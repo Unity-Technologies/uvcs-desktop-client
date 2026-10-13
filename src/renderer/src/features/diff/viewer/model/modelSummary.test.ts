@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { modelSummary, type Bounds } from './modelSummary';
-import { testModel } from './testing/testModels';
+import { boundAtOrigin, testModel } from './testing/testModels';
 
 const rounded = (bounds: Bounds | null): Bounds | null =>
   bounds && { min: bounds.min.map((v) => Number(v.toFixed(4)) + 0) as Bounds['min'], max: bounds.max.map((v) => Number(v.toFixed(4)) + 0) as Bounds['max'] };
@@ -55,6 +55,12 @@ describe('modelSummary', () => {
   it('stands a Z-up file on Y', () => {
     const tower = testModel({ upAxis: 'z', nodes: [{ name: 'Tower', mesh: { size: [1, 1, 10], center: [0, 0, 5] } }] });
     expect(rounded(modelSummary(tower).bounds)).toEqual({ min: [-0.5, 0, -0.5], max: [0.5, 10, 0.5] });
+  });
+
+  it('measures a skinned mesh where its bones hold it at rest, as it is drawn', () => {
+    // A halberd 2 m long bound upright, held across by an arm turned 90° about Z: it lies along -X, mirrored to +X.
+    const held = boundAtOrigin(testModel({ nodes: [{ name: 'Arm', kind: 'bone', rotation: [0, 0, 90] }, { name: 'Halberd', mesh: { size: [0.2, 2, 0.2], center: [0, 1, 0], bones: ['Arm'] } }] }));
+    expect(rounded(modelSummary(held).bounds)).toEqual({ min: [0, -0.1, -0.1], max: [2, 0.1, 0.1] });
   });
 
   it('bounds each node with everything under it', () => {

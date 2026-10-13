@@ -1,10 +1,13 @@
+import { Matrix4 } from 'three';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ModelBytes, ModelFormat } from '@shared/domain/content';
 import { gltfCompanions } from './gltfJson';
 import { parseModel } from './parseModel';
 import type { ParsedModel } from './parsedModel';
 import { fbxAxisConversion, Y_UP_AXES } from './fbxAxes';
+import { worldMatricesOf } from './modelSpaces';
 import { asciiFbx, box } from './testing/asciiFbx';
+import { skinnedGltf } from './testing/skinnedGltf';
 
 const bytesOf = (text: string, format: ModelFormat): ModelBytes => ({ bytes: new TextEncoder().encode(text), format });
 
@@ -86,6 +89,22 @@ describe('parseModel, FBX', () => {
     // The file's sRGB colors, in three's linear working space.
     expect(bark!.color.map((value) => Number(value.toFixed(3)))).toEqual([1, 0.214, 0]);
     expect(leaves).toMatchObject({ name: 'Leaves', baseMap: null, opacity: 0.5, alpha: 'blend' });
+  });
+
+  it('binds a skinned mesh where its node is, as FBX does: under an offset, scaled parent', async () => {
+    const rig = asciiFbx({
+      nodes: [
+        { name: 'Rig', kind: 'group', translation: [0, 50, 0], scale: [2, 2, 2] },
+        { name: 'Hips', kind: 'bone', parent: 'Rig', translation: [0, 10, 0] },
+        { name: 'Body', kind: 'mesh', parent: 'Rig', translation: [5, 0, 0], mesh: { ...box([10, 20, 10]), materials: ['Skin'], skin: { bone: 'Hips', transformLink: [2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 0, 70, 0, 1] } } },
+      ],
+    });
+    const model = await parsed(bytesOf(rig, 'fbx'));
+    const body = model.meshes[0]!;
+    expect(body.skin!.bones.map((bone) => model.nodes[bone]!.name)).toEqual(['Hips']);
+    const bodyWorld = worldMatricesOf(model, new Matrix4())[body.node]!;
+    expect(bodyWorld.elements).toEqual([2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 10, 50, 0, 1]);
+    expect(body.skin!.bindMatrix.map((value) => Number(value.toFixed(6)) + 0)).toEqual(bodyWorld.elements);
   });
 
   it('converts a Z-up file onto Y by its axes, apart from the root rotation FBXLoader set', async () => {
@@ -267,6 +286,14 @@ describe('parseModel, glTF', () => {
       [0, 0, 1],
     ]);
     expect(model.meshes.flatMap((mesh) => mesh.slotMaterials)).toEqual([0, 1]);
+  });
+
+  it("binds a skinned mesh in the file's space, not under its node: glTF places it by its joints alone", async () => {
+    const model = await parsed(bytesOf(skinnedGltf(), 'gltf'));
+    const body = model.meshes[0]!;
+    expect(model.nodes[body.node]!.name).toBe('Body');
+    expect(body.skin!.bones.map((bone) => model.nodes[bone]!.name)).toEqual(['Hips']);
+    expect(body.skin!.bindMatrix).toEqual(new Matrix4().toArray());
   });
 
   it('names the compression a glTF needs a decoder for', async () => {

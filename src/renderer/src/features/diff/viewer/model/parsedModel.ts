@@ -51,6 +51,12 @@ export interface MeshSkin {
   bones: number[];
   /** Each bone's inverse bind matrix, 16 floats apiece. */
   boneInverses: Float32Array;
+  /**
+   * The space the vertices were bound in, from the file's space (above the root), as a column-major 4×4: a bone
+   * places a vertex at `bone's world × its inverse bind × bindMatrix × vertex`. An FBX binds a mesh where its node
+   * is; glTF ignores a skinned mesh's node and binds it in the file's space (the identity), its joints alone placing it.
+   */
+  bindMatrix: number[];
 }
 
 /** A blendshape (morph target): the offset of every vertex from the base shape. */

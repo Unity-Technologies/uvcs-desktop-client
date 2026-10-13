@@ -68,7 +68,13 @@ async function compareInWorker(before: ParsedModel, after: ParsedModel): Promise
 }
 
 function placeable({ nodes, unitScale, importScale, axisConversion, meshes }: ParsedModel): PlaceableModel {
-  return { nodes, unitScale, importScale, axisConversion, meshes: meshes.map(({ node, attributes, index }) => ({ node, attributes: { position: attributes.position }, index })) };
+  return {
+    nodes,
+    unitScale,
+    importScale,
+    axisConversion,
+    meshes: meshes.map(({ node, skin, attributes: { position, skinIndex, skinWeight }, index }) => ({ node, skin, attributes: { position, skinIndex, skinWeight }, index })),
+  };
 }
 
 function startedWorker(): Worker | null {

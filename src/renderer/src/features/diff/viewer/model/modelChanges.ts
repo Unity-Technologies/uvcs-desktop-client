@@ -159,21 +159,32 @@ function refOf(after: SummaryNode | undefined, before: SummaryNode | undefined):
 
 /**
  * Resized, turned, moved off its pivot: told when every matched mesh moved the same way in Unity's space. A turn and
- * a scale are read from the nodes' placement; a scale applied to the vertices (Blender's "Apply Scale") and a move
- * off the pivot (geometry moved, the model's origin not) from where the geometry went.
+ * a scale are read from the meshes' placement; a scale applied to the vertices (Blender's "Apply Scale") and a move
+ * off the pivot (geometry moved, the model's origin not) from where the geometry went. Rigid meshes tell that; a
+ * skinned mesh's geometry goes where its bones hold it, so it tells nothing alone (a bone moved is told as the bone,
+ * `transformChanges`), but it must agree: a hat scaled beside a body that stayed is no resize.
  */
 function wholeModelChanges(before: ModelSummary, after: ModelSummary, pairs: MeshPair[]): ModelChange[] {
   const drawn = pairs.filter((pair) => pair.nodeBefore.bounds && pair.nodeAfter.bounds);
   if (drawn.length === 0) return [];
-  const motions = drawn.map(({ nodeBefore, nodeAfter }) => motionOf(nodeBefore, nodeAfter));
+  const motions = drawn.map(motionOf);
   // Where the geometry went tells a resize or a move only for meshes still made the same way: subdividing or
   // sculpting one moves its bounds too.
   const sameTopology = drawn.map(({ before, after }) => before.triangles === after.triangles && before.fingerprints.index === after.fingerprints.index);
-  const geometric = motions.filter((_, i) => sameTopology[i]);
+  const isSkinned = drawn.map((pair) => pair.before.skinned || pair.after.skinned);
+  const rigid = motions.filter((_, i) => !isSkinned[i]);
+  const geometric = motions.filter((_, i) => !isSkinned[i] && sameTopology[i]);
+  const skinnedAlike = motions.filter((_, i) => isSkinned[i] && sameTopology[i]);
+  const geometryTells = rigid.length > 0 && geometric.length === rigid.length;
+  /** What the rigid meshes' geometry agrees on, when every skinned mesh made the same way agrees too. */
+  const agreed = <T>(value: (motion: Motion) => T, close: (a: T, b: T) => boolean): T | undefined => {
+    const told = geometryTells ? shared(geometric.map(value), close) : undefined;
+    return told !== undefined && skinnedAlike.every((motion) => close(value(motion), told)) ? told : undefined;
+  };
   const rotation = shared(motions.map((motion) => motion.rotation), (a, b) => a.angleTo(b) <= radians(TURN_TOLERANCE_DEGREES));
   const unturned = rotation !== undefined && rotation.angleTo(new Quaternion()) <= radians(TURN_TOLERANCE_DEGREES);
   const placementScale = shared(motions.map((motion) => motion.placementScale), closeRatio);
-  const geometryScale = geometric.length === motions.length ? shared(geometric.map((motion) => motion.geometryScale), closeRatio) : undefined;
+  const geometryScale = agreed((motion) => motion.geometryScale, closeRatio);
   const scale = placementScale !== undefined && !closeRatio(placementScale, 1) ? placementScale : unturned ? geometryScale : undefined;
   const changes: ModelChange[] = [];
   if (scale !== undefined && Math.abs(scale - 1) > SCALE_TOLERANCE) {
@@ -188,8 +199,8 @@ function wholeModelChanges(before: ModelSummary, after: ModelSummary, pairs: Mes
   const degrees = rotation ? (rotation.angleTo(new Quaternion()) * 180) / Math.PI : 0;
   if (rotation && degrees > TURN_TOLERANCE_DEGREES) changes.push({ kind: 'turned', degrees: Math.round(degrees), axis: principalAxis(rotation) });
   if (changes.length === 0) {
-    const offset = geometric.length === motions.length ? shared(geometric.map((motion) => motion.geometryOffset), (a, b) => a.distanceTo(b) <= DISTANCE_TOLERANCE_METRES) : undefined;
-    if (offset && offset.length() > DISTANCE_TOLERANCE_METRES && geometric.every((motion) => closeRatio(motion.geometryScale, 1))) {
+    const offset = agreed((motion) => motion.geometryOffset, (a, b) => a.distanceTo(b) <= DISTANCE_TOLERANCE_METRES);
+    if (offset && offset.length() > DISTANCE_TOLERANCE_METRES && [...geometric, ...skinnedAlike].every((motion) => closeRatio(motion.geometryScale, 1))) {
       changes.push({ kind: 'offPivot', distance: offset.length() });
     }
   }
@@ -207,7 +218,7 @@ function closeRatio(a: number, b: number): boolean {
 }
 
 interface Motion {
-  /** The node's own uniform scale and rotation in Unity's space, after over before. */
+  /** The mesh's placement's uniform scale and rotation in Unity's space (`MeshSummary.placement`), after over before. */
   placementScale: number;
   rotation: Quaternion;
   /** The geometry's size and centre in Unity's space, after over before and after minus before; NaN for a size that
@@ -216,15 +227,15 @@ interface Motion {
   geometryOffset: Vector3;
 }
 
-function motionOf(before: SummaryNode, after: SummaryNode): Motion {
+function motionOf({ before: meshBefore, after: meshAfter, nodeBefore: before, nodeAfter: after }: MeshPair): Motion {
   const placement = (elements: number[]) => {
     const rotation = new Quaternion();
     const scale = new Vector3();
     new Matrix4().fromArray(elements).decompose(new Vector3(), rotation, scale);
     return { rotation, size: Math.cbrt(Math.abs(scale.x * scale.y * scale.z)) };
   };
-  const b = placement(before.world);
-  const a = placement(after.world);
+  const b = placement(meshBefore.placement);
+  const a = placement(meshAfter.placement);
   const centre = (bounds: Bounds) => new Vector3(...bounds.max).add(new Vector3(...bounds.min)).multiplyScalar(0.5);
   return {
     placementScale: b.size === 0 ? 1 : a.size / b.size,
@@ -295,6 +306,8 @@ function transformChanges(before: ModelSummary, after: ModelSummary, matching: N
     // Compensated in its parents (a root scaled ×100 as the units went from metres to centimetres): nothing moved.
     if (sameMatrix(nodeBefore.world, nodeAfter.world)) return;
     if (nodeBefore.mesh !== null && nodeAfter.mesh !== null && sameBounds(nodeBefore.bounds, nodeAfter.bounds)) {
+      // A skinned mesh's own node places nothing of it (its bones do): what is drawn stayed, and Unity skins it alike.
+      if (before.meshes[nodeBefore.mesh]!.skinned || after.meshes[nodeAfter.mesh]!.skinned) return;
       const origin = (world: number[]) => new Vector3().setFromMatrixPosition(new Matrix4().fromArray(world));
       changes.push({ kind: 'pivotMoved', node: ref, distance: origin(nodeBefore.world).distanceTo(origin(nodeAfter.world)) });
       return;

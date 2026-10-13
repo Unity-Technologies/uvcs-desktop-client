@@ -134,7 +134,8 @@ function skinOf(mesh: SkinnedMesh, indexOf: Map<Object3D, number>): ModelMesh['s
   const { bones, boneInverses } = mesh.skeleton;
   const inverses = new Float32Array(boneInverses.length * 16);
   boneInverses.forEach((matrix, i) => inverses.set(matrix.elements, i * 16));
-  return { bones: bones.map((bone) => indexOf.get(bone) ?? -1), boneInverses: inverses };
+  // The loader's own bind matrix: FBXLoader binds at the mesh's world, GLTFLoader at the identity, as glTF says.
+  return { bones: bones.map((bone) => indexOf.get(bone) ?? -1), boneInverses: inverses, bindMatrix: mesh.bindMatrix.toArray() };
 }
 
 /** Each blendshape as offsets from the base shape: FBX and glTF store them so, others as whole shapes. */

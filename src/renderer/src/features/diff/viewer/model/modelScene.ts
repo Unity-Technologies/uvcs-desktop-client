@@ -80,7 +80,7 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
   });
   root.updateMatrixWorld(true);
   model.meshes.forEach((mesh, i) => {
-    if (mesh.skin) bindSkin(meshes[i]!, mesh.skin, nodes, root.matrix);
+    if (mesh.skin) bindSkin(meshes[i]!, mesh.skin, nodes, root);
   });
   const rest = nodes.map((node) => ({ position: node.position.clone(), quaternion: node.quaternion.clone(), scale: node.scale.clone() }));
   return {
@@ -147,21 +147,35 @@ export function boneLinks(model: Pick<ParsedModel, 'nodes'>): [number, number][]
 }
 
 /**
- * Binds a skinned mesh and its twins to its bones. The file's inverse bind matrices are in the loader's space; the
- * scene's root puts the model in the viewer's (`viewerSpace`), so each is carried there (`inverse × viewerSpace⁻¹`),
- * or the root's units and axes would skin the mesh twice.
+ * Binds a skinned mesh and its twins to its bones, as the file's loader bound it: a vertex goes where `bone's world ×
+ * inverse bind × bind matrix` puts it, whatever the mesh's own node (glTF ignores it). The file's inverse bind and
+ * bind matrices are in the loader's space; the scene's root puts the model in the viewer's (`viewerSpace`), so each
+ * is carried there (`inverse × viewerSpace⁻¹`, `viewerSpace × bind`), or the root's units and axes would skin the
+ * mesh twice. Binding at the mesh's world instead drew a Sketchfab glTF, whose mesh sits under its units and axes,
+ * under them twice: a hundredth of its size, turned.
  */
-function bindSkin(mesh: SceneMesh, skin: NonNullable<ModelMesh['skin']>, nodes: Object3D[], viewerSpace: Matrix4): void {
+function bindSkin(mesh: SceneMesh, skin: NonNullable<ModelMesh['skin']>, nodes: Object3D[], root: Group): void {
+  const viewerSpace = root.matrix;
   const toViewer = viewerSpace.clone().invert();
   const inverses = skin.bones.map((_, i) => new Matrix4().fromArray(skin.boneInverses, i * 16).multiply(toViewer));
-  // A bone the file names is a node of the hierarchy; a joint the loader made an empty still moves the mesh.
-  const bones = skin.bones.map((node) => nodes[node] ?? new Bone()) as Bone[];
+  const bindMatrix = viewerSpace.clone().multiply(new Matrix4().fromArray(skin.bindMatrix));
+  // A bone the file names is a node of the hierarchy. A joint that is none (a loader's stand-in) stands where it was
+  // bound, so it holds its share of the mesh in place, as `placedPositionsOf` measures it.
+  const bones = skin.bones.map((node, i) => (nodes[node] as Bone | undefined) ?? standInBone(skin, i, root));
   const skeleton = new Skeleton(bones, inverses);
   for (const object of [mesh.solid, mesh.wire, mesh.heat, mesh.ghost]) {
-    (object as unknown as SkinnedMesh).bind(skeleton, object.matrixWorld);
+    (object as unknown as SkinnedMesh).bind(skeleton, bindMatrix);
     // Its bounds are the bind pose's: a take that moves it out of them mustn't cull it.
     object.frustumCulled = false;
   }
+}
+
+/** A bone at its bind pose (its inverse bind's inverse), under the model's root: it skins its vertices where they were bound. */
+function standInBone(skin: NonNullable<ModelMesh['skin']>, index: number, root: Group): Bone {
+  const bone = new Bone();
+  new Matrix4().fromArray(skin.boneInverses, index * 16).invert().decompose(bone.position, bone.quaternion, bone.scale);
+  root.add(bone);
+  return bone;
 }
 
 /** A box in the viewer's space from one in Unity's (`modelSummary`'s bounds): X mirrored back. */

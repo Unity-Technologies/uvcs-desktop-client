@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { changeShares, compareSurfaces, placedMeshesOf } from './surfaceComparison';
-import { testModel, type TestNode } from './testing/testModels';
+import { boundAtOrigin, testModel, type TestNode } from './testing/testModels';
 
 const placed = (nodes: TestNode[], unitScale = 1) => placedMeshesOf(testModel({ nodes, unitScale }));
 const maxOf = (distances: Float32Array[]): number => Math.max(...distances.map((mesh) => Math.max(...mesh)));
@@ -35,6 +35,18 @@ describe('compareSurfaces', () => {
     const comparison = compareSurfaces(before, after);
     expect(comparison.maxDistance).toBeCloseTo(comparison.size * 0.1);
     expect(maxOf([comparison.after[1]!])).toBeCloseTo(comparison.maxDistance);
+  });
+});
+
+describe('placedMeshesOf', () => {
+  it('places a skinned mesh where its bones hold it at rest, as it is drawn', () => {
+    // A halberd 2 m long bound upright, held across by an arm turned 90° about Z: it lies along -X.
+    const held = boundAtOrigin(testModel({ nodes: [{ name: 'Arm', kind: 'bone', rotation: [0, 0, 90] }, { name: 'Halberd', mesh: { size: [0.2, 2, 0.2], center: [0, 1, 0], bones: ['Arm'] } }] }));
+    const [halberd] = placedMeshesOf(held).meshes;
+    const xs = halberd!.positions.filter((_, i) => i % 3 === 0);
+    const ys = halberd!.positions.filter((_, i) => i % 3 === 1);
+    expect([Math.min(...xs), Math.max(...xs)].map((x) => x + 0)).toEqual([expect.closeTo(-2), expect.closeTo(0)]);
+    expect([Math.min(...ys), Math.max(...ys)]).toEqual([expect.closeTo(-0.1), expect.closeTo(0.1)]);
   });
 });
 

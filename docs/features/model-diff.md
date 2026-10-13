@@ -68,6 +68,10 @@ bounds in Unity's space, and each mesh's triangles, material slots, blendshapes,
 - **Fingerprints** of each attribute's exact values tell what changed without keeping both versions' arrays, and
   `placedPositions` (where the vertices end up in Unity's space, to 10 µm) tells a mesh whose vertices were shifted to
   stay in place (a pivot moved, a new parent) from one whose shape changed.
+- **Where a vertex is, is where it is drawn** (`placedPositionsOf`): through its node, or, skinned, through its bones
+  at rest as its file bound them (`bone's world × inverse bind × bind matrix`). The bounds, the size in the strip and
+  the Differences mode's measure all read it, so a weapon bound upright and held across by the rest pose is measured
+  across, as Unity shows it.
 
 ## What changed (`modelChanges`, `nodeMatching`, `modelChangeWords`)
 
@@ -81,9 +85,17 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
 - **The whole model**: resized (with its units as the cause when they changed), turned (around X, Y or Z when it is),
   moved off its pivot. Told from what every matched mesh agrees on (their placement, or where their geometry went for
   meshes still made the same way), never from the overall bounds, so adding a backpack isn't a resize and subdividing
-  a rock isn't a move. A resize must grow every axis alike: a sculpted ledge is a shape change.
+  a rock isn't a move. A resize must grow every axis alike: a sculpted ledge is a shape change. A mesh's placement
+  (`MeshSummary.placement`, `restingPlacementOf`) is its node's world, or, skinned, where its top-most joint carries
+  the bound mesh: a skinned glTF turned or scaled from above its skeleton is told so, and one whose mesh node alone
+  turned (which places nothing) isn't. The top-most joint, not the heaviest: it carries the whole skeleton and
+  repainting weights doesn't move it; a rest pose turning it reads as the whole model turned, as Unity shows it. Where geometry went is told by rigid meshes: a skinned
+  one goes where its bones hold it, so a bone whose rest pose moved is told as that bone, not as the model moved off
+  its pivot. A skinned mesh made the same way must still agree, so a hat scaled or moved beside a body that stayed is
+  no whole-model change.
 - **The hierarchy**: renamed, moved, removed (once, at the top of what went), added; nodes moved, turned or scaled on
-  their own; a node's pivot moved (the node moved, its geometry stayed). A unit change made up for in the root's scale
+  their own; a node's pivot moved (the node moved, its geometry stayed; not told of a skinned mesh's node, whose
+  pivot skins nothing). A unit change made up for in the root's scale
   moves nothing in Unity and isn't listed.
 - **Material slots**, model-wide as Unity remaps them by name: renamed (a name gone and another come in the same slot
   of the same mesh), removed, added; a mesh that uses another of the model's slots.
@@ -142,8 +154,11 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   (`timeInTake`), so a shorter take ends sooner beside the longer one; a take only one version has says so. It starts
   at the rest pose, and going back to it or leaving puts every node back (`resetPose`). Bones are `Bone`s and skinned
   meshes `SkinnedMesh`es (their twins too, so they deform alike), named as the takes' tracks address them
-  (`PropertyBinding.sanitizeNodeName`); the file's inverse bind matrices are carried into the viewer's space
-  (`bindSkin`), or the root's units and axes would skin the mesh twice.
+  (`PropertyBinding.sanitizeNodeName`); the file's inverse bind matrices and bind matrix are carried into the viewer's
+  space (`bindSkin`), or the root's units and axes would skin the mesh twice. The bind matrix is the loader's
+  (`MeshSkin.bindMatrix`): an FBX binds a mesh where its node is, glTF in the file's space, ignoring the skinned mesh's
+  node. Binding a glTF at its node instead drew a Sketchfab export (its meshes under a `Sketchfab_model` root that turns
+  Z up and a node that scales centimetres) under them twice: a hundredth of its size, or torn into stray triangles.
 - **The scene**: clay lit by a soft studio (three's `RoomEnvironment`) and a key light over the camera's shoulder;
   a ground grid a power of ten apart that suits the model (1 m for a person), X and Z through the origin in Unity's
   axis colors; each version's pivot axes, turned as the node every mesh hangs under. A picked node with no geometry

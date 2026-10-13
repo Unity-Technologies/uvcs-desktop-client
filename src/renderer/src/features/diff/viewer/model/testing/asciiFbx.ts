@@ -1,5 +1,6 @@
 // Writes ASCII FBX 7.4, as the DCC tools export it, for tests and the models sandbox (`scripts/sandboxes/models.sh`):
-// a hierarchy of meshes, empties and bones with their transforms, each mesh's material slots per polygon and its UVs,
+// a hierarchy of meshes, empties and bones with their transforms, each mesh's material slots per polygon and its UVs
+// and the bone it is skinned to,
 // the materials' colors and the texture files they name, animation takes, and the global settings (up axis, units,
 // the exporting app). Only what the diff reads; never shipped in the app.
 
@@ -70,6 +71,14 @@ export interface FbxMeshSpec {
   polygonMaterials?: number[];
   /** Planar UVs from X and Y, one per polygon corner. */
   uvs?: boolean;
+  /** Every vertex skinned wholly to one bone, as a Skin deformer with one Cluster. */
+  skin?: FbxSkinSpec;
+}
+
+export interface FbxSkinSpec {
+  bone: string;
+  /** The bone's world matrix when the mesh was bound (the cluster's `TransformLink`), column-major. */
+  transformLink: number[];
 }
 
 export function asciiFbx(scene: FbxScene): string {
@@ -97,6 +106,11 @@ export function asciiFbx(scene: FbxScene): string {
           connections.push(...written.connections);
         }
         connections.push(`\tC: "OO",${materialIds.get(material)},${id}`);
+      }
+      if (node.mesh.skin) {
+        const written = skinObjects(id + 2, id + 1, node.mesh, ids);
+        objects.push(...written.objects);
+        connections.push(...written.connections);
       }
     }
   }
@@ -225,6 +239,31 @@ function materialObjects(id: number, name: string, spec: FbxMaterialSpec): { obj
     );
     connections.push(`\tC: "OO",${videoId},${textureId}`, `\tC: "OP",${textureId},${id}, "${property}"`);
   });
+  return { objects, connections };
+}
+
+/** A Skin deformer on the geometry, and its one Cluster holding every vertex on the bone. */
+function skinObjects(skinId: number, geometryId: number, mesh: FbxMeshSpec, nodeIds: Map<string, number>): { objects: string[]; connections: string[] } {
+  const { bone, transformLink } = mesh.skin!;
+  const boneId = nodeIds.get(bone);
+  if (boneId === undefined) throw new Error(`No node named ${bone}`);
+  const clusterId = skinId + 1;
+  const vertices = Array.from({ length: mesh.vertices.length / 3 }, (_, i) => i);
+  const objects = [
+    `\tDeformer: ${skinId}, "Deformer::", "Skin" {`,
+    '\t\tVersion: 101',
+    '\t}',
+    `\tDeformer: ${clusterId}, "SubDeformer::", "Cluster" {`,
+    '\t\tVersion: 100',
+    array('Indexes', vertices),
+    array('Weights', vertices.map(() => 1)),
+    // Exporters write the mesh's world at bind here; FBXLoader (three 0.186) doesn't read it, binding at the mesh's
+    // world as loaded, so the identity stands in.
+    array('Transform', [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
+    array('TransformLink', transformLink),
+    '\t}',
+  ];
+  const connections = [`\tC: "OO",${skinId},${geometryId}`, `\tC: "OO",${clusterId},${skinId}`, `\tC: "OO",${boneId},${clusterId}`];
   return { objects, connections };
 }
 
