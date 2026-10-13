@@ -162,7 +162,10 @@ A version is read with what it needs beside it (`useModelReadOptions`), found by
 a committed diff's (`diffSibling`, provided by `DiffBrowser`) is the entry of the same diff (a glTF's shape lives in
 its `.bin`, so a changed shape changed the `.bin` too, with its own revisions; a moved model's `.meta` moved with it, at
 its old path on the side before), or, when the diff left it alone, the file where the diff points to (`cs:N`, the
-branch's head, `sh:N`: the same on both sides). A last change in Files or Browse repository (`lastChangeSibling`,
+branch's head, `sh:N`: the same on both sides). Beside a model under an xlink (its repository isn't the workspace's),
+that file is read through the tree there, one `cm ls --tree` and its `cm cat`, never a `serverpath:` that can't reach
+it (ARCHITECTURE.md "Xlinks"); in a shelve, whose tree `cm` can't list, it isn't found, and the viewer says what the
+model needs. A last change in Files or Browse repository (`lastChangeSibling`,
 provided by `RevisionChanges`) finds it in the tree's own listings, no `cm` command added: changed in the same
 changeset or shelve as the model, its revision and the one before; untouched by it, its one revision on both sides;
 changed since, in another repository, or not listed (private, in a folder not opened), none. Elsewhere (history,
