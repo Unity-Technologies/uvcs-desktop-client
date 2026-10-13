@@ -102,8 +102,23 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
 - **Each mesh**: triangles (and nothing else then: a rebuilt mesh changed everything), shape, normals, UVs, lightmap
   UVs (lost is a risk: baked lighting needs them), vertex colors, skinning, blendshapes renamed, removed or added.
 - **Takes** (Unity's clips are cut from them by name): renamed (one gone and one of the same length come), removed,
-  added, of another length. **Textures** the materials name, the **up axis**, the **exporting app** (all a re-export
-  with nothing else changed tells: the panel says "Nothing Unity imports changed" when there's nothing at all).
+  added, of another length. **Textures** the file's materials name (where materials aren't told, below), the **up
+  axis**, the **exporting app** (all a re-export with nothing else changed tells: the panel says "Nothing Unity imports
+  changed" when there's nothing at all).
+- **Materials as Unity resolves them** (`materialChanges`, worded by `materialChangeWords`), compared from both
+  versions' plans (`planVersion`'s `resolved`, "Materials" below), each slot both versions have: where it takes its
+  material from (Unity's default, a project's `.mat`, the model's own, a remap to a material the project hasn't: Unity's
+  missing material, a risk), and, for the same material, its base map, normal map, base color (as the Inspector shows
+  it, `#RRGGBB`), alpha (opaque, cutout, transparent), alpha cutoff, sides and the base map's tiling and offset; and a
+  texture it now uses that the workspace hasn't (a risk; one it lacked before isn't news). The workspace's materials
+  read alike for both versions, so a `.mat` changed alone never shows here: its own diff is its text. They're told
+  with the Materials look off too, from the very reads the look makes (one query each, shared): only for versions
+  whose materials may resolve differently (`materialsMayDiffer`: their slots' sources or their lookups differ), so a
+  re-export that changed no material reads nothing, and never decoding a texture. Waiting for the look to resolve
+  them was rejected: a change is a change, and the reads are the workspace's disk, no `cm` command; the one cost, a
+  GUID the project lacks, reads the project's index once, as the look would. Without a workspace, or for a version
+  with no path in it, they're not told, and the file's own list of textures named (`textures`) stands in; where they
+  are told, it goes, as the materials say which textures Unity uses.
 
 `changeRows` words them for the panel, with the line on why a risk matters in Unity, and folds three or more of a kind
 (`FOLD_FROM`: "Added 6 bones") into one row listing them. Lengths read in the unit that suits them (`formatLength`).

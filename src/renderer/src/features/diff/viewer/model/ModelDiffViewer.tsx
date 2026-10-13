@@ -17,7 +17,7 @@ import { CENTERED_SPLIT, SwipeDivider } from '../image/SwipeDivider';
 import { importSettingsChanges } from './importSettingsChanges';
 import { ModelAnimationBar } from './ModelAnimationBar';
 import { changeRows, type ChangeRow } from './modelChangeWords';
-import { isRisk, modelChanges, type NodeRef } from './modelChanges';
+import { isRisk, modelChanges, type ModelChange, type NodeRef } from './modelChanges';
 import { ModelChangesPanel } from './ModelChangesPanel';
 import { clipChoices } from './modelClips';
 import { ModelDifferencesControls } from './ModelDifferencesControls';
@@ -107,9 +107,15 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   const surface = shownSurface(modelSurface, materials.offered);
   const rows = useMemo(() => {
     if (!old || !next || !optionsBefore || !optionsAfter) return null;
-    const changes = [...modelChanges(old.summary, next.summary), ...importSettingsChanges({ summary: old.summary, settings: optionsBefore.settings }, { summary: next.summary, settings: optionsAfter.settings })];
+    // Where the materials can be told, they say which textures Unity uses: the file's list of the textures it names goes.
+    const fileChanges = modelChanges(old.summary, next.summary).filter((change) => materials.changes === null || change.kind !== 'textures');
+    const changes = [
+      ...fileChanges,
+      ...importSettingsChanges({ summary: old.summary, settings: optionsBefore.settings }, { summary: next.summary, settings: optionsAfter.settings }),
+      ...(materials.changes ?? []).map((change): ModelChange => ({ kind: 'material', change })),
+    ];
     return changeRows([...changes.filter(isRisk), ...changes.filter((change) => !isRisk(change))]);
-  }, [old, next, optionsBefore, optionsAfter]);
+  }, [old, next, optionsBefore, optionsAfter, materials.changes]);
   const stats = useMemo(() => modelStats(old?.summary ?? null, next?.summary ?? null), [old, next]);
   // Every version there is, read: framing one alone would frame a pair whose other half may be 100 times its size.
   const allRead = (!original.model || old !== null) && (!modified.model || next !== null);

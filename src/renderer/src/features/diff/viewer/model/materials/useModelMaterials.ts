@@ -3,6 +3,7 @@ import { gltfImageBytes } from '../gltfJson';
 import { textureLoadsOf, type GltfImage } from '../textures/textureLoadPlan';
 import { useTextureStates } from '../textures/useTextureStates';
 import { foundAssets, nothingFound, textureRequestOf } from './assetAnswers';
+import { materialChanges, materialsMayDiffer, type MaterialChange } from './materialChanges';
 import { assetsRequest, budgeted, planVersion, slotLooks, texturesReport, type Side, type SlotLook, type TexturesReport, type VersionPlan } from './materialPlan';
 import { materialsInputOf, type MaterialVersion } from './materialVersion';
 import { materialsOffered, slotSources } from './slotSources';
@@ -18,16 +19,25 @@ export interface ModelMaterials {
   /** Each side's slots as drawn now; null until the look was first turned on for these versions. */
   looks: Record<Side, ReadonlyMap<string, SlotLook> | null>;
   report: TexturesReport | null;
+  /**
+   * What changed in the slots' materials (`materialChanges`), whether the look is on or not: undefined while being
+   * read, null where it can't be told (no workspace, a version alone, or one with no path in the workspace).
+   */
+  changes: MaterialChange[] | null | undefined;
 }
 
 const SIDES = ['before', 'after'] as const;
 const NO_LOOKS = { before: null, after: null };
+const NO_PLANS: (VersionPlan | null)[] = [null, null];
+const NO_REQUESTS = [null, null];
 
 /**
  * The Materials look for a model's versions (docs/features/model-diff.md, "Materials"): whether it's offered, and,
  * once `wanted`, each slot's material and textures as Unity would show them, read from the workspace on disk (never
  * the server: no `cm` command), textures appearing as they decode. Turned off, what was read and decoded stays until
- * the versions change, so turning it on again is immediate.
+ * the versions change, so turning it on again is immediate. What changed in the materials is told with the look off
+ * too, from the same reads (so the look reads nothing again), and only for versions whose materials may resolve
+ * differently (`materialsMayDiffer`); no texture is decoded for it.
  */
 export function useModelMaterials(workspacePath: string, versions: Record<Side, MaterialVersion | null>, wanted: boolean): ModelMaterials {
   const mtl = useMtlMaterials(workspacePath, versions);
@@ -43,17 +53,22 @@ export function useModelMaterials(workspacePath: string, versions: Record<Side, 
   const active = useLatch(wanted && offered, inputs);
 
   const sources = useMemo(() => ({ before: inputs.before && slotSources(inputs.before), after: inputs.after && slotSources(inputs.after) }), [inputs]);
-  const requests = useMemo(
-    () => SIDES.map((side) => (active && inputs[side] && sources[side] && versions[side]?.path ? assetsRequest(inputs[side]!, sources[side]!, versions[side]!.path!) : null)),
-    [active, inputs, sources, versions],
+  const sideRequests = useMemo(
+    () => SIDES.map((side) => (inputs[side] && sources[side] && versions[side]?.path ? assetsRequest(inputs[side]!, sources[side]!, versions[side]!.path!) : null)),
+    [inputs, sources, versions],
   );
+  const comparable = workspacePath !== '' && versions.before?.path != null && versions.after?.path != null;
+  const comparing =
+    comparable && Boolean(sources.before && sources.after) && materialsMayDiffer({ sources: sources.before!, request: sideRequests[0] ?? null }, { sources: sources.after!, request: sideRequests[1] ?? null });
+  const reading = active || comparing;
+  const requests = useMemo(() => (reading ? sideRequests : NO_REQUESTS), [reading, sideRequests]);
   const firstAnswers = useUnityAssets(workspacePath, requests);
   const materials = useUnityMaterials(workspacePath, firstAnswers, requests);
   const secondRequests = useMemo(() => requests.map((request, i) => textureRequestOf(request, materials[i])), [requests, materials]);
   const secondAnswers = useUnityAssets(workspacePath, secondRequests);
 
   const plans = useMemo((): (VersionPlan | null)[] => {
-    if (!active) return [null, null];
+    if (!reading) return NO_PLANS;
     return SIDES.map((side, i) => {
       const input = inputs[side];
       const version = versions[side];
@@ -65,21 +80,31 @@ export function useModelMaterials(workspacePath: string, versions: Record<Side, 
       if (first === undefined || (secondRequests[i] && secondAnswers[i] === undefined) || materials[i] === undefined) return null;
       return planVersion(input, sources[side]!, foundAssets(request, first, secondRequests[i] ?? null, secondAnswers[i] ?? null, materials[i]!), request.modelPath, side);
     });
-  }, [active, inputs, versions, sources, requests, firstAnswers, secondRequests, secondAnswers, materials]);
+  }, [reading, inputs, versions, sources, requests, firstAnswers, secondRequests, secondAnswers, materials]);
 
-  const budget = useMemo(() => budgeted(plans), [plans]);
+  // Textures decode only for the look: the changes need none.
+  const budget = useMemo(() => budgeted(active ? plans : NO_PLANS), [active, plans]);
   const loads = useMemo(() => textureLoadsOf(workspacePath, budget.needs, budget.longest, (side, image) => gltfImageOf(versions[side], image)), [workspacePath, budget, versions]);
   const states = useTextureStates(workspacePath, loads);
 
+  const changes = useMemo((): MaterialChange[] | null | undefined => {
+    if (!comparable) return null;
+    if (!sources.before || !sources.after) return undefined;
+    if (!comparing) return [];
+    const [before, after] = plans;
+    return before && after ? materialChanges(before, after) : undefined;
+  }, [comparable, comparing, sources, plans]);
+
   return useMemo((): ModelMaterials => {
-    if (!active) return { offered, looks: NO_LOOKS, report: null };
+    if (!active) return { offered, looks: NO_LOOKS, report: null, changes };
     const [before, after] = plans;
     return {
+      changes,
       offered,
       looks: { before: before ? slotLooks(before, states) : null, after: after ? slotLooks(after, states) : null },
       report: plans.some((plan) => plan !== null) ? texturesReport(plans, states, budget.over) : null,
     };
-  }, [active, offered, plans, states, budget]);
+  }, [active, offered, plans, states, budget, changes]);
 }
 
 /** True from the first time `on` is, until `of` changes: the look's reads and decodes stay while it's off. */
