@@ -78,12 +78,13 @@ describe('planVersion and slotLooks', () => {
     expect(slotLooks(planned, new Map([['before:image:0', { kind: 'ready', key: 'k', bitmap }]])).get('Leaf')?.color).toEqual([0.5, 1, 1]);
   });
 
-  it(".mat: its maps by GUID with their tiling, its color, and the file's material while the .mat isn't found", () => {
+  it(".mat: its maps by GUID with their tiling and its color; clay for a remap to a material the project hasn't", () => {
     const input = version([fileMaterial('Bark', { color: [0.3, 0.3, 0.3] })], { materialRemaps: [{ slot: 'Bark', guid: BARK_MAT }] });
     const assets = found({ guids: new Map([[BARK_PSD, file('Assets/Art/bark.psd')], [BARK_NORMAL, file('Assets/Art/bark_n.png')]]), materials: new Map([[BARK_MAT, URP_BARK]]) });
     const planned = plan(input, assets);
     expect(planned.slots.get('Bark')).toMatchObject({ baseMap: { need: 'up:Assets/Art/bark.psd', repeat: [2, 2], offset: [0.5, 0] }, normalMap: { need: 'up:Assets/Art/bark_n.png' }, color: [1, 1, 1] });
-    expect(plan(input, found()).slots.get('Bark')).toMatchObject({ color: [0.3, 0.3, 0.3], baseMap: null });
+    // Unity assigns the missing asset (its missing material), never the file's own: no guessed look.
+    expect(plan(input, found({ guids: new Map([[BARK_MAT, null]]) })).slots.get('Bark')).toBeNull();
   });
 
   it("reads a .mat's alpha clip, transparency and sides, its color from sRGB", () => {
