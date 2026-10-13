@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { isRisk, modelChanges, type ModelChange } from './modelChanges';
 import { modelSummary } from './modelSummary';
+import type { ParsedModel } from './parsedModel';
 import { boundAtOrigin, boundInFileSpace, testModel, type TestModel, type TestNode } from './testing/testModels';
 
 const changes = (before: TestModel, after: TestModel): ModelChange[] => modelChanges(modelSummary(testModel(before)), modelSummary(testModel(after)));
@@ -105,6 +106,47 @@ describe('modelChanges: a skinned model', () => {
     // Both bound with the bones at the origin: the Hips standing 5 cm higher carries the mesh up with it.
     const list = modelChanges(summaryOf(character([0, 1, 0]), boundAtOrigin), summaryOf(character([0, 1.05, 0]), boundAtOrigin));
     expect(list).toEqual([{ kind: 'transformed', nodes: [expect.objectContaining({ name: 'Hips' })] }]);
+  });
+
+  const withHat = (hat: TestNode['mesh'], body: TestNode['mesh'] = { size: [0.5, 1.6, 0.3], bones: ['Hips'] }): TestNode[] => [
+    ...character([0, 1, 0], { name: 'Body', parent: 'Armature', mesh: body }),
+    { name: 'Hat', parent: 'Armature', position: [0, 1.9, 0], mesh: hat },
+  ];
+  const wholeModel = (list: ModelChange[]) => kinds(list).filter((kind) => kind === 'resized' || kind === 'turned' || kind === 'offPivot');
+
+  it("tells no whole-model change when only a rigid part's vertices changed beside a skinned body", () => {
+    const hat = { size: [0.3, 0.2, 0.3] as [number, number, number] };
+    const scaled = modelChanges(summaryOf(withHat(hat), boundAtOrigin), summaryOf(withHat({ size: [0.6, 0.4, 0.6] }), boundAtOrigin));
+    const moved = modelChanges(summaryOf(withHat(hat), boundAtOrigin), summaryOf(withHat({ ...hat, center: [0, 0.1, 0] }), boundAtOrigin));
+    expect(wholeModel(scaled)).toEqual([]);
+    expect(wholeModel(moved)).toEqual([]);
+  });
+
+  it('tells a model moved off its pivot when its skinned body moved with its rigid parts', () => {
+    const before = withHat({ size: [0.3, 0.2, 0.3] });
+    const after = withHat({ size: [0.3, 0.2, 0.3], center: [0, 0.1, 0] }, { size: [0.5, 1.6, 0.3], center: [0, 0.1, 0], bones: ['Hips'] });
+    expect(wholeModel(modelChanges(summaryOf(before, boundAtOrigin), summaryOf(after, boundAtOrigin)))).toEqual(['offPivot']);
+  });
+
+  /** The version after, bound as the version before was: the same bind, its bones carried by what changed above them. */
+  const reboundAs = (after: ParsedModel, before: ParsedModel): ParsedModel => ({ ...after, meshes: after.meshes.map((mesh, i) => ({ ...mesh, skin: before.meshes[i]!.skin })) });
+  const glTF = (nodes: TestNode[]) => boundInFileSpace(testModel({ nodes }));
+
+  it('tells a skinned glTF turned as a whole, its joints carrying the mesh round, with or without rigid parts', () => {
+    const sword: TestNode = { name: 'Sword', parent: 'Armature', position: [0.4, 1, 0], mesh: { size: [0.05, 1, 0.05] } };
+    for (const parts of [[], [sword]]) {
+      const before = glTF([...character([0, 1, 0]), ...parts]);
+      const turned = glTF([{ name: 'Armature', rotation: [0, 90, 0] }, ...character([0, 1, 0]).slice(1), ...parts]);
+      const list = modelChanges(modelSummary(before), modelSummary(reboundAs(turned, before)));
+      expect(list.filter((change) => change.kind === 'turned')).toEqual([{ kind: 'turned', degrees: 90, axis: 'Y' }]);
+    }
+  });
+
+  it('tells a skinned glTF scaled on its root as resized', () => {
+    const before = glTF(character([0, 1, 0]));
+    const scaled = glTF([{ name: 'Armature', scale: [2, 2, 2] }, ...character([0, 1, 0]).slice(1)]);
+    const list = modelChanges(modelSummary(before), modelSummary(reboundAs(scaled, before)));
+    expect(list).toEqual([expect.objectContaining({ kind: 'resized', factor: expect.closeTo(2) })]);
   });
 
   it('still tells a skinned model 100× larger, with its units as the cause', () => {
