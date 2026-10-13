@@ -2,6 +2,8 @@
 // Verts). Each figure shows once, as "before → after" only where it changed, so what changed stands out.
 
 import { formatCount } from '../../../../lib/text';
+import type { TexturesReport } from './materials/materialPlan';
+import { textureProblemWords } from './textures/textureProblems';
 import type { ModelSummary } from './modelSummary';
 import { changeShares, type SurfaceComparison } from './surfaceComparison';
 import { formatLength } from './modelUnits';
@@ -70,3 +72,20 @@ function largestSide(...summaries: (ModelSummary | null)[]): number {
 const SIGNIFICANT_DIGITS = 3;
 
 const UNIT_METRES: Record<string, number> = { m: 1, cm: 0.01, mm: 0.001 };
+
+/** How many texture problems the chip's tooltip names before "and N more". */
+const LISTED_ISSUES = 8;
+
+/**
+ * The Materials look's figure: the textures that show of those the materials use, "9 of 12" (or "12"), its tooltip
+ * naming the ones that don't and why. None for materials without textures.
+ */
+export function texturesStat(report: TexturesReport): ModelStat | null {
+  if (report.total === 0) return null;
+  const { total, shown, loading, issues } = report;
+  const lines = ['Textures shown, as the workspace has them'];
+  for (const issue of issues.slice(0, LISTED_ISSUES)) lines.push(`${issue.name}: ${textureProblemWords(issue.problem)}`);
+  if (issues.length > LISTED_ISSUES) lines.push(`and ${formatCount(issues.length - LISTED_ISSUES)} more`);
+  if (loading > 0) lines.push(`Loading ${formatCount(loading)}…`);
+  return { label: 'Textures', before: null, after: shown === total ? formatCount(total) : `${formatCount(shown)} of ${formatCount(total)}`, tip: lines.join('\n') };
+}
