@@ -189,6 +189,8 @@ export class ProjectAssetIndex {
       }
       const read = await reading;
       if (read !== 'whole') return { notKnown: read };
+      // Another find may have dropped the cache meanwhile (a stale hit): what's left can't tell a GUID missing.
+      if (!this.wholePackageCache) return UNREAD;
     }
     return this.byGuid.get(guid) ?? null;
   }
