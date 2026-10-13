@@ -49,7 +49,7 @@ export function materialChangesOf(input: ComparisonInput): MaterialChange[] | nu
 }
 
 /** The reasons a person can act on first: the project isn't one, then it was never opened in Unity here. */
-const REASONS_FIRST: NotKnownReason[] = ['noProject', 'noLibrary', 'unread'];
+const REASONS_FIRST: NotKnownReason[] = ['noProject', 'outsidePackage', 'noLibrary', 'unread'];
 
 /**
  * Why materials that may have changed couldn't be compared, for the panel to say so rather than that nothing changed;

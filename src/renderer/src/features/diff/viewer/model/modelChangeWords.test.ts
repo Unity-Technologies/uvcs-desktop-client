@@ -188,6 +188,7 @@ describe('changeRows, for the materials', () => {
     });
     expect(changeRows([{ kind: 'materialsNotCompared', reason: 'unread' }])[0]!.detail).toBe("The project's files couldn't all be read.");
     expect(changeRows([{ kind: 'materialsNotCompared', reason: 'noProject' }])[0]!.detail).toBe("The model isn't in a Unity project.");
+    expect(changeRows([{ kind: 'materialsNotCompared', reason: 'outsidePackage' }])[0]!.detail).toBe("The project uses a package from a folder outside it, which isn't read.");
   });
 
   it("tells a texture the workspace lacks as a risk, and folds three of them", () => {

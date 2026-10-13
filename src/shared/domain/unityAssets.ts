@@ -47,12 +47,13 @@ export interface UnityAssetsAnswer {
 
 /**
  * `known`: every GUID answered null is missing. Otherwise one isn't known missing: `noProject`, a model outside any
- * Unity project (a package's own repository, which no project's index looks up); `noLibrary`, a project without a
+ * Unity project (a package's own repository, which no project's index looks up); `outsidePackage`, a project that
+ * loads a package from a folder outside it (`file:../…` in its manifest), whose assets no folder read holds; `noLibrary`, a project without a
  * `Library` (never opened in Unity on this machine: no package cache to look in); `unread`, a read that couldn't
  * finish (a file held, a change overtaking it), a file found the disk refused to check (an antivirus holding it:
  * textures too), or a find that keeps no index (whose misses never read the cache).
  */
-export type GuidMisses = 'known' | 'noProject' | 'noLibrary' | 'unread';
+export type GuidMisses = 'known' | 'noProject' | 'outsidePackage' | 'noLibrary' | 'unread';
 
 /** The most lookups of each kind one request may carry: a model is read with at most 64 textures. */
 export const MAX_UNITY_ASSET_LOOKUPS = 512;

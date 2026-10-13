@@ -244,6 +244,7 @@ const NOT_COMPARED_WORDS: Record<NotKnownReason, string> = {
   noLibrary: 'Open the project in Unity once on this computer to compare them.',
   unread: "The project's files couldn't all be read.",
   noProject: "The model isn't in a Unity project.",
+  outsidePackage: "The project uses a package from a folder outside it, which isn't read.",
 };
 
 function scaleSettingsTitle(before: { scaleFactor: number; convertUnits: boolean }, after: { scaleFactor: number; convertUnits: boolean }): string {

@@ -11,7 +11,7 @@ import { workspaceFileOf } from '../files/workspacePaths';
 import { diskProjectFiles } from '../unity/diskProjectFiles';
 import { ProjectAssetIndex, type ProjectFiles } from '../unity/ProjectAssetIndex';
 import { preferredMatches, searchedFolders, textureCandidates } from '../unity/textureSearch';
-import { listsPsdImporter, packageListsOf } from '../unity/unityPackages';
+import { listsPsdImporter, loadsPackagesFromOutside, packageListsOf } from '../unity/unityPackages';
 import { unityProjectFound, type UnityProject } from '../unity/unityProject';
 import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
 
@@ -59,8 +59,11 @@ export function createUnityAssetsService({ watchers, platform = process.platform
     const project = await unityProjectFound(modelPath, (root) => isFolder(workspacePath, root === '' ? 'ProjectSettings' : `${root}/ProjectSettings`));
     const index = project && indexOf(workspacePath, project);
     const modelFolder = posix.dirname(modelPath) === '.' ? '' : posix.dirname(modelPath);
-    // Outside a project, or in one without a `Library`, a GUID not found isn't known missing (`pathOfGuid`).
+    // Outside a project, or in one without a `Library`, a GUID not found isn't known missing (`pathOfGuid`); nor in one
+    // that loads a package from a folder outside it, which isn't read.
     let guidMisses: GuidMisses = index ? 'known' : 'noProject';
+    const [manifest] = project ? packageListsOf(project.root) : [];
+    const outsidePackages = manifest !== undefined && loadsPackagesFromOutside(await readText(workspacePath, manifest));
     // A file the disk refused (an antivirus holding it, too many open) is no answer: the find says it was unread.
     const found = async (path: string | null): Promise<FoundFile | null> => {
       if (path === null) return null;
@@ -71,6 +74,7 @@ export function createUnityAssetsService({ watchers, platform = process.platform
     };
     const byGuid = async (guid: string): Promise<FoundFile | null> => {
       const path = index ? await index.pathOfGuid(guid, modelFolder) : null;
+      if (path === null && outsidePackages && guidMisses === 'known') guidMisses = 'outsidePackage';
       if (path === null || typeof path === 'string') return found(path);
       if (guidMisses === 'known') guidMisses = path.notKnown;
       return null;
