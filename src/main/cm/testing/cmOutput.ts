@@ -198,3 +198,31 @@ export function extendedAclOutput(level: AclOutputLevel, indent = 2): string {
   if (inherited.length > 0) lines.push(`${pad(2)}Inherited`, ...inherited.map((parent) => extendedAclOutput(parent, indent + 4).trimEnd()));
   return `${lines.join('\n')}\n`;
 }
+
+/** An item of `cm ls --tree -R --format` (`treeListingArgs`): its workspace path and what tells its revision. */
+export interface ListedRecord {
+  path: string;
+  type?: 'dir' | 'txt' | 'bin' | 'xlink';
+  size?: number;
+  revid: number;
+  hash?: string;
+  repository?: string;
+  changeset?: number;
+  parentrevid?: number;
+}
+
+/** `cm ls <folder> --tree=<point> -R --format=…` output as `treeListingArgs` asks it: server paths, `rep:` specs. */
+export function treeListingOutput(...items: ListedRecord[]): string {
+  return formatOutput(
+    ...items.map(({ path, type = 'bin', size = 0, revid, hash = `hash${revid}==`, repository = 'eco@local', changeset = 1, parentrevid = -1 }) => [
+      `/${path}`,
+      type,
+      size,
+      revid,
+      hash,
+      `rep:${repository}`,
+      changeset,
+      parentrevid,
+    ]),
+  );
+}
