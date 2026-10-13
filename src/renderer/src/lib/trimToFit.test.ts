@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fitPath, fittedPathWidth, positionsInTrimmed, trimFolderToFit, trimMiddleToFit, trimToFit } from './trimToFit';
+import { fitPath, fittedPathWidth, positionsInTrimmed, trimFolderToFit, trimMiddleToFit, trimStartToFit, trimToFit } from './trimToFit';
 
 const measure = (text: string): number => Array.from(text).length;
 
@@ -18,6 +18,20 @@ describe('trimToFit', () => {
 
   it('never splits a surrogate pair', () => {
     expect(trimToFit('a😀bcd', 3, measure)).toBe('a😀…');
+  });
+});
+
+describe('trimStartToFit', () => {
+  it('keeps text that fits', () => {
+    expect(trimStartToFit('model/', 6, measure)).toBe('model/');
+  });
+
+  it('cuts the start and keeps the end after an ellipsis', () => {
+    expect(trimStartToFit('heart_model/', 7, measure)).toBe('…model/');
+  });
+
+  it('returns nothing when not even the ellipsis fits', () => {
+    expect(trimStartToFit('model/', 0, measure)).toBe('');
   });
 });
 
@@ -82,6 +96,11 @@ describe('positionsInTrimmed', () => {
   it('moves positions after a cut in the middle and drops the cut ones', () => {
     // '/main/' + '…' + '/child_1/' out of '/main/child-br/empty/child_1/'.
     expect(positionsInTrimmed('/main/child-br/empty/child_1/', '/main/…/child_1/', [1, 6, 21])).toEqual([1, 8]);
+  });
+
+  it('moves positions after a folder cut in its middle', () => {
+    // '3DModels/heart_-_an' + '…' + '_3d_model/' out of '3DModels/heart_-_animated_anatomical_3d_model/'.
+    expect(positionsInTrimmed('3DModels/heart_-_animated_anatomical_3d_model/', '3DModels/heart_-_an…_3d_model/', [9, 20, 36])).toEqual([9, 20]);
   });
 
   it('drops positions cut from the end', () => {

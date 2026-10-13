@@ -14,6 +14,15 @@ export function trimToFit(text: string, maxWidth: number, measure: Measure): str
   return shortened(mostCharactersFitting(chars.length, (kept) => measure(shortened(kept)) <= maxWidth));
 }
 
+/** The longest suffix of `text` that, after an ellipsis, fits in `maxWidth`: `text` itself when it fits, '' when not even the ellipsis does. */
+export function trimStartToFit(text: string, maxWidth: number, measure: Measure): string {
+  if (measure(text) <= maxWidth) return text;
+  if (measure(ELLIPSIS) > maxWidth) return '';
+  const chars = Array.from(text);
+  const shortened = (kept: number): string => ELLIPSIS + chars.slice(chars.length - kept).join('');
+  return shortened(mostCharactersFitting(chars.length, (kept) => measure(shortened(kept)) <= maxWidth));
+}
+
 /**
  * `text` with its middle cut out to fit in `maxWidth`, keeping as much of both ends as fits (the start one character
  * longer when they can't be even): `cm upd…/work/game` still tells the command and what it ran on. '' when not even the
@@ -43,21 +52,42 @@ function mostCharactersFitting(length: number, fits: (kept: number) => boolean):
   return fitting;
 }
 
+/** The fewest characters of a last folder worth showing once it is cut; with less room it is dropped whole. */
+const MIN_CUT_FOLDER_CHARS = 4;
+
 /**
  * A folder (ending in `/`) shortened to fit by dropping whole segments from its middle, so what is left still reads
  * as a path: `/main/…/child_1/` for `/main/child-br/empty-branch2/child_1/`. Keeps the first segment and as many of
- * the last ones as fit; when not even `/main/…/` does, just `…/`, or nothing.
+ * the last ones as fit; when not even the last one does, it is cut rather than dropped, since it tells rows apart
+ * (`trimLastFolderToFit`); when not even `/main/…/` fits, just `…/`, or nothing.
  */
 export function trimFolderToFit(folder: string, maxWidth: number, measure: Measure): string {
   if (measure(folder) <= maxWidth) return folder;
   const headEnd = folder.indexOf('/', folder.startsWith('/') ? 1 : 0) + 1;
   const segments = folder.slice(headEnd, -1).split('/');
   const head = folder.slice(0, headEnd) + ELLIPSIS + '/';
-  for (let kept = segments.length - 1; headEnd > 0 && kept >= 0; kept--) {
+  for (let kept = segments.length - 1; headEnd > 0 && kept >= 1; kept--) {
     const shortened = head + segments.slice(segments.length - kept).map((segment) => `${segment}/`).join('');
     if (measure(shortened) <= maxWidth) return shortened;
   }
+  const lastCut = headEnd > 0 ? trimLastFolderToFit(folder.slice(0, headEnd), segments, maxWidth, measure) : '';
+  if (lastCut) return lastCut;
+  if (headEnd > 0 && measure(head) <= maxWidth) return head;
   return measure(`${ELLIPSIS}/`) <= maxWidth ? `${ELLIPSIS}/` : '';
+}
+
+/**
+ * The first segment and the last folder cut to fit, with a single ellipsis so the path still has one cut: the last
+ * folder from its middle when it is the only one after the first (`3DModels/heart_-_an…_3d_model/`), from its start
+ * when folders were dropped before it (`Assets/…-_animated_model/`). '' when fewer than `MIN_CUT_FOLDER_CHARS` of it
+ * would be left.
+ */
+function trimLastFolderToFit(first: string, segments: readonly string[], maxWidth: number, measure: Measure): string {
+  const last = `${segments[segments.length - 1]}/`;
+  const cut = segments.length === 1 ? trimMiddleToFit(last, maxWidth - measure(first), measure) : trimStartToFit(last, maxWidth - measure(first), measure);
+  const keptChars = Array.from(cut).length - ELLIPSIS.length - '/'.length;
+  if (keptChars < MIN_CUT_FOLDER_CHARS) return '';
+  return first + cut;
 }
 
 /** The fewest characters of a name worth showing after a `…/`; with less room the name gets it all. */
@@ -65,9 +95,10 @@ const MIN_NAME_CHARS = 4;
 
 /**
  * A path (`/main/task/login`, `src/app/main.ts`) as a folder and a name shortened to fit, always the same way: whole
- * folders go from the middle of the folder first (`/main/…/login`), then the folder down to `…/`, and only then the
- * name, from its middle so both ends still tell it apart (`…/ghost-mo…fix`). The `…/` stays while the name keeps a few
- * characters, so a shortened path never reads as a top-level one.
+ * folders go from the middle of the folder first (`/main/…/login`), then the last folder is cut (`trimFolderToFit`),
+ * then the folder down to `…/`, and only then the name, from its middle so both ends still tell it apart
+ * (`…/ghost-mo…fix`). The `…/` stays while the name keeps a few characters, so a shortened path never reads as a
+ * top-level one.
  */
 export function fitPath(folder: string, name: string, maxWidth: number, measure: Measure): { folder: string; name: string } {
   const nameWidth = measure(name);

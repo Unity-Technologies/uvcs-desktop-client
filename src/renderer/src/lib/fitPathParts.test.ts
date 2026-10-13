@@ -20,9 +20,9 @@ describe('fitPathParts', () => {
     expect(widthOf(fitted)).toBeLessThanOrEqual(52);
   });
 
-  it('drops whole folders from the middle of an unchanged folder first', () => {
+  it('drops whole folders from the middle of an unchanged folder first, then cuts its last one', () => {
     expect(fitPathParts([same('src/nunit/nunitclient/merge/')], 20, measure)).toEqual([same('src/…/merge/')]);
-    expect(fitPathParts([same('src/nunit/nunitclient/'), changed('new/'), same('Name.cs')], 25, measure)).toEqual([same('src/…/'), changed('new/'), same('Name.cs')]);
+    expect(fitPathParts([same('src/nunit/nunitclient/'), changed('new/'), same('Name.cs')], 25, measure)).toEqual([same('src/…itclient/'), changed('new/'), same('Name.cs')]);
   });
 
   it('keeps a third of the line for the name, then drops folders from the middle of what changed', () => {
