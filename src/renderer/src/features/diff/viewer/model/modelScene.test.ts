@@ -1,8 +1,10 @@
 import { AnimationClip, AnimationMixer, Bone, SkinnedMesh, VectorKeyframeTrack, Vector3 } from 'three';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { boneLinks, buildModelScene } from './modelScene';
 import { modelSummary } from './modelSummary';
 import type { ParsedModel } from './parsedModel';
+import { parseModel } from './parseModel';
+import { SKINNED_TOP_CORNER, skinnedGltf } from './testing/skinnedGltf';
 import { testModel } from './testing/testModels';
 
 function sceneOf(model: ParsedModel) {
@@ -43,6 +45,32 @@ describe('buildModelScene', () => {
     (body as unknown as SkinnedMesh).skeleton.update();
     const moved = (body as unknown as SkinnedMesh).applyBoneTransform(0, rest.clone());
     expect(moved.x - rest.x).toBeCloseTo(3);
+  });
+});
+
+describe('buildModelScene, a skinned glTF', () => {
+  // GLTFLoader reads `self.URL`, and its FileLoader reports progress with `ProgressEvent`: globals a page and a worker
+  // have and Node hasn't.
+  beforeEach(() => {
+    vi.stubGlobal('self', globalThis);
+    vi.stubGlobal('ProgressEvent', class extends Event {});
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("draws the mesh where its joints put it, not again under its node's units and axes", async () => {
+    const read = await parseModel({ bytes: new TextEncoder().encode(skinnedGltf()), format: 'gltf' });
+    if (read.kind !== 'parsed') throw new Error('Not parsed');
+    const scene = sceneOf(read.model);
+    // As the renderer does before each frame: an attached skin follows its mesh.
+    scene.root.updateMatrixWorld(true);
+    const body = scene.meshes[0]!.solid as unknown as SkinnedMesh;
+    body.skeleton.update();
+    // Skinned (three applies the bones), then placed by the mesh: where it is drawn.
+    const top = body.getVertexPosition(SKINNED_TOP_CORNER, new Vector3()).applyMatrix4(body.matrixWorld);
+    // 180 cm up the file's Z stands 1.8 m up Y, as three's own loader and Unity's glTFast draw it.
+    expect(top.x).toBeCloseTo(0);
+    expect(top.y).toBeCloseTo(1.8);
+    expect(top.z).toBeCloseTo(0);
   });
 });
 
