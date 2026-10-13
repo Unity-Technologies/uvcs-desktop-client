@@ -5,7 +5,7 @@
 import { readFile, stat } from 'node:fs/promises';
 import { posix } from 'node:path';
 import type { UnityAssetsApi } from '@shared/api/unityAssets';
-import { MAX_UNITY_ASSET_LOOKUPS, type FoundFile, type TextureLookup, type UnityAssetsRequest } from '@shared/domain/unityAssets';
+import { MAX_STORED_PATHS, MAX_UNITY_ASSET_LOOKUPS, MAX_UNITY_ASSET_PATH_LENGTH, type FoundFile, type TextureLookup, type UnityAssetsRequest } from '@shared/domain/unityAssets';
 import { workspaceFileOf } from '../files/workspacePaths';
 import { diskProjectFiles } from '../unity/diskProjectFiles';
 import { ProjectAssetIndex, type ProjectFiles } from '../unity/ProjectAssetIndex';
@@ -48,7 +48,7 @@ export function createUnityAssetsService({ watchers, platform = process.platform
   }
 
   async function find(workspacePath: string, request: UnityAssetsRequest) {
-    if ([request.textures, request.guids, request.paths].some((list) => list.length > MAX_UNITY_ASSET_LOOKUPS)) throw new Error('Too many lookups for one model');
+    refuseUnlikely(request);
     const modelPath = workspacePathOf(request.modelPath);
     if (modelPath === null) throw new Error(`${request.modelPath} is outside the workspace`);
     const project = unityProjectOf(modelPath);
@@ -83,6 +83,14 @@ export function createUnityAssetsService({ watchers, platform = process.platform
   }
 
   return { find };
+}
+
+/** Refuses what no model asks for: the renderer is not trusted, and each lookup reads the disk. */
+function refuseUnlikely(request: UnityAssetsRequest): void {
+  if ([request.textures, request.guids, request.paths].some((list) => list.length > MAX_UNITY_ASSET_LOOKUPS)) throw new Error('Too many lookups for one model');
+  if (request.textures.some((lookup) => lookup.storedPaths.length > MAX_STORED_PATHS)) throw new Error('Too many stored paths for one texture');
+  const strings = [request.modelPath, ...request.paths, ...request.guids, ...request.textures.flatMap((lookup) => [lookup.name, ...lookup.storedPaths, lookup.remapGuid ?? ''])];
+  if (strings.some((text) => text.length > MAX_UNITY_ASSET_PATH_LENGTH)) throw new Error('A name or path too long for a model to name');
 }
 
 /** A workspace-relative path, `/`-separated and normalized; null for one leading out of the workspace. */

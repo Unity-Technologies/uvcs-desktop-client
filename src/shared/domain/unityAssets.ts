@@ -45,3 +45,7 @@ export interface UnityAssetsAnswer {
 
 /** The most lookups of each kind one request may carry: a model is read with at most 64 textures. */
 export const MAX_UNITY_ASSET_LOOKUPS = 512;
+/** The most paths a model stores for one texture (an FBX: its relative and absolute ones). */
+export const MAX_STORED_PATHS = 16;
+/** The longest name or path a request may carry: past any OS's path length. */
+export const MAX_UNITY_ASSET_PATH_LENGTH = 4096;
