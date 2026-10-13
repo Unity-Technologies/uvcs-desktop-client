@@ -1,4 +1,5 @@
 import { open as openFile, readdir as readFolder } from 'node:fs/promises';
+import { concurrencyLimit } from '@shared/concurrencyLimit';
 import { workspaceFileOf } from '../files/workspacePaths';
 import type { ProjectFiles } from './ProjectAssetIndex';
 
@@ -9,7 +10,7 @@ interface FolderAndFileReads {
 }
 
 /** Reads at once, across every index: macOS lets a process keep 256 files open by default, and the app has others. */
-const AT_ONCE = 32;
+const limited = concurrencyLimit(32);
 
 /**
  * A workspace's files as `ProjectAssetIndex` reads them, never outside the workspace (`workspaceFileOf`). What isn't
@@ -44,20 +45,4 @@ function absent<T>(none: () => T): (error: NodeJS.ErrnoException) => T {
     if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return none();
     throw error;
   };
-}
-
-let running = 0;
-const waiting: (() => void)[] = [];
-
-/** Runs `read` when fewer than `AT_ONCE` reads run; the slot passes straight to the next waiting, never left free. */
-async function limited<T>(read: () => Promise<T>): Promise<T> {
-  if (running < AT_ONCE) running++;
-  else await new Promise<void>((resolve) => waiting.push(resolve));
-  try {
-    return await read();
-  } finally {
-    const next = waiting.shift();
-    if (next) next();
-    else running--;
-  }
 }
