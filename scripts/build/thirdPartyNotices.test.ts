@@ -102,7 +102,9 @@ describe('thirdPartyNotices', () => {
   it('fails when the supplied text is for another license than the package names now', () => {
     const supplied = suppliedFor({ tiny: { license: 'MIT', source: 'taken from github.com/someone/tiny', text: 'MIT License' } });
 
-    expect(() => thirdPartyNotices(['/r/node_modules/tiny/index.js'], read, supplied)).toThrow(/tiny 1\.0\.0 \(ISC\)/);
+    expect(() => thirdPartyNotices(['/r/node_modules/tiny/index.js'], read, supplied)).toThrow(
+      'these have none: tiny 1.0.0 (ISC; SUPPLIED_LICENSES has MIT: review it).',
+    );
   });
 
   it('lists no package for a bundle of only the app’s own code', () => {

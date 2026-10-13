@@ -75,7 +75,7 @@ export function thirdPartyNotices(moduleIds: Iterable<string>, readPackage: Read
   const sorted = [...packages.values()]
     .sort((a, b) => a.name.localeCompare(b.name, 'en') || a.version.localeCompare(b.version, 'en'))
     .map((found) => withLicenseText(found, findSuppliedLicense));
-  failOnMissingLicenseTexts(sorted);
+  failOnMissingLicenseTexts(sorted, findSuppliedLicense);
 
   const header = [
     'Third-party software in Unity Version Control — Desktop',
@@ -94,13 +94,21 @@ function withLicenseText(found: BundledPackage, findSuppliedLicense: FindSupplie
   return { ...found, licenseFiles: [{ fileName: `LICENSE (the package ships none; ${supplied.source})`, text: supplied.text }] };
 }
 
-function failOnMissingLicenseTexts(packages: BundledPackage[]): void {
-  const missing = packages.filter((found) => found.licenseFiles.length === 0).map((found) => `${found.name} ${found.version} (${found.license})`);
+function failOnMissingLicenseTexts(packages: BundledPackage[], findSuppliedLicense: FindSuppliedLicense): void {
+  const missing = packages.filter((found) => found.licenseFiles.length === 0).map((found) => missingLicenseText(found, findSuppliedLicense));
   if (missing.length === 0) return;
   throw new Error(
     `THIRD_PARTY_NOTICES.txt needs the full license text of every bundled package, and these have none: ${missing.join(', ')}. ` +
-      "Add each one's upstream license text to SUPPLIED_LICENSES (scripts/build/suppliedLicenses.ts), for the license its package.json names.",
+      "Add each one's upstream license text to SUPPLIED_LICENSES (scripts/build/suppliedLicenses.ts), for the license its package.json names, " +
+      'or review the entry the package has outgrown.',
   );
+}
+
+/** A package without a license text, as the build's error names it: a stale `SUPPLIED_LICENSES` entry says so. */
+function missingLicenseText(found: BundledPackage, findSuppliedLicense: FindSuppliedLicense): string {
+  const supplied = findSuppliedLicense(found.name);
+  const stale = supplied ? `; SUPPLIED_LICENSES has ${supplied.license}: review it` : '';
+  return `${found.name} ${found.version} (${found.license}${stale})`;
 }
 
 function packageNotice(found: BundledPackage): string {
