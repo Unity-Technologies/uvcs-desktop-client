@@ -143,7 +143,8 @@ repositories once a year, and again whenever it takes in new third-party code or
 
 ## License
 
-[Apache License 2.0](LICENSE.md), copyright Unity Technologies (see [NOTICE](NOTICE)). The installed app lists the
-open-source libraries it includes, with their licenses, in `THIRD_PARTY_NOTICES.txt`.
+Copyright © 2026 Unity Technologies. Made available under the
+[Unity Terms of Service](https://unity.com/legal/terms-of-service): see [LICENSE.md](LICENSE.md). The installed app lists
+the open-source libraries it includes, with their licenses, in `THIRD_PARTY_NOTICES.txt`.
 
 "Unity" and "Unity Version Control" are trademarks of Unity Technologies. The license grants no rights to them.
