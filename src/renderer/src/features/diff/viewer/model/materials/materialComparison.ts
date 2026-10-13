@@ -1,7 +1,7 @@
 // When the "What changed" panel tells what changed in the materials (`materialChanges`), and when it can't: the
 // decisions `useModelMaterials` makes around the reads (docs/features/model-diff.md, "What changed"). Told only from
-// what the workspace answered for both versions: a find that failed, or GUIDs no project's index looked up (a model
-// outside a Unity project), answer every asset "not found" without it being so, which would read as missing materials.
+// what the workspace answered for both versions: a find that failed, or a GUID not found that can't be told missing
+// (`guidMissesKnown`: a model outside a Unity project, or in one without a `Library`), would read as missing materials.
 
 import type { UnityAssetsAnswer, UnityAssetsRequest } from '@shared/domain/unityAssets';
 import type { ImportSettingsSource } from '../modelImportSettings';
