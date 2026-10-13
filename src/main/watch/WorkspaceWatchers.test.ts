@@ -97,4 +97,31 @@ describe('WorkspaceWatchers', () => {
     created[1]!.emit();
     expect(heard).toEqual(['/wk/a changed in ', '/wk/b unwatched', '/wk/a unwatched']);
   });
+
+  it("tells what listens to the files that the app's own write changed anything, once it settles, though the windows don't hear it", async () => {
+    const { watchers } = setUp();
+    const heard: string[] = [];
+    watchers.listen({ changed: (path, change) => heard.push(`${path} changed in ${change.folders === null ? 'anywhere' : change.folders}`), unwatched: () => undefined });
+    watchers.watch(1, '/wk/a');
+    watchers.watch(2, '/wk/b');
+
+    let finish = () => {};
+    const write = new Promise<void>((resolve) => (finish = resolve));
+    watchers.ignoreOwnWrite(write, '/wk/a/src');
+    watchers.ignoreOwnWrite(Promise.resolve(), '/wk/a', 'changelists');
+    expect(heard).toEqual([]);
+    finish();
+    await write;
+    await Promise.resolve();
+    expect(heard).toEqual(['/wk/a changed in anywhere']);
+  });
+
+  it('tells how much of a workspace its watcher sees, and nothing for one not watched', () => {
+    const { watchers, created } = setUp();
+    watchers.watch(1, '/wk/a');
+    expect(watchers.coverageOf('/wk/a')).toBe('full');
+    created[0]!.breaks();
+    expect(watchers.coverageOf('/wk/a')).toBe('partial');
+    expect(watchers.coverageOf('/wk/b')).toBeUndefined();
+  });
 });
