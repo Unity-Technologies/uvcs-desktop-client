@@ -109,8 +109,9 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
   versions' plans (`planVersion`'s `resolved`, "Materials" below), each slot both versions have (a glTF's materials,
   keyed by their place in the file, paired by name instead, and only where both files name one material so:
   `pairedSlots`; its images held in the file are compared by their place, never their content): where it takes its
-  material from (Unity's default, a project's `.mat`, the model's own, a remap to a material the project hasn't: Unity's
-  missing material, a risk), and, for the same material, its base map, normal map, base color (as the Inspector shows
+  material from (Unity's default; a project's `.mat`, by its GUID, one of the same name elsewhere named by its folder;
+  the model's own; a remap to a material the project hasn't: Unity's missing material, a risk), and, for the same
+  material, its base map, normal map, base color (as the Inspector shows
   it, `#RRGGBB`), alpha (opaque, cutout, transparent), alpha cutoff, sides and the base map's tiling and offset; and a
   texture it now uses that the workspace hasn't (a risk; one it lacked before isn't news). The workspace's materials
   read alike for both versions, so a `.mat` changed alone never shows here: its own diff is its text. They're told

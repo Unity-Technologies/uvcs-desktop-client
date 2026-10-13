@@ -89,7 +89,7 @@ export function materialsMayDiffer(before: MaterialSide, after: MaterialSide): b
 /** A slot's own material is the same on both sides, whatever the file calls it: what changed in it is its look. */
 function sameMaterial(before: ResolvedMaterial, after: ResolvedMaterial): boolean {
   if (before.kind !== after.kind) return false;
-  return before.kind !== 'project' || before.name === (after as typeof before).name;
+  return before.kind !== 'project' || before.guid === (after as typeof before).guid;
 }
 
 function lookChanges(was: ResolvedSlot, now: ResolvedSlot, before: PlannedSlot | null, after: PlannedSlot | null): MaterialChange[] {

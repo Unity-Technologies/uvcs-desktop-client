@@ -78,8 +78,8 @@ export type ResolvedMaterial =
   | { kind: 'default' }
   /** Remapped to a material the project hasn't: Unity shows its missing material. */
   | { kind: 'missing' }
-  /** A `.mat` of the project, by its file name. */
-  | { kind: 'project'; name: string }
+  /** A `.mat` of the project: known by its GUID, named by its file name (and its path where names alike meet). */
+  | { kind: 'project'; guid: string; name: string; path: string }
   /** The material the model file defines (an OBJ's `.mtl`'s). */
   | { kind: 'file'; name: string };
 
@@ -267,7 +267,7 @@ function resolvedSlot(slot: string, key: string, source: SlotSource, found: Foun
   const material = found.materials.get(source.guid) ?? null;
   return {
     slot,
-    material: { kind: 'project', name: fileNameOf(file.path).replace(/\.mat$/i, '') },
+    material: { kind: 'project', guid: source.guid, name: fileNameOf(file.path).replace(/\.mat$/i, ''), path: file.path },
     baseMap: unityTexture(material?.baseMap ?? null, 'base map'),
     normalMap: unityTexture(material?.normalMap ?? null, 'normal map'),
   };
