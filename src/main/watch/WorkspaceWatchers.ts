@@ -89,11 +89,27 @@ export class WorkspaceWatchers {
     return this.watchedBy.get(viewer);
   }
 
-  /** Ignores what `write` changes (or only its changelist rewrites) in the workspace containing `cwd`, or in every watched one without it. */
+  /**
+   * Ignores what `write` changes (or only its changelist rewrites) in the workspace containing `cwd`, or in every
+   * watched one without it. The windows refresh after their own writes anyway; what keeps something of the files
+   * (`listen`) hears, once the write settles, that anything may have changed: the watcher drops those events.
+   */
   ignoreOwnWrite(write: Promise<unknown>, cwd?: string, only?: 'changelists'): void {
     for (const { watcher } of this.byPath.values()) {
-      if (cwd === undefined || watcher.covers(cwd)) watcher.ignoreOwnWrite(write, only);
+      if (cwd !== undefined && !watcher.covers(cwd)) continue;
+      watcher.ignoreOwnWrite(write, only);
+      if (only === 'changelists') continue;
+      const anywhere: WorkspaceChange = { content: true, pathsChanged: true, metadata: false, folders: null };
+      const tell = (): void => {
+        for (const listener of this.fileListeners) listener.changed(watcher.workspacePath, anywhere);
+      };
+      write.then(tell, tell);
     }
+  }
+
+  /** How much of a workspace its watcher sees; undefined when no window shows it, and nothing sees its changes. */
+  coverageOf(workspacePath: string): WatchCoverage | undefined {
+    return this.byPath.get(workspacePath)?.coverage;
   }
 
   private start(workspacePath: string): Entry {
