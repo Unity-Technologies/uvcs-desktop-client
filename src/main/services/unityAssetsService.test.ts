@@ -148,10 +148,10 @@ describe('unityAssets.find', () => {
 
   it("says whether GUIDs were looked up in a project's index: never for a model outside a Unity project, as in a package's own repository", async () => {
     const project = await workspaceWith({ 'Game/Assets/Art/Tree/Materials/Bark.mat.meta': meta(MAT_GUID) });
-    expect((await service(project).find({ guids: [MAT_GUID] })).guidsIndexed).toBe(true);
+    expect((await service(project).find({ guids: [MAT_GUID] })).guidMissesKnown).toBe(true);
     const packageRepository = await workspaceWith({ 'Packages/com.studio.trees/Materials/Leaf.mat.meta': meta(MAT_GUID) });
     const answer = await service(packageRepository).find({ modelPath: 'Packages/com.studio.trees/Models/Tree.fbx', guids: [MAT_GUID] });
-    expect(answer).toMatchObject({ guids: [null], guidsIndexed: false });
+    expect(answer).toMatchObject({ guids: [null], guidMissesKnown: false });
   });
 
   it('finds an asset of a local package by GUID', async () => {

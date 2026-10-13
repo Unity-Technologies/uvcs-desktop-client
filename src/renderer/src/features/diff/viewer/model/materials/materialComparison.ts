@@ -56,7 +56,7 @@ export function answerStateOf(
   const rounds: [UnityAssetsRequest, UnityAssetsAnswer | null | undefined][] = [[request, first], ...(secondRequest ? [[secondRequest, second] as [UnityAssetsRequest, UnityAssetsAnswer | null | undefined]] : [])];
   let state: AnswerState = 'answered';
   for (const [asked, answer] of rounds) {
-    if (answer === null || (answer && !answer.guidsIndexed && asksGuids(asked))) return 'unknown';
+    if (answer === null || (answer && !answer.guidMissesKnown && asksGuids(asked))) return 'unknown';
     if (answer === undefined) state = 'reading';
   }
   return materials === undefined ? 'reading' : state;

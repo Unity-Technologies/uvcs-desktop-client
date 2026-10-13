@@ -42,10 +42,10 @@ export interface UnityAssetsAnswer {
    */
   importsPsb: boolean;
   /**
-   * Whether GUIDs were looked up in a Unity project's index: false for a model outside any project (a package's own
-   * repository), where every GUID is answered null without telling whether the asset exists.
+   * Whether a GUID answered null is known missing: false for a model outside any project (a package's own repository),
+   * where no project's index looks GUIDs up and every one is answered null without telling whether the asset exists.
    */
-  guidsIndexed: boolean;
+  guidMissesKnown: boolean;
 }
 
 /** The most lookups of each kind one request may carry: a model is read with at most 64 textures. */

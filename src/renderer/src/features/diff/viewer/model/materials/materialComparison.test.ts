@@ -11,7 +11,7 @@ const GLASS_MAT = '0f2b6c1e9a8d4b3c8e7f6a5b4c3d2e1f';
 const MODEL = 'Assets/Lantern/Lantern.fbx';
 
 const request = (overrides: Partial<UnityAssetsRequest> = {}): UnityAssetsRequest => ({ modelPath: MODEL, textures: [], guids: [], paths: [], searchTexturesGlobally: false, ...overrides });
-const answer = (overrides: Partial<UnityAssetsAnswer> = {}): UnityAssetsAnswer => ({ textures: [], guids: [], paths: [], importsPsb: false, guidsIndexed: true, ...overrides });
+const answer = (overrides: Partial<UnityAssetsAnswer> = {}): UnityAssetsAnswer => ({ textures: [], guids: [], paths: [], importsPsb: false, guidMissesKnown: true, ...overrides });
 
 function side(settings: Partial<ModelMaterialsInput['settings']> = {}) {
   const input: ModelMaterialsInput = { format: 'fbx', slots: [{ key: 'Glass', name: 'Glass', material: fileMaterial('Glass') }], settings: { ...DEFAULT_IMPORT_SETTINGS, ...settings } };
@@ -74,9 +74,9 @@ describe('answerStateOf', () => {
   it("is unknown when a find failed, or GUIDs weren't looked up in a project's index: nothing tells they're missing", () => {
     expect(state(null)).toBe('unknown');
     expect(state(answer(), { second: null })).toBe('unknown');
-    expect(state(answer({ guids: [null], guidsIndexed: false }))).toBe('unknown');
-    expect(answerStateOf(request({ textures: [{ name: 'glass.png', storedPaths: [], remapGuid: GLASS_MAT }] }), answer({ textures: [null], guidsIndexed: false }), null, undefined, new Map())).toBe('unknown');
-    expect(answerStateOf(request(), answer({ guidsIndexed: false }), null, undefined, new Map())).toBe('answered');
+    expect(state(answer({ guids: [null], guidMissesKnown: false }))).toBe('unknown');
+    expect(answerStateOf(request({ textures: [{ name: 'glass.png', storedPaths: [], remapGuid: GLASS_MAT }] }), answer({ textures: [null], guidMissesKnown: false }), null, undefined, new Map())).toBe('unknown');
+    expect(answerStateOf(request(), answer({ guidMissesKnown: false }), null, undefined, new Map())).toBe('answered');
   });
 });
 

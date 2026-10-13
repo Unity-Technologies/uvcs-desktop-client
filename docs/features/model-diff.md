@@ -122,7 +122,7 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
   GUID the project lacks, reads the project's index once, as the look would. They're not told (`materialChangesOf`
   is null) without a workspace, for a version with no path in it or whose `.meta` read failed (`comparableVersions`),
   or when the workspace couldn't answer for a side (`answerStateOf`): a find that failed, or GUIDs no project's index
-  looked up (`UnityAssetsAnswer.guidsIndexed`: a model outside a Unity project, as in a package's own repository),
+  looked up (`UnityAssetsAnswer.guidMissesKnown`: a model outside a Unity project, as in a package's own repository),
   which answer every asset "not found" without it being so. Then the file's own list of textures named (`textures`)
   stands in; where they are told, or being read, it goes, as the materials say which textures Unity uses
   (`whatChanged`).

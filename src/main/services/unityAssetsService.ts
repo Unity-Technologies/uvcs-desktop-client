@@ -79,7 +79,7 @@ export function createUnityAssetsService({ watchers, platform = process.platform
     for (const guid of request.guids) guids.push(index ? await found(await index.pathOfGuid(guid, modelFolder)) : null);
     const paths = await Promise.all(request.paths.map((path) => found(workspacePathOf(path))));
     const importsPsb = project !== null && (await Promise.all(packageListsOf(project.root).map((list) => readText(workspacePath, list)))).some(listsPsdImporter);
-    return { textures, guids, paths, importsPsb, guidsIndexed: index !== null };
+    return { textures, guids, paths, importsPsb, guidMissesKnown: index !== null };
   }
 
   return { find };
