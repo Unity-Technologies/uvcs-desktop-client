@@ -133,6 +133,13 @@ describe('unityAssets.find', () => {
     }
   });
 
+  it('refuses a request no model makes: too many stored paths for a texture, or a name past any path length', async () => {
+    const { find } = service(await workspaceWith({}));
+    await expect(find({ textures: [lookup('bark.png', Array.from({ length: 17 }, (_, i) => `p${i}/bark.png`))] })).rejects.toThrow('Too many');
+    await expect(find({ textures: [lookup('a'.repeat(5000))] })).rejects.toThrow('too long');
+    await expect(find({ paths: [`${'b/'.repeat(3000)}c.png`] })).rejects.toThrow('too long');
+  });
+
   it('finds an asset of a local package by GUID', async () => {
     const workspace = await workspaceWith({ 'Game/Packages/com.studio.trees/Materials/Leaf.mat': 'mat', 'Game/Packages/com.studio.trees/Materials/Leaf.mat.meta': meta(MAT_GUID) });
     expect(paths((await service(workspace).find({ guids: [MAT_GUID] })).guids)).toEqual(['Game/Packages/com.studio.trees/Materials/Leaf.mat']);
