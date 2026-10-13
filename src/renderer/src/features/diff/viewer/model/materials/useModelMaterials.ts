@@ -39,7 +39,7 @@ export function useModelMaterials(workspacePath: string, versions: Record<Side, 
     }),
     [versions.before, versions.after, mtl.before, mtl.after, workspaceSettings],
   );
-  const offered = workspacePath !== '' && materialsOffered([inputs.before, inputs.after]);
+  const offered = workspacePath !== '' && materialsOffered([inputs.before ?? null, inputs.after ?? null]);
   const active = useLatch(wanted && offered, inputs);
 
   const sources = useMemo(() => ({ before: inputs.before && slotSources(inputs.before), after: inputs.after && slotSources(inputs.after) }), [inputs]);

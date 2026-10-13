@@ -11,9 +11,13 @@ const SIDES = ['before', 'after'] as const;
 
 /**
  * The import settings of the `.meta` the workspace has beside each version's model on disk, for a version none was
- * found for (`takesWorkspaceSettings`); null for the others, while reading, and where the workspace has none.
+ * found for (`takesWorkspaceSettings`); undefined while it is read; null for the others and where the workspace has
+ * none (or it can't be read).
  */
-export function useWorkspaceImportSettings(workspacePath: string, versions: Record<'before' | 'after', MaterialVersion | null>): Record<'before' | 'after', ModelImportSettings | null> {
+export function useWorkspaceImportSettings(
+  workspacePath: string,
+  versions: Record<'before' | 'after', MaterialVersion | null>,
+): Record<'before' | 'after', ModelImportSettings | null | undefined> {
   const metas = useMemo(
     () =>
       SIDES.map((side) => {
@@ -32,15 +36,19 @@ export function useWorkspaceImportSettings(workspacePath: string, versions: Reco
     combine: dataOf,
   });
   return useMemo(() => {
-    const settingsOf = (path: string | null): ModelImportSettings | null => {
-      const bytes = path === null ? null : reads[paths.indexOf(path)];
-      return bytes ? readImportSettings(new TextDecoder().decode(bytes)) : null;
+    const settingsOf = (path: string | null): ModelImportSettings | null | undefined => {
+      if (path === null) return null;
+      const bytes = reads[paths.indexOf(path)];
+      return bytes ? readImportSettings(new TextDecoder().decode(bytes)) : bytes;
     };
     return { before: settingsOf(metas[0]!), after: settingsOf(metas[1]!) };
   }, [reads, paths, metas]);
 }
 
-/** The reads' bytes, one array while none changes: a function of its own, as TanStack runs a new one each render. */
-function dataOf(results: { data?: Uint8Array | null }[]): (Uint8Array | null | undefined)[] {
-  return results.map((result) => result.data);
+/**
+ * The reads' bytes (null where there is no `.meta` or it can't be read, undefined while it is read), one array while
+ * none changes: a function of its own, as TanStack runs a new one each render.
+ */
+function dataOf(results: { data?: Uint8Array | null; isError: boolean }[]): (Uint8Array | null | undefined)[] {
+  return results.map((result) => (result.isError ? null : result.data));
 }

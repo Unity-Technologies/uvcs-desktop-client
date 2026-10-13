@@ -212,7 +212,8 @@ choice comes back in the other modes. The merge cards' stills stay clay (`modelT
   none was found for the version (`settingsFrom: 'none'`: a last change whose `.meta` changed since, a revision in
   History or a merge, which find no sibling) the workspace's (`takesWorkspaceSettings`, `useWorkspaceImportSettings`),
   as Unity imports it now: an FBX whose materials Unity doesn't make shows clay, never the file's own. A `.meta` whose
-  read failed (`'failed'`) shows the defaults until it is read again, never the workspace's look meanwhile. No `cm`
+  read failed (`'failed'`) shows the defaults until it is read again, never the workspace's look meanwhile; a side
+  waiting for the workspace's `.meta` looks nothing up until it is read (`materialsInputOf` is undefined). No `cm`
   command is added (`api.unityAssets.find` reads the disk only; `unityAssetsService.test.ts` checks it can't reach `cm`). Reading them from the server was rejected: one
   `cm cat` per texture per side, on a server many people share, for a look whose textures have their own image diff.
   Without a workspace the look isn't offered. A revision of another repository (an xlinked one's) has no place in the

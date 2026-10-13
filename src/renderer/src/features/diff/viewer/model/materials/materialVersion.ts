@@ -17,10 +17,13 @@ export interface MaterialVersion {
  * What decides a version's materials: each slot once by its key (`slotKeysOf`), with the material the file defines for
  * it: the model's own, or for an OBJ the `.mtl`'s of the slot's name (`mtl`, read beside it); and the import settings
  * of the version's `.meta`, or, when none was found for the version (`takesWorkspaceSettings`), of the workspace's
- * (`workspaceSettings`), as Unity imports the model now.
+ * (`workspaceSettings`: null where the workspace has none), as Unity imports the model now. Undefined while that
+ * one is still being read: nothing is looked up with settings about to change.
  */
-export function materialsInputOf(version: MaterialVersion | null, mtl: FileMaterial[] | null, workspaceSettings: ModelImportSettings | null = null): ModelMaterialsInput | null {
+export function materialsInputOf(version: MaterialVersion | null, mtl: FileMaterial[] | null, workspaceSettings: ModelImportSettings | null | undefined): ModelMaterialsInput | null | undefined {
   if (!version) return null;
+  const fromWorkspace = takesWorkspaceSettings(version.options);
+  if (fromWorkspace && workspaceSettings === undefined) return undefined;
   const { model } = version;
   const mtlByName = new Map((mtl ?? []).map((material) => [material.name, material]));
   const slots = new Map<string, MaterialSlot>();
@@ -32,8 +35,7 @@ export function materialsInputOf(version: MaterialVersion | null, mtl: FileMater
       slots.set(key, { key, name, material });
     });
   }
-  const { settings } = version.options;
-  return { format: model.format, slots: [...slots.values()], settings: takesWorkspaceSettings(version.options) && workspaceSettings ? workspaceSettings : settings };
+  return { format: model.format, slots: [...slots.values()], settings: (fromWorkspace && workspaceSettings) || version.options.settings };
 }
 
 /**
