@@ -5,9 +5,11 @@
 // which read the materials from the workspace on disk: the same `.mat` reads the same on both sides, so a change
 // within a material is one of the file's own. Words are `materialChangeWords`'.
 
+import type { UnityAssetsRequest } from '@shared/domain/unityAssets';
 import { Color, LinearSRGBColorSpace } from 'three';
 import type { AlphaMode } from '../parsedModel';
 import type { PlannedSlot, ResolvedMaterial, ResolvedSlot, SlotTexture, VersionPlan } from './materialPlan';
+import type { SlotSource } from './slotSources';
 
 /** A map's tiling and offset, as the material's Inspector shows them. */
 export interface Tiling {
@@ -45,6 +47,22 @@ export function materialChanges(before: VersionPlan, after: VersionPlan): Materi
     changes.push(...newlyMissing(was, now));
   }
   return changes;
+}
+
+/** A version as the comparison would read it: its slots' sources, and what it would ask the workspace. */
+export interface MaterialSide {
+  sources: Map<string, SlotSource>;
+  request: UnityAssetsRequest | null;
+}
+
+/**
+ * Whether two versions' materials may resolve differently, so they're worth reading to list their changes. The
+ * workspace answers both alike (its materials and textures are the same for both versions), so versions whose slots
+ * take the same sources and ask the same lookups resolve the same: nothing is read just to say so.
+ */
+export function materialsMayDiffer(before: MaterialSide, after: MaterialSide): boolean {
+  const keyOf = ({ sources, request }: MaterialSide): string => JSON.stringify([[...sources].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)), request]);
+  return keyOf(before) !== keyOf(after);
 }
 
 function sameMaterial(before: ResolvedMaterial, after: ResolvedMaterial): boolean {
