@@ -237,7 +237,9 @@ trusted.
   the clips cut from the takes by frames (counted at the FBX's frame rate, `TimeMode`; 30 fps without one), and the
   materials remapped onto slots. `importSettingsChanges` tells what the settings do with the model that no longer
   fits it, only when this change broke it: a remap onto a slot it doesn't have, an avatar bone it doesn't have, a clip
-  past its take's end or from a take it doesn't have; and a Scale Factor changed. One `cm cat` a side, cached.
+  past its take's end or from a take it doesn't have; and a Scale Factor changed. Nothing of them is told when a
+  side's `.meta` read failed (`whatChanged`'s `settingsRead`): Unity's defaults stand in for it, and aren't its
+  settings. One `cm cat` a side, cached.
 - **A model's `.meta` diffed alone** (`modelOfMeta`) shows as the model under each version's settings (`ModelMetaDiff`,
   "Code | Model", the model by default, remembered as `representations.meta`): raising the Scale Factor instead of
   exporting again reads "100× larger in Unity". Only where the model can be found beside it (`modelBesideMeta`);

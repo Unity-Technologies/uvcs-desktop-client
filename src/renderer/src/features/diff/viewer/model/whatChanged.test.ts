@@ -29,7 +29,7 @@ describe('whatChanged', () => {
     expect(kinds(whatChanged(of({ gltf: true })))).toEqual(['exporter', 'textures', 'scaleFactor']);
   });
 
-  it("A .meta whose read failed tells nothing of its settings: Unity's defaults stand in for it", () => {
+  it("a .meta whose read failed tells nothing of its settings: Unity's defaults stand in for it", () => {
     expect(kinds(whatChanged(of({ settingsRead: false })))).toEqual(['exporter']);
   });
 });
