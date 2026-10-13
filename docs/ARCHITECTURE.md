@@ -220,6 +220,21 @@ through the one invoke channel, and never open a window of their own: a link tha
 (`setWindowOpenHandler`, `shell.openExternal`). Only web pages open that way (`isWebAddress`): the OS would hand
 any other scheme (`file:`, `smb:`, `ms-msdt:`) to a program.
 
+## What leaves the device
+
+Besides `cm`, which talks only to the user's own servers, the app reaches three places, all listed with what they
+receive in `PRIVACY.md` at the repository root. A change that sends anything new, or something more to any of them,
+updates `PRIVACY.md` in the same pull request. There is no telemetry, analytics or crash reporting.
+
+- **Gravatar**, for profile pictures, only once the user chose to show them ("Profile pictures (Gravatar)").
+- **GitHub**, for updates (`AppUpdates`, docs/features/updates.md).
+- **Google**, for spell-checking dictionaries: Electron's built-in spellchecker is on by default (`createMainWindow`
+  doesn't set `webPreferences.spellcheck`), and on Windows and Linux it downloads the Hunspell dictionary of the OS's
+  language from Google's servers; macOS uses the system's spellchecker and downloads nothing.
+
+The page itself reaches nothing: the renderer's Content-Security-Policy (`src/renderer/index.html`) allows only the
+app's own files and `data:`/`blob:` images, so profile pictures reach it from main as data URLs.
+
 ## Errors
 
 Every error is the app's to tell, in its own UI; Electron's native "A JavaScript error occurred in the main process"

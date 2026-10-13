@@ -74,13 +74,7 @@ runs each one only when needed, asks for many things in one command, and keeps w
 
 ## Privacy
 
-No telemetry, analytics or crash reports. Besides the `cm` commands to your own servers, the app connects to two places:
-
-- **gravatar.com**, for profile pictures, as the official clients do: it sends a hash of each email address shown.
-  Turn the pictures off in Settings ▸ Appearance, and initials show instead.
-- **github.com**, to check this repository's releases for updates and download them. Nothing about you is sent.
-
-Settings and review marks stay on your computer.
+No telemetry, analytics or crash reports. What the app sends, and to whom: [PRIVACY.md](PRIVACY.md).
 
 ## Build from source
 
