@@ -48,8 +48,8 @@ interface ItemDetailsPaneProps {
   menu: MenuEntry[];
   /** Selects a folder of the item's path in the tree. */
   onSelectFolder: (path: string) => void;
-  /** A folder's listing, once opened in the tree. */
-  folderContents?: TreeItem[];
+  /** The tree's listings, by folder, as opened: a folder's contents, and the files a model needs beside it. */
+  listings: ReadonlyMap<string, TreeItem[]>;
 }
 
 /**
@@ -58,7 +58,7 @@ interface ItemDetailsPaneProps {
  * what it holds. The heading follows the selection at once; the viewer and what `cm` is asked once it settles, without
  * remounting, so arrowing through the tree reads and renders no file it passes.
  */
-export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu, onSelectFolder, folderContents }: ItemDetailsPaneProps) {
+export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu, onSelectFolder, listings }: ItemDetailsPaneProps) {
   const shown = useSettledValue(item, item.path);
   const settled = shown.path === item.path;
   const inWorkspace = pendingIndex !== undefined;
@@ -150,11 +150,11 @@ export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu,
         isFile &&
         shownComparison && (
           // Only the Files view switches "Diff | Annotate" with a key: Browse repository has no such command.
-          <ItemViewer workspacePath={workspacePath} item={shown} comparison={shownComparison} comment={comment} viewShortcut={inWorkspace ? hotkey('annotate') : undefined} />
+          <ItemViewer workspacePath={workspacePath} item={shown} comparison={shownComparison} comment={comment} listings={listings} viewShortcut={inWorkspace ? hotkey('annotate') : undefined} />
         )
       }
     >
-      {!isFile && <FolderDetails item={item} contents={folderContents} changesInside={pendingIndex?.countInside(item.path)} details={details} />}
+      {!isFile && <FolderDetails item={item} contents={listings.get(item.path)} changesInside={pendingIndex?.countInside(item.path)} details={details} />}
     </DetailsPanel>
   );
 }

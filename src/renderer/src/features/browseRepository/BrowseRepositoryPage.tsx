@@ -78,7 +78,7 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
               item={focused}
               menu={revisionMenu(workspacePath, page.changesetId, repository, [focused])}
               onSelectFolder={selectFolder}
-              folderContents={childrenByDirectory.get(focused.path)}
+              listings={childrenByDirectory}
             />
           ) : (
             <NoSelection noun="file" />
