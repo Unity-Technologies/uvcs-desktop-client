@@ -70,24 +70,25 @@ export function trimFolderToFit(folder: string, maxWidth: number, measure: Measu
     const shortened = head + segments.slice(segments.length - kept).map((segment) => `${segment}/`).join('');
     if (measure(shortened) <= maxWidth) return shortened;
   }
-  const lastCut = headEnd > 0 ? trimLastFolderToFit(folder.slice(0, headEnd), segments, maxWidth, measure) : '';
+  const lastCut = headEnd > 0 ? trimLastFolderToFit(folder.slice(0, headEnd), folder.slice(headEnd), segments.length, maxWidth, measure) : '';
   if (lastCut) return lastCut;
   if (headEnd > 0 && measure(head) <= maxWidth) return head;
   return measure(`${ELLIPSIS}/`) <= maxWidth ? `${ELLIPSIS}/` : '';
 }
 
 /**
- * The first segment and the last folder cut to fit, with a single ellipsis so the path still has one cut: the last
- * folder from its middle when it is the only one after the first (`3DModels/heart_-_an…_3d_model/`), from its start
- * when folders were dropped before it (`Assets/…-_animated_model/`). '' when fewer than `MIN_CUT_FOLDER_CHARS` of it
- * would be left.
+ * The first segment and what follows it cut to fit with a single ellipsis, so the path still has one cut: the last
+ * folder from its middle when it is the only one after the first (`3DModels/heart_-_an…_3d_model/`), else everything
+ * after the first from its start, the dropped folders with the start of the last (`Assets/…-_animated_model/`). The
+ * whole folder doesn't fit, so either cut always leaves an ellipsis. '' when fewer than `MIN_CUT_FOLDER_CHARS` of the
+ * last folder would be left.
  */
-function trimLastFolderToFit(first: string, segments: readonly string[], maxWidth: number, measure: Measure): string {
-  const last = `${segments[segments.length - 1]}/`;
-  const cut = segments.length === 1 ? trimMiddleToFit(last, maxWidth - measure(first), measure) : trimStartToFit(last, maxWidth - measure(first), measure);
+function trimLastFolderToFit(first: string, rest: string, segmentCount: number, maxWidth: number, measure: Measure): string {
+  const room = maxWidth - measure(first);
+  const cut = segmentCount === 1 ? trimMiddleToFit(rest, room, measure) : trimStartToFit(rest, room, measure);
   const keptChars = Array.from(cut).length - ELLIPSIS.length - '/'.length;
-  if (keptChars < MIN_CUT_FOLDER_CHARS) return '';
-  return first + cut;
+  // Measured joined too: kerning can make the whole a fraction wider than its parts.
+  return keptChars >= MIN_CUT_FOLDER_CHARS && measure(first + cut) <= maxWidth ? first + cut : '';
 }
 
 /** The fewest characters of a name worth showing after a `…/`; with less room the name gets it all. */
