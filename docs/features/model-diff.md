@@ -229,7 +229,7 @@ choice comes back in the other modes. The merge cards' stills stay clay (`modelT
   texture whose name says it is the base color (`_MainTexture`; never one named normal, mask, detail…; a name that says
   nothing, `Texture2D_B222E8F`, is none); the normal map `_BumpMap` or `_NormalMap`; tiling and offset; the color
   `_BaseColor` or `_Color` (sRGB); alpha clip (`_AlphaClip`, `_AlphaCutoffEnable`, Built-in `_Mode` 1, cutoff
-  `_Cutoff`/`_AlphaCutoff`), transparency (`_Surface`, `_SurfaceType`, `_Mode` 2 or 3), both sides (`_Cull` or
+  `_Cutoff`/`_AlphaCutoff`), transparency (`_Surface`, `_SurfaceType`, `_Mode` 2 or 3; a `_Mode` left over is ignored where `_Surface` or `_SurfaceType` is set), both sides (`_Cull` or
   `_CullMode` 0, `_DoubleSidedEnable`). Textures by GUID.
 - **Unity's texture search** (`textureCandidates`, `main/unity/textureSearch.ts`), for a texture the file names: a
   `.meta` remap of the texture by its name without extension (by GUID); the model's folder; `Textures/` there and in

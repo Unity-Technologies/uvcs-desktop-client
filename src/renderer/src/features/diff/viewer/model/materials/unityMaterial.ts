@@ -53,7 +53,9 @@ export function readUnityMaterial(text: string): UnityMaterial | null {
   const floats = namedEntries(saved.m_Floats);
   const colors = namedEntries(saved.m_Colors);
   const float = (name: string): number | undefined => numberOf(floats.get(name));
-  const builtInMode = float('_Mode');
+  // A URP or HDRP material converted from the Built-in pipeline may keep its `_Mode`: its own surface decides then.
+  const ownSurface = float('_Surface') !== undefined || float('_SurfaceType') !== undefined;
+  const builtInMode = ownSurface ? undefined : float('_Mode');
   const clipped = float('_AlphaClip') === 1 || float('_AlphaCutoffEnable') === 1 || builtInMode === BUILT_IN_CUTOUT;
   const blended = float('_Surface') === 1 || float('_SurfaceType') === 1 || builtInMode === BUILT_IN_FADE || builtInMode === BUILT_IN_TRANSPARENT;
   return {
