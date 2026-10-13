@@ -33,7 +33,8 @@ export interface ModelImportSettings {
   textureRemaps: { name: string; guid: string }[];
   /**
    * Whether a texture the file names may be any file of its name in the project when the folders Unity looks in first
-   * don't have it (`materials.searchTexturesGlobally`). A `.meta` older than the setting doesn't write it: true then.
+   * don't have it (`materials.searchTexturesGlobally`). Without it, as the importer that wrote the `.meta` did: one
+   * older than the setting (ModelImporter `serializedVersion` below 24600) always searched, a newer one doesn't.
    */
   searchTexturesGlobally: boolean;
 }
@@ -53,6 +54,8 @@ export const DEFAULT_IMPORT_SETTINGS: ModelImportSettings = {
 
 const HUMANOID = '3';
 const NO_MATERIALS = '0';
+/** The ModelImporter version that has "search textures globally" (Unity 6000.6, backported to 6000.3). */
+const GLOBAL_SEARCH_SETTING_VERSION = 24600;
 
 /** The settings of a `.meta`'s ModelImporter; the defaults when it has none or doesn't read. */
 export function readImportSettings(metaText: string): ModelImportSettings {
@@ -77,7 +80,8 @@ export function readImportSettings(metaText: string): ModelImportSettings {
     remapsWithoutMaterials: importer.remapMaterialsIfMaterialImportModeIsNone === undefined || importer.remapMaterialsIfMaterialImportModeIsNone === '1',
     materialRemaps: remapsOf(importer.externalObjects, 'UnityEngine:Material').map(({ name, guid }) => ({ slot: name, guid })),
     textureRemaps: remapsOf(importer.externalObjects, 'UnityEngine:Texture2D'),
-    searchTexturesGlobally: materials.searchTexturesGlobally === undefined || numberOf(materials.searchTexturesGlobally, 1) !== 0,
+    searchTexturesGlobally:
+      materials.searchTexturesGlobally === undefined ? numberOf(importer.serializedVersion, 0) < GLOBAL_SEARCH_SETTING_VERSION : numberOf(materials.searchTexturesGlobally, 1) !== 0,
   };
 }
 
