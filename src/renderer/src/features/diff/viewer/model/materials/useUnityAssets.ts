@@ -1,10 +1,10 @@
 import { useQueries } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { BRANCH_TREE_LIFE_MS, foundFileKey, type AssetsPoint, type UnityAssetsAnswer, type UnityAssetsRequest } from '@shared/domain/unityAssets';
+import { foundFileKey, type UnityAssetsAnswer, type UnityAssetsRequest } from '@shared/domain/unityAssets';
 import { api } from '../../../../../api/client';
 import { IMMUTABLE_QUERY } from '../../../../../app/queryClient';
 import { queryKeys } from '../../../../../api/queryKeys';
-import { materialFiles, uniqueFiles, uniqueRequests } from './assetAnswers';
+import { findStaleTime, materialFiles, uniqueFiles, uniqueRequests } from './assetAnswers';
 import { readUnityMaterial, type UnityMaterial } from './unityMaterial';
 
 /** Each request's answer (`api.unityAssets.find`), undefined while it's being found, null for none or a failure. */
@@ -15,7 +15,7 @@ export function useUnityAssets(workspacePath: string, requests: (UnityAssetsRequ
     queries: unique.requests.map((request) => ({
       queryKey: queryKeys.inWorkspace(workspacePath, 'unityAssets', request),
       queryFn: () => api.unityAssets.find(workspacePath, request),
-      staleTime: staleTimeAt(request.point),
+      staleTime: (query: { state: { data?: UnityAssetsAnswer } }) => findStaleTime(request.point, query.state.data),
     })),
     combine: answersOf,
   });
@@ -48,15 +48,6 @@ export function useUnityMaterials(
       return new Map(side.map(({ guid, file }) => [guid, file ? materialOf(byKey.get(foundFileKey(file)) ?? null) : null]));
     });
   }, [reads, answers, requests]);
-}
-
-/**
- * How long a find's answer holds: the disk changes under us, as a workspace file's content does; a changeset's tree
- * never changes; a branch's head moves as people check in (`BRANCH_TREE_LIFE_MS`, as main keeps its tree).
- */
-function staleTimeAt(point: AssetsPoint): number {
-  if (point.kind === 'workspace') return 0;
-  return point.at.startsWith('cs:') ? Number.POSITIVE_INFINITY : BRANCH_TREE_LIFE_MS;
 }
 
 function materialOf(bytes: Uint8Array | null): UnityMaterial | null {
