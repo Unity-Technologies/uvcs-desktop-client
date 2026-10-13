@@ -1,8 +1,9 @@
 // `ParsedModel`s built in tests: a hierarchy by names, each mesh a box of its own size and slots, so a test reads as
 // the model an artist exported ("a crate with a lid") and states only what it is about.
 
-import { AnimationClip, Euler, Quaternion } from 'three';
+import { AnimationClip, Euler, Matrix4, Quaternion } from 'three';
 import { fbxAxisConversion, Y_UP_AXES } from '../fbxAxes';
+import { worldMatricesOf } from '../modelSpaces';
 import type { FileMaterial, ModelClip, ModelMesh, ModelNode, ModelNodeKind, ParsedModel } from '../parsedModel';
 
 export interface TestNode {
@@ -27,7 +28,7 @@ export interface TestMesh {
   uv1?: boolean;
   colors?: boolean;
   blendShapes?: string[];
-  /** Bone names the mesh is skinned to. */
+  /** Bone names the mesh is skinned to, each vertex to the first, bound as an FBX binds: where they all are now. */
   bones?: string[];
 }
 
@@ -64,7 +65,9 @@ export function testModel(spec: TestModel): ParsedModel {
       scale: node.scale ?? [1, 1, 1],
     });
   }
-  const meshes = spec.nodes.flatMap((node) => (node.mesh ? [boxMesh(index.get(node.name)!, node.mesh, index)] : []));
+  // In the file's space, as a loader binds a skin.
+  const world = worldMatricesOf({ nodes, unitScale: 1, importScale: 1, axisConversion: new Matrix4().elements }, new Matrix4());
+  const meshes = spec.nodes.flatMap((node) => (node.mesh ? [boxMesh(index.get(node.name)!, node.mesh, index, world)] : []));
   return {
     format: 'fbx',
     nodes,
@@ -91,7 +94,7 @@ const FACES: { normal: [number, number, number]; corners: [number, number, numbe
   { normal: [0, 0, -1], corners: [[1, -1, -1], [-1, -1, -1], [-1, 1, -1], [1, 1, -1]] },
 ];
 
-function boxMesh(node: number, mesh: TestMesh, nodeIndex: Map<string, number>): ModelMesh {
+function boxMesh(node: number, mesh: TestMesh, nodeIndex: Map<string, number>, world: Matrix4[]): ModelMesh {
   const [sx, sy, sz] = (mesh.size ?? [1, 1, 1]).map((value) => value / 2) as [number, number, number];
   const [cx, cy, cz] = mesh.center ?? [0, 0, 0];
   const positions: number[] = [];
@@ -125,7 +128,13 @@ function boxMesh(node: number, mesh: TestMesh, nodeIndex: Map<string, number>): 
     slots,
     slotMaterials: slots.map(() => -1),
     groups: slots.map((_, slot) => ({ start: slot * facesPerSlot * 6, count: facesPerSlot * 6, slot })),
-    skin: mesh.bones ? { bones: mesh.bones.map((bone) => nodeIndex.get(bone)!), boneInverses: new Float32Array(mesh.bones.length * 16) } : null,
+    skin: mesh.bones ? skinOf(mesh.bones.map((bone) => nodeIndex.get(bone)!), world, node) : null,
     blendShapes: (mesh.blendShapes ?? []).map((name) => ({ name, deltas: new Float32Array(vertexCount * 3) })),
   };
+}
+
+function skinOf(bones: number[], world: Matrix4[], node: number): NonNullable<ModelMesh['skin']> {
+  const boneInverses = new Float32Array(bones.length * 16);
+  bones.forEach((bone, i) => boneInverses.set(world[bone]!.clone().invert().elements, i * 16));
+  return { bones, boneInverses, bindMatrix: world[node]!.elements.slice() };
 }

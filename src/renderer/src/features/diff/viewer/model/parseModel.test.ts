@@ -1,3 +1,4 @@
+import { Matrix4 } from 'three';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ModelBytes, ModelFormat } from '@shared/domain/content';
 import { gltfCompanions } from './gltfJson';
@@ -5,6 +6,7 @@ import { parseModel } from './parseModel';
 import type { ParsedModel } from './parsedModel';
 import { fbxAxisConversion, Y_UP_AXES } from './fbxAxes';
 import { asciiFbx, box } from './testing/asciiFbx';
+import { skinnedGltf } from './testing/skinnedGltf';
 
 const bytesOf = (text: string, format: ModelFormat): ModelBytes => ({ bytes: new TextEncoder().encode(text), format });
 
@@ -267,6 +269,14 @@ describe('parseModel, glTF', () => {
       [0, 0, 1],
     ]);
     expect(model.meshes.flatMap((mesh) => mesh.slotMaterials)).toEqual([0, 1]);
+  });
+
+  it("binds a skinned mesh in the file's space, not under its node: glTF places it by its joints alone", async () => {
+    const model = await parsed(bytesOf(skinnedGltf(), 'gltf'));
+    const body = model.meshes[0]!;
+    expect(model.nodes[body.node]!.name).toBe('Body');
+    expect(body.skin!.bones.map((bone) => model.nodes[bone]!.name)).toEqual(['Hips']);
+    expect(body.skin!.bindMatrix).toEqual(new Matrix4().toArray());
   });
 
   it('names the compression a glTF needs a decoder for', async () => {
