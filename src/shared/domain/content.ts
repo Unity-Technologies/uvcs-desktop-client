@@ -14,7 +14,9 @@ export type ContentSource =
    * The file at a repository path (`/src/a.ts`) in a changeset, a branch's head or a shelve (`cs:12`, `br:/main`,
    * `sh:3`), also under an xlink, where a `serverpath:` spec finds nothing. `repository` names the xlinked repository
    * when the path is known to be under an xlink: it is read from the point's tree at once (`listsTree`), never by a
-   * `serverpath:` that can't find it.
+   * `serverpath:` that can't find it. It is a flag, not where the revision is read: the tree's `<Repository>` names
+   * that (an xlink nested in it, or a sibling under another xlink, hold the file elsewhere), so never read the listed
+   * revision as `revid:N@<repository>`.
    */
   | { kind: 'repositoryPath'; path: string; at: string; repository?: string }
   /**
