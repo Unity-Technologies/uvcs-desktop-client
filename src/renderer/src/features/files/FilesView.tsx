@@ -64,7 +64,7 @@ export function FilesView() {
     expand(workspacePath, ancestorsOf(path));
     setSelection({ selected: new Set(selected), anchor: path });
     setRevealPath(path);
-    useFilesViewStore.getState().revealed();
+    useFilesViewStore.getState().revealed(revealRequest);
   }, [revealRequest, expand, workspacePath]);
 
   const openGoToFile = useCallback(

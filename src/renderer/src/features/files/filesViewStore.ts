@@ -15,7 +15,8 @@ interface FilesViewStore {
   revealRequest: RevealRequest | null;
   setFileView: (view: FileView) => void;
   requestReveal: (workspacePath: string, path: string, selected?: string[]) => void;
-  revealed: () => void;
+  /** Forgets the request once revealed; a newer one, asked meanwhile, stays for the view to take next. */
+  revealed: (request: RevealRequest) => void;
 }
 
 export const useFilesViewStore = create<FilesViewStore>((set) => ({
@@ -23,7 +24,7 @@ export const useFilesViewStore = create<FilesViewStore>((set) => ({
   revealRequest: null,
   setFileView: (fileView) => set({ fileView }),
   requestReveal: (workspacePath, path, selected) => set({ revealRequest: { workspacePath, path, selected } }),
-  revealed: () => set({ revealRequest: null }),
+  revealed: (request) => set((state) => (state.revealRequest === request ? { revealRequest: null } : state)),
 }));
 
 /**
