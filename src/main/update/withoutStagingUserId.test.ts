@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdtemp } from 'node:fs/promises';
+import { mkdtemp, writeFile } from 'node:fs/promises';
 import type { OutgoingHttpHeaders } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -8,7 +8,7 @@ import { AppUpdater, Provider, type UpdateInfo } from 'electron-updater';
 import type { AppAdapter } from 'electron-updater/out/AppAdapter';
 import type { DownloadUpdateOptions } from 'electron-updater/out/AppUpdater';
 import type { ProviderRuntimeOptions } from 'electron-updater/out/providers/Provider';
-import { withoutStagingUserId } from './withoutStagingUserId';
+import { removeLeftoverStagingUserId, withoutStagingUserId } from './withoutStagingUserId';
 
 const NEWER_RELEASE: UpdateInfo = { version: '1.1.0', files: [], path: '', sha512: '', releaseDate: '2026-10-13T00:00:00.000Z' };
 
@@ -137,5 +137,22 @@ describe('withoutStagingUserId', () => {
     const result = await updater.checkForUpdates();
 
     expect(result?.isUpdateAvailable).toBe(true);
+  });
+});
+
+describe('removeLeftoverStagingUserId', () => {
+  it('removes the staging user id an earlier version left', async () => {
+    const userDataPath = await mkdtemp(join(tmpdir(), 'updater-'));
+    await writeFile(join(userDataPath, '.updaterId'), '7c9d2a1e-3f4b-5c6d-8e9f-0a1b2c3d4e5f');
+
+    await removeLeftoverStagingUserId(userDataPath);
+
+    expect(existsSync(join(userDataPath, '.updaterId'))).toBe(false);
+  });
+
+  it('does nothing when there is none', async () => {
+    const userDataPath = await mkdtemp(join(tmpdir(), 'updater-'));
+
+    await expect(removeLeftoverStagingUserId(userDataPath)).resolves.toBeUndefined();
   });
 });
