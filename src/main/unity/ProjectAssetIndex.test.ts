@@ -148,12 +148,12 @@ describe('ProjectAssetIndex', () => {
     expect(reads).toEqual({ lists: 26, heads: 201 });
   });
 
-  it("doesn't keep a read that failed as an empty folder or a .meta without a GUID: the next find reads it again", async () => {
+  it("doesn't keep a read that failed as an empty folder or a .meta without a GUID, nor tell the GUID missing: the next find reads it again", async () => {
     for (const failing of ['Game/Assets/Far0', 'Game/Assets/Far0/rock3.png.meta']) {
       // Failing as long as the first find reads it (its rings reach `Assets` twice).
       const { disk } = memoryFiles(project(1), new Map([[failing, 2]]));
       const index = new ProjectAssetIndex(unityProjectOf('Game/Assets/Art/Tree/Tree.fbx')!, disk, 'linux');
-      expect(await index.pathOfGuid(guid(1003), MODEL_FOLDER)).toBeNull();
+      expect(await index.pathOfGuid(guid(1003), MODEL_FOLDER)).toBeUndefined();
       expect(await index.pathOfGuid(guid(1003), MODEL_FOLDER)).toBe('Game/Assets/Far0/rock3.png');
     }
   });
@@ -212,5 +212,29 @@ describe('ProjectAssetIndex', () => {
     expect(await after).toBe('Game/Assets/Far1/Bark2.mat');
     // Nor does the stale listing, settled after the change, stand in for the folder.
     expect(await index.pathOfGuid(guid(77), MODEL_FOLDER)).toBe('Game/Assets/Far1/Bark2.mat');
+  });
+
+  describe('the package cache, when in doubt, never tells a GUID missing', () => {
+    const CACHE = 'Game/Library/PackageCache';
+    const URP = `${CACHE}/com.unity.render-pipelines.universal@17.0.3`;
+    const withCache = () => new Map([...project(1), [`${URP}/Lit.mat`, 'mat'], [`${URP}/Lit.mat.meta`, meta(42)], [`${URP}/Unlit.mat.meta`, meta(43)]]);
+    const indexOf = (disk: ProjectFiles) => new ProjectAssetIndex(unityProjectOf('Game/Assets/Art/Tree/Tree.fbx')!, disk, 'linux');
+
+    it('answers undefined while a read of the cache failed, and finds the GUID once read again', async () => {
+      for (const failing of [URP, `${URP}/Lit.mat.meta`]) {
+        const index = indexOf(memoryFiles(withCache(), new Map([[failing, 1]])).disk);
+        expect(await index.pathOfGuid(guid(42), MODEL_FOLDER)).toBeUndefined();
+        expect(await index.pathOfGuid(guid(42), MODEL_FOLDER)).toBe(`${URP}/Lit.mat`);
+      }
+    });
+
+    it('answers undefined, to every find joining it, for a read of the cache a change overtook', async () => {
+      let index: ProjectAssetIndex;
+      const held = new Map([[CACHE, async () => index.noteChange({ content: true, pathsChanged: true, metadata: false, folders: null })]]);
+      index = indexOf(memoryFiles(withCache(), new Map(), held).disk);
+      const finds = await Promise.all([index.pathOfGuid(guid(99), MODEL_FOLDER), index.pathOfGuid(guid(98), MODEL_FOLDER)]);
+      expect(finds).toEqual([undefined, undefined]);
+      expect(await index.pathOfGuid(guid(42), MODEL_FOLDER)).toBe(`${URP}/Lit.mat`);
+    });
   });
 });
