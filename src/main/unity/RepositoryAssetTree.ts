@@ -55,7 +55,12 @@ export class RepositoryAssetTree {
       const top = this.coveringTop(path) ?? (this.isUnder(path, this.comparable(near)) ? near : wide);
       const key = this.comparable(top);
       let listing = seen.get(key);
-      if (!listing) seen.set(key, (listing = this.recursive(top).then((items) => items && this.sideOf(top, items, before))));
+      if (!listing) {
+        const derived = this.recursive(top).then((items) => items && this.sideOf(top, items, before));
+        // A failure isn't kept: the view lives on in a project's index, whose next lookup lists it again.
+        derived.catch(() => seen.get(key) === derived && seen.delete(key));
+        seen.set(key, (listing = derived));
+      }
       return listing;
     };
     const itemAt = async (path: string): Promise<TreeItem | null> => (await listingOf(this.comparable(path)))?.items.get(this.comparable(path)) ?? null;
