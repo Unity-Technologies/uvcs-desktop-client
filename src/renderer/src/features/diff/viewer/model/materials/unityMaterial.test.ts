@@ -44,6 +44,20 @@ describe('readUnityMaterial', () => {
     expect(readUnityMaterial(unityMaterialYaml({ name: 'Plain', pipeline: 'urp' }))).toMatchObject({ baseMap: null, normalMap: null, baseColor: [1, 1, 1, 1] });
   });
 
+  it("takes a Shader Graph's texture as the base map only when its name says it is", () => {
+    const graph = (name: string, others: string[] = []) =>
+      [
+        'Material:',
+        '  m_SavedProperties:',
+        '    m_TexEnvs:',
+        ...[...others, name].flatMap((property) => [`    - ${property}:`, `        m_Texture: {fileID: 2800000, guid: ${property === name ? BARK : BARK_NORMAL}, type: 3}`, '        m_Scale: {x: 1, y: 1}', '        m_Offset: {x: 0, y: 0}']),
+      ].join('\n');
+    expect(readUnityMaterial(graph('_MainTexture', ['_NormalTexture']))?.baseMap?.guid).toBe(BARK);
+    expect(readUnityMaterial(graph('Albedo_Map', ['_DetailAlbedoMap', '_EmissionColorMap']))?.baseMap?.guid).toBe(BARK);
+    expect(readUnityMaterial(graph('Texture2D_B222E8F'))?.baseMap).toBeNull();
+    expect(readUnityMaterial(graph('_MaskMap', ['_BaseColorMask']))?.baseMap).toBeNull();
+  });
+
   it('reads a material Windows saved, with CRLF line ends', () => {
     const crlf = unityMaterialYaml({ name: 'Bark', pipeline: 'urp', baseMap: { guid: BARK } }).replaceAll('\n', '\r\n');
     expect(readUnityMaterial(crlf)?.baseMap?.guid).toBe(BARK);

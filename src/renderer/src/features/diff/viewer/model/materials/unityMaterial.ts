@@ -27,6 +27,13 @@ export interface UnityMaterial {
 
 /** URP's, then HDRP's, then the Built-in pipeline's. */
 const BASE_MAPS = ['_BaseMap', '_BaseColorMap', '_MainTex'];
+/**
+ * A Shader Graph names its properties itself (`_MainTexture`, `_AlbedoMap`, `Texture2D_B222E8F`): without one of
+ * the pipelines' names, a texture whose name says it is the base color is taken, and none whose name says it is
+ * anything else; a name that says nothing (`Texture2D_B222E8F`) is no base map.
+ */
+const LOOKS_LIKE_BASE_MAP = /base|albedo|diffuse|main|colou?r/i;
+const LOOKS_LIKE_OTHER_MAP = /normal|bump|mask|metal|occlusion|emissi|detail|height|rough|smooth|spec|_ao\b|mrl/i;
 const NORMAL_MAPS = ['_BumpMap', '_NormalMap'];
 const BASE_COLORS = ['_BaseColor', '_Color'];
 const CUTOFFS = ['_Cutoff', '_AlphaCutoff'];
@@ -50,7 +57,7 @@ export function readUnityMaterial(text: string): UnityMaterial | null {
   const clipped = float('_AlphaClip') === 1 || float('_AlphaCutoffEnable') === 1 || builtInMode === BUILT_IN_CUTOUT;
   const blended = float('_Surface') === 1 || float('_SurfaceType') === 1 || builtInMode === BUILT_IN_FADE || builtInMode === BUILT_IN_TRANSPARENT;
   return {
-    baseMap: firstTexture(textures, BASE_MAPS),
+    baseMap: firstTexture(textures, BASE_MAPS) ?? firstTexture(textures, [...textures.keys()].filter((name) => LOOKS_LIKE_BASE_MAP.test(name) && !LOOKS_LIKE_OTHER_MAP.test(name))),
     normalMap: firstTexture(textures, NORMAL_MAPS),
     baseColor: firstColor(colors, BASE_COLORS) ?? [1, 1, 1, 1],
     alpha: blended ? 'blend' : clipped ? 'clip' : 'opaque',
