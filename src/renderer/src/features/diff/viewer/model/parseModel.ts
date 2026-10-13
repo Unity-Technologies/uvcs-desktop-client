@@ -11,7 +11,8 @@ import { readFbxProperty, type FbxPropertyName } from './fbxProperties';
 import { fromThreeObject, type ModelFileFacts } from './fromThreeObject';
 import { readFbxTextureFiles } from './fbxTextureFiles';
 import { gltfNeed, gltfTextureImage, type GltfNeed } from './gltfJson';
-import { fileMaterialsOf, type TextureSource } from './materials/fileMaterials';
+import { fileMaterialsOf, type MaterialRefinement, type TextureSource } from './materials/fileMaterials';
+import { withSpecularGlossiness } from './materials/gltfSpecularGlossiness';
 import { fbxTextureSource, gltfTextureSource } from './materials/textureSources';
 import { noTextureLoading } from './noTextureLoading';
 import type { ParsedModel } from './parsedModel';
@@ -36,7 +37,7 @@ export async function parseModel({ bytes, format }: ModelBytes, companions: Read
   const manager = noTextureLoading((name) => textures.add(name), companionUrls);
   try {
     const loaded = await load(bytes, format, manager);
-    const { materials, indexOf } = fileMaterialsOf(loaded.root, loaded.textureSource);
+    const { materials, indexOf } = fileMaterialsOf(loaded.root, loaded.textureSource, loaded.refineMaterial);
     const facts: ModelFileFacts = { format, textures: [...textures].sort(), materials, unitScale: 1, upAxis: 'y', axisConversion: new Matrix4().elements, exportedFrom: null, frameRate: null };
     if (format === 'fbx') Object.assign(facts, fbxFacts(bytes, loaded.root));
     return { kind: 'parsed', model: fromThreeObject(loaded.root, loaded.animations, facts, indexOf) };
@@ -52,6 +53,7 @@ interface Loaded {
   animations: AnimationClip[];
   /** What the materials' textures stand for, as the loader tells. */
   textureSource: TextureSource;
+  refineMaterial?: MaterialRefinement;
 }
 
 const NO_TEXTURES: TextureSource = () => null;
@@ -70,7 +72,15 @@ async function load(bytes: Uint8Array, format: ModelBytes['format'], manager: Re
       const loader = new GLTFLoader(manager);
       loader.register((parser) => texturesNamedOnly(parser, manager.getHandler('texture')!));
       const gltf = await loader.parseAsync(format === 'gltf' ? new TextDecoder().decode(bytes) : arrayBufferOf(bytes), '');
-      return { root: gltf.scene, animations: gltf.animations, textureSource: gltfTextureSource(gltf.parser) };
+      return {
+        root: gltf.scene,
+        animations: gltf.animations,
+        textureSource: gltfTextureSource(gltf.parser),
+        refineMaterial: (material, fileMaterial) => {
+          const index = gltf.parser.associations.get(material)?.materials;
+          return index === undefined ? fileMaterial : withSpecularGlossiness(fileMaterial, gltf.parser.json, index);
+        },
+      };
     }
   }
 }

@@ -215,7 +215,10 @@ choice comes back in the other modes. The merge cards' stills stay clay (`modelT
   clay (Unity assigns the missing asset, never the file's own); any other slot the file's material, an OBJ's from its
   `.mtl` (`readMtlMaterials`, read beside it on disk). The legacy external location (`materialLocation: 0`, obsolete
   since 2019.3) counts as the file's own; its `Materials/` folder search isn't done. A glTF's materials are glTFast's:
-  the file's, keyed by material, not name (`slotKeysOf`: Sponza's 25 are all unnamed).
+  the file's, keyed by material, not name (`slotKeysOf`: Sponza's 25 are all unnamed); a map on the second UV set
+  (`texCoord: 1`, `TextureUse.channel`) samples it (`uv1`), GLTFLoader's copy of its texture known by the image source
+  it shares; a specular-glossiness material (`KHR_materials_pbrSpecularGlossiness`, which three no longer reads) takes
+  its diffuse texture and factor as glTFast does (`withSpecularGlossiness`).
 - **A `.mat`** (`readUnityMaterial`, over `parseUnityYaml`, which joins values Unity folded onto the next lines): the
   base map is the first set of `_BaseMap` (URP), `_BaseColorMap` (HDRP), `_MainTex` (Built-in), else a Shader Graph
   texture whose name says it is the base color (`_MainTexture`; never one named normal, mask, detail…; a name that says
