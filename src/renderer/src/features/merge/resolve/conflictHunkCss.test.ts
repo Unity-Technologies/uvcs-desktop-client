@@ -9,6 +9,10 @@ describe('shortenBranch', () => {
   it('drops whole folders from the middle of long ones, keeping the name', () => {
     expect(shortenBranch('/main/child-br-cr-sample/empty-branch2/child_1/subtask/merge-test')).toBe('/main/…/child_1/subtask/merge-test');
   });
+
+  it('cuts a long parent in its middle rather than dropping it', () => {
+    expect(shortenBranch('/main/child-br-cr-sample-with-a-long-name/merge-test')).toBe('/main/child-br-cr-…-long-name/merge-test');
+  });
 });
 
 describe('conflictHunkCss', () => {

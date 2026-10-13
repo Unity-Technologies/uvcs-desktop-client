@@ -35,8 +35,9 @@ interface PathLabelProps {
 /**
  * `src/app/main.ts` rendered as a dimmed folder followed by the file name; branches read the same way, the parent
  * branches dimmed before the leaf. When it doesn't fit, whole folders are dropped from the middle
- * (`src/…/app/main.ts`) so the name always stays whole. The cut is measured rather than left to CSS `text-overflow`,
- * which would cut the name first; a name too long on its own is cut from its middle (`fitPath`).
+ * (`src/…/app/main.ts`), then the last folder is cut (`3DModels/heart_-_an…_3d_model/scene.gltf`), so the name always
+ * stays whole. The cut is measured rather than left to CSS `text-overflow`, which would cut the name first; a name too
+ * long on its own is cut from its middle (`fitPath`, `trimFolderToFit`).
  */
 export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fitContent, maxWidth, tooltip = true }: PathLabelProps) {
   const nameStart = path.lastIndexOf('/') + 1;

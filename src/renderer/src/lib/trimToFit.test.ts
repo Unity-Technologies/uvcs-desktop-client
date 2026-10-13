@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fitPath, fittedPathWidth, positionsInTrimmed, trimFolderToFit, trimMiddleToFit, trimToFit } from './trimToFit';
+import { fitPath, fittedPathWidth, positionsInTrimmed, trimFolderToFit, trimMiddleToFit, trimStartToFit, trimToFit } from './trimToFit';
 
 const measure = (text: string): number => Array.from(text).length;
 
@@ -18,6 +18,20 @@ describe('trimToFit', () => {
 
   it('never splits a surrogate pair', () => {
     expect(trimToFit('a😀bcd', 3, measure)).toBe('a😀…');
+  });
+});
+
+describe('trimStartToFit', () => {
+  it('keeps text that fits', () => {
+    expect(trimStartToFit('model/', 6, measure)).toBe('model/');
+  });
+
+  it('cuts the start and keeps the end after an ellipsis', () => {
+    expect(trimStartToFit('heart_model/', 7, measure)).toBe('…model/');
+  });
+
+  it('returns nothing when not even the ellipsis fits', () => {
+    expect(trimStartToFit('model/', 0, measure)).toBe('');
   });
 });
 
@@ -54,6 +68,23 @@ describe('trimFolderToFit', () => {
     expect(trimFolderToFit('Assets/Scripts/Gameplay/', 20, measure)).toBe('Assets/…/Gameplay/');
   });
 
+  it('cuts the only folder after the first in its middle rather than dropping it', () => {
+    const folder = '3DModels/heart_-_animated_anatomical_3d_model/';
+    expect(trimFolderToFit(folder, 30, measure)).toBe('3DModels/heart_-_an…_3d_model/');
+  });
+
+  it('cuts the last folder from its start, after the dropped ones, keeping one ellipsis', () => {
+    expect(trimFolderToFit('Assets/Art/Models/heart_-_animated_model/', 25, measure)).toBe('Assets/…-_animated_model/');
+  });
+
+  it('never drops folders without an ellipsis, even where the last folder would fit right after the first', () => {
+    expect(trimFolderToFit('Assets/Art/heart_model/', 19, measure)).toBe('Assets/…eart_model/');
+  });
+
+  it('drops the last folder when too little of it would be left', () => {
+    expect(trimFolderToFit('3DModels/heart_-_animated/', 14, measure)).toBe('3DModels/…/');
+  });
+
   it('leaves only an ellipsis when not even the first segment fits', () => {
     expect(trimFolderToFit(branchParent, 6, measure)).toBe('…/');
     expect(trimFolderToFit('/main/', 4, measure)).toBe('…/');
@@ -69,6 +100,15 @@ describe('positionsInTrimmed', () => {
   it('moves positions after a cut in the middle and drops the cut ones', () => {
     // '/main/' + '…' + '/child_1/' out of '/main/child-br/empty/child_1/'.
     expect(positionsInTrimmed('/main/child-br/empty/child_1/', '/main/…/child_1/', [1, 6, 21])).toEqual([1, 8]);
+  });
+
+  it('moves positions after a folder cut in its middle', () => {
+    // '3DModels/heart_-_an' + '…' + '_3d_model/' out of '3DModels/heart_-_animated_anatomical_3d_model/'.
+    expect(positionsInTrimmed('3DModels/heart_-_animated_anatomical_3d_model/', '3DModels/heart_-_an…_3d_model/', [9, 20, 36])).toEqual([9, 20]);
+  });
+
+  it('moves positions after a last folder cut from its start', () => {
+    expect(positionsInTrimmed('Assets/Art/Models/heart_-_animated_model/', 'Assets/…-_animated_model/', [0, 18, 24])).toEqual([0, 8]);
   });
 
   it('drops positions cut from the end', () => {
@@ -88,6 +128,10 @@ describe('fitPath', () => {
 
   it('drops whole folders from the middle first', () => {
     expect(fit('/main/task/sub/', 'login', 17)).toBe('/main/…/sub/login');
+  });
+
+  it('cuts the last folder before dropping it, so rows that differ there stay apart', () => {
+    expect(fit('3DModels/heart_-_animated_anatomical_3d_model/', 'scene.gltf', 40)).toBe('3DModels/heart_-_an…_3d_model/scene.gltf');
   });
 
   it('then keeps …/ before the whole name', () => {

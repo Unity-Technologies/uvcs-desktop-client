@@ -15,6 +15,10 @@ describe('fitBranchName', () => {
     expect(fitBranchName(context('parents'), '/main/child-br-cr-sample/empty-branch2/child_1/subtask', 24)).toBe('/main/…/child_1/subtask');
   });
 
+  it('cuts a long parent branch in its middle rather than dropping it', () => {
+    expect(fitBranchName(context('long parent'), '/main/child-br-cr-sample/subtask', 24)).toBe('/main/child…mple/subtask');
+  });
+
   it('cuts a leaf too wide on its own in its middle, after a hint that it has parents', () => {
     const fitted = fitBranchName(context('leaf'), '/main/rendering-pipeline-integration-with-asset-bundles', 24);
     expect(fitted).toBe('…/rendering-p…et-bundles');
