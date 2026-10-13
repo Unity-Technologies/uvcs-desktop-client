@@ -71,8 +71,8 @@ function tree(height: number): string {
   return asciiFbx({
     nodes: [
       { name: 'Tree', kind: 'group' },
-      { name: 'Trunk', kind: 'mesh', parent: 'Tree', mesh: { ...box([30, height * 100, 30], [0, height * 50, 0]), materials: ['Bark'], uvs: true } },
-      { name: 'Canopy', kind: 'mesh', parent: 'Tree', mesh: { ...box([160, 120, 160], [0, height * 100 + 40, 0]), materials: ['Leaves'], uvs: true } },
+      { name: 'Trunk', kind: 'mesh', parent: 'Tree', mesh: { ...box([0.3, height, 0.3], [0, height / 2, 0]), materials: ['Bark'], uvs: true } },
+      { name: 'Canopy', kind: 'mesh', parent: 'Tree', mesh: { ...box([1.6, 1.2, 1.6], [0, height + 0.4, 0]), materials: ['Leaves'], uvs: true } },
     ],
     materials: {
       Bark: { diffuse: [0.8, 0.8, 0.8], diffuseTexture: { fileName: 'C:\\Art\\Tree\\bark.png', relativeFileName: 'Textures\\bark.png' } },
@@ -83,9 +83,8 @@ function tree(height: number): string {
 }
 
 function texturedBox(name: string, slot: string, texture: { fileName: string; relativeFileName?: string }, size: [number, number, number]): string {
-  const centimetres = size.map((value) => value * 100) as [number, number, number];
   return asciiFbx({
-    nodes: [{ name, kind: 'mesh', mesh: { ...box(centimetres, [0, centimetres[1] / 2, 0]), materials: [slot], uvs: true } }],
+    nodes: [{ name, kind: 'mesh', mesh: { ...box(size, [0, size[1] / 2, 0]), materials: [slot], uvs: true } }],
     materials: { [slot]: { diffuse: [0.6, 0.6, 0.6], diffuseTexture: texture } },
   });
 }
@@ -93,7 +92,7 @@ function texturedBox(name: string, slot: string, texture: { fileName: string; re
 /** A leaf card: one quad, its UVs 0-1 (planar from X and Y), the fern's outline cut from its alpha. */
 function fern(): string {
   return asciiFbx({
-    nodes: [{ name: 'Fern', kind: 'mesh', mesh: { vertices: [0, 0, 0, 100, 0, 0, 100, 100, 0, 0, 100, 0], polygons: [[0, 1, 2, 3]], materials: ['Frond'], uvs: true } }],
+    nodes: [{ name: 'Fern', kind: 'mesh', mesh: { vertices: [0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0], polygons: [[0, 1, 2, 3]], materials: ['Frond'], uvs: true } }],
     materials: { Frond: { diffuse: [0.3, 0.6, 0.25] } },
   });
 }
