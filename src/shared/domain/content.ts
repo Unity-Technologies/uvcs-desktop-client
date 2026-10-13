@@ -11,10 +11,12 @@ export type ContentSource =
   /** `fileName` is used to recognize images and pick syntax highlighting. */
   | { kind: 'revision'; revision: RevisionRef; fileName: string }
   /**
-   * The file at a repository path (`/src/a.ts`) in a changeset or shelve (`cs:12`, `sh:3`), also under an xlink, where
-   * a `serverpath:` spec finds nothing.
+   * The file at a repository path (`/src/a.ts`) in a changeset, a branch's head or a shelve (`cs:12`, `br:/main`,
+   * `sh:3`), also under an xlink, where a `serverpath:` spec finds nothing. `repository` names the xlinked repository
+   * when the path is known to be under an xlink: it is read from the point's tree at once (`listsTree`), never by a
+   * `serverpath:` that can't find it.
    */
-  | { kind: 'repositoryPath'; path: string; at: string }
+  | { kind: 'repositoryPath'; path: string; at: string; repository?: string }
   /**
    * Any `cm cat` spec, e.g. `serverpath:/src/a.ts#cs:12`. `fileName` recognizes images when
    * the spec has no path in it (e.g. `itemid:27#cs:12`).

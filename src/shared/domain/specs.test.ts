@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isPinnedSpec, spec } from './specs';
+import { isPinnedSpec, listsTree, spec } from './specs';
 
 describe('isPinnedSpec', () => {
   it.each(['src/a.ts#cs:12', 'serverpath:/a.ts#cs:12', 'itemid:27#sh:3', 'itemid:27#cs:12@editorGUI@acme@cloud', 'revid:45', 'revid:45@game@local'])(
@@ -24,5 +24,15 @@ describe('spec.itemAt', () => {
   it("reads the changeset or shelve in the item's repository", () => {
     expect(spec.itemAt(425954, 'cs:17092', 'editorGUI@acme@cloud')).toBe('itemid:425954#cs:17092@editorGUI@acme@cloud');
     expect(spec.itemAt(27, 'sh:3', 'game@local')).toBe('itemid:27#sh:3@game@local');
+  });
+});
+
+describe('listsTree', () => {
+  it("lists a changeset's tree and a branch head's, which cm ls --tree walks through xlinks", () => {
+    expect(['cs:12', 'cs:12@art@local', 'br:/main/art'].map(listsTree)).toEqual([true, true, true]);
+  });
+
+  it("lists no shelve's tree, which cm ls --tree refuses, nor a label's", () => {
+    expect(['sh:2', 'lb:v1.0'].map(listsTree)).toEqual([false, false]);
   });
 });

@@ -35,6 +35,14 @@ export function isPinnedSpec(revisionSpec: string): boolean {
   return /#(?:cs|sh):\d+(?:@[^#]+)?$/.test(revisionSpec) || /^revid:\d+(?:@|$)/.test(revisionSpec);
 }
 
+/**
+ * Whether `cm ls --tree=<pointSpec>` lists the tree there, walking through xlinks: a changeset's or a branch head's
+ * (`cs:12`, `br:/main`). It refuses a shelve's ("Incorrect object specification sh:2") and takes no label.
+ */
+export function listsTree(pointSpec: string): boolean {
+  return /^(?:cs|br):/.test(pointSpec);
+}
+
 export function repositorySpec(name: string, server: string): string {
   return `${name}@${server}`;
 }
