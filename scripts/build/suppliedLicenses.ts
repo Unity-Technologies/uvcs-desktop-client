@@ -11,6 +11,8 @@ import { join } from 'node:path';
  */
 
 /** The folder holding the supplied texts, one file per package (`SuppliedLicense.fileName`). */
+// This file's folder, under vitest and in the build alike: electron-vite bundles electron.vite.config.ts with what it
+// imports, and gives each bundled file its own __dirname.
 export const SUPPLIED_LICENSES_FOLDER = join(__dirname, 'suppliedLicenses');
 
 /** A license text the build supplies for a package that ships none. */
@@ -28,19 +30,19 @@ export const SUPPLIED_LICENSES: Readonly<Record<string, SuppliedLicense>> = {
   'react-remove-scroll-bar': {
     license: 'MIT',
     fileName: 'react-remove-scroll-bar.txt',
-    source: 'taken from github.com/theKashey/react-remove-scroll-bar',
+    source: 'taken from github.com/theKashey/react-remove-scroll-bar/blob/7301c160fda4/LICENSE',
   },
   // The upstream repository's LICENSE.txt, as it is.
   lru_map: {
     license: 'MIT',
     fileName: 'lru_map.txt',
-    source: 'taken from github.com/rsms/js-lru',
+    source: 'taken from github.com/rsms/js-lru/blob/f9381a69e17c/LICENSE.txt',
   },
   // The upstream repository (github.com/develar/lazy-val) has no license file either; its package.json declares MIT
   // and names Vladimir Krivosheev as the author, so the text is the standard MIT License with his copyright.
   'lazy-val': {
     license: 'MIT',
     fileName: 'lazy-val.txt',
-    source: 'the standard MIT License its package.json names, with its author; github.com/develar/lazy-val ships none either',
+    source: 'the standard MIT License text, as its package.json names; upstream github.com/develar/lazy-val has no license file',
   },
 };
