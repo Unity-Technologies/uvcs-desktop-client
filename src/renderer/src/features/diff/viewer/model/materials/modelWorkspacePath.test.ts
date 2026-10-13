@@ -9,8 +9,14 @@ describe('modelWorkspacePath', () => {
     expect(modelWorkspacePath({ kind: 'revision', revision: { revisionId: 4, repository: 'game@local' }, fileName: 'Assets/Tree.fbx' }, 'game@local')).toBe('Assets/Tree.fbx');
   });
 
-  it("is nowhere for a revision of another repository: its path names another tree's folder", () => {
-    expect(modelWorkspacePath({ kind: 'revision', revision: { revisionId: 4, repository: 'art@local' }, fileName: 'Assets/Tree.fbx' }, 'game@local')).toBeNull();
+  it("is where the workspace has it for a revision of an xlinked repository too: its path holds the xlink's folder", () => {
+    // Files' last change and a changeset diff name an item under an xlink by its workspace path (`cm ls`'s WkPath,
+    // `cm diff`'s path), with the xlinked repository's revision.
+    const underXlink = { kind: 'revision' as const, revision: { revisionId: 4, repository: 'art@local' }, fileName: 'Assets/Shared/Tree.fbx' };
+    expect(modelWorkspacePath(underXlink, 'game@local')).toBe('Assets/Shared/Tree.fbx');
+  });
+
+  it('is nowhere for a source without a path', () => {
     expect(modelWorkspacePath({ kind: 'empty' }, 'game@local')).toBeNull();
   });
 });
