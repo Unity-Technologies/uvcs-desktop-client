@@ -18,10 +18,19 @@ describe('reveal requests', () => {
     expect(revealRequestFor('/ws-b')).toBeNull();
   });
 
-  it('reveals once: coming back to Files later keeps the selection made since', () => {
+  it('forgets a request once it is revealed', () => {
     useFilesViewStore.getState().requestReveal('/ws', 'src/a.ts');
-    useFilesViewStore.getState().revealed();
+    useFilesViewStore.getState().revealed(revealRequestFor('/ws')!);
 
     expect(revealRequestFor('/ws')).toBeNull();
+  });
+
+  it('keeps a newer request made before the older one is marked revealed', () => {
+    useFilesViewStore.getState().requestReveal('/ws', 'src/a.ts');
+    const older = revealRequestFor('/ws')!;
+    useFilesViewStore.getState().requestReveal('/ws', 'src/b.ts');
+    useFilesViewStore.getState().revealed(older);
+
+    expect(revealRequestFor('/ws')?.path).toBe('src/b.ts');
   });
 });
