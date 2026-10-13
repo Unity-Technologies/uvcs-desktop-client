@@ -34,7 +34,8 @@ export interface SystemApi {
   takeRequestedWorkspace(): Promise<string | null>;
   /**
    * A data URL of the user's Gravatar picture, or null when they have none, the user isn't an email address, or profile
-   * pictures are turned off (`showGravatar`). Kept for the session, missing pictures included.
+   * pictures aren't on (`showsGravatar`: off until the user chose them, and then nothing is sent). Kept for the session,
+   * missing pictures included.
    */
   gravatar(user: string, size: number): Promise<string | null>;
   /** Shows an OS notification about incoming changes; clicking it focuses the window and sends `incomingNotificationClicked`. */
