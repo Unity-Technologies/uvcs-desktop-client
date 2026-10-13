@@ -192,7 +192,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
     },
     [renderer, old, next, matching],
   );
-  useOrbitGestures({ element: stageRef, renderer, view: camera.currentView, onView: camera.onGesture, onClick });
+  useOrbitGestures({ element: stageRef, renderer, view: camera.currentView, onView: camera.onGesture, onDollyStep: camera.onDollyStep, onClick });
 
   const onPickRow = useCallback(
     (id: string | null, row: ChangeRow, item?: number) => {

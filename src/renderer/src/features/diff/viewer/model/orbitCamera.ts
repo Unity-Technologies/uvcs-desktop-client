@@ -28,9 +28,9 @@ const MAX_PITCH = (89 * Math.PI) / 180;
 const FRAMING_MARGIN = 1.15;
 /** Radians per pixel dragged; a drag across a 600 px view turns the model about 200°. */
 const ORBIT_SPEED = 0.006;
-/** How fast the wheel zooms: a mouse notch (100 px) brings the camera about a fifth closer. */
+/** How fast a trackpad zooms: 100 px of scroll bring the camera about a fifth closer. */
 const DOLLY_SPEED = 0.002;
-const MIN_DISTANCE = 1e-4;
+export const MIN_DISTANCE = 1e-4;
 
 /** A view that frames the bounds whole in a viewport of `aspect` (width over height), from `yaw` and `pitch`. */
 export function framedView(bounds: BoundsLike, aspect: number, yaw = FIRST_YAW, pitch = FIRST_PITCH): OrbitView {
@@ -56,16 +56,23 @@ export function panned(view: OrbitView, dx: number, dy: number, viewportHeight: 
 }
 
 /**
- * Closer or farther by the wheel's `deltaY`, towards `point` (what is under the pointer, in the viewer's space) when
- * there is one: the target moves as much of the way to it as the distance shrinks, so that point stays put.
+ * Closer or farther by a trackpad's or a pinch's `deltaY` (a wheel's notches glide: `dollyGlide`), towards `point`
+ * when there is one (`dolliedTo`).
  */
 export function dollied(view: OrbitView, deltaY: number, point: Vector | null = null): OrbitView {
-  const factor = Math.exp(deltaY * DOLLY_SPEED);
-  const distance = Math.max(view.distance * factor, MIN_DISTANCE);
-  if (!point) return { ...view, distance };
-  const pull = 1 - distance / view.distance;
+  return dolliedTo(view, view.distance * Math.exp(deltaY * DOLLY_SPEED), point);
+}
+
+/**
+ * The view at `distance`, towards `point` (what is under the pointer, in the viewer's space) when there is one: the
+ * target moves as much of the way to it as the distance shrinks, so that point stays put.
+ */
+export function dolliedTo(view: OrbitView, distance: number, point: Vector | null): OrbitView {
+  const closer = Math.max(distance, MIN_DISTANCE);
+  if (!point) return { ...view, distance: closer };
+  const pull = 1 - closer / view.distance;
   const target = view.target.map((value, i) => value + (point[i]! - value) * pull) as Vector;
-  return { ...view, target, distance };
+  return { ...view, target, distance: closer };
 }
 
 export function cameraPositionOf(view: OrbitView): Vector {

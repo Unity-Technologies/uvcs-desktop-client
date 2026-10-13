@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useRef, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
+import { browserFrameClock } from '../../../../lib/frameClock';
+import { dollyGlide } from './dollyGlide';
 import type { ModelRenderer } from './modelRenderer';
-import { framedView, type BoundsLike, type OrbitView } from './orbitCamera';
+import { framedView, type BoundsLike, type OrbitView, type Vector } from './orbitCamera';
 import { useSize } from './useSize';
 
 const ANY_VIEW = framedView({ min: [-1, -1, -1], max: [1, 1, 1] }, 1);
@@ -8,17 +10,33 @@ const ANY_VIEW = framedView({ min: [-1, -1, -1], max: [1, 1, 1] }, 1);
 /**
  * The viewer's camera: a ref, not state, so a drag redraws the canvas without rendering the panel again. The first
  * framing frames the pair whole; until the hand moves the camera, the app keeps the pair framed as the stage resizes
- * (the panel docking beside it, the window). Framing keeps the angle the camera has, as Unity's F does.
+ * (the panel docking beside it, the window). Framing keeps the angle the camera has, as Unity's F does. A wheel's
+ * notch glides (`dollyGlide`); anything else that places the camera stops the glide where it is.
  */
 export function useModelCamera(renderer: ModelRenderer | null, bounds: BoundsLike | null, stage: RefObject<HTMLElement | null>) {
   const view = useRef<OrbitView | null>(null);
   const framedByApp = useRef(true);
+  const glide = useMemo(
+    () =>
+      dollyGlide(
+        () => view.current ?? ANY_VIEW,
+        (next) => {
+          framedByApp.current = false;
+          view.current = next;
+          renderer?.setView(next);
+        },
+        browserFrameClock,
+      ),
+    [renderer],
+  );
+  useEffect(() => () => glide.stop(), [glide]);
   const setView = useCallback(
     (next: OrbitView) => {
+      glide.stop();
       view.current = next;
       renderer?.setView(next);
     },
-    [renderer],
+    [renderer, glide],
   );
   const frame = useCallback(
     (target: BoundsLike | null) => {
@@ -45,5 +63,7 @@ export function useModelCamera(renderer: ModelRenderer | null, bounds: BoundsLik
     if (framedByApp.current && view.current) frame(bounds);
   }, [stageSize, frame, bounds]);
   const currentView = useCallback(() => view.current ?? ANY_VIEW, []);
-  return { frame, frameFirst, onGesture, currentView };
+  /** A wheel's notch: closer (`factor` over 1) or farther, towards the point under the pointer. */
+  const onDollyStep = useCallback((point: Vector | null, factor: number) => glide.zoomStep(point, factor), [glide]);
+  return { frame, frameFirst, onGesture, onDollyStep, currentView };
 }

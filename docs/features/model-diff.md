@@ -174,7 +174,9 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   half was 100 times its size. Until the user moves the camera, the model stays framed as the stage resizes and the
   panel docks.
 - **Controls** (`useOrbitGestures`), as Unity's Scene view: drag (or Alt+drag) orbits, right, middle or Shift+drag pans,
-  scroll or pinch zooms at the point under the pointer, double-click orbits around the point clicked, a click picks the
+  scroll or pinch zooms at the point under the pointer (a mouse wheel's notches glide, as in the Branch Explorer:
+  `dollyGlide`, `isDiscreteWheel`; jumping at once by what the wheel said threw a model out of sight when spun fast;
+  a trackpad and a pinch follow the fingers), double-click orbits around the point clicked, a click picks the
   part under it and its match on the other side. F frames what is picked, or the whole model; 0 the whole model
   (`modelKeys`, in the shortcut registry). Draw modes are Unity's (Shaded, Wireframe, Shaded wireframe), and material
   slots can show in their colors (`slotColor`: the avatar fills by name, so a renamed slot changes color) or their
