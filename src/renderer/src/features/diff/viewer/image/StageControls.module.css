@@ -20,6 +20,16 @@
   color: var(--text-primary);
 }
 
+.controls .button[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.controls .button[aria-disabled='true']:hover {
+  background: var(--bg-surface-raised);
+  color: inherit;
+}
+
 .controls .button[data-active] {
   border-color: color-mix(in srgb, var(--accent) 50%, transparent);
   background: var(--bg-selected-strong);

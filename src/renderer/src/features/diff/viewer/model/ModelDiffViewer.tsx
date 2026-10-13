@@ -28,7 +28,8 @@ import { ModelInfoStrip } from './ModelInfoStrip';
 import { modelCommandOf } from './modelKeys';
 import { aroundPoints, clickedNode, markersOf } from './modelPicking';
 import { modelReadFailureWords } from './modelReadFailureWords';
-import { modelStats, movedStat } from './modelStats';
+import { useModelMaterials, type MaterialVersion } from './materials/useModelMaterials';
+import { modelStats, movedStat, texturesStat } from './modelStats';
 import { ModelViewControls } from './ModelViewControls';
 import { matchNodes } from './nodeMatching';
 import { useModelCamera } from './useModelCamera';
@@ -41,6 +42,8 @@ import { useOrbitGestures } from './useOrbitGestures';
 import { useReadModel, type ModelReadState } from './useReadModel';
 import { useSize } from './useSize';
 import { useStableModel } from './useStableModel';
+import { shownSurface, surfaceButtonDisabledReason } from './surfaceLook';
+import { sourcePathOf } from './modelSiblings';
 import styles from './ModelDiffViewer.module.css';
 
 /** From this pane width the "What changed" panel opens as a column beside the stage. */
@@ -71,7 +74,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   const optionsAfter = useModelReadOptions(workspacePath, 'modified', sources.modified, modelAfter, settings?.modified);
   const before = useReadModel(modelBefore, optionsBefore);
   const after = useReadModel(modelAfter, optionsAfter);
-  const { modelDrawMode, setModelDrawMode, modelColorBySlot, setModelColorBySlot, modelToleranceShare, setModelToleranceShare, modelShowBones, setModelShowBones, modelChangesOpen, setModelChangesOpen } =
+  const { modelDrawMode, setModelDrawMode, modelSurface, setModelSurface, modelToleranceShare, setModelToleranceShare, modelShowBones, setModelShowBones, modelChangesOpen, setModelChangesOpen } =
     useDiffPreferences();
   const paneRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -92,6 +95,13 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   const comparable = Boolean(original.model && modified.model);
   const sceneBefore = useModelScene(old);
   const sceneAfter = useModelScene(next);
+  const differences = comparable && mode === 'differences';
+  const materialVersions = useMemo(
+    () => ({ before: materialVersionOf(old, modelBefore, optionsBefore, sources.original), after: materialVersionOf(next, modelAfter, optionsAfter, sources.modified) }),
+    [old, next, modelBefore, modelAfter, optionsBefore, optionsAfter, sources.original, sources.modified],
+  );
+  const materials = useModelMaterials(workspacePath, materialVersions, modelSurface === 'materials' && !differences);
+  const surface = shownSurface(modelSurface, materials.offered);
   const rows = useMemo(() => {
     if (!old || !next || !optionsBefore || !optionsAfter) return null;
     const changes = [...modelChanges(old.summary, next.summary), ...importSettingsChanges({ summary: old.summary, settings: optionsBefore.settings }, { summary: next.summary, settings: optionsAfter.settings })];
@@ -127,11 +137,14 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
       if (node.before) highlighted.before.add(node.before);
       if (node.after) highlighted.after.add(node.after);
     }
-    renderer?.setLook({ drawMode: modelDrawMode, colorBySlot: modelColorBySlot, highlighted });
+    renderer?.setLook({ drawMode: modelDrawMode, surface, highlighted });
     renderer?.setMarkers(markersOf(picked?.nodes ?? [], sceneBefore, sceneAfter));
-  }, [renderer, picked, modelDrawMode, modelColorBySlot, sceneBefore, sceneAfter]);
+  }, [renderer, picked, modelDrawMode, surface, sceneBefore, sceneAfter]);
+  // After the scenes are set (`setModels` lets a replaced side's looks go), whenever either changes.
+  useEffect(() => {
+    if (renderer && bounds) renderer.setMaterialLooks(materials.looks);
+  }, [renderer, bounds, materials.looks, sceneBefore, sceneAfter]);
 
-  const differences = comparable && mode === 'differences';
   const { comparison, comparing, failed: comparisonFailed, tolerance, regions, currentRegion, stepRegion } = useModelDifferences({
     renderer,
     palette,
@@ -141,7 +154,10 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
     toleranceShare: modelToleranceShare,
     frame,
   });
-  const shownStats = useMemo(() => (differences && comparison ? [...stats, movedStat(comparison, tolerance)] : stats), [differences, comparison, stats, tolerance]);
+  const shownStats = useMemo(() => {
+    const textures = surface === 'materials' && !differences && materials.report ? texturesStat(materials.report) : null;
+    return [...stats, ...(differences && comparison ? [movedStat(comparison, tolerance)] : []), ...(textures ? [textures] : [])];
+  }, [differences, comparison, stats, tolerance, surface, materials.report]);
 
   const choices = useMemo(() => clipChoices(old?.model.clips ?? [], next?.model.clips ?? []), [old, next]);
   const hasBones = (old?.summary.totals.bones ?? 0) + (next?.summary.totals.bones ?? 0) > 0;
@@ -243,8 +259,10 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
             <ModelViewControls
               drawMode={modelDrawMode}
               onDrawMode={setModelDrawMode}
-              colorBySlot={modelColorBySlot}
-              onColorBySlot={setModelColorBySlot}
+              surface={surface}
+              onSurface={setModelSurface}
+              materialsOffered={materials.offered}
+              surfaceUnavailable={surfaceButtonDisabledReason(differences)}
               bones={hasBones ? { shown: modelShowBones, onShow: setModelShowBones } : null}
               onFrame={frameShown}
             />
@@ -258,6 +276,19 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
       {rows && !loading && docked && changesPanel}
     </div>
   );
+}
+
+/** A version as the Materials look reads it: where it is in the workspace, its bytes and what it was read with. */
+function materialVersionOf(
+  read: Extract<ModelReadState, { status: 'ready' }> | null,
+  bytes: FileContent['model'],
+  options: ReturnType<typeof useModelReadOptions>,
+  source: ContentSource,
+): MaterialVersion | null {
+  if (!read || !bytes || !options) return null;
+  // A repository path (`/Assets/Tree.fbx`) is where the workspace has the file: the workspace is the repository's root.
+  const path = sourcePathOf(source)?.replace(/^\/+/, '').replaceAll('\\', '/') ?? null;
+  return { model: read.model, bytes, options, path };
 }
 
 function readyOf(state: ModelReadState): Extract<ModelReadState, { status: 'ready' }> | null {
