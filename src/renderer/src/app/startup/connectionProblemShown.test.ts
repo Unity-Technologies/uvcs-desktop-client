@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ConnectionProblem } from '@shared/domain/setup';
-import { connectionProblemShown } from './connectionProblemShown';
+import { connectionProblemShown, serverToCheck } from './connectionProblemShown';
 
 const problem = (server: string): ConnectionProblem => ({ kind: 'serverUnreachable', server, commandLine: `cm checkconnection ${server}`, output: '' });
 
@@ -21,5 +21,20 @@ describe('connectionProblemShown', () => {
   it("hides a server's problem once dismissed, but not another server's", () => {
     expect(connectionProblemShown(problem('codice@cloud'), { workspaceOpen: true, dismissedServer: 'codice@cloud' })).toBeNull();
     expect(connectionProblemShown(problem('local'), { workspaceOpen: true, dismissedServer: 'codice@cloud' })).toEqual(problem('local'));
+  });
+});
+
+describe('serverToCheck', () => {
+  it("checks the open workspace's server once cm is known to be configured", () => {
+    expect(serverToCheck(null, { server: 'codice@cloud' })).toBe('codice@cloud');
+  });
+
+  it('checks none while the setup check runs, or when cm has no configuration', () => {
+    expect(serverToCheck(undefined, { server: 'codice@cloud' })).toBeUndefined();
+    expect(serverToCheck({ commandLine: 'cm profile list', output: 'not correctly configured' }, { server: 'codice@cloud' })).toBeUndefined();
+  });
+
+  it('checks none on the home screen, where no workspace is open', () => {
+    expect(serverToCheck(null, undefined)).toBeUndefined();
   });
 });
