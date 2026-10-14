@@ -371,11 +371,16 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   it. Then the pages hear it (`quitStarted`), so one with unsaved edits asks Save / Don't save / Cancel first.
 - Settings are written in main, one change at a time; values computed from the stored ones (the recent workspaces and
   branches) are computed there too, and every window gets the result (`settingsChanged`).
-- What a window checks as it opens (`cm version`, `cm checkconnection`) runs until it succeeds once; later windows take
-  that answer (`untilSucceeded`). A problem is checked again by the next window, and by Retry. Only a `cm` without
-  configuration takes the app's place (`SetupProblemScreen`); a server out of reach or a failed sign-in show in a corner
-  card (`SetupProblemCard`, `setupProblemShown`) while the app works, as the home screen's reads are local and other
-  servers may answer.
+- What a window checks as it opens runs until it succeeds once; later windows take that answer (`untilSucceeded`), and
+  a problem is checked again by the next window, and by Retry. `cm version` says `cm` runs (`CmUnavailableScreen`
+  otherwise); `cm profile list`, a local command, says it's configured (`checkSetup`): without a configuration every
+  command but `version`, `location`, `configure` and `help` fails at once saying so, and `SetupProblemScreen` takes the
+  app's place. No server is asked at start-up: the home screen works without any. A workspace's server is checked as
+  the workspace opens, `cm checkconnection <server>` with the server its info names (`checkConnection`, once per server
+  until it answers), and a server out of reach or a failed sign-in show in a corner card naming it
+  (`ConnectionProblemCard`, `connectionProblemShown`) while the workspace works with what's local. Checking the default
+  server at start-up, and stopping the app on its failure, was dropped: it left a user offline unable to open even the
+  home screen, and named no server, as `cm checkconnection` prints none.
 - Dropping a folder on any window, home screen or workspace, opens its workspace in that window, or with Shift in a
   new one (`app/folderDrop`, as the official client does). The decision is `workspaces.findRoot`, a local
   `cm getworkspacefrompath`, so a folder inside a workspace opens it too; a folder that is no workspace goes straight to
@@ -427,8 +432,9 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
    page asks after its first paint waits behind it. That is why the page asks before rendering, and the main process
    earlier still.
 5. Nothing else gates the first screen: `cm version`'s answer (the app shows meanwhile, `CmUnavailableScreen` only on
-   failure), `cm checkconnection` once `cm` runs (`useSetupCheck`), the watcher once the page watches, the highlighter
-   warm-up 1.5 s later (`main.tsx`), avatars when rows show them.
+   failure), the local setup check once `cm` runs (`useSetupCheck`), the workspace's server check
+   (`useConnectionCheck`), the watcher once the page watches, the highlighter warm-up 1.5 s later (`main.tsx`),
+   avatars when rows show them.
 
 Reopening the last workspace on an M4 Max, started as the Dock does, median of 14 runs: Changes shows its data about
 820-840 ms after the process starts with the real `cm` on a local sandbox (930-990 before this sequence), 330-340 ms
