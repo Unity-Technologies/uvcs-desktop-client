@@ -5,7 +5,6 @@ import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { OutputBlock } from '../../ui/OutputBlock';
 import { connectionProblemWords } from './connectionProblemWords';
-import { CopyableCommand } from './CopyableCommand';
 import { DOWNLOAD_URL } from './installGuidance';
 
 /** The details of the connection problem card (`ConnectionProblemCard`): what to do, and what `cm` answered. */
@@ -32,7 +31,6 @@ export function ConnectionProblemDialog({ problem, onClose }: { problem: Connect
         </>
       }
     >
-      {signIn && <CopyableCommand note="Or set it up in a terminal:" command="cm configure" />}
       <OutputBlock output={`$ ${problem.commandLine}\n${problem.output}`} />
     </Dialog>
   );
