@@ -1,4 +1,4 @@
-import type { SetupProblem } from '../domain/setup';
+import type { ConnectionProblem, SetupProblem } from '../domain/setup';
 
 /** A folder being dragged over a window, read while the drag runs (`system.draggedFolder`). */
 export interface DraggedFolder {
@@ -10,8 +10,10 @@ export interface DraggedFolder {
 export interface SystemApi {
   /** Looks for `cm` again (it may have been installed meanwhile) and returns its version. */
   cmVersion(): Promise<string>;
-  /** Checks that `cm` is configured, signed in and reaches its default server; null when all is well. */
+  /** Checks, without asking any server, that `cm` is configured; null when it is. */
   checkSetup(): Promise<SetupProblem | null>;
+  /** Checks that `cm` is signed in to a server and reaches it (`cm checkconnection <server>`); null when it does. */
+  checkConnection(server: string): Promise<ConnectionProblem | null>;
   currentUser(): Promise<string>;
   /** Opens a file with the OS's default app for its type (a folder in the file manager); `apps` opens it in a chosen one. */
   openPath(path: string): Promise<void>;
