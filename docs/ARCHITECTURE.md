@@ -372,7 +372,10 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
 - Settings are written in main, one change at a time; values computed from the stored ones (the recent workspaces and
   branches) are computed there too, and every window gets the result (`settingsChanged`).
 - What a window checks as it opens (`cm version`, `cm checkconnection`) runs until it succeeds once; later windows take
-  that answer (`untilSucceeded`). A problem is checked again by the next window, and by Retry.
+  that answer (`untilSucceeded`). A problem is checked again by the next window, and by Retry. Only a `cm` without
+  configuration takes the app's place (`SetupProblemScreen`); a server out of reach or a failed sign-in show in a corner
+  card (`SetupProblemCard`, `setupProblemShown`) while the app works, as the home screen's reads are local and other
+  servers may answer.
 - Dropping a folder on any window, home screen or workspace, opens its workspace in that window, or with Shift in a
   new one (`app/folderDrop`, as the official client does). The decision is `workspaces.findRoot`, a local
   `cm getworkspacefrompath`, so a folder inside a workspace opens it too; a folder that is no workspace goes straight to
