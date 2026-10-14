@@ -4,6 +4,8 @@ import { normalize } from 'node:path';
 import { app, dialog, net, shell } from 'electron';
 import type { SystemApi } from '@shared/api/system';
 import { showsGravatar } from '@shared/domain/gravatarChoice';
+import type { ConnectionProblem } from '@shared/domain/setup';
+import { checkConnection } from '../cm/connectionCheck';
 import { checkSetup } from '../cm/setupCheck';
 import { outermostPaths } from '../files/pathContainment';
 import { callerId } from '../ipc/caller';
@@ -29,10 +31,21 @@ export function createSystemService({ cm, operations, windows, settings }: Servi
     return (await cm.execute(['version'])).trim();
   });
   const setupProblem = untilSucceeded(() => checkSetup(cm), (problem) => problem === null);
+  // Per server: once it answers, later windows on its workspaces take that answer.
+  const connectionChecks = new Map<string, () => Promise<ConnectionProblem | null>>();
+  const connectionProblem = (server: string): Promise<ConnectionProblem | null> => {
+    let check = connectionChecks.get(server);
+    if (!check) {
+      check = untilSucceeded(() => checkConnection(cm, server), (problem) => problem === null);
+      connectionChecks.set(server, check);
+    }
+    return check();
+  };
 
   return {
     cmVersion,
     checkSetup: setupProblem,
+    checkConnection: connectionProblem,
     currentUser: async () => (await cm.query(['whoami'])).trim(),
     openPath: async (path) => {
       const error = await shell.openPath(normalize(path));

@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useExternalApps } from '../components/externalApps/externalApps';
 import { DialogHost } from '../ui/dialog/DialogHost';
 import { ToastHost } from '../ui/toast/ToastHost';
@@ -20,6 +20,7 @@ import { useTheme } from './settings/useTheme';
 import { GravatarPrompt } from './settings/GravatarPrompt';
 import { useGravatarSetting } from './settings/useGravatarSetting';
 import { CmUnavailableScreen } from './startup/CmUnavailableScreen';
+import { ConnectionProblemCard } from './startup/ConnectionProblemCard';
 import { SetupProblemScreen } from './startup/SetupProblemScreen';
 import { useCmAvailability, useSetupCheck } from './startup/useCmAvailability';
 import { UpdateCard } from './updates/UpdateCard';
@@ -39,6 +40,7 @@ export function App() {
       <CommandShortcuts />
       <DialogHost />
       <ToastHost errorAction={errorDetailsAction} renderOperation={(toast, dismiss) => <OperationCard toast={toast} dismiss={dismiss} />}>
+        <ConnectionProblemCard />
         <GravatarPrompt />
         <UpdateCard />
       </ToastHost>
@@ -60,19 +62,12 @@ function Root() {
   const workspacePath = useSession((state) => state.workspacePath);
   const cm = useCmAvailability();
   const setup = useSetupCheck(cm.isSuccess);
-  const [setupProblemDismissed, dismissSetupProblem] = useState(false);
 
   if (cm.error) return <CmUnavailableScreen reason={cm.error.message} checking={cm.isFetching} onRecheck={() => void cm.refetch()} />;
-  // The app shows meanwhile: the check takes a moment, or up to its timeout when the server doesn't answer.
-  if (setup.data && !setupProblemDismissed) {
-    return (
-      <SetupProblemScreen
-        problem={setup.data}
-        checking={setup.isFetching}
-        onRetry={() => void setup.refetch()}
-        onContinue={() => dismissSetupProblem(true)}
-      />
-    );
+  // The app shows meanwhile: the check is local and takes a moment. A server out of reach never stops the app: the
+  // open workspace's server is checked apart (`ConnectionProblemCard`), and the home screen asks no server at all.
+  if (setup.data) {
+    return <SetupProblemScreen problem={setup.data} checking={setup.isFetching} onRetry={() => void setup.refetch()} />;
   }
   return (
     <>

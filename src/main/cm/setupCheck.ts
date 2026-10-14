@@ -1,66 +1,26 @@
-import type { SetupProblem, SetupProblemKind } from '@shared/domain/setup';
+import type { SetupProblem } from '@shared/domain/setup';
 import type { CmClient } from './CmClient';
 import { CmError } from './CmError';
 
-const CHECK_ARGS = ['checkconnection'];
-/** Long enough for a slow VPN, short enough not to leave the user staring at a stuck check. */
-const CHECK_TIMEOUT_MS = 10_000;
+/**
+ * A local command that needs a configuration: without one, every command but `version`, `location`, `configure` and
+ * `help` fails before doing anything, saying so. Checking with a local command means the check never waits on a server.
+ */
+const CHECK_ARGS = ['profile', 'list'];
 
 const NOT_CONFIGURED = /not correctly configured|client\.conf not found/i;
-/** `cm` asks for a sign-in method or credentials instead of failing. */
-const SIGN_IN_PROMPT = /sign in to:|select your system|^\s*(user|password):/im;
-const REJECTED_CREDENTIALS = /credentials|not authenticated|authentication failed|invalid user|password is not valid/i;
-const SIGN_IN_SERVER = /sign in to:\s*(\S+)/i;
-
-/** What a failed (or stopped) `cm checkconnection` means. Anything but a setup or sign-in problem is taken as a connection problem. */
-export function classifySetupCheck(output: string): SetupProblemKind {
-  if (NOT_CONFIGURED.test(output)) return 'notConfigured';
-  if (SIGN_IN_PROMPT.test(output) || REJECTED_CREDENTIALS.test(output)) return 'notSignedIn';
-  return 'serverUnreachable';
-}
-
-export function signInServer(output: string): string | undefined {
-  return SIGN_IN_SERVER.exec(output)?.[1];
-}
 
 /**
- * Runs `cm checkconnection` against the default server. A missing sign-in makes `cm` prompt
- * forever, so the check is killed as soon as it asks, or after a timeout.
+ * Whether `cm` has a configuration; null when it has. Another failure is no setup problem: the views say what failed.
+ * Its own process: `cm shell` refuses to start until `cm` is configured.
  */
 export async function checkSetup(cm: CmClient): Promise<SetupProblem | null> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
-  const lines: string[] = [];
-  const onOutputLine = (line: string): void => {
-    lines.push(line);
-    if (SIGN_IN_PROMPT.test(line)) controller.abort();
-  };
-
   try {
-    await cm.execute(CHECK_ARGS, { signal: controller.signal, killSignal: 'SIGKILL', onOutputLine });
+    await cm.execute(CHECK_ARGS);
     return null;
   } catch (error) {
-    if (error instanceof CmError) return setupProblem(error.command.output);
-    if (controller.signal.aborted) return setupProblem(stoppedOutput(lines));
-    throw error;
-  } finally {
-    clearTimeout(timeout);
+    if (!(error instanceof CmError)) throw error;
+    const { output } = error.command;
+    return NOT_CONFIGURED.test(output) ? { commandLine: `cm ${CHECK_ARGS.join(' ')}`, output } : null;
   }
-}
-
-function setupProblem(output: string): SetupProblem {
-  return {
-    kind: classifySetupCheck(output),
-    server: signInServer(output),
-    commandLine: `cm ${CHECK_ARGS.join(' ')}`,
-    output: output || `No answer after ${CHECK_TIMEOUT_MS / 1000} seconds.`,
-  };
-}
-
-/** What a check stopped at a prompt or by the timeout printed; a stopped prompt pads its lines with long runs of spaces. */
-function stoppedOutput(lines: readonly string[]): string {
-  return lines
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .join('\n');
 }
