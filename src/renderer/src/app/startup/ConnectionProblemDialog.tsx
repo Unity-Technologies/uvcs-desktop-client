@@ -1,16 +1,16 @@
 import { Download } from 'lucide-react';
-import type { SetupProblem } from '@shared/domain/setup';
+import type { ConnectionProblem } from '@shared/domain/setup';
 import { api } from '../../api/client';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { OutputBlock } from '../../ui/OutputBlock';
+import { connectionProblemWords } from './connectionProblemWords';
 import { CopyableCommand } from './CopyableCommand';
 import { DOWNLOAD_URL } from './installGuidance';
-import { serverProblemWords } from './serverProblemWords';
 
-/** The details of the setup problem card (`SetupProblemCard`): what to do, and what `cm` answered. */
-export function SetupProblemDialog({ problem, onClose }: { problem: SetupProblem; onClose: () => void }) {
-  const { title, explanation } = serverProblemWords(problem);
+/** The details of the connection problem card (`ConnectionProblemCard`): what to do, and what `cm` answered. */
+export function ConnectionProblemDialog({ problem, onClose }: { problem: ConnectionProblem; onClose: () => void }) {
+  const { title, explanation } = connectionProblemWords(problem);
   const signIn = problem.kind === 'notSignedIn';
 
   return (

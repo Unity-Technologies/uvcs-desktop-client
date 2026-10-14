@@ -23,6 +23,7 @@ export const queryKeys = {
   appInfo: ['appInfo'] as const,
   releaseNotes: (version: string) => ['releaseNotes', version] as const,
   cmSetup: ['cmSetup'] as const,
+  serverConnection: (server: string) => ['serverConnection', server] as const,
   homeDirectory: ['homeDirectory'] as const,
   workspaceHeads: (paths: readonly string[]) => ['workspaceHeads', paths] as const,
   workspaceRepositories: (paths: readonly string[]) => ['workspaceRepositories', paths] as const,

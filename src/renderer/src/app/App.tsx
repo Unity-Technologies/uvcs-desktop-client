@@ -20,9 +20,8 @@ import { useTheme } from './settings/useTheme';
 import { GravatarPrompt } from './settings/GravatarPrompt';
 import { useGravatarSetting } from './settings/useGravatarSetting';
 import { CmUnavailableScreen } from './startup/CmUnavailableScreen';
-import { SetupProblemCard } from './startup/SetupProblemCard';
+import { ConnectionProblemCard } from './startup/ConnectionProblemCard';
 import { SetupProblemScreen } from './startup/SetupProblemScreen';
-import { setupProblemShown } from './startup/setupProblemShown';
 import { useCmAvailability, useSetupCheck } from './startup/useCmAvailability';
 import { UpdateCard } from './updates/UpdateCard';
 import { loadUpdateStatus } from './updates/updateStore';
@@ -41,7 +40,7 @@ export function App() {
       <CommandShortcuts />
       <DialogHost />
       <ToastHost errorAction={errorDetailsAction} renderOperation={(toast, dismiss) => <OperationCard toast={toast} dismiss={dismiss} />}>
-        <SetupProblemCard />
+        <ConnectionProblemCard />
         <GravatarPrompt />
         <UpdateCard />
       </ToastHost>
@@ -65,9 +64,9 @@ function Root() {
   const setup = useSetupCheck(cm.isSuccess);
 
   if (cm.error) return <CmUnavailableScreen reason={cm.error.message} checking={cm.isFetching} onRecheck={() => void cm.refetch()} />;
-  // The app shows meanwhile: the check takes a moment, or up to its timeout when the server doesn't answer. Only a
-  // `cm` without configuration stops it; the other problems show in `SetupProblemCard`.
-  if (setup.data && setupProblemShown(setup.data, { cardDismissed: false }) === 'screen') {
+  // The app shows meanwhile: the check is local and takes a moment. A server out of reach never stops the app: the
+  // open workspace's server is checked apart (`ConnectionProblemCard`), and the home screen asks no server at all.
+  if (setup.data) {
     return <SetupProblemScreen problem={setup.data} checking={setup.isFetching} onRetry={() => void setup.refetch()} />;
   }
   return (

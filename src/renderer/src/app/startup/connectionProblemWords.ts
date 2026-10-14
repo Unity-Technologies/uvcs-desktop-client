@@ -1,7 +1,7 @@
-import type { SetupProblem } from '@shared/domain/setup';
+import type { ConnectionProblem } from '@shared/domain/setup';
 
-/** What the corner card and its details say about a server out of reach or a failed sign-in (`SetupProblemCard`). */
-export function serverProblemWords({ kind, server = 'the server' }: SetupProblem): { title: string; explanation: string } {
+/** What the connection problem card and its details say (`ConnectionProblemCard`), naming the workspace's server. */
+export function connectionProblemWords({ kind, server }: ConnectionProblem): { title: string; explanation: string } {
   if (kind === 'notSignedIn') {
     return {
       title: `You're not signed in to ${server}`,
