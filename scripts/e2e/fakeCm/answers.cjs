@@ -28,7 +28,8 @@ const COMMANDS = {
   version: () => '11.0.16.9000\n',
   checkconnection: () => 'Test connection executed successfully\n',
   whoami: () => `${OWNER}\n`,
-  'profile list': (args) => formatted(args, ACCOUNTS),
+  // Without --format: the local setup check (`checkSetup`), which reads only whether it succeeds.
+  'profile list': (args) => (args.some((arg) => arg.startsWith('--format=')) ? formatted(args, ACCOUNTS) : `${SERVER}\n`),
   'workspace list': (args) => formatted(args, WORKSPACES),
   getworkspacefrompath: (args) => formatted(args, WORKSPACES),
   status: statusOutput,
