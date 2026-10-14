@@ -15,7 +15,7 @@ interface SetupProblemScreenProps {
 
 /**
  * Explains that `cm` has no configuration yet, instead of a trail of failing views: it can't work with any server, so
- * this takes the app's place (`setupProblemShown`).
+ * this takes the app's place (`Root` in `App.tsx`, on `useSetupCheck`).
  */
 export function SetupProblemScreen({ problem, checking, onRetry }: SetupProblemScreenProps) {
   return (
