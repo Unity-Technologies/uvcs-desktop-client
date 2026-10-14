@@ -18,7 +18,7 @@ export function useSetupCheck(cmAvailable: boolean) {
 export function useConnectionCheck(server: string | undefined) {
   return useQuery({
     queryKey: queryKeys.serverConnection(server ?? ''),
-    queryFn: () => api.system.checkConnection(server!),
+    queryFn: () => api.system.checkConnection(server ?? ''),
     enabled: server !== undefined,
     staleTime: Infinity,
   });

@@ -7,7 +7,7 @@ import { CornerCard, CornerCardText } from '../../ui/toast/CornerCard';
 import { useWorkspaceInfoOf } from '../workspace/useWorkspace';
 import { useSession } from '../workspace/sessionStore';
 import { ConnectionProblemDialog } from './ConnectionProblemDialog';
-import { connectionProblemShown } from './connectionProblemShown';
+import { connectionProblemShown, serverToCheck } from './connectionProblemShown';
 import { connectionProblemWords } from './connectionProblemWords';
 import { useCmAvailability, useConnectionCheck, useSetupCheck } from './useCmAvailability';
 
@@ -20,7 +20,7 @@ export function ConnectionProblemCard() {
   const cm = useCmAvailability();
   const setup = useSetupCheck(cm.isSuccess);
   const { data: info } = useWorkspaceInfoOf(workspacePath);
-  const check = useConnectionCheck(setup.data === null ? info?.server : undefined);
+  const check = useConnectionCheck(serverToCheck(setup.data, info));
   const [dismissedServer, setDismissedServer] = useState<string | null>(null);
   const problem = connectionProblemShown(check.data, { workspaceOpen: workspacePath !== null, dismissedServer });
   if (!problem) return null;
