@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { changedRegions, MAX_REGIONS } from './surfaceRegions';
+import { countCalls } from '@shared/testing/countCalls';
+import { changedRegions, MAX_REGIONS, NearRegions } from './surfaceRegions';
 
 /** A strip of `count` quads along X, `spacing` apart, two triangles each, non-indexed as FBX stores them. */
 function strip(count: number, spacing: number, distanceAt: (x: number) => number, x0 = 0) {
@@ -43,5 +44,33 @@ describe('changedRegions', () => {
   it('keeps the biggest regions only, when the whole model changed', () => {
     const patches = Array.from({ length: 50 }, (_, i) => strip(1, 1, () => 1, i * 10));
     expect(changedRegions(patches, 0, 100)).toHaveLength(MAX_REGIONS);
+  });
+});
+
+describe('NearRegions', () => {
+  const box = (min: [number, number, number], max: [number, number, number], vertices = 1) => ({ min, max, vertices });
+
+  it('merges a region that only the box of two merged ones comes near', () => {
+    // B is near A; C is near neither, but near the box of A and B together.
+    const a = box([0, 0, 0], [1, 1, 0]);
+    const b = box([0.5, 1.02, 0], [1.5, 2, 0]);
+    const c = box([1.52, 0.5, 0], [3, 0.6, 0]);
+    expect(new NearRegions(0.05).merged([c, a, b])).toEqual([box([0, 0, 0], [3, 2, 0], 3)]);
+  });
+
+  it('keeps apart regions no box comes near', () => {
+    const regions = new NearRegions(0.05).merged([box([0, 0, 0], [1, 1, 0]), box([0, 3, 0], [1, 4, 0])]);
+    expect(regions).toHaveLength(2);
+  });
+
+  // Merging pair by pair, starting over after each merge, compared millions of pairs for a few thousand patches.
+  it('compares only the boxes that overlap along X: a few per patch, apart or in a chain', () => {
+    const apart = Array.from({ length: 3000 }, (_, i) => box([i * 10, 0, 0], [i * 10 + 1, 1, 0]));
+    const chain = Array.from({ length: 3000 }, (_, i) => box([i, 0, 0], [i + 0.99, 1, 0]));
+    const { result: separate, calls: comparedApart } = countCalls(NearRegions.prototype, 'isNear', () => new NearRegions(0.05).merged(apart));
+    const { result: joined, calls: comparedInChain } = countCalls(NearRegions.prototype, 'isNear', () => new NearRegions(0.05).merged(chain));
+    expect([separate.length, joined.length]).toEqual([3000, 1]);
+    expect(comparedApart).toBe(0);
+    expect(comparedInChain).toBeLessThan(3 * 3000);
   });
 });

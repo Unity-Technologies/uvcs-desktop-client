@@ -46,7 +46,7 @@ export function useModelRenderer(hostRef: RefObject<HTMLElement | null>): ModelR
 /** The renderer, or `null` where three can't start WebGL on the canvas: it throws, and would take the window with it. */
 function startRenderer(canvas: HTMLCanvasElement): ModelRenderer | null {
   try {
-    return new ModelRenderer(canvas);
+    return new ModelRenderer(canvas, { picks: true });
   } catch (error) {
     console.warn("The 3D view couldn't start WebGL:", error);
     return null;

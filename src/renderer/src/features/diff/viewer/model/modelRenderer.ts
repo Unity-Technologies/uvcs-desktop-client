@@ -8,6 +8,7 @@ import {
   AxesHelper,
   Box3,
   Box3Helper,
+  BufferAttribute,
   BufferGeometry,
   Color,
   DirectionalLight,
@@ -38,14 +39,18 @@ import {
 } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { canvasSizeChanged, canvasSizeOf, type CanvasSize } from './canvasSize';
+import { DISTANCE_ATTRIBUTE, distancesToDraw } from './heatColors';
 import { LookComparer } from './lookComparer';
 import { LookTextures, SlotLookMaterials } from './materials/slotLookMaterials';
 import type { SlotLook } from './materials/materialPlan';
+import { emphasisOf, outlinesWhenLit } from './meshEmphasis';
+import { MeshPicker } from './meshPicker';
 import type { ModelPalette } from './modelPalette';
 import { slotColor } from './modelPalette';
 import { modelOrientation, type ModelScene } from './modelScene';
 import { sharedDfgLutOf } from './sharedDfgLut';
 import { cameraPositionOf, clipPlanesOf, FIELD_OF_VIEW, type BoundsLike, type OrbitView, type Ray, type Vector } from './orbitCamera';
+import { pickWindowAt } from './pickWindow';
 import type { DiffsCompares, SurfaceLook } from './surfaceLook';
 import { layoutOf, paneAt, shownLayoutMode, type ChosenLayoutMode, type Layout, type Side } from './viewLayout';
 
@@ -63,7 +68,7 @@ export interface ModelLook {
   looksLoaded: boolean;
 }
 
-/** The Differences mode's colors, per mesh of each version (`heatColors`, `ghostColors`); null until compared. */
+/** The Differences mode's measure: per mesh of each version, each vertex's distance to the other version; null until compared. */
 export interface ModelHeat {
   before: Float32Array[];
   after: Float32Array[];
@@ -115,6 +120,7 @@ export class ModelRenderer {
   private readonly lookTextures: LookTextures;
   private palette: ModelPalette | null = null;
   private heat: ModelHeat | null = null;
+  private heatTolerance = { tolerance: 0, fullAt: 1 };
   private showBones = false;
   private width = 1;
   private height = 1;
@@ -127,12 +133,21 @@ export class ModelRenderer {
   private readonly comparer = new LookComparer();
   /** The grid, under Diffs by look's comparison. */
   private readonly under = new Scene();
+  /** Picks on the GPU; null where it can't, or isn't asked to pick, and picks raycast (`raycastHit`). */
+  private readonly picker: MeshPicker | null;
   /** three's one DFG LUT, once a frame drew it: released as the renderer goes (`sharedDfgLut.ts`). */
   private dfgLut: Texture | null = null;
   /** Whether the LUT was looked for in the sides drawn now: once per set of sides, not every frame until found. */
   private dfgLutSought = false;
 
-  constructor(private readonly canvas: HTMLCanvasElement) {
+  /**
+   * `picks`: what is under the pointer is asked of it (`pick`), so the GPU's picking is made and compiled at once
+   * (`MeshPicker.prepare`); a still (`modelThumbnail`) is never picked, and compiles nothing for it.
+   */
+  constructor(
+    private readonly canvas: HTMLCanvasElement,
+    { picks }: { picks: boolean },
+  ) {
     this.renderer = new WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.renderer.outputColorSpace = SRGBColorSpace;
     // Clay lit by a studio clips to white without it; the onion skin's blend applies the same (`Blender`).
@@ -149,6 +164,8 @@ export class ModelRenderer {
     generator.dispose();
     canvas.addEventListener('webglcontextrestored', this.requestRender);
     this.lookTextures = new LookTextures(Math.min(8, this.renderer.capabilities.getMaxAnisotropy()));
+    this.picker = picks && MeshPicker.supported(this.renderer) ? new MeshPicker() : null;
+    this.picker?.prepare(this.renderer, this.camera);
   }
 
   setModels(before: ModelScene | null, after: ModelScene | null, bounds: BoundsLike): void {
@@ -165,6 +182,7 @@ export class ModelRenderer {
     this.lookTextures.keepOnly(this.materialLooks);
     this.bounds = bounds;
     this.rebuildGrid();
+    this.applyHeat();
     this.applyLook();
     this.requestRender();
   }
@@ -194,17 +212,21 @@ export class ModelRenderer {
     this.requestRender();
   }
 
-  /** The Differences mode's colors, set on each mesh's geometry; null shows the clay there until they come. */
+  /**
+   * The Differences mode's distances, set on each mesh's geometry once, for the GPU to color them by
+   * (`setHeatTolerance`, `heatColors`); null shows the clay there until they come.
+   */
   setHeat(heat: ModelHeat | null): void {
     this.heat = heat;
-    for (const side of ['before', 'after'] as const) {
-      const colors = heat?.[side];
-      this.sides[side]?.model.meshes.forEach((mesh, i) => {
-        const values = colors?.[i];
-        if (values) writeAttribute(mesh.solid.geometry, 'color', values, side === 'before' ? 4 : 3);
-      });
-    }
+    this.applyHeat();
     this.applyLook();
+    this.requestRender();
+  }
+
+  /** What the Differences mode colors as changed: past `tolerance`, fully at `fullAt` (`fullHeatAt`). Recolors on the GPU alone. */
+  setHeatTolerance(tolerance: number, fullAt: number): void {
+    this.heatTolerance = { tolerance, fullAt };
+    this.applyHeat();
     this.requestRender();
   }
 
@@ -283,14 +305,13 @@ export class ModelRenderer {
     const side = pane && this.sides[pane.side];
     if (!pane || !side) return null;
     const { viewport } = pane;
-    const ndc = new Vector2(((x * this.pixelRatio - viewport.x) / viewport.width) * 2 - 1, ((this.height - y) * this.pixelRatio - viewport.y) / viewport.height * 2 - 1);
+    const at = pickWindowAt(x, y, viewport, this.height, this.pixelRatio);
     this.placeCamera(viewport.width / viewport.height);
     const raycaster = new Raycaster();
-    raycaster.setFromCamera(ndc, this.camera);
-    const hits: Intersection[] = raycaster.intersectObjects(side.model.meshes.filter((mesh) => mesh.solid.visible || mesh.wire.visible).map((mesh) => mesh.solid), false);
-    const [hit] = hits;
+    raycaster.setFromCamera(new Vector2(...at.ndc), this.camera);
     const ray: Ray = { origin: raycaster.ray.origin.toArray(), direction: raycaster.ray.direction.toArray() };
-    return { side: pane.side, key: (hit?.object.userData.key as string | undefined) ?? null, point: hit ? (hit.point.toArray() as Vector) : null, ray };
+    const hit = this.picker ? this.picker.pick(this.renderer, side.scene, this.camera, at) : raycastHit(raycaster, side.model);
+    return { side: pane.side, key: hit ? side.model.meshes[hit.mesh]!.key : null, point: hit?.point ?? null, ray };
   }
 
   /**
@@ -338,6 +359,7 @@ export class ModelRenderer {
     this.targets = null;
     this.blender.dispose();
     this.comparer.dispose();
+    this.picker?.dispose();
     this.environment.dispose();
     disposeGroup(this.grid);
     this.renderer.dispose();
@@ -484,6 +506,9 @@ export class ModelRenderer {
 
   private sceneOf(model: ModelScene): SideScene {
     const scene = new Scene();
+    // Never moved: composing its matrix every frame would place again every node under it, the static ones too
+    // (`nodesTakesMove`).
+    scene.matrixAutoUpdate = false;
     scene.environment = this.environment;
     scene.environmentIntensity = 0.55;
     const key = new DirectionalLight(0xffffff, 1.8);
@@ -503,7 +528,29 @@ export class ModelRenderer {
     pivot.renderOrder = 10;
     scene.add(key, key.target, new HemisphereLight(0xffffff, 0x000000, 0.25), model.root, markers, pivot, skeleton, joints);
     const looks = new SlotLookMaterials(model, this.lookTextures);
+    model.meshes.forEach((mesh, index) => MeshPicker.makePickable([mesh.solid, mesh.wire], index));
     return { scene, model, key, markers, pivot, skeleton, joints, looks };
+  }
+
+  /**
+   * Each side's distances on its meshes' geometries (once: the same arrays aren't set again), and the tolerance. The
+   * heat may be another pair's for a moment (a side replaced before its comparison comes): a mesh takes only distances
+   * with one per vertex of it (`distancesToDraw`), and shows its clay otherwise.
+   */
+  private applyHeat(): void {
+    for (const side of ['before', 'after'] as const) {
+      const scene = this.sides[side];
+      if (!scene) continue;
+      scene.model.meshes.forEach((mesh, i) => {
+        const { geometry } = mesh.solid;
+        const distances = distancesToDraw(this.heat?.[side][i], geometry.getAttribute('position').count);
+        const drawn = geometry.getAttribute(DISTANCE_ATTRIBUTE)?.array;
+        if (!distances) geometry.deleteAttribute(DISTANCE_ATTRIBUTE);
+        else if (drawn !== distances) geometry.setAttribute(DISTANCE_ATTRIBUTE, new BufferAttribute(distances, 1));
+      });
+      scene.model.materials.heatScale.heatTolerance.value = this.heatTolerance.tolerance;
+      scene.model.materials.heatScale.heatFullAt.value = this.heatTolerance.fullAt;
+    }
   }
 
   private applyLook(): void {
@@ -524,38 +571,50 @@ export class ModelRenderer {
       scene.joints.material.uniforms.ring!.value = new Color(palette.backdrop);
       scene.markers.material.uniforms.fill!.value = new Color(palette.highlight);
       scene.markers.material.uniforms.ring!.value = new Color(palette.backdrop);
-      for (const mesh of scene.model.meshes) {
+      const { meshes, materials } = scene.model;
+      for (const mesh of meshes) {
         mesh.heat.visible = differences && side === 'after';
         mesh.ghost.visible = differences && side === 'before';
       }
+      materials.heatScale.heatClay.value.set(palette.clay);
+      materials.heatScale.heatHot.value.set(palette.highlight);
+      materials.ghost.color.set(palette.removed);
+      const { drawMode, surface } = this.look;
       if (differences) {
         // The after's heat in its draw mode's wires; the before only as the ghost of what is gone.
-        for (const [index, mesh] of scene.model.meshes.entries()) {
+        for (const [index, mesh] of meshes.entries()) {
           scene.looks.show(index, false, null);
           mesh.solid.visible = false;
-          mesh.wire.visible = side === 'after' && this.look.drawMode !== 'shaded';
-          mesh.wire.material.color.set(palette.wire);
-          mesh.wire.material.opacity = 0.2;
+          mesh.wire.visible = side === 'after' && drawMode !== 'shaded';
+          mesh.wire.material = materials.wire('plain');
+        }
+        for (const { material } of materials.eachWire()) {
+          material.color.set(palette.wire);
+          material.opacity = 0.2;
         }
         continue;
       }
       const highlighted = comparedByLook ? new Set<string>() : this.look.highlighted[side];
       const anyHighlighted = !comparedByLook && this.look.highlighted.before.size + this.look.highlighted.after.size > 0;
-      for (const [index, mesh] of scene.model.meshes.entries()) {
-        const lit = highlighted.has(mesh.key) || [...highlighted].some((key) => mesh.key.startsWith(`${key}/`));
-        const faded = anyHighlighted && !lit;
-        const { drawMode, surface } = this.look;
+      for (const [index, mesh] of meshes.entries()) {
+        const emphasis = emphasisOf(mesh.key, highlighted, anyHighlighted);
+        const lit = emphasis === 'lit';
         mesh.solid.visible = drawMode !== 'wireframe';
-        mesh.wire.visible = drawMode !== 'shaded' || lit;
-        mesh.clay.forEach((material, slot) => {
-          const color = new Color(surface === 'slotColors' ? slotColor(palette, mesh.slots[slot] ?? '') : palette.clay);
-          material.color.copy(faded ? color.lerp(backdrop, FADE) : color);
-          material.emissive.set(lit ? palette.highlight : 0x000000);
-          material.emissiveIntensity = lit ? 0.35 : 0;
-        });
-        scene.looks.show(index, surface === 'materials', { lit, faded, highlight: palette.highlight, backdrop: palette.backdrop, fade: FADE });
-        mesh.wire.material.color.set(lit ? palette.highlight : palette.wire);
-        mesh.wire.material.opacity = drawMode === 'wireframe' ? 0.9 : lit ? 0.6 : faded ? 0.1 : 0.28;
+        mesh.wire.visible = drawMode !== 'shaded' || (lit && outlinesWhenLit(mesh.solid.geometry));
+        // In place: the solid draws this very array while the Materials look is off (`SlotLookMaterials.show`).
+        mesh.slots.forEach((slot, i) => (mesh.clay[i] = materials.clay(slot, emphasis)));
+        mesh.wire.material = materials.wire(emphasis);
+        scene.looks.show(index, surface === 'materials', { lit, faded: emphasis === 'faded', highlight: palette.highlight, backdrop: palette.backdrop, fade: FADE });
+      }
+      for (const { material, slot, emphasis } of materials.eachClay()) {
+        const color = new Color(surface === 'slotColors' ? slotColor(palette, slot) : palette.clay);
+        material.color.copy(emphasis === 'faded' ? color.lerp(backdrop, FADE) : color);
+        material.emissive.set(emphasis === 'lit' ? palette.highlight : 0x000000);
+        material.emissiveIntensity = emphasis === 'lit' ? 0.35 : 0;
+      }
+      for (const { material, emphasis } of materials.eachWire()) {
+        material.color.set(emphasis === 'lit' ? palette.highlight : palette.wire);
+        material.opacity = drawMode === 'wireframe' ? 0.9 : emphasis === 'lit' ? 0.6 : emphasis === 'faded' ? 0.1 : 0.28;
       }
     }
   }
@@ -597,6 +656,16 @@ export class ModelRenderer {
     pivot.renderOrder = 10;
     this.grid.add(pivot);
   }
+}
+
+/**
+ * The first mesh a ray from the camera meets, testing each triangle on the main thread: where the GPU can't pick
+ * (`MeshPicker.supported`). The meshes shown count, solid or wireframe.
+ */
+function raycastHit(raycaster: Raycaster, model: ModelScene): { mesh: number; point: Vector } | null {
+  const shown = model.meshes.filter((mesh) => mesh.solid.visible || mesh.wire.visible).map((mesh) => mesh.solid);
+  const [hit]: Intersection[] = raycaster.intersectObjects(shown, false);
+  return hit ? { mesh: model.meshes.findIndex((mesh) => mesh.solid === hit.object), point: hit.point.toArray() as Vector } : null;
 }
 
 /** Round dots of `size` CSS pixels on screen, ringed in the backdrop's color, never hidden by the model. */
@@ -660,7 +729,7 @@ class Blender {
 
 /**
  * Sets a geometry's attribute to `values`: written into the one it has when that is the same size (a playing take's
- * skeleton each frame, a tolerance's colors each tick), so the GPU buffer is updated rather than made again and the old
+ * skeleton each frame), so the GPU buffer is updated rather than made again and the old
  * one left for the collector; a new one otherwise.
  */
 function writeAttribute(geometry: BufferGeometry, name: string, values: Float32Array, itemSize: number): void {

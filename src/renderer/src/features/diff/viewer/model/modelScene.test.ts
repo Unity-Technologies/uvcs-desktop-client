@@ -31,7 +31,10 @@ describe('buildModelScene', () => {
   });
 
   it('builds bones as bones, and a skinned mesh bound to them, deformed where they go', () => {
-    const model = testModel({ nodes: [{ name: 'Root', kind: 'bone' }, { name: 'Body', kind: 'skinnedMesh', mesh: { bones: ['Root'] } }] });
+    const model = testModel({
+      nodes: [{ name: 'Root', kind: 'bone' }, { name: 'Body', kind: 'skinnedMesh', mesh: { bones: ['Root'] } }],
+      clips: [{ name: 'Walk', duration: 1, tracks: [{ node: 'Root', property: 'position', times: [0], values: [0, 0, 0] }] }],
+    });
     const inverse = new Float32Array(16);
     inverse.set([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
     model.meshes[0]!.skin!.boneInverses = inverse;
@@ -46,6 +49,33 @@ describe('buildModelScene', () => {
     (body as unknown as SkinnedMesh).skeleton.update();
     const moved = (body as unknown as SkinnedMesh).applyBoneTransform(0, rest.clone());
     expect(moved.x - rest.x).toBeCloseTo(3);
+  });
+});
+
+describe('buildModelScene, what a frame places again', () => {
+  // Three composes again the matrix of every object whose `matrixAutoUpdate` is on, every frame.
+  it('places again only the nodes a take moves, and each mesh with its node', () => {
+    const model = testModel({
+      nodes: [{ name: 'Lid', mesh: {} }, { name: 'Crate', mesh: {} }],
+      clips: [{ name: 'Open', duration: 1, tracks: [{ node: 'Lid', property: 'quaternion', times: [0], values: [0, 0, 0, 1] }] }],
+    });
+    const scene = sceneOf(model);
+    expect([scene.objects.get('Lid')!.matrixAutoUpdate, scene.objects.get('Crate')!.matrixAutoUpdate]).toEqual([true, false]);
+    expect(scene.meshes.flatMap(({ solid, wire, heat, ghost }) => [solid, wire, heat, ghost]).some((object) => object.matrixAutoUpdate)).toBe(false);
+  });
+
+  it('draws a node no take moves where the file has it, and a mesh under a moved one where its node goes', () => {
+    const model = testModel({
+      nodes: [{ name: 'Arm', position: [1, 0, 0] }, { name: 'Hand', parent: 'Arm', position: [0, 2, 0], mesh: {} }],
+      clips: [{ name: 'Wave', duration: 1, tracks: [{ node: 'Arm', property: 'position', times: [0], values: [5, 0, 0] }] }],
+    });
+    const scene = sceneOf(model);
+    scene.root.updateMatrixWorld();
+    const hand = scene.meshes[0]!.solid;
+    expect(new Vector3().setFromMatrixPosition(hand.matrixWorld).toArray()).toEqual([expect.closeTo(1), expect.closeTo(2), expect.closeTo(0)]);
+    scene.objects.get('Arm')!.position.x = 5;
+    scene.root.updateMatrixWorld();
+    expect(new Vector3().setFromMatrixPosition(hand.matrixWorld).toArray()).toEqual([expect.closeTo(5), expect.closeTo(2), expect.closeTo(0)]);
   });
 });
 

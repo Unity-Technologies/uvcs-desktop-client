@@ -32,7 +32,7 @@ describe('modelStats', () => {
 });
 
 describe('movedStat', () => {
-  const comparison = (after: number[], before: number[] = [0]) => ({ before: [new Float32Array(before)], after: [new Float32Array(after)], size: 10, maxDistance: 1 });
+  const comparison = (after: number[], before: number[] = [0]) => ({ before: [new Float32Array(before)], after: [new Float32Array(after)], size: 10, maxDistance: 1, farthest: Math.max(...after, ...before) });
 
   it('tells the share that moved past the tolerance, and the farthest', () => {
     expect(movedStat(comparison([0, 0, 0, 0.042]), 0.001).after).toBe('25% · up to 4.2 cm');

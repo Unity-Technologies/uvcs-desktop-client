@@ -1,5 +1,5 @@
-// One version of a model as three.js objects to draw: its hierarchy with each node's transform, each mesh with one
-// material per slot, and a wireframe twin sharing its geometry. Laid out in the viewer's space, which is Unity's
+// One version of a model as three.js objects to draw: its hierarchy with each node's transform, each mesh with a
+// material per slot (shared by the meshes drawn alike: `SceneMaterials`), and a wireframe twin sharing its geometry. Laid out in the viewer's space, which is Unity's
 // without its X mirror: Unity draws mirrored coordinates with a left-handed camera, which shows the same picture as
 // three's right-handed camera shows the file's own, so the model looks as in Unity's Scene view (`modelSummary`
 // keeps Unity's mirrored numbers for what the panel tells).
@@ -11,8 +11,8 @@ import {
   Group,
   Matrix4,
   Mesh,
-  MeshBasicMaterial,
-  MeshStandardMaterial,
+  type MeshBasicMaterial,
+  type MeshStandardMaterial,
   Object3D,
   PropertyBinding,
   Quaternion,
@@ -24,6 +24,8 @@ import type { ModelMesh, ParsedModel } from './parsedModel';
 import type { ModelSummary } from './modelSummary';
 import { slotKeysOf } from './materials/slotKeys';
 import { viewerSpaceOf } from './modelSpaces';
+import { nodesTakesMove } from './nodesTakesMove';
+import { SceneMaterials } from './sceneMaterials';
 
 export interface ModelScene {
   /** The model in the viewer's space: its units in metres and its axes onto Unity's. */
@@ -34,6 +36,8 @@ export interface ModelScene {
   /** The skeleton to draw: each bone, and each bone with its parent bone (`boneLinks`). */
   bones: Object3D[];
   links: [Object3D, Object3D][];
+  /** The clay, wire, heat and ghost materials its meshes share. */
+  materials: SceneMaterials;
   /** Puts every node back where the file has it, and every blendshape at rest, after a take moved them. */
   resetPose(): void;
   dispose(): void;
@@ -44,10 +48,11 @@ export interface SceneMesh {
   key: string;
   /** Drawn with `clay` (one material per slot, in the clay or the slot colors), or the Materials look's (`SlotLookMaterials`). */
   solid: Mesh<BufferGeometry, MeshStandardMaterial[]>;
+  /** Each slot's clay material, shared with the meshes drawn alike (`SceneMaterials.clay`): the look swaps them in place. */
   clay: MeshStandardMaterial[];
   wire: Mesh<BufferGeometry, MeshBasicMaterial>;
   /** The Differences mode's twins, on the same geometry: the version after colored by how far it moved, the version
-   *  before as a ghost of what is gone (`heatColors`, set as the geometry's `color`). Hidden in other modes. */
+   *  before as a ghost of what is gone (`heatColors`, from the geometry's `surfaceDistance`). Hidden in other modes. */
   heat: Mesh<BufferGeometry, MeshStandardMaterial>;
   ghost: Mesh<BufferGeometry, MeshBasicMaterial>;
   /** Each material slot's name, in the order of `solid.material`. */
@@ -62,6 +67,7 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
   root.matrix.copy(viewerSpaceOf(model));
   const objects = new Map<string, Object3D>();
   const nodes: Object3D[] = [];
+  const takesMove = nodesTakesMove(model.clips);
   model.nodes.forEach((node, i) => {
     const object = node.kind === 'bone' ? new Bone() : new Group();
     // As animation tracks address it (FBXLoader and GLTFLoader name their tracks so): `Hand L.001` is `Hand_L001`.
@@ -69,12 +75,16 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
     object.position.fromArray(node.position);
     object.quaternion.fromArray(node.rotation);
     object.scale.fromArray(node.scale);
+    // Only a take moves a node: the others keep this matrix, and a frame doesn't compose it again (`nodesTakesMove`).
+    object.updateMatrix();
+    object.matrixAutoUpdate = takesMove(object.name);
     (node.parent < 0 ? root : nodes[node.parent]!).add(object);
     nodes.push(object);
     objects.set(summary.nodes[i]!.key, object);
   });
+  const materials = new SceneMaterials();
   const meshes = model.meshes.map((mesh) => {
-    const sceneMesh = meshOf(mesh, summary.nodes[mesh.node]!.key, slotKeysOf(model.format, mesh));
+    const sceneMesh = meshOf(mesh, summary.nodes[mesh.node]!.key, slotKeysOf(model.format, mesh), materials);
     nodes[mesh.node]!.add(sceneMesh.solid, sceneMesh.wire, sceneMesh.heat, sceneMesh.ghost);
     return sceneMesh;
   });
@@ -89,6 +99,7 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
     meshes,
     bones: nodes.filter((_, i) => model.nodes[i]!.kind === 'bone'),
     links: boneLinks(model).map(([bone, parent]) => [nodes[bone]!, nodes[parent]!]),
+    materials,
     resetPose() {
       nodes.forEach((node, i) => {
         node.position.copy(rest[i]!.position);
@@ -98,13 +109,8 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
       for (const { solid } of meshes) solid.morphTargetInfluences?.fill(0);
     },
     dispose() {
-      for (const { solid, clay, wire, heat, ghost } of meshes) {
-        solid.geometry.dispose();
-        for (const material of clay) material.dispose();
-        wire.material.dispose();
-        heat.material.dispose();
-        ghost.material.dispose();
-      }
+      for (const { solid } of meshes) solid.geometry.dispose();
+      materials.dispose();
     },
   };
 }
@@ -113,7 +119,7 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
  * The mesh as drawn: in its bind pose (a take poses a skinned one: `ModelAnimationBar`), its slots as groups,
  * its normals computed when the file has none, as Unity's importer does, its blendshapes ready for a take to play.
  */
-function meshOf(mesh: ModelMesh, key: string, slotKeys: string[]): SceneMesh {
+function meshOf(mesh: ModelMesh, key: string, slotKeys: string[], materials: SceneMaterials): SceneMesh {
   const geometry = new BufferGeometry();
   const skinned = mesh.skin !== null && mesh.attributes.skinIndex !== null && mesh.attributes.skinWeight !== null;
   if (skinned) {
@@ -132,17 +138,21 @@ function meshOf(mesh: ModelMesh, key: string, slotKeys: string[]): SceneMesh {
   for (const group of mesh.groups) geometry.addGroup(group.start, group.count, group.slot);
   addBlendShapes(geometry, mesh.blendShapes);
   geometry.computeBoundingSphere();
-  const materials = mesh.slots.map((slot) => new MeshStandardMaterial({ name: slot, roughness: 0.72, metalness: 0, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }));
-  const solid = new MeshKind(geometry, materials);
-  const wire = new MeshKind(geometry, new MeshBasicMaterial({ wireframe: true, transparent: true, depthWrite: false }));
-  const heat = new MeshKind(geometry, new MeshStandardMaterial({ vertexColors: true, roughness: 0.72, metalness: 0, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }));
-  const ghost = new MeshKind(geometry, new MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false }));
+  const clay = mesh.slots.map((slot) => materials.clay(slot, 'plain'));
+  const solid = new MeshKind(geometry, clay);
+  const wire = new MeshKind(geometry, materials.wire('plain'));
+  const heat = new MeshKind(geometry, materials.heat);
+  const ghost = new MeshKind(geometry, materials.ghost);
   heat.visible = false;
   ghost.visible = false;
   // The twins deform as the solid does: one set of blendshape weights, the one a take sets (`playableTake`).
   for (const twin of [wire, heat, ghost]) twin.morphTargetInfluences = solid.morphTargetInfluences;
-  for (const object of [solid, wire, heat, ghost]) object.userData.key = key;
-  return { key, solid, clay: materials, wire, heat, ghost, slots: mesh.slots, slotKeys };
+  for (const object of [solid, wire, heat, ghost]) {
+    object.userData.key = key;
+    // Where its node is, always: only the node moves (`nodesTakesMove`).
+    object.matrixAutoUpdate = false;
+  }
+  return { key, solid, clay, wire, heat, ghost, slots: mesh.slots, slotKeys };
 }
 
 /**
@@ -192,6 +202,9 @@ function bindSkin(mesh: SceneMesh, skin: NonNullable<ModelMesh['skin']>, nodes: 
 function standInBone(skin: NonNullable<ModelMesh['skin']>, index: number, root: Group): Bone {
   const bone = new Bone();
   new Matrix4().fromArray(skin.boneInverses, index * 16).invert().decompose(bone.position, bone.quaternion, bone.scale);
+  // No take names it: it stays where it was bound.
+  bone.updateMatrix();
+  bone.matrixAutoUpdate = false;
   root.add(bone);
   return bone;
 }
