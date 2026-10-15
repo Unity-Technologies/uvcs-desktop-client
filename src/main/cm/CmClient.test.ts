@@ -26,14 +26,14 @@ type Answer = (options?: CmProcessOptions) => CmResult;
 function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer = ((): CmResult => ({ output: 'done\n', exitCode: 0 })) as Answer } = {}) {
   const processes: ProcessRun[] = [];
   const shellCommands: { cwd: string; args: string[] }[] = [];
-  const pools: { cmPath: string; disposed: boolean; warmed: string[]; released: string[] }[] = [];
+  const pools: { cmPath: string; disposed: boolean; shown: string[]; warmed: string[]; released: string[] }[] = [];
   const runners: CmRunners = {
     runProcess: async (cmPath, args, options) => {
       processes.push({ cmPath, args, options });
       return answer(options);
     },
     createShellPool: (cmPath) => {
-      const pool = { cmPath, disposed: false, warmed: [] as string[], released: [] as string[] };
+      const pool = { cmPath, disposed: false, shown: [] as string[], warmed: [] as string[], released: [] as string[] };
       pools.push(pool);
       return {
         run: async (cwd, args) => {
@@ -41,7 +41,8 @@ function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer
           return answer();
         },
         isReady: () => warm,
-        keptDirectory: () => pool.warmed.find((cwd) => !pool.released.includes(cwd)),
+        shownDirectory: () => pool.shown.find((cwd) => !pool.released.includes(cwd)),
+        show: (cwd) => void pool.shown.push(cwd),
         warmUp: (cwd) => void pool.warmed.push(cwd),
         release: (cwd) => void pool.released.push(cwd),
         disposeAll: () => void (pool.disposed = true),
@@ -79,7 +80,7 @@ describe('CmClient routing', () => {
     expect(shellCommands[0]?.cwd).toBe(homedir());
   });
 
-  it("runs a query that answers the same anywhere in a workspace's kept sessions, starting none in the home directory", async () => {
+  it('runs a query that answers the same anywhere in a workspace a window shows, starting no sessions in the home directory', async () => {
     const { cm, shellCommands, pools } = fakeClient();
     cm.warmUp(WORKSPACE);
 
@@ -89,8 +90,10 @@ describe('CmClient routing', () => {
     expect(pools[0]?.warmed).not.toContain(homedir());
   });
 
-  it('runs a query that answers the same anywhere in the home directory when no directory keeps sessions', async () => {
+  it('runs a query that answers the same anywhere in the home directory when no window shows a workspace', async () => {
     const { cm, shellCommands } = fakeClient();
+    await cm.query(['status'], { cwd: WORKSPACE });
+    shellCommands.length = 0;
 
     await cm.query(['profile', 'list'], { anyDirectory: true });
 
@@ -406,14 +409,14 @@ describe('CmClient command log', () => {
 });
 
 describe('CmClient sessions', () => {
-  it('warms up and releases the sessions of a directory, the home directory by default', () => {
+  it('shows (warming up) and releases the sessions of a directory, the home directory by default', () => {
     const { cm, pools } = fakeClient();
 
     cm.warmUp();
     cm.warmUp(WORKSPACE);
     cm.release(WORKSPACE);
 
-    expect(pools[0]).toMatchObject({ warmed: [homedir(), WORKSPACE], released: [WORKSPACE] });
+    expect(pools[0]).toMatchObject({ shown: [homedir(), WORKSPACE], released: [WORKSPACE] });
   });
 
   it('starts over with new sessions when cm is found somewhere else', async () => {
@@ -428,7 +431,7 @@ describe('CmClient sessions', () => {
       createShellPool: (cmPath) => {
         const pool = { cmPath, disposed: false };
         pools.push(pool);
-        return { run: vi.fn(), isReady: () => false, keptDirectory: () => undefined, warmUp: vi.fn(), release: vi.fn(), disposeAll: () => void (pool.disposed = true) };
+        return { run: vi.fn(), isReady: () => false, shownDirectory: () => undefined, show: vi.fn(), warmUp: vi.fn(), release: vi.fn(), disposeAll: () => void (pool.disposed = true) };
       },
     });
 

@@ -20,8 +20,8 @@ export interface CmRunOptions {
   cwd?: string;
   /**
    * A local command that answers the same in any directory (`profile list`, `whoami`, `workspace list`): with no `cwd`,
-   * it runs where `cm shell`s are kept already (a workspace a window shows) instead of starting the home folder's,
-   * two more processes of about 80 MB each. The home folder's only when no directory has any (the home screen).
+   * it runs in a directory a window shows (`shownDirectory`: its workspace) instead of starting the home folder's
+   * `cm shell`s, two more processes of about 80 MB each. The home folder's when only the home screen shows.
    */
   anyDirectory?: boolean;
   signal?: AbortSignal;
@@ -31,7 +31,7 @@ export interface CmRunOptions {
 }
 
 type CommandLogListener = (entry: CommandLogEntry) => void;
-type ShellPool = Pick<CmShellPool, 'run' | 'isReady' | 'keptDirectory' | 'warmUp' | 'release' | 'disposeAll'>;
+type ShellPool = Pick<CmShellPool, 'run' | 'isReady' | 'shownDirectory' | 'show' | 'warmUp' | 'release' | 'disposeAll'>;
 
 /** What `CmClient` runs commands with: a process of their own, and pooled `cm shell` sessions. Tests pass fakes. */
 export interface CmRunners {
@@ -103,9 +103,12 @@ export class CmClient {
     return this.run(args, options, false);
   }
 
-  /** Prepares `cm shell` sessions for a working directory (defaults to the home directory). */
+  /**
+   * A window shows a working directory (defaults to the home directory, for the home screen): prepares its `cm shell`
+   * sessions, where queries that run the same anywhere go too (`anyDirectory`) until `release`.
+   */
   warmUp(cwd = homedir()): void {
-    this.shellPool.warmUp(cwd);
+    this.shellPool.show(cwd);
   }
 
   /** Ends the `cm shell` sessions of a working directory no window shows anymore (each holds tens of MB). */
@@ -117,9 +120,9 @@ export class CmClient {
     this.shellPool.disposeAll();
   }
 
-  /** Where a query with no `cwd` runs: for one that runs the same anywhere, a directory with sessions kept; else home. */
+  /** Where a query with no `cwd` runs: for one that runs the same anywhere, a directory a window shows; else home. */
   private directoryForAny({ anyDirectory }: CmRunOptions): string {
-    return (anyDirectory ? this.shellPool.keptDirectory() : undefined) ?? homedir();
+    return (anyDirectory ? this.shellPool.shownDirectory() : undefined) ?? homedir();
   }
 
   /**

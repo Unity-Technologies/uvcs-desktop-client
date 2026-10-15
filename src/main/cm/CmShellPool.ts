@@ -30,6 +30,8 @@ interface Directory {
  */
 export class CmShellPool {
   private readonly directories = new Map<string, Directory>();
+  /** The directories windows show, in the order they were shown (`show`); kept even while their sessions are let go. */
+  private readonly shown = new Set<string>();
 
   constructor(
     cmPath: string,
@@ -53,14 +55,19 @@ export class CmShellPool {
   }
 
   /**
-   * A directory whose sessions are kept (not released), one that answers at once first; undefined when none is. Where a
-   * command that runs the same in any directory goes, so it starts no sessions of its own (`CmRunOptions.anyDirectory`).
+   * A directory a window shows (`show`, until `release`), one whose sessions answer at once first; undefined when no
+   * window shows any. Where a command that runs the same in any directory goes, so it starts no sessions in a directory
+   * no window needs (`CmRunOptions.anyDirectory`).
    */
-  keptDirectory(): string | undefined {
-    const kept = [...this.directories]
-      .filter(([, directory]) => !directory.released && directory.sessions.length > 0)
-      .map(([cwd]) => cwd);
-    return kept.find((cwd) => this.isReady(cwd)) ?? kept[0];
+  shownDirectory(): string | undefined {
+    const shown = [...this.shown];
+    return shown.find((cwd) => this.isReady(cwd)) ?? shown[0];
+  }
+
+  /** A window shows the directory (its workspace, or the home folder for the home screen): its sessions start now. */
+  show(cwd: string): void {
+    this.shown.add(cwd);
+    this.warmUp(cwd);
   }
 
   /** Starts the sessions for a directory so the first queries there don't pay the startup cost. */
@@ -80,6 +87,7 @@ export class CmShellPool {
 
   /** Lets a workspace's sessions go once the commands already asked for are done; a later command starts new ones. */
   release(cwd: string): void {
+    this.shown.delete(cwd);
     const directory = this.directories.get(cwd);
     if (!directory) return;
     directory.released = true;
@@ -87,6 +95,7 @@ export class CmShellPool {
   }
 
   disposeAll(): void {
+    this.shown.clear();
     for (const directory of this.directories.values()) this.disposeDirectory(directory);
     this.directories.clear();
   }
