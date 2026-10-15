@@ -34,6 +34,7 @@ function treeItem(item: Record<string, unknown>): TreeItem {
   const revisionId = integer(item.RevId);
   // A revision numbered below zero is a shelve's (`-id`, on branch `id:-1`); a private item has neither.
   const shelveId = changeset < 0 && revisionId > 0 ? -changeset : undefined;
+  const hash = text(item.Hash);
   return {
     path,
     name: path ? path.slice(path.lastIndexOf('/') + 1) : listedName,
@@ -49,6 +50,7 @@ function treeItem(item: Record<string, unknown>): TreeItem {
     parentRevisionId: integer(item.ParentRevId),
     repository: text(item.Repository).replace(/^rep:/, ''),
     itemId: integer(item.ItemId),
+    ...(hash && { hash }),
     ...(shelveId !== undefined && { shelveId }),
     ...(xlink && { xlink }),
     ...(symlinkTarget && { symlinkTarget }),

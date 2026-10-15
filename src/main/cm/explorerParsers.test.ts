@@ -40,7 +40,7 @@ describe('parseTreeItems', () => {
     expect(parseTreeItems(xml).map((item) => [item.path, item.revisionId, item.hash])).toEqual([
       ['a.txt', 13, 'W79aUjKOdDmubnGd/nEiAA=='],
       ['b.txt', -1, 'wZNJehoGssciMOYUb/RwgA=='],
-      ['notes.txt', 0, undefined],
+      ['notes.txt', -1, undefined],
     ]);
   });
 

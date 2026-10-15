@@ -11,7 +11,7 @@ import { retryWhileBusy } from '../files/whileBusy';
 import { workspaceFileOf } from '../files/workspacePaths';
 import type { ServiceContext } from './ServiceContext';
 
-export function createContentService({ cm, reviews, repositoryTrees }: Pick<ServiceContext, 'cm' | 'reviews' | 'repositoryTrees'>): ContentApi {
+export function createContentService({ cm, reviews, repositoryTrees, workspaceCopies }: Pick<ServiceContext, 'cm' | 'reviews' | 'repositoryTrees' | 'workspaceCopies'>): ContentApi {
   async function read(workspacePath: string, source: ContentSource): Promise<FileContent> {
     if (source.kind === 'empty') return EMPTY_CONTENT;
     if (source.kind === 'reviewSnapshot') return reviews.readSnapshot(workspacePath, source.path);
@@ -64,15 +64,18 @@ export function createContentService({ cm, reviews, repositoryTrees }: Pick<Serv
    * as its revision there, from the listing of its folder that the model's other reads there share
    * (`RepositoryTrees`): one `cm ls`, then one `cm cat` by revision; null where the tree hasn't the file, which costs
    * no failing command (a `serverpath:` and a tree asked in turn did), or where what it goes with (`beside`) wasn't at
-   * its path as that revision: from the same listing when they share a folder. Any other source as it is.
+   * its path as that revision: from the same listing when they share a folder. The listed revision is remembered, so
+   * the disk's copy reads it where it has its content (`WorkspaceCopies`). Any other source as it is.
    */
   async function listedRevisionOf(workspacePath: string, source: Exclude<ContentSource, { kind: 'empty' | 'reviewSnapshot' }>) {
     if (source.kind !== 'repositoryPath' || !listsTree(source.at)) return source;
-    const inTree = (path: string) => repositoryTrees.revisionAt(workspacePath, source.at, path.replace(/^\/+/, ''));
+    const inTree = (path: string) => repositoryTrees.fileAt(workspacePath, source.at, path.replace(/^\/+/, ''));
     // The revision id alone tells it: History gives `beside` only at points of the workspace's repository (`historyPointOf`).
-    if (source.beside && (await inTree(source.beside.path))?.revisionId !== source.beside.revisionId) return null;
-    const revision = await inTree(source.path);
-    return revision && { kind: 'revision' as const, revision, fileName: source.path };
+    if (source.beside && (await inTree(source.beside.path))?.revision.revisionId !== source.beside.revisionId) return null;
+    const file = await inTree(source.path);
+    if (!file) return null;
+    workspaceCopies.remember(workspacePath, [file]);
+    return { kind: 'revision' as const, revision: file.revision, fileName: source.path };
   }
 
   /** A file's bytes from the disk or `cm cat`, and the name that tells what they are. */
@@ -83,6 +86,10 @@ export function createContentService({ cm, reviews, repositoryTrees }: Pick<Serv
         throw explainLockedFile(error, absolutePath);
       });
       return { bytes, name: absolutePath };
+    }
+    if (source.kind === 'revision') {
+      const onDisk = await workspaceCopies.readRevision(workspacePath, source.revision);
+      if (onDisk) return { bytes: onDisk, name: source.fileName };
     }
     // The loaded revision of a workspace path: kept inside the workspace as a file on disk is.
     if (source.kind === 'workspaceBase') workspaceFileOf(workspacePath, source.path);
