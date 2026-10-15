@@ -43,7 +43,7 @@ import { slotColor } from './modelPalette';
 import { modelOrientation, type ModelScene } from './modelScene';
 import { cameraPositionOf, clipPlanesOf, FIELD_OF_VIEW, type BoundsLike, type OrbitView, type Ray, type Vector } from './orbitCamera';
 import type { DiffsCompares, SurfaceLook } from './surfaceLook';
-import { layoutOf, paneAt, shownLayoutMode, type Layout, type ModelLayoutMode, type Side } from './viewLayout';
+import { layoutOf, paneAt, shownLayoutMode, type ChosenLayoutMode, type Layout, type Side } from './viewLayout';
 
 export type DrawMode = 'shaded' | 'wireframe' | 'shadedWireframe';
 
@@ -67,7 +67,7 @@ export interface ModelHeat {
 
 export interface ModelLayoutState {
   /** How two versions are compared; a version shown alone (added, deleted) takes the whole canvas whatever it is. */
-  mode: Exclude<ModelLayoutMode, 'single' | 'lookDifferences'>;
+  mode: ChosenLayoutMode;
   /** The onion skin's mix: 0 all before, 1 all after. */
   blend: number;
   /** The swipe divider, as a fraction of the width. */
@@ -260,7 +260,7 @@ export class ModelRenderer {
   pick(x: number, y: number): { side: Side; key: string | null; point: Vector | null; ray: Ray } | null {
     const layout = this.layout();
     let pane = paneAt(layout, x, y, this.height, this.pixelRatio);
-    if (layout.blended) pane = layout.panes.find((candidate) => candidate.side === (this.layoutState.blend >= 0.5 ? 'after' : 'before')) ?? null;
+    if (layout.drawn === 'blended') pane = layout.panes.find((candidate) => candidate.side === (this.layoutState.blend >= 0.5 ? 'after' : 'before')) ?? null;
     const side = pane && this.sides[pane.side];
     if (!pane || !side) return null;
     const { viewport } = pane;
@@ -308,8 +308,8 @@ export class ModelRenderer {
     if (!this.palette) return;
     const layout = this.layout();
     this.renderer.setClearColor(new Color(this.palette.backdrop));
-    if (layout.blended) return this.renderBlended(layout);
-    if (layout.compared) return this.renderCompared(layout);
+    if (layout.drawn === 'blended') return this.renderBlended(layout);
+    if (layout.drawn === 'compared') return this.renderCompared(layout);
     this.renderer.setRenderTarget(null);
     this.renderer.setScissor(0, 0, this.width, this.height);
     this.renderer.setViewport(0, 0, this.width, this.height);

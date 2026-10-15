@@ -1,12 +1,15 @@
 // Where each version is drawn on the one canvas, per mode. Split gives each version a half with its own aspect;
 // swipe draws both through one full-size view, each cut to its side of the divider; onion draws both full size, to be
 // blended; differences draws the version after full size and the version before's ghost over it, in its depth;
-// differences by look draws both full size, to be compared pixel by pixel; a version shown alone takes it all. Rectangles are in canvas pixels from the bottom left, as WebGL counts.
+// differences by look draws both full size, to be compared pixel by pixel; a version shown alone takes it all.
+// Rectangles are in canvas pixels from the bottom left, as WebGL counts.
 
 import type { DiffsCompares } from './surfaceLook';
 
 export type ModelLayoutMode = 'single' | 'sideBySide' | 'onion' | 'swipe' | 'differences' | 'lookDifferences';
 export type Side = 'before' | 'after';
+/** The modes a person chooses (the header's): the others are what the view shows for them (`shownLayoutMode`). */
+export type ChosenLayoutMode = Exclude<ModelLayoutMode, 'single' | 'lookDifferences'>;
 
 export interface Rect {
   x: number;
@@ -27,10 +30,11 @@ export interface Pane {
 
 export interface Layout {
   panes: Pane[];
-  /** The panes are drawn apart and blended (onion skin), not straight onto the canvas. */
-  blended: boolean;
-  /** The panes are drawn apart and compared pixel by pixel (Diffs by look, `LookComparer`). */
-  compared?: true;
+  /**
+   * How the panes reach the canvas: straight onto it, or drawn apart and then blended (onion skin, `Blender`) or
+   * compared pixel by pixel (Diffs by look, `LookComparer`).
+   */
+  drawn: 'direct' | 'blended' | 'compared';
 }
 
 /**
@@ -38,7 +42,7 @@ export interface Layout {
  * versions' textures are loaded (compared sooner, a texture one side has and the other is still loading would light
  * up as a change); until then the version after shows alone.
  */
-export function shownLayoutMode(mode: Exclude<ModelLayoutMode, 'single' | 'lookDifferences'>, compares: DiffsCompares, looksLoaded: boolean): ModelLayoutMode {
+export function shownLayoutMode(mode: ChosenLayoutMode, compares: DiffsCompares, looksLoaded: boolean): ModelLayoutMode {
   if (mode !== 'differences' || compares === 'shape') return mode;
   return looksLoaded ? 'lookDifferences' : 'single';
 }
@@ -48,13 +52,13 @@ export function layoutOf(mode: ModelLayoutMode, width: number, height: number, s
   const full: Rect = { x: 0, y: 0, width, height };
   switch (mode) {
     case 'single':
-      return { panes: [{ side: only, viewport: full, scissor: full }], blended: false };
+      return { panes: [{ side: only, viewport: full, scissor: full }], drawn: 'direct' };
     case 'sideBySide': {
       // The before half takes the odd pixel: the halves never overlap nor leave a gap.
       const left = Math.ceil(width / 2);
       const before: Rect = { x: 0, y: 0, width: left, height };
       const after: Rect = { x: left, y: 0, width: width - left, height };
-      return { panes: [{ side: 'before', viewport: before, scissor: before }, { side: 'after', viewport: after, scissor: after }], blended: false };
+      return { panes: [{ side: 'before', viewport: before, scissor: before }, { side: 'after', viewport: after, scissor: after }], drawn: 'direct' };
     }
     case 'swipe': {
       const at = Math.round(Math.min(1, Math.max(0, split)) * width);
@@ -63,16 +67,16 @@ export function layoutOf(mode: ModelLayoutMode, width: number, height: number, s
           { side: 'before', viewport: full, scissor: { x: 0, y: 0, width: at, height } },
           { side: 'after', viewport: full, scissor: { x: at, y: 0, width: width - at, height } },
         ],
-        blended: false,
+        drawn: 'direct',
       };
     }
     case 'onion':
-      return { panes: [{ side: 'before', viewport: full, scissor: full }, { side: 'after', viewport: full, scissor: full }], blended: true };
+      return { panes: [{ side: 'before', viewport: full, scissor: full }, { side: 'after', viewport: full, scissor: full }], drawn: 'blended' };
     case 'differences':
-      return { panes: [{ side: 'after', viewport: full, scissor: full }, { side: 'before', viewport: full, scissor: full, overlay: true }], blended: false };
+      return { panes: [{ side: 'after', viewport: full, scissor: full }, { side: 'before', viewport: full, scissor: full, overlay: true }], drawn: 'direct' };
     case 'lookDifferences':
       // The version after first: a click picks it, as it is the one shown.
-      return { panes: [{ side: 'after', viewport: full, scissor: full }, { side: 'before', viewport: full, scissor: full }], blended: false, compared: true };
+      return { panes: [{ side: 'after', viewport: full, scissor: full }, { side: 'before', viewport: full, scissor: full }], drawn: 'compared' };
   }
 }
 

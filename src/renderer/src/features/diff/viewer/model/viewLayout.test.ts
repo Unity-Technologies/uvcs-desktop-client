@@ -5,7 +5,7 @@ describe('layoutOf', () => {
   it('gives a version shown alone the whole canvas', () => {
     expect(layoutOf('single', 800, 600, 0.5, 'before')).toEqual({
       panes: [{ side: 'before', viewport: { x: 0, y: 0, width: 800, height: 600 }, scissor: { x: 0, y: 0, width: 800, height: 600 } }],
-      blended: false,
+      drawn: 'direct',
     });
   });
 
@@ -27,16 +27,16 @@ describe('layoutOf', () => {
   });
 
   it('draws the version after full size for the differences, the version before over it in the same view', () => {
-    const { panes, blended } = layoutOf('differences', 400, 300);
+    const { panes, drawn } = layoutOf('differences', 400, 300);
     expect(panes.map((pane) => [pane.side, pane.viewport.width, pane.overlay ?? false])).toEqual([
       ['after', 400, false],
       ['before', 400, true],
     ]);
-    expect(blended).toBe(false);
+    expect(drawn).toBe('direct');
   });
 
   it('blends both full-size versions for the onion skin', () => {
-    expect(layoutOf('onion', 400, 300).blended).toBe(true);
+    expect(layoutOf('onion', 400, 300).drawn).toBe('blended');
   });
 
   it('compares both full-size versions for the differences by look, a click picking the version after', () => {
@@ -45,7 +45,7 @@ describe('layoutOf', () => {
       ['after', 400, false],
       ['before', 400, false],
     ]);
-    expect(layout.compared).toBe(true);
+    expect(layout.drawn).toBe('compared');
     expect(paneAt(layout, 10, 10, 300, 1)?.side).toBe('after');
   });
 });
