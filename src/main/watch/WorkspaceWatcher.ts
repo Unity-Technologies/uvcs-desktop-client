@@ -56,7 +56,8 @@ export class WorkspaceWatcher {
   async start(): Promise<WatchCoverage> {
     this.loadIgnoreRules();
     const coverage = RECURSIVE_WATCH_PLATFORMS.has(this.platform) ? this.watchRecursively() : await this.watchFolderByFolder();
-    this.partial = coverage === 'partial';
+    // Only ever set: a watch that broke meanwhile stays told.
+    if (coverage === 'partial') this.partial = true;
     return coverage;
   }
 
