@@ -149,8 +149,11 @@ method, and counted by a bounded edit distance (`diffArrays` with `maxEditLength
 is still a move. The official client's rules, which it was taken from: a change whose own two sides are that alike is
 an edit in place, never a move; a move is 2 lines at least (`MIN_MOVED_LINES`); a diff of more than 50 changes or 500
 changed lines (`MAX_BLOCKS`, `MAX_CHANGED_LINES`) is a rewrite, not looked into. Unlike it, lines with no letter or
-digit (braces, blanks) are never a move, each line is in one move at most (the closest match wins), and a diff spends
-20,000 comparisons at most (`MAX_COMPARISONS`, a few milliseconds at worst). There are no settings: the official
+digit (braces, blanks) are never a move, each line is in one move at most (the closest match wins), a diff spends
+20,000 comparisons at most (`MAX_COMPARISONS`, a few milliseconds at worst), and changed lines holding more than
+50,000 characters (`MAX_CHANGED_CHARACTERS`) aren't looked into either: a comparison takes time by the words compared
+times the edits allowed (a fifth of them), so the one changed line of a minified file of 1.6 MB held the window for
+more than ten minutes. Characters, not words, because counting them splits no line. There are no settings: the official
 client's three (on, similarity, minimum lines) sit in a menu few find, and these defaults are its own.
 
 What shows (`useMovedCode`, `MovedCode`):
@@ -221,6 +224,20 @@ a LF (`shownText`), with the same lines. Everything else keeps the files' own te
 the file's line breaks as it's typed (`diskText`: kept lines keep theirs, new ones take the file's most common),
 discards and merges split lines at all three, and one side of lone CRs against one of LFs still differs under the
 methods that recognize line endings (`crAgainstLf`); a file mixing both can't tell which of its LFs were CRs.
+
+## Long lines
+
+Chromium draws nothing of a line of text past some 1,300,000 characters (measured: 1.3M drawn, 1.4M blank, at any font
+size), so the one line of a minified file of 1.6 MB showed as an empty row. A text with a line longer than
+`LONGEST_DRAWN_LINE` (1,000,000 characters, `features/diff/viewer/longLines`) has its lines wrapped wherever they can
+wrap, whatever the wrap preference (`hasLineTooLongToDraw`): the diff (its wrap button pressed and disabled, its tooltip
+saying why) and the merge page's texts (`usePierreOptions`). Annotate can't wrap, its rows being one line high beside
+their annotation, so it cuts such a line there with an ellipsis (`withLongLinesCut`); that text is read-only, never
+written back. Everything else a long line costs is already bounded: Pierre highlights no line past
+`tokenizeMaxLineLength` (1,000 characters, its default) and marks no words in lines past `maxLineDiffLength`
+(`WORD_MARKS`), and moved code isn't looked for among changed lines that long (`MAX_CHANGED_CHARACTERS`, "Moved
+code"). Opening a pending diff of a 3.9 MB one-line file takes about 2 s, most of it Chromium laying out the wrapped
+line; 1.6 MB, about 1 s.
 
 ## Images
 
