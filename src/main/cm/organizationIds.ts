@@ -6,7 +6,10 @@
 import type { CmClient } from './CmClient';
 import { commandLineForLog } from './hideSecrets';
 
-/** `2398571046213@cloud`: a Unity organization's server by its id, as `cm` keeps it underneath. */
+/**
+ * `2398571046213@cloud`: a Unity organization's server by its id, as `cm` keeps it underneath. An older cloud
+ * organization whose own name is all digits reads the same; it only costs asking `cm` for its name, which is itself.
+ */
 export function isOrganizationIdServer(server: string): boolean {
   return /^\d+@cloud$/.test(server);
 }

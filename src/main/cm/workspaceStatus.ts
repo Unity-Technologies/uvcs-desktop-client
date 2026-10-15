@@ -12,20 +12,23 @@ const SELECTOR_KINDS: Record<string, SelectorKind> = {
 
 export interface WorkspaceStatus {
   repositoryName: string;
-  /**
-   * By name (`readWorkspaceStatus`). Straight from `parseWorkspaceStatus`, as `cm status --xml` prints it: a Unity
-   * organization's by its id (`2398571046213@cloud`), which nothing may show, compare or pass to `cm`.
-   */
+  /** By name, as `cm` prints it almost everywhere (`AcmeStudio@unity` for a Unity organization). */
   server: string;
   selector: WorkspaceSelector;
   /** Null on a shelve: its tree is no changeset (`WorkspaceInfo.loadedChangeset`). */
   loadedChangeset: number | null;
 }
 
+/** The header as `cm status --xml` prints it, its server named only by `readWorkspaceStatus`. */
+export interface PrintedWorkspaceStatus extends Omit<WorkspaceStatus, 'server'> {
+  /** A Unity organization's by its id (`2398571046213@cloud`), which nothing may show, compare or pass to `cm`. */
+  printedServer: string;
+}
+
 /** What the workspace is loaded from, read with `cm status --header --xml`, its server by name (`serverByName`). */
 export async function readWorkspaceStatus(cm: CmClient, workspacePath: string): Promise<WorkspaceStatus> {
-  const status = await readStatusHeader(cm, workspacePath);
-  return { ...status, server: await serverByName(cm, workspacePath, status.server, workspacePath) };
+  const { printedServer, ...status } = await readStatusHeader(cm, workspacePath);
+  return { ...status, server: await serverByName(cm, workspacePath, printedServer, { cwd: workspacePath }) };
 }
 
 /** What the workspace has loaded, without its repository: one `cm status --header --xml`, for what needs no more. */
@@ -34,31 +37,31 @@ export async function readWorkspaceLoad(cm: CmClient, workspacePath: string): Pr
   return { selector, loadedChangeset };
 }
 
-async function readStatusHeader(cm: CmClient, workspacePath: string): Promise<WorkspaceStatus> {
+async function readStatusHeader(cm: CmClient, workspacePath: string): Promise<PrintedWorkspaceStatus> {
   return parseWorkspaceStatus(await cm.query(['status', '--header', '--xml'], { cwd: workspacePath }));
 }
 
 /**
- * The workspace's `server` as `cm` names it everywhere but in `cm status --xml`, which prints a Unity organization's by
+ * The workspace's server as `cm` names it everywhere but in `cm status --xml`, which prints a Unity organization's by
  * its id (ARCHITECTURE.md "Unity organizations"). Only then is the workspace's machine-readable header read, a local
- * read that names it, from `cwd` (the home folder's `cm shell` unless said). Should it fail, the id stays.
+ * read that names it, run from `cwd`. Should it fail, the id stays.
  */
-export async function serverByName(cm: CmClient, workspacePath: string, server: string, cwd?: string): Promise<string> {
-  if (!isOrganizationIdServer(server)) return server;
-  const output = await cm.query(machineReadableHeaderArgs(workspacePath), cwd === undefined ? {} : { cwd }).catch(() => '');
-  return parseMachineReadableHeader(output)?.server ?? server;
+async function serverByName(cm: CmClient, workspacePath: string, printedServer: string, { cwd }: { cwd: string }): Promise<string> {
+  if (!isOrganizationIdServer(printedServer)) return printedServer;
+  const output = await cm.query(machineReadableHeaderArgs(workspacePath), { cwd }).catch(() => '');
+  return parseMachineReadableHeader(output)?.server ?? printedServer;
 }
 
 /**
  * The header of `cm status --xml`, with or without the changes. Output without the selector or the changeset is an
  * error rather than an empty status: queries built from an empty branch or changeset -1 would read the whole repository.
  */
-export function parseWorkspaceStatus(xml: string): WorkspaceStatus {
+export function parseWorkspaceStatus(xml: string): PrintedWorkspaceStatus {
   const status = child(parseXml(xml, []), 'StatusOutput');
   const workspaceStatus = child(child(status, 'WorkspaceStatus'), 'Status');
   const repSpec = child(workspaceStatus, 'RepSpec');
   const repositoryName = text(repSpec?.Name);
-  const server = text(repSpec?.Server);
+  const printedServer = text(repSpec?.Server);
   const configName = text(status?.WkConfigName);
   const selector: WorkspaceSelector = {
     kind: SELECTOR_KINDS[text(status?.WkConfigType)] ?? 'branch',
@@ -66,7 +69,7 @@ export function parseWorkspaceStatus(xml: string): WorkspaceStatus {
   };
   const loadedChangeset = repositoryName && configName ? loadedChangesetOf(integer(workspaceStatus?.Changeset, Number.NaN), selector) : undefined;
   if (loadedChangeset === undefined) throw new Error(`Unexpected output from cm status: ${xml.trim().slice(0, 200) || '(empty)'}`);
-  return { repositoryName, server, selector, loadedChangeset };
+  return { repositoryName, printedServer, selector, loadedChangeset };
 }
 
 /**

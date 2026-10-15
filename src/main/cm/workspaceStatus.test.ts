@@ -26,7 +26,7 @@ describe('parseWorkspaceStatus', () => {
   it('reads the repository, the selector and the loaded changeset', () => {
     expect(parseWorkspaceStatus(header)).toEqual({
       repositoryName: 'acme',
-      server: 'acme@cloud',
+      printedServer: 'acme@cloud',
       selector: { kind: 'branch', name: '/main/TASK1008897' },
       loadedChangeset: 278638,
     });
@@ -63,7 +63,7 @@ describe('parseWorkspaceStatus', () => {
   it('reads a workspace on a shelve as loading no changeset: cm numbers the shelve as changeset -3', () => {
     expect(parseWorkspaceStatus(onShelve)).toEqual({
       repositoryName: 'uvcs-shelvews-sandbox',
-      server: 'local',
+      printedServer: 'local',
       selector: { kind: 'shelve', name: '3' },
       loadedChangeset: null,
     });
