@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
 import { fitsCommandLine } from '../cm/commandLineLimit';
 import { cmFails, fakeCmClient, type FakeCmCommand } from '../cm/testing/fakeCmClient';
 import { batchesOf, catArgs, MAX_BATCH_BYTES, RevisionDownloads, type RevisionFile } from './RevisionDownloads';
@@ -181,6 +182,11 @@ describe('batchesOf', () => {
     expect(batches.flat()).toEqual(many);
     expect(batches.every((batch) => fitsCommandLine(catArgs(batch, folder)))).toBe(true);
     expect(batches.slice(0, -1).every((batch, index) => !fitsCommandLine(catArgs([...batch, batches[index + 1]![0]!], folder)))).toBe(true);
+  });
+
+  it('batches in linear work: twice the revisions, about twice the reads', () => {
+    const many = (count: number) => Array.from({ length: count }, (_, i) => waiting(i, 1));
+    expect(readGrowthWhenDoubled(100, many, (items) => batchesOf(items, '/tmp/s'))).toBeLessThan(2.5);
   });
 
   it('downloads each revision alone, as --file, into a folder whose path holds a ;', () => {
