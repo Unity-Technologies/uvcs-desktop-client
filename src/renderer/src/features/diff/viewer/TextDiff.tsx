@@ -86,6 +86,8 @@ interface TextDiffProps {
   changeViewRef?: RefObject<ChangeView | null>;
   /** The diff scrolled. */
   onViewScroll?: () => void;
+  /** A line is too long to draw unwrapped (`hasLineTooLongToDraw`): lines wrap whatever the preference. */
+  wrapsLongLines?: boolean;
 }
 
 /**
@@ -101,9 +103,11 @@ const SHADOW_CSS = [
 ].join('\n');
 
 /** Syntax-highlighted text diff, side by side or unified, optionally typed into on the modified side. */
-export function TextDiff({ original, modified, current, diff, diffedText, wholeFile = false, fileName, comparisonMethod, sides = BOTH_SIDES, editable = false, editorRef, onEdit, onDiscard, onUndoDiscard, changeViewRef, onViewScroll }: TextDiffProps) {
+export function TextDiff({ original, modified, current, diff, diffedText, wholeFile = false, fileName, comparisonMethod, sides = BOTH_SIDES, editable = false, editorRef, onEdit, onDiscard, onUndoDiscard, changeViewRef, onViewScroll, wrapsLongLines = false }: TextDiffProps) {
   const theme = useResolvedTheme();
-  const { layout, collapseUnchanged, wrapLines } = useDiffPreferences();
+  const preferences = useDiffPreferences();
+  const { layout, collapseUnchanged } = preferences;
+  const wrapLines = preferences.wrapLines || wrapsLongLines;
   const container = useRef<HTMLDivElement | null>(null);
   // Every diff (and the whole file) renders only the lines in view: files can be huge, and what's drawn again (a typing
   // pause's word marks, a line added, a theme switch) costs only those lines.

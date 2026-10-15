@@ -151,7 +151,16 @@ is still a move. The official client's rules, which it was taken from: a change 
 an edit in place, never a move; a move is 2 lines at least (`MIN_MOVED_LINES`); a diff of more than 50 changes or 500
 changed lines (`MAX_BLOCKS`, `MAX_CHANGED_LINES`) is a rewrite, not looked into. Unlike it, lines with no letter or
 digit (braces, blanks) are never a move, each line is in one move at most (the closest match wins), and a diff spends
-20,000 comparisons at most (`MAX_COMPARISONS`, a few milliseconds at worst). There are no settings: the official
+20,000 comparisons at most (`MAX_COMPARISONS`). Their work is bounded too, to `MOVE_WORK_BUDGET` at most (2,000,000
+word comparisons, some 150 ms at worst), counted as they're made: Myers' algorithm takes up to (2 edits + 1) times the
+shorter side's words plus the edits squared, so a comparison allows no more edits than half the work left over both
+sides' words. Long sides alike but for a few words are still found moved (paragraphs of prose, long lines); long sides
+far apart are given up early. A change whose own two sides can't be compared within that work (`UNAFFORDABLE`) is left
+out on both ends, never taken for a move when it may have been edited in place. A
+change whose two sides could neither be a move (a line each, as in a minified file) isn't compared at all, nor split
+into words when no change has two lines: the one line of a minified file of 800 KB, compared with what it became,
+held the window for minutes. A limit on the changed lines' characters was tried instead and dropped: it hid real moves
+among rewritten paragraphs. There are no settings: the official
 client's three (on, similarity, minimum lines) sit in a menu few find, and these defaults are its own.
 
 What shows (`useMovedCode`, `MovedCode`):
@@ -222,6 +231,30 @@ a LF (`shownText`), with the same lines. Everything else keeps the files' own te
 the file's line breaks as it's typed (`diskText`: kept lines keep theirs, new ones take the file's most common),
 discards and merges split lines at all three, and one side of lone CRs against one of LFs still differs under the
 methods that recognize line endings (`crAgainstLf`); a file mixing both can't tell which of its LFs were CRs.
+
+## Long lines
+
+Chromium draws nothing of a line of text past some 1,300,000 characters (measured: 1.3M drawn, 1.4M blank, at any font
+size), so the one line of a minified file of 1.6 MB showed as an empty row. A text with a line longer than
+`LONGEST_DRAWN_LINE` (1,000,000 characters, `features/diff/viewer/longLines`) has its lines wrapped wherever they can
+wrap, whatever the wrap preference (`hasLineTooLongToDraw`): the diff (its wrap button pressed and unavailable, its
+tooltip saying why) and the merge page's texts (`usePierreOptions`). Annotate can't wrap, its rows being one line high
+beside their annotation, so it cuts such a line there with an ellipsis (`withLongLinesCut`); that text is read-only,
+never written back.
+
+A text with a line longer than `LONGEST_EDITED_LINE` (50,000 characters) isn't typed into in the app
+(`hasLineTooLongToEdit`): Pierre's editor takes time by the square of a wrapped line's length at each keystroke
+(measured: 100,000 characters 0.24 s a key, 300,000 3 s, 700,000 18 s, 2 MB more than three minutes; unwrapped, 700,000
+took 70 ms, but the user may wrap any line). Such a pending file's diff is read-only (`typesIntoDiff`), a line above it
+saying why, with Open file, also above the line saying it has no changes to show; the merge page doesn't offer "Edit
+the text in the app" for it (`editInAppUnavailable`, its tooltip saying why). The limit reads the texts as read, not as
+typed: a long line pasted into a file being edited keeps it editable until it's saved, since turning the editor off in
+the middle of an edit, unsaved text and all, would be worse than a slow keystroke.
+
+Everything else a long line costs is already bounded: Pierre highlights no line past `tokenizeMaxLineLength` (1,000
+characters, its default) and marks no words in lines past `maxLineDiffLength` (`WORD_MARKS`), and comparisons of moved
+code are bounded by their work (`MOVE_WORK_BUDGET`, "Moved code"). Opening a pending diff of a 3.9 MB one-line file
+takes about 2 s, most of it Chromium laying out the wrapped line; 1.6 MB, about 1 s.
 
 ## Images
 

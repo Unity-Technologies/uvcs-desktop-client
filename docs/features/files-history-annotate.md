@@ -71,7 +71,7 @@ changeset's other blocks) and pick the block and pin it when clicked. Only the c
 history does; the rest of the cell only picks. Walking back selects the revision before, with Back (the trail `useHistorySelection` keeps; picking in the list starts it over). ⌥↓ ⌥↑ walk the blocks (with ⇧, those of the same changeset), Space opens the card. The gutter, the rules
 and Pierre's code render only the lines in view, at one pinned line height (`annotationLayout`); the code highlights as a
 read-only diff does (`syntaxHighlighting`). A pinned revision's annotation is cached as immutable, the workspace's
-follows its edits (`isImmutableAnnotation`).
+follows its edits (`isImmutableAnnotation`). A line too long to draw is cut, not wrapped: diff.md "Long lines".
 
 ## Moving items (cut and paste)
 

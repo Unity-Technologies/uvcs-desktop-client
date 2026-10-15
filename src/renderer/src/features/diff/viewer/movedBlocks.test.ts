@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { countCalls } from '@shared/testing/countCalls';
+import { countLineComparisons } from '../../../testing/countLineComparisons';
 import type { ComparisonMethod } from './comparisonMethod';
 import { lineDiff } from './lineDiff';
-import { detectMovedBlocks, MAX_BLOCKS, MAX_CHANGED_LINES, MAX_COMPARISONS, moveContaining, MoveSearch, type MovedBlock } from './movedBlocks';
+import { detectMovedBlocks, MAX_BLOCKS, MAX_CHANGED_LINES, MAX_COMPARISONS, MOVE_WORK_BUDGET, moveContaining, MoveSearch, type MovedBlock } from './movedBlocks';
 
 const text = (lines: string[], lineBreak = '\n'): string => lines.map((line) => `${line}${lineBreak}`).join('');
 const movesIn = (original: string[], modified: string[], method: ComparisonMethod = 'recognizeAll') =>
@@ -126,6 +127,53 @@ describe('detectMovedBlocks', () => {
     const original = [...FUNCTION, ...BEFORE, ...AFTER];
     expect(movesIn([...original, ...filler('old', MAX_CHANGED_LINES / 2)], [...BEFORE, ...AFTER, ...FUNCTION, ...filler('new', MAX_CHANGED_LINES / 2)])).toEqual([]);
     expect(movesIn(original, [...BEFORE, ...AFTER, ...FUNCTION])).toHaveLength(1);
+  });
+
+  it("compares no words for a minified file's one changed line: a single line never moves", () => {
+    const minified = 'var a=b.c(d,e);'.repeat(70_000);
+    const meta = lineDiff(text([minified]), text([`${minified}f();`]), 'recognizeAll').meta;
+    const { result, comparisons } = countLineComparisons(() => detectMovedBlocks(meta, 'recognizeAll'));
+    expect(result).toEqual([]);
+    expect(comparisons).toBe(0);
+  });
+
+  it('finds code moved as it was however long its lines', () => {
+    const long = (name: string): string => `const ${name} = [${'1, '.repeat(5_000)}];`;
+    const moved = [long('first'), long('second')];
+    expect(movesIn([...moved, ...BEFORE, ...AFTER], [...BEFORE, ...AFTER, ...moved])).toHaveLength(1);
+  });
+
+  it('finds paragraphs moved in prose whose other paragraphs were all rewritten', () => {
+    const paragraph = (name: string): string => Array.from({ length: 45 }, (_, index) => `${name}w${index}`).join(' ').slice(0, 450);
+    const rewritten = Array.from({ length: 120 }, (_, index) => [paragraph(`old${index}`), paragraph(`new${index}`)]);
+    const moved = [paragraph('movedA'), paragraph('movedB')];
+    const original = [...moved, ...BEFORE, ...rewritten.map(([before]) => before!), ...AFTER];
+    const modified = [...BEFORE, ...rewritten.map(([, after]) => after!), ...AFTER, ...moved];
+    expect(movesIn(original, modified)).toEqual([{ deletions: { start: 1, count: 2 }, additions: { start: 133, count: 2 }, changed: [], replaced: [] }]);
+  });
+
+  it(`spends at most ${MOVE_WORK_BUDGET} word comparisons on long sides that share no word`, () => {
+    const words = (prefix: string, separator: string): string => Array.from({ length: 12_500 }, (_, index) => `${prefix}${index}`).join(separator);
+    const meta = lineDiff(text([words('a', ' '), words('b', ' '), ...BEFORE]), text([...BEFORE, words('c', ','), words('d', ',')]), 'recognizeAll').meta;
+    const { result, comparisons } = countLineComparisons(() => detectMovedBlocks(meta, 'recognizeAll'));
+    expect(result).toEqual([]);
+    expect(comparisons).toBeLessThanOrEqual(MOVE_WORK_BUDGET);
+  });
+
+  it(`spends at most ${MOVE_WORK_BUDGET} word comparisons on long sides alike all along but for their ends`, () => {
+    // A long run of one punctuation mark, each a word, before the ends that differ: Myers' snakes run all along it.
+    const side = (name: string, end: string): string[] => [`${'('.repeat(50_000)}${name}`, `${name} ${end}`];
+    const ends = (prefix: string): string => Array.from({ length: 40 }, (_, index) => `${prefix}${index}`).join('-');
+    const meta = lineDiff(text([...side('x', ends('a')), ...BEFORE]), text([...side('y', ends('b')), ...BEFORE]), 'recognizeAll').meta;
+    const { comparisons } = countLineComparisons(() => detectMovedBlocks(meta, 'recognizeAll'));
+    expect(comparisons).toBeLessThanOrEqual(MOVE_WORK_BUDGET);
+  });
+
+  it('takes no move from a change too long to tell whether it was edited in place, even with a copy of it elsewhere', () => {
+    const long = (name: string, edited: boolean): string => Array.from({ length: 8_000 }, (_, index) => (edited && index % 200 === 0 ? `${name}${index}x` : `${name}${index}`)).join(' ');
+    const original = [long('a', false), long('b', false)];
+    const edited = [long('a', true), long('b', true)];
+    expect(movesIn([...original, ...BEFORE, ...AFTER], [...edited, ...BEFORE, ...AFTER, ...original])).toEqual([]);
   });
 
   it('spends a bounded number of comparisons on a file whose many look-alike blocks were all reordered', () => {

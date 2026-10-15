@@ -13,7 +13,7 @@ import { shownText } from '../../../lib/lineBreaks';
  * diff: only the lines in view render, highlighted in Pierre's workers, and plain past what's worth it.
  */
 export function ReadOnlyText({ path, text }: { path: string; text: string }) {
-  const pierreOptions = usePierreOptions();
+  const pierreOptions = usePierreOptions(text);
   const { virtualizer, surfaceRef, setSurface } = useSurfaceVirtualizer();
   const highlighting = syntaxHighlighting(text, '', false);
   const tokenizeMaxLength = highlighting === 'off' ? 0 : undefined;

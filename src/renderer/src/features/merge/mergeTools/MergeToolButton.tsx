@@ -23,6 +23,8 @@ interface MergeToolButtonProps {
   actions: ConflictToolActions;
   /** Resolving by hand in the app, kept in the menu for when no tool suits. */
   onEditInApp: () => void;
+  /** Why the text can't be edited in the app (`editInAppUnavailable`), shown on the entry; null when it can. */
+  editInAppUnavailable?: string | null;
   variant?: 'primary' | 'secondary';
 }
 
@@ -31,7 +33,7 @@ interface MergeToolButtonProps {
  * there (or adding one) only makes it the button's tool, the preferred one from then on (`toolChoiceEntries`). Nothing
  * opens until the user clicks the button.
  */
-export function MergeToolButton({ state, actions, onEditInApp, variant = 'primary' }: MergeToolButtonProps) {
+export function MergeToolButton({ state, actions, onEditInApp, editInAppUnavailable = null, variant = 'primary' }: MergeToolButtonProps) {
   const mergeTools = useMergeTools();
   const { tools } = mergeTools;
   const primary = primaryMergeTool(mergeTools);
@@ -50,7 +52,14 @@ export function MergeToolButton({ state, actions, onEditInApp, variant = 'primar
     ),
     SEPARATOR,
     { id: 'addApp', label: 'Choose another app…', icon: FolderOpen, run: () => void addMergeToolAndPick() },
-    { id: 'editInApp', label: 'Edit the text in the app', icon: PencilLine, run: onEditInApp },
+    {
+      id: 'editInApp',
+      label: 'Edit the text in the app',
+      icon: PencilLine,
+      run: onEditInApp,
+      disabled: editInAppUnavailable !== null,
+      disabledReason: editInAppUnavailable ?? undefined,
+    },
     SEPARATOR,
     { id: 'settings', label: 'Merge tool settings…', icon: Settings, run: () => openSettingsDialogAt('merge') },
   ]);

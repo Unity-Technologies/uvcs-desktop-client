@@ -57,7 +57,8 @@ merge's changesets, where the file may not have changed. A folder added with its
 (ARCHITECTURE.md "Folders once"). The page starts on the first item that needs the user in the order the list shows
 (`firstWaiting`), and goes back there after a run. Directory conflicts are named in plain words ("Added on both sides
 with the same name", `directoryConflictWords`), not `cm`'s ("Evil twin conflict"). Sandbox:
-`scripts/sandboxes/merge-conflicts.sh`.
+`scripts/sandboxes/merge-conflicts.sh`. A text with a line too long to draw unwrapped wraps, as in a diff, and isn't edited in the app:
+diff.md "Long lines".
 Every status reads as what the merge will do, never as done (`mergeStatus`): "Will merge automatically", "Needs your
 decision", then the user's choice ("Keeping yours", "Keeping incoming", "Combined", "Edited by you"; "Open in VS Code…",
 "Resolved in VS Code" for merge tools): an icon in the list and a chip in the file's toolbar, with a short tooltip. Sides
