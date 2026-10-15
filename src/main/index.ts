@@ -90,7 +90,7 @@ const api = createServices({
 });
 const early = new EarlyCalls(apiMethods(api));
 
-function start(launched: Promise<void>, readAhead: FirstScreenRead): void {
+function start(launched: Promise<void>, readAhead: Promise<FirstScreenRead>): void {
   if (!app.isPackaged) app.dock?.setIcon(DEVELOPMENT_DOCK_ICON);
   sendSettingsChanges(settings, (changed) => sendEvent('settingsChanged', changed));
   void revisionDownloads.removeLeftOvers();
@@ -99,7 +99,7 @@ function start(launched: Promise<void>, readAhead: FirstScreenRead): void {
   handleQuitting(quitting);
   installDockMenu(windows);
   updates.checkPeriodically();
-  const openFirst = (): void => openFirstWindow({ cm, windows, early, settings, commandLog }, readAhead);
+  const openFirst = (): void => void readAhead.then((read) => openFirstWindow({ cm, windows, early, settings, commandLog }, read));
   void launched.then(openFirst, openFirst);
   // macOS keeps the app running with no window; clicking the Dock icon then opens the home screen.
   app.on('activate', () => windows.all().length === 0 && windows.open());

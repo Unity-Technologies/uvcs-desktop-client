@@ -18,6 +18,7 @@ vi.mock('./createMainWindow', async () => {
 
 const GAME = join('/work', 'game');
 const TOOLS = join('/work', 'tools');
+const SAVED_BOUNDS = { x: 0, y: 0, width: 1200, height: 800, maximized: false };
 
 beforeEach(() => {
   fakeElectron.reset();
@@ -167,6 +168,40 @@ describe('the first window at launch', () => {
     expect(windows.firstWorkspace()).toBeUndefined();
     windows.openFirst();
     expect(windows.takeRequested(fakeElectron.windows()[0]!.webContents.id)).toBeNull();
+  });
+
+  it('decides from the folders looked for as the app started, checking none on the disk as it opens', async () => {
+    const reopened = join('Z:', 'work', 'game');
+    const gone = join('Z:', 'work', 'deleted');
+    const { windows } = setUp(
+      [TOOLS],
+      [
+        { workspacePath: gone, bounds: SAVED_BOUNDS, fullScreen: false },
+        { workspacePath: reopened, bounds: SAVED_BOUNDS, fullScreen: false },
+      ],
+    );
+    const lookedFor: string[] = [];
+    await windows.lookForLaunchFolders(async (folder) => {
+      lookedFor.push(folder);
+      return folder !== gone;
+    });
+
+    expect(lookedFor.sort()).toEqual([gone, reopened, TOOLS].sort());
+    expect(windows.firstWorkspace()).toBe(reopened);
+    windows.openFirst();
+    expect(vi.mocked(createMainWindow).mock.calls.map(([, options]) => options?.workspacePath)).toEqual([reopened]);
+  });
+
+  it('looks for no folder in development builds, which open none at launch', async () => {
+    fakeElectron.app.isPackaged = false;
+    const { windows } = setUp([TOOLS]);
+    const lookedFor: string[] = [];
+
+    await windows.lookForLaunchFolders(async (folder) => {
+      lookedFor.push(folder);
+      return true;
+    });
+    expect(lookedFor).toEqual([]);
   });
 
   it('opens on the home screen in development builds, where automated checks pick a workspace', () => {

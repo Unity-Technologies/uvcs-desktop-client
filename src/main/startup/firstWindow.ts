@@ -7,13 +7,13 @@ import { readFirstScreen } from './firstScreenReads';
 
 interface FirstScreenSources {
   cm: Pick<CmClient, 'warmUp'>;
-  windows: Pick<WorkspaceWindows, 'firstWorkspace'>;
+  windows: Pick<WorkspaceWindows, 'lookForLaunchFolders' | 'firstWorkspace'>;
   early: Pick<EarlyCalls, 'start'>;
   settings: { get(): AppSettings };
 }
 
 interface FirstWindow extends FirstScreenSources {
-  windows: Pick<WorkspaceWindows, 'firstWorkspace' | 'openFirst'>;
+  windows: Pick<WorkspaceWindows, 'lookForLaunchFolders' | 'firstWorkspace' | 'openFirst'>;
   commandLog: Pick<CommandLogRelay, 'windowsOpened'>;
 }
 
@@ -26,10 +26,12 @@ export interface FirstScreenRead {
  * Starts what the first window shows on its way as the main module loads, before Electron is ready (50-60 ms later)
  * and before its window is created (50-100 ms more), as `cm` needs neither: the `cm shell`s of the workspace it
  * reopens, or of the home folder for the home screen, which answer their first command after about a second; and its
- * first screen's reads (`readFirstScreen`). A launch that names another workspace (`requestAtLaunch`, known only
- * later) reads that one when the window opens (`openFirstWindow`), and these answers expire unused (`EARLY_ANSWER_MS`).
+ * first screen's reads (`readFirstScreen`), once it knows which (`lookForLaunchFolders`: well under a millisecond on a
+ * local disk). A launch that names another workspace (`requestAtLaunch`, known only later) reads that one when the
+ * window opens (`openFirstWindow`), and these answers expire unused (`EARLY_ANSWER_MS`).
  */
-export function readFirstScreenAhead({ cm, windows, early, settings }: FirstScreenSources): FirstScreenRead {
+export async function readFirstScreenAhead({ cm, windows, early, settings }: FirstScreenSources): Promise<FirstScreenRead> {
+  await windows.lookForLaunchFolders();
   const workspacePath = windows.firstWorkspace();
   readFirstScreenOf(workspacePath, { cm, early, settings });
   return { workspacePath };
