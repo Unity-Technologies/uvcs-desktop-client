@@ -192,8 +192,14 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   half was 100 times its size. Nothing frames until both are in the renderer either (`everyVersionHas`: each scene is
   built a render after its read; the camera gets the pair's bounds only then, so the first framing, F, a part picked
   and a resize share the rule): with one missing the renderer laid the other out alone, full width, and Split kept a
-  framing made for twice its pane's width until the window was resized. Until the user moves the camera, the model
-  stays framed as the stage resizes and the panel docks.
+  framing made for twice its pane's width until the window was resized. Until the user moves the camera or the app
+  frames a part of the model (a row or a part picked), the model stays framed as the stage
+  resizes and the panel docks. The first framing and a resize place the camera at once; everything else the app
+  frames (F, 0, a row picked) glides there (`ViewGlide`, `VIEW_GLIDE_MS`: half a second, eased in
+  and out, turning the short way round and zooming by ratio), as the Branch Explorer glides to what it reveals; under
+  reduced motion it is placed at once. A jump left the user unsure what the view had done, above all when it turned.
+  Anything that places the camera meanwhile (a drag, the wheel, the keys, a double-click) stops the glide where it is
+  and carries on from there.
 - **Controls**, as Unity's Scene view (`useOrbitGestures`); every move takes the model as far as the hand asked, at
   any zoom:
   - **Orbit and pan**: drag (or Alt+drag) orbits; right, middle or Shift+drag pans. A pan moves what it grabbed exactly
