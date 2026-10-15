@@ -14,6 +14,34 @@ describe('accounts', () => {
     expect(fake.commands).toMatchObject([{ via: 'query', args: ['profile', 'list', `--format=${ACCOUNT_FORMAT}`], options: { anyDirectory: true } }]);
   });
 
+  it('lists the profiles again after removing one, never sharing a read that started before the removal', async () => {
+    let profiles = formatOutput(['acme@cloud_ana', 'acme@cloud', 'ana', 'SSOWorkingMode']);
+    let finishFirstRead = (): void => {};
+    const firstRead = new Promise<void>((resolve) => (finishFirstRead = resolve));
+    let reads = 0;
+    const fake = fakeCmClient({
+      'profile list': async () => {
+        const listed = profiles;
+        if (reads++ === 0) await firstRead;
+        return listed;
+      },
+      'profile delete': () => {
+        profiles = '';
+        return '';
+      },
+    });
+    const service = createAccountsService(serviceContext(fake.cm), profilesContext(fake.cm));
+
+    const before = service.list();
+    await service.remove('acme@cloud_ana');
+    const after = service.list();
+    finishFirstRead();
+
+    expect(await after).toEqual([]);
+    await before;
+    expect(fake.lines().map((line) => line.split(' --')[0])).toEqual(['profile list', 'profile delete', 'profile list']);
+  });
+
   it('removes a profile by name', async () => {
     const fake = fakeCmClient({ 'profile delete': '' });
     const service = createAccountsService(serviceContext(fake.cm), profilesContext(fake.cm));
