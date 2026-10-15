@@ -485,7 +485,11 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
 
 What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--timeline` shows what waits for what):
 
-1. The main module opens the settings (the first run imports the official client's, `importLegacySettings`: a few
+1. The main process's entry (`main/boot.ts`, package.json's `main`) turns Node's compile cache on, in the user data
+   folder (`compile-cache`), then loads the app's bundle (`main/index.ts`), which V8 then compiles from what the
+   previous launch cached: 5-10 ms sooner. It works from inside app.asar (Node reads the source through Electron's
+   file system and keys each entry by its path and content), and the cache is skipped when it can't be used.
+   The main module opens the settings (the first run imports the official client's, `importLegacySettings`: a few
    ms), wires the services and, as it loads, before Electron is ready (`cm` needs neither that nor a window), starts
    the `cm shell`s of the workspace the first window reopens (or of the home folder, for the home screen) and that
    screen's first reads (`readFirstScreenAhead`, `readFirstScreen`): `cm version` and the workspace's info and
