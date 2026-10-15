@@ -54,6 +54,20 @@ describe('forgetWorkspace', () => {
     expect([cached(info), cached(branches)]).toEqual([true, true]);
   });
 
+  it("drops the contents its diffs read of the workspace's own files too, which a return reads again anyway", async () => {
+    const file = { kind: 'workspaceFile', path: 'Assets/ship.fbx' };
+    const keys = [
+      queryKeys.inWorkspace('/wk/game', 'content', file),
+      queryKeys.inWorkspace('/wk/game', 'contentBytes', file),
+      queryKeys.inWorkspace('/wk/game', 'diffContents', { kind: 'revision', id: 12 }, file),
+    ];
+    for (const key of keys) await readQuery(client, key, { staleTime: 0, answer: () => ({ text: 'v 0 0 0' }) });
+
+    forgetWorkspace(client, '/wk/game');
+
+    expect(keys.map(cached)).toEqual([false, false, false]);
+  });
+
   it('keeps an immutable result something still shows', async () => {
     const revision = queryKeys.inWorkspace('/wk/game', 'content', 'revid:12');
     await showQuery(client, revision, { meta: IMMUTABLE_QUERY });
