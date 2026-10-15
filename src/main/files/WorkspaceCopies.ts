@@ -8,7 +8,7 @@
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { posix } from 'node:path';
 import type { RevisionRef } from '@shared/domain/revision';
 import type { CmClient } from '../cm/CmClient';
 import type { ListedTreeItem } from '../cm/treeItemsXml';
@@ -113,7 +113,7 @@ export class WorkspaceCopies {
     if (known || !this.cm) return known ?? null;
     const onDisk = await stat(workspaceFileOf(workspacePath, path)).then((stats) => stats.isFile(), () => false);
     if (!onDisk) return null;
-    await this.listFolder(workspacePath, path.includes('/') ? dirname(path) : '');
+    await this.listFolder(workspacePath, path.includes('/') ? posix.dirname(path) : '');
     return this.listed.get(key) ?? null;
   }
 
@@ -200,18 +200,26 @@ function workspacePathOf(path: string): string | null {
   return parts.includes('..') ? null : parts.join('/');
 }
 
-/**
- * A revision at a workspace path. The repository by its name alone: `cm` spells a cloud repository's server two ways
- * (`name@<organization>@unity` in `cm ls`, `name@<id>@cloud` in `cm history --xml`), and at one path the workspace holds
- * one repository's item; the content check stands behind it.
- */
 /** A workspace folder, as `forgetListings` finds it by its workspace. */
 function folderKey(workspacePath: string, folder: string): string {
   return `${workspacePath}\0${workspacePathOf(folder) ?? folder}`;
 }
 
+/** A revision at a workspace path, its repository as `repositoryIdentity` tells it. */
 function heldKey(workspacePath: string, path: string, revision: RevisionRef): string {
-  return `${workspacePath}\0${path}\0${revision.revisionId}\0${revision.repository.split('@')[0]}`;
+  return `${workspacePath}\0${path}\0${revision.revisionId}\0${repositoryIdentity(revision.repository)}`;
+}
+
+/**
+ * What tells a repository, whose revision ids are its own: its whole spec, server included (two servers may each have
+ * a `game`, replicas included). A cloud repository alone by its name: `cm` spells its server two ways
+ * (`name@<organization>@unity` in `cm ls`, `name@<id>@cloud` in `cm history --xml` and diffs), and both spellings are
+ * cloud ones. Once the workspace's info carries the resolved spec (`fix/cloud-repository-specs`, PR #68), the whole
+ * specs can be compared and this exception can go.
+ */
+function repositoryIdentity(repository: string): string {
+  const [name = ''] = repository.split('@');
+  return /@(cloud|unity)$/.test(repository) ? `${name}@<cloud>` : repository;
 }
 
 function diskKey(path: string, size: number, modified: number): string {
