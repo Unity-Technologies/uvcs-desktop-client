@@ -25,22 +25,28 @@ describe('ProfileList', () => {
     expect(commands).toHaveLength(2);
   });
 
-  it('answers no one with a read it was told to forget, and lets a newer read answer after that one ends', async () => {
-    let finishFirst = (): void => {};
-    const first = new Promise<void>((resolve) => (finishFirst = resolve));
-    let reads = 0;
-    const { cm, commands } = fakeCmClient({ 'profile list': async () => (reads++ === 0 ? first.then(() => 'old') : 'new') });
+  it('answers no one with a read it was told to forget, and keeps sharing the newer read after the forgotten one ends', async () => {
+    const finish: (() => void)[] = [];
+    const { cm, commands } = fakeCmClient({
+      'profile list': async () => {
+        const read = commands.length;
+        await new Promise<void>((resolve) => finish.push(resolve));
+        return `read ${read}`;
+      },
+    });
     const profiles = new ProfileList(cm);
 
     const old = profiles.read();
     profiles.forget();
     const fresh = profiles.read();
-    finishFirst();
-    await old;
+    finish[0]!();
+    expect(await old).toBe('read 1');
 
-    expect(await fresh).toBe('new');
-    expect(await profiles.read()).toBe('new');
-    expect(commands).toHaveLength(3);
+    const sharing = profiles.read();
+    finish[1]!();
+    expect(await fresh).toBe('read 2');
+    expect(await sharing).toBe('read 2');
+    expect(commands).toHaveLength(2);
   });
 
   it('reads again after a read failed, and not once one succeeded', async () => {
