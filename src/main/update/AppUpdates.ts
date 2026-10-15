@@ -24,7 +24,11 @@ export interface FoundUpdate {
 }
 
 export interface AppUpdatesDependencies {
-  feed: UpdateFeed;
+  /**
+   * Loads electron-updater's feed (`autoUpdater`), at the first check: it is half the main bundle, and nothing needs it
+   * before that check (`FIRST_CHECK_DELAY_MS` after launch, or one the user asks for).
+   */
+  loadFeed: () => Promise<UpdateFeed>;
   /** Development builds have no feed: they never check. */
   packaged: boolean;
   /** Whether the app can't install an update itself (`needsManualInstall`: macOS without a Developer ID signature). */
@@ -64,14 +68,10 @@ export class AppUpdates {
   private manualInstall: Promise<boolean> | null = null;
   private installerPath: string | null = null;
   private notes: ReleaseNotes[] = [];
+  private feedLoaded: Promise<UpdateFeed> | null = null;
 
   constructor(private readonly dependencies: AppUpdatesDependencies) {
     this.current = dependencies.packaged ? { state: 'idle' } : { state: 'unavailable' };
-    // electron-updater reports fractions many times a second: windows hear whole percents only.
-    dependencies.feed.on('download-progress', (progress) => {
-      const percent = Math.floor(progress.percent);
-      if (this.current.state === 'downloading' && percent !== this.current.percent) this.setStatus({ ...this.current, percent });
-    });
   }
 
   status(): UpdateStatus {
@@ -106,7 +106,7 @@ export class AppUpdates {
     }
     this.setStatus({ state: 'checking' });
     try {
-      const result = await this.dependencies.feed.checkForUpdates();
+      const result = await (await this.feed()).checkForUpdates();
       if (!result?.isUpdateAvailable) this.setStatus({ state: 'upToDate' });
       else await this.download(result.updateInfo);
     } catch (error) {
@@ -129,7 +129,7 @@ export class AppUpdates {
     this.dependencies.beforeRestart();
     if (this.installerPath) await this.dependencies.openInstaller(this.installerPath);
     // Silent: the Windows installer runs with no wizard (a per-user install asks for no elevation), then the app starts again.
-    else this.dependencies.feed.quitAndInstall(true, true);
+    else (await this.feed()).quitAndInstall(true, true);
   }
 
   private async download({ version, files, releaseNotes }: FoundUpdate): Promise<void> {
@@ -137,7 +137,7 @@ export class AppUpdates {
     this.setStatus({ state: 'downloading', version, percent: 0 });
     this.manualInstall ??= this.dependencies.needsManualInstall();
     if (!(await this.manualInstall)) {
-      await this.dependencies.feed.downloadUpdate();
+      await (await this.feed()).downloadUpdate();
       this.setStatus({ state: 'ready', version, install: 'restart' });
       return;
     }
@@ -147,6 +147,19 @@ export class AppUpdates {
       this.setStatus({ state: 'downloading', version, percent }),
     );
     this.setStatus({ state: 'ready', version, install: 'installer' });
+  }
+
+  /** The feed, loaded once (`loadFeed`). */
+  private feed(): Promise<UpdateFeed> {
+    this.feedLoaded ??= this.dependencies.loadFeed().then((feed) => {
+      // electron-updater reports fractions many times a second: windows hear whole percents only.
+      feed.on('download-progress', (progress) => {
+        const percent = Math.floor(progress.percent);
+        if (this.current.state === 'downloading' && percent !== this.current.percent) this.setStatus({ ...this.current, percent });
+      });
+      return feed;
+    });
+    return this.feedLoaded;
   }
 
   private setStatus(status: UpdateStatus): void {

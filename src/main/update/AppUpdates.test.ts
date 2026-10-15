@@ -32,7 +32,7 @@ function fakeFeed(answers: Array<Awaited<ReturnType<UpdateFeed['checkForUpdates'
 function updates(feed: ReturnType<typeof fakeFeed>, parts: Partial<AppUpdatesDependencies> = {}) {
   const pushed: UpdateStatus[] = [];
   const dependencies: AppUpdatesDependencies = {
-    feed,
+    loadFeed: async () => feed,
     packaged: true,
     needsManualInstall: vi.fn(async () => false),
     downloadInstaller: vi.fn(async (_file, _version, onProgress) => {
@@ -147,6 +147,20 @@ describe('the checks on their own', () => {
     expect(feed.checkForUpdates).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(2 * CHECK_INTERVAL_MS);
     expect(feed.checkForUpdates).toHaveBeenCalledTimes(3);
+  });
+
+  it('load the feed at the first check, not at launch, and once', async () => {
+    vi.useFakeTimers();
+    const feed = fakeFeed([notFound, notFound]);
+    const loadFeed = vi.fn(async () => feed);
+    const { updates: app } = updates(feed, { loadFeed });
+
+    app.checkPeriodically();
+    await vi.advanceTimersByTimeAsync(FIRST_CHECK_DELAY_MS - 1);
+    expect(loadFeed).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1 + CHECK_INTERVAL_MS);
+    expect(feed.checkForUpdates).toHaveBeenCalledTimes(2);
+    expect(loadFeed).toHaveBeenCalledTimes(1);
   });
 
   it('are none in a development build', async () => {
