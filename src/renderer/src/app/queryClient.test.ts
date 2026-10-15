@@ -10,6 +10,7 @@ import {
   invalidateWorkspaceIn,
   keyedByWorkspaceInfo,
   MAX_UNUSED_IMMUTABLE,
+  MAX_UNUSED_IMMUTABLE_BYTES,
   SLOW_CHANGING_QUERY,
 } from './queryClient';
 import { readQuery, showQuery } from '../testing/queryProbes';
@@ -150,5 +151,14 @@ describe('immutable results off screen', () => {
     expect(cached(key('changesets', 'diff', 1))).toBe(true);
     expect(cached(key('changesets', 'diff', MAX_UNUSED_IMMUTABLE))).toBe(true);
     expect(cached(key('branches'))).toBe(true);
+  });
+
+  it('forgets the oldest files once those kept hold more than their bytes allow: a few models, not a hundred', async () => {
+    // Bytes that only say their length: a third of the bound and a little more each, allocated by no test.
+    const model = (id: number) => ({ model: { bytes: { byteLength: MAX_UNUSED_IMMUTABLE_BYTES / 3 + id }, format: 'glb' }, isBinary: true, size: 0 });
+    for (let id = 0; id < 4; id++) await readQuery(client, key('content', { kind: 'revision', id }), { meta: IMMUTABLE_QUERY, answer: () => model(id) });
+
+    const cached = (id: number) => client.getQueryData(key('content', { kind: 'revision', id })) !== undefined;
+    expect([0, 1, 2, 3].map(cached)).toEqual([false, false, true, true]);
   });
 });
