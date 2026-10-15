@@ -95,6 +95,14 @@ describe('changeRows', () => {
     expect(takeOfPick(shape!)).toBeNull();
   });
 
+  it('tells textures renamed or changed with the meshes that show them as the focus, saying where a repaint shows', () => {
+    const [renamed] = changeRows([{ kind: 'textures', added: ['Leaves_Autumn'], removed: ['Leaves_Summer'], nodes: [mesh('Leaves')] }]);
+    expect(renamed).toMatchObject({ tone: 'note', title: 'Textures changed: Leaves_Summer → Leaves_Autumn', focus: [{ name: 'Leaves' }] });
+    const [repainted] = changeRows([{ kind: 'embeddedTextures', names: ['Leaves'], nodes: [mesh('Leaves'), mesh('Bush')] }]);
+    expect(repainted).toMatchObject({ title: 'Texture Leaves changed', detail: 'Show materials and textures to see it.', focus: [{ name: 'Leaves' }, { name: 'Bush' }] });
+    expect(titles([{ kind: 'embeddedTextures', names: ['Leaves', 'Bark'], nodes: [] }])).toEqual(['2 textures changed: Leaves, Bark']);
+  });
+
   it('tells the exporting app as a note', () => {
     expect(changeRows([{ kind: 'exporter', before: 'Blender 4.2.1', after: 'Blender 4.2.3' }])[0]).toMatchObject({ tone: 'note', title: 'Exported from Blender 4.2.3, was Blender 4.2.1' });
   });

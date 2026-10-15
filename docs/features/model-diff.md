@@ -109,13 +109,16 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
   ("Animation Run changed: Hips, Leg_L, Tail and 4 more", parents first): the view shows it only once the take plays,
   so the panel says where to look. Keys are compared track by track (`takeTracksOf`, in steps of `KEY_STEP` so a
   re-export's rounding is none), a blendshape track keyed whole (glTF) blendshape by blendshape and a weight that
-  stays 0 not at all: a blendshape added to a mesh adds a 0 weight to every take, which changes none. **Textures** the file's materials name (where materials aren't told, below), the **up
-  axis**, the **exporting app** (all a re-export with nothing else changed tells: the panel says "Nothing Unity imports
+  stays 0 not at all: a blendshape added to a mesh adds a 0 weight to every take, which changes none. **Textures** the
+  file's materials name (where materials aren't told, below) and the images a glTF holds (`gltfFileImages`: by name,
+  their bytes fingerprinted, never decoded), each row framing the meshes whose materials map them
+  (`MeshSummary.textures`); and an image held in the file whose bytes changed under its name ("Texture Leaves
+  changed", which the materials can't tell and no file of its own shows). The **up axis**, the **exporting app** (all a re-export with nothing else changed tells: the panel says "Nothing Unity imports
   changed" when there's nothing at all).
 - **Materials as Unity resolves them** (`materialChanges`, worded by `materialChangeWords`), compared from both
   versions' plans (`planVersion`'s `resolved`, "Materials" below), each slot both versions have (a glTF's materials,
   keyed by their place in the file, paired by name instead, and only where both files name one material so:
-  `pairedSlots`; its images held in the file are compared by their place, never their content): where it takes its
+  `pairedSlots`; its images held in the file are compared by their place here, their names and bytes in **Textures** above): where it takes its
   material from (Unity's default; a project's `.mat`, by its GUID, one of the same name elsewhere named by its folder, a
   registry package's in `Library/PackageCache` named the package's; the model's own; a remap to a material the project
   hasn't: Unity's missing material, a risk), and, for the same material, its base map, normal map, base color (as the

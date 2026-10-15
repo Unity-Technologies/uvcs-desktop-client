@@ -61,7 +61,10 @@ export type ModelChange =
   | { kind: 'clipLength'; name: string; before: number; after: number }
   /** A take of the same name and length whose keys changed, and the nodes it keys differently (parents first). */
   | { kind: 'clipKeys'; name: string; nodes: NodeRef[] }
-  | { kind: 'textures'; added: string[]; removed: string[] }
+  /** Textures the materials name, or a glTF holds, now and no longer, and the meshes that show them. */
+  | { kind: 'textures'; added: string[]; removed: string[]; nodes: NodeRef[] }
+  /** Textures a glTF holds whose pixels changed under their names, and the meshes that show them. */
+  | { kind: 'embeddedTextures'; names: string[]; nodes: NodeRef[] }
   | { kind: 'upAxis'; before: string; after: string }
   /** What the model's import settings (`importSettingsChanges`) do with it now, and no longer fits it. */
   | { kind: 'scaleFactor'; before: ScaleSettings; after: ScaleSettings }
@@ -137,7 +140,7 @@ export function modelChanges(before: ModelSummary, after: ModelSummary): ModelCh
     ...slotChanges(pairs),
     ...pairs.flatMap((pair) => meshChanges(pair, verticesExplained || pivotsMoved.has(pair.ref.after!))),
     ...clipChanges(before, after, matching),
-    ...textureChanges(before, after),
+    ...textureChanges(before, after, matching),
   ];
   if (before.unitScale !== after.unitScale && !changes.some((change) => change.kind === 'resized')) {
     changes.push({ kind: 'unitsChanged', before: before.unitScale, after: after.unitScale });
@@ -482,10 +485,34 @@ function rekeyedNodes(before: TakeTrack[], after: TakeTrack[], summaryBefore: Mo
     .map(({ after, before }) => refOf(summaryAfter.nodes[after], summaryBefore.nodes[before]));
 }
 
-function textureChanges(before: ModelSummary, after: ModelSummary): ModelChange[] {
-  const added = after.textures.filter((name) => !before.textures.includes(name));
-  const removed = before.textures.filter((name) => !after.textures.includes(name));
-  return added.length + removed.length > 0 ? [{ kind: 'textures', added, removed }] : [];
+/**
+ * The textures the file's materials name (FBX, OBJ, a glTF's files beside it) and the images a glTF holds, by name:
+ * one gone, one come, and one held in the file whose bytes changed under its name (a repaint, which no file of its own
+ * would show). Each with the meshes that show it, so the row frames where to look.
+ */
+function textureChanges(before: ModelSummary, after: ModelSummary, matching: NodeMatching): ModelChange[] {
+  const held = (summary: ModelSummary) => new Map(summary.images.flatMap((image) => (image.bytes === null ? [] : [[image.name, image.bytes] as const])));
+  const [heldBefore, heldAfter] = [held(before), held(after)];
+  const names = (summary: ModelSummary, images: Map<string, string>) => [...new Set([...summary.textures, ...images.keys()])];
+  const [namesBefore, namesAfter] = [names(before, heldBefore), names(after, heldAfter)];
+  const added = namesAfter.filter((name) => !namesBefore.includes(name));
+  const removed = namesBefore.filter((name) => !namesAfter.includes(name));
+  const repainted = [...heldAfter].flatMap(([name, bytes]) => (heldBefore.has(name) && heldBefore.get(name) !== bytes ? [name] : []));
+  const changes: ModelChange[] = [];
+  if (added.length + removed.length > 0) changes.push({ kind: 'textures', added, removed, nodes: meshesShowing(before, after, matching, added, removed) });
+  if (repainted.length > 0) changes.push({ kind: 'embeddedTextures', names: repainted, nodes: meshesShowing(before, after, matching, repainted, repainted) });
+  return changes;
+}
+
+/** The meshes whose materials map one of the textures: `now` in the version after, `was` (gone since) before. */
+function meshesShowing(before: ModelSummary, after: ModelSummary, matching: NodeMatching, now: string[], was: string[]): NodeRef[] {
+  const showing = (summary: ModelSummary, textures: string[]) =>
+    summary.nodes.flatMap((node, i) => (node.mesh !== null && summary.meshes[node.mesh]!.textures.some((name) => textures.includes(name)) ? [i] : []));
+  const nodesAfter = new Set(showing(after, now));
+  for (const b of showing(before, was)) if (matching.afterOf[b] !== -1) nodesAfter.add(matching.afterOf[b]!);
+  const refs = [...nodesAfter].sort((x, y) => x - y).map((a) => refOf(after.nodes[a], before.nodes[matching.beforeOf[a]!]));
+  const gone = showing(before, was).filter((b) => matching.afterOf[b] === -1).map((b) => refOf(undefined, before.nodes[b]));
+  return [...refs, ...gone];
 }
 
 function radians(degrees: number): number {

@@ -3,7 +3,7 @@ import type { MaterialChange } from './materials/materialChanges';
 import type { ModelChange } from './modelChanges';
 import { whatChanged, type ChangesOfVersions } from './whatChanged';
 
-const TEXTURES: ModelChange = { kind: 'textures', added: ['rock.png'], removed: ['planks.png'] };
+const TEXTURES: ModelChange = { kind: 'textures', added: ['rock.png'], removed: ['planks.png'], nodes: [] };
 const EXPORTER: ModelChange = { kind: 'exporter', before: 'Blender 4.2.1', after: 'Blender 4.2.3' };
 const SCALE: ModelChange = { kind: 'scaleFactor', before: { scaleFactor: 1, convertUnits: true }, after: { scaleFactor: 100, convertUnits: true } };
 const MISSING: MaterialChange = { kind: 'source', slot: 'Glass', before: { kind: 'default' }, after: { kind: 'missing' } };

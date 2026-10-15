@@ -2,6 +2,9 @@
 // a `.bin` file next to it more often than inline, and a compressed one needs a decoder the viewer doesn't ship.
 
 import type { ModelFormat } from '@shared/domain/content';
+import { fileNameOf } from './noTextureLoading';
+import type { FileImage } from './parsedModel';
+import { fingerprintOf } from './uniqueVertices';
 
 /** Why a glTF can't be shown from its bytes alone. */
 export type GltfNeed = { kind: 'externalData'; file: string } | { kind: 'compressed'; compression: 'Draco' | 'meshopt' };
@@ -80,6 +83,23 @@ export function gltfImagePlace(json: unknown, image: number): GltfImagePlace | n
   if (!definition) return null;
   if (typeof definition.uri === 'string') return definition.uri.startsWith('data:') ? { kind: 'inFile' } : { kind: 'beside', path: decodedUri(definition.uri) };
   return Number.isInteger(definition.bufferView) ? { kind: 'inFile' } : null;
+}
+
+/**
+ * Each image of the glTF, named, and the bytes it holds fingerprinted (`gltfImagesOf`'s, never decoded): a texture
+ * held in the file has no file of its own to diff, so this is what tells it renamed or repainted.
+ */
+export function gltfFileImages(bytes: Uint8Array, format: Extract<ModelFormat, 'gltf' | 'glb'>, companions: Readonly<Record<string, Uint8Array>> = {}): FileImage[] {
+  const json = readJson(bytes, format);
+  const images: unknown[] = Array.isArray(json?.images) ? json.images : [];
+  const held = gltfImagesOf(bytes, format, companions);
+  return images.map((definition, image): FileImage => {
+    const place = gltfImagePlace(json, image);
+    const own = (definition as { name?: unknown } | null)?.name;
+    const name = typeof own === 'string' && own !== '' ? own : place?.kind === 'beside' ? fileNameOf(place.path) : `image ${image + 1}`;
+    const inFile = place?.kind === 'inFile' ? held(image) : null;
+    return { name, bytes: inFile ? fingerprintOf(inFile.bytes) : null };
+  });
 }
 
 const GLB_BINARY_CHUNK = 0x004e4942;

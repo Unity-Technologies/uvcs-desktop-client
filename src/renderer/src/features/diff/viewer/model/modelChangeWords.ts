@@ -230,6 +230,11 @@ function wordsOf(change: ModelChange): { title: string; detail?: string } {
       return { title: change.nodes.length > 0 ? `Animation ${change.name} changed: ${namesOf(change.nodes)}` : `Animation ${change.name} changed` };
     case 'textures':
       return { title: texturesTitle(change.added, change.removed) };
+    case 'embeddedTextures':
+      return {
+        title: change.names.length === 1 ? `Texture ${change.names[0]} changed` : `${change.names.length} textures changed: ${change.names.join(', ')}`,
+        detail: 'Show materials and textures to see it.',
+      };
     case 'upAxis':
       return { title: `Exported ${change.after}-up, was ${change.before}-up`, detail: 'Unity stands it on Y either way.' };
     case 'exporter':
@@ -286,7 +291,7 @@ const NAMED_NODES = 3;
 
 function focusOf(change: ModelChange): NodeRef[] {
   if ('node' in change) return [change.node];
-  if (change.kind === 'transformed') return change.nodes;
+  if (change.kind === 'transformed' || change.kind === 'textures' || change.kind === 'embeddedTextures') return change.nodes;
   return [];
 }
 
