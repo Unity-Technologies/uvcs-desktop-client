@@ -214,6 +214,42 @@ describe("WorkspaceCopies.read of a revision whose hash the reader doesn't know:
       return fake.lines().length === 2;
     }
 
+    it("takes nothing as held from a listing that was under way as the workspace changed: it tells the state before", async () => {
+      const workspace = await workspaceWith({ 'Prop/Pumpkin.obj': OBJ });
+      /** Each `cm ls` asked, answered when the test says. */
+      const listings: { answer: (output: string) => void }[] = [];
+      let onListing = (): void => undefined;
+      const fake = fakeCmClient({ ls: () => new Promise<string>((answer) => (listings.push({ answer }), onListing())) });
+      const nextListing = () => new Promise<void>((resolve) => (onListing = resolve));
+      const copies = new WorkspaceCopies({ cm: fake.cm });
+
+      const listed = nextListing();
+      const reading = copies.read(workspace, asked('Prop/Pumpkin.obj', 186));
+      await listed;
+      copies.forgetChanged(workspace, change({ metadata: true }));
+      listings[0]!.answer(PROP);
+      // The listing's hashes still serve the revisions it named, checked against the disk.
+      expect(await reading).not.toBeNull();
+
+      const listedAgain = nextListing();
+      const second = copies.read(workspace, asked('Prop/Pumpkin.obj', 190));
+      await listedAgain;
+      listings[1]!.answer(PROP);
+      expect(await second).toBeNull();
+      expect(fake.lines()).toHaveLength(2);
+    });
+
+    it("takes nothing as held from a history's cm ls that was under way as the workspace changed", async () => {
+      const { workspace, fake, copies } = await setUp();
+      const before = copies.generationOf(workspace);
+      copies.forgetChanged(workspace, change({ metadata: true }));
+
+      copies.rememberHeld(workspace, [{ path: 'Prop/Pumpkin.obj', revision: { revisionId: 186, repository: '3dtest/models@MyOrg@unity' }, hash: hashOf(OBJ), size: OBJ.length }], before);
+      await copies.read(workspace, asked('Prop/Pumpkin.obj', 190));
+
+      expect(fake.lines()).toHaveLength(1);
+    });
+
     it("keeps a folder's listing while only other folders' files change (an editor writing elsewhere)", async () => {
       expect(await listsAgainAfter(change({ folders: ['Library', 'Assets/Scenes'] }))).toBe(false);
     });
