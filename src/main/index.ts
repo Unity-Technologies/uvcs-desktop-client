@@ -2,6 +2,8 @@
 import './errors/installUnexpectedErrorHandlers';
 import { join } from 'node:path';
 import { app } from 'electron';
+import { BranchNamesCache } from './cm/BranchNamesCache';
+import { readBranchNames } from './cm/branchNames';
 import { CmClient } from './cm/CmClient';
 import { locateCm } from './cm/locateCm';
 import { warnOnOrganizationIds } from './cm/organizationIds';
@@ -38,7 +40,9 @@ const cm = new CmClient(locateCm);
 const settings = openSettings(userData);
 // What a workspace is loaded from, shared by the reads that follow one another as a window opens it.
 const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
-const watchers = watchShownWorkspaces(cm, headers);
+// Branch names by id, which code reviews name their branches by (`BranchNamesCache`), kept while a window shows the workspace.
+const branchNames = new BranchNamesCache((workspacePath) => readBranchNames(cm, workspacePath));
+const watchers = watchShownWorkspaces({ cm, headers, branchNames });
 const workspaceCopies = new WorkspaceCopies({ cm });
 watchers.listen({ changed: (workspacePath, change) => workspaceCopies.forgetChanged(workspacePath, change), unwatched: (workspacePath) => workspaceCopies.forgetListings(workspacePath) });
 const revisionDownloads = new RevisionDownloads({ cm, copies: workspaceCopies });
@@ -87,6 +91,7 @@ const api = createServices({
   workspaceCopies,
   revisionDownloads,
   repositoryTrees,
+  branchNames,
 });
 const early = new EarlyCalls(apiMethods(api));
 
