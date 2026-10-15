@@ -20,7 +20,7 @@ import type { MergeCompletion } from './MergeCompleted';
 import { mergeLabels } from './mergeDescription';
 import { MergeHeader } from './MergeHeader';
 import { MergeItemList } from './MergeItemList';
-import { buildMergeItems, firstWaiting, inListOrder, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, type MergeItem } from './mergeItems';
+import { buildMergeItems, firstWaiting, inListOrder, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, mergeProgress, type MergeItem, type MergeProgress } from './mergeItems';
 import { mergeItemMenu } from './mergeItemMenu';
 import { mergeItemTypes } from './mergeItemTypes';
 import { ResolveRunControl, useRunOffer } from './mergeTools/ResolveRunControl';
@@ -58,12 +58,14 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   const [merging, setMerging] = useState(false);
   const mergeButtonRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const latestItems = useRef<MergeItem[]>([]);
+  const latest = useRef<{ items: MergeItem[]; progress: MergeProgress } | null>(null);
 
   const intoServerBranch = Boolean(request.destinationBranch);
   const conflicting = plan.fileConflicts.length + plan.directoryConflicts.length > 0;
-  // Thousands of items: built again only when a decision changes, not for every file selected or key typed.
-  const items = useMemo(() => buildMergeItems(plan, fileStates, directoryResolutions), [plan, fileStates, directoryResolutions]);
+  // Thousands of items, from the plan alone: sorted and laid out once, not again for every version loaded or decision
+  // made, which change only the progress the rows read.
+  const items = useMemo(() => buildMergeItems(plan, conflictedFiles), [plan, conflictedFiles]);
+  const progress = useMemo(() => mergeProgress(fileStates, directoryResolutions), [fileStates, directoryResolutions]);
   const typeOf = useMemo(() => mergeItemTypes(plan.changes.map((change) => change.path)), [plan.changes]);
   const mergeTools = useMergeTools();
   const preferredTool = primaryMergeTool(mergeTools);
@@ -72,14 +74,14 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   const { rows, tree, toggleCollapsed, rowKeyOf } = useGroupedFileTree(content, itemKey, folderListScope(workspacePath, `merge:${request.sourceSpec}:${request.destinationBranch ?? ''}`), selectedKey);
   const latestRowKeyOf = useRef(rowKeyOf);
   latestRowKeyOf.current = rowKeyOf;
-  const conflictStatuses = useMemo(() => items.map(conflictStatusOf).filter((status) => status !== null), [items]);
+  const conflictStatuses = useMemo(() => items.map((item) => conflictStatusOf(item, progress)).filter((status) => status !== null), [items, progress]);
   const resolutions = collectResolutions({ plan, fileStates, directoryResolutions, comment });
   const selected = mergeItemAt(items, rows, selectedKey);
   const selectedGroup = selected ? undefined : rows.filter(isHeaderRow).find((row) => row.key === selectedKey);
   // The list follows the keys at once; the file behind it (a few hundred ms to highlight a file of a few thousand
   // lines) follows once they stop coming, instead of every file an arrow key passes through holding the list back.
   const shown = useDeferredValue(selected);
-  latestItems.current = items;
+  latest.current = { items, progress };
 
   // The selection follows the run while the user stays on the file it opened; looking elsewhere doesn't stop it.
   const followRun = useCallback((key: string, previousKey: string | undefined) => {
@@ -87,7 +89,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   }, []);
   // Once it ends: the first thing still waiting for the user, or else completing the merge.
   const afterRun = useCallback(() => {
-    const waiting = firstWaiting(latestItems.current);
+    const waiting = latest.current && firstWaiting(latest.current.items, latest.current.progress);
     if (waiting) {
       setSelection(singleSelection(latestRowKeyOf.current(waiting.key)));
       listRef.current?.querySelector<HTMLElement>('[role="grid"]')?.focus({ preventScroll: true });
@@ -100,8 +102,8 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
 
   // Start on the first thing that needs the user, as the list shows them, else on its first row.
   useEffect(() => {
-    if (!selectedKey && items.length > 0) setSelection(singleSelection(rowKeyOf((firstWaiting(items) ?? inListOrder(items)[0]!).key)));
-  }, [selectedKey, items, rowKeyOf]);
+    if (!selectedKey && items.length > 0) setSelection(singleSelection(rowKeyOf((firstWaiting(items, progress) ?? inListOrder(items)[0]!).key)));
+  }, [selectedKey, items, progress, rowKeyOf]);
 
   // A folder conflict is its folder's row in a tree and a row of its own in a list: switching keeps it selected.
   const listedKeys = useMemo(() => new Set(filter.visible.map(itemKey)), [filter.visible]);
@@ -149,6 +151,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
           <div ref={listRef} className={styles.list}>
             <MergeItemList
               rows={rows}
+              progress={progress}
               tree={tree}
               toggleCollapsed={toggleCollapsed}
               typeOf={typeOf}
@@ -162,6 +165,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
                   workspacePath,
                   request,
                   plan,
+                  progress,
                   labels,
                   itemTypeOf: typeOf,
                   preferredTool,
@@ -180,6 +184,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
             <MergeDetail
               workspacePath={workspacePath}
               item={shown}
+              progress={progress}
               plan={plan}
               labels={labels}
               request={request}

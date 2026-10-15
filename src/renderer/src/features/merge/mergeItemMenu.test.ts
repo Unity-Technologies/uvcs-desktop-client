@@ -4,7 +4,7 @@ import type { MergeTool } from '@shared/domain/mergeTools';
 import type { DirectoryConflict, MergePlan, MergeRequest } from '@shared/domain/merge';
 import { isSubmenu, type Action, type MenuEntry, type Submenu } from '../../lib/actions';
 import { SERVER_ROLES, WORKSPACE_ROLES, type MergeLabels } from './mergeDescription';
-import type { MergeItem } from './mergeItems';
+import { mergeProgress, type MergeItem } from './mergeItems';
 import { mergeItemMenu, type MergeMenuContext } from './mergeItemMenu';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
@@ -23,30 +23,46 @@ const versions = {
 } as const;
 const conflictState = (path: string, more: Partial<FileConflictState> = {}): FileConflictState =>
   ({ file: { key: `/${path}`, path, ...versions }, status: 'ready', isBinary: false, decidedByUser: false, resolution: null, ...more }) as FileConflictState;
-const conflict = (path: string, more: Partial<FileConflictState> = {}): MergeItem => ({ kind: 'fileConflict', key: `file:/${path}`, path, state: conflictState(path, more) });
-const change = (kind: 'added' | 'changed' | 'deleted' | 'moved', path = 'src/c.ts'): MergeItem => ({ kind: 'change', key: `change:${path}`, path, change: { kind, path: `/${path}` } });
-const directoryConflict = (type: DirectoryConflict['type']): MergeItem => ({
-  kind: 'directoryConflict',
-  key: 'directory:0',
-  path: 'src/shared',
-  index: 0,
-  resolution: undefined,
-  conflict: {
-    type,
-    title: 'Added on both sides with the same name',
-    explanation: '',
-    itemId: 3,
-    isDirectory: true,
-    source: { operation: 'added', path: '/src/shared', description: 'Added /src/shared' },
-    destination: { operation: 'added', path: '/src/shared', description: 'Added /src/shared' },
+/** An item the menu acts on, with its state when it is a conflicting file: the page's progress holds it. */
+interface Listed {
+  item: MergeItem;
+  state?: FileConflictState;
+}
+const conflict = (path: string, more: Partial<FileConflictState> = {}): Listed => {
+  const state = conflictState(path, more);
+  return { item: { kind: 'fileConflict', key: `file:/${path}`, path, file: state.file }, state };
+};
+const change = (kind: 'added' | 'changed' | 'deleted' | 'moved', path = 'src/c.ts'): Listed => ({ item: { kind: 'change', key: `change:${path}`, path, change: { kind, path: `/${path}` } } });
+const directoryConflict = (type: DirectoryConflict['type']): Listed => ({
+  item: {
+    kind: 'directoryConflict',
+    key: 'directory:0',
+    path: 'src/shared',
+    index: 0,
+    conflict: {
+      type,
+      title: 'Added on both sides with the same name',
+      explanation: '',
+      itemId: 3,
+      isDirectory: true,
+      source: { operation: 'added', path: '/src/shared', description: 'Added /src/shared' },
+      destination: { operation: 'added', path: '/src/shared', description: 'Added /src/shared' },
+    },
   },
 });
+
+/** The menu of `listed`, its conflicting files' states the page's progress. */
+function menuOf(listed: Listed[], more: Partial<MergeMenuContext> = {}): MenuEntry[] {
+  const progress = mergeProgress(listed.flatMap(({ state }) => (state ? [state] : [])), []);
+  return mergeItemMenu(listed.map(({ item }) => item), context({ progress, ...more }));
+}
 
 function context(more: Partial<MergeMenuContext> = {}): MergeMenuContext {
   return {
     workspacePath: '/ws',
     request,
     plan,
+    progress: mergeProgress([], []),
     labels,
     itemTypeOf: () => 'file',
     preferredTool: vscode,
@@ -66,7 +82,7 @@ const settle = () => new Promise((resolve) => setTimeout(resolve));
 
 describe('mergeItemMenu', () => {
   it('offers a conflicting file what any changed file has, and the ways to settle it', () => {
-    expect(ids(mergeItemMenu([conflict('src/a.ts')], context()))).toEqual([
+    expect(ids(menuOf([conflict('src/a.ts')]))).toEqual([
       'openRevision',
       'openRevisionWith',
       'openVersion',
@@ -82,7 +98,7 @@ describe('mergeItemMenu', () => {
 
   it('opens a conflicting file in the preferred merge tool, and offers starting over once the user decided it', () => {
     const resolveIn = vi.fn();
-    const menu = mergeItemMenu([conflict('src/a.ts', { decidedByUser: true })], context({ resolveIn }));
+    const menu = menuOf([conflict('src/a.ts', { decidedByUser: true })], { resolveIn });
     expect((entry(menu, 'resolveIn') as Action).label).toBe('Resolve in Visual Studio Code');
     (entry(menu, 'resolveIn') as Action).run();
     expect(resolveIn).toHaveBeenCalledWith('/src/a.ts', vscode);
@@ -90,15 +106,15 @@ describe('mergeItemMenu', () => {
   });
 
   it("offers no merge tool for a binary file, nor without one, and disables it while files resolve one by one", () => {
-    expect(ids(mergeItemMenu([conflict('a.png', { isBinary: true })], context()))).not.toContain('resolveIn');
-    expect(ids(mergeItemMenu([conflict('src/a.ts')], context({ preferredTool: undefined })))).not.toContain('resolveIn');
-    expect((entry(mergeItemMenu([conflict('src/a.ts')], context({ running: true })), 'resolveIn') as Action).disabled).toBe(true);
+    expect(ids(menuOf([conflict('a.png', { isBinary: true })]))).not.toContain('resolveIn');
+    expect(ids(menuOf([conflict('src/a.ts')], { preferredTool: undefined }))).not.toContain('resolveIn');
+    expect((entry(menuOf([conflict('src/a.ts')], { running: true }), 'resolveIn') as Action).disabled).toBe(true);
   });
 
   it("opens a conflict's incoming and base versions from the repository, and yours from the workspace", async () => {
     fakeApi.answer('history.openRevision', () => undefined);
     fakeApi.answer('system.openPath', () => undefined);
-    const menu = mergeItemMenu([conflict('src/a.ts')], context());
+    const menu = menuOf([conflict('src/a.ts')]);
     expect((entry(menu, 'openVersion') as Submenu).entries.map((item) => (item as Action).label)).toEqual(['Yours', 'Incoming', 'Base']);
 
     versionEntry(menu, 'Incoming').run();
@@ -113,7 +129,7 @@ describe('mergeItemMenu', () => {
   it('opens the destination version as yours when merging into a branch on the server, where no workspace file is it', async () => {
     fakeApi.answer('history.openRevision', () => undefined);
     const serverLabels: MergeLabels = { ...labels, roles: SERVER_ROLES };
-    const menu = mergeItemMenu([conflict('src/a.ts')], context({ labels: serverLabels, request: { ...request, destinationBranch: '/main' } }));
+    const menu = menuOf([conflict('src/a.ts')], { labels: serverLabels, request: { ...request, destinationBranch: '/main' } });
 
     versionEntry(menu, 'Destination').run();
     await settle();
@@ -123,37 +139,37 @@ describe('mergeItemMenu', () => {
 
   it("saves a conflict's incoming version", async () => {
     fakeApi.answer('history.saveRevisionAs', () => null);
-    (entry(mergeItemMenu([conflict('src/a.ts')], context()), 'saveAs') as Action).run();
+    (entry(menuOf([conflict('src/a.ts')]), 'saveAs') as Action).run();
     await settle();
     expect(fakeApi.argsOf('history.saveRevisionAs')).toEqual([['/ws', versions.source, 'a.ts']]);
   });
 
   it('offers a change that applies cleanly what any changed file has, never a choice: it is no conflict', () => {
-    expect(ids(mergeItemMenu([change('changed')], context()))).toEqual(['openRevision', 'openRevisionWith', 'history', 'saveAs', 'copy']);
+    expect(ids(menuOf([change('changed')]))).toEqual(['openRevision', 'openRevisionWith', 'history', 'saveAs', 'copy']);
   });
 
   it("annotates a conflicting file's incoming revision, by the changeset cm names for it", () => {
-    expect(ids(mergeItemMenu([conflict('src/a.ts')], context()))).toContain('annotate');
-    expect(ids(mergeItemMenu([conflict('src/b.ts')], context()))).not.toContain('annotate');
-    expect(ids(mergeItemMenu([conflict('src/a.ts', { isBinary: true })], context()))).not.toContain('annotate');
+    expect(ids(menuOf([conflict('src/a.ts')]))).toContain('annotate');
+    expect(ids(menuOf([conflict('src/b.ts')]))).not.toContain('annotate');
+    expect(ids(menuOf([conflict('src/a.ts', { isBinary: true })]))).not.toContain('annotate');
   });
 
   it('opens a clean change as the source has it, by its path at the source changeset', async () => {
     fakeApi.answer('history.openRevision', () => undefined);
-    (entry(mergeItemMenu([change('added')], context()), 'openRevision') as Action).run();
+    (entry(menuOf([change('added')]), 'openRevision') as Action).run();
     await settle();
     expect(fakeApi.argsOf('history.openRevision').map(([, version]) => version)).toEqual([{ kind: 'repositoryPath', path: '/src/c.ts', at: 'cs:12' }]);
   });
 
   it('has nothing to open or save for a deleted file or a folder', () => {
-    expect(ids(mergeItemMenu([change('deleted')], context()))).toEqual(['history', 'copy']);
-    expect(ids(mergeItemMenu([change('added')], context()))).toEqual(['openRevision', 'openRevisionWith', 'history', 'saveAs', 'copy']);
-    expect(ids(mergeItemMenu([change('changed', 'src/ui')], context({ itemTypeOf: () => 'directory' })))).toEqual(['history', 'copy']);
+    expect(ids(menuOf([change('deleted')]))).toEqual(['history', 'copy']);
+    expect(ids(menuOf([change('added')]))).toEqual(['openRevision', 'openRevisionWith', 'history', 'saveAs', 'copy']);
+    expect(ids(menuOf([change('changed', 'src/ui')], { itemTypeOf: () => 'directory' }))).toEqual(['history', 'copy']);
   });
 
   it('offers a directory conflict the choices of its panel, keeping both under the name the panel suggests', () => {
     const resolveDirectory = vi.fn();
-    const menu = mergeItemMenu([directoryConflict('evilTwin')], context({ resolveDirectory }));
+    const menu = menuOf([directoryConflict('evilTwin')], { resolveDirectory });
     expect(ids(menu)).toEqual(['keepDestination', 'keepSource', 'keepBoth', 'history', 'copy']);
     (entry(menu, 'keepSource') as Action).run();
     (entry(menu, 'keepBoth') as Action).run();
@@ -164,12 +180,12 @@ describe('mergeItemMenu', () => {
   });
 
   it("doesn't offer keeping both where the conflict can't keep both", () => {
-    expect(ids(mergeItemMenu([directoryConflict('changeDelete')], context()))).not.toContain('keepBoth');
+    expect(ids(menuOf([directoryConflict('changeDelete')]))).not.toContain('keepBoth');
   });
 
   it('settles several conflicting files at once, leaving the changes that apply cleanly alone, and copies them all', () => {
     const decide = vi.fn();
-    const menu = mergeItemMenu([conflict('a.ts'), change('changed'), conflict('b.ts')], context({ decide }));
+    const menu = menuOf([conflict('a.ts'), change('changed'), conflict('b.ts')], { decide });
     expect(ids(menu)).toEqual(['keepDestination', 'keepSource', 'copy']);
     (entry(menu, 'keepSource') as Action).run();
     expect(decide.mock.calls.map(([key]) => key)).toEqual(['/a.ts', '/b.ts']);
