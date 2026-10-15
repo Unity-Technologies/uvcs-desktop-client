@@ -23,7 +23,7 @@ export function workspaceRepositoryQuery(path: string) {
     queryFn: async ({ signal }) => {
       const lookupId = crypto.randomUUID();
       signal.addEventListener('abort', () => void api.system.cancelOperation(lookupId));
-      return (await api.workspaces.repositoriesOf([path], lookupId))[path] ?? null;
+      return api.workspaces.repositoryOf(path, lookupId);
     },
     staleTime: Infinity,
     // Kept off screen too: at most `MAX_RESOLVED_WORKSPACES` small answers, keyed by path.

@@ -215,9 +215,9 @@ by name, and never passes it to `cm`.
   - A file's history (`withServerOf`): from the item's repository, as the `cm ls` the history runs anyway names it
     (`workspaceItemArgs`, `{repspec}`), or the revision the history starts from.
   - The home screen (`parseSelectorFile`): a selector file that keeps an id names no repository (`WorkspaceHead`'s
-    `repository` null), so the recent workspaces' lookup asks `cm` (`repositoriesOf`, the machine-readable header),
+    `repository` null), so the recent workspaces' lookup asks `cm` (`repositoryOf`, the machine-readable header),
     as for a file that can't be read: one query per workspace for the session (`workspaceRepositoryQuery`), two at a
-    time across them in main (`workspaceRepositoryLookups`). Meanwhile, and for the workspaces past the recent ones,
+    time across them in main (`workspaceRepositoryLookup`). Meanwhile, and for the workspaces past the recent ones,
     the row shows the repository's own name, which the file tells (`repositoryName`, `describedEntry`), and no server.
   Should `cm` not answer, the id stays rather than a guess.
 - **What was saved under the id before**: nothing is migrated (that would be id-aware code to delete later). A

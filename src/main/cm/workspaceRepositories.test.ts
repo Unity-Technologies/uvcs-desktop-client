@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { cmFails, fakeCmClient, type FakeCmCommand } from './testing/fakeCmClient';
-import { MAX_LOOKUPS, repositoryInStatusHeader, workspaceRepositoryLookups } from './workspaceRepositories';
+import { repositoryInStatusHeader, workspaceRepositoryLookup } from './workspaceRepositories';
 
 describe('repositoryInStatusHeader', () => {
   it('reads the repository spec', () => {
@@ -21,18 +21,17 @@ describe('repositoryInStatusHeader', () => {
   });
 });
 
-describe('workspaceRepositoryLookups', () => {
+describe('workspaceRepositoryLookup', () => {
   const workspaceFolders = (count: number): Promise<string[]> => Promise.all(Array.from({ length: count }, () => mkdtemp(join(tmpdir(), 'wk-'))));
   /** Each workspace is on a repository named after its folder. */
   const statusHeader = ({ args }: FakeCmCommand): string => `STATUS|12|${args.at(-1)!.split(/[\\/]/).at(-1)}|local\n`;
+  const notCancelled = () => new AbortController().signal;
 
-  it("reads each workspace's repository with a local cm status of its own process, killed if it hangs", async () => {
+  it("reads a workspace's repository with a local cm status of its own process, killed if it hangs", async () => {
     const [first] = await workspaceFolders(1);
     const { cm, commands } = fakeCmClient({ status: statusHeader });
 
-    const repositories = await workspaceRepositoryLookups(cm)([first!], new AbortController().signal);
-
-    expect(repositories).toEqual({ [first!]: `${first!.split(/[\\/]/).at(-1)}@local` });
+    expect(await workspaceRepositoryLookup(cm)(first!, notCancelled())).toBe(`${first!.split(/[\\/]/).at(-1)}@local`);
     expect(commands).toMatchObject([
       { via: 'execute', args: ['status', '--header', '--machinereadable', '--fieldseparator=|', first], options: { killSignal: 'SIGKILL' } },
     ]);
@@ -40,21 +39,12 @@ describe('workspaceRepositoryLookups', () => {
 
   it('asks nothing about a folder that is gone, and takes a failed lookup as unknown', async () => {
     const [failing] = await workspaceFolders(1);
-    const gone = join(tmpdir(), 'no-such-workspace');
     const { cm, commands } = fakeCmClient({ status: cmFails('Error: The server is unreachable.') });
+    const lookUp = workspaceRepositoryLookup(cm);
 
-    expect(await workspaceRepositoryLookups(cm)([gone, failing!], new AbortController().signal)).toEqual({ [gone]: null, [failing!]: null });
+    expect(await lookUp(join(tmpdir(), 'no-such-workspace'), notCancelled())).toBeNull();
+    expect(await lookUp(failing!, notCancelled())).toBeNull();
     expect(commands).toHaveLength(1);
-  });
-
-  it(`looks up each workspace once, and never more than ${MAX_LOOKUPS}`, async () => {
-    const folders = await workspaceFolders(MAX_LOOKUPS + 2);
-    const { cm, commands } = fakeCmClient({ status: statusHeader });
-
-    const repositories = await workspaceRepositoryLookups(cm)([folders[0]!, ...folders], new AbortController().signal);
-
-    expect(Object.keys(repositories).sort()).toEqual(folders.slice(0, MAX_LOOKUPS).sort());
-    expect(commands).toHaveLength(MAX_LOOKUPS);
   });
 
   it('looks up two at a time across the calls the home screen makes for each workspace', async () => {
@@ -69,21 +59,21 @@ describe('workspaceRepositoryLookups', () => {
         return statusHeader(command);
       },
     });
-    const lookUp = workspaceRepositoryLookups(cm);
+    const lookUp = workspaceRepositoryLookup(cm);
 
-    const answers = await Promise.all(folders.map((folder) => lookUp([folder], new AbortController().signal)));
+    const answers = await Promise.all(folders.map((folder) => lookUp(folder, notCancelled())));
 
-    expect(answers.map((answer) => Object.keys(answer))).toEqual(folders.map((folder) => [folder]));
+    expect(answers).toEqual(folders.map((folder) => `${folder.split(/[\\/]/).at(-1)}@local`));
     expect(most).toBe(2);
   });
 
-  it('skips every lookup once cancelled', async () => {
-    const folders = await workspaceFolders(3);
+  it('skips a lookup cancelled before its turn', async () => {
+    const [folder] = await workspaceFolders(1);
     const { cm, commands } = fakeCmClient({ status: statusHeader });
     const cancelled = new AbortController();
     cancelled.abort();
 
-    expect(await workspaceRepositoryLookups(cm)(folders, cancelled.signal)).toEqual({});
+    expect(await workspaceRepositoryLookup(cm)(folder!, cancelled.signal)).toBeNull();
     expect(commands).toEqual([]);
   });
 });
