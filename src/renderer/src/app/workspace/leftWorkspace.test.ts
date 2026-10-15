@@ -2,9 +2,8 @@ import '../../testing/fakeWindow';
 import type { QueryClient } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { queryKeys } from '../../api/queryKeys';
-import { createQueryClient, IMMUTABLE_QUERY } from '../queryClient';
-import { readQuery } from '../../testing/queryProbes';
-import { DiscardHistory } from '../../features/diff/viewer/discardHistory';
+import { createQueryClient, IMMUTABLE_QUERY, SLOW_CHANGING_QUERY } from '../queryClient';
+import { readQuery, showQuery } from '../../testing/queryProbes';
 import { forgetWorkspace, workspaceLeft } from './leftWorkspace';
 
 let client: QueryClient;
@@ -33,28 +32,34 @@ describe('workspaceLeft', () => {
 });
 
 describe('forgetWorkspace', () => {
-  it("drops every query of the workspace left, immutable revisions too, and keeps the others' and the app's", async () => {
-    const revision = queryKeys.inWorkspace('/wk/game', 'diffContents', 'revid:12', 'revid:13');
-    const info = queryKeys.inWorkspace('/wk/game', 'info');
-    const otherInfo = queryKeys.inWorkspace('/wk/game-tools', 'info');
-    await readQuery(client, revision, { meta: IMMUTABLE_QUERY, gcTime: Infinity });
-    await readQuery(client, info);
-    await readQuery(client, otherInfo);
-    await readQuery(client, queryKeys.workspaces);
+  it("drops the workspace's immutable results, revisions and what changesets changed, and nobody else's", async () => {
+    const revision = queryKeys.inWorkspace('/wk/game', 'content', 'revid:12');
+    const changesetFiles = queryKeys.inWorkspace('/wk/game', 'diffEntries', 'cs:4');
+    const otherRevision = queryKeys.inWorkspace('/wk/game-tools', 'content', 'revid:12');
+    for (const key of [revision, changesetFiles, otherRevision]) await readQuery(client, key, { meta: IMMUTABLE_QUERY, gcTime: Infinity });
 
     forgetWorkspace(client, '/wk/game');
 
-    expect([cached(revision), cached(info), cached(otherInfo), cached(queryKeys.workspaces)]).toEqual([false, false, true, true]);
+    expect([cached(revision), cached(changesetFiles), cached(otherRevision)]).toEqual([false, false, true]);
   });
 
-  it("drops the undo history of the workspace's discards, keeping the other workspaces'", () => {
-    const discards = new DiscardHistory();
-    const kept = { before: 'c', after: 'd' };
-    discards.record('/wk/game', 'x.cs', { before: 'a', after: 'b' });
-    discards.record('/wk/tools', 'x.cs', kept);
+  it('keeps its lists and its info, so coming back within minutes reads nothing again', async () => {
+    const info = queryKeys.inWorkspace('/wk/game', 'info');
+    const branches = queryKeys.inWorkspace('/wk/game', 'branches', {});
+    await readQuery(client, info);
+    await readQuery(client, branches, SLOW_CHANGING_QUERY);
 
-    forgetWorkspace(client, '/wk/game', discards);
+    forgetWorkspace(client, '/wk/game');
 
-    expect([discards.last('/wk/game', 'x.cs'), discards.last('/wk/tools', 'x.cs')]).toEqual([undefined, kept]);
+    expect([cached(info), cached(branches)]).toEqual([true, true]);
+  });
+
+  it('keeps an immutable result something still shows', async () => {
+    const revision = queryKeys.inWorkspace('/wk/game', 'content', 'revid:12');
+    await showQuery(client, revision, { meta: IMMUTABLE_QUERY });
+
+    forgetWorkspace(client, '/wk/game');
+
+    expect(cached(revision)).toBe(true);
   });
 });
