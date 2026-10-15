@@ -65,6 +65,7 @@ export interface MeshSummary {
     uv: string;
     uv1: string;
     colors: string;
+    /** The triangles as a set (`trianglesFingerprint`): equal when only their order in the file changed. */
     index: string;
     skin: string;
     blendShapes: string;
@@ -175,11 +176,28 @@ function meshSummary(mesh: ModelMesh, keys: string[], placed: Float64Array, plac
       uv: fingerprintOf(attributes.uv),
       uv1: fingerprintOf(attributes.uv1),
       colors: fingerprintOf(attributes.color),
-      index: fingerprintOf(mesh.index),
+      index: trianglesFingerprint(mesh.index),
       skin: `${fingerprintOf(attributes.skinIndex)}|${fingerprintOf(attributes.skinWeight)}`,
       blendShapes: mesh.blendShapes.map((shape) => fingerprintOf(shape.deltas)).join('|'),
     },
   };
+}
+
+/**
+ * The triangles by their vertices, whatever order the file lists them in and whichever corner each starts from (its
+ * winding kept): a re-export writes them in another order, and Unity's import reorders them for the GPU anyway, so an
+ * order alone changed nothing. '' for a mesh without an index.
+ */
+function trianglesFingerprint(index: Uint32Array | null): string {
+  if (!index) return '';
+  const triangles: [number, number, number][] = [];
+  for (let i = 0; i + 2 < index.length; i += 3) {
+    const [a, b, c] = [index[i]!, index[i + 1]!, index[i + 2]!];
+    // Started from its lowest vertex, turning the same way: (5, 1, 3) is (1, 3, 5).
+    triangles.push(a <= b && a <= c ? [a, b, c] : b <= c ? [b, c, a] : [c, a, b]);
+  }
+  triangles.sort((x, y) => x[0] - y[0] || x[1] - y[1] || x[2] - y[2]);
+  return fingerprintOf(Uint32Array.from(triangles.flat()));
 }
 
 /** Placed positions in steps of 10 µm, so float noise from the matrices weighs nothing. */

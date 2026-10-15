@@ -44,6 +44,8 @@ export type ModelChange =
   | { kind: 'meshSlots'; node: NodeRef; before: string[]; after: string[] }
   | { kind: 'triangles'; node: NodeRef; before: number; after: number }
   | { kind: 'shape'; node: NodeRef }
+  /** The same vertices made into other triangles (a quad split along its other diagonal): no vertex moved. */
+  | { kind: 'triangulation'; node: NodeRef }
   | { kind: 'normals'; node: NodeRef }
   | { kind: 'uvs'; node: NodeRef }
   | { kind: 'lightmapUvs'; node: NodeRef; now: boolean }
@@ -397,8 +399,13 @@ function meshChanges({ before, after, ref }: MeshPair, verticesMovedAlike: boole
     // A shape changed when the mesh's vertices did, and where they end up in the scene did too: vertices shifted to
     // make up for a node moved (a pivot, a new parent) leave the mesh as it looked.
     const moved = old.positions !== next.positions && old.placedPositions !== next.placedPositions;
-    if ((moved && !verticesMovedAlike) || old.index !== next.index) changes.push({ kind: 'shape', node: ref });
-    else if (old.normals !== next.normals) changes.push({ kind: 'normals', node: ref });
+    if (moved && !verticesMovedAlike) changes.push({ kind: 'shape', node: ref });
+    else {
+      // Its vertices where they were, joined into other triangles: told as that, as a shape change it would read as
+      // a sculpt, while a flat face split another way looks the same.
+      if (old.index !== next.index) changes.push({ kind: 'triangulation', node: ref });
+      if (old.normals !== next.normals) changes.push({ kind: 'normals', node: ref });
+    }
     if (before.hasUv && after.hasUv && old.uv !== next.uv) changes.push({ kind: 'uvs', node: ref });
     if (before.bones.length > 0 && after.bones.length > 0 && (old.skin !== next.skin || before.bones.join('\n') !== after.bones.join('\n'))) changes.push({ kind: 'skinning', node: ref });
   }

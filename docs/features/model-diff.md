@@ -65,7 +65,8 @@ bounds in Unity's space, and each mesh's triangles, material slots, blendshapes,
   splits vertices for the tangents it computes, so it differs by a few percent; the strip's tooltip says "about".
 - **Material slots are those some triangle uses**: Unity makes submeshes only of those (a file declaring 17 materials
   Unity shows as 14).
-- **Fingerprints** of each attribute's exact values tell what changed without keeping both versions' arrays, and
+- **Fingerprints** of each attribute's exact values tell what changed without keeping both versions' arrays (the
+  triangles as a set, `trianglesFingerprint`: a re-export lists them in another order, and Unity reorders them anyway), and
   `placedPositions` (where the vertices end up in Unity's space, to 10 µm) tells a mesh whose vertices were shifted to
   stay in place (a pivot moved, a new parent) from one whose shape changed.
 - **Where a vertex is, is where it is drawn** (`placedPositionsOf`): through its node, or, skinned, through its bones
@@ -99,7 +100,9 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
   moves nothing in Unity and isn't listed.
 - **Material slots**, model-wide as Unity remaps them by name: renamed (a name gone and another come in the same slot
   of the same mesh), removed, added; a mesh that uses another of the model's slots.
-- **Each mesh**: triangles (and nothing else then: a rebuilt mesh changed everything), shape, normals, UVs, lightmap
+- **Each mesh**: triangles (and nothing else then: a rebuilt mesh changed everything), shape, triangulated
+  differently (the same vertices joined into other triangles, a flat cap split along other diagonals: no shape
+  change, which would read as a sculpt), normals, UVs, lightmap
   UVs (lost is a risk: baked lighting needs them), vertex colors, skinning, blendshapes renamed, removed or added.
 - **Takes** (Unity's clips are cut from them by name): renamed (one gone and one of the same length come), removed,
   added, of another length. **Textures** the file's materials name (where materials aren't told, below), the **up

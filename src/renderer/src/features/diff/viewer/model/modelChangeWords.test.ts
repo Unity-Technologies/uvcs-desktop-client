@@ -50,6 +50,10 @@ describe('changeRows', () => {
     expect(titles([{ kind: 'shape', node: mesh('Rock') }, { kind: 'shape', node: mesh('Ledge') }])).toEqual(["Rock's shape changed", "Ledge's shape changed"]);
   });
 
+  it('tells a mesh triangulated differently apart from a shape change, as its vertices stayed', () => {
+    expect(changeRows([{ kind: 'triangulation', node: mesh('Cap') }])).toMatchObject([{ tone: 'note', title: 'Cap is triangulated differently', detail: 'Its vertices are where they were.' }]);
+  });
+
   it('counts triangles as a budget reads them', () => {
     expect(titles([{ kind: 'triangles', node: mesh('Rock'), before: 180, after: 3024 }])).toEqual(['Rock: 180 → 3,024 triangles']);
   });

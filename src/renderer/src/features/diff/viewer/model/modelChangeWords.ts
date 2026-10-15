@@ -53,6 +53,7 @@ function foldKey(change: ModelChange): string | null {
       return `${change.kind}:${family(change.node)}`;
     case 'triangles':
     case 'shape':
+    case 'triangulation':
     case 'normals':
     case 'uvs':
     case 'skinning':
@@ -86,6 +87,7 @@ function foldedRow(key: string, run: ModelChange[]): ChangeRow {
     added: `Added ${count} ${noun}`,
     triangles: `Triangles changed on ${count} meshes`,
     shape: `${count} meshes changed shape`,
+    triangulation: `${count} meshes triangulated differently`,
     normals: `Normals changed on ${count} meshes`,
     uvs: `UVs changed on ${count} meshes`,
     skinning: `Skinning changed on ${count} meshes`,
@@ -185,6 +187,8 @@ function wordsOf(change: ModelChange): { title: string; detail?: string } {
       return { title: `${change.node.name}: ${formatCount(change.before)} → ${formatCount(change.after)} triangles` };
     case 'shape':
       return { title: `${change.node.name}'s shape changed` };
+    case 'triangulation':
+      return { title: `${change.node.name} is triangulated differently`, detail: 'Its vertices are where they were.' };
     case 'normals':
       return { title: `${change.node.name}'s normals changed`, detail: 'Its shading looks different.' };
     case 'uvs':
