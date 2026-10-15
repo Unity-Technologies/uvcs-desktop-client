@@ -176,6 +176,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
             sources={{ original: contents.original, modified: contents.modified }}
             texts={{ original: sides.original ? (left.text ?? '') : null, modified: sides.modified ? (dirty ? pausedText : (right.text ?? '')) : null }}
             mode={modelMode}
+            textDiff={textDiff}
           />
         </Suspense>
       );
