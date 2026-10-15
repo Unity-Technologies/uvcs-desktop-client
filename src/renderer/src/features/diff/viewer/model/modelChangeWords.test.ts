@@ -54,6 +54,11 @@ describe('changeRows', () => {
     expect(changeRows([{ kind: 'triangulation', node: mesh('Cap') }])).toMatchObject([{ tone: 'note', title: 'Cap is triangulated differently', detail: 'Its vertices are where they were.' }]);
   });
 
+  it('tells faces that use another material slot, folding three or more meshes', () => {
+    expect(titles([{ kind: 'faceSlots', node: mesh('Body') }])).toEqual(["Some of Body's faces use another material"]);
+    expect(titles(['Body', 'Door', 'Hood'].map((name): ModelChange => ({ kind: 'faceSlots', node: mesh(name) })))).toEqual(['Faces use other materials on 3 meshes']);
+  });
+
   it('tells faces flipped by what Unity shows of them', () => {
     expect(changeRows([{ kind: 'facesFlipped', node: mesh('Hull') }])).toMatchObject([{ tone: 'note', title: "Some of Hull's faces flipped", detail: 'Unity draws a face from its front only: from outside, those look missing.' }]);
   });

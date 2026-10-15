@@ -259,6 +259,19 @@ describe('modelChanges: mesh data', () => {
       expect(modelChanges(modelSummary(indexed(asStored)), modelSummary(indexed(reordered)))).toEqual([]);
     });
 
+    it('tells faces that moved to another material slot, over the same triangles', () => {
+      const painted = (paintTriangles: number): ParsedModel => {
+        const model = testModel({ nodes: [{ name: 'Body', mesh: { slots: ['Paint', 'Glass'] } }] });
+        model.meshes[0]!.groups = [
+          { start: 0, count: paintTriangles * 3, slot: 0 },
+          { start: paintTriangles * 3, count: 36 - paintTriangles * 3, slot: 1 },
+        ];
+        return model;
+      };
+      expect(modelChanges(modelSummary(painted(6)), modelSummary(painted(8)))).toMatchObject([{ kind: 'faceSlots', node: { name: 'Body' } }]);
+      expect(modelChanges(modelSummary(painted(6)), modelSummary(painted(6)))).toEqual([]);
+    });
+
     it('tells triangles whose winding turned, over the same vertices, as faces flipped', () => {
       const flipped = asStored.map(([a, b, c], t) => (t < 2 ? [a!, c!, b!] : [a!, b!, c!]));
       expect(modelChanges(modelSummary(indexed(asStored)), modelSummary(indexed(flipped)))).toMatchObject([{ kind: 'facesFlipped', node: { name: 'Rock' } }]);
