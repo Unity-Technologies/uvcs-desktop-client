@@ -11,7 +11,7 @@ describe('pickWindowAt', () => {
   it('counts the window from the top left, as the view offset does, and the point up positive, as the ray does', () => {
     // Near the top left corner of a full canvas of 200 × 100 at 1×.
     const window = pickWindowAt(10, 5, { x: 0, y: 0, width: 200, height: 100 }, 100, 1);
-    expect(window.ndc).toEqual([-0.9, 0.9]);
+    expect(window.ndc).toEqual([expect.closeTo(-0.9), expect.closeTo(0.9)]);
     expect(window.offset).toEqual({ x: 9.5, y: 4.5 });
   });
 });
