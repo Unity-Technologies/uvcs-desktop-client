@@ -13,7 +13,7 @@ and comment are the selected item's, above its diff. A file shows one diff, the 
 listing names it, as History's `parentRevision` finds first: "Last change · cs:12 on /main by Ana · 2 days ago ·
 comment"), a file with no revision whole against nothing ("New file", "Private file"). A last change of a file the
 workspace holds unchanged reads its revision from the disk, as History does the workspace's revision (ARCHITECTURE.md
-"Server budget", "Revisions on disk"): only the revision before it is downloaded. "Diff | Annotate" before it,
+"Server budget", "Revisions on disk"): only the revision before it is downloaded, unless the workspace holds that one too. "Diff | Annotate" before it,
 History's switch (`FileViewSwitch`; ⌘T in Files, the menu's Annotate; elsewhere Annotate opens the history; only
 where there is something to annotate) shows the file annotated instead, with what is annotated in place of the
 description (kept as the selection moves), its revision by id in its repository (`itemRevision`), or

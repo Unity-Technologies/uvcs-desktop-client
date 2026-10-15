@@ -337,7 +337,7 @@ trusted.
   listing with everything below it the Materials look already asked; then one `cm cat revid:`), through xlinks too.
   Never a whole subtree for one file: a model in `Assets` itself would list the project. The `cm cat` is skipped where
   the workspace's file there has the listed revision's size and hash (ARCHITECTURE.md "Server budget", "Revisions on
-  disk"); so is the one of a last change's sibling, which the Files view's listing names. A sibling the tree hasn't, as a model without a `.meta`, costs no command at all: a
+  disk"), as for every sibling and texture, in any diff. A sibling the tree hasn't, as a model without a `.meta`, costs no command at all: a
   `serverpath:` then the tree asked in turn left two failing commands in the log for each.
 - **Absent is an answer**: `api.content.readBytes` reads a file that isn't there as null (the disk's `ENOENT`, `cm`'s
   "The item … does not exist": `isMissingItemError`; `cm ls --tree`'s "Can't resolve the selector for the item":

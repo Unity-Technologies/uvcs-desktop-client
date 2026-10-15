@@ -88,7 +88,7 @@ export function createContentService({ cm, reviews, repositoryTrees, workspaceCo
       return { bytes, name: absolutePath };
     }
     if (source.kind === 'revision') {
-      const onDisk = await workspaceCopies.readRevision(workspacePath, source.revision);
+      const onDisk = await workspaceCopies.read(workspacePath, { path: source.fileName, revision: source.revision, hash: null, size: -1 });
       if (onDisk) return { bytes: onDisk, name: source.fileName };
     }
     // The loaded revision of a workspace path: kept inside the workspace as a file on disk is.

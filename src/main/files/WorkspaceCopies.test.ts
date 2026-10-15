@@ -78,8 +78,9 @@ describe('WorkspaceCopies.remember', () => {
     copies.remember(workspace, [listed('a.obj', 1), listed('b.obj', 2)]);
     copies.remember(workspace, [listed('a.obj', 1), listed('c.obj', 3)]);
 
-    const read = async (revisionId: number) => (await copies.readRevision(workspace, { revisionId, repository: 'models@local' }))?.toString();
-    expect([await read(1), await read(2), await read(3)]).toEqual(['a\n', undefined, 'c\n']);
+    const asked = (path: string, revisionId: number): RevisionFile => ({ path, revision: { revisionId, repository: 'models@local' }, hash: null, size: -1 });
+    const read = async (path: string, revisionId: number) => (await copies.read(workspace, asked(path, revisionId)))?.toString();
+    expect([await read('a.obj', 1), await read('b.obj', 2), await read('c.obj', 3)]).toEqual(['a\n', undefined, 'c\n']);
   });
 });
 
@@ -147,20 +148,29 @@ describe("WorkspaceCopies.read of a revision whose hash the reader doesn't know:
     expect(await copies.read(workspace, asked('Prop/PumpkinMaterials.mtl', 185))).toBeNull();
   });
 
-  it('reads nothing where the workspace has no such folder, asking once', async () => {
-    const { workspace, fake, copies } = await setUp(cmFails('Error: The item /work/Gone is not in the workspace.'));
+  it("asks nothing where the disk has no file at the path: there's no copy to tell", async () => {
+    const { workspace, fake, copies } = await setUp(PROP, {});
 
-    expect(await copies.read(workspace, asked('Gone/a.obj', 7))).toBeNull();
-    expect(await copies.read(workspace, asked('Gone/b.obj', 8))).toBeNull();
+    expect(await copies.read(workspace, asked('Prop/Pumpkin.obj', 186))).toBeNull();
+    expect(fake.lines()).toEqual([]);
+  });
+
+  it("reads nothing where the workspace can't list the folder (files it doesn't control), asking once", async () => {
+    const { workspace, fake, copies } = await setUp(cmFails('Error: The item /work/Private is not in the workspace.'), { 'Private/a.obj': OBJ, 'Private/b.obj': OBJ });
+
+    expect(await copies.read(workspace, asked('Private/a.obj', 7))).toBeNull();
+    expect(await copies.read(workspace, asked('Private/b.obj', 8))).toBeNull();
     expect(fake.lines()).toHaveLength(1);
   });
 
-  it('lists the folder again once the workspace changed', async () => {
+  it('lists the folder again for a revision it never named once the workspace changed (an update loaded another)', async () => {
     const { workspace, fake, copies } = await setUp();
     await copies.read(workspace, asked('Prop/Pumpkin.obj', 186));
+    await copies.read(workspace, asked('Prop/Pumpkin.obj', 190));
+    expect(fake.lines()).toHaveLength(1);
 
     copies.forgetListings(workspace);
-    await copies.read(workspace, asked('Prop/Pumpkin.obj', 186));
+    await copies.read(workspace, asked('Prop/Pumpkin.obj', 190));
 
     expect(fake.lines()).toHaveLength(2);
   });

@@ -127,20 +127,29 @@ and many people use the same server. Every `cm` command other than local reads (
   GUID and name from the reads the workspace info shares (`WorkspaceHeaders`). Pending changes ask which locks are mine only when some lock holds one of them; left
   changes look the selector's object id up only when an automatic shelve by another client could match it, and arriving
   from a switch looks for changes to restore only when this app left some there.
-- **Revisions on disk**: a revision the workspace holds is read from its disk, never downloaded (`WorkspaceCopies`).
-  Content decides, never status: the workspace's file at the revision's path is read when it has the size and MD5
-  `cm` lists for that revision (hashed as it is read, on the bytes returned; a file known to differ isn't read again
-  until it changes), and the revision is downloaded otherwise
-  (changed, being written, missing, a checkout with edits, another revision). The size and hash come from listings
-  already read, never a command more: the Files view's and Browse repository's `cm ls --xml` (`<Hash>` and `<Size>`
-  are the loaded revision's even once the file changed; a checkout lists revision -1 and the disk's hash, so it names
-  no revision), the history's `cm ls` of its file (`workspaceRevisionArgs`) and a point's tree beside a model
-  (`RepositoryTrees.fileAt`). Their revisions are remembered by workspace and by revision id in its repository
-  (`remember`, `readRevision`), so a diff, History or a model's `.mtl`, `.bin` or `.meta` that reads one of them
-  (`contentService`) takes the disk's copy; the Materials look's textures check their own listing's hash the same way
-  (`RevisionDownloads`). A revision no
-  listing named (a committed diff's sides: `cm diff --format` has no hash) is downloaded. Open, Save as and the merge
-  tools write a revision for another app and still download it (`saveContent`).
+- **Revisions on disk: the disk first, the server last.** Every revision a view reads (Files' last change, History,
+  a changeset's, branch's or shelve's diff, Incoming, update conflicts, a model's `.mtl`, `.bin`, `.meta` and textures
+  in any of them, both sides) follows one procedure (`WorkspaceCopies.read`):
+  1. Which file, which version: the revision's workspace path and its id (the content source's `fileName`).
+  2. Is there a file at that path on disk? If not, nothing is asked. If so, which revision does the workspace hold
+     there, with what size and hash? A listing already read tells, else one `cm ls <folder> --format=…` of the
+     workspace (`workspaceListingArgs`), one per folder for all its files, kept until the watcher sees the workspace
+     change (`forgetListings`). The listings already read: the Files view's and Browse repository's `cm ls --xml`,
+     the history's `cm ls` of its file (`workspaceRevisionArgs`), a point's tree beside a model (`RepositoryTrees.fileAt`)
+     and the Materials look's (`RevisionDownloads`), all remembered (`remember`).
+  3. Is it that revision, unchanged? Same revision id at that path, in the same repository, and the file's bytes have
+     that size and MD5 (hashed as they are read, on the bytes returned; a file known to differ isn't read again until
+     it changes). Then the disk's bytes are the revision's; otherwise it is downloaded (`cm cat`).
+
+  Content decides, never status: a file changed, being written, missing, checked out (`cm ls` lists revision -1 and
+  the disk's hash, so it holds no revision) or holding another revision is downloaded; when unsure, download. The
+  listed `<Hash>` and `<Size>` are the loaded revision's, even once the file changed. A repository is matched by its
+  name (`heldKey`): `cm` spells a cloud repository's server two ways (`name@<organization>@unity` in `cm ls`,
+  `name@<id>@cloud` in `cm history --xml` and diffs), and at one path the workspace holds one repository's item; a
+  path under an xlink is listed with the xlinked repository's revisions. A workspace `cm ls` reads the workspace's
+  metadata, never content; it is not a `LOCAL_COMMANDS` read all the same, as `cm` asks the server for the branches of
+  what it lists (one call for all of them). Open, Save as and the merge tools write a revision for another app and
+  download it (`saveContent`).
 - **Queries**: list everything only when the view needs everything, and then read it rarely. Otherwise filter on the
   server: a date (`sinceDate`), a `limit`, the people picked (`owners`), one object by name or id (`api.branches.get`). Never OR ids together
   (`where id = 1 or id = 2 …`, checked by `noOredIdLookups.test.ts`): take names and details from the query that lists

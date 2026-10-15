@@ -342,11 +342,11 @@ describe("reading a revision the workspace's disk holds", () => {
     expect(cats(fake)).toEqual([]);
   });
 
-  it("reads at the path the listing gives (Windows separators too), whatever name the reader gives the revision", async () => {
+  it('reads at the path the listing gives with Windows separators', async () => {
     const windows = workspaceListingXml('Prop', { path: 'Prop\\Pumpkin.obj', revid: 186, size: PUMPKIN.length, hash: md5(PUMPKIN) });
     const { workspace, fake, service } = await filesView(windows, { 'Prop/Pumpkin.obj': PUMPKIN });
 
-    expect((await service.read(workspace, revision(186, 'Pumpkin.obj'))).text).toBe(PUMPKIN);
+    expect((await service.read(workspace, revision(186, 'Prop/Pumpkin.obj'))).text).toBe(PUMPKIN);
     expect(cats(fake)).toEqual([]);
   });
 
