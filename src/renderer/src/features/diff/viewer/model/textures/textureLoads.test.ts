@@ -1,6 +1,6 @@
 import { fakeApi } from '../../../../../testing/fakeWindow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MAX_DOWNLOADED_AHEAD_BYTES, type FoundFile } from '@shared/domain/unityAssets';
+import { MAX_DOWNLOADED_AHEAD_BYTES, UNKNOWN_TEXTURE_BYTES, type FoundFile } from '@shared/domain/unityAssets';
 import type { TextureDecodeRequest, TextureDecoded } from './decodeTexture';
 import type { TextureLoad } from './textureLoads';
 
@@ -75,6 +75,17 @@ describe('loadTextures', () => {
     // The second part is asked for before its first texture is read: that read finds it downloading.
     const asked = fakeApi.calls().map((call) => (call.method === 'unityAssets.read' ? (call.args[1] as FoundFile).path : call.method));
     expect(asked.indexOf('unityAssets.download', 1)).toBeLessThan(asked.indexOf('Art/e.png'));
+  });
+
+  it('counts a file of unknown size (the side before of a diff) as a big texture in a part', async () => {
+    const { loadTextures } = await import('./textureLoads');
+    const perPart = MAX_DOWNLOADED_AHEAD_BYTES / UNKNOWN_TEXTURE_BYTES;
+    const files = Array.from({ length: perPart + 1 }, (_, i): FoundFile => ({ ...revision(`${i}.png`, i + 1), size: -1 }));
+
+    loadTextures(WORKSPACE, files.map((file) => loadOf(file)));
+    await worker.whenAsked(3);
+
+    expect(fakeApi.argsOf('unityAssets.download')).toEqual([[WORKSPACE, files.slice(0, perPart)]]);
   });
 
   it('downloads nothing for textures decoded before, nor for files on the disk', async () => {

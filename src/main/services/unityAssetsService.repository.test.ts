@@ -7,7 +7,7 @@ import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient
 import { treeListingOutput, type ListedRecord } from '../cm/testing/cmOutput';
 import type { RevisionFile } from '../files/WorkspaceCopies';
 import { RevisionDownloads } from '../unity/RevisionDownloads';
-import { BRANCH_TREE_LIFE_MS, MAX_DOWNLOADED_AHEAD_BYTES, MAX_UNITY_ASSET_LOOKUPS } from '@shared/domain/unityAssets';
+import { BRANCH_TREE_LIFE_MS, MAX_DOWNLOADED_AHEAD_BYTES, MAX_UNITY_ASSET_LOOKUPS, UNKNOWN_TEXTURE_BYTES } from '@shared/domain/unityAssets';
 import { RepositoryTrees } from '../unity/RepositoryTrees';
 import { createUnityAssetsService } from './unityAssetsService';
 
@@ -288,6 +288,9 @@ describe('unityAssets.download', () => {
     await expect(unityAssets.download(workspace, Array.from({ length: MAX_UNITY_ASSET_LOOKUPS + 1 }, (_, i) => file(`${i}.png`)))).rejects.toThrow('Too many files');
     const half = { ...file('a.png'), size: MAX_DOWNLOADED_AHEAD_BYTES / 2 + 1 };
     await expect(unityAssets.download(workspace, [half, { ...half, path: 'b.png' }])).rejects.toThrow('more than is downloaded ahead');
+    // Of unknown size (a diff's side before), each counts as a big texture.
+    const unknown = Array.from({ length: MAX_DOWNLOADED_AHEAD_BYTES / UNKNOWN_TEXTURE_BYTES + 1 }, (_, i) => file(`${i}.png`));
+    await expect(unityAssets.download(workspace, unknown.map((one) => ({ ...one, size: -1 })))).rejects.toThrow('more than is downloaded ahead');
     expect(fetched).toEqual([]);
   });
 });
