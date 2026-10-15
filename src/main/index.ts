@@ -27,7 +27,7 @@ import { openSettings, sendSettingsChanges } from './startup/settings';
 import { watchShownWorkspaces } from './startup/workspaceWatching';
 import { createAppUpdates } from './update/createAppUpdates';
 import { DEVELOPMENT_DOCK_ICON } from './window/appIcon';
-import { installAppMenu, installMenus } from './window/appMenu';
+import { appMenuInstaller, installDockMenu } from './window/appMenu';
 import { askToQuitWhenDone } from './window/askToQuitWhenDone';
 import { followAppTheme } from './window/followAppTheme';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
@@ -52,10 +52,11 @@ const updates = createAppUpdates({
 const windows = new WorkspaceWindows({
   settings,
   workspaceOf: (viewer) => watchers.workspaceOf(viewer),
-  onWindowsChanged: () => app.isReady() && installAppMenu(windows, updates),
+  onWindowsChanged: () => app.isReady() && installMenuBar(),
   onClosed: (viewer) => watchers.release(viewer),
   onLastWindowClosing: () => quitting.lastWindowClosing(),
 });
+const installMenuBar = appMenuInstaller(windows, updates);
 const quitting = new Quitting({
   writesRunning: () => operations.writesRunning(),
   writesFinished: () => operations.writesFinished(),
@@ -96,7 +97,7 @@ function start(launched: Promise<void>, readAhead: FirstScreenRead): void {
   registerApi(api, early);
   followAppTheme(settings);
   handleQuitting(quitting);
-  installMenus(windows, updates);
+  installDockMenu(windows);
   updates.checkPeriodically();
   const openFirst = (): void => openFirstWindow({ cm, windows, early, settings, commandLog }, readAhead);
   void launched.then(openFirst, openFirst);

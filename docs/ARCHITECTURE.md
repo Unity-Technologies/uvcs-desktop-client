@@ -507,7 +507,8 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
 5. Nothing else gates the first screen: `cm version`'s answer (the app shows meanwhile, `CmUnavailableScreen` only on
    failure), the local setup check once `cm` runs (`useSetupCheck`), the workspace's server check
    (`useConnectionCheck`), the watcher once the page watches, the highlighter warm-up 1.5 s later (`main.tsx`),
-   avatars when rows show them.
+   avatars when rows show them, the menu bar (built by the first window opening, then once per burst of window
+   changes: `appMenuInstaller`).
 
 Reopening the last workspace on an M4 Max, started as the Dock does, median of 14 runs: Changes shows its data about
 820-840 ms after the process starts with the real `cm` on a local sandbox (930-990 before this sequence), 330-340 ms
