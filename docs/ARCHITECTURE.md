@@ -703,8 +703,10 @@ renderer/src/
   a 190 ms freeze on open. Pick from the virtualized pieces: `DataTable` for a view's list, `FilterChecklist` to check
   several in a filter's popover, `PickList` to pick one in a dialog (labels, users and groups: the search keeps the
   keys, `pickListKeys`), `BranchSearchList` for branches, and `RepositoryList` for the home screen's repositories,
-  whose expanded workspaces are rows of the same flat list (`repositoryListRows`). A list whose rows take the focus
-  themselves keeps the focused row rendered while it scrolls away (`keepRendered`). The filtering and sorting behind
+  whose expanded workspaces are rows of the same flat list (`repositoryListRows`). The row holding the focus, or the
+  one a field's `aria-activedescendant` names, stays rendered while it scrolls away (`keepRendered` in the
+  virtualizer's `rangeExtractor`); a list whose rows take the focus themselves keeps it by the row's key, not its index
+  (`repositoryRowIndex`), and acts on keys only from a row's own button, never its ⋯ menu's. The filtering and sorting behind
   such a list is memoized on its inputs, so a hover or a key doesn't redo it (`memberCandidates` sorts once per list
   read). A suggestions list (`<datalist>`) holds the best few matches, never every object (`branchSuggestions`).
 - **Long names**: branch names run past 120 characters (`/main/child-br-cr-sample/empty-branch2/child_1/subtask/merge-test`),
