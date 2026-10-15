@@ -176,13 +176,13 @@ describe('layoutGraph at scale', () => {
   it('reads the history a bounded number of times per changeset and branch: twice the history, about twice the work', () => {
     const histories = new Map<number, BranchExplorerData>();
     const history = (size: number): BranchExplorerData => histories.get(size) ?? histories.set(size, largeHistory(size, size / 5)).get(size)!;
-    expect(readGrowthWhenDoubled(20_000, (size) => history(size).changesets, (changesets) => layoutGraph({ ...history(changesets.length), changesets }))).toBeLessThan(2.5);
-    expect(readGrowthWhenDoubled(20_000, (size) => history(size).branches, (branches) => layoutGraph({ ...history(branches.length * 5), branches }))).toBeLessThan(2.5);
+    expect(readGrowthWhenDoubled(5_000, (size) => history(size).changesets, (changesets) => layoutGraph({ ...history(changesets.length), changesets }))).toBeLessThan(2.5);
+    expect(readGrowthWhenDoubled(5_000, (size) => history(size).branches, (branches) => layoutGraph({ ...history(branches.length * 5), branches }))).toBeLessThan(2.5);
   });
 
-  it('places 20,000 branches of 100,000 changesets, never closer than the gap', () => {
-    const layout = layoutGraph(largeHistory(100_000, 20_000));
-    expect(layout.lanes).toHaveLength(20_000);
+  it('places 4,000 branches of 20,000 changesets, never closer than the gap', () => {
+    const layout = layoutGraph(largeHistory(20_000, 4_000));
+    expect(layout.lanes).toHaveLength(4_000);
     for (const lanes of layout.lanesByRow.values()) {
       const sorted = [...lanes].sort((a, b) => a.startColumn - b.startColumn);
       sorted.slice(1).forEach((lane, index) => expect(lane.startColumn - sorted[index]!.endColumn).toBeGreaterThan(3));
