@@ -1,5 +1,6 @@
 import type { SelectorKind, WorkspaceSelector } from '@shared/domain/workspace';
 import type { CmClient } from './CmClient';
+import { isOrganizationIdServer } from './organizationIds';
 import { child, integer, parseXml, text } from './parseXml';
 
 const SELECTOR_KINDS: Record<string, SelectorKind> = {
@@ -11,35 +12,64 @@ const SELECTOR_KINDS: Record<string, SelectorKind> = {
 
 export interface WorkspaceStatus {
   repositoryName: string;
+  /** By name, as `cm` prints it almost everywhere (`AcmeStudio@unity` for a Unity organization). */
   server: string;
   selector: WorkspaceSelector;
   /** Null on a shelve: its tree is no changeset (`WorkspaceInfo.loadedChangeset`). */
   loadedChangeset: number | null;
 }
 
-/** What the workspace is loaded from, read with `cm status --header --xml`. */
+/** The header as `cm status --xml` prints it, its server named only by `readWorkspaceStatus`. */
+export interface PrintedWorkspaceStatus extends Omit<WorkspaceStatus, 'server'> {
+  /** A Unity organization's by its id (`2398571046213@cloud`), which nothing may show, compare or pass to `cm`. */
+  printedServer: string;
+}
+
+/** What the workspace is loaded from, read with `cm status --header --xml`, its server by name (`serverByName`). */
 export async function readWorkspaceStatus(cm: CmClient, workspacePath: string): Promise<WorkspaceStatus> {
+  const { printedServer, ...status } = await readStatusHeader(cm, workspacePath);
+  return { ...status, server: await serverByName(cm, workspacePath, printedServer, { cwd: workspacePath }) };
+}
+
+/** What the workspace has loaded, without its repository: one `cm status --header --xml`, for what needs no more. */
+export async function readWorkspaceLoad(cm: CmClient, workspacePath: string): Promise<Pick<WorkspaceStatus, 'selector' | 'loadedChangeset'>> {
+  const { selector, loadedChangeset } = await readStatusHeader(cm, workspacePath);
+  return { selector, loadedChangeset };
+}
+
+async function readStatusHeader(cm: CmClient, workspacePath: string): Promise<PrintedWorkspaceStatus> {
   return parseWorkspaceStatus(await cm.query(['status', '--header', '--xml'], { cwd: workspacePath }));
+}
+
+/**
+ * The workspace's server as `cm` names it everywhere but in `cm status --xml`, which prints a Unity organization's by
+ * its id (ARCHITECTURE.md "Unity organizations"). Only then is the workspace's machine-readable header read, a local
+ * read that names it, run from `cwd`. Should it fail, the id stays.
+ */
+async function serverByName(cm: CmClient, workspacePath: string, printedServer: string, { cwd }: { cwd: string }): Promise<string> {
+  if (!isOrganizationIdServer(printedServer)) return printedServer;
+  const output = await cm.query(machineReadableHeaderArgs(workspacePath), { cwd }).catch(() => '');
+  return parseMachineReadableHeader(output)?.server ?? printedServer;
 }
 
 /**
  * The header of `cm status --xml`, with or without the changes. Output without the selector or the changeset is an
  * error rather than an empty status: queries built from an empty branch or changeset -1 would read the whole repository.
  */
-export function parseWorkspaceStatus(xml: string): WorkspaceStatus {
+export function parseWorkspaceStatus(xml: string): PrintedWorkspaceStatus {
   const status = child(parseXml(xml, []), 'StatusOutput');
   const workspaceStatus = child(child(status, 'WorkspaceStatus'), 'Status');
   const repSpec = child(workspaceStatus, 'RepSpec');
   const repositoryName = text(repSpec?.Name);
-  const server = text(repSpec?.Server);
+  const printedServer = text(repSpec?.Server);
   const configName = text(status?.WkConfigName);
   const selector: WorkspaceSelector = {
     kind: SELECTOR_KINDS[text(status?.WkConfigType)] ?? 'branch',
-    name: configName && selectorName(configName, repositoryName, server),
+    name: configName && selectorName(configName, repositoryName),
   };
   const loadedChangeset = repositoryName && configName ? loadedChangesetOf(integer(workspaceStatus?.Changeset, Number.NaN), selector) : undefined;
   if (loadedChangeset === undefined) throw new Error(`Unexpected output from cm status: ${xml.trim().slice(0, 200) || '(empty)'}`);
-  return { repositoryName, server, selector, loadedChangeset };
+  return { repositoryName, printedServer, selector, loadedChangeset };
 }
 
 /**
@@ -54,12 +84,27 @@ export function loadedChangesetOf(changeset: number, selector: WorkspaceSelector
 }
 
 /**
- * `/main/task@acme@acme@cloud` → `/main/task`. The repository spec is removed as a whole
- * suffix, because repository and organization names can repeat (`acme@acme@cloud`).
+ * `/main/task@acme@acme@cloud` → `/main/task`: everything from the first `@<repository>@`, whatever server follows
+ * (a Unity organization's may be printed by name or by its id, not always as `<RepSpec>` prints it). Names of
+ * branches, labels and repositories hold no `@`, so the first is where the repository starts, even when the
+ * organization repeats its name (`acme@acme@cloud`).
  */
-export function selectorName(configName: string, repositoryName: string, server: string): string {
-  for (const suffix of [`@${repositoryName}@${server}`, `@${repositoryName}`]) {
-    if (configName.endsWith(suffix)) return configName.slice(0, -suffix.length);
-  }
-  return configName;
+export function selectorName(configName: string, repositoryName: string): string {
+  const repositoryAt = configName.indexOf(`@${repositoryName}@`);
+  if (repositoryAt >= 0) return configName.slice(0, repositoryAt);
+  return configName.endsWith(`@${repositoryName}`) ? configName.slice(0, -repositoryName.length - 1) : configName;
+}
+
+/**
+ * `cm status --header --machinereadable` of the workspace at `workspacePath`, a local read. Unlike `--xml`, it names a
+ * Unity organization's server as people do (`AcmeStudio@unity`), but not what the workspace has loaded.
+ */
+export function machineReadableHeaderArgs(workspacePath: string): string[] {
+  return ['status', '--header', '--machinereadable', '--fieldseparator=|', workspacePath];
+}
+
+/** `STATUS|<changeset>|<repository>|<server>` from `machineReadableHeaderArgs`; null when it isn't (not a workspace). */
+export function parseMachineReadableHeader(output: string): { repositoryName: string; server: string } | null {
+  const match = /^STATUS\|-?\d+\|([^|]+)\|([^|\r\n]+)/m.exec(output);
+  return match ? { repositoryName: match[1]!, server: match[2]! } : null;
 }

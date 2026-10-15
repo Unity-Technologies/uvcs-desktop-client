@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { app } from 'electron';
 import { CmClient } from './cm/CmClient';
 import { locateCm } from './cm/locateCm';
+import { warnOnOrganizationIds } from './cm/organizationIds';
 import { warnOnRepeatedServerCommands } from './cm/repeatedCommands';
 import { findWorkspaceRoot } from './cm/workspaceRoot';
 import { apiMethods } from './ipc/apiMethods';
@@ -68,6 +69,7 @@ function start(launched: Promise<void>): void {
   // A window sees the commands its own calls ran (commands run outside any call go to every window).
   cm.onCommandLogged((entry) => sendEventToCaller('commandLogged', entry));
   if (!app.isPackaged) warnOnRepeatedServerCommands(cm);
+  if (!app.isPackaged) warnOnOrganizationIds(cm);
   if (!app.isPackaged) app.dock?.setIcon(DEVELOPMENT_DOCK_ICON);
   sendSettingsChanges(settings, (changed) => sendEvent('settingsChanged', changed));
   ignoreOwnCommandWrites(cm, watchers, headers);

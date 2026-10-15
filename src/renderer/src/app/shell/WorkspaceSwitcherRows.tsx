@@ -83,7 +83,7 @@ export function WorkspaceSwitcherRows({ currentPath, onChoose }: { currentPath: 
           onMouseEnter={() => setHighlightedPath(workspace.path)}
           onClick={() => onChoose(workspace.path)}
         >
-          <RepositoryAvatar repository={entry.repository} label={workspace.name} size={24} className={styles.avatar} />
+          <RepositoryAvatar repository={entry.repository ?? entry.repositoryName} label={workspace.name} size={24} className={styles.avatar} />
           <span className={styles.text}>
             <span className={styles.name}>
               <Highlight text={workspace.name} />

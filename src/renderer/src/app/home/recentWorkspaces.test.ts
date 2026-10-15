@@ -1,10 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { entryMatches, recentWorkspaceEntries, unlistedRecentPaths } from './recentWorkspaces';
+import { describedEntry, entryMatches, headsNamingRepository, recentWorkspaceEntries, unlistedRecentPaths } from './recentWorkspaces';
 
 const game = { name: 'game', path: '/wk/game', guid: 'g1' };
 const tools = { name: 'tools', path: '/wk/tools', guid: 'g2' };
 
 describe('recent workspaces', () => {
+  it("leaves to cm the workspaces whose selector file doesn't name their repository (a Unity organization's)", () => {
+    const branch = { kind: 'branch', name: '/main' } as const;
+    const heads = { '/wk/game': { repository: 'game@local', repositoryName: 'game', selector: branch }, '/wk/cloud': { repository: null, repositoryName: '3dtest/cloud', selector: branch } };
+
+    expect(Object.keys(headsNamingRepository(heads))).toEqual(['/wk/game']);
+    expect(headsNamingRepository(undefined)).toEqual({});
+  });
+
   it('finds the recent paths cm does not list', () => {
     expect(unlistedRecentPaths([game, tools], ['/wk/gone', '/wk/game'])).toEqual(['/wk/gone']);
   });
@@ -35,5 +43,25 @@ describe('entryMatches', () => {
   it('ignores the spaces around the search, and matches everything without one', () => {
     expect(entryMatches(entry, ' game ')).toBe(true);
     expect(entryMatches(entry, '  ')).toBe(true);
+  });
+});
+
+describe('describedEntry', () => {
+  const branch = { kind: 'branch', name: '/main' } as const;
+  // A Unity organization's workspace: its selector file names the repository, its server only by an id.
+  const cloudHead = { repository: null, repositoryName: '3dtest/cloud', selector: branch };
+  const cloud = { workspace: { name: 'cloud', path: '/wk/cloud', guid: 'g3' }, missing: false };
+
+  it("keeps the repository's name from the selector file while cm hasn't named its server", () => {
+    const described = describedEntry(cloud, cloudHead, {});
+
+    expect(described).toEqual({ ...cloud, repository: undefined, repositoryName: '3dtest/cloud', selector: branch });
+    expect(entryMatches(described, '3dtest')).toBe(true);
+  });
+
+  it('takes the whole repository from cm once it names it, and from the file when it does', () => {
+    expect(describedEntry(cloud, cloudHead, { '/wk/cloud': '3dtest/cloud@AcmeStudio@unity' })).toMatchObject({ repository: '3dtest/cloud@AcmeStudio@unity', repositoryName: '3dtest/cloud' });
+    expect(describedEntry({ workspace: game, missing: false }, { repository: 'game@local', repositoryName: 'game', selector: branch }, {})).toMatchObject({ repository: 'game@local', repositoryName: 'game' });
+    expect(describedEntry({ workspace: game, missing: false }, undefined, { '/wk/game': null })).toEqual({ workspace: game, missing: false, repository: null, repositoryName: undefined, selector: null });
   });
 });

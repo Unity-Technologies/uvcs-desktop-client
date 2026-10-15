@@ -1,7 +1,7 @@
 // `cm ls <directory> --xml`: the directory's items, from the workspace's files (a folder of the workspace, or
 // `/folder` with `--tree=cs:N`). Loaded files are controlled at the loaded changeset, added in it (revision 201, no
 // parent), with the loaded revision's size and hash; the others are private. `cm ls <path> --format=…` (the workspace's
-// own listing, `workspaceListingArgs`, and a history's file, `workspaceRevisionArgs`) prints the same items as records.
+// own listing, `workspaceListingArgs`, and a history's file, `workspaceItemArgs`) prints the same items as records.
 const { createHash } = require('node:crypto');
 const { escapeXml, formatRecords } = require('./format.cjs');
 const { FILES, OWNER, REPOSITORY_SPEC, WORKSPACE } = require('./repository.cjs');

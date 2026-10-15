@@ -37,18 +37,32 @@ type SelectorType = 'Branch' | 'Changeset' | 'Label' | 'Shelve';
 interface StatusHeaderOptions {
   changeset?: number;
   type?: SelectorType;
-  /** The repository's name, on the `local` server. */
+  /** The repository's name, on `server`. */
   repository?: string;
+  /** As `cm status --xml` prints it: `local` unless said otherwise; a Unity organization by its id (`UNITY_ORGANIZATION.byId`). */
+  server?: string;
 }
 
 /** `cm status --header --xml` of a workspace on `name` (a branch unless said otherwise), with changeset `changeset` loaded. */
-export function statusHeader(name: string, { changeset = 1, type = 'Branch', repository = 'eco' }: StatusHeaderOptions = {}): string {
+export function statusHeader(name: string, { changeset = 1, type = 'Branch', repository = 'eco', server = 'local' }: StatusHeaderOptions = {}): string {
   return `<?xml version="1.0" encoding="utf-8"?>
 <StatusOutput>
-  <WorkspaceStatus><Status><RepSpec><Server>local</Server><Name>${repository}</Name></RepSpec><Changeset>${changeset}</Changeset></Status></WorkspaceStatus>
+  <WorkspaceStatus><Status><RepSpec><Server>${server}</Server><Name>${repository}</Name></RepSpec><Changeset>${changeset}</Changeset></Status></WorkspaceStatus>
   <WkConfigType>${type}</WkConfigType>
-  <WkConfigName>${name}@${repository}@local</WkConfigName>
+  <WkConfigName>${name}@${repository}@${server}</WkConfigName>
 </StatusOutput>`;
+}
+
+/**
+ * A Unity Cloud organization's server by the name people use, which `cm` prints and takes everywhere (`byName`), and
+ * by the internal id UVCS keeps it under (`byId`), which `cm status --xml`, `cm history --xml` and the workspace's
+ * `.plastic/plastic.selector` hold instead.
+ */
+export const UNITY_ORGANIZATION = { byName: 'AcmeStudio@unity', byId: '2398571046213@cloud' } as const;
+
+/** `cm status --header --machinereadable --fieldseparator=|`: the loaded changeset, the repository and its server by name. */
+export function machineReadableStatusHeader(repository: string, server: string, changeset = 1): string {
+  return `STATUS|${changeset}|${repository}|${server}\n`;
 }
 
 interface ChangeOptions {

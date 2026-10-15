@@ -1,4 +1,3 @@
-import { repositorySpec } from '@shared/domain/specs';
 import type { WorkspaceGlance } from '@shared/domain/workspace';
 import type { CmClient } from './CmClient';
 import { parsePendingChanges } from './pendingChangesXml';
@@ -13,6 +12,5 @@ export async function readWorkspaceGlance(cm: CmClient, workspacePath: string): 
 }
 
 export function parseWorkspaceGlance(xml: string): WorkspaceGlance {
-  const { repositoryName, server, selector } = parseWorkspaceStatus(xml);
-  return { repository: repositorySpec(repositoryName, server), selector, pendingCount: parsePendingChanges(xml).changes.length };
+  return { selector: parseWorkspaceStatus(xml).selector, pendingCount: parsePendingChanges(xml).changes.length };
 }

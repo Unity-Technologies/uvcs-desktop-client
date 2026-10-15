@@ -5,6 +5,7 @@ import { repositorySpec, spec } from '@shared/domain/specs';
 import type { RevisionFile } from '../files/WorkspaceCopies';
 import { toAbsolutePath } from '../files/workspacePaths';
 import { parseRecords, recordFormat } from './formatRecords';
+import { isOrganizationIdServer } from './organizationIds';
 import { child, children, integer, parseXml, text, type XmlNode } from './parseXml';
 import { onLinksThemselves } from './symlinkArgs';
 
@@ -48,19 +49,46 @@ export function itemRevisionsArgs(records: XmlNode[]): string[] | null {
 }
 
 /**
- * The revision of the item the workspace has (`cm ls` reads the workspace, not the server), with the size and hash
- * it was loaded with, which tell whether the disk still holds it (`WorkspaceCopies`): the item itself comes first.
+ * The item the workspace has (`cm ls` reads the workspace, not the server): its revision, the repository it lives
+ * in, named as people do (`rep:game@AcmeStudio@unity`), and the size and hash it was loaded with, which tell whether
+ * the disk still holds it (`WorkspaceCopies`). The item itself comes first.
  */
-export function workspaceRevisionArgs(absolutePath: string): string[] {
-  return onLinksThemselves('ls', absolutePath, `--format=${recordFormat(['revid', 'hash', 'size', 'repspec'])}`);
+export function workspaceItemArgs(absolutePath: string): string[] {
+  return onLinksThemselves('ls', absolutePath, `--format=${recordFormat(['revid', 'repspec', 'hash', 'size'])}`);
 }
 
-/** The item's loaded revision at its workspace-relative `path`; none for a checkout (`-1`) or an item not loaded. */
-export function parseWorkspaceRevision(output: string, path: string): RevisionFile | undefined {
-  const [revid = '', hash = '', size = '', repository = ''] = parseRecords(output)[0] ?? [];
-  const revisionId = Number.parseInt(revid, 10);
-  if (Number.isNaN(revisionId) || revisionId < 0) return undefined;
-  return { path, revision: { revisionId, repository: repository.replace(/^rep:/, '') }, hash: hash || null, size: size === '' ? -1 : Number(size) };
+export interface WorkspaceItem {
+  /** Undefined for an item the workspace has no revision of. */
+  revisionId?: number;
+  repository: string;
+  /** The loaded revision's MD5, base64, as `cm` keeps it (a checkout's is the disk's). */
+  hash?: string;
+  /** The loaded revision's size. */
+  size?: number;
+}
+
+export function parseWorkspaceItem(output: string): WorkspaceItem | undefined {
+  const [revision = '', repository = '', hash = '', size = ''] = parseRecords(output)[0] ?? [];
+  const revisionId = Number.parseInt(revision, 10);
+  if (repository === '') return undefined;
+  return { ...(revisionId >= 0 && { revisionId }), repository: repository.replace(/^rep:/, ''), ...(hash && { hash }), ...(size !== '' && { size: Number(size) }) };
+}
+
+/** The revision the workspace loaded at `path`, as `WorkspaceCopies` remembers it; none for a checkout or no hash. */
+export function loadedRevisionOf(item: WorkspaceItem | undefined, path: string): RevisionFile | undefined {
+  if (item?.revisionId === undefined || item.hash === undefined) return undefined;
+  return { path, revision: { revisionId: item.revisionId, repository: item.repository }, hash: item.hash, size: item.size ?? -1 };
+}
+
+/**
+ * The records with a Unity organization's server by name. `cm history --xml` prints it by its id
+ * (ARCHITECTURE.md "Unity organizations"); the item's `repository`, which every record is of, names it: the
+ * workspace's `cm ls` of the item, or the revision the history starts from. Without it the id stays.
+ */
+export function withServerOf(records: XmlNode[], repository: string | undefined): XmlNode[] {
+  if (repository === undefined) return records;
+  const server = repository.slice(repository.indexOf('@') + 1);
+  return records.map((record) => (isOrganizationIdServer(text(record.Server)) ? { ...record, Server: server } : record));
 }
 
 /** Combines the history's records with the revisions `itemRevisionsArgs` found, each list newest first. */

@@ -2,12 +2,23 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { UNITY_ORGANIZATION } from '../cm/testing/cmOutput';
 import { parseSelectorFile, readWorkspaceHeads } from './selectorFile';
 
 describe('parseSelectorFile', () => {
+  it("leaves a Unity organization's repository to cm, as the file names its server by its id", () => {
+    // As UVCS writes it for a workspace created on `game@AcmeStudio@unity`.
+    expect(parseSelectorFile(`repository "game@${UNITY_ORGANIZATION.byId}"\r\n  path "/"\r\n    smartbranch "/main"`)).toEqual({
+      repository: null,
+      repositoryName: 'game',
+      selector: { kind: 'branch', name: '/main' },
+    });
+  });
+
   it('reads the repository and smart branch', () => {
     expect(parseSelectorFile('rep "acme@acme@cloud"\n  path "/"\n    smartbranch "/main/scm1/scm1d"')).toEqual({
       repository: 'acme@acme@cloud',
+      repositoryName: 'acme',
       selector: { kind: 'branch', name: '/main/scm1/scm1d' },
     });
   });
@@ -15,6 +26,7 @@ describe('parseSelectorFile', () => {
   it('reads a plain branch with its checkout branch', () => {
     expect(parseSelectorFile('repository "game@local"\r\n  path "/"\r\n    br "/main"\r\n    co "/main"\r\n')).toEqual({
       repository: 'game@local',
+      repositoryName: 'game',
       selector: { kind: 'branch', name: '/main' },
     });
   });
@@ -30,6 +42,7 @@ describe('parseSelectorFile', () => {
     // `.plastic/plastic.selector` of a workspace switched to shelve 2 (cm 11.0.16.10371).
     expect(parseSelectorFile('repository "uvcs-shelvews-sandbox@local"\n  path "/"\n    shelve "2"\n')).toEqual({
       repository: 'uvcs-shelvews-sandbox@local',
+      repositoryName: 'uvcs-shelvews-sandbox',
       selector: { kind: 'shelve', name: '2' },
     });
   });
@@ -42,6 +55,7 @@ describe('parseSelectorFile', () => {
   it('keeps repository names with spaces and folders', () => {
     expect(parseSelectorFile('rep "Cloud Repositories/Sample@acme@cloud"\n path "/"')).toEqual({
       repository: 'Cloud Repositories/Sample@acme@cloud',
+      repositoryName: 'Cloud Repositories/Sample',
       selector: null,
     });
   });
@@ -66,7 +80,7 @@ describe('readWorkspaceHeads', () => {
     const garbled = await workspace('garbled', 'not a selector');
 
     expect(await readWorkspaceHeads([game, unreadable, garbled, join(root, 'gone')])).toEqual({
-      [game]: { repository: 'game@local', selector: { kind: 'branch', name: '/main/task' } },
+      [game]: { repository: 'game@local', repositoryName: 'game', selector: { kind: 'branch', name: '/main/task' } },
     });
   });
 });

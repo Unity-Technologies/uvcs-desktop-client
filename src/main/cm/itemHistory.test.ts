@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { itemHistoryTarget, itemRevisionsArgs, parseHistoryRecords, parseItemHistory, parseWorkspaceRevision } from './itemHistory';
-import { formatOutput } from './testing/cmOutput';
+import { itemHistoryTarget, itemRevisionsArgs, loadedRevisionOf, parseHistoryRecords, parseItemHistory, parseWorkspaceItem, withServerOf } from './itemHistory';
+import { formatOutput, UNITY_ORGANIZATION } from './testing/cmOutput';
 
 const revision = (changeset: number, comment: string, type = 'txt'): string => `
   <Revision>
@@ -126,22 +126,44 @@ describe('itemHistoryTarget', () => {
   });
 });
 
-describe('parseWorkspaceRevision', () => {
-  it("reads the item's own revision, with the size and hash it was loaded with, listed before a directory's children", () => {
-    const pumpkin = formatOutput([126, 'Q9oQU4Ghx0O0blJW3KZXFQ==', 1824576, 'rep:models@local']);
-    expect(parseWorkspaceRevision(pumpkin, 'Prop/Pumpkin.obj')).toEqual({
-      path: 'Prop/Pumpkin.obj',
-      revision: { revisionId: 126, repository: 'models@local' },
-      hash: 'Q9oQU4Ghx0O0blJW3KZXFQ==',
-      size: 1824576,
+describe('parseWorkspaceItem', () => {
+  it("reads the item's own revision and repository, listed before a directory's children", () => {
+    expect(parseWorkspaceItem(formatOutput([100, 'rep:game@local']))).toEqual({ revisionId: 100, repository: 'game@local' });
+    expect(parseWorkspaceItem(formatOutput([102, 'rep:lib@AcmeStudio@unity'], [100, 'rep:lib@AcmeStudio@unity']))).toEqual({
+      revisionId: 102,
+      repository: 'lib@AcmeStudio@unity',
     });
-    const folder = formatOutput([102, 'gEUrSyJHiFSO6gIeIYyPWw==', 0, 'rep:models@local'], [100, 'aaa=', 3, 'rep:models@local']);
-    expect(parseWorkspaceRevision(folder, 'Prop')?.revision.revisionId).toBe(102);
-    expect(parseWorkspaceRevision(formatOutput([7, 'aGFzaA==', '', 'rep:models@local']), 'a.txt')?.size).toBe(-1);
   });
 
-  it('finds none for an item the workspace has no revision of: a checkout lists -1, with the disk\'s hash', () => {
-    expect(parseWorkspaceRevision('', 'a.txt')).toBeUndefined();
-    expect(parseWorkspaceRevision(formatOutput([-1, 'wZNJehoGssciMOYUb/RwgA==', 4, 'rep:models@local']), 'a.txt')).toBeUndefined();
+  it('reads the size and hash the item was loaded with, which tell its copy on disk', () => {
+    const pumpkin = parseWorkspaceItem(formatOutput([126, 'rep:models@local', 'Q9oQU4Ghx0O0blJW3KZXFQ==', 1824576]));
+    expect(pumpkin).toEqual({ revisionId: 126, repository: 'models@local', hash: 'Q9oQU4Ghx0O0blJW3KZXFQ==', size: 1824576 });
+    expect(loadedRevisionOf(pumpkin, 'Prop/Pumpkin.obj')).toEqual({ path: 'Prop/Pumpkin.obj', revision: { revisionId: 126, repository: 'models@local' }, hash: 'Q9oQU4Ghx0O0blJW3KZXFQ==', size: 1824576 });
+    expect(loadedRevisionOf(parseWorkspaceItem(formatOutput([7, 'rep:models@local', 'aGFzaA==', ''])), 'a.txt')?.size).toBe(-1);
+  });
+
+  it("remembers no loaded revision for a checkout (-1, the disk's hash) or an item listed without a hash", () => {
+    expect(loadedRevisionOf(parseWorkspaceItem(formatOutput([-1, 'rep:models@local', 'wZNJehoGssciMOYUb/RwgA==', 4])), 'a.txt')).toBeUndefined();
+    expect(loadedRevisionOf(parseWorkspaceItem(formatOutput([100, 'rep:game@local'])), 'a.txt')).toBeUndefined();
+  });
+
+  it('finds no revision for an item the workspace has none of, and nothing in no output', () => {
+    expect(parseWorkspaceItem(formatOutput([-1, 'rep:game@local']))).toEqual({ repository: 'game@local' });
+    expect(parseWorkspaceItem('')).toBeUndefined();
+  });
+});
+
+describe('withServerOf', () => {
+  const record = (server: string) => parseHistoryRecords(xml(revision(4, 'Fix')).replace('<Server>local</Server>', `<Server>${server}</Server>`));
+
+  it("names a Unity organization's server, which cm history --xml prints by its id, after the item's repository", () => {
+    const named = withServerOf(record(UNITY_ORGANIZATION.byId), 'game@AcmeStudio@unity');
+
+    expect(parseItemHistory(named, formatOutput([4, 45, 15])).revisions[0]).toMatchObject({ repository: 'game@AcmeStudio@unity', idSpec: 'revid:45@game@AcmeStudio@unity' });
+  });
+
+  it('leaves servers by name, and the id when no repository names it', () => {
+    expect(withServerOf(record('acme@cloud'), 'game@AcmeStudio@unity')[0]?.Server).toBe('acme@cloud');
+    expect(withServerOf(record(UNITY_ORGANIZATION.byId), undefined)[0]?.Server).toBe(UNITY_ORGANIZATION.byId);
   });
 });

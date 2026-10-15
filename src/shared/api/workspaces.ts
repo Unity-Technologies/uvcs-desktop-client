@@ -19,12 +19,11 @@ export interface WorkspacesApi {
   /** The comment of the branch, changeset, label or shelve the workspace is loaded from; empty if it has none. */
   workingObjectComment(workspacePath: string, selector: WorkspaceSelector): Promise<string>;
   /**
-   * Which repository each workspace works on (`name@server`), or null when it can't be told quickly
-   * (missing folder, unreachable server). Costs one `cm` call per workspace, so only the first 10 paths
-   * are looked up: pass the few workspaces on screen (e.g. the recent ones), never the whole list.
-   * `system.cancelOperation(lookupId)` stops the lookups, e.g. when the list leaves the screen.
+   * Which repository a workspace works on (`name@server`), or null when it can't be told quickly (missing folder,
+   * unreachable server). Costs one `cm` call, two at a time across calls: ask about the few workspaces on screen (the
+   * recent ones), never the whole list. `system.cancelOperation(lookupId)` stops it, e.g. when the list leaves the screen.
    */
-  repositoriesOf(workspacePaths: string[], lookupId: string): Promise<Record<string, string | null>>;
+  repositoryOf(workspacePath: string, lookupId: string): Promise<string | null>;
   /**
    * The repository and branch (or changeset, label, shelve) of each workspace, read from its `.plastic` folder: no `cm`
    * call, cheap enough for every listed workspace. Workspaces whose folder can't tell are left out.
