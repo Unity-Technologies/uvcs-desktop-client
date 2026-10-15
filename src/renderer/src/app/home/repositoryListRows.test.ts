@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { RepositorySummary } from '@shared/domain/repository';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { countCalls } from '@shared/testing/countCalls';
-import { matchingRepositories, repositoryListRows, repositoryRowKeyTarget, workspacesByRepository, type RepositoryListRow } from './repositoryListRows';
+import { matchingRepositories, repositoryListRows, repositoryRowIndex, repositoryRowKey, repositoryRowKeyTarget, workspacesByRepository, type RepositoryListRow } from './repositoryListRows';
 
 const repository = (name: string): RepositorySummary => ({ id: name, name, server: 'local', owner: 'ana', spec: `${name}@local` });
 const workspace = (name: string): WorkspaceSummary => ({ name, path: `/work/${name}`, guid: name });
@@ -105,5 +105,25 @@ describe('repositoryRowKeyTarget', () => {
   it('does nothing from "New workspace" or for other keys', () => {
     expect(repositoryRowKeyTarget(rows, 3, 'ArrowDown')).toBeNull();
     expect(repositoryRowKeyTarget(rows, 1, 'a')).toBeNull();
+  });
+});
+
+describe('repositoryRowIndex', () => {
+  const workspaces = workspacesByRepository([{ workspace: gameWk, repository: game.spec }]);
+
+  it('finds a row by its key as the rows above it come and go', () => {
+    const collapsed = repositoryListRows([art, game, tools], workspaces, new Set());
+    const toolsKey = repositoryRowKey(collapsed[2]!);
+    const expanded = repositoryListRows([art, game, tools], workspaces, new Set([game.spec]));
+
+    expect(repositoryRowIndex(collapsed, toolsKey)).toBe(2);
+    expect(repositoryRowIndex(expanded, toolsKey)).toBe(4);
+    expect(repositoryRowIndex(repositoryListRows([tools], workspaces, new Set()), toolsKey)).toBe(0);
+  });
+
+  it("tells a workspace's row from its repository's, and a row filtered out", () => {
+    const expanded = repositoryListRows([game], workspaces, new Set([game.spec]));
+    expect(expanded.map(repositoryRowKey)).toEqual(['repository:game@local', 'workspace:game@local:game-wk', 'newWorkspace:game@local']);
+    expect(repositoryRowIndex(repositoryListRows([art], workspaces, new Set()), 'repository:game@local')).toBe(-1);
   });
 });

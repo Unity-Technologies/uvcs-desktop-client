@@ -55,6 +55,14 @@ export function repositoryRowKey(row: RepositoryListRow): string {
   return `${row.kind}:${row.repository.spec}`;
 }
 
+/**
+ * Where the row of `key` is now, -1 once it's gone: the list keeps the focused row by its key, so the focus follows
+ * it as the filter or an expanded repository moves it.
+ */
+export function repositoryRowIndex(rows: readonly RepositoryListRow[], key: string): number {
+  return rows.findIndex((row) => repositoryRowKey(row) === key);
+}
+
 /** Where a key moves the focus in the list: to a row's index, back up out of the list, or nowhere (null). */
 export type RowKeyTarget = number | 'leaveTop' | null;
 
