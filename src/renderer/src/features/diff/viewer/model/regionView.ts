@@ -4,7 +4,7 @@
 // the model's centre out through the region. Framing each region from the angle the camera had (Unity's F) was what
 // stepping did first: two regions on either side of a model looked alike, and one turned away stayed out of sight.
 
-import { centreOf, FIRST_PITCH, framedView, type BoundsLike, type OrbitView, type Vector } from './orbitCamera';
+import { cameraSideOf, centreOf, diagonalOf, FIRST_PITCH, framedView, type BoundsLike, type OrbitView, type Vector } from './orbitCamera';
 
 /** Room around the region, as a share of its own radius: it fills about half the view, with its surroundings. */
 const CONTEXT_SHARE = 0.35;
@@ -47,8 +47,8 @@ function facingAngles(centre: Vector, modelCentre: Vector, modelSize: number, cu
   const length = Math.hypot(...outward);
   if (length < modelSize * HEART_SHARE) return current;
   const [x, y, z] = outward.map((value) => value / length) as Vector;
-  const cameraSide: Vector = [Math.cos(current.pitch) * Math.sin(current.yaw), Math.sin(current.pitch), Math.cos(current.pitch) * Math.cos(current.yaw)];
-  const facing = cameraSide[0] * x + cameraSide[1] * y + cameraSide[2] * z;
+  const [sideX, sideY, sideZ] = cameraSideOf(current);
+  const facing = sideX * x + sideY * y + sideZ * z;
   if (facing >= Math.cos(IN_SIGHT_ANGLE)) return current;
   const yaw = Math.hypot(x, z) < UPRIGHT_HORIZONTAL ? current.yaw : Math.atan2(x, z);
   return { yaw, pitch: pleasantPitch(Math.asin(y)) };
@@ -63,8 +63,4 @@ function pleasantPitch(elevation: number): number {
 
 function grown(bounds: BoundsLike, pad: number): BoundsLike {
   return { min: bounds.min.map((value) => value - pad) as Vector, max: bounds.max.map((value) => value + pad) as Vector };
-}
-
-function diagonalOf(bounds: BoundsLike): number {
-  return Math.hypot(...bounds.max.map((value, i) => value - bounds.min[i]!));
 }

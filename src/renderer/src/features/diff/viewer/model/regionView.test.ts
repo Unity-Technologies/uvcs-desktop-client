@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FIELD_OF_VIEW, FIRST_PITCH, type BoundsLike, type OrbitView, type Vector } from './orbitCamera';
+import { cameraSideOf, diagonalOf, FIELD_OF_VIEW, FIRST_PITCH, type BoundsLike, type OrbitView, type Vector } from './orbitCamera';
 import { boxedRegion, regionView } from './regionView';
 
 /** A model 2 m across each way, centred on the origin: its diagonal is √12. */
@@ -19,13 +19,8 @@ function lookingFrom(yaw: number, pitch = FIRST_PITCH): OrbitView {
 
 /** How much of the view's height the region's bounding sphere takes from `view`. */
 function share(region: BoundsLike, view: OrbitView): number {
-  const radius = Math.hypot(...region.max.map((value, i) => value - region.min[i]!)) / 2;
+  const radius = diagonalOf(region) / 2;
   return Math.tan(Math.asin(radius / view.distance)) / Math.tan(degrees(FIELD_OF_VIEW) / 2);
-}
-
-/** Where the camera is, seen from the target: a unit vector. */
-function cameraSide(view: OrbitView): Vector {
-  return [Math.cos(view.pitch) * Math.sin(view.yaw), Math.sin(view.pitch), Math.cos(view.pitch) * Math.cos(view.yaw)];
 }
 
 describe('regionView', () => {
@@ -44,7 +39,7 @@ describe('regionView', () => {
 
   it('turns round to a region on the far side, looking at it from where its surface faces, at the first look\'s elevation', () => {
     const view = regionView(regionAt([0, 0, -1]), model, lookingFrom(0), 1.5);
-    const side = cameraSide(view);
+    const side = cameraSideOf(view);
     expect(side[0]).toBeCloseTo(0, 10);
     expect(side[2]).toBeLessThan(0);
     expect(view.pitch).toBeCloseTo(FIRST_PITCH, 10);
