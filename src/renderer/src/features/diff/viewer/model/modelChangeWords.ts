@@ -209,7 +209,7 @@ function wordsOf(change: ModelChange): { title: string; detail?: string } {
     case 'faceSlots':
       return { title: `Some of ${change.node.name}'s faces use another material` };
     case 'facesFlipped':
-      return { title: `Some of ${change.node.name}'s faces flipped`, detail: 'Unity draws a face from its front only: from outside, those look missing.' };
+      return { title: `Some of ${change.node.name}'s faces flipped`, detail: 'Unity draws a face from its front only: those now show from the other side.' };
     case 'normals':
       return { title: `${change.node.name}'s normals changed`, detail: 'Its shading looks different.' };
     case 'uvs':
