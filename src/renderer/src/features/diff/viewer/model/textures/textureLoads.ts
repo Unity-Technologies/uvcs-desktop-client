@@ -2,7 +2,7 @@
 // a disk file's path, size and time written, a repository's revision) and how it's drawn, so the same texture used by
 // both versions of a model, by several slots, or by the next model, decodes once. Bytes are read where the file was
 // found (`api.unityAssets.read`: the disk, or its revision, downloaded) and handed to the texture worker, a few at a
-// time (`TEXTURES_IN_HAND`); only the decoded bitmaps are kept, the latest few hundred megabytes of them.
+// time (`TEXTURES_IN_HAND`); only the decoded bitmaps are kept (`decodes`).
 
 import { concurrencyLimit } from '@shared/concurrencyLimit';
 import { foundFileKey, type FoundFile } from '@shared/domain/unityAssets';
@@ -25,8 +25,21 @@ export interface TextureLoad {
   flipY: boolean;
 }
 
-/** The decoded bitmaps kept, by the pixels they hold (four bytes each). */
-const decodes = new DecodeCache<Promise<TextureDecoded>>(384 * 1024 * 1024);
+/**
+ * The decoded bitmaps, by the pixels they hold (four bytes each): those the viewers show (`holdTextures`), and the
+ * latest 192 MB besides, for the next model, until no viewer has shown any for a while. A bitmap let go of is closed
+ * at once: its pixels are freed then, not whenever its object is collected.
+ */
+const decodes = new DecodeCache<Promise<TextureDecoded>>({
+  keptBytes: 192 * 1024 * 1024,
+  release: (decoded) => void decoded.then((result) => result.kind === 'decoded' && result.bitmap.close()),
+  emptiedAfterMs: 30_000,
+});
+
+/** Holds the textures a viewer shows (by `TextureLoad.key`) until it lets go of them: none is closed meanwhile. */
+export function holdTextures(keys: Iterable<string>): () => void {
+  return decodes.hold(keys);
+}
 
 /**
  * The textures read and decoded at once: each holds its file's bytes from its read until the worker has them, then
