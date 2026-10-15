@@ -61,9 +61,9 @@ describe('regionView', () => {
     expect(view.pitch).toBeCloseTo(degrees(50), 10);
   });
 
-  it('looks up at a region underneath, never past the side', () => {
+  it('looks level at a region underneath, never up from below the ground a model stands on', () => {
     const view = regionView(regionAt([0, -1, 0]), model, lookingFrom(0.7, FIRST_PITCH), 1.5);
-    expect(view.pitch).toBeCloseTo(degrees(-50), 10);
+    expect(view.pitch).toBe(0);
   });
 
   it('keeps the angle for a region at the heart of the model, which faces no side more than another', () => {
