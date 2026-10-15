@@ -16,8 +16,8 @@ const FOLDERS_PER_STEP = 64;
  * New folders are watched as they appear and removed ones dropped; skipped folders (ignored ones) are never walked,
  * and follow the rule as it changes (`followSkipRule`). Past `maxFolders` the rest goes unwatched, and the tree is
  * incomplete. Once started, a watch that breaks or a new folder that can't be watched makes it incomplete too, and it
- * tells (`onBroken`). The tree is walked asynchronously, a step at a time (`FOLDERS_PER_STEP`), off the main process's
- * critical path: each folder is watched before it's listed, so a folder created meanwhile is reported and walked too.
+ * tells (`onBroken`). The tree is walked asynchronously, a step at a time (`FOLDERS_PER_STEP`), the main process answering
+ * in between: each folder is watched before it's listed, so a folder created meanwhile is reported and walked too.
  */
 export class FolderTreeWatch {
   /** By workspace-relative, `/`-separated folder (`''` for the root). */
