@@ -14,9 +14,11 @@ vi.mock('@shared/pathOrder', async (original) => {
   return { ...actual, comparePaths: vi.fn(actual.comparePaths) };
 });
 
-/** The rows the list shows. */
-function buildChangeRows({ collapsed, ...layout }: Parameters<typeof layoutChangeRows>[0] & { collapsed: ReadonlySet<string> }): ChangeRow[] {
-  return collapseRows(layoutChangeRows(layout), collapsed);
+type BuildInput = Omit<Parameters<typeof layoutChangeRows>[0], 'sorted'> & { changes: PendingChange[]; collapsed: ReadonlySet<string> };
+
+/** The rows the list shows, for changes in any order: the view sorts them before they're laid out (`useSortedChanges`). */
+function buildChangeRows({ collapsed, changes, ...layout }: BuildInput): ChangeRow[] {
+  return collapseRows(layoutChangeRows({ ...layout, sorted: sortChanges(changes) }), collapsed);
 }
 
 function change(path: string, kinds: PendingChange['kinds'], changelist?: string): PendingChange {
@@ -161,7 +163,7 @@ describe('buildChangeRows', () => {
   });
 
   it('leaves out what collapsed changelists and folders hold, and nothing after them', () => {
-    const layout = layoutChangeRows({ ...base, changes, layout: 'tree', grouping: 'changelist', changelists: [{ name: 'UI', description: '' }] });
+    const layout = layoutChangeRows({ ...base, sorted: sortChanges(changes), layout: 'tree', grouping: 'changelist', changelists: [{ name: 'UI', description: '' }] });
     expect(layout.map((row) => row.key)).toEqual([
       'changelist:',
       'change:new.txt',
@@ -295,7 +297,7 @@ describe('buildChangeRows at scale', () => {
   it.each(layouts)('lays out a %s grouped by %s of changes handed in order without comparing their paths', (layout, grouping) => {
     const sorted = sortChanges(many(2_000));
     vi.mocked(comparePaths).mockClear();
-    layoutChangeRows({ changes: sorted, changelists: [], layout, grouping });
+    layoutChangeRows({ sorted, changelists: [], layout, grouping });
     expect(comparePaths).not.toHaveBeenCalled();
   });
 });

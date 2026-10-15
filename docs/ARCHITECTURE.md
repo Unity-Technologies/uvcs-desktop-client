@@ -750,7 +750,8 @@ renderer/src/
   - **One order**: by path, folder by folder, names as people read them (`file_2` before `file_10`, case only between
     names otherwise equal; different names read the same, "v01" and "v1" or a name in two Unicode forms, by their code
     units, so each folder's files stay together): `comparePaths` (`shared/pathOrder`), used where the files are read
-    (`parseDiffEntries`, `parseMergePlan`) and by Changes (`sortChanges`). A list and a tree show the files in the same
+    (`parseDiffEntries`, `parseMergePlan`) and by Changes (`sortChanges`, once a read: `useSortedChanges`; filtering
+    keeps the order, and `layoutChangeRows` lays the changes out as they come). A list and a tree show the files in the same
     order. Ordering by kind of change first was tried and rejected: it split a folder's changes apart, and a row jumped
     to another group when its status changed; the status chips of the filter bar (`useChangeFilter`) are how to look at
     one kind. Sorting controls were rejected too: the only other order anyone asked for is by kind, which the chips
