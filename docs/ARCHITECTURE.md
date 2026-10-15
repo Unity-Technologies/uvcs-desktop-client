@@ -500,7 +500,9 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
 3. The page opens that workspace (`openWorkspaceFromAddress`) and asks for its first screen's data
    (`prefetchStartupQueries`) before its first render, and applies the theme as it renders (`useTheme`): its first
    frame is the themed workspace screen or home screen, never the home screen on the way nor a frame without colors.
-   The window shows on that frame (`ready-to-show`).
+   The window shows on that frame (`ready-to-show`): the first render is synchronous (`flushSync` in `main.tsx`,
+   `firstRender.test.ts`), as React otherwise commits a root on a later task, after the page's first frame in most
+   launches, and the window showed its background alone.
 4. `show()` holds the main process 35-55 ms (100+ when started from a terminal, which isn't the active app): what the
    page asks after its first paint waits behind it. That is why the page asks before rendering, and the main process
    earlier still.
