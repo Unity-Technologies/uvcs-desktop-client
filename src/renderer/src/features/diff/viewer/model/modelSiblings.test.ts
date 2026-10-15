@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
-import { diffSibling, sourcePathOf, workspaceSibling } from './modelSiblings';
+import { diffSibling, historySibling, sourcePathOf, workspaceSibling } from './modelSiblings';
 
 const entry = (path: string, baseRevisionId: number, revisionId: number): DiffEntry => ({ status: 'changed', path, itemType: 'file', baseRevisionId, revisionId, repository: 'game@local' });
 
@@ -72,6 +72,31 @@ describe('diffSibling', () => {
   it('finds no side of a sibling added or deleted with the model', () => {
     const find = diffSibling([entry('Assets/Barrel.bin', -1, 21)], { kind: 'changeset', changesetId: 7 }, 'game@local');
     expect(find('original', gltf, 'Assets/Barrel.gltf', 'Barrel.bin')).toBeNull();
+  });
+});
+
+describe('historySibling', () => {
+  const at = (revisionId: number, fileName = 'Assets/Box With Spaces.gltf') => ({ kind: 'revision' as const, revision: { revisionId, repository: 'game@local' }, fileName });
+  const finder = historySibling({ original: 30, modified: 31 }, true);
+
+  it("finds the file beside each revision as it was in that revision's changeset", () => {
+    expect(finder('modified', at(9), 'Assets/Box With Spaces.gltf', 'Box With Spaces.bin')).toEqual({ kind: 'repositoryPath', path: '/Assets/Box With Spaces.bin', at: 'cs:31' });
+    expect(finder('original', at(8), 'Assets/Box With Spaces.gltf', 'buffers/Box.bin')).toEqual({ kind: 'repositoryPath', path: '/Assets/buffers/Box.bin', at: 'cs:30' });
+  });
+
+  it("names it in the repository's own form, a Windows path too", () => {
+    expect(finder('modified', at(9, 'Assets\\Box.gltf'), 'Assets\\Box.gltf', 'Box.bin')).toEqual({ kind: 'repositoryPath', path: '/Assets/Box.bin', at: 'cs:31' });
+  });
+
+  it("finds none for another repository's revision (under an xlink, paths aren't the workspace's), a side with no changeset, or a name outside the folder", () => {
+    expect(historySibling({ original: 30, modified: 31 }, false)('modified', at(9), 'Assets/Box.gltf', 'Box.bin')).toBeNull();
+    expect(historySibling({ original: 30, modified: 31 }, undefined)('modified', at(9), 'Assets/Box.gltf', 'Box.bin')).toBeNull();
+    expect(historySibling({ original: null, modified: 31 }, true)('original', at(9), 'Assets/Box.gltf', 'Box.bin')).toBeNull();
+    expect(finder('modified', at(9), 'Assets/Box.gltf', '../Box.bin')).toBeNull();
+  });
+
+  it("finds a workspace file's beside it", () => {
+    expect(finder('modified', { kind: 'workspaceFile', path: 'Assets/Box.gltf' }, 'Assets/Box.gltf', 'Box.bin')).toEqual({ kind: 'workspaceFile', path: 'Assets/Box.bin' });
   });
 });
 
