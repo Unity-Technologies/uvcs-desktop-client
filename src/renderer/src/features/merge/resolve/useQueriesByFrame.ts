@@ -9,6 +9,8 @@ import { watchQueriesByFrame } from './watchQueriesByFrame';
  */
 export function useQueriesByFrame<TData>(queries: readonly QueryObserverOptions<TData>[]): readonly QueryObserverResult<TData>[] {
   const client = useQueryClient();
+  // Built in render, as `useQueries` builds its own: an observer subscribes (and reads) only in the effect, so one React
+  // discards (StrictMode's second render, a memo dropped) costs nothing, and the effect subscribes the one kept.
   const observer = useMemo(() => new QueriesObserver(client, [...queries]), [client, queries]);
   const [handed, setHanded] = useState(() => ({ observer, results: observer.getCurrentResult() }));
   useEffect(() => watchQueriesByFrame(observer, browserFrameClock, (results) => setHanded({ observer, results })), [observer]);

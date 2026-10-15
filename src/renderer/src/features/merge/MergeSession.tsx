@@ -20,7 +20,7 @@ import type { MergeCompletion } from './MergeCompleted';
 import { mergeLabels } from './mergeDescription';
 import { MergeHeader } from './MergeHeader';
 import { MergeItemList } from './MergeItemList';
-import { buildMergeItems, firstWaiting, inListOrder, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, mergeProgress, type MergeItem, type MergeProgress } from './mergeItems';
+import { buildMergeItems, firstWaiting, inListOrder, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, mergeProgress, type MergeItem } from './mergeItems';
 import { mergeItemMenu } from './mergeItemMenu';
 import { mergeItemTypes } from './mergeItemTypes';
 import { ResolveRunControl, useRunOffer } from './mergeTools/ResolveRunControl';
@@ -58,7 +58,6 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   const [merging, setMerging] = useState(false);
   const mergeButtonRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const latest = useRef<{ items: MergeItem[]; progress: MergeProgress } | null>(null);
 
   const intoServerBranch = Boolean(request.destinationBranch);
   const conflicting = plan.fileConflicts.length + plan.directoryConflicts.length > 0;
@@ -66,6 +65,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   // made, which change only the progress the rows read.
   const items = useMemo(() => buildMergeItems(plan, conflictedFiles), [plan, conflictedFiles]);
   const progress = useMemo(() => mergeProgress(fileStates, directoryResolutions), [fileStates, directoryResolutions]);
+  const latest = useRef({ items, progress });
   const typeOf = useMemo(() => mergeItemTypes(plan.changes.map((change) => change.path)), [plan.changes]);
   const mergeTools = useMergeTools();
   const preferredTool = primaryMergeTool(mergeTools);
@@ -89,7 +89,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   }, []);
   // Once it ends: the first thing still waiting for the user, or else completing the merge.
   const afterRun = useCallback(() => {
-    const waiting = latest.current && firstWaiting(latest.current.items, latest.current.progress);
+    const waiting = firstWaiting(latest.current.items, latest.current.progress);
     if (waiting) {
       setSelection(singleSelection(latestRowKeyOf.current(waiting.key)));
       listRef.current?.querySelector<HTMLElement>('[role="grid"]')?.focus({ preventScroll: true });
