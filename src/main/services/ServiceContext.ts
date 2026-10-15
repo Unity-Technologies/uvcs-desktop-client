@@ -1,5 +1,6 @@
 import type { BranchNamesCache } from '../cm/BranchNamesCache';
 import type { CmClient } from '../cm/CmClient';
+import type { ProfileList } from '../cm/ProfileList';
 import type { OperationTracker } from '../operations/OperationTracker';
 import type { RevisionCat } from '../files/RevisionCat';
 import type { WorkspaceCopies } from '../files/WorkspaceCopies';
@@ -45,6 +46,11 @@ export interface ServiceContext {
  */
 export interface BranchNamesContext {
   branchNames: BranchNamesCache;
+}
+
+/** `cm profile list`, one read shared by the accounts, the servers and the setup check (`ProfileList`). */
+export interface ProfilesContext {
+  profiles: ProfileList;
 }
 
 /** What switching with pending changes shares across services: its shelve records and the left-changes lookup. */

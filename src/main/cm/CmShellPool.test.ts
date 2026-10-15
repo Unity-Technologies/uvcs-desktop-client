@@ -159,6 +159,51 @@ describe('CmShellPool', () => {
     expect(FakeSession.created).toHaveLength(2);
   });
 
+  it('names a directory a window shows, one that answers at once first, never one only commands ran in', () => {
+    void pool.run('/other', ['status']);
+    expect(pool.shownDirectory()).toBeUndefined();
+
+    pool.show('/starting');
+    pool.show('/ready');
+    expect(pool.shownDirectory()).toBe('/starting');
+    FakeSession.created.find((session) => session.cwd === '/ready')!.answerFirstCommand();
+    expect(pool.shownDirectory()).toBe('/ready');
+
+    pool.release('/ready');
+    expect(pool.shownDirectory()).toBe('/starting');
+  });
+
+  it('names a directory shown for a while only for that long, then lets its sessions go, unless it is shown for good meanwhile', () => {
+    vi.useFakeTimers();
+    pool.show('/broken', { forMs: 1000 });
+    pool.show('/wk', { forMs: 1000 });
+    pool.show('/wk');
+    FakeSession.created.forEach((session) => session.answerFirstCommand());
+    expect(pool.shownDirectory()).toBe('/broken');
+
+    vi.advanceTimersByTime(1000);
+    expect(pool.shownDirectory()).toBe('/wk');
+    expect(FakeSession.created.map((session) => [session.cwd, session.disposed])).toEqual([
+      ['/broken', true],
+      ['/broken', true],
+      ['/wk', false],
+      ['/wk', false],
+    ]);
+    pool.show('/wk', { forMs: 1000 });
+    vi.advanceTimersByTime(1000);
+    expect(pool.shownDirectory()).toBe('/wk');
+  });
+
+  it('still names a shown directory once its idle sessions were let go, so its next command starts them there', async () => {
+    vi.useFakeTimers();
+    pool.show('/wk');
+    FakeSession.created.forEach((session) => session.answerFirstCommand());
+    await vi.advanceTimersByTimeAsync(IDLE_DIRECTORY_MS);
+    expect(FakeSession.created.every((session) => session.disposed)).toBe(true);
+
+    expect(pool.shownDirectory()).toBe('/wk');
+  });
+
   it("keeps a released workspace's sessions when a command comes before they are done", async () => {
     void pool.run('/wk', ['status']);
     const [session] = FakeSession.created;

@@ -2,7 +2,8 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CommandLogEntry } from '@shared/events';
-import { CmClient, type CmRunners } from './CmClient';
+import { CmClient, OPENING_SHOW_MS, type CmRunners } from './CmClient';
+import { CmShellPool } from './CmShellPool';
 import { CmError } from './CmError';
 import { MAX_LOGGED_COMMAND_LINE } from './clipForLog';
 import type { CmResult } from './CmResult';
@@ -26,14 +27,14 @@ type Answer = (options?: CmProcessOptions) => CmResult;
 function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer = ((): CmResult => ({ output: 'done\n', exitCode: 0 })) as Answer } = {}) {
   const processes: ProcessRun[] = [];
   const shellCommands: { cwd: string; args: string[] }[] = [];
-  const pools: { cmPath: string; disposed: boolean; warmed: string[]; released: string[] }[] = [];
+  const pools: { cmPath: string; disposed: boolean; shown: string[]; warmed: string[]; released: string[] }[] = [];
   const runners: CmRunners = {
     runProcess: async (cmPath, args, options) => {
       processes.push({ cmPath, args, options });
       return answer(options);
     },
     createShellPool: (cmPath) => {
-      const pool = { cmPath, disposed: false, warmed: [] as string[], released: [] as string[] };
+      const pool = { cmPath, disposed: false, shown: [] as string[], warmed: [] as string[], released: [] as string[] };
       pools.push(pool);
       return {
         run: async (cwd, args) => {
@@ -41,6 +42,8 @@ function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer
           return answer();
         },
         isReady: () => warm,
+        shownDirectory: () => pool.shown.find((cwd) => !pool.released.includes(cwd)),
+        show: (cwd) => void pool.shown.push(cwd),
         warmUp: (cwd) => void pool.warmed.push(cwd),
         release: (cwd) => void pool.released.push(cwd),
         disposeAll: () => void (pool.disposed = true),
@@ -61,6 +64,8 @@ async function failureOf(run: Promise<string>): Promise<CmError> {
 }
 
 describe('CmClient routing', () => {
+  afterEach(() => vi.useRealTimers());
+
   it('answers a quick read from a warm pooled cm shell, in the given workspace', async () => {
     const { cm, processes, shellCommands } = fakeClient();
 
@@ -76,6 +81,59 @@ describe('CmClient routing', () => {
     await cm.query(['profile', 'list']);
 
     expect(shellCommands[0]?.cwd).toBe(homedir());
+  });
+
+  it('runs a query that answers the same anywhere in a workspace a window shows, starting no sessions in the home directory', async () => {
+    const { cm, shellCommands, pools } = fakeClient();
+    cm.show(WORKSPACE);
+
+    await cm.query(['profile', 'list'], { anyDirectory: true });
+
+    expect(shellCommands).toEqual([{ cwd: WORKSPACE, args: ['profile', 'list'] }]);
+    expect(pools[0]?.warmed).not.toContain(homedir());
+  });
+
+  it('runs a query that answers the same anywhere in the home directory when no window shows a workspace', async () => {
+    const { cm, shellCommands } = fakeClient();
+    await cm.query(['status'], { cwd: WORKSPACE });
+    shellCommands.length = 0;
+
+    await cm.query(['profile', 'list'], { anyDirectory: true });
+
+    expect(shellCommands).toEqual([{ cwd: homedir(), args: ['profile', 'list'] }]);
+  });
+
+  it('runs a query that answers the same anywhere in the home directory while the workspace warmed up at launch is not watched', async () => {
+    const { cm, shellCommands } = fakeClient();
+    // The first window's workspace, warmed up before its page says it shows it: a broken or missing one never does.
+    cm.warmUp(WORKSPACE);
+
+    await cm.query(['profile', 'list'], { anyDirectory: true });
+
+    expect(shellCommands).toEqual([{ cwd: homedir(), args: ['profile', 'list'] }]);
+  });
+
+  it('runs a query that answers the same anywhere in the workspace the first window opens, then home if it never watches it', async () => {
+    vi.useFakeTimers();
+    const ranIn: string[] = [];
+    const session = (cwd: string) => ({
+      pendingCount: 0,
+      isReady: true,
+      start: async () => undefined,
+      run: async () => (ranIn.push(cwd), { output: '', exitCode: 0 }),
+      dispose: () => undefined,
+    });
+    const runProcess = async () => ({ output: '', exitCode: 0 });
+    const cm = new CmClient(() => CM_PATH, 'linux', { runProcess, createShellPool: (cmPath) => new CmShellPool(cmPath, session) });
+
+    cm.showWhileOpening(WORKSPACE);
+    await cm.query(['profile', 'list'], { anyDirectory: true });
+    // Its page found it broken, and went to the home screen.
+    vi.advanceTimersByTime(OPENING_SHOW_MS);
+    await cm.query(['profile', 'list'], { anyDirectory: true });
+
+    expect(ranIn).toEqual([WORKSPACE, homedir()]);
+    cm.dispose();
   });
 
   it('runs a query as a process of its own while no session of the directory is ready yet, and warms them up', async () => {
@@ -387,14 +445,14 @@ describe('CmClient command log', () => {
 });
 
 describe('CmClient sessions', () => {
-  it('warms up and releases the sessions of a directory, the home directory by default', () => {
+  it('warms up, shows and releases the sessions of a directory, warming up the home directory by default', () => {
     const { cm, pools } = fakeClient();
 
     cm.warmUp();
-    cm.warmUp(WORKSPACE);
+    cm.show(WORKSPACE);
     cm.release(WORKSPACE);
 
-    expect(pools[0]).toMatchObject({ warmed: [homedir(), WORKSPACE], released: [WORKSPACE] });
+    expect(pools[0]).toMatchObject({ warmed: [homedir()], shown: [WORKSPACE], released: [WORKSPACE] });
   });
 
   it('starts over with new sessions when cm is found somewhere else', async () => {
@@ -409,7 +467,7 @@ describe('CmClient sessions', () => {
       createShellPool: (cmPath) => {
         const pool = { cmPath, disposed: false };
         pools.push(pool);
-        return { run: vi.fn(), isReady: () => false, warmUp: vi.fn(), release: vi.fn(), disposeAll: () => void (pool.disposed = true) };
+        return { run: vi.fn(), isReady: () => false, shownDirectory: () => undefined, show: vi.fn(), warmUp: vi.fn(), release: vi.fn(), disposeAll: () => void (pool.disposed = true) };
       },
     });
 

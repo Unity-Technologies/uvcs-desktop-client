@@ -43,6 +43,10 @@ export interface FakeCm {
   ran(prefix: string): boolean;
   /** Working directories whose `cm shell` sessions were warmed up. */
   warmedUp: string[];
+  /** Working directories whose `cm shell` sessions were let go. */
+  released: string[];
+  /** Working directories a window watches (`show`), where queries that run anywhere go. */
+  shown: string[];
 }
 
 /**
@@ -55,6 +59,8 @@ export interface FakeCm {
 export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executable = 'cm' } = {}): FakeCm {
   const commands: FakeCmCommand[] = [];
   const warmedUp: string[] = [];
+  const released: string[] = [];
+  const shown: string[] = [];
   const keys = Object.keys(answers).sort((a, b) => b.length - a.length);
 
   async function run(via: CmVia, args: string[], options: CmRunOptions = {}): Promise<string> {
@@ -74,7 +80,8 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
     query: (args: string[], options?: CmRunOptions) => run('query', args, options),
     execute: (args: string[], options?: CmRunOptions) => run('execute', args, options),
     warmUp: (cwd = '') => void warmedUp.push(cwd),
-    release: () => undefined,
+    show: (cwd: string) => void shown.push(cwd),
+    release: (cwd: string) => void released.push(cwd),
     relocate: () => undefined,
     onCommandLogged: () => () => undefined,
     onCommandStarted: () => () => undefined,
@@ -88,6 +95,8 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
     linesVia: (via) => commands.filter((command) => command.via === via).map((command) => command.line),
     ran: (prefix) => commands.some((command) => startsWithWords(command.line, prefix)),
     warmedUp,
+    released,
+    shown,
   };
 }
 
