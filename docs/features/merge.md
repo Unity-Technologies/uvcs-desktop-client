@@ -119,7 +119,7 @@ again, for each version that answered, freezing it for seconds. Frames stop whil
 covered, so results also arrive after `HIDDEN_HAND_OVER_MS` without one: a merge loading behind other windows keeps
 merging its files instead of merging them all at once when the user returns. Where the versions come from: the base
 and the source are read as the item at their changesets (`itemid:N#cs:M@repo`, `conflictedFilesOf`), in a few batched
-`cm cat`s (ARCHITECTURE.md "Server budget": `RevisionCat`): 3,318 conflicting files cost 27 commands instead of
+`cm cat`s (ARCHITECTURE.md "Server budget": `RevisionCat`): 3,318 conflicting files cost 28 or 29 commands instead of
 9,954, though the server still looks each item up on its own. The destination is read by its revision, which the
 preview's `cm ls` of the destination's tree already named with its hash (`destinationRevisionId`,
 `withConflictRepositories`): the workspace's file is read instead where it is that revision unchanged, as it mostly
