@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { countCalls } from '@shared/testing/countCalls';
+import { countLineComparisons } from '../../../testing/countLineComparisons';
 import type { ComparisonMethod } from './comparisonMethod';
 import { lineDiff } from './lineDiff';
-import { detectMovedBlocks, MAX_BLOCKS, MAX_CHANGED_LINES, MAX_COMPARISONS, moveContaining, MoveSearch, type MovedBlock } from './movedBlocks';
+import { detectMovedBlocks, MAX_BLOCKS, MAX_CHANGED_CHARACTERS, MAX_CHANGED_LINES, MAX_COMPARISONS, moveContaining, MoveSearch, type MovedBlock } from './movedBlocks';
 
 const text = (lines: string[], lineBreak = '\n'): string => lines.map((line) => `${line}${lineBreak}`).join('');
 const movesIn = (original: string[], modified: string[], method: ComparisonMethod = 'recognizeAll') =>
@@ -126,6 +127,20 @@ describe('detectMovedBlocks', () => {
     const original = [...FUNCTION, ...BEFORE, ...AFTER];
     expect(movesIn([...original, ...filler('old', MAX_CHANGED_LINES / 2)], [...BEFORE, ...AFTER, ...FUNCTION, ...filler('new', MAX_CHANGED_LINES / 2)])).toEqual([]);
     expect(movesIn(original, [...BEFORE, ...AFTER, ...FUNCTION])).toHaveLength(1);
+  });
+
+  it(`compares no words in a diff whose changed lines hold more than ${MAX_CHANGED_CHARACTERS} characters: a minified file`, () => {
+    const minified = 'var a=b.c(d,e);'.repeat(Math.ceil(MAX_CHANGED_CHARACTERS / 10));
+    const meta = lineDiff(text([minified]), text([`${minified}f();`]), 'recognizeAll').meta;
+    const { result, comparisons } = countLineComparisons(() => detectMovedBlocks(meta, 'recognizeAll'));
+    expect(result).toEqual([]);
+    expect(comparisons).toBe(0);
+  });
+
+  it(`still looks for moves among long lines that hold at most ${MAX_CHANGED_CHARACTERS} characters`, () => {
+    const long = (name: string): string => `const ${name} = [${'1, '.repeat(MAX_CHANGED_CHARACTERS / 20)}];`;
+    const moved = [long('first'), long('second')];
+    expect(movesIn([...moved, ...BEFORE, ...AFTER], [...BEFORE, ...AFTER, ...moved])).toHaveLength(1);
   });
 
   it('spends a bounded number of comparisons on a file whose many look-alike blocks were all reordered', () => {

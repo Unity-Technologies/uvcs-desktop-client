@@ -38,6 +38,12 @@ export const MIN_MOVED_LINES = 2;
  */
 export const MAX_BLOCKS = 50;
 export const MAX_CHANGED_LINES = 500;
+/**
+ * Past this many characters in the changed lines (500 lines of 100), a comparison of two sides would cost too much: it
+ * takes time by their words times the edits allowed (a fifth of them), so the one line of a minified file of 1 MB, some
+ * 400,000 words, held the window for minutes. Characters, not words: counting them splits no line.
+ */
+export const MAX_CHANGED_CHARACTERS = 50_000;
 /** At most this many block comparisons in a diff, however its blocks fall: some 50 ms at worst. */
 export const MAX_COMPARISONS = 20_000;
 /** A block moved into a bigger change is searched for in runs of that change's lines, up to this many more than its own. */
