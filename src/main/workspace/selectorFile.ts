@@ -26,8 +26,13 @@ export function parseSelectorFile(text: string): WorkspaceHead | null {
   if (!repository) return null;
   const loaded = /^\s*(smartbranch|branch|br|changeset|cs|label|lb|shelve|sh)\s+"([^"]+)"/im.exec(text);
   const kind = loaded && KINDS[loaded[1]!.toLowerCase()];
-  const server = repository.slice(repository.indexOf('@') + 1);
-  return { repository: isOrganizationIdServer(server) ? null : repository, selector: kind ? { kind, name: loaded[2]! } : null };
+  const at = repository.indexOf('@');
+  const server = repository.slice(at + 1);
+  return {
+    repository: isOrganizationIdServer(server) ? null : repository,
+    repositoryName: repository.slice(0, at),
+    selector: kind ? { kind, name: loaded[2]! } : null,
+  };
 }
 
 /**

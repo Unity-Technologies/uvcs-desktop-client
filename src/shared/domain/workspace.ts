@@ -31,6 +31,8 @@ export interface WorkspaceInfo {
 export interface WorkspaceHead {
   /** `name@server`; null when the file names its server by an id people never see (a Unity organization's). */
   repository: string | null;
+  /** The repository's own name, which the file always tells. */
+  repositoryName: string;
   /** Null when the file loads something the app doesn't name (e.g. a custom selector). */
   selector: WorkspaceSelector | null;
 }

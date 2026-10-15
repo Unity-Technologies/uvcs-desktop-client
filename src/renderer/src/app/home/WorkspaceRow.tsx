@@ -16,6 +16,8 @@ interface WorkspaceRowProps {
   workspace: WorkspaceSummary;
   /** `name@server`; undefined while still resolving, null when unknown. */
   repository?: string | null;
+  /** The repository's own name while its server isn't known (a Unity organization's), shown without a server chip. */
+  repositoryName?: string;
   /** What it's loaded from, when known without asking the server. */
   selector?: WorkspaceSelector | null;
   /** Its folder is gone: dimmed, and opening it offers to locate or recreate it. */
@@ -24,9 +26,9 @@ interface WorkspaceRowProps {
   compact?: boolean;
 }
 
-export function WorkspaceRow({ workspace, repository, selector, missing = false, onOpen, compact }: WorkspaceRowProps) {
+export function WorkspaceRow({ workspace, repository, repositoryName: knownName, selector, missing = false, onOpen, compact }: WorkspaceRowProps) {
   const menu = () => (missing ? missingWorkspaceMenu(workspace, onOpen) : workspaceMenu(workspace, onOpen));
-  const repositoryName = repository && splitRepositorySpec(repository).name;
+  const repositoryName = repository ? splitRepositorySpec(repository).name : knownName;
   const showsRepository = repositoryName && repositoryName.toLowerCase() !== workspace.name.toLowerCase();
 
   return (
