@@ -29,6 +29,16 @@ export function parseHistoryRecords(xml: string): XmlNode[] {
   return children(histories, 'RevisionHistory').flatMap((history) => children(child(history, 'Revisions'), 'Revision'));
 }
 
+/** The servers the records name, as `cm history --xml` prints them: a Unity organization's by its id. */
+export function serversOf(records: XmlNode[]): string[] {
+  return [...new Set(records.map((record) => text(record.Server)))];
+}
+
+/** The records with each one's server by name (`OrganizationServers`), as the repository every spec built from them names. */
+export function withServersNamed(records: XmlNode[], nameOf: (server: string) => string): XmlNode[] {
+  return records.map((record) => ({ ...record, Server: nameOf(text(record.Server)) }));
+}
+
 /**
  * `cm history` has neither revision ids nor parents: one `cm find revision` of the item it names adds both. Null for a
  * history without revisions.
