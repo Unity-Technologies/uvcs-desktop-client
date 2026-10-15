@@ -2,11 +2,11 @@
 
 One or two sentences, in the product's words.
 
-## Current behaviour
+## Current behavior
 
 What the user sees or the app does today (for performance work, the numbers and how they were measured).
 
-## Behaviour with this pull request
+## Behavior with this pull request
 
 What the user can now do or see, and the numbers after.
 
@@ -16,7 +16,7 @@ For a product owner and the next developer, skipped only when the diff makes it 
 chosen, the pieces it adds or changes, named so they can be grepped (`RevisionCat`, `useQueriesByFrame`), the `cm`
 commands it adds, removes or batches, and the alternatives tried and dropped.
 
-## Behaviour changes
+## Behavior changes
 
 Anything a user or another layer will notice beyond the goal: a setting, shortcut, copy or default that changed, data or
 settings stored differently, a `cm` version it needs, something that now works differently on one OS. "None" if so.
