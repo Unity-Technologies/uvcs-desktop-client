@@ -5,6 +5,9 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { formatOutput, treeListingOutput, workspaceListingXml } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, optionValue, type CmAnswer, type FakeCmCommand } from '../cm/testing/fakeCmClient';
+import type { ContentSource } from '@shared/domain/content';
+import { catReadsOf, fakeCat } from '../cm/testing/fakeCat';
+import { MAX_QUICK_CAT, RevisionCat } from '../files/RevisionCat';
 import { contentHashOf } from '../files/WorkspaceCopies';
 import type { ReviewStore } from '../review/ReviewStore';
 import { createContentService } from './contentService';
@@ -95,6 +98,60 @@ describe('reading content', () => {
 
     expect(await service.read('wk', { kind: 'reviewSnapshot', path: 'a.cs' })).toBe(snapshot);
     expect(commands).toEqual([]);
+  });
+});
+
+describe("reading a merge's conflicting files", () => {
+  /** The three versions of each conflicting file, as the merge page asks for them: items at changesets, by spec. */
+  const versionsOf = (files: number, repositoryOf: (file: number) => string = () => 'eco@local'): ContentSource[] =>
+    Array.from({ length: files }, (_, file) =>
+      ['cs:3', 'cs:5', 'cs:7'].map((point): ContentSource => ({ kind: 'spec', spec: `itemid:${100 + file}#${point}@${repositoryOf(file)}`, fileName: `/src/f${file}.cs` })),
+    ).flat();
+  const server = fakeCat((spec) => (spec.startsWith('itemid:404#') ? undefined : `text of ${spec}\n`));
+
+  /** The service, its `cm` holding every `cm cat` until all the reads are asked: as when the page asks them at once. */
+  function mergePage(total: number) {
+    let everyoneAsked = () => {};
+    const allAsked = new Promise<void>((resolve) => (everyoneAsked = resolve));
+    const fake = fakeCmClient({ cat: async (command) => (await allAsked, server(command)) });
+    const revisionCat = new RevisionCat({ cm: fake.cm });
+    const save = revisionCat.save.bind(revisionCat);
+    let asked = 0;
+    revisionCat.save = (...args) => (++asked === total && everyoneAsked(), save(...args));
+    return { ...fake, service: createContentService(serviceContext(fake.cm, { revisionCat })) };
+  }
+
+  it('reads every version of 100 conflicting files in a few cm cats, never one each, those of many files each in a process of its own', async () => {
+    const workspace = await newWorkspace();
+    const versions = versionsOf(100);
+    const { service, commands } = mergePage(versions.length);
+
+    const read = await Promise.all(versions.map((source) => service.read(workspace, source)));
+
+    expect(read.map((one) => one.text)).toEqual(versions.map((source) => `text of ${(source as { spec: string }).spec}\n`));
+    expect(commands.length).toBeLessThan(10);
+    expect(commands.filter((command) => catReadsOf(command.args).length > MAX_QUICK_CAT).every((command) => command.via === 'execute')).toBe(true);
+  });
+
+  it("reads the versions of files under an xlink in commands of their own, in the xlinked repository", async () => {
+    const workspace = await newWorkspace();
+    const versions = versionsOf(20, (file) => (file % 2 === 0 ? 'eco@local' : 'lib@local'));
+    const { service, commands } = mergePage(versions.length);
+
+    await Promise.all(versions.map((source) => service.read(workspace, source)));
+
+    const repositoriesOf = (args: string[]) => new Set(catReadsOf(args).map(({ spec }) => spec.slice(spec.indexOf('@') + 1)));
+    expect(commands.every((command) => repositoriesOf(command.args).size === 1)).toBe(true);
+  });
+
+  it("fails only the version cm couldn't find, telling it's missing as a lone read would", async () => {
+    const workspace = await newWorkspace();
+    const versions = [...versionsOf(10), { kind: 'spec', spec: 'itemid:404#cs:7@eco@local', fileName: '/src/gone.cs' } as const];
+    const { service } = mergePage(versions.length);
+
+    const results = await Promise.allSettled(versions.map((source) => service.read(workspace, source)));
+
+    expect(results.filter((result) => result.status === 'rejected')).toEqual([{ status: 'rejected', reason: expect.objectContaining({ message: 'The specified revision was not found itemid:404#cs:7@eco@local' }) }]);
   });
 });
 

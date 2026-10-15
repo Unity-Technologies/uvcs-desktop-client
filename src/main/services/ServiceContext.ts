@@ -1,6 +1,7 @@
 import type { BranchNamesCache } from '../cm/BranchNamesCache';
 import type { CmClient } from '../cm/CmClient';
 import type { OperationTracker } from '../operations/OperationTracker';
+import type { RevisionCat } from '../files/RevisionCat';
 import type { WorkspaceCopies } from '../files/WorkspaceCopies';
 import type { DiffReviewStore } from '../review/DiffReviewStore';
 import type { ReviewStore } from '../review/ReviewStore';
@@ -29,6 +30,8 @@ export interface ServiceContext {
   headers: WorkspaceHeaders;
   /** The revisions listings named, read from the workspace's disk where its files are those revisions (`WorkspaceCopies`). */
   workspaceCopies: WorkspaceCopies;
+  /** Revisions saved with `cm cat`, the ones asked together in one command (`RevisionCat`). */
+  revisionCat: RevisionCat;
   /** The revisions the Materials look reads at a version's point, downloaded in batches and kept for the session. */
   revisionDownloads: RevisionDownloads;
   /** The repository's trees at the points a model viewer reads, listed once each and shared (`RepositoryTrees`). */
