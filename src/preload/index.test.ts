@@ -21,6 +21,12 @@ async function exposedBridge(): Promise<UvcsBridge> {
   return bridge;
 }
 
+/** What the preload script listens to the event channel with, from its latest load. */
+function eventChannelHandler(): EventHandler {
+  const calls = vi.mocked(ipcRenderer.on).mock.calls.filter(([channel]) => channel === EVENT_CHANNEL);
+  return calls.at(-1)![1] as unknown as EventHandler;
+}
+
 describe('the preload bridge', () => {
   afterEach(() => vi.unstubAllEnvs());
 
@@ -38,14 +44,31 @@ describe('the preload bridge', () => {
     const listener = vi.fn();
 
     const unsubscribe = bridge.on('menuCommand', listener);
-    const [[channel, handler]] = vi.mocked(ipcRenderer.on).mock.calls.slice(-1) as unknown as [[string, EventHandler]];
-    handler({}, 'menuCommand', { commandId: 'refresh' });
-    handler({}, 'commandLogged', { id: 1 });
+    const dispatch = eventChannelHandler();
+    dispatch({}, 'menuCommand', { commandId: 'refresh' });
+    dispatch({}, 'commandLogged', { id: 1 });
     unsubscribe();
+    dispatch({}, 'menuCommand', { commandId: 'close' });
 
-    expect(channel).toBe(EVENT_CHANNEL);
     expect(listener.mock.calls).toEqual([[{ commandId: 'refresh' }]]);
-    expect(ipcRenderer.removeListener).toHaveBeenCalledWith(EVENT_CHANNEL, handler);
+  });
+
+  // A window subscribes dozens of times: a channel listener each went over Electron's limit of ten (a warning in the
+  // console) and had every event checked by every subscription.
+  it('listens on the event channel once, however many subscribe', async () => {
+    vi.mocked(ipcRenderer.on).mockClear();
+    const bridge = await exposedBridge();
+    const [first, second, other] = [vi.fn(), vi.fn(), vi.fn()];
+
+    for (let index = 0; index < 20; index++) bridge.on('commandLogged', vi.fn());
+    const unsubscribeFirst = bridge.on('menuCommand', first);
+    bridge.on('menuCommand', second);
+    bridge.on('commandLogged', other);
+    unsubscribeFirst();
+    eventChannelHandler()({}, 'menuCommand', { commandId: 'refresh' });
+
+    expect(vi.mocked(ipcRenderer.on).mock.calls.map(([channel]) => channel)).toEqual([EVENT_CHANNEL]);
+    expect([first.mock.calls, second.mock.calls, other.mock.calls]).toEqual([[], [[{ commandId: 'refresh' }]], []]);
   });
 
   it("tells the renderer the platform, or the one it previews (UVCS_RENDERER_PLATFORM)", async () => {
