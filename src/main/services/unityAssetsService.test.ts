@@ -32,7 +32,7 @@ const WORKSPACE = { kind: 'workspace' } as const;
 
 /** A service for the disk alone: any \`cm\` command fails the test (\`fakeCmClient\` answers none), and nothing downloads. */
 function onDisk(cm = fakeCmClient().cm) {
-  const downloads = { read: () => Promise.reject(new Error('Nothing downloads on the disk')) };
+  const downloads = { read: () => Promise.reject(new Error('Nothing downloads on the disk')), fetch: () => Promise.reject(new Error('Nothing downloads on the disk')) };
   return { trees: new RepositoryTrees({ cm, downloads }), downloads };
 }
 

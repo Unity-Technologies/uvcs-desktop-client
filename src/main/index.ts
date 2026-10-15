@@ -13,6 +13,7 @@ import { registerApi } from './ipc/registerApi';
 import { sendEvent, sendEventToCaller } from './ipc/sendEvent';
 import { DiffReviewStore } from './review/DiffReviewStore';
 import { ReviewStore } from './review/ReviewStore';
+import { removeLeftOverTempDirectories } from './files/tempFile';
 import { WorkspaceCopies } from './files/WorkspaceCopies';
 import { createServices } from './services/createServices';
 import { RepositoryTrees } from './unity/RepositoryTrees';
@@ -94,6 +95,7 @@ function start(launched: Promise<void>, readAhead: FirstScreenRead): void {
   if (!app.isPackaged) app.dock?.setIcon(DEVELOPMENT_DOCK_ICON);
   sendSettingsChanges(settings, (changed) => sendEvent('settingsChanged', changed));
   void revisionDownloads.removeLeftOvers();
+  void removeLeftOverTempDirectories();
   registerApi(api, early);
   followAppTheme(settings);
   handleQuitting(quitting);

@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -61,6 +61,36 @@ describe('WorkspaceCopies.read', () => {
     await writeFile(join(workspace, 'a.obj'), 'v 9 9 9\n');
 
     expect(await copies.read(workspace, revisionOf('a.obj', 'v 0 0 0\n'))).toBeNull();
+  });
+
+  it("tells whether the disk has the revision's content as a read would, keeping none of it", async () => {
+    const workspace = await workspaceWith({ 'same.png': 'bark v1', 'edited.png': 'bark v9' });
+    const copies = new WorkspaceCopies();
+
+    expect(await copies.has(workspace, revisionOf('same.png', 'bark v1'))).toBe(true);
+    expect(await copies.has(workspace, revisionOf('edited.png', 'bark v1'))).toBe(false);
+    expect(await copies.has(workspace, revisionOf('gone.png', 'bark v1'))).toBe(false);
+  });
+
+  it('tells from the hash it knows for the file as it is (its size and time written), reading nothing again', async () => {
+    const workspace = await workspaceWith({ 'bark.png': 'bark v1' });
+    const path = join(workspace, 'bark.png');
+    const written = new Date(1_700_000_000_000);
+    await utimes(path, written, written);
+    const copies = new WorkspaceCopies();
+    expect(await copies.has(workspace, revisionOf('bark.png', 'bark v1'))).toBe(true);
+    // Other bytes under the same size and time: only a read would see them.
+    await writeFile(path, 'bark v9');
+    await utimes(path, written, written);
+    expect(await copies.has(workspace, revisionOf('bark.png', 'bark v1'))).toBe(true);
+  });
+
+  it('reads a file bigger than one chunk whole', async () => {
+    // Read into one buffer of the file's size (`readHashed`): more than the stream's 64 KB chunks.
+    const text = 'v 0 0 0\n'.repeat(40_000);
+    const workspace = await workspaceWith({ 'big.obj': text });
+
+    expect((await new WorkspaceCopies().read(workspace, revisionOf('big.obj', text)))?.toString()).toBe(text);
   });
 
   it('refuses a path that leads out of the workspace', async () => {

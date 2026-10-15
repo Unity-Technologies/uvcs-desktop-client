@@ -10,6 +10,7 @@ import {
   invalidateWorkspaceIn,
   keyedByWorkspaceInfo,
   MAX_UNUSED_IMMUTABLE,
+  MAX_UNUSED_IMMUTABLE_BYTES,
   SLOW_CHANGING_QUERY,
 } from './queryClient';
 import { readQuery, showQuery } from '../testing/queryProbes';
@@ -150,5 +151,28 @@ describe('immutable results off screen', () => {
     expect(cached(key('changesets', 'diff', 1))).toBe(true);
     expect(cached(key('changesets', 'diff', MAX_UNUSED_IMMUTABLE))).toBe(true);
     expect(cached(key('branches'))).toBe(true);
+  });
+
+  it('forgets the oldest files once those kept hold more than their bytes allow: a few models, not a hundred', async () => {
+    // Bytes that only say their length: a third of the bound and a little more each, allocated by no test.
+    const model = (id: number) => ({ model: { bytes: { byteLength: MAX_UNUSED_IMMUTABLE_BYTES / 3 + id }, format: 'glb' }, isBinary: true, size: 0 });
+    for (let id = 0; id < 4; id++) await readQuery(client, key('content', { kind: 'revision', id }), { meta: IMMUTABLE_QUERY, answer: () => model(id) });
+
+    const cached = (id: number) => client.getQueryData(key('content', { kind: 'revision', id })) !== undefined;
+    expect([0, 1, 2, 3].map(cached)).toEqual([false, false, true, true]);
+  });
+
+  it("counts images by their bytes and texts by their length, not models alone: a changeset's big images and a long text", async () => {
+    // A fifth of the bound and a little more each image; a text three tenths, its diff's two sides the same text.
+    const image = (id: number) => ({ image: { bytes: { byteLength: MAX_UNUSED_IMMUTABLE_BYTES / 5 + id }, mimeType: 'image/png' }, isBinary: true, size: 0 });
+    const text = { text: { length: (MAX_UNUSED_IMMUTABLE_BYTES * 3) / 10 }, isBinary: false, size: 0 };
+    const revision = (id: number) => key('content', { kind: 'revision', id });
+    for (let id = 1; id <= 4; id++) await readQuery(client, revision(id), { meta: IMMUTABLE_QUERY, answer: () => image(id) });
+    await readQuery(client, key('diffContents', 'before', 'after'), { meta: IMMUTABLE_QUERY, answer: () => ({ left: text, right: text }) });
+    await readQuery(client, revision(5), { meta: IMMUTABLE_QUERY, answer: () => image(5) });
+
+    const cached = (queryKey: readonly unknown[]) => client.getQueryData(queryKey) !== undefined;
+    expect([1, 2, 3, 4, 5].map((id) => cached(revision(id)))).toEqual([false, false, true, true, true]);
+    expect(cached(key('diffContents', 'before', 'after'))).toBe(true);
   });
 });

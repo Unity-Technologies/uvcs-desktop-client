@@ -1,6 +1,14 @@
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { processIsRunning } from '../system/processIsRunning';
+import { removeFoldersOfGoneProcesses, type OwnedFolders } from './goneProcessFolders';
+
+/**
+ * The temporary directories' names: `uvcs-<pid>-…`, with the process that owns them, so the next session can tell the
+ * ones a session killed mid-command left (`removeLeftOverTempDirectories`) from another running app's.
+ */
+const PREFIX = 'uvcs-';
 
 /** Writes `content` to a temporary file, runs `work` with its path and always deletes it afterwards. */
 export function withTempFile<T>(content: string, work: (filePath: string) => Promise<T>): Promise<T> {
@@ -22,10 +30,18 @@ export function withTempPath<T>(work: (filePath: string) => Promise<T>): Promise
  * left behind in the temp folder never fails what `work` did.
  */
 export async function withTempDirectory<T>(work: (directory: string) => Promise<T>): Promise<T> {
-  const directory = await mkdtemp(join(tmpdir(), 'uvcs-'));
+  const directory = await mkdtemp(join(tmpdir(), `${PREFIX}${process.pid}-`));
   try {
     return await work(directory);
   } finally {
     await rm(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }).catch(() => undefined);
   }
+}
+
+/**
+ * Deletes the temporary directories sessions left as they were killed or crashed mid-command: those whose process is
+ * gone (`removeFoldersOfGoneProcesses`). A revision opened in an app (`uvcs-rev-`), which may still hold it, stays.
+ */
+export function removeLeftOverTempDirectories({ tempFolder = tmpdir(), pid = process.pid, isRunning = processIsRunning }: Partial<Omit<OwnedFolders, 'prefix'>> = {}): Promise<void> {
+  return removeFoldersOfGoneProcesses({ tempFolder, prefix: PREFIX, pid, isRunning });
 }
