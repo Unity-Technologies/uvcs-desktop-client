@@ -78,14 +78,14 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
 
   /**
    * A window shows the workspace: its `cm shell`s start, and the home folder's go once no window shows the home screen,
-   * instead of idling for minutes; they served the home screen this window may have come from. Unless the workspace is
-   * the home folder itself: the shells are kept per directory as written, so they are this window's own.
+   * instead of idling for minutes; they served the home screen this window may have come from. Unless a window, this
+   * one or another, shows a workspace in the home folder itself: those shells are its own.
    */
   async function watch(workspacePath: string): Promise<WatchCoverage> {
     cm.show(workspacePath);
     const coverage = watchers.watch(callerId(), workspacePath);
     const home = homedir();
-    if (workspacePath !== home && !windows.showsHomeScreen()) cm.release(home);
+    if (!windows.showsHomeScreen() && watchers.coverageOf(home) === undefined) cm.release(home);
     return coverage;
   }
 

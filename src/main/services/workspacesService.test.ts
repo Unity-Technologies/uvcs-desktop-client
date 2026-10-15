@@ -220,7 +220,7 @@ describe('a new workspace for a task', () => {
 describe('watching a workspace', () => {
   it("shows the workspace's cm sessions and watches it for the calling window", async () => {
     const watch = vi.fn(() => ({ complete: true }) as never);
-    const { service, shown } = workspaces({}, { watch }, { showsHomeScreen: () => true });
+    const { service, shown } = workspaces({}, { watch, coverageOf: () => undefined }, { showsHomeScreen: () => true });
     const window = { id: 7, isDestroyed: () => false } as unknown as WebContents;
 
     await runForCaller(window, () => service.watch(WORKSPACE));
@@ -232,7 +232,7 @@ describe('watching a workspace', () => {
   it("lets the home folder's cm sessions go once no window shows the home screen, and keeps them while one does", async () => {
     const window = { id: 7, isDestroyed: () => false } as unknown as WebContents;
     let homeScreen = true;
-    const { service, released } = workspaces({}, { watch: () => ({ complete: true }) as never }, { showsHomeScreen: () => homeScreen });
+    const { service, released } = workspaces({}, { watch: () => 'full', coverageOf: () => undefined }, { showsHomeScreen: () => homeScreen });
 
     await runForCaller(window, () => service.watch(WORKSPACE));
     expect(released).toEqual([]);
