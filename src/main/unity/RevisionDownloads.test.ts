@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { fitsCommandLine } from '../cm/commandLineLimit';
 import { cmFails, fakeCmClient, type FakeCmCommand } from '../cm/testing/fakeCmClient';
 import { batchesOf, catArgs, MAX_BATCH_BYTES, RevisionDownloads, type RevisionFile } from './RevisionDownloads';
 
@@ -172,11 +173,14 @@ describe('batchesOf', () => {
     expect(batches.map((batch) => batch.map((one) => one.file.revision.revisionId))).toEqual([[1, 2], [3], [4], [5], [6]]);
   });
 
-  it('fits each command line Windows can start', () => {
+  it('fills each command line Windows can start, and no more', () => {
+    const folder = join('C:', 'Users', 'Jo Smith', 'AppData', 'Local', 'Temp', 'uvcs-revisions-x');
     const many = Array.from({ length: 2000 }, (_, i) => waiting(i, 1));
-    const batches = batchesOf(many, join('C:', 'Users', 'Jo Smith', 'AppData', 'Local', 'Temp', 'uvcs-revisions-x'));
+    const batches = batchesOf(many, folder);
     expect(batches.length).toBeGreaterThan(1);
-    expect(batches.flat()).toHaveLength(2000);
+    expect(batches.flat()).toEqual(many);
+    expect(batches.every((batch) => fitsCommandLine(catArgs(batch, folder)))).toBe(true);
+    expect(batches.slice(0, -1).every((batch, index) => !fitsCommandLine(catArgs([...batch, batches[index + 1]![0]!], folder)))).toBe(true);
   });
 
   it('downloads each revision alone, as --file, into a folder whose path holds a ;', () => {
