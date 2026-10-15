@@ -127,6 +127,19 @@ and many people use the same server. Every `cm` command other than local reads (
   GUID and name from the reads the workspace info shares (`WorkspaceHeaders`). Pending changes ask which locks are mine only when some lock holds one of them; left
   changes look the selector's object id up only when an automatic shelve by another client could match it, and arriving
   from a switch looks for changes to restore only when this app left some there.
+- **Revisions on disk**: a revision the workspace holds is read from its disk, never downloaded (`WorkspaceCopies`).
+  Content decides, never status: the workspace's file at the revision's path is read when it has the size and MD5
+  `cm` lists for that revision (hashed once per path, size and time written), and the revision is downloaded otherwise
+  (changed, being written, missing, a checkout with edits, another revision). The size and hash come from listings
+  already read, never a command more: the Files view's and Browse repository's `cm ls --xml` (`<Hash>` and `<Size>`
+  are the loaded revision's even once the file changed; a checkout lists revision -1 and the disk's hash, so it names
+  no revision), the history's `cm ls` of its file (`workspaceRevisionArgs`) and a point's tree beside a model
+  (`RepositoryTrees.fileAt`). Their revisions are remembered by workspace and by revision id in its repository
+  (`remember`, `readRevision`), so a diff, History or a model's `.mtl`, `.bin` or `.meta` that reads one of them
+  (`contentService`) takes the disk's copy; the Materials look's textures check their own listing's hash the same way
+  (`RevisionDownloads`). A revision no
+  listing named (a committed diff's sides: `cm diff --format` has no hash) is downloaded. Open, Save as and the merge
+  tools write a revision for another app and still download it (`saveContent`).
 - **Queries**: list everything only when the view needs everything, and then read it rarely. Otherwise filter on the
   server: a date (`sinceDate`), a `limit`, the people picked (`owners`), one object by name or id (`api.branches.get`). Never OR ids together
   (`where id = 1 or id = 2 …`, checked by `noOredIdLookups.test.ts`): take names and details from the query that lists

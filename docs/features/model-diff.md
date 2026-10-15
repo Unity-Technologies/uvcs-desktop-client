@@ -332,10 +332,12 @@ folder, and main refuses a workspace file outside the workspace anyway (`workspa
 trusted.
 
 - **Read from the folder's listing**: at a changeset or a branch's head, `api.content.readBytes` reads a sibling
-  (`repositoryPath`) by its revision there, as the listing of its folder names it (`RepositoryTrees.revisionAt`,
+  (`repositoryPath`) by its revision there, as the listing of its folder names it (`RepositoryTrees.fileAt`,
   `fileBeside`: the folder's children alone, `cm ls --tree` without `-R`, in a pooled `cm shell`, kept per point; or a
   listing with everything below it the Materials look already asked; then one `cm cat revid:`), through xlinks too.
-  Never a whole subtree for one file: a model in `Assets` itself would list the project. A sibling the tree hasn't, as a model without a `.meta`, costs no command at all: a
+  Never a whole subtree for one file: a model in `Assets` itself would list the project. The `cm cat` is skipped where
+  the workspace's file there has the listed revision's size and hash (ARCHITECTURE.md "Server budget", "Revisions on
+  disk"); so is the one of a last change's sibling, which the Files view's listing names. A sibling the tree hasn't, as a model without a `.meta`, costs no command at all: a
   `serverpath:` then the tree asked in turn left two failing commands in the log for each.
 - **Absent is an answer**: `api.content.readBytes` reads a file that isn't there as null (the disk's `ENOENT`, `cm`'s
   "The item … does not exist": `isMissingItemError`; `cm ls --tree`'s "Can't resolve the selector for the item":
@@ -432,8 +434,8 @@ heatmap's), and come back in the other modes. The merge cards' stills stay clay 
   (changeset numbers are per repository, an xlinked one's may match); a file it deleted isn't in the tree after it, and
   isn't found.
 - **Reading a file found** (`api.unityAssets.read`, `RevisionDownloads`): a disk file from the disk; a repository's
-  revision from the disk when the workspace's file at that path has its content (same size and MD5 as the listing's
-  hash, the hash kept by path, size and time written), else downloaded. The reads asked at once (both versions'
+  revision from the disk when the workspace's file at that path has its content (`WorkspaceCopies.read`: same size and
+  MD5 as the listing's hash, the hash kept by path, size and time written), else downloaded. The reads asked at once (both versions'
   textures, a ring of `.meta` files) wait until each has checked the disk, then go in one `cm cat <spec>;<file>
   <spec>;<file> …` (`catArgs`), which downloads them in one batch, in a process of its own; a batch holds one
   repository's revisions (an xlinked one's apart: `cm cat` resolves each repository's on its own) and stops at
