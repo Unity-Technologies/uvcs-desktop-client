@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extensionOf, formatCount, formatCountAtLeast, pluralize, pluralizeAtLeast, shownCount } from './text';
+import { extensionOf, fileNameOf, formatCount, formatCountAtLeast, pluralize, pluralizeAtLeast, shownCount } from './text';
 
 describe('formatCount', () => {
   it('groups thousands', () => {
@@ -23,6 +23,25 @@ describe('shownCount', () => {
     expect(shownCount(340)).toBe('340');
     expect(shownCount(340, 340)).toBe('340');
     expect(shownCount(12, 1340)).toBe('12 of 1,340');
+  });
+});
+
+describe('fileNameOf', () => {
+  it('is the last name of a path, whatever slashes it starts or ends with', () => {
+    expect(fileNameOf('src/app/main.ts')).toBe('main.ts');
+    expect(fileNameOf('main.ts')).toBe('main.ts');
+    expect(fileNameOf('/main/task')).toBe('task');
+    expect(fileNameOf('Assets/Música/')).toBe('Música');
+    expect(fileNameOf('a//b')).toBe('b');
+  });
+
+  it('keeps a backslash as part of the name', () => {
+    expect(fileNameOf('src/odd\\name.txt')).toBe('odd\\name.txt');
+  });
+
+  it('is the path itself when it has no name', () => {
+    expect(fileNameOf('/')).toBe('/');
+    expect(fileNameOf('')).toBe('');
   });
 });
 
