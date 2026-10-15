@@ -168,6 +168,21 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   regions (`changedRegions`: changed vertices joined through their own triangles and shared corners, patches of
   either version within 3% of the model merged; binning vertices into fixed cells was tried and dropped, as a coarse
   mesh read as 30 regions), each framed and boxed. The strip adds "Moved 12% · up to 4.2 cm" (`movedStat`).
+- **Diffs by look**: with the materials shown, Diffs compares how the versions look instead (`diffsCompares`):
+  both drawn apart with their materials through the one camera and compared pixel by pixel on the GPU
+  (`LookComparer`, the `lookDifferences` layout), as the image diff compares two images (`comparePixels`: the largest
+  channel difference in sRGB, or the coverage's). What changed shows in the accent, shaded by the surface's own light
+  so a surface changed whole still shows its form; the rest is a gray ghost of the version after. One rule covers a
+  texture repainted under the same name (which `materialChanges` can't tell), a color, tiling, a normal map, a remap
+  and a shape moved. It compares only once both versions' textures are loaded (`texturesSettled`, `shownLayoutMode`):
+  sooner, a texture still loading on one side would light up; until then the version after shows alone ("Loading
+  textures to compare…"). It sees what faces the camera, and a plain-colored part that moved onto itself looks the
+  same where it overlaps: the shape's heatmap, with the materials off, tells those. It has no tolerance or regions to
+  step through (they'd change with every turn of the camera), and no part lights up on a pick, as a part lit on one
+  side would compare as a change; the version after's bones and the dots of nodes picked are drawn over the
+  comparison, never into it. Its drawings are half floats (`target`): 8 bits of linear color would compare a dark
+  tone's rounding as a change. Comparing what each texture's pixels hold, in UV space, was considered and
+  dropped: it needs both versions to keep their UVs and mesh, and misses colors, tiling and remaps.
 - **Split**: a half each, before on the left. **Swipe**: both through one full view, each cut at the divider
   (`SwipeDivider`, the image swipe's). **Onion**: each version drawn apart, cleared transparent, and blended
   (`Blender`): it tone maps what was drawn and lays it over the backdrop, so the onion looks as the other modes do and
@@ -318,8 +333,9 @@ turns the other off, the one on clicked again goes back to clay, and the choice 
 (`modelSurface` in `diffPreferencesStore`, which migrated the old `modelColorBySlot`). The button ("Show materials and
 textures") shows only when some
 slot would show more than clay (`materialsOffered`: a remap, a texture, a color or transparency of its own). In Diffs
-both buttons stay, off, saying why (`surfaceButtonDisabledReason`: the heatmap colors the model), and the choice comes
-back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
+it compares how the versions look ("Compare materials and textures", `materialsButtonLabel`; Diffs by look under "The
+view"); slot colors stay there, off, saying why (`surfaceButtonDisabledReason`: their colors would hide the
+heatmap's), and come back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
 
 - **Where the version is, never another revision's files.** Each version's materials and textures are the ones that
   go with it, looked up at its point (`AssetsPoint`, found by `AssetsPointContext`, `assetsPoints.ts`): a workspace

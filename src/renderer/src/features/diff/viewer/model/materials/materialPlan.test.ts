@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { foundFileKey, type FoundFile } from '@shared/domain/unityAssets';
 import { DEFAULT_IMPORT_SETTINGS, type ModelImportSettings } from '../modelImportSettings';
 import type { FileMaterial } from '../parsedModel';
-import { assetsRequest, budgeted, findingLooks, lookupKey, materialTextureGuids, planVersion, slotLooks, texturesReport, type FoundAssets, type NeedState, type Side, type VersionPlan } from './materialPlan';
+import { assetsRequest, budgeted, findingLooks, lookupKey, materialTextureGuids, planVersion, slotLooks, texturesReport, texturesSettled, type FoundAssets, type NeedState, type Side, type VersionPlan } from './materialPlan';
 import { slotSources, type ModelMaterialsInput } from './slotSources';
 import { fileMaterial, named, use } from './testing/testMaterials';
 import type { UnityMaterial } from './unityMaterial';
@@ -284,5 +284,13 @@ describe('texturesReport', () => {
         { name: 'moss.psd', problem: 'psdWithoutComposite' },
       ],
     });
+  });
+
+  it('is settled once both versions are found and nothing loads: a failed texture is as it will stay', () => {
+    const report = { total: 2, shown: 1, loading: 0, downloading: 0, issues: [{ name: 'moss.psd', problem: 'psdWithoutComposite' as const }], finding: false };
+    expect(texturesSettled(report)).toBe(true);
+    expect(texturesSettled({ ...report, loading: 1 })).toBe(false);
+    expect(texturesSettled({ ...report, finding: true })).toBe(false);
+    expect(texturesSettled(null)).toBe(false);
   });
 });

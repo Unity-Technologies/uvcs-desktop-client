@@ -45,7 +45,9 @@ import { useOrbitGestures } from './useOrbitGestures';
 import { useReadModel, type ModelReadState } from './useReadModel';
 import { useSize } from './useSize';
 import { useStableModel } from './useStableModel';
-import { shownSurface, surfaceButtonDisabledReason } from './surfaceLook';
+import { diffsCompares, shownSurface } from './surfaceLook';
+import { stagePillRows } from './stagePillRows';
+import { texturesSettled } from './materials/materialPlan';
 import { modelWorkspacePath } from './materials/modelWorkspacePath';
 import { SiblingFinderContext, sourcePathOf, type DiffSide, type SiblingFinder } from './modelSiblings';
 import { AssetsPointContext, type AssetsPointFinder } from './assetsPoints';
@@ -110,8 +112,12 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
     }),
     [old, next, modelBefore, modelAfter, optionsBefore, optionsAfter, sources.original, sources.modified, findSibling, findAssetsPoint],
   );
-  const materials = useModelMaterials(workspacePath, materialVersions, modelSurface === 'materials' && !differences);
+  const materials = useModelMaterials(workspacePath, materialVersions, modelSurface === 'materials');
   const surface = shownSurface(modelSurface, materials.offered);
+  const compares = diffsCompares(surface);
+  const looksLoaded = texturesSettled(materials.report);
+  const shapeDifferences = differences && compares === 'shape';
+  const lookDifferences = differences && compares === 'look';
   const rows = useMemo(() => {
     if (!old || !next || !optionsBefore || !optionsAfter) return null;
     const gltf = old.model.format === 'gltf' || old.model.format === 'glb';
@@ -157,9 +163,9 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
       if (node.before) highlighted.before.add(node.before);
       if (node.after) highlighted.after.add(node.after);
     }
-    renderer?.setLook({ drawMode: modelDrawMode, surface, highlighted });
+    renderer?.setLook({ drawMode: modelDrawMode, surface, highlighted, diffsCompares: compares, looksLoaded });
     renderer?.setMarkers(markersOf(picked?.nodes ?? [], sceneBefore, sceneAfter));
-  }, [renderer, picked, modelDrawMode, surface, sceneBefore, sceneAfter]);
+  }, [renderer, picked, modelDrawMode, surface, compares, looksLoaded, sceneBefore, sceneAfter]);
   // After the scenes are set (`setModels` lets a replaced side's looks go), whenever either changes.
   useEffect(() => {
     if (renderer && bounds) renderer.setMaterialLooks(materials.looks);
@@ -170,14 +176,14 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
     palette,
     before: old?.model ?? null,
     after: next?.model ?? null,
-    wanted: differences,
+    wanted: shapeDifferences,
     toleranceShare: modelToleranceShare,
     frame,
   });
   const shownStats = useMemo(() => {
-    const textures = surface === 'materials' && !differences && materials.report ? texturesStat(materials.report) : null;
-    return [...stats, ...(differences && comparison ? [movedStat(comparison, tolerance)] : []), ...(textures ? [textures] : [])];
-  }, [differences, comparison, stats, tolerance, surface, materials.report]);
+    const textures = surface === 'materials' && materials.report ? texturesStat(materials.report) : null;
+    return [...stats, ...(shapeDifferences && comparison ? [movedStat(comparison, tolerance)] : []), ...(textures ? [textures] : [])];
+  }, [shapeDifferences, comparison, stats, tolerance, surface, materials.report]);
 
   const choices = useMemo(() => clipChoices(old?.model.clips ?? [], next?.model.clips ?? []), [old, next]);
   const hasBones = (old?.summary.totals.bones ?? 0) + (next?.summary.totals.bones ?? 0) > 0;
@@ -228,7 +234,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   const shownMode = comparable ? mode : null;
 
   const changesPanel = rows && (
-    <ModelChangesPanel rows={rows} picked={picked?.id ?? null} onPick={onPickRow} open={changesOpen} onOpenChange={setModelChangesOpen} docked={docked} pillRows={shownMode === 'onion' ? 1 : differences ? (regions.length > 0 ? 2 : 1) : 0} />
+    <ModelChangesPanel rows={rows} picked={picked?.id ?? null} onPick={onPickRow} open={changesOpen} onOpenChange={setModelChangesOpen} docked={docked} pillRows={stagePillRows({ mode: shownMode, diffsCompares: compares, regionCount: regions.length, looksLoaded })} />
   );
 
   if (failed) {
@@ -265,7 +271,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
               </>
             )}
             {shownMode === 'onion' && <BlendPill blend={blend} onBlendChange={setBlend} things="models" />}
-            {differences && comparison && (
+            {shapeDifferences && comparison && (
               <ModelDifferencesControls
                 toleranceShare={modelToleranceShare}
                 onToleranceShare={setModelToleranceShare}
@@ -275,12 +281,17 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
                 onStep={stepRegion}
               />
             )}
-            {differences && comparing && (
+            {shapeDifferences && comparing && (
               <div className={styles.computing}>
                 <Spinner size={14} /> Comparing surfaces…
               </div>
             )}
-            {differences && comparisonFailed && <div className={styles.computing}>Couldn't compare these surfaces</div>}
+            {shapeDifferences && comparisonFailed && <div className={styles.computing}>Couldn't compare these surfaces</div>}
+            {lookDifferences && !looksLoaded && (
+              <div className={styles.computing}>
+                <Spinner size={14} /> Loading textures to compare…
+              </div>
+            )}
             {rows && paneWidth > 0 && !docked && changesPanel}
             <ModelViewControls
               drawMode={modelDrawMode}
@@ -288,7 +299,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
               surface={surface}
               onSurface={setModelSurface}
               materialsOffered={materials.offered}
-              surfaceUnavailable={surfaceButtonDisabledReason(differences)}
+              differences={differences}
               bones={hasBones ? { shown: modelShowBones, onShow: setModelShowBones } : null}
               onFrame={frameShown}
             />
