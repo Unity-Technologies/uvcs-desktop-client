@@ -146,9 +146,17 @@ describe('changeRows, for the import settings', () => {
 });
 
 describe('changeRows, for the materials', () => {
-  const material = (change: MaterialChange): ModelChange => ({ kind: 'material', change });
+  const material = (change: MaterialChange, nodes: NodeRef[] = []): ModelChange => ({ kind: 'material', change, nodes });
   const project = (name: string, path = `Assets/Materials/${name}.mat`) => ({ kind: 'project' as const, guid: path, name, path });
   const DEFAULT = { kind: 'default' as const };
+
+  it('focuses the meshes that use the slot, a folded row all of them and each item its own', () => {
+    const [one] = changeRows([material({ kind: 'baseColor', slot: 'Main', before: '#CA9337', after: '#3881E1' }, [mesh('Body'), mesh('Arm')])]);
+    expect(one!.focus.map((node) => node.name)).toEqual(['Body', 'Arm']);
+    const [folded] = changeRows(['Glass', 'Visor', 'Lamp'].map((slot) => material({ kind: 'alpha', slot, before: 'opaque', after: 'blend' }, [mesh(slot)])));
+    expect(folded!.focus.map((node) => node.name)).toEqual(['Glass', 'Visor', 'Lamp']);
+    expect(folded!.items!.map((item) => item.focus.map((node) => node.name))).toEqual([['Glass'], ['Visor'], ['Lamp']]);
+  });
 
   it('tells where a slot takes its material from now, and from where before', () => {
     const rows = changeRows([

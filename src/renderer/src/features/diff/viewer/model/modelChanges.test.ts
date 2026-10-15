@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isRisk, modelChanges, type ModelChange } from './modelChanges';
+import { isRisk, meshesUsingSlot, modelChanges, type ModelChange } from './modelChanges';
 import { modelSummary } from './modelSummary';
 import type { FileImage, ParsedModel } from './parsedModel';
 import { fileMaterial, use } from './materials/testing/testMaterials';
@@ -207,6 +207,21 @@ describe('modelChanges: material slots', () => {
   it("tells a mesh that uses another of the model's slots", () => {
     const metalLid = crate.map((node) => (node.name === 'Lid' ? { ...node, mesh: { ...node.mesh!, slots: ['Metal'] } } : node));
     expect(changes({ nodes: crate }, { nodes: metalLid })).toMatchObject([{ kind: 'meshSlots', node: { name: 'Lid' }, before: ['Wood'], after: ['Metal'] }]);
+  });
+});
+
+describe('meshesUsingSlot', () => {
+  it("finds the meshes whose triangles use a slot, on the version after, or before where it's gone", () => {
+    const after = modelSummary(testModel({ nodes: crate }));
+    const before = modelSummary(testModel({ nodes: [...crate, { name: 'Hinge', mesh: { slots: ['Brass'] } }] }));
+    const slotNodes = meshesUsingSlot(before, after);
+    expect(slotNodes('Wood').map((node) => [node.name, node.before, node.after])).toEqual([
+      ['Body', 'Crate/Body', 'Crate/Body'],
+      ['Lid', 'Crate/Lid', 'Crate/Lid'],
+    ]);
+    expect(slotNodes('Metal').map((node) => node.name)).toEqual(['Body']);
+    expect(slotNodes('Brass').map((node) => [node.name, node.before, node.after])).toEqual([['Hinge', 'Hinge', undefined]]);
+    expect(slotNodes('Glass')).toEqual([]);
   });
 });
 

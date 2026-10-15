@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MaterialChange } from './materials/materialChanges';
-import type { ModelChange } from './modelChanges';
+import type { ModelChange, NodeRef } from './modelChanges';
 import { whatChanged, type ChangesOfVersions } from './whatChanged';
 
 const TEXTURES: ModelChange = { kind: 'textures', added: ['rock.png'], removed: ['planks.png'], nodes: [] };
@@ -12,7 +12,7 @@ const REPAINTED: MaterialChange = { kind: 'baseColor', slot: 'Main', before: '#C
 const kinds = (changes: ModelChange[]): string[] => changes.map((change) => (change.kind === 'material' ? `material:${change.change.kind}` : change.kind));
 
 function of(overrides: Partial<ChangesOfVersions> = {}): ChangesOfVersions {
-  return { file: [EXPORTER, TEXTURES], importSettings: [SCALE], settingsRead: true, materials: [], materialsNotCompared: null, fileMaterials: [], gltf: false, ...overrides };
+  return { file: [EXPORTER, TEXTURES], importSettings: [SCALE], settingsRead: true, materials: [], materialsNotCompared: null, fileMaterials: [], gltf: false, slotNodes: () => [], ...overrides };
 }
 
 describe('whatChanged', () => {
@@ -38,13 +38,19 @@ describe('whatChanged', () => {
   it("tells what changed in the file's own materials where Unity's can't be resolved at all: without a point, or outside a Unity project", () => {
     expect(kinds(whatChanged(of({ materials: null, fileMaterials: [REPAINTED] })))).toEqual(['exporter', 'textures', 'scaleFactor', 'material:baseColor']);
     // Outside a Unity project the file's materials are all there is: told, they need no note that they weren't compared.
-    expect(whatChanged(of({ file: [], importSettings: [], materials: null, materialsNotCompared: 'noProject', fileMaterials: [REPAINTED] }))).toEqual([{ kind: 'material', change: REPAINTED }]);
+    expect(whatChanged(of({ file: [], importSettings: [], materials: null, materialsNotCompared: 'noProject', fileMaterials: [REPAINTED] }))).toEqual([{ kind: 'material', change: REPAINTED, nodes: [] }]);
     expect(kinds(whatChanged(of({ file: [], importSettings: [], materials: null, materialsNotCompared: 'noProject' })))).toEqual(['materialsNotCompared']);
   });
 
   it("leaves the file's own materials alone where Unity's are told, or where the project may remap them otherwise", () => {
     expect(kinds(whatChanged(of({ materials: [], fileMaterials: [REPAINTED] })))).toEqual(['exporter', 'scaleFactor']);
     expect(kinds(whatChanged(of({ file: [], importSettings: [], materials: null, materialsNotCompared: 'noLibrary', fileMaterials: [REPAINTED] })))).toEqual(['materialsNotCompared']);
+  });
+
+  it('gives each material change the meshes that use its slot, to frame them', () => {
+    const body: NodeRef = { name: 'Body', path: 'Body', kind: 'mesh', before: 'Body', after: 'Body' };
+    const changes = whatChanged(of({ file: [], importSettings: [], materials: [REPAINTED], slotNodes: (slot) => (slot === 'Main' ? [body] : []) }));
+    expect(changes).toEqual([{ kind: 'material', change: REPAINTED, nodes: [body] }]);
   });
 
   it("a .meta whose read failed tells nothing of its settings: Unity's defaults stand in for it", () => {
