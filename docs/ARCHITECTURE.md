@@ -173,8 +173,8 @@ and many people use the same server. Every `cm` command other than local reads (
   changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`); merges and labels come either way.
 - Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments.
   Each is in a directory named with the app's process (`withTempDirectory`: `uvcs-<pid>-…`), deleted after the command;
-  those a session killed mid-command left go as the next one starts (`removeLeftOverTempDirectories`: only a process
-  that is gone, never another app's running beside it).
+  those a session killed mid-command left go as the next one starts (`removeLeftOverTempDirectories`, as the
+  downloads' folders: `removeFoldersOfGoneProcesses`, only a process that is gone, never another app's running beside it).
 - `cm find` reads no quote inside a value, neither doubled nor between double quotes: a search puts `%` in each quote's
   place (`withoutQuotes`), and so does an exact value (`equalsCondition`: `owner like 'o%brien@corp.com'`), whose caller
   keeps only the exact objects when it needs them. Branch, label, attribute and repository names can't hold a quote.

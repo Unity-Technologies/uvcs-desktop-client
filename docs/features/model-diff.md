@@ -169,7 +169,8 @@ Disposing it frees the GPU's memory at once (`forceContextLoss`), as stepping th
 files makes many viewers, and lets go of everything it drew, so nothing still holding the canvas keeps the scenes: the
 canvas's listener goes, and three r186's one DFG lookup texture, which every renderer that drew a standard material
 listens to (and so kept every renderer ever made, with its scenes, a few hundred megabytes a pass over six models),
-is released (`releaseSharedDfgLut`: disposed, every renderer's listener detaches; one still drawing uploads it again).
+is released (`sharedDfgLutOf`, remembered from the first frame that drew it: disposed, every renderer's listener
+detaches; one still drawing uploads it again).
 `sharedDfgLut.test.ts` pins three's revision, so an upgrade checks it again. So each renderer gets a canvas of its own (`useModelRenderer` puts it in and takes it out):
 a canvas whose context was lost hands that lost context to the next renderer, which three can't start on, as
 StrictMode's second mount showed. Where WebGL can't start at all (no usable GPU, the browser's limit of contexts), the
@@ -442,8 +443,11 @@ heatmap's), and come back in the other modes. The merge cards' stills stay clay 
   MD5 as the listing's hash, read into one buffer of its size; a file known to differ isn't read again until it
   changes, a match is always hashed again on the bytes returned), else downloaded. The textures are read a few at a
   time (below, "Budget"), so the look first asks for every repository revision it will read (`api.unityAssets.download`,
-  `RevisionDownloads.fetch`: the disk checked without keeping its bytes, `WorkspaceCopies.has`); their reads then find
-  them downloaded. The reads asked at once (the look's downloads, a ring of `.meta` files) wait until each has checked the disk, then go in one `cm cat <spec>;<file>
+  `RevisionDownloads.fetch`: the disk checked without keeping its bytes, `WorkspaceCopies.has`, from the hash known for
+  the file as it is when there is one); their reads then find them downloaded, never starting a `cm cat` of their own:
+  a revision fetched is kept past `MAX_KEPT_BYTES` until read (or `FETCHED_KEPT_MS`, five minutes: the look left), and
+  one whose batch failed fails its read at once, until it is fetched again (64 textures with the server down would
+  otherwise start 22 more commands). The reads asked at once (the look's downloads, a ring of `.meta` files) wait until each has checked the disk, then go in one `cm cat <spec>;<file>
   <spec>;<file> …` (`catArgs`), which downloads them in one batch, in a process of its own; a batch holds one
   repository's revisions (an xlinked one's apart: `cm cat` resolves each repository's on its own) and stops at
   `MAX_BATCH_BYTES` (64 MB by the sizes listed, so the first textures show sooner) and at a command line Windows can
@@ -559,7 +563,7 @@ heatmap's), and come back in the other modes. The merge cards' stills stay clay 
   (1.2 GB) at once took the renderer to 2.8 GB and the main process to 1.4 GB; three at a time, 1.5 GB and 0.4 GB, as
   fast. A file version decodes once (`textureLoads`: by its version, `foundFileKey`), and its bitmap is kept
   (`DecodeCache`) while a viewer shows it (`holdTextures`), past any budget, and besides those the latest 192 MB, for
-  the next model; a bitmap let go of is closed at once (its pixels freed then, not when collected), and every one 30 s
+  the next model (a load still waiting its turn that the cache let go of meanwhile reads nothing); a bitmap let go of is closed at once (its pixels freed then, not when collected), and every one 30 s
   after the last viewer goes. One GPU texture per bitmap and use (`LookTextures`), freed when no look uses it, or with
   the renderer.
 - **Drawn** (`SlotLookMaterials`): MeshStandardMaterial, no metal, roughness 0.6, under the same studio; base maps sRGB,
