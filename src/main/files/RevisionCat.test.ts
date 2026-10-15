@@ -97,40 +97,45 @@ describe('RevisionCat', () => {
     expect(fake.commands.length).toBe(Math.ceil(400 / longest));
   });
 
-  it('never holds both pooled sessions: a quick cm cat while another runs goes in a process of its own', async () => {
+  it("never holds both pooled sessions: a quick cm cat asked while another runs waits for it, rather than start a process (a diff's sides asked a moment apart)", async () => {
     const held = heldCat();
     const { fake, flush, save } = await setUp(held.cat);
-    const first = save(version(1));
+    const first = save(revision(1), 'r1');
     flush();
-    const second = save(version(2, 'lib@local'), 'lib2');
+    const second = save(revision(2), 'r2');
     flush();
+    expect(fake.commands).toHaveLength(1);
+    const next = held.nextCommand();
+    held.releaseFirst();
+    await next;
     held.releaseAll();
     await Promise.all([first, second]);
     expect(readsPerCommand(fake)).toEqual([
       ['query', 1],
-      ['execute', 1],
+      ['query', 1],
     ]);
   });
 
   it('runs at most two cm cats at once: the reads asked meanwhile wait, and the next batch is formed from them as one ends', async () => {
     const held = heldCat();
     const { fake, flush, save } = await setUp(held.cat);
+    const many = (from: number) => Array.from({ length: MAX_QUICK_CAT + 1 }, (_, i) => save(version(from + i)));
     const first = [save(version(1)), save(version(2))];
     flush();
-    const second = save(version(3));
+    const second = many(10);
     flush();
-    const meanwhile = Array.from({ length: MAX_QUICK_CAT + 1 }, (_, i) => save(version(10 + i)));
+    const meanwhile = many(20);
     flush();
     expect(fake.commands).toHaveLength(MAX_RUNNING_CATS);
     const third = held.nextCommand();
     held.releaseFirst();
     await Promise.all(first);
     await third;
-    held.releaseAll();
-    await Promise.all([second, ...meanwhile]);
+    held.letAllThrough();
+    await Promise.all([...second, ...meanwhile]);
     expect(readsPerCommand(fake)).toEqual([
       ['query', 2],
-      ['execute', 1],
+      ['execute', MAX_QUICK_CAT + 1],
       ['execute', MAX_QUICK_CAT + 1],
     ]);
   });
