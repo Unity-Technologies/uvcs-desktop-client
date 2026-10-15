@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { treeListingOutput, workspaceListingXml } from '../cm/testing/cmOutput';
+import { formatOutput, treeListingOutput, workspaceListingXml } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, optionValue, type CmAnswer, type FakeCmCommand } from '../cm/testing/fakeCmClient';
 import { contentHashOf } from '../files/WorkspaceCopies';
 import type { ReviewStore } from '../review/ReviewStore';
@@ -370,5 +370,36 @@ describe("reading a revision the workspace's disk holds", () => {
 
     expect(new TextDecoder().decode((await service.readBytes(workspace, { kind: 'repositoryPath', path: '/Assets/Barrel.bin', at: 'cs:12' }))!)).toBe('BIN');
     expect(lines().map((line) => line.split(' --format')[0])).toEqual(['ls /Assets --tree=cs:12']);
+  });
+});
+
+describe("reading a committed diff's revisions (a changeset, a branch, a shelve, Incoming)", () => {
+  const BEFORE = 'v 0 0 0\n';
+  const md5 = (text: string) => contentHashOf(Buffer.from(text));
+  /** The workspace's `cm ls <folder> --format=…` of `Prop`, as cm prints it: it holds the diff's side before. */
+  const PROP = formatOutput(['Prop', 'dir', 131, 'ZGly', 0, 'rep:game@local'], ['Prop/Pumpkin.obj', 'txt', 182, md5(BEFORE), BEFORE.length, 'rep:game@local']);
+  const side = (revisionId: number) => ({ kind: 'revision' as const, revision: { revisionId, repository: 'game@local' }, fileName: 'Prop/Pumpkin.obj' });
+
+  it("reads the side the workspace holds unchanged from its disk, asking the workspace's folder once, and downloads the other", async () => {
+    const workspace = await newWorkspace();
+    await mkdir(join(workspace, 'Prop'));
+    await writeFile(join(workspace, 'Prop', 'Pumpkin.obj'), BEFORE);
+    const { answer } = catWriting('after');
+    const { service, lines } = content({ ls: PROP, cat: answer });
+
+    expect((await service.read(workspace, side(182))).text).toBe(BEFORE);
+    expect((await service.read(workspace, side(186))).text).toBe('after');
+    expect(lines().map((line) => line.split(' --f')[0])).toEqual([`ls ${join(workspace, 'Prop')}`, 'cat revid:186@game@local']);
+  });
+
+  it('downloads the side the workspace holds once its file changed', async () => {
+    const workspace = await newWorkspace();
+    await mkdir(join(workspace, 'Prop'));
+    await writeFile(join(workspace, 'Prop', 'Pumpkin.obj'), 'v 9 9 9\n');
+    const { answer } = catWriting(BEFORE);
+    const { service, ran } = content({ ls: PROP, cat: answer });
+
+    expect((await service.read(workspace, side(182))).text).toBe(BEFORE);
+    expect(ran('cat revid:182@game@local')).toBe(true);
   });
 });

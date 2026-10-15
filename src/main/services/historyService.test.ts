@@ -109,6 +109,21 @@ describe("the workspace's revision in a history", () => {
   });
 });
 
+describe("the workspace's revision in a cloud repository's history", () => {
+  it("is read from the disk though cm history spells the repository's server as an id, and cm ls as the organization", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'history-cloud-wk-'));
+    await writeFile(join(workspace, 'README.md'), '# Game\n');
+    const fake = fakeCmClient({ ...TWO_REVISIONS, ls: formatOutput([45, contentHashOf(Buffer.from('# Game\n')), 7, 'rep:3dtest/game@MyOrg@unity']) });
+    const context = serviceContext(fake.cm);
+    await createHistoryService(context, { apps: {} as never }).forItem(workspace, 'README.md');
+
+    const read = await createContentService(context).read(workspace, { kind: 'revision', revision: { revisionId: 45, repository: '3dtest/game@1375488836673@cloud' }, fileName: 'README.md' });
+
+    expect(read.text).toBe('# Game\n');
+    expect(fake.ran('cat')).toBe(false);
+  });
+});
+
 describe('revert', () => {
   it('reverts the file to its version in a changeset with one quick command', async () => {
     const { service, commands } = history({ revert: '' });

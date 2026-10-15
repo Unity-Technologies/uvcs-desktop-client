@@ -2,6 +2,8 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { formatOutput } from '../cm/testing/cmOutput';
+import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import type { ListedTreeItem } from '../cm/treeItemsXml';
 import { contentHashOf, revisionFilesOf, WorkspaceCopies, type RevisionFile } from './WorkspaceCopies';
 
@@ -102,5 +104,79 @@ describe('revisionFilesOf', () => {
       { path: 'a.cs', revision: { revisionId: 40, repository: 'models@local' }, hash: 'aGFzaA==', size: 2 },
       { path: 'art.png', revision: { revisionId: 41, repository: 'models@local' }, hash: 'aGFzaA==', size: 2 },
     ]);
+  });
+});
+
+describe("WorkspaceCopies.read of a revision whose hash the reader doesn't know: the workspace's revision at its path", () => {
+  const OBJ = 'v 0 0 0\n';
+  const MTL = 'newmtl Skin\n';
+  /** `cm ls <folder> --format=…` of the workspace's `Prop` folder, as cm prints it. */
+  const PROP = formatOutput(
+    ['Prop', 'dir', 131, 'ZGly', 0, 'rep:3dtest/models@MyOrg@unity'],
+    ['Prop/Pumpkin.obj', 'txt', 186, hashOf(OBJ), OBJ.length, 'rep:3dtest/models@MyOrg@unity'],
+    ['Prop/PumpkinMaterials.mtl', 'txt', 185, hashOf(MTL), MTL.length, 'rep:3dtest/models@MyOrg@unity'],
+  );
+  const asked = (path: string, revisionId: number, repository = '3dtest/models@1375488836673@cloud'): RevisionFile => ({ path, revision: { revisionId, repository }, hash: null, size: -1 });
+
+  async function setUp(ls: CmAnswer = PROP, disk: Record<string, string> = { 'Prop/Pumpkin.obj': OBJ, 'Prop/PumpkinMaterials.mtl': MTL }) {
+    const workspace = await workspaceWith(disk);
+    const fake = fakeCmClient({ ls });
+    return { workspace, fake, copies: new WorkspaceCopies({ cm: fake.cm }) };
+  }
+
+  it('reads the disk where the workspace holds that revision unchanged, the folder listed once for all its files', async () => {
+    const { workspace, fake, copies } = await setUp();
+
+    expect((await copies.read(workspace, asked('Prop/Pumpkin.obj', 186)))?.toString()).toBe(OBJ);
+    expect((await copies.read(workspace, asked('/Prop/PumpkinMaterials.mtl', 185)))?.toString()).toBe(MTL);
+    expect(fake.commands.map(({ via, args }) => [via, args[0], args[1]])).toEqual([['query', 'ls', join(workspace, 'Prop')]]);
+  });
+
+  it('matches the repository by its name, however its server is spelled (a cloud repository has two spellings)', async () => {
+    const { workspace, copies } = await setUp();
+
+    expect(await copies.read(workspace, asked('Prop/Pumpkin.obj', 186, '3dtest/models@MyOrg@unity'))).not.toBeNull();
+    expect(await copies.read(workspace, asked('Prop/Pumpkin.obj', 186, '3dtest/models@1375488836673@cloud'))).not.toBeNull();
+  });
+
+  it("reads nothing where the workspace holds another revision, another repository's (an xlink's), or a changed file", async () => {
+    const { workspace, copies } = await setUp(PROP, { 'Prop/Pumpkin.obj': OBJ, 'Prop/PumpkinMaterials.mtl': 'newmtl Edited\n' });
+
+    expect(await copies.read(workspace, asked('Prop/Pumpkin.obj', 182))).toBeNull();
+    expect(await copies.read(workspace, asked('Prop/Pumpkin.obj', 186, 'art@local'))).toBeNull();
+    expect(await copies.read(workspace, asked('Prop/PumpkinMaterials.mtl', 185))).toBeNull();
+  });
+
+  it('reads nothing where the workspace has no such folder, asking once', async () => {
+    const { workspace, fake, copies } = await setUp(cmFails('Error: The item /work/Gone is not in the workspace.'));
+
+    expect(await copies.read(workspace, asked('Gone/a.obj', 7))).toBeNull();
+    expect(await copies.read(workspace, asked('Gone/b.obj', 8))).toBeNull();
+    expect(fake.lines()).toHaveLength(1);
+  });
+
+  it('lists the folder again once the workspace changed', async () => {
+    const { workspace, fake, copies } = await setUp();
+    await copies.read(workspace, asked('Prop/Pumpkin.obj', 186));
+
+    copies.forgetListings(workspace);
+    await copies.read(workspace, asked('Prop/Pumpkin.obj', 186));
+
+    expect(fake.lines()).toHaveLength(2);
+  });
+
+  it('finds a name the reader writes composed where cm lists it decomposed (macOS)', async () => {
+    const name = 'Prop/Calabaza\u0301.obj';
+    const { workspace, copies } = await setUp(formatOutput([name, 'txt', 9, hashOf(OBJ), OBJ.length, 'rep:models@local']), { [name.normalize('NFC')]: OBJ });
+
+    expect(await copies.read(workspace, asked(name.normalize('NFC'), 9, 'models@local'))).not.toBeNull();
+  });
+
+  it('asks nothing for a path that leads out of the workspace, or without a cm', async () => {
+    const { workspace, fake, copies } = await setUp();
+
+    expect(await copies.read(workspace, asked('../Prop/Pumpkin.obj', 186))).toBeNull();
+    expect(await new WorkspaceCopies().read(workspace, asked('Prop/Pumpkin.obj', 186))).toBeNull();
+    expect(fake.lines()).toEqual([]);
   });
 });
