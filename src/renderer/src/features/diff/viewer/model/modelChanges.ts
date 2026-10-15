@@ -49,6 +49,8 @@ export type ModelChange =
   | { kind: 'triangulation'; node: NodeRef }
   /** The same triangles, some turning the other way: Unity draws them from what was their back. */
   | { kind: 'facesFlipped'; node: NodeRef }
+  /** The same triangles, some drawn with another of the mesh's material slots. */
+  | { kind: 'faceSlots'; node: NodeRef }
   | { kind: 'normals'; node: NodeRef }
   | { kind: 'uvs'; node: NodeRef }
   | { kind: 'lightmapUvs'; node: NodeRef; now: boolean }
@@ -432,6 +434,7 @@ function meshChanges({ before, after, ref }: MeshPair, verticesMovedAlike: boole
       // Its vertices where they were, joined into other triangles: told as that, as a shape change it would read as
       // a sculpt, while a flat face split another way looks the same.
       if (old.index !== next.index) changes.push({ kind: old.corners === next.corners ? 'facesFlipped' : 'triangulation', node: ref });
+      else if (old.slots !== next.slots && before.slots.join('\n') === after.slots.join('\n')) changes.push({ kind: 'faceSlots', node: ref });
       if (old.normals !== next.normals) changes.push({ kind: 'normals', node: ref });
     }
     if (before.hasUv && after.hasUv && old.uv !== next.uv) changes.push({ kind: 'uvs', node: ref });

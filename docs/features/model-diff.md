@@ -65,9 +65,10 @@ bounds in Unity's space, and each mesh's triangles, material slots, blendshapes,
   splits vertices for the tangents it computes, so it differs by a few percent; the strip's tooltip says "about".
 - **Material slots are those some triangle uses**: Unity makes submeshes only of those (a file declaring 17 materials
   Unity shows as 14).
-- **Fingerprints** of each attribute's exact values tell what changed without keeping both versions' arrays (the
-  triangles as a set, `trianglesFingerprint`, whichever corner each starts from: a re-export lists them in another
-  order, and Unity reorders them anyway), and
+- **Fingerprints** of each attribute's exact values tell what changed without keeping both versions' arrays. The
+  triangles are hashed as sets (`triangleSetsOf`: each on its own, whichever corner it starts from, the hashes summed,
+  linear and without allocating), as a re-export lists them in another order and Unity reorders them anyway: by
+  winding, by corners alone (faces flipped) and with each one's slot (faces painted with another material).
   `placedPositions` (where the vertices end up in Unity's space, to 10 µm) tells a mesh whose vertices were shifted to
   stay in place (a pivot moved, a new parent) from one whose shape changed.
 - **Where a vertex is, is where it is drawn** (`placedPositionsOf`): through its node, or, skinned, through its bones
@@ -103,9 +104,9 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
   of the same mesh), removed, added; a mesh that uses another of the model's slots.
 - **Each mesh**: triangles (and nothing else then: a rebuilt mesh changed everything), shape, triangulated
   differently (the same vertices joined into other triangles, a flat cap split along other diagonals: no shape
-  change, which would read as a sculpt), faces flipped (the same triangles, some turning the other way), normals, UVs, lightmap
-  UVs (lost is a risk: baked lighting needs them), vertex colors gained, lost or repainted, skinning, blendshapes
-  renamed, removed, added or resculpted under their names.
+  change, which would read as a sculpt), faces flipped (the same triangles, some turning the other way), faces that
+  use another of its slots, normals, UVs, lightmap UVs (lost is a risk: baked lighting needs them), vertex colors
+  gained, lost or repainted, skinning, blendshapes renamed, removed, added or resculpted under their names.
 - **Takes** (Unity's clips are cut from them by name): renamed (one gone and one of the same length come), removed,
   added, of another length; and, at the same name and length, keyed differently, with the nodes it moves differently
   ("Animation Run changed: Hips, Leg_L, Tail and 4 more", parents first): the view shows it only once the take plays,
