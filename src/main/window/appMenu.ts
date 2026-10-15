@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, shell, type MenuItemConstructorOptions } from 'electron';
 import { sendEventTo } from '../ipc/sendEvent';
+import { coalesced } from '../system/coalesced';
 import { BUG_REPORT_URL, DOCUMENTATION_URL, FEATURE_REQUEST_URL } from './appInfo';
 import { appMenuTemplate } from './appMenuTemplate';
 import { isMenuCommandEnabled } from './workspaceMenuCommands';
@@ -35,8 +36,16 @@ function windowItems(windows: WorkspaceWindows): MenuItemConstructorOptions[] {
   }));
 }
 
-/** Installs the menu bar; call it again when windows open, close, get focus or change title. */
-export function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates): void {
+/**
+ * The menu bar's installer: it lists the windows, so it installs it again when they open, close, get focus or change
+ * title, once for each burst of such changes (opening a window focuses it and sets its title: a build takes 3-5 ms).
+ * The first window opening installs it first.
+ */
+export function appMenuInstaller(windows: WorkspaceWindows, updates: AppUpdates): () => void {
+  return coalesced(() => installAppMenu(windows, updates));
+}
+
+function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates): void {
   const template = appMenuTemplate({
     platform: process.platform,
     isPackaged: app.isPackaged,
@@ -58,17 +67,11 @@ export function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates): 
   Menu.setApplicationMenu(menu);
 }
 
-/** The menu bar, and the Dock icon's menu on macOS. */
-export function installMenus(windows: WorkspaceWindows, updates: AppUpdates): void {
-  installAppMenu(windows, updates);
-  installDockMenu(windows);
-}
-
 /**
  * The Dock icon's menu on macOS gets New Window, even with every window closed; the system puts the recent workspaces
  * above it (`recentDocuments`) and the open windows below.
  */
-function installDockMenu(windows: WorkspaceWindows): void {
+export function installDockMenu(windows: WorkspaceWindows): void {
   app.dock?.setMenu(Menu.buildFromTemplate([{ label: 'New Window', click: () => windows.open() }]));
 }
 

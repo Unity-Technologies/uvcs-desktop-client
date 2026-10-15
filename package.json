@@ -14,7 +14,7 @@
     "url": "https://github.com/Unity-Technologies/uvcs-desktop-client/issues"
   },
   "private": true,
-  "main": "out/main/index.js",
+  "main": "out/main/boot.js",
   "engines": {
     "node": ">=22.12"
   },
