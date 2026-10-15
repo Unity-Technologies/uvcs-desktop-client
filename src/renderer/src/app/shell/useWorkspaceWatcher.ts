@@ -35,11 +35,18 @@ export function useWorkspaceWatcher(): void {
 function useWatchCoverage(workspacePath: string): WatchCoverage {
   const [coverage, setCoverage] = useState<WatchCoverage>('partial');
   useEffect(() => {
+    // Main answers once the watch has started (on Linux, once every folder is watched): a workspace left meanwhile
+    // (or StrictMode's second mount) gets its answer for a watch already stopped, which says nothing of the new one.
+    let shown = true;
     void api.workspaces.watch(workspacePath).then((watched) => {
+      if (!shown) return;
       setCoverage(watched);
       if (watched === 'partial') notePartialWatch(workspacePath);
     });
-    return () => void api.workspaces.unwatch();
+    return () => {
+      shown = false;
+      void api.workspaces.unwatch();
+    };
   }, [workspacePath]);
   useUvcsEvent('workspaceWatchBroken', ({ workspacePath: brokenPath }) => {
     if (brokenPath !== workspacePath) return;
