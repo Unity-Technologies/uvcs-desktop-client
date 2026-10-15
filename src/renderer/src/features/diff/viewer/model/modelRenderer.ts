@@ -40,6 +40,7 @@ import {
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { canvasSizeChanged, canvasSizeOf, type CanvasSize } from './canvasSize';
 import { ContactShadow, SHADOW_LAYER, shadowFrameOf } from './contactShadow';
+import { GroundGrid } from './groundGrid';
 import { DISTANCE_ATTRIBUTE, distancesToDraw } from './heatColors';
 import { LookComparer } from './lookComparer';
 import { LookTextures, SlotLookMaterials } from './materials/slotLookMaterials';
@@ -114,6 +115,8 @@ export class ModelRenderer {
   /** Both versions' bounds together, in the viewer's space: the grid and the clip planes cover them. */
   private bounds: BoundsLike = { min: [-1, -1, -1], max: [1, 1, 1] };
   private readonly grid = new Group();
+  /** The endless ground grid in `grid`, on the floor under the models; null until the palette comes. */
+  private groundGrid: GroundGrid | null = null;
   /** The changed region stepped to, boxed in the accent. */
   private readonly region = new Box3Helper(new Box3());
   private view: OrbitView = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 5 };
@@ -509,6 +512,7 @@ export class ModelRenderer {
     this.camera.position.set(...cameraPositionOf(this.view));
     this.camera.lookAt(...this.view.target);
     this.camera.updateProjectionMatrix();
+    this.groundGrid?.follow(this.camera, this.view.distance);
   }
 
   private layout(): Layout {
@@ -645,9 +649,7 @@ export class ModelRenderer {
   }
 
   /**
-   * The ground grid: lines a power of ten apart that suits the model (1 m for a person, as Unity's Scene view
-   * shows; 10 cm for a prop held in the hand), every tenth stronger, and X and Z through the origin in Unity's axis
-   * colors, so a model off its pivot shows where it went. Each side's pivot axes are sized with it.
+   * The endless ground grid on the floor under the models (`GroundGrid`), and the pivot's axes at the origin.
    */
   private rebuildGrid(): void {
     const palette = this.palette;
@@ -656,25 +658,10 @@ export class ModelRenderer {
     this.grid.clear();
     const { min, max } = this.bounds;
     const extent = Math.max(max[0] - min[0], max[2] - min[2], max[1] - min[1], 1e-3);
-    const cell = 10 ** Math.floor(Math.log10(extent));
-    const reach = Math.ceil((Math.max(Math.abs(min[0]), Math.abs(max[0]), Math.abs(min[2]), Math.abs(max[2])) + extent) / cell) * cell;
-    const lines = (color: string, every: number, skipEvery: number | null): LineSegments => {
-      const positions: number[] = [];
-      for (let step = -Math.round(reach / every); step <= Math.round(reach / every); step++) {
-        if (step === 0 || (skipEvery !== null && step % skipEvery === 0)) continue;
-        const at = step * every;
-        positions.push(-reach, 0, at, reach, 0, at, at, 0, -reach, at, 0, reach);
-      }
-      const geometry = new BufferGeometry();
-      geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
-      return new LineSegments(geometry, new LineBasicMaterial({ color, transparent: true, opacity: 0.9, depthWrite: false }));
-    };
-    const axis = (color: string, from: Vector, to: Vector): LineSegments => {
-      const geometry = new BufferGeometry();
-      geometry.setAttribute('position', new Float32BufferAttribute([...from, ...to], 3));
-      return new LineSegments(geometry, new LineBasicMaterial({ color, depthWrite: false }));
-    };
-    this.grid.add(lines(palette.grid, cell, 10), lines(palette.gridMajor, cell * 10, null), axis(palette.axisX, [-reach, 0, 0], [reach, 0, 0]), axis(palette.axisZ, [0, 0, -reach], [0, 0, reach]));
+    // A step lighter on the dark theme, whose border colors sit too near its backdrop for a grid that fades as it goes.
+    const lines = palette.isDark ? { minor: palette.gridMajor, major: palette.wire } : { minor: palette.grid, major: palette.gridMajor };
+    this.groundGrid = new GroundGrid({ ...lines, axisX: palette.axisX, axisZ: palette.axisZ }, shadowFrameOf(this.bounds).floor);
+    this.grid.add(this.groundGrid.mesh);
     const pivot = new AxesHelper(extent * 0.12);
     pivot.setColors(new Color(palette.axisX), new Color(palette.axisY), new Color(palette.axisZ));
     (pivot.material as LineBasicMaterial).depthTest = false;
