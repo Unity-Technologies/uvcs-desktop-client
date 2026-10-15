@@ -3,10 +3,11 @@
 // (`pickedAt`). Three's `Raycaster` tested every triangle of a mesh on the main thread: a wheel notch, a click or a pan
 // on a 3-million-triangle model froze the view for 150 ms. Drawn so, a pick costs one draw of what the narrowed
 // camera sees (three culls every mesh whose bounds miss the window) and one pixel read back, and it picks what is
-// drawn: a skinned mesh posed by a take, a blendshape, exactly as shown. A GPU that can't draw into float pixels
+// drawn: a skinned mesh posed by a take, a blendshape, exactly as shown, and only the faces its material draws (a
+// double-sided leaf card from behind too: `facesOf`); an alpha-clipped hole still picks the card. A GPU that can't draw into float pixels
 // (`EXT_color_buffer_float`, which WebGL 2 has nearly everywhere) has `supported` false: the renderer raycasts then.
 
-import { BufferAttribute, BufferGeometry, Color, FloatType, Mesh, PerspectiveCamera, Scene, ShaderMaterial, type Material, type WebGLRenderer, WebGLRenderTarget } from 'three';
+import { BackSide, BufferAttribute, BufferGeometry, Color, DoubleSide, FloatType, type GeometryGroup, Mesh, PerspectiveCamera, Scene, ShaderMaterial, type Material, type WebGLRenderer, WebGLRenderTarget } from 'three';
 import { pickedAt, type PickWindow } from './pickWindow';
 
 /** The layer the pickable meshes are on, beside the default one everything is drawn on. */
@@ -25,10 +26,13 @@ export class MeshPicker {
   static makePickable(objects: Mesh[], mesh: number): void {
     for (const object of objects) {
       object.layers.enable(PICK_LAYER);
-      // The picking pass's one material tells each mesh apart by this uniform, set as three draws the mesh.
-      object.onBeforeRender = (_renderer, _scene, _camera, _geometry, material: Material) => {
+      // The picking pass's one material tells each mesh apart, and draws the faces its own material draws, by these
+      // uniforms, set as three draws each mesh (and each slot of it: `group`).
+      object.onBeforeRender = (_renderer, _scene, _camera, _geometry, material: Material, group: unknown) => {
         if (!(material instanceof ShaderMaterial) || material.userData.picks !== true) return;
         material.uniforms.mesh!.value = mesh + 1;
+        // Three passes the geometry's group drawn (null without groups); its types say an Object3D `Group`.
+        material.uniforms.faces!.value = facesOf(object.material, group as GeometryGroup | null);
         material.uniformsNeedUpdate = true;
       };
     }
@@ -83,10 +87,20 @@ export class MeshPicker {
   }
 }
 
+/**
+ * Which faces the mesh's own material draws for this slot, as the picking pass takes them: 0 the front, 1 the back,
+ * 2 both. The pass itself draws both, and drops the others; flipping its `side` for each draw would compile it again.
+ */
+export function facesOf(material: Material | Material[], group: Pick<GeometryGroup, 'materialIndex'> | null): number {
+  const drawn = Array.isArray(material) ? material[group?.materialIndex ?? 0] : material;
+  return drawn?.side === DoubleSide ? 2 : drawn?.side === BackSide ? 1 : 0;
+}
+
 /** Writes the surface's point in the viewer's space and the mesh's place plus one, deformed as drawn (skin, blendshapes). */
 function pickMaterial(): ShaderMaterial {
   const material = new ShaderMaterial({
-    uniforms: { mesh: { value: 0 } },
+    uniforms: { mesh: { value: 0 }, faces: { value: 0 } },
+    side: DoubleSide,
     vertexShader: `
       #include <common>
       #include <morphtarget_pars_vertex>
@@ -102,8 +116,10 @@ function pickMaterial(): ShaderMaterial {
       }`,
     fragmentShader: `
       uniform float mesh;
+      uniform int faces;
       varying vec3 vPoint;
       void main() {
+        if ((faces == 0 && !gl_FrontFacing) || (faces == 1 && gl_FrontFacing)) discard;
         gl_FragColor = vec4(vPoint, mesh);
       }`,
   });

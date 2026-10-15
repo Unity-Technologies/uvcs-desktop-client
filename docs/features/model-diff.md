@@ -185,7 +185,8 @@ only what changes:
 - **Picking reads the GPU** (`MeshPicker`): the side's meshes shown (solid or wireframe) are drawn into one float
   pixel through the camera narrowed to the point under the pointer (`pickWindowAt`, three's `setViewOffset`, which
   culls every mesh whose bounds miss it), writing where the surface is and which mesh it is (`pickedAt`), deformed as
-  drawn. Three's `Raycaster` tested every triangle on the main thread: 90 ms a wheel notch, click or pan on 3 million
+  drawn. It picks the faces each slot's material draws (`facesOf`: a double-sided leaf card from behind too), not its
+  alpha clip: a hole cut in a card picks the card. Three's `Raycaster` tested every triangle on the main thread: 90 ms a wheel notch, click or pan on 3 million
   triangles; read so, 2.5 ms. Its program is compiled as the renderer starts (`prepare`), or the first pick of each
   model waited 100 ms for it. A GPU without float pixels to draw into (`EXT_color_buffer_float`) raycasts.
 - **A part lit up isn't outlined when it is dense** (`outlinesWhenLit`, past `LIT_OUTLINE_MAX_TRIANGLES`): its wires
