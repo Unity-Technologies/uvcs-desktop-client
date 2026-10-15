@@ -698,8 +698,9 @@ renderer/src/
   `DetailsCopyable`, `DetailsLink`, `DetailsDisclosure`, `MoreDetails`), each imported from its own module. Lists are
   a `DataTable` (`ui/table/`: only the rows in view render; the columns' sort, the keys' steps `selectionStep`, and
   `selectFirstRow`'s successor selection each in a module of their own). Arrowing renders the view on every step, so
-  it hands the table the same `rows`, `columns` and `rowKey` until they change (memoized, or built outside the
-  component): new ones make it sort and key every row again. The sort keeps each column's ranks by column id
+  it hands the table the same `rows` and `rowKey` until they change (memoized, or built outside the component), and
+  the same `columns` when they sort: new rows or a new key make it key every row again, a new `sortValue` sort them
+  again. The sort keeps each column's ranks by column id
   (`ColumnSorter`), so a new `sortValue` function costs a number sort, never comparing the rows' text again.
 - **Long names**: branch names run past 120 characters (`/main/child-br-cr-sample/empty-branch2/child_1/subtask/merge-test`),
   so nothing that shows one may overflow, wrap a row or push another control out. Each place names a branch one of two
