@@ -69,11 +69,6 @@ export class GroundGrid {
     this.uniforms.inverseViewProjection.value.copy(this.uniforms.viewProjection.value).invert();
     this.uniforms.fadeDistance.value = gridFadeDistanceOf(cameraDistance);
   }
-
-  dispose(): void {
-    this.mesh.geometry.dispose();
-    this.mesh.material.dispose();
-  }
 }
 
 const VERTEX = `

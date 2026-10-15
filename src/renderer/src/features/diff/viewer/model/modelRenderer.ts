@@ -1,5 +1,5 @@
-// Draws a model diff on one WebGL canvas: each version in a scene of its own (a studio light, the 1 m grid Unity's
-// Scene view shows, the model's pivot) seen through one camera, laid out by the mode (`layoutOf`). It draws only
+// Draws a model diff on one WebGL canvas: each version in a scene of its own (a studio light, a contact shadow on the
+// floor, the endless ground grid, the model's pivot) seen through one camera, laid out by the mode (`layoutOf`). It draws only
 // when asked (`requestRender`: a gesture, a mode, a look; at once for a still or a resize, `renderNow`), never on a
 // loop: an idle diff costs the GPU nothing. The onion skin draws each version apart and blends them, so it blends
 // what is seen, not the meshes' depths; Diffs by look draws them apart too, and compares them (`LookComparer`).
@@ -112,7 +112,7 @@ export class ModelRenderer {
   private readonly camera = new PerspectiveCamera(FIELD_OF_VIEW, 1, 0.01, 1000);
   private readonly environment: Texture;
   private readonly sides: Record<Side, SideScene | null> = { before: null, after: null };
-  /** Both versions' bounds together, in the viewer's space: the grid and the clip planes cover them. */
+  /** Both versions' bounds together, in the viewer's space: the clip planes and the shadows' floor cover them. */
   private bounds: BoundsLike = { min: [-1, -1, -1], max: [1, 1, 1] };
   private readonly grid = new Group();
   /** The endless ground grid in `grid`, on the floor under the models; null until the palette comes. */
@@ -170,7 +170,7 @@ export class ModelRenderer {
     const generator = new PMREMGenerator(this.renderer);
     this.environment = generator.fromScene(new RoomEnvironment(), 0.04).texture;
     generator.dispose();
-    canvas.addEventListener('webglcontextrestored', this.requestRender);
+    canvas.addEventListener('webglcontextrestored', this.redrawShadows);
     this.lookTextures = new LookTextures(Math.min(8, this.renderer.capabilities.getMaxAnisotropy()));
     this.picker = picks && MeshPicker.supported(this.renderer) ? new MeshPicker() : null;
     this.picker?.prepare(this.renderer, this.camera);
@@ -335,9 +335,14 @@ export class ModelRenderer {
 
   /** A take moved the nodes: the shadows follow on the next frame. */
   posed(): void {
+    this.redrawShadows();
+  }
+
+  /** The shadows drawn again on the next frame: a pose changed, or a restored context lost their drawings. */
+  private readonly redrawShadows = (): void => {
     for (const side of Object.values(this.sides)) side?.shadow.markStale();
     this.requestRender();
-  }
+  };
 
   /** Draws on the next frame, once however often it is asked before then. */
   readonly requestRender = (): void => {
@@ -362,7 +367,7 @@ export class ModelRenderer {
    */
   dispose(): void {
     cancelAnimationFrame(this.frame);
-    this.canvas.removeEventListener('webglcontextrestored', this.requestRender);
+    this.canvas.removeEventListener('webglcontextrestored', this.redrawShadows);
     (this.dfgLut ?? sharedDfgLutOf(this.renderer, this.drawnMaterials()))?.dispose();
     this.dfgLut = null;
     for (const side of Object.values(this.sides)) if (side) disposeSide(side);
@@ -390,7 +395,7 @@ export class ModelRenderer {
   private render(): void {
     if (!this.palette) return;
     const layout = this.layout();
-    this.updateShadows();
+    this.updateShadows(layout);
     this.renderer.setClearColor(new Color(this.palette.backdrop));
     if (layout.drawn === 'blended') return this.renderBlended(layout);
     if (layout.drawn === 'compared') return this.renderCompared(layout);
@@ -462,11 +467,18 @@ export class ModelRenderer {
     for (const side of Object.values(this.sides)) if (side) this.renderer.render(side.markers, this.camera);
   }
 
-  /** Each side's shadow where the floor is now, drawn again if its model or pose changed since. */
-  private updateShadows(): void {
+  /**
+   * The shadow of each side the layout draws with the grid, where the floor is now, drawn again if its model or pose
+   * changed since; the rest (Diffs' version before, Diffs by look) show none and draw nothing.
+   */
+  private updateShadows(layout: Layout): void {
     const frame = shadowFrameOf(this.bounds);
     const opacity = this.palette?.isDark ? SHADOW_OPACITY.dark : SHADOW_OPACITY.light;
-    for (const side of Object.values(this.sides)) if (side) side.shadow.update(this.renderer, side.scene, side.model, frame, opacity);
+    if (layout.drawn === 'compared') return;
+    for (const pane of layout.panes) {
+      const side = this.sides[pane.side];
+      if (side && !pane.overlay) side.shadow.update(this.renderer, side.scene, side.model, frame, opacity);
+    }
   }
 
   private drawSide(side: SideScene, aspect: number, withGrid = true): void {
