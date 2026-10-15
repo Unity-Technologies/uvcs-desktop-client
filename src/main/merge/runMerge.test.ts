@@ -132,6 +132,35 @@ describe('runMerge into the workspace', () => {
     expect(await readFile(join(workspacePath, 'src', 'b.txt'), 'utf8')).toBe('incoming version\n');
   });
 
+  it("says which files still hold yours when cm couldn't save their incoming version, and that the merge is in the workspace", async () => {
+    const { cm } = fakeCmClient({
+      'status --short': '',
+      'merge br:/main/task': ({ args }) => (args.includes('--merge') ? '' : mergeOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31))),
+      ls: treeListing('eco@local', 'src/a.txt', 'src/b.txt'),
+      cat: fakeCat((spec) => (spec.startsWith('itemid:30#') ? 'incoming version\n' : undefined)),
+    });
+    const resolutions: MergeResolutions = { directoryConflicts: [], files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'source' } } };
+
+    await expect(runMerge(cm, workspacePath, FROM_TASK, resolutions, recordingContext().context)).rejects.toThrow(
+      "The merge is in the workspace, but /src/b.txt still holds your version: its incoming version couldn't be saved.",
+    );
+    expect(await readFile(join(workspacePath, 'src', 'a.txt'), 'utf8')).toBe('incoming version\n');
+  });
+
+  it("names every file of a cm cat that failed naming none, as they may all still hold yours", async () => {
+    const { cm } = fakeCmClient({
+      'status --short': '',
+      'merge br:/main/task': ({ args }) => (args.includes('--merge') ? '' : mergeOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31))),
+      ls: treeListing('eco@local', 'src/a.txt', 'src/b.txt'),
+      cat: cmFails('The connection was closed.'),
+    });
+    const resolutions: MergeResolutions = { directoryConflicts: [], files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'source' } } };
+
+    await expect(runMerge(cm, workspacePath, FROM_TASK, resolutions, recordingContext().context)).rejects.toThrow(
+      "The merge is in the workspace, but /src/a.txt and /src/b.txt still hold your version: their incoming version couldn't be saved.",
+    );
+  });
+
   it('reads the incoming version of a shelve from the shelve, whose revisions no changeset holds', async () => {
     const { cm, lines } = fakeCmClient({
       'status --short': '',
