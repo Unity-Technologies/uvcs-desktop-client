@@ -48,8 +48,13 @@ export function CodeReviewsView() {
   const { data: reviews, isLoading, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, assignedToMe }));
   const offered = usePeopleSeen('codeReviews', reviews, ownerOf);
 
-  const visible = (reviews ?? []).filter((review) => matchesPeople(people, me, review.owner) && matchesWordFilter(reviewFilterTexts(review), search));
-  const selectWhenShown = useSelectCreated(visible.map(reviewKey), setSelection);
+  // The same rows while only the selection changes: the table sorts them again only when they change.
+  const visible = useMemo(
+    () => (reviews ?? []).filter((review) => matchesPeople(people, me, review.owner) && matchesWordFilter(reviewFilterTexts(review), search)),
+    [reviews, people, me, search],
+  );
+  const visibleKeys = useMemo(() => visible.map(reviewKey), [visible]);
+  const selectWhenShown = useSelectCreated(visibleKeys, setSelection);
   const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : '';
   // On the workspace's branch, and selected once the refreshed list shows it.
   const newReview = useCallback(
