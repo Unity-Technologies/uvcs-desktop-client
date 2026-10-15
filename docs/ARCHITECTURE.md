@@ -521,12 +521,13 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
    changes: `appMenuInstaller`).
 
 Reopening the last workspace on an M4 Max (Electron 44), started as the Dock does, warm, median of 14 runs, in ms
-after the process starts: with the real `cm` on a local sandbox the first paint comes at about 350 and Changes shows
-its data at about 530 (386 and 620 before the compile cache, the reads before `app.whenReady`, the lazy updater and
-the synchronous first render); with the fake `cm` the first paint at about 348 (359) and the data at about 370, as the
-fake answers before the page asks. What remains: Electron's own start to `app.whenReady` (about 140), creating the
-window (about 45), loading the page (about 105 to its first render, which its scripts include), and `cm status` as a
-process (300-350: the workspace's shells answer only after about a second).
+after the process starts, interleaved with a build from before the compile cache, the reads before `app.whenReady`,
+the lazy updater and the synchronous first render (in brackets; two sessions): with the real `cm` on a local sandbox
+the first paint comes at about 350 (360-386) and Changes shows its data at 425-530 (535-620); with the fake `cm` the
+first paint and the data come within noise of before (about 350 and 370), as the fake answers before the page asks.
+What remains: Electron's own start to `app.whenReady` (about 140), creating the window (about 45), loading the page
+(about 105 to its first render, which its scripts include), and `cm status` as a process (300-350: the workspace's
+shells answer only after about a second).
 
 Tried and dropped, so they aren't proposed again:
 - Showing the window as it is created (`show: true`): an empty frame shows 150 ms sooner, but `show()` then holds the
