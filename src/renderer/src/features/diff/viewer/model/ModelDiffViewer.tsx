@@ -123,8 +123,9 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   const looksLoaded = texturesSettled(materials.report);
   const shapeDifferences = differences && compares === 'shape';
   const lookDifferences = differences && compares === 'look';
+  const matching = useMemo(() => old && next && matchNodes(old.summary, next.summary), [old, next]);
   const rows = useMemo(() => {
-    if (!old || !next || !optionsBefore || !optionsAfter) return null;
+    if (!old || !next || !matching || !optionsBefore || !optionsAfter) return null;
     const gltf = old.model.format === 'gltf' || old.model.format === 'glb';
     return changeRows(
       whatChanged({
@@ -134,11 +135,11 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
         materials: materials.changes,
         materialsNotCompared: materials.notCompared,
         fileMaterials: fileMaterialChanges(old.model, next.model),
-        slotNodes: meshesUsingSlot(old.summary, next.summary),
+        slotNodes: meshesUsingSlot(old.summary, next.summary, matching),
         gltf,
       }),
     );
-  }, [old, next, optionsBefore, optionsAfter, materials.changes, materials.notCompared]);
+  }, [old, next, matching, optionsBefore, optionsAfter, materials.changes, materials.notCompared]);
   const stats = useMemo(() => modelStats(old?.summary ?? null, next?.summary ?? null), [old, next]);
   // Every version there is, read: framing one alone would frame a pair whose other half may be 100 times its size.
   // On booleans: a pending file read again brings new bytes, not another pair.
@@ -216,7 +217,6 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   }, [renderer, hasBones, modelShowBones]);
   const scenes = useMemo(() => ({ before: sceneBefore, after: sceneAfter }), [sceneBefore, sceneAfter]);
 
-  const matching = useMemo(() => old && next && matchNodes(old.summary, next.summary), [old, next]);
   const onClick = useCallback(
     (x: number, y: number) => {
       const hit = renderer?.pick(x, y);

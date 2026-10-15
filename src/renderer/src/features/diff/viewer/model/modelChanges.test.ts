@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { isRisk, meshesUsingSlot, modelChanges, type ModelChange } from './modelChanges';
 import { modelSummary } from './modelSummary';
+import { matchNodes } from './nodeMatching';
 import type { FileImage, ParsedModel } from './parsedModel';
 import { fileMaterial, use } from './materials/testing/testMaterials';
 import { boundAtOrigin, boundInFileSpace, testModel, type TestModel, type TestNode } from './testing/testModels';
@@ -214,7 +215,7 @@ describe('meshesUsingSlot', () => {
   it("finds the meshes whose triangles use a slot, on the version after, or before where it's gone", () => {
     const after = modelSummary(testModel({ nodes: crate }));
     const before = modelSummary(testModel({ nodes: [...crate, { name: 'Hinge', mesh: { slots: ['Brass'] } }] }));
-    const slotNodes = meshesUsingSlot(before, after);
+    const slotNodes = meshesUsingSlot(before, after, matchNodes(before, after));
     expect(slotNodes('Wood').map((node) => [node.name, node.before, node.after])).toEqual([
       ['Body', 'Crate/Body', 'Crate/Body'],
       ['Lid', 'Crate/Lid', 'Crate/Lid'],

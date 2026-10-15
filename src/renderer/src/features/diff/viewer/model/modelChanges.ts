@@ -161,14 +161,12 @@ export function modelChanges(before: ModelSummary, after: ModelSummary): ModelCh
 
 /**
  * The meshes whose triangles use a material slot, by its name: as the version after has them, and those of the
- * version before that are gone since. What a material's row frames.
+ * version before that are gone since, as `matching` pairs them (`matchNodes`, which the viewer has already). What a
+ * material's row frames.
  */
-export function meshesUsingSlot(before: ModelSummary, after: ModelSummary): (slot: string) => NodeRef[] {
-  let matching: NodeMatching | null = null;
+export function meshesUsingSlot(before: ModelSummary, after: ModelSummary, { afterOf, beforeOf }: NodeMatching): (slot: string) => NodeRef[] {
   const using = (summary: ModelSummary, slot: string) => summary.nodes.flatMap((node, i) => (node.mesh !== null && summary.meshes[node.mesh]!.slots.includes(slot) ? [i] : []));
   return (slot) => {
-    matching ??= matchNodes(before, after);
-    const { afterOf, beforeOf } = matching;
     const now = using(after, slot).map((a) => refOf(after.nodes[a], before.nodes[beforeOf[a]!]));
     const gone = using(before, slot).filter((b) => afterOf[b] === -1).map((b) => refOf(undefined, before.nodes[b]));
     return [...now, ...gone];
