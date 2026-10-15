@@ -20,6 +20,8 @@ const RECURSIVE_WATCH_PLATFORMS = new Set<NodeJS.Platform>(['darwin', 'win32']);
  * shared by all their apps (8,192 on kernels before 5.11, more since). A bigger tree is watched in part.
  */
 const MAX_WATCHED_FOLDERS = 10_000;
+/** Files may have changed anywhere: their views read everything again. */
+const ANY_FILE_EDIT: WorkspaceChange = { content: true, pathsChanged: true, metadata: false, folders: null };
 
 /**
  * Watches a workspace and reports what changed, in coalesced batches: file edits (pending changes) apart
@@ -42,12 +44,12 @@ export class WorkspaceWatcher {
 
   constructor(
     readonly workspacePath: string,
-    onChanged: (change: WorkspaceChange) => void,
+    private readonly onChanged: (change: WorkspaceChange) => void,
     private readonly onBroken: () => void,
     private readonly platform: NodeJS.Platform = process.platform,
     private readonly watch: WatchFolder = watchFolder,
   ) {
-    this.batcher = new ChangeBatcher((change) => !this.stopped && onChanged(change), QUIET_MS, MAX_WAIT_MS);
+    this.batcher = new ChangeBatcher((change) => this.report(change), QUIET_MS, MAX_WAIT_MS);
   }
 
   /** Answers once watching: on Linux, once every folder has its watch (`FolderTreeWatch`). */
@@ -98,7 +100,15 @@ export class WorkspaceWatcher {
       MAX_WATCHED_FOLDERS,
       this.watch,
     );
-    return (await this.folderTree.start()) ? 'full' : 'partial';
+    if (!(await this.folderTree.start())) return 'partial';
+    // A file edited in a folder whose watch wasn't there yet went unseen: the windows (and what keeps something of the
+    // files) read everything again once, as they take the workspace as fully watched from now on.
+    this.report(ANY_FILE_EDIT);
+    return 'full';
+  }
+
+  private report(change: WorkspaceChange): void {
+    if (!this.stopped) this.onChanged(change);
   }
 
   private tryWatch(path: string, recursive: boolean): boolean {
