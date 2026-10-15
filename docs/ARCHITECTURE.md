@@ -499,10 +499,6 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
    only later, has that one read as the window opens (`openFirstWindow`). At `app.whenReady` the main process
    registers the API and opens the first window. What `cm` logs before it exists waits for it (`CommandLogRelay`),
    and the page's events sent while it still loads reach it once it has (`sendEventTo`), so its command log lists them.
-   Nothing before the window waits on a slow disk: the folders of the workspaces it may reopen are looked for without
-   holding the main process (`lookForLaunchFolders`; one on a network drive that doesn't answer within
-   `FOLDER_LOOKUP_MS` counts as there, and its page explains if it isn't), and on Windows `cm` is looked for where the
-   installer puts it before the Path's folders, which may be on network drives (`cmCandidates`).
 3. The window is created hidden, its background the page's `--bg-app` (`WINDOW_BACKGROUND`), and names the workspace
    it opens in its page's address when the folder is there (`startingWorkspaceQuery`).
 4. The page opens that workspace (`openWorkspaceFromAddress`) and asks for its first screen's data

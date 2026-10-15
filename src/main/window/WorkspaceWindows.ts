@@ -3,7 +3,6 @@ import { app, BrowserWindow } from 'electron';
 import type { SavedWindow } from '@shared/domain/settings';
 import { sendEventTo } from '../ipc/sendEvent';
 import type { SettingsStore } from '../settings/SettingsStore';
-import { folderIsThere } from '../system/folderIsThere';
 import { createMainWindow } from './createMainWindow';
 import { askBeforeUnloading } from './leaveRequests';
 import { savedBoundsOf } from './savedWindowBounds';
@@ -39,8 +38,6 @@ export class WorkspaceWindows {
   private lastFocused: BrowserWindow | null = null;
   /** The view each window's page shows (`viewShown`, by web contents id), kept for a restart to install an update. */
   private readonly views = new Map<number, string>();
-  /** Whether each folder the first windows may open is there, looked for as the app starts (`lookForLaunchFolders`). */
-  private readonly launchFolders = new Map<string, boolean>();
 
   constructor(private readonly options: WorkspaceWindowsOptions) {}
 
@@ -48,7 +45,7 @@ export class WorkspaceWindows {
   open(workspacePath?: string, reopening?: Reopening): BrowserWindow {
     const cascadeFrom = reopening ? undefined : (BrowserWindow.getFocusedWindow() ?? this.all().at(-1));
     // Its page starts on the workspace when its folder is there; for a missing one, the page's own check explains it.
-    const startsOn = workspacePath && this.folderExists(workspacePath) ? workspacePath : undefined;
+    const startsOn = workspacePath && existsSync(workspacePath) ? workspacePath : undefined;
     const window = createMainWindow(this.options.settings, { cascadeFrom, workspacePath: startsOn, ...reopening });
     const viewer = window.webContents.id;
     askBeforeUnloading(window);
@@ -77,18 +74,6 @@ export class WorkspaceWindows {
   }
 
   /**
-   * Looks for the folders of the workspaces the first windows may open (`firstWorkspace`, `openFirst`) without holding
-   * the main process: one on a network drive that doesn't answer would hold the launch for seconds (`folderIsThere`).
-   * Development builds open none.
-   */
-  async lookForLaunchFolders(isThere: (path: string) => Promise<boolean> = folderIsThere): Promise<void> {
-    if (!app.isPackaged) return;
-    const { openWindows, recentWorkspacePaths } = this.options.settings.get();
-    const folders = new Set([...openWindows.map((saved) => saved.workspacePath), recentWorkspacePaths[0]].filter((path) => path !== undefined));
-    await Promise.all([...folders].map(async (folder) => this.launchFolders.set(folder, await isThere(folder))));
-  }
-
-  /**
    * The workspace the window focused at launch opens (`openFirst`): the one that launched the app, else the one the
    * focused window showed when the app quit, else the last one used (none, for the home screen, when its folder is gone).
    */
@@ -113,8 +98,6 @@ export class WorkspaceWindows {
     });
     if (launchRequest) this.showWorkspace(launchRequest);
     else if (reopened.length === 0) this.open(this.lastUsedWorkspace());
-    // What was found at launch may not stay true: a later window looks again.
-    this.launchFolders.clear();
   }
 
   /**
@@ -210,17 +193,12 @@ export class WorkspaceWindows {
    * they start on the home screen, where automated UI checks pick a workspace.
    */
   private windowsToReopen(): SavedWindow[] {
-    return app.isPackaged ? windowsToReopen(this.options.settings.get().openWindows, (path) => this.folderExists(path)) : [];
+    return app.isPackaged ? windowsToReopen(this.options.settings.get().openWindows, existsSync) : [];
   }
 
   private lastUsedWorkspace(): string | undefined {
     const lastUsed = app.isPackaged ? this.options.settings.get().recentWorkspacePaths[0] : undefined;
-    return lastUsed && this.folderExists(lastUsed) ? lastUsed : undefined;
-  }
-
-  /** Whether a workspace's folder is there: as found at launch (`lookForLaunchFolders`), else looked for now. */
-  private folderExists(path: string): boolean {
-    return this.launchFolders.get(path) ?? existsSync(path);
+    return lastUsed && existsSync(lastUsed) ? lastUsed : undefined;
   }
 
   private shownBy(viewer: number): string | undefined {
