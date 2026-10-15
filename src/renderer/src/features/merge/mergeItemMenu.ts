@@ -8,13 +8,14 @@ import type { MenuEntry } from '../../lib/actions';
 import type { GroupedEntry } from '../../lib/menuGroups';
 import { annotatedHistory } from '../history/annotatedHistory';
 import { suggestRename } from './directoryConflicts/renameSuggestion';
-import type { MergeItem } from './mergeItems';
+import { fileStateOf, type MergeItem, type MergeProgress } from './mergeItems';
 import { conflictMenuEntries, type ConflictMenuContext } from './resolve/conflictMenuEntries';
 
 /** What the merge page knows and can do, for the menu of what it lists. */
 export interface MergeMenuContext extends Omit<ConflictMenuContext, 'yoursInWorkspace'> {
   request: MergeRequest;
   plan: MergePlan;
+  progress: MergeProgress;
   /** What a repository path of the merge is (`mergeItemTypes`): a folder has nothing to open. */
   itemTypeOf: (path: string) => ItemType;
   resolveDirectory: (index: number, resolution: DirectoryConflictResolution) => void;
@@ -27,7 +28,7 @@ export interface MergeMenuContext extends Omit<ConflictMenuContext, 'yoursInWork
  */
 export function mergeItemMenu(items: MergeItem[], context: MergeMenuContext): MenuEntry[] {
   const single = items.length === 1 ? items[0]! : null;
-  const conflicts = items.flatMap((item) => (item.kind === 'fileConflict' ? [item.state] : []));
+  const conflicts = items.flatMap((item) => (item.kind === 'fileConflict' ? [fileStateOf(item, context.progress)] : []));
   const added: GroupedEntry[] = [
     ...conflictMenuEntries(conflicts, { ...context, yoursInWorkspace: !context.request.destinationBranch }),
     ...(single?.kind === 'directoryConflict' ? directoryConflictEntries(single, context) : []),
@@ -54,17 +55,17 @@ function directoryConflictEntries(item: Extract<MergeItem, { kind: 'directoryCon
  * names for it; a clean change has none named (only the merge's own changesets, where the file may not have changed),
  * so it isn't offered there rather than annotating another revision.
  */
-function changedFileOf(item: MergeItem, { request, plan, itemTypeOf }: MergeMenuContext): ChangedFile {
+function changedFileOf(item: MergeItem, { request, plan, progress, itemTypeOf }: MergeMenuContext): ChangedFile {
   const history: PageOf<'history'> = { kind: 'history', path: item.path };
   const annotateAt = (changesetId: number) => annotatedHistory({ path: item.path, select: { changesetId } });
   switch (item.kind) {
     case 'fileConflict': {
-      const { source } = item.state.file;
-      const incomingChangeset = plan.fileConflicts.find((conflict) => conflict.path === item.state.file.key)?.sourceChangeset;
+      const { source } = item.file;
+      const incomingChangeset = plan.fileConflicts.find((conflict) => conflict.path === item.file.key)?.sourceChangeset;
       return {
         path: item.path,
         history,
-        annotation: incomingChangeset === undefined || item.state.isBinary ? null : annotateAt(incomingChangeset),
+        annotation: incomingChangeset === undefined || fileStateOf(item, progress).isBinary ? null : annotateAt(incomingChangeset),
         version: source.kind === 'empty' ? null : (source as RepositoryVersion),
       };
     }
