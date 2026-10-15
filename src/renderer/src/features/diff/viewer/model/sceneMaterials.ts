@@ -3,7 +3,7 @@
 // refresh every material's uniforms (its studio light, its environment's turn) for each of a model's 3,000 parts in
 // every frame; shared, it refreshes them once per material, as it draws a material's meshes one after another.
 
-import { MeshBasicMaterial, MeshStandardMaterial } from 'three';
+import { type BufferGeometry, MeshBasicMaterial, MeshStandardMaterial } from 'three';
 
 /** How a mesh stands out while some are picked: lit up, faded towards the backdrop, or neither. */
 export type Emphasis = 'plain' | 'lit' | 'faded';
@@ -57,4 +57,16 @@ export class SceneMaterials {
 export function emphasisOf(meshKey: string, picked: ReadonlySet<string>, anyPicked: boolean): Emphasis {
   const lit = picked.has(meshKey) || [...picked].some((key) => meshKey.startsWith(`${key}/`));
   return lit ? 'lit' : anyPicked ? 'faded' : 'plain';
+}
+
+/**
+ * A mesh this dense isn't outlined when lit up in the shaded mode: its wires, closer than pixels, only tint it the
+ * highlight's color, which its glow already does, and three builds a wireframe's lines on the main thread the first
+ * time it draws one (140 ms and 200 MB, CPU and GPU, for 3 million triangles). The Wireframe modes draw it whole.
+ */
+export const LIT_OUTLINE_MAX_TRIANGLES = 250_000;
+
+export function outlinesWhenLit(geometry: Pick<BufferGeometry, 'index' | 'attributes'>): boolean {
+  const corners = geometry.index?.count ?? geometry.attributes.position?.count ?? 0;
+  return corners / 3 <= LIT_OUTLINE_MAX_TRIANGLES;
 }

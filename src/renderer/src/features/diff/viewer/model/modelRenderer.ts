@@ -46,7 +46,7 @@ import { slotColor } from './modelPalette';
 import { modelOrientation, type ModelScene } from './modelScene';
 import { cameraPositionOf, clipPlanesOf, FIELD_OF_VIEW, type BoundsLike, type OrbitView, type Ray, type Vector } from './orbitCamera';
 import { pickWindowAt } from './pickWindow';
-import { emphasisOf } from './sceneMaterials';
+import { emphasisOf, outlinesWhenLit } from './sceneMaterials';
 import type { DiffsCompares, SurfaceLook } from './surfaceLook';
 import { layoutOf, paneAt, shownLayoutMode, type ChosenLayoutMode, type Layout, type Side } from './viewLayout';
 
@@ -529,7 +529,7 @@ export class ModelRenderer {
         const emphasis = emphasisOf(mesh.key, highlighted, anyHighlighted);
         const lit = emphasis === 'lit';
         mesh.solid.visible = drawMode !== 'wireframe';
-        mesh.wire.visible = drawMode !== 'shaded' || lit;
+        mesh.wire.visible = drawMode !== 'shaded' || (lit && outlinesWhenLit(mesh.solid.geometry));
         // In place: the solid draws this very array while the Materials look is off (`SlotLookMaterials.show`).
         mesh.slots.forEach((slot, i) => (mesh.clay[i] = materials.clay(slot, emphasis)));
         mesh.wire.material = materials.wire(emphasis);
