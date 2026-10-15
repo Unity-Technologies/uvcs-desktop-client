@@ -71,6 +71,37 @@ describe('the preload bridge', () => {
     expect([first.mock.calls, second.mock.calls, other.mock.calls]).toEqual([[], [[{ commandId: 'refresh' }]], []]);
   });
 
+  it('calls a listener subscribed twice once after one of its subscriptions ends', async () => {
+    const bridge = await exposedBridge();
+    const listener = vi.fn();
+
+    bridge.on('menuCommand', listener);
+    const unsubscribe = bridge.on('menuCommand', listener);
+    unsubscribe();
+    eventChannelHandler()({}, 'menuCommand', { commandId: 'refresh' });
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('hands an event to the listeners there were when it came, whatever they subscribe or end meanwhile', async () => {
+    const bridge = await exposedBridge();
+    const [ended, added] = [vi.fn(), vi.fn()];
+    const endsTheOther = vi.fn(() => {
+      unsubscribeEnded();
+      bridge.on('menuCommand', added);
+    });
+
+    bridge.on('menuCommand', endsTheOther);
+    const unsubscribeEnded = bridge.on('menuCommand', ended);
+    const dispatch = eventChannelHandler();
+    dispatch({}, 'menuCommand', { commandId: 'first' });
+    dispatch({}, 'menuCommand', { commandId: 'second' });
+
+    expect(endsTheOther).toHaveBeenCalledTimes(2);
+    expect(ended.mock.calls).toEqual([[{ commandId: 'first' }]]);
+    expect(added.mock.calls).toEqual([[{ commandId: 'second' }]]);
+  });
+
   it("tells the renderer the platform, or the one it previews (UVCS_RENDERER_PLATFORM)", async () => {
     expect((await exposedBridge()).platform).toBe(process.platform);
 
