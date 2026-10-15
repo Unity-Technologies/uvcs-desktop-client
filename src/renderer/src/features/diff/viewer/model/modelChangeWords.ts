@@ -66,6 +66,7 @@ function foldKey(change: ModelChange): string | null {
     case 'uvs':
     case 'skinning':
     case 'meshSlots':
+    case 'vertexColorsChanged':
       return change.kind;
     case 'lightmapUvs':
     case 'vertexColors':
@@ -100,6 +101,7 @@ function foldedRow(key: string, run: ModelChange[]): ChangeRow {
     facesFlipped: `Faces flipped on ${count} meshes`,
     normals: `Normals changed on ${count} meshes`,
     uvs: `UVs changed on ${count} meshes`,
+    vertexColorsChanged: `Vertex colors changed on ${count} meshes`,
     skinning: `Skinning changed on ${count} meshes`,
     meshSlots: `${count} meshes use other material slots`,
     avatarBoneLost: `The Humanoid avatar lost ${count} of its bones`,
@@ -214,6 +216,12 @@ function wordsOf(change: ModelChange): { title: string; detail?: string } {
         : { title: `${change.node.name} lost its lightmap UVs`, detail: 'Baked lighting needs them: export them again or turn on Generate Lightmap UVs.' };
     case 'vertexColors':
       return { title: change.now ? `${change.node.name} has vertex colors now` : `${change.node.name} lost its vertex colors` };
+    case 'vertexColorsChanged':
+      return { title: `${change.node.name}'s vertex colors changed` };
+    case 'blendShapesChanged':
+      return {
+        title: change.names.length === 1 ? `Blendshape ${change.names[0]} on ${change.node.name} changed` : `Blendshapes changed on ${change.node.name}: ${listed(change.names)}`,
+      };
     case 'skinning':
       return { title: `${change.node.name}'s skinning changed`, detail: 'It bends differently in animations.' };
     case 'blendShapeRenamed':
@@ -286,12 +294,16 @@ function takeOf(change: ModelChange): { take?: string } {
 
 /** The first few nodes' names, and how many more: a clue of where to look, not a list. */
 function namesOf(nodes: NodeRef[]): string {
-  const named = nodes.slice(0, NAMED_NODES).map((node) => node.name);
-  const more = nodes.length - named.length;
-  return more > 0 ? `${named.join(', ')} and ${more} more` : named.join(', ');
+  return listed(nodes.map((node) => node.name));
 }
 
-const NAMED_NODES = 3;
+function listed(names: string[]): string {
+  const shown = names.slice(0, NAMED);
+  const more = names.length - shown.length;
+  return more > 0 ? `${shown.join(', ')} and ${more} more` : shown.join(', ');
+}
+
+const NAMED = 3;
 
 function focusOf(change: ModelChange): NodeRef[] {
   if ('node' in change) return [change.node];

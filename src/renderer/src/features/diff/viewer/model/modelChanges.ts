@@ -53,6 +53,10 @@ export type ModelChange =
   | { kind: 'uvs'; node: NodeRef }
   | { kind: 'lightmapUvs'; node: NodeRef; now: boolean }
   | { kind: 'vertexColors'; node: NodeRef; now: boolean }
+  /** Vertex colors on both versions, painted otherwise. */
+  | { kind: 'vertexColorsChanged'; node: NodeRef }
+  /** Blendshapes both versions have by name whose offsets changed: the shape a face makes. */
+  | { kind: 'blendShapesChanged'; node: NodeRef; names: string[] }
   | { kind: 'skinning'; node: NodeRef }
   | { kind: 'blendShapeRenamed'; node: NodeRef; from: string; to: string }
   | { kind: 'blendShapeRemoved'; node: NodeRef; name: string }
@@ -415,6 +419,10 @@ function meshChanges({ before, after, ref }: MeshPair, verticesMovedAlike: boole
       if (old.normals !== next.normals) changes.push({ kind: 'normals', node: ref });
     }
     if (before.hasUv && after.hasUv && old.uv !== next.uv) changes.push({ kind: 'uvs', node: ref });
+    if (before.hasColors && after.hasColors && old.colors !== next.colors) changes.push({ kind: 'vertexColorsChanged', node: ref });
+    const offsetsBefore = new Map(before.blendShapes.map((name, i) => [name, old.blendShapes[i]]));
+    const resculpted = after.blendShapes.filter((name, i) => offsetsBefore.has(name) && offsetsBefore.get(name) !== next.blendShapes[i]);
+    if (resculpted.length > 0) changes.push({ kind: 'blendShapesChanged', node: ref, names: resculpted });
     if (before.bones.length > 0 && after.bones.length > 0 && (old.skin !== next.skin || before.bones.join('\n') !== after.bones.join('\n'))) changes.push({ kind: 'skinning', node: ref });
   }
   if (before.hasLightmapUv !== after.hasLightmapUv) changes.push({ kind: 'lightmapUvs', node: ref, now: after.hasLightmapUv });

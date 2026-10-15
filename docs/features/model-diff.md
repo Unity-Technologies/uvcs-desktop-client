@@ -104,7 +104,8 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
 - **Each mesh**: triangles (and nothing else then: a rebuilt mesh changed everything), shape, triangulated
   differently (the same vertices joined into other triangles, a flat cap split along other diagonals: no shape
   change, which would read as a sculpt), faces flipped (the same triangles, some turning the other way), normals, UVs, lightmap
-  UVs (lost is a risk: baked lighting needs them), vertex colors, skinning, blendshapes renamed, removed or added.
+  UVs (lost is a risk: baked lighting needs them), vertex colors gained, lost or repainted, skinning, blendshapes
+  renamed, removed, added or resculpted under their names.
 - **Takes** (Unity's clips are cut from them by name): renamed (one gone and one of the same length come), removed,
   added, of another length; and, at the same name and length, keyed differently, with the nodes it moves differently
   ("Animation Run changed: Hips, Leg_L, Tail and 4 more", parents first): the view shows it only once the take plays,

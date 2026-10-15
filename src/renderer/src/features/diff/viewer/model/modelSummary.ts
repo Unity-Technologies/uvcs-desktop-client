@@ -74,7 +74,8 @@ export interface MeshSummary {
     /** The triangles as a set of corners, whichever way each turns: equal when only some faces flipped. */
     corners: string;
     skin: string;
-    blendShapes: string;
+    /** Each blendshape's offsets, in `blendShapes`' order. */
+    blendShapes: string[];
   };
 }
 
@@ -191,7 +192,7 @@ function meshSummary(mesh: ModelMesh, keys: string[], placed: Float64Array, plac
       index: trianglesFingerprint(mesh.index, 'winding'),
       corners: trianglesFingerprint(mesh.index, 'corners'),
       skin: `${fingerprintOf(attributes.skinIndex)}|${fingerprintOf(attributes.skinWeight)}`,
-      blendShapes: mesh.blendShapes.map((shape) => fingerprintOf(shape.deltas)).join('|'),
+      blendShapes: mesh.blendShapes.map((shape) => fingerprintOf(shape.deltas)),
     },
   };
 }
