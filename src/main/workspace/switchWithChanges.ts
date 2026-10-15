@@ -2,7 +2,7 @@ import type { PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import type { PendingChangesAction, SwitchResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
 import { onLinksThemselves } from '../cm/symlinkArgs';
-import { readWorkspaceStatus } from '../cm/workspaceStatus';
+import { readWorkspaceLoad } from '../cm/workspaceStatus';
 import { hasPendingChanges } from '../merge/hasPendingChanges';
 import type { OperationContext } from '../operations/OperationTracker';
 import type { SettingsStore } from '../settings/SettingsStore';
@@ -144,7 +144,7 @@ async function shelveAndSwitch(
   }
 
   // Record where the switch really landed, as `cm status` names it, to recognize it later.
-  const landed = (await readWorkspaceStatus(cm, workspacePath)).selector;
+  const landed = (await readWorkspaceLoad(cm, workspacePath)).selector;
   const switched = { ...record, target: selectorPlace(landed) };
   records.save(switched);
   return switched;

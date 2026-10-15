@@ -24,8 +24,18 @@ export interface WorkspaceStatus {
 
 /** What the workspace is loaded from, read with `cm status --header --xml`, its server by name (`serverByName`). */
 export async function readWorkspaceStatus(cm: CmClient, workspacePath: string): Promise<WorkspaceStatus> {
-  const status = parseWorkspaceStatus(await cm.query(['status', '--header', '--xml'], { cwd: workspacePath }));
+  const status = await readStatusHeader(cm, workspacePath);
   return { ...status, server: await serverByName(cm, workspacePath, status.server, workspacePath) };
+}
+
+/** What the workspace has loaded, without its repository: one `cm status --header --xml`, for what needs no more. */
+export async function readWorkspaceLoad(cm: CmClient, workspacePath: string): Promise<Pick<WorkspaceStatus, 'selector' | 'loadedChangeset'>> {
+  const { selector, loadedChangeset } = await readStatusHeader(cm, workspacePath);
+  return { selector, loadedChangeset };
+}
+
+async function readStatusHeader(cm: CmClient, workspacePath: string): Promise<WorkspaceStatus> {
+  return parseWorkspaceStatus(await cm.query(['status', '--header', '--xml'], { cwd: workspacePath }));
 }
 
 /**
