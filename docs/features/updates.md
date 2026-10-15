@@ -211,6 +211,11 @@ Drive and builds there (`BUILD_DIR`). On macOS the temp folder is a disk in memo
 then holds writes for seconds, which timed out tests writing a temp file. How fast the tests run on CI's 2-CPU
 runners, and why: `vitest.config.ts`.
 
+CI's runners are slow and uneven: a test runs up to ten times slower there than on a laptop, and several times slower
+again on a bad day (a word-marks test of 0.6 s locally once took 10 s on Windows x64), against vitest's 5 s timeout.
+Tests that took 2 to 4 s there timed out now and then, whichever was running when the runner slowed down; that is why
+a test takes milliseconds (CLAUDE.md "Super fast").
+
 `.github/workflows/codeql.yml` runs GitHub's CodeQL security analysis on pushes to main, pull requests and weekly;
 findings show in the Security tab and on pull requests. It skips while the repository is private: code scanning needs
 GitHub Advanced Security there, and is free on a public repository.
