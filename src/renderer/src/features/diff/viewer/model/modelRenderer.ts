@@ -649,7 +649,8 @@ export class ModelRenderer {
   }
 
   /**
-   * The endless ground grid on the floor under the models (`GroundGrid`), and the pivot's axes at the origin.
+   * The endless ground grid on the floor under the models (`GroundGrid`), and the pivot's axes at the origin, each
+   * side's sized and colored as the grid's.
    */
   private rebuildGrid(): void {
     const palette = this.palette;
@@ -667,6 +668,12 @@ export class ModelRenderer {
     (pivot.material as LineBasicMaterial).depthTest = false;
     pivot.renderOrder = 10;
     this.grid.add(pivot);
+    // Each version's pivot axes as the grid's, turned as its model is: three's default 1 m axes in its own colors
+    // stuck out far past a prop.
+    for (const side of Object.values(this.sides)) {
+      side?.pivot.scale.setScalar(extent * 0.12);
+      side?.pivot.setColors(new Color(palette.axisX), new Color(palette.axisY), new Color(palette.axisZ));
+    }
   }
 }
 
