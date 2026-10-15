@@ -97,6 +97,12 @@ export type GuidMisses = 'known' | 'noProject' | 'outsidePackage' | 'noLibrary' 
 
 /** The most lookups of each kind one request may carry: a model is read with at most 64 textures. */
 export const MAX_UNITY_ASSET_LOOKUPS = 512;
+/**
+ * The most bytes (by the sizes listed; an unknown size counts as none) one `unityAssets.download` asks for: half what a
+ * session keeps of its downloads (1 GB), so what a look fetched is still kept when it reads it, a few at a time,
+ * whatever else is downloaded meanwhile. A look needing more asks for the rest as its reads get there.
+ */
+export const MAX_DOWNLOADED_AHEAD_BYTES = 512 * 1024 * 1024;
 /** The most paths a model stores for one texture (an FBX: its relative and absolute ones). */
 export const MAX_STORED_PATHS = 16;
 /** The longest name or path a request may carry: past any OS's path length. */

@@ -12,6 +12,7 @@ import type { UnityAssetsApi } from '@shared/api/unityAssets';
 import { listsTree } from '@shared/domain/specs';
 import {
   MAX_CHANGED_ASSETS,
+  MAX_DOWNLOADED_AHEAD_BYTES,
   MAX_STORED_PATHS,
   MAX_UNITY_ASSET_LOOKUPS,
   MAX_UNITY_ASSET_PATH_LENGTH,
@@ -194,9 +195,13 @@ export function createUnityAssetsService({ watchers, trees, downloads, platform 
     return bytes && new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   }
 
-  /** The repository's revisions among the files downloaded in one batch (`RevisionDownloads.fetch`); a disk file needs nothing. */
+  /**
+   * The repository's revisions among the files downloaded in one batch (`RevisionDownloads.fetch`), at most
+   * `MAX_DOWNLOADED_AHEAD_BYTES` of them; a disk file needs nothing.
+   */
   async function download(workspacePath: string, files: FoundFile[]): Promise<void> {
     if (files.length > MAX_UNITY_ASSET_LOOKUPS) throw new Error('Too many files to download at once');
+    if (files.reduce((bytes, file) => bytes + Math.max(file.size, 0), 0) > MAX_DOWNLOADED_AHEAD_BYTES) throw new Error('Asked for more than is downloaded ahead at once');
     const revisions = files.flatMap((file) => {
       if (file.stored !== 'repository') return [];
       refuseUnlikelyRevision(file.revision);

@@ -32,12 +32,6 @@ export const MAX_KEPT_BYTES = 1024 * 1024 * 1024;
  * show the first textures sooner.
  */
 export const MAX_BATCH_BYTES = 64 * 1024 * 1024;
-/**
- * How long a revision fetched ahead (`fetch`) is kept past `MAX_KEPT_BYTES` while it waits for its read: a look reads
- * its textures a few at a time, and one let go first would be downloaded again on its own. One never read (the look
- * left) goes after this.
- */
-export const FETCHED_KEPT_MS = 5 * 60_000;
 /** The failed fetches remembered, so their reads fail at once, before starting over. */
 const MAX_FAILED_FETCHES = 1000;
 /** A revision of unknown size counts as this much in a batch. */
@@ -57,8 +51,6 @@ interface RevisionDownloadsOptions {
   isRunning?: (pid: number) => boolean;
   /** Deletes the session's folder as the app quits; tests pass one that fails, as Windows may (a file held). */
   removeFolder?: (folder: string) => void;
-  /** The clock that tells how long a fetched revision has waited for its read. */
-  now?: () => number;
 }
 
 interface Waiting {
@@ -87,11 +79,8 @@ export class RevisionDownloads {
   /** Downloaded files by revision, oldest first, with their sizes. */
   private readonly kept = new Map<string, { target: string; size: number }>();
   private keptBytes = 0;
-  /** Revisions fetched ahead and not read yet, with when: kept past the budget until read (`FETCHED_KEPT_MS`). */
-  private readonly fetched = new Map<string, number>();
   /** Why the fetch of a revision failed, until it is fetched again: its read fails at once, never downloading it alone. */
   private readonly failedFetches = new Map<string, unknown>();
-  private readonly now: () => number;
   /** Downloads asked for or under way, by revision: a revision is downloaded once however many ask. */
   private readonly downloading = new Map<string, Promise<string>>();
   private waiting: Waiting[] = [];
@@ -99,8 +88,7 @@ export class RevisionDownloads {
   private checking = 0;
   private scheduled = false;
 
-  constructor({ cm, copies = new WorkspaceCopies(), tempFolder = tmpdir(), maxKeptBytes = MAX_KEPT_BYTES, schedule = (run) => void setImmediate(run), pid = process.pid, isRunning = processIsRunning, removeFolder = (folder) => rmSync(folder, { recursive: true, force: true }), now = Date.now }: RevisionDownloadsOptions) {
-    this.now = now;
+  constructor({ cm, copies = new WorkspaceCopies(), tempFolder = tmpdir(), maxKeptBytes = MAX_KEPT_BYTES, schedule = (run) => void setImmediate(run), pid = process.pid, isRunning = processIsRunning, removeFolder = (folder) => rmSync(folder, { recursive: true, force: true }) }: RevisionDownloadsOptions) {
     this.removeFolder = removeFolder;
     this.pid = pid;
     this.isRunning = isRunning;
@@ -123,7 +111,7 @@ export class RevisionDownloads {
       const kept = this.kept.get(key);
       if (kept) {
         const bytes = await readFile(kept.target).catch(() => null);
-        if (bytes) return this.touch(key, kept), this.wasRead(key), bytes;
+        if (bytes) return this.touch(key, kept), bytes;
         this.forget(key);
       }
       if (this.failedFetches.has(key)) throw this.failedFetches.get(key);
@@ -133,13 +121,11 @@ export class RevisionDownloads {
       const downloaded = this.download(workspacePath, file, key);
       doneChecking();
       // A batch bigger than what is kept may let go of a download before its read reads it: it's downloaded again.
-      const bytes = await readCapped(await downloaded).catch(async (error: unknown) => {
+      return await readCapped(await downloaded).catch(async (error: unknown) => {
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
         this.forget(key);
         return readCapped(await this.download(workspacePath, file, key));
       });
-      this.wasRead(key);
-      return bytes;
     });
   }
 
@@ -147,8 +133,9 @@ export class RevisionDownloads {
    * Has the revision ready for a read to come, reading none of it: on the disk (checked as a read checks it), kept, or
    * downloaded now in one batch with the others asked at once. A reader that reads a few files at a time, to hold few
    * in memory (the Materials look's textures), asks for them all here first, so its reads never split the batch.
-   * Fails as the read would, and its read then fails at once (until it is fetched again); kept past `MAX_KEPT_BYTES`
-   * until read, or `FETCHED_KEPT_MS`. A revision past what is read is left for the read to refuse.
+   * Fails as the read would, and its read then fails at once (until it is fetched again). Kept as any download: a
+   * reader fetches at most half what is kept at a time (`MAX_DOWNLOADED_AHEAD_BYTES`), so it is still there when read.
+   * A revision past what is read is left for the read to refuse.
    */
   async fetch(workspacePath: string, file: RevisionFile): Promise<void> {
     const key = keyOf(file.revision);
@@ -156,23 +143,16 @@ export class RevisionDownloads {
     return this.whileChecking(async (doneChecking) => {
       if (await this.copies.has(workspacePath, file)) return;
       const kept = this.kept.get(key);
-      if (kept) return this.touch(key, kept), void this.fetched.set(key, this.now());
+      if (kept) return this.touch(key, kept);
       if (file.size > MAX_MODEL_BYTES) return;
-      this.fetched.set(key, this.now());
       const downloaded = this.download(workspacePath, file, key);
       doneChecking();
       await downloaded.catch((error: unknown) => {
-        this.fetched.delete(key);
         if (this.failedFetches.size >= MAX_FAILED_FETCHES) this.failedFetches.clear();
         this.failedFetches.set(key, error);
         throw error;
       });
     });
-  }
-
-  /** A fetched revision read: it is kept as any other now, the oldest going past the budget. */
-  private wasRead(key: string): void {
-    if (this.fetched.delete(key)) this.letGoPastBudget();
   }
 
   /**
@@ -297,24 +277,10 @@ export class RevisionDownloads {
     this.forget(key);
     this.kept.set(key, file);
     this.keptBytes += file.size;
-    this.letGoPastBudget(key);
-  }
-
-  /** Lets go of the oldest downloads past `maxKeptBytes`, but `latest` and those fetched waiting for their read. */
-  private letGoPastBudget(latest?: string): void {
     for (const oldest of this.kept.keys()) {
-      if (this.keptBytes <= this.maxKeptBytes) break;
-      if (oldest === latest || this.isWaitingForRead(oldest)) continue;
+      if (this.keptBytes <= this.maxKeptBytes || oldest === key) break;
       this.forget(oldest, true);
     }
-  }
-
-  private isWaitingForRead(key: string): boolean {
-    const since = this.fetched.get(key);
-    if (since === undefined) return false;
-    if (this.now() - since < FETCHED_KEPT_MS) return true;
-    this.fetched.delete(key);
-    return false;
   }
 
   private touch(key: string, file: { target: string; size: number }): void {
