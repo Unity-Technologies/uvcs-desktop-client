@@ -19,6 +19,8 @@ export default defineConfig(({ mode }) => ({
   main: {
     plugins: [externalizeDepsPlugin(), thirdPartyNotices.plugin()],
     resolve: { alias: sharedAlias },
+    // `boot` turns the compile cache on, then loads `index`, the app (src/main/boot.ts).
+    build: { rollupOptions: { input: { boot: resolve(__dirname, 'src/main/boot.ts'), index: resolve(__dirname, 'src/main/index.ts') } } },
   },
   preload: {
     plugins: [externalizeDepsPlugin(), thirdPartyNotices.plugin()],
