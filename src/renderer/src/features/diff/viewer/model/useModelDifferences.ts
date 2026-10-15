@@ -4,8 +4,9 @@ import { steppedRegion } from '../image/changedRegions';
 import { fullHeatAt, ghostColors, heatColors, type Rgb } from './heatColors';
 import type { ModelPalette } from './modelPalette';
 import type { ModelRenderer } from './modelRenderer';
-import type { BoundsLike, Vector } from './orbitCamera';
+import type { BoundsLike } from './orbitCamera';
 import type { ParsedModel } from './parsedModel';
+import { boxedRegion } from './regionView';
 import { placedMeshesOf } from './surfaceComparison';
 import { changedRegions, type ChangedRegion } from './surfaceRegions';
 import { useSurfaceComparison } from './useSurfaceComparison';
@@ -19,15 +20,16 @@ interface DifferencesInput {
   wanted: boolean;
   /** The tolerance, as a share of the model's size. */
   toleranceShare: number;
-  frame: (bounds: BoundsLike) => void;
+  /** Takes the camera to a changed region, turned to face it (`regionView`). */
+  frameRegion: (region: BoundsLike) => void;
 }
 
 /**
  * The Differences mode: the pair's surfaces compared in the worker, colored at the tolerance (`heatColors`), and its
- * changed regions to step through, each framed and boxed. The slider moves at once; the colors and regions of
+ * changed regions to step through, each faced, framed and boxed. The slider moves at once; the colors and regions of
  * millions of vertices follow when React has the time (`useDeferredValue`).
  */
-export function useModelDifferences({ renderer, palette, before, after, wanted, toleranceShare, frame }: DifferencesInput) {
+export function useModelDifferences({ renderer, palette, before, after, wanted, toleranceShare, frameRegion }: DifferencesInput) {
   const { comparison, comparing, failed } = useSurfaceComparison(before, after, wanted);
   const tolerance = useDeferredValue(comparison ? toleranceShare * comparison.size : 0);
 
@@ -54,20 +56,14 @@ export function useModelDifferences({ renderer, palette, before, after, wanted, 
   const currentRegion = wanted && stepped?.regions === regions ? stepped.index : null;
   useEffect(() => {
     const region = currentRegion === null ? null : regions[currentRegion];
-    renderer?.setRegion(region ? paddedRegion(region, comparison?.size ?? 0) : null);
+    renderer?.setRegion(region ? boxedRegion(region, comparison?.size ?? 0) : null);
   }, [renderer, regions, currentRegion, comparison]);
   const stepRegion = (direction: 1 | -1): void => {
     if (regions.length === 0) return;
     const index = steppedRegion(currentRegion, direction, regions.length);
     setStepped({ regions, index });
-    frame(paddedRegion(regions[index]!, comparison?.size ?? 0));
+    frameRegion(regions[index]!);
   };
 
   return { comparison, comparing, failed, tolerance, regions, currentRegion, stepRegion };
-}
-
-/** A changed region with room around it, a twentieth of the model: a dent framed alone would fill the view. */
-function paddedRegion(region: ChangedRegion, modelSize: number): BoundsLike {
-  const pad = modelSize * 0.05;
-  return { min: region.min.map((value) => value - pad) as Vector, max: region.max.map((value) => value + pad) as Vector };
 }

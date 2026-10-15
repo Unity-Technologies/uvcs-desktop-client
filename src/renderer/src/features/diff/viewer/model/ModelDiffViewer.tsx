@@ -185,7 +185,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
     after: next?.model ?? null,
     wanted: shapeDifferences,
     toleranceShare: modelToleranceShare,
-    frame,
+    frameRegion: camera.frameRegion,
   });
   const shownStats = useMemo(() => {
     const textures = surface === 'materials' && materials.report ? texturesStat(materials.report) : null;

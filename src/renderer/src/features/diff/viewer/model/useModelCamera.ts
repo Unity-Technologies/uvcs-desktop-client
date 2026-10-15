@@ -4,6 +4,7 @@ import { prefersReducedMotion } from '../../../../lib/reducedMotion';
 import { dollyGlide } from './dollyGlide';
 import type { ModelRenderer } from './modelRenderer';
 import { framedView, type BoundsLike, type OrbitView, type Vector } from './orbitCamera';
+import { regionView } from './regionView';
 import { useSize } from './useSize';
 import { VIEW_GLIDE_MS, ViewGlide } from './viewGlide';
 
@@ -13,8 +14,9 @@ const ANY_VIEW = framedView({ min: [-1, -1, -1], max: [1, 1, 1] }, 1);
  * The viewer's camera: a ref, not state, so a drag redraws the canvas without rendering the panel again. The first
  * framing frames the pair whole, at once; until the hand moves the camera or the app frames a part of the model, the
  * app keeps the pair framed as the stage resizes (the panel docking beside it, the window). Framing (F, 0, a part
- * picked) keeps the angle the camera has, as Unity's F does, and glides there (`ViewGlide`), as a wheel's notch does
- * (`dollyGlide`); anything else that places the camera stops a glide where it is.
+ * picked) keeps the angle the camera has, as Unity's F does; a changed region stepped to turns to face it
+ * (`regionView`). Both glide there (`ViewGlide`), as a wheel's notch does (`dollyGlide`); anything else that places the
+ * camera stops a glide where it is.
  */
 /** `bounds`: the pair's, once every version is in the renderer; null until then, when nothing frames. */
 export function useModelCamera(renderer: ModelRenderer | null, bounds: BoundsLike | null, stage: RefObject<HTMLElement | null>) {
@@ -91,6 +93,15 @@ export function useModelCamera(renderer: ModelRenderer | null, bounds: BoundsLik
     },
     [framedOn, glideTo, bounds],
   );
+  /** Glides to a changed region, turned to face it when it doesn't face the camera (`regionView`). */
+  const frameRegion = useCallback(
+    (region: BoundsLike) => {
+      if (!renderer || !bounds) return;
+      framedByApp.current = false;
+      glideTo(regionView(region, bounds, view.current ?? ANY_VIEW, renderer.paneAspect()));
+    },
+    [renderer, bounds, glideTo],
+  );
   /** What a gesture does: the hand has the camera from then on. */
   const onGesture = useCallback(
     (next: OrbitView) => {
@@ -116,5 +127,5 @@ export function useModelCamera(renderer: ModelRenderer | null, bounds: BoundsLik
     },
     [glide, dolly],
   );
-  return { frame, frameFirst, onGesture, onDollyStep, currentView };
+  return { frame, frameRegion, frameFirst, onGesture, onDollyStep, currentView };
 }
