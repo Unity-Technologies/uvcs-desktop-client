@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { repositorySpec } from '@shared/domain/specs';
+import { concurrencyLimit } from '@shared/concurrencyLimit';
 import type { CmClient } from './CmClient';
 import { machineReadableHeaderArgs, parseMachineReadableHeader } from './workspaceStatus';
 
@@ -15,27 +16,28 @@ export function repositoryInStatusHeader(output: string): string | null {
   return header && repositorySpec(header.repositoryName, header.server);
 }
 
-/**
- * Finds the repository of up to `MAX_LOOKUPS` workspaces, two at a time,
- * giving up (and killing `cm`) on the ones that don't answer quickly.
- * Aborting `signal` kills the running lookups and skips the rest.
- */
-export async function resolveWorkspaceRepositories(
-  cm: CmClient,
-  workspacePaths: string[],
-  signal: AbortSignal,
-): Promise<Record<string, string | null>> {
-  const repositories: Record<string, string | null> = {};
-  const pending = [...new Set(workspacePaths)].slice(0, MAX_LOOKUPS);
+/** Finds the repository of up to `MAX_LOOKUPS` workspaces (`lookUp`, read by `workspaceRepositoryLookups`). */
+export type WorkspaceRepositoryLookups = (workspacePaths: string[], signal: AbortSignal) => Promise<Record<string, string | null>>;
 
-  const lookUpNext = async (): Promise<void> => {
-    while (pending.length > 0 && !signal.aborted) {
-      const path = pending.shift()!;
-      repositories[path] = await repositoryOf(cm, path, signal);
-    }
+/**
+ * Looks workspaces' repositories up two at a time across every call of the session (the home screen asks about each
+ * recent workspace on its own), giving up (and killing `cm`) on the ones that don't answer quickly. Aborting a call's
+ * `signal` kills its running lookups and skips the rest.
+ */
+export function workspaceRepositoryLookups(cm: CmClient): WorkspaceRepositoryLookups {
+  const inTurn = concurrencyLimit(CONCURRENT_LOOKUPS);
+  return async (workspacePaths, signal) => {
+    const repositories: Record<string, string | null> = {};
+    const paths = [...new Set(workspacePaths)].slice(0, MAX_LOOKUPS);
+    await Promise.all(
+      paths.map((path) =>
+        inTurn(async () => {
+          if (!signal.aborted) repositories[path] = await repositoryOf(cm, path, signal);
+        }),
+      ),
+    );
+    return repositories;
   };
-  await Promise.all(Array.from({ length: CONCURRENT_LOOKUPS }, lookUpNext));
-  return repositories;
 }
 
 async function repositoryOf(cm: CmClient, workspacePath: string, signal: AbortSignal): Promise<string | null> {

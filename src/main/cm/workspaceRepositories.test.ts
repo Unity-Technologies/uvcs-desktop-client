@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { cmFails, fakeCmClient, type FakeCmCommand } from './testing/fakeCmClient';
-import { MAX_LOOKUPS, repositoryInStatusHeader, resolveWorkspaceRepositories } from './workspaceRepositories';
+import { MAX_LOOKUPS, repositoryInStatusHeader, workspaceRepositoryLookups } from './workspaceRepositories';
 
 describe('repositoryInStatusHeader', () => {
   it('reads the repository spec', () => {
@@ -21,7 +21,7 @@ describe('repositoryInStatusHeader', () => {
   });
 });
 
-describe('resolveWorkspaceRepositories', () => {
+describe('workspaceRepositoryLookups', () => {
   const workspaceFolders = (count: number): Promise<string[]> => Promise.all(Array.from({ length: count }, () => mkdtemp(join(tmpdir(), 'wk-'))));
   /** Each workspace is on a repository named after its folder. */
   const statusHeader = ({ args }: FakeCmCommand): string => `STATUS|12|${args.at(-1)!.split(/[\\/]/).at(-1)}|local\n`;
@@ -30,7 +30,7 @@ describe('resolveWorkspaceRepositories', () => {
     const [first] = await workspaceFolders(1);
     const { cm, commands } = fakeCmClient({ status: statusHeader });
 
-    const repositories = await resolveWorkspaceRepositories(cm, [first!], new AbortController().signal);
+    const repositories = await workspaceRepositoryLookups(cm)([first!], new AbortController().signal);
 
     expect(repositories).toEqual({ [first!]: `${first!.split(/[\\/]/).at(-1)}@local` });
     expect(commands).toMatchObject([
@@ -43,7 +43,7 @@ describe('resolveWorkspaceRepositories', () => {
     const gone = join(tmpdir(), 'no-such-workspace');
     const { cm, commands } = fakeCmClient({ status: cmFails('Error: The server is unreachable.') });
 
-    expect(await resolveWorkspaceRepositories(cm, [gone, failing!], new AbortController().signal)).toEqual({ [gone]: null, [failing!]: null });
+    expect(await workspaceRepositoryLookups(cm)([gone, failing!], new AbortController().signal)).toEqual({ [gone]: null, [failing!]: null });
     expect(commands).toHaveLength(1);
   });
 
@@ -51,10 +51,30 @@ describe('resolveWorkspaceRepositories', () => {
     const folders = await workspaceFolders(MAX_LOOKUPS + 2);
     const { cm, commands } = fakeCmClient({ status: statusHeader });
 
-    const repositories = await resolveWorkspaceRepositories(cm, [folders[0]!, ...folders], new AbortController().signal);
+    const repositories = await workspaceRepositoryLookups(cm)([folders[0]!, ...folders], new AbortController().signal);
 
     expect(Object.keys(repositories).sort()).toEqual(folders.slice(0, MAX_LOOKUPS).sort());
     expect(commands).toHaveLength(MAX_LOOKUPS);
+  });
+
+  it('looks up two at a time across the calls the home screen makes for each workspace', async () => {
+    const folders = await workspaceFolders(5);
+    let running = 0;
+    let most = 0;
+    const { cm } = fakeCmClient({
+      status: async (command) => {
+        most = Math.max(most, ++running);
+        await Promise.resolve();
+        running--;
+        return statusHeader(command);
+      },
+    });
+    const lookUp = workspaceRepositoryLookups(cm);
+
+    const answers = await Promise.all(folders.map((folder) => lookUp([folder], new AbortController().signal)));
+
+    expect(answers.map((answer) => Object.keys(answer))).toEqual(folders.map((folder) => [folder]));
+    expect(most).toBe(2);
   });
 
   it('skips every lookup once cancelled', async () => {
@@ -63,7 +83,7 @@ describe('resolveWorkspaceRepositories', () => {
     const cancelled = new AbortController();
     cancelled.abort();
 
-    expect(await resolveWorkspaceRepositories(cm, folders, cancelled.signal)).toEqual({});
+    expect(await workspaceRepositoryLookups(cm)(folders, cancelled.signal)).toEqual({});
     expect(commands).toEqual([]);
   });
 });
