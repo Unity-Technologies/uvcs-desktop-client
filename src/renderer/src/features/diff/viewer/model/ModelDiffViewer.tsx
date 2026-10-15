@@ -170,18 +170,23 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
     if (framing) onViewChange(currentView());
   }, [stageSize, framing, onViewChange, currentView]);
   const modelCentre = useCallback(() => (bounds ? centreOf(bounds) : null), [bounds]);
-  const { frame } = camera;
   const pickedBounds = useCallback(
     (nodes: NodeRef[]) => nodesBounds(nodes, old?.summary ?? null, next?.summary ?? null) ?? aroundPoints(markersOf(nodes, sceneBefore, sceneAfter), bounds),
     [old, next, sceneBefore, sceneAfter, bounds],
   );
-  const frameShown = useCallback(() => frame((picked && pickedBounds(picked.nodes)) ?? framing), [frame, picked, pickedBounds, framing]);
+  const frameShown = useCallback(() => {
+    const part = picked && pickedBounds(picked.nodes);
+    if (part) camera.framePart(part);
+    else camera.frameWhole();
+  }, [camera, picked, pickedBounds]);
 
   useEffect(() => {
     if (!renderer || !bounds) return;
     renderer.setModels(sceneBefore, sceneAfter, bounds);
-    camera.frameFirst();
-  }, [renderer, sceneBefore, sceneAfter, bounds, camera.frameFirst]);
+    // The pair framed once both scenes are in the renderer (`framing`), given here rather than left to the camera's
+    // own effects, which may run after this one.
+    camera.frameFirst(framing);
+  }, [renderer, sceneBefore, sceneAfter, bounds, framing, camera]);
   useEffect(() => {
     if (renderer && palette) renderer.setPalette(palette);
   }, [renderer, palette]);
@@ -209,7 +214,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
     after: next?.model ?? null,
     wanted: shapeDifferences,
     toleranceShare: modelToleranceShare,
-    frame,
+    frameRegion: camera.frameRegion,
   });
   const shownStats = useMemo(() => {
     const textures = surface === 'materials' && materials.report ? texturesStat(materials.report) : null;
@@ -231,7 +236,8 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
     },
     [renderer, old, next, matching],
   );
-  useOrbitGestures({ element: stageRef, renderer, view: camera.currentView, onView: camera.onGesture, onDollyStep: camera.onDollyStep, modelCentre, onClick });
+  const stopCoasting = useOrbitGestures({ element: stageRef, renderer, view: camera.currentView, onView: camera.onGesture, onDollyStep: camera.onDollyStep, modelCentre, onClick });
+  useEffect(() => camera.setInterrupt(stopCoasting), [camera, stopCoasting]);
 
   const onPickRow = useCallback(
     (id: string | null, row: ChangeRow, item?: number) => {
@@ -241,9 +247,9 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
       const takeToPlay = takeOfPick(row, item);
       if (takeToPlay !== null) setTake(takeToPlay);
       const target = pickedBounds(nodes);
-      if (target) frame(target);
+      if (target) camera.framePart(target);
     },
-    [frame, pickedBounds],
+    [camera, pickedBounds],
   );
 
   const flyKeys = useFlyKeys({ view: camera.currentView, onView: camera.onGesture, modelCentre });
@@ -256,7 +262,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
     const command = modelCommandOf(event.nativeEvent);
     if (!command) return;
     event.preventDefault();
-    if (command === 'frameAll') frame(framing);
+    if (command === 'frameAll') camera.frameWhole();
     else frameShown();
   };
 
@@ -306,7 +312,10 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
               <TooSmallNote
                 tooSmall={tooSmall}
                 area={sideArea(tooSmall.side, shownMode === 'swipe' ? split : CENTERED_SPLIT)}
-                onFrame={() => frame(sideBounds[tooSmall.side])}
+                onFrame={() => {
+                  const side = sideBounds[tooSmall.side];
+                  if (side) camera.framePart(side);
+                }}
               />
             )}
             {shownMode === 'onion' && <BlendPill blend={blend} onBlendChange={setBlend} things="models" />}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { accumulateZoom, cubicEaseOut, isDiscreteWheel, wheelZoomFactor, ZOOM_GLIDE_MAX_MS, ZOOM_GLIDE_MS, type ZoomLimits } from './wheelZoom';
+import { accumulateZoom, cubicEaseInOut, cubicEaseOut, isDiscreteWheel, wheelZoomFactor, ZOOM_GLIDE_MAX_MS, ZOOM_GLIDE_MS, type ZoomLimits } from './wheelZoom';
 
 const LIMITS: ZoomLimits = { min: 0.1, max: 4 };
 
@@ -11,6 +11,12 @@ describe('wheelZoom', () => {
     expect(cubicEaseOut(0)).toBe(0);
     expect(cubicEaseOut(1)).toBe(1);
     expect(cubicEaseOut(0.5)).toBeGreaterThan(0.5);
+  });
+
+  it('eases in and out symmetrically: slow at both ends, halfway at half time', () => {
+    expect([cubicEaseInOut(0), cubicEaseInOut(0.5), cubicEaseInOut(1)]).toEqual([0, 0.5, 1]);
+    expect(cubicEaseInOut(0.1)).toBeLessThan(0.1);
+    expect(cubicEaseInOut(0.9)).toBeCloseTo(1 - cubicEaseInOut(0.1), 10);
   });
 
   it('tells wheel notches from trackpad pinches', () => {

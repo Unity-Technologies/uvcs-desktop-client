@@ -1,81 +1,57 @@
-import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { browserFrameClock } from '../../../../lib/frameClock';
-import { dollyGlide } from './dollyGlide';
+import { prefersReducedMotion } from '../../../../lib/reducedMotion';
+import { ModelCameraControl } from './modelCameraControl';
 import type { ModelRenderer } from './modelRenderer';
-import { framedView, type BoundsLike, type OrbitView, type Vector } from './orbitCamera';
+import type { BoundsLike, OrbitView, Vector } from './orbitCamera';
 import { useSize } from './useSize';
-
-const ANY_VIEW = framedView({ min: [-1, -1, -1], max: [1, 1, 1] }, 1);
+import { VIEW_GLIDE_MS } from './viewGlide';
 
 /**
- * The viewer's camera: a ref, not state, so a drag redraws the canvas without rendering the panel again. The first
- * framing frames the pair whole; until the hand moves the camera, the app keeps the pair framed as the stage resizes
- * (the panel docking beside it, the window). Framing keeps the angle the camera has, as Unity's F does. A wheel's
- * notch glides (`dollyGlide`); anything else that places the camera stops the glide where it is.
- */
-/**
+ * The viewer's camera (`ModelCameraControl`, where its rules are), wired to React: not state, so a drag redraws the
+ * canvas without rendering the panel again. Every move of the camera reaches the renderer through `onCameraMove`.
  * `bounds`: the pair's, once every version is in the renderer; null until then, when nothing frames. `onViewChange`:
- * told every view the camera takes, for what depends on it (`tooSmallToSee`), without rendering on each.
+ * told every view the camera takes (gestures, glide frames, framings, resizes), for what depends on it
+ * (`tooSmallToSee`), without rendering on each.
  */
 export function useModelCamera(renderer: ModelRenderer | null, bounds: BoundsLike | null, stage: RefObject<HTMLElement | null>, onViewChange?: (view: OrbitView) => void) {
-  const view = useRef<OrbitView | null>(null);
-  const framedByApp = useRef(true);
-  const viewListener = useRef(onViewChange);
-  useEffect(() => {
-    viewListener.current = onViewChange;
-  }, [onViewChange]);
-  const glide = useMemo(
+  const latestRenderer = useRef(renderer);
+  latestRenderer.current = renderer;
+  // The latest callback: the control is built once, and one it captured would see the first render's values.
+  const latestViewChange = useRef(onViewChange);
+  latestViewChange.current = onViewChange;
+  const [control] = useState(
     () =>
-      dollyGlide(
-        () => view.current ?? ANY_VIEW,
-        (next) => {
-          framedByApp.current = false;
-          view.current = next;
-          renderer?.setView(next);
-          viewListener.current?.(next);
+      new ModelCameraControl({
+        onCameraMove: (view) => {
+          latestRenderer.current?.setView(view);
+          latestViewChange.current?.(view);
         },
-        browserFrameClock,
-      ),
-    [renderer],
+        paneAspect: () => latestRenderer.current?.paneAspect() ?? 1,
+        clock: browserFrameClock,
+        glideMs: () => (prefersReducedMotion() ? 0 : VIEW_GLIDE_MS),
+      }),
   );
-  useEffect(() => () => glide.stop(), [glide]);
-  const setView = useCallback(
-    (next: OrbitView) => {
-      glide.stop();
-      view.current = next;
-      renderer?.setView(next);
-      viewListener.current?.(next);
-    },
-    [renderer, glide],
-  );
-  const frame = useCallback(
-    (target: BoundsLike | null) => {
-      // Nothing frames before the pair does (`bounds` null): a part picked or F then would frame for a layout that
-      // isn't the pair's yet, and the first framing would keep it.
-      if (!renderer || !target || !bounds) return;
-      const current = view.current;
-      setView(current ? framedView(target, renderer.paneAspect(), current.yaw, current.pitch) : framedView(target, renderer.paneAspect()));
-    },
-    [renderer, setView, bounds],
-  );
-  /** What a gesture does: the hand has the camera from then on. */
-  const onGesture = useCallback(
-    (next: OrbitView) => {
-      framedByApp.current = false;
-      setView(next);
-    },
-    [setView],
-  );
-  /** Frames the pair once its models are in the renderer, unless the camera was placed already (the same pair read again). */
-  const frameFirst = useCallback(() => {
-    if (!view.current) frame(bounds);
-  }, [frame, bounds]);
+  useEffect(() => () => control.stopGlides(), [control]);
+  // Nothing frames before the pair does: a row picked or F then would frame for a layout that isn't the pair's yet,
+  // and the first framing would keep it.
+  useEffect(() => control.setBounds(renderer ? bounds : null), [control, renderer, bounds]);
   const stageSize = useSize(stage);
-  useEffect(() => {
-    if (framedByApp.current && view.current) frame(bounds);
-  }, [stageSize, frame, bounds]);
-  const currentView = useCallback(() => view.current ?? ANY_VIEW, []);
-  /** A wheel's notch: closer (`factor` over 1) or farther, towards the point under the pointer. */
-  const onDollyStep = useCallback((point: Vector | null, factor: number) => glide.zoomStep(point, factor), [glide]);
-  return { frame, frameFirst, onGesture, onDollyStep, currentView };
+  useEffect(() => control.followResize(), [control, stageSize, bounds]);
+  return useMemo(
+    () => ({
+      /** Frames the pair the first time (`bounds` as given to the hook): call it once its models are in the renderer. */
+      frameFirst: (pair: BoundsLike | null) => control.frameFirst(pair),
+      frameWhole: () => control.frameWhole(),
+      framePart: (part: BoundsLike) => control.framePart(part),
+      frameRegion: (region: BoundsLike) => control.frameRegion(region),
+      onGesture: (view: OrbitView) => control.onGesture(view),
+      /** A wheel's notch: closer (`factor` over 1) or farther, towards the point under the pointer. */
+      onDollyStep: (point: Vector | null, factor: number) => control.onDollyStep(point, factor),
+      currentView: () => control.currentView(),
+      /** What stops the hand's moves still under way (`useOrbitGestures`' coasts) before the app frames. */
+      setInterrupt: (interrupt: () => void) => control.setInterrupt(interrupt),
+    }),
+    [control],
+  );
 }

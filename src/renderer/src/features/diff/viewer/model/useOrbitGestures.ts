@@ -3,7 +3,7 @@
 // scroll or pinch to zoom at the pointer (a wheel's notches glide: `dollyGlide`); double-click to orbit around the
 // point clicked. A press that doesn't move is a click: it picks the part under it.
 
-import { useEffect, useRef, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import { SHORT_FLING, type FlingFeel } from '../../../../lib/fling';
 import { browserFrameClock } from '../../../../lib/frameClock';
 import { isDiscreteWheel, wheelZoomFactor } from '../../../../lib/wheelZoom';
@@ -36,9 +36,14 @@ interface OrbitGestures {
   onClick: (x: number, y: number) => void;
 }
 
-export function useOrbitGestures({ element, renderer, view, onView, onDollyStep, modelCentre, onClick }: OrbitGestures): void {
+/**
+ * Returns what stops the drag's coast still under way: the app runs it before it frames (`ModelCameraControl`), as the
+ * coast's next frame would take the camera back from the glide.
+ */
+export function useOrbitGestures({ element, renderer, view, onView, onDollyStep, modelCentre, onClick }: OrbitGestures): () => void {
   const latest = useRef({ view, onView, onDollyStep, modelCentre, onClick });
   latest.current = { view, onView, onDollyStep, modelCentre, onClick };
+  const stopTheCoast = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const target = element.current;
@@ -55,6 +60,7 @@ export function useOrbitGestures({ element, renderer, view, onView, onDollyStep,
       panInertia.cancel();
       turnInertia.cancel();
     };
+    stopTheCoast.current = stopCoasting;
     const local = (event: MouseEvent): [number, number] => {
       const rect = target.getBoundingClientRect();
       return [event.clientX - rect.left, event.clientY - rect.top];
@@ -136,10 +142,12 @@ export function useOrbitGestures({ element, renderer, view, onView, onDollyStep,
     target.addEventListener('contextmenu', onContextMenu);
     return () => {
       stopCoasting();
+      stopTheCoast.current = null;
       target.removeEventListener('pointerdown', onPointerDown);
       target.removeEventListener('wheel', onWheel);
       target.removeEventListener('dblclick', onDoubleClick);
       target.removeEventListener('contextmenu', onContextMenu);
     };
   }, [element, renderer]);
+  return useCallback(() => stopTheCoast.current?.(), []);
 }

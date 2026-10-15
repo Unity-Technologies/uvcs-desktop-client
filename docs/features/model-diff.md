@@ -186,7 +186,15 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   in mm, cm or m; `heatColors` keeps the clay within it and turns to the accent beyond. ‹ › step through the changed
   regions (`changedRegions`: changed vertices joined through their own triangles and shared corners, patches of
   either version within 3% of the model merged; binning vertices into fixed cells was tried and dropped, as a coarse
-  mesh read as 30 regions), each framed and boxed. The strip adds "Moved 12% · up to 4.2 cm" (`movedStat`).
+  mesh read as 30 regions), each boxed just clear of its surface (`boxedRegion`) and glided to (`regionView`,
+  `ViewGlide`): the camera aims at the region's centre, close enough for it to fill about half the view with some of
+  the model around it (never closer than a few percent of the model, so a dent isn't a close-up of nothing), and turns
+  to face it when it is turned away or seen edge-on from the camera's angle (more than 60° off): it looks from the
+  side the region faces, the model's centre out through the region, from a little above (the first look's elevation),
+  down onto a region on top at most 50°, and level at one facing down (from below, the camera went under the ground
+  the model stands on); a region facing the camera already keeps the user's angle, so stepping stays calm. Framing
+  every region from the angle the camera had, as F does, was tried first: two regions on either side of a model
+  framed alike, and one turned away stayed out of sight. The strip adds "Moved 12% · up to 4.2 cm" (`movedStat`).
 - **Diffs by look**: with the materials shown, Diffs compares how the versions look instead (`diffsCompares`):
   both drawn apart with their materials through the one camera and compared pixel by pixel on the GPU
   (`LookComparer`, the `lookDifferences` layout), as the image diff compares two images (`comparePixels`: the largest
@@ -209,14 +217,26 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   deleted) takes the whole canvas. Modes are the image diff's, remembered apart (`modelMode`).
 - **Framing**: both versions together (`framedBounds`), once both are read: framing one alone framed a pair whose other
   half was 100 times its size. Nothing frames until both are in the renderer either (`everyVersionHas`: each scene is
-  built a render after its read; the camera gets the pair's bounds only then, so the first framing, F, a part picked and
-  a resize share the rule): with one missing the renderer laid the other out alone, full width, and Split kept a framing
-  made for twice its pane's width until the window was resized. Until the user moves the camera, the model stays framed
-  as the stage resizes and the panel docks. Framed so, a version far smaller than the other (a model exported 100× too
-  big beside the fixed one) is a speck, and its pane in Split or Swipe would look empty: while it is under 12 px on
-  screen and the other shows (`tooSmallToSee`, told each view the camera takes: `useModelCamera`'s `onViewChange`), its
-  pane says so ("100× smaller: too small to see at this size", `TooSmallNote`) with "Frame it", which frames that
-  version. The shared framing stays: it is what lets sizes compare.
+  built a render after its read; the camera gets the pair's bounds only then, so the first framing, F, a row picked
+  and a resize share the rule): with one missing the renderer laid the other out alone, full width, and Split kept a
+  framing made for twice its pane's width until the window was resized. The camera's rules are `ModelCameraControl`'s
+  (`useModelCamera` wires it): until the user moves the camera or the app frames a part of the model (a row picked,
+  F with something picked, a region stepped to), the model stays framed as the stage resizes and the panel docks;
+  framing the whole model again (0, or F with nothing picked) makes it follow resizes again. The first framing and a
+  resize place the camera at once; everything else the app frames (F, 0, a row picked, a region stepped to) glides
+  there (`ViewGlide`, `VIEW_GLIDE_MS`: half a second, eased in and out, turning the short way round and zooming by
+  ratio), as the Branch Explorer glides to what it reveals; under reduced motion it is placed at once. A jump left the
+  user unsure what the view had done, above all when it turned. A framing first stops a drag's coast still under way
+  (`useOrbitGestures` hands its `stopCoasting` to the camera): the coast's next frame took the camera back, and the
+  glide never went. Anything that places the camera meanwhile (a drag, the wheel, the keys, a double-click) stops the
+  glide where it is and carries on from there. Every move of the camera, whatever made it, goes through
+  `ModelCameraControl`'s `moveCamera` and is told to `onCameraMove`.
+  Framed so, a version far smaller than the other (a model exported 100× too big beside the fixed one) is a speck,
+  and its pane in Split or Swipe would look empty: while it is under 12 px on screen and the other shows
+  (`tooSmallToSee`, told every camera move through `onCameraMove`, glide frames included, and on each resize: the
+  `onViewChange` of `useModelCamera`), its pane says so ("100× smaller: too small to see at this size",
+  `TooSmallNote`) with "Frame it", which frames that version as a part (`framePart`: it glides there and stops
+  following resizes). The shared framing stays: it is what lets sizes compare.
 - **Controls**, as Unity's Scene view (`useOrbitGestures`); every move takes the model as far as the hand asked, at
   any zoom:
   - **Orbit and pan**: drag (or Alt+drag) orbits; right, middle or Shift+drag pans. A pan moves what it grabbed exactly
