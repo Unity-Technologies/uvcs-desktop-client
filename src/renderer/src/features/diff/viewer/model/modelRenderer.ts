@@ -44,7 +44,7 @@ import type { SlotLook } from './materials/materialPlan';
 import type { ModelPalette } from './modelPalette';
 import { slotColor } from './modelPalette';
 import { modelOrientation, type ModelScene } from './modelScene';
-import { releaseSharedDfgLut } from './sharedDfgLut';
+import { sharedDfgLutOf } from './sharedDfgLut';
 import { cameraPositionOf, clipPlanesOf, FIELD_OF_VIEW, type BoundsLike, type OrbitView, type Ray, type Vector } from './orbitCamera';
 import type { DiffsCompares, SurfaceLook } from './surfaceLook';
 import { layoutOf, paneAt, shownLayoutMode, type ChosenLayoutMode, type Layout, type Side } from './viewLayout';
@@ -127,6 +127,8 @@ export class ModelRenderer {
   private readonly comparer = new LookComparer();
   /** The grid, under Diffs by look's comparison. */
   private readonly under = new Scene();
+  /** three's one DFG LUT, once a frame drew it: released as the renderer goes (`sharedDfgLut.ts`). */
+  private dfgLut: Texture | null = null;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     this.renderer = new WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -295,7 +297,7 @@ export class ModelRenderer {
   renderNow(): void {
     cancelAnimationFrame(this.frame);
     this.frame = 0;
-    this.render();
+    this.drawFrame();
   }
 
   /** Draws on the next frame, once however often it is asked before then. */
@@ -303,9 +305,15 @@ export class ModelRenderer {
     if (this.frame) return;
     this.frame = requestAnimationFrame(() => {
       this.frame = 0;
-      this.render();
+      this.drawFrame();
     });
   };
+
+  /** Draws, and remembers the shared DFG LUT the first frame that drew it: a side replaced later can't hide it. */
+  private drawFrame(): void {
+    this.render();
+    this.dfgLut ??= sharedDfgLutOf(this.renderer, this.drawnMaterials());
+  }
 
   /**
    * Frees the GPU's memory and lets go of everything drawn: the canvas may outlive the renderer (a page's references,
@@ -314,7 +322,8 @@ export class ModelRenderer {
   dispose(): void {
     cancelAnimationFrame(this.frame);
     this.canvas.removeEventListener('webglcontextrestored', this.requestRender);
-    releaseSharedDfgLut(this.renderer, this.drawnMaterials());
+    (this.dfgLut ?? sharedDfgLutOf(this.renderer, this.drawnMaterials()))?.dispose();
+    this.dfgLut = null;
     for (const side of Object.values(this.sides)) if (side) disposeSide(side);
     this.sides.before = this.sides.after = null;
     this.heat = null;

@@ -10,14 +10,11 @@
 import type { Material, Texture, WebGLRenderer } from 'three';
 
 /**
- * Lets go of the shared DFG LUT's hold on every renderer: call it as a renderer is disposed, before
- * `WebGLRenderer.dispose`, with the materials it drew (the LUT is found in their uniforms; one is enough).
+ * The shared DFG LUT, found in the uniforms of a material the renderer drew (one standard material is enough); null
+ * where none drew it. Disposing it as a renderer goes, before `WebGLRenderer.dispose`, lets go of its hold on every
+ * renderer. A renderer remembers it once it has drawn: a side replaced since takes the materials that would find it.
  */
-export function releaseSharedDfgLut(renderer: Pick<WebGLRenderer, 'properties'>, materials: Iterable<Material>): void {
-  dfgLutOf(renderer, materials)?.dispose();
-}
-
-function dfgLutOf(renderer: Pick<WebGLRenderer, 'properties'>, materials: Iterable<Material>): Texture | null {
+export function sharedDfgLutOf(renderer: Pick<WebGLRenderer, 'properties'>, materials: Iterable<Material>): Texture | null {
   for (const material of materials) {
     const uniforms = (renderer.properties.get(material) as { uniforms?: { dfgLUT?: { value: Texture | null } } }).uniforms;
     const lut = uniforms?.dfgLUT?.value;

@@ -1,6 +1,6 @@
 import { DataTexture, MeshBasicMaterial, MeshStandardMaterial, REVISION, type Event, type Material, type Texture } from 'three';
 import { describe, expect, it } from 'vitest';
-import { releaseSharedDfgLut } from './sharedDfgLut';
+import { sharedDfgLutOf } from './sharedDfgLut';
 
 /**
  * A renderer as three r186's is to the LUT (no WebGL in the tests): its materials' uniforms point at the one LUT, and
@@ -13,19 +13,19 @@ function rendererDrawing(lut: Texture, materials: Material[]) {
   return { renderer: { properties: { get: (material: object) => properties.get(material as Material) ?? {} } } as never, materials, onTextureDispose };
 }
 
-describe('releaseSharedDfgLut', () => {
-  it("detaches every renderer's listener from the shared LUT, found in a standard material's uniforms", () => {
+describe('sharedDfgLutOf', () => {
+  it("finds the shared LUT in a standard material's uniforms; disposed, every renderer's listener detaches", () => {
     const lut = new DataTexture();
     const drawing = [0, 1, 2].map(() => rendererDrawing(lut, [new MeshBasicMaterial(), new MeshStandardMaterial()]));
-    releaseSharedDfgLut(drawing[0]!.renderer, drawing[0]!.materials);
+    const [first] = drawing;
+    expect(sharedDfgLutOf(first!.renderer, first!.materials)).toBe(lut);
+    lut.dispose();
     for (const { onTextureDispose } of drawing) expect(lut.hasEventListener('dispose', onTextureDispose)).toBe(false);
   });
 
-  it('does nothing where no material drew the LUT', () => {
-    const lut = new DataTexture();
-    const { renderer, onTextureDispose } = rendererDrawing(lut, []);
-    releaseSharedDfgLut(renderer, [new MeshBasicMaterial()]);
-    expect(lut.hasEventListener('dispose', onTextureDispose)).toBe(true);
+  it('finds none where no material drew the LUT', () => {
+    const { renderer } = rendererDrawing(new DataTexture(), []);
+    expect(sharedDfgLutOf(renderer, [new MeshBasicMaterial()])).toBeNull();
   });
 
   it('is written for the three.js whose LUT holds on to every renderer: an upgrade checks it again', () => {
