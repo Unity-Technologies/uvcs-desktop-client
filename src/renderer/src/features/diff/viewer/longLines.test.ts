@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hasLineTooLongToDraw, LONGEST_DRAWN_LINE } from './longLines';
+import { hasLineTooLongToDraw, LONGEST_DRAWN_LINE, withLongLinesCut } from './longLines';
 
 const line = (length: number): string => 'var a=b;'.repeat(Math.ceil(length / 8)).slice(0, length);
 
@@ -33,5 +33,18 @@ describe('hasLineTooLongToDraw', () => {
     expect(csv.length).toBeGreaterThan(LONGEST_DRAWN_LINE);
     expect(hasLineTooLongToDraw([csv])).toBe(false);
     expect(hasLineTooLongToDraw([JSON.stringify(records)])).toBe(true);
+  });
+});
+
+describe('withLongLinesCut', () => {
+  it(`cuts each line past ${LONGEST_DRAWN_LINE} characters there, with an ellipsis, and keeps every line break`, () => {
+    const long = line(LONGEST_DRAWN_LINE + 10);
+    const cut = `${long.slice(0, LONGEST_DRAWN_LINE)}…`;
+    expect(withLongLinesCut(`first\r\n${long}\n${long}\rlast`)).toBe(`first\r\n${cut}\n${cut}\rlast`);
+  });
+
+  it('gives back a text with no line that long as it is', () => {
+    const text = `${line(LONGEST_DRAWN_LINE)}\nshort\n`;
+    expect(withLongLinesCut(text)).toBe(text);
   });
 });
