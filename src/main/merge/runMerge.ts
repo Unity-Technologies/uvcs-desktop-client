@@ -80,7 +80,7 @@ export async function runMerge(
     }
 
     context.reportProgress('Writing resolved files');
-    await writeFileConflictResolutions(cm, workspacePath, request, plan, resolutions.files, context.signal);
+    await writeFileConflictResolutions(cm, workspacePath, request, plan, resolutions.files);
     return {};
   });
 }
@@ -127,7 +127,10 @@ function resolveConflictArgs(resolution: DirectoryConflictResolution): string[] 
 /**
  * Writes each file's decision: a text as it is, and the incoming versions the page holds no text of (binaries, text in
  * another encoding) saved by `cm` straight into the workspace, all of them with one `cm cat` per batch
- * (`catBatchesOf`), in a process: binaries run to hundreds of MB.
+ * (`catBatchesOf`), in a process even for one: binaries run to hundreds of MB, and a pooled session held that long
+ * stalls every read behind it. `cm merge` has run by then: the writes take no cancel signal, as stopping them would
+ * leave the merge half applied. `--file=` refuses a read-only file where `<spec>;<file>` doesn't check: these files are
+ * checked out by the merge, so writable, either way.
  */
 async function writeFileConflictResolutions(
   cm: CmClient,
@@ -135,7 +138,6 @@ async function writeFileConflictResolutions(
   request: MergeRequest,
   plan: MergePlan,
   resolutions: Record<string, FileConflictResolution>,
-  signal: AbortSignal,
 ): Promise<void> {
   const incomingReads: CatRead[] = [];
   for (const conflict of plan.fileConflicts) {
@@ -150,7 +152,7 @@ async function writeFileConflictResolutions(
       incomingReads.push({ spec: source, repository: conflict.repository, target, size: -1 });
     }
   }
-  for (const batch of catBatchesOf(incomingReads, (read) => read)) await cm.execute(catArgs(batch), { cwd: workspacePath, signal });
+  for (const batch of catBatchesOf(incomingReads, (read) => read)) await cm.execute(catArgs(batch), { cwd: workspacePath });
 }
 
 /** The text a file is written with: the one decided, or the source's as read; none to keep the destination, or for `cm cat`. */
