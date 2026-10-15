@@ -1,8 +1,10 @@
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { formatOutput } from '../cm/testing/cmOutput';
+import { OrganizationServers } from '../cm/organizationServers';
+import { formatOutput, machineReadableStatusHeader, statusHeader, UNITY_ORGANIZATION } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { cmHeaderReaders, WorkspaceHeaders } from '../workspace/WorkspaceHeaders';
 import { createHistoryService } from './historyService';
 import { serviceContext } from './testing/serviceContext';
 
@@ -11,7 +13,7 @@ vi.mock('electron', () => ({ dialog: {}, shell: {} }));
 const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
 const README = join(WORKSPACE, 'README.md');
 
-const revision = (changeset: number, itemId = '7'): string => `
+const revision = (changeset: number, itemId = '7', server = 'local'): string => `
   <Revision>
     <RevisionSpec>README.md#cs:${changeset}</RevisionSpec>
     <Branch>/main</Branch>
@@ -21,7 +23,8 @@ const revision = (changeset: number, itemId = '7'): string => `
     <Owner>ana</Owner>
     <Comment>Change ${changeset}</Comment>
     <Repository>game</Repository>
-    <Server>local</Server>
+    <Server>${server}</Server>
+    <RepositorySpec><Server>${server}</Server><Name>game</Name></RepositorySpec>
     <ItemId>${itemId}</ItemId>
     <Size>42</Size>
   </Revision>`;
@@ -34,7 +37,9 @@ const historyXml = (revisions: string): string => `<?xml version="1.0" encoding=
 
 function history(answers: Record<string, CmAnswer>) {
   const fake = fakeCmClient(answers);
-  return { ...fake, service: createHistoryService(serviceContext(fake.cm), { apps: {} as never }) };
+  const organizations = new OrganizationServers(fake.cm);
+  const headers = new WorkspaceHeaders(cmHeaderReaders(fake.cm, organizations));
+  return { ...fake, service: createHistoryService(serviceContext(fake.cm, { headers, organizations }), { apps: {} as never }) };
 }
 
 const TWO_REVISIONS: Record<string, CmAnswer> = {
@@ -43,6 +48,24 @@ const TWO_REVISIONS: Record<string, CmAnswer> = {
 };
 
 describe('file history', () => {
+  it("names a Unity organization's revisions as cm does everywhere else, though cm history --xml prints its id", async () => {
+    const { service, lines } = history({
+      history: historyXml(revision(1, '7', UNITY_ORGANIZATION.byId) + revision(4, '7', UNITY_ORGANIZATION.byId)),
+      'status --header --xml': statusHeader('/main', { repository: 'game', server: UNITY_ORGANIZATION.byId }),
+      'status --header --machinereadable': machineReadableStatusHeader('game', UNITY_ORGANIZATION.byName),
+      'find revision': formatOutput([1, 15, -1], [4, 45, 15]),
+      ls: '45\n',
+    });
+
+    const itemHistory = await service.forItem(WORKSPACE, 'README.md');
+
+    expect(itemHistory.revisions.map((item) => [item.repository, item.idSpec])).toEqual([
+      ['game@AcmeStudio@unity', 'revid:45@game@AcmeStudio@unity'],
+      ['game@AcmeStudio@unity', 'revid:15@game@AcmeStudio@unity'],
+    ]);
+    expect(lines().find((line) => line.startsWith('find revision'))).toContain("on repository 'game@AcmeStudio@unity'");
+  });
+
   it("reads a workspace file's history with three quick commands: the history, its revision ids, and the one loaded", async () => {
     const { service, commands } = history({ ...TWO_REVISIONS, ls: '45\n' });
 
