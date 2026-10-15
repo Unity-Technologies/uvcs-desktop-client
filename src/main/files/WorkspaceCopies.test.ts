@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { TreeItem } from '@shared/domain/explorer';
+import type { ListedTreeItem } from '../cm/treeItemsXml';
 import { contentHashOf, revisionFilesOf, WorkspaceCopies, type RevisionFile } from './WorkspaceCopies';
 
 const hashOf = (text: string) => contentHashOf(Buffer.from(text));
@@ -82,7 +82,7 @@ describe('WorkspaceCopies.remember', () => {
 });
 
 describe('revisionFilesOf', () => {
-  const item = (path: string, parts: Partial<TreeItem>): TreeItem => ({
+  const item = (path: string, parts: Partial<ListedTreeItem>): ListedTreeItem => ({
     path, name: path, itemType: 'file', size: 2, date: '', isPrivate: false, isCheckedOut: false, changeset: 3, branch: '/main', owner: 'ana',
     revisionId: 40, parentRevisionId: 30, repository: 'models@local', itemId: 7, hash: 'aGFzaA==', ...parts,
   });

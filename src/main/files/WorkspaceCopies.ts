@@ -7,8 +7,8 @@
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
-import type { TreeItem } from '@shared/domain/explorer';
 import type { RevisionRef } from '@shared/domain/revision';
+import type { ListedTreeItem } from '../cm/treeItemsXml';
 import { MAX_MODEL_BYTES } from './fileContent';
 import { workspaceFileOf } from './workspacePaths';
 
@@ -28,7 +28,13 @@ const MAX_DISK_HASHES = 10_000;
 /** The listed revisions remembered, the latest listed kept: a few big folders' worth. */
 const MAX_LISTED_REVISIONS = 50_000;
 
+interface WorkspaceCopiesOptions {
+  /** The most listed revisions remembered; tests pass a few. */
+  maxListed?: number;
+}
+
 export class WorkspaceCopies {
+  private readonly maxListed: number;
   /**
    * The hashes of disk files, by path, size and time written: a file known to differ from a revision isn't read again
    * for it until it changes. A match is always hashed again, on the bytes returned.
@@ -36,6 +42,10 @@ export class WorkspaceCopies {
   private readonly diskHashes = new Map<string, string>();
   /** The revisions listings named, by workspace and revision, the latest listed last. */
   private readonly listed = new Map<string, RevisionFile>();
+
+  constructor({ maxListed = MAX_LISTED_REVISIONS }: WorkspaceCopiesOptions = {}) {
+    this.maxListed = maxListed;
+  }
 
   /**
    * Remembers the revisions a listing named in the workspace (the Files view's folders, Browse repository's, a
@@ -50,7 +60,7 @@ export class WorkspaceCopies {
       this.listed.set(key, file);
     }
     for (const oldest of this.listed.keys()) {
-      if (this.listed.size <= MAX_LISTED_REVISIONS) break;
+      if (this.listed.size <= this.maxListed) break;
       this.listed.delete(oldest);
     }
   }
@@ -106,7 +116,7 @@ async function readHashed(absolutePath: string): Promise<{ bytes: Buffer; hash: 
  * The files of a `cm ls --xml` listing as the revisions they hold: neither folders nor links, nor a private item or a
  * checkout, which hold none.
  */
-export function revisionFilesOf(items: readonly TreeItem[]): RevisionFile[] {
+export function revisionFilesOf(items: readonly ListedTreeItem[]): RevisionFile[] {
   return items.flatMap(({ itemType, path, revisionId, repository, hash, size }) =>
     (itemType === 'file' || itemType === 'binaryFile') && revisionId > 0 && hash !== undefined ? [{ path, revision: { revisionId, repository }, hash, size }] : [],
   );

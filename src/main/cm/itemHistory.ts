@@ -60,7 +60,7 @@ export function parseWorkspaceRevision(output: string, path: string): RevisionFi
   const [revid = '', hash = '', size = '', repository = ''] = parseRecords(output)[0] ?? [];
   const revisionId = Number.parseInt(revid, 10);
   if (Number.isNaN(revisionId) || revisionId < 0) return undefined;
-  return { path, revision: { revisionId, repository: repository.replace(/^rep:/, '') }, hash: hash || null, size: Number(size) || 0 };
+  return { path, revision: { revisionId, repository: repository.replace(/^rep:/, '') }, hash: hash || null, size: size === '' ? -1 : Number(size) };
 }
 
 /** Combines the history's records with the revisions `itemRevisionsArgs` found, each list newest first. */

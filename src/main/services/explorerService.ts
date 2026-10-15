@@ -4,7 +4,7 @@ import type { ExplorerApi } from '@shared/api/explorer';
 import type { ItemMove, RevisionType } from '@shared/domain/explorer';
 import { parseItemDetails } from '../cm/itemDetailsXml';
 import { onLinksThemselves } from '../cm/symlinkArgs';
-import { parseTreeItems } from '../cm/treeItemsXml';
+import { parseTreeItems, withoutHash } from '../cm/treeItemsXml';
 import { listWorkspacePaths } from '../files/listWorkspacePaths';
 import { revisionFilesOf } from '../files/WorkspaceCopies';
 import { moveArgs, moveItems } from '../files/moveItems';
@@ -15,11 +15,14 @@ import type { ServiceContext } from './ServiceContext';
 export function createExplorerService({ cm, operations, workspaceCopies }: ServiceContext): ExplorerApi {
   const inWorkspace = (workspacePath: string) => ({ cwd: workspacePath });
 
-  /** A folder's items, their revisions remembered: a diff of one the disk holds reads it there (`WorkspaceCopies`). */
+  /**
+   * A folder's items, their revisions remembered: a diff of one the disk holds reads it there (`WorkspaceCopies`). The
+   * hashes stay here.
+   */
   function rememberedItems(workspacePath: string, xml: string) {
     const items = parseTreeItems(xml);
     workspaceCopies.remember(workspacePath, revisionFilesOf(items));
-    return items;
+    return items.map(withoutHash);
   }
 
   async function listDirectory(workspacePath: string, directory: string) {

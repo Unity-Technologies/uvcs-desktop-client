@@ -29,11 +29,6 @@ export interface TreeItem {
    */
   repository: string;
   itemId: number;
-  /**
-   * MD5 of its revision's content, base64, as `cm` keeps it: in a workspace, the revision it was loaded from, even
-   * once the file on disk changed (a checkout, revision -1, lists the disk's). Unset for a private item.
-   */
-  hash?: string;
   /** Set for a directory that is an xlink: where it points. */
   xlink?: XlinkTarget;
   /** Set for a symbolic link in the workspace: the path it points to, as written in the link. */
