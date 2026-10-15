@@ -91,9 +91,16 @@ function inclusionEntries(changes: PendingChange[], { isIncluded, setIncluded }:
   ];
 }
 
-/** The "Copy" submenu of workspace items: their paths, relative to the workspace or full. */
+/**
+ * The "Copy" submenu of workspace items: their paths, relative to the workspace or full. One item's show beside their
+ * labels; several are joined only when copied, since a right-click can hold 50,000 of them.
+ */
 export function itemCopySubmenu(workspacePath: string, paths: string[]): GroupedEntry | null {
-  return copySubmenu('', { path: paths.join('\n'), fullPath: paths.map((path) => absolutePath(workspacePath, path)).join('\n') }, { count: paths.length });
+  const relative = (): string => paths.join('\n');
+  const full = (): string => paths.map((path) => absolutePath(workspacePath, path)).join('\n');
+  if (paths.length === 0) return null;
+  if (paths.length === 1) return copySubmenu('', { path: relative(), fullPath: full() });
+  return copySubmenu('', { path: async () => relative(), fullPath: async () => full() }, { count: paths.length });
 }
 
 /** Adds the selected items, or all files with the extension they share, to the ignore, cloaked or hidden-changes rules. */
