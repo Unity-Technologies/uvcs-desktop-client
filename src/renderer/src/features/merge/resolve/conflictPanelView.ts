@@ -1,3 +1,4 @@
+import { hasLineTooLongToEdit } from '../../diff/viewer/longLines';
 import type { FileConflictState } from './useFileConflicts';
 
 /**
@@ -42,4 +43,12 @@ export function textToEdit(state: FileConflictState): string {
   const { decision, contents, document } = state;
   if (decision?.kind === 'wholeFile') return contents?.[decision.side].text ?? '';
   return decision?.text ?? document?.text ?? '';
+}
+
+/**
+ * Why the text can't be edited in the app, for the menu entry's tooltip; null when it can. Not with a line too long to
+ * type into (`hasLineTooLongToEdit`): one keystroke in a wrapped line of 2 MB held Pierre's editor for minutes.
+ */
+export function editInAppUnavailable(state: FileConflictState): string | null {
+  return hasLineTooLongToEdit([textToEdit(state)]) ? 'A line of this file is too long to edit here' : null;
 }

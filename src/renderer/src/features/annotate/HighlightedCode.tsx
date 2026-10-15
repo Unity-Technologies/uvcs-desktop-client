@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useResolvedTheme } from '../../app/settings/useResolvedTheme';
 import { fileNameOf } from '../../lib/text';
 import { useHighlightWorkers } from '../diff/viewer/highlightWorkers';
+import { withLongLinesCut } from '../diff/viewer/longLines';
 import { PIERRE_SURFACE_CSS, pierreThemeName } from '../diff/viewer/pierreOptions';
 import { highlightedLanguage, syntaxHighlighting } from '../diff/viewer/syntaxHighlighting';
 
@@ -15,12 +16,13 @@ interface HighlightedCodeProps {
   virtualizer: Virtualizer;
 }
 
-/** The file's code, highlighted by size as a read-only diff is, rendering only the lines in view. */
+/** The file's code, highlighted by size as a read-only diff is, rendering only the lines in view; a line too long to draw is cut. */
 export function HighlightedCode({ className, code, path, virtualizer }: HighlightedCodeProps) {
   const theme = useResolvedTheme();
   const highlighting = syntaxHighlighting(code, '', false);
   const workers = useHighlightWorkers(highlighting === 'background');
-  const file = useMemo(() => ({ name: fileNameOf(path), lang: highlightedLanguage(highlighting, path), contents: code }), [path, code, highlighting]);
+  // Each row is one line high, beside its annotation, so a line too long to draw can't wrap: it's cut instead.
+  const file = useMemo(() => ({ name: fileNameOf(path), lang: highlightedLanguage(highlighting, path), contents: withLongLinesCut(code) }), [path, code, highlighting]);
   const options = useMemo(
     () => ({
       theme: pierreThemeName(theme),

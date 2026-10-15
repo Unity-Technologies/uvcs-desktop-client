@@ -1,4 +1,4 @@
-import { RefreshCw } from 'lucide-react';
+import { AppWindow, PencilOff, RefreshCw } from 'lucide-react';
 import { Suspense, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import { openFile } from '../../../components/externalApps/externalAppOperations';
 import { lazyComponent } from '../../../lib/lazyComponent';
@@ -9,7 +9,7 @@ import { Button } from '../../../ui/Button';
 import { CenteredSpinner } from '../../../ui/Spinner';
 import { absolutePath } from '../../pendingChanges/pendingChangeOperations';
 import { extensionOf } from '../../../lib/text';
-import { canEditInPlace } from './canEditInPlace';
+import { canEditInPlace, typesIntoDiff } from './canEditInPlace';
 import { ChangeNavigator } from './ChangeNavigator';
 import type { ChangeView } from './changeView';
 import { diffBodyOf } from './diffBody';
@@ -20,6 +20,7 @@ import { DiffNotice } from './DiffNotice';
 import { DiffViewerFrame } from './DiffViewerFrame';
 import { ImageModeSwitch } from './ImageModeSwitch';
 import { hasLineChanges } from './lineDiff';
+import { hasLineTooLongToDraw } from './longLines';
 import { MethodHidingNotice } from './MethodHidingNotice';
 import { modelBesideMeta, modelOfMeta } from './model/modelMeta';
 import { SiblingFinderContext } from './model/modelSiblings';
@@ -96,7 +97,10 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const modelFound = modelAbsentFor !== metaVersions;
   const metaModel = isText && modelFound && modelOfMeta(fileName) !== null ? modelBesideMeta(findSibling, { original: contents.original, modified: contents.modified }) : null;
   const metaAsModel = metaModel !== null && (representations.meta ?? 'model') === 'model';
-  const editable = isText && editablePath !== null;
+  const wrapsLongLines = useMemo(() => isText && hasLineTooLongToDraw([left.text ?? '', right.text ?? '']), [isText, left.text, right.text]);
+  const editable = useMemo(() => isText && typesIntoDiff(editablePath !== null, [left.text ?? '', right.text ?? '']), [isText, editablePath, left.text, right.text]);
+  // A workspace file shown read-only all the same says why, with the way to edit it elsewhere.
+  const tooLongToType = isText && editablePath !== null && !editable;
   const diffs = useLineDiffs({ isText, original: left.text ?? '', saved: right.text, current, comparisonMethod, fileName });
   const wholeFile = typedIntoWhole(editable, diffs.saved);
   // Nothing to view differently in an empty or unchanged file that only says so, nor in a .meta shown as its model.
@@ -131,6 +135,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
           plainText={syntaxHighlighting(left.text ?? '', right.text ?? '', editable) === 'off'}
           plainTextThreshold={plainTextThresholdLabel(editable)}
           followsLayout={followsLayout(sides, wholeFile)}
+          wrapsLongLines={wrapsLongLines}
         />
       )}
       {/* Single-sided images and models (added or deleted) are previews: no modes to offer. */}
@@ -162,12 +167,19 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
         onUndoDiscard={discards?.onUndoDiscard}
         changeViewRef={changeView}
         onViewScroll={navigation.onViewScroll}
+        wrapsLongLines={wrapsLongLines}
       />
     </Suspense>
   );
   // Of the file as read, so the line saying so stays put while it's typed into.
   const hidingNotice = diffs.hidingMethod && (
     <MethodHidingNotice method={diffs.hidingMethod} original={left.text ?? ''} modified={right.text ?? ''} onPick={setComparisonMethod} />
+  );
+  // Above whatever a workspace file shown read-only all the same shows: its diff, or the line saying there's none.
+  const tooLongNotice = tooLongToType && (
+    <DiffNotice tone="info" icon={<PencilOff size={13} />} action={openEditable && <Button size="small" icon={<AppWindow size={13} />} onClick={openEditable}>Open file</Button>}>
+      A line of this file is too long to edit here.
+    </DiffNotice>
   );
 
   let body: ReactNode;
@@ -217,6 +229,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
     case 'textDiff':
       body = (
         <>
+          {tooLongNotice}
           {hidingNotice}
           {textDiff}
         </>
@@ -244,15 +257,18 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
       break;
     default:
       body = (
-        <NothingToDiff
-          reason={bodyKind}
-          left={left}
-          right={right}
-          identicalDescription={identical}
-          comparisonMethod={comparisonMethod}
-          onRecognizeAll={recognizeAll}
-          openFile={openEditable}
-        />
+        <>
+          {tooLongNotice}
+          <NothingToDiff
+            reason={bodyKind}
+            left={left}
+            right={right}
+            identicalDescription={identical}
+            comparisonMethod={comparisonMethod}
+            onRecognizeAll={recognizeAll}
+            openFile={openEditable}
+          />
+        </>
       );
   }
 

@@ -26,7 +26,7 @@ interface ConflictHunksProps {
  * destination's side with the choices for this conflict, its lines, then the source's side and its lines.
  */
 export function ConflictHunks({ path, text, labels, onChange }: ConflictHunksProps) {
-  const pierreOptions = usePierreOptions();
+  const pierreOptions = usePierreOptions(text);
   const surfaceRef = useRef<HTMLDivElement>(null);
   const { source, destination } = labels.roles;
   // Highlighted like a read-only diff of its two sides, which Pierre highlights as a file each, about as long as the

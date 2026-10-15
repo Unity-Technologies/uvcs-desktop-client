@@ -13,7 +13,7 @@ import { MergeToolOpenBanner } from '../mergeTools/MergeToolOpenBanner';
 import { fileConflictStatus, fileConflictTool } from '../mergeStatus';
 import { chosenConflictChoice, decisionFor, hasConflicts, type ConflictChoice } from './conflictChoices';
 import { ConflictBody } from './ConflictBody';
-import { effectiveView, hasBase, rendersVersions, type PanelView } from './conflictPanelView';
+import { editInAppUnavailable, effectiveView, hasBase, rendersVersions, type PanelView } from './conflictPanelView';
 import type { FileConflictDecision } from './fileConflictDecision';
 import { KeepChoices } from './KeepChoices';
 import type { FileConflictState } from './useFileConflicts';
@@ -59,6 +59,7 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
       state={state}
       actions={toolActions}
       onEditInApp={() => choose('byHand')}
+      editInAppUnavailable={editInAppUnavailable(state)}
       // The primary action while the file waits for the user, unless the page offers resolving them all (or is at it);
       // once decided, completing the merge takes over.
       variant={state.resolution || toolActions.runOffered || toolActions.run ? 'secondary' : 'primary'}
