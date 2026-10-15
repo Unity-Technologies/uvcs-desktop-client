@@ -1,8 +1,10 @@
 // The repository's trees at the points a model viewer reads (a changeset, a branch's head), each listed once while
 // kept and shared by every read there (docs/features/model-diff.md, "Beside the model" and "Materials"): the Materials
-// look's lookups (`unityAssetsService`) and a model's files beside it (`contentService.readBytes`: its `.meta`, a
-// glTF's `.bin`). A file beside the model is found in its folder's children (`cm ls` without `-R`), or in a listing
-// with everything below it the look asked first; a file the tree hasn't costs no command.
+// look's lookups (`unityAssetsService`), a model's files beside it (`contentService.readBytes`: its `.meta`, a
+// glTF's `.bin`) and the model beside a `.meta` (`contentService.read`, `readBeside`), each checked, where it says
+// whose it is (`beside`), against what its folder's listing has at that file's own path. A file beside the model is
+// found in its folder's children (`cm ls` without `-R`), or in a listing with everything below it the look asked
+// first; a file the tree hasn't costs no command.
 
 import type { RevisionRef } from '@shared/domain/revision';
 import { BRANCH_TREE_LIFE_MS } from '@shared/domain/unityAssets';
@@ -76,7 +78,8 @@ export class RepositoryTrees {
 
   /**
    * The revision of a workspace-relative file beside a model at a point whose tree `cm ls` lists (`listsTree`), from
-   * its folder's listing (`fileBeside`); null where the tree hasn't it. Rejects where the tree couldn't be listed.
+   * its folder's listing (`fileBeside`); null where the tree hasn't it. Rejects where the tree couldn't be listed. Also
+   * what a `beside` check reads: the revision at the path of the file a sibling goes with.
    */
   async revisionAt(workspacePath: string, at: string, path: string): Promise<RevisionRef | null> {
     const file = await this.at(workspacePath, at).tree.fileBeside(path);

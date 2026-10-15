@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
-import { diffSibling, sourcePathOf, workspaceSibling } from './modelSiblings';
+import { diffSibling, historyPointOf, historySibling, sourcePathOf, workspaceSibling } from './modelSiblings';
 
 const entry = (path: string, baseRevisionId: number, revisionId: number): DiffEntry => ({ status: 'changed', path, itemType: 'file', baseRevisionId, revisionId, repository: 'game@local' });
 
@@ -72,6 +72,57 @@ describe('diffSibling', () => {
   it('finds no side of a sibling added or deleted with the model', () => {
     const find = diffSibling([entry('Assets/Barrel.bin', -1, 21)], { kind: 'changeset', changesetId: 7 }, 'game@local');
     expect(find('original', gltf, 'Assets/Barrel.gltf', 'Barrel.bin')).toBeNull();
+  });
+});
+
+describe('historyPointOf', () => {
+  const points = { changesets: { original: 30, modified: 31 }, inWorkspaceRepository: true };
+
+  it("is each side's own changeset, in the workspace's repository", () => {
+    expect(historyPointOf(points, 'original')).toBe('cs:30');
+    expect(historyPointOf(points, 'modified')).toBe('cs:31');
+  });
+
+  it("is none under an xlink (a changeset of the xlinked repository, whose paths aren't the workspace's), while the repository isn't known, or for a side with no changeset", () => {
+    expect(historyPointOf({ ...points, inWorkspaceRepository: false }, 'modified')).toBeNull();
+    expect(historyPointOf({ ...points, inWorkspaceRepository: undefined }, 'modified')).toBeNull();
+    expect(historyPointOf({ ...points, changesets: { original: null, modified: 31 } }, 'original')).toBeNull();
+    expect(historyPointOf({ ...points, changesets: { original: -1, modified: 31 } }, 'original')).toBeNull();
+  });
+});
+
+describe('historySibling', () => {
+  const at = (revisionId: number, fileName = 'Assets/Box With Spaces.gltf') => ({ kind: 'revision' as const, revision: { revisionId, repository: 'game@local' }, fileName });
+  const finder = historySibling({ changesets: { original: 30, modified: 31 }, inWorkspaceRepository: true });
+
+  it("finds the file beside each revision in that revision's changeset, only where the revision itself is at its path then", () => {
+    // The history's path is the one it was opened at: moved since or before, another item (or none) was there, and
+    // main reads nothing (`beside`, checked against the folder's listing that finds the sibling).
+    expect(finder('modified', at(9), 'Assets/Box With Spaces.gltf', 'Box With Spaces.bin')).toEqual({
+      kind: 'repositoryPath',
+      path: '/Assets/Box With Spaces.bin',
+      at: 'cs:31',
+      beside: { path: '/Assets/Box With Spaces.gltf', revisionId: 9 },
+    });
+    expect(finder('original', at(8), 'Assets/Box With Spaces.gltf', 'buffers/Box.bin')).toEqual({
+      kind: 'repositoryPath',
+      path: '/Assets/buffers/Box.bin',
+      at: 'cs:30',
+      beside: { path: '/Assets/Box With Spaces.gltf', revisionId: 8 },
+    });
+  });
+
+  it("names both in the repository's own form, a Windows path too", () => {
+    expect(finder('modified', at(9, 'Assets\\Box.gltf'), 'Assets\\Box.gltf', 'Box.bin')).toEqual({ kind: 'repositoryPath', path: '/Assets/Box.bin', at: 'cs:31', beside: { path: '/Assets/Box.gltf', revisionId: 9 } });
+  });
+
+  it('finds none where a side has no point (`historyPointOf`), or for a name outside the folder', () => {
+    expect(historySibling({ changesets: { original: 30, modified: 31 }, inWorkspaceRepository: false })('modified', at(9), 'Assets/Box.gltf', 'Box.bin')).toBeNull();
+    expect(finder('modified', at(9), 'Assets/Box.gltf', '../Box.bin')).toBeNull();
+  });
+
+  it("finds a workspace file's beside it", () => {
+    expect(finder('modified', { kind: 'workspaceFile', path: 'Assets/Box.gltf' }, 'Assets/Box.gltf', 'Box.bin')).toEqual({ kind: 'workspaceFile', path: 'Assets/Box.bin' });
   });
 });
 

@@ -243,8 +243,26 @@ it (ARCHITECTURE.md "Xlinks"); in a shelve or at a label, whose trees `cm ls` ca
 says what the model needs. A last change in Files or Browse repository (`lastChangeSibling`,
 provided by `RevisionChanges`) finds it in the tree's own listings, no `cm` command added: changed in the same
 changeset or shelve as the model, its revision and the one before; untouched by it, its one revision on both sides;
-changed since, in another repository, or not listed (private, in a folder not opened), none. Elsewhere (history,
-merges) none is found. A sibling is found beside the path each side was read from (`sourcePathOf`), never the diff's
+changed since, in another repository, or not listed (private, in a folder not opened), none. A history's revisions
+(`historySibling`, provided by `RevisionComparison`) find it as it was in the changeset that made each revision, read
+from that point's listing ("Read from the folder's listing" below), at the point their materials use too
+(`historyPointOf`, `revisionsAssetsPoint`); none under an xlink (a changeset of the xlinked repository, whose paths
+aren't the workspace's). A history names its files at the path it was opened at (today's, or the path at a revision
+when opened from Browse repository or a diff's entry), which in another revision's changeset may have held another
+item, or none: the model moved or renamed since, or before, its folder renamed, on another branch. So the sibling
+carries the revision it goes with (`beside`), and main reads it only where the folder's listing has that very revision
+at that path (`listedRevisionOf`), from the listing that finds the sibling: no command added when they share a folder,
+one `cm ls` of the model's folder when the sibling is below it. Elsewhere it reads as absent, and the model says what
+it needs, as before. Guessing from the moves `cm history --moveddeleted` lists was tried and dropped: it lists moves
+by changeset number across branches, not a parent folder's rename, and doesn't know which path the history was
+opened at. A model beside a `.meta` read so (`readBeside`) reads as empty where the `.meta` wasn't there: an answer, as an
+absent sibling is ("A model's `.meta` diffed alone" below).
+Each side is its own point, so a sibling unchanged between them is read once per side, one `cm cat` more per
+comparison (the model too, for a `.meta`'s History). Sharing one read needs each sibling resolved to its revision
+before its bytes are asked, a step in every reader of siblings. Keeping `cm cat revid:` bytes in main by revision, as
+`listedRevisionOf` already resolves one, was rejected too: it would hold whole `.bin` files and models, up to
+`MAX_MODEL_BYTES` each, in main's memory for a read the renderer's cache already keeps. A merge's revisions find
+none. A sibling is found beside the path each side was read from (`sourcePathOf`), never the diff's
 file name, which names the next file while the one before still shows. Its name never reaches above the model's
 folder, and main refuses a workspace file outside the workspace anyway (`workspaceFileOf`): the renderer is not
 trusted.
@@ -284,8 +302,13 @@ trusted.
   settings. One `cm cat` a side, cached.
 - **A model's `.meta` diffed alone** (`modelOfMeta`) shows as the model under each version's settings (`ModelMetaDiff`,
   "Code | Model", the model by default, remembered as `representations.meta`): raising the Scale Factor instead of
-  exporting again reads "100× larger in Unity". Only where the model can be found beside it (`modelBesideMeta`);
-  elsewhere the `.meta` is its text. A model that didn't change is read once for both sides (`modelReadsOfSides`).
+  exporting again reads "100× larger in Unity". Only where the model can be found beside it (`modelBesideMeta`): in
+  History too, beside each revision at its point (`historySibling`); elsewhere the `.meta` is its text. Once read
+  (`metaModelView`), a side whose model wasn't beside it then (in History, a `.meta` moved since or before) shows
+  empty, and where neither side has it the `.meta` is its text, as any text file (`onModelAbsent`: its change arrows,
+  notices and "No content changes", without "Code | Model", as there is no model to show); only a model that couldn't
+  be read (the server) says "Couldn't read". A model that didn't change is read once for both sides
+  (`modelReadsOfSides`), except in History, where each side is its own point and the model is read at each.
 
 ## Materials
 
@@ -305,7 +328,8 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   diff's own changes undone (`changedAssetsOf`: each file as it was, one the diff added gone, a move both ways; past
   `MAX_CHANGED_ASSETS` the side before has none; a request carries only those under the model's Unity project, or its
   folder outside one, `pointForModel`, as main's search goes no further); a history's revision at the changeset that made it
-  (`revisionsAssetsPoint`); Files' last change at its changeset, and before it, that changeset's own changes as their
+  (`revisionsAssetsPoint`), whatever its path was then: materials resolve by GUID and texture name, not by the
+  model's path; Files' last change at its changeset, and before it, that changeset's own changes as their
   parent revisions (`lastChangeAssetsPoint`, `AssetsBefore` `changeset`). Anything else has no point (a merge's
   versions, a shelve's or a label's tree, which `cm ls` can't list, a revision of an xlinked repository in History or
   Files, whose tree's paths aren't the workspace's, and any revision there while the workspace's repository isn't
@@ -313,9 +337,9 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   disk's files, which may be another revision's. The disk's look was rejected for that reason: a model on a branch
   the workspace never loaded showed clay, and one at another revision showed the workspace's textures, wrong. Only the
   model's own `.meta` is read as the version's sibling (its remaps, with its import settings), and an OBJ's `.mtl`
-  (`MaterialVersion.sibling`). In a committed diff and in Files each side keeps its own; where none was found for the
-  version (`settingsFrom: 'none'`: a last change whose `.meta` changed since, a revision in History or a merge, which
-  find no sibling) the workspace's (`takesWorkspaceSettings`, `useWorkspaceImportSettings`), as Unity imports it now:
+  (`MaterialVersion.sibling`). In a committed diff, in Files and in History each side keeps its own; where none was found for the
+  version (`settingsFrom: 'none'`: a last change whose `.meta` changed since; in History, a revision under an xlink or
+  one the model wasn't at its path in; a merge's, which finds no sibling) the workspace's (`takesWorkspaceSettings`, `useWorkspaceImportSettings`), as Unity imports it now:
   an FBX whose materials Unity doesn't make shows clay, never the file's own. A `.meta` whose read failed (`'failed'`)
   shows the defaults until it is read again, never the workspace's look meanwhile; a side waiting for the workspace's
   `.meta` looks nothing up until it is read (`materialsInputOf` is undefined). Without a workspace the look isn't

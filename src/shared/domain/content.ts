@@ -17,8 +17,13 @@ export type ContentSource =
    * `serverpath:` that can't find it. It is a flag, not where the revision is read: the tree's `<Repository>` names
    * that (an xlink nested in it, or a sibling under another xlink, hold the file elsewhere), so never read the listed
    * revision as `revid:N@<repository>`.
+   * `beside` reads it only where the file it goes with is at `beside.path` in that point's tree as that revision: a
+   * History names a revision's files beside it at the path it was opened at, which then may have held another item,
+   * or none (the model moved or renamed since, or before). Checked against the folder listing that finds the file,
+   * so it holds only at a point whose tree `cm ls` lists (`listsTree`: a changeset, a branch's head), the only points
+   * History gives; elsewhere it is ignored.
    */
-  | { kind: 'repositoryPath'; path: string; at: string; repository?: string }
+  | { kind: 'repositoryPath'; path: string; at: string; repository?: string; beside?: { path: string; revisionId: number } }
   /**
    * Any `cm cat` spec, e.g. `serverpath:/src/a.ts#cs:12`. `fileName` recognizes images when
    * the spec has no path in it (e.g. `itemid:27#cs:12`).

@@ -137,6 +137,63 @@ describe('reading the bytes of a model companion', () => {
     expect(written).toHaveLength(2);
   });
 
+  describe('beside a revision of the model (a History, named at the path it was opened at)', () => {
+    /** `cm ls <folder> --tree` as cm answers each folder at the point; a folder the tree hasn't fails as cm does. */
+    const listings = (folders: Record<string, string>) => async ({ args }: FakeCmCommand) =>
+      folders[args[1]!] ?? cmFails([`Can't resolve the selector for the item ${args[1]}`, '<?xml version="1.0" encoding="utf-8"?>', '<LsResults>', '  <LsItems />', '</LsResults>'].join('\n'));
+    const BUFFERS_LISTING = treeListingOutput({ path: 'Assets/buffers', type: 'dir', revid: 50 }, { path: 'Assets/buffers/Box.bin', revid: 51 });
+    const ls = listings({ '/Assets': ASSETS_LISTING, '/Assets/buffers': BUFFERS_LISTING });
+    const binBeside = (revisionId: number) => ({ kind: 'repositoryPath' as const, path: '/Assets/Barrel.bin', at: 'cs:12', beside: { path: '/Assets/Barrel.gltf', revisionId } });
+
+    it('reads it where the listing has the model at its path as that revision, from the same listing', async () => {
+      const workspace = await newWorkspace();
+      const { written, answer } = catWriting('BIN');
+      const { service, commands } = content({ cat: answer, ls });
+
+      expect(new TextDecoder().decode((await service.readBytes(workspace, binBeside(43)))!)).toBe('BIN');
+      expect(commands.map(({ via, args }) => [via, args[0], args[1]])).toEqual([
+        ['query', 'ls', '/Assets'],
+        ['query', 'cat', 'revid:41@eco@local'],
+      ]);
+      expect(written).toHaveLength(1);
+    });
+
+    it("reads one in a folder below the model's by its revision in that folder's listing, the model checked in its own", async () => {
+      const workspace = await newWorkspace();
+      const { answer } = catWriting('BIN');
+      const { service, commands } = content({ cat: answer, ls });
+      const bin = { kind: 'repositoryPath' as const, path: '/Assets/buffers/Box.bin', at: 'cs:12', beside: { path: '/Assets/Barrel.gltf', revisionId: 43 } };
+
+      expect(await service.readBytes(workspace, bin)).not.toBeNull();
+      expect(commands.map(({ via, args }) => [via, args[0], args[1]])).toEqual([
+        ['query', 'ls', '/Assets'],
+        ['query', 'ls', '/Assets/buffers'],
+        ['query', 'cat', 'revid:51@eco@local'],
+      ]);
+    });
+
+    it("reads it as nothing where another item, or none, was at the model's path then (moved or renamed since, its folder gone), with no cm cat", async () => {
+      const workspace = await newWorkspace();
+      const { service, lines } = content({ ls });
+
+      expect(await service.readBytes(workspace, binBeside(7))).toBeNull();
+      expect(await service.readBytes(workspace, { ...binBeside(43), beside: { path: '/Assets/Old/Barrel.gltf', revisionId: 43 } })).toBeNull();
+      expect(lines().map((line) => line.split(' --format')[0])).toEqual(['ls /Assets --tree=cs:12', 'ls /Assets/Old --tree=cs:12']);
+    });
+
+    it("reads a .meta's model by its revision in the listing, and as no model where the .meta wasn't there then: an answer, not a failure", async () => {
+      const workspace = await newWorkspace();
+      const { answer } = catWriting('glTF');
+      const { service, lines } = content({ cat: answer, ls });
+      const model = (revisionId: number, metaFolder = 'Assets') => ({ kind: 'repositoryPath' as const, path: '/Assets/Barrel.gltf', at: 'cs:12', beside: { path: `/${metaFolder}/Barrel.gltf.meta`, revisionId } });
+
+      expect((await service.read(workspace, model(42))).text).toBe('glTF');
+      expect(await service.read(workspace, model(5))).toEqual({ text: '', isBinary: false, size: 0 });
+      expect(await service.read(workspace, model(42, 'Renamed'))).toEqual({ text: '', isBinary: false, size: 0 });
+      expect(lines().map((line) => line.split(' --f')[0])).toEqual(['ls /Assets --tree=cs:12', 'cat revid:43@eco@local', 'ls /Renamed --tree=cs:12']);
+    });
+  });
+
   it("reads a companion that isn't there as nothing, from the disk or from the tree's listing, without a failing command", async () => {
     const workspace = await newWorkspace();
     const { service, lines } = content({ ls: ASSETS_LISTING });
