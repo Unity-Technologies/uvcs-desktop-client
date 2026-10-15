@@ -301,6 +301,14 @@ describe("reading a revision the workspace's disk holds", () => {
     expect(fake.lines()).toEqual([`ls ${join(workspace, 'Prop')} --xml --symlink`]);
   });
 
+  it("asks the workspace nothing more for a revision the Files view's listing of its folder doesn't name (the one before)", async () => {
+    const { workspace, fake, service } = await filesView(PROP_LISTING, { 'Prop/Pumpkin.obj': PUMPKIN });
+
+    await service.read(workspace, revision(182));
+
+    expect(fake.lines().map((line) => line.split(' ')[0])).toEqual(['ls', 'cat']);
+  });
+
   it('downloads a revision whose file on disk was changed, even to the same size', async () => {
     const { workspace, fake, service } = await filesView(PROP_LISTING, { 'Prop/Pumpkin.obj': PUMPKIN.replace('0 0 0', '1 1 1'), 'Prop/PumpkinMaterials.mtl': `${MTL}# edited\n` });
 
