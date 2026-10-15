@@ -39,8 +39,8 @@ you touch:
      pooled `cm shell` sessions, two per working directory; a command takes the first one free, and a directory idle
      for ten minutes lets its sessions go; a workspace no window shows anymore lets them go once their commands are
      done (`WorkspaceWatchers` `onStopped`). A session takes about a second to answer its first command, so until one
-     in that directory has, the query runs as a process of its own (the first window's start before it is created:
-     `openFirstWindow`). A workspace write that may run long (`runsLong`:
+     in that directory has, the query runs as a process of its own (the first window's start as the app loads:
+     `readFirstScreenAhead`). A workspace write that may run long (`runsLong`:
      more than `MAX_QUICK_WRITE_PATHS` paths, recursive, or a transfer) runs as a process of its own too, so it never
      holds a session every read of the workspace would wait behind.
    - `execute()` for long or cancellable work (update, switch, checkin, shelve, merge, sync; the Branch Explorer's
@@ -489,7 +489,7 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
    folder (`compile-cache`), then loads the app's bundle (`main/index.ts`), which V8 then compiles from what the
    previous launch cached: 5-10 ms sooner. It works from inside app.asar (Node reads the source through Electron's
    file system and keys each entry by its path and content), and the cache is skipped when it can't be used.
-   The main module opens the settings (the first run imports the official client's, `importLegacySettings`: a few
+2. The main module opens the settings (the first run imports the official client's, `importLegacySettings`: a few
    ms), wires the services and, as it loads, before Electron is ready (`cm` needs neither that nor a window), starts
    the `cm shell`s of the workspace the first window reopens (or of the home folder, for the home screen) and that
    screen's first reads (`readFirstScreenAhead`, `readFirstScreen`): `cm version` and the workspace's info and
@@ -503,29 +503,30 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
    holding the main process (`lookForLaunchFolders`; one on a network drive that doesn't answer within
    `FOLDER_LOOKUP_MS` counts as there, and its page explains if it isn't), and on Windows `cm` is looked for where the
    installer puts it before the Path's folders, which may be on network drives (`cmCandidates`).
-2. The window is created hidden, its background the page's `--bg-app` (`WINDOW_BACKGROUND`), and names the workspace
+3. The window is created hidden, its background the page's `--bg-app` (`WINDOW_BACKGROUND`), and names the workspace
    it opens in its page's address when the folder is there (`startingWorkspaceQuery`).
-3. The page opens that workspace (`openWorkspaceFromAddress`) and asks for its first screen's data
+4. The page opens that workspace (`openWorkspaceFromAddress`) and asks for its first screen's data
    (`prefetchStartupQueries`) before its first render, and applies the theme as it renders (`useTheme`): its first
    frame is the themed workspace screen or home screen, never the home screen on the way nor a frame without colors.
    The window shows on that frame (`ready-to-show`): the first render is synchronous (`flushSync` in `main.tsx`,
    `firstRender.test.ts`), as React otherwise commits a root on a later task, after the page's first frame in most
    launches, and the window showed its background alone.
-4. `show()` holds the main process 35-55 ms (100+ when started from a terminal, which isn't the active app): what the
+5. `show()` holds the main process 35-55 ms (100+ when started from a terminal, which isn't the active app): what the
    page asks after its first paint waits behind it. That is why the page asks before rendering, and the main process
    earlier still.
-5. Nothing else gates the first screen: `cm version`'s answer (the app shows meanwhile, `CmUnavailableScreen` only on
+6. Nothing else gates the first screen: `cm version`'s answer (the app shows meanwhile, `CmUnavailableScreen` only on
    failure), the local setup check once `cm` runs (`useSetupCheck`), the workspace's server check
    (`useConnectionCheck`), the watcher once the page watches, the highlighter warm-up 1.5 s later (`main.tsx`),
    avatars when rows show them, the menu bar (built by the first window opening, then once per burst of window
    changes: `appMenuInstaller`).
 
-Reopening the last workspace on an M4 Max, started as the Dock does, median of 14 runs: Changes shows its data about
-820-840 ms after the process starts with the real `cm` on a local sandbox (930-990 before this sequence), 330-340 ms
-after the window is created (480-550); with the fake `cm` about 205-220 ms after it (255-265). What remains: Electron's
-own start to `app.whenReady` (300-400 ms, our main module about 30 of it), creating the window, loading the page
-(about 100 ms to its first render), and `cm status` as a process (300-350 ms: the workspace's shells answer only
-after about a second).
+Reopening the last workspace on an M4 Max (Electron 44), started as the Dock does, warm, median of 14 runs, in ms
+after the process starts: with the real `cm` on a local sandbox the first paint comes at about 350 and Changes shows
+its data at about 530 (386 and 620 before the compile cache, the reads before `app.whenReady`, the lazy updater and
+the synchronous first render); with the fake `cm` the first paint at about 348 (359) and the data at about 370, as the
+fake answers before the page asks. What remains: Electron's own start to `app.whenReady` (about 140), creating the
+window (about 45), loading the page (about 105 to its first render, which its scripts include), and `cm status` as a
+process (300-350: the workspace's shells answer only after about a second).
 
 Tried and dropped, so they aren't proposed again:
 - Showing the window as it is created (`show: true`): an empty frame shows 150 ms sooner, but `show()` then holds the
@@ -534,6 +535,11 @@ Tried and dropped, so they aren't proposed again:
   first render: the wait paints an empty frame, the window shows on it, and `show()` holds the answer: the first
   render came 90 ms later.
 - Minifying the renderer bundle (1.7 MB to 0.73 MB): the page's scripts ran 0-8 ms sooner, within noise.
+- Serving the renderer from a custom `app://` scheme with V8's code cache (`codeCache: true`): deserializing the
+  cache (12 ms on the page's main thread) replaced the compile Chromium streams off it, and the protocol handler cost
+  10 ms more: Changes showed its data at 375, 381 and 378 ms over `file://`, the scheme, and the scheme with the cache.
+- Preloading the Changes view's chunk before the first render: 10 ms sooner with the fake `cm` only; with the real
+  one `cm status` answers later and hides it.
 
 ## Renderer
 
