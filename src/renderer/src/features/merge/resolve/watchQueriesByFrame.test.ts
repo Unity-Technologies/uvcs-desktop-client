@@ -51,12 +51,13 @@ describe('watchQueriesByFrame', () => {
     expect(handed).toHaveLength(1);
   });
 
-  it('hands nothing over once unwatched, and asks for no frame', async () => {
+  it('hands nothing over once unwatched, neither in a frame nor after the timer, and asks for no frame', async () => {
     const { watch, frames, handed } = setup();
     const unwatch = watch();
     await answerAll();
     unwatch();
     frames.frame();
+    await vi.advanceTimersByTimeAsync(HIDDEN_HAND_OVER_MS);
     expect(handed).toHaveLength(0);
     expect(frames.animating()).toBe(false);
   });
