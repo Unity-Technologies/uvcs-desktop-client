@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { formatOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
+import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 import type { ListedTreeItem } from '../cm/treeItemsXml';
 import { contentHashOf, revisionFilesOf, WorkspaceCopies, type RevisionFile } from './WorkspaceCopies';
 
@@ -200,6 +201,34 @@ describe("WorkspaceCopies.read of a revision whose hash the reader doesn't know:
     await copies.read(workspace, asked('Prop/Pumpkin.obj', 190));
 
     expect(fake.lines()).toHaveLength(2);
+  });
+
+  describe('as the workspace changes', () => {
+    const change = (parts: Partial<WorkspaceChange>): WorkspaceChange => ({ content: true, pathsChanged: false, metadata: false, folders: [], ...parts });
+    /** Lists `Prop` (asked for a revision it doesn't hold), lets the change in, and tells whether asking again lists it again. */
+    async function listsAgainAfter(seen: WorkspaceChange): Promise<boolean> {
+      const { workspace, fake, copies } = await setUp();
+      await copies.read(workspace, asked('Prop/Pumpkin.obj', 190));
+      copies.forgetChanged(workspace, seen);
+      await copies.read(workspace, asked('Prop/Pumpkin.obj', 190));
+      return fake.lines().length === 2;
+    }
+
+    it("keeps a folder's listing while only other folders' files change (an editor writing elsewhere)", async () => {
+      expect(await listsAgainAfter(change({ folders: ['Library', 'Assets/Scenes'] }))).toBe(false);
+    });
+
+    it('lists a folder again once its own files changed', async () => {
+      expect(await listsAgainAfter(change({ folders: ['Prop'] }))).toBe(true);
+    });
+
+    it("lists every folder again once cm rewrote the workspace's state (an update, a checkin, an undo)", async () => {
+      expect(await listsAgainAfter(change({ metadata: true, folders: ['Library'] }))).toBe(true);
+    });
+
+    it("lists every folder again when the watcher couldn't tell which changed", async () => {
+      expect(await listsAgainAfter(change({ folders: null }))).toBe(true);
+    });
   });
 
   it('finds a name the reader writes composed where cm lists it decomposed (macOS)', async () => {
