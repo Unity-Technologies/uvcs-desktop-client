@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ContentSource } from '@shared/domain/content';
 import { canEditInPlace, typesIntoDiff } from './canEditInPlace';
-import { LONGEST_DRAWN_LINE } from './longLines';
+import { LONGEST_DRAWN_LINE, LONGEST_EDITED_LINE } from './longLines';
 
 const onDisk: ContentSource = { kind: 'workspaceFile', path: 'src/a.cs' };
 
@@ -34,6 +34,11 @@ describe('typesIntoDiff', () => {
   it('keeps read-only a file with a line too long to draw unwrapped, on either side: typing there froze the window', () => {
     expect(typesIntoDiff(true, ['', minified])).toBe(false);
     expect(typesIntoDiff(true, [minified, 'short\n'])).toBe(false);
+  });
+
+  it(`keeps read-only a file with a line longer than ${LONGEST_EDITED_LINE} characters: typing into it wrapped took seconds a key`, () => {
+    expect(typesIntoDiff(true, ['', 'x'.repeat(LONGEST_EDITED_LINE + 1)])).toBe(false);
+    expect(typesIntoDiff(true, ['', 'x'.repeat(LONGEST_EDITED_LINE)])).toBe(true);
   });
 
   it("keeps read-only what can't be edited in place", () => {

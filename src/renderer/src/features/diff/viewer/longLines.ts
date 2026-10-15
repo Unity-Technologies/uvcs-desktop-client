@@ -5,6 +5,9 @@
  */
 export const LONGEST_DRAWN_LINE = 1_000_000;
 
+/** The longest line, in characters, typed into in the app (`hasLineTooLongToEdit`). */
+export const LONGEST_EDITED_LINE = Infinity;
+
 const LINE_BREAK = /\r\n?|\n/g;
 
 /** Whether any of the texts has a line too long to draw unwrapped (`LONGEST_DRAWN_LINE`): the view wraps it then. */
