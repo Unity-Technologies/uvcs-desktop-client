@@ -1,8 +1,9 @@
 import type { ApiMethod } from './apiMethods';
 
 /**
- * How long an early answer waits for the page's call: a page asks within a second of its window opening, and an
- * answer older than this would be a stale read (a window closed at once, a page that asked for something else).
+ * How long an early answer waits for the page's call once its window opened (`expireUntaken`): a page asks within a
+ * second of its window opening, and an answer older than this would be a stale read (a window closed at once, a page
+ * that asked for something else).
  */
 export const EARLY_ANSWER_MS = 5000;
 
@@ -13,11 +14,12 @@ const unrefTimeout: Schedule = (drop, ms) => void setTimeout(drop, ms).unref();
 /**
  * API calls the main process makes before a window's page does (`readFirstScreen`), so their `cm` commands run while
  * the window is created and its page loads instead of after. The page's first call with the same method and arguments
- * takes the answer, in flight or done, instead of running again (`registerApi`); an answer nobody takes goes after
- * `EARLY_ANSWER_MS`.
+ * takes the answer, in flight or done, instead of running again (`registerApi`); an answer nobody takes goes
+ * `EARLY_ANSWER_MS` after the window opened (`expireUntaken`), however long Electron took to get ready before.
  */
 export class EarlyCalls {
   private readonly answers = new Map<string, Promise<unknown>>();
+  private expiring = false;
 
   constructor(
     private readonly methods: Map<string, ApiMethod>,
@@ -33,6 +35,16 @@ export class EarlyCalls {
     // A failure is the page's to see when it asks, as if it had made the call; until then it is no unhandled one.
     answer.catch(() => {});
     this.answers.set(key, answer);
+    if (this.expiring) this.expire(key, answer);
+  }
+
+  /** The window whose page takes the answers opened: each one not taken goes `EARLY_ANSWER_MS` from now. */
+  expireUntaken(): void {
+    this.expiring = true;
+    for (const [key, answer] of this.answers) this.expire(key, answer);
+  }
+
+  private expire(key: string, answer: Promise<unknown>): void {
     this.schedule(() => this.answers.get(key) === answer && this.answers.delete(key), EARLY_ANSWER_MS);
   }
 
