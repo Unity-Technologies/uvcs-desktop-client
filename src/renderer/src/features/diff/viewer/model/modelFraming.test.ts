@@ -27,6 +27,7 @@ describe('everyVersionHas', () => {
   it("doesn't wait for a version there isn't (a model added or deleted)", () => {
     expect(everyVersionHas({ before: false, after: true }, { before: null, after: 'scene' })).toBe(true);
     expect(everyVersionHas({ before: true, after: false }, { before: null, after: null })).toBe(false);
+    expect(everyVersionHas({ before: false, after: false }, { before: null, after: null })).toBe(true);
   });
 });
 

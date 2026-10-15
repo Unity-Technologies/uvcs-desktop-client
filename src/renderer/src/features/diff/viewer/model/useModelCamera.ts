@@ -13,6 +13,7 @@ const ANY_VIEW = framedView({ min: [-1, -1, -1], max: [1, 1, 1] }, 1);
  * (the panel docking beside it, the window). Framing keeps the angle the camera has, as Unity's F does. A wheel's
  * notch glides (`dollyGlide`); anything else that places the camera stops the glide where it is.
  */
+/** `bounds`: the pair's, once every version is in the renderer; null until then, when nothing frames. */
 export function useModelCamera(renderer: ModelRenderer | null, bounds: BoundsLike | null, stage: RefObject<HTMLElement | null>) {
   const view = useRef<OrbitView | null>(null);
   const framedByApp = useRef(true);
@@ -40,11 +41,13 @@ export function useModelCamera(renderer: ModelRenderer | null, bounds: BoundsLik
   );
   const frame = useCallback(
     (target: BoundsLike | null) => {
-      if (!renderer || !target) return;
+      // Nothing frames before the pair does (`bounds` null): a part picked or F then would frame for a layout that
+      // isn't the pair's yet, and the first framing would keep it.
+      if (!renderer || !target || !bounds) return;
       const current = view.current;
       setView(current ? framedView(target, renderer.paneAspect(), current.yaw, current.pitch) : framedView(target, renderer.paneAspect()));
     },
-    [renderer, setView],
+    [renderer, setView, bounds],
   );
   /** What a gesture does: the hand has the camera from then on. */
   const onGesture = useCallback(
