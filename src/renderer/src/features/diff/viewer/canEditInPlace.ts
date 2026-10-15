@@ -10,3 +10,8 @@ export function canEditInPlace(original: ContentSource, modified: ContentSource)
   if (original.kind === 'empty') return true;
   return (original.kind === 'workspaceBase' || original.kind === 'reviewSnapshot') && original.path === modified.path;
 }
+
+/** Whether a diff that can be edited in place is typed into. */
+export function typesIntoDiff(editableInPlace: boolean, texts: readonly string[]): boolean {
+  return editableInPlace;
+}
