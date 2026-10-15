@@ -20,7 +20,9 @@ export interface ChangeRow {
   /** What to frame and light up when the row is picked. */
   focus: NodeRef[];
   /** A folded run of one kind of change: a line for each. */
-  items?: { label: string; focus: NodeRef[] }[];
+  items?: { label: string; focus: NodeRef[]; take?: string }[];
+  /** The take to play when the row is picked: what changed shows only as it plays. */
+  take?: string;
 }
 
 /** From this many changes of one kind, they fold into one row. */
@@ -38,7 +40,7 @@ export function changeRows(changes: ModelChange[]): ChangeRow[] {
       rows.push(foldedRow(fold, run));
       return;
     }
-    rows.push({ id: `${change.kind}:${index}`, tone: isRisk(change) ? 'risk' : 'note', ...wordsOf(change), focus: focusOf(change) });
+    rows.push({ id: `${change.kind}:${index}`, tone: isRisk(change) ? 'risk' : 'note', ...wordsOf(change), focus: focusOf(change), ...takeOf(change) });
   });
   return rows;
 }
@@ -63,6 +65,7 @@ function foldKey(change: ModelChange): string | null {
     case 'vertexColors':
       return `${change.kind}:${change.now}`;
     case 'avatarBoneLost':
+    case 'clipKeys':
       return change.kind;
     case 'material':
       return `material:${materialFoldKey(change.change)}`;
@@ -74,7 +77,7 @@ function foldKey(change: ModelChange): string | null {
 function foldedRow(key: string, run: ModelChange[]): ChangeRow {
   const first = run[0]!;
   const count = run.length;
-  const items = run.map((change) => ({ label: itemLabel(change), focus: focusOf(change) }));
+  const items = run.map((change) => ({ label: itemLabel(change), focus: focusOf(change), ...takeOf(change) }));
   if (first.kind === 'material') {
     const words = materialFoldWords(run.flatMap((change) => (change.kind === 'material' ? [change.change] : [])));
     return { id: `fold:${key}`, tone: isRisk(first) ? 'risk' : 'note', ...words, focus: [], items };
@@ -93,6 +96,7 @@ function foldedRow(key: string, run: ModelChange[]): ChangeRow {
     skinning: `Skinning changed on ${count} meshes`,
     meshSlots: `${count} meshes use other material slots`,
     avatarBoneLost: `The Humanoid avatar lost ${count} of its bones`,
+    clipKeys: `${count} animations changed`,
     lightmapUvs: first.kind === 'lightmapUvs' && first.now ? `${count} meshes have lightmap UVs now` : `${count} meshes lost their lightmap UVs`,
     vertexColors: first.kind === 'vertexColors' && first.now ? `${count} meshes have vertex colors now` : `${count} meshes lost their vertex colors`,
   };
@@ -119,6 +123,8 @@ function itemLabel(change: ModelChange): string {
       return `${change.node.name}: ${change.before.join(', ')} → ${change.after.join(', ')}`;
     case 'avatarBoneLost':
       return `${change.humanName} → ${change.boneName}`;
+    case 'clipKeys':
+      return change.nodes.length > 0 ? `${change.name}: ${namesOf(change.nodes)}` : change.name;
     case 'material':
       return materialItemLabel(change.change);
     default:
@@ -215,6 +221,8 @@ function wordsOf(change: ModelChange): { title: string; detail?: string } {
       return { title: `New animation ${change.name}` };
     case 'clipLength':
       return { title: `Animation ${change.name}: ${seconds(change.before)} → ${seconds(change.after)}`, detail: 'Clips cut from it by frames may no longer fit.' };
+    case 'clipKeys':
+      return { title: change.nodes.length > 0 ? `Animation ${change.name} changed: ${namesOf(change.nodes)}` : `Animation ${change.name} changed` };
     case 'textures':
       return { title: texturesTitle(change.added, change.removed) };
     case 'upAxis':
@@ -256,6 +264,20 @@ function scaleSettingsTitle(before: { scaleFactor: number; convertUnits: boolean
   const units = before.convertUnits !== after.convertUnits ? `, Convert Units ${after.convertUnits ? 'on' : 'off'}` : '';
   return `Scale Factor in the import settings: ${before.scaleFactor} → ${after.scaleFactor}${units}`;
 }
+
+/** A take's row plays it. Its nodes aren't its focus: a bone's dot marks where it rests, while the take moves it. */
+function takeOf(change: ModelChange): { take?: string } {
+  return change.kind === 'clipKeys' ? { take: change.name } : {};
+}
+
+/** The first few nodes' names, and how many more: a clue of where to look, not a list. */
+function namesOf(nodes: NodeRef[]): string {
+  const named = nodes.slice(0, NAMED_NODES).map((node) => node.name);
+  const more = nodes.length - named.length;
+  return more > 0 ? `${named.join(', ')} and ${more} more` : named.join(', ');
+}
+
+const NAMED_NODES = 3;
 
 function focusOf(change: ModelChange): NodeRef[] {
   if ('node' in change) return [change.node];

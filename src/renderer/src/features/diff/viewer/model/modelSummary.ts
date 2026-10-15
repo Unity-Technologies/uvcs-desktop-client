@@ -7,6 +7,7 @@ import { Box3, Vector3 } from 'three';
 import type { ModelMesh, ModelNodeKind, ParsedModel } from './parsedModel';
 import { isSkinned, placedPositionsOf, restingPlacementOf } from './meshPlacement';
 import { unitySpaceOf, worldMatricesOf } from './modelSpaces';
+import { takeTracksOf, type TakeTrack } from './takeTracks';
 import { countUniqueVertices, fingerprintOf, NORMAL_WELD_STEP } from './uniqueVertices';
 
 export interface Bounds {
@@ -75,7 +76,8 @@ export interface MeshSummary {
 export interface ModelSummary {
   nodes: SummaryNode[];
   meshes: MeshSummary[];
-  clips: { name: string; duration: number }[];
+  /** The takes, and what each keys (`takeTracksOf`). */
+  clips: { name: string; duration: number; tracks: TakeTrack[] }[];
   textures: string[];
   unitScale: number;
   /** What the import settings scale the model by (`ParsedModel.importScale`). */
@@ -126,7 +128,7 @@ export function modelSummary(model: ParsedModel): ModelSummary {
   return {
     nodes,
     meshes,
-    clips: model.clips.map(({ name, duration }) => ({ name, duration })),
+    clips: model.clips.map((clip) => ({ name: clip.name, duration: clip.duration, tracks: takeTracksOf(clip, model, keys) })),
     textures: model.textures,
     unitScale: model.unitScale,
     importScale: model.importScale,

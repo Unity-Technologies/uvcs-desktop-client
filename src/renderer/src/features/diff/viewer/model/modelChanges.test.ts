@@ -344,6 +344,16 @@ describe('modelChanges: takes and textures', () => {
       expect(changes(run(0.3, 0.1), withoutTail)).toMatchObject([{ kind: 'clipKeys', name: 'Run', nodes: [{ name: 'Tail' }] }]);
     });
 
+    it("tells nothing of a blendshape added beside a take's blendshape keys, which keeps its weight at 0", () => {
+      const face = (shapes: string[], weights: number[][]): TestModel => ({
+        nodes: [{ name: 'Face', mesh: { blendShapes: shapes } }],
+        clips: [{ name: 'Talk', duration: 1, tracks: [{ node: 'Face', property: 'morphTargetInfluences', times: [0, 1], values: weights.flat() }] }],
+      });
+      const talking = face(['Open'], [[0], [1]]);
+      expect(changes(talking, face(['Open', 'Excited'], [[0, 0], [1, 0]]))).toMatchObject([{ kind: 'blendShapeAdded', name: 'Excited' }]);
+      expect(changes(talking, face(['Open'], [[0], [0.6]]))).toMatchObject([{ kind: 'clipKeys', name: 'Talk', nodes: [{ name: 'Face' }] }]);
+    });
+
     it('leaves a take of another length to its length, which already says it changed', () => {
       const longer = run(0.5, 0.1);
       longer.clips![0]!.duration = 1.5;

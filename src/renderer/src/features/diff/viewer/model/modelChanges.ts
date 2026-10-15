@@ -8,6 +8,7 @@
 import { Matrix4, Quaternion, Vector3 } from 'three';
 import type { ModelNodeKind } from './parsedModel';
 import type { Bounds, MeshSummary, ModelSummary, SummaryNode } from './modelSummary';
+import type { TakeTrack } from './takeTracks';
 import { matchNodes, type NodeMatching } from './nodeMatching';
 import { isMaterialRisk, type MaterialChange } from './materials/materialChanges';
 import type { NotKnownReason } from './materials/materialComparison';
@@ -58,6 +59,8 @@ export type ModelChange =
   | { kind: 'clipRemoved'; name: string }
   | { kind: 'clipAdded'; name: string }
   | { kind: 'clipLength'; name: string; before: number; after: number }
+  /** A take of the same name and length whose keys changed, and the nodes it keys differently (parents first). */
+  | { kind: 'clipKeys'; name: string; nodes: NodeRef[] }
   | { kind: 'textures'; added: string[]; removed: string[] }
   | { kind: 'upAxis'; before: string; after: string }
   /** What the model's import settings (`importSettingsChanges`) do with it now, and no longer fits it. */
@@ -133,7 +136,7 @@ export function modelChanges(before: ModelSummary, after: ModelSummary): ModelCh
     ...transforms,
     ...slotChanges(pairs),
     ...pairs.flatMap((pair) => meshChanges(pair, verticesExplained || pivotsMoved.has(pair.ref.after!))),
-    ...clipChanges(before, after),
+    ...clipChanges(before, after, matching),
     ...textureChanges(before, after),
   ];
   if (before.unitScale !== after.unitScale && !changes.some((change) => change.kind === 'resized')) {
@@ -422,8 +425,12 @@ function blendShapeChanges(before: string[], after: string[], node: NodeRef): Mo
   return [...removed.map((name): ModelChange => ({ kind: 'blendShapeRemoved', node, name })), ...added.map((name): ModelChange => ({ kind: 'blendShapeAdded', node, name }))];
 }
 
-/** Takes by name, as Unity's clips name the take they're cut from: one gone and one come of the same length is a rename. */
-function clipChanges(before: ModelSummary, after: ModelSummary): ModelChange[] {
+/**
+ * Takes by name, as Unity's clips name the take they're cut from: one gone and one come of the same length is a rename.
+ * A take of the same length whose keys changed is told with the nodes it moves differently: the viewer plays it, but
+ * only once picked, so the panel says where to look.
+ */
+function clipChanges(before: ModelSummary, after: ModelSummary, matching: NodeMatching): ModelChange[] {
   const lengths = new Map(after.clips.map((clip) => [clip.name, clip.duration]));
   const names = new Set(before.clips.map((clip) => clip.name));
   const removed = before.clips.filter((clip) => !lengths.has(clip.name));
@@ -438,7 +445,41 @@ function clipChanges(before: ModelSummary, after: ModelSummary): ModelChange[] {
     const length = lengths.get(clip.name);
     if (length !== undefined && Math.abs(length - clip.duration) > DURATION_TOLERANCE_SECONDS) changes.push({ kind: 'clipLength', name: clip.name, before: clip.duration, after: length });
   }
+  const clipsAfter = new Map(after.clips.map((clip) => [clip.name, clip]));
+  for (const clip of before.clips) {
+    const next = clipsAfter.get(clip.name);
+    if (!next || Math.abs(next.duration - clip.duration) > DURATION_TOLERANCE_SECONDS) continue;
+    const nodes = rekeyedNodes(clip.tracks, next.tracks, before, after, matching);
+    if (nodes) changes.push({ kind: 'clipKeys', name: clip.name, nodes });
+  }
   return changes;
+}
+
+/**
+ * The nodes whose tracks differ between the versions of a take (keyed differently, or only on one side), in the
+ * version after's order, each once; null when every track is the same.
+ */
+function rekeyedNodes(before: TakeTrack[], after: TakeTrack[], summaryBefore: ModelSummary, summaryAfter: ModelSummary, matching: NodeMatching): NodeRef[] | null {
+  const keysOf = (tracks: TakeTrack[]) => new Map(tracks.map((track) => [track.name, track]));
+  const [was, now] = [keysOf(before), keysOf(after)];
+  const changed = [...new Set([...was.keys(), ...now.keys()])].filter((name) => was.get(name)?.keys !== now.get(name)?.keys);
+  if (changed.length === 0) return null;
+  const indexOf = (summary: ModelSummary) => {
+    const indices = new Map(summary.nodes.map((node, i) => [node.key, i]));
+    return (track: TakeTrack | undefined): number => (track?.node == null ? -1 : (indices.get(track.node) ?? -1));
+  };
+  const [indexBefore, indexAfter] = [indexOf(summaryBefore), indexOf(summaryAfter)];
+  // Each node as an index after, or (gone since, or no longer keyed) before.
+  const sides = new Map<string, { after: number; before: number }>();
+  for (const name of changed) {
+    const keyedAfter = indexAfter(now.get(name));
+    const a = keyedAfter !== -1 ? keyedAfter : (matching.afterOf[indexBefore(was.get(name))] ?? -1);
+    const b = a === -1 ? indexBefore(was.get(name)) : matching.beforeOf[a]!;
+    if (a !== -1 || b !== -1) sides.set(`${a}:${b}`, { after: a, before: b });
+  }
+  return [...sides.values()]
+    .sort((x, y) => (x.after === -1 ? Infinity : x.after) - (y.after === -1 ? Infinity : y.after) || x.before - y.before)
+    .map(({ after, before }) => refOf(summaryAfter.nodes[after], summaryBefore.nodes[before]));
 }
 
 function textureChanges(before: ModelSummary, after: ModelSummary): ModelChange[] {
