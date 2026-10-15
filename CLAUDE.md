@@ -309,8 +309,10 @@ them on the server, and reading shell command lines cost more to keep right than
 5. **Apply the review**: fix every must-fix and what's worth it among the rest, in new commits; re-run step 3. If the
    fixes went beyond small, review again. A finding you decline gets one line of why in the pull request.
 6. **Open the pull request**: `git push -u origin <branch>`, then `gh pr create` with the template filled in
-   (`.github/pull_request_template.md`): what the user can now do, how it was checked, what the review found and what
-   changed for it, the docs. The title says what the user can now do, like a commit message.
+   (`.github/pull_request_template.md`): the behaviour before and after, how it was implemented (the approach, the
+   pieces named, the `cm` commands, the alternatives dropped), behaviour changes beyond the goal, how it was checked,
+   what the review found and what changed for it, the docs. The title says what the user can now do, like a commit
+   message.
 7. **Stop there**, and report the pull request's link to the user, with what to try in the app for anything visible.
    A person approves and merges it: don't approve or merge it yourself. Comments on the pull request are answered
    with new commits on the same branch, never a force push.
