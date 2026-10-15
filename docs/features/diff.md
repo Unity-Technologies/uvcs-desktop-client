@@ -120,8 +120,9 @@ below one by one (a click within 150 ms of the last is the rest of a double clic
 hidden until typing pauses. The diff's focus ring is for the keyboard only (`usePointerFocusMark`: clicks mark what
 they focus, since Chromium shows `:focus-visible` once any key, even Shift, is pressed). The new text is computed in
 the renderer (`discardLines`). Without unsaved edits it's shown at once and written, and each file keeps an undo
-stack for the session (⌘Z in the diff); with some, it's one more edit in the editor, unsaved, and ⌘Z takes it back
-like typing (`diffDiscards`).
+stack for the session, kept through a visit to another workspace (⌘Z in the diff: `DiscardHistory`; past
+`MAX_DISCARD_HISTORY_CHARS` of text the oldest of any file go, as each keeps the whole file before and after); with
+some, it's one more edit in the editor, unsaved, and ⌘Z takes it back like typing (`diffDiscards`).
 
 ## Moving through changes
 
@@ -285,6 +286,14 @@ Why one highlighting worker. Measured on a task branch of a large production rep
   highlights again the texts on screen (`setRenderOptions`).
 - The rest is garbage between collections (the page's heap reaches about 95 MB for 25 used; Pierre's structured
   clones of highlighted lines, Myers diffs, Shiki on the main thread): the renderer goes back to about 130 MB once idle.
+- **What stays once a diff is gone**: Differences keeps the pair it compared (both images and their differences, 5
+  bytes a pixel: 36 MB for 3000 x 2400) in the image diff worker, so a new tolerance only renders the heatmap again;
+  the pair goes as its viewer unmounts (`forgetComparedImages`). The bitmaps cross to the worker copied, not
+  transferred: `rasterize` keeps them for the pixel inspector. A window that leaves a workspace forgets the contents
+  its diffs read, revisions and its own files alike (`forgetWorkspace`, ARCHITECTURE.md "Windows"). Measured on a
+  changeset of big texts and 2400 x 2400 images, each in Differences: leaving the diff took the worker's buffers from
+  30 MB to none, and switching the window to another workspace its query cache from 181 MB to none and the
+  renderer's footprint from about 600 MB to 394.
 
 What a diff read stays after it goes off screen: a revision's content is immutable, kept an hour after its last use
 (`REVISION_CACHE_MS`), and of those the last 100 (`MAX_UNUSED_IMMUTABLE`) holding at most 256 MB of files

@@ -5,7 +5,7 @@ import type { CommandLogEntry } from '@shared/events';
 import { CmClient, OPENING_SHOW_MS, type CmRunners } from './CmClient';
 import { CmShellPool } from './CmShellPool';
 import { CmError } from './CmError';
-import { MAX_LOGGED_COMMAND_LINE } from './clipForLog';
+import { MAX_LOGGED_COMMAND_LINE } from '@shared/clipForLog';
 import type { CmResult } from './CmResult';
 import { CmOutputTooLargeError } from './outputLimit';
 import { MAX_QUICK_WRITE_PATHS } from './longCommands';

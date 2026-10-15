@@ -9,7 +9,8 @@
 import { BRANCH_TREE_LIFE_MS } from '@shared/domain/unityAssets';
 import type { CmClient } from '../cm/CmClient';
 import { isNotInTreeError } from '../cm/missingItem';
-import { parseTreeListing, treeListingArgs } from '../cm/treeListing';
+import { OwnCopies, ownCopy } from '../cm/ownCopy';
+import { parseTreeListing, treeListingArgs, type ListedItem } from '../cm/treeListing';
 import type { RevisionFile } from '../files/WorkspaceCopies';
 import type { ProjectAssetIndex } from './ProjectAssetIndex';
 import { RepositoryAssetTree } from './RepositoryAssetTree';
@@ -36,6 +37,8 @@ interface RepositoryTreesOptions {
 export class RepositoryTrees {
   /** By workspace and point, the latest used last. */
   private readonly trees = new Map<string, KeptTree>();
+  /** The repository specs the listings name, one copy each (`ownItems`). */
+  private readonly repositories = new OwnCopies();
   private readonly cm: Pick<CmClient, 'query' | 'execute'>;
   private readonly downloads: Pick<RevisionDownloads, 'read'>;
   private readonly platform: NodeJS.Platform;
@@ -63,7 +66,10 @@ export class RepositoryTrees {
       list: (folder: string, recursive: boolean) => {
         const args = treeListingArgs(folder, at, recursive);
         const listed = recursive ? this.cm.execute(args, { cwd: workspacePath }) : this.cm.query(args, { cwd: workspacePath });
-        return listed.then(parseTreeListing, (error: unknown) => (isNotInTreeError(error) ? null : Promise.reject(error)));
+        return listed.then(
+          (output) => this.ownItems(parseTreeListing(output)),
+          (error: unknown) => (isNotInTreeError(error) ? null : Promise.reject(error)),
+        );
       },
       read: (file: Parameters<RevisionDownloads['read']>[1], mayDownload: () => boolean) => this.downloads.read(workspacePath, file, mayDownload),
     };
@@ -74,6 +80,19 @@ export class RepositoryTrees {
       this.trees.delete(oldest);
     }
     return fresh;
+  }
+
+  /**
+   * The items as strings of their own (`ownCopy`): a kept tree keeps its listings, whose items are otherwise slices of
+   * the whole output, a whole project's listing kept for a few names.
+   */
+  private ownItems(items: ListedItem[]): ListedItem[] {
+    return items.map(({ path, revision, hash, ...rest }) => ({
+      ...rest,
+      path: ownCopy(path),
+      revision: { revisionId: revision.revisionId, repository: this.repositories.of(revision.repository) },
+      hash: ownCopy(hash),
+    }));
   }
 
   /**

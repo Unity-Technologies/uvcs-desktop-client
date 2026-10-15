@@ -38,6 +38,8 @@ export interface ServiceContext {
   /** The repository's trees at the points a model viewer reads, listed once each and shared (`RepositoryTrees`). */
   repositoryTrees: RepositoryTrees;
   updates: AppUpdates;
+  /** Branch names by object id, kept while a window shows the workspace (`BranchNamesCache`). */
+  branchNames: BranchNamesCache;
 }
 
 /**

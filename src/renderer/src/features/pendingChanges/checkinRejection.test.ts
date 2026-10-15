@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
+import { clipForLog, MAX_LOGGED_OUTPUT } from '@shared/clipForLog';
 import type { FailedCommand } from '@shared/ipc';
 import { checkinRejection, overlappingPaths } from './checkinRejection';
 
@@ -25,6 +26,11 @@ const entry = (status: DiffEntry['status'], path: string, extra: Partial<DiffEnt
 describe('checkinRejection', () => {
   it('reads where the workspace is and where the branch moved', () => {
     expect(checkinRejection(failed(MERGE_NEEDED_OUTPUT))).toEqual({ headChangeset: 43, loadedChangeset: 41 });
+  });
+
+  it('reads it after thousands of progress lines, clipped as the window gets it (`registerApi`)', () => {
+    const progress = Array.from({ length: 5_000 }, (_, i) => `STAGE Uploading Assets/Textures/texture_${i}.png`).join('\n');
+    expect(checkinRejection(failed(clipForLog(`${progress}\n${MERGE_NEEDED_OUTPUT}`, MAX_LOGGED_OUTPUT, 'ends')))).toEqual({ headChangeset: 43, loadedChangeset: 41 });
   });
 
   it('understands the plain output too', () => {

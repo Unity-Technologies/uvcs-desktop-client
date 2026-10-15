@@ -10,4 +10,9 @@ describe('clipForLog', () => {
     expect(clipForLog('cm undo a b c', 7)).toBe('cm undo… 6 more characters');
     expect(clipForLog(`cm undo ${'x'.repeat(20_000)}`, 8)).toBe('cm undo … 20,000 more characters');
   });
+
+  it('keeps both ends of an output, where cm prints what went wrong last', () => {
+    expect(clipForLog('Downloading a\nDownloading b\nError: locked', 12, 'ends')).toBe('Downlo… 29 more characters …locked');
+    expect(clipForLog('Error: locked', 13, 'ends')).toBe('Error: locked');
+  });
 });

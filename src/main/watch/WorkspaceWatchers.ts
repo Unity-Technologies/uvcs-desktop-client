@@ -14,10 +14,10 @@ export interface Watcher {
   stop(): void;
 }
 
-type CreateWatcher = (workspacePath: string, onChanged: (change: WorkspaceChange) => void, onBroken: () => void) => Watcher;
+export type CreateWatcher = (workspacePath: string, onChanged: (change: WorkspaceChange) => void, onBroken: () => void) => Watcher;
 
 /** What the registry tells about the workspaces it watches, and to which windows (viewers). */
-interface WatchersListener {
+export interface WatchersListener {
   changed(viewers: number[], workspacePath: string, change: WorkspaceChange): void;
   /** The workspace's watch broke: it sees only part of the changes from now on. */
   broken(viewers: number[], workspacePath: string): void;

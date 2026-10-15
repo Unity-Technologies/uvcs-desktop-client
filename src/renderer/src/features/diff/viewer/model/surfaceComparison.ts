@@ -25,6 +25,8 @@ export interface SurfaceComparison {
   size: number;
   /** The distance a vertex with nothing near is told as. */
   maxDistance: number;
+  /** The farthest any vertex of either version is from the other: measured with them, as no tolerance changes it. */
+  farthest: number;
 }
 
 /** What is far from everything is told as this share of the model. */
@@ -43,24 +45,31 @@ export function compareSurfaces(before: PlacedMeshes, after: PlacedMeshes): Surf
   // Built once per side, for all the other side's meshes: see `MeasurableSurface`.
   const surfaceBefore = MeasurableSurface.of({ positions: trianglesOf(before) });
   const surfaceAfter = MeasurableSurface.of({ positions: trianglesOf(after) });
-  return {
-    before: before.meshes.map((mesh) => surfaceDistances(mesh.positions, surfaceAfter, { maxDistance })),
-    after: after.meshes.map((mesh) => surfaceDistances(mesh.positions, surfaceBefore, { maxDistance })),
-    size,
-    maxDistance,
-  };
+  const distancesBefore = before.meshes.map((mesh) => surfaceDistances(mesh.positions, surfaceAfter, { maxDistance }));
+  const distancesAfter = after.meshes.map((mesh) => surfaceDistances(mesh.positions, surfaceBefore, { maxDistance }));
+  return { before: distancesBefore, after: distancesAfter, size, maxDistance, farthest: farthestOf([...distancesBefore, ...distancesAfter]) };
 }
 
 /** How much of each version moved past the tolerance (shares of their vertices), and the farthest any moved. */
 export function changeShares(comparison: SurfaceComparison, tolerance: number): { moved: number; gone: number; farthest: number } {
   const within = Math.fround(tolerance);
+  // Counted, not filtered: a filtered copy of millions of distances held the window at each step of the slider.
   const share = (meshes: Float32Array[]): number => {
-    const total = meshes.reduce((sum, mesh) => sum + mesh.length, 0);
-    const beyond = meshes.reduce((sum, mesh) => sum + mesh.filter((distance) => distance > within).length, 0);
+    let total = 0;
+    let beyond = 0;
+    for (const mesh of meshes) {
+      total += mesh.length;
+      for (let v = 0; v < mesh.length; v++) if (mesh[v]! > within) beyond++;
+    }
     return total === 0 ? 0 : beyond / total;
   };
-  const farthest = Math.max(0, ...[...comparison.before, ...comparison.after].map((mesh) => mesh.reduce((max, distance) => Math.max(max, distance), 0)));
-  return { moved: share(comparison.after), gone: share(comparison.before), farthest };
+  return { moved: share(comparison.after), gone: share(comparison.before), farthest: comparison.farthest };
+}
+
+function farthestOf(meshes: Float32Array[]): number {
+  let farthest = 0;
+  for (const mesh of meshes) for (let v = 0; v < mesh.length; v++) farthest = Math.max(farthest, mesh[v]!);
+  return farthest;
 }
 
 /** Every mesh's triangles, 9 floats each. */

@@ -164,7 +164,7 @@ quality: **if the tests pass, the app works as specified**. Test what matters, n
 - **Specs**: a rule written in `docs/` deserves a test that enforces it; a rule for the whole repository becomes a
   static test ("Rules the tests enforce" below). A bug fix starts with a test that fails without it.
 
-**Don't test** what the type checker already proves, pass-through code, the libraries' own behaviour (React, TanStack
+**Don't test** what the type checker already proves, pass-through code, the libraries' own behavior (React, TanStack
 Query, Pierre), or implementation details (private helpers, call order nobody relies on). A test should fail only
 when something a user or another layer relies on changes; one that breaks on every refactor is noise.
 
@@ -309,8 +309,10 @@ them on the server, and reading shell command lines cost more to keep right than
 5. **Apply the review**: fix every must-fix and what's worth it among the rest, in new commits; re-run step 3. If the
    fixes went beyond small, review again. A finding you decline gets one line of why in the pull request.
 6. **Open the pull request**: `git push -u origin <branch>`, then `gh pr create` with the template filled in
-   (`.github/pull_request_template.md`): what the user can now do, how it was checked, what the review found and what
-   changed for it, the docs. The title says what the user can now do, like a commit message.
+   (`.github/pull_request_template.md`): the behavior before and after, how it was implemented (the approach, the
+   pieces named, the `cm` commands, the alternatives dropped), behavior changes beyond the goal, how it was checked,
+   what the review found and what changed for it, the docs. The title says what the user can now do, like a commit
+   message.
 7. **Stop there**, and report the pull request's link to the user, with what to try in the app for anything visible.
    A person approves and merges it: don't approve or merge it yourself. Comments on the pull request are answered
    with new commits on the same branch, never a force push.
@@ -322,7 +324,7 @@ merge it (docs/features/updates.md "CI"). Once the user says it merged, remove i
 
 ## Docs
 
-- `docs/` describes how the app works **now**, never its history. A change that alters behaviour, a `cm` quirk or a
+- `docs/` describes how the app works **now**, never its history. A change that alters behavior, a `cm` quirk or a
   convention updates the relevant doc in the same commit.
 - Rules every change must respect go in `docs/ARCHITECTURE.md`; one area's rules go in its `docs/features/*.md`
   (create one when a new area has rules the code can't show, and list it at the top of ARCHITECTURE.md). Name the

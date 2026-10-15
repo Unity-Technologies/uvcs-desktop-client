@@ -1,11 +1,12 @@
 // The Differences mode's client of the image diff worker. One worker for the app's life outlives mode switches and
-// files, so coming back to Differences, or moving the tolerance, is a quick render against the pair it keeps. When
-// the worker can't start or dies mid-flight, the same passes run on the main thread: slower, never wrong.
+// files, so coming back to Differences, or moving the tolerance, is a quick render against the pair it keeps, until
+// the pair's viewer goes (`forgetComparedImages`). When the worker can't start or dies mid-flight, the same passes run
+// on the main thread: slower, never wrong.
 
 import type { ChangedRegion } from './changedRegions';
 import { heatmapPasses, type RenderedHeatmap } from './heatmapPasses';
 import type { AnchorMode } from './composedFrame';
-import type { BitmapPayload, DiffWorkerRequest, DiffWorkerResponse, HeatmapPayload } from './imageDiff.worker';
+import type { BitmapPayload, DiffWorkerMessage, DiffWorkerRequest, DiffWorkerResponse, HeatmapPayload } from './imageDiff.worker';
 import type { RgbaBitmap } from './pixelComparison';
 
 /** A heatmap ready to paint, and the changed regions to step through, at one tolerance. */
@@ -44,6 +45,16 @@ export async function rerenderHeatmap(key: string, tolerance: number): Promise<H
   }
   const response = await ask(imageWorker, { id: ++lastRequestId, kind: 'rerender', key, tolerance });
   return response?.kind === 'rendered' ? toHeatmap(response) : null;
+}
+
+/**
+ * Lets the pair compared last go, in the worker and on the main thread: its viewer is gone. Kept, it would hold 5
+ * bytes a pixel (both images and their differences) until another pair is compared, maybe never. Whatever pair it
+ * is: one the viewer was still comparing as it went is the worker's last too, as the worker answers in order.
+ */
+export function forgetComparedImages(): void {
+  worker?.postMessage({ kind: 'forget' } satisfies DiffWorkerMessage);
+  mainThreadPasses.forget();
 }
 
 function startedWorker(): Worker | null {

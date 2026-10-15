@@ -5,25 +5,54 @@ export interface Discard {
 }
 
 /**
- * The discards made to each file in this session, newest last, so they can be undone one after another. Kept per
- * workspace file, whatever diff they were made in.
+ * The characters of text the undo history keeps, both texts of every discard (about twice as many bytes): a few
+ * discards in big files, many in small ones.
  */
-const history = new Map<string, Discard[]>();
+export const MAX_DISCARD_HISTORY_CHARS = 8_000_000;
+
+interface Recorded {
+  key: string;
+  discard: Discard;
+}
+
+/**
+ * The discards made to each workspace file in this window, so they can be undone one after another (newest first),
+ * whatever diff they were made in. Each keeps the whole file's text before and after: past `maxChars` the oldest of
+ * any file go, never the newest. They outlive a visit to another workspace: ⌘Z still undoes them on return.
+ */
+export class DiscardHistory {
+  /** Every file's discards, oldest first. */
+  private recorded: Recorded[] = [];
+  private chars = 0;
+
+  constructor(private readonly maxChars = MAX_DISCARD_HISTORY_CHARS) {}
+
+  record(workspacePath: string, path: string, discard: Discard): void {
+    this.recorded.push({ key: keyOf(workspacePath, path), discard });
+    this.chars += charsOf(discard);
+    while (this.chars > this.maxChars && this.recorded.length > 1) {
+      const [oldest] = this.recorded.splice(0, 1);
+      this.chars -= charsOf(oldest.discard);
+    }
+  }
+
+  /** The file's newest discard still kept. */
+  last(workspacePath: string, path: string): Discard | undefined {
+    const key = keyOf(workspacePath, path);
+    return this.recorded.findLast((entry) => entry.key === key)?.discard;
+  }
+
+  /** The discard was undone. */
+  forget(workspacePath: string, path: string, discard: Discard): void {
+    const key = keyOf(workspacePath, path);
+    this.recorded = this.recorded.filter((entry) => entry.key !== key || entry.discard !== discard);
+    this.chars = this.recorded.reduce((total, entry) => total + charsOf(entry.discard), 0);
+  }
+}
+
+/** This window's discards. */
+export const discardHistory = new DiscardHistory();
 
 const keyOf = (workspacePath: string, path: string): string => `${workspacePath}\0${path}`;
 
-export function recordDiscard(workspacePath: string, path: string, discard: Discard): void {
-  const key = keyOf(workspacePath, path);
-  history.set(key, [...(history.get(key) ?? []), discard]);
-}
-
-export function lastDiscard(workspacePath: string, path: string): Discard | undefined {
-  return history.get(keyOf(workspacePath, path))?.at(-1);
-}
-
-export function forgetDiscard(workspacePath: string, path: string, discard: Discard): void {
-  const key = keyOf(workspacePath, path);
-  const left = (history.get(key) ?? []).filter((entry) => entry !== discard);
-  if (left.length > 0) history.set(key, left);
-  else history.delete(key);
-}
+const charsOf = ({ before, after }: Discard): number => before.length + after.length;

@@ -25,6 +25,7 @@ import { SetupProblemScreen } from './startup/SetupProblemScreen';
 import { useCmAvailability, useSetupCheck } from './startup/useCmAvailability';
 import { UpdateCard } from './updates/UpdateCard';
 import { loadUpdateStatus } from './updates/updateStore';
+import { useForgetLeftWorkspace } from './workspace/leftWorkspace';
 import { useSession } from './workspace/sessionStore';
 import { useRequestedWorkspace } from './workspace/useRequestedWorkspace';
 import { WorkspaceGate } from './workspace/WorkspaceGate';
@@ -60,6 +61,7 @@ function Root() {
   useRequestedWorkspace();
   useEffect(() => void loadUpdateStatus(), []);
   const workspacePath = useSession((state) => state.workspacePath);
+  useForgetLeftWorkspace(workspacePath);
   const cm = useCmAvailability();
   const setup = useSetupCheck(cm.isSuccess);
 
