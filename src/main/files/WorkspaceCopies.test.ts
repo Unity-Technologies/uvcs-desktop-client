@@ -133,11 +133,27 @@ describe("WorkspaceCopies.read of a revision whose hash the reader doesn't know:
     expect(fake.commands.map(({ via, args }) => [via, args[0], args[1]])).toEqual([['query', 'ls', join(workspace, 'Prop')]]);
   });
 
-  it('matches the repository by its name, however its server is spelled (a cloud repository has two spellings)', async () => {
+  it('matches a cloud repository by its name, however its server is spelled (cm spells a cloud server two ways)', async () => {
     const { workspace, copies } = await setUp();
 
     expect(await copies.read(workspace, asked('Prop/Pumpkin.obj', 186, '3dtest/models@MyOrg@unity'))).not.toBeNull();
     expect(await copies.read(workspace, asked('Prop/Pumpkin.obj', 186, '3dtest/models@1375488836673@cloud'))).not.toBeNull();
+  });
+
+  it("never takes a same-named repository of another server for the workspace's: its revision ids are its own", async () => {
+    const onServerA = formatOutput(['Prop/Pumpkin.obj', 'txt', 186, hashOf(OBJ), OBJ.length, 'rep:game@serverA:8087']);
+    const { workspace, copies } = await setUp(onServerA);
+
+    expect(await copies.read(workspace, asked('Prop/Pumpkin.obj', 186, 'game@serverB:8087'))).toBeNull();
+    expect(await copies.read(workspace, asked('Prop/Pumpkin.obj', 186, 'game@serverA:8087'))).not.toBeNull();
+  });
+
+  it("never takes a revision a listing named in a same-named repository of another server", async () => {
+    const workspace = await workspaceWith({ 'Prop/Pumpkin.obj': OBJ });
+    const copies = new WorkspaceCopies();
+    copies.remember(workspace, [{ path: 'Prop/Pumpkin.obj', revision: { revisionId: 186, repository: 'game@serverA:8087' }, hash: hashOf(OBJ), size: OBJ.length }]);
+
+    expect(await copies.read(workspace, asked('Prop/Pumpkin.obj', 186, 'game@serverB:8087'))).toBeNull();
   });
 
   it("reads nothing where the workspace holds another revision, another repository's (an xlink's), or a changed file", async () => {
