@@ -120,9 +120,9 @@ below one by one (a click within 150 ms of the last is the rest of a double clic
 hidden until typing pauses. The diff's focus ring is for the keyboard only (`usePointerFocusMark`: clicks mark what
 they focus, since Chromium shows `:focus-visible` once any key, even Shift, is pressed). The new text is computed in
 the renderer (`discardLines`). Without unsaved edits it's shown at once and written, and each file keeps an undo
-stack while the window shows its workspace (⌘Z in the diff: `DiscardHistory`, the oldest of any file let go past
-`MAX_DISCARD_HISTORY_CHARS` of text, as each keeps the whole file before and after); with some, it's one more edit in the editor, unsaved, and ⌘Z takes it back
-like typing (`diffDiscards`).
+stack for the session, kept through a visit to another workspace (⌘Z in the diff: `DiscardHistory`; past
+`MAX_DISCARD_HISTORY_CHARS` of text the oldest of any file go, as each keeps the whole file before and after); with
+some, it's one more edit in the editor, unsaved, and ⌘Z takes it back like typing (`diffDiscards`).
 
 ## Moving through changes
 

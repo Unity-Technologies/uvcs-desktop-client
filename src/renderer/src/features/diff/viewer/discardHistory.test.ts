@@ -52,16 +52,4 @@ describe('DiscardHistory', () => {
     history.record('/wk', 'z.cs', huge);
     expect([history.last('/wk', 'y.cs'), history.last('/wk', 'z.cs')]).toEqual([undefined, huge]);
   });
-
-  it("forgets a workspace's discards once the window leaves it, keeping the other workspaces'", () => {
-    const history = new DiscardHistory();
-    const left = { before: 'a', after: 'b' };
-    const kept = { before: 'c', after: 'd' };
-    history.record('/wk/game', 'x.cs', left);
-    history.record('/wk/tools', 'x.cs', kept);
-
-    history.forgetWorkspace('/wk/game');
-
-    expect([history.last('/wk/game', 'x.cs'), history.last('/wk/tools', 'x.cs')]).toEqual([undefined, kept]);
-  });
 });

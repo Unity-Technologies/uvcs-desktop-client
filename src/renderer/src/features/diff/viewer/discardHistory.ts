@@ -12,14 +12,13 @@ export const MAX_DISCARD_HISTORY_CHARS = 8_000_000;
 
 interface Recorded {
   key: string;
-  workspacePath: string;
   discard: Discard;
 }
 
 /**
  * The discards made to each workspace file in this window, so they can be undone one after another (newest first),
  * whatever diff they were made in. Each keeps the whole file's text before and after: past `maxChars` the oldest of
- * any file go, never the newest; a workspace the window leaves takes its own with it (`forgetWorkspace`).
+ * any file go, never the newest. They outlive a visit to another workspace: ⌘Z still undoes them on return.
  */
 export class DiscardHistory {
   /** Every file's discards, oldest first. */
@@ -29,7 +28,7 @@ export class DiscardHistory {
   constructor(private readonly maxChars = MAX_DISCARD_HISTORY_CHARS) {}
 
   record(workspacePath: string, path: string, discard: Discard): void {
-    this.recorded.push({ key: keyOf(workspacePath, path), workspacePath, discard });
+    this.recorded.push({ key: keyOf(workspacePath, path), discard });
     this.chars += charsOf(discard);
     while (this.chars > this.maxChars && this.recorded.length > 1) {
       const [oldest] = this.recorded.splice(0, 1);
@@ -46,16 +45,8 @@ export class DiscardHistory {
   /** The discard was undone. */
   forget(workspacePath: string, path: string, discard: Discard): void {
     const key = keyOf(workspacePath, path);
-    this.keepOnly((entry) => entry.key !== key || entry.discard !== discard);
-  }
-
-  forgetWorkspace(workspacePath: string): void {
-    this.keepOnly((entry) => entry.workspacePath !== workspacePath);
-  }
-
-  private keepOnly(kept: (entry: Recorded) => boolean): void {
-    this.recorded = this.recorded.filter(kept);
-    this.chars = this.recorded.reduce((total, { discard }) => total + charsOf(discard), 0);
+    this.recorded = this.recorded.filter((entry) => entry.key !== key || entry.discard !== discard);
+    this.chars = this.recorded.reduce((total, entry) => total + charsOf(entry.discard), 0);
   }
 }
 
