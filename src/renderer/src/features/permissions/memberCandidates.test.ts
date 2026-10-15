@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { memberCandidates } from './memberCandidates';
+import { matchingCandidates, memberCandidates } from './memberCandidates';
 
 describe('memberCandidates', () => {
-  const sources = { users: ['zoe@corp.com', 'ana@corp.com'], groups: ['Web Devs', 'Admins'], specials: true, listed: new Set(['Admins']), search: '' };
+  const sources = { users: ['zoe@corp.com', 'ana@corp.com'], groups: ['Web Devs', 'Admins'], specials: true, listed: new Set(['Admins']) };
 
   it('offers the special entries, then groups, then users, by name, telling those already listed', () => {
     expect(memberCandidates(sources).map((candidate) => [candidate.label, candidate.member.kind, candidate.listed])).toEqual([
@@ -16,8 +16,10 @@ describe('memberCandidates', () => {
   });
 
   it('finds them by the words typed, in any order', () => {
-    expect(memberCandidates({ ...sources, search: 'devs web' }).map((candidate) => candidate.label)).toEqual(['Web Devs']);
-    expect(memberCandidates({ ...sources, search: 'all' }).map((candidate) => candidate.member.name)).toEqual(['ALL USERS']);
+    const candidates = memberCandidates(sources);
+    expect(matchingCandidates(candidates, 'devs web').map((candidate) => candidate.label)).toEqual(['Web Devs']);
+    expect(matchingCandidates(candidates, 'all').map((candidate) => candidate.member.name)).toEqual(['ALL USERS']);
+    expect(matchingCandidates(candidates, '')).toEqual(candidates);
   });
 
   it('leaves the special entries out where only a real user or group fits', () => {
