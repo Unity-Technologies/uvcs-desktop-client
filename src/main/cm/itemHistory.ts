@@ -2,6 +2,7 @@ import type { ItemHistory, ItemPathChange, ItemRevision } from '@shared/domain/h
 import type { ItemType } from '@shared/domain/pendingChanges';
 import type { RevisionRef } from '@shared/domain/revision';
 import { repositorySpec, spec } from '@shared/domain/specs';
+import type { RevisionFile } from '../files/WorkspaceCopies';
 import { toAbsolutePath } from '../files/workspacePaths';
 import { parseRecords, recordFormat } from './formatRecords';
 import { child, children, integer, parseXml, text, type XmlNode } from './parseXml';
@@ -46,14 +47,20 @@ export function itemRevisionsArgs(records: XmlNode[]): string[] | null {
   ];
 }
 
-/** The revision of the item the workspace has (`cm ls` reads the workspace, not the server): the item itself comes first. */
+/**
+ * The revision of the item the workspace has (`cm ls` reads the workspace, not the server), with the size and hash
+ * it was loaded with, which tell whether the disk still holds it (`WorkspaceCopies`): the item itself comes first.
+ */
 export function workspaceRevisionArgs(absolutePath: string): string[] {
-  return onLinksThemselves('ls', absolutePath, '--format={revid}');
+  return onLinksThemselves('ls', absolutePath, `--format=${recordFormat(['revid', 'hash', 'size', 'repspec'])}`);
 }
 
-export function parseWorkspaceRevision(output: string): number | undefined {
-  const revisionId = Number.parseInt(output.trim().split('\n')[0] ?? '', 10);
-  return Number.isNaN(revisionId) || revisionId < 0 ? undefined : revisionId;
+/** The item's loaded revision at its workspace-relative `path`; none for a checkout (`-1`) or an item not loaded. */
+export function parseWorkspaceRevision(output: string, path: string): RevisionFile | undefined {
+  const [revid = '', hash = '', size = '', repository = ''] = parseRecords(output)[0] ?? [];
+  const revisionId = Number.parseInt(revid, 10);
+  if (Number.isNaN(revisionId) || revisionId < 0) return undefined;
+  return { path, revision: { revisionId, repository: repository.replace(/^rep:/, '') }, hash: hash || null, size: Number(size) || 0 };
 }
 
 /** Combines the history's records with the revisions `itemRevisionsArgs` found, each list newest first. */

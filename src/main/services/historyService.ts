@@ -13,17 +13,20 @@ import { toAbsolutePath } from '../files/workspacePaths';
 import { revisionFiles } from './revisionFiles';
 import type { AppsContext, ServiceContext } from './ServiceContext';
 
-export function createHistoryService({ cm }: ServiceContext, { apps }: Pick<AppsContext, 'apps'>): HistoryApi {
+export function createHistoryService({ cm, workspaceCopies }: ServiceContext, { apps }: Pick<AppsContext, 'apps'>): HistoryApi {
   const revisions = revisionFiles(cm, (path, editorId) => apps.openInEditor(path, editorId));
 
   /**
    * Which revision of the file the workspace has, read from the workspace itself; none when history starts from a
-   * revision (the workspace may not have its item), or when the workspace can't tell.
+   * revision (the workspace may not have its item), or when the workspace can't tell. Remembered, so its diff reads
+   * it from the disk while the file there is still that revision (`WorkspaceCopies`).
    */
   async function readWorkspaceRevision(workspacePath: string, path: string, revision: RevisionRef | undefined): Promise<number | undefined> {
     if (revision !== undefined) return undefined;
     const args = workspaceRevisionArgs(toAbsolutePath(workspacePath, path));
-    return cm.query(args, { cwd: workspacePath }).then(parseWorkspaceRevision, () => undefined);
+    const loaded = await cm.query(args, { cwd: workspacePath }).then((output) => parseWorkspaceRevision(output, path), () => undefined);
+    if (loaded) workspaceCopies.remember(workspacePath, [loaded]);
+    return loaded?.revision.revisionId;
   }
 
   return {
