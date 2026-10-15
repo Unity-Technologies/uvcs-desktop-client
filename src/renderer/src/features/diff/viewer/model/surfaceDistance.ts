@@ -1,13 +1,15 @@
 // How far each vertex of one surface is from another surface: the Differences mode's measure, the 3D twin of the
 // image diff's pixel difference. Each triangle is measured exactly (closest point on a triangle, Ericson, Real-Time
 // Collision Detection 5.1.5), so a re-meshed surface that kept its shape measures 0, which a nearest-vertex distance
-// would not. Two things keep it fast on a real model, whose triangles crowd where the detail is:
+// would not. Three things keep it fast on a real model, whose triangles crowd where the detail is:
 //
 // - A vertex found exactly at a vertex of the other surface (to `SAME_POINT_STEP`) is at 0 without a search: most of a
 //   model is unchanged between versions. And each point is measured once: a file repeats a corner per polygon.
 // - The other surface's triangles go in a bounding volume hierarchy (`buildHierarchy`), searched nearest box first,
 //   skipping every box farther than the nearest triangle found. A uniform grid was tried first and dropped: a dense
 //   fuselage beside an empty helipad put thousands of triangles in a cell (3.3 s for 38k vertices).
+// - The corners and the hierarchy are built once per surface (`MeasurableSurface`) and searched for every mesh
+//   measured against it: built per mesh, a scene of thousands of meshes read the whole other surface thousands of times.
 //
 // Pure and allocation-light: it runs in the model worker over millions of vertices.
 
