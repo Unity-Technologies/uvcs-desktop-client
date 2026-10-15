@@ -8,11 +8,8 @@ const placed = (nodes: TestNode[], unitScale = 1) => placedMeshesOf(testModel({ 
 /** A grid of `count` crates, every tenth lifted by `lift`: a scene of many small meshes, as a level or a kit is. */
 const crates = (count: number, lift = 0) =>
   placed(Array.from({ length: count }, (_, i) => ({ name: `Crate ${i}`, position: [(i % 10) * 2, i % 10 === 0 ? lift : 0, Math.floor(i / 10) * 2] as [number, number, number], mesh: {} })));
-/** The same meshes drawn as one: their triangles' corners one after the other. */
-const asOneMesh = ({ meshes }: PlacedMeshes): PlacedMeshes => {
-  const corners = meshes.flatMap(({ positions, index }) => (index ? [...index].flatMap((vertex) => [...positions.subarray(vertex * 3, vertex * 3 + 3)]) : [...positions]));
-  return { meshes: [{ positions: new Float32Array(corners), index: null }] };
-};
+/** The same meshes drawn as one: their triangles' corners one after the other (`testModel`'s meshes have no index). */
+const asOneMesh = ({ meshes }: PlacedMeshes): PlacedMeshes => ({ meshes: [{ positions: new Float32Array(meshes.flatMap((mesh) => [...mesh.positions])), index: null }] });
 const concatenated = (meshes: Float32Array[]): number[] => meshes.flatMap((mesh) => [...mesh]);
 const maxOf = (distances: Float32Array[]): number => Math.max(...distances.map((mesh) => Math.max(...mesh)));
 
