@@ -81,6 +81,23 @@ describe('workspace info', () => {
     ]);
   });
 
+  it("still opens a Unity organization's workspace when cm can't name its server, keeping the id rather than a guess", async () => {
+    for (const machineReadable of [cmFails('The workspace is locked.'), machineReadableStatusHeader('game', UNITY_ORGANIZATION.byId, 12)]) {
+      const { service } = workspaces({
+        'status --header --xml': statusHeader('/main/task1', { changeset: 12, repository: 'game', server: UNITY_ORGANIZATION.byId }),
+        'status --header --machinereadable': machineReadable,
+        ...WORKSPACE_NAMES,
+      });
+
+      expect(await service.info(WORKSPACE)).toMatchObject({
+        repository: `game@${UNITY_ORGANIZATION.byId}`,
+        server: UNITY_ORGANIZATION.byId,
+        selector: { kind: 'branch', name: '/main/task1' },
+        loadedChangeset: 12,
+      });
+    }
+  });
+
   it('renames the workspace by its current name, read alone, and reads its name again afterwards', async () => {
     const { service, lines } = workspaces({ status: STATUS_HEADER, ...WORKSPACE_NAMES, 'workspace rename': '' });
 
