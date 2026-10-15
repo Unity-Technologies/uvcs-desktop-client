@@ -1,3 +1,4 @@
+import { hasLineTooLongToDraw } from '../../diff/viewer/longLines';
 import type { FileConflictState } from './useFileConflicts';
 
 /**
@@ -44,7 +45,10 @@ export function textToEdit(state: FileConflictState): string {
   return decision?.text ?? document?.text ?? '';
 }
 
-/** Why the text can't be edited in the app, for the menu entry's tooltip; null when it can. */
+/**
+ * Why the text can't be edited in the app, for the menu entry's tooltip; null when it can. Not with a line too long to
+ * draw unwrapped (`hasLineTooLongToDraw`): one keystroke in a wrapped line of 2 MB held Pierre's editor for minutes.
+ */
 export function editInAppUnavailable(state: FileConflictState): string | null {
-  return null;
+  return hasLineTooLongToDraw([textToEdit(state)]) ? 'A line of this file is too long to edit here' : null;
 }
