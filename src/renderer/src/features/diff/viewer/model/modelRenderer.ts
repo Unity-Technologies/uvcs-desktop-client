@@ -109,6 +109,8 @@ export class ModelRenderer {
   private width = 1;
   private height = 1;
   private pixelRatio = 1;
+  /** Whether the canvas was sized yet: until then it has the browser's default size, whatever the fields say. */
+  private sized = false;
   private frame = 0;
   private targets: [WebGLRenderTarget, WebGLRenderTarget] | null = null;
   private readonly blender = new Blender();
@@ -223,15 +225,24 @@ export class ModelRenderer {
     this.requestRender();
   }
 
+  /**
+   * Sizes the canvas, and draws at once: sizing a canvas clears it, and a draw left for the next frame let the window
+   * show it cleared on every step of a resize (the view blinked). Called from a ResizeObserver, which runs after
+   * layout and before paint, the new size is painted drawn. The same size again changes nothing: setting a canvas's
+   * width, even to the one it has, clears it too.
+   */
   setSize(width: number, height: number, pixelRatio: number): void {
-    this.width = Math.max(1, Math.round(width));
-    this.height = Math.max(1, Math.round(height));
+    const [nextWidth, nextHeight] = [Math.max(1, Math.round(width)), Math.max(1, Math.round(height))];
+    if (this.sized && nextWidth === this.width && nextHeight === this.height && pixelRatio === this.pixelRatio) return;
+    this.sized = true;
+    this.width = nextWidth;
+    this.height = nextHeight;
     this.pixelRatio = pixelRatio;
     this.renderer.setPixelRatio(pixelRatio);
     this.renderer.setSize(this.width, this.height, false);
     this.targets?.forEach((target) => target.dispose());
     this.targets = null;
-    this.requestRender();
+    this.renderNow();
   }
 
   /** The aspect of the pane a version is drawn in: framing fits it. Measured now: a resize may not be told yet. */
