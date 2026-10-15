@@ -244,6 +244,11 @@ describe('modelChanges: mesh data', () => {
       expect(modelChanges(modelSummary(indexed(asStored)), modelSummary(indexed(reordered)))).toEqual([]);
     });
 
+    it('tells triangles whose winding turned, over the same vertices, as faces flipped', () => {
+      const flipped = asStored.map(([a, b, c], t) => (t < 2 ? [a!, c!, b!] : [a!, b!, c!]));
+      expect(modelChanges(modelSummary(indexed(asStored)), modelSummary(indexed(flipped)))).toMatchObject([{ kind: 'facesFlipped', node: { name: 'Rock' } }]);
+    });
+
     it('tells a face triangulated another way, over the same vertices, as that and not as a shape change', () => {
       // The first face's quad (corners 0, 1, 2, 3 at vertices 0, 1, 2 and 5) split along its other diagonal.
       const otherDiagonal = [[0, 1, 5], [1, 2, 5], ...asStored.slice(2)];

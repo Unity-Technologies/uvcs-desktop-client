@@ -54,6 +54,10 @@ describe('changeRows', () => {
     expect(changeRows([{ kind: 'triangulation', node: mesh('Cap') }])).toMatchObject([{ tone: 'note', title: 'Cap is triangulated differently', detail: 'Its vertices are where they were.' }]);
   });
 
+  it('tells faces flipped by what Unity shows of them', () => {
+    expect(changeRows([{ kind: 'facesFlipped', node: mesh('Hull') }])).toMatchObject([{ tone: 'note', title: "Some of Hull's faces flipped", detail: 'Unity draws a face from its front only: from outside, those look missing.' }]);
+  });
+
   it('counts triangles as a budget reads them', () => {
     expect(titles([{ kind: 'triangles', node: mesh('Rock'), before: 180, after: 3024 }])).toEqual(['Rock: 180 → 3,024 triangles']);
   });
