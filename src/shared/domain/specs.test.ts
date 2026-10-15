@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { isPinnedSpec, listsTree, spec } from './specs';
+import { isPinnedSpec, listsTree, repositoryOfSpec, spec } from './specs';
+
+describe('repositoryOfSpec', () => {
+  it('reads the repository of the specs the app builds by id, a cloud one included', () => {
+    expect(repositoryOfSpec(spec.revision({ revisionId: 45, repository: 'game@local' }))).toBe('game@local');
+    expect(repositoryOfSpec(spec.itemAt(27, 'cs:12', 'editorGUI@acme@cloud'))).toBe('editorGUI@acme@cloud');
+    expect(repositoryOfSpec(spec.itemAt(27, 'sh:3', 'game@local:8087'))).toBe('game@local:8087');
+  });
+
+  it.each(['revid:45', 'itemid:27#cs:12', 'serverpath:/a@b.ts#cs:12', 'src/a.ts#br:/main@game@local'])('tells no repository for %s', (revisionSpec) => {
+    expect(repositoryOfSpec(revisionSpec)).toBeNull();
+  });
+});
 
 describe('isPinnedSpec', () => {
   it.each(['src/a.ts#cs:12', 'serverpath:/a.ts#cs:12', 'itemid:27#sh:3', 'itemid:27#cs:12@editorGUI@acme@cloud', 'revid:45', 'revid:45@game@local'])(
