@@ -86,10 +86,13 @@ describe('pointForModel', () => {
 
 describe('revisionsAssetsPoint and lastChangeAssetsPoint', () => {
   it("puts a history's revisions each at the changeset that made it, only in the workspace's repository", () => {
-    const pointOf = revisionsAssetsPoint({ original: 7, modified: 9 }, true);
+    const points = { changesets: { original: 7, modified: 9 }, inWorkspaceRepository: true, lastPathChange: null };
+    const pointOf = revisionsAssetsPoint(points);
     expect(pointOf('original', revision(3))).toEqual({ kind: 'repository', at: 'cs:7' });
     expect(pointOf('modified', revision(4))).toEqual({ kind: 'repository', at: 'cs:9' });
-    expect(revisionsAssetsPoint({ original: 7, modified: 9 }, false)('modified', revision(4))).toBeNull();
+    expect(revisionsAssetsPoint({ ...points, inWorkspaceRepository: false })('modified', revision(4))).toBeNull();
+    // Before the item last moved, its materials at its path now would be another file's.
+    expect(revisionsAssetsPoint({ ...points, lastPathChange: 8 })('original', revision(3))).toBeNull();
   });
 
   it("puts Files' last change at its changeset, and before it, that changeset undone; a shelve's has none", () => {
@@ -103,7 +106,7 @@ describe('revisionsAssetsPoint and lastChangeAssetsPoint', () => {
     expect(inWorkspaceRepository('eco@local', undefined)).toBeUndefined();
     expect(inWorkspaceRepository('eco@local', 'eco@local')).toBe(true);
     expect(inWorkspaceRepository('art@local', 'eco@local')).toBe(false);
-    expect(revisionsAssetsPoint({ original: 7, modified: 9 }, undefined)('modified', revision(4))).toBeNull();
+    expect(revisionsAssetsPoint({ changesets: { original: 7, modified: 9 }, inWorkspaceRepository: undefined, lastPathChange: null })('modified', revision(4))).toBeNull();
     expect(lastChangeAssetsPoint(12, 'eco@local', undefined)('modified', revision(4))).toBeNull();
   });
 });

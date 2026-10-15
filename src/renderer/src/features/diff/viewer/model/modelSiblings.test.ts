@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
-import { diffSibling, historySibling, sourcePathOf, workspaceSibling } from './modelSiblings';
+import { diffSibling, historyPointOf, historySibling, sourcePathOf, workspaceSibling } from './modelSiblings';
 
 const entry = (path: string, baseRevisionId: number, revisionId: number): DiffEntry => ({ status: 'changed', path, itemType: 'file', baseRevisionId, revisionId, repository: 'game@local' });
 
@@ -75,9 +75,32 @@ describe('diffSibling', () => {
   });
 });
 
+describe('historyPointOf', () => {
+  const points = { changesets: { original: 30, modified: 31 }, inWorkspaceRepository: true, lastPathChange: null };
+
+  it("is each side's own changeset, in the workspace's repository", () => {
+    expect(historyPointOf(points, 'original')).toBe('cs:30');
+    expect(historyPointOf(points, 'modified')).toBe('cs:31');
+  });
+
+  it("is none under an xlink (a changeset of the xlinked repository, whose paths aren't the workspace's), while the repository isn't known, or for a side with no changeset", () => {
+    expect(historyPointOf({ ...points, inWorkspaceRepository: false }, 'modified')).toBeNull();
+    expect(historyPointOf({ ...points, inWorkspaceRepository: undefined }, 'modified')).toBeNull();
+    expect(historyPointOf({ ...points, changesets: { original: null, modified: 31 } }, 'original')).toBeNull();
+    expect(historyPointOf({ ...points, changesets: { original: -1, modified: 31 } }, 'original')).toBeNull();
+  });
+
+  it('is none before the item was last moved, renamed or removed: the file at its path then was another', () => {
+    const moved = { ...points, lastPathChange: 31 };
+    expect(historyPointOf(moved, 'original')).toBeNull();
+    // A changeset that moved the item and changed it made a revision at its new path.
+    expect(historyPointOf(moved, 'modified')).toBe('cs:31');
+  });
+});
+
 describe('historySibling', () => {
   const at = (revisionId: number, fileName = 'Assets/Box With Spaces.gltf') => ({ kind: 'revision' as const, revision: { revisionId, repository: 'game@local' }, fileName });
-  const finder = historySibling({ original: 30, modified: 31 }, true);
+  const finder = historySibling({ changesets: { original: 30, modified: 31 }, inWorkspaceRepository: true, lastPathChange: null });
 
   it("finds the file beside each revision as it was in that revision's changeset", () => {
     expect(finder('modified', at(9), 'Assets/Box With Spaces.gltf', 'Box With Spaces.bin')).toEqual({ kind: 'repositoryPath', path: '/Assets/Box With Spaces.bin', at: 'cs:31' });
@@ -88,10 +111,10 @@ describe('historySibling', () => {
     expect(finder('modified', at(9, 'Assets\\Box.gltf'), 'Assets\\Box.gltf', 'Box.bin')).toEqual({ kind: 'repositoryPath', path: '/Assets/Box.bin', at: 'cs:31' });
   });
 
-  it("finds none for another repository's revision (under an xlink, paths aren't the workspace's), a side with no changeset, or a name outside the folder", () => {
-    expect(historySibling({ original: 30, modified: 31 }, false)('modified', at(9), 'Assets/Box.gltf', 'Box.bin')).toBeNull();
-    expect(historySibling({ original: 30, modified: 31 }, undefined)('modified', at(9), 'Assets/Box.gltf', 'Box.bin')).toBeNull();
-    expect(historySibling({ original: null, modified: 31 }, true)('original', at(9), 'Assets/Box.gltf', 'Box.bin')).toBeNull();
+  it('finds none where a side has no point (`historyPointOf`), or for a name outside the folder', () => {
+    const moved = historySibling({ changesets: { original: 30, modified: 31 }, inWorkspaceRepository: true, lastPathChange: 31 });
+    expect(moved('original', at(8), 'Assets/Hero.fbx.meta', 'Hero.fbx')).toBeNull();
+    expect(historySibling({ changesets: { original: 30, modified: 31 }, inWorkspaceRepository: false, lastPathChange: null })('modified', at(9), 'Assets/Box.gltf', 'Box.bin')).toBeNull();
     expect(finder('modified', at(9), 'Assets/Box.gltf', '../Box.bin')).toBeNull();
   });
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { modelBesideMeta, modelOfMeta, modelReadsOfSides } from './modelMeta';
-import { workspaceSibling } from './modelSiblings';
+import { historySibling, workspaceSibling } from './modelSiblings';
 
 describe('modelOfMeta', () => {
   it("names the model a model's .meta belongs to, whatever the case", () => {
@@ -25,6 +25,15 @@ describe('modelBesideMeta', () => {
   it('finds none where the sources name no folder to look in, so the .meta shows as text', () => {
     const revision = { kind: 'revision' as const, revision: { revisionId: 4, repository: 'game@local' }, fileName: 'Assets/Hero.fbx.meta' };
     expect(modelBesideMeta(workspaceSibling, { original: revision, modified: revision })).toBeNull();
+  });
+
+  it("finds the model beside each side of a .meta's history, as it was in each revision's changeset", () => {
+    const revision = (revisionId: number) => ({ kind: 'revision' as const, revision: { revisionId, repository: 'game@local' }, fileName: 'Assets/Crate.fbx.meta' });
+    const findSibling = historySibling({ changesets: { original: 21, modified: 22 }, inWorkspaceRepository: true, lastPathChange: null });
+    expect(modelBesideMeta(findSibling, { original: revision(40), modified: revision(41) })).toEqual({
+      original: { kind: 'repositoryPath', path: '/Assets/Crate.fbx', at: 'cs:21' },
+      modified: { kind: 'repositoryPath', path: '/Assets/Crate.fbx', at: 'cs:22' },
+    });
   });
 
   it("finds the one side there is, of a .meta added with its model", () => {
