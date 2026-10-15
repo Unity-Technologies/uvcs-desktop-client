@@ -45,6 +45,8 @@ describe('whatChanged', () => {
   it("leaves the file's own materials alone where Unity's are told, or where the project may remap them otherwise", () => {
     expect(kinds(whatChanged(of({ materials: [], fileMaterials: [REPAINTED] })))).toEqual(['exporter', 'scaleFactor']);
     expect(kinds(whatChanged(of({ file: [], importSettings: [], materials: null, materialsNotCompared: 'noLibrary', fileMaterials: [REPAINTED] })))).toEqual(['materialsNotCompared']);
+    // A .meta that couldn't be read may remap the slot: the file's material may not be what Unity shows.
+    expect(kinds(whatChanged(of({ file: [], importSettings: [], materials: null, settingsRead: false, fileMaterials: [REPAINTED] })))).toEqual([]);
   });
 
   it('gives each material change the meshes that use its slot, to frame them', () => {

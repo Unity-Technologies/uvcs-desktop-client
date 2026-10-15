@@ -60,7 +60,7 @@ describe('changeRows', () => {
   });
 
   it('tells faces flipped by what Unity shows of them', () => {
-    expect(changeRows([{ kind: 'facesFlipped', node: mesh('Hull') }])).toMatchObject([{ tone: 'note', title: "Some of Hull's faces flipped", detail: 'Unity draws a face from its front only: from outside, those look missing.' }]);
+    expect(changeRows([{ kind: 'facesFlipped', node: mesh('Hull') }])).toMatchObject([{ tone: 'note', title: "Some of Hull's faces flipped", detail: 'Unity draws a face from its front only: those now show from the other side.' }]);
   });
 
   it('tells blendshapes resculpted and vertex colors repainted, naming the mesh', () => {
