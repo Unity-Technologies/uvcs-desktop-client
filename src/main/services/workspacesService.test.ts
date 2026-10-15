@@ -224,4 +224,14 @@ describe('other workspaces', () => {
     expect(commands).toMatchObject([{ via: 'query', args: ['status', '--xml', WORKSPACE], options: {} }]);
     expect(commands[0]?.options.cwd).toBeUndefined();
   });
+
+  it("glances at a Unity organization's workspace naming its server as cm does everywhere else, from the home folder too", async () => {
+    const { service, commands } = workspaces({
+      'status --xml': statusHeader('/main/task1', { repository: 'game', server: UNITY_ORGANIZATION.byId }),
+      'status --header --machinereadable': machineReadableStatusHeader('game', UNITY_ORGANIZATION.byName),
+    });
+
+    expect((await service.glance(WORKSPACE)).repository).toBe('game@AcmeStudio@unity');
+    expect(commands.map((command) => command.options.cwd)).toEqual([undefined, undefined]);
+  });
 });
