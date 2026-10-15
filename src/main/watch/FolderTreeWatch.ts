@@ -63,8 +63,8 @@ export class FolderTreeWatch {
     return this.complete && this.watches.has('');
   }
 
-  /** Resolves once no walk is under way: every folder in the tree now (as far as the limit goes) is watched. */
-  async idle(): Promise<void> {
+  /** Resolves once no walk is under way: the first one, nor one of a folder that appeared or stopped being skipped. */
+  async walksDone(): Promise<void> {
     while (this.walks.size > 0) await Promise.all(this.walks);
   }
 

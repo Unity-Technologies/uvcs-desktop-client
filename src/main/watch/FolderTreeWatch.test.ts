@@ -21,7 +21,7 @@ interface Options {
  * chooses, whatever the disk's speed.
  */
 function heldListings() {
-  const unanswered: (() => void)[] = [];
+  const unanswered: { folder: string; answer: () => void }[] = [];
   const waiting: { count: number; resolve: () => void }[] = [];
   let holding = true;
   const tellWaiting = (): void => {
@@ -30,20 +30,24 @@ function heldListings() {
       waiter.resolve();
     }
   };
-  const answer = (): void => unanswered.splice(0).forEach((answerListing) => answerListing());
+  const answer = (exceptFolder?: string): void => {
+    const answering = unanswered.filter(({ folder }) => folder !== exceptFolder);
+    for (const listing of answering) unanswered.splice(unanswered.indexOf(listing), 1);
+    for (const listing of answering) listing.answer();
+  };
   const list: ListSubfolders = (folder) => {
     const names = readdirSync(folder, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name);
     if (!holding) return Promise.resolve(names);
     return new Promise((resolve) => {
-      unanswered.push(() => resolve(names));
+      unanswered.push({ folder, answer: () => resolve(names) });
       tellWaiting();
     });
   };
   return {
     list,
-    /** Answers the listings asked so far. */
+    /** Answers the listings asked so far (but that of `exceptFolder`, an absolute path). */
     answer,
     /** Answers the listings asked so far, and every one from now on at once. */
     answerAll: (): void => {
@@ -133,7 +137,7 @@ describe('FolderTreeWatch', () => {
 
     mkdirSync(at('new/deeper'), { recursive: true });
     emit('', 'rename', 'new');
-    await tree.idle();
+    await tree.walksDone();
     expect(watched()).toEqual(expect.arrayContaining(['new', 'new/deeper']));
   });
 
@@ -144,7 +148,7 @@ describe('FolderTreeWatch', () => {
     renameSync(at('src/deep'), at('Library/deep'));
     emit('src', 'rename', 'deep');
     emit('Library', 'rename', 'deep');
-    await tree.idle();
+    await tree.walksDone();
     expect(watched()).toEqual(['', 'Library', 'Library/Cache', 'Library/deep', 'src']);
   });
 
@@ -164,7 +168,7 @@ describe('FolderTreeWatch', () => {
 
     mkdirSync(at('src/obj'));
     emit('src', 'rename', 'obj');
-    await tree.idle();
+    await tree.walksDone();
     expect(watched()).toEqual(['', 'src', 'src/deep']);
   });
 
@@ -175,12 +179,12 @@ describe('FolderTreeWatch', () => {
 
     skipped = ['src'];
     tree.followSkipRule();
-    await tree.idle();
+    await tree.walksDone();
     expect(watched()).toEqual(['', 'Library', 'Library/Cache']);
 
     skipped = [];
     tree.followSkipRule();
-    await tree.idle();
+    await tree.walksDone();
     expect(watched()).toEqual(['', 'Library', 'Library/Cache', 'src', 'src/deep']);
   });
 
@@ -293,7 +297,7 @@ describe('FolderTreeWatch walks the tree a step at a time, leaving the main proc
     emit('', 'rename', 'new');
     listings.answerAll();
     expect(await started).toBe(true);
-    await tree.idle();
+    await tree.walksDone();
     expect(watched()).toEqual(['', 'Library', 'Library/Cache', 'new', 'new/deeper', 'src', 'src/deep']);
   });
 
@@ -312,7 +316,7 @@ describe('FolderTreeWatch walks the tree a step at a time, leaving the main proc
 
     skipped = [];
     tree.followSkipRule();
-    await tree.idle();
+    await tree.walksDone();
     expect(watched()).toEqual(['', 'Library', 'Library/Cache', 'src', 'src/deep']);
   });
 
