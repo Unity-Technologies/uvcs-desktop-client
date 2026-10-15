@@ -19,7 +19,7 @@ import { RepositoryTrees } from './unity/RepositoryTrees';
 import { RevisionDownloads } from './unity/RevisionDownloads';
 import { CommandLogRelay } from './startup/commandLogRelay';
 import { openFirstWindow, readFirstScreenAhead, type FirstScreenRead } from './startup/firstWindow';
-import { handleLaunchRequests, isTheRunningApp } from './startup/launchRequests';
+import { handleLaunchRequests, isTheRunningApp, launchNamesAFolder } from './startup/launchRequests';
 import { trackOperations } from './startup/operationTracking';
 import { ignoreOwnCommandWrites } from './startup/ownWrites';
 import { handleQuitting, Quitting } from './startup/quitting';
@@ -108,7 +108,7 @@ function start(launched: Promise<void>, readAhead: FirstScreenRead): void {
 if (isTheRunningApp()) {
   const launched = handleLaunchRequests(windows, (folder) => findWorkspaceRoot(cm, folder));
   // `cm` doesn't need Electron ready: the first screen's commands run while it gets there.
-  const readAhead = readFirstScreenAhead({ cm, windows, early, settings });
+  const readAhead = readFirstScreenAhead({ cm, windows, early, settings }, launchNamesAFolder());
   void app.whenReady().then(() => start(launched, readAhead));
 } else {
   app.quit();

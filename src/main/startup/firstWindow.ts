@@ -14,39 +14,49 @@ interface FirstScreenSources {
 
 interface FirstWindow extends FirstScreenSources {
   windows: Pick<WorkspaceWindows, 'firstWorkspace' | 'openFirst'>;
+  early: Pick<EarlyCalls, 'start' | 'expireUntaken'>;
   commandLog: Pick<CommandLogRelay, 'windowsOpened'>;
 }
 
-/** The workspace whose first screen is on its way (`readFirstScreenAhead`); undefined for the home screen. */
-export interface FirstScreenRead {
-  workspacePath: string | undefined;
-}
+/**
+ * The first screen read ahead (`readFirstScreenAhead`): the workspace's, undefined for the home screen's; null when
+ * none was, as the launch names a folder.
+ */
+export type FirstScreenRead = { workspacePath: string | undefined } | null;
 
 /**
  * Starts what the first window shows on its way as the main module loads, before Electron is ready (50-60 ms later)
- * and before its window is created (50-100 ms more), as `cm` needs neither: the `cm shell`s of the workspace it
- * reopens, or of the home folder for the home screen, which answer their first command after about a second; and its
- * first screen's reads (`readFirstScreen`). A launch that names another workspace (`requestAtLaunch`, known only
- * later) reads that one when the window opens (`openFirstWindow`), and these answers expire unused (`EARLY_ANSWER_MS`).
+ * and before its window is created (50-100 ms more), as `cm` needs neither: `cm version`, and the first screen of the
+ * workspace it reopens (or the home screen): its `cm shell`s, which answer their first command after about a second,
+ * and its reads (`readFirstScreen`).
+ *
+ * A launch that names a folder (`namesAFolder`: Windows and Linux pass it as an argument) opens the workspace `cm`
+ * finds holding it, so only `cm version` is read ahead, and the screen when the window opens. macOS names it later
+ * (`open-file`), so there the last workspace's screen is read ahead anyway, and its answers expire unused
+ * (`EARLY_ANSWER_MS`) while the window opens on the named one (`openFirstWindow`).
  */
-export function readFirstScreenAhead({ cm, windows, early, settings }: FirstScreenSources): FirstScreenRead {
+export function readFirstScreenAhead({ cm, windows, early, settings }: FirstScreenSources, namesAFolder: boolean): FirstScreenRead {
+  early.start('system.cmVersion', []);
+  if (namesAFolder) return null;
   const workspacePath = windows.firstWorkspace();
-  readFirstScreenOf(workspacePath, { cm, early, settings });
+  readScreenOf(workspacePath, { cm, early, settings });
   return { workspacePath };
 }
 
 /**
- * Opens the first window at launch (`openFirst`), its first screen read ahead (`readFirstScreenAhead`) unless the
- * launch named another workspace, which is read now. The commands logged before it opened then reach its command log.
+ * Opens the first window at launch (`openFirst`), its first screen read ahead (`readFirstScreenAhead`) unless that was
+ * another or none, which is read now. The answers its page doesn't take then expire, and the commands logged before
+ * it opened reach its command log.
  */
 export function openFirstWindow({ cm, windows, early, settings, commandLog }: FirstWindow, readAhead: FirstScreenRead): void {
   const workspacePath = windows.firstWorkspace();
-  if (workspacePath !== readAhead.workspacePath) readFirstScreenOf(workspacePath, { cm, early, settings });
+  if (readAhead === null || readAhead.workspacePath !== workspacePath) readScreenOf(workspacePath, { cm, early, settings });
   windows.openFirst();
+  early.expireUntaken();
   commandLog.windowsOpened();
 }
 
-function readFirstScreenOf(workspacePath: string | undefined, { cm, early, settings }: Omit<FirstScreenSources, 'windows'>): void {
+function readScreenOf(workspacePath: string | undefined, { cm, early, settings }: Omit<FirstScreenSources, 'windows'>): void {
   cm.warmUp(workspacePath);
   readFirstScreen(early, settings.get(), workspacePath);
 }
