@@ -59,10 +59,16 @@ const EXTRA_WINDOW_LINES = 10;
 export function detectMovedBlocks(meta: DisplayMeta, method: ComparisonMethod): MovedBlock[] {
   const blocks = listChangeBlocks(meta);
   const changedLines = blocks.reduce((total, block) => total + block.oldLines + block.newLines, 0);
-  if (blocks.length > MAX_BLOCKS || changedLines > MAX_CHANGED_LINES) return [];
+  if (blocks.length > MAX_BLOCKS || changedLines > MAX_CHANGED_LINES || changedCharacters(meta, blocks) > MAX_CHANGED_CHARACTERS) return [];
   const search = new MoveSearch(meta, method, blocks);
   const candidates = search.sides.flatMap((sides) => search.movesFrom(sides));
   return closestFirst(candidates).map(({ deletions, additions }) => ({ deletions, additions, ...editsInMove(meta, method, deletions, additions) }));
+}
+
+/** The characters in the lines the changes remove and add. */
+function changedCharacters(meta: DisplayMeta, blocks: ChangeBlock[]): number {
+  const length = (lines: string[], start: number, count: number): number => lines.slice(start - 1, start - 1 + count).reduce((total, line) => total + line.length, 0);
+  return blocks.reduce((total, block) => total + length(meta.deletionLines, block.oldStart, block.oldLines) + length(meta.additionLines, block.newStart, block.newLines), 0);
 }
 
 /** A side of a change, its lines as word ids. */
