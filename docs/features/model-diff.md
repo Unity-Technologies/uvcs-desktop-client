@@ -66,7 +66,8 @@ bounds in Unity's space, and each mesh's triangles, material slots, blendshapes,
 - **Material slots are those some triangle uses**: Unity makes submeshes only of those (a file declaring 17 materials
   Unity shows as 14).
 - **Fingerprints** of each attribute's exact values tell what changed without keeping both versions' arrays (the
-  triangles as a set, `trianglesFingerprint`: a re-export lists them in another order, and Unity reorders them anyway), and
+  triangles as a set, `trianglesFingerprint`, whichever corner each starts from: a re-export lists them in another
+  order, and Unity reorders them anyway), and
   `placedPositions` (where the vertices end up in Unity's space, to 10 µm) tells a mesh whose vertices were shifted to
   stay in place (a pivot moved, a new parent) from one whose shape changed.
 - **Where a vertex is, is where it is drawn** (`placedPositionsOf`): through its node, or, skinned, through its bones
@@ -102,7 +103,7 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
   of the same mesh), removed, added; a mesh that uses another of the model's slots.
 - **Each mesh**: triangles (and nothing else then: a rebuilt mesh changed everything), shape, triangulated
   differently (the same vertices joined into other triangles, a flat cap split along other diagonals: no shape
-  change, which would read as a sculpt), normals, UVs, lightmap
+  change, which would read as a sculpt), faces flipped (the same triangles, some turning the other way), normals, UVs, lightmap
   UVs (lost is a risk: baked lighting needs them), vertex colors, skinning, blendshapes renamed, removed or added.
 - **Takes** (Unity's clips are cut from them by name): renamed (one gone and one of the same length come), removed,
   added, of another length; and, at the same name and length, keyed differently, with the nodes it moves differently

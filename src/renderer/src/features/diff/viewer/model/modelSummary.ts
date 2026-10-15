@@ -69,8 +69,10 @@ export interface MeshSummary {
     uv: string;
     uv1: string;
     colors: string;
-    /** The triangles as a set (`trianglesFingerprint`): equal when only their order in the file changed. */
+    /** The triangles as a set, each turning its way (`trianglesFingerprint`): equal when only their order in the file changed. */
     index: string;
+    /** The triangles as a set of corners, whichever way each turns: equal when only some faces flipped. */
+    corners: string;
     skin: string;
     blendShapes: string;
   };
@@ -186,7 +188,8 @@ function meshSummary(mesh: ModelMesh, keys: string[], placed: Float64Array, plac
       uv: fingerprintOf(attributes.uv),
       uv1: fingerprintOf(attributes.uv1),
       colors: fingerprintOf(attributes.color),
-      index: trianglesFingerprint(mesh.index),
+      index: trianglesFingerprint(mesh.index, 'winding'),
+      corners: trianglesFingerprint(mesh.index, 'corners'),
       skin: `${fingerprintOf(attributes.skinIndex)}|${fingerprintOf(attributes.skinWeight)}`,
       blendShapes: mesh.blendShapes.map((shape) => fingerprintOf(shape.deltas)).join('|'),
     },
@@ -214,17 +217,19 @@ function textureName(texture: FileTexture, images: FileImage[]): string {
 }
 
 /**
- * The triangles by their vertices, whatever order the file lists them in and whichever corner each starts from (its
- * winding kept): a re-export writes them in another order, and Unity's import reorders them for the GPU anyway, so an
- * order alone changed nothing. '' for a mesh without an index.
+ * The triangles by their vertices, whatever order the file lists them in and whichever corner each starts from: a
+ * re-export writes them in another order, and Unity's import reorders them for the GPU anyway, so an order alone
+ * changed nothing. By `winding`, each keeps the way it turns (its front); by `corners`, only which vertices it joins.
+ * '' for a mesh without an index.
  */
-function trianglesFingerprint(index: Uint32Array | null): string {
+function trianglesFingerprint(index: Uint32Array | null, by: 'winding' | 'corners'): string {
   if (!index) return '';
   const triangles: [number, number, number][] = [];
   for (let i = 0; i + 2 < index.length; i += 3) {
     const [a, b, c] = [index[i]!, index[i + 1]!, index[i + 2]!];
-    // Started from its lowest vertex, turning the same way: (5, 1, 3) is (1, 3, 5).
-    triangles.push(a <= b && a <= c ? [a, b, c] : b <= c ? [b, c, a] : [c, a, b]);
+    // Started from its lowest vertex, turning the same way: (5, 1, 3) is (1, 3, 5); by corners, (1, 5, 3) is too.
+    const started: [number, number, number] = a <= b && a <= c ? [a, b, c] : b <= c ? [b, c, a] : [c, a, b];
+    triangles.push(by === 'winding' ? started : [started[0], Math.min(started[1], started[2]), Math.max(started[1], started[2])]);
   }
   triangles.sort((x, y) => x[0] - y[0] || x[1] - y[1] || x[2] - y[2]);
   return fingerprintOf(Uint32Array.from(triangles.flat()));

@@ -61,6 +61,7 @@ function foldKey(change: ModelChange): string | null {
     case 'triangles':
     case 'shape':
     case 'triangulation':
+    case 'facesFlipped':
     case 'normals':
     case 'uvs':
     case 'skinning':
@@ -96,6 +97,7 @@ function foldedRow(key: string, run: ModelChange[]): ChangeRow {
     triangles: `Triangles changed on ${count} meshes`,
     shape: `${count} meshes changed shape`,
     triangulation: `${count} meshes triangulated differently`,
+    facesFlipped: `Faces flipped on ${count} meshes`,
     normals: `Normals changed on ${count} meshes`,
     uvs: `UVs changed on ${count} meshes`,
     skinning: `Skinning changed on ${count} meshes`,
@@ -200,6 +202,8 @@ function wordsOf(change: ModelChange): { title: string; detail?: string } {
       return { title: `${change.node.name}'s shape changed` };
     case 'triangulation':
       return { title: `${change.node.name} is triangulated differently`, detail: 'Its vertices are where they were.' };
+    case 'facesFlipped':
+      return { title: `Some of ${change.node.name}'s faces flipped`, detail: 'Unity draws a face from its front only: from outside, those look missing.' };
     case 'normals':
       return { title: `${change.node.name}'s normals changed`, detail: 'Its shading looks different.' };
     case 'uvs':
