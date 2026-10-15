@@ -438,7 +438,7 @@ heatmap's), and come back in the other modes. The merge cards' stills stay clay 
   MD5 as the listing's hash; a file known to differ isn't read again until it changes, a match is always hashed again
   on the bytes returned), else downloaded. The reads asked at once (both versions'
   textures, a ring of `.meta` files) wait until each has checked the disk, then go in one `cm cat <spec>;<file>
-  <spec>;<file> …` (`catArgs`), which downloads them in one batch, in a process of its own; a batch holds one
+  <spec>;<file> …` (`catBatchesOf`, `catArgs`, shared with `RevisionCat`), which downloads them in one batch, in a process of its own; a batch holds one
   repository's revisions (an xlinked one's apart: `cm cat` resolves each repository's on its own) and stops at
   `MAX_BATCH_BYTES` (64 MB by the sizes listed, so the first textures show sooner) and at a command line Windows can
   start; a folder whose path holds `;` takes each as `--file=`. A revision listed past `MAX_MODEL_BYTES` is refused

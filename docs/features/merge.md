@@ -113,7 +113,12 @@ incoming text the page read, is named, so `cm` uploads nothing for it; a decided
 `cm` checks in as they are. `cm` leaves both files alone; `runMerge`'s temp folder holds them until it ends.
 
 Merges hold hundreds of conflicting files and thousands of changes. Every conflicting file's three versions load at
-once (its status needs its automatic merge); each file merges once, when its versions are in (`loadConflict`), and
+once (its status needs its automatic merge), so reading only on demand isn't an option: the base and the source are
+read as the item at their changesets (`itemid:N#cs:M@repo`, `conflictedFilesOf`), in a few batched `cm cat`s
+(ARCHITECTURE.md "Server budget": `RevisionCat`), and the destination by its revision, which the preview's `cm ls` of
+the destination's tree already named with its hash (`destinationRevisionId`, `withConflictRepositories`): the
+workspace's file is read instead where it is that revision unchanged, as it mostly is in a workspace merge
+(`WorkspaceCopies`). 3,318 conflicting files cost 27 `cm cat`s, not 9,954. Each file merges once, when its versions are in (`loadConflict`), and
 keeps its state while nothing about it changes (`buildStates`). The three-way merge (`diff3`) draws node-diff3's diff3
 regions over Myers diffs of each side, whose time goes by the lines changed (lockfiles repeat lines by the thousand).
 The list and Incoming render only the rows in view; the file behind the selection follows it deferred, so arrowing
