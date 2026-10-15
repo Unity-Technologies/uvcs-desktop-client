@@ -43,6 +43,7 @@ import type { SlotLook } from './materials/materialPlan';
 import type { ModelPalette } from './modelPalette';
 import { slotColor } from './modelPalette';
 import { modelOrientation, type ModelScene } from './modelScene';
+import { emphasisOf } from './sceneMaterials';
 import { cameraPositionOf, clipPlanesOf, FIELD_OF_VIEW, type BoundsLike, type OrbitView, type Ray, type Vector } from './orbitCamera';
 import type { DiffsCompares, SurfaceLook } from './surfaceLook';
 import { layoutOf, paneAt, shownLayoutMode, type ChosenLayoutMode, type Layout, type Side } from './viewLayout';
@@ -496,38 +497,47 @@ export class ModelRenderer {
       scene.joints.material.uniforms.ring!.value = new Color(palette.backdrop);
       scene.markers.material.uniforms.fill!.value = new Color(palette.highlight);
       scene.markers.material.uniforms.ring!.value = new Color(palette.backdrop);
-      for (const mesh of scene.model.meshes) {
+      const { meshes, materials } = scene.model;
+      for (const mesh of meshes) {
         mesh.heat.visible = differences && side === 'after';
         mesh.ghost.visible = differences && side === 'before';
       }
+      const { drawMode, surface } = this.look;
       if (differences) {
         // The after's heat in its draw mode's wires; the before only as the ghost of what is gone.
-        for (const [index, mesh] of scene.model.meshes.entries()) {
+        for (const [index, mesh] of meshes.entries()) {
           scene.looks.show(index, false, null);
           mesh.solid.visible = false;
-          mesh.wire.visible = side === 'after' && this.look.drawMode !== 'shaded';
-          mesh.wire.material.color.set(palette.wire);
-          mesh.wire.material.opacity = 0.2;
+          mesh.wire.visible = side === 'after' && drawMode !== 'shaded';
+          mesh.wire.material = materials.wire('plain');
+        }
+        for (const { material } of materials.eachWire()) {
+          material.color.set(palette.wire);
+          material.opacity = 0.2;
         }
         continue;
       }
       const highlighted = comparedByLook ? new Set<string>() : this.look.highlighted[side];
       const anyHighlighted = !comparedByLook && this.look.highlighted.before.size + this.look.highlighted.after.size > 0;
-      for (const [index, mesh] of scene.model.meshes.entries()) {
-        const lit = highlighted.has(mesh.key) || [...highlighted].some((key) => mesh.key.startsWith(`${key}/`));
-        const faded = anyHighlighted && !lit;
-        const { drawMode, surface } = this.look;
+      for (const [index, mesh] of meshes.entries()) {
+        const emphasis = emphasisOf(mesh.key, highlighted, anyHighlighted);
+        const lit = emphasis === 'lit';
         mesh.solid.visible = drawMode !== 'wireframe';
         mesh.wire.visible = drawMode !== 'shaded' || lit;
-        mesh.clay.forEach((material, slot) => {
-          const color = new Color(surface === 'slotColors' ? slotColor(palette, mesh.slots[slot] ?? '') : palette.clay);
-          material.color.copy(faded ? color.lerp(backdrop, FADE) : color);
-          material.emissive.set(lit ? palette.highlight : 0x000000);
-          material.emissiveIntensity = lit ? 0.35 : 0;
-        });
-        scene.looks.show(index, surface === 'materials', { lit, faded, highlight: palette.highlight, backdrop: palette.backdrop, fade: FADE });
-        mesh.wire.material.color.set(lit ? palette.highlight : palette.wire);
-        mesh.wire.material.opacity = drawMode === 'wireframe' ? 0.9 : lit ? 0.6 : faded ? 0.1 : 0.28;
+        // In place: the solid draws this very array while the Materials look is off (`SlotLookMaterials.show`).
+        mesh.slots.forEach((slot, i) => (mesh.clay[i] = materials.clay(slot, emphasis)));
+        mesh.wire.material = materials.wire(emphasis);
+        scene.looks.show(index, surface === 'materials', { lit, faded: emphasis === 'faded', highlight: palette.highlight, backdrop: palette.backdrop, fade: FADE });
+      }
+      for (const { material, slot, emphasis } of materials.eachClay()) {
+        const color = new Color(surface === 'slotColors' ? slotColor(palette, slot) : palette.clay);
+        material.color.copy(emphasis === 'faded' ? color.lerp(backdrop, FADE) : color);
+        material.emissive.set(emphasis === 'lit' ? palette.highlight : 0x000000);
+        material.emissiveIntensity = emphasis === 'lit' ? 0.35 : 0;
+      }
+      for (const { material, emphasis } of materials.eachWire()) {
+        material.color.set(emphasis === 'lit' ? palette.highlight : palette.wire);
+        material.opacity = drawMode === 'wireframe' ? 0.9 : emphasis === 'lit' ? 0.6 : emphasis === 'faded' ? 0.1 : 0.28;
       }
     }
   }
