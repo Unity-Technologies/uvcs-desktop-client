@@ -145,16 +145,38 @@ describe('runMerge into the workspace', () => {
     expect(await readFile(join(workspacePath, 'src', 'a.txt'), 'utf8')).toBe('incoming version\n');
   });
 
-  it("names every file of a cm cat that failed naming none, as they may all still hold yours", async () => {
-    const { cm } = fakeCmClient({
+  /** A `cm` merging two kept incoming files, a.txt and b.txt, whose `cm cat` answers `cat`. */
+  const keepingTwoIncoming = (cat: CmAnswer) =>
+    fakeCmClient({
       'status --short': '',
       'merge br:/main/task': ({ args }) => (args.includes('--merge') ? '' : mergeOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31))),
       ls: treeListing('eco@local', 'src/a.txt', 'src/b.txt'),
-      cat: cmFails('The connection was closed.'),
+      cat,
     });
-    const resolutions: MergeResolutions = { directoryConflicts: [], files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'source' } } };
+  const bothIncoming: MergeResolutions = { directoryConflicts: [], files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'source' } } };
 
-    expect(await runMerge(cm, workspacePath, FROM_TASK, resolutions, recordingContext().context)).toEqual({ incomingNotSaved: ['/src/a.txt', '/src/b.txt'] });
+  it('tries a cm cat that failed naming none once more, and says its files may not hold the incoming version when it fails again', async () => {
+    const { cm, lines } = keepingTwoIncoming(cmFails('The connection was closed.'));
+
+    expect(await runMerge(cm, workspacePath, FROM_TASK, bothIncoming, recordingContext().context)).toEqual({ incomingMaybeNotSaved: ['/src/a.txt', '/src/b.txt'] });
+    expect(lines().filter((line) => line.startsWith('cat'))).toHaveLength(2);
+  });
+
+  it('saves every incoming version when a cm cat that failed naming none works the second time', async () => {
+    let attempts = 0;
+    const { cm } = keepingTwoIncoming((command) => (attempts++ === 0 ? cmFails('The connection was closed.') : fakeCat(() => 'incoming version\n')(command)));
+
+    expect(await runMerge(cm, workspacePath, FROM_TASK, bothIncoming, recordingContext().context)).toEqual({});
+    expect(await readFile(join(workspacePath, 'src', 'b.txt'), 'utf8')).toBe('incoming version\n');
+  });
+
+  it("doesn't take a revision cm couldn't find for the only failure when another line names none", async () => {
+    const { cm } = keepingTwoIncoming(cmFails('The specified revision was not found itemid:30#cs:3@eco@local\nError downloading a revision.'));
+
+    expect(await runMerge(cm, workspacePath, FROM_TASK, bothIncoming, recordingContext().context)).toEqual({
+      incomingNotSaved: ['/src/a.txt'],
+      incomingMaybeNotSaved: ['/src/b.txt'],
+    });
   });
 
   it('reads the incoming version of a shelve from the shelve, whose revisions no changeset holds', async () => {

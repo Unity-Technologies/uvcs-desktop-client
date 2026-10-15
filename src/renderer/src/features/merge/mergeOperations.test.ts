@@ -56,8 +56,8 @@ describe('completing a merge', () => {
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Merge applied to your workspace' }]);
   });
 
-  it("says which files still hold yours when the merge couldn't save their incoming version", async () => {
-    fakeApi.answer('merge.run', () => ({ incomingNotSaved: ['/Assets/Grass.png', '/Assets/Rock.png'] }));
+  it("says which files still hold yours when the merge couldn't save their incoming version, and which may", async () => {
+    fakeApi.answer('merge.run', () => ({ incomingNotSaved: ['/Assets/Grass.png', '/Assets/Rock.png'], incomingMaybeNotSaved: ['/Assets/Lamp.glb'] }));
     navigation.openPage({ kind: 'merge', request: intoWorkspace });
 
     await completeMerge(ws, intoWorkspace, resolutions);
@@ -65,8 +65,18 @@ describe('completing a merge', () => {
       {
         kind: 'info',
         title: 'Merge applied, but 2 files still hold yours',
-        detail: "Their incoming version couldn't be downloaded: /Assets/Grass.png and /Assets/Rock.png. Check them before checking in.",
+        detail: "The incoming version of Grass.png and Rock.png couldn't be saved. Lamp.glb may not hold the incoming version. Check them before checking in.",
       },
+    ]);
+  });
+
+  it('says which files may not hold the incoming version when none is known to still hold yours', async () => {
+    fakeApi.answer('merge.run', () => ({ incomingMaybeNotSaved: ['/Assets/Lamp.glb'] }));
+    navigation.openPage({ kind: 'merge', request: intoWorkspace });
+
+    await completeMerge(ws, intoWorkspace, resolutions);
+    expect(shownToasts()).toEqual([
+      { kind: 'info', title: 'Merge applied, but 1 file may not hold the incoming version', detail: 'Lamp.glb may not hold the incoming version. Check it before checking in.' },
     ]);
   });
 
