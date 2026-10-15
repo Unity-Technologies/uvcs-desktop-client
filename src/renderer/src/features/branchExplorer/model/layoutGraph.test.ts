@@ -167,6 +167,7 @@ describe('layoutGraph with pending changes', () => {
 });
 
 describe('layoutGraph at scale', () => {
+  // The size is the claim: past what a call can take as arguments (`push(...items)`, `Math.max(...items)`).
   it('lays out a branch with more changesets than a function takes arguments', () => {
     const changesets = Array.from({ length: 200_000 }, (_, id) => changeset(id, '/main', id - 1));
     const lane = layoutGraph({ branches: [branch('/main', '', 199_999)], changesets, mergeLinks: [], labels: [] }).lanesByBranch.get('/main');

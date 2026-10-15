@@ -68,12 +68,13 @@ describe('boundedDiff', () => {
   });
 
   it('keeps every line that is unique and in order, past the budget', () => {
-    // Lines 0..n; every seventh changed into a line of its own.
-    const oldIds = Array.from({ length: 100_000 }, (_, index) => index);
+    // Lines 0..n; every seventh changed into a line of its own. Myers would spend 40,000 lines × 2,857 edits, about
+    // 30 times the budget: past it, as a longer text would be.
+    const oldIds = Array.from({ length: 20_000 }, (_, index) => index);
     const newIds = oldIds.map((id) => (id % 7 === 3 ? 1_000_000 + id : id));
     const { result: runs, comparisons } = countLineComparisons(() => boundedDiff(oldIds, newIds));
     expect(comparisons).toBeLessThanOrEqual(MYERS_BUDGET);
-    expect(edits(runs)).toEqual({ added: 14_286, removed: 14_286 });
+    expect(edits(runs)).toEqual({ added: 2_857, removed: 2_857 });
     expect(applied(oldIds, newIds, runs)).toEqual(newIds);
   });
 

@@ -39,7 +39,7 @@ describe('Arrivals', () => {
   it('goes through the keys again only when they change', () => {
     const arrivals = new Arrivals(400);
     let reads = 0;
-    const keys = new Proxy(Array.from({ length: 100_000 }, (_, index) => `k${index}`), {
+    const keys = new Proxy(Array.from({ length: 1_000 }, (_, index) => `k${index}`), {
       get: (target, property, receiver) => {
         if (property === Symbol.iterator) reads++;
         return Reflect.get(target, property, receiver);

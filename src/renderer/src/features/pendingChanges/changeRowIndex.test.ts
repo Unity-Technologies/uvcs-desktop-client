@@ -35,9 +35,9 @@ describe('perRow', () => {
   });
 });
 
-describe('holding ↓ over 100,000 changes', () => {
-  // One folder of 100,000 files: its check goes over all of them.
-  const many = Array.from({ length: 100_000 }, (_, index) => change(`assets/f${String(index).padStart(6, '0')}.png`, index % 2 ? ['changed'] : ['private']));
+describe('holding ↓ over thousands of changes', () => {
+  // One folder of 10,000 files: its check goes over all of them. What is counted is the same at any size.
+  const many = Array.from({ length: 10_000 }, (_, index) => change(`assets/f${String(index).padStart(6, '0')}.png`, index % 2 ? ['changed'] : ['private']));
   const rows = layoutChangeRows({ changes: many, changelists: [], layout: 'tree', grouping: 'none' });
 
   it('works out the check of each row that comes into view once, not on every step', () => {
@@ -62,7 +62,7 @@ describe('holding ↓ over 100,000 changes', () => {
     }
 
     expect(focused).toBe(index.rowKeys[200]);
-    // The folder's check went over its 100,000 changes once; each file that came into view, once more.
-    expect(looked).toBe(100_000 + filesShown.size);
+    // The folder's check went over its 10,000 changes once; each file that came into view, once more.
+    expect(looked).toBe(10_000 + filesShown.size);
   });
 });

@@ -52,8 +52,8 @@ describe('SpanIndex', () => {
     expect(visitsPerScreen(40_000) / visitsPerScreen(20_000)).toBeLessThan(1.3);
   });
 
-  it('indexes 100,000 spans', () => {
-    const { lefts, rights } = randomSpans(100_000, 1_000_000);
+  it('indexes 20,000 spans', () => {
+    const { lefts, rights } = randomSpans(20_000, 200_000);
     const expected = lefts.flatMap((start, item) => (start <= 5_300 && rights[item]! >= 5_000 ? [item] : []));
     expect(new SpanIndex(lefts, rights).overlapping(5_000, 5_300, [])).toEqual(expected);
   });

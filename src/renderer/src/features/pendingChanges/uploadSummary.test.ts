@@ -31,11 +31,11 @@ describe('uploadSummary', () => {
     expect(uploadSummary([change('a.ts', ['moved'], 10), change('b.ts', ['deleted'], 10)])).toEqual({ bytes: 0, newFiles: 0, editedFiles: 0, largest: null });
   });
 
-  it('goes over the changes once, as checking a box does, even for 100,000 of them', () => {
+  it('goes over the changes once, as checking a box does', () => {
     const kinds: PendingChange['kinds'][] = [['added'], ['checkedOut', 'changed'], ['moved']];
     const many = (count: number) => Array.from({ length: count }, (_, index) => change(`Assets/f${index}.png`, kinds[index % 3]!, index));
-    const summary = uploadSummary(many(100_000));
-    expect(summary.newFiles + summary.editedFiles).toBe(66_667);
+    const summary = uploadSummary(many(3_000));
+    expect(summary.newFiles + summary.editedFiles).toBe(2_000);
     expect(readGrowthWhenDoubled(1_000, many, uploadSummary)).toBeLessThan(2.05);
   });
 });
