@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { CircleX, Trash2, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, type CSSProperties, type KeyboardEvent } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, type CSSProperties, type KeyboardEvent } from 'react';
 import { hotkey, hotkeys } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
 import { pluralize } from '../../lib/text';
@@ -37,7 +37,9 @@ export function CommandLogPanel() {
   const listRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLInputElement>(null);
   const log = useMemo(() => ({ entries, firstNumber }), [entries, firstNumber]);
-  const rows = useMemo(() => commandLogRows(log, scope, workspacePath, filter), [log, scope, workspacePath, filter]);
+  // Filtering reads every command's output, megabytes of it: the field takes each key at once, the rows follow.
+  const shownFilter = useDeferredValue(filter);
+  const rows = useMemo(() => commandLogRows(log, scope, workspacePath, shownFilter), [log, scope, workspacePath, shownFilter]);
 
   // The entry asked for shows even if the filter or the scope hid it; only when asked, so filtering can hide it again.
   useEffect(() => {
@@ -84,12 +86,12 @@ export function CommandLogPanel() {
         <IconButton size="small" icon={<X size={14} />} label="Close" onClick={toggle} />
       </header>
       <div ref={listRef} className={`${styles.list} selectable`} style={{ '--number-digits': numberDigits(log) } as CSSProperties}>
-        <HighlightQuery query={filter.query}>
+        <HighlightQuery query={shownFilter.query}>
           {rows.map((row) => (
             <CommandLogEntryRow key={row.entry.id} entry={row.entry} number={row.number} revealed={row.entry.id === revealedId} cwd={row.cwd} />
           ))}
         </HighlightQuery>
-        {rows.length === 0 && isFiltering(filter) && (
+        {rows.length === 0 && isFiltering(shownFilter) && (
           <div className={styles.empty}>
             No commands match
             <Button size="small" variant="ghost" onClick={() => setFilter(NO_FILTER)}>

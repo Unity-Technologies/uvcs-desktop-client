@@ -722,7 +722,11 @@ renderer/src/
   primitives of their own in `ui/` (`DetailsSection`, `DetailsEmpty`, `DetailsSkeleton`, `DetailsBadge`,
   `DetailsCopyable`, `DetailsLink`, `DetailsDisclosure`, `MoreDetails`), each imported from its own module. Lists are
   a `DataTable` (`ui/table/`: only the rows in view render; the columns' sort, the keys' steps `selectionStep`, and
-  `selectFirstRow`'s successor selection each in a module of their own).
+  `selectFirstRow`'s successor selection each in a module of their own). Arrowing renders the view on every step, so
+  it hands the table the same `rows` and `rowKey` until they change (memoized, or built outside the component), and
+  the same `columns` when they sort: new rows or a new key make it key every row again, a new `sortValue` sort them
+  again. The sort keeps each column's ranks by column id
+  (`ColumnSorter`), so a new `sortValue` function costs a number sort, never comparing the rows' text again.
 - **Big lists render only the rows in view**: anything a server can hold thousands of (branches, labels, repositories,
   users and groups) is virtualized, never a plain `.map` over every row: a 4,800-label `.map` built 29k DOM nodes and
   a 190 ms freeze on open. Pick from the virtualized pieces: `DataTable` for a view's list, `FilterChecklist` to check
@@ -786,7 +790,8 @@ renderer/src/
   - **One order**: by path, folder by folder, names as people read them (`file_2` before `file_10`, case only between
     names otherwise equal; different names read the same, "v01" and "v1" or a name in two Unicode forms, by their code
     units, so each folder's files stay together): `comparePaths` (`shared/pathOrder`), used where the files are read
-    (`parseDiffEntries`, `parseMergePlan`) and by Changes (`sortChanges`). A list and a tree show the files in the same
+    (`parseDiffEntries`, `parseMergePlan`) and by Changes (`sortChanges`, once a read: `useSortedChanges`; filtering
+    keeps the order, and `layoutChangeRows` lays the changes out as they come). A list and a tree show the files in the same
     order. Ordering by kind of change first was tried and rejected: it split a folder's changes apart, and a row jumped
     to another group when its status changed; the status chips of the filter bar (`useChangeFilter`) are how to look at
     one kind. Sorting controls were rejected too: the only other order anyone asked for is by kind, which the chips
