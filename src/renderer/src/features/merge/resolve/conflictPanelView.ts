@@ -43,3 +43,8 @@ export function textToEdit(state: FileConflictState): string {
   if (decision?.kind === 'wholeFile') return contents?.[decision.side].text ?? '';
   return decision?.text ?? document?.text ?? '';
 }
+
+/** Why the text can't be edited in the app, for the menu entry's tooltip; null when it can. */
+export function editInAppUnavailable(state: FileConflictState): string | null {
+  return null;
+}

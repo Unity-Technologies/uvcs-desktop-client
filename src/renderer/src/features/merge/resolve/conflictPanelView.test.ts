@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FileContent } from '@shared/domain/content';
-import { effectiveView, mergedText, rendersVersions, textToEdit } from './conflictPanelView';
+import { LONGEST_DRAWN_LINE } from '../../diff/viewer/longLines';
+import { effectiveView, editInAppUnavailable, mergedText, rendersVersions, textToEdit } from './conflictPanelView';
 import type { FileConflictState } from './useFileConflicts';
 
 const text = (value: string): FileContent => ({ text: value, isBinary: false, size: value.length });
@@ -86,5 +87,16 @@ describe('textToEdit', () => {
     expect(textToEdit(stateOf())).toBe(MARKED);
     expect(textToEdit(stateOf({ decision: { kind: 'wholeFile', side: 'destination' } }))).toBe('mine');
     expect(textToEdit(stateOf({ decision: undefined }))).toBe(MARKED);
+  });
+});
+
+describe('editInAppUnavailable', () => {
+  it('offers editing the text in the app', () => {
+    expect(editInAppUnavailable(stateOf())).toBeNull();
+  });
+
+  it("says why a text with a line too long to draw unwrapped isn't edited in the app: typing there froze the window", () => {
+    const minified = `<<<<<<< /main\n${'var a=b;'.repeat(LONGEST_DRAWN_LINE / 4)}\n=======\nx\n>>>>>>> /main/task\n`;
+    expect(editInAppUnavailable(stateOf({ decision: { kind: 'text', text: minified } }))).toBe('A line of this file is too long to edit here');
   });
 });
