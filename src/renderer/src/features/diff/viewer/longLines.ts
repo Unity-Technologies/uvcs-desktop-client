@@ -5,9 +5,11 @@
  */
 export const LONGEST_DRAWN_LINE = 1_000_000;
 
+const LINE_BREAK = /\r\n?|\n/g;
+
 /** Whether any of the texts has a line too long to draw unwrapped (`LONGEST_DRAWN_LINE`): the view wraps it then. */
 export function hasLineTooLongToDraw(texts: readonly string[]): boolean {
-  return texts.some((text) => text.length > LONGEST_DRAWN_LINE && lineRanges(text).some(({ start, end }) => end - start > LONGEST_DRAWN_LINE));
+  return texts.some((text) => text.length > LONGEST_DRAWN_LINE && hasLongLine(text));
 }
 
 /**
@@ -16,20 +18,21 @@ export function hasLineTooLongToDraw(texts: readonly string[]): boolean {
  */
 export function withLongLinesCut(text: string): string {
   if (!hasLineTooLongToDraw([text])) return text;
-  return lineRanges(text)
-    .map(({ start, end, next }) => (end - start > LONGEST_DRAWN_LINE ? `${text.slice(start, start + LONGEST_DRAWN_LINE)}…${text.slice(end, next)}` : text.slice(start, next)))
-    .join('');
+  return text.replace(/[^\r\n]+/g, (line) => (line.length > LONGEST_DRAWN_LINE ? `${cutAt(line, LONGEST_DRAWN_LINE)}…` : line));
 }
 
-/** Where each line starts and ends, and where the next one starts, past its break (LF, CRLF or a lone CR). */
-function lineRanges(text: string): { start: number; end: number; next: number }[] {
-  const ranges: { start: number; end: number; next: number }[] = [];
+/** Whether a line is too long to draw, found from the line breaks (LF, CRLF or a lone CR), stopping at the first. */
+function hasLongLine(text: string): boolean {
   let start = 0;
-  for (const lineBreak of text.matchAll(/\r\n?|\n/g)) {
-    const next = lineBreak.index + lineBreak[0].length;
-    ranges.push({ start, end: lineBreak.index, next });
-    start = next;
+  for (const lineBreak of text.matchAll(LINE_BREAK)) {
+    if (lineBreak.index - start > LONGEST_DRAWN_LINE) return true;
+    start = lineBreak.index + lineBreak[0].length;
   }
-  ranges.push({ start, end: text.length, next: text.length });
-  return ranges;
+  return text.length - start > LONGEST_DRAWN_LINE;
+}
+
+/** The first `length` code units of `line`, one fewer when the last would be half of a character written in two. */
+function cutAt(line: string, length: number): string {
+  const last = line.charCodeAt(length - 1);
+  return line.slice(0, last >= 0xd800 && last <= 0xdbff ? length - 1 : length);
 }
