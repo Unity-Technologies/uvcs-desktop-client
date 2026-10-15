@@ -19,6 +19,12 @@ export const MAX_RUNNING_CATS = 2;
  * has two pooled sessions, and every other read of it waits behind those.
  */
 export const MAX_QUICK_CAT = 4;
+/**
+ * The most revisions waiting that are read in quick `cm cat`s, one after the other in one pooled session, the session
+ * free between them for any other read: a small merge's few dozen versions, about a millisecond each on a warm session
+ * where a process costs 100-150 ms to start. Past it (a big merge's thousands), batches go to processes.
+ */
+export const MAX_QUICK_BACKLOG = 64;
 
 /** A revision as `cm cat` reads it. */
 export interface CatRevision {
@@ -97,11 +103,14 @@ export class RevisionCat {
    * Starts batches while fewer than `MAX_RUNNING_CATS` run, each formed from what waits then (`nextCatBatch`): after
    * one group's batch, another group's reads go first, so another view's read waits for one batch, not the queue. A
    * few revisions wait for the quick `cm cat` running to end rather than start a process: it answers in milliseconds,
-   * where starting `cm` costs 100-150 ms (a diff's two sides, asked a moment apart).
+   * where starting `cm` costs 100-150 ms (a diff's two sides, asked a moment apart). While what waits is at most
+   * `MAX_QUICK_BACKLOG`, it is all read so, a quick `cm cat` after another (a small merge); past it, in batches as big
+   * as a command line takes, each a process.
    */
   private runWaiting(workspacePath: string, reads: WorkspaceReads): void {
     while (reads.running < MAX_RUNNING_CATS && reads.waiting.length > 0) {
-      const { batch, group } = nextCatBatch(reads.waiting, (read) => read, reads.lastGroup);
+      const limits = reads.waiting.length > MAX_QUICK_BACKLOG ? {} : { maxReads: MAX_QUICK_CAT };
+      const { batch, group } = nextCatBatch(reads.waiting, (read) => read, reads.lastGroup, limits);
       if (isQuick(batch) && reads.quickRunning) break;
       const taken = new Set(batch);
       reads.waiting = reads.waiting.filter((read) => !taken.has(read));

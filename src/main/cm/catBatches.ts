@@ -26,6 +26,8 @@ export interface CatBatchLimits {
   maxBytes?: number;
   /** What a revision of unknown size counts as against `maxBytes`. */
   unknownSize?: number;
+  /** The most revisions one batch reads. */
+  maxReads?: number;
 }
 
 /**
@@ -108,6 +110,7 @@ class CatBatch<T> {
 
   fits(read: T): boolean {
     if (this.reads.length === 0) return true;
+    if (this.reads.length >= (this.limits.maxReads ?? Infinity)) return false;
     const catRead = this.catReadOf(read);
     return this.bytes + this.sizeOf(catRead) <= (this.limits.maxBytes ?? Infinity) && this.length + commandLineLength([batchArg(catRead)]) <= MAX_COMMAND_LINE;
   }

@@ -95,18 +95,20 @@ describe('RevisionCat', () => {
     expect(mostAtOnce).toBe(1);
   });
 
-  it('reads a backlog past what quick cm cats serve in full batches, each a process, every command line one Windows can start', async () => {
+  it('reads a backlog past what quick cm cats serve in full batches, each a process, every command line one Windows can start; the last few quick', async () => {
     const { fake, flush, save } = await setUp(SERVER, { longFolder: true });
     const saved = Promise.all(Array.from({ length: 400 }, (_, i) => save(version(1000 + i))));
     flush();
     await saved;
     const perCommand = readsPerCommand(fake);
+    const readsVia = (via: string) => perCommand.filter(([by]) => by === via).map(([, reads]) => Number(reads));
     expect(perCommand.reduce((total, [, reads]) => total + Number(reads), 0)).toBe(400);
-    expect(perCommand.every(([via]) => via === 'execute')).toBe(true);
     expect(fake.commands.every((command) => fitsCommandLine(command.args))).toBe(true);
-    // Full batches: as few commands as the command line allows.
-    const longest = Math.max(...perCommand.map(([, reads]) => Number(reads)));
-    expect(fake.commands.length).toBe(Math.ceil(400 / longest));
+    // Full batches, as few as the command line allows, while the backlog is big; what's left goes in quick ones.
+    const processes = readsVia('execute');
+    expect(processes.length).toBeGreaterThan(1);
+    expect(new Set(processes.slice(0, -1)).size).toBe(1);
+    expect(readsVia('query').reduce((total, reads) => total + reads, 0)).toBeLessThanOrEqual(MAX_QUICK_BACKLOG);
   });
 
   it("never holds both pooled sessions: a quick cm cat asked while another runs waits for it, rather than start a process (a diff's sides asked a moment apart)", async () => {
