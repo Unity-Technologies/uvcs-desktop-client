@@ -5,7 +5,7 @@ import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 import { isSameOrInside } from '../files/pathContainment';
 import { ChangeBatcher } from './ChangeBatcher';
 import { changedFolder } from './changedFolder';
-import { classifyChange, isChangelistFile, workspaceChangeOf } from './classifyChange';
+import { ANY_FILE_EDIT, classifyChange, isChangelistFile, workspaceChangeOf } from './classifyChange';
 import { FolderTreeWatch } from './FolderTreeWatch';
 import { isIgnored, NO_IGNORE_RULES, parseIgnoreRules, type IgnoreRules } from './ignoreRules';
 import { OwnWrites } from './OwnWrites';
@@ -42,18 +42,24 @@ export class WorkspaceWatcher {
 
   constructor(
     readonly workspacePath: string,
-    onChanged: (change: WorkspaceChange) => void,
+    private readonly onChanged: (change: WorkspaceChange) => void,
     private readonly onBroken: () => void,
     private readonly platform: NodeJS.Platform = process.platform,
     private readonly watch: WatchFolder = watchFolder,
   ) {
-    this.batcher = new ChangeBatcher((change) => !this.stopped && onChanged(change), QUIET_MS, MAX_WAIT_MS);
+    this.batcher = new ChangeBatcher((change) => this.report(change), QUIET_MS, MAX_WAIT_MS);
   }
 
-  start(): WatchCoverage {
+  /**
+   * Answers once watching: on Linux, once every folder has its watch (`FolderTreeWatch`); while folders keep
+   * appearing, it waits for them too.
+   */
+  async start(): Promise<WatchCoverage> {
     this.loadIgnoreRules();
-    const coverage = RECURSIVE_WATCH_PLATFORMS.has(this.platform) ? this.watchRecursively() : this.watchFolderByFolder();
-    this.partial = coverage === 'partial';
+    const coverage = RECURSIVE_WATCH_PLATFORMS.has(this.platform) ? this.watchRecursively() : await this.watchFolderByFolder();
+    // Only ever set, as a guard: no watch can break before start answers today (`onBroken` comes only once a watch
+    // has started, and only microtasks run between that and this line), but a watch told broken must stay so.
+    if (coverage === 'partial') this.partial = true;
     return coverage;
   }
 
@@ -88,7 +94,7 @@ export class WorkspaceWatcher {
     return 'partial';
   }
 
-  private watchFolderByFolder(): WatchCoverage {
+  private async watchFolderByFolder(): Promise<WatchCoverage> {
     this.folderTree = new FolderTreeWatch(
       this.workspacePath,
       (folder) => isIgnored(folder, this.ignoreRules),
@@ -97,7 +103,15 @@ export class WorkspaceWatcher {
       MAX_WATCHED_FOLDERS,
       this.watch,
     );
-    return this.folderTree.start() ? 'full' : 'partial';
+    if (!(await this.folderTree.start())) return 'partial';
+    // A file edited in a folder whose watch wasn't there yet went unseen: the windows (and what keeps something of the
+    // files) read everything again once, as they take the workspace as fully watched from now on.
+    this.report(ANY_FILE_EDIT);
+    return 'full';
+  }
+
+  private report(change: WorkspaceChange): void {
+    if (!this.stopped) this.onChanged(change);
   }
 
   private tryWatch(path: string, recursive: boolean): boolean {

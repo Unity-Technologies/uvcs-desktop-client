@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WorkspaceChange } from '@shared/domain/workspaceChange';
+import { ANY_FILE_EDIT } from './classifyChange';
 import { fakeFolderWatches } from './testing/fakeFolderWatches';
 import { WorkspaceWatcher } from './WorkspaceWatcher';
 
@@ -181,18 +182,18 @@ describe('WorkspaceWatcher', () => {
     expect(watches.watched().size).toBe(0);
   });
 
-  it('watches the whole tree with one recursive watch on macOS and Windows', () => {
+  it('watches the whole tree with one recursive watch on macOS and Windows', async () => {
     for (const platform of ['darwin', 'win32'] as const) {
       const { coverage, watches } = watching({ platform });
-      expect(coverage).toBe('full');
+      expect(await coverage).toBe('full');
       expect(watches.watched()).toEqual(new Map([[workspacePath, true]]));
     }
   });
 
-  it('without recursion, still watches the root and .plastic for checkins and switches, and says the watch is partial', () => {
+  it('without recursion, still watches the root and .plastic for checkins and switches, and says the watch is partial', async () => {
     const { coverage, watches } = watching({ unwatchable: [{ path: workspacePath, recursive: true }] });
 
-    expect(coverage).toBe('partial');
+    expect(await coverage).toBe('partial');
     expect(watches.watched()).toEqual(
       new Map([
         [workspacePath, false],
@@ -201,24 +202,42 @@ describe('WorkspaceWatcher', () => {
     );
   });
 
-  it('watches folder by folder on Linux, skipping ignored folders', () => {
+  it('watches folder by folder on Linux, skipping ignored folders', async () => {
     mkdirSync(join(workspacePath, 'src'));
     mkdirSync(join(workspacePath, 'Library'));
     writeFileSync(join(workspacePath, 'ignore.conf'), 'Library\n');
     const { coverage, watches, changes } = watching({ platform: 'linux' });
 
-    expect(coverage).toBe('full');
+    expect(await coverage).toBe('full');
     expect([...watches.watched().keys()].sort()).toEqual([workspacePath, join(workspacePath, 'src')].sort());
     watches.emit(join(workspacePath, 'src'), 'change', 'a.ts');
     vi.advanceTimersByTime(300);
-    expect(changes).toEqual([fileEdit('src')]);
+    expect(changes).toEqual([ANY_FILE_EDIT, fileEdit('src')]);
   });
 
-  it('on Linux, watches the folders ignore.conf leaves as it changes', () => {
+  it('on Linux, reports files edited anywhere once every folder is watched: an edit made while it walked went unseen', async () => {
+    mkdirSync(join(workspacePath, 'src'));
+    const { coverage, changes } = watching({ platform: 'linux' });
+
+    expect(changes).toEqual([]);
+    expect(await coverage).toBe('full');
+    expect(changes).toEqual([ANY_FILE_EDIT]);
+  });
+
+  it('reports nothing when it starts watching in one go (macOS and Windows), or watches only part (the windows refresh on focus)', async () => {
+    const recursive = watching({ platform: 'darwin' });
+    expect(await recursive.coverage).toBe('full');
+    const partial = watching({ platform: 'linux', unwatchable: [{ path: workspacePath }] });
+    expect(await partial.coverage).toBe('partial');
+    expect([...recursive.changes, ...partial.changes]).toEqual([]);
+  });
+
+  it('on Linux, watches the folders ignore.conf leaves as it changes', async () => {
     mkdirSync(join(workspacePath, 'src'));
     mkdirSync(join(workspacePath, 'Library'));
     writeFileSync(join(workspacePath, 'ignore.conf'), 'Library\n');
-    const { watches } = watching({ platform: 'linux' });
+    const { watches, coverage } = watching({ platform: 'linux' });
+    await coverage;
     const watched = (): string[] => [...watches.watched().keys()].sort();
 
     writeFileSync(join(workspacePath, 'ignore.conf'), 'src\n');
@@ -241,14 +260,16 @@ describe('WorkspaceWatcher', () => {
     expect(timesBroken()).toBe(0);
   });
 
-  it("tells once on Linux that a folder's watch broke, or that a new folder couldn't be watched", () => {
+  it("tells once on Linux that a folder's watch broke, or that a new folder couldn't be watched", async () => {
     mkdirSync(join(workspacePath, 'src'));
     const brokeFolder = watching({ platform: 'linux' });
+    await brokeFolder.coverage;
     brokeFolder.watches.break(join(workspacePath, 'src'));
     brokeFolder.watches.break(workspacePath);
     expect(brokeFolder.timesBroken()).toBe(1);
 
     const outOfWatches = watching({ platform: 'linux', unwatchable: [{ path: join(workspacePath, 'new') }] });
+    await outOfWatches.coverage;
     mkdirSync(join(workspacePath, 'new'));
     outOfWatches.watches.emit(workspacePath, 'rename', 'new');
     expect(outOfWatches.timesBroken()).toBe(1);
