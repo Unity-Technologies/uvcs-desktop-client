@@ -8,17 +8,12 @@ import { shelvableChanges, summarizePending } from './pendingSnapshot';
 import { readPendingSnapshot } from './readPendingChanges';
 import { switchApproach } from './switchApproach';
 import { bringDisabledReason, describeSelector, leaveDisabledReason } from './switchSelectors';
-import type { ShelveFlowDependencies } from './shelveFlowDependencies';
 import type { SwitchShelveRecords } from './switchShelveRecords';
 import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdentity';
 
 /** Reads what the pending changes allow before switching, so the app can offer the right choices. */
-export async function readSwitchPreflight(
-  { cm, headers, records }: Pick<ShelveFlowDependencies, 'cm' | 'headers' | 'records'>,
-  workspacePath: string,
-  targetSpec: string,
-): Promise<SwitchPreflight> {
-  const [workspace, { changes }] = await Promise.all([readWorkspaceIdentity(headers, workspacePath), readPendingSnapshot(cm, workspacePath)]);
+export async function readSwitchPreflight(cm: CmClient, records: SwitchShelveRecords, workspacePath: string, targetSpec: string): Promise<SwitchPreflight> {
+  const [workspace, { changes }] = await Promise.all([readWorkspaceIdentity(cm, workspacePath), readPendingSnapshot(cm, workspacePath)]);
   const summary = summarizePending(changes);
   const needsChoice = switchApproach(summary) === 'shelveChanges';
 

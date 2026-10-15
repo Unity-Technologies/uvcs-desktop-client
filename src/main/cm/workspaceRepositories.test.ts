@@ -8,6 +8,8 @@ import { MAX_LOOKUPS, repositoryInStatusHeader, resolveWorkspaceRepositories } f
 describe('repositoryInStatusHeader', () => {
   it('reads the repository spec', () => {
     expect(repositoryInStatusHeader('STATUS|25076|website|acme@cloud\n')).toBe('website@acme@cloud');
+    // A Unity organization's server by name, which `cm status --xml` and the selector file give by its id.
+    expect(repositoryInStatusHeader('STATUS|51|3dtest/game|AcmeStudio@unity\n')).toBe('3dtest/game@AcmeStudio@unity');
   });
 
   it('accepts workspaces without a loaded changeset', () => {

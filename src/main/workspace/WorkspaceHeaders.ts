@@ -1,7 +1,6 @@
 import type { CmClient } from '../cm/CmClient';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
 import { readWorkspaceStatus, type WorkspaceStatus } from '../cm/workspaceStatus';
-import type { OrganizationServers } from '../cm/organizationServers';
 import { isSameOrInside } from '../files/pathContainment';
 
 /** A read this recent answers again, unless something rewrote the workspace meanwhile (`forget`). */
@@ -13,17 +12,13 @@ export interface WorkspaceNames {
 }
 
 export interface HeaderReaders {
-  /** What the workspace is loaded from, its server by name (`OrganizationServers`). */
   status(workspacePath: string): Promise<WorkspaceStatus>;
   names(workspacePath: string): Promise<WorkspaceNames>;
 }
 
-export function cmHeaderReaders(cm: CmClient, organizations: OrganizationServers): HeaderReaders {
+export function cmHeaderReaders(cm: CmClient): HeaderReaders {
   return {
-    status: async (workspacePath) => {
-      const status = await readWorkspaceStatus(cm, workspacePath);
-      return { ...status, server: await organizations.nameOfWorkspaceServer(workspacePath, status.server, workspacePath) };
-    },
+    status: (workspacePath) => readWorkspaceStatus(cm, workspacePath),
     names: async (workspacePath) => {
       const output = await cm.query(['getworkspacefrompath', workspacePath, `--format=${recordFormat(['wkname', 'guid'])}`], { cwd: workspacePath });
       const [name = '', guid = ''] = parseRecords(output)[0] ?? [];

@@ -1,7 +1,7 @@
 import type { CmClient, CmRunOptions } from '../CmClient';
 import { CmError } from '../CmError';
 import { extractErrorMessage } from '../errorMessage';
-import { namesOrganizationById } from '../organizationServers';
+import { namesOrganizationById } from '../organizationIds';
 
 /** How a command reached `cm`: a pooled `cm shell` (`query`) or a process of its own (`execute`). */
 type CmVia = 'query' | 'execute';
@@ -60,7 +60,7 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
   async function run(via: CmVia, args: string[], options: CmRunOptions = {}): Promise<string> {
     const command: FakeCmCommand = { via, args, line: args.join(' '), options };
     commands.push(command);
-    if (namesOrganizationById(args)) throw new Error(`A Unity organization's server by its id reached cm (name it first, OrganizationServers): cm ${command.line}`);
+    if (namesOrganizationById(args)) throw new Error(`A Unity organization's server by its id reached cm (take it from an output that names it): cm ${command.line}`);
     const key = keys.find((candidate) => startsWithWords(command.line, candidate));
     if (key === undefined) throw new Error(`Unexpected cm command (${via}): cm ${command.line}`);
     const answer = answers[key]!;

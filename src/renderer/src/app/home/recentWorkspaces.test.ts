@@ -1,10 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { entryMatches, recentWorkspaceEntries, unlistedRecentPaths } from './recentWorkspaces';
+import { entryMatches, headsNamingRepository, recentWorkspaceEntries, unlistedRecentPaths } from './recentWorkspaces';
 
 const game = { name: 'game', path: '/wk/game', guid: 'g1' };
 const tools = { name: 'tools', path: '/wk/tools', guid: 'g2' };
 
 describe('recent workspaces', () => {
+  it("leaves to cm the workspaces whose selector file doesn't name their repository (a Unity organization's)", () => {
+    const branch = { kind: 'branch', name: '/main' } as const;
+    const heads = { '/wk/game': { repository: 'game@local', selector: branch }, '/wk/cloud': { repository: null, selector: branch } };
+
+    expect(Object.keys(headsNamingRepository(heads))).toEqual(['/wk/game']);
+    expect(headsNamingRepository(undefined)).toEqual({});
+  });
+
   it('finds the recent paths cm does not list', () => {
     expect(unlistedRecentPaths([game, tools], ['/wk/gone', '/wk/game'])).toEqual(['/wk/gone']);
   });

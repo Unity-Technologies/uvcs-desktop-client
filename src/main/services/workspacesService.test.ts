@@ -9,8 +9,7 @@ import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer } from '../cm/
 import { UPDATE_ARGS } from '../cm/updateArgs';
 import { runForCaller } from '../ipc/caller';
 import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
-import { cmHeaders } from '../workspace/testing/cmHeaders';
-import { WorkspaceHeaders } from '../workspace/WorkspaceHeaders';
+import { cmHeaderReaders, WorkspaceHeaders } from '../workspace/WorkspaceHeaders';
 import type { SwitchContext } from './ServiceContext';
 import { serviceContext } from './testing/serviceContext';
 import { createWorkspacesService } from './workspacesService';
@@ -23,9 +22,9 @@ const STATUS_HEADER = statusHeader('/main/task1', { changeset: 12, repository: '
 
 function workspaces(answers: Record<string, CmAnswer>, watchers?: Partial<WorkspaceWatchers>) {
   const fake = fakeCmClient(answers);
-  const headers = new WorkspaceHeaders(cmHeaders(fake.cm));
+  const headers = new WorkspaceHeaders(cmHeaderReaders(fake.cm));
   const context = serviceContext(fake.cm, { headers, watchers: watchers as WorkspaceWatchers });
-  return { ...fake, headers, operations: context.operations, service: createWorkspacesService(context, {} as SwitchContext) };
+  return { ...fake, operations: context.operations, service: createWorkspacesService(context, {} as SwitchContext) };
 }
 
 const WORKSPACE_NAMES = { getworkspacefrompath: formatOutput(['game', 'a0411612']) };
@@ -60,19 +59,26 @@ describe('workspace info', () => {
     expect(lines().map((line) => line.split(' ')[0])).toEqual(['status', 'getworkspacefrompath']);
   });
 
-  it("names a Unity organization's server as cm does everywhere else, though the header prints its id, asking once a session", async () => {
-    const { service, headers, lines } = workspaces({
+  it("names a Unity organization's server as cm does everywhere else, though the header prints its id", async () => {
+    const { service, commands } = workspaces({
       'status --header --xml': statusHeader('/main/task1', { changeset: 12, repository: 'game', server: UNITY_ORGANIZATION.byId }),
       'status --header --machinereadable': machineReadableStatusHeader('game', UNITY_ORGANIZATION.byName, 12),
       ...WORKSPACE_NAMES,
     });
 
-    const info = await service.info(WORKSPACE);
-    headers.forget(WORKSPACE);
-    await service.info(WORKSPACE);
-
-    expect(info).toMatchObject({ repository: 'game@AcmeStudio@unity', repositoryName: 'game', server: 'AcmeStudio@unity', selector: { kind: 'branch', name: '/main/task1' } });
-    expect(lines().filter((line) => line.includes('--machinereadable'))).toEqual([`status --header --machinereadable --fieldseparator=| ${WORKSPACE}`]);
+    expect(await service.info(WORKSPACE)).toEqual({
+      name: 'game',
+      path: WORKSPACE,
+      repository: 'game@AcmeStudio@unity',
+      repositoryName: 'game',
+      server: 'AcmeStudio@unity',
+      selector: { kind: 'branch', name: '/main/task1' },
+      loadedChangeset: 12,
+    });
+    // Only an id asks the machine-readable header, a local read in the workspace's own sessions.
+    expect(commands.filter(({ args }) => args.includes('--machinereadable'))).toMatchObject([
+      { via: 'query', args: ['status', '--header', '--machinereadable', '--fieldseparator=|', WORKSPACE], options: { cwd: WORKSPACE } },
+    ]);
   });
 
   it('renames the workspace by its current name, read alone, and reads its name again afterwards', async () => {
@@ -233,23 +239,5 @@ describe('other workspaces', () => {
 
     expect((await service.glance(WORKSPACE)).repository).toBe('game@AcmeStudio@unity');
     expect(commands.map((command) => command.options.cwd)).toEqual([undefined, undefined]);
-  });
-
-  it("tells what each workspace works on from its selector file, a Unity organization's server by name, asked once", async () => {
-    const root = await mkdtemp(join(tmpdir(), 'uvcs-heads-'));
-    const [game, tools] = [join(root, 'game'), join(root, 'tools')];
-    for (const path of [game, tools]) {
-      await mkdir(join(path, '.plastic'), { recursive: true });
-      // As UVCS writes it for a workspace created on `game@AcmeStudio@unity`: the organization by its id, CRLF.
-      await writeFile(join(path, '.plastic', 'plastic.selector'), `repository "game@${UNITY_ORGANIZATION.byId}"\r\n  path "/"\r\n    smartbranch "/main"`);
-    }
-    const { service, commands } = workspaces({ 'status --header --machinereadable': machineReadableStatusHeader('game', UNITY_ORGANIZATION.byName) });
-
-    expect(await service.heads([game, tools])).toEqual({
-      [game]: { repository: 'game@AcmeStudio@unity', selector: { kind: 'branch', name: '/main' } },
-      [tools]: { repository: 'game@AcmeStudio@unity', selector: { kind: 'branch', name: '/main' } },
-    });
-    expect(commands).toHaveLength(1);
-    expect(commands[0]?.options.cwd).toBeUndefined();
   });
 });

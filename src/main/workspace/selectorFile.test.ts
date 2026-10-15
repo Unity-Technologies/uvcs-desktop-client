@@ -2,11 +2,18 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { OrganizationServers } from '../cm/organizationServers';
-import { fakeCmClient } from '../cm/testing/fakeCmClient';
+import { UNITY_ORGANIZATION } from '../cm/testing/cmOutput';
 import { parseSelectorFile, readWorkspaceHeads } from './selectorFile';
 
 describe('parseSelectorFile', () => {
+  it("leaves a Unity organization's repository to cm, as the file names its server by its id", () => {
+    // As UVCS writes it for a workspace created on `game@AcmeStudio@unity`.
+    expect(parseSelectorFile(`repository "game@${UNITY_ORGANIZATION.byId}"\r\n  path "/"\r\n    smartbranch "/main"`)).toEqual({
+      repository: null,
+      selector: { kind: 'branch', name: '/main' },
+    });
+  });
+
   it('reads the repository and smart branch', () => {
     expect(parseSelectorFile('rep "acme@acme@cloud"\n  path "/"\n    smartbranch "/main/scm1/scm1d"')).toEqual({
       repository: 'acme@acme@cloud',
@@ -67,9 +74,7 @@ describe('readWorkspaceHeads', () => {
     const unreadable = await workspace('no-selector');
     const garbled = await workspace('garbled', 'not a selector');
 
-    const noCm = new OrganizationServers(fakeCmClient().cm);
-
-    expect(await readWorkspaceHeads([game, unreadable, garbled, join(root, 'gone')], noCm)).toEqual({
+    expect(await readWorkspaceHeads([game, unreadable, garbled, join(root, 'gone')])).toEqual({
       [game]: { repository: 'game@local', selector: { kind: 'branch', name: '/main/task' } },
     });
   });

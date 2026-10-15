@@ -4,7 +4,6 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UpdateResolutions } from '@shared/domain/incoming';
 import type { LeftChangesFinder } from './leftChanges';
-import { cmHeaders } from './testing/cmHeaders';
 import {
   branchFound,
   change,
@@ -75,7 +74,7 @@ function blockedWorkspace(workspacePath: string, { pending: changed = ['src/old.
   });
   const records = new SwitchShelveRecords(memorySettings());
   const finish = vi.fn(async () => {});
-  const deps = { cm: fake.cm, headers: cmHeaders(fake.cm), records, leftChanges: { finish } as unknown as LeftChangesFinder, backupsRoot: join(workspacePath, '..', 'backups') };
+  const deps = { cm: fake.cm, records, leftChanges: { finish } as unknown as LeftChangesFinder, backupsRoot: join(workspacePath, '..', 'backups') };
   return { ...fake, deps, records, finish, shelveComment: () => shelveComment };
 }
 

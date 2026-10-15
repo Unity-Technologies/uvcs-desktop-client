@@ -1,6 +1,5 @@
 import type { BranchNamesCache } from '../cm/BranchNamesCache';
 import type { CmClient } from '../cm/CmClient';
-import type { OrganizationServers } from '../cm/organizationServers';
 import type { OperationTracker } from '../operations/OperationTracker';
 import type { DiffReviewStore } from '../review/DiffReviewStore';
 import type { ReviewStore } from '../review/ReviewStore';
@@ -27,8 +26,6 @@ export interface ServiceContext {
   watchers: WorkspaceWatchers;
   windows: WorkspaceWindows;
   headers: WorkspaceHeaders;
-  /** Unity organizations' servers by name, for what names them by id (`cm history --xml`, `.plastic/plastic.selector`). */
-  organizations: OrganizationServers;
   /** The revisions the Materials look reads at a version's point, downloaded in batches and kept for the session. */
   revisionDownloads: RevisionDownloads;
   /** The repository's trees at the points a model viewer reads, listed once each and shared (`RepositoryTrees`). */

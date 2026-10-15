@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { itemHistoryTarget, itemRevisionsArgs, parseHistoryRecords, parseItemHistory, parseWorkspaceRevision } from './itemHistory';
-import { formatOutput } from './testing/cmOutput';
+import { itemHistoryTarget, itemRevisionsArgs, parseHistoryRecords, parseItemHistory, parseWorkspaceItem, withServerOf } from './itemHistory';
+import { formatOutput, UNITY_ORGANIZATION } from './testing/cmOutput';
 
 const revision = (changeset: number, comment: string, type = 'txt'): string => `
   <Revision>
@@ -126,14 +126,32 @@ describe('itemHistoryTarget', () => {
   });
 });
 
-describe('parseWorkspaceRevision', () => {
-  it("reads the item's own revision, listed before a directory's children", () => {
-    expect(parseWorkspaceRevision('100\n')).toBe(100);
-    expect(parseWorkspaceRevision('102\n100\n101\n')).toBe(102);
+describe('parseWorkspaceItem', () => {
+  it("reads the item's own revision and repository, listed before a directory's children", () => {
+    expect(parseWorkspaceItem(formatOutput([100, 'rep:game@local']))).toEqual({ revisionId: 100, repository: 'game@local' });
+    expect(parseWorkspaceItem(formatOutput([102, 'rep:lib@AcmeStudio@unity'], [100, 'rep:lib@AcmeStudio@unity']))).toEqual({
+      revisionId: 102,
+      repository: 'lib@AcmeStudio@unity',
+    });
   });
 
-  it('finds none for an item the workspace has no revision of', () => {
-    expect(parseWorkspaceRevision('')).toBeUndefined();
-    expect(parseWorkspaceRevision('-1\n')).toBeUndefined();
+  it('finds no revision for an item the workspace has none of, and nothing in no output', () => {
+    expect(parseWorkspaceItem(formatOutput([-1, 'rep:game@local']))).toEqual({ repository: 'game@local' });
+    expect(parseWorkspaceItem('')).toBeUndefined();
+  });
+});
+
+describe('withServerOf', () => {
+  const record = (server: string) => parseHistoryRecords(xml(revision(4, 'Fix')).replace('<Server>local</Server>', `<Server>${server}</Server>`));
+
+  it("names a Unity organization's server, which cm history --xml prints by its id, after the item's repository", () => {
+    const named = withServerOf(record(UNITY_ORGANIZATION.byId), 'game@AcmeStudio@unity');
+
+    expect(parseItemHistory(named, formatOutput([4, 45, 15])).revisions[0]).toMatchObject({ repository: 'game@AcmeStudio@unity', idSpec: 'revid:45@game@AcmeStudio@unity' });
+  });
+
+  it('leaves servers by name, and the id when no repository names it', () => {
+    expect(withServerOf(record('acme@cloud'), 'game@AcmeStudio@unity')[0]?.Server).toBe('acme@cloud');
+    expect(withServerOf(record(UNITY_ORGANIZATION.byId), undefined)[0]?.Server).toBe(UNITY_ORGANIZATION.byId);
   });
 });

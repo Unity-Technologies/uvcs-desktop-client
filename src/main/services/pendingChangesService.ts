@@ -19,13 +19,12 @@ import { withTempFile } from '../files/tempFile';
 import { toAbsolutePaths } from '../files/workspacePaths';
 import { addFilterRules } from '../workspace/filterRuleFile';
 import { shelveAndUndo } from '../workspace/shelveAndUndo';
-import { cmHeaderReaders } from '../workspace/WorkspaceHeaders';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 const DEFAULT_CHANGELIST = 'Default';
 
-export function createPendingChangesService({ cm, operations, organizations }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): PendingChangesApi {
-  const shelveAwayDependencies = { cm, headers: cmHeaderReaders(cm, organizations), records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'shelve-backups') };
+export function createPendingChangesService({ cm, operations }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): PendingChangesApi {
+  const shelveAwayDependencies = { cm, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'shelve-backups') };
 
   async function list(workspacePath: string, filter: PendingChangesFilter): Promise<PendingChangesSnapshot> {
     return parsePendingChanges(await cm.query(pendingChangesStatusArgs(filter), { cwd: workspacePath }));

@@ -1,4 +1,4 @@
-import type { WorkspaceSelector, WorkspaceSummary } from '@shared/domain/workspace';
+import type { WorkspaceHead, WorkspaceSelector, WorkspaceSummary } from '@shared/domain/workspace';
 import { matchesAllWords } from '../../lib/matchesAllWords';
 import { lastSegment } from '../../lib/paths';
 
@@ -26,6 +26,14 @@ export function recentWorkspaceEntries(workspaces: WorkspaceSummary[], recentPat
     // Its name went with the folder; the folder name usually matches it.
     return missingPaths.includes(path) ? [{ workspace: { name: lastSegment(path), path, guid: path }, missing: true }] : [];
   });
+}
+
+/**
+ * The workspaces whose selector file names their repository; `cm` is asked about the recent ones among the rest
+ * (`useRecentWorkspaceRepositories`): a Unity organization's, whose file keeps its server by an id people never see.
+ */
+export function headsNamingRepository(heads: Record<string, WorkspaceHead> = {}): Record<string, WorkspaceHead> {
+  return Object.fromEntries(Object.entries(heads).filter(([, head]) => head.repository !== null));
 }
 
 /** Whether a workspace is found by the home screen's search: every word of it in its name, path, repository or branch. */

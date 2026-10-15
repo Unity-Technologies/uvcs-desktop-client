@@ -1,5 +1,6 @@
 import type { SelectorKind, WorkspaceSelector } from '@shared/domain/workspace';
 import type { CmClient } from './CmClient';
+import { isOrganizationIdServer } from './organizationIds';
 import { child, integer, parseXml, text } from './parseXml';
 
 const SELECTOR_KINDS: Record<string, SelectorKind> = {
@@ -12,8 +13,8 @@ const SELECTOR_KINDS: Record<string, SelectorKind> = {
 export interface WorkspaceStatus {
   repositoryName: string;
   /**
-   * As `cm status --xml` prints it: a Unity organization's by its id (`2398571046213@cloud`), which nothing may show,
-   * compare or pass to `cm`; `OrganizationServers` names it (`WorkspaceHeaders` does).
+   * By name (`readWorkspaceStatus`). Straight from `parseWorkspaceStatus`, as `cm status --xml` prints it: a Unity
+   * organization's by its id (`2398571046213@cloud`), which nothing may show, compare or pass to `cm`.
    */
   server: string;
   selector: WorkspaceSelector;
@@ -21,9 +22,21 @@ export interface WorkspaceStatus {
   loadedChangeset: number | null;
 }
 
-/** What the workspace is loaded from, read with `cm status --header --xml`. */
+/** What the workspace is loaded from, read with `cm status --header --xml`, its server by name (`serverByName`). */
 export async function readWorkspaceStatus(cm: CmClient, workspacePath: string): Promise<WorkspaceStatus> {
-  return parseWorkspaceStatus(await cm.query(['status', '--header', '--xml'], { cwd: workspacePath }));
+  const status = parseWorkspaceStatus(await cm.query(['status', '--header', '--xml'], { cwd: workspacePath }));
+  return { ...status, server: await serverByName(cm, workspacePath, status.server, workspacePath) };
+}
+
+/**
+ * The workspace's `server` as `cm` names it everywhere but in `cm status --xml`, which prints a Unity organization's by
+ * its id (ARCHITECTURE.md "Unity organizations"). Only then is the workspace's machine-readable header read, a local
+ * read that names it, from `cwd` (the home folder's `cm shell` unless said). Should it fail, the id stays.
+ */
+export async function serverByName(cm: CmClient, workspacePath: string, server: string, cwd?: string): Promise<string> {
+  if (!isOrganizationIdServer(server)) return server;
+  const output = await cm.query(machineReadableHeaderArgs(workspacePath), cwd === undefined ? {} : { cwd }).catch(() => '');
+  return parseMachineReadableHeader(output)?.server ?? server;
 }
 
 /**
