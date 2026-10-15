@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WorkspaceChange } from '@shared/domain/workspaceChange';
+import { ANY_FILE_EDIT } from './classifyChange';
 import { fakeFolderWatches } from './testing/fakeFolderWatches';
 import { WorkspaceWatcher } from './WorkspaceWatcher';
 
@@ -31,7 +32,6 @@ function watching({ platform = 'darwin' as NodeJS.Platform, unwatchable = [] as 
 
 const fileEdit = (folder: string, pathsChanged = false): WorkspaceChange => ({ content: true, pathsChanged, metadata: false, folders: [folder] });
 const WORKSPACE_STATE: WorkspaceChange = { content: false, pathsChanged: false, metadata: true, folders: [] };
-const ANY_FILE_EDIT: WorkspaceChange = { content: true, pathsChanged: true, metadata: false, folders: null };
 
 describe('WorkspaceWatcher coalesces bursts', () => {
   it('into one change once events stop for 300 ms', () => {

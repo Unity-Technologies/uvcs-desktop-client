@@ -1,5 +1,6 @@
 import type { WatchCoverage } from '@shared/api/workspaces';
 import type { WorkspaceChange } from '@shared/domain/workspaceChange';
+import { ANY_FILE_EDIT } from './classifyChange';
 import { AFTER_OWN_WRITE_GRACE_MS } from './OwnWrites';
 import { WorkspaceWatcher } from './WorkspaceWatcher';
 
@@ -102,9 +103,8 @@ export class WorkspaceWatchers {
       if (cwd !== undefined && !watcher.covers(cwd)) continue;
       watcher.ignoreOwnWrite(write, only);
       if (only === 'changelists') continue;
-      const anywhere: WorkspaceChange = { content: true, pathsChanged: true, metadata: false, folders: null };
       const tell = (): void => {
-        for (const listener of this.fileListeners) listener.changed(watcher.workspacePath, anywhere);
+        for (const listener of this.fileListeners) listener.changed(watcher.workspacePath, ANY_FILE_EDIT);
       };
       // Once it settles, and again when its grace ends: what changed meanwhile, the watcher dropped as the write's.
       const settled = (): void => {

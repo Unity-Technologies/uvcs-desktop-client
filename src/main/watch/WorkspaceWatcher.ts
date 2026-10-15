@@ -5,7 +5,7 @@ import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 import { isSameOrInside } from '../files/pathContainment';
 import { ChangeBatcher } from './ChangeBatcher';
 import { changedFolder } from './changedFolder';
-import { classifyChange, isChangelistFile, workspaceChangeOf } from './classifyChange';
+import { ANY_FILE_EDIT, classifyChange, isChangelistFile, workspaceChangeOf } from './classifyChange';
 import { FolderTreeWatch } from './FolderTreeWatch';
 import { isIgnored, NO_IGNORE_RULES, parseIgnoreRules, type IgnoreRules } from './ignoreRules';
 import { OwnWrites } from './OwnWrites';
@@ -20,8 +20,6 @@ const RECURSIVE_WATCH_PLATFORMS = new Set<NodeJS.Platform>(['darwin', 'win32']);
  * shared by all their apps (8,192 on kernels before 5.11, more since). A bigger tree is watched in part.
  */
 const MAX_WATCHED_FOLDERS = 10_000;
-/** Files may have changed anywhere: their views read everything again. */
-const ANY_FILE_EDIT: WorkspaceChange = { content: true, pathsChanged: true, metadata: false, folders: null };
 
 /**
  * Watches a workspace and reports what changed, in coalesced batches: file edits (pending changes) apart
