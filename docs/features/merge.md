@@ -124,7 +124,8 @@ your decision" before any of its versions is read: the preview's `cm ls` of the 
 revision's type, and a destination revision `cm` keeps as `bin` makes the file a known binary (`destinationIsBinary`,
 `isKnownBinary`; Incoming's update conflicts, by the incoming revision's type), with no command more, even if its bytes
 would read as text: `cm`'s own merge doesn't merge it line by line either. Its three
-versions are read only while the file shows (`readsOnOpen`, `useFileConflicts`' `openFile`), in one batch. A file whose
+versions are read only while the file shows, once the selection settles on it (`readsOnOpen`, `useFileConflicts`'
+`openFile`, `useSettledValue`: holding ↓ through a folder of textures reads none it passes), in one batch. A file whose
 destination is text may still hold a binary version: its versions are read, and their bytes tell, as for every text
 file (`loadConflict`). Every other conflicting file's three versions load at once (`upFrontReads`: its status needs
 its automatic merge), watched by one observer whose results reach the page at most once a frame

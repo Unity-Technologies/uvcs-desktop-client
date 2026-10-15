@@ -4,6 +4,8 @@ import type { ContentSource } from '@shared/domain/content';
 import type { FileConflictResolution } from '@shared/domain/merge';
 import type { MergeTool, MergeToolOutcome } from '@shared/domain/mergeTools';
 import { api } from '../../../api/client';
+import { queryClient } from '../../../app/queryClient';
+import { useSettledValue } from '../../../lib/useSettled';
 import type { MergeLabels } from '../mergeDescription';
 import { resolveInMergeTool, type OpenTool } from '../mergeTools/resolveInMergeTool';
 import { conflictVersionQuery } from './conflictVersionQuery';
@@ -55,7 +57,9 @@ export interface FileConflictState {
 /**
  * Loads the three versions of every conflicting file but the known binaries, merges them automatically where possible
  * and keeps the user's decisions for the rest, including the ones made in a merge tool. A known binary's versions are
- * read once it opens (`openFile`: the file the page shows), and kept while it stays open.
+ * read once it opens (`openFile`: the file the page shows) and the selection settles on it (`useSettledValue`), or at
+ * once when read before: holding ↓ through a folder of textures reads none of those it passes. They are kept while it
+ * stays open.
  */
 export function useFileConflicts(workspacePath: string, files: ConflictedFile[], labels: MergeLabels) {
   const [decisions, setDecisions] = useState<Record<string, FileConflictDecision>>({});
@@ -67,8 +71,12 @@ export function useFileConflicts(workspacePath: string, files: ConflictedFile[],
   const contentQueries = useMemo(() => upFront.sources.map((source) => conflictVersionQuery(workspacePath, source)), [workspacePath, upFront]);
   const upFrontResults = useQueriesByFrame(contentQueries);
   const openedFile = files.find((file) => file.key === openKey);
+  const settled = useSettledValue(openKey, openKey ?? '') === openKey;
   const openedVersions = useQueries({
-    queries: readsOnOpen(openedFile).map((source) => conflictVersionQuery(workspacePath, source)),
+    queries: readsOnOpen(openedFile).map((source) => {
+      const query = conflictVersionQuery(workspacePath, source);
+      return { ...query, enabled: settled || queryClient.getQueryData(query.queryKey) !== undefined };
+    }),
     combine: versionReads,
   });
   const built = useRef<BuiltStates>(new Map());
