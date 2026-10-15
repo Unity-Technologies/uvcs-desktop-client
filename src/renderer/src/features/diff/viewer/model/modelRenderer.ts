@@ -13,6 +13,7 @@ import {
   DirectionalLight,
   Float32BufferAttribute,
   Group,
+  HalfFloatType,
   HemisphereLight,
   LineBasicMaterial,
   LineSegments,
@@ -119,9 +120,8 @@ export class ModelRenderer {
   private targets: [WebGLRenderTarget, WebGLRenderTarget] | null = null;
   private readonly blender = new Blender();
   private readonly comparer = new LookComparer();
-  /** What Diffs by look draws around the comparison: the grid under it, and the region boxed over it. */
+  /** The grid, under Diffs by look's comparison. */
   private readonly under = new Scene();
-  private readonly over = new Scene();
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     this.renderer = new WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -343,8 +343,9 @@ export class ModelRenderer {
   }
 
   /**
-   * Diffs by look: each version drawn apart with its materials (no grid, pivot or bones, which would compare as
-   * themselves), the grid on the canvas, then the comparison over it, and the region stepped to boxed on top.
+   * Diffs by look: each version drawn apart with its materials, the grid on the canvas, then the comparison over it,
+   * and on top what isn't the model: the version after's bones and the dots of the nodes picked. Drawn into the
+   * versions, those would compare as changes (a bone or a node only one version has) or turn gray where they match.
    */
   private renderCompared(layout: Layout): void {
     const targets = (this.targets ??= [this.target(), this.target()]);
@@ -352,13 +353,14 @@ export class ModelRenderer {
     this.renderer.setViewport(0, 0, this.width, this.height);
     this.renderer.setClearAlpha(0);
     const drawn = { before: targets[0]!, after: targets[1]! };
-    // Out of the versions' scenes first: drawn into one alone, the box would compare as a change.
-    this.over.add(this.region);
     for (const pane of layout.panes) {
       this.renderer.setRenderTarget(drawn[pane.side]);
       this.renderer.clear();
       const side = this.sides[pane.side];
-      if (side) this.drawSide(side, this.width / this.height, false);
+      if (!side) continue;
+      side.markers.visible = false;
+      this.drawSide(side, this.width / this.height, false);
+      side.markers.visible = true;
     }
     this.renderer.setClearAlpha(1);
     this.renderer.setRenderTarget(null);
@@ -367,7 +369,13 @@ export class ModelRenderer {
     this.under.add(this.grid);
     this.renderer.render(this.under, this.camera);
     this.comparer.draw(this.renderer, drawn.before.texture, drawn.after.texture, { backdrop: this.palette!.backdrop, accent: this.palette!.highlight });
-    this.renderer.render(this.over, this.camera);
+    const after = this.sides.after;
+    if (after) {
+      this.placeSkeleton(after, this.showBones);
+      this.renderer.render(after.skeleton, this.camera);
+      this.renderer.render(after.joints, this.camera);
+    }
+    for (const side of Object.values(this.sides)) if (side) this.renderer.render(side.markers, this.camera);
   }
 
   private drawSide(side: SideScene, aspect: number, withGrid = true): void {
@@ -420,8 +428,12 @@ export class ModelRenderer {
     return layoutOf(shownLayoutMode(mode, this.look.diffsCompares, this.look.looksLoaded), width, height, split);
   }
 
+  /**
+   * Half floats: what is drawn into it is linear, and 8 bits of linear lose the dark tones (a step there is about 13
+   * in sRGB), which the onion's blend shows as banding and Diffs by look would compare as changes.
+   */
   private target(): WebGLRenderTarget {
-    return new WebGLRenderTarget(this.width * this.pixelRatio, this.height * this.pixelRatio, { samples: 4 });
+    return new WebGLRenderTarget(this.width * this.pixelRatio, this.height * this.pixelRatio, { samples: 4, type: HalfFloatType });
   }
 
   private sceneOf(model: ModelScene): SideScene {

@@ -175,8 +175,10 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   sooner, a texture still loading on one side would light up; until then the version after shows alone ("Loading
   textures to compare…"). It sees what faces the camera, and a plain-colored part that moved onto itself looks the
   same where it overlaps: the shape's heatmap, with the materials off, tells those. It has no tolerance or regions to
-  step through (they'd change with every turn of the camera), and nothing lights up on a pick, as a part lit on one
-  side would compare as a change. Comparing what each texture's pixels hold, in UV space, was considered and
+  step through (they'd change with every turn of the camera), and no part lights up on a pick, as a part lit on one
+  side would compare as a change; the version after's bones and the dots of nodes picked are drawn over the
+  comparison, never into it. Its drawings are half floats (`target`): 8 bits of linear color would compare a dark
+  tone's rounding as a change. Comparing what each texture's pixels hold, in UV space, was considered and
   dropped: it needs both versions to keep their UVs and mesh, and misses colors, tiling and remaps.
 - **Split**: a half each, before on the left. **Swipe**: both through one full view, each cut at the divider
   (`SwipeDivider`, the image swipe's). **Onion**: each version drawn apart, cleared transparent, and blended
