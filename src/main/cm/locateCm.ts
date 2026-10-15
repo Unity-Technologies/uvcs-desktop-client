@@ -26,15 +26,11 @@ function installLocations(platform: NodeJS.Platform, env: NodeJS.ProcessEnv): st
 
 /**
  * Where to look for `cm`, in order: the PATH, then the install locations (an app started from the Dock or a desktop
- * menu may have a short PATH). On Windows the install locations come first: a Path often lists folders on network
- * drives, where checking for a file can hold the main process for seconds as the app starts, and the installer puts
- * its folder on the Path anyway. It's started without a shell, so on Windows only `cm.exe` runs.
+ * menu may have a short PATH). It's started without a shell, so on Windows only `cm.exe` runs.
  */
 export function cmCandidates(platform: NodeJS.Platform, env: NodeJS.ProcessEnv): string[] {
   const join = platform === 'win32' ? win32.join : posix.join;
-  const onPath = pathFolders(env, platform).map((folder) => join(folder, executableName(platform)));
-  const installed = installLocations(platform, env);
-  return platform === 'win32' ? [...installed, ...onPath] : [...onPath, ...installed];
+  return [...pathFolders(env, platform).map((folder) => join(folder, executableName(platform))), ...installLocations(platform, env)];
 }
 
 function executableName(platform: NodeJS.Platform): string {
