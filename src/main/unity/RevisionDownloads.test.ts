@@ -4,29 +4,19 @@ import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
-import { fitsCommandLine } from '../cm/commandLineLimit';
-import { cmFails, fakeCmClient, type FakeCmCommand } from '../cm/testing/fakeCmClient';
+import { catReadsOf, catWriting } from '../cm/testing/fakeCat';
+import { cmFails, fakeCmClient } from '../cm/testing/fakeCmClient';
 import { formatOutput } from '../cm/testing/cmOutput';
 import { WorkspaceCopies, type RevisionFile } from '../files/WorkspaceCopies';
-import { batchesOf, catArgs, MAX_BATCH_BYTES, RevisionDownloads } from './RevisionDownloads';
+import { batchesOf, MAX_BATCH_BYTES, RevisionDownloads } from './RevisionDownloads';
 
 const md5 = (text: string) => createHash('md5').update(text).digest('base64');
 
 /** The content of each revision on the server, by id. */
 const SERVER: Record<number, string> = { 1: 'bark v1', 2: 'leaves v2', 3: 'moss v3' };
 
-/** `cm cat <spec>;<file> …` as `cm` does it: every revision it has written to its file; one it hasn't fails the command. */
-async function catAnswer(command: FakeCmCommand): Promise<string | ReturnType<typeof cmFails>> {
-  const missing: string[] = [];
-  for (const arg of command.args.slice(1)) {
-    const [revisionSpec = '', target = ''] = arg.split(';');
-    const id = Number(/^revid:(\d+)@/.exec(revisionSpec)?.[1]);
-    if (SERVER[id] === undefined) missing.push(revisionSpec);
-    else await writeFile(target, SERVER[id]!);
-  }
-  return missing.length > 0 ? cmFails(`The specified revision was not found ${missing[0]}`) : '';
-}
+/** `cm cat` as `cm` does it, of the revisions on the server. */
+const catAnswer = catWriting((revisionSpec) => SERVER[Number(/^revid:(\d+)@/.exec(revisionSpec)?.[1])]);
 
 const file = (revisionId: number, path = `Art/${revisionId}.png`, hash: string | null = null, size = -1): RevisionFile => ({ path, revision: { revisionId, repository: 'eco@local' }, hash, size });
 
@@ -81,7 +71,7 @@ describe('RevisionDownloads', () => {
     const cut = new RevisionDownloads({
       cm: fakeCmClient({
         cat: async ({ args }) => {
-          for (const arg of args.slice(1)) await writeFile(arg.split(';')[1]!, 'bark v');
+          for (const { target } of catReadsOf(args)) await writeFile(target, 'bark v');
           return cmFails('The connection was closed');
         },
       }).cm,
@@ -91,7 +81,7 @@ describe('RevisionDownloads', () => {
     });
     await expect(cut.read(workspace, file(1, 'Art/1.png', md5('bark v1'), 7))).rejects.toThrow('closed');
     // A whole one in the same failed command stays, its size and hash as listed.
-    const whole = new RevisionDownloads({ cm: fakeCmClient({ cat: async ({ args }) => (await writeFile(args[1]!.split(';')[1]!, 'bark v1'), cmFails('The connection was closed')) }).cm, tempFolder: sessions, pid: 100, isRunning: () => false });
+    const whole = new RevisionDownloads({ cm: fakeCmClient({ cat: async ({ args }) => (await writeFile(catReadsOf(args)[0]!.target, 'bark v1'), cmFails('The connection was closed')) }).cm, tempFolder: sessions, pid: 100, isRunning: () => false });
     expect(await text(whole.read(workspace, file(1, 'Art/1.png', md5('bark v1'), 7)))).toBe('bark v1');
   });
 
@@ -104,7 +94,7 @@ describe('RevisionDownloads', () => {
     const { workspace, fake, downloads, text } = await setUp();
     const [found] = await Promise.allSettled([text(downloads.read(workspace, file(3))), text(downloads.read(workspace, file(404)))]);
     expect(found).toEqual({ status: 'fulfilled', value: 'moss v3' });
-    expect(fake.commands.map((command) => command.args.length)).toEqual([3, 2]);
+    expect(fake.commands.map((command) => catReadsOf(command.args).length)).toEqual([2, 1]);
   });
 
   it("downloads again, together in one more batch, the revisions a failed batch can't tell whole: never one process each", async () => {
@@ -112,7 +102,7 @@ describe('RevisionDownloads', () => {
     const reads = [file(1), file(2), file(3), file(404)].map((asked) => text(downloads.read(workspace, asked)));
     const results = await Promise.allSettled(reads);
     expect(results.map((result) => result.status)).toEqual(['fulfilled', 'fulfilled', 'fulfilled', 'rejected']);
-    expect(fake.commands.map((command) => command.args.length - 1)).toEqual([4, 3]);
+    expect(fake.commands.map((command) => catReadsOf(command.args).length)).toEqual([4, 3]);
   });
 
   it('refuses unread a revision listed past what is read', async () => {
@@ -184,27 +174,6 @@ describe('batchesOf', () => {
   it('batches by workspace, by repository and by bytes, a revision past the limit alone', () => {
     const half = MAX_BATCH_BYTES / 2;
     const batches = batchesOf([waiting(1, half), waiting(2, half), waiting(3, 1), waiting(4, MAX_BATCH_BYTES * 2), waiting(5, 1, '/other'), waiting(6, 1, '/w', 'art@local')], '/tmp/s');
-    expect(batches.map((batch) => batch.map((one) => one.file.revision.revisionId))).toEqual([[1, 2], [3], [4], [5], [6]]);
-  });
-
-  it('fills each command line Windows can start, and no more', () => {
-    const folder = join('C:', 'Users', 'Jo Smith', 'AppData', 'Local', 'Temp', 'uvcs-revisions-x');
-    const many = Array.from({ length: 2000 }, (_, i) => waiting(i, 1));
-    const batches = batchesOf(many, folder);
-    expect(batches.length).toBeGreaterThan(1);
-    expect(batches.flat()).toEqual(many);
-    expect(batches.every((batch) => fitsCommandLine(catArgs(batch, folder)))).toBe(true);
-    expect(batches.slice(0, -1).every((batch, index) => !fitsCommandLine(catArgs([...batch, batches[index + 1]![0]!], folder)))).toBe(true);
-  });
-
-  it('batches in linear work: twice the revisions, about twice the reads', () => {
-    const many = (count: number) => Array.from({ length: count }, (_, i) => waiting(i, 1));
-    expect(readGrowthWhenDoubled(100, many, (items) => batchesOf(items, '/tmp/s'))).toBeLessThan(2.5);
-  });
-
-  it('downloads each revision alone, as --file, into a folder whose path holds a ;', () => {
-    const batches = batchesOf([waiting(1, 1), waiting(2, 1)], '/tmp/a;b');
-    expect(batches).toHaveLength(2);
-    expect(catArgs(batches[0]!, '/tmp/a;b')).toEqual(['cat', 'revid:1@eco@local', `--file=${join('/tmp/a;b', 't1')}`]);
+    expect(batches.map((batch) => batch.map((one) => one.file.revision.revisionId))).toEqual([[1, 2], [3], [4], [6], [5]]);
   });
 });

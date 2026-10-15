@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import type { RevisionRef } from '@shared/domain/revision';
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
-import { commandLineLength, MAX_COMMAND_LINE } from '../cm/commandLineLimit';
+import { catArgs, catBatchesOf, type CatRead } from '../cm/catBatches';
 import { MAX_MODEL_BYTES } from '../files/fileContent';
 import { contentHashOf, WorkspaceCopies, type RevisionFile } from '../files/WorkspaceCopies';
 
@@ -207,7 +207,7 @@ export class RevisionDownloads {
     const targets = batch.map((one) => join(folder, one.target));
     // The OS's cleaning (macOS's of folders idle for days, systemd-tmpfiles) may have taken the folder meanwhile.
     const failure = await mkdir(folder, { recursive: true })
-      .then(() => this.cm.execute(catArgs(batch, folder), { cwd: batch[0]!.workspacePath }))
+      .then(() => this.cm.execute(catArgs(batch.map((one) => catReadOf(one, folder))), { cwd: batch[0]!.workspacePath }))
       .then(
         () => null,
         (error: unknown) => error,
@@ -275,49 +275,22 @@ function processIsRunning(pid: number): boolean {
 }
 
 /**
- * The waiting reads in batches: one workspace (`cm` runs in it) and one repository each (an xlinked repository's
- * revisions apart: `cm cat` resolves each repository's on its own), within `MAX_BATCH_BYTES` (one revision past it goes
- * alone) and a command line Windows can start. A folder holding `;` can't be named in `<spec>;<file>`: then each
- * revision goes alone, as `--file=`.
+ * The waiting reads in batches of one `cm cat` each (`catBatchesOf`): one workspace each (`cm` runs in it), within
+ * `MAX_BATCH_BYTES`, a revision of unknown size counting as `UNKNOWN_SIZE`.
  */
 export function batchesOf<T extends { workspacePath: string; file: Pick<RevisionFile, 'revision' | 'size'>; target: string }>(waiting: readonly T[], folder: string): T[][] {
-  const batches: T[][] = [];
   const byWorkspace = new Map<string, T[]>();
   for (const one of waiting) {
-    const key = JSON.stringify([one.workspacePath, one.file.revision.repository]);
-    const reads = byWorkspace.get(key);
+    const reads = byWorkspace.get(one.workspacePath);
     if (reads) reads.push(one);
-    else byWorkspace.set(key, [one]);
+    else byWorkspace.set(one.workspacePath, [one]);
   }
-  // The command line grows by each revision's argument: measured one at a time, not the whole batch again for each.
-  const catLength = commandLineLength(['cat']);
-  for (const reads of byWorkspace.values()) {
-    let batch: T[] = [];
-    let bytes = 0;
-    let length = catLength;
-    for (const one of reads) {
-      const size = one.file.size >= 0 ? one.file.size : UNKNOWN_SIZE;
-      const argLength = commandLineLength(catArgs([one], folder).slice(1)); // Its own arguments, past `cat`.
-      if (batch.length > 0 && (folder.includes(';') || bytes + size > MAX_BATCH_BYTES || length + argLength > MAX_COMMAND_LINE)) {
-        batches.push(batch);
-        batch = [];
-        bytes = 0;
-        length = catLength;
-      }
-      batch.push(one);
-      bytes += size;
-      length += argLength;
-    }
-    if (batch.length > 0) batches.push(batch);
-  }
-  return batches;
+  return [...byWorkspace.values()].flatMap((reads) => catBatchesOf(reads, (one) => catReadOf(one, folder), { maxBytes: MAX_BATCH_BYTES, unknownSize: UNKNOWN_SIZE }));
 }
 
-/** `cm cat` of the batch's revisions, each into its file in the folder. */
-export function catArgs(batch: readonly { file: Pick<RevisionFile, 'revision'>; target: string }[], folder: string): string[] {
-  const [only] = batch;
-  if (folder.includes(';') && only) return ['cat', spec.revision(only.file.revision), `--file=${join(folder, only.target)}`];
-  return ['cat', ...batch.map((one) => `${spec.revision(one.file.revision)};${join(folder, one.target)}`)];
+/** A waiting read as `cm cat` takes it: its revision, into its file in the session's folder. */
+export function catReadOf({ file, target }: { file: Pick<RevisionFile, 'revision' | 'size'>; target: string }, folder: string): CatRead {
+  return { spec: spec.revision(file.revision), repository: file.revision.repository, target: join(folder, target), size: file.size };
 }
 
 /** Whether a file written by a `cm cat` that failed is whole: its size and hash as listed, where known; else not. */
