@@ -40,11 +40,13 @@ import { canvasSizeChanged, canvasSizeOf, type CanvasSize } from './canvasSize';
 import { LookComparer } from './lookComparer';
 import { LookTextures, SlotLookMaterials } from './materials/slotLookMaterials';
 import type { SlotLook } from './materials/materialPlan';
+import { MeshPicker } from './meshPicker';
 import type { ModelPalette } from './modelPalette';
 import { slotColor } from './modelPalette';
 import { modelOrientation, type ModelScene } from './modelScene';
-import { emphasisOf } from './sceneMaterials';
 import { cameraPositionOf, clipPlanesOf, FIELD_OF_VIEW, type BoundsLike, type OrbitView, type Ray, type Vector } from './orbitCamera';
+import { pickWindowAt } from './pickWindow';
+import { emphasisOf } from './sceneMaterials';
 import type { DiffsCompares, SurfaceLook } from './surfaceLook';
 import { layoutOf, paneAt, shownLayoutMode, type ChosenLayoutMode, type Layout, type Side } from './viewLayout';
 
@@ -126,6 +128,8 @@ export class ModelRenderer {
   private readonly comparer = new LookComparer();
   /** The grid, under Diffs by look's comparison. */
   private readonly under = new Scene();
+  /** Picks on the GPU; null where it can't, and picks raycast (`raycastHit`). */
+  private readonly picker: MeshPicker | null;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     this.renderer = new WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -144,6 +148,7 @@ export class ModelRenderer {
     generator.dispose();
     canvas.addEventListener('webglcontextrestored', this.requestRender);
     this.lookTextures = new LookTextures(Math.min(8, this.renderer.capabilities.getMaxAnisotropy()));
+    this.picker = MeshPicker.supported(this.renderer) ? new MeshPicker() : null;
   }
 
   setModels(before: ModelScene | null, after: ModelScene | null, bounds: BoundsLike): void {
@@ -277,14 +282,13 @@ export class ModelRenderer {
     const side = pane && this.sides[pane.side];
     if (!pane || !side) return null;
     const { viewport } = pane;
-    const ndc = new Vector2(((x * this.pixelRatio - viewport.x) / viewport.width) * 2 - 1, ((this.height - y) * this.pixelRatio - viewport.y) / viewport.height * 2 - 1);
+    const at = pickWindowAt(x, y, viewport, this.height, this.pixelRatio);
     this.placeCamera(viewport.width / viewport.height);
     const raycaster = new Raycaster();
-    raycaster.setFromCamera(ndc, this.camera);
-    const hits: Intersection[] = raycaster.intersectObjects(side.model.meshes.filter((mesh) => mesh.solid.visible || mesh.wire.visible).map((mesh) => mesh.solid), false);
-    const [hit] = hits;
+    raycaster.setFromCamera(new Vector2(...at.ndc), this.camera);
     const ray: Ray = { origin: raycaster.ray.origin.toArray(), direction: raycaster.ray.direction.toArray() };
-    return { side: pane.side, key: (hit?.object.userData.key as string | undefined) ?? null, point: hit ? (hit.point.toArray() as Vector) : null, ray };
+    const hit = this.picker ? this.picker.pick(this.renderer, side.scene, this.camera, at) : raycastHit(raycaster, side.model);
+    return { side: pane.side, key: hit ? side.model.meshes[hit.mesh]!.key : null, point: hit?.point ?? null, ray };
   }
 
   /**
@@ -313,6 +317,7 @@ export class ModelRenderer {
     this.targets?.forEach((target) => target.dispose());
     this.blender.dispose();
     this.comparer.dispose();
+    this.picker?.dispose();
     this.environment.dispose();
     disposeGroup(this.grid);
     this.renderer.dispose();
@@ -476,6 +481,7 @@ export class ModelRenderer {
     pivot.renderOrder = 10;
     scene.add(key, key.target, new HemisphereLight(0xffffff, 0x000000, 0.25), model.root, markers, pivot, skeleton, joints);
     const looks = new SlotLookMaterials(model, this.lookTextures);
+    model.meshes.forEach((mesh, index) => MeshPicker.makePickable([mesh.solid, mesh.wire], index));
     return { scene, model, key, markers, pivot, skeleton, joints, looks };
   }
 
@@ -579,6 +585,16 @@ export class ModelRenderer {
     pivot.renderOrder = 10;
     this.grid.add(pivot);
   }
+}
+
+/**
+ * The first mesh a ray from the camera meets, testing each triangle on the main thread: where the GPU can't pick
+ * (`MeshPicker.supported`). The meshes shown count, solid or wireframe.
+ */
+function raycastHit(raycaster: Raycaster, model: ModelScene): { mesh: number; point: Vector } | null {
+  const shown = model.meshes.filter((mesh) => mesh.solid.visible || mesh.wire.visible).map((mesh) => mesh.solid);
+  const [hit]: Intersection[] = raycaster.intersectObjects(shown, false);
+  return hit ? { mesh: model.meshes.findIndex((mesh) => mesh.solid === hit.object), point: hit.point.toArray() as Vector } : null;
 }
 
 /** Round dots of `size` CSS pixels on screen, ringed in the backdrop's color, never hidden by the model. */
