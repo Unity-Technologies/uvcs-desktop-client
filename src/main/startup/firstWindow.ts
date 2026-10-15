@@ -36,11 +36,17 @@ export type FirstScreenRead = { workspacePath: string | undefined } | null;
  * (`EARLY_ANSWER_MS`) while the window opens on the named one (`openFirstWindow`).
  */
 export function readFirstScreenAhead({ cm, windows, early, settings }: FirstScreenSources, namesAFolder: boolean): FirstScreenRead {
-  early.start('system.cmVersion', []);
-  if (namesAFolder) return null;
-  const workspacePath = windows.firstWorkspace();
-  readScreenOf(workspacePath, { cm, early, settings });
-  return { workspacePath };
+  try {
+    early.start('system.cmVersion', []);
+    if (namesAFolder) return null;
+    const workspacePath = windows.firstWorkspace();
+    readScreenOf(workspacePath, { cm, early, settings });
+    return { workspacePath };
+  } catch (error) {
+    // Reading ahead only saves time: the window still opens, and reads its screen then.
+    console.warn('[start-up] Reading the first screen ahead failed:', error);
+    return null;
+  }
 }
 
 /**
