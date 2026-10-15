@@ -313,7 +313,8 @@ app's own files and `data:`/`blob:` images, so profile pictures reach it from ma
 Every error is the app's to tell, in its own UI; Electron's native "A JavaScript error occurred in the main process"
 dialog never shows.
 
-- **Expected failures** reach the window as the API call's rejection (`registerApi`: a `CmError` keeps its command),
+- **Expected failures** reach the window as the API call's rejection (`registerApi`: a `CmError` keeps its command,
+  clipped as the command log clips it, both ends of its output kept: `clipForLog`),
   and the renderer tells them as error toasts (`runOperation`, `runAction`) whose Details open `ErrorDialog`, with
   "Report an Issue".
 - **Main, nothing caught**: `main/index.ts` imports `errors/installUnexpectedErrorHandlers` first, so before any other
