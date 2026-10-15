@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { MergeRequest, MergeResolutions } from '@shared/domain/merge';
 import { mergeOutput, statusHeader, treeListing } from '../cm/testing/cmOutput';
 import { fakeCat } from '../cm/testing/fakeCat';
-import { fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { cmFails, fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { recordingContext } from '../operations/testing/recordingContext';
 import { runMerge } from './runMerge';
 
@@ -110,6 +110,26 @@ describe('runMerge into the workspace', () => {
     expect(await readFile(join(workspacePath, 'src', 'a.txt'), 'utf8')).toBe('incoming version\n');
     expect(await readFile(join(workspacePath, 'src', 'b.txt'), 'utf8')).toBe('incoming version\n');
     expect(await readFile(join(workspacePath, 'src', 'c.txt'), 'utf8')).toBe('mine c.txt\n');
+  });
+
+  it('writes every incoming version kept even when cancelled once cm merged: the merge is in the workspace by then', async () => {
+    const cancel = new AbortController();
+    const { cm } = fakeCmClient({
+      'status --short': '',
+      'merge br:/main/task': ({ args }) => {
+        if (!args.includes('--merge')) return mergeOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31));
+        cancel.abort();
+        return '';
+      },
+      ls: treeListing('eco@local', 'src/a.txt', 'src/b.txt'),
+      cat: (command) => (command.options.signal?.aborted ? cmFails('Cancelled') : fakeCat(() => 'incoming version\n')(command)),
+    });
+    const resolutions: MergeResolutions = { directoryConflicts: [], files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'source' } } };
+
+    await runMerge(cm, workspacePath, FROM_TASK, resolutions, recordingContext(cancel.signal).context);
+
+    expect(await readFile(join(workspacePath, 'src', 'a.txt'), 'utf8')).toBe('incoming version\n');
+    expect(await readFile(join(workspacePath, 'src', 'b.txt'), 'utf8')).toBe('incoming version\n');
   });
 
   it('reads the incoming version of a shelve from the shelve, whose revisions no changeset holds', async () => {
