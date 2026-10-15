@@ -1,7 +1,8 @@
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { defaultRangeExtractor, useVirtualizer } from '@tanstack/react-virtual';
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Checkbox } from './Checkbox';
 import { checklistKeyAction } from './checklistKeys';
+import { keepRendered } from '../lib/keepRendered';
 import { HighlightQuery } from './Highlight';
 import { SearchField } from './SearchField';
 import styles from './FilterChecklist.module.css';
@@ -41,7 +42,14 @@ export function FilterChecklist({ rows, search, onSearchChange, placeholder, lab
   const id = useId();
   const [active, setActive] = useState(-1);
   const [browsing, setBrowsing] = useState(false);
-  const virtualizer = useVirtualizer({ count: rows.length, getScrollElement: () => listRef.current, estimateSize: () => rowHeight, overscan: 8 });
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => listRef.current,
+    estimateSize: () => rowHeight,
+    overscan: 8,
+    // The row the search field's aria-activedescendant names stays rendered while the mouse wheel scrolls it away.
+    rangeExtractor: (range) => keepRendered(defaultRangeExtractor(range), active, rows.length),
+  });
 
   // Typing starts over from the first match; clearing the search leaves the rows unpicked.
   useEffect(() => {
