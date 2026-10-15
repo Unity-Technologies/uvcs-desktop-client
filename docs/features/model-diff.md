@@ -171,7 +171,7 @@ a canvas whose context was lost hands that lost context to the next renderer, wh
 StrictMode's second mount showed. Where WebGL can't start at all (no usable GPU, the browser's limit of contexts), the
 pane says "Couldn't start the 3D view", not the window's error screen. What changes every frame (a playing take's skeleton) is
 written into the buffers it has (`writeAttribute`), and a side replaced frees its own (`disposeSide`). The model worker
-answers every request, a failure too ("Couldn't compare these surfaces"): no view waits for good. Each version is a scene of its own (`buildModelScene`: its hierarchy, a material per slot, a
+answers every request, a failure too ("Couldn't compare these surfaces"): no view waits for good. Each version is a scene of its own (`buildModelScene`: its hierarchy, a material per slot shared by the meshes drawn alike (`SceneMaterials`), a
 wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out per mode (`layoutOf`). A model of
 thousands of parts turns at the display's rate (3,000 meshes in Split: 33 ms a frame before, 17 now), as a frame does
 only what changes:
