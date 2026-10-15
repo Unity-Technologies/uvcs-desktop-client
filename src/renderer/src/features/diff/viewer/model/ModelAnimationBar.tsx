@@ -58,13 +58,13 @@ export function ModelAnimationBar({ renderer, scenes, choices, comparable, take:
     }
     seek(mixers, choice, 0);
     setTime(0);
-    renderer.requestRender();
+    renderer.posed();
     return () => {
       for (const side of ['before', 'after'] as const) {
         mixers[side]?.stopAllAction();
         scenes[side]?.resetPose();
       }
-      renderer.requestRender();
+      renderer.posed();
     };
   }, [mixers, choice, takes, scenes, renderer]);
 
@@ -80,7 +80,7 @@ export function ModelAnimationBar({ renderer, scenes, choices, comparable, take:
       last = now;
       seek(mixers, choice, next);
       setTime(next);
-      renderer.requestRender();
+      renderer.posed();
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
@@ -91,7 +91,7 @@ export function ModelAnimationBar({ renderer, scenes, choices, comparable, take:
     setPlaying(false);
     seek(mixers, choice, value);
     setTime(value);
-    renderer.requestRender();
+    renderer.posed();
   };
 
   const unplayable = unplayableWords([...(takes.before?.dropped ?? []), ...(takes.after?.dropped ?? [])]);

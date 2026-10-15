@@ -313,10 +313,35 @@ only what changes:
   shown"). The rest pose puts the blendshapes back at 0 too (`resetPose`): a glTF's default weights (its mesh's or
   node's `weights`) aren't carried, so one whose rest shape isn't its base shows the base.
 - **The scene**: clay lit by a soft studio (three's `RoomEnvironment`) and a key light over the camera's shoulder;
-  a ground grid a power of ten apart that suits the model (1 m for a person), X and Z through the origin in Unity's
-  axis colors; each version's pivot axes, turned as the node every mesh hangs under. A picked node with no geometry
+  each version's pivot axes, turned as the node every mesh hangs under and sized to the model (12% of it, not three's
+  1 m, which stuck far out of a prop). A picked node with no geometry
   (a bone, an empty) shows as a dot on top of everything, framed with a third of the model around it. Colors come from
   `tokens.css` (`readModelPalette`, read again as the theme changes).
+- **The floor**: both versions stand on one floor, the lowest point of the two (`shadowFrameOf`), so a model that
+  rises or sinks between them shows it against the floor.
+  - **A contact shadow** under each version, as Sketchfab grounds a model (`ContactShadow`): the model seen from under
+    the floor through an orthographic camera, darker the nearer the floor (three's depth material, its depth as alpha:
+    `shadowsByDepth`), the nearest surface winning by depth test and either side of it casting, blurred, on a plane
+    under it. Three's contact-shadow example draws without a depth test, where the last surface drawn wins: a tabletop
+    drawn after its legs hid their shadow. Only the solids cast it (camera layer `SHADOW_LAYER`, the one after the picker's
+    `PICK_LAYER`), whatever the mode shows. It is drawn again only when the model, the bounds or a take's pose changes
+    (`ModelRenderer.posed`, which the animation bar calls) or a lost WebGL context comes back, never as the camera
+    moves. It covers the rest pose's footprint (the framed bounds): a take that walks the model off it, or below the
+    floor, is cut at its edge. Diffs' version before (a ghost)
+    and Diffs by look (a shadow would compare as a change) draw none. It is darker on the dark theme
+    (`SHADOW_OPACITY`), whose backdrop shows less of it.
+  - **An endless ground grid** on that floor, as Unity's Scene view and Blender draw theirs (`GroundGrid`): worked
+    out per pixel over the whole view, where the camera's ray meets the floor; cells a power of ten that suits how far
+    each part is (10 cm near, 1 m farther, 10 m towards the horizon), the smallest whose lines are
+    `MIN_PIXELS_BETWEEN_LINES` apart fading into the next ten times larger; fading out at `FADE_DISTANCES` the camera's
+    distance to its target; X and Z through the origin, muted (`AXIS_OPACITY`), say where the pivot is across the
+    ground. A step lighter on the dark theme (its border colors sit too near its backdrop). Each pixel writes the
+    depth the model's camera gives the floor there (`gl_FragDepth`), so the model hides the grid behind it.
+  - Rejected: the grid as line geometry sized to the model. The near plane is as far out as the model allows
+    (`clipPlanesOf`), for the depth precision Diffs hides the version before by, so it cut the ground between the
+    camera and a model seen close; pulling the near plane in costs that precision, and a grid sized to the model
+    ended in an edge or left the view empty. The grid at the pivot's height (y = 0) cut through a model whose pivot is
+    at its middle while the shadow lay under it.
 - **"What changed"** (`ModelChangesPanel`): folded by default to its title, its count and its risks, so the model has
   the stage, and remembered as the user leaves it (`modelChangesOpen`). Open, beside a pane at least `ROOMY_PANE` wide
   it is a column of its own; narrower, or folded, it floats at the stage's top right (under the onion's pill). A row
@@ -418,7 +443,7 @@ textures") shows only when some
 slot would show more than clay (`materialsOffered`: a remap, a texture, a color or transparency of its own). In Diffs
 it compares how the versions look ("Compare materials and textures", `materialsButtonLabel`; Diffs by look under "The
 view"); slot colors stay there, off, saying why (`surfaceButtonDisabledReason`: their colors would hide the
-heatmap's), and come back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
+heatmap's), and come back in the other modes. The merge cards' stills stay clay (`modelThumbnail`), on the same floor, shadow and grid as the live view.
 
 - **Where the version is, never another revision's files.** Each version's materials and textures are the ones that
   go with it, looked up at its point (`AssetsPoint`, found by `AssetsPointContext`, `assetsPoints.ts`): a workspace

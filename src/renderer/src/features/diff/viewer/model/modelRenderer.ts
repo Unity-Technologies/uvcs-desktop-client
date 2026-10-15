@@ -1,5 +1,5 @@
-// Draws a model diff on one WebGL canvas: each version in a scene of its own (a studio light, the 1 m grid Unity's
-// Scene view shows, the model's pivot) seen through one camera, laid out by the mode (`layoutOf`). It draws only
+// Draws a model diff on one WebGL canvas: each version in a scene of its own (a studio light, a contact shadow on the
+// floor, the endless ground grid, the model's pivot) seen through one camera, laid out by the mode (`layoutOf`). It draws only
 // when asked (`requestRender`: a gesture, a mode, a look; at once for a still or a resize, `renderNow`), never on a
 // loop: an idle diff costs the GPU nothing. The onion skin draws each version apart and blends them, so it blends
 // what is seen, not the meshes' depths; Diffs by look draws them apart too, and compares them (`LookComparer`).
@@ -39,6 +39,8 @@ import {
 } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { canvasSizeChanged, canvasSizeOf, type CanvasSize } from './canvasSize';
+import { ContactShadow, SHADOW_LAYER, shadowFrameOf } from './contactShadow';
+import { GroundGrid } from './groundGrid';
 import { DISTANCE_ATTRIBUTE, distancesToDraw } from './heatColors';
 import { LookComparer } from './lookComparer';
 import { LookTextures, SlotLookMaterials } from './materials/slotLookMaterials';
@@ -96,19 +98,25 @@ interface SideScene {
   joints: Points<BufferGeometry, ShaderMaterial>;
   /** Each mesh's materials as the Materials look draws them, made the first time it does. */
   looks: SlotLookMaterials;
+  /** The soft shadow under it, on the floor both versions share. */
+  shadow: ContactShadow;
 }
 
 /** How much a node that isn't lit up fades towards the backdrop while others are. */
 const FADE = 0.7;
+/** How dark the contact shadow is at its darkest: more on the dark theme, whose backdrop shows less of it. */
+const SHADOW_OPACITY = { light: 0.45, dark: 0.9 } as const;
 
 export class ModelRenderer {
   private readonly renderer: WebGLRenderer;
   private readonly camera = new PerspectiveCamera(FIELD_OF_VIEW, 1, 0.01, 1000);
   private readonly environment: Texture;
   private readonly sides: Record<Side, SideScene | null> = { before: null, after: null };
-  /** Both versions' bounds together, in the viewer's space: the grid and the clip planes cover them. */
+  /** Both versions' bounds together, in the viewer's space: the clip planes and the shadows' floor cover them. */
   private bounds: BoundsLike = { min: [-1, -1, -1], max: [1, 1, 1] };
   private readonly grid = new Group();
+  /** The endless ground grid in `grid`, on the floor under the models; null until the palette comes. */
+  private groundGrid: GroundGrid | null = null;
   /** The changed region stepped to, boxed in the accent. */
   private readonly region = new Box3Helper(new Box3());
   private view: OrbitView = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 5 };
@@ -162,7 +170,7 @@ export class ModelRenderer {
     const generator = new PMREMGenerator(this.renderer);
     this.environment = generator.fromScene(new RoomEnvironment(), 0.04).texture;
     generator.dispose();
-    canvas.addEventListener('webglcontextrestored', this.requestRender);
+    canvas.addEventListener('webglcontextrestored', this.redrawShadows);
     this.lookTextures = new LookTextures(Math.min(8, this.renderer.capabilities.getMaxAnisotropy()));
     this.picker = picks && MeshPicker.supported(this.renderer) ? new MeshPicker() : null;
     this.picker?.prepare(this.renderer, this.camera);
@@ -180,6 +188,7 @@ export class ModelRenderer {
       this.dfgLutSought = false;
     }
     this.lookTextures.keepOnly(this.materialLooks);
+    if (!sameBounds(this.bounds, bounds)) for (const side of Object.values(this.sides)) side?.shadow.markStale();
     this.bounds = bounds;
     this.rebuildGrid();
     this.applyHeat();
@@ -324,6 +333,17 @@ export class ModelRenderer {
     this.drawFrame();
   }
 
+  /** A take moved the nodes: the shadows follow on the next frame. */
+  posed(): void {
+    this.redrawShadows();
+  }
+
+  /** The shadows drawn again on the next frame: a pose changed, or a restored context lost their drawings. */
+  private readonly redrawShadows = (): void => {
+    for (const side of Object.values(this.sides)) side?.shadow.markStale();
+    this.requestRender();
+  };
+
   /** Draws on the next frame, once however often it is asked before then. */
   readonly requestRender = (): void => {
     if (this.frame) return;
@@ -347,7 +367,7 @@ export class ModelRenderer {
    */
   dispose(): void {
     cancelAnimationFrame(this.frame);
-    this.canvas.removeEventListener('webglcontextrestored', this.requestRender);
+    this.canvas.removeEventListener('webglcontextrestored', this.redrawShadows);
     (this.dfgLut ?? sharedDfgLutOf(this.renderer, this.drawnMaterials()))?.dispose();
     this.dfgLut = null;
     for (const side of Object.values(this.sides)) if (side) disposeSide(side);
@@ -375,6 +395,7 @@ export class ModelRenderer {
   private render(): void {
     if (!this.palette) return;
     const layout = this.layout();
+    this.updateShadows(layout);
     this.renderer.setClearColor(new Color(this.palette.backdrop));
     if (layout.drawn === 'blended') return this.renderBlended(layout);
     if (layout.drawn === 'compared') return this.renderCompared(layout);
@@ -446,6 +467,20 @@ export class ModelRenderer {
     for (const side of Object.values(this.sides)) if (side) this.renderer.render(side.markers, this.camera);
   }
 
+  /**
+   * The shadow of each side the layout draws with the grid, where the floor is now, drawn again if its model or pose
+   * changed since; the rest (Diffs' version before, Diffs by look) show none and draw nothing.
+   */
+  private updateShadows(layout: Layout): void {
+    const frame = shadowFrameOf(this.bounds);
+    const opacity = this.palette?.isDark ? SHADOW_OPACITY.dark : SHADOW_OPACITY.light;
+    if (layout.drawn === 'compared') return;
+    for (const pane of layout.panes) {
+      const side = this.sides[pane.side];
+      if (side && !pane.overlay) side.shadow.update(this.renderer, side.scene, side.model, frame, opacity);
+    }
+  }
+
   private drawSide(side: SideScene, aspect: number, withGrid = true): void {
     this.placeCamera(aspect);
     // The key light rides over the camera's right shoulder, so the side facing the viewer is always lit.
@@ -457,6 +492,8 @@ export class ModelRenderer {
     if (withGrid) side.scene.add(this.grid, this.region);
     else this.grid.removeFromParent();
     side.pivot.visible = withGrid;
+    // Under the version drawn with the grid only: Diffs' version before is a ghost, and by look a shadow would compare.
+    side.shadow.plane.visible = withGrid;
     this.placeSkeleton(side, withGrid && this.showBones);
     this.renderer.render(side.scene, this.camera);
   }
@@ -487,6 +524,7 @@ export class ModelRenderer {
     this.camera.position.set(...cameraPositionOf(this.view));
     this.camera.lookAt(...this.view.target);
     this.camera.updateProjectionMatrix();
+    this.groundGrid?.follow(this.camera, this.view.distance);
   }
 
   private layout(): Layout {
@@ -529,7 +567,10 @@ export class ModelRenderer {
     scene.add(key, key.target, new HemisphereLight(0xffffff, 0x000000, 0.25), model.root, markers, pivot, skeleton, joints);
     const looks = new SlotLookMaterials(model, this.lookTextures);
     model.meshes.forEach((mesh, index) => MeshPicker.makePickable([mesh.solid, mesh.wire], index));
-    return { scene, model, key, markers, pivot, skeleton, joints, looks };
+    const shadow = new ContactShadow();
+    for (const mesh of model.meshes) mesh.solid.layers.enable(SHADOW_LAYER);
+    scene.add(shadow.plane);
+    return { scene, model, key, markers, pivot, skeleton, joints, looks, shadow };
   }
 
   /**
@@ -620,9 +661,8 @@ export class ModelRenderer {
   }
 
   /**
-   * The ground grid: lines a power of ten apart that suits the model (1 m for a person, as Unity's Scene view
-   * shows; 10 cm for a prop held in the hand), every tenth stronger, and X and Z through the origin in Unity's axis
-   * colors, so a model off its pivot shows where it went. Each side's pivot axes are sized with it.
+   * The endless ground grid on the floor under the models (`GroundGrid`), and the pivot's axes at the origin, each
+   * side's sized and colored as the grid's.
    */
   private rebuildGrid(): void {
     const palette = this.palette;
@@ -631,30 +671,21 @@ export class ModelRenderer {
     this.grid.clear();
     const { min, max } = this.bounds;
     const extent = Math.max(max[0] - min[0], max[2] - min[2], max[1] - min[1], 1e-3);
-    const cell = 10 ** Math.floor(Math.log10(extent));
-    const reach = Math.ceil((Math.max(Math.abs(min[0]), Math.abs(max[0]), Math.abs(min[2]), Math.abs(max[2])) + extent) / cell) * cell;
-    const lines = (color: string, every: number, skipEvery: number | null): LineSegments => {
-      const positions: number[] = [];
-      for (let step = -Math.round(reach / every); step <= Math.round(reach / every); step++) {
-        if (step === 0 || (skipEvery !== null && step % skipEvery === 0)) continue;
-        const at = step * every;
-        positions.push(-reach, 0, at, reach, 0, at, at, 0, -reach, at, 0, reach);
-      }
-      const geometry = new BufferGeometry();
-      geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
-      return new LineSegments(geometry, new LineBasicMaterial({ color, transparent: true, opacity: 0.9, depthWrite: false }));
-    };
-    const axis = (color: string, from: Vector, to: Vector): LineSegments => {
-      const geometry = new BufferGeometry();
-      geometry.setAttribute('position', new Float32BufferAttribute([...from, ...to], 3));
-      return new LineSegments(geometry, new LineBasicMaterial({ color, depthWrite: false }));
-    };
-    this.grid.add(lines(palette.grid, cell, 10), lines(palette.gridMajor, cell * 10, null), axis(palette.axisX, [-reach, 0, 0], [reach, 0, 0]), axis(palette.axisZ, [0, 0, -reach], [0, 0, reach]));
+    // A step lighter on the dark theme, whose border colors sit too near its backdrop for a grid that fades as it goes.
+    const lines = palette.isDark ? { minor: palette.gridMajor, major: palette.wire } : { minor: palette.grid, major: palette.gridMajor };
+    this.groundGrid = new GroundGrid({ ...lines, axisX: palette.axisX, axisZ: palette.axisZ }, shadowFrameOf(this.bounds).floor);
+    this.grid.add(this.groundGrid.mesh);
     const pivot = new AxesHelper(extent * 0.12);
     pivot.setColors(new Color(palette.axisX), new Color(palette.axisY), new Color(palette.axisZ));
     (pivot.material as LineBasicMaterial).depthTest = false;
     pivot.renderOrder = 10;
     this.grid.add(pivot);
+    // Each version's pivot axes as the grid's, turned as its model is: three's default 1 m axes in its own colors
+    // stuck out far past a prop.
+    for (const side of Object.values(this.sides)) {
+      side?.pivot.scale.setScalar(extent * 0.12);
+      side?.pivot.setColors(new Color(palette.axisX), new Color(palette.axisY), new Color(palette.axisZ));
+    }
   }
 }
 
@@ -752,6 +783,11 @@ function disposeSide(side: SideScene): void {
   }
   side.pivot.dispose();
   side.looks.dispose();
+  side.shadow.dispose();
+}
+
+function sameBounds(a: BoundsLike, b: BoundsLike): boolean {
+  return a.min.every((value, i) => value === b.min[i]) && a.max.every((value, i) => value === b.max[i]);
 }
 
 function disposeGroup(group: Group): void {

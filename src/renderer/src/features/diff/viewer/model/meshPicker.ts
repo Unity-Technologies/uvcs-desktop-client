@@ -11,7 +11,7 @@ import { BackSide, BufferAttribute, BufferGeometry, Color, DoubleSide, FloatType
 import { pickedAt, type PickWindow } from './pickWindow';
 
 /** The layer the pickable meshes are on, beside the default one everything is drawn on. */
-const PICK_LAYER = 1;
+export const PICK_LAYER = 1;
 
 export class MeshPicker {
   private readonly target = new WebGLRenderTarget(1, 1, { type: FloatType, depthBuffer: true });
