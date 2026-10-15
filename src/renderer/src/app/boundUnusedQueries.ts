@@ -22,8 +22,9 @@ export function boundUnusedQueries(cache: QueryCache, max: number, matches: (que
 
   const forgetPastBounds = (): void => {
     const held = bytes ? new UnusedBytes(cache, unused, bytes.heldBy) : null;
+    const maxBytes = bytes?.max ?? Infinity;
     for (const oldest of unused) {
-      if (unused.size <= max && (!held || held.total <= bytes!.max)) break;
+      if (unused.size <= max && (held?.total ?? 0) <= maxBytes) break;
       unused.delete(oldest);
       held?.forget(oldest);
       cache.remove(oldest);
