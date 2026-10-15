@@ -10,6 +10,21 @@ describe('fakeCmClient', () => {
     await expect(cm.query(['find', 'branchy'])).rejects.toThrow('Unexpected cm command');
   });
 
+  it("fails a command naming a Unity organization's server by its id, which the app always names first", async () => {
+    const { cm } = fakeCmClient({ cat: '', 'find revision': '', 'lock list': '', 'profile delete': '', 'find changeset': '' });
+
+    for (const args of [
+      ['cat', 'revid:45@game@2398571046213@cloud'],
+      ['find', 'revision', "where itemid = 7 on repository 'game@2398571046213@cloud'"],
+      ['lock', 'list', '--repository=game@2398571046213@cloud'],
+    ]) {
+      await expect(cm.query(args)).rejects.toThrow("A Unity organization's server by its id reached cm");
+    }
+    // A profile's name is the id form itself, as `cm profile list` prints it; and a changeset of a repository named so.
+    await expect(cm.query(['profile', 'delete', '--name=2398571046213@cloud'])).resolves.toBe('');
+    await expect(cm.query(['find', 'changeset', 'cs:5@cloud', 'game@AcmeStudio@unity'])).resolves.toBe('');
+  });
+
   it('answers with the longest key the command starts with, and records how each command was run', async () => {
     const { cm, commands, linesVia } = fakeCmClient({ find: 'any', 'find branch': 'branches' });
 

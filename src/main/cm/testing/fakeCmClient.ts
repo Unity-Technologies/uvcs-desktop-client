@@ -59,6 +59,7 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
   async function run(via: CmVia, args: string[], options: CmRunOptions = {}): Promise<string> {
     const command: FakeCmCommand = { via, args, line: args.join(' '), options };
     commands.push(command);
+    if (namesOrganizationById(args)) throw new Error(`A Unity organization's server by its id reached cm (name it first, OrganizationServers): cm ${command.line}`);
     const key = keys.find((candidate) => startsWithWords(command.line, candidate));
     if (key === undefined) throw new Error(`Unexpected cm command (${via}): cm ${command.line}`);
     const answer = answers[key]!;
@@ -87,6 +88,14 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
     ran: (prefix) => commands.some((command) => startsWithWords(command.line, prefix)),
     warmedUp,
   };
+}
+
+/**
+ * Whether a command names a Unity organization's server by its id (`game@2398571046213@cloud`), which the app never
+ * passes to `cm` (`OrganizationServers`). A profile's name is that id form itself, as `cm profile list` prints it.
+ */
+function namesOrganizationById(args: readonly string[]): boolean {
+  return args[0] !== 'profile' && args.some((arg) => /(?:^|[@='"\s])\d+@cloud(?![.\w])/.test(arg));
 }
 
 /** Whether `line` starts with the whole words of `prefix`: `find branch` starts `find branch --xml`, not `find branchy`. */
