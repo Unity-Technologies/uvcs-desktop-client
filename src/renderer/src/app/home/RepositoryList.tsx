@@ -1,10 +1,10 @@
 import { defaultRangeExtractor, useVirtualizer } from '@tanstack/react-virtual';
-import { forwardRef, useImperativeHandle, useLayoutEffect, useRef, useState, type FocusEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { forwardRef, useCallback, useImperativeHandle, useLayoutEffect, useRef, useState, type FocusEvent, type KeyboardEvent, type ReactNode } from 'react';
 import type { RepositorySummary } from '@shared/domain/repository';
 import { keepRendered } from '../../lib/keepRendered';
 import { HighlightQuery } from '../../ui/Highlight';
 import { RepositoryRow } from './RepositoryRow';
-import { repositoryRowKey, repositoryRowKeyTarget, type RepositoryListRow } from './repositoryListRows';
+import { repositoryRowIndex, repositoryRowKey, repositoryRowKeyTarget, type RepositoryListRow } from './repositoryListRows';
 import { WorkspaceRow } from './WorkspaceRow';
 import styles from './Home.module.css';
 
@@ -13,6 +13,9 @@ const ROW_FOCUS = '[data-roving-item], [data-workspace-row]';
 
 /** Close to each row's height, so the scroll bar barely moves as rows are measured. */
 const ESTIMATED_HEIGHT: Record<RepositoryListRow['kind'], number> = { repository: 50, workspace: 47, newWorkspace: 34 };
+
+/** Pixels: `.list`'s padding, kept clear above and below a row the keys scroll to, so its focus ring shows whole. */
+const LIST_PADDING = 8;
 
 export interface RepositoryListHandle {
   /** ↓ from the search field: the first row takes the focus. False when there is none. */
@@ -42,30 +45,50 @@ export const RepositoryList = forwardRef<RepositoryListHandle, RepositoryListPro
   ref,
 ) {
   const listRef = useRef<HTMLDivElement>(null);
-  const [focused, setFocused] = useState<number | null>(null);
-  const focusRequested = useRef(false);
+  const rowsRef = useRef<HTMLDivElement>(null);
+  // The row holding the focus, by its key: the filter or an expanding repository moves it, the focus stays on it.
+  const [focusedKey, setFocusedKey] = useState<string | null>(null);
+  // A row the keys moved to that wasn't rendered yet: it takes the focus once the scroll renders it.
+  const pendingFocus = useRef<string | null>(null);
+  // Where the rows start in the scrolled content: below the list's padding and whatever shows above them.
+  const [scrollMargin, setScrollMargin] = useState(0);
+  const focusedIndex = focusedKey === null ? null : repositoryRowIndex(rows, focusedKey);
+  const estimateSize = useCallback((index: number) => ESTIMATED_HEIGHT[rows[index]!.kind], [rows]);
+  const getItemKey = useCallback((index: number) => repositoryRowKey(rows[index]!), [rows]);
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => listRef.current,
-    estimateSize: (index) => ESTIMATED_HEIGHT[rows[index]!.kind],
-    getItemKey: (index) => repositoryRowKey(rows[index]!),
+    estimateSize,
+    getItemKey,
     overscan: 8,
-    rangeExtractor: (range) => keepRendered(defaultRangeExtractor(range), focused, rows.length),
+    scrollMargin,
+    scrollPaddingStart: LIST_PADDING,
+    scrollPaddingEnd: LIST_PADDING,
+    rangeExtractor: (range) => keepRendered(defaultRangeExtractor(range), focusedIndex, rows.length),
   });
 
+  const focusableAt = (index: number): HTMLElement | null =>
+    listRef.current?.querySelector(`[data-index="${index}"]`)?.querySelector<HTMLElement>(ROW_FOCUS) ?? null;
+
+  // Rendered already (the overscan holds the rows next to the one focused), it takes the focus at once.
   const focusRow = (index: number): void => {
-    focusRequested.current = true;
-    setFocused(index);
+    const key = repositoryRowKey(rows[index]!);
     virtualizer.scrollToIndex(index);
+    setFocusedKey(key);
+    const row = focusableAt(index);
+    pendingFocus.current = row ? null : key;
+    row?.focus({ preventScroll: true });
   };
 
-  // A row asked for by the keys may render only after the scroll: it takes the focus once it's there.
   useLayoutEffect(() => {
-    if (!focusRequested.current || focused === null) return;
-    const row = listRef.current?.querySelector(`[data-index="${focused}"]`)?.querySelector<HTMLElement>(ROW_FOCUS);
-    if (!row) return;
-    focusRequested.current = false;
-    row.focus({ preventScroll: true });
+    const top = rowsRef.current && listRef.current ? rowsRef.current.getBoundingClientRect().top - listRef.current.getBoundingClientRect().top + listRef.current.scrollTop : 0;
+    if (Math.round(top) !== scrollMargin) setScrollMargin(Math.round(top));
+    if (pendingFocus.current === null) return;
+    const index = repositoryRowIndex(rows, pendingFocus.current);
+    const row = index === -1 ? null : focusableAt(index);
+    if (index !== -1 && !row) return;
+    pendingFocus.current = null;
+    row?.focus({ preventScroll: true });
   });
 
   useImperativeHandle(ref, () => ({
@@ -82,8 +105,9 @@ export const RepositoryList = forwardRef<RepositoryListHandle, RepositoryListPro
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    // Keys pressed in a row's menu (a portal) bubble here too: they belong to the menu.
-    if (!event.currentTarget.contains(event.target as Node) || event.metaKey || event.ctrlKey || event.altKey) return;
+    // Only a row's own button moves on: keys on its other buttons (the ⋯ menu's ↓ opens it) or in a menu (a portal,
+    // whose keys bubble here too) are theirs.
+    if (event.defaultPrevented || !(event.target as Element).matches?.(ROW_FOCUS) || event.metaKey || event.ctrlKey || event.altKey) return;
     const current = rowIndexOf(event.target);
     if (current === null) return;
     const target = repositoryRowKeyTarget(rows, current, event.key);
@@ -96,7 +120,8 @@ export const RepositoryList = forwardRef<RepositoryListHandle, RepositoryListPro
   // A click or Tab moves the focus too: that row is the one kept rendered.
   const onFocus = (event: FocusEvent<HTMLDivElement>): void => {
     const index = rowIndexOf(event.target);
-    if (index !== null && index !== focused) setFocused(index);
+    const row = index === null ? undefined : rows[index];
+    if (row) setFocusedKey(repositoryRowKey(row));
   };
 
   const rowContent = (row: RepositoryListRow): ReactNode => {
@@ -136,7 +161,7 @@ export const RepositoryList = forwardRef<RepositoryListHandle, RepositoryListPro
     <div ref={listRef} className={styles.list} onKeyDown={onKeyDown} onFocus={onFocus}>
       {placeholder}
       <HighlightQuery query={query}>
-        <div className={styles.repositoryRows} style={{ height: virtualizer.getTotalSize() }}>
+        <div ref={rowsRef} className={styles.repositoryRows} style={{ height: virtualizer.getTotalSize() }}>
           {virtualizer.getVirtualItems().map((item) => {
             const row = rows[item.index]!;
             return (
@@ -146,7 +171,7 @@ export const RepositoryList = forwardRef<RepositoryListHandle, RepositoryListPro
                 data-index={item.index}
                 data-kind={row.kind}
                 className={styles.repositorySlot}
-                style={{ transform: `translateY(${item.start}px)` }}
+                style={{ transform: `translateY(${item.start - scrollMargin}px)` }}
               >
                 {rowContent(row)}
               </div>
