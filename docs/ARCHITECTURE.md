@@ -103,7 +103,8 @@ and many people use the same server. Every `cm` command other than local reads (
   types, attribute values, the working object's comment, the palette's lists, the recent shelves in Changes, the user's and everyone's): five minutes, and focus never re-reads them. The Branch
   Explorer is kept five minutes and focus never re-reads all history. Local views skip focus while the watcher sees the disk.
 - **Home**: the repository and branch of every listed workspace come from its `.plastic/plastic.selector` file
-  (`workspaces.heads`); `cm` is asked only about recent workspaces whose file can't tell.
+  (`workspaces.heads`); `cm` is asked only about recent workspaces whose file can't tell (or names a Unity
+  organization by its id: "Unity organizations").
 - **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`; `useSettledValue` for details that stay on screen as the selection moves, like a history's diff or any file's diff, `useDiffContents`, which shows a pair read before at once), `cm diff`
   runs only on request, and immutable results (what a changeset, shelve or branch head changed, revisions by id, specs
   pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`; the last 100 off screen, `boundUnusedQueries`) and skipped by refreshes.
@@ -189,6 +190,48 @@ repository, set where `cm` names it, and every spec built from it names both (`s
 - An item of another repository than the workspace's (`otherRepository`) keeps its changeset, branch and comment (read
   `on repository`), but leads to none of the workspace's views: no changeset diff, Branch Explorer, branch chip link or
   labels, and its changeset spec is copied with its repository.
+
+## Unity organizations
+
+A Unity Cloud organization's server has two names: the one people use, which `cm` prints and takes almost everywhere
+(`AcmeStudio@unity`), and the organization's id, which UVCS keeps underneath (`2398571046213@cloud`). Both reach the
+same repository, but as text they compare unequal, so the app never shows the id form, never compares it with a spec
+by name, and never passes it to `cm`.
+
+- **Where the id form comes from**: `cm status --xml` (its header's `<Server>` and `<WkConfigName>`), `cm history
+  --xml` (each revision's `<Server>`; both are `cm` printing what it stores, a leak to fix in `cm`, which older
+  versions keep), and the workspace's `.plastic/plastic.selector`, which keeps it by design. Everything else the app
+  reads names it: the machine-readable status header, `cm wi`, `--format` outputs, `cm ls`, `cm fileinfo`, `cm diff`,
+  `cm find`, `cm repository list`.
+- **Where the app takes the name instead**, each from an output `cm` already names it in, never by mapping ids to names
+  itself (`isOrganizationIdServer`, `main/cm/organizationIds.ts`, only tells an id apart):
+  - The workspace's repository and server (`WorkspaceInfo`, `readWorkspaceStatus`): from
+    `cm status --header --machinereadable` (`machineReadableHeaderArgs`), a local read
+    run only when the `--xml` header printed an id (`serverByName`). The header is shared for a few seconds
+    (`WorkspaceHeaders`). Reads that need only what is loaded take `readWorkspaceLoad`, which has no server to misuse,
+    and the header as printed (`parseWorkspaceStatus`) holds the id only as `printedServer`. The header's branch is
+    read whichever form its `<WkConfigName>` prints (`selectorName`). The switcher's glance at another workspace
+    (`readWorkspaceGlance`) reads only its branch and pending changes: its row already shows the repository.
+  - A file's history (`withServerOf`): from the item's repository, as the `cm ls` the history runs anyway names it
+    (`workspaceItemArgs`, `{repspec}`), or the revision the history starts from.
+  - The home screen (`parseSelectorFile`): a selector file that keeps an id names no repository (`WorkspaceHead`'s
+    `repository` null), so the recent workspaces' lookup asks `cm` (`repositoryOf`, the machine-readable header),
+    as for a file that can't be read: one query per workspace for the session (`workspaceRepositoryQuery`), two at a
+    time across them in main (`workspaceRepositoryLookup`). Meanwhile, and for the workspaces past the recent ones,
+    the row shows the repository's own name, which the file tells (`repositoryName`, `describedEntry`), and no server.
+  Should `cm` not answer, the id stays rather than a guess.
+- **What was saved under the id before**: nothing is migrated (that would be id-aware code to delete later). A
+  shelve this app left on a Unity organization's workspace, recorded under the id, no longer matches the workspace's
+  repository: it is offered as one another app left (adopted as foreign), its changelists are lost, and the folder
+  where added files waited is no longer used to put them back. Review marks kept under the id's repository no longer
+  show.
+- **Kept so**: `fakeCmClient` fails a test whose code passes the id form to `cm` (`namesOrganizationById`; a profile's
+  name is the id form itself, as `cm profile list` prints it, so `cm profile` is exempt), and development builds warn
+  `[organization id]` in the console when a command does (`warnOnOrganizationIds`).
+- Not done instead: reading `cm`'s own local table of organizations (a file in its config folder) duplicates what
+  `cm` does and is the client's config, which the app doesn't keep reading ("Own config"); keeping a table in the app
+  (learned once per organization) was tried and dropped for the same duplication; `cm profile list`'s names cover
+  only organizations with a profile of their own, not those signed in through `*@cloud`.
 
 ## No external tool opens by itself
 

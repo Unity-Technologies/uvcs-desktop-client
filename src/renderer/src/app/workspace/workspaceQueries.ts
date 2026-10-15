@@ -1,4 +1,4 @@
-import { queryOptions, useQuery } from '@tanstack/react-query';
+import { queryOptions, useQueries, useQuery } from '@tanstack/react-query';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -13,24 +13,38 @@ export function useWorkspaceList() {
 const MAX_RESOLVED_WORKSPACES = 10;
 
 /**
- * Repository of the recently used workspaces. Each lookup is a `cm` call, so this is limited to
- * the few recent ones and resolved once per session, never for the whole workspace list.
- * The lookups stop when nothing on screen needs them anymore (e.g. leaving the home screen).
- * Paths in `alreadyKnown` (e.g. told by their `.plastic` folder) are skipped.
+ * The repository of one recently used workspace, null when `cm` can't tell. One query per workspace, kept for the
+ * session: a workspace becoming recent costs one lookup, never the others' again (main runs them two at a time). The
+ * lookup stops when nothing on screen needs it anymore (e.g. leaving the home screen).
+ */
+export function workspaceRepositoryQuery(path: string) {
+  return queryOptions({
+    queryKey: queryKeys.workspaceRepository(path),
+    queryFn: async ({ signal }) => {
+      const lookupId = crypto.randomUUID();
+      signal.addEventListener('abort', () => void api.system.cancelOperation(lookupId));
+      return api.workspaces.repositoryOf(path, lookupId);
+    },
+    staleTime: Infinity,
+    // Kept off screen too: at most `MAX_RESOLVED_WORKSPACES` small answers, keyed by path.
+    gcTime: Infinity,
+  });
+}
+
+/**
+ * Repository of the recently used workspaces. Each lookup is a `cm` call, so this is limited to the few recent ones
+ * and resolved once per session (`workspaceRepositoryQuery`), never for the whole workspace list. Paths in
+ * `alreadyKnown` (e.g. told by their `.plastic` folder) are skipped.
  */
 export function useRecentWorkspaceRepositories(workspaces: WorkspaceSummary[] | undefined, alreadyKnown: Record<string, unknown> = {}) {
   const { recentWorkspacePaths } = useSettings();
   const listed = new Set((workspaces ?? []).map((workspace) => workspace.path));
   const paths = recentWorkspacePaths.filter((path) => listed.has(path) && !(path in alreadyKnown)).slice(0, MAX_RESOLVED_WORKSPACES);
-  return useQuery({
-    queryKey: queryKeys.workspaceRepositories(paths),
-    queryFn: ({ signal }) => {
-      const lookupId = crypto.randomUUID();
-      signal.addEventListener('abort', () => void api.system.cancelOperation(lookupId));
-      return api.workspaces.repositoriesOf(paths, lookupId);
-    },
-    enabled: paths.length > 0,
-    staleTime: Infinity,
+  return useQueries({
+    queries: paths.map(workspaceRepositoryQuery),
+    combine: (results) => ({
+      data: Object.fromEntries(results.flatMap((result, index) => (result.data === undefined ? [] : [[paths[index]!, result.data]]))) as Record<string, string | null>,
+    }),
   });
 }
 

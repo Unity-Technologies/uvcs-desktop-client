@@ -1,6 +1,6 @@
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { useRecentWorkspaceRepositories, useWorkspaceHeads } from '../workspace/workspaceQueries';
-import type { WorkspaceEntry } from './recentWorkspaces';
+import { describedEntry, headsNamingRepository, type WorkspaceEntry } from './recentWorkspaces';
 
 type Undescribed = Pick<WorkspaceEntry, 'workspace' | 'missing'>;
 
@@ -10,9 +10,6 @@ type Undescribed = Pick<WorkspaceEntry, 'workspace' | 'missing'>;
  */
 export function useDescribeWorkspace(workspaces: WorkspaceSummary[] | undefined): (entry: Undescribed) => WorkspaceEntry {
   const { data: heads, isFetched: headsRead } = useWorkspaceHeads(workspaces);
-  const { data: repositories } = useRecentWorkspaceRepositories(headsRead ? workspaces : undefined, heads);
-  return ({ workspace, missing }) => {
-    const head = heads?.[workspace.path];
-    return { workspace, missing, repository: head?.repository ?? repositories?.[workspace.path], selector: head?.selector ?? null };
-  };
+  const { data: repositories } = useRecentWorkspaceRepositories(headsRead ? workspaces : undefined, headsNamingRepository(heads));
+  return (entry) => describedEntry(entry, heads?.[entry.workspace.path], repositories ?? {});
 }

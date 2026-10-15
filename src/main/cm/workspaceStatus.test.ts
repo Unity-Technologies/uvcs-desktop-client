@@ -3,15 +3,15 @@ import { loadedChangesetOf, parseWorkspaceStatus, selectorName } from './workspa
 
 describe('selectorName', () => {
   it('removes the repository spec even when the name repeats in the server', () => {
-    expect(selectorName('/main/task1008833@acme@acme@cloud', 'acme', 'acme@cloud')).toBe('/main/task1008833');
+    expect(selectorName('/main/task1008833@acme@acme@cloud', 'acme')).toBe('/main/task1008833');
   });
 
   it('removes a local repository spec', () => {
-    expect(selectorName('/main@sandbox@local', 'sandbox', 'local')).toBe('/main');
+    expect(selectorName('/main@sandbox@local', 'sandbox')).toBe('/main');
   });
 
   it('keeps names without a repository suffix', () => {
-    expect(selectorName('/main', 'sandbox', 'local')).toBe('/main');
+    expect(selectorName('/main', 'sandbox')).toBe('/main');
   });
 });
 
@@ -26,10 +26,22 @@ describe('parseWorkspaceStatus', () => {
   it('reads the repository, the selector and the loaded changeset', () => {
     expect(parseWorkspaceStatus(header)).toEqual({
       repositoryName: 'acme',
-      server: 'acme@cloud',
+      printedServer: 'acme@cloud',
       selector: { kind: 'branch', name: '/main/TASK1008897' },
       loadedChangeset: 278638,
     });
+  });
+
+  it("reads the branch whichever form of a Unity organization's server each field prints", () => {
+    const mixed = (repSpecServer: string, configServer: string) => `<?xml version="1.0" encoding="utf-8"?>
+<StatusOutput>
+  <WorkspaceStatus><Status><RepSpec><Server>${repSpecServer}</Server><Name>3dtest/game</Name></RepSpec><Changeset>51</Changeset></Status></WorkspaceStatus>
+  <WkConfigType>Branch</WkConfigType>
+  <WkConfigName>/main/task@3dtest/game@${configServer}</WkConfigName>
+</StatusOutput>`;
+
+    expect(parseWorkspaceStatus(mixed('AcmeStudio@unity', '2398571046213@cloud')).selector).toEqual({ kind: 'branch', name: '/main/task' });
+    expect(parseWorkspaceStatus(mixed('2398571046213@cloud', 'AcmeStudio@unity')).selector).toEqual({ kind: 'branch', name: '/main/task' });
   });
 
   // `cm status --header --xml` of a workspace switched to shelve 3 (cm 11.0.16.10371, a local server).
@@ -51,7 +63,7 @@ describe('parseWorkspaceStatus', () => {
   it('reads a workspace on a shelve as loading no changeset: cm numbers the shelve as changeset -3', () => {
     expect(parseWorkspaceStatus(onShelve)).toEqual({
       repositoryName: 'uvcs-shelvews-sandbox',
-      server: 'local',
+      printedServer: 'local',
       selector: { kind: 'shelve', name: '3' },
       loadedChangeset: null,
     });

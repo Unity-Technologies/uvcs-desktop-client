@@ -29,16 +29,19 @@ export interface WorkspaceInfo {
 
 /** What a workspace works on, as its selector file says: `cm` reads and rewrites it, the app only reads it. */
 export interface WorkspaceHead {
-  /** `name@server`. */
-  repository: string;
+  /** `name@server`; null when the file names its server by an id people never see (a Unity organization's). */
+  repository: string | null;
+  /** The repository's own name, which the file always tells. */
+  repositoryName: string;
   /** Null when the file loads something the app doesn't name (e.g. a custom selector). */
   selector: WorkspaceSelector | null;
 }
 
-/** Another workspace at a glance: what it's loaded from and how many pending changes it has. */
+/**
+ * Another workspace at a glance: what it's loaded from and how many pending changes it has. Its repository is the
+ * one its row already shows (`WorkspaceHead`).
+ */
 export interface WorkspaceGlance {
-  /** `name@server`. */
-  repository: string;
   selector: WorkspaceSelector;
   pendingCount: number;
 }

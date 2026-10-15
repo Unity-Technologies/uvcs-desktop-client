@@ -9,7 +9,7 @@ import { readUpdateProgress } from '../cm/progress/updateProgress';
 import { switchArgs, UPDATE_ARGS } from '../cm/updateArgs';
 import { readWorkingObjectComment } from '../cm/workingObjectComment';
 import { readWorkspaceGlance } from '../cm/workspaceGlance';
-import { resolveWorkspaceRepositories } from '../cm/workspaceRepositories';
+import { workspaceRepositoryLookup } from '../cm/workspaceRepositories';
 import { findWorkspaceRoot } from '../cm/workspaceRoot';
 import { CmError } from '../cm/CmError';
 import { checkNewWorkspaceFolder } from '../files/newWorkspaceFolder';
@@ -23,6 +23,7 @@ const UPDATE_NEEDS_MERGE = 'Some of your local changes collide with incoming one
 
 export function createWorkspacesService({ cm, operations, watchers, settings, headers }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): WorkspacesApi {
   const switchDependencies = { cm, settings, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'switch-backups') };
+  const lookUpRepository = workspaceRepositoryLookup(cm);
   /** Folders `create` made (they didn't exist or were empty): the only ones `discardNew` may delete. */
   const createdFolders = new Set<string>();
 
@@ -92,15 +93,15 @@ export function createWorkspacesService({ cm, operations, watchers, settings, he
     await rm(workspacePath, { recursive: true, force: true, maxRetries: 5 });
   }
 
-  function repositoriesOf(workspacePaths: string[], lookupId: string): Promise<Record<string, string | null>> {
-    return operations.read(lookupId, ({ signal }) => resolveWorkspaceRepositories(cm, workspacePaths, signal));
+  function repositoryOf(workspacePath: string, lookupId: string): Promise<string | null> {
+    return operations.read(lookupId, ({ signal }) => lookUpRepository(workspacePath, signal));
   }
 
   return {
     list,
     info,
     workingObjectComment: (workspacePath, selector) => readWorkingObjectComment(cm, workspacePath, selector),
-    repositoriesOf,
+    repositoryOf,
     heads: readWorkspaceHeads,
     findMissing: async (paths) => paths.filter((path) => !existsSync(path)),
     findRoot: (directory) => findWorkspaceRoot(cm, directory),

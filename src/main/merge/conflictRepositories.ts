@@ -3,7 +3,7 @@ import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
 import type { PrintedMergePlan } from '../cm/mergeOutput';
 import { parseTreeItems } from '../cm/treeItemsXml';
-import { readWorkspaceStatus } from '../cm/workspaceStatus';
+import { readWorkspaceLoad } from '../cm/workspaceStatus';
 
 /**
  * The plan with the repository of each conflicting file. `cm merge` prints a file under a writable xlink with the
@@ -29,7 +29,7 @@ export function destinationTree(request: MergeRequest, plan: PrintedMergePlan): 
 
 /** The workspace's loaded changeset. A workspace on a shelve takes no merges: `cm` finds no branch to check out on. */
 async function loadedTree(cm: CmClient, workspacePath: string): Promise<string> {
-  const { loadedChangeset } = await readWorkspaceStatus(cm, workspacePath);
+  const { loadedChangeset } = await readWorkspaceLoad(cm, workspacePath);
   if (loadedChangeset === null) throw new Error("A workspace on a shelve can't take a merge. Switch it to a branch first.");
   return spec.changeset(loadedChangeset);
 }

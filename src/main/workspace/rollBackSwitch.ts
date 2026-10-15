@@ -1,7 +1,7 @@
 import { selectorSpec } from '@shared/domain/specs';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
-import { readWorkspaceStatus } from '../cm/workspaceStatus';
+import { readWorkspaceLoad } from '../cm/workspaceStatus';
 import type { OperationContext } from '../operations/OperationTracker';
 import { failureReason, putBackAfterFailure } from './putShelvedChangesBack';
 import { runSwitch } from './runSwitch';
@@ -29,7 +29,7 @@ export async function rollBackSwitch(deps: ShelveFlowDependencies, workspacePath
  * goes back (nothing is pending by then). Resolves to whether the workspace is on the source.
  */
 async function returnToSource(cm: CmClient, workspacePath: string, sourceSpec: string, context: OperationContext): Promise<boolean> {
-  const isOnSource = async (): Promise<boolean> => selectorSpec((await readWorkspaceStatus(cm, workspacePath)).selector) === sourceSpec;
+  const isOnSource = async (): Promise<boolean> => selectorSpec((await readWorkspaceLoad(cm, workspacePath)).selector) === sourceSpec;
   if (await isOnSource()) return true;
   await runSwitch(cm, workspacePath, sourceSpec, context);
   return isOnSource();

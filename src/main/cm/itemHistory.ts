@@ -4,6 +4,7 @@ import type { RevisionRef } from '@shared/domain/revision';
 import { repositorySpec, spec } from '@shared/domain/specs';
 import { toAbsolutePath } from '../files/workspacePaths';
 import { parseRecords, recordFormat } from './formatRecords';
+import { isOrganizationIdServer } from './organizationIds';
 import { child, children, integer, parseXml, text, type XmlNode } from './parseXml';
 import { onLinksThemselves } from './symlinkArgs';
 
@@ -46,14 +47,36 @@ export function itemRevisionsArgs(records: XmlNode[]): string[] | null {
   ];
 }
 
-/** The revision of the item the workspace has (`cm ls` reads the workspace, not the server): the item itself comes first. */
-export function workspaceRevisionArgs(absolutePath: string): string[] {
-  return onLinksThemselves('ls', absolutePath, '--format={revid}');
+/**
+ * The item the workspace has (`cm ls` reads the workspace, not the server): its revision, and the repository it lives
+ * in, named as people do (`rep:game@AcmeStudio@unity`). The item itself comes first.
+ */
+export function workspaceItemArgs(absolutePath: string): string[] {
+  return onLinksThemselves('ls', absolutePath, `--format=${recordFormat(['revid', 'repspec'])}`);
 }
 
-export function parseWorkspaceRevision(output: string): number | undefined {
-  const revisionId = Number.parseInt(output.trim().split('\n')[0] ?? '', 10);
-  return Number.isNaN(revisionId) || revisionId < 0 ? undefined : revisionId;
+export interface WorkspaceItem {
+  /** Undefined for an item the workspace has no revision of. */
+  revisionId?: number;
+  repository: string;
+}
+
+export function parseWorkspaceItem(output: string): WorkspaceItem | undefined {
+  const [revision = '', repository = ''] = parseRecords(output)[0] ?? [];
+  const revisionId = Number.parseInt(revision, 10);
+  if (repository === '') return undefined;
+  return { ...(revisionId >= 0 && { revisionId }), repository: repository.replace(/^rep:/, '') };
+}
+
+/**
+ * The records with a Unity organization's server by name. `cm history --xml` prints it by its id
+ * (ARCHITECTURE.md "Unity organizations"); the item's `repository`, which every record is of, names it: the
+ * workspace's `cm ls` of the item, or the revision the history starts from. Without it the id stays.
+ */
+export function withServerOf(records: XmlNode[], repository: string | undefined): XmlNode[] {
+  if (repository === undefined) return records;
+  const server = repository.slice(repository.indexOf('@') + 1);
+  return records.map((record) => (isOrganizationIdServer(text(record.Server)) ? { ...record, Server: server } : record));
 }
 
 /** Combines the history's records with the revisions `itemRevisionsArgs` found, each list newest first. */

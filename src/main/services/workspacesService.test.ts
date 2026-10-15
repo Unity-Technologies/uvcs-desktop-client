@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { WebContents } from 'electron';
-import { change, formatOutput, statusHeader } from '../cm/testing/cmOutput';
+import { change, formatOutput, machineReadableStatusHeader, statusHeader, UNITY_ORGANIZATION } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { UPDATE_ARGS } from '../cm/updateArgs';
 import { runForCaller } from '../ipc/caller';
@@ -57,6 +57,45 @@ describe('workspace info', () => {
       loadedChangeset: 12,
     });
     expect(lines().map((line) => line.split(' ')[0])).toEqual(['status', 'getworkspacefrompath']);
+  });
+
+  it("names a Unity organization's server as cm does everywhere else, though the header prints its id", async () => {
+    const { service, commands } = workspaces({
+      'status --header --xml': statusHeader('/main/task1', { changeset: 12, repository: 'game', server: UNITY_ORGANIZATION.byId }),
+      'status --header --machinereadable': machineReadableStatusHeader('game', UNITY_ORGANIZATION.byName, 12),
+      ...WORKSPACE_NAMES,
+    });
+
+    expect(await service.info(WORKSPACE)).toEqual({
+      name: 'game',
+      path: WORKSPACE,
+      repository: 'game@AcmeStudio@unity',
+      repositoryName: 'game',
+      server: 'AcmeStudio@unity',
+      selector: { kind: 'branch', name: '/main/task1' },
+      loadedChangeset: 12,
+    });
+    // Only an id asks the machine-readable header, a local read in the workspace's own sessions.
+    expect(commands.filter(({ args }) => args.includes('--machinereadable'))).toMatchObject([
+      { via: 'query', args: ['status', '--header', '--machinereadable', '--fieldseparator=|', WORKSPACE], options: { cwd: WORKSPACE } },
+    ]);
+  });
+
+  it("still opens a Unity organization's workspace when cm can't name its server, keeping the id rather than a guess", async () => {
+    for (const machineReadable of [cmFails('The workspace is locked.'), machineReadableStatusHeader('game', UNITY_ORGANIZATION.byId, 12)]) {
+      const { service } = workspaces({
+        'status --header --xml': statusHeader('/main/task1', { changeset: 12, repository: 'game', server: UNITY_ORGANIZATION.byId }),
+        'status --header --machinereadable': machineReadable,
+        ...WORKSPACE_NAMES,
+      });
+
+      expect(await service.info(WORKSPACE)).toMatchObject({
+        repository: `game@${UNITY_ORGANIZATION.byId}`,
+        server: UNITY_ORGANIZATION.byId,
+        selector: { kind: 'branch', name: '/main/task1' },
+        loadedChangeset: 12,
+      });
+    }
   });
 
   it('renames the workspace by its current name, read alone, and reads its name again afterwards', async () => {
@@ -204,8 +243,15 @@ describe('other workspaces', () => {
     const withChanges = STATUS_HEADER.replace('</StatusOutput>', `<Changes>${change('CH', 'a.cs')}</Changes></StatusOutput>`);
     const { service, commands } = workspaces({ status: withChanges });
 
-    expect(await service.glance(WORKSPACE)).toEqual({ repository: 'game@local', selector: { kind: 'branch', name: '/main/task1' }, pendingCount: 1 });
+    expect(await service.glance(WORKSPACE)).toEqual({ selector: { kind: 'branch', name: '/main/task1' }, pendingCount: 1 });
     expect(commands).toMatchObject([{ via: 'query', args: ['status', '--xml', WORKSPACE], options: {} }]);
     expect(commands[0]?.options.cwd).toBeUndefined();
+  });
+
+  it("glances at a Unity organization's workspace with that one command, as the switcher shows no repository from it", async () => {
+    const { service, commands } = workspaces({ status: statusHeader('/main/task1', { repository: 'game', server: UNITY_ORGANIZATION.byId }) });
+
+    expect(await service.glance(WORKSPACE)).toEqual({ selector: { kind: 'branch', name: '/main/task1' }, pendingCount: 0 });
+    expect(commands).toHaveLength(1);
   });
 });

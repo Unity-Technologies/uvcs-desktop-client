@@ -69,11 +69,12 @@ export const WorkspaceList = forwardRef<WorkspaceListHandle, WorkspaceListProps>
             )}
             {section.entries.length === 0
               ? section.empty
-              : section.entries.map(({ workspace, missing, repository, selector }) => (
+              : section.entries.map(({ workspace, missing, repository, repositoryName, selector }) => (
                   <WorkspaceRow
                     key={workspace.guid}
                     workspace={workspace}
                     repository={repository}
+                    repositoryName={repositoryName}
                     selector={selector}
                     missing={missing}
                     onOpen={onOpen}

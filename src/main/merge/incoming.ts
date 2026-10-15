@@ -16,7 +16,7 @@ import { findRecords, toChangeset } from '../cm/findObjects';
 import { equalsCondition, findArgs } from '../cm/findQuery';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
-import { readWorkspaceStatus } from '../cm/workspaceStatus';
+import { readWorkspaceLoad } from '../cm/workspaceStatus';
 import { findUpdateBlockers, findUpdateConflicts } from './updateCollisions';
 
 const NOTHING_INCOMING: NothingIncoming = { branch: null, changesetCount: 0, countCapped: false, authors: [] };
@@ -102,7 +102,7 @@ interface NewestIncoming {
 }
 
 async function readNewestIncomingChangesets(cm: CmClient, workspacePath: string): Promise<NewestIncoming> {
-  const { selector, loadedChangeset } = await readWorkspaceStatus(cm, workspacePath);
+  const { selector, loadedChangeset } = await readWorkspaceLoad(cm, workspacePath);
   // Only a shelve has no loaded changeset, and a shelve is no branch.
   if (selector.kind !== 'branch' || loadedChangeset === null) return { summary: NOTHING_INCOMING, changesets: [], moreChangesets: false };
 

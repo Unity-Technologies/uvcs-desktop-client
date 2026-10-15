@@ -26,7 +26,7 @@ export const queryKeys = {
   serverConnection: (server: string) => ['serverConnection', server] as const,
   homeDirectory: ['homeDirectory'] as const,
   workspaceHeads: (paths: readonly string[]) => ['workspaceHeads', paths] as const,
-  workspaceRepositories: (paths: readonly string[]) => ['workspaceRepositories', paths] as const,
+  workspaceRepository: (path: string) => ['workspaceRepository', path] as const,
   missingWorkspacePaths: (paths: readonly string[]) => ['missingWorkspacePaths', paths] as const,
   inWorkspace: (workspacePath: string, ...parts: unknown[]) => [...workspaceKey(workspacePath), ...parts] as const,
 };
