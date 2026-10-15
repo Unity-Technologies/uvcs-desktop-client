@@ -18,6 +18,7 @@ import {
   HemisphereLight,
   LineBasicMaterial,
   LineSegments,
+  type Material,
   Mesh,
   NeutralToneMapping,
   OrthographicCamera,
@@ -47,6 +48,7 @@ import { MeshPicker } from './meshPicker';
 import type { ModelPalette } from './modelPalette';
 import { slotColor } from './modelPalette';
 import { modelOrientation, type ModelScene } from './modelScene';
+import { sharedDfgLutOf } from './sharedDfgLut';
 import { cameraPositionOf, clipPlanesOf, FIELD_OF_VIEW, type BoundsLike, type OrbitView, type Ray, type Vector } from './orbitCamera';
 import { pickWindowAt } from './pickWindow';
 import type { DiffsCompares, SurfaceLook } from './surfaceLook';
@@ -133,6 +135,10 @@ export class ModelRenderer {
   private readonly under = new Scene();
   /** Picks on the GPU; null where it can't, or isn't asked to pick, and picks raycast (`raycastHit`). */
   private readonly picker: MeshPicker | null;
+  /** three's one DFG LUT, once a frame drew it: released as the renderer goes (`sharedDfgLut.ts`). */
+  private dfgLut: Texture | null = null;
+  /** Whether the LUT was looked for in the sides drawn now: once per set of sides, not every frame until found. */
+  private dfgLutSought = false;
 
   /**
    * `picks`: what is under the pointer is asked of it (`pick`), so the GPU's picking is made and compiled at once
@@ -171,6 +177,7 @@ export class ModelRenderer {
       // The looks were the replaced model's: the next model's come with `setMaterialLooks`.
       this.materialLooks = { ...this.materialLooks, [side]: null };
       this.sides[side] = model && this.sceneOf(model);
+      this.dfgLutSought = false;
     }
     this.lookTextures.keepOnly(this.materialLooks);
     this.bounds = bounds;
@@ -314,7 +321,7 @@ export class ModelRenderer {
   renderNow(): void {
     cancelAnimationFrame(this.frame);
     this.frame = 0;
-    this.render();
+    this.drawFrame();
   }
 
   /** Draws on the next frame, once however often it is asked before then. */
@@ -322,15 +329,34 @@ export class ModelRenderer {
     if (this.frame) return;
     this.frame = requestAnimationFrame(() => {
       this.frame = 0;
-      this.render();
+      this.drawFrame();
     });
   };
 
+  /** Draws, and remembers the shared DFG LUT the first frame that drew it: a side replaced later can't hide it. */
+  private drawFrame(): void {
+    this.render();
+    if (this.dfgLut || this.dfgLutSought || !this.palette) return;
+    this.dfgLutSought = true;
+    this.dfgLut = sharedDfgLutOf(this.renderer, this.drawnMaterials());
+  }
+
+  /**
+   * Frees the GPU's memory and lets go of everything drawn: the canvas may outlive the renderer (a page's references,
+   * the shared DFG LUT's until released), and must not keep the scenes, their geometry and textures with it.
+   */
   dispose(): void {
     cancelAnimationFrame(this.frame);
+    this.canvas.removeEventListener('webglcontextrestored', this.requestRender);
+    (this.dfgLut ?? sharedDfgLutOf(this.renderer, this.drawnMaterials()))?.dispose();
+    this.dfgLut = null;
     for (const side of Object.values(this.sides)) if (side) disposeSide(side);
+    this.sides.before = this.sides.after = null;
+    this.heat = null;
+    this.materialLooks = { before: null, after: null };
     this.lookTextures.dispose();
     this.targets?.forEach((target) => target.dispose());
+    this.targets = null;
     this.blender.dispose();
     this.comparer.dispose();
     this.picker?.dispose();
@@ -339,6 +365,11 @@ export class ModelRenderer {
     this.renderer.dispose();
     // The GPU memory goes back at once, not when the canvas is collected: stepping through files makes many viewers.
     this.renderer.forceContextLoss();
+  }
+
+  /** The standard materials the sides draw with: the clay, the Differences mode's, and the Materials look's on the meshes now. */
+  private drawnMaterials(): Material[] {
+    return Object.values(this.sides).flatMap((side) => side?.model.meshes.flatMap((mesh) => [...mesh.solid.material, ...mesh.clay, mesh.heat.material]) ?? []);
   }
 
   private render(): void {

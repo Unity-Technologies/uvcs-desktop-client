@@ -1,9 +1,6 @@
 import { useQueries } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import type { ContentSource } from '@shared/domain/content';
-import { api } from '../../../../../api/client';
-import { queryKeys } from '../../../../../api/queryKeys';
-import { contentCaching } from '../../useDiffContents';
+import { contentBytesQuery } from '../../contentQueries';
 import { readImportSettings, type ModelImportSettings } from '../modelImportSettings';
 import { takesWorkspaceSettings, type MaterialVersion } from './materialVersion';
 
@@ -29,10 +26,7 @@ export function useWorkspaceImportSettings(
   // Both versions of a file at one path read its `.meta` once.
   const paths = useMemo(() => [...new Set(metas.flatMap((path) => (path ? [path] : [])))], [metas]);
   const reads = useQueries({
-    queries: paths.map((path) => {
-      const source: ContentSource = { kind: 'workspaceFile', path };
-      return { queryKey: queryKeys.inWorkspace(workspacePath, 'contentBytes', source), queryFn: () => api.content.readBytes(workspacePath, source), ...contentCaching([source]) };
-    }),
+    queries: paths.map((path) => contentBytesQuery(workspacePath, { kind: 'workspaceFile', path })),
     combine: dataOf,
   });
   return useMemo(() => {

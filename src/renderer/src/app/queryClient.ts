@@ -2,6 +2,7 @@ import { QueryClient, type Query } from '@tanstack/react-query';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { queryKeys, workspaceKey } from '../api/queryKeys';
 import { boundUnusedQueries } from './boundUnusedQueries';
+import { heldContentBytes } from './heldContentBytes';
 import { workspaceInfoKeyMoved, type WorkspaceInfoPart } from './refresh/headChanges';
 import { trackWindowFocus } from './refresh/trackWindowFocus';
 
@@ -20,7 +21,7 @@ export function createQueryClient(): QueryClient {
       },
     },
   });
-  boundUnusedQueries(client.getQueryCache(), MAX_UNUSED_IMMUTABLE, (query) => !isRefreshable(query));
+  boundUnusedQueries(client.getQueryCache(), MAX_UNUSED_IMMUTABLE, (query) => !isRefreshable(query), { max: MAX_UNUSED_IMMUTABLE_BYTES, heldBy: heldContentBytes });
   return client;
 }
 
@@ -59,6 +60,11 @@ export function isRefreshable(query: Query): boolean {
 
 /** Immutable results kept once off screen: the objects opened last (a changeset's files, a revision's text). */
 export const MAX_UNUSED_IMMUTABLE = 100;
+/**
+ * The most bytes of files those results hold (`heldContentBytes`): the last few models looked at (a model is read up
+ * to 100 MB, and its parsed model, kept as long as its bytes, takes about as much again), not a hundred of them.
+ */
+export const MAX_UNUSED_IMMUTABLE_BYTES = 256 * 1024 * 1024;
 
 export const queryClient = createQueryClient();
 

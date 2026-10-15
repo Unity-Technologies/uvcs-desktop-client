@@ -166,7 +166,12 @@ mode, a look), never on a loop. A resize draws at once (`ModelRenderer.setSize`,
 `canvasSizeChanged`): sizing a canvas clears it, and the ResizeObserver runs after the frame's animation callbacks and
 before paint, so leaving that draw to `requestRender` painted a cleared canvas at every step and the view blinked.
 Disposing it frees the GPU's memory at once (`forceContextLoss`), as stepping through
-files makes many viewers. So each renderer gets a canvas of its own (`useModelRenderer` puts it in and takes it out):
+files makes many viewers, and lets go of everything it drew, so nothing still holding the canvas keeps the scenes: the
+canvas's listener goes, and three r186's one DFG lookup texture, which every renderer that drew a standard material
+listens to (and so kept every renderer ever made, with its scenes, a few hundred megabytes a pass over six models),
+is released (`sharedDfgLutOf`, remembered from the first frame that drew it: disposed, every renderer's listener
+detaches; one still drawing uploads it again).
+`sharedDfgLut.test.ts` pins three's revision, so an upgrade checks it again. So each renderer gets a canvas of its own (`useModelRenderer` puts it in and takes it out):
 a canvas whose context was lost hands that lost context to the next renderer, which three can't start on, as
 StrictMode's second mount showed. Where WebGL can't start at all (no usable GPU, the browser's limit of contexts), the
 pane says "Couldn't start the 3D view", not the window's error screen. What changes every frame (a playing take's skeleton) is
@@ -462,9 +467,18 @@ heatmap's), and come back in the other modes. The merge cards' stills stay clay 
   isn't found.
 - **Reading a file found** (`api.unityAssets.read`, `RevisionDownloads`): a disk file from the disk; a repository's
   revision from the disk when the workspace's file at that path has its content (`WorkspaceCopies.read`: same size and
-  MD5 as the listing's hash; a file known to differ isn't read again until it changes, a match is always hashed again
-  on the bytes returned), else downloaded. The reads asked at once (both versions'
-  textures, a ring of `.meta` files) wait until each has checked the disk, then go in one `cm cat <spec>;<file>
+  MD5 as the listing's hash, read into one buffer of its size; a file known to differ isn't read again until it
+  changes, a match is always hashed again on the bytes returned), else downloaded. The textures are read a few at a
+  time (below, "Budget"), so the look first asks for every repository revision it will read (`api.unityAssets.download`,
+  `RevisionDownloads.fetch`: the disk checked without keeping its bytes, `WorkspaceCopies.has`, from the hash known for
+  the file as it is when there is one); their reads then find them downloaded, never starting a `cm cat` of their own:
+  it asks for at most `MAX_DOWNLOADED_AHEAD_BYTES` (512 MB, half the downloads kept; a revision of unknown size, the
+  side before's, counts as `UNKNOWN_TEXTURE_BYTES`, 64 MB: `downloadedAheadBytesOf`) at a time, the next part as the
+  first texture in it comes up, so what one look fetched is still kept when read. The 1 GB kept is one budget for every
+  window: past it (two looks downloading at once), a texture let go of before its read is downloaded again, alone; and a revision whose batch failed fails
+  its read at once, until it is fetched again (64 textures with the server down would otherwise start 22 more
+  commands). Keeping fetched revisions past `MAX_KEPT_BYTES` until read was tried and dropped: it needed a budget of its
+  own, a cap, a time-out and to tell which read took each, for what asking a part at a time does. The reads asked at once (the look's downloads, a ring of `.meta` files) wait until each has checked the disk, then go in one `cm cat <spec>;<file>
   <spec>;<file> …` (`catArgs`), which downloads them in one batch, in a process of its own; a batch holds one
   repository's revisions (an xlinked one's apart: `cm cat` resolves each repository's on its own) and stops at
   `MAX_BATCH_BYTES` (64 MB by the sizes listed, so the first textures show sooner) and at a command line Windows can
@@ -575,9 +589,14 @@ heatmap's), and come back in the other modes. The merge cards' stills stay clay 
 - **Budget** (`textureBudget`): at most 64 texture files a model (`MAX_TEXTURE_FILES`, both versions together, each file
   once); each drawn at most 2048 px on its longest side, 1024 past 24 textures, with mipmaps; refused before decoding
   past 16384 px a side or 8192² pixels (`imageSizeOf` reads each format's header first), and unread past the read's own
-  size cap (100 MB, `MAX_MODEL_BYTES`). A file version decodes once (`textureLoads`: by its version, `foundFileKey`; the
-  latest 384 MB of bitmaps kept), one GPU texture per bitmap and use (`LookTextures`), freed when no look uses it, or
-  with the renderer.
+  size cap (100 MB, `MAX_MODEL_BYTES`). Three textures are read and decoded at a time (`TEXTURES_IN_HAND`: one read
+  while the worker decodes two), each holding its file's bytes only until the worker has them: reading forty 4K PNGs
+  (1.2 GB) at once took the renderer to 2.8 GB and the main process to 1.4 GB; three at a time, 1.5 GB and 0.4 GB, as
+  fast. A file version decodes once (`textureLoads`: by its version, `foundFileKey`), and its bitmap is kept
+  (`DecodeCache`) while a viewer shows it (`holdTextures`), past any budget, and besides those the latest 192 MB, for
+  the next model (a load still waiting its turn that the cache let go of meanwhile reads nothing); a bitmap let go of is closed at once (its pixels freed then, not when collected), and every one 30 s
+  after the last viewer goes. One GPU texture per bitmap and use (`LookTextures`), freed when no look uses it, or with
+  the renderer.
 - **Drawn** (`SlotLookMaterials`): MeshStandardMaterial, no metal, roughness 0.6, under the same studio; base maps sRGB,
   normal maps linear (a texture's own `.meta` isn't read); an FBX's or OBJ's textured material untinted (Unity's
   ModelImporter drops the diffuse tint), a glTF's tinted by its base color; alpha clip as `alphaTest`, transparency
@@ -600,7 +619,7 @@ heatmap's), and come back in the other modes. The merge cards' stills stay clay 
 A binary conflict whose versions render (models or images: `rendersVersions`) opens on its versions to keep
 (`choice`) and shows each side against the base, and the base, through the diff viewer (docs/features/merge.md). A
 model's cards hold a still of it (`modelThumbnail`: drawn once through a renderer of its own, read back at once, let
-go) and what its side changed since the base (`ModelSinceBase`, the panel's rows, risks first).
+go, as a viewer's is: "The view") and what its side changed since the base (`ModelSinceBase`, the panel's rows, risks first).
 
 ## Sandbox
 
