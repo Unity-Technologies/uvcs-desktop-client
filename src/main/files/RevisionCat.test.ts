@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { fitsCommandLine } from '../cm/commandLineLimit';
 import { catReadsOf, fakeCat } from '../cm/testing/fakeCat';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
-import { MAX_QUICK_CAT, MAX_RUNNING_CATS, RevisionCat, type CatRevision } from './RevisionCat';
+import { MAX_QUICK_BACKLOG, MAX_QUICK_CAT, MAX_RUNNING_CATS, RevisionCat, type CatRevision } from './RevisionCat';
 
 const WORKSPACE = join(tmpdir(), 'w');
 /** A conflicting file's version, as a merge names it: an item at a changeset of its repository. */
@@ -76,21 +76,33 @@ describe('RevisionCat', () => {
     expect(fake.commands).toMatchObject([{ via: 'query', args: ['cat', `itemid:1#cs:5@eco@local;${target(1)}`, `itemid:2#cs:5@eco@local;${target(2)}`, `itemid:3#cs:5@eco@local;${target(3)}`] }]);
   });
 
-  it('reads more than a few revisions in a process of its own: a pooled session is for quick commands', async () => {
-    const { fake, flush, save } = await setUp();
-    const saved = Promise.all(Array.from({ length: MAX_QUICK_CAT + 1 }, (_, i) => save(version(i + 1))));
+  it("reads a small merge's few dozen versions in quick cm cats one after the other, in one pooled session, never a process", async () => {
+    let running = 0;
+    let mostAtOnce = 0;
+    const counting: CmAnswer = async (command) => {
+      mostAtOnce = Math.max(mostAtOnce, ++running);
+      await Promise.resolve();
+      running--;
+      return SERVER(command);
+    };
+    const { fake, flush, save } = await setUp(counting);
+    const saved = Promise.all(Array.from({ length: 30 }, (_, i) => save(version(i + 1))));
     flush();
     await saved;
-    expect(readsPerCommand(fake)).toEqual([['execute', MAX_QUICK_CAT + 1]]);
+    expect(fake.linesVia('execute')).toEqual([]);
+    expect(readsPerCommand(fake).every(([, reads]) => Number(reads) <= MAX_QUICK_CAT)).toBe(true);
+    expect(fake.commands).toHaveLength(Math.ceil(30 / MAX_QUICK_CAT));
+    expect(mostAtOnce).toBe(1);
   });
 
-  it('reads many revisions asked together in full batches, every command line one Windows can start', async () => {
+  it('reads a backlog past what quick cm cats serve in full batches, each a process, every command line one Windows can start', async () => {
     const { fake, flush, save } = await setUp(SERVER, { longFolder: true });
     const saved = Promise.all(Array.from({ length: 400 }, (_, i) => save(version(1000 + i))));
     flush();
     await saved;
     const perCommand = readsPerCommand(fake);
     expect(perCommand.reduce((total, [, reads]) => total + Number(reads), 0)).toBe(400);
+    expect(perCommand.every(([via]) => via === 'execute')).toBe(true);
     expect(fake.commands.every((command) => fitsCommandLine(command.args))).toBe(true);
     // Full batches: as few commands as the command line allows.
     const longest = Math.max(...perCommand.map(([, reads]) => Number(reads)));
@@ -119,12 +131,12 @@ describe('RevisionCat', () => {
   it('runs at most two cm cats at once: the reads asked meanwhile wait, and the next batch is formed from them as one ends', async () => {
     const held = heldCat();
     const { fake, flush, save } = await setUp(held.cat);
-    const many = (from: number) => Array.from({ length: MAX_QUICK_CAT + 1 }, (_, i) => save(version(from + i)));
-    const first = [save(version(1)), save(version(2))];
+    const backlog = (from: number) => Array.from({ length: MAX_QUICK_BACKLOG + 1 }, (_, i) => save(version(from + i)));
+    const first = backlog(1000);
     flush();
-    const second = many(10);
+    const second = backlog(2000);
     flush();
-    const meanwhile = many(20);
+    const meanwhile = backlog(3000);
     flush();
     expect(fake.commands).toHaveLength(MAX_RUNNING_CATS);
     const third = held.nextCommand();
@@ -134,9 +146,9 @@ describe('RevisionCat', () => {
     held.letAllThrough();
     await Promise.all([...second, ...meanwhile]);
     expect(readsPerCommand(fake)).toEqual([
-      ['query', 2],
-      ['execute', MAX_QUICK_CAT + 1],
-      ['execute', MAX_QUICK_CAT + 1],
+      ['execute', MAX_QUICK_BACKLOG + 1],
+      ['execute', MAX_QUICK_BACKLOG + 1],
+      ['execute', MAX_QUICK_BACKLOG + 1],
     ]);
   });
 
@@ -150,7 +162,7 @@ describe('RevisionCat', () => {
     const next = held.nextCommand();
     held.releaseFirst();
     await next;
-    expect(specsPerCommand(fake)[MAX_RUNNING_CATS]).toEqual(['revid:7@eco@local']);
+    expect(fake.commands[MAX_RUNNING_CATS]).toMatchObject({ via: 'query', args: ['cat', 'revid:7@eco@local', expect.stringMatching(/^--file=/)] });
     held.letAllThrough();
     await Promise.all([historyClick, ...loading]);
   });
@@ -167,24 +179,24 @@ describe('RevisionCat', () => {
 
   it("fails a revision cm didn't find alone, with cm's line for it, and keeps the others as written: no command more", async () => {
     const { fake, flush, save, target } = await setUp();
-    const reads = [1, 404, 3, 4, 5].map((id) => save(version(id)));
+    const reads = [1, 404, 3, 4].map((id) => save(version(id)));
     flush();
     const results = await Promise.allSettled(reads);
-    expect(results.map((result) => result.status)).toEqual(['fulfilled', 'rejected', 'fulfilled', 'fulfilled', 'fulfilled']);
+    expect(results.map((result) => result.status)).toEqual(['fulfilled', 'rejected', 'fulfilled', 'fulfilled']);
     expect(results[1]).toMatchObject({ reason: { message: 'The specified revision was not found itemid:404#cs:5@eco@local' } });
-    expect(await readFile(target(5), 'utf8')).toBe('content of itemid:5#cs:5@eco@local');
-    expect(readsPerCommand(fake)).toEqual([['execute', 5]]);
+    expect(await readFile(target(4), 'utf8')).toBe('content of itemid:4#cs:5@eco@local');
+    expect(readsPerCommand(fake)).toEqual([['query', 4]]);
   });
 
   it('finds the one spec that failed a whole cm cat before it wrote anything, saying nothing of it, in halves: every other read is saved', async () => {
     const refusing: CmAnswer = (command) => (catReadsOf(command.args).some((read) => read.spec.startsWith('itemid:13#')) ? cmFails('Error: Incorrect object specification') : SERVER(command));
     const { fake, flush, save } = await setUp(refusing);
-    const reads = Array.from({ length: 16 }, (_, i) => save(version(i + 1)));
+    const reads = Array.from({ length: MAX_QUICK_BACKLOG + 1 }, (_, i) => save(version(i + 1)));
     flush();
     const results = await Promise.allSettled(reads);
     expect(results.filter((result) => result.status === 'rejected')).toEqual([{ status: 'rejected', reason: expect.objectContaining({ message: 'Incorrect object specification' }) }]);
-    // The batch, then two halves at each of log2(16) levels: never a command each.
-    expect(fake.commands.length).toBeLessThanOrEqual(1 + 2 * Math.log2(16));
+    // The batch, then two halves at each halving: never a command each.
+    expect(fake.commands.length).toBeLessThanOrEqual(1 + 2 * Math.ceil(Math.log2(MAX_QUICK_BACKLOG + 1)));
   });
 
   it('fails the reads of a cm cat that failed for them all (a dropped connection) after trying its halves once, never one by one', async () => {
@@ -193,11 +205,12 @@ describe('RevisionCat', () => {
       return cmFails('Error: The connection was closed');
     };
     const { fake, flush, save } = await setUp(cutShort);
-    const reads = Array.from({ length: 6 }, (_, i) => save(version(i + 1)));
+    const reads = Array.from({ length: MAX_QUICK_BACKLOG + 2 }, (_, i) => save(version(i + 1)));
     flush();
     const results = await Promise.allSettled(reads);
     expect(results.every((result) => result.status === 'rejected' && /connection was closed/.test(String(result.reason)))).toBe(true);
-    expect(readsPerCommand(fake).map(([, reads]) => reads)).toEqual([6, 3, 3]);
+    const half = (MAX_QUICK_BACKLOG + 2) / 2;
+    expect(readsPerCommand(fake).map(([, reads]) => reads)).toEqual([MAX_QUICK_BACKLOG + 2, half, half]);
   });
 
   it("keeps a diff's side cm wrote when the other side failed with an error that doesn't name it", async () => {
