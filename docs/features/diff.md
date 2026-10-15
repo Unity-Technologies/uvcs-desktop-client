@@ -245,8 +245,10 @@ A text with a line longer than `LONGEST_EDITED_LINE` (50,000 characters) isn't t
 (`hasLineTooLongToEdit`): Pierre's editor takes time by the square of a wrapped line's length at each keystroke
 (measured: 100,000 characters 0.24 s a key, 300,000 3 s, 700,000 18 s, 2 MB more than three minutes; unwrapped, 700,000
 took 70 ms, but the user may wrap any line). Such a pending file's diff is read-only (`typesIntoDiff`), a line above it
-saying why, with Open file; the merge page doesn't offer "Edit the text in the app" for it (`editInAppUnavailable`, its
-tooltip saying why).
+saying why, with Open file, also above the line saying it has no changes to show; the merge page doesn't offer "Edit
+the text in the app" for it (`editInAppUnavailable`, its tooltip saying why). The limit reads the texts as read, not as
+typed: a long line pasted into a file being edited keeps it editable until it's saved, since turning the editor off in
+the middle of an edit, unsaved text and all, would be worse than a slow keystroke.
 
 Everything else a long line costs is already bounded: Pierre highlights no line past `tokenizeMaxLineLength` (1,000
 characters, its default) and marks no words in lines past `maxLineDiffLength` (`WORD_MARKS`), and comparisons of moved

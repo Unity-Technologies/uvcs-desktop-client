@@ -175,6 +175,12 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const hidingNotice = diffs.hidingMethod && (
     <MethodHidingNotice method={diffs.hidingMethod} original={left.text ?? ''} modified={right.text ?? ''} onPick={setComparisonMethod} />
   );
+  // Above whatever a workspace file shown read-only all the same shows: its diff, or the line saying there's none.
+  const tooLongNotice = tooLongToType && (
+    <DiffNotice tone="info" icon={<PencilOff size={13} />} action={openEditable && <Button size="small" icon={<AppWindow size={13} />} onClick={openEditable}>Open file</Button>}>
+      A line of this file is too long to edit here.
+    </DiffNotice>
+  );
 
   let body: ReactNode;
   const bodyKind = metaAsModel ? 'metaModel' : diffBodyOf(presentation, editable, diffs.saved);
@@ -223,11 +229,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
     case 'textDiff':
       body = (
         <>
-          {tooLongToType && (
-            <DiffNotice tone="info" icon={<PencilOff size={13} />} action={openEditable && <Button size="small" icon={<AppWindow size={13} />} onClick={openEditable}>Open file</Button>}>
-              A line of this file is too long to edit here.
-            </DiffNotice>
-          )}
+          {tooLongNotice}
           {hidingNotice}
           {textDiff}
         </>
@@ -255,15 +257,18 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
       break;
     default:
       body = (
-        <NothingToDiff
-          reason={bodyKind}
-          left={left}
-          right={right}
-          identicalDescription={identical}
-          comparisonMethod={comparisonMethod}
-          onRecognizeAll={recognizeAll}
-          openFile={openEditable}
-        />
+        <>
+          {tooLongNotice}
+          <NothingToDiff
+            reason={bodyKind}
+            left={left}
+            right={right}
+            identicalDescription={identical}
+            comparisonMethod={comparisonMethod}
+            onRecognizeAll={recognizeAll}
+            openFile={openEditable}
+          />
+        </>
       );
   }
 
