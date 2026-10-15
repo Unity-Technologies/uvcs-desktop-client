@@ -5,7 +5,8 @@
 // `cm status` says of it.
 
 import { createHash } from 'node:crypto';
-import { readFile, stat } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import { stat } from 'node:fs/promises';
 import type { TreeItem } from '@shared/domain/explorer';
 import type { RevisionRef } from '@shared/domain/revision';
 import { MAX_MODEL_BYTES } from './fileContent';
@@ -28,7 +29,10 @@ const MAX_DISK_HASHES = 10_000;
 const MAX_LISTED_REVISIONS = 50_000;
 
 export class WorkspaceCopies {
-  /** The hashes of disk files, by path, size and time written: a file read once isn't hashed again until it changes. */
+  /**
+   * The hashes of disk files, by path, size and time written: a file known to differ from a revision isn't read again
+   * for it until it changes. A match is always hashed again, on the bytes returned.
+   */
   private readonly diskHashes = new Map<string, string>();
   /** The revisions listings named, by workspace and revision, the latest listed last. */
   private readonly listed = new Map<string, RevisionFile>();
@@ -72,14 +76,30 @@ export class WorkspaceCopies {
     const key = diskKey(absolutePath, stats.size, stats.mtimeMs);
     const known = this.diskHashes.get(key);
     if (known !== undefined && known !== file.hash) return null;
-    const bytes = await readFile(absolutePath).catch(() => null);
-    if (!bytes) return null;
-    // The bytes hashed are the bytes returned: a file written meanwhile can't pass for the revision.
-    const hash = contentHashOf(bytes);
+    const read = await readHashed(absolutePath).catch(() => null);
+    if (!read) return null;
     if (this.diskHashes.size >= MAX_DISK_HASHES) this.diskHashes.clear();
-    this.diskHashes.set(key, hash);
-    return hash === file.hash ? bytes : null;
+    this.diskHashes.set(key, read.hash);
+    return read.hash === file.hash ? read.bytes : null;
   }
+}
+
+/**
+ * A file's bytes and their MD5, hashed chunk by chunk as they are read: a 100 MB model never blocks the main process
+ * while it is hashed. The bytes hashed are the bytes returned, so a file written meanwhile can't pass for a revision.
+ * Null for one that grew past `MAX_MODEL_BYTES` while read.
+ */
+async function readHashed(absolutePath: string): Promise<{ bytes: Buffer; hash: string } | null> {
+  const hash = createHash('md5');
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of createReadStream(absolutePath) as AsyncIterable<Buffer>) {
+    size += chunk.length;
+    if (size > MAX_MODEL_BYTES) return null;
+    hash.update(chunk);
+    chunks.push(chunk);
+  }
+  return { bytes: Buffer.concat(chunks), hash: hash.digest('base64') };
 }
 
 /**

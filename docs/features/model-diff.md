@@ -435,7 +435,8 @@ heatmap's), and come back in the other modes. The merge cards' stills stay clay 
   isn't found.
 - **Reading a file found** (`api.unityAssets.read`, `RevisionDownloads`): a disk file from the disk; a repository's
   revision from the disk when the workspace's file at that path has its content (`WorkspaceCopies.read`: same size and
-  MD5 as the listing's hash, the hash kept by path, size and time written), else downloaded. The reads asked at once (both versions'
+  MD5 as the listing's hash; a file known to differ isn't read again until it changes, a match is always hashed again
+  on the bytes returned), else downloaded. The reads asked at once (both versions'
   textures, a ring of `.meta` files) wait until each has checked the disk, then go in one `cm cat <spec>;<file>
   <spec>;<file> …` (`catArgs`), which downloads them in one batch, in a process of its own; a batch holds one
   repository's revisions (an xlinked one's apart: `cm cat` resolves each repository's on its own) and stops at

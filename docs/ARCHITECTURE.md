@@ -129,7 +129,8 @@ and many people use the same server. Every `cm` command other than local reads (
   from a switch looks for changes to restore only when this app left some there.
 - **Revisions on disk**: a revision the workspace holds is read from its disk, never downloaded (`WorkspaceCopies`).
   Content decides, never status: the workspace's file at the revision's path is read when it has the size and MD5
-  `cm` lists for that revision (hashed once per path, size and time written), and the revision is downloaded otherwise
+  `cm` lists for that revision (hashed as it is read, on the bytes returned; a file known to differ isn't read again
+  until it changes), and the revision is downloaded otherwise
   (changed, being written, missing, a checkout with edits, another revision). The size and hash come from listings
   already read, never a command more: the Files view's and Browse repository's `cm ls --xml` (`<Hash>` and `<Size>`
   are the loaded revision's even once the file changed; a checkout lists revision -1 and the disk's hash, so it names
