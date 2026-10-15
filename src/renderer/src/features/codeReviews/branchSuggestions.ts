@@ -1,4 +1,5 @@
 import type { Branch } from '@shared/domain/branch';
+import { branchCreatedTime, newestBranchesFirst } from '../branches/newestBranchesFirst';
 
 /** The most branches the branch field suggests: a repository holds tens of thousands, and a few are all one reads. */
 export const MAX_BRANCH_SUGGESTIONS = 30;
@@ -19,12 +20,11 @@ function matchRank(name: string, typed: string): number | null {
  */
 export function branchSuggestions(branches: readonly Branch[], typed: string, limit = MAX_BRANCH_SUGGESTIONS): Branch[] {
   const text = typed.trim().toLowerCase();
-  const newestFirst = (a: Branch, b: Branch): number => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
-  if (!text) return [...branches].sort(newestFirst).slice(0, limit);
+  if (!text) return newestBranchesFirst(branches).slice(0, limit);
   const ranked = branches.flatMap((branch) => {
     const rank = matchRank(branch.name, text);
-    return rank === null ? [] : [{ branch, rank }];
+    return rank === null ? [] : [{ branch, rank, created: branchCreatedTime(branch) }];
   });
-  ranked.sort((a, b) => a.rank - b.rank || newestFirst(a.branch, b.branch));
+  ranked.sort((a, b) => a.rank - b.rank || b.created - a.created);
   return ranked.slice(0, limit).map(({ branch }) => branch);
 }
