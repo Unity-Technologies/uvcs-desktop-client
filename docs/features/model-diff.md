@@ -320,10 +320,14 @@ only what changes:
 - **The floor**: both versions stand on one floor, the lowest point of the two (`shadowFrameOf`), so a model that
   rises or sinks between them shows it against the floor.
   - **A contact shadow** under each version, as Sketchfab grounds a model (`ContactShadow`): the model seen from under
-    the floor through an orthographic camera, darker the nearer the floor (three's depth material, its depth as alpha),
-    blurred, on a plane under it. Only the solids cast it (camera layer `SHADOW_LAYER`; the picker draws from layer
-    1), whatever the mode shows. It is drawn again only when the model, the bounds or a take's pose changes
-    (`ModelRenderer.posed`, which the animation bar calls), never as the camera moves. Diffs' version before (a ghost)
+    the floor through an orthographic camera, darker the nearer the floor (three's depth material, its depth as alpha:
+    `shadowsByDepth`), the nearest surface winning by depth test and either side of it casting, blurred, on a plane
+    under it. Three's contact-shadow example draws without a depth test, where the last surface drawn wins: a tabletop
+    drawn after its legs hid their shadow. Only the solids cast it (camera layer `SHADOW_LAYER`, the one after the picker's
+    `PICK_LAYER`), whatever the mode shows. It is drawn again only when the model, the bounds or a take's pose changes
+    (`ModelRenderer.posed`, which the animation bar calls) or a lost WebGL context comes back, never as the camera
+    moves. It covers the rest pose's footprint (the framed bounds): a take that walks the model off it, or below the
+    floor, is cut at its edge. Diffs' version before (a ghost)
     and Diffs by look (a shadow would compare as a change) draw none. It is darker on the dark theme
     (`SHADOW_OPACITY`), whose backdrop shows less of it.
   - **An endless ground grid** on that floor, as Unity's Scene view and Blender draw theirs (`GroundGrid`): worked
@@ -439,7 +443,7 @@ textures") shows only when some
 slot would show more than clay (`materialsOffered`: a remap, a texture, a color or transparency of its own). In Diffs
 it compares how the versions look ("Compare materials and textures", `materialsButtonLabel`; Diffs by look under "The
 view"); slot colors stay there, off, saying why (`surfaceButtonDisabledReason`: their colors would hide the
-heatmap's), and come back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
+heatmap's), and come back in the other modes. The merge cards' stills stay clay (`modelThumbnail`), on the same floor, shadow and grid as the live view.
 
 - **Where the version is, never another revision's files.** Each version's materials and textures are the ones that
   go with it, looked up at its point (`AssetsPoint`, found by `AssetsPointContext`, `assetsPoints.ts`): a workspace
