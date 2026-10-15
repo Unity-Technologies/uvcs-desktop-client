@@ -5,7 +5,7 @@ import type { DiffReviewMark } from '@shared/domain/review';
 import { PersistedByKey } from './PersistedByKey';
 
 /** Diffs remembered per repository; the least recently used go first. */
-export const MAX_DIFFS_PER_REPOSITORY = 200;
+const MAX_DIFFS_PER_REPOSITORY = 200;
 
 interface StoredDiff {
   usedAt: number;
