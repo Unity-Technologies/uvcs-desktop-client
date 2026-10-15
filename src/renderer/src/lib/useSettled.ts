@@ -17,9 +17,10 @@ export function useSettled(delayMs = SELECTION_SETTLE_MS): boolean {
 }
 
 /**
- * `value` once its `key` stays put, for details that ask `cm` about the selected row (a revision's diff or annotation):
- * a change after a pause shows at once, while the rows an arrow key passes through are skipped until it stops. Until
- * then the value of the last settled key is kept on screen.
+ * `value` once its `key` stays put, for work too costly to redo at every step of a quick run of changes: details that
+ * ask `cm` about the selected row (a revision's diff or annotation), a model's changed regions as its tolerance slider
+ * moves. A change after a pause shows at once, while the steps of a run (the rows an arrow key passes through, a drag
+ * of the slider) are skipped until it stops. Until then the value of the last settled key is kept.
  */
 export function useSettledValue<T>(value: T, key: string, delayMs = SELECTION_SETTLE_MS): T {
   const [settled, setSettled] = useState({ key, value });
