@@ -138,7 +138,8 @@ and many people use the same server. Every `cm` command other than local reads (
      Materials look's in `RevisionDownloads`) is remembered with its hash (`remember`), never as what the workspace
      holds. Only for a path still unknown, and only when a file is there on disk, one `cm ls <folder> --format=…` of
      the workspace (`workspaceListingArgs`) tells, for all the folder's files (none for a folder the Files view
-     listed: `rememberFolder`), kept until the watcher sees the workspace change (`forgetListings`).
+     listed: `rememberFolder`), kept until the watcher sees that folder's files change, or `cm` rewrite the workspace's
+     state (`forgetChanged`).
   3. Is it that revision, unchanged? Same revision id at that path, in the same repository, and the file's bytes have
      that size and MD5 (hashed as they are read, on the bytes returned; a file known to differ isn't read again until
      it changes). Then the disk's bytes are the revision's; otherwise it is downloaded (`cm cat`).

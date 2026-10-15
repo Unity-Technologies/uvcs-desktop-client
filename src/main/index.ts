@@ -38,7 +38,7 @@ const settings = openSettings(userData);
 const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
 const watchers = watchShownWorkspaces(cm, headers);
 const workspaceCopies = new WorkspaceCopies({ cm });
-watchers.listen({ changed: (workspacePath) => workspaceCopies.forgetListings(workspacePath), unwatched: (workspacePath) => workspaceCopies.forgetListings(workspacePath) });
+watchers.listen({ changed: (workspacePath, change) => workspaceCopies.forgetChanged(workspacePath, change), unwatched: (workspacePath) => workspaceCopies.forgetListings(workspacePath) });
 const revisionDownloads = new RevisionDownloads({ cm, copies: workspaceCopies });
 const repositoryTrees = new RepositoryTrees({ cm, downloads: revisionDownloads });
 const operations = trackOperations(watchers);

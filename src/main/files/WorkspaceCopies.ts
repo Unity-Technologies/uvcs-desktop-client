@@ -10,6 +10,7 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { posix } from 'node:path';
 import type { RevisionRef } from '@shared/domain/revision';
+import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 import type { CmClient } from '../cm/CmClient';
 import type { ListedTreeItem } from '../cm/treeItemsXml';
 import { parseWorkspaceListing, workspaceListingArgs } from '../cm/workspaceListing';
@@ -52,10 +53,11 @@ export class WorkspaceCopies {
   /** The revisions listings named at their paths (`heldKey`), the latest listed last. */
   private readonly listed = new Map<string, RevisionFile>();
   /**
-   * The revision the workspace holds at each path it told (`pathKey`): its own listings (the Files view's, a history's
-   * `cm ls` of its file, a folder's). A path known here answers any other revision with no command.
+   * The paths the workspace told which revision it holds at, by folder (`folderKey`), the latest told last: its own
+   * listings (the Files view's, a history's `cm ls` of its file, a folder's). A path known here answers any other
+   * revision with no command. By folder, so a change forgets one folder's at once.
    */
-  private readonly held = new Map<string, RevisionFile>();
+  private readonly held = new Map<string, Set<string>>();
   /** The workspace folders listed (or being listed), by workspace and folder, until the workspace changes. */
   private readonly listedFolders = new Map<string, Promise<void>>();
 
@@ -80,7 +82,10 @@ export class WorkspaceCopies {
   rememberHeld(workspacePath: string, files: Iterable<RevisionFile>): void {
     const valid = [...validFiles(files)];
     this.remember(workspacePath, valid);
-    for (const file of valid) keepLatest(this.held, pathKey(workspacePath, file.path), file, this.maxListed);
+    for (const file of valid) {
+      const folder = folderKey(workspacePath, folderOf(file.path));
+      keepLatest(this.held, folder, (this.held.get(folder) ?? new Set<string>()).add(file.path), MAX_LISTED_FOLDERS);
+    }
   }
 
   /**
@@ -92,7 +97,22 @@ export class WorkspaceCopies {
     this.keepFolderListing(folderKey(workspacePath, folder), Promise.resolve());
   }
 
-  /** The workspace changed (the watcher saw it, or stopped watching): its folders are listed again when asked. */
+  /**
+   * The watcher saw the workspace change: what it held is asked again where it may differ. Every folder once `cm`
+   * rewrote the workspace's state (`metadata`: an update, a checkin, an undo) or the watcher couldn't tell where; else
+   * only the folders whose files changed, so an app writing elsewhere all the time (a Unity editor) never makes every
+   * diff list its folders again.
+   */
+  forgetChanged(workspacePath: string, change: WorkspaceChange): void {
+    if (change.metadata || change.folders === null) return this.forgetListings(workspacePath);
+    for (const folder of change.folders) {
+      const key = folderKey(workspacePath, folder);
+      this.listedFolders.delete(key);
+      this.held.delete(key);
+    }
+  }
+
+  /** The workspace changed everywhere, or isn't watched anymore: its folders are listed again when asked. */
   forgetListings(workspacePath: string): void {
     for (const map of [this.listedFolders, this.held]) for (const key of [...map.keys()]) if (key.startsWith(`${workspacePath}\0`)) map.delete(key);
   }
@@ -116,10 +136,10 @@ export class WorkspaceCopies {
     const key = heldKey(workspacePath, path, file.revision);
     const known = this.listed.get(key) ?? null;
     // The workspace told what it holds there: this revision (`known`), or another.
-    if (known || this.held.has(pathKey(workspacePath, path)) || !this.cm) return known;
+    if (known || this.held.get(folderKey(workspacePath, folderOf(path)))?.has(path) || !this.cm) return known;
     const onDisk = await stat(workspaceFileOf(workspacePath, path)).then((stats) => stats.isFile(), () => false);
     if (!onDisk) return null;
-    await this.listFolder(workspacePath, path.includes('/') ? posix.dirname(path) : '');
+    await this.listFolder(workspacePath, folderOf(path));
     return this.listed.get(key) ?? null;
   }
 
@@ -224,9 +244,9 @@ function keepLatest<T>(map: Map<string, T>, key: string, value: T, max: number):
   }
 }
 
-/** A workspace path. */
-function pathKey(workspacePath: string, path: string): string {
-  return `${workspacePath}\0${path}`;
+/** The folder of a workspace path, `''` for the root's files. */
+function folderOf(path: string): string {
+  return path.includes('/') ? posix.dirname(path) : '';
 }
 
 /** A workspace folder, as `forgetListings` finds it by its workspace. */
