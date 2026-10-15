@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { MergeRequest, MergeResolutions } from '@shared/domain/merge';
 import { mergeOutput, statusHeader, treeListing } from '../cm/testing/cmOutput';
+import { fakeCat } from '../cm/testing/fakeCat';
 import { fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { recordingContext } from '../operations/testing/recordingContext';
 import { runMerge } from './runMerge';
@@ -37,10 +38,7 @@ function mergingCm(plan: string[][], { remainingAfterSolving = [] as string[][][
     'status --short': pending,
     'merge br:/main/task': merge,
     ls: treeListing('eco@local', 'src/a.txt', 'src/b.txt', 'src/c.txt'),
-    cat: async ({ args }) => {
-      await writeFile(optionValue(args, '--file=')!, 'incoming version\n');
-      return '';
-    },
+    cat: fakeCat(() => 'incoming version\n'),
     'status --header --xml': statusHeader('/main', { changeset: 4 }),
   });
 }
@@ -94,6 +92,24 @@ describe('runMerge into the workspace', () => {
 
     expect(await readFile(join(workspacePath, 'src', 'a.txt'), 'utf8')).toBe('incoming as read\n');
     expect(lines().filter((line) => line.startsWith('cat'))).toEqual([`cat itemid:31#cs:3@eco@local --file=${join(workspacePath, 'src', 'b.txt')}`]);
+  });
+
+  it('writes every incoming version it has no text of (binaries) with one cm cat in a process of its own, however many', async () => {
+    const { cm, commands } = mergingCm([fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31), fileConflict('src/c.txt', 32)]);
+    const resolutions: MergeResolutions = {
+      directoryConflicts: [],
+      files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'source' }, '/src/c.txt': { choice: 'destination' } },
+    };
+
+    await runMerge(cm, workspacePath, FROM_TASK, resolutions, recordingContext().context);
+
+    const cats = commands.filter((command) => command.args[0] === 'cat');
+    expect(cats.map(({ args, via }) => ({ args, via }))).toEqual([
+      { args: ['cat', `itemid:30#cs:3@eco@local;${join(workspacePath, 'src', 'a.txt')}`, `itemid:31#cs:3@eco@local;${join(workspacePath, 'src', 'b.txt')}`], via: 'execute' },
+    ]);
+    expect(await readFile(join(workspacePath, 'src', 'a.txt'), 'utf8')).toBe('incoming version\n');
+    expect(await readFile(join(workspacePath, 'src', 'b.txt'), 'utf8')).toBe('incoming version\n');
+    expect(await readFile(join(workspacePath, 'src', 'c.txt'), 'utf8')).toBe('mine c.txt\n');
   });
 
   it('reads the incoming version of a shelve from the shelve, whose revisions no changeset holds', async () => {
