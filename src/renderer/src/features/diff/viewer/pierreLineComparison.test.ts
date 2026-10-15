@@ -1,8 +1,10 @@
 import { FileDiff, type DiffHunksRenderer } from '@pierre/diffs';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { lineDiffOptions } from './lineDiff';
 import { installPierreLineComparison } from './pierreLineComparison';
-import { changesOf, typedIntoPierre } from './pierreSessionFixture';
+import { changesOf, typedIntoPierre, warmUpPierre } from './pierreSessionFixture';
+
+beforeAll(warmUpPierre);
 
 describe('Pierre typed into under a comparison method', () => {
   it('hands the comparison to the renderer that re-diffs every keystroke', () => {

@@ -1,10 +1,12 @@
 import { DiffHunksRenderer } from '@pierre/diffs';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { MAX_WORD_DIFFED_LINE_PAIRS } from './changedLinePairs';
 import { lineDiff } from './lineDiff';
-import { typedIntoPierre } from './pierreSessionFixture';
+import { typedIntoPierre, warmUpPierre } from './pierreSessionFixture';
 import { refreshWordMarks } from './pierreWordMarks';
 import { renderedWordMarks } from './renderedWordMarks';
+
+beforeAll(warmUpPierre);
 
 const ORIGINAL = 'namespace Codice;\nusing Codice.CM.Common;\nclass Main {}\n';
 const MODIFIED = 'namespace Codice.Client;\nusing Codice.CM.Common;\nclass Main {}\n';

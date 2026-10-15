@@ -1,11 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { blockLines, listChangeBlocks } from './changeBlocks';
 import { COMPARISON_METHODS, type ComparisonMethod } from './comparisonMethod';
 import { discardLines, withOwnLines } from './discardLines';
 import { DIFF_TEST_TEXTS } from './diffTestTexts';
 import { differsUnder, hasLineChanges, lineDiff } from './lineDiff';
-import { changesOf, typedIntoPierre } from './pierreSessionFixture';
+import { changesOf, typedIntoPierre, warmUpPierre } from './pierreSessionFixture';
 import { shownDiff } from './shownDiff';
+
+beforeAll(warmUpPierre);
 
 const stats = (original: string, modified: string, method: ComparisonMethod = 'recognizeAll') => {
   const { added, removed } = lineDiff(original, modified, method);

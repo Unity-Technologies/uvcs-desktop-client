@@ -1,7 +1,9 @@
 import { DiffHunksRenderer } from '@pierre/diffs';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { typedIntoPierre } from './pierreSessionFixture';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { typedIntoPierre, warmUpPierre } from './pierreSessionFixture';
 import { installPierreSessionEndRefresh } from './pierreSessionEndRefresh';
+
+beforeAll(warmUpPierre);
 
 const ORIGINAL = 'namespace Codice;\nusing Codice.CM.Common;\nclass Main {}\n';
 const MODIFIED = 'namespace Codice.Client;\nusing Codice.CM.Common;\nclass Main {}\n';
