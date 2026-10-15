@@ -42,13 +42,13 @@ import { DISTANCE_ATTRIBUTE, distancesToDraw } from './heatColors';
 import { LookComparer } from './lookComparer';
 import { LookTextures, SlotLookMaterials } from './materials/slotLookMaterials';
 import type { SlotLook } from './materials/materialPlan';
+import { emphasisOf, outlinesWhenLit } from './meshEmphasis';
 import { MeshPicker } from './meshPicker';
 import type { ModelPalette } from './modelPalette';
 import { slotColor } from './modelPalette';
 import { modelOrientation, type ModelScene } from './modelScene';
 import { cameraPositionOf, clipPlanesOf, FIELD_OF_VIEW, type BoundsLike, type OrbitView, type Ray, type Vector } from './orbitCamera';
 import { pickWindowAt } from './pickWindow';
-import { emphasisOf, outlinesWhenLit } from './sceneMaterials';
 import type { DiffsCompares, SurfaceLook } from './surfaceLook';
 import { layoutOf, paneAt, shownLayoutMode, type ChosenLayoutMode, type Layout, type Side } from './viewLayout';
 
