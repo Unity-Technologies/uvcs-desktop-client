@@ -58,7 +58,7 @@ export class CmShellPool {
   }
 
   /**
-   * A directory a window shows (`show`, until `release`), one whose sessions answer at once first; undefined when no
+   * A directory a window shows (`show`, until `release`, or `forMs`), one whose sessions answer at once first; undefined when no
    * window shows any. Where a command that runs the same in any directory goes, so it starts no sessions in a directory
    * no window needs (`CmRunOptions.anyDirectory`).
    */
@@ -69,8 +69,8 @@ export class CmShellPool {
 
   /**
    * A window shows the directory's workspace: its sessions start now. Until `release`, or with `forMs` for that long at
-   * most, unless a show without it comes meanwhile: a window opening a workspace it hasn't watched yet, which a broken
-   * or missing workspace never will be.
+   * most, then released, unless a show without it comes meanwhile: a window opening a workspace it hasn't watched yet,
+   * which a broken or missing workspace never will be.
    */
   show(cwd: string, { forMs }: { forMs?: number } = {}): void {
     const previous = this.shown.get(cwd);
@@ -78,7 +78,8 @@ export class CmShellPool {
     if (forMs === undefined || previous === null) {
       this.shown.set(cwd, null);
     } else {
-      const ending: NodeJS.Timeout = setTimeout(() => this.shown.get(cwd) === ending && this.shown.delete(cwd), forMs);
+      // Never watched (a broken or missing workspace): no window needs its sessions, so they go at once.
+      const ending: NodeJS.Timeout = setTimeout(() => this.shown.get(cwd) === ending && this.release(cwd), forMs);
       // Ending a show is no reason to keep the app running.
       ending.unref();
       this.shown.set(cwd, ending);
