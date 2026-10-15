@@ -1,7 +1,7 @@
-// Revisions saved to files with `cm cat` (ARCHITECTURE.md "Server budget"), the ones asked together in one command:
-// a merge page reads three versions of every conflicting file at once, and a command each would be thousands of
-// process starts and connections. A read asked while no `cm cat` runs starts at once, as the one quick command it
-// always was; one asked while others run waits for one of them to end.
+// Revisions saved to files with `cm cat` (ARCHITECTURE.md "Server budget"), the ones asked together in one command: a
+// merge page reads three versions of every conflicting file but its known binaries at once, and a command each would be
+// thousands of process starts and connections. A read asked while no `cm cat` runs starts at once, as the one quick
+// command it always was; one asked while others run waits for one of them to end.
 
 import { rm, stat } from 'node:fs/promises';
 import type { CmClient } from '../cm/CmClient';
