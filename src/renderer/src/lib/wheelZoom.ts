@@ -19,6 +19,11 @@ export function cubicEaseOut(t: number): number {
   return 1 - (1 - t) ** 3;
 }
 
+/** Slow start, slow landing, symmetric about the middle: halfway in time is halfway there. */
+export function cubicEaseInOut(t: number): number {
+  return t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
+}
+
 /**
  * A physical wheel notch (about 100px, or line/page mode, which only wheels use) versus a trackpad
  * pinch or scroll, which Chromium reports as small pixel deltas.

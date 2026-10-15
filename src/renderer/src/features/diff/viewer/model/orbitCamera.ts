@@ -149,8 +149,8 @@ export function pointOnRay(view: OrbitView, ray: Ray, depth: number): Vector {
 }
 
 export function cameraPositionOf(view: OrbitView): Vector {
-  const { yaw, pitch, distance, target } = view;
-  return [target[0] + distance * Math.cos(pitch) * Math.sin(yaw), target[1] + distance * Math.sin(pitch), target[2] + distance * Math.cos(pitch) * Math.cos(yaw)];
+  const side = cameraSideOf(view);
+  return view.target.map((value, i) => value + view.distance * side[i]!) as Vector;
 }
 
 /** Clip planes that hold the bounds from where the camera is: near as far out as it can be, so depth stays precise. */
@@ -163,10 +163,15 @@ export function clipPlanesOf(view: OrbitView, bounds: BoundsLike): { near: numbe
   return { near: Math.max(toCentre - radius, far / 10000, MIN_DISTANCE / 10), far };
 }
 
+/** Where the camera is, seen from the target, as a unit vector: the side of the target it looks from. */
+export function cameraSideOf(view: OrbitView): Vector {
+  const { yaw, pitch } = view;
+  return [Math.cos(pitch) * Math.sin(yaw), Math.sin(pitch), Math.cos(pitch) * Math.cos(yaw)];
+}
+
 /** Where the camera looks, as a unit vector: from it towards the target. */
 function forwardOf(view: OrbitView): Vector {
-  const { yaw, pitch } = view;
-  return [-Math.cos(pitch) * Math.sin(yaw), -Math.sin(pitch), -Math.cos(pitch) * Math.cos(yaw)];
+  return cameraSideOf(view).map((value) => -value) as Vector;
 }
 
 /** The camera's right and up, as unit vectors in the viewer's space. */
@@ -181,6 +186,11 @@ export function centreOf(bounds: BoundsLike): Vector {
   return bounds.min.map((value, i) => (value + bounds.max[i]!) / 2) as Vector;
 }
 
+/** The length of the bounds' diagonal: the size of what they hold, whatever its shape. */
+export function diagonalOf(bounds: BoundsLike): number {
+  return Math.hypot(...bounds.max.map((value, i) => value - bounds.min[i]!));
+}
+
 function radiusOf(bounds: BoundsLike): number {
-  return Math.hypot(...bounds.max.map((value, i) => value - bounds.min[i]!)) / 2;
+  return diagonalOf(bounds) / 2;
 }
