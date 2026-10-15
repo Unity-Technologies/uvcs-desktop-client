@@ -207,7 +207,9 @@ arm64, Windows x64 and arm64 and Linux x64, the typecheck once on Linux, and the
 macOS and Windows x64 jobs. The shared install step (`.github/actions/install`) pins Node, restores `node_modules` from
 the last install of the same lockfile (`reuse-node-modules`, CI only: releases install clean), or else caches npm's and
 Electron's downloads and retries `npm ci`. On a Windows runner with a raw local SSD (arm64) the job formats it as a Dev
-Drive and builds there (`BUILD_DIR`). How fast the tests run on CI's 2-CPU runners, and why: `vitest.config.ts`.
+Drive and builds there (`BUILD_DIR`). On macOS the temp folder is a disk in memory: the runner's own disk now and
+then holds writes for seconds, which timed out tests writing a temp file. How fast the tests run on CI's 2-CPU
+runners, and why: `vitest.config.ts`.
 
 `.github/workflows/codeql.yml` runs GitHub's CodeQL security analysis on pushes to main, pull requests and weekly;
 findings show in the Security tab and on pull requests. It skips while the repository is private: code scanning needs
