@@ -159,7 +159,7 @@ describe('CmShellPool', () => {
     expect(FakeSession.created).toHaveLength(2);
   });
 
-  it('names a directory a window shows, one that answers at once first, never one only commands ran in', async () => {
+  it('names a directory a window shows, one that answers at once first, never one only commands ran in', () => {
     void pool.run('/other', ['status']);
     expect(pool.shownDirectory()).toBeUndefined();
 
@@ -171,6 +171,20 @@ describe('CmShellPool', () => {
 
     pool.release('/ready');
     expect(pool.shownDirectory()).toBe('/starting');
+  });
+
+  it('names a directory shown for a while only for that long, unless it is shown for good meanwhile', () => {
+    vi.useFakeTimers();
+    pool.show('/broken', { forMs: 1000 });
+    pool.show('/wk', { forMs: 1000 });
+    pool.show('/wk');
+    expect(pool.shownDirectory()).toBe('/broken');
+
+    vi.advanceTimersByTime(1000);
+    expect(pool.shownDirectory()).toBe('/wk');
+    pool.show('/wk', { forMs: 1000 });
+    vi.advanceTimersByTime(1000);
+    expect(pool.shownDirectory()).toBe('/wk');
   });
 
   it('still names a shown directory once its idle sessions were let go, so its next command starts them there', async () => {

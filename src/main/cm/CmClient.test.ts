@@ -2,7 +2,8 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CommandLogEntry } from '@shared/events';
-import { CmClient, type CmRunners } from './CmClient';
+import { CmClient, OPENING_SHOW_MS, type CmRunners } from './CmClient';
+import { CmShellPool } from './CmShellPool';
 import { CmError } from './CmError';
 import { MAX_LOGGED_COMMAND_LINE } from './clipForLog';
 import type { CmResult } from './CmResult';
@@ -63,6 +64,8 @@ async function failureOf(run: Promise<string>): Promise<CmError> {
 }
 
 describe('CmClient routing', () => {
+  afterEach(() => vi.useRealTimers());
+
   it('answers a quick read from a warm pooled cm shell, in the given workspace', async () => {
     const { cm, processes, shellCommands } = fakeClient();
 
@@ -82,7 +85,7 @@ describe('CmClient routing', () => {
 
   it('runs a query that answers the same anywhere in a workspace a window shows, starting no sessions in the home directory', async () => {
     const { cm, shellCommands, pools } = fakeClient();
-    cm.warmUp(WORKSPACE);
+    cm.show(WORKSPACE);
 
     await cm.query(['profile', 'list'], { anyDirectory: true });
 
@@ -108,6 +111,29 @@ describe('CmClient routing', () => {
     await cm.query(['profile', 'list'], { anyDirectory: true });
 
     expect(shellCommands).toEqual([{ cwd: homedir(), args: ['profile', 'list'] }]);
+  });
+
+  it('runs a query that answers the same anywhere in the workspace the first window opens, then home if it never watches it', async () => {
+    vi.useFakeTimers();
+    const ranIn: string[] = [];
+    const session = (cwd: string) => ({
+      pendingCount: 0,
+      isReady: true,
+      start: async () => undefined,
+      run: async () => (ranIn.push(cwd), { output: '', exitCode: 0 }),
+      dispose: () => undefined,
+    });
+    const runProcess = async () => ({ output: '', exitCode: 0 });
+    const cm = new CmClient(() => CM_PATH, 'linux', { runProcess, createShellPool: (cmPath) => new CmShellPool(cmPath, session) });
+
+    cm.showWhileOpening(WORKSPACE);
+    await cm.query(['profile', 'list'], { anyDirectory: true });
+    // Its page found it broken, and went to the home screen.
+    vi.advanceTimersByTime(OPENING_SHOW_MS);
+    await cm.query(['profile', 'list'], { anyDirectory: true });
+
+    expect(ranIn).toEqual([WORKSPACE, homedir()]);
+    cm.dispose();
   });
 
   it('runs a query as a process of its own while no session of the directory is ready yet, and warms them up', async () => {
@@ -419,14 +445,14 @@ describe('CmClient command log', () => {
 });
 
 describe('CmClient sessions', () => {
-  it('shows (warming up) and releases the sessions of a directory, the home directory by default', () => {
+  it('warms up, shows and releases the sessions of a directory, warming up the home directory by default', () => {
     const { cm, pools } = fakeClient();
 
     cm.warmUp();
-    cm.warmUp(WORKSPACE);
+    cm.show(WORKSPACE);
     cm.release(WORKSPACE);
 
-    expect(pools[0]).toMatchObject({ shown: [homedir(), WORKSPACE], released: [WORKSPACE] });
+    expect(pools[0]).toMatchObject({ warmed: [homedir()], shown: [WORKSPACE], released: [WORKSPACE] });
   });
 
   it('starts over with new sessions when cm is found somewhere else', async () => {

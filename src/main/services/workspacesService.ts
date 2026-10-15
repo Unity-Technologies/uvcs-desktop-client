@@ -82,7 +82,7 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
    * the home folder itself: the shells are kept per directory as written, so they are this window's own.
    */
   async function watch(workspacePath: string): Promise<WatchCoverage> {
-    cm.warmUp(workspacePath);
+    cm.show(workspacePath);
     const coverage = watchers.watch(callerId(), workspacePath);
     const home = homedir();
     if (workspacePath !== home && !windows.showsHomeScreen()) cm.release(home);

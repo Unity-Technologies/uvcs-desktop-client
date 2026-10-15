@@ -30,8 +30,11 @@ interface Directory {
  */
 export class CmShellPool {
   private readonly directories = new Map<string, Directory>();
-  /** The directories windows show, in the order they were shown (`show`); kept even while their sessions are let go. */
-  private readonly shown = new Set<string>();
+  /**
+   * The directories windows show, in the order they were shown (`show`), kept even while their sessions are let go;
+   * with the timer that ends a show for a while (`forMs`), null for one that lasts until `release`.
+   */
+  private readonly shown = new Map<string, NodeJS.Timeout | null>();
 
   constructor(
     cmPath: string,
@@ -60,13 +63,26 @@ export class CmShellPool {
    * no window needs (`CmRunOptions.anyDirectory`).
    */
   shownDirectory(): string | undefined {
-    const shown = [...this.shown];
+    const shown = [...this.shown.keys()];
     return shown.find((cwd) => this.isReady(cwd)) ?? shown[0];
   }
 
-  /** A window shows the directory (its workspace, or the home folder for the home screen): its sessions start now. */
-  show(cwd: string): void {
-    this.shown.add(cwd);
+  /**
+   * A window shows the directory's workspace: its sessions start now. Until `release`, or with `forMs` for that long at
+   * most, unless a show without it comes meanwhile: a window opening a workspace it hasn't watched yet, which a broken
+   * or missing workspace never will be.
+   */
+  show(cwd: string, { forMs }: { forMs?: number } = {}): void {
+    const previous = this.shown.get(cwd);
+    if (previous) clearTimeout(previous);
+    if (forMs === undefined || previous === null) {
+      this.shown.set(cwd, null);
+    } else {
+      const ending: NodeJS.Timeout = setTimeout(() => this.shown.get(cwd) === ending && this.shown.delete(cwd), forMs);
+      // Ending a show is no reason to keep the app running.
+      ending.unref();
+      this.shown.set(cwd, ending);
+    }
     this.warmUp(cwd);
   }
 
@@ -87,7 +103,7 @@ export class CmShellPool {
 
   /** Lets a workspace's sessions go once the commands already asked for are done; a later command starts new ones. */
   release(cwd: string): void {
-    this.shown.delete(cwd);
+    this.forgetShown(cwd);
     const directory = this.directories.get(cwd);
     if (!directory) return;
     directory.released = true;
@@ -95,9 +111,15 @@ export class CmShellPool {
   }
 
   disposeAll(): void {
-    this.shown.clear();
+    [...this.shown.keys()].forEach((cwd) => this.forgetShown(cwd));
     for (const directory of this.directories.values()) this.disposeDirectory(directory);
     this.directories.clear();
+  }
+
+  private forgetShown(cwd: string): void {
+    const ending = this.shown.get(cwd);
+    if (ending) clearTimeout(ending);
+    this.shown.delete(cwd);
   }
 
   private directory(cwd: string): Directory {

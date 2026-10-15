@@ -20,7 +20,7 @@ export interface CmRunOptions {
   cwd?: string;
   /**
    * A local command that answers the same in any directory (`profile list`, `whoami`, `workspace list`): with no `cwd`,
-   * it runs in a directory a window shows (`shownDirectory`: its workspace) instead of starting the home folder's
+   * it runs in a workspace a window watches (`show`, `shownDirectory`) instead of starting the home folder's
    * `cm shell`s, two more processes of about 80 MB each. The home folder's when only the home screen shows.
    */
   anyDirectory?: boolean;
@@ -40,6 +40,9 @@ export interface CmRunners {
 }
 
 const CM_RUNNERS: CmRunners = { runProcess: runCmProcess, createShellPool: (cmPath) => new CmShellPool(cmPath) };
+/** Long enough for a slow machine's first window to watch its workspace; a page that never does stops counting after. */
+export const OPENING_SHOW_MS = 30_000;
+
 type CommandStartedListener = (command: { args: readonly string[]; cwd: string; finished: Promise<unknown> }) => void;
 
 /**
@@ -103,12 +106,27 @@ export class CmClient {
     return this.run(args, options, false);
   }
 
-  /**
-   * A window shows a working directory (defaults to the home directory, for the home screen): prepares its `cm shell`
-   * sessions, where queries that run the same anywhere go too (`anyDirectory`) until `release`.
-   */
+  /** Prepares `cm shell` sessions for a working directory (defaults to the home directory). */
   warmUp(cwd = homedir()): void {
+    this.shellPool.warmUp(cwd);
+  }
+
+  /**
+   * A window watches the workspace in `cwd` (`workspaces.watch`): its sessions start, and queries that run the same
+   * anywhere go there too (`anyDirectory`) until `release`. Only a watch shows a directory: a workspace warmed up at
+   * launch whose page finds it broken or missing is never watched, so it never holds them.
+   */
+  show(cwd: string): void {
     this.shellPool.show(cwd);
+  }
+
+  /**
+   * The first window opens the workspace in `cwd` at launch: its sessions start, and it counts as shown (`show`) before
+   * its page watches it, so the launch's queries that run anywhere (the profiles read) start none in the home folder.
+   * For `OPENING_SHOW_MS` at most: a workspace the page finds broken or missing is never watched.
+   */
+  showWhileOpening(cwd: string): void {
+    this.shellPool.show(cwd, { forMs: OPENING_SHOW_MS });
   }
 
   /** Ends the `cm shell` sessions of a working directory no window shows anymore (each holds tens of MB). */

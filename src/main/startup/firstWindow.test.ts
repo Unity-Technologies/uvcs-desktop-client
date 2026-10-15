@@ -8,7 +8,10 @@ const SETTINGS = { ...DEFAULT_SETTINGS, pendingChanges: { ...DEFAULT_SETTINGS.pe
 function openFirstOn(workspacePath: string | undefined): string[] {
   const steps: string[] = [];
   openFirstWindow({
-    cm: { warmUp: (cwd) => void steps.push(`warm up ${cwd ?? 'the home folder'}`) },
+    cm: {
+      warmUp: (cwd) => void steps.push(`warm up ${cwd ?? 'the home folder'}`),
+      showWhileOpening: (cwd) => void steps.push(`show ${cwd} while it opens`),
+    },
     windows: { firstWorkspace: () => workspacePath, openFirst: () => void steps.push('open the window') },
     early: { start: (method, args) => void steps.push(`read ${method} ${JSON.stringify(args)}`) },
     settings: { get: () => SETTINGS },
@@ -17,9 +20,9 @@ function openFirstOn(workspacePath: string | undefined): string[] {
 }
 
 describe('openFirstWindow', () => {
-  it("starts the workspace's cm shells and its Changes view's reads before creating the window", () => {
+  it("starts the workspace's cm shells, shown while it opens, and its Changes view's reads before creating the window", () => {
     expect(openFirstOn('/wk')).toEqual([
-      'warm up /wk',
+      'show /wk while it opens',
       'read system.cmVersion []',
       'read workspaces.info ["/wk"]',
       `read pendingChanges.list ${JSON.stringify(['/wk', SETTINGS.pendingChanges])}`,
