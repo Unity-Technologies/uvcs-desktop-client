@@ -164,7 +164,7 @@ quality: **if the tests pass, the app works as specified**. Test what matters, n
 - **Specs**: a rule written in `docs/` deserves a test that enforces it; a rule for the whole repository becomes a
   static test ("Rules the tests enforce" below). A bug fix starts with a test that fails without it.
 
-**Don't test** what the type checker already proves, pass-through code, the libraries' own behaviour (React, TanStack
+**Don't test** what the type checker already proves, pass-through code, the libraries' own behavior (React, TanStack
 Query, Pierre), or implementation details (private helpers, call order nobody relies on). A test should fail only
 when something a user or another layer relies on changes; one that breaks on every refactor is noise.
 
@@ -324,7 +324,7 @@ merge it (docs/features/updates.md "CI"). Once the user says it merged, remove i
 
 ## Docs
 
-- `docs/` describes how the app works **now**, never its history. A change that alters behaviour, a `cm` quirk or a
+- `docs/` describes how the app works **now**, never its history. A change that alters behavior, a `cm` quirk or a
   convention updates the relevant doc in the same commit.
 - Rules every change must respect go in `docs/ARCHITECTURE.md`; one area's rules go in its `docs/features/*.md`
   (create one when a new area has rules the code can't show, and list it at the top of ARCHITECTURE.md). Name the
