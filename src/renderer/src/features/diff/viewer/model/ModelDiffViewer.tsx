@@ -46,6 +46,7 @@ import { useReadModel, type ModelReadState } from './useReadModel';
 import { useSize } from './useSize';
 import { useStableModel } from './useStableModel';
 import { diffsCompares, shownSurface } from './surfaceLook';
+import { stagePillRows } from './stagePillRows';
 import { texturesSettled } from './materials/materialPlan';
 import { modelWorkspacePath } from './materials/modelWorkspacePath';
 import { SiblingFinderContext, sourcePathOf, type DiffSide, type SiblingFinder } from './modelSiblings';
@@ -233,7 +234,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   const shownMode = comparable ? mode : null;
 
   const changesPanel = rows && (
-    <ModelChangesPanel rows={rows} picked={picked?.id ?? null} onPick={onPickRow} open={changesOpen} onOpenChange={setModelChangesOpen} docked={docked} pillRows={shownMode === 'onion' ? 1 : shapeDifferences ? (regions.length > 0 ? 2 : 1) : 0} />
+    <ModelChangesPanel rows={rows} picked={picked?.id ?? null} onPick={onPickRow} open={changesOpen} onOpenChange={setModelChangesOpen} docked={docked} pillRows={stagePillRows({ mode: shownMode, diffsCompares: compares, regionCount: regions.length, looksLoaded })} />
   );
 
   if (failed) {
