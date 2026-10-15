@@ -232,7 +232,7 @@ describe('watching a workspace', () => {
   it("lets the home folder's cm sessions go once no window shows the home screen, and keeps them while one does", async () => {
     const window = { id: 7, isDestroyed: () => false } as unknown as WebContents;
     let homeScreen = true;
-    const { service, released } = workspaces({}, { watch: () => 'full', coverageOf: () => undefined }, { showsHomeScreen: () => homeScreen });
+    const { service, released } = workspaces({}, { watch: async () => 'full' as const, coverageOf: () => undefined }, { showsHomeScreen: () => homeScreen });
 
     await runForCaller(window, () => service.watch(WORKSPACE));
     expect(released).toEqual([]);
@@ -249,7 +249,7 @@ describe('watching a workspace', () => {
     const window = { id: 7, isDestroyed: () => false } as unknown as WebContents;
     const watched = new Set<string>();
     const watchers = {
-      watch: (_viewer: number, workspacePath: string) => (watched.add(workspacePath), 'full' as const),
+      watch: async (_viewer: number, workspacePath: string) => (watched.add(workspacePath), 'full' as const),
       coverageOf: (workspacePath: string) => (watched.has(workspacePath) ? ('full' as const) : undefined),
     };
     const { service, released, shown } = workspaces({}, watchers, { showsHomeScreen: () => false });
