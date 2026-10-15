@@ -39,15 +39,18 @@ you touch:
      pooled `cm shell` sessions, two per working directory; a command takes the first one free, and a directory idle
      for ten minutes lets its sessions go; a workspace no window shows anymore lets them go once their commands are
      done (`WorkspaceWatchers` `onStopped`), and the home folder's once a window opens a workspace and none shows the
-     home screen (`showsHomeScreen`; not when the workspace is the home folder itself). Each session is a process of
-     about 80 MB, so a query with no `cwd` that answers the same in any directory (`profile list`, `profile delete`,
-     `whoami`, `workspace list`, `status --xml <path>`, `getworkspacefrompath <path>`) says so (`anyDirectory`) and
-     runs in a directory a window shows (`shownDirectory`: shown by `CmClient.warmUp`, until `release`), a ready one
-     first, instead of starting the home folder's two; it starts them only when no window shows a workspace. A session
-     takes about a second to answer its first command, so until one in that directory has, the query runs as a process
-     of its own (the first window's start before it is created: `openFirstWindow`). A workspace write that may run long
-     (`runsLong`: more than `MAX_QUICK_WRITE_PATHS` paths, recursive, or a transfer) runs as a process of its own too,
-     so it never holds a session every read of the workspace would wait behind.
+     home screen (`showsHomeScreen`) and no window shows a workspace in the home folder itself. Each session is a
+     process of about 80 MB, so a query with no `cwd` that answers the same in any directory (`profile list`,
+     `profile delete`, `whoami`, `workspace list`, `status --xml <path>`, `getworkspacefrompath <path>`) says so
+     (`anyDirectory`) and runs in a workspace a window shows (`shownDirectory`), a ready one first, instead of
+     starting the home folder's two; it starts them only when no window shows a workspace. A workspace is shown once
+     its window watches it (`CmClient.show`, until `release`), and the first window's for `OPENING_SHOW_MS` before
+     that (`showWhileOpening`), so launch's profiles read runs there; one its page finds broken or missing is never
+     watched, and stops counting. A session takes about a second to answer its first command, so until one in that
+     directory has, the query runs as a process of its own (the first window's start before it is created:
+     `openFirstWindow`). A workspace write that may run long (`runsLong`: more than `MAX_QUICK_WRITE_PATHS` paths,
+     recursive, or a transfer) runs as a process of its own too, so it never holds a session every read of the
+     workspace would wait behind.
    - `execute()` for long or cancellable work (update, switch, checkin, shelve, merge, sync; the Branch Explorer's
      merges `find`, the slowest query on big repositories): a dedicated process that streams progress lines.
    - A command line too long to start a process with (a checkin or shelve of thousands of paths: Windows takes 32,767
