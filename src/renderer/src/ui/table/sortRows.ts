@@ -10,8 +10,9 @@ type SortValue = string | number;
 export type SortRanks = Map<SortValue, number>;
 
 /**
- * `rows` ordered by `sortValue` (stable: equal values keep their order), with the ranks it used. `ranks` from an earlier
- * call with the same `sortValue` are reused while they know every value; otherwise they're computed again for these rows.
+ * `rows` ordered by `sortValue` (stable: equal values keep their order), with the ranks it used. `ranks` from any earlier
+ * call are reused while they know every value, since a value's rank depends only on the value (`compareSortValues`);
+ * otherwise they're computed again for these rows.
  */
 export function sortRows<Row>(
   rows: readonly Row[],

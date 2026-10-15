@@ -62,6 +62,14 @@ describe('ColumnSorter', () => {
     expect(sorted.slice(0, 3).map((row) => row.name)).toEqual(['/main/task-0', '/main/task-1', '/main/task-2']);
   });
 
+  it('sorts right when a column id is sorted by another field, even one holding the same values on other rows', () => {
+    const rows = ['b', 'c', 'a'].map((name, index) => ({ name, label: ['a', 'b', 'c'][index]!, size: 3 - index }));
+    const sorter = new ColumnSorter();
+    sorter.sort(rows, 'shown', (row) => row.name, false);
+    expect(sorter.sort(rows, 'shown', (row) => row.label, false)).toEqual(sortRows(rows, (row) => row.label, false).rows);
+    expect(sorter.sort(rows, 'shown', (row) => row.size, true)).toEqual(sortRows(rows, (row) => row.size, true).rows);
+  });
+
   it('keeps each column its own ranks, so switching back to a column compares no text', () => {
     const sorter = new ColumnSorter();
     sorter.sort(many, 'name', byName, false);
