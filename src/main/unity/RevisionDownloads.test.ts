@@ -69,6 +69,23 @@ describe('RevisionDownloads', () => {
     expect(fake.lines().map((line) => line.split(' ')[0])).toEqual(['ls']);
   });
 
+  it('fetches the revisions a reader will read a few at a time in one cm cat: the reads that follow download nothing', async () => {
+    const { workspace, fake, downloads, text } = await setUp();
+    const firstRead = text(downloads.read(workspace, file(1)));
+    await Promise.all([downloads.fetch(workspace, file(1)), downloads.fetch(workspace, file(2)), downloads.fetch(workspace, file(3))]);
+    expect(await Promise.all([firstRead, text(downloads.read(workspace, file(2))), text(downloads.read(workspace, file(3)))])).toEqual(['bark v1', 'leaves v2', 'moss v3']);
+    expect(fake.commands.map((command) => [command.via, command.args.length])).toEqual([['execute', 4]]);
+  });
+
+  it("fetches nothing the workspace's disk has, and fails a fetch as the read would", async () => {
+    const { workspace, fake, downloads } = await setUp();
+    await mkdir(join(workspace, 'Art'));
+    await writeFile(join(workspace, 'Art', 'same.png'), 'bark v1');
+    await downloads.fetch(workspace, file(1, 'Art/same.png', md5('bark v1'), 7));
+    expect(fake.commands).toEqual([]);
+    await expect(downloads.fetch(workspace, file(404))).rejects.toThrow('revid:404@eco@local');
+  });
+
   it('tells each revision of a batch apart: one cm has not fails alone', async () => {
     const { workspace, downloads, text } = await setUp();
     const [found, gone] = await Promise.allSettled([text(downloads.read(workspace, file(3))), text(downloads.read(workspace, file(404)))]);

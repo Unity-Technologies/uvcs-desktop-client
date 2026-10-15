@@ -142,6 +142,14 @@ export class WorkspaceCopies {
     return (await this.matchingOnDisk(workspacePath, file, true))?.bytes ?? null;
   }
 
+  /**
+   * Whether the workspace's disk has the revision's content, checked as `read` checks it, but keeping none of the
+   * bytes: what decides a download for a read to come (`RevisionDownloads.fetch`).
+   */
+  async has(workspacePath: string, file: RevisionFile): Promise<boolean> {
+    return (await this.matchingOnDisk(workspacePath, file, false)) !== null;
+  }
+
   private async matchingOnDisk(workspacePath: string, file: RevisionFile, keepBytes: boolean): Promise<{ bytes: Buffer | null } | null> {
     if (file.hash !== null) return this.matching(workspacePath, file, keepBytes);
     const held = await this.heldAt(workspacePath, file);

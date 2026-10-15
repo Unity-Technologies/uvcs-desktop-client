@@ -39,7 +39,7 @@ interface UnityAssetsContext {
   watchers: Pick<WorkspaceWatchers, 'listen' | 'coverageOf'>;
   /** The repository's trees at the points looked at, shared with the reads of a model's files beside it. */
   trees: Pick<RepositoryTrees, 'at'>;
-  downloads: Pick<RevisionDownloads, 'read'>;
+  downloads: Pick<RevisionDownloads, 'read' | 'fetch'>;
   platform?: NodeJS.Platform;
   /** The disk as the project indexes read it; tests count the reads. */
   filesOf?: (workspacePath: string) => ProjectFiles;
@@ -182,8 +182,7 @@ export function createUnityAssetsService({ watchers, trees, downloads, platform 
 
   /** A file found's bytes: the disk's, or its revision's (`RevisionDownloads`); null for a disk file no longer there. */
   async function read(workspacePath: string, file: FoundFile): Promise<Uint8Array | null> {
-    const path = workspacePathOf(file.path);
-    if (path === null || file.path.length > MAX_UNITY_ASSET_PATH_LENGTH) throw new Error(`${file.path} is outside the workspace`);
+    const path = pathInWorkspace(file);
     let bytes: Buffer | null;
     if (file.stored === 'disk') {
       bytes = await readDiskFile(workspaceFileOf(workspacePath, path));
@@ -195,7 +194,26 @@ export function createUnityAssetsService({ watchers, trees, downloads, platform 
     return bytes && new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   }
 
-  return { find, read };
+  /** The repository's revisions among the files downloaded in one batch (`RevisionDownloads.fetch`); a disk file needs nothing. */
+  async function download(workspacePath: string, files: FoundFile[]): Promise<void> {
+    if (files.length > MAX_UNITY_ASSET_LOOKUPS) throw new Error('Too many files to download at once');
+    const revisions = files.flatMap((file) => {
+      if (file.stored !== 'repository') return [];
+      refuseUnlikelyRevision(file.revision);
+      return [{ path: pathInWorkspace(file), revision: file.revision, hash: file.hash, size: file.size }];
+    });
+    // Each read that follows tells its own failure.
+    await Promise.all(revisions.map((revision) => downloads.fetch(workspacePath, revision).catch(() => undefined)));
+  }
+
+  return { find, read, download };
+}
+
+/** A found file's path, refused when it leads out of the workspace. */
+function pathInWorkspace(file: FoundFile): string {
+  const path = workspacePathOf(file.path);
+  if (path === null || file.path.length > MAX_UNITY_ASSET_PATH_LENGTH) throw new Error(`${file.path} is outside the workspace`);
+  return path;
 }
 
 /** A disk file's bytes, refused unread past `MAX_MODEL_BYTES`; null when it isn't there. */

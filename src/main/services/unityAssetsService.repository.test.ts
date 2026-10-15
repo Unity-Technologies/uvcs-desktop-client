@@ -7,7 +7,7 @@ import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient
 import { treeListingOutput, type ListedRecord } from '../cm/testing/cmOutput';
 import type { RevisionFile } from '../files/WorkspaceCopies';
 import { RevisionDownloads } from '../unity/RevisionDownloads';
-import { BRANCH_TREE_LIFE_MS } from '@shared/domain/unityAssets';
+import { BRANCH_TREE_LIFE_MS, MAX_UNITY_ASSET_LOOKUPS } from '@shared/domain/unityAssets';
 import { RepositoryTrees } from '../unity/RepositoryTrees';
 import { createUnityAssetsService } from './unityAssetsService';
 
@@ -61,18 +61,23 @@ async function setUp(items: ListedRecord[], { platform = 'darwin' as NodeJS.Plat
   if (projectOnDisk) await mkdir(join(workspace, 'Game', 'ProjectSettings'), { recursive: true });
   const fake = fakeCmClient({ ls: listing(items) });
   const downloaded: RevisionFile[] = [];
+  const fetched: RevisionFile[] = [];
   let time = 0;
   const downloads = {
     read: async (_workspace: string, file: RevisionFile) => {
       downloaded.push(file);
       return Buffer.from(METAS[file.revision.revisionId] ?? 'bytes');
     },
+    fetch: async (_workspace: string, file: RevisionFile) => {
+      fetched.push(file);
+      if (file.revision.revisionId === 404) throw new Error('The specified revision was not found');
+    },
   };
   const trees = new RepositoryTrees({ cm: fake.cm, downloads, platform, now: () => time });
   const unityAssets = createUnityAssetsService({ trees, downloads, watchers: { listen: () => () => undefined, coverageOf: () => 'full' }, platform });
   const find = (request: Partial<UnityAssetsRequest>, point: AssetsPoint = { kind: 'repository', at: 'cs:12' }) =>
     unityAssets.find(workspace, { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', point, textures: [], guids: [], paths: [], searchTexturesGlobally: false, ...request });
-  return { workspace, unityAssets, fake, downloaded, find, later: (ms: number) => (time += ms) };
+  return { workspace, unityAssets, fake, downloaded, fetched, find, later: (ms: number) => (time += ms) };
 }
 
 const lookup = (name: string, storedPaths: string[] = []) => ({ name, storedPaths, remapGuid: null });
@@ -125,7 +130,7 @@ describe('unityAssets.find at a point of the repository', () => {
     const workspace = await mkdtemp(join(tmpdir(), 'assets-at-point-'));
     let fail = true;
     const fake = fakeCmClient({ ls: (command) => (fail ? ((fail = false), cmFails('The server is down')) : listing(TREE_FOLDER)(command) as string) });
-    const downloads = { read: () => Promise.reject(new Error('no')) };
+    const downloads = { read: () => Promise.reject(new Error('no')), fetch: () => Promise.reject(new Error('no')) };
     const unityAssets = createUnityAssetsService({ trees: new RepositoryTrees({ cm: fake.cm, downloads }), downloads, watchers: { listen: () => () => undefined, coverageOf: () => 'full' } });
     const request = { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', point: { kind: 'repository', at: 'cs:12' } as const, textures: [], guids: [], paths: ['Game/Assets/Art/Tree/Tree.fbx'], searchTexturesGlobally: false };
     await expect(unityAssets.find(workspace, request)).rejects.toThrow('The server is down');
@@ -140,7 +145,7 @@ describe('unityAssets.find at a point of the repository', () => {
     const fake = fakeCmClient({
       ls: (command) => (command.args[1] === '/Game' && failProject ? cmFails('The server is down') : (listing(PROJECT)(command) as string)),
     });
-    const downloads = { read: async (_workspace: string, file: RevisionFile) => Buffer.from(METAS[file.revision.revisionId] ?? 'bytes') };
+    const downloads = { read: async (_workspace: string, file: RevisionFile) => Buffer.from(METAS[file.revision.revisionId] ?? 'bytes'), fetch: async () => undefined };
     const unityAssets = createUnityAssetsService({ trees: new RepositoryTrees({ cm: fake.cm, downloads }), downloads, watchers: { listen: () => () => undefined, coverageOf: () => 'full' } });
     const request = { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', point: { kind: 'repository', at: 'cs:12' } as const, textures: [], guids: [MAT_GUID], paths: [], searchTexturesGlobally: false };
     // The server is down for the whole first find: it can't tell.
@@ -257,5 +262,30 @@ describe('unityAssets.read', () => {
     expect(downloaded).toEqual([{ path: 'Art/Bark.mat.meta', revision, hash: null, size: -1 }]);
     await expect(unityAssets.read(workspace, { path: '../../etc/passwd', size: 1, stored: 'disk', modified: 1 })).rejects.toThrow('outside the workspace');
     await expect(unityAssets.read(workspace, { path: 'a.png', size: 1, stored: 'repository', revision: { revisionId: 1, repository: 'eco@local;x' }, hash: null })).rejects.toThrow('Not a revision');
+  });
+});
+
+describe('unityAssets.download', () => {
+  it("fetches the repository's revisions among the files, never a disk file, and leaves a failure for the read to tell", async () => {
+    const { workspace, unityAssets, fetched } = await setUp(PROJECT);
+    const revision = (revisionId: number) => ({ revisionId, repository: 'eco@local' });
+    await unityAssets.download(workspace, [
+      { path: 'Art/bark.png', size: 3, stored: 'disk', modified: 1 },
+      { path: 'Art/leaves.png', size: 5, stored: 'repository', revision: revision(12), hash: 'aGFzaA==' },
+      { path: 'Art/gone.png', size: 5, stored: 'repository', revision: revision(404), hash: null },
+    ]);
+    expect(fetched).toEqual([
+      { path: 'Art/leaves.png', revision: revision(12), hash: 'aGFzaA==', size: 5 },
+      { path: 'Art/gone.png', revision: revision(404), hash: null, size: 5 },
+    ]);
+  });
+
+  it("refuses a path out of the workspace, a revision cm can't name, and more files than a look reads", async () => {
+    const { workspace, unityAssets, fetched } = await setUp(PROJECT);
+    const file = (path: string, repository = 'eco@local') => ({ path, size: 1, stored: 'repository' as const, revision: { revisionId: 1, repository }, hash: null });
+    await expect(unityAssets.download(workspace, [file('../../etc/passwd')])).rejects.toThrow('outside the workspace');
+    await expect(unityAssets.download(workspace, [file('a.png', 'eco@local;x')])).rejects.toThrow('Not a revision');
+    await expect(unityAssets.download(workspace, Array.from({ length: MAX_UNITY_ASSET_LOOKUPS + 1 }, (_, i) => file(`${i}.png`)))).rejects.toThrow('Too many files');
+    expect(fetched).toEqual([]);
   });
 });

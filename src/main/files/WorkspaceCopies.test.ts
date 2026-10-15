@@ -63,6 +63,15 @@ describe('WorkspaceCopies.read', () => {
     expect(await copies.read(workspace, revisionOf('a.obj', 'v 0 0 0\n'))).toBeNull();
   });
 
+  it("tells whether the disk has the revision's content as a read would, keeping none of it", async () => {
+    const workspace = await workspaceWith({ 'same.png': 'bark v1', 'edited.png': 'bark v9' });
+    const copies = new WorkspaceCopies();
+
+    expect(await copies.has(workspace, revisionOf('same.png', 'bark v1'))).toBe(true);
+    expect(await copies.has(workspace, revisionOf('edited.png', 'bark v1'))).toBe(false);
+    expect(await copies.has(workspace, revisionOf('gone.png', 'bark v1'))).toBe(false);
+  });
+
   it('reads a file bigger than one chunk whole', async () => {
     // Read into one buffer of the file's size (`readHashed`): more than the stream's 64 KB chunks.
     const text = 'v 0 0 0\n'.repeat(40_000);

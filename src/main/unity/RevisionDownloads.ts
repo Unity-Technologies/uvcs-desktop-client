@@ -36,7 +36,7 @@ const UNKNOWN_SIZE = 1024 * 1024;
 interface RevisionDownloadsOptions {
   cm: Pick<CmClient, 'execute'>;
   /** Reads a revision from the workspace's disk where its file there has the revision's content. */
-  copies?: Pick<WorkspaceCopies, 'read'>;
+  copies?: Pick<WorkspaceCopies, 'read' | 'has'>;
   /** The folder the session's downloads folder is made in, the first time something is downloaded: the OS's temp folder. */
   tempFolder?: string;
   maxKeptBytes?: number;
@@ -61,7 +61,7 @@ interface Waiting {
 
 export class RevisionDownloads {
   private readonly cm: Pick<CmClient, 'execute'>;
-  private readonly copies: Pick<WorkspaceCopies, 'read'>;
+  private readonly copies: Pick<WorkspaceCopies, 'read' | 'has'>;
   private readonly tempFolder: string;
   private leftOvers: Promise<void> | null = null;
   private readonly pid: number;
@@ -119,6 +119,25 @@ export class RevisionDownloads {
         this.forget(key);
         return readCapped(await this.download(workspacePath, file, key));
       });
+    });
+  }
+
+  /**
+   * Has the revision ready for a read to come, reading none of it: on the disk (checked as a read checks it), kept, or
+   * downloaded now in one batch with the others asked at once. A reader that reads a few files at a time, to hold few
+   * in memory (the Materials look's textures), asks for them all here first, so its reads never split the batch.
+   * Fails as the read would; a revision past what is read is left for the read to refuse.
+   */
+  async fetch(workspacePath: string, file: RevisionFile): Promise<void> {
+    return this.whileChecking(async (doneChecking) => {
+      if (await this.copies.has(workspacePath, file)) return;
+      const key = keyOf(file.revision);
+      const kept = this.kept.get(key);
+      if (kept) return this.touch(key, kept);
+      if (file.size > MAX_MODEL_BYTES) return;
+      const downloaded = this.download(workspacePath, file, key);
+      doneChecking();
+      await downloaded;
     });
   }
 
