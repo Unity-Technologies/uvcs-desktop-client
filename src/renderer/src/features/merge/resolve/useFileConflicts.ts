@@ -21,6 +21,12 @@ export interface ConflictedFile {
   base: ContentSource;
   source: ContentSource;
   destination: ContentSource;
+  /**
+   * Known to be a binary before any version is read (by the type `cm` keeps for one of its revisions): it needs a
+   * decision straight away, and its versions are read only once the user opens it (`readsOnOpen`). Without it, the
+   * versions read tell.
+   */
+  isKnownBinary?: boolean;
 }
 
 export interface FileConflictState {
