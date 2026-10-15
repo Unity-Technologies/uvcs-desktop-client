@@ -63,10 +63,10 @@ export class LookComparer {
         // what it looks like now, not a flat silhouette.
         vec3 shaded = accent * mix(0.35, 1.3, sqrt(gray));
         if (difference > tolerance) shown = mix(shown, shaded, minAccent + difference * (1.0 - minAccent));
-        gl_FragColor = vec4(shown, covered);
+        // Opaque: \`seen\` already laid a partly covered edge over the backdrop; blending it again would rim it.
+        gl_FragColor = vec4(shown, 1.0);
         #include <colorspace_fragment>
       }`,
-    transparent: true,
     depthTest: false,
     depthWrite: false,
   });
