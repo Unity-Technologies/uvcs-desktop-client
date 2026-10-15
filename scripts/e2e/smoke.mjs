@@ -101,6 +101,20 @@ try {
     // A line only the edited side of the fixture's file has.
     await main.getByText('void Jump() { }').first().waitFor();
   });
+  await step('A revision read from the disk', async () => {
+    await window.getByRole('navigation').getByRole('button', { name: /^Files( \d+)?$/ }).click();
+    await main.getByText('README.md', { exact: true }).first().click();
+    // The fake cm's revision 201 is another file's: README.md's text shows only when its revision is read from disk.
+    await main.getByText('A small game.').first().waitFor();
+    // A last change against its parent: the side after from the disk, the side before (revision 200) downloaded.
+    // Go to file reveals it without selecting its folder (whose details the fake cm doesn't know).
+    await window.keyboard.press('ControlOrMeta+P');
+    await window.keyboard.type('camera');
+    await window.keyboard.press('Enter');
+    await main.getByText('float distance = 8f;').first().waitFor();
+    await main.getByText('float distance = 10f;').first().waitFor();
+    await window.getByRole('navigation').getByRole('button', { name: /^Changes( \d+)?$/ }).click();
+  });
   await step('Model diff', async () => {
     await main.getByText('Assets/crate.obj', { exact: true }).first().click();
     // The 3D view, and what changed in it: the fixture renamed the crate's material slot.

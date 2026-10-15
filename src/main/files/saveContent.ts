@@ -7,6 +7,7 @@ import type { CmClient } from '../cm/CmClient';
 import { isNotInTreeError } from '../cm/missingItem';
 import { removedItemSpec } from '../cm/removedItemSpec';
 import { parseTreeItems } from '../cm/treeItemsXml';
+import type { WorkspaceCopies } from './WorkspaceCopies';
 import { toAbsolutePath } from './workspacePaths';
 
 /** A version of a file, as it is and whatever it holds, saved to `target`. Review snapshots are read elsewhere. */
@@ -27,6 +28,18 @@ export async function saveContent(cm: CmClient, workspacePath: string, source: E
     case 'spec':
       return saveRevision(cm, workspacePath, source.spec, target);
   }
+}
+
+/**
+ * A version saved for another app (Open, Save as, a merge tool): a revision the workspace holds unchanged is copied
+ * from its disk (`WorkspaceCopies`), anything else saved as `saveContent` reads it.
+ */
+export async function saveVersion(cm: CmClient, copies: Pick<WorkspaceCopies, 'read'>, workspacePath: string, source: Exclude<ContentSource, { kind: 'reviewSnapshot' }>, target: string): Promise<void> {
+  if (source.kind === 'revision') {
+    const onDisk = await copies.read(workspacePath, { path: source.fileName, revision: source.revision, hash: null, size: -1 });
+    if (onDisk) return writeFile(target, onDisk);
+  }
+  return saveContent(cm, workspacePath, source, target);
 }
 
 async function saveLoadedRevision(cm: CmClient, workspacePath: string, path: string, target: string): Promise<void> {

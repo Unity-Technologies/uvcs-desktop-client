@@ -5,7 +5,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { cmFails, fakeCmClient, type FakeCmCommand } from '../cm/testing/fakeCmClient';
-import { batchesOf, catArgs, MAX_BATCH_BYTES, RevisionDownloads, type RevisionFile } from './RevisionDownloads';
+import { formatOutput } from '../cm/testing/cmOutput';
+import { WorkspaceCopies, type RevisionFile } from '../files/WorkspaceCopies';
+import { batchesOf, catArgs, MAX_BATCH_BYTES, RevisionDownloads } from './RevisionDownloads';
 
 const md5 = (text: string) => createHash('md5').update(text).digest('base64');
 
@@ -52,6 +54,17 @@ describe('RevisionDownloads', () => {
     expect(fake.commands).toEqual([]);
     expect(await text(downloads.read(workspace, file(1, 'Art/edited.png', md5('bark v1'), 7)))).toBe('bark v1');
     expect(fake.linesVia('execute')).toHaveLength(1);
+  });
+
+  it("reads a texture of a diff's side before (its hash unknown) from the disk where the workspace holds that revision unchanged", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'revisions-workspace-'));
+    await mkdir(join(workspace, 'Art'));
+    await writeFile(join(workspace, 'Art', 'bark.png'), 'bark v1');
+    const fake = fakeCmClient({ ls: formatOutput(['Art/bark.png', 'bin', 1, md5('bark v1'), 7, 'rep:eco@local']), cat: catAnswer });
+    const downloads = new RevisionDownloads({ cm: fake.cm, copies: new WorkspaceCopies({ cm: fake.cm }), tempFolder: await mkdtemp(join(tmpdir(), 'revisions-session-')), pid: 100, isRunning: () => false });
+
+    expect((await downloads.read(workspace, file(1, 'Art/bark.png'))).toString()).toBe('bark v1');
+    expect(fake.lines().map((line) => line.split(' ')[0])).toEqual(['ls']);
   });
 
   it('tells each revision of a batch apart: one cm has not fails alone', async () => {

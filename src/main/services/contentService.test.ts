@@ -3,10 +3,12 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { treeListingOutput } from '../cm/testing/cmOutput';
+import { formatOutput, treeListingOutput, workspaceListingXml } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, optionValue, type CmAnswer, type FakeCmCommand } from '../cm/testing/fakeCmClient';
+import { contentHashOf } from '../files/WorkspaceCopies';
 import type { ReviewStore } from '../review/ReviewStore';
 import { createContentService } from './contentService';
+import { createExplorerService } from './explorerService';
 import { serviceContext } from './testing/serviceContext';
 
 async function newWorkspace(): Promise<string> {
@@ -263,5 +265,149 @@ describe('reading the bytes of a model companion', () => {
   it('reads nothing of an empty side', async () => {
     const { service } = content({});
     expect(await service.readBytes(await newWorkspace(), { kind: 'empty' })).toBeNull();
+  });
+});
+
+describe("reading a revision the workspace's disk holds", () => {
+  const PUMPKIN = 'v 0 0 0\nmtllib PumpkinMaterials.mtl\n';
+  const MTL = 'newmtl Skin\nmap_Kd Pumpkin_Skin.png\n';
+  const md5 = (text: string) => contentHashOf(Buffer.from(text));
+  const revision = (revisionId: number, fileName = 'Prop/Pumpkin.obj', repository = 'eco@local') => ({ kind: 'revision' as const, revision: { revisionId, repository }, fileName });
+
+  /** The Files view's listing of `Prop`, as the workspace loaded it, then the content service reading in the same context. */
+  async function filesView(listing: string, disk: Record<string, string>) {
+    const workspace = await newWorkspace();
+    await mkdir(join(workspace, 'Prop'));
+    for (const [path, text] of Object.entries(disk)) await writeFile(join(workspace, ...path.split('/')), text);
+    const { answer } = catWriting('downloaded');
+    const fake = fakeCmClient({ ls: listing, cat: answer });
+    const context = serviceContext(fake.cm);
+    await createExplorerService(context).listDirectory(workspace, 'Prop');
+    return { workspace, fake, service: createContentService(context) };
+  }
+  const cats = (fake: ReturnType<typeof fakeCmClient>) => fake.lines().filter((line) => line.startsWith('cat ')).map((line) => line.split(' ')[1]);
+
+  const PROP_LISTING = workspaceListingXml(
+    'Prop',
+    { path: 'Prop/Pumpkin.obj', revid: 186, size: PUMPKIN.length, hash: md5(PUMPKIN) },
+    { path: 'Prop/PumpkinMaterials.mtl', revid: 185, size: MTL.length, hash: md5(MTL) },
+  );
+
+  it('reads the revisions the listing names from the disk, with no cm cat, where the files there are those revisions', async () => {
+    const { workspace, fake, service } = await filesView(PROP_LISTING, { 'Prop/Pumpkin.obj': PUMPKIN, 'Prop/PumpkinMaterials.mtl': MTL });
+
+    expect((await service.read(workspace, revision(186))).text).toBe(PUMPKIN);
+    expect(new TextDecoder().decode((await service.readBytes(workspace, revision(185, 'Prop/PumpkinMaterials.mtl')))!)).toBe(MTL);
+    expect(fake.lines()).toEqual([`ls ${join(workspace, 'Prop')} --xml --symlink`]);
+  });
+
+  it("asks the workspace nothing more for a revision the Files view's listing of its folder doesn't name (the one before)", async () => {
+    const { workspace, fake, service } = await filesView(PROP_LISTING, { 'Prop/Pumpkin.obj': PUMPKIN });
+
+    await service.read(workspace, revision(182));
+
+    expect(fake.lines().map((line) => line.split(' ')[0])).toEqual(['ls', 'cat']);
+  });
+
+  it('downloads a revision whose file on disk was changed, even to the same size', async () => {
+    const { workspace, fake, service } = await filesView(PROP_LISTING, { 'Prop/Pumpkin.obj': PUMPKIN.replace('0 0 0', '1 1 1'), 'Prop/PumpkinMaterials.mtl': `${MTL}# edited\n` });
+
+    expect((await service.read(workspace, revision(186))).text).toBe('downloaded');
+    expect((await service.read(workspace, revision(185, 'Prop/PumpkinMaterials.mtl'))).text).toBe('downloaded');
+    expect(cats(fake)).toEqual(['revid:186@eco@local', 'revid:185@eco@local']);
+  });
+
+  it("downloads a revision whose file isn't on disk (deleted, cloaked, moved away)", async () => {
+    const { workspace, fake, service } = await filesView(PROP_LISTING, {});
+
+    expect((await service.read(workspace, revision(186))).text).toBe('downloaded');
+    expect(cats(fake)).toEqual(['revid:186@eco@local']);
+  });
+
+  it("downloads the file's other revisions, and a checked-out file's: the listing names no revision of a checkout", async () => {
+    const checkedOut = workspaceListingXml('Prop', { path: 'Prop/Pumpkin.obj', revid: 186, size: PUMPKIN.length, hash: md5(PUMPKIN), checkedOut: true });
+    const { workspace, fake, service } = await filesView(checkedOut, { 'Prop/Pumpkin.obj': PUMPKIN });
+
+    await service.read(workspace, revision(186));
+    await service.read(workspace, revision(132));
+
+    expect(cats(fake)).toEqual(['revid:186@eco@local', 'revid:132@eco@local']);
+  });
+
+  it("downloads the same revision id of another repository (an xlinked one's)", async () => {
+    const { workspace, fake, service } = await filesView(PROP_LISTING, { 'Prop/Pumpkin.obj': PUMPKIN });
+
+    await service.read(workspace, revision(186, 'Prop/Pumpkin.obj', 'art@local'));
+
+    expect(cats(fake)).toEqual(['revid:186@art@local']);
+  });
+
+  it('reads a file under an xlink from the disk by its revision in the xlinked repository', async () => {
+    const xlinked = workspaceListingXml('Prop', { path: 'Prop/Pumpkin.obj', revid: 9, size: PUMPKIN.length, hash: md5(PUMPKIN), repository: 'art@local' });
+    const { workspace, fake, service } = await filesView(xlinked, { 'Prop/Pumpkin.obj': PUMPKIN });
+
+    expect((await service.read(workspace, revision(9, 'Prop/Pumpkin.obj', 'art@local'))).text).toBe(PUMPKIN);
+    expect(cats(fake)).toEqual([]);
+  });
+
+  it('reads at the path the listing gives with Windows separators', async () => {
+    const windows = workspaceListingXml('Prop', { path: 'Prop\\Pumpkin.obj', revid: 186, size: PUMPKIN.length, hash: md5(PUMPKIN) });
+    const { workspace, fake, service } = await filesView(windows, { 'Prop/Pumpkin.obj': PUMPKIN });
+
+    expect((await service.read(workspace, revision(186, 'Prop/Pumpkin.obj'))).text).toBe(PUMPKIN);
+    expect(cats(fake)).toEqual([]);
+  });
+
+  it("reads a revision one workspace's listing named from that workspace's disk only", async () => {
+    const { workspace, fake, service } = await filesView(PROP_LISTING, { 'Prop/Pumpkin.obj': PUMPKIN });
+    const other = await newWorkspace();
+    await mkdir(join(other, 'Prop'));
+    await writeFile(join(other, 'Prop', 'Pumpkin.obj'), PUMPKIN);
+
+    await service.read(other, revision(186));
+    await service.read(workspace, revision(186));
+
+    expect(cats(fake)).toEqual(['revid:186@eco@local']);
+  });
+
+  it("reads a model's sibling at a changeset from the disk where the tree's listing has the disk's content", async () => {
+    const workspace = await newWorkspace();
+    await mkdir(join(workspace, 'Assets'));
+    await writeFile(join(workspace, 'Assets', 'Barrel.bin'), 'BIN');
+    const { service, lines } = content({ ls: treeListingOutput({ path: 'Assets', type: 'dir', revid: 40 }, { path: 'Assets/Barrel.bin', revid: 41, size: 3, hash: md5('BIN') }) });
+
+    expect(new TextDecoder().decode((await service.readBytes(workspace, { kind: 'repositoryPath', path: '/Assets/Barrel.bin', at: 'cs:12' }))!)).toBe('BIN');
+    expect(lines().map((line) => line.split(' --format')[0])).toEqual(['ls /Assets --tree=cs:12']);
+  });
+});
+
+describe("reading a committed diff's revisions (a changeset, a branch, a shelve, Incoming)", () => {
+  const BEFORE = 'v 0 0 0\n';
+  const md5 = (text: string) => contentHashOf(Buffer.from(text));
+  /** The workspace's `cm ls <folder> --format=…` of `Prop`, as cm prints it: it holds the diff's side before. */
+  const PROP = formatOutput(['Prop', 'dir', 131, 'ZGly', 0, 'rep:game@local'], ['Prop/Pumpkin.obj', 'txt', 182, md5(BEFORE), BEFORE.length, 'rep:game@local']);
+  const side = (revisionId: number) => ({ kind: 'revision' as const, revision: { revisionId, repository: 'game@local' }, fileName: 'Prop/Pumpkin.obj' });
+
+  it("reads the side the workspace holds unchanged from its disk, asking the workspace's folder once, and downloads the other", async () => {
+    const workspace = await newWorkspace();
+    await mkdir(join(workspace, 'Prop'));
+    await writeFile(join(workspace, 'Prop', 'Pumpkin.obj'), BEFORE);
+    const { answer } = catWriting('after');
+    const { service, lines } = content({ ls: PROP, cat: answer });
+
+    expect((await service.read(workspace, side(182))).text).toBe(BEFORE);
+    expect((await service.read(workspace, side(186))).text).toBe('after');
+    expect(lines().map((line) => line.split(' --f')[0])).toEqual([`ls ${join(workspace, 'Prop')}`, 'cat revid:186@game@local']);
+  });
+
+  it('downloads the side the workspace holds once its file changed', async () => {
+    const workspace = await newWorkspace();
+    await mkdir(join(workspace, 'Prop'));
+    await writeFile(join(workspace, 'Prop', 'Pumpkin.obj'), 'v 9 9 9\n');
+    const { answer } = catWriting(BEFORE);
+    const { service, ran } = content({ ls: PROP, cat: answer });
+
+    expect((await service.read(workspace, side(182))).text).toBe(BEFORE);
+    expect(ran('cat revid:182@game@local')).toBe(true);
   });
 });

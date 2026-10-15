@@ -128,6 +128,33 @@ and many people use the same server. Every `cm` command other than local reads (
   GUID and name from the reads the workspace info shares (`WorkspaceHeaders`). Pending changes ask which locks are mine only when some lock holds one of them; left
   changes look the selector's object id up only when an automatic shelve by another client could match it, and arriving
   from a switch looks for changes to restore only when this app left some there.
+- **Revisions on disk: the disk first, the server last.** Every revision a view reads (Files' last change, History,
+  a changeset's, branch's or shelve's diff, Incoming, update conflicts, a model's `.mtl`, `.bin`, `.meta` and textures
+  in any of them, both sides) follows one procedure (`WorkspaceCopies.read`):
+  1. Which file, which version: the revision's workspace path and its id (the content source's `fileName`).
+  2. Which revision does the workspace hold at that path, with what size and hash? A path the workspace already told
+     answers at once, with no command (`rememberHeld`: the Files view's `cm ls --xml` of its folders, a history's
+     `cm ls` of its file, `workspaceItemArgs`), so a revision it doesn't hold there costs nothing. A revision
+     another tree's listing named (Browse repository, a point's tree beside a model: `RepositoryTrees.fileAt`, the
+     Materials look's in `RevisionDownloads`) is remembered with its hash (`remember`), never as what the workspace
+     holds. Only for a path still unknown, and only when a file is there on disk, one `cm ls <folder> --format=…` of
+     the workspace (`workspaceListingArgs`) tells, for all the folder's files (none for a folder the Files view
+     listed: `rememberFolder`), kept until the watcher sees that folder's files change, or `cm` rewrite the workspace's
+     state (`forgetChanged`); a listing asked before such a change marks nothing held (`generationOf`).
+  3. Is it that revision, unchanged? Same revision id at that path, in the same repository, and the file's bytes have
+     that size and MD5 (hashed as they are read, on the bytes returned; a file known to differ isn't read again until
+     it changes). Then the disk's bytes are the revision's; otherwise it is downloaded (`cm cat`).
+
+  Content decides, never status: a file changed, being written, missing, checked out (`cm ls` lists revision -1 and
+  the disk's hash, so it holds no revision) or holding another revision is downloaded; when unsure, download. The
+  listed `<Hash>` and `<Size>` are the loaded revision's, even once the file changed. A repository is matched by its
+  whole spec, server included, as revision ids are per repository (`heldKey`): the hash checked is the workspace's
+  revision's, so another server's same-named repository would pass. A Unity organization's server is named alike on
+  every side compared (`cm ls`, `cm diff`, History's revisions through `withServerOf`: "Unity organizations"); a
+  revision left by the organization's id, where `cm` couldn't name it, only misses its copy. A path under an xlink is listed with the xlinked repository's revisions. A workspace `cm ls` reads the workspace's
+  metadata, never content; it is not a `LOCAL_COMMANDS` read all the same, as `cm` asks the server for the branches of
+  what it lists (one call for all of them). Open, Save as and the merge tools copy a revision the workspace holds the
+  same way (`saveVersion`).
 - **Queries**: list everything only when the view needs everything, and then read it rarely. Otherwise filter on the
   server: a date (`sinceDate`), a `limit`, the people picked (`owners`), one object by name or id (`api.branches.get`). Never OR ids together
   (`where id = 1 or id = 2 …`, checked by `noOredIdLookups.test.ts`): take names and details from the query that lists

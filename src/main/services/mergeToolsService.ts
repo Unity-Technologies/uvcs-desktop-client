@@ -6,7 +6,7 @@ import { dialog } from 'electron';
 import type { MergeToolsApi } from '@shared/api/mergeTools';
 import type { ContentSource } from '@shared/domain/content';
 import type { MergeToolOutcome, MergeToolRequest } from '@shared/domain/mergeTools';
-import { saveContent } from '../files/saveContent';
+import { saveVersion } from '../files/saveContent';
 import { withTempDirectory } from '../files/tempFile';
 import { fillArgs, type MergeToolFiles } from '../merge/mergeTools/commandLine';
 import { detectKnownTools } from '../merge/mergeTools/detectTools';
@@ -26,7 +26,7 @@ interface OpenTool {
   bundle: string | null;
 }
 
-export function createMergeToolsService({ cm, settings }: ServiceContext, { installedApps, icons }: Pick<AppsContext, 'installedApps' | 'icons'>): MergeToolsApi {
+export function createMergeToolsService({ cm, settings, workspaceCopies }: ServiceContext, { installedApps, icons }: Pick<AppsContext, 'installedApps' | 'icons'>): MergeToolsApi {
   const open = new Map<string, OpenTool>();
 
   async function list() {
@@ -79,7 +79,7 @@ export function createMergeToolsService({ cm, settings }: ServiceContext, { inst
 
   function save(workspacePath: string, source: ContentSource, target: string): Promise<void> {
     if (source.kind === 'reviewSnapshot') throw new Error('A review snapshot is not a version to merge.');
-    return saveContent(cm, workspacePath, source, target);
+    return saveVersion(cm, workspaceCopies, workspacePath, source, target);
   }
 
   return {

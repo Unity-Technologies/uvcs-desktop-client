@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { itemHistoryTarget, itemRevisionsArgs, parseHistoryRecords, parseItemHistory, parseWorkspaceItem, withServerOf } from './itemHistory';
+import { itemHistoryTarget, itemRevisionsArgs, loadedRevisionOf, parseHistoryRecords, parseItemHistory, parseWorkspaceItem, withServerOf } from './itemHistory';
 import { formatOutput, UNITY_ORGANIZATION } from './testing/cmOutput';
 
 const revision = (changeset: number, comment: string, type = 'txt'): string => `
@@ -133,6 +133,18 @@ describe('parseWorkspaceItem', () => {
       revisionId: 102,
       repository: 'lib@AcmeStudio@unity',
     });
+  });
+
+  it('reads the size and hash the item was loaded with, which tell its copy on disk', () => {
+    const pumpkin = parseWorkspaceItem(formatOutput([126, 'rep:models@local', 'Q9oQU4Ghx0O0blJW3KZXFQ==', 1824576]));
+    expect(pumpkin).toEqual({ revisionId: 126, repository: 'models@local', hash: 'Q9oQU4Ghx0O0blJW3KZXFQ==', size: 1824576 });
+    expect(loadedRevisionOf(pumpkin, 'Prop/Pumpkin.obj')).toEqual({ path: 'Prop/Pumpkin.obj', revision: { revisionId: 126, repository: 'models@local' }, hash: 'Q9oQU4Ghx0O0blJW3KZXFQ==', size: 1824576 });
+    expect(loadedRevisionOf(parseWorkspaceItem(formatOutput([7, 'rep:models@local', 'aGFzaA==', ''])), 'a.txt')?.size).toBe(-1);
+  });
+
+  it("remembers no loaded revision for a checkout (-1, the disk's hash) or an item listed without a hash", () => {
+    expect(loadedRevisionOf(parseWorkspaceItem(formatOutput([-1, 'rep:models@local', 'wZNJehoGssciMOYUb/RwgA==', 4])), 'a.txt')).toBeUndefined();
+    expect(loadedRevisionOf(parseWorkspaceItem(formatOutput([100, 'rep:game@local'])), 'a.txt')).toBeUndefined();
   });
 
   it('finds no revision for an item the workspace has none of, and nothing in no output', () => {

@@ -27,6 +27,23 @@ describe('parseTreeItems', () => {
     expect(items[2]).toMatchObject({ itemType: 'binaryFile', isCheckedOut: true, date: '' });
   });
 
+  it("reads the hash of each item's revision: the one it was loaded from, even where the disk's file changed", () => {
+    // `cm ls --xml` of a workspace whose a.txt was edited (the revision's hash and size, 4 bytes) and b.txt checked out
+    // (no revision, the disk's hash), trimmed.
+    const xml = `<LsResults><LsItems>
+      <LsItem><Status>Controlled</Status><Name>a.txt</Name><WkPath>a.txt</WkPath><Size>4</Size><Type>txt</Type><Changeset>2</Changeset>
+        <Repository>rep:probe@local</Repository><Checkout /><RevId>13</RevId><Hash>W79aUjKOdDmubnGd/nEiAA==</Hash><HashAlgorithm>MD5</HashAlgorithm></LsItem>
+      <LsItem><Status>Controlled</Status><Name>b.txt</Name><WkPath>b.txt</WkPath><Size>4</Size><Type>txt</Type><Changeset>2</Changeset>
+        <Repository>rep:probe@local</Repository><Checkout>CO</Checkout><RevId>-1</RevId><Hash>wZNJehoGssciMOYUb/RwgA==</Hash></LsItem>
+      <LsItem><Status>Private</Status><Name>notes.txt</Name><WkPath>notes.txt</WkPath><Type>txt</Type><Checkout /></LsItem>
+    </LsItems></LsResults>`;
+    expect(parseTreeItems(xml).map((item) => [item.path, item.revisionId, item.hash])).toEqual([
+      ['a.txt', 13, 'W79aUjKOdDmubnGd/nEiAA=='],
+      ['b.txt', -1, 'wZNJehoGssciMOYUb/RwgA=='],
+      ['notes.txt', -1, undefined],
+    ]);
+  });
+
   it("reads a shelve's revisions, which a workspace on a shelve lists as changeset -3 on branch id:-1", () => {
     // `cm ls --xml` of a workspace switched to shelve 3, trimmed.
     const xml = `<LsResults><LsItems>

@@ -2,6 +2,7 @@ import type { ItemHistory, ItemPathChange, ItemRevision } from '@shared/domain/h
 import type { ItemType } from '@shared/domain/pendingChanges';
 import type { RevisionRef } from '@shared/domain/revision';
 import { repositorySpec, spec } from '@shared/domain/specs';
+import type { RevisionFile } from '../files/WorkspaceCopies';
 import { toAbsolutePath } from '../files/workspacePaths';
 import { parseRecords, recordFormat } from './formatRecords';
 import { isOrganizationIdServer } from './organizationIds';
@@ -48,24 +49,35 @@ export function itemRevisionsArgs(records: XmlNode[]): string[] | null {
 }
 
 /**
- * The item the workspace has (`cm ls` reads the workspace, not the server): its revision, and the repository it lives
- * in, named as people do (`rep:game@AcmeStudio@unity`). The item itself comes first.
+ * The item the workspace has (`cm ls` reads the workspace, not the server): its revision, the repository it lives
+ * in, named as people do (`rep:game@AcmeStudio@unity`), and the size and hash it was loaded with, which tell whether
+ * the disk still holds it (`WorkspaceCopies`). The item itself comes first.
  */
 export function workspaceItemArgs(absolutePath: string): string[] {
-  return onLinksThemselves('ls', absolutePath, `--format=${recordFormat(['revid', 'repspec'])}`);
+  return onLinksThemselves('ls', absolutePath, `--format=${recordFormat(['revid', 'repspec', 'hash', 'size'])}`);
 }
 
 export interface WorkspaceItem {
   /** Undefined for an item the workspace has no revision of. */
   revisionId?: number;
   repository: string;
+  /** The loaded revision's MD5, base64, as `cm` keeps it (a checkout's is the disk's). */
+  hash?: string;
+  /** The loaded revision's size. */
+  size?: number;
 }
 
 export function parseWorkspaceItem(output: string): WorkspaceItem | undefined {
-  const [revision = '', repository = ''] = parseRecords(output)[0] ?? [];
+  const [revision = '', repository = '', hash = '', size = ''] = parseRecords(output)[0] ?? [];
   const revisionId = Number.parseInt(revision, 10);
   if (repository === '') return undefined;
-  return { ...(revisionId >= 0 && { revisionId }), repository: repository.replace(/^rep:/, '') };
+  return { ...(revisionId >= 0 && { revisionId }), repository: repository.replace(/^rep:/, ''), ...(hash && { hash }), ...(size !== '' && { size: Number(size) }) };
+}
+
+/** The revision the workspace loaded at `path`, as `WorkspaceCopies` remembers it; none for a checkout or no hash. */
+export function loadedRevisionOf(item: WorkspaceItem | undefined, path: string): RevisionFile | undefined {
+  if (item?.revisionId === undefined || item.hash === undefined) return undefined;
+  return { path, revision: { revisionId: item.revisionId, repository: item.repository }, hash: item.hash, size: item.size ?? -1 };
 }
 
 /**

@@ -15,18 +15,7 @@ import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
 import { fitsCommandLine } from '../cm/commandLineLimit';
 import { MAX_MODEL_BYTES } from '../files/fileContent';
-import { workspaceFileOf } from '../files/workspacePaths';
-
-/** A revision of a file at a point, as listed there. */
-export interface RevisionFile {
-  /** Workspace-relative, `/`-separated: the disk's file there is read instead where its content is the revision's. */
-  path: string;
-  revision: RevisionRef;
-  /** MD5, base64, as `cm` keeps it; null where not known (then it's always downloaded). */
-  hash: string | null;
-  /** -1 where not known. */
-  size: number;
-}
+import { contentHashOf, WorkspaceCopies, type RevisionFile } from '../files/WorkspaceCopies';
 
 /**
  * The session's downloads folders, under the OS's temp folder, named with the process that owns them
@@ -46,6 +35,8 @@ const UNKNOWN_SIZE = 1024 * 1024;
 
 interface RevisionDownloadsOptions {
   cm: Pick<CmClient, 'execute'>;
+  /** Reads a revision from the workspace's disk where its file there has the revision's content. */
+  copies?: Pick<WorkspaceCopies, 'read'>;
   /** The folder the session's downloads folder is made in, the first time something is downloaded: the OS's temp folder. */
   tempFolder?: string;
   maxKeptBytes?: number;
@@ -70,6 +61,7 @@ interface Waiting {
 
 export class RevisionDownloads {
   private readonly cm: Pick<CmClient, 'execute'>;
+  private readonly copies: Pick<WorkspaceCopies, 'read'>;
   private readonly tempFolder: string;
   private leftOvers: Promise<void> | null = null;
   private readonly pid: number;
@@ -89,14 +81,13 @@ export class RevisionDownloads {
   /** Reads still checking the disk: the reads asked at once go in one batch, so it waits for them. */
   private checking = 0;
   private scheduled = false;
-  /** The hashes of disk files, by path, size and time written. */
-  private readonly diskHashes = new Map<string, string>();
 
-  constructor({ cm, tempFolder = tmpdir(), maxKeptBytes = MAX_KEPT_BYTES, schedule = (run) => void setImmediate(run), pid = process.pid, isRunning = processIsRunning, removeFolder = (folder) => rmSync(folder, { recursive: true, force: true }) }: RevisionDownloadsOptions) {
+  constructor({ cm, copies = new WorkspaceCopies(), tempFolder = tmpdir(), maxKeptBytes = MAX_KEPT_BYTES, schedule = (run) => void setImmediate(run), pid = process.pid, isRunning = processIsRunning, removeFolder = (folder) => rmSync(folder, { recursive: true, force: true }) }: RevisionDownloadsOptions) {
     this.removeFolder = removeFolder;
     this.pid = pid;
     this.isRunning = isRunning;
     this.cm = cm;
+    this.copies = copies;
     this.tempFolder = tempFolder;
     this.maxKeptBytes = maxKeptBytes;
     this.schedule = schedule;
@@ -116,7 +107,7 @@ export class RevisionDownloads {
       this.downloadWhenAllChecked();
     };
     try {
-      const onDisk = await this.diskCopy(workspacePath, file);
+      const onDisk = await this.copies.read(workspacePath, file);
       if (onDisk) return onDisk;
       const key = keyOf(file.revision);
       const kept = this.kept.get(key);
@@ -171,22 +162,6 @@ export class RevisionDownloads {
     } catch {
       // The next session deletes it.
     }
-  }
-
-  /** The disk's file at the path, when it has the revision's content: the same size, and the same MD5. */
-  private async diskCopy(workspacePath: string, file: RevisionFile): Promise<Buffer | null> {
-    if (file.hash === null) return null;
-    const absolutePath = workspaceFileOf(workspacePath, file.path);
-    const stats = await stat(absolutePath).catch(() => null);
-    if (!stats?.isFile() || (file.size >= 0 && stats.size !== file.size) || stats.size > MAX_MODEL_BYTES) return null;
-    const known = this.diskHashes.get(diskKey(absolutePath, stats.size, stats.mtimeMs));
-    if (known !== undefined && known !== file.hash) return null;
-    const bytes = await readFile(absolutePath).catch(() => null);
-    if (!bytes) return null;
-    const hash = md5Of(bytes);
-    if (this.diskHashes.size >= 10_000) this.diskHashes.clear();
-    this.diskHashes.set(diskKey(absolutePath, stats.size, stats.mtimeMs), hash);
-    return hash === file.hash ? bytes : null;
   }
 
   private download(workspacePath: string, file: RevisionFile, key: string): Promise<string> {
@@ -341,7 +316,7 @@ export function catArgs(batch: readonly { file: Pick<RevisionFile, 'revision'>; 
 /** Whether a file written by a `cm cat` that failed is whole: its size and hash as listed, where known; else not. */
 async function isWhole(file: RevisionFile, target: string, size: number): Promise<boolean> {
   if (!canTellWhole(file) || (file.size >= 0 && size !== file.size)) return false;
-  return file.hash === null || md5Of(await readFile(target)) === file.hash;
+  return file.hash === null || contentHashOf(await readFile(target)) === file.hash;
 }
 
 function canTellWhole(file: RevisionFile): boolean {
@@ -355,14 +330,6 @@ function keyOf(revision: RevisionRef): string {
 /** A file name for a revision's download, from its id and repository: no separator, no `;`, one per revision. */
 function fileNameOf(key: string): string {
   return createHash('sha1').update(key).digest('hex');
-}
-
-function diskKey(path: string, size: number, modified: number): string {
-  return `${path}\0${size}\0${modified}`;
-}
-
-function md5Of(bytes: Buffer): string {
-  return createHash('md5').update(bytes).digest('base64');
 }
 
 async function readCapped(target: string): Promise<Buffer> {

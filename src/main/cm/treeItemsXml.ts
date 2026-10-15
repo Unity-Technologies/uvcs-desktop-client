@@ -11,6 +11,21 @@ const ITEM_TYPES: Record<string, ItemType> = {
   xlink: 'xlink',
 };
 
+/** A listed item, with what only the main process uses. */
+export interface ListedTreeItem extends TreeItem {
+  /**
+   * MD5 of its revision's content, base64, as `cm` keeps it: in a workspace, the revision it was loaded from, even
+   * once the file on disk changed (a checkout, revision -1, lists the disk's). Unset for a private item. It tells the
+   * disk's copy of the revision (`WorkspaceCopies`) and stays in the main process (`withoutHash`).
+   */
+  hash?: string;
+}
+
+/** The item as the windows get it. */
+export function withoutHash({ hash: _hash, ...item }: ListedTreeItem): TreeItem {
+  return item;
+}
+
 /**
  * Parses `cm ls --xml`. The listed directory itself comes back as a `.` entry, which is skipped.
  * Paths are made relative with forward slashes: `--tree` listings return server paths (`/src/a.ts`).
@@ -19,13 +34,13 @@ const ITEM_TYPES: Record<string, ItemType> = {
  * Workspace listings take `--symlink` (`onLinksThemselves`): without it a link to a folder reads as that folder,
  * children and paths included.
  */
-export function parseTreeItems(xml: string): TreeItem[] {
+export function parseTreeItems(xml: string): ListedTreeItem[] {
   const items = children(child(child(parseXml(xml, ['LsItem']), 'LsResults'), 'LsItems'), 'LsItem');
 
   return items.filter((item) => text(item.Name) !== '.').map(treeItem);
 }
 
-function treeItem(item: Record<string, unknown>): TreeItem {
+function treeItem(item: Record<string, unknown>): ListedTreeItem {
   const path = text(item.WkPath).replace(/\\/g, '/').replace(/^\//, '');
   const listedName = text(item.Name);
   const xlink = parseXlinkName(listedName);
@@ -34,6 +49,7 @@ function treeItem(item: Record<string, unknown>): TreeItem {
   const revisionId = integer(item.RevId);
   // A revision numbered below zero is a shelve's (`-id`, on branch `id:-1`); a private item has neither.
   const shelveId = changeset < 0 && revisionId > 0 ? -changeset : undefined;
+  const hash = text(item.Hash);
   return {
     path,
     name: path ? path.slice(path.lastIndexOf('/') + 1) : listedName,
@@ -49,6 +65,7 @@ function treeItem(item: Record<string, unknown>): TreeItem {
     parentRevisionId: integer(item.ParentRevId),
     repository: text(item.Repository).replace(/^rep:/, ''),
     itemId: integer(item.ItemId),
+    ...(hash && { hash }),
     ...(shelveId !== undefined && { shelveId }),
     ...(xlink && { xlink }),
     ...(symlinkTarget && { symlinkTarget }),

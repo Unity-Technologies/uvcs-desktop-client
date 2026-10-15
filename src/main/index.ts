@@ -13,6 +13,7 @@ import { registerApi } from './ipc/registerApi';
 import { sendEvent, sendEventToCaller } from './ipc/sendEvent';
 import { DiffReviewStore } from './review/DiffReviewStore';
 import { ReviewStore } from './review/ReviewStore';
+import { WorkspaceCopies } from './files/WorkspaceCopies';
 import { createServices } from './services/createServices';
 import { RepositoryTrees } from './unity/RepositoryTrees';
 import { RevisionDownloads } from './unity/RevisionDownloads';
@@ -37,7 +38,9 @@ const settings = openSettings(userData);
 // What a workspace is loaded from, shared by the reads that follow one another as a window opens it.
 const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
 const watchers = watchShownWorkspaces(cm, headers);
-const revisionDownloads = new RevisionDownloads({ cm });
+const workspaceCopies = new WorkspaceCopies({ cm });
+watchers.listen({ changed: (workspacePath, change) => workspaceCopies.forgetChanged(workspacePath, change), unwatched: (workspacePath) => workspaceCopies.forgetListings(workspacePath) });
+const revisionDownloads = new RevisionDownloads({ cm, copies: workspaceCopies });
 const repositoryTrees = new RepositoryTrees({ cm, downloads: revisionDownloads });
 const operations = trackOperations(watchers);
 const updates = createAppUpdates({
@@ -81,6 +84,7 @@ function start(launched: Promise<void>): void {
     windows,
     headers,
     updates,
+    workspaceCopies,
     revisionDownloads,
     repositoryTrees,
   });

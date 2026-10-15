@@ -6,11 +6,11 @@
 // found in its folder's children (`cm ls` without `-R`), or in a listing with everything below it the look asked
 // first; a file the tree hasn't costs no command.
 
-import type { RevisionRef } from '@shared/domain/revision';
 import { BRANCH_TREE_LIFE_MS } from '@shared/domain/unityAssets';
 import type { CmClient } from '../cm/CmClient';
 import { isNotInTreeError } from '../cm/missingItem';
 import { parseTreeListing, treeListingArgs } from '../cm/treeListing';
+import type { RevisionFile } from '../files/WorkspaceCopies';
 import type { ProjectAssetIndex } from './ProjectAssetIndex';
 import { RepositoryAssetTree } from './RepositoryAssetTree';
 import type { RevisionDownloads } from './RevisionDownloads';
@@ -78,11 +78,12 @@ export class RepositoryTrees {
 
   /**
    * The revision of a workspace-relative file beside a model at a point whose tree `cm ls` lists (`listsTree`), from
-   * its folder's listing (`fileBeside`); null where the tree hasn't it. Rejects where the tree couldn't be listed. Also
-   * what a `beside` check reads: the revision at the path of the file a sibling goes with.
+   * its folder's listing (`fileBeside`), with the size and hash that tell the disk's copy; null where the tree hasn't
+   * it. Rejects where the tree couldn't be listed. Also what a `beside` check reads: the revision at the path of the
+   * file a sibling goes with.
    */
-  async revisionAt(workspacePath: string, at: string, path: string): Promise<RevisionRef | null> {
+  async fileAt(workspacePath: string, at: string, path: string): Promise<RevisionFile | null> {
     const file = await this.at(workspacePath, at).tree.fileBeside(path);
-    return file?.stored === 'repository' ? file.revision : null;
+    return file?.stored === 'repository' ? { path: file.path, revision: file.revision, hash: file.hash, size: file.size } : null;
   }
 }
