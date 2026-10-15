@@ -101,11 +101,13 @@ describe('layoutGraph rows', () => {
 
 describe('layoutKeeping', () => {
   it('lays out exactly what keeping one more changeset lays out, reusing the layout when it already shows on its own', () => {
-    const data = largeHistory(1_500, 300);
+    // Every 3rd changeset of a history of 600: each check lays the whole history out, so a longer one made this test
+    // take up to 5 s on CI's runners without checking more kinds of changeset.
+    const data = largeHistory(600, 120);
     const keep = new Set([40, 41]);
     const base = { keep, pending: null, layout: layoutGraph(data, { keep }) };
     let reused = 0;
-    for (let id = 0; id < 1_500; id += 7) {
+    for (let id = 0; id < 600; id += 3) {
       const layout = layoutKeeping(data, base, id);
       if (layout === base.layout) reused++;
       expect(layout.nodesByColumn).toEqual(layoutGraph(data, { keep: new Set([...keep, id]) }).nodesByColumn);
