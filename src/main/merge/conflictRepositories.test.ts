@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PrintedMergePlan } from '../cm/mergeOutput';
+import { parseTreeItems } from '../cm/treeItemsXml';
 import { conflictListingArgs, destinationTree, withRepositories } from './conflictRepositories';
 
 const XLINKED = '/01project/src/client/plugins/editor-plugin/Packages/com.acme.editor.tests/Infrastructure/DiffWindowMockExtensions.cs';
@@ -39,18 +40,18 @@ describe('conflictListingArgs', () => {
 });
 
 describe('withRepositories', () => {
-  it("names the xlinked repository of a file under a writable xlink, and the merged one's for the others", () => {
-    expect(withRepositories(plan([XLINKED, OWN]), LISTING).fileConflicts.map(({ path, repository }) => ({ path, repository }))).toEqual([
-      { path: XLINKED, repository: 'editorGUI@acme@cloud' },
-      { path: OWN, repository: 'acme@acme@cloud' },
+  it("names the xlinked repository of a file under a writable xlink, and the merged one's for the others, with the destination's revision there", () => {
+    expect(withRepositories(plan([XLINKED, OWN]), parseTreeItems(LISTING)).fileConflicts.map(({ path, repository, destinationRevisionId }) => ({ path, repository, destinationRevisionId }))).toEqual([
+      { path: XLINKED, repository: 'editorGUI@acme@cloud', destinationRevisionId: 432251 },
+      { path: OWN, repository: 'acme@acme@cloud', destinationRevisionId: 31259533 },
     ]);
   });
 
   it('fails rather than read a conflicting file in a repository it may not be in', () => {
-    expect(() => withRepositories(plan([XLINKED, '/elsewhere.cs']), LISTING)).toThrow('/elsewhere.cs');
+    expect(() => withRepositories(plan([XLINKED, '/elsewhere.cs']), parseTreeItems(LISTING))).toThrow('/elsewhere.cs');
   });
 
   it('keeps a plan without file conflicts as it is', () => {
-    expect(withRepositories(plan([]), '').fileConflicts).toEqual([]);
+    expect(withRepositories(plan([]), []).fileConflicts).toEqual([]);
   });
 });
