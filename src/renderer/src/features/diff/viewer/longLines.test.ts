@@ -43,6 +43,11 @@ describe('withLongLinesCut', () => {
     expect(withLongLinesCut(`first\r\n${long}\n${long}\rlast`)).toBe(`first\r\n${cut}\n${cut}\rlast`);
   });
 
+  it('cuts before a character written in two code units rather than between them', () => {
+    const emoji = `a${'😀'.repeat(LONGEST_DRAWN_LINE / 2 + 1)}`;
+    expect(withLongLinesCut(emoji)).toBe(`${emoji.slice(0, LONGEST_DRAWN_LINE - 1)}…`);
+  });
+
   it('gives back a text with no line that long as it is', () => {
     const text = `${line(LONGEST_DRAWN_LINE)}\nshort\n`;
     expect(withLongLinesCut(text)).toBe(text);
