@@ -1,7 +1,8 @@
 // Draws a model diff on one WebGL canvas: each version in a scene of its own (a studio light, the 1 m grid Unity's
 // Scene view shows, the model's pivot) seen through one camera, laid out by the mode (`layoutOf`). It draws only
 // when asked (`requestRender`: a gesture, a mode, a look), never on a loop: an idle diff costs the GPU nothing. The
-// onion skin draws each version apart and blends them, so it blends what is seen, not the meshes' depths.
+// onion skin draws each version apart and blends them, so it blends what is seen, not the meshes' depths; Diffs by
+// look draws them apart too, and compares them (`LookComparer`).
 
 import {
   AxesHelper,
@@ -34,14 +35,15 @@ import {
   type Texture,
 } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { LookComparer } from './lookComparer';
 import { LookTextures, SlotLookMaterials } from './materials/slotLookMaterials';
 import type { SlotLook } from './materials/materialPlan';
 import type { ModelPalette } from './modelPalette';
 import { slotColor } from './modelPalette';
 import { modelOrientation, type ModelScene } from './modelScene';
 import { cameraPositionOf, clipPlanesOf, FIELD_OF_VIEW, type BoundsLike, type OrbitView, type Ray, type Vector } from './orbitCamera';
-import type { SurfaceLook } from './surfaceLook';
-import { layoutOf, paneAt, type Layout, type ModelLayoutMode, type Side } from './viewLayout';
+import type { DiffsCompares, SurfaceLook } from './surfaceLook';
+import { layoutOf, paneAt, shownLayoutMode, type Layout, type ModelLayoutMode, type Side } from './viewLayout';
 
 export type DrawMode = 'shaded' | 'wireframe' | 'shadedWireframe';
 
@@ -51,6 +53,10 @@ export interface ModelLook {
   surface: SurfaceLook;
   /** Node keys lit up on each side; the rest fade while any is. */
   highlighted: { before: Set<string>; after: Set<string> };
+  /** What Diffs compares: the shape (`setHeat`), or the look, with the materials (`LookComparer`). */
+  diffsCompares: DiffsCompares;
+  /** Both versions' textures are loaded (`texturesSettled`): until then Diffs by look shows the version after alone. */
+  looksLoaded: boolean;
 }
 
 /** The Differences mode's colors, per mesh of each version (`heatColors`, `ghostColors`); null until compared. */
@@ -61,7 +67,7 @@ export interface ModelHeat {
 
 export interface ModelLayoutState {
   /** How two versions are compared; a version shown alone (added, deleted) takes the whole canvas whatever it is. */
-  mode: Exclude<ModelLayoutMode, 'single'>;
+  mode: Exclude<ModelLayoutMode, 'single' | 'lookDifferences'>;
   /** The onion skin's mix: 0 all before, 1 all after. */
   blend: number;
   /** The swipe divider, as a fraction of the width. */
@@ -98,7 +104,7 @@ export class ModelRenderer {
   private readonly region = new Box3Helper(new Box3());
   private view: OrbitView = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 5 };
   private layoutState: ModelLayoutState = { mode: 'sideBySide', blend: 0.5, split: 0.5 };
-  private look: ModelLook = { drawMode: 'shaded', surface: 'clay', highlighted: { before: new Set(), after: new Set() } };
+  private look: ModelLook = { drawMode: 'shaded', surface: 'clay', highlighted: { before: new Set(), after: new Set() }, diffsCompares: 'shape', looksLoaded: false };
   /** Each side's slots as the Materials look draws them (`slotLooks`); a slot absent stays clay. */
   private materialLooks: Record<Side, ReadonlyMap<string, SlotLook> | null> = { before: null, after: null };
   /** The GPU textures of the decoded bitmaps the looks use, one per bitmap and use, shared by the sides. */
@@ -112,6 +118,10 @@ export class ModelRenderer {
   private frame = 0;
   private targets: [WebGLRenderTarget, WebGLRenderTarget] | null = null;
   private readonly blender = new Blender();
+  private readonly comparer = new LookComparer();
+  /** What Diffs by look draws around the comparison: the grid under it, and the region boxed over it. */
+  private readonly under = new Scene();
+  private readonly over = new Scene();
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     this.renderer = new WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -286,6 +296,7 @@ export class ModelRenderer {
     this.lookTextures.dispose();
     this.targets?.forEach((target) => target.dispose());
     this.blender.dispose();
+    this.comparer.dispose();
     this.environment.dispose();
     disposeGroup(this.grid);
     this.renderer.dispose();
@@ -298,6 +309,7 @@ export class ModelRenderer {
     const layout = this.layout();
     this.renderer.setClearColor(new Color(this.palette.backdrop));
     if (layout.blended) return this.renderBlended(layout);
+    if (layout.compared) return this.renderCompared(layout);
     this.renderer.setRenderTarget(null);
     this.renderer.setScissor(0, 0, this.width, this.height);
     this.renderer.setViewport(0, 0, this.width, this.height);
@@ -328,6 +340,34 @@ export class ModelRenderer {
     this.renderer.setClearAlpha(1);
     this.renderer.setRenderTarget(null);
     this.blender.draw(this.renderer, targets[0]!.texture, targets[1]!.texture, this.layoutState.blend, new Color(this.palette!.backdrop));
+  }
+
+  /**
+   * Diffs by look: each version drawn apart with its materials (no grid, pivot or bones, which would compare as
+   * themselves), the grid on the canvas, then the comparison over it, and the region stepped to boxed on top.
+   */
+  private renderCompared(layout: Layout): void {
+    const targets = (this.targets ??= [this.target(), this.target()]);
+    this.renderer.setScissor(0, 0, this.width, this.height);
+    this.renderer.setViewport(0, 0, this.width, this.height);
+    this.renderer.setClearAlpha(0);
+    const drawn = { before: targets[0]!, after: targets[1]! };
+    // Out of the versions' scenes first: drawn into one alone, the box would compare as a change.
+    this.over.add(this.region);
+    for (const pane of layout.panes) {
+      this.renderer.setRenderTarget(drawn[pane.side]);
+      this.renderer.clear();
+      const side = this.sides[pane.side];
+      if (side) this.drawSide(side, this.width / this.height, false);
+    }
+    this.renderer.setClearAlpha(1);
+    this.renderer.setRenderTarget(null);
+    this.renderer.clear();
+    // After the versions: drawing them without the grid takes it out of wherever it is.
+    this.under.add(this.grid);
+    this.renderer.render(this.under, this.camera);
+    this.comparer.draw(this.renderer, drawn.before.texture, drawn.after.texture, { backdrop: this.palette!.backdrop, accent: this.palette!.highlight });
+    this.renderer.render(this.over, this.camera);
   }
 
   private drawSide(side: SideScene, aspect: number, withGrid = true): void {
@@ -377,7 +417,7 @@ export class ModelRenderer {
     const { mode, split } = this.layoutState;
     const [width, height] = [this.width * this.pixelRatio, this.height * this.pixelRatio];
     if (!this.sides.before || !this.sides.after) return layoutOf('single', width, height, split, this.sides.after ? 'after' : 'before');
-    return layoutOf(mode, width, height, split);
+    return layoutOf(shownLayoutMode(mode, this.look.diffsCompares, this.look.looksLoaded), width, height, split);
   }
 
   private target(): WebGLRenderTarget {
@@ -412,7 +452,11 @@ export class ModelRenderer {
     const palette = this.palette;
     if (!palette) return;
     const backdrop = new Color(palette.backdrop);
-    const differences = this.layoutState.mode === 'differences' && this.heat !== null && this.sides.before !== null && this.sides.after !== null;
+    const bothSides = this.sides.before !== null && this.sides.after !== null;
+    const inDiffs = this.layoutState.mode === 'differences' && bothSides;
+    const differences = inDiffs && this.look.diffsCompares === 'shape' && this.heat !== null;
+    // Compared by look, nothing lights up: a part lit up on one side and not its match would compare as a change.
+    const comparedByLook = inDiffs && this.look.diffsCompares === 'look';
     (this.region.material as LineBasicMaterial).color.set(palette.highlight);
     for (const side of ['before', 'after'] as const) {
       const scene = this.sides[side];
@@ -437,8 +481,8 @@ export class ModelRenderer {
         }
         continue;
       }
-      const highlighted = this.look.highlighted[side];
-      const anyHighlighted = this.look.highlighted.before.size + this.look.highlighted.after.size > 0;
+      const highlighted = comparedByLook ? new Set<string>() : this.look.highlighted[side];
+      const anyHighlighted = !comparedByLook && this.look.highlighted.before.size + this.look.highlighted.after.size > 0;
       for (const [index, mesh] of scene.model.meshes.entries()) {
         const lit = highlighted.has(mesh.key) || [...highlighted].some((key) => mesh.key.startsWith(`${key}/`));
         const faded = anyHighlighted && !lit;

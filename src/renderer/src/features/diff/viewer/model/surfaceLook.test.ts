@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { migrateDiffPreferences } from '../diffPreferencesStore';
-import { clickedSurface, shownSurface, surfaceButtonDisabledReason, surfaceButtonOn } from './surfaceLook';
+import { clickedSurface, diffsCompares, materialsButtonLabel, shownSurface, surfaceButtonDisabledReason, surfaceButtonOn } from './surfaceLook';
 
 describe('the surface look', () => {
   it('is one choice: a button turns its look on and the other off, and clicked again goes back to clay', () => {
@@ -17,15 +17,25 @@ describe('the surface look', () => {
     expect(shownSurface('slotColors', false)).toBe('slotColors');
   });
 
-  it('shows a button on only while its look is chosen and can show: in Diffs none is on', () => {
+  it('shows a button on only while its look is chosen and can show: in Diffs slot colors never are', () => {
     expect(surfaceButtonOn('materials', 'materials', false)).toBe(true);
     expect(surfaceButtonOn('materials', 'slotColors', false)).toBe(false);
-    expect(surfaceButtonOn('materials', 'materials', true)).toBe(false);
+    expect(surfaceButtonOn('materials', 'materials', true)).toBe(true);
+    expect(surfaceButtonOn('slotColors', 'slotColors', true)).toBe(false);
   });
 
-  it('says why its buttons are off in Diffs, and only there', () => {
-    expect(surfaceButtonDisabledReason(true)).toBe('Off in Diffs: its colors show what changed');
-    expect(surfaceButtonDisabledReason(false)).toBeNull();
+  it('says why slot colors are off in Diffs, and only there: the materials compare the looks', () => {
+    expect(surfaceButtonDisabledReason('slotColors', true)).toBe('Off in Diffs: its colors show what changed');
+    expect(surfaceButtonDisabledReason('slotColors', false)).toBeNull();
+    expect(surfaceButtonDisabledReason('materials', true)).toBeNull();
+    expect(materialsButtonLabel(true)).toBe('Compare materials and textures');
+    expect(materialsButtonLabel(false)).toBe('Show materials and textures');
+  });
+
+  it('makes Diffs compare how the versions look with the materials shown, and their shape otherwise', () => {
+    expect(diffsCompares('materials')).toBe('look');
+    expect(diffsCompares('clay')).toBe('shape');
+    expect(diffsCompares('slotColors')).toBe('shape');
   });
 
   it('is remembered across sessions, slot colors chosen before there were materials kept', () => {
