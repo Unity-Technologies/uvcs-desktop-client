@@ -82,13 +82,26 @@ function find([object, ...args]) {
   return args.includes('--xml') ? findXml(findable.element, found) : formatted(args, found);
 }
 
-/** `cm cat <spec> --file=<target>`: a revision by id (`revid:201@…`), else the loaded revision of a workspace path. */
-function cat([spec, target]) {
+/**
+ * `cm cat <spec> --file=<target>`, or `cm cat <spec>;<target> …` for revisions asked together: a revision by id
+ * (`revid:201@…`), else the loaded revision of a workspace path.
+ */
+function cat(args) {
+  const [spec, target] = args;
+  if (args.length === 2 && target?.startsWith('--file=')) return writeRevision(spec, target.slice('--file='.length));
+  for (const arg of args) {
+    const separator = arg.indexOf(';');
+    if (separator < 0) throw new Error('The fake cm writes revisions only to a --file, or each to its <spec>;<file>');
+    writeRevision(arg.slice(0, separator), arg.slice(separator + 1));
+  }
+  return '';
+}
+
+function writeRevision(spec, target) {
   const revision = /^revid:(\d+)/.exec(spec)?.[1];
   const content = revision ? REVISIONS[revision] : loadedContent(spec);
   if (content === undefined) throw new Error(`The fake cm has no revision ${spec}`);
-  if (!target?.startsWith('--file=')) throw new Error('The fake cm writes revisions only to a --file');
-  writeFileSync(target.slice('--file='.length), content);
+  writeFileSync(target, content);
   return '';
 }
 

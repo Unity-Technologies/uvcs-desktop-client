@@ -1,7 +1,15 @@
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import type { ContentSource } from '@shared/domain/content';
 import type { MergeRequest } from '@shared/domain/merge';
 import { mergeOutput, statusHeader, treeListing } from '../cm/testing/cmOutput';
+import { fakeCat } from '../cm/testing/fakeCat';
 import { cmFails, fakeCmClient } from '../cm/testing/fakeCmClient';
+import { contentHashOf, WorkspaceCopies } from '../files/WorkspaceCopies';
+import { createContentService } from '../services/contentService';
+import { serviceContext } from '../services/testing/serviceContext';
 import { previewMerge } from './previewMerge';
 
 const FROM_TASK: MergeRequest = { kind: 'merge', sourceSpec: 'br:/main/task' };
@@ -75,5 +83,45 @@ describe('previewMerge', () => {
 
     await expect(previewMerge(cm, '/work', FROM_TASK)).rejects.toThrow('The branch /main/task does not exist.');
     expect(lines().filter((line) => line.startsWith('merge'))).toHaveLength(1);
+  });
+});
+
+describe("the merge page reading the destination's versions", () => {
+  const md5 = (text: string) => contentHashOf(Buffer.from(text));
+  /** `cm ls <paths> --tree=cs:4 --xml`: each conflicting file's revision in the destination, with its size and hash. */
+  const listing = (...files: { path: string; revid: number; text: string }[]) =>
+    `<?xml version="1.0" encoding="utf-8"?><LsResults><LsItems>${files
+      .map(
+        ({ path, revid, text }) =>
+          `<LsItem><Status>Controlled</Status><Name>${path.split('/').pop()}</Name><WkPath>/${path}</WkPath><Size>${text.length}</Size><Type>txt</Type><Changeset>4</Changeset><Repository>rep:eco@local</Repository><RevId>${revid}</RevId><ItemId>30</ItemId><Hash>${md5(text)}</Hash></LsItem>`,
+      )
+      .join('')}</LsItems></LsResults>`;
+  /** The destination's version as the merge page asks for it (`conflictedFilesOf`): by its revision. */
+  const destinationOf = ({ path, repository, destinationRevisionId }: { path: string; repository: string; destinationRevisionId: number }): ContentSource => ({
+    kind: 'revision',
+    revision: { revisionId: destinationRevisionId, repository },
+    fileName: path,
+  });
+
+  it("reads each from the workspace's disk where its file is that revision unchanged, and downloads the others, with no command more than the preview's", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'merge-wk-'));
+    await mkdir(join(workspace, 'src'));
+    await writeFile(join(workspace, 'src', 'a.txt'), 'destination a\n');
+    await writeFile(join(workspace, 'src', 'b.txt'), 'edited since\n');
+    const fake = fakeCmClient({
+      'status --short': '',
+      'merge br:/main/task': mergeOutput(SOURCE, DESTINATION, CONFLICT, ['FILE_CONFLICT', '/src/b.txt', '1', '3', '4', '31']),
+      ls: listing({ path: 'src/a.txt', revid: 40, text: 'destination a\n' }, { path: 'src/b.txt', revid: 41, text: 'destination b\n' }),
+      cat: fakeCat((spec) => (spec === 'revid:41@eco@local' ? 'destination b\n' : undefined)),
+    });
+    const copies = new WorkspaceCopies({ cm: fake.cm });
+    const content = createContentService(serviceContext(fake.cm, { workspaceCopies: copies }));
+
+    const plan = await previewMerge(fake.cm, workspace, FROM_TASK, copies);
+    const read = await Promise.all(plan.fileConflicts.map((conflict) => content.read(workspace, destinationOf(conflict))));
+
+    expect(read.map((one) => one.text)).toEqual(['destination a\n', 'destination b\n']);
+    const afterThePreview = fake.lines().filter((line) => !line.startsWith('status') && !line.startsWith('merge'));
+    expect(afterThePreview.map((line) => line.split(' ').slice(0, 2).join(' '))).toEqual(['ls /src/a.txt', 'cat revid:41@eco@local']);
   });
 });

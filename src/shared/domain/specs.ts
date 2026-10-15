@@ -36,6 +36,14 @@ export function isPinnedSpec(revisionSpec: string): boolean {
 }
 
 /**
+ * The repository a revision spec built by `spec.revision` or `spec.itemAt` reads in (`revid:45@game@local`,
+ * `itemid:27#cs:12@game@local` → `game@local`); null for any other spec, whose repository it doesn't tell for sure.
+ */
+export function repositoryOfSpec(revisionSpec: string): string | null {
+  return /^(?:revid:\d+|itemid:\d+#(?:cs|sh):\d+)@(.+)$/.exec(revisionSpec)?.[1] ?? null;
+}
+
+/**
  * Whether `cm ls --tree=<pointSpec>` lists the tree there, walking through xlinks: a changeset's or a branch head's
  * (`cs:12`, `br:/main`). It refuses a shelve's and a label's ("Incorrect object specification sh:2", `lb:v1.0`).
  */

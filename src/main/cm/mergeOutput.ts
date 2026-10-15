@@ -17,8 +17,11 @@ import { directoryConflictWords } from './directoryConflictWords';
 /** Separates fields in `cm merge --machinereadable` output. */
 export const MERGE_FIELD_SEPARATOR = FIELD_SEPARATOR;
 
-/** A conflicting file as `cm merge` prints it: its ids and changesets, without the repository they belong to. */
-type PrintedFileConflict = Omit<FileConflict, 'repository'>;
+/**
+ * A conflicting file as `cm merge` prints it: its ids and changesets, without the repository they belong to nor the
+ * destination's revision.
+ */
+type PrintedFileConflict = Omit<FileConflict, 'repository' | 'destinationRevisionId'>;
 
 /** The plan as `cm merge` prints it; `withConflictRepositories` completes its file conflicts. */
 export type PrintedMergePlan = Omit<MergePlan, 'fileConflicts'> & { fileConflicts: PrintedFileConflict[] };

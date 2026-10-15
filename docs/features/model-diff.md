@@ -479,7 +479,8 @@ heatmap's), and come back in the other modes. The merge cards' stills stay clay 
   its read at once, until it is fetched again (64 textures with the server down would otherwise start 22 more
   commands). Keeping fetched revisions past `MAX_KEPT_BYTES` until read was tried and dropped: it needed a budget of its
   own, a cap, a time-out and to tell which read took each, for what asking a part at a time does. The reads asked at once (the look's downloads, a ring of `.meta` files) wait until each has checked the disk, then go in one `cm cat <spec>;<file>
-  <spec>;<file> …` (`catArgs`), which downloads them in one batch, in a process of its own; a batch holds one
+  <spec>;<file> …` (`catBatchesOf`, `catArgs`, the batching `RevisionCat` shares), which downloads them in one
+  batch, in a process of its own; a batch holds one
   repository's revisions (an xlinked one's apart: `cm cat` resolves each repository's on its own) and stops at
   `MAX_BATCH_BYTES` (64 MB by the sizes listed, so the first textures show sooner) and at a command line Windows can
   start; a folder whose path holds `;` takes each as `--file=`. A revision listed past `MAX_MODEL_BYTES` is refused
