@@ -23,14 +23,18 @@ export function sendEventTo<Name extends UvcsEventName>(target: WebContents, nam
     return;
   }
   const waiting = waitingForLoad.get(target) ?? sendOnceLoaded(target);
-  waiting.push(() => sendEventTo(target, name, payload));
+  waiting.push(() => !target.isDestroyed() && target.send(EVENT_CHANNEL, name, payload));
 }
 
-/** The events waiting for the page to load, sent then. */
+/**
+ * The events waiting for the page to load, sent once Electron stops saying it loads (`did-stop-loading`, after a load
+ * that failed too). Not at `did-finish-load`: `isLoading` may still be true then, and an event sent in between would
+ * wait for a load that never comes (the first screen's commands, logged before the page, went missing that way).
+ */
 function sendOnceLoaded(target: WebContents): (() => void)[] {
   const sends: (() => void)[] = [];
   waitingForLoad.set(target, sends);
-  target.once('did-finish-load', () => {
+  target.once('did-stop-loading', () => {
     waitingForLoad.delete(target);
     sends.forEach((send) => send());
   });

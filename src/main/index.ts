@@ -17,8 +17,9 @@ import { WorkspaceCopies } from './files/WorkspaceCopies';
 import { createServices } from './services/createServices';
 import { RepositoryTrees } from './unity/RepositoryTrees';
 import { RevisionDownloads } from './unity/RevisionDownloads';
-import { openFirstWindow } from './startup/firstWindow';
-import { handleLaunchRequests, isTheRunningApp } from './startup/launchRequests';
+import { CommandLogRelay } from './startup/commandLogRelay';
+import { openFirstWindow, readFirstScreenAhead, type FirstScreenRead } from './startup/firstWindow';
+import { handleLaunchRequests, isTheRunningApp, launchNamesAFolder } from './startup/launchRequests';
 import { trackOperations } from './startup/operationTracking';
 import { ignoreOwnCommandWrites } from './startup/ownWrites';
 import { handleQuitting, Quitting } from './startup/quitting';
@@ -26,7 +27,7 @@ import { openSettings, sendSettingsChanges } from './startup/settings';
 import { watchShownWorkspaces } from './startup/workspaceWatching';
 import { createAppUpdates } from './update/createAppUpdates';
 import { DEVELOPMENT_DOCK_ICON } from './window/appIcon';
-import { installAppMenu, installMenus } from './window/appMenu';
+import { appMenuInstaller, installDockMenu } from './window/appMenu';
 import { askToQuitWhenDone } from './window/askToQuitWhenDone';
 import { followAppTheme } from './window/followAppTheme';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
@@ -51,10 +52,11 @@ const updates = createAppUpdates({
 const windows = new WorkspaceWindows({
   settings,
   workspaceOf: (viewer) => watchers.workspaceOf(viewer),
-  onWindowsChanged: () => app.isReady() && installAppMenu(windows, updates),
+  onWindowsChanged: () => app.isReady() && installMenuBar(),
   onClosed: (viewer) => watchers.release(viewer),
   onLastWindowClosing: () => quitting.lastWindowClosing(),
 });
+const installMenuBar = appMenuInstaller(windows, updates);
 const quitting = new Quitting({
   writesRunning: () => operations.writesRunning(),
   writesFinished: () => operations.writesFinished(),
@@ -65,36 +67,39 @@ const quitting = new Quitting({
   quit: () => app.quit(),
 });
 
-function start(launched: Promise<void>): void {
-  // A window sees the commands its own calls ran (commands run outside any call go to every window).
-  cm.onCommandLogged((entry) => sendEventToCaller('commandLogged', entry));
-  if (!app.isPackaged) warnOnRepeatedServerCommands(cm);
-  if (!app.isPackaged) warnOnOrganizationIds(cm);
+// Every command `cm` runs is logged and watched from here on, as the first screen's reads start before Electron is
+// ready. A window sees the commands its own calls ran (commands run outside any call go to every window).
+const commandLog = new CommandLogRelay((entry) => sendEventToCaller('commandLogged', entry));
+cm.onCommandLogged((entry) => commandLog.logged(entry));
+if (!app.isPackaged) warnOnRepeatedServerCommands(cm);
+if (!app.isPackaged) warnOnOrganizationIds(cm);
+ignoreOwnCommandWrites(cm, watchers, headers);
+const api = createServices({
+  cm,
+  operations,
+  reviews: new ReviewStore(join(userData, 'review-snapshots')),
+  diffReviews: new DiffReviewStore(join(userData, 'review-snapshots', 'diffs')),
+  settings,
+  watchers,
+  windows,
+  headers,
+  updates,
+  workspaceCopies,
+  revisionDownloads,
+  repositoryTrees,
+});
+const early = new EarlyCalls(apiMethods(api));
+
+function start(launched: Promise<void>, readAhead: FirstScreenRead): void {
   if (!app.isPackaged) app.dock?.setIcon(DEVELOPMENT_DOCK_ICON);
   sendSettingsChanges(settings, (changed) => sendEvent('settingsChanged', changed));
-  ignoreOwnCommandWrites(cm, watchers, headers);
   void revisionDownloads.removeLeftOvers();
-  const api = createServices({
-    cm,
-    operations,
-    reviews: new ReviewStore(join(userData, 'review-snapshots')),
-    diffReviews: new DiffReviewStore(join(userData, 'review-snapshots', 'diffs')),
-    settings,
-    watchers,
-    windows,
-    headers,
-    updates,
-    workspaceCopies,
-    revisionDownloads,
-    repositoryTrees,
-  });
-  const early = new EarlyCalls(apiMethods(api));
   registerApi(api, early);
   followAppTheme(settings);
   handleQuitting(quitting);
-  installMenus(windows, updates);
+  installDockMenu(windows);
   updates.checkPeriodically();
-  const openFirst = (): void => openFirstWindow({ cm, windows, early, settings });
+  const openFirst = (): void => openFirstWindow({ cm, windows, early, settings, commandLog }, readAhead);
   void launched.then(openFirst, openFirst);
   // macOS keeps the app running with no window; clicking the Dock icon then opens the home screen.
   app.on('activate', () => windows.all().length === 0 && windows.open());
@@ -102,7 +107,9 @@ function start(launched: Promise<void>): void {
 
 if (isTheRunningApp()) {
   const launched = handleLaunchRequests(windows, (folder) => findWorkspaceRoot(cm, folder));
-  void app.whenReady().then(() => start(launched));
+  // `cm` doesn't need Electron ready: the first screen's commands run while it gets there.
+  const readAhead = readFirstScreenAhead({ cm, windows, early, settings }, launchNamesAFolder());
+  void app.whenReady().then(() => start(launched, readAhead));
 } else {
   app.quit();
 }

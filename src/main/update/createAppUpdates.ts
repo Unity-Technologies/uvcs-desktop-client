@@ -1,8 +1,7 @@
 import { basename, join } from 'node:path';
 import { app, net, shell } from 'electron';
-import { autoUpdater } from 'electron-updater';
 import { sendEvent } from '../ipc/sendEvent';
-import { AppUpdates, type AppUpdatesDependencies } from './AppUpdates';
+import { AppUpdates, type AppUpdatesDependencies, type UpdateFeed } from './AppUpdates';
 import { downloadInstaller } from './downloadInstaller';
 import { installerAsset } from './installerAsset';
 import { needsManualInstall } from './macSignature';
@@ -14,17 +13,10 @@ type AroundInstalling = Pick<AppUpdatesDependencies, 'writesRunning' | 'writesFi
 
 /** The app's updates (`AppUpdates`) over electron-updater and Electron; they check on their own once started (`checkPeriodically`). */
 export function createAppUpdates(aroundInstalling: AroundInstalling): AppUpdates {
-  // `AppUpdates` downloads once it knows how the update will install (`needsManualInstall`).
-  autoUpdater.autoDownload = false;
-  autoUpdater.autoInstallOnAppQuit = true;
-  // The notes of every release since the running one, not just the latest: an update may skip a few.
-  autoUpdater.fullChangelog = true;
-  // A check is a standard request: no installation id.
-  withoutStagingUserId(autoUpdater);
   removeLeftoverStagingUserId(app.getPath('userData')).catch((error: unknown) => console.warn('[updates] The old staging user id stays:', error));
 
   return new AppUpdates({
-    feed: autoUpdater,
+    loadFeed: loadAutoUpdater,
     packaged: app.isPackaged,
     needsManualInstall: async () => process.platform === 'darwin' && needsManualInstall(process.execPath),
     installerOf: (files) => installerAsset(files, process.arch, app.runningUnderARM64Translation),
@@ -45,3 +37,17 @@ export function createAppUpdates(aroundInstalling: AroundInstalling): AppUpdates
     logFailure: (text) => console.warn(text),
   });
 }
+
+/** electron-updater's `autoUpdater`, loaded as `AppUpdates` first needs it (`loadFeed`) and set up for it. */
+async function loadAutoUpdater(): Promise<UpdateFeed> {
+  const { autoUpdater } = await import('electron-updater');
+  // `AppUpdates` downloads once it knows how the update will install (`needsManualInstall`).
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+  // The notes of every release since the running one, not just the latest: an update may skip a few.
+  autoUpdater.fullChangelog = true;
+  // A check is a standard request: no installation id.
+  withoutStagingUserId(autoUpdater);
+  return autoUpdater;
+}
+
