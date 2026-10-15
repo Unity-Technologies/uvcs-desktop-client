@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { catReadsOf, catWriting } from '../cm/testing/fakeCat';
+import { catReadsOf, fakeCat } from '../cm/testing/fakeCat';
 import { cmFails, fakeCmClient } from '../cm/testing/fakeCmClient';
 import { formatOutput } from '../cm/testing/cmOutput';
 import { WorkspaceCopies, type RevisionFile } from '../files/WorkspaceCopies';
@@ -16,7 +16,7 @@ const md5 = (text: string) => createHash('md5').update(text).digest('base64');
 const SERVER: Record<number, string> = { 1: 'bark v1', 2: 'leaves v2', 3: 'moss v3' };
 
 /** `cm cat` as `cm` does it, of the revisions on the server. */
-const catAnswer = catWriting((revisionSpec) => SERVER[Number(/^revid:(\d+)@/.exec(revisionSpec)?.[1])]);
+const catAnswer = fakeCat((revisionSpec) => SERVER[Number(/^revid:(\d+)@/.exec(revisionSpec)?.[1])]);
 
 const file = (revisionId: number, path = `Art/${revisionId}.png`, hash: string | null = null, size = -1): RevisionFile => ({ path, revision: { revisionId, repository: 'eco@local' }, hash, size });
 

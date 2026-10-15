@@ -1,5 +1,5 @@
 import { writeFile } from 'node:fs/promises';
-import { cmFails, optionValue, type CmAnswer } from './fakeCmClient';
+import { cmFails, optionValue, type CmFailure, type FakeCmCommand } from './fakeCmClient';
 
 /** The revisions a `cm cat` was asked for, each with the file it was to write: `cat <spec> --file=<file>` or `cat <spec>;<file> …`. */
 export function catReadsOf(args: readonly string[]): { spec: string; target: string }[] {
@@ -15,7 +15,7 @@ export function catReadsOf(args: readonly string[]): { spec: string; target: str
  * `cm cat` as `cm` does it, in either form: every revision `contentOf` knows is written to its file, even when another
  * isn't found; each one it doesn't know prints `The specified revision was not found <spec>` and fails the command.
  */
-export function catWriting(contentOf: (spec: string) => string | Buffer | undefined): CmAnswer {
+export function fakeCat(contentOf: (spec: string) => string | Buffer | undefined): (command: FakeCmCommand) => Promise<string | CmFailure> {
   return async ({ args }) => {
     const missing: string[] = [];
     for (const { spec, target } of catReadsOf(args)) {
