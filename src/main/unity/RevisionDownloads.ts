@@ -134,8 +134,9 @@ export class RevisionDownloads {
    * downloaded now in one batch with the others asked at once. A reader that reads a few files at a time, to hold few
    * in memory (the Materials look's textures), asks for them all here first, so its reads never split the batch.
    * Fails as the read would, and its read then fails at once (until it is fetched again). Kept as any download: a
-   * reader fetches at most half what is kept at a time (`MAX_DOWNLOADED_AHEAD_BYTES`), so it is still there when read.
-   * A revision past what is read is left for the read to refuse.
+   * reader fetches at most half what is kept at a time (`MAX_DOWNLOADED_AHEAD_BYTES`), so one reader's is still there
+   * when read; one let go of meanwhile (other downloads past the budget) is downloaded again by its read, alone. A
+   * revision past what is read is left for the read to refuse.
    */
   async fetch(workspacePath: string, file: RevisionFile): Promise<void> {
     const key = keyOf(file.revision);

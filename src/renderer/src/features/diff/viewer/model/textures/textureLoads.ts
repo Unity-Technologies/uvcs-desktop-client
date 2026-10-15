@@ -5,7 +5,7 @@
 // time (`TEXTURES_IN_HAND`); only the decoded bitmaps are kept (`decodes`).
 
 import { concurrencyLimit } from '@shared/concurrencyLimit';
-import { foundFileKey, MAX_DOWNLOADED_AHEAD_BYTES, type FoundFile } from '@shared/domain/unityAssets';
+import { downloadedAheadBytesOf, foundFileKey, MAX_DOWNLOADED_AHEAD_BYTES, type FoundFile } from '@shared/domain/unityAssets';
 import { api } from '../../../../../api/client';
 import type { TextureDecoded } from './decodeTexture';
 import { MAX_TEXTURE_FILE_BYTES } from './textureBudget';
@@ -60,8 +60,8 @@ export function textureKey(workspacePath: string, load: Omit<TextureLoad, 'key'>
 /**
  * Each load's texture decoded, in the order asked. The repository's files not decoded yet are asked to download first,
  * in one batch (`api.unityAssets.download`): read a few at a time, they would each go in a `cm cat` of their own. At
- * most `MAX_DOWNLOADED_AHEAD_BYTES` at a time, so what was downloaded is still kept when it is read: the next part is
- * asked for as the first texture in it comes up.
+ * most `MAX_DOWNLOADED_AHEAD_BYTES` at a time, so what one look downloaded is still kept when it is read: the next
+ * part is asked for as the first texture in it comes up.
  */
 export function loadTextures(workspacePath: string, loads: readonly TextureLoad[]): Promise<TextureDecoded>[] {
   const downloads = new Map<string, FoundFile>();
@@ -86,12 +86,12 @@ export function loadTextures(workspacePath: string, loads: readonly TextureLoad[
 
 const NOTHING_TO_ASK = (): void => undefined;
 
-/** The files in parts of at most `maxBytes` by their sizes, in order; one bigger than that alone. */
+/** The files in parts of at most `maxBytes` (`downloadedAheadBytesOf`), in order; one bigger than that alone. */
 function partsOf(files: readonly FoundFile[], maxBytes: number): FoundFile[][] {
   const parts: FoundFile[][] = [];
   let bytes = 0;
   for (const file of files) {
-    const size = Math.max(file.size, 0);
+    const size = downloadedAheadBytesOf(file);
     const last = parts.at(-1);
     if (last && bytes + size <= maxBytes) {
       last.push(file);

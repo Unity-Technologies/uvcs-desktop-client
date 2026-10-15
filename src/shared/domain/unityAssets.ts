@@ -98,11 +98,19 @@ export type GuidMisses = 'known' | 'noProject' | 'outsidePackage' | 'noLibrary' 
 /** The most lookups of each kind one request may carry: a model is read with at most 64 textures. */
 export const MAX_UNITY_ASSET_LOOKUPS = 512;
 /**
- * The most bytes (by the sizes listed; an unknown size counts as none) one `unityAssets.download` asks for: half what a
- * session keeps of its downloads (1 GB), so what a look fetched is still kept when it reads it, a few at a time,
- * whatever else is downloaded meanwhile. A look needing more asks for the rest as its reads get there.
+ * The most bytes (`downloadedAheadBytesOf`) one `unityAssets.download` asks for: half what a session keeps of its
+ * downloads (1 GB, one budget for every window), so what one look fetched is still kept when it reads it, a few at a
+ * time. A look needing more asks for the rest as its reads get there. Past that (two looks downloading at once, a
+ * repository's big listing meanwhile), a texture let go of before its read is downloaded again, alone.
  */
 export const MAX_DOWNLOADED_AHEAD_BYTES = 512 * 1024 * 1024;
+/** What a revision of unknown size (a diff's side before) counts as downloaded ahead: as much as a big texture takes. */
+export const UNKNOWN_TEXTURE_BYTES = 64 * 1024 * 1024;
+
+/** What a file counts as against `MAX_DOWNLOADED_AHEAD_BYTES`: its size, or `UNKNOWN_TEXTURE_BYTES` where not known. */
+export function downloadedAheadBytesOf(file: FoundFile): number {
+  return file.size >= 0 ? file.size : UNKNOWN_TEXTURE_BYTES;
+}
 /** The most paths a model stores for one texture (an FBX: its relative and absolute ones). */
 export const MAX_STORED_PATHS = 16;
 /** The longest name or path a request may carry: past any OS's path length. */
