@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Column } from './column';
-import { sortRows, type SortRanks } from './sortRows';
+import { ColumnSorter } from './sortRows';
 
 export interface TableSort {
   columnId: string;
@@ -14,16 +14,13 @@ export interface TableSort {
 export function useSortedRows<Row>(rows: readonly Row[], columns: Column<Row>[], initialSort: TableSort | undefined) {
   const [sort, setSort] = useState(initialSort);
   const sortValue = columns.find((column) => column.id === sort?.columnId)?.sortValue;
-  // Kept per column, so filtering a sorted list re-sorts it by number (`sortRows`).
-  const sortRanks = useRef<{ sortValue?: Column<Row>['sortValue']; ranks?: SortRanks }>({});
+  // Keeps each column's ranks, so filtering a sorted list re-sorts it by number (`ColumnSorter`).
+  const [sorter] = useState(() => new ColumnSorter());
 
-  const sortedRows = useMemo(() => {
-    if (!sort || !sortValue) return rows;
-    const kept = sortRanks.current.sortValue === sortValue ? sortRanks.current.ranks : undefined;
-    const sorted = sortRows(rows, sortValue, sort.descending, kept);
-    sortRanks.current = { sortValue, ranks: sorted.ranks };
-    return sorted.rows;
-  }, [rows, sortValue, sort]);
+  const sortedRows = useMemo(
+    () => (sort && sortValue ? sorter.sort(rows, sort.columnId, sortValue, sort.descending) : rows),
+    [sorter, rows, sortValue, sort],
+  );
 
   const toggleSort = (column: Column<Row>): void => {
     if (!column.sortValue) return;

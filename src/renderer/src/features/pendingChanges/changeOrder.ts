@@ -2,9 +2,8 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import { comparePaths } from '@shared/pathOrder';
 
 /**
- * The order the rows show changes in, flat or a tree: by path, as every list of files (`comparePaths`). Sorting what
- * is already in order takes one comparison a change, so a view that hands `layoutChangeRows` changes kept in this
- * order (filtered, but not reordered) lays them out again without sorting.
+ * The order the rows show changes in, flat or a tree: by path, as every list of files (`comparePaths`). Sorted once
+ * (`useSortedChanges`): filtering keeps the order, and `layoutChangeRows` lays changes out as they come.
  */
 export function sortChanges(changes: PendingChange[]): PendingChange[] {
   return [...changes].sort((a, b) => comparePaths(a.path, b.path));

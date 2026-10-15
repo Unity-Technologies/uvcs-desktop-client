@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { compareSortValues } from '../../lib/naturalCompare';
-import { sortRows } from './sortRows';
+import { ColumnSorter, sortRows } from './sortRows';
 
 vi.mock('../../lib/naturalCompare', async (original) => {
   const actual = await original<typeof import('../../lib/naturalCompare')>();
@@ -45,5 +45,37 @@ describe('sortRows', () => {
     const sorted = sortRows(many.filter((_, index) => index % 2 === 0), byName, true, ranks);
     expect(compareSortValues).not.toHaveBeenCalled();
     expect(sorted.rows[0]!.name).toBe('/main/task-4998');
+  });
+});
+
+describe('ColumnSorter', () => {
+  const many = Array.from({ length: 2_000 }, (_, index) => ({ name: `/main/task-${(index * 7919) % 2_000}` }));
+
+  // A view that builds its columns as it renders hands a new `sortValue` each time: arrowing through 20,000 branches
+  // compared every name again on every step.
+  it("sorts again without comparing text when the view hands a column's sortValue as a new function", () => {
+    const sorter = new ColumnSorter();
+    sorter.sort(many, 'name', (row) => row.name, false);
+    vi.mocked(compareSortValues).mockClear();
+    const sorted = sorter.sort(many, 'name', (row) => row.name, false);
+    expect(compareSortValues).not.toHaveBeenCalled();
+    expect(sorted.slice(0, 3).map((row) => row.name)).toEqual(['/main/task-0', '/main/task-1', '/main/task-2']);
+  });
+
+  it('sorts right when a column id is sorted by another field, even one holding the same values on other rows', () => {
+    const rows = ['b', 'c', 'a'].map((name, index) => ({ name, label: ['a', 'b', 'c'][index]!, size: 3 - index }));
+    const sorter = new ColumnSorter();
+    sorter.sort(rows, 'shown', (row) => row.name, false);
+    expect(sorter.sort(rows, 'shown', (row) => row.label, false)).toEqual(sortRows(rows, (row) => row.label, false).rows);
+    expect(sorter.sort(rows, 'shown', (row) => row.size, true)).toEqual(sortRows(rows, (row) => row.size, true).rows);
+  });
+
+  it('keeps each column its own ranks, so switching back to a column compares no text', () => {
+    const sorter = new ColumnSorter();
+    sorter.sort(many, 'name', byName, false);
+    sorter.sort(many, 'length', (row) => row.name.length, false);
+    vi.mocked(compareSortValues).mockClear();
+    sorter.sort(many, 'name', byName, true);
+    expect(compareSortValues).not.toHaveBeenCalled();
   });
 });
