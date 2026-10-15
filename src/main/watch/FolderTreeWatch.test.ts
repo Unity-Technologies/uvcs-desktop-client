@@ -1,27 +1,71 @@
-import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, renameSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { FolderTreeWatch } from './FolderTreeWatch';
+import { FOLDERS_PER_STEP, FolderTreeWatch, listSubfoldersOnDisk, type ListSubfolders } from './FolderTreeWatch';
 import { fakeFolderWatches } from './testing/fakeFolderWatches';
 import type { WatchFolder } from './watchFolder';
 
 interface Options {
+  /** The tree's folders, `/`-separated (src/deep and Library/Cache by default). */
+  folders?: string[];
   skip?: (folder: string) => boolean;
   maxFolders?: number;
   unwatchable?: string[];
-  /** Called as each folder gets watched (its relative and absolute paths), to act at that point of the walk. */
-  whenWatched?: (folder: string, path: string, tree: FolderTreeWatch) => void;
+  /** Listings answer only when the test says (`listings`), else as the disk does. */
+  holdListings?: boolean;
 }
 
 /**
- * A real folder tree (src/deep, Library/Cache) watched through fake watches the test fires. As with `fs.watch`, a
- * folder that doesn't exist can't be watched.
+ * Listings read from the disk when asked, and answered when the test says: the walk takes its steps when the test
+ * chooses, whatever the disk's speed.
+ */
+function heldListings() {
+  const unanswered: (() => void)[] = [];
+  const waiting: { count: number; resolve: () => void }[] = [];
+  let holding = true;
+  const tellWaiting = (): void => {
+    for (const waiter of waiting.filter(({ count }) => unanswered.length >= count)) {
+      waiting.splice(waiting.indexOf(waiter), 1);
+      waiter.resolve();
+    }
+  };
+  const answer = (): void => unanswered.splice(0).forEach((answerListing) => answerListing());
+  const list: ListSubfolders = (folder) => {
+    const names = readdirSync(folder, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+    if (!holding) return Promise.resolve(names);
+    return new Promise((resolve) => {
+      unanswered.push(() => resolve(names));
+      tellWaiting();
+    });
+  };
+  return {
+    list,
+    /** Answers the listings asked so far. */
+    answer,
+    /** Answers the listings asked so far, and every one from now on at once. */
+    answerAll: (): void => {
+      holding = false;
+      answer();
+    },
+    /** Resolves once `count` listings wait for their answer. */
+    asked: (count: number): Promise<void> =>
+      new Promise((resolve) => {
+        waiting.push({ count, resolve });
+        tellWaiting();
+      }),
+  };
+}
+
+/**
+ * A real folder tree watched through fake watches the test fires. As with `fs.watch`, a folder that doesn't exist
+ * can't be watched.
  */
 function setUp(options: Options = {}) {
   const root = mkdtempSync(join(tmpdir(), 'folder-tree-'));
-  mkdirSync(join(root, 'src', 'deep'), { recursive: true });
-  mkdirSync(join(root, 'Library', 'Cache'), { recursive: true });
+  for (const folder of options.folders ?? ['src/deep', 'Library/Cache']) mkdirSync(join(root, ...folder.split('/')), { recursive: true });
   const at = (folder: string): string => (folder ? join(root, ...folder.split('/')) : root);
   const relative = (path: string): string => (path === root ? '' : path.slice(root.length + 1).split(/[\\/]/).join('/'));
   const watches = fakeFolderWatches((options.unwatchable ?? []).map((folder) => ({ path: at(folder) })));
@@ -30,9 +74,9 @@ function setUp(options: Options = {}) {
     if (!existsSync(path)) throw Object.assign(new Error(`ENOENT: no such file or directory, watch '${path}'`), { code: 'ENOENT' });
     const folderWatch = watches.watch(path, recursive, onEvent);
     everWatched.push(relative(path));
-    options.whenWatched?.(relative(path), path, tree);
     return folderWatch;
   };
+  const listings = heldListings();
   const events: string[] = [];
   let broken = 0;
   const tree = new FolderTreeWatch(
@@ -42,11 +86,13 @@ function setUp(options: Options = {}) {
     () => broken++,
     options.maxFolders ?? 100,
     watch,
+    options.holdListings ? listings.list : listSubfoldersOnDisk,
   );
   return {
     root,
     tree,
     events,
+    listings,
     /** The watched folders, workspace-relative and sorted. */
     watched: (): string[] => [...watches.watched().keys()].map(relative).sort(),
     /** Every folder that was ever watched, even if it isn't anymore. */
@@ -210,23 +256,42 @@ describe('FolderTreeWatch walks the tree a step at a time, leaving the main proc
     expect(watched()).toEqual(['', 'Library', 'Library/Cache', 'src', 'src/deep']);
   });
 
-  it('stops walking once closed meanwhile, and lets go of what it had watched', async () => {
-    const { tree, watched, everWatched } = setUp({
-      whenWatched: (folder, _path, tree) => folder === 'Library' && queueMicrotask(() => tree.close()),
-    });
+  it(`watches ${FOLDERS_PER_STEP} folders at most before waiting for their listings`, async () => {
+    const folders = Array.from({ length: 100 }, (_, index) => `folder${index}`);
+    const { tree, watched, listings } = setUp({ folders, maxFolders: 1000, holdListings: true });
 
-    expect(await tree.start()).toBe(false);
-    await tree.idle();
+    const started = tree.start();
+    expect(watched()).toHaveLength(1);
+    listings.answer();
+    await listings.asked(FOLDERS_PER_STEP);
+    expect(watched()).toHaveLength(1 + FOLDERS_PER_STEP);
+    listings.answer();
+    await listings.asked(100 - FOLDERS_PER_STEP);
+    expect(watched()).toHaveLength(101);
+    listings.answer();
+    expect(await started).toBe(true);
+  });
+
+  it('stops walking once closed meanwhile, and lets go of what it had watched', async () => {
+    const { tree, watched, everWatched, listings } = setUp({ holdListings: true });
+    const started = tree.start();
+    listings.answer();
+    await listings.asked(2);
+
+    tree.close();
+    listings.answerAll();
+    expect(await started).toBe(false);
     expect(watched()).toEqual([]);
     expect(everWatched()).toEqual(['', 'Library', 'src']);
   });
 
   it('catches a folder created while it walks, with everything inside it', async () => {
-    const { tree, watched, emit, at } = setUp();
-
+    const { tree, watched, emit, at, listings } = setUp({ holdListings: true });
     const started = tree.start();
+
     mkdirSync(at('new/deeper'), { recursive: true });
     emit('', 'rename', 'new');
+    listings.answerAll();
     expect(await started).toBe(true);
     await tree.idle();
     expect(watched()).toEqual(['', 'Library', 'Library/Cache', 'new', 'new/deeper', 'src', 'src/deep']);
@@ -234,20 +299,15 @@ describe('FolderTreeWatch walks the tree a step at a time, leaving the main proc
 
   it('watches nothing under a folder skipped since it was listed, and walks it once no longer skipped', async () => {
     let skipped: string[] = [];
-    let skippedMidWalk = false;
-    const { tree, watched } = setUp({
-      skip: (folder) => skipped.includes(folder),
-      whenWatched: (folder, _path, tree) => {
-        if (folder !== 'src' || skippedMidWalk) return;
-        skippedMidWalk = true;
-        queueMicrotask(() => {
-          skipped = ['src'];
-          tree.followSkipRule();
-        });
-      },
-    });
+    const { tree, watched, listings } = setUp({ skip: (folder) => skipped.includes(folder), holdListings: true });
+    const started = tree.start();
+    listings.answer();
+    await listings.asked(2);
 
-    expect(await tree.start()).toBe(true);
+    skipped = ['src'];
+    tree.followSkipRule();
+    listings.answerAll();
+    expect(await started).toBe(true);
     expect(watched()).toEqual(['', 'Library', 'Library/Cache']);
 
     skipped = [];
@@ -257,11 +317,14 @@ describe('FolderTreeWatch walks the tree a step at a time, leaving the main proc
   });
 
   it('counts no loss for a folder deleted after it was listed', async () => {
-    const { tree, watched } = setUp({
-      whenWatched: (folder, path) => folder === 'src' && queueMicrotask(() => rmSync(join(path, 'deep'), { recursive: true })),
-    });
+    const { tree, watched, at, listings } = setUp({ holdListings: true });
+    const started = tree.start();
+    listings.answer();
+    await listings.asked(2);
 
-    expect(await tree.start()).toBe(true);
+    rmSync(at('src/deep'), { recursive: true });
+    listings.answerAll();
+    expect(await started).toBe(true);
     expect(watched()).toEqual(['', 'Library', 'Library/Cache', 'src']);
   });
 });

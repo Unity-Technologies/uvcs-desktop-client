@@ -7,7 +7,20 @@ import { watchFolder, type FolderWatch, type WatchFolder } from './watchFolder';
  * Folders watched in one go before the walk waits for their listings: the main process answers the windows in
  * between, so a big tree (thousands of folders) never holds it for more than a few milliseconds.
  */
-const FOLDERS_PER_STEP = 64;
+export const FOLDERS_PER_STEP = 64;
+
+/** The names of the folders directly inside a folder (an absolute path); none when it can't be read. */
+export type ListSubfolders = (folder: string) => Promise<string[]>;
+
+/** Links to folders aren't listed (`Dirent.isDirectory` doesn't follow them): they're never followed, as `cm` doesn't. */
+export const listSubfoldersOnDisk: ListSubfolders = async (folder) => {
+  try {
+    const entries = await readdir(folder, { withFileTypes: true });
+    return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+  } catch {
+    return [];
+  }
+};
 
 /**
  * A recursive watch made of one plain watch per folder, where `fs.watch` has no native recursion (Linux). Node's own
@@ -37,6 +50,7 @@ export class FolderTreeWatch {
     private readonly onBroken: () => void,
     private readonly maxFolders: number,
     private readonly watch: WatchFolder = watchFolder,
+    private readonly listSubfolders: ListSubfolders = listSubfoldersOnDisk,
   ) {}
 
   /**
@@ -161,14 +175,10 @@ export class FolderTreeWatch {
     }
   }
 
-  /** The folders directly inside `folder` (links to folders aren't: `Dirent.isDirectory` doesn't follow them). */
+  /** The folders directly inside `folder`, workspace-relative. */
   private async subfolders(folder: string): Promise<string[]> {
-    try {
-      const entries = await readdir(this.absolute(folder), { withFileTypes: true });
-      return entries.filter((entry) => entry.isDirectory()).map((entry) => childOf(folder, entry.name));
-    } catch {
-      return [];
-    }
+    const names = await this.listSubfolders(this.absolute(folder));
+    return names.map((name) => childOf(folder, name));
   }
 
   /** A folder, not a link to one: links are never followed, as `cm` doesn't. */
