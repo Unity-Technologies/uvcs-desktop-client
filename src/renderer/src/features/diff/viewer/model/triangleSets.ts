@@ -28,9 +28,13 @@ export function triangleSetsOf(index: Uint32Array | null, vertexCount: number, g
   }
   const slots = new SetHash();
   const ranges = groups.length > 0 ? groups : [{ start: 0, count: length, slot: 0 }];
+  // A slot by its place among those some triangle uses (`MeshSummary.slots`), not in the file's list: an exporter
+  // writes slots no face uses (Blender's FBX), and one dropped would renumber every slot after it.
+  const used = [...new Set(ranges.filter((range) => range.count > 0).map((range) => range.slot))].sort((a, b) => a - b);
   for (const { start, count, slot } of ranges) {
+    const tag = used.indexOf(slot) + 1;
     for (let i = start; i + 2 < Math.min(start + count, length); i += 3) {
-      slots.addTriangle(corner(i), corner(i + 1), corner(i + 2), slot + 1);
+      slots.addTriangle(corner(i), corner(i + 1), corner(i + 2), tag);
     }
   }
   return { winding: winding.fingerprint(), corners: corners.fingerprint(), slots: slots.fingerprint() };
