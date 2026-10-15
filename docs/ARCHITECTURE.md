@@ -485,13 +485,16 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
 
 What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--timeline` shows what waits for what):
 
-1. The main process opens the settings (the first run imports the official client's, `importLegacySettings`: a few
-   ms) and, at `app.whenReady`, wires the services and opens the first window (`openFirstWindow`). Before creating it,
-   which takes 50-100 ms, it starts the `cm shell`s of the workspace it reopens (or of the home folder, for the home
-   screen) and that screen's first reads (`readFirstScreen`): `cm version` and the workspace's info and pending
-   changes, or the home screen's workspaces and servers. Their commands run while the window and its page load; the
-   page's identical calls take the answers (`EarlyCalls`, in `registerApi`; one nobody takes goes after 5 s). The
-   page's events sent while it still loads reach it once it has (`sendEventTo`), so its command log lists them.
+1. The main module opens the settings (the first run imports the official client's, `importLegacySettings`: a few
+   ms), wires the services and, as it loads, before Electron is ready (`cm` needs neither that nor a window), starts
+   the `cm shell`s of the workspace the first window reopens (or of the home folder, for the home screen) and that
+   screen's first reads (`readFirstScreenAhead`, `readFirstScreen`): `cm version` and the workspace's info and
+   pending changes, or the home screen's workspaces and servers. Their commands run while Electron gets ready (50-60
+   ms) and the window and its page load; the page's identical calls take the answers (`EarlyCalls`, in
+   `registerApi`; one nobody takes goes after 5 s, `EARLY_ANSWER_MS`). A launch that names another workspace, known
+   only later, has that one read as the window opens (`openFirstWindow`). At `app.whenReady` the main process
+   registers the API and opens the first window. What `cm` logs before it exists waits for it (`CommandLogRelay`),
+   and the page's events sent while it still loads reach it once it has (`sendEventTo`), so its command log lists them.
 2. The window is created hidden, its background the page's `--bg-app` (`WINDOW_BACKGROUND`), and names the workspace
    it opens in its page's address when the folder is there (`startingWorkspaceQuery`).
 3. The page opens that workspace (`openWorkspaceFromAddress`) and asks for its first screen's data
