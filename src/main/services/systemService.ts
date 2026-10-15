@@ -46,7 +46,7 @@ export function createSystemService({ cm, operations, windows, settings }: Servi
     cmVersion,
     checkSetup: setupProblem,
     checkConnection: connectionProblem,
-    currentUser: async () => (await cm.query(['whoami'])).trim(),
+    currentUser: async () => (await cm.query(['whoami'], { anyDirectory: true })).trim(),
     openPath: async (path) => {
       const error = await shell.openPath(normalize(path));
       if (error) throw new Error(error);

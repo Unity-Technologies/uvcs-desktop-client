@@ -56,11 +56,11 @@ describe('the cm version', () => {
 });
 
 describe('the current user', () => {
-  it('asks cm who the user is with one quick command', async () => {
+  it('asks cm who the user is with one quick command, in any directory', async () => {
     const { service, commands } = system({ whoami: 'ana@unity.com\n' });
 
     expect(await service.currentUser()).toBe('ana@unity.com');
-    expect(commands).toMatchObject([{ via: 'query', args: ['whoami'] }]);
+    expect(commands).toMatchObject([{ via: 'query', args: ['whoami'], options: { anyDirectory: true } }]);
   });
 });
 

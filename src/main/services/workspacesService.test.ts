@@ -30,7 +30,7 @@ function workspaces(answers: Record<string, CmAnswer>, watchers?: Partial<Worksp
 const WORKSPACE_NAMES = { getworkspacefrompath: formatOutput(['game', 'a0411612']) };
 
 describe('workspace list', () => {
-  it('lists the workspaces with one local read, each folder once', async () => {
+  it('lists the workspaces with one local read in any directory, each folder once', async () => {
     const { service, commands } = workspaces({
       'workspace list': formatOutput(['game', WORKSPACE, 'g1'], ['game-copy', WORKSPACE, 'g2'], ['tools', join(tmpdir(), 'tools'), 'g3']),
     });
@@ -39,7 +39,7 @@ describe('workspace list', () => {
       { name: 'game-copy', path: WORKSPACE, guid: 'g2' },
       { name: 'tools', path: join(tmpdir(), 'tools'), guid: 'g3' },
     ]);
-    expect(commands).toMatchObject([{ via: 'query', args: ['workspace', 'list', '--format={wkname}\u001f{path}\u001f{wkid}\u001e'] }]);
+    expect(commands).toMatchObject([{ via: 'query', args: ['workspace', 'list', '--format={wkname}\u001f{path}\u001f{wkid}\u001e'], options: { anyDirectory: true } }]);
   });
 });
 

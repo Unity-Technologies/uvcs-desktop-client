@@ -28,7 +28,7 @@ export function createWorkspacesService({ cm, operations, watchers, settings, he
   const createdFolders = new Set<string>();
 
   async function list(): Promise<WorkspaceSummary[]> {
-    const output = await cm.query(['workspace', 'list', `--format=${recordFormat(['wkname', 'path', 'wkid'])}`]);
+    const output = await cm.query(['workspace', 'list', `--format=${recordFormat(['wkname', 'path', 'wkid'])}`], { anyDirectory: true });
     const workspaces = parseRecords(output).map(([name = '', path = '', guid = '']) => ({ name, path, guid }));
     // The client registry can list the same workspace several times; show each folder once.
     return [...new Map(workspaces.map((workspace) => [workspace.path, workspace])).values()];
