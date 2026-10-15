@@ -205,8 +205,8 @@ by name, and never passes it to `cm`.
   `cm find`, `cm repository list`.
 - **Where the app takes the name instead**, each from an output `cm` already names it in, never by mapping ids to names
   itself (`isOrganizationIdServer`, `main/cm/organizationIds.ts`, only tells an id apart):
-  - The workspace's repository and server (`WorkspaceInfo`, `readWorkspaceStatus`) and the switcher's glance
-    (`readWorkspaceGlance`): from `cm status --header --machinereadable` (`machineReadableHeaderArgs`), a local read
+  - The workspace's repository and server (`WorkspaceInfo`, `readWorkspaceStatus`): from
+    `cm status --header --machinereadable` (`machineReadableHeaderArgs`), a local read
     run only when the `--xml` header printed an id (`serverByName`). The header is shared for a few seconds
     (`WorkspaceHeaders`). Reads that need only what is loaded take `readWorkspaceLoad`, which has no server to misuse.
   - A file's history (`withServerOf`): from the item's repository, as the `cm ls` the history runs anyway names it

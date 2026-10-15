@@ -35,10 +35,11 @@ export interface WorkspaceHead {
   selector: WorkspaceSelector | null;
 }
 
-/** Another workspace at a glance: what it's loaded from and how many pending changes it has. */
+/**
+ * Another workspace at a glance: what it's loaded from and how many pending changes it has. Its repository is the
+ * one its row already shows (`WorkspaceHead`).
+ */
 export interface WorkspaceGlance {
-  /** `name@server`. */
-  repository: string;
   selector: WorkspaceSelector;
   pendingCount: number;
 }

@@ -11,10 +11,8 @@ const status = (changes: string) => `<?xml version="1.0" encoding="utf-8"?>
 </StatusOutput>`;
 
 describe('parseWorkspaceGlance', () => {
-  it('reads the repository, the branch and how many files are pending', () => {
+  it('reads the branch and how many files are pending', () => {
     expect(parseWorkspaceGlance(status(change('CH', 'a.txt') + change('PR', 'new.txt')))).toEqual({
-      repositoryName: 'acme',
-      server: 'acme@cloud',
       selector: { kind: 'branch', name: '/main/task-12' },
       pendingCount: 2,
     });
