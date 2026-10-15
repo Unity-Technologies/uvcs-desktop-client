@@ -173,15 +173,22 @@ describe('CmShellPool', () => {
     expect(pool.shownDirectory()).toBe('/starting');
   });
 
-  it('names a directory shown for a while only for that long, unless it is shown for good meanwhile', () => {
+  it('names a directory shown for a while only for that long, then lets its sessions go, unless it is shown for good meanwhile', () => {
     vi.useFakeTimers();
     pool.show('/broken', { forMs: 1000 });
     pool.show('/wk', { forMs: 1000 });
     pool.show('/wk');
+    FakeSession.created.forEach((session) => session.answerFirstCommand());
     expect(pool.shownDirectory()).toBe('/broken');
 
     vi.advanceTimersByTime(1000);
     expect(pool.shownDirectory()).toBe('/wk');
+    expect(FakeSession.created.map((session) => [session.cwd, session.disposed])).toEqual([
+      ['/broken', true],
+      ['/broken', true],
+      ['/wk', false],
+      ['/wk', false],
+    ]);
     pool.show('/wk', { forMs: 1000 });
     vi.advanceTimersByTime(1000);
     expect(pool.shownDirectory()).toBe('/wk');
