@@ -55,7 +55,7 @@ export class FolderTreeWatch {
 
   /**
    * Watches the tree, once walked; false if some folder couldn't be watched (none at all, past the limit, out of
-   * inotify watches), or if it was closed meanwhile.
+   * inotify watches), or if it was closed meanwhile. While folders keep appearing, it waits for their walks too.
    */
   async start(): Promise<boolean> {
     // With the walks of folders that appeared meanwhile: what one of them can't watch, this answer tells.

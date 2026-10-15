@@ -50,11 +50,15 @@ export class WorkspaceWatcher {
     this.batcher = new ChangeBatcher((change) => this.report(change), QUIET_MS, MAX_WAIT_MS);
   }
 
-  /** Answers once watching: on Linux, once every folder has its watch (`FolderTreeWatch`). */
+  /**
+   * Answers once watching: on Linux, once every folder has its watch (`FolderTreeWatch`); while folders keep
+   * appearing, it waits for them too.
+   */
   async start(): Promise<WatchCoverage> {
     this.loadIgnoreRules();
     const coverage = RECURSIVE_WATCH_PLATFORMS.has(this.platform) ? this.watchRecursively() : await this.watchFolderByFolder();
-    // Only ever set: a watch that broke meanwhile stays told.
+    // Only ever set, as a guard: no watch can break before start answers today (`onBroken` comes only once a watch
+    // has started, and only microtasks run between that and this line), but a watch told broken must stay so.
     if (coverage === 'partial') this.partial = true;
     return coverage;
   }
