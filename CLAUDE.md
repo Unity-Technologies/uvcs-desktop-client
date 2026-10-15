@@ -175,6 +175,12 @@ built on them, and verify what's on screen with Playwright.
 The suite runs after every change, so it must take seconds, not minutes. A test never needs UVCS infrastructure: no
 `cm` installation, server, account, network or real workspace.
 
+- **Each test takes milliseconds.** Vitest fails a test after 5 s, and CI's runners are up to ten times slower than a
+  laptop, several times more again on a bad day (a test of 0.6 s locally once took 10 s on Windows x64): one over
+  about 100 ms locally is a timeout waiting to happen. A scale test shows how the work grows on thousands of items
+  (counted as they double: `readGrowthWhenDoubled`), not on hundreds of thousands; a limit a test reaches is passed in
+  small (`DiffReviewStore`'s); a file's one-time load goes in a `beforeAll` (`warmUpPierre`). The timeout is never
+  raised.
 - **Test each layer with the input it takes, not the layer below.** A view that shows 10 branches gets 10 branches
   built in the test; it never asks a server for them.
 - **`cm` output is synthetic**: to test a parser, write the output as `cm` prints it (`--xml`, `--format` records,
