@@ -1,4 +1,5 @@
 import type { BranchName } from './branchNames';
+import { ownCopy } from './ownCopy';
 
 type ReadAll = (workspacePath: string) => Promise<BranchName[]>;
 
@@ -78,12 +79,4 @@ export class BranchNamesCache {
     this.reading.set(workspacePath, read);
     return read;
   }
-}
-
-/**
- * The name as a string of its own. Parsed names are slices of the command's whole output, which V8 keeps alive for as
- * long as any slice lives: kept here, the 20 MB of a 20,000-branch list would stay in memory for the whole session.
- */
-function ownCopy(text: string): string {
-  return Buffer.from(text, 'utf8').toString('utf8');
 }
