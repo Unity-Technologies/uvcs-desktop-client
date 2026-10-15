@@ -1,4 +1,4 @@
-import { BackSide, BoxGeometry, DoubleSide, FrontSide, Mesh, MeshStandardMaterial, ShaderMaterial, type BufferGeometry, type Camera, type Scene, type WebGLRenderer } from 'three';
+import { BackSide, BoxGeometry, DoubleSide, FrontSide, Mesh, MeshBasicMaterial, MeshStandardMaterial, ShaderMaterial, type BufferGeometry, type Camera, type Scene, type WebGLRenderer } from 'three';
 import { describe, expect, it } from 'vitest';
 import { facesOf, MeshPicker } from './meshPicker';
 
@@ -10,6 +10,12 @@ describe('facesOf', () => {
   it("reads a mesh of several slots by the slot drawn, as a leaf card's double-sided slot beside a trunk's", () => {
     const slots = [new MeshStandardMaterial(), new MeshStandardMaterial({ side: DoubleSide })];
     expect([facesOf(slots, { materialIndex: 0 }), facesOf(slots, { materialIndex: 1 })]).toEqual([0, 2]);
+  });
+});
+
+describe('facesOf, wireframe', () => {
+  it('picks both sides of a part drawn as wireframe, whose lines show from both', () => {
+    expect(facesOf(new MeshBasicMaterial({ wireframe: true }), null)).toBe(2);
   });
 });
 
