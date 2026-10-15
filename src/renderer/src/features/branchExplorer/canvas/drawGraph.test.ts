@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { AVATAR_COLORS } from '../../../lib/avatarColors';
 import { largeHistory } from '../model/graphFixtures';
 import { layoutGraph } from '../model/layoutGraph';
@@ -94,12 +94,17 @@ const palette: GraphPalette = {
 const PIXEL_RATIO = 2;
 const ZOOM = 0.6;
 const size = { width: 1400, height: 900 };
-// About 12.8 million world px wide: its recent end lies past x = 1e7.
-const layout = layoutGraph(largeHistory(200_000, 60_000));
-const focus = layout.nodesByColumn[160_000]!;
-const lane = layout.lanesByBranch.get(focus.changeset.branch)!;
+/**
+ * About 12.8 million world px wide: its recent end lies past x = 1e7. The size is the claim (a canvas loses precision
+ * that far out), an exception to tests' few thousand items; laid out in the `beforeAll` that needs it, not as the file loads.
+ */
+function farHistory() {
+  const layout = layoutGraph(largeHistory(200_000, 60_000));
+  const focus = layout.nodesByColumn[160_000]!;
+  return { layout, focus, lane: layout.lanesByBranch.get(focus.changeset.branch)! };
+}
 
-function drawFar(search: GraphScene['search'], searchQuery = ''): ReturnType<typeof recordingContext> {
+function drawFar({ layout, focus, lane }: ReturnType<typeof farHistory>, search: GraphScene['search'], searchQuery = ''): ReturnType<typeof recordingContext> {
   const recording = recordingContext();
   const scene: GraphScene = {
     layout,
@@ -140,14 +145,20 @@ function device([a, b, c, d, e, f]: number[], x: number, y: number): { x: number
 }
 
 describe('drawGraph far into a huge history', () => {
-  const hits = searchGraph(layout, 'task');
-  const frames = {
-    plain: drawFar(null),
-    searching: drawFar(searchHighlight(layout, hits, { kind: 'branch', name: lane.branch.name }), 'task'),
-  };
+  let far: ReturnType<typeof farHistory>;
+  let frames: Record<'plain' | 'searching', ReturnType<typeof recordingContext>>;
+  beforeAll(() => {
+    far = farHistory();
+    const hits = searchGraph(far.layout, 'task');
+    frames = {
+      plain: drawFar(far, null),
+      searching: drawFar(far, searchHighlight(far.layout, hits, { kind: 'branch', name: far.lane.branch.name }), 'task'),
+    };
+  });
 
-  it.each(Object.entries(frames))('hands the canvas only small numbers (%s)', (_, { placed, transforms }) => {
-    expect(columnX(focus.column)).toBeGreaterThan(1e7);
+  it.each(['plain', 'searching'] as const)('hands the canvas only small numbers (%s)', (frame) => {
+    const { placed, transforms } = frames[frame];
+    expect(columnX(far.focus.column)).toBeGreaterThan(1e7);
     // Bands, links, avatars with and without a picture, labels, headers and their texts, the ruler.
     expect(new Set(placed.map(({ name }) => name))).toEqual(PLACING_DRAWN);
     const numbers = [...placed.flatMap(({ args }) => args), ...transforms.flat()].filter((value) => typeof value === 'number');
@@ -156,6 +167,7 @@ describe('drawGraph far into a huge history', () => {
 
   it('draws each changeset in view where its world position says', () => {
     const { placed } = frames.plain;
+    const { layout, focus } = far;
     const { panX, panY } = centerOn({ zoom: ZOOM, panX: 0, panY: 0 }, columnX(focus.column), rowY(focus.row), size);
     const centers = placed.filter(({ name }) => name === 'arc').map(({ args, transform }) => device(transform, args[0] as number, args[1] as number));
     const inView = layout.nodesByColumn.slice(focus.column - 5, focus.column + 6).filter((node) => {

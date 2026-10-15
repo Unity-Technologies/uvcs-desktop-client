@@ -21,6 +21,8 @@ const ORED_ID_LITERAL = /['"`][^'"`\n]*\bid\s*=\s*[^'"`\n]*\bor\b[^'"`\n]*['"`]/
 const OWNERS_CONDITION = /\bowner = |equalsCondition\('owner'/;
 
 function oredIdLookups(source: string): string[] {
+  // Most sources hold neither: matched whole first, so only the few that do are read line by line.
+  if (!ORED_ID_LITERAL.test(source) && !JOINED_WITH_OR.test(source)) return [];
   const lines = source.split('\n');
   return lines.filter((line, index) => {
     if (ORED_ID_LITERAL.test(line)) return true;

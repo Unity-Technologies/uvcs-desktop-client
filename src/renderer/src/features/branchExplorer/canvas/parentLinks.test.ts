@@ -42,8 +42,8 @@ describe('parentLinksInView', () => {
     expect(linkIds(layout, view(0, 7))).not.toContain('1->2');
   });
 
-  it('finds the lines on screen of a 100,000-changeset history', () => {
-    const layout = layoutGraph(largeHistory(100_000, 20_000));
+  it('finds the lines on screen of a 20,000-changeset history', () => {
+    const layout = layoutGraph(largeHistory(20_000, 4_000));
     const everyLink = layout.nodesByColumn.flatMap((child) => {
       const parent = layout.nodes.get(child.changeset.parent);
       return parent && parent.changeset.branch === child.changeset.branch ? [`${parent.changeset.id}->${child.changeset.id}`] : [];
@@ -65,12 +65,13 @@ describe('parentLinksInView', () => {
       // The first frame indexes the rows once per layout.
       parentLinksInView(layout, view(0, 30, 0, 80), 0);
       const before = reads();
-      for (let frame = 0; frame < 2_000; frame++) parentLinksInView(layout, view(frame, frame + 30, 0, 80), 0);
-      return (reads() - before) / 2_000;
+      for (let frame = 0; frame < 500; frame++) parentLinksInView(layout, view(frame, frame + 30, 0, 80), 0);
+      return (reads() - before) / 500;
     };
-    const perFrame = readsPerFrame(25_000);
+    // Reads are counted, so histories of 10,000 and 20,000 show it as well as longer ones, which took up to 2 s on CI.
+    const perFrame = readsPerFrame(10_000);
     expect(perFrame).toBeLessThan(40 * (31 + 81));
-    expect(readsPerFrame(50_000) / perFrame).toBeLessThan(1.3);
+    expect(readsPerFrame(20_000) / perFrame).toBeLessThan(1.3);
   });
 });
 

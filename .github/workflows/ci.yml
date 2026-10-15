@@ -67,6 +67,17 @@ jobs:
         with:
           working-directory: ${{ env.BUILD_DIR || github.workspace }}
           reuse-node-modules: 'true'
+      # The macOS runner's disk now and then holds every write for seconds, once for over a minute, while reads go on:
+      # tests that were writing a temp file then timed out (three runs of forty in October 2026), the rest passed. The
+      # temp folder (the tests' own, `vitest.tempDirectory.ts`, and the smoke test's) moves to a 512 MB disk in memory,
+      # apart from the runner's: the tests write about 5 MB there, the smoke test its app's data and screenshots. APFS,
+      # as users' Macs have: names stay as written, NFC or NFD, where HFS+ would store them decomposed.
+      - name: Temp folder in memory
+        if: runner.os == 'macOS'
+        run: |
+          device=$(hdiutil attach -nomount ram://1048576 | tr -d '[:space:]')
+          diskutil erasevolume APFS UVCSTemp "$device"
+          echo "TMPDIR=/Volumes/UVCSTemp" >> "$GITHUB_ENV"
       # Once: tsc answers the same on every OS, and Linux's case-sensitive disk makes it the strictest about import paths.
       - if: runner.os == 'Linux'
         run: npm run typecheck

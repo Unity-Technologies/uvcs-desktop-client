@@ -1,7 +1,10 @@
 import { FileDiff, type DiffHunksRenderer } from '@pierre/diffs';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { lineDiff } from './lineDiff';
 import { isReadyToEdit } from './pierreEditorReady';
+import { warmUpPierre } from './pierreSessionFixture';
+
+beforeAll(warmUpPierre);
 
 const diffOf = (modified: string) => lineDiff('const a = 1;\nconst b = 2;\n', modified, 'recognizeAll', 'file.ts').meta;
 

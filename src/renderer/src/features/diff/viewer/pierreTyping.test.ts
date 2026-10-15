@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { diskText, shownText } from '../../../lib/lineBreaks';
 import { COMPARISON_METHODS } from './comparisonMethod';
 import { hasLineChanges, lineDiff } from './lineDiff';
 import { DIFF_TEST_TEXTS } from './diffTestTexts';
-import { changesOf, fileChangesOf, typedIntoPierre } from './pierreSessionFixture';
+import { changesOf, fileChangesOf, typedIntoPierre, warmUpPierre } from './pierreSessionFixture';
 
 /**
  * Typing into a diff, under every comparison method and every kind of text the viewer takes: after each keystroke,
@@ -14,6 +14,8 @@ import { changesOf, fileChangesOf, typedIntoPierre } from './pierreSessionFixtur
 /** The editor's lines as it shows them (lone CRs as LFs), each with its line break. */
 const linesOf = (text: string): string[] => shownText(text).match(/[^\n]*\n|[^\n]+$/g) ?? [];
 const withoutBreak = (line: string): string => line.replace(/\r?\n$/, '');
+
+beforeAll(warmUpPierre);
 
 describe('typing into a diff', () => {
   for (const [name, [original, modified]] of Object.entries(DIFF_TEST_TEXTS)) {

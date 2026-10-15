@@ -36,12 +36,14 @@ describe('sortRows', () => {
     expect(sorted.rows.map((row) => row.name)).toEqual(['alpha', 'Beta', 'beta', 'task-2', 'task-10']);
   });
 
-  it('re-sorts 100,000 filtered rows without comparing their text', () => {
-    const many = Array.from({ length: 100_000 }, (_, index) => ({ name: `/main/task-${(index * 7919) % 100_000}` }));
+  // Not a single comparison, whatever the size: a few thousand rows show it. The mock records every comparison of the
+  // first sort, which made 100,000 rows take seconds on CI's runners.
+  it('re-sorts thousands of filtered rows without comparing their text', () => {
+    const many = Array.from({ length: 5_000 }, (_, index) => ({ name: `/main/task-${(index * 7919) % 5_000}` }));
     const { ranks } = sortRows(many, byName, false);
     vi.mocked(compareSortValues).mockClear();
     const sorted = sortRows(many.filter((_, index) => index % 2 === 0), byName, true, ranks);
     expect(compareSortValues).not.toHaveBeenCalled();
-    expect(sorted.rows[0]!.name).toBe('/main/task-99998');
+    expect(sorted.rows[0]!.name).toBe('/main/task-4998');
   });
 });

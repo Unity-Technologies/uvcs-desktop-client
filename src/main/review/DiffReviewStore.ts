@@ -5,7 +5,7 @@ import type { DiffReviewMark } from '@shared/domain/review';
 import { PersistedByKey } from './PersistedByKey';
 
 /** Diffs remembered per repository; the least recently used go first. */
-export const MAX_DIFFS_PER_REPOSITORY = 200;
+const MAX_DIFFS_PER_REPOSITORY = 200;
 
 interface StoredDiff {
   usedAt: number;
@@ -30,6 +30,8 @@ export class DiffReviewStore {
   constructor(
     private readonly root: string,
     private readonly now: () => number = Date.now,
+    /** How many diffs each repository remembers; tests pass a few, as remembering each is a write of its file. */
+    private readonly maxDiffsPerRepository = MAX_DIFFS_PER_REPOSITORY,
   ) {}
 
   async marks(repository: string, diff: string): Promise<DiffReviewMark[]> {
@@ -51,7 +53,7 @@ export class DiffReviewStore {
     const marks = change(repositoryMarks[diff]?.marks ?? {});
     if (Object.keys(marks).length === 0) delete repositoryMarks[diff];
     else repositoryMarks[diff] = { usedAt: this.now(), marks };
-    forgetLeastRecentlyUsed(repositoryMarks);
+    forgetLeastRecentlyUsed(repositoryMarks, this.maxDiffsPerRepository);
     await this.save(repository, repositoryMarks);
   }
 
@@ -68,7 +70,7 @@ export class DiffReviewStore {
   }
 }
 
-function forgetLeastRecentlyUsed(marks: RepositoryMarks): void {
+function forgetLeastRecentlyUsed(marks: RepositoryMarks, kept: number): void {
   const byUse = Object.entries(marks).sort(([, a], [, b]) => b.usedAt - a.usedAt);
-  for (const [diff] of byUse.slice(MAX_DIFFS_PER_REPOSITORY)) delete marks[diff];
+  for (const [diff] of byUse.slice(kept)) delete marks[diff];
 }

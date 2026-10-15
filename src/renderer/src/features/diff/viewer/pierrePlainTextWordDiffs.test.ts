@@ -24,7 +24,7 @@ async function plainTextMarks(diff: FileDiffMetadata, options: { tokenizeMaxLeng
 
 describe('installPierrePlainTextWordDiffs', () => {
   it('marks the words that changed in a plain text diff of more than 1,000 lines', async () => {
-    expect(await plainTextMarks(diffOf(10_000, (index) => index === 5_000))).toEqual({ deletions: ['beta'], additions: ['gamma'] });
+    expect(await plainTextMarks(diffOf(1_500, (index) => index === 750))).toEqual({ deletions: ['beta'], additions: ['gamma'] });
   });
 
   it('marks them in a long text file, which is plain text whatever its size', async () => {

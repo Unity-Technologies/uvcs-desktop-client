@@ -80,9 +80,10 @@ describe('layoutPathTree', () => {
     expect(rows[0]!.key).toBe('folder:changelist:UI:src');
   });
 
-  it('lays out 100,000 items, every item once', () => {
-    const paths = Array.from({ length: 100_000 }, (_, index) => `src/m${index % 20}/p${index % 10}/s${index % 5}/f${index}.cs`);
-    expect(tree(paths).filter((row) => row.type === 'file')).toHaveLength(100_000);
+  // How the work grows is the test below; 100,000 items on top of it took up to 2 s on CI's runners.
+  it('lays out 20,000 items, every item once', () => {
+    const paths = Array.from({ length: 20_000 }, (_, index) => `src/m${index % 20}/p${index % 10}/s${index % 5}/f${index}.cs`);
+    expect(tree(paths).filter((row) => row.type === 'file')).toHaveLength(20_000);
   });
 
   it('lays out in n·log n work: twice the items, about twice the reads', () => {

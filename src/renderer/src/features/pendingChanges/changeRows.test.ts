@@ -271,9 +271,11 @@ describe('buildChangeRows at scale', () => {
     ['tree', 'changelist'],
   ];
 
-  it.each(layouts)('lays out a %s grouped by %s of 100,000 changes, every change once', (layout, grouping) => {
-    const rows = buildChangeRows({ ...base, changes: many(100_000), layout, grouping });
-    expect(rows.filter((row) => row.type === 'file')).toHaveLength(100_000);
+  // How the work grows is the test below; this one lays out a list as long as a big project's, every change in it.
+  // 100,000 changes took up to 4 s on CI's runners.
+  it.each(layouts)('lays out a %s grouped by %s of 20,000 changes, every change once', (layout, grouping) => {
+    const rows = buildChangeRows({ ...base, changes: many(20_000), layout, grouping });
+    expect(rows.filter((row) => row.type === 'file')).toHaveLength(20_000);
   });
 
   it.each(layouts)('lays out a %s grouped by %s in n·log n work: twice the changes, about twice the reads', (layout, grouping) => {

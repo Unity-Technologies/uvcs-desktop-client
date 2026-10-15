@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fitsCommandLine, MAX_COMMAND_LINE, quotedLength } from './commandLineLimit';
+import { commandLineLength, fitsCommandLine, MAX_COMMAND_LINE, quotedLength } from './commandLineLimit';
 
 describe('fitsCommandLine', () => {
   it('measures the whole command line', () => {
@@ -12,6 +12,15 @@ describe('fitsCommandLine', () => {
     const unquoted = paths.reduce((length, path) => length + path.length + 1, 0);
     expect(unquoted).toBeLessThan(MAX_COMMAND_LINE);
     expect(fitsCommandLine(paths)).toBe(false);
+  });
+});
+
+describe('commandLineLength', () => {
+  it('adds up over the parts of a command line, quoted arguments included', () => {
+    const first = ['cat', 'C:\\My Project\\', 'say "hi"'];
+    const second = ['revid:7@game@local;C:\\Temp\\Jo Smith\\t7', '', 'a\\"b'];
+    expect(commandLineLength([...first, ...second])).toBe(commandLineLength(first) + commandLineLength(second));
+    expect(commandLineLength(first)).toBe(4 + '"C:\\My Project\\\\" '.length + '"say \\"hi\\"" '.length);
   });
 });
 

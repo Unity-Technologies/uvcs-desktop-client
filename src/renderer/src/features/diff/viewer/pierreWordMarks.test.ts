@@ -1,10 +1,12 @@
 import { DiffHunksRenderer } from '@pierre/diffs';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { MAX_WORD_DIFFED_LINE_PAIRS } from './changedLinePairs';
 import { lineDiff } from './lineDiff';
-import { typedIntoPierre } from './pierreSessionFixture';
+import { typedIntoPierre, warmUpPierre } from './pierreSessionFixture';
 import { refreshWordMarks } from './pierreWordMarks';
 import { renderedWordMarks } from './renderedWordMarks';
+
+beforeAll(warmUpPierre);
 
 const ORIGINAL = 'namespace Codice;\nusing Codice.CM.Common;\nclass Main {}\n';
 const MODIFIED = 'namespace Codice.Client;\nusing Codice.CM.Common;\nclass Main {}\n';
@@ -42,15 +44,16 @@ describe('refreshWordMarks', () => {
     expect(session.rowsInStep()).toBe(true);
   });
 
-  it('marks a big file with a few lines typed into without highlighting it again', async () => {
-    const original = code(1_200);
-    expect(original.length).toBeGreaterThan(50_000);
+  // Highlighting is what grows with the file, so counting it shows the cost doesn't: a few hundred lines are enough.
+  // Highlighting a 1,200-line file twice took up to 10 s on CI's runners.
+  it('marks a long file with a few lines typed into without highlighting it again', async () => {
+    const original = code(300);
     const lines = original.split('\n');
-    lines[600] = "const value600 = compute(600, 'renamed 600');";
+    lines[200] = "const value200 = compute(200, 'renamed 200');";
     const modified = lines.join('\n');
     const session = await typedIntoPierre(original, modified, 'recognizeAll');
-    session.type(300, "const total300 = compute(300, 'name 300');");
-    lines[300] = "const total300 = compute(300, 'name 300');";
+    session.type(100, "const total100 = compute(100, 'name 100');");
+    lines[100] = "const total100 = compute(100, 'name 100');";
     const highlights = countHighlights();
 
     expect(refreshWordMarks(session.component)).toBe(true);
@@ -76,7 +79,8 @@ describe('refreshWordMarks', () => {
   it('leaves the marks to the save once more lines changed than are worth diffing', async () => {
     const original = code(MAX_WORD_DIFFED_LINE_PAIRS + 1);
     const modified = code(MAX_WORD_DIFFED_LINE_PAIRS + 1, (index) => `let value${index} = compute(${index}, 'name ${index}');`);
-    const session = await typedIntoPierre(original, modified, 'recognizeAll');
+    // As plain text: the count of changed lines decides, not the language, and over 1,000 lines highlighted took seconds.
+    const session = await typedIntoPierre(original, modified, 'recognizeAll', { fileName: 'file.txt' });
     session.type(0, 'var value0;');
     const before = session.wordMarks();
     expect(refreshWordMarks(session.component)).toBe(false);

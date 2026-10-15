@@ -32,7 +32,7 @@ describe('narrows', () => {
 
 describe('searchGraph typing on', () => {
   it('finds from the last hits exactly what a full search finds, numbers included', () => {
-    const layout = layoutGraph(largeHistory(5_000, 1_000));
+    const layout = layoutGraph(largeHistory(2_500, 500));
     for (const typed of ['change 42 dev2', 'cs:42 task', 'Task1 main', 'v2000 x']) {
       let previous: GraphSearchResult | null = null;
       for (let length = 1; length <= typed.length; length++) {

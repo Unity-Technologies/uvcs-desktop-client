@@ -101,11 +101,13 @@ describe('layoutGraph rows', () => {
 
 describe('layoutKeeping', () => {
   it('lays out exactly what keeping one more changeset lays out, reusing the layout when it already shows on its own', () => {
-    const data = largeHistory(1_500, 300);
+    // Every 3rd changeset of a history of 600: each check lays the whole history out, so a longer one made this test
+    // take up to 5 s on CI's runners without checking more kinds of changeset.
+    const data = largeHistory(600, 120);
     const keep = new Set([40, 41]);
     const base = { keep, pending: null, layout: layoutGraph(data, { keep }) };
     let reused = 0;
-    for (let id = 0; id < 1_500; id += 7) {
+    for (let id = 0; id < 600; id += 3) {
       const layout = layoutKeeping(data, base, id);
       if (layout === base.layout) reused++;
       expect(layout.nodesByColumn).toEqual(layoutGraph(data, { keep: new Set([...keep, id]) }).nodesByColumn);
@@ -165,6 +167,7 @@ describe('layoutGraph with pending changes', () => {
 });
 
 describe('layoutGraph at scale', () => {
+  // The size is the claim: past what a call can take as arguments (`push(...items)`, `Math.max(...items)`).
   it('lays out a branch with more changesets than a function takes arguments', () => {
     const changesets = Array.from({ length: 200_000 }, (_, id) => changeset(id, '/main', id - 1));
     const lane = layoutGraph({ branches: [branch('/main', '', 199_999)], changesets, mergeLinks: [], labels: [] }).lanesByBranch.get('/main');
@@ -174,13 +177,13 @@ describe('layoutGraph at scale', () => {
   it('reads the history a bounded number of times per changeset and branch: twice the history, about twice the work', () => {
     const histories = new Map<number, BranchExplorerData>();
     const history = (size: number): BranchExplorerData => histories.get(size) ?? histories.set(size, largeHistory(size, size / 5)).get(size)!;
-    expect(readGrowthWhenDoubled(20_000, (size) => history(size).changesets, (changesets) => layoutGraph({ ...history(changesets.length), changesets }))).toBeLessThan(2.5);
-    expect(readGrowthWhenDoubled(20_000, (size) => history(size).branches, (branches) => layoutGraph({ ...history(branches.length * 5), branches }))).toBeLessThan(2.5);
+    expect(readGrowthWhenDoubled(5_000, (size) => history(size).changesets, (changesets) => layoutGraph({ ...history(changesets.length), changesets }))).toBeLessThan(2.5);
+    expect(readGrowthWhenDoubled(5_000, (size) => history(size).branches, (branches) => layoutGraph({ ...history(branches.length * 5), branches }))).toBeLessThan(2.5);
   });
 
-  it('places 20,000 branches of 100,000 changesets, never closer than the gap', () => {
-    const layout = layoutGraph(largeHistory(100_000, 20_000));
-    expect(layout.lanes).toHaveLength(20_000);
+  it('places 4,000 branches of 20,000 changesets, never closer than the gap', () => {
+    const layout = layoutGraph(largeHistory(20_000, 4_000));
+    expect(layout.lanes).toHaveLength(4_000);
     for (const lanes of layout.lanesByRow.values()) {
       const sorted = [...lanes].sort((a, b) => a.startColumn - b.startColumn);
       sorted.slice(1).forEach((lane, index) => expect(lane.startColumn - sorted[index]!.endColumn).toBeGreaterThan(3));

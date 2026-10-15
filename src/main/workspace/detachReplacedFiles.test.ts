@@ -1,9 +1,10 @@
-import { mkdir, mkdtemp, readFile, readlink, rm, stat, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readlink, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, it } from 'vitest';
+import { describe, it, vi } from 'vitest';
 import { change, pendingStatus } from '../cm/testing/cmOutput';
 import { fakeCmClient } from '../cm/testing/fakeCmClient';
+import { waitForNextSecond } from '../files/nextSecond';
 import { detachReplacedFiles } from './detachReplacedFiles';
 
 const replaced = (path: string, revisionType: 'enTextFile' | 'enSymLink', type = 'RP'): string => pendingStatus(change(type, path, { revisionType }));
@@ -22,24 +23,30 @@ function fakeCm(status: string, undo: () => Promise<void>) {
   return { cm: fake.cm, argsAsked: () => fake.commands.map((command) => command.args) };
 }
 
-// Concurrent: each test has its own folder and fake, and each waits out a real second (`waitForNextSecond`).
-describe.concurrent('detachReplacedFiles', () => {
+// Writing in a later second than `cm` is `waitForNextSecond`'s own guarantee (nextSecond.test.ts): here it would cost
+// a real second a test. What matters here is when it waits: after the undo, before writing the files back.
+vi.mock('../files/nextSecond', () => ({ waitForNextSecond: vi.fn(async () => {}) }));
+
+describe('detachReplacedFiles', () => {
   it('writes the shelved text back in a later second than the undo wrote the loaded one, so cm sees the change', async ({ expect }) => {
     const workspacePath = await mkdtemp(join(tmpdir(), 'uvcs-detach-'));
     const file = join(workspacePath, 'a.txt');
     await writeFile(file, 'teh\n');
-    let undoneAtSecond = -1;
+    const steps: string[] = [];
     const { cm, argsAsked } = fakeCm(replaced('a.txt', 'enTextFile'), async () => {
       // Like cm: the loaded revision, as many bytes as the shelved text.
       await writeFile(file, 'the\n');
-      undoneAtSecond = Math.floor((await stat(file)).mtimeMs / 1000);
+      steps.push('undo');
+    });
+    vi.mocked(waitForNextSecond).mockImplementationOnce(async () => {
+      steps.push(`wait, the file reading ${JSON.stringify(await readFile(file, 'utf8'))}`);
     });
 
     await detachReplacedFiles(cm, workspacePath);
 
+    expect(steps).toEqual(['undo', 'wait, the file reading "the\\n"']);
     expect(argsAsked().map(([command]) => command)).toEqual(['status', 'undo', 'checkout']);
     expect(await readFile(file, 'utf8')).toBe('teh\n');
-    expect(Math.floor((await stat(file)).mtimeMs / 1000)).toBeGreaterThan(undoneAtSecond);
   });
 
   it('adds back a file the shelve copied over a deletion, so nothing reads its revision once the shelve is deleted', async ({ expect }) => {

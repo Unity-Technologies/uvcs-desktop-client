@@ -1,11 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { blockLines, listChangeBlocks } from './changeBlocks';
 import { COMPARISON_METHODS, type ComparisonMethod } from './comparisonMethod';
 import { discardLines, withOwnLines } from './discardLines';
 import { DIFF_TEST_TEXTS } from './diffTestTexts';
 import { differsUnder, hasLineChanges, lineDiff } from './lineDiff';
-import { changesOf, typedIntoPierre } from './pierreSessionFixture';
+import { changesOf, typedIntoPierre, warmUpPierre } from './pierreSessionFixture';
 import { shownDiff } from './shownDiff';
+
+beforeAll(warmUpPierre);
 
 const stats = (original: string, modified: string, method: ComparisonMethod = 'recognizeAll') => {
   const { added, removed } = lineDiff(original, modified, method);
@@ -123,7 +125,7 @@ describe('one diff, typed or saved, counted or discarded', () => {
     for (const { name, saved, typed, shows } of EDITS) {
       it(`${method}: ${name}`, async () => {
         // Typing: Pierre re-diffs the text in its edit session, keystroke by keystroke or as a whole.
-        const session = await typedIntoPierre(original, modified, method, saved);
+        const session = await typedIntoPierre(original, modified, method, { current: saved });
         if (typed === undefined) session.replace(saved);
         else for (let length = 1; length <= typed.length; length++) session.type(editedLine, typed.slice(0, length));
         const typing = changesOf(session.diff);
