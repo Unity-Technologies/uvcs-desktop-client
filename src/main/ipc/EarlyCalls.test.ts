@@ -51,14 +51,19 @@ describe('EarlyCalls', () => {
     await expect(early.take('system.cmVersion', [])).rejects.toThrow('cm not found');
   });
 
-  it('drops an answer nobody took in time, so a later call reads afresh', () => {
-    const { early, drops } = earlyCalls({ 'workspaces.list': async () => [] });
+  it('drops an answer nobody took in time once the window that would take it opened, so a later call reads afresh', () => {
+    const { early, drops } = earlyCalls({ 'workspaces.list': async () => [], 'system.cmVersion': async () => '11.0' });
 
     early.start('workspaces.list', []);
-    expect(drops.map(({ ms }) => ms)).toEqual([EARLY_ANSWER_MS]);
-    drops[0]!.drop();
+    // Started as the app loads: the time to take it runs from when the window opens.
+    expect(drops).toEqual([]);
+    early.expireUntaken();
+    early.start('system.cmVersion', []);
+    expect(drops.map(({ ms }) => ms)).toEqual([EARLY_ANSWER_MS, EARLY_ANSWER_MS]);
+    drops.forEach(({ drop }) => drop());
 
     expect(early.take('workspaces.list', [])).toBeUndefined();
+    expect(early.take('system.cmVersion', [])).toBeUndefined();
   });
 
   it("refuses a method the API doesn't have", () => {
