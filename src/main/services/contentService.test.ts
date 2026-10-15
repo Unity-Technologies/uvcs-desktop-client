@@ -137,6 +137,43 @@ describe('reading the bytes of a model companion', () => {
     expect(written).toHaveLength(2);
   });
 
+  describe('beside a revision of the model (a History, named at the path it was opened at)', () => {
+    const binBeside = (revisionId: number) => ({ kind: 'repositoryPath' as const, path: '/Assets/Barrel.bin', at: 'cs:12', beside: { path: '/Assets/Barrel.gltf', revisionId } });
+
+    it('reads it where the listing has the model at its path as that revision, from the same listing', async () => {
+      const workspace = await newWorkspace();
+      const { written, answer } = catWriting('BIN');
+      const { service, commands } = content({ cat: answer, ls: ASSETS_LISTING });
+
+      expect(new TextDecoder().decode((await service.readBytes(workspace, binBeside(43)))!)).toBe('BIN');
+      expect(commands.map(({ via, args }) => [via, args[0], args[1]])).toEqual([
+        ['query', 'ls', '/Assets'],
+        ['query', 'cat', 'revid:41@eco@local'],
+      ]);
+      expect(written).toHaveLength(1);
+    });
+
+    it('reads it as nothing where another item, or none, was at the model\'s path then (moved or renamed since), with no cm cat', async () => {
+      const workspace = await newWorkspace();
+      const { service, lines } = content({ ls: ASSETS_LISTING });
+
+      expect(await service.readBytes(workspace, binBeside(7))).toBeNull();
+      expect(await service.readBytes(workspace, { ...binBeside(43), beside: { path: '/Assets/Old/Barrel.gltf', revisionId: 43 } })).toBeNull();
+      expect(lines().map((line) => line.split(' --format')[0])).toEqual(['ls /Assets --tree=cs:12', 'ls /Assets/Old --tree=cs:12']);
+    });
+
+    it("reads a .meta's model by its revision in the listing, and fails where the .meta wasn't there then", async () => {
+      const workspace = await newWorkspace();
+      const { answer } = catWriting('glTF');
+      const { service, lines } = content({ cat: answer, ls: ASSETS_LISTING });
+      const model = (revisionId: number) => ({ kind: 'repositoryPath' as const, path: '/Assets/Barrel.gltf', at: 'cs:12', beside: { path: '/Assets/Barrel.gltf.meta', revisionId } });
+
+      expect((await service.read(workspace, model(42))).text).toBe('glTF');
+      await expect(service.read(workspace, model(5))).rejects.toThrow("Barrel.gltf wasn't beside");
+      expect(lines().map((line) => line.split(' --f')[0])).toEqual(['ls /Assets --tree=cs:12', 'cat revid:43@eco@local']);
+    });
+  });
+
   it("reads a companion that isn't there as nothing, from the disk or from the tree's listing, without a failing command", async () => {
     const workspace = await newWorkspace();
     const { service, lines } = content({ ls: ASSETS_LISTING });

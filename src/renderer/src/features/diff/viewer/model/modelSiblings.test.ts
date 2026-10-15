@@ -76,7 +76,7 @@ describe('diffSibling', () => {
 });
 
 describe('historyPointOf', () => {
-  const points = { changesets: { original: 30, modified: 31 }, inWorkspaceRepository: true, lastPathChange: null };
+  const points = { changesets: { original: 30, modified: 31 }, inWorkspaceRepository: true };
 
   it("is each side's own changeset, in the workspace's repository", () => {
     expect(historyPointOf(points, 'original')).toBe('cs:30');
@@ -89,32 +89,35 @@ describe('historyPointOf', () => {
     expect(historyPointOf({ ...points, changesets: { original: null, modified: 31 } }, 'original')).toBeNull();
     expect(historyPointOf({ ...points, changesets: { original: -1, modified: 31 } }, 'original')).toBeNull();
   });
-
-  it('is none before the item was last moved, renamed or removed: the file at its path then was another', () => {
-    const moved = { ...points, lastPathChange: 31 };
-    expect(historyPointOf(moved, 'original')).toBeNull();
-    // A changeset that moved the item and changed it made a revision at its new path.
-    expect(historyPointOf(moved, 'modified')).toBe('cs:31');
-  });
 });
 
 describe('historySibling', () => {
   const at = (revisionId: number, fileName = 'Assets/Box With Spaces.gltf') => ({ kind: 'revision' as const, revision: { revisionId, repository: 'game@local' }, fileName });
-  const finder = historySibling({ changesets: { original: 30, modified: 31 }, inWorkspaceRepository: true, lastPathChange: null });
+  const finder = historySibling({ changesets: { original: 30, modified: 31 }, inWorkspaceRepository: true });
 
-  it("finds the file beside each revision as it was in that revision's changeset", () => {
-    expect(finder('modified', at(9), 'Assets/Box With Spaces.gltf', 'Box With Spaces.bin')).toEqual({ kind: 'repositoryPath', path: '/Assets/Box With Spaces.bin', at: 'cs:31' });
-    expect(finder('original', at(8), 'Assets/Box With Spaces.gltf', 'buffers/Box.bin')).toEqual({ kind: 'repositoryPath', path: '/Assets/buffers/Box.bin', at: 'cs:30' });
+  it("finds the file beside each revision in that revision's changeset, only where the revision itself is at its path then", () => {
+    // The history's path is the one it was opened at: moved since or before, another item (or none) was there, and
+    // main reads nothing (`beside`, checked against the folder's listing that finds the sibling).
+    expect(finder('modified', at(9), 'Assets/Box With Spaces.gltf', 'Box With Spaces.bin')).toEqual({
+      kind: 'repositoryPath',
+      path: '/Assets/Box With Spaces.bin',
+      at: 'cs:31',
+      beside: { path: '/Assets/Box With Spaces.gltf', revisionId: 9 },
+    });
+    expect(finder('original', at(8), 'Assets/Box With Spaces.gltf', 'buffers/Box.bin')).toEqual({
+      kind: 'repositoryPath',
+      path: '/Assets/buffers/Box.bin',
+      at: 'cs:30',
+      beside: { path: '/Assets/Box With Spaces.gltf', revisionId: 8 },
+    });
   });
 
-  it("names it in the repository's own form, a Windows path too", () => {
-    expect(finder('modified', at(9, 'Assets\\Box.gltf'), 'Assets\\Box.gltf', 'Box.bin')).toEqual({ kind: 'repositoryPath', path: '/Assets/Box.bin', at: 'cs:31' });
+  it("names both in the repository's own form, a Windows path too", () => {
+    expect(finder('modified', at(9, 'Assets\\Box.gltf'), 'Assets\\Box.gltf', 'Box.bin')).toEqual({ kind: 'repositoryPath', path: '/Assets/Box.bin', at: 'cs:31', beside: { path: '/Assets/Box.gltf', revisionId: 9 } });
   });
 
   it('finds none where a side has no point (`historyPointOf`), or for a name outside the folder', () => {
-    const moved = historySibling({ changesets: { original: 30, modified: 31 }, inWorkspaceRepository: true, lastPathChange: 31 });
-    expect(moved('original', at(8), 'Assets/Hero.fbx.meta', 'Hero.fbx')).toBeNull();
-    expect(historySibling({ changesets: { original: 30, modified: 31 }, inWorkspaceRepository: false, lastPathChange: null })('modified', at(9), 'Assets/Box.gltf', 'Box.bin')).toBeNull();
+    expect(historySibling({ changesets: { original: 30, modified: 31 }, inWorkspaceRepository: false })('modified', at(9), 'Assets/Box.gltf', 'Box.bin')).toBeNull();
     expect(finder('modified', at(9), 'Assets/Box.gltf', '../Box.bin')).toBeNull();
   });
 

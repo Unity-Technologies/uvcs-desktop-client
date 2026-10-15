@@ -29,10 +29,10 @@ describe('modelBesideMeta', () => {
 
   it("finds the model beside each side of a .meta's history, as it was in each revision's changeset", () => {
     const revision = (revisionId: number) => ({ kind: 'revision' as const, revision: { revisionId, repository: 'game@local' }, fileName: 'Assets/Crate.fbx.meta' });
-    const findSibling = historySibling({ changesets: { original: 21, modified: 22 }, inWorkspaceRepository: true, lastPathChange: null });
+    const findSibling = historySibling({ changesets: { original: 21, modified: 22 }, inWorkspaceRepository: true });
     expect(modelBesideMeta(findSibling, { original: revision(40), modified: revision(41) })).toEqual({
-      original: { kind: 'repositoryPath', path: '/Assets/Crate.fbx', at: 'cs:21' },
-      modified: { kind: 'repositoryPath', path: '/Assets/Crate.fbx', at: 'cs:22' },
+      original: { kind: 'repositoryPath', path: '/Assets/Crate.fbx', at: 'cs:21', beside: { path: '/Assets/Crate.fbx.meta', revisionId: 40 } },
+      modified: { kind: 'repositoryPath', path: '/Assets/Crate.fbx', at: 'cs:22', beside: { path: '/Assets/Crate.fbx.meta', revisionId: 41 } },
     });
   });
 
