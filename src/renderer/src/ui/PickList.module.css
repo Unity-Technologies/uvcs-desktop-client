@@ -1,0 +1,40 @@
+/* The field, the note and the rows take their places in the dialog's body, spaced as its other parts. */
+.pickList {
+  display: contents;
+}
+
+.list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+/* Only the rows in view are rendered, each placed where it belongs. */
+.rows {
+  position: relative;
+}
+
+.row {
+  position: absolute;
+  right: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: default;
+}
+
+.row[data-active='true'] {
+  background: var(--accent-soft);
+}
+
+.row[aria-disabled='true'] {
+  color: var(--text-tertiary);
+}
+
+.empty {
+  padding: var(--space-4);
+  color: var(--text-tertiary);
+  text-align: center;
+}
