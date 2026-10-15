@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import type { RevisionRef } from '@shared/domain/revision';
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
-import { fitsCommandLine } from '../cm/commandLineLimit';
+import { commandLineLength, MAX_COMMAND_LINE } from '../cm/commandLineLimit';
 import { MAX_MODEL_BYTES } from '../files/fileContent';
 import { workspaceFileOf } from '../files/workspacePaths';
 
@@ -310,21 +310,28 @@ export function batchesOf<T extends { workspacePath: string; file: Pick<Revision
   const byWorkspace = new Map<string, T[]>();
   for (const one of waiting) {
     const key = JSON.stringify([one.workspacePath, one.file.revision.repository]);
-    byWorkspace.set(key, [...(byWorkspace.get(key) ?? []), one]);
+    const reads = byWorkspace.get(key);
+    if (reads) reads.push(one);
+    else byWorkspace.set(key, [one]);
   }
+  // The command line grows by each revision's argument: measured one at a time, not the whole batch again for each.
+  const catLength = commandLineLength(['cat']);
   for (const reads of byWorkspace.values()) {
     let batch: T[] = [];
     let bytes = 0;
+    let length = catLength;
     for (const one of reads) {
       const size = one.file.size >= 0 ? one.file.size : UNKNOWN_SIZE;
-      const args = catArgs([...batch, one], folder);
-      if (batch.length > 0 && (folder.includes(';') || bytes + size > MAX_BATCH_BYTES || !fitsCommandLine(args))) {
+      const argLength = commandLineLength(catArgs([one], folder).slice(1)); // Its own arguments, past `cat`.
+      if (batch.length > 0 && (folder.includes(';') || bytes + size > MAX_BATCH_BYTES || length + argLength > MAX_COMMAND_LINE)) {
         batches.push(batch);
         batch = [];
         bytes = 0;
+        length = catLength;
       }
       batch.push(one);
       bytes += size;
+      length += argLength;
     }
     if (batch.length > 0) batches.push(batch);
   }

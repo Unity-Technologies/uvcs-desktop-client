@@ -6,9 +6,14 @@ export const MAX_COMMAND_LINE = 30_000;
 
 /** Measured as Windows gets it, with the quotes and escapes that make it the longest of every OS's. */
 export function fitsCommandLine(args: readonly string[]): boolean {
+  return commandLineLength(args) <= MAX_COMMAND_LINE;
+}
+
+/** The characters `args` take on a Windows command line, each with the space after it: adds up over parts of one. */
+export function commandLineLength(args: readonly string[]): number {
   let length = 0;
   for (const arg of args) length += quotedLength(arg) + 1;
-  return length <= MAX_COMMAND_LINE;
+  return length;
 }
 
 /**
