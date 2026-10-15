@@ -1,4 +1,5 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSettledValue } from '../../../../lib/useSettled';
 import { steppedRegion } from '../image/changedRegions';
 import { fullHeatAt } from './heatColors';
 import type { ModelRenderer } from './modelRenderer';
@@ -8,6 +9,13 @@ import { boxedRegion } from './regionView';
 import { placedMeshesOf } from './surfaceComparison';
 import { changedRegions, type ChangedRegion } from './surfaceRegions';
 import { useSurfaceComparison } from './useSurfaceComparison';
+
+/**
+ * How long the tolerance stays put before its regions and figures are found again: a drag of the slider, or an arrow
+ * key held on it, finds them once, at the end, never for each step it passes (a step costs tens of milliseconds over
+ * millions of vertices). A change after a pause finds them at once (`useSettledValue`).
+ */
+const TOLERANCE_SETTLE_MS = 150;
 
 interface DifferencesInput {
   renderer: ModelRenderer | null;
@@ -24,20 +32,20 @@ interface DifferencesInput {
 /**
  * The Differences mode: the pair's surfaces compared in the worker, colored at the tolerance on the GPU (`heatColors`),
  * and its changed regions to step through, each faced, framed and boxed. The slider and the colors move at once; the
- * regions and the figures of millions of vertices follow when React has the time (`useDeferredValue`).
+ * regions and the figures (`tolerance`, as the "Moved" stat reads it) follow once the tolerance settles.
  */
 export function useModelDifferences({ renderer, before, after, wanted, toleranceShare, frameRegion }: DifferencesInput) {
   const { comparison, comparing, failed } = useSurfaceComparison(before, after, wanted);
-  const tolerance = useDeferredValue(comparison ? toleranceShare * comparison.size : 0);
+  const shownTolerance = comparison ? toleranceShare * comparison.size : 0;
+  const settledShare = useSettledValue(toleranceShare, String(toleranceShare), TOLERANCE_SETTLE_MS);
+  const tolerance = comparison ? settledShare * comparison.size : 0;
 
   useEffect(() => {
     renderer?.setHeat(comparison && { before: comparison.before, after: comparison.after });
   }, [renderer, comparison]);
   useEffect(() => {
-    if (!renderer || !comparison) return;
-    const shown = toleranceShare * comparison.size;
-    renderer.setHeatTolerance(shown, fullHeatAt(shown, comparison.size));
-  }, [renderer, comparison, toleranceShare]);
+    if (comparison) renderer?.setHeatTolerance(shownTolerance, fullHeatAt(shownTolerance, comparison.size));
+  }, [renderer, comparison, shownTolerance]);
 
   const placed = useMemo(() => (comparison && before && after ? { before: placedMeshesOf(before), after: placedMeshesOf(after) } : null), [comparison, before, after]);
   const regions = useMemo(() => {
