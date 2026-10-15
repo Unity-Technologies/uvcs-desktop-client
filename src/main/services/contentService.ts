@@ -15,7 +15,16 @@ export function createContentService({ cm, reviews, repositoryTrees }: Pick<Serv
   async function read(workspacePath: string, source: ContentSource): Promise<FileContent> {
     if (source.kind === 'empty') return EMPTY_CONTENT;
     if (source.kind === 'reviewSnapshot') return reviews.readSnapshot(workspacePath, source.path);
+    if (source.kind === 'repositoryPath' && source.beside) return readBeside(workspacePath, source);
     const { bytes, name } = await bytesOf(workspacePath, source);
+    return toFileContent(bytes, name);
+  }
+
+  /** A file read only beside a revision of another (`beside`): by its revision in the listing that checked it; it fails where it wasn't there. */
+  async function readBeside(workspacePath: string, source: Extract<ContentSource, { kind: 'repositoryPath' }>): Promise<FileContent> {
+    const listed = await listedRevisionOf(workspacePath, source);
+    if (listed === null) throw new Error(`${source.path.split('/').pop()} wasn't beside ${source.beside!.path} at ${source.at}`);
+    const { bytes, name } = await bytesOf(workspacePath, listed);
     return toFileContent(bytes, name);
   }
 
@@ -50,11 +59,14 @@ export function createContentService({ cm, reviews, repositoryTrees }: Pick<Serv
    * A file at a point whose tree `cm ls` lists (a model's `.meta` or `.bin` beside it at a changeset or branch head),
    * as its revision there, from the listing of its folder that the model's other reads there share
    * (`RepositoryTrees`): one `cm ls`, then one `cm cat` by revision; null where the tree hasn't the file, which costs
-   * no failing command (a `serverpath:` and a tree asked in turn did). Any other source as it is.
+   * no failing command (a `serverpath:` and a tree asked in turn did), or where what it goes with (`beside`) wasn't at
+   * its path as that revision: from the same listing when they share a folder. Any other source as it is.
    */
   async function listedRevisionOf(workspacePath: string, source: Exclude<ContentSource, { kind: 'empty' | 'reviewSnapshot' }>) {
     if (source.kind !== 'repositoryPath' || !listsTree(source.at)) return source;
-    const revision = await repositoryTrees.revisionAt(workspacePath, source.at, source.path.replace(/^\/+/, ''));
+    const inTree = (path: string) => repositoryTrees.revisionAt(workspacePath, source.at, path.replace(/^\/+/, ''));
+    if (source.beside && (await inTree(source.beside.path))?.revisionId !== source.beside.revisionId) return null;
+    const revision = await inTree(source.path);
     return revision && { kind: 'revision' as const, revision, fileName: source.path };
   }
 
