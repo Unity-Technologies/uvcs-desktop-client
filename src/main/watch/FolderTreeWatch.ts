@@ -58,7 +58,9 @@ export class FolderTreeWatch {
    * inotify watches), or if it was closed meanwhile.
    */
   async start(): Promise<boolean> {
-    await this.walk('');
+    // With the walks of folders that appeared meanwhile: what one of them can't watch, this answer tells.
+    void this.walk('');
+    await this.walksDone();
     this.started = true;
     return this.complete && this.watches.has('');
   }
