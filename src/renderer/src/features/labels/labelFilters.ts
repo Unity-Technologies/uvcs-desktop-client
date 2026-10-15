@@ -1,5 +1,6 @@
 import type { Label } from '@shared/domain/label';
 import type { QueryFilter } from '@shared/domain/query';
+import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { pickedOwners, type PeoplePick } from '../../lib/peopleFilter';
 import { sinceDateFor, type SincePreset } from '../../lib/sincePresets';
 import { userFilterTexts } from '../../lib/userName';
@@ -12,4 +13,9 @@ export function labelsQuery({ since, people }: { since: SincePreset; people: Peo
 /** What a label's row shows, which its filter looks through: the name, comment, branch and creator. */
 export function labelFilterTexts(label: Pick<Label, 'name' | 'comment' | 'branch' | 'owner'>): string[] {
   return [label.name, label.comment, label.branch, ...userFilterTexts(label.owner)];
+}
+
+/** The labels a label picker offers for `search`: by the name it shows, leaving out `exclude` (the one being compared). */
+export function labelChoices(labels: readonly Label[], exclude: string | undefined, search: string): Label[] {
+  return labels.filter((label) => label.name !== exclude && matchesWordFilter([label.name], search));
 }
