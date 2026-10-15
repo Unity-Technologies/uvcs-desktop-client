@@ -286,3 +286,8 @@ Why one highlighting worker. Measured on a task branch of a large production rep
   highlights again the texts on screen (`setRenderOptions`).
 - The rest is garbage between collections (the page's heap reaches about 95 MB for 25 used; Pierre's structured
   clones of highlighted lines, Myers diffs, Shiki on the main thread): the renderer goes back to about 130 MB once idle.
+- **What stays once a diff is gone**: Differences keeps the pair it compared (both images and their differences, 5
+  bytes a pixel: 36 MB for 3000 x 2400) in the image diff worker, so a new tolerance only renders the heatmap again;
+  the pair goes as its viewer unmounts (`forgetComparedImages`). The bitmaps cross to the worker copied, not
+  transferred: `rasterize` keeps them for the pixel inspector. A window that leaves a workspace forgets its revisions
+  and the undo history of its discards (`forgetWorkspace`, ARCHITECTURE.md "Windows").

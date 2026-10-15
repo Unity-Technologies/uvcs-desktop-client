@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RgbaBitmap } from './pixelComparison';
-import type { DiffWorkerRequest, DiffWorkerResponse } from './imageDiff.worker';
+import type { DiffWorkerMessage, DiffWorkerRequest, DiffWorkerResponse } from './imageDiff.worker';
 
 /**
  * The image diff's client (`imageDiffSession`): the worker does the pixel passes, and when it can't start or dies
@@ -20,6 +20,8 @@ class FakeImageData {
 class FakeWorker {
   static respond: (request: DiffWorkerRequest) => DiffWorkerResponse | null = () => null;
   static started = 0;
+  /** Every request posted to any worker. */
+  static posted: DiffWorkerMessage[] = [];
   onmessage: ((event: { data: DiffWorkerResponse }) => void) | null = null;
   onerror: (() => void) | null = null;
 
@@ -27,7 +29,9 @@ class FakeWorker {
     FakeWorker.started++;
   }
 
-  postMessage(request: DiffWorkerRequest): void {
+  postMessage(request: DiffWorkerMessage): void {
+    FakeWorker.posted.push(request);
+    if (request.kind === 'forget') return;
     const response = FakeWorker.respond(request);
     queueMicrotask(() => (response ? this.onmessage?.({ data: response }) : this.onerror?.()));
   }
@@ -48,6 +52,7 @@ async function loadSession(worker: typeof FakeWorker | undefined) {
 
 beforeEach(() => {
   FakeWorker.started = 0;
+  FakeWorker.posted = [];
   FakeWorker.respond = () => null;
 });
 afterEach(() => vi.unstubAllGlobals());
@@ -66,6 +71,13 @@ describe('without a worker', () => {
     await session.compareImages('pair', OLD, NEW, 'center', 0);
     expect((await session.rerenderHeatmap('pair', 255))?.regions).toEqual([]);
     expect(await session.rerenderHeatmap('another pair', 0)).toBeNull();
+  });
+
+  it('lets the pair go once its viewer is gone', async () => {
+    const session = await loadSession(undefined);
+    await session.compareImages('pair', OLD, NEW, 'center', 0);
+    session.forgetComparedImages();
+    expect(await session.rerenderHeatmap('pair', 0)).toBeNull();
   });
 });
 
@@ -100,5 +112,16 @@ describe('with a worker', () => {
     await session.compareImages('pair', OLD, NEW, 'center', 0);
     expect(FakeWorker.started).toBe(1);
     expect((await session.rerenderHeatmap('pair', 255))?.regions).toEqual([]);
+  });
+
+  it('tells the worker to let the pair go once its viewer is gone, and starts none just for that', async () => {
+    const session = await loadSession(FakeWorker);
+    session.forgetComparedImages();
+    expect(FakeWorker.started).toBe(0);
+
+    FakeWorker.respond = (request) => ({ id: request.id, kind: 'gone' });
+    await session.rerenderHeatmap('pair', 10);
+    session.forgetComparedImages();
+    expect(FakeWorker.posted.map(({ kind }) => kind)).toEqual(['rerender', 'forget']);
   });
 });

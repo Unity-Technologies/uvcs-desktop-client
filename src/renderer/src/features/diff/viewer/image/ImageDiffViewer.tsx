@@ -10,7 +10,7 @@
 // exact texels from 8× zoom.
 
 import { ImageOff } from 'lucide-react';
-import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { FileContent } from '@shared/domain/content';
 import { useSpinDelay } from '../../../../lib/useSpinDelay';
 import { EmptyState } from '../../../../ui/EmptyState';
@@ -19,6 +19,7 @@ import { useDiffPreferences } from '../diffPreferencesStore';
 import { DifferencesMode } from './DifferencesMode';
 import { composedSize } from './composedFrame';
 import type { ImageDiffMode } from './imageDiffModes';
+import { forgetComparedImages } from './imageDiffSession';
 import type { DiffStats } from './imageInfo';
 import { ImageInfoStrip } from './ImageInfoStrip';
 import { OnionSkinMode } from './OnionSkinMode';
@@ -52,6 +53,8 @@ export function ImageDiffViewer({ original, modified, mode }: ImageDiffViewerPro
   const [blend, setBlend] = useState(0.5);
   const [stats, setStats] = useState<DiffStats | null>(null);
   const heatmapCache = useRef<CachedHeatmap | null>(null);
+  // The pair compared for Differences stays in the worker for the next tolerance, as long as this viewer shows it.
+  useEffect(() => forgetComparedImages, []);
   const stageRef = useRef<HTMLDivElement>(null);
 
   const oldImage = oldState.status === 'ready' ? oldState.image : null;
