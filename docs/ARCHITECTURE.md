@@ -38,11 +38,19 @@ you touch:
    - `query()` for quick commands, reads and small writes alike (a label, a rename, an undo of a few files): reuses
      pooled `cm shell` sessions, two per working directory; a command takes the first one free, and a directory idle
      for ten minutes lets its sessions go; a workspace no window shows anymore lets them go once their commands are
-     done (`WorkspaceWatchers` `onStopped`). A session takes about a second to answer its first command, so until one
-     in that directory has, the query runs as a process of its own (the first window's start as the app loads:
-     `readFirstScreenAhead`). A workspace write that may run long (`runsLong`:
-     more than `MAX_QUICK_WRITE_PATHS` paths, recursive, or a transfer) runs as a process of its own too, so it never
-     holds a session every read of the workspace would wait behind.
+     done (`WorkspaceWatchers` `onStopped`), and the home folder's once a window opens a workspace and none shows the
+     home screen (`showsHomeScreen`) and no window shows a workspace in the home folder itself. Each session is a
+     process of about 80 MB, so a query with no `cwd` that answers the same in any directory (`profile list`,
+     `profile delete`, `whoami`, `workspace list`, `status --xml <path>`, `getworkspacefrompath <path>`) says so
+     (`anyDirectory`) and runs in a workspace a window shows (`shownDirectory`), a ready one first, instead of
+     starting the home folder's two; it starts them only when no window shows a workspace. A workspace is shown once
+     its window watches it (`CmClient.show`, until `release`), and the first window's for `OPENING_SHOW_MS` from when
+     its shells start ahead (`showWhileOpening`), so launch's profiles read runs there; one its page finds broken or
+     missing is never watched, and its shells go when that time ends. A session takes about a second to answer its
+     first command, so until one in that directory has, the query runs as a process of its own (the first window's
+     start as the app loads: `readFirstScreenAhead`). A workspace write that may run long (`runsLong`: more than `MAX_QUICK_WRITE_PATHS`
+     paths, recursive, or a transfer) runs as a process of its own too, so it never holds a session every read of the
+     workspace would wait behind.
    - `execute()` for long or cancellable work (update, switch, checkin, shelve, merge, sync; the Branch Explorer's
      merges `find`, the slowest query on big repositories): a dedicated process that streams progress lines.
    - A command line too long to start a process with (a checkin or shelve of thousands of paths: Windows takes 32,767
@@ -445,7 +453,11 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   a problem is checked again by the next window, and by Retry. `cm version` says `cm` runs (`CmUnavailableScreen`
   otherwise); `cm profile list`, a local command, says it's configured (`checkSetup`): without a configuration every
   command but `version`, `location`, `configure` and `help` fails at once saying so, and `SetupProblemScreen` takes the
-  app's place. No server is asked at start-up: the home screen works without any. A workspace's server is checked as
+  app's place. The check costs no command of its own: the accounts, the servers and it share one profiles read
+  (`ProfileList`: everyone asking while it runs takes its answer, a removed account makes it `forget` a read started
+  before, and once one succeeded `cm` is configured for the session). Unconfigured, that read runs as a process:
+  `cm shell` refuses to start, so no session is ever ready. No server is asked at start-up: the home screen works
+  without any. A workspace's server is checked as
   the workspace opens, `cm checkconnection <server>` with the server its info names (`checkConnection`, once per server
   until it answers), and a server out of reach or a failed sign-in show in a corner card naming it
   (`ConnectionProblemCard`, `connectionProblemShown`) while the workspace works with what's local. Checking the default
@@ -498,7 +510,8 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
    `registerApi`; one nobody takes goes 5 s after the window opened, `EARLY_ANSWER_MS`, `expireUntaken`). A launch
    that names a folder on Windows and Linux (`launchNamesAFolder`, known as the module loads) reads ahead only
    `cm version`: its workspace, which `cm` finds, is read as the window opens (`openFirstWindow`). macOS names it later
-   (`open-file`), so there the last workspace is read ahead anyway, and those answers expire unused. A failed read
+   (`open-file`), so there the last workspace is read ahead anyway, and those answers expire unused (its shells, shown
+   only while it opens, go after `OPENING_SHOW_MS` as no window watches it: `showWhileOpening`). A failed read
    ahead only means the window reads its screen as it opens. At `app.whenReady` the main process registers the API
    and opens the first window, and builds the menu bar right after creating it, before it shows. What `cm` logs
    before the window exists waits for it (`CommandLogRelay`), and the page's events sent while it still loads reach
@@ -727,6 +740,17 @@ renderer/src/
   the same `columns` when they sort: new rows or a new key make it key every row again, a new `sortValue` sort them
   again. The sort keeps each column's ranks by column id
   (`ColumnSorter`), so a new `sortValue` function costs a number sort, never comparing the rows' text again.
+- **Big lists render only the rows in view**: anything a server can hold thousands of (branches, labels, repositories,
+  users and groups) is virtualized, never a plain `.map` over every row: a 4,800-label `.map` built 29k DOM nodes and
+  a 190 ms freeze on open. Pick from the virtualized pieces: `DataTable` for a view's list, `FilterChecklist` to check
+  several in a filter's popover, `PickList` to pick one in a dialog (labels, users and groups: the search keeps the
+  keys, `pickListKeys`), `BranchSearchList` for branches, and `RepositoryList` for the home screen's repositories,
+  whose expanded workspaces are rows of the same flat list (`repositoryListRows`). The row holding the focus, or the
+  one a field's `aria-activedescendant` names, stays rendered while it scrolls away (`keepRendered` in the
+  virtualizer's `rangeExtractor`); a list whose rows take the focus themselves keeps it by the row's key, not its index
+  (`repositoryRowIndex`), and acts on keys only from a row's own button, never its ⋯ menu's (`movesBetweenRows`). The filtering and sorting behind
+  such a list is memoized on its inputs, so a hover or a key doesn't redo it (`memberCandidates` sorts once per list
+  read). A suggestions list (`<datalist>`) holds the best few matches, never every object (`branchSuggestions`).
 - **Long names**: branch names run past 120 characters (`/main/child-br-cr-sample/empty-branch2/child_1/subtask/merge-test`),
   so nothing that shows one may overflow, wrap a row or push another control out. Each place names a branch one of two
   ways, by what it does with it:

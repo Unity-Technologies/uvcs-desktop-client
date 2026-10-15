@@ -18,11 +18,13 @@ interface CandidateSources {
   /** Offer `ALL USERS` and `OWNER` too (adding an entry), not where only a real user or group fits (an owner). */
   specials: boolean;
   listed: ReadonlySet<string>;
-  search: string;
 }
 
-/** The users and groups matching `search`: the special entries first, then groups, then users, each by name. */
-export function memberCandidates({ users, groups, specials, listed, search }: CandidateSources): MemberCandidate[] {
+/**
+ * Everyone the member picker offers: the special entries first, then groups, then users, each by name. Sorting
+ * thousands of names (a large directory) takes a while, so the picker builds this once per list read, not per key.
+ */
+export function memberCandidates({ users, groups, specials, listed }: CandidateSources): MemberCandidate[] {
   const candidate = (name: string, role: MemberRole): MemberCandidate => ({
     member: { name, kind: role === 'user' || role === 'owner' ? 'user' : 'group' },
     role,
@@ -34,5 +36,10 @@ export function memberCandidates({ users, groups, specials, listed, search }: Ca
     ...(specials ? [candidate(OWNER, 'owner'), candidate(EVERYONE, 'everyone')] : []),
     ...byName(groups).map((name) => candidate(name, 'group')),
     ...byName(users).map((name) => candidate(name, 'user')),
-  ].filter((entry) => matchesWordFilter([entry.label], search));
+  ];
+}
+
+/** The candidates matching `search` by the name shown, in their order. */
+export function matchingCandidates(candidates: readonly MemberCandidate[], search: string): MemberCandidate[] {
+  return candidates.filter((entry) => matchesWordFilter([entry.label], search));
 }

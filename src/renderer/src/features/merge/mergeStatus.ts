@@ -2,7 +2,7 @@ import type { DirectoryConflictResolution, MergeChange } from '@shared/domain/me
 import type { StatusTone as ChangeTone } from '../../components/StatusBadge';
 import { pluralize } from '../../lib/text';
 import type { MergeLabels } from './mergeDescription';
-import type { MergeItem } from './mergeItems';
+import { fileStateOf, type MergeItem, type MergeProgress } from './mergeItems';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
 /**
@@ -55,12 +55,12 @@ export function fileConflictStatus(state: FileConflictState): ConflictStatus {
 }
 
 /** The status of a conflict in the list; changes that apply cleanly have none. */
-export function conflictStatusOf(item: MergeItem): ConflictStatus | null {
+export function conflictStatusOf(item: MergeItem, progress: MergeProgress): ConflictStatus | null {
   switch (item.kind) {
     case 'fileConflict':
-      return fileConflictStatus(item.state);
+      return fileConflictStatus(fileStateOf(item, progress));
     case 'directoryConflict':
-      return directoryConflictStatus(item.resolution);
+      return directoryConflictStatus(progress.directoryResolutions[item.index]);
     case 'change':
       return null;
   }

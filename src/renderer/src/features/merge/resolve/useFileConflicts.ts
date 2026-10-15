@@ -1,4 +1,3 @@
-import { useQueries } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ContentSource } from '@shared/domain/content';
 import type { FileConflictResolution } from '@shared/domain/merge';
@@ -11,6 +10,7 @@ import type { FileConflictDecision } from './fileConflictDecision';
 import { buildStates, type BuiltStates } from './fileConflictStates';
 import type { ConflictContents } from './loadedConflict';
 import type { ConflictDocument } from './threeWayMerge';
+import { useQueriesByFrame } from './useQueriesByFrame';
 
 /** A file changed on both sides, and where to read each version from. */
 export interface ConflictedFile {
@@ -50,6 +50,7 @@ export function useFileConflicts(workspacePath: string, files: ConflictedFile[],
   const [decisions, setDecisions] = useState<Record<string, FileConflictDecision>>({});
   const [openTools, setOpenTools] = useState<Record<string, OpenTool>>({});
   // Kept while the files are: three queries a file, which TanStack hashes and subscribes to again whenever they're new.
+  // Their results come at most once a frame: thousands of versions answer one after the other.
   const contentQueries = useMemo(
     () =>
       files
@@ -57,20 +58,17 @@ export function useFileConflicts(workspacePath: string, files: ConflictedFile[],
         .map((source) => conflictVersionQuery(workspacePath, source)),
     [workspacePath, files],
   );
-  const queries = useQueries({ queries: contentQueries });
-
-  // `queries` is a new array on every render, so `loadedVersion` stands for it in the dependencies.
-  const loadedVersion = queries.map((query) => `${query.status}:${query.dataUpdatedAt}`).join('|');
+  const versions = useQueriesByFrame(contentQueries);
   const built = useRef<BuiltStates>(new Map());
   const states = useMemo(() => {
     const next = buildStates(
-      files.map((file, index) => ({ file, versions: queries.slice(index * 3, index * 3 + 3), decision: decisions[file.key], openTool: openTools[file.key] })),
+      files.map((file, index) => ({ file, versions: versions.slice(index * 3, index * 3 + 3), decision: decisions[file.key], openTool: openTools[file.key] })),
       labels,
       built.current,
     );
     built.current = next.built;
     return next.states;
-  }, [files, labels, loadedVersion, decisions, openTools]);
+  }, [files, labels, versions, decisions, openTools]);
   const latest = useRef({ states, openTools });
   latest.current = { states, openTools };
 

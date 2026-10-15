@@ -1,13 +1,10 @@
 import { Database, Plus, RefreshCw, ServerCog } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { RepositorySummary } from '@shared/domain/repository';
 import { openServerPermissions } from '../../features/permissions/openPermissions';
-import { matchesAllWords } from '../../lib/matchesAllWords';
-import { focusFirstItem, moveRovingFocus } from '../../lib/rovingFocus';
 import { describeServer } from '../../lib/servers';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
-import { HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { SearchField } from '../../ui/SearchField';
 import { ListSkeleton } from '../../ui/Skeleton';
@@ -15,12 +12,9 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { useRepositories } from '../workspace/workspaceQueries';
 import { openCreateRepositoryDialog } from './dialogs/CreateRepositoryDialog';
 import { openCreateWorkspaceDialog } from './dialogs/CreateWorkspaceDialog';
-import { RepositoryRow } from './RepositoryRow';
+import { RepositoryList, type RepositoryListHandle } from './RepositoryList';
+import { matchingRepositories, repositoryListRows, workspacesByRepository } from './repositoryListRows';
 import { useWorkspaceEntries } from './useWorkspaceEntries';
-import styles from './Home.module.css';
-
-/** The rows ↑/↓ walk: each repository, and the workspaces listed under an expanded one. */
-const ROWS = '[data-roving-item], [data-workspace-row]';
 
 interface RepositoriesPanelProps {
   server: string;
@@ -30,15 +24,16 @@ interface RepositoriesPanelProps {
 export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
   const [filter, setFilter] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<RepositoryListHandle>(null);
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const { data: repositories, isLoading, isFetching, error, refetch } = useRepositories(server);
   const { all: workspaceEntries } = useWorkspaceEntries('');
   // Named as in the sidebar: "This computer", an organization's name.
   const place = describeServer(server);
 
-  const shown = (repositories ?? []).filter((repository) => !filter.trim() || matchesAllWords(repository.name, filter));
-  const workspacesOf = (repository: RepositorySummary) =>
-    workspaceEntries.filter((entry) => entry.repository === repository.spec).map((entry) => entry.workspace);
+  const shown = useMemo(() => matchingRepositories(repositories ?? [], filter), [repositories, filter]);
+  const rows = repositoryListRows(shown, workspacesByRepository(workspaceEntries), expanded);
+  const toggle = (repository: RepositorySummary): void => setExpanded((open) => toggled(open, repository.spec));
   const createWorkspace = (repository: RepositorySummary): void => openCreateWorkspaceDialog({ repository, onCreated: onOpen });
 
   return (
@@ -65,43 +60,45 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
           placeholder="Find a repository"
           autoFocus
           onKeyDown={(event) => {
-            if (event.key === 'ArrowDown' && focusFirstItem(listRef.current, ROWS)) event.preventDefault();
+            if (event.key === 'ArrowDown' && listRef.current?.focusFirst()) event.preventDefault();
           }}
         />
       </ViewHeader>
 
-      <div
+      <RepositoryList
         ref={listRef}
-        className={styles.list}
-        onKeyDown={(event) => moveRovingFocus(event.currentTarget, event, () => searchRef.current?.focus(), ROWS)}
-      >
-        {isLoading && <ListSkeleton rowHeight={48} />}
-        {error && (
-          <EmptyState
-            title={`Couldn't reach ${server}`}
-            description={error.message}
-            action={<Button onClick={() => void refetch()}>Try again</Button>}
-          />
-        )}
-        {repositories && shown.length === 0 && (
-          <EmptyState
-            icon={<Database size={22} />}
-            title={filter ? 'No matching repositories' : 'No repositories yet'}
-            description={filter ? undefined : 'Create one to start versioning a project.'}
-          />
-        )}
-        <HighlightQuery query={filter}>
-          {shown.map((repository) => (
-            <RepositoryRow
-              key={repository.spec}
-              repository={repository}
-              workspaces={workspacesOf(repository)}
-              onOpen={onOpen}
-              onCreateWorkspace={createWorkspace}
-            />
-          ))}
-        </HighlightQuery>
-      </div>
+        rows={rows}
+        query={filter}
+        onToggle={toggle}
+        onOpen={onOpen}
+        onCreateWorkspace={createWorkspace}
+        onLeaveTop={() => searchRef.current?.focus()}
+        placeholder={
+          <>
+            {isLoading && <ListSkeleton rowHeight={48} />}
+            {error && (
+              <EmptyState
+                title={`Couldn't reach ${server}`}
+                description={error.message}
+                action={<Button onClick={() => void refetch()}>Try again</Button>}
+              />
+            )}
+            {repositories && shown.length === 0 && (
+              <EmptyState
+                icon={<Database size={22} />}
+                title={filter ? 'No matching repositories' : 'No repositories yet'}
+                description={filter ? undefined : 'Create one to start versioning a project.'}
+              />
+            )}
+          </>
+        }
+      />
     </>
   );
+}
+
+function toggled(set: ReadonlySet<string>, item: string): Set<string> {
+  const next = new Set(set);
+  if (!next.delete(item)) next.add(item);
+  return next;
 }

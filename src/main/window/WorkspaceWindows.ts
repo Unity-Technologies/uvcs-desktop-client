@@ -181,6 +181,11 @@ export class WorkspaceWindows {
     return this.shownBy(window.webContents.id);
   }
 
+  /** Whether a window shows the home screen: one whose page shows no workspace and wasn't asked to open one. */
+  showsHomeScreen(): boolean {
+    return this.all().some((window) => this.workspaceIn(window) === undefined);
+  }
+
   /** The open windows in the order they were opened. */
   all(): BrowserWindow[] {
     return BrowserWindow.getAllWindows()
