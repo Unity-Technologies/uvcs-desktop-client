@@ -2,6 +2,8 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { OrganizationServers } from '../cm/organizationServers';
+import { fakeCmClient } from '../cm/testing/fakeCmClient';
 import { parseSelectorFile, readWorkspaceHeads } from './selectorFile';
 
 describe('parseSelectorFile', () => {
@@ -65,7 +67,9 @@ describe('readWorkspaceHeads', () => {
     const unreadable = await workspace('no-selector');
     const garbled = await workspace('garbled', 'not a selector');
 
-    expect(await readWorkspaceHeads([game, unreadable, garbled, join(root, 'gone')])).toEqual({
+    const noCm = new OrganizationServers(fakeCmClient().cm);
+
+    expect(await readWorkspaceHeads([game, unreadable, garbled, join(root, 'gone')], noCm)).toEqual({
       [game]: { repository: 'game@local', selector: { kind: 'branch', name: '/main/task' } },
     });
   });

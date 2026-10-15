@@ -109,7 +109,7 @@ export function createWorkspacesService({ cm, operations, watchers, settings, he
     info,
     workingObjectComment: (workspacePath, selector) => readWorkingObjectComment(cm, workspacePath, selector),
     repositoriesOf,
-    heads: readWorkspaceHeads,
+    heads: (workspacePaths) => readWorkspaceHeads(workspacePaths, organizations),
     findMissing: async (paths) => paths.filter((path) => !existsSync(path)),
     findRoot: (directory) => findWorkspaceRoot(cm, directory),
     create,
