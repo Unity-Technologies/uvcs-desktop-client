@@ -62,7 +62,7 @@ export function parseWorkspaceStatus(xml: string): WorkspaceStatus {
   const configName = text(status?.WkConfigName);
   const selector: WorkspaceSelector = {
     kind: SELECTOR_KINDS[text(status?.WkConfigType)] ?? 'branch',
-    name: configName && selectorName(configName, repositoryName, server),
+    name: configName && selectorName(configName, repositoryName),
   };
   const loadedChangeset = repositoryName && configName ? loadedChangesetOf(integer(workspaceStatus?.Changeset, Number.NaN), selector) : undefined;
   if (loadedChangeset === undefined) throw new Error(`Unexpected output from cm status: ${xml.trim().slice(0, 200) || '(empty)'}`);
@@ -81,14 +81,15 @@ export function loadedChangesetOf(changeset: number, selector: WorkspaceSelector
 }
 
 /**
- * `/main/task@acme@acme@cloud` → `/main/task`. The repository spec is removed as a whole
- * suffix, because repository and organization names can repeat (`acme@acme@cloud`).
+ * `/main/task@acme@acme@cloud` → `/main/task`: everything from the first `@<repository>@`, whatever server follows
+ * (a Unity organization's may be printed by name or by its id, not always as `<RepSpec>` prints it). Names of
+ * branches, labels and repositories hold no `@`, so the first is where the repository starts, even when the
+ * organization repeats its name (`acme@acme@cloud`).
  */
-export function selectorName(configName: string, repositoryName: string, server: string): string {
-  for (const suffix of [`@${repositoryName}@${server}`, `@${repositoryName}`]) {
-    if (configName.endsWith(suffix)) return configName.slice(0, -suffix.length);
-  }
-  return configName;
+export function selectorName(configName: string, repositoryName: string): string {
+  const repositoryAt = configName.indexOf(`@${repositoryName}@`);
+  if (repositoryAt >= 0) return configName.slice(0, repositoryAt);
+  return configName.endsWith(`@${repositoryName}`) ? configName.slice(0, -repositoryName.length - 1) : configName;
 }
 
 /**

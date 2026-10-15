@@ -3,15 +3,15 @@ import { loadedChangesetOf, parseWorkspaceStatus, selectorName } from './workspa
 
 describe('selectorName', () => {
   it('removes the repository spec even when the name repeats in the server', () => {
-    expect(selectorName('/main/task1008833@acme@acme@cloud', 'acme', 'acme@cloud')).toBe('/main/task1008833');
+    expect(selectorName('/main/task1008833@acme@acme@cloud', 'acme')).toBe('/main/task1008833');
   });
 
   it('removes a local repository spec', () => {
-    expect(selectorName('/main@sandbox@local', 'sandbox', 'local')).toBe('/main');
+    expect(selectorName('/main@sandbox@local', 'sandbox')).toBe('/main');
   });
 
   it('keeps names without a repository suffix', () => {
-    expect(selectorName('/main', 'sandbox', 'local')).toBe('/main');
+    expect(selectorName('/main', 'sandbox')).toBe('/main');
   });
 });
 
