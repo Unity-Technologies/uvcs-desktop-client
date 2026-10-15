@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron';
 import type { UvcsApi } from '@shared/api';
 import { INVOKE_CHANNEL, type InvokeRequest, type InvokeResponse, type RemoteError } from '@shared/ipc';
+import { clipForLog, MAX_LOGGED_COMMAND_LINE, MAX_LOGGED_OUTPUT } from '../cm/clipForLog';
 import { CmError } from '../cm/CmError';
 import { apiMethods } from './apiMethods';
 import { runForCaller } from './caller';
@@ -27,7 +28,19 @@ export function registerApi(api: UvcsApi, early?: EarlyCalls): void {
 }
 
 function toRemoteError(error: unknown): RemoteError {
-  if (error instanceof CmError) return { message: error.message, command: error.command };
+  if (error instanceof CmError) return { message: error.message, command: clippedCommand(error.command) };
   if (error instanceof Error) return { message: error.message };
   return { message: String(error) };
+}
+
+/**
+ * A failed command as the window gets it: clipped as the command log clips it. A failed update of 50,000 files would
+ * send megabytes of progress lines, kept by the page as long as the error is.
+ */
+function clippedCommand(command: CmError['command']): CmError['command'] {
+  return {
+    ...command,
+    commandLine: clipForLog(command.commandLine, MAX_LOGGED_COMMAND_LINE),
+    output: clipForLog(command.output, MAX_LOGGED_OUTPUT, 'ends'),
+  };
 }

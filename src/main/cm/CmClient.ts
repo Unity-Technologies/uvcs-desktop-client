@@ -150,7 +150,10 @@ export class CmClient {
     return shellCommandResult(result.output);
   }
 
-  /** Logs the command with its secrets hidden (`hideSecrets`) and clipped (`clipForLog`); returns it unclipped, for the error that reports it. */
+  /**
+   * Logs the command with its secrets hidden (`hideSecrets`) and clipped (`clipForLog`); returns it unclipped, for the
+   * error that reports it: what reads the error in main may need all of it, and the window gets it clipped (`registerApi`).
+   */
   private log(args: string[], cwd: string, startedAt: number, result: CmResult, viaShell: boolean): CommandLogEntry {
     const commandLine = commandLineForLog(args);
     const output = result.exitCode === 0 ? '' : outputForLog(result.output.trim());
@@ -164,7 +167,7 @@ export class CmClient {
       viaShell,
       output,
     };
-    const logged = { ...entry, commandLine: clipForLog(commandLine, MAX_LOGGED_COMMAND_LINE), output: clipForLog(output, MAX_LOGGED_OUTPUT) };
+    const logged = { ...entry, commandLine: clipForLog(commandLine, MAX_LOGGED_COMMAND_LINE), output: clipForLog(output, MAX_LOGGED_OUTPUT, 'ends') };
     this.logListeners.forEach((listener) => listener(logged));
     return entry;
   }
