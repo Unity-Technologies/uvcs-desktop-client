@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { framedBounds, nodesBounds } from './modelFraming';
+import { everyVersionHas, framedBounds, nodesBounds } from './modelFraming';
 import { modelSummary } from './modelSummary';
 import { testModel } from './testing/testModels';
 
@@ -13,6 +13,20 @@ describe('framedBounds', () => {
   it('frames the one version there is, and nothing when there is none', () => {
     expect(framedBounds(null, lamp(0))).toEqual({ min: [-0.5, -0.5, -0.5], max: [0.5, 2.5, 0.5] });
     expect(framedBounds(null, null)).toBeNull();
+  });
+});
+
+describe('everyVersionHas', () => {
+  it('waits for each version there is, so the first framing sees the pair as it will be laid out', () => {
+    const both = { before: true, after: true };
+    expect(everyVersionHas(both, { before: 'scene', after: null })).toBe(false);
+    expect(everyVersionHas(both, { before: null, after: 'scene' })).toBe(false);
+    expect(everyVersionHas(both, { before: 'scene', after: 'scene' })).toBe(true);
+  });
+
+  it("doesn't wait for a version there isn't (a model added or deleted)", () => {
+    expect(everyVersionHas({ before: false, after: true }, { before: null, after: 'scene' })).toBe(true);
+    expect(everyVersionHas({ before: true, after: false }, { before: null, after: null })).toBe(false);
   });
 });
 
