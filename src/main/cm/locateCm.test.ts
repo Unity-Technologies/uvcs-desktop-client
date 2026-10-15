@@ -17,7 +17,7 @@ describe('locateCm', () => {
     );
   });
 
-  it('finds cm.exe on the Windows Path, quoted folders and all, then in Program Files', () => {
+  it('finds cm.exe where the Windows installers put it, then on the Path, quoted folders and all', () => {
     const env = { Path: 'C:\\Windows;"C:\\Tools;Old";C:\\Program Files\\PlasticSCM5\\client', ProgramFiles: 'C:\\Program Files' };
     expect(locateCm('win32', env, found('C:\\Tools;Old\\cm.exe'))).toBe('C:\\Tools;Old\\cm.exe');
     expect(locateCm('win32', { Path: 'C:\\Windows' }, found('C:\\Program Files (x86)\\PlasticSCM5\\client\\cm.exe'))).toBe(
@@ -31,6 +31,19 @@ describe('locateCm', () => {
       'C:\\Users\\me\\AppData\\Local\\Programs\\PlasticSCM5\\client\\cm.exe',
       'C:\\Users\\me\\AppData\\Local\\Programs\\Unity VCS\\client\\cm.exe',
     ]);
+  });
+
+  it('checks no folder of the Windows Path, where network drives answer slowly, when cm is where the installer put it', () => {
+    const installed = 'C:\\Program Files\\PlasticSCM5\\client\\cm.exe';
+    const checked: string[] = [];
+    const exists = (path: string) => {
+      checked.push(path);
+      return path === installed;
+    };
+    const env = { Path: 'Z:\\shared\\tools;\\\\fileserver\\bin;C:\\Program Files\\PlasticSCM5\\client', ProgramFiles: 'C:\\Program Files' };
+
+    expect(locateCm('win32', env, exists)).toBe(installed);
+    expect(checked).toEqual([installed]);
   });
 
   it('falls back to the bare name, so starting it says it was not found', () => {
