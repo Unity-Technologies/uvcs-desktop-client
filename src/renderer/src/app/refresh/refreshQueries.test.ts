@@ -76,7 +76,7 @@ describe('refreshQueries', () => {
     changesetFiles.unsubscribe();
   });
 
-  it('refreshes thousands of queries on screen without a pass over the cache for each', async () => {
+  it('refreshes hundreds of queries on screen without a pass over the cache for each', async () => {
     /** The passes over the cache a refresh of `count` queries on screen makes. */
     const passesRefreshing = async (count: number): Promise<number> => {
       const shown = Array.from({ length: count }, (_, index) => shownQuery(`folder${index}`));
@@ -92,7 +92,8 @@ describe('refreshQueries', () => {
       return passes;
     };
 
-    // A pass per query hashed every key in the cache for each: 3,000 queries took seconds.
-    expect(await passesRefreshing(3000)).toBe(await passesRefreshing(3));
+    // A pass per query hashed every key in the cache for each: 3,000 queries took seconds. Counting the passes shows it
+    // with a few hundred; thousands made this test itself take seconds on CI (each fetch settling checks every query).
+    expect(await passesRefreshing(300)).toBe(await passesRefreshing(3));
   });
 });
