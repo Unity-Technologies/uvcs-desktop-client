@@ -4,7 +4,7 @@ import type { RepositorySummary } from '@shared/domain/repository';
 import { keepRendered } from '../../lib/keepRendered';
 import { HighlightQuery } from '../../ui/Highlight';
 import { RepositoryRow } from './RepositoryRow';
-import { repositoryRowIndex, repositoryRowKey, repositoryRowKeyTarget, type RepositoryListRow } from './repositoryListRows';
+import { movesBetweenRows, repositoryRowIndex, repositoryRowKey, repositoryRowKeyTarget, type RepositoryListRow } from './repositoryListRows';
 import { WorkspaceRow } from './WorkspaceRow';
 import styles from './Home.module.css';
 
@@ -105,9 +105,9 @@ export const RepositoryList = forwardRef<RepositoryListHandle, RepositoryListPro
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    // Only a row's own button moves on: keys on its other buttons (the ⋯ menu's ↓ opens it) or in a menu (a portal,
-    // whose keys bubble here too) are theirs.
-    if (event.defaultPrevented || !(event.target as Element).matches?.(ROW_FOCUS) || event.metaKey || event.ctrlKey || event.altKey) return;
+    // Keys on a row's other buttons (the ⋯ menu's ↓ opens it) or in a menu (a portal, whose keys bubble here too) are theirs.
+    const onRowButton = Boolean((event.target as Element).matches?.(ROW_FOCUS));
+    if (!movesBetweenRows({ defaultPrevented: event.defaultPrevented, onRowButton, withModifiers: event.metaKey || event.ctrlKey || event.altKey })) return;
     const current = rowIndexOf(event.target);
     if (current === null) return;
     const target = repositoryRowKeyTarget(rows, current, event.key);

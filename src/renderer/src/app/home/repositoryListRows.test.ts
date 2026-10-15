@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { RepositorySummary } from '@shared/domain/repository';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { countCalls } from '@shared/testing/countCalls';
-import { matchingRepositories, repositoryListRows, repositoryRowIndex, repositoryRowKey, repositoryRowKeyTarget, workspacesByRepository, type RepositoryListRow } from './repositoryListRows';
+import { matchingRepositories, movesBetweenRows, repositoryListRows, repositoryRowIndex, repositoryRowKey, repositoryRowKeyTarget, workspacesByRepository, type RepositoryListRow } from './repositoryListRows';
 
 const repository = (name: string): RepositorySummary => ({ id: name, name, server: 'local', owner: 'ana', spec: `${name}@local` });
 const workspace = (name: string): WorkspaceSummary => ({ name, path: `/work/${name}`, guid: name });
@@ -125,5 +125,23 @@ describe('repositoryRowIndex', () => {
     const expanded = repositoryListRows([game], workspaces, new Set([game.spec]));
     expect(expanded.map(repositoryRowKey)).toEqual(['repository:game@local', 'workspace:game@local:game-wk', 'newWorkspace:game@local']);
     expect(repositoryRowIndex(repositoryListRows([art], workspaces, new Set()), 'repository:game@local')).toBe(-1);
+  });
+});
+
+describe('movesBetweenRows', () => {
+  const press = { defaultPrevented: false, onRowButton: true, withModifiers: false };
+
+  it("moves on a key pressed on a row's own button", () => {
+    expect(movesBetweenRows(press)).toBe(true);
+  });
+
+  it("leaves ↓ on a row's ⋯ trigger to its menu, which opens on it", () => {
+    expect(movesBetweenRows({ ...press, onRowButton: false, defaultPrevented: true })).toBe(false);
+    expect(movesBetweenRows({ ...press, onRowButton: false })).toBe(false);
+  });
+
+  it('leaves a key something already handled, or a shortcut, alone', () => {
+    expect(movesBetweenRows({ ...press, defaultPrevented: true })).toBe(false);
+    expect(movesBetweenRows({ ...press, withModifiers: true })).toBe(false);
   });
 });

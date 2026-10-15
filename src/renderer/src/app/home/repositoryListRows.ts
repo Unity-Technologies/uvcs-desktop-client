@@ -63,6 +63,21 @@ export function repositoryRowIndex(rows: readonly RepositoryListRow[], key: stri
   return rows.findIndex((row) => repositoryRowKey(row) === key);
 }
 
+/** A key pressed in the list, as far as deciding whether it moves between rows. */
+export interface ListKeyPress {
+  /** Something already handled it: the ⋯ menu's trigger opening on ↓. */
+  defaultPrevented: boolean;
+  /** It was pressed on a row's own button (a repository's or a workspace's), not on another button of the row or in a menu. */
+  onRowButton: boolean;
+  /** With ⌘, Ctrl or Alt held: a shortcut, not a move. */
+  withModifiers: boolean;
+}
+
+/** Whether the list moves between rows on this key: only a row's own button, and only a key nothing else took. */
+export function movesBetweenRows({ defaultPrevented, onRowButton, withModifiers }: ListKeyPress): boolean {
+  return onRowButton && !defaultPrevented && !withModifiers;
+}
+
 /** Where a key moves the focus in the list: to a row's index, back up out of the list, or nowhere (null). */
 export type RowKeyTarget = number | 'leaveTop' | null;
 
