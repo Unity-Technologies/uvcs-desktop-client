@@ -148,8 +148,8 @@ and many people use the same server. Every `cm` command other than local reads (
   `name@<id>@cloud` in `cm history --xml` and diffs), and at one path the workspace holds one repository's item; a
   path under an xlink is listed with the xlinked repository's revisions. A workspace `cm ls` reads the workspace's
   metadata, never content; it is not a `LOCAL_COMMANDS` read all the same, as `cm` asks the server for the branches of
-  what it lists (one call for all of them). Open, Save as and the merge tools write a revision for another app and
-  download it (`saveContent`).
+  what it lists (one call for all of them). Open, Save as and the merge tools copy a revision the workspace holds the
+  same way (`saveVersion`).
 - **Queries**: list everything only when the view needs everything, and then read it rarely. Otherwise filter on the
   server: a date (`sinceDate`), a `limit`, the people picked (`owners`), one object by name or id (`api.branches.get`). Never OR ids together
   (`where id = 1 or id = 2 …`, checked by `noOredIdLookups.test.ts`): take names and details from the query that lists

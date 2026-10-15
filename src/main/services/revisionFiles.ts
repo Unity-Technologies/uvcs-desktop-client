@@ -4,7 +4,8 @@ import { join } from 'node:path';
 import { dialog, shell } from 'electron';
 import type { RepositoryVersion } from '@shared/domain/content';
 import type { CmClient } from '../cm/CmClient';
-import { saveContent } from '../files/saveContent';
+import { saveVersion } from '../files/saveContent';
+import type { WorkspaceCopies } from '../files/WorkspaceCopies';
 
 /**
  * A version of a file taken out of the repository (a revision, or a path or item at a changeset: a merge's sides):
@@ -17,9 +18,12 @@ export interface RevisionFiles {
   open(workspacePath: string, version: RepositoryVersion, fileName: string, editorId?: string): Promise<void>;
 }
 
-/** `openInEditor` opens a saved file in one of the user's editors (`ExternalAppsCatalog`). */
-export function revisionFiles(cm: CmClient, openInEditor: (path: string, editorId: string) => Promise<void>): RevisionFiles {
-  const download = (workspacePath: string, version: RepositoryVersion, targetFile: string): Promise<void> => saveContent(cm, workspacePath, version, targetFile);
+/**
+ * `openInEditor` opens a saved file in one of the user's editors (`ExternalAppsCatalog`). A revision the workspace holds
+ * unchanged is copied from its disk (`copies`), never downloaded.
+ */
+export function revisionFiles(cm: CmClient, copies: Pick<WorkspaceCopies, 'read'>, openInEditor: (path: string, editorId: string) => Promise<void>): RevisionFiles {
+  const download = (workspacePath: string, version: RepositoryVersion, targetFile: string): Promise<void> => saveVersion(cm, copies, workspacePath, version, targetFile);
 
   return {
     async saveAs(workspacePath, version, suggestedFileName) {

@@ -14,7 +14,7 @@ import { revisionFiles } from './revisionFiles';
 import type { AppsContext, ServiceContext } from './ServiceContext';
 
 export function createHistoryService({ cm, workspaceCopies }: ServiceContext, { apps }: Pick<AppsContext, 'apps'>): HistoryApi {
-  const revisions = revisionFiles(cm, (path, editorId) => apps.openInEditor(path, editorId));
+  const revisions = revisionFiles(cm, workspaceCopies, (path, editorId) => apps.openInEditor(path, editorId));
 
   /**
    * Which revision of the file the workspace has, read from the workspace itself; none when history starts from a
