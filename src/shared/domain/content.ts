@@ -19,7 +19,9 @@ export type ContentSource =
    * revision as `revid:N@<repository>`.
    * `beside` reads it only where the file it goes with is at `beside.path` in that point's tree as that revision: a
    * History names a revision's files beside it at the path it was opened at, which then may have held another item,
-   * or none (the model moved or renamed since, or before). Checked against the folder listing that finds the file.
+   * or none (the model moved or renamed since, or before). Checked against the folder listing that finds the file,
+   * so it holds only at a point whose tree `cm ls` lists (`listsTree`: a changeset, a branch's head), the only points
+   * History gives; elsewhere it is ignored.
    */
   | { kind: 'repositoryPath'; path: string; at: string; repository?: string; beside?: { path: string; revisionId: number } }
   /**

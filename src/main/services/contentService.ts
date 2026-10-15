@@ -20,10 +20,14 @@ export function createContentService({ cm, reviews, repositoryTrees }: Pick<Serv
     return toFileContent(bytes, name);
   }
 
-  /** A file read only beside a revision of another (`beside`): by its revision in the listing that checked it; it fails where it wasn't there. */
+  /**
+   * A file read only beside a revision of another (`beside`: a `.meta`'s model in History), by its revision in the
+   * listing that checked it. Where it wasn't there then, or the tree hasn't it, it reads as empty: an answer, as
+   * `readBytes`' null is (the `.meta` then shows as its text), never a failure.
+   */
   async function readBeside(workspacePath: string, source: Extract<ContentSource, { kind: 'repositoryPath' }>): Promise<FileContent> {
     const listed = await listedRevisionOf(workspacePath, source);
-    if (listed === null) throw new Error(`${source.path.split('/').pop()} wasn't beside ${source.beside!.path} at ${source.at}`);
+    if (listed === null) return EMPTY_CONTENT;
     const { bytes, name } = await bytesOf(workspacePath, listed);
     return toFileContent(bytes, name);
   }
@@ -65,6 +69,7 @@ export function createContentService({ cm, reviews, repositoryTrees }: Pick<Serv
   async function listedRevisionOf(workspacePath: string, source: Exclude<ContentSource, { kind: 'empty' | 'reviewSnapshot' }>) {
     if (source.kind !== 'repositoryPath' || !listsTree(source.at)) return source;
     const inTree = (path: string) => repositoryTrees.revisionAt(workspacePath, source.at, path.replace(/^\/+/, ''));
+    // The revision id alone tells it: History gives `beside` only at points of the workspace's repository (`historyPointOf`).
     if (source.beside && (await inTree(source.beside.path))?.revisionId !== source.beside.revisionId) return null;
     const revision = await inTree(source.path);
     return revision && { kind: 'revision' as const, revision, fileName: source.path };
