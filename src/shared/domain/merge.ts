@@ -49,6 +49,11 @@ export interface FileConflict {
    * xlinked one, where the same numbers are another item and other changesets.
    */
   repository: string;
+  /**
+   * The destination's revision of the file, in `repository`: read by its id, from the workspace's disk where the
+   * workspace's file has its content (`WorkspaceCopies`), else downloaded.
+   */
+  destinationRevisionId: number;
 }
 
 export type DirectoryConflictType =

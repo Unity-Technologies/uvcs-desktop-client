@@ -52,7 +52,7 @@ these is missing, say so in your report as a finding.
 
 Lead with a one-line verdict: **ready for a pull request**, or **needs changes**. Then the findings, most severe first:
 
-- **must-fix**: wrong behaviour, a broken rule of CLAUDE.md, missing tests or validation, a ripple left unhandled.
+- **must-fix**: wrong behavior, a broken rule of CLAUDE.md, missing tests or validation, a ripple left unhandled.
 - **should-fix**: makes the code harder to read or change, an inconsistency, a doc left untrue.
 - **nit**: optional polish. Keep these few.
 

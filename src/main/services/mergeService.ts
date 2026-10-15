@@ -10,11 +10,11 @@ import { updateWithMerge } from '../merge/updateWithMerge';
 import { shelveBlockedAndUpdate } from '../workspace/shelveBlockedAndUpdate';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
-export function createMergeService({ cm, operations }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): MergeApi {
+export function createMergeService({ cm, operations, workspaceCopies }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): MergeApi {
   const backupsRoot = join(app.getPath('userData'), 'update-backups');
 
   return {
-    preview: (workspacePath, request) => previewMerge(cm, workspacePath, request),
+    preview: (workspacePath, request) => previewMerge(cm, workspacePath, request, workspaceCopies),
     run: (workspacePath, request, resolutions, operationId) =>
       operations.run(operationId, async (context) => {
         const result = await runMerge(cm, workspacePath, request, resolutions, context);

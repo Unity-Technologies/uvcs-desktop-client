@@ -209,7 +209,6 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
 
   const { comparison, comparing, failed: comparisonFailed, tolerance, regions, currentRegion, stepRegion } = useModelDifferences({
     renderer,
-    palette,
     before: old?.model ?? null,
     after: next?.model ?? null,
     wanted: shapeDifferences,

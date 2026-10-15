@@ -13,6 +13,7 @@ import { registerApi } from './ipc/registerApi';
 import { sendEvent, sendEventToCaller } from './ipc/sendEvent';
 import { DiffReviewStore } from './review/DiffReviewStore';
 import { ReviewStore } from './review/ReviewStore';
+import { RevisionCat } from './files/RevisionCat';
 import { removeLeftOverTempDirectories } from './files/tempFile';
 import { WorkspaceCopies } from './files/WorkspaceCopies';
 import { createServices } from './services/createServices';
@@ -42,6 +43,7 @@ const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
 const watchers = watchShownWorkspaces(cm, headers);
 const workspaceCopies = new WorkspaceCopies({ cm });
 watchers.listen({ changed: (workspacePath, change) => workspaceCopies.forgetChanged(workspacePath, change), unwatched: (workspacePath) => workspaceCopies.forgetListings(workspacePath) });
+const revisionCat = new RevisionCat({ cm });
 const revisionDownloads = new RevisionDownloads({ cm, copies: workspaceCopies });
 const repositoryTrees = new RepositoryTrees({ cm, downloads: revisionDownloads });
 const operations = trackOperations(watchers);
@@ -86,6 +88,7 @@ const api = createServices({
   headers,
   updates,
   workspaceCopies,
+  revisionCat,
   revisionDownloads,
   repositoryTrees,
 });

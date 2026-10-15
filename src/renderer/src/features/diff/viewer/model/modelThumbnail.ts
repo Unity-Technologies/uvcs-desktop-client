@@ -16,7 +16,7 @@ export function modelThumbnail(model: ParsedModel, summary: ModelSummary, palett
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
-  const renderer = new ModelRenderer(canvas);
+  const renderer = new ModelRenderer(canvas, { picks: false });
   const scene = buildModelScene(model, summary);
   try {
     renderer.setSize(width, height, window.devicePixelRatio);

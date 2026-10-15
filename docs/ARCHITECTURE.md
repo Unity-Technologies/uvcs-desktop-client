@@ -82,6 +82,27 @@ and many people use the same server. Every `cm` command other than local reads (
   `withConflictRepositories`), and a second command only for the few items the first couldn't answer
   (`repositoryPath`). Reads go through `CmClient.query()`, so they reuse a warm `cm shell` instead of starting a
   process; `execute()` is only for long, streamed or cancellable work.
+- **Revisions asked together, one `cm cat` per batch**: every revision read by its spec (`content.read` of a
+  `revision` or a `spec`: diffs, History, Incoming, a merge's conflicting files) goes through `RevisionCat`, which
+  saves the reads asked together with one `cm cat <spec>;<file> <spec>;<file> …` per batch (`nextCatBatch`,
+  `catGroupOf`: one repository each, an xlinked one's apart, as `cm cat` takes each repository's apart; revisions by
+  id apart from items at a point; a command line Windows can start). What a batch saves is process starts and
+  connections: merging 3,318 conflicting files runs 28 or 29 commands instead of 9,954 (measured on a local server).
+  The server still looks up an item at a point (`itemid:N#cs:M`) on its own, one per revision; only a batch of
+  revisions by id (`revid:`) is looked up at
+  once. A read asked while no `cm cat` runs starts at once (`setImmediate`, no timer), as `cm cat <spec> --file=<file>`.
+  At most `MAX_RUNNING_CATS` (2) run per workspace; the next batch is formed from what waits as one ends, another
+  group's reads first, so a read another view asks for waits for one batch, never the whole queue. Up to
+  `MAX_QUICK_CAT` (4) revisions (a diff's sides, a conflict's versions) go in a pooled `cm shell`, one such command at
+  a time (a second waits for it: it answers in milliseconds). While what waits is at most `MAX_QUICK_BACKLOG` (64), it
+  is all read so, a quick `cm cat` after another in one session, free between them for any other read: a small
+  merge's few dozen versions in tens of ms, where a process costs 100-150 ms to start. Past it, batches go to
+  processes of their own. `cm cat` writes every
+  revision it finds even when one fails, and names each it doesn't (`The specified revision was not found <spec>`):
+  that read fails alone with its line, and when every line names one, the others were written whole. A failure that
+  names nothing (a spec it can't take fails the command before it writes anything, a dropped connection) is narrowed
+  down in halves (`narrowDown`): the half that fails again is split again, so one bad spec costs about two commands
+  per halving, never one per read; when both halves fail, they all fail.
 
 - **Idle** (focused, nothing touched): only the incoming check, one `cm find changeset "... order by changesetid desc
   limit 101" --format={changesetid}{owner}` a minute (every five behind other apps, none while hidden). It takes the
@@ -137,14 +158,15 @@ and many people use the same server. Every `cm` command other than local reads (
   changes look the selector's object id up only when an automatic shelve by another client could match it, and arriving
   from a switch looks for changes to restore only when this app left some there.
 - **Revisions on disk: the disk first, the server last.** Every revision a view reads (Files' last change, History,
-  a changeset's, branch's or shelve's diff, Incoming, update conflicts, a model's `.mtl`, `.bin`, `.meta` and textures
-  in any of them, both sides) follows one procedure (`WorkspaceCopies.read`):
+  a changeset's, branch's or shelve's diff, Incoming, update conflicts, a merge's destination version of each
+  conflicting file, a model's `.mtl`, `.bin`, `.meta` and textures in any of them, both sides) follows one procedure
+  (`WorkspaceCopies.read`):
   1. Which file, which version: the revision's workspace path and its id (the content source's `fileName`).
   2. Which revision does the workspace hold at that path, with what size and hash? A path the workspace already told
      answers at once, with no command (`rememberHeld`: the Files view's `cm ls --xml` of its folders, a history's
      `cm ls` of its file, `workspaceItemArgs`), so a revision it doesn't hold there costs nothing. A revision
      another tree's listing named (Browse repository, a point's tree beside a model: `RepositoryTrees.fileAt`, the
-     Materials look's in `RevisionDownloads`) is remembered with its hash (`remember`), never as what the workspace
+     Materials look's in `RevisionDownloads`, a merge's destination tree: `withConflictRepositories`) is remembered with its hash (`remember`), never as what the workspace
      holds. Only for a path still unknown, and only when a file is there on disk, one `cm ls <folder> --format=…` of
      the workspace (`workspaceListingArgs`) tells, for all the folder's files (none for a folder the Files view
      listed: `rememberFolder`), kept until the watcher sees that folder's files change, or `cm` rewrite the workspace's

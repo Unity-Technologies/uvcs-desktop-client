@@ -2,16 +2,17 @@ import { readFile, stat, writeFile } from 'node:fs/promises';
 import { isMissingItemError, isNotInTreeError, isServerPathNotFoundError } from '../cm/missingItem';
 import type { ContentApi } from '@shared/api/content';
 import type { ContentSource, FileContent } from '@shared/domain/content';
-import { listsTree } from '@shared/domain/specs';
+import { listsTree, repositoryOfSpec, spec } from '@shared/domain/specs';
 import { EMPTY_CONTENT, MAX_MODEL_BYTES, toFileContent } from '../files/fileContent';
 import { explainLockedFile } from '../files/lockedFile';
+import type { CatRevision } from '../files/RevisionCat';
 import { saveContent } from '../files/saveContent';
 import { withTempPath } from '../files/tempFile';
 import { retryWhileBusy } from '../files/whileBusy';
 import { workspaceFileOf } from '../files/workspacePaths';
 import type { ServiceContext } from './ServiceContext';
 
-export function createContentService({ cm, reviews, repositoryTrees, workspaceCopies }: Pick<ServiceContext, 'cm' | 'reviews' | 'repositoryTrees' | 'workspaceCopies'>): ContentApi {
+export function createContentService({ cm, reviews, repositoryTrees, workspaceCopies, revisionCat }: Pick<ServiceContext, 'cm' | 'reviews' | 'repositoryTrees' | 'workspaceCopies' | 'revisionCat'>): ContentApi {
   async function read(workspacePath: string, source: ContentSource): Promise<FileContent> {
     if (source.kind === 'empty') return EMPTY_CONTENT;
     if (source.kind === 'reviewSnapshot') return reviews.readSnapshot(workspacePath, source.path);
@@ -94,7 +95,9 @@ export function createContentService({ cm, reviews, repositoryTrees, workspaceCo
     // The loaded revision of a workspace path: kept inside the workspace as a file on disk is.
     if (source.kind === 'workspaceBase') workspaceFileOf(workspacePath, source.path);
     return withTempPath(async (outputFile) => {
-      await saveContent(cm, workspacePath, source, outputFile);
+      // A revision named by its spec goes with the others asked with it, in one `cm cat` (a merge's thousands of versions).
+      if (source.kind === 'revision' || source.kind === 'spec') await revisionCat.save(workspacePath, catRevisionOf(source), outputFile);
+      else await saveContent(cm, workspacePath, source, outputFile);
       return { bytes: await readFile(outputFile), name: fileNameOf(source) };
     });
   }
@@ -122,6 +125,11 @@ function isMissingItem(error: unknown): boolean {
  */
 function isMissingWhereNoTreeIsListed(source: ContentSource, error: unknown): boolean {
   return source.kind === 'repositoryPath' && source.repository === undefined && !listsTree(source.at) && isServerPathNotFoundError(error);
+}
+
+function catRevisionOf(source: Extract<ContentSource, { kind: 'revision' | 'spec' }>): CatRevision {
+  if (source.kind === 'revision') return { spec: spec.revision(source.revision), repository: source.revision.repository };
+  return { spec: source.spec, repository: repositoryOfSpec(source.spec) };
 }
 
 function fileNameOfAny(source: Exclude<ContentSource, { kind: 'empty' | 'reviewSnapshot' }>): string {

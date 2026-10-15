@@ -1,8 +1,7 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { Color } from 'three';
+import { useEffect, useMemo, useState } from 'react';
+import { useSettledValue } from '../../../../lib/useSettled';
 import { steppedRegion } from '../image/changedRegions';
-import { fullHeatAt, ghostColors, heatColors, type Rgb } from './heatColors';
-import type { ModelPalette } from './modelPalette';
+import { fullHeatAt } from './heatColors';
 import type { ModelRenderer } from './modelRenderer';
 import type { BoundsLike } from './orbitCamera';
 import type { ParsedModel } from './parsedModel';
@@ -11,9 +10,15 @@ import { placedMeshesOf } from './surfaceComparison';
 import { changedRegions, type ChangedRegion } from './surfaceRegions';
 import { useSurfaceComparison } from './useSurfaceComparison';
 
+/**
+ * How long the tolerance stays put before its regions and figures are found again: a drag of the slider, or an arrow
+ * key held on it, finds them once, at the end, never for each step it passes (a step costs tens of milliseconds over
+ * millions of vertices). A change after a pause finds them at once (`useSettledValue`).
+ */
+const TOLERANCE_SETTLE_MS = 150;
+
 interface DifferencesInput {
   renderer: ModelRenderer | null;
-  palette: ModelPalette | null;
   before: ParsedModel | null;
   after: ParsedModel | null;
   /** The Differences mode is on. */
@@ -25,24 +30,22 @@ interface DifferencesInput {
 }
 
 /**
- * The Differences mode: the pair's surfaces compared in the worker, colored at the tolerance (`heatColors`), and its
- * changed regions to step through, each faced, framed and boxed. The slider moves at once; the colors and regions of
- * millions of vertices follow when React has the time (`useDeferredValue`).
+ * The Differences mode: the pair's surfaces compared in the worker, colored at the tolerance on the GPU (`heatColors`),
+ * and its changed regions to step through, each faced, framed and boxed. The slider and the colors move at once; the
+ * regions and the figures (`tolerance`, as the "Moved" stat reads it) follow once the tolerance settles.
  */
-export function useModelDifferences({ renderer, palette, before, after, wanted, toleranceShare, frameRegion }: DifferencesInput) {
+export function useModelDifferences({ renderer, before, after, wanted, toleranceShare, frameRegion }: DifferencesInput) {
   const { comparison, comparing, failed } = useSurfaceComparison(before, after, wanted);
-  const tolerance = useDeferredValue(comparison ? toleranceShare * comparison.size : 0);
+  const shownTolerance = comparison ? toleranceShare * comparison.size : 0;
+  const settledShare = useSettledValue(toleranceShare, String(toleranceShare), TOLERANCE_SETTLE_MS);
+  const tolerance = comparison ? settledShare * comparison.size : 0;
 
   useEffect(() => {
-    if (!renderer || !palette) return;
-    if (!comparison) return renderer.setHeat(null);
-    const linear = (css: string): Rgb => new Color(css).toArray() as Rgb;
-    const fullAt = fullHeatAt(tolerance, comparison.size);
-    renderer.setHeat({
-      after: comparison.after.map((distances) => heatColors(distances, tolerance, fullAt, linear(palette.clay), linear(palette.highlight))),
-      before: comparison.before.map((distances) => ghostColors(distances, tolerance, fullAt, linear(palette.removed))),
-    });
-  }, [renderer, palette, comparison, tolerance]);
+    renderer?.setHeat(comparison && { before: comparison.before, after: comparison.after });
+  }, [renderer, comparison]);
+  useEffect(() => {
+    if (comparison) renderer?.setHeatTolerance(shownTolerance, fullHeatAt(shownTolerance, comparison.size));
+  }, [renderer, comparison, shownTolerance]);
 
   const placed = useMemo(() => (comparison && before && after ? { before: placedMeshesOf(before), after: placedMeshesOf(after) } : null), [comparison, before, after]);
   const regions = useMemo(() => {

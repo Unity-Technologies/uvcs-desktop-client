@@ -174,10 +174,29 @@ detaches; one still drawing uploads it again).
 `sharedDfgLut.test.ts` pins three's revision, so an upgrade checks it again. So each renderer gets a canvas of its own (`useModelRenderer` puts it in and takes it out):
 a canvas whose context was lost hands that lost context to the next renderer, which three can't start on, as
 StrictMode's second mount showed. Where WebGL can't start at all (no usable GPU, the browser's limit of contexts), the
-pane says "Couldn't start the 3D view", not the window's error screen. What changes every frame or tick (a playing take's skeleton, the tolerance's colors) is
+pane says "Couldn't start the 3D view", not the window's error screen. What changes every frame (a playing take's skeleton) is
 written into the buffers it has (`writeAttribute`), and a side replaced frees its own (`disposeSide`). The model worker
-answers every request, a failure too ("Couldn't compare these surfaces"): no view waits for good. Each version is a scene of its own (`buildModelScene`: its hierarchy, a material per slot, a
-wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out per mode (`layoutOf`):
+answers every request, a failure too ("Couldn't compare these surfaces"): no view waits for good. Each version is a scene of its own (`buildModelScene`: its hierarchy, a material per slot shared by the meshes drawn alike (`SceneMaterials`), a
+wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out per mode (`layoutOf`). A model of
+thousands of parts turns at the display's rate (3,000 meshes in Split: 33 ms a frame before, 17 now), as a frame does
+only what changes:
+
+- **Only a take moves a node** (`nodesTakesMove`): every other node, and every mesh under its node, keeps the matrix it
+  was built with (three's `matrixAutoUpdate` off, the side's scene's too), so a frame doesn't compose thousands of
+  matrices that never change. A track that reaches its node through another moves every node.
+- **Meshes drawn alike share their materials** (`SceneMaterials`): one clay material per slot name and emphasis (lit,
+  faded, plain: `emphasisOf`), one wire material per emphasis, one heat and one ghost. A material each made three
+  refresh every material's uniforms for every mesh, each frame. The look sets each shared material's color once.
+- **Picking reads the GPU** (`MeshPicker`): the side's meshes shown (solid or wireframe) are drawn into one float
+  pixel through the camera narrowed to the point under the pointer (`pickWindowAt`, three's `setViewOffset`, which
+  culls every mesh whose bounds miss it), writing where the surface is and which mesh it is (`pickedAt`), deformed as
+  drawn. It picks the faces each slot's material draws (`facesOf`: a double-sided leaf card from behind too, and
+  any part from behind in the Wireframe modes, whose lines show from both sides), not its alpha clip: a hole cut in a card picks the card. Three's `Raycaster` tested every triangle on the main thread: 90 ms a wheel notch, click or pan on 3 million
+  triangles; read so, 2.5 ms. Its program is compiled as the renderer starts (`prepare`), or the first pick of each
+  model waited 100 ms for it. A GPU without float pixels to draw into (`EXT_color_buffer_float`) raycasts.
+- **A part lit up isn't outlined when it is dense** (`outlinesWhenLit`, past `LIT_OUTLINE_MAX_TRIANGLES`): its wires
+  would only tint it, and three builds a wireframe's lines on the main thread the first time it draws one (140 ms and
+  200 MB for 3 million triangles); its glow says it is picked. The Wireframe modes draw it whole.
 
 - **Diffs** (Differences): the version after colored by how far each vertex is from the version before's surface,
   and the version before drawn as a ghost (`--status-deleted`) only where it is gone, over it in its depth. The
@@ -191,10 +210,15 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   compares in about 0.5 s; made once per mesh, it held the model worker, and every model read queued behind it, for
   minutes. What nothing is near saturates at a tenth of the model ("12 cm+" in the strip). The
   tolerance is a share of the model's size (`modelToleranceShare`, one setting for a bolt and a building), read out
-  in mm, cm or m; `heatColors` keeps the clay within it and turns to the accent beyond. ‹ › step through the changed
+  in mm, cm or m; `heatColors` keeps the clay within it and turns to the accent beyond, on the GPU: each mesh holds
+  its vertices' distances once (`surfaceDistance`, `ModelRenderer.setHeat`), and the tolerance and colors are
+  uniforms (`HeatScale`, `setHeatTolerance`), so the slider recolors at once without the main thread (coloring every
+  vertex on it held it 160 ms a step on 3 million triangles). The regions and the "Moved" figure follow once the
+  slider settles (`TOLERANCE_SETTLE_MS`), never at each step a drag passes. ‹ › step through the changed
   regions (`changedRegions`: changed vertices joined through their own triangles and shared corners, patches of
-  either version within 3% of the model merged; binning vertices into fixed cells was tried and dropped, as a coarse
-  mesh read as 30 regions), each boxed just clear of its surface (`boxedRegion`) and glided to (`regionView`,
+  either version within 3% of the model merged, as their boxes grow, in passes that compare only boxes overlapping
+  along X (`NearRegions`; merging pair by pair and starting over took half a second for 3,000 patches); binning
+  vertices into fixed cells was tried and dropped, as a coarse mesh read as 30 regions), each boxed just clear of its surface (`boxedRegion`) and glided to (`regionView`,
   `ViewGlide`): the camera aims at the region's centre, close enough for it to fill about half the view with some of
   the model around it (never closer than a few percent of the model, so a dent isn't a close-up of nothing), and turns
   to face it when it is turned away or seen edge-on from the camera's angle (more than 60° off): it looks from the
@@ -455,7 +479,8 @@ heatmap's), and come back in the other modes. The merge cards' stills stay clay 
   its read at once, until it is fetched again (64 textures with the server down would otherwise start 22 more
   commands). Keeping fetched revisions past `MAX_KEPT_BYTES` until read was tried and dropped: it needed a budget of its
   own, a cap, a time-out and to tell which read took each, for what asking a part at a time does. The reads asked at once (the look's downloads, a ring of `.meta` files) wait until each has checked the disk, then go in one `cm cat <spec>;<file>
-  <spec>;<file> …` (`catArgs`), which downloads them in one batch, in a process of its own; a batch holds one
+  <spec>;<file> …` (`catBatchesOf`, `catArgs`, the batching `RevisionCat` shares), which downloads them in one
+  batch, in a process of its own; a batch holds one
   repository's revisions (an xlinked one's apart: `cm cat` resolves each repository's on its own) and stops at
   `MAX_BATCH_BYTES` (64 MB by the sizes listed, so the first textures show sooner) and at a command line Windows can
   start; a folder whose path holds `;` takes each as `--file=`. A revision listed past `MAX_MODEL_BYTES` is refused
