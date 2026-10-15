@@ -10,6 +10,7 @@ import {
   type MergeResult,
 } from '@shared/domain/merge';
 import { spec } from '@shared/domain/specs';
+import { catArgs, catBatchesOf, type CatRead } from '../cm/catBatches';
 import type { CmClient } from '../cm/CmClient';
 import { parseCreatedChangeset, parseDestinationMoved, parseMergePlan } from '../cm/mergeOutput';
 import { directoryConflictIdentity } from './directoryConflictIdentity';
@@ -30,7 +31,7 @@ import { previewMerge } from './previewMerge';
  *    so nothing is decided behind the user's back and no external merge tool opens. A merge into a server branch
  *    takes each file's decision from a resolutions file (`fileConflictResolutionsFile`).
  * 3. For workspace merges, each conflicting file is then written with its resolution: the text decided, the source's
- *    text as the page read it, or else (binaries) the source's revision, with one `cm cat` each.
+ *    text as the page read it, or else (binaries) the source's revision, all with one `cm cat`.
  * If anything looks different from the plan the user reviewed, it stops before changing the workspace.
  */
 export async function runMerge(
@@ -79,7 +80,7 @@ export async function runMerge(
     }
 
     context.reportProgress('Writing resolved files');
-    await writeFileConflictResolutions(cm, workspacePath, request, plan, resolutions.files);
+    await writeFileConflictResolutions(cm, workspacePath, request, plan, resolutions.files, context.signal);
     return {};
   });
 }
@@ -123,13 +124,20 @@ function resolveConflictArgs(resolution: DirectoryConflictResolution): string[] 
   }
 }
 
+/**
+ * Writes each file's decision: a text as it is, and the incoming versions the page holds no text of (binaries, text in
+ * another encoding) saved by `cm` straight into the workspace, all of them with one `cm cat` per batch
+ * (`catBatchesOf`), in a process: binaries run to hundreds of MB.
+ */
 async function writeFileConflictResolutions(
   cm: CmClient,
   workspacePath: string,
   request: MergeRequest,
   plan: MergePlan,
   resolutions: Record<string, FileConflictResolution>,
+  signal: AbortSignal,
 ): Promise<void> {
+  const incomingReads: CatRead[] = [];
   for (const conflict of plan.fileConflicts) {
     const resolution = resolutions[conflict.path]!;
     const target = toAbsolutePath(workspacePath, conflict.path.replace(/^\//, ''));
@@ -139,9 +147,10 @@ async function writeFileConflictResolutions(
       await retryWhileBusy(() => writeFile(target, text, 'utf8'));
     } else if (resolution.choice === 'source') {
       const source = spec.itemAt(conflict.itemId, mergeSourcePoint(request, conflict.sourceChangeset), conflict.repository);
-      await cm.query(['cat', source, `--file=${target}`], { cwd: workspacePath });
+      incomingReads.push({ spec: source, repository: conflict.repository, target, size: -1 });
     }
   }
+  for (const batch of catBatchesOf(incomingReads, (read) => read)) await cm.execute(catArgs(batch), { cwd: workspacePath, signal });
 }
 
 /** The text a file is written with: the one decided, or the source's as read; none to keep the destination, or for `cm cat`. */
