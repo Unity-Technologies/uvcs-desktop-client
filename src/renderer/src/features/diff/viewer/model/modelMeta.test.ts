@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { modelBesideMeta, modelOfMeta, modelReadsOfSides } from './modelMeta';
+import { metaModelView, modelBesideMeta, modelOfMeta, modelReadsOfSides } from './modelMeta';
 import { historySibling, workspaceSibling } from './modelSiblings';
 
 describe('modelOfMeta', () => {
@@ -56,5 +56,24 @@ describe('modelReadsOfSides', () => {
   it('reads no model for a side without one, as an empty read of its own', () => {
     expect(modelReadsOfSides({ original: null, modified: model })).toEqual({ reads: [null, model], readOf: { original: 0, modified: 1 } });
     expect(modelReadsOfSides({ original: null, modified: null })).toEqual({ reads: [null], readOf: { original: 0, modified: 0 } });
+  });
+});
+
+describe('metaModelView', () => {
+  it('shows the model where a side has it, a side without one empty: a .meta added with its model, or one whose model was elsewhere then', () => {
+    expect(metaModelView({ original: 'model', modified: 'model' })).toBe('model');
+    expect(metaModelView({ original: 'none', modified: 'model' })).toBe('model');
+    expect(metaModelView({ original: 'absent', modified: 'model' })).toBe('model');
+  });
+
+  it("shows the .meta's text where neither side has its model beside it (in History, a .meta moved since)", () => {
+    expect(metaModelView({ original: 'absent', modified: 'absent' })).toBe('text');
+    expect(metaModelView({ original: 'none', modified: 'absent' })).toBe('text');
+  });
+
+  it("waits for every read, and fails only on a side that genuinely couldn't be read", () => {
+    expect(metaModelView({ original: 'loading', modified: 'model' })).toBe('loading');
+    expect(metaModelView({ original: 'failed', modified: 'model' })).toBe('failed');
+    expect(metaModelView({ original: 'failed', modified: 'loading' })).toBe('loading');
   });
 });
