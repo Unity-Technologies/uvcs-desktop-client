@@ -15,6 +15,7 @@ import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
 import { commandLineLength, MAX_COMMAND_LINE } from '../cm/commandLineLimit';
 import { MAX_MODEL_BYTES } from '../files/fileContent';
+import { processIsRunning } from '../system/processIsRunning';
 import { contentHashOf, WorkspaceCopies, type RevisionFile } from '../files/WorkspaceCopies';
 
 /**
@@ -290,16 +291,6 @@ export class RevisionDownloads {
     this.kept.delete(key);
     this.keptBytes -= kept.size;
     if (deleteFile) void rm(kept.target, { force: true }).catch(() => undefined);
-  }
-}
-
-/** Whether a process is running: signal 0 checks without sending one (`EPERM`: it runs, as another user's). */
-function processIsRunning(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return (error as NodeJS.ErrnoException).code === 'EPERM';
   }
 }
 
