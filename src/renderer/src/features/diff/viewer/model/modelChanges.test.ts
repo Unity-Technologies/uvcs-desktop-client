@@ -330,6 +330,15 @@ describe('modelChanges: mesh data', () => {
     expect(kinds(modelChanges(modelSummary(face()), modelSummary(face())))).toEqual([]);
   });
 
+  it("tells no blendshape resculpted on a model resized with its vertices: its offsets scaled with them", () => {
+    const face = (size: number): ParsedModel => {
+      const model = testModel({ nodes: [{ name: 'Face', mesh: { size: [size, size, size], blendShapes: ['Smile'] } }] });
+      model.meshes[0]!.blendShapes[0]!.deltas[4] = 0.02 * size;
+      return model;
+    };
+    expect(kinds(modelChanges(modelSummary(face(1)), modelSummary(face(100))))).toEqual(['resized']);
+  });
+
   it('tells a blendshape renamed, removed or added', () => {
     const face = (blendShapes: string[]): TestModel => ({ nodes: [{ name: 'Face', mesh: { blendShapes } }] });
     expect(changes(face(['Smile', 'Blink']), face(['smile', 'Blink']))).toMatchObject([{ kind: 'blendShapeRenamed', from: 'Smile', to: 'smile' }]);
