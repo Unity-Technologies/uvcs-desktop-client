@@ -1,7 +1,7 @@
 // Revisions saved to files with `cm cat` (ARCHITECTURE.md "Server budget"), the ones asked together in one command:
 // a merge page reads three versions of every conflicting file at once, and a command each would be thousands of
 // process starts and connections. A read asked while no `cm cat` runs starts at once, as the one quick command it
-// always was; one asked while two run goes in the next.
+// always was; one asked while others run waits for one of them to end.
 
 import { rm, stat } from 'node:fs/promises';
 import type { CmClient } from '../cm/CmClient';
@@ -15,8 +15,8 @@ import { catArgs, nextCatBatch, type CatRead } from '../cm/catBatches';
 export const MAX_RUNNING_CATS = 2;
 /**
  * The most revisions a quick `cm cat` reads in a pooled `cm shell` (`query()`): a diff's two sides, a conflict's three
- * versions. A bigger batch runs as a process of its own (`execute()`), as does any while another quick one runs: a
- * workspace has two pooled sessions, and every other read of it waits behind those.
+ * versions. A bigger batch runs as a process of its own (`execute()`). One quick `cm cat` runs at a time: a workspace
+ * has two pooled sessions, and every other read of it waits behind those.
  */
 export const MAX_QUICK_CAT = 4;
 
@@ -92,11 +92,14 @@ export class RevisionCat {
 
   /**
    * Starts batches while fewer than `MAX_RUNNING_CATS` run, each formed from what waits then (`nextCatBatch`): after
-   * one group's batch, another group's reads go first, so another view's read waits for one batch, not the queue.
+   * one group's batch, another group's reads go first, so another view's read waits for one batch, not the queue. A
+   * few revisions wait for the quick `cm cat` running to end rather than start a process: it answers in milliseconds,
+   * where starting `cm` costs 100-150 ms (a diff's two sides, asked a moment apart).
    */
   private runWaiting(workspacePath: string, reads: WorkspaceReads): void {
     while (reads.running < MAX_RUNNING_CATS && reads.waiting.length > 0) {
       const { batch, group } = nextCatBatch(reads.waiting, (read) => read, reads.lastGroup);
+      if (isQuick(batch) && reads.quickRunning) break;
       const taken = new Set(batch);
       reads.waiting = reads.waiting.filter((read) => !taken.has(read));
       reads.lastGroup = group;
@@ -160,10 +163,12 @@ export class RevisionCat {
     return { reads: unexplained, failure };
   }
 
-  /** A few revisions in a pooled session, unless another quick `cm cat` holds one; more in a process of their own. */
+  /**
+   * A few revisions in a pooled session, unless another quick `cm cat` holds one (halves read again while one runs);
+   * more in a process of their own.
+   */
   private async run(workspacePath: string, reads: WorkspaceReads, batch: Waiting[]): Promise<void> {
-    const quick = batch.length <= MAX_QUICK_CAT && !reads.quickRunning;
-    if (!quick) return void (await this.cm.execute(catArgs(batch), { cwd: workspacePath }));
+    if (!isQuick(batch) || reads.quickRunning) return void (await this.cm.execute(catArgs(batch), { cwd: workspacePath }));
     reads.quickRunning = true;
     try {
       await this.cm.query(catArgs(batch), { cwd: workspacePath });
@@ -171,6 +176,10 @@ export class RevisionCat {
       reads.quickRunning = false;
     }
   }
+}
+
+function isQuick(batch: readonly Waiting[]): boolean {
+  return batch.length <= MAX_QUICK_CAT;
 }
 
 /** The lines a failed `cm` command printed; none for a failure that isn't `cm`'s. */
