@@ -7,7 +7,7 @@
 
 import { createHash } from 'node:crypto';
 import { rmSync } from 'node:fs';
-import { mkdir, mkdtemp, readdir, readFile, rm, stat } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { RevisionRef } from '@shared/domain/revision';
@@ -15,6 +15,7 @@ import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
 import { commandLineLength, MAX_COMMAND_LINE } from '../cm/commandLineLimit';
 import { MAX_MODEL_BYTES } from '../files/fileContent';
+import { removeFoldersOfGoneProcesses } from '../files/goneProcessFolders';
 import { processIsRunning } from '../system/processIsRunning';
 import { contentHashOf, WorkspaceCopies, type RevisionFile } from '../files/WorkspaceCopies';
 
@@ -199,18 +200,8 @@ export class RevisionDownloads {
    * app's running now (a development build beside the installed one) stays. This session's own is made once they're gone.
    */
   removeLeftOvers(): Promise<void> {
-    this.leftOvers ??= readdir(this.tempFolder).then(
-      (names) => Promise.all(names.filter((name) => this.isLeftOver(name)).map((name) => rm(join(this.tempFolder, name), { recursive: true, force: true }).catch(() => undefined))).then(() => undefined),
-      () => undefined,
-    );
+    this.leftOvers ??= removeFoldersOfGoneProcesses({ tempFolder: this.tempFolder, prefix: FOLDER_PREFIX, pid: this.pid, isRunning: this.isRunning });
     return this.leftOvers;
-  }
-
-  private isLeftOver(name: string): boolean {
-    const owner = new RegExp(`^${FOLDER_PREFIX}(\\d+)-`).exec(name);
-    if (!owner) return false;
-    const pid = Number(owner[1]);
-    return pid !== this.pid && !this.isRunning(pid);
   }
 
   /**
