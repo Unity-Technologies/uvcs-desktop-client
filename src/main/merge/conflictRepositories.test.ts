@@ -53,7 +53,7 @@ describe('withRepositories', () => {
 
   it("fails rather than read a destination's version the listing names no revision of", () => {
     const withoutRevision = parseTreeItems(LISTING).map((item) => (item.path === OWN.slice(1) ? { ...item, revisionId: -1 } : item));
-    expect(() => withRepositories(plan([XLINKED, OWN]), withoutRevision)).toThrow(`Couldn't tell which repository ${OWN} is in.`);
+    expect(() => withRepositories(plan([XLINKED, OWN]), withoutRevision)).toThrow(`Couldn't tell which version of ${OWN} the destination has.`);
   });
 
   it('keeps a plan without file conflicts as it is', () => {
