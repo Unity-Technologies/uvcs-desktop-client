@@ -241,6 +241,15 @@ describe('watching a workspace', () => {
     await runForCaller(window, () => service.watch(WORKSPACE));
     expect(released).toEqual([homedir()]);
   });
+
+  it('keeps the cm sessions of a workspace in the home folder itself, which the window shows', async () => {
+    const window = { id: 7, isDestroyed: () => false } as unknown as WebContents;
+    const { service, released } = workspaces({}, { watch: () => ({ complete: true }) as never }, { showsHomeScreen: () => false });
+
+    await runForCaller(window, () => service.watch(homedir()));
+
+    expect(released).toEqual([]);
+  });
 });
 
 describe('other workspaces', () => {
