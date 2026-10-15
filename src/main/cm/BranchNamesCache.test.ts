@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { BranchNamesCache } from './BranchNamesCache';
 
-function setup(branches = [1, 2, 3].map((id) => ({ id, name: `/main/b${id}` }))) {
+const BRANCHES = [1, 2, 3].map((id) => ({ id, name: `/main/b${id}` }));
+
+function setup(branches = BRANCHES, isShown = (_workspacePath: string) => true) {
   const reads: string[] = [];
   let now = 0;
   const cache = new BranchNamesCache(
@@ -10,6 +12,7 @@ function setup(branches = [1, 2, 3].map((id) => ({ id, name: `/main/b${id}` })))
       return branches;
     },
     () => now,
+    isShown,
   );
   return { cache, reads, advance: (ms: number) => (now += ms) };
 }
@@ -67,5 +70,37 @@ describe('BranchNamesCache', () => {
     cache.remember('/wk', [{ id: 7, name: '/main/task' }], { complete: true });
     expect(await cache.resolve('/wk', [7, 404])).toEqual(new Map([[7, '/main/task']]));
     expect(reads).toEqual([]);
+  });
+
+  it("forgets a workspace's names, keeping the other workspaces'", async () => {
+    const { cache, reads } = setup();
+    await cache.resolve('/a', [1]);
+    await cache.resolve('/b', [1]);
+
+    cache.forget('/a');
+
+    await cache.resolve('/b', [2]);
+    expect(reads).toEqual(['/a', '/b']);
+    await cache.resolve('/a', [1]);
+    expect(reads).toEqual(['/a', '/b', '/a']);
+  });
+
+  it('keeps nothing of a read the workspace was forgotten during', async () => {
+    const { cache, reads } = setup();
+    const lookup = cache.resolve('/a', [1]);
+    cache.forget('/a');
+    await lookup;
+
+    await cache.resolve('/a', [1]);
+    expect(reads).toEqual(['/a', '/a']);
+  });
+
+  it('keeps nothing for a workspace no window shows, still answering the lookup that read the names', async () => {
+    const { cache, reads } = setup(undefined, () => false);
+    cache.remember('/wk', [{ id: 7, name: '/main/task' }], { complete: true });
+
+    expect(await cache.resolve('/wk', [1])).toEqual(new Map([[1, '/main/b1']]));
+    expect(await cache.resolve('/wk', [7])).toEqual(new Map());
+    expect(reads).toEqual(['/wk', '/wk']);
   });
 });

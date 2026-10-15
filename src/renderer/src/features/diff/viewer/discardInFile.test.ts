@@ -25,7 +25,7 @@ vi.mock('../../../ui/toast/toastStore', () => ({
 vi.mock('./fileText', () => ({ showFileText: () => {}, refreshFileViews: async () => {} }));
 
 import { discardInFile, undoLastDiscard, type DiscardTarget } from './discardInFile';
-import { lastDiscard } from './discardHistory';
+import { discardHistory } from './discardHistory';
 
 /** Every step of an undo started from a toast is done: the fakes answer at once. */
 const settled = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
@@ -64,7 +64,7 @@ describe('discarding in a file', () => {
     disk.failWrites = true;
     await discardInFile(target, { before: 'a\nB\n', after: 'a\nb\n' }, 'Reverted 1 line');
     expect(toasts).toMatchObject([{ kind: 'error', title: `Couldn't write file${file}.ts` }]);
-    expect(lastDiscard('/ws', target.path)).toBeUndefined();
+    expect(discardHistory.last('/ws', target.path)).toBeUndefined();
   });
 });
 
@@ -94,7 +94,7 @@ describe('undoing discards (⌘Z in the diff)', () => {
     undoNewer!.run();
     await settled();
     expect(disk.files.get(target.path)).toBe('1\n2\n');
-    expect(lastDiscard('/ws', target.path)).toEqual({ before: '1\n2\n3\n', after: '1\n2\n' });
+    expect(discardHistory.last('/ws', target.path)).toEqual({ before: '1\n2\n3\n', after: '1\n2\n' });
   });
 
   it('undoes nothing once the file changed since, so the newer changes stay', async () => {
@@ -105,7 +105,7 @@ describe('undoing discards (⌘Z in the diff)', () => {
     await undoLastDiscard(target);
     expect(disk.writes).toEqual([]);
     expect(toasts.at(-1)).toMatchObject({ kind: 'info', title: `file${file}.ts changed since` });
-    expect(lastDiscard('/ws', target.path)).toEqual({ before: 'a\nB\n', after: 'a\nb\n' });
+    expect(discardHistory.last('/ws', target.path)).toEqual({ before: 'a\nB\n', after: 'a\nb\n' });
   });
 
   it('keeps the discard to undo when putting the text back failed', async () => {
@@ -113,6 +113,6 @@ describe('undoing discards (⌘Z in the diff)', () => {
     await discardInFile(target, { before: 'a\nB\n', after: 'a\nb\n' }, 'Reverted 1 line');
     disk.failWrites = true;
     await undoLastDiscard(target);
-    expect(lastDiscard('/ws', target.path)).toEqual({ before: 'a\nB\n', after: 'a\nb\n' });
+    expect(discardHistory.last('/ws', target.path)).toEqual({ before: 'a\nB\n', after: 'a\nb\n' });
   });
 });

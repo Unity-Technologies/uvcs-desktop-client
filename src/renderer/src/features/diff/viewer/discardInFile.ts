@@ -1,7 +1,7 @@
 import { api } from '../../../api/client';
 import { fileNameOf } from '../../../lib/text';
 import { toast } from '../../../ui/toast/toastStore';
-import { forgetDiscard, lastDiscard, recordDiscard, type Discard } from './discardHistory';
+import { discardHistory, type Discard } from './discardHistory';
 import { refreshFileViews, showFileText } from './fileText';
 
 export interface DiscardTarget {
@@ -17,14 +17,14 @@ export interface DiscardTarget {
 /** Writes the file with some changes discarded, remembering its previous text so the discard can be undone. */
 export async function discardInFile(target: DiscardTarget, discard: Discard, done: string): Promise<void> {
   if (!(await write(target, discard.after))) return;
-  recordDiscard(target.workspacePath, target.path, discard);
+  discardHistory.record(target.workspacePath, target.path, discard);
   toast.success(`${done} in ${fileNameOf(target.path)}`, undefined, { label: 'Undo', run: () => void undoDiscard(target, discard) });
   if (discard.after === target.baseText) target.onMatchesBase?.();
 }
 
 /** Undoes the file's latest discard of this session, if any. */
 export async function undoLastDiscard(target: DiscardTarget): Promise<void> {
-  const discard = lastDiscard(target.workspacePath, target.path);
+  const discard = discardHistory.last(target.workspacePath, target.path);
   if (discard) await undoDiscard(target, discard);
 }
 
@@ -35,7 +35,7 @@ async function undoDiscard(target: DiscardTarget, discard: Discard): Promise<voi
     toast.info(`${fileNameOf(target.path)} changed since`, 'Nothing was undone, so the newer changes stay.');
     return;
   }
-  if (await write(target, discard.before)) forgetDiscard(target.workspacePath, target.path, discard);
+  if (await write(target, discard.before)) discardHistory.forget(target.workspacePath, target.path, discard);
 }
 
 /** Shows the new text right away, then writes it and re-reads what depends on the file. */

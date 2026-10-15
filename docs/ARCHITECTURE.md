@@ -153,8 +153,9 @@ and many people use the same server. Every `cm` command other than local reads (
   their branch by object id: the branch chips (Branch Explorer, Branches, finishing a task) match it against the ids
   their branch lists already carry, and share one review list with the palette; the Code reviews view and page name it
   from the branch lists already read (`BranchNamesCache.remember`), or else read every branch's id and name once
-  (`readBranchNames`, two light queries, kept ten minutes). The top bar takes the branch comment from the branch query. The recent branches and renaming a workspace take its
-  GUID and name from the reads the workspace info shares (`WorkspaceHeaders`). Pending changes ask which locks are mine only when some lock holds one of them; left
+  (`readBranchNames`, two light queries, kept ten minutes, and only while a window shows the workspace:
+  `watchShownWorkspaces`). The top bar takes the branch comment from the branch query. The recent branches and
+  renaming a workspace take its GUID and name from the reads the workspace info shares (`WorkspaceHeaders`). Pending changes ask which locks are mine only when some lock holds one of them; left
   changes look the selector's object id up only when an automatic shelve by another client could match it, and arriving
   from a switch looks for changes to restore only when this app left some there.
 - **Revisions on disk: the disk first, the server last.** Every revision a view reads (Files' last change, History,
@@ -199,6 +200,9 @@ and many people use the same server. Every `cm` command other than local reads (
 
 - Prefer `--xml` (`parseXml`) or `--format` with `recordFormat`/`parseRecords` (control-character separators; no ambiguity with paths or comments).
 - Never parse human-readable output when a machine format exists.
+- Parsed values are slices of the command's whole output, which V8 keeps alive while any slice lives. A cache that
+  keeps them past the answer copies them as it keeps them, not every parser (`ownCopy`; `OwnCopies` for a value many
+  entries repeat, like a repository spec): `BranchNamesCache`, `WorkspaceCopies`, `RepositoryTrees`.
 - `cm find branch` leaves hidden branches out unless asked for (`hidden = 'true'`), and `cm find changeset` their
   changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`); merges and labels come either way.
 - Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments.
@@ -343,9 +347,9 @@ app's own files and `data:`/`blob:` images, so profile pictures reach it from ma
 Every error is the app's to tell, in its own UI; Electron's native "A JavaScript error occurred in the main process"
 dialog never shows.
 
-- **Expected failures** reach the window as the API call's rejection (`registerApi`: a `CmError` keeps its command),
-  and the renderer tells them as error toasts (`runOperation`, `runAction`) whose Details open `ErrorDialog`, with
-  "Report an Issue".
+- **Expected failures** reach the window as the API call's rejection (`registerApi`: a `CmError` keeps its command,
+  clipped as the command log clips it, both ends of its output kept: `clipForLog`), and the renderer tells them as
+  error toasts (`runOperation`, `runAction`) whose Details open `ErrorDialog`, with "Report an Issue".
 - **Main, nothing caught**: `main/index.ts` imports `errors/installUnexpectedErrorHandlers` first, so before any other
   module runs `handleUnexpectedErrors` listens to `uncaughtException` and `unhandledRejection` (a listener of the app's
   own is what keeps Electron's dialog away, and Node from ending the process on a rejection). Each one is logged with
@@ -459,7 +463,13 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
 - A window that leaves one workspace for another keeps its page: `WorkspaceGate` mounts the views again, but the
   renderer's stores outlive the workspace. A store holding a workspace's state keys it by the workspace path
   (`useExpandedDirectories`, `useViewSelection`) or says which workspace it belongs to (`cutItemsIn`,
-  `revealRequestIn`); otherwise the next workspace reads it, e.g. lists a folder only the last one has.
+  `revealRequestIn`); otherwise the next workspace reads it, e.g. lists a folder only the last one has. The big part
+  of what the window read of the workspace it leaves (for another one or the home screen) goes once its views unmount
+  (`useForgetLeftWorkspace`, `forgetWorkspace`): what nothing shows of its immutable results (revisions, what
+  changesets changed) and of every content its diffs read, its own files too (`content`, `contentBytes`,
+  `diffContents`, whatever their source). Each window has its own query client, and a workspace's revisions, kept an
+  hour, held hundreds of MB after the window moved on. Its lists and info are light and stay until their usual
+  `gcTime`, so coming back within minutes asks the server nothing; only a content shown again is read again.
 - The start-up (`main/index.ts`) is a few named steps; the wiring behind each (settings, watchers, own writes,
   operations, launch requests, the first window) lives in `main/startup/`, around the tested logic of the other
   folders. The order and what it waits for: "Start-up" below.

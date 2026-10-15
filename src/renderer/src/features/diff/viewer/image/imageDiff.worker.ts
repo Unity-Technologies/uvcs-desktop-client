@@ -1,6 +1,6 @@
 // The Differences mode's pixel passes (`heatmapPasses`), off the UI thread: a 4K pair takes tens of milliseconds that
 // must never hold a paint. The worker keeps the last pair compared, so moving the tolerance slider only renders the
-// heatmap again. This file is only the messaging.
+// heatmap again, until the pair's viewer goes (`forget`). This file is only the messaging.
 
 import type { ChangedRegion } from './changedRegions';
 import { heatmapPasses, type RenderedHeatmap } from './heatmapPasses';
@@ -18,6 +18,9 @@ export type DiffWorkerRequest =
   | { id: number; kind: 'compare'; key: string; old: BitmapPayload; new: BitmapPayload; anchor: AnchorMode; tolerance: number }
   | { id: number; kind: 'rerender'; key: string; tolerance: number };
 
+/** What the worker is told: a request it answers, or to let the pair it keeps go (answered with nothing). */
+export type DiffWorkerMessage = DiffWorkerRequest | { kind: 'forget' };
+
 /** A heatmap as it crosses back: its pixels' buffer is transferred, not copied. */
 export interface HeatmapPayload {
   pixels: ArrayBuffer;
@@ -34,13 +37,14 @@ export type DiffWorkerResponse =
 
 // The renderer's tsconfig types the DOM, not lib.webworker: the worker's global with just what this file uses.
 const scope = self as unknown as {
-  onmessage: ((event: MessageEvent<DiffWorkerRequest>) => void) | null;
+  onmessage: ((event: MessageEvent<DiffWorkerMessage>) => void) | null;
   postMessage(message: DiffWorkerResponse, transfer?: Transferable[]): void;
 };
 
 const passes = heatmapPasses();
 
 scope.onmessage = ({ data: request }) => {
+  if (request.kind === 'forget') return passes.forget();
   if (request.kind === 'compare') {
     const { coveredPixels, histogram, ...heatmap } = passes.compare(request.key, toBitmap(request.old), toBitmap(request.new), request.anchor, request.tolerance);
     // The histogram goes to the renderer, which counts changed pixels with it; the comparison stays for `rerender`.

@@ -1,6 +1,6 @@
 // The Differences mode's work on one pair of revisions, wherever it runs: in the worker (`imageDiff.worker`), or on
 // the main thread when there is none (`imageDiffSession`). Both keep the last pair compared, so a new tolerance only
-// renders the heatmap again.
+// renders the heatmap again, until its viewer goes (`forget`): 5 bytes a pixel, 36 MB for a pair of 3000 x 2400.
 
 import type { AnchorMode } from './composedFrame';
 import { findChangedRegions, type ChangedRegion } from './changedRegions';
@@ -25,6 +25,8 @@ export interface HeatmapPasses {
   compare(key: string, old: RgbaBitmap, next: RgbaBitmap, anchor: AnchorMode, tolerance: number): ComparedHeatmap;
   /** Renders the pair kept at another tolerance; null when the pair kept is another (compare it again). */
   rerender(key: string, tolerance: number): RenderedHeatmap | null;
+  /** Lets the pair kept go: its viewer is gone. */
+  forget(): void;
 }
 
 export function heatmapPasses(): HeatmapPasses {
@@ -37,6 +39,9 @@ export function heatmapPasses(): HeatmapPasses {
     },
     rerender(key, tolerance) {
       return kept?.key === key ? rendered(kept.comparison, tolerance) : null;
+    },
+    forget() {
+      kept = null;
     },
   };
 }

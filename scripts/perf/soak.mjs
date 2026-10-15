@@ -3,8 +3,9 @@
 // Every cycle visits every view (selecting rows, opening row menus and each view's pages: diffs, history, annotate,
 // the merge preview), opens the palette, settings, dialogs and menus, and edits a file on disk so the watcher refreshes.
 // After each cycle it forces a GC and records the renderer's heap, DOM nodes, listeners, TanStack Query cache size and
-// blob URLs not revoked, the main process's heap and RSS, and how many `cm` processes run. At the end it prints the
-// growth per cycle and the idle CPU of every process over 30 s.
+// blob URLs not revoked, the main process's heap and RSS, the physical footprint of the main and renderer processes
+// (macOS only: there RSS misleads), and how many `cm` processes run. At the end it prints the growth per cycle and the
+// idle CPU of every process over 30 s.
 //
 // The workspace must be a sandbox on a local server (the cycle creates and deletes a private file, and edits one);
 // `scripts/sandboxes/demo.sh` makes one that fits the defaults:
@@ -14,7 +15,7 @@
 //   node scripts/perf/soak.mjs --workspace=/tmp/uvcs-demo [--minutes=30] [--cycles=N] [--cdp=9510] [--inspect=10510]
 //     [--out=/tmp/soak.csv] [--merge-branch=/main/drift] [--history-file=README.md] [--others=/tmp/wk-2,/tmp/wk-3]
 //     [--binary-merge-branch=/main/art] [--snapshots=/tmp/soak-snapshots]
-// - The merge preview merges `--merge-branch` to /main on the server and never completes it.
+// - The merge preview merges `--merge-branch` to main on the server and never completes it.
 // - `--others`: each cycle switches the window to the next of those workspaces (of any repository) and back.
 // - `--binary-merge-branch`: there, it previews merging that branch, whose binary conflict it resolves each way and
 //   checks both versions show (the other workspaces must be clean).
@@ -100,6 +101,30 @@ function cmProcesses() {
   return processes.filter((process) => process.ppid === mainPid && /(^|\/)cm$/.test(process.comm)).length;
 }
 
+/**
+ * A process's physical footprint in MB, what macOS's Activity Monitor shows as its memory (`vmmap --summary`): RSS
+ * misleads there, counting shared and compressed pages its own way. Null on other systems, and for a process gone.
+ */
+function physicalFootprintMB(pid) {
+  if (process.platform !== 'darwin') return null;
+  try {
+    const summary = execFileSync('vmmap', ['--summary', String(pid)], { stdio: ['ignore', 'pipe', 'ignore'] });
+    const [, amount, unit] = /^Physical footprint:\s+([\d.]+)([KMG])/m.exec(summary.toString()) ?? [];
+    return amount === undefined ? null : Number(amount) * { K: 1 / 1024, M: 1, G: 1024 }[unit];
+  } catch {
+    return null;
+  }
+}
+
+/** The footprint of every renderer process (the windows' pages and their workers), summed. */
+async function renderersFootprintMB() {
+  const { processInfo } = await browserCdp.send('SystemInfo.getProcessInfo');
+  const footprints = processInfo.filter((info) => info.type === 'renderer').map((info) => physicalFootprintMB(info.id));
+  return footprints.includes(null) ? null : footprints.reduce((total, footprint) => total + footprint, 0);
+}
+
+const formatMB = (megabytes) => (megabytes === null ? '' : megabytes.toFixed(1));
+
 async function sample(cycle) {
   await cdp.send('HeapProfiler.collectGarbage');
   await mainCdp('HeapProfiler.collectGarbage');
@@ -119,6 +144,8 @@ async function sample(cycle) {
     blobUrls: await page.evaluate(() => window.__soakBlobUrls.size),
     mainHeapMB: (heap / 1e6).toFixed(2),
     mainRssMB: (rss / 1e6).toFixed(1),
+    mainFootprintMB: formatMB(physicalFootprintMB(mainPid)),
+    rendererFootprintMB: formatMB(await renderersFootprintMB()),
     cm: cmProcesses(),
   };
 }
@@ -216,14 +243,14 @@ const steps = {
     editOnDisk(cycle);
     await settle(1500);
     await main.getByRole('radio', { name: 'Files', exact: true }).click();
-    await main.getByRole('radio', { name: 'List', exact: true }).click();
     await settle(300);
-    await browseRows('option', 4);
+    // The files show as a tree or a list, as Settings says (`FileListLayout`).
+    await browseRows((await main.getByRole('tree').count()) > 0 ? 'treeitem' : 'option', 4);
     const filter = main.getByRole('textbox', { name: /^Filter/ });
     await filter.fill('Player');
     await settle(300);
     await filter.fill('');
-    for (const mode of ['Tree', 'Changelists', 'Files', 'List']) {
+    for (const mode of ['Changelists', 'Files']) {
       await main.getByRole('radio', { name: mode, exact: true }).click();
       await settle(300);
     }
@@ -259,8 +286,8 @@ const steps = {
     await settle(500);
     await openFirstRow();
     await main.getByRole('row').nth(1).click({ button: 'right' });
-    await page.getByRole('menuitem', { name: /^Merge to \/main/ }).click();
-    await page.getByRole('button', { name: /^Or merge on the server/ }).click({ timeout: 8000 });
+    await page.getByRole('menuitem', { name: /^Merge to main on the server/ }).click();
+    await main.getByRole('heading', { name: /^Merge .* into / }).waitFor();
     await settle(1500);
     await back();
     await filter.fill('');
@@ -392,8 +419,10 @@ rmSync(join(workspace, 'soak-scratch.txt'), { force: true });
 const from = samples[Math.floor(samples.length / 4)];
 const to = samples.at(-1);
 console.log(`\nGrowth per cycle over cycles ${from.cycle}–${to.cycle}:`);
-for (const key of ['heapMB', 'nodes', 'listeners', 'queries', 'blobUrls', 'mainHeapMB', 'mainRssMB', 'cm']) {
-  console.log(`  ${key.padEnd(11)} ${from[key]} → ${to[key]}  (${((to[key] - from[key]) / Math.max(1, to.cycle - from.cycle)).toFixed(3)}/cycle)`);
+const summed = ['heapMB', 'nodes', 'listeners', 'queries', 'blobUrls', 'mainHeapMB', 'mainRssMB', 'mainFootprintMB', 'rendererFootprintMB', 'cm'];
+for (const key of summed) {
+  if (to[key] === '') continue;
+  console.log(`  ${key.padEnd(19)} ${from[key]} → ${to[key]}  (${((to[key] - from[key]) / Math.max(1, to.cycle - from.cycle)).toFixed(3)}/cycle)`);
 }
 if (Object.keys(failures).length) console.log('Failed steps:', failures);
 

@@ -1,7 +1,5 @@
 import type { UvcsApi } from '@shared/api';
 import type { KeptAsideFile } from '@shared/domain/switchWithChanges';
-import { BranchNamesCache } from '../cm/BranchNamesCache';
-import { readBranchNames } from '../cm/branchNames';
 import { ProfileList } from '../cm/ProfileList';
 import { homedir } from 'node:os';
 import { nativeImage } from 'electron';
@@ -50,7 +48,7 @@ export function createServices(context: ServiceContext): UvcsApi {
   const switchShelves = new SwitchShelveRecords(context.settings);
   const tellKeptAside = (workspacePath: string, files: KeptAsideFile[]) => sendEventToCaller('filesKeptAside', { workspacePath, files });
   const switching: SwitchContext = { switchShelves, leftChanges: new LeftChangesFinder(context.cm, switchShelves, context.headers, tellKeptAside) };
-  const naming: BranchNamesContext = { branchNames: new BranchNamesCache((workspacePath) => readBranchNames(context.cm, workspacePath)) };
+  const naming: BranchNamesContext = { branchNames: context.branchNames };
   const apps = appsContext(context);
   const profiles: ProfilesContext = { profiles: new ProfileList(context.cm) };
 

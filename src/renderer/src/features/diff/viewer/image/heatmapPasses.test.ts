@@ -27,4 +27,11 @@ describe('heatmapPasses', () => {
     expect(passes.rerender('first', 0)).toBeNull();
     expect(passes.rerender('second', 0)).not.toBeNull();
   });
+
+  it('lets the pair go once its viewer is gone', () => {
+    const passes = heatmapPasses();
+    passes.compare('pair', OLD, NEW, 'center', 0);
+    passes.forget();
+    expect(passes.rerender('pair', 0)).toBeNull();
+  });
 });
