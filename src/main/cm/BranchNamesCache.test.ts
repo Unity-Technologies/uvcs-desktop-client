@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BranchNamesCache } from './BranchNamesCache';
 
-function setup(branches = [1, 2, 3].map((id) => ({ id, name: `/main/b${id}` }))) {
+function setup(branches = [1, 2, 3].map((id) => ({ id, name: `/main/b${id}` })), isShown = (_workspacePath: string) => true) {
   const reads: string[] = [];
   let now = 0;
   const cache = new BranchNamesCache(
@@ -10,6 +10,7 @@ function setup(branches = [1, 2, 3].map((id) => ({ id, name: `/main/b${id}` })))
       return branches;
     },
     () => now,
+    isShown,
   );
   return { cache, reads, advance: (ms: number) => (now += ms) };
 }
@@ -90,5 +91,14 @@ describe('BranchNamesCache', () => {
 
     await cache.resolve('/a', [1]);
     expect(reads).toEqual(['/a', '/a']);
+  });
+
+  it('keeps nothing for a workspace no window shows, still answering the lookup that read the names', async () => {
+    const { cache, reads } = setup(undefined, () => false);
+    cache.remember('/wk', [{ id: 7, name: '/main/task' }], { complete: true });
+
+    expect(await cache.resolve('/wk', [1])).toEqual(new Map([[1, '/main/b1']]));
+    expect(await cache.resolve('/wk', [7])).toEqual(new Map());
+    expect(reads).toEqual(['/wk', '/wk']);
   });
 });
