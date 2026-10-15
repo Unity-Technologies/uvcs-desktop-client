@@ -208,6 +208,8 @@ export class WorkspaceCopies {
     const key = diskKey(absolutePath, stats.size, stats.mtimeMs);
     const known = this.diskHashes.get(key);
     if (known !== undefined && known !== file.hash) return null;
+    // Without the bytes, the hash known for the file as it is now answers (`has`): the read that follows hashes them.
+    if (known !== undefined && !keepBytes) return { bytes: null };
     const read = await readHashed(absolutePath, stats.size, keepBytes).catch(() => null);
     if (!read) return null;
     if (this.diskHashes.size >= MAX_DISK_HASHES) this.diskHashes.clear();
