@@ -17,10 +17,12 @@ interface TextViewControlsProps {
   plainTextThreshold: string;
   /** Split | Unified changes how the diff shows (`followsLayout`). */
   followsLayout: boolean;
+  /** A line is too long to draw unwrapped (`hasLineTooLongToDraw`): lines wrap, and the toggle says so. */
+  wrapsLongLines: boolean;
 }
 
 /** The header's ways of viewing a text's lines: its size note and +N −M, the comparison method, collapse, wrap, Split | Unified. */
-export function TextViewControls({ diff, plainText, plainTextThreshold, followsLayout }: TextViewControlsProps) {
+export function TextViewControls({ diff, plainText, plainTextThreshold, followsLayout, wrapsLongLines }: TextViewControlsProps) {
   const { layout, collapseUnchanged, wrapLines, comparisonMethod, setLayout, setCollapseUnchanged, setWrapLines, setComparisonMethod } = useDiffPreferences();
   return (
     <>
@@ -39,8 +41,9 @@ export function TextViewControls({ diff, plainText, plainTextThreshold, followsL
         <IconButton
           size="small"
           icon={<WrapText size={14} />}
-          label={wrapLines ? "Don't wrap lines" : 'Wrap lines'}
-          variant={wrapLines ? 'secondary' : 'ghost'}
+          label={wrapsLongLines ? 'Wrapped: a line is too long to show unwrapped' : wrapLines ? "Don't wrap lines" : 'Wrap lines'}
+          variant={wrapLines || wrapsLongLines ? 'secondary' : 'ghost'}
+          disabled={wrapsLongLines}
           onClick={() => setWrapLines(!wrapLines)}
         />
       </PaneToolbarGroup>

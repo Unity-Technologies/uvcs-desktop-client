@@ -20,6 +20,7 @@ import { DiffNotice } from './DiffNotice';
 import { DiffViewerFrame } from './DiffViewerFrame';
 import { ImageModeSwitch } from './ImageModeSwitch';
 import { hasLineChanges } from './lineDiff';
+import { hasLineTooLongToDraw } from './longLines';
 import { MethodHidingNotice } from './MethodHidingNotice';
 import { modelBesideMeta, modelOfMeta } from './model/modelMeta';
 import { SiblingFinderContext } from './model/modelSiblings';
@@ -99,6 +100,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const editable = isText && editablePath !== null;
   const diffs = useLineDiffs({ isText, original: left.text ?? '', saved: right.text, current, comparisonMethod, fileName });
   const wholeFile = typedIntoWhole(editable, diffs.saved);
+  const wrapsLongLines = useMemo(() => isText && hasLineTooLongToDraw([left.text ?? '', right.text ?? '']), [isText, left.text, right.text]);
   // Nothing to view differently in an empty or unchanged file that only says so, nor in a .meta shown as its model.
   const viewControls = !metaAsModel && showsLines(presentation, editable);
   // Nor to move through there or in a file typed into whole; a version shown alone (added, deleted) is one change.
@@ -131,6 +133,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
           plainText={syntaxHighlighting(left.text ?? '', right.text ?? '', editable) === 'off'}
           plainTextThreshold={plainTextThresholdLabel(editable)}
           followsLayout={followsLayout(sides, wholeFile)}
+          wrapsLongLines={wrapsLongLines}
         />
       )}
       {/* Single-sided images and models (added or deleted) are previews: no modes to offer. */}
@@ -162,6 +165,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
         onUndoDiscard={discards?.onUndoDiscard}
         changeViewRef={changeView}
         onViewScroll={navigation.onViewScroll}
+        wrapsLongLines={wrapsLongLines}
       />
     </Suspense>
   );
