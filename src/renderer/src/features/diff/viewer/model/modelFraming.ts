@@ -5,6 +5,15 @@ import type { NodeRef } from './modelChanges';
 import type { Bounds, ModelSummary } from './modelSummary';
 import type { BoundsLike } from './orbitCamera';
 
+/**
+ * Whether each version there is (`present`: the diff has it) has what is waited for (`have`: its read, its scene).
+ * The first framing waits for every version's scene: framed with one still missing, the renderer laid it out alone,
+ * full width, and the pair kept a framing made for that shape until the window was resized.
+ */
+export function everyVersionHas(present: { before: boolean; after: boolean }, have: { before: unknown; after: unknown }): boolean {
+  return (!present.before || have.before != null) && (!present.after || have.after != null);
+}
+
 /** The union of the versions' bounds, in the viewer's space; null when neither draws anything. */
 export function framedBounds(...summaries: (ModelSummary | null)[]): BoundsLike | null {
   return union(summaries.flatMap((summary) => (summary?.bounds ? [summary.bounds] : [])));

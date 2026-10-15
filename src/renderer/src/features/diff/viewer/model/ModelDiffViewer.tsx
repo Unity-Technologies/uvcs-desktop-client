@@ -23,7 +23,7 @@ import { ModelChangesPanel } from './ModelChangesPanel';
 import { clipChoices } from './modelClips';
 import { ModelDifferencesControls } from './ModelDifferencesControls';
 import type { ModelDiffMode } from './modelDiffModes';
-import { framedBounds, nodesBounds } from './modelFraming';
+import { everyVersionHas, framedBounds, nodesBounds } from './modelFraming';
 import type { ModelImportSettings } from './modelImportSettings';
 import { ModelInfoStrip } from './ModelInfoStrip';
 import { modelCommandOf } from './modelKeys';
@@ -134,7 +134,8 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   }, [old, next, optionsBefore, optionsAfter, materials.changes, materials.notCompared]);
   const stats = useMemo(() => modelStats(old?.summary ?? null, next?.summary ?? null), [old, next]);
   // Every version there is, read: framing one alone would frame a pair whose other half may be 100 times its size.
-  const allRead = (!original.model || old !== null) && (!modified.model || next !== null);
+  const present = useMemo(() => ({ before: Boolean(original.model), after: Boolean(modified.model) }), [original.model, modified.model]);
+  const allRead = everyVersionHas(present, { before: old, after: next });
   const bounds = useMemo(() => (allRead ? framedBounds(old?.summary ?? null, next?.summary ?? null) : null), [allRead, old, next]);
 
   const camera = useModelCamera(renderer, bounds, stageRef);
@@ -149,8 +150,10 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   useEffect(() => {
     if (!renderer || !bounds) return;
     renderer.setModels(sceneBefore, sceneAfter, bounds);
-    camera.frameFirst();
-  }, [renderer, sceneBefore, sceneAfter, bounds, camera.frameFirst]);
+    // Once both are in: each scene is built a render after its read, and framed with one missing, the pair kept a
+    // framing made for a version alone (`everyVersionHas`).
+    if (everyVersionHas(present, { before: sceneBefore, after: sceneAfter })) camera.frameFirst();
+  }, [renderer, sceneBefore, sceneAfter, bounds, present, camera.frameFirst]);
   useEffect(() => {
     if (renderer && palette) renderer.setPalette(palette);
   }, [renderer, palette]);
