@@ -64,33 +64,37 @@ export interface HistoryPoints {
   changesets: Record<DiffSide, number | null>;
   /** Whether the revisions are the workspace's repository's; undefined while that isn't known. */
   inWorkspaceRepository: boolean | undefined;
-  /** The last changeset that moved, renamed or removed the item (`ItemHistory.pathChanges`); null if none did. */
-  lastPathChange: number | null;
 }
 
 /**
  * Where a side of a history comparison finds what goes with it (its files beside it, its materials): the changeset
- * that made its revision, read at the item's path now. None under an xlink (a changeset of the xlinked repository,
- * whose paths aren't the workspace's), nor before the item last moved, renamed or was removed: the file at its path
- * then was another, or nothing (a changeset that moved it and changed it made its revision at the new path).
+ * that made its revision. None under an xlink: that is a changeset of the xlinked repository, whose paths aren't the
+ * workspace's.
  */
-export function historyPointOf({ changesets, inWorkspaceRepository, lastPathChange }: HistoryPoints, side: DiffSide): string | null {
+export function historyPointOf({ changesets, inWorkspaceRepository }: HistoryPoints, side: DiffSide): string | null {
   const changeset = changesets[side];
-  if (!inWorkspaceRepository || changeset === null || changeset < 0) return null;
-  if (lastPathChange !== null && changeset < lastPathChange) return null;
-  return `cs:${changeset}`;
+  return inWorkspaceRepository && changeset !== null && changeset >= 0 ? `cs:${changeset}` : null;
 }
 
-/** A history's siblings: the file beside each revision at its point (`historyPointOf`), so a glTF reads the `.bin` that went with it. */
+/**
+ * A history's siblings: the file beside each revision at its point (`historyPointOf`), so a glTF reads the `.bin`
+ * that went with it. Named at the history's path, the one it was opened at, which may have held another item or none
+ * in that changeset (the model moved or renamed since, or before): main reads it only where the revision itself is at
+ * that path then (`beside`, against the folder listing that finds the sibling), and reads nothing otherwise.
+ */
 export function historySibling(points: HistoryPoints): SiblingFinder {
   return (side, source, path, fileName) => {
     if (source.kind !== 'revision') return workspaceSibling(side, source, path, fileName);
     const at = historyPointOf(points, side);
     const sibling = siblingPath(path, fileName);
     if (at === null || sibling === null) return null;
-    // The repository's paths always use `/`: a history opened from a Windows path names its file with `\`.
-    return { kind: 'repositoryPath', path: `/${sibling.replaceAll('\\', '/')}`, at };
+    return { kind: 'repositoryPath', path: inRepositoryForm(sibling), at, beside: { path: inRepositoryForm(path), revisionId: source.revision.revisionId } };
   };
+}
+
+/** A workspace-relative path as the repository names it: from its root, with `/` (a history opened from a Windows path has `\`). */
+function inRepositoryForm(path: string): string {
+  return `/${path.replaceAll('\\', '/')}`;
 }
 
 /** Where a committed diff points to: a changeset, a branch's head, a shelve, the end of a range. */

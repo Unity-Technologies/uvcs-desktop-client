@@ -70,7 +70,6 @@ export function RevisionPane({ path, history, focusedRow, selectedRows, menu, on
           path={path}
           revisions={history.revisions}
           selected={selectedRevisions}
-          lastPathChange={history.pathChanges[0]?.changesetId ?? null}
           onBack={onBack}
           history={annotationHistory}
           otherRepository={otherRepository}

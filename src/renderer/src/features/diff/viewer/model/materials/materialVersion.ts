@@ -45,8 +45,9 @@ export function materialsInputOf(version: MaterialVersion | null, mtl: FileMater
 
 /**
  * Whether a version's materials take the workspace's `.meta` settings: only when no `.meta` was found for it (a last
- * change whose `.meta` changed since, a revision in History, a merge's source); never for one whose read failed,
- * which shows the defaults until read again, rather than the workspace's look and then its own.
+ * change whose `.meta` changed since; in History, a revision under an xlink or one the model wasn't at its path in;
+ * a merge's source); never for one whose read failed, which shows the defaults until read again, rather than the
+ * workspace's look and then its own.
  */
 export function takesWorkspaceSettings(options: ModelReadOptions): boolean {
   return options.settingsFrom === 'none';

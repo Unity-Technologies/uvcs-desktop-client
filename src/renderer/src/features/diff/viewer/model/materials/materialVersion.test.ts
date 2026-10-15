@@ -44,7 +44,8 @@ describe('materialsInputOf', () => {
       point: null,
       sibling: () => null,
     });
-    // No .meta for the version (a last change whose .meta changed since, a revision under an xlink in History): the workspace's decides.
+    // No .meta for the version (a last change whose .meta changed since; in History, a revision under an xlink or
+    // one the model wasn't at its path in): the workspace's decides.
     expect(materialsInputOf(version('none'), null, workspace)?.settings).toBe(workspace);
     expect(materialsInputOf(version('none'), null, null)?.settings).toEqual(DEFAULT_IMPORT_SETTINGS);
     // Its own .meta, even one that reads as the defaults (no ModelImporter in it).
