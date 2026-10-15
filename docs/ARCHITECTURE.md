@@ -208,13 +208,23 @@ by name, and never passes it to `cm`.
   - The workspace's repository and server (`WorkspaceInfo`, `readWorkspaceStatus`): from
     `cm status --header --machinereadable` (`machineReadableHeaderArgs`), a local read
     run only when the `--xml` header printed an id (`serverByName`). The header is shared for a few seconds
-    (`WorkspaceHeaders`). Reads that need only what is loaded take `readWorkspaceLoad`, which has no server to misuse.
+    (`WorkspaceHeaders`). Reads that need only what is loaded take `readWorkspaceLoad`, which has no server to misuse,
+    and the header as printed (`parseWorkspaceStatus`) holds the id only as `printedServer`. The header's branch is
+    read whichever form its `<WkConfigName>` prints (`selectorName`). The switcher's glance at another workspace
+    (`readWorkspaceGlance`) reads only its branch and pending changes: its row already shows the repository.
   - A file's history (`withServerOf`): from the item's repository, as the `cm ls` the history runs anyway names it
     (`workspaceItemArgs`, `{repspec}`), or the revision the history starts from.
   - The home screen (`parseSelectorFile`): a selector file that keeps an id names no repository (`WorkspaceHead`'s
     `repository` null), so the recent workspaces' lookup asks `cm` (`repositoriesOf`, the machine-readable header),
-    as for a file that can't be read.
+    as for a file that can't be read: one query per workspace for the session (`workspaceRepositoryQuery`), two at a
+    time across them in main (`workspaceRepositoryLookups`). Meanwhile, and for the workspaces past the recent ones,
+    the row shows the repository's own name, which the file tells (`repositoryName`, `describedEntry`), and no server.
   Should `cm` not answer, the id stays rather than a guess.
+- **What was saved under the id before**: nothing is migrated (that would be id-aware code to delete later). A
+  shelve this app left on a Unity organization's workspace, recorded under the id, no longer matches the workspace's
+  repository: it is offered as one another app left (adopted as foreign), its changelists are lost, and the folder
+  where added files waited is no longer used to put them back. Review marks kept under the id's repository no longer
+  show.
 - **Kept so**: `fakeCmClient` fails a test whose code passes the id form to `cm` (`namesOrganizationById`; a profile's
   name is the id form itself, as `cm profile list` prints it, so `cm profile` is exempt), and development builds warn
   `[organization id]` in the console when a command does (`warnOnOrganizationIds`).
