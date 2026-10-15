@@ -5,14 +5,15 @@ import { watchQueriesByFrame } from './watchQueriesByFrame';
 
 const FILES = 300;
 
-function setup() {
+/** Queries whose reads answer `answer(id)`: the text, by default. */
+function setup(answer: (id: number) => Promise<string> = async (id) => `text ${id}`) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   let reads = 0;
   const queries = Array.from({ length: FILES }, (_, id) => ({
     queryKey: ['version', id],
-    queryFn: async () => {
+    queryFn: () => {
       reads++;
-      return `text ${id}`;
+      return answer(id);
     },
   }));
   const observer = new QueriesObserver(client, queries);
@@ -58,5 +59,29 @@ describe('watchQueriesByFrame', () => {
     frames.frame();
     expect(handed).toHaveLength(0);
     expect(frames.animating()).toBe(false);
+  });
+
+  it('hands over again, in a frame of its own, what answers after a hand-over', async () => {
+    let answerLast: (text: string) => void = () => {};
+    const last = new Promise<string>((resolve) => (answerLast = resolve));
+    const { watch, frames, handed } = setup((id) => (id === FILES - 1 ? last : Promise.resolve(`text ${id}`)));
+    watch();
+    await answerAll();
+    frames.frame();
+    expect(handed.at(-1)!.at(-1)!.data).toBeUndefined();
+
+    answerLast('late text');
+    await answerAll();
+    frames.frame();
+    expect(handed.at(-1)!.at(-1)!.data).toBe('late text');
+  });
+
+  it('hands over a read that failed, with its error', async () => {
+    const { watch, frames, handed } = setup((id) => (id === 0 ? Promise.reject(new Error('cm cat failed')) : Promise.resolve(`text ${id}`)));
+    watch();
+    await answerAll();
+    frames.frame();
+    const [failed] = handed.at(-1)!;
+    expect([failed!.data, failed!.error?.message]).toEqual([undefined, 'cm cat failed']);
   });
 });

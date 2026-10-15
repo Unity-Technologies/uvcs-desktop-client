@@ -15,9 +15,9 @@ const plan: MergePlan = {
 
 const file: ConflictedFile = { key: '/a.txt', path: 'a.txt', base: { kind: 'empty' }, source: { kind: 'empty' }, destination: { kind: 'empty' } };
 
-function fileState(resolved: boolean, conflicted = file): FileConflictState {
+function fileState(resolved: boolean): FileConflictState {
   return {
-    file: conflicted,
+    file,
     status: 'ready',
     isBinary: false,
     decidedByUser: resolved,
