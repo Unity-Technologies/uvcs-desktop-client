@@ -1,9 +1,11 @@
 import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { contentHashOf } from '../files/WorkspaceCopies';
+import { createContentService } from './contentService';
 import { createExplorerService } from './explorerService';
 import { serviceContext } from './testing/serviceContext';
 
@@ -34,6 +36,29 @@ describe('browsing the workspace', () => {
 
     expect(commands).toMatchObject([{ via: 'query', args: ['ls', join(WORKSPACE, 'src'), '--xml', '--symlink'], options: { cwd: WORKSPACE } }]);
     expect(items.map((item) => [item.path, item.revisionId])).toEqual([['src/a.cs', 52]]);
+  });
+
+  it("keeps each item's hash in the main process: the windows have no use for it", async () => {
+    const { service } = explorer({ ls: LS_XML.replace('<ItemId>36</ItemId>', '<ItemId>36</ItemId><Hash>aGFzaA==</Hash>') });
+
+    const [item] = await service.listDirectory(WORKSPACE, 'src');
+
+    expect(item).not.toHaveProperty('hash');
+  });
+
+  it("reads a revision Browse repository listed from the workspace's disk where it holds it unchanged", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'browse-wk-'));
+    await mkdir(join(workspace, 'src'));
+    await writeFile(join(workspace, 'src', 'a.cs'), 'class A {}\n');
+    const listed = LS_XML.replace('<WkPath>src/a.cs</WkPath>', '<WkPath>/src/a.cs</WkPath>').replace('<ItemId>36</ItemId>', `<ItemId>36</ItemId><Repository>rep:game@local</Repository><Hash>${contentHashOf(Buffer.from('class A {}\n'))}</Hash>`).replace('<Size>12</Size>', '<Size>11</Size>');
+    const fake = fakeCmClient({ ls: listed });
+    const context = serviceContext(fake.cm);
+    await createExplorerService(context).listRepositoryDirectory(workspace, 12, 'src');
+
+    const read = await createContentService(context).read(workspace, { kind: 'revision', revision: { revisionId: 52, repository: 'game@local' }, fileName: 'src/a.cs' });
+
+    expect(read.text).toBe('class A {}\n');
+    expect(fake.ran('cat')).toBe(false);
   });
 
   it("lists a folder of a changeset's tree by its repository path", async () => {

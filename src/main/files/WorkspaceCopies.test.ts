@@ -2,7 +2,8 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { contentHashOf, WorkspaceCopies, type RevisionFile } from './WorkspaceCopies';
+import type { TreeItem } from '@shared/domain/explorer';
+import { contentHashOf, revisionFilesOf, WorkspaceCopies, type RevisionFile } from './WorkspaceCopies';
 
 const hashOf = (text: string) => contentHashOf(Buffer.from(text));
 
@@ -63,5 +64,43 @@ describe('WorkspaceCopies.read', () => {
     const workspace = await workspaceWith({});
 
     await expect(new WorkspaceCopies().read(workspace, revisionOf('../outside.obj', 'v\n'))).rejects.toThrow('outside the workspace');
+  });
+});
+
+describe('WorkspaceCopies.remember', () => {
+  it('keeps the latest revisions listed, letting the oldest go past its bound', async () => {
+    const workspace = await workspaceWith({ 'a.obj': 'a\n', 'b.obj': 'b\n', 'c.obj': 'c\n' });
+    const copies = new WorkspaceCopies({ maxListed: 2 });
+    const listed = (path: string, revisionId: number): RevisionFile => ({ path, revision: { revisionId, repository: 'models@local' }, hash: hashOf(`${path[0]}\n`), size: 2 });
+
+    copies.remember(workspace, [listed('a.obj', 1), listed('b.obj', 2)]);
+    copies.remember(workspace, [listed('a.obj', 1), listed('c.obj', 3)]);
+
+    const read = async (revisionId: number) => (await copies.readRevision(workspace, { revisionId, repository: 'models@local' }))?.toString();
+    expect([await read(1), await read(2), await read(3)]).toEqual(['a\n', undefined, 'c\n']);
+  });
+});
+
+describe('revisionFilesOf', () => {
+  const item = (path: string, parts: Partial<TreeItem>): TreeItem => ({
+    path, name: path, itemType: 'file', size: 2, date: '', isPrivate: false, isCheckedOut: false, changeset: 3, branch: '/main', owner: 'ana',
+    revisionId: 40, parentRevisionId: 30, repository: 'models@local', itemId: 7, hash: 'aGFzaA==', ...parts,
+  });
+
+  it('takes the files that hold a revision: never a folder, an xlink, a link, a private item or a checkout', () => {
+    const files = revisionFilesOf([
+      item('a.cs', {}),
+      item('art.png', { itemType: 'binaryFile', revisionId: 41 }),
+      item('src', { itemType: 'directory' }),
+      item('lib', { itemType: 'xlink' }),
+      item('link', { itemType: 'symlink' }),
+      item('notes.txt', { isPrivate: true, revisionId: -1, hash: undefined }),
+      item('b.cs', { isCheckedOut: true, revisionId: -1 }),
+    ]);
+
+    expect(files).toEqual([
+      { path: 'a.cs', revision: { revisionId: 40, repository: 'models@local' }, hash: 'aGFzaA==', size: 2 },
+      { path: 'art.png', revision: { revisionId: 41, repository: 'models@local' }, hash: 'aGFzaA==', size: 2 },
+    ]);
   });
 });

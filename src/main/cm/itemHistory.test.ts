@@ -137,6 +137,7 @@ describe('parseWorkspaceRevision', () => {
     });
     const folder = formatOutput([102, 'gEUrSyJHiFSO6gIeIYyPWw==', 0, 'rep:models@local'], [100, 'aaa=', 3, 'rep:models@local']);
     expect(parseWorkspaceRevision(folder, 'Prop')?.revision.revisionId).toBe(102);
+    expect(parseWorkspaceRevision(formatOutput([7, 'aGFzaA==', '', 'rep:models@local']), 'a.txt')?.size).toBe(-1);
   });
 
   it('finds none for an item the workspace has no revision of: a checkout lists -1, with the disk\'s hash', () => {
