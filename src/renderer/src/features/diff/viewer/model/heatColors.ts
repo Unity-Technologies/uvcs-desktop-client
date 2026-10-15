@@ -28,6 +28,14 @@ function glslFloat(value: number): string {
 /** The vertex attribute holding each vertex's distance to the other version. */
 export const DISTANCE_ATTRIBUTE = 'surfaceDistance';
 
+/**
+ * A mesh's distances to draw by, or null: the comparison and the scenes come apart (each a render after its read), so
+ * for a moment the distances may be another pair's. One per vertex of the mesh, or none: a mesh shows its clay then.
+ */
+export function distancesToDraw(distances: Float32Array | undefined, vertices: number): Float32Array | null {
+  return distances?.length === vertices ? distances : null;
+}
+
 /** What the heat and ghost materials color by, shared as uniforms: setting a value recolors without compiling. */
 export interface HeatScale {
   heatTolerance: { value: number };

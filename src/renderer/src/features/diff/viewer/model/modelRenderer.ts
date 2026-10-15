@@ -38,7 +38,7 @@ import {
 } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { canvasSizeChanged, canvasSizeOf, type CanvasSize } from './canvasSize';
-import { DISTANCE_ATTRIBUTE } from './heatColors';
+import { DISTANCE_ATTRIBUTE, distancesToDraw } from './heatColors';
 import { LookComparer } from './lookComparer';
 import { LookTextures, SlotLookMaterials } from './materials/slotLookMaterials';
 import type { SlotLook } from './materials/materialPlan';
@@ -494,15 +494,21 @@ export class ModelRenderer {
     return { scene, model, key, markers, pivot, skeleton, joints, looks };
   }
 
-  /** Each side's distances on its meshes' geometries (once: the same arrays aren't set again), and the tolerance. */
+  /**
+   * Each side's distances on its meshes' geometries (once: the same arrays aren't set again), and the tolerance. The
+   * heat may be another pair's for a moment (a side replaced before its comparison comes): a mesh takes only distances
+   * with one per vertex of it (`distancesToDraw`), and shows its clay otherwise.
+   */
   private applyHeat(): void {
     for (const side of ['before', 'after'] as const) {
       const scene = this.sides[side];
       if (!scene) continue;
       scene.model.meshes.forEach((mesh, i) => {
-        const distances = this.heat?.[side][i];
         const { geometry } = mesh.solid;
-        if (distances && geometry.getAttribute(DISTANCE_ATTRIBUTE)?.array !== distances) geometry.setAttribute(DISTANCE_ATTRIBUTE, new BufferAttribute(distances, 1));
+        const distances = distancesToDraw(this.heat?.[side][i], geometry.getAttribute('position').count);
+        const drawn = geometry.getAttribute(DISTANCE_ATTRIBUTE)?.array;
+        if (!distances) geometry.deleteAttribute(DISTANCE_ATTRIBUTE);
+        else if (drawn !== distances) geometry.setAttribute(DISTANCE_ATTRIBUTE, new BufferAttribute(distances, 1));
       });
       scene.model.materials.heatScale.heatTolerance.value = this.heatTolerance.tolerance;
       scene.model.materials.heatScale.heatFullAt.value = this.heatTolerance.fullAt;
