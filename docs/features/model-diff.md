@@ -145,7 +145,10 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
   index" below). Then the file's own list of textures named (`textures`) stands in, and where the materials may have
   changed (`materialsMayDiffer`) a note says they weren't compared and why ("Materials not compared": open the project
   in Unity once on this computer; the project's files couldn't all be read; the model isn't in a Unity project;
-  `materialsNotComparedOf`), so the panel never says nothing changed; where they are told, or being read, it goes, as
+  `materialsNotComparedOf`), so the panel never says nothing changed. Where they can't be resolved at all (no point
+  to look them up at, as a merge's versions, or no Unity project), the file's own materials stand in
+  (`fileMaterialChanges`: each named slot's base color where it shows, a glTF's under its base map too, alpha,
+  cutoff, opacity, sides and tiling; which textures it maps is the textures' row), and told, they need no note; where they are told, or being read, it goes, as
   the materials say which textures Unity uses (`whatChanged`).
 
 `changeRows` words them for the panel, with the line on why a risk matters in Unity, and folds three or more of a kind

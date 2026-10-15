@@ -1,6 +1,8 @@
 // Everything "What changed" tells of two versions, risks first: what changed in the file (`modelChanges`), what its
 // import settings no longer fit (`importSettingsChanges`), and what changed in its materials (`materialChanges`).
 // Where the materials are told, they say which textures Unity uses, so the file's own list of textures named goes.
+// Where they can't be resolved at all (no point to look them up at, or no Unity project), the file's own materials
+// stand in (`fileMaterialChanges`): a color repainted is still told.
 
 import type { MaterialChange } from './materials/materialChanges';
 import type { NotKnownReason } from './materials/materialComparison';
@@ -15,18 +17,25 @@ export interface ChangesOfVersions {
   materials: MaterialChange[] | null | undefined;
   /** `materialsNotComparedOf`: why materials that may have changed couldn't be compared. */
   materialsNotCompared: NotKnownReason | null;
+  /** `fileMaterialChanges`: what changed in the materials the file defines, told where Unity's can't be resolved. */
+  fileMaterials: MaterialChange[];
   /** A glTF's images held in the file are named by no file: the materials compare them by place, never by content. */
   gltf: boolean;
 }
 
-export function whatChanged({ file, importSettings, settingsRead, materials, materialsNotCompared, gltf }: ChangesOfVersions): ModelChange[] {
+export function whatChanged({ file, importSettings, settingsRead, materials, materialsNotCompared, fileMaterials, gltf }: ChangesOfVersions): ModelChange[] {
   const texturesTold = materials !== null && !gltf;
+  // The project's lookups (a remap, a texture search) can't resolve where there's no point or no project: the file's
+  // materials are what there is. Elsewhere (no Library, a read that failed) a slot may be remapped, and the note says so.
+  const fileMaterialsStandIn = materials === null && (materialsNotCompared === null || materialsNotCompared === 'noProject');
+  const told = materials ?? (fileMaterialsStandIn ? fileMaterials : []);
+  // Never "Nothing Unity imports changed" when the materials may have and couldn't be compared, unless the file's told.
+  const notCompared = materialsNotCompared && !(fileMaterialsStandIn && told.length > 0) ? [{ kind: 'materialsNotCompared' as const, reason: materialsNotCompared }] : [];
   const changes = [
     ...file.filter((change) => !texturesTold || change.kind !== 'textures'),
     ...(settingsRead ? importSettings : []),
-    ...(materials ?? []).map((change): ModelChange => ({ kind: 'material', change })),
-    // Never "Nothing Unity imports changed" when the materials may have and couldn't be compared.
-    ...(materialsNotCompared ? [{ kind: 'materialsNotCompared' as const, reason: materialsNotCompared }] : []),
+    ...told.map((change): ModelChange => ({ kind: 'material', change })),
+    ...notCompared,
   ];
   return [...changes.filter(isRisk), ...changes.filter((change) => !isRisk(change))];
 }

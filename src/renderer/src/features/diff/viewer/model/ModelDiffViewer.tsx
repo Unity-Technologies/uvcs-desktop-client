@@ -29,6 +29,7 @@ import { ModelInfoStrip } from './ModelInfoStrip';
 import { modelCommandOf } from './modelKeys';
 import { aroundPoints, clickedNode, markersOf } from './modelPicking';
 import { modelReadFailureWords } from './modelReadFailureWords';
+import { fileMaterialChanges } from './materials/fileMaterialChanges';
 import { useModelMaterials, type MaterialVersion } from './materials/useModelMaterials';
 import { modelStats, movedStat, texturesStat } from './modelStats';
 import { ModelViewControls } from './ModelViewControls';
@@ -130,6 +131,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
         settingsRead: optionsBefore.settingsFrom !== 'failed' && optionsAfter.settingsFrom !== 'failed',
         materials: materials.changes,
         materialsNotCompared: materials.notCompared,
+        fileMaterials: fileMaterialChanges(old.model, next.model),
         gltf,
       }),
     );
