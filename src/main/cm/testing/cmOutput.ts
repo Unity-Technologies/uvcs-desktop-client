@@ -226,3 +226,27 @@ export function treeListingOutput(...items: ListedRecord[]): string {
     ]),
   );
 }
+
+/** An item of a workspace's `cm ls <folder> --xml`: the revision it was loaded from (its size and hash), or a checkout's -1. */
+export interface WorkspaceListedRecord {
+  path: string;
+  revid: number;
+  size: number;
+  hash: string;
+  repository?: string;
+  checkedOut?: boolean;
+}
+
+/**
+ * A workspace's `cm ls <folder> --xml`, trimmed, as `cm` prints it: the folder itself as `.`, `WkPath`s relative with
+ * the OS's separators, and each file's `Size` and `Hash` its loaded revision's, never the disk's (a checkout has none).
+ */
+export function workspaceListingXml(folder: string, ...items: WorkspaceListedRecord[]): string {
+  const item = ({ path, revid, size, hash, repository = 'eco@local', checkedOut = false }: WorkspaceListedRecord) =>
+    `<LsItem><Status>Controlled</Status><Name>${path.split('/').pop()}</Name><WkPath>${path}</WkPath><Size>${size}</Size><Type>bin</Type>` +
+    `<Changeset>21</Changeset><Repository>rep:${repository}</Repository><Checkout>${checkedOut ? 'CO' : ''}</Checkout>` +
+    `<RevId>${checkedOut ? -1 : revid}</RevId><ParentRevId>${revid - 1}</ParentRevId><ItemId>${revid + 1000}</ItemId><Hash>${hash}</Hash>` +
+    '<HashAlgorithm>MD5</HashAlgorithm><Branch>/main</Branch><Date>2026-10-15T14:24:03+02:00</Date></LsItem>';
+  const self = `<LsItem><Status>Controlled</Status><Name>.</Name><WkPath>${folder}</WkPath><Type>dir</Type><RevId>1</RevId></LsItem>`;
+  return `<?xml version="1.0" encoding="utf-8"?>\n<LsResults><LsItems>${self}${items.map(item).join('')}</LsItems></LsResults>`;
+}
