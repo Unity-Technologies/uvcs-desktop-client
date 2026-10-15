@@ -228,6 +228,28 @@ describe('modelChanges: mesh data', () => {
     expect(kinds(modelChanges(before, after))).toEqual(['shape']);
   });
 
+  describe('its triangles', () => {
+    /** The rock with an index: its 12 triangles as `triangles` lists them, each three of its 36 vertices. */
+    const indexed = (triangles: number[][]): ParsedModel => {
+      const model = testModel(rock({}));
+      model.meshes[0]!.index = Uint32Array.from(triangles.flat());
+      return model;
+    };
+    const asStored = Array.from({ length: 12 }, (_, t) => [3 * t, 3 * t + 1, 3 * t + 2]);
+
+    it('tells nothing when only their order changed, as a re-export writes them and Unity reorders them anyway', () => {
+      // Every triangle another place in the list, and its corners started from another one, keeping its winding.
+      const reordered = [...asStored].reverse().map(([a, b, c]) => [b!, c!, a!]);
+      expect(modelChanges(modelSummary(indexed(asStored)), modelSummary(indexed(reordered)))).toEqual([]);
+    });
+
+    it('tells a face triangulated another way, over the same vertices, as that and not as a shape change', () => {
+      // The first face's quad (corners 0, 1, 2, 3 at vertices 0, 1, 2 and 5) split along its other diagonal.
+      const otherDiagonal = [[0, 1, 5], [1, 2, 5], ...asStored.slice(2)];
+      expect(modelChanges(modelSummary(indexed(asStored)), modelSummary(indexed(otherDiagonal)))).toMatchObject([{ kind: 'triangulation', node: { name: 'Rock' } }]);
+    });
+  });
+
   it('tells no shape change for vertices shifted to stay where they were, under a node moved to a new parent', () => {
     const before: TestModel = { nodes: [{ name: 'Head', position: [0, 1.7, 0] }, { name: 'Helmet', mesh: { center: [0, 1.8, 0] } }] };
     const after: TestModel = { nodes: [{ name: 'Head', position: [0, 1.7, 0] }, { name: 'Helmet', parent: 'Head', mesh: { center: [0, 0.1, 0] } }] };
