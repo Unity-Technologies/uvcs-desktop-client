@@ -56,6 +56,20 @@ describe('completing a merge', () => {
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Merge applied to your workspace' }]);
   });
 
+  it("says which files still hold yours when the merge couldn't save their incoming version", async () => {
+    fakeApi.answer('merge.run', () => ({ incomingNotSaved: ['/Assets/Grass.png', '/Assets/Rock.png'] }));
+    navigation.openPage({ kind: 'merge', request: intoWorkspace });
+
+    await completeMerge(ws, intoWorkspace, resolutions);
+    expect(shownToasts()).toEqual([
+      {
+        kind: 'info',
+        title: 'Merge applied, but 2 files still hold yours',
+        detail: "Their incoming version couldn't be downloaded: /Assets/Grass.png and /Assets/Rock.png. Check them before checking in.",
+      },
+    ]);
+  });
+
   it('goes back to where it was opened from after merging into a server branch, with one toast naming the new changeset', async () => {
     fakeApi.answer('merge.run', () => ({ changesetId: 42 }));
     navigation.openPage({ kind: 'merge', request: intoServerBranch });
