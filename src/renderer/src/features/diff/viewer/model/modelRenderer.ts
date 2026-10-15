@@ -129,6 +129,8 @@ export class ModelRenderer {
   private readonly under = new Scene();
   /** three's one DFG LUT, once a frame drew it: released as the renderer goes (`sharedDfgLut.ts`). */
   private dfgLut: Texture | null = null;
+  /** Whether the LUT was looked for in the sides drawn now: once per set of sides, not every frame until found. */
+  private dfgLutSought = false;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     this.renderer = new WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -158,6 +160,7 @@ export class ModelRenderer {
       // The looks were the replaced model's: the next model's come with `setMaterialLooks`.
       this.materialLooks = { ...this.materialLooks, [side]: null };
       this.sides[side] = model && this.sceneOf(model);
+      this.dfgLutSought = false;
     }
     this.lookTextures.keepOnly(this.materialLooks);
     this.bounds = bounds;
@@ -312,7 +315,9 @@ export class ModelRenderer {
   /** Draws, and remembers the shared DFG LUT the first frame that drew it: a side replaced later can't hide it. */
   private drawFrame(): void {
     this.render();
-    this.dfgLut ??= sharedDfgLutOf(this.renderer, this.drawnMaterials());
+    if (this.dfgLut || this.dfgLutSought || !this.palette) return;
+    this.dfgLutSought = true;
+    this.dfgLut = sharedDfgLutOf(this.renderer, this.drawnMaterials());
   }
 
   /**
