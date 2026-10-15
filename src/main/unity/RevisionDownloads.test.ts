@@ -9,7 +9,7 @@ import { fitsCommandLine } from '../cm/commandLineLimit';
 import { cmFails, fakeCmClient, type FakeCmCommand } from '../cm/testing/fakeCmClient';
 import { formatOutput } from '../cm/testing/cmOutput';
 import { WorkspaceCopies, type RevisionFile } from '../files/WorkspaceCopies';
-import { batchesOf, catArgs, MAX_BATCH_BYTES, RevisionDownloads } from './RevisionDownloads';
+import { batchesOf, catArgs, FETCHED_KEPT_MS, MAX_BATCH_BYTES, RevisionDownloads } from './RevisionDownloads';
 
 const md5 = (text: string) => createHash('md5').update(text).digest('base64');
 
@@ -75,6 +75,38 @@ describe('RevisionDownloads', () => {
     await Promise.all([downloads.fetch(workspace, file(1)), downloads.fetch(workspace, file(2)), downloads.fetch(workspace, file(3))]);
     expect(await Promise.all([firstRead, text(downloads.read(workspace, file(2))), text(downloads.read(workspace, file(3)))])).toEqual(['bark v1', 'leaves v2', 'moss v3']);
     expect(fake.commands.map((command) => [command.via, command.args.length])).toEqual([['execute', 4]]);
+  });
+
+  it('keeps what was fetched until it is read, past what it keeps: the reads that follow download nothing again', async () => {
+    const { workspace, fake, downloads, text } = await setUp('bark v1'.length);
+    await Promise.all([1, 2, 3].map((id) => downloads.fetch(workspace, file(id))));
+    expect(await Promise.all([1, 2, 3].map((id) => text(downloads.read(workspace, file(id)))))).toEqual(['bark v1', 'leaves v2', 'moss v3']);
+    expect(fake.commands).toHaveLength(1);
+  });
+
+  it('lets go of a fetched revision never read once it has waited long enough', async () => {
+    let time = 0;
+    const sessions = await mkdtemp(join(tmpdir(), 'revisions-session-'));
+    const workspace = await mkdtemp(join(tmpdir(), 'revisions-workspace-'));
+    const fake = fakeCmClient({ cat: catAnswer });
+    const downloads = new RevisionDownloads({ cm: fake.cm, tempFolder: sessions, pid: 100, isRunning: () => false, maxKeptBytes: 'bark v1'.length, now: () => time });
+    await downloads.fetch(workspace, file(1));
+    time += FETCHED_KEPT_MS;
+    await downloads.fetch(workspace, file(2));
+    await downloads.read(workspace, file(1));
+    expect(fake.commands).toHaveLength(3);
+  });
+
+  it('fails at once the reads of revisions whose fetch failed, never trying each again on its own', async () => {
+    const { workspace, fake, downloads } = await setUp();
+    const failing = [404, 405, 406].map((id) => file(id));
+    await Promise.allSettled(failing.map((one) => downloads.fetch(workspace, one)));
+    const tried = fake.commands.length;
+    const reads = await Promise.allSettled(failing.map((one) => downloads.read(workspace, one)));
+    expect(reads.map((read) => read.status)).toEqual(['rejected', 'rejected', 'rejected']);
+    expect(fake.commands).toHaveLength(tried);
+    await Promise.allSettled([downloads.fetch(workspace, failing[0]!)]);
+    expect(fake.commands.length).toBeGreaterThan(tried);
   });
 
   it("fetches nothing the workspace's disk has, and fails a fetch as the read would", async () => {
