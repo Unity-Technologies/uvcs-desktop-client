@@ -63,6 +63,14 @@ describe('WorkspaceCopies.read', () => {
     expect(await copies.read(workspace, revisionOf('a.obj', 'v 0 0 0\n'))).toBeNull();
   });
 
+  it('reads a file bigger than one chunk whole', async () => {
+    // Read into one buffer of the file's size (`readHashed`): more than the stream's 64 KB chunks.
+    const text = 'v 0 0 0\n'.repeat(40_000);
+    const workspace = await workspaceWith({ 'big.obj': text });
+
+    expect((await new WorkspaceCopies().read(workspace, revisionOf('big.obj', text)))?.toString()).toBe(text);
+  });
+
   it('refuses a path that leads out of the workspace', async () => {
     const workspace = await workspaceWith({});
 
