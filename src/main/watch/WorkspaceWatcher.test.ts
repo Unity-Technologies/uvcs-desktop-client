@@ -31,6 +31,7 @@ function watching({ platform = 'darwin' as NodeJS.Platform, unwatchable = [] as 
 
 const fileEdit = (folder: string, pathsChanged = false): WorkspaceChange => ({ content: true, pathsChanged, metadata: false, folders: [folder] });
 const WORKSPACE_STATE: WorkspaceChange = { content: false, pathsChanged: false, metadata: true, folders: [] };
+const ANY_FILE_EDIT: WorkspaceChange = { content: true, pathsChanged: true, metadata: false, folders: null };
 
 describe('WorkspaceWatcher coalesces bursts', () => {
   it('into one change once events stop for 300 ms', () => {
@@ -211,7 +212,24 @@ describe('WorkspaceWatcher', () => {
     expect([...watches.watched().keys()].sort()).toEqual([workspacePath, join(workspacePath, 'src')].sort());
     watches.emit(join(workspacePath, 'src'), 'change', 'a.ts');
     vi.advanceTimersByTime(300);
-    expect(changes).toEqual([fileEdit('src')]);
+    expect(changes).toEqual([ANY_FILE_EDIT, fileEdit('src')]);
+  });
+
+  it('on Linux, reports files edited anywhere once every folder is watched: an edit made while it walked went unseen', async () => {
+    mkdirSync(join(workspacePath, 'src'));
+    const { coverage, changes } = watching({ platform: 'linux' });
+
+    expect(changes).toEqual([]);
+    expect(await coverage).toBe('full');
+    expect(changes).toEqual([ANY_FILE_EDIT]);
+  });
+
+  it('reports nothing when it starts watching in one go (macOS and Windows), or watches only part (the windows refresh on focus)', async () => {
+    const recursive = watching({ platform: 'darwin' });
+    expect(await recursive.coverage).toBe('full');
+    const partial = watching({ platform: 'linux', unwatchable: [{ path: workspacePath }] });
+    expect(await partial.coverage).toBe('partial');
+    expect([...recursive.changes, ...partial.changes]).toEqual([]);
   });
 
   it('on Linux, watches the folders ignore.conf leaves as it changes', async () => {

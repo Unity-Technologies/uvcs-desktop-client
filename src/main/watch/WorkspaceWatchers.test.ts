@@ -71,6 +71,19 @@ describe('WorkspaceWatchers', () => {
     expect(watchers.coverageOf('/wk/a')).toBe('full');
   });
 
+  it('reports a change the watcher sees as it starts to the windows already showing it, and to what listens to the files', async () => {
+    const { watchers, created, onChanged } = setUp({ startsLater: true });
+    const heard: string[] = [];
+    watchers.listen({ changed: (path) => heard.push(path), unwatched: () => undefined });
+    const watched = watchers.watch(1, '/wk/a');
+
+    created[0]!.emit();
+    created[0]!.startsWatching('full');
+    expect(await watched).toBe('full');
+    expect(onChanged).toHaveBeenCalledExactlyOnceWith([1], '/wk/a', CHANGE);
+    expect(heard).toEqual(['/wk/a']);
+  });
+
   it('stops a watcher still starting once no window shows its workspace', async () => {
     const { watchers, created, onStopped } = setUp({ startsLater: true });
     const watched = watchers.watch(1, '/wk/a');
