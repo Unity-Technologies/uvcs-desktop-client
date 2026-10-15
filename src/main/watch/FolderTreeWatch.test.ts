@@ -301,6 +301,24 @@ describe('FolderTreeWatch walks the tree a step at a time, leaving the main proc
     expect(watched()).toEqual(['', 'Library', 'Library/Cache', 'new', 'new/deeper', 'src', 'src/deep']);
   });
 
+  it("answers start() once every walk under way is done, a new folder's too: its answer counts that walk", async () => {
+    const { tree, at, emit, listings, timesBroken } = setUp({ holdListings: true, unwatchable: ['new/deeper/deepest'] });
+    const started = tree.start();
+    mkdirSync(at('new/deeper/deepest'), { recursive: true });
+    emit('', 'rename', 'new');
+    for (const unanswered of [3, 3]) {
+      listings.answer(at('new'));
+      await listings.asked(unanswered);
+    }
+    listings.answer(at('new'));
+
+    listings.answer();
+    await listings.asked(1);
+    listings.answer();
+    expect(await started).toBe(false);
+    expect(timesBroken()).toBe(0);
+  });
+
   it('watches nothing under a folder skipped since it was listed, and walks it once no longer skipped', async () => {
     let skipped: string[] = [];
     const { tree, watched, listings } = setUp({ skip: (folder) => skipped.includes(folder), holdListings: true });
