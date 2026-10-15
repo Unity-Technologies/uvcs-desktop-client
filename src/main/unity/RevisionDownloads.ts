@@ -98,15 +98,7 @@ export class RevisionDownloads {
    * budget). Rejects when it can't be read.
    */
   async read(workspacePath: string, file: RevisionFile, mayDownload: () => boolean = () => true): Promise<Buffer> {
-    this.checking++;
-    let checked = false;
-    const doneChecking = () => {
-      if (checked) return;
-      checked = true;
-      this.checking--;
-      this.downloadWhenAllChecked();
-    };
-    try {
+    return this.whileChecking(async (doneChecking) => {
       const onDisk = await this.copies.read(workspacePath, file);
       if (onDisk) return onDisk;
       const key = keyOf(file.revision);
@@ -127,6 +119,24 @@ export class RevisionDownloads {
         this.forget(key);
         return readCapped(await this.download(workspacePath, file, key));
       });
+    });
+  }
+
+  /**
+   * Runs a read's work as one still checking the disk (`checking`) until it says it's done (or ends): the downloads
+   * asked meanwhile wait for it, so the reads asked at once go in one batch.
+   */
+  private async whileChecking<T>(work: (doneChecking: () => void) => Promise<T>): Promise<T> {
+    this.checking++;
+    let checked = false;
+    const doneChecking = () => {
+      if (checked) return;
+      checked = true;
+      this.checking--;
+      this.downloadWhenAllChecked();
+    };
+    try {
+      return await work(doneChecking);
     } finally {
       doneChecking();
     }
