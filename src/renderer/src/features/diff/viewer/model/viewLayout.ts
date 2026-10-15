@@ -1,9 +1,11 @@
 // Where each version is drawn on the one canvas, per mode. Split gives each version a half with its own aspect;
 // swipe draws both through one full-size view, each cut to its side of the divider; onion draws both full size, to be
-// blended; differences draws the version after full size and the version before's ghost over it, in its depth; a
-// version shown alone takes it all. Rectangles are in canvas pixels from the bottom left, as WebGL counts.
+// blended; differences draws the version after full size and the version before's ghost over it, in its depth;
+// differences by look draws both full size, to be compared pixel by pixel; a version shown alone takes it all. Rectangles are in canvas pixels from the bottom left, as WebGL counts.
 
-export type ModelLayoutMode = 'single' | 'sideBySide' | 'onion' | 'swipe' | 'differences';
+import type { DiffsCompares } from './surfaceLook';
+
+export type ModelLayoutMode = 'single' | 'sideBySide' | 'onion' | 'swipe' | 'differences' | 'lookDifferences';
 export type Side = 'before' | 'after';
 
 export interface Rect {
@@ -27,6 +29,18 @@ export interface Layout {
   panes: Pane[];
   /** The panes are drawn apart and blended (onion skin), not straight onto the canvas. */
   blended: boolean;
+  /** The panes are drawn apart and compared pixel by pixel (Diffs by look, `LookComparer`). */
+  compared?: true;
+}
+
+/**
+ * How a mode is laid out: as itself, but Diffs with the materials shown compares how the versions look, once both
+ * versions' textures are loaded (compared sooner, a texture one side has and the other is still loading would light
+ * up as a change); until then the version after shows alone.
+ */
+export function shownLayoutMode(mode: Exclude<ModelLayoutMode, 'single' | 'lookDifferences'>, compares: DiffsCompares, looksLoaded: boolean): ModelLayoutMode {
+  if (mode !== 'differences' || compares === 'shape') return mode;
+  return looksLoaded ? 'lookDifferences' : 'single';
 }
 
 /** `split`: the swipe divider, as a fraction of the width. `only`: the side shown alone. */
@@ -56,6 +70,9 @@ export function layoutOf(mode: ModelLayoutMode, width: number, height: number, s
       return { panes: [{ side: 'before', viewport: full, scissor: full }, { side: 'after', viewport: full, scissor: full }], blended: true };
     case 'differences':
       return { panes: [{ side: 'after', viewport: full, scissor: full }, { side: 'before', viewport: full, scissor: full, overlay: true }], blended: false };
+    case 'lookDifferences':
+      // The version after first: a click picks it, as it is the one shown.
+      return { panes: [{ side: 'after', viewport: full, scissor: full }, { side: 'before', viewport: full, scissor: full }], blended: false, compared: true };
   }
 }
 

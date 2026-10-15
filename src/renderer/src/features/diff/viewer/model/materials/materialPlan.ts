@@ -420,6 +420,14 @@ export function texturesReport(plans: readonly (VersionPlan | null)[], states: R
 }
 
 /**
+ * Whether every texture the versions use is drawn as it will stay: found, and loaded or failed (a failed one draws as
+ * it will). What compares how the versions look waits for it (`shownLayoutMode`).
+ */
+export function texturesSettled(report: TexturesReport | null): boolean {
+  return report !== null && !report.finding && report.loading === 0;
+}
+
+/**
  * How a slot whose base map is on its way is drawn meanwhile: its color (linear) darkened to a mid tone, so a model whose
  * materials are white under their textures (most glTF exports) doesn't flash as bright clay while they download, and
  * reads as not yet textured. Its own color once the texture shows, or where it fails.

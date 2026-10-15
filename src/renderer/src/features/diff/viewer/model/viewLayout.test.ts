@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { layoutOf, paneAt } from './viewLayout';
+import { layoutOf, paneAt, shownLayoutMode } from './viewLayout';
 
 describe('layoutOf', () => {
   it('gives a version shown alone the whole canvas', () => {
@@ -37,6 +37,29 @@ describe('layoutOf', () => {
 
   it('blends both full-size versions for the onion skin', () => {
     expect(layoutOf('onion', 400, 300).blended).toBe(true);
+  });
+
+  it('compares both full-size versions for the differences by look, a click picking the version after', () => {
+    const layout = layoutOf('lookDifferences', 400, 300);
+    expect(layout.panes.map((pane) => [pane.side, pane.viewport.width, pane.overlay ?? false])).toEqual([
+      ['after', 400, false],
+      ['before', 400, false],
+    ]);
+    expect(layout.compared).toBe(true);
+    expect(paneAt(layout, 10, 10, 300, 1)?.side).toBe('after');
+  });
+});
+
+describe('shownLayoutMode', () => {
+  it('lays out Diffs by shape, and every other mode, as they are', () => {
+    expect(shownLayoutMode('differences', 'shape', false)).toBe('differences');
+    expect(shownLayoutMode('onion', 'look', true)).toBe('onion');
+    expect(shownLayoutMode('sideBySide', 'look', false)).toBe('sideBySide');
+  });
+
+  it('compares the looks once the textures are loaded, showing the version after alone until then', () => {
+    expect(shownLayoutMode('differences', 'look', true)).toBe('lookDifferences');
+    expect(shownLayoutMode('differences', 'look', false)).toBe('single');
   });
 });
 
