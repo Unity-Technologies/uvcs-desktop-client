@@ -1,7 +1,7 @@
 import { QueriesObserver, QueryClient, type QueryObserverResult } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeFrames } from '../../../testing/fakeFrames';
-import { watchQueriesByFrame } from './watchQueriesByFrame';
+import { HIDDEN_HAND_OVER_MS, watchQueriesByFrame } from './watchQueriesByFrame';
 
 const FILES = 300;
 
@@ -23,8 +23,8 @@ function setup(answer: (id: number) => Promise<string> = async (id) => `text ${i
   return { observer, frames, handed, watch, reads: () => reads };
 }
 
-/** Lets every read answer, and TanStack tell its observers (it batches them on a timer). */
-const answerAll = () => vi.runAllTimersAsync();
+/** Lets every read answer, and TanStack tell its observers (it batches them on a timer of 0 ms). */
+const answerAll = () => vi.advanceTimersByTimeAsync(1);
 
 describe('watchQueriesByFrame', () => {
   beforeEach(() => vi.useFakeTimers());
@@ -83,5 +83,24 @@ describe('watchQueriesByFrame', () => {
     frames.frame();
     const [failed] = handed.at(-1)!;
     expect([failed!.data, failed!.error?.message]).toEqual([undefined, 'cm cat failed']);
+  });
+
+  it('hands over without a frame when none comes in time, as in a hidden window, where frames stop', async () => {
+    const { watch, frames, handed } = setup();
+    watch();
+    await answerAll();
+    await vi.advanceTimersByTimeAsync(HIDDEN_HAND_OVER_MS);
+    expect(handed).toHaveLength(1);
+    expect(handed[0]!.every((result) => result.data !== undefined)).toBe(true);
+    expect(frames.animating()).toBe(false);
+  });
+
+  it('hands over once when a frame comes first, the timer then cancelled', async () => {
+    const { watch, frames, handed } = setup();
+    watch();
+    await answerAll();
+    frames.frame();
+    await vi.advanceTimersByTimeAsync(HIDDEN_HAND_OVER_MS);
+    expect(handed).toHaveLength(1);
   });
 });
