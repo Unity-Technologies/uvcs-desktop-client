@@ -10,8 +10,8 @@ import { VIEW_GLIDE_MS } from './viewGlide';
 /**
  * The viewer's camera (`ModelCameraControl`, where its rules are), wired to React: not state, so a drag redraws the
  * canvas without rendering the panel again. Every move of the camera reaches the renderer through `onCameraMove`.
+ * `bounds`: the pair's, once every version is in the renderer; null until then, when nothing frames.
  */
-/** `bounds`: the pair's, once every version is in the renderer; null until then, when nothing frames. */
 export function useModelCamera(renderer: ModelRenderer | null, bounds: BoundsLike | null, stage: RefObject<HTMLElement | null>) {
   const latestRenderer = useRef(renderer);
   latestRenderer.current = renderer;
