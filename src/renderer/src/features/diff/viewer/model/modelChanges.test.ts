@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { isRisk, modelChanges, type ModelChange } from './modelChanges';
 import { modelSummary } from './modelSummary';
-import type { ParsedModel } from './parsedModel';
+import type { FileImage, ParsedModel } from './parsedModel';
+import { fileMaterial, use } from './materials/testing/testMaterials';
 import { boundAtOrigin, boundInFileSpace, testModel, type TestModel, type TestNode } from './testing/testModels';
 
 const changes = (before: TestModel, after: TestModel): ModelChange[] => modelChanges(modelSummary(testModel(before)), modelSummary(testModel(after)));
@@ -362,6 +363,35 @@ describe('modelChanges: takes and textures', () => {
   });
 
   it('tells the textures the materials name now and no longer', () => {
-    expect(changes({ nodes: crate, textures: ['wood.png'] }, { nodes: crate, textures: ['wood.png', 'wood_normal.png'] })).toEqual([{ kind: 'textures', added: ['wood_normal.png'], removed: [] }]);
+    expect(changes({ nodes: crate, textures: ['wood.png'] }, { nodes: crate, textures: ['wood.png', 'wood_normal.png'] })).toEqual([{ kind: 'textures', added: ['wood_normal.png'], removed: [], nodes: [] }]);
+  });
+
+  describe('textures a glTF holds', () => {
+    // A tree whose leaves' material maps the file's first image, and whose trunk's maps none.
+    const tree = (images: FileImage[]): TestModel => ({
+      nodes: [
+        { name: 'Trunk', mesh: { slots: ['Bark'], materials: [0] } },
+        { name: 'Leaves', mesh: { slots: ['Leaves'], materials: [1] } },
+      ],
+      materials: [fileMaterial('Bark'), fileMaterial('Leaves', { baseMap: use({ kind: 'gltfImage', image: 0 }) })],
+      images,
+    });
+
+    it('tells them by their names, with the meshes that show them, as the file names no texture file', () => {
+      expect(changes(tree([{ name: 'Leaves_Summer', bytes: 'summer' }]), tree([{ name: 'Leaves_Autumn', bytes: 'autumn' }]))).toMatchObject([
+        { kind: 'textures', added: ['Leaves_Autumn'], removed: ['Leaves_Summer'], nodes: [{ name: 'Leaves', before: 'Leaves', after: 'Leaves' }] },
+      ]);
+    });
+
+    it('tells one repainted under its name, with the meshes that show it', () => {
+      expect(changes(tree([{ name: 'Leaves', bytes: 'green' }]), tree([{ name: 'Leaves', bytes: 'red' }]))).toMatchObject([
+        { kind: 'embeddedTextures', names: ['Leaves'], nodes: [{ name: 'Leaves' }] },
+      ]);
+      expect(changes(tree([{ name: 'Leaves', bytes: 'green' }]), tree([{ name: 'Leaves', bytes: 'green' }]))).toEqual([]);
+    });
+
+    it("leaves an image in a file of its own to that file's diff: the model holds only its name", () => {
+      expect(changes(tree([{ name: 'leaves.png', bytes: null }]), tree([{ name: 'leaves.png', bytes: null }]))).toEqual([]);
+    });
   });
 });

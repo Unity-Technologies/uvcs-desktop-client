@@ -4,7 +4,7 @@
 import { AnimationClip, Euler, Matrix4, NumberKeyframeTrack, PropertyBinding, Quaternion, QuaternionKeyframeTrack, VectorKeyframeTrack, type KeyframeTrack } from 'three';
 import { fbxAxisConversion, Y_UP_AXES } from '../fbxAxes';
 import { worldMatricesOf } from '../modelSpaces';
-import type { FileMaterial, ModelClip, ModelMesh, ModelNode, ModelNodeKind, ParsedModel } from '../parsedModel';
+import type { FileImage, FileMaterial, ModelClip, ModelMesh, ModelNode, ModelNodeKind, ParsedModel } from '../parsedModel';
 
 export interface TestNode {
   name: string;
@@ -30,6 +30,8 @@ export interface TestMesh {
   blendShapes?: string[];
   /** Bone names the mesh is skinned to, each vertex to the first, bound as an FBX binds: where they all are now. */
   bones?: string[];
+  /** Each slot's material, as an index in `TestModel.materials` (`ModelMesh.slotMaterials`); none by default. */
+  materials?: number[];
 }
 
 export interface TestModel {
@@ -43,6 +45,7 @@ export interface TestModel {
   clips?: TestClip[];
   textures?: string[];
   materials?: FileMaterial[];
+  images?: FileImage[];
   exportedFrom?: string | null;
 }
 
@@ -89,6 +92,7 @@ export function testModel(spec: TestModel): ParsedModel {
     clips: (spec.clips ?? []).map(({ name, duration, tracks = [] }): ModelClip => ({ name, duration, tracks: AnimationClip.toJSON(new AnimationClip(name, duration, tracks.map(keyframeTrackOf))) })),
     textures: spec.textures ?? [],
     materials: spec.materials ?? [],
+    images: spec.images ?? [],
     unitScale: spec.unitScale ?? 1,
     importScale: spec.importScale ?? 1,
     frameRate: spec.frameRate ?? null,
@@ -163,7 +167,7 @@ function boxMesh(node: number, mesh: TestMesh, nodeIndex: Map<string, number>, w
     },
     index: null,
     slots,
-    slotMaterials: slots.map(() => -1),
+    slotMaterials: slots.map((_, slot) => mesh.materials?.[slot] ?? -1),
     groups: slots.map((_, slot) => ({ start: slot * facesPerSlot * 6, count: facesPerSlot * 6, slot })),
     skin: mesh.bones ? skinOf(mesh.bones.map((bone) => nodeIndex.get(bone)!), world, node) : null,
     blendShapes: (mesh.blendShapes ?? []).map((name) => ({ name, deltas: new Float32Array(vertexCount * 3) })),

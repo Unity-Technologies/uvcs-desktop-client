@@ -225,6 +225,31 @@ describe('parseModel, glTF', () => {
     });
   });
 
+  it("names the images a glTF holds and fingerprints their bytes, so a repaint shows; one in a file of its own by its file's name alone", async () => {
+    const base64 = (bytes: number[]) => Buffer.from(bytes).toString('base64');
+    const positions = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]);
+    const withImages = (pixels: number[]) =>
+      triangleGltf('inline', {
+        images: [{ name: 'Leaves_Summer', bufferView: 1, mimeType: 'image/png' }, { uri: `data:image/png;base64,${base64(pixels)}` }, { uri: 'textures/bark%20old.png' }],
+        bufferViews: [
+          { buffer: 0, byteLength: 36 },
+          { buffer: 1, byteLength: pixels.length },
+        ],
+        buffers: [
+          { byteLength: 36, uri: `data:application/octet-stream;base64,${Buffer.from(positions.buffer).toString('base64')}` },
+          { byteLength: pixels.length, uri: `data:application/octet-stream;base64,${base64(pixels)}` },
+        ],
+      });
+    const green = await parsed(bytesOf(withImages([1, 2, 3, 4]), 'gltf'));
+    const red = await parsed(bytesOf(withImages([9, 2, 3, 4]), 'gltf'));
+    expect(green.images.map((image) => image.name)).toEqual(['Leaves_Summer', 'image 2', 'bark old.png']);
+    expect(green.images[2]!.bytes).toBeNull();
+    expect(green.images.map((image) => typeof image.bytes)).toEqual(['string', 'string', 'object']);
+    expect(red.images[0]!.bytes).not.toBe(green.images[0]!.bytes);
+    expect(red.images[1]!.bytes).not.toBe(green.images[1]!.bytes);
+    expect((await parsed(bytesOf(withImages([1, 2, 3, 4]), 'gltf'))).images).toEqual(green.images);
+  });
+
   it('reads a map on the second UV set: its image, which set it samples, and that set', async () => {
     // Positions, then UV set 0 (all zeros) and UV set 1 (the triangle's corners), in one inline buffer.
     const values = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1]);
