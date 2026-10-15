@@ -40,6 +40,14 @@ type Rows = Record<'deletions' | 'additions' | 'unified', number[]>;
 
 const BOTH_SIDES: DiffSides = { original: true, modified: true };
 
+/**
+ * Renders a small diff as `typedIntoPierre` does, for a test file's `beforeAll`: Shiki loads its TypeScript grammar and
+ * compiles its patterns at the first highlight, which took the file's first test up to 3.6 s on CI's Windows runner.
+ */
+export async function warmUpPierre(): Promise<void> {
+  await typedIntoPierre('const a = 1;\n', 'const b = 2;\n', 'recognizeAll');
+}
+
 /** How `typedIntoPierre` sets up the diff; each has the viewer's usual value by default. */
 interface TypedIntoPierreOptions {
   /** The text the editor's diff compares with the original (`lineDiffOptions`): the modified text by default. */
