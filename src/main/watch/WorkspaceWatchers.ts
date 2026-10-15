@@ -6,7 +6,8 @@ import { WorkspaceWatcher } from './WorkspaceWatcher';
 /** What the registry needs from a watcher; tests pass a fake. */
 export interface Watcher {
   readonly workspacePath: string;
-  start(): WatchCoverage;
+  /** Answers once watching (on Linux, once its folders are walked), with how much it sees. */
+  start(): Promise<WatchCoverage>;
   covers(cwd: string): boolean;
   ignoreOwnWrite(write: Promise<unknown>, only?: 'changelists'): void;
   stop(): void;
@@ -35,7 +36,10 @@ export interface WorkspaceFilesListener {
 
 interface Entry {
   watcher: Watcher;
+  /** 'partial' until the watcher has started: until then, it doesn't see every change. */
   coverage: WatchCoverage;
+  /** Settles once the watcher has started, `coverage` then saying how much it sees. */
+  started: Promise<void>;
   viewers: Set<number>;
 }
 
@@ -53,15 +57,13 @@ export class WorkspaceWatchers {
     private readonly createWatcher: CreateWatcher = (path, onChanged, onBroken) => new WorkspaceWatcher(path, onChanged, onBroken),
   ) {}
 
-  /** The viewer now shows `workspacePath`: it stops getting changes of the workspace it showed before. */
-  watch(viewer: number, workspacePath: string): WatchCoverage {
-    const current = this.byPath.get(workspacePath);
-    if (current && this.watchedBy.get(viewer) === workspacePath) return current.coverage;
-    this.release(viewer);
-
-    const entry = current ?? this.start(workspacePath);
-    entry.viewers.add(viewer);
-    this.watchedBy.set(viewer, workspacePath);
+  /**
+   * The viewer now shows `workspacePath`: it stops getting changes of the workspace it showed before at once, and is
+   * answered how much of this one is watched once its watcher has started.
+   */
+  async watch(viewer: number, workspacePath: string): Promise<WatchCoverage> {
+    const entry = this.show(viewer, workspacePath);
+    await entry.started;
     return entry.coverage;
   }
 
@@ -118,6 +120,17 @@ export class WorkspaceWatchers {
     return this.byPath.get(workspacePath)?.coverage;
   }
 
+  private show(viewer: number, workspacePath: string): Entry {
+    const current = this.byPath.get(workspacePath);
+    if (current && this.watchedBy.get(viewer) === workspacePath) return current;
+    this.release(viewer);
+
+    const entry = current ?? this.start(workspacePath);
+    entry.viewers.add(viewer);
+    this.watchedBy.set(viewer, workspacePath);
+    return entry;
+  }
+
   private start(workspacePath: string): Entry {
     const viewers = new Set<number>();
     const watcher = this.createWatcher(
@@ -132,7 +145,8 @@ export class WorkspaceWatchers {
         for (const listener of this.fileListeners) listener.unwatched(workspacePath);
       },
     );
-    const entry: Entry = { watcher, coverage: watcher.start(), viewers };
+    const entry: Entry = { watcher, coverage: 'partial', started: Promise.resolve(), viewers };
+    entry.started = watcher.start().then((coverage) => void (entry.coverage = coverage));
     this.byPath.set(workspacePath, entry);
     return entry;
   }

@@ -50,9 +50,10 @@ export class WorkspaceWatcher {
     this.batcher = new ChangeBatcher((change) => !this.stopped && onChanged(change), QUIET_MS, MAX_WAIT_MS);
   }
 
-  start(): WatchCoverage {
+  /** Answers once watching: on Linux, once every folder has its watch (`FolderTreeWatch`). */
+  async start(): Promise<WatchCoverage> {
     this.loadIgnoreRules();
-    const coverage = RECURSIVE_WATCH_PLATFORMS.has(this.platform) ? this.watchRecursively() : this.watchFolderByFolder();
+    const coverage = RECURSIVE_WATCH_PLATFORMS.has(this.platform) ? this.watchRecursively() : await this.watchFolderByFolder();
     this.partial = coverage === 'partial';
     return coverage;
   }
@@ -88,7 +89,7 @@ export class WorkspaceWatcher {
     return 'partial';
   }
 
-  private watchFolderByFolder(): WatchCoverage {
+  private async watchFolderByFolder(): Promise<WatchCoverage> {
     this.folderTree = new FolderTreeWatch(
       this.workspacePath,
       (folder) => isIgnored(folder, this.ignoreRules),
@@ -97,7 +98,7 @@ export class WorkspaceWatcher {
       MAX_WATCHED_FOLDERS,
       this.watch,
     );
-    return this.folderTree.start() ? 'full' : 'partial';
+    return (await this.folderTree.start()) ? 'full' : 'partial';
   }
 
   private tryWatch(path: string, recursive: boolean): boolean {

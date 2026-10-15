@@ -42,6 +42,7 @@ export interface WorkspacesApi {
   /**
    * The calling window now shows this workspace: it gets `workspaceChanged` events when the workspace changes on
    * disk, instead of the ones of the workspace it showed before. Windows showing the same workspace share a watcher.
+   * Answers once the watch has started (on Linux, once every folder has its watch), with how much it sees.
    */
   watch(workspacePath: string): Promise<WatchCoverage>;
   /** The calling window shows no workspace anymore (back to the home screen). */
