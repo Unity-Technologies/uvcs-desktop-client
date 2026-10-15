@@ -131,10 +131,17 @@ export class ModelRenderer {
   private readonly comparer = new LookComparer();
   /** The grid, under Diffs by look's comparison. */
   private readonly under = new Scene();
-  /** Picks on the GPU; null where it can't, and picks raycast (`raycastHit`). */
+  /** Picks on the GPU; null where it can't, or isn't asked to pick, and picks raycast (`raycastHit`). */
   private readonly picker: MeshPicker | null;
 
-  constructor(private readonly canvas: HTMLCanvasElement) {
+  /**
+   * `picks`: what is under the pointer is asked of it (`pick`), so the GPU's picking is made and compiled at once
+   * (`MeshPicker.prepare`); a still (`modelThumbnail`) is never picked, and compiles nothing for it.
+   */
+  constructor(
+    private readonly canvas: HTMLCanvasElement,
+    { picks }: { picks: boolean },
+  ) {
     this.renderer = new WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.renderer.outputColorSpace = SRGBColorSpace;
     // Clay lit by a studio clips to white without it; the onion skin's blend applies the same (`Blender`).
@@ -151,7 +158,7 @@ export class ModelRenderer {
     generator.dispose();
     canvas.addEventListener('webglcontextrestored', this.requestRender);
     this.lookTextures = new LookTextures(Math.min(8, this.renderer.capabilities.getMaxAnisotropy()));
-    this.picker = MeshPicker.supported(this.renderer) ? new MeshPicker() : null;
+    this.picker = picks && MeshPicker.supported(this.renderer) ? new MeshPicker() : null;
     this.picker?.prepare(this.renderer, this.camera);
   }
 
