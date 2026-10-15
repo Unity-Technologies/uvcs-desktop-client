@@ -1,9 +1,10 @@
 // The model's camera gliding from where it is to a view the app chose (a changed region stepped to, F, a part
 // picked), as the Branch Explorer glides to what it reveals (`ViewportGlide`): a jump left the user unsure what the
-// view had done, above all when it also turned. It eases in and out, as what moves between two places does
-// (`--ease-in-out`), turns the short way round, and zooms by ratio, so closing in on a small part slows as it nears.
+// view had done, above all when it also turned. It eases in and out (`cubicEaseInOut`), as what moves between two
+// places does, turns the short way round, and zooms by ratio, so closing in on a small part slows as it nears.
 
 import type { FrameClock } from '../../../../lib/frameClock';
+import { cubicEaseInOut } from '../../../../lib/wheelZoom';
 import type { OrbitView } from './orbitCamera';
 
 /** Long enough to follow a turn, short enough not to wait for: a touch longer than the Branch Explorer's 420 ms glide. */
@@ -33,7 +34,7 @@ export class ViewGlide {
     const step = (): void => {
       const t = Math.min(1, (this.clock.now() - startedAt) / duration);
       this.frame = t < 1 ? this.clock.request(step) : null;
-      this.onView(t < 1 ? viewBetween(from, to, easeInOut(t)) : to);
+      this.onView(t < 1 ? viewBetween(from, to, cubicEaseInOut(t)) : to);
     };
     this.frame = this.clock.request(step);
   }
@@ -64,9 +65,4 @@ function shortestTurn(from: number, to: number): number {
   const full = 2 * Math.PI;
   const turn = (((to - from) % full) + full) % full;
   return turn > Math.PI ? turn - full : turn;
-}
-
-/** Slow start, slow landing: cubic, as the `--ease-in-out` token's curve. */
-function easeInOut(t: number): number {
-  return t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
 }
