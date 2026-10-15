@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { countedArray } from '@shared/testing/countedReads';
 import { itemRulePatterns, sharedExtension } from './filterRulePatterns';
 
 describe('itemRulePatterns', () => {
@@ -31,5 +32,12 @@ describe('sharedExtension', () => {
     expect(sharedExtension(['a.asset', 'b.json'])).toBeNull();
     expect(sharedExtension(['ProjectSettings', 'a.asset'])).toBeNull();
     expect(sharedExtension(['ProjectSettings'])).toBeNull();
+  });
+
+  // Right-clicking 50,000 selected changes read every path's extension before the menu showed.
+  it('stops at the first item whose extension differs', () => {
+    const { array: paths, reads } = countedArray(['a.asset', 'b.json', ...Array.from({ length: 1_000 }, (_, index) => `c${index}.asset`)]);
+    expect(sharedExtension(paths)).toBeNull();
+    expect(reads()).toBe(2);
   });
 });

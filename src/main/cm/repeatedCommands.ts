@@ -21,6 +21,7 @@ const REPEATED_COMMAND_BUDGET = { maxRuns: 2, windowMs: 10_000 };
  * true once per burst, when a command goes over the budget.
  */
 export class RepeatedCommandDetector {
+  /** The recent runs of each command, the command run longest ago first (a `Map` keeps the order keys are set in). */
   private readonly runs = new Map<string, number[]>();
 
   constructor(private readonly budget = REPEATED_COMMAND_BUDGET) {}
@@ -28,13 +29,21 @@ export class RepeatedCommandDetector {
   record(command: string, at: number): boolean {
     const recent = (this.runs.get(command) ?? []).filter((time) => at - time < this.budget.windowMs);
     recent.push(at);
+    this.runs.delete(command);
     this.runs.set(command, recent);
-    if (this.runs.size > 1000) this.forgetOlderThan(at - this.budget.windowMs);
+    this.forgetOlderThan(at - this.budget.windowMs);
     return recent.length === this.budget.maxRuns + 1;
   }
 
+  /**
+   * Drops the commands last run before `time`: they come first, so it stops at the first one run since. Each command is
+   * dropped once, however many there are: a big merge runs thousands.
+   */
   private forgetOlderThan(time: number): void {
-    for (const [command, times] of this.runs) if (times.every((run) => run < time)) this.runs.delete(command);
+    for (const [command, times] of this.runs) {
+      if (times.at(-1)! >= time) return;
+      this.runs.delete(command);
+    }
   }
 }
 

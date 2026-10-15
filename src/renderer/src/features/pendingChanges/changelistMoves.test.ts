@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { SelectionState } from '../../lib/selection';
 import { changelistHeadersOf, changesToMove, dragFromRow } from './changelistMoves';
+import { sortChanges } from './changeOrder';
 import { layoutChangeRows } from './changeRows';
 
 function change(path: string, kinds: PendingChange['kinds'], changelist?: string): PendingChange {
@@ -42,7 +43,7 @@ describe('changelistHeadersOf', () => {
   const changelists = [{ name: 'UI', description: '' }];
 
   it("gives every row, folders and files, its changelist's header: dropping on it moves into that changelist", () => {
-    const rows = layoutChangeRows({ changes, changelists, layout: 'tree', grouping: 'changelist' });
+    const rows = layoutChangeRows({ sorted: sortChanges(changes), changelists, layout: 'tree', grouping: 'changelist' });
     const headers = changelistHeadersOf(rows);
     expect(rows.map((row) => [row.key, headers.get(row.key)?.key])).toEqual([
       ['changelist:', 'changelist:'],
@@ -56,7 +57,7 @@ describe('changelistHeadersOf', () => {
   });
 
   it('has none when the changes are not grouped by changelist', () => {
-    const rows = layoutChangeRows({ changes, changelists, layout: 'list', grouping: 'none' });
+    const rows = layoutChangeRows({ sorted: sortChanges(changes), changelists, layout: 'list', grouping: 'none' });
     expect(changelistHeadersOf(rows).size).toBe(0);
   });
 });

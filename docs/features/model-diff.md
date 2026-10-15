@@ -186,7 +186,10 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   a triangle, a bounding volume hierarchy; a uniform grid was tried and dropped, as a dense part beside an empty one
   put thousands of triangles in a cell). A vertex exactly at a vertex of the other version is 0 without a search,
   and each point is measured once (files repeat a corner per polygon): a 2M-triangle car takes 1.4 s unchanged, 5 s
-  with every vertex moved. What nothing is near saturates at a tenth of the model ("12 cm+" in the strip). The
+  with every vertex moved. Each version's surface is made ready to measure against once (`MeasurableSurface`: its
+  corners hashed, its triangles in the hierarchy) for all the other version's meshes, so a scene of 3,000 meshes
+  compares in about 0.5 s; made once per mesh, it held the model worker, and every model read queued behind it, for
+  minutes. What nothing is near saturates at a tenth of the model ("12 cm+" in the strip). The
   tolerance is a share of the model's size (`modelToleranceShare`, one setting for a bolt and a building), read out
   in mm, cm or m; `heatColors` keeps the clay within it and turns to the accent beyond. ‹ › step through the changed
   regions (`changedRegions`: changed vertices joined through their own triangles and shared corners, patches of
