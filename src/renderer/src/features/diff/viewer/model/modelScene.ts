@@ -24,6 +24,7 @@ import type { ModelMesh, ParsedModel } from './parsedModel';
 import type { ModelSummary } from './modelSummary';
 import { slotKeysOf } from './materials/slotKeys';
 import { viewerSpaceOf } from './modelSpaces';
+import { nodesTakesMove } from './nodesTakesMove';
 
 export interface ModelScene {
   /** The model in the viewer's space: its units in metres and its axes onto Unity's. */
@@ -62,6 +63,7 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
   root.matrix.copy(viewerSpaceOf(model));
   const objects = new Map<string, Object3D>();
   const nodes: Object3D[] = [];
+  const takesMove = nodesTakesMove(model.clips);
   model.nodes.forEach((node, i) => {
     const object = node.kind === 'bone' ? new Bone() : new Group();
     // As animation tracks address it (FBXLoader and GLTFLoader name their tracks so): `Hand L.001` is `Hand_L001`.
@@ -69,6 +71,9 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
     object.position.fromArray(node.position);
     object.quaternion.fromArray(node.rotation);
     object.scale.fromArray(node.scale);
+    // Only a take moves a node: the others keep this matrix, and a frame doesn't compose it again (`nodesTakesMove`).
+    object.updateMatrix();
+    object.matrixAutoUpdate = takesMove(object.name);
     (node.parent < 0 ? root : nodes[node.parent]!).add(object);
     nodes.push(object);
     objects.set(summary.nodes[i]!.key, object);
@@ -141,7 +146,11 @@ function meshOf(mesh: ModelMesh, key: string, slotKeys: string[]): SceneMesh {
   ghost.visible = false;
   // The twins deform as the solid does: one set of blendshape weights, the one a take sets (`playableTake`).
   for (const twin of [wire, heat, ghost]) twin.morphTargetInfluences = solid.morphTargetInfluences;
-  for (const object of [solid, wire, heat, ghost]) object.userData.key = key;
+  for (const object of [solid, wire, heat, ghost]) {
+    object.userData.key = key;
+    // Where its node is, always: only the node moves (`nodesTakesMove`).
+    object.matrixAutoUpdate = false;
+  }
   return { key, solid, clay: materials, wire, heat, ghost, slots: mesh.slots, slotKeys };
 }
 
@@ -192,6 +201,9 @@ function bindSkin(mesh: SceneMesh, skin: NonNullable<ModelMesh['skin']>, nodes: 
 function standInBone(skin: NonNullable<ModelMesh['skin']>, index: number, root: Group): Bone {
   const bone = new Bone();
   new Matrix4().fromArray(skin.boneInverses, index * 16).invert().decompose(bone.position, bone.quaternion, bone.scale);
+  // No take names it: it stays where it was bound.
+  bone.updateMatrix();
+  bone.matrixAutoUpdate = false;
   root.add(bone);
   return bone;
 }

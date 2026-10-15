@@ -453,6 +453,9 @@ export class ModelRenderer {
 
   private sceneOf(model: ModelScene): SideScene {
     const scene = new Scene();
+    // Never moved: composing its matrix every frame would place again every node under it, the static ones too
+    // (`nodesTakesMove`).
+    scene.matrixAutoUpdate = false;
     scene.environment = this.environment;
     scene.environmentIntensity = 0.55;
     const key = new DirectionalLight(0xffffff, 1.8);
