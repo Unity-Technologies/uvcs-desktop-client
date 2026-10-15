@@ -1,9 +1,7 @@
 import { useQueries } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import type { ContentSource } from '@shared/domain/content';
-import { api } from '../../../../../api/client';
-import { queryKeys } from '../../../../../api/queryKeys';
-import { contentCaching } from '../../useDiffContents';
+import { contentBytesQuery } from '../../contentQueries';
 import type { FileMaterial } from '../parsedModel';
 import { uniqueFiles } from './assetAnswers';
 import type { MaterialVersion } from './materialVersion';
@@ -19,11 +17,7 @@ const SIDES = ['before', 'after'] as const;
 export function useMtlMaterials(workspacePath: string, versions: Record<'before' | 'after', MaterialVersion | null>): Record<'before' | 'after', FileMaterial[] | null> {
   const files = useMemo(() => SIDES.map((side) => mtlFiles(versions[side])), [versions]);
   const reads = useQueries({
-    queries: uniqueFiles(files.flat(), sourceKey).map((source) => ({
-      queryKey: queryKeys.inWorkspace(workspacePath, 'contentBytes', source),
-      queryFn: () => api.content.readBytes(workspacePath, source),
-      ...contentCaching([source]),
-    })),
+    queries: uniqueFiles(files.flat(), sourceKey).map((source) => contentBytesQuery(workspacePath, source)),
     combine: dataOf,
   });
   return useMemo(() => {

@@ -1,9 +1,7 @@
 import { useQueries } from '@tanstack/react-query';
 import { useContext, useMemo, useRef } from 'react';
 import type { ContentSource, ModelBytes } from '@shared/domain/content';
-import { api } from '../../../../api/client';
-import { queryKeys } from '../../../../api/queryKeys';
-import { contentCaching } from '../useDiffContents';
+import { contentBytesQuery } from '../contentQueries';
 import { gltfCompanions } from './gltfJson';
 import { sameBytes } from './sameBytes';
 import { SiblingFinderContext, sourcePathOf, type DiffSide } from './modelSiblings';
@@ -31,12 +29,8 @@ export function useModelCompanions(workspacePath: string, side: DiffSide, source
   const found = siblings.filter((sibling): sibling is { name: string; source: ContentSource } => sibling.source !== null);
   // One result for all the reads, a new one only when one of them changes.
   const reads = useQueries({
-    queries: found.map(({ source: sibling }) => ({
-      queryKey: queryKeys.inWorkspace(workspacePath, 'contentBytes', sibling),
-      // A file that isn't there is an answer (null), kept as any other; a failure is read again.
-      queryFn: () => api.content.readBytes(workspacePath, sibling),
-      ...contentCaching([sibling]),
-    })),
+    // A file that isn't there is an answer (null), kept as any other; a failure is read again.
+    queries: found.map(({ source: sibling }) => contentBytesQuery(workspacePath, sibling)),
     combine: combineReads,
   });
   const names = found.map(({ name }) => name).join('\n');

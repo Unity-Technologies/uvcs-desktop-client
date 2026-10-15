@@ -290,7 +290,16 @@ Why one highlighting worker. Measured on a task branch of a large production rep
   bytes a pixel: 36 MB for 3000 x 2400) in the image diff worker, so a new tolerance only renders the heatmap again;
   the pair goes as its viewer unmounts (`forgetComparedImages`). The bitmaps cross to the worker copied, not
   transferred: `rasterize` keeps them for the pixel inspector. A window that leaves a workspace forgets its revisions
-  and the undo history of its discards (`forgetWorkspace`, ARCHITECTURE.md "Windows"). Measured on a changeset of big
+  (`forgetWorkspace`, ARCHITECTURE.md "Windows"). Measured on a changeset of big
   texts and 2400 x 2400 images, each in Differences: leaving the diff took the worker's buffers from 30 MB to none,
   and switching the window to another workspace its query cache from 181 MB to none and the renderer's footprint
   from about 600 MB to 394.
+
+What a diff read stays after it goes off screen: a revision's content is immutable, kept an hour after its last use
+(`REVISION_CACHE_MS`), and of those the last 100 (`MAX_UNUSED_IMMUTABLE`) holding at most 256 MB of files
+(`MAX_UNUSED_IMMUTABLE_BYTES`, `boundUnusedQueries` by `heldContentBytes`): a diff's pair and its two files hold the
+same objects, counted once, and what a query on screen holds counts for nothing. By number alone, stepping through a
+changeset of big models kept every one of them (a 3D model is read up to 100 MB, its parsed model about as much
+again, kept as long as its bytes). A query's function is built outside the hook that asks it (`contentQueries`):
+TanStack keeps it with the cached query, and one made inside the model diff's hooks kept their whole scope, both
+versions' bytes and parsed models, alive with it.
