@@ -186,5 +186,4 @@ describe('ModelCameraControl', () => {
     control.onGesture(handView);
     expect(moves.at(-1)).toBe(handView);
   });
-
 });
