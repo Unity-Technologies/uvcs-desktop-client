@@ -163,6 +163,12 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
     [sideBounds],
   );
   const camera = useModelCamera(renderer, framing, stageRef, onViewChange);
+  // A stage resized changes what a view shows, with the camera where the hand left it.
+  const stageSize = useSize(stageRef);
+  const { currentView } = camera;
+  useEffect(() => {
+    if (framing) onViewChange(currentView());
+  }, [stageSize, framing, onViewChange, currentView]);
   const modelCentre = useCallback(() => (bounds ? centreOf(bounds) : null), [bounds]);
   const { frame } = camera;
   const pickedBounds = useCallback(
