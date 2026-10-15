@@ -1,5 +1,6 @@
 import type { UvcsApi } from '@shared/api';
 import type { KeptAsideFile } from '@shared/domain/switchWithChanges';
+import { ProfileList } from '../cm/ProfileList';
 import { homedir } from 'node:os';
 import { nativeImage } from 'electron';
 import { sendEventToCaller } from '../ipc/sendEvent';
@@ -41,7 +42,7 @@ import { createUnityAssetsService } from './unityAssetsService';
 import { createUpdatesService } from './updatesService';
 import { createWindowsService } from './windowsService';
 import { createWorkspacesService } from './workspacesService';
-import type { AppsContext, BranchNamesContext, ServiceContext, SwitchContext } from './ServiceContext';
+import type { AppsContext, BranchNamesContext, ProfilesContext, ServiceContext, SwitchContext } from './ServiceContext';
 
 export function createServices(context: ServiceContext): UvcsApi {
   const switchShelves = new SwitchShelveRecords(context.settings);
@@ -49,9 +50,10 @@ export function createServices(context: ServiceContext): UvcsApi {
   const switching: SwitchContext = { switchShelves, leftChanges: new LeftChangesFinder(context.cm, switchShelves, context.headers, tellKeptAside) };
   const naming: BranchNamesContext = { branchNames: context.branchNames };
   const apps = appsContext(context);
+  const profiles: ProfilesContext = { profiles: new ProfileList(context.cm) };
 
   return {
-    accounts: createAccountsService(context),
+    accounts: createAccountsService(context, profiles),
     annotate: createAnnotateService(context),
     apps: createAppsService(apps),
     attributes: createAttributesService(context),
@@ -70,12 +72,12 @@ export function createServices(context: ServiceContext): UvcsApi {
     mergeTools: createMergeToolsService(context, apps),
     pendingChanges: createPendingChangesService(context, switching),
     permissions: createPermissionsService(context),
-    repositories: createRepositoriesService(context),
+    repositories: createRepositoriesService(context, profiles),
     review: createReviewService(context),
     settings: createSettingsService(context),
     shelves: createShelvesService(context, switching),
     sync: createSyncService(context),
-    system: createSystemService(context),
+    system: createSystemService(context, profiles),
     unityAssets: createUnityAssetsService({ watchers: context.watchers, trees: context.repositoryTrees, downloads: context.revisionDownloads }),
     updates: createUpdatesService(context),
     windows: createWindowsService(context),

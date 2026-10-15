@@ -217,6 +217,18 @@ describe('WorkspaceWindows', () => {
     expect(onWindowsChanged).toHaveBeenCalledTimes(3);
   });
 
+  it('tell whether a window shows the home screen: none once each shows or was asked to open a workspace', () => {
+    const { windows, open, shows } = setUp();
+    expect(windows.showsHomeScreen()).toBe(false);
+
+    const home = open();
+    open(TOOLS);
+    expect(windows.showsHomeScreen()).toBe(true);
+
+    shows(home, GAME);
+    expect(windows.showsHomeScreen()).toBe(false);
+  });
+
   it('lists the open windows in the order they were opened', () => {
     const { windows, open } = setUp();
     const [a, b, c] = [open(), open(), open()];

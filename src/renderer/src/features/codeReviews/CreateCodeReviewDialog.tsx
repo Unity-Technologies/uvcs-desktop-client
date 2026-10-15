@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction } from '../../app/operations/runOperation';
@@ -10,6 +10,7 @@ import { SegmentedControl } from '../../ui/SegmentedControl';
 import { TextField } from '../../ui/TextField';
 import { toast } from '../../ui/toast/toastStore';
 import { useBranches } from '../branches/useBranches';
+import { branchSuggestions } from './branchSuggestions';
 import { draftTargetSpec, type ReviewTargetDraft, type ReviewTargetKind } from './reviewDraft';
 
 /**
@@ -36,6 +37,9 @@ function CreateCodeReviewDialog({ workspacePath, initialTarget, onClose, onCreat
   const [assignee, setAssignee] = useState('');
   const [creating, setCreating] = useState(false);
 
+  // Only the best few of the tens of thousands a repository may hold: suggesting every one made the field slow to
+  // open and to type in.
+  const suggestions = useMemo(() => (targetKind === 'branch' && branches ? branchSuggestions(branches, target) : []), [targetKind, branches, target]);
   const targetSpec = draftTargetSpec(targetKind, target);
   const isValid = title.trim() !== '' && targetSpec !== null;
 
@@ -92,7 +96,7 @@ function CreateCodeReviewDialog({ workspacePath, initialTarget, onClose, onCreat
         <>
           <TextField label="Branch" placeholder="/main/task" value={target} onChange={(event) => setTarget(event.target.value)} list={branchListId} />
           <datalist id={branchListId}>
-            {branches?.map((branch) => <option key={branch.id} value={branch.name} />)}
+            {suggestions.map((branch) => <option key={branch.id} value={branch.name} />)}
           </datalist>
         </>
       ) : (

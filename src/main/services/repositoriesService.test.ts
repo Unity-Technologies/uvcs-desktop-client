@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import { ACCOUNT_FORMAT } from '../cm/accounts';
 import { formatOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createRepositoriesService } from './repositoriesService';
-import { serviceContext } from './testing/serviceContext';
+import { profilesContext, serviceContext } from './testing/serviceContext';
 
 function repositories(answers: Record<string, CmAnswer>) {
   const fake = fakeCmClient(answers);
-  return { ...fake, service: createRepositoriesService(serviceContext(fake.cm)) };
+  return { ...fake, service: createRepositoriesService(serviceContext(fake.cm), profilesContext(fake.cm)) };
 }
 
 const LISTED = formatOutput(['4', 'tools', 'acme@cloud', 'bob'], ['2', 'game', 'acme@cloud', 'ana']);
@@ -14,14 +15,14 @@ const LISTED = formatOutput(['4', 'tools', 'acme@cloud', 'bob'], ['2', 'game', '
 describe('servers', () => {
   it("lists the profiles' servers with the local one first, from one local read", async () => {
     const { service, commands } = repositories({
-      'profile list': formatOutput(['acme@cloud', 'ana', 'SSOWorkingMode'], ['*@cloud', '', ''], ['local', '', 'NameWorkingMode']),
+      'profile list': formatOutput(['acme@cloud_ana', 'acme@cloud', 'ana', 'SSOWorkingMode'], ['*@cloud', '*@cloud', '', ''], ['local', 'local', '', 'NameWorkingMode']),
     });
 
     expect(await service.servers()).toEqual([
       { server: 'local', user: '', workingMode: '' },
       { server: 'acme@cloud', user: 'ana', workingMode: 'SSOWorkingMode' },
     ]);
-    expect(commands).toMatchObject([{ via: 'query', args: ['profile', 'list', '--format={server}\u001f{user}\u001f{workingmode}\u001e'] }]);
+    expect(commands).toMatchObject([{ via: 'query', args: ['profile', 'list', `--format=${ACCOUNT_FORMAT}`], options: { anyDirectory: true } }]);
   });
 });
 
