@@ -1,5 +1,6 @@
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { defaultRangeExtractor, useVirtualizer } from '@tanstack/react-virtual';
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { keepRendered } from '../lib/keepRendered';
 import { HighlightQuery } from './Highlight';
 import { pickListKeyAction } from './pickListKeys';
 import { SearchField } from './SearchField';
@@ -41,7 +42,14 @@ export function PickList<T>({ items, itemKey, search, onSearchChange, placeholde
   const id = useId();
   const [active, setActive] = useState(0);
   const activeIndex = Math.min(active, Math.max(0, items.length - 1));
-  const virtualizer = useVirtualizer({ count: items.length, getScrollElement: () => listRef.current, estimateSize: () => rowHeight, overscan: 8 });
+  const virtualizer = useVirtualizer({
+    count: items.length,
+    getScrollElement: () => listRef.current,
+    estimateSize: () => rowHeight,
+    overscan: 8,
+    // The row the search field's aria-activedescendant names stays rendered while the mouse wheel scrolls it away.
+    rangeExtractor: (range) => keepRendered(defaultRangeExtractor(range), activeIndex, items.length),
+  });
 
   // Typing starts over from the first match.
   useEffect(() => {
