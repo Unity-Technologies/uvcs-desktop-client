@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { queryKeys } from '../../api/queryKeys';
 import { createQueryClient, IMMUTABLE_QUERY } from '../queryClient';
 import { readQuery } from '../../testing/queryProbes';
+import { DiscardHistory } from '../../features/diff/viewer/discardHistory';
 import { forgetWorkspace, workspaceLeft } from './leftWorkspace';
 
 let client: QueryClient;
@@ -44,5 +45,16 @@ describe('forgetWorkspace', () => {
     forgetWorkspace(client, '/wk/game');
 
     expect([cached(revision), cached(info), cached(otherInfo), cached(queryKeys.workspaces)]).toEqual([false, false, true, true]);
+  });
+
+  it("drops the undo history of the workspace's discards, keeping the other workspaces'", () => {
+    const discards = new DiscardHistory();
+    const kept = { before: 'c', after: 'd' };
+    discards.record('/wk/game', 'x.cs', { before: 'a', after: 'b' });
+    discards.record('/wk/tools', 'x.cs', kept);
+
+    forgetWorkspace(client, '/wk/game', discards);
+
+    expect([discards.last('/wk/game', 'x.cs'), discards.last('/wk/tools', 'x.cs')]).toEqual([undefined, kept]);
   });
 });
