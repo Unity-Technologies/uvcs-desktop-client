@@ -84,14 +84,21 @@ and many people use the same server. Every `cm` command other than local reads (
   process; `execute()` is only for long, streamed or cancellable work.
 - **Revisions asked together, one `cm cat` per batch**: every revision read by its spec (`content.read` of a
   `revision` or a `spec`: diffs, History, Incoming, a merge's conflicting files) goes through `RevisionCat`, which
-  saves the reads asked together with one `cm cat <spec>;<file> <spec>;<file> …` per batch (`catBatchesOf`: one
-  repository each, an xlinked one's apart, as `cm cat` resolves each repository on its own; a command line Windows can
-  start). A read asked alone runs at once (`setImmediate`, no timer), as `cm cat <spec> --file=<file>`. At most
-  `MAX_RUNNING_CATS` (2) run per workspace, and the reads asked meanwhile wait and go together in the next ones: that
-  is how batches grow while a merge page asks for thousands. Up to `MAX_QUICK_CAT` (50) revisions go in a pooled
-  `cm shell`, more in a process of its own. `cm cat` writes every revision it finds even when one fails, and names each
-  it doesn't (`The specified revision was not found <spec>`): that read fails alone with its line; the others a failed
-  command wrote are read again once, together. Merging 3,318 conflicting files: 27 commands instead of 9,954.
+  saves the reads asked together with one `cm cat <spec>;<file> <spec>;<file> …` per batch (`nextCatBatch`,
+  `catGroupOf`: one repository each, an xlinked one's apart, as `cm cat` takes each repository's apart; revisions by
+  id apart from items at a point; a command line Windows can start). What a batch saves is process starts and
+  connections: merging 3,318 conflicting files runs 27 commands instead of 9,954. The server still looks up an item at
+  a point (`itemid:N#cs:M`) on its own, one per revision; only a batch of revisions by id (`revid:`) is looked up at
+  once. A read asked while no `cm cat` runs starts at once (`setImmediate`, no timer), as `cm cat <spec> --file=<file>`.
+  At most `MAX_RUNNING_CATS` (2) run per workspace; the next batch is formed from what waits as one ends, another
+  group's reads first, so a read another view asks for waits for one batch, never the whole queue. Up to
+  `MAX_QUICK_CAT` (4) revisions (a diff's sides, a conflict's versions) go in a pooled `cm shell`, one such command at
+  a time (a second waits for it: it answers in milliseconds); more go in a process of their own. `cm cat` writes every
+  revision it finds even when one fails, and names each it doesn't (`The specified revision was not found <spec>`):
+  that read fails alone with its line, and when every line names one, the others were written whole. A failure that
+  names nothing (a spec it can't take fails the command before it writes anything, a dropped connection) is narrowed
+  down in halves (`narrowDown`): the half that fails again is split again, so one bad spec costs about two commands
+  per halving, never one per read; when both halves fail, they all fail.
 
 - **Idle** (focused, nothing touched): only the incoming check, one `cm find changeset "... order by changesetid desc
   limit 101" --format={changesetid}{owner}` a minute (every five behind other apps, none while hidden). It takes the
