@@ -53,7 +53,7 @@ function useImportSettings(workspacePath: string, side: DiffSide, source: Conten
     enabled: meta !== null,
     ...(meta && contentCaching([meta])),
   });
-  // No sibling finder for the version (a revision in History) finds no `.meta`. A read that failed (the server) shows
+  // A version whose sibling finder finds none (a merge's revision; one under an xlink in History) has no `.meta`. A read that failed (the server) shows
   // the defaults meanwhile, and is read again, never kept as the answer.
   if (meta === null) return NO_META;
   if (read.isError) return FAILED_READ;

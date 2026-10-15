@@ -10,7 +10,7 @@ import type { ContentSource } from '@shared/domain/content';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { listsTree } from '@shared/domain/specs';
 import { MAX_CHANGED_ASSETS, type AssetsPoint, type ChangedAsset } from '@shared/domain/unityAssets';
-import { pointOf, type DiffSide } from './modelSiblings';
+import { historyPointOf, pointOf, type DiffSide, type HistoryPoints } from './modelSiblings';
 
 /** The point of the version a side shows from `source`; null where none is known. */
 export type AssetsPointFinder = (side: DiffSide, source: ContentSource) => AssetsPoint | null;
@@ -77,15 +77,12 @@ export function inWorkspaceRepository(repository: string, workspaceRepository: s
   return workspaceRepository === undefined ? undefined : repository === workspaceRepository;
 }
 
-/**
- * Two revisions of a history, each at the changeset that made it. Only in the workspace's repository: a revision of an
- * xlinked one is in a tree whose paths aren't the workspace's.
- */
-export function revisionsAssetsPoint(changesets: Record<DiffSide, number | null>, inWorkspaceRepository: boolean | undefined): AssetsPointFinder {
+/** Two revisions of a history, each at the changeset that made it, where it has one (`historyPointOf`). */
+export function revisionsAssetsPoint(points: HistoryPoints): AssetsPointFinder {
   return (side, source) => {
     if (source.kind !== 'revision') return workspaceAssetsPoint(side, source);
-    const changeset = changesets[side];
-    return inWorkspaceRepository && changeset !== null && changeset >= 0 ? { kind: 'repository', at: `cs:${changeset}` } : null;
+    const at = historyPointOf(points, side);
+    return at === null ? null : { kind: 'repository', at };
   };
 }
 

@@ -241,10 +241,14 @@ says what the model needs. A last change in Files or Browse repository (`lastCha
 provided by `RevisionChanges`) finds it in the tree's own listings, no `cm` command added: changed in the same
 changeset or shelve as the model, its revision and the one before; untouched by it, its one revision on both sides;
 changed since, in another repository, or not listed (private, in a folder not opened), none. A history's revisions
-(`historySibling`, provided by `RevisionComparison`) find it as it was in the changeset that made each revision
-(`cs:N`, one `cm cat` per side), in the workspace's repository only, as their materials are (`revisionsAssetsPoint`): a
-revision under an xlink is at a changeset of the xlinked repository, whose paths aren't the workspace's. A merge's
-revisions find none. A sibling is found beside the path each side was read from (`sourcePathOf`), never the diff's
+(`historySibling`, provided by `RevisionComparison`) find it as it was in the changeset that made each revision, read
+from that point's listing ("Read from the folder's listing" below), at the point their materials use too
+(`historyPointOf`, `revisionsAssetsPoint`): none under an xlink (a changeset of the xlinked repository, whose paths
+aren't the workspace's), nor before the item last moved, renamed or was removed (`lastPathChange`, from
+`ItemHistory.pathChanges`), when the file at its path was another or nothing. Each side is its own point, so a sibling
+unchanged between them is read once per side: sharing one read needs each sibling resolved to its revision before its
+bytes are asked, a step in every reader of siblings, and costs one `cm cat` of the unchanged file per comparison. A
+merge's revisions find none. A sibling is found beside the path each side was read from (`sourcePathOf`), never the diff's
 file name, which names the next file while the one before still shows. Its name never reaches above the model's
 folder, and main refuses a workspace file outside the workspace anyway (`workspaceFileOf`): the renderer is not
 trusted.
@@ -284,8 +288,10 @@ trusted.
   settings. One `cm cat` a side, cached.
 - **A model's `.meta` diffed alone** (`modelOfMeta`) shows as the model under each version's settings (`ModelMetaDiff`,
   "Code | Model", the model by default, remembered as `representations.meta`): raising the Scale Factor instead of
-  exporting again reads "100× larger in Unity". Only where the model can be found beside it (`modelBesideMeta`);
-  elsewhere the `.meta` is its text. A model that didn't change is read once for both sides (`modelReadsOfSides`).
+  exporting again reads "100× larger in Unity". Only where the model can be found beside it (`modelBesideMeta`): in
+  History too, beside each revision at its point (`historySibling`); elsewhere the `.meta` is its text. A model that
+  didn't change is read once for both sides (`modelReadsOfSides`), except in History, where each side is its own point
+  and the model is read at each.
 
 ## Materials
 

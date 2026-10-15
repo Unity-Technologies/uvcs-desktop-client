@@ -8,8 +8,9 @@ export function modelOfMeta(path: string): string | null {
 }
 
 /**
- * Where to read the model beside each side of a model's `.meta`; null when neither side can find it (a history's
- * revisions, which name no folder to look in), and then the `.meta` shows as its text only.
+ * Where to read the model beside each side of a model's `.meta`; null when neither side can find it (a merge's
+ * revisions; in History, a revision under an xlink or from before the item last moved: `historyPointOf`), and then the
+ * `.meta` shows as its text only.
  */
 export function modelBesideMeta(findSibling: SiblingFinder, sources: Record<DiffSide, ContentSource>): Record<DiffSide, ContentSource | null> | null {
   const beside = (side: DiffSide): ContentSource | null => {

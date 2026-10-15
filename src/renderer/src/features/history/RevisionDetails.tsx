@@ -17,6 +17,8 @@ interface RevisionDetailsProps {
   /** All revisions, newest first. */
   revisions: ItemRevision[];
   selected: ItemRevision[];
+  /** The last changeset that moved, renamed or removed the file (`ItemHistory.pathChanges`, newest first); null if none. */
+  lastPathChange: number | null;
   /** Walks back from a revision "Annotate before this change" selected. */
   onBack?: () => void;
   history: AnnotationHistory;
@@ -32,7 +34,7 @@ interface RevisionDetailsProps {
  * revision is compared with the one it was made from; two selected revisions with each other, and the newer one is
  * annotated. Directories have no content, so their changeset is offered instead.
  */
-export function RevisionDetails({ path, revisions, selected, onBack, history, otherRepository, picked, onPick }: RevisionDetailsProps) {
+export function RevisionDetails({ path, revisions, selected, lastPathChange, onBack, history, otherRepository, picked, onPick }: RevisionDetailsProps) {
   const compared = comparedRevisions(revisions, selected);
   // Arrowing through the history doesn't read (`cm cat`, `cm annotate`) every revision it passes.
   const [newer, older] = useSettledValue(compared, compared.map((revision) => revision?.revisionId).join(':'));
@@ -80,7 +82,7 @@ export function RevisionDetails({ path, revisions, selected, onBack, history, ot
   );
 
   return view === 'diff' ? (
-    <RevisionComparison path={path} newer={newer} older={older} leading={leading} />
+    <RevisionComparison path={path} newer={newer} older={older} lastPathChange={lastPathChange} leading={leading} />
   ) : (
     <AnnotationPane path={path} repository={newer.repository} revision={newer} leading={leading} history={history} />
   );

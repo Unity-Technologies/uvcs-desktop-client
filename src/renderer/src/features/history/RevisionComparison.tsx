@@ -13,18 +13,20 @@ interface RevisionComparisonProps {
   newer: ItemRevision;
   /** None when `newer` created the file. */
   older: ItemRevision | undefined;
+  /** The last changeset that moved, renamed or removed the file: before it, nothing beside it is looked for. */
+  lastPathChange: number | null;
   /** Shown first in the toolbar, e.g. a view switch. */
   leading?: ReactNode;
 }
 
 /** The diff between two revisions of a file. */
-export function RevisionComparison({ path, newer, older, leading }: RevisionComparisonProps) {
+export function RevisionComparison({ path, newer, older, lastPathChange, leading }: RevisionComparisonProps) {
   const workspacePath = useWorkspacePath();
   const inWorkspace = inWorkspaceRepository(newer.repository, useWorkspaceInfo().data?.repository);
   const { findAssetsPoint, findSibling } = useMemo(() => {
-    const changesets = { original: older?.changesetId ?? null, modified: newer.changesetId };
-    return { findAssetsPoint: revisionsAssetsPoint(changesets, inWorkspace), findSibling: historySibling(changesets, inWorkspace) };
-  }, [older?.changesetId, newer.changesetId, inWorkspace]);
+    const points = { changesets: { original: older?.changesetId ?? null, modified: newer.changesetId }, inWorkspaceRepository: inWorkspace, lastPathChange };
+    return { findAssetsPoint: revisionsAssetsPoint(points), findSibling: historySibling(points) };
+  }, [older?.changesetId, newer.changesetId, inWorkspace, lastPathChange]);
 
   return (
     <AssetsPointContext.Provider value={findAssetsPoint}>
