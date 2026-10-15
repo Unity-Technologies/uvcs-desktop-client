@@ -5,7 +5,7 @@
 import { placedPositionsOf, type PlaceableMesh } from './meshPlacement';
 import { viewerSpaceOf, worldMatricesOf } from './modelSpaces';
 import type { ParsedModel } from './parsedModel';
-import { surfaceDistances } from './surfaceDistance';
+import { MeasurableSurface, surfaceDistances } from './surfaceDistance';
 
 /** What placing a version's meshes takes of it: its nodes, units and axes, and each mesh's positions, skin and indices. */
 export type PlaceableModel = Pick<ParsedModel, 'nodes' | 'unitScale' | 'importScale' | 'axisConversion'> & {
@@ -43,8 +43,8 @@ export function compareSurfaces(before: PlacedMeshes, after: PlacedMeshes): Surf
   const surfaceBefore = { positions: trianglesOf(before) };
   const surfaceAfter = { positions: trianglesOf(after) };
   return {
-    before: before.meshes.map((mesh) => surfaceDistances(mesh.positions, surfaceAfter, { maxDistance })),
-    after: after.meshes.map((mesh) => surfaceDistances(mesh.positions, surfaceBefore, { maxDistance })),
+    before: before.meshes.map((mesh) => surfaceDistances(mesh.positions, MeasurableSurface.of(surfaceAfter), { maxDistance })),
+    after: after.meshes.map((mesh) => surfaceDistances(mesh.positions, MeasurableSurface.of(surfaceBefore), { maxDistance })),
     size,
     maxDistance,
   };

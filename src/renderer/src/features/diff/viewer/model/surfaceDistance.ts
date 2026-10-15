@@ -24,15 +24,30 @@ export interface DistanceOptions {
 /** Points this close are one: below a re-export's rounding, far below what the Differences mode can show. */
 const SAME_POINT_STEP = 1e-6;
 
-export function surfaceDistances(vertices: Float32Array, surface: Triangles, { maxDistance }: DistanceOptions): Float32Array {
+/**
+ * A surface made ready to measure against: its corners hashed and its triangles in a hierarchy. Building it reads every
+ * triangle, so a version's surface is built once and measured against for all the other version's meshes.
+ */
+export class MeasurableSurface {
+  private constructor(
+    readonly corners: PointSet,
+    /** Null for a surface without triangles: nothing is near it. */
+    readonly search: NearestSearch | null,
+  ) {}
+
+  static of({ positions }: Triangles): MeasurableSurface {
+    const triangleCount = positions.length / 9;
+    const search = triangleCount === 0 ? null : new NearestSearch(buildHierarchy(positions, triangleCount), positions);
+    return new MeasurableSurface(new PointSet(positions), search);
+  }
+}
+
+export function surfaceDistances(vertices: Float32Array, surface: MeasurableSurface, { maxDistance }: DistanceOptions): Float32Array {
   const distances = new Float32Array(vertices.length / 3).fill(maxDistance);
-  const triangleCount = surface.positions.length / 9;
-  if (triangleCount === 0) return distances;
-  const corners = new PointSet(surface.positions);
+  const { corners, search } = surface;
+  if (!search) return distances;
   const measured = new PointSet(vertices);
   const measures = new Float32Array(measured.size).fill(-1);
-  const hierarchy = buildHierarchy(surface.positions, triangleCount);
-  const search = new NearestSearch(hierarchy, surface.positions);
   for (let v = 0; v < distances.length; v++) {
     const x = vertices[v * 3]!;
     const y = vertices[v * 3 + 1]!;
