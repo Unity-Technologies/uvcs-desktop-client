@@ -60,6 +60,8 @@ export class WorkspaceCopies {
   private readonly held = new Map<string, Set<string>>();
   /** The workspace folders listed (or being listed), by workspace and folder, until the workspace changes. */
   private readonly listedFolders = new Map<string, Promise<void>>();
+  /** How many times each workspace was seen to change (`generationOf`). */
+  private readonly generations = new Map<string, number>();
 
   constructor({ cm, maxListed = MAX_LISTED_REVISIONS }: WorkspaceCopiesOptions = {}) {
     this.cm = cm;
@@ -76,12 +78,23 @@ export class WorkspaceCopies {
   }
 
   /**
-   * Remembers what the workspace itself told it holds at each path (its own `cm ls`: a history's of its file, a
-   * folder's): any other revision asked there is not on its disk, with no command.
+   * The workspace's state as last seen to change: taken as a listing of it is asked, and handed back with what it
+   * told (`listedAt`). A listing asked before the workspace changed tells the state before: its hashes still serve the
+   * revisions it named, but nothing of it counts as held.
    */
-  rememberHeld(workspacePath: string, files: Iterable<RevisionFile>): void {
+  generationOf(workspacePath: string): number {
+    return this.generations.get(workspacePath) ?? 0;
+  }
+
+  /**
+   * Remembers what the workspace itself told it holds at each path (its own `cm ls`: a history's of its file, a
+   * folder's): any other revision asked there is not on its disk, with no command. Only from a listing asked since the
+   * workspace last changed (`listedAt`); an older one's revisions are only remembered.
+   */
+  rememberHeld(workspacePath: string, files: Iterable<RevisionFile>, listedAt = this.generationOf(workspacePath)): void {
     const valid = [...validFiles(files)];
     this.remember(workspacePath, valid);
+    if (listedAt !== this.generationOf(workspacePath)) return;
     for (const file of valid) {
       const folder = folderKey(workspacePath, folderOf(file.path));
       keepLatest(this.held, folder, (this.held.get(folder) ?? new Set<string>()).add(file.path), MAX_LISTED_FOLDERS);
@@ -92,9 +105,9 @@ export class WorkspaceCopies {
    * Remembers a workspace folder's own listing (the Files view's `cm ls --xml`): its files' revisions, and that a
    * revision it doesn't name isn't there, so the folder isn't listed again for one until the workspace changes.
    */
-  rememberFolder(workspacePath: string, folder: string, files: Iterable<RevisionFile>): void {
-    this.rememberHeld(workspacePath, files);
-    this.keepFolderListing(folderKey(workspacePath, folder), Promise.resolve());
+  rememberFolder(workspacePath: string, folder: string, files: Iterable<RevisionFile>, listedAt = this.generationOf(workspacePath)): void {
+    this.rememberHeld(workspacePath, files, listedAt);
+    if (listedAt === this.generationOf(workspacePath)) this.keepFolderListing(folderKey(workspacePath, folder), Promise.resolve());
   }
 
   /**
@@ -105,6 +118,7 @@ export class WorkspaceCopies {
    */
   forgetChanged(workspacePath: string, change: WorkspaceChange): void {
     if (change.metadata || change.folders === null) return this.forgetListings(workspacePath);
+    this.generations.set(workspacePath, this.generationOf(workspacePath) + 1);
     for (const folder of change.folders) {
       const key = folderKey(workspacePath, folder);
       this.listedFolders.delete(key);
@@ -114,6 +128,7 @@ export class WorkspaceCopies {
 
   /** The workspace changed everywhere, or isn't watched anymore: its folders are listed again when asked. */
   forgetListings(workspacePath: string): void {
+    this.generations.set(workspacePath, this.generationOf(workspacePath) + 1);
     for (const map of [this.listedFolders, this.held]) for (const key of [...map.keys()]) if (key.startsWith(`${workspacePath}\0`)) map.delete(key);
   }
 
@@ -146,12 +161,17 @@ export class WorkspaceCopies {
   /** One `cm ls` of the workspace folder while the workspace doesn't change, its files remembered; a failure lists nothing. */
   private listFolder(workspacePath: string, folder: string): Promise<void> {
     const key = folderKey(workspacePath, folder);
-    const listing =
-      this.listedFolders.get(key) ??
-      this.cm!.query(workspaceListingArgs(toAbsolutePath(workspacePath, folder)), { cwd: workspacePath }).then(
-        (output) => this.rememberHeld(workspacePath, parseWorkspaceListing(output)),
-        () => undefined,
-      );
+    const kept = this.listedFolders.get(key);
+    if (kept) return kept;
+    const listedAt = this.generationOf(workspacePath);
+    const listing: Promise<void> = this.cm!.query(workspaceListingArgs(toAbsolutePath(workspacePath, folder)), { cwd: workspacePath }).then(
+      (output) => {
+        this.rememberHeld(workspacePath, parseWorkspaceListing(output), listedAt);
+        // Asked before the workspace changed: the folder is listed again for the next read.
+        if (listedAt !== this.generationOf(workspacePath) && this.listedFolders.get(key) === listing) this.listedFolders.delete(key);
+      },
+      () => undefined,
+    );
     this.keepFolderListing(key, listing);
     return listing;
   }

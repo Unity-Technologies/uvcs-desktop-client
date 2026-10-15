@@ -27,9 +27,10 @@ export function createHistoryService({ cm, workspaceCopies }: ServiceContext, { 
   async function readWorkspaceItem(workspacePath: string, path: string, revision: RevisionRef | undefined): Promise<WorkspaceItem | undefined> {
     if (revision !== undefined) return undefined;
     const args = workspaceItemArgs(toAbsolutePath(workspacePath, path));
+    const listedAt = workspaceCopies.generationOf(workspacePath);
     const item = await cm.query(args, { cwd: workspacePath }).then(parseWorkspaceItem, () => undefined);
     const loaded = loadedRevisionOf(item, path);
-    if (loaded) workspaceCopies.rememberHeld(workspacePath, [loaded]);
+    if (loaded) workspaceCopies.rememberHeld(workspacePath, [loaded], listedAt);
     return item;
   }
 
