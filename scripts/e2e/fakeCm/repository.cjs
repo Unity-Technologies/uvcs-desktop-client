@@ -72,7 +72,8 @@ const REPOSITORIES = [{ repid: 1, repname: REPOSITORY, repserver: SERVER, repown
 
 /**
  * The workspace's files: `loaded` is the content of the loaded revision (what `cm cat` answers), `onDisk` what the
- * fixture writes when the user changed it. A file with nothing loaded is private.
+ * fixture writes when the user changed it, `parent` the revision before the loaded one (revision 200), for a file
+ * changed in the loaded changeset rather than added. A file with nothing loaded is private.
  */
 const FILES = {
   'README.md': { loaded: '# Demo\n\nA small game.\n' },
@@ -80,7 +81,7 @@ const FILES = {
     loaded: 'class Player {\n  float speed = 4f;\n  void Move() { }\n}\n',
     onDisk: 'class Player {\n  float speed = 5f;\n  void Move() { }\n  void Jump() { }\n}\n',
   },
-  'src/camera.cs': { loaded: 'class Camera {\n  float distance = 10f;\n}\n' },
+  'src/camera.cs': { loaded: 'class Camera {\n  float distance = 10f;\n}\n', parent: 'class Camera {\n  float distance = 8f;\n}\n' },
   // A 3D model, written as text (OBJ) so the fixture stays readable: its diff is the model diff's, which reads the
   // import settings in its .meta beside it, as every model of a Unity project has.
   'Assets/crate.obj.meta': { loaded: 'fileFormatVersion: 2\nguid: 4f1d0c6a2b3e4d5f8a9b0c1d2e3f4a5b\nModelImporter:\n  meshes:\n    globalScale: 1\n    useFileScale: 1\n  animationType: 2\n' },
@@ -91,8 +92,12 @@ const FILES = {
   'notes.txt': { onDisk: 'Ideas for the next level.\n' },
 };
 
-/** Revisions by id, for `cm cat revid:N`: the two sides of the one change every `cm diff` reports. */
+/**
+ * Revisions by id, for `cm cat revid:N`: the two sides of the one change every `cm diff` reports, and the revision
+ * before `src/camera.cs`'s (Files' last change of it).
+ */
 const REVISIONS = {
+  200: FILES['src/camera.cs'].parent,
   201: FILES['src/player.cs'].loaded,
   202: FILES['src/player.cs'].onDisk,
 };
