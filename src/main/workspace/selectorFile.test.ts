@@ -10,6 +10,7 @@ describe('parseSelectorFile', () => {
     // As UVCS writes it for a workspace created on `game@AcmeStudio@unity`.
     expect(parseSelectorFile(`repository "game@${UNITY_ORGANIZATION.byId}"\r\n  path "/"\r\n    smartbranch "/main"`)).toEqual({
       repository: null,
+      repositoryName: 'game',
       selector: { kind: 'branch', name: '/main' },
     });
   });
