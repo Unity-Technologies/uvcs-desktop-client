@@ -50,14 +50,16 @@ describe('createFuzzyIndex', () => {
     }
   });
 
-  it('types on and deletes back through 200,000 paths looking only at what still matches', () => {
-    const texts = Array.from({ length: 200_000 }, (_, index) => `assets/level${index % 50}/props/prop${index}.prefab`);
+  // The characters read are counted, so 20,000 paths show a pass over all of them as well as 200,000 did (which took
+  // up to 2 s on CI's runners).
+  it('types on and deletes back through 20,000 paths looking only at what still matches', () => {
+    const texts = Array.from({ length: 20_000 }, (_, index) => `assets/level${index % 50}/props/prop${index}.prefab`);
     const index = createFuzzyIndex(texts);
     for (const query of ['p', 'pr', 'pro', 'prop', 'prop1', 'prop19', 'prop199', 'prop1999']) index.rank(query, 10);
     const stillMatching = texts.filter((text) => text.includes('prop1999')).join('').length;
 
     // Each letter typed looks through the paths the query before it matched, each deleted answers from memory: all
-    // 200,000 paths every time read each thousands of times more.
+    // 20,000 paths every time would read about 2,000 times more.
     const typedOn = countCharactersRead(() => index.rank('prop19990', 10));
     const deletedBack = countCharactersRead(() => index.rank('prop1999', 10));
     expect(typedOn.result.length).toBeGreaterThan(0);
