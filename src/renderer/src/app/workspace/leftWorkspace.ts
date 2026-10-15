@@ -1,8 +1,7 @@
-import type { QueryClient } from '@tanstack/react-query';
+import type { Query, QueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { workspaceKey } from '../../api/queryKeys';
-import { discardHistory, type DiscardHistory } from '../../features/diff/viewer/discardHistory';
-import { queryClient } from '../queryClient';
+import { isRefreshable, queryClient } from '../queryClient';
 
 /** The workspace a window no longer shows, now that it shows `current` (another one, or the home screen); null if none. */
 export function workspaceLeft(previous: string | null, current: string | null): string | null {
@@ -10,20 +9,23 @@ export function workspaceLeft(previous: string | null, current: string | null): 
 }
 
 /**
- * Forgets what this window read of a workspace it left. Each window has its own query client, so nothing else reads
- * them: kept, a workspace's immutable results (revisions' texts and images, kept for an hour) would stay in memory
- * long after the window moved on, hundreds of MB after big diffs. Coming back reads the workspace again. The undo
- * history of its discards goes too: each keeps whole files' texts.
+ * Forgets the big part of what this window read of a workspace it left: its immutable results nothing shows
+ * (revisions' texts, images and models, what changesets changed), kept an hour otherwise, hundreds of MB after big
+ * diffs. Each window has its own query client, so nothing else reads them. Its lists and its info are light and stay
+ * until their usual `gcTime`, so going home and back within minutes reads nothing from the server again. The query
+ * defaults set for the workspace (`setQueryDefaults`, `useWorkspaceWatcher`) stay too: a few entries, set again as it
+ * opens.
  */
-export function forgetWorkspace(client: QueryClient, workspacePath: string, discards: DiscardHistory = discardHistory): void {
-  client.removeQueries({ queryKey: workspaceKey(workspacePath) });
-  discards.forgetWorkspace(workspacePath);
+export function forgetWorkspace(client: QueryClient, workspacePath: string): void {
+  client.removeQueries({ queryKey: workspaceKey(workspacePath), predicate: isBigAndUnused });
 }
+
+const isBigAndUnused = (query: Query): boolean => !isRefreshable(query) && query.getObserversCount() === 0;
 
 /**
  * Forgets the workspace the window leaves (`forgetWorkspace`). In an effect, so the left workspace's views have
- * unmounted, and stopped observing its queries, by the time they go; an effect run again on the same workspace (React's
- * StrictMode) leaves nothing.
+ * unmounted, and stopped observing its queries, by the time they go; an effect run again on the same workspace
+ * (React's StrictMode) leaves nothing.
  */
 export function useForgetLeftWorkspace(workspacePath: string | null): void {
   const shown = useRef(workspacePath);
