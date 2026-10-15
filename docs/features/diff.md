@@ -234,17 +234,22 @@ methods that recognize line endings (`crAgainstLf`); a file mixing both can't te
 Chromium draws nothing of a line of text past some 1,300,000 characters (measured: 1.3M drawn, 1.4M blank, at any font
 size), so the one line of a minified file of 1.6 MB showed as an empty row. A text with a line longer than
 `LONGEST_DRAWN_LINE` (1,000,000 characters, `features/diff/viewer/longLines`) has its lines wrapped wherever they can
-wrap, whatever the wrap preference (`hasLineTooLongToDraw`): the diff (its wrap button pressed and disabled, its tooltip
-saying why) and the merge page's texts (`usePierreOptions`). Such a pending file isn't typed into in the diff (`typesIntoDiff`): Pierre's editor froze the window at the first
-keystroke in a 2 MB line, so the diff is read-only, a line above it saying why, with Open file. For the same reason the
-merge page doesn't offer "Edit the text in the app" for such a text (`editInAppUnavailable`, its tooltip saying why):
-one keystroke in the wrapped line took more than three minutes. A line of 700,000 characters, drawn unwrapped, takes
-typing at 70 ms a key. Annotate can't wrap, its rows being one line high beside
-their annotation, so it cuts such a line there with an ellipsis (`withLongLinesCut`); that text is read-only, never
-written back. Everything else a long line costs is already bounded: Pierre highlights no line past
-`tokenizeMaxLineLength` (1,000 characters, its default) and marks no words in lines past `maxLineDiffLength`
-(`WORD_MARKS`), and comparisons of moved code are bounded by their work (`MOVE_WORK_BUDGET`, "Moved code"). Opening a pending diff of a 3.9 MB one-line file takes about 2 s, most of it Chromium laying out the wrapped
-line; 1.6 MB, about 1 s.
+wrap, whatever the wrap preference (`hasLineTooLongToDraw`): the diff (its wrap button pressed and unavailable, its
+tooltip saying why) and the merge page's texts (`usePierreOptions`). Annotate can't wrap, its rows being one line high
+beside their annotation, so it cuts such a line there with an ellipsis (`withLongLinesCut`); that text is read-only,
+never written back.
+
+A text with a line longer than `LONGEST_EDITED_LINE` (50,000 characters) isn't typed into in the app
+(`hasLineTooLongToEdit`): Pierre's editor takes time by the square of a wrapped line's length at each keystroke
+(measured: 100,000 characters 0.24 s a key, 300,000 3 s, 700,000 18 s, 2 MB more than three minutes; unwrapped, 700,000
+took 70 ms, but the user may wrap any line). Such a pending file's diff is read-only (`typesIntoDiff`), a line above it
+saying why, with Open file; the merge page doesn't offer "Edit the text in the app" for it (`editInAppUnavailable`, its
+tooltip saying why).
+
+Everything else a long line costs is already bounded: Pierre highlights no line past `tokenizeMaxLineLength` (1,000
+characters, its default) and marks no words in lines past `maxLineDiffLength` (`WORD_MARKS`), and comparisons of moved
+code are bounded by their work (`MOVE_WORK_BUDGET`, "Moved code"). Opening a pending diff of a 3.9 MB one-line file
+takes about 2 s, most of it Chromium laying out the wrapped line; 1.6 MB, about 1 s.
 
 ## Images
 

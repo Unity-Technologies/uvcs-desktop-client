@@ -5,14 +5,27 @@
  */
 export const LONGEST_DRAWN_LINE = 1_000_000;
 
-/** The longest line, in characters, typed into in the app (`hasLineTooLongToEdit`). */
-export const LONGEST_EDITED_LINE = Infinity;
+/**
+ * The longest line, in characters, typed into in the app (`hasLineTooLongToEdit`). Pierre's editor takes time by the
+ * square of a wrapped line's length at each keystroke (measured: 100,000 characters 0.24 s a key, 300,000 3 s, 700,000
+ * 18 s, 2 MB more than three minutes); unwrapped, 700,000 took 70 ms, but the user may wrap any line.
+ */
+export const LONGEST_EDITED_LINE = 50_000;
 
 const LINE_BREAK = /\r\n?|\n/g;
 
 /** Whether any of the texts has a line too long to draw unwrapped (`LONGEST_DRAWN_LINE`): the view wraps it then. */
 export function hasLineTooLongToDraw(texts: readonly string[]): boolean {
-  return texts.some((text) => text.length > LONGEST_DRAWN_LINE && hasLongLine(text));
+  return hasLineLongerThan(texts, LONGEST_DRAWN_LINE);
+}
+
+/** Whether any of the texts has a line too long to type into (`LONGEST_EDITED_LINE`): it's shown read-only then. */
+export function hasLineTooLongToEdit(texts: readonly string[]): boolean {
+  return hasLineLongerThan(texts, LONGEST_EDITED_LINE);
+}
+
+function hasLineLongerThan(texts: readonly string[], limit: number): boolean {
+  return texts.some((text) => text.length > limit && hasLongLine(text, limit));
 }
 
 /**
@@ -24,14 +37,14 @@ export function withLongLinesCut(text: string): string {
   return text.replace(/[^\r\n]+/g, (line) => (line.length > LONGEST_DRAWN_LINE ? `${cutAt(line, LONGEST_DRAWN_LINE)}…` : line));
 }
 
-/** Whether a line is too long to draw, found from the line breaks (LF, CRLF or a lone CR), stopping at the first. */
-function hasLongLine(text: string): boolean {
+/** Whether a line is longer than `limit`, found from the line breaks (LF, CRLF or a lone CR), stopping at the first. */
+function hasLongLine(text: string, limit: number): boolean {
   let start = 0;
   for (const lineBreak of text.matchAll(LINE_BREAK)) {
-    if (lineBreak.index - start > LONGEST_DRAWN_LINE) return true;
+    if (lineBreak.index - start > limit) return true;
     start = lineBreak.index + lineBreak[0].length;
   }
-  return text.length - start > LONGEST_DRAWN_LINE;
+  return text.length - start > limit;
 }
 
 /** The first `length` code units of `line`, one fewer when the last would be half of a character written in two. */
