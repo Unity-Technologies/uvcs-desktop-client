@@ -551,6 +551,10 @@ renderer/src/
   own update check runs hourly too, against GitHub, never the server: features/updates.md).
   - `main/watch/WorkspaceWatcher` watches an open workspace (recursive on macOS/Windows; on Linux a watch per folder,
     `FolderTreeWatch`, as Node's recursive mode there watches every file and loses files saved by replacing them;
+    it walks the tree asynchronously, `FOLDERS_PER_STEP` folders at a time, so a big project never holds the main
+    process, and `workspaces.watch` answers once every walk under way is done (the windows take the workspace as
+    partly watched until then); once its first walks have watched every folder, the watch reports a file edit
+    anywhere once, for the edits made in folders not yet watched (`ANY_FILE_EDIT`);
     an event Windows sends without a name, when a burst overflowed its buffer, refreshes everything),
     skips `ignore.conf` folders (on Linux the folders watched follow its edits, `followSkipRule`) and `.plastic` lock/temp files, coalesces bursts (300 ms quiet, 2 s max wait) and drops what the
     app's own writes cause (`changesWorkspace` commands and tracked operations): the renderer refreshes after those anyway.
