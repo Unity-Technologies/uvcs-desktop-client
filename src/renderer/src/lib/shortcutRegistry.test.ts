@@ -24,8 +24,11 @@ describe('shortcut registry', () => {
   it('holds every shortcut of the renderer: bindings, tooltips and key caps read their keys from it', () => {
     const offenders = filesUnder(RENDERER, isAppSource)
       .filter((path) => !path.endsWith('shortcutRegistry.ts'))
-      .flatMap((path) =>
-        readFileSync(path, 'utf8')
+      .map((path) => ({ path, text: readFileSync(path, 'utf8') }))
+      // Most files name no shortcut at all: matched whole first, so only the few that do are read line by line.
+      .filter(({ text }) => LITERAL_SHORTCUT.some((pattern) => pattern.test(text)))
+      .flatMap(({ path, text }) =>
+        text
           .split('\n')
           .map((line, index) => ({ line, where: `${relative(RENDERER, path)}:${index + 1}` }))
           .filter(({ line }) => !/^\s*(\*|\/\/|\/\*)/.test(line) && LITERAL_SHORTCUT.some((pattern) => pattern.test(line)))
