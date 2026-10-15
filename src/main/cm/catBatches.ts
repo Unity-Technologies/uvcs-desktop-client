@@ -4,6 +4,7 @@
 // (`itemid:N#cs:M`) are looked up one by one inside the command. Shared by every reader that downloads revisions asked
 // together: a merge's conflicting files (`RevisionCat`), a model's textures (`RevisionDownloads`).
 
+import { CmError } from './CmError';
 import { commandLineLength, MAX_COMMAND_LINE } from './commandLineLimit';
 
 /** One revision for `cm cat` to write to a file. */
@@ -95,6 +96,40 @@ export function catArgs(batch: readonly CatRead[]): string[] {
   const [only] = batch;
   if (only && batch.length === 1) return ['cat', only.spec, `--file=${only.target}`];
   return ['cat', ...batch.map(batchArg)];
+}
+
+/** What a failed `cm cat` told about its reads (`explainCatFailure`). */
+export interface CatFailureExplained<T> {
+  /** The reads it named as not found (`The specified revision was not found <spec>`), each with its line. */
+  notFound: { read: T; line: string }[];
+  /**
+   * Every line it printed names one of them: the other reads were written whole. False when some line names none (a
+   * failed download, a dropped connection): any of the others may be unwritten.
+   */
+  everyLineExplained: boolean;
+}
+
+/**
+ * What a failed `cm cat` told about `reads`. `cm cat` goes on after a problem: it writes every revision it can, prints
+ * a `not found <spec>` line per revision it can't resolve, and a line naming no spec per download that failed.
+ */
+export function explainCatFailure<T extends { spec: string }>(reads: readonly T[], failure: unknown): CatFailureExplained<T> {
+  const lines = failureLines(failure);
+  const notFound = reads.flatMap((read) => {
+    const line = lines.find((candidate) => candidate.endsWith(` ${read.spec}`));
+    return line === undefined ? [] : [{ read, line }];
+  });
+  const everyLineExplained = lines.length > 0 && lines.every((line) => notFound.some((named) => named.line === line));
+  return { notFound, everyLineExplained };
+}
+
+/** The lines a failed `cm` command printed; none for a failure that isn't `cm`'s. */
+function failureLines(failure: unknown): string[] {
+  if (!(failure instanceof CmError)) return [];
+  return failure.command.output
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
 
 /** A batch being filled: the command line grows by each revision's argument, measured one at a time. */

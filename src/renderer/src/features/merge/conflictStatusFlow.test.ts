@@ -33,10 +33,11 @@ interface FileSetup {
   versions?: { data?: FileContent; error?: Error }[];
   decision?: FileConflictDecision;
   openTool?: typeof vsCode;
+  isKnownBinary?: boolean;
 }
 
-function stateOf({ versions = [{ data: BASE }, { data: SOURCE }, { data: DESTINATION }], decision, openTool }: FileSetup = {}): FileConflictState {
-  const file = { key: '/app.ts', path: 'app.ts', base: { kind: 'empty' }, source: { kind: 'empty' }, destination: { kind: 'empty' } } as const;
+function stateOf({ versions = [{ data: BASE }, { data: SOURCE }, { data: DESTINATION }], decision, openTool, isKnownBinary }: FileSetup = {}): FileConflictState {
+  const file = { key: '/app.ts', path: 'app.ts', base: { kind: 'empty' }, source: { kind: 'empty' }, destination: { kind: 'empty' }, ...(isKnownBinary && { isKnownBinary }) } as const;
   const inputs = { file, versions: versions.map((version) => ({ data: version.data, error: version.error ?? null })), decision, openTool };
   return buildStates([inputs], workspace, new Map()).states[0]!;
 }
@@ -52,6 +53,16 @@ describe('a conflicting file, as the merge page shows it', () => {
     expect(conflicted.remainingConflicts).toBe(1);
     expect(blocksCompletion(conflicted)).toBe(true);
     expect(planProgress([fileConflictStatus(conflicted), fileConflictStatus(conflicted)])).toBe('2 conflicts to decide');
+  });
+
+  it('needs a decision as a known binary before any version is read, and lets the merge complete once a side is kept', () => {
+    const notRead = [{}, {}, {}];
+    const waiting = stateOf({ versions: notRead, isKnownBinary: true });
+    expect(reads(waiting)).toBe('Needs your decision');
+    expect(blocksCompletion(waiting)).toBe(true);
+    const kept = stateOf({ versions: notRead, isKnownBinary: true, decision: { kind: 'wholeFile', side: 'source' } });
+    expect(reads(kept)).toBe('Keeping incoming');
+    expect(blocksCompletion(kept)).toBe(false);
   });
 
   it('merges automatically when both sides changed different places, needing nothing', () => {

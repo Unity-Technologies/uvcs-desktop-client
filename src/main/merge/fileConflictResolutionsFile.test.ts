@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { FileConflict, MergePlan } from '@shared/domain/merge';
 import { fileConflictResolutionsFile } from './fileConflictResolutionsFile';
 
-const conflict = (path: string): FileConflict => ({ path, itemId: 1, baseChangeset: 1, sourceChangeset: 2, destinationChangeset: 3, repository: 'game@local', destinationRevisionId: 30 });
+const conflict = (path: string): FileConflict => ({ path, itemId: 1, baseChangeset: 1, sourceChangeset: 2, destinationChangeset: 3, repository: 'game@local', destinationRevisionId: 30, destinationIsBinary: false });
 const plan = (...paths: string[]): MergePlan => ({ status: 'ready', changes: [], fileConflicts: paths.map(conflict), directoryConflicts: [], warnings: [] });
 const directory = join('tmp', 'merge');
 

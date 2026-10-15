@@ -1,12 +1,12 @@
-// Revisions saved to files with `cm cat` (ARCHITECTURE.md "Server budget"), the ones asked together in one command:
-// a merge page reads three versions of every conflicting file at once, and a command each would be thousands of
-// process starts and connections. A read asked while no `cm cat` runs starts at once, as the one quick command it
-// always was; one asked while others run waits for one of them to end.
+// Revisions saved to files with `cm cat` (ARCHITECTURE.md "Server budget"), the ones asked together in one command: a
+// merge page reads three versions of every conflicting file but its known binaries at once, and a command each would be
+// thousands of process starts and connections. A read asked while no `cm cat` runs starts at once, as the one quick
+// command it always was; one asked while others run waits for one of them to end.
 
 import { rm, stat } from 'node:fs/promises';
 import type { CmClient } from '../cm/CmClient';
 import { CmError } from '../cm/CmError';
-import { catArgs, nextCatBatch, type CatRead } from '../cm/catBatches';
+import { catArgs, explainCatFailure, nextCatBatch, type CatRead } from '../cm/catBatches';
 
 /**
  * The most `cm cat`s that run at once in a workspace. Reads asked meanwhile wait, and the next batch is formed from
@@ -163,11 +163,12 @@ export class RevisionCat {
     if (failure === null) return batch.forEach((read) => read.resolve()), null;
     if (batch.length === 1) return batch[0]!.reject(failure), null;
     const written = await Promise.all(batch.map((read) => stat(read.target).then(() => true, () => false)));
-    const lines = outputLinesOf(failure);
-    const lineNaming = (read: Waiting) => lines.find((line) => line.endsWith(` ${read.spec}`));
-    const missing = batch.filter((read, i) => !written[i] && lineNaming(read) !== undefined);
-    missing.forEach((read) => read.reject((failure as CmError).withMessage(lineNaming(read)!)));
-    const everyLineExplained = lines.length > 0 && lines.every((line) => missing.some((read) => line.endsWith(` ${read.spec}`)));
+    const { notFound, everyLineExplained } = explainCatFailure(
+      batch.filter((_, i) => !written[i]),
+      failure,
+    );
+    notFound.forEach(({ read, line }) => read.reject((failure as CmError).withMessage(line)));
+    const missing = notFound.map(({ read }) => read);
     const rest = batch.filter((read) => !missing.includes(read));
     if (everyLineExplained) rest.filter((read) => written[batch.indexOf(read)]).forEach((read) => read.resolve());
     const unexplained = everyLineExplained ? rest.filter((read) => !written[batch.indexOf(read)]) : rest;
@@ -193,13 +194,4 @@ export class RevisionCat {
 
 function isQuick(batch: readonly Waiting[]): boolean {
   return batch.length <= MAX_QUICK_CAT;
-}
-
-/** The lines a failed `cm` command printed; none for a failure that isn't `cm`'s. */
-function outputLinesOf(failure: unknown): string[] {
-  if (!(failure instanceof CmError)) return [];
-  return failure.command.output
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
 }

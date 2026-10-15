@@ -28,18 +28,21 @@ export function ConflictBody({ workspacePath, state, labels, view, editing, onDe
   const { file, decision, contents } = state;
 
   if (state.status === 'loading') return <CenteredSpinner />;
-  if (state.status === 'error' || !contents) return <EmptyState title="Couldn't read this file" description={state.error?.message} />;
+  if (state.status === 'error') return <EmptyState title="Couldn't read this file" description={state.error?.message} />;
 
+  // A known binary's cards show before its versions are read: it is decided without them.
   if (state.isBinary && view === 'choice') {
     return (
       <WholeFileChoice
         contents={contents}
+        error={state.error}
         labels={labels}
         chosen={decision?.kind === 'wholeFile' ? decision.side : undefined}
         onChoose={(side) => onDecide({ kind: 'wholeFile', side })}
       />
     );
   }
+  if (!contents) return <EmptyState title="Couldn't read this file" description={state.error?.message} />;
 
   if (editing) {
     return <HandEditor path={file.path} text={textToEdit(state)} onChange={(text) => onDecide({ kind: 'text', text, edited: true })} />;

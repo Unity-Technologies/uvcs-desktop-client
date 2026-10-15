@@ -10,6 +10,7 @@ import {
   type MergeResult,
 } from '@shared/domain/merge';
 import { spec } from '@shared/domain/specs';
+import { catArgs, catBatchesOf, explainCatFailure, type CatRead } from '../cm/catBatches';
 import type { CmClient } from '../cm/CmClient';
 import { parseCreatedChangeset, parseDestinationMoved, parseMergePlan } from '../cm/mergeOutput';
 import { directoryConflictIdentity } from './directoryConflictIdentity';
@@ -30,7 +31,9 @@ import { previewMerge } from './previewMerge';
  *    so nothing is decided behind the user's back and no external merge tool opens. A merge into a server branch
  *    takes each file's decision from a resolutions file (`fileConflictResolutionsFile`).
  * 3. For workspace merges, each conflicting file is then written with its resolution: the text decided, the source's
- *    text as the page read it, or else (binaries) the source's revision, with one `cm cat` each.
+ *    text as the page read it, or else (binaries) the source's revision, all with one `cm cat`. A version that can't
+ *    be saved leaves its file as yours, named in the result (`incomingNotSaved`, or `incomingMaybeNotSaved` when `cm`
+ *    didn't tell): the merge is in the workspace by then.
  * If anything looks different from the plan the user reviewed, it stops before changing the workspace.
  */
 export async function runMerge(
@@ -79,8 +82,8 @@ export async function runMerge(
     }
 
     context.reportProgress('Writing resolved files');
-    await writeFileConflictResolutions(cm, workspacePath, request, plan, resolutions.files);
-    return {};
+    const { notSaved, maybeNotSaved } = await writeFileConflictResolutions(cm, workspacePath, request, plan, resolutions.files);
+    return { ...(notSaved.length > 0 && { incomingNotSaved: notSaved }), ...(maybeNotSaved.length > 0 && { incomingMaybeNotSaved: maybeNotSaved }) };
   });
 }
 
@@ -123,13 +126,22 @@ function resolveConflictArgs(resolution: DirectoryConflictResolution): string[] 
   }
 }
 
+/**
+ * Writes each file's decision: a text as it is, and the incoming versions the page holds no text of (binaries, text in
+ * another encoding) saved by `cm` straight into the workspace, all of them with one `cm cat` per batch
+ * (`catBatchesOf`), in a process even for one: binaries run to hundreds of MB, and a pooled session held that long
+ * stalls every read behind it. `cm merge` has run by then: the writes take no cancel signal, as stopping them would
+ * leave the merge half applied. `--file=` refuses a read-only file where `<spec>;<file>` doesn't check: these files are
+ * checked out by the merge, so writable, either way. Returns the files whose incoming version couldn't be saved.
+ */
 async function writeFileConflictResolutions(
   cm: CmClient,
   workspacePath: string,
   request: MergeRequest,
   plan: MergePlan,
   resolutions: Record<string, FileConflictResolution>,
-): Promise<void> {
+): Promise<UnsavedIncoming> {
+  const incomingReads: IncomingRead[] = [];
   for (const conflict of plan.fileConflicts) {
     const resolution = resolutions[conflict.path]!;
     const target = toAbsolutePath(workspacePath, conflict.path.replace(/^\//, ''));
@@ -139,9 +151,52 @@ async function writeFileConflictResolutions(
       await retryWhileBusy(() => writeFile(target, text, 'utf8'));
     } else if (resolution.choice === 'source') {
       const source = spec.itemAt(conflict.itemId, mergeSourcePoint(request, conflict.sourceChangeset), conflict.repository);
-      await cm.query(['cat', source, `--file=${target}`], { cwd: workspacePath });
+      incomingReads.push({ path: conflict.path, spec: source, repository: conflict.repository, target, size: -1 });
     }
   }
+  return saveIncomingVersions(cm, workspacePath, incomingReads);
+}
+
+/** An incoming version for `cm cat` to save over a conflicting file, with the file's path in the plan. */
+type IncomingRead = CatRead & { path: string };
+
+/** The files whose incoming version a merge couldn't save: those known to still hold yours, and those that may. */
+interface UnsavedIncoming {
+  notSaved: string[];
+  maybeNotSaved: string[];
+}
+
+/**
+ * Saves the incoming versions, every batch even when one fails: the merge is in the workspace already, so a failure
+ * only names the files left holding yours. A revision `cm cat` names as not found wasn't saved; a failure some line of
+ * which names nothing (a download that failed, a dropped connection) is tried once more for the others, as saving a
+ * version again changes nothing, and what fails again may not hold the incoming version. A file another program
+ * holds open on Windows fails too, with no retry: `cm` writes it, not `retryWhileBusy`.
+ */
+async function saveIncomingVersions(cm: CmClient, workspacePath: string, reads: IncomingRead[]): Promise<UnsavedIncoming> {
+  const unsaved: UnsavedIncoming = { notSaved: [], maybeNotSaved: [] };
+  for (const batch of catBatchesOf(reads, (read) => read)) {
+    let uncertain = await saveOnce(cm, workspacePath, batch, unsaved);
+    if (uncertain.length > 0) uncertain = await saveOnce(cm, workspacePath, uncertain, unsaved);
+    unsaved.maybeNotSaved.push(...uncertain.map((read) => read.path));
+  }
+  return unsaved;
+}
+
+/**
+ * One `cm cat` of the reads: those it named as not found join `unsaved`; returns those it may not have written, when
+ * some line of its failure names nothing.
+ */
+async function saveOnce(cm: CmClient, workspacePath: string, reads: IncomingRead[], unsaved: UnsavedIncoming): Promise<IncomingRead[]> {
+  const failure = await cm.execute(catArgs(reads), { cwd: workspacePath }).then(
+    () => null,
+    (error: unknown) => error,
+  );
+  if (failure === null) return [];
+  const { notFound, everyLineExplained } = explainCatFailure(reads, failure);
+  const missing = notFound.map(({ read }) => read);
+  unsaved.notSaved.push(...missing.map((read) => read.path));
+  return everyLineExplained ? [] : reads.filter((read) => !missing.includes(read));
 }
 
 /** The text a file is written with: the one decided, or the source's as read; none to keep the destination, or for `cm cat`. */

@@ -91,7 +91,9 @@ front, Stop waiting), its conflicts show without choices and the merge can't com
 Editing the text in the app opens a banner with Done and Discard edits; the choice shows picked and "Changes" shows what
 it produces. Binary conflicts offer the two versions to keep, as cards, and no merge tool; one whose versions render (3D models,
 images: `rendersVersions`) also shows each side against the base and the base itself ("Choose | Yours | Incoming |
-Base"), and a model's cards tell what each side changed since the base (docs/features/model-diff.md "In a merge"). The
+Base"), and a model's cards tell what each side changed since the base (docs/features/model-diff.md "In a merge"). A
+binary's versions (textures, models, scenes: up to hundreds of MB each) are read only while it shows (below); its
+cards can be picked before their previews come, and when its versions can't be read, a card's icon says why. The
 Incoming view resolves update conflicts with the same panel and run (in its update bar); a merge into a server branch
 resolves its files the same way as a workspace merge. A file
 that merges automatically is never edited; its menu only overrides it by keeping one version.
@@ -106,15 +108,32 @@ no refresh, not even the one after the merge, previews it again.
 
 Complete merge writes each conflicting file's decision into the workspace, after `cm merge` (`runMerge`): the text
 decided, or, keeping the incoming version of a text file, the text the page read (`resolutionOf` carries it when it
-writes back byte for byte, UTF-8); only binaries and text in other encodings are read again, with a `cm cat` each.
+writes back byte for byte, UTF-8); the incoming binaries and text in other encodings are saved by `cm` straight into
+the workspace, all of them with one `cm cat` per batch (`catBatchesOf`), in a process: the page never holds their
+bytes, and keeping yours reads nothing. Once `cm merge` ran, cancelling doesn't stop these writes: the merge is in the
+workspace by then, so an incoming version that can't be saved leaves its file as yours, and the merge's toast names it
+("Merge applied, but 2 files still hold yours", `incomingNotSaved`). `cm cat` goes on after a problem: it prints a
+`not found <spec>` line per revision it can't resolve and a line naming nothing per download that failed
+(`explainCatFailure`, shared with `RevisionCat`). A failure with such an unnamed line is tried once more for the files
+it didn't name, as saving a version again changes nothing; what fails again is worded as uncertain ("may not hold the
+incoming version", `incomingMaybeNotSaved`). `cm merge --merge` can't take each file's decision in a workspace
+(`--fileconflictsresolutionsfile` works only with `--to`), and `--keepsource` keeps every file's.
 A merge into a server branch has no workspace to write in: `cm merge --to` reads every file's decision from a JSON file
 (`--fileconflictsresolutionsfile`, written by `fileConflictResolutionsFile`): `{ "resolutions": [{ "path", "keep": "source" |
 "destination" } | { "path", "resultFile" }] }`, by the path `cm merge` printed in the plan. A side kept, even an
 incoming text the page read, is named, so `cm` uploads nothing for it; a decided text goes in a result file whose bytes
 `cm` checks in as they are. `cm` leaves both files alone; `runMerge`'s temp folder holds them until it ends.
 
-Merges hold thousands of conflicting files and changes. Every conflicting file's three versions load at once (its
-status needs its automatic merge), watched by one observer whose results reach the page at most once a frame
+Merges hold thousands of conflicting files and changes. A binary never merges line by line, so its status is "Needs
+your decision" before any of its versions is read: the preview's `cm ls` of the destination's tree names each
+revision's type, and a destination revision `cm` keeps as `bin` makes the file a known binary (`destinationIsBinary`,
+`isKnownBinary`; Incoming's update conflicts, by the incoming revision's type), with no command more, even if its bytes
+would read as text: `cm`'s own merge doesn't merge it line by line either. Its three
+versions are read only while the file shows, once the selection settles on it (`readsOnOpen`, `useFileConflicts`'
+`openFile`, `useSettledValue`: holding ↓ through a folder of textures reads none it passes), in one batch. A file whose
+destination is text may still hold a binary version: its versions are read, and their bytes tell, as for every text
+file (`loadConflict`). Every other conflicting file's three versions load at once (`upFrontReads`: its status needs
+its automatic merge), watched by one observer whose results reach the page at most once a frame
 (`useQueriesByFrame`, `watchQueriesByFrame`): `useQueries` rendered the page, and compared every query's options
 again, for each version that answered, freezing it for seconds. Frames stop while the window is hidden, minimised or
 covered, so results also arrive after `HIDDEN_HAND_OVER_MS` without one: a merge loading behind other windows keeps

@@ -40,3 +40,23 @@ describe('loadConflict', () => {
     expect(result.status === 'ready' && result.document).toBeUndefined();
   });
 });
+
+describe('loadConflict of a known binary', () => {
+  const notRead = [{ error: null }, { error: null }, { error: null }];
+
+  it('is ready for a decision before any version is read', () => {
+    expect(loadConflict(notRead, labels, undefined, true)).toEqual({ status: 'ready', labels });
+  });
+
+  it('shows its versions once read, never merged, even when they read as text', () => {
+    const versions = loaded(text('a\n'), text('b\n'), text('c\n'));
+    const result = loadConflict(versions, labels, undefined, true);
+    expect(result).toEqual({ status: 'ready', labels, contents: { base: versions[0]!.data, source: versions[1]!.data, destination: versions[2]!.data } });
+    expect(loadConflict([...versions], labels, result, true)).toBe(result);
+  });
+
+  it("still waits for a decision when its versions can't be read, and says why", () => {
+    const error = new Error('gone');
+    expect(loadConflict([...loaded(text('a'), text('b')), { error }], labels, undefined, true)).toEqual({ status: 'ready', labels, error });
+  });
+});

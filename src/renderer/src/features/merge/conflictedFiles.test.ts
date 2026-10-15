@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { FileConflict, MergePlan } from '@shared/domain/merge';
 import { conflictedFilesOf } from './conflictedFiles';
 
-const conflict: FileConflict = { path: '/src/a.cs', itemId: 27, baseChangeset: 3, sourceChangeset: 5, destinationChangeset: 4, repository: 'lib@local', destinationRevisionId: 432 };
+const conflict: FileConflict = { path: '/src/a.cs', itemId: 27, baseChangeset: 3, sourceChangeset: 5, destinationChangeset: 4, repository: 'lib@local', destinationRevisionId: 432, destinationIsBinary: false };
 const plan = (fileConflicts: FileConflict[]): MergePlan => ({ status: 'ready', changes: [], fileConflicts, directoryConflicts: [], warnings: [] });
 
 describe('conflictedFilesOf', () => {
@@ -16,6 +16,12 @@ describe('conflictedFilesOf', () => {
         destination: { kind: 'revision', revision: { revisionId: 432, repository: 'lib@local' }, fileName: '/src/a.cs' },
       },
     ]);
+  });
+
+  it("knows a file is a binary, before any version is read, when cm keeps the destination's revision as one", () => {
+    const [texture, code] = conflictedFilesOf(plan([{ ...conflict, path: '/a.png', destinationIsBinary: true }, conflict]), { kind: 'merge', sourceSpec: 'br:/main/task' });
+    expect(texture?.isKnownBinary).toBe(true);
+    expect(code?.isKnownBinary).toBeUndefined();
   });
 
   it("reads a shelve's version at the shelve, and nothing for a file with no common ancestor", () => {

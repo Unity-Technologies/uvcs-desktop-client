@@ -54,6 +54,12 @@ export interface FileConflict {
    * workspace's file has its content (`WorkspaceCopies`), else downloaded.
    */
   destinationRevisionId: number;
+  /**
+   * `cm` keeps the destination's revision as a binary (its `cm ls` type): the file can't merge line by line whatever
+   * its other versions hold, so the merge page reads none of its versions until the user opens it. False says nothing
+   * about the other versions: they are read to tell.
+   */
+  destinationIsBinary: boolean;
 }
 
 export type DirectoryConflictType =
@@ -143,6 +149,13 @@ export interface MergeResult {
    * the new head: merge it into the branch (`followUpMerge`) to finish.
    */
   destinationMoved?: boolean;
+  /**
+   * A workspace merge's conflicting files, by their plan path, that still hold the destination's version: their
+   * incoming version, kept by the user, couldn't be saved after `cm merge` ran (`runMerge`).
+   */
+  incomingNotSaved?: string[];
+  /** Files whose incoming version may not have been saved: `cm` failed without telling which, twice. */
+  incomingMaybeNotSaved?: string[];
 }
 
 /** The merge that finishes a server-side merge whose destination moved: its changeset into the branch. */

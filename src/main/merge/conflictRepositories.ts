@@ -11,7 +11,8 @@ import { revisionFilesOf, type WorkspaceCopies } from '../files/WorkspaceCopies'
  * under a writable xlink with the xlinked repository's item id and changesets, never the repository, and
  * `itemid:27#cs:12` reads the merged one's item 27, another file. One `cm ls` of the conflicting files in the
  * destination's tree reads each one's (it crosses xlinks), and only when some file conflicts. The destination's
- * revisions it lists are remembered with their hashes (`copies`): the workspace's disk serves each one its file has.
+ * revisions it lists are remembered with their hashes (`copies`): the workspace's disk serves each one its file has. Its
+ * type tells a binary (`destinationIsBinary`) with no byte read.
  */
 export async function withConflictRepositories(
   cm: CmClient,
@@ -49,7 +50,7 @@ export function conflictListingArgs(plan: PrintedMergePlan, tree: string): strin
   return ['ls', ...plan.fileConflicts.map((conflict) => conflict.path), `--tree=${tree}`, '--xml'];
 }
 
-/** Completes the plan's conflicts with the repositories and revisions `cm ls --xml` listed for their paths. */
+/** Completes the plan's conflicts with the repositories, revisions and types `cm ls --xml` listed for their paths. */
 export function withRepositories(plan: PrintedMergePlan, listed: readonly ListedTreeItem[]): MergePlan {
   const byPath = new Map(listed.map((item) => [item.path, item]));
   return {
@@ -58,7 +59,7 @@ export function withRepositories(plan: PrintedMergePlan, listed: readonly Listed
       const item = byPath.get(conflict.path.replace(/^\//, ''));
       if (!item?.repository) throw new Error(`Couldn't tell which repository ${conflict.path} is in.`);
       if (item.revisionId <= 0) throw new Error(`Couldn't tell which version of ${conflict.path} the destination has.`);
-      return { ...conflict, repository: item.repository, destinationRevisionId: item.revisionId };
+      return { ...conflict, repository: item.repository, destinationRevisionId: item.revisionId, destinationIsBinary: item.itemType === 'binaryFile' };
     }),
   };
 }

@@ -4,7 +4,8 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { MergeRequest, MergeResolutions } from '@shared/domain/merge';
 import { mergeOutput, statusHeader, treeListing } from '../cm/testing/cmOutput';
-import { fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { fakeCat } from '../cm/testing/fakeCat';
+import { cmFails, fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { recordingContext } from '../operations/testing/recordingContext';
 import { runMerge } from './runMerge';
 
@@ -37,10 +38,7 @@ function mergingCm(plan: string[][], { remainingAfterSolving = [] as string[][][
     'status --short': pending,
     'merge br:/main/task': merge,
     ls: treeListing('eco@local', 'src/a.txt', 'src/b.txt', 'src/c.txt'),
-    cat: async ({ args }) => {
-      await writeFile(optionValue(args, '--file=')!, 'incoming version\n');
-      return '';
-    },
+    cat: fakeCat(() => 'incoming version\n'),
     'status --header --xml': statusHeader('/main', { changeset: 4 }),
   });
 }
@@ -94,6 +92,91 @@ describe('runMerge into the workspace', () => {
 
     expect(await readFile(join(workspacePath, 'src', 'a.txt'), 'utf8')).toBe('incoming as read\n');
     expect(lines().filter((line) => line.startsWith('cat'))).toEqual([`cat itemid:31#cs:3@eco@local --file=${join(workspacePath, 'src', 'b.txt')}`]);
+  });
+
+  it('writes every incoming version it has no text of (binaries) with one cm cat in a process of its own, however many', async () => {
+    const { cm, commands } = mergingCm([fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31), fileConflict('src/c.txt', 32)]);
+    const resolutions: MergeResolutions = {
+      directoryConflicts: [],
+      files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'source' }, '/src/c.txt': { choice: 'destination' } },
+    };
+
+    await runMerge(cm, workspacePath, FROM_TASK, resolutions, recordingContext().context);
+
+    const cats = commands.filter((command) => command.args[0] === 'cat');
+    expect(cats.map(({ args, via }) => ({ args, via }))).toEqual([
+      { args: ['cat', `itemid:30#cs:3@eco@local;${join(workspacePath, 'src', 'a.txt')}`, `itemid:31#cs:3@eco@local;${join(workspacePath, 'src', 'b.txt')}`], via: 'execute' },
+    ]);
+    expect(await readFile(join(workspacePath, 'src', 'a.txt'), 'utf8')).toBe('incoming version\n');
+    expect(await readFile(join(workspacePath, 'src', 'b.txt'), 'utf8')).toBe('incoming version\n');
+    expect(await readFile(join(workspacePath, 'src', 'c.txt'), 'utf8')).toBe('mine c.txt\n');
+  });
+
+  it('writes every incoming version kept even when cancelled once cm merged: the merge is in the workspace by then', async () => {
+    const cancel = new AbortController();
+    const { cm } = fakeCmClient({
+      'status --short': '',
+      'merge br:/main/task': ({ args }) => {
+        if (!args.includes('--merge')) return mergeOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31));
+        cancel.abort();
+        return '';
+      },
+      ls: treeListing('eco@local', 'src/a.txt', 'src/b.txt'),
+      cat: (command) => (command.options.signal?.aborted ? cmFails('Cancelled') : fakeCat(() => 'incoming version\n')(command)),
+    });
+    const resolutions: MergeResolutions = { directoryConflicts: [], files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'source' } } };
+
+    await runMerge(cm, workspacePath, FROM_TASK, resolutions, recordingContext(cancel.signal).context);
+
+    expect(await readFile(join(workspacePath, 'src', 'a.txt'), 'utf8')).toBe('incoming version\n');
+    expect(await readFile(join(workspacePath, 'src', 'b.txt'), 'utf8')).toBe('incoming version\n');
+  });
+
+  it("completes, naming the files that still hold yours, when cm couldn't save their incoming version: the merge is in the workspace", async () => {
+    const { cm } = fakeCmClient({
+      'status --short': '',
+      'merge br:/main/task': ({ args }) => (args.includes('--merge') ? '' : mergeOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31))),
+      ls: treeListing('eco@local', 'src/a.txt', 'src/b.txt'),
+      cat: fakeCat((spec) => (spec.startsWith('itemid:30#') ? 'incoming version\n' : undefined)),
+    });
+    const resolutions: MergeResolutions = { directoryConflicts: [], files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'source' } } };
+
+    expect(await runMerge(cm, workspacePath, FROM_TASK, resolutions, recordingContext().context)).toEqual({ incomingNotSaved: ['/src/b.txt'] });
+    expect(await readFile(join(workspacePath, 'src', 'a.txt'), 'utf8')).toBe('incoming version\n');
+  });
+
+  /** A `cm` merging two kept incoming files, a.txt and b.txt, whose `cm cat` answers `cat`. */
+  const keepingTwoIncoming = (cat: CmAnswer) =>
+    fakeCmClient({
+      'status --short': '',
+      'merge br:/main/task': ({ args }) => (args.includes('--merge') ? '' : mergeOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31))),
+      ls: treeListing('eco@local', 'src/a.txt', 'src/b.txt'),
+      cat,
+    });
+  const bothIncoming: MergeResolutions = { directoryConflicts: [], files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'source' } } };
+
+  it('tries a cm cat that failed naming none once more, and says its files may not hold the incoming version when it fails again', async () => {
+    const { cm, lines } = keepingTwoIncoming(cmFails('The connection was closed.'));
+
+    expect(await runMerge(cm, workspacePath, FROM_TASK, bothIncoming, recordingContext().context)).toEqual({ incomingMaybeNotSaved: ['/src/a.txt', '/src/b.txt'] });
+    expect(lines().filter((line) => line.startsWith('cat'))).toHaveLength(2);
+  });
+
+  it('saves every incoming version when a cm cat that failed naming none works the second time', async () => {
+    let attempts = 0;
+    const { cm } = keepingTwoIncoming((command) => (attempts++ === 0 ? cmFails('The connection was closed.') : fakeCat(() => 'incoming version\n')(command)));
+
+    expect(await runMerge(cm, workspacePath, FROM_TASK, bothIncoming, recordingContext().context)).toEqual({});
+    expect(await readFile(join(workspacePath, 'src', 'b.txt'), 'utf8')).toBe('incoming version\n');
+  });
+
+  it("doesn't take a revision cm couldn't find for the only failure when another line names none", async () => {
+    const { cm } = keepingTwoIncoming(cmFails('The specified revision was not found itemid:30#cs:3@eco@local\nError downloading a revision.'));
+
+    expect(await runMerge(cm, workspacePath, FROM_TASK, bothIncoming, recordingContext().context)).toEqual({
+      incomingNotSaved: ['/src/a.txt'],
+      incomingMaybeNotSaved: ['/src/b.txt'],
+    });
   });
 
   it('reads the incoming version of a shelve from the shelve, whose revisions no changeset holds', async () => {

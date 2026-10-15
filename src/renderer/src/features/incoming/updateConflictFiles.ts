@@ -13,6 +13,7 @@ export function updateConflictFiles(conflicts: UpdateConflict[]): ConflictedFile
     base: { kind: 'revision', revision: { revisionId: conflict.baseRevisionId, repository: conflict.repository }, fileName: conflict.path },
     source: { kind: 'revision', revision: { revisionId: conflict.incomingRevisionId, repository: conflict.repository }, fileName: conflict.path },
     destination: { kind: 'workspaceFile', path: conflict.path },
+    ...(conflict.isBinary && { isKnownBinary: true }),
   }));
 }
 

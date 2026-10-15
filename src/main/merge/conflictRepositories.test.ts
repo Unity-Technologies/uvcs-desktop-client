@@ -5,6 +5,7 @@ import { conflictListingArgs, destinationTree, withRepositories } from './confli
 
 const XLINKED = '/01project/src/client/plugins/editor-plugin/Packages/com.acme.editor.tests/Infrastructure/DiffWindowMockExtensions.cs';
 const OWN = '/01project/src/client/cm/commands/merge/MergePrinter.cs';
+const TEXTURE = '/01project/Assets/Textures/Grass.png';
 
 const plan = (paths: string[]): PrintedMergePlan => ({
   status: 'ready',
@@ -22,6 +23,8 @@ const LISTING = `<?xml version="1.0" encoding="utf-8"?>
     <Changeset>17092</Changeset><Repository>rep:editorGUI@acme@cloud</Repository><RevId>432251</RevId><ItemId>425954</ItemId></LsItem>
   <LsItem><Status>Controlled</Status><Name>MergePrinter.cs</Name><WkPath>${OWN}</WkPath><Type>txt</Type>
     <Changeset>276520</Changeset><Repository>rep:acme@acme@cloud</Repository><RevId>31259533</RevId><ItemId>420525</ItemId></LsItem>
+  <LsItem><Status>Controlled</Status><Name>Grass.png</Name><WkPath>${TEXTURE}</WkPath><Size>30889126</Size><Type>bin</Type>
+    <Changeset>276611</Changeset><Repository>rep:acme@acme@cloud</Repository><RevId>31259610</RevId><ItemId>420530</ItemId></LsItem>
 </LsItems></LsResults>`;
 
 describe('destinationTree', () => {
@@ -44,6 +47,13 @@ describe('withRepositories', () => {
     expect(withRepositories(plan([XLINKED, OWN]), parseTreeItems(LISTING)).fileConflicts.map(({ path, repository, destinationRevisionId }) => ({ path, repository, destinationRevisionId }))).toEqual([
       { path: XLINKED, repository: 'editorGUI@acme@cloud', destinationRevisionId: 432251 },
       { path: OWN, repository: 'acme@acme@cloud', destinationRevisionId: 31259533 },
+    ]);
+  });
+
+  it("tells a binary by the type cm keeps for the destination's revision, with no byte of it read", () => {
+    expect(withRepositories(plan([OWN, TEXTURE]), parseTreeItems(LISTING)).fileConflicts.map(({ path, destinationIsBinary }) => ({ path, destinationIsBinary }))).toEqual([
+      { path: OWN, destinationIsBinary: false },
+      { path: TEXTURE, destinationIsBinary: true },
     ]);
   });
 

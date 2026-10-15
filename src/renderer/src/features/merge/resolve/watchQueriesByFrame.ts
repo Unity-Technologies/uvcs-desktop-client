@@ -11,9 +11,9 @@ export const HIDDEN_HAND_OVER_MS = 250;
 /**
  * Watches the queries of `observer`, which reads them as any view showing them would (and again when a refresh asks),
  * and hands their results to `onResults` at most once a frame, or after `HIDDEN_HAND_OVER_MS` when no frame comes. A
- * merge reads three versions of each of thousands of conflicting files, which answer one after the other: rendering
- * the page once per answer (`useQueries`, which also compares every query's options again on each render) froze it
- * for seconds. Returns how to stop watching.
+ * merge reads three versions of each of thousands of conflicting files (all but its known binaries), which answer one
+ * after the other: rendering the page once per answer (`useQueries`, which also compares every query's options again on
+ * each render) froze it for seconds. Returns how to stop watching.
  */
 export function watchQueriesByFrame(observer: QueriesObserver, clock: FrameClock, onResults: (results: QueryObserverResult[]) => void): () => void {
   let pending: { frame: number; timer: ReturnType<typeof setTimeout> } | null = null;

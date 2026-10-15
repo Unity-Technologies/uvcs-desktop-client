@@ -1,5 +1,5 @@
 import type { MergeTool } from '@shared/domain/mergeTools';
-import { fileNameOf, pluralize } from '../../../lib/text';
+import { fileNameOf, listNames, pluralize } from '../../../lib/text';
 import type { FileConflictState } from '../resolve/useFileConflicts';
 import { waitsForTool } from './mergeToolOutcome';
 
@@ -89,9 +89,3 @@ function allOf(total: number): string {
   if (total === 1) return 'the conflict';
   return total === 2 ? 'both conflicts' : `all ${total} conflicts`;
 }
-
-function listNames(names: string[]): string {
-  if (names.length <= 2) return names.join(' and ');
-  return `${names.slice(0, 2).join(', ')} and ${pluralize(names.length - 2, 'other')}`;
-}
-

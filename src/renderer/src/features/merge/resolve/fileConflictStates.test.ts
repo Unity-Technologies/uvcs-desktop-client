@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { FileContent } from '@shared/domain/content';
 import { buildStates, type BuiltStates, type ConflictFileInputs } from './fileConflictStates';
 import * as threeWayMerge from './threeWayMerge';
+import type { FileConflictDecision } from './fileConflictDecision';
 import type { ConflictedFile } from './useFileConflicts';
 
 vi.mock('./threeWayMerge', async (importOriginal) => {
@@ -56,5 +57,17 @@ describe('buildStates', () => {
     const { states } = buildStates(inputsOf([file!], versions, 2), labels, new Map());
     expect(states[0]).toMatchObject({ status: 'loading', resolution: null });
     expect(buildStates(inputsOf([file!], versions, 3), labels, new Map()).states[0]).toMatchObject({ status: 'ready', remainingConflicts: 1, resolution: null });
+  });
+});
+
+describe('buildStates of a known binary', () => {
+  const texture: ConflictedFile = { ...fileOf(0), key: '/Grass.png', path: 'Grass.png', isKnownBinary: true };
+  const notRead = [{ error: null }, { error: null }, { error: null }];
+  const stateOf = (decision?: FileConflictDecision) => buildStates([{ file: texture, versions: notRead, decision, openTool: undefined }], labels, new Map()).states[0];
+
+  it('needs a decision before any version is read, and keeps a side by name once decided', () => {
+    expect(stateOf()).toMatchObject({ status: 'ready', isBinary: true, resolution: null, mergedAutomatically: false });
+    expect(stateOf()?.contents).toBeUndefined();
+    expect(stateOf({ kind: 'wholeFile', side: 'source' })).toMatchObject({ status: 'ready', resolution: { choice: 'source' } });
   });
 });
