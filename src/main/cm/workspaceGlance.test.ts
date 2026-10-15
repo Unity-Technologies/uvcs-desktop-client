@@ -13,7 +13,8 @@ const status = (changes: string) => `<?xml version="1.0" encoding="utf-8"?>
 describe('parseWorkspaceGlance', () => {
   it('reads the repository, the branch and how many files are pending', () => {
     expect(parseWorkspaceGlance(status(change('CH', 'a.txt') + change('PR', 'new.txt')))).toEqual({
-      repository: 'acme@acme@cloud',
+      repositoryName: 'acme',
+      server: 'acme@cloud',
       selector: { kind: 'branch', name: '/main/task-12' },
       pendingCount: 2,
     });

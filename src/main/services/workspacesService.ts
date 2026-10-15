@@ -118,7 +118,7 @@ export function createWorkspacesService({ cm, operations, watchers, settings, he
     update,
     watch,
     unwatch: async () => watchers.release(callerId()),
-    glance: (workspacePath) => readWorkspaceGlance(cm, workspacePath),
+    glance: (workspacePath) => readWorkspaceGlance(cm, organizations, workspacePath),
     checkNewFolder: checkNewWorkspaceFolder,
     switchNewWorkspace,
     discardNew,
