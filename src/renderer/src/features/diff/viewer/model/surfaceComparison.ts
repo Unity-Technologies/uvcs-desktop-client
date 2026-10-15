@@ -5,7 +5,7 @@
 import { placedPositionsOf, type PlaceableMesh } from './meshPlacement';
 import { viewerSpaceOf, worldMatricesOf } from './modelSpaces';
 import type { ParsedModel } from './parsedModel';
-import { surfaceDistances } from './surfaceDistance';
+import { MeasurableSurface, surfaceDistances } from './surfaceDistance';
 
 /** What placing a version's meshes takes of it: its nodes, units and axes, and each mesh's positions, skin and indices. */
 export type PlaceableModel = Pick<ParsedModel, 'nodes' | 'unitScale' | 'importScale' | 'axisConversion'> & {
@@ -40,8 +40,9 @@ export function placedMeshesOf(model: PlaceableModel): PlacedMeshes {
 export function compareSurfaces(before: PlacedMeshes, after: PlacedMeshes): SurfaceComparison {
   const size = diagonalOf([before, after]);
   const maxDistance = Math.max(size * SATURATION, 1e-9);
-  const surfaceBefore = { positions: trianglesOf(before) };
-  const surfaceAfter = { positions: trianglesOf(after) };
+  // Built once per side, for all the other side's meshes: see `MeasurableSurface`.
+  const surfaceBefore = MeasurableSurface.of({ positions: trianglesOf(before) });
+  const surfaceAfter = MeasurableSurface.of({ positions: trianglesOf(after) });
   return {
     before: before.meshes.map((mesh) => surfaceDistances(mesh.positions, surfaceAfter, { maxDistance })),
     after: after.meshes.map((mesh) => surfaceDistances(mesh.positions, surfaceBefore, { maxDistance })),
@@ -50,7 +51,6 @@ export function compareSurfaces(before: PlacedMeshes, after: PlacedMeshes): Surf
   };
 }
 
-/** Every mesh's triangles, 9 floats each. */
 /** How much of each version moved past the tolerance (shares of their vertices), and the farthest any moved. */
 export function changeShares(comparison: SurfaceComparison, tolerance: number): { moved: number; gone: number; farthest: number } {
   const within = Math.fround(tolerance);
@@ -63,6 +63,7 @@ export function changeShares(comparison: SurfaceComparison, tolerance: number): 
   return { moved: share(comparison.after), gone: share(comparison.before), farthest };
 }
 
+/** Every mesh's triangles, 9 floats each. */
 function trianglesOf(placed: PlacedMeshes): Float32Array {
   const total = placed.meshes.reduce((sum, mesh) => sum + (mesh.index?.length ?? mesh.positions.length / 3) * 3, 0);
   const triangles = new Float32Array(total);
