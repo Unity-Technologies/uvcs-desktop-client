@@ -286,6 +286,22 @@ describe('modelChanges: mesh data', () => {
     expect(changes(rock({}), rock({ colors: true }))).toMatchObject([{ kind: 'vertexColors', now: true }]);
   });
 
+  it('tells vertex colors repainted', () => {
+    const repainted = testModel(rock({ colors: true }));
+    repainted.meshes[0]!.attributes.color!.fill(0.5, 0, 9);
+    expect(modelChanges(modelSummary(testModel(rock({ colors: true }))), modelSummary(repainted))).toMatchObject([{ kind: 'vertexColorsChanged', node: { name: 'Rock' } }]);
+  });
+
+  it('tells the blendshapes whose shapes changed under their names', () => {
+    const face = (): ParsedModel => testModel({ nodes: [{ name: 'Face', mesh: { blendShapes: ['Smile', 'Blink', 'Frown'] } }] });
+    const resculpted = face();
+    resculpted.meshes[0]!.blendShapes[0]!.deltas[4] = 0.02;
+    resculpted.meshes[0]!.blendShapes[2]!.deltas[7] = -0.01;
+    expect(modelChanges(modelSummary(face()), modelSummary(resculpted))).toMatchObject([{ kind: 'blendShapesChanged', node: { name: 'Face' }, names: ['Smile', 'Frown'] }]);
+    // Renamed, it is told renamed: its shape is compared under its new name only when both versions have that name.
+    expect(kinds(modelChanges(modelSummary(face()), modelSummary(face())))).toEqual([]);
+  });
+
   it('tells a blendshape renamed, removed or added', () => {
     const face = (blendShapes: string[]): TestModel => ({ nodes: [{ name: 'Face', mesh: { blendShapes } }] });
     expect(changes(face(['Smile', 'Blink']), face(['smile', 'Blink']))).toMatchObject([{ kind: 'blendShapeRenamed', from: 'Smile', to: 'smile' }]);

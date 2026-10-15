@@ -58,6 +58,12 @@ describe('changeRows', () => {
     expect(changeRows([{ kind: 'facesFlipped', node: mesh('Hull') }])).toMatchObject([{ tone: 'note', title: "Some of Hull's faces flipped", detail: 'Unity draws a face from its front only: from outside, those look missing.' }]);
   });
 
+  it('tells blendshapes resculpted and vertex colors repainted, naming the mesh', () => {
+    expect(titles([{ kind: 'blendShapesChanged', node: mesh('Face'), names: ['Smile'] }])).toEqual(['Blendshape Smile on Face changed']);
+    expect(titles([{ kind: 'blendShapesChanged', node: mesh('Face'), names: ['Smile', 'Blink', 'Frown', 'Pout'] }])).toEqual(['Blendshapes changed on Face: Smile, Blink, Frown and 1 more']);
+    expect(titles([{ kind: 'vertexColorsChanged', node: mesh('Rock') }])).toEqual(["Rock's vertex colors changed"]);
+  });
+
   it('counts triangles as a budget reads them', () => {
     expect(titles([{ kind: 'triangles', node: mesh('Rock'), before: 180, after: 3024 }])).toEqual(['Rock: 180 → 3,024 triangles']);
   });
