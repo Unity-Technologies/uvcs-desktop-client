@@ -39,14 +39,15 @@ you touch:
      pooled `cm shell` sessions, two per working directory; a command takes the first one free, and a directory idle
      for ten minutes lets its sessions go; a workspace no window shows anymore lets them go once their commands are
      done (`WorkspaceWatchers` `onStopped`), and the home folder's once a window opens a workspace and none shows the
-     home screen (`showsHomeScreen`). Each session is a process of about 80 MB, so a query with no `cwd` that answers
-     the same in any directory (`profile list`, `whoami`, `workspace list`) says so (`anyDirectory`) and runs in a
-     directory whose sessions are kept already (`keptDirectory`: the workspace a window shows) instead of starting the
-     home folder's two; only on the home screen, where no other is kept, does it start them. A session takes about a second to answer its first command, so until one
-     in that directory has, the query runs as a process of its own (the first window's start before it is created:
-     `openFirstWindow`). A workspace write that may run long (`runsLong`:
-     more than `MAX_QUICK_WRITE_PATHS` paths, recursive, or a transfer) runs as a process of its own too, so it never
-     holds a session every read of the workspace would wait behind.
+     home screen (`showsHomeScreen`; not when the workspace is the home folder itself). Each session is a process of
+     about 80 MB, so a query with no `cwd` that answers the same in any directory (`profile list`, `profile delete`,
+     `whoami`, `workspace list`, `status --xml <path>`, `getworkspacefrompath <path>`) says so (`anyDirectory`) and
+     runs in a directory a window shows (`shownDirectory`: shown by `CmClient.warmUp`, until `release`), a ready one
+     first, instead of starting the home folder's two; it starts them only when no window shows a workspace. A session
+     takes about a second to answer its first command, so until one in that directory has, the query runs as a process
+     of its own (the first window's start before it is created: `openFirstWindow`). A workspace write that may run long
+     (`runsLong`: more than `MAX_QUICK_WRITE_PATHS` paths, recursive, or a transfer) runs as a process of its own too,
+     so it never holds a session every read of the workspace would wait behind.
    - `execute()` for long or cancellable work (update, switch, checkin, shelve, merge, sync; the Branch Explorer's
      merges `find`, the slowest query on big repositories): a dedicated process that streams progress lines.
    - A command line too long to start a process with (a checkin or shelve of thousands of paths: Windows takes 32,767
@@ -450,8 +451,10 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   otherwise); `cm profile list`, a local command, says it's configured (`checkSetup`): without a configuration every
   command but `version`, `location`, `configure` and `help` fails at once saying so, and `SetupProblemScreen` takes the
   app's place. The check costs no command of its own: the accounts, the servers and it share one profiles read
-  (`ProfileList`: everyone asking while it runs takes its answer, and once one succeeded `cm` is configured for the
-  session). Unconfigured, that read runs as a process: `cm shell` refuses to start, so no session is ever ready. No server is asked at start-up: the home screen works without any. A workspace's server is checked as
+  (`ProfileList`: everyone asking while it runs takes its answer, a removed account makes it `forget` a read started
+  before, and once one succeeded `cm` is configured for the session). Unconfigured, that read runs as a process:
+  `cm shell` refuses to start, so no session is ever ready. No server is asked at start-up: the home screen works
+  without any. A workspace's server is checked as
   the workspace opens, `cm checkconnection <server>` with the server its info names (`checkConnection`, once per server
   until it answers), and a server out of reach or a failed sign-in show in a corner card naming it
   (`ConnectionProblemCard`, `connectionProblemShown`) while the workspace works with what's local. Checking the default

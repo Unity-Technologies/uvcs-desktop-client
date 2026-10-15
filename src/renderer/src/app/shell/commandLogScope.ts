@@ -5,9 +5,9 @@ export type CommandLogScope = 'workspace' | 'all';
 
 /**
  * Whether a command ran for the given workspace: `cm` resolves the workspace from the working directory,
- * so a command belongs to the workspace it ran in. Lookups of other workspaces from the home screen run elsewhere
- * and don't; local commands that answer the same anywhere (profiles, the workspace list: `anyDirectory`) run in a
- * workspace a window shows, and show among its commands.
+ * so a command belongs to the workspace it ran in. Commands that answer the same in any directory (the profiles, the
+ * workspace list, glances at other workspaces: `anyDirectory`) run in a directory a window shows and show in the log
+ * of whichever workspace that is; on the home screen they run in the home folder, in no workspace's log.
  */
 export function ranInWorkspace(entry: CommandLogEntry, workspacePath: string): boolean {
   const root = workspacePath.replace(/[\\/]+$/, '');
