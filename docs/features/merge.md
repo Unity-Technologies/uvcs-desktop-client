@@ -110,7 +110,8 @@ decided, or, keeping the incoming version of a text file, the text the page read
 writes back byte for byte, UTF-8); the incoming binaries and text in other encodings are saved by `cm` straight into
 the workspace, all of them with one `cm cat` per batch (`catBatchesOf`), in a process: the page never holds their
 bytes, and keeping yours reads nothing. Once `cm merge` ran, cancelling doesn't stop these writes: the merge is in the
-workspace by then. `cm merge --merge` can't take each file's decision in a workspace (`--fileconflictsresolutionsfile`
+workspace by then, so an incoming version that can't be saved leaves its file as yours, and the merge's toast names it
+(`incomingNotSaved`). `cm merge --merge` can't take each file's decision in a workspace (`--fileconflictsresolutionsfile`
 works only with `--to`), and `--keepsource` keeps every file's.
 A merge into a server branch has no workspace to write in: `cm merge --to` reads every file's decision from a JSON file
 (`--fileconflictsresolutionsfile`, written by `fileConflictResolutionsFile`): `{ "resolutions": [{ "path", "keep": "source" |

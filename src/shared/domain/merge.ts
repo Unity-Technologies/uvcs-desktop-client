@@ -149,6 +149,11 @@ export interface MergeResult {
    * the new head: merge it into the branch (`followUpMerge`) to finish.
    */
   destinationMoved?: boolean;
+  /**
+   * A workspace merge's conflicting files, by their plan path, that still hold the destination's version: their
+   * incoming version, kept by the user, couldn't be saved after `cm merge` ran (`runMerge`).
+   */
+  incomingNotSaved?: string[];
 }
 
 /** The merge that finishes a server-side merge whose destination moved: its changeset into the branch. */

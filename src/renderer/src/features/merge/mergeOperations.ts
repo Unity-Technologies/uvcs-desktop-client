@@ -4,6 +4,7 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { runOperation, type OperationSuccess } from '../../app/operations/runOperation';
 import { isAffectedByCheckinOrUpdate, isAffectedByServerMerge, isAffectedByShelveApplied } from '../../app/refresh/refreshScopes';
 import { branchLabel, branchLabels } from '../../lib/branchLabels';
+import { listNames, pluralize } from '../../lib/text';
 import { toast } from '../../ui/toast/toastStore';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { finishMergedTask } from '../mergeTask/mergeTaskOperations';
@@ -56,7 +57,7 @@ function mergeRefreshScope(request: MergeRequest): (queryKey: readonly unknown[]
  */
 function mergeSuccess(request: MergeRequest, taskBranch: string | undefined, result: MergeResult): OperationSuccess | null {
   const destination = request.destinationBranch;
-  if (!destination) return { title: 'Merge applied to your workspace' };
+  if (!destination) return workspaceMergeSuccess(result);
   if (result.destinationMoved) return null;
   const [source, into] = mergedNames(request.sourceSpec, taskBranch, destination);
   const merged = `Merged ${source} into ${into}`;
@@ -65,6 +66,16 @@ function mergeSuccess(request: MergeRequest, taskBranch: string | undefined, res
   return {
     title: `${merged} (cs:${changesetId})`,
     action: { label: 'Show in Branch Explorer', run: () => showInBranchExplorer({ kind: 'changeset', id: changesetId }) },
+  };
+}
+
+/** A workspace merge is applied even when some incoming versions couldn't be saved: those files still hold yours. */
+function workspaceMergeSuccess({ incomingNotSaved = [] }: MergeResult): OperationSuccess {
+  if (incomingNotSaved.length === 0) return { title: 'Merge applied to your workspace' };
+  return {
+    kind: 'info',
+    title: `Merge applied, but ${pluralize(incomingNotSaved.length, 'file')} still ${incomingNotSaved.length === 1 ? 'holds' : 'hold'} yours`,
+    detail: `${incomingNotSaved.length === 1 ? 'Its' : 'Their'} incoming version couldn't be downloaded: ${listNames(incomingNotSaved)}. Check them before checking in.`,
   };
 }
 
