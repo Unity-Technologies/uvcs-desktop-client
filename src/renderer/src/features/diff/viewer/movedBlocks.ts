@@ -83,6 +83,13 @@ interface BlockSides {
   added: Side;
 }
 
+/** Whether a change may have moved (`MoveSearch.kindOf`). */
+type ChangeKind = 'stays' | 'unknown' | 'open';
+
+/** `compare`'s answers short of an edit distance: the sides differ by more than allowed, or the work left can't tell. */
+const TOO_DIFFERENT = -1;
+const UNAFFORDABLE = -2;
+
 interface Candidate {
   deletions: LineRange;
   additions: LineRange;
@@ -96,6 +103,7 @@ export class MoveSearch {
   private readonly wordIds = new Map<string, number>();
   private comparisonsLeft = MAX_COMPARISONS;
   private workLeft = MOVE_WORK_BUDGET;
+  private readonly kinds = new Map<BlockSides, ChangeKind>();
 
   constructor(
     private readonly meta: DisplayMeta,
@@ -105,39 +113,61 @@ export class MoveSearch {
     this.sides = blocks.map((block) => ({ removed: this.side('deletions', block.oldStart, block.oldLines), added: this.side('additions', block.newStart, block.newLines) }));
   }
 
-  /** Where each side of a change went, if it moved: the closest match among the other changes' opposite sides. */
+  /**
+   * Where each side of a change went, if it moved: the closest match among the other changes' opposite sides. A change
+   * edited in place moves nowhere; one too long to tell (`UNAFFORDABLE`) is left out on both ends, rather than taken
+   * for code moved when it may have been edited where it is.
+   */
   movesFrom(change: BlockSides): Candidate[] {
-    const { removed, added } = change;
-    if (!canMove(removed) && !canMove(added)) return [];
-    if (removed.range.count > 0 && added.range.count > 0 && this.compare(removed, added, allowedEdits(removed)) >= 0) return [];
-    const others = this.sides.filter((other) => other !== change);
-    const wentTo = this.closest(removed, others.map((other) => other.added));
-    const cameFrom = this.closest(added, others.map((other) => other.removed));
+    if (this.kindOf(change) !== 'open') return [];
+    const others = this.sides.filter((other) => other !== change && this.kindOf(other) !== 'unknown');
+    const wentTo = this.closest(change.removed, others.map((other) => other.added));
+    const cameFrom = this.closest(change.added, others.map((other) => other.removed));
     return [
-      ...(wentTo ? [{ deletions: removed.range, additions: wentTo.range, edits: wentTo.edits }] : []),
-      ...(cameFrom ? [{ deletions: cameFrom.range, additions: added.range, edits: cameFrom.edits }] : []),
+      ...(wentTo ? [{ deletions: change.removed.range, additions: wentTo.range, edits: wentTo.edits }] : []),
+      ...(cameFrom ? [{ deletions: cameFrom.range, additions: change.added.range, edits: cameFrom.edits }] : []),
     ];
   }
 
   /**
    * The edit distance between two sides' words, when it's at most `maxEdits` (a word changed counts two: one out, one
-   * in); -1 past it, or once the diff has spent its comparisons. Myers' algorithm takes the words of both sides times
-   * the edits it allows, so it allows no more than the diff's work left can pay for (`MOVE_WORK_BUDGET`): two long
-   * sides alike but for a few words are still compared, two long sides far apart are given up early.
+   * in); `TOO_DIFFERENT` past it, `UNAFFORDABLE` when the diff's work left can't tell. Myers' algorithm (`diff`'s)
+   * takes up to (2 edits + 1) times the shorter side's words, plus the edits squared: so a comparison allows no more
+   * edits than half the work left over both sides' words (`MOVE_WORK_BUDGET`), a real bound. Two long sides alike but
+   * for a few words are still compared; two long sides far apart are given up early.
    */
   compare(source: Side, target: Side, maxEdits: number, targetStart = 0, targetCount = target.lines.length): number {
     const targetWords = target.wordsBefore[targetStart + targetCount]! - target.wordsBefore[targetStart]!;
-    const words = totalWords(source) + targetWords;
-    const affordableEdits = Math.min(maxEdits, Math.floor(this.workLeft / Math.max(words, 1)));
-    if (affordableEdits < 0 || Math.abs(totalWords(source) - targetWords) > affordableEdits || this.comparisonsLeft <= 0) return -1;
+    const wordGap = Math.abs(totalWords(source) - targetWords);
+    if (maxEdits < 0 || wordGap > maxEdits) return TOO_DIFFERENT;
+    const affordableEdits = Math.min(maxEdits, Math.floor(this.workLeft / (2 * Math.max(totalWords(source) + targetWords, 1))));
+    if (wordGap > affordableEdits || this.comparisonsLeft <= 0) return UNAFFORDABLE;
     this.comparisonsLeft--;
     const comparator = (left: number, right: number): boolean => {
       this.workLeft--;
       return left === right;
     };
     const changes = diffArrays(source.lines.flat(), target.lines.slice(targetStart, targetStart + targetCount).flat(), { maxEditLength: affordableEdits, comparator });
-    if (!changes) return -1;
+    if (!changes) return affordableEdits < maxEdits ? UNAFFORDABLE : TOO_DIFFERENT;
     return changes.reduce((edits, change) => edits + (change.added || change.removed ? (change.count ?? 0) : 0), 0);
+  }
+
+  /**
+   * What a change is, its sides compared once: `stays` where neither side can move or the two are alike (edited in
+   * place), `unknown` when that comparison costs more than the work left, `open` to look for where it went.
+   */
+  private kindOf(change: BlockSides): ChangeKind {
+    let kind = this.kinds.get(change);
+    if (kind) return kind;
+    const { removed, added } = change;
+    if (!canMove(removed) && !canMove(added)) kind = 'stays';
+    else if (removed.range.count === 0 || added.range.count === 0) kind = 'open';
+    else {
+      const edits = this.compare(removed, added, allowedEdits(removed));
+      kind = edits >= 0 ? 'stays' : edits === UNAFFORDABLE ? 'unknown' : 'open';
+    }
+    this.kinds.set(change, kind);
+    return kind;
   }
 
   /** The closest match for `source` among the targets, whole or a run of their lines, if any is close enough. */
