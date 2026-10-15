@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { countCalls } from '@shared/testing/countCalls';
 import { changeShares, compareSurfaces, placedMeshesOf, type PlacedMeshes } from './surfaceComparison';
+import { MeasurableSurface } from './surfaceDistance';
 import { boundAtOrigin, testModel, type TestNode } from './testing/testModels';
 
 const placed = (nodes: TestNode[], unitScale = 1) => placedMeshesOf(testModel({ nodes, unitScale }));
@@ -46,6 +48,12 @@ describe('compareSurfaces', () => {
     expect(concatenated(byMesh.after)).toEqual(concatenated(whole.after));
     expect(concatenated(byMesh.before)).toEqual(concatenated(whole.before));
     expect(Math.max(...concatenated(byMesh.after))).toBeCloseTo(0.5, 5);
+  });
+
+  it('makes each version ready to measure against once, however many meshes it has', () => {
+    // A scene of thousands of meshes kept the model worker busy for minutes when each mesh rebuilt the other version.
+    const { calls } = countCalls(MeasurableSurface, 'of', () => compareSurfaces(crates(100), crates(100, 0.5)));
+    expect(calls).toBe(2);
   });
 
   it('tells what nothing is near as a tenth of the model', () => {
