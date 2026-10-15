@@ -160,6 +160,22 @@ describe('detectMovedBlocks', () => {
     expect(comparisons).toBeLessThanOrEqual(MOVE_WORK_BUDGET);
   });
 
+  it(`spends at most ${MOVE_WORK_BUDGET} word comparisons on long sides alike all along but for their ends`, () => {
+    // A long run of one punctuation mark, each a word, before the ends that differ: Myers' snakes run all along it.
+    const side = (name: string, end: string): string[] => [`${'('.repeat(50_000)}${name}`, `${name} ${end}`];
+    const ends = (prefix: string): string => Array.from({ length: 40 }, (_, index) => `${prefix}${index}`).join('-');
+    const meta = lineDiff(text([...side('x', ends('a')), ...BEFORE]), text([...side('y', ends('b')), ...BEFORE]), 'recognizeAll').meta;
+    const { comparisons } = countLineComparisons(() => detectMovedBlocks(meta, 'recognizeAll'));
+    expect(comparisons).toBeLessThanOrEqual(MOVE_WORK_BUDGET);
+  });
+
+  it('takes no move from a change too long to tell whether it was edited in place, even with a copy of it elsewhere', () => {
+    const long = (name: string, edited: boolean): string => Array.from({ length: 8_000 }, (_, index) => (edited && index % 200 === 0 ? `${name}${index}x` : `${name}${index}`)).join(' ');
+    const original = [long('a', false), long('b', false)];
+    const edited = [long('a', true), long('b', true)];
+    expect(movesIn([...original, ...BEFORE, ...AFTER], [...edited, ...BEFORE, ...AFTER, ...original])).toEqual([]);
+  });
+
   it('spends a bounded number of comparisons on a file whose many look-alike blocks were all reordered', () => {
     const blocks = Array.from({ length: 24 }, (_, index) => [`function add${index}(a, b) {`, `  return a + b + ${index};`, '}', ...filler(`use${index}_`, 6)]);
     const original = blocks.flatMap((block, index) => [...block, `// section ${index}`]);
