@@ -40,17 +40,31 @@ type Rows = Record<'deletions' | 'additions' | 'unified', number[]>;
 
 const BOTH_SIDES: DiffSides = { original: true, modified: true };
 
+/** How `typedIntoPierre` sets up the diff; each has the viewer's usual value by default. */
+interface TypedIntoPierreOptions {
+  /** The text the editor's diff compares with the original (`lineDiffOptions`): the modified text by default. */
+  current?: string;
+  sides?: DiffSides;
+  /** Names the language Pierre highlights: TypeScript by default. A `.txt` file shows as plain text: nothing to highlight, so a long one renders fast. */
+  fileName?: string;
+}
+
 /**
  * For tests: Pierre's renderer as its `FileDiff` makes it, in the edit session of a diff typed into, as the viewer has
  * it (`lineDiff` of `original` and `modified`, shown by `shownDiff` and rendered) before the first keystroke.
  */
-export async function typedIntoPierre(original: string, modified: string, method: ComparisonMethod, current = modified, sides = BOTH_SIDES) {
+export async function typedIntoPierre(
+  original: string,
+  modified: string,
+  method: ComparisonMethod,
+  { current = modified, sides = BOTH_SIDES, fileName = 'file.ts' }: TypedIntoPierreOptions = {},
+) {
   installPierreLineComparison();
   const parseDiffOptions = lineDiffOptions(original, current, method);
   const component = new FileDiff({ parseDiffOptions, theme: 'github-light', lineDiffType: 'word' });
   // Its own renderer, made as Pierre makes it (`getHunksRendererOptions`, which `installPierreLineComparison` patches).
   const renderer = (component as unknown as { hunksRenderer: DiffHunksRenderer }).hunksRenderer;
-  const diff = shownDiff(lineDiff(original, modified, method, 'file.ts').meta, sides, original, modified, true);
+  const diff = shownDiff(lineDiff(original, modified, method, fileName).meta, sides, original, modified, true);
   renderer.beginEditSession(diff);
   await renderer.asyncRender(diff);
   const rowsNow = (): Rows => {

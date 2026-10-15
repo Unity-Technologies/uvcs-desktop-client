@@ -123,7 +123,7 @@ describe('one diff, typed or saved, counted or discarded', () => {
     for (const { name, saved, typed, shows } of EDITS) {
       it(`${method}: ${name}`, async () => {
         // Typing: Pierre re-diffs the text in its edit session, keystroke by keystroke or as a whole.
-        const session = await typedIntoPierre(original, modified, method, saved);
+        const session = await typedIntoPierre(original, modified, method, { current: saved });
         if (typed === undefined) session.replace(saved);
         else for (let length = 1; length <= typed.length; length++) session.type(editedLine, typed.slice(0, length));
         const typing = changesOf(session.diff);
