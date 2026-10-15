@@ -426,7 +426,11 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
 - A window that leaves one workspace for another keeps its page: `WorkspaceGate` mounts the views again, but the
   renderer's stores outlive the workspace. A store holding a workspace's state keys it by the workspace path
   (`useExpandedDirectories`, `useViewSelection`) or says which workspace it belongs to (`cutItemsIn`,
-  `revealRequestIn`); otherwise the next workspace reads it, e.g. lists a folder only the last one has.
+  `revealRequestIn`); otherwise the next workspace reads it, e.g. lists a folder only the last one has. What the
+  window read of the workspace it leaves (for another one or the home screen) goes once its views unmount
+  (`useForgetLeftWorkspace`, `forgetWorkspace`: every `queryKeys.inWorkspace` query, immutable revisions too): each
+  window has its own query client, and a workspace's revisions, kept an hour, held hundreds of MB after the window
+  moved on. Coming back reads it again.
 - The start-up (`main/index.ts`) is a few named steps; the wiring behind each (settings, watchers, own writes,
   operations, launch requests, the first window) lives in `main/startup/`, around the tested logic of the other
   folders. The order and what it waits for: "Start-up" below.
