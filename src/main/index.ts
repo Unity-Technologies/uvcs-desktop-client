@@ -27,7 +27,7 @@ import { trackOperations } from './startup/operationTracking';
 import { ignoreOwnCommandWrites } from './startup/ownWrites';
 import { handleQuitting, Quitting } from './startup/quitting';
 import { openSettings, sendSettingsChanges } from './startup/settings';
-import { watchShownWorkspaces } from './startup/workspaceWatching';
+import { isShown, watchShownWorkspaces } from './startup/workspaceWatching';
 import { createAppUpdates } from './update/createAppUpdates';
 import { DEVELOPMENT_DOCK_ICON } from './window/appIcon';
 import { appMenuInstaller, installDockMenu } from './window/appMenu';
@@ -42,7 +42,11 @@ const settings = openSettings(userData);
 // What a workspace is loaded from, shared by the reads that follow one another as a window opens it.
 const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
 // Branch names by id, which code reviews name their branches by (`BranchNamesCache`), kept while a window shows the workspace.
-const branchNames = new BranchNamesCache((workspacePath) => readBranchNames(cm, workspacePath));
+const branchNames = new BranchNamesCache(
+  (workspacePath) => readBranchNames(cm, workspacePath),
+  Date.now,
+  (workspacePath) => isShown(watchers, workspacePath),
+);
 const watchers = watchShownWorkspaces({ cm, headers, branchNames });
 const workspaceCopies = new WorkspaceCopies({ cm });
 watchers.listen({ changed: (workspacePath, change) => workspaceCopies.forgetChanged(workspacePath, change), unwatched: (workspacePath) => workspaceCopies.forgetListings(workspacePath) });

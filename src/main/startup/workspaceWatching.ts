@@ -40,3 +40,8 @@ export function watchShownWorkspaces(
 function windowsOf(viewers: number[]): WebContents[] {
   return viewers.map((viewer) => webContents.fromId(viewer)).filter((target) => target !== undefined);
 }
+
+/** Whether some window shows the workspace: what a window lets go as it leaves it isn't kept again after. */
+export function isShown(watchers: Pick<WorkspaceWatchers, 'coverageOf'>, workspacePath: string): boolean {
+  return watchers.coverageOf(workspacePath) !== undefined;
+}
