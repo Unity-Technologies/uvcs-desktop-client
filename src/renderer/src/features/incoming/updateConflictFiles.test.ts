@@ -8,6 +8,17 @@ function stateOf(path: string, resolution: FileConflictState['resolution']): Fil
   return { file: file!, status: 'ready', isBinary: false, decidedByUser: false, resolution, mergedAutomatically: false, remainingConflicts: 0 };
 }
 
+describe('updateConflictFiles', () => {
+  it('knows a file is a binary, before any version is read, when cm keeps the incoming revision as one', () => {
+    const [texture, code] = updateConflictFiles([
+      { path: 'a.png', isBinary: true, baseRevisionId: 1, incomingRevisionId: 2, repository: 'game@local' },
+      { path: 'a.ts', isBinary: false, baseRevisionId: 3, incomingRevisionId: 4, repository: 'game@local' },
+    ]);
+    expect(texture?.isKnownBinary).toBe(true);
+    expect(code?.isKnownBinary).toBeUndefined();
+  });
+});
+
 describe('updateResolutionsOf', () => {
   it("names each file's resolution by its path once every file is decided", () => {
     const keepMine: FileConflictResolution = { choice: 'destination' };

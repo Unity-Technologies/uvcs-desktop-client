@@ -44,7 +44,7 @@ interface IncomingSessionProps {
  */
 export function IncomingSession({ workspacePath, incoming, header }: IncomingSessionProps) {
   const conflictedFiles = useMemo(() => updateConflictFiles(incoming.conflicts), [incoming.conflicts]);
-  const { states, decide, reset, resolveInTool } = useFileConflicts(workspacePath, conflictedFiles, UPDATE_LABELS);
+  const { states, decide, reset, resolveInTool, openFile } = useFileConflicts(workspacePath, conflictedFiles, UPDATE_LABELS);
   const [scope, setScope] = useState<IncomingScope>(ALL_INCOMING);
   // The right-hand side shows the changeset just picked, until a file is.
   const [showsChangeset, setShowsChangeset] = useState(false);
@@ -116,6 +116,9 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const fileMenu = (selected: DiffEntry[]) =>
     incomingFileMenu(selected, { workspacePath, scope, loadedChangeset: incoming.loadedChangeset, headChangeset: incoming.headChangeset, conflictOf, preferredTool, running: Boolean(run.progress), decide, reset, resolveIn: (key, tool) => void resolveInTool(key, tool) });
   const selectedConflict = scope.kind === 'all' && focusedFile ? states.find((state) => state.file.key === focusedFile.path) : undefined;
+  // A binary's versions are read only while it shows.
+  const shownConflictKey = selectedConflict?.file.key;
+  useEffect(() => openFile(shownConflictKey), [openFile, shownConflictKey]);
 
   const detail = () => {
     if (showsChangeset && scopedChangeset) {
