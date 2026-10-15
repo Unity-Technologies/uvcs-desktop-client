@@ -66,6 +66,25 @@ describe('changeRows', () => {
     });
   });
 
+  it('tells a take whose keys changed by the nodes it moves differently, and plays that take when picked', () => {
+    const [row] = changeRows([{ kind: 'clipKeys', name: 'Run', nodes: [bone('Hips'), bone('Leg_L'), bone('Leg_R'), bone('Tail'), bone('Ear_L')] }]);
+    // Its focus is none: a bone's dot stands where the bone rests, while the take plays it elsewhere.
+    expect(row).toMatchObject({ tone: 'note', title: 'Animation Run changed: Hips, Leg_L, Leg_R and 2 more', take: 'Run', focus: [] });
+    expect(titles([{ kind: 'clipKeys', name: 'Walk', nodes: [bone('Tail')] }])).toEqual(['Animation Walk changed: Tail']);
+    expect(titles([{ kind: 'clipKeys', name: 'Wave', nodes: [] }])).toEqual(['Animation Wave changed']);
+  });
+
+  it('folds three or more takes whose keys changed, each item playing its own take', () => {
+    const rows = changeRows(['Run', 'Walk', 'Wave'].map((name): ModelChange => ({ kind: 'clipKeys', name, nodes: [bone('Hips'), bone('Tail')] })));
+    expect(rows).toMatchObject([{ title: '3 animations changed', focus: [] }]);
+    expect(rows[0]!.take).toBeUndefined();
+    expect(rows[0]!.items).toEqual([
+      { label: 'Run: Hips, Tail', focus: [], take: 'Run' },
+      { label: 'Walk: Hips, Tail', focus: [], take: 'Walk' },
+      { label: 'Wave: Hips, Tail', focus: [], take: 'Wave' },
+    ]);
+  });
+
   it('tells the exporting app as a note', () => {
     expect(changeRows([{ kind: 'exporter', before: 'Blender 4.2.1', after: 'Blender 4.2.3' }])[0]).toMatchObject({ tone: 'note', title: 'Exported from Blender 4.2.3, was Blender 4.2.1' });
   });

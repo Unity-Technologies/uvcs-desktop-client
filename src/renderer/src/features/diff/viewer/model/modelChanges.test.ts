@@ -304,6 +304,53 @@ describe('modelChanges: takes and textures', () => {
     ]);
   });
 
+  describe('keys changed in a take of the same name and length', () => {
+    const rig: TestNode[] = [
+      { name: 'Hips', kind: 'bone' },
+      { name: 'Leg L', parent: 'Hips', kind: 'bone' },
+      { name: 'Tail', parent: 'Hips', kind: 'bone' },
+      { name: 'Body', mesh: { bones: ['Hips', 'Leg L', 'Tail'] } },
+    ];
+    const run = (legSwing: number, tailSway: number, hipsBounce = 0.1): TestModel => ({
+      nodes: rig,
+      clips: [
+        {
+          name: 'Run',
+          duration: 1,
+          tracks: [
+            { node: 'Hips', property: 'position', times: [0, 0.5, 1], values: [0, 1, 0, 0, 1 + hipsBounce, 0, 0, 1, 0] },
+            { node: 'Leg L', property: 'quaternion', times: [0, 1], values: [0, 0, 0, 1, legSwing, 0, 0, Math.sqrt(1 - legSwing ** 2)] },
+            { node: 'Tail', property: 'quaternion', times: [0, 1], values: [0, 0, 0, 1, 0, tailSway, 0, Math.sqrt(1 - tailSway ** 2)] },
+          ],
+        },
+        { name: 'Idle', duration: 2, tracks: [{ node: 'Hips', property: 'position', times: [0, 2], values: [0, 1, 0, 0, 1, 0] }] },
+      ],
+    });
+
+    it('tells the take, and the nodes whose keys changed, by their names in the file, parents first', () => {
+      expect(changes(run(0.3, 0.1), run(0.5, 0.2, 0.2))).toMatchObject([
+        { kind: 'clipKeys', name: 'Run', nodes: [{ name: 'Hips', kind: 'bone' }, { name: 'Leg L' }, { name: 'Tail' }] },
+      ]);
+      expect(changes(run(0.3, 0.1), run(0.3, 0.25))).toMatchObject([{ kind: 'clipKeys', name: 'Run', nodes: [{ name: 'Tail', before: 'Hips/Tail', after: 'Hips/Tail' }] }]);
+    });
+
+    it("tells nothing of keys a re-export rounded differently, or of a take that didn't change", () => {
+      expect(changes(run(0.3, 0.1), run(0.3 + 1e-7, 0.1))).toEqual([]);
+    });
+
+    it('tells a node the take no longer moves, or moves now', () => {
+      const withoutTail = run(0.3, 0.1);
+      withoutTail.clips![0]!.tracks!.pop();
+      expect(changes(run(0.3, 0.1), withoutTail)).toMatchObject([{ kind: 'clipKeys', name: 'Run', nodes: [{ name: 'Tail' }] }]);
+    });
+
+    it('leaves a take of another length to its length, which already says it changed', () => {
+      const longer = run(0.5, 0.1);
+      longer.clips![0]!.duration = 1.5;
+      expect(kinds(changes(run(0.3, 0.1), longer))).toEqual(['clipLength']);
+    });
+  });
+
   it('tells the textures the materials name now and no longer', () => {
     expect(changes({ nodes: crate, textures: ['wood.png'] }, { nodes: crate, textures: ['wood.png', 'wood_normal.png'] })).toEqual([{ kind: 'textures', added: ['wood_normal.png'], removed: [] }]);
   });

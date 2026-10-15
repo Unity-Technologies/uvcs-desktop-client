@@ -1,7 +1,7 @@
 // `ParsedModel`s built in tests: a hierarchy by names, each mesh a box of its own size and slots, so a test reads as
 // the model an artist exported ("a crate with a lid") and states only what it is about.
 
-import { AnimationClip, Euler, Matrix4, Quaternion } from 'three';
+import { AnimationClip, Euler, Matrix4, NumberKeyframeTrack, PropertyBinding, Quaternion, QuaternionKeyframeTrack, VectorKeyframeTrack, type KeyframeTrack } from 'three';
 import { fbxAxisConversion, Y_UP_AXES } from '../fbxAxes';
 import { worldMatricesOf } from '../modelSpaces';
 import type { FileMaterial, ModelClip, ModelMesh, ModelNode, ModelNodeKind, ParsedModel } from '../parsedModel';
@@ -40,10 +40,24 @@ export interface TestModel {
   importScale?: number;
   frameRate?: number | null;
   upAxis?: 'y' | 'z';
-  clips?: { name: string; duration: number }[];
+  clips?: TestClip[];
   textures?: string[];
   materials?: FileMaterial[];
   exportedFrom?: string | null;
+}
+
+export interface TestClip {
+  name: string;
+  duration: number;
+  tracks?: TestTrack[];
+}
+
+/** A take's keys for one property of a node, named by the node's name in the file, as a loader names its track. */
+export interface TestTrack {
+  node: string;
+  property: 'position' | 'quaternion' | 'scale' | 'morphTargetInfluences';
+  times: number[];
+  values: number[];
 }
 
 /** 3ds Max's: Z up, -Y front. */
@@ -72,7 +86,7 @@ export function testModel(spec: TestModel): ParsedModel {
     format: 'fbx',
     nodes,
     meshes,
-    clips: (spec.clips ?? []).map((clip): ModelClip => ({ ...clip, tracks: AnimationClip.toJSON(new AnimationClip(clip.name, clip.duration, [])) })),
+    clips: (spec.clips ?? []).map(({ name, duration, tracks = [] }): ModelClip => ({ name, duration, tracks: AnimationClip.toJSON(new AnimationClip(name, duration, tracks.map(keyframeTrackOf))) })),
     textures: spec.textures ?? [],
     materials: spec.materials ?? [],
     unitScale: spec.unitScale ?? 1,
@@ -82,6 +96,13 @@ export function testModel(spec: TestModel): ParsedModel {
     axisConversion: fbxAxisConversion(spec.upAxis === 'z' ? MAX_AXES : Y_UP_AXES),
     exportedFrom: spec.exportedFrom ?? null,
   };
+}
+
+/** The track three's loaders make: named `<node>.<property>`, the node's name as `PropertyBinding` takes it (`Hand L` is `Hand_L`). */
+function keyframeTrackOf({ node, property, times, values }: TestTrack): KeyframeTrack {
+  const name = `${PropertyBinding.sanitizeNodeName(node)}.${property}`;
+  if (property === 'quaternion') return new QuaternionKeyframeTrack(name, times, values);
+  return property === 'morphTargetInfluences' ? new NumberKeyframeTrack(name, times, values) : new VectorKeyframeTrack(name, times, values);
 }
 
 /**
