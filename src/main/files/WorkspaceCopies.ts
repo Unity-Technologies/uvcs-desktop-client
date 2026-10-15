@@ -51,6 +51,11 @@ export class WorkspaceCopies {
   private readonly diskHashes = new Map<string, string>();
   /** The revisions listings named at their paths (`heldKey`), the latest listed last. */
   private readonly listed = new Map<string, RevisionFile>();
+  /**
+   * The revision the workspace holds at each path it told (`pathKey`): its own listings (the Files view's, a history's
+   * `cm ls` of its file, a folder's). A path known here answers any other revision with no command.
+   */
+  private readonly held = new Map<string, RevisionFile>();
   /** The workspace folders listed (or being listed), by workspace and folder, until the workspace changes. */
   private readonly listedFolders = new Map<string, Promise<void>>();
 
@@ -65,17 +70,17 @@ export class WorkspaceCopies {
    * it. A revision's content never changes, so a listing gone stale only misses a copy; the disk is checked at each read.
    */
   remember(workspacePath: string, files: Iterable<RevisionFile>): void {
-    for (const file of files) {
-      const path = workspacePathOf(file.path);
-      if (file.hash === null || file.revision.revisionId <= 0 || path === null) continue;
-      const key = heldKey(workspacePath, path, file.revision);
-      this.listed.delete(key);
-      this.listed.set(key, { ...file, path });
-    }
-    for (const oldest of this.listed.keys()) {
-      if (this.listed.size <= this.maxListed) break;
-      this.listed.delete(oldest);
-    }
+    for (const file of validFiles(files)) keepLatest(this.listed, heldKey(workspacePath, file.path, file.revision), file, this.maxListed);
+  }
+
+  /**
+   * Remembers what the workspace itself told it holds at each path (its own `cm ls`: a history's of its file, a
+   * folder's): any other revision asked there is not on its disk, with no command.
+   */
+  rememberHeld(workspacePath: string, files: Iterable<RevisionFile>): void {
+    const valid = [...validFiles(files)];
+    this.remember(workspacePath, valid);
+    for (const file of valid) keepLatest(this.held, pathKey(workspacePath, file.path), file, this.maxListed);
   }
 
   /**
@@ -83,13 +88,13 @@ export class WorkspaceCopies {
    * revision it doesn't name isn't there, so the folder isn't listed again for one until the workspace changes.
    */
   rememberFolder(workspacePath: string, folder: string, files: Iterable<RevisionFile>): void {
-    this.remember(workspacePath, files);
+    this.rememberHeld(workspacePath, files);
     this.keepFolderListing(folderKey(workspacePath, folder), Promise.resolve());
   }
 
   /** The workspace changed (the watcher saw it, or stopped watching): its folders are listed again when asked. */
   forgetListings(workspacePath: string): void {
-    for (const key of [...this.listedFolders.keys()]) if (key.startsWith(`${workspacePath}\0`)) this.listedFolders.delete(key);
+    for (const map of [this.listedFolders, this.held]) for (const key of [...map.keys()]) if (key.startsWith(`${workspacePath}\0`)) map.delete(key);
   }
 
   /**
@@ -109,8 +114,9 @@ export class WorkspaceCopies {
     const path = workspacePathOf(file.path);
     if (path === null) return null;
     const key = heldKey(workspacePath, path, file.revision);
-    const known = this.listed.get(key);
-    if (known || !this.cm) return known ?? null;
+    const known = this.listed.get(key) ?? null;
+    // The workspace told what it holds there: this revision (`known`), or another.
+    if (known || this.held.has(pathKey(workspacePath, path)) || !this.cm) return known;
     const onDisk = await stat(workspaceFileOf(workspacePath, path)).then((stats) => stats.isFile(), () => false);
     if (!onDisk) return null;
     await this.listFolder(workspacePath, path.includes('/') ? posix.dirname(path) : '');
@@ -123,7 +129,7 @@ export class WorkspaceCopies {
     const listing =
       this.listedFolders.get(key) ??
       this.cm!.query(workspaceListingArgs(toAbsolutePath(workspacePath, folder)), { cwd: workspacePath }).then(
-        (output) => this.remember(workspacePath, parseWorkspaceListing(output)),
+        (output) => this.rememberHeld(workspacePath, parseWorkspaceListing(output)),
         () => undefined,
       );
     this.keepFolderListing(key, listing);
@@ -198,6 +204,29 @@ export function contentHashOf(bytes: Buffer): string {
 function workspacePathOf(path: string): string | null {
   const parts = path.replaceAll('\\', '/').normalize('NFC').split('/').filter((part) => part !== '');
   return parts.includes('..') ? null : parts.join('/');
+}
+
+/** The files that tell a revision, at their paths as the workspace's listings write them. */
+function* validFiles(files: Iterable<RevisionFile>): Generator<RevisionFile> {
+  for (const file of files) {
+    const path = workspacePathOf(file.path);
+    if (file.hash !== null && file.revision.revisionId > 0 && path !== null) yield { ...file, path };
+  }
+}
+
+/** Sets the key as the latest, letting the oldest go past `max`. */
+function keepLatest<T>(map: Map<string, T>, key: string, value: T, max: number): void {
+  map.delete(key);
+  map.set(key, value);
+  for (const oldest of map.keys()) {
+    if (map.size <= max) break;
+    map.delete(oldest);
+  }
+}
+
+/** A workspace path. */
+function pathKey(workspacePath: string, path: string): string {
+  return `${workspacePath}\0${path}`;
 }
 
 /** A workspace folder, as `forgetListings` finds it by its workspace. */

@@ -131,13 +131,14 @@ and many people use the same server. Every `cm` command other than local reads (
   a changeset's, branch's or shelve's diff, Incoming, update conflicts, a model's `.mtl`, `.bin`, `.meta` and textures
   in any of them, both sides) follows one procedure (`WorkspaceCopies.read`):
   1. Which file, which version: the revision's workspace path and its id (the content source's `fileName`).
-  2. Is there a file at that path on disk? If not, nothing is asked. If so, which revision does the workspace hold
-     there, with what size and hash? A listing already read tells, else one `cm ls <folder> --format=…` of the
-     workspace (`workspaceListingArgs`), one per folder for all its files (none for a folder the Files view listed:
-     `rememberFolder`), kept until the watcher sees the workspace
-     change (`forgetListings`). The listings already read: the Files view's and Browse repository's `cm ls --xml`,
-     the history's `cm ls` of its file (`workspaceRevisionArgs`), a point's tree beside a model (`RepositoryTrees.fileAt`)
-     and the Materials look's (`RevisionDownloads`), all remembered (`remember`).
+  2. Which revision does the workspace hold at that path, with what size and hash? A path the workspace already told
+     answers at once, with no command (`rememberHeld`: the Files view's `cm ls --xml` of its folders, a history's
+     `cm ls` of its file, `workspaceRevisionArgs`), so a revision it doesn't hold there costs nothing. A revision
+     another tree's listing named (Browse repository, a point's tree beside a model: `RepositoryTrees.fileAt`, the
+     Materials look's in `RevisionDownloads`) is remembered with its hash (`remember`), never as what the workspace
+     holds. Only for a path still unknown, and only when a file is there on disk, one `cm ls <folder> --format=…` of
+     the workspace (`workspaceListingArgs`) tells, for all the folder's files (none for a folder the Files view
+     listed: `rememberFolder`), kept until the watcher sees the workspace change (`forgetListings`).
   3. Is it that revision, unchanged? Same revision id at that path, in the same repository, and the file's bytes have
      that size and MD5 (hashed as they are read, on the bytes returned; a file known to differ isn't read again until
      it changes). Then the disk's bytes are the revision's; otherwise it is downloaded (`cm cat`).

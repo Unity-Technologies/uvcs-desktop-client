@@ -25,7 +25,7 @@ export function createHistoryService({ cm, workspaceCopies }: ServiceContext, { 
     if (revision !== undefined) return undefined;
     const args = workspaceRevisionArgs(toAbsolutePath(workspacePath, path));
     const loaded = await cm.query(args, { cwd: workspacePath }).then((output) => parseWorkspaceRevision(output, path), () => undefined);
-    if (loaded) workspaceCopies.remember(workspacePath, [loaded]);
+    if (loaded) workspaceCopies.rememberHeld(workspacePath, [loaded]);
     return loaded?.revision.revisionId;
   }
 
