@@ -23,7 +23,7 @@ import { ModelChangesPanel } from './ModelChangesPanel';
 import { clipChoices } from './modelClips';
 import { ModelDifferencesControls } from './ModelDifferencesControls';
 import type { ModelDiffMode } from './modelDiffModes';
-import { framedBounds, nodesBounds } from './modelFraming';
+import { everyVersionHas, framedBounds, nodesBounds } from './modelFraming';
 import type { ModelImportSettings } from './modelImportSettings';
 import { ModelInfoStrip } from './ModelInfoStrip';
 import { modelCommandOf } from './modelKeys';
@@ -134,17 +134,24 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   }, [old, next, optionsBefore, optionsAfter, materials.changes, materials.notCompared]);
   const stats = useMemo(() => modelStats(old?.summary ?? null, next?.summary ?? null), [old, next]);
   // Every version there is, read: framing one alone would frame a pair whose other half may be 100 times its size.
-  const allRead = (!original.model || old !== null) && (!modified.model || next !== null);
+  // On booleans: a pending file read again brings new bytes, not another pair.
+  const [hasBefore, hasAfter] = [Boolean(original.model), Boolean(modified.model)];
+  const present = useMemo(() => ({ before: hasBefore, after: hasAfter }), [hasBefore, hasAfter]);
+  const allRead = everyVersionHas(present, { before: old, after: next });
   const bounds = useMemo(() => (allRead ? framedBounds(old?.summary ?? null, next?.summary ?? null) : null), [allRead, old, next]);
 
-  const camera = useModelCamera(renderer, bounds, stageRef);
+  // The camera frames only once every version is in the renderer (`everyVersionHas`): each scene is built a render
+  // after its read, and framed with one missing, the renderer laid the other out alone, full width, and the pair kept
+  // a framing made for that shape.
+  const framing = everyVersionHas(present, { before: sceneBefore, after: sceneAfter }) ? bounds : null;
+  const camera = useModelCamera(renderer, framing, stageRef);
   const modelCentre = useCallback(() => (bounds ? centreOf(bounds) : null), [bounds]);
   const { frame } = camera;
   const pickedBounds = useCallback(
     (nodes: NodeRef[]) => nodesBounds(nodes, old?.summary ?? null, next?.summary ?? null) ?? aroundPoints(markersOf(nodes, sceneBefore, sceneAfter), bounds),
     [old, next, sceneBefore, sceneAfter, bounds],
   );
-  const frameShown = useCallback(() => frame((picked && pickedBounds(picked.nodes)) ?? bounds), [frame, picked, pickedBounds, bounds]);
+  const frameShown = useCallback(() => frame((picked && pickedBounds(picked.nodes)) ?? framing), [frame, picked, pickedBounds, framing]);
 
   useEffect(() => {
     if (!renderer || !bounds) return;
@@ -224,7 +231,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
     const command = modelCommandOf(event.nativeEvent);
     if (!command) return;
     event.preventDefault();
-    if (command === 'frameAll') frame(bounds);
+    if (command === 'frameAll') frame(framing);
     else frameShown();
   };
 

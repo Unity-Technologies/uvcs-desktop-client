@@ -189,8 +189,11 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   blends what is seen, not the meshes' depths; Play blinks (`BlendPill`, the image onion's). A version alone (added,
   deleted) takes the whole canvas. Modes are the image diff's, remembered apart (`modelMode`).
 - **Framing**: both versions together (`framedBounds`), once both are read: framing one alone framed a pair whose other
-  half was 100 times its size. Until the user moves the camera, the model stays framed as the stage resizes and the
-  panel docks.
+  half was 100 times its size. Nothing frames until both are in the renderer either (`everyVersionHas`: each scene is
+  built a render after its read; the camera gets the pair's bounds only then, so the first framing, F, a part picked
+  and a resize share the rule): with one missing the renderer laid the other out alone, full width, and Split kept a
+  framing made for twice its pane's width until the window was resized. Until the user moves the camera, the model
+  stays framed as the stage resizes and the panel docks.
 - **Controls**, as Unity's Scene view (`useOrbitGestures`); every move takes the model as far as the hand asked, at
   any zoom:
   - **Orbit and pan**: drag (or Alt+drag) orbits; right, middle or Shift+drag pans. A pan moves what it grabbed exactly
