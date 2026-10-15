@@ -43,7 +43,7 @@ function camera({ glideMs = VIEW_GLIDE_MS, aspect = ASPECT } = {}) {
 /** A camera framed on the pair, as it opens. */
 function framed(options?: { glideMs?: number }) {
   const made = camera(options);
-  made.control.frameFirst();
+  made.control.frameFirst(pair);
   return made;
 }
 
@@ -53,15 +53,23 @@ describe('ModelCameraControl', () => {
     expect(control.currentView()).toEqual(framedView(pair, ASPECT));
     expect(frames.animating()).toBe(false);
     control.onGesture(handView);
-    control.frameFirst();
+    control.frameFirst(pair);
     expect(control.currentView()).toBe(handView);
     expect(moves.at(-1)).toBe(handView);
+  });
+
+  it('frames the pair it is given the first time, whether or not it was told the bounds before', () => {
+    const { control, moves } = camera();
+    control.setBounds(null);
+    control.frameFirst(pair);
+    expect(control.currentView()).toEqual(framedView(pair, ASPECT));
+    expect(moves).toHaveLength(1);
   });
 
   it('frames nothing before the pair is in the renderer', () => {
     const { control, frames, moves } = camera();
     control.setBounds(null);
-    control.frameFirst();
+    control.frameFirst(null);
     control.framePart(part);
     control.frameRegion(back);
     control.frameWhole();
