@@ -108,8 +108,8 @@ function cmProcesses() {
 function physicalFootprintMB(pid) {
   if (process.platform !== 'darwin') return null;
   try {
-    const summary = execFileSync('vmmap', ['--summary', String(pid)], { stdio: ['ignore', 'pipe', 'ignore'] }).toString();
-    const [, amount, unit] = /^Physical footprint:\s+([\d.]+)([KMG])/m.exec(summary) ?? [];
+    const summary = execFileSync('vmmap', ['--summary', String(pid)], { stdio: ['ignore', 'pipe', 'ignore'] });
+    const [, amount, unit] = /^Physical footprint:\s+([\d.]+)([KMG])/m.exec(summary.toString()) ?? [];
     return amount === undefined ? null : Number(amount) * { K: 1 / 1024, M: 1, G: 1024 }[unit];
   } catch {
     return null;
@@ -419,7 +419,8 @@ rmSync(join(workspace, 'soak-scratch.txt'), { force: true });
 const from = samples[Math.floor(samples.length / 4)];
 const to = samples.at(-1);
 console.log(`\nGrowth per cycle over cycles ${from.cycle}–${to.cycle}:`);
-for (const key of ['heapMB', 'nodes', 'listeners', 'queries', 'blobUrls', 'mainHeapMB', 'mainRssMB', 'mainFootprintMB', 'rendererFootprintMB', 'cm']) {
+const summed = ['heapMB', 'nodes', 'listeners', 'queries', 'blobUrls', 'mainHeapMB', 'mainRssMB', 'mainFootprintMB', 'rendererFootprintMB', 'cm'];
+for (const key of summed) {
   if (to[key] === '') continue;
   console.log(`  ${key.padEnd(19)} ${from[key]} → ${to[key]}  (${((to[key] - from[key]) / Math.max(1, to.cycle - from.cycle)).toFixed(3)}/cycle)`);
 }

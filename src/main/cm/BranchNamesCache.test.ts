@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { BranchNamesCache } from './BranchNamesCache';
 
-function setup(branches = [1, 2, 3].map((id) => ({ id, name: `/main/b${id}` })), isShown = (_workspacePath: string) => true) {
+const BRANCHES = [1, 2, 3].map((id) => ({ id, name: `/main/b${id}` }));
+
+function setup(branches = BRANCHES, isShown = (_workspacePath: string) => true) {
   const reads: string[] = [];
   let now = 0;
   const cache = new BranchNamesCache(

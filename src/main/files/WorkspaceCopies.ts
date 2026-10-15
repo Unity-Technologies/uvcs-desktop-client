@@ -90,7 +90,8 @@ export class WorkspaceCopies {
    */
   private *kept(files: Iterable<RevisionFile>): Generator<RevisionFile> {
     for (const { path, revision, hash, size } of validFiles(files)) {
-      yield { path: ownCopy(path), revision: { revisionId: revision.revisionId, repository: this.repositories.of(revision.repository) }, hash: hash && ownCopy(hash), size };
+      const repository = this.repositories.of(revision.repository);
+      yield { path: ownCopy(path), revision: { revisionId: revision.revisionId, repository }, hash: hash && ownCopy(hash), size };
     }
   }
 

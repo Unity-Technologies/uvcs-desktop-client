@@ -185,7 +185,8 @@ export class CmClient {
 
   /**
    * Logs the command with its secrets hidden (`hideSecrets`) and clipped (`clipForLog`); returns it unclipped, for the
-   * error that reports it: what reads the error in main may need all of it, and the window gets it clipped (`registerApi`).
+   * error that reports it: what reads the error in main may need all of it, and the window gets it clipped
+   * (`registerApi`).
    */
   private log(args: string[], cwd: string, startedAt: number, result: CmResult, viaShell: boolean): CommandLogEntry {
     const commandLine = commandLineForLog(args);

@@ -41,7 +41,8 @@ const cm = new CmClient(locateCm);
 const settings = openSettings(userData);
 // What a workspace is loaded from, shared by the reads that follow one another as a window opens it.
 const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
-// Branch names by id, which code reviews name their branches by (`BranchNamesCache`), kept while a window shows the workspace.
+// Branch names by id, which code reviews name their branches by (`BranchNamesCache`), kept while a window shows the
+// workspace.
 const branchNames = new BranchNamesCache(
   (workspacePath) => readBranchNames(cm, workspacePath),
   Date.now,
