@@ -289,11 +289,11 @@ Why one highlighting worker. Measured on a task branch of a large production rep
 - **What stays once a diff is gone**: Differences keeps the pair it compared (both images and their differences, 5
   bytes a pixel: 36 MB for 3000 x 2400) in the image diff worker, so a new tolerance only renders the heatmap again;
   the pair goes as its viewer unmounts (`forgetComparedImages`). The bitmaps cross to the worker copied, not
-  transferred: `rasterize` keeps them for the pixel inspector. A window that leaves a workspace forgets its revisions
-  (`forgetWorkspace`, ARCHITECTURE.md "Windows"). Measured on a changeset of big
-  texts and 2400 x 2400 images, each in Differences: leaving the diff took the worker's buffers from 30 MB to none,
-  and switching the window to another workspace its query cache from 181 MB to none and the renderer's footprint
-  from about 600 MB to 394.
+  transferred: `rasterize` keeps them for the pixel inspector. A window that leaves a workspace forgets the contents
+  its diffs read, revisions and its own files alike (`forgetWorkspace`, ARCHITECTURE.md "Windows"). Measured on a
+  changeset of big texts and 2400 x 2400 images, each in Differences: leaving the diff took the worker's buffers from
+  30 MB to none, and switching the window to another workspace its query cache from 181 MB to none and the
+  renderer's footprint from about 600 MB to 394.
 
 What a diff read stays after it goes off screen: a revision's content is immutable, kept an hour after its last use
 (`REVISION_CACHE_MS`), and of those the last 100 (`MAX_UNUSED_IMMUTABLE`) holding at most 256 MB of files
