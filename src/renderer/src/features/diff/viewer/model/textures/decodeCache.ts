@@ -16,6 +16,11 @@ export class DecodeCache<T> {
     return entry.value;
   }
 
+  /** Whether the key's value is kept; unlike `get`, it doesn't count as a use. */
+  has(key: string): boolean {
+    return this.entries.has(key);
+  }
+
   set(key: string, value: T, bytes: number): void {
     this.entries.delete(key);
     this.entries.set(key, { value, bytes });
