@@ -413,6 +413,18 @@ describe('modelChanges: takes and textures', () => {
       expect(changes(talking, face(['Open'], [[0], [0.6]]))).toMatchObject([{ kind: 'clipKeys', name: 'Talk', nodes: [{ name: 'Face' }] }]);
     });
 
+    it("reads a cubic blendshape track's values apart from its tangents, as glTF keys them", () => {
+      // CUBICSPLINE: each key holds every weight's in-tangent, then every value, then every out-tangent.
+      const face = (shapes: string[], keys: number[][]): TestModel => ({
+        nodes: [{ name: 'Face', mesh: { blendShapes: shapes } }],
+        clips: [{ name: 'Talk', duration: 1, tracks: [{ node: 'Face', property: 'morphTargetInfluences', times: [0, 1], values: keys.flat() }] }],
+      });
+      const talking = face(['Open'], [[0, 0, 0], [0.5, 1, 0.5]]);
+      const withExcited = face(['Open', 'Excited'], [[0, 0, 0, 0, 0, 0], [0.5, 0, 1, 0, 0.5, 0]]);
+      expect(changes(talking, withExcited)).toMatchObject([{ kind: 'blendShapeAdded', name: 'Excited' }]);
+      expect(changes(talking, face(['Open'], [[0, 0, 0], [0.5, 0.7, 0.5]]))).toMatchObject([{ kind: 'clipKeys', name: 'Talk' }]);
+    });
+
     it('leaves a take of another length to its length, which already says it changed', () => {
       const longer = run(0.5, 0.1);
       longer.clips![0]!.duration = 1.5;
