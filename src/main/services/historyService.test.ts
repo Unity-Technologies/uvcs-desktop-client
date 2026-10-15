@@ -1,8 +1,11 @@
+import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { formatOutput } from '../cm/testing/cmOutput';
-import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { cmFails, fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { contentHashOf } from '../files/WorkspaceCopies';
+import { createContentService } from './contentService';
 import { createHistoryService } from './historyService';
 import { serviceContext } from './testing/serviceContext';
 
@@ -44,12 +47,12 @@ const TWO_REVISIONS: Record<string, CmAnswer> = {
 
 describe('file history', () => {
   it("reads a workspace file's history with three quick commands: the history, its revision ids, and the one loaded", async () => {
-    const { service, commands } = history({ ...TWO_REVISIONS, ls: '45\n' });
+    const { service, commands } = history({ ...TWO_REVISIONS, ls: formatOutput([45, 'aGFzaA==', 42, 'rep:game@local']) });
 
     const itemHistory = await service.forItem(WORKSPACE, 'README.md');
 
     expect(commands.map(({ via, args }) => [via, args])).toEqual([
-      ['query', ['ls', README, '--format={revid}', '--symlink']],
+      ['query', ['ls', README, '--format={revid}\u001f{hash}\u001f{size}\u001f{repspec}\u001e', '--symlink']],
       ['query', ['history', README, '--moveddeleted', '--xml', '--symlink']],
       ['query', ['find', 'revision', "where itemid = 7 on repository 'game@local'", '--format={changeset}\u001f{id}\u001f{parent}\u001e', '--nototal']],
     ]);
@@ -84,6 +87,25 @@ describe('file history', () => {
 
     expect((await service.forItem(WORKSPACE, 'README.md')).revisions).toEqual([]);
     expect(lines().some((line) => line.startsWith('find'))).toBe(false);
+  });
+});
+
+describe("the workspace's revision in a history", () => {
+  it('is read from the disk where the workspace holds it unchanged, and downloaded once it changed', async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'history-wk-'));
+    await writeFile(join(workspace, 'README.md'), '# Game\n');
+    const fake = fakeCmClient({ ...TWO_REVISIONS, ls: formatOutput([45, contentHashOf(Buffer.from('# Game\n')), 7, 'rep:game@local']), cat: async ({ args }) => (await writeFile(optionValue(args, '--file=')!, 'downloaded'), '') });
+    const context = serviceContext(fake.cm);
+    await createHistoryService(context, { apps: {} as never }).forItem(workspace, 'README.md');
+    const content = createContentService(context);
+    const workspaceRevision = { kind: 'revision' as const, revision: { revisionId: 45, repository: 'game@local' }, fileName: 'README.md' };
+
+    expect((await content.read(workspace, workspaceRevision)).text).toBe('# Game\n');
+    expect(fake.ran('cat')).toBe(false);
+
+    await writeFile(join(workspace, 'README.md'), '# Gamf\n');
+    expect((await content.read(workspace, workspaceRevision)).text).toBe('downloaded');
+    expect(fake.ran('cat revid:45@game@local')).toBe(true);
   });
 });
 

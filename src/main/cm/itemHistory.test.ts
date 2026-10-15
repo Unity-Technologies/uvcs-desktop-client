@@ -127,13 +127,20 @@ describe('itemHistoryTarget', () => {
 });
 
 describe('parseWorkspaceRevision', () => {
-  it("reads the item's own revision, listed before a directory's children", () => {
-    expect(parseWorkspaceRevision('100\n')).toBe(100);
-    expect(parseWorkspaceRevision('102\n100\n101\n')).toBe(102);
+  it("reads the item's own revision, with the size and hash it was loaded with, listed before a directory's children", () => {
+    const pumpkin = formatOutput([126, 'Q9oQU4Ghx0O0blJW3KZXFQ==', 1824576, 'rep:models@local']);
+    expect(parseWorkspaceRevision(pumpkin, 'Prop/Pumpkin.obj')).toEqual({
+      path: 'Prop/Pumpkin.obj',
+      revision: { revisionId: 126, repository: 'models@local' },
+      hash: 'Q9oQU4Ghx0O0blJW3KZXFQ==',
+      size: 1824576,
+    });
+    const folder = formatOutput([102, 'gEUrSyJHiFSO6gIeIYyPWw==', 0, 'rep:models@local'], [100, 'aaa=', 3, 'rep:models@local']);
+    expect(parseWorkspaceRevision(folder, 'Prop')?.revision.revisionId).toBe(102);
   });
 
-  it('finds none for an item the workspace has no revision of', () => {
-    expect(parseWorkspaceRevision('')).toBeUndefined();
-    expect(parseWorkspaceRevision('-1\n')).toBeUndefined();
+  it('finds none for an item the workspace has no revision of: a checkout lists -1, with the disk\'s hash', () => {
+    expect(parseWorkspaceRevision('', 'a.txt')).toBeUndefined();
+    expect(parseWorkspaceRevision(formatOutput([-1, 'wZNJehoGssciMOYUb/RwgA==', 4, 'rep:models@local']), 'a.txt')).toBeUndefined();
   });
 });
