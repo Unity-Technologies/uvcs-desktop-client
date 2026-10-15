@@ -254,21 +254,14 @@ function folderKey(workspacePath: string, folder: string): string {
   return `${workspacePath}\0${workspacePathOf(folder) ?? folder}`;
 }
 
-/** A revision at a workspace path, its repository as `repositoryIdentity` tells it. */
-function heldKey(workspacePath: string, path: string, revision: RevisionRef): string {
-  return `${workspacePath}\0${path}\0${revision.revisionId}\0${repositoryIdentity(revision.repository)}`;
-}
-
 /**
- * What tells a repository, whose revision ids are its own: its whole spec, server included (two servers may each have
- * a `game`, replicas included). A cloud repository alone by its name: `cm` spells its server two ways
- * (`name@<organization>@unity` in `cm ls`, `name@<id>@cloud` in `cm history --xml` and diffs), and both spellings are
- * cloud ones. Once the workspace's info carries the resolved spec (`fix/cloud-repository-specs`, PR #68), the whole
- * specs can be compared and this exception can go.
+ * A revision at a workspace path, in its repository by its whole spec, server included: revision ids are per
+ * repository, and two servers may each have a `game` (replicas too). Every spec compared here names a Unity
+ * organization's server by name (ARCHITECTURE.md "Unity organizations": `cm ls`, `cm diff`, and History's revisions,
+ * `withServerOf`); one left by its id, where `cm` couldn't name it, only misses its copy and is downloaded.
  */
-function repositoryIdentity(repository: string): string {
-  const [name = ''] = repository.split('@');
-  return /@(cloud|unity)$/.test(repository) ? `${name}@<cloud>` : repository;
+function heldKey(workspacePath: string, path: string, revision: RevisionRef): string {
+  return `${workspacePath}\0${path}\0${revision.revisionId}\0${revision.repository}`;
 }
 
 function diskKey(path: string, size: number, modified: number): string {

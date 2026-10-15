@@ -148,11 +148,10 @@ and many people use the same server. Every `cm` command other than local reads (
   Content decides, never status: a file changed, being written, missing, checked out (`cm ls` lists revision -1 and
   the disk's hash, so it holds no revision) or holding another revision is downloaded; when unsure, download. The
   listed `<Hash>` and `<Size>` are the loaded revision's, even once the file changed. A repository is matched by its
-  whole spec, server included, as revision ids are per repository (`repositoryIdentity`): the hash checked is the
-  workspace's revision's, so another server's same-named repository would pass. Only a cloud repository is matched by
-  its name, as `cm` spells its server two ways (`name@<organization>@unity` in `cm ls`, `name@<id>@cloud` in
-  `cm history --xml` and diffs); once the workspace's info carries the resolved spec (PR #68), whole specs are compared
-  there too. A path under an xlink is listed with the xlinked repository's revisions. A workspace `cm ls` reads the workspace's
+  whole spec, server included, as revision ids are per repository (`heldKey`): the hash checked is the workspace's
+  revision's, so another server's same-named repository would pass. A Unity organization's server is named alike on
+  every side compared (`cm ls`, `cm diff`, History's revisions through `withServerOf`: "Unity organizations"); a
+  revision left by the organization's id, where `cm` couldn't name it, only misses its copy. A path under an xlink is listed with the xlinked repository's revisions. A workspace `cm ls` reads the workspace's
   metadata, never content; it is not a `LOCAL_COMMANDS` read all the same, as `cm` asks the server for the branches of
   what it lists (one call for all of them). Open, Save as and the merge tools copy a revision the workspace holds the
   same way (`saveVersion`).
