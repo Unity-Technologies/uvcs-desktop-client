@@ -40,11 +40,13 @@ export function placedMeshesOf(model: PlaceableModel): PlacedMeshes {
 export function compareSurfaces(before: PlacedMeshes, after: PlacedMeshes): SurfaceComparison {
   const size = diagonalOf([before, after]);
   const maxDistance = Math.max(size * SATURATION, 1e-9);
-  const surfaceBefore = { positions: trianglesOf(before) };
-  const surfaceAfter = { positions: trianglesOf(after) };
+  // Each surface is made ready once for all the other version's meshes: once per mesh, a scene of thousands of meshes
+  // read the whole other version thousands of times (minutes, in the one model worker every model read waits on).
+  const surfaceBefore = MeasurableSurface.of({ positions: trianglesOf(before) });
+  const surfaceAfter = MeasurableSurface.of({ positions: trianglesOf(after) });
   return {
-    before: before.meshes.map((mesh) => surfaceDistances(mesh.positions, MeasurableSurface.of(surfaceAfter), { maxDistance })),
-    after: after.meshes.map((mesh) => surfaceDistances(mesh.positions, MeasurableSurface.of(surfaceBefore), { maxDistance })),
+    before: before.meshes.map((mesh) => surfaceDistances(mesh.positions, surfaceAfter, { maxDistance })),
+    after: after.meshes.map((mesh) => surfaceDistances(mesh.positions, surfaceBefore, { maxDistance })),
     size,
     maxDistance,
   };
