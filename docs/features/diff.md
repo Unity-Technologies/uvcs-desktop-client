@@ -149,11 +149,15 @@ method, and counted by a bounded edit distance (`diffArrays` with `maxEditLength
 is still a move. The official client's rules, which it was taken from: a change whose own two sides are that alike is
 an edit in place, never a move; a move is 2 lines at least (`MIN_MOVED_LINES`); a diff of more than 50 changes or 500
 changed lines (`MAX_BLOCKS`, `MAX_CHANGED_LINES`) is a rewrite, not looked into. Unlike it, lines with no letter or
-digit (braces, blanks) are never a move, each line is in one move at most (the closest match wins), a diff spends
-20,000 comparisons at most (`MAX_COMPARISONS`, a few milliseconds at worst), and changed lines holding more than
-50,000 characters (`MAX_CHANGED_CHARACTERS`) aren't looked into either: a comparison takes time by the words compared
-times the edits allowed (a fifth of them), so the one changed line of a minified file of 1.6 MB held the window for
-more than ten minutes. Characters, not words, because counting them splits no line. There are no settings: the official
+digit (braces, blanks) are never a move, each line is in one move at most (the closest match wins), and a diff spends
+20,000 comparisons at most (`MAX_COMPARISONS`). Their work is bounded too: Myers' algorithm takes the words of both
+sides times the edits it allows, so a comparison allows no more edits than the diff's work left can pay for
+(`MOVE_WORK_BUDGET`, 2,000,000 word comparisons, some 150 ms at worst), counted as they're made. Long sides alike but
+for a few words are still found moved (paragraphs of prose, long lines); long sides far apart are given up early. A
+change whose two sides could neither be a move (a line each, as in a minified file) isn't compared at all, nor split
+into words when no change has two lines: the one line of a minified file of 800 KB, compared with what it became,
+held the window for minutes. A limit on the changed lines' characters was tried instead and dropped: it hid real moves
+among rewritten paragraphs. There are no settings: the official
 client's three (on, similarity, minimum lines) sit in a menu few find, and these defaults are its own.
 
 What shows (`useMovedCode`, `MovedCode`):
@@ -235,8 +239,7 @@ saying why) and the merge page's texts (`usePierreOptions`). Annotate can't wrap
 their annotation, so it cuts such a line there with an ellipsis (`withLongLinesCut`); that text is read-only, never
 written back. Everything else a long line costs is already bounded: Pierre highlights no line past
 `tokenizeMaxLineLength` (1,000 characters, its default) and marks no words in lines past `maxLineDiffLength`
-(`WORD_MARKS`), and moved code isn't looked for among changed lines that long (`MAX_CHANGED_CHARACTERS`, "Moved
-code"). Opening a pending diff of a 3.9 MB one-line file takes about 2 s, most of it Chromium laying out the wrapped
+(`WORD_MARKS`), and comparisons of moved code are bounded by their work (`MOVE_WORK_BUDGET`, "Moved code"). Opening a pending diff of a 3.9 MB one-line file takes about 2 s, most of it Chromium laying out the wrapped
 line; 1.6 MB, about 1 s.
 
 ## Images

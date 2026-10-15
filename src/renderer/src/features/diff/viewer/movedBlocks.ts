@@ -39,16 +39,11 @@ export const MIN_MOVED_LINES = 2;
 export const MAX_BLOCKS = 50;
 export const MAX_CHANGED_LINES = 500;
 /**
- * Past this many characters in the changed lines (500 lines of 100), a comparison of two sides would cost too much: it
- * takes time by their words times the edits allowed (a fifth of them), so the one line of a minified file of 1 MB, some
- * 400,000 words, held the window for minutes. Characters, not words: counting them splits no line.
+ * At most about this many word comparisons in a diff, some 150 ms at worst (measured: 2M in 136 ms, 20M in 1.4 s).
+ * Comparing two sides takes their words times the edits allowed, a fifth of them: the one line of a minified file of
+ * 800 KB, compared with what it became, held the window for minutes.
  */
-export const MAX_CHANGED_CHARACTERS = 50_000;
-/**
- * At most about this many word comparisons in a diff, some 100 ms. Comparing two sides takes their words times the
- * edits allowed, a fifth of them, so a few long sides (a minified file's lines, paragraphs of prose) cost millions.
- */
-export const MOVE_WORK_BUDGET = 20_000_000;
+export const MOVE_WORK_BUDGET = 2_000_000;
 /** At most this many block comparisons in a diff, however its blocks fall: some 50 ms at worst. */
 export const MAX_COMPARISONS = 20_000;
 /** A block moved into a bigger change is searched for in runs of that change's lines, up to this many more than its own. */
@@ -64,16 +59,12 @@ const EXTRA_WINDOW_LINES = 10;
 export function detectMovedBlocks(meta: DisplayMeta, method: ComparisonMethod): MovedBlock[] {
   const blocks = listChangeBlocks(meta);
   const changedLines = blocks.reduce((total, block) => total + block.oldLines + block.newLines, 0);
-  if (blocks.length > MAX_BLOCKS || changedLines > MAX_CHANGED_LINES || changedCharacters(meta, blocks) > MAX_CHANGED_CHARACTERS) return [];
+  if (blocks.length > MAX_BLOCKS || changedLines > MAX_CHANGED_LINES) return [];
+  // Splitting the sides into words reads every changed character: none of it when no side is long enough to move.
+  if (!blocks.some((block) => Math.max(block.oldLines, block.newLines) >= MIN_MOVED_LINES)) return [];
   const search = new MoveSearch(meta, method, blocks);
   const candidates = search.sides.flatMap((sides) => search.movesFrom(sides));
   return closestFirst(candidates).map(({ deletions, additions }) => ({ deletions, additions, ...editsInMove(meta, method, deletions, additions) }));
-}
-
-/** The characters in the lines the changes remove and add. */
-function changedCharacters(meta: DisplayMeta, blocks: ChangeBlock[]): number {
-  const length = (lines: string[], start: number, count: number): number => lines.slice(start - 1, start - 1 + count).reduce((total, line) => total + line.length, 0);
-  return blocks.reduce((total, block) => total + length(meta.deletionLines, block.oldStart, block.oldLines) + length(meta.additionLines, block.newStart, block.newLines), 0);
 }
 
 /** A side of a change, its lines as word ids. */
@@ -104,6 +95,7 @@ export class MoveSearch {
   readonly sides: BlockSides[];
   private readonly wordIds = new Map<string, number>();
   private comparisonsLeft = MAX_COMPARISONS;
+  private workLeft = MOVE_WORK_BUDGET;
 
   constructor(
     private readonly meta: DisplayMeta,
@@ -116,6 +108,7 @@ export class MoveSearch {
   /** Where each side of a change went, if it moved: the closest match among the other changes' opposite sides. */
   movesFrom(change: BlockSides): Candidate[] {
     const { removed, added } = change;
+    if (!canMove(removed) && !canMove(added)) return [];
     if (removed.range.count > 0 && added.range.count > 0 && this.compare(removed, added, allowedEdits(removed)) >= 0) return [];
     const others = this.sides.filter((other) => other !== change);
     const wentTo = this.closest(removed, others.map((other) => other.added));
@@ -128,20 +121,28 @@ export class MoveSearch {
 
   /**
    * The edit distance between two sides' words, when it's at most `maxEdits` (a word changed counts two: one out, one
-   * in); -1 past it, or once the diff has spent its comparisons.
+   * in); -1 past it, or once the diff has spent its comparisons. Myers' algorithm takes the words of both sides times
+   * the edits it allows, so it allows no more than the diff's work left can pay for (`MOVE_WORK_BUDGET`): two long
+   * sides alike but for a few words are still compared, two long sides far apart are given up early.
    */
   compare(source: Side, target: Side, maxEdits: number, targetStart = 0, targetCount = target.lines.length): number {
     const targetWords = target.wordsBefore[targetStart + targetCount]! - target.wordsBefore[targetStart]!;
-    if (maxEdits < 0 || Math.abs(totalWords(source) - targetWords) > maxEdits || this.comparisonsLeft <= 0) return -1;
+    const words = totalWords(source) + targetWords;
+    const affordableEdits = Math.min(maxEdits, Math.floor(this.workLeft / Math.max(words, 1)));
+    if (affordableEdits < 0 || Math.abs(totalWords(source) - targetWords) > affordableEdits || this.comparisonsLeft <= 0) return -1;
     this.comparisonsLeft--;
-    const changes = diffArrays(source.lines.flat(), target.lines.slice(targetStart, targetStart + targetCount).flat(), { maxEditLength: maxEdits });
+    const comparator = (left: number, right: number): boolean => {
+      this.workLeft--;
+      return left === right;
+    };
+    const changes = diffArrays(source.lines.flat(), target.lines.slice(targetStart, targetStart + targetCount).flat(), { maxEditLength: affordableEdits, comparator });
     if (!changes) return -1;
     return changes.reduce((edits, change) => edits + (change.added || change.removed ? (change.count ?? 0) : 0), 0);
   }
 
   /** The closest match for `source` among the targets, whole or a run of their lines, if any is close enough. */
   private closest(source: Side, targets: Side[]): { range: LineRange; edits: number } | undefined {
-    if (source.range.count < MIN_MOVED_LINES || !source.named) return undefined;
+    if (!canMove(source)) return undefined;
     let best: { range: LineRange; edits: number } | undefined;
     let maxEdits = allowedEdits(source);
     for (const target of targets) {
@@ -178,6 +179,11 @@ export class MoveSearch {
 /** A run of letters, digits or underscores (any script's), a run of spaces and tabs, a line break, or one other character. */
 const WORD = /[\p{L}\p{N}_]+|[ \t]+|\r\n|[\s\S]/gu;
 const NAME = /[\p{L}\p{N}]/u;
+
+/** Whether a side may be a move: 2 lines at least (`MIN_MOVED_LINES`) holding a name or a number. */
+function canMove(side: Side): boolean {
+  return side.range.count >= MIN_MOVED_LINES && side.named;
+}
 
 function totalWords(side: Side): number {
   return side.wordsBefore.at(-1)!;
