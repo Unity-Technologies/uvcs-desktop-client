@@ -1,6 +1,6 @@
 import { MeshBasicMaterial, MeshStandardMaterial, ShaderLib, type WebGLProgramParametersWithUniforms, type WebGLRenderer } from 'three';
 import { describe, expect, it } from 'vitest';
-import { colorsByHeat, DISTANCE_ATTRIBUTE, fadesByHeat, fullHeatAt, GHOST_OPACITY, HEAT_ONSET, heatScale, spliced } from './heatColors';
+import { colorsByHeat, DISTANCE_ATTRIBUTE, fadesByHeat, distancesToDraw, fullHeatAt, GHOST_OPACITY, HEAT_ONSET, heatScale, spliced } from './heatColors';
 
 /** The shader three would compile for the material, as its `onBeforeCompile` leaves it. */
 function compiled(material: MeshStandardMaterial | MeshBasicMaterial, shader: { vertexShader: string; fragmentShader: string }) {
@@ -56,5 +56,12 @@ describe('fullHeatAt', () => {
   it('is ten times the tolerance, or a fiftieth of the model when the tolerance is tiny', () => {
     expect(fullHeatAt(0.01, 1)).toBeCloseTo(0.1);
     expect(fullHeatAt(0, 10)).toBeCloseTo(0.2);
+  });
+});
+
+describe('distancesToDraw', () => {
+  it("draws a mesh's distances only when there is one per vertex of it: another model's would color it wrongly", () => {
+    const distances = new Float32Array(3);
+    expect([distancesToDraw(distances, 3), distancesToDraw(distances, 4), distancesToDraw(undefined, 3)]).toEqual([distances, null, null]);
   });
 });
