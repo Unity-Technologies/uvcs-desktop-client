@@ -4,6 +4,8 @@
 // boxes come within a few percent of the model of each other are one place to look at (what went from the version
 // before, and what came to the version after there). Biggest first. Binning vertices into cells of a fixed size was
 // tried first and dropped: on a coarse mesh, neighbours fell in cells apart and one sculpted side read as 30 regions.
+// Found again as the tolerance settles (`useModelDifferences`), over millions of vertices: nothing here allocates per
+// vertex or per triangle, and merging compares only the boxes that overlap along X (`NearRegions`), not every pair.
 
 import type { Vector } from './orbitCamera';
 
@@ -31,80 +33,149 @@ const SAME_POINT_STEP = 1e-6;
 export function changedRegions(meshes: MeasuredMesh[], tolerance: number, modelSize: number): ChangedRegion[] {
   const within = Math.fround(tolerance);
   const patches = meshes.flatMap((mesh) => patchesOf(mesh, within));
-  return mergedNear(patches, modelSize * NEAR_SHARE)
-    .sort((a, b) => b.vertices - a.vertices)
+  return new NearRegions(modelSize * NEAR_SHARE)
+    .merged(patches)
+    .sort((a, b) => b.vertices - a.vertices || a.min[0] - b.min[0] || a.min[1] - b.min[1] || a.min[2] - b.min[2])
     .slice(0, MAX_REGIONS);
 }
 
 /** The mesh's changed vertices, joined through its triangles and its shared corners. */
 function patchesOf({ positions, index, distances }: MeasuredMesh, within: number): ChangedRegion[] {
   const count = distances.length;
-  const changed = (v: number): boolean => distances[v]! > within;
-  const parent = new Int32Array(count).map((_, v) => v);
-  const find = (v: number): number => {
-    while (parent[v] !== v) {
-      parent[v] = parent[parent[v]!]!;
-      v = parent[v]!;
-    }
-    return v;
-  };
+  const sets = new DisjointSets(count);
   const join = (a: number, b: number): void => {
-    if (changed(a) && changed(b)) parent[find(a)] = find(b);
+    if (distances[a]! > within && distances[b]! > within) sets.union(a, b);
   };
   const corners = index?.length ?? count;
   for (let corner = 0; corner + 2 < corners; corner += 3) {
-    const [a, b, c] = index ? [index[corner]!, index[corner + 1]!, index[corner + 2]!] : [corner, corner + 1, corner + 2];
+    const a = index ? index[corner]! : corner;
+    const b = index ? index[corner + 1]! : corner + 1;
+    const c = index ? index[corner + 2]! : corner + 2;
     join(a, b);
     join(b, c);
     join(c, a);
   }
-  const atPoint = new Map<string, number>();
-  for (let v = 0; v < count; v++) {
-    if (!changed(v)) continue;
-    const key = `${Math.round(positions[v * 3]! / SAME_POINT_STEP)},${Math.round(positions[v * 3 + 1]! / SAME_POINT_STEP)},${Math.round(positions[v * 3 + 2]! / SAME_POINT_STEP)}`;
-    const other = atPoint.get(key);
-    if (other === undefined) atPoint.set(key, v);
-    else join(v, other);
-  }
+  const changed: number[] = [];
+  for (let v = 0; v < count; v++) if (distances[v]! > within) changed.push(v);
+  joinSamePoints(positions, changed, (a, b) => sets.union(a, b));
   const patches = new Map<number, ChangedRegion>();
-  for (let v = 0; v < count; v++) {
-    if (!changed(v)) continue;
-    const point: Vector = [positions[v * 3]!, positions[v * 3 + 1]!, positions[v * 3 + 2]!];
-    const root = find(v);
+  for (const v of changed) {
+    const [x, y, z] = [positions[v * 3]!, positions[v * 3 + 1]!, positions[v * 3 + 2]!];
+    const root = sets.find(v);
     const patch = patches.get(root);
-    if (patch) grow(patch, point, 1);
-    else patches.set(root, { min: [...point], max: [...point], vertices: 1 });
+    if (!patch) {
+      patches.set(root, { min: [x, y, z], max: [x, y, z], vertices: 1 });
+      continue;
+    }
+    patch.min[0] = Math.min(patch.min[0], x);
+    patch.min[1] = Math.min(patch.min[1], y);
+    patch.min[2] = Math.min(patch.min[2], z);
+    patch.max[0] = Math.max(patch.max[0], x);
+    patch.max[1] = Math.max(patch.max[1], y);
+    patch.max[2] = Math.max(patch.max[2], z);
+    patch.vertices++;
   }
   return [...patches.values()];
 }
 
-/** Patches merged while any two come within `near` of each other. */
-function mergedNear(patches: ChangedRegion[], near: number): ChangedRegion[] {
-  const regions = [...patches];
-  for (let merged = true; merged; ) {
-    merged = false;
-    for (let i = 0; i < regions.length && !merged; i++) {
-      for (let j = i + 1; j < regions.length; j++) {
-        if (!within(regions[i]!, regions[j]!, near)) continue;
-        grow(regions[i]!, regions[j]!.min, 0);
-        grow(regions[i]!, regions[j]!.max, regions[j]!.vertices);
-        regions.splice(j, 1);
-        merged = true;
+/**
+ * Joins the vertices of `vertices` that are at one point (to `SAME_POINT_STEP`), through a table of their rounded
+ * coordinates open to probing: a key string per vertex cost more than all the rest on a model of millions.
+ */
+function joinSamePoints(positions: Float32Array, vertices: number[], join: (a: number, b: number) => void): void {
+  const size = 2 ** Math.ceil(Math.log2(Math.max(2, vertices.length * 2)));
+  const slots = new Int32Array(size).fill(-1);
+  const rounded = (v: number, axis: number): number => Math.round(positions[v * 3 + axis]! / SAME_POINT_STEP);
+  for (const v of vertices) {
+    const [x, y, z] = [rounded(v, 0), rounded(v, 1), rounded(v, 2)];
+    let slot = (Math.imul(x | 0, 73856093) ^ Math.imul(y | 0, 19349663) ^ Math.imul(z | 0, 83492791)) & (size - 1);
+    for (;;) {
+      const other = slots[slot]!;
+      if (other < 0) {
+        slots[slot] = v;
         break;
       }
+      if (rounded(other, 0) === x && rounded(other, 1) === y && rounded(other, 2) === z) {
+        join(v, other);
+        break;
+      }
+      slot = (slot + 1) & (size - 1);
     }
   }
-  return regions;
 }
 
-function within(a: ChangedRegion, b: ChangedRegion, near: number): boolean {
-  return [0, 1, 2].every((axis) => a.min[axis]! - near <= b.max[axis]! && b.min[axis]! - near <= a.max[axis]!);
-}
+/**
+ * Regions merged while any two come within `near` of each other, as their boxes grow: passes of joining every pair
+ * near now, until a pass joins none. A pass sorts the boxes along X and compares each only with those that start
+ * before it ends there: merging pair by pair, starting over after each merge, took half a second for 3,000 patches.
+ */
+export class NearRegions {
+  constructor(private readonly near: number) {}
 
-function grow(region: ChangedRegion, point: Vector, vertices: number): void {
-  for (let axis = 0; axis < 3; axis++) {
-    region.min[axis] = Math.min(region.min[axis]!, point[axis]!);
-    region.max[axis] = Math.max(region.max[axis]!, point[axis]!);
+  merged(patches: ChangedRegion[]): ChangedRegion[] {
+    let regions = patches;
+    for (;;) {
+      const next = this.mergedOnce(regions);
+      if (next.length === regions.length) return next;
+      regions = next;
+    }
   }
-  region.vertices += vertices;
+
+  /** Whether two boxes come within `near` of each other on every axis. */
+  isNear(a: ChangedRegion, b: ChangedRegion): boolean {
+    for (let axis = 0; axis < 3; axis++) {
+      if (a.min[axis]! - this.near > b.max[axis]! || b.min[axis]! - this.near > a.max[axis]!) return false;
+    }
+    return true;
+  }
+
+  private mergedOnce(regions: ChangedRegion[]): ChangedRegion[] {
+    const order = regions.map((_, i) => i).sort((a, b) => regions[a]!.min[0] - regions[b]!.min[0]);
+    const sets = new DisjointSets(regions.length);
+    order.forEach((i, at) => {
+      const region = regions[i]!;
+      for (let next = at + 1; next < order.length && regions[order[next]!]!.min[0] - this.near <= region.max[0]; next++) {
+        if (this.isNear(region, regions[order[next]!]!)) sets.union(i, order[next]!);
+      }
+    });
+    const merged = new Map<number, ChangedRegion>();
+    regions.forEach((region, i) => {
+      const root = sets.find(i);
+      const into = merged.get(root);
+      if (!into) {
+        merged.set(root, { min: [...region.min], max: [...region.max], vertices: region.vertices });
+        return;
+      }
+      for (let axis = 0; axis < 3; axis++) {
+        into.min[axis] = Math.min(into.min[axis]!, region.min[axis]!);
+        into.max[axis] = Math.max(into.max[axis]!, region.max[axis]!);
+      }
+      into.vertices += region.vertices;
+    });
+    return [...merged.values()];
+  }
+}
+
+/** Union-find over 0…count-1, paths halved as they are walked. */
+class DisjointSets {
+  private readonly parent: Int32Array;
+
+  constructor(count: number) {
+    this.parent = new Int32Array(count);
+    for (let i = 0; i < count; i++) this.parent[i] = i;
+  }
+
+  find(i: number): number {
+    const parent = this.parent;
+    while (parent[i] !== i) {
+      parent[i] = parent[parent[i]!]!;
+      i = parent[i]!;
+    }
+    return i;
+  }
+
+  union(a: number, b: number): void {
+    const [rootA, rootB] = [this.find(a), this.find(b)];
+    if (rootA !== rootB) this.parent[rootA] = rootB;
+  }
 }
