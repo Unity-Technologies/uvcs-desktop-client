@@ -68,4 +68,27 @@ describe('BranchNamesCache', () => {
     expect(await cache.resolve('/wk', [7, 404])).toEqual(new Map([[7, '/main/task']]));
     expect(reads).toEqual([]);
   });
+
+  it("forgets a workspace's names, keeping the other workspaces'", async () => {
+    const { cache, reads } = setup();
+    await cache.resolve('/a', [1]);
+    await cache.resolve('/b', [1]);
+
+    cache.forget('/a');
+
+    await cache.resolve('/b', [2]);
+    expect(reads).toEqual(['/a', '/b']);
+    await cache.resolve('/a', [1]);
+    expect(reads).toEqual(['/a', '/b', '/a']);
+  });
+
+  it('keeps nothing of a read the workspace was forgotten during', async () => {
+    const { cache, reads } = setup();
+    const lookup = cache.resolve('/a', [1]);
+    cache.forget('/a');
+    await lookup;
+
+    await cache.resolve('/a', [1]);
+    expect(reads).toEqual(['/a', '/a']);
+  });
 });

@@ -11,7 +11,8 @@ const MAX_AGE_MS = 10 * 60_000;
  * light queries. An id missing from a complete list is a deleted branch.
  */
 export class BranchNamesCache {
-  private readonly entries = new Map<string, { name: string; readAt: number }>();
+  /** By workspace, then branch id. */
+  private readonly entries = new Map<string, Map<number, { name: string; readAt: number }>>();
   private readonly completeAt = new Map<string, number>();
   private readonly reading = new Map<string, Promise<void>>();
 
@@ -23,7 +24,9 @@ export class BranchNamesCache {
   /** Names read along with something else (a branch list); `complete` when it holds every branch, hidden ones too. */
   remember(workspacePath: string, branches: readonly BranchName[], { complete = false } = {}): void {
     const readAt = this.now();
-    for (const { id, name } of branches) this.entries.set(entryKey(workspacePath, id), { name: ownCopy(name), readAt });
+    let entries = this.entries.get(workspacePath);
+    if (!entries) this.entries.set(workspacePath, (entries = new Map()));
+    for (const { id, name } of branches) entries.set(id, { name: ownCopy(name), readAt });
     if (complete) this.completeAt.set(workspacePath, readAt);
   }
 
@@ -39,8 +42,18 @@ export class BranchNamesCache {
     return names;
   }
 
+  /**
+   * No window shows the workspace anymore (`WorkspaceWatchers` `stopped`): its names go, megabytes on a repository of
+   * 20,000 branches, and a read under way keeps none.
+   */
+  forget(workspacePath: string): void {
+    this.entries.delete(workspacePath);
+    this.completeAt.delete(workspacePath);
+    this.reading.delete(workspacePath);
+  }
+
   private nameOf(workspacePath: string, id: number): string | undefined {
-    const entry = this.entries.get(entryKey(workspacePath, id));
+    const entry = this.entries.get(workspacePath)?.get(id);
     return entry && this.now() - entry.readAt < MAX_AGE_MS ? entry.name : undefined;
   }
 
@@ -53,9 +66,15 @@ export class BranchNamesCache {
   private readEvery(workspacePath: string): Promise<void> {
     const running = this.reading.get(workspacePath);
     if (running) return running;
-    const read = this.readAll(workspacePath)
-      .then((branches) => this.remember(workspacePath, branches, { complete: true }))
-      .finally(() => this.reading.delete(workspacePath));
+    // A read the workspace was forgotten during (`forget`) keeps nothing.
+    const isCurrent = (): boolean => this.reading.get(workspacePath) === read;
+    const read: Promise<void> = this.readAll(workspacePath)
+      .then((branches) => {
+        if (isCurrent()) this.remember(workspacePath, branches, { complete: true });
+      })
+      .finally(() => {
+        if (isCurrent()) this.reading.delete(workspacePath);
+      });
     this.reading.set(workspacePath, read);
     return read;
   }
@@ -67,8 +86,4 @@ export class BranchNamesCache {
  */
 function ownCopy(text: string): string {
   return Buffer.from(text, 'utf8').toString('utf8');
-}
-
-function entryKey(workspacePath: string, id: number): string {
-  return `${workspacePath}\n${id}`;
 }
