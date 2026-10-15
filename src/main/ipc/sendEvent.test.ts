@@ -66,4 +66,13 @@ describe('sendEventTo', () => {
       [EVENT_CHANNEL, 'commandLogged', second],
     ]);
   });
+
+  it('sends what waited once the page loaded, even while Electron still says it is loading then', () => {
+    const page = Object.assign(new EventEmitter(), { id: 1, isDestroyed: () => false, isLoading: () => true, send: vi.fn() });
+
+    sendEventTo(page as unknown as WebContents, 'commandLogged', LOGGED);
+    page.emit('did-finish-load');
+
+    expect(page.send.mock.calls).toEqual([[EVENT_CHANNEL, 'commandLogged', LOGGED]]);
+  });
 });
