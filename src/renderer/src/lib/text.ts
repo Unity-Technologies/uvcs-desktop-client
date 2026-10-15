@@ -8,7 +8,11 @@ export function firstLine(text: string): string {
  * names, where a `\` is part of a name (macOS and Linux allow it); a local path takes `lastSegment`.
  */
 export function fileNameOf(path: string): string {
-  return path.split('/').filter(Boolean).at(-1) ?? path;
+  // Cut, not split: a menu reads the names of 50,000 selected paths.
+  let end = path.length;
+  while (end > 0 && path[end - 1] === '/') end--;
+  if (end === 0) return path;
+  return path.slice(path.lastIndexOf('/', end - 1) + 1, end);
 }
 
 /** The extension of a file name or workspace path, dot included (`.asset`); null when it has none or is a dotfile. */
