@@ -495,10 +495,14 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
    screen's first reads (`readFirstScreenAhead`, `readFirstScreen`): `cm version` and the workspace's info and
    pending changes, or the home screen's workspaces and servers. Their commands run while Electron gets ready (50-60
    ms) and the window and its page load; the page's identical calls take the answers (`EarlyCalls`, in
-   `registerApi`; one nobody takes goes after 5 s, `EARLY_ANSWER_MS`). A launch that names another workspace, known
-   only later, has that one read as the window opens (`openFirstWindow`). At `app.whenReady` the main process
-   registers the API and opens the first window. What `cm` logs before it exists waits for it (`CommandLogRelay`),
-   and the page's events sent while it still loads reach it once it has (`sendEventTo`), so its command log lists them.
+   `registerApi`; one nobody takes goes 5 s after the window opened, `EARLY_ANSWER_MS`, `expireUntaken`). A launch
+   that names a folder on Windows and Linux (`launchNamesAFolder`, known as the module loads) reads ahead only
+   `cm version`: its workspace, which `cm` finds, is read as the window opens (`openFirstWindow`). macOS names it later
+   (`open-file`), so there the last workspace is read ahead anyway, and those answers expire unused. A failed read
+   ahead only means the window reads its screen as it opens. At `app.whenReady` the main process registers the API
+   and opens the first window, and builds the menu bar right after creating it, before it shows. What `cm` logs
+   before the window exists waits for it (`CommandLogRelay`), and the page's events sent while it still loads reach
+   it once it has (`sendEventTo`), so its command log lists them.
 3. The window is created hidden, its background the page's `--bg-app` (`WINDOW_BACKGROUND`), and names the workspace
    it opens in its page's address when the folder is there (`startingWorkspaceQuery`).
 4. The page opens that workspace (`openWorkspaceFromAddress`) and asks for its first screen's data
