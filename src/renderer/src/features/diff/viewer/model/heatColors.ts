@@ -12,6 +12,19 @@ export function fullHeatAt(tolerance: number, modelSize: number): number {
   return Math.max(tolerance * 10, modelSize * 0.02, 1e-9);
 }
 
+/**
+ * How far towards the accent a vertex just past the tolerance already is: a third of the way and more, so a change
+ * can't be missed. It reaches the accent at `heatFullAt`.
+ */
+export const HEAT_ONSET = 0.35;
+/** The ghost's opacity just past the tolerance, and at `heatFullAt`: what is gone shows, never hiding the version after. */
+export const GHOST_OPACITY = { onset: 0.2, full: 0.65 } as const;
+
+/** A number as GLSL writes a float literal: `1` would be an int. */
+function glslFloat(value: number): string {
+  return Number.isInteger(value) ? `${value}.0` : `${value}`;
+}
+
 /** The vertex attribute holding each vertex's distance to the other version. */
 export const DISTANCE_ATTRIBUTE = 'surfaceDistance';
 
@@ -41,17 +54,14 @@ const HEAT_OF = `
   }
 `;
 
-/**
- * The version after's material: its clay color within the tolerance, towards the accent beyond it. A change just past
- * the tolerance is already a third of the way to the accent, so it can't be missed.
- */
+/** The version after's material: its clay color within the tolerance, from `HEAT_ONSET` towards the accent beyond it. */
 export function colorsByHeat(material: MeshStandardMaterial, scale: HeatScale): void {
   material.onBeforeCompile = (shader: WebGLProgramParametersWithUniforms) => {
     Object.assign(shader.uniforms, scale);
     shader.vertexShader = spliced(
       shader.vertexShader,
       ['#include <common>', `#include <common>\n${HEAT_OF}\nuniform vec3 heatClay;\nuniform vec3 heatHot;\nvarying vec3 vHeatColor;`],
-      ['#include <color_vertex>', `#include <color_vertex>\nfloat heat = heatOf(${DISTANCE_ATTRIBUTE});\nvHeatColor = mix(heatClay, heatHot, heat == 0.0 ? 0.0 : 0.35 + 0.65 * heat);`],
+      ['#include <color_vertex>', `#include <color_vertex>\nfloat heat = heatOf(${DISTANCE_ATTRIBUTE});\nvHeatColor = mix(heatClay, heatHot, heat == 0.0 ? 0.0 : mix(${glslFloat(HEAT_ONSET)}, 1.0, heat));`],
     );
     shader.fragmentShader = spliced(shader.fragmentShader, ['#include <common>', '#include <common>\nvarying vec3 vHeatColor;'], ['#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb *= vHeatColor;']);
   };
@@ -64,7 +74,7 @@ export function fadesByHeat(material: MeshBasicMaterial, scale: HeatScale): void
     shader.vertexShader = spliced(
       shader.vertexShader,
       ['#include <common>', `#include <common>\n${HEAT_OF}\nvarying float vGhostAlpha;`],
-      ['#include <color_vertex>', `#include <color_vertex>\nfloat heat = heatOf(${DISTANCE_ATTRIBUTE});\nvGhostAlpha = heat == 0.0 ? 0.0 : 0.2 + 0.45 * heat;`],
+      ['#include <color_vertex>', `#include <color_vertex>\nfloat heat = heatOf(${DISTANCE_ATTRIBUTE});\nvGhostAlpha = heat == 0.0 ? 0.0 : mix(${glslFloat(GHOST_OPACITY.onset)}, ${glslFloat(GHOST_OPACITY.full)}, heat);`],
     );
     shader.fragmentShader = spliced(shader.fragmentShader, ['#include <common>', '#include <common>\nvarying float vGhostAlpha;'], ['#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.a *= vGhostAlpha;']);
   };

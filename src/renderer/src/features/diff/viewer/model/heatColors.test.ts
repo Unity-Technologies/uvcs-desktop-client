@@ -1,6 +1,6 @@
 import { MeshBasicMaterial, MeshStandardMaterial, ShaderLib, type WebGLProgramParametersWithUniforms, type WebGLRenderer } from 'three';
 import { describe, expect, it } from 'vitest';
-import { colorsByHeat, DISTANCE_ATTRIBUTE, fadesByHeat, fullHeatAt, heatScale, spliced } from './heatColors';
+import { colorsByHeat, DISTANCE_ATTRIBUTE, fadesByHeat, fullHeatAt, GHOST_OPACITY, HEAT_ONSET, heatScale, spliced } from './heatColors';
 
 /** The shader three would compile for the material, as its `onBeforeCompile` leaves it. */
 function compiled(material: MeshStandardMaterial | MeshBasicMaterial, shader: { vertexShader: string; fragmentShader: string }) {
@@ -16,7 +16,7 @@ describe('colorsByHeat', () => {
     colorsByHeat(material, scale);
     const shader = compiled(material, ShaderLib.standard);
     expect(shader.vertexShader).toContain(`attribute float ${DISTANCE_ATTRIBUTE};`);
-    expect(shader.vertexShader).toContain(`vHeatColor = mix(heatClay, heatHot,`);
+    expect(shader.vertexShader).toContain('vHeatColor = mix(heatClay, heatHot, heat == 0.0 ? 0.0 : mix(0.35, 1.0, heat));');
     expect(shader.fragmentShader).toContain('diffuseColor.rgb *= vHeatColor;');
     // The very objects: moving the slider sets their values, and the GPU recolors without compiling again.
     expect(shader.uniforms.heatTolerance).toBe(scale.heatTolerance);
@@ -30,9 +30,19 @@ describe('fadesByHeat', () => {
     const material = new MeshBasicMaterial();
     fadesByHeat(material, scale);
     const shader = compiled(material, ShaderLib.basic);
-    expect(shader.vertexShader).toContain(`vGhostAlpha = heat == 0.0 ? 0.0 :`);
+    expect(shader.vertexShader).toContain('vGhostAlpha = heat == 0.0 ? 0.0 : mix(0.2, 0.65, heat);');
     expect(shader.fragmentShader).toContain('diffuseColor.a *= vGhostAlpha;');
     expect(shader.uniforms.heatFullAt).toBe(scale.heatFullAt);
+  });
+});
+
+describe('the heat colors', () => {
+  it('shows a change just past the tolerance clearly: already a third of the way to the accent', () => {
+    expect(HEAT_ONSET).toBeGreaterThanOrEqual(1 / 3);
+  });
+
+  it('shows what is gone faintly just past the tolerance, and never hides the version after', () => {
+    expect([GHOST_OPACITY.onset, GHOST_OPACITY.full]).toEqual([0.2, 0.65]);
   });
 });
 
