@@ -26,6 +26,8 @@ export function workspaceRepositoryQuery(path: string) {
       return (await api.workspaces.repositoriesOf([path], lookupId))[path] ?? null;
     },
     staleTime: Infinity,
+    // Kept off screen too: at most `MAX_RESOLVED_WORKSPACES` small answers, keyed by path.
+    gcTime: Infinity,
   });
 }
 
