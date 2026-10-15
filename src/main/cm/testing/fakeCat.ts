@@ -1,7 +1,10 @@
 import { writeFile } from 'node:fs/promises';
 import { cmFails, optionValue, type CmFailure, type FakeCmCommand } from './fakeCmClient';
 
-/** The revisions a `cm cat` was asked for, each with the file it was to write: `cat <spec> --file=<file>` or `cat <spec>;<file> …`. */
+/**
+ * The revisions a `cm cat` was asked for, each with the file it was to write: `cat <spec> --file=<file>` or
+ * `cat <spec>;<file> …`.
+ */
 export function catReadsOf(args: readonly string[]): { spec: string; target: string }[] {
   const single = optionValue(args, '--file=');
   if (single !== undefined) return [{ spec: args[1]!, target: single }];

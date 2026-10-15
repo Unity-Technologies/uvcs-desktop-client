@@ -32,7 +32,10 @@ interface Waiting extends CatRead {
   reject: (error: unknown) => void;
 }
 
-/** A workspace's reads: those waiting, how many `cm cat`s run (one of them in a pooled session or not), the group read last. */
+/**
+ * A workspace's reads: those waiting, how many `cm cat`s run (and whether one holds a pooled session), the group read
+ * last.
+ */
 interface WorkspaceReads {
   waiting: Waiting[];
   running: number;
