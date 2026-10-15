@@ -23,7 +23,9 @@ export function sendEventTo<Name extends UvcsEventName>(target: WebContents, nam
     return;
   }
   const waiting = waitingForLoad.get(target) ?? sendOnceLoaded(target);
-  waiting.push(() => sendEventTo(target, name, payload));
+  // Sent as it loads, without asking again: Electron may still report it loading during `did-finish-load`, and asking
+  // would wait for a load that never comes (the first screen's commands, logged before it, went missing that way).
+  waiting.push(() => !target.isDestroyed() && target.send(EVENT_CHANNEL, name, payload));
 }
 
 /** The events waiting for the page to load, sent then. */
