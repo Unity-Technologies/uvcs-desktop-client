@@ -5,7 +5,7 @@
 // time (`TEXTURES_IN_HAND`); only the decoded bitmaps are kept (`decodes`).
 
 import { concurrencyLimit } from '@shared/concurrencyLimit';
-import { foundFileKey, type FoundFile } from '@shared/domain/unityAssets';
+import { foundFileKey, MAX_DOWNLOADED_AHEAD_BYTES, type FoundFile } from '@shared/domain/unityAssets';
 import { api } from '../../../../../api/client';
 import type { TextureDecoded } from './decodeTexture';
 import { MAX_TEXTURE_FILE_BYTES } from './textureBudget';
@@ -59,27 +59,59 @@ export function textureKey(workspacePath: string, load: Omit<TextureLoad, 'key'>
 
 /**
  * Each load's texture decoded, in the order asked. The repository's files not decoded yet are asked to download first,
- * all of them in one batch (`api.unityAssets.download`): read a few at a time, they would each go in a `cm cat` of
- * their own.
+ * in one batch (`api.unityAssets.download`): read a few at a time, they would each go in a `cm cat` of their own. At
+ * most `MAX_DOWNLOADED_AHEAD_BYTES` at a time, so what was downloaded is still kept when it is read: the next part is
+ * asked for as the first texture in it comes up.
  */
 export function loadTextures(workspacePath: string, loads: readonly TextureLoad[]): Promise<TextureDecoded>[] {
   const downloads = new Map<string, FoundFile>();
   for (const { key, source } of loads) {
     if (source.kind === 'found' && source.file.stored === 'repository' && source.file.size <= MAX_TEXTURE_FILE_BYTES && !decodes.has(key)) downloads.set(foundFileKey(source.file), source.file);
   }
-  // A download that fails is told by its read.
-  if (downloads.size > 0) api.unityAssets.download(workspacePath, [...downloads.values()]).catch(() => undefined);
-  return loads.map((load) => loadTexture(workspacePath, load));
+  const askFor = new Map<string, () => void>();
+  for (const part of partsOf([...downloads.values()], MAX_DOWNLOADED_AHEAD_BYTES)) {
+    let asked = false;
+    const ask = (): void => {
+      if (asked) return;
+      asked = true;
+      // A download that fails is told by its read.
+      api.unityAssets.download(workspacePath, part).catch(() => undefined);
+    };
+    for (const file of part) askFor.set(foundFileKey(file), ask);
+  }
+  const [first] = askFor.values();
+  first?.();
+  return loads.map((load) => loadTexture(workspacePath, load, (load.source.kind === 'found' && askFor.get(foundFileKey(load.source.file))) || NOTHING_TO_ASK));
 }
 
-/** The texture decoded, from the one decode of the same file version if there was one. */
-function loadTexture(workspacePath: string, load: TextureLoad): Promise<TextureDecoded> {
+const NOTHING_TO_ASK = (): void => undefined;
+
+/** The files in parts of at most `maxBytes` by their sizes, in order; one bigger than that alone. */
+function partsOf(files: readonly FoundFile[], maxBytes: number): FoundFile[][] {
+  const parts: FoundFile[][] = [];
+  let bytes = 0;
+  for (const file of files) {
+    const size = Math.max(file.size, 0);
+    const last = parts.at(-1);
+    if (last && bytes + size <= maxBytes) {
+      last.push(file);
+      bytes += size;
+    } else {
+      parts.push([file]);
+      bytes = size;
+    }
+  }
+  return parts;
+}
+
+/** The texture decoded, from the one decode of the same file version if there was one; `askForDownload` as it is read. */
+function loadTexture(workspacePath: string, load: TextureLoad, askForDownload: () => void): Promise<TextureDecoded> {
   const kept = decodes.get(load.key);
   if (kept) return kept;
   // Its turn come, a load the cache let go of meanwhile (no viewer holds it, and it went past the budget or a while
   // after the last viewer) reads nothing. One whose turn comes at once was just asked for, before the cache has it.
   let decoded: Promise<TextureDecoded> | undefined;
-  decoded = inHand(() => (decoded === undefined || decodes.peek(load.key) === decoded ? readAndDecode(workspacePath, load) : Promise.resolve(LET_GO_OF)));
+  decoded = inHand(() => (decoded === undefined || decodes.peek(load.key) === decoded ? readAndDecode(workspacePath, load, askForDownload) : Promise.resolve(LET_GO_OF)));
   // Sized as at most the budget's side until it is known; a decode that failed to read is tried again next time.
   decodes.set(load.key, decoded, load.longest * load.longest * 4);
   void decoded.then((result) => {
@@ -91,7 +123,8 @@ function loadTexture(workspacePath: string, load: TextureLoad): Promise<TextureD
   return decoded;
 }
 
-async function readAndDecode(workspacePath: string, load: TextureLoad): Promise<TextureDecoded> {
+async function readAndDecode(workspacePath: string, load: TextureLoad, askForDownload: () => void): Promise<TextureDecoded> {
+  askForDownload();
   const bytes = load.source.kind === 'bytes' ? load.source.bytes.slice() : await readFound(workspacePath, load.source.file);
   if (!(bytes instanceof Uint8Array)) return bytes;
   return decodeOffThread({ bytes, name: load.name, longest: load.longest, flipY: load.flipY });
