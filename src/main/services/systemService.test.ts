@@ -5,12 +5,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { net, shell } from 'electron';
 import { gravatarChoice } from '@shared/domain/gravatarChoice';
 import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
+import { ACCOUNT_FORMAT } from '../cm/accounts';
+import { formatOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { memorySettings } from '../settings/testing/memorySettings';
 import { readDraggedPath } from '../system/dragPasteboard';
 import { gravatarUrl } from '../system/gravatar';
+import { createAccountsService } from './accountsService';
+import { createRepositoriesService } from './repositoriesService';
 import { createSystemService } from './systemService';
-import { serviceContext } from './testing/serviceContext';
+import { profilesContext, serviceContext } from './testing/serviceContext';
 
 vi.mock('electron', () => ({
   app: {},
@@ -26,7 +30,7 @@ vi.mock('../window/incomingNotification', () => ({ showIncomingNotification: vi.
 function system(answers: Record<string, CmAnswer>, settings: Partial<AppSettings> = {}) {
   const fake = fakeCmClient(answers);
   const relocate = vi.spyOn(fake.cm, 'relocate');
-  return { ...fake, relocate, service: createSystemService(serviceContext(fake.cm, { settings: memorySettings(settings) })) };
+  return { ...fake, relocate, service: createSystemService(serviceContext(fake.cm, { settings: memorySettings(settings) }), profilesContext(fake.cm)) };
 }
 
 describe('the cm version', () => {
@@ -52,11 +56,11 @@ describe('the cm version', () => {
 });
 
 describe('the current user', () => {
-  it('asks cm who the user is with one quick command', async () => {
+  it('asks cm who the user is with one quick command, in any directory', async () => {
     const { service, commands } = system({ whoami: 'ana@unity.com\n' });
 
     expect(await service.currentUser()).toBe('ana@unity.com');
-    expect(commands).toMatchObject([{ via: 'query', args: ['whoami'] }]);
+    expect(commands).toMatchObject([{ via: 'query', args: ['whoami'], options: { anyDirectory: true } }]);
   });
 });
 
@@ -137,7 +141,19 @@ describe('the setup and connection checks', () => {
     const { service, lines } = system({ 'profile list': 'local\n' });
 
     expect(await service.checkSetup()).toBeNull();
-    expect(lines()).toEqual(['profile list']);
+    expect(lines()).toEqual([`profile list --format=${ACCOUNT_FORMAT}`]);
+  });
+
+  it('shares the profiles read with the accounts and the servers: launch lists the profiles once', async () => {
+    const fake = fakeCmClient({ 'profile list': formatOutput(['local', 'local', 'ana', 'NameWorkingMode']) });
+    const profiles = profilesContext(fake.cm);
+    const context = serviceContext(fake.cm, { settings: memorySettings({}) });
+    const [system, accounts, repositories] = [createSystemService(context, profiles), createAccountsService(context, profiles), createRepositoriesService(context, profiles)];
+
+    await Promise.all([accounts.list(), repositories.servers(), system.checkSetup()]);
+    expect(await system.checkSetup()).toBeNull();
+
+    expect(fake.commands).toMatchObject([{ via: 'query', options: { anyDirectory: true } }]);
   });
 
   it("checks a workspace's server once it answers, for every window, and again while it doesn't", async () => {

@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { WebContents } from 'electron';
@@ -9,6 +9,7 @@ import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer } from '../cm/
 import { UPDATE_ARGS } from '../cm/updateArgs';
 import { runForCaller } from '../ipc/caller';
 import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
+import type { WorkspaceWindows } from '../window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from '../workspace/WorkspaceHeaders';
 import type { SwitchContext } from './ServiceContext';
 import { serviceContext } from './testing/serviceContext';
@@ -20,17 +21,17 @@ const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
 
 const STATUS_HEADER = statusHeader('/main/task1', { changeset: 12, repository: 'game' });
 
-function workspaces(answers: Record<string, CmAnswer>, watchers?: Partial<WorkspaceWatchers>) {
+function workspaces(answers: Record<string, CmAnswer>, watchers?: Partial<WorkspaceWatchers>, windows?: Partial<WorkspaceWindows>) {
   const fake = fakeCmClient(answers);
   const headers = new WorkspaceHeaders(cmHeaderReaders(fake.cm));
-  const context = serviceContext(fake.cm, { headers, watchers: watchers as WorkspaceWatchers });
+  const context = serviceContext(fake.cm, { headers, watchers: watchers as WorkspaceWatchers, windows: windows as WorkspaceWindows });
   return { ...fake, operations: context.operations, service: createWorkspacesService(context, {} as SwitchContext) };
 }
 
 const WORKSPACE_NAMES = { getworkspacefrompath: formatOutput(['game', 'a0411612']) };
 
 describe('workspace list', () => {
-  it('lists the workspaces with one local read, each folder once', async () => {
+  it('lists the workspaces with one local read in any directory, each folder once', async () => {
     const { service, commands } = workspaces({
       'workspace list': formatOutput(['game', WORKSPACE, 'g1'], ['game-copy', WORKSPACE, 'g2'], ['tools', join(tmpdir(), 'tools'), 'g3']),
     });
@@ -39,7 +40,7 @@ describe('workspace list', () => {
       { name: 'game-copy', path: WORKSPACE, guid: 'g2' },
       { name: 'tools', path: join(tmpdir(), 'tools'), guid: 'g3' },
     ]);
-    expect(commands).toMatchObject([{ via: 'query', args: ['workspace', 'list', '--format={wkname}\u001f{path}\u001f{wkid}\u001e'] }]);
+    expect(commands).toMatchObject([{ via: 'query', args: ['workspace', 'list', '--format={wkname}\u001f{path}\u001f{wkid}\u001e'], options: { anyDirectory: true } }]);
   });
 });
 
@@ -217,35 +218,70 @@ describe('a new workspace for a task', () => {
 });
 
 describe('watching a workspace', () => {
-  it("warms up the workspace's cm sessions and watches it for the calling window", async () => {
+  it("shows the workspace's cm sessions and watches it for the calling window", async () => {
     const watch = vi.fn(() => ({ complete: true }) as never);
-    const { service, warmedUp } = workspaces({}, { watch });
+    const { service, shown } = workspaces({}, { watch, coverageOf: () => undefined }, { showsHomeScreen: () => true });
     const window = { id: 7, isDestroyed: () => false } as unknown as WebContents;
 
     await runForCaller(window, () => service.watch(WORKSPACE));
 
-    expect(warmedUp).toEqual([WORKSPACE]);
+    expect(shown).toEqual([WORKSPACE]);
     expect(watch).toHaveBeenCalledWith(7, WORKSPACE);
+  });
+
+  it("lets the home folder's cm sessions go once no window shows the home screen, and keeps them while one does", async () => {
+    const window = { id: 7, isDestroyed: () => false } as unknown as WebContents;
+    let homeScreen = true;
+    const { service, released } = workspaces({}, { watch: async () => 'full' as const, coverageOf: () => undefined }, { showsHomeScreen: () => homeScreen });
+
+    await runForCaller(window, () => service.watch(WORKSPACE));
+    expect(released).toEqual([]);
+
+    homeScreen = false;
+    await runForCaller(window, () => service.watch(WORKSPACE));
+    expect(released).toEqual([homedir()]);
+  });
+
+  it.each([
+    ['opens it first: never let go', [homedir(), WORKSPACE], []],
+    ['opens it after another window opened another workspace: let go before it opened only', [WORKSPACE, homedir()], [homedir()]],
+  ])('keeps the cm sessions of a workspace in the home folder itself while a window shows it, whichever %s', async (_order, opened, releasedHome) => {
+    const window = { id: 7, isDestroyed: () => false } as unknown as WebContents;
+    const watched = new Set<string>();
+    const watchers = {
+      watch: async (_viewer: number, workspacePath: string) => (watched.add(workspacePath), 'full' as const),
+      coverageOf: (workspacePath: string) => (watched.has(workspacePath) ? ('full' as const) : undefined),
+    };
+    const { service, released, shown } = workspaces({}, watchers, { showsHomeScreen: () => false });
+
+    for (const workspacePath of opened) await runForCaller(window, () => service.watch(workspacePath));
+
+    expect(shown).toEqual(opened);
+    expect(released).toEqual(releasedHome);
   });
 });
 
 describe('other workspaces', () => {
-  it('finds the root of the workspace holding a folder, or none outside any workspace', async () => {
-    const { service } = workspaces({
+  it('finds the root of the workspace holding a folder, or none outside any workspace, with a local read in any directory', async () => {
+    const { service, commands } = workspaces({
       getworkspacefrompath: ({ args }) => (args[1] === join(WORKSPACE, 'src') ? `${WORKSPACE}\n` : cmFails(`Error: ${args[1]} is not in a workspace.`)),
     });
 
     expect(await service.findRoot(join(WORKSPACE, 'src'))).toBe(WORKSPACE);
     expect(await service.findRoot(tmpdir())).toBeNull();
+    expect(commands.map(({ via, options }) => ({ via, options }))).toEqual([
+      { via: 'query', options: { anyDirectory: true } },
+      { via: 'query', options: { anyDirectory: true } },
+    ]);
   });
 
-  it("glances at another workspace's branch and pending changes with one local cm status from the home folder", async () => {
+  it("glances at another workspace's branch and pending changes with one local cm status, in any directory", async () => {
     const withChanges = STATUS_HEADER.replace('</StatusOutput>', `<Changes>${change('CH', 'a.cs')}</Changes></StatusOutput>`);
     const { service, commands } = workspaces({ status: withChanges });
 
     expect(await service.glance(WORKSPACE)).toEqual({ selector: { kind: 'branch', name: '/main/task1' }, pendingCount: 1 });
-    expect(commands).toMatchObject([{ via: 'query', args: ['status', '--xml', WORKSPACE], options: {} }]);
-    expect(commands[0]?.options.cwd).toBeUndefined();
+    expect(commands).toMatchObject([{ via: 'query', args: ['status', '--xml', WORKSPACE] }]);
+    expect(commands[0]?.options).toEqual({ anyDirectory: true });
   });
 
   it("glances at a Unity organization's workspace with that one command, as the switcher shows no repository from it", async () => {

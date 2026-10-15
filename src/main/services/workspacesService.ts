@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { app } from 'electron';
 import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
@@ -21,14 +22,14 @@ import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 const UPDATE_NEEDS_MERGE = 'Some of your local changes collide with incoming ones. Open Incoming to merge them while updating.';
 
-export function createWorkspacesService({ cm, operations, watchers, settings, headers }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): WorkspacesApi {
+export function createWorkspacesService({ cm, operations, watchers, windows, settings, headers }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): WorkspacesApi {
   const switchDependencies = { cm, settings, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'switch-backups') };
   const lookUpRepository = workspaceRepositoryLookup(cm);
   /** Folders `create` made (they didn't exist or were empty): the only ones `discardNew` may delete. */
   const createdFolders = new Set<string>();
 
   async function list(): Promise<WorkspaceSummary[]> {
-    const output = await cm.query(['workspace', 'list', `--format=${recordFormat(['wkname', 'path', 'wkid'])}`]);
+    const output = await cm.query(['workspace', 'list', `--format=${recordFormat(['wkname', 'path', 'wkid'])}`], { anyDirectory: true });
     const workspaces = parseRecords(output).map(([name = '', path = '', guid = '']) => ({ name, path, guid }));
     // The client registry can list the same workspace several times; show each folder once.
     return [...new Map(workspaces.map((workspace) => [workspace.path, workspace])).values()];
@@ -75,9 +76,17 @@ export function createWorkspacesService({ cm, operations, watchers, settings, he
     });
   }
 
+  /**
+   * A window shows the workspace: its `cm shell`s start, and the home folder's go once no window shows the home screen,
+   * instead of idling for minutes; they served the home screen this window may have come from. Unless a window, this
+   * one or another, shows a workspace in the home folder itself: those shells are its own.
+   */
   async function watch(workspacePath: string): Promise<WatchCoverage> {
-    cm.warmUp(workspacePath);
-    return watchers.watch(callerId(), workspacePath);
+    cm.show(workspacePath);
+    const coverage = watchers.watch(callerId(), workspacePath);
+    const home = homedir();
+    if (!windows.showsHomeScreen() && watchers.coverageOf(home) === undefined) cm.release(home);
+    return coverage;
   }
 
   function switchNewWorkspace(workspacePath: string, targetSpec: string, operationId: string): Promise<void> {

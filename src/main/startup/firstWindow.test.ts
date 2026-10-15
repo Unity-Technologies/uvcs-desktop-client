@@ -21,7 +21,10 @@ function launch({ atLoad, atOpen = atLoad, namesAFolder = false, readsFail = fal
   let firstWorkspace = atLoad;
   let failing = readsFail;
   const sources = {
-    cm: { warmUp: (cwd?: string) => void steps.push(`warm up ${cwd ?? 'the home folder'}`) },
+    cm: {
+      warmUp: (cwd?: string) => void steps.push(`warm up ${cwd ?? 'the home folder'}`),
+      showWhileOpening: (cwd: string) => void steps.push(`show ${cwd} while it opens`),
+    },
     windows: { firstWorkspace: () => firstWorkspace, openFirst: () => void steps.push('open the window') },
     early: {
       start: (method: string, args: unknown[]) => {
@@ -43,7 +46,7 @@ function launch({ atLoad, atOpen = atLoad, namesAFolder = false, readsFail = fal
 
 const CM_VERSION = 'read system.cmVersion []';
 const WORKSPACE_READS = (workspacePath: string): string[] => [
-  `warm up ${workspacePath}`,
+  `show ${workspacePath} while it opens`,
   `read workspaces.info ${JSON.stringify([workspacePath])}`,
   `read pendingChanges.list ${JSON.stringify([workspacePath, SETTINGS.pendingChanges])}`,
 ];
@@ -54,7 +57,7 @@ afterEach(() => {
 });
 
 describe('the first window', () => {
-  it("starts the workspace's cm shells and its Changes view's reads before Electron is ready", () => {
+  it("starts the workspace's cm shells, shown while it opens, and its Changes view's reads before Electron is ready", () => {
     expect(launch({ atLoad: '/wk' })).toEqual([CM_VERSION, ...WORKSPACE_READS('/wk'), 'Electron ready', ...OPENED]);
   });
 

@@ -4,17 +4,39 @@ import { statusTones } from '../../components/changeFilter';
 import type { StatusTone } from '../../components/StatusBadge';
 import { withoutRepeatedFolders } from '../../lib/enclosingFolders';
 import type { GroupedTreeRow, TreeGroup } from '../../lib/groupedPathTree';
-import type { FileConflictState } from './resolve/useFileConflicts';
+import type { ConflictedFile, FileConflictState } from './resolve/useFileConflicts';
 
 /**
  * Something in the merge the user can look at: a conflict to decide or a change that applies cleanly. `path` is
- * where it is, without the root ("src/app.ts"), as the list shows it.
+ * where it is, without the root ("src/app.ts"), as the list shows it. Items come from the plan alone and never change
+ * with it: where a conflict stands is the `MergeProgress`.
  */
 export type MergeItem = { key: string; path: string } & (
-  | { kind: 'directoryConflict'; index: number; conflict: DirectoryConflict; resolution: DirectoryConflictResolution | undefined }
-  | { kind: 'fileConflict'; state: FileConflictState }
+  | { kind: 'directoryConflict'; index: number; conflict: DirectoryConflict }
+  | { kind: 'fileConflict'; file: ConflictedFile }
   | { kind: 'change'; change: MergeChange }
 );
+
+/**
+ * Where the conflicts stand: each file's state, by its key, as its versions load and the user decides, and each
+ * directory conflict's resolution, by its index. Kept apart from the items: thousands of them are sorted and laid out
+ * once, and a status changing (thousands do while the versions load) only draws again the rows that show it.
+ */
+export interface MergeProgress {
+  fileStates: ReadonlyMap<string, FileConflictState>;
+  directoryResolutions: readonly (DirectoryConflictResolution | undefined)[];
+}
+
+export function mergeProgress(fileStates: readonly FileConflictState[], directoryResolutions: readonly (DirectoryConflictResolution | undefined)[]): MergeProgress {
+  return { fileStates: new Map(fileStates.map((state) => [state.file.key, state])), directoryResolutions };
+}
+
+/** A conflicting file's state: every file of the plan has one, from the first render (`useFileConflicts`). */
+export function fileStateOf(item: Extract<MergeItem, { kind: 'fileConflict' }>, progress: MergeProgress): FileConflictState {
+  const state = progress.fileStates.get(item.file.key);
+  if (!state) throw new Error(`No state for the conflicting file ${item.file.key}`);
+  return state;
+}
 
 /** The merge page's groups: what both sides changed, and what applies cleanly. */
 export type MergeGroup = 'conflicts' | 'changes';
@@ -28,11 +50,7 @@ export const MERGE_GROUP_TIPS: Record<MergeGroup, string> = {
  * Conflicts first (directory ones, then files), then everything that merges cleanly, but a folder added or deleted
  * with what it holds: its items say it already, as in a diff (`withoutRepeatedFolders`); a moved one stays.
  */
-export function buildMergeItems(
-  plan: MergePlan,
-  fileStates: FileConflictState[],
-  directoryResolutions: readonly (DirectoryConflictResolution | undefined)[],
-): MergeItem[] {
+export function buildMergeItems(plan: MergePlan, conflictedFiles: readonly ConflictedFile[]): MergeItem[] {
   return [
     ...plan.directoryConflicts.map(
       (conflict, index): MergeItem => ({
@@ -41,10 +59,9 @@ export function buildMergeItems(
         path: withoutRoot(conflict.destination.path),
         index,
         conflict,
-        resolution: directoryResolutions[index],
       }),
     ),
-    ...fileStates.map((state): MergeItem => ({ kind: 'fileConflict', key: `file:${state.file.key}`, path: withoutRoot(state.file.path), state })),
+    ...conflictedFiles.map((file): MergeItem => ({ kind: 'fileConflict', key: `file:${file.key}`, path: withoutRoot(file.path), file })),
     ...withoutRepeatedFolders(
       plan.changes.map((change, index): MergeItem & { kind: 'change' } => ({ kind: 'change', key: `change:${index}`, path: withoutRoot(change.path), change })),
       (item) => item.change.path,
@@ -57,9 +74,9 @@ function isConflict(item: MergeItem): boolean {
   return item.kind !== 'change';
 }
 
-export function needsDecision(item: MergeItem): boolean {
-  if (item.kind === 'directoryConflict') return !item.resolution;
-  if (item.kind === 'fileConflict') return !item.state.resolution;
+export function needsDecision(item: MergeItem, progress: MergeProgress): boolean {
+  if (item.kind === 'directoryConflict') return !progress.directoryResolutions[item.index];
+  if (item.kind === 'fileConflict') return !fileStateOf(item, progress).resolution;
   return false;
 }
 
@@ -69,8 +86,8 @@ export function inListOrder(items: MergeItem[]): MergeItem[] {
 }
 
 /** The first item still waiting for the user, as the list shows them: where the page starts, and goes after a run. */
-export function firstWaiting(items: MergeItem[]): MergeItem | undefined {
-  return inListOrder(items).find(needsDecision);
+export function firstWaiting(items: MergeItem[], progress: MergeProgress): MergeItem | undefined {
+  return inListOrder(items).find((item) => needsDecision(item, progress));
 }
 
 /**

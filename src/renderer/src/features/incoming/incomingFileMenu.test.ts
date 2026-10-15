@@ -4,6 +4,7 @@ import type { DiffEntry } from '@shared/domain/diff';
 import type { MergeTool } from '@shared/domain/mergeTools';
 import type { MergePlan, MergeRequest } from '@shared/domain/merge';
 import type { Action, MenuEntry, Submenu } from '../../lib/actions';
+import { mergeProgress } from '../merge/mergeItems';
 import { mergeItemMenu } from '../merge/mergeItemMenu';
 import type { FileConflictState } from '../merge/resolve/useFileConflicts';
 import { incomingFileMenu, type IncomingFileMenuContext } from './incomingFileMenu';
@@ -52,10 +53,11 @@ const mergeOnly = (menu: MenuEntry[]) =>
 const request: MergeRequest = { kind: 'merge', sourceSpec: 'br:/main/task' };
 const plan = { contributors: { source: { changesetId: 4, branch: '/main' }, destination: { changesetId: 1, branch: '/main' } }, fileConflicts: [] } as unknown as MergePlan;
 const onMergePage = (state: FileConflictState) =>
-  mergeItemMenu([{ kind: 'fileConflict', key: `file:${state.file.key}`, path: state.file.path, state }], {
+  mergeItemMenu([{ kind: 'fileConflict', key: `file:${state.file.key}`, path: state.file.path, file: state.file }], {
     workspacePath: '/ws',
     request,
     plan,
+    progress: mergeProgress([state], []),
     labels: UPDATE_LABELS,
     itemTypeOf: () => 'file',
     preferredTool: vscode,
