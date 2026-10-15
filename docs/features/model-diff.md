@@ -448,9 +448,11 @@ heatmap's), and come back in the other modes. The merge cards' stills stay clay 
   time (below, "Budget"), so the look first asks for every repository revision it will read (`api.unityAssets.download`,
   `RevisionDownloads.fetch`: the disk checked without keeping its bytes, `WorkspaceCopies.has`, from the hash known for
   the file as it is when there is one); their reads then find them downloaded, never starting a `cm cat` of their own:
-  a revision fetched is kept past `MAX_KEPT_BYTES` until read (or `FETCHED_KEPT_MS`, five minutes: the look left), and
-  one whose batch failed fails its read at once, until it is fetched again (64 textures with the server down would
-  otherwise start 22 more commands). The reads asked at once (the look's downloads, a ring of `.meta` files) wait until each has checked the disk, then go in one `cm cat <spec>;<file>
+  it asks for at most `MAX_DOWNLOADED_AHEAD_BYTES` (512 MB, half the downloads kept) at a time, the next part as the
+  first texture in it comes up, so what was fetched is still kept when read; and a revision whose batch failed fails
+  its read at once, until it is fetched again (64 textures with the server down would otherwise start 22 more
+  commands). Keeping fetched revisions past `MAX_KEPT_BYTES` until read was tried and dropped: it needed a budget of its
+  own, a cap, a time-out and to tell which read took each, for what asking a part at a time does. The reads asked at once (the look's downloads, a ring of `.meta` files) wait until each has checked the disk, then go in one `cm cat <spec>;<file>
   <spec>;<file> …` (`catArgs`), which downloads them in one batch, in a process of its own; a batch holds one
   repository's revisions (an xlinked one's apart: `cm cat` resolves each repository's on its own) and stops at
   `MAX_BATCH_BYTES` (64 MB by the sizes listed, so the first textures show sooner) and at a command line Windows can
