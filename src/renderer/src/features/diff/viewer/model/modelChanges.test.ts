@@ -273,6 +273,19 @@ describe('modelChanges: mesh data', () => {
       expect(modelChanges(modelSummary(painted(6)), modelSummary(painted(6)))).toEqual([]);
     });
 
+    it("tells nothing when a slot no face used is gone, as Blender's FBX export writes them", () => {
+      const body = (slots: string[]): ParsedModel => {
+        const model = testModel({ nodes: [{ name: 'Body', mesh: { slots } }] });
+        const first = slots.indexOf('Paint');
+        model.meshes[0]!.groups = [
+          { start: 0, count: 18, slot: first },
+          { start: 18, count: 18, slot: first + 1 },
+        ];
+        return model;
+      };
+      expect(modelChanges(modelSummary(body(['Unused', 'Paint', 'Glass'])), modelSummary(body(['Paint', 'Glass'])))).toEqual([]);
+    });
+
     it('tells triangles whose winding turned, over the same vertices, as faces flipped', () => {
       const flipped = asStored.map(([a, b, c], t) => (t < 2 ? [a!, c!, b!] : [a!, b!, c!]));
       expect(modelChanges(modelSummary(indexed(asStored)), modelSummary(indexed(flipped)))).toMatchObject([{ kind: 'facesFlipped', node: { name: 'Rock' } }]);
@@ -329,6 +342,15 @@ describe('modelChanges: mesh data', () => {
     expect(modelChanges(modelSummary(face()), modelSummary(resculpted))).toMatchObject([{ kind: 'blendShapesChanged', node: { name: 'Face' }, names: ['Smile', 'Frown'] }]);
     // Renamed, it is told renamed: its shape is compared under its new name only when both versions have that name.
     expect(kinds(modelChanges(modelSummary(face()), modelSummary(face())))).toEqual([]);
+  });
+
+  it('tells a blendshape resculpted on a model resized by its root, whose vertices and offsets kept their scale', () => {
+    const face = (rootScale: number, smile: number): ParsedModel => {
+      const model = testModel({ nodes: [{ name: 'Head', scale: [rootScale, rootScale, rootScale] }, { name: 'Face', parent: 'Head', mesh: { blendShapes: ['Smile', 'Blink'] } }] });
+      model.meshes[0]!.blendShapes[0]!.deltas[4] = smile;
+      return model;
+    };
+    expect(modelChanges(modelSummary(face(1, 0.02)), modelSummary(face(100, 0.05)))).toMatchObject([{ kind: 'resized' }, { kind: 'blendShapesChanged', names: ['Smile'] }]);
   });
 
   it("tells no blendshape resculpted on a model resized with its vertices: its offsets scaled with them", () => {
