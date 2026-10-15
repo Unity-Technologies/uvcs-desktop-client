@@ -51,6 +51,11 @@ describe('withRepositories', () => {
     expect(() => withRepositories(plan([XLINKED, '/elsewhere.cs']), parseTreeItems(LISTING))).toThrow('/elsewhere.cs');
   });
 
+  it("fails rather than read a destination's version the listing names no revision of", () => {
+    const withoutRevision = parseTreeItems(LISTING).map((item) => (item.path === OWN.slice(1) ? { ...item, revisionId: -1 } : item));
+    expect(() => withRepositories(plan([XLINKED, OWN]), withoutRevision)).toThrow(`Couldn't tell which repository ${OWN} is in.`);
+  });
+
   it('keeps a plan without file conflicts as it is', () => {
     expect(withRepositories(plan([]), []).fileConflicts).toEqual([]);
   });

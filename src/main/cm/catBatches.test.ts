@@ -19,6 +19,14 @@ describe('catBatchesOf', () => {
     expect(specsOf(batches)).toEqual([['revid:1@eco@local', 'revid:3@eco@local'], ['revid:2@lib@local']]);
   });
 
+  it('batches revisions by id apart from items at a point: only a batch of revid: specs is looked up at once', () => {
+    const item = (id: number): CatRead => ({ ...read(id), spec: `itemid:${id}#cs:5@eco@local` });
+    expect(specsOf(catBatchesOf([read(1), item(2), read(3), item(4)], asIs))).toEqual([
+      ['revid:1@eco@local', 'revid:3@eco@local'],
+      ['itemid:2#cs:5@eco@local', 'itemid:4#cs:5@eco@local'],
+    ]);
+  });
+
   it("reads alone a revision whose repository can't be told", () => {
     expect(specsOf(catBatchesOf([read(1), read(2, { repository: null }), read(3)], asIs))).toEqual([['revid:2@eco@local'], ['revid:1@eco@local', 'revid:3@eco@local']]);
   });
