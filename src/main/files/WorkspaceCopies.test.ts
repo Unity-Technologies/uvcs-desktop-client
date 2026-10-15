@@ -148,6 +148,17 @@ describe("WorkspaceCopies.read of a revision whose hash the reader doesn't know:
     expect(await copies.read(workspace, asked('Prop/Pumpkin.obj', 186, 'game@serverA:8087'))).not.toBeNull();
   });
 
+  it("answers a path whose revision the workspace told with no command, and asks the workspace where only another tree's listing named one", async () => {
+    const { workspace, fake, copies } = await setUp();
+    copies.rememberHeld(workspace, [{ path: 'Prop/Pumpkin.obj', revision: { revisionId: 186, repository: '3dtest/models@MyOrg@unity' }, hash: hashOf(OBJ), size: OBJ.length }]);
+    copies.remember(workspace, [{ path: 'Prop/PumpkinMaterials.mtl', revision: { revisionId: 132, repository: '3dtest/models@MyOrg@unity' }, hash: hashOf('old'), size: 3 }]);
+
+    expect(await copies.read(workspace, asked('Prop/Pumpkin.obj', 182))).toBeNull();
+    expect(fake.lines()).toEqual([]);
+    expect(await copies.read(workspace, asked('Prop/PumpkinMaterials.mtl', 185))).not.toBeNull();
+    expect(fake.lines()).toHaveLength(1);
+  });
+
   it("never takes a revision a listing named in a same-named repository of another server", async () => {
     const workspace = await workspaceWith({ 'Prop/Pumpkin.obj': OBJ });
     const copies = new WorkspaceCopies();

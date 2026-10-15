@@ -107,6 +107,20 @@ describe("the workspace's revision in a history", () => {
     expect((await content.read(workspace, workspaceRevision)).text).toBe('downloaded');
     expect(fake.ran('cat revid:45@game@local')).toBe(true);
   });
+
+  it("downloads the history's other revisions with no listing of the file's folder: the history's cm ls said what the workspace holds there", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'history-wk-'));
+    await writeFile(join(workspace, 'README.md'), '# Game\n');
+    const fake = fakeCmClient({ ...TWO_REVISIONS, ls: formatOutput([45, contentHashOf(Buffer.from('# Game\n')), 7, 'rep:game@local']), cat: async ({ args }) => (await writeFile(optionValue(args, '--file=')!, 'older'), '') });
+    const context = serviceContext(fake.cm);
+    await createHistoryService(context, { apps: {} as never }).forItem(workspace, 'README.md');
+    const listedBefore = fake.lines().filter((line) => line.startsWith('ls')).length;
+
+    await createContentService(context).read(workspace, { kind: 'revision', revision: { revisionId: 15, repository: 'game@local' }, fileName: 'README.md' });
+
+    expect(fake.lines().filter((line) => line.startsWith('ls'))).toHaveLength(listedBefore);
+    expect(fake.ran('cat revid:15@game@local')).toBe(true);
+  });
 });
 
 describe("the workspace's revision in a cloud repository's history", () => {
