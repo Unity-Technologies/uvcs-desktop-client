@@ -54,9 +54,14 @@ export function compareSurfaces(before: PlacedMeshes, after: PlacedMeshes): Surf
 /** How much of each version moved past the tolerance (shares of their vertices), and the farthest any moved. */
 export function changeShares(comparison: SurfaceComparison, tolerance: number): { moved: number; gone: number; farthest: number } {
   const within = Math.fround(tolerance);
+  // Counted, not filtered: a filtered copy of millions of distances held the window at each step of the slider.
   const share = (meshes: Float32Array[]): number => {
-    const total = meshes.reduce((sum, mesh) => sum + mesh.length, 0);
-    const beyond = meshes.reduce((sum, mesh) => sum + mesh.filter((distance) => distance > within).length, 0);
+    let total = 0;
+    let beyond = 0;
+    for (const mesh of meshes) {
+      total += mesh.length;
+      for (let v = 0; v < mesh.length; v++) if (mesh[v]! > within) beyond++;
+    }
     return total === 0 ? 0 : beyond / total;
   };
   const farthest = Math.max(0, ...[...comparison.before, ...comparison.after].map((mesh) => mesh.reduce((max, distance) => Math.max(max, distance), 0)));
