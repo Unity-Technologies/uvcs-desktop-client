@@ -8,7 +8,8 @@ import { catReadsOf, fakeCat } from '../cm/testing/fakeCat';
 import { cmFails, fakeCmClient } from '../cm/testing/fakeCmClient';
 import { formatOutput } from '../cm/testing/cmOutput';
 import { WorkspaceCopies, type RevisionFile } from '../files/WorkspaceCopies';
-import { batchesOf, MAX_BATCH_BYTES, RevisionDownloads } from './RevisionDownloads';
+import { MAX_DOWNLOADED_AHEAD_BYTES } from '@shared/domain/unityAssets';
+import { batchesOf, MAX_BATCH_BYTES, MAX_KEPT_BYTES, RevisionDownloads } from './RevisionDownloads';
 
 const md5 = (text: string) => createHash('md5').update(text).digest('base64');
 
@@ -57,6 +58,47 @@ describe('RevisionDownloads', () => {
 
     expect((await downloads.read(workspace, file(1, 'Art/bark.png'))).toString()).toBe('bark v1');
     expect(fake.lines().map((line) => line.split(' ')[0])).toEqual(['ls']);
+  });
+
+  it('fetches the revisions a reader will read a few at a time in one cm cat: the reads that follow download nothing', async () => {
+    const { workspace, fake, downloads, text } = await setUp();
+    const firstRead = text(downloads.read(workspace, file(1)));
+    await Promise.all([downloads.fetch(workspace, file(1)), downloads.fetch(workspace, file(2)), downloads.fetch(workspace, file(3))]);
+    expect(await Promise.all([firstRead, text(downloads.read(workspace, file(2))), text(downloads.read(workspace, file(3)))])).toEqual(['bark v1', 'leaves v2', 'moss v3']);
+    expect(fake.commands.map((command) => [command.via, command.args.length])).toEqual([['execute', 4]]);
+  });
+
+  it('reads what was fetched with no more commands, and others asked together meanwhile in one cm cat', async () => {
+    const { workspace, fake, downloads, text } = await setUp('bark v1'.length + 'leaves v2'.length + 'moss v3'.length);
+    await downloads.fetch(workspace, file(1));
+    expect(await Promise.all([2, 3].map((id) => text(downloads.read(workspace, file(id)))))).toEqual(['leaves v2', 'moss v3']);
+    expect(await text(downloads.read(workspace, file(1)))).toBe('bark v1');
+    expect(fake.commands).toHaveLength(2);
+  });
+
+  it('keeps at least twice what one fetch may download ahead: what a look fetched is still kept as it reads it', () => {
+    expect(MAX_DOWNLOADED_AHEAD_BYTES * 2).toBeLessThanOrEqual(MAX_KEPT_BYTES);
+  });
+
+  it('fails at once the reads of revisions whose fetch failed, never trying each again on its own', async () => {
+    const { workspace, fake, downloads } = await setUp();
+    const failing = [404, 405, 406].map((id) => file(id));
+    await Promise.allSettled(failing.map((one) => downloads.fetch(workspace, one)));
+    const tried = fake.commands.length;
+    const reads = await Promise.allSettled(failing.map((one) => downloads.read(workspace, one)));
+    expect(reads.map((read) => read.status)).toEqual(['rejected', 'rejected', 'rejected']);
+    expect(fake.commands).toHaveLength(tried);
+    await Promise.allSettled([downloads.fetch(workspace, failing[0]!)]);
+    expect(fake.commands.length).toBeGreaterThan(tried);
+  });
+
+  it("fetches nothing the workspace's disk has, and fails a fetch as the read would", async () => {
+    const { workspace, fake, downloads } = await setUp();
+    await mkdir(join(workspace, 'Art'));
+    await writeFile(join(workspace, 'Art', 'same.png'), 'bark v1');
+    await downloads.fetch(workspace, file(1, 'Art/same.png', md5('bark v1'), 7));
+    expect(fake.commands).toEqual([]);
+    await expect(downloads.fetch(workspace, file(404))).rejects.toThrow('revid:404@eco@local');
   });
 
   it('tells each revision of a batch apart: one cm has not fails alone', async () => {

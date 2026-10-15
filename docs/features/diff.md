@@ -285,3 +285,12 @@ Why one highlighting worker. Measured on a task branch of a large production rep
   highlights again the texts on screen (`setRenderOptions`).
 - The rest is garbage between collections (the page's heap reaches about 95 MB for 25 used; Pierre's structured
   clones of highlighted lines, Myers diffs, Shiki on the main thread): the renderer goes back to about 130 MB once idle.
+
+What a diff read stays after it goes off screen: a revision's content is immutable, kept an hour after its last use
+(`REVISION_CACHE_MS`), and of those the last 100 (`MAX_UNUSED_IMMUTABLE`) holding at most 256 MB of files
+(`MAX_UNUSED_IMMUTABLE_BYTES`, `boundUnusedQueries` by `heldContentBytes`): a diff's pair and its two files hold the
+same objects, counted once, and what a query on screen holds counts for nothing. By number alone, stepping through a
+changeset of big models kept every one of them (a 3D model is read up to 100 MB, its parsed model about as much
+again, kept as long as its bytes). A query's function is built outside the hook that asks it (`contentQueries`):
+TanStack keeps it with the cached query, and one made inside the model diff's hooks kept their whole scope, both
+versions' bytes and parsed models, alive with it.

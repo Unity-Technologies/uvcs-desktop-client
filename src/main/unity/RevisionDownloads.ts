@@ -7,7 +7,7 @@
 
 import { createHash } from 'node:crypto';
 import { rmSync } from 'node:fs';
-import { mkdir, mkdtemp, readdir, readFile, rm, stat } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { RevisionRef } from '@shared/domain/revision';
@@ -15,6 +15,8 @@ import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
 import { catArgs, catBatchesOf, type CatRead } from '../cm/catBatches';
 import { MAX_MODEL_BYTES } from '../files/fileContent';
+import { removeFoldersOfGoneProcesses } from '../files/goneProcessFolders';
+import { processIsRunning } from '../system/processIsRunning';
 import { contentHashOf, WorkspaceCopies, type RevisionFile } from '../files/WorkspaceCopies';
 
 /**
@@ -30,13 +32,15 @@ export const MAX_KEPT_BYTES = 1024 * 1024 * 1024;
  * show the first textures sooner.
  */
 export const MAX_BATCH_BYTES = 64 * 1024 * 1024;
+/** The failed fetches remembered, so their reads fail at once, before starting over. */
+const MAX_FAILED_FETCHES = 1000;
 /** A revision of unknown size counts as this much in a batch. */
 const UNKNOWN_SIZE = 1024 * 1024;
 
 interface RevisionDownloadsOptions {
   cm: Pick<CmClient, 'execute'>;
   /** Reads a revision from the workspace's disk where its file there has the revision's content. */
-  copies?: Pick<WorkspaceCopies, 'read'>;
+  copies?: Pick<WorkspaceCopies, 'read' | 'has'>;
   /** The folder the session's downloads folder is made in, the first time something is downloaded: the OS's temp folder. */
   tempFolder?: string;
   maxKeptBytes?: number;
@@ -61,7 +65,7 @@ interface Waiting {
 
 export class RevisionDownloads {
   private readonly cm: Pick<CmClient, 'execute'>;
-  private readonly copies: Pick<WorkspaceCopies, 'read'>;
+  private readonly copies: Pick<WorkspaceCopies, 'read' | 'has'>;
   private readonly tempFolder: string;
   private leftOvers: Promise<void> | null = null;
   private readonly pid: number;
@@ -75,6 +79,8 @@ export class RevisionDownloads {
   /** Downloaded files by revision, oldest first, with their sizes. */
   private readonly kept = new Map<string, { target: string; size: number }>();
   private keptBytes = 0;
+  /** Why the fetch of a revision failed, until it is fetched again: its read fails at once, never downloading it alone. */
+  private readonly failedFetches = new Map<string, unknown>();
   /** Downloads asked for or under way, by revision: a revision is downloaded once however many ask. */
   private readonly downloading = new Map<string, Promise<string>>();
   private waiting: Waiting[] = [];
@@ -98,15 +104,7 @@ export class RevisionDownloads {
    * budget). Rejects when it can't be read.
    */
   async read(workspacePath: string, file: RevisionFile, mayDownload: () => boolean = () => true): Promise<Buffer> {
-    this.checking++;
-    let checked = false;
-    const doneChecking = () => {
-      if (checked) return;
-      checked = true;
-      this.checking--;
-      this.downloadWhenAllChecked();
-    };
-    try {
+    return this.whileChecking(async (doneChecking) => {
       const onDisk = await this.copies.read(workspacePath, file);
       if (onDisk) return onDisk;
       const key = keyOf(file.revision);
@@ -116,6 +114,7 @@ export class RevisionDownloads {
         if (bytes) return this.touch(key, kept), bytes;
         this.forget(key);
       }
+      if (this.failedFetches.has(key)) throw this.failedFetches.get(key);
       if (!this.downloading.has(key) && !mayDownload()) throw new Error(`${file.path} is past what is downloaded for one lookup`);
       // Past what is read, known by its size: refused before downloading it for nothing.
       if (file.size > MAX_MODEL_BYTES) throw new Error(`${file.path} is too large to read`);
@@ -127,6 +126,51 @@ export class RevisionDownloads {
         this.forget(key);
         return readCapped(await this.download(workspacePath, file, key));
       });
+    });
+  }
+
+  /**
+   * Has the revision ready for a read to come, reading none of it: on the disk (checked as a read checks it), kept, or
+   * downloaded now in one batch with the others asked at once. A reader that reads a few files at a time, to hold few
+   * in memory (the Materials look's textures), asks for them all here first, so its reads never split the batch.
+   * Fails as the read would, and its read then fails at once (until it is fetched again). Kept as any download: a
+   * reader fetches at most half what is kept at a time (`MAX_DOWNLOADED_AHEAD_BYTES`), so one reader's is still there
+   * when read; one let go of meanwhile (other downloads past the budget) is downloaded again by its read, alone. A
+   * revision past what is read is left for the read to refuse.
+   */
+  async fetch(workspacePath: string, file: RevisionFile): Promise<void> {
+    const key = keyOf(file.revision);
+    this.failedFetches.delete(key);
+    return this.whileChecking(async (doneChecking) => {
+      if (await this.copies.has(workspacePath, file)) return;
+      const kept = this.kept.get(key);
+      if (kept) return this.touch(key, kept);
+      if (file.size > MAX_MODEL_BYTES) return;
+      const downloaded = this.download(workspacePath, file, key);
+      doneChecking();
+      await downloaded.catch((error: unknown) => {
+        if (this.failedFetches.size >= MAX_FAILED_FETCHES) this.failedFetches.clear();
+        this.failedFetches.set(key, error);
+        throw error;
+      });
+    });
+  }
+
+  /**
+   * Runs a read's work as one still checking the disk (`checking`) until it says it's done (or ends): the downloads
+   * asked meanwhile wait for it, so the reads asked at once go in one batch.
+   */
+  private async whileChecking<T>(work: (doneChecking: () => void) => Promise<T>): Promise<T> {
+    this.checking++;
+    let checked = false;
+    const doneChecking = () => {
+      if (checked) return;
+      checked = true;
+      this.checking--;
+      this.downloadWhenAllChecked();
+    };
+    try {
+      return await work(doneChecking);
     } finally {
       doneChecking();
     }
@@ -137,18 +181,8 @@ export class RevisionDownloads {
    * app's running now (a development build beside the installed one) stays. This session's own is made once they're gone.
    */
   removeLeftOvers(): Promise<void> {
-    this.leftOvers ??= readdir(this.tempFolder).then(
-      (names) => Promise.all(names.filter((name) => this.isLeftOver(name)).map((name) => rm(join(this.tempFolder, name), { recursive: true, force: true }).catch(() => undefined))).then(() => undefined),
-      () => undefined,
-    );
+    this.leftOvers ??= removeFoldersOfGoneProcesses({ tempFolder: this.tempFolder, prefix: FOLDER_PREFIX, pid: this.pid, isRunning: this.isRunning });
     return this.leftOvers;
-  }
-
-  private isLeftOver(name: string): boolean {
-    const owner = new RegExp(`^${FOLDER_PREFIX}(\\d+)-`).exec(name);
-    if (!owner) return false;
-    const pid = Number(owner[1]);
-    return pid !== this.pid && !this.isRunning(pid);
   }
 
   /**
@@ -261,16 +295,6 @@ export class RevisionDownloads {
     this.kept.delete(key);
     this.keptBytes -= kept.size;
     if (deleteFile) void rm(kept.target, { force: true }).catch(() => undefined);
-  }
-}
-
-/** Whether a process is running: signal 0 checks without sending one (`EPERM`: it runs, as another user's). */
-function processIsRunning(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return (error as NodeJS.ErrnoException).code === 'EPERM';
   }
 }
 

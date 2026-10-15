@@ -13,4 +13,11 @@ export interface UnityAssetsApi {
    * `cm cat`, and kept for the session.
    */
   read(workspacePath: string, file: FoundFile): Promise<Uint8Array | null>;
+  /**
+   * Downloads, in one `cm cat`, the repository's revisions among the files that the workspace's disk hasn't, without
+   * reading them; files on the disk need nothing. A reader that reads a few at a time to hold few in memory (the
+   * Materials look's textures) asks for them all here first: its reads then download nothing, and one that fails says
+   * so as it is read. At most `MAX_UNITY_ASSET_LOOKUPS` files, of `MAX_DOWNLOADED_AHEAD_BYTES` in all.
+   */
+  download(workspacePath: string, files: FoundFile[]): Promise<void>;
 }
