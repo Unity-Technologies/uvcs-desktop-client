@@ -242,13 +242,22 @@ describe('watching a workspace', () => {
     expect(released).toEqual([homedir()]);
   });
 
-  it('keeps the cm sessions of a workspace in the home folder itself, which the window shows', async () => {
+  it.each([
+    ['opens it first: never let go', [homedir(), WORKSPACE], []],
+    ['opens it after another window opened another workspace: let go before it opened only', [WORKSPACE, homedir()], [homedir()]],
+  ])('keeps the cm sessions of a workspace in the home folder itself while a window shows it, whichever %s', async (_order, opened, releasedHome) => {
     const window = { id: 7, isDestroyed: () => false } as unknown as WebContents;
-    const { service, released } = workspaces({}, { watch: () => ({ complete: true }) as never }, { showsHomeScreen: () => false });
+    const watched = new Set<string>();
+    const watchers = {
+      watch: (_viewer: number, workspacePath: string) => (watched.add(workspacePath), 'full' as const),
+      coverageOf: (workspacePath: string) => (watched.has(workspacePath) ? ('full' as const) : undefined),
+    };
+    const { service, released, shown } = workspaces({}, watchers, { showsHomeScreen: () => false });
 
-    await runForCaller(window, () => service.watch(homedir()));
+    for (const workspacePath of opened) await runForCaller(window, () => service.watch(workspacePath));
 
-    expect(released).toEqual([]);
+    expect(shown).toEqual(opened);
+    expect(released).toEqual(releasedHome);
   });
 });
 
