@@ -154,6 +154,8 @@ export interface MergeResult {
    * incoming version, kept by the user, couldn't be saved after `cm merge` ran (`runMerge`).
    */
   incomingNotSaved?: string[];
+  /** Files whose incoming version may not have been saved: `cm` failed without telling which, twice. */
+  incomingMaybeNotSaved?: string[];
 }
 
 /** The merge that finishes a server-side merge whose destination moved: its changeset into the branch. */

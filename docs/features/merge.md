@@ -111,8 +111,12 @@ writes back byte for byte, UTF-8); the incoming binaries and text in other encod
 the workspace, all of them with one `cm cat` per batch (`catBatchesOf`), in a process: the page never holds their
 bytes, and keeping yours reads nothing. Once `cm merge` ran, cancelling doesn't stop these writes: the merge is in the
 workspace by then, so an incoming version that can't be saved leaves its file as yours, and the merge's toast names it
-(`incomingNotSaved`). `cm merge --merge` can't take each file's decision in a workspace (`--fileconflictsresolutionsfile`
-works only with `--to`), and `--keepsource` keeps every file's.
+("Merge applied, but 2 files still hold yours", `incomingNotSaved`). `cm cat` goes on after a problem: it prints a
+`not found <spec>` line per revision it can't resolve and a line naming nothing per download that failed
+(`explainCatFailure`, shared with `RevisionCat`). A failure with such an unnamed line is tried once more for the files
+it didn't name, as saving a version again changes nothing; what fails again is worded as uncertain ("may not hold the
+incoming version", `incomingMaybeNotSaved`). `cm merge --merge` can't take each file's decision in a workspace
+(`--fileconflictsresolutionsfile` works only with `--to`), and `--keepsource` keeps every file's.
 A merge into a server branch has no workspace to write in: `cm merge --to` reads every file's decision from a JSON file
 (`--fileconflictsresolutionsfile`, written by `fileConflictResolutionsFile`): `{ "resolutions": [{ "path", "keep": "source" |
 "destination" } | { "path", "resultFile" }] }`, by the path `cm merge` printed in the plan. A side kept, even an

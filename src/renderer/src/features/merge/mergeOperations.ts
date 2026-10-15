@@ -4,7 +4,7 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { runOperation, type OperationSuccess } from '../../app/operations/runOperation';
 import { isAffectedByCheckinOrUpdate, isAffectedByServerMerge, isAffectedByShelveApplied } from '../../app/refresh/refreshScopes';
 import { branchLabel, branchLabels } from '../../lib/branchLabels';
-import { listNames, pluralize } from '../../lib/text';
+import { fileNameOf, listNames, pluralize } from '../../lib/text';
 import { toast } from '../../ui/toast/toastStore';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { finishMergedTask } from '../mergeTask/mergeTaskOperations';
@@ -69,13 +69,28 @@ function mergeSuccess(request: MergeRequest, taskBranch: string | undefined, res
   };
 }
 
-/** A workspace merge is applied even when some incoming versions couldn't be saved: those files still hold yours. */
-function workspaceMergeSuccess({ incomingNotSaved = [] }: MergeResult): OperationSuccess {
-  if (incomingNotSaved.length === 0) return { title: 'Merge applied to your workspace' };
+/**
+ * A workspace merge is applied even when some incoming versions couldn't be saved: those files still hold yours, and
+ * those `cm` didn't tell about may not hold the incoming version. Files by name, as the run's notes name them.
+ */
+function workspaceMergeSuccess({ incomingNotSaved = [], incomingMaybeNotSaved = [] }: MergeResult): OperationSuccess {
+  const total = incomingNotSaved.length + incomingMaybeNotSaved.length;
+  if (total === 0) return { title: 'Merge applied to your workspace' };
+  const names = (paths: string[]): string => listNames(paths.map(fileNameOf));
+  const title =
+    incomingNotSaved.length > 0
+      ? `still ${incomingNotSaved.length === 1 ? 'holds' : 'hold'} yours`
+      : 'may not hold the incoming version';
   return {
     kind: 'info',
-    title: `Merge applied, but ${pluralize(incomingNotSaved.length, 'file')} still ${incomingNotSaved.length === 1 ? 'holds' : 'hold'} yours`,
-    detail: `${incomingNotSaved.length === 1 ? 'Its' : 'Their'} incoming version couldn't be downloaded: ${listNames(incomingNotSaved)}. Check them before checking in.`,
+    title: `Merge applied, but ${pluralize(incomingNotSaved.length || total, 'file')} ${title}`,
+    detail: [
+      incomingNotSaved.length > 0 && `The incoming version of ${names(incomingNotSaved)} couldn't be saved.`,
+      incomingMaybeNotSaved.length > 0 && `${names(incomingMaybeNotSaved)} may not hold the incoming version.`,
+      `Check ${total === 1 ? 'it' : 'them'} before checking in.`,
+    ]
+      .filter(Boolean)
+      .join(' '),
   };
 }
 
