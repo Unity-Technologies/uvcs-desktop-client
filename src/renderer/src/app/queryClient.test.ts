@@ -161,4 +161,18 @@ describe('immutable results off screen', () => {
     const cached = (id: number) => client.getQueryData(key('content', { kind: 'revision', id })) !== undefined;
     expect([0, 1, 2, 3].map(cached)).toEqual([false, false, true, true]);
   });
+
+  it("counts images by their bytes and texts by their length, not models alone: a changeset's big images and a long text", async () => {
+    // A fifth of the bound and a little more each image; a text three tenths, its diff's two sides the same text.
+    const image = (id: number) => ({ image: { bytes: { byteLength: MAX_UNUSED_IMMUTABLE_BYTES / 5 + id }, mimeType: 'image/png' }, isBinary: true, size: 0 });
+    const text = { text: { length: (MAX_UNUSED_IMMUTABLE_BYTES * 3) / 10 }, isBinary: false, size: 0 };
+    const revision = (id: number) => key('content', { kind: 'revision', id });
+    for (let id = 1; id <= 4; id++) await readQuery(client, revision(id), { meta: IMMUTABLE_QUERY, answer: () => image(id) });
+    await readQuery(client, key('diffContents', 'before', 'after'), { meta: IMMUTABLE_QUERY, answer: () => ({ left: text, right: text }) });
+    await readQuery(client, revision(5), { meta: IMMUTABLE_QUERY, answer: () => image(5) });
+
+    const cached = (queryKey: readonly unknown[]) => client.getQueryData(queryKey) !== undefined;
+    expect([1, 2, 3, 4, 5].map((id) => cached(revision(id)))).toEqual([false, false, true, true, true]);
+    expect(cached(key('diffContents', 'before', 'after'))).toBe(true);
+  });
 });
