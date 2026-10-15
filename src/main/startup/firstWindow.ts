@@ -43,7 +43,8 @@ export function readFirstScreenAhead({ cm, windows, early, settings }: FirstScre
     readScreenOf(workspacePath, { cm, early, settings });
     return { workspacePath };
   } catch (error) {
-    // Reading ahead only saves time: the window still opens, and reads its screen then.
+    // Reading ahead only saves time: the window still opens, and reads its screen then. One that failed partway may
+    // start some of those reads again, on this failure path only.
     console.warn('[start-up] Reading the first screen ahead failed:', error);
     return null;
   }

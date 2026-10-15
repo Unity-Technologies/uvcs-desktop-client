@@ -8,7 +8,9 @@ import { join } from 'node:path';
 import { app } from 'electron';
 
 const cache = enableCompileCache(join(app.getPath('userData'), 'compile-cache'));
-if (!app.isPackaged && cache.status === constants.compileCacheStatus.FAILED) console.warn('[start-up] No compile cache:', cache.message);
+if (!app.isPackaged && cache.status === constants.compileCacheStatus.FAILED) {
+  console.warn('[start-up] No compile cache:', cache.message);
+}
 // A separate bundle, loaded once the cache is on (electron.vite.config.ts builds both, `boot.test.ts`), synchronously:
 // an error as it loads fails the launch as an error in the main module does.
 require('./index.js');
