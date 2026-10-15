@@ -32,6 +32,18 @@ describe('parseWorkspaceStatus', () => {
     });
   });
 
+  it("reads the branch whichever form of a Unity organization's server each field prints", () => {
+    const mixed = (repSpecServer: string, configServer: string) => `<?xml version="1.0" encoding="utf-8"?>
+<StatusOutput>
+  <WorkspaceStatus><Status><RepSpec><Server>${repSpecServer}</Server><Name>3dtest/game</Name></RepSpec><Changeset>51</Changeset></Status></WorkspaceStatus>
+  <WkConfigType>Branch</WkConfigType>
+  <WkConfigName>/main/task@3dtest/game@${configServer}</WkConfigName>
+</StatusOutput>`;
+
+    expect(parseWorkspaceStatus(mixed('AcmeStudio@unity', '2398571046213@cloud')).selector).toEqual({ kind: 'branch', name: '/main/task' });
+    expect(parseWorkspaceStatus(mixed('2398571046213@cloud', 'AcmeStudio@unity')).selector).toEqual({ kind: 'branch', name: '/main/task' });
+  });
+
   // `cm status --header --xml` of a workspace switched to shelve 3 (cm 11.0.16.10371, a local server).
   const onShelve = `<?xml version="1.0" encoding="utf-8"?>
 <StatusOutput>
