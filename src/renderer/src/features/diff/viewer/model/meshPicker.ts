@@ -93,6 +93,8 @@ export class MeshPicker {
  */
 export function facesOf(material: Material | Material[], group: Pick<GeometryGroup, 'materialIndex'> | null): number {
   const drawn = Array.isArray(material) ? material[group?.materialIndex ?? 0] : material;
+  // A wireframe's lines show from both sides, whatever its side says.
+  if (drawn && 'wireframe' in drawn && drawn.wireframe === true) return 2;
   return drawn?.side === DoubleSide ? 2 : drawn?.side === BackSide ? 1 : 0;
 }
 
