@@ -16,7 +16,7 @@ import { SideChip } from '../image/stage';
 import { CENTERED_SPLIT, SwipeDivider } from '../image/SwipeDivider';
 import { importSettingsChanges } from './importSettingsChanges';
 import { ModelAnimationBar } from './ModelAnimationBar';
-import { changeRows, type ChangeRow } from './modelChangeWords';
+import { changeRows, takeOfPick, type ChangeRow } from './modelChangeWords';
 import { modelChanges, type NodeRef } from './modelChanges';
 import { whatChanged } from './whatChanged';
 import { ModelChangesPanel } from './ModelChangesPanel';
@@ -96,6 +96,8 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   const [blend, setBlend] = useState(0.5);
   const [split, setSplit] = useState(CENTERED_SPLIT);
   const [picked, setPicked] = useState<Picked | null>(null);
+  // The take the animation bar plays: picked there, or by a row of "What changed" about a take.
+  const [take, setTake] = useState<string | null>(null);
 
   const old = readyOf(before);
   const next = readyOf(after);
@@ -215,6 +217,8 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
       if (id === null) return setPicked(null);
       const nodes = item === undefined ? row.focus : (row.items?.[item]?.focus ?? []);
       setPicked({ id, nodes });
+      const takeToPlay = takeOfPick(row, item);
+      if (takeToPlay !== null) setTake(takeToPlay);
       const target = pickedBounds(nodes);
       if (target) frame(target);
     },
@@ -311,7 +315,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
               onFrame={frameShown}
             />
             <div className={styles.dock}>
-              {renderer && choices.length > 0 && <ModelAnimationBar renderer={renderer} scenes={scenes} choices={choices} comparable={comparable} />}
+              {renderer && choices.length > 0 && <ModelAnimationBar renderer={renderer} scenes={scenes} choices={choices} comparable={comparable} take={take} onTake={setTake} />}
               <ModelInfoStrip stats={shownStats} />
             </div>
           </>

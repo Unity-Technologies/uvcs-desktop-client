@@ -45,6 +45,11 @@ export function changeRows(changes: ModelChange[]): ChangeRow[] {
   return rows;
 }
 
+/** The take a row picked, or one of its items (`item`), plays: what changed in it shows only as it plays. */
+export function takeOfPick(row: ChangeRow, item?: number): string | null {
+  return (item === undefined ? row.take : row.items?.[item]?.take) ?? null;
+}
+
 /** Changes that fold together: one kind, on nodes of one family, the same way (lightmap UVs gained, not lost). */
 function foldKey(change: ModelChange): string | null {
   switch (change.kind) {

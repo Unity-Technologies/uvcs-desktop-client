@@ -252,7 +252,9 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
 - **"What changed"** (`ModelChangesPanel`): folded by default to its title, its count and its risks, so the model has
   the stage, and remembered as the user leaves it (`modelChangesOpen`). Open, beside a pane at least `ROOMY_PANE` wide
   it is a column of its own; narrower, or folded, it floats at the stage's top right (under the onion's pill). A row picked frames and lights up
-  its nodes on both sides; the rest fade. **The info strip** (`modelStats`): Tris, Verts, materials, bones,
+  its nodes on both sides; the rest fade. A row about a take's keys (or its item, folded) plays that take in the take
+  bar instead (`takeOfPick`; the bar's take is the viewer's, `ModelAnimationBar`'s `take`), framing and fading
+  nothing: a bone's dot marks where it rests, not where the take moves it. **The info strip** (`modelStats`): Tris, Verts, materials, bones,
   blendshapes, animations and size, "before → after" where they changed, both sizes in one unit.
 
 ## Beside the model: its `.bin` and its `.meta`
