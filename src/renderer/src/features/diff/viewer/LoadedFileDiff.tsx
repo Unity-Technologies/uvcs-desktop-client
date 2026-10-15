@@ -1,5 +1,5 @@
 import { RefreshCw } from 'lucide-react';
-import { Suspense, useContext, useMemo, useRef, type ReactNode } from 'react';
+import { Suspense, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import { openFile } from '../../../components/externalApps/externalAppOperations';
 import { lazyComponent } from '../../../lib/lazyComponent';
 import { hotkey } from '../../../lib/shortcutRegistry';
@@ -89,7 +89,12 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   // A model's .meta shows as the model under its import settings where the model can be found beside it, unless the
   // user picked its text (`representations.meta`).
   const findSibling = useContext(SiblingFinderContext);
-  const metaModel = isText && modelOfMeta(fileName) !== null ? modelBesideMeta(findSibling, { original: contents.original, modified: contents.modified }) : null;
+  // Where neither side's model was beside it after all (in History, a .meta moved since: `metaModelView`), the .meta is
+  // its text, as any other, arrows and notices included; told by ModelMetaDiff once read, for these versions only.
+  const metaVersions = JSON.stringify([contents.original, contents.modified]);
+  const [modelAbsentFor, setModelAbsentFor] = useState<string | null>(null);
+  const modelFound = modelAbsentFor !== metaVersions;
+  const metaModel = isText && modelFound && modelOfMeta(fileName) !== null ? modelBesideMeta(findSibling, { original: contents.original, modified: contents.modified }) : null;
   const metaAsModel = metaModel !== null && (representations.meta ?? 'model') === 'model';
   const editable = isText && editablePath !== null;
   const diffs = useLineDiffs({ isText, original: left.text ?? '', saved: right.text, current, comparisonMethod, fileName });
@@ -176,7 +181,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
             sources={{ original: contents.original, modified: contents.modified }}
             texts={{ original: sides.original ? (left.text ?? '') : null, modified: sides.modified ? (dirty ? pausedText : (right.text ?? '')) : null }}
             mode={modelMode}
-            textDiff={textDiff}
+            onModelAbsent={() => setModelAbsentFor(metaVersions)}
           />
         </Suspense>
       );

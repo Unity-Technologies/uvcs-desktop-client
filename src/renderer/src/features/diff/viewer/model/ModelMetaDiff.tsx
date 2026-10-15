@@ -3,7 +3,7 @@
 // in Unity's terms ("100× larger in Unity", "Clip Wave ends past its take"). The `.meta`'s text is a click away.
 
 import { useQueries } from '@tanstack/react-query';
-import { useContext, useMemo, type ReactNode } from 'react';
+import { useContext, useEffect, useMemo } from 'react';
 import type { ContentSource, FileContent } from '@shared/domain/content';
 import { api } from '../../../../api/client';
 import { queryKeys } from '../../../../api/queryKeys';
@@ -23,13 +23,13 @@ interface ModelMetaDiffProps {
   /** Each version of the `.meta`'s text (with unsaved edits, for the one typed into). */
   texts: { original: string | null; modified: string | null };
   mode: ModelDiffMode;
-  /** The `.meta`'s text diff, shown where neither side has its model beside it (in History, a `.meta` moved since). */
-  textDiff: ReactNode;
+  /** Neither side has its model beside it (in History, a `.meta` moved since): the `.meta` shows as its text instead. */
+  onModelAbsent: () => void;
 }
 
 const EMPTY: FileContent = { text: '', isBinary: false, size: 0 };
 
-export function ModelMetaDiff({ workspacePath, sources, texts, mode, textDiff }: ModelMetaDiffProps) {
+export function ModelMetaDiff({ workspacePath, sources, texts, mode, onModelAbsent }: ModelMetaDiffProps) {
   const findSibling = useContext(SiblingFinderContext);
   // Each side's model is beside that side's `.meta`; a side without one (added, deleted) has no model to show.
   const modelSources = modelBesideMeta(findSibling, sources) ?? { original: null, modified: null };
@@ -59,12 +59,14 @@ export function ModelMetaDiff({ workspacePath, sources, texts, mode, textDiff }:
     return read.data.model || read.data.tooLarge === 'model' ? 'model' : 'absent';
   };
   const view = metaModelView({ original: readOfSide('original'), modified: readOfSide('modified') });
+  useEffect(() => {
+    if (view === 'text') onModelAbsent();
+  }, [view, onModelAbsent]);
   // A model that isn't beside its `.meta` reads as absent, never as a failure: this is the server or the disk failing.
   if (view === 'failed') {
     return <EmptyState title={`Couldn't read ${modelOfMeta(modelName)?.split(/[\\/]/).pop() ?? 'the model'}`} description="The .meta's own text is in Code." />;
   }
-  if (view === 'text') return textDiff;
-  if (view === 'loading' || !original || !modified) return <CenteredSpinner />;
+  if (view !== 'model' || !original || !modified) return <CenteredSpinner />;
   return (
     <ModelDiffViewer
       workspacePath={workspacePath}

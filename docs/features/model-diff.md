@@ -302,8 +302,9 @@ trusted.
   exporting again reads "100× larger in Unity". Only where the model can be found beside it (`modelBesideMeta`): in
   History too, beside each revision at its point (`historySibling`); elsewhere the `.meta` is its text. Once read
   (`metaModelView`), a side whose model wasn't beside it then (in History, a `.meta` moved since or before) shows
-  empty, and where neither side has it the `.meta` shows as its text, its header still the model's; only a model that
-  couldn't be read (the server) says "Couldn't read". A model that didn't change is read once for both sides
+  empty, and where neither side has it the `.meta` is its text, as any text file (`onModelAbsent`: its change arrows,
+  notices and "No content changes", without "Code | Model", as there is no model to show); only a model that couldn't
+  be read (the server) says "Couldn't read". A model that didn't change is read once for both sides
   (`modelReadsOfSides`), except in History, where each side is its own point and the model is read at each.
 
 ## Materials
