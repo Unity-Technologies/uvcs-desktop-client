@@ -49,6 +49,9 @@ export function holdTextures(keys: Iterable<string>): () => void {
 export const TEXTURES_IN_HAND = 3;
 const inHand = concurrencyLimit(TEXTURES_IN_HAND);
 
+/** What a load the cache let go of before its turn resolves to: no viewer awaits it. */
+const LET_GO_OF: TextureDecoded = { kind: 'failed', problem: 'unreadable' };
+
 export function textureKey(workspacePath: string, load: Omit<TextureLoad, 'key'>): string {
   const of = load.source.kind === 'found' ? foundFileKey(load.source.file) : load.source.id;
   return [workspacePath, of, load.longest, load.flipY].join('\0');
@@ -73,10 +76,15 @@ export function loadTextures(workspacePath: string, loads: readonly TextureLoad[
 function loadTexture(workspacePath: string, load: TextureLoad): Promise<TextureDecoded> {
   const kept = decodes.get(load.key);
   if (kept) return kept;
-  const decoded = inHand(() => readAndDecode(workspacePath, load));
+  // Its turn come, a load the cache let go of meanwhile (no viewer holds it, and it went past the budget or a while
+  // after the last viewer) reads nothing. One whose turn comes at once was just asked for, before the cache has it.
+  let decoded: Promise<TextureDecoded> | undefined;
+  decoded = inHand(() => (decoded === undefined || decodes.peek(load.key) === decoded ? readAndDecode(workspacePath, load) : Promise.resolve(LET_GO_OF)));
   // Sized as at most the budget's side until it is known; a decode that failed to read is tried again next time.
   decodes.set(load.key, decoded, load.longest * load.longest * 4);
   void decoded.then((result) => {
+    // Let go of, or another decode of the key took its place: nothing of the cache is this one's to change.
+    if (decodes.peek(load.key) !== decoded) return;
     if (result.kind === 'decoded') decodes.resize(load.key, result.bitmap.width * result.bitmap.height * 4);
     else if (result.problem === 'unreadable') decodes.delete(load.key);
   });

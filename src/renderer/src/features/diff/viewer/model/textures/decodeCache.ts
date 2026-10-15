@@ -40,6 +40,11 @@ export class DecodeCache<T> {
     return entry.value;
   }
 
+  /** The key's value, kept or held; unlike `get`, it doesn't count as a use. */
+  peek(key: string): T | undefined {
+    return (this.kept.get(key) ?? this.heldOnly.get(key))?.value;
+  }
+
   /** Whether the key's value is kept; unlike `get`, it doesn't count as a use. */
   has(key: string): boolean {
     return this.kept.has(key) || this.heldOnly.has(key);
