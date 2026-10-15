@@ -11,7 +11,7 @@ export function clickedSurface(current: SurfaceLook, clicked: Exclude<SurfaceLoo
 
 /** Why a look's button is off, in its tooltip; null while it can be used. Diffs colors the model its own way. */
 export function surfaceButtonDisabledReason(differences: boolean): string | null {
-  return differences ? 'Diffs colors the model by how far it moved' : null;
+  return differences ? 'Off in Diffs: its colors show what changed' : null;
 }
 
 /** Whether a look's button shows on: its look chosen, and the buttons usable (in Diffs, none is). */

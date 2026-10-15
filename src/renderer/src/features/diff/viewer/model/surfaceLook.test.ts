@@ -24,7 +24,7 @@ describe('the surface look', () => {
   });
 
   it('says why its buttons are off in Diffs, and only there', () => {
-    expect(surfaceButtonDisabledReason(true)).toBe('Diffs colors the model by how far it moved');
+    expect(surfaceButtonDisabledReason(true)).toBe('Off in Diffs: its colors show what changed');
     expect(surfaceButtonDisabledReason(false)).toBeNull();
   });
 
