@@ -381,12 +381,34 @@
   transform: rotate(90deg);
 }
 
+/* Only the repositories in view are rendered (`RepositoryList`), each placed where it belongs. */
+.repositoryRows {
+  position: relative;
+  flex: none;
+}
+
+.repositorySlot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  padding-bottom: 2px;
+}
+
+/* An expanded repository's workspaces read as one block under it, their line unbroken. */
+.repositorySlot[data-kind='workspace'] {
+  padding-bottom: 0;
+}
+
+.repositorySlot[data-kind='newWorkspace'] {
+  padding-bottom: calc(var(--space-2) + 2px);
+}
+
 .nested {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  margin: 0 0 var(--space-2) 58px;
-  padding-left: var(--space-2);
+  margin-left: 58px;
+  padding: 0 0 1px var(--space-2);
   border-left: 1px solid var(--border-subtle);
 }
 
