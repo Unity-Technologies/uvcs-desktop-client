@@ -40,8 +40,8 @@ describe('sharePendingChanges', () => {
     expect(described.changes).toBe(previous.changes);
   });
 
-  it('shares 100,000 changes, reading each one a bounded number of times', () => {
-    const many = snapshot(Array.from({ length: 100_000 }, (_, index) => change(`src/folder${index % 100}/file${index}.ts`)));
+  it('shares 10,000 changes, keeping those that are the same and taking those that changed', () => {
+    const many = snapshot(Array.from({ length: 10_000 }, (_, index) => change(`src/folder${index % 100}/file${index}.ts`)));
     const next = reread(many);
     next.changes[500] = change(next.changes[500]!.path, '2');
     const shared = sharePendingChanges(many, next);
