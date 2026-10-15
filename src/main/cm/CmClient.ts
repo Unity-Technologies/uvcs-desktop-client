@@ -18,6 +18,12 @@ import { withUtf8Output } from './utf8Output';
 export interface CmRunOptions {
   /** Working directory; `cm` resolves the workspace and repository from it. */
   cwd?: string;
+  /**
+   * A local command that answers the same in any directory (`profile list`, `whoami`, `workspace list`): with no `cwd`,
+   * it runs where `cm shell`s are kept already (a workspace a window shows) instead of starting the home folder's,
+   * two more processes of about 80 MB each. The home folder's only when no directory has any (the home screen).
+   */
+  anyDirectory?: boolean;
   signal?: AbortSignal;
   /** Signal sent to the process when `signal` aborts (default SIGTERM). */
   killSignal?: NodeJS.Signals;
@@ -25,7 +31,7 @@ export interface CmRunOptions {
 }
 
 type CommandLogListener = (entry: CommandLogEntry) => void;
-type ShellPool = Pick<CmShellPool, 'run' | 'isReady' | 'warmUp' | 'release' | 'disposeAll'>;
+type ShellPool = Pick<CmShellPool, 'run' | 'isReady' | 'keptDirectory' | 'warmUp' | 'release' | 'disposeAll'>;
 
 /** What `CmClient` runs commands with: a process of their own, and pooled `cm shell` sessions. Tests pass fakes. */
 export interface CmRunners {
@@ -88,7 +94,8 @@ export class CmClient {
    * anyway (`runsLong`: a workspace write of many files) gets a process of its own, as does one before the pool is warm.
    */
   query(args: string[], options: CmRunOptions = {}): Promise<string> {
-    return this.run(args, options, this.runsInPooledShell(args, options));
+    const placed = { ...options, cwd: options.cwd ?? this.directoryForAny(options) };
+    return this.run(args, placed, this.runsInPooledShell(args, placed));
   }
 
   /** Runs a long or cancellable command in its own process, streaming its output. */
@@ -108,6 +115,11 @@ export class CmClient {
 
   dispose(): void {
     this.shellPool.disposeAll();
+  }
+
+  /** Where a query with no `cwd` runs: for one that runs the same anywhere, a directory with sessions kept; else home. */
+  private directoryForAny({ anyDirectory }: CmRunOptions): string {
+    return (anyDirectory ? this.shellPool.keptDirectory() : undefined) ?? homedir();
   }
 
   /**

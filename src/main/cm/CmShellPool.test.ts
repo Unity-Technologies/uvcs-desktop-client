@@ -159,6 +159,20 @@ describe('CmShellPool', () => {
     expect(FakeSession.created).toHaveLength(2);
   });
 
+  it('names a directory whose sessions are kept, one that answers at once first, and none once they are let go', async () => {
+    expect(pool.keptDirectory()).toBeUndefined();
+    pool.warmUp('/starting');
+    pool.warmUp('/ready');
+    expect(pool.keptDirectory()).toBe('/starting');
+
+    FakeSession.created[2]!.answerFirstCommand();
+    expect(pool.keptDirectory()).toBe('/ready');
+
+    pool.release('/ready');
+    await settle();
+    expect(pool.keptDirectory()).toBe('/starting');
+  });
+
   it("keeps a released workspace's sessions when a command comes before they are done", async () => {
     void pool.run('/wk', ['status']);
     const [session] = FakeSession.created;

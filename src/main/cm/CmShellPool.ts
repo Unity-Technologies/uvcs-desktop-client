@@ -52,6 +52,17 @@ export class CmShellPool {
     return this.directories.get(cwd)?.sessions.some((session) => session.isReady) ?? false;
   }
 
+  /**
+   * A directory whose sessions are kept (not released), one that answers at once first; undefined when none is. Where a
+   * command that runs the same in any directory goes, so it starts no sessions of its own (`CmRunOptions.anyDirectory`).
+   */
+  keptDirectory(): string | undefined {
+    const kept = [...this.directories]
+      .filter(([, directory]) => !directory.released && directory.sessions.length > 0)
+      .map(([cwd]) => cwd);
+    return kept.find((cwd) => this.isReady(cwd)) ?? kept[0];
+  }
+
   /** Starts the sessions for a directory so the first queries there don't pay the startup cost. */
   warmUp(cwd: string): void {
     const directory = this.directory(cwd);

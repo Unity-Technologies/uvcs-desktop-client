@@ -41,6 +41,7 @@ function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer
           return answer();
         },
         isReady: () => warm,
+        keptDirectory: () => pool.warmed.find((cwd) => !pool.released.includes(cwd)),
         warmUp: (cwd) => void pool.warmed.push(cwd),
         release: (cwd) => void pool.released.push(cwd),
         disposeAll: () => void (pool.disposed = true),
@@ -76,6 +77,24 @@ describe('CmClient routing', () => {
     await cm.query(['profile', 'list']);
 
     expect(shellCommands[0]?.cwd).toBe(homedir());
+  });
+
+  it("runs a query that answers the same anywhere in a workspace's kept sessions, starting none in the home directory", async () => {
+    const { cm, shellCommands, pools } = fakeClient();
+    cm.warmUp(WORKSPACE);
+
+    await cm.query(['profile', 'list'], { anyDirectory: true });
+
+    expect(shellCommands).toEqual([{ cwd: WORKSPACE, args: ['profile', 'list'] }]);
+    expect(pools[0]?.warmed).not.toContain(homedir());
+  });
+
+  it('runs a query that answers the same anywhere in the home directory when no directory keeps sessions', async () => {
+    const { cm, shellCommands } = fakeClient();
+
+    await cm.query(['profile', 'list'], { anyDirectory: true });
+
+    expect(shellCommands).toEqual([{ cwd: homedir(), args: ['profile', 'list'] }]);
   });
 
   it('runs a query as a process of its own while no session of the directory is ready yet, and warms them up', async () => {
@@ -409,7 +428,7 @@ describe('CmClient sessions', () => {
       createShellPool: (cmPath) => {
         const pool = { cmPath, disposed: false };
         pools.push(pool);
-        return { run: vi.fn(), isReady: () => false, warmUp: vi.fn(), release: vi.fn(), disposeAll: () => void (pool.disposed = true) };
+        return { run: vi.fn(), isReady: () => false, keptDirectory: () => undefined, warmUp: vi.fn(), release: vi.fn(), disposeAll: () => void (pool.disposed = true) };
       },
     });
 
