@@ -13,10 +13,17 @@ const ANY_VIEW = framedView({ min: [-1, -1, -1], max: [1, 1, 1] }, 1);
  * (the panel docking beside it, the window). Framing keeps the angle the camera has, as Unity's F does. A wheel's
  * notch glides (`dollyGlide`); anything else that places the camera stops the glide where it is.
  */
-/** `bounds`: the pair's, once every version is in the renderer; null until then, when nothing frames. */
-export function useModelCamera(renderer: ModelRenderer | null, bounds: BoundsLike | null, stage: RefObject<HTMLElement | null>) {
+/**
+ * `bounds`: the pair's, once every version is in the renderer; null until then, when nothing frames. `onViewChange`:
+ * told every view the camera takes, for what depends on it (`tooSmallToSee`), without rendering on each.
+ */
+export function useModelCamera(renderer: ModelRenderer | null, bounds: BoundsLike | null, stage: RefObject<HTMLElement | null>, onViewChange?: (view: OrbitView) => void) {
   const view = useRef<OrbitView | null>(null);
   const framedByApp = useRef(true);
+  const viewListener = useRef(onViewChange);
+  useEffect(() => {
+    viewListener.current = onViewChange;
+  }, [onViewChange]);
   const glide = useMemo(
     () =>
       dollyGlide(
@@ -25,6 +32,7 @@ export function useModelCamera(renderer: ModelRenderer | null, bounds: BoundsLik
           framedByApp.current = false;
           view.current = next;
           renderer?.setView(next);
+          viewListener.current?.(next);
         },
         browserFrameClock,
       ),
@@ -36,6 +44,7 @@ export function useModelCamera(renderer: ModelRenderer | null, bounds: BoundsLik
       glide.stop();
       view.current = next;
       renderer?.setView(next);
+      viewListener.current?.(next);
     },
     [renderer, glide],
   );

@@ -34,7 +34,7 @@ import { useModelMaterials, type MaterialVersion } from './materials/useModelMat
 import { modelStats, movedStat, texturesStat } from './modelStats';
 import { ModelViewControls } from './ModelViewControls';
 import { matchNodes } from './nodeMatching';
-import { centreOf } from './orbitCamera';
+import { centreOf, type OrbitView } from './orbitCamera';
 import { useModelCamera } from './useModelCamera';
 import { useModelDifferences } from './useModelDifferences';
 import { useModelPalette } from './useModelPalette';
@@ -43,6 +43,8 @@ import { useModelRenderer } from './useModelRenderer';
 import { useModelScene } from './useModelScene';
 import { useFlyKeys } from './useFlyKeys';
 import { useOrbitGestures } from './useOrbitGestures';
+import { tooSmallToSee, type TooSmall } from './tooSmallToSee';
+import { TooSmallNote } from './TooSmallNote';
 import { useReadModel, type ModelReadState } from './useReadModel';
 import { useSize } from './useSize';
 import { useStableModel } from './useStableModel';
@@ -149,7 +151,17 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   // after its read, and framed with one missing, the renderer laid the other out alone, full width, and the pair kept
   // a framing made for that shape.
   const framing = everyVersionHas(present, { before: sceneBefore, after: sceneAfter }) ? bounds : null;
-  const camera = useModelCamera(renderer, framing, stageRef);
+  // Which version, if any, the shared framing leaves too small to see beside the other (a model exported 100× too big).
+  const sideBounds = useMemo(() => ({ before: old && framedBounds(old.summary), after: next && framedBounds(next.summary) }), [old, next]);
+  const [tooSmall, setTooSmall] = useState<TooSmall | null>(null);
+  const onViewChange = useCallback(
+    (view: OrbitView) => {
+      const found = tooSmallToSee(sideBounds, view, stageRef.current?.clientHeight ?? 0);
+      setTooSmall((shown) => (shown?.side === found?.side && shown?.times === found?.times ? shown : found));
+    },
+    [sideBounds],
+  );
+  const camera = useModelCamera(renderer, framing, stageRef, onViewChange);
   const modelCentre = useCallback(() => (bounds ? centreOf(bounds) : null), [bounds]);
   const { frame } = camera;
   const pickedBounds = useCallback(
@@ -284,6 +296,13 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
                 </div>
               </>
             )}
+            {(shownMode === 'sideBySide' || shownMode === 'swipe') && tooSmall && (
+              <TooSmallNote
+                tooSmall={tooSmall}
+                area={sideArea(tooSmall.side, shownMode === 'swipe' ? split : CENTERED_SPLIT)}
+                onFrame={() => frame(sideBounds[tooSmall.side])}
+              />
+            )}
             {shownMode === 'onion' && <BlendPill blend={blend} onBlendChange={setBlend} things="models" />}
             {shapeDifferences && comparison && (
               <ModelDifferencesControls
@@ -348,6 +367,11 @@ function materialVersionOf(
   const path = sourcePathOf(source);
   const sibling = (fileName: string) => (path === null ? null : findSibling(side, source, path, fileName));
   return { model: read.model, bytes, options, path: modelWorkspacePath(source), point: findAssetsPoint(side, source), sibling };
+}
+
+/** Where a side's pane is across the stage, as fractions of its width: left of the split, or right of it. */
+function sideArea(side: 'before' | 'after', split: number): { left: number; width: number } {
+  return side === 'before' ? { left: 0, width: split } : { left: split, width: 1 - split };
 }
 
 function readyOf(state: ModelReadState): Extract<ModelReadState, { status: 'ready' }> | null {

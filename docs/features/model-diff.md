@@ -209,7 +209,11 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   built a render after its read; the camera gets the pair's bounds only then, so the first framing, F, a part picked
   and a resize share the rule): with one missing the renderer laid the other out alone, full width, and Split kept a
   framing made for twice its pane's width until the window was resized. Until the user moves the camera, the model
-  stays framed as the stage resizes and the panel docks.
+  stays framed as the stage resizes and the panel docks. Framed so, a version far smaller than the other (a model exported 100× too big
+  beside the fixed one) is a speck, and its pane in Split or Swipe would look empty: while it is under 12 px on screen
+  and the other shows (`tooSmallToSee`, told each view the camera takes: `useModelCamera`'s `onViewChange`), its pane
+  says so ("100× smaller: too small to see at this size", `TooSmallNote`) with "Frame it", which frames that version.
+  The shared framing stays: it is what lets sizes compare.
 - **Controls**, as Unity's Scene view (`useOrbitGestures`); every move takes the model as far as the hand asked, at
   any zoom:
   - **Orbit and pan**: drag (or Alt+drag) orbits; right, middle or Shift+drag pans. A pan moves what it grabbed exactly
