@@ -100,6 +100,16 @@ describe('CmClient routing', () => {
     expect(shellCommands).toEqual([{ cwd: homedir(), args: ['profile', 'list'] }]);
   });
 
+  it('runs a query that answers the same anywhere in the home directory while the workspace warmed up at launch is not watched', async () => {
+    const { cm, shellCommands } = fakeClient();
+    // The first window's workspace, warmed up before its page says it shows it: a broken or missing one never does.
+    cm.warmUp(WORKSPACE);
+
+    await cm.query(['profile', 'list'], { anyDirectory: true });
+
+    expect(shellCommands).toEqual([{ cwd: homedir(), args: ['profile', 'list'] }]);
+  });
+
   it('runs a query as a process of its own while no session of the directory is ready yet, and warms them up', async () => {
     const { cm, processes, shellCommands, pools } = fakeClient({ warm: false });
 
