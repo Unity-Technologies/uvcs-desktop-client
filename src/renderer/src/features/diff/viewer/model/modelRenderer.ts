@@ -149,6 +149,7 @@ export class ModelRenderer {
     canvas.addEventListener('webglcontextrestored', this.requestRender);
     this.lookTextures = new LookTextures(Math.min(8, this.renderer.capabilities.getMaxAnisotropy()));
     this.picker = MeshPicker.supported(this.renderer) ? new MeshPicker() : null;
+    this.picker?.prepare(this.renderer, this.camera);
   }
 
   setModels(before: ModelScene | null, after: ModelScene | null, bounds: BoundsLike): void {

@@ -6,7 +6,7 @@
 // drawn: a skinned mesh posed by a take, a blendshape, exactly as shown. A GPU that can't draw into float pixels
 // (`EXT_color_buffer_float`, which WebGL 2 has nearly everywhere) has `supported` false: the renderer raycasts then.
 
-import { Color, FloatType, PerspectiveCamera, ShaderMaterial, type Material, type Mesh, type Scene, type WebGLRenderer, WebGLRenderTarget } from 'three';
+import { BufferAttribute, BufferGeometry, Color, FloatType, Mesh, PerspectiveCamera, Scene, ShaderMaterial, type Material, type WebGLRenderer, WebGLRenderTarget } from 'three';
 import { pickedAt, type PickWindow } from './pickWindow';
 
 /** The layer the pickable meshes are on, beside the default one everything is drawn on. */
@@ -36,6 +36,21 @@ export class MeshPicker {
 
   static supported(renderer: WebGLRenderer): boolean {
     return renderer.extensions.has('EXT_color_buffer_float');
+  }
+
+  /**
+   * Has the GPU compile the picking pass now, for meshes neither skinned nor with blendshapes (the big ones), as it
+   * would draw into the picking pixel: compiling at the first pick held the first click or wheel notch on each model
+   * for 100 ms. The GPU compiles in parallel (`KHR_parallel_shader_compile`): this doesn't wait for it.
+   */
+  prepare(renderer: WebGLRenderer, camera: PerspectiveCamera): void {
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new BufferAttribute(new Float32Array(9), 3));
+    const target = renderer.getRenderTarget();
+    renderer.setRenderTarget(this.target);
+    renderer.compile(new Scene().add(new Mesh(geometry, this.material)), camera);
+    renderer.setRenderTarget(target);
+    geometry.dispose();
   }
 
   /** The mesh of `scene` seen through `camera` at the window, and the point of it there; null where none is. */
