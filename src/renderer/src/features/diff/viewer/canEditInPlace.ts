@@ -1,4 +1,5 @@
 import type { ContentSource } from '@shared/domain/content';
+import { hasLineTooLongToDraw } from './longLines';
 
 /**
  * A diff is typed into directly when its modified side is a workspace file shown against its own past (the loaded
@@ -11,7 +12,10 @@ export function canEditInPlace(original: ContentSource, modified: ContentSource)
   return (original.kind === 'workspaceBase' || original.kind === 'reviewSnapshot') && original.path === modified.path;
 }
 
-/** Whether a diff that can be edited in place is typed into. */
+/**
+ * Whether a diff that can be edited in place is typed into: not when a side has a line too long to draw unwrapped
+ * (`hasLineTooLongToDraw`), where Pierre's editor froze the window at the first keystroke (a minified file of 2 MB).
+ */
 export function typesIntoDiff(editableInPlace: boolean, texts: readonly string[]): boolean {
-  return editableInPlace;
+  return editableInPlace && !hasLineTooLongToDraw(texts);
 }

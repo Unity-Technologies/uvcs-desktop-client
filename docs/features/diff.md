@@ -235,7 +235,8 @@ Chromium draws nothing of a line of text past some 1,300,000 characters (measure
 size), so the one line of a minified file of 1.6 MB showed as an empty row. A text with a line longer than
 `LONGEST_DRAWN_LINE` (1,000,000 characters, `features/diff/viewer/longLines`) has its lines wrapped wherever they can
 wrap, whatever the wrap preference (`hasLineTooLongToDraw`): the diff (its wrap button pressed and disabled, its tooltip
-saying why) and the merge page's texts (`usePierreOptions`). Annotate can't wrap, its rows being one line high beside
+saying why) and the merge page's texts (`usePierreOptions`). Such a pending file isn't typed into in the diff (`typesIntoDiff`): Pierre's editor froze the window at the first
+keystroke in a 2 MB line, so the diff is read-only, a line above it saying why, with Open file. Annotate can't wrap, its rows being one line high beside
 their annotation, so it cuts such a line there with an ellipsis (`withLongLinesCut`); that text is read-only, never
 written back. Everything else a long line costs is already bounded: Pierre highlights no line past
 `tokenizeMaxLineLength` (1,000 characters, its default) and marks no words in lines past `maxLineDiffLength`
