@@ -1,6 +1,6 @@
 import { fakeApi } from '../../testing/fakeWindow';
 import { QueryClient } from '@tanstack/react-query';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { workspaceRepositoryQuery } from './workspaceQueries';
 
 describe('workspaceRepositoryQuery', () => {
@@ -14,6 +14,22 @@ describe('workspaceRepositoryQuery', () => {
     expect(await read(['/wk/docs', '/wk/game', '/wk/tools'])).toEqual(['docs@local', 'game@local', 'tools@local']);
 
     expect(fakeApi.argsOf('workspaces.repositoriesOf').map(([paths]) => paths)).toEqual([['/wk/game'], ['/wk/tools'], ['/wk/docs']]);
+  });
+
+  it('keeps the answer for the session, however long the home screen is away', async () => {
+    vi.useFakeTimers();
+    try {
+      const client = new QueryClient();
+      fakeApi.answer('workspaces.repositoriesOf', () => ({ '/wk/game': 'game@local' }));
+
+      await client.fetchQuery(workspaceRepositoryQuery('/wk/game'));
+      await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
+      await client.fetchQuery(workspaceRepositoryQuery('/wk/game'));
+
+      expect(fakeApi.argsOf('workspaces.repositoriesOf')).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("keeps a workspace cm couldn't tell as unknown", async () => {
