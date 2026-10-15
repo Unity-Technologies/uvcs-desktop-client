@@ -32,6 +32,9 @@ export function isChangelistFile(relativePath: string | undefined): boolean {
   return relativePath !== undefined && relativePath.replaceAll('\\', '/').startsWith('.plastic/changelists/');
 }
 
+/** Files may have changed anywhere (not `.plastic`): their views read everything again. */
+export const ANY_FILE_EDIT: WorkspaceChange = { content: true, pathsChanged: true, metadata: false, folders: null };
+
 /**
  * What an event of `kind` tells the windows. `event` is `fs.watch`'s: `rename` for additions, deletions and moves,
  * `change` for edits. `folder` holds the item (`changedFolder`); a `.plastic` rewrite changes no folder's listing.

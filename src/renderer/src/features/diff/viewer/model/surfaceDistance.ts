@@ -1,13 +1,15 @@
 // How far each vertex of one surface is from another surface: the Differences mode's measure, the 3D twin of the
 // image diff's pixel difference. Each triangle is measured exactly (closest point on a triangle, Ericson, Real-Time
 // Collision Detection 5.1.5), so a re-meshed surface that kept its shape measures 0, which a nearest-vertex distance
-// would not. Two things keep it fast on a real model, whose triangles crowd where the detail is:
+// would not. Three things keep it fast on a real model, whose triangles crowd where the detail is:
 //
 // - A vertex found exactly at a vertex of the other surface (to `SAME_POINT_STEP`) is at 0 without a search: most of a
 //   model is unchanged between versions. And each point is measured once: a file repeats a corner per polygon.
 // - The other surface's triangles go in a bounding volume hierarchy (`buildHierarchy`), searched nearest box first,
 //   skipping every box farther than the nearest triangle found. A uniform grid was tried first and dropped: a dense
 //   fuselage beside an empty helipad put thousands of triangles in a cell (3.3 s for 38k vertices).
+// - The corners and the hierarchy are built once per surface (`MeasurableSurface`) and searched for every mesh
+//   measured against it: built per mesh, a scene of thousands of meshes read the whole other surface thousands of times.
 //
 // Pure and allocation-light: it runs in the model worker over millions of vertices.
 
@@ -24,15 +26,30 @@ export interface DistanceOptions {
 /** Points this close are one: below a re-export's rounding, far below what the Differences mode can show. */
 const SAME_POINT_STEP = 1e-6;
 
-export function surfaceDistances(vertices: Float32Array, surface: Triangles, { maxDistance }: DistanceOptions): Float32Array {
+/**
+ * A surface made ready to measure against: its corners hashed and its triangles in a hierarchy. Building it reads every
+ * triangle, so a version's surface is built once and measured against for all the other version's meshes.
+ */
+export class MeasurableSurface {
+  private constructor(
+    readonly corners: PointSet,
+    /** Null for a surface without triangles: nothing is near it. */
+    readonly search: NearestSearch | null,
+  ) {}
+
+  static of({ positions }: Triangles): MeasurableSurface {
+    const triangleCount = positions.length / 9;
+    const search = triangleCount === 0 ? null : new NearestSearch(buildHierarchy(positions, triangleCount), positions);
+    return new MeasurableSurface(new PointSet(positions), search);
+  }
+}
+
+export function surfaceDistances(vertices: Float32Array, surface: MeasurableSurface, { maxDistance }: DistanceOptions): Float32Array {
   const distances = new Float32Array(vertices.length / 3).fill(maxDistance);
-  const triangleCount = surface.positions.length / 9;
-  if (triangleCount === 0) return distances;
-  const corners = new PointSet(surface.positions);
+  const { corners, search } = surface;
+  if (!search) return distances;
   const measured = new PointSet(vertices);
   const measures = new Float32Array(measured.size).fill(-1);
-  const hierarchy = buildHierarchy(surface.positions, triangleCount);
-  const search = new NearestSearch(hierarchy, surface.positions);
   for (let v = 0; v < distances.length; v++) {
     const x = vertices[v * 3]!;
     const y = vertices[v * 3 + 1]!;
