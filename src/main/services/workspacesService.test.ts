@@ -244,22 +244,26 @@ describe('watching a workspace', () => {
 });
 
 describe('other workspaces', () => {
-  it('finds the root of the workspace holding a folder, or none outside any workspace', async () => {
-    const { service } = workspaces({
+  it('finds the root of the workspace holding a folder, or none outside any workspace, with a local read in any directory', async () => {
+    const { service, commands } = workspaces({
       getworkspacefrompath: ({ args }) => (args[1] === join(WORKSPACE, 'src') ? `${WORKSPACE}\n` : cmFails(`Error: ${args[1]} is not in a workspace.`)),
     });
 
     expect(await service.findRoot(join(WORKSPACE, 'src'))).toBe(WORKSPACE);
     expect(await service.findRoot(tmpdir())).toBeNull();
+    expect(commands.map(({ via, options }) => ({ via, options }))).toEqual([
+      { via: 'query', options: { anyDirectory: true } },
+      { via: 'query', options: { anyDirectory: true } },
+    ]);
   });
 
-  it("glances at another workspace's branch and pending changes with one local cm status from the home folder", async () => {
+  it("glances at another workspace's branch and pending changes with one local cm status, in any directory", async () => {
     const withChanges = STATUS_HEADER.replace('</StatusOutput>', `<Changes>${change('CH', 'a.cs')}</Changes></StatusOutput>`);
     const { service, commands } = workspaces({ status: withChanges });
 
     expect(await service.glance(WORKSPACE)).toEqual({ selector: { kind: 'branch', name: '/main/task1' }, pendingCount: 1 });
-    expect(commands).toMatchObject([{ via: 'query', args: ['status', '--xml', WORKSPACE], options: {} }]);
-    expect(commands[0]?.options.cwd).toBeUndefined();
+    expect(commands).toMatchObject([{ via: 'query', args: ['status', '--xml', WORKSPACE] }]);
+    expect(commands[0]?.options).toEqual({ anyDirectory: true });
   });
 
   it("glances at a Unity organization's workspace with that one command, as the switcher shows no repository from it", async () => {
