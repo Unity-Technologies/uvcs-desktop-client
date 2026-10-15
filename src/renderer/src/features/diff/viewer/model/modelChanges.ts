@@ -141,12 +141,13 @@ export function modelChanges(before: ModelSummary, after: ModelSummary): ModelCh
   // moved them all alike: no shape changed.
   const pivotsMoved = new Set(transforms.flatMap((change) => (change.kind === 'pivotMoved' ? [change.node.after!] : [])));
   const verticesExplained = whole.some((change) => change.kind === 'resized' || change.kind === 'offPivot');
+  const resized = whole.some((change) => change.kind === 'resized');
   const changes: ModelChange[] = [
     ...whole,
     ...hierarchyChanges(before, after, matching),
     ...transforms,
     ...slotChanges(pairs),
-    ...pairs.flatMap((pair) => meshChanges(pair, verticesExplained || pivotsMoved.has(pair.ref.after!))),
+    ...pairs.flatMap((pair) => meshChanges(pair, { verticesMovedAlike: verticesExplained || pivotsMoved.has(pair.ref.after!), resized })),
     ...clipChanges(before, after, matching),
     ...textureChanges(before, after, matching),
   ];
@@ -418,8 +419,9 @@ function sameSlotsBut(before: string[], after: string[], told: ModelChange[]): b
 /**
  * What changed in one mesh's data. A mesh rebuilt (another triangle count) changed everything; only that is told.
  * `verticesMovedAlike`: its vertices all moved as a change told already did (a pivot, a resize): no change of shape.
+ * `resized`: the model was resized, which scales a blendshape's offsets too.
  */
-function meshChanges({ before, after, ref }: MeshPair, verticesMovedAlike: boolean): ModelChange[] {
+function meshChanges({ before, after, ref }: MeshPair, { verticesMovedAlike, resized }: { verticesMovedAlike: boolean; resized: boolean }): ModelChange[] {
   const changes: ModelChange[] = [];
   const old = before.fingerprints;
   const next = after.fingerprints;
@@ -439,7 +441,8 @@ function meshChanges({ before, after, ref }: MeshPair, verticesMovedAlike: boole
     }
     if (before.hasUv && after.hasUv && old.uv !== next.uv) changes.push({ kind: 'uvs', node: ref });
     if (before.hasColors && after.hasColors && old.colors !== next.colors) changes.push({ kind: 'vertexColorsChanged', node: ref });
-    const offsetsBefore = new Map(before.blendShapes.map((name, i) => [name, old.blendShapes[i]]));
+    // Offsets are in the file's units: a model scaled with its vertices (Apply Scale) scaled them all, told as the resize.
+    const offsetsBefore = new Map(resized ? [] : before.blendShapes.map((name, i) => [name, old.blendShapes[i]]));
     const resculpted = after.blendShapes.filter((name, i) => offsetsBefore.has(name) && offsetsBefore.get(name) !== next.blendShapes[i]);
     if (resculpted.length > 0) changes.push({ kind: 'blendShapesChanged', node: ref, names: resculpted });
     if (before.bones.length > 0 && after.bones.length > 0 && (old.skin !== next.skin || before.bones.join('\n') !== after.bones.join('\n'))) changes.push({ kind: 'skinning', node: ref });
