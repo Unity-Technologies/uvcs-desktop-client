@@ -698,6 +698,15 @@ renderer/src/
   `DetailsCopyable`, `DetailsLink`, `DetailsDisclosure`, `MoreDetails`), each imported from its own module. Lists are
   a `DataTable` (`ui/table/`: only the rows in view render; the columns' sort, the keys' steps `selectionStep`, and
   `selectFirstRow`'s successor selection each in a module of their own).
+- **Big lists render only the rows in view**: anything a server can hold thousands of (branches, labels, repositories,
+  users and groups) is virtualized, never a plain `.map` over every row: a 4,800-label `.map` built 29k DOM nodes and
+  a 190 ms freeze on open. Pick from the virtualized pieces: `DataTable` for a view's list, `FilterChecklist` to check
+  several in a filter's popover, `PickList` to pick one in a dialog (labels, users and groups: the search keeps the
+  keys, `pickListKeys`), `BranchSearchList` for branches, and `RepositoryList` for the home screen's repositories,
+  whose expanded workspaces are rows of the same flat list (`repositoryListRows`). A list whose rows take the focus
+  themselves keeps the focused row rendered while it scrolls away (`keepRendered`). The filtering and sorting behind
+  such a list is memoized on its inputs, so a hover or a key doesn't redo it (`memberCandidates` sorts once per list
+  read). A suggestions list (`<datalist>`) holds the best few matches, never every object (`branchSuggestions`).
 - **Long names**: branch names run past 120 characters (`/main/child-br-cr-sample/empty-branch2/child_1/subtask/merge-test`),
   so nothing that shows one may overflow, wrap a row or push another control out. Each place names a branch one of two
   ways, by what it does with it:
