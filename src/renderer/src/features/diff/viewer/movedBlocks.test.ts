@@ -3,7 +3,7 @@ import { countCalls } from '@shared/testing/countCalls';
 import { countLineComparisons } from '../../../testing/countLineComparisons';
 import type { ComparisonMethod } from './comparisonMethod';
 import { lineDiff } from './lineDiff';
-import { detectMovedBlocks, MAX_BLOCKS, MAX_CHANGED_CHARACTERS, MAX_CHANGED_LINES, MAX_COMPARISONS, moveContaining, MoveSearch, type MovedBlock } from './movedBlocks';
+import { detectMovedBlocks, MAX_BLOCKS, MAX_CHANGED_LINES, MAX_COMPARISONS, MOVE_WORK_BUDGET, moveContaining, MoveSearch, type MovedBlock } from './movedBlocks';
 
 const text = (lines: string[], lineBreak = '\n'): string => lines.map((line) => `${line}${lineBreak}`).join('');
 const movesIn = (original: string[], modified: string[], method: ComparisonMethod = 'recognizeAll') =>
@@ -129,18 +129,35 @@ describe('detectMovedBlocks', () => {
     expect(movesIn(original, [...BEFORE, ...AFTER, ...FUNCTION])).toHaveLength(1);
   });
 
-  it(`compares no words in a diff whose changed lines hold more than ${MAX_CHANGED_CHARACTERS} characters: a minified file`, () => {
-    const minified = 'var a=b.c(d,e);'.repeat(Math.ceil(MAX_CHANGED_CHARACTERS / 10));
+  it("compares no words for a minified file's one changed line: a single line never moves", () => {
+    const minified = 'var a=b.c(d,e);'.repeat(70_000);
     const meta = lineDiff(text([minified]), text([`${minified}f();`]), 'recognizeAll').meta;
     const { result, comparisons } = countLineComparisons(() => detectMovedBlocks(meta, 'recognizeAll'));
     expect(result).toEqual([]);
     expect(comparisons).toBe(0);
   });
 
-  it(`still looks for moves among long lines that hold at most ${MAX_CHANGED_CHARACTERS} characters`, () => {
-    const long = (name: string): string => `const ${name} = [${'1, '.repeat(MAX_CHANGED_CHARACTERS / 20)}];`;
+  it('finds code moved as it was however long its lines', () => {
+    const long = (name: string): string => `const ${name} = [${'1, '.repeat(5_000)}];`;
     const moved = [long('first'), long('second')];
     expect(movesIn([...moved, ...BEFORE, ...AFTER], [...BEFORE, ...AFTER, ...moved])).toHaveLength(1);
+  });
+
+  it('finds paragraphs moved in prose whose other paragraphs were all rewritten', () => {
+    const paragraph = (name: string): string => Array.from({ length: 45 }, (_, index) => `${name}w${index}`).join(' ').slice(0, 450);
+    const rewritten = Array.from({ length: 120 }, (_, index) => [paragraph(`old${index}`), paragraph(`new${index}`)]);
+    const moved = [paragraph('movedA'), paragraph('movedB')];
+    const original = [...moved, ...BEFORE, ...rewritten.map(([before]) => before!), ...AFTER];
+    const modified = [...BEFORE, ...rewritten.map(([, after]) => after!), ...AFTER, ...moved];
+    expect(movesIn(original, modified)).toEqual([{ deletions: { start: 1, count: 2 }, additions: { start: 133, count: 2 }, changed: [], replaced: [] }]);
+  });
+
+  it(`spends at most ${MOVE_WORK_BUDGET} word comparisons on long sides that share no word`, () => {
+    const words = (prefix: string, separator: string): string => Array.from({ length: 12_500 }, (_, index) => `${prefix}${index}`).join(separator);
+    const meta = lineDiff(text([words('a', ' '), words('b', ' '), ...BEFORE]), text([...BEFORE, words('c', ','), words('d', ',')]), 'recognizeAll').meta;
+    const { result, comparisons } = countLineComparisons(() => detectMovedBlocks(meta, 'recognizeAll'));
+    expect(result).toEqual([]);
+    expect(comparisons).toBeLessThanOrEqual(MOVE_WORK_BUDGET);
   });
 
   it('spends a bounded number of comparisons on a file whose many look-alike blocks were all reordered', () => {

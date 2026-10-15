@@ -44,6 +44,11 @@ export const MAX_CHANGED_LINES = 500;
  * 400,000 words, held the window for minutes. Characters, not words: counting them splits no line.
  */
 export const MAX_CHANGED_CHARACTERS = 50_000;
+/**
+ * At most about this many word comparisons in a diff, some 100 ms. Comparing two sides takes their words times the
+ * edits allowed, a fifth of them, so a few long sides (a minified file's lines, paragraphs of prose) cost millions.
+ */
+export const MOVE_WORK_BUDGET = 20_000_000;
 /** At most this many block comparisons in a diff, however its blocks fall: some 50 ms at worst. */
 export const MAX_COMPARISONS = 20_000;
 /** A block moved into a bigger change is searched for in runs of that change's lines, up to this many more than its own. */
