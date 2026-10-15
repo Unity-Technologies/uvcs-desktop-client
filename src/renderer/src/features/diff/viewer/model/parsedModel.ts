@@ -124,6 +124,14 @@ export interface FileMaterial {
   doubleSided: boolean;
 }
 
+/** One of a glTF's images (`FileTexture`'s `gltfImage` indexes them): what tells a texture renamed or repainted. */
+export interface FileImage {
+  /** Its name in the file; else its file's name, for one beside the glTF; else `image 2`, by its place. */
+  name: string;
+  /** A fingerprint of the bytes the file holds; null for an image in a file of its own, which the model only names. */
+  bytes: string | null;
+}
+
 export interface ParsedModel {
   format: ModelFormat;
   /** Parents before their children; `nodes[0]` is the root (the model itself). */
@@ -134,6 +142,8 @@ export interface ParsedModel {
   textures: string[];
   /** Each material the meshes use, once (`ModelMesh.slotMaterials`): what the Materials look starts from. */
   materials: FileMaterial[];
+  /** A glTF's images, by their index in it; none for other formats, whose textures are files of their own. */
+  images: FileImage[];
   /** Metres per file unit, as Unity imports it ("Convert Units"): an FBX in centimetres is 0.01. */
   unitScale: number;
   /** What the model's import settings multiply that by (`importScaleOf`: its Scale Factor); 1 when none are read. */

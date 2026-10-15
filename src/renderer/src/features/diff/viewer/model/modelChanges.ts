@@ -8,6 +8,7 @@
 import { Matrix4, Quaternion, Vector3 } from 'three';
 import type { ModelNodeKind } from './parsedModel';
 import type { Bounds, MeshSummary, ModelSummary, SummaryNode } from './modelSummary';
+import type { TakeTrack } from './takeTracks';
 import { matchNodes, type NodeMatching } from './nodeMatching';
 import { isMaterialRisk, type MaterialChange } from './materials/materialChanges';
 import type { NotKnownReason } from './materials/materialComparison';
@@ -44,10 +45,20 @@ export type ModelChange =
   | { kind: 'meshSlots'; node: NodeRef; before: string[]; after: string[] }
   | { kind: 'triangles'; node: NodeRef; before: number; after: number }
   | { kind: 'shape'; node: NodeRef }
+  /** The same vertices made into other triangles (a quad split along its other diagonal): no vertex moved. */
+  | { kind: 'triangulation'; node: NodeRef }
+  /** The same triangles, some turning the other way: Unity draws them from what was their back. */
+  | { kind: 'facesFlipped'; node: NodeRef }
+  /** The same triangles, some drawn with another of the mesh's material slots. */
+  | { kind: 'faceSlots'; node: NodeRef }
   | { kind: 'normals'; node: NodeRef }
   | { kind: 'uvs'; node: NodeRef }
   | { kind: 'lightmapUvs'; node: NodeRef; now: boolean }
   | { kind: 'vertexColors'; node: NodeRef; now: boolean }
+  /** Vertex colors on both versions, painted otherwise. */
+  | { kind: 'vertexColorsChanged'; node: NodeRef }
+  /** Blendshapes both versions have by name whose offsets changed: the shape a face makes. */
+  | { kind: 'blendShapesChanged'; node: NodeRef; names: string[] }
   | { kind: 'skinning'; node: NodeRef }
   | { kind: 'blendShapeRenamed'; node: NodeRef; from: string; to: string }
   | { kind: 'blendShapeRemoved'; node: NodeRef; name: string }
@@ -56,7 +67,12 @@ export type ModelChange =
   | { kind: 'clipRemoved'; name: string }
   | { kind: 'clipAdded'; name: string }
   | { kind: 'clipLength'; name: string; before: number; after: number }
-  | { kind: 'textures'; added: string[]; removed: string[] }
+  /** A take of the same name and length whose keys changed, and the nodes it keys differently (parents first). */
+  | { kind: 'clipKeys'; name: string; nodes: NodeRef[] }
+  /** Textures the materials name, or a glTF holds, now and no longer, and the meshes that show them. */
+  | { kind: 'textures'; added: string[]; removed: string[]; nodes: NodeRef[] }
+  /** Textures a glTF holds whose pixels changed under their names, and the meshes that show them. */
+  | { kind: 'embeddedTextures'; names: string[]; nodes: NodeRef[] }
   | { kind: 'upAxis'; before: string; after: string }
   /** What the model's import settings (`importSettingsChanges`) do with it now, and no longer fits it. */
   | { kind: 'scaleFactor'; before: ScaleSettings; after: ScaleSettings }
@@ -66,7 +82,7 @@ export type ModelChange =
   | { kind: 'clipTakeLost'; clip: string; take: string }
   | { kind: 'exporter'; before: string | null; after: string | null }
   /** What changed in a slot's material as Unity resolves it (`materialChanges`). */
-  | { kind: 'material'; change: MaterialChange }
+  | { kind: 'material'; change: MaterialChange; nodes: NodeRef[] }
   /** Materials that may have changed but couldn't be compared, and why (`materialsNotComparedOf`). */
   | { kind: 'materialsNotCompared'; reason: NotKnownReason };
 
@@ -125,14 +141,15 @@ export function modelChanges(before: ModelSummary, after: ModelSummary): ModelCh
   // moved them all alike: no shape changed.
   const pivotsMoved = new Set(transforms.flatMap((change) => (change.kind === 'pivotMoved' ? [change.node.after!] : [])));
   const verticesExplained = whole.some((change) => change.kind === 'resized' || change.kind === 'offPivot');
+  const resized = whole.some((change) => change.kind === 'resized');
   const changes: ModelChange[] = [
     ...whole,
     ...hierarchyChanges(before, after, matching),
     ...transforms,
     ...slotChanges(pairs),
-    ...pairs.flatMap((pair) => meshChanges(pair, verticesExplained || pivotsMoved.has(pair.ref.after!))),
-    ...clipChanges(before, after),
-    ...textureChanges(before, after),
+    ...pairs.flatMap((pair) => meshChanges(pair, { verticesMovedAlike: verticesExplained || pivotsMoved.has(pair.ref.after!), resized })),
+    ...clipChanges(before, after, matching),
+    ...textureChanges(before, after, matching),
   ];
   if (before.unitScale !== after.unitScale && !changes.some((change) => change.kind === 'resized')) {
     changes.push({ kind: 'unitsChanged', before: before.unitScale, after: after.unitScale });
@@ -140,6 +157,20 @@ export function modelChanges(before: ModelSummary, after: ModelSummary): ModelCh
   if (before.upAxis !== after.upAxis) changes.push({ kind: 'upAxis', before: before.upAxis.toUpperCase(), after: after.upAxis.toUpperCase() });
   if (before.exportedFrom !== after.exportedFrom) changes.push({ kind: 'exporter', before: before.exportedFrom, after: after.exportedFrom });
   return [...changes.filter(isRisk), ...changes.filter((change) => !isRisk(change))];
+}
+
+/**
+ * The meshes whose triangles use a material slot, by its name: as the version after has them, and those of the
+ * version before that are gone since, as `matching` pairs them (`matchNodes`, which the viewer has already). What a
+ * material's row frames.
+ */
+export function meshesUsingSlot(before: ModelSummary, after: ModelSummary, { afterOf, beforeOf }: NodeMatching): (slot: string) => NodeRef[] {
+  const using = (summary: ModelSummary, slot: string) => summary.nodes.flatMap((node, i) => (node.mesh !== null && summary.meshes[node.mesh]!.slots.includes(slot) ? [i] : []));
+  return (slot) => {
+    const now = using(after, slot).map((a) => refOf(after.nodes[a], before.nodes[beforeOf[a]!]));
+    const gone = using(before, slot).filter((b) => afterOf[b] === -1).map((b) => refOf(undefined, before.nodes[b]));
+    return [...now, ...gone];
+  };
 }
 
 /** A mesh on both sides, with its nodes. */
@@ -386,8 +417,9 @@ function sameSlotsBut(before: string[], after: string[], told: ModelChange[]): b
 /**
  * What changed in one mesh's data. A mesh rebuilt (another triangle count) changed everything; only that is told.
  * `verticesMovedAlike`: its vertices all moved as a change told already did (a pivot, a resize): no change of shape.
+ * `resized`: the model was resized, which scales a blendshape's offsets too where it scaled the mesh's vertices.
  */
-function meshChanges({ before, after, ref }: MeshPair, verticesMovedAlike: boolean): ModelChange[] {
+function meshChanges({ before, after, ref }: MeshPair, { verticesMovedAlike, resized }: { verticesMovedAlike: boolean; resized: boolean }): ModelChange[] {
   const changes: ModelChange[] = [];
   const old = before.fingerprints;
   const next = after.fingerprints;
@@ -397,9 +429,22 @@ function meshChanges({ before, after, ref }: MeshPair, verticesMovedAlike: boole
     // A shape changed when the mesh's vertices did, and where they end up in the scene did too: vertices shifted to
     // make up for a node moved (a pivot, a new parent) leave the mesh as it looked.
     const moved = old.positions !== next.positions && old.placedPositions !== next.placedPositions;
-    if ((moved && !verticesMovedAlike) || old.index !== next.index) changes.push({ kind: 'shape', node: ref });
-    else if (old.normals !== next.normals) changes.push({ kind: 'normals', node: ref });
+    if (moved && !verticesMovedAlike) changes.push({ kind: 'shape', node: ref });
+    else {
+      // Its vertices where they were, joined into other triangles: told as that, as a shape change it would read as
+      // a sculpt, while a flat face split another way looks the same.
+      if (old.index !== next.index) changes.push({ kind: old.corners === next.corners ? 'facesFlipped' : 'triangulation', node: ref });
+      else if (old.slots !== next.slots && before.slots.join('\n') === after.slots.join('\n')) changes.push({ kind: 'faceSlots', node: ref });
+      if (old.normals !== next.normals) changes.push({ kind: 'normals', node: ref });
+    }
     if (before.hasUv && after.hasUv && old.uv !== next.uv) changes.push({ kind: 'uvs', node: ref });
+    if (before.hasColors && after.hasColors && old.colors !== next.colors) changes.push({ kind: 'vertexColorsChanged', node: ref });
+    // Offsets are in the file's units: a model scaled with its vertices (Apply Scale) scaled them all, told as the
+    // resize. One scaled by a node kept its vertices, and its offsets: a change in them is a resculpt.
+    const offsetsScaled = resized && old.positions !== next.positions;
+    const offsetsBefore = new Map(offsetsScaled ? [] : before.blendShapes.map((name, i) => [name, old.blendShapes[i]]));
+    const resculpted = after.blendShapes.filter((name, i) => offsetsBefore.has(name) && offsetsBefore.get(name) !== next.blendShapes[i]);
+    if (resculpted.length > 0) changes.push({ kind: 'blendShapesChanged', node: ref, names: resculpted });
     if (before.bones.length > 0 && after.bones.length > 0 && (old.skin !== next.skin || before.bones.join('\n') !== after.bones.join('\n'))) changes.push({ kind: 'skinning', node: ref });
   }
   if (before.hasLightmapUv !== after.hasLightmapUv) changes.push({ kind: 'lightmapUvs', node: ref, now: after.hasLightmapUv });
@@ -415,8 +460,12 @@ function blendShapeChanges(before: string[], after: string[], node: NodeRef): Mo
   return [...removed.map((name): ModelChange => ({ kind: 'blendShapeRemoved', node, name })), ...added.map((name): ModelChange => ({ kind: 'blendShapeAdded', node, name }))];
 }
 
-/** Takes by name, as Unity's clips name the take they're cut from: one gone and one come of the same length is a rename. */
-function clipChanges(before: ModelSummary, after: ModelSummary): ModelChange[] {
+/**
+ * Takes by name, as Unity's clips name the take they're cut from: one gone and one come of the same length is a rename.
+ * A take of the same length whose keys changed is told with the nodes it moves differently: the viewer plays it, but
+ * only once picked, so the panel says where to look.
+ */
+function clipChanges(before: ModelSummary, after: ModelSummary, matching: NodeMatching): ModelChange[] {
   const lengths = new Map(after.clips.map((clip) => [clip.name, clip.duration]));
   const names = new Set(before.clips.map((clip) => clip.name));
   const removed = before.clips.filter((clip) => !lengths.has(clip.name));
@@ -431,13 +480,71 @@ function clipChanges(before: ModelSummary, after: ModelSummary): ModelChange[] {
     const length = lengths.get(clip.name);
     if (length !== undefined && Math.abs(length - clip.duration) > DURATION_TOLERANCE_SECONDS) changes.push({ kind: 'clipLength', name: clip.name, before: clip.duration, after: length });
   }
+  const clipsAfter = new Map(after.clips.map((clip) => [clip.name, clip]));
+  for (const clip of before.clips) {
+    const next = clipsAfter.get(clip.name);
+    if (!next || Math.abs(next.duration - clip.duration) > DURATION_TOLERANCE_SECONDS) continue;
+    const nodes = rekeyedNodes(clip.tracks, next.tracks, before, after, matching);
+    if (nodes) changes.push({ kind: 'clipKeys', name: clip.name, nodes });
+  }
   return changes;
 }
 
-function textureChanges(before: ModelSummary, after: ModelSummary): ModelChange[] {
-  const added = after.textures.filter((name) => !before.textures.includes(name));
-  const removed = before.textures.filter((name) => !after.textures.includes(name));
-  return added.length + removed.length > 0 ? [{ kind: 'textures', added, removed }] : [];
+/**
+ * The nodes whose tracks differ between the versions of a take (keyed differently, or only on one side), in the
+ * version after's order, each once; null when every track is the same.
+ */
+function rekeyedNodes(before: TakeTrack[], after: TakeTrack[], summaryBefore: ModelSummary, summaryAfter: ModelSummary, matching: NodeMatching): NodeRef[] | null {
+  const keysOf = (tracks: TakeTrack[]) => new Map(tracks.map((track) => [track.name, track]));
+  const [was, now] = [keysOf(before), keysOf(after)];
+  const changed = [...new Set([...was.keys(), ...now.keys()])].filter((name) => was.get(name)?.keys !== now.get(name)?.keys);
+  if (changed.length === 0) return null;
+  const indexOf = (summary: ModelSummary) => {
+    const indices = new Map(summary.nodes.map((node, i) => [node.key, i]));
+    return (track: TakeTrack | undefined): number => (track?.node == null ? -1 : (indices.get(track.node) ?? -1));
+  };
+  const [indexBefore, indexAfter] = [indexOf(summaryBefore), indexOf(summaryAfter)];
+  // Each node as an index after, or (gone since, or no longer keyed) before.
+  const sides = new Map<string, { after: number; before: number }>();
+  for (const name of changed) {
+    const keyedAfter = indexAfter(now.get(name));
+    const a = keyedAfter !== -1 ? keyedAfter : (matching.afterOf[indexBefore(was.get(name))] ?? -1);
+    const b = a === -1 ? indexBefore(was.get(name)) : matching.beforeOf[a]!;
+    if (a !== -1 || b !== -1) sides.set(`${a}:${b}`, { after: a, before: b });
+  }
+  return [...sides.values()]
+    .sort((x, y) => (x.after === -1 ? Infinity : x.after) - (y.after === -1 ? Infinity : y.after) || x.before - y.before)
+    .map(({ after, before }) => refOf(summaryAfter.nodes[after], summaryBefore.nodes[before]));
+}
+
+/**
+ * The textures the file's materials name (FBX, OBJ, a glTF's files beside it) and the images a glTF holds, by name:
+ * one gone, one come, and one held in the file whose bytes changed under its name (a repaint, which no file of its own
+ * would show). Each with the meshes that show it, so the row frames where to look.
+ */
+function textureChanges(before: ModelSummary, after: ModelSummary, matching: NodeMatching): ModelChange[] {
+  const held = (summary: ModelSummary) => new Map(summary.images.flatMap((image) => (image.bytes === null ? [] : [[image.name, image.bytes] as const])));
+  const [heldBefore, heldAfter] = [held(before), held(after)];
+  const names = (summary: ModelSummary, images: Map<string, string>) => [...new Set([...summary.textures, ...images.keys()])];
+  const [namesBefore, namesAfter] = [names(before, heldBefore), names(after, heldAfter)];
+  const added = namesAfter.filter((name) => !namesBefore.includes(name));
+  const removed = namesBefore.filter((name) => !namesAfter.includes(name));
+  const repainted = [...heldAfter].flatMap(([name, bytes]) => (heldBefore.has(name) && heldBefore.get(name) !== bytes ? [name] : []));
+  const changes: ModelChange[] = [];
+  if (added.length + removed.length > 0) changes.push({ kind: 'textures', added, removed, nodes: meshesShowing(before, after, matching, added, removed) });
+  if (repainted.length > 0) changes.push({ kind: 'embeddedTextures', names: repainted, nodes: meshesShowing(before, after, matching, repainted, repainted) });
+  return changes;
+}
+
+/** The meshes whose materials map one of the textures: `now` in the version after, `was` (gone since) before. */
+function meshesShowing(before: ModelSummary, after: ModelSummary, matching: NodeMatching, now: string[], was: string[]): NodeRef[] {
+  const showing = (summary: ModelSummary, textures: string[]) =>
+    summary.nodes.flatMap((node, i) => (node.mesh !== null && summary.meshes[node.mesh]!.textures.some((name) => textures.includes(name)) ? [i] : []));
+  const nodesAfter = new Set(showing(after, now));
+  for (const b of showing(before, was)) if (matching.afterOf[b] !== -1) nodesAfter.add(matching.afterOf[b]!);
+  const refs = [...nodesAfter].sort((x, y) => x - y).map((a) => refOf(after.nodes[a], before.nodes[matching.beforeOf[a]!]));
+  const gone = showing(before, was).filter((b) => matching.afterOf[b] === -1).map((b) => refOf(undefined, before.nodes[b]));
+  return [...refs, ...gone];
 }
 
 function radians(degrees: number): number {

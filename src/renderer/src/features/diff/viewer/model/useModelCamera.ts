@@ -10,15 +10,23 @@ import { VIEW_GLIDE_MS } from './viewGlide';
 /**
  * The viewer's camera (`ModelCameraControl`, where its rules are), wired to React: not state, so a drag redraws the
  * canvas without rendering the panel again. Every move of the camera reaches the renderer through `onCameraMove`.
- * `bounds`: the pair's, once every version is in the renderer; null until then, when nothing frames.
+ * `bounds`: the pair's, once every version is in the renderer; null until then, when nothing frames. `onViewChange`:
+ * told every view the camera takes (gestures, glide frames, framings, resizes), for what depends on it
+ * (`tooSmallToSee`), without rendering on each.
  */
-export function useModelCamera(renderer: ModelRenderer | null, bounds: BoundsLike | null, stage: RefObject<HTMLElement | null>) {
+export function useModelCamera(renderer: ModelRenderer | null, bounds: BoundsLike | null, stage: RefObject<HTMLElement | null>, onViewChange?: (view: OrbitView) => void) {
   const latestRenderer = useRef(renderer);
   latestRenderer.current = renderer;
+  // The latest callback: the control is built once, and one it captured would see the first render's values.
+  const latestViewChange = useRef(onViewChange);
+  latestViewChange.current = onViewChange;
   const [control] = useState(
     () =>
       new ModelCameraControl({
-        onCameraMove: (view) => latestRenderer.current?.setView(view),
+        onCameraMove: (view) => {
+          latestRenderer.current?.setView(view);
+          latestViewChange.current?.(view);
+        },
         paneAspect: () => latestRenderer.current?.paneAspect() ?? 1,
         clock: browserFrameClock,
         glideMs: () => (prefersReducedMotion() ? 0 : VIEW_GLIDE_MS),

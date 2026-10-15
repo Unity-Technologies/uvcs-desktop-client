@@ -38,4 +38,11 @@ describe('fingerprintOf', () => {
     expect(fingerprintOf(new Float32Array([0]))).not.toBe(fingerprintOf(new Float32Array([0, 0])));
     expect(fingerprintOf(null)).toBe('');
   });
+
+  it("fingerprints bytes where they are, a view into another buffer as its copy, and tells a byte's change", () => {
+    const file = new Uint8Array([9, 1, 2, 3, 4, 5]);
+    const image = file.subarray(1);
+    expect(fingerprintOf(image)).toBe(fingerprintOf(image.slice()));
+    expect(fingerprintOf(image)).not.toBe(fingerprintOf(new Uint8Array([1, 2, 3, 4, 6])));
+  });
 });

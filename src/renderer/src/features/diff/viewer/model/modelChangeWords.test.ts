@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changeRows } from './modelChangeWords';
+import { changeRows, takeOfPick } from './modelChangeWords';
 import type { ModelChange, NodeRef } from './modelChanges';
 import { formatLength, formatUnits } from './modelUnits';
 import type { MaterialChange } from './materials/materialChanges';
@@ -50,6 +50,25 @@ describe('changeRows', () => {
     expect(titles([{ kind: 'shape', node: mesh('Rock') }, { kind: 'shape', node: mesh('Ledge') }])).toEqual(["Rock's shape changed", "Ledge's shape changed"]);
   });
 
+  it('tells a mesh triangulated differently apart from a shape change, as its vertices stayed', () => {
+    expect(changeRows([{ kind: 'triangulation', node: mesh('Cap') }])).toMatchObject([{ tone: 'note', title: 'Cap is triangulated differently', detail: 'Its vertices are where they were.' }]);
+  });
+
+  it('tells faces that use another material slot, folding three or more meshes', () => {
+    expect(titles([{ kind: 'faceSlots', node: mesh('Body') }])).toEqual(["Some of Body's faces use another material"]);
+    expect(titles(['Body', 'Door', 'Hood'].map((name): ModelChange => ({ kind: 'faceSlots', node: mesh(name) })))).toEqual(['Faces use other materials on 3 meshes']);
+  });
+
+  it('tells faces flipped by what Unity shows of them', () => {
+    expect(changeRows([{ kind: 'facesFlipped', node: mesh('Hull') }])).toMatchObject([{ tone: 'note', title: "Some of Hull's faces flipped", detail: 'Unity draws a face from its front only: those now show from the other side.' }]);
+  });
+
+  it('tells blendshapes resculpted and vertex colors repainted, naming the mesh', () => {
+    expect(titles([{ kind: 'blendShapesChanged', node: mesh('Face'), names: ['Smile'] }])).toEqual(['Blendshape Smile on Face changed']);
+    expect(titles([{ kind: 'blendShapesChanged', node: mesh('Face'), names: ['Smile', 'Blink', 'Frown', 'Pout'] }])).toEqual(['Blendshapes changed on Face: Smile, Blink, Frown and 1 more']);
+    expect(titles([{ kind: 'vertexColorsChanged', node: mesh('Rock') }])).toEqual(["Rock's vertex colors changed"]);
+  });
+
   it('counts triangles as a budget reads them', () => {
     expect(titles([{ kind: 'triangles', node: mesh('Rock'), before: 180, after: 3024 }])).toEqual(['Rock: 180 → 3,024 triangles']);
   });
@@ -60,6 +79,43 @@ describe('changeRows', () => {
       title: 'Material slot Wood is now Wood_mat',
       detail: "Unity remaps materials by slot name: the material set for the old name isn't used anymore.",
     });
+  });
+
+  it('tells a take whose keys changed by the nodes it moves differently, and plays that take when picked', () => {
+    const [row] = changeRows([{ kind: 'clipKeys', name: 'Run', nodes: [bone('Hips'), bone('Leg_L'), bone('Leg_R'), bone('Tail'), bone('Ear_L')] }]);
+    // Its focus is none: a bone's dot stands where the bone rests, while the take plays it elsewhere.
+    expect(row).toMatchObject({ tone: 'note', title: 'Animation Run changed: Hips, Leg_L, Leg_R and 2 more', take: 'Run', focus: [] });
+    expect(titles([{ kind: 'clipKeys', name: 'Walk', nodes: [bone('Tail')] }])).toEqual(['Animation Walk changed: Tail']);
+    expect(titles([{ kind: 'clipKeys', name: 'Wave', nodes: [] }])).toEqual(['Animation Wave changed']);
+  });
+
+  it('folds three or more takes whose keys changed, each item playing its own take', () => {
+    const rows = changeRows(['Run', 'Walk', 'Wave'].map((name): ModelChange => ({ kind: 'clipKeys', name, nodes: [bone('Hips'), bone('Tail')] })));
+    expect(rows).toMatchObject([{ title: '3 animations changed', focus: [] }]);
+    expect(rows[0]!.take).toBeUndefined();
+    expect(rows[0]!.items).toEqual([
+      { label: 'Run: Hips, Tail', focus: [], take: 'Run' },
+      { label: 'Walk: Hips, Tail', focus: [], take: 'Walk' },
+      { label: 'Wave: Hips, Tail', focus: [], take: 'Wave' },
+    ]);
+  });
+
+  it('plays the take a row or an item picked is about, and leaves the take bar alone for any other', () => {
+    const [one] = changeRows([{ kind: 'clipKeys', name: 'Run', nodes: [] }]);
+    const [folded] = changeRows(['Run', 'Walk', 'Wave'].map((name): ModelChange => ({ kind: 'clipKeys', name, nodes: [] })));
+    const [shape] = changeRows([{ kind: 'shape', node: mesh('Rock') }]);
+    expect(takeOfPick(one!)).toBe('Run');
+    expect(takeOfPick(folded!, 1)).toBe('Walk');
+    expect(takeOfPick(folded!)).toBeNull();
+    expect(takeOfPick(shape!)).toBeNull();
+  });
+
+  it('tells textures renamed or changed with the meshes that show them as the focus, saying where a repaint shows', () => {
+    const [renamed] = changeRows([{ kind: 'textures', added: ['Leaves_Autumn'], removed: ['Leaves_Summer'], nodes: [mesh('Leaves')] }]);
+    expect(renamed).toMatchObject({ tone: 'note', title: 'Textures changed: Leaves_Summer → Leaves_Autumn', focus: [{ name: 'Leaves' }] });
+    const [repainted] = changeRows([{ kind: 'embeddedTextures', names: ['Leaves'], nodes: [mesh('Leaves'), mesh('Bush')] }]);
+    expect(repainted).toMatchObject({ title: 'Texture Leaves changed', detail: 'Show materials and textures to see it.', focus: [{ name: 'Leaves' }, { name: 'Bush' }] });
+    expect(titles([{ kind: 'embeddedTextures', names: ['Leaves', 'Bark'], nodes: [] }])).toEqual(['2 textures changed: Leaves, Bark']);
   });
 
   it('tells the exporting app as a note', () => {
@@ -95,9 +151,17 @@ describe('changeRows, for the import settings', () => {
 });
 
 describe('changeRows, for the materials', () => {
-  const material = (change: MaterialChange): ModelChange => ({ kind: 'material', change });
+  const material = (change: MaterialChange, nodes: NodeRef[] = []): ModelChange => ({ kind: 'material', change, nodes });
   const project = (name: string, path = `Assets/Materials/${name}.mat`) => ({ kind: 'project' as const, guid: path, name, path });
   const DEFAULT = { kind: 'default' as const };
+
+  it('focuses the meshes that use the slot, a folded row all of them and each item its own', () => {
+    const [one] = changeRows([material({ kind: 'baseColor', slot: 'Main', before: '#CA9337', after: '#3881E1' }, [mesh('Body'), mesh('Arm')])]);
+    expect(one!.focus.map((node) => node.name)).toEqual(['Body', 'Arm']);
+    const [folded] = changeRows(['Glass', 'Visor', 'Lamp'].map((slot) => material({ kind: 'alpha', slot, before: 'opaque', after: 'blend' }, [mesh(slot)])));
+    expect(folded!.focus.map((node) => node.name)).toEqual(['Glass', 'Visor', 'Lamp']);
+    expect(folded!.items!.map((item) => item.focus.map((node) => node.name))).toEqual([['Glass'], ['Visor'], ['Lamp']]);
+  });
 
   it('tells where a slot takes its material from now, and from where before', () => {
     const rows = changeRows([

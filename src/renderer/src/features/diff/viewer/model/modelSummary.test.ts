@@ -81,7 +81,7 @@ describe('modelSummary', () => {
       }),
     );
     expect(summary.totals).toEqual({ triangles: 24, vertices: 48, meshes: 2, materials: 2, bones: 0, blendShapes: 2 });
-    expect(summary.clips).toEqual([{ name: 'Idle', duration: 2 }]);
+    expect(summary.clips).toEqual([{ name: 'Idle', duration: 2, tracks: [] }]);
   });
 
   it('keeps only the material slots some triangle uses, as Unity makes submeshes only of those', () => {

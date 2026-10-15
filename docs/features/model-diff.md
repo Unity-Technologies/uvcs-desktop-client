@@ -65,9 +65,12 @@ bounds in Unity's space, and each mesh's triangles, material slots, blendshapes,
   splits vertices for the tangents it computes, so it differs by a few percent; the strip's tooltip says "about".
 - **Material slots are those some triangle uses**: Unity makes submeshes only of those (a file declaring 17 materials
   Unity shows as 14).
-- **Fingerprints** of each attribute's exact values tell what changed without keeping both versions' arrays, and
-  `placedPositions` (where the vertices end up in Unity's space, to 10 µm) tells a mesh whose vertices were shifted to
-  stay in place (a pivot moved, a new parent) from one whose shape changed.
+- **Fingerprints** of each attribute's exact values tell what changed without keeping both versions' arrays. The
+  triangles are hashed as sets (`triangleSetsOf`: each on its own, whichever corner it starts from, the hashes summed,
+  linear and without allocating), as a re-export lists them in another order and Unity reorders them anyway: by winding,
+  by corners alone (faces flipped) and with each one's slot (faces painted with another material). `placedPositions`
+  (where the vertices end up in Unity's space, to 10 µm) tells a mesh whose vertices were shifted to stay in place (a
+  pivot moved, a new parent) from one whose shape changed.
 - **Where a vertex is, is where it is drawn** (`placedPositionsOf`): through its node, or, skinned, through its bones
   at rest as its file bound them (`bone's world × inverse bind × bind matrix`). The bounds, the size in the strip and
   the Differences mode's measure all read it, so a weapon bound upright and held across by the rest pose is measured
@@ -99,46 +102,62 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
   moves nothing in Unity and isn't listed.
 - **Material slots**, model-wide as Unity remaps them by name: renamed (a name gone and another come in the same slot
   of the same mesh), removed, added; a mesh that uses another of the model's slots.
-- **Each mesh**: triangles (and nothing else then: a rebuilt mesh changed everything), shape, normals, UVs, lightmap
-  UVs (lost is a risk: baked lighting needs them), vertex colors, skinning, blendshapes renamed, removed or added.
+- **Each mesh**: triangles (and nothing else then: a rebuilt mesh changed everything), shape, triangulated differently
+  (the same vertices joined into other triangles, a flat cap split along other diagonals: no shape change, which would
+  read as a sculpt), faces flipped (the same triangles, some turning the other way), faces that use another of its
+  slots, normals, UVs, lightmap UVs (lost is a risk: baked lighting needs them), vertex colors gained, lost or
+  repainted, skinning, blendshapes renamed, removed, added or resculpted under their names.
 - **Takes** (Unity's clips are cut from them by name): renamed (one gone and one of the same length come), removed,
-  added, of another length. **Textures** the file's materials name (where materials aren't told, below), the **up
-  axis**, the **exporting app** (all a re-export with nothing else changed tells: the panel says "Nothing Unity imports
-  changed" when there's nothing at all).
+  added, of another length; and, at the same name and length, keyed differently, with the nodes it moves differently
+  ("Animation Run changed: Hips, Leg_L, Tail and 4 more", parents first): the view shows it only once the take plays, so
+  the panel says where to look. Keys are compared track by track (`takeTracksOf`, in steps of `KEY_STEP` so a
+  re-export's rounding is none), a blendshape track keyed whole (glTF) blendshape by blendshape (a cubic one's values
+  apart from its tangents) and a weight that stays 0 not at all: a blendshape added to a mesh adds a 0 weight to every
+  take, which changes none. **Textures** the file's materials name (where materials aren't told, below) and the images a
+  glTF holds (`gltfFileImages`: by name, their bytes fingerprinted, never decoded), each row framing the meshes whose
+  materials map them (`MeshSummary.textures`); and an image held in the file whose bytes changed under its name
+  ("Texture Leaves changed", which the materials can't tell and no file of its own shows). Known limits: an image the
+  file leaves unnamed is named by its place (`image 2`), so one removed before it renames it; two images of one name
+  compare as one. The **up axis**, the **exporting app** (all a re-export with nothing else changed tells: the panel
+  says "Nothing Unity imports changed" when there's nothing at all).
 - **Materials as Unity resolves them** (`materialChanges`, worded by `materialChangeWords`), compared from both
   versions' plans (`planVersion`'s `resolved`, "Materials" below), each slot both versions have (a glTF's materials,
   keyed by their place in the file, paired by name instead, and only where both files name one material so:
-  `pairedSlots`; its images held in the file are compared by their place, never their content): where it takes its
-  material from (Unity's default; a project's `.mat`, by its GUID, one of the same name elsewhere named by its folder, a
-  registry package's in `Library/PackageCache` named the package's; the model's own; a remap to a material the project
-  hasn't: Unity's missing material, a risk), and, for the same material, its base map, normal map, base color (as the
-  Inspector shows it, `#RRGGBB`), alpha (opaque, cutout, transparent), alpha cutoff, opacity (in whole percents, as
-  told), sides and the base map's tiling and offset; and a texture it now uses that the workspace hasn't (a risk; one it
-  lacked before isn't news). Each version's materials are read where it is (its point, "Materials" below), so a
-  `.mat` the diff changed is told too. They're told with the Materials look off too, from the very reads the look makes
-  (one query each, shared): only for versions whose materials may resolve differently (`materialsMayDiffer`: their
-  slots' sources or their lookups differ, the points themselves aside; or a diff's side before undoes a change to a
-  `.mat`, an image, an `.mtl`, the `.meta` of one of those, or the model's own `.meta`; a script's `.meta` names
-  nothing a material reads), so a re-export that changed no material reads nothing, and never decoding a
-  texture. The two sides of a committed diff are always at two points: comparing them listed the model's folder for
-  every model diff opened, the look off, to tell nothing. A history's and a last change's two points, whose changes
-  aren't known, are compared with the look on only. Waiting for the look to resolve them was rejected: a change is a
-  change, and the reads are the disk's, or listings of the point shared by both sides; a GUID the project lacks
-  reads the project's index once, as the look would. They're not told (`materialChangesOf` is null) without a
-  workspace, for a version with no path in it, no point (`AssetsPoint`), or whose `.meta` read failed
-  (`comparableVersions`), or when the workspace couldn't answer for a side (`answerStateOf`): a find that
-  failed, a file the disk refused to check (only `ENOENT` and `ENOTDIR` say a file isn't there: `foundFile`), or a GUID
-  not found that can't be told missing (`UnityAssetsAnswer.guidMisses`: a model outside a Unity project, as in a
-  package's own repository, or in a project without a `Library`, never opened in Unity on this machine, "The project's
-  index" below). Then the file's own list of textures named (`textures`) stands in, and where the materials may have
-  changed (`materialsMayDiffer`) a note says they weren't compared and why ("Materials not compared": open the project
-  in Unity once on this computer; the project's files couldn't all be read; the model isn't in a Unity project;
-  `materialsNotComparedOf`), so the panel never says nothing changed; where they are told, or being read, it goes, as
-  the materials say which textures Unity uses (`whatChanged`).
+  `pairedSlots`; its images held in the file are compared by their place here, their names and bytes in **Textures**
+  above): where it takes its material from (Unity's default; a project's `.mat`, by its GUID, one of the same name
+  elsewhere named by its folder, a registry package's in `Library/PackageCache` named the package's; the model's own; a
+  remap to a material the project hasn't: Unity's missing material, a risk), and, for the same material, its base map,
+  normal map, base color (as the Inspector shows it, `#RRGGBB`), alpha (opaque, cutout, transparent), alpha cutoff,
+  opacity (in whole percents, as told), sides and the base map's tiling and offset; and a texture it now uses that the
+  workspace hasn't (a risk; one it lacked before isn't news). Each version's materials are read where it is (its point,
+  "Materials" below), so a `.mat` the diff changed is told too. They're told with the Materials look off too, from the
+  very reads the look makes (one query each, shared): only for versions whose materials may resolve differently
+  (`materialsMayDiffer`: their slots' sources or their lookups differ, the points themselves aside; or a diff's side
+  before undoes a change to a `.mat`, an image, an `.mtl`, the `.meta` of one of those, or the model's own `.meta`; a
+  script's `.meta` names nothing a material reads), so a re-export that changed no material reads nothing, and never
+  decoding a texture. The two sides of a committed diff are always at two points: comparing them listed the model's
+  folder for every model diff opened, the look off, to tell nothing. A history's and a last change's two points, whose
+  changes aren't known, are compared with the look on only. Waiting for the look to resolve them was rejected: a change
+  is a change, and the reads are the disk's, or listings of the point shared by both sides; a GUID the project lacks
+  reads the project's index once, as the look would. They're not told (`materialChangesOf` is null) without a workspace,
+  for a version with no path in it, no point (`AssetsPoint`), or whose `.meta` read failed (`comparableVersions`), or
+  when the workspace couldn't answer for a side (`answerStateOf`): a find that failed, a file the disk refused to check
+  (only `ENOENT` and `ENOTDIR` say a file isn't there: `foundFile`), or a GUID not found that can't be told missing
+  (`UnityAssetsAnswer.guidMisses`: a model outside a Unity project, as in a package's own repository, or in a project
+  without a `Library`, never opened in Unity on this machine, "The project's index" below). Then the file's own list of
+  textures named (`textures`) stands in, and where the materials may have changed (`materialsMayDiffer`) a note says
+  they weren't compared and why ("Materials not compared": open the project in Unity once on this computer; the
+  project's files couldn't all be read; the model isn't in a Unity project; `materialsNotComparedOf`), so the panel
+  never says nothing changed. Where they can't be resolved at all (no point to look them up at, as a merge's versions,
+  or no Unity project) and both `.meta` files were read (`settingsRead`: one that failed may remap a slot), the file's
+  own materials stand in (`fileMaterialChanges`: each named slot's base color where it shows, a glTF's under its base
+  map too, alpha, cutoff, opacity, sides and tiling; which textures it maps is the textures' row), and told, they need
+  no note; where they are told, or being read, it goes, as the materials say which textures Unity uses (`whatChanged`).
 
 `changeRows` words them for the panel, with the line on why a risk matters in Unity, and folds three or more of a kind
 (`FOLD_FROM`: "Added 6 bones") into one row listing them; material rows count slots ("3 slots now transparent"), and
-a missing texture once however many slots use it. Lengths read in the unit that suits them (`formatLength`).
+a missing texture once however many slots use it; a material's row frames the meshes that use its slot
+(`meshesUsingSlot`). Lengths read in the unit that suits them (`formatLength`).
 
 ## The view
 
@@ -212,6 +231,12 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   glide never went. Anything that places the camera meanwhile (a drag, the wheel, the keys, a double-click) stops the
   glide where it is and carries on from there. Every move of the camera, whatever made it, goes through
   `ModelCameraControl`'s `moveCamera` and is told to `onCameraMove`.
+  Framed so, a version far smaller than the other (a model exported 100× too big beside the fixed one) is a speck,
+  and its pane in Split or Swipe would look empty: while it is under 12 px on screen and the other shows
+  (`tooSmallToSee`, told every camera move through `onCameraMove`, glide frames included, and on each resize: the
+  `onViewChange` of `useModelCamera`), its pane says so ("100× smaller: too small to see at this size",
+  `TooSmallNote`) with "Frame it", which frames that version as a part (`framePart`: it glides there and stops
+  following resizes). The shared framing stays: it is what lets sizes compare.
 - **Controls**, as Unity's Scene view (`useOrbitGestures`); every move takes the model as far as the hand asked, at
   any zoom:
   - **Orbit and pan**: drag (or Alt+drag) orbits; right, middle or Shift+drag pans. A pan moves what it grabbed exactly
@@ -239,8 +264,8 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   to its parent bone (`boneLinks`) and a dot per joint, where the bones are now.
 - **Takes** (`ModelAnimationBar`, when a version has any): a take picked from both versions' (matched by name,
   `clipChoices`) plays on one timeline, each version its own take of that name at its own length, looping
-  (`timeInTake`), so a shorter take ends sooner beside the longer one; a take only one version has says so. It starts
-  at the rest pose, and going back to it or leaving puts every node back (`resetPose`). Bones are `Bone`s and skinned
+  (`timeInTake`), so a shorter take ends sooner beside the longer one; a take only one version has says so. It starts at
+  the rest pose, and going back to it or leaving puts every node back (`resetPose`). Bones are `Bone`s and skinned
   meshes `SkinnedMesh`es (their twins too, so they deform alike), named as the takes' tracks address them
   (`PropertyBinding.sanitizeNodeName`); the file's inverse bind matrices and bind matrix are carried into the viewer's
   space (`bindSkin`), or the root's units and axes would skin the mesh twice. The bind matrix is the loader's
@@ -250,11 +275,11 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   Blendshapes play too (a beating heart, a face): each mesh's are morph targets (`addBlendShapes`, at rest at 0, its
   twins sharing its weights), and a take's blendshape track, which names the mesh's node (a Group holding the mesh in
   the scene), is pointed at the mesh itself (`playableTake`), glTF's whole set of weights and FBX's one by its index.
-  Before binding, `playableTake` leaves out every track whose node or property the scene hasn't (a node it doesn't
-  have, blendshapes of a mesh without them), as three's `AnimationMixer` would log an error for each one it can't
-  bind, so the tracks beside them still play; the bar then says so in one line (`unplayableWords`: "Blendshape
-  animation isn't shown"). The rest pose puts the blendshapes back at 0 too (`resetPose`): a glTF's default weights
-  (its mesh's or node's `weights`) aren't carried, so one whose rest shape isn't its base shows the base.
+  Before binding, `playableTake` leaves out every track whose node or property the scene hasn't (a node it doesn't have,
+  blendshapes of a mesh without them), as three's `AnimationMixer` would log an error for each one it can't bind, so the
+  tracks beside them still play; the bar then says so in one line (`unplayableWords`: "Blendshape animation isn't
+  shown"). The rest pose puts the blendshapes back at 0 too (`resetPose`): a glTF's default weights (its mesh's or
+  node's `weights`) aren't carried, so one whose rest shape isn't its base shows the base.
 - **The scene**: clay lit by a soft studio (three's `RoomEnvironment`) and a key light over the camera's shoulder;
   a ground grid a power of ten apart that suits the model (1 m for a person), X and Z through the origin in Unity's
   axis colors; each version's pivot axes, turned as the node every mesh hangs under. A picked node with no geometry
@@ -262,9 +287,12 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   `tokens.css` (`readModelPalette`, read again as the theme changes).
 - **"What changed"** (`ModelChangesPanel`): folded by default to its title, its count and its risks, so the model has
   the stage, and remembered as the user leaves it (`modelChangesOpen`). Open, beside a pane at least `ROOMY_PANE` wide
-  it is a column of its own; narrower, or folded, it floats at the stage's top right (under the onion's pill). A row picked frames and lights up
-  its nodes on both sides; the rest fade. **The info strip** (`modelStats`): Tris, Verts, materials, bones,
-  blendshapes, animations and size, "before → after" where they changed, both sizes in one unit.
+  it is a column of its own; narrower, or folded, it floats at the stage's top right (under the onion's pill). A row
+  picked frames and lights up its nodes on both sides; the rest fade. A row about a take's keys (or its item, folded)
+  plays that take in the take bar instead (`takeOfPick`; the bar's take is the viewer's, `ModelAnimationBar`'s `take`),
+  framing and fading nothing: a bone's dot marks where it rests, not where the take moves it. **The info strip**
+  (`modelStats`): Tris, Verts, materials, bones, blendshapes, animations and size, "before → after" where they changed,
+  both sizes in one unit.
 
 ## Beside the model: its `.bin` and its `.meta`
 

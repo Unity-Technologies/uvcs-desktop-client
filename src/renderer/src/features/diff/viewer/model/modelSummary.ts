@@ -4,9 +4,12 @@
 // the model worker; `modelChanges` compares two of them, the info strip and the "What changed" panel read them.
 
 import { Box3, Vector3 } from 'three';
-import type { ModelMesh, ModelNodeKind, ParsedModel } from './parsedModel';
+import type { FileImage, FileTexture, ModelMesh, ModelNodeKind, ParsedModel } from './parsedModel';
+import { fileNameOf } from './noTextureLoading';
 import { isSkinned, placedPositionsOf, restingPlacementOf } from './meshPlacement';
 import { unitySpaceOf, worldMatricesOf } from './modelSpaces';
+import { takeTracksOf, type TakeTrack } from './takeTracks';
+import { triangleSetsOf } from './triangleSets';
 import { countUniqueVertices, fingerprintOf, NORMAL_WELD_STEP } from './uniqueVertices';
 
 export interface Bounds {
@@ -42,6 +45,8 @@ export interface MeshSummary {
   /** The material slots its triangles use, in slot order: Unity's submeshes. A slot no triangle uses, Unity drops. */
   slots: string[];
   blendShapes: string[];
+  /** The textures its slots' materials map (`texturesOfMesh`), by the names `ModelSummary.textures` and `images` give them. */
+  textures: string[];
   /** Bones the mesh is skinned to, by node key; empty for a mesh that isn't skinned. */
   bones: string[];
   /** Placed by its bones (`placedPositionsOf`), not by its node: its node's own transform says nothing of where it is. */
@@ -65,17 +70,27 @@ export interface MeshSummary {
     uv: string;
     uv1: string;
     colors: string;
+    /** The triangles as a set, each turning its way (`triangleSetsOf`): equal when only their order in the file changed. */
     index: string;
+    /** The triangles as a set of corners, whichever way each turns: equal when only some faces flipped. */
+    corners: string;
+    /** Each triangle with its material slot: equal when no face took another material. */
+    slots: string;
     skin: string;
-    blendShapes: string;
+    /** Each blendshape's offsets, in `blendShapes`' order. */
+    blendShapes: string[];
   };
 }
 
 export interface ModelSummary {
   nodes: SummaryNode[];
   meshes: MeshSummary[];
-  clips: { name: string; duration: number }[];
+  /** The takes, and what each keys (`takeTracksOf`). */
+  clips: { name: string; duration: number; tracks: TakeTrack[] }[];
+  /** The texture files the materials name (`ParsedModel.textures`). */
   textures: string[];
+  /** A glTF's images (`ParsedModel.images`). */
+  images: FileImage[];
   unitScale: number;
   /** What the import settings scale the model by (`ParsedModel.importScale`). */
   importScale: number;
@@ -101,7 +116,7 @@ export function modelSummary(model: ParsedModel): ModelSummary {
     // here and let go, so a big model never holds every mesh's placement at once.
     const placed = placedPositionsOf(mesh, { space, world }, new Float64Array(mesh.attributes.position.length));
     ownBounds[mesh.node] = boundsOf(placed);
-    return meshSummary(mesh, keys, placed, restingPlacementOf(mesh, { space, world }).elements);
+    return meshSummary(mesh, keys, placed, restingPlacementOf(mesh, { space, world }).elements, texturesOfMesh(mesh, model));
   });
   const subtreeBounds = [...ownBounds];
   // Children come after their parents: walking back, each node's bounds are complete before its parent takes them.
@@ -125,8 +140,9 @@ export function modelSummary(model: ParsedModel): ModelSummary {
   return {
     nodes,
     meshes,
-    clips: model.clips.map(({ name, duration }) => ({ name, duration })),
+    clips: model.clips.map((clip) => ({ name: clip.name, duration: clip.duration, tracks: takeTracksOf(clip, model, keys) })),
     textures: model.textures,
+    images: model.images,
     unitScale: model.unitScale,
     importScale: model.importScale,
     frameRate: model.frameRate,
@@ -144,9 +160,10 @@ export function modelSummary(model: ParsedModel): ModelSummary {
   };
 }
 
-function meshSummary(mesh: ModelMesh, keys: string[], placed: Float64Array, placement: number[]): MeshSummary {
+function meshSummary(mesh: ModelMesh, keys: string[], placed: Float64Array, placement: number[], textures: string[]): MeshSummary {
   const { attributes } = mesh;
   const vertexCount = attributes.position.length / 3;
+  const triangles = triangleSetsOf(mesh.index, vertexCount, mesh.groups);
   const drawn = [
     { array: attributes.position, size: 3, step: 0 },
     { array: attributes.normal, size: 3, step: NORMAL_WELD_STEP },
@@ -160,6 +177,7 @@ function meshSummary(mesh: ModelMesh, keys: string[], placed: Float64Array, plac
     vertices: countUniqueVertices({ arrays: drawn.map((a) => a.array), sizes: drawn.map((a) => a.size), steps: drawn.map((a) => a.step), count: vertexCount }),
     slots: mesh.slots.filter((_, slot) => mesh.groups.some((group) => group.slot === slot && group.count > 0)),
     blendShapes: mesh.blendShapes.map((shape) => shape.name),
+    textures,
     bones: mesh.skin ? mesh.skin.bones.map((bone) => keys[bone] ?? '') : [],
     skinned: isSkinned(mesh),
     placement,
@@ -175,11 +193,33 @@ function meshSummary(mesh: ModelMesh, keys: string[], placed: Float64Array, plac
       uv: fingerprintOf(attributes.uv),
       uv1: fingerprintOf(attributes.uv1),
       colors: fingerprintOf(attributes.color),
-      index: fingerprintOf(mesh.index),
+      index: triangles.winding,
+      corners: triangles.corners,
+      slots: triangles.slots,
       skin: `${fingerprintOf(attributes.skinIndex)}|${fingerprintOf(attributes.skinWeight)}`,
-      blendShapes: mesh.blendShapes.map((shape) => fingerprintOf(shape.deltas)).join('|'),
+      blendShapes: mesh.blendShapes.map((shape) => fingerprintOf(shape.deltas)),
     },
   };
+}
+
+/** The textures the materials of the mesh's slots map (base and normal), each once: what a texture changed shows on. */
+function texturesOfMesh(mesh: ModelMesh, model: Pick<ParsedModel, 'materials' | 'images'>): string[] {
+  const names = mesh.slotMaterials.flatMap((material) => {
+    const own = model.materials[material];
+    return own ? [own.baseMap, own.normalMap].flatMap((use) => (use ? [textureName(use.texture, model.images)] : [])) : [];
+  });
+  return [...new Set(names)];
+}
+
+function textureName(texture: FileTexture, images: FileImage[]): string {
+  switch (texture.kind) {
+    case 'named':
+      return texture.name;
+    case 'beside':
+      return fileNameOf(texture.path);
+    case 'gltfImage':
+      return images[texture.image]?.name ?? `image ${texture.image + 1}`;
+  }
 }
 
 /** Placed positions in steps of 10 µm, so float noise from the matrices weighs nothing. */

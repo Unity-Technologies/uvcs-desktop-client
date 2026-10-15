@@ -155,6 +155,6 @@ export function percentOf(value: number): number {
 }
 
 /** A linear color as the Inspector shows it: in sRGB, 8 bits a channel, so what rounds alike is no change. */
-function hexOf([r, g, b]: [number, number, number]): string {
+export function hexOf([r, g, b]: [number, number, number]): string {
   return `#${new Color().setRGB(r, g, b, LinearSRGBColorSpace).getHexString().toUpperCase()}`;
 }

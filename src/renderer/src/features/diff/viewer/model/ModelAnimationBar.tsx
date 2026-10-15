@@ -25,12 +25,20 @@ interface ModelAnimationBarProps {
   choices: ClipChoice[];
   /** Both versions are there: a take only one has is told so (a model added or deleted has only its own). */
   comparable: boolean;
+  /** The take picked, by name; null for the rest pose. Owned by the viewer, as "What changed" picks takes too. */
+  take: string | null;
+  onTake: (take: string | null) => void;
 }
 
-export function ModelAnimationBar({ renderer, scenes, choices, comparable }: ModelAnimationBarProps) {
-  const [picked, setPicked] = useState(REST_POSE);
+export function ModelAnimationBar({ renderer, scenes, choices, comparable, take: picked, onTake }: ModelAnimationBarProps) {
   const [playing, setPlaying] = useState(false);
   const [time, setTime] = useState(0);
+  // A take picked, here or in "What changed", plays; the rest pose stands still.
+  const [playingFor, setPlayingFor] = useState(picked);
+  if (playingFor !== picked) {
+    setPlayingFor(picked);
+    setPlaying(picked !== null);
+  }
   const choice = choices.find((candidate) => candidate.name === picked) ?? null;
   const length = choice ? choiceLength(choice) : 0;
   const mixers = useMemo(() => ({ before: scenes.before && new AnimationMixer(scenes.before.root), after: scenes.after && new AnimationMixer(scenes.after.root) }), [scenes.before, scenes.after]);
@@ -92,12 +100,9 @@ export function ModelAnimationBar({ renderer, scenes, choices, comparable }: Mod
     <div className={styles.bar} data-no-pan>
       <ChoiceChip
         icon={<Clapperboard size={13} />}
-        value={picked}
+        value={choice ? choice.name : REST_POSE}
         neutralValue={REST_POSE}
-        onChange={(value) => {
-          setPicked(value);
-          setPlaying(value !== REST_POSE);
-        }}
+        onChange={(value) => onTake(value === REST_POSE ? null : value)}
         choices={[{ value: REST_POSE, label: 'Rest pose' }, ...choices.map((candidate) => ({ value: candidate.name, label: candidate.name }))]}
       />
       {choice && (

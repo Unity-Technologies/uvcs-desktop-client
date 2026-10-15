@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { isRisk, modelChanges, type ModelChange } from './modelChanges';
+import { isRisk, meshesUsingSlot, modelChanges, type ModelChange } from './modelChanges';
 import { modelSummary } from './modelSummary';
-import type { ParsedModel } from './parsedModel';
+import { matchNodes } from './nodeMatching';
+import type { FileImage, ParsedModel } from './parsedModel';
+import { fileMaterial, use } from './materials/testing/testMaterials';
 import { boundAtOrigin, boundInFileSpace, testModel, type TestModel, type TestNode } from './testing/testModels';
 
 const changes = (before: TestModel, after: TestModel): ModelChange[] => modelChanges(modelSummary(testModel(before)), modelSummary(testModel(after)));
@@ -209,6 +211,21 @@ describe('modelChanges: material slots', () => {
   });
 });
 
+describe('meshesUsingSlot', () => {
+  it("finds the meshes whose triangles use a slot, on the version after, or before where it's gone", () => {
+    const after = modelSummary(testModel({ nodes: crate }));
+    const before = modelSummary(testModel({ nodes: [...crate, { name: 'Hinge', mesh: { slots: ['Brass'] } }] }));
+    const slotNodes = meshesUsingSlot(before, after, matchNodes(before, after));
+    expect(slotNodes('Wood').map((node) => [node.name, node.before, node.after])).toEqual([
+      ['Body', 'Crate/Body', 'Crate/Body'],
+      ['Lid', 'Crate/Lid', 'Crate/Lid'],
+    ]);
+    expect(slotNodes('Metal').map((node) => node.name)).toEqual(['Body']);
+    expect(slotNodes('Brass').map((node) => [node.name, node.before, node.after])).toEqual([['Hinge', 'Hinge', undefined]]);
+    expect(slotNodes('Glass')).toEqual([]);
+  });
+});
+
 describe('modelChanges: mesh data', () => {
   const rock = (mesh: TestNode['mesh']): TestModel => ({ nodes: [{ name: 'Rock', mesh }] });
 
@@ -226,6 +243,59 @@ describe('modelChanges: mesh data', () => {
     after.meshes[0]!.fingerprints.positions = 'sculpted';
     after.meshes[0]!.fingerprints.placedPositions = 'sculpted in place';
     expect(kinds(modelChanges(before, after))).toEqual(['shape']);
+  });
+
+  describe('its triangles', () => {
+    /** The rock with an index: its 12 triangles as `triangles` lists them, each three of its 36 vertices. */
+    const indexed = (triangles: number[][]): ParsedModel => {
+      const model = testModel(rock({}));
+      model.meshes[0]!.index = Uint32Array.from(triangles.flat());
+      return model;
+    };
+    const asStored = Array.from({ length: 12 }, (_, t) => [3 * t, 3 * t + 1, 3 * t + 2]);
+
+    it('tells nothing when only their order changed, as a re-export writes them and Unity reorders them anyway', () => {
+      // Every triangle another place in the list, and its corners started from another one, keeping its winding.
+      const reordered = [...asStored].reverse().map(([a, b, c]) => [b!, c!, a!]);
+      expect(modelChanges(modelSummary(indexed(asStored)), modelSummary(indexed(reordered)))).toEqual([]);
+    });
+
+    it('tells faces that moved to another material slot, over the same triangles', () => {
+      const painted = (paintTriangles: number): ParsedModel => {
+        const model = testModel({ nodes: [{ name: 'Body', mesh: { slots: ['Paint', 'Glass'] } }] });
+        model.meshes[0]!.groups = [
+          { start: 0, count: paintTriangles * 3, slot: 0 },
+          { start: paintTriangles * 3, count: 36 - paintTriangles * 3, slot: 1 },
+        ];
+        return model;
+      };
+      expect(modelChanges(modelSummary(painted(6)), modelSummary(painted(8)))).toMatchObject([{ kind: 'faceSlots', node: { name: 'Body' } }]);
+      expect(modelChanges(modelSummary(painted(6)), modelSummary(painted(6)))).toEqual([]);
+    });
+
+    it("tells nothing when a slot no face used is gone, as Blender's FBX export writes them", () => {
+      const body = (slots: string[]): ParsedModel => {
+        const model = testModel({ nodes: [{ name: 'Body', mesh: { slots } }] });
+        const first = slots.indexOf('Paint');
+        model.meshes[0]!.groups = [
+          { start: 0, count: 18, slot: first },
+          { start: 18, count: 18, slot: first + 1 },
+        ];
+        return model;
+      };
+      expect(modelChanges(modelSummary(body(['Unused', 'Paint', 'Glass'])), modelSummary(body(['Paint', 'Glass'])))).toEqual([]);
+    });
+
+    it('tells triangles whose winding turned, over the same vertices, as faces flipped', () => {
+      const flipped = asStored.map(([a, b, c], t) => (t < 2 ? [a!, c!, b!] : [a!, b!, c!]));
+      expect(modelChanges(modelSummary(indexed(asStored)), modelSummary(indexed(flipped)))).toMatchObject([{ kind: 'facesFlipped', node: { name: 'Rock' } }]);
+    });
+
+    it('tells a face triangulated another way, over the same vertices, as that and not as a shape change', () => {
+      // The first face's quad (corners 0, 1, 2, 3 at vertices 0, 1, 2 and 5) split along its other diagonal.
+      const otherDiagonal = [[0, 1, 5], [1, 2, 5], ...asStored.slice(2)];
+      expect(modelChanges(modelSummary(indexed(asStored)), modelSummary(indexed(otherDiagonal)))).toMatchObject([{ kind: 'triangulation', node: { name: 'Rock' } }]);
+    });
   });
 
   it('tells no shape change for vertices shifted to stay where they were, under a node moved to a new parent', () => {
@@ -258,6 +328,40 @@ describe('modelChanges: mesh data', () => {
     expect(changes(rock({}), rock({ colors: true }))).toMatchObject([{ kind: 'vertexColors', now: true }]);
   });
 
+  it('tells vertex colors repainted', () => {
+    const repainted = testModel(rock({ colors: true }));
+    repainted.meshes[0]!.attributes.color!.fill(0.5, 0, 9);
+    expect(modelChanges(modelSummary(testModel(rock({ colors: true }))), modelSummary(repainted))).toMatchObject([{ kind: 'vertexColorsChanged', node: { name: 'Rock' } }]);
+  });
+
+  it('tells the blendshapes whose shapes changed under their names', () => {
+    const face = (): ParsedModel => testModel({ nodes: [{ name: 'Face', mesh: { blendShapes: ['Smile', 'Blink', 'Frown'] } }] });
+    const resculpted = face();
+    resculpted.meshes[0]!.blendShapes[0]!.deltas[4] = 0.02;
+    resculpted.meshes[0]!.blendShapes[2]!.deltas[7] = -0.01;
+    expect(modelChanges(modelSummary(face()), modelSummary(resculpted))).toMatchObject([{ kind: 'blendShapesChanged', node: { name: 'Face' }, names: ['Smile', 'Frown'] }]);
+    // Renamed, it is told renamed: its shape is compared under its new name only when both versions have that name.
+    expect(kinds(modelChanges(modelSummary(face()), modelSummary(face())))).toEqual([]);
+  });
+
+  it('tells a blendshape resculpted on a model resized by its root, whose vertices and offsets kept their scale', () => {
+    const face = (rootScale: number, smile: number): ParsedModel => {
+      const model = testModel({ nodes: [{ name: 'Head', scale: [rootScale, rootScale, rootScale] }, { name: 'Face', parent: 'Head', mesh: { blendShapes: ['Smile', 'Blink'] } }] });
+      model.meshes[0]!.blendShapes[0]!.deltas[4] = smile;
+      return model;
+    };
+    expect(modelChanges(modelSummary(face(1, 0.02)), modelSummary(face(100, 0.05)))).toMatchObject([{ kind: 'resized' }, { kind: 'blendShapesChanged', names: ['Smile'] }]);
+  });
+
+  it("tells no blendshape resculpted on a model resized with its vertices: its offsets scaled with them", () => {
+    const face = (size: number): ParsedModel => {
+      const model = testModel({ nodes: [{ name: 'Face', mesh: { size: [size, size, size], blendShapes: ['Smile'] } }] });
+      model.meshes[0]!.blendShapes[0]!.deltas[4] = 0.02 * size;
+      return model;
+    };
+    expect(kinds(modelChanges(modelSummary(face(1)), modelSummary(face(100))))).toEqual(['resized']);
+  });
+
   it('tells a blendshape renamed, removed or added', () => {
     const face = (blendShapes: string[]): TestModel => ({ nodes: [{ name: 'Face', mesh: { blendShapes } }] });
     expect(changes(face(['Smile', 'Blink']), face(['smile', 'Blink']))).toMatchObject([{ kind: 'blendShapeRenamed', from: 'Smile', to: 'smile' }]);
@@ -282,7 +386,105 @@ describe('modelChanges: takes and textures', () => {
     ]);
   });
 
+  describe('keys changed in a take of the same name and length', () => {
+    const rig: TestNode[] = [
+      { name: 'Hips', kind: 'bone' },
+      { name: 'Leg L', parent: 'Hips', kind: 'bone' },
+      { name: 'Tail', parent: 'Hips', kind: 'bone' },
+      { name: 'Body', mesh: { bones: ['Hips', 'Leg L', 'Tail'] } },
+    ];
+    const run = (legSwing: number, tailSway: number, hipsBounce = 0.1): TestModel => ({
+      nodes: rig,
+      clips: [
+        {
+          name: 'Run',
+          duration: 1,
+          tracks: [
+            { node: 'Hips', property: 'position', times: [0, 0.5, 1], values: [0, 1, 0, 0, 1 + hipsBounce, 0, 0, 1, 0] },
+            { node: 'Leg L', property: 'quaternion', times: [0, 1], values: [0, 0, 0, 1, legSwing, 0, 0, Math.sqrt(1 - legSwing ** 2)] },
+            { node: 'Tail', property: 'quaternion', times: [0, 1], values: [0, 0, 0, 1, 0, tailSway, 0, Math.sqrt(1 - tailSway ** 2)] },
+          ],
+        },
+        { name: 'Idle', duration: 2, tracks: [{ node: 'Hips', property: 'position', times: [0, 2], values: [0, 1, 0, 0, 1, 0] }] },
+      ],
+    });
+
+    it('tells the take, and the nodes whose keys changed, by their names in the file, parents first', () => {
+      expect(changes(run(0.3, 0.1), run(0.5, 0.2, 0.2))).toMatchObject([
+        { kind: 'clipKeys', name: 'Run', nodes: [{ name: 'Hips', kind: 'bone' }, { name: 'Leg L' }, { name: 'Tail' }] },
+      ]);
+      expect(changes(run(0.3, 0.1), run(0.3, 0.25))).toMatchObject([{ kind: 'clipKeys', name: 'Run', nodes: [{ name: 'Tail', before: 'Hips/Tail', after: 'Hips/Tail' }] }]);
+    });
+
+    it("tells nothing of keys a re-export rounded differently, or of a take that didn't change", () => {
+      expect(changes(run(0.3, 0.1), run(0.3 + 1e-7, 0.1))).toEqual([]);
+    });
+
+    it('tells a node the take no longer moves, or moves now', () => {
+      const withoutTail = run(0.3, 0.1);
+      withoutTail.clips![0]!.tracks!.pop();
+      expect(changes(run(0.3, 0.1), withoutTail)).toMatchObject([{ kind: 'clipKeys', name: 'Run', nodes: [{ name: 'Tail' }] }]);
+    });
+
+    it("tells nothing of a blendshape added beside a take's blendshape keys, which keeps its weight at 0", () => {
+      const face = (shapes: string[], weights: number[][]): TestModel => ({
+        nodes: [{ name: 'Face', mesh: { blendShapes: shapes } }],
+        clips: [{ name: 'Talk', duration: 1, tracks: [{ node: 'Face', property: 'morphTargetInfluences', times: [0, 1], values: weights.flat() }] }],
+      });
+      const talking = face(['Open'], [[0], [1]]);
+      expect(changes(talking, face(['Open', 'Excited'], [[0, 0], [1, 0]]))).toMatchObject([{ kind: 'blendShapeAdded', name: 'Excited' }]);
+      expect(changes(talking, face(['Open'], [[0], [0.6]]))).toMatchObject([{ kind: 'clipKeys', name: 'Talk', nodes: [{ name: 'Face' }] }]);
+    });
+
+    it("reads a cubic blendshape track's values apart from its tangents, as glTF keys them", () => {
+      // CUBICSPLINE: each key holds every weight's in-tangent, then every value, then every out-tangent.
+      const face = (shapes: string[], keys: number[][]): TestModel => ({
+        nodes: [{ name: 'Face', mesh: { blendShapes: shapes } }],
+        clips: [{ name: 'Talk', duration: 1, tracks: [{ node: 'Face', property: 'morphTargetInfluences', times: [0, 1], values: keys.flat() }] }],
+      });
+      const talking = face(['Open'], [[0, 0, 0], [0.5, 1, 0.5]]);
+      const withExcited = face(['Open', 'Excited'], [[0, 0, 0, 0, 0, 0], [0.5, 0, 1, 0, 0.5, 0]]);
+      expect(changes(talking, withExcited)).toMatchObject([{ kind: 'blendShapeAdded', name: 'Excited' }]);
+      expect(changes(talking, face(['Open'], [[0, 0, 0], [0.5, 0.7, 0.5]]))).toMatchObject([{ kind: 'clipKeys', name: 'Talk' }]);
+    });
+
+    it('leaves a take of another length to its length, which already says it changed', () => {
+      const longer = run(0.5, 0.1);
+      longer.clips![0]!.duration = 1.5;
+      expect(kinds(changes(run(0.3, 0.1), longer))).toEqual(['clipLength']);
+    });
+  });
+
   it('tells the textures the materials name now and no longer', () => {
-    expect(changes({ nodes: crate, textures: ['wood.png'] }, { nodes: crate, textures: ['wood.png', 'wood_normal.png'] })).toEqual([{ kind: 'textures', added: ['wood_normal.png'], removed: [] }]);
+    expect(changes({ nodes: crate, textures: ['wood.png'] }, { nodes: crate, textures: ['wood.png', 'wood_normal.png'] })).toEqual([{ kind: 'textures', added: ['wood_normal.png'], removed: [], nodes: [] }]);
+  });
+
+  describe('textures a glTF holds', () => {
+    // A tree whose leaves' material maps the file's first image, and whose trunk's maps none.
+    const tree = (images: FileImage[]): TestModel => ({
+      nodes: [
+        { name: 'Trunk', mesh: { slots: ['Bark'], materials: [0] } },
+        { name: 'Leaves', mesh: { slots: ['Leaves'], materials: [1] } },
+      ],
+      materials: [fileMaterial('Bark'), fileMaterial('Leaves', { baseMap: use({ kind: 'gltfImage', image: 0 }) })],
+      images,
+    });
+
+    it('tells them by their names, with the meshes that show them, as the file names no texture file', () => {
+      expect(changes(tree([{ name: 'Leaves_Summer', bytes: 'summer' }]), tree([{ name: 'Leaves_Autumn', bytes: 'autumn' }]))).toMatchObject([
+        { kind: 'textures', added: ['Leaves_Autumn'], removed: ['Leaves_Summer'], nodes: [{ name: 'Leaves', before: 'Leaves', after: 'Leaves' }] },
+      ]);
+    });
+
+    it('tells one repainted under its name, with the meshes that show it', () => {
+      expect(changes(tree([{ name: 'Leaves', bytes: 'green' }]), tree([{ name: 'Leaves', bytes: 'red' }]))).toMatchObject([
+        { kind: 'embeddedTextures', names: ['Leaves'], nodes: [{ name: 'Leaves' }] },
+      ]);
+      expect(changes(tree([{ name: 'Leaves', bytes: 'green' }]), tree([{ name: 'Leaves', bytes: 'green' }]))).toEqual([]);
+    });
+
+    it("leaves an image in a file of its own to that file's diff: the model holds only its name", () => {
+      expect(changes(tree([{ name: 'leaves.png', bytes: null }]), tree([{ name: 'leaves.png', bytes: null }]))).toEqual([]);
+    });
   });
 });

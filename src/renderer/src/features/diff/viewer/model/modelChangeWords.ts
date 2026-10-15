@@ -20,7 +20,9 @@ export interface ChangeRow {
   /** What to frame and light up when the row is picked. */
   focus: NodeRef[];
   /** A folded run of one kind of change: a line for each. */
-  items?: { label: string; focus: NodeRef[] }[];
+  items?: { label: string; focus: NodeRef[]; take?: string }[];
+  /** The take to play when the row is picked: what changed shows only as it plays. */
+  take?: string;
 }
 
 /** From this many changes of one kind, they fold into one row. */
@@ -38,9 +40,14 @@ export function changeRows(changes: ModelChange[]): ChangeRow[] {
       rows.push(foldedRow(fold, run));
       return;
     }
-    rows.push({ id: `${change.kind}:${index}`, tone: isRisk(change) ? 'risk' : 'note', ...wordsOf(change), focus: focusOf(change) });
+    rows.push({ id: `${change.kind}:${index}`, tone: isRisk(change) ? 'risk' : 'note', ...wordsOf(change), focus: focusOf(change), ...takeOf(change) });
   });
   return rows;
+}
+
+/** The take a row picked, or one of its items (`item`), plays: what changed in it shows only as it plays. */
+export function takeOfPick(row: ChangeRow, item?: number): string | null {
+  return (item === undefined ? row.take : row.items?.[item]?.take) ?? null;
 }
 
 /** Changes that fold together: one kind, on nodes of one family, the same way (lightmap UVs gained, not lost). */
@@ -53,15 +60,20 @@ function foldKey(change: ModelChange): string | null {
       return `${change.kind}:${family(change.node)}`;
     case 'triangles':
     case 'shape':
+    case 'triangulation':
+    case 'facesFlipped':
+    case 'faceSlots':
     case 'normals':
     case 'uvs':
     case 'skinning':
     case 'meshSlots':
+    case 'vertexColorsChanged':
       return change.kind;
     case 'lightmapUvs':
     case 'vertexColors':
       return `${change.kind}:${change.now}`;
     case 'avatarBoneLost':
+    case 'clipKeys':
       return change.kind;
     case 'material':
       return `material:${materialFoldKey(change.change)}`;
@@ -73,10 +85,10 @@ function foldKey(change: ModelChange): string | null {
 function foldedRow(key: string, run: ModelChange[]): ChangeRow {
   const first = run[0]!;
   const count = run.length;
-  const items = run.map((change) => ({ label: itemLabel(change), focus: focusOf(change) }));
+  const items = run.map((change) => ({ label: itemLabel(change), focus: focusOf(change), ...takeOf(change) }));
   if (first.kind === 'material') {
     const words = materialFoldWords(run.flatMap((change) => (change.kind === 'material' ? [change.change] : [])));
-    return { id: `fold:${key}`, tone: isRisk(first) ? 'risk' : 'note', ...words, focus: [], items };
+    return { id: `fold:${key}`, tone: isRisk(first) ? 'risk' : 'note', ...words, focus: run.flatMap(focusOf), items };
   }
   const noun = 'node' in first ? plural(family(first.node), count) : 'meshes';
   const titles: Partial<Record<ModelChange['kind'], string>> = {
@@ -86,11 +98,16 @@ function foldedRow(key: string, run: ModelChange[]): ChangeRow {
     added: `Added ${count} ${noun}`,
     triangles: `Triangles changed on ${count} meshes`,
     shape: `${count} meshes changed shape`,
+    triangulation: `${count} meshes triangulated differently`,
+    facesFlipped: `Faces flipped on ${count} meshes`,
+    faceSlots: `Faces use other materials on ${count} meshes`,
     normals: `Normals changed on ${count} meshes`,
     uvs: `UVs changed on ${count} meshes`,
+    vertexColorsChanged: `Vertex colors changed on ${count} meshes`,
     skinning: `Skinning changed on ${count} meshes`,
     meshSlots: `${count} meshes use other material slots`,
     avatarBoneLost: `The Humanoid avatar lost ${count} of its bones`,
+    clipKeys: `${count} animations changed`,
     lightmapUvs: first.kind === 'lightmapUvs' && first.now ? `${count} meshes have lightmap UVs now` : `${count} meshes lost their lightmap UVs`,
     vertexColors: first.kind === 'vertexColors' && first.now ? `${count} meshes have vertex colors now` : `${count} meshes lost their vertex colors`,
   };
@@ -117,6 +134,8 @@ function itemLabel(change: ModelChange): string {
       return `${change.node.name}: ${change.before.join(', ')} → ${change.after.join(', ')}`;
     case 'avatarBoneLost':
       return `${change.humanName} → ${change.boneName}`;
+    case 'clipKeys':
+      return change.nodes.length > 0 ? `${change.name}: ${namesOf(change.nodes)}` : change.name;
     case 'material':
       return materialItemLabel(change.change);
     default:
@@ -185,6 +204,12 @@ function wordsOf(change: ModelChange): { title: string; detail?: string } {
       return { title: `${change.node.name}: ${formatCount(change.before)} → ${formatCount(change.after)} triangles` };
     case 'shape':
       return { title: `${change.node.name}'s shape changed` };
+    case 'triangulation':
+      return { title: `${change.node.name} is triangulated differently`, detail: 'Its vertices are where they were.' };
+    case 'faceSlots':
+      return { title: `Some of ${change.node.name}'s faces use another material` };
+    case 'facesFlipped':
+      return { title: `Some of ${change.node.name}'s faces flipped`, detail: 'Unity draws a face from its front only: those now show from the other side.' };
     case 'normals':
       return { title: `${change.node.name}'s normals changed`, detail: 'Its shading looks different.' };
     case 'uvs':
@@ -195,6 +220,12 @@ function wordsOf(change: ModelChange): { title: string; detail?: string } {
         : { title: `${change.node.name} lost its lightmap UVs`, detail: 'Baked lighting needs them: export them again or turn on Generate Lightmap UVs.' };
     case 'vertexColors':
       return { title: change.now ? `${change.node.name} has vertex colors now` : `${change.node.name} lost its vertex colors` };
+    case 'vertexColorsChanged':
+      return { title: `${change.node.name}'s vertex colors changed` };
+    case 'blendShapesChanged':
+      return {
+        title: change.names.length === 1 ? `Blendshape ${change.names[0]} on ${change.node.name} changed` : `Blendshapes changed on ${change.node.name}: ${listed(change.names)}`,
+      };
     case 'skinning':
       return { title: `${change.node.name}'s skinning changed`, detail: 'It bends differently in animations.' };
     case 'blendShapeRenamed':
@@ -211,8 +242,15 @@ function wordsOf(change: ModelChange): { title: string; detail?: string } {
       return { title: `New animation ${change.name}` };
     case 'clipLength':
       return { title: `Animation ${change.name}: ${seconds(change.before)} → ${seconds(change.after)}`, detail: 'Clips cut from it by frames may no longer fit.' };
+    case 'clipKeys':
+      return { title: change.nodes.length > 0 ? `Animation ${change.name} changed: ${namesOf(change.nodes)}` : `Animation ${change.name} changed` };
     case 'textures':
       return { title: texturesTitle(change.added, change.removed) };
+    case 'embeddedTextures':
+      return {
+        title: change.names.length === 1 ? `Texture ${change.names[0]} changed` : `${change.names.length} textures changed: ${change.names.join(', ')}`,
+        detail: 'Show materials and textures to see it.',
+      };
     case 'upAxis':
       return { title: `Exported ${change.after}-up, was ${change.before}-up`, detail: 'Unity stands it on Y either way.' };
     case 'exporter':
@@ -253,9 +291,27 @@ function scaleSettingsTitle(before: { scaleFactor: number; convertUnits: boolean
   return `Scale Factor in the import settings: ${before.scaleFactor} → ${after.scaleFactor}${units}`;
 }
 
+/** A take's row plays it. Its nodes aren't its focus: a bone's dot marks where it rests, while the take moves it. */
+function takeOf(change: ModelChange): { take?: string } {
+  return change.kind === 'clipKeys' ? { take: change.name } : {};
+}
+
+/** The first few nodes' names, and how many more: a clue of where to look, not a list. */
+function namesOf(nodes: NodeRef[]): string {
+  return listed(nodes.map((node) => node.name));
+}
+
+function listed(names: string[]): string {
+  const shown = names.slice(0, NAMED);
+  const more = names.length - shown.length;
+  return more > 0 ? `${shown.join(', ')} and ${more} more` : shown.join(', ');
+}
+
+const NAMED = 3;
+
 function focusOf(change: ModelChange): NodeRef[] {
   if ('node' in change) return [change.node];
-  if (change.kind === 'transformed') return change.nodes;
+  if (change.kind === 'transformed' || change.kind === 'textures' || change.kind === 'embeddedTextures' || change.kind === 'material') return change.nodes;
   return [];
 }
 

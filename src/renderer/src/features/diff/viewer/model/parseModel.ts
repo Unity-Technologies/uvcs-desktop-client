@@ -10,7 +10,7 @@ import { fbxAxisConversion, Y_UP_AXES, type FbxAxisSystem } from './fbxAxes';
 import { isBinaryFbx, readFbxProperty, type FbxPropertyName } from './fbxProperties';
 import { fromThreeObject, type ModelFileFacts } from './fromThreeObject';
 import { readFbxTextureFiles } from './fbxTextureFiles';
-import { gltfNeed, gltfTextureImage, type GltfNeed } from './gltfJson';
+import { gltfFileImages, gltfNeed, gltfTextureImage, type GltfNeed } from './gltfJson';
 import { fileMaterialsOf, type MaterialRefinement, type TextureSource } from './materials/fileMaterials';
 import { withSpecularGlossiness } from './materials/gltfSpecularGlossiness';
 import { fbxTextureSource, gltfTextureSource } from './materials/textureSources';
@@ -52,7 +52,8 @@ export async function parseModel({ bytes, format }: ModelBytes, companions: Read
   try {
     const loaded = await load(bytes, format, manager);
     const { materials, indexOf } = fileMaterialsOf(loaded.root, loaded.textureSource, loaded.refineMaterial);
-    const facts: ModelFileFacts = { format, textures: [...textures].sort(), materials, unitScale: 1, upAxis: 'y', axisConversion: new Matrix4().elements, exportedFrom: null, frameRate: null };
+    const images = format === 'gltf' || format === 'glb' ? gltfFileImages(bytes, format, companions) : [];
+    const facts: ModelFileFacts = { format, textures: [...textures].sort(), materials, images, unitScale: 1, upAxis: 'y', axisConversion: new Matrix4().elements, exportedFrom: null, frameRate: null };
     if (format === 'fbx') Object.assign(facts, fbxFacts(bytes, loaded.root));
     return { kind: 'parsed', model: fromThreeObject(loaded.root, loaded.animations, facts, indexOf) };
   } catch {

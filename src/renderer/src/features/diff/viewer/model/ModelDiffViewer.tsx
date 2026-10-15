@@ -16,8 +16,8 @@ import { SideChip } from '../image/stage';
 import { CENTERED_SPLIT, SwipeDivider } from '../image/SwipeDivider';
 import { importSettingsChanges } from './importSettingsChanges';
 import { ModelAnimationBar } from './ModelAnimationBar';
-import { changeRows, type ChangeRow } from './modelChangeWords';
-import { modelChanges, type NodeRef } from './modelChanges';
+import { changeRows, takeOfPick, type ChangeRow } from './modelChangeWords';
+import { meshesUsingSlot, modelChanges, type NodeRef } from './modelChanges';
 import { whatChanged } from './whatChanged';
 import { ModelChangesPanel } from './ModelChangesPanel';
 import { clipChoices } from './modelClips';
@@ -29,11 +29,12 @@ import { ModelInfoStrip } from './ModelInfoStrip';
 import { modelCommandOf } from './modelKeys';
 import { aroundPoints, clickedNode, markersOf } from './modelPicking';
 import { modelReadFailureWords } from './modelReadFailureWords';
+import { fileMaterialChanges } from './materials/fileMaterialChanges';
 import { useModelMaterials, type MaterialVersion } from './materials/useModelMaterials';
 import { modelStats, movedStat, texturesStat } from './modelStats';
 import { ModelViewControls } from './ModelViewControls';
 import { matchNodes } from './nodeMatching';
-import { centreOf } from './orbitCamera';
+import { centreOf, type OrbitView } from './orbitCamera';
 import { useModelCamera } from './useModelCamera';
 import { useModelDifferences } from './useModelDifferences';
 import { useModelPalette } from './useModelPalette';
@@ -42,6 +43,8 @@ import { useModelRenderer } from './useModelRenderer';
 import { useModelScene } from './useModelScene';
 import { useFlyKeys } from './useFlyKeys';
 import { useOrbitGestures } from './useOrbitGestures';
+import { tooSmallToSee, type TooSmall } from './tooSmallToSee';
+import { TooSmallNote } from './TooSmallNote';
 import { useReadModel, type ModelReadState } from './useReadModel';
 import { useSize } from './useSize';
 import { useStableModel } from './useStableModel';
@@ -96,6 +99,8 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   const [blend, setBlend] = useState(0.5);
   const [split, setSplit] = useState(CENTERED_SPLIT);
   const [picked, setPicked] = useState<Picked | null>(null);
+  // The take the animation bar plays: picked there, or by a row of "What changed" about a take.
+  const [take, setTake] = useState<string | null>(null);
 
   const old = readyOf(before);
   const next = readyOf(after);
@@ -118,8 +123,9 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   const looksLoaded = texturesSettled(materials.report);
   const shapeDifferences = differences && compares === 'shape';
   const lookDifferences = differences && compares === 'look';
+  const matching = useMemo(() => old && next && matchNodes(old.summary, next.summary), [old, next]);
   const rows = useMemo(() => {
-    if (!old || !next || !optionsBefore || !optionsAfter) return null;
+    if (!old || !next || !matching || !optionsBefore || !optionsAfter) return null;
     const gltf = old.model.format === 'gltf' || old.model.format === 'glb';
     return changeRows(
       whatChanged({
@@ -128,10 +134,12 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
         settingsRead: optionsBefore.settingsFrom !== 'failed' && optionsAfter.settingsFrom !== 'failed',
         materials: materials.changes,
         materialsNotCompared: materials.notCompared,
+        fileMaterials: fileMaterialChanges(old.model, next.model),
+        slotNodes: meshesUsingSlot(old.summary, next.summary, matching),
         gltf,
       }),
     );
-  }, [old, next, optionsBefore, optionsAfter, materials.changes, materials.notCompared]);
+  }, [old, next, matching, optionsBefore, optionsAfter, materials.changes, materials.notCompared]);
   const stats = useMemo(() => modelStats(old?.summary ?? null, next?.summary ?? null), [old, next]);
   // Every version there is, read: framing one alone would frame a pair whose other half may be 100 times its size.
   // On booleans: a pending file read again brings new bytes, not another pair.
@@ -144,7 +152,23 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   // after its read, and framed with one missing, the renderer laid the other out alone, full width, and the pair kept
   // a framing made for that shape.
   const framing = everyVersionHas(present, { before: sceneBefore, after: sceneAfter }) ? bounds : null;
-  const camera = useModelCamera(renderer, framing, stageRef);
+  // Which version, if any, the shared framing leaves too small to see beside the other (a model exported 100× too big).
+  const sideBounds = useMemo(() => ({ before: old && framedBounds(old.summary), after: next && framedBounds(next.summary) }), [old, next]);
+  const [tooSmall, setTooSmall] = useState<TooSmall | null>(null);
+  const onViewChange = useCallback(
+    (view: OrbitView) => {
+      const found = tooSmallToSee(sideBounds, view, stageRef.current?.clientHeight ?? 0);
+      setTooSmall((shown) => (shown?.side === found?.side && shown?.times === found?.times ? shown : found));
+    },
+    [sideBounds],
+  );
+  const camera = useModelCamera(renderer, framing, stageRef, onViewChange);
+  // A stage resized changes what a view shows, with the camera where the hand left it.
+  const stageSize = useSize(stageRef);
+  const { currentView } = camera;
+  useEffect(() => {
+    if (framing) onViewChange(currentView());
+  }, [stageSize, framing, onViewChange, currentView]);
   const modelCentre = useCallback(() => (bounds ? centreOf(bounds) : null), [bounds]);
   const pickedBounds = useCallback(
     (nodes: NodeRef[]) => nodesBounds(nodes, old?.summary ?? null, next?.summary ?? null) ?? aroundPoints(markersOf(nodes, sceneBefore, sceneAfter), bounds),
@@ -204,7 +228,6 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   }, [renderer, hasBones, modelShowBones]);
   const scenes = useMemo(() => ({ before: sceneBefore, after: sceneAfter }), [sceneBefore, sceneAfter]);
 
-  const matching = useMemo(() => old && next && matchNodes(old.summary, next.summary), [old, next]);
   const onClick = useCallback(
     (x: number, y: number) => {
       const hit = renderer?.pick(x, y);
@@ -221,6 +244,8 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
       if (id === null) return setPicked(null);
       const nodes = item === undefined ? row.focus : (row.items?.[item]?.focus ?? []);
       setPicked({ id, nodes });
+      const takeToPlay = takeOfPick(row, item);
+      if (takeToPlay !== null) setTake(takeToPlay);
       const target = pickedBounds(nodes);
       if (target) camera.framePart(target);
     },
@@ -283,6 +308,16 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
                 </div>
               </>
             )}
+            {(shownMode === 'sideBySide' || shownMode === 'swipe') && tooSmall && (
+              <TooSmallNote
+                tooSmall={tooSmall}
+                area={sideArea(tooSmall.side, shownMode === 'swipe' ? split : CENTERED_SPLIT)}
+                onFrame={() => {
+                  const side = sideBounds[tooSmall.side];
+                  if (side) camera.framePart(side);
+                }}
+              />
+            )}
             {shownMode === 'onion' && <BlendPill blend={blend} onBlendChange={setBlend} things="models" />}
             {shapeDifferences && comparison && (
               <ModelDifferencesControls
@@ -317,7 +352,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
               onFrame={frameShown}
             />
             <div className={styles.dock}>
-              {renderer && choices.length > 0 && <ModelAnimationBar renderer={renderer} scenes={scenes} choices={choices} comparable={comparable} />}
+              {renderer && choices.length > 0 && <ModelAnimationBar renderer={renderer} scenes={scenes} choices={choices} comparable={comparable} take={take} onTake={setTake} />}
               <ModelInfoStrip stats={shownStats} />
             </div>
           </>
@@ -347,6 +382,11 @@ function materialVersionOf(
   const path = sourcePathOf(source);
   const sibling = (fileName: string) => (path === null ? null : findSibling(side, source, path, fileName));
   return { model: read.model, bytes, options, path: modelWorkspacePath(source), point: findAssetsPoint(side, source), sibling };
+}
+
+/** Where a side's pane is across the stage, as fractions of its width: left of the split, or right of it. */
+function sideArea(side: 'before' | 'after', split: number): { left: number; width: number } {
+  return side === 'before' ? { left: 0, width: split } : { left: split, width: 1 - split };
 }
 
 function readyOf(state: ModelReadState): Extract<ModelReadState, { status: 'ready' }> | null {
