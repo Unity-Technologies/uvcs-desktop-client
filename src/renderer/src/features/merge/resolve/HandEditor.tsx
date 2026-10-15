@@ -24,8 +24,8 @@ const createEditor: React.ComponentProps<typeof EditProvider>['createEditor'] = 
  * editor on the main thread).
  */
 export function HandEditor({ path, text, onChange }: HandEditorProps) {
-  const pierreOptions = usePierreOptions();
   const [initialText] = useState(text);
+  const pierreOptions = usePierreOptions(initialText);
   const highlighting = syntaxHighlighting(initialText, '', true);
   const options = useMemo(() => ({ ...pierreOptions, tokenizeMaxLength: highlighting === 'off' ? 0 : undefined }), [pierreOptions, highlighting]);
   const file = useMemo(() => ({ name: path, lang: highlightedLanguage(highlighting, path), contents: shownText(initialText) }), [path, highlighting, initialText]);
