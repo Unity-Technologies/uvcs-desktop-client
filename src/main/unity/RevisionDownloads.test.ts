@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { cmFails, fakeCmClient, type FakeCmCommand } from '../cm/testing/fakeCmClient';
-import { batchesOf, catArgs, MAX_BATCH_BYTES, RevisionDownloads, type RevisionFile } from './RevisionDownloads';
+import type { RevisionFile } from '../files/WorkspaceCopies';
+import { batchesOf, catArgs, MAX_BATCH_BYTES, RevisionDownloads } from './RevisionDownloads';
 
 const md5 = (text: string) => createHash('md5').update(text).digest('base64');
 

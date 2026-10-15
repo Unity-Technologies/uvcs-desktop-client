@@ -10,7 +10,7 @@
 import type { AssetsBefore, FoundFile } from '@shared/domain/unityAssets';
 import type { ListedItem } from '../cm/treeListing';
 import type { ProjectFiles } from './ProjectAssetIndex';
-import type { RevisionFile } from './RevisionDownloads';
+import type { RevisionFile } from '../files/WorkspaceCopies';
 
 /** A file or folder of the tree at the point, after the side before's changes; a size of -1 and no hash where not known. */
 type TreeItem = Pick<ListedItem, 'path' | 'isFolder' | 'size' | 'revision'> & { hash: string | null };
