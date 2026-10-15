@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ipcMain, type IpcMainInvokeEvent, type WebContents } from 'electron';
 import type { UvcsApi } from '@shared/api';
 import { INVOKE_CHANNEL, type InvokeRequest, type InvokeResponse } from '@shared/ipc';
+import { clipForLog, MAX_LOGGED_COMMAND_LINE, MAX_LOGGED_OUTPUT } from '../cm/clipForLog';
 import { CmError } from '../cm/CmError';
 import { callerId, currentCaller } from './caller';
 import { apiMethods } from './apiMethods';
@@ -52,6 +53,22 @@ describe('registerApi', () => {
     });
 
     expect(await invoke('workspaces.switchTo')).toEqual({ ok: false, error: { message: 'The branch does not exist.', command: FAILED_COMMAND } });
+  });
+
+  it('sends a long failed command clipped as the command log clips it, the end of its output kept', async () => {
+    const progress = Array.from({ length: 20_000 }, (_, i) => `Downloading Assets/file_${i}.png`).join('\n');
+    const ending = 'The update operation detected conflicts.';
+    const command = { ...FAILED_COMMAND, commandLine: `cm undo ${'Assets/file.png '.repeat(1_000)}`, output: `${progress}\n${ending}` };
+    const invoke = served({ workspaces: { update: async () => Promise.reject(new CmError('Conflicts', command)) } });
+
+    const answer = await invoke('workspaces.update');
+
+    const sent = answer.ok ? undefined : answer.error.command;
+    expect(sent?.commandLine).toBe(clipForLog(command.commandLine, MAX_LOGGED_COMMAND_LINE));
+    expect(sent?.output).toBe(clipForLog(command.output, MAX_LOGGED_OUTPUT, 'ends'));
+    expect(sent?.output.length).toBeLessThan(MAX_LOGGED_OUTPUT + 100);
+    expect(sent?.output.endsWith(ending)).toBe(true);
+    expect(sent?.logEntryId).toBe(FAILED_COMMAND.logEntryId);
   });
 
   it('sends any other failure as its message only', async () => {
