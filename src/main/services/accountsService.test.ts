@@ -42,12 +42,12 @@ describe('accounts', () => {
     expect(fake.lines().map((line) => line.split(' --')[0])).toEqual(['profile list', 'profile delete', 'profile list']);
   });
 
-  it('removes a profile by name', async () => {
+  it('removes a profile by name, with a local command run in any directory', async () => {
     const fake = fakeCmClient({ 'profile delete': '' });
     const service = createAccountsService(serviceContext(fake.cm), profilesContext(fake.cm));
 
     await service.remove('acme@cloud_ana');
 
-    expect(fake.lines()).toEqual(['profile delete --name=acme@cloud_ana']);
+    expect(fake.commands).toMatchObject([{ via: 'query', args: ['profile', 'delete', '--name=acme@cloud_ana'], options: { anyDirectory: true } }]);
   });
 });

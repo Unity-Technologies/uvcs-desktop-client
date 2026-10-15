@@ -6,7 +6,11 @@ export function createAccountsService({ cm }: ServiceContext, { profiles }: Prof
   return {
     list: async () => parseAccounts(await profiles.read()),
     remove: async (name) => {
-      await cm.query(['profile', 'delete', `--name=${name}`]);
+      try {
+        await cm.query(['profile', 'delete', `--name=${name}`], { anyDirectory: true });
+      } finally {
+        profiles.forget();
+      }
     },
   };
 }

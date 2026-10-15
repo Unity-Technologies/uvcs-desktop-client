@@ -25,6 +25,24 @@ describe('ProfileList', () => {
     expect(commands).toHaveLength(2);
   });
 
+  it('answers no one with a read it was told to forget, and lets a newer read answer after that one ends', async () => {
+    let finishFirst = (): void => {};
+    const first = new Promise<void>((resolve) => (finishFirst = resolve));
+    let reads = 0;
+    const { cm, commands } = fakeCmClient({ 'profile list': async () => (reads++ === 0 ? first.then(() => 'old') : 'new') });
+    const profiles = new ProfileList(cm);
+
+    const old = profiles.read();
+    profiles.forget();
+    const fresh = profiles.read();
+    finishFirst();
+    await old;
+
+    expect(await fresh).toBe('new');
+    expect(await profiles.read()).toBe('new');
+    expect(commands).toHaveLength(3);
+  });
+
   it('reads again after a read failed, and not once one succeeded', async () => {
     let configured = false;
     const { cm, commands } = fakeCmClient({ 'profile list': () => (configured ? PROFILES : cmFails('Error: client.conf not found')) });

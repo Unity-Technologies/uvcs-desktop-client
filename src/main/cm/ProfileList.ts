@@ -16,18 +16,25 @@ export class ProfileList {
 
   /** The profiles as `cm` prints them in `ACCOUNT_FORMAT` (`parseAccounts`); a read running already answers. */
   read(): Promise<string> {
-    this.reading ??= this.cm.query(PROFILE_LIST_ARGS, { anyDirectory: true }).then(
+    if (this.reading) return this.reading;
+    const reading = this.cm.query(PROFILE_LIST_ARGS, { anyDirectory: true }).then(
       (output) => {
-        this.reading = null;
         this.readOnce = true;
         return output;
       },
-      (error: unknown) => {
-        this.reading = null;
-        throw error;
-      },
     );
-    return this.reading;
+    this.reading = reading;
+    // Only this read's own end lets it go: one forgotten (`forget`) may end after a newer one started.
+    const letGo = () => {
+      if (this.reading === reading) this.reading = null;
+    };
+    reading.then(letGo, letGo);
+    return reading;
+  }
+
+  /** A write changed the profiles (`profile delete`): a read that started before it answers no one after it. */
+  forget(): void {
+    this.reading = null;
   }
 
   /**
