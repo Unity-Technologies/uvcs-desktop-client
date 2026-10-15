@@ -14,9 +14,6 @@ const ROW_FOCUS = '[data-roving-item], [data-workspace-row]';
 /** Close to each row's height, so the scroll bar barely moves as rows are measured. */
 const ESTIMATED_HEIGHT: Record<RepositoryListRow['kind'], number> = { repository: 50, workspace: 47, newWorkspace: 34 };
 
-/** Pixels: `.list`'s padding, kept clear above and below a row the keys scroll to, so its focus ring shows whole. */
-const LIST_PADDING = 8;
-
 export interface RepositoryListHandle {
   /** ↓ from the search field: the first row takes the focus. False when there is none. */
   focusFirst: () => boolean;
@@ -52,6 +49,8 @@ export const RepositoryList = forwardRef<RepositoryListHandle, RepositoryListPro
   const pendingFocus = useRef<string | null>(null);
   // Where the rows start in the scrolled content: below the list's padding and whatever shows above them.
   const [scrollMargin, setScrollMargin] = useState(0);
+  // The list's own padding, kept clear above and below a row the keys scroll to, so its focus ring shows whole.
+  const [listPadding, setListPadding] = useState({ start: 0, end: 0 });
   const focusedIndex = focusedKey === null ? null : repositoryRowIndex(rows, focusedKey);
   const estimateSize = useCallback((index: number) => ESTIMATED_HEIGHT[rows[index]!.kind], [rows]);
   const getItemKey = useCallback((index: number) => repositoryRowKey(rows[index]!), [rows]);
@@ -62,8 +61,8 @@ export const RepositoryList = forwardRef<RepositoryListHandle, RepositoryListPro
     getItemKey,
     overscan: 8,
     scrollMargin,
-    scrollPaddingStart: LIST_PADDING,
-    scrollPaddingEnd: LIST_PADDING,
+    scrollPaddingStart: listPadding.start,
+    scrollPaddingEnd: listPadding.end,
     rangeExtractor: (range) => keepRendered(defaultRangeExtractor(range), focusedIndex, rows.length),
   });
 
@@ -79,6 +78,12 @@ export const RepositoryList = forwardRef<RepositoryListHandle, RepositoryListPro
     pendingFocus.current = row ? null : key;
     row?.focus({ preventScroll: true });
   };
+
+  useLayoutEffect(() => {
+    if (!listRef.current) return;
+    const style = getComputedStyle(listRef.current);
+    setListPadding({ start: parseFloat(style.paddingTop) || 0, end: parseFloat(style.paddingBottom) || 0 });
+  }, []);
 
   useLayoutEffect(() => {
     const top = rowsRef.current && listRef.current ? rowsRef.current.getBoundingClientRect().top - listRef.current.getBoundingClientRect().top + listRef.current.scrollTop : 0;
