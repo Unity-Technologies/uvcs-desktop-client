@@ -3,8 +3,9 @@
 // shape lives in its `.bin`, so a changed shape changed the `.bin` too, which is then an entry of the same diff with
 // its own revisions; a sibling the diff didn't change is the same on both sides, read where the diff points to (the
 // changeset, the branch's head, the shelve, the label; under an xlink, through the tree there). A last change in Files
-// or Browse repository finds them in the tree's listings (`lastChangeSibling`). Anything else (a history's revisions,
-// a merge's) finds none, and the viewer says what the model needs.
+// or Browse repository finds them in the tree's listings (`lastChangeSibling`); a history's revisions, beside each in
+// the changeset that made it (`historySibling`). Anything else (a merge's revisions) finds none, and the viewer says
+// what the model needs.
 
 import { createContext } from 'react';
 import type { ContentSource } from '@shared/domain/content';
@@ -57,6 +58,22 @@ export function diffSibling(entries: DiffEntry[], target: DiffTarget, workspaceR
   };
 }
 
+/**
+ * A history's siblings: the file beside each revision as it was in the changeset that made that revision, so a glTF
+ * reads the `.bin` that went with it. Only in the workspace's repository, as `revisionsAssetsPoint`: a revision under
+ * an xlink is at a changeset of the xlinked repository, whose paths aren't the workspace's.
+ */
+export function historySibling(changesets: Record<DiffSide, number | null>, inWorkspaceRepository: boolean | undefined): SiblingFinder {
+  return (side, source, path, fileName) => {
+    if (source.kind !== 'revision') return workspaceSibling(side, source, path, fileName);
+    const changeset = changesets[side];
+    const sibling = siblingPath(path, fileName);
+    if (!inWorkspaceRepository || changeset === null || changeset < 0 || sibling === null) return null;
+    // The repository's paths always use `/`: a history opened from a Windows path names its file with `\`.
+    return { kind: 'repositoryPath', path: `/${sibling.replaceAll('\\', '/')}`, at: `cs:${changeset}` };
+  };
+}
+
 /** Where a committed diff points to: a changeset, a branch's head, a shelve, the end of a range. */
 export function pointOf(target: DiffTarget): string {
   switch (target.kind) {
@@ -93,6 +110,7 @@ export function sourcePathOf(source: ContentSource): string | null {
 
 /**
  * How the model viewer finds siblings where it shows: workspace files anywhere; a committed diff's where `DiffBrowser`
- * provides `diffSibling`, a last change's where `RevisionChanges` provides `lastChangeSibling`.
+ * provides `diffSibling`, a last change's where `RevisionChanges` provides `lastChangeSibling`, a history's where
+ * `RevisionComparison` provides `historySibling`.
  */
 export const SiblingFinderContext = createContext<SiblingFinder>(workspaceSibling);

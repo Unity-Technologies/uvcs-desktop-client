@@ -240,8 +240,11 @@ it (ARCHITECTURE.md "Xlinks"); in a shelve or at a label, whose trees `cm ls` ca
 says what the model needs. A last change in Files or Browse repository (`lastChangeSibling`,
 provided by `RevisionChanges`) finds it in the tree's own listings, no `cm` command added: changed in the same
 changeset or shelve as the model, its revision and the one before; untouched by it, its one revision on both sides;
-changed since, in another repository, or not listed (private, in a folder not opened), none. Elsewhere (history,
-merges) none is found. A sibling is found beside the path each side was read from (`sourcePathOf`), never the diff's
+changed since, in another repository, or not listed (private, in a folder not opened), none. A history's revisions
+(`historySibling`, provided by `RevisionComparison`) find it as it was in the changeset that made each revision
+(`cs:N`, one `cm cat` per side), in the workspace's repository only, as their materials are (`revisionsAssetsPoint`): a
+revision under an xlink is at a changeset of the xlinked repository, whose paths aren't the workspace's. A merge's
+revisions find none. A sibling is found beside the path each side was read from (`sourcePathOf`), never the diff's
 file name, which names the next file while the one before still shows. Its name never reaches above the model's
 folder, and main refuses a workspace file outside the workspace anyway (`workspaceFileOf`): the renderer is not
 trusted.
@@ -311,8 +314,8 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   the workspace never loaded showed clay, and one at another revision showed the workspace's textures, wrong. Only the
   model's own `.meta` is read as the version's sibling (its remaps, with its import settings), and an OBJ's `.mtl`
   (`MaterialVersion.sibling`). In a committed diff and in Files each side keeps its own; where none was found for the
-  version (`settingsFrom: 'none'`: a last change whose `.meta` changed since, a revision in History or a merge, which
-  find no sibling) the workspace's (`takesWorkspaceSettings`, `useWorkspaceImportSettings`), as Unity imports it now:
+  version (`settingsFrom: 'none'`: a last change whose `.meta` changed since, a revision under an xlink in History, or a
+  merge's, which find no sibling) the workspace's (`takesWorkspaceSettings`, `useWorkspaceImportSettings`), as Unity imports it now:
   an FBX whose materials Unity doesn't make shows clay, never the file's own. A `.meta` whose read failed (`'failed'`)
   shows the defaults until it is read again, never the workspace's look meanwhile; a side waiting for the workspace's
   `.meta` looks nothing up until it is read (`materialsInputOf` is undefined). Without a workspace the look isn't

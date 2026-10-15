@@ -3,6 +3,7 @@ import type { ContentSource } from '@shared/domain/content';
 import type { ItemRevision } from '@shared/domain/history';
 import { revisionRef } from '@shared/domain/revision';
 import { AssetsPointContext, inWorkspaceRepository, revisionsAssetsPoint } from '../diff/viewer/model/assetsPoints';
+import { historySibling, SiblingFinderContext } from '../diff/viewer/model/modelSiblings';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { FileDiffViewer } from '../diff/viewer/FileDiffViewer';
 import styles from './RevisionComparison.module.css';
@@ -20,28 +21,30 @@ interface RevisionComparisonProps {
 export function RevisionComparison({ path, newer, older, leading }: RevisionComparisonProps) {
   const workspacePath = useWorkspacePath();
   const inWorkspace = inWorkspaceRepository(newer.repository, useWorkspaceInfo().data?.repository);
-  const findAssetsPoint = useMemo(
-    () => revisionsAssetsPoint({ original: older?.changesetId ?? null, modified: newer.changesetId }, inWorkspace),
-    [older?.changesetId, newer.changesetId, inWorkspace],
-  );
+  const { findAssetsPoint, findSibling } = useMemo(() => {
+    const changesets = { original: older?.changesetId ?? null, modified: newer.changesetId };
+    return { findAssetsPoint: revisionsAssetsPoint(changesets, inWorkspace), findSibling: historySibling(changesets, inWorkspace) };
+  }, [older?.changesetId, newer.changesetId, inWorkspace]);
 
   return (
     <AssetsPointContext.Provider value={findAssetsPoint}>
-      <FileDiffViewer
-        workspacePath={workspacePath}
-        original={older ? revisionSource(older, path) : { kind: 'empty' }}
-        modified={revisionSource(newer, path)}
-        fileName={path}
-        title={
-          <>
-            {leading}
-            <span className={styles.title}>
-              {older ? `cs:${older.changesetId} → ` : 'Created in '}
-              <strong>cs:{newer.changesetId}</strong>
-            </span>
-          </>
-        }
-      />
+      <SiblingFinderContext.Provider value={findSibling}>
+        <FileDiffViewer
+          workspacePath={workspacePath}
+          original={older ? revisionSource(older, path) : { kind: 'empty' }}
+          modified={revisionSource(newer, path)}
+          fileName={path}
+          title={
+            <>
+              {leading}
+              <span className={styles.title}>
+                {older ? `cs:${older.changesetId} → ` : 'Created in '}
+                <strong>cs:{newer.changesetId}</strong>
+              </span>
+            </>
+          }
+        />
+      </SiblingFinderContext.Provider>
     </AssetsPointContext.Provider>
   );
 }
