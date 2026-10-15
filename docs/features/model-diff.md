@@ -111,8 +111,8 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
   added, of another length; and, at the same name and length, keyed differently, with the nodes it moves differently
   ("Animation Run changed: Hips, Leg_L, Tail and 4 more", parents first): the view shows it only once the take plays,
   so the panel says where to look. Keys are compared track by track (`takeTracksOf`, in steps of `KEY_STEP` so a
-  re-export's rounding is none), a blendshape track keyed whole (glTF) blendshape by blendshape and a weight that
-  stays 0 not at all: a blendshape added to a mesh adds a 0 weight to every take, which changes none. **Textures** the
+  re-export's rounding is none), a blendshape track keyed whole (glTF) blendshape by blendshape (a cubic one's values apart from its
+  tangents) and a weight that stays 0 not at all: a blendshape added to a mesh adds a 0 weight to every take, which changes none. **Textures** the
   file's materials name (where materials aren't told, below) and the images a glTF holds (`gltfFileImages`: by name,
   their bytes fingerprinted, never decoded), each row framing the meshes whose materials map them
   (`MeshSummary.textures`); and an image held in the file whose bytes changed under its name ("Texture Leaves

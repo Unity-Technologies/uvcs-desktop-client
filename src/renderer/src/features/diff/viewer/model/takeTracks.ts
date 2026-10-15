@@ -22,8 +22,8 @@ const KEY_STEP = 1e-4;
  * Each track of the take. Its node is found by the name three's loaders give a track (`PropertyBinding`'s sanitized
  * name: `Leg L` is `Leg_L`), the first node of that name; `nodeKeys` are the summary's keys, in the model's order. A
  * blendshape track keyed whole, as glTF keys every weight of a mesh at once, is one track per blendshape, by its name:
- * a blendshape added to the mesh adds a weight to every take's keys, which changes none of them. A weight that stays
- * 0 moves nothing, and is no track.
+ * a blendshape added to the mesh adds a weight to every take's keys, which changes none of them (a cubic track's
+ * tangents aside). A weight that stays 0 moves nothing, and is no track.
  */
 export function takeTracksOf(clip: ModelClip, model: Pick<ParsedModel, 'nodes' | 'meshes'>, nodeKeys: readonly string[]): TakeTrack[] {
   const indexOfName = new Map<string, number>();
@@ -42,9 +42,14 @@ export function takeTracksOf(clip: ModelClip, model: Pick<ParsedModel, 'nodes' |
     };
     if (path?.propertyName !== 'morphTargetInfluences' || path.propertyIndex !== undefined || track.times.length === 0) return keyed(track.name, track.values);
     const shapes = model.meshes.find((mesh) => mesh.node === index)?.blendShapes ?? [];
-    const count = Math.round(track.values.length / track.times.length);
+    const perKey = Math.round(track.values.length / track.times.length);
+    // A cubic track (glTF's CUBICSPLINE) holds, per key, every weight's in-tangent, then every value, then every
+    // out-tangent: the values, the middle third, are what the take sets.
+    const cubic = shapes.length > 0 && perKey === shapes.length * 3;
+    const count = cubic ? shapes.length : perKey;
+    const valueAt = (key: number, shape: number): number => track.values[key * perKey + (cubic ? count : 0) + shape]!;
     return Array.from({ length: count }, (_, shape) =>
-      keyed(`${track.name}[${shapes[shape]?.name ?? shape}]`, track.values.filter((_, i) => i % count === shape)),
+      keyed(`${track.name}[${shapes[shape]?.name ?? shape}]`, Array.from(track.times, (_, key) => valueAt(key, shape))),
     ).flat();
   });
 }
