@@ -52,7 +52,6 @@ export function compareSurfaces(before: PlacedMeshes, after: PlacedMeshes): Surf
   };
 }
 
-/** Every mesh's triangles, 9 floats each. */
 /** How much of each version moved past the tolerance (shares of their vertices), and the farthest any moved. */
 export function changeShares(comparison: SurfaceComparison, tolerance: number): { moved: number; gone: number; farthest: number } {
   const within = Math.fround(tolerance);
@@ -65,6 +64,7 @@ export function changeShares(comparison: SurfaceComparison, tolerance: number): 
   return { moved: share(comparison.after), gone: share(comparison.before), farthest };
 }
 
+/** Every mesh's triangles, 9 floats each. */
 function trianglesOf(placed: PlacedMeshes): Float32Array {
   const total = placed.meshes.reduce((sum, mesh) => sum + (mesh.index?.length ?? mesh.positions.length / 3) * 3, 0);
   const triangles = new Float32Array(total);
