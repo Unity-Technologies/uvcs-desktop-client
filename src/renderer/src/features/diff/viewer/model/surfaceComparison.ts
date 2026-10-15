@@ -64,8 +64,20 @@ export function changeShares(comparison: SurfaceComparison, tolerance: number): 
     }
     return total === 0 ? 0 : beyond / total;
   };
-  const farthest = Math.max(0, ...[...comparison.before, ...comparison.after].map((mesh) => mesh.reduce((max, distance) => Math.max(max, distance), 0)));
-  return { moved: share(comparison.after), gone: share(comparison.before), farthest };
+  return { moved: share(comparison.after), gone: share(comparison.before), farthest: farthestOf(comparison) };
+}
+
+/** The farthest any vertex of either version is from the other, once per comparison: no tolerance changes it. */
+const farthests = new WeakMap<SurfaceComparison, number>();
+
+function farthestOf(comparison: SurfaceComparison): number {
+  let farthest = farthests.get(comparison);
+  if (farthest === undefined) {
+    farthest = 0;
+    for (const mesh of [...comparison.before, ...comparison.after]) for (let v = 0; v < mesh.length; v++) farthest = Math.max(farthest, mesh[v]!);
+    farthests.set(comparison, farthest);
+  }
+  return farthest;
 }
 
 /** Every mesh's triangles, 9 floats each. */
