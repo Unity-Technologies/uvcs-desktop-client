@@ -59,6 +59,7 @@ describe('compareSurfaces', () => {
     const comparison = compareSurfaces(before, after);
     expect(comparison.maxDistance).toBeCloseTo(comparison.size * 0.1);
     expect(maxOf([comparison.after[1]!])).toBeCloseTo(comparison.maxDistance);
+    expect(comparison.farthest).toBe(maxOf([...comparison.before, ...comparison.after]));
   });
 });
 
@@ -76,7 +77,7 @@ describe('placedMeshesOf', () => {
 
 describe('changeShares', () => {
   it('tells how much of each version moved past the tolerance, and the farthest', () => {
-    const comparison = { before: [new Float32Array([0, 0, 0.3, 0])], after: [new Float32Array([0, 0.5])], size: 10, maxDistance: 1 };
+    const comparison = { before: [new Float32Array([0, 0, 0.3, 0])], after: [new Float32Array([0, 0.5])], size: 10, maxDistance: 1, farthest: 0.5 };
     expect(changeShares(comparison, 0.1)).toEqual({ moved: 0.5, gone: 0.25, farthest: 0.5 });
   });
 });

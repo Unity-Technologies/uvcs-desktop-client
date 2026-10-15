@@ -25,6 +25,8 @@ export interface SurfaceComparison {
   size: number;
   /** The distance a vertex with nothing near is told as. */
   maxDistance: number;
+  /** The farthest any vertex of either version is from the other: measured with them, as no tolerance changes it. */
+  farthest: number;
 }
 
 /** What is far from everything is told as this share of the model. */
@@ -43,12 +45,9 @@ export function compareSurfaces(before: PlacedMeshes, after: PlacedMeshes): Surf
   // Built once per side, for all the other side's meshes: see `MeasurableSurface`.
   const surfaceBefore = MeasurableSurface.of({ positions: trianglesOf(before) });
   const surfaceAfter = MeasurableSurface.of({ positions: trianglesOf(after) });
-  return {
-    before: before.meshes.map((mesh) => surfaceDistances(mesh.positions, surfaceAfter, { maxDistance })),
-    after: after.meshes.map((mesh) => surfaceDistances(mesh.positions, surfaceBefore, { maxDistance })),
-    size,
-    maxDistance,
-  };
+  const distancesBefore = before.meshes.map((mesh) => surfaceDistances(mesh.positions, surfaceAfter, { maxDistance }));
+  const distancesAfter = after.meshes.map((mesh) => surfaceDistances(mesh.positions, surfaceBefore, { maxDistance }));
+  return { before: distancesBefore, after: distancesAfter, size, maxDistance, farthest: farthestOf([...distancesBefore, ...distancesAfter]) };
 }
 
 /** How much of each version moved past the tolerance (shares of their vertices), and the farthest any moved. */
@@ -64,19 +63,12 @@ export function changeShares(comparison: SurfaceComparison, tolerance: number): 
     }
     return total === 0 ? 0 : beyond / total;
   };
-  return { moved: share(comparison.after), gone: share(comparison.before), farthest: farthestOf(comparison) };
+  return { moved: share(comparison.after), gone: share(comparison.before), farthest: comparison.farthest };
 }
 
-/** The farthest any vertex of either version is from the other, once per comparison: no tolerance changes it. */
-const farthests = new WeakMap<SurfaceComparison, number>();
-
-function farthestOf(comparison: SurfaceComparison): number {
-  let farthest = farthests.get(comparison);
-  if (farthest === undefined) {
-    farthest = 0;
-    for (const mesh of [...comparison.before, ...comparison.after]) for (let v = 0; v < mesh.length; v++) farthest = Math.max(farthest, mesh[v]!);
-    farthests.set(comparison, farthest);
-  }
+function farthestOf(meshes: Float32Array[]): number {
+  let farthest = 0;
+  for (const mesh of meshes) for (let v = 0; v < mesh.length; v++) farthest = Math.max(farthest, mesh[v]!);
   return farthest;
 }
 
