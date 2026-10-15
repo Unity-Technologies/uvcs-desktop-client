@@ -37,6 +37,12 @@ export function pluralize(count: number, singular: string, plural = `${singular}
   return `${formatCount(count)} ${count === 1 ? singular : plural}`;
 }
 
+/** Names in a sentence, the first two and how many more: "a and b", "a, b and 3 others". */
+export function listNames(names: readonly string[]): string {
+  if (names.length <= 2) return names.join(' and ');
+  return `${names.slice(0, 2).join(', ')} and ${pluralize(names.length - 2, 'other')}`;
+}
+
 /** A count that may have stopped short (`more`: there are more than `count`, e.g. a capped `cm find`): "100+". */
 export function formatCountAtLeast(count: number, more: boolean): string {
   return more ? `${formatCount(count)}+` : formatCount(count);
