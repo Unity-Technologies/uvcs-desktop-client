@@ -38,6 +38,15 @@ export async function handleLaunchRequests(
   if (root) windows.requestAtLaunch(root);
 }
 
+/**
+ * Whether this launch names a folder on its command line (Windows, Linux), known as the main module loads, before
+ * `cm` finds the workspace holding it: the first window may then open another workspace than the last one used
+ * (`readFirstScreenAhead`). macOS names it later, in `open-file`.
+ */
+export function launchNamesAFolder(launch: Launch = { argv: process.argv, workingDirectory: process.cwd() }): boolean {
+  return namedFolder(launch) !== null;
+}
+
 function openLaterLaunchRequest(windows: WorkspaceWindows, findRoot: FindWorkspaceRoot, launch: Launch): void {
   const folder = namedFolder(launch);
   if (!folder) {

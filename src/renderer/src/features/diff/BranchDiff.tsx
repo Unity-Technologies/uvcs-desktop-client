@@ -41,6 +41,9 @@ export function BranchDiff({ branch, branchHead, focusPath }: BranchDiffProps) {
 /** The Changesets view's columns that fit beside a diff; the avatar, whose tooltip names the author, always shows. */
 const CHANGESET_COLUMNS: Column<Changeset>[] = [avatarColumn({ alwaysShown: true }), numberColumn('Changeset'), commentColumn(), dateColumn()];
 
+/** Kept out of the render: a new `rowKey` makes the table key every changeset of the branch again on each step. */
+const changesetKey = (changeset: Changeset): string => String(changeset.id);
+
 function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; toolbar: React.ReactNode; focusPath?: string }) {
   const filter = useMemo(() => ({ branch }), [branch]);
   const { data: changesets, error } = useChangesets(filter);
@@ -64,7 +67,7 @@ function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; 
         <DataTable
           rows={changesets}
           columns={CHANGESET_COLUMNS}
-          rowKey={(changeset) => String(changeset.id)}
+          rowKey={changesetKey}
           selection={selection}
           onSelectionChange={setSelection}
         />

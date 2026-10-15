@@ -33,7 +33,9 @@ import { labelMenu } from '../features/labels/labelMenu';
 import { lockMenu } from '../features/locks/lockMenu';
 import { WORKSPACE_ROLES } from '../features/merge/mergeDescription';
 import { incomingFileMenu, type IncomingFileMenuContext } from '../features/incoming/incomingFileMenu';
+import { mergeProgress } from '../features/merge/mergeItems';
 import { mergeItemMenu, type MergeMenuContext } from '../features/merge/mergeItemMenu';
+import type { FileConflictState } from '../features/merge/resolve/useFileConflicts';
 import { changelistMenu } from '../features/pendingChanges/changelistMenu';
 import { pendingChangeMenu } from '../features/pendingChanges/pendingChangeMenu';
 import { shelveMenu } from '../features/shelves/shelveMenu';
@@ -119,11 +121,14 @@ const graphContext = {
 const lane = layout.lanesByBranch.get('/main/a')!;
 const resultContext: ResultContext = { workspacePath: ws, term: '', currentBranch: '/main', loadedChangeset: 6, changelists: [], changeAt: () => undefined };
 
+const mergeVersion = { kind: 'spec', spec: 'itemid:7#cs:11@game@local' } as const;
+const mergeConflictState = { file: { key: '/src/a.ts', path: 'src/a.ts', base: mergeVersion, source: mergeVersion, destination: mergeVersion }, status: 'ready', isBinary: false, decidedByUser: true, resolution: null } as FileConflictState;
 /** Every menu the app builds for an object, one of each kind and situation. */
 const mergeContext: MergeMenuContext = {
   workspacePath: ws,
   request: { kind: 'merge', sourceSpec: 'br:/main/task' },
   plan: { contributors: { source: { changesetId: 12, branch: '/main/task' }, destination: { changesetId: 10, branch: '/main' } }, fileConflicts: [{ path: '/src/a.ts', sourceChangeset: 11 }] } as never,
+  progress: mergeProgress([mergeConflictState], []),
   labels: { source: '/main/task', destination: '/main', roles: WORKSPACE_ROLES },
   itemTypeOf: () => 'file',
   preferredTool: { id: 'vscode', name: 'Visual Studio Code' } as never,
@@ -133,15 +138,14 @@ const mergeContext: MergeMenuContext = {
   resolveIn: () => {},
   resolveDirectory: () => {},
 };
-const mergeVersion = { kind: 'spec', spec: 'itemid:7#cs:11@game@local' } as const;
-const mergeConflict = { kind: 'fileConflict', key: 'file:/src/a.ts', path: 'src/a.ts', state: { file: { key: '/src/a.ts', path: 'src/a.ts', base: mergeVersion, source: mergeVersion, destination: mergeVersion }, status: 'ready', isBinary: false, decidedByUser: true, resolution: null } } as never;
+const mergeConflict = { kind: 'fileConflict', key: 'file:/src/a.ts', path: 'src/a.ts', file: mergeConflictState.file } as never;
 const incomingConflictFile = { path: 'src/a.ts', itemType: 'file', status: 'changed', revisionId: 40, baseRevisionId: 39, repository } as never;
 const incomingContext: IncomingFileMenuContext = {
   workspacePath: ws,
   scope: { kind: 'all' },
   loadedChangeset: 1,
   headChangeset: 4,
-  conflictOf: () => (mergeConflict as { state: never }).state,
+  conflictOf: () => mergeConflictState,
   preferredTool: { id: 'vscode', name: 'Visual Studio Code' } as never,
   running: false,
   decide: () => {},

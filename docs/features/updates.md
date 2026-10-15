@@ -35,7 +35,8 @@ character and ends with `CUT_SHORT_MARK`.
 The app updates from the GitHub releases of `RELEASES_REPOSITORY` (`main/update/releaseFeed.ts`; electron-builder.yml's
 `publish` names the same one, which a test checks), through electron-updater. `AppUpdates` (`main/update/`) owns it and
 tells every window each step (`updateStatusChanged`, an `UpdateStatus`); a window that opens reads where it stands
-(`updates.status`).
+(`updates.status`). electron-updater loads at the first check (`loadFeed`, a chunk of its own): it is half the main
+bundle, and the main module evaluates it in about 7 ms that the first window would otherwise wait for.
 
 - **When**: once 4 s after launch, so it never competes with the first window's reads, then every hour
   (`FIRST_CHECK_DELAY_MS`, `CHECK_INTERVAL_MS`), and when the user asks (`check`: the About dialog, Check for

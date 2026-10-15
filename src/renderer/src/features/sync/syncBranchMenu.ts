@@ -2,7 +2,7 @@ import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
 import { menuAction } from '../../components/menuWords';
 
-interface BranchSync {
+export interface BranchSync {
   push: (branch: string) => void;
   pull: (branch: string) => void;
 }

@@ -1,15 +1,24 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
+import { comparePaths } from '@shared/pathOrder';
 import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
 import type { FileListLayout } from '../../components/fileListLayoutStore';
 import { treeArrowMove } from '../../lib/treeArrowMove';
 import { rowCheckState } from './changeRowChecks';
 import { changeTreeArrowRows, LEVEL_INDENT, rowIndent, topLevelCheckboxInset, treeLevel } from './changeRowLevels';
+import { sortChanges } from './changeOrder';
 import { changesUnderRow, collapseRows, layoutChangeRows, menuTargetOf, type ChangeRow, type ChangesGrouping } from './changeRows';
 
-/** The rows the list shows. */
-function buildChangeRows({ collapsed, ...layout }: Parameters<typeof layoutChangeRows>[0] & { collapsed: ReadonlySet<string> }): ChangeRow[] {
-  return collapseRows(layoutChangeRows(layout), collapsed);
+vi.mock('@shared/pathOrder', async (original) => {
+  const actual = await original<typeof import('@shared/pathOrder')>();
+  return { ...actual, comparePaths: vi.fn(actual.comparePaths) };
+});
+
+type BuildInput = Omit<Parameters<typeof layoutChangeRows>[0], 'sorted'> & { changes: PendingChange[]; collapsed: ReadonlySet<string> };
+
+/** The rows the list shows, for changes in any order: the view sorts them before they're laid out (`useSortedChanges`). */
+function buildChangeRows({ collapsed, changes, ...layout }: BuildInput): ChangeRow[] {
+  return collapseRows(layoutChangeRows({ ...layout, sorted: sortChanges(changes) }), collapsed);
 }
 
 function change(path: string, kinds: PendingChange['kinds'], changelist?: string): PendingChange {
@@ -154,7 +163,7 @@ describe('buildChangeRows', () => {
   });
 
   it('leaves out what collapsed changelists and folders hold, and nothing after them', () => {
-    const layout = layoutChangeRows({ ...base, changes, layout: 'tree', grouping: 'changelist', changelists: [{ name: 'UI', description: '' }] });
+    const layout = layoutChangeRows({ ...base, sorted: sortChanges(changes), layout: 'tree', grouping: 'changelist', changelists: [{ name: 'UI', description: '' }] });
     expect(layout.map((row) => row.key)).toEqual([
       'changelist:',
       'change:new.txt',
@@ -281,5 +290,14 @@ describe('buildChangeRows at scale', () => {
   it.each(layouts)('lays out a %s grouped by %s in n·log n work: twice the changes, about twice the reads', (layout, grouping) => {
     const growth = readGrowthWhenDoubled(5_000, many, (changes) => buildChangeRows({ ...base, changes, layout, grouping }));
     expect(growth).toBeLessThan(2.5);
+  });
+
+  // Typing in the filter lays the changes out again on every key: 50,000 of them took 20 ms a key just to be found in
+  // order, which they already were (`useSortedChanges`, then filtered).
+  it.each(layouts)('lays out a %s grouped by %s of changes handed in order without comparing their paths', (layout, grouping) => {
+    const sorted = sortChanges(many(2_000));
+    vi.mocked(comparePaths).mockClear();
+    layoutChangeRows({ sorted, changelists: [], layout, grouping });
+    expect(comparePaths).not.toHaveBeenCalled();
   });
 });

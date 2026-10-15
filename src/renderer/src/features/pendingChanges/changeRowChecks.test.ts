@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { rowCheckState, spaceToggle } from './changeRowChecks';
+import { sortChanges } from './changeOrder';
 import { layoutChangeRows, type ChangeRow } from './changeRows';
 
 const change = (path: string, kinds: PendingChange['kinds'] = ['changed']): PendingChange => ({ path, kinds, itemType: 'file', size: 1, lastModified: '' });
 
 const rows = layoutChangeRows({
-  changes: [change('src/a.ts'), change('src/b.ts'), change('bin/out.dll', ['ignored'])],
+  sorted: sortChanges([change('src/a.ts'), change('src/b.ts'), change('bin/out.dll', ['ignored'])]),
   changelists: [],
   layout: 'tree',
   grouping: 'none',

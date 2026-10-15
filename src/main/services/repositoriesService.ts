@@ -1,15 +1,16 @@
 import type { RepositoriesApi } from '@shared/api/repositories';
 import type { RepositorySummary } from '@shared/domain/repository';
+import { parseAccounts } from '../cm/accounts';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
-import { parseProfiles } from '../cm/profiles';
-import type { ServiceContext } from './ServiceContext';
+import { serverProfiles } from '../cm/profiles';
+import type { ProfilesContext, ServiceContext } from './ServiceContext';
 
 /** Remote servers can be slow or ask for credentials; don't let one hang the home screen. */
 const LIST_TIMEOUT_MS = 20_000;
 
-export function createRepositoriesService({ cm }: ServiceContext): RepositoriesApi {
+export function createRepositoriesService({ cm }: ServiceContext, { profiles }: ProfilesContext): RepositoriesApi {
   async function servers() {
-    return parseProfiles(await cm.query(['profile', 'list', `--format=${recordFormat(['server', 'user', 'workingmode'])}`]));
+    return serverProfiles(parseAccounts(await profiles.read()));
   }
 
   async function list(server: string): Promise<RepositorySummary[]> {

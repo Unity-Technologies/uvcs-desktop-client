@@ -15,9 +15,9 @@ import { GravatarCache } from '../system/gravatar';
 import { untilSucceeded } from '../system/untilSucceeded';
 import { isWebAddress } from '../system/webAddress';
 import { showIncomingNotification } from '../window/incomingNotification';
-import type { ServiceContext } from './ServiceContext';
+import type { ProfilesContext, ServiceContext } from './ServiceContext';
 
-export function createSystemService({ cm, operations, windows, settings }: ServiceContext): SystemApi {
+export function createSystemService({ cm, operations, windows, settings }: ServiceContext, { profiles }: ProfilesContext): SystemApi {
   const gravatars = new GravatarCache(async (url) => {
     const response = await net.fetch(url);
     if (!response.ok) return null;
@@ -30,7 +30,7 @@ export function createSystemService({ cm, operations, windows, settings }: Servi
     // Its own process: `cm shell` refuses to start until cm is configured, and that is reported by checkSetup.
     return (await cm.execute(['version'])).trim();
   });
-  const setupProblem = untilSucceeded(() => checkSetup(cm), (problem) => problem === null);
+  const setupProblem = untilSucceeded(() => checkSetup(profiles), (problem) => problem === null);
   // Per server: once it answers, later windows on its workspaces take that answer.
   const connectionChecks = new Map<string, () => Promise<ConnectionProblem | null>>();
   const connectionProblem = (server: string): Promise<ConnectionProblem | null> => {
@@ -46,7 +46,7 @@ export function createSystemService({ cm, operations, windows, settings }: Servi
     cmVersion,
     checkSetup: setupProblem,
     checkConnection: connectionProblem,
-    currentUser: async () => (await cm.query(['whoami'])).trim(),
+    currentUser: async () => (await cm.query(['whoami'], { anyDirectory: true })).trim(),
     openPath: async (path) => {
       const error = await shell.openPath(normalize(path));
       if (error) throw new Error(error);

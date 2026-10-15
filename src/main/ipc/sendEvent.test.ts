@@ -19,6 +19,7 @@ function loadingContents(id: number) {
   const loaded = (): void => {
     loading = false;
     page.emit('did-finish-load');
+    page.emit('did-stop-loading');
   };
   return { contents, loaded };
 }
@@ -61,6 +62,24 @@ describe('sendEventTo', () => {
     expect(contents.send).not.toHaveBeenCalled();
 
     loaded();
+    expect(contents.send.mock.calls).toEqual([
+      [EVENT_CHANNEL, 'commandLogged', LOGGED],
+      [EVENT_CHANNEL, 'commandLogged', second],
+    ]);
+  });
+
+  it('sends what came while Electron still said the page was loading after it finished, once loading stops', () => {
+    const page = new EventEmitter();
+    let loading = true;
+    const contents = Object.assign(page, { id: 1, isDestroyed: () => false, isLoading: () => loading, send: vi.fn() });
+    const second = { ...LOGGED, id: 2 };
+
+    sendEventTo(contents as unknown as WebContents, 'commandLogged', LOGGED);
+    page.emit('did-finish-load');
+    sendEventTo(contents as unknown as WebContents, 'commandLogged', second);
+    loading = false;
+    page.emit('did-stop-loading');
+
     expect(contents.send.mock.calls).toEqual([
       [EVENT_CHANNEL, 'commandLogged', LOGGED],
       [EVENT_CHANNEL, 'commandLogged', second],

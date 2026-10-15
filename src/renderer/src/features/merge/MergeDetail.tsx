@@ -1,7 +1,7 @@
 import type { DirectoryConflictResolution, MergePlan, MergeRequest } from '@shared/domain/merge';
 import { DirectoryConflictPanel } from './directoryConflicts/DirectoryConflictPanel';
 import { MergeChangePreview } from './MergeChangePreview';
-import type { MergeItem } from './mergeItems';
+import { fileStateOf, type MergeItem, type MergeProgress } from './mergeItems';
 import type { ConflictToolActions } from './mergeTools/MergeToolButton';
 import { FileConflictPanel } from './resolve/FileConflictPanel';
 import type { FileConflictDecision } from './resolve/fileConflictDecision';
@@ -10,6 +10,7 @@ import type { MergeLabels } from './mergeDescription';
 interface MergeDetailProps {
   workspacePath: string;
   item: MergeItem;
+  progress: MergeProgress;
   plan: MergePlan;
   labels: MergeLabels;
   request: MergeRequest;
@@ -23,6 +24,7 @@ interface MergeDetailProps {
 export function MergeDetail({
   workspacePath,
   item,
+  progress,
   plan,
   labels,
   request,
@@ -38,7 +40,7 @@ export function MergeDetail({
           key={item.key}
           conflict={item.conflict}
           labels={labels}
-          resolution={item.resolution}
+          resolution={progress.directoryResolutions[item.index]}
           onResolve={(resolution) => onResolveDirectory(item.index, resolution)}
         />
       );
@@ -47,11 +49,11 @@ export function MergeDetail({
         <FileConflictPanel
           key={item.key}
           workspacePath={workspacePath}
-          state={item.state}
+          state={fileStateOf(item, progress)}
           labels={labels}
           toolActions={toolActions}
-          onDecide={(decision) => onDecideFile(item.state.file.key, decision)}
-          onStartOver={() => onStartOverFile(item.state.file.key)}
+          onDecide={(decision) => onDecideFile(item.file.key, decision)}
+          onStartOver={() => onStartOverFile(item.file.key)}
         />
       );
     case 'change':

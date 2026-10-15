@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { memorySettings } from '../settings/testing/memorySettings';
 import { fakeElectron } from '../window/testing/fakeElectron';
 import { WorkspaceWindows } from '../window/WorkspaceWindows';
-import { handleLaunchRequests } from './launchRequests';
+import { handleLaunchRequests, launchNamesAFolder } from './launchRequests';
 
 vi.mock('electron', async () => (await import('../window/testing/fakeElectron')).fakeElectron.module);
 vi.mock('../window/createMainWindow', async () => {
@@ -84,5 +84,17 @@ describe('handleLaunchRequests', () => {
     await found(GAME);
     expect(fakeElectron.windows()).toHaveLength(1);
     expect(requestedIn(0)).toBe(GAME);
+  });
+});
+
+describe('launchNamesAFolder', () => {
+  it('tells, as the app loads, whether the installed app was launched naming a folder (Windows, Linux)', () => {
+    expect(launchNamesAFolder({ argv: ['uvcs', 'src'], workingDirectory: GAME })).toBe(true);
+    expect(launchNamesAFolder({ argv: ['uvcs', '--some-switch'], workingDirectory: GAME })).toBe(false);
+  });
+
+  it('is never true in development builds, which open no folder they are named', () => {
+    fakeElectron.app.isPackaged = false;
+    expect(launchNamesAFolder({ argv: ['electron', '.'], workingDirectory: GAME })).toBe(false);
   });
 });

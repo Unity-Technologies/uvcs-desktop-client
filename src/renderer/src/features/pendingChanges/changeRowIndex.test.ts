@@ -9,7 +9,7 @@ const change = (path: string, kinds: PendingChange['kinds'] = ['changed'], chang
 
 describe('indexChangeRows', () => {
   it('finds every row by key, and keeps the files in the order shown', () => {
-    const rows = layoutChangeRows({ changes: [change('src/a.ts'), change('src/b.ts', ['changed'], 'UI')], changelists: [{ name: 'UI', description: '' }], layout: 'tree', grouping: 'changelist' });
+    const rows = layoutChangeRows({ sorted: [change('src/a.ts'), change('src/b.ts', ['changed'], 'UI')], changelists: [{ name: 'UI', description: '' }], layout: 'tree', grouping: 'changelist' });
 
     const index = indexChangeRows(rows);
 
@@ -23,7 +23,7 @@ describe('indexChangeRows', () => {
 describe('perRow', () => {
   it('works a row out once however often it is asked', () => {
     const asked: ChangeRow[] = [];
-    const rows = layoutChangeRows({ changes: [change('a.ts'), change('b.ts')], changelists: [], layout: 'list', grouping: 'none' });
+    const rows = layoutChangeRows({ sorted: [change('a.ts'), change('b.ts')], changelists: [], layout: 'list', grouping: 'none' });
     const keyOf = perRow((row) => {
       asked.push(row);
       return row.key;
@@ -38,7 +38,7 @@ describe('perRow', () => {
 describe('holding ↓ over thousands of changes', () => {
   // One folder of 10,000 files: its check goes over all of them. What is counted is the same at any size.
   const many = Array.from({ length: 10_000 }, (_, index) => change(`assets/f${String(index).padStart(6, '0')}.png`, index % 2 ? ['changed'] : ['private']));
-  const rows = layoutChangeRows({ changes: many, changelists: [], layout: 'tree', grouping: 'none' });
+  const rows = layoutChangeRows({ sorted: many, changelists: [], layout: 'tree', grouping: 'none' });
 
   it('works out the check of each row that comes into view once, not on every step', () => {
     const index = indexChangeRows(rows);
