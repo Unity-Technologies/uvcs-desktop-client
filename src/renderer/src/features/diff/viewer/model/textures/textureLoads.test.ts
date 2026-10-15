@@ -1,6 +1,6 @@
 import { fakeApi } from '../../../../../testing/fakeWindow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { FoundFile } from '@shared/domain/unityAssets';
+import { MAX_DOWNLOADED_AHEAD_BYTES, type FoundFile } from '@shared/domain/unityAssets';
 import type { TextureDecodeRequest, TextureDecoded } from './decodeTexture';
 import type { TextureLoad } from './textureLoads';
 
@@ -54,6 +54,27 @@ describe('loadTextures', () => {
     expect(await decoded[0]).toEqual(FAILED);
     await worker.whenAsked(TEXTURES_IN_HAND + 1);
     expect(fakeApi.argsOf('unityAssets.read')).toHaveLength(TEXTURES_IN_HAND + 1);
+  });
+
+  it('asks for at most what downloads keep ahead at a time, the next part as its first texture comes up', async () => {
+    const { loadTextures } = await import('./textureLoads');
+    const quarter = (name: string, id: number): FoundFile => ({ ...revision(name, id), size: MAX_DOWNLOADED_AHEAD_BYTES / 4 });
+    const files = [quarter('a.png', 1), quarter('b.png', 2), quarter('c.png', 3), quarter('d.png', 4), quarter('e.png', 5)];
+
+    loadTextures(WORKSPACE, files.map((file) => loadOf(file)));
+    await worker.whenAsked(3);
+    expect(fakeApi.argsOf('unityAssets.download')).toEqual([[WORKSPACE, files.slice(0, 4)]]);
+    worker.asked[0]!.answer(FAILED);
+    worker.asked[1]!.answer(FAILED);
+    await worker.whenAsked(5);
+
+    expect(fakeApi.argsOf('unityAssets.download')).toEqual([
+      [WORKSPACE, files.slice(0, 4)],
+      [WORKSPACE, files.slice(4)],
+    ]);
+    // The second part is asked for before its first texture is read: that read finds it downloading.
+    const asked = fakeApi.calls().map((call) => (call.method === 'unityAssets.read' ? (call.args[1] as FoundFile).path : call.method));
+    expect(asked.indexOf('unityAssets.download', 1)).toBeLessThan(asked.indexOf('Art/e.png'));
   });
 
   it('downloads nothing for textures decoded before, nor for files on the disk', async () => {

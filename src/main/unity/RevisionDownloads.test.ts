@@ -9,7 +9,8 @@ import { fitsCommandLine } from '../cm/commandLineLimit';
 import { cmFails, fakeCmClient, type FakeCmCommand } from '../cm/testing/fakeCmClient';
 import { formatOutput } from '../cm/testing/cmOutput';
 import { WorkspaceCopies, type RevisionFile } from '../files/WorkspaceCopies';
-import { batchesOf, catArgs, FETCHED_KEPT_MS, MAX_BATCH_BYTES, RevisionDownloads } from './RevisionDownloads';
+import { MAX_DOWNLOADED_AHEAD_BYTES } from '@shared/domain/unityAssets';
+import { batchesOf, catArgs, MAX_BATCH_BYTES, MAX_KEPT_BYTES, RevisionDownloads } from './RevisionDownloads';
 
 const md5 = (text: string) => createHash('md5').update(text).digest('base64');
 
@@ -77,24 +78,16 @@ describe('RevisionDownloads', () => {
     expect(fake.commands.map((command) => [command.via, command.args.length])).toEqual([['execute', 4]]);
   });
 
-  it('keeps what was fetched until it is read, past what it keeps: the reads that follow download nothing again', async () => {
-    const { workspace, fake, downloads, text } = await setUp('bark v1'.length);
-    await Promise.all([1, 2, 3].map((id) => downloads.fetch(workspace, file(id))));
-    expect(await Promise.all([1, 2, 3].map((id) => text(downloads.read(workspace, file(id)))))).toEqual(['bark v1', 'leaves v2', 'moss v3']);
-    expect(fake.commands).toHaveLength(1);
+  it('reads what was fetched with no more commands, and others asked together meanwhile in one cm cat', async () => {
+    const { workspace, fake, downloads, text } = await setUp('bark v1'.length + 'leaves v2'.length + 'moss v3'.length);
+    await downloads.fetch(workspace, file(1));
+    expect(await Promise.all([2, 3].map((id) => text(downloads.read(workspace, file(id)))))).toEqual(['leaves v2', 'moss v3']);
+    expect(await text(downloads.read(workspace, file(1)))).toBe('bark v1');
+    expect(fake.commands).toHaveLength(2);
   });
 
-  it('lets go of a fetched revision never read once it has waited long enough', async () => {
-    let time = 0;
-    const sessions = await mkdtemp(join(tmpdir(), 'revisions-session-'));
-    const workspace = await mkdtemp(join(tmpdir(), 'revisions-workspace-'));
-    const fake = fakeCmClient({ cat: catAnswer });
-    const downloads = new RevisionDownloads({ cm: fake.cm, tempFolder: sessions, pid: 100, isRunning: () => false, maxKeptBytes: 'bark v1'.length, now: () => time });
-    await downloads.fetch(workspace, file(1));
-    time += FETCHED_KEPT_MS;
-    await downloads.fetch(workspace, file(2));
-    await downloads.read(workspace, file(1));
-    expect(fake.commands).toHaveLength(3);
+  it('keeps at least twice what one fetch may download ahead: what a look fetched is still kept as it reads it', () => {
+    expect(MAX_DOWNLOADED_AHEAD_BYTES * 2).toBeLessThanOrEqual(MAX_KEPT_BYTES);
   });
 
   it('fails at once the reads of revisions whose fetch failed, never trying each again on its own', async () => {
