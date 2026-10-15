@@ -1,25 +1,44 @@
+import { MeshBasicMaterial, MeshStandardMaterial, ShaderLib, type WebGLProgramParametersWithUniforms, type WebGLRenderer } from 'three';
 import { describe, expect, it } from 'vitest';
-import { fullHeatAt, ghostColors, heatColors } from './heatColors';
+import { colorsByHeat, DISTANCE_ATTRIBUTE, fadesByHeat, fullHeatAt, heatScale, spliced } from './heatColors';
 
-const clay: [number, number, number] = [0.5, 0.5, 0.5];
-const hot: [number, number, number] = [0, 0, 1];
-const rounded = (values: Float32Array): number[] => [...values].map((value) => Number(value.toFixed(3)));
+/** The shader three would compile for the material, as its `onBeforeCompile` leaves it. */
+function compiled(material: MeshStandardMaterial | MeshBasicMaterial, shader: { vertexShader: string; fragmentShader: string }) {
+  const parameters = { ...shader, uniforms: {} } as WebGLProgramParametersWithUniforms;
+  material.onBeforeCompile(parameters, {} as WebGLRenderer);
+  return parameters;
+}
 
-describe('heatColors', () => {
-  it('keeps the clay within the tolerance, and turns to the accent as far as a vertex moved', () => {
-    expect(rounded(heatColors(new Float32Array([0, 0.1, 1, 5]), 0.1, 1, clay, hot))).toEqual([0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0, 0, 1, 0, 0, 1]);
-  });
-
-  it('shows a change just past the tolerance clearly', () => {
-    const [r] = heatColors(new Float32Array([0.1001]), 0.1, 1, clay, hot);
-    expect(r).toBeLessThan(0.35);
+describe('colorsByHeat', () => {
+  it("colors the version after in three's own shader, by each vertex's distance, from the shared tolerance", () => {
+    const scale = heatScale();
+    const material = new MeshStandardMaterial();
+    colorsByHeat(material, scale);
+    const shader = compiled(material, ShaderLib.standard);
+    expect(shader.vertexShader).toContain(`attribute float ${DISTANCE_ATTRIBUTE};`);
+    expect(shader.vertexShader).toContain(`vHeatColor = mix(heatClay, heatHot,`);
+    expect(shader.fragmentShader).toContain('diffuseColor.rgb *= vHeatColor;');
+    // The very objects: moving the slider sets their values, and the GPU recolors without compiling again.
+    expect(shader.uniforms.heatTolerance).toBe(scale.heatTolerance);
+    expect(shader.uniforms.heatHot).toBe(scale.heatHot);
   });
 });
 
-describe('ghostColors', () => {
-  it('shows the version before only where it is gone', () => {
-    const colors = ghostColors(new Float32Array([0, 1]), 0.1, 1, [1, 0, 0]);
-    expect(rounded(colors)).toEqual([1, 0, 0, 0, 1, 0, 0, 0.65]);
+describe('fadesByHeat', () => {
+  it('fades the version before by each vertex distance, in its own color', () => {
+    const scale = heatScale();
+    const material = new MeshBasicMaterial();
+    fadesByHeat(material, scale);
+    const shader = compiled(material, ShaderLib.basic);
+    expect(shader.vertexShader).toContain(`vGhostAlpha = heat == 0.0 ? 0.0 :`);
+    expect(shader.fragmentShader).toContain('diffuseColor.a *= vGhostAlpha;');
+    expect(shader.uniforms.heatFullAt).toBe(scale.heatFullAt);
+  });
+});
+
+describe('spliced', () => {
+  it("fails on a chunk the shader hasn't, rather than drawing without the heat", () => {
+    expect(() => spliced('void main() {}', ['#include <color_vertex>', ''])).toThrow('#include <color_vertex>');
   });
 });
 

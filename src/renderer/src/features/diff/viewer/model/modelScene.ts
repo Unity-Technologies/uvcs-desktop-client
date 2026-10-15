@@ -52,7 +52,7 @@ export interface SceneMesh {
   clay: MeshStandardMaterial[];
   wire: Mesh<BufferGeometry, MeshBasicMaterial>;
   /** The Differences mode's twins, on the same geometry: the version after colored by how far it moved, the version
-   *  before as a ghost of what is gone (`heatColors`, set as the geometry's `color`). Hidden in other modes. */
+   *  before as a ghost of what is gone (`heatColors`, from the geometry's `surfaceDistance`). Hidden in other modes. */
   heat: Mesh<BufferGeometry, MeshStandardMaterial>;
   ghost: Mesh<BufferGeometry, MeshBasicMaterial>;
   /** Each material slot's name, in the order of `solid.material`. */

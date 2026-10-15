@@ -1,8 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { Color } from 'three';
 import { steppedRegion } from '../image/changedRegions';
-import { fullHeatAt, ghostColors, heatColors, type Rgb } from './heatColors';
-import type { ModelPalette } from './modelPalette';
+import { fullHeatAt } from './heatColors';
 import type { ModelRenderer } from './modelRenderer';
 import type { BoundsLike } from './orbitCamera';
 import type { ParsedModel } from './parsedModel';
@@ -13,7 +11,6 @@ import { useSurfaceComparison } from './useSurfaceComparison';
 
 interface DifferencesInput {
   renderer: ModelRenderer | null;
-  palette: ModelPalette | null;
   before: ParsedModel | null;
   after: ParsedModel | null;
   /** The Differences mode is on. */
@@ -25,24 +22,22 @@ interface DifferencesInput {
 }
 
 /**
- * The Differences mode: the pair's surfaces compared in the worker, colored at the tolerance (`heatColors`), and its
- * changed regions to step through, each faced, framed and boxed. The slider moves at once; the colors and regions of
- * millions of vertices follow when React has the time (`useDeferredValue`).
+ * The Differences mode: the pair's surfaces compared in the worker, colored at the tolerance on the GPU (`heatColors`),
+ * and its changed regions to step through, each faced, framed and boxed. The slider and the colors move at once; the
+ * regions and the figures of millions of vertices follow when React has the time (`useDeferredValue`).
  */
-export function useModelDifferences({ renderer, palette, before, after, wanted, toleranceShare, frameRegion }: DifferencesInput) {
+export function useModelDifferences({ renderer, before, after, wanted, toleranceShare, frameRegion }: DifferencesInput) {
   const { comparison, comparing, failed } = useSurfaceComparison(before, after, wanted);
   const tolerance = useDeferredValue(comparison ? toleranceShare * comparison.size : 0);
 
   useEffect(() => {
-    if (!renderer || !palette) return;
-    if (!comparison) return renderer.setHeat(null);
-    const linear = (css: string): Rgb => new Color(css).toArray() as Rgb;
-    const fullAt = fullHeatAt(tolerance, comparison.size);
-    renderer.setHeat({
-      after: comparison.after.map((distances) => heatColors(distances, tolerance, fullAt, linear(palette.clay), linear(palette.highlight))),
-      before: comparison.before.map((distances) => ghostColors(distances, tolerance, fullAt, linear(palette.removed))),
-    });
-  }, [renderer, palette, comparison, tolerance]);
+    renderer?.setHeat(comparison && { before: comparison.before, after: comparison.after });
+  }, [renderer, comparison]);
+  useEffect(() => {
+    if (!renderer || !comparison) return;
+    const shown = toleranceShare * comparison.size;
+    renderer.setHeatTolerance(shown, fullHeatAt(shown, comparison.size));
+  }, [renderer, comparison, toleranceShare]);
 
   const placed = useMemo(() => (comparison && before && after ? { before: placedMeshesOf(before), after: placedMeshesOf(after) } : null), [comparison, before, after]);
   const regions = useMemo(() => {

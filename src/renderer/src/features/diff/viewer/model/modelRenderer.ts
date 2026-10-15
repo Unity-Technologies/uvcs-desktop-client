@@ -8,6 +8,7 @@ import {
   AxesHelper,
   Box3,
   Box3Helper,
+  BufferAttribute,
   BufferGeometry,
   Color,
   DirectionalLight,
@@ -37,6 +38,7 @@ import {
 } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { canvasSizeChanged, canvasSizeOf, type CanvasSize } from './canvasSize';
+import { DISTANCE_ATTRIBUTE } from './heatColors';
 import { LookComparer } from './lookComparer';
 import { LookTextures, SlotLookMaterials } from './materials/slotLookMaterials';
 import type { SlotLook } from './materials/materialPlan';
@@ -64,7 +66,7 @@ export interface ModelLook {
   looksLoaded: boolean;
 }
 
-/** The Differences mode's colors, per mesh of each version (`heatColors`, `ghostColors`); null until compared. */
+/** The Differences mode's measure: per mesh of each version, each vertex's distance to the other version; null until compared. */
 export interface ModelHeat {
   before: Float32Array[];
   after: Float32Array[];
@@ -116,6 +118,7 @@ export class ModelRenderer {
   private readonly lookTextures: LookTextures;
   private palette: ModelPalette | null = null;
   private heat: ModelHeat | null = null;
+  private heatTolerance = { tolerance: 0, fullAt: 1 };
   private showBones = false;
   private width = 1;
   private height = 1;
@@ -165,6 +168,7 @@ export class ModelRenderer {
     this.lookTextures.keepOnly(this.materialLooks);
     this.bounds = bounds;
     this.rebuildGrid();
+    this.applyHeat();
     this.applyLook();
     this.requestRender();
   }
@@ -194,17 +198,21 @@ export class ModelRenderer {
     this.requestRender();
   }
 
-  /** The Differences mode's colors, set on each mesh's geometry; null shows the clay there until they come. */
+  /**
+   * The Differences mode's distances, set on each mesh's geometry once, for the GPU to color them by
+   * (`setHeatTolerance`, `heatColors`); null shows the clay there until they come.
+   */
   setHeat(heat: ModelHeat | null): void {
     this.heat = heat;
-    for (const side of ['before', 'after'] as const) {
-      const colors = heat?.[side];
-      this.sides[side]?.model.meshes.forEach((mesh, i) => {
-        const values = colors?.[i];
-        if (values) writeAttribute(mesh.solid.geometry, 'color', values, side === 'before' ? 4 : 3);
-      });
-    }
+    this.applyHeat();
     this.applyLook();
+    this.requestRender();
+  }
+
+  /** What the Differences mode colors as changed: past `tolerance`, fully at `fullAt` (`fullHeatAt`). Recolors on the GPU alone. */
+  setHeatTolerance(tolerance: number, fullAt: number): void {
+    this.heatTolerance = { tolerance, fullAt };
+    this.applyHeat();
     this.requestRender();
   }
 
@@ -486,6 +494,21 @@ export class ModelRenderer {
     return { scene, model, key, markers, pivot, skeleton, joints, looks };
   }
 
+  /** Each side's distances on its meshes' geometries (once: the same arrays aren't set again), and the tolerance. */
+  private applyHeat(): void {
+    for (const side of ['before', 'after'] as const) {
+      const scene = this.sides[side];
+      if (!scene) continue;
+      scene.model.meshes.forEach((mesh, i) => {
+        const distances = this.heat?.[side][i];
+        const { geometry } = mesh.solid;
+        if (distances && geometry.getAttribute(DISTANCE_ATTRIBUTE)?.array !== distances) geometry.setAttribute(DISTANCE_ATTRIBUTE, new BufferAttribute(distances, 1));
+      });
+      scene.model.materials.heatScale.heatTolerance.value = this.heatTolerance.tolerance;
+      scene.model.materials.heatScale.heatFullAt.value = this.heatTolerance.fullAt;
+    }
+  }
+
   private applyLook(): void {
     const palette = this.palette;
     if (!palette) return;
@@ -509,6 +532,9 @@ export class ModelRenderer {
         mesh.heat.visible = differences && side === 'after';
         mesh.ghost.visible = differences && side === 'before';
       }
+      materials.heatScale.heatClay.value.set(palette.clay);
+      materials.heatScale.heatHot.value.set(palette.highlight);
+      materials.ghost.color.set(palette.removed);
       const { drawMode, surface } = this.look;
       if (differences) {
         // The after's heat in its draw mode's wires; the before only as the ghost of what is gone.
@@ -659,7 +685,7 @@ class Blender {
 
 /**
  * Sets a geometry's attribute to `values`: written into the one it has when that is the same size (a playing take's
- * skeleton each frame, a tolerance's colors each tick), so the GPU buffer is updated rather than made again and the old
+ * skeleton each frame), so the GPU buffer is updated rather than made again and the old
  * one left for the collector; a new one otherwise.
  */
 function writeAttribute(geometry: BufferGeometry, name: string, values: Float32Array, itemSize: number): void {

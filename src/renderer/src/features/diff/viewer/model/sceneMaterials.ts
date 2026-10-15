@@ -4,6 +4,7 @@
 // every frame; shared, it refreshes them once per material, as it draws a material's meshes one after another.
 
 import { type BufferGeometry, MeshBasicMaterial, MeshStandardMaterial } from 'three';
+import { colorsByHeat, fadesByHeat, heatScale } from './heatColors';
 
 /** How a mesh stands out while some are picked: lit up, faded towards the backdrop, or neither. */
 export type Emphasis = 'plain' | 'lit' | 'faded';
@@ -14,9 +15,16 @@ const CLAY = { roughness: 0.72, metalness: 0, polygonOffset: true, polygonOffset
 export class SceneMaterials {
   private readonly clays = new Map<string, MeshStandardMaterial>();
   private readonly wires = new Map<Emphasis, MeshBasicMaterial>();
-  /** The Differences mode's twins (`ModelScene` `heat`, `ghost`): every mesh's alike. */
-  readonly heat = new MeshStandardMaterial({ vertexColors: true, ...CLAY });
-  readonly ghost = new MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false });
+  /** What the heat and ghost color by: the tolerance and the colors (`ModelRenderer.setHeatTolerance`, `applyLook`). */
+  readonly heatScale = heatScale();
+  /** The Differences mode's twins (`ModelScene` `heat`, `ghost`): every mesh's alike, colored on the GPU (`heatColors`). */
+  readonly heat = new MeshStandardMaterial(CLAY);
+  readonly ghost = new MeshBasicMaterial({ transparent: true, depthWrite: false });
+
+  constructor() {
+    colorsByHeat(this.heat, this.heatScale);
+    fadesByHeat(this.ghost, this.heatScale);
+  }
 
   /** The clay material of a slot of this name, drawn with this emphasis. */
   clay(slot: string, emphasis: Emphasis): MeshStandardMaterial {
