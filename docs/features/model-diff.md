@@ -143,7 +143,10 @@ a missing texture once however many slots use it. Lengths read in the unit that 
 ## The view
 
 One `ModelRenderer` per viewer draws on one WebGL canvas, only when something changes (`requestRender`: a gesture, a
-mode, a look), never on a loop; disposing it frees the GPU's memory at once (`forceContextLoss`), as stepping through
+mode, a look), never on a loop. A resize draws at once (`ModelRenderer.setSize`, only when the canvas's pixels change:
+`canvasSizeChanged`): sizing a canvas clears it, and the ResizeObserver runs after the frame's animation callbacks and
+before paint, so leaving that draw to `requestRender` painted a cleared canvas at every step and the view blinked.
+Disposing it frees the GPU's memory at once (`forceContextLoss`), as stepping through
 files makes many viewers. So each renderer gets a canvas of its own (`useModelRenderer` puts it in and takes it out):
 a canvas whose context was lost hands that lost context to the next renderer, which three can't start on, as
 StrictMode's second mount showed. Where WebGL can't start at all (no usable GPU, the browser's limit of contexts), the

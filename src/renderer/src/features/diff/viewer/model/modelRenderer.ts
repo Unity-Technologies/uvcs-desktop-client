@@ -1,8 +1,8 @@
 // Draws a model diff on one WebGL canvas: each version in a scene of its own (a studio light, the 1 m grid Unity's
 // Scene view shows, the model's pivot) seen through one camera, laid out by the mode (`layoutOf`). It draws only
-// when asked (`requestRender`: a gesture, a mode, a look), never on a loop: an idle diff costs the GPU nothing. The
-// onion skin draws each version apart and blends them, so it blends what is seen, not the meshes' depths; Diffs by
-// look draws them apart too, and compares them (`LookComparer`).
+// when asked (`requestRender`: a gesture, a mode, a look; at once for a still or a resize, `renderNow`), never on a
+// loop: an idle diff costs the GPU nothing. The onion skin draws each version apart and blends them, so it blends
+// what is seen, not the meshes' depths; Diffs by look draws them apart too, and compares them (`LookComparer`).
 
 import {
   AxesHelper,
@@ -36,6 +36,7 @@ import {
   type Texture,
 } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { canvasSizeChanged, canvasSizeOf, type CanvasSize } from './canvasSize';
 import { LookComparer } from './lookComparer';
 import { LookTextures, SlotLookMaterials } from './materials/slotLookMaterials';
 import type { SlotLook } from './materials/materialPlan';
@@ -116,6 +117,8 @@ export class ModelRenderer {
   private width = 1;
   private height = 1;
   private pixelRatio = 1;
+  /** The size last given to the canvas; null until then, when it has the browser's default size. */
+  private applied: CanvasSize | null = null;
   private frame = 0;
   private targets: [WebGLRenderTarget, WebGLRenderTarget] | null = null;
   private readonly blender = new Blender();
@@ -233,15 +236,24 @@ export class ModelRenderer {
     this.requestRender();
   }
 
+  /**
+   * Sizes the canvas, and draws at once: sizing a canvas clears it, and a draw left for the next frame let the window
+   * show it cleared on every step of a resize (the view blinked). Called from a ResizeObserver, which runs after
+   * layout and before paint, the new size is painted drawn. The same size again changes nothing: setting a canvas's
+   * width, even to the one it has, clears it too.
+   */
   setSize(width: number, height: number, pixelRatio: number): void {
-    this.width = Math.max(1, Math.round(width));
-    this.height = Math.max(1, Math.round(height));
+    const next = canvasSizeOf(width, height, pixelRatio);
+    if (!canvasSizeChanged(this.applied, next)) return;
+    this.applied = next;
+    this.width = next.width;
+    this.height = next.height;
     this.pixelRatio = pixelRatio;
     this.renderer.setPixelRatio(pixelRatio);
     this.renderer.setSize(this.width, this.height, false);
     this.targets?.forEach((target) => target.dispose());
     this.targets = null;
-    this.requestRender();
+    this.renderNow();
   }
 
   /** The aspect of the pane a version is drawn in: framing fits it. Measured now: a resize may not be told yet. */
@@ -274,7 +286,10 @@ export class ModelRenderer {
     return { side: pane.side, key: (hit?.object.userData.key as string | undefined) ?? null, point: hit ? (hit.point.toArray() as Vector) : null, ray };
   }
 
-  /** Draws now, for a still (a thumbnail read back at once); views draw on the next frame (`requestRender`). */
+  /**
+   * Draws now: for a still (a thumbnail read back at once), and after a resize, whose cleared canvas would otherwise be
+   * painted (`setSize`). Everything else draws on the next frame (`requestRender`).
+   */
   renderNow(): void {
     cancelAnimationFrame(this.frame);
     this.frame = 0;
