@@ -87,8 +87,9 @@ and many people use the same server. Every `cm` command other than local reads (
   saves the reads asked together with one `cm cat <spec>;<file> <spec>;<file> …` per batch (`nextCatBatch`,
   `catGroupOf`: one repository each, an xlinked one's apart, as `cm cat` takes each repository's apart; revisions by
   id apart from items at a point; a command line Windows can start). What a batch saves is process starts and
-  connections: merging 3,318 conflicting files runs 27 commands instead of 9,954. The server still looks up an item at
-  a point (`itemid:N#cs:M`) on its own, one per revision; only a batch of revisions by id (`revid:`) is looked up at
+  connections: merging 3,318 conflicting files runs 28 or 29 commands instead of 9,954 (measured on a local server).
+  The server still looks up an item at a point (`itemid:N#cs:M`) on its own, one per revision; only a batch of
+  revisions by id (`revid:`) is looked up at
   once. A read asked while no `cm cat` runs starts at once (`setImmediate`, no timer), as `cm cat <spec> --file=<file>`.
   At most `MAX_RUNNING_CATS` (2) run per workspace; the next batch is formed from what waits as one ends, another
   group's reads first, so a read another view asks for waits for one batch, never the whole queue. Up to

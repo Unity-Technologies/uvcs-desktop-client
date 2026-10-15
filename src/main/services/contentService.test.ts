@@ -7,7 +7,7 @@ import { formatOutput, treeListingOutput, workspaceListingXml } from '../cm/test
 import { cmFails, fakeCmClient, optionValue, type CmAnswer, type FakeCmCommand } from '../cm/testing/fakeCmClient';
 import type { ContentSource } from '@shared/domain/content';
 import { catReadsOf, fakeCat } from '../cm/testing/fakeCat';
-import { MAX_QUICK_CAT, RevisionCat } from '../files/RevisionCat';
+import { RevisionCat } from '../files/RevisionCat';
 import { contentHashOf } from '../files/WorkspaceCopies';
 import type { ReviewStore } from '../review/ReviewStore';
 import { createContentService } from './contentService';
@@ -109,28 +109,33 @@ describe("reading a merge's conflicting files", () => {
     ).flat();
   const server = fakeCat((spec) => (spec.startsWith('itemid:404#') ? undefined : `text of ${spec}\n`));
 
-  /** The service, its `cm` holding every `cm cat` until all the reads are asked: as when the page asks them at once. */
+  /**
+   * The service, its batching run only once every read is asked (`RevisionCat`'s `schedule`, held until the last
+   * read): as when the page asks them at once, whatever order the temp folders are made in.
+   */
   function mergePage(total: number) {
-    let everyoneAsked = () => {};
-    const allAsked = new Promise<void>((resolve) => (everyoneAsked = resolve));
-    const fake = fakeCmClient({ cat: async (command) => (await allAsked, server(command)) });
-    const revisionCat = new RevisionCat({ cm: fake.cm });
+    const fake = fakeCmClient({ cat: server });
+    const runs: (() => void)[] = [];
+    const revisionCat = new RevisionCat({ cm: fake.cm, schedule: (run) => void runs.push(run) });
     const save = revisionCat.save.bind(revisionCat);
     let asked = 0;
-    revisionCat.save = (...args) => (++asked === total && everyoneAsked(), save(...args));
+    revisionCat.save = (...args) => {
+      const saved = save(...args);
+      if (++asked === total) runs.splice(0).forEach((run) => run());
+      return saved;
+    };
     return { ...fake, service: createContentService(serviceContext(fake.cm, { revisionCat })) };
   }
 
-  it('reads every version of 100 conflicting files in a few cm cats, never one each, those of many files each in a process of its own', async () => {
+  it('reads every version of 50 conflicting files asked at once in one cm cat, in a process of its own', async () => {
     const workspace = await newWorkspace();
-    const versions = versionsOf(100);
+    const versions = versionsOf(50);
     const { service, commands } = mergePage(versions.length);
 
     const read = await Promise.all(versions.map((source) => service.read(workspace, source)));
 
     expect(read.map((one) => one.text)).toEqual(versions.map((source) => `text of ${(source as { spec: string }).spec}\n`));
-    expect(commands.length).toBeLessThan(10);
-    expect(commands.filter((command) => catReadsOf(command.args).length > MAX_QUICK_CAT).every((command) => command.via === 'execute')).toBe(true);
+    expect(commands.map((command) => [command.via, catReadsOf(command.args).length])).toEqual([['execute', versions.length]]);
   });
 
   it("reads the versions of files under an xlink in commands of their own, in the xlinked repository", async () => {

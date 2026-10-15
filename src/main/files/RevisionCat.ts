@@ -138,8 +138,9 @@ export class RevisionCat {
    * bad spec is found in about two commands per halving, never one per read. When both halves fail, it failed for
    * them all (a dropped connection): they fail.
    */
-  private async narrowDown(workspacePath: string, reads: WorkspaceReads, { reads: unexplained, failure }: Unexplained): Promise<void> {
-    if (unexplained.length === 1) return unexplained[0]!.reject(failure);
+  private async narrowDown(workspacePath: string, reads: WorkspaceReads, { reads: unexplained }: Unexplained): Promise<void> {
+    // Read again alone, it settles with its own answer: a good revision isn't failed with another's error.
+    if (unexplained.length === 1) return void (await this.attempt(workspacePath, reads, unexplained));
     const middle = Math.ceil(unexplained.length / 2);
     const first = await this.attempt(workspacePath, reads, unexplained.slice(0, middle));
     const second = await this.attempt(workspacePath, reads, unexplained.slice(middle));

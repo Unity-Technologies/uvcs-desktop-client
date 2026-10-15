@@ -57,7 +57,8 @@ export function withRepositories(plan: PrintedMergePlan, listed: readonly Listed
     ...plan,
     fileConflicts: plan.fileConflicts.map((conflict) => {
       const item = byPath.get(conflict.path.replace(/^\//, ''));
-      if (!item?.repository || item.revisionId <= 0) throw new Error(`Couldn't tell which repository ${conflict.path} is in.`);
+      if (!item?.repository) throw new Error(`Couldn't tell which repository ${conflict.path} is in.`);
+      if (item.revisionId <= 0) throw new Error(`Couldn't tell which version of ${conflict.path} the destination has.`);
       return { ...conflict, repository: item.repository, destinationRevisionId: item.revisionId, destinationIsBinary: item.itemType === 'binaryFile' };
     }),
   };

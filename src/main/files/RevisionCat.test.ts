@@ -215,6 +215,21 @@ describe('RevisionCat', () => {
     expect(readsPerCommand(fake).map(([, reads]) => reads)).toEqual([MAX_QUICK_BACKLOG + 2, half, half]);
   });
 
+  it("reads again, alone, the one revision a failure left unexplained, rather than fail it with another's error", async () => {
+    let first = true;
+    const confused: CmAnswer = (command) => {
+      if (!first) return SERVER(command);
+      first = false;
+      return cmFails('The specified revision was not found revid:404@eco@local\nError: The connection was reset');
+    };
+    const { flush, save } = await setUp(confused);
+    const sides = [save(revision(404)), save(revision(7))];
+    flush();
+    const [gone, kept] = await Promise.allSettled(sides);
+    expect(gone).toMatchObject({ status: 'rejected', reason: { message: 'The specified revision was not found revid:404@eco@local' } });
+    expect(kept).toEqual({ status: 'fulfilled', value: undefined });
+  });
+
   it("keeps a diff's side cm wrote when the other side failed with an error that doesn't name it", async () => {
     const oneSideGone: CmAnswer = async (command) => {
       for (const { spec, target } of catReadsOf(command.args)) if (spec !== 'revid:404@eco@local') await writeFile(target, `content of ${spec}`);
