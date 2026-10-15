@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { app } from 'electron';
 import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
@@ -21,7 +22,7 @@ import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 const UPDATE_NEEDS_MERGE = 'Some of your local changes collide with incoming ones. Open Incoming to merge them while updating.';
 
-export function createWorkspacesService({ cm, operations, watchers, settings, headers }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): WorkspacesApi {
+export function createWorkspacesService({ cm, operations, watchers, windows, settings, headers }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): WorkspacesApi {
   const switchDependencies = { cm, settings, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'switch-backups') };
   const lookUpRepository = workspaceRepositoryLookup(cm);
   /** Folders `create` made (they didn't exist or were empty): the only ones `discardNew` may delete. */
@@ -75,9 +76,15 @@ export function createWorkspacesService({ cm, operations, watchers, settings, he
     });
   }
 
+  /**
+   * A window shows the workspace: its `cm shell`s start, and the home folder's go once no window shows the home screen,
+   * instead of idling for minutes; they served the home screen this window may have come from.
+   */
   async function watch(workspacePath: string): Promise<WatchCoverage> {
     cm.warmUp(workspacePath);
-    return watchers.watch(callerId(), workspacePath);
+    const coverage = watchers.watch(callerId(), workspacePath);
+    if (!windows.showsHomeScreen()) cm.release(homedir());
+    return coverage;
   }
 
   function switchNewWorkspace(workspacePath: string, targetSpec: string, operationId: string): Promise<void> {
