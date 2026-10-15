@@ -234,4 +234,22 @@ describe('other workspaces', () => {
     expect((await service.glance(WORKSPACE)).repository).toBe('game@AcmeStudio@unity');
     expect(commands.map((command) => command.options.cwd)).toEqual([undefined, undefined]);
   });
+
+  it("tells what each workspace works on from its selector file, a Unity organization's server by name, asked once", async () => {
+    const root = await mkdtemp(join(tmpdir(), 'uvcs-heads-'));
+    const [game, tools] = [join(root, 'game'), join(root, 'tools')];
+    for (const path of [game, tools]) {
+      await mkdir(join(path, '.plastic'), { recursive: true });
+      // As UVCS writes it for a workspace created on `game@AcmeStudio@unity`: the organization by its id, CRLF.
+      await writeFile(join(path, '.plastic', 'plastic.selector'), `repository "game@${UNITY_ORGANIZATION.byId}"\r\n  path "/"\r\n    smartbranch "/main"`);
+    }
+    const { service, commands } = workspaces({ 'status --header --machinereadable': machineReadableStatusHeader('game', UNITY_ORGANIZATION.byName) });
+
+    expect(await service.heads([game, tools])).toEqual({
+      [game]: { repository: 'game@AcmeStudio@unity', selector: { kind: 'branch', name: '/main' } },
+      [tools]: { repository: 'game@AcmeStudio@unity', selector: { kind: 'branch', name: '/main' } },
+    });
+    expect(commands).toHaveLength(1);
+    expect(commands[0]?.options.cwd).toBeUndefined();
+  });
 });
