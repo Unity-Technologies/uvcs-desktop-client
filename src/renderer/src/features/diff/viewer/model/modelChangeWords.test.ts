@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changeRows } from './modelChangeWords';
+import { changeRows, takeOfPick } from './modelChangeWords';
 import type { ModelChange, NodeRef } from './modelChanges';
 import { formatLength, formatUnits } from './modelUnits';
 import type { MaterialChange } from './materials/materialChanges';
@@ -83,6 +83,16 @@ describe('changeRows', () => {
       { label: 'Walk: Hips, Tail', focus: [], take: 'Walk' },
       { label: 'Wave: Hips, Tail', focus: [], take: 'Wave' },
     ]);
+  });
+
+  it('plays the take a row or an item picked is about, and leaves the take bar alone for any other', () => {
+    const [one] = changeRows([{ kind: 'clipKeys', name: 'Run', nodes: [] }]);
+    const [folded] = changeRows(['Run', 'Walk', 'Wave'].map((name): ModelChange => ({ kind: 'clipKeys', name, nodes: [] })));
+    const [shape] = changeRows([{ kind: 'shape', node: mesh('Rock') }]);
+    expect(takeOfPick(one!)).toBe('Run');
+    expect(takeOfPick(folded!, 1)).toBe('Walk');
+    expect(takeOfPick(folded!)).toBeNull();
+    expect(takeOfPick(shape!)).toBeNull();
   });
 
   it('tells the exporting app as a note', () => {
