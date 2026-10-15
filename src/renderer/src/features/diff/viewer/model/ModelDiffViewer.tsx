@@ -159,8 +159,10 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   useEffect(() => {
     if (!renderer || !bounds) return;
     renderer.setModels(sceneBefore, sceneAfter, bounds);
-    camera.frameFirst();
-  }, [renderer, sceneBefore, sceneAfter, bounds, camera.frameFirst]);
+    // The pair framed once both scenes are in the renderer (`framing`), given here rather than left to the camera's
+    // own effects, which may run after this one.
+    camera.frameFirst(framing);
+  }, [renderer, sceneBefore, sceneAfter, bounds, framing, camera]);
   useEffect(() => {
     if (renderer && palette) renderer.setPalette(palette);
   }, [renderer, palette]);

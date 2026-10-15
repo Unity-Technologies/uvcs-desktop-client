@@ -67,9 +67,14 @@ export class ModelCameraControl {
     return this.view ?? ANY_VIEW;
   }
 
-  /** Frames the pair once its models are in the renderer, unless the camera was placed already (the same pair read again). */
-  frameFirst(): void {
-    if (!this.view && this.pair) this.placeNow(this.framedOn(this.pair));
+  /**
+   * Frames `pair` once its models are in the renderer (null until then), unless the camera was placed already (the
+   * same pair read again). The pair is given, not read from `setBounds`, so the first framing never depends on which
+   * of the viewer's effects told the bounds first.
+   */
+  frameFirst(pair: BoundsLike | null): void {
+    this.setBounds(pair);
+    if (!this.view && pair) this.placeNow(this.framedOn(pair));
   }
 
   /** The pane resized: the pair is framed for it again, at once, while it is what is framed. */

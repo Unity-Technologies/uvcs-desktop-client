@@ -32,7 +32,8 @@ export function useModelCamera(renderer: ModelRenderer | null, bounds: BoundsLik
   useEffect(() => control.followResize(), [control, stageSize, bounds]);
   return useMemo(
     () => ({
-      frameFirst: () => control.frameFirst(),
+      /** Frames the pair the first time (`bounds` as given to the hook): call it once its models are in the renderer. */
+      frameFirst: (pair: BoundsLike | null) => control.frameFirst(pair),
       frameWhole: () => control.frameWhole(),
       framePart: (part: BoundsLike) => control.framePart(part),
       frameRegion: (region: BoundsLike) => control.frameRegion(region),
