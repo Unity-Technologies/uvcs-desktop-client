@@ -99,7 +99,7 @@ describe('ModelCameraControl', () => {
     expect(control.currentView()).toEqual(framedView(pair, 0.5, handView.yaw, handView.pitch));
   });
 
-  it('glides to a part picked, keeping the angle, rather than jumping', () => {
+  it('glides to a part framed (a row picked, F on what is picked), keeping the angle, rather than jumping', () => {
     const { control, frames } = framed();
     control.onGesture(handView);
     control.framePart(part);

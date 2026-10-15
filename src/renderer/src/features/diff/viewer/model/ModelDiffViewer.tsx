@@ -146,12 +146,15 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   const framing = everyVersionHas(present, { before: sceneBefore, after: sceneAfter }) ? bounds : null;
   const camera = useModelCamera(renderer, framing, stageRef);
   const modelCentre = useCallback(() => (bounds ? centreOf(bounds) : null), [bounds]);
-  const { frame } = camera;
   const pickedBounds = useCallback(
     (nodes: NodeRef[]) => nodesBounds(nodes, old?.summary ?? null, next?.summary ?? null) ?? aroundPoints(markersOf(nodes, sceneBefore, sceneAfter), bounds),
     [old, next, sceneBefore, sceneAfter, bounds],
   );
-  const frameShown = useCallback(() => frame((picked && pickedBounds(picked.nodes)) ?? framing), [frame, picked, pickedBounds, framing]);
+  const frameShown = useCallback(() => {
+    const part = picked && pickedBounds(picked.nodes);
+    if (part) camera.framePart(part);
+    else camera.frameWhole();
+  }, [camera, picked, pickedBounds]);
 
   useEffect(() => {
     if (!renderer || !bounds) return;
@@ -208,7 +211,8 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
     },
     [renderer, old, next, matching],
   );
-  useOrbitGestures({ element: stageRef, renderer, view: camera.currentView, onView: camera.onGesture, onDollyStep: camera.onDollyStep, modelCentre, onClick });
+  const stopCoasting = useOrbitGestures({ element: stageRef, renderer, view: camera.currentView, onView: camera.onGesture, onDollyStep: camera.onDollyStep, modelCentre, onClick });
+  useEffect(() => camera.setInterrupt(stopCoasting), [camera, stopCoasting]);
 
   const onPickRow = useCallback(
     (id: string | null, row: ChangeRow, item?: number) => {
@@ -216,9 +220,9 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
       const nodes = item === undefined ? row.focus : (row.items?.[item]?.focus ?? []);
       setPicked({ id, nodes });
       const target = pickedBounds(nodes);
-      if (target) frame(target);
+      if (target) camera.framePart(target);
     },
-    [frame, pickedBounds],
+    [camera, pickedBounds],
   );
 
   const flyKeys = useFlyKeys({ view: camera.currentView, onView: camera.onGesture, modelCentre });
@@ -231,7 +235,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
     const command = modelCommandOf(event.nativeEvent);
     if (!command) return;
     event.preventDefault();
-    if (command === 'frameAll') frame(framing);
+    if (command === 'frameAll') camera.frameWhole();
     else frameShown();
   };
 

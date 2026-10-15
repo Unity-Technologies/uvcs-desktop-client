@@ -198,16 +198,20 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   deleted) takes the whole canvas. Modes are the image diff's, remembered apart (`modelMode`).
 - **Framing**: both versions together (`framedBounds`), once both are read: framing one alone framed a pair whose other
   half was 100 times its size. Nothing frames until both are in the renderer either (`everyVersionHas`: each scene is
-  built a render after its read; the camera gets the pair's bounds only then, so the first framing, F, a part picked
+  built a render after its read; the camera gets the pair's bounds only then, so the first framing, F, a row picked
   and a resize share the rule): with one missing the renderer laid the other out alone, full width, and Split kept a
-  framing made for twice its pane's width until the window was resized. Until the user moves the camera or the app
-  frames a part of the model (a region stepped to, a row or a part picked), the model stays framed as the stage
-  resizes and the panel docks. The first framing and a resize place the camera at once; everything else the app frames
-  (F, 0, a row picked, a region stepped to) glides there (`ViewGlide`, `VIEW_GLIDE_MS`: half a second, eased in and
-  out, turning the short way round and zooming by ratio), as the Branch Explorer glides to what it reveals; under
-  reduced motion it is placed at once. A jump left the user unsure what the view had done, above all when it turned.
-  Anything that places the camera meanwhile (a drag, the wheel, the keys, a double-click) stops the glide where it is
-  and carries on from there.
+  framing made for twice its pane's width until the window was resized. The camera's rules are `ModelCameraControl`'s
+  (`useModelCamera` wires it): until the user moves the camera or the app frames a part of the model (a row picked,
+  F with something picked, a region stepped to), the model stays framed as the stage resizes and the panel docks;
+  framing the whole model again (0, or F with nothing picked) makes it follow resizes again. The first framing and a
+  resize place the camera at once; everything else the app frames (F, 0, a row picked, a region stepped to) glides
+  there (`ViewGlide`, `VIEW_GLIDE_MS`: half a second, eased in and out, turning the short way round and zooming by
+  ratio), as the Branch Explorer glides to what it reveals; under reduced motion it is placed at once. A jump left the
+  user unsure what the view had done, above all when it turned. A framing first stops a drag's coast still under way
+  (`useOrbitGestures` hands its `stopCoasting` to the camera): the coast's next frame took the camera back, and the
+  glide never went. Anything that places the camera meanwhile (a drag, the wheel, the keys, a double-click) stops the
+  glide where it is and carries on from there. Every move of the camera, whatever made it, goes through
+  `ModelCameraControl`'s `moveCamera` and is told to `onCameraMove`.
 - **Controls**, as Unity's Scene view (`useOrbitGestures`); every move takes the model as far as the hand asked, at
   any zoom:
   - **Orbit and pan**: drag (or Alt+drag) orbits; right, middle or Shift+drag pans. A pan moves what it grabbed exactly
