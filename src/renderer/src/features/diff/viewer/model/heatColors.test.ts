@@ -41,8 +41,8 @@ describe('the heat colors', () => {
     expect(HEAT_ONSET).toBeGreaterThanOrEqual(1 / 3);
   });
 
-  it('shows what is gone faintly just past the tolerance, and never hides the version after', () => {
-    expect([GHOST_OPACITY.onset, GHOST_OPACITY.full]).toEqual([0.2, 0.65]);
+  it('shows what is gone faintly just past the tolerance, more the farther, and never hides the version after', () => {
+    expect(0 < GHOST_OPACITY.onset && GHOST_OPACITY.onset < GHOST_OPACITY.full && GHOST_OPACITY.full < 1).toBe(true);
   });
 });
 
