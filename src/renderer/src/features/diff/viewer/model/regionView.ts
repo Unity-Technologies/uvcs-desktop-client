@@ -12,9 +12,12 @@ const CONTEXT_SHARE = 0.35;
 const MIN_CONTEXT_SHARE = 0.03;
 /** A region facing the camera within this angle is in sight already: the user's angle stays. */
 const IN_SIGHT_ANGLE = (60 * Math.PI) / 180;
-/** Looking down onto a region on top, or up at one underneath, at most this steeply: never over the top. */
+/** Looking down onto a region on top at most this steeply: never over the top. */
 const STEEPEST_PITCH = (50 * Math.PI) / 180;
-/** A region facing further down than this is looked at from below; one less steep, from the first look's elevation. */
+/**
+ * A region facing further down than this (feet, a hull's underside) is looked at level; one less steep, from the first
+ * look's elevation. Looking up at it from below put the camera under the ground a model stands on, the grid between.
+ */
 const UNDERSIDE_ELEVATION = -STEEPEST_PITCH;
 /** A region nearer the model's centre than this share of the model faces no side more than another. */
 const HEART_SHARE = 0.05;
@@ -51,10 +54,10 @@ function facingAngles(centre: Vector, modelCentre: Vector, modelSize: number, cu
   return { yaw, pitch: pleasantPitch(Math.asin(y)) };
 }
 
-/** A region facing up is looked down onto, one facing down far enough from below, and one facing a side from a little above. */
+/** A region facing up is looked down onto, one facing down level, and one facing a side from a little above. */
 function pleasantPitch(elevation: number): number {
   if (elevation >= FIRST_PITCH) return Math.min(elevation, STEEPEST_PITCH);
-  if (elevation <= UNDERSIDE_ELEVATION) return -STEEPEST_PITCH;
+  if (elevation <= UNDERSIDE_ELEVATION) return 0;
   return FIRST_PITCH;
 }
 
