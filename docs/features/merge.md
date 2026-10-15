@@ -112,17 +112,20 @@ A merge into a server branch has no workspace to write in: `cm merge --to` reads
 incoming text the page read, is named, so `cm` uploads nothing for it; a decided text goes in a result file whose bytes
 `cm` checks in as they are. `cm` leaves both files alone; `runMerge`'s temp folder holds them until it ends.
 
-Merges hold thousands of conflicting files and changes. Every conflicting file's three versions load at
-once (its status needs its automatic merge), watched by one observer whose results reach the page at most once a
-frame (`useQueriesByFrame`, `watchQueriesByFrame`): `useQueries` rendered the page, and compared every query's options
-again, for each version that answered, freezing it for seconds. Each file merges once, when its versions are in
-(`loadConflict`), and keeps its state while nothing about it changes (`buildStates`). The list's items come from the
-plan alone (`buildMergeItems`), so they are sorted and laid out once; where each conflict stands is the page's
-`MergeProgress`, which the rows, menus and detail read by key, so a status changing only draws its row again. The three-way merge (`diff3`) draws node-diff3's diff3
-regions over Myers diffs of each side, whose time goes by the lines changed (lockfiles repeat lines by the thousand).
-The list and Incoming render only the rows in view; the file behind the selection follows it deferred, so arrowing
-never waits for a file to highlight. Conflicts, Base and the hand editor follow the diffs' size rule
-(`syntaxHighlighting`), and Base (when big) and the hand editor render only the lines in view.
+Merges hold thousands of conflicting files and changes. Every conflicting file's three versions load at once (its
+status needs its automatic merge), watched by one observer whose results reach the page at most once a frame
+(`useQueriesByFrame`, `watchQueriesByFrame`): `useQueries` rendered the page, and compared every query's options
+again, for each version that answered, freezing it for seconds. Frames stop while the window is hidden, minimised or
+covered, so results also arrive after `HIDDEN_HAND_OVER_MS` without one: a merge loading behind other windows keeps
+merging its files instead of merging them all at once when the user returns. Each file merges once, when its versions
+are in (`loadConflict`), and keeps its state while nothing about it changes (`buildStates`). The list's items come
+from the plan alone (`buildMergeItems`), so they are sorted and laid out once; where each conflict stands is the
+page's `MergeProgress`, which the rows, menus and detail read by key, so a status changing only draws again the rows
+in view. The three-way merge (`diff3`) draws node-diff3's diff3 regions over Myers diffs of each side, whose time goes
+by the lines changed (lockfiles repeat lines by the thousand). The list and Incoming render only the rows in view; the
+file behind the selection follows it deferred, so arrowing never waits for a file to highlight. Conflicts, Base and
+the hand editor follow the diffs' size rule (`syntaxHighlighting`), and Base (when big) and the hand editor render
+only the lines in view.
 
 ## Finishing a task
 
