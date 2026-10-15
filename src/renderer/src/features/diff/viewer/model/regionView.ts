@@ -33,9 +33,15 @@ export function regionView(region: BoundsLike, model: BoundsLike, current: Orbit
   return framedView(grown(region, pad), aspect, yaw, pitch);
 }
 
-/** The region as it is boxed on screen: just clear of its surface, a hundredth of the model around it. */
+/**
+ * How far the box stands off a region, as a share of the model: just clear of its surface, so its lines don't run
+ * along the faces they box. A twentieth boxed a part loosely enough that two regions' boxes looked alike.
+ */
+const BOX_CLEARANCE_SHARE = 0.01;
+
+/** The region as it is boxed on screen, just clear of its surface. */
 export function boxedRegion(region: BoundsLike, modelSize: number): BoundsLike {
-  return grown(region, modelSize * 0.01);
+  return grown(region, modelSize * BOX_CLEARANCE_SHARE);
 }
 
 /**

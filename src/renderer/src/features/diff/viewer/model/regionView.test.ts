@@ -56,6 +56,14 @@ describe('regionView', () => {
     expect(view.pitch).toBeCloseTo(degrees(50), 10);
   });
 
+  it('looks at a region facing partly up from its own elevation, between the first look\'s and the steepest', () => {
+    const elevation = degrees(35);
+    const centre: Vector = [0, Math.sin(elevation), -Math.cos(elevation)];
+    const view = regionView(regionAt(centre), model, lookingFrom(0), 1.5);
+    expect(view.pitch).toBeCloseTo(elevation, 10);
+    expect(Math.cos(view.yaw)).toBeCloseTo(-1, 10);
+  });
+
   it('looks level at a region underneath, never up from below the ground a model stands on', () => {
     const view = regionView(regionAt([0, -1, 0]), model, lookingFrom(0.7, FIRST_PITCH), 1.5);
     expect(view.pitch).toBe(0);
