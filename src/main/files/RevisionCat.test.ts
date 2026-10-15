@@ -76,7 +76,7 @@ describe('RevisionCat', () => {
     flush();
     const second = save(version(3));
     flush();
-    const meanwhile = Array.from({ length: 10 }, (_, i) => save(version(10 + i)));
+    const meanwhile = Array.from({ length: MAX_QUICK_CAT + 1 }, (_, i) => save(version(10 + i)));
     flush();
     expect(fake.commands).toHaveLength(MAX_RUNNING_CATS);
     const third = new Promise<void>((resolve) => (commandAsked = resolve));
@@ -88,7 +88,7 @@ describe('RevisionCat', () => {
     expect(readsPerCommand(fake)).toEqual([
       ['query', 2],
       ['query', 1],
-      ['execute', 10],
+      ['execute', MAX_QUICK_CAT + 1],
     ]);
   });
 
@@ -114,8 +114,8 @@ describe('RevisionCat', () => {
     expect(await readFile(target(6), 'utf8')).toBe('content of itemid:6#cs:5@eco@local');
     // Those written by the command that failed are read again once, together: never a command each.
     expect(readsPerCommand(fake)).toEqual([
-      ['execute', 6],
-      ['execute', 5],
+      ['query', 6],
+      ['query', 5],
     ]);
   });
 

@@ -13,11 +13,12 @@ import { catArgs, catBatchesOf, type CatRead } from '../cm/catBatches';
  */
 export const MAX_RUNNING_CATS = 2;
 /**
- * The most revisions a quick `cm cat` reads: a few files, about as quick as one (a diff's two sides, a conflict's three
- * versions), go in a pooled `cm shell` (`query()`). A bigger batch runs as a process of its own (`execute()`): it may
- * take seconds, and would hold a session every other read of the workspace waits behind.
+ * The most revisions a quick `cm cat` reads, in a pooled `cm shell` (`query()`): a warm one reads a small file in about
+ * a millisecond (a local server), where a process costs 100-150 ms to start, so a diff's two sides, a conflict's three
+ * versions or a small merge's few dozen files answer in tens of ms. A bigger batch runs as a process of its own
+ * (`execute()`): it may take seconds, and would hold a session every other read of the workspace waits behind.
  */
-export const MAX_QUICK_CAT = 4;
+export const MAX_QUICK_CAT = 50;
 
 /** A revision as `cm cat` reads it. */
 export interface CatRevision {
