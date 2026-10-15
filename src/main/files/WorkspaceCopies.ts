@@ -78,6 +78,15 @@ export class WorkspaceCopies {
     }
   }
 
+  /**
+   * Remembers a workspace folder's own listing (the Files view's `cm ls --xml`): its files' revisions, and that a
+   * revision it doesn't name isn't there, so the folder isn't listed again for one until the workspace changes.
+   */
+  rememberFolder(workspacePath: string, folder: string, files: Iterable<RevisionFile>): void {
+    this.remember(workspacePath, files);
+    this.keepFolderListing(folderKey(workspacePath, folder), Promise.resolve());
+  }
+
   /** The workspace changed (the watcher saw it, or stopped watching): its folders are listed again when asked. */
   forgetListings(workspacePath: string): void {
     for (const key of [...this.listedFolders.keys()]) if (key.startsWith(`${workspacePath}\0`)) this.listedFolders.delete(key);
@@ -110,20 +119,24 @@ export class WorkspaceCopies {
 
   /** One `cm ls` of the workspace folder while the workspace doesn't change, its files remembered; a failure lists nothing. */
   private listFolder(workspacePath: string, folder: string): Promise<void> {
-    const key = `${workspacePath}\0${folder}`;
+    const key = folderKey(workspacePath, folder);
     const listing =
       this.listedFolders.get(key) ??
       this.cm!.query(workspaceListingArgs(toAbsolutePath(workspacePath, folder)), { cwd: workspacePath }).then(
         (output) => this.remember(workspacePath, parseWorkspaceListing(output)),
         () => undefined,
       );
+    this.keepFolderListing(key, listing);
+    return listing;
+  }
+
+  private keepFolderListing(key: string, listing: Promise<void>): void {
     this.listedFolders.delete(key);
     this.listedFolders.set(key, listing);
     for (const oldest of this.listedFolders.keys()) {
       if (this.listedFolders.size <= MAX_LISTED_FOLDERS) break;
       this.listedFolders.delete(oldest);
     }
-    return listing;
   }
 
   /**
@@ -192,6 +205,11 @@ function workspacePathOf(path: string): string | null {
  * (`name@<organization>@unity` in `cm ls`, `name@<id>@cloud` in `cm history --xml`), and at one path the workspace holds
  * one repository's item; the content check stands behind it.
  */
+/** A workspace folder, as `forgetListings` finds it by its workspace. */
+function folderKey(workspacePath: string, folder: string): string {
+  return `${workspacePath}\0${workspacePathOf(folder) ?? folder}`;
+}
+
 function heldKey(workspacePath: string, path: string, revision: RevisionRef): string {
   return `${workspacePath}\0${path}\0${revision.revisionId}\0${revision.repository.split('@')[0]}`;
 }

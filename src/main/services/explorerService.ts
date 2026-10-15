@@ -27,7 +27,10 @@ export function createExplorerService({ cm, operations, workspaceCopies }: Servi
 
   async function listDirectory(workspacePath: string, directory: string) {
     const xml = await cm.query(onLinksThemselves('ls', toAbsolutePath(workspacePath, directory), '--xml'), inWorkspace(workspacePath));
-    return rememberedItems(workspacePath, xml);
+    // The workspace's own listing of the folder: what it holds there, so it isn't asked again to find a copy.
+    const items = parseTreeItems(xml);
+    workspaceCopies.rememberFolder(workspacePath, directory, revisionFilesOf(items));
+    return items.map(withoutHash);
   }
 
   async function listRepositoryDirectory(workspacePath: string, changesetId: number, directory: string) {

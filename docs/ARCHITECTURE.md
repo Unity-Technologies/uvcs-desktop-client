@@ -133,7 +133,8 @@ and many people use the same server. Every `cm` command other than local reads (
   1. Which file, which version: the revision's workspace path and its id (the content source's `fileName`).
   2. Is there a file at that path on disk? If not, nothing is asked. If so, which revision does the workspace hold
      there, with what size and hash? A listing already read tells, else one `cm ls <folder> --format=…` of the
-     workspace (`workspaceListingArgs`), one per folder for all its files, kept until the watcher sees the workspace
+     workspace (`workspaceListingArgs`), one per folder for all its files (none for a folder the Files view listed:
+     `rememberFolder`), kept until the watcher sees the workspace
      change (`forgetListings`). The listings already read: the Files view's and Browse repository's `cm ls --xml`,
      the history's `cm ls` of its file (`workspaceRevisionArgs`), a point's tree beside a model (`RepositoryTrees.fileAt`)
      and the Materials look's (`RevisionDownloads`), all remembered (`remember`).
