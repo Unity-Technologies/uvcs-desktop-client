@@ -169,6 +169,9 @@ and many people use the same server. Every `cm` command other than local reads (
 
 - Prefer `--xml` (`parseXml`) or `--format` with `recordFormat`/`parseRecords` (control-character separators; no ambiguity with paths or comments).
 - Never parse human-readable output when a machine format exists.
+- Parsed values are slices of the command's whole output, which V8 keeps alive while any slice lives. A cache that
+  keeps them past the answer copies them as it keeps them, not every parser (`ownCopy`; `OwnCopies` for a value many
+  entries repeat, like a repository spec): `BranchNamesCache`, `WorkspaceCopies`, `RepositoryTrees`.
 - `cm find branch` leaves hidden branches out unless asked for (`hidden = 'true'`), and `cm find changeset` their
   changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`); merges and labels come either way.
 - Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments.

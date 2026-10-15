@@ -7,3 +7,19 @@ export function ownCopy(text: string): string {
   return Buffer.from(text, 'utf8').toString('utf8');
 }
 
+/**
+ * One own copy (`ownCopy`) per distinct text, for values many cached entries repeat (a repository spec): a copy each
+ * would multiply them. Only for values with few distinct texts: it keeps every one it saw.
+ */
+export class OwnCopies {
+  private readonly copies = new Map<string, string>();
+
+  of(text: string): string {
+    let copy = this.copies.get(text);
+    if (copy === undefined) {
+      copy = ownCopy(text);
+      this.copies.set(copy, copy);
+    }
+    return copy;
+  }
+}

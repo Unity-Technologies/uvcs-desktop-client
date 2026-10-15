@@ -12,6 +12,7 @@ import { posix } from 'node:path';
 import type { RevisionRef } from '@shared/domain/revision';
 import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 import type { CmClient } from '../cm/CmClient';
+import { OwnCopies, ownCopy } from '../cm/ownCopy';
 import type { ListedTreeItem } from '../cm/treeItemsXml';
 import { parseWorkspaceListing, workspaceListingArgs } from '../cm/workspaceListing';
 import { MAX_MODEL_BYTES } from './fileContent';
@@ -62,6 +63,8 @@ export class WorkspaceCopies {
   private readonly listedFolders = new Map<string, Promise<void>>();
   /** How many times each workspace was seen to change (`generationOf`). */
   private readonly generations = new Map<string, number>();
+  /** The repository specs the listings name, one copy each (`kept`). */
+  private readonly repositories = new OwnCopies();
 
   constructor({ cm, maxListed = MAX_LISTED_REVISIONS }: WorkspaceCopiesOptions = {}) {
     this.cm = cm;
@@ -74,7 +77,21 @@ export class WorkspaceCopies {
    * it. A revision's content never changes, so a listing gone stale only misses a copy; the disk is checked at each read.
    */
   remember(workspacePath: string, files: Iterable<RevisionFile>): void {
-    for (const file of validFiles(files)) keepLatest(this.listed, heldKey(workspacePath, file.path, file.revision), file, this.maxListed);
+    this.keepListed(workspacePath, this.kept(files));
+  }
+
+  private keepListed(workspacePath: string, kept: Iterable<RevisionFile>): void {
+    for (const file of kept) keepLatest(this.listed, heldKey(workspacePath, file.path, file.revision), file, this.maxListed);
+  }
+
+  /**
+   * The files that tell a revision (`validFiles`), as strings of their own (`ownCopy`): what a listing names are slices
+   * of its whole output, and up to `MAX_LISTED_REVISIONS` of them are kept, so a few would keep every listing read.
+   */
+  private *kept(files: Iterable<RevisionFile>): Generator<RevisionFile> {
+    for (const { path, revision, hash, size } of validFiles(files)) {
+      yield { path: ownCopy(path), revision: { revisionId: revision.revisionId, repository: this.repositories.of(revision.repository) }, hash: hash && ownCopy(hash), size };
+    }
   }
 
   /**
@@ -92,8 +109,8 @@ export class WorkspaceCopies {
    * workspace last changed (`listedAt`); an older one's revisions are only remembered.
    */
   rememberHeld(workspacePath: string, files: Iterable<RevisionFile>, listedAt = this.generationOf(workspacePath)): void {
-    const valid = [...validFiles(files)];
-    this.remember(workspacePath, valid);
+    const valid = [...this.kept(files)];
+    this.keepListed(workspacePath, valid);
     if (listedAt !== this.generationOf(workspacePath)) return;
     for (const file of valid) {
       const folder = folderKey(workspacePath, folderOf(file.path));
