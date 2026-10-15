@@ -13,6 +13,7 @@ import { registerApi } from './ipc/registerApi';
 import { sendEvent, sendEventToCaller } from './ipc/sendEvent';
 import { DiffReviewStore } from './review/DiffReviewStore';
 import { ReviewStore } from './review/ReviewStore';
+import { removeLeftOverTempDirectories } from './files/tempFile';
 import { WorkspaceCopies } from './files/WorkspaceCopies';
 import { createServices } from './services/createServices';
 import { RepositoryTrees } from './unity/RepositoryTrees';
@@ -74,6 +75,7 @@ function start(launched: Promise<void>): void {
   sendSettingsChanges(settings, (changed) => sendEvent('settingsChanged', changed));
   ignoreOwnCommandWrites(cm, watchers, headers);
   void revisionDownloads.removeLeftOvers();
+  void removeLeftOverTempDirectories();
   const api = createServices({
     cm,
     operations,
