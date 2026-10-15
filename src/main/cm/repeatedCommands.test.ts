@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { countCalls } from '@shared/testing/countCalls';
 import type { CmClient } from './CmClient';
 import { isServerCommand, RepeatedCommandDetector, warnOnRepeatedServerCommands } from './repeatedCommands';
 
@@ -29,6 +30,25 @@ describe('RepeatedCommandDetector', () => {
   it('counts each command apart', () => {
     const detector = new RepeatedCommandDetector(budget);
     expect(['a', 'b', 'a', 'b'].map((command, index) => detector.record(command, index))).toEqual([false, false, false, false]);
+  });
+
+  // A big merge runs thousands of distinct commands: going over every command remembered on each one took 150 ms of the
+  // main process. What's counted is each step through the remembered commands (a Map's iterator).
+  it('forgets old commands in work that grows with the commands, not with their square', () => {
+    const detector = new RepeatedCommandDetector(budget);
+    const mapIterator = Object.getPrototypeOf(new Map().entries()) as { next: () => unknown };
+    const { calls } = countCalls(mapIterator, 'next', () => {
+      for (let index = 0; index < 3_000; index++) detector.record(`cm diff file${index}`, index);
+    });
+    expect(calls).toBeLessThan(3 * 3_000);
+  });
+
+  it('counts a command afresh once its runs are older than the window, after thousands of others', () => {
+    const detector = new RepeatedCommandDetector(budget);
+    detector.record('cm find branch', 0);
+    detector.record('cm find branch', 1);
+    for (let index = 0; index < 2_000; index++) detector.record(`cm diff file${index}`, 20_000 + index);
+    expect(detector.record('cm find branch', 30_000)).toBe(false);
   });
 });
 

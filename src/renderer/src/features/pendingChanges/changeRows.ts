@@ -2,7 +2,6 @@ import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import type { FileListLayout } from '../../components/fileListLayoutStore';
 import { collapseGroupedTreeRows, layoutGroupedTree, type GroupedTreeRow } from '../../lib/groupedPathTree';
 import { layoutPathList, layoutPathTree } from '../../lib/pathTree';
-import { sortChanges } from './changeOrder';
 
 /**
  * A changelist, a folder of changes or a change, as every grouped list of files has them (`groupedPathTree`). A
@@ -15,7 +14,8 @@ export type ChangesGrouping = 'none' | 'changelist';
 export const DEFAULT_CHANGELIST_LABEL = 'Default changelist';
 
 interface LayoutInput {
-  changes: PendingChange[];
+  /** The changes, in `sortChanges` order: filtering a sorted list keeps it in order, so it isn't sorted again here. */
+  sorted: PendingChange[];
   changelists: Changelist[];
   layout: FileListLayout;
   grouping: ChangesGrouping;
@@ -33,12 +33,11 @@ interface Group {
  * if nothing was collapsed: opening or closing a folder only leaves rows out (`collapseRows`). What is checked is left
  * to `rowCheckState`: checking files doesn't lay tens of thousands of rows out again either.
  */
-export function layoutChangeRows({ changes, changelists, layout, grouping }: LayoutInput): ChangeRow[] {
+export function layoutChangeRows({ sorted, changelists, layout, grouping }: LayoutInput): ChangeRow[] {
   if (grouping === 'none') {
-    const sorted = sortChanges(changes);
     return layout === 'tree' ? layoutPathTree({ sorted, keyOf: changeKey, folderScope: 'all' }) : layoutPathList(sorted, changeKey);
   }
-  const groups = groupByChangelist(changes, changelists).map(({ key, label, changelist, changes: inGroup }) => ({ key, label, group: changelist, sorted: sortChanges(inGroup) }));
+  const groups = groupByChangelist(sorted, changelists).map(({ key, label, changelist, changes: inGroup }) => ({ key, label, group: changelist, sorted: inGroup }));
   return layoutGroupedTree(groups, changeKey, layout === 'tree');
 }
 

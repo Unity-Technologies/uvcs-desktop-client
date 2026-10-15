@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { closestOnTriangle, surfaceDistances } from './surfaceDistance';
+import { closestOnTriangle, MeasurableSurface, surfaceDistances } from './surfaceDistance';
 
 /** A unit square on the XZ plane at height `y`, as two triangles, or as `n`×`n` cells of two triangles each. */
 function square(y = 0, n = 1): Float32Array {
@@ -47,19 +47,19 @@ describe('closestOnTriangle', () => {
 
 describe('surfaceDistances', () => {
   it('measures how far each vertex is from the surface', () => {
-    const distances = surfaceDistances(points([0.5, 0.25, 0.5], [0.5, 0, 0.5], [2, 0, 0.5]), { positions: square() }, { maxDistance: 10 });
+    const distances = surfaceDistances(points([0.5, 0.25, 0.5], [0.5, 0, 0.5], [2, 0, 0.5]), MeasurableSurface.of({ positions: square() }), { maxDistance: 10 });
     expect([...distances].map((value) => Number(value.toFixed(5)))).toEqual([0.25, 0, 1]);
   });
 
   it('measures a re-meshed surface that kept its shape as unchanged', () => {
     const vertices = square(0, 7);
-    const distances = surfaceDistances(vertices, { positions: square(0, 3) }, { maxDistance: 1 });
+    const distances = surfaceDistances(vertices, MeasurableSurface.of({ positions: square(0, 3) }), { maxDistance: 1 });
     expect(Math.max(...distances)).toBeLessThan(1e-6);
   });
 
   it('tells a vertex with nothing near as far as the most it measures', () => {
-    expect([...surfaceDistances(points([0, 50, 0]), { positions: square() }, { maxDistance: 0.5 })]).toEqual([0.5]);
-    expect([...surfaceDistances(points([0, 0, 0]), { positions: new Float32Array() }, { maxDistance: 0.5 })]).toEqual([0.5]);
+    expect([...surfaceDistances(points([0, 50, 0]), MeasurableSurface.of({ positions: square() }), { maxDistance: 0.5 })]).toEqual([0.5]);
+    expect([...surfaceDistances(points([0, 0, 0]), MeasurableSurface.of({ positions: new Float32Array() }), { maxDistance: 0.5 })]).toEqual([0.5]);
   });
 
   it('finds the nearest triangle as measuring every one would, wherever the vertex is', () => {
@@ -71,7 +71,7 @@ describe('surfaceDistances', () => {
     };
     const triangles = new Float32Array(Array.from({ length: 300 * 9 }, () => random() * 10));
     const vertices = new Float32Array(Array.from({ length: 200 * 3 }, () => random() * 14 - 2));
-    const fast = surfaceDistances(vertices, { positions: triangles }, { maxDistance: 100 });
+    const fast = surfaceDistances(vertices, MeasurableSurface.of({ positions: triangles }), { maxDistance: 100 });
     const out = new Float64Array(3);
     for (let v = 0; v < 200; v++) {
       const [x, y, z] = [vertices[v * 3]!, vertices[v * 3 + 1]!, vertices[v * 3 + 2]!];

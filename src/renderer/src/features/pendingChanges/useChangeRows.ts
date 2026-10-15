@@ -6,7 +6,7 @@ import { topLevelCheckboxInset } from './changeRowLevels';
 import { changeKey, collapseRows, layoutChangeRows, type ChangeRow, type ChangesGrouping } from './changeRows';
 
 interface ChangeRowsInput {
-  /** The changes shown, sorted and filtered. */
+  /** The changes shown, in `sortChanges` order and filtered: they are laid out as they come. */
   changes: PendingChange[];
   changelists: Changelist[];
   layout: FileListLayout;
@@ -33,7 +33,7 @@ interface ChangeRows {
 export function useChangeRows({ changes, changelists, layout, grouping, scope }: ChangeRowsInput): ChangeRows {
   const { collapsed, toggleCollapsed } = useCollapsedFolders(scope);
   const changesByKey = useMemo(() => new Map(changes.map((change) => [changeKey(change), change])), [changes]);
-  const allRows = useMemo(() => layoutChangeRows({ changes, changelists, layout, grouping }), [changes, changelists, layout, grouping]);
+  const allRows = useMemo(() => layoutChangeRows({ sorted: changes, changelists, layout, grouping }), [changes, changelists, layout, grouping]);
   const rows = useMemo(() => collapseRows(allRows, collapsed), [allRows, collapsed]);
   const checkboxInset = useMemo(() => topLevelCheckboxInset(rows), [rows]);
   const fileKeys = useMemo(() => rows.flatMap((row) => (row.type === 'file' ? [row.key] : [])), [rows]);

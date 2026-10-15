@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { changeShares, compareSurfaces, placedMeshesOf } from './surfaceComparison';
+import { countCalls } from '@shared/testing/countCalls';
+import { changeShares, compareSurfaces, placedMeshesOf, type PlacedMeshes } from './surfaceComparison';
+import { MeasurableSurface } from './surfaceDistance';
 import { boundAtOrigin, testModel, type TestNode } from './testing/testModels';
 
 const placed = (nodes: TestNode[], unitScale = 1) => placedMeshesOf(testModel({ nodes, unitScale }));
+/** A grid of `count` crates, every tenth lifted by `lift`: a scene of many small meshes, as a level or a kit is. */
+const crates = (count: number, lift = 0) =>
+  placed(Array.from({ length: count }, (_, i) => ({ name: `Crate ${i}`, position: [(i % 10) * 2, i % 10 === 0 ? lift : 0, Math.floor(i / 10) * 2] as [number, number, number], mesh: {} })));
+/** The same meshes drawn as one: their triangles' corners one after the other (`testModel`'s meshes have no index). */
+const asOneMesh = ({ meshes }: PlacedMeshes): PlacedMeshes => ({ meshes: [{ positions: new Float32Array(meshes.flatMap((mesh) => [...mesh.positions])), index: null }] });
+const concatenated = (meshes: Float32Array[]): number[] => meshes.flatMap((mesh) => [...mesh]);
 const maxOf = (distances: Float32Array[]): number => Math.max(...distances.map((mesh) => Math.max(...mesh)));
 
 describe('compareSurfaces', () => {
@@ -27,6 +35,22 @@ describe('compareSurfaces', () => {
     const before = placed([{ name: 'Rock', mesh: { size: [100, 100, 100] } }], 0.01);
     const after = placed([{ name: 'Rock', position: [10, 0, 0], mesh: { size: [100, 100, 100] } }], 0.01);
     expect(maxOf(compareSurfaces(before, after).after)).toBeCloseTo(0.1, 5);
+  });
+
+  it('measures each mesh as it measures the model drawn as one mesh', () => {
+    const before = crates(30);
+    const after = crates(30, 0.5);
+    const byMesh = compareSurfaces(before, after);
+    const whole = compareSurfaces(asOneMesh(before), asOneMesh(after));
+    expect(concatenated(byMesh.after)).toEqual(concatenated(whole.after));
+    expect(concatenated(byMesh.before)).toEqual(concatenated(whole.before));
+    expect(Math.max(...concatenated(byMesh.after))).toBeCloseTo(0.5, 5);
+  });
+
+  it('makes each version ready to measure against once, however many meshes it has', () => {
+    // A scene of thousands of meshes kept the model worker busy for minutes when each mesh rebuilt the other version.
+    const { calls } = countCalls(MeasurableSurface, 'of', () => compareSurfaces(crates(100), crates(100, 0.5)));
+    expect(calls).toBe(2);
   });
 
   it('tells what nothing is near as a tenth of the model', () => {

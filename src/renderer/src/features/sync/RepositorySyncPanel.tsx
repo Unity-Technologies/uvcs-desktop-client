@@ -1,5 +1,5 @@
 import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, GitBranch } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { PathLabel } from '../../components/PathLabel';
@@ -18,7 +18,7 @@ import { userFilterTexts } from '../../lib/userName';
 import type { Column } from '../../ui/table/column';
 import { DataTable } from '../../ui/table/DataTable';
 import { useBranches } from '../branches/useBranches';
-import { syncBranchMenu } from './syncBranchMenu';
+import { syncBranchMenu, type BranchSync } from './syncBranchMenu';
 import { pullBranch, pushBranch } from './syncOperations';
 import { useSyncTargetStore } from './syncTargetStore';
 import styles from './SyncView.module.css';
@@ -32,12 +32,25 @@ export function RepositorySyncPanel({ localRepository }: { localRepository: stri
   const [selection, setSelection] = useState(EMPTY_SELECTION);
   const { data: branches, isLoading } = useBranches();
 
-  const push = (branch: string): void => {
-    if (remote) void pushBranch(workspacePath, { branch, from: localRepository, to: remote });
-  };
-  const pull = (branch: string): void => {
-    if (remote) void pullBranch(workspacePath, { branch, from: remote, to: localRepository });
-  };
+  // Arrowing through a repository's 20,000 branches renders the panel on every step: the rows, their columns and their
+  // filter stay the same objects, so the table neither sorts nor filters them again.
+  const sync = useMemo<BranchSync>(
+    () => ({
+      push: (branch) => {
+        if (remote) void pushBranch(workspacePath, { branch, from: localRepository, to: remote });
+      },
+      pull: (branch) => {
+        if (remote) void pullBranch(workspacePath, { branch, from: remote, to: localRepository });
+      },
+    }),
+    [workspacePath, localRepository, remote],
+  );
+  const columns = useMemo(() => [...BRANCH_COLUMNS, syncActionsColumn(remote, sync)], [remote, sync]);
+  const shown = useMemo(
+    () => (branches ?? []).filter((branch) => matchesWordFilter([branch.name, ...userFilterTexts(branch.owner)], filter)),
+    [branches, filter],
+  );
+
   const pullRemoteBranch = async (): Promise<void> => {
     const branch = await prompt({
       title: 'Pull a branch',
@@ -46,32 +59,8 @@ export function RepositorySyncPanel({ localRepository }: { localRepository: stri
       initialValue: '/main/',
       confirmLabel: 'Pull',
     });
-    if (branch) pull(branch.startsWith('/') ? branch : `/${branch}`);
+    if (branch) sync.pull(branch.startsWith('/') ? branch : `/${branch}`);
   };
-
-  const columns: Column<Branch>[] = [
-    { id: 'name', header: 'Branch', grow: 2, render: (branch) => <PathLabel path={branch.name} />, sortValue: (branch) => branch.name },
-    { id: 'owner', header: 'Created by', grow: 1, render: (branch) => <UserLabel user={branch.owner} /> },
-    { id: 'date', header: 'Created', width: 130, secondary: true, render: (branch) => <RelativeTime date={branch.date} />, sortValue: (branch) => branch.date },
-    {
-      id: 'actions',
-      header: '',
-      width: 180,
-      align: 'end',
-      render: (branch) => (
-        <span className={styles.rowActions}>
-          <Button size="small" icon={<ArrowUpFromLine size={13} />} disabled={!remote} onClick={() => push(branch.name)}>
-            Push
-          </Button>
-          <Button size="small" icon={<ArrowDownToLine size={13} />} disabled={!remote} onClick={() => pull(branch.name)}>
-            Pull
-          </Button>
-        </span>
-      ),
-    },
-  ];
-
-  const shown = (branches ?? []).filter((branch) => matchesWordFilter([branch.name, ...userFilterTexts(branch.owner)], filter));
 
   return (
     <div className={styles.panel}>
@@ -110,14 +99,42 @@ export function RepositorySyncPanel({ localRepository }: { localRepository: stri
           <DataTable
             rows={shown}
             columns={columns}
-            rowKey={(branch) => branch.name}
+            rowKey={branchName}
             selection={selection}
             onSelectionChange={setSelection}
             initialSort={{ columnId: 'name', descending: false }}
-            contextMenu={(selected) => syncBranchMenu(selected, remote, { push, pull })}
+            contextMenu={(selected) => syncBranchMenu(selected, remote, sync)}
           />
         </HighlightQuery>
       )}
     </div>
   );
+}
+
+const branchName = (branch: Branch): string => branch.name;
+
+const BRANCH_COLUMNS: Column<Branch>[] = [
+  { id: 'name', header: 'Branch', grow: 2, render: (branch) => <PathLabel path={branch.name} />, sortValue: branchName },
+  { id: 'owner', header: 'Created by', grow: 1, render: (branch) => <UserLabel user={branch.owner} /> },
+  { id: 'date', header: 'Created', width: 130, secondary: true, render: (branch) => <RelativeTime date={branch.date} />, sortValue: (branch) => branch.date },
+];
+
+/** Each row's Push and Pull buttons, enabled once there is a remote to sync with. */
+function syncActionsColumn(remote: string | null, sync: BranchSync): Column<Branch> {
+  return {
+    id: 'actions',
+    header: '',
+    width: 180,
+    align: 'end',
+    render: (branch) => (
+      <span className={styles.rowActions}>
+        <Button size="small" icon={<ArrowUpFromLine size={13} />} disabled={!remote} onClick={() => sync.push(branch.name)}>
+          Push
+        </Button>
+        <Button size="small" icon={<ArrowDownToLine size={13} />} disabled={!remote} onClick={() => sync.pull(branch.name)}>
+          Pull
+        </Button>
+      </span>
+    ),
+  };
 }

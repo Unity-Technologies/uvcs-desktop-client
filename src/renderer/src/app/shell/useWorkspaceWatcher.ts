@@ -9,6 +9,7 @@ import { isAffectedByFileChanges, LOCAL_AREAS } from '../refresh/refreshScopes';
 import { useSettings } from '../settings/useSettings';
 import { useWorkspacePath } from '../workspace/useWorkspace';
 import { noteBrokenWatch, notePartialWatch } from './watchNotes';
+import { watchShownWorkspace } from './watchShownWorkspace';
 import { HeldChanges, inWorkspace, localQueryDefaults, refreshForChange } from './workspaceChangeRefresh';
 
 /**
@@ -34,13 +35,14 @@ export function useWorkspaceWatcher(): void {
  */
 function useWatchCoverage(workspacePath: string): WatchCoverage {
   const [coverage, setCoverage] = useState<WatchCoverage>('partial');
-  useEffect(() => {
-    void api.workspaces.watch(workspacePath).then((watched) => {
-      setCoverage(watched);
-      if (watched === 'partial') notePartialWatch(workspacePath);
-    });
-    return () => void api.workspaces.unwatch();
-  }, [workspacePath]);
+  useEffect(
+    () =>
+      watchShownWorkspace(workspacePath, api.workspaces, (watched) => {
+        setCoverage(watched);
+        if (watched === 'partial') notePartialWatch(workspacePath);
+      }),
+    [workspacePath],
+  );
   useUvcsEvent('workspaceWatchBroken', ({ workspacePath: brokenPath }) => {
     if (brokenPath !== workspacePath) return;
     setCoverage('partial');

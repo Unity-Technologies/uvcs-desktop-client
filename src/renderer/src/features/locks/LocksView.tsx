@@ -1,4 +1,5 @@
 import { ExternalLink, Lock as LockIcon, LockOpen } from 'lucide-react';
+import { useMemo } from 'react';
 import type { Lock } from '@shared/domain/lock';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { ObjectListView } from '../../components/ObjectListView';
@@ -71,7 +72,11 @@ export function LocksView() {
   const lockRules = useLockRulesPage();
   useLockRulesCommand(lockRules);
 
-  const visible = (locks ?? []).filter((lock) => matchesPeople(people, me, lock.owner) && matchesWordFilter(lockFilterTexts(lock), filter));
+  // The same rows while only the selection changes: the table sorts them again only when they change.
+  const visible = useMemo(
+    () => (locks ?? []).filter((lock) => matchesPeople(people, me, lock.owner) && matchesWordFilter(lockFilterTexts(lock), filter)),
+    [locks, people, me, filter],
+  );
   const selected = visible.filter((lock) => selection.selected.has(lockKey(lock)));
   const releasable = selected.filter(isReleasable);
   const focused = visible.find((lock) => lockKey(lock) === selection.anchor);
