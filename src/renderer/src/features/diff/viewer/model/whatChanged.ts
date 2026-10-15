@@ -6,7 +6,7 @@
 
 import type { MaterialChange } from './materials/materialChanges';
 import type { NotKnownReason } from './materials/materialComparison';
-import { isRisk, type ModelChange } from './modelChanges';
+import { isRisk, type ModelChange, type NodeRef } from './modelChanges';
 
 export interface ChangesOfVersions {
   file: ModelChange[];
@@ -19,11 +19,13 @@ export interface ChangesOfVersions {
   materialsNotCompared: NotKnownReason | null;
   /** `fileMaterialChanges`: what changed in the materials the file defines, told where Unity's can't be resolved. */
   fileMaterials: MaterialChange[];
+  /** The meshes that use a slot (`meshesUsingSlot`): what a material's row frames. */
+  slotNodes: (slot: string) => NodeRef[];
   /** A glTF's images held in the file are named by no file: the materials compare them by place, never by content. */
   gltf: boolean;
 }
 
-export function whatChanged({ file, importSettings, settingsRead, materials, materialsNotCompared, fileMaterials, gltf }: ChangesOfVersions): ModelChange[] {
+export function whatChanged({ file, importSettings, settingsRead, materials, materialsNotCompared, fileMaterials, gltf, slotNodes }: ChangesOfVersions): ModelChange[] {
   const texturesTold = materials !== null && !gltf;
   // The project's lookups (a remap, a texture search) can't resolve where there's no point or no project: the file's
   // materials are what there is. Elsewhere (no Library, a read that failed) a slot may be remapped, and the note says so.
@@ -34,7 +36,7 @@ export function whatChanged({ file, importSettings, settingsRead, materials, mat
   const changes = [
     ...file.filter((change) => !texturesTold || change.kind !== 'textures'),
     ...(settingsRead ? importSettings : []),
-    ...told.map((change): ModelChange => ({ kind: 'material', change })),
+    ...told.map((change): ModelChange => ({ kind: 'material', change, nodes: slotNodes(change.slot) })),
     ...notCompared,
   ];
   return [...changes.filter(isRisk), ...changes.filter((change) => !isRisk(change))];

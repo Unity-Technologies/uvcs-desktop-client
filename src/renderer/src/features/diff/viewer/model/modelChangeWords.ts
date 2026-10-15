@@ -87,7 +87,7 @@ function foldedRow(key: string, run: ModelChange[]): ChangeRow {
   const items = run.map((change) => ({ label: itemLabel(change), focus: focusOf(change), ...takeOf(change) }));
   if (first.kind === 'material') {
     const words = materialFoldWords(run.flatMap((change) => (change.kind === 'material' ? [change.change] : [])));
-    return { id: `fold:${key}`, tone: isRisk(first) ? 'risk' : 'note', ...words, focus: [], items };
+    return { id: `fold:${key}`, tone: isRisk(first) ? 'risk' : 'note', ...words, focus: run.flatMap(focusOf), items };
   }
   const noun = 'node' in first ? plural(family(first.node), count) : 'meshes';
   const titles: Partial<Record<ModelChange['kind'], string>> = {
@@ -307,7 +307,7 @@ const NAMED = 3;
 
 function focusOf(change: ModelChange): NodeRef[] {
   if ('node' in change) return [change.node];
-  if (change.kind === 'transformed' || change.kind === 'textures' || change.kind === 'embeddedTextures') return change.nodes;
+  if (change.kind === 'transformed' || change.kind === 'textures' || change.kind === 'embeddedTextures' || change.kind === 'material') return change.nodes;
   return [];
 }
 

@@ -17,7 +17,7 @@ import { CENTERED_SPLIT, SwipeDivider } from '../image/SwipeDivider';
 import { importSettingsChanges } from './importSettingsChanges';
 import { ModelAnimationBar } from './ModelAnimationBar';
 import { changeRows, takeOfPick, type ChangeRow } from './modelChangeWords';
-import { modelChanges, type NodeRef } from './modelChanges';
+import { meshesUsingSlot, modelChanges, type NodeRef } from './modelChanges';
 import { whatChanged } from './whatChanged';
 import { ModelChangesPanel } from './ModelChangesPanel';
 import { clipChoices } from './modelClips';
@@ -132,6 +132,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
         materials: materials.changes,
         materialsNotCompared: materials.notCompared,
         fileMaterials: fileMaterialChanges(old.model, next.model),
+        slotNodes: meshesUsingSlot(old.summary, next.summary),
         gltf,
       }),
     );

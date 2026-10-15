@@ -80,7 +80,7 @@ export type ModelChange =
   | { kind: 'clipTakeLost'; clip: string; take: string }
   | { kind: 'exporter'; before: string | null; after: string | null }
   /** What changed in a slot's material as Unity resolves it (`materialChanges`). */
-  | { kind: 'material'; change: MaterialChange }
+  | { kind: 'material'; change: MaterialChange; nodes: NodeRef[] }
   /** Materials that may have changed but couldn't be compared, and why (`materialsNotComparedOf`). */
   | { kind: 'materialsNotCompared'; reason: NotKnownReason };
 
@@ -154,6 +154,22 @@ export function modelChanges(before: ModelSummary, after: ModelSummary): ModelCh
   if (before.upAxis !== after.upAxis) changes.push({ kind: 'upAxis', before: before.upAxis.toUpperCase(), after: after.upAxis.toUpperCase() });
   if (before.exportedFrom !== after.exportedFrom) changes.push({ kind: 'exporter', before: before.exportedFrom, after: after.exportedFrom });
   return [...changes.filter(isRisk), ...changes.filter((change) => !isRisk(change))];
+}
+
+/**
+ * The meshes whose triangles use a material slot, by its name: as the version after has them, and those of the
+ * version before that are gone since. What a material's row frames.
+ */
+export function meshesUsingSlot(before: ModelSummary, after: ModelSummary): (slot: string) => NodeRef[] {
+  let matching: NodeMatching | null = null;
+  const using = (summary: ModelSummary, slot: string) => summary.nodes.flatMap((node, i) => (node.mesh !== null && summary.meshes[node.mesh]!.slots.includes(slot) ? [i] : []));
+  return (slot) => {
+    matching ??= matchNodes(before, after);
+    const { afterOf, beforeOf } = matching;
+    const now = using(after, slot).map((a) => refOf(after.nodes[a], before.nodes[beforeOf[a]!]));
+    const gone = using(before, slot).filter((b) => afterOf[b] === -1).map((b) => refOf(undefined, before.nodes[b]));
+    return [...now, ...gone];
+  };
 }
 
 /** A mesh on both sides, with its nodes. */
