@@ -289,7 +289,7 @@ export function batchesOf<T extends { workspacePath: string; file: Pick<Revision
 }
 
 /** A waiting read as `cm cat` takes it: its revision, into its file in the session's folder. */
-export function catReadOf({ file, target }: { file: Pick<RevisionFile, 'revision' | 'size'>; target: string }, folder: string): CatRead {
+function catReadOf({ file, target }: { file: Pick<RevisionFile, 'revision' | 'size'>; target: string }, folder: string): CatRead {
   return { spec: spec.revision(file.revision), repository: file.revision.repository, target: join(folder, target), size: file.size };
 }
 
