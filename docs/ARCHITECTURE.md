@@ -93,7 +93,10 @@ and many people use the same server. Every `cm` command other than local reads (
   At most `MAX_RUNNING_CATS` (2) run per workspace; the next batch is formed from what waits as one ends, another
   group's reads first, so a read another view asks for waits for one batch, never the whole queue. Up to
   `MAX_QUICK_CAT` (4) revisions (a diff's sides, a conflict's versions) go in a pooled `cm shell`, one such command at
-  a time (a second waits for it: it answers in milliseconds); more go in a process of their own. `cm cat` writes every
+  a time (a second waits for it: it answers in milliseconds). While what waits is at most `MAX_QUICK_BACKLOG` (64), it
+  is all read so, a quick `cm cat` after another in one session, free between them for any other read: a small
+  merge's few dozen versions in tens of ms, where a process costs 100-150 ms to start. Past it, batches go to
+  processes of their own. `cm cat` writes every
   revision it finds even when one fails, and names each it doesn't (`The specified revision was not found <spec>`):
   that read fails alone with its line, and when every line names one, the others were written whole. A failure that
   names nothing (a spec it can't take fails the command before it writes anything, a dropped connection) is narrowed
