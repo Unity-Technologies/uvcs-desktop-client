@@ -5,11 +5,10 @@
 import { useQueries } from '@tanstack/react-query';
 import { useContext, useEffect, useMemo } from 'react';
 import type { ContentSource, FileContent } from '@shared/domain/content';
-import { api } from '../../../../api/client';
 import { queryKeys } from '../../../../api/queryKeys';
 import { EmptyState } from '../../../../ui/EmptyState';
 import { CenteredSpinner } from '../../../../ui/Spinner';
-import { contentCaching } from '../useDiffContents';
+import { contentQuery } from '../contentQueries';
 import { ModelDiffViewer } from './ModelDiffViewer';
 import type { ModelDiffMode } from './modelDiffModes';
 import { readImportSettings } from './modelImportSettings';
@@ -29,6 +28,11 @@ interface ModelMetaDiffProps {
 
 const EMPTY: FileContent = { text: '', isBinary: false, size: 0 };
 
+/** A side without a model: built apart from the component, as `contentQuery` is, so its query keeps nothing of it. */
+function noContentQuery(workspacePath: string) {
+  return { queryKey: queryKeys.inWorkspace(workspacePath, 'content', null), queryFn: () => Promise.resolve(EMPTY) };
+}
+
 export function ModelMetaDiff({ workspacePath, sources, texts, mode, onModelAbsent }: ModelMetaDiffProps) {
   const findSibling = useContext(SiblingFinderContext);
   // Each side's model is beside that side's `.meta`; a side without one (added, deleted) has no model to show.
@@ -37,12 +41,7 @@ export function ModelMetaDiff({ workspacePath, sources, texts, mode, onModelAbse
   // A `.meta` changed alone has the same model on both sides: read once, shown on both.
   const { reads: modelReads, readOf } = modelReadsOfSides(modelSources);
   const reads = useQueries({
-    queries: modelReads.map((source) => ({
-      queryKey: queryKeys.inWorkspace(workspacePath, 'content', source),
-      queryFn: () => (source ? api.content.read(workspacePath, source) : Promise.resolve(EMPTY)),
-      retry: false,
-      ...(source ? contentCaching([source]) : {}),
-    })),
+    queries: modelReads.map((source) => ({ ...(source ? contentQuery(workspacePath, source) : noContentQuery(workspacePath)), retry: false })),
   });
   const settings = useMemo(
     () => ({ original: readImportSettings(texts.original ?? ''), modified: readImportSettings(texts.modified ?? '') }),

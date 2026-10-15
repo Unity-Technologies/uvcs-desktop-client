@@ -1,13 +1,9 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { ContentSource, FileContent } from '@shared/domain/content';
-import { api } from '../../../api/client';
 import { queryKeys } from '../../../api/queryKeys';
-import { IMMUTABLE_QUERY, queryClient } from '../../../app/queryClient';
+import { queryClient } from '../../../app/queryClient';
 import { useSettledValue } from '../../../lib/useSettled';
-import { isImmutableContent } from './immutableContent';
-
-/** Going back to a diff within the hour shows it at once, without keeping every file ever opened in memory. */
-const REVISION_CACHE_MS = 60 * 60_000;
+import { contentCaching, contentQuery } from './contentQueries';
 
 export interface DiffContents {
   original: ContentSource;
@@ -41,25 +37,5 @@ export function useDiffContents(workspacePath: string, original: ContentSource, 
 
 /** Each side keeps its own cache entry, shared with other views of the same version. */
 function readContent(workspacePath: string, source: ContentSource): Promise<FileContent> {
-  return queryClient.fetchQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'content', source),
-    queryFn: () => api.content.read(workspacePath, source),
-    ...contentCaching([source]),
-  });
-}
-
-/**
- * Live contents are read again whenever asked. A revision (by id, or a spec pinned to a changeset or shelve) never
- * changes: read once, kept an hour after its last use, skipped by refreshes. Others (the loaded revision) stay until
- * an operation refreshes the workspace.
- */
-export function contentCaching(sources: ContentSource[]) {
-  if (sources.some(isLive)) return { staleTime: 0 };
-  if (sources.every(isImmutableContent)) return { staleTime: Infinity, gcTime: REVISION_CACHE_MS, meta: IMMUTABLE_QUERY };
-  return { staleTime: Infinity };
-}
-
-/** Workspace files change under us, and so does the reviewed copy on every new review; revisions never do. */
-function isLive(source: ContentSource): boolean {
-  return source.kind === 'workspaceFile' || source.kind === 'reviewSnapshot';
+  return queryClient.fetchQuery(contentQuery(workspacePath, source));
 }

@@ -139,9 +139,21 @@ export class WorkspaceCopies {
    * where the disk has a file at the path, from a listing remembered or one `cm ls` of its folder.
    */
   async read(workspacePath: string, file: RevisionFile): Promise<Buffer | null> {
-    if (file.hash !== null) return this.matching(workspacePath, file);
+    return (await this.matchingOnDisk(workspacePath, file, true))?.bytes ?? null;
+  }
+
+  /**
+   * Whether the workspace's disk has the revision's content, checked as `read` checks it, but keeping none of the
+   * bytes: what decides a download for a read to come (`RevisionDownloads.fetch`).
+   */
+  async has(workspacePath: string, file: RevisionFile): Promise<boolean> {
+    return (await this.matchingOnDisk(workspacePath, file, false)) !== null;
+  }
+
+  private async matchingOnDisk(workspacePath: string, file: RevisionFile, keepBytes: boolean): Promise<{ bytes: Buffer | null } | null> {
+    if (file.hash !== null) return this.matching(workspacePath, file, keepBytes);
     const held = await this.heldAt(workspacePath, file);
-    return held ? this.matching(workspacePath, held) : null;
+    return held ? this.matching(workspacePath, held, keepBytes) : null;
   }
 
   /** The workspace's listing of the revision at the reader's path, when the workspace holds that very revision there. */
@@ -189,37 +201,40 @@ export class WorkspaceCopies {
    * The disk's file at the revision's path, when it has the revision's content: the same size, and the same MD5 as
    * the hash listed. Null where it hasn't, isn't there, or is past `MAX_MODEL_BYTES`.
    */
-  private async matching(workspacePath: string, file: RevisionFile): Promise<Buffer | null> {
+  private async matching(workspacePath: string, file: RevisionFile, keepBytes: boolean): Promise<{ bytes: Buffer | null } | null> {
     const absolutePath = workspaceFileOf(workspacePath, file.path);
     const stats = await stat(absolutePath).catch(() => null);
     if (!stats?.isFile() || (file.size >= 0 && stats.size !== file.size) || stats.size > MAX_MODEL_BYTES) return null;
     const key = diskKey(absolutePath, stats.size, stats.mtimeMs);
     const known = this.diskHashes.get(key);
     if (known !== undefined && known !== file.hash) return null;
-    const read = await readHashed(absolutePath).catch(() => null);
+    // Without the bytes, the hash known for the file as it is now answers (`has`): the read that follows hashes them.
+    if (known !== undefined && !keepBytes) return { bytes: null };
+    const read = await readHashed(absolutePath, stats.size, keepBytes).catch(() => null);
     if (!read) return null;
     if (this.diskHashes.size >= MAX_DISK_HASHES) this.diskHashes.clear();
     this.diskHashes.set(key, read.hash);
-    return read.hash === file.hash ? read.bytes : null;
+    return read.hash === file.hash ? { bytes: read.bytes } : null;
   }
 }
 
 /**
- * A file's bytes and their MD5, hashed chunk by chunk as they are read: a 100 MB model never blocks the main process
- * while it is hashed. The bytes hashed are the bytes returned, so a file written meanwhile can't pass for a revision.
- * Null for one that grew past `MAX_MODEL_BYTES` while read.
+ * A file's bytes (when `keepBytes`) and their MD5, hashed chunk by chunk as they are read: a 100 MB model never blocks
+ * the main process while it is hashed. The bytes hashed are the bytes returned, so a file written meanwhile can't pass
+ * for a revision. Read into one buffer of the size the file had (`size`), never chunks joined at the end, which held
+ * each file twice. Null for one that grew past it while read.
  */
-async function readHashed(absolutePath: string): Promise<{ bytes: Buffer; hash: string } | null> {
+async function readHashed(absolutePath: string, size: number, keepBytes: boolean): Promise<{ bytes: Buffer | null; hash: string } | null> {
   const hash = createHash('md5');
-  const chunks: Buffer[] = [];
-  let size = 0;
+  const bytes = keepBytes ? Buffer.allocUnsafe(size) : null;
+  let read = 0;
   for await (const chunk of createReadStream(absolutePath) as AsyncIterable<Buffer>) {
-    size += chunk.length;
-    if (size > MAX_MODEL_BYTES) return null;
+    if (read + chunk.length > size) return null;
     hash.update(chunk);
-    chunks.push(chunk);
+    bytes?.set(chunk, read);
+    read += chunk.length;
   }
-  return { bytes: Buffer.concat(chunks), hash: hash.digest('base64') };
+  return { bytes: bytes?.subarray(0, read) ?? null, hash: hash.digest('base64') };
 }
 
 /**

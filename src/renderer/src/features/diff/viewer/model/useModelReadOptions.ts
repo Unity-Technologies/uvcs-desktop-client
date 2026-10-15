@@ -3,7 +3,7 @@ import { useContext, useMemo } from 'react';
 import type { ContentSource, ModelBytes } from '@shared/domain/content';
 import { api } from '../../../../api/client';
 import { queryKeys } from '../../../../api/queryKeys';
-import { contentCaching } from '../useDiffContents';
+import { contentCaching } from '../contentQueries';
 import { DEFAULT_IMPORT_SETTINGS, readImportSettings, type ImportSettingsSource, type ModelImportSettings } from './modelImportSettings';
 import { SiblingFinderContext, sourcePathOf, type DiffSide } from './modelSiblings';
 import type { ModelReadOptions } from './readModelFile';
