@@ -34,7 +34,7 @@ export async function shelveAndUndo(
   const changes = shelvedAwayChanges(snapshot.changes, paths);
   if (changes.some((change) => change.mergeInfo)) throw new Error(IN_MERGE);
 
-  const workspace = await readWorkspaceIdentity(cm, workspacePath);
+  const workspace = await readWorkspaceIdentity(deps.headers, workspacePath);
   context.beginStep('Shelving your changes', 1, 2);
   const shelve = await createVerifiedShelve(cm, workspacePath, changes, comment, context, paths ?? undefined);
   const record = newShelveRecord(workspace, shelve.id, shelvedContents(snapshot, changes), { mode: 'leave', reason: 'shelve', objectRef: '', target: NO_TARGET });

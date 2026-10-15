@@ -8,9 +8,10 @@ import { previewMerge } from '../merge/previewMerge';
 import { runMerge } from '../merge/runMerge';
 import { updateWithMerge } from '../merge/updateWithMerge';
 import { shelveBlockedAndUpdate } from '../workspace/shelveBlockedAndUpdate';
+import { cmHeaderReaders } from '../workspace/WorkspaceHeaders';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
-export function createMergeService({ cm, operations }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): MergeApi {
+export function createMergeService({ cm, operations, organizations }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): MergeApi {
   const backupsRoot = join(app.getPath('userData'), 'update-backups');
 
   return {
@@ -32,7 +33,7 @@ export function createMergeService({ cm, operations }: ServiceContext, { switchS
       operations.run(operationId, (context) => updateWithMerge(cm, workspacePath, resolutions, backupsRoot, context)),
     shelveBlockedAndUpdate: (workspacePath, resolutions, operationId) =>
       operations.run(operationId, (context) =>
-        shelveBlockedAndUpdate({ cm, records: switchShelves, leftChanges, backupsRoot }, workspacePath, resolutions, context),
+        shelveBlockedAndUpdate({ cm, headers: cmHeaderReaders(cm, organizations), records: switchShelves, leftChanges, backupsRoot }, workspacePath, resolutions, context),
       ),
   };
 }

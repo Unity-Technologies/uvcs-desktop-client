@@ -9,7 +9,8 @@ import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer } from '../cm/
 import { UPDATE_ARGS } from '../cm/updateArgs';
 import { runForCaller } from '../ipc/caller';
 import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
-import { cmHeaderReaders, WorkspaceHeaders } from '../workspace/WorkspaceHeaders';
+import { cmHeaders } from '../workspace/testing/cmHeaders';
+import { WorkspaceHeaders } from '../workspace/WorkspaceHeaders';
 import type { SwitchContext } from './ServiceContext';
 import { serviceContext } from './testing/serviceContext';
 import { createWorkspacesService } from './workspacesService';
@@ -22,7 +23,7 @@ const STATUS_HEADER = statusHeader('/main/task1', { changeset: 12, repository: '
 
 function workspaces(answers: Record<string, CmAnswer>, watchers?: Partial<WorkspaceWatchers>) {
   const fake = fakeCmClient(answers);
-  const headers = new WorkspaceHeaders(cmHeaderReaders(fake.cm));
+  const headers = new WorkspaceHeaders(cmHeaders(fake.cm));
   const context = serviceContext(fake.cm, { headers, watchers: watchers as WorkspaceWatchers });
   return { ...fake, headers, operations: context.operations, service: createWorkspacesService(context, {} as SwitchContext) };
 }

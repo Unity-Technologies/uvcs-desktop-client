@@ -29,12 +29,15 @@ import { askToQuitWhenDone } from './window/askToQuitWhenDone';
 import { followAppTheme } from './window/followAppTheme';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders';
+import { OrganizationServers } from './cm/organizationServers';
 
 const userData = app.getPath('userData');
 const cm = new CmClient(locateCm);
 const settings = openSettings(userData);
+// Unity organizations' servers by name, learned once a session (some outputs name them by id).
+const organizations = new OrganizationServers(cm);
 // What a workspace is loaded from, shared by the reads that follow one another as a window opens it.
-const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
+const headers = new WorkspaceHeaders(cmHeaderReaders(cm, organizations));
 const watchers = watchShownWorkspaces(cm, headers);
 const revisionDownloads = new RevisionDownloads({ cm });
 const repositoryTrees = new RepositoryTrees({ cm, downloads: revisionDownloads });
@@ -78,6 +81,7 @@ function start(launched: Promise<void>): void {
     watchers,
     windows,
     headers,
+    organizations,
     updates,
     revisionDownloads,
     repositoryTrees,

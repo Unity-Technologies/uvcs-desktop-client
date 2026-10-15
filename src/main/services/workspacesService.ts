@@ -17,12 +17,20 @@ import { callerId } from '../ipc/caller';
 import { readWorkspaceHeads } from '../workspace/selectorFile';
 import { readSwitchPreflight } from '../workspace/switchPreflight';
 import { switchWithChanges } from '../workspace/switchWithChanges';
+import { cmHeaderReaders } from '../workspace/WorkspaceHeaders';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 const UPDATE_NEEDS_MERGE = 'Some of your local changes collide with incoming ones. Open Incoming to merge them while updating.';
 
-export function createWorkspacesService({ cm, operations, watchers, settings, headers }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): WorkspacesApi {
-  const switchDependencies = { cm, settings, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'switch-backups') };
+export function createWorkspacesService({ cm, operations, watchers, settings, headers, organizations }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): WorkspacesApi {
+  const switchDependencies = {
+    cm,
+    headers: cmHeaderReaders(cm, organizations),
+    settings,
+    records: switchShelves,
+    leftChanges,
+    backupsRoot: join(app.getPath('userData'), 'switch-backups'),
+  };
   /** Folders `create` made (they didn't exist or were empty): the only ones `discardNew` may delete. */
   const createdFolders = new Set<string>();
 
@@ -114,7 +122,7 @@ export function createWorkspacesService({ cm, operations, watchers, settings, he
     checkNewFolder: checkNewWorkspaceFolder,
     switchNewWorkspace,
     discardNew,
-    switchPreflight: (workspacePath, targetSpec) => readSwitchPreflight(cm, switchShelves, workspacePath, targetSpec),
+    switchPreflight: (workspacePath, targetSpec) => readSwitchPreflight(switchDependencies, workspacePath, targetSpec),
     switchTo: (workspacePath, targetSpec, operationId, pendingChanges) =>
       operations.run(operationId, (context) => switchWithChanges(switchDependencies, workspacePath, targetSpec, pendingChanges, context)),
   };

@@ -46,7 +46,7 @@ export async function switchWithChanges(
   action: PendingChangesAction | undefined,
   context: OperationContext,
 ): Promise<SwitchResult> {
-  const workspace = await readWorkspaceIdentity(deps.cm, workspacePath);
+  const workspace = await readWorkspaceIdentity(deps.headers, workspacePath);
   const snapshot = await readPendingSnapshot(deps.cm, workspacePath);
   const result = await switchFrom(deps, workspacePath, workspace, snapshot, targetSpec, action, context);
   return { ...result, renamedPrivates: await privatesRenamedBySwitch(deps.cm, workspacePath, snapshot) };

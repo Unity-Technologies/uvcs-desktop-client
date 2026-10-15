@@ -35,7 +35,7 @@ export async function shelveBlockedAndUpdate(
   const incoming = await readIncomingChanges(cm, workspacePath);
   if (incoming.blockedPaths.length === 0) throw new Error('Nothing blocks the update anymore: update from Incoming.');
 
-  const workspace = await readWorkspaceIdentity(cm, workspacePath);
+  const workspace = await readWorkspaceIdentity(deps.headers, workspacePath);
   const objectRef = await selectorObjectRef(cm, workspacePath, workspace.selector);
   if (!objectRef) throw new Error(`Couldn't find ${describeSelector(workspace.selector)} in the repository, so nothing was shelved.`);
 

@@ -6,6 +6,7 @@ import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import { memorySettings } from '../settings/testing/memorySettings';
 import { readSwitchPreflight } from './switchPreflight';
 import { SwitchShelveRecords } from './switchShelveRecords';
+import { cmHeaders } from './testing/cmHeaders';
 import { leftRecord } from './testing/leftRecord';
 import { playAlongWorkspace, type WorkspaceScenario } from './testing/playAlongWorkspace';
 
@@ -14,7 +15,7 @@ const WORKSPACE = '/work';
 function preflight(scenario: WorkspaceScenario, target = 'br:/main/task2', records: SwitchShelveRecord[] = []) {
   const workspace = playAlongWorkspace(WORKSPACE, scenario);
   const store = new SwitchShelveRecords(memorySettings({ switchShelves: records }));
-  return { ...workspace, result: readSwitchPreflight(workspace.cm, store, WORKSPACE, target) };
+  return { ...workspace, result: readSwitchPreflight({ cm: workspace.cm, headers: cmHeaders(workspace.cm), records: store }, WORKSPACE, target) };
 }
 
 describe('readSwitchPreflight', () => {
@@ -23,7 +24,7 @@ describe('readSwitchPreflight', () => {
     await writeFile(join(workspacePath, 'notes.txt'), 'mine\n');
     const workspace = playAlongWorkspace(workspacePath, { pending: { 'src/a.txt': 'CH', 'src/b.txt': 'AD', 'notes.txt': 'PR' } });
 
-    expect(await readSwitchPreflight(workspace.cm, new SwitchShelveRecords(memorySettings()), workspacePath, 'br:/main/task2')).toMatchObject({
+    expect(await readSwitchPreflight({ cm: workspace.cm, headers: cmHeaders(workspace.cm), records: new SwitchShelveRecords(memorySettings()) }, workspacePath, 'br:/main/task2')).toMatchObject({
       sourceName: '/main/task1',
       pendingCount: 2,
       privateCount: 1,

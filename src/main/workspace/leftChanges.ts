@@ -15,7 +15,7 @@ import { newShelveRecord, NO_TARGET } from './shelveRecord';
 import type { SwitchShelveRecords } from './switchShelveRecords';
 import { deleteShelves, readShelveEntries } from './verifiedShelve';
 import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdentity';
-import { cmHeaderReaders, type HeaderReaders } from './WorkspaceHeaders';
+import type { HeaderReaders } from './WorkspaceHeaders';
 
 /**
  * The shelves left behind when switching away, found again when the workspace comes back:
@@ -28,7 +28,7 @@ export class LeftChangesFinder {
   constructor(
     private readonly cm: CmClient,
     private readonly records: SwitchShelveRecords,
-    private readonly headers: HeaderReaders = cmHeaderReaders(cm),
+    private readonly headers: HeaderReaders,
     private readonly tellKeptAside: (workspacePath: string, files: KeptAsideFile[]) => void = () => {},
   ) {}
 

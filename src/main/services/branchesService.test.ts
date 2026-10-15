@@ -7,7 +7,8 @@ import { BranchNamesCache } from '../cm/BranchNamesCache';
 import { branchesFound, findXml, formatOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { SettingsStore } from '../settings/SettingsStore';
-import { cmHeaderReaders, WorkspaceHeaders } from '../workspace/WorkspaceHeaders';
+import { cmHeaders } from '../workspace/testing/cmHeaders';
+import { WorkspaceHeaders } from '../workspace/WorkspaceHeaders';
 import { createBranchesService } from './branchesService';
 import { readingFileOption } from './testing/readingFileOption';
 import { serviceContext } from './testing/serviceContext';
@@ -184,7 +185,7 @@ describe('recent branches', () => {
   function recentBranches() {
     const fake = fakeCmClient({ getworkspacefrompath: formatOutput(['game', WORKSPACE_GUID]) });
     const settings = new SettingsStore(join(mkdtempSync(join(tmpdir(), 'uvcs-settings-')), 'settings.json'));
-    const headers = new WorkspaceHeaders(cmHeaderReaders(fake.cm));
+    const headers = new WorkspaceHeaders(cmHeaders(fake.cm));
     const service = createBranchesService(serviceContext(fake.cm, { settings, headers }), { branchNames: new BranchNamesCache(async () => []) });
     return { ...fake, settings, headers, service };
   }

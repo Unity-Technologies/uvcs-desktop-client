@@ -1,10 +1,13 @@
 import type { CmClient } from '../cm/CmClient';
 import type { LeftChangesFinder } from './leftChanges';
+import type { HeaderReaders } from './WorkspaceHeaders';
 import type { SwitchShelveRecords } from './switchShelveRecords';
 
 /** What every flow that shelves changes out of the workspace (switch, shelve away, update) works with. */
 export interface ShelveFlowDependencies {
   cm: CmClient;
+  /** What the workspace is loaded from, read afresh, its server by name. */
+  headers: HeaderReaders;
   records: SwitchShelveRecords;
   /** Puts the changes back when a step fails (`finish`). */
   leftChanges: LeftChangesFinder;
