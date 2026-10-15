@@ -43,17 +43,17 @@ export function changedRegions(meshes: MeasuredMesh[], tolerance: number, modelS
 function patchesOf({ positions, index, distances }: MeasuredMesh, within: number): ChangedRegion[] {
   const count = distances.length;
   const sets = new DisjointSets(count);
-  const join = (a: number, b: number): void => {
-    if (distances[a]! > within && distances[b]! > within) sets.union(a, b);
-  };
   const corners = index?.length ?? count;
   for (let corner = 0; corner + 2 < corners; corner += 3) {
     const a = index ? index[corner]! : corner;
     const b = index ? index[corner + 1]! : corner + 1;
     const c = index ? index[corner + 2]! : corner + 2;
-    join(a, b);
-    join(b, c);
-    join(c, a);
+    const movedA = distances[a]! > within;
+    const movedB = distances[b]! > within;
+    const movedC = distances[c]! > within;
+    if (movedA && movedB) sets.union(a, b);
+    if (movedB && movedC) sets.union(b, c);
+    if (movedC && movedA) sets.union(c, a);
   }
   const changed: number[] = [];
   for (let v = 0; v < count; v++) if (distances[v]! > within) changed.push(v);
