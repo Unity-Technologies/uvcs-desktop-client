@@ -39,6 +39,7 @@ import {
 } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { canvasSizeChanged, canvasSizeOf, type CanvasSize } from './canvasSize';
+import { ContactShadow, SHADOW_LAYER, shadowFrameOf } from './contactShadow';
 import { DISTANCE_ATTRIBUTE, distancesToDraw } from './heatColors';
 import { LookComparer } from './lookComparer';
 import { LookTextures, SlotLookMaterials } from './materials/slotLookMaterials';
@@ -96,10 +97,14 @@ interface SideScene {
   joints: Points<BufferGeometry, ShaderMaterial>;
   /** Each mesh's materials as the Materials look draws them, made the first time it does. */
   looks: SlotLookMaterials;
+  /** The soft shadow under it, on the floor both versions share. */
+  shadow: ContactShadow;
 }
 
 /** How much a node that isn't lit up fades towards the backdrop while others are. */
 const FADE = 0.7;
+/** How dark the contact shadow is at its darkest: more on the dark theme, whose backdrop shows less of it. */
+const SHADOW_OPACITY = { light: 0.45, dark: 0.9 } as const;
 
 export class ModelRenderer {
   private readonly renderer: WebGLRenderer;
@@ -180,6 +185,7 @@ export class ModelRenderer {
       this.dfgLutSought = false;
     }
     this.lookTextures.keepOnly(this.materialLooks);
+    if (!sameBounds(this.bounds, bounds)) for (const side of Object.values(this.sides)) side?.shadow.markStale();
     this.bounds = bounds;
     this.rebuildGrid();
     this.applyHeat();
@@ -324,6 +330,12 @@ export class ModelRenderer {
     this.drawFrame();
   }
 
+  /** A take moved the nodes: the shadows follow on the next frame. */
+  posed(): void {
+    for (const side of Object.values(this.sides)) side?.shadow.markStale();
+    this.requestRender();
+  }
+
   /** Draws on the next frame, once however often it is asked before then. */
   readonly requestRender = (): void => {
     if (this.frame) return;
@@ -375,6 +387,7 @@ export class ModelRenderer {
   private render(): void {
     if (!this.palette) return;
     const layout = this.layout();
+    this.updateShadows();
     this.renderer.setClearColor(new Color(this.palette.backdrop));
     if (layout.drawn === 'blended') return this.renderBlended(layout);
     if (layout.drawn === 'compared') return this.renderCompared(layout);
@@ -446,6 +459,13 @@ export class ModelRenderer {
     for (const side of Object.values(this.sides)) if (side) this.renderer.render(side.markers, this.camera);
   }
 
+  /** Each side's shadow where the floor is now, drawn again if its model or pose changed since. */
+  private updateShadows(): void {
+    const frame = shadowFrameOf(this.bounds);
+    const opacity = this.palette?.isDark ? SHADOW_OPACITY.dark : SHADOW_OPACITY.light;
+    for (const side of Object.values(this.sides)) if (side) side.shadow.update(this.renderer, side.scene, side.model, frame, opacity);
+  }
+
   private drawSide(side: SideScene, aspect: number, withGrid = true): void {
     this.placeCamera(aspect);
     // The key light rides over the camera's right shoulder, so the side facing the viewer is always lit.
@@ -457,6 +477,8 @@ export class ModelRenderer {
     if (withGrid) side.scene.add(this.grid, this.region);
     else this.grid.removeFromParent();
     side.pivot.visible = withGrid;
+    // Under the version drawn with the grid only: Diffs' version before is a ghost, and by look a shadow would compare.
+    side.shadow.plane.visible = withGrid;
     this.placeSkeleton(side, withGrid && this.showBones);
     this.renderer.render(side.scene, this.camera);
   }
@@ -529,7 +551,10 @@ export class ModelRenderer {
     scene.add(key, key.target, new HemisphereLight(0xffffff, 0x000000, 0.25), model.root, markers, pivot, skeleton, joints);
     const looks = new SlotLookMaterials(model, this.lookTextures);
     model.meshes.forEach((mesh, index) => MeshPicker.makePickable([mesh.solid, mesh.wire], index));
-    return { scene, model, key, markers, pivot, skeleton, joints, looks };
+    const shadow = new ContactShadow();
+    for (const mesh of model.meshes) mesh.solid.layers.enable(SHADOW_LAYER);
+    scene.add(shadow.plane);
+    return { scene, model, key, markers, pivot, skeleton, joints, looks, shadow };
   }
 
   /**
@@ -752,6 +777,11 @@ function disposeSide(side: SideScene): void {
   }
   side.pivot.dispose();
   side.looks.dispose();
+  side.shadow.dispose();
+}
+
+function sameBounds(a: BoundsLike, b: BoundsLike): boolean {
+  return a.min.every((value, i) => value === b.min[i]) && a.max.every((value, i) => value === b.max[i]);
 }
 
 function disposeGroup(group: Group): void {
