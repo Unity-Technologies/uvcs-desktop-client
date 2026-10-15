@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { repositorySpec } from '@shared/domain/specs';
 import type { CmClient } from './CmClient';
+import { machineReadableHeaderArgs, parseMachineReadableHeader } from './workspaceStatus';
 
 /** Only a handful of workspaces (the recent ones) are ever looked up; never the whole list. */
 export const MAX_LOOKUPS = 10;
@@ -10,8 +11,8 @@ const LOOKUP_TIMEOUT_MS = 4000;
 
 /** `STATUS|<changeset>|<repository>|<server>` from `cm status --header --machinereadable`. */
 export function repositoryInStatusHeader(output: string): string | null {
-  const match = /^STATUS\|-?\d+\|([^|]+)\|([^|\r\n]+)/m.exec(output);
-  return match ? repositorySpec(match[1]!, match[2]!) : null;
+  const header = parseMachineReadableHeader(output);
+  return header && repositorySpec(header.repositoryName, header.server);
 }
 
 /**
@@ -40,7 +41,7 @@ export async function resolveWorkspaceRepositories(
 async function repositoryOf(cm: CmClient, workspacePath: string, signal: AbortSignal): Promise<string | null> {
   if (!existsSync(workspacePath)) return null;
   try {
-    const output = await cm.execute(['status', '--header', '--machinereadable', '--fieldseparator=|', workspacePath], {
+    const output = await cm.execute(machineReadableHeaderArgs(workspacePath), {
       signal: AbortSignal.any([signal, AbortSignal.timeout(LOOKUP_TIMEOUT_MS)]),
       killSignal: 'SIGKILL',
     });

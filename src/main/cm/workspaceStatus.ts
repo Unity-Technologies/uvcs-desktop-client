@@ -11,6 +11,10 @@ const SELECTOR_KINDS: Record<string, SelectorKind> = {
 
 export interface WorkspaceStatus {
   repositoryName: string;
+  /**
+   * As `cm status --xml` prints it: a Unity organization's by its id (`2398571046213@cloud`), which nothing may show,
+   * compare or pass to `cm`; `OrganizationServers` names it (`WorkspaceHeaders` does).
+   */
   server: string;
   selector: WorkspaceSelector;
   /** Null on a shelve: its tree is no changeset (`WorkspaceInfo.loadedChangeset`). */
@@ -62,4 +66,18 @@ export function selectorName(configName: string, repositoryName: string, server:
     if (configName.endsWith(suffix)) return configName.slice(0, -suffix.length);
   }
   return configName;
+}
+
+/**
+ * `cm status --header --machinereadable` of the workspace at `workspacePath`, a local read. Unlike `--xml`, it names a
+ * Unity organization's server as people do (`AcmeStudio@unity`), but not what the workspace has loaded.
+ */
+export function machineReadableHeaderArgs(workspacePath: string): string[] {
+  return ['status', '--header', '--machinereadable', '--fieldseparator=|', workspacePath];
+}
+
+/** `STATUS|<changeset>|<repository>|<server>` from `machineReadableHeaderArgs`; null when it isn't (not a workspace). */
+export function parseMachineReadableHeader(output: string): { repositoryName: string; server: string } | null {
+  const match = /^STATUS\|-?\d+\|([^|]+)\|([^|\r\n]+)/m.exec(output);
+  return match ? { repositoryName: match[1]!, server: match[2]! } : null;
 }
