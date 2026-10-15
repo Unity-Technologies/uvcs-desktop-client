@@ -43,8 +43,9 @@ export function TextViewControls({ diff, plainText, plainTextThreshold, followsL
           icon={<WrapText size={14} />}
           label={wrapsLongLines ? 'Wrapped: a line is too long to show unwrapped' : wrapLines ? "Don't wrap lines" : 'Wrap lines'}
           variant={wrapLines || wrapsLongLines ? 'secondary' : 'ghost'}
-          disabled={wrapsLongLines}
-          onClick={() => setWrapLines(!wrapLines)}
+          // aria-disabled rather than disabled, so hovering still shows the tooltip saying why.
+          aria-disabled={wrapsLongLines || undefined}
+          onClick={wrapsLongLines ? undefined : () => setWrapLines(!wrapLines)}
         />
       </PaneToolbarGroup>
       {followsLayout && (
