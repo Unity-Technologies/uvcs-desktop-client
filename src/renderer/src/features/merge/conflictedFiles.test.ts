@@ -18,6 +18,12 @@ describe('conflictedFilesOf', () => {
     ]);
   });
 
+  it("knows a file is a binary, before any version is read, when cm keeps the destination's revision as one", () => {
+    const [texture, code] = conflictedFilesOf(plan([{ ...conflict, path: '/a.png', destinationIsBinary: true }, conflict]), { kind: 'merge', sourceSpec: 'br:/main/task' });
+    expect(texture?.isKnownBinary).toBe(true);
+    expect(code?.isKnownBinary).toBeUndefined();
+  });
+
   it("reads a shelve's version at the shelve, and nothing for a file with no common ancestor", () => {
     const [file] = conflictedFilesOf(plan([{ ...conflict, baseChangeset: -1 }]), { kind: 'merge', sourceSpec: 'sh:9' });
     expect(file).toMatchObject({ base: { kind: 'empty' }, source: { spec: 'itemid:27#sh:9@lib@local' } });

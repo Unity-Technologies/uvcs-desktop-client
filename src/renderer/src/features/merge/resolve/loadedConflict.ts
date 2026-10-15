@@ -1,4 +1,5 @@
 import type { FileContent } from '@shared/domain/content';
+import type { VersionRead } from './conflictVersionReads';
 import { buildConflictDocument, type ConflictDocument, type ConflictLabels } from './threeWayMerge';
 
 export interface ConflictContents {
@@ -7,37 +8,54 @@ export interface ConflictContents {
   destination: FileContent;
 }
 
-/** A conflicting file as far as its three versions have loaded, merged automatically once they all have. */
+/**
+ * A conflicting file as far as its three versions have loaded, merged automatically once they all have. A known binary
+ * is ready before any is read: `contents` once they are, `error` when they couldn't be.
+ */
 export type LoadedConflict =
   | { status: 'loading' }
   | { status: 'error'; error: Error }
-  | { status: 'ready'; contents: ConflictContents; labels: ConflictLabels; document?: ConflictDocument };
+  | { status: 'ready'; contents?: ConflictContents; labels: ConflictLabels; document?: ConflictDocument; error?: Error };
 
 /**
  * The file from its versions (base, source, destination). Merging is the expensive part, and the versions of hundreds
  * of files load one after the other: a file whose versions and labels are the ones `previous` merged keeps that merge.
+ * A file known to be a binary (`knownBinary`) is never merged: it waits for a decision whether its versions are read.
  */
-export function loadConflict(
-  versions: readonly { data?: FileContent; error: Error | null }[],
-  labels: ConflictLabels,
-  previous?: LoadedConflict,
-): LoadedConflict {
+export function loadConflict(versions: readonly VersionRead[], labels: ConflictLabels, previous?: LoadedConflict, knownBinary = false): LoadedConflict {
+  if (knownBinary) return loadBinary(versions, labels, previous);
+
   const error = versions.find((version) => version.error)?.error;
   if (error) return { status: 'error', error };
 
-  const [base, source, destination] = versions.map((version) => version.data);
-  if (!base || !source || !destination) return { status: 'loading' };
+  const contents = contentsOf(versions);
+  if (!contents) return { status: 'loading' };
+  if (previous?.status === 'ready' && previous.labels === labels && sameContents(previous.contents, contents)) return previous;
 
-  if (previous?.status === 'ready' && previous.labels === labels) {
-    const { contents } = previous;
-    if (contents.base === base && contents.source === source && contents.destination === destination) return previous;
-  }
-
+  const { base, source, destination } = contents;
   const isBinary = base.isBinary || source.isBinary || destination.isBinary;
   return {
     status: 'ready',
-    contents: { base, source, destination },
+    contents,
     labels,
     document: isBinary ? undefined : buildConflictDocument(base.text ?? '', source.text ?? '', destination.text ?? '', labels),
   };
+}
+
+/** A known binary: ready for a decision at once, with its versions once read (the user opened it) or why they weren't. */
+function loadBinary(versions: readonly VersionRead[], labels: ConflictLabels, previous: LoadedConflict | undefined): LoadedConflict {
+  const error = versions.find((version) => version.error)?.error ?? undefined;
+  const contents = error ? undefined : contentsOf(versions);
+  if (previous?.status === 'ready' && previous.labels === labels && previous.error === error && sameContents(previous.contents, contents)) return previous;
+  return { status: 'ready', labels, ...(contents && { contents }), ...(error && { error }) };
+}
+
+function contentsOf(versions: readonly VersionRead[]): ConflictContents | undefined {
+  const [base, source, destination] = versions.map((version) => version.data);
+  return base && source && destination ? { base, source, destination } : undefined;
+}
+
+function sameContents(a: ConflictContents | undefined, b: ConflictContents | undefined): boolean {
+  if (!a || !b) return a === b;
+  return a.base === b.base && a.source === b.source && a.destination === b.destination;
 }

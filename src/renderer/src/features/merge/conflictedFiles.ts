@@ -15,6 +15,7 @@ export function conflictedFilesOf(plan: MergePlan, request: MergeRequest): Confl
     base: conflict.baseChangeset < 0 ? { kind: 'empty' } : versionAt(conflict, spec.changeset(conflict.baseChangeset)),
     source: versionAt(conflict, mergeSourcePoint(request, conflict.sourceChangeset)),
     destination: { kind: 'revision', revision: { revisionId: conflict.destinationRevisionId, repository: conflict.repository }, fileName: conflict.path },
+    ...(conflict.destinationIsBinary && { isKnownBinary: true }),
   }));
 }
 

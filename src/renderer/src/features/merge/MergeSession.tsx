@@ -49,7 +49,7 @@ const itemPath = (item: MergeItem): string => item.path;
 export function MergeSession({ workspacePath, request, plan, task, onCompleted }: MergeSessionProps) {
   const labels = useMemo(() => mergeLabels(request, plan), [request, plan]);
   const conflictedFiles = useMemo(() => conflictedFilesOf(plan, request), [plan, request]);
-  const { states: fileStates, decide, reset, resolveInTool } = useFileConflicts(workspacePath, conflictedFiles, labels);
+  const { states: fileStates, decide, reset, resolveInTool, openFile } = useFileConflicts(workspacePath, conflictedFiles, labels);
   const [directoryResolutions, setDirectoryResolutions] = useState<(DirectoryConflictResolution | undefined)[]>([]);
   const [comment, setComment] = useState(() => (task ? defaultMergeComment(task.branch) : `Merge from ${labels.source}`));
   const { choices: taskChoices, setChoices: setTaskChoices, finishing } = useFinishingTask(task);
@@ -82,6 +82,9 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   // lines) follows once they stop coming, instead of every file an arrow key passes through holding the list back.
   const shown = useDeferredValue(selected);
   latest.current = { items, progress };
+  // A binary's versions are read only while it shows.
+  const shownFileKey = shown?.kind === 'fileConflict' ? shown.file.key : undefined;
+  useEffect(() => openFile(shownFileKey), [openFile, shownFileKey]);
 
   // The selection follows the run while the user stays on the file it opened; looking elsewhere doesn't stop it.
   const followRun = useCallback((key: string, previousKey: string | undefined) => {

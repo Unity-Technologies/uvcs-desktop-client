@@ -1,3 +1,4 @@
+import { useQueries } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ContentSource } from '@shared/domain/content';
 import type { FileConflictResolution } from '@shared/domain/merge';
@@ -6,6 +7,7 @@ import { api } from '../../../api/client';
 import type { MergeLabels } from '../mergeDescription';
 import { resolveInMergeTool, type OpenTool } from '../mergeTools/resolveInMergeTool';
 import { conflictVersionQuery } from './conflictVersionQuery';
+import { readsOnOpen, upFrontReads, versionReads, versionsOf } from './conflictVersionReads';
 import type { FileConflictDecision } from './fileConflictDecision';
 import { buildStates, type BuiltStates } from './fileConflictStates';
 import type { ConflictContents } from './loadedConflict';
@@ -32,7 +34,9 @@ export interface ConflictedFile {
 export interface FileConflictState {
   file: ConflictedFile;
   status: 'loading' | 'error' | 'ready';
+  /** Why its versions couldn't be read: its status (`error`), or for a known binary, what its cards show. */
   error?: Error;
+  /** Its three versions, once read: a known binary's only once it opens. */
   contents?: ConflictContents;
   isBinary: boolean;
   /** The automatic three-way merge, for text files. */
@@ -49,32 +53,35 @@ export interface FileConflictState {
 }
 
 /**
- * Loads the three versions of every conflicting file, merges them automatically where possible
- * and keeps the user's decisions for the rest, including the ones made in a merge tool.
+ * Loads the three versions of every conflicting file but the known binaries, merges them automatically where possible
+ * and keeps the user's decisions for the rest, including the ones made in a merge tool. A known binary's versions are
+ * read once it opens (`openFile`: the file the page shows), and kept while it stays open.
  */
 export function useFileConflicts(workspacePath: string, files: ConflictedFile[], labels: MergeLabels) {
   const [decisions, setDecisions] = useState<Record<string, FileConflictDecision>>({});
   const [openTools, setOpenTools] = useState<Record<string, OpenTool>>({});
+  const [openKey, openFile] = useState<string>();
   // Kept while the files are: three queries a file, which TanStack hashes and subscribes to again whenever they're new.
   // Their results come at most once a frame: thousands of versions answer one after the other.
-  const contentQueries = useMemo(
-    () =>
-      files
-        .flatMap((file) => [file.base, file.source, file.destination])
-        .map((source) => conflictVersionQuery(workspacePath, source)),
-    [workspacePath, files],
-  );
-  const versions = useQueriesByFrame(contentQueries);
+  const upFront = useMemo(() => upFrontReads(files), [files]);
+  const contentQueries = useMemo(() => upFront.sources.map((source) => conflictVersionQuery(workspacePath, source)), [workspacePath, upFront]);
+  const upFrontResults = useQueriesByFrame(contentQueries);
+  const openedFile = files.find((file) => file.key === openKey);
+  const openedVersions = useQueries({
+    queries: readsOnOpen(openedFile).map((source) => conflictVersionQuery(workspacePath, source)),
+    combine: versionReads,
+  });
   const built = useRef<BuiltStates>(new Map());
   const states = useMemo(() => {
+    const opened = openedFile && { key: openedFile.key, versions: openedVersions };
     const next = buildStates(
-      files.map((file, index) => ({ file, versions: versions.slice(index * 3, index * 3 + 3), decision: decisions[file.key], openTool: openTools[file.key] })),
+      files.map((file) => ({ file, versions: versionsOf(file, upFront, upFrontResults, opened), decision: decisions[file.key], openTool: openTools[file.key] })),
       labels,
       built.current,
     );
     built.current = next.built;
     return next.states;
-  }, [files, labels, versions, decisions, openTools]);
+  }, [files, labels, upFront, upFrontResults, openedFile, openedVersions, decisions, openTools]);
   const latest = useRef({ states, openTools });
   latest.current = { states, openTools };
 
@@ -111,5 +118,5 @@ export function useFileConflicts(workspacePath: string, files: ConflictedFile[],
   // Leaving the merge stops waiting for the tools still open: what they save afterwards has nowhere to go.
   useEffect(() => () => Object.values(latest.current.openTools).forEach((open) => void api.mergeTools.stopWaiting(open.sessionId)), []);
 
-  return { states, decide, reset, resolveInTool };
+  return { states, decide, reset, resolveInTool, openFile };
 }

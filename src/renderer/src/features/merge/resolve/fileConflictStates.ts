@@ -1,4 +1,4 @@
-import type { FileContent } from '@shared/domain/content';
+import type { VersionRead } from './conflictVersionReads';
 import type { OpenTool } from '../mergeTools/resolveInMergeTool';
 import { initialDecision, remainingConflicts, resolutionOf, type FileConflictDecision } from './fileConflictDecision';
 import { loadConflict, type LoadedConflict } from './loadedConflict';
@@ -8,7 +8,7 @@ import type { ConflictedFile, FileConflictState } from './useFileConflicts';
 /** A conflicting file with its versions (base, source, destination) as far as they've loaded, and what the user did. */
 export interface ConflictFileInputs {
   file: ConflictedFile;
-  versions: readonly { data?: FileContent; error: Error | null }[];
+  versions: readonly VersionRead[];
   /** The user's decision, if any. */
   decision: FileConflictDecision | undefined;
   openTool: OpenTool | undefined;
@@ -33,7 +33,7 @@ export function buildStates(files: ConflictFileInputs[], labels: ConflictLabels,
   const built = new Map<string, { inputs: StateInputs; state: FileConflictState }>();
   const states = files.map(({ file, versions, decision, openTool }) => {
     const before = previous.get(file.key);
-    const inputs = { file, loaded: loadConflict(versions, labels, before?.inputs.loaded), decision, openTool };
+    const inputs = { file, loaded: loadConflict(versions, labels, before?.inputs.loaded, file.isKnownBinary), decision, openTool };
     const state = before && sameInputs(before.inputs, inputs) ? before.state : toState(inputs);
     built.set(file.key, { inputs, state });
     return state;
@@ -54,12 +54,13 @@ function toState({ file, loaded, decision: userDecision, openTool }: StateInputs
   return {
     file,
     status: 'ready',
-    contents: loaded.contents,
+    ...(loaded.contents && { contents: loaded.contents }),
+    ...(loaded.error && { error: loaded.error }),
     isBinary: !loaded.document,
     document: loaded.document,
     decision,
     decidedByUser: Boolean(userDecision),
-    resolution: openTool ? null : resolutionOf(decision, loaded.contents.source.text),
+    resolution: openTool ? null : resolutionOf(decision, loaded.contents?.source.text),
     mergedAutomatically: !userDecision && loaded.document?.conflictCount === 0,
     remainingConflicts: remainingConflicts(decision),
     ...(openTool && { openTool }),

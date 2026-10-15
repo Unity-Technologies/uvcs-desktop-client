@@ -37,6 +37,14 @@ export function readsOnOpen(file: ConflictedFile | undefined): ContentSource[] {
   return file?.isKnownBinary ? [file.base, file.source, file.destination] : [];
 }
 
+/**
+ * The reads as `versionsOf` takes them, from the queries' results (`useQueries`' `combine`): a new array only when a
+ * result changed, so a file's state is built again only then.
+ */
+export function versionReads(results: readonly VersionRead[]): VersionRead[] {
+  return results.map(({ data, error }) => ({ data, error }));
+}
+
 /** A file's three versions as far as read: up front, or for a known binary, as it opened. */
 export function versionsOf(
   file: ConflictedFile,
