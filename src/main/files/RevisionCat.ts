@@ -1,24 +1,24 @@
 // Revisions saved to files with `cm cat` (ARCHITECTURE.md "Server budget"), the ones asked together in one command:
-// a merge page reads three versions of every conflicting file at once, a command each would be thousands. A read asked
-// alone runs at once, as the one quick command it always was.
+// a merge page reads three versions of every conflicting file at once, and a command each would be thousands of
+// process starts and connections. A read asked while no `cm cat` runs starts at once, as the one quick command it
+// always was; one asked while two run goes in the next.
 
 import { rm, stat } from 'node:fs/promises';
 import type { CmClient } from '../cm/CmClient';
 import { CmError } from '../cm/CmError';
-import { catArgs, catBatchesOf, type CatRead } from '../cm/catBatches';
+import { catArgs, nextCatBatch, type CatRead } from '../cm/catBatches';
 
 /**
- * The most `cm cat`s that run at once in a workspace. Reads asked meanwhile wait, and go together in the next ones:
- * how batches grow while many reads arrive, while one asked alone runs at once.
+ * The most `cm cat`s that run at once in a workspace. Reads asked meanwhile wait, and the next batch is formed from
+ * what waits as one ends: how batches grow while many reads arrive.
  */
 export const MAX_RUNNING_CATS = 2;
 /**
- * The most revisions a quick `cm cat` reads, in a pooled `cm shell` (`query()`): a warm one reads a small file in about
- * a millisecond (a local server), where a process costs 100-150 ms to start, so a diff's two sides, a conflict's three
- * versions or a small merge's few dozen files answer in tens of ms. A bigger batch runs as a process of its own
- * (`execute()`): it may take seconds, and would hold a session every other read of the workspace waits behind.
+ * The most revisions a quick `cm cat` reads in a pooled `cm shell` (`query()`): a diff's two sides, a conflict's three
+ * versions. A bigger batch runs as a process of its own (`execute()`), as does any while another quick one runs: a
+ * workspace has two pooled sessions, and every other read of it waits behind those.
  */
-export const MAX_QUICK_CAT = 50;
+export const MAX_QUICK_CAT = 4;
 
 /** A revision as `cm cat` reads it. */
 export interface CatRevision {
@@ -32,19 +32,26 @@ interface Waiting extends CatRead {
   reject: (error: unknown) => void;
 }
 
-/** A workspace's reads: those waiting to be batched, the batches formed and waiting for a `cm cat`, and how many run. */
+/** A workspace's reads: those waiting, how many `cm cat`s run (one of them in a pooled session or not), the group read last. */
 interface WorkspaceReads {
   waiting: Waiting[];
-  batches: Waiting[][];
   running: number;
+  quickRunning: boolean;
+  lastGroup: string | null;
   scheduled: boolean;
+}
+
+/** Reads a failed `cm cat` didn't tell about, and its failure. */
+interface Unexplained {
+  reads: Waiting[];
+  failure: unknown;
 }
 
 interface RevisionCatOptions {
   cm: Pick<CmClient, 'query' | 'execute'>;
   /**
    * Runs the reads asked so far: once the IPC calls that arrived together have asked theirs. `setImmediate` runs
-   * after the I/O callbacks at hand, with no timer's delay: a read asked alone isn't held back.
+   * after the I/O callbacks at hand, with no timer's delay.
    */
   schedule?: (run: () => void) => void;
 }
@@ -70,7 +77,7 @@ export class RevisionCat {
 
   private readsOf(workspacePath: string): WorkspaceReads {
     let reads = this.workspaces.get(workspacePath);
-    if (!reads) this.workspaces.set(workspacePath, (reads = { waiting: [], batches: [], running: 0, scheduled: false }));
+    if (!reads) this.workspaces.set(workspacePath, (reads = { waiting: [], running: 0, quickRunning: false, lastGroup: null, scheduled: false }));
     return reads;
   }
 
@@ -83,55 +90,94 @@ export class RevisionCat {
     });
   }
 
-  /** Starts the next batches while fewer than `MAX_RUNNING_CATS` run, batching what waits once those formed are taken. */
+  /**
+   * Starts batches while fewer than `MAX_RUNNING_CATS` run, each formed from what waits then (`nextCatBatch`): after
+   * one group's batch, another group's reads go first, so another view's read waits for one batch, not the queue.
+   */
   private runWaiting(workspacePath: string, reads: WorkspaceReads): void {
-    while (reads.running < MAX_RUNNING_CATS) {
-      if (reads.batches.length === 0 && reads.waiting.length > 0) {
-        reads.batches = catBatchesOf(reads.waiting, (read) => read);
-        reads.waiting = [];
-      }
-      const batch = reads.batches.shift();
-      if (!batch) break;
+    while (reads.running < MAX_RUNNING_CATS && reads.waiting.length > 0) {
+      const { batch, group } = nextCatBatch(reads.waiting, (read) => read, reads.lastGroup);
+      const taken = new Set(batch);
+      reads.waiting = reads.waiting.filter((read) => !taken.has(read));
+      reads.lastGroup = group;
       reads.running++;
-      void this.runBatch(workspacePath, batch).finally(() => {
+      void this.runBatch(workspacePath, reads, batch).finally(() => {
         reads.running--;
-        if (reads.running === 0 && reads.waiting.length === 0 && reads.batches.length === 0) this.workspaces.delete(workspacePath);
+        if (reads.running === 0 && reads.waiting.length === 0) this.workspaces.delete(workspacePath);
         else this.runWaiting(workspacePath, reads);
       });
     }
   }
 
   /**
-   * One `cm cat` of the batch. `cm cat` writes every revision it found even when another failed, and names each it
-   * didn't find (`The specified revision was not found <spec>`): a revision not written fails with its own line where
-   * `cm` printed one. One written by a command that failed may be cut short (a dropped connection): those are read
-   * again once, together (never a command each); failing again, they fail.
+   * One `cm cat` of the batch, then the reads its failure didn't tell about narrowed down in halves (`narrowDown`).
    */
-  private async runBatch(workspacePath: string, batch: Waiting[], retried = false): Promise<void> {
-    const run = batch.length <= MAX_QUICK_CAT ? this.cm.query : this.cm.execute;
-    const failure = await run.call(this.cm, catArgs(batch), { cwd: workspacePath }).then(
+  private async runBatch(workspacePath: string, reads: WorkspaceReads, batch: Waiting[]): Promise<void> {
+    const unexplained = await this.attempt(workspacePath, reads, batch);
+    if (unexplained) await this.narrowDown(workspacePath, reads, unexplained);
+  }
+
+  /**
+   * A `cm cat` that failed for reasons it didn't tell per revision (a spec it couldn't take fails the whole command
+   * before it writes anything): its halves are read again, and the half that fails again split the same way, so one
+   * bad spec is found in about two commands per halving, never one per read. When both halves fail, it failed for
+   * them all (a dropped connection): they fail.
+   */
+  private async narrowDown(workspacePath: string, reads: WorkspaceReads, { reads: unexplained, failure }: Unexplained): Promise<void> {
+    if (unexplained.length === 1) return unexplained[0]!.reject(failure);
+    const middle = Math.ceil(unexplained.length / 2);
+    const first = await this.attempt(workspacePath, reads, unexplained.slice(0, middle));
+    const second = await this.attempt(workspacePath, reads, unexplained.slice(middle));
+    if (first && second) return [first, second].forEach(({ reads: failed, failure: why }) => failed.forEach((read) => read.reject(why)));
+    const failedAgain = first ?? second;
+    if (failedAgain) await this.narrowDown(workspacePath, reads, failedAgain);
+  }
+
+  /**
+   * Runs `cm cat` of the reads and settles those it can tell about. `cm cat` writes every revision it found even when
+   * another failed, and names each it didn't find (`The specified revision was not found <spec>`): a read not written
+   * fails with its own line. When every line of the failure names such a read, the others were written whole;
+   * otherwise (one cut short by a dropped connection, a failure naming nothing) they are returned, unexplained.
+   */
+  private async attempt(workspacePath: string, reads: WorkspaceReads, batch: Waiting[]): Promise<Unexplained | null> {
+    const failure = await this.run(workspacePath, reads, batch).then(
       () => null,
       (error: unknown) => error,
     );
-    if (failure === null) return batch.forEach((read) => read.resolve());
-    if (batch.length === 1) return batch[0]!.reject(failure);
-    const again: Waiting[] = [];
-    await Promise.all(
-      batch.map(async (read) => {
-        const written = await stat(read.target).then(() => true, () => false);
-        if (!written) return read.reject(failureOf(read, failure));
-        if (retried) return read.reject(failure);
-        await rm(read.target, { force: true }).catch(() => undefined);
-        again.push(read);
-      }),
-    );
-    if (again.length > 0) await this.runBatch(workspacePath, again, true);
+    if (failure === null) return batch.forEach((read) => read.resolve()), null;
+    if (batch.length === 1) return batch[0]!.reject(failure), null;
+    const written = await Promise.all(batch.map((read) => stat(read.target).then(() => true, () => false)));
+    const lines = outputLinesOf(failure);
+    const lineNaming = (read: Waiting) => lines.find((line) => line.endsWith(` ${read.spec}`));
+    const missing = batch.filter((read, i) => !written[i] && lineNaming(read) !== undefined);
+    missing.forEach((read) => read.reject((failure as CmError).withMessage(lineNaming(read)!)));
+    const everyLineExplained = lines.length > 0 && lines.every((line) => missing.some((read) => line.endsWith(` ${read.spec}`)));
+    const rest = batch.filter((read) => !missing.includes(read));
+    if (everyLineExplained) rest.filter((read) => written[batch.indexOf(read)]).forEach((read) => read.resolve());
+    const unexplained = everyLineExplained ? rest.filter((read) => !written[batch.indexOf(read)]) : rest;
+    if (unexplained.length === 0) return null;
+    await Promise.all(unexplained.map((read) => rm(read.target, { force: true }).catch(() => undefined)));
+    return { reads: unexplained, failure };
+  }
+
+  /** A few revisions in a pooled session, unless another quick `cm cat` holds one; more in a process of their own. */
+  private async run(workspacePath: string, reads: WorkspaceReads, batch: Waiting[]): Promise<void> {
+    const quick = batch.length <= MAX_QUICK_CAT && !reads.quickRunning;
+    if (!quick) return void (await this.cm.execute(catArgs(batch), { cwd: workspacePath }));
+    reads.quickRunning = true;
+    try {
+      await this.cm.query(catArgs(batch), { cwd: workspacePath });
+    } finally {
+      reads.quickRunning = false;
+    }
   }
 }
 
-/** The failure of one revision of a batch: the line `cm` printed naming its spec, else the command's. */
-function failureOf(read: CatRead, failure: unknown): unknown {
-  if (!(failure instanceof CmError)) return failure;
-  const line = failure.command.output.split(/\r?\n/).find((candidate) => candidate.trim().endsWith(` ${read.spec}`));
-  return line === undefined ? failure : failure.withMessage(line.trim());
+/** The lines a failed `cm` command printed; none for a failure that isn't `cm`'s. */
+function outputLinesOf(failure: unknown): string[] {
+  if (!(failure instanceof CmError)) return [];
+  return failure.command.output
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
