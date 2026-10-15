@@ -10,7 +10,7 @@ function directoryConflict(type: DirectoryConflict['type']): DirectoryConflict {
 const plan: MergePlan = {
   status: 'ready',
   changes: [],
-  fileConflicts: [{ path: '/a.txt', itemId: 2, baseChangeset: 1, sourceChangeset: 2, destinationChangeset: 3, repository: 'game@local', destinationRevisionId: 30 }],
+  fileConflicts: [{ path: '/a.txt', itemId: 2, baseChangeset: 1, sourceChangeset: 2, destinationChangeset: 3, repository: 'game@local', destinationRevisionId: 30, destinationIsBinary: false }],
   directoryConflicts: [directoryConflict('evilTwin')],
   warnings: [],
 };

@@ -54,6 +54,12 @@ export interface FileConflict {
    * workspace's file has its content (`WorkspaceCopies`), else downloaded.
    */
   destinationRevisionId: number;
+  /**
+   * `cm` keeps the destination's revision as a binary (its `cm ls` type): the file can't merge line by line whatever
+   * its other versions hold, so the merge page reads none of its versions until the user opens it. False says nothing
+   * about the other versions: they are read to tell.
+   */
+  destinationIsBinary: boolean;
 }
 
 export type DirectoryConflictType =

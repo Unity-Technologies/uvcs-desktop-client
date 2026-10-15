@@ -19,9 +19,9 @@ export const MERGE_FIELD_SEPARATOR = FIELD_SEPARATOR;
 
 /**
  * A conflicting file as `cm merge` prints it: its ids and changesets, without the repository they belong to nor the
- * destination's revision.
+ * destination's revision and its type.
  */
-type PrintedFileConflict = Omit<FileConflict, 'repository' | 'destinationRevisionId'>;
+type PrintedFileConflict = Omit<FileConflict, 'repository' | 'destinationRevisionId' | 'destinationIsBinary'>;
 
 /** The plan as `cm merge` prints it; `withConflictRepositories` completes its file conflicts. */
 export type PrintedMergePlan = Omit<MergePlan, 'fileConflicts'> & { fileConflicts: PrintedFileConflict[] };
