@@ -118,7 +118,7 @@ describe("WorkspaceCopies.read of a revision whose hash the reader doesn't know:
     ['Prop/Pumpkin.obj', 'txt', 186, hashOf(OBJ), OBJ.length, 'rep:3dtest/models@MyOrg@unity'],
     ['Prop/PumpkinMaterials.mtl', 'txt', 185, hashOf(MTL), MTL.length, 'rep:3dtest/models@MyOrg@unity'],
   );
-  const asked = (path: string, revisionId: number, repository = '3dtest/models@1375488836673@cloud'): RevisionFile => ({ path, revision: { revisionId, repository }, hash: null, size: -1 });
+  const asked = (path: string, revisionId: number, repository = '3dtest/models@MyOrg@unity'): RevisionFile => ({ path, revision: { revisionId, repository }, hash: null, size: -1 });
 
   async function setUp(ls: CmAnswer = PROP, disk: Record<string, string> = { 'Prop/Pumpkin.obj': OBJ, 'Prop/PumpkinMaterials.mtl': MTL }) {
     const workspace = await workspaceWith(disk);
@@ -134,11 +134,11 @@ describe("WorkspaceCopies.read of a revision whose hash the reader doesn't know:
     expect(fake.commands.map(({ via, args }) => [via, args[0], args[1]])).toEqual([['query', 'ls', join(workspace, 'Prop')]]);
   });
 
-  it('matches a cloud repository by its name, however its server is spelled (cm spells a cloud server two ways)', async () => {
+  it("matches a Unity organization's repository by its whole spec, and downloads one named by the organization's id (cm history --xml's, where cm couldn't name it)", async () => {
     const { workspace, copies } = await setUp();
 
     expect(await copies.read(workspace, asked('Prop/Pumpkin.obj', 186, '3dtest/models@MyOrg@unity'))).not.toBeNull();
-    expect(await copies.read(workspace, asked('Prop/Pumpkin.obj', 186, '3dtest/models@1375488836673@cloud'))).not.toBeNull();
+    expect(await copies.read(workspace, asked('Prop/Pumpkin.obj', 186, '3dtest/models@1375488836673@cloud'))).toBeNull();
   });
 
   it("never takes a same-named repository of another server for the workspace's: its revision ids are its own", async () => {

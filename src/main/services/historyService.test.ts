@@ -153,14 +153,19 @@ describe("the workspace's revision in a history", () => {
 });
 
 describe("the workspace's revision in a cloud repository's history", () => {
-  it("is read from the disk though cm history spells the repository's server as an id, and cm ls as the organization", async () => {
+  it("is read from the disk though cm history prints the organization by its id: the history names it as cm ls does", async () => {
     const workspace = await mkdtemp(join(tmpdir(), 'history-cloud-wk-'));
     await writeFile(join(workspace, 'README.md'), '# Game\n');
-    const fake = fakeCmClient({ ...TWO_REVISIONS, ls: formatOutput([45, 'rep:3dtest/game@MyOrg@unity', contentHashOf(Buffer.from('# Game\n')), 7]) });
+    const fake = fakeCmClient({
+      history: historyXml(revision(1, '7', UNITY_ORGANIZATION.byId) + revision(4, '7', UNITY_ORGANIZATION.byId)),
+      'find revision': formatOutput([1, 15, -1], [4, 45, 15]),
+      ls: formatOutput([45, `rep:game@${UNITY_ORGANIZATION.byName}`, contentHashOf(Buffer.from('# Game\n')), 7]),
+    });
     const context = serviceContext(fake.cm);
-    await createHistoryService(context, { apps: {} as never }).forItem(workspace, 'README.md');
+    const { revisions } = await createHistoryService(context, { apps: {} as never }).forItem(workspace, 'README.md');
+    const newest = revisions[0]!;
 
-    const read = await createContentService(context).read(workspace, { kind: 'revision', revision: { revisionId: 45, repository: '3dtest/game@1375488836673@cloud' }, fileName: 'README.md' });
+    const read = await createContentService(context).read(workspace, { kind: 'revision', revision: { revisionId: newest.revisionId, repository: newest.repository }, fileName: 'README.md' });
 
     expect(read.text).toBe('# Game\n');
     expect(fake.ran('cat')).toBe(false);
