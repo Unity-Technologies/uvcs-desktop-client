@@ -7,7 +7,7 @@ import { formatOutput, treeListingOutput, workspaceListingXml } from '../cm/test
 import { cmFails, fakeCmClient, optionValue, type CmAnswer, type FakeCmCommand } from '../cm/testing/fakeCmClient';
 import type { ContentSource } from '@shared/domain/content';
 import { catReadsOf, fakeCat } from '../cm/testing/fakeCat';
-import { MAX_QUICK_CAT, RevisionCat } from '../files/RevisionCat';
+import { MAX_QUICK_BACKLOG, MAX_QUICK_CAT, RevisionCat } from '../files/RevisionCat';
 import { contentHashOf } from '../files/WorkspaceCopies';
 import type { ReviewStore } from '../review/ReviewStore';
 import { createContentService } from './contentService';
@@ -129,7 +129,11 @@ describe("reading a merge's conflicting files", () => {
     const read = await Promise.all(versions.map((source) => service.read(workspace, source)));
 
     expect(read.map((one) => one.text)).toEqual(versions.map((source) => `text of ${(source as { spec: string }).spec}\n`));
-    expect(commands.length).toBeLessThan(10);
+    // How the reads arrive (each after its temp folder is made) decides the first batches, so the claim is a bound: the
+    // quick cats of the backlog's first and last few (at most `MAX_QUICK_BACKLOG` each), and processes of more than
+    // `MAX_QUICK_BACKLOG` each between. Never one command each.
+    const quickCats = (2 * MAX_QUICK_BACKLOG) / MAX_QUICK_CAT;
+    expect(commands.length).toBeLessThanOrEqual(quickCats + Math.ceil(versions.length / (MAX_QUICK_BACKLOG + 1)));
     expect(commands.filter((command) => catReadsOf(command.args).length > MAX_QUICK_CAT).every((command) => command.via === 'execute')).toBe(true);
   });
 
