@@ -1,6 +1,7 @@
 import type { CmClient, CmRunOptions } from '../CmClient';
 import { CmError } from '../CmError';
 import { extractErrorMessage } from '../errorMessage';
+import { namesOrganizationById } from '../organizationServers';
 
 /** How a command reached `cm`: a pooled `cm shell` (`query`) or a process of its own (`execute`). */
 type CmVia = 'query' | 'execute';
@@ -88,14 +89,6 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
     ran: (prefix) => commands.some((command) => startsWithWords(command.line, prefix)),
     warmedUp,
   };
-}
-
-/**
- * Whether a command names a Unity organization's server by its id (`game@2398571046213@cloud`), which the app never
- * passes to `cm` (`OrganizationServers`). A profile's name is that id form itself, as `cm profile list` prints it.
- */
-function namesOrganizationById(args: readonly string[]): boolean {
-  return args[0] !== 'profile' && args.some((arg) => /(?:^|[@='"\s])\d+@cloud(?![.\w])/.test(arg));
 }
 
 /** Whether `line` starts with the whole words of `prefix`: `find branch` starts `find branch --xml`, not `find branchy`. */

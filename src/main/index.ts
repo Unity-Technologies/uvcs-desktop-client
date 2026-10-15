@@ -29,7 +29,7 @@ import { askToQuitWhenDone } from './window/askToQuitWhenDone';
 import { followAppTheme } from './window/followAppTheme';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders';
-import { OrganizationServers } from './cm/organizationServers';
+import { OrganizationServers, warnOnOrganizationIds } from './cm/organizationServers';
 
 const userData = app.getPath('userData');
 const cm = new CmClient(locateCm);
@@ -68,6 +68,7 @@ function start(launched: Promise<void>): void {
   // A window sees the commands its own calls ran (commands run outside any call go to every window).
   cm.onCommandLogged((entry) => sendEventToCaller('commandLogged', entry));
   if (!app.isPackaged) warnOnRepeatedServerCommands(cm);
+  if (!app.isPackaged) warnOnOrganizationIds(cm);
   if (!app.isPackaged) app.dock?.setIcon(DEVELOPMENT_DOCK_ICON);
   sendSettingsChanges(settings, (changed) => sendEvent('settingsChanged', changed));
   ignoreOwnCommandWrites(cm, watchers, headers);

@@ -1,9 +1,10 @@
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { CmClient } from './CmClient';
 import { machineReadableStatusHeader, UNITY_ORGANIZATION } from './testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from './testing/fakeCmClient';
-import { isOrganizationIdServer, OrganizationServers } from './organizationServers';
+import { isOrganizationIdServer, OrganizationServers, warnOnOrganizationIds } from './organizationServers';
 
 const GAME = join(tmpdir(), 'wkspaces', 'game');
 const TOOLS = join(tmpdir(), 'wkspaces', 'tools');
@@ -54,5 +55,23 @@ describe('OrganizationServers', () => {
     expect(await organizations.nameOfWorkspaceServer(GAME, UNITY_ORGANIZATION.byId)).toBe(UNITY_ORGANIZATION.byId);
     expect(await organizations.nameOfWorkspaceServer(GAME, UNITY_ORGANIZATION.byId)).toBe(UNITY_ORGANIZATION.byId);
     expect(commands).toHaveLength(2);
+  });
+});
+
+describe('warnOnOrganizationIds', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("warns in development builds when a command names an organization's server by its id", () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    let started: Parameters<CmClient['onCommandStarted']>[0] = () => undefined;
+    warnOnOrganizationIds({ onCommandStarted: (listener) => ((started = listener), () => undefined) });
+    const run = (args: string[]) => started({ args, cwd: GAME, finished: Promise.resolve() });
+
+    run(['cat', `revid:45@game@${UNITY_ORGANIZATION.byName}`]);
+    run(['profile', 'list']);
+    run(['cat', `revid:45@game@${UNITY_ORGANIZATION.byId}`]);
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toContain(`[organization id] cm cat revid:45@game@${UNITY_ORGANIZATION.byId}`);
   });
 });
