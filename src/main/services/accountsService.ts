@@ -1,12 +1,16 @@
 import type { AccountsApi } from '@shared/api/accounts';
-import { ACCOUNT_FORMAT, parseAccounts } from '../cm/accounts';
-import type { ServiceContext } from './ServiceContext';
+import { parseAccounts } from '../cm/accounts';
+import type { ProfilesContext, ServiceContext } from './ServiceContext';
 
-export function createAccountsService({ cm }: ServiceContext): AccountsApi {
+export function createAccountsService({ cm }: ServiceContext, { profiles }: ProfilesContext): AccountsApi {
   return {
-    list: async () => parseAccounts(await cm.query(['profile', 'list', `--format=${ACCOUNT_FORMAT}`])),
+    list: async () => parseAccounts(await profiles.read()),
     remove: async (name) => {
-      await cm.query(['profile', 'delete', `--name=${name}`]);
+      try {
+        await cm.query(['profile', 'delete', `--name=${name}`], { anyDirectory: true });
+      } finally {
+        profiles.forget();
+      }
     },
   };
 }

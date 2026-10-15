@@ -6,7 +6,7 @@ import type { CommandLogRelay } from './commandLogRelay';
 import { readFirstScreen } from './firstScreenReads';
 
 interface FirstScreenSources {
-  cm: Pick<CmClient, 'warmUp'>;
+  cm: Pick<CmClient, 'warmUp' | 'showWhileOpening'>;
   windows: Pick<WorkspaceWindows, 'firstWorkspace'>;
   early: Pick<EarlyCalls, 'start'>;
   settings: { get(): AppSettings };
@@ -27,8 +27,9 @@ export type FirstScreenRead = { workspacePath: string | undefined } | null;
 /**
  * Starts what the first window shows on its way as the main module loads, before Electron is ready (50-60 ms later)
  * and before its window is created (50-100 ms more), as `cm` needs neither: `cm version`, and the first screen of the
- * workspace it reopens (or the home screen): its `cm shell`s, which answer their first command after about a second,
- * and its reads (`readFirstScreen`).
+ * workspace it reopens (or the home screen): its `cm shell`s, which answer their first command after about a second
+ * (the workspace's shown while it opens, `showWhileOpening`, so launch's profiles read runs there and none start in
+ * the home folder), and its reads (`readFirstScreen`).
  *
  * A launch that names a folder (`namesAFolder`: Windows and Linux pass it as an argument) opens the workspace `cm`
  * finds holding it, so only `cm version` is read ahead, and the screen when the window opens. macOS names it later
@@ -64,6 +65,7 @@ export function openFirstWindow({ cm, windows, early, settings, commandLog }: Fi
 }
 
 function readScreenOf(workspacePath: string | undefined, { cm, early, settings }: Omit<FirstScreenSources, 'windows'>): void {
-  cm.warmUp(workspacePath);
+  if (workspacePath) cm.showWhileOpening(workspacePath);
+  else cm.warmUp();
   readFirstScreen(early, settings.get(), workspacePath);
 }
