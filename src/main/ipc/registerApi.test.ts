@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ipcMain, type IpcMainInvokeEvent, type WebContents } from 'electron';
 import type { UvcsApi } from '@shared/api';
 import { INVOKE_CHANNEL, type InvokeRequest, type InvokeResponse } from '@shared/ipc';
-import { clipForLog, MAX_LOGGED_COMMAND_LINE, MAX_LOGGED_OUTPUT } from '../cm/clipForLog';
+import { clipForLog, MAX_LOGGED_COMMAND_LINE, MAX_LOGGED_OUTPUT } from '@shared/clipForLog';
 import { CmError } from '../cm/CmError';
 import { callerId, currentCaller } from './caller';
 import { apiMethods } from './apiMethods';

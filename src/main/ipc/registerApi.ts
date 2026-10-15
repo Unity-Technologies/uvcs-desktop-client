@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron';
 import type { UvcsApi } from '@shared/api';
 import { INVOKE_CHANNEL, type InvokeRequest, type InvokeResponse, type RemoteError } from '@shared/ipc';
-import { clipForLog, MAX_LOGGED_COMMAND_LINE, MAX_LOGGED_OUTPUT } from '../cm/clipForLog';
+import { clipForLog, MAX_LOGGED_COMMAND_LINE, MAX_LOGGED_OUTPUT } from '@shared/clipForLog';
 import { CmError } from '../cm/CmError';
 import { apiMethods } from './apiMethods';
 import { runForCaller } from './caller';

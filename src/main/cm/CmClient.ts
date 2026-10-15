@@ -1,7 +1,7 @@
 import { homedir } from 'node:os';
 import type { CommandLogEntry } from '@shared/events';
 import { CmError } from './CmError';
-import { clipForLog, MAX_LOGGED_COMMAND_LINE, MAX_LOGGED_OUTPUT } from './clipForLog';
+import { clipForLog, MAX_LOGGED_COMMAND_LINE, MAX_LOGGED_OUTPUT } from '@shared/clipForLog';
 import { inCmPathForm } from './cmPathForm';
 import type { CmResult } from './CmResult';
 import { CmShellPool } from './CmShellPool';
