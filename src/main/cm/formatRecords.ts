@@ -11,15 +11,20 @@ export function recordFormat(placeholders: readonly string[]): string {
 }
 
 /**
- * The records of a `--format` output, each value exactly as `cm` printed it (`cm` ends each record with a line break
- * after the record separator). Only `cm diff` quotes some of its values: `unquoted`.
+ * The records of a `--format` output, each value as `cm` printed it, CRLF turned into LF (a comment written on
+ * Windows keeps its CRLF in the repository). `cm` ends each record with a line break after the record separator. Only
+ * `cm diff` quotes some of its values: `unquoted`.
  */
 export function parseRecords(output: string): string[][] {
   return output
     .split(RECORD_SEPARATOR)
     .map((record) => record.replace(/^\r?\n/, ''))
     .filter((record) => record.length > 0)
-    .map((record) => record.split(FIELD_SEPARATOR));
+    .map((record) => withLf(record).split(FIELD_SEPARATOR));
+}
+
+function withLf(text: string): string {
+  return text.includes('\r') ? text.replaceAll('\r\n', '\n') : text;
 }
 
 /** The fields a `--format` prints of each item, and what a record of them becomes. */
