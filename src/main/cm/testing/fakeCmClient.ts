@@ -1,7 +1,7 @@
 import type { CmClient, CmRecordsOptions, CmRunOptions } from '../CmClient';
 import { CmError } from '../CmError';
 import { extractErrorMessage } from '../errorMessage';
-import { parseRecords, type ReadRecord } from '../formatRecords';
+import { RecordReader, type ReadRecord } from '../formatRecords';
 import { namesOrganizationById } from '../organizationIds';
 
 /**
@@ -82,7 +82,11 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
   }
 
   async function runRecords<T>(via: CmVia, args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions): Promise<T[]> {
-    return parseRecords(await run(via, args, options, true), readRecord);
+    const output = await run(via, args, options, true);
+    // Read as `CmClient` reads them: as they arrive, text after the last record no record.
+    const records = new RecordReader(readRecord);
+    records.read(Buffer.from(output, 'utf8'));
+    return records.finish();
   }
 
   const fake = {
