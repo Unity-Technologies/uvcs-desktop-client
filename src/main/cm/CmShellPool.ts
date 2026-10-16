@@ -1,5 +1,6 @@
 import { CmShellSession } from './CmShellSession';
 import type { CmResult } from './CmResult';
+import type { RecordReader } from './formatRecords';
 
 const SESSIONS_PER_DIRECTORY = 2;
 /** A directory no command ran in for this long lets its sessions go (a workspace no window shows anymore). */
@@ -10,6 +11,7 @@ type CreateSession = (cwd: string) => Session;
 
 interface Waiting {
   args: string[];
+  records?: RecordReader<unknown>;
   resolve: (result: CmResult) => void;
   reject: (error: Error) => void;
 }
@@ -41,10 +43,11 @@ export class CmShellPool {
     private readonly createSession: CreateSession = (cwd) => new CmShellSession(cmPath, cwd),
   ) {}
 
-  run(cwd: string, args: string[]): Promise<CmResult> {
+  /** Runs `cm <args>` in a session of the directory; its records go to `records` as they arrive (`CmShellSession.run`). */
+  run(cwd: string, args: string[], records?: RecordReader<unknown>): Promise<CmResult> {
     const directory = this.directory(cwd);
     return new Promise((resolve, reject) => {
-      directory.waiting.push({ args, resolve, reject });
+      directory.waiting.push({ args, records, resolve, reject });
       this.dispatch(cwd, directory);
     });
   }
@@ -139,9 +142,9 @@ export class CmShellPool {
     while (directory.waiting.length > 0) {
       const session = this.freeSession(cwd, directory);
       if (!session) return;
-      const { args, resolve, reject } = directory.waiting.shift()!;
+      const { args, records, resolve, reject } = directory.waiting.shift()!;
       session
-        .run(args)
+        .run(args, records)
         .then(resolve, reject)
         .finally(() => {
           if (this.directories.get(cwd) !== directory) return;
