@@ -1,5 +1,5 @@
 import type { CmClient } from '../cm/CmClient';
-import { parseRecords, recordFormat } from '../cm/formatRecords';
+import { recordFormat } from '../cm/formatRecords';
 import { readWorkspaceStatus, type WorkspaceStatus } from '../cm/workspaceStatus';
 import { isSameOrInside } from '../files/pathContainment';
 
@@ -20,9 +20,9 @@ export function cmHeaderReaders(cm: CmClient): HeaderReaders {
   return {
     status: (workspacePath) => readWorkspaceStatus(cm, workspacePath),
     names: async (workspacePath) => {
-      const output = await cm.query(['getworkspacefrompath', workspacePath, `--format=${recordFormat(['wkname', 'guid'])}`], { cwd: workspacePath });
-      const [name = '', guid = ''] = parseRecords(output)[0] ?? [];
-      return { name: name.trim(), guid: guid.trim() };
+      const args = ['getworkspacefrompath', workspacePath, `--format=${recordFormat(['wkname', 'guid'])}`];
+      const [names] = await cm.queryRecords(args, ([name = '', guid = '']) => ({ name: name.trim(), guid: guid.trim() }), { cwd: workspacePath });
+      return names ?? { name: '', guid: '' };
     },
   };
 }
