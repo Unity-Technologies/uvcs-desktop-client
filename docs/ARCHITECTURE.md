@@ -57,8 +57,11 @@ you touch:
      characters, quotes included) is written to a `cm shell` of its own instead (`processCommand`): still one command, never split.
      So is, on Windows, a command that prints text (see Parsing).
    - A pooled command may take two minutes, a workspace write half an hour (a few paths can still be a whole tree).
-   - A command may print at most `MAX_OUTPUT_LENGTH` (256 MB) characters, shell or process: its output is read as one
-     string, and V8 refuses strings past about 512 MB. Past it the command is killed (a session starts a new process)
+   - `queryRecords()` and `executeRecords()` run a command that prints `--format` records as `query()` and
+     `execute()` do, routing included, and read each record as it arrives (see Parsing: records).
+   - A command may print at most `MAX_OUTPUT_LENGTH` (256 MB) characters, shell or process: text output is read as one
+     string, and V8 refuses strings past about 512 MB. Records are never one string; the limit counts their bytes, which
+     bounds what reading them costs. Past it the command is killed (a session starts a new process)
      and fails with a `CmError` (`CmOutputTooLargeError`), never a crash. A list that can get there needs a
      server-side filter or a `limit` (Server budget: Queries).
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
@@ -198,11 +201,29 @@ and many people use the same server. Every `cm` command other than local reads (
 
 ## Parsing `cm` output
 
-- Prefer `--xml` (`parseXml`) or `--format` with `recordFormat`/`parseRecords` (control-character separators; no ambiguity with paths or comments).
+- Prefer `--format` with `recordFormat` (control-character separators; no ambiguity with paths or comments) or
+  `--xml` (`parseXml`).
 - Never parse human-readable output when a machine format exists.
-- Parsed values are slices of the command's whole output, which V8 keeps alive while any slice lives. A cache that
-  keeps them past the answer copies them as it keeps them, not every parser (`ownCopy`; `OwnCopies` for a value many
-  entries repeat, like a repository spec): `BranchNamesCache`, `WorkspaceCopies`, `RepositoryTrees`.
+- **Records are read as they arrive**: a `--format` command goes through `cm.queryRecords(args, readRecord, options)`
+  (or `executeRecords`), where `readRecord` builds a row (a branch, a changeset) from each record's fields, or
+  `undefined` to leave it out; `parseRecords(output, readRecord)` reads a whole string the same way. `RecordReader`
+  takes the output in byte chunks, from a pooled `cm shell` (`RecordOutput`) or a process (`runCmProcess`'s
+  `records`), and reads each record once its separator arrives, keeping only the one still arriving: the output is
+  never joined, copied for its CRLF, split into an array of records or held whole. A `cm find branch` of 1,000,000
+  branches (151 MB) costs the main process 443 MB of peak RSS instead of 722 MB, and 424 ms instead of 568 ms; 100,000
+  branches 80 MB instead of 115 MB (Electron's V8, `scripts/perf/records.mjs`). What follows the last record is the
+  command's text output (`takeRest`: nothing, a `CommandResult` line, an error), which `CmError` and the command log
+  show as for any command.
+  - Bytes, not text: the record separator is ASCII, which UTF-8 never uses inside a character of several bytes, so a
+    record is found before it's decoded, and a character split between chunks stays whole.
+  - Each record is decoded once (`toString` of its bytes) and split: its fields are slices of it, keeping alive their
+    own record at most. Decoding each field on its own makes fresh strings but cost 30% more time than reading the
+    whole output; slices of decoded chunks would keep every chunk alive. Sharing one copy of repeated owners and branch
+    names (a `Map`) saved a tenth of the peak for a quarter more time, the record's string being alive anyway: dropped.
+- Parsed values of text output are slices of the command's whole output, which V8 keeps alive while any slice lives
+  (a record's values, of their record). A cache that keeps them past the answer copies them as it keeps them, not
+  every parser (`ownCopy`; `OwnCopies` for a value many entries repeat, like a repository spec): `BranchNamesCache`,
+  `WorkspaceCopies`, `RepositoryTrees`.
 - `cm find branch` leaves hidden branches out unless asked for (`hidden = 'true'`), and `cm find changeset` their
   changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`); merges and labels come either way.
 - Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments.
