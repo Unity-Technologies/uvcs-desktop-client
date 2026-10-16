@@ -9,13 +9,17 @@ export interface RawCodeReview extends CodeReviewSummary {
   targetId: number;
 }
 
+/**
+ * `{status}` only: `{codereviewstatus}` prints the same status, and with `--format` a field an older `cm` doesn't know
+ * fails the whole command.
+ */
 export const FOUND_REVIEWS = foundObjects(
   'review',
-  ['id', 'title', 'codereviewstatus', 'status', 'owner', 'assignee', 'date', 'targettype', 'target'],
+  ['id', 'title', 'status', 'owner', 'assignee', 'date', 'targettype', 'target'],
   (value): RawCodeReview => ({
     id: integerValue(value('id')),
     title: value('title'),
-    status: toStatus(value('codereviewstatus') || value('status')),
+    status: toStatus(value('status')),
     owner: value('owner'),
     assignee: value('assignee'),
     date: value('date'),
@@ -24,9 +28,9 @@ export const FOUND_REVIEWS = foundObjects(
   }),
 );
 
-/** `cm` prefixes the value with its type name, e.g. `CodeReviewStatus Under review`. */
+/** `cm` prefixes the value with its type name: `Status Under review`. */
 function toStatus(value: string): CodeReviewStatus {
-  const status = value.replace(/^(CodeReviewStatus|Status)\s+/, '');
+  const status = value.replace(/^Status\s+/, '');
   return CODE_REVIEW_STATUSES.find((known) => known.toLowerCase() === status.toLowerCase()) ?? 'Under review';
 }
 

@@ -143,7 +143,7 @@ describe('code review records', () => {
   it('strips the status type name and splits the target', () => {
     const output = recordsOutput(
       FOUND_REVIEWS,
-      { id: 60, title: 'Branch review', codereviewstatus: 'CodeReviewStatus Rework required', targettype: 'Branch', target: 'id:54', assignee: '' },
+      { id: 60, title: 'Branch review', status: 'Status Rework required', targettype: 'Branch', target: 'id:54', assignee: '' },
       { id: 62, title: 'Changeset review', status: 'Status Reviewed', targettype: 'Changeset', target: 2 },
       { id: 63, title: 'Shelve review', status: 'Status Under review', targettype: 'Shelve', target: 3 },
     );

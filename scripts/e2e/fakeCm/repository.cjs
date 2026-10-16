@@ -59,7 +59,7 @@ const SHELVES = [
 ];
 
 const REVIEWS = [
-  { id: 80, title: 'Review player movement', status: 'Status Under review', codereviewstatus: 'CodeReviewStatus Under review', assignee: OWNER, targettype: 'branch', target: 'id:20', date: daysAgo(8), ...common },
+  { id: 80, title: 'Review player movement', status: 'Status Under review', assignee: OWNER, targettype: 'branch', target: 'id:20', date: daysAgo(8), ...common },
 ];
 
 const ATTRIBUTE_TYPES = [{ id: 60, name: 'status', comment: 'Where the task is', date: daysAgo(30), ...common }];
