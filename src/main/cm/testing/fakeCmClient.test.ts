@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CmError } from '../CmError';
+import { formatOutput } from './cmOutput';
 import { cmFails, fakeCmClient } from './fakeCmClient';
 
 describe('fakeCmClient', () => {
@@ -35,6 +36,26 @@ describe('fakeCmClient', () => {
       { via: 'execute', line: 'find changeset', options: {} },
     ]);
     expect(linesVia('execute')).toEqual(['find changeset']);
+  });
+
+  it('answers a command read as records from the same --format output, recording how it was run', async () => {
+    const { cm, linesVia } = fakeCmClient({ 'find branch': formatOutput(['3', '/main'], ['37', '/main/task']), 'find merge': formatOutput(['merge', '2', '5']) });
+
+    const branches = await cm.queryRecords(['find', 'branch'], ([id = '', name = '']) => ({ id: Number(id), name }));
+    const merges = await cm.executeRecords(['find', 'merge'], ([type]) => type);
+
+    expect(branches).toEqual([
+      { id: 3, name: '/main' },
+      { id: 37, name: '/main/task' },
+    ]);
+    expect(merges).toEqual(['merge']);
+    expect([linesVia('query'), linesVia('execute')]).toEqual([['find branch'], ['find merge']]);
+  });
+
+  it('fails a command read as records as CmClient does', async () => {
+    const { cm } = fakeCmClient({ 'find branch': cmFails('Error: The repository does not exist.\n') });
+
+    await expect(cm.queryRecords(['find', 'branch'], (fields) => fields)).rejects.toMatchObject({ message: 'The repository does not exist.' });
   });
 
   it('tells whether a command starting with whole words was asked', async () => {

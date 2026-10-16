@@ -1,9 +1,13 @@
-import type { CmClient, CmRunOptions } from '../CmClient';
+import type { CmClient, CmRecordsOptions, CmRunOptions } from '../CmClient';
 import { CmError } from '../CmError';
 import { extractErrorMessage } from '../errorMessage';
+import { parseRecords, type ReadRecord } from '../formatRecords';
 import { namesOrganizationById } from '../organizationIds';
 
-/** How a command reached `cm`: a pooled `cm shell` (`query`) or a process of its own (`execute`). */
+/**
+ * How a command reached `cm`: as a quick one, a pooled `cm shell` (`query`, `queryRecords`), or as a long one, a process
+ * of its own (`execute`, `executeRecords`).
+ */
 type CmVia = 'query' | 'execute';
 
 export interface FakeCmCommand {
@@ -75,10 +79,16 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
     return result;
   }
 
+  async function runRecords<T>(via: CmVia, args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions): Promise<T[]> {
+    return parseRecords(await run(via, args, options), readRecord);
+  }
+
   const fake = {
     executable,
     query: (args: string[], options?: CmRunOptions) => run('query', args, options),
     execute: (args: string[], options?: CmRunOptions) => run('execute', args, options),
+    queryRecords: <T>(args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions) => runRecords('query', args, readRecord, options),
+    executeRecords: <T>(args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions) => runRecords('execute', args, readRecord, options),
     warmUp: (cwd = '') => void warmedUp.push(cwd),
     show: (cwd: string) => void shown.push(cwd),
     release: (cwd: string) => void released.push(cwd),
