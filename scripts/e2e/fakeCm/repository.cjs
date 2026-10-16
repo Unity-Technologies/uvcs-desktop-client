@@ -19,7 +19,16 @@ const common = { owner: OWNER, repname: REPOSITORY, repserver: SERVER };
 
 /** Dates follow today, so views filtered to the last weeks (`date >= …`) keep showing the objects. */
 function daysAgo(days) {
-  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  return roundTripDate(new Date(Date.now() - days * 24 * 60 * 60 * 1000));
+}
+
+/** A date as `--dateformat=o` prints it: local time, seven fraction digits, the UTC offset (`…T10:00:00.0000000+02:00`). */
+function roundTripDate(date) {
+  const two = (value) => String(value).padStart(2, '0');
+  const offset = -date.getTimezoneOffset();
+  const zone = `${offset >= 0 ? '+' : '-'}${two(Math.floor(Math.abs(offset) / 60))}:${two(Math.abs(offset) % 60)}`;
+  const day = `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}`;
+  return `${day}T${two(date.getHours())}:${two(date.getMinutes())}:${two(date.getSeconds())}.${String(date.getMilliseconds()).padStart(3, '0')}0000${zone}`;
 }
 const visible = { hidden: 'false' };
 

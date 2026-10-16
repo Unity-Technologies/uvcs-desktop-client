@@ -200,13 +200,22 @@ and many people use the same server. Every `cm` command other than local reads (
 
 - **Records, not XML.** A command that has `--format` is read as records: a `RecordLayout` names the fields it prints
   (`layoutFormat`, `recordFormat`: control-character separators, no ambiguity with paths or comments) and
-  `readRecords` reads each by name, every value exactly as `cm` printed it (only `cm diff` quotes some: `unquoted`).
-  Each layout is declared once: the `cm find` objects in `foundObjects.ts` (`FOUND_BRANCHES`...; `findArgs`,
+  `readRecords` reads each by name (`layoutReader`, the reader a streamed command takes too). Values arrive as printed
+  with CRLF turned into LF (`parseRecords`); a layout trims the free text it shows (comments, titles, attribute
+  values), as XML parsing did, and leaves the rest as printed: names, paths, and the Branch Explorer's, annotate's and
+  diff's records, where whitespace matters. Only `cm diff` quotes some values (`unquoted`). Each layout is declared
+  once: the `cm find` objects in `foundObjects.ts` (`FOUND_BRANCHES`...; `findArgs`,
   `findQueryArgs`), `FOUND_REVIEWS`, `FOUND_ATTRIBUTE_TYPES`, `TREE_ITEMS` for `cm ls`. For 19,807 branches, records
   are 2.6 MB where `cm find --xml` printed 9.1 MB, and parse in a third of the time (26 ms against 77; 115 against 365
   for 100k, and past about 600k branches the XML passed `MAX_OUTPUT_LENGTH`). `--xml` also prints every field, some
   costing the server (`cm ls --xml` reads every item's GUID). A test writes the output as `cm` prints it for that
-  layout (`recordsOutput`, `foundLine`).
+  layout (`recordsOutput`, `foundLine`). Anything with more than a few fields takes a `RecordLayout`; the small
+  positional readers of two to four fields stay as they are (`parseWorkspaceListing`, `parseWorkspaceItem`,
+  `parseBranchNames`, the incoming check, `parseAccounts`, the Branch Explorer's `parseBranches`...).
+- **`cm ls` on Windows**: it asks `--encoding` of `--xml` only, so its records come in UTF-8 only from a `cm shell`: a
+  listing that can't take a pooled one starts a `cm shell` of its own (`processCommand`, about half a second more
+  than an `--xml` process), and a server path holding a quote, which no shell line can hold, prints in the console's
+  code page (`TREE_ITEM_FORMAT`). Whether an item has a revision is one rule for every reader (`listedRevisionId`).
 - **Dates** in `cm find` come in `FIND_DATE_FORMAT` (`--dateformat=o`, ISO 8601 round trip, `findCommand`), which
   also sets how the query's dates are read: a day is spelled `roundTripDate` (`whereClause`). Without it `cm` prints
   the format its client config sets. `cm ls` takes `{date:o}`; it prints `0001-01-01…` for an item with no date.
