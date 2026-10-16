@@ -37,7 +37,7 @@ describe('found objects', () => {
 
   // The lists showed comments, titles and values trimmed when they came from XML; they still do.
   it('trims the free text each list shows, and nothing else', () => {
-    const branch = readRecords(FOUND_BRANCHES, recordsOutput(FOUND_BRANCHES, { name: '/main/a', comment: '\n  Fix crash\n\n' }));
+    const branch = readRecords(FOUND_BRANCHES, recordsOutput(FOUND_BRANCHES, { name: '/main/a ', owner: ' ana ', comment: '\n  Fix crash\n\n' }));
     const review = readRecords(FOUND_REVIEWS, recordsOutput(FOUND_REVIEWS, { id: 1, title: ' Review it ', status: 'Status Reviewed' }));
     const values = readRecords(FOUND_ATTRIBUTE_VALUES, recordsOutput(FOUND_ATTRIBUTE_VALUES, { name: 'notes', value: '- one\n' }));
     const others = [
@@ -46,14 +46,14 @@ describe('found objects', () => {
       readRecords(FOUND_SHELVES, recordsOutput(FOUND_SHELVES, { comment: ' text\n' }))[0]?.comment,
       readRecords(FOUND_ATTRIBUTE_TYPES, recordsOutput(FOUND_ATTRIBUTE_TYPES, { comment: ' text\n' }))[0]?.comment,
     ];
-    expect([branch[0]?.comment, branch[0]?.name, review[0]?.title, values[0]?.value, ...others]).toEqual(['Fix crash', '/main/a', 'Review it', '- one', 'text', 'text', 'text', 'text']);
+    expect([branch[0]?.comment, branch[0]?.name, branch[0]?.owner, review[0]?.title, values[0]?.value, ...others]).toEqual(['Fix crash', '/main/a ', ' ana ', 'Review it', '- one', 'text', 'text', 'text', 'text']);
   });
 
   it('reads nothing from an empty output', () => {
     expect(readRecords(FOUND_CHANGESETS, '')).toEqual([]);
   });
 
-  it('reads a root changeset, which has no parent, ', () => {
+  it('reads a root changeset, which has no parent', () => {
     const output = recordsOutput(FOUND_CHANGESETS, { changesetid: 0, parent: -1, branch: '/main', comment: 'Root dir', repname: 'game', repserver: 'local' });
     expect(readRecords(FOUND_CHANGESETS, output)).toMatchObject([{ id: 0, parent: -1, branch: '/main', comment: 'Root dir', repository: 'game@local' }]);
   });
