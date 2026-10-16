@@ -14,8 +14,9 @@ export interface CmProcessOptions {
   /** The most characters (bytes, with `records`) the command may print (`MAX_OUTPUT_LENGTH`): past it, it is killed and fails. */
   maxOutputLength?: number;
   /**
-   * Where the `--format` records the command prints go, read as they arrive (`CmClient.queryRecords`); the result's
-   * output is then only what follows the last record (`takeRest`). Its output has no lines to report.
+   * Where the `--format` records the command prints on stdout go, read as they arrive (`CmClient.queryRecords`); the
+   * result's output is then what it wrote to stderr and what followed its last record (`takeRest`). Its output has no
+   * lines to report.
    */
   records?: RecordReader<unknown>;
 }
@@ -77,9 +78,11 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
     };
 
     if (records) {
-      // Bytes: the reader finds records before decoding, so a character split between two chunks stays whole.
+      // Bytes: the reader finds records before decoding, so a character split between two chunks stays whole. Only
+      // stdout's: what `cm` writes to stderr (its errors) is text of its own, which a write in the middle of a record
+      // would otherwise land in.
       child.stdout.on('data', collectRecords(records));
-      child.stderr.on('data', collectRecords(records));
+      child.stderr.setEncoding('utf8').on('data', collect);
     } else {
       // Decoded by the streams, so a character split between two chunks stays whole.
       child.stdout.setEncoding('utf8').on('data', collect);
@@ -90,7 +93,8 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
       if (stopped) return;
       if (pendingLine) options.onOutputLine?.(pendingLine);
       // Windows ends lines with CRLF; parsers get LF, as from a `cm shell`.
-      const output = records ? records.takeRest() : chunks.join('').replaceAll('\r\n', '\n');
+      const text = chunks.join('').replaceAll('\r\n', '\n');
+      const output = records ? text + records.takeRest() : text;
       resolve({ output, exitCode: code ?? -1 });
     });
   });

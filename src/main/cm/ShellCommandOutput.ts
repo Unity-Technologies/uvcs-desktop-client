@@ -54,13 +54,17 @@ export class TextOutput implements ShellCommandOutput {
 }
 
 /**
- * A command's `--format` records, read as they arrive (`RecordReader`): the output is never held whole. Only what
- * follows the last record is text: nothing but the result line for a command that succeeded, its error otherwise.
+ * A command's `--format` records, read from stdout as they arrive (`RecordReader`): the output is never held whole.
+ * What `cm` writes to stderr (its errors) is text kept apart: a write landing in the middle of a record would
+ * otherwise end up in its fields, or split one of its characters. The result line and prompts are looked for in
+ * stdout, where `cm shell` writes them.
  */
 export class RecordOutput implements ShellCommandOutput {
   private size = 0;
   private tailBytes = Buffer.alloc(0);
   private decodedTail = '';
+  private readonly errors: string[] = [];
+  private readonly errorDecoder = new StringDecoder('utf8');
 
   constructor(
     private readonly records: RecordReader<unknown>,
@@ -75,18 +79,23 @@ export class RecordOutput implements ShellCommandOutput {
     return this.decodedTail;
   }
 
-  append(chunk: Buffer): void {
-    this.records.read(chunk);
+  append(chunk: Buffer, stream: OutputStream): void {
     this.size += chunk.length;
+    if (stream === 'stderr') {
+      this.errors.push(this.errorDecoder.write(chunk));
+      return;
+    }
+    this.records.read(chunk);
     // A copy, not a slice: the tail keeps no chunk alive. A character cut at its start decodes as U+FFFD, which no
     // result line or prompt starts with.
     this.tailBytes = Buffer.concat([this.tailBytes, chunk.subarray(-this.tailLength)]).subarray(-this.tailLength);
     this.decodedTail = this.tailBytes.toString('utf8');
   }
 
+  /** What the command wrote to stderr, then what followed its last record on stdout, before the result line. */
   beforeResultLine(): string {
     const rest = this.records.takeRest();
     const result = resultLineAtEnd(rest);
-    return result ? rest.slice(0, result.outputEnd) : rest;
+    return this.errors.join('').replaceAll('\r\n', '\n') + (result ? rest.slice(0, result.outputEnd) : rest);
   }
 }
