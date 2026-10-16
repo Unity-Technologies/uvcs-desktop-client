@@ -1,7 +1,8 @@
 // Stands in for `cm shell` in tests, started as `node shell` in this folder so it runs the same on every OS.
 // Commands: `version`, `echo <text>`, `fail`, `prompt` (asks a question and waits), `quote` (output holding a
 // `CommandResult` line of its own, like a changeset comment quoting a `cm shell` session), `crlf <text>` (answers
-// with Windows line breaks, as cm does there), `print <count>` (that many characters, in lines of 100).
+// with Windows line breaks, as cm does there), `print <count>` (that many characters, in lines of 100), `records
+// <count> [crlf]` (that many `--format` records of an id and a name, with Windows line breaks when asked).
 const { createInterface } = require('node:readline');
 
 const lines = createInterface({ input: process.stdin });
@@ -18,7 +19,11 @@ lines.on('line', (line) => {
   else if (command === 'echo') process.stdout.write(`${rest.join(' ')}\nCommandResult 0\n`);
   else if (command === 'crlf') process.stdout.write(`${rest.join(' ')}\r\nsecond line\r\nCommandResult 0\r\n`);
   else if (command === 'print') process.stdout.write(`${'x'.repeat(99)}\n`.repeat(Math.ceil(Number(rest[0]) / 100)) + 'CommandResult 0\n');
-  else if (command === 'fail') process.stdout.write('Something went wrong\nCommandResult 1\n');
+  else if (command === 'records') {
+    const lineBreak = rest[1] === 'crlf' ? '\r\n' : '\n';
+    const records = Array.from({ length: Number(rest[0]) }, (_, id) => `${id}\u001f/main/tarea-ñ-${id}\u001e${lineBreak}`);
+    process.stdout.write(`${records.join('')}CommandResult 0${lineBreak}`);
+  } else if (command === 'fail') process.stdout.write('Something went wrong\nCommandResult 1\n');
   else if (command === 'quote') process.stdout.write('>cm shell\nCommandResult 0\nstill the comment\nCommandResult 0\n');
   else if (command === 'prompt') {
     process.stdout.write('Select your system [0-1]: ');
