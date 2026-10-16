@@ -1,22 +1,22 @@
 // What the fake `cm` answers to each command, from the synthetic repository. A command, subcommand or `--format`
 // field it doesn't know fails, naming it: the smoke test then fails and says what to teach it.
 const { writeFileSync } = require('node:fs');
-const { findXml, formatRecords } = require('./format.cjs');
+const { formatRecords } = require('./format.cjs');
 const repository = require('./repository.cjs');
 const { statusOutput } = require('./status.cjs');
 const { lsOutput } = require('./tree.cjs');
 const { matching } = require('./where.cjs');
 
-/** What `cm find <object>` searches, and the element `--xml` prints each object as (`cm` prints labels as MARKER). */
+/** What `cm find <object>` searches. */
 const FINDABLE = {
-  attribute: { element: 'ATTRIBUTE', records: repository.ATTRIBUTES },
-  attributetype: { element: 'ATTRIBUTEENTITY', records: repository.ATTRIBUTE_TYPES },
-  branch: { element: 'BRANCH', records: repository.BRANCHES },
-  changeset: { element: 'CHANGESET', records: repository.CHANGESETS },
-  label: { element: 'MARKER', records: repository.LABELS },
-  merge: { element: 'MERGE', records: repository.MERGES },
-  review: { element: 'REVIEW', records: repository.REVIEWS },
-  shelve: { element: 'SHELVE', records: repository.SHELVES },
+  attribute: repository.ATTRIBUTES,
+  attributetype: repository.ATTRIBUTE_TYPES,
+  branch: repository.BRANCHES,
+  changeset: repository.CHANGESETS,
+  label: repository.LABELS,
+  merge: repository.MERGES,
+  review: repository.REVIEWS,
+  shelve: repository.SHELVES,
 };
 
 const { DIFFERENCES, FILES, LOCKS, OWNER, REPOSITORIES, REVISIONS, SERVER, WORKSPACE } = repository;
@@ -74,12 +74,11 @@ function showAcl([spec, option]) {
   ].join('\n');
 }
 
-/** `cm find <object> <query> --xml|--format=…`: the objects the query's comparisons keep (`where.cjs`). */
+/** `cm find <object> <query> --format=…`: the objects the query's comparisons keep (`where.cjs`). */
 function find([object, ...args]) {
-  const findable = FINDABLE[object.toLowerCase()];
-  if (!findable) throw new Error(`The fake cm can't find ${object} objects`);
-  const found = matching(findable.records, args.filter((arg) => !arg.startsWith('--')).join(' '));
-  return args.includes('--xml') ? findXml(findable.element, found) : formatted(args, found);
+  const records = FINDABLE[object.toLowerCase()];
+  if (!records) throw new Error(`The fake cm can't find ${object} objects`);
+  return formatted(args, matching(records, args.filter((arg) => !arg.startsWith('--')).join(' ')));
 }
 
 /**

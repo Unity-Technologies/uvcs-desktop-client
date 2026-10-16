@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { graphBranch, graphChangeset, graphLabel, graphMergeLink, roundTripDate } from './branchExplorerRecords';
+import { countCharactersRead } from '@shared/testing/countCharactersRead';
+import { graphBranch, graphChangeset, graphLabel, graphMergeLink } from './branchExplorerRecords';
 import { parseRecords } from './formatRecords';
 import { formatOutput } from './testing/cmOutput';
 
@@ -37,13 +38,17 @@ describe('branch explorer records', () => {
     ]);
   });
 
-  it('spells query days in the round-trip date format', () => {
-    expect(roundTripDate('2026-08-26')).toMatch(/^2026-08-26T00:00:00\.0000000[+-]\d{2}:\d{2}$/);
-  });
-
   it('reads labels', () => {
     expect(parseRecords(formatOutput(['v1.0', 3, 'jane', '2026-09-01', 'First']), graphLabel)).toEqual([
       { name: 'v1.0', changeset: 3, owner: 'jane', date: '2026-09-01', comment: 'First' },
     ]);
+  });
+
+  it('reads the changesets of a big repository in one pass: a few reads of each character, whatever the size', () => {
+    const output = formatOutput(...Array.from({ length: 5_000 }, (_, id) => [id, `/main/task${id % 2_000}`, id - 1, '2026-09-25T10:11:12.0000000+02:00', 'jane', `comment ${id}`]));
+    const { result: changesets, charactersRead } = countCharactersRead(() => parseRecords(output, graphChangeset));
+    // About 3 reads of each character; a pass over the rest of the output per record reads each thousands of times.
+    expect(charactersRead / output.length).toBeLessThan(5);
+    expect(changesets).toHaveLength(5_000);
   });
 });

@@ -10,7 +10,6 @@ import {
   changesetsFound,
   diffRecord,
   mergeOutput,
-  NOTHING_FOUND,
   pendingStatus,
   shelvesCreated,
   statusHeader,
@@ -48,7 +47,7 @@ function blockedWorkspace(workspacePath: string, { pending: changed = ['src/old.
     'status --header --xml': statusHeader('/main/task1'),
     getworkspacefrompath: WORKSPACE_NAMES,
     'find changeset': changesetsFound('/main/task1', { id: 2, owner: 'ana' }),
-    'find branch': branchExists ? branchFound('/main/task1', 37) : NOTHING_FOUND,
+    'find branch': branchExists ? branchFound('/main/task1', 37) : '',
     'diff cs:1 cs:2': diffRecord('D', 'src/old.txt', { revision: 11 }) + alsoIncoming,
     'status --xml --controlledchanged --changed': pendingChanges,
     'status --xml --iscochanged': pendingChanges,
@@ -165,7 +164,7 @@ describe('shelveBlockedAndUpdate', () => {
 
   it('shelves nothing once nothing blocks the update anymore', async () => {
     const { deps } = blockedWorkspace(workspacePath);
-    const upToDate = fakeCmClient({ 'status --header --xml': statusHeader('/main/task1'), 'find changeset': NOTHING_FOUND });
+    const upToDate = fakeCmClient({ 'status --header --xml': statusHeader('/main/task1'), 'find changeset': '' });
 
     await expect(run({ ...deps, cm: upToDate.cm })).rejects.toThrow('Nothing blocks the update anymore: update from Incoming.');
     expect(upToDate.lines()).toEqual(['status --header --xml', expect.stringMatching(/^find changeset /)]);

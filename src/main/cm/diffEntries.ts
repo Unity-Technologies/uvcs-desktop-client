@@ -1,11 +1,12 @@
 import type { DiffEntry, DiffStatus } from '@shared/domain/diff';
 import type { ItemType } from '@shared/domain/pendingChanges';
 import { comparePaths } from '@shared/pathOrder';
-import { parseRecords, recordFormat } from './formatRecords';
+import { parseRecords, recordFormat, unquoted } from './formatRecords';
 
 /**
  * `--format` for `cm diff --repositorypaths` that `parseDiffEntries` understands. `{repository}` is the repository of
- * each item's revisions: under an xlink, the xlinked one.
+ * each item's revisions: under an xlink, the xlinked one. `cm diff` prints the paths and the repository between double
+ * quotes, which are no part of them.
  */
 export const DIFF_FORMAT = recordFormat(['status', 'path', 'srccmpath', 'baserevid', 'revid', 'type', 'repository']);
 
@@ -29,7 +30,8 @@ export function parseDiffEntries(output: string): DiffEntry[] {
   return [...entriesByPath.values()].sort((a, b) => comparePaths(a.path, b.path));
 }
 
-function toDiffEntry([statusCode = '', path = '', sourcePath = '', baseRevision = '', revision = '', typeCode = '', repository = '']: string[]): DiffEntry | null {
+function toDiffEntry([statusCode = '', quotedPath = '', quotedSourcePath = '', baseRevision = '', revision = '', typeCode = '', quotedRepository = '']: string[]): DiffEntry | null {
+  const [path, sourcePath, repository] = [unquoted(quotedPath), unquoted(quotedSourcePath), unquoted(quotedRepository)];
   const status = STATUSES[statusCode];
   if (!status) return null;
 

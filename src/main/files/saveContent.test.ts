@@ -2,6 +2,8 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { recordsOutput } from '../cm/testing/cmOutput';
+import { TREE_ITEM_FORMAT, TREE_ITEMS } from '../cm/treeItems';
 import { cmFails, fakeCmClient } from '../cm/testing/fakeCmClient';
 import { saveContent } from './saveContent';
 
@@ -47,9 +49,8 @@ describe('saveContent of the loaded revision', () => {
 
 const XLINKED = '/plugins/editor-plugin/Tests/DiffWindowMockExtensions.cs';
 
-/** `cm ls <XLINKED> --tree=cs:278738 --xml`: the file is the editorGUI repository's, under the editor-plugin xlink. */
-const XLINKED_LISTING = `<LsResults><LsItems><LsItem><Status>Controlled</Status><Name>DiffWindowMockExtensions.cs</Name>
-  <WkPath>${XLINKED}</WkPath><Type>txt</Type><Repository>rep:editorGUI@acme@cloud</Repository><RevId>432251</RevId></LsItem></LsItems></LsResults>`;
+/** `cm ls <XLINKED> --tree=cs:278738 --format=TREE_ITEM_FORMAT`: the file is the editorGUI repository's, under the editor-plugin xlink. */
+const XLINKED_LISTING = recordsOutput(TREE_ITEMS, { name: 'DiffWindowMockExtensions.cs', wkpath: XLINKED, type: 'txt', size: 40, repspec: 'rep:editorGUI@acme@cloud', revid: 432251 });
 
 /** A `cm` whose repository tree has an xlink at `/plugins/editor-plugin`: `serverpath:` finds nothing under it. */
 function xlinkingCm() {
@@ -77,13 +78,13 @@ describe('saveContent of a repository path', () => {
   it("reads a path under an xlink as the revision the changeset's tree has there, in the xlinked repository", async () => {
     const { cm, lines } = xlinkingCm();
     await saveContent(cm, tmpdir(), { kind: 'repositoryPath', path: XLINKED, at: 'cs:278738' }, 'out');
-    expect(lines()).toEqual([`cat serverpath:${XLINKED}#cs:278738 --file=out`, `ls ${XLINKED} --tree=cs:278738 --xml`, 'cat revid:432251@editorGUI@acme@cloud --file=out']);
+    expect(lines()).toEqual([`cat serverpath:${XLINKED}#cs:278738 --file=out`, `ls ${XLINKED} --tree=cs:278738 ${TREE_ITEM_FORMAT}`, 'cat revid:432251@editorGUI@acme@cloud --file=out']);
   });
 
   it("reads a path under an xlink at a branch's head as the revision the branch's tree has there", async () => {
     const { cm, lines } = xlinkingCm();
     await saveContent(cm, tmpdir(), { kind: 'repositoryPath', path: XLINKED, at: 'br:/main' }, 'out');
-    expect(lines()).toEqual([`cat serverpath:${XLINKED}#br:/main --file=out`, `ls ${XLINKED} --tree=br:/main --xml`, 'cat revid:432251@editorGUI@acme@cloud --file=out']);
+    expect(lines()).toEqual([`cat serverpath:${XLINKED}#br:/main --file=out`, `ls ${XLINKED} --tree=br:/main ${TREE_ITEM_FORMAT}`, 'cat revid:432251@editorGUI@acme@cloud --file=out']);
   });
 
   it("fails as cm does for a shelve's path, whose tree can't be listed", async () => {
@@ -95,39 +96,22 @@ describe('saveContent of a repository path', () => {
 
 const SHARED_BIN = '/Assets/Shared/Models/scene.bin';
 
-/** `cm ls /Assets/Shared/Models/scene.bin --tree=cs:3 --xml`, as cm prints it: the game repository xlinks art at Assets/Shared. */
-const SHARED_BIN_LISTING = `<?xml version="1.0" encoding="utf-8"?>
-<LsResults>
-  <LsItems>
-    <LsItem>
-      <Status>Controlled</Status>
-      <Name>scene.bin</Name>
-      <CurrentPath>/Assets/Shared/Models/scene.bin</CurrentPath>
-      <WkPath>/Assets/Shared/Models/scene.bin</WkPath>
-      <Size>7</Size>
-      <FormattedSize>7 bytes</FormattedSize>
-      <Type>txt</Type>
-      <Changeset>1</Changeset>
-      <Repository>rep:art@local</Repository>
-      <Owner>ana@unity3d.com</Owner>
-      <Checkout />
-      <BrId>4</BrId>
-      <RevId>14</RevId>
-      <ParentRevId>-1</ParentRevId>
-      <ItemId>19</ItemId>
-      <RepId>267</RepId>
-      <Server>local</Server>
-      <SymlinkTarget />
-      <Hash>RMZaMUglHwroxMQj6yytRw==</Hash>
-      <HashAlgorithm>MD5</HashAlgorithm>
-      <Chmod>NOT_DEFINED</Chmod>
-      <Branch>/main</Branch>
-      <Guid>6b56fe80-82b8-4d14-9d82-ec76faa08cdb</Guid>
-      <ItemGuid>e634db8d-07e6-4261-9e09-7ea2613747d7</ItemGuid>
-      <Date>2026-10-13T17:43:58+02:00</Date>
-    </LsItem>
-  </LsItems>
-</LsResults>`;
+/** `cm ls /Assets/Shared/Models/scene.bin --tree=cs:3 --format=TREE_ITEM_FORMAT`, as cm prints it: the game repository xlinks art at Assets/Shared. */
+const SHARED_BIN_LISTING = recordsOutput(TREE_ITEMS, {
+  name: 'scene.bin',
+  wkpath: '/Assets/Shared/Models/scene.bin',
+  type: 'txt',
+  size: 7,
+  'date:o': '2026-10-13T17:43:58.0000000+02:00',
+  changeset: 1,
+  branch: '/main',
+  owner: 'ana@unity3d.com',
+  revid: 14,
+  parentrevid: -1,
+  repspec: 'rep:art@local',
+  itemid: 19,
+  hash: 'RMZaMUglHwroxMQj6yytRw==',
+});
 
 describe('saveContent of a repository path known to be under an xlink', () => {
   /** A `cm` where `serverpath:` finds nothing under the Assets/Shared xlink, as the real one. */
@@ -141,11 +125,11 @@ describe('saveContent of a repository path known to be under an xlink', () => {
   it.each(['cs:3', 'br:/main'])("reads it from the tree at %s at once: one quick cm ls, then its revision in the xlinked repository, no failing cm cat first", async (at) => {
     const { cm, commands } = sharedArtCm();
     await saveContent(cm, tmpdir(), { kind: 'repositoryPath', path: SHARED_BIN, at, repository: 'art@local' }, 'out');
-    expect(commands.map(({ via, line }) => `${via}: ${line}`)).toEqual([`query: ls ${SHARED_BIN} --tree=${at} --xml`, 'query: cat revid:14@art@local --file=out']);
+    expect(commands.map(({ via, line }) => `${via}: ${line}`)).toEqual([`query: ls ${SHARED_BIN} --tree=${at} ${TREE_ITEM_FORMAT}`, 'query: cat revid:14@art@local --file=out']);
   });
 
   it("fails as cm does when the tree hasn't the path", async () => {
-    const { cm } = fakeCmClient({ ls: cmFails(`Can't resolve the selector for the item ${SHARED_BIN}\n<?xml version="1.0" encoding="utf-8"?>\n<LsResults>\n  <LsItems />\n</LsResults>`) });
+    const { cm } = fakeCmClient({ ls: cmFails(`Can't resolve the selector for the item ${SHARED_BIN}`) });
     await expect(saveContent(cm, tmpdir(), { kind: 'repositoryPath', path: SHARED_BIN, at: 'cs:3', repository: 'art@local' }, 'out')).rejects.toThrow("Can't resolve the selector");
   });
 

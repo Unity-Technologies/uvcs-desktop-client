@@ -195,7 +195,7 @@ describe('CmShellSession reading records', () => {
     await expect(finished).resolves.toEqual({ output: '', exitCode: 0 });
     expect(records.finish()).toEqual([
       ['1', '/main/tarea-ñ'],
-      ['2', 'quoted'],
+      ['2', '"quoted"'],
     ]);
   });
 

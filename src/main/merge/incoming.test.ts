@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { change, changesetsFound, diffRecord, formatOutput, NOTHING_FOUND, pendingStatus, statusHeader } from '../cm/testing/cmOutput';
+import { FOUND_CHANGESETS } from '../cm/foundObjects';
+import { change, changesetsFound, diffRecord, formatOutput, foundLine, pendingStatus, statusHeader } from '../cm/testing/cmOutput';
 import { INCOMING_CHANGESETS_PAGE } from '@shared/domain/incoming';
 import { fakeCmClient } from '../cm/testing/fakeCmClient';
 import { incomingChangesetsArgs, INCOMING_CHECK_LIMIT, readIncomingChangesetPage, readIncomingChanges, readIncomingSummary, summarizeIncoming } from './incoming';
@@ -97,7 +98,7 @@ describe('readIncomingChanges', () => {
     expect(changes.conflicts.map((conflict) => conflict.path)).toEqual(['src/a.txt']);
     expect(changes.blockedPaths).toEqual(['src/old.txt']);
     expect(lines().filter((line) => line.startsWith('find'))).toEqual([
-      `find changeset where changesetid > 41 and branch = '/main' order by changesetid desc limit ${INCOMING_CHANGESETS_PAGE + 1} --xml --nototal`,
+      foundLine(FOUND_CHANGESETS, `where changesetid > 41 and branch = '/main' order by changesetid desc limit ${INCOMING_CHANGESETS_PAGE + 1}`),
     ]);
   });
 
@@ -117,7 +118,7 @@ describe('readIncomingChanges', () => {
   });
 
   it('asks nothing more once nothing came in', async () => {
-    const { cm, lines } = branchMovedOn(NOTHING_FOUND);
+    const { cm, lines } = branchMovedOn('');
 
     expect(await readIncomingChanges(cm, '/work')).toMatchObject({ changesetCount: 0, files: [], conflicts: [], blockedPaths: [] });
     expect(lines().some((line) => line.startsWith('diff'))).toBe(false);
@@ -134,7 +135,7 @@ describe('a page of incoming changesets', () => {
 
     expect(page.changesets.map((changeset) => changeset.id)).toEqual([45, 44]);
     expect(page.more).toBe(true);
-    expect(linesVia('query')).toEqual(["find changeset where changesetid > 41 and branch = '/main' order by changesetid desc limit 3 --xml --nototal"]);
+    expect(linesVia('query')).toEqual([foundLine(FOUND_CHANGESETS, "where changesetid > 41 and branch = '/main' order by changesetid desc limit 3")]);
     expect(lines()).toHaveLength(1);
   });
 
@@ -145,6 +146,6 @@ describe('a page of incoming changesets', () => {
 
     expect(page).toMatchObject({ more: false });
     expect(page.changesets.map((changeset) => changeset.id)).toEqual([43]);
-    expect(lines()).toEqual(["find changeset where changesetid > 41 and changesetid < 44 and branch = '/main' order by changesetid desc limit 3 --xml --nototal"]);
+    expect(lines()).toEqual([foundLine(FOUND_CHANGESETS, "where changesetid > 41 and changesetid < 44 and branch = '/main' order by changesetid desc limit 3")]);
   });
 });

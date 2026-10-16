@@ -6,6 +6,7 @@ import { child, children, integer, parseXml, text } from './parseXml';
  * which repository the item lives in and where (the children of an xlink live at the root of the xlinked repository;
  * folders under an xlink report paths in it), and the item the changeset of its loaded revision. Null when the item has
  * none (changeset -1: added, or not loaded, like a file the branch deleted), so no `#cs:-1` spec is ever asked for.
+ * XML still, as `parseItemDetails`: two items.
  */
 export function removedItemSpec(fileinfoXml: string, name: string): string | null {
   const [parent, item] = children(child(parseXml(fileinfoXml, ['FileInfo']), 'FileInfos'), 'FileInfo');

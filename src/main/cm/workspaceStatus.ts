@@ -31,7 +31,10 @@ export async function readWorkspaceStatus(cm: CmClient, workspacePath: string): 
   return { ...status, server: await serverByName(cm, workspacePath, printedServer, { cwd: workspacePath }) };
 }
 
-/** What the workspace has loaded, without its repository: one `cm status --header --xml`, for what needs no more. */
+/**
+ * What the workspace has loaded, without its repository: one `cm status --header --xml`, for what needs no more. XML,
+ * as `cm status` has no `--format` (`parsePendingChanges`).
+ */
 export async function readWorkspaceLoad(cm: CmClient, workspacePath: string): Promise<Pick<WorkspaceStatus, 'selector' | 'loadedChangeset'>> {
   const { selector, loadedChangeset } = await readStatusHeader(cm, workspacePath);
   return { selector, loadedChangeset };

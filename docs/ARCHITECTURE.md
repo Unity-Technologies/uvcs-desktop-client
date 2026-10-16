@@ -167,7 +167,7 @@ and many people use the same server. Every `cm` command other than local reads (
   (`WorkspaceCopies.read`):
   1. Which file, which version: the revision's workspace path and its id (the content source's `fileName`).
   2. Which revision does the workspace hold at that path, with what size and hash? A path the workspace already told
-     answers at once, with no command (`rememberHeld`: the Files view's `cm ls --xml` of its folders, a history's
+     answers at once, with no command (`rememberHeld`: the Files view's `cm ls` of its folders, a history's
      `cm ls` of its file, `workspaceItemArgs`), so a revision it doesn't hold there costs nothing. A revision
      another tree's listing named (Browse repository, a point's tree beside a model: `RepositoryTrees.fileAt`, the
      Materials look's in `RevisionDownloads`, a merge's destination tree: `withConflictRepositories`) is remembered with its hash (`remember`), never as what the workspace
@@ -192,8 +192,8 @@ and many people use the same server. Every `cm` command other than local reads (
 - **Queries**: list everything only when the view needs everything, and then read it rarely. Otherwise filter on the
   server: a date (`sinceDate`), a `limit`, the people picked (`owners`), one object by name or id (`api.branches.get`). Never OR ids together
   (`where id = 1 or id = 2 …`, checked by `noOredIdLookups.test.ts`): take names and details from the query that lists
-  the objects (`--format` fields, `{id}` in branch lists), or from one bounded query the view needs anyway. Prefer
-  `--format` with just the fields needed over `--xml`.
+  the objects (`--format` fields, `{id}` in branch lists), or from one bounded query the view needs anyway. A list
+  reads just the fields it needs, as records (Parsing).
   Equivalent filters must share one query key (`compactFilter`). A parse failure must fail, never degrade to an empty
   filter (`parseWorkspaceStatus`): `cm find changeset where changesetid > -1` reads the whole repository.
 - **Guard**: development builds warn in the console (`[server budget]`) when the same server command runs more than
@@ -201,8 +201,33 @@ and many people use the same server. Every `cm` command other than local reads (
 
 ## Parsing `cm` output
 
-- Prefer `--format` with `recordFormat` (control-character separators; no ambiguity with paths or comments) or
-  `--xml` (`parseXml`).
+- **Records, not XML.** A command that has `--format` is read as records: a `RecordLayout` names the fields it prints
+  (`layoutFormat`, `recordFormat`: control-character separators, no ambiguity with paths or comments) and
+  `readRecords` reads each by name (`layoutReader`, the reader a streamed command takes too). Values arrive as printed
+  with CRLF turned into LF (`parseRecords`); a layout trims the free text it shows (comments, titles, attribute
+  values), as XML parsing did, and leaves the rest as printed: names, paths, and the Branch Explorer's, annotate's and
+  diff's records, where whitespace matters. Only `cm diff` quotes some values (`unquoted`). Each layout is declared
+  once: the `cm find` objects in `foundObjects.ts` (`FOUND_BRANCHES`...; `findArgs`,
+  `findQueryArgs`), `FOUND_REVIEWS`, `FOUND_ATTRIBUTE_TYPES`, `TREE_ITEMS` for `cm ls` (whether a listed item has a revision is one rule for every `cm ls`
+  reader: `listedRevisionId`). For 19,807 branches, records
+  are 2.6 MB where `cm find --xml` printed 9.1 MB, and parse in a third of the time (26 ms against 77; 115 against 365
+  for 100k, and past about 600k branches the XML passed `MAX_OUTPUT_LENGTH`). `--xml` also prints every field, some
+  costing the server (`cm ls --xml` reads every item's GUID). A test writes the output as `cm` prints it for that
+  layout (`recordsOutput`, `foundLine`). Anything with more than a few fields takes a `RecordLayout`; the small
+  positional readers of two to four fields stay as they are (`parseWorkspaceListing`, `parseWorkspaceItem`,
+  `parseBranchNames`, the incoming check, `parseAccounts`, the Branch Explorer's row builders `graphBranch`...).
+- **`cm ls` on Windows**: it asks `--encoding` of `--xml` only, so its records come in UTF-8 only from a `cm shell`: a
+  listing that can't take a pooled one starts a `cm shell` of its own (`processCommand`, about half a second more
+  than an `--xml` process), and a server path holding a quote, which no shell line can hold, prints in the console's
+  code page (`TREE_ITEM_FORMAT`).
+- **Dates** in `cm find` come in `FIND_DATE_FORMAT` (`--dateformat=o`, ISO 8601 round trip, `findCommand`), which
+  also sets how the query's dates are read: a day is spelled `roundTripDate` (`whereClause`). Without it `cm` prints
+  the format its client config sets. `cm ls` takes `{date:o}`; it prints `0001-01-01…` for an item with no date.
+- **XML remains** only where `--format` can't say it: `cm status` has none, and `--machinereadable` has neither the
+  changelists nor the merge info (`parsePendingChanges`, `parseWorkspaceStatus`: a local read); `cm history --format`
+  has no revision type, which tells text from binary from a directory, and a revision from a move or a removal
+  (`itemHistoryArgs`); `cm fileinfo` reads one item or two, where records would save nothing (`parseItemDetails`,
+  `removedItemSpec`). XML goes through `parseXml`.
 - Never parse human-readable output when a machine format exists.
 - **Records are read as they arrive**: new code reads a `--format` command with `cm.queryRecords(args, readRecord,
   options)` (or `executeRecords`), where `readRecord` builds a row (a branch, a changeset) from each record's fields, or
@@ -274,7 +299,7 @@ repository, set where `cm` names it, and every spec built from it names both (`s
   workspace paths and `cm ls --tree` do. A history opened from a diff or a repository tree reads the item of its
   revision (`rev:revid:N@repo`, `itemHistoryTarget`). A path known to be under an xlink (a model's sibling in a
   committed diff, a `repositoryPath` with its `repository`) is read from the tree at once (`saveFromTree`: one
-  `cm ls <path> --tree=<point> --xml`, then `cm cat revid:N@repo`), never by a `serverpath:` bound to fail; a merge
+  `cm ls <path> --tree=<point>`, then `cm cat revid:N@repo`), never by a `serverpath:` bound to fail; a merge
   change's version, not known to be under one, is looked up there once `serverpath:` finds nothing (a second command
   only for those). `cm ls --tree` takes a changeset or a branch (`listsTree`) and refuses a shelve or a label
   ("Incorrect object specification"): under an xlink, their unchanged files can't be read by path.

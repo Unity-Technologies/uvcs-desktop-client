@@ -183,8 +183,8 @@ The suite runs after every change, so it must take seconds, not minutes. A test 
 - **Test each layer with the input it takes, not the layer below.** A view that shows 10 branches gets 10 branches
   built in the test; it never asks a server for them.
 - **`cm` output is synthetic**: to test a parser, write the output as `cm` prints it (`--xml`, `--format` records,
-  `CommandResult` lines) as a string in the test, or with `main/cm/testing/cmOutput` (`formatOutput`, `findXml`,
-  `statusHeader`...); never run `cm`. Code that runs `cm` gets `fakeCmClient` (`main/cm/testing/`): it answers from
+  `CommandResult` lines) as a string in the test, or with `main/cm/testing/cmOutput` (`formatOutput`, `recordsOutput`,
+  `foundLine`, `statusHeader`...); never run `cm`. Code that runs `cm` gets `fakeCmClient` (`main/cm/testing/`): it answers from
   such strings, records the commands it was asked and how (`query` or `execute`), and fails on any other. A workspace
   that changes as `cm` would is `playAlongWorkspace`, built on it. The `cm shell` protocol itself is tested against
   `main/cm/testing/fakeCmShell`, a script that answers like `cm shell`.

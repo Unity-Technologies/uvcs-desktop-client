@@ -7,7 +7,6 @@ import {
   diffRecord,
   formatOutput,
   mergeOutput,
-  NOTHING_FOUND,
   pendingStatusInChangelists,
   shelvesCreated,
   shelvesFound,
@@ -156,7 +155,7 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
   const findBranch = ({ args }: FakeCmCommand): string => {
     const shortName = /name = '([^']*)'/.exec(args[2]!)![1];
     const found = [...knownBranches].find((name) => name.split('/').pop() === shortName);
-    return found ? branchFound(found, BRANCH_IDS[found]!) : NOTHING_FOUND;
+    return found ? branchFound(found, BRANCH_IDS[found]!) : '';
   };
 
   const fake = fakeCmClient({

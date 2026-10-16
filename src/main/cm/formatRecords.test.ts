@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FIELD_SEPARATOR, parseRecords, RecordReader, recordFormat, RECORD_SEPARATOR } from './formatRecords';
+import { FIELD_SEPARATOR, layoutReader, parseRecords, readRecords, RecordReader, recordFormat, RECORD_SEPARATOR } from './formatRecords';
 import { formatOutput } from './testing/cmOutput';
 import { countCharactersRead } from '@shared/testing/countCharactersRead';
 import { countBytesRead } from './testing/countBytesRead';
@@ -7,6 +7,19 @@ import { countBytesRead } from './testing/countBytesRead';
 describe('recordFormat', () => {
   it('ends each field with the field separator and the record with the record separator', () => {
     expect(recordFormat(['id', 'name'])).toBe(`{id}${FIELD_SEPARATOR}{name}${RECORD_SEPARATOR}`);
+  });
+
+  it('keeps the .NET format a placeholder carries', () => {
+    expect(recordFormat(['id', 'date:o'])).toBe(`{id}${FIELD_SEPARATOR}{date:o}${RECORD_SEPARATOR}`);
+  });
+});
+
+describe('readRecords', () => {
+  const NAMED = { fields: ['id', 'name'], read: (value: (field: string) => string) => (value('name') === '.' ? undefined : `${value('id')}:${value('name')}`) };
+
+  it('reads each record by field name, and leaves out those its layout reads as nothing', () => {
+    expect(readRecords(NAMED, formatOutput(['1', '.'], ['2', 'a'], ['3']))).toEqual(['2:a', '3:']);
+    expect(layoutReader(NAMED)(['4', 'b'])).toBe('4:b');
   });
 });
 
@@ -36,8 +49,15 @@ describe('parseRecords', () => {
     ]);
   });
 
-  it('takes the quotes cm puts around a value away', () => {
-    expect(parseRecords(formatOutput(['"quoted"', '"', 'in "the" middle']))).toEqual([['quoted', '"', 'in "the" middle']]);
+  // `cm find`, `cm ls` and `cm annotate` print values as they are: a comment or a line of code between quotes is one.
+  it('keeps the quotes a value starts and ends with', () => {
+    expect(parseRecords(formatOutput(['"WIP"', '"', 'in "the" middle']))).toEqual([['"WIP"', '"', 'in "the" middle']]);
+  });
+
+  // A comment written on Windows keeps its CRLF in the repository; a `\r` left in it would make a one-line comment
+  // read as two lines and keep a title prefilled from it out of the pooled `cm shell`.
+  it('turns CRLF into LF inside a value', () => {
+    expect(parseRecords(formatOutput(['1', 'Fix crash\r\nin the HUD\r\n']))).toEqual([['1', 'Fix crash\nin the HUD\n']]);
   });
 
   it('reads text after the last record as one more record', () => {
@@ -86,7 +106,7 @@ describe('RecordReader', () => {
     ['2', '', '', 'x', '"'],
   ];
   const AS_READ = [
-    ['31266319', '/main/task-ñ', 'quoted', 'Línea\nsegunda 日本 🎮', ''],
+    ['31266319', '/main/task-ñ', '"quoted"', 'Línea\nsegunda 日本 🎮', ''],
     ['2', '', '', 'x', '"'],
   ];
   const LF_OUTPUT = RECORDS.map((fields) => `${fields.join(FIELD_SEPARATOR)}${RECORD_SEPARATOR}\n`).join('');

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PrintedMergePlan } from '../cm/mergeOutput';
-import { parseTreeItems } from '../cm/treeItemsXml';
+import { recordsOutput } from '../cm/testing/cmOutput';
+import { parseTreeItems, TREE_ITEM_FORMAT, TREE_ITEMS } from '../cm/treeItems';
 import { conflictListingArgs, destinationTree, withRepositories } from './conflictRepositories';
 
 const XLINKED = '/01project/src/client/plugins/editor-plugin/Packages/com.acme.editor.tests/Infrastructure/DiffWindowMockExtensions.cs';
@@ -16,16 +17,13 @@ const plan = (paths: string[]): PrintedMergePlan => ({
   warnings: [],
 });
 
-// `cm ls <paths> --tree=cs:278738 --xml` in acme@acme@cloud, where editor-plugin is an xlink to editorGUI, trimmed.
-const LISTING = `<?xml version="1.0" encoding="utf-8"?>
-<LsResults><LsItems>
-  <LsItem><Status>Controlled</Status><Name>DiffWindowMockExtensions.cs</Name><WkPath>${XLINKED}</WkPath><Type>txt</Type>
-    <Changeset>17092</Changeset><Repository>rep:editorGUI@acme@cloud</Repository><RevId>432251</RevId><ItemId>425954</ItemId></LsItem>
-  <LsItem><Status>Controlled</Status><Name>MergePrinter.cs</Name><WkPath>${OWN}</WkPath><Type>txt</Type>
-    <Changeset>276520</Changeset><Repository>rep:acme@acme@cloud</Repository><RevId>31259533</RevId><ItemId>420525</ItemId></LsItem>
-  <LsItem><Status>Controlled</Status><Name>Grass.png</Name><WkPath>${TEXTURE}</WkPath><Size>30889126</Size><Type>bin</Type>
-    <Changeset>276611</Changeset><Repository>rep:acme@acme@cloud</Repository><RevId>31259610</RevId><ItemId>420530</ItemId></LsItem>
-</LsItems></LsResults>`;
+// `cm ls <paths> --tree=cs:278738 --format=TREE_ITEM_FORMAT` in acme@acme@cloud, where editor-plugin is an xlink to editorGUI.
+const LISTING = recordsOutput(
+  TREE_ITEMS,
+  { name: 'DiffWindowMockExtensions.cs', wkpath: XLINKED, type: 'txt', size: 812, changeset: 17092, repspec: 'rep:editorGUI@acme@cloud', revid: 432251, itemid: 425954 },
+  { name: 'MergePrinter.cs', wkpath: OWN, type: 'txt', size: 4211, changeset: 276520, repspec: 'rep:acme@acme@cloud', revid: 31259533, itemid: 420525 },
+  { name: 'Grass.png', wkpath: TEXTURE, type: 'bin', size: 30889126, changeset: 276611, repspec: 'rep:acme@acme@cloud', revid: 31259610, itemid: 420530 },
+);
 
 describe('destinationTree', () => {
   it('is the destination contributor, else the branch merged into, else the workspace tells', () => {
@@ -38,7 +36,7 @@ describe('destinationTree', () => {
 
 describe('conflictListingArgs', () => {
   it('lists the conflicting files in the tree the merge goes into', () => {
-    expect(conflictListingArgs(plan([XLINKED, OWN]), 'cs:278648')).toEqual(['ls', XLINKED, OWN, '--tree=cs:278648', '--xml']);
+    expect(conflictListingArgs(plan([XLINKED, OWN]), 'cs:278648')).toEqual(['ls', XLINKED, OWN, '--tree=cs:278648', TREE_ITEM_FORMAT]);
   });
 });
 

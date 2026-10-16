@@ -6,8 +6,11 @@ const RECORD_SEPARATOR_BYTE = 0x1e;
 const CR_CODE = 0x0d;
 const LF_CODE = 0x0a;
 
-/** Builds a `--format` value whose output `parseRecords` and `RecordReader` split unambiguously. */
-export function recordFormat(placeholders: string[]): string {
+/**
+ * Builds a `--format` value whose output `parseRecords` and `RecordReader` split unambiguously. A placeholder may carry
+ * a .NET format (`date:o`), which `cm ls` applies to its dates.
+ */
+export function recordFormat(placeholders: readonly string[]): string {
   return placeholders.map((name) => `{${name}}`).join(FIELD_SEPARATOR) + RECORD_SEPARATOR;
 }
 
@@ -39,13 +42,11 @@ export function parseRecords<T>(output: string, readRecord?: ReadRecord<T>): (T 
 
 /**
  * The fields of one record's text, without the line break `cm` prints before it (after the previous record's
- * separator): CRLF read as LF, and a value between quotes without them. The rules of both `parseRecords` and
- * `RecordReader`.
+ * separator): each value as `cm` printed it, CRLF turned into LF (a comment written on Windows keeps its CRLF in the
+ * repository). The rules of both `parseRecords` and `RecordReader`. Only `cm diff` quotes some of its values: `unquoted`.
  */
 function fieldsOf(record: string): string[] {
-  const fields = (record.includes('\r') ? withLf(record) : record).split(FIELD_SEPARATOR);
-  for (let index = 0; index < fields.length; index++) fields[index] = unquote(fields[index]!);
-  return fields;
+  return withLf(record).split(FIELD_SEPARATOR);
 }
 
 /**
@@ -60,8 +61,7 @@ function fieldsOf(record: string): string[] {
  * output it came in (slices of decoded chunks would keep every chunk alive while any value lives). One decoding per
  * record, not per field: each decoding is a call into C++, which is what a record's fields cost most.
  *
- * As `cm` prints them: a line break after each record's separator (CRLF on Windows, read as LF in fields too), and a
- * value between quotes loses them.
+ * As `cm` prints them: a line break after each record's separator (CRLF on Windows, read as LF in fields too).
  */
 export class RecordReader<T> {
   private readonly rows: T[] = [];
@@ -137,12 +137,39 @@ function lineBreakLengthIn(text: string, start: number, end: number): number {
 
 /** Windows ends lines with CRLF; parsers get LF, as everywhere else. */
 function withLf(text: string): string {
-  return text.replaceAll('\r\n', '\n');
+  return text.includes('\r') ? text.replaceAll('\r\n', '\n') : text;
 }
 
-const QUOTE_CODE = 0x22;
+/** The fields a `--format` prints of each item, and what a record of them becomes (`undefined`: none). */
+export interface RecordLayout<T, Field extends string = string> {
+  fields: readonly Field[];
+  /** Gets each record's values by field name. */
+  read: (value: (field: Field) => string) => T | undefined;
+}
 
-function unquote(value: string): string {
-  const quoted = value.length >= 2 && value.charCodeAt(0) === QUOTE_CODE && value.charCodeAt(value.length - 1) === QUOTE_CODE;
-  return quoted ? value.slice(1, -1) : value;
+/** The `--format` that prints the layout's fields as `readRecords` reads them. */
+export function layoutFormat(layout: RecordLayout<unknown>): string {
+  return `--format=${recordFormat(layout.fields)}`;
+}
+
+/** Reads a record printed through `layoutFormat`, by field name: the field indexes are found once, not per record. */
+export function layoutReader<T, Field extends string>({ fields, read }: RecordLayout<T, Field>): ReadRecord<T> {
+  const indexes = new Map(fields.map((field, index) => [field, index]));
+  return (values) => read((field) => values[indexes.get(field)!] ?? '');
+}
+
+/** The items of an output printed through `layoutFormat`, already held as text. */
+export function readRecords<T, Field extends string>(layout: RecordLayout<T, Field>, output: string): T[] {
+  return parseRecords(output, layoutReader(layout));
+}
+
+/** A number `cm` printed; -1 where it printed none. */
+export function integerValue(value: string): number {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isNaN(parsed) ? -1 : parsed;
+}
+
+/** A value `cm` printed between double quotes (`cm diff`'s paths and repository), without them. */
+export function unquoted(value: string): string {
+  return value.length >= 2 && value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1) : value;
 }

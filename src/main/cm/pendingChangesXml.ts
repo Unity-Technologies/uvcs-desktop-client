@@ -32,6 +32,8 @@ const ITEM_TYPES: Record<string, ItemType> = {
  * Parses `cm status --xml`, with or without `--changelists`. The same item can be listed
  * several times (e.g. moved and changed), so entries are merged by path. Paths come with the OS's separators. The
  * merges in progress come from the changes' merge info: `cm status --xml` lists them nowhere else.
+ * XML, not records: `cm status` has no `--format`, and `--machinereadable` prints neither the changelists nor the
+ * merge info. It is a local read of the workspace, which the server never sees.
  */
 export function parsePendingChanges(xml: string, platform: NodeJS.Platform = process.platform): PendingChangesSnapshot {
   const status = child(parseXml(xml, ['Change', 'Changelist']), 'StatusOutput');
