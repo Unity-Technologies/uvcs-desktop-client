@@ -14,12 +14,16 @@ const MEGABYTE = 1024 * 1024;
  * `CmError`, which names the command.
  */
 export class CmOutputTooLargeError extends Error {
-  constructor(maxLength: number) {
-    super(`The command printed more than ${describeLength(maxLength)}, too much to read, and was stopped.`);
+  /** `unit`: what `maxLength` counts: characters of text output, bytes of records. */
+  constructor(maxLength: number, unit: OutputUnit = 'characters') {
+    super(`The command printed more than ${describeLength(maxLength, unit)}, too much to read, and was stopped.`);
     this.name = 'CmOutputTooLargeError';
   }
 }
 
-function describeLength(length: number): string {
-  return length >= MEGABYTE ? `${Math.round(length / MEGABYTE)} MB` : `${length} characters`;
+/** What an output's length counts. */
+export type OutputUnit = 'characters' | 'bytes';
+
+function describeLength(length: number, unit: OutputUnit): string {
+  return length >= MEGABYTE ? `${Math.round(length / MEGABYTE)} MB` : `${length} ${unit}`;
 }

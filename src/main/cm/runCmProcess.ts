@@ -53,7 +53,7 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
       if (stopped) return false;
       length += size;
       if (length <= maxOutputLength) return true;
-      stop(new CmOutputTooLargeError(maxOutputLength));
+      stop(new CmOutputTooLargeError(maxOutputLength, records ? 'bytes' : 'characters'));
       return false;
     };
 

@@ -1,6 +1,7 @@
 import { StringDecoder } from 'node:string_decoder';
 import type { RecordReader } from './formatRecords';
 import { OutputBuffer } from './OutputBuffer';
+import type { OutputUnit } from './outputLimit';
 import { resultLineAtEnd } from './shellResultLine';
 
 export type OutputStream = 'stdout' | 'stderr';
@@ -11,8 +12,9 @@ export type OutputStream = 'stdout' | 'stderr';
  * session looks for the result line and for prompts.
  */
 export interface ShellCommandOutput {
-  /** How much arrived: characters of text, bytes of records. What `MAX_OUTPUT_LENGTH` bounds. */
+  /** How much arrived, in `unit`s: characters of text, bytes of records. What `MAX_OUTPUT_LENGTH` bounds. */
   readonly length: number;
+  readonly unit: OutputUnit;
   /** The last characters that arrived. */
   readonly tail: string;
   append(chunk: Buffer, stream: OutputStream): void;
@@ -22,6 +24,7 @@ export interface ShellCommandOutput {
 
 /** A command's output kept whole, as text. */
 export class TextOutput implements ShellCommandOutput {
+  readonly unit = 'characters';
   private readonly buffer: OutputBuffer;
   // One per stream, so a character split between two chunks stays whole.
   private readonly decoders: Record<OutputStream, StringDecoder> = { stdout: new StringDecoder('utf8'), stderr: new StringDecoder('utf8') };
@@ -60,6 +63,7 @@ export class TextOutput implements ShellCommandOutput {
  * stdout, where `cm shell` writes them.
  */
 export class RecordOutput implements ShellCommandOutput {
+  readonly unit = 'bytes';
   private size = 0;
   private tailBytes = Buffer.alloc(0);
   private decodedTail = '';

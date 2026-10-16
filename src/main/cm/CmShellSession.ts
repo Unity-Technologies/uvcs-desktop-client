@@ -144,7 +144,7 @@ export class CmShellSession {
     this.output.append(chunk, stream);
     // Past the limit a text output could never be read as one string: the command is stopped a chunk past it at most.
     if (this.output.length > this.maxOutputLength) {
-      this.abortRunning(new CmOutputTooLargeError(this.maxOutputLength));
+      this.abortRunning(new CmOutputTooLargeError(this.maxOutputLength, this.output.unit));
       return;
     }
     this.received += chunk.length;
