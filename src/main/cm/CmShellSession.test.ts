@@ -276,7 +276,7 @@ describe('CmShellSession reading records', () => {
     const tooLarge = session.run(['records', '200'], asFields());
     const next = session.run(['echo', 'recovered']);
 
-    await expect(tooLarge).rejects.toThrow('printed more than 1000 characters');
+    await expect(tooLarge).rejects.toThrow('printed more than 1000 bytes');
     await expect(next).resolves.toEqual({ output: 'recovered', exitCode: 0 });
   });
 

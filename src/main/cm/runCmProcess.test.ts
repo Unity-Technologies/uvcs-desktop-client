@@ -84,7 +84,7 @@ describe('runCmProcess reading records', () => {
   it('stops a command whose records pass the limit, which it fails', async () => {
     const script = "process.stdout.write('1\\u001e\\n'.repeat(2000)); setInterval(() => process.stdout.write('1\\u001e\\n'), 10);";
     const records = new RecordReader((fields) => fields);
-    await expect(runCmProcess(process.execPath, ['-e', script], { records, maxOutputLength: 1000 })).rejects.toThrow('printed more than 1000 characters');
+    await expect(runCmProcess(process.execPath, ['-e', script], { records, maxOutputLength: 1000 })).rejects.toThrow('printed more than 1000 bytes');
   });
 
   it('fails a command whose records its caller cannot read, instead of never ending', async () => {
