@@ -16,6 +16,8 @@ export interface FakeCmCommand {
   /** The arguments joined by spaces, as the command log shows them without `cm`: `find branch --xml`. */
   line: string;
   options: CmRunOptions;
+  /** Whether its output was read into records as it arrived (`queryRecords`, `executeRecords`), not as one string. */
+  readsRecords: boolean;
 }
 
 /** What a command prints, exactly as `cm` prints it; a function answers from the command (and may read its files). */
@@ -67,8 +69,8 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
   const shown: string[] = [];
   const keys = Object.keys(answers).sort((a, b) => b.length - a.length);
 
-  async function run(via: CmVia, args: string[], options: CmRunOptions = {}): Promise<string> {
-    const command: FakeCmCommand = { via, args, line: args.join(' '), options };
+  async function run(via: CmVia, args: string[], options: CmRunOptions = {}, readsRecords = false): Promise<string> {
+    const command: FakeCmCommand = { via, args, line: args.join(' '), options, readsRecords };
     commands.push(command);
     if (namesOrganizationById(args)) throw new Error(`A Unity organization's server by its id reached cm (take it from an output that names it): cm ${command.line}`);
     const key = keys.find((candidate) => startsWithWords(command.line, candidate));
@@ -80,7 +82,7 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
   }
 
   async function runRecords<T>(via: CmVia, args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions): Promise<T[]> {
-    return parseRecords(await run(via, args, options), readRecord);
+    return parseRecords(await run(via, args, options, true), readRecord);
   }
 
   const fake = {

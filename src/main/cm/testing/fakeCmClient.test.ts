@@ -39,7 +39,7 @@ describe('fakeCmClient', () => {
   });
 
   it('answers a command read as records from the same --format output, recording how it was run', async () => {
-    const { cm, linesVia } = fakeCmClient({ 'find branch': formatOutput(['3', '/main'], ['37', '/main/task']), 'find merge': formatOutput(['merge', '2', '5']) });
+    const { cm, commands, linesVia } = fakeCmClient({ 'find branch': formatOutput(['3', '/main'], ['37', '/main/task']), 'find merge': formatOutput(['merge', '2', '5']) });
 
     const branches = await cm.queryRecords(['find', 'branch'], ([id = '', name = '']) => ({ id: Number(id), name }));
     const merges = await cm.executeRecords(['find', 'merge'], ([type]) => type);
@@ -50,6 +50,7 @@ describe('fakeCmClient', () => {
     ]);
     expect(merges).toEqual(['merge']);
     expect([linesVia('query'), linesVia('execute')]).toEqual([['find branch'], ['find merge']]);
+    expect(commands.map((command) => command.readsRecords)).toEqual([true, true]);
   });
 
   it('fails a command read as records as CmClient does', async () => {
