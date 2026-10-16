@@ -45,6 +45,14 @@ describe('Branch Explorer load', () => {
     expect(commands.every((command) => command.options.cwd === WORKSPACE)).toBe(true);
   });
 
+  it('reads each find as records as they arrive, never holding its whole output: a big repository answers with hundreds of MB', async () => {
+    const { service, commands } = branchExplorer();
+
+    await service.load(WORKSPACE, { includeHidden: false });
+
+    expect(commands.map((command) => command.readsRecords)).toEqual([true, true, true, true, true]);
+  });
+
   it('draws the visible branches, changesets, merge links and labels', async () => {
     const { service } = branchExplorer();
 
