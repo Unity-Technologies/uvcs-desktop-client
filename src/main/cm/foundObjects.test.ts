@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { countCharactersRead } from '@shared/testing/countCharactersRead';
-import { FOUND_ATTRIBUTE_TYPES } from './attributeRecords';
+import { FOUND_ATTRIBUTE_TYPES, FOUND_ATTRIBUTE_VALUES } from './attributeRecords';
+import { FOUND_REVIEWS } from './codeReviewRecords';
 import { FOUND_BRANCHES, FOUND_CHANGESETS, FOUND_LABELS, FOUND_SHELVES } from './foundObjects';
 import { readRecords } from './formatRecords';
 import { recordsOutput } from './testing/cmOutput';
@@ -32,6 +33,15 @@ describe('found objects', () => {
         repository: 'game@AcmeStudio@unity',
       },
     ]);
+  });
+
+  // The lists showed comments, titles and values trimmed when they came from XML; they still do.
+  it('trims the free text each list shows, and nothing else', () => {
+    const branch = readRecords(FOUND_BRANCHES, recordsOutput(FOUND_BRANCHES, { name: '/main/a', comment: '\n  Fix crash\n\n' }));
+    const review = readRecords(FOUND_REVIEWS, recordsOutput(FOUND_REVIEWS, { id: 1, title: ' Review it ', status: 'Status Reviewed' }));
+    const values = readRecords(FOUND_ATTRIBUTE_VALUES, recordsOutput(FOUND_ATTRIBUTE_VALUES, { name: 'notes', value: '- one\n' }));
+    const others = [FOUND_CHANGESETS, FOUND_LABELS, FOUND_SHELVES, FOUND_ATTRIBUTE_TYPES].map((found) => readRecords(found, recordsOutput(found, { comment: ' text\n' }))[0]?.comment);
+    expect([branch[0]?.comment, branch[0]?.name, review[0]?.title, values[0]?.value, ...others]).toEqual(['Fix crash', '/main/a', 'Review it', '- one', 'text', 'text', 'text', 'text']);
   });
 
   it('reads nothing from an empty output', () => {
