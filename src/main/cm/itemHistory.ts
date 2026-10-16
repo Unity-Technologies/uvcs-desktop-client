@@ -20,7 +20,10 @@ export function itemHistoryTarget(workspacePath: string, path: string, revision?
   return revision ? `rev:${spec.revision(revision)}` : toAbsolutePath(workspacePath, path);
 }
 
-/** The item's revisions, moves and removals. */
+/**
+ * The item's revisions, moves and removals. XML, not records: `cm history --format` has no revision type, which
+ * tells a revision's kind (text, binary, directory) and a revision from a move or a removal.
+ */
 export function itemHistoryArgs(target: string): string[] {
   return onLinksThemselves('history', target, '--moveddeleted', '--xml');
 }
