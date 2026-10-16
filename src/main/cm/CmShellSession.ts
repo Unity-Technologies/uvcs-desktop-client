@@ -51,7 +51,7 @@ export class CmShellSession {
   private running: PendingCommand | null = null;
   /** The running command's output; output that comes while none runs goes nowhere. */
   private output: ShellCommandOutput = new TextOutput(TAIL_LENGTH);
-  /** Characters received so far, to tell whether output came in while a prompt timer was pending. */
+  /** Bytes received so far, to tell whether output came in while a prompt timer was pending. */
   private received = 0;
   private promptTimer: NodeJS.Timeout | null = null;
   private timeoutTimer: NodeJS.Timeout | null = null;
@@ -139,6 +139,8 @@ export class CmShellSession {
   }
 
   private onOutput(chunk: Buffer, stream: OutputStream): void {
+    // No command to answer: it would only end up in the next one's output, or count toward its limit.
+    if (!this.running) return;
     this.output.append(chunk, stream);
     // Past the limit a text output could never be read as one string: the command is stopped a chunk past it at most.
     if (this.output.length > this.maxOutputLength) {
@@ -147,7 +149,7 @@ export class CmShellSession {
     }
     this.received += chunk.length;
     this.watchForPrompt();
-    if (!this.running || !resultLineAtEnd(this.output.tail)) return;
+    if (!resultLineAtEnd(this.output.tail)) return;
 
     // A comment can hold a `CommandResult 0` line too (some teams' do): the real one is the last output, with nothing
     // more in the pipe. `setImmediate` lets output already waiting be read first.
