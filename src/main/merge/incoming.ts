@@ -12,9 +12,9 @@ import {
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
 import { DIFF_FORMAT, parseDiffEntries } from '../cm/diffEntries';
-import { FOUND_CHANGESETS, parseFound } from '../cm/foundObjects';
+import { FOUND_CHANGESETS } from '../cm/foundObjects';
 import { equalsCondition, findArgs } from '../cm/findQuery';
-import { parseRecords, recordFormat } from '../cm/formatRecords';
+import { parseRecords, readRecords, recordFormat } from '../cm/formatRecords';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { readWorkspaceLoad } from '../cm/workspaceStatus';
 import { findUpdateBlockers, findUpdateConflicts } from './updateCollisions';
@@ -120,6 +120,6 @@ export async function readIncomingChangesetPage(cm: CmClient, workspacePath: str
   const { branch, loadedChangeset, olderThan, limit } = request;
   const conditions = [`changesetid > ${loadedChangeset}`, ...(olderThan === undefined ? [] : [`changesetid < ${olderThan}`])];
   const output = await cm.query(findArgs(FOUND_CHANGESETS, { branch, limit: limit + 1 }, 'changesetid desc', conditions), { cwd: workspacePath });
-  const found = parseFound(FOUND_CHANGESETS, output);
+  const found = readRecords(FOUND_CHANGESETS, output);
   return { changesets: found.slice(0, limit), more: found.length > limit };
 }

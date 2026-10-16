@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FOUND_REVIEWS } from './codeReviewRecords';
-import { parseFound } from './foundObjects';
+import { readRecords } from './formatRecords';
 import { parseItemDetails } from './itemDetailsXml';
 import { parseLocks } from './lockRecords';
 import { parseTreeItems } from './treeItemsXml';
@@ -143,7 +143,7 @@ describe('code review records', () => {
       { id: 62, title: 'Changeset review', status: 'Status Reviewed', targettype: 'Changeset', target: 2 },
       { id: 63, title: 'Shelve review', status: 'Status Under review', targettype: 'Shelve', target: 3 },
     );
-    expect(parseFound(FOUND_REVIEWS, output)).toMatchObject([
+    expect(readRecords(FOUND_REVIEWS, output)).toMatchObject([
       { id: 60, status: 'Rework required', targetType: 'branch', targetId: 54, assignee: '' },
       { id: 62, status: 'Reviewed', targetType: 'changeset', targetId: 2 },
       { id: 63, status: 'Under review', targetType: 'shelve', targetId: 3 },

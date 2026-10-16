@@ -1,5 +1,6 @@
 import { CODE_REVIEW_STATUSES, type CodeReviewStatus, type CodeReviewSummary } from '@shared/domain/codeReview';
-import { foundObjects, integerValue } from './foundObjects';
+import { foundObjects } from './foundObjects';
+import { integerValue } from './formatRecords';
 
 /** A review as `cm find review` reports it; branch targets come as object ids (`id:54`) to be resolved. */
 export interface RawCodeReview extends CodeReviewSummary {

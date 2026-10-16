@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { parseRecords } from '../formatRecords';
-import { FOUND_BRANCHES, parseFound } from '../foundObjects';
+import { parseRecords, readRecords } from '../formatRecords';
+import { FOUND_BRANCHES } from '../foundObjects';
 import { extendedAclOutput, formatOutput, foundOutput } from './cmOutput';
 
 describe('synthetic cm output', () => {
@@ -9,7 +9,7 @@ describe('synthetic cm output', () => {
       ['1', 'a b'],
       ['2', 'ç'],
     ]);
-    expect(parseFound(FOUND_BRANCHES, foundOutput(FOUND_BRANCHES, { id: 3, name: '/main/a&b' }))).toMatchObject([{ id: 3, name: '/main/a&b', comment: '' }]);
+    expect(readRecords(FOUND_BRANCHES, foundOutput(FOUND_BRANCHES, { id: 3, name: '/main/a&b' }))).toMatchObject([{ id: 3, name: '/main/a&b', comment: '' }]);
   });
 
   it('indents cm showacl --extended as cm 11 does', () => {

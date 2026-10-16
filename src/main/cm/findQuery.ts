@@ -1,5 +1,6 @@
 import type { QueryFilter } from '@shared/domain/query';
-import { foundFormat, type FoundObjects } from './foundObjects';
+import { type FoundObjects } from './foundObjects';
+import { layoutFormat } from './formatRecords';
 
 /**
  * The `--dateformat` of every `cm find`: ISO 8601 round-trip dates (`2026-09-25T23:16:33.1234567+02:00`), which the
@@ -26,19 +27,19 @@ export function findCommand(object: string, query: string, format: string): stri
 }
 
 /**
- * Builds `cm find` arguments: `<object> "<where/order/limit>"`, printing the fields `found` reads (`parseFound`).
+ * Builds `cm find` arguments: `<object> "<where/order/limit>"`, printing the fields `found` reads (`readRecords`).
  * `orderBy` is null for objects `cm` cannot sort (shelves).
  */
 export function findArgs(found: FoundObjects<unknown>, filter: QueryFilter, orderBy: string | null, extraConditions: string[] = []): string[] {
   const order = orderBy ? ` order by ${orderBy}` : '';
   const limit = filter.limit ? ` limit ${filter.limit}` : '';
   const conditions = filter.text ? [...extraConditions, textCondition(found.object, filter.text)] : extraConditions;
-  return findCommand(found.object, `${whereClause(filter, conditions)}${order}${limit}`.trim(), foundFormat(found));
+  return findCommand(found.object, `${whereClause(filter, conditions)}${order}${limit}`.trim(), layoutFormat(found));
 }
 
 /** `cm find` arguments for the objects `found` reads that `query` keeps (`where …`), as written. */
 export function findWhereArgs(found: FoundObjects<unknown>, query: string): string[] {
-  return findCommand(found.object, query, foundFormat(found));
+  return findCommand(found.object, query, layoutFormat(found));
 }
 
 /** The field `QueryFilter.text` searches in, per object. */

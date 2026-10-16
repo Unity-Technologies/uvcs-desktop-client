@@ -3,13 +3,13 @@ import { MAX_LISTED_CODE_REVIEWS, type CodeReview, type CodeReviewFilter, type C
 import type { QueryFilter } from '@shared/domain/query';
 import { FOUND_REVIEWS, type RawCodeReview } from '../cm/codeReviewRecords';
 import { equalsCondition, findArgs } from '../cm/findQuery';
-import { parseFound } from '../cm/foundObjects';
+import { readRecords } from '../cm/formatRecords';
 import type { BranchNamesContext, ServiceContext } from './ServiceContext';
 
 export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }: BranchNamesContext): CodeReviewsApi {
   async function findReviews(workspacePath: string, conditions: string[], filter: QueryFilter): Promise<RawCodeReview[]> {
     const output = await cm.query(findArgs(FOUND_REVIEWS, filter, 'date desc', conditions), { cwd: workspacePath });
-    return parseFound(FOUND_REVIEWS, output);
+    return readRecords(FOUND_REVIEWS, output);
   }
 
   function findReviewById(workspacePath: string, reviewId: number): Promise<RawCodeReview[]> {

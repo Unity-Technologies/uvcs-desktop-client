@@ -1,6 +1,7 @@
 import type { AttributeType, AttributeValue } from '@shared/domain/attribute';
 import { repositorySpec } from '@shared/domain/specs';
-import { foundObjects, integerValue } from './foundObjects';
+import { foundObjects } from './foundObjects';
+import { integerValue } from './formatRecords';
 
 /** `cm find attributetype`: the attribute types of the repository. */
 export const FOUND_ATTRIBUTE_TYPES = foundObjects(

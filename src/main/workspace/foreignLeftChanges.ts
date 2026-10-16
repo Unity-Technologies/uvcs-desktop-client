@@ -4,7 +4,8 @@ import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { AUTOMATIC_SHELVE_CONDITION, automaticShelveComment } from '../cm/automaticShelve';
 import type { CmClient } from '../cm/CmClient';
 import { findWhereArgs } from '../cm/findQuery';
-import { FOUND_SHELVES, parseFound } from '../cm/foundObjects';
+import { FOUND_SHELVES } from '../cm/foundObjects';
+import { readRecords } from '../cm/formatRecords';
 import { selectorObjectRef } from './selectorObjectRef';
 import { describeSelector } from './switchSelectors';
 import { readShelveEntries } from './verifiedShelve';
@@ -12,7 +13,7 @@ import { readShelveEntries } from './verifiedShelve';
 /** The user's automatic shelves in the repository, whoever made them: this app, the official client or `cm switch`. */
 export async function readAutomaticShelves(cm: CmClient, workspacePath: string): Promise<Shelve[]> {
   const output = await cm.query(findWhereArgs(FOUND_SHELVES, `where owner = 'me' and ${AUTOMATIC_SHELVE_CONDITION}`), { cwd: workspacePath });
-  return parseFound(FOUND_SHELVES, output);
+  return readRecords(FOUND_SHELVES, output);
 }
 
 /**

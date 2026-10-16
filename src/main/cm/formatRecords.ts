@@ -22,6 +22,30 @@ export function parseRecords(output: string): string[][] {
     .map((record) => record.split(FIELD_SEPARATOR));
 }
 
+/** The fields a `--format` prints of each item, and what a record of them becomes. */
+export interface RecordLayout<T, Field extends string = string> {
+  fields: readonly Field[];
+  /** Gets each record's values by field name. */
+  read: (value: (field: Field) => string) => T;
+}
+
+/** The `--format` that prints the layout's fields as `readRecords` reads them. */
+export function layoutFormat(layout: RecordLayout<unknown>): string {
+  return `--format=${recordFormat(layout.fields)}`;
+}
+
+/** The items of an output printed through `layoutFormat`. */
+export function readRecords<T, Field extends string>({ fields, read }: RecordLayout<T, Field>, output: string): T[] {
+  const indexes = new Map(fields.map((field, index) => [field, index]));
+  return parseRecords(output).map((values) => read((field) => values[indexes.get(field)!] ?? ''));
+}
+
+/** A number `cm` printed; -1 where it printed none. */
+export function integerValue(value: string): number {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isNaN(parsed) ? -1 : parsed;
+}
+
 /** A value `cm` printed between double quotes (`cm diff`'s paths and repository), without them. */
 export function unquoted(value: string): string {
   return value.length >= 2 && value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1) : value;

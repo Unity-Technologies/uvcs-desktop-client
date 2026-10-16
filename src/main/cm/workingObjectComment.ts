@@ -1,7 +1,8 @@
 import type { SelectorKind, WorkspaceSelector } from '@shared/domain/workspace';
 import type { CmClient } from './CmClient';
 import { equalsCondition, findWhereArgs } from './findQuery';
-import { FOUND_BRANCHES, FOUND_CHANGESETS, FOUND_LABELS, FOUND_SHELVES, parseFound, type FoundObjects } from './foundObjects';
+import { FOUND_BRANCHES, FOUND_CHANGESETS, FOUND_LABELS, FOUND_SHELVES, type FoundObjects } from './foundObjects';
+import { readRecords } from './formatRecords';
 
 interface WorkingObjectQuery {
   /** Branches and labels have a name, which tells the object among those found; changesets and shelves a number. */
@@ -25,7 +26,7 @@ export function workingObjectFindArgs(selector: WorkspaceSelector): string[] {
 
 /** The comment of that object in the `cm find` output; empty when it has none or wasn't found (e.g. a hidden branch). */
 export function workingObjectCommentIn(output: string, selector: WorkspaceSelector): string {
-  const objects = parseFound(QUERIES[selector.kind].found, output);
+  const objects = readRecords(QUERIES[selector.kind].found, output);
   const isNamed = selector.kind === 'branch' || selector.kind === 'label';
   const object = isNamed ? objects.find((candidate) => candidate.name === selector.name) : objects[0];
   return object?.comment ?? '';
