@@ -40,7 +40,12 @@ describe('found objects', () => {
     const branch = readRecords(FOUND_BRANCHES, recordsOutput(FOUND_BRANCHES, { name: '/main/a', comment: '\n  Fix crash\n\n' }));
     const review = readRecords(FOUND_REVIEWS, recordsOutput(FOUND_REVIEWS, { id: 1, title: ' Review it ', status: 'Status Reviewed' }));
     const values = readRecords(FOUND_ATTRIBUTE_VALUES, recordsOutput(FOUND_ATTRIBUTE_VALUES, { name: 'notes', value: '- one\n' }));
-    const others = [FOUND_CHANGESETS, FOUND_LABELS, FOUND_SHELVES, FOUND_ATTRIBUTE_TYPES].map((found) => readRecords(found, recordsOutput(found, { comment: ' text\n' }))[0]?.comment);
+    const others = [
+      readRecords(FOUND_CHANGESETS, recordsOutput(FOUND_CHANGESETS, { comment: ' text\n' }))[0]?.comment,
+      readRecords(FOUND_LABELS, recordsOutput(FOUND_LABELS, { comment: ' text\n' }))[0]?.comment,
+      readRecords(FOUND_SHELVES, recordsOutput(FOUND_SHELVES, { comment: ' text\n' }))[0]?.comment,
+      readRecords(FOUND_ATTRIBUTE_TYPES, recordsOutput(FOUND_ATTRIBUTE_TYPES, { comment: ' text\n' }))[0]?.comment,
+    ];
     expect([branch[0]?.comment, branch[0]?.name, review[0]?.title, values[0]?.value, ...others]).toEqual(['Fix crash', '/main/a', 'Review it', '- one', 'text', 'text', 'text', 'text']);
   });
 
