@@ -1,5 +1,5 @@
 // The synthetic repository the fake `cm` answers from: a few objects of each kind, their fields named as `cm` names
-// them in `--format` and `find --xml` output. Small on purpose: the smoke test checks that views show, not what.
+// them in `--format` output. Small on purpose: the smoke test checks that views show, not what.
 
 const REPOSITORY = 'demo';
 const SERVER = 'local';
@@ -59,7 +59,7 @@ const SHELVES = [
 ];
 
 const REVIEWS = [
-  { id: 80, title: 'Review player movement', status: 'Under review', assignee: OWNER, targettype: 'branch', target: 'id:20', date: daysAgo(8), ...common },
+  { id: 80, title: 'Review player movement', status: 'Status Under review', codereviewstatus: 'CodeReviewStatus Under review', assignee: OWNER, targettype: 'branch', target: 'id:20', date: daysAgo(8), ...common },
 ];
 
 const ATTRIBUTE_TYPES = [{ id: 60, name: 'status', comment: 'Where the task is', date: daysAgo(30), ...common }];
