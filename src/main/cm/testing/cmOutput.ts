@@ -1,5 +1,6 @@
-import { FIELD_SEPARATOR, RECORD_SEPARATOR } from '../formatRecords';
+import { FIELD_SEPARATOR, RECORD_SEPARATOR, type RecordLayout } from '../formatRecords';
 import { findWhereArgs } from '../findQuery';
+import { TREE_ITEMS } from '../treeItems';
 import { FOUND_BRANCHES, FOUND_CHANGESETS, FOUND_SHELVES, type FoundObjects } from '../foundObjects';
 
 /**
@@ -18,11 +19,11 @@ export function foundLine(found: FoundObjects<unknown>, query: string): string {
 }
 
 /**
- * `cm find` output as `findArgs` asks it of `found`: each object's fields in the order its `--format` prints them, a
- * field left out printed empty.
+ * Output printed through a record layout's `--format` (`findArgs`, `TREE_ITEM_FORMAT`): each item's fields in the order
+ * it prints them, a field left out printed empty.
  */
-export function foundOutput<Field extends string>(found: FoundObjects<unknown, Field>, ...objects: Partial<Record<Field, string | number>>[]): string {
-  return formatOutput(...objects.map((object) => found.fields.map((field) => object[field] ?? '')));
+export function recordsOutput<Field extends string>(layout: RecordLayout<unknown, Field>, ...objects: Partial<Record<Field, string | number>>[]): string {
+  return formatOutput(...objects.map((object) => layout.fields.map((field) => object[field] ?? '')));
 }
 
 export const WORKSPACE_GUID = 'a0411612-d36e-4eca-b9b5-97acad5969ea';
@@ -99,7 +100,7 @@ const guidOf = (prefix: string, id: number): string => `${prefix}${String(id).pa
 
 /** `cm find branch …` (`FOUND_BRANCHES`) finding branches by name and object id. */
 export function branchesFound(...branches: { name: string; id: number }[]): string {
-  return foundOutput(
+  return recordsOutput(
     FOUND_BRANCHES,
     ...branches.map(({ name, id }) => ({
       id,
@@ -123,7 +124,7 @@ export function branchFound(name: string, id: number): string {
 
 /** `cm find changeset …` (`FOUND_CHANGESETS`) on `branch`, newest first as asked (`order by changesetid desc`). */
 export function changesetsFound(branch: string, ...changesets: { id: number; owner: string }[]): string {
-  return foundOutput(
+  return recordsOutput(
     FOUND_CHANGESETS,
     ...changesets.map(({ id, owner }) => ({
       changesetid: id,
@@ -141,7 +142,7 @@ export function changesetsFound(branch: string, ...changesets: { id: number; own
 
 /** `cm find shelve …` (`FOUND_SHELVES`) finding shelves by number and comment. */
 export function shelvesFound(...shelves: { id: number; comment: string }[]): string {
-  return foundOutput(
+  return recordsOutput(
     FOUND_SHELVES,
     ...shelves.map(({ id, comment }) => ({
       shelveid: id,
@@ -171,15 +172,12 @@ export function mergeOutput(...records: string[][]): string {
   return records.map((fields) => fields.join(FIELD_SEPARATOR)).join('\n') + '\n';
 }
 
-/** `cm ls <paths> --tree=… --xml` listing items of `repository`. */
+/** `cm ls <paths> --tree=… --format=TREE_ITEM_FORMAT` listing text files of `repository`, by their server paths. */
 export function treeListing(repository: string, ...paths: string[]): string {
-  const items = paths
-    .map(
-      (path) =>
-        `<LsItem><Status>Controlled</Status><Name>${path.split('/').pop()}</Name><WkPath>/${path}</WkPath><Type>txt</Type><Changeset>3</Changeset><Repository>rep:${repository}</Repository><RevId>40</RevId><ItemId>30</ItemId></LsItem>`,
-    )
-    .join('');
-  return `<?xml version="1.0" encoding="utf-8"?><LsResults><LsItems>${items}</LsItems></LsResults>`;
+  return recordsOutput(
+    TREE_ITEMS,
+    ...paths.map((path) => ({ name: path.split('/').pop(), wkpath: `/${path}`, type: 'txt', size: 3, changeset: 3, repspec: `rep:${repository}`, revid: 40, itemid: 30 })),
+  );
 }
 
 type AclOutputCategory = 'Allowed' | 'Denied' | 'Override Allowed' | 'Override Denied';
@@ -234,7 +232,7 @@ export function treeListingOutput(...items: ListedRecord[]): string {
   );
 }
 
-/** An item of a workspace's `cm ls <folder> --xml`: the revision it was loaded from (its size and hash), or a checkout's -1. */
+/** An item of a workspace's `cm ls <folder>`: the revision it was loaded from (its size and hash), or a checkout's -1. */
 export interface WorkspaceListedRecord {
   path: string;
   revid: number;
@@ -245,15 +243,26 @@ export interface WorkspaceListedRecord {
 }
 
 /**
- * A workspace's `cm ls <folder> --xml`, trimmed, as `cm` prints it: the folder itself as `.`, `WkPath`s relative with
- * the OS's separators, and each file's `Size` and `Hash` its loaded revision's, never the disk's (a checkout has none).
+ * A workspace's `cm ls <folder> --format=TREE_ITEM_FORMAT` as `cm` prints it: the folder itself as `.`, `{wkpath}`s
+ * relative with the OS's separators, and each file's `{size}` and `{hash}` its loaded revision's, never the disk's (a
+ * checkout has no revision).
  */
-export function workspaceListingXml(folder: string, ...items: WorkspaceListedRecord[]): string {
-  const item = ({ path, revid, size, hash, repository = 'eco@local', checkedOut = false }: WorkspaceListedRecord) =>
-    `<LsItem><Status>Controlled</Status><Name>${path.split('/').pop()}</Name><WkPath>${path}</WkPath><Size>${size}</Size><Type>bin</Type>` +
-    `<Changeset>21</Changeset><Repository>rep:${repository}</Repository><Checkout>${checkedOut ? 'CO' : ''}</Checkout>` +
-    `<RevId>${checkedOut ? -1 : revid}</RevId><ParentRevId>${revid - 1}</ParentRevId><ItemId>${revid + 1000}</ItemId><Hash>${hash}</Hash>` +
-    '<HashAlgorithm>MD5</HashAlgorithm><Branch>/main</Branch><Date>2026-10-15T14:24:03+02:00</Date></LsItem>';
-  const self = `<LsItem><Status>Controlled</Status><Name>.</Name><WkPath>${folder}</WkPath><Type>dir</Type><RevId>1</RevId></LsItem>`;
-  return `<?xml version="1.0" encoding="utf-8"?>\n<LsResults><LsItems>${self}${items.map(item).join('')}</LsItems></LsResults>`;
+export function workspaceListingOutput(folder: string, ...items: WorkspaceListedRecord[]): string {
+  const item = ({ path, revid, size, hash, repository = 'eco@local', checkedOut = false }: WorkspaceListedRecord) => ({
+    name: path.split(/[\\/]/).pop(),
+    wkpath: path,
+    type: 'bin',
+    size,
+    'date:o': '2026-10-15T14:24:03.0000000+02:00',
+    checkout: checkedOut ? 'CO' : '',
+    changeset: checkedOut ? -1 : 21,
+    branch: '/main',
+    owner: 'me',
+    revid: checkedOut ? -1 : revid,
+    parentrevid: revid - 1,
+    repspec: `rep:${repository}`,
+    itemid: revid + 1000,
+    hash,
+  });
+  return recordsOutput(TREE_ITEMS, { name: '.', wkpath: folder, type: 'dir', size: 0, revid: 1 }, ...items.map(item));
 }

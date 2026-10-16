@@ -2,7 +2,7 @@ import type { MergePlan, MergeRequest } from '@shared/domain/merge';
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
 import type { PrintedMergePlan } from '../cm/mergeOutput';
-import { parseTreeItems, type ListedTreeItem } from '../cm/treeItemsXml';
+import { parseTreeItems, TREE_ITEM_FORMAT, type ListedTreeItem } from '../cm/treeItems';
 import { readWorkspaceLoad } from '../cm/workspaceStatus';
 import { revisionFilesOf, type WorkspaceCopies } from '../files/WorkspaceCopies';
 
@@ -47,10 +47,10 @@ async function loadedTree(cm: CmClient, workspacePath: string): Promise<string> 
 
 /** `cm ls` of the conflicting files in `tree`. */
 export function conflictListingArgs(plan: PrintedMergePlan, tree: string): string[] {
-  return ['ls', ...plan.fileConflicts.map((conflict) => conflict.path), `--tree=${tree}`, '--xml'];
+  return ['ls', ...plan.fileConflicts.map((conflict) => conflict.path), `--tree=${tree}`, TREE_ITEM_FORMAT];
 }
 
-/** Completes the plan's conflicts with the repositories, revisions and types `cm ls --xml` listed for their paths. */
+/** Completes the plan's conflicts with the repositories, revisions and types `cm ls` listed for their paths. */
 export function withRepositories(plan: PrintedMergePlan, listed: readonly ListedTreeItem[]): MergePlan {
   const byPath = new Map(listed.map((item) => [item.path, item]));
   return {

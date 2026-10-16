@@ -4,7 +4,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { ContentSource } from '@shared/domain/content';
 import type { MergeRequest } from '@shared/domain/merge';
-import { mergeOutput, statusHeader, treeListing } from '../cm/testing/cmOutput';
+import { mergeOutput, recordsOutput, statusHeader, treeListing } from '../cm/testing/cmOutput';
+import { TREE_ITEM_FORMAT, TREE_ITEMS } from '../cm/treeItems';
 import { fakeCat } from '../cm/testing/fakeCat';
 import { cmFails, fakeCmClient } from '../cm/testing/fakeCmClient';
 import { contentHashOf, WorkspaceCopies } from '../files/WorkspaceCopies';
@@ -50,7 +51,7 @@ describe('previewMerge', () => {
 
     const plan = await previewMerge(cm, '/work', FROM_TASK);
     expect(plan.fileConflicts).toEqual([expect.objectContaining({ path: '/src/a.txt', repository: 'lib@local' })]);
-    expect(lines().filter((line) => line.startsWith('ls'))).toEqual(['ls /src/a.txt --tree=cs:4 --xml']);
+    expect(lines().filter((line) => line.startsWith('ls'))).toEqual([`ls /src/a.txt --tree=cs:4 ${TREE_ITEM_FORMAT}`]);
   });
 
   it('lists the files in the loaded changeset when cm printed no contributors', async () => {
@@ -62,7 +63,7 @@ describe('previewMerge', () => {
     });
 
     await previewMerge(cm, '/work', FROM_TASK);
-    expect(lines()).toContain('ls /src/a.txt --tree=cs:9 --xml');
+    expect(lines()).toContain(`ls /src/a.txt --tree=cs:9 ${TREE_ITEM_FORMAT}`);
   });
 
   it('explains a silent failure with what the plain merge says', async () => {
@@ -88,14 +89,12 @@ describe('previewMerge', () => {
 
 describe("the merge page reading the destination's versions", () => {
   const md5 = (text: string) => contentHashOf(Buffer.from(text));
-  /** `cm ls <paths> --tree=cs:4 --xml`: each conflicting file's revision in the destination, with its size and hash. */
+  /** `cm ls <paths> --tree=cs:4 --format=TREE_ITEM_FORMAT`: each conflicting file's revision in the destination, with its size and hash. */
   const listing = (...files: { path: string; revid: number; text: string }[]) =>
-    `<?xml version="1.0" encoding="utf-8"?><LsResults><LsItems>${files
-      .map(
-        ({ path, revid, text }) =>
-          `<LsItem><Status>Controlled</Status><Name>${path.split('/').pop()}</Name><WkPath>/${path}</WkPath><Size>${text.length}</Size><Type>txt</Type><Changeset>4</Changeset><Repository>rep:eco@local</Repository><RevId>${revid}</RevId><ItemId>30</ItemId><Hash>${md5(text)}</Hash></LsItem>`,
-      )
-      .join('')}</LsItems></LsResults>`;
+    recordsOutput(
+      TREE_ITEMS,
+      ...files.map(({ path, revid, text }) => ({ name: path.split('/').pop(), wkpath: `/${path}`, size: text.length, type: 'txt', changeset: 4, repspec: 'rep:eco@local', revid, itemid: 30, hash: md5(text) })),
+    );
   /** The destination's version as the merge page asks for it (`conflictedFilesOf`): by its revision. */
   const destinationOf = ({ path, repository, destinationRevisionId }: { path: string; repository: string; destinationRevisionId: number }): ContentSource => ({
     kind: 'revision',

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { FOUND_BRANCHES, FOUND_LABELS } from '../cm/foundObjects';
-import { branchesFound, foundLine, foundOutput } from '../cm/testing/cmOutput';
+import { branchesFound, foundLine, recordsOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient } from '../cm/testing/fakeCmClient';
 import { selectorObjectRef } from './selectorObjectRef';
 
-const LABEL_V1 = foundOutput(FOUND_LABELS, { id: 812, name: 'v1', changeset: 12, branch: '/main', owner: 'me', date: '2026-09-25T23:16:33.0000000+02:00', repname: 'eco', repserver: 'local' });
+const LABEL_V1 = recordsOutput(FOUND_LABELS, { id: 812, name: 'v1', changeset: 12, branch: '/main', owner: 'me', date: '2026-09-25T23:16:33.0000000+02:00', repname: 'eco', repserver: 'local' });
 
 describe('selectorObjectRef', () => {
   it('names a changeset by its number, asking nothing', async () => {

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { findWhereArgs } from './findQuery';
 import { FOUND_BRANCHES, FOUND_CHANGESETS, FOUND_LABELS } from './foundObjects';
-import { foundOutput } from './testing/cmOutput';
+import { recordsOutput } from './testing/cmOutput';
 import { workingObjectCommentIn, workingObjectFindArgs } from './workingObjectComment';
 
-const branches = foundOutput(FOUND_BRANCHES, { name: '/main/task', comment: 'Old task' }, { name: '/main/fixes/task', comment: 'Report exceptions via telemetry' });
+const branches = recordsOutput(FOUND_BRANCHES, { name: '/main/task', comment: 'Old task' }, { name: '/main/fixes/task', comment: 'Report exceptions via telemetry' });
 
 describe('workingObjectFindArgs', () => {
   it('finds a branch by its last segment', () => {
@@ -29,7 +29,7 @@ describe('workingObjectCommentIn', () => {
   });
 
   it('takes only the label of that very name, not another the wildcard for a quote matched', () => {
-    const labels = foundOutput(FOUND_LABELS, { name: 'v1-rc', comment: 'Another' });
+    const labels = recordsOutput(FOUND_LABELS, { name: 'v1-rc', comment: 'Another' });
     expect(workingObjectCommentIn(labels, { kind: 'label', name: "v1'rc" })).toBe('');
     expect(workingObjectCommentIn(labels, { kind: 'label', name: 'v1-rc' })).toBe('Another');
   });
@@ -52,7 +52,7 @@ describe('workingObjectCommentIn', () => {
 
 describe('the comment of a changeset', () => {
   it('reads the one changeset found, its comment as cm keeps it', () => {
-    const output = foundOutput(FOUND_CHANGESETS, { changesetid: 42, comment: '"Quoted"\nand multi-line' });
+    const output = recordsOutput(FOUND_CHANGESETS, { changesetid: 42, comment: '"Quoted"\nand multi-line' });
     expect(workingObjectCommentIn(output, { kind: 'changeset', name: '42' })).toBe('"Quoted"\nand multi-line');
   });
 });

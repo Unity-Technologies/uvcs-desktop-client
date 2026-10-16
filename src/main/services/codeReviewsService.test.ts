@@ -5,7 +5,7 @@ import { BranchNamesCache } from '../cm/BranchNamesCache';
 import { readBranchNames } from '../cm/branchNames';
 import { FOUND_REVIEWS } from '../cm/codeReviewRecords';
 import { findWhereArgs, roundTripDate } from '../cm/findQuery';
-import { formatOutput, foundLine, foundOutput } from '../cm/testing/cmOutput';
+import { formatOutput, foundLine, recordsOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createCodeReviewsService } from './codeReviewsService';
 import { serviceContext } from './testing/serviceContext';
@@ -43,7 +43,7 @@ const EVERY_BRANCH_NAME: Record<string, CmAnswer> = {
 
 describe('code review list', () => {
   it('lists the newest reviews with one cm find, filtered on the server', async () => {
-    const { service, commands } = codeReviews({ 'find review': foundOutput(FOUND_REVIEWS, ON_CHANGESET) });
+    const { service, commands } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_CHANGESET) });
 
     await service.list(WORKSPACE, { assignedToMe: true, status: 'Reviewed', owners: ['ana'], sinceDate: '2026-09-01', text: 'fix' });
 
@@ -61,7 +61,7 @@ describe('code review list', () => {
 
   it('names each target: changesets and shelves by number, branches by the names of every branch, read once', async () => {
     const { service, lines } = codeReviews({
-      'find review': foundOutput(FOUND_REVIEWS, ON_TASK1, ON_CHANGESET, ON_SHELVE, ON_DELETED_BRANCH),
+      'find review': recordsOutput(FOUND_REVIEWS, ON_TASK1, ON_CHANGESET, ON_SHELVE, ON_DELETED_BRANCH),
       ...EVERY_BRANCH_NAME,
     });
 
@@ -80,7 +80,7 @@ describe('code review list', () => {
   });
 
   it('asks nothing more when the branch lists already read name every target', async () => {
-    const { service, branchNames, lines } = codeReviews({ 'find review': foundOutput(FOUND_REVIEWS, ON_TASK1) });
+    const { service, branchNames, lines } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_TASK1) });
     branchNames.remember(WORKSPACE, [{ id: 37, name: '/main/task1' }]);
 
     const [listed] = await service.list(WORKSPACE, {});
@@ -90,7 +90,7 @@ describe('code review list', () => {
   });
 
   it('lists summaries with branch targets by id, never reading branch names', async () => {
-    const { service, lines } = codeReviews({ 'find review': foundOutput(FOUND_REVIEWS, ON_TASK1, ON_CHANGESET) });
+    const { service, lines } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_TASK1, ON_CHANGESET) });
 
     const summaries = await service.listSummaries(WORKSPACE, {});
 
@@ -101,7 +101,7 @@ describe('code review list', () => {
 
 describe('one code review', () => {
   it('reads a review by id', async () => {
-    const { service, lines } = codeReviews({ 'find review': foundOutput(FOUND_REVIEWS, ON_CHANGESET) });
+    const { service, lines } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_CHANGESET) });
 
     expect(await service.get(WORKSPACE, 6)).toMatchObject({ id: 6, title: 'Review 6', status: 'Under review', target: { kind: 'changeset' } });
     expect(lines()).toEqual([foundLine(FOUND_REVIEWS, 'where id = 6 order by date desc')]);
@@ -131,7 +131,7 @@ describe('code review writes', () => {
   });
 
   it('checks that a status change took, as cm ignores it on reviews nobody is assigned to', async () => {
-    const { service, lines } = codeReviews({ 'codereview -e': '', 'find review': foundOutput(FOUND_REVIEWS, review(6, 'Changeset', '120', 'Reviewed')) });
+    const { service, lines } = codeReviews({ 'codereview -e': '', 'find review': recordsOutput(FOUND_REVIEWS, review(6, 'Changeset', '120', 'Reviewed')) });
 
     await service.update(WORKSPACE, 6, { status: 'Reviewed' });
 
@@ -139,7 +139,7 @@ describe('code review writes', () => {
   });
 
   it('fails when cm left the status as it was', async () => {
-    const { service } = codeReviews({ 'codereview -e': '', 'find review': foundOutput(FOUND_REVIEWS, review(6, 'Changeset', '120', 'Under review')) });
+    const { service } = codeReviews({ 'codereview -e': '', 'find review': recordsOutput(FOUND_REVIEWS, review(6, 'Changeset', '120', 'Under review')) });
 
     await expect(service.update(WORKSPACE, 6, { status: 'Reviewed' })).rejects.toThrow(
       new Error("The status didn't change: a review nobody is assigned to keeps its status. Assign the review, then try again."),

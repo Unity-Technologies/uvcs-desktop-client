@@ -6,7 +6,7 @@ import { MAIN_BRANCH_GUID } from '@shared/domain/branch';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
 import { findWhereArgs, roundTripDate } from '../cm/findQuery';
 import { FOUND_BRANCHES } from '../cm/foundObjects';
-import { branchesFound, formatOutput, foundLine, foundOutput } from '../cm/testing/cmOutput';
+import { branchesFound, formatOutput, foundLine, recordsOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { SettingsStore } from '../settings/SettingsStore';
 import { cmHeaderReaders, WorkspaceHeaders } from '../workspace/WorkspaceHeaders';
@@ -51,7 +51,7 @@ const visibleOrHidden =
 
 describe('branch list', () => {
   it('lists visible branches with one quick cm find, newest first', async () => {
-    const { service, commands } = branches({ 'find branch': foundOutput(FOUND_BRANCHES, TASK2, TASK1) });
+    const { service, commands } = branches({ 'find branch': recordsOutput(FOUND_BRANCHES, TASK2, TASK1) });
 
     const listed = await service.list(WORKSPACE, { includeHidden: false });
 
@@ -65,7 +65,7 @@ describe('branch list', () => {
   });
 
   it('reads hidden branches with a second query only when asked, flagged and merged by date', async () => {
-    const { service, lines } = branches({ 'find branch': visibleOrHidden(foundOutput(FOUND_BRANCHES, TASK2, TASK1), foundOutput(FOUND_BRANCHES, OLD_HIDDEN)) });
+    const { service, lines } = branches({ 'find branch': visibleOrHidden(recordsOutput(FOUND_BRANCHES, TASK2, TASK1), recordsOutput(FOUND_BRANCHES, OLD_HIDDEN)) });
 
     const listed = await service.list(WORKSPACE, { includeHidden: true });
 
@@ -91,7 +91,7 @@ describe('branch list', () => {
   });
 
   it('remembers the names it listed, so code reviews name their branches without asking cm', async () => {
-    const { service, branchNames, commands } = branches({ 'find branch': foundOutput(FOUND_BRANCHES, TASK2, TASK1) });
+    const { service, branchNames, commands } = branches({ 'find branch': recordsOutput(FOUND_BRANCHES, TASK2, TASK1) });
 
     await service.list(WORKSPACE, { includeHidden: false });
 
@@ -108,7 +108,7 @@ describe('branch list', () => {
 describe('one branch by name', () => {
   it('finds a branch by its last name part among visible and hidden ones, and picks the one with the full name', async () => {
     const { service, lines } = branches({
-      'find branch': visibleOrHidden(foundOutput(FOUND_BRANCHES, TASK1, OTHER_TASK1), ''),
+      'find branch': visibleOrHidden(recordsOutput(FOUND_BRANCHES, TASK1, OTHER_TASK1), ''),
     });
 
     const branch = await service.get(WORKSPACE, '/main/fix/task1');
@@ -121,7 +121,7 @@ describe('one branch by name', () => {
   });
 
   it('finds a hidden branch, flagged as such', async () => {
-    const { service } = branches({ 'find branch': visibleOrHidden('', foundOutput(FOUND_BRANCHES, OLD_HIDDEN)) });
+    const { service } = branches({ 'find branch': visibleOrHidden('', recordsOutput(FOUND_BRANCHES, OLD_HIDDEN)) });
 
     expect(await service.get(WORKSPACE, '/main/old')).toMatchObject({ id: 21, isHidden: true });
   });

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { formatOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import type { WorkspaceChange } from '@shared/domain/workspaceChange';
-import type { ListedTreeItem } from '../cm/treeItemsXml';
+import type { ListedTreeItem } from '../cm/treeItems';
 import { contentHashOf, revisionFilesOf, WorkspaceCopies, type RevisionFile } from './WorkspaceCopies';
 
 const hashOf = (text: string) => contentHashOf(Buffer.from(text));

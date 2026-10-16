@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { findWhereArgs } from '../cm/findQuery';
 import { FOUND_LABELS } from '../cm/foundObjects';
-import { foundOutput } from '../cm/testing/cmOutput';
+import { recordsOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createLabelsService } from './labelsService';
 import { readingFileOption } from './testing/readingFileOption';
@@ -21,7 +21,7 @@ const V1 = { id: 80, name: 'v1.0', changeset: 12, branch: '/main', comment: 'Fir
 
 describe('labels', () => {
   it('lists labels newest first with one cm find, filtered on the server', async () => {
-    const { service, commands } = labels({ 'find label': foundOutput(FOUND_LABELS, V1) });
+    const { service, commands } = labels({ 'find label': recordsOutput(FOUND_LABELS, V1) });
 
     const listed = await service.list(WORKSPACE, { text: 'v1', limit: 20 });
 

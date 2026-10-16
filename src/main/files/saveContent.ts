@@ -6,7 +6,7 @@ import { listsTree, spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
 import { isNotInTreeError } from '../cm/missingItem';
 import { removedItemSpec } from '../cm/removedItemSpec';
-import { parseTreeItems } from '../cm/treeItemsXml';
+import { parseTreeItems, TREE_ITEM_FORMAT } from '../cm/treeItems';
 import type { WorkspaceCopies } from './WorkspaceCopies';
 import { toAbsolutePath } from './workspacePaths';
 
@@ -96,7 +96,7 @@ async function saveRepositoryPath(cm: CmClient, workspacePath: string, path: str
  */
 async function saveFromTree(cm: CmClient, workspacePath: string, path: string, at: string, target: string): Promise<void> {
   if (!listsTree(at)) throw new Error(`${path} is under an xlink, which ${at} can't be read through`);
-  const listed = await cm.query(['ls', path, `--tree=${at}`, '--xml'], { cwd: workspacePath });
+  const listed = await cm.query(['ls', path, `--tree=${at}`, TREE_ITEM_FORMAT], { cwd: workspacePath });
   const item = parseTreeItems(listed).find((candidate) => `/${candidate.path}` === path);
   if (!item || item.revisionId < 0) throw new Error(`${path} isn't in the tree at ${at}`);
   await saveRevision(cm, workspacePath, spec.revision(item), target);

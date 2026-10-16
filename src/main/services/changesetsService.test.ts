@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { findWhereArgs, roundTripDate } from '../cm/findQuery';
 import { FOUND_CHANGESETS } from '../cm/foundObjects';
-import { foundLine, foundOutput } from '../cm/testing/cmOutput';
+import { foundLine, recordsOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createChangesetsService } from './changesetsService';
 import { serviceContext } from './testing/serviceContext';
@@ -31,7 +31,7 @@ function changesets(answers: Record<string, CmAnswer>) {
 
 describe('changesets', () => {
   it('lists changesets newest first with one cm find, filtered on the server', async () => {
-    const { service, commands } = changesets({ 'find changeset': foundOutput(FOUND_CHANGESETS, changesetRecord(12), changesetRecord(11)) });
+    const { service, commands } = changesets({ 'find changeset': recordsOutput(FOUND_CHANGESETS, changesetRecord(12), changesetRecord(11)) });
 
     const listed = await service.list(WORKSPACE, { branch: '/main/task1', sinceDate: '2026-09-01', limit: 100 });
 
@@ -49,7 +49,7 @@ describe('changesets', () => {
   });
 
   it('reads one changeset, in another repository when it names one (an xlinked item)', async () => {
-    const { service, lines } = changesets({ 'find changeset': foundOutput(FOUND_CHANGESETS, changesetRecord(7, 'lib')) });
+    const { service, lines } = changesets({ 'find changeset': recordsOutput(FOUND_CHANGESETS, changesetRecord(7, 'lib')) });
 
     await service.get(WORKSPACE, 7);
     const xlinked = await service.get(WORKSPACE, 7, 'lib@local');
