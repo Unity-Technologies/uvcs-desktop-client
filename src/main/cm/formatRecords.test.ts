@@ -1,10 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { parseRecords, recordFormat } from './formatRecords';
+import { layoutReader, parseRecords, readRecords, recordFormat } from './formatRecords';
 import { formatOutput } from './testing/cmOutput';
 
 describe('recordFormat', () => {
   it('ends each field and record with a control character', () => {
     expect(recordFormat(['id', 'date:o'])).toBe('{id}\u001f{date:o}\u001e');
+  });
+});
+
+describe('readRecords', () => {
+  const NAMED = { fields: ['id', 'name'], read: (value: (field: string) => string) => (value('name') === '.' ? undefined : `${value('id')}:${value('name')}`) };
+
+  it('reads each record by field name, and leaves out those its layout reads as nothing', () => {
+    expect(readRecords(NAMED, formatOutput(['1', '.'], ['2', 'a'], ['3']))).toEqual(['2:a', '3:']);
+    expect(layoutReader(NAMED)(['4', 'b'])).toBe('4:b');
   });
 });
 

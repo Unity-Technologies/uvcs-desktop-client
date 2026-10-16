@@ -36,9 +36,9 @@ const TREE_ITEM_FIELDS = ['name', 'wkpath', 'type', 'size', 'date:o', 'checkout'
 
 type TreeItemField = (typeof TREE_ITEM_FIELDS)[number];
 
-export const TREE_ITEMS: RecordLayout<ListedTreeItem | null, TreeItemField> = {
+export const TREE_ITEMS: RecordLayout<ListedTreeItem, TreeItemField> = {
   fields: TREE_ITEM_FIELDS,
-  read: (value) => (value('name') === '.' ? null : treeItem(value)),
+  read: (value) => (value('name') === '.' ? undefined : treeItem(value)),
 };
 
 /** The `--format` of every `cm ls` read with `parseTreeItems`. */
@@ -53,7 +53,7 @@ export const TREE_ITEM_FORMAT = layoutFormat(TREE_ITEMS);
  * children and paths included.
  */
 export function parseTreeItems(output: string): ListedTreeItem[] {
-  return readRecords(TREE_ITEMS, output).filter((item) => item !== null);
+  return readRecords(TREE_ITEMS, output);
 }
 
 function treeItem(value: (field: TreeItemField) => string): ListedTreeItem {

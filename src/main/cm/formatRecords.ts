@@ -27,11 +27,14 @@ function withLf(text: string): string {
   return text.includes('\r') ? text.replaceAll('\r\n', '\n') : text;
 }
 
-/** The fields a `--format` prints of each item, and what a record of them becomes. */
+/** What one record's values become; `undefined` leaves the record out. */
+export type ReadRecord<T> = (fields: string[]) => T | undefined;
+
+/** The fields a `--format` prints of each item, and what a record of them becomes (`undefined`: none). */
 export interface RecordLayout<T, Field extends string = string> {
   fields: readonly Field[];
   /** Gets each record's values by field name. */
-  read: (value: (field: Field) => string) => T;
+  read: (value: (field: Field) => string) => T | undefined;
 }
 
 /** The `--format` that prints the layout's fields as `readRecords` reads them. */
@@ -39,10 +42,19 @@ export function layoutFormat(layout: RecordLayout<unknown>): string {
   return `--format=${recordFormat(layout.fields)}`;
 }
 
-/** The items of an output printed through `layoutFormat`. */
-export function readRecords<T, Field extends string>({ fields, read }: RecordLayout<T, Field>, output: string): T[] {
+/** Reads a record printed through `layoutFormat`, by field name: the field indexes are found once, not per record. */
+export function layoutReader<T, Field extends string>({ fields, read }: RecordLayout<T, Field>): ReadRecord<T> {
   const indexes = new Map(fields.map((field, index) => [field, index]));
-  return parseRecords(output).map((values) => read((field) => values[indexes.get(field)!] ?? ''));
+  return (values) => read((field) => values[indexes.get(field)!] ?? '');
+}
+
+/** The items of an output printed through `layoutFormat`. */
+export function readRecords<T, Field extends string>(layout: RecordLayout<T, Field>, output: string): T[] {
+  const read = layoutReader(layout);
+  return parseRecords(output).flatMap((values) => {
+    const item = read(values);
+    return item === undefined ? [] : [item];
+  });
 }
 
 /** A number `cm` printed; -1 where it printed none. */
