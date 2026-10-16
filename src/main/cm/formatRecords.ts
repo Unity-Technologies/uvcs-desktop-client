@@ -104,9 +104,11 @@ export class RecordReader<T> {
     return withLf(bytes.toString('utf8', lineBreakLength(bytes, 0, bytes.length)));
   }
 
-  /** The rows read, `trailing` read as one more record when there is any: a last record printed without its separator. */
-  finish(trailing: string): T[] {
-    if (trailing) this.read(Buffer.from(`${trailing}${RECORD_SEPARATOR}`, 'utf8'));
+  /**
+   * The rows read. Text after the last record is no record (`takeRest`): every `recordFormat` record ends with its
+   * separator, so what follows is what `cm` printed besides them, a warning or an error.
+   */
+  finish(): T[] {
     return this.rows;
   }
 

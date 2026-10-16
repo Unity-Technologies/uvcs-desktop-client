@@ -173,11 +173,14 @@ export class CmClient {
     return this.shellPool.isReady(cwd);
   }
 
-  /** Runs the command with its records read by `readRecord`; what it prints besides them is its output, for its failure. */
+  /**
+   * Runs the command with its records read by `readRecord`. What it printed besides them (its stderr, text after the
+   * last record) is its output, which explains its failure and is no record.
+   */
   private async runRecords<T>(args: string[], readRecord: ReadRecord<T>, options: CmRecordsOptions, useShell: boolean): Promise<T[]> {
     const records = new RecordReader(readRecord);
-    const trailing = await this.run(args, options, useShell, records);
-    return records.finish(trailing);
+    await this.run(args, options, useShell, records);
+    return records.finish();
   }
 
   /** Runs `cm <args>`, logs it and fails on an exit code other than 0; with `records`, its records go there as they arrive. */
