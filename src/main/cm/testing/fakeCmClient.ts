@@ -1,9 +1,13 @@
-import type { CmClient, CmRunOptions } from '../CmClient';
+import type { CmClient, CmRecordsOptions, CmRunOptions } from '../CmClient';
 import { CmError } from '../CmError';
 import { extractErrorMessage } from '../errorMessage';
+import { RecordReader, type ReadRecord } from '../formatRecords';
 import { namesOrganizationById } from '../organizationIds';
 
-/** How a command reached `cm`: a pooled `cm shell` (`query`) or a process of its own (`execute`). */
+/**
+ * How a command reached `cm`: as a quick one, a pooled `cm shell` (`query`, `queryRecords`), or as a long one, a process
+ * of its own (`execute`, `executeRecords`).
+ */
 type CmVia = 'query' | 'execute';
 
 export interface FakeCmCommand {
@@ -12,6 +16,8 @@ export interface FakeCmCommand {
   /** The arguments joined by spaces, as the command log shows them without `cm`: `find branch --xml`. */
   line: string;
   options: CmRunOptions;
+  /** Whether its output was read into records as it arrived (`queryRecords`, `executeRecords`), not as one string. */
+  readsRecords: boolean;
 }
 
 /** What a command prints, exactly as `cm` prints it; a function answers from the command (and may read its files). */
@@ -63,8 +69,8 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
   const shown: string[] = [];
   const keys = Object.keys(answers).sort((a, b) => b.length - a.length);
 
-  async function run(via: CmVia, args: string[], options: CmRunOptions = {}): Promise<string> {
-    const command: FakeCmCommand = { via, args, line: args.join(' '), options };
+  async function run(via: CmVia, args: string[], options: CmRunOptions = {}, readsRecords = false): Promise<string> {
+    const command: FakeCmCommand = { via, args, line: args.join(' '), options, readsRecords };
     commands.push(command);
     if (namesOrganizationById(args)) throw new Error(`A Unity organization's server by its id reached cm (take it from an output that names it): cm ${command.line}`);
     const key = keys.find((candidate) => startsWithWords(command.line, candidate));
@@ -75,10 +81,20 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
     return result;
   }
 
+  async function runRecords<T>(via: CmVia, args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions): Promise<T[]> {
+    const output = await run(via, args, options, true);
+    // Read as `CmClient` reads them: as they arrive, text after the last record no record.
+    const records = new RecordReader(readRecord);
+    records.read(Buffer.from(output, 'utf8'));
+    return records.finish();
+  }
+
   const fake = {
     executable,
     query: (args: string[], options?: CmRunOptions) => run('query', args, options),
     execute: (args: string[], options?: CmRunOptions) => run('execute', args, options),
+    queryRecords: <T>(args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions) => runRecords('query', args, readRecord, options),
+    executeRecords: <T>(args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions) => runRecords('execute', args, readRecord, options),
     warmUp: (cwd = '') => void warmedUp.push(cwd),
     show: (cwd: string) => void shown.push(cwd),
     release: (cwd: string) => void released.push(cwd),

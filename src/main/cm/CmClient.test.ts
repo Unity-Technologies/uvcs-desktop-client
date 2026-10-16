@@ -7,7 +7,9 @@ import { CmShellPool } from './CmShellPool';
 import { CmError } from './CmError';
 import { MAX_LOGGED_COMMAND_LINE } from '@shared/clipForLog';
 import type { CmResult } from './CmResult';
+import { RecordReader } from './formatRecords';
 import { CmOutputTooLargeError } from './outputLimit';
+import { formatOutput } from './testing/cmOutput';
 import { MAX_QUICK_WRITE_PATHS } from './longCommands';
 import type { CmProcessOptions } from './runCmProcess';
 import { SHELL_ARGS } from './shellCommandLine';
@@ -31,15 +33,15 @@ function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer
   const runners: CmRunners = {
     runProcess: async (cmPath, args, options) => {
       processes.push({ cmPath, args, options });
-      return answer(options);
+      return printed(answer(options), options.records);
     },
     createShellPool: (cmPath) => {
       const pool = { cmPath, disposed: false, shown: [] as string[], warmed: [] as string[], released: [] as string[] };
       pools.push(pool);
       return {
-        run: async (cwd, args) => {
+        run: async (cwd, args, records) => {
           shellCommands.push({ cwd, args });
-          return answer();
+          return printed(answer(), records);
         },
         isReady: () => warm,
         shownDirectory: () => pool.shown.find((cwd) => !pool.released.includes(cwd)),
@@ -56,8 +58,15 @@ function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer
   return { cm, processes, shellCommands, pools, logged };
 }
 
+/** What a runner gives for a command that printed `result.output`: with `records`, they read it, and the rest is its output. */
+function printed(result: CmResult, records: RecordReader<unknown> | undefined): CmResult {
+  if (!records) return result;
+  records.read(Buffer.from(result.output, 'utf8'));
+  return { output: records.takeRest(), exitCode: result.exitCode };
+}
+
 /** The `CmError` a command fails with. */
-async function failureOf(run: Promise<string>): Promise<CmError> {
+async function failureOf(run: Promise<unknown>): Promise<CmError> {
   const error = await run.then(() => undefined, (caught: unknown) => caught);
   expect(error).toBeInstanceOf(CmError);
   return error as CmError;
@@ -254,6 +263,74 @@ describe('CmClient command line too long for a process', () => {
 
     expect(processes[0]?.args).toEqual(SHELL_ARGS);
     expect(output).toBe('Ñandú.txt\n');
+  });
+});
+
+describe('CmClient records', () => {
+  const BRANCHES = formatOutput(['3', '/main'], ['37', '/main/tarea-ñ']);
+  const toBranch = ([id = '', name = '']: string[]) => ({ id: Number(id), name });
+  const listing = (output: string, exitCode = 0) => fakeClient({ answer: () => ({ output, exitCode }) });
+
+  it('reads the records of a quick command from a warm pooled cm shell into what its caller builds of them', async () => {
+    const { cm, shellCommands, processes, logged } = listing(BRANCHES);
+
+    const branches = await cm.queryRecords(['find', 'branch', '--format=x'], toBranch, { cwd: WORKSPACE });
+
+    expect(branches).toEqual([
+      { id: 3, name: '/main' },
+      { id: 37, name: '/main/tarea-ñ' },
+    ]);
+    expect(shellCommands).toEqual([{ cwd: WORKSPACE, args: ['find', 'branch', '--format=x', '--encoding=utf-8'] }]);
+    expect(processes).toEqual([]);
+    expect(logged).toMatchObject([{ commandLine: 'cm find branch --format=x --encoding=utf-8', exitCode: 0, viaShell: true, output: '' }]);
+  });
+
+  it('reads them from a process of its own while the pool is cold, as a query would run', async () => {
+    const { cm, processes, shellCommands } = fakeClient({ warm: false, answer: () => ({ output: BRANCHES, exitCode: 0 }) });
+
+    await expect(cm.queryRecords(['find', 'branch'], toBranch, { cwd: WORKSPACE })).resolves.toHaveLength(2);
+
+    expect(shellCommands).toEqual([]);
+    expect(processes[0]?.options.records).toBeInstanceOf(RecordReader);
+  });
+
+  it('reads the records of a slow command from a process of its own', async () => {
+    const { cm, processes, shellCommands } = listing(formatOutput(['merge', '2', '5']));
+
+    const merges = await cm.executeRecords(['find', 'merge'], ([type]) => type, { cwd: WORKSPACE });
+
+    expect(merges).toEqual(['merge']);
+    expect(shellCommands).toEqual([]);
+    expect(processes.map(({ args }) => args)).toEqual([['find', 'merge', '--encoding=utf-8']]);
+  });
+
+  it('reads them from a cm shell of its own on Windows, its result line left out', async () => {
+    const { cm, processes } = fakeClient({ platform: 'win32', warm: false, answer: () => ({ output: `${BRANCHES}CommandResult 0\n`, exitCode: 0 }) });
+
+    const items = await cm.queryRecords(['ls', '--format=x'], toBranch, { cwd: WORKSPACE });
+
+    expect(processes[0]?.args).toEqual(SHELL_ARGS);
+    expect(items).toHaveLength(2);
+  });
+
+  it("fails with a CmError explained by the command's error, which the log shows", async () => {
+    const error = 'Error: The branch br:/main/gone does not exist.\n';
+    const { cm, logged } = listing(error, 1);
+
+    await expect(failureOf(cm.queryRecords(['find', 'branch'], toBranch))).resolves.toMatchObject({
+      message: 'The branch br:/main/gone does not exist.',
+      command: { exitCode: 1, output: error.trim() },
+    });
+    expect(logged).toMatchObject([{ exitCode: 1, output: error.trim() }]);
+  });
+
+  it('fails with the result of a cm shell of its own when the command fails there', async () => {
+    const { cm } = fakeClient({ platform: 'win32', warm: false, answer: () => ({ output: 'Error: The path is not in a workspace.\nCommandResult 1\n', exitCode: 0 }) });
+
+    await expect(failureOf(cm.queryRecords(['ls', '--format=x'], toBranch))).resolves.toMatchObject({
+      message: 'The path is not in a workspace.',
+      command: { exitCode: 1 },
+    });
   });
 });
 

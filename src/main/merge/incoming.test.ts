@@ -42,13 +42,14 @@ describe('the incoming summary', () => {
 
   it('costs one bounded find however far behind the workspace is', async () => {
     const behind = formatOutput(...Array.from({ length: INCOMING_CHECK_LIMIT + 1 }, (_, index) => [1000 - index, 'ana']));
-    const { cm, lines, linesVia } = fakeCmClient({ 'find changeset': behind });
+    const { cm, commands, lines, linesVia } = fakeCmClient({ 'find changeset': behind });
 
     const summary = await readIncomingSummary(cm, '/w', { branch: '/main', loadedChangeset: 41 });
 
     expect(summary).toMatchObject({ headChangeset: 1000, changesetCount: INCOMING_CHECK_LIMIT, countCapped: true, authors: ['ana'] });
     expect(lines()).toHaveLength(1);
     expect(linesVia('query')).toEqual(lines());
+    expect(commands[0]?.readsRecords).toBe(true);
   });
 });
 

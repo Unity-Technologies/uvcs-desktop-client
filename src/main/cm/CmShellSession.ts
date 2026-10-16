@@ -1,8 +1,9 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import type { CmResult } from './CmResult';
 import { changesWorkspace } from '../watch/changesWorkspace';
-import { OutputBuffer } from './OutputBuffer';
+import type { RecordReader } from './formatRecords';
 import { CmOutputTooLargeError, MAX_OUTPUT_LENGTH } from './outputLimit';
+import { RecordOutput, TextOutput, type OutputStream, type ShellCommandOutput } from './ShellCommandOutput';
 import { SHELL_ARGS, toShellCommandLine } from './shellCommandLine';
 import { resultLineAtEnd } from './shellResultLine';
 /** A trailing line without a newline that looks like a question, e.g. "Select your system [0-1]:". */
@@ -20,16 +21,21 @@ const STARTUP_PROBE = ['version'];
 export interface CmShellSessionLimits {
   /** How long output may pause on a question-like line before it counts as a prompt. */
   promptStallMs?: number;
-  /** The most characters a command may print (`MAX_OUTPUT_LENGTH`). */
+  /** The most characters (bytes, for records) a command may print (`MAX_OUTPUT_LENGTH`). */
   maxOutputLength?: number;
 }
 
 interface PendingCommand {
   commandLine: string;
   timeoutMs: number;
+  /** Where its `--format` records go as they arrive (`CmClient.queryRecords`); none for a command whose output is text. */
+  records?: RecordReader<unknown>;
   resolve: (result: CmResult) => void;
   reject: (error: Error) => void;
 }
+
+/** How much of the end of the output is kept at hand: room for the longest prompt, and for the result line. */
+const TAIL_LENGTH = MAX_PROMPT_LENGTH + 1;
 
 /**
  * A long-lived `cm shell` process bound to one working directory.
@@ -43,8 +49,9 @@ export class CmShellSession {
   private process: ChildProcessWithoutNullStreams | null = null;
   private readonly queue: PendingCommand[] = [];
   private running: PendingCommand | null = null;
-  private readonly buffer = new OutputBuffer(MAX_PROMPT_LENGTH + 1);
-  /** Characters received so far, to tell whether output came in while a prompt timer was pending. */
+  /** The running command's output; output that comes while none runs goes nowhere. */
+  private output: ShellCommandOutput = new TextOutput(TAIL_LENGTH);
+  /** Bytes received so far, to tell whether output came in while a prompt timer was pending. */
   private received = 0;
   private promptTimer: NodeJS.Timeout | null = null;
   private timeoutTimer: NodeJS.Timeout | null = null;
@@ -81,9 +88,13 @@ export class CmShellSession {
     await this.run(STARTUP_PROBE).catch(() => {});
   }
 
-  run(args: string[]): Promise<CmResult> {
+  /**
+   * Runs `cm <args>`. With `records`, its `--format` records go there as they arrive, and the result's output is only
+   * what it printed besides them (`RecordReader.takeRest`): nothing, or its error.
+   */
+  run(args: string[], records?: RecordReader<unknown>): Promise<CmResult> {
     return new Promise((resolve, reject) => {
-      this.queue.push({ commandLine: toShellCommandLine(args), timeoutMs: shellCommandTimeoutMs(args), resolve, reject });
+      this.queue.push({ commandLine: toShellCommandLine(args), timeoutMs: shellCommandTimeoutMs(args), records, resolve, reject });
       this.runNext();
     });
   }
@@ -101,6 +112,7 @@ export class CmShellSession {
     if (this.running || this.queue.length === 0) return;
 
     this.running = this.queue.shift()!;
+    this.output = this.running.records ? new RecordOutput(this.running.records, TAIL_LENGTH) : new TextOutput(TAIL_LENGTH);
     this.timeoutTimer = setTimeout(
       () => this.guarded(() => this.abortRunning(new Error('The cm command took too long and was stopped.'))),
       this.running.timeoutMs,
@@ -114,10 +126,10 @@ export class CmShellSession {
     const child = spawn(this.cmPath, SHELL_ARGS, { cwd: this.cwd, windowsHide: true });
     this.answered = false;
     // What a killed process still had in its pipes must not end up in the output of the next command.
-    const onData = (text: string) => child === this.process && this.guarded(() => this.onOutput(text));
-    // Decoded by the streams, so a character split between two chunks stays whole.
-    child.stdout.setEncoding('utf8').on('data', onData);
-    child.stderr.setEncoding('utf8').on('data', onData);
+    const onData = (stream: OutputStream) => (chunk: Buffer) => child === this.process && this.guarded(() => this.onOutput(chunk, stream));
+    // Bytes: the command's output decodes them (`TextOutput`), or finds records in them before decoding (`RecordOutput`).
+    child.stdout.on('data', onData('stdout'));
+    child.stderr.on('data', onData('stderr'));
     // A process that died while a command was written to it breaks the pipe (EPIPE): an error nobody listened to would throw.
     child.stdin.on('error', (error) => child === this.process && this.abortRunning(error));
     child.on('error', (error) => this.onProcessEnded(child, error));
@@ -126,16 +138,18 @@ export class CmShellSession {
     return child;
   }
 
-  private onOutput(text: string): void {
-    // Past the limit the output could never be read as one string: the command is stopped before it gets there.
-    if (this.buffer.length + text.length > this.maxOutputLength) {
-      this.abortRunning(new CmOutputTooLargeError(this.maxOutputLength));
+  private onOutput(chunk: Buffer, stream: OutputStream): void {
+    // No command to answer: it would only end up in the next one's output, or count toward its limit.
+    if (!this.running) return;
+    this.output.append(chunk, stream);
+    // Past the limit a text output could never be read as one string: the command is stopped a chunk past it at most.
+    if (this.output.length > this.maxOutputLength) {
+      this.abortRunning(new CmOutputTooLargeError(this.maxOutputLength, this.output.unit));
       return;
     }
-    this.buffer.append(text);
-    this.received += text.length;
+    this.received += chunk.length;
     this.watchForPrompt();
-    if (!this.running || !resultLineAtEnd(this.buffer.tail)) return;
+    if (!resultLineAtEnd(this.output.tail)) return;
 
     // A comment can hold a `CommandResult 0` line too (some teams' do): the real one is the last output, with nothing
     // more in the pipe. `setImmediate` lets output already waiting be read first.
@@ -148,15 +162,11 @@ export class CmShellSession {
   }
 
   private finishIfDone(): void {
-    const { tail, length } = this.buffer;
-    const result = resultLineAtEnd(tail);
+    const result = resultLineAtEnd(this.output.tail);
     if (!result || !this.running) return;
 
-    // Not a regular expression: V8 keeps the last string one ran on, which would hold the whole output in memory.
-    // Windows ends lines with CRLF: the last one's CR stays before the result line's LF.
-    const text = this.buffer.textBefore(length - tail.length + result.outputEnd).replaceAll('\r\n', '\n');
-    const output = text.endsWith('\r') ? text.slice(0, -1) : text;
-    this.buffer.clear();
+    const output = this.output.beforeResultLine();
+    this.output = new TextOutput(TAIL_LENGTH);
     this.answered = true;
     this.finishRunning().resolve({ output, exitCode: result.exitCode });
     this.runNext();
@@ -165,9 +175,9 @@ export class CmShellSession {
   private watchForPrompt(): void {
     if (this.promptTimer) clearTimeout(this.promptTimer);
     this.promptTimer = null;
-    const { tail } = this.buffer;
+    const { tail, length } = this.output;
     const newline = tail.lastIndexOf('\n');
-    if (newline < 0 && this.buffer.length > MAX_PROMPT_LENGTH) return;
+    if (newline < 0 && length > MAX_PROMPT_LENGTH) return;
     const lastLine = tail.slice(newline + 1);
     if (!lastLine || !PROMPT_LIKE_TAIL.test(lastLine)) return;
 
@@ -203,7 +213,7 @@ export class CmShellSession {
   private abortRunning(reason: Error): void {
     const child = this.process;
     this.process = null;
-    this.buffer.clear();
+    this.output = new TextOutput(TAIL_LENGTH);
     child?.kill('SIGKILL');
     if (this.running) this.finishRunning().reject(reason);
     this.runNext();
@@ -219,7 +229,7 @@ export class CmShellSession {
   private onProcessEnded(child: ChildProcessWithoutNullStreams, error: Error): void {
     if (child !== this.process) return;
     this.process = null;
-    this.buffer.clear();
+    this.output = new TextOutput(TAIL_LENGTH);
     if (this.running) this.finishRunning().reject(error);
     this.runNext();
   }

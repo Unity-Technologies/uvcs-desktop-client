@@ -14,7 +14,7 @@ import type { CmClient } from '../cm/CmClient';
 import { DIFF_FORMAT, parseDiffEntries } from '../cm/diffEntries';
 import { FOUND_CHANGESETS } from '../cm/foundObjects';
 import { equalsCondition, findArgs } from '../cm/findQuery';
-import { parseRecords, readRecords, recordFormat } from '../cm/formatRecords';
+import { readRecords, recordFormat } from '../cm/formatRecords';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { readWorkspaceLoad } from '../cm/workspaceStatus';
 import { findUpdateBlockers, findUpdateConflicts } from './updateCollisions';
@@ -35,8 +35,7 @@ export const INCOMING_CHECK_LIMIT = 100;
 export async function readIncomingSummary(cm: CmClient, workspacePath: string, loaded: LoadedBranch): Promise<IncomingSummary> {
   if (!loaded) return NOTHING_INCOMING;
   const { branch, loadedChangeset } = loaded;
-  const output = await cm.query(incomingChangesetsArgs(branch, loadedChangeset), { cwd: workspacePath });
-  const newest = parseRecords(output).map(([id, owner]) => ({ id: Number(id), owner: owner ?? '' }));
+  const newest = await cm.queryRecords(incomingChangesetsArgs(branch, loadedChangeset), ([id, owner = '']) => ({ id: Number(id), owner }), { cwd: workspacePath });
   return summarizeIncoming(branch, loadedChangeset, newest, INCOMING_CHECK_LIMIT);
 }
 

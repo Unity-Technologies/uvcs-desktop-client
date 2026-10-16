@@ -2,33 +2,143 @@
 export const FIELD_SEPARATOR = '\u001f';
 export const RECORD_SEPARATOR = '\u001e';
 
+const RECORD_SEPARATOR_BYTE = 0x1e;
+const CR_CODE = 0x0d;
+const LF_CODE = 0x0a;
+
 /**
- * Builds a `--format` value whose output `parseRecords` can split unambiguously. A placeholder may carry a .NET format
- * (`date:o`), which `cm ls` applies to its dates.
+ * Builds a `--format` value whose output `parseRecords` and `RecordReader` split unambiguously. A placeholder may carry
+ * a .NET format (`date:o`), which `cm ls` applies to its dates.
  */
 export function recordFormat(placeholders: readonly string[]): string {
   return placeholders.map((name) => `{${name}}`).join(FIELD_SEPARATOR) + RECORD_SEPARATOR;
 }
 
+/** What a caller builds of each record's fields (a branch, a changeset); undefined leaves the record out. */
+export type ReadRecord<T> = (fields: string[]) => T | undefined;
+
+const asFields: ReadRecord<string[]> = (fields) => fields;
+
 /**
- * The records of a `--format` output, each value as `cm` printed it, CRLF turned into LF (a comment written on
- * Windows keeps its CRLF in the repository). `cm` ends each record with a line break after the record separator. Only
- * `cm diff` quotes some of its values: `unquoted`.
+ * The records of a whole `--format` output already held as text, read by `readRecord` (their fields, by default):
+ * found in the string itself, so each record and its fields are slices of the output, with no copy. Text after the
+ * last record is read as one more record.
  */
-export function parseRecords(output: string): string[][] {
-  return output
-    .split(RECORD_SEPARATOR)
-    .map((record) => record.replace(/^\r?\n/, ''))
-    .filter((record) => record.length > 0)
-    .map((record) => withLf(record).split(FIELD_SEPARATOR));
+export function parseRecords(output: string): string[][];
+export function parseRecords<T>(output: string, readRecord: ReadRecord<T>): T[];
+export function parseRecords<T>(output: string, readRecord?: ReadRecord<T>): (T | string[])[] {
+  const read = readRecord ?? asFields;
+  const rows: (T | string[])[] = [];
+  for (let start = 0; start <= output.length; ) {
+    const separator = output.indexOf(RECORD_SEPARATOR, start);
+    const end = separator < 0 ? output.length : separator;
+    const fieldsStart = start + lineBreakLengthIn(output, start, end);
+    const row = fieldsStart < end ? read(fieldsOf(output.slice(fieldsStart, end))) : undefined;
+    if (row !== undefined) rows.push(row);
+    start = end + 1;
+  }
+  return rows;
 }
 
+/**
+ * The fields of one record's text, without the line break `cm` prints before it (after the previous record's
+ * separator): each value as `cm` printed it, CRLF turned into LF (a comment written on Windows keeps its CRLF in the
+ * repository). The rules of both `parseRecords` and `RecordReader`. Only `cm diff` quotes some of its values: `unquoted`.
+ */
+function fieldsOf(record: string): string[] {
+  return withLf(record).split(FIELD_SEPARATOR);
+}
+
+/**
+ * Reads `--format` records (`recordFormat`) from a command's output as it arrives, in byte chunks, into what
+ * `readRecord` builds of them: only the record still arriving is kept between chunks, so the output is never held
+ * whole, nor split into an array of records first. A big answer (every branch and changeset of a large repository)
+ * costs the main process about what its rows weigh.
+ *
+ * Bytes, not text: the record separator is ASCII, which UTF-8 never uses inside a character of several bytes, so a
+ * record is found before decoding, and a character split between two chunks is decoded whole. Each record is decoded
+ * on its own and its fields are slices of it: a value keeps alive its own record at most, never the chunk or the
+ * output it came in (slices of decoded chunks would keep every chunk alive while any value lives). One decoding per
+ * record, not per field: each decoding is a call into C++, which is what a record's fields cost most.
+ *
+ * As `cm` prints them: a line break after each record's separator (CRLF on Windows, read as LF in fields too).
+ */
+export class RecordReader<T> {
+  private readonly rows: T[] = [];
+  /** The bytes after the last record separator: the record still arriving, or text that is no record at all. */
+  private incomplete: Buffer[] = [];
+
+  constructor(private readonly readRecord: ReadRecord<T>) {}
+
+  /** How many records were read so far: what a caller (a test) checks to tell records are read as they arrive. */
+  get count(): number {
+    return this.rows.length;
+  }
+
+  /** Reads the records the chunk completes; what follows the last of them waits for the next chunk. */
+  read(chunk: Buffer): void {
+    let start = 0;
+    let end = chunk.indexOf(RECORD_SEPARATOR_BYTE);
+    if (end >= 0 && this.incomplete.length > 0) {
+      const record = Buffer.concat([...this.incomplete, chunk.subarray(0, end)]);
+      this.incomplete = [];
+      this.readRecordIn(record, 0, record.length);
+      start = end + 1;
+      end = chunk.indexOf(RECORD_SEPARATOR_BYTE, start);
+    }
+    for (; end >= 0; end = chunk.indexOf(RECORD_SEPARATOR_BYTE, start)) {
+      this.readRecordIn(chunk, start, end);
+      start = end + 1;
+    }
+    if (start < chunk.length) this.incomplete.push(start === 0 ? chunk : chunk.subarray(start));
+  }
+
+  /**
+   * The text after the last record, which it then forgets: nothing for an output of records alone, what a command
+   * prints besides them (an error, a `cm shell`'s `CommandResult` line) otherwise. Without the line break that ends
+   * the last record, Windows' CRLF read as LF.
+   */
+  takeRest(): string {
+    const bytes = Buffer.concat(this.incomplete);
+    this.incomplete = [];
+    return withLf(bytes.toString('utf8', lineBreakLength(bytes, 0, bytes.length)));
+  }
+
+  /**
+   * The rows read. Text after the last record is no record (`takeRest`): every `recordFormat` record ends with its
+   * separator, so what follows is what `cm` printed besides them, a warning or an error.
+   */
+  finish(): T[] {
+    return this.rows;
+  }
+
+  /** Reads the record between `start` and its separator at `end`; an empty one is no record. */
+  private readRecordIn(bytes: Buffer, start: number, end: number): void {
+    const fieldsStart = start + lineBreakLength(bytes, start, end);
+    if (fieldsStart === end) return;
+    const row = this.readRecord(fieldsOf(bytes.toString('utf8', fieldsStart, end)));
+    if (row !== undefined) this.rows.push(row);
+  }
+}
+
+/** The length of the line break at `start` (LF or CRLF), which `cm` prints after each record's separator. */
+function lineBreakLength(bytes: Buffer, start: number, end: number): number {
+  if (start < end && bytes[start] === LF_CODE) return 1;
+  if (start + 1 < end && bytes[start] === CR_CODE && bytes[start + 1] === LF_CODE) return 2;
+  return 0;
+}
+
+/** `lineBreakLength` in text. */
+function lineBreakLengthIn(text: string, start: number, end: number): number {
+  if (start < end && text.charCodeAt(start) === LF_CODE) return 1;
+  if (start + 1 < end && text.charCodeAt(start) === CR_CODE && text.charCodeAt(start + 1) === LF_CODE) return 2;
+  return 0;
+}
+
+/** Windows ends lines with CRLF; parsers get LF, as everywhere else. */
 function withLf(text: string): string {
   return text.includes('\r') ? text.replaceAll('\r\n', '\n') : text;
 }
-
-/** What one record's values become; `undefined` leaves the record out. */
-export type ReadRecord<T> = (fields: string[]) => T | undefined;
 
 /** The fields a `--format` prints of each item, and what a record of them becomes (`undefined`: none). */
 export interface RecordLayout<T, Field extends string = string> {
@@ -48,13 +158,9 @@ export function layoutReader<T, Field extends string>({ fields, read }: RecordLa
   return (values) => read((field) => values[indexes.get(field)!] ?? '');
 }
 
-/** The items of an output printed through `layoutFormat`. */
+/** The items of an output printed through `layoutFormat`, already held as text. */
 export function readRecords<T, Field extends string>(layout: RecordLayout<T, Field>, output: string): T[] {
-  const read = layoutReader(layout);
-  return parseRecords(output).flatMap((values) => {
-    const item = read(values);
-    return item === undefined ? [] : [item];
-  });
+  return parseRecords(output, layoutReader(layout));
 }
 
 /** A number `cm` printed; -1 where it printed none. */

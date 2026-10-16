@@ -6,6 +6,7 @@ import { inCmPathForm } from './cmPathForm';
 import type { CmResult } from './CmResult';
 import { CmShellPool } from './CmShellPool';
 import { extractErrorMessage } from './errorMessage';
+import { RecordReader, type ReadRecord } from './formatRecords';
 import { commandLineForLog, outputForLog } from './hideSecrets';
 import { runsLong } from './longCommands';
 import { CmOutputTooLargeError } from './outputLimit';
@@ -29,6 +30,9 @@ export interface CmRunOptions {
   killSignal?: NodeJS.Signals;
   onOutputLine?: (line: string) => void;
 }
+
+/** How a command printing `--format` records runs: as any other, but with no output lines to report. */
+export type CmRecordsOptions = Omit<CmRunOptions, 'onOutputLine'>;
 
 type CommandLogListener = (entry: CommandLogEntry) => void;
 type ShellPool = Pick<CmShellPool, 'run' | 'isReady' | 'shownDirectory' | 'show' | 'warmUp' | 'release' | 'disposeAll'>;
@@ -106,6 +110,21 @@ export class CmClient {
     return this.run(args, options, false);
   }
 
+  /**
+   * Runs a quick command that prints `--format` records (`recordFormat`), where `query` would, and reads each record
+   * into what `readRecord` builds of its fields as it arrives (`RecordReader`): the output is never held whole, so a
+   * big answer costs about what its rows weigh. Fails as `query` does.
+   */
+  queryRecords<T>(args: string[], readRecord: ReadRecord<T>, options: CmRecordsOptions = {}): Promise<T[]> {
+    const placed = { ...options, cwd: options.cwd ?? this.directoryForAny(options) };
+    return this.runRecords(args, readRecord, placed, this.runsInPooledShell(args, placed));
+  }
+
+  /** Runs a long or cancellable command that prints `--format` records in its own process, reading them as `queryRecords` does. */
+  executeRecords<T>(args: string[], readRecord: ReadRecord<T>, options: CmRecordsOptions = {}): Promise<T[]> {
+    return this.runRecords(args, readRecord, options, false);
+  }
+
   /** Prepares `cm shell` sessions for a working directory (defaults to the home directory). */
   warmUp(cwd = homedir()): void {
     this.shellPool.warmUp(cwd);
@@ -154,12 +173,23 @@ export class CmClient {
     return this.shellPool.isReady(cwd);
   }
 
-  private async run(requested: string[], options: CmRunOptions, useShell: boolean): Promise<string> {
+  /**
+   * Runs the command with its records read by `readRecord`. What it printed besides them (its stderr, text after the
+   * last record) is its output, which explains its failure and is no record.
+   */
+  private async runRecords<T>(args: string[], readRecord: ReadRecord<T>, options: CmRecordsOptions, useShell: boolean): Promise<T[]> {
+    const records = new RecordReader(readRecord);
+    await this.run(args, options, useShell, records);
+    return records.finish();
+  }
+
+  /** Runs `cm <args>`, logs it and fails on an exit code other than 0; with `records`, its records go there as they arrive. */
+  private async run(requested: string[], options: CmRunOptions, useShell: boolean, records?: RecordReader<unknown>): Promise<string> {
     const cwd = options.cwd ?? homedir();
     const args = withUtf8Output(inCmPathForm(requested, cwd, this.platform));
     const startedAt = Date.now();
     const log = (result: CmResult): CommandLogEntry => this.log(args, cwd, startedAt, result, useShell);
-    const finished = useShell ? this.shellPool.run(cwd, args) : this.runProcess(args, cwd, options);
+    const finished = useShell ? this.shellPool.run(cwd, args, records) : this.runProcess(args, cwd, options, records);
     this.startListeners.forEach((listener) => listener({ args, cwd, finished }));
 
     const result = await finished.catch((error: unknown) => {
@@ -174,12 +204,13 @@ export class CmClient {
   }
 
   /** A process of its own; a command line too long to start one with (thousands of paths) goes to a `cm shell` of its own. */
-  private async runProcess(args: string[], cwd: string, { signal, killSignal, onOutputLine }: CmRunOptions): Promise<CmResult> {
+  private async runProcess(args: string[], cwd: string, { signal, killSignal, onOutputLine }: CmRunOptions, records?: RecordReader<unknown>): Promise<CmResult> {
     const { args: started, input } = processCommand(args, this.platform);
     const { runProcess } = this.runners;
-    if (input === undefined) return runProcess(this.cmPath, started, { cwd, signal, killSignal, onOutputLine });
+    if (input === undefined) return runProcess(this.cmPath, started, { cwd, signal, killSignal, onOutputLine, records });
     const outputLine = onOutputLine && ((line: string) => !isShellResultLine(line) && onOutputLine(line));
-    const result = await runProcess(this.cmPath, started, { cwd, signal, killSignal, onOutputLine: outputLine, input });
+    const result = await runProcess(this.cmPath, started, { cwd, signal, killSignal, onOutputLine: outputLine, input, records });
+    // A `cm shell` of its own ends its output with a result line; with records, the line follows the last of them.
     return shellCommandResult(result.output);
   }
 

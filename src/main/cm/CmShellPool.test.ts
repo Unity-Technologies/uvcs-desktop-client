@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CmResult } from './CmResult';
 import { CmShellPool, IDLE_DIRECTORY_MS } from './CmShellPool';
+import { RecordReader } from './formatRecords';
 
 /** A session whose commands finish when the test says so. */
 class FakeSession {
   static created: FakeSession[] = [];
   readonly ran: string[] = [];
+  readonly recordReaders: (RecordReader<unknown> | undefined)[] = [];
   disposed = false;
   started = false;
   answerFirstCommand = (): void => {};
@@ -37,8 +39,9 @@ class FakeSession {
     return this.starting;
   }
 
-  run(args: string[]): Promise<CmResult> {
+  run(args: string[], records?: RecordReader<unknown>): Promise<CmResult> {
     this.ran.push(args.join(' '));
+    this.recordReaders.push(records);
     return new Promise((finish) => this.running.push({ command: args.join(' '), finish }));
   }
 
@@ -80,6 +83,13 @@ describe('CmShellPool', () => {
 
     first!.finish('status');
     await expect(slow).resolves.toMatchObject({ output: 'status' });
+  });
+
+  it('hands the session the reader of the records of a command that prints them', () => {
+    const records = new RecordReader((fields) => fields);
+    void pool.run('/wk', ['find', 'branch'], records);
+    void pool.run('/wk', ['status']);
+    expect(FakeSession.created.flatMap((session) => session.recordReaders)).toEqual([records, undefined]);
   });
 
   it('keeps sessions apart per directory', () => {

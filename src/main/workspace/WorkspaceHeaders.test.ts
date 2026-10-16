@@ -1,7 +1,9 @@
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { WorkspaceStatus } from '../cm/workspaceStatus';
-import { WorkspaceHeaders, type HeaderReaders } from './WorkspaceHeaders';
+import { formatOutput } from '../cm/testing/cmOutput';
+import { fakeCmClient } from '../cm/testing/fakeCmClient';
+import { cmHeaderReaders, WorkspaceHeaders, type HeaderReaders } from './WorkspaceHeaders';
 
 const STATUS: WorkspaceStatus = { repositoryName: 'repo', server: 'local', selector: { kind: 'branch', name: '/main' }, loadedChangeset: 3 };
 
@@ -56,5 +58,16 @@ describe('WorkspaceHeaders', () => {
     await Promise.all([headers.status(game), headers.status(gameTwo), headers.status(tools)]);
 
     expect(readers.status.mock.calls.map(([path]) => path)).toEqual([game, gameTwo, tools, game]);
+  });
+});
+
+describe('cmHeaderReaders', () => {
+  it("reads the workspace's name and guid with one getworkspacefrompath, read as records", async () => {
+    const workspace = join('wkspaces', 'game');
+    const { cm, commands } = fakeCmClient({ getworkspacefrompath: formatOutput([' game ', 'a0411612 ']) });
+
+    await expect(cmHeaderReaders(cm).names(workspace)).resolves.toEqual({ name: 'game', guid: 'a0411612' });
+
+    expect(commands.map(({ via, args, readsRecords }) => [via, args[0], args[1], readsRecords])).toEqual([['query', 'getworkspacefrompath', workspace, true]]);
   });
 });
