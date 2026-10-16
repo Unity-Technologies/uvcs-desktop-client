@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { FIELD_SEPARATOR, parseRecords, RecordReader, recordFormat, RECORD_SEPARATOR } from './formatRecords';
 import { formatOutput } from './testing/cmOutput';
+import { countCharactersRead } from '@shared/testing/countCharactersRead';
 import { countBytesRead } from './testing/countBytesRead';
 
 describe('recordFormat', () => {
@@ -122,19 +123,23 @@ describe('RecordReader', () => {
     ]);
   });
 
+  const records = (count: number, record: (id: number) => (string | number)[]) => Array.from({ length: count }, (_, id) => record(id));
+
   it.each([
-    ['records of many fields', (id: number) => [id, `/main/task${id % 2_000}`, id - 1, '2026-09-25T10:11:12.0000000+02:00', 'jane', `comment ${id}`]],
-    ['records of one field', (id: number) => [id]],
-  ])('reads each byte of a big output a few times, whatever its size: %s', (_, record) => {
-    const output = Buffer.from(formatOutput(...Array.from({ length: 20_000 }, (_, id) => record(id))));
+    ['records of many fields', records(20_000, (id) => [id, `/main/task${id % 2_000}`, id - 1, '2026-09-25T10:11:12.0000000+02:00', 'jane', `comment ${id}`])],
+    ['records of one field', records(20_000, (id) => [id])],
+    ['a record bigger than many chunks', [[1, 'x'.repeat(2_000_000)]]],
+  ])('reads each byte of a big output a few times, whatever its size: %s', (_, printed) => {
+    const output = Buffer.from(formatOutput(...printed));
     const chunks = Array.from({ length: Math.ceil(output.length / 65_536) }, (_, index) => output.subarray(index * 65_536, (index + 1) * 65_536));
     const reader = new RecordReader((fields) => fields);
 
-    const { bytesRead } = countBytesRead(() => chunks.forEach((chunk) => reader.read(chunk)));
+    const { result: bytesRead, charactersRead } = countCharactersRead(() => countBytesRead(() => chunks.forEach((chunk) => reader.read(chunk))).bytesRead);
 
-    // About four reads of each byte (record separator, field separator, carriage return, decoding). A search per record
-    // through the rest of its chunk reads each thousands of times; joining the chunks and splitting the whole, more.
-    expect(bytesRead / output.length).toBeLessThan(5);
-    expect(reader.count).toBe(20_000);
+    // Each byte is looked at about twice (the record separator, decoding its record), and each character about twice
+    // (a carriage return, the field separators). A search per record through the rest of its chunk, or the bytes kept
+    // of an unfinished record joined again with each chunk, reads each one many times.
+    expect((bytesRead + charactersRead) / output.length).toBeLessThan(6);
+    expect(reader.count).toBe(printed.length);
   });
 });
