@@ -47,6 +47,17 @@ describe('parseRecords', () => {
     ]);
   });
 
+  it('reads a big output in the string itself, in one pass, never copying it into bytes', () => {
+    const output = formatOutput(...Array.from({ length: 20_000 }, (_, id) => [id, `/main/task${id}`, '2026-09-25T10:11:12.0000000+02:00', `comment ${id}`]));
+
+    const { result, charactersRead } = countCharactersRead(() => countBytesRead(() => parseRecords(output)));
+
+    expect(result.bytesRead).toBe(0);
+    // About four reads of each character: the record separator, the carriage return, the field separators, the slice.
+    expect(charactersRead / output.length).toBeLessThan(6);
+    expect(result.result).toHaveLength(20_000);
+  });
+
   it('builds what its caller reads of each record, leaving out the records it skips', () => {
     const output = formatOutput(['1', 'a'], ['2', ''], ['3', 'c']);
     expect(parseRecords(output, ([id = '', name = '']) => (name ? { id: Number(id), name } : undefined))).toEqual([

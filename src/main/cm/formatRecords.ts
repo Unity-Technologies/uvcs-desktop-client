@@ -3,8 +3,8 @@ export const FIELD_SEPARATOR = '\u001f';
 export const RECORD_SEPARATOR = '\u001e';
 
 const RECORD_SEPARATOR_BYTE = 0x1e;
-const CR_BYTE = 0x0d;
-const LF_BYTE = 0x0a;
+const CR_CODE = 0x0d;
+const LF_CODE = 0x0a;
 
 /** Builds a `--format` value whose output `parseRecords` and `RecordReader` split unambiguously. */
 export function recordFormat(placeholders: string[]): string {
@@ -16,13 +16,36 @@ export type ReadRecord<T> = (fields: string[]) => T | undefined;
 
 const asFields: ReadRecord<string[]> = (fields) => fields;
 
-/** The records of a whole `--format` output, read by `readRecord` (their fields, by default). */
+/**
+ * The records of a whole `--format` output already held as text, read by `readRecord` (their fields, by default):
+ * found in the string itself, so each record and its fields are slices of the output, with no copy. Text after the
+ * last record is read as one more record.
+ */
 export function parseRecords(output: string): string[][];
 export function parseRecords<T>(output: string, readRecord: ReadRecord<T>): T[];
 export function parseRecords<T>(output: string, readRecord?: ReadRecord<T>): (T | string[])[] {
-  const reader = new RecordReader<T | string[]>(readRecord ?? asFields);
-  reader.read(Buffer.from(output, 'utf8'));
-  return reader.finish(reader.takeRest());
+  const read = readRecord ?? asFields;
+  const rows: (T | string[])[] = [];
+  for (let start = 0; start <= output.length; ) {
+    const separator = output.indexOf(RECORD_SEPARATOR, start);
+    const end = separator < 0 ? output.length : separator;
+    const fieldsStart = start + lineBreakLengthIn(output, start, end);
+    const row = fieldsStart < end ? read(fieldsOf(output.slice(fieldsStart, end))) : undefined;
+    if (row !== undefined) rows.push(row);
+    start = end + 1;
+  }
+  return rows;
+}
+
+/**
+ * The fields of one record's text, without the line break `cm` prints before it (after the previous record's
+ * separator): CRLF read as LF, and a value between quotes without them. The rules of both `parseRecords` and
+ * `RecordReader`.
+ */
+function fieldsOf(record: string): string[] {
+  const fields = (record.includes('\r') ? withLf(record) : record).split(FIELD_SEPARATOR);
+  for (let index = 0; index < fields.length; index++) fields[index] = unquote(fields[index]!);
+  return fields;
 }
 
 /**
@@ -47,7 +70,7 @@ export class RecordReader<T> {
 
   constructor(private readonly readRecord: ReadRecord<T>) {}
 
-  /** How many records were read so far. */
+  /** How many records were read so far: what a caller (a test) checks to tell records are read as they arrive. */
   get count(): number {
     return this.rows.length;
   }
@@ -91,18 +114,22 @@ export class RecordReader<T> {
   private readRecordIn(bytes: Buffer, start: number, end: number): void {
     const fieldsStart = start + lineBreakLength(bytes, start, end);
     if (fieldsStart === end) return;
-    const record = bytes.toString('utf8', fieldsStart, end);
-    const fields = (record.includes('\r') ? withLf(record) : record).split(FIELD_SEPARATOR);
-    for (let index = 0; index < fields.length; index++) fields[index] = unquote(fields[index]!);
-    const row = this.readRecord(fields);
+    const row = this.readRecord(fieldsOf(bytes.toString('utf8', fieldsStart, end)));
     if (row !== undefined) this.rows.push(row);
   }
 }
 
 /** The length of the line break at `start` (LF or CRLF), which `cm` prints after each record's separator. */
 function lineBreakLength(bytes: Buffer, start: number, end: number): number {
-  if (start < end && bytes[start] === LF_BYTE) return 1;
-  if (start + 1 < end && bytes[start] === CR_BYTE && bytes[start + 1] === LF_BYTE) return 2;
+  if (start < end && bytes[start] === LF_CODE) return 1;
+  if (start + 1 < end && bytes[start] === CR_CODE && bytes[start + 1] === LF_CODE) return 2;
+  return 0;
+}
+
+/** `lineBreakLength` in text. */
+function lineBreakLengthIn(text: string, start: number, end: number): number {
+  if (start < end && text.charCodeAt(start) === LF_CODE) return 1;
+  if (start + 1 < end && text.charCodeAt(start) === CR_CODE && text.charCodeAt(start + 1) === LF_CODE) return 2;
   return 0;
 }
 
