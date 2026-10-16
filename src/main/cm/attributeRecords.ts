@@ -10,7 +10,7 @@ export const FOUND_ATTRIBUTE_TYPES = foundObjects(
   (value): AttributeType => ({
     id: integerValue(value('id')),
     name: value('name'),
-    comment: value('comment'),
+    comment: value('comment').trim(),
     owner: value('owner'),
     date: value('date'),
     repository: repositorySpec(value('repname'), value('repserver')),
@@ -18,4 +18,4 @@ export const FOUND_ATTRIBUTE_TYPES = foundObjects(
 );
 
 /** `cm find attribute`: an object's value of one attribute, `name` the attribute type's. */
-export const FOUND_ATTRIBUTE_VALUES = foundObjects('attribute', ['name', 'value'], (value): AttributeValue => ({ name: value('name'), value: value('value') }));
+export const FOUND_ATTRIBUTE_VALUES = foundObjects('attribute', ['name', 'value'], (value): AttributeValue => ({ name: value('name'), value: value('value').trim() }));

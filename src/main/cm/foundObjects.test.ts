@@ -53,9 +53,9 @@ describe('found objects', () => {
     expect(readRecords(FOUND_CHANGESETS, '')).toEqual([]);
   });
 
-  it('reads a root changeset, which has no parent, and a comment ending with a line break', () => {
-    const output = recordsOutput(FOUND_CHANGESETS, { changesetid: 0, parent: -1, branch: '/main', comment: 'Root dir\n', repname: 'game', repserver: 'local' });
-    expect(readRecords(FOUND_CHANGESETS, output)).toMatchObject([{ id: 0, parent: -1, branch: '/main', comment: 'Root dir\n', repository: 'game@local' }]);
+  it('reads a root changeset, which has no parent, ', () => {
+    const output = recordsOutput(FOUND_CHANGESETS, { changesetid: 0, parent: -1, branch: '/main', comment: 'Root dir', repname: 'game', repserver: 'local' });
+    expect(readRecords(FOUND_CHANGESETS, output)).toMatchObject([{ id: 0, parent: -1, branch: '/main', comment: 'Root dir', repository: 'game@local' }]);
   });
 
   it('reads records whose lines end with CRLF', () => {

@@ -18,7 +18,7 @@ export const FOUND_REVIEWS = foundObjects(
   ['id', 'title', 'status', 'owner', 'assignee', 'date', 'targettype', 'target'],
   (value): RawCodeReview => ({
     id: integerValue(value('id')),
-    title: value('title'),
+    title: value('title').trim(),
     status: toStatus(value('status')),
     owner: value('owner'),
     assignee: value('assignee'),
