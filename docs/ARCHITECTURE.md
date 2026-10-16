@@ -209,10 +209,13 @@ and many people use the same server. Every `cm` command other than local reads (
   `undefined` to leave it out. `RecordReader` takes stdout in byte chunks, from a pooled `cm shell` (`RecordOutput`)
   or a process (`runCmProcess`'s `records`), and reads each record once its separator arrives, keeping only the one
   still arriving: the output is never joined, copied for its CRLF, split into an array of records or held whole. A
-  `cm find branch` of 1,000,000 branches (151 MB) costs the main process 443 MB of peak RSS instead of 722 MB, and
-  424 ms instead of 568 ms; 100,000 branches 80 MB instead of 115 MB (Electron's V8, `scripts/perf/records.mjs`).
-  The command's text output is what it wrote to stderr and what followed its last record (`takeRest`: nothing, a
-  `CommandResult` line, an error), never a record: `CmError` and the command log show it as for any command.
+  `cm find branch` of 1,000,000 branches (151 MB) costs the main process 451 MB of peak RSS instead of 722 MB, and
+  427 ms instead of 566 ms, the rows holding 305 MB instead of 444 MB; 100,000 branches 79 MB of peak instead of 115 MB
+  (Electron's V8, one run of `scripts/perf/records.mjs`; the figures here are all from it). The command's text output
+  is what it wrote to stderr and what followed its last record (`takeRest`: nothing, a `CommandResult` line, an
+  error), never a record: every `recordFormat` record ends with its separator, so what follows is a warning or an
+  error, and a warning on stderr of a command that succeeded must not become a row. `CmError` and the command log show
+  that output as for any command.
   - stderr is kept apart, as text: a write in the middle of a record would land in its fields or split a character.
   - Bytes, not text: the record separator is ASCII, which UTF-8 never uses inside a character of several bytes, so a
     record is found before it's decoded, and a character split between chunks stays whole.
@@ -222,8 +225,10 @@ and many people use the same server. Every `cm` command other than local reads (
     names (a `Map`) saved a tenth of the peak for a quarter more time, the record's string being alive anyway: dropped.
 - Output already held as text (a cache's string, `ProfileList`; the callers read with `query()`, such as the `cm ls`
   listings, annotate, diffs and the services' lists) is read with `parseRecords(output, readRecord)`: the same field
-  rules (`fieldsOf`), its records found in the string itself, with no copy into bytes (a million branches: 389 ms and
-  582 MB of peak, where splitting the whole took 573 ms and 721 MB).
+  rules (`fieldsOf`), its records found in the string itself, with no copy into bytes (a million branches: 386 ms and
+  581 MB of peak, where splitting the whole took 566 ms and 722 MB). Unlike `queryRecords`, it reads text after the
+  last record as one more record, as it always did, so its callers read what they read before until they move to
+  `queryRecords`.
 - Values read from text output are slices of the command's whole output, which V8 keeps alive while any slice lives;
   values read as records arrive, slices of their own record. A cache that keeps them past the answer copies them as it
   keeps them, not every parser (`ownCopy`; `OwnCopies` for a value many entries repeat, like a repository spec):
