@@ -204,26 +204,30 @@ and many people use the same server. Every `cm` command other than local reads (
 - Prefer `--format` with `recordFormat` (control-character separators; no ambiguity with paths or comments) or
   `--xml` (`parseXml`).
 - Never parse human-readable output when a machine format exists.
-- **Records are read as they arrive**: a `--format` command goes through `cm.queryRecords(args, readRecord, options)`
-  (or `executeRecords`), where `readRecord` builds a row (a branch, a changeset) from each record's fields, or
-  `undefined` to leave it out; `parseRecords(output, readRecord)` reads a whole string the same way. `RecordReader`
-  takes the output in byte chunks, from a pooled `cm shell` (`RecordOutput`) or a process (`runCmProcess`'s
-  `records`), and reads each record once its separator arrives, keeping only the one still arriving: the output is
-  never joined, copied for its CRLF, split into an array of records or held whole. A `cm find branch` of 1,000,000
-  branches (151 MB) costs the main process 443 MB of peak RSS instead of 722 MB, and 424 ms instead of 568 ms; 100,000
-  branches 80 MB instead of 115 MB (Electron's V8, `scripts/perf/records.mjs`). What follows the last record is the
-  command's text output (`takeRest`: nothing, a `CommandResult` line, an error), which `CmError` and the command log
-  show as for any command.
+- **Records are read as they arrive**: new code reads a `--format` command with `cm.queryRecords(args, readRecord,
+  options)` (or `executeRecords`), where `readRecord` builds a row (a branch, a changeset) from each record's fields, or
+  `undefined` to leave it out. `RecordReader` takes stdout in byte chunks, from a pooled `cm shell` (`RecordOutput`)
+  or a process (`runCmProcess`'s `records`), and reads each record once its separator arrives, keeping only the one
+  still arriving: the output is never joined, copied for its CRLF, split into an array of records or held whole. A
+  `cm find branch` of 1,000,000 branches (151 MB) costs the main process 443 MB of peak RSS instead of 722 MB, and
+  424 ms instead of 568 ms; 100,000 branches 80 MB instead of 115 MB (Electron's V8, `scripts/perf/records.mjs`).
+  The command's text output is what it wrote to stderr and what followed its last record (`takeRest`: nothing, a
+  `CommandResult` line, an error), never a record: `CmError` and the command log show it as for any command.
+  - stderr is kept apart, as text: a write in the middle of a record would land in its fields or split a character.
   - Bytes, not text: the record separator is ASCII, which UTF-8 never uses inside a character of several bytes, so a
     record is found before it's decoded, and a character split between chunks stays whole.
   - Each record is decoded once (`toString` of its bytes) and split: its fields are slices of it, keeping alive their
     own record at most. Decoding each field on its own makes fresh strings but cost 30% more time than reading the
     whole output; slices of decoded chunks would keep every chunk alive. Sharing one copy of repeated owners and branch
     names (a `Map`) saved a tenth of the peak for a quarter more time, the record's string being alive anyway: dropped.
-- Parsed values of text output are slices of the command's whole output, which V8 keeps alive while any slice lives
-  (a record's values, of their record). A cache that keeps them past the answer copies them as it keeps them, not
-  every parser (`ownCopy`; `OwnCopies` for a value many entries repeat, like a repository spec): `BranchNamesCache`,
-  `WorkspaceCopies`, `RepositoryTrees`.
+- Output already held as text (a cache's string, `ProfileList`; the callers read with `query()`, such as the `cm ls`
+  listings, annotate, diffs and the services' lists) is read with `parseRecords(output, readRecord)`: the same field
+  rules (`fieldsOf`), its records found in the string itself, with no copy into bytes (a million branches: 389 ms and
+  582 MB of peak, where splitting the whole took 573 ms and 721 MB).
+- Values read from text output are slices of the command's whole output, which V8 keeps alive while any slice lives;
+  values read as records arrive, slices of their own record. A cache that keeps them past the answer copies them as it
+  keeps them, not every parser (`ownCopy`; `OwnCopies` for a value many entries repeat, like a repository spec):
+  `BranchNamesCache`, `WorkspaceCopies`, `RepositoryTrees`.
 - `cm find branch` leaves hidden branches out unless asked for (`hidden = 'true'`), and `cm find changeset` their
   changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`); merges and labels come either way.
 - Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments.
