@@ -62,6 +62,12 @@ describe('attribute values', () => {
     expect(commands[0]?.args.slice(0, 3)).toEqual(['find', 'attribute', "where type = 'status' limit 500"]);
   });
 
+  it('samples the values trimmed, as an object's values are read', async () => {
+    const { service } = attributes({ 'find attribute': formatOutput(['done\n'], [' in progress ']) });
+
+    expect(await service.usedValues(WORKSPACE, 'status')).toEqual(['done', 'in progress']);
+  });
+
   it('sets a value through a file, as values may span several lines, and deletes the file afterwards', async () => {
     const { seen, answer } = readingFileOption('--valuecontents=');
     const { service, commands } = attributes({ 'attribute set': answer });
