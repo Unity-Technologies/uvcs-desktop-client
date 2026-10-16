@@ -64,6 +64,19 @@ describe('branch list', () => {
     ]);
   });
 
+  // Written out, not built by the code under test: what cm is asked, field separators and all.
+  it('asks cm for the fields it reads as records, dates in the round-trip format', async () => {
+    const { service, lines } = branches({ 'find branch': '' });
+
+    await service.list(WORKSPACE, { includeHidden: false });
+
+    expect(lines()).toEqual([
+      "find branch where hidden = 'false' order by date desc " +
+        '--format={id}\u001f{name}\u001f{parent}\u001f{comment}\u001f{owner}\u001f{date}\u001f{changeset}\u001f{guid}\u001f{repname}\u001f{repserver}\u001e ' +
+        '--dateformat=o --nototal',
+    ]);
+  });
+
   it('reads hidden branches with a second query only when asked, flagged and merged by date', async () => {
     const { service, lines } = branches({ 'find branch': visibleOrHidden(recordsOutput(FOUND_BRANCHES, TASK2, TASK1), recordsOutput(FOUND_BRANCHES, OLD_HIDDEN)) });
 
