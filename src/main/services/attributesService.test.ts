@@ -62,7 +62,7 @@ describe('attribute values', () => {
     expect(commands[0]?.args.slice(0, 3)).toEqual(['find', 'attribute', "where type = 'status' limit 500"]);
   });
 
-  it('samples the values trimmed, as an object's values are read', async () => {
+  it('samples the values trimmed, as the values of an object are read', async () => {
     const { service } = attributes({ 'find attribute': formatOutput(['done\n'], [' in progress ']) });
 
     expect(await service.usedValues(WORKSPACE, 'status')).toEqual(['done', 'in progress']);
