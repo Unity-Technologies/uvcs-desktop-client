@@ -1,9 +1,11 @@
 // Reading `--format` records: what the main process spends reading a `cm find branch` answer (the Branch Explorer's
-// `BRANCH_FORMAT`) two ways, each in a Node process of its own, from a stand-in `cm` that pipes synthetic records:
+// `BRANCH_FORMAT`) three ways, each in a Node process of its own, from a stand-in `cm` that pipes synthetic records:
 // - `text`: as before `RecordReader`: the whole output decoded and joined into one string, CRLF replaced, then split
 //   into records and fields (`parseRecords` as it was) and mapped to branches.
 // - `records`: `CmClient.queryRecords`' way: `runCmProcess` with a `RecordReader` reading each record into a branch
 //   as its bytes arrive (`graphBranch`).
+// - `parse`: the whole output read as one string, as `text`, then read by today's `parseRecords(output, graphBranch)`,
+//   the way of the callers that still hold their output as text.
 //
 //   node scripts/perf/records.mjs [--records=20000,100000,1000000] [--runs=3]
 //   ELECTRON_RUN_AS_NODE=1 node_modules/.bin/electron scripts/perf/records.mjs     # with Electron's V8, as main runs
@@ -37,7 +39,7 @@ async function compare() {
     for (const size of sizes) {
       const output = join(folder, `branches-${size}.txt`);
       const bytes = await writeBranches(output, size);
-      for (const way of ['text', 'records']) {
+      for (const way of ['text', 'records', 'parse']) {
         const measured = Array.from({ length: runs }, () => run(bundle, standIn, output, way));
         const median = (key) => measured.map((m) => m[key]).sort((a, b) => a - b)[Math.floor(runs / 2)];
         console.log(
@@ -66,7 +68,7 @@ async function bundleReaders(folder) {
     stdin: {
       contents: [
         "export { runCmProcess } from './src/main/cm/runCmProcess';",
-        "export { RecordReader } from './src/main/cm/formatRecords';",
+        "export { parseRecords, RecordReader } from './src/main/cm/formatRecords';",
         "export { graphBranch } from './src/main/cm/branchExplorerRecords';",
       ].join('\n'),
       resolveDir: root,
@@ -106,7 +108,7 @@ async function writeBranches(file, count) {
 }
 
 async function measure(bundle, standIn, output, way) {
-  const { runCmProcess, RecordReader, graphBranch } = await import(bundle);
+  const { runCmProcess, parseRecords, RecordReader, graphBranch } = await import(bundle);
   global.gc();
   const rssBefore = process.resourceUsage().maxRSS * 1024;
   const heapBefore = process.memoryUsage().heapUsed;
@@ -116,6 +118,9 @@ async function measure(bundle, standIn, output, way) {
   if (way === 'text') {
     const { output: text } = await runCmProcess(process.execPath, [standIn, output], {});
     branches = branchesAsBefore(text);
+  } else if (way === 'parse') {
+    const { output: text } = await runCmProcess(process.execPath, [standIn, output], {});
+    branches = parseRecords(text, graphBranch(false));
   } else {
     const records = new RecordReader(graphBranch(false));
     const result = await runCmProcess(process.execPath, [standIn, output], { records });
