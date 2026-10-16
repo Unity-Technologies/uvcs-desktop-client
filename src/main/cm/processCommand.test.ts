@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { checkinArgs } from './checkinArgs';
 import { fitsCommandLine } from './commandLineLimit';
 import { processCommand } from './processCommand';
+import { toShellCommandLine } from './shellCommandLine';
+import { TREE_ITEM_FORMAT } from './treeItems';
 
 const manyPaths = Array.from({ length: 20_000 }, (_, index) => `/Users/ana/work/My Project/Assets/Textures/Level ${index % 40}/texture_${index}.png`);
 
@@ -28,6 +30,13 @@ describe('processCommand', () => {
     expect(processCommand(['diff', 'cs:4', '--format={path}'], 'win32').input).toBe('diff cs:4 --format={path}\nexit\n');
     expect(processCommand(update, 'linux')).toEqual({ args: update });
     expect(processCommand(update, 'darwin')).toEqual({ args: update });
+  });
+
+  // `cm ls` applies `--encoding` to `--xml` only: its records come in UTF-8 only from a `cm shell`.
+  it("on Windows, lists items in a cm shell of its own, the field separators of the listing's format and all", () => {
+    const listing = ['ls', 'C:\\wk\\Assets\\Señal', TREE_ITEM_FORMAT, '--symlink'];
+    expect(processCommand(listing, 'win32')).toEqual({ args: ['shell', '--encoding=utf-8'], input: `${toShellCommandLine(listing)}\nexit\n` });
+    expect(processCommand(listing, 'darwin')).toEqual({ args: listing });
   });
 
   it('on Windows too, starts commands whose output is UTF-8 anyway, and paths a shell line cannot hold', () => {

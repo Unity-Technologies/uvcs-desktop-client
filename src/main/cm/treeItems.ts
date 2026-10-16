@@ -50,7 +50,12 @@ export const TREE_ITEMS: RecordLayout<ListedTreeItem, TreeItemField> = {
   read: (value) => (value('name') === '.' ? undefined : treeItem(value)),
 };
 
-/** The `--format` of every `cm ls` read with `parseTreeItems`. */
+/**
+ * The `--format` of every `cm ls` read with `parseTreeItems`. Trade-off: `cm ls` asks `--encoding` of `--xml` only, so
+ * on Windows a listing that can't take a pooled `cm shell` starts a `cm shell` of its own for UTF-8 (about half a
+ * second more than an `--xml` process; `processCommand`), and a server path holding a quote, which no shell line can
+ * hold, prints in the console's code page.
+ */
 export const TREE_ITEM_FORMAT = layoutFormat(TREE_ITEMS);
 
 /**
