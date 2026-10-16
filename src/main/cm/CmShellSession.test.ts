@@ -241,6 +241,21 @@ describe('CmShellSession reading records', () => {
     expect(records.finish()).toEqual([['1', '/main']]);
   });
 
+  it('counts no output that comes while no command runs toward any limit', async () => {
+    const shell = printedShellProcess();
+    vi.mocked(spawn).mockReturnValueOnce(shell.process);
+    session = new CmShellSession('cm', '/wk', { maxOutputLength: 100 });
+    const first = session.run(['status']);
+    shell.print('first\nCommandResult 0\n');
+    await first;
+
+    shell.print('x'.repeat(1000));
+    const next = session.run(['status']);
+    shell.print('next\nCommandResult 0\n');
+
+    await expect(next).resolves.toEqual({ output: 'next', exitCode: 0 });
+  });
+
   it('ends a command at its last result line, not at one quoted in a record', async () => {
     const shell = printedShellProcess();
     vi.mocked(spawn).mockReturnValueOnce(shell.process);
