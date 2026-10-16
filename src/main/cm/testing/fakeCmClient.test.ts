@@ -53,6 +53,12 @@ describe('fakeCmClient', () => {
     expect(commands.map((command) => command.readsRecords)).toEqual([true, true]);
   });
 
+  it('reads text after the last record as no record, as CmClient does', async () => {
+    const { cm } = fakeCmClient({ 'find branch': `${formatOutput(['3', '/main'])}Warning: the server is slow.\n` });
+
+    await expect(cm.queryRecords(['find', 'branch'], (fields) => fields)).resolves.toEqual([['3', '/main']]);
+  });
+
   it('fails a command read as records as CmClient does', async () => {
     const { cm } = fakeCmClient({ 'find branch': cmFails('Error: The repository does not exist.\n') });
 
