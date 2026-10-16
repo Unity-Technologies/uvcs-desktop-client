@@ -11,7 +11,10 @@ export interface CmProcessOptions {
   onOutputLine?: (line: string) => void;
   /** Written to the command's stdin, which is then closed: what it reads, and nothing to answer a prompt with. */
   input?: string;
-  /** The most characters (bytes, with `records`) the command may print (`MAX_OUTPUT_LENGTH`): past it, it is killed and fails. */
+  /**
+   * The most the command may print (`MAX_OUTPUT_LENGTH`): past it, it is killed and fails. Characters of text; with
+   * `records`, bytes of stdout plus characters of stderr (its errors, a few lines), as the message says bytes.
+   */
   maxOutputLength?: number;
   /**
    * Where the `--format` records the command prints on stdout go, read as they arrive (`CmClient.queryRecords`); the
