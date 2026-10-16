@@ -124,7 +124,7 @@ async function measure(bundle, standIn, output, way) {
   } else {
     const records = new RecordReader(graphBranch(false));
     const result = await runCmProcess(process.execPath, [standIn, output], { records });
-    branches = records.finish(result.output);
+    branches = records.finish();
   }
 
   const ms = performance.now() - started;

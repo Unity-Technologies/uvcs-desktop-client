@@ -74,7 +74,7 @@ describe('RecordReader', () => {
     const reader = new RecordReader<string[]>((fields) => fields);
     [0, ...cuts].forEach((start, index) => reader.read(bytes.subarray(start, cuts[index] ?? bytes.length)));
     const rest = reader.takeRest();
-    return { rows: reader.finish(''), rest };
+    return { rows: reader.finish(), rest };
   }
 
   const everyByte = (output: string): number[] => Array.from({ length: Buffer.byteLength(output) - 1 }, (_, index) => index + 1);

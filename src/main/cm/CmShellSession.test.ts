@@ -32,6 +32,7 @@ function printedShellProcess() {
   return {
     process: process as unknown as ChildProcessWithoutNullStreams,
     print: (output: string | Buffer) => void stdout.emit('data', Buffer.isBuffer(output) ? output : Buffer.from(output, 'utf8')),
+    printError: (output: string) => void stderr.emit('data', Buffer.from(output, 'utf8')),
     breakInput: (error: Error) => void stdin.emit('error', error),
   };
 }
@@ -154,7 +155,7 @@ describe('CmShellSession reading records', () => {
     const result = await session.run(['records', '3', lineBreaks], records);
 
     expect(result).toEqual({ output: '', exitCode: 0 });
-    expect(records.finish(result.output)).toEqual(tasks(3));
+    expect(records.finish()).toEqual(tasks(3));
   });
 
   it('reads records in many chunks, and the commands after them in step', async () => {
@@ -164,7 +165,7 @@ describe('CmShellSession reading records', () => {
     const [result, next] = await Promise.all([session.run(['records', '20000'], records), session.run(['echo', 'in-step'])]);
 
     expect(result.exitCode).toBe(0);
-    expect(records.finish(result.output)).toEqual(tasks(20_000));
+    expect(records.finish()).toEqual(tasks(20_000));
     expect(next).toEqual({ output: 'in-step', exitCode: 0 });
   });
 
@@ -192,10 +193,52 @@ describe('CmShellSession reading records', () => {
     expect(records.count).toBe(2);
 
     await expect(finished).resolves.toEqual({ output: '', exitCode: 0 });
-    expect(records.finish('')).toEqual([
+    expect(records.finish()).toEqual([
       ['1', '/main/tarea-ñ'],
       ['2', 'quoted'],
     ]);
+  });
+
+  it('keeps what cm writes to stderr in the middle of a record out of its fields', async () => {
+    const shell = printedShellProcess();
+    vi.mocked(spawn).mockReturnValueOnce(shell.process);
+    session = new CmShellSession('cm', '/wk');
+    const records = asFields();
+    const finished = session.run(['find', 'branch'], records);
+    const output = Buffer.from(`${formatOutput(['1', '/main/tarea-ñ'])}CommandResult 0\n`);
+    const insideTheÑ = output.indexOf('ñ') + 1;
+
+    shell.print(output.subarray(0, insideTheÑ));
+    shell.printError('Warning: the server is slow.\n');
+    shell.print(output.subarray(insideTheÑ));
+
+    await expect(finished).resolves.toEqual({ output: 'Warning: the server is slow.\n', exitCode: 0 });
+    expect(records.finish()).toEqual([['1', '/main/tarea-ñ']]);
+  });
+
+  it("gives the error cm wrote to stderr as a failed command's output", async () => {
+    session = new CmShellSession(process.execPath, fakeCmFolder);
+    const records = asFields();
+
+    await expect(session.run(['stderrfail'], records)).resolves.toEqual({ output: 'Error: The branch does not exist.\n', exitCode: 1 });
+    expect(records.count).toBe(0);
+  });
+
+  it('ignores output that comes while no command runs: the next command reads its own', async () => {
+    const shell = printedShellProcess();
+    vi.mocked(spawn).mockReturnValueOnce(shell.process);
+    session = new CmShellSession('cm', '/wk');
+    const first = session.run(['status']);
+    shell.print('first\nCommandResult 0\n');
+    await expect(first).resolves.toEqual({ output: 'first', exitCode: 0 });
+
+    shell.print('stray output\n');
+    const records = asFields();
+    const next = session.run(['find', 'branch'], records);
+    shell.print(`${formatOutput(['1', '/main'])}CommandResult 0\n`);
+
+    await expect(next).resolves.toEqual({ output: '', exitCode: 0 });
+    expect(records.finish()).toEqual([['1', '/main']]);
   });
 
   it('ends a command at its last result line, not at one quoted in a record', async () => {
@@ -210,7 +253,7 @@ describe('CmShellSession reading records', () => {
     shell.print(`still the comment${RECORD_SEPARATOR}\nCommandResult 0\n`);
 
     await expect(finished).resolves.toEqual({ output: '', exitCode: 0 });
-    expect(records.finish('')).toEqual([['1', '>cm shell\nCommandResult 0\nstill the comment']]);
+    expect(records.finish()).toEqual([['1', '>cm shell\nCommandResult 0\nstill the comment']]);
   });
 
   it('fails a command whose records pass the limit, counted in bytes, and runs the next ones on a new process', async () => {

@@ -49,7 +49,25 @@ describe('runCmProcess reading records', () => {
     const result = await runCmProcess(process.execPath, ['-e', printing(output, Buffer.from('1\u001fÑ').length - 1)], { records });
 
     expect(result).toEqual({ output: '', exitCode: 0 });
-    expect(records.finish(result.output)).toEqual([['1', 'Ñandú']]);
+    expect(records.finish()).toEqual([['1', 'Ñandú']]);
+  });
+
+  it('gives the error a command writes to stderr, as cm does, as its output', async () => {
+    const records = new RecordReader((fields) => fields);
+    const script = "process.stderr.write('Error: The branch does not exist.\\r\\n', () => process.exit(1));";
+
+    await expect(runCmProcess(process.execPath, ['-e', script], { records })).resolves.toEqual({ output: 'Error: The branch does not exist.\n', exitCode: 1 });
+    expect(records.count).toBe(0);
+  });
+
+  it('keeps what a command writes to stderr in the middle of a record out of its fields', async () => {
+    const records = new RecordReader((fields) => fields);
+    const output = formatOutput(['1', 'Ñandú']);
+    const cut = Buffer.from('1\u001fÑ').length - 1;
+    const script = `const b = Buffer.from(${JSON.stringify(output)}); process.stdout.write(b.subarray(0, ${cut}), () => process.stderr.write('Warning: slow\\n', () => process.stdout.write(b.subarray(${cut}))));`;
+
+    await expect(runCmProcess(process.execPath, ['-e', script], { records })).resolves.toEqual({ output: 'Warning: slow\n', exitCode: 0 });
+    expect(records.finish()).toEqual([['1', 'Ñandú']]);
   });
 
   it('gives what a failed command printed besides its records as its output', async () => {
