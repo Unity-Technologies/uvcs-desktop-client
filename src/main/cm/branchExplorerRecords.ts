@@ -1,6 +1,5 @@
 import type { GraphBranch, GraphChangeset, GraphLabel, MergeLink, MergeLinkType } from '@shared/domain/branchExplorer';
 import { recordFormat, type ReadRecord } from './formatRecords';
-import type { InternedStrings } from './InternedStrings';
 
 /**
  * `cm find ... --format` layouts for the Branch Explorer. Formatted records are much lighter than XML,
@@ -35,16 +34,15 @@ const MERGE_LINK_TYPES: Record<string, MergeLinkType> = {
   intervalcherrypicksubstractive: 'intervalSubtractive',
 };
 
-// What the Branch Explorer builds of each record as it arrives (`CmClient.queryRecords`). The texts many rows repeat
-// (owners; branch names, as each changeset names its branch and each branch its parent) are kept once per load.
+// What the Branch Explorer builds of each record as it arrives (`CmClient.queryRecords`).
 
 /** A branch of one `cm find branch`: hidden ones come from a query of their own (`hidden = 'true'`). */
-export function graphBranch(isHidden: boolean, strings: InternedStrings): ReadRecord<GraphBranch> {
+export function graphBranch(isHidden: boolean): ReadRecord<GraphBranch> {
   return ([id = '', name = '', parent = '', owner = '', date = '', head = '', comment = '']) => ({
     id: toInteger(id),
-    name: strings.of(name),
-    parent: strings.of(parent),
-    owner: strings.of(owner),
+    name,
+    parent,
+    owner,
     date,
     comment,
     headChangeset: toInteger(head),
@@ -52,16 +50,14 @@ export function graphBranch(isHidden: boolean, strings: InternedStrings): ReadRe
   });
 }
 
-export function graphChangeset(strings: InternedStrings): ReadRecord<GraphChangeset> {
-  return ([id = '', branch = '', parent = '', date = '', owner = '', comment = '']) => ({
-    id: toInteger(id),
-    branch: strings.of(branch),
-    parent: toInteger(parent),
-    date,
-    owner: strings.of(owner),
-    comment,
-  });
-}
+export const graphChangeset: ReadRecord<GraphChangeset> = ([id = '', branch = '', parent = '', date = '', owner = '', comment = '']) => ({
+  id: toInteger(id),
+  branch,
+  parent: toInteger(parent),
+  date,
+  owner,
+  comment,
+});
 
 /** A merge link; one of a type the graph doesn't draw is left out. */
 export const graphMergeLink: ReadRecord<MergeLink> = ([type = '', source = '', destination = '']) => {
@@ -69,15 +65,13 @@ export const graphMergeLink: ReadRecord<MergeLink> = ([type = '', source = '', d
   return linkType && { type: linkType, sourceChangeset: toInteger(source), destinationChangeset: toInteger(destination) };
 };
 
-export function graphLabel(strings: InternedStrings): ReadRecord<GraphLabel> {
-  return ([name = '', changeset = '', owner = '', date = '', comment = '']) => ({
-    name,
-    changeset: toInteger(changeset),
-    owner: strings.of(owner),
-    date,
-    comment,
-  });
-}
+export const graphLabel: ReadRecord<GraphLabel> = ([name = '', changeset = '', owner = '', date = '', comment = '']) => ({
+  name,
+  changeset: toInteger(changeset),
+  owner,
+  date,
+  comment,
+});
 
 function toInteger(value: string): number {
   const parsed = Number.parseInt(value, 10);
