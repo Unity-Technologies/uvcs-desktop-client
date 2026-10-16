@@ -2,7 +2,9 @@ import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { findXml } from '../cm/testing/cmOutput';
+import { findWhereArgs } from '../cm/findQuery';
+import { FOUND_LABELS } from '../cm/foundObjects';
+import { foundOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createLabelsService } from './labelsService';
 import { readingFileOption } from './testing/readingFileOption';
@@ -15,15 +17,15 @@ function labels(answers: Record<string, CmAnswer>) {
   return { ...fake, service: createLabelsService(serviceContext(fake.cm)) };
 }
 
-const V1 = { ID: 80, NAME: 'v1.0', CHANGESET: 12, BRANCH: '/main', COMMENT: 'First', OWNER: 'ana', DATE: '2026-09-25T10:00:00+02:00', REPNAME: 'game', REPSERVER: 'local' };
+const V1 = { id: 80, name: 'v1.0', changeset: 12, branch: '/main', comment: 'First', owner: 'ana', date: '2026-09-25T10:00:00+02:00', repname: 'game', repserver: 'local' };
 
 describe('labels', () => {
   it('lists labels newest first with one cm find, filtered on the server', async () => {
-    const { service, commands } = labels({ 'find label': findXml('MARKER', V1) });
+    const { service, commands } = labels({ 'find label': foundOutput(FOUND_LABELS, V1) });
 
     const listed = await service.list(WORKSPACE, { text: 'v1', limit: 20 });
 
-    expect(commands).toMatchObject([{ via: 'query', args: ['find', 'label', "where name like '%1%' order by date desc limit 20", '--xml', '--nototal'] }]);
+    expect(commands).toMatchObject([{ via: 'query', args: findWhereArgs(FOUND_LABELS, "where name like '%1%' order by date desc limit 20") }]);
     expect(listed).toEqual([{ id: 80, name: 'v1.0', changeset: 12, branch: '/main', comment: 'First', owner: 'ana', date: '2026-09-25T10:00:00+02:00', repository: 'game@local' }]);
   });
 

@@ -4,14 +4,14 @@ import type { QueryFilter } from '@shared/domain/query';
 import { shortBranchName } from '@shared/domain/specs';
 import { branchCreateArgs } from '../cm/branchCreateArgs';
 import { equalsCondition, findArgs } from '../cm/findQuery';
-import { findRecords, toBranch } from '../cm/findObjects';
+import { FOUND_BRANCHES, parseFound } from '../cm/foundObjects';
 import { withTempFile } from '../files/tempFile';
 import type { BranchNamesContext, ServiceContext } from './ServiceContext';
 
 export function createBranchesService({ cm, settings, headers }: ServiceContext, { branchNames }: BranchNamesContext): BranchesApi {
   async function find(workspacePath: string, filter: QueryFilter, conditions: string[]): Promise<Branch[]> {
-    const xml = await cm.query(findArgs('branch', { ...filter, branch: undefined }, 'date desc', conditions), { cwd: workspacePath });
-    const branches = findRecords(xml, 'BRANCH').map(toBranch);
+    const output = await cm.query(findArgs(FOUND_BRANCHES, { ...filter, branch: undefined }, 'date desc', conditions), { cwd: workspacePath });
+    const branches = parseFound(FOUND_BRANCHES, output);
     // The code review chips name branches by id: this list answers them.
     branchNames.remember(workspacePath, branches);
     return branches;

@@ -1,19 +1,19 @@
 import type { ChangesetsApi } from '@shared/api/changesets';
-import { findArgs } from '../cm/findQuery';
-import { findRecords, toChangeset } from '../cm/findObjects';
+import { findArgs, findWhereArgs } from '../cm/findQuery';
+import { FOUND_CHANGESETS, parseFound } from '../cm/foundObjects';
 import type { ServiceContext } from './ServiceContext';
 
 export function createChangesetsService({ cm }: ServiceContext): ChangesetsApi {
   return {
     async list(workspacePath, filter) {
-      const xml = await cm.query(findArgs('changeset', filter, 'changesetid desc'), { cwd: workspacePath });
-      return findRecords(xml, 'CHANGESET').map(toChangeset);
+      const output = await cm.query(findArgs(FOUND_CHANGESETS, filter, 'changesetid desc'), { cwd: workspacePath });
+      return parseFound(FOUND_CHANGESETS, output);
     },
 
     async get(workspacePath, changesetId, repository) {
       const where = `where changesetid = ${changesetId}${repository ? ` on repository '${repository}'` : ''}`;
-      const xml = await cm.query(['find', 'changeset', where, '--xml', '--nototal'], { cwd: workspacePath });
-      const [changeset] = findRecords(xml, 'CHANGESET').map(toChangeset);
+      const output = await cm.query(findWhereArgs(FOUND_CHANGESETS, where), { cwd: workspacePath });
+      const [changeset] = parseFound(FOUND_CHANGESETS, output);
       if (!changeset) throw new Error(`Changeset ${changesetId} was not found.`);
       return changeset;
     },

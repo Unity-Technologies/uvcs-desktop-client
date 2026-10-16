@@ -1,6 +1,5 @@
 import { CODE_REVIEW_STATUSES, type CodeReviewStatus, type CodeReviewSummary } from '@shared/domain/codeReview';
-import { findRecords } from './findObjects';
-import { integer, text } from './parseXml';
+import { foundObjects, integerValue } from './foundObjects';
 
 /** A review as `cm find review` reports it; branch targets come as object ids (`id:54`) to be resolved. */
 export interface RawCodeReview extends CodeReviewSummary {
@@ -9,18 +8,20 @@ export interface RawCodeReview extends CodeReviewSummary {
   targetId: number;
 }
 
-export function parseCodeReviews(xml: string): RawCodeReview[] {
-  return findRecords(xml, 'REVIEW').map((record) => ({
-    id: integer(record.ID),
-    title: text(record.TITLE),
-    status: toStatus(text(record.CODEREVIEWSTATUS) || text(record.STATUS)),
-    owner: text(record.OWNER),
-    assignee: text(record.ASSIGNEE),
-    date: text(record.DATE),
-    targetType: toTargetType(text(record.TARGETTYPE)),
-    targetId: integer(text(record.TARGET).replace(/^id:/, '')),
-  }));
-}
+export const FOUND_REVIEWS = foundObjects(
+  'review',
+  ['id', 'title', 'codereviewstatus', 'status', 'owner', 'assignee', 'date', 'targettype', 'target'],
+  (value): RawCodeReview => ({
+    id: integerValue(value('id')),
+    title: value('title'),
+    status: toStatus(value('codereviewstatus') || value('status')),
+    owner: value('owner'),
+    assignee: value('assignee'),
+    date: value('date'),
+    targetType: toTargetType(value('targettype')),
+    targetId: integerValue(value('target').replace(/^id:/, '')),
+  }),
+);
 
 /** `cm` prefixes the value with its type name, e.g. `CodeReviewStatus Under review`. */
 function toStatus(value: string): CodeReviewStatus {

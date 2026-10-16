@@ -1,6 +1,6 @@
 import type { BranchExplorerQuery } from '@shared/domain/branchExplorer';
-import { BRANCH_FORMAT, CHANGESET_FORMAT, DATE_FORMAT, LABEL_FORMAT, MERGE_FORMAT, roundTripDate } from './branchExplorerRecords';
-import { whereClause } from './findQuery';
+import { BRANCH_FORMAT, CHANGESET_FORMAT, LABEL_FORMAT, MERGE_FORMAT } from './branchExplorerRecords';
+import { findCommand, whereClause } from './findQuery';
 
 /**
  * The `cm find` commands that load the Branch Explorer. `cm find branch` leaves hidden branches out unless asked for
@@ -8,9 +8,8 @@ import { whereClause } from './findQuery';
  * Hidden branches are always read, few as they are: the code review chips name them by id.
  */
 export function branchExplorerFinds(query: BranchExplorerQuery): Record<'branches' | 'hiddenBranches' | 'changesets' | 'merges' | 'labels', string[]> {
-  const find = (object: string, where: string, format: string): string[] =>
-    ['find', object, where, `--format=${format}`, `--dateformat=${DATE_FORMAT}`, '--nototal'].filter(Boolean);
-  const range = { sinceDate: query.sinceDate && roundTripDate(query.sinceDate) };
+  const find = (object: string, where: string, format: string): string[] => findCommand(object, where, `--format=${format}`);
+  const range = { sinceDate: query.sinceDate };
   const inRange = whereClause(range);
   return {
     branches: find('branch', '', BRANCH_FORMAT),

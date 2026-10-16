@@ -1,21 +1,20 @@
 import type { AttributeType, AttributeValue } from '@shared/domain/attribute';
-import { integer, text } from './parseXml';
+import { repositorySpec } from '@shared/domain/specs';
+import { foundObjects, integerValue } from './foundObjects';
 
-type XmlRecord = Record<string, unknown>;
+/** `cm find attributetype`: the attribute types of the repository. */
+export const FOUND_ATTRIBUTE_TYPES = foundObjects(
+  'attributetype',
+  ['id', 'name', 'comment', 'owner', 'date', 'repname', 'repserver'],
+  (value): AttributeType => ({
+    id: integerValue(value('id')),
+    name: value('name'),
+    comment: value('comment'),
+    owner: value('owner'),
+    date: value('date'),
+    repository: repositorySpec(value('repname'), value('repserver')),
+  }),
+);
 
-/** A record of `cm find attributetype --xml`. */
-export function toAttributeType(record: XmlRecord): AttributeType {
-  return {
-    id: integer(record.ID),
-    name: text(record.NAME),
-    comment: text(record.COMMENT),
-    owner: text(record.OWNER),
-    date: text(record.DATE),
-    repository: `${text(record.REPNAME)}@${text(record.REPSERVER)}`,
-  };
-}
-
-/** A record of `cm find attribute --xml`: an object's value of one attribute. */
-export function toAttributeValue(record: XmlRecord): AttributeValue {
-  return { name: text(record.NAME), value: text(record.VALUE) };
-}
+/** `cm find attribute`: an object's value of one attribute, `name` the attribute type's. */
+export const FOUND_ATTRIBUTE_VALUES = foundObjects('attribute', ['name', 'value'], (value): AttributeValue => ({ name: value('name'), value: value('value') }));

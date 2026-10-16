@@ -4,7 +4,9 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { MAIN_BRANCH_GUID } from '@shared/domain/branch';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
-import { branchesFound, findXml, formatOutput } from '../cm/testing/cmOutput';
+import { findWhereArgs, roundTripDate } from '../cm/findQuery';
+import { FOUND_BRANCHES } from '../cm/foundObjects';
+import { branchesFound, formatOutput, foundLine, foundOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { SettingsStore } from '../settings/SettingsStore';
 import { cmHeaderReaders, WorkspaceHeaders } from '../workspace/WorkspaceHeaders';
@@ -16,23 +18,23 @@ const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
 
 function branchRecord(id: number, name: string, date: string) {
   return {
-    ID: id,
-    COMMENT: '',
-    DATE: date,
-    OWNER: 'ana',
-    NAME: name,
-    PARENT: '/main',
-    REPNAME: 'game',
-    REPSERVER: 'local',
-    CHANGESET: 12,
-    GUID: `guid-${id}`,
+    id: id,
+    comment: '',
+    date: date,
+    owner: 'ana',
+    name: name,
+    parent: '/main',
+    repname: 'game',
+    repserver: 'local',
+    changeset: 12,
+    guid: `guid-${id}`,
   };
 }
 
 const TASK1 = branchRecord(37, '/main/task1', '2026-09-25T10:00:00+02:00');
 const TASK2 = branchRecord(38, '/main/task2', '2026-09-27T10:00:00+02:00');
 const OLD_HIDDEN = branchRecord(21, '/main/old', '2026-09-26T10:00:00+02:00');
-const OTHER_TASK1 = { ...branchRecord(40, '/main/fix/task1', '2026-09-28T10:00:00+02:00'), PARENT: '/main/fix' };
+const OTHER_TASK1 = { ...branchRecord(40, '/main/fix/task1', '2026-09-28T10:00:00+02:00'), parent: '/main/fix' };
 
 function branches(answers: Record<string, CmAnswer>) {
   const fake = fakeCmClient(answers);
@@ -49,12 +51,12 @@ const visibleOrHidden =
 
 describe('branch list', () => {
   it('lists visible branches with one quick cm find, newest first', async () => {
-    const { service, commands } = branches({ 'find branch': findXml('BRANCH', TASK2, TASK1) });
+    const { service, commands } = branches({ 'find branch': foundOutput(FOUND_BRANCHES, TASK2, TASK1) });
 
     const listed = await service.list(WORKSPACE, { includeHidden: false });
 
     expect(commands).toMatchObject([
-      { via: 'query', args: ['find', 'branch', "where hidden = 'false' order by date desc", '--xml', '--nototal'], options: { cwd: WORKSPACE } },
+      { via: 'query', args: findWhereArgs(FOUND_BRANCHES, "where hidden = 'false' order by date desc"), options: { cwd: WORKSPACE } },
     ]);
     expect(listed.map((branch) => [branch.id, branch.name, branch.repository])).toEqual([
       [38, '/main/task2', 'game@local'],
@@ -63,13 +65,13 @@ describe('branch list', () => {
   });
 
   it('reads hidden branches with a second query only when asked, flagged and merged by date', async () => {
-    const { service, lines } = branches({ 'find branch': visibleOrHidden(findXml('BRANCH', TASK2, TASK1), findXml('BRANCH', OLD_HIDDEN)) });
+    const { service, lines } = branches({ 'find branch': visibleOrHidden(foundOutput(FOUND_BRANCHES, TASK2, TASK1), foundOutput(FOUND_BRANCHES, OLD_HIDDEN)) });
 
     const listed = await service.list(WORKSPACE, { includeHidden: true });
 
     expect(lines()).toEqual([
-      "find branch where hidden = 'false' order by date desc --xml --nototal",
-      "find branch where hidden = 'true' order by date desc --xml --nototal",
+      foundLine(FOUND_BRANCHES, "where hidden = 'false' order by date desc"),
+      foundLine(FOUND_BRANCHES, "where hidden = 'true' order by date desc"),
     ]);
     expect(listed.map((branch) => [branch.name, branch.isHidden ?? false])).toEqual([
       ['/main/task2', false],
@@ -79,17 +81,17 @@ describe('branch list', () => {
   });
 
   it('filters on the server by date, owners, text and limit, and never by branch', async () => {
-    const { service, lines } = branches({ 'find branch': findXml('BRANCH') });
+    const { service, lines } = branches({ 'find branch': '' });
 
     await service.list(WORKSPACE, { includeHidden: false, sinceDate: '2026-09-01', owners: ['ana'], text: 'task', limit: 50, branch: '/main' });
 
     expect(lines()).toEqual([
-      "find branch where hidden = 'false' and name like '%ask%' and date >= '2026-09-01' and owner = 'ana' order by date desc limit 50 --xml --nototal",
+      foundLine(FOUND_BRANCHES, `where hidden = 'false' and name like '%ask%' and date >= '${roundTripDate('2026-09-01')}' and owner = 'ana' order by date desc limit 50`),
     ]);
   });
 
   it('remembers the names it listed, so code reviews name their branches without asking cm', async () => {
-    const { service, branchNames, commands } = branches({ 'find branch': findXml('BRANCH', TASK2, TASK1) });
+    const { service, branchNames, commands } = branches({ 'find branch': foundOutput(FOUND_BRANCHES, TASK2, TASK1) });
 
     await service.list(WORKSPACE, { includeHidden: false });
 
@@ -106,26 +108,26 @@ describe('branch list', () => {
 describe('one branch by name', () => {
   it('finds a branch by its last name part among visible and hidden ones, and picks the one with the full name', async () => {
     const { service, lines } = branches({
-      'find branch': visibleOrHidden(findXml('BRANCH', TASK1, OTHER_TASK1), findXml('BRANCH')),
+      'find branch': visibleOrHidden(foundOutput(FOUND_BRANCHES, TASK1, OTHER_TASK1), ''),
     });
 
     const branch = await service.get(WORKSPACE, '/main/fix/task1');
 
     expect(lines()).toEqual([
-      "find branch where name = 'task1' and hidden = 'false' order by date desc --xml --nototal",
-      "find branch where name = 'task1' and hidden = 'true' order by date desc --xml --nototal",
+      foundLine(FOUND_BRANCHES, "where name = 'task1' and hidden = 'false' order by date desc"),
+      foundLine(FOUND_BRANCHES, "where name = 'task1' and hidden = 'true' order by date desc"),
     ]);
     expect(branch).toMatchObject({ id: 40, name: '/main/fix/task1' });
   });
 
   it('finds a hidden branch, flagged as such', async () => {
-    const { service } = branches({ 'find branch': visibleOrHidden(findXml('BRANCH'), findXml('BRANCH', OLD_HIDDEN)) });
+    const { service } = branches({ 'find branch': visibleOrHidden('', foundOutput(FOUND_BRANCHES, OLD_HIDDEN)) });
 
     expect(await service.get(WORKSPACE, '/main/old')).toMatchObject({ id: 21, isHidden: true });
   });
 
   it("answers null for a branch that doesn't exist", async () => {
-    const { service } = branches({ 'find branch': findXml('BRANCH') });
+    const { service } = branches({ 'find branch': '' });
 
     expect(await service.get(WORKSPACE, '/main/gone')).toBeNull();
   });

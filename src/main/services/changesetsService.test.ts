@@ -1,7 +1,9 @@
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { findXml } from '../cm/testing/cmOutput';
+import { findWhereArgs, roundTripDate } from '../cm/findQuery';
+import { FOUND_CHANGESETS } from '../cm/foundObjects';
+import { foundLine, foundOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createChangesetsService } from './changesetsService';
 import { serviceContext } from './testing/serviceContext';
@@ -10,16 +12,15 @@ const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
 
 function changesetRecord(id: number, repository = 'game') {
   return {
-    ID: id + 100,
-    CHANGESETID: id,
-    COMMENT: `Change ${id}`,
-    DATE: '2026-09-25T10:00:00+02:00',
-    OWNER: 'ana',
-    BRANCH: '/main/task1',
-    PARENT: id - 1,
-    REPNAME: repository,
-    REPSERVER: 'local',
-    GUID: `guid-${id}`,
+    changesetid: id,
+    comment: `Change ${id}`,
+    date: '2026-09-25T10:00:00+02:00',
+    owner: 'ana',
+    branch: '/main/task1',
+    parent: id - 1,
+    repname: repository,
+    repserver: 'local',
+    guid: `guid-${id}`,
   };
 }
 
@@ -30,14 +31,14 @@ function changesets(answers: Record<string, CmAnswer>) {
 
 describe('changesets', () => {
   it('lists changesets newest first with one cm find, filtered on the server', async () => {
-    const { service, commands } = changesets({ 'find changeset': findXml('CHANGESET', changesetRecord(12), changesetRecord(11)) });
+    const { service, commands } = changesets({ 'find changeset': foundOutput(FOUND_CHANGESETS, changesetRecord(12), changesetRecord(11)) });
 
     const listed = await service.list(WORKSPACE, { branch: '/main/task1', sinceDate: '2026-09-01', limit: 100 });
 
     expect(commands).toMatchObject([
       {
         via: 'query',
-        args: ['find', 'changeset', "where date >= '2026-09-01' and branch = '/main/task1' order by changesetid desc limit 100", '--xml', '--nototal'],
+        args: findWhereArgs(FOUND_CHANGESETS, `where date >= '${roundTripDate('2026-09-01')}' and branch = '/main/task1' order by changesetid desc limit 100`),
         options: { cwd: WORKSPACE },
       },
     ]);
@@ -48,20 +49,20 @@ describe('changesets', () => {
   });
 
   it('reads one changeset, in another repository when it names one (an xlinked item)', async () => {
-    const { service, lines } = changesets({ 'find changeset': findXml('CHANGESET', changesetRecord(7, 'lib')) });
+    const { service, lines } = changesets({ 'find changeset': foundOutput(FOUND_CHANGESETS, changesetRecord(7, 'lib')) });
 
     await service.get(WORKSPACE, 7);
     const xlinked = await service.get(WORKSPACE, 7, 'lib@local');
 
     expect(lines()).toEqual([
-      'find changeset where changesetid = 7 --xml --nototal',
-      "find changeset where changesetid = 7 on repository 'lib@local' --xml --nototal",
+      foundLine(FOUND_CHANGESETS, 'where changesetid = 7'),
+      foundLine(FOUND_CHANGESETS, "where changesetid = 7 on repository 'lib@local'"),
     ]);
     expect(xlinked.repository).toBe('lib@local');
   });
 
   it("fails for a changeset that doesn't exist", async () => {
-    const { service } = changesets({ 'find changeset': findXml('CHANGESET') });
+    const { service } = changesets({ 'find changeset': '' });
 
     await expect(service.get(WORKSPACE, 7)).rejects.toThrow('Changeset 7 was not found.');
   });

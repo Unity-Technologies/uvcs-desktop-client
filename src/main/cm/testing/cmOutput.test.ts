@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseRecords } from '../formatRecords';
-import { findRecords } from '../findObjects';
-import { extendedAclOutput, findXml, formatOutput } from './cmOutput';
+import { FOUND_BRANCHES, parseFound } from '../foundObjects';
+import { extendedAclOutput, formatOutput, foundOutput } from './cmOutput';
 
 describe('synthetic cm output', () => {
   it("is what the app's parsers read", () => {
@@ -9,7 +9,7 @@ describe('synthetic cm output', () => {
       ['1', 'a b'],
       ['2', 'ç'],
     ]);
-    expect(findRecords(findXml('BRANCH', { ID: 3, NAME: '/main/a&b' }), 'BRANCH')).toEqual([{ ID: '3', NAME: '/main/a&b' }]);
+    expect(parseFound(FOUND_BRANCHES, foundOutput(FOUND_BRANCHES, { id: 3, name: '/main/a&b' }))).toMatchObject([{ id: 3, name: '/main/a&b', comment: '' }]);
   });
 
   it('indents cm showacl --extended as cm 11 does', () => {

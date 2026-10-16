@@ -1,9 +1,9 @@
 import type { AttributesApi } from '@shared/api/attributes';
 import type { AttributeType, AttributeValue } from '@shared/domain/attribute';
-import { toAttributeType, toAttributeValue } from '../cm/attributeRecords';
-import { equalsCondition } from '../cm/findQuery';
-import { findRecords } from '../cm/findObjects';
+import { FOUND_ATTRIBUTE_TYPES, FOUND_ATTRIBUTE_VALUES } from '../cm/attributeRecords';
+import { equalsCondition, findWhereArgs } from '../cm/findQuery';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
+import { parseFound } from '../cm/foundObjects';
 import { withTempFile } from '../files/tempFile';
 import type { ServiceContext } from './ServiceContext';
 
@@ -12,8 +12,8 @@ const USED_VALUES_SAMPLE = 500;
 
 export function createAttributesService({ cm }: ServiceContext): AttributesApi {
   async function listTypes(workspacePath: string): Promise<AttributeType[]> {
-    const xml = await cm.query(['find', 'attributetype', '--xml', '--nototal'], { cwd: workspacePath });
-    return findRecords(xml, 'ATTRIBUTEENTITY').map(toAttributeType);
+    const output = await cm.query(findWhereArgs(FOUND_ATTRIBUTE_TYPES, ''), { cwd: workspacePath });
+    return parseFound(FOUND_ATTRIBUTE_TYPES, output);
   }
 
   async function createType(workspacePath: string, name: string, comment: string): Promise<void> {
@@ -35,8 +35,8 @@ export function createAttributesService({ cm }: ServiceContext): AttributesApi {
 
   async function valuesOf(workspacePath: string, objectSpec: string): Promise<AttributeValue[]> {
     const query = `where ${equalsCondition('srcobj', objectSpec)}`;
-    const xml = await cm.query(['find', 'attribute', query, '--xml', '--nototal'], { cwd: workspacePath });
-    return findRecords(xml, 'ATTRIBUTE').map(toAttributeValue);
+    const output = await cm.query(findWhereArgs(FOUND_ATTRIBUTE_VALUES, query), { cwd: workspacePath });
+    return parseFound(FOUND_ATTRIBUTE_VALUES, output);
   }
 
   async function usedValues(workspacePath: string, attribute: string): Promise<string[]> {

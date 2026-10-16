@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { parseCodeReviews } from './codeReviewsXml';
+import { FOUND_REVIEWS } from './codeReviewRecords';
+import { parseFound } from './foundObjects';
 import { parseItemDetails } from './itemDetailsXml';
 import { parseLocks } from './lockRecords';
 import { parseTreeItems } from './treeItemsXml';
-import { formatOutput } from './testing/cmOutput';
+import { formatOutput, foundOutput } from './testing/cmOutput';
 
 const LS_XML = `<?xml version="1.0" encoding="utf-8"?>
 <LsResults><LsItems>
@@ -134,17 +135,15 @@ describe('parseLocks', () => {
   });
 });
 
-describe('parseCodeReviews', () => {
+describe('code review records', () => {
   it('strips the status type name and splits the target', () => {
-    const xml = `<PLASTICQUERY>
-      <REVIEW><ID>60</ID><TITLE>Branch review</TITLE><CODEREVIEWSTATUS>CodeReviewStatus Rework required</CODEREVIEWSTATUS>
-        <TARGETTYPE>Branch</TARGETTYPE><TARGET>id:54</TARGET><ASSIGNEE></ASSIGNEE></REVIEW>
-      <REVIEW><ID>62</ID><TITLE>Changeset review</TITLE><STATUS>Status Reviewed</STATUS>
-        <TARGETTYPE>Changeset</TARGETTYPE><TARGET>2</TARGET></REVIEW>
-      <REVIEW><ID>63</ID><TITLE>Shelve review</TITLE><STATUS>Status Under review</STATUS>
-        <TARGETTYPE>Shelve</TARGETTYPE><TARGET>3</TARGET></REVIEW>
-    </PLASTICQUERY>`;
-    expect(parseCodeReviews(xml)).toMatchObject([
+    const output = foundOutput(
+      FOUND_REVIEWS,
+      { id: 60, title: 'Branch review', codereviewstatus: 'CodeReviewStatus Rework required', targettype: 'Branch', target: 'id:54', assignee: '' },
+      { id: 62, title: 'Changeset review', status: 'Status Reviewed', targettype: 'Changeset', target: 2 },
+      { id: 63, title: 'Shelve review', status: 'Status Under review', targettype: 'Shelve', target: 3 },
+    );
+    expect(parseFound(FOUND_REVIEWS, output)).toMatchObject([
       { id: 60, status: 'Rework required', targetType: 'branch', targetId: 54, assignee: '' },
       { id: 62, status: 'Reviewed', targetType: 'changeset', targetId: 2 },
       { id: 63, status: 'Under review', targetType: 'shelve', targetId: 3 },

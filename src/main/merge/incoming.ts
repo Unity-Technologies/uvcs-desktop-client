@@ -12,7 +12,7 @@ import {
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
 import { DIFF_FORMAT, parseDiffEntries } from '../cm/diffEntries';
-import { findRecords, toChangeset } from '../cm/findObjects';
+import { FOUND_CHANGESETS, parseFound } from '../cm/foundObjects';
 import { equalsCondition, findArgs } from '../cm/findQuery';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
@@ -119,7 +119,7 @@ async function readNewestIncomingChangesets(cm: CmClient, workspacePath: string)
 export async function readIncomingChangesetPage(cm: CmClient, workspacePath: string, request: IncomingChangesetsRequest): Promise<IncomingChangesetPage> {
   const { branch, loadedChangeset, olderThan, limit } = request;
   const conditions = [`changesetid > ${loadedChangeset}`, ...(olderThan === undefined ? [] : [`changesetid < ${olderThan}`])];
-  const xml = await cm.query(findArgs('changeset', { branch, limit: limit + 1 }, 'changesetid desc', conditions), { cwd: workspacePath });
-  const found = findRecords(xml, 'CHANGESET').map(toChangeset);
+  const output = await cm.query(findArgs(FOUND_CHANGESETS, { branch, limit: limit + 1 }, 'changesetid desc', conditions), { cwd: workspacePath });
+  const found = parseFound(FOUND_CHANGESETS, output);
   return { changesets: found.slice(0, limit), more: found.length > limit };
 }

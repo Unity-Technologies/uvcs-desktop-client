@@ -2,7 +2,8 @@ import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { findXml, formatOutput } from '../cm/testing/cmOutput';
+import { FOUND_ATTRIBUTE_TYPES, FOUND_ATTRIBUTE_VALUES } from '../cm/attributeRecords';
+import { formatOutput, foundLine, foundOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createAttributesService } from './attributesService';
 import { readingFileOption } from './testing/readingFileOption';
@@ -18,12 +19,12 @@ function attributes(answers: Record<string, CmAnswer>) {
 describe('attribute types', () => {
   it('lists attribute types with one cm find', async () => {
     const { service, commands } = attributes({
-      'find attributetype': findXml('ATTRIBUTEENTITY', { ID: 9, NAME: 'status', COMMENT: 'Task status', OWNER: 'ana', DATE: '2026-09-25', REPNAME: 'game', REPSERVER: 'local' }),
+      'find attributetype': foundOutput(FOUND_ATTRIBUTE_TYPES, { id: 9, name: 'status', comment: 'Task status', owner: 'ana', date: '2026-09-25', repname: 'game', repserver: 'local' }),
     });
 
     const types = await service.listTypes(WORKSPACE);
 
-    expect(commands).toMatchObject([{ via: 'query', line: 'find attributetype --xml --nototal', options: { cwd: WORKSPACE } }]);
+    expect(commands).toMatchObject([{ via: 'query', line: foundLine(FOUND_ATTRIBUTE_TYPES, ''), options: { cwd: WORKSPACE } }]);
     expect(types).toEqual([{ id: 9, name: 'status', comment: 'Task status', owner: 'ana', date: '2026-09-25', repository: 'game@local' }]);
   });
 
@@ -48,10 +49,10 @@ describe('attribute types', () => {
 
 describe('attribute values', () => {
   it("reads an object's values with one cm find", async () => {
-    const { service, lines } = attributes({ 'find attribute': findXml('ATTRIBUTE', { NAME: 'status', VALUE: 'done' }) });
+    const { service, lines } = attributes({ 'find attribute': foundOutput(FOUND_ATTRIBUTE_VALUES, { name: 'status', value: 'done' }) });
 
     expect(await service.valuesOf(WORKSPACE, 'br:/main/dani')).toEqual([{ name: 'status', value: 'done' }]);
-    expect(lines()).toEqual(["find attribute where srcobj = 'br:/main/dani' --xml --nototal"]);
+    expect(lines()).toEqual([foundLine(FOUND_ATTRIBUTE_VALUES, "where srcobj = 'br:/main/dani'")]);
   });
 
   it('samples the values a type takes with one bounded query', async () => {
