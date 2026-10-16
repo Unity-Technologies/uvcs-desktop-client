@@ -62,7 +62,7 @@ export const graphChangeset: ReadRecord<GraphChangeset> = ([id = '', branch = ''
 /** A merge link; one of a type the graph doesn't draw is left out. */
 export const graphMergeLink: ReadRecord<MergeLink> = ([type = '', source = '', destination = '']) => {
   const linkType = MERGE_LINK_TYPES[type.toLowerCase()];
-  return linkType && { type: linkType, sourceChangeset: toInteger(source), destinationChangeset: toInteger(destination) };
+  return linkType ? { type: linkType, sourceChangeset: toInteger(source), destinationChangeset: toInteger(destination) } : undefined;
 };
 
 export const graphLabel: ReadRecord<GraphLabel> = ([name = '', changeset = '', owner = '', date = '', comment = '']) => ({
