@@ -6,6 +6,7 @@
 import type { RevisionFile } from '../files/WorkspaceCopies';
 import { parseRecords, recordFormat } from './formatRecords';
 import { onLinksThemselves } from './symlinkArgs';
+import { listedRevisionId } from './treeItems';
 
 const FIELDS = ['wkpath', 'type', 'revid', 'hash', 'size', 'repspec'];
 
@@ -20,8 +21,8 @@ export function workspaceListingArgs(absoluteFolder: string): string[] {
  */
 export function parseWorkspaceListing(output: string): RevisionFile[] {
   return parseRecords(output).flatMap(([wkPath = '', type = '', revid = '', hash = '', size = '', repository = '']) => {
-    const revisionId = Number.parseInt(revid, 10);
-    if ((type !== 'txt' && type !== 'bin') || !(revisionId > 0) || hash === '') return [];
+    const revisionId = listedRevisionId(revid);
+    if ((type !== 'txt' && type !== 'bin') || revisionId === undefined || revisionId <= 0 || hash === '') return [];
     return [{ path: wkPath.replaceAll('\\', '/'), revision: { revisionId, repository: repository.replace(/^rep:/, '') }, hash, size: size === '' ? -1 : Number(size) }];
   });
 }

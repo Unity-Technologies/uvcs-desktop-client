@@ -21,6 +21,15 @@ export interface ListedTreeItem extends TreeItem {
   hash?: string;
 }
 
+/**
+ * The revision `cm ls` printed for an item: none (`undefined`) for a private item or one not loaded, which print
+ * `{revid}` empty; -1 for a checkout, whose revision isn't loaded; else its id. Every `cm ls` reader decides by it
+ * (`parseTreeItems`, `parseWorkspaceListing`).
+ */
+export function listedRevisionId(revid: string): number | undefined {
+  return revid === '' ? undefined : integerValue(revid);
+}
+
 /** The item as the windows get it. */
 export function withoutHash({ hash: _hash, ...item }: ListedTreeItem): TreeItem {
   return item;
@@ -62,7 +71,8 @@ function treeItem(value: (field: TreeItemField) => string): ListedTreeItem {
   const xlink = parseXlinkName(listedName);
   const symlinkTarget = value('symlinktarget').replace(/^\s*->\s*/, '');
   const changeset = integerValue(value('changeset'));
-  const revisionId = integerValue(value('revid'));
+  const listedRevision = listedRevisionId(value('revid'));
+  const revisionId = listedRevision ?? -1;
   // A revision numbered below zero is a shelve's (`-id`, on branch `id:-1`); a private item has neither.
   const shelveId = changeset < 0 && revisionId > 0 ? -changeset : undefined;
   const hash = value('hash');
@@ -74,7 +84,7 @@ function treeItem(value: (field: TreeItemField) => string): ListedTreeItem {
     size: Number.parseInt(value('size'), 10) || 0,
     // `cm` prints the minimum date (`0001-01-01…`) for an item not checked in yet or not loaded.
     date: date.startsWith('0001-') ? '' : date,
-    isPrivate: value('revid') === '' && value('size') !== '',
+    isPrivate: listedRevision === undefined && value('size') !== '',
     isCheckedOut: value('checkout') !== '',
     changeset: shelveId === undefined ? changeset : null,
     branch: shelveId === undefined ? value('branch') : '',

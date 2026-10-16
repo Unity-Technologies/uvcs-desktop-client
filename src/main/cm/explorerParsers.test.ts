@@ -3,11 +3,17 @@ import { FOUND_REVIEWS } from './codeReviewRecords';
 import { readRecords } from './formatRecords';
 import { parseItemDetails } from './itemDetailsXml';
 import { parseLocks } from './lockRecords';
-import { parseTreeItems, TREE_ITEMS } from './treeItems';
+import { listedRevisionId, parseTreeItems, TREE_ITEMS } from './treeItems';
 import { formatOutput, recordsOutput } from './testing/cmOutput';
 
 /** Items of `cm ls --format=TREE_ITEM_FORMAT`, the fields as `cm` prints them. */
 const listed = (...items: Partial<Record<(typeof TREE_ITEMS.fields)[number], string | number>>[]): string => recordsOutput(TREE_ITEMS, ...items);
+
+describe('listedRevisionId', () => {
+  it('tells an item with no revision (private, not loaded) from a checkout and a loaded revision', () => {
+    expect([listedRevisionId(''), listedRevisionId('-1'), listedRevisionId('52')]).toEqual([undefined, -1, 52]);
+  });
+});
 
 describe('parseTreeItems', () => {
   it('skips the listed directory and maps each child', () => {
