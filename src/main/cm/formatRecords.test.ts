@@ -22,6 +22,12 @@ describe('parseRecords', () => {
     expect(parseRecords(formatOutput(['"WIP"', '"']))).toEqual([['"WIP"', '"']]);
   });
 
+  // A comment written on Windows keeps its CRLF in the repository; a `\r` left in it would make a one-line comment
+  // read as two lines and keep a title prefilled from it out of the pooled `cm shell`.
+  it('turns CRLF into LF inside a value', () => {
+    expect(parseRecords(formatOutput(['1', 'Fix crash\r\nin the HUD\r\n']))).toEqual([['1', 'Fix crash\nin the HUD\n']]);
+  });
+
   it('reads records whose lines end with CRLF', () => {
     expect(parseRecords('1\u001fa\u001e\r\n2\u001fb\u001e\r\n')).toEqual([
       ['1', 'a'],
