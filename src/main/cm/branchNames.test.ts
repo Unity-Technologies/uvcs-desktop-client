@@ -26,9 +26,9 @@ describe('readBranchNames', () => {
       { id: 37, name: '/main/task1' },
       { id: 21, name: '/main/old' },
     ]);
-    expect(commands.map(({ via, args, options }) => [via, args, options.cwd])).toEqual([
-      ['query', ['find', 'branch', `--format={id}${F}{name}${R}`, '--nototal'], '/wk'],
-      ['query', ['find', 'branch', "where hidden = 'true'", `--format={id}${F}{name}${R}`, '--nototal'], '/wk'],
+    expect(commands.map(({ via, args, options, readsRecords }) => [via, args, options.cwd, readsRecords])).toEqual([
+      ['query', ['find', 'branch', `--format={id}${F}{name}${R}`, '--nototal'], '/wk', true],
+      ['query', ['find', 'branch', "where hidden = 'true'", `--format={id}${F}{name}${R}`, '--nototal'], '/wk', true],
     ]);
   });
 });
