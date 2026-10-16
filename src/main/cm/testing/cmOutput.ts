@@ -1,5 +1,5 @@
 import { FIELD_SEPARATOR, RECORD_SEPARATOR, type RecordLayout } from '../formatRecords';
-import { findWhereArgs } from '../findQuery';
+import { findQueryArgs } from '../findQuery';
 import { TREE_ITEMS } from '../treeItems';
 import { FOUND_BRANCHES, FOUND_CHANGESETS, FOUND_SHELVES, type FoundObjects } from '../foundObjects';
 
@@ -15,7 +15,7 @@ export function formatOutput(...records: readonly (string | number)[][]): string
 
 /** The command line of `cm find` of the objects `found` reads that `query` keeps, as `fakeCmClient` records it. */
 export function foundLine(found: FoundObjects<unknown>, query: string): string {
-  return findWhereArgs(found, query).join(' ');
+  return findQueryArgs(found, query).join(' ');
 }
 
 /**

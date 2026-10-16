@@ -1,6 +1,6 @@
 import type { SelectorKind, WorkspaceSelector } from '@shared/domain/workspace';
 import type { CmClient } from './CmClient';
-import { equalsCondition, findWhereArgs } from './findQuery';
+import { equalsCondition, findQueryArgs } from './findQuery';
 import { FOUND_BRANCHES, FOUND_CHANGESETS, FOUND_LABELS, FOUND_SHELVES, type FoundObjects } from './foundObjects';
 import { readRecords } from './formatRecords';
 
@@ -21,7 +21,7 @@ const QUERIES: Record<SelectorKind, WorkingObjectQuery> = {
 /** The `cm find` arguments that read the object a workspace is loaded from. */
 export function workingObjectFindArgs(selector: WorkspaceSelector): string[] {
   const { found, condition } = QUERIES[selector.kind];
-  return findWhereArgs(found, `where ${condition(selector.name)}`);
+  return findQueryArgs(found, `where ${condition(selector.name)}`);
 }
 
 /** The comment of that object in the `cm find` output; empty when it has none or wasn't found (e.g. a hidden branch). */

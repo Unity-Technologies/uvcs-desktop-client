@@ -38,7 +38,7 @@ export function findArgs(found: FoundObjects<unknown>, filter: QueryFilter, orde
 }
 
 /** `cm find` arguments for the objects `found` reads that `query` keeps (`where …`), as written. */
-export function findWhereArgs(found: FoundObjects<unknown>, query: string): string[] {
+export function findQueryArgs(found: FoundObjects<unknown>, query: string): string[] {
   return findCommand(found.object, query, layoutFormat(found));
 }
 

@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { findWhereArgs } from '../cm/findQuery';
+import { findQueryArgs } from '../cm/findQuery';
 import { FOUND_LABELS } from '../cm/foundObjects';
 import { recordsOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
@@ -25,7 +25,7 @@ describe('labels', () => {
 
     const listed = await service.list(WORKSPACE, { text: 'v1', limit: 20 });
 
-    expect(commands).toMatchObject([{ via: 'query', args: findWhereArgs(FOUND_LABELS, "where name like '%1%' order by date desc limit 20") }]);
+    expect(commands).toMatchObject([{ via: 'query', args: findQueryArgs(FOUND_LABELS, "where name like '%1%' order by date desc limit 20") }]);
     expect(listed).toEqual([{ id: 80, name: 'v1.0', changeset: 12, branch: '/main', comment: 'First', owner: 'ana', date: '2026-09-25T10:00:00+02:00', repository: 'game@local' }]);
   });
 

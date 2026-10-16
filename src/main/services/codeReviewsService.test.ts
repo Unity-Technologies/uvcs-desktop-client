@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
 import { readBranchNames } from '../cm/branchNames';
 import { FOUND_REVIEWS } from '../cm/codeReviewRecords';
-import { findWhereArgs, roundTripDate } from '../cm/findQuery';
+import { findQueryArgs, roundTripDate } from '../cm/findQuery';
 import { formatOutput, foundLine, recordsOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createCodeReviewsService } from './codeReviewsService';
@@ -50,7 +50,7 @@ describe('code review list', () => {
     expect(commands).toMatchObject([
       {
         via: 'query',
-        args: findWhereArgs(
+        args: findQueryArgs(
           FOUND_REVIEWS,
           `where assignee = 'me' and status = 'Reviewed' and title like '%ix%' and date >= '${roundTripDate('2026-09-01')}' and owner = 'ana' order by date desc limit 300`,
         ),

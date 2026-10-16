@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { MAIN_BRANCH_GUID } from '@shared/domain/branch';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
-import { findWhereArgs, roundTripDate } from '../cm/findQuery';
+import { findQueryArgs, roundTripDate } from '../cm/findQuery';
 import { FOUND_BRANCHES } from '../cm/foundObjects';
 import { branchesFound, formatOutput, foundLine, recordsOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
@@ -56,7 +56,7 @@ describe('branch list', () => {
     const listed = await service.list(WORKSPACE, { includeHidden: false });
 
     expect(commands).toMatchObject([
-      { via: 'query', args: findWhereArgs(FOUND_BRANCHES, "where hidden = 'false' order by date desc"), options: { cwd: WORKSPACE } },
+      { via: 'query', args: findQueryArgs(FOUND_BRANCHES, "where hidden = 'false' order by date desc"), options: { cwd: WORKSPACE } },
     ]);
     expect(listed.map((branch) => [branch.id, branch.name, branch.repository])).toEqual([
       [38, '/main/task2', 'game@local'],

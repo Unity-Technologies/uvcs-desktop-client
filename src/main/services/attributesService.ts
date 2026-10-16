@@ -1,7 +1,7 @@
 import type { AttributesApi } from '@shared/api/attributes';
 import type { AttributeType, AttributeValue } from '@shared/domain/attribute';
 import { FOUND_ATTRIBUTE_TYPES, FOUND_ATTRIBUTE_VALUES } from '../cm/attributeRecords';
-import { equalsCondition, findWhereArgs } from '../cm/findQuery';
+import { equalsCondition, findQueryArgs } from '../cm/findQuery';
 import { parseRecords, readRecords, recordFormat } from '../cm/formatRecords';
 
 import { withTempFile } from '../files/tempFile';
@@ -12,7 +12,7 @@ const USED_VALUES_SAMPLE = 500;
 
 export function createAttributesService({ cm }: ServiceContext): AttributesApi {
   async function listTypes(workspacePath: string): Promise<AttributeType[]> {
-    const output = await cm.query(findWhereArgs(FOUND_ATTRIBUTE_TYPES, ''), { cwd: workspacePath });
+    const output = await cm.query(findQueryArgs(FOUND_ATTRIBUTE_TYPES, ''), { cwd: workspacePath });
     return readRecords(FOUND_ATTRIBUTE_TYPES, output);
   }
 
@@ -35,7 +35,7 @@ export function createAttributesService({ cm }: ServiceContext): AttributesApi {
 
   async function valuesOf(workspacePath: string, objectSpec: string): Promise<AttributeValue[]> {
     const query = `where ${equalsCondition('srcobj', objectSpec)}`;
-    const output = await cm.query(findWhereArgs(FOUND_ATTRIBUTE_VALUES, query), { cwd: workspacePath });
+    const output = await cm.query(findQueryArgs(FOUND_ATTRIBUTE_VALUES, query), { cwd: workspacePath });
     return readRecords(FOUND_ATTRIBUTE_VALUES, output);
   }
 

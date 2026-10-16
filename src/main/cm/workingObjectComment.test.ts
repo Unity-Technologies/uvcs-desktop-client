@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findWhereArgs } from './findQuery';
+import { findQueryArgs } from './findQuery';
 import { FOUND_BRANCHES, FOUND_CHANGESETS, FOUND_LABELS } from './foundObjects';
 import { recordsOutput } from './testing/cmOutput';
 import { workingObjectCommentIn, workingObjectFindArgs } from './workingObjectComment';
@@ -8,7 +8,7 @@ const branches = recordsOutput(FOUND_BRANCHES, { name: '/main/task', comment: 'O
 
 describe('workingObjectFindArgs', () => {
   it('finds a branch by its last segment', () => {
-    expect(workingObjectFindArgs({ kind: 'branch', name: '/main/fixes/task' })).toEqual(findWhereArgs(FOUND_BRANCHES, "where name = 'task'"));
+    expect(workingObjectFindArgs({ kind: 'branch', name: '/main/fixes/task' })).toEqual(findQueryArgs(FOUND_BRANCHES, "where name = 'task'"));
   });
 
   it('finds labels by name and changesets and shelves by number', () => {

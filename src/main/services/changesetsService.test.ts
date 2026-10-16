@@ -1,7 +1,7 @@
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { findWhereArgs, roundTripDate } from '../cm/findQuery';
+import { findQueryArgs, roundTripDate } from '../cm/findQuery';
 import { FOUND_CHANGESETS } from '../cm/foundObjects';
 import { foundLine, recordsOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
@@ -38,7 +38,7 @@ describe('changesets', () => {
     expect(commands).toMatchObject([
       {
         via: 'query',
-        args: findWhereArgs(FOUND_CHANGESETS, `where date >= '${roundTripDate('2026-09-01')}' and branch = '/main/task1' order by changesetid desc limit 100`),
+        args: findQueryArgs(FOUND_CHANGESETS, `where date >= '${roundTripDate('2026-09-01')}' and branch = '/main/task1' order by changesetid desc limit 100`),
         options: { cwd: WORKSPACE },
       },
     ]);

@@ -202,7 +202,7 @@ and many people use the same server. Every `cm` command other than local reads (
   (`layoutFormat`, `recordFormat`: control-character separators, no ambiguity with paths or comments) and
   `readRecords` reads each by name, every value exactly as `cm` printed it (only `cm diff` quotes some: `unquoted`).
   Each layout is declared once: the `cm find` objects in `foundObjects.ts` (`FOUND_BRANCHES`...; `findArgs`,
-  `findWhereArgs`), `FOUND_REVIEWS`, `FOUND_ATTRIBUTE_TYPES`, `TREE_ITEMS` for `cm ls`. For 19,807 branches, records
+  `findQueryArgs`), `FOUND_REVIEWS`, `FOUND_ATTRIBUTE_TYPES`, `TREE_ITEMS` for `cm ls`. For 19,807 branches, records
   are 2.6 MB where `cm find --xml` printed 9.1 MB, and parse in a third of the time (26 ms against 77; 115 against 365
   for 100k, and past about 600k branches the XML passed `MAX_OUTPUT_LENGTH`). `--xml` also prints every field, some
   costing the server (`cm ls --xml` reads every item's GUID). A test writes the output as `cm` prints it for that
