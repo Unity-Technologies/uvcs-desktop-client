@@ -41,7 +41,7 @@ export function createAttributesService({ cm }: ServiceContext): AttributesApi {
   async function usedValues(workspacePath: string, attribute: string): Promise<string[]> {
     const query = `where ${equalsCondition('type', attribute)} limit ${USED_VALUES_SAMPLE}`;
     const output = await cm.query(['find', 'attribute', query, `--format=${recordFormat(['value'])}`, '--nototal'], { cwd: workspacePath });
-    return parseRecords(output).map(([value]) => value ?? '');
+    return parseRecords(output).map(([value = '']) => value.trim());
   }
 
   function setValue(workspacePath: string, objectSpec: string, attribute: string, value: string): Promise<void> {
