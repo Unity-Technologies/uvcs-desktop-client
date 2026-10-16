@@ -10,21 +10,6 @@ export const CHANGESET_FORMAT = recordFormat(['changesetid', 'branch', 'parent',
 export const MERGE_FORMAT = recordFormat(['type', 'srcchangeset', 'dstchangeset']);
 export const LABEL_FORMAT = recordFormat(['name', 'changeset', 'owner', 'date', 'comment']);
 
-/** ISO 8601 round-trip dates, so the renderer can parse them. */
-export const DATE_FORMAT = 'o';
-
-/**
- * `--dateformat` also applies to the dates written in the query, so a `YYYY-MM-DD` day must be
- * spelled in the round-trip format: local midnight with its UTC offset.
- */
-export function roundTripDate(day: string): string {
-  const offsetMinutes = -new Date(`${day}T00:00:00`).getTimezoneOffset();
-  const sign = offsetMinutes >= 0 ? '+' : '-';
-  const hours = String(Math.floor(Math.abs(offsetMinutes) / 60)).padStart(2, '0');
-  const minutes = String(Math.abs(offsetMinutes) % 60).padStart(2, '0');
-  return `${day}T00:00:00.0000000${sign}${hours}:${minutes}`;
-}
-
 const MERGE_LINK_TYPES: Record<string, MergeLinkType> = {
   merge: 'merge',
   cherrypick: 'cherryPick',

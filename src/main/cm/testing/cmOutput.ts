@@ -1,4 +1,7 @@
-import { FIELD_SEPARATOR, RECORD_SEPARATOR } from '../formatRecords';
+import { FIELD_SEPARATOR, RECORD_SEPARATOR, type RecordLayout } from '../formatRecords';
+import { findQueryArgs } from '../findQuery';
+import { TREE_ITEMS } from '../treeItems';
+import { FOUND_BRANCHES, FOUND_CHANGESETS, FOUND_SHELVES, type FoundObjects } from '../foundObjects';
 
 /**
  * `cm` output as `cm` prints it, for tests to parse and for `fakeCmClient` to answer with. Only the fields the parsers
@@ -10,22 +13,18 @@ export function formatOutput(...records: readonly (string | number)[][]): string
   return records.map((fields) => `${fields.join(FIELD_SEPARATOR)}${RECORD_SEPARATOR}\n`).join('');
 }
 
-/** `cm find <object> --xml` output: one `<element>` per record, each field an element of its own. */
-export function findXml(element: string, ...records: Record<string, string | number>[]): string {
-  const fields = (record: Record<string, string | number>): string =>
-    Object.entries(record)
-      .map(([name, value]) => `    <${name}>${escapeXml(String(value))}</${name}>`)
-      .join('\n');
-  const body = records.map((record) => `  <${element}>\n${fields(record)}\n  </${element}>`).join('\n');
-  return `<?xml version="1.0" encoding="utf-8" ?>\n<PLASTICQUERY>\n${body}\n</PLASTICQUERY>\n`;
+/** The command line of `cm find` of the objects `found` reads that `query` keeps, as `fakeCmClient` records it. */
+export function foundLine(found: FoundObjects<unknown>, query: string): string {
+  return findQueryArgs(found, query).join(' ');
 }
 
-function escapeXml(value: string): string {
-  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+/**
+ * Output printed through a record layout's `--format` (`findArgs`, `TREE_ITEM_FORMAT`): each item's fields in the order
+ * it prints them, a field left out printed empty.
+ */
+export function recordsOutput<Field extends string>(layout: RecordLayout<unknown, Field>, ...objects: Partial<Record<Field, string | number>>[]): string {
+  return formatOutput(...objects.map((object) => layout.fields.map((field) => object[field] ?? '')));
 }
-
-/** `cm find … --xml` that found nothing. */
-export const NOTHING_FOUND = '<?xml version="1.0" encoding="utf-8" ?>\n<PLASTICQUERY>\n</PLASTICQUERY>\n';
 
 export const WORKSPACE_GUID = 'a0411612-d36e-4eca-b9b5-97acad5969ea';
 
@@ -99,66 +98,61 @@ export function pendingStatusInChangelists(changelists: { name: string; descript
 /** A GUID whose last digits are `id`, so each object's is its own. */
 const guidOf = (prefix: string, id: number): string => `${prefix}${String(id).padStart(4, '0')}`;
 
-/** `cm find branch … --xml` finding branches by name and object id. */
+/** `cm find branch …` (`FOUND_BRANCHES`) finding branches by name and object id. */
 export function branchesFound(...branches: { name: string; id: number }[]): string {
-  return findXml(
-    'BRANCH',
+  return recordsOutput(
+    FOUND_BRANCHES,
     ...branches.map(({ name, id }) => ({
-      ID: id,
-      COMMENT: '',
-      DATE: '2026-09-25T23:16:33+02:00',
-      OWNER: 'me',
-      NAME: name,
-      PARENT: '/main',
-      REPOSITORY: 'eco',
-      REPNAME: 'eco',
-      REPSERVER: 'local',
-      TYPE: 'T',
-      CHANGESET: 1,
-      GUID: guidOf('9b8e2f7a-58f3-4c43-9d83-3c2f1f5c', id),
+      id,
+      comment: '',
+      date: '2026-09-25T23:16:33.0000000+02:00',
+      owner: 'me',
+      name,
+      parent: '/main',
+      repname: 'eco',
+      repserver: 'local',
+      changeset: 1,
+      guid: guidOf('9b8e2f7a-58f3-4c43-9d83-3c2f1f5c', id),
     })),
   );
 }
 
-/** `cm find branch … --xml` finding `name` with object id `id`. */
+/** `cm find branch …` finding `name` with object id `id`. */
 export function branchFound(name: string, id: number): string {
   return branchesFound({ name, id });
 }
 
-/** `cm find changeset … --xml` on `branch`, newest first as asked (`order by changesetid desc`). */
+/** `cm find changeset …` (`FOUND_CHANGESETS`) on `branch`, newest first as asked (`order by changesetid desc`). */
 export function changesetsFound(branch: string, ...changesets: { id: number; owner: string }[]): string {
-  return findXml(
-    'CHANGESET',
+  return recordsOutput(
+    FOUND_CHANGESETS,
     ...changesets.map(({ id, owner }) => ({
-      ID: id + 100,
-      CHANGESETID: id,
-      COMMENT: `Change ${id}`,
-      BRANCH: branch,
-      DATE: '2026-09-25T23:16:33+02:00',
-      OWNER: owner,
-      PARENT: id - 1,
-      REPNAME: 'eco',
-      REPSERVER: 'local',
-      GUID: guidOf('6f1c4b1e-8d1c-4f7a-9c2e-2b8f4c1d', id),
+      changesetid: id,
+      comment: `Change ${id}`,
+      branch,
+      date: '2026-09-25T23:16:33.0000000+02:00',
+      owner,
+      parent: id - 1,
+      repname: 'eco',
+      repserver: 'local',
+      guid: guidOf('6f1c4b1e-8d1c-4f7a-9c2e-2b8f4c1d', id),
     })),
   );
 }
 
-/** `cm find shelve … --xml` finding shelves by number and comment. */
+/** `cm find shelve …` (`FOUND_SHELVES`) finding shelves by number and comment. */
 export function shelvesFound(...shelves: { id: number; comment: string }[]): string {
-  return findXml(
-    'SHELVE',
+  return recordsOutput(
+    FOUND_SHELVES,
     ...shelves.map(({ id, comment }) => ({
-      ID: id + 46,
-      SHELVEID: id,
-      COMMENT: comment,
-      DATE: '2026-09-25T23:17:30+02:00',
-      OWNER: 'me',
-      REPOSITORY: 'eco',
-      REPNAME: 'eco',
-      REPSERVER: 'local',
-      PARENT: 1,
-      GUID: guidOf('c7558622-b4f1-49eb-9f76-639af4d7', id),
+      shelveid: id,
+      comment,
+      date: '2026-09-25T23:17:30.0000000+02:00',
+      owner: 'me',
+      repname: 'eco',
+      repserver: 'local',
+      parent: 1,
+      guid: guidOf('c7558622-b4f1-49eb-9f76-639af4d7', id),
     })),
   );
 }
@@ -178,15 +172,12 @@ export function mergeOutput(...records: string[][]): string {
   return records.map((fields) => fields.join(FIELD_SEPARATOR)).join('\n') + '\n';
 }
 
-/** `cm ls <paths> --tree=… --xml` listing items of `repository`. */
+/** `cm ls <paths> --tree=… --format=TREE_ITEM_FORMAT` listing text files of `repository`, by their server paths. */
 export function treeListing(repository: string, ...paths: string[]): string {
-  const items = paths
-    .map(
-      (path) =>
-        `<LsItem><Status>Controlled</Status><Name>${path.split('/').pop()}</Name><WkPath>/${path}</WkPath><Type>txt</Type><Changeset>3</Changeset><Repository>rep:${repository}</Repository><RevId>40</RevId><ItemId>30</ItemId></LsItem>`,
-    )
-    .join('');
-  return `<?xml version="1.0" encoding="utf-8"?><LsResults><LsItems>${items}</LsItems></LsResults>`;
+  return recordsOutput(
+    TREE_ITEMS,
+    ...paths.map((path) => ({ name: path.split('/').pop(), wkpath: `/${path}`, type: 'txt', size: 3, changeset: 3, repspec: `rep:${repository}`, revid: 40, itemid: 30 })),
+  );
 }
 
 type AclOutputCategory = 'Allowed' | 'Denied' | 'Override Allowed' | 'Override Denied';
@@ -241,7 +232,7 @@ export function treeListingOutput(...items: ListedRecord[]): string {
   );
 }
 
-/** An item of a workspace's `cm ls <folder> --xml`: the revision it was loaded from (its size and hash), or a checkout's -1. */
+/** An item of a workspace's `cm ls <folder>`: the revision it was loaded from (its size and hash), or a checkout's -1. */
 export interface WorkspaceListedRecord {
   path: string;
   revid: number;
@@ -252,15 +243,26 @@ export interface WorkspaceListedRecord {
 }
 
 /**
- * A workspace's `cm ls <folder> --xml`, trimmed, as `cm` prints it: the folder itself as `.`, `WkPath`s relative with
- * the OS's separators, and each file's `Size` and `Hash` its loaded revision's, never the disk's (a checkout has none).
+ * A workspace's `cm ls <folder> --format=TREE_ITEM_FORMAT` as `cm` prints it: the folder itself as `.`, `{wkpath}`s
+ * relative with the OS's separators, and each file's `{size}` and `{hash}` its loaded revision's, never the disk's (a
+ * checkout has no revision).
  */
-export function workspaceListingXml(folder: string, ...items: WorkspaceListedRecord[]): string {
-  const item = ({ path, revid, size, hash, repository = 'eco@local', checkedOut = false }: WorkspaceListedRecord) =>
-    `<LsItem><Status>Controlled</Status><Name>${path.split('/').pop()}</Name><WkPath>${path}</WkPath><Size>${size}</Size><Type>bin</Type>` +
-    `<Changeset>21</Changeset><Repository>rep:${repository}</Repository><Checkout>${checkedOut ? 'CO' : ''}</Checkout>` +
-    `<RevId>${checkedOut ? -1 : revid}</RevId><ParentRevId>${revid - 1}</ParentRevId><ItemId>${revid + 1000}</ItemId><Hash>${hash}</Hash>` +
-    '<HashAlgorithm>MD5</HashAlgorithm><Branch>/main</Branch><Date>2026-10-15T14:24:03+02:00</Date></LsItem>';
-  const self = `<LsItem><Status>Controlled</Status><Name>.</Name><WkPath>${folder}</WkPath><Type>dir</Type><RevId>1</RevId></LsItem>`;
-  return `<?xml version="1.0" encoding="utf-8"?>\n<LsResults><LsItems>${self}${items.map(item).join('')}</LsItems></LsResults>`;
+export function workspaceListingOutput(folder: string, ...items: WorkspaceListedRecord[]): string {
+  const item = ({ path, revid, size, hash, repository = 'eco@local', checkedOut = false }: WorkspaceListedRecord) => ({
+    name: path.split(/[\\/]/).pop(),
+    wkpath: path,
+    type: 'bin',
+    size,
+    'date:o': '2026-10-15T14:24:03.0000000+02:00',
+    checkout: checkedOut ? 'CO' : '',
+    changeset: checkedOut ? -1 : 21,
+    branch: '/main',
+    owner: 'me',
+    revid: checkedOut ? -1 : revid,
+    parentrevid: revid - 1,
+    repspec: `rep:${repository}`,
+    itemid: revid + 1000,
+    hash,
+  });
+  return recordsOutput(TREE_ITEMS, { name: '.', wkpath: folder, type: 'dir', size: 0, revid: 1 }, ...items.map(item));
 }

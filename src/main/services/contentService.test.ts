@@ -3,7 +3,8 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { formatOutput, treeListingOutput, workspaceListingXml } from '../cm/testing/cmOutput';
+import { formatOutput, recordsOutput, treeListingOutput, workspaceListingOutput } from '../cm/testing/cmOutput';
+import { TREE_ITEM_FORMAT, TREE_ITEMS } from '../cm/treeItems';
 import { cmFails, fakeCmClient, optionValue, type CmAnswer, type FakeCmCommand } from '../cm/testing/fakeCmClient';
 import type { ContentSource } from '@shared/domain/content';
 import { catReadsOf, fakeCat } from '../cm/testing/fakeCat';
@@ -43,12 +44,19 @@ const ASSETS_LISTING = treeListingOutput(
   { path: 'Assets/Barrel.gltf', type: 'txt', revid: 43 },
 );
 
-const LS_UNDER_XLINK = `<?xml version="1.0" encoding="utf-8"?>
-<LsResults><LsItems>
-  <LsItem><Status>Controlled</Status><Name>a.cs</Name><WkPath>/lib/a.cs</WkPath><Size>12</Size><Type>txt</Type>
-    <Changeset>30</Changeset><Repository>rep:lib@local</Repository><RevId>432</RevId><ParentRevId>400</ParentRevId><ItemId>9</ItemId>
-    <Branch>/main</Branch><Date>2026-09-25T09:41:47+02:00</Date></LsItem>
-</LsItems></LsResults>`;
+const LS_UNDER_XLINK = recordsOutput(TREE_ITEMS, {
+  name: 'a.cs',
+  wkpath: '/lib/a.cs',
+  size: 12,
+  type: 'txt',
+  changeset: 30,
+  repspec: 'rep:lib@local',
+  revid: 432,
+  parentrevid: 400,
+  itemid: 9,
+  branch: '/main',
+  'date:o': '2026-09-25T09:41:47.0000000+02:00',
+});
 
 describe('reading content', () => {
   it('reads a revision with one quick cm cat into a temp file, deleted afterwards', async () => {
@@ -76,7 +84,7 @@ describe('reading content', () => {
     expect(read.text).toBe('xlinked\n');
     expect(commands.map(({ args }) => args.filter((arg) => !arg.startsWith('--file=')))).toEqual([
       ['cat', 'serverpath:/lib/a.cs#cs:30'],
-      ['ls', '/lib/a.cs', '--tree=cs:30', '--xml'],
+      ['ls', '/lib/a.cs', '--tree=cs:30', TREE_ITEM_FORMAT],
       ['cat', 'revid:432@lib@local'],
     ]);
   });
@@ -277,8 +285,7 @@ describe('reading the bytes of a model companion', () => {
   describe("of the workspace's repository that isn't there", () => {
     /** As cm prints it: `serverpath:` can't tell a missing file from one under an xlink, so the tree is asked. */
     const notFound = ({ args }: FakeCmCommand) => cmFails(`The specified revision was not found ${args[1]}`);
-    const notInTree = ({ args }: FakeCmCommand) =>
-      cmFails([`Can't resolve the selector for the item ${args[1]}`, '<?xml version="1.0" encoding="utf-8"?>', '<LsResults>', '  <LsItems />', '</LsResults>'].join('\n'));
+    const notInTree = ({ args }: FakeCmCommand) => cmFails(`Can't resolve the selector for the item ${args[1]}`);
 
     it.each(['cs:3', 'br:/main'])('reads it as nothing at %s, where the tree has no such folder', async (at) => {
       const { service, lines } = content({ cat: notFound, ls: notInTree });
@@ -349,7 +356,7 @@ describe("reading a revision the workspace's disk holds", () => {
   }
   const cats = (fake: ReturnType<typeof fakeCmClient>) => fake.lines().filter((line) => line.startsWith('cat ')).map((line) => line.split(' ')[1]);
 
-  const PROP_LISTING = workspaceListingXml(
+  const PROP_LISTING = workspaceListingOutput(
     'Prop',
     { path: 'Prop/Pumpkin.obj', revid: 186, size: PUMPKIN.length, hash: md5(PUMPKIN) },
     { path: 'Prop/PumpkinMaterials.mtl', revid: 185, size: MTL.length, hash: md5(MTL) },
@@ -360,7 +367,7 @@ describe("reading a revision the workspace's disk holds", () => {
 
     expect((await service.read(workspace, revision(186))).text).toBe(PUMPKIN);
     expect(new TextDecoder().decode((await service.readBytes(workspace, revision(185, 'Prop/PumpkinMaterials.mtl')))!)).toBe(MTL);
-    expect(fake.lines()).toEqual([`ls ${join(workspace, 'Prop')} --xml --symlink`]);
+    expect(fake.lines()).toEqual([`ls ${join(workspace, 'Prop')} ${TREE_ITEM_FORMAT} --symlink`]);
   });
 
   it("asks the workspace nothing more for a revision the Files view's listing of its folder doesn't name (the one before)", async () => {
@@ -387,7 +394,7 @@ describe("reading a revision the workspace's disk holds", () => {
   });
 
   it("downloads the file's other revisions, and a checked-out file's: the listing names no revision of a checkout", async () => {
-    const checkedOut = workspaceListingXml('Prop', { path: 'Prop/Pumpkin.obj', revid: 186, size: PUMPKIN.length, hash: md5(PUMPKIN), checkedOut: true });
+    const checkedOut = workspaceListingOutput('Prop', { path: 'Prop/Pumpkin.obj', revid: 186, size: PUMPKIN.length, hash: md5(PUMPKIN), checkedOut: true });
     const { workspace, fake, service } = await filesView(checkedOut, { 'Prop/Pumpkin.obj': PUMPKIN });
 
     await service.read(workspace, revision(186));
@@ -405,7 +412,7 @@ describe("reading a revision the workspace's disk holds", () => {
   });
 
   it('reads a file under an xlink from the disk by its revision in the xlinked repository', async () => {
-    const xlinked = workspaceListingXml('Prop', { path: 'Prop/Pumpkin.obj', revid: 9, size: PUMPKIN.length, hash: md5(PUMPKIN), repository: 'art@local' });
+    const xlinked = workspaceListingOutput('Prop', { path: 'Prop/Pumpkin.obj', revid: 9, size: PUMPKIN.length, hash: md5(PUMPKIN), repository: 'art@local' });
     const { workspace, fake, service } = await filesView(xlinked, { 'Prop/Pumpkin.obj': PUMPKIN });
 
     expect((await service.read(workspace, revision(9, 'Prop/Pumpkin.obj', 'art@local'))).text).toBe(PUMPKIN);
@@ -413,7 +420,7 @@ describe("reading a revision the workspace's disk holds", () => {
   });
 
   it('reads at the path the listing gives with Windows separators', async () => {
-    const windows = workspaceListingXml('Prop', { path: 'Prop\\Pumpkin.obj', revid: 186, size: PUMPKIN.length, hash: md5(PUMPKIN) });
+    const windows = workspaceListingOutput('Prop', { path: 'Prop\\Pumpkin.obj', revid: 186, size: PUMPKIN.length, hash: md5(PUMPKIN) });
     const { workspace, fake, service } = await filesView(windows, { 'Prop/Pumpkin.obj': PUMPKIN });
 
     expect((await service.read(workspace, revision(186, 'Prop/Pumpkin.obj'))).text).toBe(PUMPKIN);

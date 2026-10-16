@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { countCharactersRead } from '@shared/testing/countCharactersRead';
-import { parseBranches, parseChangesets, parseLabels, parseMergeLinks, roundTripDate } from './branchExplorerRecords';
+import { parseBranches, parseChangesets, parseLabels, parseMergeLinks } from './branchExplorerRecords';
 import { formatOutput } from './testing/cmOutput';
 
 describe('branch explorer records', () => {
@@ -35,10 +35,6 @@ describe('branch explorer records', () => {
       { type: 'cherryPick', sourceChangeset: 15, destinationChangeset: 16 },
       { type: 'subtractive', sourceChangeset: 3, destinationChangeset: 9 },
     ]);
-  });
-
-  it('spells query days in the round-trip date format', () => {
-    expect(roundTripDate('2026-08-26')).toMatch(/^2026-08-26T00:00:00\.0000000[+-]\d{2}:\d{2}$/);
   });
 
   it('parses labels', () => {

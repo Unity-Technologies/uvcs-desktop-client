@@ -3,7 +3,9 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { recordsOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { TREE_ITEM_FORMAT, TREE_ITEMS } from '../cm/treeItems';
 import { contentHashOf } from '../files/WorkspaceCopies';
 import { createContentService } from './contentService';
 import { createExplorerService } from './explorerService';
@@ -16,13 +18,23 @@ function explorer(answers: Record<string, CmAnswer>) {
   return { ...fake, service: createExplorerService(serviceContext(fake.cm)) };
 }
 
-const LS_XML = `<?xml version="1.0" encoding="utf-8"?>
-<LsResults><LsItems>
-  <LsItem><Status>Controlled</Status><Name>.</Name><WkPath>src</WkPath><Type>dir</Type></LsItem>
-  <LsItem><Status>Controlled</Status><Name>a.cs</Name><WkPath>src/a.cs</WkPath><Size>12</Size><Type>txt</Type>
-    <Changeset>2</Changeset><Owner>ana</Owner><Checkout /><RevId>52</RevId><ParentRevId>37</ParentRevId><ItemId>36</ItemId>
-    <Branch>/main</Branch><Date>2026-09-25T09:41:47+02:00</Date></LsItem>
-</LsItems></LsResults>`;
+const A_CS = {
+  name: 'a.cs',
+  wkpath: 'src/a.cs',
+  size: 12,
+  type: 'txt',
+  changeset: 2,
+  owner: 'ana',
+  revid: 52,
+  parentrevid: 37,
+  itemid: 36,
+  branch: '/main',
+  'date:o': '2026-09-25T09:41:47.0000000+02:00',
+} as const;
+
+/** `cm ls src --format=TREE_ITEM_FORMAT`: the folder itself, then `a.cs` as `changed` changes it. */
+const listing = (changed: Partial<Record<(typeof TREE_ITEMS.fields)[number], string | number>> = {}) =>
+  recordsOutput(TREE_ITEMS, { name: '.', wkpath: 'src', type: 'dir', size: 0, revid: 1 }, { ...A_CS, ...changed });
 
 const FILEINFO_XML = `<?xml version="1.0" encoding="utf-8"?>
 <FileInfos><FileInfo><ServerPath>/src/a.cs</ServerPath><Status>Controlled</Status><RevisionChangeset>2</RevisionChangeset>
@@ -30,16 +42,16 @@ const FILEINFO_XML = `<?xml version="1.0" encoding="utf-8"?>
 
 describe('browsing the workspace', () => {
   it('lists a folder of the workspace with one quick cm ls, links as themselves', async () => {
-    const { service, commands } = explorer({ ls: LS_XML });
+    const { service, commands } = explorer({ ls: listing() });
 
     const items = await service.listDirectory(WORKSPACE, 'src');
 
-    expect(commands).toMatchObject([{ via: 'query', args: ['ls', join(WORKSPACE, 'src'), '--xml', '--symlink'], options: { cwd: WORKSPACE } }]);
+    expect(commands).toMatchObject([{ via: 'query', args: ['ls', join(WORKSPACE, 'src'), TREE_ITEM_FORMAT, '--symlink'], options: { cwd: WORKSPACE } }]);
     expect(items.map((item) => [item.path, item.revisionId])).toEqual([['src/a.cs', 52]]);
   });
 
   it("keeps each item's hash in the main process: the windows have no use for it", async () => {
-    const { service } = explorer({ ls: LS_XML.replace('<ItemId>36</ItemId>', '<ItemId>36</ItemId><Hash>aGFzaA==</Hash>') });
+    const { service } = explorer({ ls: listing({ hash: 'aGFzaA==' }) });
 
     const [item] = await service.listDirectory(WORKSPACE, 'src');
 
@@ -50,7 +62,7 @@ describe('browsing the workspace', () => {
     const workspace = await mkdtemp(join(tmpdir(), 'browse-wk-'));
     await mkdir(join(workspace, 'src'));
     await writeFile(join(workspace, 'src', 'a.cs'), 'class A {}\n');
-    const listed = LS_XML.replace('<WkPath>src/a.cs</WkPath>', '<WkPath>/src/a.cs</WkPath>').replace('<ItemId>36</ItemId>', `<ItemId>36</ItemId><Repository>rep:game@local</Repository><Hash>${contentHashOf(Buffer.from('class A {}\n'))}</Hash>`).replace('<Size>12</Size>', '<Size>11</Size>');
+    const listed = listing({ wkpath: '/src/a.cs', repspec: 'rep:game@local', hash: contentHashOf(Buffer.from('class A {}\n')), size: 11 });
     const fake = fakeCmClient({ ls: listed });
     const context = serviceContext(fake.cm);
     await createExplorerService(context).listRepositoryDirectory(workspace, 12, 'src');
@@ -62,11 +74,11 @@ describe('browsing the workspace', () => {
   });
 
   it("lists a folder of a changeset's tree by its repository path", async () => {
-    const { service, lines } = explorer({ ls: LS_XML });
+    const { service, lines } = explorer({ ls: listing() });
 
     await service.listRepositoryDirectory(WORKSPACE, 12, 'src');
 
-    expect(lines()).toEqual(['ls /src --tree=cs:12 --xml']);
+    expect(lines()).toEqual([`ls /src --tree=cs:12 ${TREE_ITEM_FORMAT}`]);
   });
 
   it("reads an item's details with one quick cm fileinfo", async () => {

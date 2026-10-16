@@ -1,0 +1,46 @@
+import { describe, expect, it } from 'vitest';
+import { layoutReader, parseRecords, readRecords, recordFormat } from './formatRecords';
+import { formatOutput } from './testing/cmOutput';
+
+describe('recordFormat', () => {
+  it('ends each field and record with a control character', () => {
+    expect(recordFormat(['id', 'date:o'])).toBe('{id}\u001f{date:o}\u001e');
+  });
+});
+
+describe('readRecords', () => {
+  const NAMED = { fields: ['id', 'name'], read: (value: (field: string) => string) => (value('name') === '.' ? undefined : `${value('id')}:${value('name')}`) };
+
+  it('reads each record by field name, and leaves out those its layout reads as nothing', () => {
+    expect(readRecords(NAMED, formatOutput(['1', '.'], ['2', 'a'], ['3']))).toEqual(['2:a', '3:']);
+    expect(layoutReader(NAMED)(['4', 'b'])).toBe('4:b');
+  });
+});
+
+describe('parseRecords', () => {
+  it('reads nothing from an empty output', () => {
+    expect(parseRecords('')).toEqual([]);
+  });
+
+  it('keeps line breaks, Unicode and empty fields inside a record', () => {
+    expect(parseRecords(formatOutput(['1', 'Multi\nline', '', 'ça 日本']))).toEqual([['1', 'Multi\nline', '', 'ça 日本']]);
+  });
+
+  // `cm find`, `cm ls` and `cm annotate` print values as they are: a comment or a line of code between quotes is one.
+  it('keeps the quotes a value starts and ends with', () => {
+    expect(parseRecords(formatOutput(['"WIP"', '"']))).toEqual([['"WIP"', '"']]);
+  });
+
+  // A comment written on Windows keeps its CRLF in the repository; a `\r` left in it would make a one-line comment
+  // read as two lines and keep a title prefilled from it out of the pooled `cm shell`.
+  it('turns CRLF into LF inside a value', () => {
+    expect(parseRecords(formatOutput(['1', 'Fix crash\r\nin the HUD\r\n']))).toEqual([['1', 'Fix crash\nin the HUD\n']]);
+  });
+
+  it('reads records whose lines end with CRLF', () => {
+    expect(parseRecords('1\u001fa\u001e\r\n2\u001fb\u001e\r\n')).toEqual([
+      ['1', 'a'],
+      ['2', 'b'],
+    ]);
+  });
+});

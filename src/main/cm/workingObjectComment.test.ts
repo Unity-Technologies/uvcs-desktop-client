@@ -1,21 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { findQueryArgs } from './findQuery';
+import { FOUND_BRANCHES, FOUND_CHANGESETS, FOUND_LABELS } from './foundObjects';
+import { recordsOutput } from './testing/cmOutput';
 import { workingObjectCommentIn, workingObjectFindArgs } from './workingObjectComment';
 
-const branches = `<?xml version="1.0" encoding="utf-8" ?>
-<PLASTICQUERY>
-  <BRANCH><NAME>/main/task</NAME><COMMENT>Old task</COMMENT></BRANCH>
-  <BRANCH><NAME>/main/fixes/task</NAME><COMMENT>Report exceptions via telemetry</COMMENT></BRANCH>
-</PLASTICQUERY>`;
+const branches = recordsOutput(FOUND_BRANCHES, { name: '/main/task', comment: 'Old task' }, { name: '/main/fixes/task', comment: 'Report exceptions via telemetry' });
 
 describe('workingObjectFindArgs', () => {
   it('finds a branch by its last segment', () => {
-    expect(workingObjectFindArgs({ kind: 'branch', name: '/main/fixes/task' })).toEqual([
-      'find',
-      'branch',
-      "where name = 'task'",
-      '--xml',
-      '--nototal',
-    ]);
+    expect(workingObjectFindArgs({ kind: 'branch', name: '/main/fixes/task' })).toEqual(findQueryArgs(FOUND_BRANCHES, "where name = 'task'"));
   });
 
   it('finds labels by name and changesets and shelves by number', () => {
@@ -36,7 +29,7 @@ describe('workingObjectCommentIn', () => {
   });
 
   it('takes only the label of that very name, not another the wildcard for a quote matched', () => {
-    const labels = `<?xml version="1.0" encoding="utf-8" ?><PLASTICQUERY><MARKER><NAME>v1-rc</NAME><COMMENT>Another</COMMENT></MARKER></PLASTICQUERY>`;
+    const labels = recordsOutput(FOUND_LABELS, { name: 'v1-rc', comment: 'Another' });
     expect(workingObjectCommentIn(labels, { kind: 'label', name: "v1'rc" })).toBe('');
     expect(workingObjectCommentIn(labels, { kind: 'label', name: 'v1-rc' })).toBe('Another');
   });
@@ -49,10 +42,17 @@ describe('workingObjectCommentIn', () => {
       }),
     ).toBe('');
     expect(
-      workingObjectCommentIn('<PLASTICQUERY></PLASTICQUERY>', {
+      workingObjectCommentIn('', {
         kind: 'label',
         name: 'v1',
       }),
     ).toBe('');
+  });
+});
+
+describe('the comment of a changeset', () => {
+  it('reads the one changeset found, its comment as cm keeps it', () => {
+    const output = recordsOutput(FOUND_CHANGESETS, { changesetid: 42, comment: '"Quoted"\nand multi-line' });
+    expect(workingObjectCommentIn(output, { kind: 'changeset', name: '42' })).toBe('"Quoted"\nand multi-line');
   });
 });

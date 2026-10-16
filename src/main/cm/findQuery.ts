@@ -1,14 +1,45 @@
 import type { QueryFilter } from '@shared/domain/query';
+import { type FoundObjects } from './foundObjects';
+import { layoutFormat } from './formatRecords';
 
 /**
- * Builds `cm find` arguments: `<object> "<where/order/limit>" --xml --nototal`.
+ * The `--dateformat` of every `cm find`: ISO 8601 round-trip dates (`2026-09-25T23:16:33.1234567+02:00`), which the
+ * renderer parses. Asked for, rather than left to `cm`, because without it `cm` prints dates in the format its client
+ * config sets, if any.
+ */
+export const FIND_DATE_FORMAT = 'o';
+
+/**
+ * `--dateformat` also applies to the dates written in the query, so a `YYYY-MM-DD` day must be spelled in the
+ * round-trip format: local midnight with its UTC offset.
+ */
+export function roundTripDate(day: string): string {
+  const offsetMinutes = -new Date(`${day}T00:00:00`).getTimezoneOffset();
+  const sign = offsetMinutes >= 0 ? '+' : '-';
+  const hours = String(Math.floor(Math.abs(offsetMinutes) / 60)).padStart(2, '0');
+  const minutes = String(Math.abs(offsetMinutes) % 60).padStart(2, '0');
+  return `${day}T00:00:00.0000000${sign}${hours}:${minutes}`;
+}
+
+/** `cm find <object> "<query>"`, printed through `format` (`--format=…`), its dates in `FIND_DATE_FORMAT`. */
+export function findCommand(object: string, query: string, format: string): string[] {
+  return ['find', object, query, format, `--dateformat=${FIND_DATE_FORMAT}`, '--nototal'].filter(Boolean);
+}
+
+/**
+ * Builds `cm find` arguments: `<object> "<where/order/limit>"`, printing the fields `found` reads (`readRecords`).
  * `orderBy` is null for objects `cm` cannot sort (shelves).
  */
-export function findArgs(object: string, filter: QueryFilter, orderBy: string | null, extraConditions: string[] = []): string[] {
+export function findArgs(found: FoundObjects<unknown>, filter: QueryFilter, orderBy: string | null, extraConditions: string[] = []): string[] {
   const order = orderBy ? ` order by ${orderBy}` : '';
   const limit = filter.limit ? ` limit ${filter.limit}` : '';
-  const conditions = filter.text ? [...extraConditions, textCondition(object, filter.text)] : extraConditions;
-  return ['find', object, `${whereClause(filter, conditions)}${order}${limit}`.trim(), '--xml', '--nototal'];
+  const conditions = filter.text ? [...extraConditions, textCondition(found.object, filter.text)] : extraConditions;
+  return findCommand(found.object, `${whereClause(filter, conditions)}${order}${limit}`.trim(), layoutFormat(found));
+}
+
+/** `cm find` arguments for the objects `found` reads that `query` keeps (`where …`), as written. */
+export function findQueryArgs(found: FoundObjects<unknown>, query: string): string[] {
+  return findCommand(found.object, query, layoutFormat(found));
 }
 
 /** The field `QueryFilter.text` searches in, per object. */
@@ -38,10 +69,10 @@ export function caseTolerantPattern(text: string): string {
   return `%${words.map((word) => (word.length > 1 ? word.slice(1) : word)).join('%')}%`;
 }
 
-/** Builds the `where` clause of a `cm find` query from the common list filter. */
+/** Builds the `where` clause of a `cm find` query from the common list filter, its day in `FIND_DATE_FORMAT`. */
 export function whereClause(filter: QueryFilter, extraConditions: string[] = []): string {
   const conditions = [...extraConditions];
-  if (filter.sinceDate) conditions.push(`date >= '${filter.sinceDate}'`);
+  if (filter.sinceDate) conditions.push(`date >= '${roundTripDate(filter.sinceDate)}'`);
   if (filter.owners?.length) conditions.push(ownersCondition(filter.owners));
   if (filter.branch) conditions.push(equalsCondition('branch', filter.branch));
   return conditions.length > 0 ? `where ${conditions.join(' and ')}` : '';

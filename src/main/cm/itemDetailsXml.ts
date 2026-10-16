@@ -1,7 +1,10 @@
 import type { ItemDetails } from '@shared/domain/explorer';
 import { child, children, integer, parseXml, text } from './parseXml';
 
-/** Parses `cm fileinfo --xml` for a single item. */
+/**
+ * Parses `cm fileinfo --xml` for a single item. XML still: one item is a few hundred bytes, where records would save
+ * nothing.
+ */
 export function parseItemDetails(xml: string): ItemDetails {
   const info = children(child(parseXml(xml, ['FileInfo']), 'FileInfos'), 'FileInfo')[0];
   if (!info) throw new Error('cm fileinfo returned no information for the item.');

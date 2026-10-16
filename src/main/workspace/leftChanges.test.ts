@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
-import { branchFound, shelvesFound, statusHeader, WORKSPACE_NAMES } from '../cm/testing/cmOutput';
+import { FOUND_BRANCHES } from '../cm/foundObjects';
+import { branchFound, foundLine, shelvesFound, statusHeader, WORKSPACE_NAMES } from '../cm/testing/cmOutput';
 import { fakeCmClient } from '../cm/testing/fakeCmClient';
 import { recordingContext } from '../operations/testing/recordingContext';
 import { memorySettings } from '../settings/testing/memorySettings';
@@ -56,7 +57,7 @@ describe('LeftChangesFinder', () => {
     const finder = new LeftChangesFinder(cm, recordsOf([]));
 
     expect(await finder.find('/work')).toEqual([expect.objectContaining({ shelveId: 2, foreign: true })]);
-    expect(lines()).toContain("find branch where name = 'task1' --xml --nototal");
+    expect(lines()).toContain(foundLine(FOUND_BRANCHES, "where name = 'task1'"));
   });
 
   it('offers changes still waiting to be brought elsewhere as left here, once the workspace is back where they were made', async () => {
