@@ -130,6 +130,18 @@ describe('WorkspaceWatchers', () => {
     expect(created.map((watcher) => watcher.ignored)).toEqual([1, 2]);
   });
 
+  it("tells a write to the other windows showing its workspace, not to the window that ran it nor another workspace's", () => {
+    const { watchers, onChanged } = setUp();
+    watchers.watch(1, '/wk/a');
+    watchers.watch(2, '/wk/a');
+    watchers.watch(3, '/wk/b');
+
+    watchers.writtenBy(1, '/wk/a/src', CHANGE);
+    expect(onChanged).toHaveBeenCalledExactlyOnceWith([2], '/wk/a', CHANGE);
+    watchers.writtenBy(3, '/wk/b', CHANGE);
+    expect(onChanged).toHaveBeenCalledOnce();
+  });
+
   it('tells what listens to the files every change, and when they stop being all seen', () => {
     const { watchers, created } = setUp();
     const heard: string[] = [];

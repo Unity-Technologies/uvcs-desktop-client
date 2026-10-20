@@ -1,24 +1,30 @@
 import { describe, expect, it } from 'vitest';
+import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 import { ignoreOwnCommandWrites } from './ownWrites';
 
 type StartedListener = Parameters<Parameters<typeof ignoreOwnCommandWrites>[0]['onCommandStarted']>[0];
 
 /** A `cm` whose commands the test starts, and what the watchers and headers were told. */
-function setUp() {
+function setUp(writer?: number) {
   let listener: StartedListener = () => {};
   const ignored: string[] = [];
   const forgotten: string[] = [];
+  const toldOthers: { writer: number; cwd: string; change: WorkspaceChange }[] = [];
   ignoreOwnCommandWrites(
     { onCommandStarted: (started) => ((listener = started), () => {}) },
-    { ignoreOwnWrite: (_write, cwd, only) => void ignored.push([cwd, only].filter(Boolean).join(' ')) },
+    {
+      ignoreOwnWrite: (_write, cwd, only) => void ignored.push([cwd, only].filter(Boolean).join(' ')),
+      writtenBy: (by, cwd, change) => void toldOthers.push({ writer: by, cwd, change }),
+    },
     { forget: (workspacePath) => void forgotten.push(workspacePath) },
+    () => writer,
   );
   const run = async (args: string[], outcome: 'succeeds' | 'fails' = 'succeeds'): Promise<void> => {
     const finished = outcome === 'succeeds' ? Promise.resolve() : Promise.reject(new Error('cm failed'));
     listener({ args, cwd: '/wk/game', finished });
     await finished.catch(() => undefined);
   };
-  return { run, ignored, forgotten: () => forgotten };
+  return { run, ignored, forgotten: () => forgotten, toldOthers };
 }
 
 describe('ignoreOwnCommandWrites', () => {
@@ -51,5 +57,20 @@ describe('ignoreOwnCommandWrites', () => {
     await run(['find', 'changeset']);
     expect(ignored).toEqual([]);
     expect(forgotten()).toEqual([]);
+  });
+
+  it("tells the other windows showing the workspace once a window's write settles, as anything may have changed", async () => {
+    const { run, toldOthers } = setUp(7);
+
+    await run(['undo', '/wk/game/a.txt'], 'fails');
+    await run(['status', '--xml', '--changelists']);
+    expect(toldOthers).toEqual([{ writer: 7, cwd: '/wk/game', change: { content: true, pathsChanged: true, metadata: true, folders: null } }]);
+  });
+
+  it('tells no other window of a write no window ran', async () => {
+    const { run, toldOthers } = setUp();
+
+    await run(['checkin', '/wk/game/a.txt']);
+    expect(toldOthers).toEqual([]);
   });
 });
