@@ -40,6 +40,12 @@
   position: relative;
 }
 
+/* Placeholders while the branches are read, as tall as a short list (`LOADING_ROWS`). */
+.loading {
+  display: flex;
+  flex-direction: column;
+}
+
 .rows > * {
   position: absolute;
   left: 0;

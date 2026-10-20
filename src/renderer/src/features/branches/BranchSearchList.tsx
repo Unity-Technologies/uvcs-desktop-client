@@ -9,12 +9,15 @@ import { hotkey } from '../../lib/shortcutRegistry';
 import { HighlightQuery } from '../../ui/Highlight';
 import { KeyHints } from '../../ui/KeyHints';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
+import { ListSkeleton } from '../../ui/Skeleton';
 import { BranchSearchItem } from './BranchSearchItem';
 import { branchSearchEmptyText, branchSearchRows, type BranchesRead, type BranchGroup } from './branchSearchRows';
 import styles from './BranchSearchList.module.css';
 
 const GROUP_HEIGHT = 28;
 const BRANCH_HEIGHT = 44;
+/** Placeholder rows while the branches are read: a short list's height, so the popup doesn't open small and grow. */
+const LOADING_ROWS = 6;
 
 interface BranchSearchListProps {
   groups: BranchGroup[];
@@ -102,6 +105,12 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
       </div>
       <HighlightQuery query={query}>
         <div ref={listRef} className={styles.list}>
+          {read === 'loading' && (
+            // Placeholder rows at the branches' own height while they're read, so the list opens at the size it keeps.
+            <div className={styles.loading} style={{ height: BRANCH_HEIGHT * LOADING_ROWS }}>
+              <ListSkeleton rowHeight={BRANCH_HEIGHT} />
+            </div>
+          )}
           {branches.length === 0 && emptyText && <div className={styles.empty}>{emptyText}</div>}
           <div id={listboxId} role="listbox" aria-label="Branches" className={styles.rows} style={{ height: virtualizer.getTotalSize() }}>
             {virtualizer.getVirtualItems().map((virtualRow) => {
