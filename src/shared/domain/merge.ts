@@ -1,3 +1,5 @@
+import { spec } from './specs';
+
 export type MergeKind = 'merge' | 'cherryPick' | 'subtractive';
 
 /** What to merge. Everything the merge view needs to preview and run it. */
@@ -174,6 +176,25 @@ export function followUpMerge(result: MergeResult, destinationBranch: string): M
  */
 export function mergeSourcePoint(request: MergeRequest, sourceChangeset: number): string {
   return request.sourceSpec.startsWith('sh:') ? request.sourceSpec : `cs:${sourceChangeset}`;
+}
+
+// The specs a conflicting file's versions are read and saved by, the same for the merge page and the merge: the item
+// at a contributor's point, in the repository the plan names for it (an xlinked one's own, where the same numbers are
+// another item).
+
+/** The incoming version: the item at the source's changeset, or a shelve's in the shelve. */
+export function sourceVersionSpec(request: MergeRequest, conflict: FileConflict): string {
+  return spec.itemAt(conflict.itemId, mergeSourcePoint(request, conflict.sourceChangeset), conflict.repository);
+}
+
+/** The common ancestor's version: the item at the base's changeset. Only for a file with a base (`hasMergeBase`). */
+export function baseVersionSpec(conflict: FileConflict): string {
+  return spec.itemAt(conflict.itemId, spec.changeset(conflict.baseChangeset), conflict.repository);
+}
+
+/** A file added on both sides has no common ancestor: `cm` prints a negative base changeset for it. */
+export function hasMergeBase(conflict: FileConflict): boolean {
+  return conflict.baseChangeset >= 0;
 }
 
 /** Directory conflicts where keeping both items under a new name is possible. */

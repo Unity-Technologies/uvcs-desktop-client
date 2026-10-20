@@ -1,5 +1,4 @@
-import { RENAMEABLE_CONFLICTS, type MergePlan, type MergeResolutions } from '@shared/domain/merge';
-import { hasBase } from './keptVersionSpec';
+import { hasMergeBase, RENAMEABLE_CONFLICTS, type MergePlan, type MergeResolutions } from '@shared/domain/merge';
 
 const UNMERGEABLE_REASONS: Record<Exclude<MergePlan['status'], 'ready'>, string> = {
   pendingChanges: 'The workspace has pending changes. Check them in or shelve them before merging.',
@@ -27,7 +26,7 @@ export function assertResolutionsComplete(plan: MergePlan, resolutions: MergeRes
 
   const unresolved = plan.fileConflicts.filter((conflict) => !resolutions.files[conflict.path]);
   if (unresolved.length > 0) throw new Error(`Resolve ${unresolved.map((conflict) => conflict.path).join(', ')} before merging.`);
-  const baseless = plan.fileConflicts.find((conflict) => resolutions.files[conflict.path]!.choice === 'base' && !hasBase(conflict));
+  const baseless = plan.fileConflicts.find((conflict) => resolutions.files[conflict.path]!.choice === 'base' && !hasMergeBase(conflict));
   if (baseless) throw new Error(`${baseless.path} has no base to keep: it was added on both sides.`);
 }
 

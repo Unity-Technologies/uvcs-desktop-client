@@ -1,6 +1,5 @@
 import { join } from 'node:path';
-import type { FileConflictResolution, MergePlan } from '@shared/domain/merge';
-import { baseVersionSpec } from './keptVersionSpec';
+import { baseVersionSpec, type FileConflictResolution, type MergePlan } from '@shared/domain/merge';
 
 /** One file conflict's decision, as `cm merge --to --fileconflictsresolutionsfile` reads it. */
 type FileConflictResolutionEntry = { path: string; keep: 'source' | 'destination' } | { path: string; resultFile: string };

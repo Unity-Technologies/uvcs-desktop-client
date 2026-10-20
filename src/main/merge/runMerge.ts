@@ -1,6 +1,8 @@
 import { writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import {
+  baseVersionSpec,
+  sourceVersionSpec,
   type DirectoryConflictResolution,
   type FileConflictResolution,
   type MergePlan,
@@ -18,7 +20,6 @@ import { retryWhileBusy } from '../files/whileBusy';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { OperationContext } from '../operations/OperationTracker';
 import { fileConflictResolutionsFile } from './fileConflictResolutionsFile';
-import { baseVersionSpec, sourceVersionSpec } from './keptVersionSpec';
 import { fileConflictArgs, MACHINE_READABLE_ARGS, mergeSourceArgs } from './mergeArgs';
 import { assertResolutionsComplete, describeUnmergeablePlan } from './mergeRules';
 import { previewMerge } from './previewMerge';
