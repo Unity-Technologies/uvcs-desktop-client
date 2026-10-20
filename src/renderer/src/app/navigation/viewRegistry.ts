@@ -15,29 +15,28 @@ import {
 import type { ComponentType } from 'react';
 import { useIncomingChangesBadge } from '../../features/incoming/useIncomingChangesBadge';
 import { useLeftChangesSummary } from '../../features/leftChanges/useLeftChanges';
+import { AttributesView } from '../../features/attributes/AttributesView';
+import { BranchExplorerView } from '../../features/branchExplorer/BranchExplorerView';
+import { BranchesView } from '../../features/branches/BranchesView';
+import { ChangesetsView } from '../../features/changesets/ChangesetsView';
+import { CodeReviewsView } from '../../features/codeReviews/CodeReviewsView';
+import { FilesView } from '../../features/files/FilesView';
+import { IncomingChangesView } from '../../features/incoming/IncomingChangesView';
+import { LabelsView } from '../../features/labels/LabelsView';
+import { LocksView } from '../../features/locks/LocksView';
+import { ShelvesView } from '../../features/shelves/ShelvesView';
+import { SyncView } from '../../features/sync/SyncView';
 import { PendingChangesView } from '../../features/pendingChanges/PendingChangesView';
 import { usePendingChangesBadge } from '../../features/pendingChanges/usePendingChanges';
 import type { Icon } from '../../lib/actions';
-import { lazyComponent } from '../../lib/lazyComponent';
 import type { NavBadge } from '../../ui/nav/navBadgeText';
 import { isMac } from '../../lib/platform';
 import { viewShortcut } from '../../lib/shortcutRegistry';
 import type { ViewId } from './views';
 
-// Views load on first visit so the app starts fast. Changes, where a workspace opens, is in the startup bundle: its
-// first frame is its own loading state (header, list skeleton, check-in panel), never a generic fallback that it then
-// replaces; its diff pane loads on first use instead (`ChangeSelectionPane`).
-const AttributesView = lazyComponent(() => import('../../features/attributes/AttributesView').then((module) => module.AttributesView));
-const BranchExplorerView = lazyComponent(() => import('../../features/branchExplorer/BranchExplorerView').then((module) => module.BranchExplorerView));
-const BranchesView = lazyComponent(() => import('../../features/branches/BranchesView').then((module) => module.BranchesView));
-const ChangesetsView = lazyComponent(() => import('../../features/changesets/ChangesetsView').then((module) => module.ChangesetsView));
-const CodeReviewsView = lazyComponent(() => import('../../features/codeReviews/CodeReviewsView').then((module) => module.CodeReviewsView));
-const FilesView = lazyComponent(() => import('../../features/files/FilesView').then((module) => module.FilesView));
-const IncomingChangesView = lazyComponent(() => import('../../features/incoming/IncomingChangesView').then((module) => module.IncomingChangesView));
-const LabelsView = lazyComponent(() => import('../../features/labels/LabelsView').then((module) => module.LabelsView));
-const LocksView = lazyComponent(() => import('../../features/locks/LocksView').then((module) => module.LocksView));
-const ShelvesView = lazyComponent(() => import('../../features/shelves/ShelvesView').then((module) => module.ShelvesView));
-const SyncView = lazyComponent(() => import('../../features/sync/SyncView').then((module) => module.SyncView));
+// Every view is in the startup bundle: its first frame is its own loading state (its header, its filters, its skeleton),
+// never a generic fallback that it then replaces. What is heavy beneath them loads on first use instead, in a pane
+// already laid out (`startupBundle.test.ts` keeps the heavy libraries out).
 
 export interface ViewDefinition {
   id: ViewId;
