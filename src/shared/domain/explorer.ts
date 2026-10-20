@@ -1,4 +1,5 @@
 import type { ItemType } from './pendingChanges';
+import type { RevisionRef } from './revision';
 
 /** One file or directory as listed by `cm ls`, in the workspace or in a repository tree. */
 export interface TreeItem {
@@ -67,4 +68,14 @@ export interface ItemMove {
   from: string;
   to: string;
   isPrivate: boolean;
+}
+
+/**
+ * A deleted item to bring back as a pending change: its last revision, the one the deletion removed (a diff's
+ * `baseRevisionId`), restored at `path` (workspace-relative, forward slashes), where it was or anywhere else. A folder
+ * comes back with everything it held then.
+ */
+export interface DeletedItemRestore {
+  revision: RevisionRef;
+  path: string;
 }
