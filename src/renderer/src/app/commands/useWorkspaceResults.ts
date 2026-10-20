@@ -50,5 +50,6 @@ function workspaceResult(workspace: WorkspaceSummary, term: string, open: OpenWo
     quality: term ? fuzzyMatchQuality(workspace.name, term) : undefined,
     menu: () => workspaceMenu(workspace, open),
     run: () => open(workspace.path, 'here'),
+    runInNewWindow: () => open(workspace.path, 'newWindow'),
   };
 }

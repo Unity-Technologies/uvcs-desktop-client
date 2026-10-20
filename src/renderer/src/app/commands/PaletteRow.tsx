@@ -1,5 +1,6 @@
 import { Command as Cmdk } from 'cmdk';
 import { Ellipsis } from 'lucide-react';
+import { useRef, type MouseEvent } from 'react';
 import { COPY_ENTRY_IDS } from '../../components/copyMenu';
 import { PathLabel } from '../../components/PathLabel';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -20,6 +21,8 @@ interface PaletteRowProps {
   menuOpen: boolean;
   onMenuOpenChange: (open: boolean) => void;
   onRun: () => void;
+  /** A click with Shift: opens the result in a new window where it can (a workspace); true when it did. */
+  onRunInNewWindow: (event: MouseEvent) => boolean;
   /** Runs before any of its actions that leave the palette (closes it). */
   onLeave: () => void;
   /** Takes focus back when the actions menu closes, so typing goes on where it was. */
@@ -27,8 +30,9 @@ interface PaletteRowProps {
 }
 
 /** One result: its icon, the highlighted label with a dimmed detail after it, a status or "current" pill, and its actions (Tab). */
-export function PaletteRow({ result, selected, menuOpen, onMenuOpenChange, onRun, onLeave, onMenuClosed }: PaletteRowProps) {
+export function PaletteRow({ result, selected, menuOpen, onMenuOpenChange, onRun, onRunInNewWindow, onLeave, onMenuClosed }: PaletteRowProps) {
   const Icon = result.icon;
+  const actionsRef = useRef<HTMLButtonElement>(null);
   const showsActions = result.menu && (selected || menuOpen);
   return (
     <Cmdk.Item
@@ -37,6 +41,10 @@ export function PaletteRow({ result, selected, menuOpen, onMenuOpenChange, onRun
       data-menu-open={menuOpen}
       disabled={result.disabled}
       onSelect={onRun}
+      // cmdk's click runs the result: a Shift-click that opens it in a new window is taken first (the actions button keeps its clicks).
+      onClickCapture={(event) => {
+        if (!actionsRef.current?.contains(event.target as Node) && onRunInNewWindow(event)) event.stopPropagation();
+      }}
       onContextMenu={(event) => {
         event.preventDefault();
         if (result.menu) onMenuOpenChange(true);
@@ -73,6 +81,7 @@ export function PaletteRow({ result, selected, menuOpen, onMenuOpenChange, onRun
           }}
         >
           <button
+            ref={actionsRef}
             type="button"
             tabIndex={-1}
             className={styles.actions}
