@@ -71,17 +71,22 @@ export function openRevisionEntries(open: (editorId: string | null) => Promise<u
   const editor = defaultEditor(apps);
   return [
     menuAction('openRevision', () => void open(editor?.id ?? null), { label: editor ? `Open this revision in ${editor.name}` : 'Open this revision' }),
-    menuSubmenu(
-      'openRevisionWith',
-      tidyMenu([
-        ...apps.editors.map((app) => appEntry(app, apps.editorId, () => void open(app.id))),
-        SEPARATOR,
-        ...(editor ? [defaultAppEntry(() => void open(null))] : []),
-        SEPARATOR,
-        ...otherAppEntries(open),
-      ]),
-    ),
+    menuSubmenu('openRevisionWith', openRevisionWithEntries(open, apps)),
   ];
+}
+
+/**
+ * Every editor to open a saved revision in, the user's marked; its default app when the user has an editor; then
+ * another app, and the apps' settings. `open` saves the revision and opens it in an editor, or with its default app for `null`.
+ */
+export function openRevisionWithEntries(open: (editorId: string | null) => Promise<unknown>, apps: ExternalApps): MenuEntry[] {
+  return tidyMenu([
+    ...apps.editors.map((app) => appEntry(app, apps.editorId, () => void open(app.id))),
+    SEPARATOR,
+    ...(defaultEditor(apps) ? [defaultAppEntry(() => void open(null))] : []),
+    SEPARATOR,
+    ...otherAppEntries(open),
+  ]);
 }
 
 function appEntry(app: ExternalApp, defaultId: string | null, run: () => void): Action {
