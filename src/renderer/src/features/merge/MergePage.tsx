@@ -6,7 +6,7 @@ import type { PageProps } from '../../app/navigation/pages';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
-import { CenteredSpinner } from '../../ui/Spinner';
+import { MergeCalculating } from './MergeCalculating';
 import { MergeCompleted, type MergeCompletion } from './MergeCompleted';
 import { MergeSession } from './MergeSession';
 import { useMergePlan } from './useMergePlan';
@@ -19,7 +19,7 @@ export function MergePage({ page }: PageProps<'merge'>) {
   const [completion, setCompletion] = useState<MergeCompletion>();
 
   if (completion) return <MergeCompleted request={page.request} completion={completion} />;
-  if (isLoading) return <CenteredSpinner />;
+  if (isLoading) return <MergeCalculating request={page.request} />;
   if (error || !plan) {
     return (
       <EmptyState
