@@ -1,0 +1,24 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* The title drags the window, as a title bar's does; only its back button takes clicks. */
+header > .title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  padding-left: var(--space-1);
+  font-size: var(--text-sm);
+  -webkit-app-region: drag;
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg-surface);
+}

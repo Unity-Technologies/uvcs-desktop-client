@@ -19,3 +19,11 @@ export type ViewId = (typeof VIEW_IDS)[number];
 export function isViewId(value: string): value is ViewId {
   return (VIEW_IDS as readonly string[]).includes(value);
 }
+
+/**
+ * The command that goes to a view (⌘1…, the palette, the menu bar). A page window sends it to its workspace window
+ * by this id (`windows.showWorkspaceWindow`), which runs it as its own.
+ */
+export function viewCommandId(view: ViewId): string {
+  return `goto.${view}`;
+}

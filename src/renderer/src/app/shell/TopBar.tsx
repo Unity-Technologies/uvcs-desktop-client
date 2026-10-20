@@ -4,8 +4,11 @@ import { HomeButton } from './HomeButton';
 import styles from './TopBar.module.css';
 
 interface TopBarProps {
-  /** Goes to the home screen, or back to its first section when already there. */
-  onHome: () => void;
+  /**
+   * Goes to the home screen, or back to its first section when already there. None in a page window, which shows one
+   * page of its workspace window's.
+   */
+  onHome?: () => void;
   /** The screen is the home screen. */
   atHome?: boolean;
   /** What the screen shows after the home button (a workspace's branch). */
@@ -24,7 +27,7 @@ export function TopBar({ onHome, atHome = false, children, end }: TopBarProps) {
   return (
     <header className={styles.topBar}>
       <AppMenuButton />
-      <HomeButton atHome={atHome} onClick={onHome} />
+      {onHome && <HomeButton atHome={atHome} onClick={onHome} />}
       {children}
       <div className={styles.spacer} />
       {end}

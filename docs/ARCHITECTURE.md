@@ -26,6 +26,7 @@ you touch:
 | `features/updates.md`                   | The About dialog, reporting an issue, how the app updates (unsigned macOS too), What's New, releases, the app icon and CI |
 | `features/locks.md`                     | Lock rules: where they are edited, and why not in the app                      |
 | `features/permissions.md`               | Permissions: the ACL model, `cm showacl`/`cm acl` quirks, the dialog, where it's reachable |
+| `features/page-windows.md`              | A page (a diff, a history, a review) in a new window: where it's offered, how it belongs to its workspace window, Follow selection |
 
 ## How a request flows
 
@@ -502,6 +503,8 @@ safe, and the step of a multi-command operation (shelve, undo, switch, bring). N
 ## Windows
 
 One window per workspace, so several tasks (often one AI agent each, in its own workspace and branch) run side by side.
+A workspace window may open page windows (a diff, a history… in a window of its own, for another display), which
+belong to it and aren't workspace windows: `features/page-windows.md`.
 
 - `main/window/WorkspaceWindows` opens the windows; opening a workspace that another window shows brings that window
   forward instead (`windows.focusWorkspace`, checked by `useOpenWorkspace`). The windows open as the installed app quits

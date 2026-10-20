@@ -24,7 +24,7 @@ const STATUS_HEADER = statusHeader('/main/task1', { changeset: 12, repository: '
 function workspaces(answers: Record<string, CmAnswer>, watchers?: Partial<WorkspaceWatchers>, windows?: Partial<WorkspaceWindows>) {
   const fake = fakeCmClient(answers);
   const headers = new WorkspaceHeaders(cmHeaderReaders(fake.cm));
-  const context = serviceContext(fake.cm, { headers, watchers: watchers as WorkspaceWatchers, windows: windows as WorkspaceWindows });
+  const context = serviceContext(fake.cm, { headers, watchers: watchers as WorkspaceWatchers, windows: { workspaceShown: () => undefined, ...windows } as WorkspaceWindows });
   return { ...fake, operations: context.operations, service: createWorkspacesService(context, {} as SwitchContext) };
 }
 
@@ -227,6 +227,20 @@ describe('watching a workspace', () => {
 
     expect(shown).toEqual([WORKSPACE]);
     expect(watch).toHaveBeenCalledWith(7, WORKSPACE);
+  });
+
+  it('tells the windows which workspace the calling window shows now, or none, so the page windows it left behind close', async () => {
+    const workspaceShown = vi.fn();
+    const window = { id: 7, isDestroyed: () => false } as unknown as WebContents;
+    const { service } = workspaces({}, { watch: async () => 'full' as const, coverageOf: () => undefined, release: () => undefined }, { showsHomeScreen: () => true, workspaceShown });
+
+    await runForCaller(window, () => service.watch(WORKSPACE));
+    await runForCaller(window, () => service.unwatch());
+
+    expect(workspaceShown.mock.calls).toEqual([
+      [7, WORKSPACE],
+      [7, undefined],
+    ]);
   });
 
   it("lets the home folder's cm sessions go once no window shows the home screen, and keeps them while one does", async () => {

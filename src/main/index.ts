@@ -12,7 +12,8 @@ import { findWorkspaceRoot } from './cm/workspaceRoot';
 import { apiMethods } from './ipc/apiMethods';
 import { EarlyCalls } from './ipc/EarlyCalls';
 import { registerApi } from './ipc/registerApi';
-import { sendEvent, sendEventToCaller } from './ipc/sendEvent';
+import { currentCaller } from './ipc/caller';
+import { sendEvent, sendEventTo } from './ipc/sendEvent';
 import { DiffReviewStore } from './review/DiffReviewStore';
 import { ReviewStore } from './review/ReviewStore';
 import { RevisionCat } from './files/RevisionCat';
@@ -34,6 +35,7 @@ import { DEVELOPMENT_DOCK_ICON } from './window/appIcon';
 import { appMenuInstaller, installDockMenu } from './window/appMenu';
 import { askToQuitWhenDone } from './window/askToQuitWhenDone';
 import { followAppTheme } from './window/followAppTheme';
+import { HandedOverDiffs } from './window/HandedOverDiffs';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders';
 
@@ -81,7 +83,12 @@ const quitting = new Quitting({
 
 // Every command `cm` runs is logged and watched from here on, as the first screen's reads start before Electron is
 // ready. A window sees the commands its own calls ran (commands run outside any call go to every window).
-const commandLog = new CommandLogRelay((entry) => sendEventToCaller('commandLogged', entry));
+// A page window has no command log: what it runs shows in its workspace window's.
+const commandLog = new CommandLogRelay((entry) => {
+  const caller = currentCaller();
+  if (caller) sendEventTo(windows.commandLogOf(caller), 'commandLogged', entry);
+  else sendEvent('commandLogged', entry);
+});
 cm.onCommandLogged((entry) => commandLog.logged(entry));
 if (!app.isPackaged) warnOnRepeatedServerCommands(cm);
 if (!app.isPackaged) warnOnOrganizationIds(cm);
@@ -94,6 +101,7 @@ const api = createServices({
   settings,
   watchers,
   windows,
+  handedOverDiffs: new HandedOverDiffs(),
   headers,
   updates,
   workspaceCopies,

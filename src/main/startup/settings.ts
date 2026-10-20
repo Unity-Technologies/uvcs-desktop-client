@@ -17,7 +17,9 @@ export function sendSettingsChanges(settings: Pick<SettingsStore, 'onChanged'>, 
   settings.onChanged((changed, changes) => windowsShowAnyOf(changes) && send(changed));
 }
 
-/** The window bounds are saved as windows move and read only when one opens: no window shows them. */
+const SAVED_AS_WINDOWS_MOVE: readonly string[] = ['windowBounds', 'pageWindowBounds'] satisfies (keyof AppSettings)[];
+
+/** The windows' bounds are saved as windows move and read only when one opens: no window shows them. */
 export function windowsShowAnyOf(changes: Partial<AppSettings>): boolean {
-  return Object.keys(changes).some((key) => key !== 'windowBounds');
+  return Object.keys(changes).some((key) => !SAVED_AS_WINDOWS_MOVE.includes(key));
 }

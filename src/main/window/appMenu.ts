@@ -25,15 +25,22 @@ function commandItem(label: string, commandId: string, accelerator?: string, wit
   };
 }
 
-/** The Window menu's list: every open window by the workspace it shows, the focused one checked. */
+/**
+ * The Window menu's list: every open window by the workspace it shows, each followed by its page windows (by their
+ * page's title), the focused one checked.
+ */
 function windowItems(windows: WorkspaceWindows): MenuItemConstructorOptions[] {
   const focused = BrowserWindow.getFocusedWindow();
-  return windows.all().map((window) => ({
-    label: windows.workspaceIn(window) ? window.getTitle() : 'Home',
+  const item = (window: BrowserWindow, label: string): MenuItemConstructorOptions => ({
+    label,
     type: 'checkbox',
     checked: window === focused,
     click: () => focusWindow(window),
-  }));
+  });
+  return windows.all().flatMap((window) => [
+    item(window, windows.workspaceIn(window) ? window.getTitle() : 'Home'),
+    ...windows.pageWindowsOf(window.webContents.id).map((pageWindow) => item(pageWindow, pageWindow.getTitle())),
+  ]);
 }
 
 /**

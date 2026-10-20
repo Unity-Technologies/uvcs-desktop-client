@@ -1,5 +1,6 @@
 import type { LabelInfo } from '@shared/domain/label';
 import { spec } from '@shared/domain/specs';
+import { openInNewWindow } from '../../app/pageWindow/openInNewWindow';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -9,6 +10,7 @@ import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { mergeTo } from '../branches/branchOperations';
 import { openObjectPermissions } from '../permissions/openPermissions';
 import {
+  labelDiffPage,
   browseLabel,
   createBranchFromLabel,
   deleteLabels,
@@ -38,6 +40,7 @@ export function labelMenu(workspacePath: string, labels: LabelInfo[], place: Men
 
   return groupedMenu([
     single && menuAction('diff', () => showLabelChanges(single)),
+    single && menuAction('diffInNewWindow', () => openInNewWindow(labelDiffPage(single))),
     pair && menuAction('diffPair', () => diffLabels(pair[0], pair[1])),
     single && menuAction('switch', () => void switchToLabel(workspacePath, single), { label: 'Switch to this label' }),
     single && menuAction('merge', () => mergeFromLabel(single)),

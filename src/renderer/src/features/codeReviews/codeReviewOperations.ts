@@ -4,6 +4,7 @@ import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { readServerUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
+import type { PageOf } from '../../app/navigation/pages';
 import { queryClient } from '../../app/queryClient';
 import { runAction, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByCodeReviews } from '../../app/refresh/refreshScopes';
@@ -64,6 +65,10 @@ export async function deleteReviews(workspacePath: string, reviews: CodeReviewSu
   );
 }
 
+export function codeReviewPage(review: Pick<CodeReview, 'id'>, focusPath?: string): PageOf<'codeReview'> {
+  return { kind: 'codeReview', reviewId: review.id, focusPath };
+}
+
 export function openReview(review: Pick<CodeReview, 'id'>, focusPath?: string): void {
-  navigation.openPage({ kind: 'codeReview', reviewId: review.id, focusPath });
+  navigation.openPage(codeReviewPage(review, focusPath));
 }

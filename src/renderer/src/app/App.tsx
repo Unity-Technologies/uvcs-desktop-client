@@ -13,6 +13,8 @@ import { errorDetailsAction } from './errors/errorDetailsAction';
 import { FolderDropTarget } from './folderDrop/FolderDropTarget';
 import { HomeScreen } from './home/HomeScreen';
 import { OperationCard } from './operations/OperationCard';
+import { PageWindowScreen } from './pageWindow/PageWindowScreen';
+import { usePageWindow } from './pageWindow/pageWindowStore';
 import { queryClient } from './queryClient';
 import { useAppMenuKeys } from './shell/appMenu';
 import { useSettingsFromOtherWindows } from './settings/useSettings';
@@ -61,6 +63,7 @@ function Root() {
   useRequestedWorkspace();
   useEffect(() => void loadUpdateStatus(), []);
   const workspacePath = useSession((state) => state.workspacePath);
+  const isPageWindow = usePageWindow((state) => state.isPageWindow);
   useForgetLeftWorkspace(workspacePath);
   const cm = useCmAvailability();
   const setup = useSetupCheck(cm.isSuccess);
@@ -71,6 +74,7 @@ function Root() {
   if (setup.data) {
     return <SetupProblemScreen problem={setup.data} checking={setup.isFetching} onRetry={() => void setup.refetch()} />;
   }
+  if (isPageWindow) return <PageWindowScreen />;
   return (
     <>
       {workspacePath ? <WorkspaceGate key={workspacePath} /> : <HomeScreen />}

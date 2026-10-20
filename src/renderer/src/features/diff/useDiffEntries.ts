@@ -13,11 +13,16 @@ interface DiffEntriesOptions {
   branchHead?: number;
 }
 
+/** The query key of a diff's files: a branch's at the head it was read at. */
+export function diffEntriesKey(workspacePath: string, target: DiffTarget | null, branchHead?: number) {
+  return branchHead === undefined ? queryKeys.inWorkspace(workspacePath, 'diff', target) : queryKeys.inWorkspace(workspacePath, 'diff', target, branchHead);
+}
+
 export function useDiffEntries(target: DiffTarget | null, { enabled = true, branchHead }: DiffEntriesOptions = {}) {
   const workspacePath = useWorkspacePath();
   const immutable = isImmutableDiff(target, branchHead);
   return useQuery({
-    queryKey: branchHead === undefined ? queryKeys.inWorkspace(workspacePath, 'diff', target) : queryKeys.inWorkspace(workspacePath, 'diff', target, branchHead),
+    queryKey: diffEntriesKey(workspacePath, target, branchHead),
     queryFn: () => api.diff.entries(workspacePath, target!),
     enabled: enabled && target !== null,
     staleTime: immutable ? Infinity : 15_000,

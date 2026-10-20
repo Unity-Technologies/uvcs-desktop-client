@@ -2,6 +2,7 @@ import { FileDiff, GitBranch, House } from 'lucide-react';
 import { Fragment } from 'react';
 import type { BranchInfo } from '@shared/domain/branch';
 import { shortBranchName, spec } from '@shared/domain/specs';
+import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { DetailsHeading } from '../../components/DetailsHeading';
 import { PLAIN_LINKS, type ObjectLinks } from '../../components/objectLinks';
@@ -14,7 +15,7 @@ import type { Property } from '../../ui/PropertyList';
 import { AttributeChips } from '../attributes/AttributeChips';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { BranchChip } from './BranchChip';
-import { diffBranch } from './branchOperations';
+import { branchDiffPage, diffBranch } from './branchOperations';
 
 interface BranchDetailsProps {
   branch: BranchInfo;
@@ -28,6 +29,7 @@ interface BranchDetailsProps {
 export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [] }: BranchDetailsProps) {
   const { data: workspace } = useWorkspaceInfo();
   const isCurrent = workspace?.selector.kind === 'branch' && workspace.selector.name === branch.name;
+  useShowInFollowingWindow(branchDiffPage(branch));
 
   return (
     <DetailsPanel

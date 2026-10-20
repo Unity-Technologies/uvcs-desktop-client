@@ -6,7 +6,7 @@ import { continueLeaving } from '../window/leaveRequests';
 import { focusWindow } from '../window/WorkspaceWindows';
 import type { ServiceContext } from './ServiceContext';
 
-export function createWindowsService({ windows }: ServiceContext): WindowsApi {
+export function createWindowsService({ windows, handedOverDiffs }: ServiceContext): WindowsApi {
   return {
     openWorkspace: async (workspacePath) => windows.showWorkspace(workspacePath),
     focusWorkspace: async (workspacePath) => {
@@ -22,5 +22,13 @@ export function createWindowsService({ windows }: ServiceContext): WindowsApi {
       const window = caller && BrowserWindow.fromWebContents(caller);
       if (window) popUpAppMenu(window, position);
     },
+    openPage: async ({ workspacePath, page, diff, seed }) => {
+      if (diff) handedOverDiffs.hand(workspacePath, diff.target, diff.entries);
+      windows.openPage(callerId(), { workspacePath, page, seed });
+    },
+    followSelection: async (following) => windows.follow(callerId(), following),
+    selectionShown: async (page, seed) => windows.selectionShown(callerId(), page, seed),
+    showWorkspaceWindow: async (commandId) => windows.showWorkspaceWindow(callerId(), commandId),
+    openPageInWorkspaceWindow: async (page) => windows.openInWorkspaceWindow(callerId(), page),
   };
 }

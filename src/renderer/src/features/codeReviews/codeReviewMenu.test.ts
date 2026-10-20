@@ -92,8 +92,8 @@ describe('getting the reviewed code into the workspace', () => {
     expect(reviewedCodeEntry(codeReviewMenu(ws, reviews, onBranch('/main')))).toEqual([]);
   });
 
-  it('comes right after opening the review, as what the review does to the workspace', () => {
+  it('comes right after the ways to open the review, here or in a new window, as what the review does to the workspace', () => {
     const menu = codeReviewMenu(ws, [reviewOf({ kind: 'branch', branch: '/main/task' })], onBranch('/main'));
-    expect(actions(menu).map((entry) => entry.id).slice(0, 2)).toEqual(['openReview', 'switch']);
+    expect(actions(menu).map((entry) => entry.id).slice(0, 3)).toEqual(['openReview', 'reviewInNewWindow', 'switch']);
   });
 });

@@ -75,6 +75,15 @@ describe('createMainWindow', () => {
     expect(fakeElectron.windows().map((window) => window.loadedQuery)).toEqual([{ workspace: '/work/game' }, {}]);
   });
 
+  it("starts a page window's page on the page it shows, where the last page window was left", () => {
+    const page = { kind: 'diff', title: 'Changeset 7', target: { kind: 'changeset', changesetId: 7 } };
+    vi.mocked(loadWindowBounds).mockClear();
+    createMainWindow(memorySettings(), { workspacePath: '/work/game', page });
+
+    expect(fakeElectron.windows().at(-1)!.loadedQuery).toEqual({ workspace: '/work/game', page: JSON.stringify(page) });
+    expect(vi.mocked(loadWindowBounds).mock.calls[0]?.[1]).toBe('pageWindowBounds');
+  });
+
   it("takes Windows' Back command (a mouse's back button, the Browser Back key) to the page", () => {
     const window = open();
 

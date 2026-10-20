@@ -52,6 +52,7 @@ import {
   MoveRight,
   PenLine,
   Pencil,
+  PictureInPicture2,
   Plus,
   RotateCcw,
   ScanText,
@@ -98,6 +99,9 @@ export const MENU_WORDS = {
   diffMerge: word('primary', FileDiff, 'Open diff of the merge'),
   changesetDiff: word('primary', FileDiff),
   openReview: word('primary', ExternalLink, 'Open review'),
+  // The same, in a window of its own (`openInNewWindow`), to read beside the workspace's window, on another display.
+  diffInNewWindow: word('primary', PictureInPicture2, 'Open diff in new window'),
+  reviewInNewWindow: word('primary', PictureInPicture2, 'Open review in new window'),
   release: word('primary', LockOpen, 'Release lock'),
   openWorkspace: word('primary', FolderOpen, 'Open workspace'),
   openInNewWindow: word('primary', AppWindow, 'Open in new window'),

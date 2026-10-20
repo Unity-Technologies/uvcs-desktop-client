@@ -2,6 +2,7 @@ import type { LabelInfo as Label } from '@shared/domain/label';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
+import type { PageOf } from '../../app/navigation/pages';
 import { runAction, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByLabels } from '../../app/refresh/refreshScopes';
 import { switchWorkspace } from '../../app/shell/workspaceOperations';
@@ -20,8 +21,13 @@ export function mergeFromLabel(label: Label): void {
   navigation.openPage({ kind: 'merge', request: { kind: 'merge', sourceSpec: spec.label(label.name) } });
 }
 
+/** The diff of what the labeled changeset changed. */
+export function labelDiffPage(label: Pick<Label, 'name' | 'changeset'>, focusPath?: string): PageOf<'diff'> {
+  return { kind: 'diff', title: `Label ${label.name}`, target: { kind: 'changeset', changesetId: label.changeset }, focusPath };
+}
+
 export function showLabelChanges(label: Label, focusPath?: string): void {
-  navigation.openPage({ kind: 'diff', title: `Label ${label.name}`, target: { kind: 'changeset', changesetId: label.changeset }, focusPath });
+  navigation.openPage(labelDiffPage(label, focusPath));
 }
 
 /** Compares two labels, older one on the left. */

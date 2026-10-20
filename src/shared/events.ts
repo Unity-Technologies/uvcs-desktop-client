@@ -1,5 +1,6 @@
 import type { UpdateStatus } from './domain/appUpdate';
 import type { OperationProgress } from './domain/operation';
+import type { PageSeed, PageWindowPage } from './domain/pageWindow';
 import type { AppSettings } from './domain/settings';
 import type { KeptAsideFile } from './domain/switchWithChanges';
 import type { WorkspaceChange } from './domain/workspaceChange';
@@ -57,6 +58,14 @@ export interface UvcsEvents {
   navigateBack: Record<string, never>;
   /** The main process caught an error nothing else did, and kept running; every window gets it. */
   unexpectedError: UnexpectedError;
+  /** This page window follows its workspace window's selection now, or stopped (another of its page windows took it). */
+  followingChanged: { following: boolean };
+  /** A page window follows this workspace window's selection (`windows.selectionShown`), or none does anymore. */
+  selectionFollowed: { followed: boolean };
+  /** What is selected in the workspace window, for the page window following it to show. */
+  selectionToFollow: { page: PageWindowPage; seed?: PageSeed };
+  /** One of this workspace window's page windows asks it to open a page only it shows (a merge). */
+  pageRequested: { page: PageWindowPage };
 }
 
 export type UvcsEventName = keyof UvcsEvents;

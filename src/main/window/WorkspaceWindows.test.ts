@@ -370,3 +370,133 @@ describe('the windows open as the app quit', () => {
     expect(openedWith()).toEqual([{ workspacePath: undefined, reopen: undefined, inBackground: undefined }]);
   });
 });
+
+describe('page windows', () => {
+  const DIFF = { kind: 'diff', title: 'Changeset 7', target: { kind: 'changeset', changesetId: 7 } };
+  const HISTORY = { kind: 'history', path: 'src/player.cs' };
+
+  /** A workspace window on GAME and a page window it opened, its page showing GAME too as it watches it. */
+  function withPageWindow(setup = setUp()) {
+    const game = setup.open();
+    setup.shows(game, GAME);
+    const page = setup.windows.openPage(game.webContents.id, { workspacePath: GAME, page: DIFF }) as unknown as FakeWindow;
+    setup.shows(page, GAME);
+    return { ...setup, game, page };
+  }
+
+  const sentTo = (window: FakeWindow) => window.webContents.sent.map(([, name, payload]) => [name, payload]);
+
+  it('open on the page, cascaded from their workspace window the first time, then where the last page window was', () => {
+    const { windows, settings, game, page } = withPageWindow();
+    expect(vi.mocked(createMainWindow).mock.calls.at(-1)?.[1]).toEqual({ cascadeFrom: game, workspacePath: GAME, page: DIFF });
+
+    windows.openPage(game.webContents.id, { workspacePath: GAME, page: HISTORY });
+    expect(vi.mocked(createMainWindow).mock.calls.at(-1)?.[1]).toMatchObject({ cascadeFrom: page, page: HISTORY });
+
+    page.close();
+    fakeElectron.windows().at(-1)!.close();
+    settings.update({ pageWindowBounds: { x: 2000, y: 40, width: 900, height: 700, maximized: false } });
+    windows.openPage(game.webContents.id, { workspacePath: GAME, page: DIFF });
+    expect(vi.mocked(createMainWindow).mock.calls.at(-1)?.[1]).toMatchObject({ cascadeFrom: undefined, page: DIFF });
+  });
+
+  it("aren't workspace windows: opening their workspace brings its window forward, and they aren't saved for the next launch", () => {
+    const { windows, settings, game, page } = withPageWindow();
+    page.focus();
+
+    expect(windows.all()).toEqual([game]);
+    expect(windows.windowShowing(GAME)).toBe(game);
+    windows.showWorkspace(GAME);
+    expect(fakeElectron.focused()).toBe(game);
+    windows.saveSession({ withViews: false });
+    expect(settings.get().openWindows.map(({ workspacePath }) => workspacePath)).toEqual([GAME]);
+  });
+
+  it('belong to the workspace window, also when a page window opens another', () => {
+    const { windows, game, page } = withPageWindow();
+
+    const another = windows.openPage(page.webContents.id, { workspacePath: GAME, page: HISTORY }) as unknown as FakeWindow;
+    expect(windows.pageWindowsOf(game.webContents.id)).toEqual([page, another]);
+    expect(windows.ownerOf(another.webContents.id)).toBe(game.webContents.id);
+  });
+
+  it('close with their workspace window, telling the watchers they show nothing anymore', () => {
+    const { game, page, onClosed } = withPageWindow();
+
+    game.close();
+    expect(page.isDestroyed()).toBe(true);
+    expect(onClosed).toHaveBeenCalledWith(page.webContents.id);
+  });
+
+  it('close once their workspace window shows another workspace or the home screen, and stay while it shows theirs', () => {
+    const { windows, game, page } = withPageWindow();
+
+    windows.workspaceShown(game.webContents.id, GAME);
+    expect(page.isDestroyed()).toBe(false);
+    windows.workspaceShown(game.webContents.id, TOOLS);
+    expect(page.isDestroyed()).toBe(true);
+
+    const other = withPageWindow();
+    other.windows.workspaceShown(other.game.webContents.id, undefined);
+    expect(other.page.isDestroyed()).toBe(true);
+  });
+
+  it("follow their workspace window's selection: both hear it, and the page window gets each selection", () => {
+    const { windows, game, page } = withPageWindow();
+
+    windows.selectionShown(game.webContents.id, HISTORY);
+    expect(sentTo(page)).toEqual([]);
+
+    windows.follow(page.webContents.id, true);
+    windows.selectionShown(game.webContents.id, DIFF);
+    expect(sentTo(page)).toEqual([
+      ['followingChanged', { following: true }],
+      ['selectionToFollow', { page: DIFF }],
+    ]);
+    expect(sentTo(game)).toEqual([['selectionFollowed', { followed: true }]]);
+
+    page.close();
+    expect(sentTo(game).at(-1)).toEqual(['selectionFollowed', { followed: false }]);
+  });
+
+  it("log their commands in their workspace window's command log", () => {
+    const { windows, game, page } = withPageWindow();
+
+    expect(windows.commandLogOf(page.webContents as never)).toBe(game.webContents);
+    expect(windows.commandLogOf(game.webContents as never)).toBe(game.webContents);
+  });
+
+  it('tell a page loaded again whether it follows or is followed, as it starts not knowing', () => {
+    const { windows, game, page } = withPageWindow();
+    page.webContents.emit('did-finish-load');
+    game.webContents.emit('did-finish-load');
+    expect([...sentTo(page), ...sentTo(game)]).toEqual([]);
+
+    windows.follow(page.webContents.id, true);
+    page.webContents.sent.length = 0;
+    game.webContents.sent.length = 0;
+    page.webContents.emit('did-finish-load');
+    game.webContents.emit('did-finish-load');
+    expect(sentTo(page)).toEqual([['followingChanged', { following: true }]]);
+    expect(sentTo(game)).toEqual([['selectionFollowed', { followed: true }]]);
+  });
+
+  it('open a page only their workspace window shows (a merge) there, bringing it forward', () => {
+    const { windows, game, page } = withPageWindow();
+    const merge = { kind: 'merge', request: { kind: 'merge', sourceSpec: 'cs:7' } };
+    page.focus();
+
+    windows.openInWorkspaceWindow(page.webContents.id, merge);
+    expect(fakeElectron.focused()).toBe(game);
+    expect(sentTo(game)).toEqual([['pageRequested', { page: merge }]]);
+  });
+
+  it('bring their workspace window forward, running a command there when asked', () => {
+    const { windows, game, page } = withPageWindow();
+    page.focus();
+
+    windows.showWorkspaceWindow(page.webContents.id, 'goto.branches');
+    expect(fakeElectron.focused()).toBe(game);
+    expect(sentTo(game)).toEqual([['menuCommand', { commandId: 'goto.branches' }]]);
+  });
+});

@@ -115,6 +115,19 @@ export class WorkspaceWatchers {
     }
   }
 
+  /**
+   * A write one window ran (`writer`) changed the workspace holding `cwd`: the other windows showing it (its page
+   * windows, or the window that opened them) hear it as a change on disk, since their watcher dropped it as the app's
+   * own and only the writer refreshes after its own writes.
+   */
+  writtenBy(writer: number, cwd: string, change: WorkspaceChange): void {
+    for (const [workspacePath, entry] of this.byPath) {
+      if (!entry.watcher.covers(cwd)) continue;
+      const others = [...entry.viewers].filter((viewer) => viewer !== writer);
+      if (others.length > 0) this.listener.changed(others, workspacePath, change);
+    }
+  }
+
   /** How much of a workspace its watcher sees; undefined when no window shows it, and nothing sees its changes. */
   coverageOf(workspacePath: string): WatchCoverage | undefined {
     return this.byPath.get(workspacePath)?.coverage;
