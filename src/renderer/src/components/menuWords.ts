@@ -20,6 +20,7 @@ import {
   EyeOff,
   FileCheck,
   FileDiff,
+  FileClock,
   FileDown,
   FilePlus,
   Files,
@@ -124,6 +125,8 @@ export const MENU_WORDS = {
   // A conflicting file of a merge or an update settled by taking one version whole; the words name the side ("Keep yours").
   keepDestination: word('act', FileCheck),
   keepSource: word('act', FileDown),
+  // A conflicting file settled by keeping its common ancestor's version whole ("Keep base", "for 3 files").
+  keepBase: word('act', FileClock),
   // A directory conflict settled by keeping both items, yours under a new name.
   keepBoth: word('act', Files, 'Keep both'),
   // A conflicting file opened in a merge tool; the words name the tool ("Resolve in Visual Studio Code").

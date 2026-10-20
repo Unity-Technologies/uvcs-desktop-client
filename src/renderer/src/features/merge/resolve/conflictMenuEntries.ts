@@ -9,6 +9,7 @@ import { openVersion } from '../../history/revisionOperations';
 import { absolutePath } from '../../pendingChanges/pendingChangeOperations';
 import type { MergeLabels } from '../mergeDescription';
 import type { FileConflictDecision } from './fileConflictDecision';
+import { hasBase } from './conflictPanelView';
 import { keepVersionEntries } from './keepVersionEntries';
 import type { FileConflictState } from './useFileConflicts';
 
@@ -30,14 +31,14 @@ export interface ConflictMenuContext {
 /**
  * What the conflicting files selected add to the menu of a list of changed files, the same on the merge page and in
  * Incoming: one of them, "Resolve in <tool>" and "Open version ▸" with each side's version and the base; any, Keep
- * yours or incoming (`keepVersionEntries`); one the user decided, Start over. Nothing is read to build it.
+ * yours, incoming or base (`keepVersionEntries`); one the user decided, Start over. Nothing is read to build it.
  */
 export function conflictMenuEntries(selected: FileConflictState[], context: ConflictMenuContext): GroupedEntry[] {
   const single = selected.length === 1 ? selected[0]! : null;
   return [
     ...(single ? singleConflictEntries(single, context) : []),
     ...keepVersionEntries(
-      selected.map((state) => state.file.key),
+      selected.map((state) => ({ key: state.file.key, hasBase: hasBase(state) })),
       context.labels,
       context.decide,
     ),
