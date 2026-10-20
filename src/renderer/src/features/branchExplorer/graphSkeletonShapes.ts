@@ -3,7 +3,8 @@ import { BAND_HEIGHT, COLUMN_WIDTH, columnX, HEADER_HEIGHT, HEADER_INSET, header
 /**
  * The Branch Explorer while its history is read: a few branches drawn with the graph's own measurements (rows, columns,
  * bands, header cards, changesets), at zoom 1, so what loads takes their place. A fixed pattern, not a guess at the
- * history: a main branch across, three short ones off it.
+ * history: a main branch across, three short ones off it. The main one takes row 0, as `layoutGraph` lays `/main` out
+ * (`layoutGraph.test.ts`), so the real one lands where its placeholder was.
  */
 export interface GraphSkeletonShapes {
   bands: Rect[];
