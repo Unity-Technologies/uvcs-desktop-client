@@ -3,11 +3,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ContentSource } from '@shared/domain/content';
 import type { FileConflictResolution } from '@shared/domain/merge';
 import type { MergeTool, MergeToolOutcome } from '@shared/domain/mergeTools';
-import { api } from '../../../api/client';
 import { queryClient } from '../../../app/queryClient';
 import { useSettledValue } from '../../../lib/useSettled';
 import type { MergeLabels } from '../mergeDescription';
 import { resolveInMergeTool, type OpenTool } from '../mergeTools/resolveInMergeTool';
+import { stopMergeToolSession } from '../mergeTools/mergeToolSessions';
 import { useMergeTools } from '../mergeTools/useMergeTools';
 import { conflictVersionQuery } from './conflictVersionQuery';
 import { readsOnOpen, upFrontReads, versionReads, versionsOf } from './conflictVersionReads';
@@ -131,7 +131,7 @@ export function useFileConflicts(workspacePath: string, files: ConflictedFile[],
   );
 
   // Leaving the merge stops waiting for the tools still open: what they save afterwards has nowhere to go.
-  useEffect(() => () => Object.values(latest.current.openTools).forEach((open) => void api.mergeTools.stopWaiting(open.sessionId)), []);
+  useEffect(() => () => Object.values(latest.current.openTools).forEach((open) => void stopMergeToolSession(open.sessionId)), []);
 
   return { states, decide, reset, resolveInTool, openFile };
 }

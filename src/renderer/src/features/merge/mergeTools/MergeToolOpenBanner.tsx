@@ -3,6 +3,7 @@ import { SMART_MERGE_NAME } from '@shared/domain/mergeTools';
 import { api } from '../../../api/client';
 import { Button } from '../../../ui/Button';
 import { Spinner } from '../../../ui/Spinner';
+import { stopMergeToolSession } from './mergeToolSessions';
 import type { OpenTool } from './resolveInMergeTool';
 import { runPositionText, type RunProgress } from './resolveRun';
 import styles from './MergeToolOpenBanner.module.css';
@@ -28,7 +29,7 @@ export function MergeToolOpenBanner({ fileName, open, run }: MergeToolOpenBanner
           Merging <strong>{fileName}</strong> with Smart Merge…
         </span>
         {!run && (
-          <Button size="small" variant="ghost" data-tip="Leaves the file as it was" onClick={() => void api.mergeTools.stopWaiting(open.sessionId)}>
+          <Button size="small" variant="ghost" data-tip="Leaves the file as it was" onClick={() => void stopMergeToolSession(open.sessionId)}>
             Stop
           </Button>
         )}
@@ -48,7 +49,7 @@ export function MergeToolOpenBanner({ fileName, open, run }: MergeToolOpenBanner
         </Button>
       )}
       {!run && (
-        <Button size="small" variant="ghost" data-tip="Takes what was saved so far" onClick={() => void api.mergeTools.stopWaiting(open.sessionId)}>
+        <Button size="small" variant="ghost" data-tip="Takes what was saved so far" onClick={() => void stopMergeToolSession(open.sessionId)}>
           Stop waiting
         </Button>
       )}

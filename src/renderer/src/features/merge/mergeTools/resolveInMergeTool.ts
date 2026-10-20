@@ -1,4 +1,4 @@
-import { SMART_MERGE_NAME, type MergeTool, type MergeToolOutcome, type SmartMergeRequest } from '@shared/domain/mergeTools';
+import { SMART_MERGE_NAME, type MergeTool, type MergeToolOutcome, type SmartMergeOutcome, type SmartMergeRequest } from '@shared/domain/mergeTools';
 import { api } from '../../../api/client';
 import { fileNameOf } from '../../../lib/text';
 import { toast } from '../../../ui/toast/toastStore';
@@ -6,6 +6,7 @@ import type { MergeLabels } from '../mergeDescription';
 import type { FileConflictDecision } from '../resolve/fileConflictDecision';
 import type { FileConflictState } from '../resolve/useFileConflicts';
 import { decisionFromTool, toolOutcomeMessage, toolVersionNames } from './mergeToolOutcome';
+import { wasStopped } from './mergeToolSessions';
 import { smartMergeVersions } from './smartMergeVersions';
 
 /**
@@ -77,11 +78,10 @@ async function runSmartMerge(versions: Omit<SmartMergeRequest, 'sessionId'>, onO
   const sessionId = crypto.randomUUID();
   onOpen({ sessionId, toolName: SMART_MERGE_NAME, canBringToFront: false });
   try {
-    const merged = await api.mergeTools.smartMerge({ sessionId, ...versions });
-    if (merged.kind === 'merged') return { kind: 'resolved', text: merged.text };
-    return merged.kind === 'stopped' ? NOTHING_SAVED : null;
-  } catch {
-    return null;
+    const merged = await api.mergeTools.smartMerge({ sessionId, ...versions }).catch((): SmartMergeOutcome => ({ kind: 'notMerged' }));
+    // Stopped here too late for main to stop it: still stopped, so no tool opens after the user said stop.
+    if (wasStopped(sessionId) || merged.kind === 'stopped') return NOTHING_SAVED;
+    return merged.kind === 'merged' ? { kind: 'resolved', text: merged.text } : null;
   } finally {
     onOpen(null);
   }
@@ -105,6 +105,7 @@ async function openInTool(workspacePath: string, state: FileConflictState, tool:
     return { kind: 'failed', message: error instanceof Error ? error.message : String(error) };
   } finally {
     onOpen(null);
+    wasStopped(sessionId); // Main had the tool to stop: only forgotten here.
   }
 }
 

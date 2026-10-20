@@ -32,7 +32,7 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   first on a Unity asset the user decided nothing for yet (`smartMergeVersions`, from `decidedByUser`), and the chosen
   tool opens only when it doesn't merge the file. Two calls, so each phase shows what really happens:
   `mergeTools.smartMerge` with the versions the page already read (no `cm` command), while the file reads "Merging…"
-  and its banner "Merging <file> with Smart Merge…" with Stop (stopping it opens nothing); then, if it didn't merge,
+  and its banner "Merging <file> with Smart Merge…" with Stop (stopping it opens nothing, even a stop that reaches main as Smart Merge ends on its own: the renderer remembers it, `stopMergeToolSession`, `wasStopped`); then, if it didn't merge,
   `mergeTools.resolve` opens the tool as for any file. Without a Unity Editor (`MergeToolList.smartMerge` null) the
   tool opens straight away: nothing shows Smart Merge at work. While Smart Merge (or a tool) has the file, its menu
   offers no Keep or Start over, as its toolbar offers none (`conflictMenuEntries`); and should the user decide the file
