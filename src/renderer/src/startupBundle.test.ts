@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 /**
  * What the window loads before its first frame: every module `main.tsx` reaches through static imports, every view
@@ -13,12 +13,23 @@ const RENDERER_SOURCE = __dirname;
 const SHARED_SOURCE = resolve(__dirname, '../../shared');
 const ENTRY = resolve(RENDERER_SOURCE, 'main.tsx');
 
-/** Pierre's diff viewer (with Shiki's grammars) and three.js, for 3D models: megabytes the first frame never needs. */
-const HEAVY_PACKAGES = ['@pierre/diffs', 'three'];
+/**
+ * Pierre's diff viewer, Shiki's grammars under it (reached directly too) and three.js, for 3D models: megabytes the
+ * first frame never needs. A new heavy library joins them, and loads behind a lazy boundary in a pane already laid out.
+ */
+const HEAVY_PACKAGES = ['@pierre/diffs', 'shiki', 'three'];
+const HEAVY_SCOPES = ['@shikijs/'];
+
+/** What a module may import that isn't code: styles, and assets Vite turns into a URL or a string (`?url`, `?raw`). */
+const ASSET = /\.(css|svg|png|jpe?g|gif|webp|json|wasm|txt)$|\?[a-z]+$/;
 
 const EXTENSIONS = ['.ts', '.tsx', '/index.ts', '/index.tsx'];
 
-/** The modules a source imports at run time: `import type` and clauses of types only are left out, as TypeScript drops them. */
+/**
+ * The modules a source imports at run time: `import type` and clauses of types only are left out, as TypeScript drops
+ * them. A clause may run across lines, and so may swallow a statement before the next `from`: that only ever reads a
+ * type import as a runtime one, so the test errs on the side of reporting.
+ */
 function runtimeImports(source: string): string[] {
   const statements = source.matchAll(/^\s*(?:import|export)\s+(?!type\b)([^'";]*?)\s*from\s*['"]([^'"]+)['"]|^\s*import\s+['"]([^'"]+)['"]/gm);
   return [...statements].filter(([, clause = '']) => !onlyTypes(clause)).map((match) => (match[2] ?? match[3])!);
@@ -39,9 +50,12 @@ function resolveModule(from: string, specifier: string): string | null {
         ? resolve(RENDERER_SOURCE, specifier.slice('@renderer/'.length))
         : null;
   if (base === null) return packageName(specifier);
+  if (ASSET.test(specifier)) return null;
   if (/\.tsx?$/.test(base) && existsSync(base)) return base;
   const file = EXTENSIONS.map((extension) => base + extension).find((candidate) => existsSync(candidate));
-  return file ?? null;
+  // A module not found would hide everything it imports: say so rather than pass.
+  if (file === undefined) throw new Error(`Cannot resolve ${specifier} from ${relative(RENDERER_SOURCE, from)}`);
+  return file;
 }
 
 function packageName(specifier: string): string {
@@ -72,18 +86,17 @@ function chainTo(module: string, importedBy: Map<string, string | null>): string
 }
 
 describe('startup bundle', () => {
-  const importedBy = staticGraph(ENTRY);
-
-  it('holds every view, so none paints a generic fallback first', () => {
-    const views = ['PendingChangesView', 'IncomingChangesView', 'FilesView', 'BranchExplorerView', 'SyncView'];
-
-    expect(views.filter((view) => ![...importedBy.keys()].some((module) => module.endsWith(`${view}.tsx`)))).toEqual([]);
+  let importedBy = new Map<string, string | null>();
+  beforeAll(() => {
+    importedBy = staticGraph(ENTRY);
   });
 
   it('leaves the heavy libraries to load on first use', () => {
-    const reached = HEAVY_PACKAGES.filter((name) => importedBy.has(name)).map((name) => chainTo(name, importedBy));
+    const heavy = [...importedBy.keys()].filter((module) => HEAVY_PACKAGES.includes(module) || HEAVY_SCOPES.some((scope) => module.startsWith(scope)));
 
-    expect(reached).toEqual([]);
+    expect(heavy.map((module) => chainTo(module, importedBy))).toEqual([]);
+    // The walk reaches the views (none is lazy: `viewRegistry.test.ts`), so it would see them import one.
+    expect([...importedBy.keys()].some((module) => module.endsWith('BranchExplorerView.tsx'))).toBe(true);
   });
 
   it('reads imports as TypeScript emits them', () => {
@@ -99,5 +112,6 @@ describe('startup bundle', () => {
     expect(runtimeImports(source)).toEqual(['./d', '../f', './h', './styles.css']);
     expect(packageName('three/examples/jsm/loaders/GLTFLoader.js')).toBe('three');
     expect(packageName('@pierre/diffs/react')).toBe('@pierre/diffs');
+    expect(packageName('@shikijs/langs/typescript')).toBe('@shikijs/langs');
   });
 });
