@@ -1,18 +1,14 @@
 import { UserMinus, UserPlus } from 'lucide-react';
 import { forwardRef, useId, useState, type KeyboardEvent } from 'react';
-import { navigationTarget } from '../../lib/listNavigation';
-import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { hotkey, hotkeys } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { SearchField } from '../../ui/SearchField';
 import { MemberIcon } from './MemberIcon';
+import { memberAfterKey, memberListView } from './memberListView';
 import { memberStatus, type MemberRow } from './members';
 import styles from './PermissionsDialog.module.css';
-
-/** Past this many entries the list gets a filter. */
-const FILTER_FROM = 8;
 
 interface MemberListProps {
   rows: MemberRow[];
@@ -28,10 +24,8 @@ interface MemberListProps {
 export const MemberList = forwardRef<HTMLDivElement, MemberListProps>(function MemberList({ rows, selected, onSelect, onAdd, onRemove, removeReason }, ref) {
   const listId = useId();
   const [filter, setFilter] = useState('');
-  const shown = rows.filter((row) => matchesWordFilter([row.label], filter));
-  const selectedRow = rows.find((row) => row.member.name === selected);
+  const { filters, shown, selectedRow, selectedIndex: index } = memberListView(rows, selected, filter);
   const reason = selectedRow ? removeReason(selectedRow) : 'Pick a user or group';
-  const index = shown.findIndex((row) => row.member.name === selected);
   const optionId = (name: string) => `${listId}-${encodeURIComponent(name)}`;
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
@@ -40,11 +34,11 @@ export const MemberList = forwardRef<HTMLDivElement, MemberListProps>(function M
       if (!reason) onRemove(selectedRow);
       return;
     }
-    const next = navigationTarget(event.key, Math.max(0, index), shown.length);
-    if (next === null) return;
+    const next = memberAfterKey({ filters, shown, selectedRow, selectedIndex: index }, event.key);
+    if (next === undefined) return;
     event.preventDefault();
-    onSelect(shown[next]!.member.name);
-    document.getElementById(optionId(shown[next]!.member.name))?.scrollIntoView({ block: 'nearest' });
+    onSelect(next);
+    document.getElementById(optionId(next))?.scrollIntoView({ block: 'nearest' });
   };
 
   return (
@@ -61,7 +55,7 @@ export const MemberList = forwardRef<HTMLDivElement, MemberListProps>(function M
           onClick={() => selectedRow && onRemove(selectedRow)}
         />
       </header>
-      {rows.length > FILTER_FROM && <SearchField value={filter} onChange={setFilter} placeholder="Filter users and groups" width="100%" />}
+      {filters && <SearchField value={filter} onChange={setFilter} placeholder="Filter users and groups" width="100%" />}
       <HighlightQuery query={filter}>
         <div
           ref={ref}
