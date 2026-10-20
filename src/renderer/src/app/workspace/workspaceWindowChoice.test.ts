@@ -1,6 +1,6 @@
 import { fakeApi } from '../../testing/fakeWindow';
 import { describe, expect, it, vi } from 'vitest';
-import { openWorkspaceIn, windowAskedBy } from './workspaceWindowChoice';
+import { newWindowRunOf, windowAskedBy, workspaceOpener } from './workspaceWindowChoice';
 
 const pressed = (held: Partial<Record<'shiftKey' | 'altKey' | 'ctrlKey' | 'metaKey', boolean>> = {}) => ({
   shiftKey: false,
@@ -24,13 +24,18 @@ describe('windowAskedBy', () => {
     expect(windowAskedBy(pressed({ shiftKey: true, ctrlKey: true }))).toBe('here');
     expect(windowAskedBy(pressed({ shiftKey: true, altKey: true }))).toBe('here');
   });
+
+  it('always opens a missing workspace here, where the user locates, recreates or forgets it', () => {
+    expect(windowAskedBy(pressed({ shiftKey: true }), { missing: true })).toBe('here');
+    expect(windowAskedBy(pressed({ shiftKey: true }), { missing: false })).toBe('newWindow');
+  });
 });
 
-describe('openWorkspaceIn', () => {
-  it('opens the workspace here through the window\'s own opener, asking the main process nothing', () => {
+describe('workspaceOpener', () => {
+  it("opens the workspace here through the window's own opener, asking the main process nothing", () => {
     const openHere = vi.fn();
 
-    openWorkspaceIn('here', '/ws', openHere);
+    workspaceOpener(openHere)('/ws', 'here');
 
     expect(openHere).toHaveBeenCalledWith('/ws');
     expect(fakeApi.methods()).toEqual([]);
@@ -40,9 +45,23 @@ describe('openWorkspaceIn', () => {
     fakeApi.answer('windows.openWorkspace', () => undefined);
     const openHere = vi.fn();
 
-    openWorkspaceIn('newWindow', '/ws', openHere);
+    workspaceOpener(openHere)('/ws', 'newWindow');
 
     expect(openHere).not.toHaveBeenCalled();
     expect(fakeApi.calls()).toEqual([{ method: 'windows.openWorkspace', args: ['/ws'] }]);
+  });
+});
+
+describe('newWindowRunOf', () => {
+  const workspaceResult = { runInNewWindow: () => {} };
+
+  it("takes a palette result's new window run with Shift held", () => {
+    expect(newWindowRunOf(workspaceResult, pressed({ shiftKey: true }))).toBe(workspaceResult.runInNewWindow);
+  });
+
+  it('leaves the result to its own run without Shift, or when it has no new window to open in', () => {
+    expect(newWindowRunOf(workspaceResult, pressed())).toBeUndefined();
+    expect(newWindowRunOf({}, pressed({ shiftKey: true }))).toBeUndefined();
+    expect(newWindowRunOf(undefined, pressed({ shiftKey: true }))).toBeUndefined();
   });
 });
