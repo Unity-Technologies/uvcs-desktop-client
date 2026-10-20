@@ -570,7 +570,7 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
 - A workspace picked from a list (the home screen's rows, search and a repository's Open button, the switcher, the
   palette's workspace results) opens in this window, or in a new one with Shift held on the click or Enter
   (`windowAskedBy`, `workspaceOpener`; `workspaceInNewWindow` in the shortcuts sheet, the switcher's hints and the
-  palette's footer), the modifier a folder drop takes, and the one browsers use for a new window on all three OSs.
+  menu's key cap), the modifier a folder drop takes, and the one browsers use for a new window on all three OSs.
   With another modifier held too it opens here, and a missing workspace always opens here, whatever the keys: its
   screen locates, recreates or forgets it. The menu says the same: Open workspace, then Open in new window
   (`workspaceMenu`), but not a missing workspace's. The new window asks `windows.openWorkspace`, so a workspace another
