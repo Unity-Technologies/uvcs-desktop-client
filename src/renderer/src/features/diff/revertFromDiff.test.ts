@@ -50,27 +50,27 @@ describe("a diff's older side", () => {
 
 describe("a diff's file menu", () => {
   it('reverts one file the diff changed, in the workspace\'s repository, to before the change', () => {
-    const menu = diffEntryMenu(ws, ofChangeset, [entry()], undefined, [], repository);
+    const menu = diffEntryMenu(ws, ofChangeset, [entry()], { workspaceRepository: repository });
 
     expect(revertEntry(menu)).toMatchObject({ label: 'Revert file to before this change…', menuGroup: 'act' });
-    expect(revertEntry(diffEntryMenu(ws, ofChangeset, [entry('changed', 'binaryFile')], undefined, [], repository))).toBeDefined();
+    expect(revertEntry(diffEntryMenu(ws, ofChangeset, [entry('changed', 'binaryFile')], { workspaceRepository: repository }))).toBeDefined();
   });
 
   it('offers no revert for a file added, deleted or only moved, a folder or an xlink', () => {
     for (const offered of [entry('added'), entry('deleted'), entry('moved'), entry('changed', 'directory'), entry('changed', 'xlink')]) {
-      expect(revertEntry(diffEntryMenu(ws, ofChangeset, [offered], undefined, [], repository)), JSON.stringify(offered)).toBeUndefined();
+      expect(revertEntry(diffEntryMenu(ws, ofChangeset, [offered], { workspaceRepository: repository })), JSON.stringify(offered)).toBeUndefined();
     }
   });
 
   it("offers no revert for a file of an xlinked repository, nor while the workspace's repository isn't known", () => {
-    expect(revertEntry(diffEntryMenu(ws, ofChangeset, [entry('changed', 'file', 'thirdparty@local')], undefined, [], repository))).toBeUndefined();
+    expect(revertEntry(diffEntryMenu(ws, ofChangeset, [entry('changed', 'file', 'thirdparty@local')], { workspaceRepository: repository }))).toBeUndefined();
     expect(revertEntry(diffEntryMenu(ws, ofChangeset, [entry()]))).toBeUndefined();
   });
 
   it('offers no revert for several files, nor for a diff with no changeset before it', () => {
-    expect(revertEntry(diffEntryMenu(ws, ofChangeset, [entry(), entry()], undefined, [], repository))).toBeUndefined();
-    expect(revertEntry(diffEntryMenu(ws, { kind: 'branch', branch: '/main/task' }, [entry()], undefined, [], repository))).toBeUndefined();
-    expect(revertEntry(diffEntryMenu(ws, { kind: 'shelve', shelveId: 3 }, [entry()], undefined, [], repository))).toBeUndefined();
+    expect(revertEntry(diffEntryMenu(ws, ofChangeset, [entry(), entry()], { workspaceRepository: repository }))).toBeUndefined();
+    expect(revertEntry(diffEntryMenu(ws, { kind: 'branch', branch: '/main/task' }, [entry()], { workspaceRepository: repository }))).toBeUndefined();
+    expect(revertEntry(diffEntryMenu(ws, { kind: 'shelve', shelveId: 3 }, [entry()], { workspaceRepository: repository }))).toBeUndefined();
   });
 });
 
