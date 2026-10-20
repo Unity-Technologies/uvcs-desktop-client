@@ -1,4 +1,4 @@
-import type { MergeTool } from '@shared/domain/mergeTools';
+import { SMART_MERGE_NAME, type MergeTool } from '@shared/domain/mergeTools';
 import { fileNameOf, listNames, pluralize } from '../../../lib/text';
 import type { FileConflictState } from '../resolve/useFileConflicts';
 import { waitsForTool } from './mergeToolOutcome';
@@ -57,6 +57,8 @@ export function runPositionText(progress: RunProgress): string {
 
 export interface RunEnding {
   resolved: number;
+  /** Of those resolved, the Unity assets Smart Merge merged before the tool would open. */
+  withSmartMerge: number;
   total: number;
   /** Stopped by the user before the last file. */
   stopped: boolean;
@@ -64,18 +66,20 @@ export interface RunEnding {
 
 /**
  * The toast once the run ends: "Resolved 4 of 5 in FakeMerge", "1 still needs you", and what it left out; stopped
- * before any, just that.
+ * before any, just that. What Smart Merge merged is told apart: "Resolved all 3 conflicts: 2 with Smart Merge, 1 in
+ * VS Code".
  */
 export function runSummary(ending: RunEnding, plan: RunPlan): { kind: 'success' | 'info'; title: string; detail?: string } {
   const { resolved, total, stopped } = ending;
   const tool = plan.tool.name;
   const waiting = total - resolved;
+  const by = resolvedBy(ending, tool);
   const title =
     resolved === total
-      ? `Resolved ${allOf(total)} in ${tool}`
+      ? `Resolved ${allOf(total)}${by}`
       : stopped && resolved === 0
         ? `Stopped resolving in ${tool}`
-        : `${stopped ? 'Stopped: resolved' : 'Resolved'} ${resolved} of ${total} in ${tool}`;
+        : `${stopped ? 'Stopped: resolved' : 'Resolved'} ${resolved} of ${total}${by}`;
   const detail = [waiting > 0 && `${waiting} still ${waiting === 1 ? 'needs' : 'need'} you.`, leftOutNote(plan) && `${leftOutNote(plan)}.`].filter(Boolean).join(' ');
   return { kind: resolved === total ? 'success' : 'info', title, ...(detail && { detail }) };
 }
@@ -83,6 +87,13 @@ export function runSummary(ending: RunEnding, plan: RunPlan): { kind: 'success' 
 /** "Resolve 5 conflicts in FakeMerge". */
 export function runLabel(plan: RunPlan): string {
   return `Resolve ${pluralize(plan.keys.length, 'conflict')} in ${plan.tool.name}`;
+}
+
+/** " in VS Code", " with Smart Merge", or ": 2 with Smart Merge, 1 in VS Code". */
+function resolvedBy({ resolved, withSmartMerge }: RunEnding, tool: string): string {
+  if (withSmartMerge === 0) return ` in ${tool}`;
+  if (withSmartMerge === resolved) return ` with ${SMART_MERGE_NAME}`;
+  return `: ${withSmartMerge} with ${SMART_MERGE_NAME}, ${resolved - withSmartMerge} in ${tool}`;
 }
 
 function allOf(total: number): string {

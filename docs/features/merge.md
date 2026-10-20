@@ -99,7 +99,7 @@ app.ts in <tool>", Skip this file (closes it there) and Stop (Esc, confirmed whi
 the file open and the selection follows it unless the user looks elsewhere, which never stops the run; files decided in
 the app meanwhile are skipped, a file closed unsaved keeps "Needs your decision" and pauses the strip ("closed without
 saving", Next file / Stop) unless the setting says to go on, and a tool that can't start stops the run with its reason.
-A toast sums it up ("Resolved 4 of 5 in <tool>", "1 still needs you") and focus goes to the first file still waiting,
+A toast sums it up ("Resolved 4 of 5 in <tool>", "1 still needs you"; what Smart Merge merged apart, "Resolved all 3 conflicts: 2 with Smart Merge, 1 in <tool>") and focus goes to the first file still waiting,
 or to Complete merge. With one file left, its own toolbar is the way.
 
 A conflicting file is read-only. Its toolbar holds the file, its status and the ways out: "Resolve in <tool>"
