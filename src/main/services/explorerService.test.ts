@@ -126,7 +126,7 @@ describe('changing the workspace', () => {
     await mkdir(join(workspace, 'notes'));
     const { service, commands } = explorer({ 'status --header': statusHeader('/main', { repository: 'game' }), undelete: '' });
 
-    await service.restoreDeleted(
+    const outcome = await service.restoreDeleted(
       workspace,
       [
         { revision: { revisionId: 24, repository: 'game@local' }, path: 'docs' },
@@ -141,15 +141,16 @@ describe('changing the workspace', () => {
       { via: 'query', args: ['undelete', 'revid:24', join(workspace, 'docs')] },
       { via: 'query', args: ['undelete', 'revid:16', join(workspace, 'notes', 'Café menú.txt')] },
     ]);
+    expect(outcome).toEqual({ restored: 2, total: 2 });
   });
 
   it("refuses a revision of another repository than the workspace's, whatever the window asks", async () => {
     const workspace = await mkdtemp(join(tmpdir(), 'explorer-wk-'));
     const { service, ran } = explorer({ 'status --header': statusHeader('/main', { repository: 'game' }) });
 
-    const restoring = service.restoreDeleted(workspace, [{ revision: { revisionId: 24, repository: 'thirdparty@local' }, path: 'lib' }], 'op-1');
+    const outcome = await service.restoreDeleted(workspace, [{ revision: { revisionId: 24, repository: 'thirdparty@local' }, path: 'lib' }], 'op-1');
 
-    await expect(restoring).rejects.toThrow('not in the workspace’s repository');
+    expect(outcome).toEqual({ restored: 0, total: 1, refused: expect.objectContaining({ kind: 'otherRepository', path: 'lib' }) });
     expect(ran('undelete')).toBe(false);
   });
 

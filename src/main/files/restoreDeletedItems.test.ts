@@ -29,56 +29,71 @@ describe('restoreDeletedItems', () => {
     ]);
   });
 
-  it('never restores over an item that took its place, and restores nothing then', async () => {
+  it('restores nothing over an item that took its place, and says so', async () => {
     const items = restorer([WORKSPACE, join(WORKSPACE, 'src'), join(WORKSPACE, 'docs')]);
-    await expect(restoreDeletedItems(WORKSPACE, repository, [enemy, docs], items, context())).rejects.toThrow('docs is already in the workspace. Restore it to another path.');
+    await expect(restoreDeletedItems(WORKSPACE, repository, [enemy, docs], items, context())).resolves.toEqual({
+      restored: 0,
+      total: 2,
+      refused: { kind: 'placeTaken', path: 'docs', message: 'docs is already in the workspace. Restore it to another path.' },
+    });
     expect(items.cm).not.toHaveBeenCalled();
   });
 
   it('needs the folder it goes back into: cm writes the files, then fails, leaving them private', async () => {
     const items = restorer([WORKSPACE]);
-    await expect(restoreDeletedItems(WORKSPACE, repository, [enemy], items, context())).rejects.toThrow('src isn’t in the workspace. Restore src/Enemy.cs to another folder.');
+    await expect(restoreDeletedItems(WORKSPACE, repository, [enemy], items, context())).resolves.toEqual({
+      restored: 0,
+      total: 1,
+      refused: { kind: 'folderMissing', path: 'src/Enemy.cs', message: 'src isn’t in the workspace. Restore src/Enemy.cs to another folder.' },
+    });
     expect(items.cm).not.toHaveBeenCalled();
   });
 
   it("restores only revisions of the workspace's repository, which cm finds by a bare id", async () => {
     const items = restorer();
     const xlinked = { revision: { revisionId: 18, repository: 'thirdparty@local' }, path: 'src/Enemy.cs' };
-    await expect(restoreDeletedItems(WORKSPACE, repository, [enemy, xlinked], items, context())).rejects.toThrow(
-      'src/Enemy.cs is in thirdparty@local, not in the workspace’s repository: it can’t be restored here.',
-    );
+    const outcome = await restoreDeletedItems(WORKSPACE, repository, [enemy, xlinked], items, context());
+    expect(outcome.refused).toEqual({
+      kind: 'otherRepository',
+      path: 'src/Enemy.cs',
+      message: 'src/Enemy.cs is in thirdparty@local, not in the workspace’s repository: it can’t be restored here.',
+    });
     expect(items.cm).not.toHaveBeenCalled();
   });
 
-  it("tells cm's refusal in the app's words, keeping the command for its details", async () => {
+  it("stops at cm's first refusal, telling it in the app's words, and what came back before it", async () => {
     const items = restorer();
-    const command = { commandLine: 'undelete revid:18 /ws/src/Old.cs', exitCode: 1, output: '', logEntryId: 1 };
-    items.cm.mockRejectedValueOnce(new CmError("The item 35 is already loaded on tree on path '/src/Enemy.cs'.", command));
-    const restoring = restoreDeletedItems(WORKSPACE, repository, [{ ...enemy, path: 'src/Old.cs' }], items, context());
-    await expect(restoring).rejects.toMatchObject({ message: 'The workspace already has this item, at src/Enemy.cs.', command });
+    const command = { commandLine: 'undelete revid:24 /ws/docs', exitCode: 1, output: '', logEntryId: 1 };
+    items.cm.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new CmError("The item 35 is already loaded on tree on path '/docs'.", command));
+    await expect(restoreDeletedItems(WORKSPACE, repository, [enemy, docs, enemy], items, context())).resolves.toEqual({
+      restored: 1,
+      total: 3,
+      refused: { kind: 'alreadyLoaded', path: 'docs', loadedPath: 'docs', message: 'The workspace already has this item, at docs.' },
+    });
+    expect(items.cm).toHaveBeenCalledTimes(2);
   });
 
-  it('stops at the first failure', async () => {
+  it('fails on any other failure, as cm tells it', async () => {
     const items = restorer();
-    items.cm.mockRejectedValueOnce(new Error('The item 35 is already loaded on tree'));
-    await expect(restoreDeletedItems(WORKSPACE, repository, [enemy, docs], items, context())).rejects.toThrow('already loaded');
+    items.cm.mockRejectedValueOnce(new Error('Could not connect to the server.'));
+    await expect(restoreDeletedItems(WORKSPACE, repository, [enemy, docs], items, context())).rejects.toThrow('Could not connect');
     expect(items.cm).toHaveBeenCalledTimes(1);
   });
 
-  it('stops between items once stopped, never in the middle of one', async () => {
+  it('stops between items once stopped, never in the middle of one, saying what came back', async () => {
     const controller = new AbortController();
     const items = restorer();
     items.cm.mockImplementationOnce(async () => {
       controller.abort();
       return undefined;
     });
-    await expect(restoreDeletedItems(WORKSPACE, repository, [enemy, docs], items, context(controller.signal))).rejects.toThrow('Stopped');
+    await expect(restoreDeletedItems(WORKSPACE, repository, [enemy, docs], items, context(controller.signal))).resolves.toEqual({ restored: 1, total: 2, stopped: true });
     expect(items.cm).toHaveBeenCalledTimes(1);
   });
 
   it('counts the items restored', async () => {
     const progress = context();
-    await restoreDeletedItems(WORKSPACE, repository, [enemy, docs], restorer(), progress);
+    await expect(restoreDeletedItems(WORKSPACE, repository, [enemy, docs], restorer(), progress)).resolves.toEqual({ restored: 2, total: 2 });
     expect(progress.reportProgress.mock.calls).toEqual([
       ['Restoring items', { current: 0, total: 2 }],
       ['Restoring items', { current: 1, total: 2 }],
