@@ -14,6 +14,7 @@ const WORKSPACE_WRITES = new Set([
   'undo',
   'undocheckout',
   'unco',
+  'undelete',
   'update',
 ]);
 
