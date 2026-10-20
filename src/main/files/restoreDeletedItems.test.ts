@@ -49,7 +49,10 @@ describe('restoreDeletedItems', () => {
   it('stops between items once stopped, never in the middle of one', async () => {
     const controller = new AbortController();
     const items = restorer();
-    items.cm.mockImplementationOnce(async () => controller.abort());
+    items.cm.mockImplementationOnce(async () => {
+      controller.abort();
+      return undefined;
+    });
     await expect(restoreDeletedItems(WORKSPACE, [enemy, docs], items, context(controller.signal))).rejects.toThrow('Stopped');
     expect(items.cm).toHaveBeenCalledTimes(1);
   });
