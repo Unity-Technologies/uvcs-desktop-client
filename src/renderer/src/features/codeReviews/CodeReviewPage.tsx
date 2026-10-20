@@ -120,7 +120,7 @@ function ReviewHeader({ review }: { review: CodeReview }) {
             className={styles.reviewedCode}
             icon={<ReviewedCodeIcon size={14} />}
             aria-disabled={reviewedCode.disabledReason !== undefined || undefined}
-            data-tip={reviewedCode.disabledReason}
+            data-tip={reviewedCode.disabledReason ?? reviewedCode.label}
             onClick={() => reviewedCode.disabledReason === undefined && void reviewedCode.run()}
           >
             {reviewedCode.label}
