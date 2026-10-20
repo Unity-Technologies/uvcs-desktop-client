@@ -70,7 +70,7 @@ function VersionCard({ title, subtitle, content, base, error, selected, onSelect
   const [undecodableImage, setUndecodableImage] = useState<ImageBytes>();
   const paint = usePaintableImage(content?.image);
   const undecodable = paint.status === 'failed' || (undecodableImage !== undefined && undecodableImage === content?.image);
-  const imageUrl = useImageUrl(paint.status === 'paintable' ? paint.image : undefined);
+  const imageUrl = useImageUrl(paint.status === 'paintable' ? paint.blob : undefined);
   return (
     <button className={styles.card} data-selected={selected} onClick={onSelect}>
       <div className={styles.preview}>

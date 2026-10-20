@@ -2,7 +2,7 @@
 // for whatever paints an image the browser can't decode (`paintableImage`: the image diff, the merge page's cards): a
 // 4K PSD or EXR takes long enough to hold a paint. One worker for both, so three's loaders load in one thread, once.
 // Apart from the model worker, so the next model's read never waits behind the last one's textures. What crosses
-// back (a bitmap, a BMP's bytes) is transferred. This file is only the messaging.
+// back (a bitmap, a BMP's Blob) is transferred or handed over, never copied. This file is only the messaging.
 
 import type { ImageBytes } from '@shared/domain/content';
 import { paintableImage, type PaintableImage } from '../../image/paintableImage';
@@ -31,7 +31,6 @@ function answerPaint(id: number, image: ImageBytes): void {
   } catch {
     painted = { status: 'failed', problem: 'unreadable' };
   }
-  // A BMP made here is transferred; an image the browser paints as it was comes back as it went.
-  const made = painted.status === 'paintable' && painted.image !== image ? [painted.image.bytes.buffer as ArrayBuffer] : [];
-  scope.postMessage({ id, painted }, made);
+  // A Blob crosses as a handle to its bytes, which stay out of the page's heap.
+  scope.postMessage({ id, painted });
 }

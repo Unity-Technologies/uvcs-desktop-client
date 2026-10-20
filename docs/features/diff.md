@@ -277,11 +277,19 @@ makes each into an image the browser paints before anything shows it (`usePainta
   The decoders are the textures' own (`lib/images`: `decodePixels`, three's loaders for TGA, TIFF, EXR and HDR,
   `readPsd` for Photoshop), loaded only in the worker. A second worker for images was tried and set aside: a second
   thread and a second copy of three's loaders, and a client that repeated the texture worker's line for line.
-- **By content first** (`imageFormatOfContent`: a PNG saved as `.tga` paints as the PNG it is), else by its type; its
-  size read from the header and refused past 16384 px a side or 8192² pixels before decoding (`sizeProblem`).
+- **By content first** (`imageFormatOfContent`: a PNG saved as `.tga` paints as the PNG it is, told on the page with
+  no trip to the worker: `needsDecoding`), else by its type; its size read from the header and refused past 16384 px
+  a side or 8192² pixels before decoding (`sizeProblem`, the model diff's limits, where a texture is drawn at 2048 px at
+  most). What an image costs at its size, 4 bytes a pixel each (256 MB at the limit): in the worker, its RGBA pixels and
+  its BMP while it is written (an EXR or HDR holds 16 bytes a pixel of floats first: 1 GB at the limit); on the page,
+  the decoded `<img>`, and, once Differences or the pixel inspector read it, its pixels (`rasterize`); the BMP itself
+  stays in a Blob, out of the page's heap. A browser image under the image cap has no pixel limit today.
 - **As a BMP** (`bmpOf`): the decoded pixels are written as a 32-bit BMP with an alpha mask, which `<img>` reads as it
-  is: no compression to spend time on, and a see-through pixel keeps its color. A PNG made through a canvas was set
-  aside: the canvas premultiplies alpha, losing the color of every transparent pixel, and encoding takes long.
+  is: no compression to spend time on, and a see-through pixel keeps its color. It crosses back from the worker as a
+  Blob (`PaintableImage`), a handle, and the page keeps only its URL. A PNG made through a canvas was set aside: the
+  canvas premultiplies alpha, losing the color of every transparent pixel, and encoding takes long. Chromium shows a
+  32-bit BMP whose alpha is 0 in every pixel as opaque (some writers leave alpha unset), so a texture transparent all
+  over shows its color.
 - **High dynamic range** (EXR, HDR) shows as the model diff's textures do: clamped to 0-1 and encoded as sRGB. The info
   strip says so ("HDR, clamped"), and the pixel inspector tells the colors shown, "as shown", not the file's values.
   16-bit channels show as 8 bits.

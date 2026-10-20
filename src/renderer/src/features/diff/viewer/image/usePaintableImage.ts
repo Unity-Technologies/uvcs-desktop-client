@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ImageBytes } from '@shared/domain/content';
 import { needsDecoding } from './decodedImageTypes';
 import { paintOffThread } from '../model/textures/textureWorkerSession';
+import { imageBlob } from './imageBlob';
 import type { PaintableImage } from './paintableImage';
 
 export type PaintState = { status: 'none' } | { status: 'decoding' } | PaintableImage;
@@ -22,7 +23,7 @@ const DECODING: PaintState = { status: 'decoding' };
 /** What paints for the image now: never what was decoded of the image before, while this one decodes. */
 export function shownPaint(image: ImageBytes | undefined, kept: KeptPaint | undefined): PaintState {
   if (!image) return NONE;
-  if (!needsDecoding(image)) return { status: 'paintable', image, highDynamicRange: false };
+  if (!needsDecoding(image)) return { status: 'paintable', blob: imageBlob(image), highDynamicRange: false };
   return kept?.image === image ? kept.painted : DECODING;
 }
 

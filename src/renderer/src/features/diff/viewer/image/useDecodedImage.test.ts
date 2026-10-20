@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { ImageBytes } from '@shared/domain/content';
 import { shownDecodeState, type KeptDecode } from './useDecodedImage';
 import type { PaintState } from './usePaintableImage';
 
-const png = (byte: number): PaintState => ({ status: 'paintable', image: { bytes: new Uint8Array([byte]), mimeType: 'image/png' } satisfies ImageBytes, highDynamicRange: false });
+const png = (byte: number): PaintState => ({ status: 'paintable', blob: new Blob([new Uint8Array([byte])], { type: 'image/png' }), highDynamicRange: false });
 const ready = (url: string): KeptDecode => ({
   url,
   state: { status: 'ready', image: { src: url, element: {} as HTMLImageElement, width: 4, height: 3, highDynamicRange: false } },

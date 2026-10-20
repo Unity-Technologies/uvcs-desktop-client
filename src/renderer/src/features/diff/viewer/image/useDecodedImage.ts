@@ -58,7 +58,7 @@ export function shownDecodeState(paint: PaintState, url: string | undefined, kep
 
 export function useDecodedImage(image: ImageBytes | undefined): DecodeState {
   const paint = usePaintableImage(image);
-  const url = useImageUrl(paint.status === 'paintable' ? paint.image : undefined);
+  const url = useImageUrl(paint.status === 'paintable' ? paint.blob : undefined);
   const [kept, setKept] = useState<KeptDecode>();
 
   useEffect(() => {
@@ -67,7 +67,7 @@ export function useDecodedImage(image: ImageBytes | undefined): DecodeState {
     const img = new Image();
     img.onload = () => {
       if (stale) return;
-      const size = decodedSize({ width: img.naturalWidth, height: img.naturalHeight }, paint.image.mimeType === 'image/svg+xml');
+      const size = decodedSize({ width: img.naturalWidth, height: img.naturalHeight }, paint.blob.type === 'image/svg+xml');
       setKept({ url, state: { status: 'ready', image: { src: url, element: img, ...size, highDynamicRange: paint.highDynamicRange } } });
     };
     img.onerror = () => {
