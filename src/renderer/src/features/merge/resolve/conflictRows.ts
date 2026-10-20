@@ -1,11 +1,13 @@
 import { FLASHED_LINES } from '../../diff/viewer/lineMarksCss';
 
 /**
- * How many conflicts start above the top of the view (`viewTop`), from where their header rows are (`tops`): where
- * the first move through them goes from. One starting at the very top is in view.
+ * How many conflicts start above the top of the view (`viewTop`), from their header rows (`rows`, in order) and where
+ * each starts (`topOf`, read only up to the first in view): where the first move through them goes from. One starting
+ * at the very top is in view.
  */
-export function conflictsAbove(tops: readonly number[], viewTop: number): number {
-  return tops.filter((top) => top < viewTop).length;
+export function conflictsAbove<Row>(rows: readonly Row[], topOf: (row: Row) => number, viewTop: number): number {
+  const firstInView = rows.findIndex((row) => topOf(row) >= viewTop);
+  return firstInView === -1 ? rows.length : firstInView;
 }
 
 /**

@@ -41,10 +41,7 @@ export function useConflictView(viewRef: RefObject<StepView | null>, surfaceRef:
       place.current.above(() => {
         const surface = surfaceRef.current;
         if (!surface) return 0;
-        return conflictsAbove(
-          actionRows(surface).map((row) => row.getBoundingClientRect().top),
-          surface.getBoundingClientRect().top,
-        );
+        return conflictsAbove(actionRows(surface), (row) => row.getBoundingClientRect().top, surface.getBoundingClientRect().top);
       }),
     aboveAfterChange: () => place.current.aboveAfterChange(),
   }));

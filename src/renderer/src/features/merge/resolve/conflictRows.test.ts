@@ -4,10 +4,17 @@ import { ConflictPlace, conflictLinesSelector, conflictsAbove } from './conflict
 
 describe('conflictsAbove', () => {
   it('counts the conflicts starting above the top of the view; one starting at the top is in view', () => {
-    expect(conflictsAbove([10, 200, 900], 0)).toBe(0);
-    expect(conflictsAbove([-400, 200, 900], 200)).toBe(1);
-    expect(conflictsAbove([-400, -20, -1], 0)).toBe(3);
-    expect(conflictsAbove([], 0)).toBe(0);
+    const at = (top: number): number => top;
+    expect(conflictsAbove([10, 200, 900], at, 0)).toBe(0);
+    expect(conflictsAbove([-400, 200, 900], at, 200)).toBe(1);
+    expect(conflictsAbove([-400, -20, -1], at, 0)).toBe(3);
+    expect(conflictsAbove([], at, 0)).toBe(0);
+  });
+
+  it('reads where they start only up to the first in view', () => {
+    const read: number[] = [];
+    conflictsAbove([-400, 10, 200, 900], (top) => (read.push(top), top), 0);
+    expect(read).toEqual([-400, 10]);
   });
 });
 
