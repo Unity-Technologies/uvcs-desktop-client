@@ -7,7 +7,7 @@ import { fileNameOf, pluralize } from '../../../lib/text';
 import { Button } from '../../../ui/Button';
 import { ActionDropdownMenu } from '../../../ui/menu/ActionDropdownMenu';
 import { SegmentedControl } from '../../../ui/SegmentedControl';
-import type { StepView } from '../../diff/viewer/useStepNavigation';
+import { STEP_FRAME, type StepView } from '../../diff/viewer/useStepNavigation';
 import { ConflictStatusChip } from '../ConflictStatusChip';
 import type { MergeLabels } from '../mergeDescription';
 import { MergeToolButton, type ConflictToolActions } from '../mergeTools/MergeToolButton';
@@ -91,7 +91,7 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
   );
 
   return (
-    <div ref={panelRef} className={styles.panel}>
+    <div ref={panelRef} className={styles.panel} {...STEP_FRAME}>
       <div className={styles.toolbar}>
         <div className={styles.file}>
           <PathLabel path={state.file.path} fitContent />

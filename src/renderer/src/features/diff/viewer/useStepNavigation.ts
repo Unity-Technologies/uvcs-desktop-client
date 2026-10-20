@@ -162,11 +162,18 @@ export function goesSomewhere(navigation: StepNavigation): boolean {
 }
 
 /**
- * Whether a key pressed on `target` moves through the view in `frame`: pressed in it, in the list beside it, or with
- * nothing focused (a header button disabled at the last step lets go of the focus).
+ * Marks what holds a view and the controls that pick it (a conflicting file's panel, with its views' segments): keys
+ * pressed anywhere in it move through the view, as from the view itself.
+ */
+export const STEP_FRAME = { 'data-step-frame': '' } as const;
+
+/**
+ * Whether a key pressed on `target` moves through the view in `frame`: pressed in it or in what holds it
+ * (`STEP_FRAME`), in the list beside it, or with nothing focused (a header button disabled at the last step lets go
+ * of the focus).
  */
 function takesKeysFrom(frame: HTMLElement | null, target: EventTarget | null): boolean {
   if (!frame || !(target instanceof Element) || target.closest('input, textarea, select, [contenteditable="true"]')) return false;
-  if (frame.contains(target)) return true;
+  if (frame.contains(target) || frame.closest('[data-step-frame]')?.contains(target)) return true;
   return (target === document.body || target.closest('[data-main-focus]') !== null) && frame.checkVisibility();
 }
