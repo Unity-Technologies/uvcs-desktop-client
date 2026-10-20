@@ -2,6 +2,7 @@ import type { Changeset, ChangesetInfo } from '@shared/domain/changeset';
 import type { MergeRequest } from '@shared/domain/merge';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
+import type { PageOf } from '../../app/navigation/pages';
 import { runAction, runRead, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByChangesetComment, isAffectedByChangesetMove } from '../../app/refresh/refreshScopes';
 import { switchWorkspace } from '../../app/shell/workspaceOperations';
@@ -12,8 +13,13 @@ import { toast } from '../../ui/toast/toastStore';
 import { pickBranch } from '../branches/BranchPickerDialog';
 import { askForChangesetComment } from './EditCommentDialog';
 
+/** The diff of what a changeset changed. */
+export function changesetDiffPage(changeset: Pick<Changeset, 'id'>, focusPath?: string): PageOf<'diff'> {
+  return { kind: 'diff', title: `Changeset ${changeset.id}`, target: { kind: 'changeset', changesetId: changeset.id }, focusPath };
+}
+
 export function openChangesetDiff(changeset: Pick<Changeset, 'id'>, focusPath?: string): void {
-  navigation.openPage({ kind: 'diff', title: `Changeset ${changeset.id}`, target: { kind: 'changeset', changesetId: changeset.id }, focusPath });
+  navigation.openPage(changesetDiffPage(changeset, focusPath));
 }
 
 /** Compares the state after the older changeset with the state after the newer one. */

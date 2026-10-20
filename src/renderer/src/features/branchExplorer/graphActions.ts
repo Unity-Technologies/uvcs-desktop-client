@@ -1,6 +1,7 @@
 import type { MergeKind } from '@shared/domain/merge';
 import { navigation } from '../../app/navigation/navigationStore';
 import { diffBranch } from '../branches/branchOperations';
+import { openChangesetDiff } from '../changesets/changesetOperations';
 import { showLabelChanges } from '../labels/labelOperations';
 import type { GraphSelection } from './graphSelection';
 import { selectedLabel } from './model/graphLabels';
@@ -10,7 +11,7 @@ import type { GraphLayout } from './model/layoutGraph';
 export const graphActions = {
   merge: (kind: MergeKind, sourceSpec: string) => navigation.openPage({ kind: 'merge', request: { kind, sourceSpec } }),
 
-  diffChangeset: (id: number) => navigation.openPage({ kind: 'diff', title: `Changeset ${id}`, target: { kind: 'changeset', changesetId: id } }),
+  diffChangeset: (id: number) => openChangesetDiff({ id }),
   diffBranch,
   diffLabel: showLabelChanges,
 };

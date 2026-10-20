@@ -3,6 +3,7 @@ import { shortBranchName, spec } from '@shared/domain/specs';
 import type { PendingChangesAction } from '@shared/domain/switchWithChanges';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
+import type { PageOf } from '../../app/navigation/pages';
 import { runAction, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByBranchList } from '../../app/refresh/refreshScopes';
 import { switchWorkspace } from '../../app/shell/workspaceOperations';
@@ -134,7 +135,11 @@ export async function mergeTo(sourceSpec: string, sourceName: string, task?: Tas
   navigation.openPage({ kind: 'merge', request: { kind: 'merge', sourceSpec, destinationBranch: destination }, ...(task && { task }) });
 }
 
-/** Diffs the branch at the head it's known at, so the diff its details panel already read is reused. */
-export function diffBranch({ name, headChangeset }: Pick<Branch, 'name' | 'headChangeset'>, focusPath?: string): void {
-  navigation.openPage({ kind: 'diff', title: `Branch ${branchLabel(name)}`, target: { kind: 'branch', branch: name }, focusPath, branchHead: headChangeset });
+/** The diff of what a branch brings, at the head it's known at, so the diff its details panel already read is reused. */
+export function branchDiffPage({ name, headChangeset }: Pick<Branch, 'name' | 'headChangeset'>, focusPath?: string): PageOf<'diff'> {
+  return { kind: 'diff', title: `Branch ${branchLabel(name)}`, target: { kind: 'branch', branch: name }, focusPath, branchHead: headChangeset };
+}
+
+export function diffBranch(branch: Pick<Branch, 'name' | 'headChangeset'>, focusPath?: string): void {
+  navigation.openPage(branchDiffPage(branch, focusPath));
 }

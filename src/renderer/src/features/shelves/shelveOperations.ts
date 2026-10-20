@@ -2,6 +2,7 @@ import type { ShelvedAway, Shelve } from '@shared/domain/shelve';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
 import { navigation, useNavigation } from '../../app/navigation/navigationStore';
+import type { PageOf } from '../../app/navigation/pages';
 import { runOperation, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByShelveApplied, isAffectedByShelveDeletion, isAffectedByShelvingAway } from '../../app/refresh/refreshScopes';
 import { pluralize } from '../../lib/text';
@@ -72,8 +73,13 @@ export function shelveAway(workspacePath: string, paths: string[] | null, commen
   });
 }
 
+/** The diff of what a shelve holds. */
+export function shelveDiffPage(shelve: Pick<Shelve, 'id'>, focusPath?: string): PageOf<'diff'> {
+  return { kind: 'diff', title: `Shelve ${shelve.id}`, target: { kind: 'shelve', shelveId: shelve.id }, focusPath };
+}
+
 export function showShelveChanges(shelve: Pick<Shelve, 'id'>, focusPath?: string): void {
-  navigation.openPage({ kind: 'diff', title: `Shelve ${shelve.id}`, target: { kind: 'shelve', shelveId: shelve.id }, focusPath });
+  navigation.openPage(shelveDiffPage(shelve, focusPath));
 }
 
 export async function deleteShelve(workspacePath: string, shelveId: number): Promise<boolean> {
