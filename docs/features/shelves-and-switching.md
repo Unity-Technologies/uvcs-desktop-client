@@ -59,13 +59,13 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
   saving, a new `.meta`) stays out, and checking files by hand adds or takes them there. While it lasts, a quiet
   "Changelist ui" under the panel's button says why only its files are checked. It ends, and the files the user had left
   out before are the only ones left out again, in three ways: a successful check-in or shelve (`endPrepared`; a failed
-  or cancelled one keeps it); none of its files pending anymore (undone, shelved away by a switch, checked in from
-  outside the app: `preparedStillPending`, `currentChoice`), or else every change made later would stay unchecked; and
-  checking every file with the list's header box while the filters hide none (`includeEverything`). The button does what
-  it always does: one `cm checkin` or shelve of those paths, the empty-comment warning, "Update & check in". Running at
-  once was dropped: it skipped reading the comment, which a changelist's description only suggests. "Undo N changes…"
-  opens the Undo dialog on its changes. The default changelist has no menu of its own: right-clicking it acts on its
-  files.
+  or cancelled one keeps it); no pending change left in the changelist (undone, shelved away by a switch, checked in
+  from outside the app: `preparedStillPending`, `currentChoice`; an added file undone stays on disk, private, but is no
+  longer the changelist's), or else every change made later would stay unchecked; and checking every file with the
+  list's header box while the filters hide none (`includeEverything`). The button does what it always does: one `cm
+  checkin` or shelve of those paths, the empty-comment warning, "Update & check in". Running at once was dropped: it
+  skipped reading the comment, which a changelist's description only suggests. "Undo N changes…" opens the Undo dialog
+  on its changes. The default changelist has no menu of its own: right-clicking it acts on its files.
 - **The list** is one `cm find shelve` by owner and date (`useMyShelves`, `SLOW_CHANGING_QUERY`), refreshed by shelve
   operations; the count comes from it. Typing filters it, and after three letters one bounded server search by comment
   (`useShelvesSearch`, `shelvesScope`) finds older ones. A row opens the shelve's diff, which shows its comment and Apply as the page's

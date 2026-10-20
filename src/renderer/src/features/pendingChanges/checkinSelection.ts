@@ -43,11 +43,11 @@ export function withEverythingIncluded(choice: CheckinChoice, paths: string[]): 
 }
 
 /**
- * Whether any of a prepared changelist's files is still pending: one in the changelist, or one it checks (the user may
- * have unchecked every file of the changelist, or checked others).
+ * Whether the prepared changelist still holds a pending change, checked or not. By the changelist, not the paths: an
+ * added file undone stays on disk, private, at its path, and files the user checked besides don't keep it going.
  */
 export function preparedStillPending(prepared: PreparedChangelist, allChanges: PendingChange[]): boolean {
-  return allChanges.some((change) => change.changelist === prepared.name || prepared.paths.has(change.path));
+  return allChanges.some((change) => change.changelist === prepared.name);
 }
 
 /**
