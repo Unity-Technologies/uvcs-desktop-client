@@ -48,6 +48,16 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
   The panel's shelve (`shelveFromPanel`) takes the files as they are on disk, as its check-in does
   (`checkinFromPanel`); shelved away, the changes take the draft comment along, kept here they leave it for their
   check-in.
+- **A changelist at a time**: grouped by changelists, a changelist's menu (`changelistMenu`) offers "Check in this
+  changelist" and "Shelve this changelist", which ready the panel rather than run (`prepareChangelistCheckin`): its
+  changes checked and every other one unchecked (those the filters hide too), the panel in that mode (kept with the
+  draft, `CheckinDraft.mode`), its description as the comment unless the user wrote one (a comment another
+  changelist's description filled counts as none), and the caret at the end of the summary (`focusAfterMenu` leaves
+  it there as the menu closes). The button then does what it always does: one `cm checkin` or shelve of those paths,
+  the empty-comment warning, "Update & check in". The files left out stay left out after it, as after any check-in.
+  Running at once was dropped: it skipped reading the comment, which a changelist's description only suggests. "Undo N
+  changes…" opens the Undo dialog on its changes. The default changelist has no menu of its own: right-clicking it
+  acts on its files.
 - **The list** is one `cm find shelve` by owner and date (`useMyShelves`, `SLOW_CHANGING_QUERY`), refreshed by shelve
   operations; the count comes from it. Typing filters it, and after three letters one bounded server search by comment
   (`useShelvesSearch`, `shelvesScope`) finds older ones. A row opens the shelve's diff, which shows its comment and Apply as the page's
