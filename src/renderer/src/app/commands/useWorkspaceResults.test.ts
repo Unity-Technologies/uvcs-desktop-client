@@ -28,6 +28,6 @@ describe('workspaceResults', () => {
 
     workspaceResults(all, ['/wk/game'], null, '', open)[0]!.run();
 
-    expect(open).toHaveBeenCalledWith('/wk/game');
+    expect(open).toHaveBeenCalledWith('/wk/game', 'here');
   });
 });

@@ -9,6 +9,7 @@ import { Button } from '../../ui/Button';
 import { Highlight } from '../../ui/Highlight';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
+import { openWorkspaceIn, type OpenWorkspaceIn } from '../workspace/workspaceWindowChoice';
 import { missingWorkspaceMenu, workspaceMenu } from './homeMenus';
 import styles from './Home.module.css';
 
@@ -27,7 +28,8 @@ interface WorkspaceRowProps {
 }
 
 export function WorkspaceRow({ workspace, repository, repositoryName: knownName, selector, missing = false, onOpen, compact }: WorkspaceRowProps) {
-  const menu = () => (missing ? missingWorkspaceMenu(workspace, onOpen) : workspaceMenu(workspace, onOpen));
+  const openIn: OpenWorkspaceIn = (path, where) => openWorkspaceIn(where, path, onOpen);
+  const menu = () => (missing ? missingWorkspaceMenu(workspace, onOpen) : workspaceMenu(workspace, openIn));
   const repositoryName = repository ? splitRepositorySpec(repository).name : knownName;
   const showsRepository = repositoryName && repositoryName.toLowerCase() !== workspace.name.toLowerCase();
 

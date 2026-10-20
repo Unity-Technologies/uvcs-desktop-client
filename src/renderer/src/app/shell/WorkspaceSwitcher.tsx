@@ -12,6 +12,7 @@ import { openCreateWorkspaceDialog } from '../home/dialogs/CreateWorkspaceDialog
 import { useSession } from '../workspace/sessionStore';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
 import { useWorkspaceInfo } from '../workspace/useWorkspace';
+import { openWorkspaceIn } from '../workspace/workspaceWindowChoice';
 import { copyWorkspacePath, openTerminalIn, openWorkspaceInFileManager } from '../workspace/workspaceShellActions';
 import { currentWorkspaceMenu } from './currentWorkspaceMenu';
 import { WorkspaceSwitcherRows } from './WorkspaceSwitcherRows';
@@ -47,7 +48,7 @@ export function WorkspaceSwitcher({ currentPath, children }: { currentPath: stri
       </ActionContextMenu>
       <Popover.Portal>
         <Popover.Content className={styles.popover} side="bottom" align="start" sideOffset={4} {...returnFocus}>
-          <WorkspaceSwitcherRows currentPath={currentPath} onChoose={(path) => closeThen(() => openWorkspace(path))()} />
+          <WorkspaceSwitcherRows currentPath={currentPath} onChoose={(path, where) => closeThen(() => openWorkspaceIn(where, path, openWorkspace))()} />
           <div className={styles.footer}>
             <SwitcherAction icon={FolderPlus} onClick={closeThen(() => openCreateWorkspaceDialog({ onCreated: openWorkspace }))}>
               New workspace…
