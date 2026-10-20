@@ -14,6 +14,10 @@ describe('branchChangesetPane', () => {
     expect(branchChangesetPane([], null)).toEqual({ kind: 'noChangesets' });
   });
 
+  it('shows the newest changeset until one is selected, never saying a branch with changesets has none', () => {
+    expect(branchChangesetPane(newestFirst, null)).toEqual({ kind: 'changeset', changesetId: 12 });
+  });
+
   it('shows the diff of the changeset selected', () => {
     expect(branchChangesetPane(newestFirst, 11)).toEqual({ kind: 'changeset', changesetId: 11 });
   });
