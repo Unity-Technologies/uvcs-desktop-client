@@ -111,6 +111,16 @@ describe('keeping the base of a conflict', () => {
     expect(conflictBases(resolveConflictRegion(document.text, 1, 'incoming'), document)).toEqual(['b\n']);
   });
 
+  it('tells conflicts with the same sides apart while all of them are left, and knows no base once one went and their bases differ', () => {
+    const repeated = buildConflictDocument('x\n1\ny\n2\nz\n', 'x\nS\ny\nS\nz\n', 'x\nD\ny\nD\nz\n', labels);
+    expect(conflictBases(repeated.text, repeated)).toEqual(['1\n', '2\n']);
+    expect(conflictBases(resolveConflictRegion(repeated.text, 0, 'incoming'), repeated)).toEqual([undefined]);
+    expect(conflictBases(resolveConflictRegion(repeated.text, 1, 'incoming'), repeated)).toEqual([undefined]);
+
+    const sameBase = buildConflictDocument('x\n1\ny\n1\nz\n', 'x\nS\ny\nS\nz\n', 'x\nD\ny\nD\nz\n', labels);
+    expect(conflictBases(resolveConflictRegion(sameBase.text, 0, 'incoming'), sameBase)).toEqual(['1\n']);
+  });
+
   it("knows no base for a conflict edited by hand, whose sides aren't the merge's any more", () => {
     const edited = document.text.replace('D1\n', 'mine\n');
     expect(conflictBases(edited, document)).toEqual([undefined, 'd\n']);
