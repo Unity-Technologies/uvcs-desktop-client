@@ -181,7 +181,13 @@ const MENUS: Record<string, () => MenuEntry[]> = {
     historyMenu({ workspacePath: ws, path: 'src/a.ts', ofWorkspaceFile: true, annotate: () => {} }, [
       { kind: 'revision', revision: { revisionId: 40, changesetId: 5, itemType: 'file', repository, idSpec: 'revid:40@game@local', date: '' } } as never,
     ]),
-  diffEntry: () => diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [{ path: '/src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39, repository } as never], { statusOf: () => 'unreviewed', toggle: () => {} } as never),
+  diffEntry: () =>
+    diffEntryMenu(
+      ws,
+      { kind: 'changeset', changesetId: 5 },
+      [{ status: 'changed', path: '/src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39, repository } as never],
+      { review: { statusOf: () => 'unreviewed', toggle: () => {} } as never, workspaceRepository: repository },
+    ),
   mergeConflict: () => mergeItemMenu([mergeConflict], mergeContext),
   mergeChange: () => mergeItemMenu([{ kind: 'change', key: 'change:0', path: 'src/c.ts', change: { kind: 'changed', path: '/src/c.ts' } }], mergeContext),
   mergeDirectoryConflict: () => mergeItemMenu([mergeDirectoryConflict], mergeContext),
@@ -425,8 +431,11 @@ describe('opening', () => {
     expect(opening(MENUS.folder!())).toEqual([...words, REVEAL]);
     expect(opening(MENUS.currentWorkspace!())).toEqual([...words, 'Open in Finder']);
     expect(opening(MENUS.workspace!())).toEqual([...words, 'Open in Finder']);
-    expect(reading(MENUS.workspace!()).slice(0, 1)).toEqual([expect.stringContaining('openWorkspace | Open workspace')]);
-    expect(MENUS.workspace!()[1]).toBe(SEPARATOR);
+    expect(reading(MENUS.workspace!()).slice(0, 2)).toEqual([
+      expect.stringContaining('openWorkspace | Open workspace'),
+      expect.stringContaining('openInNewWindow | Open in new window'),
+    ]);
+    expect(MENUS.workspace!()[2]).toBe(SEPARATOR);
   });
 
   it("opens a revision first, in the user's editor or any other app", () => {
