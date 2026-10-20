@@ -3,7 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const asked = vi.hoisted(() => ({
   picked: undefined as string | undefined,
-  picker: undefined as { exclude?: string } | undefined,
+  /** The branch the picker hands back whole (`pickBranchInfo`). */
+  pickedBranch: undefined as Branch | undefined,
+  picker: undefined as { title?: string; exclude?: string } | undefined,
   switches: [] as unknown[][],
   /** Whether the switch goes through (false: the user cancelled it, or it failed). */
   switchSucceeds: true,
@@ -14,6 +16,10 @@ vi.mock('./BranchPickerDialog', () => ({
   pickBranch: async (options: { exclude?: string }) => {
     asked.picker = options;
     return asked.picked;
+  },
+  pickBranchInfo: async (options: { title: string; exclude?: string }) => {
+    asked.picker = options;
+    return asked.pickedBranch;
   },
 }));
 vi.mock('../../app/shell/workspaceOperations', () => ({
@@ -28,13 +34,14 @@ import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
 import { answerConfirms, answerPrompts } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
-import { createBranchAndSwitch, deleteBranches, mergeTo, renameBranch, setBranchesHidden, switchToBranch, type SwitchToNewBranch } from './branchOperations';
+import { createBranchAndSwitch, deleteBranches, diffWithAnotherBranch, mergeTo, renameBranch, setBranchesHidden, switchToBranch, type SwitchToNewBranch } from './branchOperations';
 
 const ws = '/ws';
 const branch = (name: string, guid = `guid-${name}`): Branch => ({ id: 1, name, parent: '/main', comment: '', owner: 'ana', date: '', headChangeset: 5, guid, repository: 'game@local' });
 
 beforeEach(() => {
   asked.picked = undefined;
+  asked.pickedBranch = undefined;
   asked.picker = undefined;
   asked.switches.length = 0;
   asked.switchSucceeds = true;
@@ -231,6 +238,43 @@ describe('merging to another branch', () => {
     await mergeTo('lb:v1', 'v1');
 
     expect(asked.picker?.exclude).toBeUndefined();
+    expect(whereTheWindowIs().pages).toEqual([]);
+  });
+});
+
+describe('comparing with another branch', () => {
+  const head = (name: string, headChangeset: number): Branch => ({ ...branch(name), headChangeset });
+
+  it("compares the two branches' heads, the older head on the left, naming each branch in the header", async () => {
+    asked.pickedBranch = head('/main', 12);
+
+    await diffWithAnotherBranch(head('/main/task', 40));
+
+    expect(asked.picker).toEqual({ title: 'Compare task with…', exclude: '/main/task' });
+    expect(whereTheWindowIs().pages).toEqual([
+      {
+        kind: 'diff',
+        title: 'main → task',
+        target: { kind: 'range', fromSpec: 'cs:12', toSpec: 'cs:40' },
+        sideNames: [
+          { label: 'main', tooltip: '/main at changeset 12' },
+          { label: 'task', tooltip: '/main/task at changeset 40' },
+        ],
+      },
+    ]);
+  });
+
+  it('names two branches of the same name by as much of their paths as tells them apart', async () => {
+    asked.pickedBranch = head('/main/b/fix', 7);
+
+    await diffWithAnotherBranch(head('/main/a/fix', 9));
+
+    expect(whereTheWindowIs().pages.map((page) => page.kind === 'diff' && page.title)).toEqual(['b/fix → a/fix']);
+  });
+
+  it('opens nothing when the picker is dismissed', async () => {
+    await diffWithAnotherBranch(head('/main/task', 40));
+
     expect(whereTheWindowIs().pages).toEqual([]);
   });
 });
