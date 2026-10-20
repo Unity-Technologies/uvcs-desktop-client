@@ -2,7 +2,7 @@ import type { Changeset } from '@shared/domain/changeset';
 import type { QueryFilter } from '@shared/domain/query';
 import { shortBranchName } from '@shared/domain/specs';
 import type { Label } from '@shared/domain/label';
-import { EVERYONE, pickedOwners } from '../../lib/peopleFilter';
+import { EVERYONE, isEveryone, pickedOwners, type PeoplePick } from '../../lib/peopleFilter';
 import { longerRangeHint } from '../../lib/longerRangeHint';
 import { typedChangesetNumber } from '../../lib/changesetNumber';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
@@ -14,25 +14,105 @@ import type { ViewFilters } from '../../lib/viewFilters';
 /** Keeps "Any time" usable on huge repositories. */
 const ANY_TIME_LIMIT = 2000;
 
-export interface ChangesetFilters extends ViewFilters {
+/**
+ * A branch picked by name, with the workspace it was picked in: the store outlives the workspace a window shows, and
+ * another workspace's repository may have no such branch, or another one by that name. It holds the time range and
+ * people its history shows with, its own for the session, so picking a branch never changes what the view remembers.
+ */
+export interface PickedBranch {
+  workspacePath: string;
+  name: string;
   since: SincePreset;
-  onlyCurrentBranch: boolean;
+  people: PeoplePick;
 }
 
-export const DEFAULT_CHANGESET_FILTERS: ChangesetFilters = { text: '', people: EVERYONE, since: 'lastMonth', onlyCurrentBranch: false };
+export interface ChangesetFilters extends ViewFilters {
+  since: SincePreset;
+  /** Only the branch the workspace is on, following it as the workspace switches ("This branch"). */
+  onlyCurrentBranch: boolean;
+  /** Only this branch, kept for the session (`CHANGESET_SESSION_FILTERS`); while it applies, "This branch" doesn't. */
+  pickedBranch: PickedBranch | null;
+}
 
-/** What "Clear filters" resets besides the text and the people. */
-export const CLEARED_CHANGESET_FILTERS: Partial<ChangesetFilters> = { onlyCurrentBranch: false };
+export const DEFAULT_CHANGESET_FILTERS: ChangesetFilters = { text: '', people: EVERYONE, since: 'lastMonth', onlyCurrentBranch: false, pickedBranch: null };
+
+/** Every branch's changesets: what "Clear filters" resets besides the text and the people. */
+export const ALL_BRANCHES: Pick<ChangesetFilters, 'onlyCurrentBranch' | 'pickedBranch'> = { onlyCurrentBranch: false, pickedBranch: null };
+export const CLEARED_CHANGESET_FILTERS: Partial<ChangesetFilters> = ALL_BRANCHES;
+
+/** Only the workspace's branch, whichever it is on. */
+export const CURRENT_BRANCH: Pick<ChangesetFilters, 'onlyCurrentBranch' | 'pickedBranch'> = { onlyCurrentBranch: true, pickedBranch: null };
+
+/**
+ * Only `name`'s changesets, in this workspace, from its menu ("Show changesets") or the branch chip alike: its whole
+ * history (Any time, capped as always) by everyone, with no text hiding some. The time range, the people and "This
+ * branch" the view remembers stay as they were, and show again once the pick is cleared.
+ */
+export function pickedBranchFilters(workspacePath: string, name: string): Pick<ChangesetFilters, 'text' | 'pickedBranch'> {
+  return { text: '', pickedBranch: { workspacePath, name, since: 'anyTime', people: EVERYONE } };
+}
+
+/** A branch picked by name is the repository's, so it is kept for the session, as the people picked by name are. */
+export const CHANGESET_SESSION_FILTERS: readonly (keyof ChangesetFilters)[] = ['pickedBranch'];
+
+/** The time range and people the view shows and reads with. */
+export type ShownFilters = Pick<ChangesetFilters, 'since' | 'people'>;
+
+/** The branch picked in `workspacePath`; one picked in another workspace is none here. */
+function pickedIn(pickedBranch: PickedBranch | null, workspacePath: string): PickedBranch | null {
+  return pickedBranch?.workspacePath === workspacePath ? pickedBranch : null;
+}
+
+/** The time range and people shown: the picked branch's own while one applies here, else those the view remembers. */
+export function shownFilters({ since, people, pickedBranch }: Pick<ChangesetFilters, 'since' | 'people' | 'pickedBranch'>, workspacePath: string): ShownFilters {
+  const picked = pickedIn(pickedBranch, workspacePath);
+  return picked ? { since: picked.since, people: picked.people } : { since, people };
+}
+
+/** A change to the time range or the people goes to the picked branch while one applies here, so the remembered ones stay. */
+export function shownFiltersChange(pickedBranch: PickedBranch | null, workspacePath: string, change: Partial<ShownFilters>): Partial<ChangesetFilters> {
+  const picked = pickedIn(pickedBranch, workspacePath);
+  return picked ? { pickedBranch: { ...picked, ...change } } : change;
+}
+
+/** Whose changesets the view reads: every branch's, the branch the workspace is on, or a branch picked by name. */
+export type BranchScope = { kind: 'all' } | { kind: 'current'; name: string } | { kind: 'picked'; name: string };
+
+/**
+ * The branch filter as it applies in `workspacePath`: a branch picked in another workspace is none here, and "This
+ * branch" is none while the workspace is on no branch (a label, a changeset).
+ */
+export function branchScopeIn(
+  { onlyCurrentBranch, pickedBranch }: Pick<ChangesetFilters, 'onlyCurrentBranch' | 'pickedBranch'>,
+  workspacePath: string,
+  currentBranch: string | undefined,
+): BranchScope {
+  const picked = pickedIn(pickedBranch, workspacePath);
+  if (picked) return { kind: 'picked', name: picked.name };
+  if (onlyCurrentBranch && currentBranch) return { kind: 'current', name: currentBranch };
+  return { kind: 'all' };
+}
+
+/** The branch whose changesets the scope reads; undefined for every branch. */
+export function branchOf(scope: BranchScope): string | undefined {
+  return scope.kind === 'all' ? undefined : scope.name;
+}
+
+/** Whether "Clear filters" would show more: text, the people shown, or a branch that applies here. */
+export function isFilteringChangesets(text: string, shown: ShownFilters, scope: BranchScope): boolean {
+  return text.trim() !== '' || !isEveryone(shown.people) || scope.kind !== 'all';
+}
 
 /**
  * What to ask `cm find` for: the time range, the people and the branch, so "Any time" (capped) finds the people's
- * newest ones and not those among everyone's newest. The text is matched locally, so typing stays instant.
+ * newest ones and not those among everyone's newest. The text is matched locally, so typing stays instant. "This
+ * branch" and the same branch picked by name ask the same query (`branchOf`).
  */
-export function toQueryFilter({ since, people, onlyCurrentBranch }: Omit<ChangesetFilters, 'text'>, currentBranch: string | undefined, today: Date): QueryFilter {
+export function toQueryFilter({ since, people }: Pick<ChangesetFilters, 'since' | 'people'>, branch: string | undefined, today: Date): QueryFilter {
   return {
     sinceDate: sinceDateFor(since, today),
     owners: pickedOwners(people),
-    branch: onlyCurrentBranch ? currentBranch : undefined,
+    branch,
     limit: since === 'anyTime' ? ANY_TIME_LIMIT : undefined,
   };
 }

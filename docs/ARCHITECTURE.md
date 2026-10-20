@@ -259,7 +259,8 @@ and many people use the same server. Every `cm` command other than local reads (
   keeps them, not every parser (`ownCopy`; `OwnCopies` for a value many entries repeat, like a repository spec):
   `BranchNamesCache`, `WorkspaceCopies`, `RepositoryTrees`.
 - `cm find branch` leaves hidden branches out unless asked for (`hidden = 'true'`), and `cm find changeset` their
-  changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`); merges and labels come either way.
+  changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`; a list of one branch's changesets always asks for
+  it, `changesetsService`); merges and labels come either way.
 - Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments.
   Each is in a directory named with the app's process (`withTempDirectory`: `uvcs-<pid>-…`), deleted after the command;
   those a session killed mid-command left go as the next one starts (`removeLeftOverTempDirectories`, as the
@@ -775,14 +776,16 @@ renderer/src/
 - **Menus**: one grammar for every object's menu (`lib/menuGroups`): the default action (what Enter does in the app:
   open the workspace, a diff), every way to open it in other apps (the editor, the terminal, "Open with ▸", Reveal:
   `openOnDiskEntries`, docs/features/open-with.md; a file's Enter is its "Open in <editor>"), what it does (switch, apply, check out), merges, what it creates, where it leads (history,
-  annotate, browse, Show in Branch Explorer), the OS (save a revision), the clipboard (Cut, one "Copy ▸", Paste), edits (rename, comments,
+  annotate, browse, a branch's changesets, Show in Branch Explorer), the OS (save a revision), the clipboard (Cut, one "Copy ▸", Paste), edits (rename, comments,
   hiding, permissions), and what undoes or deletes it last, in the danger tone; a separator between groups. Entries come from one
   vocabulary (`components/menuWords`: one id, icon, wording and group per concept) and `groupedMenu` orders them.
   One builder per kind (`branchMenu`, `changesetMenu`, `labelMenu`, `shelveMenu`, `codeReviewMenu`, `fileMenu`,
   `pendingChangeMenu`) serves every place the object shows: its view, details' "More actions", the Branch Explorer,
   the top bar's pill (right-click, `workingObjectMenu`), the switcher, the palette. A place only adds entries, at the
   end of their group (`withEntries`: the graph's "Go to head changeset"); the Branch Explorer leaves out "Show in
-  Branch Explorer". "Copy ▸" (`copySubmenu`) lists what the object has in one order (name or number, title, paths,
+  Branch Explorer". One exception: the palette's code reviews of a branch have no "Switch to this branch", as its
+  searches read reviews without branch names (`listSummaries`; naming them would read every branch,
+  `BranchNamesCache`), while changeset and shelve reviews come named (`CodeReviewSummary.target`) and keep it. "Copy ▸" (`copySubmenu`) lists what the object has in one order (name or number, title, paths,
   spec, full spec with `@repository`, comment, GUID), each with what it copies, and the toast names it ("Branch spec
   copied"); ⌘C in a list copies its first entry (`useCopyCommand`) unless text is selected. Items that open a dialog
   end with "…"; submenus hold real sets of choices, the choice made checked after its label (`checked`), so the icon
@@ -821,7 +824,8 @@ renderer/src/
   ranked by (`fuzzyMatchPositions`). Text a row shows but its filter doesn't look at is never marked.
   - **One filter bar**: every view lays its filters out with `FilterBar`, whose slots fix the order: the text
     (`FilterField`, "Filter <things>", 240px), people, time (`SincePicker`, the presets of `lib/sincePresets`, any time
-    last), kinds and statuses (`ToggleChip`, `ChoiceChip`, the Branch Explorer's Branches picker), then the view's own
+    last), kinds and statuses (`ToggleChip`, `ChoiceChip`, the Branch Explorer's Branches picker, Changesets'
+    `BranchScopeFilter`; a picker's options above its list are `FilterOptions`), then the view's own
     options at the end (layout, the graph's View). The text field is where ⌘F (and / from outside a text field) goes
     while it shows (`listFilter`, in its tooltip and the shortcuts sheet); ↓ goes on to the list and Esc empties it,
     then goes back to the list. Changes' and a diff's file filters take it too (`useChangeFilter(..., true)`); a list
@@ -840,9 +844,23 @@ renderer/src/
     or everyone's, other people picked among everyone's; the Branch Explorer fades the others' changesets
     (`pickedNames`), History and Attributes filter what they read. Code reviews go by who created them; Assigned to me
     is a chip of its own. `cm find` fails on an owner it doesn't know, so only people from the rows are offered.
+  - **Branch** (Changesets): one chip, `BranchScopeFilter`, for every branch's changesets, "This branch" (the one the
+    workspace is on, followed as it switches) or any branch picked from the switcher's list (`branchSwitcherGroups`
+    over `useBranches`, the every-branch read the switcher, the pickers and the palette share, asked for only once the
+    popover opens); no query of its own lists branches. The branch goes into the view's `cm find` (`toQueryFilter`,
+    `branch = '…'`), so "This branch" and the same branch picked by name share one query key. A branch picked by name
+    says which workspace it was picked in (`PickedBranch`, `branchScopeIn`): the store outlives the workspace a window
+    shows, and another repository may have no such branch. A branch's menu, in every place it shows the Branch
+    Explorer included, opens the view on it ("Show changesets", `showBranchChangesets`). Both ways pick it alike
+    (`pickedBranchFilters`): its whole history (Any time, capped) by everyone, the text emptied, and nothing the view
+    remembers changed. The pick holds its own time range and people for the session, which the chips show and edit
+    (`shownFilters`, `shownFiltersChange`); All branches, This branch or Clear filters drop it, and the remembered ones
+    show again. Clearing the remembered filters, or picking with Any time written into them, was rejected: a "Mine ·
+    Last month" user was left on "Everyone · Any time" for good, a heavier read on a big repository.
   - **Remembered**: each view keeps its filters in one store (`createViewFilters`): the time range, the kinds, the
-    view options and Mine across sessions, the text and the people picked by name for the session (people differ
-    between repositories); a page's (History) last as long as it. Older stores' `onlyMine` and the Branch Explorer's
+    view options and Mine across sessions, the text, the people picked by name and what else holds the repository's
+    objects (`forSession`: a branch picked by name) for the session, as they differ between repositories; a page's
+    (History) last as long as it. Older stores' `onlyMine` and the Branch Explorer's
     own date ranges are read into these (`restoredFilters`, `sincePresetOf`).
   - **Counts and empty lists**: the header counts what shows, "12 of 340" while filters hide some of what was read
     (`shownCount`). A list its filters empty says "No matching <things>" with Clear filters (`NoMatches`), which

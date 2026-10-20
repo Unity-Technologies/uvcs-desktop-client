@@ -166,6 +166,7 @@ export const MENU_WORDS = {
   // The words name the kind of object picked ("Compare with another branch…").
   compare: word('navigate', GitCompareArrows),
   browse: word('navigate', FolderTree),
+  changesets: word('navigate', GitCommitVertical, 'Show changesets'),
   showInBranchExplorer: word('navigate', GitGraph, 'Show in Branch Explorer'),
   locks: word('navigate', Lock, 'Show locks'),
   showInLocks: word('navigate', Lock, 'Show in Locks'),
