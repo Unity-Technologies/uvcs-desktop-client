@@ -114,7 +114,9 @@ export function DataTable<Row>({
   // A selection kept from an earlier visit shows once its row is in.
   const revealedAnchor = useRef(false);
   useEffect(() => {
-    if (!revealedAnchor.current) revealedAnchor.current = reveal(selection.anchor);
+    // Rows gone (filtered out) and back: the selection kept shows again.
+    if (orderedKeys.length === 0) revealedAnchor.current = false;
+    else if (!revealedAnchor.current) revealedAnchor.current = reveal(selection.anchor);
   }, [orderedKeys.length]);
 
   useKeepRowSelected({ enabled: selectFirstRow, orderedKeys, isShown, selection, onSelectionChange, focusRow: setFocusedKey });
@@ -190,6 +192,16 @@ export function DataTable<Row>({
     </div>
   );
 
+  // No rows to move through: the column titles over the notice, outside the grid, whose keys and roles are for rows.
+  if (sortedRows.length === 0 && empty) {
+    return (
+      <div className={styles.table}>
+        <DataTableHeader columns={shownColumns} sort={sort} onSort={toggleSort} hidden={hideHeader} />
+        {empty}
+      </div>
+    );
+  }
+
   return (
     <div
       ref={tableRef}
@@ -207,7 +219,7 @@ export function DataTable<Row>({
       {...MAIN_FOCUS}
     >
       <DataTableHeader columns={shownColumns} sort={sort} onSort={toggleSort} hidden={hideHeader} />
-      {sortedRows.length === 0 && empty ? empty : contextMenu ? <ActionContextMenu entries={() => contextMenu(selectedRows())}>{body}</ActionContextMenu> : body}
+      {contextMenu ? <ActionContextMenu entries={() => contextMenu(selectedRows())}>{body}</ActionContextMenu> : body}
     </div>
   );
 }
