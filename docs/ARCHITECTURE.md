@@ -567,6 +567,13 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   ended for sure by a `dragleave` towards nothing, a drop or any pointer move), since an element's own
   enter and leave events don't pair up and left the overlay on screen.
   The overlay (`FolderDropOverlay`) fades out on a timer (`LEAVE_MS`), never on an animation event, so it can't linger.
+- A workspace picked from a list (the home screen's rows and search, the switcher, the palette's workspace results)
+  opens in this window, or in a new one with Shift held on the click or Enter (`windowAskedBy`, `openWorkspaceIn`;
+  `workspaceInNewWindow` in the shortcuts sheet), the modifier a folder drop takes, and the one browsers use for a new
+  window on all three OSs. Its menu says the same: Open workspace, then Open in new window (`workspaceMenu`), but not
+  a missing workspace's. The new window asks `windows.openWorkspace`, so a workspace another window shows comes forward
+  instead; the new window remembers it as recent as it opens it (`useRequestedWorkspace`). With ⌘ or Ctrl held too, it
+  opens here: those differ per OS.
 - A new workspace (the New workspace dialog: `createWorkspaceAndUpdate`) opens as soon as `cm workspace create` makes
   it, then gets the latest files of /main through the workspace's own Update (`updateWorkspace`: `cm update` in a process
   of its own, its progress card, its refreshes). `cm workspace create` already puts it on /main with nothing loaded, so
