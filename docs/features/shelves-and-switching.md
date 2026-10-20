@@ -53,7 +53,7 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
   changes checked alone (those the filters hide too), the panel in that mode (Changes holds it, `PendingChangesPanes`,
   so it goes back to Check in when Changes shows again, as after the caret), its description as the comment unless the user wrote one (a comment another changelist's
   description filled counts as none; one filled from a description since edited counts as the user's), and the caret
-  at the end of the summary (`focusAfterMenu` leaves it there as the menu closes). What is checked is the prepared
+  at the end of the summary (ARCHITECTURE.md "Focus": a menu leaves the caret where its action put it). What is checked is the prepared
   changelist's paths (`PreparedChangelist` in the draft, read by `includedBy`), not exclusions: a change that appears
   meanwhile (an editor saving, a new `.meta`) stays out, and checking files by hand adds or takes them there. A
   successful check-in or shelve ends it (`endPrepared`), and the files the user had left out before are the only ones
