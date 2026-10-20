@@ -287,9 +287,9 @@ makes each into an image the browser paints before anything shows it (`usePainta
 - **As a BMP** (`bmpOf`): the decoded pixels are written as a 32-bit BMP with an alpha mask, which `<img>` reads as it
   is: no compression to spend time on, and a see-through pixel keeps its color. It crosses back from the worker as a
   Blob (`PaintableImage`), a handle, and the page keeps only its URL. A PNG made through a canvas was set aside: the
-  canvas premultiplies alpha, losing the color of every transparent pixel, and encoding takes long. Chromium shows a
-  32-bit BMP whose alpha is 0 in every pixel as opaque (some writers leave alpha unset), so a texture transparent all
-  over shows its color.
+  canvas premultiplies alpha, losing the color of every transparent pixel, and encoding takes long. Chromium keeps a BMP
+  whose alpha is 0 in every pixel transparent, as the texture is (checked in the app: some BMP readers take such an
+  image as opaque, guessing its writer left alpha unset).
 - **High dynamic range** (EXR, HDR) shows as the model diff's textures do: clamped to 0-1 and encoded as sRGB. The info
   strip says so ("HDR", its tooltip saying it shows clamped: `HIGH_DYNAMIC_RANGE_TIP`), and the pixel inspector tells
   the colors shown, "as shown", not the file's values. 16-bit channels show as 8 bits.
