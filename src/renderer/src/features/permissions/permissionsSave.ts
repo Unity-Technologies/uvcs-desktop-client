@@ -14,15 +14,14 @@ interface PermissionsSaveInput {
 export interface PermissionsSaveButton {
   enabled: boolean;
   label: string;
-  /** Why it is disabled; undefined while it can save. */
+  /** Why it is disabled; undefined while it can save, and while it saves (it shows it is busy). */
   disabledReason: string | undefined;
 }
 
 export function permissionsSaveButton({ changeCount, saving, createsGroup, groupBranchCount }: PermissionsSaveInput): PermissionsSaveButton {
-  const enabled = changeCount > 0 && !saving && (!createsGroup || groupBranchCount > 0);
-  return {
-    enabled,
-    label: changeCount > 1 ? `Save ${pluralize(changeCount, 'change')}` : 'Save',
-    disabledReason: enabled ? undefined : changeCount > 0 ? 'Name the branches of the new group first' : 'Nothing changed yet',
-  };
+  const label = changeCount > 1 ? `Save ${pluralize(changeCount, 'change')}` : 'Save';
+  if (saving) return { enabled: false, label, disabledReason: undefined };
+  if (changeCount === 0) return { enabled: false, label, disabledReason: 'Nothing changed yet' };
+  if (createsGroup && groupBranchCount === 0) return { enabled: false, label, disabledReason: 'Name the branches of the new group first' };
+  return { enabled: true, label, disabledReason: undefined };
 }
