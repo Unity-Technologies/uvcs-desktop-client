@@ -3,8 +3,11 @@ import { SCOPE_PREFIXES } from './paletteScope';
 import styles from './CommandPalette.module.css';
 import { hotkey, hotkeys } from '../../lib/shortcutRegistry';
 
-/** The keys that drive the palette, and the prefixes that narrow the search (without a workspace, only commands can be searched). */
-export function PaletteFooter({ inWorkspace }: { inWorkspace: boolean }) {
+/**
+ * The keys that drive the palette (Shift+Enter while the highlighted result opens in a new window: a workspace), and the
+ * prefixes that narrow the search (without a workspace, only commands can be searched).
+ */
+export function PaletteFooter({ inWorkspace, opensInNewWindow }: { inWorkspace: boolean; opensInNewWindow: boolean }) {
   return (
     <div className={styles.footer}>
       <span className={styles.hint}>
@@ -16,6 +19,11 @@ export function PaletteFooter({ inWorkspace }: { inWorkspace: boolean }) {
       <span className={styles.hint}>
         <Kbd keys={hotkey('paletteOpen')} /> open
       </span>
+      {opensInNewWindow && (
+        <span className={styles.hint}>
+          <Kbd keys={hotkey('workspaceInNewWindow')} /> new window
+        </span>
+      )}
       <span className={styles.hint}>
         <Kbd keys={hotkey('rowActions')} /> actions
       </span>
