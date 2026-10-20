@@ -20,11 +20,11 @@ committed before the fix, a clean-context review, a pull request.
 - Reproduce it in the real app with the `playwright-cli` skill (CLAUDE.md "Seeing the app"). The reported workspace
   is the user's: read it, never write to it. When a sandbox script (`scripts/sandboxes/*.sh`) built it, it is the
   reproduction recipe; rebuild it only against the local server, and only when the user agrees.
-- Watch the command log (⌘⇧L) and the console: which `cm` commands ran, what they answered, any renderer error.
+- Watch the command log (⌘⇧L, Ctrl+Shift+L elsewhere) and the console: which `cm` commands ran, what they answered, any renderer error.
   Running the read-only `cm` command yourself (`cm diff`, `cm cat`, `cm find`, `cm status`) shows what the app was
   given, which splits a parsing bug from a rendering bug.
 - If the expected behavior is unclear, find it before deciding the code is wrong: the feature doc
-  (`docs/features/*.md`), its tests, its pull request, the official clients (CLAUDE.local.md, read only).
+  (`docs/features/*.md`), its tests, its pull request, the official clients (CLAUDE.local.md, when present; read only).
 - If it can't be reproduced, say what's missing. Never claim a reproduction you didn't see.
 
 ## 2. Find the root cause
@@ -49,9 +49,12 @@ Prove it with history, not with the date of the report:
 
 - `git log --oneline -- <file>`, `git log -L <start>,<end>:<file>`, `git log -S '<symbol>'`, `git blame`: when the
   faulty lines came in, and what they replaced.
-- Check out the feature's first commit (or its pull request's head) in a throwaway worktree
-  (`git worktree add /tmp/<name> <sha>`) and run the new failing test there, or the app. Fails there too → original
-  defect; passes there → bisect (`git bisect run npx vitest run <test file>`) to the commit that broke it.
+- Run the new failing test on old code: `git worktree add /tmp/<name> <sha>`, link the main checkout's dependencies
+  (`ln -s <repo>/node_modules /tmp/<name>/node_modules`), copy the test in as an untracked file, with any new module
+  it imports in the version that does what the code did then, and run it there. It fails at the feature's first
+  commit (or its pull request's head) too → original defect. It passes there → bisect to the commit that broke it,
+  with a script that copies those files in at each step and exits 125 (skip) when the test can't load, so a missing
+  module isn't read as the bug.
 - `gh pr view <n>` gives the change's intent and how it was checked. Remove the worktree when done.
 
 ## 4. Ask why the harness missed it
