@@ -1,6 +1,7 @@
 import { useEffect, useMemo, type RefObject } from 'react';
 import { ChangeNavigator } from '../../diff/viewer/ChangeNavigator';
 import { goesSomewhere, useStepNavigation, type StepShortcuts, type StepView } from '../../diff/viewer/useStepNavigation';
+import styles from './ConflictNavigator.module.css';
 
 const CONFLICT_SHORTCUTS: StepShortcuts = { next: 'nextConflict', previous: 'previousConflict' };
 
@@ -32,5 +33,10 @@ export function ConflictNavigator({ count, view, frame, path }: ConflictNavigato
     return () => panel?.removeEventListener('scroll', onViewScroll, { capture: true });
   }, [frame, onViewScroll]);
 
-  return goesSomewhere(navigation) ? <ChangeNavigator navigation={navigation} /> : null;
+  if (!goesSomewhere(navigation)) return null;
+  return (
+    <div className={styles.navigator}>
+      <ChangeNavigator navigation={navigation} />
+    </div>
+  );
 }

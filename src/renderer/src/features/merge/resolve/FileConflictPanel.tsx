@@ -65,9 +65,7 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
     aboveAfterChange: () => conflictView.current?.aboveAfterChange() ?? 0,
   };
   const navigator = conflictCount !== null && (
-    <div className={styles.navigator}>
-      <ConflictNavigator count={conflictCount} view={view === 'choice' ? WHOLE_FILE_CHOICE : conflictsOnScreen} frame={panelRef} path={state.file.path} />
-    </div>
+    <ConflictNavigator count={conflictCount} view={view === 'choice' ? WHOLE_FILE_CHOICE : conflictsOnScreen} frame={panelRef} path={state.file.path} />
   );
 
   const choose = (choice: ConflictChoice): void => {

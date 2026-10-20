@@ -59,13 +59,9 @@
   padding: var(--space-2) var(--space-3) 6px;
 }
 
-/* The conflict arrows, at the bar's end as in a diff's header, whatever the views beside them; under them, still at
-   the end, in a pane too narrow for both. */
-.navigator {
-  display: flex;
-  flex: none;
-  margin-left: auto;
-  padding-left: var(--space-2);
+/* Nothing in it: a file with no views to pick whose arrows have nowhere to go. */
+.viewBar:empty {
+  display: none;
 }
 
 .count {
