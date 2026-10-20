@@ -12,13 +12,8 @@ interface PickBranchOptions {
   exclude?: string;
 }
 
-/** Asks the user to choose a branch. Resolves to its full name, or undefined if dismissed. */
-export async function pickBranch(options: PickBranchOptions): Promise<string | undefined> {
-  return (await pickBranchInfo(options))?.name;
-}
-
 /** Asks the user to choose a branch. Resolves to it as the branch list read it (its head too), or undefined if dismissed. */
-export function pickBranchInfo(options: PickBranchOptions): Promise<Branch | undefined> {
+export function pickBranch(options: PickBranchOptions): Promise<Branch | undefined> {
   return askDialog<Branch>((finish) => <BranchPickerDialog {...options} finish={finish} />);
 }
 

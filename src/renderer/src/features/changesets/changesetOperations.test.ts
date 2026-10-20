@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const asked = vi.hoisted(() => ({
   comment: undefined as string | undefined,
-  picked: undefined as string | undefined,
+  picked: undefined as { name: string } | undefined,
   picker: undefined as { exclude?: string } | undefined,
   pickedChangeset: undefined as number | undefined,
   changesetPicker: undefined as { title: string; exclude: number } | undefined,
@@ -60,7 +60,7 @@ describe('changeset operations', () => {
   });
 
   it('merges a changeset into the branch picked, never offering its own', async () => {
-    asked.picked = '/main';
+    asked.picked = { name: '/main' };
 
     await mergeChangesetTo(changeset);
 

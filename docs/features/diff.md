@@ -38,7 +38,7 @@ opens a range diff (`kind: 'range'`), the older side on the left: `cm diff <olde
 immutable.
 
 - **Branches** compare their heads, `cm diff cs:<head> cs:<head>` (`diffBranches`): `cm diff` takes no two branch
-  specs (it reads the second as a path). The heads are the ones the branch lists read (`pickBranchInfo` hands back the
+  specs (it reads the second as a path). The heads are the ones the branch lists read (`pickBranch` hands back the
   branch picked, its head too), so nothing is asked to resolve them; a head moved since that list was read is the
   list's staleness, as for a branch's own diff (`branchHead`). The header names each branch in words, its full name and
   head in the tooltip (the diff page's `sideNames`), as `cs:` specs alone wouldn't say which branch is which.

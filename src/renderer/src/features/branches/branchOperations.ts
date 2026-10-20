@@ -13,7 +13,7 @@ import { invalidateWorkspace } from '../../app/queryClient';
 import { toast, useToastStore } from '../../ui/toast/toastStore';
 import type { TaskMerge } from '../mergeTask/taskMerge';
 import { validateBranchName } from './branchNames';
-import { pickBranch, pickBranchInfo } from './BranchPickerDialog';
+import { pickBranch } from './BranchPickerDialog';
 import { rememberRecentBranch } from './recentBranches';
 
 /**
@@ -131,7 +131,7 @@ export async function mergeTo(sourceSpec: string, sourceName: string, task?: Tas
     exclude: sourceSpec === spec.branch(sourceName) ? sourceName : undefined,
   });
   if (!destination) return;
-  navigation.openPage({ kind: 'merge', request: { kind: 'merge', sourceSpec, destinationBranch: destination }, ...(task && { task }) });
+  navigation.openPage({ kind: 'merge', request: { kind: 'merge', sourceSpec, destinationBranch: destination.name }, ...(task && { task }) });
 }
 
 /** Diffs the branch at the head it's known at, so the diff its details panel already read is reused. */
@@ -161,6 +161,6 @@ export function diffBranches(first: BranchAtHead, second: BranchAtHead): void {
 }
 
 export async function diffWithAnotherBranch(branch: BranchAtHead): Promise<void> {
-  const other = await pickBranchInfo({ title: `Compare ${branchLabel(branch.name)} with…`, exclude: branch.name });
+  const other = await pickBranch({ title: `Compare ${branchLabel(branch.name)} with…`, exclude: branch.name });
   if (other) diffBranches(branch, other);
 }

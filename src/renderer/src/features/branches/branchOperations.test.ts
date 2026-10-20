@@ -2,9 +2,8 @@ import { commandFailure, fakeApi } from '../../testing/fakeWindow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const asked = vi.hoisted(() => ({
-  picked: undefined as string | undefined,
-  /** The branch the picker hands back whole (`pickBranchInfo`). */
-  pickedBranch: undefined as Branch | undefined,
+  /** The branch the picker hands back, as the branch list read it. */
+  picked: undefined as Pick<Branch, 'name' | 'headChangeset'> | undefined,
   picker: undefined as { title?: string; exclude?: string } | undefined,
   switches: [] as unknown[][],
   /** Whether the switch goes through (false: the user cancelled it, or it failed). */
@@ -13,13 +12,9 @@ const asked = vi.hoisted(() => ({
 vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
 vi.mock('./BranchPickerDialog', () => ({
-  pickBranch: async (options: { exclude?: string }) => {
+  pickBranch: async (options: { title: string; exclude?: string }) => {
     asked.picker = options;
     return asked.picked;
-  },
-  pickBranchInfo: async (options: { title: string; exclude?: string }) => {
-    asked.picker = options;
-    return asked.pickedBranch;
   },
 }));
 vi.mock('../../app/shell/workspaceOperations', () => ({
@@ -41,7 +36,6 @@ const branch = (name: string, guid = `guid-${name}`): Branch => ({ id: 1, name, 
 
 beforeEach(() => {
   asked.picked = undefined;
-  asked.pickedBranch = undefined;
   asked.picker = undefined;
   asked.switches.length = 0;
   asked.switchSucceeds = true;
@@ -217,7 +211,7 @@ describe('branch operations', () => {
 
 describe('merging to another branch', () => {
   it('opens the server merge into the branch picked, never offering the branch itself', async () => {
-    asked.picked = '/main';
+    asked.picked = { name: '/main', headChangeset: 3 };
 
     await mergeTo('br:/main/task', '/main/task');
 
@@ -226,7 +220,7 @@ describe('merging to another branch', () => {
   });
 
   it('carries a task branch to the merge page, which then also offers to finish it', async () => {
-    asked.picked = '/main/other';
+    asked.picked = { name: '/main/other', headChangeset: 3 };
     const task = { branch: { id: 7, name: '/main/task', parent: '/main', comment: '' }, choices: { markReviewed: false, hideBranch: false } };
 
     await mergeTo('br:/main/task', '/main/task', task);
@@ -246,7 +240,7 @@ describe('comparing with another branch', () => {
   const head = (name: string, headChangeset: number): Branch => ({ ...branch(name), headChangeset });
 
   it("compares the two branches' heads, the older head on the left, naming each branch in the header", async () => {
-    asked.pickedBranch = head('/main', 12);
+    asked.picked = head('/main', 12);
 
     await diffWithAnotherBranch(head('/main/task', 40));
 
@@ -265,7 +259,7 @@ describe('comparing with another branch', () => {
   });
 
   it('names two branches of the same name by as much of their paths as tells them apart', async () => {
-    asked.pickedBranch = head('/main/b/fix', 7);
+    asked.picked = head('/main/b/fix', 7);
 
     await diffWithAnotherBranch(head('/main/a/fix', 9));
 

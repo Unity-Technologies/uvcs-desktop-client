@@ -37,12 +37,12 @@ export function openMerge(request: MergeRequest): void {
 }
 
 export async function mergeChangesetTo(changeset: Pick<Changeset, 'id' | 'branch'>): Promise<void> {
-  const destinationBranch = await pickBranch({
+  const destination = await pickBranch({
     title: `Merge changeset ${changeset.id} to…`,
     description: 'The merge happens on the server; your workspace is not touched.',
     exclude: changeset.branch,
   });
-  if (destinationBranch) openMerge({ kind: 'merge', sourceSpec: `cs:${changeset.id}`, destinationBranch });
+  if (destination) openMerge({ kind: 'merge', sourceSpec: `cs:${changeset.id}`, destinationBranch: destination.name });
 }
 
 export function switchToChangeset(workspacePath: string, changeset: Pick<Changeset, 'id'>): Promise<boolean> {
