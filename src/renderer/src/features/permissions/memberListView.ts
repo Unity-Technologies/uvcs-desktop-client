@@ -16,7 +16,7 @@ export interface MemberListView {
   query: string;
   /** The rows the filter keeps, in the rows' order. */
   shown: MemberRow[];
-  /** The selected row, which the remove button and shortcut act on. */
+  /** The selected row, which the remove button and shortcut act on; none while the filter hides it. */
   selectedRow: MemberRow | undefined;
   /** Where the selected row is among `shown`; -1 when it isn't there. */
   selectedIndex: number;
@@ -30,13 +30,16 @@ export function memberListView(rows: readonly MemberRow[], selected: string | un
     filters,
     query,
     shown,
-    selectedRow: rows.find((row) => row.member.name === selected),
+    selectedRow: shown.find((row) => row.member.name === selected),
     selectedIndex: shown.findIndex((row) => row.member.name === selected),
   };
 }
 
-/** The member a navigation key selects next, by name; undefined when the key doesn't navigate the list. */
+/**
+ * The member a navigation key selects next, by name; undefined when the key doesn't navigate the list. With no row
+ * selected among those shown, ↓ and ↑ land on the first.
+ */
 export function memberAfterKey(view: MemberListView, key: string): string | undefined {
-  const next = navigationTarget(key, Math.max(0, view.selectedIndex), view.shown.length);
+  const next = navigationTarget(key, view.selectedIndex, view.shown.length);
   return next === null ? undefined : view.shown[next]!.member.name;
 }
