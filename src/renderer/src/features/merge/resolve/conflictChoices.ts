@@ -3,10 +3,10 @@ import type { FileConflictDecision } from './fileConflictDecision';
 import { resolveEveryConflictRegion, type ConflictDocument } from './threeWayMerge';
 
 /**
- * The ways to settle a file with conflicts at once: keep one version, keep both sides of every conflict, or write the
- * result by hand. Conflicts can also be decided one by one.
+ * The ways to settle a file with conflicts at once: keep one version (a side's, or the base's where the file has one),
+ * keep both sides of every conflict, or write the result by hand. Conflicts can also be decided one by one.
  */
-export type ConflictChoice = 'destination' | 'source' | 'both' | 'byHand';
+export type ConflictChoice = 'destination' | 'source' | 'base' | 'both' | 'byHand';
 
 /** The decision a choice stands for; by hand has none until the user writes it. */
 export function decisionFor(choice: Exclude<ConflictChoice, 'byHand'>, document: ConflictDocument): FileConflictDecision {
@@ -24,6 +24,8 @@ export function chosenConflictChoice(
       return 'destination';
     case 'keepingSource':
       return 'source';
+    case 'keepingBase':
+      return 'base';
     case 'edited':
       return 'byHand';
     case 'combined':

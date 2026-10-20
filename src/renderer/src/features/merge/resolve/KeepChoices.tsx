@@ -6,6 +6,8 @@ import styles from './KeepChoices.module.css';
 
 interface KeepChoicesProps {
   labels: MergeLabels;
+  /** The file has a common ancestor to keep (not one added on both sides). */
+  withBase: boolean;
   chosen: ConflictChoice | undefined;
   onChoose: (choice: ConflictChoice) => void;
   /** Set once the user decided something: back to the conflicts as the automatic merge left them. */
@@ -14,14 +16,16 @@ interface KeepChoicesProps {
 
 /**
  * How to settle a whole file with conflicts at once, next to "Resolve in <tool>": keep a version or both, in one
- * compact "Keep [Yours | Incoming | Both]" group (the word outside, the choices in their track) with the current choice pressed; "Changes" then shows what it produces.
+ * compact "Keep [Yours | Incoming | Both | Base]" group (the word outside, the choices in their track; Base only where
+ * the file has one) with the current choice pressed; "Changes" then shows what it produces.
  */
-export function KeepChoices({ labels, chosen, onChoose, onStartOver }: KeepChoicesProps) {
+export function KeepChoices({ labels, withBase, chosen, onChoose, onStartOver }: KeepChoicesProps) {
   const { source, destination } = labels.roles;
   const choices: { choice: Exclude<ConflictChoice, 'byHand'>; label: string; tip: string }[] = [
     { choice: 'destination', label: destination.name, tip: `Whole file from ${labels.destination}` },
     { choice: 'source', label: source.name, tip: `Whole file from ${labels.source}` },
     { choice: 'both', label: 'Both', tip: `Both sides of every conflict, ${destination.name.toLowerCase()} first` },
+    ...(withBase ? [{ choice: 'base' as const, label: 'Base', tip: 'Whole file as it was before either side changed it' }] : []),
   ];
 
   return (

@@ -9,7 +9,8 @@
 
 .options {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
   gap: var(--space-4);
 }
 

@@ -8,8 +8,11 @@ export type FileConflictDecision =
    * than a side picked for each conflict; `tool`: the merge tool that saved it.
    */
   | { kind: 'text'; text: string; edited?: boolean; tool?: string }
-  /** Take one version of the whole file. */
-  | { kind: 'wholeFile'; side: 'source' | 'destination' };
+  /** Take one version of the whole file: a side's, or the base's (the common ancestor's), for a file that has one. */
+  | { kind: 'wholeFile'; side: KeptVersion };
+
+/** The versions a file can keep whole. */
+export type KeptVersion = 'source' | 'destination' | 'base';
 
 /** Text files start from the automatic merge; binary files need an explicit choice. */
 export function initialDecision(document: ConflictDocument | undefined): FileConflictDecision | undefined {
@@ -17,14 +20,16 @@ export function initialDecision(document: ConflictDocument | undefined): FileCon
 }
 
 /**
- * The resolution to send to the merge, or null while the file still needs the user. Keeping the source carries its
- * text (`sourceText`, as read) when writing it gives back its bytes, so the merge needn't read it from the server again.
+ * The resolution to send to the merge, or null while the file still needs the user. Keeping the source or the base
+ * carries its text (`texts`, as read) when writing it gives back its bytes, so the merge needn't read it from the
+ * server again.
  */
-export function resolutionOf(decision: FileConflictDecision | undefined, sourceText?: string): FileConflictResolution | null {
+export function resolutionOf(decision: FileConflictDecision | undefined, texts: { source?: string; base?: string } = {}): FileConflictResolution | null {
   if (!decision) return null;
   if (decision.kind === 'wholeFile') {
-    if (decision.side === 'source' && sourceText !== undefined && writesBackAsRead(sourceText)) return { choice: 'source', text: sourceText };
-    return { choice: decision.side };
+    if (decision.side === 'destination') return { choice: 'destination' };
+    const text = texts[decision.side];
+    return text !== undefined && writesBackAsRead(text) ? { choice: decision.side, text } : { choice: decision.side };
   }
   return hasConflictMarkers(decision.text) ? null : { choice: 'text', text: decision.text };
 }

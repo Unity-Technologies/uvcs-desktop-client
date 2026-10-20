@@ -5,12 +5,11 @@ import { PathLabel } from '../../../components/PathLabel';
 import { useImageUrl } from '../../diff/viewer/image/useImageUrl';
 import { formatSize } from '../../../lib/formatDate';
 import { Spinner } from '../../../ui/Spinner';
+import type { KeptVersion } from './fileConflictDecision';
 import type { ConflictContents } from './loadedConflict';
 import type { MergeLabels } from '../mergeDescription';
 import { ModelSinceBase, ModelVersionThumbnail } from './ModelVersionPreview';
 import styles from './WholeFileChoice.module.css';
-
-type Side = 'source' | 'destination';
 
 interface WholeFileChoiceProps {
   /** Its versions, once read: the cards can be picked before (a known binary is decided without its bytes). */
@@ -18,12 +17,17 @@ interface WholeFileChoiceProps {
   /** Why the versions couldn't be read. */
   error: Error | undefined;
   labels: MergeLabels;
-  chosen: Side | undefined;
-  onChoose: (side: Side) => void;
+  /** The file has a common ancestor to keep (not one added on both sides). */
+  withBase: boolean;
+  chosen: KeptVersion | undefined;
+  onChoose: (version: KeptVersion) => void;
 }
 
-/** For files that can't be merged line by line (binaries): pick the version to keep, its preview showing once read. */
-export function WholeFileChoice({ contents, error, labels, chosen, onChoose }: WholeFileChoiceProps) {
+/**
+ * For files that can't be merged line by line (binaries): pick the version to keep, each side's or the base's, its
+ * preview showing once read.
+ */
+export function WholeFileChoice({ contents, error, labels, withBase, chosen, onChoose }: WholeFileChoiceProps) {
   return (
     <div className={styles.choices}>
       <div className={styles.options}>
@@ -45,6 +49,17 @@ export function WholeFileChoice({ contents, error, labels, chosen, onChoose }: W
           selected={chosen === 'source'}
           onSelect={() => onChoose('source')}
         />
+        {withBase && (
+          <VersionCard
+            title="Keep base"
+            subtitle="Common ancestor"
+            content={contents?.base}
+            base={undefined}
+            error={error}
+            selected={chosen === 'base'}
+            onSelect={() => onChoose('base')}
+          />
+        )}
       </div>
     </div>
   );

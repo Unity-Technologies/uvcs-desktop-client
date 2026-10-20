@@ -85,6 +85,7 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
                 {toolButton}
                 <KeepChoices
                   labels={labels}
+                  withBase={hasBase(state)}
                   chosen={chosenConflictChoice(status, state.decision, state.document)}
                   onChoose={choose}
                   onStartOver={state.decidedByUser ? onStartOver : undefined}

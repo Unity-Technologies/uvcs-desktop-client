@@ -5,7 +5,7 @@ import { FileDiffViewer } from '../../diff/viewer/FileDiffViewer';
 import { LoadedFileDiff } from '../../diff/viewer/LoadedFileDiff';
 import type { MergeLabels } from '../mergeDescription';
 import { ConflictHunks } from './ConflictHunks';
-import { mergedText, textToEdit, type PanelView } from './conflictPanelView';
+import { hasBase, mergedText, textToEdit, type PanelView } from './conflictPanelView';
 import type { FileConflictDecision } from './fileConflictDecision';
 import { HandEditor } from './HandEditor';
 import { ReadOnlyText } from './ReadOnlyText';
@@ -37,6 +37,7 @@ export function ConflictBody({ workspacePath, state, labels, view, editing, onDe
         contents={contents}
         error={state.error}
         labels={labels}
+        withBase={hasBase(state)}
         chosen={decision?.kind === 'wholeFile' ? decision.side : undefined}
         onChoose={(side) => onDecide({ kind: 'wholeFile', side })}
       />
