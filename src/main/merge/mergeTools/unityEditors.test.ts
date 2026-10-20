@@ -64,8 +64,10 @@ describe('findUnityEditors', () => {
     expect(findUnityEditors(linux, fs)).toEqual([]);
   });
 
-  it('includes the single editor installed before the Hub, whose version its path doesn’t say', () => {
-    expect(findUnityEditors(mac, fakeFileSystem([]))).toEqual([{ version: '', folder: '/Applications/Unity/Unity.app' }]);
-    expect(findUnityEditors(windows, fakeFileSystem([]))).toEqual([{ version: '', folder: 'C:\\Program Files\\Unity\\Editor' }]);
+  it('includes the single editor installed before the Hub when it is there, whose version its path doesn’t say', () => {
+    expect(findUnityEditors(mac, fakeFileSystem(['/Applications/Unity/Unity.app']))).toEqual([{ version: '', folder: '/Applications/Unity/Unity.app' }]);
+    expect(findUnityEditors(windows, fakeFileSystem(['C:\\Program Files\\Unity\\Editor\\Unity.exe']))).toEqual([{ version: '', folder: 'C:\\Program Files\\Unity\\Editor' }]);
+    expect(findUnityEditors(mac, fakeFileSystem([]))).toEqual([]);
+    expect(findUnityEditors(windows, fakeFileSystem([]))).toEqual([]);
   });
 });
