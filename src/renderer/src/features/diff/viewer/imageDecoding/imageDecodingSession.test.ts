@@ -60,7 +60,7 @@ describe('imageDecodingSession', () => {
   it('hands the one worker two requests at a time, the next once one is answered', async () => {
     const { session, worker, first } = await startedSession();
     const second = worker.nextRequest();
-    const painted = session.paintOffThread(tga(1));
+    const { painted } = session.paintOffThread(tga(1));
     const third = session.decodeOffThread(request('c.png'));
     const paint = await second;
     expect(FakeWorker.created).toHaveLength(1);
@@ -79,13 +79,36 @@ describe('imageDecodingSession', () => {
     const { session, worker } = await startedSession();
     const image = tga(1);
     const arrived = worker.nextRequest();
-    const [one, two] = [session.paintOffThread(image), session.paintOffThread(image)];
+    const [one, two] = [session.paintOffThread(image).painted, session.paintOffThread(image).painted];
     worker.answer(await arrived);
     expect(await one).toBe(await two);
     expect(worker.asked.filter((asked) => 'paint' in asked)).toHaveLength(1);
     const again = worker.nextRequest();
-    void session.paintOffThread(image);
+    void session.paintOffThread(image).painted;
     expect(await again).toMatchObject({ paint: image });
+  });
+
+  it('never hands the worker a paint every viewer let go of while it waited, and paints it for a viewer asking again', async () => {
+    const { session, worker, first } = await startedSession();
+    const second = worker.nextRequest();
+    void session.decodeOffThread(request('b.png'));
+    await second;
+    const image = tga(1);
+    const [one, two] = [session.paintOffThread(image), session.paintOffThread(image)];
+    one.release();
+    two.release();
+    const next = worker.nextRequest();
+    const waiting = session.decodeOffThread(request('c.png'));
+    worker.answer(worker.asked[0]!);
+    await first;
+    expect(nameOf(await next)).toBe('c.png');
+    expect(worker.asked.map(nameOf)).toEqual(['first.png', 'b.png', 'c.png']);
+    const again = worker.nextRequest();
+    worker.answer(worker.asked[1]!);
+    void session.paintOffThread(image).painted;
+    expect(await again).toMatchObject({ paint: image });
+    worker.answer(worker.asked[2]!);
+    await waiting;
   });
 
   it("fails what a crashed worker was asked, and what follows, and never decodes on the page's own thread", async () => {
@@ -93,7 +116,7 @@ describe('imageDecodingSession', () => {
     worker.onerror?.();
     expect(await first).toEqual({ kind: 'failed', problem: 'unreadable' });
     expect(await session.decodeOffThread(request('b.png'))).toEqual({ kind: 'failed', problem: 'unreadable' });
-    expect(await session.paintOffThread(tga(2))).toEqual({ status: 'failed', problem: 'unreadable' });
+    expect(await session.paintOffThread(tga(2)).painted).toEqual({ status: 'failed', problem: 'unreadable' });
     expect(FakeWorker.created).toHaveLength(1);
     expect(worker.terminated).toBe(true);
   });
