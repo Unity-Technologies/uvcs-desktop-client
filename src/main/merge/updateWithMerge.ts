@@ -1,4 +1,4 @@
-import { writeFile } from 'node:fs/promises';
+import { copyFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import type { UpdateConflict, UpdateResolutions, UpdateResult } from '@shared/domain/incoming';
 import { spec } from '@shared/domain/specs';
@@ -116,10 +116,13 @@ async function saveBasesKept(
   return saved;
 }
 
-/** Copies `source` into `target`; false when there's no file at `source`. */
+/**
+ * Copies `source` into `target`, a temp file, without reading it into memory (binaries run to hundreds of MB); false
+ * when there's no file at `source`.
+ */
 async function copiedIfThere(source: string, target: string): Promise<boolean> {
   try {
-    await copyInto(source, target);
+    await copyFile(source, target);
     return true;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
