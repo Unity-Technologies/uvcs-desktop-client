@@ -33,7 +33,7 @@ describe('AppIcons', () => {
     expect(read.fileIcon).not.toHaveBeenCalled();
     expect(await new AppIcons('darwin', read).of('/Applications/Missing.app')).toBeUndefined();
     expect(await new AppIcons('darwin', readers(vi.fn().mockRejectedValue(new Error('no thumbnail')))).of('/Applications/Zed.app')).toBeUndefined();
-    expect(await new AppIcons('win32', readers(images(), vi.fn().mockRejectedValue(new Error('no icon')))).of('C:\Tools\meld.exe')).toBeUndefined();
+    expect(await new AppIcons('win32', readers(images(), vi.fn().mockRejectedValue(new Error('no icon')))).of('C:\\Tools\\meld.exe')).toBeUndefined();
   });
 
   it('adds the icon to an item, or leaves it as it is', async () => {
