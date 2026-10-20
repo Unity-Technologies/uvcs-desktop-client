@@ -21,7 +21,9 @@ const crate =
     const seam = y % 32 < 2 ? -60 : 0;
     const onCross = stencil && Math.abs(Math.abs(x - SIZE / 2) - Math.abs(y - SIZE / 2)) < 10 && Math.abs(x - SIZE / 2) < 70;
     if (onCross) return [200, 30, 30, 255];
-    return [150 + hue + grain + seam, 100 + grain / 2 + seam, 55 - hue / 2 + seam, 255];
+    // Clamped: the writers store each channel as a byte, where -5 would wrap to 251.
+    const byte = (value: number): number => Math.max(0, Math.min(255, Math.round(value)));
+    return [byte(150 + hue + grain + seam), byte(100 + grain / 2 + seam), byte(55 - hue / 2 + seam), 255];
   };
 
 /** A normal map of round bumps on a grid; `spacing` sets how many. */
