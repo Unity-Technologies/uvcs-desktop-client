@@ -11,10 +11,13 @@ export type IncomingViewState =
   | { kind: 'upToDate' }
   | { kind: 'incoming'; incoming: BranchIncomingChanges };
 
-/** `incoming`: what the query holds; `pending`: it has never answered; `failed`: its last read failed. */
+/**
+ * `incoming`: what the query holds; `pending`: it has never answered; `failed`: its last read failed. A read that
+ * fails after one that answered (a refresh, a focus) keeps what that one read, as the workspace screen does: only a
+ * view with nothing read gives its body to the error.
+ */
 export function incomingViewState(incoming: IncomingChanges | undefined, pending: boolean, failed: boolean): IncomingViewState {
-  if (pending) return { kind: 'reading' };
-  if (failed || !incoming) return { kind: 'failed' };
+  if (!incoming) return pending || !failed ? { kind: 'reading' } : { kind: 'failed' };
   if (!incoming.branch) return { kind: 'notOnBranch' };
   return incoming.changesetCount === 0 ? { kind: 'upToDate' } : { kind: 'incoming', incoming };
 }
