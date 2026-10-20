@@ -1,12 +1,13 @@
 import type { Shelve } from '@shared/domain/shelve';
 import { spec } from '@shared/domain/specs';
+import { openInNewWindow } from '../../app/pageWindow/openInNewWindow';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
 import { menuAction } from '../../components/menuWords';
 import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
-import { applyShelve, deleteShelve, showShelveChanges } from './shelveOperations';
+import { applyShelve, deleteShelve, shelveDiffPage, showShelveChanges } from './shelveOperations';
 
 /** What a shelve is copied as, first what ⌘C copies: `3`, `sh:3`, `sh:3@repo@server`, its comment and GUID. */
 export function shelveCopyTexts(shelve: ShelveInfo): CopyTexts {
@@ -42,6 +43,7 @@ export function shelveMenu(workspacePath: string, shelves: ShelveInfo[], { left 
 
   return groupedMenu([
     menuAction('diff', () => showShelveChanges(shelve)),
+    menuAction('diffInNewWindow', () => openInNewWindow(shelveDiffPage(shelve))),
     menuAction('apply', () => void apply(left), { label: left ? 'Restore' : 'Apply to workspace' }),
     !left && mine && menuAction('applyAndDelete', () => void apply(true)),
     menuAction('newCodeReview', () =>

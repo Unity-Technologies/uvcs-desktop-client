@@ -1,10 +1,11 @@
 import { CODE_REVIEW_STATUSES, type CodeReviewSummary } from '@shared/domain/codeReview';
+import { openInNewWindow } from '../../app/pageWindow/openInNewWindow';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
 import { menuAction, menuSubmenu } from '../../components/menuWords';
-import { deleteReviews, openReview, reassignReview, setReviewStatus } from './codeReviewOperations';
+import { codeReviewPage, deleteReviews, openReview, reassignReview, setReviewStatus } from './codeReviewOperations';
 
 /** What a code review is copied as, first what ⌘C copies: its number, then its title. */
 export function codeReviewCopyTexts(review: Pick<CodeReviewSummary, 'id' | 'title'>): CopyTexts {
@@ -18,6 +19,7 @@ export function codeReviewMenu(workspacePath: string, reviews: CodeReviewSummary
 
   return groupedMenu([
     single && menuAction('openReview', () => openReview(single)),
+    single && menuAction('reviewInNewWindow', () => openInNewWindow(codeReviewPage(single))),
     single &&
       menuSubmenu(
         'status',

@@ -1,6 +1,7 @@
 import type { ChangesetInfo } from '@shared/domain/changeset';
 import { spec } from '@shared/domain/specs';
 import { navigation } from '../../app/navigation/navigationStore';
+import { openInNewWindow } from '../../app/pageWindow/openInNewWindow';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -15,6 +16,7 @@ import {
   editChangesetComment,
   mergeChangesetTo,
   moveChangesetToBranch,
+  changesetDiffPage,
   openChangesetDiff,
   openMerge,
   openRangeDiff,
@@ -60,6 +62,7 @@ function singleChangesetMenu(context: ChangesetMenuContext, changeset: Changeset
 
   return groupedMenu([
     menuAction('diff', () => openChangesetDiff(changeset), { shortcut: hotkey('listDiff') }),
+    menuAction('diffInNewWindow', () => openInNewWindow(changesetDiffPage(changeset))),
     menuAction('switch', () => void switchToChangeset(workspacePath, changeset), { label: 'Switch to this changeset' }),
     canRevertTo && menuAction('revert', () => revertWorkspaceToChangeset(changeset, loadedChangeset), { label: 'Revert workspace to this changeset…' }),
     menuAction('merge', () => openMerge({ kind: 'merge', sourceSpec: source })),

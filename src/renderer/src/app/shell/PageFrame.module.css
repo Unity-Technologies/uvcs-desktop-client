@@ -44,6 +44,12 @@
   white-space: nowrap;
 }
 
+/* Quiet, at the end of the breadcrumb: an option for a second display, not a step of the page. */
+.newWindow {
+  margin-left: auto;
+  color: var(--text-tertiary);
+}
+
 .content {
   display: flex;
   flex: 1;

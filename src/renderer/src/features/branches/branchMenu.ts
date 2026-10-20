@@ -1,5 +1,6 @@
 import { isMainBranch, type BranchInfo } from '@shared/domain/branch';
 import { spec } from '@shared/domain/specs';
+import { openInNewWindow } from '../../app/pageWindow/openInNewWindow';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -14,6 +15,7 @@ import { isTaskBranch } from '../mergeTask/mergeTaskSummary';
 import { taskMergeOf } from '../mergeTask/taskMerge';
 import { openTaskWorkspaceDialog } from '../taskWorkspace/TaskWorkspaceDialog';
 import {
+  branchDiffPage,
   cherryPickFromBranch,
   deleteBranches,
   diffBranch,
@@ -52,6 +54,7 @@ export function branchMenu(workspacePath: string, branches: BranchInfo[], curren
 
   return groupedMenu([
     single && menuAction('diff', () => diffBranch(single)),
+    single && menuAction('diffInNewWindow', () => openInNewWindow(branchDiffPage(single))),
     single && menuAction('switch', () => void switchToBranch(workspacePath, single.name), { label: 'Switch to this branch', ...onCurrent }),
     single && menuAction('taskWorkspace', () => openTaskWorkspaceDialog({ workspacePath, branch: single.name }), onCurrent),
     single && menuAction('merge', () => mergeFromBranch(single.name), onCurrent),
