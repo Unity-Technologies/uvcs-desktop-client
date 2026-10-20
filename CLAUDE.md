@@ -292,6 +292,9 @@ Commit like a careful human. The history should show *how* the work happened.
 - A commit message says what the user can now do or see, in the product's words, not which files changed ("The
   Branch Explorer keeps the user's place when it is laid out again …"). Changes to docs or tooling say what they
   change in a short line.
+- **Public text says what changed, never why internally.** The repository is public: commit messages, branch names,
+  pull requests, comments and docs never mention internal reviews, approvals, requests or tickets (Legal, Privacy,
+  security, compliance), nor the reasoning they gave. Say what the user can now do or see, and what the code does.
 - A branch is named for its work: `<kind>/<topic>` in kebab case, where kind is `feature`, `fix`, `refactor`,
   `tests`, `docs`, `perf` or `chore` (`fix/palette-apostrophe`, `refactor/main-services`). An agent whose worktree
   came with a generated name (`worktree-agent-a571eb…`) renames it first: `git branch -m <kind>/<topic>`.
@@ -325,7 +328,7 @@ them on the server, and reading shell command lines cost more to keep right than
    (`.github/pull_request_template.md`): the behavior before and after, how it was implemented (the approach, the
    pieces named, the `cm` commands, the alternatives dropped), behavior changes beyond the goal, how it was checked,
    what the review found and what changed for it, the docs. The title says what the user can now do, like a commit
-   message.
+   message, and nothing in it names an internal review or approval ("Public text says what changed", in Commits).
 7. **Stop there**, and report the pull request's link to the user, with what to try in the app for anything visible.
    A person approves and merges it: don't approve or merge it yourself. Comments on the pull request are answered
    with new commits on the same branch, never a force push.
