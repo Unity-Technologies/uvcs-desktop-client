@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { listChangeBlocks, listChangeRegions } from './changeBlocks';
-import { arrivalChange, changePositionLabel, plannedMove } from './changeNavigation';
+import { arrivalChange, positionLabel, plannedMove } from './changeNavigation';
 import { DIFF_TEST_TEXTS } from './diffTestTexts';
 import { fileSteps, type PendingArrival } from './fileSteps';
 import { lineDiff } from './lineDiff';
@@ -25,7 +25,7 @@ class DiffBesideList {
 
   /** The list's current file and the header's "3 of 12". */
   get header(): string {
-    return `${this.shown}: ${changePositionLabel({ count: this.count, current: this.current })}`;
+    return `${this.shown}: ${positionLabel({ count: this.count, current: this.current }, 'change')}`;
   }
 
   press(direction: 1 | -1): this {

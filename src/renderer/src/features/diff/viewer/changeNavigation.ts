@@ -65,12 +65,15 @@ export function modifiedLineAt(blocks: ChangeBlock[], side: DiffSide, lineNumber
  * The change still current once the text changed: the same one while the diff has as many changes (typing within
  * one), none once changes came or went, and the next move goes from the view again.
  */
-export function currentAfterChange(current: number | null, before: ChangeRegion[], after: ChangeRegion[]): number | null {
+export function currentAfterChange(current: number | null, before: readonly unknown[], after: readonly unknown[]): number | null {
   return current !== null && before.length === after.length ? current : null;
 }
 
-/** "3 of 12" once a change was moved to, "12 changes" before, "No changes" in a file only stepped past. */
-export function changePositionLabel({ count, current }: Pick<ChangePosition, 'count' | 'current'>): string {
-  if (count === 0) return 'No changes';
-  return current === null ? pluralize(count, 'change') : `${formatCount(current + 1)} of ${formatCount(count)}`;
+/**
+ * "3 of 12" once a change (or a conflict: `noun`) was moved to, "12 changes" before, "No changes" in a file only
+ * stepped past.
+ */
+export function positionLabel({ count, current }: Pick<ChangePosition, 'count' | 'current'>, noun: string): string {
+  if (count === 0) return `No ${noun}s`;
+  return current === null ? pluralize(count, noun) : `${formatCount(current + 1)} of ${formatCount(count)}`;
 }

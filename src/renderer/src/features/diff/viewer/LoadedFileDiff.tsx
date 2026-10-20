@@ -32,10 +32,11 @@ import { followsLayout } from './shownDiff';
 import { plainTextThresholdLabel, syntaxHighlighting } from './syntaxHighlighting';
 import { TextViewControls } from './TextViewControls';
 import { UnsavedEditsControls } from './UnsavedEditsControls';
-import { goesSomewhere, useChangeNavigation } from './useChangeNavigation';
+import { useChangeNavigation } from './useChangeNavigation';
 import type { DiffContents } from './useDiffContents';
 import { useFileBuffer } from './useFileBuffer';
 import { useLineDiffs } from './useLineDiffs';
+import { goesSomewhere } from './useStepNavigation';
 import { typedIntoWhole, wholeFileNote } from './wholeFileNote';
 import { WholeFileNotice } from './WholeFileNotice';
 
@@ -110,7 +111,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const frame = useRef<HTMLDivElement>(null);
   const changeView = useRef<ChangeView>(null);
   const navigation = useChangeNavigation(viewControls && !wholeFile ? (diffs.current?.meta ?? null) : null, changeView, frame, fileName);
-  const navigator = goesSomewhere(navigation) && <ChangeNavigator navigation={navigation} />;
+  const navigator = goesSomewhere(navigation) && <ChangeNavigator navigation={navigation} keysWhileTyping />;
   const openEditable = editablePath === null ? undefined : () => void openFile(absolutePath(workspacePath, editablePath));
   const discards = diffDiscards(workspacePath, buffer, onMatchesBase);
   const identical = identicalDescription ?? IDENTICAL_DESCRIPTION;
