@@ -147,7 +147,7 @@ markup from the network.
   and Apache ask to keep, so `npm run build` also writes `out/THIRD_PARTY_NOTICES.txt`: the name, version, license
   and LICENSE/NOTICE files of exactly the packages whose code is in the bundles (`thirdPartyNoticesCollector` in
   `scripts/build/`, one plugin for main, preload, renderer and its workers; the text is `thirdPartyNotices`). Every
-  package's entry carries a full license text, as Unity Legal requires: a package whose npm package ships no license
+  package's entry carries a full license text: a package whose npm package ships no license
   file gets the text in `SUPPLIED_LICENSES` (`scripts/build/suppliedLicenses.ts`, one reviewed file per package in
   `scripts/build/suppliedLicenses/`, copied from its upstream repository, or the standard text of the license its
   package.json names with its author when upstream has none either), and `npm run build` fails on a bundled package
@@ -155,11 +155,10 @@ markup from the network.
   gets its upstream license text added there; an entry whose package now ships its own license file fails
   `suppliedLicenses.test.ts` until it is removed. electron-builder.yml's `extraResources` ships
   `THIRD_PARTY_NOTICES.txt` with the app's `LICENSE.md` as plain files in the resources folder, outside `app.asar`.
-- **Licenses**: the app is made available under the Unity Terms of Service (`LICENSE.md`; package.json says
-  `SEE LICENSE IN LICENSE.md`). It has no `NOTICE` file: that is an Apache-2.0 convention, and `LICENSE.md` holds the
-  copyright line. Every package in package-lock.json must have a permissive license (`PERMISSIVE_LICENSES`,
-  `scripts/build/dependencyLicenses.test.ts`): a copyleft one fails the tests and needs a legal decision before it
-  joins.
+- **Licenses**: the app is made available under the Unity Terms of Service (`LICENSE.md`, which also holds the
+  copyright line; package.json says `SEE LICENSE IN LICENSE.md`). Every package in package-lock.json must have a
+  permissive license (`PERMISSIVE_LICENSES`, `scripts/build/dependencyLicenses.test.ts`): a copyleft one fails the
+  tests and needs a legal decision before it joins.
 - **macOS** releases are signed with Unity's Developer ID (`Unity Technologies SF (9QW8UQUTAA)`, the certificate Unity
   Hub uses, imported from Key Vault on Unity's macOS runners) and notarized, so updates install on a restart. macOS
   installs an update only from the same team, so that identity must never change. A local build (`npm run dist`) is
