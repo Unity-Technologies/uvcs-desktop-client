@@ -44,9 +44,10 @@ made to the file after the diff go too, which the confirmation's changeset numbe
   diff's header or a list already read, else one `cm find`), a range's first changeset. A branch's diff starts at its
   common ancestor with its parent, which nothing read names, a label range at a label, and a shelve at no changeset of
   its own: none of them offers it.
-- Only one file, changed in place, of the workspace's repository (`canRevertFromDiff`): an added file had no older
-  version, a deleted one is the undelete's, a moved one would keep its new place (`cm revert` takes back content, not
-  paths), a folder or an xlink has no content to take back, and an xlinked repository's changesets aren't the diff's.
+- Only one file whose content changed, in place or moved too, of the workspace's repository (`canRevertFromDiff`):
+  `cm revert` finds the item by its id and takes its content back, keeping its name, so a pure move has nothing to
+  revert; an added file had no older version, a deleted one is the undelete's, a folder or an xlink has no content to
+  take back, and an xlinked repository's changesets aren't the diff's.
 - Incoming offers none: its changes aren't in the workspace yet (`diffEntryMenu` without `workspaceRepository`).
 - `cm revert` finds the file where the diff names it, in the workspace: a file moved or deleted since fails with
   `cm`'s message, and one with pending changes too ("must be checked in").

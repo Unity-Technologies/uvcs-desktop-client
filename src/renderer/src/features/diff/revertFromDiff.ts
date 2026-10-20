@@ -24,14 +24,20 @@ export function olderSideOf(target: DiffTarget): OlderSide | null {
 }
 
 /**
- * Whether undoing a diff's change to this item makes sense in the workspace: a file the diff changed in place (an added
- * file had no older version, a deleted one has none to revert in the workspace, and `cm revert` takes the content back,
- * not a move), in the workspace's own repository: an xlinked one's changesets aren't the diff's, and the workspace's
- * repository must be known to tell.
+ * Whether undoing a diff's change to this item makes sense in the workspace: a file whose content the diff changed, in
+ * its place or moved too (`cm revert` finds the item by its id, takes its content back and leaves its name, so a move
+ * alone has nothing to revert; an added file had no older version, a deleted one none in the workspace), in the
+ * workspace's own repository: an xlinked one's changesets aren't the diff's, and the workspace's repository must be
+ * known to tell.
  */
 export function canRevertFromDiff(entry: DiffEntry, workspaceRepository: string | undefined): boolean {
   const isFile = entry.itemType !== 'directory' && entry.itemType !== 'xlink';
-  return isFile && entry.status === 'changed' && workspaceRepository !== undefined && entry.repository === workspaceRepository;
+  return isFile && changedContent(entry) && workspaceRepository !== undefined && entry.repository === workspaceRepository;
+}
+
+/** A changed file, or a moved one that changed too: `parseDiffEntries` keeps the content change's two revisions. */
+function changedContent(entry: DiffEntry): boolean {
+  return entry.status === 'changed' || (entry.status === 'moved' && entry.baseRevisionId !== entry.revisionId);
 }
 
 /**
