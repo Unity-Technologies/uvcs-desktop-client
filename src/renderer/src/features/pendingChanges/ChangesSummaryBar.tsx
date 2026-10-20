@@ -4,6 +4,7 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import { SEPARATOR } from '../../lib/actions';
 import { formatCount, pluralize } from '../../lib/text';
 import { Checkbox, type CheckState } from '../../ui/Checkbox';
+import { SkeletonBar } from '../../ui/Skeleton';
 import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { isCheckinCandidate, isControlled } from './changeCategories';
@@ -12,7 +13,8 @@ import styles from './ChangesSummaryBar.module.css';
 interface ChangesSummaryBarProps {
   /** The changes the filter lets through. */
   changes: PendingChange[];
-  totalCount: number;
+  /** How many changes were read; undefined until they are, when the count is a placeholder. */
+  totalCount: number | undefined;
   isIncluded: (change: PendingChange) => boolean;
   onSetIncluded: (changes: PendingChange[], included: boolean) => void;
   onUndo: (changes: PendingChange[]) => void;
@@ -28,14 +30,14 @@ export function ChangesSummaryBar({ changes, totalCount, isIncluded, onSetInclud
     return { candidates, includedCount: candidates.filter(isIncluded).length, undoable: changes.filter(isControlled) };
   }, [changes, isIncluded]);
   const checkState: CheckState = includedCount === 0 ? false : includedCount === candidates.length ? true : 'mixed';
-  const filtered = changes.length !== totalCount;
+  const filtered = totalCount !== undefined && changes.length !== totalCount;
   const undoAllLabel = filtered ? `Undo the ${formatCount(undoable.length)} shown changes` : 'Undo all changes';
 
   return (
     <div className={styles.bar} style={{ '--checkbox-inset': `${checkboxInset}px` } as CSSProperties}>
       <Checkbox checked={checkState} disabled={candidates.length === 0} onChange={(checked) => onSetIncluded(candidates, checked)} />
       <span className={styles.label}>
-        {filtered ? `${formatCount(changes.length)} of ${formatCount(totalCount)}` : pluralize(totalCount, 'file')}
+        {totalCount === undefined ? <SkeletonBar width="48px" /> : filtered ? `${formatCount(changes.length)} of ${formatCount(totalCount)}` : pluralize(totalCount, 'file')}
       </span>
       <div className={styles.undo}>
         <IconButton

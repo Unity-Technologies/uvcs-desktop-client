@@ -8,7 +8,7 @@ import { Checkbox } from '../../ui/Checkbox';
 import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { ResizeHandle } from '../../ui/ResizeHandle';
-import { checkinButtonLabel, checkinDisabledReason, type CheckinMode } from './checkinButton';
+import { canChangeCheckinMode, checkinButtonLabel, checkinDisabledReason, type CheckinMode } from './checkinButton';
 import { CheckinButtonWording } from './CheckinButtonWording';
 import { CheckinModeMenu, describeMode } from './CheckinModeMenu';
 import { useCheckinDraftStore, useCheckinMessage } from './checkinDraftStore';
@@ -24,6 +24,8 @@ interface CheckinPanelProps {
   summaryRef: RefObject<HTMLInputElement | null>;
   /** Whose draft comment the fields show and edit. */
   workspacePath: string;
+  /** How many changes are pending; undefined until they are read. */
+  pendingCount: number | undefined;
   includedCount: number;
   /** What the included changes upload. */
   upload: UploadSummary;
@@ -48,6 +50,7 @@ interface CheckinPanelProps {
 export function CheckinPanel({
   summaryRef,
   workspacePath,
+  pendingCount,
   includedCount,
   upload,
   shelvable,
@@ -70,12 +73,13 @@ export function CheckinPanel({
   const onMessageChange = (message: { summary?: string; description?: string }): void => setMessage(workspacePath, message);
   const shelving = mode === 'shelve';
   const count = shelving ? shelvable.count : includedCount;
-  const disabledReason = checkinDisabledReason(mode, count, includedCount);
+  const disabledReason = checkinDisabledReason(mode, count, includedCount, pendingCount);
   const canAct = disabledReason === null && !busy;
   const { icon: ModeIcon } = describeMode(mode);
   const uploaded = shelving ? shelvable.upload : upload;
   const label = checkinButtonLabel({
     mode,
+    pendingCount,
     includedCount: count,
     branchName,
     uploadBytes: uploaded.bytes,
@@ -149,7 +153,7 @@ export function CheckinPanel({
         >
           <CheckinButtonWording forms={label.forms} />
         </Button>
-        <CheckinModeMenu mode={mode} disabled={busy} onChange={setMode} />
+        <CheckinModeMenu mode={mode} disabled={!canChangeCheckinMode(pendingCount, busy)} onChange={setMode} />
       </div>
       {updatesFirst && behindDescription && <div className={styles.behind}>{behindDescription}</div>}
     </div>
