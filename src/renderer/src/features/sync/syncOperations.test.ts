@@ -59,4 +59,27 @@ describe('sync operations', () => {
 
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'game@local is in sync with https://github.com/team/game.git' }]);
   });
+
+  it('never shows the token or password a pasted Git URL carries', async () => {
+    fakeApi.answer('sync.syncWithGit', () => undefined);
+    const url = 'https://ana:ghp_s3cr3t@github.com/team/game.git';
+
+    await syncWithGit(ws, { repository: 'game@local', url });
+
+    expect(fakeApi.argsOf('sync.syncWithGit')).toEqual([[ws, { repository: 'game@local', url }, expect.any(String)]]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'game@local is in sync with https://github.com/team/game.git' }]);
+  });
+
+  it('names the Git remote without its credentials when the sync fails', async () => {
+    fakeApi.answer('sync.syncWithGit', () => {
+      // The failure as main sends it: `CmError` hides the URL's credentials (`outputForLog`).
+      throw commandFailure("fatal: Authentication failed for 'https://•••@github.com/team/game.git/'");
+    });
+
+    await syncWithGit(ws, { repository: 'game@local', url: 'https://ana:ghp_s3cr3t@github.com/team/game.git' });
+
+    expect(shownToasts()).toEqual([
+      { kind: 'error', title: 'Syncing with https://github.com/team/game.git failed', detail: "fatal: Authentication failed for 'https://•••@github.com/team/game.git/'" },
+    ]);
+  });
 });

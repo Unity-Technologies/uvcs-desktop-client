@@ -2,6 +2,7 @@ import type { GitSyncRequest, ReplicationRequest, ReplicationSummary } from '@sh
 import { api } from '../../api/client';
 import { runOperation } from '../../app/operations/runOperation';
 import { branchLabel } from '../../lib/branchLabels';
+import { gitRemoteLabel } from './gitRemoteLabel';
 import { replicationMessage } from './replicationMessage';
 
 /**
@@ -28,11 +29,13 @@ export function pullBranch(workspacePath: string, request: ReplicationRequest): 
   });
 }
 
+/** Syncs with a Git remote, named without the credentials its URL may carry (`gitRemoteLabel`). */
 export function syncWithGit(workspacePath: string, request: GitSyncRequest): Promise<void | undefined> {
+  const remote = gitRemoteLabel(request.url);
   return runOperation({
-    title: `Syncing with ${request.url}`,
+    title: `Syncing with ${remote}`,
     workspacePath,
     run: (operationId) => api.sync.syncWithGit(workspacePath, request, operationId),
-    success: () => ({ title: `${request.repository} is in sync with ${request.url}` }),
+    success: () => ({ title: `${request.repository} is in sync with ${remote}` }),
   });
 }
