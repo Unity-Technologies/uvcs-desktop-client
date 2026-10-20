@@ -60,7 +60,8 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
   left out again; a failed or cancelled one keeps it. It ends too once none of its files is pending anymore (undone,
   shelved away by a switch, checked in from outside the app: `preparedStillPending`, `currentChoice`), or else every
   change made later would stay unchecked. Checking every file with the list's header box, nothing hidden by the
-  filters, ends it as well (`includeEverything`). The button does what it always does: one `cm checkin` or
+  filters, ends it as well (`includeEverything`). While it lasts, a quiet "Changelist ui" under the panel's button says
+  why only its files are checked. The button does what it always does: one `cm checkin` or
   shelve of those paths, the empty-comment warning, "Update & check in".
   Running at once was dropped: it skipped reading the comment, which a changelist's description only suggests. "Undo N
   changes…" opens the Undo dialog on its changes. The default changelist has no menu of its own: right-clicking it
