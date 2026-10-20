@@ -833,9 +833,17 @@ renderer/src/
     or everyone's, other people picked among everyone's; the Branch Explorer fades the others' changesets
     (`pickedNames`), History and Attributes filter what they read. Code reviews go by who created them; Assigned to me
     is a chip of its own. `cm find` fails on an owner it doesn't know, so only people from the rows are offered.
+  - **Branch** (Changesets): one chip, `BranchScopeFilter`, for every branch's changesets, "This branch" (the one the
+    workspace is on, followed as it switches) or any branch picked from the switcher's list (`branchSwitcherGroups`
+    over `useBranches`, the every-branch read the switcher, the pickers and the palette share, asked for only once the
+    popover opens); no query of its own lists branches. The branch goes into the view's `cm find` (`toQueryFilter`,
+    `branch = '…'`), so "This branch" and the same branch picked by name share one query key. A branch picked by name
+    says which workspace it was picked in (`PickedBranch`, `branchScopeIn`): the store outlives the workspace a window
+    shows, and another repository may have no such branch.
   - **Remembered**: each view keeps its filters in one store (`createViewFilters`): the time range, the kinds, the
-    view options and Mine across sessions, the text and the people picked by name for the session (people differ
-    between repositories); a page's (History) last as long as it. Older stores' `onlyMine` and the Branch Explorer's
+    view options and Mine across sessions, the text, the people picked by name and what else holds the repository's
+    objects (`forSession`: a branch picked by name) for the session, as they differ between repositories; a page's
+    (History) last as long as it. Older stores' `onlyMine` and the Branch Explorer's
     own date ranges are read into these (`restoredFilters`, `sincePresetOf`).
   - **Counts and empty lists**: the header counts what shows, "12 of 340" while filters hide some of what was read
     (`shownCount`). A list its filters empty says "No matching <things>" with Clear filters (`NoMatches`), which
