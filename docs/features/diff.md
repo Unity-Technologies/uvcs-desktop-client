@@ -189,8 +189,8 @@ it deletes is still in the workspace (`diffEntryMenu` without `workspaceReposito
 - The official client asks to confirm first; nothing is lost here (the item comes back as a change to undo or check
   in), so it asks only past `MAX_RESTORED_WITHOUT_ASKING` items, for the time they take.
 
-`scripts/sandboxes/deletes.sh` builds changesets that delete a file, a folder, an accented name, and a path a new file
-took.
+`scripts/sandboxes/deletes.sh` builds changesets that delete a file, a folder, an accented name, a path a new file
+took, and (cs:5) 25 files one by one, more than are restored without asking.
 
 ## Moving through changes
 
