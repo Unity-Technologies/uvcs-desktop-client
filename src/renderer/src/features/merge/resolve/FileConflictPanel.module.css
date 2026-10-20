@@ -59,7 +59,7 @@
   padding: var(--space-2) var(--space-3) 6px;
 }
 
-/* Nothing in it: a file with no views to pick whose arrows have nowhere to go. */
+/* Nothing in it: a file with no views to pick whose arrows have nowhere to go (`ConflictNavigator` renders nothing). */
 .viewBar:empty {
   display: none;
 }
