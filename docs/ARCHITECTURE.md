@@ -768,7 +768,7 @@ renderer/src/
 - **Menus**: one grammar for every object's menu (`lib/menuGroups`): the default action (what Enter does in the app:
   open the workspace, a diff), every way to open it in other apps (the editor, the terminal, "Open with ▸", Reveal:
   `openOnDiskEntries`, docs/features/open-with.md; a file's Enter is its "Open in <editor>"), what it does (switch, apply, check out), merges, what it creates, where it leads (history,
-  annotate, browse, Show in Branch Explorer), the OS (save a revision), the clipboard (Cut, one "Copy ▸", Paste), edits (rename, comments,
+  annotate, browse, a branch's changesets, Show in Branch Explorer), the OS (save a revision), the clipboard (Cut, one "Copy ▸", Paste), edits (rename, comments,
   hiding, permissions), and what undoes or deletes it last, in the danger tone; a separator between groups. Entries come from one
   vocabulary (`components/menuWords`: one id, icon, wording and group per concept) and `groupedMenu` orders them.
   One builder per kind (`branchMenu`, `changesetMenu`, `labelMenu`, `shelveMenu`, `codeReviewMenu`, `fileMenu`,
@@ -839,7 +839,9 @@ renderer/src/
     popover opens); no query of its own lists branches. The branch goes into the view's `cm find` (`toQueryFilter`,
     `branch = '…'`), so "This branch" and the same branch picked by name share one query key. A branch picked by name
     says which workspace it was picked in (`PickedBranch`, `branchScopeIn`): the store outlives the workspace a window
-    shows, and another repository may have no such branch.
+    shows, and another repository may have no such branch. A branch's menu, in every place it shows the Branch
+    Explorer included, opens the view on it ("Show changesets", `showBranchChangesets`): Any time, so an old branch
+    shows its changesets, and no text or people hiding some.
   - **Remembered**: each view keeps its filters in one store (`createViewFilters`): the time range, the kinds, the
     view options and Mine across sessions, the text, the people picked by name and what else holds the repository's
     objects (`forSession`: a branch picked by name) for the session, as they differ between repositories; a page's
