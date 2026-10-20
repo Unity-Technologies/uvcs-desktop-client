@@ -52,7 +52,7 @@ describe('Annotate outside the Files view', () => {
 
   it("opens a changeset diff's file on the revision the diff shows", () => {
     const review = { statusOf: () => 'unreviewed', toggle: () => {} } as never;
-    expect(annotate(diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [diffEntry], review))).toEqual({
+    expect(annotate(diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [diffEntry], { review }))).toEqual({
       kind: 'history',
       path: 'src/a.ts',
       revision: { revisionId: 40, repository: 'game@local' },

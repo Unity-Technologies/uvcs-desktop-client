@@ -58,6 +58,7 @@ export const SHORTCUTS = {
   openWorkspace: { area: 'General', label: 'Open another workspace', keys: ['mod+shift+o'], commandId: 'workspace.open' },
   newWindow: { area: 'General', label: 'New window', keys: ['mod+n'], commandId: 'app.newWindow' },
   dropInNewWindow: { area: 'General', label: 'Open a folder dropped on the window in a new window (hold while dropping)', keys: ['shift'] },
+  workspaceInNewWindow: { area: 'General', label: 'Open the workspace in a new window, or Shift-click it (home screen, switcher, palette)', keys: ['shift+enter'] },
   commandLog: { area: 'General', label: 'Command log', keys: ['mod+shift+l'], commandId: 'app.commandLog' },
   toggleSidebar: { area: 'General', label: 'Collapse or expand the sidebar', keys: ['mod+\\'], commandId: 'app.sidebar' },
   appMenu: { area: 'General', label: 'Open the menu', keys: ['f10'], offMacOnly: true },

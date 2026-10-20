@@ -3,6 +3,7 @@ import type { RevisionRef } from '@shared/domain/revision';
 import { api } from '../../api/client';
 import { currentExternalApps } from '../../components/externalApps/externalApps';
 import { runVoidAction } from '../../app/operations/runOperation';
+import { isAffectedByPendingChangeEdit } from '../../app/refresh/refreshScopes';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
 
@@ -37,15 +38,20 @@ export async function saveVersionAs(workspacePath: string, version: RepositoryVe
   }
 }
 
-/** Loads an old revision's content into the workspace; the result shows up as a pending change. */
-export async function revertItemTo(workspacePath: string, path: string, changesetId: number): Promise<void> {
+/**
+ * Loads an old revision's content into the workspace; the result shows up as a pending change. `undoing`: the changeset
+ * whose change to the file this takes back, named in the confirmation too (a changeset's diff), as its parent's number
+ * alone leaves the user to work out which change goes. `cm revert` checks the
+ * file out, which may take its lock, so it refreshes what a checkout does.
+ */
+export async function revertItemTo(workspacePath: string, path: string, changesetId: number, undoing?: number): Promise<void> {
   const confirmed = await confirm({
-    title: `Revert ${path} to changeset ${changesetId}?`,
+    title: `Revert ${path} to changeset ${changesetId}${undoing === undefined ? '' : `, before changeset ${undoing}`}?`,
     message: 'The file will be checked out with the content it had in that changeset. Review and check it in from Changes.',
     confirmLabel: 'Revert file',
   });
   if (!confirmed) return;
 
-  const reverted = await runVoidAction(workspacePath, "Couldn't revert the file", () => api.history.revertTo(workspacePath, path, changesetId));
+  const reverted = await runVoidAction(workspacePath, "Couldn't revert the file", () => api.history.revertTo(workspacePath, path, changesetId), isAffectedByPendingChangeEdit);
   if (reverted) toast.success(`Reverted ${path}`, `Content from changeset ${changesetId} is now a pending change.`);
 }

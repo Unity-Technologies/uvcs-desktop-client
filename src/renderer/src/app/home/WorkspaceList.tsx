@@ -1,6 +1,7 @@
 import { forwardRef, useImperativeHandle, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { focusFirstItem, moveRovingFocus } from '../../lib/rovingFocus';
 import { HighlightQuery } from '../../ui/Highlight';
+import { windowAskedBy, workspaceOpener } from '../workspace/workspaceWindowChoice';
 import type { WorkspaceEntry } from './recentWorkspaces';
 import { firstMatch, searchedSections } from './searchedSections';
 import { WorkspaceRow } from './WorkspaceRow';
@@ -35,7 +36,8 @@ interface WorkspaceListProps {
 
 /**
  * The home screen's workspaces, in titled sections read as one list: ↑ and ↓ (and Page Up / Down) move between rows
- * across sections, Enter or a click opens one; Enter in the search field opens the first match.
+ * across sections, Enter or a click opens one (in a new window with Shift: `windowAskedBy`); Enter in the search field
+ * opens the first match.
  */
 export const WorkspaceList = forwardRef<WorkspaceListHandle, WorkspaceListProps>(function WorkspaceList({ sections, query, noMatches, onOpen, onLeaveTop }, ref) {
   const listRef = useRef<HTMLDivElement>(null);
@@ -48,7 +50,7 @@ export const WorkspaceList = forwardRef<WorkspaceListHandle, WorkspaceListProps>
         focusFirstItem(listRef.current, ROWS);
       } else if (event.key === 'Enter' && first) {
         event.preventDefault();
-        onOpen(first.workspace.path);
+        workspaceOpener(onOpen)(first.workspace.path, windowAskedBy(event, first));
       }
     },
   }));
