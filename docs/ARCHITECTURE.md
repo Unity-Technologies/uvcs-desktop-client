@@ -15,7 +15,7 @@ you touch:
 
 | Doc                                     | Covers                                                                         |
 | --------------------------------------- | ------------------------------------------------------------------------------ |
-| `features/diff.md`                      | Editing, discarding, stepping through changes, comparison methods, line breaks, images, review marks, highlighting memory |
+| `features/diff.md`                      | Comparing two branches, changesets or labels, editing, discarding, stepping through changes, comparison methods, line breaks, images, review marks, highlighting memory |
 | `features/model-diff.md`                | 3D models (FBX, OBJ, glTF): reading them as Unity imports them, what changed in Unity's terms, the 3D view, materials and textures where each version is, the disk or the repository at its point (`api.unityAssets`) |
 | `features/merge.md`                     | The merge page, conflict resolution, external merge tools, finishing a task    |
 | `features/incoming.md`                  | Incoming: changesets and their files, conflicts with your changes, updating    |
@@ -791,7 +791,9 @@ renderer/src/
   spec, full spec with `@repository`, comment, GUID), each with what it copies, and the toast names it ("Branch spec
   copied"); ⌘C in a list copies its first entry (`useCopyCommand`) unless text is selected. Items that open a dialog
   end with "…"; submenus hold real sets of choices, the choice made checked after its label (`checked`), so the icon
-  in front stays the item's own (an app's). `menuGrammar.test.ts` checks every builder and every place.
+  in front stays the item's own (an app's). `menuGrammar.test.ts` checks every builder and every place. A menu's
+  content is in a portal, but React bubbles its events to the row its trigger sits in: `ActionDropdownMenu` keeps its
+  clicks and mouse presses from reaching that row (picking from a changelist's "…" selected and folded it).
 - **Back buttons**: a page goes back with the mouse's back button and, on Windows, the Browser Back key (the `app-command`
   the main process forwards as `navigateBack`), once per press however it arrives (`useBackButtons`).
 - **Keyboard**: every shortcut is declared in `lib/shortcutRegistry.ts` and bound through `hotkey(id)`; the shortcuts sheet
@@ -817,8 +819,10 @@ renderer/src/
   screen already offers in place (updating the workspace: the incoming chip) stays out.
 - **Focus**: the list, tree or graph a view or page works on carries `MAIN_FOCUS` (`lib/mainFocus.ts`). `useMainFocus`
   focuses it after navigating and whenever focus falls to the document (a dialog, menu or popover closed), and hands it
-  list keys pressed while nothing has focus. Views keep their list's selection while away (`useViewSelection`). Lists
-  expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container.
+  list keys pressed while nothing has focus. A closing menu gives focus back to its trigger unless its action opened
+  a dialog or put the caret in a field ("Check in this changelist": the comment), which keep it (`focusAfterMenu`;
+  the action runs first, `runAfterMenuCloses`). Views keep their list's selection while away (`useViewSelection`).
+  Lists expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container.
 - **Filters**: every list's filter marks what made a row match, by the same rule. A filter field takes each word typed
   in any order, each found in one of the texts the row shows (`matchesWordFilter`; users by the name shown and as stored,
   `userFilterTexts`), and `HighlightQuery` marks those words in each cell; a path cut to fit finds them in the whole

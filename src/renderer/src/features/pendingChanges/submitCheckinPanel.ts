@@ -51,6 +51,7 @@ export async function checkinFromPanel(request: PanelCheckin, whileRunning: Whil
   );
   if (!checkedIn) return 'notCheckedIn';
   useCheckinDraftStore.getState().clearMessage(workspacePath);
+  useCheckinDraftStore.getState().endPrepared(workspacePath);
   return 'checkedIn';
 }
 
@@ -62,6 +63,7 @@ export async function shelveFromPanel(workspacePath: string, shelvable: PendingC
   if (!(await settleBeforeLeaving())) return false;
   const shelved = await whileRunning(() => shelveChanges(workspacePath, shelvable, joinComment(checkinDraftOf(workspacePath)), keep));
   if (shelved && !keep) useCheckinDraftStore.getState().clearMessage(workspacePath);
+  if (shelved) useCheckinDraftStore.getState().endPrepared(workspacePath);
   return shelved;
 }
 

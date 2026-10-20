@@ -17,7 +17,7 @@ vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { answerConfirms } from '../../testing/fakeDialogs';
 import { pressToastAction, shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
-import { absolutePath, addToSourceControl, checkout, deletePrivateFiles, undoChanges } from './pendingChangeOperations';
+import { absolutePath, addToSourceControl, checkout, deletePrivateFiles, undoChanges, undoChangesLabel } from './pendingChangeOperations';
 import { BACKUP_SHELVE_COMMENT } from './undoPlan';
 
 const ws = '/ws';
@@ -147,5 +147,12 @@ describe('adding and checking out', () => {
     const afterCheckout = watchRefreshes(ws);
     await checkout(ws, [change('art/hero.psd', ['changed'])]);
     expect(afterCheckout()).toEqual(['explorer', 'info', 'locks', 'pendingChanges', 'review']);
+  });
+});
+
+describe('undoChangesLabel', () => {
+  it('names one change alone, and counts several', () => {
+    expect(undoChangesLabel(1)).toBe('Undo changes…');
+    expect(undoChangesLabel(3)).toBe('Undo 3 changes…');
   });
 });
