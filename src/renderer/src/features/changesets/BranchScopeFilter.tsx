@@ -3,9 +3,9 @@ import { useMemo, useState } from 'react';
 import { PathLabel } from '../../components/PathLabel';
 import { FilterOptions } from '../../ui/FilterOptions';
 import { FilterPopover } from '../../ui/FilterPopover';
-import { CenteredSpinner } from '../../ui/Spinner';
 import { MenuChip } from '../../ui/ToggleChip';
 import { BranchSearchList } from '../branches/BranchSearchList';
+import { branchesRead } from '../branches/branchSearchRows';
 import { branchSwitcherGroups } from '../branches/branchSwitcherGroups';
 import { useRecentBranchGuids } from '../branches/recentBranches';
 import { useBranches } from '../branches/useBranches';
@@ -66,9 +66,8 @@ function chipName(scope: BranchScope): string {
 }
 
 function BranchList({ workspacePath, currentBranch, onPick }: { workspacePath: string; currentBranch: string | undefined; onPick: (name: string) => void }) {
-  const { data: branches } = useBranches();
+  const branchesQuery = useBranches();
   const recentGuids = useRecentBranchGuids(workspacePath);
-  const groups = useMemo(() => branches && branchSwitcherGroups(branches, recentGuids), [branches, recentGuids]);
-  if (!groups) return <CenteredSpinner />;
-  return <BranchSearchList groups={groups} currentBranch={currentBranch} onPick={(branch) => onPick(branch.name)} />;
+  const groups = useMemo(() => branchSwitcherGroups(branchesQuery.data ?? [], recentGuids), [branchesQuery.data, recentGuids]);
+  return <BranchSearchList groups={groups} currentBranch={currentBranch} onPick={(branch) => onPick(branch.name)} read={branchesRead(branchesQuery)} />;
 }

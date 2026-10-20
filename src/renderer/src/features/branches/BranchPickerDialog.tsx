@@ -1,8 +1,9 @@
+import { useMemo } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
-import { CenteredSpinner } from '../../ui/Spinner';
 import { BranchSearchList } from './BranchSearchList';
+import { branchesRead } from './branchSearchRows';
 import { useBranches } from './useBranches';
 
 interface PickBranchOptions {
@@ -18,12 +19,12 @@ export function pickBranch(options: PickBranchOptions): Promise<Branch | undefin
 }
 
 function BranchPickerDialog({ title, description, exclude, finish }: PickBranchOptions & { finish: (branch: Branch | undefined) => void }) {
-  const { data } = useBranches();
-  const branches = data?.filter((branch) => branch.name !== exclude);
+  const branchesQuery = useBranches();
+  const branches = useMemo(() => (branchesQuery.data ?? []).filter((branch) => branch.name !== exclude), [branchesQuery.data, exclude]);
 
   return (
     <Dialog title={title} description={description} width={520} onClose={() => finish(undefined)}>
-      {branches ? <BranchSearchList groups={[{ title: 'Branches', branches }]} onPick={finish} /> : <CenteredSpinner />}
+      <BranchSearchList groups={[{ title: 'Branches', branches }]} onPick={finish} read={branchesRead(branchesQuery)} />
     </Dialog>
   );
 }
