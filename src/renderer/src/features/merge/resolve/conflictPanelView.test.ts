@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FileContent } from '@shared/domain/content';
 import { LONGEST_DRAWN_LINE, LONGEST_EDITED_LINE } from '../../diff/viewer/longLines';
-import { effectiveView, editInAppUnavailable, mergedText, rendersVersions, textToEdit } from './conflictPanelView';
+import { effectiveView, editInAppUnavailable, hasBase, mergedText, rendersVersions, textToEdit } from './conflictPanelView';
 import type { FileConflictState } from './useFileConflicts';
 
 const text = (value: string): FileContent => ({ text: value, isBinary: false, size: value.length });
@@ -22,6 +22,18 @@ function stateOf(overrides: Partial<FileConflictState> = {}): FileConflictState 
     ...overrides,
   };
 }
+
+/** A file with a common ancestor: one a test keeps the base of. */
+const withBaseFile = (overrides: Partial<FileConflictState> = {}): FileConflictState =>
+  stateOf({ file: { ...stateOf().file, base: { kind: 'spec', spec: 'itemid:7#cs:4@game@local', fileName: 'src/a.ts' } }, ...overrides });
+
+describe('hasBase', () => {
+  it('offers keeping the base only for a file that has one: not one added on both sides', () => {
+    expect(hasBase(withBaseFile())).toBe(true);
+    expect(hasBase(stateOf())).toBe(false);
+    expect(hasBase(stateOf({ isBinary: true, document: undefined }))).toBe(false);
+  });
+});
 
 describe('effectiveView', () => {
   it('opens on the conflicts while any is left, then on what the merge changes', () => {
@@ -75,7 +87,7 @@ describe('mergedText', () => {
   it('is the resolved text, or the version kept whole', () => {
     expect(mergedText(stateOf({ decision: { kind: 'text', text: 'both' }, remainingConflicts: 0 }))).toBe('both');
     expect(mergedText(stateOf({ decision: { kind: 'wholeFile', side: 'source' }, remainingConflicts: 0 }))).toBe('theirs');
-    expect(mergedText(stateOf({ decision: { kind: 'wholeFile', side: 'base' }, remainingConflicts: 0 }))).toBe('base');
+    expect(mergedText(withBaseFile({ decision: { kind: 'wholeFile', side: 'base' }, remainingConflicts: 0 }))).toBe('base');
   });
 
   it('is nothing for a binary', () => {
