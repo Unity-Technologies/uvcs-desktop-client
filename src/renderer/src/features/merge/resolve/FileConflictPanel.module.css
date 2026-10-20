@@ -53,8 +53,15 @@
 .viewBar {
   display: flex;
   flex: none;
+  flex-wrap: wrap;
   align-items: center;
+  row-gap: var(--space-1);
   padding: var(--space-2) var(--space-3) 6px;
+}
+
+/* Nothing in it: a file with no views to pick whose arrows have nowhere to go (`ConflictNavigator` renders nothing). */
+.viewBar:empty {
+  display: none;
 }
 
 .count {

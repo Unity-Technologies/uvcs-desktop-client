@@ -10,19 +10,21 @@ import { pluralize } from '../../lib/text';
 import { hidesEveryRow } from '../../lib/hidesEveryRow';
 import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
+import { FileStepsContext, useFileSteps } from '../diff/viewer/fileSteps';
 import { defaultMergeComment } from '../mergeTask/mergeTaskSummary';
 import type { TaskMerge } from '../mergeTask/taskMerge';
 import { ResolveInWorkspaceMenu } from '../mergeTask/ResolveInWorkspaceMenu';
 import { TaskMergeOptions } from '../mergeTask/TaskMergeOptions';
 import { useFinishingTask } from '../mergeTask/useFinishingTask';
 import { conflictedFilesOf } from './conflictedFiles';
+import { conflictStepKeys } from './conflictSteps';
 import { MergeDetail } from './MergeDetail';
 import type { MergeCompletion } from './MergeCompleted';
 import { mergeLabels } from './mergeDescription';
 import { MergeHeader } from './MergeHeader';
 import { MergeItemList } from './MergeItemList';
 import { MergePanes } from './MergePanes';
-import { buildMergeItems, firstWaiting, inListOrder, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, mergeProgress, type MergeItem } from './mergeItems';
+import { buildMergeItems, firstWaiting, inListOrder, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, mergeProgress, needsDecision, type MergeItem } from './mergeItems';
 import { mergeItemMenu } from './mergeItemMenu';
 import { mergeItemTypes } from './mergeItemTypes';
 import { ResolveRunControl, useRunOffer } from './mergeTools/ResolveRunControl';
@@ -111,6 +113,18 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
     if (!selectedKey && items.length > 0) setSelection(singleSelection(rowKeyOf((firstWaiting(items, progress) ?? inListOrder(items)[0]!).key)));
   }, [selectedKey, items, progress, rowKeyOf]);
 
+  // A conflicting file's arrows go on past its first or last conflict to the files around it that wait for the user.
+  const conflictKeys = useMemo(() => conflictStepKeys(rows, selectedKey, (item) => item.kind === 'fileConflict' && needsDecision(item, progress)), [rows, selectedKey, progress]);
+  const conflictSteps = useFileSteps({
+    keys: conflictKeys,
+    current: selectedKey,
+    select: (key) => setSelection(singleSelection(key)),
+    pathOf: (key) => {
+      const item = mergeItemAt(items, rows, key);
+      return item?.kind === 'fileConflict' ? item.file.path : key;
+    },
+  });
+
   // A folder conflict is its folder's row in a tree and a row of its own in a list: switching keeps it selected.
   const listedKeys = useMemo(() => new Set(filter.visible.map(itemKey)), [filter.visible]);
   useSelectionFollowsItem(selectedKey, selected?.key, selection, setSelection, (key) => listedKeys.has(key), rowKeyOf);
@@ -185,18 +199,20 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
       }
       detail={
         hidesAll ? null : shown ? (
-          <MergeDetail
-            workspacePath={workspacePath}
-            item={shown}
-            progress={progress}
-            plan={plan}
-            labels={labels}
-            request={request}
-            toolActions={{ resolveIn: (key, tool) => void resolveInTool(key, tool), run: run.progress, runOffered: runPlans.length > 0 }}
-            onDecideFile={decide}
-            onStartOverFile={reset}
-            onResolveDirectory={resolveDirectoryConflict}
-          />
+          <FileStepsContext.Provider value={shown.kind === 'fileConflict' ? conflictSteps : null}>
+            <MergeDetail
+              workspacePath={workspacePath}
+              item={shown}
+              progress={progress}
+              plan={plan}
+              labels={labels}
+              request={request}
+              toolActions={{ resolveIn: (key, tool) => void resolveInTool(key, tool), run: run.progress, runOffered: runPlans.length > 0 }}
+              onDecideFile={decide}
+              onStartOverFile={reset}
+              onResolveDirectory={resolveDirectoryConflict}
+            />
+          </FileStepsContext.Provider>
         ) : selectedGroup ? (
           <EmptyState
             icon={<Folder size={24} />}

@@ -1,12 +1,14 @@
 import { UnresolvedFile, WorkerPoolContext } from '@pierre/diffs/react';
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, type RefObject } from 'react';
 import { Button } from '../../../ui/Button';
 import { useHighlightWorkers } from '../../diff/viewer/highlightWorkers';
 import { PaneScrollbars } from '../../diff/viewer/PaneScrollbars';
+import type { StepView } from '../../diff/viewer/useStepNavigation';
 import { highlightedLanguage, syntaxHighlighting } from '../../diff/viewer/syntaxHighlighting';
 import type { MergeLabels } from '../mergeDescription';
 import { conflictHunkCss, shortenBranch } from './conflictHunkCss';
-import { resolveConflictRegion, type ConflictRegionChoice } from './threeWayMerge';
+import { countConflictRegions, resolveConflictRegion, type ConflictRegionChoice } from './threeWayMerge';
+import { useConflictView } from './useConflictView';
 import { usePierreOptions } from './usePierreOptions';
 import styles from './ConflictHunks.module.css';
 import surface from './TextSurface.module.css';
@@ -17,6 +19,8 @@ interface ConflictHunksProps {
   /** The merged text, conflicts between markers. */
   text: string;
   labels: MergeLabels;
+  /** Receives this view's side of stepping through its conflicts (`ConflictNavigator`). */
+  viewRef: RefObject<StepView | null>;
   /** Absent while the conflicts can't be decided here (a merge tool has the file): labels only, no choices. */
   onChange?: (text: string) => void;
 }
@@ -25,9 +29,15 @@ interface ConflictHunksProps {
  * The merged file, read-only, shown with lone CRs as LFs; choices resolve the text with its own line breaks. Each conflict reads as two labeled blocks instead of raw markers: a header naming the
  * destination's side with the choices for this conflict, its lines, then the source's side and its lines.
  */
-export function ConflictHunks({ path, text, labels, onChange }: ConflictHunksProps) {
+export function ConflictHunks({ path, text, labels, viewRef, onChange }: ConflictHunksProps) {
   const pierreOptions = usePierreOptions(text);
   const surfaceRef = useRef<HTMLDivElement>(null);
+  const resolvedAt = useConflictView(viewRef, surfaceRef);
+  // Every choice for one conflict goes through here: the next move goes on to the conflict that takes its place.
+  const resolve = (index: number, resolvedText: string): void => {
+    resolvedAt(index, countConflictRegions(text));
+    onChange?.(resolvedText);
+  };
   const { source, destination } = labels.roles;
   // Highlighted like a read-only diff of its two sides, which Pierre highlights as a file each, about as long as the
   // text: in Pierre's workers past what the main thread highlights at once, plain past what's worth it.
@@ -63,7 +73,11 @@ export function ConflictHunks({ path, text, labels, onChange }: ConflictHunksPro
                 <span className={styles.branch}>{shortenBranch(labels.destination)}</span>
               </span>
               {onChange && (
-                <HunkChoices labels={labels} conflictIndex={action.conflictIndex} onChoose={(choice) => onChange(resolveConflictRegion(text, action.conflictIndex, choice))} />
+                <HunkChoices
+                  labels={labels}
+                  conflictIndex={action.conflictIndex}
+                  onChoose={(choice) => resolve(action.conflictIndex, resolveConflictRegion(text, action.conflictIndex, choice))}
+                />
               )}
             </div>
           )}

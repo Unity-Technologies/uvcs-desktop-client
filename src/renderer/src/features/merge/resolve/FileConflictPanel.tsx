@@ -1,5 +1,5 @@
 import { ChevronDown, FileCheck2, PencilLine, RotateCcw } from 'lucide-react';
-import { Suspense, useState } from 'react';
+import { Suspense, useRef, useState } from 'react';
 import { PathLabel } from '../../../components/PathLabel';
 import { SEPARATOR } from '../../../lib/actions';
 import { lazyComponent } from '../../../lib/lazyComponent';
@@ -7,14 +7,16 @@ import { fileNameOf, pluralize } from '../../../lib/text';
 import { Button } from '../../../ui/Button';
 import { ActionDropdownMenu } from '../../../ui/menu/ActionDropdownMenu';
 import { SegmentedControl } from '../../../ui/SegmentedControl';
+import { STEP_FRAME, type StepView } from '../../diff/viewer/useStepNavigation';
 import { ConflictStatusChip } from '../ConflictStatusChip';
 import type { MergeLabels } from '../mergeDescription';
 import { MergeToolButton, type ConflictToolActions } from '../mergeTools/MergeToolButton';
 import { MergeToolOpenBanner } from '../mergeTools/MergeToolOpenBanner';
 import { fileConflictStatus, fileConflictTool } from '../mergeStatus';
 import { chosenConflictChoice, decisionFor, hasConflicts, type ConflictChoice } from './conflictChoices';
+import { FRESH_PANEL, conflictsToStep, editInAppUnavailable, effectiveView, hasBase, justDecided, rememberConflicts, rendersVersions, type PanelMemory, type PanelView } from './conflictPanelView';
+import { ConflictNavigator } from './ConflictNavigator';
 import { openableVersions } from './conflictVersionOpening';
-import { editInAppUnavailable, effectiveView, hasBase, rendersVersions, type PanelView } from './conflictPanelView';
 import type { FileConflictDecision } from './fileConflictDecision';
 import { KeepChoices } from './KeepChoices';
 import { OpenVersionMenu } from './OpenVersionMenu';
@@ -24,6 +26,9 @@ import styles from './FileConflictPanel.module.css';
 // The versions and the merged text (Pierre, the 3D model viewer) load on first use, under the panel's header and
 // choices, which show at once.
 const ConflictBody = lazyComponent(() => import('./ConflictBody').then((module) => module.ConflictBody));
+
+/** A binary's choice is one conflict, the whole file, on screen as soon as the panel is. */
+const WHOLE_FILE_CHOICE: StepView = { isShown: () => true, reveal: () => undefined, countAbove: () => 0, aboveAfterChange: () => 0 };
 
 interface FileConflictPanelProps {
   workspacePath: string;
@@ -42,7 +47,12 @@ interface FileConflictPanelProps {
  * merges automatically can only be overridden by keeping one version.
  */
 export function FileConflictPanel({ workspacePath, state, labels, yoursInWorkspace, toolActions, onDecide, onStartOver }: FileConflictPanelProps) {
-  const [chosenView, setChosenView] = useState<PanelView>();
+  // The view picked, and whether the file showed conflicts: a file decided here keeps its conflict arrows.
+  const [memory, setMemory] = useState<PanelMemory>(FRESH_PANEL);
+  const remembered = rememberConflicts(memory, state);
+  if (remembered.remaining !== memory.remaining || remembered.sawConflicts !== memory.sawConflicts) setMemory(remembered);
+  const chosenView = remembered.chosen;
+  const setChosenView = (chosen: PanelView): void => setMemory((current) => ({ ...current, chosen }));
   /** While resolving by hand: the user's decision before, to put back if they discard their edits. */
   const [editingFrom, setEditingFrom] = useState<{ decision: FileConflictDecision | undefined }>();
   const editing = editingFrom !== undefined;
@@ -53,6 +63,19 @@ export function FileConflictPanel({ workspacePath, state, labels, yoursInWorkspa
   const { source, destination } = labels.roles;
   // A binary's versions open in other apps from its toolbar and its cards: deciding often means looking at them there.
   const versions = state.isBinary ? openableVersions(state, { workspacePath, labels, yoursInWorkspace }) : [];
+  const panelRef = useRef<HTMLDivElement>(null);
+  const conflictView = useRef<StepView>(null);
+  // Its last conflict resolved here, the file keeps the conflict arrows: they go straight on to the next file.
+  const conflictCount = editing ? null : conflictsToStep(view, state, justDecided(remembered, state));
+  const conflictsOnScreen: StepView = {
+    isShown: () => conflictView.current?.isShown() ?? false,
+    reveal: (index) => conflictView.current?.reveal(index),
+    countAbove: () => conflictView.current?.countAbove() ?? 0,
+    aboveAfterChange: (count) => conflictView.current?.aboveAfterChange(count) ?? 0,
+  };
+  const navigator = conflictCount !== null && (
+    <ConflictNavigator count={conflictCount} view={view === 'choice' ? WHOLE_FILE_CHOICE : conflictsOnScreen} frame={panelRef} path={state.file.path} />
+  );
 
   const choose = (choice: ConflictChoice): void => {
     if (choice === 'byHand') setEditingFrom({ decision: state.decidedByUser ? state.decision : undefined });
@@ -77,7 +100,7 @@ export function FileConflictPanel({ workspacePath, state, labels, yoursInWorkspa
   );
 
   return (
-    <div className={styles.panel}>
+    <div ref={panelRef} className={styles.panel} {...STEP_FRAME}>
       <div className={styles.toolbar}>
         <div className={styles.file}>
           <PathLabel path={state.file.path} fitContent />
@@ -135,9 +158,10 @@ export function FileConflictPanel({ workspacePath, state, labels, yoursInWorkspa
         <MergeToolOpenBanner fileName={fileNameOf(state.file.path)} open={state.openTool} run={toolActions.run?.currentKey === state.file.key ? toolActions.run : null} />
       )}
 
-      {(canMergeLines || rendersVersions(state)) && !editing && (
+      {(canMergeLines || rendersVersions(state) || navigator) && !editing && (
         <div className={styles.viewBar}>
-          <SegmentedControl<PanelView> value={view} onChange={setChosenView} segments={viewSegments(state, labels)} />
+          {(canMergeLines || rendersVersions(state)) && <SegmentedControl<PanelView> value={view} onChange={setChosenView} segments={viewSegments(state, labels)} />}
+          {navigator}
         </div>
       )}
 
@@ -149,6 +173,8 @@ export function FileConflictPanel({ workspacePath, state, labels, yoursInWorkspa
           versions={versions}
           view={view}
           editing={editing}
+          conflictViewRef={conflictView}
+          changeArrows={conflictCount === null}
           onDecide={onDecide}
         />
       </Suspense>

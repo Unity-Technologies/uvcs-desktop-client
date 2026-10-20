@@ -61,7 +61,11 @@ export function lineAtTopOf(container: HTMLElement, blocks: ChangeBlock[]): numb
   return null;
 }
 
-function scrollToRows(container: HTMLElement, first: Element, last: Element[], smooth: boolean): void {
+/**
+ * Scrolls `container` so the rows from `first` to `last` start a few rows from the top, unless they're all in view:
+ * a diff's change, a merged file's conflict.
+ */
+export function scrollToRows(container: HTMLElement, first: Element, last: Element[], smooth: boolean): void {
   const view = container.getBoundingClientRect();
   const top = first.getBoundingClientRect().top;
   const bottom = Math.max(...[first, ...last].map((row) => row.getBoundingClientRect().bottom));

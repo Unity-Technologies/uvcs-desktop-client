@@ -1,7 +1,7 @@
 import { parseDiffFromFile } from '@pierre/diffs';
 import { describe, expect, it } from 'vitest';
 import { listChangeBlocks, listChangeRegions } from './changeBlocks';
-import { adjacentChange, arrivalChange, changePositionLabel, changesAbove, currentAfterChange, modifiedLineAt, plannedMove } from './changeNavigation';
+import { adjacentChange, arrivalChange, positionLabel, changesAbove, currentAfterChange, modifiedLineAt, plannedMove } from './changeNavigation';
 
 const lines = (...items: string[]) => items.map((item) => `${item}\n`).join('');
 const blocksOf = (original: string, modified: string) => listChangeBlocks(parseDiffFromFile({ name: 'a.ts', contents: original }, { name: 'a.ts', contents: modified }));
@@ -34,8 +34,8 @@ describe('adjacentChange', () => {
 
 describe('plannedMove', () => {
   it('moves to the next or previous change while there is one', () => {
-    expect(plannedMove({ count: 3, current: 1, above: 0 }, 1, true)).toEqual({ to: 'change', index: 2 });
-    expect(plannedMove({ count: 3, current: null, above: 2 }, -1, true)).toEqual({ to: 'change', index: 1 });
+    expect(plannedMove({ count: 3, current: 1, above: 0 }, 1, true)).toEqual({ to: 'step', index: 2 });
+    expect(plannedMove({ count: 3, current: null, above: 2 }, -1, true)).toEqual({ to: 'step', index: 1 });
   });
 
   it('goes on to the file beside the diff past its last or first change, or nowhere without one', () => {
@@ -94,15 +94,15 @@ describe('currentAfterChange', () => {
   });
 });
 
-describe('changePositionLabel', () => {
+describe('positionLabel', () => {
   it('counts the changes, then says which one is current', () => {
-    expect(changePositionLabel({ count: 12, current: null })).toBe('12 changes');
-    expect(changePositionLabel({ count: 1, current: null })).toBe('1 change');
-    expect(changePositionLabel({ count: 1200, current: 2 })).toBe('3 of 1,200');
+    expect(positionLabel({ count: 12, current: null }, 'change')).toBe('12 changes');
+    expect(positionLabel({ count: 1, current: null }, 'change')).toBe('1 change');
+    expect(positionLabel({ count: 1200, current: 2 }, 'change')).toBe('3 of 1,200');
   });
 
   it('says there are none in a file only stepped past (an image, identical versions)', () => {
-    expect(changePositionLabel({ count: 0, current: null })).toBe('No changes');
+    expect(positionLabel({ count: 0, current: null }, 'change')).toBe('No changes');
   });
 });
 
