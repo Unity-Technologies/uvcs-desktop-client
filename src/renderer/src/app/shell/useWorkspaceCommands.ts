@@ -28,6 +28,7 @@ import { openTaskWorkspaceDialog } from '../../features/taskWorkspace/TaskWorksp
 import type { Icon } from '../../lib/actions';
 import { useMemo } from 'react';
 import { useCommands, type Command } from '../commands/commandStore';
+import { viewCommands } from '../commands/viewCommands';
 import { navigation } from '../navigation/navigationStore';
 import { VIEWS } from '../navigation/viewRegistry';
 import { invalidateWorkspace } from '../queryClient';
@@ -63,14 +64,7 @@ export function useWorkspaceCommands(): void {
 
   const commands = useMemo<Command[]>(
     () => [
-      ...VIEWS.map((view) => ({
-        id: `goto.${view.id}`,
-        group: 'Go to',
-        label: view.label,
-        icon: view.icon,
-        shortcut: view.shortcut,
-        run: () => navigation.goToView(view.id),
-      })),
+      ...viewCommands(VIEWS, navigation.goToView),
       {
         id: 'workspace.update',
         group: 'Workspace',
