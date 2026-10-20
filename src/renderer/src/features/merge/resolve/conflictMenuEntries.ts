@@ -22,18 +22,20 @@ export interface ConflictMenuContext extends VersionOpeningContext {
 /**
  * What the conflicting files selected add to the menu of a list of changed files, the same on the merge page and in
  * Incoming: one of them, "Resolve in <tool>" and "Open version ▸" with each side's version and the base; any, Keep
- * yours or incoming (`keepVersionEntries`); one the user decided, Start over. Nothing is read to build it.
+ * yours or incoming (`keepVersionEntries`); one the user decided, Start over. A file a tool (or Smart Merge) has open
+ * is settled by its outcome, as its toolbar says: nothing here decides it meanwhile. Nothing is read to build it.
  */
 export function conflictMenuEntries(selected: FileConflictState[], context: ConflictMenuContext): GroupedEntry[] {
   const single = selected.length === 1 ? selected[0]! : null;
+  const settleable = selected.filter((state) => !state.openTool);
   return [
     ...(single ? singleConflictEntries(single, context) : []),
     ...keepVersionEntries(
-      selected.map((state) => state.file.key),
+      settleable.map((state) => state.file.key),
       context.labels,
       context.decide,
     ),
-    ...(single?.decidedByUser ? [menuAction('startOver', () => context.reset(single.file.key))] : []),
+    ...(single?.decidedByUser && !single.openTool ? [menuAction('startOver', () => context.reset(single.file.key))] : []),
   ];
 }
 

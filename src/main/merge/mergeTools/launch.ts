@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, type SpawnOptionsWithStdioTuple, type StdioNull, type StdioPipe } from 'node:child_process';
 import { spawnCommand } from '../../system/apps/spawnCommand';
 
 /**
@@ -16,15 +16,20 @@ export interface ToolRun {
 }
 
 /**
- * Runs the tool and waits until it exits. Its output is a pipe, which is what keeps `opendiff` waiting for FileMerge.
- * Rejects when it can't be started at all.
+ * How a tool is started. Its output is a pipe, which is what keeps `opendiff` waiting for FileMerge. `hidden`: it
+ * works without a window (Smart Merge), so Windows opens no console for it; a merge tool's window stays visible.
  */
-export function launchMergeTool(executable: string, args: string[], signal: AbortSignal): Promise<ToolRun> {
+export function toolSpawnOptions({ verbatim, signal, hidden }: { verbatim: boolean; signal: AbortSignal; hidden: boolean }): SpawnOptionsWithStdioTuple<StdioNull, StdioPipe, StdioPipe> {
+  return { stdio: ['ignore', 'pipe', 'pipe'], windowsVerbatimArguments: verbatim, windowsHide: hidden, signal, killSignal: 'SIGTERM' };
+}
+
+/** Runs the tool and waits until it exits (`toolSpawnOptions`). Rejects when it can't be started at all. */
+export function launchMergeTool(executable: string, args: string[], signal: AbortSignal, { hidden = false } = {}): Promise<ToolRun> {
   const { command, commandArgs, verbatim } = spawnCommand(process.platform, executable, args);
   const started = Date.now();
   const ran = (exitCode: number | null, errorOutput: string): ToolRun => ({ exitCode, errorOutput: errorOutput.trim(), seconds: (Date.now() - started) / 1000 });
   return new Promise((resolve, reject) => {
-    const child = spawn(command, commandArgs, { stdio: ['ignore', 'pipe', 'pipe'], windowsVerbatimArguments: verbatim, signal, killSignal: 'SIGTERM' });
+    const child = spawn(command, commandArgs, toolSpawnOptions({ verbatim, signal, hidden }));
     let errorOutput = '';
     child.stdout.resume();
     child.stderr.on('data', (chunk: Buffer) => (errorOutput = (errorOutput + chunk.toString()).slice(-2000)));

@@ -2,8 +2,8 @@ import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { MergeToolRequest } from '@shared/domain/mergeTools';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { MergeToolRequest, SmartMergeRequest, SmartMergeTool } from '@shared/domain/mergeTools';
 import { cmFails, fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { launchMergeTool } from '../merge/mergeTools/launch';
 import { memorySettings } from '../settings/testing/memorySettings';
@@ -36,10 +36,12 @@ const CAT_VERSIONS: CmAnswer = async ({ args }) => {
   return '';
 };
 
-function mergeTools(answers: Record<string, CmAnswer>) {
+/** `smartMerge`: where Smart Merge is, standing in for this machine's Unity Editors; none by default. */
+function mergeTools(answers: Record<string, CmAnswer>, smartMerge: SmartMergeTool | null = null) {
   const fake = fakeCmClient(answers);
   const settings = memorySettings({ mergeTool: MY_TOOL.id, customMergeTools: [MY_TOOL], mergeToolArgs: {} });
-  return { ...fake, service: createMergeToolsService(serviceContext(fake.cm, { settings }), { installedApps: { get: async () => NO_INSTALLED_APPS } as never, icons: new AppIcons('linux', async () => undefined) }) };
+  const apps = { installedApps: { get: async () => NO_INSTALLED_APPS } as never, icons: new AppIcons('linux', async () => undefined) };
+  return { ...fake, service: createMergeToolsService(serviceContext(fake.cm, { settings }), apps, () => smartMerge) };
 }
 
 /** The tool as launched: its arguments and what each file held when it opened. */
@@ -113,5 +115,141 @@ describe('resolving a file in a merge tool', () => {
     await service.stopWaiting(REQUEST.sessionId);
 
     expect(await resolving).toEqual({ kind: 'unchanged', exitCode: null, errorOutput: '' });
+  });
+});
+
+describe('Smart Merge', () => {
+  const SMART_MERGE: SmartMergeTool = { executable: join(tmpdir(), 'Unity', 'UnityYAMLMerge'), editorVersion: '6000.3.19f1' };
+  const UNITY_HEADER = '%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n';
+  const PREFAB: SmartMergeRequest = {
+    sessionId: 'session-2',
+    path: 'Assets/Player.prefab',
+    base: `${UNITY_HEADER}base\n`,
+    yours: `${UNITY_HEADER}yours\n`,
+    incoming: `${UNITY_HEADER}incoming\n`,
+  };
+
+  /** Smart Merge ends with `exitCode` after writing `written` to the result; what it was given, as files. */
+  function smartMergeEnds(exitCode: number | null, written: string, errorOutput = '') {
+    const seen: { args: string[]; hidden: boolean | undefined; files: string[] }[] = [];
+    vi.mocked(launchMergeTool).mockImplementation(async (_executable, args, _signal, options) => {
+      seen.push({ args, hidden: options?.hidden, files: await Promise.all(args.slice(-4, -1).map((file) => readFile(file, 'utf8'))) });
+      await writeFile(args.at(-1)!, written);
+      return { exitCode, errorOutput, seconds: 0.2 };
+    });
+    return seen;
+  }
+
+  beforeEach(() => {
+    vi.mocked(launchMergeTool).mockReset();
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('merges a Unity asset from the versions given, hidden and with no fallback tool, reading nothing from cm', async () => {
+    const seen = smartMergeEnds(0, `${UNITY_HEADER}merged\n`);
+    const { service, commands } = mergeTools({}, SMART_MERGE);
+
+    expect(await service.smartMerge(PREFAB)).toEqual({ kind: 'merged', text: `${UNITY_HEADER}merged\n` });
+    expect(commands).toEqual([]);
+    const [{ args, hidden, files }] = seen as [(typeof seen)[number]];
+    expect(hidden).toBe(true);
+    expect(args.slice(0, 5)).toEqual(['merge', '-h', '--force', '--fallback', 'none']);
+    expect(args.slice(-4).map((file) => file.split(/[\\/]/).pop())).toEqual(['Player.BASE.prefab', 'Player.INCOMING.prefab', 'Player.YOURS.prefab', 'Player.prefab']);
+    expect(files).toEqual([PREFAB.base, PREFAB.incoming, PREFAB.yours]);
+  });
+
+  it('never takes its half merge when it leaves conflicts', async () => {
+    smartMergeEnds(2, `${UNITY_HEADER}base values where they disagree\n`);
+    const { service } = mergeTools({}, SMART_MERGE);
+
+    expect(await service.smartMerge(PREFAB)).toEqual({ kind: 'notMerged' });
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it('merges a file whose base revision was empty from an asset with no objects, as it refuses an empty base', async () => {
+    const seen = smartMergeEnds(0, `${UNITY_HEADER}both\n`);
+    const { service } = mergeTools({}, SMART_MERGE);
+
+    await service.smartMerge({ ...PREFAB, base: '' });
+
+    expect(seen[0]!.files[0]).toBe(UNITY_HEADER);
+  });
+
+  it('leaves the file to the tool when it can’t start or fails, and says why in the console', async () => {
+    vi.mocked(launchMergeTool).mockRejectedValueOnce(new Error("Couldn't start UnityYAMLMerge: it is not there anymore"));
+    const { service } = mergeTools({}, SMART_MERGE);
+
+    expect(await service.smartMerge(PREFAB)).toEqual({ kind: 'notMerged' });
+    smartMergeEnds(1, '', "Error parsing file 'Player.BASE.prefab'");
+    expect(await service.smartMerge(PREFAB)).toEqual({ kind: 'notMerged' });
+
+    expect(vi.mocked(console.warn).mock.calls.map((call) => call.join(' '))).toEqual([
+      "[smart merge] Assets/Player.prefab: Couldn't start UnityYAMLMerge: it is not there anymore",
+      "[smart merge] Assets/Player.prefab: exit code 1 Error parsing file 'Player.BASE.prefab'",
+    ]);
+  });
+
+  it('runs nothing without a Unity Editor, or on sides that aren’t Unity assets', async () => {
+    smartMergeEnds(0, 'never');
+    const withoutUnity = mergeTools({}).service;
+    const withUnity = mergeTools({}, SMART_MERGE).service;
+
+    expect(await withoutUnity.smartMerge(PREFAB)).toEqual({ kind: 'notMerged' });
+    expect(await withUnity.smartMerge({ ...PREFAB, yours: 'fileFormatVersion: 2\n' })).toEqual({ kind: 'notMerged' });
+    expect(launchMergeTool).not.toHaveBeenCalled();
+  });
+
+  it('stops when the user stops it', async () => {
+    let started: () => void = () => undefined;
+    const smartMergeStarted = new Promise<void>((resolve) => (started = resolve));
+    vi.mocked(launchMergeTool).mockImplementation((_executable, _args, signal) => {
+      started();
+      return new Promise((resolve) => signal.addEventListener('abort', () => resolve({ exitCode: null, errorOutput: '', seconds: 1 })));
+    });
+    const { service } = mergeTools({}, SMART_MERGE);
+
+    const merging = service.smartMerge(PREFAB);
+    await smartMergeStarted;
+    await service.stopWaiting(PREFAB.sessionId);
+
+    expect(await merging).toEqual({ kind: 'stopped' });
+  });
+
+  it('says it was stopped when the user stops it as it exits on its own, so no tool opens after', async () => {
+    let started: () => void = () => undefined;
+    const smartMergeStarted = new Promise<void>((resolve) => (started = resolve));
+    vi.mocked(launchMergeTool).mockImplementation((_executable, _args, signal) => {
+      started();
+      // It ends with its own exit code (conflicts left), the stop arriving too late to kill it.
+      return new Promise((resolve) => signal.addEventListener('abort', () => resolve({ exitCode: 2, errorOutput: '', seconds: 1 })));
+    });
+    const { service } = mergeTools({}, SMART_MERGE);
+
+    const merging = service.smartMerge(PREFAB);
+    await smartMergeStarted;
+    await service.stopWaiting(PREFAB.sessionId);
+
+    expect(await merging).toEqual({ kind: 'stopped' });
+  });
+
+  it('starts merge tools with their window shown', async () => {
+    vi.mocked(launchMergeTool).mockResolvedValue({ exitCode: 0, errorOutput: '', seconds: 30 });
+    const { service } = mergeTools({ cat: CAT_VERSIONS }, SMART_MERGE);
+
+    await service.resolve(WORKSPACE, REQUEST);
+
+    expect(vi.mocked(launchMergeTool).mock.calls.map(([executable, , , options]) => [executable, options?.hidden ?? false])).toEqual([[MY_TOOL.executable, false]]);
+  });
+
+  it('lists Smart Merge apart from the tools to pick', async () => {
+    const { service } = mergeTools({}, SMART_MERGE);
+
+    const { tools, smartMerge } = await service.list();
+    expect(smartMerge).toEqual(SMART_MERGE);
+    expect(tools.map((tool) => tool.executable)).not.toContain(SMART_MERGE.executable);
   });
 });

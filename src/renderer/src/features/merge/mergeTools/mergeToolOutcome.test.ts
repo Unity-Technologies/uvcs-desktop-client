@@ -21,6 +21,21 @@ describe('toolOutcomeMessage', () => {
     });
   });
 
+  it('says Smart Merge merged a Unity asset', () => {
+    expect(toolOutcomeMessage({ kind: 'resolved', text: 'x\n' }, 'Smart Merge', 'Player.prefab')).toEqual({
+      kind: 'success',
+      title: 'Merged Player.prefab with Smart Merge',
+    });
+  });
+
+  it('says Smart Merge was stopped, which has nothing saved to speak of', () => {
+    expect(toolOutcomeMessage({ kind: 'unchanged', exitCode: null, errorOutput: '' }, 'Smart Merge', 'Player.prefab')).toEqual({
+      kind: 'info',
+      title: 'Stopped Smart Merge',
+      detail: 'Player.prefab still needs your decision.',
+    });
+  });
+
   it('says nothing changed when the tool closed without saving, with its error if it failed', () => {
     expect(toolOutcomeMessage({ kind: 'unchanged', exitCode: 0, errorOutput: '' }, 'KDiff3', 'a.ts')).toEqual({
       kind: 'info',

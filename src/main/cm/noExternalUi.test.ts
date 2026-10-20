@@ -109,8 +109,10 @@ describe('merge tools open only on the user’s request', () => {
     expect(launching).toEqual(['services/createServices.ts']);
   });
 
-  it('launches merge tools only from the service behind "Resolve in…"', () => {
-    const launching = allSources.filter(({ source }) => /from '[./]*(merge\/)?mergeTools\/launch'/.test(source)).map(({ file }) => relative(file));
+  it('launches merge tools (and Smart Merge) only from the service behind "Resolve in…"', () => {
+    // Any value import of `launch`, a sibling's `./launch` included; `import type` starts nothing.
+    const importsLaunch = /^import (?!type )[^;]*from '(\.\/|[./]*(merge\/)?mergeTools\/)launch';/m;
+    const launching = allSources.filter(({ source }) => importsLaunch.test(source)).map(({ file }) => relative(file));
     expect(launching).toEqual(['services/mergeToolsService.ts']);
   });
 });

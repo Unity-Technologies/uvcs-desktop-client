@@ -1,7 +1,9 @@
 import { AppWindow } from 'lucide-react';
+import { SMART_MERGE_NAME } from '@shared/domain/mergeTools';
 import { api } from '../../../api/client';
 import { Button } from '../../../ui/Button';
 import { Spinner } from '../../../ui/Spinner';
+import { stopMergeToolSession } from './mergeToolSessions';
 import type { OpenTool } from './resolveInMergeTool';
 import { runPositionText, type RunProgress } from './resolveRun';
 import styles from './MergeToolOpenBanner.module.css';
@@ -13,9 +15,27 @@ interface MergeToolOpenBannerProps {
   run: RunProgress | null;
 }
 
-/** While a merge tool has the file open: what to do there, and a way back if the tool is lost or done. */
+/**
+ * While a merge tool has the file open: what to do there, and a way back if the tool is lost or done. While Smart
+ * Merge merges it there's nothing to do but wait, or stop it.
+ */
 export function MergeToolOpenBanner({ fileName, open, run }: MergeToolOpenBannerProps) {
   const last = run && run.position === run.total - 1;
+  if (open.toolName === SMART_MERGE_NAME) {
+    return (
+      <div className={styles.banner} role="status">
+        <Spinner size={13} />
+        <span className={styles.text}>
+          Merging <strong>{fileName}</strong> with Smart Merge…
+        </span>
+        {!run && (
+          <Button size="small" variant="ghost" data-tip="Leaves the file as it was" onClick={() => void stopMergeToolSession(open.sessionId)}>
+            Stop
+          </Button>
+        )}
+      </div>
+    );
+  }
   return (
     <div className={styles.banner} role="status">
       <Spinner size={13} />
@@ -29,7 +49,7 @@ export function MergeToolOpenBanner({ fileName, open, run }: MergeToolOpenBanner
         </Button>
       )}
       {!run && (
-        <Button size="small" variant="ghost" data-tip="Takes what was saved so far" onClick={() => void api.mergeTools.stopWaiting(open.sessionId)}>
+        <Button size="small" variant="ghost" data-tip="Takes what was saved so far" onClick={() => void stopMergeToolSession(open.sessionId)}>
           Stop waiting
         </Button>
       )}
