@@ -233,7 +233,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
           </div>
         }
         second={
-          panesState === 'reading' ? null : panesState === 'nothingPending' ? (
+          panesState === 'reading' || panesState === 'noMatches' ? null : panesState === 'nothingPending' ? (
             nothingPending
           ) : (
             <ChangeSelectionPane

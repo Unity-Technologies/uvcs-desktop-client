@@ -677,7 +677,7 @@ renderer/src/
   - Nothing there: the list keeps its pane (its count reads 0) and the empty state takes the details pane
     (`changesPanesState`, `objectListState`).
   - Filters hide everything: "No matching …" in the list, under its column titles (`DataTable`'s `empty`), beside
-    the details' no-selection state.
+    a blank details pane: there is nothing to select.
   - Only an error reading the whole view, and an outcome that ends a page (not on a branch, nothing to merge), take
     the whole body.
   - Every view and page is in the startup bundle (`viewRegistry`, `pageRegistry`), so none paints a fallback it then
