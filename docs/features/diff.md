@@ -263,6 +263,32 @@ most) and are painted from a blob URL that lives while it's shown (`useImageUrl`
 a 25 MB PNG, decoded again at every paint). The URL is revoked as the image changes, so what is painted is only ever
 the decode of the image's current URL (`shownDecodeState`): an `<img>` still given the one before fails to load.
 
+## Unity's texture formats
+
+TGA, TIFF, Photoshop (PSD and PSB), OpenEXR and Radiance HDR show in the image diff like any other image: every mode,
+the info strip, the pixel inspector, and the merge page's version cards (`WholeFileChoice`). Main reads them as images
+of their own type (`DECODED_IMAGE_TYPES`, by extension, within `MAX_IMAGE_BYTES` as every image), and the renderer
+makes each into an image the browser paints before anything shows it (`usePaintableImage`):
+
+- **Off the UI thread**: in the image decode worker (`imageDecode.worker`, `imageDecodeSession`: one worker, two
+  decodes at a time, one decode per image while it runs), never on the page's thread, where a 4K PSD or EXR would hold
+  a paint; a worker that can't start or dies fails the image. The decoders are the model diff's textures' own
+  (`lib/images`: `decodePixels`, three's loaders for TGA, TIFF, EXR and HDR, `readPsd` for Photoshop), loaded only in
+  the worker.
+- **By content first** (`imageFormatOfContent`: a PNG saved as `.tga` paints as the PNG it is), else by its type; its
+  size read from the header and refused past 16384 px a side or 8192² pixels before decoding (`sizeProblem`).
+- **As a BMP** (`bmpOf`): the decoded pixels are written as a 32-bit BMP with an alpha mask, which `<img>` reads as it
+  is: no compression to spend time on, and a see-through pixel keeps its color. A PNG made through a canvas was set
+  aside: the canvas premultiplies alpha, losing the color of every transparent pixel, and encoding takes long.
+- **High dynamic range** (EXR, HDR) shows as the model diff's textures do: clamped to 0-1 and encoded as sRGB. The info
+  strip says so ("HDR, clamped"), and the pixel inspector tells the colors shown, "as shown", not the file's values.
+  16-bit channels show as 8 bits.
+- **What can't be painted** (a PSD saved without "Maximize Compatibility" or in CMYK, Lab, indexed or 32 bits, a header
+  past the limit, a damaged file) shows the binary diff's sizes and why, in the texture problems' words
+  (`undecodedDescription`, `imageProblemWords`); a merge card shows its file icon with why in its tooltip
+  (`undecodedTip`). A PSD over `MAX_IMAGE_BYTES` (40 MB) is "too large to preview", as any image.
+- Nothing is kept once a viewer goes: going back to a file decodes it again.
+
 ## Images written as text
 
 An SVG reads as both (`toFileContent` ships its text and its image; past the text cap,
