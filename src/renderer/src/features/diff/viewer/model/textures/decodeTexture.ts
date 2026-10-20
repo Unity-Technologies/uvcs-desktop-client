@@ -6,7 +6,7 @@
 
 import { decodePixels } from '../../../../../lib/images/decodePixels';
 import { fittedSize } from './textureBudget';
-import { imageSizeOf, sizeProblem, textureFormatOf } from '../../../../../lib/images/textureFormats';
+import { imageFormatOf, imageSizeOf, sizeProblem } from '../../../../../lib/images/imageFormats';
 import { bitmapIsOpaque } from './textureOpacity';
 import type { TextureProblem } from './textureProblems';
 
@@ -23,7 +23,7 @@ export interface TextureDecodeRequest {
 export type TextureDecoded = { kind: 'decoded'; bitmap: ImageBitmap; opaque: boolean } | { kind: 'failed'; problem: TextureProblem };
 
 export async function decodeTexture({ bytes, name, longest, flipY }: TextureDecodeRequest): Promise<TextureDecoded> {
-  const format = textureFormatOf(name);
+  const format = imageFormatOf(name);
   if (format === 'unsupported') return { kind: 'failed', problem: 'unsupportedFormat' };
   const size = imageSizeOf(bytes, name);
   if (!size) return { kind: 'failed', problem: 'unreadable' };

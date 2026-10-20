@@ -1,7 +1,7 @@
 // What the Materials look spends on textures, so a model with a hundred 8K maps still shows at once and fits the GPU:
 // how many files it decodes, how large each is drawn, and what it refuses unread.
 
-import type { ImageSize } from '../../../../../lib/images/textureFormats';
+import type { ImageSize } from '../../../../../lib/images/imageFormats';
 
 /** The most texture files one model's look decodes; those past it say so. */
 export const MAX_TEXTURE_FILES = 64;

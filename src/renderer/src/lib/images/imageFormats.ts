@@ -5,9 +5,9 @@
  * How a texture decodes: by the browser (`createImageBitmap`), by three's loaders (TGA, TIFF, EXR, Radiance HDR), by
  * the app's own reader (Photoshop's PSD and PSB), or not at all (DDS, KTX, anything else: GPU formats and the rare).
  */
-export type TextureFormat = 'browser' | 'tga' | 'tiff' | 'exr' | 'hdr' | 'psd' | 'unsupported';
+export type ImageFormat = 'browser' | 'tga' | 'tiff' | 'exr' | 'hdr' | 'psd' | 'unsupported';
 
-const FORMATS: Record<string, TextureFormat> = {
+const FORMATS: Record<string, ImageFormat> = {
   png: 'browser',
   jpg: 'browser',
   jpeg: 'browser',
@@ -23,7 +23,7 @@ const FORMATS: Record<string, TextureFormat> = {
   psb: 'psd',
 };
 
-export function textureFormatOf(fileName: string): TextureFormat {
+export function imageFormatOf(fileName: string): ImageFormat {
   const extension = /\.([^./\\]+)$/.exec(fileName)?.[1]?.toLowerCase() ?? '';
   return FORMATS[extension] ?? 'unsupported';
 }
@@ -34,12 +34,12 @@ export interface ImageSize {
 }
 
 /** A side past this, or more pixels than this, is refused before decoding: decoding allocates every pixel at once. */
-export const MAX_TEXTURE_SIDE = 16384;
-export const MAX_TEXTURE_PIXELS = 8192 * 8192;
+export const MAX_IMAGE_SIDE = 16384;
+export const MAX_IMAGE_PIXELS = 8192 * 8192;
 
 /** Why an image of this size isn't decoded; null when it may be. */
 export function sizeProblem({ width, height }: ImageSize): 'tooLarge' | null {
-  return width > MAX_TEXTURE_SIDE || height > MAX_TEXTURE_SIDE || width * height > MAX_TEXTURE_PIXELS ? 'tooLarge' : null;
+  return width > MAX_IMAGE_SIDE || height > MAX_IMAGE_SIDE || width * height > MAX_IMAGE_PIXELS ? 'tooLarge' : null;
 }
 
 /** The size the file's header says, or null when the header doesn't read as its format's. */
@@ -64,7 +64,7 @@ function headerSize(bytes: Uint8Array, fileName: string): ImageSize | null {
   if (ascii(bytes, 0, 2) === '#?') return radianceSize(bytes);
   if (ascii(bytes, 0, 2) === 'II' || ascii(bytes, 0, 2) === 'MM') return tiffSize(bytes, view);
   // TGA has no signature: its header, by the name.
-  if (textureFormatOf(fileName) === 'tga' && bytes.length >= 18) return { width: view.getUint16(12, true), height: view.getUint16(14, true) };
+  if (imageFormatOf(fileName) === 'tga' && bytes.length >= 18) return { width: view.getUint16(12, true), height: view.getUint16(14, true) };
   return null;
 }
 

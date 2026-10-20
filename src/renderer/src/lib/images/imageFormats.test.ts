@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { writeExr, writeHdr, writeTga, writeTiff } from './testing/imageWriters';
 import { writePsd } from './testing/psdWriter';
-import { imageSizeOf, sizeProblem, textureFormatOf } from './textureFormats';
+import { imageFormatOf, imageSizeOf, sizeProblem } from './imageFormats';
 
 const black = (): [number, number, number, number] => [0, 0, 0, 255];
 
@@ -15,9 +15,9 @@ function header(length: number, ...fields: [offset: number, write: (view: DataVi
 
 const ascii = (view: DataView, at: number, text: string) => [...text].forEach((character, i) => view.setUint8(at + i, character.charCodeAt(0)));
 
-describe('textureFormatOf', () => {
+describe('imageFormatOf', () => {
   it('decodes the formats Unity projects use, by extension whatever its case, and no GPU format', () => {
-    expect(['a.PNG', 'b.jpg', 'c.jpeg', 'd.tga', 'e.psd', 'f.PSB', 'g.exr', 'h.tif', 'i.hdr', 'j.dds', 'k.ktx', 'l'].map(textureFormatOf)).toEqual([
+    expect(['a.PNG', 'b.jpg', 'c.jpeg', 'd.tga', 'e.psd', 'f.PSB', 'g.exr', 'h.tif', 'i.hdr', 'j.dds', 'k.ktx', 'l'].map(imageFormatOf)).toEqual([
       'browser',
       'browser',
       'browser',

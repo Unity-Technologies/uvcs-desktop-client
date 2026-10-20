@@ -8,10 +8,10 @@ import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
 import { TGALoader } from 'three/examples/jsm/loaders/TGALoader.js';
 import { TIFFLoader } from 'three/examples/jsm/loaders/TIFFLoader.js';
 import { readPsd } from './psdImage';
-import type { TextureFormat } from './textureFormats';
+import type { ImageFormat } from './imageFormats';
 import type { ImageProblem } from './imageProblems';
 
-export type PixelFormat = Exclude<TextureFormat, 'browser' | 'unsupported'>;
+export type PixelFormat = Exclude<ImageFormat, 'browser' | 'unsupported'>;
 
 export type PixelsRead = { kind: 'image'; width: number; height: number; rgba: Uint8ClampedArray } | { kind: 'failed'; problem: ImageProblem };
 

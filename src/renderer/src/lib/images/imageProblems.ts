@@ -4,7 +4,7 @@
 export type ImageProblem =
   /** DDS, KTX and the like: GPU formats, and the rare ones. */
   | 'unsupportedFormat'
-  /** Past what is decoded (`MAX_TEXTURE_SIDE`, `MAX_TEXTURE_PIXELS`, the read's size cap). */
+  /** Past what is decoded (`MAX_IMAGE_SIDE`, `MAX_IMAGE_PIXELS`, the read's size cap). */
   | 'tooLarge'
   /** A Photoshop file whose composite image is blank: saved without "Maximize Compatibility". */
   | 'psdWithoutComposite'

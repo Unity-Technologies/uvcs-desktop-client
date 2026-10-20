@@ -602,7 +602,7 @@ heatmap's), and come back in the other modes. The merge cards' stills stay clay 
   be composed). Changes inside folders `ignore.conf` hides from the watcher aren't seen: an `Assets` folder is versioned
   content. Measured by hand on a project of 100,000 assets (1,000 folders): a GUID it lacks reads it all in about 2.1 s,
   once; the next lookup reads nothing. Tests count the reads (`ProjectAssetIndex.test.ts`).
-- **Formats** (`textureFormatOf`), decoded in a worker of their own (`texture.worker`), never on the UI thread (where it
+- **Formats** (`imageFormatOf`), decoded in a worker of their own (`texture.worker`), never on the UI thread (where it
   can't start, textures don't show): PNG, JPEG, GIF, BMP, WebP by the browser (`createImageBitmap`); TGA, TIFF (LZW
   too), EXR (DWAA too) and Radiance HDR by three's loaders (high dynamic range clamped and encoded as sRGB); PSD and PSB
   by the app's own reader of the composite image (`readPsd`: raw or RLE, 8 or 16 bits, RGB or grayscale, alpha; read by
