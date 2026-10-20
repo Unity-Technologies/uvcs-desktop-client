@@ -167,21 +167,22 @@ only the lines in view.
 
 ### Stepping through conflicts
 
-A conflicting file steps through its conflicts as a diff steps through its changes (diff.md "Moving through
-changes"), with the same keys, ⌥↓ ⌥↑ and F7 ⇧F7 (`nextConflict`, `previousConflict`), and arrows around "2 of 3" at
-the end of its view bar (`ConflictNavigator`, on `useStepNavigation`). The keys work from anywhere in the file's panel,
-its views' segments included (`STEP_FRAME`), from the list and with nothing focused. A conflict moved to comes a few rows from the
+A conflicting file steps through its conflicts as a diff steps through its changes (diff.md "Moving through changes"),
+with the same keys, ⌥↓ ⌥↑ and F7 ⇧F7 (`nextConflict`, `previousConflict`), and arrows around "2 of 3" at the end of its
+view bar (`ConflictNavigator`, on `useStepNavigation`). The keys work from anywhere in the file's panel, its views'
+segments included (`STEP_FRAME`), from the list and with nothing focused. A conflict moved to comes a few rows from the
 top unless it's all in view, and lights up (`useConflictView`: Pierre draws each one from its actions row down to its
-end marker). Every conflict shown is one still to decide: resolving one with its header's choices takes it out of the
-text and the count, and the next move goes on to the one that took its place, or back to the one before it
-(`ConflictPlace`: the screen can't tell, with every conflict in view). That holds until the view is scrolled more than
-a few rows away, however it scrolls (the shorter text pulling it back at the end of the file doesn't count), or the
-conflicts change otherwise (started over, saved by a merge tool). A binary waiting for the version to keep is one
-conflict, "1 of 1"; a file that couldn't be read has none, and its arrows still go on. The views that are diffs
-(Changes, Yours, Incoming) keep their own arrows through their changes, and the base none. But a file whose last
-conflict is resolved while it shows keeps the conflict arrows over its Changes, "No conflicts", so the next move goes
-straight on to the next file that waits instead of through the changes the merge makes; picking the Changes view
-gives the diff its arrows back (`justDecided`, LoadedFileDiff's `stepsThroughChanges`).
+end marker). Every conflict shown is one still to decide: resolving one with its header's choices (`resolve` in
+`ConflictHunks`) takes it out of the text and the count, and the next move goes on to the one that took its place, or
+back to the one before it (`ConflictPlace`: the screen can't tell, with every conflict in view). That holds until the
+view is scrolled more than a few rows away, however it scrolls (the shorter text pulling it back at the end of the file
+doesn't count), or the conflicts change otherwise (started over, saved by a merge tool). A binary waiting for the
+version to keep is one conflict, "1 of 1"; a file that couldn't be read has none, and its arrows still go on. The views
+that are diffs (Changes, Yours, Incoming) keep their own arrows through their changes, and the base none. But a file
+whose last conflict is resolved while it shows keeps the conflict arrows over its Changes, "No conflicts", until the
+user leaves the file: the next move goes straight on to the next file that waits instead of through the changes the
+merge makes (`justDecided`, `LoadedFileDiff`'s `stepsThroughChanges`). Started over, the file opens on its conflicts
+again (`rememberConflicts`).
 
 Past the last or first conflict, the arrows go on to the next file's first conflict or the previous file's last, as
 the list shows them, but only to the files still waiting for the user: those decided or merged automatically are

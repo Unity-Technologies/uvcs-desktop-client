@@ -14,7 +14,7 @@ import { MergeToolButton, type ConflictToolActions } from '../mergeTools/MergeTo
 import { MergeToolOpenBanner } from '../mergeTools/MergeToolOpenBanner';
 import { fileConflictStatus, fileConflictTool } from '../mergeStatus';
 import { chosenConflictChoice, decisionFor, hasConflicts, type ConflictChoice } from './conflictChoices';
-import { conflictsToStep, editInAppUnavailable, effectiveView, hasBase, justDecided, rendersVersions, type PanelView } from './conflictPanelView';
+import { FRESH_PANEL, conflictsToStep, editInAppUnavailable, effectiveView, hasBase, justDecided, rememberConflicts, rendersVersions, type PanelMemory, type PanelView } from './conflictPanelView';
 import { ConflictNavigator } from './ConflictNavigator';
 import { openableVersions } from './conflictVersionOpening';
 import type { FileConflictDecision } from './fileConflictDecision';
@@ -47,7 +47,12 @@ interface FileConflictPanelProps {
  * merges automatically can only be overridden by keeping one version.
  */
 export function FileConflictPanel({ workspacePath, state, labels, yoursInWorkspace, toolActions, onDecide, onStartOver }: FileConflictPanelProps) {
-  const [chosenView, setChosenView] = useState<PanelView>();
+  // The view picked, and whether the file showed conflicts: a file decided here keeps its conflict arrows.
+  const [memory, setMemory] = useState<PanelMemory>(FRESH_PANEL);
+  const remembered = rememberConflicts(memory, state);
+  if (remembered.remaining !== memory.remaining || remembered.sawConflicts !== memory.sawConflicts) setMemory(remembered);
+  const chosenView = remembered.chosen;
+  const setChosenView = (chosen: PanelView): void => setMemory((current) => ({ ...current, chosen }));
   /** While resolving by hand: the user's decision before, to put back if they discard their edits. */
   const [editingFrom, setEditingFrom] = useState<{ decision: FileConflictDecision | undefined }>();
   const editing = editingFrom !== undefined;
@@ -61,9 +66,7 @@ export function FileConflictPanel({ workspacePath, state, labels, yoursInWorkspa
   const panelRef = useRef<HTMLDivElement>(null);
   const conflictView = useRef<StepView>(null);
   // Its last conflict resolved here, the file keeps the conflict arrows: they go straight on to the next file.
-  const [sawConflicts, setSawConflicts] = useState(false);
-  if (!sawConflicts && state.remainingConflicts > 0) setSawConflicts(true);
-  const conflictCount = editing ? null : conflictsToStep(view, state, justDecided(sawConflicts, chosenView, state));
+  const conflictCount = editing ? null : conflictsToStep(view, state, justDecided(remembered, state));
   const conflictsOnScreen: StepView = {
     isShown: () => conflictView.current?.isShown() ?? false,
     reveal: (index) => conflictView.current?.reveal(index),

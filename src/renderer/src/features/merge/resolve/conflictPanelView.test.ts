@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FileContent } from '@shared/domain/content';
 import { LONGEST_DRAWN_LINE, LONGEST_EDITED_LINE } from '../../diff/viewer/longLines';
-import { FRESH_PANEL, conflictsToStep, effectiveView, justDecided, rememberConflicts, type PanelMemory, editInAppUnavailable, mergedText, rendersVersions, textToEdit } from './conflictPanelView';
+import { FRESH_PANEL, conflictsToStep, editInAppUnavailable, effectiveView, justDecided, mergedText, rememberConflicts, rendersVersions, textToEdit, type PanelMemory } from './conflictPanelView';
 import type { FileConflictState } from './useFileConflicts';
 
 const text = (value: string): FileContent => ({ text: value, isBinary: false, size: value.length });

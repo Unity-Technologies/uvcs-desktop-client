@@ -60,12 +60,33 @@ export function conflictsToStep(view: PanelView, state: FileConflictState, decid
   return null;
 }
 
+/** What a conflicting file's panel keeps while it shows the file: the view the user picked, and its conflicts. */
+export interface PanelMemory {
+  chosen: PanelView | undefined;
+  /** The file showed conflicts since the panel opened on it. */
+  sawConflicts: boolean;
+  /** How many conflicts it showed last. */
+  remaining: number;
+}
+
+export const FRESH_PANEL: PanelMemory = { chosen: undefined, sawConflicts: false, remaining: 0 };
+
 /**
- * Whether a file was just decided while shown: it had conflicts (`sawConflicts`), has none left, and the user didn't
- * pick its Changes view (`chosen`), whose diff then steps through the changes the merge makes.
+ * The panel's memory once the file is `state`: conflicts coming back (started over) open them again, whatever view
+ * was picked.
  */
-export function justDecided(sawConflicts: boolean, chosen: PanelView | undefined, state: FileConflictState): boolean {
-  return sawConflicts && state.remainingConflicts === 0 && chosen !== 'changes';
+export function rememberConflicts(memory: PanelMemory, state: FileConflictState): PanelMemory {
+  const remaining = state.remainingConflicts;
+  const cameBack = memory.remaining === 0 && remaining > 0;
+  return { chosen: cameBack ? undefined : memory.chosen, sawConflicts: memory.sawConflicts || remaining > 0, remaining };
+}
+
+/**
+ * Whether a file was just decided while shown: it had conflicts since the panel opened on it, and has none left. Its
+ * conflict arrows stay over its Changes until the user leaves the file, whatever view is picked.
+ */
+export function justDecided(memory: PanelMemory, state: FileConflictState): boolean {
+  return memory.sawConflicts && state.remainingConflicts === 0;
 }
 
 /**
