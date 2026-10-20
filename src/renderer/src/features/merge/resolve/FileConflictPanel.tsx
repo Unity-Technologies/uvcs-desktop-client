@@ -16,8 +16,10 @@ import { fileConflictStatus, fileConflictTool } from '../mergeStatus';
 import { chosenConflictChoice, decisionFor, hasConflicts, type ConflictChoice } from './conflictChoices';
 import { conflictsToStep, editInAppUnavailable, effectiveView, hasBase, justDecided, rendersVersions, type PanelView } from './conflictPanelView';
 import { ConflictNavigator } from './ConflictNavigator';
+import { openableVersions } from './conflictVersionOpening';
 import type { FileConflictDecision } from './fileConflictDecision';
 import { KeepChoices } from './KeepChoices';
+import { OpenVersionMenu } from './OpenVersionMenu';
 import type { FileConflictState } from './useFileConflicts';
 import styles from './FileConflictPanel.module.css';
 
@@ -32,6 +34,8 @@ interface FileConflictPanelProps {
   workspacePath: string;
   state: FileConflictState;
   labels: MergeLabels;
+  /** "Yours" is the workspace file (a merge into the workspace, an update), not the destination's version on the server. */
+  yoursInWorkspace: boolean;
   toolActions: ConflictToolActions;
   onDecide: (decision: FileConflictDecision) => void;
   onStartOver: () => void;
@@ -42,7 +46,7 @@ interface FileConflictPanelProps {
  * or for the whole file (keep a version or both; editing the text in the app stays in the tool menu); a file that
  * merges automatically can only be overridden by keeping one version.
  */
-export function FileConflictPanel({ workspacePath, state, labels, toolActions, onDecide, onStartOver }: FileConflictPanelProps) {
+export function FileConflictPanel({ workspacePath, state, labels, yoursInWorkspace, toolActions, onDecide, onStartOver }: FileConflictPanelProps) {
   const [chosenView, setChosenView] = useState<PanelView>();
   /** While resolving by hand: the user's decision before, to put back if they discard their edits. */
   const [editingFrom, setEditingFrom] = useState<{ decision: FileConflictDecision | undefined }>();
@@ -52,6 +56,8 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
   const view = effectiveView(chosenView, state);
   const status = fileConflictStatus(state);
   const { source, destination } = labels.roles;
+  // A binary's versions open in other apps from its toolbar and its cards: deciding often means looking at them there.
+  const versions = state.isBinary ? openableVersions(state, { workspacePath, labels, yoursInWorkspace }) : [];
   const panelRef = useRef<HTMLDivElement>(null);
   const conflictView = useRef<StepView>(null);
   // Its last conflict resolved here, the file keeps the conflict arrows: they go straight on to the next file.
@@ -124,6 +130,11 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
             )}
           </div>
         )}
+        {versions.length > 0 && (
+          <div className={styles.controls} role="group" aria-label="Open a version">
+            <OpenVersionMenu versions={versions} />
+          </div>
+        )}
       </div>
 
       {editing && (
@@ -156,6 +167,7 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
           workspacePath={workspacePath}
           state={state}
           labels={labels}
+          versions={versions}
           view={view}
           editing={editing}
           conflictViewRef={conflictView}

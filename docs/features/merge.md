@@ -49,7 +49,14 @@ every conflicting file among them (`keepVersionEntries`). One item's menu is any
 menu": history, open or save the incoming version, Copy) with what a merge adds (`mergeItemMenu`): a conflicting file, the same
 entries as in Incoming (`conflictMenuEntries`), "Resolve in <tool>" (the preferred one, `primaryMergeTool`; disabled while files resolve one by one), Keep yours or
 incoming, Start over once decided, annotate at the incoming revision `cm` names for it, and "Open version ▸" Yours (the
-workspace file; the destination's version merging into a server branch), Incoming and Base; a directory conflict its
+workspace file; the destination's version merging into a server branch), Incoming and Base (`openableVersions`): a
+text in the user's editor, a binary with its default app (`oneClickApp`: the editors are for text; a known binary is one before its versions
+are read, `opensAsBinary`). A binary's
+versions open only from there: its menu drops the list's "Open this revision in <editor>" and "Open this revision
+with ▸", which would open the incoming one a second way, and keeps "Save this revision as…" (`withConflictOpening`,
+in Incoming too). A version taken
+out of the repository opens under a name that tells which it is (`versionCopyName`: `hero.INCOMING.psd`, as the merge
+tools name theirs), so two versions open side by side in one app don't look alike; a directory conflict its
 panel's choices, Keep both under the name the panel suggests. A directory conflict holding another conflict (a folder
 added on both sides, a file in it changed on both) is its folder's row in a tree: selecting that row selects the
 conflict, and its menu acts on it alone (`mergeItemAt`, `mergeItemsActedOn`). A clean change isn't annotated: `cm` names only the
@@ -91,7 +98,12 @@ front, Stop waiting), its conflicts show without choices and the merge can't com
 Editing the text in the app opens a banner with Done and Discard edits; the choice shows picked and "Changes" shows what
 it produces. Binary conflicts offer the two versions to keep, as cards, and no merge tool; one whose versions render (3D models,
 images: `rendersVersions`) also shows each side against the base and the base itself ("Choose | Yours | Incoming |
-Base"), and a model's cards tell what each side changed since the base (docs/features/model-diff.md "In a merge"). A
+Base"), and a model's cards tell what each side changed since the base (docs/features/model-diff.md "In a merge").
+Deciding often means looking at the versions in the artist's own app (two PSDs in Photoshop, two FBX in Blender): the
+binary's toolbar holds "Open version" (`OpenVersionMenu`), a submenu per version (Yours, Incoming, Base when there is
+one), and each card's menu (right-click, the menu key) its own version; both list "Open" with its default app, then
+every app, "Choose another app…" and "Manage apps…" (`versionAppEntries`, over `openRevisionWithEntries`; no editor is
+marked the default there). Nothing opens but on the user's pick. A
 binary's versions (textures, models, scenes: up to hundreds of MB each) are read only while it shows (below); its
 cards can be picked before their previews come, and when its versions can't be read, a card's icon says why. The
 Incoming view resolves update conflicts with the same panel and run (in its update bar); a merge into a server branch
