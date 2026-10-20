@@ -28,6 +28,11 @@ describe('restorePathProblem', () => {
     expect(restorePathProblem('..\\Enemy.cs', 'win32')).toBeDefined();
   });
 
+  it('says a path in the workspace names no drive on Windows', () => {
+    expect(restorePathProblem('D:\\src\\Enemy.cs', 'win32')).toBe('A path in the workspace starts with a folder or a name, not a drive');
+    expect(restorePathProblem('c:src/Enemy.cs', 'win32')).toBe('A path in the workspace starts with a folder or a name, not a drive');
+  });
+
   it('says a path in the workspace starts with no separator', () => {
     expect(restorePathProblem('/src/Enemy.cs', 'darwin')).toBe('A path in the workspace starts with a folder or a name, not “/”');
     expect(restorePathProblem('\\src\\Enemy.cs', 'win32')).toBe('A path in the workspace starts with a folder or a name, not “\\”');
