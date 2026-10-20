@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Branch } from '@shared/domain/branch';
-import { branchSearchEmptyText, branchSearchRows } from './branchSearchRows';
+import { branchesRead, branchSearchEmptyText, branchSearchRows } from './branchSearchRows';
 
 const branch = (name: string, comment = ''): Branch => ({
   id: 0,
@@ -60,5 +60,17 @@ describe('branchSearchEmptyText', () => {
   it("says it couldn't read the branches, whatever was typed, instead of an empty list for good", () => {
     expect(branchSearchEmptyText('', 'failed')).toBe("Couldn't read the branches.");
     expect(branchSearchEmptyText('boost', 'failed')).toBe("Couldn't read the branches.");
+  });
+});
+
+describe('branchesRead', () => {
+  it('is read once there are branches, even after a later read failed', () => {
+    expect(branchesRead({ data: [], isError: false })).toBe('read');
+    expect(branchesRead({ data: [], isError: true })).toBe('read');
+  });
+
+  it('is loading until the first read answers, and failed when it failed', () => {
+    expect(branchesRead({ data: undefined, isError: false })).toBe('loading');
+    expect(branchesRead({ data: undefined, isError: true })).toBe('failed');
   });
 });

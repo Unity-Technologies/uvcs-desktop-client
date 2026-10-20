@@ -10,7 +10,7 @@ import { HighlightQuery } from '../../ui/Highlight';
 import { KeyHints } from '../../ui/KeyHints';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { BranchSearchItem } from './BranchSearchItem';
-import { branchSearchEmptyText, branchSearchRows, type BranchGroup } from './branchSearchRows';
+import { branchSearchEmptyText, branchSearchRows, type BranchesRead, type BranchGroup } from './branchSearchRows';
 import styles from './BranchSearchList.module.css';
 
 const GROUP_HEIGHT = 28;
@@ -26,12 +26,12 @@ interface BranchSearchListProps {
   menu?: (branch: Branch) => MenuEntry[];
   /** Next to the filter field, e.g. a "New branch" button. */
   action?: ReactNode;
-  /** The branches are still read: the list says nothing yet. */
-  loading?: boolean;
+  /** Where the branches stand (`branchesRead`): the list keeps its frame while they're read, and says when they can't be. */
+  read?: BranchesRead;
 }
 
 /** A searchable, keyboard-driven list of branches in titled groups. Virtualized: repositories can have thousands of branches. */
-export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 'Find a branch', menu, action, loading = false }: BranchSearchListProps) {
+export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 'Find a branch', menu, action, read = 'read' }: BranchSearchListProps) {
   const [query, setQuery] = useState('');
   const [highlighted, setHighlighted] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
@@ -40,7 +40,7 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
   const listboxId = useId();
 
   const { rows, branches } = useMemo(() => branchSearchRows(groups, query), [groups, query]);
-  const emptyText = branchSearchEmptyText(query, loading);
+  const emptyText = branchSearchEmptyText(query, read);
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => listRef.current,

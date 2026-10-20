@@ -10,6 +10,7 @@ import { Button } from '../../ui/Button';
 import { branchMenu } from './branchMenu';
 import { switchToBranch } from './branchOperations';
 import { BranchSearchList } from './BranchSearchList';
+import { branchesRead } from './branchSearchRows';
 import { branchSwitcherGroups } from './branchSwitcherGroups';
 import { newBranchFromWorkspace } from './newBranchFromWorkspace';
 import { useRecentBranchGuids } from './recentBranches';
@@ -17,7 +18,8 @@ import { useBranches } from './useBranches';
 
 /** The branch switcher's list (`branchSwitcherGroups`): picking a branch switches the workspace to it. */
 export function BranchSwitcher({ workspace, onDone }: { workspace: WorkspaceInfo; onDone: () => void }) {
-  const { data: branches } = useBranches();
+  const branchesQuery = useBranches();
+  const branches = branchesQuery.data;
   const recentGuids = useRecentBranchGuids(workspace.path);
   const currentBranch = branchWorkedOn(workspace.selector);
   const groups = useMemo(() => branchSwitcherGroups(branches ?? [], recentGuids), [branches, recentGuids]);
@@ -31,7 +33,7 @@ export function BranchSwitcher({ workspace, onDone }: { workspace: WorkspaceInfo
     <BranchSearchList
       groups={groups}
       currentBranch={currentBranch}
-      loading={branches === undefined}
+      read={branchesRead(branchesQuery)}
       placeholder="Switch to branch…"
       onPick={pick}
       // Actions close the popup first (dialogs and pages open without it on top); copying keeps it open.
