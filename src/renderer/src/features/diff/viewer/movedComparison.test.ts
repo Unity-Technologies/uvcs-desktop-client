@@ -19,12 +19,12 @@ function comparisonOfMove(moved: string[], method: ComparisonMethod = 'recognize
 describe('movedComparison', () => {
   it('shows code moved as it was, whole, saying nothing changed on the way', () => {
     // The diff of two equal texts has no lines at all: shown as a diff, the dialog was empty.
-    expect(comparisonOfMove(FUNCTION)).toEqual({ kind: 'unchanged', code: text(FUNCTION), note: 'Moved without changes' });
+    expect(comparisonOfMove(FUNCTION)).toEqual({ kind: 'unchanged', code: FUNCTION.join('\n'), note: 'Moved without changes' });
   });
 
   it('shows code moved with only what the comparison method ignores changed, whole, saying what that is', () => {
     const reindented = FUNCTION.map((line) => `  ${line}`);
-    expect(comparisonOfMove(reindented, 'ignoreWhitespace')).toEqual({ kind: 'unchanged', code: text(reindented), note: 'Only whitespace differs' });
+    expect(comparisonOfMove(reindented, 'ignoreWhitespace')).toEqual({ kind: 'unchanged', code: reindented.join('\n'), note: 'Only whitespace differs' });
   });
 
   it('shows code moved and edited as the diff of its two places, with only the edit changed', () => {
