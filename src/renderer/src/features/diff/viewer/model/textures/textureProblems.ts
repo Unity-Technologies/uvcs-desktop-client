@@ -1,7 +1,7 @@
 // Why a texture a model's materials use doesn't show, in plain words for the info strip's tooltip. Its slot shows its
 // material's color meanwhile (or clay): a missing texture never fails the model or the other textures.
 
-import { imageProblemWords, type ImageProblem } from './imageProblems';
+import { imageProblemWords, type ImageProblem } from '../../../../../lib/images/imageProblems';
 
 export type TextureProblem =
   /** Its file doesn't decode (`ImageProblem`). */

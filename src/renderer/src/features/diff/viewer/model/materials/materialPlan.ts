@@ -14,7 +14,7 @@ import { Color, SRGBColorSpace } from 'three';
 import { siblingPath } from '../modelSiblings';
 import type { AlphaMode, FileMaterial, FileTexture, TextureUse } from '../parsedModel';
 import { MAX_TEXTURE_FILES, textureSideFor } from '../textures/textureBudget';
-import { textureFormatOf } from '../textures/textureFormats';
+import { textureFormatOf } from '../../../../../lib/images/textureFormats';
 import type { TextureProblem } from '../textures/textureProblems';
 import { isBuiltInGuid } from './builtInAssets';
 import type { ModelMaterialsInput, SlotSource } from './slotSources';

@@ -4,9 +4,9 @@
 // WebGL can't apply to a bitmap), its alpha kept apart from its color, and whether any pixel is see-through
 // (`bitmapIsOpaque`). Never on the UI thread.
 
-import { decodePixels } from './decodePixels';
+import { decodePixels } from '../../../../../lib/images/decodePixels';
 import { fittedSize } from './textureBudget';
-import { imageSizeOf, sizeProblem, textureFormatOf } from './textureFormats';
+import { imageSizeOf, sizeProblem, textureFormatOf } from '../../../../../lib/images/textureFormats';
 import { bitmapIsOpaque } from './textureOpacity';
 import type { TextureProblem } from './textureProblems';
 
