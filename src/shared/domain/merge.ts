@@ -205,5 +205,11 @@ export function isValidRenameName(newName: string): boolean {
   return newName.trim() !== '' && !/[\\/]/.test(newName) && newName !== '.' && newName !== '..';
 }
 
+/** Whether a directory conflict is decided: a side kept, or both under a name the merge takes (`isValidRenameName`). */
+export function directoryConflictDecided(resolution: DirectoryConflictResolution | undefined): boolean {
+  if (!resolution) return false;
+  return resolution.choice !== 'rename' || isValidRenameName(resolution.newName);
+}
+
 /** Directory conflicts where keeping both items under a new name is possible. */
 export const RENAMEABLE_CONFLICTS: ReadonlySet<DirectoryConflictType> = new Set(['evilTwin', 'movedEvilTwin', 'addMove', 'moveAdd']);

@@ -1,10 +1,9 @@
-import type { DirectoryConflict, DirectoryConflictResolution, MergeChange, MergePlan } from '@shared/domain/merge';
+import { directoryConflictDecided, type DirectoryConflict, type DirectoryConflictResolution, type MergeChange, type MergePlan } from '@shared/domain/merge';
 import { comparePaths } from '@shared/pathOrder';
 import { statusTones } from '../../components/changeFilter';
 import type { StatusTone } from '../../components/StatusBadge';
 import { withoutRepeatedFolders } from '../../lib/enclosingFolders';
 import type { GroupedTreeRow, TreeGroup } from '../../lib/groupedPathTree';
-import { directoryConflictStatus } from './mergeStatus';
 import type { ConflictedFile, FileConflictState } from './resolve/useFileConflicts';
 
 /**
@@ -76,7 +75,7 @@ function isConflict(item: MergeItem): boolean {
 }
 
 export function needsDecision(item: MergeItem, progress: MergeProgress): boolean {
-  if (item.kind === 'directoryConflict') return directoryConflictStatus(progress.directoryResolutions[item.index]) === 'needsDecision';
+  if (item.kind === 'directoryConflict') return !directoryConflictDecided(progress.directoryResolutions[item.index]);
   if (item.kind === 'fileConflict') return !fileStateOf(item, progress).resolution;
   return false;
 }
