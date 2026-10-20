@@ -2,7 +2,8 @@ import { Trash2, UserPlus } from 'lucide-react';
 import { CODE_REVIEW_STATUSES, type CodeReview, type CodeReviewStatus } from '@shared/domain/codeReview';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageProps } from '../../app/navigation/pages';
-import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { MENU_WORDS } from '../../components/menuWords';
 import { PathLabel } from '../../components/PathLabel';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
@@ -12,6 +13,7 @@ import { SegmentedControl } from '../../ui/SegmentedControl';
 import { SkeletonBar } from '../../ui/Skeleton';
 import { DiffPage } from '../diff/DiffPage';
 import { deleteReviews, reassignReview, setReviewStatus } from './codeReviewOperations';
+import { reviewedCodeAction } from './reviewedCode';
 import { describeTarget, reviewDiffTarget } from './reviewTarget';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
 import { useCodeReview } from './useCodeReviews';
@@ -68,6 +70,10 @@ function ReviewHeaderSkeleton() {
 
 function ReviewHeader({ review }: { review: CodeReview }) {
   const workspacePath = useWorkspacePath();
+  const { data: workspace } = useWorkspaceInfo();
+  // The review menu's own entry (`codeReviewMenu`), as a button: the reviewer gets the code to run it.
+  const reviewedCode = reviewedCodeAction(workspacePath, review.target, workspace?.selector);
+  const ReviewedCodeIcon = reviewedCode && MENU_WORDS[reviewedCode.word].icon;
 
   const remove = async (): Promise<void> => {
     if (await deleteReviews(workspacePath, [review])) navigation.goBack();
@@ -108,6 +114,18 @@ function ReviewHeader({ review }: { review: CodeReview }) {
         <span className={styles.hint} data-tip={COMMENTS_HINT}>
           {COMMENTS_HINT}
         </span>
+        {reviewedCode && ReviewedCodeIcon && (
+          // aria-disabled rather than disabled, so hovering still shows the tooltip saying why.
+          <Button
+            className={styles.reviewedCode}
+            icon={<ReviewedCodeIcon size={14} />}
+            aria-disabled={reviewedCode.disabledReason !== undefined || undefined}
+            data-tip={reviewedCode.disabledReason ?? reviewedCode.label}
+            onClick={() => reviewedCode.disabledReason === undefined && void reviewedCode.run()}
+          >
+            {reviewedCode.label}
+          </Button>
+        )}
         <Button icon={<UserPlus size={14} />} onClick={() => void reassignReview(workspacePath, review)}>
           Assign
         </Button>

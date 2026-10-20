@@ -1,6 +1,10 @@
 import { fakeApi } from '../../testing/fakeWindow';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { ExternalApps } from '@shared/domain/externalApps';
 import type { MergeTool } from '@shared/domain/mergeTools';
+import { DEFAULT_SETTINGS } from '@shared/domain/settings';
+import { queryClient } from '../../app/queryClient';
+import { externalAppsKey } from '../../components/externalApps/externalApps';
 import type { DirectoryConflict, MergePlan, MergeRequest } from '@shared/domain/merge';
 import { isSubmenu, type Action, type MenuEntry, type Submenu } from '../../lib/actions';
 import { SERVER_ROLES, WORKSPACE_ROLES, type MergeLabels } from './mergeDescription';
@@ -80,7 +84,17 @@ const entry = (menu: MenuEntry[], id: string) => menu.find((item) => typeof item
 const versionEntry = (menu: MenuEntry[], label: string) => (entry(menu, 'openVersion') as Submenu).entries.find((item) => (item as Action).label === label) as Action;
 const settle = () => new Promise((resolve) => setTimeout(resolve));
 
+/** The user has an editor, which "Open" uses for every file. */
+const WITH_EDITOR: ExternalApps = {
+  editors: [{ id: 'vscode', name: 'Visual Studio Code', origin: 'known', location: '/Applications/Visual Studio Code.app', opensFolders: true }],
+  terminals: [],
+  editorId: 'vscode',
+  terminalId: null,
+};
+
 describe('mergeItemMenu', () => {
+  afterEach(() => queryClient.removeQueries({ queryKey: externalAppsKey(DEFAULT_SETTINGS) }));
+
   it('offers a conflicting file what any changed file has, and the ways to settle it', () => {
     expect(ids(menuOf([conflict('src/a.ts')]))).toEqual([
       'openRevision',
@@ -89,6 +103,7 @@ describe('mergeItemMenu', () => {
       'resolveIn',
       'keepDestination',
       'keepSource',
+      'keepBase',
       'history',
       'annotate',
       'saveAs',
@@ -124,6 +139,43 @@ describe('mergeItemMenu', () => {
 
     expect(fakeApi.argsOf('history.openRevision').map(([, version]) => version)).toEqual([versions.source, versions.base]);
     expect(fakeApi.argsOf('system.openPath')).toEqual([['/ws/src/a.ts']]);
+  });
+
+  it("opens a text conflict's versions in the user's editor, each saved under a name that tells which it is", async () => {
+    queryClient.setQueryData(externalAppsKey(DEFAULT_SETTINGS), WITH_EDITOR);
+    fakeApi.answer('history.openRevision', () => undefined);
+    fakeApi.answer('apps.openInEditor', () => undefined);
+    const menu = menuOf([conflict('src/a.ts')]);
+
+    versionEntry(menu, 'Incoming').run();
+    versionEntry(menu, 'Yours').run();
+    await settle();
+
+    expect(fakeApi.argsOf('history.openRevision')).toEqual([['/ws', versions.source, 'a.INCOMING.ts', 'vscode']]);
+    expect(fakeApi.argsOf('apps.openInEditor')).toEqual([['/ws/src/a.ts', 'vscode']]);
+  });
+
+  it("opens a binary conflict's versions with their default app, though the user has an editor: editors are for text", async () => {
+    queryClient.setQueryData(externalAppsKey(DEFAULT_SETTINGS), WITH_EDITOR);
+    fakeApi.answer('history.openRevision', () => undefined);
+    fakeApi.answer('system.openPath', () => undefined);
+    const menu = menuOf([conflict('art/hero.psd', { isBinary: true })]);
+
+    versionEntry(menu, 'Base').run();
+    versionEntry(menu, 'Yours').run();
+    await settle();
+
+    expect(fakeApi.argsOf('history.openRevision')).toEqual([['/ws', versions.base, 'hero.BASE.psd', undefined]]);
+    expect(fakeApi.argsOf('system.openPath')).toEqual([['/ws/art/hero.psd']]);
+  });
+
+  it("opens a binary conflict's incoming version only from \"Open version\", where it opens with its default app, and still saves it", () => {
+    const menu = menuOf([conflict('art/hero.psd', { isBinary: true })]);
+    expect(ids(menu)).not.toContain('openRevision');
+    expect(ids(menu)).not.toContain('openRevisionWith');
+    expect(ids(menu)).toEqual(expect.arrayContaining(['openVersion', 'saveAs']));
+    const knownBinary = conflict('art/hero.psd', { status: 'loading', file: { key: '/art/hero.psd', path: 'art/hero.psd', ...versions, isKnownBinary: true } });
+    expect(ids(menuOf([knownBinary]))).not.toContain('openRevision');
   });
 
   it('opens the destination version as yours when merging into a branch on the server, where no workspace file is it', async () => {
@@ -183,12 +235,29 @@ describe('mergeItemMenu', () => {
     expect(ids(menuOf([directoryConflict('changeDelete')]))).not.toContain('keepBoth');
   });
 
+  it('offers no "Keep base" when undoing a changeset: its base is the change being undone', () => {
+    const undone = conflict('a.ts', { file: { key: '/a.ts', path: 'a.ts', ...versions, baseIsUndoneChange: true } });
+    expect(ids(menuOf([undone, conflict('b.ts')]))).not.toContain('keepBase');
+    expect(ids(menuOf([conflict('b.ts')]))).toContain('keepBase');
+  });
+
   it('settles several conflicting files at once, leaving the changes that apply cleanly alone, and copies them all', () => {
     const decide = vi.fn();
     const menu = menuOf([conflict('a.ts'), change('changed'), conflict('b.ts')], { decide });
-    expect(ids(menu)).toEqual(['keepDestination', 'keepSource', 'copy']);
+    expect(ids(menu)).toEqual(['keepDestination', 'keepSource', 'keepBase', 'copy']);
     (entry(menu, 'keepSource') as Action).run();
     expect(decide.mock.calls.map(([key]) => key)).toEqual(['/a.ts', '/b.ts']);
     expect(isSubmenu(entry(menu, 'copy'))).toBe(true);
+  });
+
+  it('settles nothing for a file a tool or Smart Merge has open, as its toolbar offers nothing then: the outcome decides it', () => {
+    const open = { sessionId: 's', toolName: 'Smart Merge', canBringToFront: false };
+    expect(ids(menuOf([conflict('a.prefab', { openTool: open, decidedByUser: true })]))).not.toContain('keepDestination');
+    expect(ids(menuOf([conflict('a.prefab', { openTool: open, decidedByUser: true })]))).not.toContain('startOver');
+
+    const decide = vi.fn();
+    const menu = menuOf([conflict('a.prefab', { openTool: open }), conflict('b.ts')], { decide });
+    (entry(menu, 'keepSource') as Action).run();
+    expect(decide.mock.calls.map(([key]) => key)).toEqual(['/b.ts']);
   });
 });

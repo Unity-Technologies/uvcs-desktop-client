@@ -6,7 +6,7 @@ vi.mock('../ui/copyToClipboard', () => ({ copyToClipboard: (text: string, what: 
 
 import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
-import type { CodeReviewSummary } from '@shared/domain/codeReview';
+import type { CodeReview, CodeReviewSummary } from '@shared/domain/codeReview';
 import type { TreeItem } from '@shared/domain/explorer';
 import type { Label } from '@shared/domain/label';
 import type { Lock } from '@shared/domain/lock';
@@ -75,6 +75,10 @@ const changeset: Changeset = { id: 5, guid: 'c-guid', branch: '/main/a', comment
 const label: Label = { id: 3, name: 'v1', changeset: 6, branch: '/main', comment: 'First', owner: 'jane@example.com', date: '2026-09-07T00:00:00Z', repository };
 const shelve: Shelve = { id: 12, guid: 's-guid', comment: 'Spike', owner: 'jane@example.com', date: '2026-09-27T10:00:00Z', parentChangeset: 4, repository };
 const review: CodeReviewSummary = { id: 9, title: 'Review the task', status: 'Under review', owner: 'jane@example.com', assignee: '', date: '2026-09-27T10:00:00Z' };
+/** The review as the Code reviews view lists it, its branch named. */
+const branchReview: CodeReview = { ...review, targetBranchId: branch.id, target: { kind: 'branch', branch: branch.name } };
+/** A changeset's review, as every list reads it: its target needs no branch name. */
+const changesetReview: CodeReview = { ...review, target: { kind: 'changeset', changesetId: 5 } };
 const workspace: WorkspaceInfo = { name: 'game', path: ws, repository, repositoryName: 'game', server: 'local', selector: { kind: 'branch', name: '/main' }, loadedChangeset: 6 };
 const file: TreeItem = {
   path: 'src/a.ts',
@@ -107,7 +111,8 @@ const lock: Lock = {
 };
 const pendingLocks = new Map([['src/a.ts', { mine: false, owner: 'ana', workspace: 'art-wk', key: `${repository}:4` }]]);
 
-const layout = layoutGraph({ ...sampleHistory(), branches: [...sampleHistory().branches, graphBranch('/main/task', '/main', 5)] });
+// /main/task keeps its object id, as the code review of it names it (`targetBranchId`).
+const layout = layoutGraph({ ...sampleHistory(), branches: [...sampleHistory().branches, { ...graphBranch('/main/task', '/main', 5), id: branch.id }] });
 const graphContext = {
   workspacePath: ws,
   layout,
@@ -160,6 +165,9 @@ const mergeDirectoryConflict = {
   conflict: { type: 'evilTwin', destination: { path: '/src/shared' }, source: { path: '/src/shared' } },
 } as never;
 
+const deletedEntry = { status: 'deleted', path: 'src/Enemy.cs', itemType: 'file', revisionId: -1, baseRevisionId: 18, repository } as const;
+const deletedFolder = { ...deletedEntry, path: 'docs', itemType: 'directory', baseRevisionId: 24 } as const;
+
 const MENUS: Record<string, () => MenuEntry[]> = {
   branch: () => branchMenu(ws, [branch], '/main'),
   currentBranch: () => branchMenu(ws, [branch], branch.name),
@@ -172,6 +180,10 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   othersShelve: () => shelveMenu(ws, [shelve], { mine: false }),
   leftShelve: () => shelveMenu(ws, [shelve], { left: true }),
   codeReview: () => codeReviewMenu(ws, [review]),
+  branchCodeReview: () => codeReviewMenu(ws, [branchReview], workspace.selector),
+  branchCodeReviewOnItsBranch: () => codeReviewMenu(ws, [branchReview], { kind: 'branch', name: branch.name }),
+  changesetCodeReview: () => codeReviewMenu(ws, [changesetReview], workspace.selector),
+  shelveCodeReview: () => codeReviewMenu(ws, [{ ...review, target: { kind: 'shelve', shelveId: 12 } }], workspace.selector),
   file: () => fileMenu(ws, [file], new PendingChangesIndex([])),
   folder: () => fileMenu(ws, [{ ...file, path: 'src', name: 'src', itemType: 'directory' }], new PendingChangesIndex([])),
   lockedFile: () => fileMenu(ws, [file], new PendingChangesIndex([change]), pendingLocks),
@@ -181,7 +193,15 @@ const MENUS: Record<string, () => MenuEntry[]> = {
     historyMenu({ workspacePath: ws, path: 'src/a.ts', ofWorkspaceFile: true, annotate: () => {} }, [
       { kind: 'revision', revision: { revisionId: 40, changesetId: 5, itemType: 'file', repository, idSpec: 'revid:40@game@local', date: '' } } as never,
     ]),
-  diffEntry: () => diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [{ path: '/src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39, repository } as never], { statusOf: () => 'unreviewed', toggle: () => {} } as never),
+  diffEntry: () =>
+    diffEntryMenu(
+      ws,
+      { kind: 'changeset', changesetId: 5 },
+      [{ status: 'changed', path: '/src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39, repository } as never],
+      { review: { statusOf: () => 'unreviewed', toggle: () => {} } as never, workspaceRepository: repository },
+    ),
+  deletedDiffEntry: () => diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [deletedEntry], { workspaceRepository: repository }),
+  deletedDiffEntries: () => diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [deletedEntry, deletedFolder], { workspaceRepository: repository }),
   mergeConflict: () => mergeItemMenu([mergeConflict], mergeContext),
   mergeChange: () => mergeItemMenu([{ kind: 'change', key: 'change:0', path: 'src/c.ts', change: { kind: 'changed', path: '/src/c.ts' } }], mergeContext),
   mergeDirectoryConflict: () => mergeItemMenu([mergeDirectoryConflict], mergeContext),
@@ -192,7 +212,7 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   lock: () => lockMenu(ws, [lock]),
   syncBranch: () => syncBranchMenu([branch], 'game@cloud', { push: () => {}, pull: () => {} }),
   attributeType: () => attributeTypeMenu(ws, [{ name: 'status', comment: '' } as never]),
-  changelist: () => changelistMenu(ws, { name: 'ui', description: '' } as never),
+  changelist: () => changelistMenu(ws, { name: 'ui', description: '' }, { changes: [{ ...change, changelist: 'ui' }], prepare: () => {} }),
   workspace: () => workspaceMenu({ name: 'game', path: ws, guid: 'w' }, () => {}),
   missingWorkspace: () => missingWorkspaceMenu({ name: 'game', path: ws, guid: 'w' }, () => {}),
   repository: () => repositoryMenu({ id: '1', name: 'game', server: 'local', owner: '', spec: repository }, () => {}),
@@ -246,6 +266,31 @@ describe('the menu grammar', () => {
 
   it.each(Object.entries(MENUS))('%s: what opens a dialog ends with "…", and nothing else does', (_name, build) => {
     for (const entry of topEntries(build())) expect(entry.label).not.toMatch(/\.\.\.$/);
+  });
+});
+
+describe('Compare with another', () => {
+  const comparing = (menu: MenuEntry[]) => topEntries(menu).filter((entry) => entry.id === 'compare').map((entry) => entry.label);
+
+  it('compares one branch, changeset or label with another of its kind, wherever it shows', () => {
+    expect(comparing(MENUS.branch!())).toEqual(['Compare with another branch…']);
+    expect(comparing(MENUS.currentBranch!())).toEqual(['Compare with another branch…']);
+    expect(comparing(MENUS.graphBranch!())).toEqual(['Compare with another branch…']);
+    expect(comparing(MENUS.changeset!())).toEqual(['Compare with another changeset…']);
+    expect(comparing(MENUS.graphChangeset!())).toEqual(['Compare with another changeset…']);
+    expect(comparing(MENUS.label!())).toEqual(['Compare with another label…']);
+  });
+
+  it("sits with a branch's other views: its changesets, then comparing, then the Branch Explorer", () => {
+    const navigating = (menu: MenuEntry[]) => topEntries(menu).filter((entry) => groupOf(entry) === 'navigate').map((entry) => entry.label);
+    expect(navigating(MENUS.branch!())).toEqual(['Show changesets', 'Compare with another branch…', 'Show in Branch Explorer']);
+    expect(navigating(MENUS.graphBranch!()).slice(0, 2)).toEqual(['Show changesets', 'Compare with another branch…']);
+  });
+
+  it('leaves it out of a selection of several, which compares them or nothing', () => {
+    expect(comparing(MENUS.branches!())).toEqual([]);
+    expect(comparing(MENUS.changesetInterval!())).toEqual([]);
+    expect(comparing(MENUS.labelPair!())).toEqual([]);
   });
 });
 
@@ -310,9 +355,12 @@ describe('one menu per object, the same everywhere', () => {
   });
 
   it('a code review reads the same in the Code reviews view, the palette and the Branch Explorer', () => {
-    const common = codeReviewMenu(ws, [review]);
-    expectOnlyAdds(codeReviewResult(review, resultContext).menu!(), common);
-    expectOnlyAdds(graphMenu({ kind: 'codeReview', review }, graphContext), common);
+    const inView = codeReviewMenu(ws, [branchReview], workspace.selector);
+    const { target: _named, ...asSearched } = branchReview;
+    expectOnlyAdds(graphMenu({ kind: 'codeReview', review: asSearched }, graphContext), inView);
+    // The one exception (ARCHITECTURE.md "Menus"): the palette's searches don't name a branch, so it can't switch to it.
+    expectOnlyAdds(codeReviewResult(asSearched, resultContext).menu!(), withoutAction(inView, 'switch'));
+    expectOnlyAdds(codeReviewResult(changesetReview, resultContext).menu!(), codeReviewMenu(ws, [changesetReview], workspace.selector));
   });
 });
 
@@ -425,8 +473,11 @@ describe('opening', () => {
     expect(opening(MENUS.folder!())).toEqual([...words, REVEAL]);
     expect(opening(MENUS.currentWorkspace!())).toEqual([...words, 'Open in Finder']);
     expect(opening(MENUS.workspace!())).toEqual([...words, 'Open in Finder']);
-    expect(reading(MENUS.workspace!()).slice(0, 1)).toEqual([expect.stringContaining('openWorkspace | Open workspace')]);
-    expect(MENUS.workspace!()[1]).toBe(SEPARATOR);
+    expect(reading(MENUS.workspace!()).slice(0, 2)).toEqual([
+      expect.stringContaining('openWorkspace | Open workspace'),
+      expect.stringContaining('openInNewWindow | Open in new window'),
+    ]);
+    expect(MENUS.workspace!()[2]).toBe(SEPARATOR);
   });
 
   it("opens a revision first, in the user's editor or any other app", () => {

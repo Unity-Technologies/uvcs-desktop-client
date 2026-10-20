@@ -7,7 +7,10 @@
 // framing; zoom controls float over the stage (joined by the anchor toggle
 // when the revisions differ in size); an info strip narrates the change
 // (dimensions, sizes, % of pixels that differ) and a pixel inspector reports
-// exact texels from 8× zoom.
+// exact texels from 8× zoom (of a high dynamic range image, the texels as
+// shown). Unity's texture formats (TGA, TIFF, PSD, EXR, HDR) are decoded in a
+// worker first (`usePaintableImage`); a side that can't be shows the binary
+// diff, saying why.
 
 import { ImageOff } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
@@ -15,12 +18,16 @@ import type { FileContent } from '@shared/domain/content';
 import { useSpinDelay } from '../../../../lib/useSpinDelay';
 import { EmptyState } from '../../../../ui/EmptyState';
 import { CenteredSpinner } from '../../../../ui/Spinner';
+import { DiffNotice } from '../DiffNotice';
 import { useDiffPreferences } from '../diffPreferencesStore';
+import { sizeChange, TOO_LARGE_TITLES } from '../fileSizeWords';
+import { OpenFileButton } from '../OpenFileButton';
 import { DifferencesMode } from './DifferencesMode';
 import { composedSize } from './composedFrame';
 import type { ImageDiffMode } from './imageDiffModes';
 import { forgetComparedImages } from './imageDiffSession';
-import type { DiffStats } from './imageInfo';
+import { undecodedDescription, unpaintedNotice, type DiffStats } from './imageInfo';
+import { imagePairView } from './imagePairView';
 import { ImageInfoStrip } from './ImageInfoStrip';
 import { OnionSkinMode } from './OnionSkinMode';
 import { PixelInspector } from './PixelInspector';
@@ -40,10 +47,12 @@ interface ImageDiffViewerProps {
   modified: FileContent;
   /** Active diff mode; owned by the header's segmented control. */
   mode: ImageDiffMode;
+  /** Opens a workspace file in the app it opens with, offered where no version can be painted for its size. */
+  openFile?: () => void;
 }
 
 /** Mount one per pair of images: blend, stats and the heatmap cache belong to the pair. */
-export function ImageDiffViewer({ original, modified, mode }: ImageDiffViewerProps) {
+export function ImageDiffViewer({ original, modified, mode, openFile }: ImageDiffViewerProps) {
   const oldState = useDecodedImage(original.image);
   const newState = useDecodedImage(modified.image);
   const { imageAnchor: anchor, imageTolerance, setImageAnchor, setImageTolerance } = useDiffPreferences();
@@ -57,9 +66,10 @@ export function ImageDiffViewer({ original, modified, mode }: ImageDiffViewerPro
   useEffect(() => forgetComparedImages, []);
   const stageRef = useRef<HTMLDivElement>(null);
 
-  const oldImage = oldState.status === 'ready' ? oldState.image : null;
-  const newImage = newState.status === 'ready' ? newState.image : null;
-  const isDiff = Boolean(original.image && modified.image);
+  const view = imagePairView(oldState, newState);
+  const oldImage = view.kind === 'painted' ? view.old : null;
+  const newImage = view.kind === 'painted' ? view.new : null;
+  const isDiff = Boolean(oldImage && newImage);
   const sizesDiffer = !!oldImage && !!newImage && (oldImage.width !== newImage.width || oldImage.height !== newImage.height);
 
   // The composed frame both revisions are laid out in (max of both sizes).
@@ -70,7 +80,7 @@ export function ImageDiffViewer({ original, modified, mode }: ImageDiffViewerPro
   }, [oldImage, newImage]);
 
   const panZoom = usePanZoom(frame);
-  const decoding = !frame || (isDiff && (!oldImage || !newImage));
+  const decoding = view.kind === 'loading';
   const spin = useSpinDelay(decoding);
 
   // Keyboard zoom on the focused stage (`zoomCommandOf`).
@@ -84,13 +94,22 @@ export function ImageDiffViewer({ original, modified, mode }: ImageDiffViewerPro
     [panZoom],
   );
 
-  if (oldState.status === 'error' || newState.status === 'error') {
-    return <EmptyState icon={<ImageOff size={22} />} title="Couldn't display this image" description="The file looks like an image but couldn't be decoded." />;
+  // No version paints: too large reads as any image too large to preview; otherwise the binary diff, saying why.
+  if (view.kind === 'unpainted') {
+    if (view.problem === 'tooLarge') {
+      return <EmptyState title={TOO_LARGE_TITLES.image} description={sizeChange(original, modified)} action={openFile && <OpenFileButton onClick={openFile} />} />;
+    }
+    return <EmptyState title="Binary file" description={undecodedDescription(original, modified, view.problem)} />;
   }
   if (decoding || !frame) return spin ? <CenteredSpinner /> : null;
 
   return (
     <div className={styles.pane} tabIndex={0} onKeyDown={onKeyDown}>
+      {view.kind === 'painted' && view.unpainted && (
+        <DiffNotice tone="info" icon={<ImageOff size={13} />}>
+          {unpaintedNotice(view.unpainted.side, view.unpainted.problem)}
+        </DiffNotice>
+      )}
       <div className={styles.stage} ref={stageRef}>
         {!isDiff && (
           <Viewport panZoom={panZoom}>

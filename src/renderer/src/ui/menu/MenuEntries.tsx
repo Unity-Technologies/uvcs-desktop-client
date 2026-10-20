@@ -76,8 +76,10 @@ export function MenuEntries({ entries, primitives }: { entries: MenuEntry[]; pri
 }
 
 /**
- * Menu actions often open dialogs. Running them after the menu has closed and restored focus
- * keeps the menu from lingering on screen and stealing the dialog's keyboard input.
+ * Runs a menu's action on the next task, out of Radix's select handler, so the menu closes rather than lingering over
+ * a dialog the action opens. That task comes before Radix's FocusScope restores focus (its own timer, scheduled as the
+ * closed menu unmounts), so the action has opened its dialog or put the caret in a field by then: `focusAfterMenu`
+ * relies on this order to leave focus there instead of on the menu's trigger.
  */
 function runAfterMenuCloses(action: () => void): void {
   setTimeout(action, 0);

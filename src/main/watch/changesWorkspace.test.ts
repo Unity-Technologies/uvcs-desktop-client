@@ -8,6 +8,7 @@ describe('changesWorkspace', () => {
     expect(changesWorkspace(['merge', 'br:/main/task', '--merge'])).toBe(true);
     expect(changesWorkspace(['shelveset', 'apply', 'sh:3'])).toBe(true);
     expect(changesWorkspace(['changelist', 'default', 'add', '/ws/a.txt'])).toBe(true);
+    expect(changesWorkspace(['undelete', 'revid:18', '/ws/src/Enemy.cs'])).toBe(true);
   });
 
   it('leaves out reads and previews', () => {

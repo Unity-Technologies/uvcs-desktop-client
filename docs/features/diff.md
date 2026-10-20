@@ -30,6 +30,50 @@ is noise for anyone reading a branch, and the web code review and GitHub show on
 not decide first whether the branch received merges (as the official client does to show its button): that is the
 same common-ancestor calculation `--integration` already makes inside its one command.
 
+## Comparing two branches, changesets or labels
+
+Two objects of a kind are compared from a selection of two (labels, changesets), or from one object's menu, "Compare
+with another branch…", "…changeset…", "…label…" (the `compare` menu word), which asks for the other with a picker and
+opens a range diff (`kind: 'range'`), the older side on the left: `cm diff <older> <newer>`, one command, cached as
+immutable.
+
+- **Branches** compare their heads, `cm diff cs:<head> cs:<head>` (`diffBranches`): `cm diff` takes no two branch
+  specs (it reads the second as a path). The heads are the ones the branch lists read (`pickBranch` hands back the
+  branch picked, its head too), so nothing is asked to resolve them; a head moved since that list was read is the
+  list's staleness, as for a branch's own diff (`branchHead`). The header names each branch in words, its full name and
+  head in the tooltip (the diff page's `sideNames`), as `cs:` specs alone wouldn't say which branch is which.
+- **Changesets** are picked among the newest (`recentChangesetsQuery`: the palette's `cm find changeset ... limit
+  2000`, one cache entry for both, never read again on focus), or any other by typing its number (`changesetChoices`):
+  a repository's ~280k changesets are never listed. The rows match on what they show (number, the comment's first line,
+  the branch's own name). A number typed is offered when the read can't rule it out, older than those read when the
+  read stopped at its limit; any other shows as "No changeset N", which can't be picked, so
+  no diff opens on a changeset that doesn't exist. While the list is read, or when it couldn't be (said in its
+  place), a number typed can still be picked.
+
+## Reverting a file
+
+A file a changeset's diff changed (the diff page, a details panel's changed files: a changeset's, a label's, a code
+review's of a changeset) or a range of changesets changed has "Revert file to before this change…" in its menu
+(`revertFromDiffEntry`): the file goes back to the diff's older side as a pending change, `history.revertTo` (`cm
+revert <file>#cs:N`) with History's confirmation, which names the changeset it goes back to and, for a changeset's
+diff, the one it undoes ("Revert src/a.ts to changeset 37, before changeset 42?", `revertItemTo`'s `undoing`). It is
+the native client's "Revert changes" on a diff: undoing what the diff did to the file is what a diff is looked at for,
+and History already reverts to the newer side ("Revert file to this revision…"). Like the native one, it reverts the
+content whole: changes made to the file after the diff go too, which the confirmation's changeset number tells.
+
+- The older side is a changeset: a changeset's parent (`olderSideOf`, read on click by `readChangeset` from what the
+  diff's header or a list already read, else one `cm find`), a range's first changeset. A branch's diff starts at its
+  common ancestor with its parent, which nothing read names, a label range at a label, and a shelve at no changeset of
+  its own: none of them offers it.
+- Only one file whose content changed, in place or moved too, of the workspace's repository (`canRevertFromDiff`):
+  `cm revert` finds the item by its id and takes its content back, keeping its name, so a pure move has nothing to
+  revert; an added file had no older version, a deleted one comes back otherwise ("Restoring deleted items"), a folder or an xlink has no content to
+  take back, and an xlinked repository's changesets aren't the diff's.
+- Incoming offers none: its changes aren't in the workspace yet (`diffEntryMenu` without `workspaceRepository`).
+- `cm revert` finds the file where the diff names it, in the workspace: a file moved or deleted since fails with
+  `cm`'s message, and one with pending changes too ("must be checked in").
+- It refreshes what a checkout does (`isAffectedByPendingChangeEdit`).
+
 ## Editing in the diff
 
 A workspace file shown against its own past (loaded revision, reviewed copy, or nothing for an
@@ -124,6 +168,50 @@ stack for the session, kept through a visit to another workspace (⌘Z in the di
 `MAX_DISCARD_HISTORY_CHARS` of text the oldest of any file go, as each keeps the whole file before and after); with
 some, it's one more edit in the editor, unsaved, and ⌘Z takes it back like typing (`diffDiscards`).
 
+## Restoring deleted items
+
+An item a diff shows deleted (a changeset's, branch's, shelve's or range's; a file or a folder) comes back from its
+menu, in the diff page and a details panel's changed files, as a pending change: "Restore file", "Restore folder" or
+"Restore N items" where it was, and for one item "Restore to…" any path in the workspace, typed with `/` (or `\`
+on Windows: `typedRestorePath`) (`restoreMenuEntries`, `restoreDeleted`). `cm undelete <revid:N> <path>` writes the revision the deletion removed (the entry's
+`baseRevisionId`) and records it as copied; a folder comes back with everything it held then. It is offered only when
+every selected item was deleted, in the workspace's own repository, and none is an xlink (`deletedItemRestores`):
+`cm` restores no xlink nor xlinked item, and finds a bare id only there (`undeleteArgs`). Incoming offers none: what
+it deletes is still in the workspace (`diffEntryMenu` without `workspaceRepository`).
+
+- `cm diff` lists a deleted folder alone, but where a diff lists it with its files the list shows only the files
+  (`listedEntries`): a file of a deleted folder comes back with the outermost folder the diff deleted ("Restore folder
+  docs"), as `cm` restores nothing into a folder that's gone, and a folder row's files are one restore of it
+  (`deletedItemRestores`, given every entry of the diff: `diffEntryMenu`'s `diffEntries`).
+- `cm` takes one item a command, so several are one operation running one each (`restoreDeletedItems` in main),
+  which stops between two. A folder row of a tree selects every deleted file under it, so past
+  `MAX_RESTORED_WITHOUT_ASKING` (20) items it asks first: each is a process and a round trip to the server.
+  `undelete` counts as a transfer (`runsLong`): a folder downloads all it held, so it runs as a process, never
+  holding a pooled shell.
+- Every place is checked on disk before any `cm`, and nothing is restored if one fails: `cm` refuses a path that holds
+  an item ("The restore path should not exist"), but into a folder that's gone it writes the files and then fails,
+  leaving them private. Main also refuses a revision of another repository than the workspace's (read from the status header the window's info
+  shares, `headers.status`), whatever the renderer asked: the bare id would name another item there.
+- `cm`'s own refusals read in the app's words (`undeleteRefusal`): an item the workspace still loads ("The item 35
+  is already loaded on tree on path '/src/a.cs'" becomes "The workspace already has this item, at src/a.cs"), a folder
+  holding an xlink, a place taken after the check. Only English output is recognized, on purpose: `cm` in another
+  language shows its own words, as any other failure does.
+- A refusal crosses as data, never as text to match (`RestoreOutcome`: how many came back, and the `RestoreRefusal`'s
+  kind, path and words), stopping the rest: the error toast says what came back before it ("Restored 2 of 5 items")
+  and offers what helps (`refusalAction`): "Restore to…" for an item whose place is taken or whose folder is gone,
+  starting from where it was, then going on with the items the refusal left behind; and "Show in Files" where the
+  workspace already has it. Stopped, the info toast says what came back too, or only "Stopped" when nothing did. Any other failure fails the operation, as `cm` tells it.
+- Not handled: "Restore to…" a path under an xlink. `cm` looks the bare id up in the xlinked repository there, where
+  it may name another item or none; knowing where xlinks are would take a `cm` read of its own.
+- `cm undelete` takes the workspace's path as `cm` names it: given a link to it (`/tmp/…` for `/private/tmp/…` on
+  macOS) it writes the files, then fails with "Item path not in workspace", leaving them private. The app's workspace
+  paths come from `cm`, so only a hand-typed command meets it.
+- The official client asks to confirm first; nothing is lost here (the item comes back as a change to undo or check
+  in), so it asks only past `MAX_RESTORED_WITHOUT_ASKING` items, for the time they take.
+
+`scripts/sandboxes/deletes.sh` builds changesets that delete a file, a folder, an accented name, a path a new file
+took, and (cs:5) 25 files one by one, more than are restored without asking.
+
 ## Moving through changes
 
 Every text diff of two versions steps through its changes (`useChangeNavigation`: the
@@ -138,7 +226,9 @@ or deleted file) is one change, "1 of 1"; a file with none to step through (an i
 keeps the arrows, "No changes", so stepping through the list never stops there. It steps through the files as the list
 shows them: in a tree, those in a closed folder are skipped. The list itself, its order and its List/Tree layout, are
 every list of changed files' (ARCHITECTURE.md "Lists of changed files"); a folder selected in it shows how many changes
-it holds instead of a diff.
+it holds instead of a diff. The stepping itself (the position, the keys, the arrival from a file beside it) is
+`useStepNavigation`, given the steps and a `StepView`: `useChangeNavigation` is it over a diff's change regions, and the
+merge page steps through conflicts with it (merge.md "Stepping through conflicts").
 
 ## Moved code
 
@@ -262,6 +352,56 @@ An image's bytes cross IPC as binary (`FileContent.image`, a `Uint8Array` and it
 most) and are painted from a blob URL that lives while it's shown (`useImageUrl`), never a data URL (35 MB of text for
 a 25 MB PNG, decoded again at every paint). The URL is revoked as the image changes, so what is painted is only ever
 the decode of the image's current URL (`shownDecodeState`): an `<img>` still given the one before fails to load.
+
+## Unity's texture formats
+
+TGA, TIFF, Photoshop (PSD and PSB), OpenEXR and Radiance HDR show in the image diff like any other image: every mode,
+the info strip, the pixel inspector, and the merge page's version cards (`WholeFileChoice`). Main reads them as images
+of their own type (`DECODED_IMAGE_TYPES`, by extension, within `MAX_IMAGE_BYTES` as every image), and the renderer
+makes each into an image the browser paints before anything shows it (`usePaintableImage`):
+
+- **Off the UI thread**: in the image decoding worker (`imageDecoding.worker`, a `paint` request; `paintOffThread`
+  in `imageDecodingSession`), never on the page's thread, where a 4K PSD or EXR would hold a paint; a worker that can't
+  start or dies fails the image. The session hands the worker at most two requests at a time, a texture's or an
+  image's, from one queue (it bounds the bytes in the worker's hands; two may be under way at once, as a texture's
+  decode awaits `createImageBitmap`); an image asked again while in hand is asked once, and one every viewer let go of
+  (`release`, in the effect's cleanup) before its turn is never handed over, so stepping through files queues only the
+  one on screen. The decoders are the textures' own (`lib/images`: `decodePixels`, three's loaders for TGA, TIFF, EXR
+  and HDR, `readPsd` for Photoshop), loaded only in the worker. A second worker for images was tried and set aside: a
+  second thread and a second copy of three's loaders, and a client that repeated the decoding worker's line for line.
+  What sharing costs, accepted for that: one queue, so a model's textures and an image diff wait for each other; and
+  one failure, so a parser that hangs on a file holds both, and a worker that dies fails textures and images alike
+  in that window until it reloads.
+- **By content first** (`imageFormatOfContent`: a PNG saved as `.tga` paints as the PNG it is, told on the page with
+  no trip to the worker: `needsDecoding`), else by its type; its size read from the header and refused past 16384 px
+  a side or 8192² pixels before decoding (`sizeProblem`, the model diff's limits, where a texture is drawn at 2048 px at
+  most). What an image costs at its size, 4 bytes a pixel each (256 MB at the limit): in the worker, its RGBA pixels and
+  its BMP while it is written (an EXR or HDR holds 16 bytes a pixel of floats first: 1 GB at the limit); on the page,
+  the decoded `<img>`, and, once Differences or the pixel inspector read it, its pixels (`rasterize`); the BMP itself
+  stays in a Blob, out of the page's heap. A browser image under the image cap has no pixel limit today.
+- **As a BMP** (`bmpOf`): the decoded pixels are written as a 32-bit BMP with an alpha mask, which `<img>` reads as it
+  is: no compression to spend time on, and a see-through pixel keeps its color. It crosses back from the worker as a
+  Blob (`PaintableImage`), a handle, and the page keeps only its URL. A PNG made through a canvas was set aside: the
+  canvas premultiplies alpha, losing the color of every transparent pixel, and encoding takes long. Chromium keeps a BMP
+  whose alpha is 0 in every pixel transparent, as the texture is (checked in the app: some BMP readers take such an
+  image as opaque, guessing its writer left alpha unset).
+- **High dynamic range** (EXR, HDR) shows as the model diff's textures do: clamped to 0-1 and encoded as sRGB. The info
+  strip says so ("HDR", its tooltip saying it shows clamped: `HIGH_DYNAMIC_RANGE_TIP`), and the pixel inspector tells
+  the colors shown, "as shown", not the file's values. 16-bit channels show as 8 bits.
+- **What can't be painted** (a PSD saved without "Maximize Compatibility" or in CMYK, Lab, indexed or 32 bits, a header
+  past the limit, a damaged file; `imagePairView`): a version that can't, beside one that can, leaves that one shown
+  alone, as an added or deleted image is, under a line saying which version is left out and why (`unpaintedNotice`):
+  a PSD saved again without "Maximize Compatibility" still shows as it was. When none can, an image past the pixel
+  limit reads as one past the byte limit ("This image is too large to preview", the sizes, and "Open file" for a
+  workspace file: `TOO_LARGE_TITLES`, `sizeChange`, `OpenFileButton`, shared with `NothingToDiff`), and any other
+  shows the binary diff's sizes and why, in the texture problems' words (`undecodedDescription`,
+  `imageProblemWords`). The header's mode switch stays over these: it is chosen before the versions decode. A merge
+  card shows its file icon with why in its tooltip (`undecodedTip`).
+- **The byte cap**: a PSD over `MAX_IMAGE_BYTES` (40 MB) is "too large to preview", as any image, though Photoshop files
+  often pass it. To do: the model diff reads its textures up to 256 MB through another path (`MAX_TEXTURE_FILE_BYTES`,
+  within the read's `MAX_MODEL_BYTES`); the image diff could read a texture as large, once a version's bytes crossing
+  IPC whole stops being the limit.
+- Nothing is kept once a viewer goes: going back to a file decodes it again.
 
 ## Images written as text
 

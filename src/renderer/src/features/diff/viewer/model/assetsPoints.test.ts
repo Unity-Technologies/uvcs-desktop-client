@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { ContentSource } from '@shared/domain/content';
 import type { DiffEntry } from '@shared/domain/diff';
 import { MAX_CHANGED_ASSETS } from '@shared/domain/unityAssets';
-import { changedAssetsOf, diffAssetsPoint, inWorkspaceRepository, pointForModel, lastChangeAssetsPoint, revisionsAssetsPoint, workspaceAssetsPoint } from './assetsPoints';
+import { inWorkspaceRepository } from '@shared/domain/repository';
+import { changedAssetsOf, diffAssetsPoint, pointForModel, lastChangeAssetsPoint, revisionsAssetsPoint, workspaceAssetsPoint } from './assetsPoints';
 
 const revision = (revisionId: number, fileName = 'Art/Tree.fbx'): ContentSource => ({ kind: 'revision', revision: { revisionId, repository: 'eco@local' }, fileName });
 const workspaceFile: ContentSource = { kind: 'workspaceFile', path: 'Art/Tree.fbx' };

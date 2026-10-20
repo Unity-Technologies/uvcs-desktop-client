@@ -25,6 +25,7 @@ import {
   deletePrivateFiles,
   FILTER_LIST_FILES,
   undoChanges,
+  undoChangesLabel,
 } from './pendingChangeOperations';
 
 /** Whether each change goes into the next check-in, and a way to change it. */
@@ -73,9 +74,7 @@ export function pendingChangeMenu(
     moveToChangelistSubmenu(workspacePath, changes, changelists),
     filterRulesSubmenu(workspacePath, changes.map((change) => change.path)),
     controlledChanges.length > 0 &&
-      menuAction('undo', () => void undoChanges(workspacePath, controlledChanges), {
-        label: controlledChanges.length === 1 ? 'Undo changes…' : `Undo ${formatCount(controlledChanges.length)} changes…`,
-      }),
+      menuAction('undo', () => void undoChanges(workspacePath, controlledChanges), { label: undoChangesLabel(controlledChanges.length) }),
     privateChanges.length > 0 && menuAction('trash', () => void deletePrivateFiles(workspacePath, privateChanges), { label: `Move to ${TRASH_NAME}…` }),
   ]);
 }

@@ -1,13 +1,14 @@
 import type { ShelvedAway, Shelve } from '@shared/domain/shelve';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
-import { navigation, useNavigation } from '../../app/navigation/navigationStore';
+import { navigation } from '../../app/navigation/navigationStore';
 import type { PageOf } from '../../app/navigation/pages';
+import { viewChangesAction } from '../../app/navigation/viewChangesAction';
 import { runOperation, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByShelveApplied, isAffectedByShelveDeletion, isAffectedByShelvingAway } from '../../app/refresh/refreshScopes';
 import { pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
-import { toast, type ToastAction } from '../../ui/toast/toastStore';
+import { toast } from '../../ui/toast/toastStore';
 import { appliedShelveMessage, setAsideComment } from './shelveMessages';
 
 /**
@@ -37,12 +38,6 @@ export async function applyShelve(workspacePath: string, shelveId: number, delet
     default:
       return false;
   }
-}
-
-/** Leads to Changes, unless it's what the window shows. */
-function viewChangesAction(): ToastAction | undefined {
-  const { view, pages } = useNavigation.getState();
-  return view === 'changes' && pages.length === 0 ? undefined : { label: 'View changes', run: () => navigation.goToView('changes') };
 }
 
 async function shelvePendingChangesFirst(workspacePath: string, shelveId: number): Promise<boolean> {

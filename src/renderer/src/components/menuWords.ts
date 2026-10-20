@@ -1,5 +1,6 @@
 import {
   AppWindow,
+  Archive,
   ArchiveRestore,
   ArrowDownToLine,
   ArrowLeftToLine,
@@ -20,6 +21,7 @@ import {
   EyeOff,
   FileCheck,
   FileDiff,
+  FileClock,
   FileDown,
   FilePlus,
   Files,
@@ -32,6 +34,7 @@ import {
   FolderSearch,
   FolderTree,
   GitBranchPlus,
+  GitCommitHorizontal,
   GitCommitVertical,
   GitCompareArrows,
   GitGraph,
@@ -101,6 +104,7 @@ export const MENU_WORDS = {
   reviewInNewWindow: word('primary', PictureInPicture2, 'Open review in new window'),
   release: word('primary', LockOpen, 'Release lock'),
   openWorkspace: word('primary', FolderOpen, 'Open workspace'),
+  openInNewWindow: word('primary', AppWindow, 'Open in new window'),
   locate: word('primary', FolderSearch, 'Locate or recreate…'),
 
   // Opening it in other apps, and the file manager (`openOnDiskEntries`, `openRevisionEntries`): a file's Enter too.
@@ -122,18 +126,27 @@ export const MENU_WORDS = {
   revert: word('act', RotateCcw),
   apply: word('act', ArchiveRestore),
   applyAndDelete: word('act', ArchiveRestore, 'Apply and delete'),
+  // The changes it holds checked in or shelved; the words name the object ("Check in this changelist"). The icons are
+  // the check-in panel's for each mode (`describeMode`).
+  checkin: word('act', GitCommitHorizontal),
+  shelve: word('act', Archive),
   include: word('act', SquareCheckBig, 'Include in check-in'),
   exclude: word('act', Square, 'Exclude from check-in'),
   review: word('act', CircleCheck),
   // A conflicting file of a merge or an update settled by taking one version whole; the words name the side ("Keep yours").
   keepDestination: word('act', FileCheck),
   keepSource: word('act', FileDown),
+  // A conflicting file settled by keeping its common ancestor's version whole ("Keep base", "for 3 files").
+  keepBase: word('act', FileClock),
   // A directory conflict settled by keeping both items, yours under a new name.
   keepBoth: word('act', Files, 'Keep both'),
   // A conflicting file opened in a merge tool; the words name the tool ("Resolve in Visual Studio Code").
   resolveIn: word('act', Merge),
   // A conflicting file back to how the merge started it, the user's decision dropped.
   startOver: word('act', RotateCcw, 'Start over'),
+  // A deleted item brought back as a pending change; the words name it ("Restore file", "Restore 3 items").
+  restore: word('act', ArchiveRestore),
+  restoreTo: word('act', FolderInput, 'Restore to…'),
   add: word('act', Plus),
   checkout: word('act', PenLine, 'Check out'),
   status: word('act', CircleDot, 'Set status'),
@@ -166,8 +179,10 @@ export const MENU_WORDS = {
   history: word('navigate', History, 'View history'),
   annotate: word('navigate', ScanText, 'Annotate'),
   annotateRevision: word('navigate', ScanText, 'Annotate this revision'),
-  compare: word('navigate', GitCompareArrows, 'Compare with another label…'),
+  // The words name the kind of object picked ("Compare with another branch…").
+  compare: word('navigate', GitCompareArrows),
   browse: word('navigate', FolderTree),
+  changesets: word('navigate', GitCommitVertical, 'Show changesets'),
   showInBranchExplorer: word('navigate', GitGraph, 'Show in Branch Explorer'),
   locks: word('navigate', Lock, 'Show locks'),
   showInLocks: word('navigate', Lock, 'Show in Locks'),

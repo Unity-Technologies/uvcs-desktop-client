@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { buildConflictDocument, countConflictRegions, hasConflictMarkers, resolveConflictRegion, resolveEveryConflictRegion } from './threeWayMerge';
+import {
+  buildConflictDocument,
+  countConflictRegions,
+  hasConflictMarkers,
+  keepConflictRegionBase,
+  resolveConflictRegion,
+  resolveEveryConflictRegion,
+} from './threeWayMerge';
 
 const labels = { source: '/main/task', destination: '/main' };
 const BASE = 'line1\nline2\nline3\nline4\nline5\n';
@@ -7,7 +14,7 @@ const BASE = 'line1\nline2\nline3\nline4\nline5\n';
 describe('buildConflictDocument', () => {
   it('applies non-overlapping changes from both sides without conflicts', () => {
     const document = buildConflictDocument(BASE, 'line1 SRC\nline2\nline3\nline4\nline5\n', 'line1\nline2\nline3\nline4\nline5 DST\n', labels);
-    expect(document).toEqual({ text: 'line1 SRC\nline2\nline3\nline4\nline5 DST\n', conflictCount: 0 });
+    expect(document).toEqual({ text: 'line1 SRC\nline2\nline3\nline4\nline5 DST\n', conflictCount: 0, conflictBases: [] });
   });
 
   it('wraps overlapping changes in markers, destination (current) first', () => {
@@ -18,7 +25,7 @@ describe('buildConflictDocument', () => {
   });
 
   it('does not report the same change on both sides as a conflict', () => {
-    expect(buildConflictDocument('a\nb\n', 'a\nB\n', 'a\nB\n', labels)).toEqual({ text: 'a\nB\n', conflictCount: 0 });
+    expect(buildConflictDocument('a\nb\n', 'a\nB\n', 'a\nB\n', labels)).toEqual({ text: 'a\nB\n', conflictCount: 0, conflictBases: [] });
   });
 
   it('treats content added on both sides of an empty base as a conflict', () => {
@@ -37,7 +44,7 @@ describe('buildConflictDocument', () => {
 
   it('merges files of lone CRs line by line, keeping their CRs', () => {
     const document = buildConflictDocument('a\rb\rc\rd\r', 'a\rb\rc\rD\r', 'A\rb\rc\rd\r', labels);
-    expect(document).toEqual({ text: 'A\rb\rc\rD\r', conflictCount: 0 });
+    expect(document).toEqual({ text: 'A\rb\rc\rD\r', conflictCount: 0, conflictBases: [] });
   });
 
   it('ends the markers of a file of lone CRs with CRs, so resolving leaves only CRs', () => {
@@ -78,6 +85,33 @@ describe('resolveConflictRegion', () => {
   it('keeps Windows line endings inside the region', () => {
     const text = '<<<<<<< dst\r\nD\r\n=======\r\nS\r\n>>>>>>> src\r\n';
     expect(resolveConflictRegion(text, 0, 'incoming')).toBe('S\r\n');
+  });
+});
+
+describe('keeping the base of a conflict', () => {
+  const document = buildConflictDocument('a\nb\nc\nd\ne\n', 'a\nS1\nc\nS2\ne\n', 'a\nD1\nc\nD2\ne\n', labels);
+
+  it('knows the base each conflict came from, in order', () => {
+    expect(document.conflictBases).toEqual(['b\n', 'd\n']);
+  });
+
+  it('puts the base in place of one conflict and leaves the others untouched', () => {
+    const resolved = keepConflictRegionBase(document.text, 1, 'd\n');
+    expect(resolved).toBe('a\n<<<<<<< /main\nD1\n=======\nS1\n>>>>>>> /main/task\nc\nd\ne\n');
+    expect(keepConflictRegionBase(resolved, 0, 'b\n')).toBe('a\nb\nc\nd\ne\n');
+  });
+
+  it('keeps neither side where both added lines at the same place: the base has none there', () => {
+    const added = buildConflictDocument('a\nc\n', 'a\nS\nc\n', 'a\nD\nc\n', labels);
+    expect(added.conflictBases).toEqual(['']);
+    expect(keepConflictRegionBase(added.text, 0, '')).toBe('a\nc\n');
+  });
+
+  it("keeps the base's own line breaks, and its last line without one at the end of the file", () => {
+    const crlf = buildConflictDocument('a\r\nb\r\n', 'a\r\nS\r\n', 'a\r\nD\r\n', labels);
+    expect(keepConflictRegionBase(crlf.text, 0, crlf.conflictBases[0]!)).toBe('a\r\nb\r\n');
+    const unended = buildConflictDocument('a\nb', 'a\nS', 'a\nD', labels);
+    expect(keepConflictRegionBase(unended.text, 0, unended.conflictBases[0]!)).toBe('a\nb');
   });
 });
 

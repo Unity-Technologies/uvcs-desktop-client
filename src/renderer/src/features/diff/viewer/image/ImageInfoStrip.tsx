@@ -1,4 +1,4 @@
-import { changedLabel, sideLabel, type DiffStats } from './imageInfo';
+import { changedLabel, HIGH_DYNAMIC_RANGE_TIP, sideLabel, type DiffStats } from './imageInfo';
 import type { DecodedImage } from './useDecodedImage';
 import styles from './ImageInfoStrip.module.css';
 
@@ -20,18 +20,27 @@ export function ImageInfoStrip({ old, new: next, stats, tolerance }: ImageInfoSt
   const changed = stats && changedLabel(stats, tolerance);
   return (
     <div className={styles.strip}>
-      {old && (
-        <span className={styles.side} data-side="old">
-          {sideLabel(old.image, old.bytes)}
-        </span>
-      )}
+      {old && <SideLabel side="old" {...old} />}
       {old && next && <span className={styles.arrow}>→</span>}
-      {next && (
-        <span className={styles.side} data-side="new">
-          {sideLabel(next.image, next.bytes)}
-        </span>
-      )}
+      {next && <SideLabel side="new" {...next} />}
       {changed && <span className={styles.stat}>{changed}</span>}
     </div>
+  );
+}
+
+/** One version's size, and "HDR" for a high dynamic range image, its tooltip saying it shows clamped. */
+function SideLabel({ side, image, bytes }: ImageSide & { side: 'old' | 'new' }) {
+  return (
+    <span className={styles.side} data-side={side}>
+      {sideLabel(image, bytes)}
+      {image.highDynamicRange && (
+        <>
+          {' · '}
+          <span className={styles.tag} data-tip={HIGH_DYNAMIC_RANGE_TIP}>
+            HDR
+          </span>
+        </>
+      )}
+    </span>
   );
 }

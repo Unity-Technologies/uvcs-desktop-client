@@ -1,4 +1,5 @@
 import type { ItemType } from './pendingChanges';
+import type { RevisionRef } from './revision';
 
 /** One file or directory as listed by `cm ls`, in the workspace or in a repository tree. */
 export interface TreeItem {
@@ -67,4 +68,36 @@ export interface ItemMove {
   from: string;
   to: string;
   isPrivate: boolean;
+}
+
+/**
+ * A deleted item to bring back as a pending change: its last revision, the one the deletion removed (a diff's
+ * `baseRevisionId`), restored at `path` (workspace-relative, forward slashes), where it was or anywhere else. A folder
+ * comes back with everything it held then.
+ */
+export interface DeletedItemRestore {
+  revision: RevisionRef;
+  path: string;
+}
+
+/**
+ * Why an item couldn't come back: its place is taken, its folder is gone, the workspace still has it (at `loadedPath`),
+ * it is or holds an xlink, or its revision is of another repository than the workspace's.
+ */
+export interface RestoreRefusal {
+  kind: 'placeTaken' | 'folderMissing' | 'alreadyLoaded' | 'xlink' | 'otherRepository';
+  /** Where it was asked to go (workspace-relative), as in the `DeletedItemRestore`. */
+  path: string;
+  /** Where the workspace has it (workspace-relative), for `alreadyLoaded`. */
+  loadedPath?: string;
+  /** The refusal in the app's words. */
+  message: string;
+}
+
+/** What restoring deleted items did: how many of them came back, and what stopped the rest (a refusal, the user). */
+export interface RestoreOutcome {
+  restored: number;
+  total: number;
+  refused?: RestoreRefusal;
+  stopped?: boolean;
 }

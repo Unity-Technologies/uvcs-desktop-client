@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { listChangeBlocks, listChangeRegions } from './changeBlocks';
-import { arrivalChange, changePositionLabel, plannedMove } from './changeNavigation';
+import { arrivalChange, positionLabel, plannedMove } from './changeNavigation';
 import { DIFF_TEST_TEXTS } from './diffTestTexts';
 import { fileSteps, type PendingArrival } from './fileSteps';
+import { pressStep } from './stepNavigation';
 import { lineDiff } from './lineDiff';
 
 /**
- * Moving through changes (⌥↓ ⌥↑, F7 ⇧F7) in a diff beside a list of files, as `useChangeNavigation` does with the
- * list's `FileStepsContext`: past the last change on to the next file's first, past the first back to the previous
- * file's last, and through files with nothing to step through. The view stays at the top of each file it opens.
+ * Moving through changes (⌥↓ ⌥↑, F7 ⇧F7) in a diff beside a list of files, as `useStepNavigation` does (`pressStep`)
+ * with the list's `FileStepsContext`: past the last change on to the next file's first, past the first back to the
+ * previous file's last, and through files with nothing to step through. The view stays at the top of each file it opens.
  */
 
 const changesOf = (original: string, modified: string): number => listChangeRegions(listChangeBlocks(lineDiff(original, modified, 'recognizeAll').meta)).length;
@@ -25,14 +26,13 @@ class DiffBesideList {
 
   /** The list's current file and the header's "3 of 12". */
   get header(): string {
-    return `${this.shown}: ${changePositionLabel({ count: this.count, current: this.current })}`;
+    return `${this.shown}: ${positionLabel({ count: this.count, current: this.current }, 'change')}`;
   }
 
+  /** The view stays at the top of each file: no change starts above it. */
   press(direction: 1 | -1): this {
-    const steps = this.steps();
-    const move = plannedMove({ count: this.count, current: this.current, above: 0 }, direction, steps.canStep(direction));
-    if (move?.to === 'change') this.current = move.index;
-    else if (move?.to === 'file') steps.step(direction);
+    const outcome = pressStep({ count: this.count, current: this.current, above: 0 }, direction, this.steps(), () => 0);
+    if (typeof outcome === 'number') this.current = outcome;
     return this;
   }
 
@@ -102,7 +102,7 @@ describe('stepping through the changes of a list of files', () => {
     for (let press = 0; press < 8; press++) list.press(1);
     expect(list.header).toBe('b.cs: 3 of 3');
     expect(list.goesTo(1)).toBeNull();
-    expect(list.goesTo(-1)).toBe('change');
+    expect(list.goesTo(-1)).toBe('step');
   });
 
   it('keeps going on from a file without changes, whichever way', () => {

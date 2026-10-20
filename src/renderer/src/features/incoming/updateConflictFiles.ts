@@ -11,6 +11,7 @@ export function updateConflictFiles(conflicts: UpdateConflict[]): ConflictedFile
     key: conflict.path,
     path: conflict.path,
     base: { kind: 'revision', revision: { revisionId: conflict.baseRevisionId, repository: conflict.repository }, fileName: conflict.path },
+    baseName: 'your loaded changeset',
     source: { kind: 'revision', revision: { revisionId: conflict.incomingRevisionId, repository: conflict.repository }, fileName: conflict.path },
     destination: { kind: 'workspaceFile', path: conflict.path },
     ...(conflict.isBinary && { isKnownBinary: true }),

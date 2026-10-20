@@ -18,13 +18,28 @@ export function useChangeset(changesetId: number | null, repository?: string) {
   // The workspace's lists hold its own repository's changesets only.
   const listed = () => (known && !other ? listedChangeset(workspacePath, changesetId) : undefined);
   return useQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'changesets', 'byId', changesetId, other),
+    queryKey: changesetKey(workspacePath, changesetId, other),
     queryFn: () => api.changesets.get(workspacePath, changesetId!, other),
     enabled: changesetId !== null && known,
     // Opened from a list already read (Changesets, the palette): shown at once, asked for only once that list is stale.
     initialData: () => listed()?.changeset,
     initialDataUpdatedAt: () => listed()?.readAt,
   });
+}
+
+/**
+ * The workspace's changeset `changesetId` for an action that needs it once clicked (its parent): what `useChangeset`
+ * or a list already read, else one read, kept as `useChangeset` keeps it.
+ */
+export async function readChangeset(workspacePath: string, changesetId: number): Promise<Changeset> {
+  return (
+    listedChangeset(workspacePath, changesetId)?.changeset ??
+    queryClient.ensureQueryData({ queryKey: changesetKey(workspacePath, changesetId), queryFn: () => api.changesets.get(workspacePath, changesetId) })
+  );
+}
+
+function changesetKey(workspacePath: string, changesetId: number | null, other?: string) {
+  return queryKeys.inWorkspace(workspacePath, 'changesets', 'byId', changesetId, other);
 }
 
 /** The changeset from a list of the workspace's changesets already read, and when that list was read. */

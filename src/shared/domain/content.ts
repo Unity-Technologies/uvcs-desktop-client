@@ -39,6 +39,18 @@ export interface ImageBytes {
   mimeType: string;
 }
 
+/**
+ * The image types the browser can't decode, which the renderer decodes itself before painting them, by the format it
+ * decodes each as (`decodePixels`): Unity textures. Main names them by their extension (`toFileContent`).
+ */
+export const DECODED_IMAGE_TYPES = {
+  tga: 'image/x-tga',
+  tiff: 'image/tiff',
+  exr: 'image/x-exr',
+  hdr: 'image/vnd.radiance',
+  psd: 'image/vnd.adobe.photoshop',
+} as const;
+
 /** The 3D model formats the diff shows: what Unity projects keep models in, read by their extension. */
 export type ModelFormat = 'fbx' | 'obj' | 'gltf' | 'glb';
 

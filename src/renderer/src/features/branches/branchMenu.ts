@@ -8,6 +8,7 @@ import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
 import { serverMergeLabel } from '../../components/mergeMenuLabels';
 import { menuAction, type MenuPlace } from '../../components/menuWords';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
+import { showBranchChangesets } from '../changesets/showBranchChangesets';
 import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
 import { openTaskMerge } from '../mergeTask/mergeTaskOperations';
 import { openObjectPermissions } from '../permissions/openPermissions';
@@ -19,6 +20,7 @@ import {
   cherryPickFromBranch,
   deleteBranches,
   diffBranch,
+  diffWithAnotherBranch,
   mergeFromBranch,
   mergeTo,
   renameBranch,
@@ -64,6 +66,8 @@ export function branchMenu(workspacePath: string, branches: BranchInfo[], curren
     single &&
       menuAction('newBranch', () => void openCreateBranchDialog(workspacePath, branchHeadOrigin(single)).then((name) => name && place.onBranchCreated?.(name))),
     single && menuAction('newCodeReview', () => openCreateCodeReviewDialog(workspacePath, { kind: 'branch', value: single.name })),
+    single && menuAction('changesets', () => showBranchChangesets(workspacePath, single.name)),
+    single && menuAction('compare', () => void diffWithAnotherBranch(single), { label: 'Compare with another branch…' }),
     single && !place.inBranchExplorer && menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'branch', name: single.name, date: single.date })),
     single && copySubmenu('Branch', branchCopyTexts(single), { shortcut: hotkey('listCopy') }),
     single && menuAction('rename', () => void renameBranch(workspacePath, single), { shortcut: hotkey('rename') }),

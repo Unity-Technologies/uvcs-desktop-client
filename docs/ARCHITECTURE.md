@@ -15,7 +15,7 @@ you touch:
 
 | Doc                                     | Covers                                                                         |
 | --------------------------------------- | ------------------------------------------------------------------------------ |
-| `features/diff.md`                      | Editing, discarding, stepping through changes, comparison methods, line breaks, images, review marks, highlighting memory |
+| `features/diff.md`                      | Comparing two branches, changesets or labels, editing, discarding, stepping through changes, comparison methods, line breaks, images, review marks, highlighting memory |
 | `features/model-diff.md`                | 3D models (FBX, OBJ, glTF): reading them as Unity imports them, what changed in Unity's terms, the 3D view, materials and textures where each version is, the disk or the repository at its point (`api.unityAssets`) |
 | `features/merge.md`                     | The merge page, conflict resolution, external merge tools, finishing a task    |
 | `features/incoming.md`                  | Incoming: changesets and their files, conflicts with your changes, updating    |
@@ -148,7 +148,7 @@ and many people use the same server. Every `cm` command other than local reads (
   a merge into a server branch the workspace too, refreshing the incoming check instead (`isAffectedByServerMerge`);
   shelving changes that stay in the workspace refreshes only the shelve lists, and shelving them away those and the workspace; a new, deleted or hidden branch only the
   branch lists and the Branch Explorer; a label edit the labels and the graph; an attribute or value edit only the
-  attributes; a code review created, edited, marked reviewed or deleted only the reviews (their lists and the branch chips); releasing a lock only the locks; deleting a shelve or discarding left changes only the shelve lists and the left changes, and applying or restoring one those, the workspace and its locks; adding, checking out, removing or undoing files only the workspace and its locks; a changeset's comment edited only what shows changesets, and one moved or deleted those, the branch lists and incoming. Reads refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
+  attributes; a code review created, edited, marked reviewed or deleted only the reviews (their lists and the branch chips); releasing a lock only the locks; deleting a shelve or discarding left changes only the shelve lists and the left changes, and applying or restoring one those, the workspace and its locks; adding, checking out, removing, undoing or reverting files only the workspace and its locks; restoring deleted items only the workspace (`isAffectedByRestoredItems`); a changeset's comment edited only what shows changesets, and one moved or deleted those, the branch lists and incoming. Reads refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
   the last (create a branch and switch to it: `createBranchAndSwitch`). Views keyed by the workspace info (`keyedByWorkspaceInfo`: left changes, the
   incoming check, the branch the workspace is on) wait for it, and when the operation gave them another key they are only
   marked stale: they are read under the new key as they show, never once more under the old one. Event-driven refreshes
@@ -260,7 +260,8 @@ and many people use the same server. Every `cm` command other than local reads (
   keeps them, not every parser (`ownCopy`; `OwnCopies` for a value many entries repeat, like a repository spec):
   `BranchNamesCache`, `WorkspaceCopies`, `RepositoryTrees`.
 - `cm find branch` leaves hidden branches out unless asked for (`hidden = 'true'`), and `cm find changeset` their
-  changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`); merges and labels come either way.
+  changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`; a list of one branch's changesets always asks for
+  it, `changesetsService`); merges and labels come either way.
 - Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments.
   Each is in a directory named with the app's process (`withTempDirectory`: `uvcs-<pid>-…`), deleted after the command;
   those a session killed mid-command left go as the next one starts (`removeLeftOverTempDirectories`, as the
@@ -290,7 +291,9 @@ Revision ids, item ids and changeset numbers are per repository, and an item und
 other servers) lives in the xlinked repository: `cm` looks a bare `revid:432251` up in the workspace's, where it is
 another file or none. So a revision is never a bare id: `RevisionRef` (`shared/domain/revision.ts`) is an id with its
 repository, set where `cm` names it, and every spec built from it names both (`spec.revision`: `revid:N@repo@server`,
-`spec.itemAt`: `itemid:N#cs:M@repo`), as the official client carries each diff item's mount repository.
+`spec.itemAt`: `itemid:N#cs:M@repo`), as the official client carries each diff item's mount repository. The one
+exception is `cm undelete`, which refuses any spec naming a repository and takes a bare id in the restore path's
+(`undeleteArgs`): the app restores only items of the workspace's own repository.
 
 - Each item records its repository as parsed: `cm diff --format={repository}` (`DiffEntry`, so every committed diff,
   Incoming and update conflicts), `cm ls` `<Repository>` (`TreeItem`: Files, Browse repository), `cm history`'s
@@ -367,7 +370,8 @@ and the app keeps the decision. An editor or a terminal opens only on the user's
   `cm diff` always has `--format`. `main/cm/noExternalUi.test.ts` checks these statically, and that processes start
   only to run `cm`, to ask the OS which apps are installed (`readInstalledApps`), to open an editor or a terminal
   (`system/apps/launchApp.ts`, wired only in `createServices`), or from `main/merge/mergeTools/launch.ts`, imported
-  only by `mergeToolsService`.
+  only by `mergeToolsService` (which also runs Unity's Smart Merge through it, headless, before the tool the user
+  asked for: docs/features/merge.md).
 - `cm` processes run with stdin closed, so a console prompt fails instead of hanging.
 
 ## Secrets
@@ -570,6 +574,14 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   ended for sure by a `dragleave` towards nothing, a drop or any pointer move), since an element's own
   enter and leave events don't pair up and left the overlay on screen.
   The overlay (`FolderDropOverlay`) fades out on a timer (`LEAVE_MS`), never on an animation event, so it can't linger.
+- A workspace picked from a list (the home screen's rows, search and a repository's Open button, the switcher, the
+  palette's workspace results) opens in this window, or in a new one with Shift held on the click or Enter
+  (`windowAskedBy`, `workspaceOpener`; `workspaceInNewWindow` in the shortcuts sheet, the switcher's hints and the
+  menu's key cap), the modifier a folder drop takes, and the one browsers use for a new window on all three OSs.
+  With another modifier held too it opens here, and a missing workspace always opens here, whatever the keys: its
+  screen locates, recreates or forgets it. The menu says the same: Open workspace, then Open in new window
+  (`workspaceMenu`), but not a missing workspace's. The new window asks `windows.openWorkspace`, so a workspace another
+  window shows comes forward instead; the new window remembers it as recent as it opens it (`useRequestedWorkspace`).
 - A new workspace (the New workspace dialog: `createWorkspaceAndUpdate`) opens as soon as `cm workspace create` makes
   it, then gets the latest files of /main through the workspace's own Update (`updateWorkspace`: `cm update` in a process
   of its own, its progress card, its refreshes). `cm workspace create` already puts it on /main with nothing loaded, so
@@ -770,18 +782,22 @@ renderer/src/
 - **Menus**: one grammar for every object's menu (`lib/menuGroups`): the default action (what Enter does in the app:
   open the workspace, a diff), every way to open it in other apps (the editor, the terminal, "Open with ▸", Reveal:
   `openOnDiskEntries`, docs/features/open-with.md; a file's Enter is its "Open in <editor>"), what it does (switch, apply, check out), merges, what it creates, where it leads (history,
-  annotate, browse, Show in Branch Explorer), the OS (save a revision), the clipboard (Cut, one "Copy ▸", Paste), edits (rename, comments,
+  annotate, browse, a branch's changesets, Show in Branch Explorer), the OS (save a revision), the clipboard (Cut, one "Copy ▸", Paste), edits (rename, comments,
   hiding, permissions), and what undoes or deletes it last, in the danger tone; a separator between groups. Entries come from one
   vocabulary (`components/menuWords`: one id, icon, wording and group per concept) and `groupedMenu` orders them.
   One builder per kind (`branchMenu`, `changesetMenu`, `labelMenu`, `shelveMenu`, `codeReviewMenu`, `fileMenu`,
   `pendingChangeMenu`) serves every place the object shows: its view, details' "More actions", the Branch Explorer,
   the top bar's pill (right-click, `workingObjectMenu`), the switcher, the palette. A place only adds entries, at the
   end of their group (`withEntries`: the graph's "Go to head changeset"); the Branch Explorer leaves out "Show in
-  Branch Explorer". "Copy ▸" (`copySubmenu`) lists what the object has in one order (name or number, title, paths,
+  Branch Explorer". One exception: the palette's code reviews of a branch have no "Switch to this branch", as its
+  searches read reviews without branch names (`listSummaries`; naming them would read every branch,
+  `BranchNamesCache`), while changeset and shelve reviews come named (`CodeReviewSummary.target`) and keep it. "Copy ▸" (`copySubmenu`) lists what the object has in one order (name or number, title, paths,
   spec, full spec with `@repository`, comment, GUID), each with what it copies, and the toast names it ("Branch spec
   copied"); ⌘C in a list copies its first entry (`useCopyCommand`) unless text is selected. Items that open a dialog
   end with "…"; submenus hold real sets of choices, the choice made checked after its label (`checked`), so the icon
-  in front stays the item's own (an app's). `menuGrammar.test.ts` checks every builder and every place.
+  in front stays the item's own (an app's). `menuGrammar.test.ts` checks every builder and every place. A menu's
+  content is in a portal, but React bubbles its events to the row its trigger sits in: `ActionDropdownMenu` keeps its
+  clicks and mouse presses from reaching that row (picking from a changelist's "…" selected and folded it).
 - **Back buttons**: a page goes back with the mouse's back button and, on Windows, the Browser Back key (the `app-command`
   the main process forwards as `navigateBack`), once per press however it arrives (`useBackButtons`).
 - **Keyboard**: every shortcut is declared in `lib/shortcutRegistry.ts` and bound through `hotkey(id)`; the shortcuts sheet
@@ -807,8 +823,10 @@ renderer/src/
   screen already offers in place (updating the workspace: the incoming chip) stays out.
 - **Focus**: the list, tree or graph a view or page works on carries `MAIN_FOCUS` (`lib/mainFocus.ts`). `useMainFocus`
   focuses it after navigating and whenever focus falls to the document (a dialog, menu or popover closed), and hands it
-  list keys pressed while nothing has focus. Views keep their list's selection while away (`useViewSelection`). Lists
-  expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container.
+  list keys pressed while nothing has focus. A closing menu gives focus back to its trigger unless its action opened
+  a dialog or put the caret in a field ("Check in this changelist": the comment), which keep it (`focusAfterMenu`;
+  the action runs first, `runAfterMenuCloses`). Views keep their list's selection while away (`useViewSelection`).
+  Lists expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container.
 - **Filters**: every list's filter marks what made a row match, by the same rule. A filter field takes each word typed
   in any order, each found in one of the texts the row shows (`matchesWordFilter`; users by the name shown and as stored,
   `userFilterTexts`), and `HighlightQuery` marks those words in each cell; a path cut to fit finds them in the whole
@@ -816,7 +834,8 @@ renderer/src/
   ranked by (`fuzzyMatchPositions`). Text a row shows but its filter doesn't look at is never marked.
   - **One filter bar**: every view lays its filters out with `FilterBar`, whose slots fix the order: the text
     (`FilterField`, "Filter <things>", 240px), people, time (`SincePicker`, the presets of `lib/sincePresets`, any time
-    last), kinds and statuses (`ToggleChip`, `ChoiceChip`, the Branch Explorer's Branches picker), then the view's own
+    last), kinds and statuses (`ToggleChip`, `ChoiceChip`, the Branch Explorer's Branches picker, Changesets'
+    `BranchScopeFilter`; a picker's options above its list are `FilterOptions`), then the view's own
     options at the end (layout, the graph's View). The text field is where ⌘F (and / from outside a text field) goes
     while it shows (`listFilter`, in its tooltip and the shortcuts sheet); ↓ goes on to the list and Esc empties it,
     then goes back to the list. Changes' and a diff's file filters take it too (`useChangeFilter(..., true)`); a list
@@ -835,9 +854,23 @@ renderer/src/
     or everyone's, other people picked among everyone's; the Branch Explorer fades the others' changesets
     (`pickedNames`), History and Attributes filter what they read. Code reviews go by who created them; Assigned to me
     is a chip of its own. `cm find` fails on an owner it doesn't know, so only people from the rows are offered.
+  - **Branch** (Changesets): one chip, `BranchScopeFilter`, for every branch's changesets, "This branch" (the one the
+    workspace is on, followed as it switches) or any branch picked from the switcher's list (`branchSwitcherGroups`
+    over `useBranches`, the every-branch read the switcher, the pickers and the palette share, asked for only once the
+    popover opens); no query of its own lists branches. The branch goes into the view's `cm find` (`toQueryFilter`,
+    `branch = '…'`), so "This branch" and the same branch picked by name share one query key. A branch picked by name
+    says which workspace it was picked in (`PickedBranch`, `branchScopeIn`): the store outlives the workspace a window
+    shows, and another repository may have no such branch. A branch's menu, in every place it shows the Branch
+    Explorer included, opens the view on it ("Show changesets", `showBranchChangesets`). Both ways pick it alike
+    (`pickedBranchFilters`): its whole history (Any time, capped) by everyone, the text emptied, and nothing the view
+    remembers changed. The pick holds its own time range and people for the session, which the chips show and edit
+    (`shownFilters`, `shownFiltersChange`); All branches, This branch or Clear filters drop it, and the remembered ones
+    show again. Clearing the remembered filters, or picking with Any time written into them, was rejected: a "Mine ·
+    Last month" user was left on "Everyone · Any time" for good, a heavier read on a big repository.
   - **Remembered**: each view keeps its filters in one store (`createViewFilters`): the time range, the kinds, the
-    view options and Mine across sessions, the text and the people picked by name for the session (people differ
-    between repositories); a page's (History) last as long as it. Older stores' `onlyMine` and the Branch Explorer's
+    view options and Mine across sessions, the text, the people picked by name and what else holds the repository's
+    objects (`forSession`: a branch picked by name) for the session, as they differ between repositories; a page's
+    (History) last as long as it. Older stores' `onlyMine` and the Branch Explorer's
     own date ranges are read into these (`restoredFilters`, `sincePresetOf`).
   - **Counts and empty lists**: the header counts what shows, "12 of 340" while filters hide some of what was read
     (`shownCount`). A list its filters empty says "No matching <things>" with Clear filters (`NoMatches`), which
@@ -965,7 +998,9 @@ renderer/src/
   - **One menu**: a file's menu is `changedFileMenu` (`components/`) in every list but Changes: its history (annotated
     or not), "Open this revision" and "Save this revision as…" for the version the list shows (a diff's newer side, a
     merge's incoming version; nothing to open for a deleted file or a folder), and Copy; a list adds its own after the
-    shared entries of each group (a diff the review mark, `diffEntryMenu`; a merge the ways to settle a conflict,
+    shared entries of each group (a diff the review mark and, on the workspace's own history, reverting a file to before
+    the change or restoring what was deleted, `diffEntryMenu`, features/diff.md "Reverting a file" and "Restoring
+    deleted items"; a merge the ways to settle a conflict,
     `mergeItemMenu`). Nothing is read to build it: what Open and Save as take out of the repository is a
     `RepositoryVersion` (a revision, or a path or item at a changeset, as a merge knows its sides), read when they run.
   - **Folders once**: a folder added or deleted along with what it holds is left out, its items say it already, but a

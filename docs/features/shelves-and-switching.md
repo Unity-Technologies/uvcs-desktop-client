@@ -24,6 +24,14 @@ client's) are offered again by the "Welcome back" banner in Changes (`features/l
 automatically on arrival when they apply cleanly (`restoreOnArrival`). Changes still waiting to be brought (conflicts
 left for the merge view) are offered on the target, and as left ones on the source if the user goes back instead.
 
+A code review brings the reviewer its code through the same flows (`reviewedCodeAction`, in the review's menu and its
+page's header): "Switch to this branch" or "Switch to this changeset" is the branch's or changeset's own switch, and
+"Apply to workspace" applies the shelve as Changes applies someone else's (below), keeping it. It stays in its place,
+disabled, where the workspace already is (on the branch, or switched to that changeset or shelve; on a branch with
+that changeset loaded it isn't, as switching leaves the branch), and isn't offered where the target isn't named: a
+deleted branch, or a branch review in the palette (ARCHITECTURE.md "Menus"). Reviews are read in the workspace's
+repository, so none is ever on another.
+
 ## A workspace on a shelve
 
 `cm` keeps shelves as changesets numbered below zero: a workspace switched to shelve 3 reports changeset -3 in
@@ -48,6 +56,24 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
   The panel's shelve (`shelveFromPanel`) takes the files as they are on disk, as its check-in does
   (`checkinFromPanel`); shelved away, the changes take the draft comment along, kept here they leave it for their
   check-in.
+- **A changelist at a time**: grouped by changelists, a changelist's menu (`changelistMenu`) offers "Check in this
+  changelist" and "Shelve this changelist", which ready the panel rather than run (`prepareChangelistCheckin`): its
+  changes checked alone (those the filters hide too), the panel in that mode (Changes holds it, `PendingChangesPanes`,
+  so it is back to Check in each time Changes shows, as after choosing Shelve with the caret), its description as the
+  comment unless the user wrote one (a comment another changelist's description filled counts as none; one filled from a
+  description since edited counts as the user's), and the caret at the end of the summary (ARCHITECTURE.md "Focus": a
+  menu leaves the caret where its action put it). What is checked is the prepared changelist's paths
+  (`PreparedChangelist` in the draft, read by `includedBy`), not exclusions: a change that appears meanwhile (an editor
+  saving, a new `.meta`) stays out, and checking files by hand adds or takes them there. While it lasts, a quiet
+  "Changelist ui" under the panel's button says why only its files are checked. It ends, and the files the user had left
+  out before are the only ones left out again, in three ways: a successful check-in or shelve (`endPrepared`; a failed
+  or cancelled one keeps it); no pending change left in the changelist (undone, shelved away by a switch, checked in
+  from outside the app: `preparedStillPending`, `currentChoice`; an added file undone stays on disk, private, but is no
+  longer the changelist's), or else every change made later would stay unchecked; and checking every file with the
+  list's header box while the filters hide none (`includeEverything`). The button does what it always does: one `cm
+  checkin` or shelve of those paths, the empty-comment warning, "Update & check in". Running at once was dropped: it
+  skipped reading the comment, which a changelist's description only suggests. "Undo N changes…" opens the Undo dialog
+  on its changes. The default changelist has no menu of its own: right-clicking it acts on its files.
 - **The list** is one `cm find shelve` by owner and date (`useMyShelves`, `SLOW_CHANGING_QUERY`), refreshed by shelve
   operations; the count comes from it. Typing filters it, and after three letters one bounded server search by comment
   (`useShelvesSearch`, `shelvesScope`) finds older ones. A row opens the shelve's diff, which shows its comment and Apply as the page's

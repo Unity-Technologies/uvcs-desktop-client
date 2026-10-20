@@ -14,7 +14,7 @@ import { Color, SRGBColorSpace } from 'three';
 import { siblingPath } from '../modelSiblings';
 import type { AlphaMode, FileMaterial, FileTexture, TextureUse } from '../parsedModel';
 import { MAX_TEXTURE_FILES, textureSideFor } from '../textures/textureBudget';
-import { textureFormatOf } from '../textures/textureFormats';
+import { imageFormatOf } from '../../../../../lib/images/imageFormats';
 import type { TextureProblem } from '../textures/textureProblems';
 import { isBuiltInGuid } from './builtInAssets';
 import type { ModelMaterialsInput, SlotSource } from './slotSources';
@@ -167,7 +167,7 @@ export function planVersion(version: ModelMaterialsInput, sources: Map<string, S
       return null;
     }
     const fileName = fileNameOf(file.path);
-    if (textureFormatOf(fileName) === 'unsupported') {
+    if (imageFormatOf(fileName) === 'unsupported') {
       issues.set(fileName, { name: fileName, problem: 'unsupportedFormat' });
       return null;
     }

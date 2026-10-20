@@ -12,6 +12,7 @@ import { unlistedRecentPaths, type WorkspaceEntry } from '../home/recentWorkspac
 import { useDescribeWorkspace } from '../home/useDescribeWorkspace';
 import { useSettings } from '../settings/useSettings';
 import { useWorkspaceInfo } from '../workspace/useWorkspace';
+import { windowAskedBy, type OpenWorkspaceIn } from '../workspace/workspaceWindowChoice';
 import { useMissingWorkspacePaths, useWorkspaceList } from '../workspace/workspaceQueries';
 import { WorkspaceSwitcherChips } from './WorkspaceSwitcherChips';
 import { highlightedRow, workspaceSwitcherList } from './workspaceSwitcherList';
@@ -19,9 +20,9 @@ import styles from './WorkspaceSwitcher.module.css';
 
 /**
  * The switcher's filter and its workspaces, recent ones first: the arrows move through them from the filter, Enter
- * opens the highlighted one, and the menu key opens its actions.
+ * opens the highlighted one (in a new window with Shift: `windowAskedBy`), and the menu key opens its actions.
  */
-export function WorkspaceSwitcherRows({ currentPath, onChoose }: { currentPath: string; onChoose: (path: string) => void }) {
+export function WorkspaceSwitcherRows({ currentPath, onChoose }: { currentPath: string; onChoose: OpenWorkspaceIn }) {
   const [filter, setFilter] = useState('');
   const [highlightedPath, setHighlightedPath] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -52,7 +53,7 @@ export function WorkspaceSwitcherRows({ currentPath, onChoose }: { currentPath: 
       setHighlightedPath(flat[target]!.workspace.path);
     } else if (event.key === 'Enter' && flat[highlighted]) {
       event.preventDefault();
-      onChoose(flat[highlighted].workspace.path);
+      onChoose(flat[highlighted].workspace.path, windowAskedBy(event, flat[highlighted]));
     } else if (flat[highlighted] && isRowMenuKey(event)) {
       event.preventDefault();
       openContextMenuOf(document.getElementById(`${listboxId}-${highlighted}`));
@@ -65,7 +66,7 @@ export function WorkspaceSwitcherRows({ currentPath, onChoose }: { currentPath: 
     return (
       <ActionContextMenu
         key={workspace.guid}
-        entries={() => (missing ? missingWorkspaceMenu : workspaceMenu)(workspace, onChoose)}
+        entries={() => (missing ? missingWorkspaceMenu(workspace, (path) => onChoose(path, 'here')) : workspaceMenu(workspace, onChoose))}
         // Back to the filter, so typing and the arrow keys carry on.
         onCloseAutoFocus={(event) => {
           event.preventDefault();
@@ -81,7 +82,7 @@ export function WorkspaceSwitcherRows({ currentPath, onChoose }: { currentPath: 
           data-highlighted={index === highlighted}
           data-missing={missing}
           onMouseEnter={() => setHighlightedPath(workspace.path)}
-          onClick={() => onChoose(workspace.path)}
+          onClick={(event) => onChoose(workspace.path, windowAskedBy(event, { missing }))}
         >
           <RepositoryAvatar repository={entry.repository ?? entry.repositoryName} label={workspace.name} size={24} className={styles.avatar} />
           <span className={styles.text}>
@@ -136,7 +137,12 @@ export function WorkspaceSwitcherRows({ currentPath, onChoose }: { currentPath: 
           {others.map((entry, index) => row(entry, recent.length + index))}
         </HighlightQuery>
       </div>
-      <KeyHints hints={[{ keys: hotkey('rowActions'), label: 'actions' }]} />
+      <KeyHints
+        hints={[
+          { keys: hotkey('workspaceInNewWindow'), label: 'new window' },
+          { keys: hotkey('rowActions'), label: 'actions' },
+        ]}
+      />
     </>
   );
 }

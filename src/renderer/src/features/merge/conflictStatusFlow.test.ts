@@ -34,10 +34,13 @@ interface FileSetup {
   decision?: FileConflictDecision;
   openTool?: typeof vsCode;
   isKnownBinary?: boolean;
+  /** Added on both sides: no common ancestor. */
+  withoutBase?: boolean;
 }
 
-function stateOf({ versions = [{ data: BASE }, { data: SOURCE }, { data: DESTINATION }], decision, openTool, isKnownBinary }: FileSetup = {}): FileConflictState {
-  const file = { key: '/app.ts', path: 'app.ts', base: { kind: 'empty' }, source: { kind: 'empty' }, destination: { kind: 'empty' }, ...(isKnownBinary && { isKnownBinary }) } as const;
+function stateOf({ versions = [{ data: BASE }, { data: SOURCE }, { data: DESTINATION }], decision, openTool, isKnownBinary, withoutBase }: FileSetup = {}): FileConflictState {
+  const base = withoutBase ? { kind: 'empty' as const } : { kind: 'spec' as const, spec: 'itemid:7#cs:1@game@local', fileName: 'app.ts' };
+  const file = { key: '/app.ts', path: 'app.ts', base, source: { kind: 'empty' }, destination: { kind: 'empty' }, ...(isKnownBinary && { isKnownBinary }) } as const;
   const inputs = { file, versions: versions.map((version) => ({ data: version.data, error: version.error ?? null })), decision, openTool };
   return buildStates([inputs], workspace, new Map()).states[0]!;
 }
@@ -78,6 +81,30 @@ describe('a conflicting file, as the merge page shows it', () => {
     expect(chosenConflictChoice(fileConflictStatus(keptYours), keptYours.decision, document)).toBe('destination');
     expect(blocksCompletion(keptYours)).toBe(false);
     expect(reads(stateOf({ decision: decisionFor('destination', document) }), serverBranch)).toBe('Keeping destination');
+  });
+
+  it('keeps the base, the version before either side changed it, carrying its text as read', () => {
+    const keptBase = stateOf({ decision: decisionFor('base', document) });
+    expect(reads(keptBase)).toBe('Keeping base');
+    expect(keptBase.resolution).toEqual({ choice: 'base', text: BASE.text });
+    expect(chosenConflictChoice(fileConflictStatus(keptBase), keptBase.decision, document)).toBe('base');
+    expect(blocksCompletion(keptBase)).toBe(false);
+  });
+
+  it('reads as keeping the base when the conflicts picked add up to it', () => {
+    const pickedBase = stateOf({ decision: { kind: 'text', text: BASE.text! } });
+    expect(reads(pickedBase)).toBe('Keeping base');
+  });
+
+  it('never reads as keeping a base the file has none of, even when the text decided is as empty as that missing base', () => {
+    const addedOnBoth = stateOf({ withoutBase: true, versions: [{ data: text('') }, { data: text('S\n') }, { data: text('D\n') }], decision: { kind: 'text', text: '' } });
+    expect(reads(addedOnBoth)).toBe('Combined');
+  });
+
+  it("keeps a binary's base without its bytes, which cm saves when the merge completes", () => {
+    const kept = stateOf({ versions: [{}, {}, {}], isKnownBinary: true, decision: { kind: 'wholeFile', side: 'base' } });
+    expect(kept.resolution).toEqual({ choice: 'base' });
+    expect(reads(kept)).toBe('Keeping base');
   });
 
   it('reads as keeping a side when the conflicts picked add up to that version', () => {

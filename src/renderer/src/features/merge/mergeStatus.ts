@@ -1,8 +1,10 @@
 import type { DirectoryConflictResolution, MergeChange } from '@shared/domain/merge';
+import { SMART_MERGE_NAME } from '@shared/domain/mergeTools';
 import type { StatusTone as ChangeTone } from '../../components/StatusBadge';
 import { pluralize } from '../../lib/text';
 import type { MergeLabels } from './mergeDescription';
 import { fileStateOf, type MergeItem, type MergeProgress } from './mergeItems';
+import { hasBase } from './resolve/conflictPanelView';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
 /**
@@ -17,6 +19,8 @@ export type ConflictStatus =
   | 'needsDecision'
   | 'keepingDestination'
   | 'keepingSource'
+  /** A file conflict keeping the common ancestor's version, as neither side has it any more. */
+  | 'keepingBase'
   /** A directory conflict keeping both items, the destination one renamed. */
   | 'keepingBoth'
   /** Merged text that takes something from each side, as the user picked. */
@@ -48,9 +52,11 @@ export function fileConflictStatus(state: FileConflictState): ConflictStatus {
   if (decision?.kind === 'text' && decision.tool) return 'resolvedInTool';
   if (resolution.choice === 'destination') return 'keepingDestination';
   if (resolution.choice === 'source') return 'keepingSource';
+  if (resolution.choice === 'base') return 'keepingBase';
   if (decision?.kind === 'text' && decision.edited) return 'edited';
   if (resolution.text === contents?.destination.text) return 'keepingDestination';
   if (resolution.text === contents?.source.text) return 'keepingSource';
+  if (hasBase(state) && resolution.text === contents?.base.text) return 'keepingBase';
   return 'combined';
 }
 
@@ -108,6 +114,8 @@ export function presentStatus(status: ConflictStatus, labels: MergeLabels, tool 
       return { label: `Keeping ${destination.name.toLowerCase()}`, tone: 'decided', explanation: labels.destination };
     case 'keepingSource':
       return { label: `Keeping ${source.name.toLowerCase()}`, tone: 'decided', explanation: labels.source };
+    case 'keepingBase':
+      return { label: 'Keeping base', tone: 'decided', explanation: 'The version before either side changed it' };
     case 'keepingBoth':
       return { label: 'Keeping both', tone: 'decided', explanation: `${destination.name} renamed` };
     case 'combined':
@@ -115,8 +123,11 @@ export function presentStatus(status: ConflictStatus, labels: MergeLabels, tool 
     case 'edited':
       return { label: 'Edited by you', tone: 'decided', explanation: 'Edited in the app' };
     case 'resolvedInTool':
+      if (tool === SMART_MERGE_NAME) return { label: 'Merged by Smart Merge', tone: 'decided', explanation: 'Smart Merge merged both sides’ changes' };
       return { label: `Resolved in ${tool}`, tone: 'decided', explanation: `Saved in ${tool}` };
     case 'openInTool':
+      // Smart Merge has no window: it merges the file on its own, before the tool opens.
+      if (tool === SMART_MERGE_NAME) return { label: 'Merging…', tone: 'muted', explanation: 'Smart Merge is merging it' };
       return { label: `Open in ${tool}…`, tone: 'pending', explanation: `Save and close it in ${tool}` };
   }
 }

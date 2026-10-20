@@ -7,7 +7,7 @@ import type { PageOf } from '../../app/navigation/pages';
 import { runAction, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByBranchList } from '../../app/refresh/refreshScopes';
 import { switchWorkspace } from '../../app/shell/workspaceOperations';
-import { branchLabel } from '../../lib/branchLabels';
+import { branchLabel, branchLabels } from '../../lib/branchLabels';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { invalidateWorkspace } from '../../app/queryClient';
@@ -132,7 +132,7 @@ export async function mergeTo(sourceSpec: string, sourceName: string, task?: Tas
     exclude: sourceSpec === spec.branch(sourceName) ? sourceName : undefined,
   });
   if (!destination) return;
-  navigation.openPage({ kind: 'merge', request: { kind: 'merge', sourceSpec, destinationBranch: destination }, ...(task && { task }) });
+  navigation.openPage({ kind: 'merge', request: { kind: 'merge', sourceSpec, destinationBranch: destination.name }, ...(task && { task }) });
 }
 
 /** The diff of what a branch brings, at the head it's known at, so the diff its details panel already read is reused. */
@@ -142,4 +142,30 @@ export function branchDiffPage({ name, headChangeset }: Pick<Branch, 'name' | 'h
 
 export function diffBranch(branch: Pick<Branch, 'name' | 'headChangeset'>, focusPath?: string): void {
   navigation.openPage(branchDiffPage(branch, focusPath));
+}
+
+type BranchAtHead = Pick<Branch, 'name' | 'headChangeset'>;
+
+/**
+ * Compares two branches as their heads are (`cm diff cs:<head> cs:<head>`: `cm diff` takes no two branches), the older
+ * head on the left, as labels compare. The heads are the ones the branch lists read, so the diff is immutable and
+ * nothing is asked to resolve them; the header names each branch, its head in the tooltip.
+ */
+export function diffBranches(first: BranchAtHead, second: BranchAtHead): void {
+  const [older, newer] = first.headChangeset <= second.headChangeset ? [first, second] : [second, first];
+  const [olderLabel, newerLabel] = branchLabels(older.name, newer.name);
+  navigation.openPage({
+    kind: 'diff',
+    title: `${olderLabel} → ${newerLabel}`,
+    target: { kind: 'range', fromSpec: spec.changeset(older.headChangeset), toSpec: spec.changeset(newer.headChangeset) },
+    sideNames: [
+      { label: olderLabel, tooltip: `${older.name} at changeset ${older.headChangeset}` },
+      { label: newerLabel, tooltip: `${newer.name} at changeset ${newer.headChangeset}` },
+    ],
+  });
+}
+
+export async function diffWithAnotherBranch(branch: BranchAtHead): Promise<void> {
+  const other = await pickBranch({ title: `Compare ${branchLabel(branch.name)} with…`, exclude: branch.name });
+  if (other) diffBranches(branch, other);
 }

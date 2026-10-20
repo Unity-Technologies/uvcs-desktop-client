@@ -1,7 +1,7 @@
-import { lstat } from 'node:fs/promises';
 import { basename } from 'node:path';
 import type { ItemMove } from '@shared/domain/explorer';
 import type { OperationContext } from '../operations/OperationTracker';
+import { pathExists } from './pathExists';
 import { toAbsolutePath } from './workspacePaths';
 
 interface ItemMover {
@@ -36,11 +36,4 @@ export async function moveItems(
     else await cm(moveArgs(workspacePath, move));
   }
   context.reportProgress('Moving items', { current: moves.length, total: moves.length });
-}
-
-async function pathExists(path: string): Promise<boolean> {
-  return lstat(path).then(
-    () => true,
-    () => false,
-  );
 }

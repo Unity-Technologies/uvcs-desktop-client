@@ -1,18 +1,24 @@
+import { useMemo } from 'react';
 import { create } from 'zustand';
+import { withEverythingIncluded, withIncluded, type CheckinChoice, type PreparedChangelist } from './checkinSelection';
 
-interface CheckinDraft {
+interface CheckinDraft extends CheckinChoice {
   summary: string;
   description: string;
-  /** Paths the user unchecked. New changes are included by default, so we remember exclusions. */
-  excludedPaths: ReadonlySet<string>;
 }
 
-const EMPTY_DRAFT: CheckinDraft = { summary: '', description: '', excludedPaths: new Set() };
+const EMPTY_DRAFT: CheckinDraft = { summary: '', description: '', excludedPaths: new Set(), prepared: null };
 
 interface CheckinDraftStore {
   drafts: Record<string, CheckinDraft>;
   setMessage: (workspacePath: string, message: { summary?: string; description?: string }) => void;
   setIncluded: (workspacePath: string, paths: string[], included: boolean) => void;
+  /** Checks every file, `paths` being all of them: ends a prepared changelist rather than growing it. */
+  includeEverything: (workspacePath: string, paths: string[]) => void;
+  /** Checks a changelist's files alone ("Check in this changelist"), the files the user left out kept for later. */
+  prepareChangelist: (workspacePath: string, prepared: PreparedChangelist) => void;
+  /** Once the prepared changelist is checked in or shelved: back to every file but those the user left out. */
+  endPrepared: (workspacePath: string) => void;
   /** After a check-in: the comment goes, the files left out stay left out. */
   clearMessage: (workspacePath: string) => void;
 }
@@ -26,11 +32,10 @@ export const useCheckinDraftStore = create<CheckinDraftStore>((set) => {
     drafts: {},
     setMessage: (workspacePath, message) => updateDraft(workspacePath, (draft) => ({ ...draft, ...message })),
     setIncluded: (workspacePath, paths, included) =>
-      updateDraft(workspacePath, (draft) => {
-        const excludedPaths = new Set(draft.excludedPaths);
-        paths.forEach((path) => (included ? excludedPaths.delete(path) : excludedPaths.add(path)));
-        return { ...draft, excludedPaths };
-      }),
+      updateDraft(workspacePath, (draft) => ({ ...draft, ...withIncluded(draft, paths, included) })),
+    includeEverything: (workspacePath, paths) => updateDraft(workspacePath, (draft) => ({ ...draft, ...withEverythingIncluded(draft, paths) })),
+    prepareChangelist: (workspacePath, prepared) => updateDraft(workspacePath, (draft) => ({ ...draft, prepared })),
+    endPrepared: (workspacePath) => updateDraft(workspacePath, (draft) => ({ ...draft, prepared: null })),
     clearMessage: (workspacePath) => updateDraft(workspacePath, (draft) => ({ ...draft, summary: '', description: '' })),
   };
 });
@@ -47,6 +52,9 @@ export function useCheckinMessage(workspacePath: string): { summary: string; des
   return { summary, description };
 }
 
-export function useExcludedPaths(workspacePath: string): ReadonlySet<string> {
-  return useCheckinDraftStore((state) => (state.drafts[workspacePath] ?? EMPTY_DRAFT).excludedPaths);
+/** What the user checked: what the list's checks and the check-in follow. */
+export function useCheckinChoice(workspacePath: string): CheckinChoice {
+  const excludedPaths = useCheckinDraftStore((state) => (state.drafts[workspacePath] ?? EMPTY_DRAFT).excludedPaths);
+  const prepared = useCheckinDraftStore((state) => (state.drafts[workspacePath] ?? EMPTY_DRAFT).prepared);
+  return useMemo(() => ({ excludedPaths, prepared }), [excludedPaths, prepared]);
 }

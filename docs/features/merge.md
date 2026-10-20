@@ -27,6 +27,38 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   saved text becomes the file's decision (markers left count as conflicts left). Text files only: no tool really
   merges binaries, so a binary keeps one of its versions, picked in the app (`waitsForTool`). "Stop waiting" kills the tool process and takes what was saved so far, as soon as it exits: a launcher's
   app still holding its output doesn't keep the file open.
+- **Smart Merge** (Unity's merge of scenes, prefabs and other assets by their objects: the `UnityYAMLMerge` program in
+  every Unity Editor) isn't a tool to pick: "Resolve in…" (and each file of a "Resolve N conflicts in…" run) runs it
+  first on a Unity asset the user decided nothing for yet (`smartMergeVersions`, from `decidedByUser`), and the chosen
+  tool opens only when it doesn't merge the file. Two calls, so each phase shows what really happens:
+  `mergeTools.smartMerge` with the versions the page already read (no `cm` command), while the file reads "Merging…"
+  and its banner "Merging <file> with Smart Merge…" with Stop (stopping it opens nothing, even a stop that reaches main as Smart Merge ends on its own: the renderer remembers it, `stopMergeToolSession`, `wasStopped`); then, if it didn't merge,
+  `mergeTools.resolve` opens the tool as for any file. Without a Unity Editor (`MergeToolList.smartMerge` null) the
+  tool opens straight away: nothing shows Smart Merge at work. While Smart Merge (or a tool) has the file, its menu
+  offers no Keep or Start over, as its toolbar offers none (`conflictMenuEntries`); and should the user decide the file
+  meanwhile (from another file's selection), that decision stands: Smart Merge's merge is dropped and nothing opens
+  (`ResolveOptions.stillUndecided`). A file goes to it when its two sides start with Unity's YAML
+  header (`isUnityYaml`), whatever its extension: a `.meta` file has none and goes to the tool. A base revision
+  that was an empty file (checked in empty, then filled differently on each side) becomes an asset with no objects
+  (`EMPTY_UNITY_YAML`), as Smart Merge refuses an empty file; a file added on both sides never gets here, `cm` makes
+  it a directory conflict. It runs with
+  no window (`windowsHide` on Windows, `toolSpawnOptions`) and no fallback tool (`SMART_MERGE_ARGS`: `merge -h --force
+  --fallback none`; `--force` lets it take `.mat`, `.asset`… beyond the `.unity`, `.prefab` and `.meta` it knows by
+  name, and it refuses what isn't Unity YAML anyway). Only exit code 0 counts (`judgeSmartMerge`): on 2 (conflicts
+  left) it still writes a result holding the base's values where the sides disagree, so that result is dropped; 1
+  means it couldn't read or merge the file. A failure other than conflicts left is warned in the console (`[smart
+  merge]`, with the end of its stderr). Its merge reads "Merged by Smart Merge"; "Resolve in…" on it opens the tool on
+  Smart Merge's result, and Start over makes the file undecided again, so the next "Resolve in…" lets Smart Merge try
+  again. Its size ceiling is the page's: a version over `MAX_TEXT_BYTES` (10 MB) is a binary to the page, which no tool
+  opens, so Smart Merge isn't tried on it either. In practice it's lower: a text conflict of about 3.5 MB overflows the
+  stack of the page's own line merge (`diff3Merge`, as it loads the file), before Smart Merge could be asked. It comes
+  from the newest Unity release installed
+  (`findSmartMerge`, `compareUnityVersions`: releases before alphas and betas), found as Unity Hub keeps editors
+  (`findUnityEditors`): its editors folder (`/Applications/Unity/Hub/Editor`, `C:\Program Files\Unity\Hub\Editor`,
+  `~/Unity/Hub/Editor`), the folder picked in the Hub (`secondaryInstallPath.json` in the Hub's config folder), the
+  editors located by hand (`editors-v2.json`, `editors.json`) and the install made without the Hub; inside an editor,
+  `Contents/Helpers` on macOS since Unity 6.3 (`Contents/Tools` before), `Data/Tools` on Windows and Linux. Settings'
+  Merge pane says which editor's it uses. Sandbox: `scripts/sandboxes/smart-merge.sh`.
 - The workspace is never touched: the outcome is a decision like any other, written when the merge completes.
 
 ## Merge page
@@ -45,11 +77,18 @@ holds the changeset comment (`Merge from <source>`) and the button.
 The list (`MergeItemList`) is every list of changed files (ARCHITECTURE.md "Lists of changed files") in two groups,
 "Conflicts" then "Changes to apply" (`mergeItemGroups`), each by path: the filter (the "!" chip for conflicts,
 `mergeItemTones`), List or Tree, and several items selected at once, whose menu keeps yours or the incoming version of
-every conflicting file among them (`keepVersionEntries`). One item's menu is any changed file's (ARCHITECTURE.md "One
+every conflicting file among them, or the base when every one of them has one (`keepVersionEntries`). One item's menu is any changed file's (ARCHITECTURE.md "One
 menu": history, open or save the incoming version, Copy) with what a merge adds (`mergeItemMenu`): a conflicting file, the same
-entries as in Incoming (`conflictMenuEntries`), "Resolve in <tool>" (the preferred one, `primaryMergeTool`; disabled while files resolve one by one), Keep yours or
-incoming, Start over once decided, annotate at the incoming revision `cm` names for it, and "Open version ▸" Yours (the
-workspace file; the destination's version merging into a server branch), Incoming and Base; a directory conflict its
+entries as in Incoming (`conflictMenuEntries`), "Resolve in <tool>" (the preferred one, `primaryMergeTool`; disabled while files resolve one by one), Keep yours,
+incoming or base (where it has one), Start over once decided, annotate at the incoming revision `cm` names for it, and "Open version ▸" Yours (the
+workspace file; the destination's version merging into a server branch), Incoming and Base (`openableVersions`): a
+text in the user's editor, a binary with its default app (`oneClickApp`: the editors are for text; a known binary is one before its versions
+are read, `opensAsBinary`). A binary's
+versions open only from there: its menu drops the list's "Open this revision in <editor>" and "Open this revision
+with ▸", which would open the incoming one a second way, and keeps "Save this revision as…" (`withConflictOpening`,
+in Incoming too). A version taken
+out of the repository opens under a name that tells which it is (`versionCopyName`: `hero.INCOMING.psd`, as the merge
+tools name theirs), so two versions open side by side in one app don't look alike; a directory conflict its
 panel's choices, Keep both under the name the panel suggests. A directory conflict holding another conflict (a folder
 added on both sides, a file in it changed on both) is its folder's row in a tree: selecting that row selects the
 conflict, and its menu acts on it alone (`mergeItemAt`, `mergeItemsActedOn`). A clean change isn't annotated: `cm` names only the
@@ -60,7 +99,7 @@ with the same name", `directoryConflictWords`), not `cm`'s ("Evil twin conflict"
 `scripts/sandboxes/merge-conflicts.sh`. A text with a line too long to draw unwrapped wraps, as in a diff, and isn't edited in the app:
 diff.md "Long lines".
 Every status reads as what the merge will do, never as done (`mergeStatus`): "Will merge automatically", "Needs your
-decision", then the user's choice ("Keeping yours", "Keeping incoming", "Combined", "Edited by you"; "Open in VS Code…",
+decision", then the user's choice ("Keeping yours", "Keeping incoming", "Keeping base", "Combined", "Edited by you"; "Open in VS Code…",
 "Resolved in VS Code" for merge tools): an icon in the list and a chip in the file's toolbar, with a short tooltip. Sides
 are "Yours"/"Incoming" in a workspace and "Destination"/"Source" when merging into a server branch (`mergeLabels`), always
 next to their branch. Copy stays short: labels name things, tooltips define them, no sentence restates what the page shows.
@@ -72,26 +111,36 @@ saved and closed (`useResolveRun`, `resolveRun`). Both carets pick the tool like
 (`toolChoiceEntries`): the button's tool is checked, and picking another (or adding one) only makes it the button's
 tool, the preferred one from then on; nothing opens until the button is clicked. Files the tool can't open (binaries, types it isn't for) are left
 out and named in its tooltip. While it runs, a strip takes the status's place: a step per file, "Resolving 2 of 5 ·
-app.ts in <tool>", Skip this file (closes it there) and Stop (Esc, confirmed while the tool has a file). The list marks
+app.ts in <tool>", Skip this file (closes it there) and Stop (Esc, confirmed while the tool has a file); while Smart Merge merges the file first, "with Smart Merge", Skip and Stop stop it, and Esc needs no confirmation (`runStripWords`). The list marks
 the file open and the selection follows it unless the user looks elsewhere, which never stops the run; files decided in
 the app meanwhile are skipped, a file closed unsaved keeps "Needs your decision" and pauses the strip ("closed without
 saving", Next file / Stop) unless the setting says to go on, and a tool that can't start stops the run with its reason.
-A toast sums it up ("Resolved 4 of 5 in <tool>", "1 still needs you") and focus goes to the first file still waiting,
+A toast sums it up ("Resolved 4 of 5 in <tool>", "1 still needs you"; what Smart Merge merged apart, "Resolved all 3 conflicts: 2 with Smart Merge, 1 in <tool>") and focus goes to the first file still waiting,
 or to Complete merge. With one file left, its own toolbar is the way.
 
 A conflicting file is read-only. Its toolbar holds the file, its status and the ways out: "Resolve in <tool>"
 (`MergeToolButton`, a split button, primary while the file waits and the header offers nothing; disabled during a run:
-the other tools found, "Choose another app…", "Edit the text in the app" and the settings behind the caret), then "Keep Yours | Incoming | Both" for the whole file (`KeepChoices`, `conflictChoices`)
-and Start over. In a narrow pane the controls wrap within themselves, the Keep choices under the tool's button, so none
+the other tools found, "Choose another app…", "Edit the text in the app" and the settings behind the caret), then "Keep Yours | Incoming | Both | Base" for the whole file (`KeepChoices`, `conflictChoices`;
+Base, the version before either side changed it, only for a file that has one: not one added on both sides, and never when undoing a changeset, where `cm` takes the changeset undone as the base and keeping it would put the change back: `offersKeepBase`, `baseIsUndoneChange`; the same rule for every Keep base below) and Start over. In a narrow pane the controls wrap within themselves, the Keep choices under the tool's button, so none
 is cut off. Below, short one-line views: "Conflicts" with the count left, then "Changes" (the destination now → after
 the merge), "Yours", "Incoming" and "Base". Conflicts read as labeled blocks instead of conflict markers
 (`conflictHunkCss` over Pierre's view): a header naming the destination's side with Keep yours / Keep incoming / Keep both
-for that conflict, its lines, the source's label and its lines. While a tool has the file, a banner says so (Bring to
+/ Keep base for that conflict (in a narrow pane just Yours | Incoming | Both | Base, a container query), its lines, the
+source's label and its lines. The markers hold only the sides: the
+automatic merge keeps each conflict's base (`ConflictDocument.conflictBases`), and the decision carries the bases of
+the conflicts left, dropping each one decided (`decideConflict`), so a conflict's base is its own even where others
+show the same sides. Text edited by hand or saved in a tool carries none: its conflicts offer no Keep base. While a tool has the file, a banner says so (Bring to
 front, Stop waiting), its conflicts show without choices and the merge can't complete; a toast tells how it ended.
 Editing the text in the app opens a banner with Done and Discard edits; the choice shows picked and "Changes" shows what
-it produces. Binary conflicts offer the two versions to keep, as cards, and no merge tool; one whose versions render (3D models,
+it produces. Binary conflicts offer the versions to keep as cards, each side's and the base's (where the file has one),
+and no merge tool; one whose versions render (3D models,
 images: `rendersVersions`) also shows each side against the base and the base itself ("Choose | Yours | Incoming |
-Base"), and a model's cards tell what each side changed since the base (docs/features/model-diff.md "In a merge"). A
+Base"), and a model's cards tell what each side changed since the base (docs/features/model-diff.md "In a merge").
+Deciding often means looking at the versions in the artist's own app (two PSDs in Photoshop, two FBX in Blender): the
+binary's toolbar holds "Open version" (`OpenVersionMenu`), a submenu per version (Yours, Incoming, Base when there is
+one), and each card's menu (right-click, the menu key) its own version; both list "Open" with its default app, then
+every app, "Choose another app…" and "Manage apps…" (`versionAppEntries`, over `openRevisionWithEntries`; no editor is
+marked the default there). Nothing opens but on the user's pick. A
 binary's versions (textures, models, scenes: up to hundreds of MB each) are read only while it shows (below); its
 cards can be picked before their previews come, and when its versions can't be read, a card's icon says why. The
 Incoming view resolves update conflicts with the same panel and run (in its update bar); a merge into a server branch
@@ -107,22 +156,27 @@ branch opens instead (`followUpMerge`), with a toast saying why. The page reads 
 no refresh, not even the one after the merge, previews it again.
 
 Complete merge writes each conflicting file's decision into the workspace, after `cm merge` (`runMerge`): the text
-decided, or, keeping the incoming version of a text file, the text the page read (`resolutionOf` carries it when it
-writes back byte for byte, UTF-8); the incoming binaries and text in other encodings are saved by `cm` straight into
-the workspace, all of them with one `cm cat` per batch (`catBatchesOf`), in a process: the page never holds their
-bytes, and keeping yours reads nothing. Once `cm merge` ran, cancelling doesn't stop these writes: the merge is in the
-workspace by then, so an incoming version that can't be saved leaves its file as yours, and the merge's toast names it
-("Merge applied, but 2 files still hold yours", `incomingNotSaved`). `cm cat` goes on after a problem: it prints a
+decided, or, keeping the incoming version or the base of a text file, the text the page read (`resolutionOf` carries
+it when it writes back byte for byte, UTF-8); the incoming versions and bases of binaries and of text in other
+encodings are saved by `cm` straight into the workspace (the item at the source's point or at the base's changeset,
+`sourceVersionSpec`, `baseVersionSpec`), all of them with one `cm cat` per batch (`catBatchesOf`), in a process: the page never holds their
+bytes, and keeping yours reads nothing. `cm merge` has no option to keep the base: the app writes it like any decided
+text. Once `cm merge` ran, cancelling doesn't stop these writes: the merge is in the
+workspace by then, so a version kept that can't be saved leaves its file as yours, and the merge's toast names it
+("Merge applied, but 2 files still hold yours", `keptVersionNotSaved`). `cm cat` goes on after a problem: it prints a
 `not found <spec>` line per revision it can't resolve and a line naming nothing per download that failed
 (`explainCatFailure`, shared with `RevisionCat`). A failure with such an unnamed line is tried once more for the files
 it didn't name, as saving a version again changes nothing; what fails again is worded as uncertain ("may not hold the
-incoming version", `incomingMaybeNotSaved`). `cm merge --merge` can't take each file's decision in a workspace
+version you kept", `keptVersionMaybeNotSaved`). `cm merge --merge` can't take each file's decision in a workspace
 (`--fileconflictsresolutionsfile` works only with `--to`), and `--keepsource` keeps every file's.
 A merge into a server branch has no workspace to write in: `cm merge --to` reads every file's decision from a JSON file
 (`--fileconflictsresolutionsfile`, written by `fileConflictResolutionsFile`): `{ "resolutions": [{ "path", "keep": "source" |
 "destination" } | { "path", "resultFile" }] }`, by the path `cm merge` printed in the plan. A side kept, even an
 incoming text the page read, is named, so `cm` uploads nothing for it; a decided text goes in a result file whose bytes
-`cm` checks in as they are. `cm` leaves both files alone; `runMerge`'s temp folder holds them until it ends.
+`cm` checks in as they are. The file names no base to keep, so a base kept goes in a result file too: its text as the
+page read it, or its revision saved there by `cm cat` (one per batch, in a process) before `cm merge` runs, which a
+base that can't be read stops with nothing merged. `cm` leaves both files alone; `runMerge`'s temp folder holds them
+until it ends.
 
 Merges hold thousands of conflicting files and changes. A binary never merges line by line, so its status is "Needs
 your decision" before any of its versions is read: the preview's `cm ls` of the destination's tree names each
@@ -152,6 +206,33 @@ by the lines changed (lockfiles repeat lines by the thousand). The list and Inco
 file behind the selection follows it deferred, so arrowing never waits for a file to highlight. Conflicts, Base and
 the hand editor follow the diffs' size rule (`syntaxHighlighting`), and Base (when big) and the hand editor render
 only the lines in view.
+
+### Stepping through conflicts
+
+A conflicting file steps through its conflicts as a diff steps through its changes (diff.md "Moving through changes"),
+with the same keys, ⌥↓ ⌥↑ and F7 ⇧F7 (`nextConflict`, `previousConflict`), and arrows around "2 of 3" at the end of its
+view bar (`ConflictNavigator`, on `useStepNavigation`). The keys work from anywhere in the file's panel, its views'
+segments included (`STEP_FRAME`), from the list and with nothing focused. A conflict moved to comes a few rows from the
+top unless it's all in view, and lights up (`useConflictView`: Pierre draws each one from its actions row down to its
+end marker). Every conflict shown is one still to decide: resolving one with its header's choices (`resolve` in
+`ConflictHunks`) takes it out of the text and the count, and the next move goes on to the one that took its place, or
+back to the one before it (`ConflictPlace`: the screen can't tell, with every conflict in view). That holds until the
+view is scrolled more than a few rows away, however it scrolls (the shorter text pulling it back at the end of the file
+doesn't count), or the conflicts change otherwise (started over, saved by a merge tool). A binary waiting for the
+version to keep is one conflict, "1 of 1"; a file that couldn't be read has none, and its arrows still go on. The views
+that are diffs (Changes, Yours, Incoming) keep their own arrows through their changes, and the base none. But a file
+whose last conflict is resolved while it shows keeps the conflict arrows over its Changes, "No conflicts", until the
+user leaves the file: the next move goes straight on to the next file that waits instead of through the changes the
+merge makes (`justDecided`, `LoadedFileDiff`'s `stepsThroughChanges`). Started over, the file opens on its conflicts
+again (`rememberConflicts`).
+
+Past the last or first conflict, the arrows go on to the next file's first conflict or the previous file's last, as
+the list shows them, but only to the files still waiting for the user: those decided or merged automatically are
+passed by (`conflictStepKeys`; the file shown stays among them, so the arrows know where they are once it's decided).
+Directory conflicts aren't stepped to: they have no conflicts to step through. The diffs of a conflicting file go on to
+the same files past their changes. Incoming steps through its update conflicts the same way. There are no first and
+last conflict keys: Home and End are the list's, and the official client's "next unresolved conflict" is every move
+here, since a resolved conflict is no longer one.
 
 ## Finishing a task
 

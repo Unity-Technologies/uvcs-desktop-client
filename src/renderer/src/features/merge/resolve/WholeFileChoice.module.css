@@ -7,9 +7,10 @@
   overflow: auto;
 }
 
+/* Side by side while each card has room for its preview; a card that hasn't wraps to the next row. */
 .options {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: var(--space-4);
 }
 
