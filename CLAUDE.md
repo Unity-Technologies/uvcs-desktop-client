@@ -184,7 +184,7 @@ selection. The component maps that result to JSX and wires events; only presenta
 a class from a prop). The idiom: `diffBodyOf` (`features/diff/viewer/diffBody.ts`) names what the diff viewer shows,
 and the viewer only switches on it. What's on screen is verified with Playwright.
 
-**Super fast.** The number of tests doesn't matter; the time they take does (today about 5,200 tests in 7 s).
+**Super fast.** The number of tests doesn't matter; the time they take does (today about 6,100 tests in 8 s).
 The suite runs after every change, so it must take seconds, not minutes. A test never needs UVCS infrastructure: no
 `cm` installation, server, account, network or real workspace.
 
