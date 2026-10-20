@@ -24,6 +24,10 @@ describe('incomingViewState', () => {
     expect(incomingViewState(undefined, false, true)).toEqual({ kind: 'failed' });
   });
 
+  it('keeps what it read when reading again fails, as the workspace screen does', () => {
+    expect(incomingViewState(behind, false, true)).toEqual({ kind: 'incoming', incoming: behind });
+  });
+
   it('says nothing comes in off a branch', () => {
     expect(incomingViewState(offBranch, false, false)).toEqual({ kind: 'notOnBranch' });
   });
