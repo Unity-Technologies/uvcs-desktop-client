@@ -1,4 +1,4 @@
-import { CheckCircle2, GitBranch, RefreshCw } from 'lucide-react';
+import { AlertCircle, CheckCircle2, GitBranch, RefreshCw } from 'lucide-react';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { branchLabel } from '../../lib/branchLabels';
@@ -9,24 +9,37 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { IncomingChangesetsHeading } from './IncomingChangesetsHeading';
 import { IncomingPanes } from './IncomingPanes';
 import { IncomingSession } from './IncomingSession';
-import { incomingViewState } from './incomingViewState';
+import { incomingRefreshFailed, incomingViewState } from './incomingViewState';
 import { useIncomingChanges } from './useIncomingChanges';
+import styles from './IncomingChangesView.module.css';
 
 export function IncomingChangesView() {
   const workspacePath = useWorkspacePath();
   const { data: incoming, isPending, isFetching, error } = useIncomingChanges();
 
   // The session says how many came in, as its list knows them (`incomingSubtitle`); before, only the branch.
+  // A check that failed after one that answered says so beside what that one read, which the view keeps.
+  const refreshFailed = incomingRefreshFailed(incoming, error !== null);
   const headerSaying = (words: string | undefined) => (
     <ViewHeader
       title="Incoming"
-      subtitle={incoming?.branch && words && <span data-tip={incoming.branch}>{words}</span>}
+      subtitle={
+        <>
+          {incoming?.branch && words && <span data-tip={incoming.branch}>{words}</span>}
+          {refreshFailed && (
+            <span className={styles.refreshFailed} data-tip={error?.message}>
+              <AlertCircle size={12} /> Couldn't check again
+            </span>
+          )}
+        </>
+      }
       actions={<IconButton icon={<RefreshCw size={14} />} label="Refresh" loading={isFetching} onClick={() => void invalidateWorkspace(workspacePath)} />}
     />
   );
   const header = headerSaying(incoming?.branch ? branchLabel(incoming.branch) : undefined);
 
-  // The panes keep their layout while reading and once up to date; not being on a branch, or failing, takes the body.
+  // The panes keep their layout while reading and once up to date; not being on a branch, or failing with nothing
+  // read, takes the body.
   const state = incomingViewState(incoming, isPending, error !== null);
   if (state.kind === 'reading') {
     return (

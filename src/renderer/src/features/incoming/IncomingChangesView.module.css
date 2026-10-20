@@ -1,0 +1,8 @@
+/* Beside the branch, after a check that failed: calm, as what shows is still what the last check read. */
+.refreshFailed {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  color: var(--text-secondary);
+}

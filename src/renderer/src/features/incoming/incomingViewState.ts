@@ -21,3 +21,11 @@ export function incomingViewState(incoming: IncomingChanges | undefined, pending
   if (!incoming.branch) return { kind: 'notOnBranch' };
   return incoming.changesetCount === 0 ? { kind: 'upToDate' } : { kind: 'incoming', incoming };
 }
+
+/**
+ * Whether the header says the last check failed: it did, and the view keeps what an earlier one read
+ * (`incomingViewState`), which may be out of date. With nothing read, the failure takes the view instead.
+ */
+export function incomingRefreshFailed(incoming: IncomingChanges | undefined, failed: boolean): boolean {
+  return failed && incoming !== undefined;
+}
