@@ -572,8 +572,8 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   `workspaceInNewWindow` in the shortcuts sheet), the modifier a folder drop takes, and the one browsers use for a new
   window on all three OSs. Its menu says the same: Open workspace, then Open in new window (`workspaceMenu`), but not
   a missing workspace's. The new window asks `windows.openWorkspace`, so a workspace another window shows comes forward
-  instead; the new window remembers it as recent as it opens it (`useRequestedWorkspace`). With ⌘ or Ctrl held too, it
-  opens here: those differ per OS.
+  instead; the new window remembers it as recent as it opens it (`useRequestedWorkspace`). With another
+  modifier held too, it opens here.
 - A new workspace (the New workspace dialog: `createWorkspaceAndUpdate`) opens as soon as `cm workspace create` makes
   it, then gets the latest files of /main through the workspace's own Update (`updateWorkspace`: `cm update` in a process
   of its own, its progress card, its refreshes). `cm workspace create` already puts it on /main with nothing loaded, so
