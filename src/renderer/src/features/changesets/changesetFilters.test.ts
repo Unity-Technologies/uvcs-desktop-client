@@ -102,7 +102,7 @@ describe('changesetChoices', () => {
   const recent = [changeset(50, 'Fix the menu'), changeset(42, 'Add the menu\nWith its icons', '/main/ui'), changeset(41, 'Ship 42 levels')];
   /** More than the three read: the read stopped at its limit, so older changesets exist. */
   const NOT_REACHED = 10;
-  const choices = (search: string, read: readonly Changeset[] | undefined = recent, limit = NOT_REACHED) => changesetChoices(read, limit, 50, search);
+  const choices = (search: string, read: readonly Changeset[] = recent, limit = NOT_REACHED) => changesetChoices(read, limit, 50, search);
   const ids = (search: string) => choices(search).map((choice) => choice.id);
 
   it('offers the newest changesets read, leaving out the one being compared', () => {
@@ -136,8 +136,8 @@ describe('changesetChoices', () => {
   });
 
   it('offers any number typed while the changesets are unread, or the read failed', () => {
-    expect(choices('7', undefined)).toEqual([{ id: 7 }]);
-    expect(choices('', undefined)).toEqual([]);
+    expect(changesetChoices(undefined, NOT_REACHED, 50, '7')).toEqual([{ id: 7 }]);
+    expect(changesetChoices(undefined, NOT_REACHED, 50, '')).toEqual([]);
   });
 
   it('never offers the changeset being compared, even typed', () => {

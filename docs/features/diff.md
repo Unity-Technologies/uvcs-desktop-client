@@ -43,8 +43,12 @@ immutable.
   list's staleness, as for a branch's own diff (`branchHead`). The header names each branch in words, its full name and
   head in the tooltip (the diff page's `sideNames`), as `cs:` specs alone wouldn't say which branch is which.
 - **Changesets** are picked among the newest (`recentChangesetsQuery`: the palette's `cm find changeset ... limit
-  2000`, one cache entry for both), or any other by typing its number (`changesetChoices`): a repository's ~280k
-  changesets are never listed. A number that names no changeset fails in the diff, with `cm`'s own words.
+  2000`, one cache entry for both, never read again on focus), or any other by typing its number (`changesetChoices`):
+  a repository's ~280k changesets are never listed. The rows match on what they show (number, the comment's first line,
+  the branch's own name). A number typed is offered when the read can't rule it out: newer than those read (checked in
+  since), or older when the read stopped at its limit; any other shows as "No changeset N", which can't be picked, so
+  no diff opens on a changeset that doesn't exist. While the list is read, or when it couldn't be (said in its
+  place), a number typed can still be picked.
 
 ## Editing in the diff
 

@@ -3,13 +3,14 @@ import { GitCommitVertical } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { branchLabel } from '../../lib/branchLabels';
+import { typedChangesetNumber } from '../../lib/changesetNumber';
 import { firstLine } from '../../lib/text';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { Highlight } from '../../ui/Highlight';
 import { PickList } from '../../ui/PickList';
 import { changesetChoices, type ChangesetChoice } from './changesetFilters';
-import { recentChangesetsQuery } from './recentChangesets';
+import { RECENT_CHANGESETS, recentChangesetsQuery } from './recentChangesets';
 import styles from './ChangesetPickerDialog.module.css';
 
 interface PickChangesetOptions {
@@ -27,9 +28,12 @@ export async function pickChangeset(options: PickChangesetOptions): Promise<numb
 }
 
 function ChangesetPickerDialog({ title, exclude, finish }: PickChangesetOptions & { finish: (choice: ChangesetChoice | undefined) => void }) {
-  const { data: recent } = useQuery(recentChangesetsQuery(useWorkspacePath()));
+  const workspacePath = useWorkspacePath();
+  const { data: recent, error } = useQuery(recentChangesetsQuery(workspacePath));
   const [search, setSearch] = useState('');
-  const choices = useMemo(() => changesetChoices(recent ?? [], exclude, search), [recent, exclude, search]);
+  const choices = useMemo(() => changesetChoices(recent, RECENT_CHANGESETS, exclude, search), [recent, exclude, search]);
+  // A number typed is picked without the list: only an empty or text search waits for it.
+  const waiting = !recent && !error && typedChangesetNumber(search) === undefined;
 
   return (
     <Dialog title={title} width={560} onClose={() => finish(undefined)}>
@@ -41,16 +45,17 @@ function ChangesetPickerDialog({ title, exclude, finish }: PickChangesetOptions 
         placeholder="Find a changeset or type its number"
         label="Changesets"
         onPick={finish}
-        loading={!recent}
+        isDisabled={(choice) => choice.missing === true}
+        loading={waiting}
         rowHeight={30}
-        empty="No changesets found. Type a number to pick an older one."
-        renderItem={({ id, changeset }) => (
+        empty={error ? `Couldn't read the changesets: ${error.message}. Type a number to pick one.` : 'No changesets found. Type a number to pick an older one.'}
+        renderItem={({ id, changeset, missing }) => (
           <>
             <GitCommitVertical size={13} className={styles.icon} />
             <span className={styles.number}>
               <Highlight text={String(id)} />
             </span>
-            <span className={styles.comment}>{changeset ? <ChangesetComment comment={changeset.comment} /> : <span className={styles.muted}>Changeset {id}</span>}</span>
+            <span className={styles.comment}>{changeset ? <ChangesetComment comment={changeset.comment} /> : <span className={styles.muted}>{missing ? `No changeset ${id}` : `Changeset ${id}`}</span>}</span>
             {changeset && (
               <span className={styles.branch}>
                 <Highlight text={branchLabel(changeset.branch)} />
