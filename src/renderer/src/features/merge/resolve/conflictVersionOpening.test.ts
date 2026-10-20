@@ -79,6 +79,10 @@ describe('oneClickApp', () => {
     expect(oneClickApp(conflict({}, false), APPS)).toBe('vscode');
     expect(oneClickApp(conflict({}, true), APPS)).toBeNull();
   });
+
+  it('opens a file known to be a binary with its default app before its versions are read', () => {
+    expect(oneClickApp(conflict({ isKnownBinary: true }, false), APPS)).toBeNull();
+  });
 });
 
 describe('versionAppEntries', () => {

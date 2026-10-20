@@ -173,6 +173,8 @@ describe('mergeItemMenu', () => {
     expect(ids(menu)).not.toContain('openRevision');
     expect(ids(menu)).not.toContain('openRevisionWith');
     expect(ids(menu)).toEqual(expect.arrayContaining(['openVersion', 'saveAs']));
+    const knownBinary = conflict('art/hero.psd', { status: 'loading', file: { key: '/art/hero.psd', path: 'art/hero.psd', ...versions, isKnownBinary: true } });
+    expect(ids(menuOf([knownBinary]))).not.toContain('openRevision');
   });
 
   it('opens the destination version as yours when merging into a branch on the server, where no workspace file is it', async () => {
