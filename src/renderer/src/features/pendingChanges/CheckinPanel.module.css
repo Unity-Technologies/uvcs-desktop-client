@@ -90,6 +90,11 @@
   white-space: nowrap;
 }
 
+/* The changelist checked alone ("Check in this changelist"), as quiet as the line about being behind. */
+.prepared {
+  composes: behind;
+}
+
 .modeButton {
   width: 32px;
   height: 32px;

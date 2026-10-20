@@ -207,7 +207,7 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   lock: () => lockMenu(ws, [lock]),
   syncBranch: () => syncBranchMenu([branch], 'game@cloud', { push: () => {}, pull: () => {} }),
   attributeType: () => attributeTypeMenu(ws, [{ name: 'status', comment: '' } as never]),
-  changelist: () => changelistMenu(ws, { name: 'ui', description: '' } as never),
+  changelist: () => changelistMenu(ws, { name: 'ui', description: '' }, { changes: [{ ...change, changelist: 'ui' }], prepare: () => {} }),
   workspace: () => workspaceMenu({ name: 'game', path: ws, guid: 'w' }, () => {}),
   missingWorkspace: () => missingWorkspaceMenu({ name: 'game', path: ws, guid: 'w' }, () => {}),
   repository: () => repositoryMenu({ id: '1', name: 'game', server: 'local', owner: '', spec: repository }, () => {}),
