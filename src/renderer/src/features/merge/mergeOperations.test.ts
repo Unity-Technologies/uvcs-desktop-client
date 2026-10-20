@@ -65,7 +65,7 @@ describe('completing a merge', () => {
       {
         kind: 'info',
         title: 'Merge applied, but 2 files still hold yours',
-        detail: "The version you kept of Grass.png and Rock.png couldn't be saved. Lamp.glb may not hold the version you kept. Check them before checking in.",
+        detail: "Couldn't save the version you kept of Grass.png and Rock.png. Lamp.glb may not hold the version you kept. Check them before checking in.",
       },
     ]);
   });
