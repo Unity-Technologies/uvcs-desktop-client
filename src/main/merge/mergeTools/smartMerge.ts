@@ -1,12 +1,9 @@
-import type { MergeToolOutcome, SmartMergeTool } from '@shared/domain/mergeTools';
+import type { SmartMergeOutcome, SmartMergeTool } from '@shared/domain/mergeTools';
 import type { AppFileSystem } from '../../system/apps/appFileSystem';
 import { pathFor, type Whereabouts } from '../../system/apps/whereabouts';
 import type { ToolRun } from './launch';
 import { findUnityEditors, type UnityEditor } from './unityEditors';
 import { compareUnityVersions } from './unityVersion';
-
-/** Unity's own name for its merge of scenes, prefabs and other assets (the Unity Manual's "Smart merge"). */
-export const SMART_MERGE_NAME = 'Smart Merge';
 
 /**
  * Smart Merge, the `UnityYAMLMerge` program every Unity Editor ships with, from the newest editor installed (releases
@@ -36,23 +33,18 @@ function programInEditor(editor: UnityEditor, where: Whereabouts): string[] {
  */
 export const SMART_MERGE_ARGS = ['merge', '-h', '--force', '--fallback', 'none', '{base}', '{incoming}', '{yours}', '{result}'];
 
-/** The start of every asset Unity saves as text: `%YAML 1.1` and Unity's tag. */
-const UNITY_YAML_HEADER = /^\uFEFF?%YAML 1\.1\r?\n%TAG !u! tag:unity3d\.com,2011:/;
-
-/** How much of a file `isUnityYaml` needs: the header, with room for a BOM and CRLF line ends. */
-export const UNITY_YAML_HEADER_BYTES = 64;
-
-/** Whether a version is a Unity asset saved as text, which Smart Merge merges by its objects instead of its lines. */
-export function isUnityYaml(text: string): boolean {
-  return UNITY_YAML_HEADER.test(text);
-}
-
 /**
  * What Smart Merge did, by its exit code: 0 merged every change; anything else (2: conflicts it left, 1: a file it
- * couldn't read) leaves the file to the user. A result written with conflicts left holds the base's values where the
- * sides disagree, a merge that looks finished but isn't: it is never taken. Null when it didn't merge.
+ * couldn't read or merge) leaves the file to the merge tool. A result written with conflicts left holds the base's
+ * values where the sides disagree, a merge that looks finished but isn't: it is never taken.
  */
-export function judgeSmartMerge(run: ToolRun, result: Buffer | null): MergeToolOutcome | null {
-  if (run.exitCode !== 0 || !result || result.length === 0) return null;
-  return { kind: 'resolved', text: result.toString('utf8'), tool: SMART_MERGE_NAME };
+export function judgeSmartMerge(run: ToolRun, result: Buffer | null): SmartMergeOutcome {
+  if (run.exitCode === null) return { kind: 'stopped' };
+  if (run.exitCode !== 0 || !result || result.length === 0) return { kind: 'notMerged' };
+  return { kind: 'merged', text: result.toString('utf8') };
+}
+
+/** Exit codes that say something went wrong rather than "conflicts left", worth a warning in the console. */
+export function smartMergeWentWrong(run: ToolRun): boolean {
+  return run.exitCode !== null && run.exitCode !== 0 && run.exitCode !== 2;
 }

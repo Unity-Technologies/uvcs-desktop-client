@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { fakeFileSystem, linux, mac, windows } from '../../system/apps/testing/appFixtures';
 import { fillArgs } from './commandLine';
-import { findSmartMerge, isUnityYaml, judgeSmartMerge, SMART_MERGE_ARGS, UNITY_YAML_HEADER_BYTES } from './smartMerge';
+import { findSmartMerge, judgeSmartMerge, SMART_MERGE_ARGS, smartMergeWentWrong } from './smartMerge';
 
 const MAC_HUB = '/Applications/Unity/Hub/Editor';
 
@@ -56,44 +56,30 @@ describe('SMART_MERGE_ARGS', () => {
   });
 });
 
-describe('isUnityYaml', () => {
-  const HEADER = '%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!1 &100\nGameObject:\n';
-
-  it('knows a Unity asset saved as text by its header, with LF or CRLF line ends and a BOM', () => {
-    expect(isUnityYaml(HEADER)).toBe(true);
-    expect(isUnityYaml(HEADER.replaceAll('\n', '\r\n'))).toBe(true);
-    expect(isUnityYaml(`\uFEFF${HEADER}`)).toBe(true);
-  });
-
-  it('fits the header in the bytes read for it, even with a BOM and CRLF', () => {
-    const longest = `\uFEFF${HEADER.replaceAll('\n', '\r\n')}`;
-    expect(isUnityYaml(Buffer.from(longest).subarray(0, UNITY_YAML_HEADER_BYTES).toString('utf8'))).toBe(true);
-  });
-
-  it('turns away other text: plain YAML, a .meta file, code, an empty file', () => {
-    expect(isUnityYaml('%YAML 1.2\n---\nname: x\n')).toBe(false);
-    expect(isUnityYaml('fileFormatVersion: 2\nguid: 0123456789abcdef\n')).toBe(false);
-    expect(isUnityYaml('using UnityEngine;\n')).toBe(false);
-    expect(isUnityYaml('')).toBe(false);
-  });
-});
-
 describe('judgeSmartMerge', () => {
   const run = (exitCode: number | null) => ({ exitCode, errorOutput: '', seconds: 0.2 });
   const merged = Buffer.from('%YAML 1.1\nmerged\n');
 
   it('takes the result when it merged every change', () => {
-    expect(judgeSmartMerge(run(0), merged)).toEqual({ kind: 'resolved', text: '%YAML 1.1\nmerged\n', tool: 'Smart Merge' });
+    expect(judgeSmartMerge(run(0), merged)).toEqual({ kind: 'merged', text: '%YAML 1.1\nmerged\n' });
   });
 
   it('never takes a result with conflicts left, which holds the base’s values where the sides disagree', () => {
-    expect(judgeSmartMerge(run(2), merged)).toBeNull();
+    expect(judgeSmartMerge(run(2), merged)).toEqual({ kind: 'notMerged' });
   });
 
-  it('leaves the file to the user when it couldn’t merge it, was stopped, or wrote nothing', () => {
-    expect(judgeSmartMerge(run(1), merged)).toBeNull();
-    expect(judgeSmartMerge(run(null), merged)).toBeNull();
-    expect(judgeSmartMerge(run(0), null)).toBeNull();
-    expect(judgeSmartMerge(run(0), Buffer.alloc(0))).toBeNull();
+  it('leaves the file to the tool when it couldn’t merge it or wrote nothing, and says when the user stopped it', () => {
+    expect(judgeSmartMerge(run(1), merged)).toEqual({ kind: 'notMerged' });
+    expect(judgeSmartMerge(run(0), null)).toEqual({ kind: 'notMerged' });
+    expect(judgeSmartMerge(run(0), Buffer.alloc(0))).toEqual({ kind: 'notMerged' });
+    expect(judgeSmartMerge(run(null), merged)).toEqual({ kind: 'stopped' });
+  });
+});
+
+describe('smartMergeWentWrong', () => {
+  const run = (exitCode: number | null) => ({ exitCode, errorOutput: '', seconds: 0.2 });
+
+  it('warns about a failure, not about a merge or conflicts left or the user stopping it', () => {
+    expect([0, 2, null, 1, 3].map((code) => smartMergeWentWrong(run(code)))).toEqual([false, false, false, true, true]);
   });
 });

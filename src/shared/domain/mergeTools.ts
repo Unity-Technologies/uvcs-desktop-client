@@ -28,14 +28,17 @@ export interface MergeTool {
 export interface MergeToolList {
   tools: MergeTool[];
   preferredId: string | null;
-  /** Smart Merge, when a Unity Editor is installed: "Resolve in…" tries it first on Unity assets. */
+  /** Smart Merge, when a Unity Editor is installed: "Resolve in…" runs it first on Unity assets (`smartMerge`). */
   smartMerge: SmartMergeTool | null;
 }
 
+/** Unity's own name for its merge of scenes, prefabs and other assets (the Unity Manual's "Smart merge"). */
+export const SMART_MERGE_NAME = 'Smart Merge';
+
 /**
  * Unity's Smart Merge (`UnityYAMLMerge`, in every Unity Editor): it merges scenes, prefabs and other Unity assets by
- * their objects, without a window. It isn't a tool to pick: "Resolve in…" runs it first on a Unity asset nothing was
- * decided for yet, and opens the chosen tool only when it can't merge the file on its own.
+ * their objects, without a window. It isn't a tool to pick: "Resolve in…" runs it first on a Unity asset the user
+ * decided nothing for yet, and opens the chosen tool only when it can't merge the file on its own.
  */
 export interface SmartMergeTool {
   executable: string;
@@ -70,24 +73,34 @@ export interface MergeToolRequest {
   startText: string;
   /** How each version is called in the tool's window, e.g. `Yours (/main/task)`. */
   names: { base: string; yours: string; incoming: string };
-  /**
-   * Try Smart Merge before opening the tool, when the file is a Unity asset and a Unity Editor is installed: set while
-   * the user decided nothing for the file yet (`decidedByUser`). Once they did, the tool opens on it, so they can
-   * always get there.
-   */
-  trySmartMergeFirst: boolean;
 }
+
+/**
+ * A Unity asset for Smart Merge: its three versions as the merge page read them (an empty base when both sides added
+ * it). Chosen by the caller, `sessionId` stops it like a tool's.
+ */
+export interface SmartMergeRequest {
+  sessionId: string;
+  /** The file's workspace path, for its name and extension. */
+  path: string;
+  base: string;
+  yours: string;
+  incoming: string;
+}
+
+/**
+ * How Smart Merge ended: the merged text when it merged every change; `notMerged` when it left conflicts, couldn't
+ * merge the file or there's no Unity Editor here (the merge tool takes over); `stopped` when the user stopped it.
+ */
+export type SmartMergeOutcome = { kind: 'merged'; text: string } | { kind: 'notMerged' } | { kind: 'stopped' };
 
 /**
  * How it ended, judged by the result file (few tools tell saving from cancelling by their exit code): what the user
  * saved; `unchanged` when the tool closed without saving, or the user stopped waiting; `failed` when it couldn't run.
  */
 export type MergeToolOutcome =
-  /**
-   * A text file saved: its merged text, conflict markers included if the user left some. `tool` names who merged it
-   * when it isn't the tool asked for: Smart Merge, which merged it before the tool had to open.
-   */
-  | { kind: 'resolved'; text: string; tool?: string }
+  /** A text file saved: its merged text, conflict markers included if the user left some. */
+  | { kind: 'resolved'; text: string }
   /** `exitCode` is null when the user stopped waiting; `errorOutput` is the end of what the tool wrote to stderr. */
   | { kind: 'unchanged'; exitCode: number | null; errorOutput: string }
   | { kind: 'failed'; message: string };

@@ -1,4 +1,4 @@
-import type { MergeToolOutcome } from '@shared/domain/mergeTools';
+import { SMART_MERGE_NAME, type MergeToolOutcome } from '@shared/domain/mergeTools';
 import { pluralize } from '../../../lib/text';
 import type { MergeLabels } from '../mergeDescription';
 import type { FileConflictDecision } from '../resolve/fileConflictDecision';
@@ -13,12 +13,9 @@ export function waitsForTool(state: FileConflictState): boolean {
   return state.status === 'ready' && !state.resolution && !state.openTool && !state.isBinary;
 }
 
-/**
- * The decision a merge tool's outcome makes; none when nothing was saved. It names who merged the file: Smart Merge
- * when it merged it before the tool had to open.
- */
+/** The decision a merge tool's outcome makes, naming the tool (or Smart Merge); none when nothing was saved. */
 export function decisionFromTool(outcome: MergeToolOutcome, tool: string): FileConflictDecision | undefined {
-  if (outcome.kind === 'resolved') return { kind: 'text', text: outcome.text, tool: outcome.tool ?? tool };
+  if (outcome.kind === 'resolved') return { kind: 'text', text: outcome.text, tool };
   return undefined;
 }
 
@@ -32,7 +29,7 @@ export interface OutcomeMessage {
 export function toolOutcomeMessage(outcome: MergeToolOutcome, tool: string, fileName: string): OutcomeMessage {
   switch (outcome.kind) {
     case 'resolved': {
-      if (outcome.tool) return { kind: 'success', title: `Resolved ${fileName} with ${outcome.tool}` };
+      if (tool === SMART_MERGE_NAME) return { kind: 'success', title: `Merged ${fileName} with Smart Merge` };
       const left = countConflictRegions(outcome.text);
       if (left > 0) {
         return {

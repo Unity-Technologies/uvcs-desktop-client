@@ -1,4 +1,5 @@
 import { Check, GalleryVerticalEnd, Pause, Settings, SkipForward } from 'lucide-react';
+import { SMART_MERGE_NAME } from '@shared/domain/mergeTools';
 import { openSettingsDialogAt } from '../../../app/settings/SettingsDialog';
 import { saveSettings, useSettings } from '../../../app/settings/useSettings';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../../lib/actions';
@@ -89,6 +90,8 @@ function RunStrip({ states, run, progress }: { states: FileConflictState[]; run:
   const current = states.find((state) => state.file.key === progress.currentKey);
   const name = current ? fileNameOf(current.file.path) : '';
   const toolOpen = Boolean(current?.openTool);
+  // Smart Merge merges a Unity asset before the tool would open on it.
+  const where = current?.openTool?.toolName === SMART_MERGE_NAME ? 'with Smart Merge' : `in ${progress.toolName}`;
 
   // Esc stops, asking first while the tool has a file: stopping closes it.
   const stopFromKeyboard = async (): Promise<void> => {
@@ -130,7 +133,7 @@ function RunStrip({ states, run, progress }: { states: FileConflictState[]; run:
         Resolving {runPositionText(progress)}
         <span className={styles.position}>
           {' · '}
-          <strong>{name}</strong> in {progress.toolName}
+          <strong>{name}</strong> {where}
         </span>
       </span>
       <Button size="small" variant="ghost" icon={<SkipForward size={13} />} data-tip={`Closes it in ${progress.toolName} and opens the next file`} onClick={run.skip}>

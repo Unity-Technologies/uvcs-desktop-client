@@ -1,11 +1,12 @@
 import { existsSync } from 'node:fs';
-import { open as openFile, readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { dialog } from 'electron';
 import type { MergeToolsApi } from '@shared/api/mergeTools';
 import type { ContentSource } from '@shared/domain/content';
-import type { MergeToolOutcome, MergeToolRequest, SmartMergeTool } from '@shared/domain/mergeTools';
+import type { MergeToolOutcome, MergeToolRequest, SmartMergeOutcome, SmartMergeRequest, SmartMergeTool } from '@shared/domain/mergeTools';
+import { EMPTY_UNITY_YAML, isUnityYaml } from '@shared/unityYaml';
 import { saveVersion } from '../files/saveContent';
 import { withTempDirectory } from '../files/tempFile';
 import { fillArgs, type MergeToolFiles } from '../merge/mergeTools/commandLine';
@@ -13,7 +14,7 @@ import { detectKnownTools } from '../merge/mergeTools/detectTools';
 import { KNOWN_TOOLS } from '../merge/mergeTools/knownTools';
 import { activateApp, launchMergeTool } from '../merge/mergeTools/launch';
 import { mergeToolList } from '../merge/mergeTools/mergeToolList';
-import { findSmartMerge, isUnityYaml, judgeSmartMerge, SMART_MERGE_ARGS, UNITY_YAML_HEADER_BYTES } from '../merge/mergeTools/smartMerge';
+import { findSmartMerge, judgeSmartMerge, SMART_MERGE_ARGS, smartMergeWentWrong } from '../merge/mergeTools/smartMerge';
 import { toolFileNames } from '../merge/mergeTools/toolFileNames';
 import { judgeToolResult } from '../merge/mergeTools/toolResult';
 import { appBundleOf } from '../system/apps/appBundle';
@@ -53,8 +54,7 @@ export function createMergeToolsService(
   }
 
   async function resolve(workspacePath: string, request: MergeToolRequest): Promise<MergeToolOutcome> {
-    const { tools, smartMerge } = await list();
-    const tool = tools.find((candidate) => candidate.id === request.toolId);
+    const tool = (await list()).tools.find((candidate) => candidate.id === request.toolId);
     if (!tool) return { kind: 'failed', message: "That merge tool isn't installed anymore." };
 
     const stop = new AbortController();
@@ -63,9 +63,6 @@ export function createMergeToolsService(
       return await withTempDirectory(async (directory) => {
         const files = await writeToolFiles(workspacePath, request, directory);
         const start = await readFile(files.result);
-        const merged = request.trySmartMergeFirst && smartMerge && (await smartMerged(smartMerge, files, start, stop.signal));
-        if (merged) return merged;
-        if (stop.signal.aborted) return { kind: 'unchanged', exitCode: null, errorOutput: '' };
         const run = await launchMergeTool(tool.executable, fillArgs(tool.args, files), stop.signal);
         return judgeToolResult({ start, result: await readIfThere(files.result) }, run);
       });
@@ -77,17 +74,43 @@ export function createMergeToolsService(
   }
 
   /**
-   * Smart Merge's merge of a Unity asset, when it merged every change; otherwise null, with the result file put back
-   * as the tool must find it (Smart Merge writes the base's values where it left conflicts). Smart Merge failing to
-   * start only means the tool opens: the user asked for the tool.
+   * Runs Smart Merge on the versions given, hidden, with no fallback tool. Anything short of a full merge is
+   * `notMerged`, and the merge tool takes over: no Unity Editor, sides that aren't Unity assets, Smart Merge failing to
+   * start or leaving conflicts. What went wrong (other than conflicts left) is warned in the console, for diagnosis.
    */
-  async function smartMerged(smartMerge: SmartMergeTool, files: MergeToolFiles, start: Buffer, signal: AbortSignal): Promise<MergeToolOutcome | null> {
-    const [yours, incoming] = await Promise.all([startOf(files.yours), startOf(files.incoming)]);
-    if (!isUnityYaml(yours) || !isUnityYaml(incoming)) return null;
-    const run = await launchMergeTool(smartMerge.executable, fillArgs(SMART_MERGE_ARGS, files), signal, { hidden: true }).catch(() => null);
-    const outcome = run && !signal.aborted ? judgeSmartMerge(run, await readIfThere(files.result)) : null;
-    if (!outcome) await writeFile(files.result, start);
-    return outcome;
+  async function smartMerge(request: SmartMergeRequest): Promise<SmartMergeOutcome> {
+    const where: Whereabouts = { platform: process.platform, env: process.env, home: homedir(), cmPath: cm.executable };
+    const smartMergeTool = smartMergeFinder(where);
+    if (!smartMergeTool || !isUnityYaml(request.yours) || !isUnityYaml(request.incoming)) return { kind: 'notMerged' };
+
+    const stop = new AbortController();
+    open.set(request.sessionId, { stop, bundle: null });
+    try {
+      return await withTempDirectory(async (directory) => {
+        const files = await writeSmartMergeFiles(request, directory);
+        const run = await launchMergeTool(smartMergeTool.executable, fillArgs(SMART_MERGE_ARGS, files), stop.signal, { hidden: true });
+        if (smartMergeWentWrong(run)) console.warn('[smart merge]', `${request.path}: exit code ${run.exitCode}`, run.errorOutput);
+        return judgeSmartMerge(run, await readIfThere(files.result));
+      });
+    } catch (error) {
+      console.warn('[smart merge]', `${request.path}:`, error instanceof Error ? error.message : String(error));
+      return { kind: 'notMerged' };
+    } finally {
+      open.delete(request.sessionId);
+    }
+  }
+
+  /**
+   * The three versions as files Smart Merge reads, named after the file. An empty base (the file added on both sides)
+   * becomes an asset with no objects: Smart Merge refuses an empty file, and merges two added assets from that one.
+   */
+  async function writeSmartMergeFiles(request: SmartMergeRequest, directory: string): Promise<MergeToolFiles> {
+    const names = toolFileNames(request.path);
+    const files = { base: join(directory, names.base), yours: join(directory, names.yours), incoming: join(directory, names.incoming), result: join(directory, names.result) };
+    await writeFile(files.base, request.base || EMPTY_UNITY_YAML, 'utf8');
+    await writeFile(files.yours, request.yours, 'utf8');
+    await writeFile(files.incoming, request.incoming, 'utf8');
+    return { ...files, baseName: 'Base', yoursName: 'Yours', incomingName: 'Incoming', fileName: names.result };
   }
 
   /** The three versions and the result, holding the text to start from, as files in `directory` the tool can open. */
@@ -117,6 +140,7 @@ export function createMergeToolsService(
       return { ...found, tools: await Promise.all(found.tools.map((tool) => icons.withIcon(tool, tool.executable))) };
     },
     resolve,
+    smartMerge,
     stopWaiting: async (sessionId) => open.get(sessionId)?.stop.abort(),
     bringToFront: async (sessionId) => {
       const bundle = open.get(sessionId)?.bundle;
@@ -132,17 +156,6 @@ export function createMergeToolsService(
       return picked ? appExecutable(picked, diskFileSystem) : null;
     },
   };
-}
-
-/** The first bytes of a file, as text: enough for its header, without reading a scene of tens of MB. */
-async function startOf(path: string): Promise<string> {
-  const file = await openFile(path);
-  try {
-    const { buffer, bytesRead } = await file.read(Buffer.alloc(UNITY_YAML_HEADER_BYTES), 0, UNITY_YAML_HEADER_BYTES, 0);
-    return buffer.subarray(0, bytesRead).toString('utf8');
-  } finally {
-    await file.close();
-  }
 }
 
 async function readIfThere(path: string): Promise<Buffer | null> {

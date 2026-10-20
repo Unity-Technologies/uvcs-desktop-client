@@ -2,8 +2,8 @@ import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { MergeToolRequest, SmartMergeTool } from '@shared/domain/mergeTools';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { MergeToolRequest, SmartMergeRequest, SmartMergeTool } from '@shared/domain/mergeTools';
 import { cmFails, fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { launchMergeTool } from '../merge/mergeTools/launch';
 import { memorySettings } from '../settings/testing/memorySettings';
@@ -28,7 +28,6 @@ const REQUEST: MergeToolRequest = {
   incoming: { kind: 'revision', revision: { revisionId: 12, repository: 'game@local' }, fileName: 'player.cs' },
   startText: '<<<<<<< conflict\n',
   names: { base: 'Base', yours: 'Yours (/main/task1)', incoming: 'Incoming (/main)' },
-  trySmartMergeFirst: false,
 };
 
 /** `cm cat revid:N@…` writes "version N" to the file it is given. */
@@ -119,113 +118,114 @@ describe('resolving a file in a merge tool', () => {
   });
 });
 
-describe('Smart Merge before the merge tool', () => {
+describe('Smart Merge', () => {
   const SMART_MERGE: SmartMergeTool = { executable: join(tmpdir(), 'Unity', 'UnityYAMLMerge'), editorVersion: '6000.3.19f1' };
   const UNITY_HEADER = '%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n';
-  const PREFAB_REQUEST: MergeToolRequest = { ...REQUEST, path: 'Assets/Player.prefab', trySmartMergeFirst: true };
-
-  /** `cm cat revid:N@…` writes a Unity asset, "version N" in it. */
-  const CAT_PREFABS: CmAnswer = async ({ args }) => {
-    await writeFile(optionValue(args, '--file=')!, `${UNITY_HEADER}version ${/revid:(\d+)/.exec(args[1]!)![1]}\n`);
-    return '';
+  const PREFAB: SmartMergeRequest = {
+    sessionId: 'session-2',
+    path: 'Assets/Player.prefab',
+    base: `${UNITY_HEADER}base\n`,
+    yours: `${UNITY_HEADER}yours\n`,
+    incoming: `${UNITY_HEADER}incoming\n`,
   };
 
-  /** Smart Merge ends with `exitCode` after writing `written` to the result; the tool saves "merged by hand". */
-  function smartMergeEnds(exitCode: number | null, written: string) {
-    vi.mocked(launchMergeTool).mockImplementation(async (executable, args) => {
-      if (executable === SMART_MERGE.executable) {
-        await writeFile(args.at(-1)!, written);
-        return { exitCode, errorOutput: '', seconds: 0.2 };
-      }
-      await writeFile(args[4]!, 'merged by hand\n');
-      return { exitCode: 0, errorOutput: '', seconds: 30 };
+  /** Smart Merge ends with `exitCode` after writing `written` to the result; what it was given, as files. */
+  function smartMergeEnds(exitCode: number | null, written: string, errorOutput = '') {
+    const seen: { args: string[]; hidden: boolean | undefined; files: string[] }[] = [];
+    vi.mocked(launchMergeTool).mockImplementation(async (_executable, args, _signal, options) => {
+      seen.push({ args, hidden: options?.hidden, files: await Promise.all(args.slice(-4, -1).map((file) => readFile(file, 'utf8'))) });
+      await writeFile(args.at(-1)!, written);
+      return { exitCode, errorOutput, seconds: 0.2 };
     });
+    return seen;
   }
-
-  const launched = () => vi.mocked(launchMergeTool).mock.calls.map(([executable]) => executable);
 
   beforeEach(() => {
     vi.mocked(launchMergeTool).mockReset();
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
   });
 
-  it('takes Smart Merge’s merge of a Unity asset and opens no tool', async () => {
-    let smartMergeArgs: string[] = [];
-    vi.mocked(launchMergeTool).mockImplementation(async (_executable, args) => {
-      smartMergeArgs = args;
-      await writeFile(args.at(-1)!, `${UNITY_HEADER}merged\n`);
-      return { exitCode: 0, errorOutput: '', seconds: 0.2 };
-    });
-    const { service } = mergeTools({ cat: CAT_PREFABS }, SMART_MERGE);
-
-    expect(await service.resolve(WORKSPACE, PREFAB_REQUEST)).toEqual({ kind: 'resolved', text: `${UNITY_HEADER}merged\n`, tool: 'Smart Merge' });
-    expect(launched()).toEqual([SMART_MERGE.executable]);
-    const [base, incoming, yours, result] = smartMergeArgs.slice(-4);
-    expect(smartMergeArgs.slice(0, 5)).toEqual(['merge', '-h', '--force', '--fallback', 'none']);
-    expect([base, incoming, yours, result].map((file) => file!.split(/[\\/]/).pop())).toEqual(['Player.BASE.prefab', 'Player.INCOMING.prefab', 'Player.YOURS.prefab', 'Player.prefab']);
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
-  it('opens the tool on the file as it stood when Smart Merge leaves conflicts, never on its half merge', async () => {
-    let resultWhenToolOpened = '';
-    vi.mocked(launchMergeTool).mockImplementation(async (executable, args) => {
-      if (executable === SMART_MERGE.executable) {
-        await writeFile(args.at(-1)!, `${UNITY_HEADER}base values where they disagree\n`);
-        return { exitCode: 2, errorOutput: '', seconds: 0.2 };
-      }
-      resultWhenToolOpened = await readFile(args[4]!, 'utf8');
-      await writeFile(args[4]!, 'merged by hand\n');
-      return { exitCode: 0, errorOutput: '', seconds: 30 };
-    });
-    const { service } = mergeTools({ cat: CAT_PREFABS }, SMART_MERGE);
+  it('merges a Unity asset from the versions given, hidden and with no fallback tool, reading nothing from cm', async () => {
+    const seen = smartMergeEnds(0, `${UNITY_HEADER}merged\n`);
+    const { service, commands } = mergeTools({}, SMART_MERGE);
 
-    expect(await service.resolve(WORKSPACE, PREFAB_REQUEST)).toEqual({ kind: 'resolved', text: 'merged by hand\n' });
-    expect(launched()).toEqual([SMART_MERGE.executable, MY_TOOL.executable]);
-    expect(resultWhenToolOpened).toBe(PREFAB_REQUEST.startText);
+    expect(await service.smartMerge(PREFAB)).toEqual({ kind: 'merged', text: `${UNITY_HEADER}merged\n` });
+    expect(commands).toEqual([]);
+    const [{ args, hidden, files }] = seen as [(typeof seen)[number]];
+    expect(hidden).toBe(true);
+    expect(args.slice(0, 5)).toEqual(['merge', '-h', '--force', '--fallback', 'none']);
+    expect(args.slice(-4).map((file) => file.split(/[\\/]/).pop())).toEqual(['Player.BASE.prefab', 'Player.INCOMING.prefab', 'Player.YOURS.prefab', 'Player.prefab']);
+    expect(files).toEqual([PREFAB.base, PREFAB.incoming, PREFAB.yours]);
   });
 
-  it('opens the tool when Smart Merge can’t start', async () => {
-    vi.mocked(launchMergeTool).mockImplementation(async (executable, args) => {
-      if (executable === SMART_MERGE.executable) throw new Error(`Couldn't start ${executable}: it is not there anymore`);
-      await writeFile(args[4]!, 'merged by hand\n');
-      return { exitCode: 0, errorOutput: '', seconds: 30 };
-    });
-    const { service } = mergeTools({ cat: CAT_PREFABS }, SMART_MERGE);
+  it('never takes its half merge when it leaves conflicts', async () => {
+    smartMergeEnds(2, `${UNITY_HEADER}base values where they disagree\n`);
+    const { service } = mergeTools({}, SMART_MERGE);
 
-    expect(await service.resolve(WORKSPACE, PREFAB_REQUEST)).toEqual({ kind: 'resolved', text: 'merged by hand\n' });
+    expect(await service.smartMerge(PREFAB)).toEqual({ kind: 'notMerged' });
+    expect(console.warn).not.toHaveBeenCalled();
   });
 
-  it('leaves files that aren’t Unity assets to the tool, whatever their name', async () => {
+  it('merges a file added on both sides from an asset with no objects, as it refuses an empty base', async () => {
+    const seen = smartMergeEnds(0, `${UNITY_HEADER}both\n`);
+    const { service } = mergeTools({}, SMART_MERGE);
+
+    await service.smartMerge({ ...PREFAB, base: '' });
+
+    expect(seen[0]!.files[0]).toBe(UNITY_HEADER);
+  });
+
+  it('leaves the file to the tool when it can’t start or fails, and says why in the console', async () => {
+    vi.mocked(launchMergeTool).mockRejectedValueOnce(new Error("Couldn't start UnityYAMLMerge: it is not there anymore"));
+    const { service } = mergeTools({}, SMART_MERGE);
+
+    expect(await service.smartMerge(PREFAB)).toEqual({ kind: 'notMerged' });
+    smartMergeEnds(1, '', "Error parsing file 'Player.BASE.prefab'");
+    expect(await service.smartMerge(PREFAB)).toEqual({ kind: 'notMerged' });
+
+    expect(vi.mocked(console.warn).mock.calls.map((call) => call.join(' '))).toEqual([
+      "[smart merge] Assets/Player.prefab: Couldn't start UnityYAMLMerge: it is not there anymore",
+      "[smart merge] Assets/Player.prefab: exit code 1 Error parsing file 'Player.BASE.prefab'",
+    ]);
+  });
+
+  it('runs nothing without a Unity Editor, or on sides that aren’t Unity assets', async () => {
     smartMergeEnds(0, 'never');
-    const { service } = mergeTools({ cat: CAT_VERSIONS }, SMART_MERGE);
+    const withoutUnity = mergeTools({}).service;
+    const withUnity = mergeTools({}, SMART_MERGE).service;
 
-    expect(await service.resolve(WORKSPACE, PREFAB_REQUEST)).toEqual({ kind: 'resolved', text: 'merged by hand\n' });
-    expect(launched()).toEqual([MY_TOOL.executable]);
+    expect(await withoutUnity.smartMerge(PREFAB)).toEqual({ kind: 'notMerged' });
+    expect(await withUnity.smartMerge({ ...PREFAB, yours: 'fileFormatVersion: 2\n' })).toEqual({ kind: 'notMerged' });
+    expect(launchMergeTool).not.toHaveBeenCalled();
   });
 
-  it('opens the tool straight away once something was decided for the file, or without a Unity Editor', async () => {
-    smartMergeEnds(0, 'never');
-    const decided = mergeTools({ cat: CAT_PREFABS }, SMART_MERGE).service;
-    await decided.resolve(WORKSPACE, { ...PREFAB_REQUEST, trySmartMergeFirst: false });
-    const noUnity = mergeTools({ cat: CAT_PREFABS }).service;
-    await noUnity.resolve(WORKSPACE, PREFAB_REQUEST);
-
-    expect(launched()).toEqual([MY_TOOL.executable, MY_TOOL.executable]);
-  });
-
-  it('opens nothing more when the user stops waiting while Smart Merge runs', async () => {
+  it('stops when the user stops it', async () => {
     let started: () => void = () => undefined;
     const smartMergeStarted = new Promise<void>((resolve) => (started = resolve));
     vi.mocked(launchMergeTool).mockImplementation((_executable, _args, signal) => {
       started();
       return new Promise((resolve) => signal.addEventListener('abort', () => resolve({ exitCode: null, errorOutput: '', seconds: 1 })));
     });
-    const { service } = mergeTools({ cat: CAT_PREFABS }, SMART_MERGE);
+    const { service } = mergeTools({}, SMART_MERGE);
 
-    const resolving = service.resolve(WORKSPACE, PREFAB_REQUEST);
+    const merging = service.smartMerge(PREFAB);
     await smartMergeStarted;
-    await service.stopWaiting(PREFAB_REQUEST.sessionId);
+    await service.stopWaiting(PREFAB.sessionId);
 
-    expect(await resolving).toEqual({ kind: 'unchanged', exitCode: null, errorOutput: '' });
-    expect(launched()).toEqual([SMART_MERGE.executable]);
+    expect(await merging).toEqual({ kind: 'stopped' });
+  });
+
+  it('starts merge tools with their window shown', async () => {
+    vi.mocked(launchMergeTool).mockResolvedValue({ exitCode: 0, errorOutput: '', seconds: 30 });
+    const { service } = mergeTools({ cat: CAT_VERSIONS }, SMART_MERGE);
+
+    await service.resolve(WORKSPACE, REQUEST);
+
+    expect(vi.mocked(launchMergeTool).mock.calls.map(([executable, , , options]) => [executable, options?.hidden ?? false])).toEqual([[MY_TOOL.executable, false]]);
   });
 
   it('lists Smart Merge apart from the tools to pick', async () => {

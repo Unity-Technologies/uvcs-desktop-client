@@ -56,6 +56,13 @@ describe('presentStatus', () => {
     const serverLabels = mergeLabels({ kind: 'merge', sourceSpec: 'br:/main/task', destinationBranch: '/main' }, undefined);
     expect(presentStatus('keepingDestination', serverLabels).label).toBe('Keeping destination');
   });
+
+  it('tells a tool the user works in from Smart Merge, which merges on its own', () => {
+    expect(presentStatus('openInTool', workspaceLabels, 'VS Code')).toMatchObject({ label: 'Open in VS Code…', explanation: 'Save and close it in VS Code' });
+    expect(presentStatus('openInTool', workspaceLabels, 'Smart Merge')).toMatchObject({ label: 'Merging…', explanation: 'Smart Merge is merging it' });
+    expect(presentStatus('resolvedInTool', workspaceLabels, 'VS Code')).toMatchObject({ label: 'Resolved in VS Code', explanation: 'Saved in VS Code' });
+    expect(presentStatus('resolvedInTool', workspaceLabels, 'Smart Merge')).toMatchObject({ label: 'Merged by Smart Merge', explanation: 'Smart Merge merged both sides’ changes' });
+  });
 });
 
 describe('describeChange', () => {

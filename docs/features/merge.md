@@ -28,15 +28,22 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   merges binaries, so a binary keeps one of its versions, picked in the app (`waitsForTool`). "Stop waiting" kills the tool process and takes what was saved so far, as soon as it exits: a launcher's
   app still holding its output doesn't keep the file open.
 - **Smart Merge** (Unity's merge of scenes, prefabs and other assets by their objects: the `UnityYAMLMerge` program in
-  every Unity Editor) isn't a tool to pick: "Resolve in…" (and each file of a "Resolve N conflicts in…" run) tries it
-  first on a Unity asset the user decided nothing for yet (`trySmartMergeFirst`, from `decidedByUser`), and the chosen
-  tool opens only when it can't merge the file. A file goes to it when its two sides start with Unity's YAML header
-  (`isUnityYaml`), whatever its extension; it runs headless with no fallback tool (`SMART_MERGE_ARGS`: `merge -h
-  --force --fallback none`; `--force` lets it take `.mat`, `.asset`… beyond the `.unity`, `.prefab` and `.meta` it
-  knows by name, and it refuses what isn't Unity YAML anyway). Only exit code 0 counts (`judgeSmartMerge`): on 2
-  (conflicts left) it still writes a result holding the base's values where the sides disagree, so that result is
-  dropped and the tool opens on the file as it stood. Its merge reads "Resolved in Smart Merge"; Start over, or
-  "Resolve in…" again, then opens the tool (on its result). It comes from the newest Unity release installed
+  every Unity Editor) isn't a tool to pick: "Resolve in…" (and each file of a "Resolve N conflicts in…" run) runs it
+  first on a Unity asset the user decided nothing for yet (`smartMergeVersions`, from `decidedByUser`), and the chosen
+  tool opens only when it doesn't merge the file. Two calls, so each phase shows what really happens:
+  `mergeTools.smartMerge` with the versions the page already read (no `cm` command), while the file reads "Merging…"
+  and its banner "Merging <file> with Smart Merge…" with Stop (stopping it opens nothing); then, if it didn't merge,
+  `mergeTools.resolve` opens the tool as for any file. A file goes to it when its two sides start with Unity's YAML
+  header (`isUnityYaml`), whatever its extension: a `.meta` file has none and goes to the tool. A file added on both
+  sides gets an asset with no objects as its base (`EMPTY_UNITY_YAML`): Smart Merge refuses an empty file. It runs with
+  no window (`windowsHide` on Windows, `toolSpawnOptions`) and no fallback tool (`SMART_MERGE_ARGS`: `merge -h --force
+  --fallback none`; `--force` lets it take `.mat`, `.asset`… beyond the `.unity`, `.prefab` and `.meta` it knows by
+  name, and it refuses what isn't Unity YAML anyway). Only exit code 0 counts (`judgeSmartMerge`): on 2 (conflicts
+  left) it still writes a result holding the base's values where the sides disagree, so that result is dropped; 1
+  means it couldn't read or merge the file. A failure other than conflicts left is warned in the console (`[smart
+  merge]`, with the end of its stderr). Its merge reads "Merged by Smart Merge"; "Resolve in…" on it opens the tool on
+  Smart Merge's result, and Start over makes the file undecided again, so the next "Resolve in…" lets Smart Merge try
+  again. It comes from the newest Unity release installed
   (`findSmartMerge`, `compareUnityVersions`: releases before alphas and betas), found as Unity Hub keeps editors
   (`findUnityEditors`): its editors folder (`/Applications/Unity/Hub/Editor`, `C:\Program Files\Unity\Hub\Editor`,
   `~/Unity/Hub/Editor`), the folder picked in the Hub (`secondaryInstallPath.json` in the Hub's config folder), the

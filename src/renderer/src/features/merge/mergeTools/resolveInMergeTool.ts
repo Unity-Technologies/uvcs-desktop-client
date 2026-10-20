@@ -1,4 +1,4 @@
-import type { MergeTool, MergeToolOutcome } from '@shared/domain/mergeTools';
+import { SMART_MERGE_NAME, type MergeTool, type MergeToolOutcome } from '@shared/domain/mergeTools';
 import { api } from '../../../api/client';
 import { fileNameOf } from '../../../lib/text';
 import { toast } from '../../../ui/toast/toastStore';
@@ -6,8 +6,12 @@ import type { MergeLabels } from '../mergeDescription';
 import type { FileConflictDecision } from '../resolve/fileConflictDecision';
 import type { FileConflictState } from '../resolve/useFileConflicts';
 import { decisionFromTool, toolOutcomeMessage, toolVersionNames } from './mergeToolOutcome';
+import { smartMergeVersions } from './smartMergeVersions';
 
-/** A merge tool that has a file open, waiting for the user. */
+/**
+ * A merge tool that has a file open, waiting for the user; or Smart Merge merging it, with no window (`toolName` is
+ * `SMART_MERGE_NAME`, and nothing can be brought to the front).
+ */
 export interface OpenTool {
   sessionId: string;
   toolName: string;
@@ -23,9 +27,10 @@ export interface MergeToolSession {
 /**
  * Opens one conflicting file in a merge tool and waits for it: `onOpen` reports it open, then closed (null). The
  * result file starts as the file stands in the app (the automatic merge with its markers, or the user's picks), so the
- * tool shows where things are. A Unity asset the user decided nothing for goes through Smart Merge first, and the tool
- * opens only if it can't merge it (`MergeToolRequest.trySmartMergeFirst`). Tells the user how it went, unless `quiet`
- * (resolving one by one tells it as a whole).
+ * tool shows where things are. A Unity asset the user decided nothing for goes to Smart Merge first
+ * (`smartMergeVersions`), reported open as Smart Merge while it merges: the tool opens only if it doesn't merge the
+ * file, and not at all if the user stopped it. Tells the user how it went, unless `quiet` (resolving one by one tells
+ * it as a whole).
  */
 export async function resolveInMergeTool(
   workspacePath: string,
@@ -35,12 +40,38 @@ export async function resolveInMergeTool(
   onOpen: (open: OpenTool | null) => void,
   quiet = false,
 ): Promise<MergeToolSession> {
+  const smartMerged = await trySmartMerge(state, onOpen);
+  const [outcome, by] = smartMerged ? [smartMerged, SMART_MERGE_NAME] : [await openInTool(workspacePath, state, tool, labels, onOpen), tool.name];
+  if (!quiet) {
+    const message = toolOutcomeMessage(outcome, by, fileNameOf(state.file.path));
+    if (message.kind === 'error') toast.error(message.title, message.detail);
+    else toast[message.kind](message.title, message.detail);
+  }
+  return { outcome, decision: decisionFromTool(outcome, by) };
+}
+
+/** Smart Merge's outcome when it merged the file or the user stopped it; null when the tool is to open. */
+async function trySmartMerge(state: FileConflictState, onOpen: (open: OpenTool | null) => void): Promise<MergeToolOutcome | null> {
+  const versions = smartMergeVersions(state);
+  if (!versions) return null;
   const sessionId = crypto.randomUUID();
-  const fileName = fileNameOf(state.file.path);
-  onOpen({ sessionId, toolName: tool.name, canBringToFront: tool.canBringToFront });
-  let outcome: MergeToolOutcome;
+  onOpen({ sessionId, toolName: SMART_MERGE_NAME, canBringToFront: false });
   try {
-    outcome = await api.mergeTools.resolve(workspacePath, {
+    const merged = await api.mergeTools.smartMerge({ sessionId, ...versions });
+    if (merged.kind === 'merged') return { kind: 'resolved', text: merged.text };
+    return merged.kind === 'stopped' ? { kind: 'unchanged', exitCode: null, errorOutput: '' } : null;
+  } catch {
+    return null;
+  } finally {
+    onOpen(null);
+  }
+}
+
+async function openInTool(workspacePath: string, state: FileConflictState, tool: MergeTool, labels: MergeLabels, onOpen: (open: OpenTool | null) => void): Promise<MergeToolOutcome> {
+  const sessionId = crypto.randomUUID();
+  onOpen({ sessionId, toolName: tool.name, canBringToFront: tool.canBringToFront });
+  try {
+    return await api.mergeTools.resolve(workspacePath, {
       sessionId,
       toolId: tool.id,
       path: state.file.path,
@@ -49,20 +80,12 @@ export async function resolveInMergeTool(
       incoming: state.file.source,
       startText: startText(state),
       names: toolVersionNames(labels),
-      trySmartMergeFirst: !state.decidedByUser,
     });
   } catch (error) {
-    outcome = { kind: 'failed', message: error instanceof Error ? error.message : String(error) };
+    return { kind: 'failed', message: error instanceof Error ? error.message : String(error) };
   } finally {
     onOpen(null);
   }
-
-  if (!quiet) {
-    const message = toolOutcomeMessage(outcome, tool.name, fileName);
-    if (message.kind === 'error') toast.error(message.title, message.detail);
-    else toast[message.kind](message.title, message.detail);
-  }
-  return { outcome, decision: decisionFromTool(outcome, tool.name) };
 }
 
 function startText(state: FileConflictState): string {
