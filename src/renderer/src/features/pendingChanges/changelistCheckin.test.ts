@@ -19,7 +19,7 @@ import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { askedDialogs } from '../../testing/fakeDialogs';
 import { changesByChangelist, prepareChangelistCheckin } from './changelistCheckin';
 import { checkinDraftOf, useCheckinDraftStore } from './checkinDraftStore';
-import { checkinSelectionOf, includedBy } from './checkinSelection';
+import { checkinSelectionOf, currentChoice, includedBy } from './checkinSelection';
 import { checkinFromPanel, shelveFromPanel } from './submitCheckinPanel';
 
 const ws = '/ws';
@@ -51,10 +51,11 @@ const defaultChanges = [change('README.md', ['changed']), change('notes.txt', ['
 const allChanges = [...defaultChanges, ...uiChanges, artChange, plainChange];
 
 /** What the panel checks in and shelves once the draft is as `prepareChangelistCheckin` left it. */
-const selection = (changes = allChanges) => checkinSelectionOf(changes, includedBy(checkinDraftOf(ws)));
+const selection = (changes = allChanges) => checkinSelectionOf(changes, includedBy(currentChoice(checkinDraftOf(ws), changes)));
 
 function prepare(changelist: Changelist, changelistsNow = changelists): void {
-  prepareChangelistCheckin({ workspacePath: ws, changelist, allChanges, changelists: changelistsNow });
+  const changes = changesByChangelist(allChanges).get(changelist.name) ?? [];
+  prepareChangelistCheckin({ workspacePath: ws, changelist, changes, changelists: changelistsNow });
 }
 
 const panelCheckin = (included: PendingChange[]) => ({ workspacePath: ws, included, pendingCount: allChanges.length, behind: false, bulkPrivate: null, warnOnEmptyComment: true });
@@ -136,6 +137,33 @@ describe('prepareChangelistCheckin', () => {
     prepare(art, edited);
 
     expect(checkinDraftOf(ws)).toMatchObject({ summary: 'Polish the menus', description: 'Spacing and icons.' });
+  });
+});
+
+describe('how a prepared changelist ends', () => {
+  // Its files undone, shelved away by a switch, or checked in from outside the app: nothing would ever be checked again.
+  it('ends once none of its files is pending, so a new change goes in', () => {
+    prepare(ui);
+
+    const edited = change('src/game/Enemy.cs', ['checkedOut', 'changed']);
+    const afterUndo = [...defaultChanges, edited];
+    expect(selection(afterUndo).included).toEqual([defaultChanges[0], defaultChanges[1], edited]);
+  });
+
+  it('holds while some of its files are pending', () => {
+    prepare(ui);
+
+    expect(selection([...defaultChanges, uiChanges[0]!]).included).toEqual([uiChanges[0]]);
+  });
+
+  it('ends when the user checks every file, none hidden by the filters, back to the files they had left out', () => {
+    useCheckinDraftStore.getState().setIncluded(ws, ['README.md'], false);
+    prepare(ui);
+
+    useCheckinDraftStore.getState().includeEverything(ws, allChanges.map((candidate) => candidate.path));
+
+    expect(checkinDraftOf(ws).prepared).toBeNull();
+    expect(selection().included).toEqual(allChanges.filter((candidate) => candidate.path !== 'build/out.log'));
   });
 });
 
