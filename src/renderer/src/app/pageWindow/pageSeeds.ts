@@ -29,6 +29,16 @@ export function pageSeed(workspacePath: string, page: Page): PageSeed | undefine
  */
 export function plantPageSeed(workspacePath: string, seed: PageSeed): void {
   const options = { updatedAt: seed.readAt };
-  if (seed.changeset) queryClient.setQueryData(queryKeys.inWorkspace(workspacePath, 'changesets', 'handedOver', seed.changeset.id), [seed.changeset], options);
-  if (seed.shelve) queryClient.setQueryData(queryKeys.inWorkspace(workspacePath, 'shelves', 'handedOver', seed.shelve.id), [seed.shelve], options);
+  if (seed.changeset) plant(queryKeys.inWorkspace(workspacePath, 'changesets', 'handedOver'), seed.changeset.id, [seed.changeset], options);
+  if (seed.shelve) plant(queryKeys.inWorkspace(workspacePath, 'shelves', 'handedOver'), seed.shelve.id, [seed.shelve], options);
+}
+
+/**
+ * Kept while the window lives: nothing observes them, and a shelve's page reads its row at every render
+ * (`cachedShelve`), so the usual collection of unused queries would take its header and actions after five minutes.
+ * They are a row each.
+ */
+function plant(handedOver: readonly unknown[], id: number, rows: unknown[], options: { updatedAt: number }): void {
+  queryClient.setQueryDefaults(handedOver, { gcTime: Infinity });
+  queryClient.setQueryData([...handedOver, id], rows, options);
 }

@@ -1,5 +1,5 @@
 import '../../testing/fakeWindow';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
 import type { Shelve } from '@shared/domain/shelve';
 import { queryKeys } from '../../api/queryKeys';
@@ -30,6 +30,18 @@ describe('handing a page window what its page shows', () => {
     expect(pageSeed(WS, diffOf({ kind: 'changeset', changesetId: 10 }))).toBeUndefined();
     expect(pageSeed(WS, diffOf({ kind: 'branch', branch: '/main/drift' }))).toBeUndefined();
     expect(pageSeed(WS, { kind: 'history', path: 'src/player.cs' })).toBeUndefined();
+  });
+
+  it("stays while the window lives, though nothing observes it: a shelve's page reads it at every render", () => {
+    vi.useFakeTimers();
+    try {
+      plantPageSeed(WS, { readAt: READ_AT, shelve: SHELVE });
+      vi.advanceTimersByTime(60 * 60 * 1000);
+
+      expect(cachedShelve(WS, 4)).toEqual(SHELVE);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('is found in the page window where its page looks, as read when its window read it', () => {
