@@ -48,7 +48,7 @@ export function BranchScopeFilter({ workspacePath, scope, currentBranch, onShowA
       onOpenChange={setOpen}
       width={360}
       trigger={
-        <MenuChip icon={<GitBranch size={13} />} active={scope.kind !== 'all'} aria-label="Branch">
+        <MenuChip icon={<GitBranch size={13} />} active={scope.kind !== 'all'}>
           {scope.kind === 'all' ? 'All branches' : scope.kind === 'current' ? 'This branch' : <PathLabel path={scope.name} fitContent maxWidth={PICKED_BRANCH_MAX_WIDTH} />}
         </MenuChip>
       }
