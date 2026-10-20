@@ -8,6 +8,7 @@ import { ListSkeleton } from '../../ui/Skeleton';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { IncomingPanes } from './IncomingPanes';
 import { IncomingSession } from './IncomingSession';
+import { NoIncomingChangesets } from './NoIncomingChangesets';
 import { useIncomingChanges } from './useIncomingChanges';
 
 export function IncomingChangesView() {
@@ -48,7 +49,7 @@ export function IncomingChangesView() {
     return (
       <>
         {header}
-        <IncomingPanes list={null} detail={<EmptyState icon={<CheckCircle2 size={22} />} title="You're up to date" />} />
+        <IncomingPanes list={<NoIncomingChangesets />} detail={<EmptyState icon={<CheckCircle2 size={22} />} title="You're up to date" />} />
       </>
     );
   }
