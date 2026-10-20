@@ -32,11 +32,13 @@ export function usePaintableImage(image: ImageBytes | undefined): PaintState {
   useEffect(() => {
     if (!image || !needsDecoding(image)) return;
     let stale = false;
-    void paintOffThread(image).then((painted) => {
+    const request = paintOffThread(image);
+    void request.painted.then((painted) => {
       if (!stale) setKept({ image, painted });
     });
     return () => {
       stale = true;
+      request.release();
     };
   }, [image]);
   return useMemo(() => shownPaint(image, kept), [image, kept]);

@@ -296,11 +296,16 @@ makes each into an image the browser paints before anything shows it (`usePainta
 
 - **Off the UI thread**: in the image decoding worker (`imageDecoding.worker`, a `paint` request; `paintOffThread`
   in `imageDecodingSession`), never on the page's thread, where a 4K PSD or EXR would hold a paint; a worker that can't
-  start or dies fails the image. The worker decodes one request at a time, the session hands it at most two (it bounds
-  the bytes in the worker's hands, a texture's or an image's), and an image asked again while in hand is asked once.
-  The decoders are the textures' own (`lib/images`: `decodePixels`, three's loaders for TGA, TIFF, EXR and HDR,
-  `readPsd` for Photoshop), loaded only in the worker. A second worker for images was tried and set aside: a second
-  thread and a second copy of three's loaders, and a client that repeated the decoding worker's line for line.
+  start or dies fails the image. The session hands the worker at most two requests at a time, a texture's or an
+  image's, from one queue (it bounds the bytes in the worker's hands; two may be under way at once, as a texture's
+  decode awaits `createImageBitmap`); an image asked again while in hand is asked once, and one every viewer let go of
+  (`release`, in the effect's cleanup) before its turn is never handed over, so stepping through files queues only the
+  one on screen. The decoders are the textures' own (`lib/images`: `decodePixels`, three's loaders for TGA, TIFF, EXR
+  and HDR, `readPsd` for Photoshop), loaded only in the worker. A second worker for images was tried and set aside: a
+  second thread and a second copy of three's loaders, and a client that repeated the decoding worker's line for line.
+  What sharing costs, accepted for that: one queue, so a model's textures and an image diff wait for each other; and
+  one failure, so a parser that hangs on a file holds both, and a worker that dies fails textures and images alike
+  in that window until it reloads.
 - **By content first** (`imageFormatOfContent`: a PNG saved as `.tga` paints as the PNG it is, told on the page with
   no trip to the worker: `needsDecoding`), else by its type; its size read from the header and refused past 16384 px
   a side or 8192² pixels before decoding (`sizeProblem`, the model diff's limits, where a texture is drawn at 2048 px at
