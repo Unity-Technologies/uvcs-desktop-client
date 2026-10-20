@@ -58,6 +58,11 @@ describe('file conflict decisions', () => {
     expect(conflictBaseAt({ kind: 'wholeFile', side: 'source' }, 0)).toBeUndefined();
   });
 
+  it("knows no base once the text's conflicts and the bases carried no longer match", () => {
+    expect(conflictBaseAt({ kind: 'text', text: '<<<<<<< dst\nD\n=======\nS\n>>>>>>> src\n', conflictBases: ['b\n', 'd\n'] }, 0)).toBeUndefined();
+    expect(conflictBaseAt({ kind: 'text', text: '<<<<<<< dst\nD\n=======\nS\n>>>>>>> src\n', conflictBases: ['b\n'] }, 0)).toBe('b\n');
+  });
+
   it('binary files start without a decision', () => {
     expect(initialDecision(undefined)).toBeUndefined();
     expect(resolutionOf(undefined)).toBeNull();

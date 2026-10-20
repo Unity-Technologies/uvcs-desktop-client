@@ -17,6 +17,10 @@ describe('updateConflictFiles', () => {
     expect(texture?.isKnownBinary).toBe(true);
     expect(code?.isKnownBinary).toBeUndefined();
   });
+
+  it('names the base as the changeset the workspace had loaded', () => {
+    expect(updateConflictFiles([{ path: 'a.ts', isBinary: false, baseRevisionId: 1, incomingRevisionId: 2, repository: 'game@local' }])[0]?.baseName).toBe('your loaded changeset');
+  });
 });
 
 describe('updateResolutionsOf', () => {

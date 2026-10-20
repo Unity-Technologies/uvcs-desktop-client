@@ -9,6 +9,7 @@ import {
   hasBase,
   justDecided,
   mergedText,
+  offersConflictBase,
   offersKeepBase,
   rememberConflicts,
   rendersVersions,
@@ -53,6 +54,15 @@ describe('offersKeepBase', () => {
     expect(offersKeepBase(withBaseFile())).toBe(true);
     expect(offersKeepBase(stateOf())).toBe(false);
     expect(offersKeepBase(withBaseFile({ file: { ...withBaseFile().file, baseIsUndoneChange: true } }))).toBe(false);
+  });
+});
+
+describe('offersConflictBase', () => {
+  const marked = { kind: 'text' as const, text: MARKED, conflictBases: ['base\n'] };
+  it('offers keeping one conflict\'s base when the file offers its base and that conflict\'s is known', () => {
+    expect(offersConflictBase(withBaseFile({ decision: marked }), 0)).toBe(true);
+    expect(offersConflictBase(withBaseFile({ decision: { kind: 'text', text: MARKED, edited: true } }), 0)).toBe(false);
+    expect(offersConflictBase(withBaseFile({ decision: marked, file: { ...withBaseFile().file, baseIsUndoneChange: true } }), 0)).toBe(false);
   });
 });
 
