@@ -29,3 +29,19 @@ export function incomingViewState(incoming: IncomingChanges | undefined, pending
 export function incomingRefreshFailed(incoming: IncomingChanges | undefined, failed: boolean): boolean {
   return failed && incoming !== undefined;
 }
+
+/** What Incoming's header says under its title: the words about the branch (tipped with its name), and whether the last check failed. */
+export interface IncomingHeaderSubtitle {
+  branchWords: { words: string; branch: string } | undefined;
+  refreshFailed: boolean;
+}
+
+/**
+ * `words`: what the view says about the branch (`incomingSubtitle`, or its name before the list is read). Undefined
+ * when there is nothing to say, so the header holds no empty line.
+ */
+export function incomingHeaderSubtitle(incoming: IncomingChanges | undefined, words: string | undefined, failed: boolean): IncomingHeaderSubtitle | undefined {
+  const branchWords = incoming?.branch && words ? { words, branch: incoming.branch } : undefined;
+  const refreshFailed = incomingRefreshFailed(incoming, failed);
+  return branchWords || refreshFailed ? { branchWords, refreshFailed } : undefined;
+}

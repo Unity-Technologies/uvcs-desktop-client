@@ -1,8 +1,8 @@
-/* Beside the branch, after a check that failed: calm, as what shows is still what the last check read. */
+/* First in the header's line, after a check that failed: calm, as what shows is still what the last check read. */
 .refreshFailed {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  margin-left: var(--space-2);
+  margin-right: var(--space-2);
   color: var(--text-secondary);
 }

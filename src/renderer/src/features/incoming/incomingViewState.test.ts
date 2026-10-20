@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { IncomingChanges } from '@shared/domain/incoming';
-import { incomingRefreshFailed, incomingViewState } from './incomingViewState';
+import { incomingHeaderSubtitle, incomingRefreshFailed, incomingViewState } from './incomingViewState';
 
 const details = { changesets: [], moreChangesets: false, files: [], conflicts: [], blockedPaths: [] };
 const behind: IncomingChanges = {
@@ -47,5 +47,18 @@ describe('incomingRefreshFailed', () => {
   it('has nothing to say when the read answered, or when the failure takes the whole view', () => {
     expect(incomingRefreshFailed(behind, false)).toBe(false);
     expect(incomingRefreshFailed(undefined, true)).toBe(false);
+  });
+});
+
+describe('incomingHeaderSubtitle', () => {
+  it('says what came in on the branch, tipped with its name, and that the check failed when it did', () => {
+    expect(incomingHeaderSubtitle(behind, '3 new on main', false)).toEqual({ branchWords: { words: '3 new on main', branch: '/main' }, refreshFailed: false });
+    expect(incomingHeaderSubtitle(behind, '3 new on main', true)).toEqual({ branchWords: { words: '3 new on main', branch: '/main' }, refreshFailed: true });
+  });
+
+  it('says nothing off a branch, while reading, or with no words yet, so the header holds no empty line', () => {
+    expect(incomingHeaderSubtitle(offBranch, undefined, false)).toBeUndefined();
+    expect(incomingHeaderSubtitle(undefined, undefined, false)).toBeUndefined();
+    expect(incomingHeaderSubtitle(behind, undefined, false)).toBeUndefined();
   });
 });
