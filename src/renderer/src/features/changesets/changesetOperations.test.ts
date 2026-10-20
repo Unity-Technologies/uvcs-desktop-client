@@ -5,10 +5,18 @@ const asked = vi.hoisted(() => ({
   comment: undefined as string | undefined,
   picked: undefined as string | undefined,
   picker: undefined as { exclude?: string } | undefined,
+  pickedChangeset: undefined as number | undefined,
+  changesetPicker: undefined as { title: string; exclude: number } | undefined,
 }));
 vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
 vi.mock('./EditCommentDialog', () => ({ askForChangesetComment: async () => asked.comment }));
+vi.mock('./ChangesetPickerDialog', () => ({
+  pickChangeset: async (options: { title: string; exclude: number }) => {
+    asked.changesetPicker = options;
+    return asked.pickedChangeset;
+  },
+}));
 vi.mock('../branches/BranchPickerDialog', () => ({
   pickBranch: async (options: { exclude?: string }) => {
     asked.picker = options;
@@ -19,7 +27,7 @@ vi.mock('../branches/BranchPickerDialog', () => ({
 import type { ChangesetInfo } from '@shared/domain/changeset';
 import { answerConfirms, answerPrompts } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
-import { deleteChangeset, editChangesetComment, mergeChangesetTo, moveChangesetToBranch, readChangesetGuid, revertWorkspaceToChangeset } from './changesetOperations';
+import { deleteChangeset, diffWithAnotherChangeset, editChangesetComment, mergeChangesetTo, moveChangesetToBranch, readChangesetGuid, revertWorkspaceToChangeset } from './changesetOperations';
 
 const ws = '/ws';
 const changeset = { id: 42, branch: '/main/task', comment: 'Old comment' };
@@ -29,6 +37,8 @@ beforeEach(() => {
   asked.comment = undefined;
   asked.picked = undefined;
   asked.picker = undefined;
+  asked.pickedChangeset = undefined;
+  asked.changesetPicker = undefined;
 });
 
 describe('changeset operations', () => {
@@ -107,5 +117,22 @@ describe('changeset operations', () => {
     fakeApi.answer('changesets.get', () => ({ id: 42, guid: 'read' }));
     expect(await readChangesetGuid(ws, listed())).toBe('read');
     expect(fakeApi.argsOf('changesets.get')).toEqual([[ws, 42]]);
+  });
+});
+
+describe('comparing with another changeset', () => {
+  it('compares the state after each, the older changeset on the left, never offering the changeset itself', async () => {
+    asked.pickedChangeset = 7;
+
+    await diffWithAnotherChangeset({ id: 42 });
+
+    expect(asked.changesetPicker).toEqual({ title: 'Compare changeset 42 with…', exclude: 42 });
+    expect(whereTheWindowIs().pages).toEqual([{ kind: 'diff', title: 'Changesets 7 → 42', target: { kind: 'range', fromSpec: 'cs:7', toSpec: 'cs:42' } }]);
+  });
+
+  it('opens nothing when the picker is dismissed', async () => {
+    await diffWithAnotherChangeset({ id: 42 });
+
+    expect(whereTheWindowIs().pages).toEqual([]);
   });
 });
