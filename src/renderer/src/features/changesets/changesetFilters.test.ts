@@ -5,7 +5,7 @@ import type { Label } from '@shared/domain/label';
 import { compactFilter } from '../../lib/compactFilter';
 import { EVERYONE, MINE } from '../../lib/peopleFilter';
 import { isFiltering } from '../../lib/viewFilters';
-import { changesetsCap, CLEARED_CHANGESET_FILTERS, DEFAULT_CHANGESET_FILTERS, matchesSearch, noChangesetsHint, toQueryFilter } from './changesetFilters';
+import { changesetChoices, changesetsCap, CLEARED_CHANGESET_FILTERS, DEFAULT_CHANGESET_FILTERS, matchesSearch, noChangesetsHint, toQueryFilter } from './changesetFilters';
 import { useChangesetFilters } from './changesetsViewStore';
 
 const today = new Date(2026, 8, 25);
@@ -94,5 +94,33 @@ describe('changesetsCap', () => {
     expect(changesetsCap(2000, 2000, 'anyTime')).toBe('The newest 2,000');
     expect(changesetsCap(12, 40, 'anyTime')).toBeUndefined();
     expect(changesetsCap(2000, 2000, 'lastMonth')).toBeUndefined();
+  });
+});
+
+describe('changesetChoices', () => {
+  const changeset = (id: number, comment = ''): Changeset => ({ id, guid: `g${id}`, branch: '/main', comment, owner: 'ana', date: '', parent: id - 1, repository: 'game@local' });
+  const recent = [changeset(50, 'Fix the menu'), changeset(42, 'Add the menu'), changeset(41, 'Ship 42 levels')];
+  const ids = (search: string, exclude = 50) => changesetChoices(recent, exclude, search).map((choice) => choice.id);
+
+  it('offers the newest changesets read, leaving out the one being compared', () => {
+    expect(ids('')).toEqual([42, 41]);
+  });
+
+  it('looks through what a row shows: number, comment, branch, author', () => {
+    expect(ids('menu')).toEqual([42]);
+    expect(ids('ship levels')).toEqual([41]);
+  });
+
+  it('puts a changeset typed by number first, with its row when it was read, then the others that mention it', () => {
+    expect(changesetChoices(recent, 50, '42')).toEqual([{ id: 42, changeset: recent[1] }, { id: 41, changeset: recent[2] }]);
+    expect(ids('cs:41')).toEqual([41]);
+  });
+
+  it('offers a changeset older than those read by its number alone', () => {
+    expect(changesetChoices(recent, 50, '7')).toEqual([{ id: 7 }]);
+  });
+
+  it('never offers the changeset being compared, even typed', () => {
+    expect(ids('50')).toEqual([]);
   });
 });
