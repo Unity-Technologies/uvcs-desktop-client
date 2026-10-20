@@ -16,6 +16,10 @@ describe('annotationBodyOf', () => {
     expect(annotationBodyOf(annotated, false)).toBe('code');
   });
 
+  it('says an empty file is empty instead of showing an empty box', () => {
+    expect(annotationBodyOf({ lines: [], changesets: [] }, false)).toBe('emptyFile');
+  });
+
   it("says it couldn't annotate when reading failed", () => {
     expect(annotationBodyOf(undefined, true)).toBe('failed');
   });
