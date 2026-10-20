@@ -102,7 +102,7 @@ describe('stepping through the changes of a list of files', () => {
     for (let press = 0; press < 8; press++) list.press(1);
     expect(list.header).toBe('b.cs: 3 of 3');
     expect(list.goesTo(1)).toBeNull();
-    expect(list.goesTo(-1)).toBe('change');
+    expect(list.goesTo(-1)).toBe('step');
   });
 
   it('keeps going on from a file without changes, whichever way', () => {

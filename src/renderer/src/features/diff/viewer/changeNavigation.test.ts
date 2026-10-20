@@ -34,8 +34,8 @@ describe('adjacentChange', () => {
 
 describe('plannedMove', () => {
   it('moves to the next or previous change while there is one', () => {
-    expect(plannedMove({ count: 3, current: 1, above: 0 }, 1, true)).toEqual({ to: 'change', index: 2 });
-    expect(plannedMove({ count: 3, current: null, above: 2 }, -1, true)).toEqual({ to: 'change', index: 1 });
+    expect(plannedMove({ count: 3, current: 1, above: 0 }, 1, true)).toEqual({ to: 'step', index: 2 });
+    expect(plannedMove({ count: 3, current: null, above: 2 }, -1, true)).toEqual({ to: 'step', index: 1 });
   });
 
   it('goes on to the file beside the diff past its last or first change, or nowhere without one', () => {

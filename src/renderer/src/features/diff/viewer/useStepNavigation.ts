@@ -17,10 +17,10 @@ export interface StepNavigation {
   noun: string;
   shortcuts: StepShortcuts;
   count: number;
-  /** "3 of 12", or "12 changes" before the first move. */
+  /** "3 of 12" once a step was moved to, "12 changes" (or conflicts: `noun`) before, "No changes" with none. */
   label: string;
   /** Where a move goes: to a step, on to the file beside it in the list (past the ends), or nowhere. */
-  goesTo: (direction: 1 | -1) => 'change' | 'file' | null;
+  goesTo: (direction: 1 | -1) => 'step' | 'file' | null;
   go: (direction: 1 | -1) => void;
   /** For the view's scrolling element: where the first move goes from follows the view. */
   onViewScroll: () => void;

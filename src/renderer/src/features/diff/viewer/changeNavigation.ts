@@ -21,8 +21,8 @@ export function adjacentChange({ count, current, above }: ChangePosition, direct
   return target >= 0 && target < count ? target : null;
 }
 
-/** Where a move goes: to a change of this diff, on to the file beside it in the list, or nowhere. */
-export type ChangeMove = { to: 'change'; index: number } | { to: 'file' } | null;
+/** Where a move goes: to a step of this view (a change, a conflict), on to the file beside it in the list, or nowhere. */
+export type ChangeMove = { to: 'step'; index: number } | { to: 'file' } | null;
 
 /**
  * Where a move from `position` goes: the next or previous change, else, past the last or first, the file after or
@@ -30,7 +30,7 @@ export type ChangeMove = { to: 'change'; index: number } | { to: 'file' } | null
  */
 export function plannedMove(position: ChangePosition, direction: 1 | -1, canStepFile: boolean): ChangeMove {
   const index = adjacentChange(position, direction);
-  if (index !== null) return { to: 'change', index };
+  if (index !== null) return { to: 'step', index };
   return canStepFile ? { to: 'file' } : null;
 }
 
