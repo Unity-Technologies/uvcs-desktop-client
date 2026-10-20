@@ -198,8 +198,8 @@ export function hasMergeBase(conflict: FileConflict): boolean {
 }
 
 /**
- * Whether "Keep both" can rename the destination's item to `newName`: one name in its folder, never a path, `.` or
- * `..`. The merge page counts the conflict as decided only then, and the merge refuses anything else.
+ * Whether "Keep both" takes `newName` for the destination's item: one name, never a path (no `/` or `\`), `.` or `..`.
+ * The merge page counts the conflict as decided only then, and the merge refuses anything else.
  */
 export function isValidRenameName(newName: string): boolean {
   return newName.trim() !== '' && !/[\\/]/.test(newName) && newName !== '.' && newName !== '..';
