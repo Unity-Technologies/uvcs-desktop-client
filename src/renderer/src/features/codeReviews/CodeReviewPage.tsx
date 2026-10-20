@@ -9,7 +9,7 @@ import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SegmentedControl } from '../../ui/SegmentedControl';
-import { DetailsPanelSkeleton } from '../../ui/DetailsPanelSkeleton';
+import { SkeletonBar } from '../../ui/Skeleton';
 import { DiffPage } from '../diff/DiffPage';
 import { deleteReviews, reassignReview, setReviewStatus } from './codeReviewOperations';
 import { describeTarget, reviewDiffTarget } from './reviewTarget';
@@ -27,7 +27,8 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
   if (isLoading) {
     return (
       <div className={styles.page}>
-        <DetailsPanelSkeleton />
+        <ReviewHeaderSkeleton />
+        <div className={styles.changes} />
       </div>
     );
   }
@@ -45,6 +46,23 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
         )}
       </div>
     </div>
+  );
+}
+
+/** The review's header while it's read: its three rows at their heights, a placeholder where each one's words go. */
+function ReviewHeaderSkeleton() {
+  return (
+    <header className={styles.header} aria-busy="true" aria-label="Loading">
+      <div className={`${styles.titleRow} ${styles.placeholderTitle}`}>
+        <SkeletonBar width="320px" />
+      </div>
+      <div className={`${styles.meta} ${styles.placeholderMeta}`}>
+        <SkeletonBar width="420px" />
+      </div>
+      <div className={`${styles.actions} ${styles.placeholderActions}`}>
+        <SkeletonBar width="260px" />
+      </div>
+    </header>
   );
 }
 
