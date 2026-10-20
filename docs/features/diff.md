@@ -138,7 +138,9 @@ or deleted file) is one change, "1 of 1"; a file with none to step through (an i
 keeps the arrows, "No changes", so stepping through the list never stops there. It steps through the files as the list
 shows them: in a tree, those in a closed folder are skipped. The list itself, its order and its List/Tree layout, are
 every list of changed files' (ARCHITECTURE.md "Lists of changed files"); a folder selected in it shows how many changes
-it holds instead of a diff.
+it holds instead of a diff. The stepping itself (the position, the keys, the arrival from a file beside it) is
+`useStepNavigation`, given the steps and a `StepView`: `useChangeNavigation` is it over a diff's change regions, and the
+merge page steps through conflicts with it (merge.md "Stepping through conflicts").
 
 ## Moved code
 

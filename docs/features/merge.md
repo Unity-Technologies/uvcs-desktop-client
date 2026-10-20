@@ -153,6 +153,25 @@ file behind the selection follows it deferred, so arrowing never waits for a fil
 the hand editor follow the diffs' size rule (`syntaxHighlighting`), and Base (when big) and the hand editor render
 only the lines in view.
 
+### Stepping through conflicts
+
+A conflicting file steps through its conflicts as a diff steps through its changes (diff.md "Moving through
+changes"), with the same keys, ⌥↓ ⌥↑ and F7 ⇧F7 (`nextConflict`, `previousConflict`), and arrows around "2 of 3" at
+the end of its view bar (`ConflictNavigator`, on `useStepNavigation`). A conflict moved to comes a few rows from the
+top unless it's all in view, and lights up (`useConflictView`: Pierre draws each one from its actions row down to its
+end marker). Every conflict shown is one still to decide: resolving one takes it out of the text and the count, and
+the next move goes on from the view, to the conflict that followed it. A binary waiting for the version to keep is
+one conflict, "1 of 1"; a file that couldn't be read has none, and its arrows still go on. The views that are diffs
+(Changes, Yours, Incoming) keep their own arrows through their changes, and the base none.
+
+Past the last or first conflict, the arrows go on to the next file's first conflict or the previous file's last, as
+the list shows them, but only to the files still waiting for the user: those decided or merged automatically are
+passed by (`conflictStepKeys`; the file shown stays among them, so the arrows know where they are once it's decided).
+Directory conflicts aren't stepped to: they have no conflicts to step through. The diffs of a conflicting file go on to
+the same files past their changes. Incoming steps through its update conflicts the same way. There are no first and
+last conflict keys: Home and End are the list's, and the official client's "next unresolved conflict" is every move
+here, since a resolved conflict is no longer one.
+
 ## Finishing a task
 
 A task branch (`isTaskBranch`: one with a parent) is finished by merging it into its parent on the server: Branch ▸
