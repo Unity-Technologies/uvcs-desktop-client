@@ -45,8 +45,8 @@ immutable.
 - **Changesets** are picked among the newest (`recentChangesetsQuery`: the palette's `cm find changeset ... limit
   2000`, one cache entry for both, never read again on focus), or any other by typing its number (`changesetChoices`):
   a repository's ~280k changesets are never listed. The rows match on what they show (number, the comment's first line,
-  the branch's own name). A number typed is offered when the read can't rule it out: newer than those read (checked in
-  since), or older when the read stopped at its limit; any other shows as "No changeset N", which can't be picked, so
+  the branch's own name). A number typed is offered when the read can't rule it out, older than those read when the
+  read stopped at its limit; any other shows as "No changeset N", which can't be picked, so
   no diff opens on a changeset that doesn't exist. While the list is read, or when it couldn't be (said in its
   place), a number typed can still be picked.
 

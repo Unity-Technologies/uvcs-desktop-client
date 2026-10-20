@@ -126,13 +126,11 @@ describe('changesetChoices', () => {
     expect(choices('7', recent, 3)).toEqual([{ id: 7 }]);
   });
 
-  it('offers a changeset newer than those read: checked in since', () => {
-    expect(choices('60')).toEqual([{ id: 60 }]);
-  });
 
-  it("says a number names no changeset when the read had every changeset there, or one between those read", () => {
+  it('says a number names no changeset when the read had every changeset there: older ones, between or newer', () => {
     expect(choices('7')).toEqual([{ id: 7, missing: true }]);
     expect(choices('45', recent, 3)).toEqual([{ id: 45, missing: true }]);
+    expect(choices('60', recent, 3)).toEqual([{ id: 60, missing: true }]);
   });
 
   it('offers any number typed while the changesets are unread, or the read failed', () => {

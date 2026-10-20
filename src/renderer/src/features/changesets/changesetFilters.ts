@@ -47,7 +47,7 @@ export function matchesSearch(changeset: Changeset, search: string, labels: read
 
 /**
  * A changeset a picker offers: one of those read, with its row; one typed by number that the read can't rule out
- * (older or newer than those read); or, `missing`, a number typed that names no changeset, offered but not picked.
+ * (older than those read); or, `missing`, a number typed that names no changeset, offered but not picked.
  */
 export interface ChangesetChoice {
   id: number;
@@ -79,10 +79,10 @@ function typedChoice(id: number, recent: readonly Changeset[] | undefined, readL
   const read = recent?.find((changeset) => changeset.id === id);
   if (read) return { id, changeset: read };
   if (!recent || recent.length === 0) return { id };
-  const ids = recent.map((changeset) => changeset.id);
-  // Checked in since the read, or older than a read that stopped at its limit.
-  const beyondRead = id > Math.max(...ids) || (recent.length >= readLimit && id < Math.min(...ids));
-  return beyondRead ? { id } : { id, missing: true };
+  // Older than a read that stopped at its limit. A newer one would be checked in since the read, which is read again
+  // as new changesets come (`refreshScopes`: the changeset lists refresh on check-ins, the user's and others').
+  const olderThanRead = recent.length >= readLimit && id < Math.min(...recent.map((changeset) => changeset.id));
+  return olderThanRead ? { id } : { id, missing: true };
 }
 
 /** What to try when nothing shows: the filters only look through what the time range read. */
