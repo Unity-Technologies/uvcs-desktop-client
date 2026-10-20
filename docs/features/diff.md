@@ -278,7 +278,9 @@ What shows (`useMovedCode`, `MovedCode`):
   shows the arrow and the number only, the words in its tooltip.
 - The label's other button, "Compare moved code", opens the two places side by side (`openMovedCodeDialog`, of
   `movedCopies`): a read-only diff of what moved with what it became, in the diff's look, layout and comparison
-  method, so only what changed on the way shows as changed. Its lines are numbered from the start of the moved code
+  method, so only what changed on the way shows as changed. Code moved as it was, or with only what the method ignores
+  changed, shows alone, its note saying so ("Moved without changes", "Only whitespace differs"): a diff with no line
+  changes has no lines for Pierre to show (`movedComparison`). Its lines are numbered from the start of the moved code
   (Pierre numbers a diff from 1); the title says where both places are. Putting the two places side by side in the
   diff itself, each side scrolling on its own, was rejected: everything in the diff (its gaps, navigation, discards,
   the editor, the labels) relies on both sides' rows lining up.
