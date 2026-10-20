@@ -1,7 +1,7 @@
 import { forwardRef, useImperativeHandle, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { focusFirstItem, moveRovingFocus } from '../../lib/rovingFocus';
 import { HighlightQuery } from '../../ui/Highlight';
-import { openWorkspaceIn, windowAskedBy } from '../workspace/workspaceWindowChoice';
+import { windowAskedBy, workspaceOpener } from '../workspace/workspaceWindowChoice';
 import type { WorkspaceEntry } from './recentWorkspaces';
 import { firstMatch, searchedSections } from './searchedSections';
 import { WorkspaceRow } from './WorkspaceRow';
@@ -50,7 +50,7 @@ export const WorkspaceList = forwardRef<WorkspaceListHandle, WorkspaceListProps>
         focusFirstItem(listRef.current, ROWS);
       } else if (event.key === 'Enter' && first) {
         event.preventDefault();
-        openWorkspaceIn(windowAskedBy(event), first.workspace.path, onOpen);
+        workspaceOpener(onOpen)(first.workspace.path, windowAskedBy(event, first));
       }
     },
   }));

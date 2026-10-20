@@ -9,7 +9,7 @@ import { Button } from '../../ui/Button';
 import { Highlight } from '../../ui/Highlight';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
-import { openWorkspaceIn, windowAskedBy, type OpenWorkspaceIn } from '../workspace/workspaceWindowChoice';
+import { windowAskedBy, workspaceOpener } from '../workspace/workspaceWindowChoice';
 import { missingWorkspaceMenu, workspaceMenu } from './homeMenus';
 import styles from './Home.module.css';
 
@@ -28,7 +28,7 @@ interface WorkspaceRowProps {
 }
 
 export function WorkspaceRow({ workspace, repository, repositoryName: knownName, selector, missing = false, onOpen, compact }: WorkspaceRowProps) {
-  const openIn: OpenWorkspaceIn = (path, where) => openWorkspaceIn(where, path, onOpen);
+  const openIn = workspaceOpener(onOpen);
   const menu = () => (missing ? missingWorkspaceMenu(workspace, onOpen) : workspaceMenu(workspace, openIn));
   const repositoryName = repository ? splitRepositorySpec(repository).name : knownName;
   const showsRepository = repositoryName && repositoryName.toLowerCase() !== workspace.name.toLowerCase();
@@ -36,7 +36,7 @@ export function WorkspaceRow({ workspace, repository, repositoryName: knownName,
   return (
     <ActionContextMenu entries={menu}>
       <div className={styles.row} data-compact={compact} data-missing={missing}>
-        <button className={styles.rowMain} data-workspace-row onClick={(event) => openIn(workspace.path, windowAskedBy(event))}>
+        <button className={styles.rowMain} data-workspace-row onClick={(event) => openIn(workspace.path, windowAskedBy(event, { missing }))}>
           <RepositoryAvatar repository={repository ?? knownName} label={workspace.name} size={compact ? 24 : 32} className={styles.rowAvatar} />
           <span className={styles.rowText}>
             <span className={styles.rowTitle}>

@@ -53,7 +53,7 @@ export function WorkspaceSwitcherRows({ currentPath, onChoose }: { currentPath: 
       setHighlightedPath(flat[target]!.workspace.path);
     } else if (event.key === 'Enter' && flat[highlighted]) {
       event.preventDefault();
-      onChoose(flat[highlighted].workspace.path, windowAskedBy(event));
+      onChoose(flat[highlighted].workspace.path, windowAskedBy(event, flat[highlighted]));
     } else if (flat[highlighted] && isRowMenuKey(event)) {
       event.preventDefault();
       openContextMenuOf(document.getElementById(`${listboxId}-${highlighted}`));
@@ -82,7 +82,7 @@ export function WorkspaceSwitcherRows({ currentPath, onChoose }: { currentPath: 
           data-highlighted={index === highlighted}
           data-missing={missing}
           onMouseEnter={() => setHighlightedPath(workspace.path)}
-          onClick={(event) => onChoose(workspace.path, windowAskedBy(event))}
+          onClick={(event) => onChoose(workspace.path, windowAskedBy(event, { missing }))}
         >
           <RepositoryAvatar repository={entry.repository ?? entry.repositoryName} label={workspace.name} size={24} className={styles.avatar} />
           <span className={styles.text}>
