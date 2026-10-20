@@ -1,8 +1,9 @@
-import { join } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { restoreDeletedItems } from './restoreDeletedItems';
 
-const WORKSPACE = join('/', 'ws');
+// As `workspaceFileOf` resolves it: on Windows, on the current drive (`D:\ws`).
+const WORKSPACE = resolve(sep, 'ws');
 const repository = 'game@local';
 const enemy = { revision: { revisionId: 18, repository }, path: 'src/Enemy.cs' };
 const docs = { revision: { revisionId: 24, repository }, path: 'docs' };
