@@ -7,6 +7,7 @@ import { reportUnexpectedErrors } from './app/errors/reportUnexpectedErrors';
 import { guardUnloading } from './app/navigation/leaveGuard';
 import { reportShownView } from './app/navigation/reportShownView';
 import { prefetchStartupQueries } from './app/startup/prefetchStartupQueries';
+import { openPageWindowFromAddress } from './app/pageWindow/openPageWindowFromAddress';
 import { openWorkspaceFromAddress } from './app/workspace/openWorkspaceFromAddress';
 import { trackPointerReturnFocus } from './lib/inputModality';
 import { WINDOW_CHROME } from './lib/platform';
@@ -23,9 +24,12 @@ setTimeout(() => {
 document.documentElement.dataset.chrome = WINDOW_CHROME;
 guardUnloading();
 trackPointerReturnFocus();
-openWorkspaceFromAddress();
-reportShownView();
-void prefetchStartupQueries();
+// A page window shows one page of its workspace: no view to report, nor a first screen to read ahead.
+if (!openPageWindowFromAddress()) {
+  openWorkspaceFromAddress();
+  reportShownView();
+  void prefetchStartupQueries();
+}
 
 const root = createRoot(document.getElementById('root')!);
 // Synchronously: the window shows on the page's first frame (`ready-to-show`), which otherwise can come before React's
