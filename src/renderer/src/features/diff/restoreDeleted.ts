@@ -17,7 +17,8 @@ export async function restoreDeletedItems(workspacePath: string, restores: Delet
     title: `Restoring ${what}`,
     workspacePath,
     run: (operationId) => api.explorer.restoreDeleted(workspacePath, restores, operationId),
-    success: () => ({ title: `Restored ${what}`, action: viewChangesAction() }),
+    // Where one came back (it may be elsewhere than it was); several each where they were. No generic count of changes.
+    success: () => ({ title: `Restored ${what}`, detail: restores.length === 1 ? `At ${restores[0]!.path}` : 'Each where it was', action: viewChangesAction() }),
     cancellable: restores.length > 1,
     affects: isAffectedByRestoredItems,
   });

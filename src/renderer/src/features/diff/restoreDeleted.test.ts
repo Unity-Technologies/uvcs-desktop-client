@@ -24,7 +24,7 @@ describe('restoreDeletedItems', () => {
     await restoreDeletedItems(ws, [enemy, docs]);
 
     expect(restoresAsked()).toEqual([[enemy, docs]]);
-    expect(shownToasts()).toEqual([expect.objectContaining({ kind: 'success', title: 'Restored 2 items', action: 'View changes' })]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Restored 2 items', detail: 'Each where it was', action: 'View changes' }]);
     pressToastAction('Restored 2 items');
     expect(whereTheWindowIs().view).toBe('changes');
   });
@@ -34,7 +34,7 @@ describe('restoreDeletedItems', () => {
 
     await restoreDeletedItems(ws, [enemy]);
 
-    expect(shownToasts()).toEqual([expect.objectContaining({ kind: 'success', title: 'Restored Enemy.cs' })]);
+    expect(shownToasts()).toEqual([expect.objectContaining({ kind: 'success', title: 'Restored Enemy.cs', detail: 'At src/Enemy.cs' })]);
   });
 
   it('refreshes the workspace, not its locks nor the repository, which a restore leaves alone', async () => {
