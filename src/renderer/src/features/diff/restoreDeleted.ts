@@ -59,7 +59,7 @@ export async function restoreDeletedItemTo(workspacePath: string, restore: Delet
 function confirmMany(what: string): Promise<boolean> {
   return confirm({
     title: `Restore ${what}?`,
-    message: 'Each comes back with a command of its own, which takes a while for this many.',
+    message: 'This may take a while.',
     confirmLabel: `Restore ${what}`,
   });
 }
