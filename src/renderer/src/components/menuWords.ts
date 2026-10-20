@@ -1,5 +1,6 @@
 import {
   AppWindow,
+  Archive,
   ArchiveRestore,
   ArrowDownToLine,
   ArrowLeftToLine,
@@ -32,6 +33,7 @@ import {
   FolderSearch,
   FolderTree,
   GitBranchPlus,
+  GitCommitHorizontal,
   GitCommitVertical,
   GitCompareArrows,
   GitGraph,
@@ -118,6 +120,10 @@ export const MENU_WORDS = {
   revert: word('act', RotateCcw),
   apply: word('act', ArchiveRestore),
   applyAndDelete: word('act', ArchiveRestore, 'Apply and delete'),
+  // The changes it holds checked in or shelved; the words name the object ("Check in this changelist"). The icons are
+  // the check-in panel's for each mode (`describeMode`).
+  checkin: word('act', GitCommitHorizontal),
+  shelve: word('act', Archive),
   include: word('act', SquareCheckBig, 'Include in check-in'),
   exclude: word('act', Square, 'Exclude from check-in'),
   review: word('act', CircleCheck),

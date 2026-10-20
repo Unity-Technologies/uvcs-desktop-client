@@ -36,6 +36,7 @@ import { undoUnchangedCheckouts } from './checkinOperations';
 import { matchesBranch } from './changeCategories';
 import { changesUnderRow, type ChangeRow } from './changeRows';
 import { changesPanesState } from './changesPanesState';
+import { changesByChangelist, prepareChangelistCheckin } from './changelistCheckin';
 import { changelistMenu } from './changelistMenu';
 import { moveToChangelist } from './changelistOperations';
 import { changeTones } from './changeTone';
@@ -45,6 +46,7 @@ import { addFilterRules, openChange, undoChanges } from './pendingChangeOperatio
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { useChangeRows } from './useChangeRows';
 import { useCheckinPanelSubmit } from './useCheckinPanelSubmit';
+import type { CheckinMode } from './checkinButton';
 import { useCheckinSelection } from './useCheckinSelection';
 import { useSortedChanges } from './useSortedChanges';
 import styles from './PendingChangesView.module.css';
@@ -83,6 +85,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
 
   const allChanges = snapshot?.changes ?? NO_CHANGES;
   const changelists = snapshot?.changelists ?? NO_CHANGELISTS;
+  const changelistChanges = useMemo(() => changesByChangelist(allChanges), [allChanges]);
   const locks = usePendingLocks(workspacePath, workspace?.repository, allChanges, readAt);
   // Sorted once for the layout; filtering keeps the order, so typing in the filter or opening a folder never sorts again.
   const sorted = useSortedChanges(allChanges);
@@ -133,6 +136,12 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
     setIncluded(workspacePath, selected.map((change) => change.path), include);
   const toggleIncluded = (toggled: ChangeRow[], include: boolean): void => setIncludedChanges(toggled.flatMap(changesUnderRow), include);
 
+  // The changelist's changes checked alone, then the caret after the comment: writing or reading it is the way on.
+  const prepareChangelist = (changelist: Changelist, mode: CheckinMode): void => {
+    prepareChangelistCheckin({ workspacePath, mode, changelist, allChanges, changelists });
+    focusAtEnd(summaryRef.current, checkinDraftOf(workspacePath).summary);
+  };
+
   const listedCount = snapshot && allChanges.length;
   const panesState = changesPanesState(listedCount, changes.length);
   const listBody =
@@ -158,7 +167,12 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
           contextMenu={(selected) =>
             pendingChangeMenu(workspacePath, selected, changelists, { isIncluded, setIncluded: setIncludedChanges }, review, locks)
           }
-          changelistMenu={(changelist) => changelistMenu(workspacePath, changelist)}
+          changelistMenu={(changelist) =>
+            changelistMenu(workspacePath, changelist, {
+              changes: changelistChanges.get(changelist.name) ?? NO_CHANGES,
+              prepare: (mode) => prepareChangelist(changelist, mode),
+            })
+          }
           review={review}
           locks={locks}
         />
@@ -268,6 +282,13 @@ function useMergeComment(workspacePath: string, snapshot: PendingChangesSnapshot
     const draft = checkinDraftOf(workspacePath);
     if (mergeSource && !draft.summary && !draft.description) setMessage(workspacePath, { summary: `Merged from ${mergeSource.branch}` });
   }, [mergeSource?.id]);
+}
+
+/** Puts the caret at the end of `text`, the field's value once it renders the draft just set. */
+function focusAtEnd(field: HTMLInputElement | null, text: string): void {
+  if (!field) return;
+  field.focus();
+  field.setSelectionRange(text.length, text.length);
 }
 
 /** How many of the changes shown are selected: a selection can hold rows the filter now hides, and folders. */
