@@ -17,8 +17,8 @@ describe('renameNameProblem', () => {
     expect(renameNameProblem('sub\\Config.cs')).toBe('Enter a file name without folders.');
   });
 
-  it('says . and .. name folders, not an item', () => {
-    expect(renameNameProblem('.')).toBe('“.” names a folder, not an item: enter another name.');
-    expect(renameNameProblem('..')).toBe('“..” names a folder, not an item: enter another name.');
+  it('asks for another name than . or ..', () => {
+    expect(renameNameProblem('.')).toBe('Enter a name other than “.”.');
+    expect(renameNameProblem('..')).toBe('Enter a name other than “..”.');
   });
 });

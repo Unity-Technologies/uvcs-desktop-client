@@ -4,6 +4,6 @@ import { isValidRenameName } from '@shared/domain/merge';
 export function renameNameProblem(newName: string): string | undefined {
   if (isValidRenameName(newName)) return undefined;
   if (newName.trim() === '') return 'Enter a name.';
-  if (newName === '.' || newName === '..') return `“${newName}” names a folder, not an item: enter another name.`;
+  if (newName === '.' || newName === '..') return `Enter a name other than “${newName}”.`;
   return 'Enter a file name without folders.';
 }
