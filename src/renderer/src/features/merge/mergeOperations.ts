@@ -70,8 +70,8 @@ function mergeSuccess(request: MergeRequest, taskBranch: string | undefined, res
 }
 
 /**
- * A workspace merge is applied even when some incoming versions couldn't be saved: those files still hold yours, and
- * those `cm` didn't tell about may not hold the incoming version. Files by name, as the run's notes name them.
+ * A workspace merge is applied even when some versions kept (incoming, or the base) couldn't be saved: those files
+ * still hold yours, and those `cm` didn't tell about may not hold the version kept. Files by name, as the run's notes name them.
  */
 function workspaceMergeSuccess({ keptVersionNotSaved = [], keptVersionMaybeNotSaved = [] }: MergeResult): OperationSuccess {
   const total = keptVersionNotSaved.length + keptVersionMaybeNotSaved.length;
@@ -80,13 +80,13 @@ function workspaceMergeSuccess({ keptVersionNotSaved = [], keptVersionMaybeNotSa
   const title =
     keptVersionNotSaved.length > 0
       ? `still ${keptVersionNotSaved.length === 1 ? 'holds' : 'hold'} yours`
-      : 'may not hold the incoming version';
+      : 'may not hold the version you kept';
   return {
     kind: 'info',
     title: `Merge applied, but ${pluralize(keptVersionNotSaved.length || total, 'file')} ${title}`,
     detail: [
-      keptVersionNotSaved.length > 0 && `The incoming version of ${names(keptVersionNotSaved)} couldn't be saved.`,
-      keptVersionMaybeNotSaved.length > 0 && `${names(keptVersionMaybeNotSaved)} may not hold the incoming version.`,
+      keptVersionNotSaved.length > 0 && `The version you kept of ${names(keptVersionNotSaved)} couldn't be saved.`,
+      keptVersionMaybeNotSaved.length > 0 && `${names(keptVersionMaybeNotSaved)} may not hold the version you kept.`,
       `Check ${total === 1 ? 'it' : 'them'} before checking in.`,
     ]
       .filter(Boolean)
