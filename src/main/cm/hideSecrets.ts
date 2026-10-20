@@ -7,7 +7,6 @@ const HIDDEN_SECRET = '•••';
 /** Options whose value is a secret (`cm sync ... git --pwd=`). Add any new one the app passes. */
 const SECRET_OPTIONS = ['--pwd='];
 
-
 /**
  * The command line as the command log, a `CmError` and the `[server budget]` warning show it: every command is logged
  * and sent to the window, so a password passed to `cm` must never reach them.
