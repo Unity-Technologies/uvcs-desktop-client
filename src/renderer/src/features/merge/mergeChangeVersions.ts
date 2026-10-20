@@ -4,12 +4,14 @@ import { spec } from '@shared/domain/specs';
 
 /**
  * What the merge page previews for a change that applies cleanly: the version before against the version it leads
- * to (`diff`), or a note that only its permissions change.
+ * to (`diff`), a note that only its permissions change, or, when the plan didn't name the merge's source and
+ * destination changesets (`MergePlan.contributors`), what the merge will do without its versions (`noVersions`).
  */
-export type ChangePreview = { kind: 'permissionsOnly' } | { kind: 'diff'; original: ContentSource; modified: ContentSource };
+export type ChangePreview = { kind: 'permissionsOnly' } | { kind: 'noVersions' } | { kind: 'diff'; original: ContentSource; modified: ContentSource };
 
 export function changePreviewOf(change: MergeChange, contributors: MergeContributors | undefined, request: MergeRequest): ChangePreview {
-  if (!contributors || change.kind === 'permissions') return { kind: 'permissionsOnly' };
+  if (change.kind === 'permissions') return { kind: 'permissionsOnly' };
+  if (!contributors) return { kind: 'noVersions' };
   return { kind: 'diff', ...versionsToCompare(change, contributors, request) };
 }
 

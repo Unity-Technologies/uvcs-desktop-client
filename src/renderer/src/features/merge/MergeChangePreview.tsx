@@ -19,6 +19,7 @@ interface MergeChangePreviewProps {
 export function MergeChangePreview({ workspacePath, request, change, contributors, labels }: MergeChangePreviewProps) {
   const preview = changePreviewOf(change, contributors, request);
   if (preview.kind === 'permissionsOnly') return <EmptyState title={change.path} description="Only the file permissions will change." />;
+  if (preview.kind === 'noVersions') return <EmptyState title={change.path} description={describeChange(change, labels)} />;
 
   const { original, modified } = preview;
   return (
