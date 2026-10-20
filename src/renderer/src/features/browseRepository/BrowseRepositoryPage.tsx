@@ -9,10 +9,10 @@ import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
 import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
-import { CenteredSpinner } from '../../ui/Spinner';
 import { ViewHeader } from '../../ui/ViewHeader';
+import { DetailsPanelSkeleton } from '../../ui/DetailsPanelSkeleton';
 import { useExpandedDirectories, useExpandedDirectoriesStore } from '../files/expandedDirectoriesStore';
-import { FileTreeTable } from '../files/FileTreeTable';
+import { FileTreeSkeleton, FileTreeTable } from '../files/FileTreeTable';
 import { FILE_TREE_WIDTH } from '../files/fileTreeWidth';
 import { buildFileTreeRows } from '../files/fileTreeRows';
 import { ItemDetailsPane } from '../files/ItemDetailsPane';
@@ -48,7 +48,6 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
     </ViewHeader>
   );
 
-  if (isLoadingRoot) return <>{header}<CenteredSpinner /></>;
   if (error) return <>{header}<EmptyState title="Couldn't browse the repository" description={error.message} /></>;
 
   return (
@@ -58,21 +57,28 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
         widthKey="browseRepositoryTree"
         widthLimits={FILE_TREE_WIDTH}
         sized="list"
+        // The tree's own header over placeholder rows while the root is read: the layout never changes shape.
         list={
-          <HighlightQuery query={shownFilter}>
-            <FileTreeTable
-              rows={rows}
-              selection={selection}
-              onSelectionChange={setSelection}
-              onToggleDirectory={(directory) => toggle(treeId, directory)}
-              onOpenFile={(item) => void openRevision(workspacePath, revisionRef(item), item.name)}
-              contextMenu={(items) => revisionMenu(workspacePath, page.changesetId, repository, items)}
-              revealPath={revealPath}
-            />
-          </HighlightQuery>
+          isLoadingRoot ? (
+            <FileTreeSkeleton />
+          ) : (
+            <HighlightQuery query={shownFilter}>
+              <FileTreeTable
+                rows={rows}
+                selection={selection}
+                onSelectionChange={setSelection}
+                onToggleDirectory={(directory) => toggle(treeId, directory)}
+                onOpenFile={(item) => void openRevision(workspacePath, revisionRef(item), item.name)}
+                contextMenu={(items) => revisionMenu(workspacePath, page.changesetId, repository, items)}
+                revealPath={revealPath}
+              />
+            </HighlightQuery>
+          )
         }
         details={
-          focused ? (
+          isLoadingRoot ? (
+            <DetailsPanelSkeleton />
+          ) : focused ? (
             <ItemDetailsPane
               workspacePath={workspacePath}
               item={focused}
