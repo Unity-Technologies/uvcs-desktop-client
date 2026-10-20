@@ -30,6 +30,22 @@ is noise for anyone reading a branch, and the web code review and GitHub show on
 not decide first whether the branch received merges (as the official client does to show its button): that is the
 same common-ancestor calculation `--integration` already makes inside its one command.
 
+## Comparing two branches, changesets or labels
+
+Two objects of a kind are compared from a selection of two (labels, changesets), or from one object's menu, "Compare
+with another branch…", "…changeset…", "…label…" (the `compare` menu word), which asks for the other with a picker and
+opens a range diff (`kind: 'range'`), the older side on the left: `cm diff <older> <newer>`, one command, cached as
+immutable.
+
+- **Branches** compare their heads, `cm diff cs:<head> cs:<head>` (`diffBranches`): `cm diff` takes no two branch
+  specs (it reads the second as a path). The heads are the ones the branch lists read (`pickBranchInfo` hands back the
+  branch picked, its head too), so nothing is asked to resolve them; a head moved since that list was read is the
+  list's staleness, as for a branch's own diff (`branchHead`). The header names each branch in words, its full name and
+  head in the tooltip (the diff page's `sideNames`), as `cs:` specs alone wouldn't say which branch is which.
+- **Changesets** are picked among the newest (`recentChangesetsQuery`: the palette's `cm find changeset ... limit
+  2000`, one cache entry for both), or any other by typing its number (`changesetChoices`): a repository's ~280k
+  changesets are never listed. A number that names no changeset fails in the diff, with `cm`'s own words.
+
 ## Editing in the diff
 
 A workspace file shown against its own past (loaded revision, reviewed copy, or nothing for an
