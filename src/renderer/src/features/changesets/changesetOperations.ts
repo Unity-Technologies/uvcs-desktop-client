@@ -17,8 +17,9 @@ export function openChangesetDiff(changeset: Pick<Changeset, 'id'>, focusPath?: 
   navigation.openPage({ kind: 'diff', title: `Changeset ${changeset.id}`, target: { kind: 'changeset', changesetId: changeset.id }, focusPath });
 }
 
-/** Compares the state after the older changeset with the state after the newer one. */
-export function openRangeDiff(older: Pick<Changeset, 'id'>, newer: Pick<Changeset, 'id'>): void {
+/** Compares the state after the older changeset (on the left) with the state after the newer one, in either order. */
+export function openRangeDiff(first: Pick<Changeset, 'id'>, second: Pick<Changeset, 'id'>): void {
+  const [older, newer] = first.id <= second.id ? [first, second] : [second, first];
   navigation.openPage({
     kind: 'diff',
     title: `Changesets ${older.id} → ${newer.id}`,
@@ -28,9 +29,7 @@ export function openRangeDiff(older: Pick<Changeset, 'id'>, newer: Pick<Changese
 
 export async function diffWithAnotherChangeset(changeset: Pick<Changeset, 'id'>): Promise<void> {
   const other = await pickChangeset({ title: `Compare changeset ${changeset.id} with…`, exclude: changeset.id });
-  if (other === undefined) return;
-  const [older, newer] = other < changeset.id ? [other, changeset.id] : [changeset.id, other];
-  openRangeDiff({ id: older }, { id: newer });
+  if (other !== undefined) openRangeDiff(changeset, { id: other });
 }
 
 export function openMerge(request: MergeRequest): void {
