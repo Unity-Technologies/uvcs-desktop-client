@@ -76,7 +76,7 @@ const label: Label = { id: 3, name: 'v1', changeset: 6, branch: '/main', comment
 const shelve: Shelve = { id: 12, guid: 's-guid', comment: 'Spike', owner: 'jane@example.com', date: '2026-09-27T10:00:00Z', parentChangeset: 4, repository };
 const review: CodeReviewSummary = { id: 9, title: 'Review the task', status: 'Under review', owner: 'jane@example.com', assignee: '', date: '2026-09-27T10:00:00Z' };
 /** The review as the Code reviews view lists it, its branch named. */
-const branchReview: CodeReview = { ...review, targetBranchId: branch.id, target: { kind: 'branch', branch: branch.name } };
+const branchReview: CodeReview = { ...review, target: { kind: 'branch', branch: branch.name } };
 const workspace: WorkspaceInfo = { name: 'game', path: ws, repository, repositoryName: 'game', server: 'local', selector: { kind: 'branch', name: '/main' }, loadedChangeset: 6 };
 const file: TreeItem = {
   path: 'src/a.ts',
@@ -109,8 +109,7 @@ const lock: Lock = {
 };
 const pendingLocks = new Map([['src/a.ts', { mine: false, owner: 'ana', workspace: 'art-wk', key: `${repository}:4` }]]);
 
-// /main/task keeps its object id, as the code review of it names it (`targetBranchId`).
-const layout = layoutGraph({ ...sampleHistory(), branches: [...sampleHistory().branches, { ...graphBranch('/main/task', '/main', 5), id: branch.id }] });
+const layout = layoutGraph({ ...sampleHistory(), branches: [...sampleHistory().branches, graphBranch('/main/task', '/main', 5)] });
 const graphContext = {
   workspacePath: ws,
   layout,
@@ -320,12 +319,6 @@ describe('one menu per object, the same everywhere', () => {
     const common = codeReviewMenu(ws, [review]);
     expectOnlyAdds(codeReviewResult(review, resultContext).menu!(), common);
     expectOnlyAdds(graphMenu({ kind: 'codeReview', review }, graphContext), common);
-  });
-
-  it("a branch's code review reads the same in the Code reviews view and the Branch Explorer, which names the branch from its header", () => {
-    const graph = graphMenu({ kind: 'codeReview', review: { ...review, targetBranchId: branch.id } }, graphContext);
-    expect(reading(graph)).toEqual(reading(codeReviewMenu(ws, [branchReview], { kind: 'branch', name: graphContext.currentBranch })));
-    expect(reading(graph)).toEqual(expect.arrayContaining([expect.stringContaining('switch | Switch to this branch')]));
   });
 });
 
