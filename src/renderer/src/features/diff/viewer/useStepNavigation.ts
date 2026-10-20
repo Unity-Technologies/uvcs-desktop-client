@@ -2,8 +2,9 @@ import { useCallback, useContext, useEffect, useRef, useState, type RefObject } 
 import { isModalDialogOpen } from '../../../lib/modalDialog';
 import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkeys, type ShortcutId } from '../../../lib/shortcutRegistry';
-import { arrivalChange, currentAfterChange, plannedMove, positionLabel, type ChangeMove, type ChangePosition } from './changeNavigation';
+import { arrivalChange, plannedMove, positionLabel } from './changeNavigation';
 import { FileStepsContext, type Arrival } from './fileSteps';
+import { positionAfterChange, pressStep } from './stepNavigation';
 
 /** Frames to wait, after a step from the file beside it, for the view to show: it may still be loading. */
 const ARRIVAL_MAX_FRAMES = 60;
@@ -36,12 +37,17 @@ export interface StepView {
   isShown: () => boolean;
   /** Brings the step at `index` into view. */
   reveal: (index: number) => void;
-  /** How many steps start above the top of the view: where the first move goes from. */
+  /** How many steps start above the top of the view, read from the screen: where the first move goes from. */
   countAbove: () => number;
+  /**
+   * The same once the steps changed, while rendering, without reading the screen: where the view last stood (a diff's
+   * line at its top), or just before the conflict resolved there.
+   */
+  aboveAfterChange: () => number;
 }
 
 interface StepNavigationOptions {
-  /** The steps, in order: when they change for as many others, the step moved to stays (`currentAfterChange`). */
+  /** The steps, in order: when they change for as many others, the step moved to stays (`positionAfterChange`). */
   steps: readonly unknown[];
   view: StepView;
   /** The view and its header: the keys work from there, from the list beside it and with nothing focused. */
@@ -68,8 +74,10 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts }:
   // The steps changed: the one moved to stays while there are as many.
   const [known, setKnown] = useState(steps);
   if (known !== steps) {
+    const after = positionAfterChange({ count: known.length, current, above }, known, steps, view.aboveAfterChange());
     setKnown(steps);
-    setCurrent(currentAfterChange(current, known, steps));
+    setCurrent(after.current);
+    setAbove(after.above);
   }
 
   const readAbove = useCallback((): number => {
@@ -77,7 +85,6 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts }:
     setAbove(count);
     return count;
   }, []);
-  useEffect(() => void readAbove(), [steps, readAbove]);
 
   const scrollFrame = useRef(0);
   const onViewScroll = useCallback(() => {
@@ -94,11 +101,9 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts }:
     setCurrent(target);
     latestView.current.reveal(target);
   };
-  const plan = (from: ChangePosition, direction: 1 | -1): ChangeMove => plannedMove(from, direction, files?.canStep(direction) ?? false);
   const go = (direction: 1 | -1): void => {
-    const move = plan(current === null ? { ...position, above: readAbove() } : position, direction);
-    if (move?.to === 'change') moveTo(move.index);
-    else if (move?.to === 'file') files!.step(direction);
+    const outcome = pressStep(position, direction, files, readAbove);
+    if (typeof outcome === 'number') moveTo(outcome);
   };
   const latestGo = useRef(go);
   latestGo.current = go;
@@ -145,7 +150,7 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts }:
     shortcuts,
     count: steps.length,
     label: positionLabel(position, noun),
-    goesTo: (direction) => plan(position, direction)?.to ?? null,
+    goesTo: (direction) => plannedMove(position, direction, files?.canStep(direction) ?? false)?.to ?? null,
     go,
     onViewScroll,
   };

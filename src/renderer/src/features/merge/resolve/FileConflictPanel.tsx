@@ -26,7 +26,7 @@ import styles from './FileConflictPanel.module.css';
 const ConflictBody = lazyComponent(() => import('./ConflictBody').then((module) => module.ConflictBody));
 
 /** A binary's choice is one conflict, the whole file, on screen as soon as the panel is. */
-const WHOLE_FILE_CHOICE: StepView = { isShown: () => true, reveal: () => undefined, countAbove: () => 0 };
+const WHOLE_FILE_CHOICE: StepView = { isShown: () => true, reveal: () => undefined, countAbove: () => 0, aboveAfterChange: () => 0 };
 
 interface FileConflictPanelProps {
   workspacePath: string;
@@ -59,6 +59,7 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
     isShown: () => conflictView.current?.isShown() ?? false,
     reveal: (index) => conflictView.current?.reveal(index),
     countAbove: () => conflictView.current?.countAbove() ?? 0,
+    aboveAfterChange: () => conflictView.current?.aboveAfterChange() ?? 0,
   };
   const navigator = conflictCount !== null && (
     <div className={styles.navigator}>

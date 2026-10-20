@@ -33,6 +33,7 @@ export function useChangeNavigation(
         if (line != null) topLine.current = line;
         return changesAbove(regions, topLine.current);
       },
+      aboveAfterChange: () => changesAbove(regions, topLine.current),
     },
     frame,
     path,

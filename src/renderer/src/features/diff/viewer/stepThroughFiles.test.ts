@@ -3,12 +3,13 @@ import { listChangeBlocks, listChangeRegions } from './changeBlocks';
 import { arrivalChange, positionLabel, plannedMove } from './changeNavigation';
 import { DIFF_TEST_TEXTS } from './diffTestTexts';
 import { fileSteps, type PendingArrival } from './fileSteps';
+import { pressStep } from './stepNavigation';
 import { lineDiff } from './lineDiff';
 
 /**
- * Moving through changes (⌥↓ ⌥↑, F7 ⇧F7) in a diff beside a list of files, as `useChangeNavigation` does with the
- * list's `FileStepsContext`: past the last change on to the next file's first, past the first back to the previous
- * file's last, and through files with nothing to step through. The view stays at the top of each file it opens.
+ * Moving through changes (⌥↓ ⌥↑, F7 ⇧F7) in a diff beside a list of files, as `useStepNavigation` does (`pressStep`)
+ * with the list's `FileStepsContext`: past the last change on to the next file's first, past the first back to the
+ * previous file's last, and through files with nothing to step through. The view stays at the top of each file it opens.
  */
 
 const changesOf = (original: string, modified: string): number => listChangeRegions(listChangeBlocks(lineDiff(original, modified, 'recognizeAll').meta)).length;
@@ -28,11 +29,10 @@ class DiffBesideList {
     return `${this.shown}: ${positionLabel({ count: this.count, current: this.current }, 'change')}`;
   }
 
+  /** The view stays at the top of each file: no change starts above it. */
   press(direction: 1 | -1): this {
-    const steps = this.steps();
-    const move = plannedMove({ count: this.count, current: this.current, above: 0 }, direction, steps.canStep(direction));
-    if (move?.to === 'change') this.current = move.index;
-    else if (move?.to === 'file') steps.step(direction);
+    const outcome = pressStep({ count: this.count, current: this.current, above: 0 }, direction, this.steps(), () => 0);
+    if (typeof outcome === 'number') this.current = outcome;
     return this;
   }
 

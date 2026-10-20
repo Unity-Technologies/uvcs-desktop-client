@@ -1,4 +1,4 @@
-import { useImperativeHandle, type RefObject } from 'react';
+import { useImperativeHandle, useRef, type RefObject } from 'react';
 import { scrollToRows } from '../../diff/viewer/changeView';
 import { pierreShadowRoot } from '../../diff/viewer/pierreDom';
 import { useChangeFlash } from '../../diff/viewer/useChangeFlash';
@@ -11,8 +11,10 @@ import { conflictLinesSelector, conflictsAbove } from './conflictRows';
  * a few rows from the top unless it's all in view, and lit for a moment. Pierre draws each conflict as a row of
  * actions (`data-merge-conflict-actions`, holding our header), its lines and marker rows, down to `marker-end`.
  */
-export function useConflictView(viewRef: RefObject<StepView | null> | undefined, surfaceRef: RefObject<HTMLElement | null>): void {
+export function useConflictView(viewRef: RefObject<StepView | null>, surfaceRef: RefObject<HTMLElement | null>): void {
   const flash = useChangeFlash();
+  // How many conflicts started above the top of the view when it was last read.
+  const lastAbove = useRef(0);
   useShadowStyle(surfaceRef, flash.css);
 
   useImperativeHandle(viewRef, () => ({
@@ -28,11 +30,13 @@ export function useConflictView(viewRef: RefObject<StepView | null> | undefined,
     countAbove: () => {
       const surface = surfaceRef.current;
       if (!surface) return 0;
-      return conflictsAbove(
+      lastAbove.current = conflictsAbove(
         actionRows(surface).map((row) => row.getBoundingClientRect().top),
         surface.getBoundingClientRect().top,
       );
+      return lastAbove.current;
     },
+    aboveAfterChange: () => lastAbove.current,
   }));
 }
 
