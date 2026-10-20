@@ -30,14 +30,6 @@
 Get the one for your computer from the [latest release](https://github.com/Unity-Technologies/uvcs-desktop-client/releases/latest).
 The app keeps itself up to date from new releases.
 
-<details>
-<summary><b>The first launch asks for permission</b> (the builds aren't code-signed yet)</summary>
-
-- **macOS**: open System Settings ▸ Privacy & Security and click Open Anyway.
-- **Windows**: if SmartScreen warns about an unknown publisher, click More info ▸ Run anyway.
-
-</details>
-
 ## Get started
 
 1. Install [Unity Version Control](https://unity.com/solutions/version-control) and sign in once, from the official
