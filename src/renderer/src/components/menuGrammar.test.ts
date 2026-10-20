@@ -6,7 +6,7 @@ vi.mock('../ui/copyToClipboard', () => ({ copyToClipboard: (text: string, what: 
 
 import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
-import type { CodeReviewSummary } from '@shared/domain/codeReview';
+import type { CodeReview, CodeReviewSummary } from '@shared/domain/codeReview';
 import type { TreeItem } from '@shared/domain/explorer';
 import type { Label } from '@shared/domain/label';
 import type { Lock } from '@shared/domain/lock';
@@ -75,6 +75,8 @@ const changeset: Changeset = { id: 5, guid: 'c-guid', branch: '/main/a', comment
 const label: Label = { id: 3, name: 'v1', changeset: 6, branch: '/main', comment: 'First', owner: 'jane@example.com', date: '2026-09-07T00:00:00Z', repository };
 const shelve: Shelve = { id: 12, guid: 's-guid', comment: 'Spike', owner: 'jane@example.com', date: '2026-09-27T10:00:00Z', parentChangeset: 4, repository };
 const review: CodeReviewSummary = { id: 9, title: 'Review the task', status: 'Under review', owner: 'jane@example.com', assignee: '', date: '2026-09-27T10:00:00Z' };
+/** The review as the Code reviews view lists it, its branch named. */
+const branchReview: CodeReview = { ...review, targetBranchId: branch.id, target: { kind: 'branch', branch: branch.name } };
 const workspace: WorkspaceInfo = { name: 'game', path: ws, repository, repositoryName: 'game', server: 'local', selector: { kind: 'branch', name: '/main' }, loadedChangeset: 6 };
 const file: TreeItem = {
   path: 'src/a.ts',
@@ -107,7 +109,8 @@ const lock: Lock = {
 };
 const pendingLocks = new Map([['src/a.ts', { mine: false, owner: 'ana', workspace: 'art-wk', key: `${repository}:4` }]]);
 
-const layout = layoutGraph({ ...sampleHistory(), branches: [...sampleHistory().branches, graphBranch('/main/task', '/main', 5)] });
+// /main/task keeps its object id, as the code review of it names it (`targetBranchId`).
+const layout = layoutGraph({ ...sampleHistory(), branches: [...sampleHistory().branches, { ...graphBranch('/main/task', '/main', 5), id: branch.id }] });
 const graphContext = {
   workspacePath: ws,
   layout,
@@ -172,6 +175,10 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   othersShelve: () => shelveMenu(ws, [shelve], { mine: false }),
   leftShelve: () => shelveMenu(ws, [shelve], { left: true }),
   codeReview: () => codeReviewMenu(ws, [review]),
+  branchCodeReview: () => codeReviewMenu(ws, [branchReview], workspace.selector),
+  branchCodeReviewOnItsBranch: () => codeReviewMenu(ws, [branchReview], { kind: 'branch', name: branch.name }),
+  changesetCodeReview: () => codeReviewMenu(ws, [{ ...review, target: { kind: 'changeset', changesetId: 5 } }], workspace.selector),
+  shelveCodeReview: () => codeReviewMenu(ws, [{ ...review, target: { kind: 'shelve', shelveId: 12 } }], workspace.selector),
   file: () => fileMenu(ws, [file], new PendingChangesIndex([])),
   folder: () => fileMenu(ws, [{ ...file, path: 'src', name: 'src', itemType: 'directory' }], new PendingChangesIndex([])),
   lockedFile: () => fileMenu(ws, [file], new PendingChangesIndex([change]), pendingLocks),
@@ -313,6 +320,12 @@ describe('one menu per object, the same everywhere', () => {
     const common = codeReviewMenu(ws, [review]);
     expectOnlyAdds(codeReviewResult(review, resultContext).menu!(), common);
     expectOnlyAdds(graphMenu({ kind: 'codeReview', review }, graphContext), common);
+  });
+
+  it("a branch's code review reads the same in the Code reviews view and the Branch Explorer, which names the branch from its header", () => {
+    const graph = graphMenu({ kind: 'codeReview', review: { ...review, targetBranchId: branch.id } }, graphContext);
+    expect(reading(graph)).toEqual(reading(codeReviewMenu(ws, [branchReview], { kind: 'branch', name: graphContext.currentBranch })));
+    expect(reading(graph)).toEqual(expect.arrayContaining([expect.stringContaining('switch | Switch to this branch')]));
   });
 });
 
