@@ -18,7 +18,7 @@ const SERVER = fakeCat((spec) => (/^(?:itemid|revid):404\b/.test(spec) ? undefin
  * A server whose `cm cat` succeeds without writing: what the tests of how hundreds of reads are batched take. A read
  * that succeeded is never looked for on disk, and writing every file took past vitest's 5 s on Windows' CI runners.
  */
-const BATCHING_SERVER: CmAnswer = () => '';
+const BATCHING_SERVER: typeof SERVER = async () => '';
 
 /** Runs the reads asked so far when the test says, as if every IPC call had arrived together. */
 function manualSchedule() {
@@ -27,7 +27,7 @@ function manualSchedule() {
 }
 
 /** `cm cat` answering only once the test releases it: what runs at once, and what waits, can be told. */
-function heldCat(answer: CmAnswer = SERVER) {
+function heldCat(answer: typeof SERVER = SERVER) {
   const releases: (() => void)[] = [];
   let asked: (() => void) | null = null;
   let held = true;
