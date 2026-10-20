@@ -1,4 +1,5 @@
 import { formatSize } from '../../../../lib/formatDate';
+import { imageProblemWords, type ImageProblem } from '../../../../lib/images/imageProblems';
 import type { Size } from './composedFrame';
 
 /** How much of a pair differs at the tolerance, which the Differences mode counts for the info strip. */
@@ -10,9 +11,21 @@ export interface DiffStats {
 /** A pixel's red, green, blue and alpha, 0–255 each. */
 export type Rgba = readonly [number, number, number, number];
 
-/** "1024×768 · 245 KB": one revision's identity card for the info strip. */
-export function sideLabel(image: Size, bytes: number): string {
-  return `${image.width}×${image.height} · ${formatSize(bytes)}`;
+/**
+ * "1024×768 · 245 KB": one revision's identity card for the info strip. A high dynamic range image says it shows
+ * clamped (`highDynamicRange`): what is brighter than white in the file shows as white.
+ */
+export function sideLabel(image: Size & { highDynamicRange?: boolean }, bytes: number): string {
+  return `${image.width}×${image.height} · ${formatSize(bytes)}${image.highDynamicRange ? ' · HDR, clamped' : ''}`;
+}
+
+/**
+ * What a pair the viewer can't paint shows in its place: the binary diff's sizes, and why in plain words
+ * (`imageProblemWords`).
+ */
+export function undecodedDescription(oldBytes: number, newBytes: number, problem: ImageProblem): string {
+  const why = imageProblemWords(problem);
+  return `${formatSize(oldBytes)} → ${formatSize(newBytes)}. ${why.charAt(0).toUpperCase()}${why.slice(1)}.`;
 }
 
 /**

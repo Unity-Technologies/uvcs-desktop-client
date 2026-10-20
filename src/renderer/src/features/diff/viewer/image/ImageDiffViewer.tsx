@@ -7,11 +7,14 @@
 // framing; zoom controls float over the stage (joined by the anchor toggle
 // when the revisions differ in size); an info strip narrates the change
 // (dimensions, sizes, % of pixels that differ) and a pixel inspector reports
-// exact texels from 8× zoom.
+// exact texels from 8× zoom (of a high dynamic range image, the texels as
+// shown). Unity's texture formats (TGA, TIFF, PSD, EXR, HDR) are decoded in a
+// worker first (`usePaintableImage`); a side that can't be shows the binary
+// diff, saying why.
 
-import { ImageOff } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { FileContent } from '@shared/domain/content';
+import type { ImageProblem } from '../../../../lib/images/imageProblems';
 import { useSpinDelay } from '../../../../lib/useSpinDelay';
 import { EmptyState } from '../../../../ui/EmptyState';
 import { CenteredSpinner } from '../../../../ui/Spinner';
@@ -20,7 +23,7 @@ import { DifferencesMode } from './DifferencesMode';
 import { composedSize } from './composedFrame';
 import type { ImageDiffMode } from './imageDiffModes';
 import { forgetComparedImages } from './imageDiffSession';
-import type { DiffStats } from './imageInfo';
+import { undecodedDescription, type DiffStats } from './imageInfo';
 import { ImageInfoStrip } from './ImageInfoStrip';
 import { OnionSkinMode } from './OnionSkinMode';
 import { PixelInspector } from './PixelInspector';
@@ -28,7 +31,7 @@ import { MAX_TOLERANCE } from './pixelComparison';
 import { SideBySideMode } from './SideBySideMode';
 import { ImageLayer, Viewport, World } from './stage';
 import { SwipeMode } from './SwipeMode';
-import { useDecodedImage } from './useDecodedImage';
+import { useDecodedImage, type DecodeState } from './useDecodedImage';
 import type { CachedHeatmap } from './useHeatmap';
 import { usePanZoom } from './usePanZoom';
 import { ZoomControls } from './ZoomControls';
@@ -84,9 +87,9 @@ export function ImageDiffViewer({ original, modified, mode }: ImageDiffViewerPro
     [panZoom],
   );
 
-  if (oldState.status === 'error' || newState.status === 'error') {
-    return <EmptyState icon={<ImageOff size={22} />} title="Couldn't display this image" description="The file looks like an image but couldn't be decoded." />;
-  }
+  // A side that can't be painted (a PSD saved without its composite, a damaged file): the binary diff, saying why.
+  const problem = problemOf(oldState) ?? problemOf(newState);
+  if (problem) return <EmptyState title="Binary file" description={undecodedDescription(original.size, modified.size, problem)} />;
   if (decoding || !frame) return spin ? <CenteredSpinner /> : null;
 
   return (
@@ -135,4 +138,9 @@ export function ImageDiffViewer({ original, modified, mode }: ImageDiffViewerPro
       </div>
     </div>
   );
+}
+
+/** Why a side decoded to nothing that paints, if it did. */
+function problemOf(state: DecodeState): ImageProblem | undefined {
+  return state.status === 'error' ? state.problem : undefined;
 }
