@@ -5,11 +5,6 @@ describe('sideLabel', () => {
   it('shows dimensions and size', () => {
     expect(sideLabel({ width: 64, height: 32 }, 178)).toBe('64×32 · 178 B');
   });
-
-  it('says a high dynamic range image shows clamped', () => {
-    expect(sideLabel({ width: 64, height: 32, highDynamicRange: true }, 178)).toBe('64×32 · 178 B · HDR, clamped');
-    expect(sideLabel({ width: 64, height: 32, highDynamicRange: false }, 178)).toBe('64×32 · 178 B');
-  });
 });
 
 describe('undecodedDescription', () => {

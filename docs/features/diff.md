@@ -291,8 +291,8 @@ makes each into an image the browser paints before anything shows it (`usePainta
   32-bit BMP whose alpha is 0 in every pixel as opaque (some writers leave alpha unset), so a texture transparent all
   over shows its color.
 - **High dynamic range** (EXR, HDR) shows as the model diff's textures do: clamped to 0-1 and encoded as sRGB. The info
-  strip says so ("HDR, clamped"), and the pixel inspector tells the colors shown, "as shown", not the file's values.
-  16-bit channels show as 8 bits.
+  strip says so ("HDR", its tooltip saying it shows clamped: `HIGH_DYNAMIC_RANGE_TIP`), and the pixel inspector tells
+  the colors shown, "as shown", not the file's values. 16-bit channels show as 8 bits.
 - **What can't be painted** (a PSD saved without "Maximize Compatibility" or in CMYK, Lab, indexed or 32 bits, a header
   past the limit, a damaged file; `imagePairView`): a version that can't, beside one that can, leaves that one shown
   alone, as an added or deleted image is, under a line saying which version doesn't show and why (`unpaintedNotice`):

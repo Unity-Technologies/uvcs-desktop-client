@@ -13,13 +13,13 @@ export interface DiffStats {
 /** A pixel's red, green, blue and alpha, 0–255 each. */
 export type Rgba = readonly [number, number, number, number];
 
-/**
- * "1024×768 · 245 KB": one revision's identity card for the info strip. A high dynamic range image says it shows
- * clamped (`highDynamicRange`): what is brighter than white in the file shows as white.
- */
-export function sideLabel(image: Size & { highDynamicRange?: boolean }, bytes: number): string {
-  return `${image.width}×${image.height} · ${formatSize(bytes)}${image.highDynamicRange ? ' · HDR, clamped' : ''}`;
+/** "1024×768 · 245 KB": one revision's identity card for the info strip. */
+export function sideLabel(image: Size, bytes: number): string {
+  return `${image.width}×${image.height} · ${formatSize(bytes)}`;
 }
+
+/** What the info strip's "HDR" beside a high dynamic range image (`highDynamicRange`) means. */
+export const HIGH_DYNAMIC_RANGE_TIP = 'High dynamic range, shown clamped to 0–1: what is brighter than white in the file shows as white';
 
 /**
  * What a pair the viewer can't paint shows in its place: the binary diff's sizes, and why in plain words

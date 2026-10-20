@@ -37,3 +37,9 @@
   font-family: var(--font-ui);
   font-weight: var(--weight-semibold);
 }
+
+/* The strip lets the pointer through to the stage; a tag that explains itself takes it, for its tooltip. */
+.tag {
+  pointer-events: auto;
+  cursor: default;
+}
