@@ -58,6 +58,7 @@ export function ConflictBody({ workspacePath, state, labels, view, editing, onDe
           path={file.path}
           text={decision?.kind === 'text' ? decision.text : ''}
           labels={labels}
+          document={hasBase(state) ? state.document : undefined}
           onChange={(text) => onDecide({ kind: 'text', text, edited: decision?.kind === 'text' && decision.edited })}
         />
       );
