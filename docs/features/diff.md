@@ -141,10 +141,19 @@ every selected item was deleted, in the workspace's own repository, and none is 
   holding a pooled shell.
 - Every place is checked on disk before any `cm`, and nothing is restored if one fails: `cm` refuses a path that holds
   an item ("The restore path should not exist"), but into a folder that's gone it writes the files and then fails,
-  leaving them private. The toast says which; for one item it offers "Restore to…", starting from where it was. `cm` also refuses an item the workspace
-  still loads ("The item 35 is already loaded on tree"), shown as it prints it.
+  leaving them private. The toast says which; for one item it offers "Restore to…", starting from where it was. Main
+  also refuses a revision of another repository than the workspace's (read from the status header the window's info
+  shares, `headers.status`), whatever the renderer asked: the bare id would name another item there.
+- `cm`'s own refusals read in the app's words (`undeleteRefusal`): an item the workspace still loads ("The item 35
+  is already loaded on tree on path '/src/a.cs'" becomes "… is already in the workspace, at src/a.cs"), a folder
+  holding an xlink, a place taken after the check.
+- Not handled: "Restore to…" a path under an xlink. `cm` looks the bare id up in the xlinked repository there, where
+  it may name another item or none; knowing where xlinks are would take a `cm` read of its own.
+- `cm undelete` takes the workspace's path as `cm` names it: given a link to it (`/tmp/…` for `/private/tmp/…` on
+  macOS) it writes the files, then fails with "Item path not in workspace", leaving them private. The app's workspace
+  paths come from `cm`, so only a hand-typed command meets it.
 - The official client asks to confirm first; nothing is lost here (the item comes back as a change to undo or check
-  in), so it doesn't.
+  in), so it asks only past `MAX_RESTORED_WITHOUT_ASKING` items, for the time they take.
 
 `scripts/sandboxes/deletes.sh` builds changesets that delete a file, a folder, an accented name, and a path a new file
 took.

@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import type { ExplorerApi } from '@shared/api/explorer';
 import type { DeletedItemRestore, ItemMove, RevisionType } from '@shared/domain/explorer';
+import { repositorySpec } from '@shared/domain/specs';
 import { parseItemDetails } from '../cm/itemDetailsXml';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { parseTreeItems, TREE_ITEM_FORMAT, withoutHash } from '../cm/treeItems';
@@ -13,7 +14,7 @@ import { restoreDeletedItems } from '../files/restoreDeletedItems';
 import { toAbsolutePath, toAbsolutePaths } from '../files/workspacePaths';
 import type { ServiceContext } from './ServiceContext';
 
-export function createExplorerService({ cm, operations, workspaceCopies }: ServiceContext): ExplorerApi {
+export function createExplorerService({ cm, operations, workspaceCopies, headers }: ServiceContext): ExplorerApi {
   const inWorkspace = (workspacePath: string) => ({ cwd: workspacePath });
 
   /**
@@ -60,7 +61,11 @@ export function createExplorerService({ cm, operations, workspaceCopies }: Servi
 
   function restoreDeleted(workspacePath: string, restores: DeletedItemRestore[], operationId: string) {
     const restorer = { cm: (args: string[]) => cm.query(args, inWorkspace(workspacePath)) };
-    return operations.run(operationId, (context) => restoreDeletedItems(workspacePath, restores, restorer, context));
+    return operations.run(operationId, async (context) => {
+      // The workspace's repository, from the header its window's info reads too (a local read, shared while fresh).
+      const { repositoryName, server } = await headers.status(workspacePath);
+      await restoreDeletedItems(workspacePath, repositorySpec(repositoryName, server), restores, restorer, context);
+    });
   }
 
   async function renameItemOnDisk(workspacePath: string, fromPath: string, toPath: string) {

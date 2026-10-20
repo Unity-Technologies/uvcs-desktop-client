@@ -3,7 +3,8 @@
 # files and a subfolder in it, a name with spaces and accents, and a file whose path a new file took afterwards.
 # Usage: scripts/sandboxes/deletes.sh [repo-name [workspace-folder]]   → repo undelete-demo@local, workspace /tmp/uvcs-undelete
 # It deletes and recreates both, so it takes only names: the repository is always on the local server, the
-# workspace always a folder of /tmp.
+# workspace always a folder of /tmp. A `cm undelete` typed by hand there takes /private/tmp/…, as cm names it on macOS:
+# given /tmp/… it writes the files, then fails ("Item path not in workspace").
 set -euo pipefail
 NAME=${1:-undelete-demo}
 FOLDER=${2:-uvcs-undelete}
