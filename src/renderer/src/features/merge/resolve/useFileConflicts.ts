@@ -8,6 +8,7 @@ import { queryClient } from '../../../app/queryClient';
 import { useSettledValue } from '../../../lib/useSettled';
 import type { MergeLabels } from '../mergeDescription';
 import { resolveInMergeTool, type OpenTool } from '../mergeTools/resolveInMergeTool';
+import { useMergeTools } from '../mergeTools/useMergeTools';
 import { conflictVersionQuery } from './conflictVersionQuery';
 import { readsOnOpen, upFrontReads, versionReads, versionsOf } from './conflictVersionReads';
 import type { FileConflictDecision } from './fileConflictDecision';
@@ -97,6 +98,8 @@ export function useFileConflicts(workspacePath: string, files: ConflictedFile[],
     setDecisions((current) => ({ ...current, [key]: decision }));
   }, []);
 
+  const hasSmartMerge = useMergeTools().smartMerge !== null;
+
   const reset = useCallback((key: string) => {
     setDecisions(({ [key]: _discarded, ...rest }) => rest);
   }, []);
@@ -115,12 +118,16 @@ export function useFileConflicts(workspacePath: string, files: ConflictedFile[],
         tool,
         labels,
         (open) => setOpenTools(({ [key]: _closed, ...others }) => (open ? { ...others, [key]: open } : others)),
-        quiet,
+        {
+          quiet,
+          smartMerge: hasSmartMerge,
+          stillUndecided: () => !latest.current.states.find((candidate) => candidate.file.key === key)?.decidedByUser,
+        },
       );
       if (decision) decide(key, decision);
       return outcome;
     },
-    [workspacePath, labels, decide],
+    [workspacePath, labels, decide, hasSmartMerge],
   );
 
   // Leaving the merge stops waiting for the tools still open: what they save afterwards has nowhere to go.

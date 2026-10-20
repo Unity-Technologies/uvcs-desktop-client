@@ -1,4 +1,4 @@
-import { SMART_MERGE_NAME, type MergeTool, type MergeToolOutcome } from '@shared/domain/mergeTools';
+import { SMART_MERGE_NAME, type MergeTool, type MergeToolOutcome, type SmartMergeRequest } from '@shared/domain/mergeTools';
 import { api } from '../../../api/client';
 import { fileNameOf } from '../../../lib/text';
 import { toast } from '../../../ui/toast/toastStore';
@@ -24,13 +24,26 @@ export interface MergeToolSession {
   decision: FileConflictDecision | undefined;
 }
 
+/** How "Resolve in…" runs for one file. */
+export interface ResolveOptions {
+  /** Leaves telling how it went to the caller (resolving one by one tells it as a whole). */
+  quiet?: boolean;
+  /** Smart Merge was found (`MergeToolList.smartMerge`): without it, nothing shows it at work. */
+  smartMerge: boolean;
+  /** Whether the user still hasn't decided the file in the app: asked once Smart Merge is done. */
+  stillUndecided: () => boolean;
+}
+
+/** What a session ends with when it decides nothing and the user already knows why (stopped, or decided meanwhile). */
+const NOTHING_SAVED: MergeToolOutcome = { kind: 'unchanged', exitCode: null, errorOutput: '' };
+
 /**
  * Opens one conflicting file in a merge tool and waits for it: `onOpen` reports it open, then closed (null). The
  * result file starts as the file stands in the app (the automatic merge with its markers, or the user's picks), so the
  * tool shows where things are. A Unity asset the user decided nothing for goes to Smart Merge first
  * (`smartMergeVersions`), reported open as Smart Merge while it merges: the tool opens only if it doesn't merge the
- * file, and not at all if the user stopped it. Tells the user how it went, unless `quiet` (resolving one by one tells
- * it as a whole).
+ * file, and not at all if the user stopped it. A decision the user made in the app meanwhile stands: Smart Merge's
+ * merge is dropped and nothing opens.
  */
 export async function resolveInMergeTool(
   workspacePath: string,
@@ -38,10 +51,19 @@ export async function resolveInMergeTool(
   tool: MergeTool,
   labels: MergeLabels,
   onOpen: (open: OpenTool | null) => void,
-  quiet = false,
+  options: ResolveOptions,
 ): Promise<MergeToolSession> {
-  const smartMerged = await trySmartMerge(state, onOpen);
-  const [outcome, by] = smartMerged ? [smartMerged, SMART_MERGE_NAME] : [await openInTool(workspacePath, state, tool, labels, onOpen), tool.name];
+  const versions = options.smartMerge ? smartMergeVersions(state) : null;
+  if (versions) {
+    const smartMerged = await runSmartMerge(versions, onOpen);
+    if (!options.stillUndecided()) return { outcome: NOTHING_SAVED, decision: undefined };
+    if (smartMerged) return ended(smartMerged, SMART_MERGE_NAME, state, options);
+  }
+  return ended(await openInTool(workspacePath, state, tool, labels, onOpen), tool.name, state, options);
+}
+
+/** The session's decision, `by` the tool or Smart Merge, told to the user unless `quiet`. */
+function ended(outcome: MergeToolOutcome, by: string, state: FileConflictState, { quiet }: ResolveOptions): MergeToolSession {
   if (!quiet) {
     const message = toolOutcomeMessage(outcome, by, fileNameOf(state.file.path));
     if (message.kind === 'error') toast.error(message.title, message.detail);
@@ -51,15 +73,13 @@ export async function resolveInMergeTool(
 }
 
 /** Smart Merge's outcome when it merged the file or the user stopped it; null when the tool is to open. */
-async function trySmartMerge(state: FileConflictState, onOpen: (open: OpenTool | null) => void): Promise<MergeToolOutcome | null> {
-  const versions = smartMergeVersions(state);
-  if (!versions) return null;
+async function runSmartMerge(versions: Omit<SmartMergeRequest, 'sessionId'>, onOpen: (open: OpenTool | null) => void): Promise<MergeToolOutcome | null> {
   const sessionId = crypto.randomUUID();
   onOpen({ sessionId, toolName: SMART_MERGE_NAME, canBringToFront: false });
   try {
     const merged = await api.mergeTools.smartMerge({ sessionId, ...versions });
     if (merged.kind === 'merged') return { kind: 'resolved', text: merged.text };
-    return merged.kind === 'stopped' ? { kind: 'unchanged', exitCode: null, errorOutput: '' } : null;
+    return merged.kind === 'stopped' ? NOTHING_SAVED : null;
   } catch {
     return null;
   } finally {
