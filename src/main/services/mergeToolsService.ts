@@ -89,6 +89,8 @@ export function createMergeToolsService(
       return await withTempDirectory(async (directory) => {
         const files = await writeSmartMergeFiles(request, directory);
         const run = await launchMergeTool(smartMergeTool.executable, fillArgs(SMART_MERGE_ARGS, files), stop.signal, { hidden: true });
+        // Stopped as it exited on its own: still stopped, or the tool would open after the user stopped (or left the page).
+        if (stop.signal.aborted) return { kind: 'stopped' };
         if (smartMergeWentWrong(run)) console.warn('[smart merge]', `${request.path}: exit code ${run.exitCode}`, run.errorOutput);
         return judgeSmartMerge(run, await readIfThere(files.result));
       });
