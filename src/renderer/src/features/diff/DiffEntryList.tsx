@@ -25,12 +25,14 @@ interface DiffEntryListProps {
   onSelectionChange: (selection: SelectionState) => void;
   contextMenu: (selected: DiffEntry[]) => MenuEntry[];
   review: ReviewMode<DiffEntry>;
+  /** The diff's files are still being read: placeholder rows under the filter bar. */
+  loading?: boolean;
 }
 
 export const diffEntryKey = (entry: DiffEntry): string => entry.path;
 
 /** The files of a diff, as a list or a tree: filterable, and in review mode marked as they are reviewed, a folder at a time too. */
-export function DiffEntryList({ rows, tree, toggleCollapsed, query, filterBar, selection, onSelectionChange, contextMenu, review }: DiffEntryListProps) {
+export function DiffEntryList({ rows, tree, toggleCollapsed, query, filterBar, selection, onSelectionChange, contextMenu, review, loading }: DiffEntryListProps) {
   const { on, statusOf, toggle } = review;
 
   const renderItem = (row: DiffEntryRowItem, level: number) => {
@@ -65,6 +67,7 @@ export function DiffEntryList({ rows, tree, toggleCollapsed, query, filterBar, s
       onItemsKeyDown={onItemsKeyDown}
       letterMoves
       label="Changed files"
+      loading={loading}
     />
   );
 }

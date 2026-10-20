@@ -4,6 +4,7 @@ import { groupedRowLevel, groupedTreeKeyMove, isGroupedList, type GroupedTreeRow
 import { itemsUnderRows, type PathTreeRow } from '../lib/pathTree';
 import type { SelectionState } from '../lib/selection';
 import { HighlightQuery } from '../ui/Highlight';
+import { ListSkeleton } from '../ui/Skeleton';
 import type { Column } from '../ui/table/column';
 import { DataTable } from '../ui/table/DataTable';
 import { FileTreeCell } from './FileTreeCell';
@@ -35,9 +36,12 @@ interface FileTreeListProps<T, G> {
   letterMoves?: boolean;
   /** For screen readers: what the files are ("Changed files"). */
   label: string;
+  /** The files are still being read: placeholder rows, at the real row height, under the filter bar. */
+  loading?: boolean;
 }
 
 const rowKey = <T, G>(row: GroupedTreeRow<T, G>): string => row.key;
+const ROW_HEIGHT = 28;
 
 /**
  * Every list of changed files: the filter bar, then the files as a list or a tree, in groups or not, with a desktop
@@ -58,6 +62,7 @@ export function FileTreeList<T, G>({
   onItemsKeyDown,
   letterMoves = false,
   label,
+  loading = false,
 }: FileTreeListProps<T, G>) {
   const grouped = isGroupedList(rows);
   const columns: Column<GroupedTreeRow<T, G>>[] = [
@@ -81,24 +86,28 @@ export function FileTreeList<T, G>({
     <div className={styles.list}>
       {filterBar}
       {belowFilterBar}
-      <HighlightQuery query={query}>
-        <DataTable
-          rows={rows}
-          columns={columns}
-          rowKey={rowKey}
-          selection={selection}
-          onSelectionChange={onSelectionChange}
-          // The list may open on a file far down (the one clicked elsewhere), and filtering keeps it in view.
-          revealKey={selection.anchor}
-          contextMenu={contextMenu && ((selected) => contextMenu(itemsUnderRows(selected)))}
-          rowHeight={28}
-          letterMoves={letterMoves}
-          onRowPressed={(row) => row.type !== 'file' && toggleCollapsed(row.key)}
-          onRowKeyDown={onRowKeyDown}
-          hideHeader
-          label={tree ? `${label}, by folder` : label}
-        />
-      </HighlightQuery>
+      {loading ? (
+        <ListSkeleton rowHeight={ROW_HEIGHT} />
+      ) : (
+        <HighlightQuery query={query}>
+          <DataTable
+            rows={rows}
+            columns={columns}
+            rowKey={rowKey}
+            selection={selection}
+            onSelectionChange={onSelectionChange}
+            // The list may open on a file far down (the one clicked elsewhere), and filtering keeps it in view.
+            revealKey={selection.anchor}
+            contextMenu={contextMenu && ((selected) => contextMenu(itemsUnderRows(selected)))}
+            rowHeight={ROW_HEIGHT}
+            letterMoves={letterMoves}
+            onRowPressed={(row) => row.type !== 'file' && toggleCollapsed(row.key)}
+            onRowKeyDown={onRowKeyDown}
+            hideHeader
+            label={tree ? `${label}, by folder` : label}
+          />
+        </HighlightQuery>
+      )}
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import type { DiffTarget } from '@shared/domain/diff';
 import { EmptyState } from '../../ui/EmptyState';
-import { CenteredSpinner } from '../../ui/Spinner';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { PathLabel } from '../../components/PathLabel';
 import { ChangesetSummary } from '../changesets/ChangesetSummary';
@@ -35,10 +34,8 @@ export function TargetDiff({ target, toolbar, focusPath, branchHead }: TargetDif
       </header>
       {error ? (
         <EmptyState title="Couldn't calculate the differences" description={error.message} />
-      ) : entries ? (
-        <DiffBrowser key={JSON.stringify(target)} target={target} entries={entries} initialPath={focusPath} />
       ) : (
-        <CenteredSpinner />
+        <DiffBrowser key={JSON.stringify(target)} target={target} entries={entries} initialPath={focusPath} />
       )}
     </div>
   );

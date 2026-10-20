@@ -4,10 +4,10 @@ import { avatarColumn, commentColumn, dateColumn, numberColumn } from '../../com
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
 import { SegmentedControl } from '../../ui/SegmentedControl';
-import { CenteredSpinner } from '../../ui/Spinner';
 import { SplitPane } from '../../ui/SplitPane';
 import type { Column } from '../../ui/table/column';
 import { DataTable } from '../../ui/table/DataTable';
+import { TableSkeleton } from '../../ui/table/TableSkeleton';
 import { useChangesets } from '../changesets/useChangesets';
 import { TargetDiff } from './TargetDiff';
 
@@ -56,7 +56,6 @@ function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; 
   }, [selectedId, firstId]);
 
   if (error) return <EmptyState title="Couldn't load the branch changesets" description={error.message} />;
-  if (!changesets) return <CenteredSpinner />;
 
   return (
     <SplitPane
@@ -64,16 +63,15 @@ function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; 
       minSize={220}
       maxSize={560}
       first={
-        <DataTable
-          rows={changesets}
-          columns={CHANGESET_COLUMNS}
-          rowKey={changesetKey}
-          selection={selection}
-          onSelectionChange={setSelection}
-        />
+        // The list's own column titles over placeholder rows while the changesets are read: the layout stays.
+        changesets ? (
+          <DataTable rows={changesets} columns={CHANGESET_COLUMNS} rowKey={changesetKey} selection={selection} onSelectionChange={setSelection} />
+        ) : (
+          <TableSkeleton columns={CHANGESET_COLUMNS} />
+        )
       }
       second={
-        selectedId === null ? (
+        !changesets ? null : selectedId === null ? (
           <EmptyState title="This branch has no changesets" />
         ) : (
           <TargetDiff target={{ kind: 'changeset', changesetId: selectedId }} toolbar={toolbar} focusPath={focusPath} />
