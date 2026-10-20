@@ -613,7 +613,8 @@ heatmap's), and come back in the other modes. The merge cards' stills stay clay 
   rest aren't shown. A library for PSD (ag-psd) was set aside: layers, effects and text a texture never needs, more of
   an untrusted file parsed; the one thing it would add is flattening the layers of a PSD whose composite is blank.
   The decoders, the header sizes, the limits before decoding (`sizeProblem`) and the words for what doesn't decode
-  (`imageProblemWords`) are pure helpers in `lib/images`, which the image diff decodes these formats with too
+  (`imageProblemWords`) are pure helpers in `lib/images`, which the image diff decodes these formats with too, in the
+  same `texture.worker` (a `paint` request)
   (diff.md "Unity's texture formats"); what only the look needs (the budget, flipping, the bitmaps) stays here.
 - **Budget** (`textureBudget`): at most 64 texture files a model (`MAX_TEXTURE_FILES`, both versions together, each file
   once); each drawn at most 2048 px on its longest side, 1024 past 24 textures, with mipmaps; refused before decoding

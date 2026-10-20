@@ -270,11 +270,13 @@ the info strip, the pixel inspector, and the merge page's version cards (`WholeF
 of their own type (`DECODED_IMAGE_TYPES`, by extension, within `MAX_IMAGE_BYTES` as every image), and the renderer
 makes each into an image the browser paints before anything shows it (`usePaintableImage`):
 
-- **Off the UI thread**: in the image decode worker (`imageDecode.worker`, `imageDecodeSession`: one worker, two
-  decodes at a time, one decode per image while it runs), never on the page's thread, where a 4K PSD or EXR would hold
-  a paint; a worker that can't start or dies fails the image. The decoders are the model diff's textures' own
-  (`lib/images`: `decodePixels`, three's loaders for TGA, TIFF, EXR and HDR, `readPsd` for Photoshop), loaded only in
-  the worker.
+- **Off the UI thread**: in the model diff's texture worker (`texture.worker`, a `paint` request; `paintOffThread`
+  in `textureWorkerSession`), never on the page's thread, where a 4K PSD or EXR would hold a paint; a worker that can't
+  start or dies fails the image. The worker decodes one request at a time, the session hands it at most two (it bounds
+  the bytes in the worker's hands, a texture's or an image's), and an image asked again while in hand is asked once.
+  The decoders are the textures' own (`lib/images`: `decodePixels`, three's loaders for TGA, TIFF, EXR and HDR,
+  `readPsd` for Photoshop), loaded only in the worker. A second worker for images was tried and set aside: a second
+  thread and a second copy of three's loaders, and a client that repeated the texture worker's line for line.
 - **By content first** (`imageFormatOfContent`: a PNG saved as `.tga` paints as the PNG it is), else by its type; its
   size read from the header and refused past 16384 px a side or 8192² pixels before decoding (`sizeProblem`).
 - **As a BMP** (`bmpOf`): the decoded pixels are written as a 32-bit BMP with an alpha mask, which `<img>` reads as it

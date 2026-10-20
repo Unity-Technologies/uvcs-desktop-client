@@ -1,11 +1,11 @@
 // An image as the browser can paint it: the image itself for the types it decodes, or, for Unity's texture formats
-// (`needsDecoding`), the image the decode worker makes of it (`paintableOffThread`). Whatever shows an image (the image
+// (`needsDecoding`), the image the texture worker makes of it (`paintOffThread`). Whatever shows an image (the image
 // diff, the merge page's previews) paints what this gives, from a blob URL (`useImageUrl`).
 
 import { useEffect, useMemo, useState } from 'react';
 import type { ImageBytes } from '@shared/domain/content';
 import { needsDecoding } from './decodedImageTypes';
-import { paintableOffThread } from './imageDecodeSession';
+import { paintOffThread } from '../model/textures/textureWorkerSession';
 import type { PaintableImage } from './paintableImage';
 
 export type PaintState = { status: 'none' } | { status: 'decoding' } | PaintableImage;
@@ -31,7 +31,7 @@ export function usePaintableImage(image: ImageBytes | undefined): PaintState {
   useEffect(() => {
     if (!image || !needsDecoding(image)) return;
     let stale = false;
-    void paintableOffThread(image).then((painted) => {
+    void paintOffThread(image).then((painted) => {
       if (!stale) setKept({ image, painted });
     });
     return () => {
