@@ -3,10 +3,11 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { recordsOutput } from '../cm/testing/cmOutput';
+import { recordsOutput, statusHeader } from '../cm/testing/cmOutput';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { TREE_ITEM_FORMAT, TREE_ITEMS } from '../cm/treeItems';
 import { contentHashOf } from '../files/WorkspaceCopies';
+import { cmHeaderReaders, WorkspaceHeaders } from '../workspace/WorkspaceHeaders';
 import { createContentService } from './contentService';
 import { createExplorerService } from './explorerService';
 import { serviceContext } from './testing/serviceContext';
@@ -15,7 +16,7 @@ const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
 
 function explorer(answers: Record<string, CmAnswer>) {
   const fake = fakeCmClient(answers);
-  return { ...fake, service: createExplorerService(serviceContext(fake.cm)) };
+  return { ...fake, service: createExplorerService(serviceContext(fake.cm, { headers: new WorkspaceHeaders(cmHeaderReaders(fake.cm)) })) };
 }
 
 const A_CS = {
@@ -123,7 +124,7 @@ describe('changing the workspace', () => {
   it('restores deleted items with one quick cm undelete each, which CmClient runs as a process: it downloads', async () => {
     const workspace = await mkdtemp(join(tmpdir(), 'explorer-wk-'));
     await mkdir(join(workspace, 'notes'));
-    const { service, commands } = explorer({ undelete: '' });
+    const { service, commands } = explorer({ 'status --header': statusHeader('/main', { repository: 'game' }), undelete: '' });
 
     await service.restoreDeleted(
       workspace,
@@ -135,9 +136,21 @@ describe('changing the workspace', () => {
     );
 
     expect(commands.map(({ via, args }) => ({ via, args }))).toEqual([
+      // The workspace's repository, a local read the window's info shares: cm finds the bare id only there.
+      { via: 'query', args: ['status', '--header', '--xml'] },
       { via: 'query', args: ['undelete', 'revid:24', join(workspace, 'docs')] },
       { via: 'query', args: ['undelete', 'revid:16', join(workspace, 'notes', 'Café menú.txt')] },
     ]);
+  });
+
+  it("refuses a revision of another repository than the workspace's, whatever the window asks", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'explorer-wk-'));
+    const { service, ran } = explorer({ 'status --header': statusHeader('/main', { repository: 'game' }) });
+
+    const restoring = service.restoreDeleted(workspace, [{ revision: { revisionId: 24, repository: 'thirdparty@local' }, path: 'lib' }], 'op-1');
+
+    await expect(restoring).rejects.toThrow('not in the workspace’s repository');
+    expect(ran('undelete')).toBe(false);
   });
 
   it('adds folders with everything in them, and changes revision types, with one command for all the items', async () => {
