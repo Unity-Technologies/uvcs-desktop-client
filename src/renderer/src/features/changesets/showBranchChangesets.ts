@@ -3,12 +3,10 @@ import { pickedBranchFilters } from './changesetFilters';
 import { useChangesetFilters } from './changesetsViewStore';
 
 /**
- * The Changesets view on one branch's changesets, from the branch's menu ("Show changesets"): the branch picked by
- * name, Any time (capped as always) so an old branch shows its changesets too, and no text or people hiding some.
+ * The Changesets view on one branch's changesets, from the branch's menu ("Show changesets"): the branch picked as the
+ * branch chip picks it (`pickedBranchFilters`), its whole history, leaving what the view remembers as it was.
  */
 export function showBranchChangesets(workspacePath: string, branch: string): void {
-  const filters = useChangesetFilters.getState();
-  filters.clear();
-  filters.update({ ...pickedBranchFilters(workspacePath, branch), since: 'anyTime' });
+  useChangesetFilters.getState().update(pickedBranchFilters(workspacePath, branch));
   navigation.goToView('changesets');
 }

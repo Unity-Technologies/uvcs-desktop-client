@@ -30,7 +30,10 @@ import {
   matchesSearch,
   noChangesetsHint,
   pickedBranchFilters,
+  shownFilters,
+  shownFiltersChange,
   toQueryFilter,
+  type ShownFilters,
 } from './changesetFilters';
 import { useChangesetFilters } from './changesetsViewStore';
 import { changesetMenu } from './changesetMenu';
@@ -47,13 +50,16 @@ export function ChangesetsView() {
   const workspacePath = useWorkspacePath();
   const { data: workspace } = useWorkspaceInfo();
   const filters = useChangesetFilters();
-  const { text, people, since, update } = filters;
+  const { text, update } = filters;
   const me = useWorkspaceUser();
   const [selection, setSelection] = useViewSelection('changesets');
 
   const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined;
   const branchScope = branchScopeIn(filters, workspacePath, currentBranch);
   const branch = branchOf(branchScope);
+  // A picked branch shows with its own time range and people; the remembered ones stay for when the pick is cleared.
+  const { since, people } = shownFilters(filters, workspacePath);
+  const updateShown = (change: Partial<ShownFilters>) => update(shownFiltersChange(filters.pickedBranch, workspacePath, change));
   // The text is matched locally; only the other filters trigger a new `cm find`.
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const queryFilter = useMemo(() => toQueryFilter({ since, people: queriedPeople }, branch, new Date()), [since, queriedPeople, branch]);
@@ -89,13 +95,13 @@ export function ChangesetsView() {
   );
 
   const cap = changesets && changesetsCap(visible.length, changesets.length, since);
-  const filtering = isFilteringChangesets(filters, branchScope);
+  const filtering = isFilteringChangesets(text, { since, people }, branchScope);
   const header = (
     <ViewHeader title="Changesets" count={cap ? undefined : changesets && visible.length} total={changesets?.length} subtitle={cap}>
       <FilterBar
         text={<FilterField value={text} onChange={(value) => update({ text: value })} placeholder="Filter changesets" />}
-        people={<PeopleFilter value={people} onChange={(value) => update({ people: value })} people={offered} mineTip="Changesets you checked in" />}
-        time={<SincePicker value={since} onChange={(value) => update({ since: value })} />}
+        people={<PeopleFilter value={people} onChange={(value) => updateShown({ people: value })} people={offered} mineTip="Changesets you checked in" />}
+        time={<SincePicker value={since} onChange={(value) => updateShown({ since: value })} />}
         kinds={
           <BranchScopeFilter
             workspacePath={workspacePath}

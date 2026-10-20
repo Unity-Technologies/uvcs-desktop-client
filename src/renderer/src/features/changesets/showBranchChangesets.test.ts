@@ -43,13 +43,13 @@ describe('Show changesets', () => {
     const fromList = entryOf(branchMenu(WORKSPACE, [branch], '/main'));
     expect(fromList).toMatchObject({ label: 'Show changesets' });
     (fromList as { run: () => void }).run();
-    expect(filtersShown().pickedBranch).toEqual({ workspacePath: WORKSPACE, name: '/main/task' });
+    expect(filtersShown().pickedBranch).toMatchObject({ workspacePath: WORKSPACE, name: '/main/task' });
 
     const layout = layoutGraph(sampleHistory());
     const context = { workspacePath: WORKSPACE, layout, currentBranch: '/main', loadedChangeset: 6, repository: 'game@local', goToChangeset: () => {}, showRelatedTo: () => {}, revealCreatedBranch: () => {} };
     const fromGraph = entryOf(graphMenu({ kind: 'branch', lane: layout.lanesByBranch.get('/main/a')! }, context));
     (fromGraph as { run: () => void }).run();
-    expect(filtersShown().pickedBranch).toEqual({ workspacePath: WORKSPACE, name: '/main/a' });
+    expect(filtersShown().pickedBranch).toMatchObject({ workspacePath: WORKSPACE, name: '/main/a' });
     expect(whereTheWindowIs().view).toBe('changesets');
   });
 

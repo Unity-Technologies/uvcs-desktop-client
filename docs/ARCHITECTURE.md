@@ -814,7 +814,8 @@ renderer/src/
   ranked by (`fuzzyMatchPositions`). Text a row shows but its filter doesn't look at is never marked.
   - **One filter bar**: every view lays its filters out with `FilterBar`, whose slots fix the order: the text
     (`FilterField`, "Filter <things>", 240px), people, time (`SincePicker`, the presets of `lib/sincePresets`, any time
-    last), kinds and statuses (`ToggleChip`, `ChoiceChip`, the Branch Explorer's Branches picker), then the view's own
+    last), kinds and statuses (`ToggleChip`, `ChoiceChip`, the Branch Explorer's Branches picker, Changesets'
+    `BranchScopeFilter`; a picker's options above its list are `FilterOptions`), then the view's own
     options at the end (layout, the graph's View). The text field is where ⌘F (and / from outside a text field) goes
     while it shows (`listFilter`, in its tooltip and the shortcuts sheet); ↓ goes on to the list and Esc empties it,
     then goes back to the list. Changes' and a diff's file filters take it too (`useChangeFilter(..., true)`); a list
@@ -840,8 +841,12 @@ renderer/src/
     `branch = '…'`), so "This branch" and the same branch picked by name share one query key. A branch picked by name
     says which workspace it was picked in (`PickedBranch`, `branchScopeIn`): the store outlives the workspace a window
     shows, and another repository may have no such branch. A branch's menu, in every place it shows the Branch
-    Explorer included, opens the view on it ("Show changesets", `showBranchChangesets`): Any time, so an old branch
-    shows its changesets, and no text or people hiding some.
+    Explorer included, opens the view on it ("Show changesets", `showBranchChangesets`). Both ways pick it alike
+    (`pickedBranchFilters`): its whole history (Any time, capped) by everyone, the text emptied, and nothing the view
+    remembers changed. The pick holds its own time range and people for the session, which the chips show and edit
+    (`shownFilters`, `shownFiltersChange`); All branches, This branch or Clear filters drop it, and the remembered ones
+    show again. Clearing the remembered filters, or picking with Any time written into them, was rejected: a "Mine ·
+    Last month" user was left on "Everyone · Any time" for good, a heavier read on a big repository.
   - **Remembered**: each view keeps its filters in one store (`createViewFilters`): the time range, the kinds, the
     view options and Mine across sessions, the text, the people picked by name and what else holds the repository's
     objects (`forSession`: a branch picked by name) for the session, as they differ between repositories; a page's
