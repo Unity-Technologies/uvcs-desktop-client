@@ -11,15 +11,8 @@ export interface ConflictLabels {
 export interface ConflictDocument {
   text: string;
   conflictCount: number;
-  /** Each conflict as the merge wrote it, in order, with the base it came from: the markers hold only the sides. */
-  conflicts: ConflictVersions[];
-}
-
-/** One conflict's lines, joined: each side's as written between the markers, and the base's as it was. */
-export interface ConflictVersions {
-  current: string;
-  base: string;
-  incoming: string;
+  /** The base each conflict came from, in order, its lines joined as they were: the markers hold only the sides. */
+  conflictBases: string[];
 }
 
 const MARKER_START = '<<<<<<< ';
@@ -36,25 +29,24 @@ export function buildConflictDocument(base: string, source: string, destination:
   const lineBreak = dominantLineBreak(destinationLines) ?? dominantLineBreak(sourceLines) ?? dominantLineBreak(baseLines) ?? '\n';
   const regions = diff3Merge(destinationLines, baseLines, sourceLines);
   const ended = (text: string): string => (text === '' || endsWithLineBreak(text) ? text : text + lineBreak);
-  const conflicts: ConflictVersions[] = [];
+  const conflictBases: string[] = [];
 
   const text = regions
     .map((region) => {
       if ('ok' in region) return region.ok.join('');
       const { a, o, b } = region.conflict;
-      const versions = { current: ended(a.join('')), base: o.join(''), incoming: ended(b.join('')) };
-      conflicts.push(versions);
+      conflictBases.push(o.join(''));
       return [
         `${MARKER_START}${labels.destination}${lineBreak}`,
-        versions.current,
+        ended(a.join('')),
         `${MARKER_SEPARATOR}${lineBreak}`,
-        versions.incoming,
+        ended(b.join('')),
         `${MARKER_END}${labels.source}${lineBreak}`,
       ].join('');
     })
     .join('');
 
-  return { text, conflictCount: conflicts.length, conflicts };
+  return { text, conflictCount: conflictBases.length, conflictBases };
 }
 
 /** Whether text (e.g. edited by hand) still contains unresolved conflict markers. */
@@ -70,36 +62,9 @@ export function resolveConflictRegion(text: string, conflictIndex: number, choic
   return replaceConflictRegion(text, conflictIndex, ({ current, incoming }) => [...(choice !== 'incoming' ? current : []), ...(choice !== 'current' ? incoming : [])]);
 }
 
-/** Replaces the conflict region number `conflictIndex` (0-based) with its base (`conflictBases`), as it was. */
+/** Replaces the conflict region number `conflictIndex` (0-based) with its base (`ConflictDocument.conflictBases`), as it was. */
 export function keepConflictRegionBase(text: string, conflictIndex: number, base: string): string {
   return replaceConflictRegion(text, conflictIndex, () => [base]);
-}
-
-/**
- * The base of each conflict region left in `text`, found by its sides among the document's conflicts. Conflicts with
- * the same sides are told apart only while every one of them is left (in order) or when their bases are the same:
- * once one is decided, which is which can't be told. None for a region whose sides were edited by hand.
- */
-export function conflictBases(text: string, document: ConflictDocument): (string | undefined)[] {
-  const sidesOf = (current: string, incoming: string): string => `${current}\u0000${incoming}`;
-  const basesBySides = new Map<string, string[]>();
-  for (const { current, incoming, base } of document.conflicts) {
-    const key = sidesOf(current, incoming);
-    basesBySides.set(key, [...(basesBySides.get(key) ?? []), base]);
-  }
-
-  const regions = conflictRegionsOf(splitLines(text)).map(({ current, incoming }) => sidesOf(current.join(''), incoming.join('')));
-  const leftBySides = new Map<string, number>();
-  for (const key of regions) leftBySides.set(key, (leftBySides.get(key) ?? 0) + 1);
-
-  const seenBySides = new Map<string, number>();
-  return regions.map((key) => {
-    const bases = basesBySides.get(key) ?? [];
-    const seen = seenBySides.get(key) ?? 0;
-    seenBySides.set(key, seen + 1);
-    if (bases.length === leftBySides.get(key)) return bases[seen];
-    return bases.length > 0 && bases.every((base) => base === bases[0]) ? bases[0] : undefined;
-  });
 }
 
 /** A conflict region's lines between its markers, and the line its end marker is on (the last, when it has none). */
@@ -125,17 +90,6 @@ function replaceConflictRegion(text: string, conflictIndex: number, replacement:
     position = region.end;
   }
   return output.join('');
-}
-
-function conflictRegionsOf(lines: string[]): ConflictRegionLines[] {
-  const regions: ConflictRegionLines[] = [];
-  for (let position = 0; position < lines.length; position++) {
-    if (!lines[position]!.startsWith(MARKER_START)) continue;
-    const region = readConflictRegion(lines, position);
-    regions.push(region);
-    position = region.end;
-  }
-  return regions;
 }
 
 /** The region whose start marker is on line `start`. */

@@ -7,7 +7,7 @@ import type { MergeLabels } from '../mergeDescription';
 import { ConflictHunks } from './ConflictHunks';
 import { mergedText, offersKeepBase, textToEdit, type PanelView } from './conflictPanelView';
 import type { OpenableVersion } from './conflictVersionOpening';
-import type { FileConflictDecision } from './fileConflictDecision';
+import { conflictBaseAt, decideConflict, type FileConflictDecision } from './fileConflictDecision';
 import { HandEditor } from './HandEditor';
 import { ReadOnlyText } from './ReadOnlyText';
 import type { FileConflictState } from './useFileConflicts';
@@ -56,14 +56,14 @@ export function ConflictBody({ workspacePath, state, labels, versions, view, edi
   switch (view) {
     case 'conflicts':
       // The merge tool has the file: picking sides here meanwhile would be overwritten by what it saves.
-      if (state.openTool) return <ConflictHunks path={file.path} text={decision?.kind === 'text' ? decision.text : ''} labels={labels} />;
+      if (state.openTool || decision?.kind !== 'text') return <ConflictHunks path={file.path} text={decision?.kind === 'text' ? decision.text : ''} labels={labels} />;
       return (
         <ConflictHunks
           path={file.path}
-          text={decision?.kind === 'text' ? decision.text : ''}
+          text={decision.text}
           labels={labels}
-          document={offersKeepBase(state) ? state.document : undefined}
-          onChange={(text) => onDecide({ kind: 'text', text, edited: decision?.kind === 'text' && decision.edited })}
+          offersBase={(conflictIndex) => offersKeepBase(state) && conflictBaseAt(decision, conflictIndex) !== undefined}
+          onDecide={(conflictIndex, choice) => onDecide(decideConflict(decision, conflictIndex, choice))}
         />
       );
     case 'changes':

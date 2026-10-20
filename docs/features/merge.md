@@ -95,10 +95,9 @@ the merge), "Yours", "Incoming" and "Base". Conflicts read as labeled blocks ins
 (`conflictHunkCss` over Pierre's view): a header naming the destination's side with Keep yours / Keep incoming / Keep both
 / Keep base for that conflict (in a narrow pane just Yours | Incoming | Both | Base, a container query), its lines, the
 source's label and its lines. The markers hold only the sides: the
-automatic merge keeps each conflict's base (`ConflictDocument.conflicts`), and a conflict left finds its own by its
-sides (`conflictBases`), so Keep base is offered wherever the sides are still the merge's, not on one edited by hand,
-not in a file with no base, and not where conflicts with the same sides but different bases can no longer be told
-apart (one of them decided). While a tool has the file, a banner says so (Bring to
+automatic merge keeps each conflict's base (`ConflictDocument.conflictBases`), and the decision carries the bases of
+the conflicts left, dropping each one decided (`decideConflict`), so a conflict's base is its own even where others
+show the same sides. Text edited by hand or saved in a tool carries none: its conflicts offer no Keep base. While a tool has the file, a banner says so (Bring to
 front, Stop waiting), its conflicts show without choices and the merge can't complete; a toast tells how it ended.
 Editing the text in the app opens a banner with Done and Discard edits; the choice shows picked and "Changes" shows what
 it produces. Binary conflicts offer the versions to keep as cards, each side's and the base's (where the file has one),

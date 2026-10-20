@@ -6,7 +6,7 @@ import { PaneScrollbars } from '../../diff/viewer/PaneScrollbars';
 import { highlightedLanguage, syntaxHighlighting } from '../../diff/viewer/syntaxHighlighting';
 import type { MergeLabels } from '../mergeDescription';
 import { conflictHunkCss, shortenBranch } from './conflictHunkCss';
-import { conflictBases, keepConflictRegionBase, resolveConflictRegion, type ConflictDocument, type ConflictRegionChoice } from './threeWayMerge';
+import type { ConflictBlockChoice } from './fileConflictDecision';
 import { usePierreOptions } from './usePierreOptions';
 import styles from './ConflictHunks.module.css';
 import surface from './TextSurface.module.css';
@@ -17,19 +17,18 @@ interface ConflictHunksProps {
   /** The merged text, conflicts between markers. */
   text: string;
   labels: MergeLabels;
-  /** The automatic merge, which knows each conflict's base: absent for a file with no base (added on both sides). */
-  document?: ConflictDocument;
+  /** Whether conflict number `conflictIndex` offers keeping its base (`conflictBaseAt`, `offersKeepBase`); none offers it without. */
+  offersBase?: (conflictIndex: number) => boolean;
   /** Absent while the conflicts can't be decided here (a merge tool has the file): labels only, no choices. */
-  onChange?: (text: string) => void;
+  onDecide?: (conflictIndex: number, choice: ConflictBlockChoice) => void;
 }
 
 /**
  * The merged file, read-only, shown with lone CRs as LFs; choices resolve the text with its own line breaks. Each conflict reads as two labeled blocks instead of raw markers: a header naming the
  * destination's side with the choices for this conflict, its lines, then the source's side and its lines.
  */
-export function ConflictHunks({ path, text, labels, document, onChange }: ConflictHunksProps) {
+export function ConflictHunks({ path, text, labels, offersBase, onDecide }: ConflictHunksProps) {
   const pierreOptions = usePierreOptions(text);
-  const bases = useMemo(() => (document ? conflictBases(text, document) : []), [text, document]);
   const surfaceRef = useRef<HTMLDivElement>(null);
   const { source, destination } = labels.roles;
   // Highlighted like a read-only diff of its two sides, which Pierre highlights as a file each, about as long as the
@@ -65,12 +64,12 @@ export function ConflictHunks({ path, text, labels, document, onChange }: Confli
                 <span className={styles.role}>{destination.name}</span>
                 <span className={styles.branch}>{shortenBranch(labels.destination)}</span>
               </span>
-              {onChange && (
+              {onDecide && (
                 <HunkChoices
                   labels={labels}
                   conflictIndex={action.conflictIndex}
-                  onChoose={(choice) => onChange(resolveConflictRegion(text, action.conflictIndex, choice))}
-                  onKeepBase={withBase(bases[action.conflictIndex], (base) => onChange(keepConflictRegionBase(text, action.conflictIndex, base)))}
+                  withBase={offersBase?.(action.conflictIndex) ?? false}
+                  onChoose={(choice) => onDecide(action.conflictIndex, choice)}
                 />
               )}
             </div>
@@ -85,19 +84,19 @@ export function ConflictHunks({ path, text, labels, document, onChange }: Confli
 interface HunkChoicesProps {
   labels: MergeLabels;
   conflictIndex: number;
-  onChoose: (choice: ConflictRegionChoice) => void;
-  /** Absent when the conflict's base isn't known (no base, or its sides edited by hand). */
-  onKeepBase?: () => void;
+  /** "Keep base" is offered: the conflict's base is known (not after a hand edit) and keeping it makes sense. */
+  withBase: boolean;
+  onChoose: (choice: ConflictBlockChoice) => void;
 }
 
-function HunkChoices({ labels, conflictIndex, onChoose, onKeepBase }: HunkChoicesProps) {
+function HunkChoices({ labels, conflictIndex, withBase, onChoose }: HunkChoicesProps) {
   const { source, destination } = labels.roles;
   return (
     <span className={styles.choices} role="group" aria-label={`Resolve conflict ${conflictIndex + 1}`}>
       <HunkChoice label={destination.name} tip={`From ${labels.destination}`} onClick={() => onChoose('current')} />
       <HunkChoice label={source.name} tip={`From ${labels.source}`} onClick={() => onChoose('incoming')} />
       <HunkChoice label="Both" tip={`${destination.name} first, then ${source.name.toLowerCase()}`} onClick={() => onChoose('both')} />
-      {onKeepBase && <HunkChoice label="Base" tip="As it was before either side changed it" onClick={onKeepBase} />}
+      {withBase && <HunkChoice label="Base" tip="As it was before either side changed it" onClick={() => onChoose('base')} />}
     </span>
   );
 }
@@ -110,11 +109,6 @@ function HunkChoice({ label, tip, onClick }: { label: string; tip: string; onCli
       <span className={styles.shortLabel}>{label}</span>
     </Button>
   );
-}
-
-/** `keep` bound to the base, when there is one. */
-function withBase(base: string | undefined, keep: (base: string) => void): (() => void) | undefined {
-  return base === undefined ? undefined : () => keep(base);
 }
 
 /** A short key that changes whenever the text does. */
