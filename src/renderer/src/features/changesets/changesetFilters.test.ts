@@ -98,26 +98,46 @@ describe('changesetsCap', () => {
 });
 
 describe('changesetChoices', () => {
-  const changeset = (id: number, comment = ''): Changeset => ({ id, guid: `g${id}`, branch: '/main', comment, owner: 'ana', date: '', parent: id - 1, repository: 'game@local' });
-  const recent = [changeset(50, 'Fix the menu'), changeset(42, 'Add the menu'), changeset(41, 'Ship 42 levels')];
-  const ids = (search: string, exclude = 50) => changesetChoices(recent, exclude, search).map((choice) => choice.id);
+  const changeset = (id: number, comment = '', branch = '/main'): Changeset => ({ id, guid: `g${id}`, branch, comment, owner: 'ana', date: '', parent: id - 1, repository: 'game@local' });
+  const recent = [changeset(50, 'Fix the menu'), changeset(42, 'Add the menu\nWith its icons', '/main/ui'), changeset(41, 'Ship 42 levels')];
+  /** More than the three read: the read stopped at its limit, so older changesets exist. */
+  const NOT_REACHED = 10;
+  const choices = (search: string, read: readonly Changeset[] | undefined = recent, limit = NOT_REACHED) => changesetChoices(read, limit, 50, search);
+  const ids = (search: string) => choices(search).map((choice) => choice.id);
 
   it('offers the newest changesets read, leaving out the one being compared', () => {
     expect(ids('')).toEqual([42, 41]);
   });
 
-  it('looks through what a row shows: number, comment, branch, author', () => {
+  it("looks through what a row shows: the number, the comment's first line, the branch's own name", () => {
     expect(ids('menu')).toEqual([42]);
     expect(ids('ship levels')).toEqual([41]);
+    expect(ids('ui')).toEqual([42]);
+    expect(ids('icons')).toEqual([]);
+    expect(ids('ana')).toEqual([]);
   });
 
   it('puts a changeset typed by number first, with its row when it was read, then the others that mention it', () => {
-    expect(changesetChoices(recent, 50, '42')).toEqual([{ id: 42, changeset: recent[1] }, { id: 41, changeset: recent[2] }]);
+    expect(choices('42')).toEqual([{ id: 42, changeset: recent[1] }, { id: 41, changeset: recent[2] }]);
     expect(ids('cs:41')).toEqual([41]);
   });
 
-  it('offers a changeset older than those read by its number alone', () => {
-    expect(changesetChoices(recent, 50, '7')).toEqual([{ id: 7 }]);
+  it('offers a changeset older than those read by its number alone, when the read stopped at its limit', () => {
+    expect(choices('7', recent, 3)).toEqual([{ id: 7 }]);
+  });
+
+  it('offers a changeset newer than those read: checked in since', () => {
+    expect(choices('60')).toEqual([{ id: 60 }]);
+  });
+
+  it("says a number names no changeset when the read had every changeset there, or one between those read", () => {
+    expect(choices('7')).toEqual([{ id: 7, missing: true }]);
+    expect(choices('45', recent, 3)).toEqual([{ id: 45, missing: true }]);
+  });
+
+  it('offers any number typed while the changesets are unread, or the read failed', () => {
+    expect(choices('7', undefined)).toEqual([{ id: 7 }]);
+    expect(choices('', undefined)).toEqual([]);
   });
 
   it('never offers the changeset being compared, even typed', () => {
