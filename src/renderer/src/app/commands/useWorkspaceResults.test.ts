@@ -30,4 +30,12 @@ describe('workspaceResults', () => {
 
     expect(open).toHaveBeenCalledWith('/wk/game', 'here');
   });
+
+  it('opens the workspace in a new window with Shift (`runInNewWindow`)', () => {
+    const open = vi.fn();
+
+    workspaceResults(all, ['/wk/game'], null, '', open)[0]!.runInNewWindow!();
+
+    expect(open).toHaveBeenCalledWith('/wk/game', 'newWindow');
+  });
 });
