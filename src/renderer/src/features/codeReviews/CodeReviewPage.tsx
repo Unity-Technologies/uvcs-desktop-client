@@ -115,11 +115,12 @@ function ReviewHeader({ review }: { review: CodeReview }) {
           {COMMENTS_HINT}
         </span>
         {reviewedCode && ReviewedCodeIcon && (
+          // aria-disabled rather than disabled, so hovering still shows the tooltip saying why.
           <Button
             icon={<ReviewedCodeIcon size={14} />}
-            disabled={reviewedCode.disabledReason !== undefined}
+            aria-disabled={reviewedCode.disabledReason !== undefined || undefined}
             data-tip={reviewedCode.disabledReason}
-            onClick={() => void reviewedCode.run()}
+            onClick={() => reviewedCode.disabledReason === undefined && void reviewedCode.run()}
           >
             {reviewedCode.label}
           </Button>

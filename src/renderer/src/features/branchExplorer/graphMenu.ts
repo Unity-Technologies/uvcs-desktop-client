@@ -1,4 +1,3 @@
-import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu, withEntries } from '../../lib/menuGroups';
 import { menuAction, type MenuPlace } from '../../components/menuWords';
@@ -42,7 +41,7 @@ export function graphMenu(target: GraphTarget | null, context: GraphMenuContext)
       ]);
     }
     case 'codeReview':
-      return graphCodeReviewMenu(target.review, context);
+      return codeReviewMenu(context.workspacePath, [target.review]);
     case 'mergeLink':
       return groupedMenu([
         menuAction('diffMerge', () => graphActions.diffChangeset(target.link.destinationChangeset)),
@@ -52,13 +51,6 @@ export function graphMenu(target: GraphTarget | null, context: GraphMenuContext)
     default:
       return [];
   }
-}
-
-/** A review chip sits on its branch's header, so the graph names the reviewed branch without asking. */
-function graphCodeReviewMenu(review: CodeReviewSummary, { workspacePath, layout, currentBranch }: GraphMenuContext): MenuEntry[] {
-  const reviewed = [...layout.lanesByBranch.values()].find((lane) => lane.branch.id === review.targetBranchId)?.branch.name;
-  const workspaceOn = currentBranch === undefined ? undefined : { kind: 'branch' as const, name: currentBranch };
-  return codeReviewMenu(workspacePath, [reviewed ? { ...review, target: { kind: 'branch', branch: reviewed } } : review], workspaceOn);
 }
 
 function graphChangesetMenu(id: number, { workspacePath, layout, currentBranch, loadedChangeset, repository, goToChangeset }: GraphMenuContext, place: MenuPlace): MenuEntry[] {
