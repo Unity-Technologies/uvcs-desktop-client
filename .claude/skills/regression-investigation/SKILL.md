@@ -103,6 +103,7 @@ one input:
 - Each of these goes in the same pull request, in its own commit.
 
 Stay pragmatic: things go wrong sometimes, and the improvement must be proportionate to what this incident proves.
+
 - Don't add hard requirements, new mandatory rules or generic validation layers to CLAUDE.md or the docs for one
   bug. A recurring weakness, seen more than once, earns a rule; one incident earns a recommendation.
 
