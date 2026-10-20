@@ -147,7 +147,7 @@ and many people use the same server. Every `cm` command other than local reads (
   a merge into a server branch the workspace too, refreshing the incoming check instead (`isAffectedByServerMerge`);
   shelving changes that stay in the workspace refreshes only the shelve lists, and shelving them away those and the workspace; a new, deleted or hidden branch only the
   branch lists and the Branch Explorer; a label edit the labels and the graph; an attribute or value edit only the
-  attributes; a code review created, edited, marked reviewed or deleted only the reviews (their lists and the branch chips); releasing a lock only the locks; deleting a shelve or discarding left changes only the shelve lists and the left changes, and applying or restoring one those, the workspace and its locks; adding, checking out, removing or undoing files only the workspace and its locks; a changeset's comment edited only what shows changesets, and one moved or deleted those, the branch lists and incoming. Reads refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
+  attributes; a code review created, edited, marked reviewed or deleted only the reviews (their lists and the branch chips); releasing a lock only the locks; deleting a shelve or discarding left changes only the shelve lists and the left changes, and applying or restoring one those, the workspace and its locks; adding, checking out, removing, undoing or reverting files only the workspace and its locks; a changeset's comment edited only what shows changesets, and one moved or deleted those, the branch lists and incoming. Reads refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
   the last (create a branch and switch to it: `createBranchAndSwitch`). Views keyed by the workspace info (`keyedByWorkspaceInfo`: left changes, the
   incoming check, the branch the workspace is on) wait for it, and when the operation gave them another key they are only
   marked stale: they are read under the new key as they show, never once more under the old one. Event-driven refreshes
@@ -567,6 +567,14 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   ended for sure by a `dragleave` towards nothing, a drop or any pointer move), since an element's own
   enter and leave events don't pair up and left the overlay on screen.
   The overlay (`FolderDropOverlay`) fades out on a timer (`LEAVE_MS`), never on an animation event, so it can't linger.
+- A workspace picked from a list (the home screen's rows, search and a repository's Open button, the switcher, the
+  palette's workspace results) opens in this window, or in a new one with Shift held on the click or Enter
+  (`windowAskedBy`, `workspaceOpener`; `workspaceInNewWindow` in the shortcuts sheet, the switcher's hints and the
+  menu's key cap), the modifier a folder drop takes, and the one browsers use for a new window on all three OSs.
+  With another modifier held too it opens here, and a missing workspace always opens here, whatever the keys: its
+  screen locates, recreates or forgets it. The menu says the same: Open workspace, then Open in new window
+  (`workspaceMenu`), but not a missing workspace's. The new window asks `windows.openWorkspace`, so a workspace another
+  window shows comes forward instead; the new window remembers it as recent as it opens it (`useRequestedWorkspace`).
 - A new workspace (the New workspace dialog: `createWorkspaceAndUpdate`) opens as soon as `cm workspace create` makes
   it, then gets the latest files of /main through the workspace's own Update (`updateWorkspace`: `cm update` in a process
   of its own, its progress card, its refreshes). `cm workspace create` already puts it on /main with nothing loaded, so
@@ -962,7 +970,8 @@ renderer/src/
   - **One menu**: a file's menu is `changedFileMenu` (`components/`) in every list but Changes: its history (annotated
     or not), "Open this revision" and "Save this revision as…" for the version the list shows (a diff's newer side, a
     merge's incoming version; nothing to open for a deleted file or a folder), and Copy; a list adds its own after the
-    shared entries of each group (a diff the review mark, `diffEntryMenu`; a merge the ways to settle a conflict,
+    shared entries of each group (a diff the review mark and, on the workspace's own history, reverting a file to before
+    the change, `diffEntryMenu`, features/diff.md "Reverting a file"; a merge the ways to settle a conflict,
     `mergeItemMenu`). Nothing is read to build it: what Open and Save as take out of the repository is a
     `RepositoryVersion` (a revision, or a path or item at a changeset, as a merge knows its sides), read when they run.
   - **Folders once**: a folder added or deleted along with what it holds is left out, its items say it already, but a
