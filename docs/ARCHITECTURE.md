@@ -669,8 +669,9 @@ renderer/src/
 
 - **One layout from the first frame**: a view or page paints its final layout at once and keeps it while it loads,
   when nothing is there and when filters hide everything; only what fills it changes.
-  - Its header (title, count, actions, filters, switches) always shows; a filter waits, disabled, until its list is
-    read (`useChangeFilter`'s `reading`). A switch in a pane's header stays with it (`DiffFrame`: a branch diff's
+  - Its header (title, count, actions, filters, switches) always shows. A filter over what is read waits, disabled,
+    until it is read (`useChangeFilter`'s `reading`, History's text); filters that choose what is read (a time range,
+    people, the kinds an object list asks for) stay live. A switch in a pane's header stays with it (`DiffFrame`: a branch diff's
     "Whole branch | Changeset by changeset").
   - Loading: the panes stay, with placeholder rows at the real row height under the list's own column titles
     (`ui/Skeleton`, `TableSkeleton`, `FileTreeSkeleton`, `FileTreeList`'s `loading`), the details as
