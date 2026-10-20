@@ -76,8 +76,8 @@ export interface MergeToolRequest {
 }
 
 /**
- * A Unity asset for Smart Merge: its three versions as the merge page read them (an empty base when both sides added
- * it). Chosen by the caller, `sessionId` stops it like a tool's.
+ * A Unity asset for Smart Merge: its three versions as the merge page read them (an empty base when the base revision
+ * was an empty file). Chosen by the caller, `sessionId` stops it like a tool's.
  */
 export interface SmartMergeRequest {
   sessionId: string;

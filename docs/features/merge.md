@@ -38,8 +38,10 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   offers no Keep or Start over, as its toolbar offers none (`conflictMenuEntries`); and should the user decide the file
   meanwhile (from another file's selection), that decision stands: Smart Merge's merge is dropped and nothing opens
   (`ResolveOptions.stillUndecided`). A file goes to it when its two sides start with Unity's YAML
-  header (`isUnityYaml`), whatever its extension: a `.meta` file has none and goes to the tool. A file added on both
-  sides gets an asset with no objects as its base (`EMPTY_UNITY_YAML`): Smart Merge refuses an empty file. It runs with
+  header (`isUnityYaml`), whatever its extension: a `.meta` file has none and goes to the tool. A base revision
+  that was an empty file (checked in empty, then filled differently on each side) becomes an asset with no objects
+  (`EMPTY_UNITY_YAML`), as Smart Merge refuses an empty file; a file added on both sides never gets here, `cm` makes
+  it a directory conflict. It runs with
   no window (`windowsHide` on Windows, `toolSpawnOptions`) and no fallback tool (`SMART_MERGE_ARGS`: `merge -h --force
   --fallback none`; `--force` lets it take `.mat`, `.asset`… beyond the `.unity`, `.prefab` and `.meta` it knows by
   name, and it refuses what isn't Unity YAML anyway). Only exit code 0 counts (`judgeSmartMerge`): on 2 (conflicts

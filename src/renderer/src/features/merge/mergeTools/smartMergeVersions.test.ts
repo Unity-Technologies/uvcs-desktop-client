@@ -23,7 +23,7 @@ describe('smartMergeVersions', () => {
     expect(smartMergeVersions(material)).toEqual({ path: 'Assets/Red.mat', base: `${UNITY}b`, yours: `${UNITY}d`, incoming: `${UNITY}s` });
   });
 
-  it('gives an empty base for a file added on both sides', () => {
+  it('gives an empty base when the base revision was an empty file', () => {
     expect(smartMergeVersions(conflict('Assets/New.prefab', { source: `${UNITY}s`, destination: `${UNITY}d` }))?.base).toBe('');
   });
 

@@ -170,7 +170,7 @@ describe('Smart Merge', () => {
     expect(console.warn).not.toHaveBeenCalled();
   });
 
-  it('merges a file added on both sides from an asset with no objects, as it refuses an empty base', async () => {
+  it('merges a file whose base revision was empty from an asset with no objects, as it refuses an empty base', async () => {
     const seen = smartMergeEnds(0, `${UNITY_HEADER}both\n`);
     const { service } = mergeTools({}, SMART_MERGE);
 

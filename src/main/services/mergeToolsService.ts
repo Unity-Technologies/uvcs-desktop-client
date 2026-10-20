@@ -103,8 +103,9 @@ export function createMergeToolsService(
   }
 
   /**
-   * The three versions as files Smart Merge reads, named after the file. An empty base (the file added on both sides)
-   * becomes an asset with no objects: Smart Merge refuses an empty file, and merges two added assets from that one.
+   * The three versions as files Smart Merge reads, named after the file. An empty base (the base revision was an empty
+   * file, filled differently on each side) becomes an asset with no objects (`EMPTY_UNITY_YAML`): Smart Merge refuses
+   * an empty file, and merges both sides' objects from that one.
    */
   async function writeSmartMergeFiles(request: SmartMergeRequest, directory: string): Promise<MergeToolFiles> {
     const names = toolFileNames(request.path);
