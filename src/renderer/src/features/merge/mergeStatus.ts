@@ -3,6 +3,7 @@ import type { StatusTone as ChangeTone } from '../../components/StatusBadge';
 import { pluralize } from '../../lib/text';
 import type { MergeLabels } from './mergeDescription';
 import { fileStateOf, type MergeItem, type MergeProgress } from './mergeItems';
+import { hasBase } from './resolve/conflictPanelView';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
 /**
@@ -54,7 +55,7 @@ export function fileConflictStatus(state: FileConflictState): ConflictStatus {
   if (decision?.kind === 'text' && decision.edited) return 'edited';
   if (resolution.text === contents?.destination.text) return 'keepingDestination';
   if (resolution.text === contents?.source.text) return 'keepingSource';
-  if (resolution.text === contents?.base.text) return 'keepingBase';
+  if (hasBase(state) && resolution.text === contents?.base.text) return 'keepingBase';
   return 'combined';
 }
 
