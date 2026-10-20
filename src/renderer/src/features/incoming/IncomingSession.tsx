@@ -27,13 +27,13 @@ import { useIncomingChangesetList } from './useIncomingChangesets';
 import { UPDATE_LABELS, updateConflictFiles, updateResolutionsOf } from './updateConflictFiles';
 import { shelveBlockedAndUpdate, updateResolvingConflicts, updateToIncoming } from './updateOperations';
 import { useIncomingFiles } from './useIncomingFiles';
+import { useIncomingViewStore } from './incomingViewStore';
+import styles from './IncomingSession.module.css';
 
 // The file's diff and its conflict (the text and 3D model viewers) load on first use: Incoming itself is in the
 // startup bundle (`viewRegistry`).
 const FileConflictPanel = lazyComponent(() => import('../merge/resolve/FileConflictPanel').then((module) => module.FileConflictPanel));
 const IncomingFileDiff = lazyComponent(() => import('./IncomingDetail').then((module) => module.IncomingFileDiff));
-import { useIncomingViewStore } from './incomingViewStore';
-import styles from './IncomingSession.module.css';
 
 interface IncomingSessionProps {
   workspacePath: string;
