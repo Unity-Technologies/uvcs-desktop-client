@@ -110,12 +110,12 @@ function MergeItemRow({ item, progress, labels, typeOf, nameOnly }: { item: Merg
 function MergeItemMarks({ item, progress, labels }: { item: MergeItem; progress: MergeProgress; labels: MergeLabels }) {
   if (item.kind === 'directoryConflict') {
     const { conflict } = item;
-    const resolution = progress.directoryResolutions[item.index];
+    const status = directoryConflictStatus(progress.directoryResolutions[item.index]);
     return (
       <ConflictStatusChip
-        status={directoryConflictStatus(resolution)}
+        status={status}
         labels={labels}
-        explanation={resolution ? undefined : `${conflict.title}: ${conflict.explanation}`}
+        explanation={status === 'needsDecision' ? `${conflict.title}: ${conflict.explanation}` : undefined}
         compact
       />
     );
