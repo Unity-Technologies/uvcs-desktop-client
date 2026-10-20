@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FileContent } from '@shared/domain/content';
 import { LONGEST_DRAWN_LINE, LONGEST_EDITED_LINE } from '../../diff/viewer/longLines';
-import { effectiveView, editInAppUnavailable, mergedText, rendersVersions, textToEdit } from './conflictPanelView';
+import { conflictsToStep, effectiveView, editInAppUnavailable, mergedText, rendersVersions, textToEdit } from './conflictPanelView';
 import type { FileConflictState } from './useFileConflicts';
 
 const text = (value: string): FileContent => ({ text: value, isBinary: false, size: value.length });
@@ -87,6 +87,27 @@ describe('textToEdit', () => {
     expect(textToEdit(stateOf())).toBe(MARKED);
     expect(textToEdit(stateOf({ decision: { kind: 'wholeFile', side: 'destination' } }))).toBe('mine');
     expect(textToEdit(stateOf({ decision: undefined }))).toBe(MARKED);
+  });
+});
+
+describe('conflictsToStep', () => {
+  it('steps through the conflicts left in the conflicts view', () => {
+    expect(conflictsToStep('conflicts', stateOf({ remainingConflicts: 3 }))).toBe(3);
+  });
+
+  it("leaves a diff's changes to the diff's own arrows, and steps through nothing in the base or while the file loads", () => {
+    for (const view of ['changes', 'destination', 'source', 'base'] as const) expect(conflictsToStep(view, stateOf())).toBeNull();
+    expect(conflictsToStep('changes', stateOf({ status: 'loading', remainingConflicts: 0 }))).toBeNull();
+  });
+
+  it('takes a binary waiting for the version to keep as one conflict, and none once one is kept', () => {
+    const binary = stateOf({ isBinary: true, document: undefined, decision: undefined, remainingConflicts: 0 });
+    expect(conflictsToStep('choice', binary)).toBe(1);
+    expect(conflictsToStep('choice', { ...binary, resolution: { choice: 'source' } })).toBe(0);
+  });
+
+  it("has none in a file that couldn't be read, whose arrows still go on to the next file", () => {
+    expect(conflictsToStep('changes', stateOf({ status: 'error', remainingConflicts: 0 }))).toBe(0);
   });
 });
 

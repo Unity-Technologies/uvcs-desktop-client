@@ -1,8 +1,10 @@
 import type { FileContent } from '@shared/domain/content';
+import type { RefObject } from 'react';
 import { EmptyState } from '../../../ui/EmptyState';
 import { CenteredSpinner } from '../../../ui/Spinner';
 import { FileDiffViewer } from '../../diff/viewer/FileDiffViewer';
 import { LoadedFileDiff } from '../../diff/viewer/LoadedFileDiff';
+import type { StepView } from '../../diff/viewer/useStepNavigation';
 import type { MergeLabels } from '../mergeDescription';
 import { ConflictHunks } from './ConflictHunks';
 import { mergedText, textToEdit, type PanelView } from './conflictPanelView';
@@ -20,11 +22,13 @@ interface ConflictBodyProps {
   view: PanelView;
   /** The user is editing the text in the app. */
   editing: boolean;
+  /** Receives the conflicts view's side of stepping through them (`ConflictNavigator`). */
+  conflictViewRef: RefObject<StepView | null>;
   onDecide: (decision: FileConflictDecision) => void;
 }
 
 /** Under a conflicting file's toolbar: its view, the hand editor, or a binary's versions to keep. */
-export function ConflictBody({ workspacePath, state, labels, view, editing, onDecide }: ConflictBodyProps) {
+export function ConflictBody({ workspacePath, state, labels, view, editing, conflictViewRef, onDecide }: ConflictBodyProps) {
   const { file, decision, contents } = state;
 
   if (state.status === 'loading') return <CenteredSpinner />;
@@ -51,12 +55,13 @@ export function ConflictBody({ workspacePath, state, labels, view, editing, onDe
   switch (view) {
     case 'conflicts':
       // The merge tool has the file: picking sides here meanwhile would be overwritten by what it saves.
-      if (state.openTool) return <ConflictHunks path={file.path} text={decision?.kind === 'text' ? decision.text : ''} labels={labels} />;
+      if (state.openTool) return <ConflictHunks path={file.path} text={decision?.kind === 'text' ? decision.text : ''} labels={labels} viewRef={conflictViewRef} />;
       return (
         <ConflictHunks
           path={file.path}
           text={decision?.kind === 'text' ? decision.text : ''}
           labels={labels}
+          viewRef={conflictViewRef}
           onChange={(text) => onDecide({ kind: 'text', text, edited: decision?.kind === 'text' && decision.edited })}
         />
       );

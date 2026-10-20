@@ -1,5 +1,5 @@
 import { ChevronDown, FileCheck2, PencilLine, RotateCcw } from 'lucide-react';
-import { Suspense, useState } from 'react';
+import { Suspense, useRef, useState } from 'react';
 import { PathLabel } from '../../../components/PathLabel';
 import { SEPARATOR } from '../../../lib/actions';
 import { lazyComponent } from '../../../lib/lazyComponent';
@@ -7,13 +7,15 @@ import { fileNameOf, pluralize } from '../../../lib/text';
 import { Button } from '../../../ui/Button';
 import { ActionDropdownMenu } from '../../../ui/menu/ActionDropdownMenu';
 import { SegmentedControl } from '../../../ui/SegmentedControl';
+import type { StepView } from '../../diff/viewer/useStepNavigation';
 import { ConflictStatusChip } from '../ConflictStatusChip';
 import type { MergeLabels } from '../mergeDescription';
 import { MergeToolButton, type ConflictToolActions } from '../mergeTools/MergeToolButton';
 import { MergeToolOpenBanner } from '../mergeTools/MergeToolOpenBanner';
 import { fileConflictStatus, fileConflictTool } from '../mergeStatus';
 import { chosenConflictChoice, decisionFor, hasConflicts, type ConflictChoice } from './conflictChoices';
-import { editInAppUnavailable, effectiveView, hasBase, rendersVersions, type PanelView } from './conflictPanelView';
+import { conflictsToStep, editInAppUnavailable, effectiveView, hasBase, rendersVersions, type PanelView } from './conflictPanelView';
+import { ConflictNavigator } from './ConflictNavigator';
 import type { FileConflictDecision } from './fileConflictDecision';
 import { KeepChoices } from './KeepChoices';
 import type { FileConflictState } from './useFileConflicts';
@@ -22,6 +24,9 @@ import styles from './FileConflictPanel.module.css';
 // The versions and the merged text (Pierre, the 3D model viewer) load on first use, under the panel's header and
 // choices, which show at once.
 const ConflictBody = lazyComponent(() => import('./ConflictBody').then((module) => module.ConflictBody));
+
+/** A binary's choice is one conflict, the whole file, on screen as soon as the panel is. */
+const WHOLE_FILE_CHOICE: StepView = { isShown: () => true, reveal: () => undefined, countAbove: () => 0 };
 
 interface FileConflictPanelProps {
   workspacePath: string;
@@ -47,6 +52,19 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
   const view = effectiveView(chosenView, state);
   const status = fileConflictStatus(state);
   const { source, destination } = labels.roles;
+  const panelRef = useRef<HTMLDivElement>(null);
+  const conflictView = useRef<StepView>(null);
+  const conflictCount = editing ? null : conflictsToStep(view, state);
+  const conflictsOnScreen: StepView = {
+    isShown: () => conflictView.current?.isShown() ?? false,
+    reveal: (index) => conflictView.current?.reveal(index),
+    countAbove: () => conflictView.current?.countAbove() ?? 0,
+  };
+  const navigator = conflictCount !== null && (
+    <div className={styles.navigator}>
+      <ConflictNavigator count={conflictCount} view={view === 'choice' ? WHOLE_FILE_CHOICE : conflictsOnScreen} frame={panelRef} path={state.file.path} />
+    </div>
+  );
 
   const choose = (choice: ConflictChoice): void => {
     if (choice === 'byHand') setEditingFrom({ decision: state.decidedByUser ? state.decision : undefined });
@@ -71,7 +89,7 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
   );
 
   return (
-    <div className={styles.panel}>
+    <div ref={panelRef} className={styles.panel}>
       <div className={styles.toolbar}>
         <div className={styles.file}>
           <PathLabel path={state.file.path} fitContent />
@@ -124,9 +142,10 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
         <MergeToolOpenBanner fileName={fileNameOf(state.file.path)} open={state.openTool} run={toolActions.run?.currentKey === state.file.key ? toolActions.run : null} />
       )}
 
-      {(canMergeLines || rendersVersions(state)) && !editing && (
+      {(canMergeLines || rendersVersions(state) || navigator) && !editing && (
         <div className={styles.viewBar}>
-          <SegmentedControl<PanelView> value={view} onChange={setChosenView} segments={viewSegments(state, labels)} />
+          {(canMergeLines || rendersVersions(state)) && <SegmentedControl<PanelView> value={view} onChange={setChosenView} segments={viewSegments(state, labels)} />}
+          {navigator}
         </div>
       )}
 
@@ -137,6 +156,7 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
           labels={labels}
           view={view}
           editing={editing}
+          conflictViewRef={conflictView}
           onDecide={onDecide}
         />
       </Suspense>

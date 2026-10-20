@@ -57,6 +57,14 @@
   padding: var(--space-2) var(--space-3) 6px;
 }
 
+/* The conflict arrows, at the bar's end as in a diff's header, whatever the views beside them. */
+.navigator {
+  display: flex;
+  flex: none;
+  margin-left: auto;
+  padding-left: var(--space-2);
+}
+
 .count {
   min-width: 16px;
   margin-left: 2px;

@@ -46,6 +46,18 @@ export function textToEdit(state: FileConflictState): string {
 }
 
 /**
+ * How many conflicts the panel's arrows step through in `view` (`ConflictNavigator`): those left in its text, or one
+ * for a binary still waiting for the version to keep; none in a file that couldn't be read, which still steps on to
+ * the next file. Null where the view steps through its own changes (a diff), and in the base or a file still loading.
+ */
+export function conflictsToStep(view: PanelView, state: FileConflictState): number | null {
+  if (view === 'choice') return state.resolution ? 0 : 1;
+  if (state.status === 'error') return 0;
+  if (view === 'conflicts' && state.status === 'ready') return state.remainingConflicts;
+  return null;
+}
+
+/**
  * Why the text can't be edited in the app, for the menu entry's tooltip; null when it can. Not with a line too long to
  * type into (`hasLineTooLongToEdit`): one keystroke in a wrapped line of 2 MB held Pierre's editor for minutes.
  */
