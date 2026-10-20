@@ -1,4 +1,4 @@
-import { CODE_REVIEW_STATUSES, type CodeReviewSummary, type CodeReviewTarget } from '@shared/domain/codeReview';
+import { CODE_REVIEW_STATUSES, type CodeReviewSummary } from '@shared/domain/codeReview';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
@@ -13,15 +13,13 @@ export function codeReviewCopyTexts(review: Pick<CodeReviewSummary, 'id' | 'titl
   return { number: String(review.id), title: review.title.trim() };
 }
 
-/** A review as a list read it: with its target named (`CodeReview`), or without, as the palette's searches read it. */
-export type ReviewInMenu = CodeReviewSummary & { target?: CodeReviewTarget };
-
 /**
  * The menu of the selected code reviews, the same wherever reviews show: the Code reviews view, the Branch Explorer,
- * the palette and their details. Where a review comes with its target, it offers to bring the reviewed code to the
- * workspace (`reviewedCodeAction`), disabled where `workspaceOn` (what the workspace is on) already is.
+ * the palette and their details. It brings the reviewed code to the workspace (`reviewedCodeAction`) wherever the
+ * review comes with its target named, disabled where `workspaceOn` (what the workspace is on) already is: everywhere
+ * but a branch review in the palette, whose searches don't read branch names (ARCHITECTURE.md "Menus").
  */
-export function codeReviewMenu(workspacePath: string, reviews: ReviewInMenu[], workspaceOn?: WorkspaceSelector): MenuEntry[] {
+export function codeReviewMenu(workspacePath: string, reviews: CodeReviewSummary[], workspaceOn?: WorkspaceSelector): MenuEntry[] {
   if (reviews.length === 0) return [];
   const single = reviews.length === 1 ? reviews[0]! : null;
   const reviewedCode = single?.target && reviewedCodeAction(workspacePath, single.target, workspaceOn);

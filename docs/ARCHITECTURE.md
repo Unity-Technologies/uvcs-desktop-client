@@ -774,7 +774,9 @@ renderer/src/
   `pendingChangeMenu`) serves every place the object shows: its view, details' "More actions", the Branch Explorer,
   the top bar's pill (right-click, `workingObjectMenu`), the switcher, the palette. A place only adds entries, at the
   end of their group (`withEntries`: the graph's "Go to head changeset"); the Branch Explorer leaves out "Show in
-  Branch Explorer". "Copy ▸" (`copySubmenu`) lists what the object has in one order (name or number, title, paths,
+  Branch Explorer". One exception: the palette's code reviews of a branch have no "Switch to this branch", as its
+  searches read reviews without branch names (`listSummaries`; naming them would read every branch,
+  `BranchNamesCache`), while changeset and shelve reviews come named (`CodeReviewSummary.target`) and keep it. "Copy ▸" (`copySubmenu`) lists what the object has in one order (name or number, title, paths,
   spec, full spec with `@repository`, comment, GUID), each with what it copies, and the toast names it ("Branch spec
   copied"); ⌘C in a list copies its first entry (`useCopyCommand`) unless text is selected. Items that open a dialog
   end with "…"; submenus hold real sets of choices, the choice made checked after its label (`checked`), so the icon
