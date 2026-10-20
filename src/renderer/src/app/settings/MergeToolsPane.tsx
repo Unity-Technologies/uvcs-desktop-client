@@ -57,7 +57,7 @@ export function MergeToolsPane() {
       {smartMerge && (
         <section className={styles.section}>
           <h2 className={styles.heading}>Unity scenes, prefabs and assets</h2>
-          <p className={styles.note} title={smartMerge.executable}>
+          <p className={styles.note} data-tip={smartMerge.executable}>
             {smartMergeNote(smartMerge, preferred?.name)}
           </p>
         </section>
