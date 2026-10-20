@@ -162,7 +162,7 @@ function OpenPalette({ close }: { close: () => void }) {
             ))}
           </Cmdk.List>
         </HighlightQuery>
-        <PaletteFooter inWorkspace={workspacePath !== null} opensInNewWindow={!!selectedResult?.runInNewWindow} />
+        <PaletteFooter inWorkspace={workspacePath !== null} />
       </Cmdk>
     </div>
   );
