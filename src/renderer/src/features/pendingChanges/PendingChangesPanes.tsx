@@ -1,5 +1,6 @@
 import { GitMerge } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { flushSync } from 'react-dom';
 import type { Changelist, PendingChange, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
@@ -140,9 +141,12 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
 
   // The changelist's changes checked alone, then the caret after the comment: writing or reading it is the way on.
   const prepareChangelist = (changelist: Changelist, mode: CheckinMode): void => {
-    prepareChangelistCheckin({ workspacePath, changelist, allChanges, changelists });
-    setCheckinMode(mode);
-    focusAtEnd(summaryRef.current, checkinDraftOf(workspacePath).summary);
+    // Rendered at once, so the summary holds the comment before the caret goes after it.
+    flushSync(() => {
+      prepareChangelistCheckin({ workspacePath, changelist, allChanges, changelists });
+      setCheckinMode(mode);
+    });
+    focusAtEnd(summaryRef.current);
   };
 
   const listedCount = snapshot && allChanges.length;
@@ -289,11 +293,11 @@ function useMergeComment(workspacePath: string, snapshot: PendingChangesSnapshot
   }, [mergeSource?.id]);
 }
 
-/** Puts the caret at the end of `text`, the field's value once it renders the draft just set. */
-function focusAtEnd(field: HTMLInputElement | null, text: string): void {
+/** Puts the caret at the end of the field's text, as after typing it. */
+function focusAtEnd(field: HTMLInputElement | null): void {
   if (!field) return;
   field.focus();
-  field.setSelectionRange(text.length, text.length);
+  field.setSelectionRange(field.value.length, field.value.length);
 }
 
 /** How many of the changes shown are selected: a selection can hold rows the filter now hides, and folders. */
