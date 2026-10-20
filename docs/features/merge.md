@@ -49,7 +49,10 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   means it couldn't read or merge the file. A failure other than conflicts left is warned in the console (`[smart
   merge]`, with the end of its stderr). Its merge reads "Merged by Smart Merge"; "Resolve in…" on it opens the tool on
   Smart Merge's result, and Start over makes the file undecided again, so the next "Resolve in…" lets Smart Merge try
-  again. It comes from the newest Unity release installed
+  again. Its size ceiling is the page's: a version over `MAX_TEXT_BYTES` (10 MB) is a binary to the page, which no tool
+  opens, so Smart Merge isn't tried on it either. In practice it's lower: a text conflict of about 3.5 MB overflows the
+  stack of the page's own line merge (`diff3Merge`, as it loads the file), before Smart Merge could be asked. It comes
+  from the newest Unity release installed
   (`findSmartMerge`, `compareUnityVersions`: releases before alphas and betas), found as Unity Hub keeps editors
   (`findUnityEditors`): its editors folder (`/Applications/Unity/Hub/Editor`, `C:\Program Files\Unity\Hub\Editor`,
   `~/Unity/Hub/Editor`), the folder picked in the Hub (`secondaryInstallPath.json` in the Hub's config folder), the
