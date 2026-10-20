@@ -165,6 +165,9 @@ const mergeDirectoryConflict = {
   conflict: { type: 'evilTwin', destination: { path: '/src/shared' }, source: { path: '/src/shared' } },
 } as never;
 
+const deletedEntry = { status: 'deleted', path: 'src/Enemy.cs', itemType: 'file', revisionId: -1, baseRevisionId: 18, repository } as const;
+const deletedFolder = { ...deletedEntry, path: 'docs', itemType: 'directory', baseRevisionId: 24 } as const;
+
 const MENUS: Record<string, () => MenuEntry[]> = {
   branch: () => branchMenu(ws, [branch], '/main'),
   currentBranch: () => branchMenu(ws, [branch], branch.name),
@@ -197,6 +200,8 @@ const MENUS: Record<string, () => MenuEntry[]> = {
       [{ status: 'changed', path: '/src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39, repository } as never],
       { review: { statusOf: () => 'unreviewed', toggle: () => {} } as never, workspaceRepository: repository },
     ),
+  deletedDiffEntry: () => diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [deletedEntry], { workspaceRepository: repository }),
+  deletedDiffEntries: () => diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [deletedEntry, deletedFolder], { workspaceRepository: repository }),
   mergeConflict: () => mergeItemMenu([mergeConflict], mergeContext),
   mergeChange: () => mergeItemMenu([{ kind: 'change', key: 'change:0', path: 'src/c.ts', change: { kind: 'changed', path: '/src/c.ts' } }], mergeContext),
   mergeDirectoryConflict: () => mergeItemMenu([mergeDirectoryConflict], mergeContext),

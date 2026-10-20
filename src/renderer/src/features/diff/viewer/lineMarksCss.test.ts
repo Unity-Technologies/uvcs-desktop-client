@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changeFlashCss, lineMarksCss } from './lineMarksCss';
+import { changeRows, flashCss, lineMarksCss } from './lineMarksCss';
 
 const removed = (lineNumber: number) => ({ side: 'deletions' as const, lineNumber });
 const added = (lineNumber: number) => ({ side: 'additions' as const, lineNumber });
@@ -37,16 +37,16 @@ describe('lineMarksCss', () => {
   });
 });
 
-describe('changeFlashCss', () => {
+describe('flashCss of a change', () => {
   it("lights the change's rows and line numbers, anew each move", () => {
-    const css = changeFlashCss([removed(3), added(3)], 1);
+    const css = flashCss(changeRows([removed(3), added(3)]), 1);
     expect(css).toContain('[data-line-type="change-deletion"][data-line="3"],[data-line-type="change-addition"][data-line="3"],[data-line-type="change-deletion"][data-column-number="3"]');
     expect(css).toContain('animation:change-flash-1 ');
-    expect(changeFlashCss([added(3)], 2)).toContain('animation:change-flash-0 ');
+    expect(flashCss(changeRows([added(3)]), 2)).toContain('animation:change-flash-0 ');
   });
 
   it('lights it without motion for whoever reduces motion, and nothing without lines', () => {
-    expect(changeFlashCss([added(3)], 0)).toContain('@media (prefers-reduced-motion:reduce){[data-line-type="change-addition"][data-line="3"],[data-line-type="change-addition"][data-column-number="3"]{box-shadow');
-    expect(changeFlashCss([], 0)).toBe('');
+    expect(flashCss(changeRows([added(3)]), 0)).toContain('@media (prefers-reduced-motion:reduce){[data-line-type="change-addition"][data-line="3"],[data-line-type="change-addition"][data-column-number="3"]{box-shadow');
+    expect(flashCss(changeRows([]), 0)).toBe('');
   });
 });

@@ -11,8 +11,8 @@
 import { deflateSync } from 'node:zlib';
 import { asciiFbx, box } from '../../../src/renderer/src/features/diff/viewer/model/testing/asciiFbx';
 import { unityMaterialYaml } from '../../../src/renderer/src/features/diff/viewer/model/materials/testing/unityMaterialYaml';
-import { writeTga, type Pixel } from '../../../src/renderer/src/features/diff/viewer/model/textures/testing/imageWriters';
-import { writePsd } from '../../../src/renderer/src/features/diff/viewer/model/textures/testing/psdWriter';
+import { writeTga, type Pixel } from '../../../src/renderer/src/lib/images/testing/imageWriters';
+import { writePsd } from '../../../src/renderer/src/lib/images/testing/psdWriter';
 import { guidOf, materialMeta, textureImporterMeta } from './unityMeta';
 
 /** What the artists changed of the textured props: the tree grows in a later changeset. */

@@ -1,0 +1,8 @@
+/* The conflict arrows, at the bar's end as in a diff's header, whatever the views beside them; under them, still at
+   the end, in a pane too narrow for both. */
+.navigator {
+  display: flex;
+  flex: none;
+  margin-left: auto;
+  padding-left: var(--space-2);
+}

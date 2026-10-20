@@ -6,6 +6,7 @@ import type { GroupedEntry } from '../../lib/menuGroups';
 import { reviewMenuEntry } from '../review/reviewMenuEntry';
 import type { ListReview } from '../review/useReviewMode';
 import { diffEntryAnnotation, diffEntryHistory } from './diffEntryHistory';
+import { restoreMenuEntries } from './restoreMenuEntries';
 import { revertFromDiffEntry } from './revertFromDiff';
 
 /** What the list showing a diff's files brings to their menu. */
@@ -16,18 +17,23 @@ export interface DiffEntryMenuOptions {
   added?: GroupedEntry[];
   /**
    * The workspace's repository, given where the diff's changes are the workspace's history to act on (a diff page, a
-   * details panel), not changes still to come (Incoming); none while it isn't known.
+   * details panel), not changes still to come (Incoming); none while it isn't known. Reverting and restoring what was
+   * deleted need it (`revertFromDiffEntry`, `restoreMenuEntries`).
    */
   workspaceRepository?: string;
+  /** Every entry of the diff, the folders its list hides included (`listedEntries`): what a deleted file comes back with. */
+  diffEntries?: DiffEntry[];
 }
 
 /**
  * Context menu for a file in a diff (`changedFileMenu`): mark it reviewed (where the list reviews), revert it to before
- * the diff's change (`revertFromDiffEntry`), open or save the newer revision, or jump to its history, annotated or not.
+ * the diff's change (`revertFromDiffEntry`) or restore it where it was deleted (`restoreMenuEntries`), open or save the
+ * newer revision, or jump to its history, annotated or not.
  */
-export function diffEntryMenu(workspacePath: string, target: DiffTarget, entries: DiffEntry[], { review, added = [], workspaceRepository }: DiffEntryMenuOptions = {}): MenuEntry[] {
+export function diffEntryMenu(workspacePath: string, target: DiffTarget, entries: DiffEntry[], { review, added = [], workspaceRepository, diffEntries = entries }: DiffEntryMenuOptions = {}): MenuEntry[] {
   const revert = revertFromDiffEntry(workspacePath, target, entries, workspaceRepository);
-  return changedFileMenu(workspacePath, entries.map((entry) => changedFileOf(target, entry, entries.length === 1)), [review ? reviewMenuEntry(entries, review) : null, revert, ...added]);
+  const restore = restoreMenuEntries(workspacePath, entries, diffEntries, workspaceRepository);
+  return changedFileMenu(workspacePath, entries.map((entry) => changedFileOf(target, entry, entries.length === 1)), [review ? reviewMenuEntry(entries, review) : null, revert, ...restore, ...added]);
 }
 
 /** A diff's file as its menu needs it: the newer revision, or else the older one (a deleted file's). */

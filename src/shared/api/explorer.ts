@@ -1,4 +1,4 @@
-import type { ItemDetails, ItemMove, RevisionType, TreeItem } from '../domain/explorer';
+import type { DeletedItemRestore, ItemDetails, RestoreOutcome, ItemMove, RevisionType, TreeItem } from '../domain/explorer';
 
 export interface ExplorerApi {
   /** Children of a workspace directory (`''` is the root), including private items. */
@@ -15,6 +15,12 @@ export interface ExplorerApi {
   renamePrivate(workspacePath: string, fromPath: string, toPath: string): Promise<void>;
   /** Moves items one after the other, as an operation; stops at the first that fails, and never replaces an existing item. */
   moveItems(workspacePath: string, moves: ItemMove[], operationId: string): Promise<void>;
+  /**
+   * Brings deleted items of the workspace's repository back as pending changes (`cm undelete`), one after the other,
+   * as an operation; checks first that each place is free and its folder there. Resolves with how many came back and
+   * what stopped the rest (a refusal, the user); fails only on another failure.
+   */
+  restoreDeleted(workspacePath: string, restores: DeletedItemRestore[], operationId: string): Promise<RestoreOutcome>;
   /** Creates an empty file or directory and adds it to version control. */
   create(workspacePath: string, path: string, kind: 'file' | 'directory'): Promise<void>;
   changeRevisionType(workspacePath: string, paths: string[], type: RevisionType): Promise<void>;

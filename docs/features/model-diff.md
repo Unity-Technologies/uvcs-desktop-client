@@ -602,8 +602,9 @@ heatmap's), and come back in the other modes. The merge cards' stills stay clay 
   be composed). Changes inside folders `ignore.conf` hides from the watcher aren't seen: an `Assets` folder is versioned
   content. Measured by hand on a project of 100,000 assets (1,000 folders): a GUID it lacks reads it all in about 2.1 s,
   once; the next lookup reads nothing. Tests count the reads (`ProjectAssetIndex.test.ts`).
-- **Formats** (`textureFormatOf`), decoded in a worker of their own (`texture.worker`), never on the UI thread (where it
-  can't start, textures don't show): PNG, JPEG, GIF, BMP, WebP by the browser (`createImageBitmap`); TGA, TIFF (LZW
+- **Formats** (`imageFormatOf`), decoded in the image decoding worker (`imageDecoding.worker`, which the image diff
+  shares: diff.md "Unity's texture formats", what that costs), never on the UI thread (where it can't start, textures
+  don't show): PNG, JPEG, GIF, BMP, WebP by the browser (`createImageBitmap`); TGA, TIFF (LZW
   too), EXR (DWAA too) and Radiance HDR by three's loaders (high dynamic range clamped and encoded as sRGB); PSD and PSB
   by the app's own reader of the composite image (`readPsd`: raw or RLE, 8 or 16 bits, RGB or grayscale, alpha; read by
   content, so a PSD named `.psb` reads). Unity imports a `.psb` (a PSD named so too) only in a project with the 2D PSD
@@ -612,12 +613,16 @@ heatmap's), and come back in the other modes. The merge cards' stills stay clay 
   Compatibility" (Version Info's `hasRealMergedData`), or in CMYK, Lab, indexed or 32 bits, says so. DDS, KTX and the
   rest aren't shown. A library for PSD (ag-psd) was set aside: layers, effects and text a texture never needs, more of
   an untrusted file parsed; the one thing it would add is flattening the layers of a PSD whose composite is blank.
+  The decoders, the header sizes, the limits before decoding (`sizeProblem`) and the words for what doesn't decode
+  (`imageProblemWords`) are pure helpers in `lib/images`, which the image diff decodes these formats with too, in the
+  same `imageDecoding.worker` (a `paint` request)
+  (diff.md "Unity's texture formats"); what only the look needs (the budget, flipping, the bitmaps) stays here.
 - **Budget** (`textureBudget`): at most 64 texture files a model (`MAX_TEXTURE_FILES`, both versions together, each file
   once); each drawn at most 2048 px on its longest side, 1024 past 24 textures, with mipmaps; refused before decoding
   past 16384 px a side or 8192² pixels (`imageSizeOf` reads each format's header first), and unread past the read's own
   size cap (100 MB, `MAX_MODEL_BYTES`). Three textures are read and decoded at a time (`TEXTURES_IN_HAND`: one read
-  while the worker decodes two), each holding its file's bytes only until the worker has them: reading forty 4K PNGs
-  (1.2 GB) at once took the renderer to 2.8 GB and the main process to 1.4 GB; three at a time, 1.5 GB and 0.4 GB, as
+  while the worker has two in hand, shared with the image diff's paints), each holding its file's bytes only until the
+  worker has them: reading forty 4K PNGs (1.2 GB) at once took the renderer to 2.8 GB and the main process to 1.4 GB; three at a time, 1.5 GB and 0.4 GB, as
   fast. A file version decodes once (`textureLoads`: by its version, `foundFileKey`), and its bitmap is kept
   (`DecodeCache`) while a viewer shows it (`holdTextures`), past any budget, and besides those the latest 192 MB, for
   the next model (a load still waiting its turn that the cache let go of meanwhile reads nothing); a bitmap let go of is closed at once (its pixels freed then, not when collected), and every one 30 s

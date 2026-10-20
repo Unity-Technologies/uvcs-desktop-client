@@ -3,6 +3,7 @@ import type { Editor } from '@pierre/diffs/edit';
 import { useEffect, useImperativeHandle, useRef, type RefObject } from 'react';
 import type { ChangeRegion } from './changeBlocks';
 import { lineAtTopOf, scrollToChange, type ChangeView } from './changeView';
+import { changeRows } from './lineMarksCss';
 import { isTypingIn } from './pierreDom';
 import { useChangeFlash } from './useChangeFlash';
 import { useShadowStyle } from './useShadowStyle';
@@ -35,7 +36,7 @@ export function useChangeView({ changeViewRef, containerRef, virtualizer, editor
       if (!container) return;
       stopScrolling.current?.();
       stopScrolling.current = scrollToChange(container, change, virtualizer);
-      changeFlash.light(change.lines);
+      changeFlash.light(changeRows(change.lines));
       pickChange(change);
       // Typing goes on from the change (F7 while typing): the caret would otherwise bring the view back to it.
       const typedInto = editor.current;

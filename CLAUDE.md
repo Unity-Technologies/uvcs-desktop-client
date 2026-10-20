@@ -138,10 +138,14 @@ npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click 
   (every kind of move, some changed too, checked in and pending), `moved-code.sh` (code moved inside a file, as it
   was and edited, checked in and pending), `permissions.sh` (permissions at every level, a secured path and a group of
   branches; never the server's own), `models.sh` (a Unity project with one changeset per 3D model diff case: units,
-  rotation, pivot, hierarchy, material slots, sculpt, polycount, UVs; a branch and a pending model too), `incoming.sh`
+  rotation, pivot, hierarchy, material slots, sculpt, polycount, UVs; a branch and a pending model too), `textures.sh`
+  (TGA, TIFF, PSD, EXR and HDR textures changed, resized, added, deleted, unreadable and in conflict: the image
+  diff; takes names), `incoming.sh`
   (a workspace three changesets behind, with a local change that conflicts: Incoming), `merge-conflicts.sh` (a branch
-  whose merge has file and directory conflicts and changes in several folders: the merge page), `smart-merge.sh` (Unity
-  prefabs that conflict line by line, one Smart Merge merges and one it can't: needs a Unity Editor installed).
+  whose merge has file and directory conflicts and changes in several folders: the merge page), `deletes.sh`
+  (changesets deleting a file, a folder, an accented name, and a path a new file took: restoring deleted items),
+  `smart-merge.sh` (Unity prefabs that conflict line by line, one Smart Merge merges and one it can't: needs a Unity
+  Editor installed).
   `scripts/perf/soak.mjs` catches leaks.
 - `UVCS_RENDERER_PLATFORM=win32` (or `linux`) previews another OS's shortcuts, copy and layout from a Mac (the page
   only: the menus and window frame stay the Mac's).

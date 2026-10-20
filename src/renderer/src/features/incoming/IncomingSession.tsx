@@ -11,6 +11,8 @@ import { NoMatches } from '../../ui/NoMatches';
 import { ChangesetDetails } from '../changesets/ChangesetDetails';
 import { changesetMenu } from '../changesets/changesetMenu';
 import { diffEntryKey } from '../diff/DiffEntryList';
+import { FileStepsContext, useFileSteps } from '../diff/viewer/fileSteps';
+import { conflictStepKeys } from '../merge/conflictSteps';
 import { fileConflictStatus, fileConflictTool } from '../merge/mergeStatus';
 import { ResolveRunControl, useRunOffer } from '../merge/mergeTools/ResolveRunControl';
 import { useResolveRun } from '../merge/mergeTools/useResolveRun';
@@ -72,7 +74,18 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const runPlans = useRunOffer(states, run);
   const [updating, setUpdating] = useState(false);
 
-  const pendingConflictPaths = new Set(states.filter((state) => !state.resolution).map((state) => state.file.key));
+  const pendingConflictPaths = useMemo(() => new Set(states.filter((state) => !state.resolution).map((state) => state.file.key)), [states]);
+  // A conflicting file's arrows go on past its first or last conflict to the files around it that need merging.
+  const conflictKeys = useMemo(
+    () => conflictStepKeys(rows, selection.anchor, (file: DiffEntry) => pendingConflictPaths.has(file.path)),
+    [rows, selection.anchor, pendingConflictPaths],
+  );
+  const conflictSteps = useFileSteps({
+    keys: conflictKeys,
+    current: selection.anchor,
+    select: (key) => selectFiles(singleSelection(key)),
+    pathOf: (key) => key,
+  });
   const conflictStates = new Map(states.map((state) => [state.file.key, { status: fileConflictStatus(state), tool: fileConflictTool(state) }]));
   const resolutions = updateResolutionsOf(states);
 
@@ -130,16 +143,18 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
     if (hidesAll) return null;
     if (selectedConflict) {
       return (
-        <FileConflictPanel
-          key={selectedConflict.file.key}
-          workspacePath={workspacePath}
-          state={selectedConflict}
-          labels={UPDATE_LABELS}
-          yoursInWorkspace
-          toolActions={{ resolveIn: (key, tool) => void resolveInTool(key, tool), run: run.progress, runOffered: runPlans.length > 0 }}
-          onDecide={(decision) => decide(selectedConflict.file.key, decision)}
-          onStartOver={() => reset(selectedConflict.file.key)}
-        />
+        <FileStepsContext.Provider value={conflictSteps}>
+          <FileConflictPanel
+            key={selectedConflict.file.key}
+            workspacePath={workspacePath}
+            state={selectedConflict}
+            labels={UPDATE_LABELS}
+            yoursInWorkspace
+            toolActions={{ resolveIn: (key, tool) => void resolveInTool(key, tool), run: run.progress, runOffered: runPlans.length > 0 }}
+            onDecide={(decision) => decide(selectedConflict.file.key, decision)}
+            onStartOver={() => reset(selectedConflict.file.key)}
+          />
+        </FileStepsContext.Provider>
       );
     }
     if (focusedFile) return <IncomingFileDiff key={`${scope.kind}:${focusedFile.path}`} workspacePath={workspacePath} file={focusedFile} />;

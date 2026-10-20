@@ -14,6 +14,7 @@ import {
   isAffectedByServerMerge,
   isAffectedByPendingChangeEdit,
   isAffectedByPermissions,
+  isAffectedByRestoredItems,
   isAffectedByShelveApplied,
   isAffectedByShelveDeletion,
   isAffectedByShelving,
@@ -126,6 +127,15 @@ describe('refresh scopes', () => {
     expect(isAffectedByPendingChangeEdit(key('locks', {}))).toBe(true);
     expect(isAffectedByPendingChangeEdit(key('shelves', { owners: ['me'] }))).toBe(false);
     expect(isAffectedByPendingChangeEdit(key('history', 'a.txt'))).toBe(false);
+  });
+
+  it('refreshes the workspace, not its locks nor the repository, when deleted items are restored', () => {
+    expect(isAffectedByRestoredItems(key('pendingChanges'))).toBe(true);
+    expect(isAffectedByRestoredItems(key('explorer', 'directory', 'src'))).toBe(true);
+    expect(isAffectedByRestoredItems(key('explorer', 'allPaths'))).toBe(true);
+    expect(isAffectedByRestoredItems(key('locks', {}))).toBe(false);
+    expect(isAffectedByRestoredItems(key('changesets', {}))).toBe(false);
+    expect(isAffectedByRestoredItems(key('history', 'a.txt'))).toBe(false);
   });
 
   it('refreshes only what shows a changeset comment when one is edited, the changesets already read too', () => {

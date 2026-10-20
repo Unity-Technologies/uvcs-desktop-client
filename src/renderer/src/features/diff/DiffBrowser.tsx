@@ -59,12 +59,12 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
     review.showAll();
   };
   const { rows, tree, toggleCollapsed } = useFileTree(shown, diffEntryKey, folderListScope(workspacePath, `diff:${JSON.stringify(target)}`), selection.anchor);
+  const workspaceRepository = useWorkspaceInfo().data?.repository;
   // A folder the keyboard (or a click) is on, in a tree.
   const focusedFolder = focused ? undefined : rows.find((row): row is TreeFolderRow<DiffEntry> => row.type === 'folder' && row.key === selection.anchor);
   // The diff's change navigation goes on to the files before and after, as the list shows them.
   const rowKeys = useMemo(() => rows.flatMap((row) => (row.type === 'file' && row.item.itemType !== 'directory' ? [row.key] : [])), [rows]);
   // A model's companions (a glTF's `.bin`) are entries of the same diff, or the files where it points to.
-  const workspaceRepository = useWorkspaceInfo().data?.repository;
   const findSibling = useMemo(() => diffSibling(readEntries, target, workspaceRepository), [readEntries, target, workspaceRepository]);
   // A model's materials and textures are the ones where the diff points to, the side before with its changes undone.
   const findAssetsPoint = useMemo(() => diffAssetsPoint(readEntries, target), [readEntries, target]);
@@ -92,7 +92,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
           filterBar={filter.bar}
           selection={selection}
           onSelectionChange={setSelection}
-          contextMenu={(selected) => diffEntryMenu(workspacePath, target, selected, { review, workspaceRepository })}
+          contextMenu={(selected) => diffEntryMenu(workspacePath, target, selected, { review, workspaceRepository, diffEntries: readEntries })}
           review={review}
           loading={reading}
           noMatches={hidesAll && <NoMatches noun="files" onClear={clearFilter} />}

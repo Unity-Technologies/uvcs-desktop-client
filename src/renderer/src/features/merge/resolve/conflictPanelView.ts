@@ -46,6 +46,50 @@ export function textToEdit(state: FileConflictState): string {
 }
 
 /**
+ * How many conflicts the panel's arrows step through in `view` (`ConflictNavigator`): those left in its text, or one
+ * for a binary still waiting for the version to keep; none in a file that couldn't be read, nor in one just decided
+ * while shown (`decidedHere`, `justDecided`), whose arrows go straight on to the next file instead of through the
+ * changes the merge makes. Null where the view steps through its own changes (a diff), and in the base or a file still
+ * loading.
+ */
+export function conflictsToStep(view: PanelView, state: FileConflictState, decidedHere: boolean): number | null {
+  if (view === 'choice') return state.resolution ? 0 : 1;
+  if (state.status === 'error') return 0;
+  if (view === 'conflicts' && state.status === 'ready') return state.remainingConflicts;
+  if (view === 'changes' && decidedHere) return 0;
+  return null;
+}
+
+/** What a conflicting file's panel keeps while it shows the file: the view the user picked, and its conflicts. */
+export interface PanelMemory {
+  chosen: PanelView | undefined;
+  /** The file showed conflicts since the panel opened on it. */
+  sawConflicts: boolean;
+  /** How many conflicts it showed last. */
+  remaining: number;
+}
+
+export const FRESH_PANEL: PanelMemory = { chosen: undefined, sawConflicts: false, remaining: 0 };
+
+/**
+ * The panel's memory once the file is `state`: conflicts coming back (started over) open them again, whatever view
+ * was picked.
+ */
+export function rememberConflicts(memory: PanelMemory, state: FileConflictState): PanelMemory {
+  const remaining = state.remainingConflicts;
+  const cameBack = memory.remaining === 0 && remaining > 0;
+  return { chosen: cameBack ? undefined : memory.chosen, sawConflicts: memory.sawConflicts || remaining > 0, remaining };
+}
+
+/**
+ * Whether a file was just decided while shown: it had conflicts since the panel opened on it, and has none left. Its
+ * conflict arrows stay over its Changes until the user leaves the file, whatever view is picked.
+ */
+export function justDecided(memory: PanelMemory, state: FileConflictState): boolean {
+  return memory.sawConflicts && state.remainingConflicts === 0;
+}
+
+/**
  * Why the text can't be edited in the app, for the menu entry's tooltip; null when it can. Not with a line too long to
  * type into (`hasLineTooLongToEdit`): one keystroke in a wrapped line of 2 MB held Pierre's editor for minutes.
  */
