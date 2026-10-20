@@ -1,7 +1,7 @@
 import { ChevronRight } from 'lucide-react';
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
-import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { FileListLayoutMenu } from '../../components/FileListLayoutMenu';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
@@ -46,6 +46,7 @@ interface ChangedFilesSectionProps {
 export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFilesSectionProps) {
   const [requested, setRequested] = useState(false);
   const workspacePath = useWorkspacePath();
+  const workspaceRepository = useWorkspaceInfo().data?.repository;
   const { changesCollapsed: collapsed, set } = useDetailsLayoutStore();
   const { data: diffEntries, error } = useDiffEntries(target, { enabled: requested, branchHead });
   // The files the diff lists, so the count and the rows match the diff's: no folder added or deleted with its files.
@@ -108,13 +109,13 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
           <div ref={listRef} className={styles.files} onKeyDown={onListKeyDown}>
             {listed.rows.map((row) =>
               row.type === 'folder' ? (
-                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(workspacePath, target, row.items, review)}>
+                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(workspacePath, target, row.items, review, [], workspaceRepository)}>
                   <button className={styles.file} onClick={() => toggleCollapsed(row.key)} aria-expanded={!row.collapsed} {...ROVING_ITEM}>
                     <DiffEntryRow row={row} tree={tree} />
                   </button>
                 </ActionContextMenu>
               ) : (
-                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(workspacePath, target, [row.item], review)}>
+                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(workspacePath, target, [row.item], review, [], workspaceRepository)}>
                   <button className={styles.file} onClick={() => onOpen(row.item.path)} {...ROVING_ITEM}>
                     <DiffEntryRow row={row} tree={tree} />
                   </button>

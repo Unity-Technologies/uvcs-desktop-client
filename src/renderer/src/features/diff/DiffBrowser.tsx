@@ -92,7 +92,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
           filterBar={filter.bar}
           selection={selection}
           onSelectionChange={setSelection}
-          contextMenu={(selected) => diffEntryMenu(workspacePath, target, selected, review)}
+          contextMenu={(selected) => diffEntryMenu(workspacePath, target, selected, review, [], workspaceRepository)}
           review={review}
           loading={reading}
           noMatches={hidesAll && <NoMatches noun="files" onClear={clearFilter} />}
