@@ -104,7 +104,7 @@ describe('versionsMenu', () => {
     fakeApi.answer('history.openRevision', () => undefined);
     const menu = versionsMenu(openableVersions(conflict(), inWorkspace), APPS);
     expect(labelsOf(menu)).toEqual(['Yours', 'Incoming', 'Base']);
-    expect(menu.every((entry) => entry !== SEPARATOR && isSubmenu(entry))).toBe(true);
+    expect(menu.every(isSubmenu)).toBe(true);
 
     const incoming = (menu[1] as Submenu).entries;
     expect(labelsOf(incoming)).toEqual(labelsOf(versionAppEntries(async () => {}, APPS)));
