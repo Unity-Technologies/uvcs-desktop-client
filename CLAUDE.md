@@ -140,7 +140,7 @@ npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click 
   branches; never the server's own), `models.sh` (a Unity project with one changeset per 3D model diff case: units,
   rotation, pivot, hierarchy, material slots, sculpt, polycount, UVs; a branch and a pending model too), `textures.sh`
   (TGA, TIFF, PSD, EXR and HDR textures changed, resized, added, deleted, unreadable and in conflict: the image
-  diff; takes `REPO` and `WK`), `incoming.sh`
+  diff; takes names), `incoming.sh`
   (a workspace three changesets behind, with a local change that conflicts: Incoming), `merge-conflicts.sh` (a branch
   whose merge has file and directory conflicts and changes in several folders: the merge page).
   `scripts/perf/soak.mjs` catches leaks.

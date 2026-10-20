@@ -5,11 +5,18 @@
 # files the viewer can't read (one saved without "Maximize Compatibility", one in CMYK); and a branch, /main/retouch,
 # that conflicts with it on the TGA and the PSD with alpha (the merge page's version cards). The files are written by
 # textures/writeTextures.ts.
-# Usage: scripts/sandboxes/textures.sh   (from the repository root) → repo textures@local, workspace /tmp/uvcs-textures
-#        REPO=other@local WK=/tmp/other scripts/sandboxes/textures.sh   to build it under other names.
+# Usage: scripts/sandboxes/textures.sh [repo-name [workspace-folder]]   (from the repository root)
+#        → repo textures@local, workspace /tmp/uvcs-textures
+# It deletes and recreates both, so it takes only names: the repository is always on the local server, the
+# workspace always a folder of /tmp.
 set -euo pipefail
-REPO=${REPO:-textures@local}
-WK=${WK:-/tmp/uvcs-textures}
+NAME=${1:-textures}
+FOLDER=${2:-uvcs-textures}
+case "$NAME/$FOLDER" in
+  */*/* | *@* | *..* | */. | */-* | -* | *[[:space:]]*) echo "Give names only (no server, no path): $NAME $FOLDER" >&2; exit 1 ;;
+esac
+REPO="$NAME@local"
+WK="/tmp/$FOLDER"
 GENERATOR=$(mktemp -d)/writeTextures.mjs
 
 npx esbuild scripts/sandboxes/textures/writeTextures.ts --bundle --platform=node --format=esm --outfile="$GENERATOR" --log-level=warning
