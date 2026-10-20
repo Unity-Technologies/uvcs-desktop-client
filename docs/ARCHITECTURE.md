@@ -382,7 +382,7 @@ the values of `SECRET_OPTIONS` (`--pwd=`, which a Git sync takes) and the whole 
 (`https://user:token@host` and `https://token@host` both read `https://•••@host`, as GitHub takes a token as the user
 alone; `withoutUrlUserInfo`, `shared/urlUserInfo.ts`). The same goes for the `[server budget]` and `[organization id]`
 warnings, an error nothing caught (`textForLog`) and the lines a push, pull or sync shows as its progress
-(`readActivityProgress`). An SSH remote (`git@host:path`) and an `@` in a path are left as they are. A new option that
+(`readActivityProgress`). An scp-like SSH remote (`git@host:path`), an `@` in a path and an `@` after a host with no path (an email beside a URL) are left as they are; an `ssh://` URL loses its user as any other. A new option that
 carries a secret joins `SECRET_OPTIONS`. `cm sync` takes the password only on its command line, so it still shows in
 the process list while the sync runs; never pass a secret where `cm` offers a file instead. The window's own titles
 and toasts name a Git remote by the same rule, its user info dropped (`gitRemoteLabel`).
