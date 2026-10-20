@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Branch } from '@shared/domain/branch';
-import { branchSearchRows } from './branchSearchRows';
+import { branchSearchEmptyText, branchSearchRows } from './branchSearchRows';
 
 const branch = (name: string, comment = ''): Branch => ({
   id: 0,
@@ -43,5 +43,17 @@ describe('branchSearchRows', () => {
   it('finds a number inside a branch name', () => {
     const numbered = [{ title: 'Other branches', branches: [branch('/main/task1008742'), branch('/main/task1008874')] }];
     expect(branchSearchRows(numbered, '100874').branches.map((match) => match.name)).toEqual(['/main/task1008742']);
+  });
+});
+
+describe('branchSearchEmptyText', () => {
+  it('names the words typed that no branch matches', () => {
+    expect(branchSearchEmptyText('boost', false)).toBe('No branches match “boost”.');
+  });
+
+  it('never quotes an empty search: a list with no branches says so, and one still loading says nothing', () => {
+    expect(branchSearchEmptyText('', false)).toBe('No branches.');
+    expect(branchSearchEmptyText('  ', false)).toBe('No branches.');
+    expect(branchSearchEmptyText('', true)).toBeNull();
   });
 });
