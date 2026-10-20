@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { initialDecision, remainingConflicts, resolutionOf } from './fileConflictDecision';
+import { conflictBaseAt, decideConflict, initialDecision, remainingConflicts, resolutionOf } from './fileConflictDecision';
 import { buildConflictDocument } from './threeWayMerge';
 
 const labels = { source: 'src', destination: 'dst' };
@@ -36,6 +36,26 @@ describe('file conflict decisions', () => {
     expect(resolutionOf({ kind: 'wholeFile', side: 'base' }, { base: 'before\r\n', source: 'after\n' })).toEqual({ choice: 'base', text: 'before\r\n' });
     expect(resolutionOf({ kind: 'wholeFile', side: 'base' }, { base: 'caf\uFFFD\n' })).toEqual({ choice: 'base' });
     expect(resolutionOf({ kind: 'wholeFile', side: 'base' })).toEqual({ choice: 'base' });
+  });
+
+  it('decides one conflict, carrying the bases of those left: the one decided goes', () => {
+    const decision = initialDecision(buildConflictDocument('a\nb\nc\nd\ne\n', 'a\nS1\nc\nS2\ne\n', 'a\nD1\nc\nD2\ne\n', labels))!;
+    expect([conflictBaseAt(decision, 0), conflictBaseAt(decision, 1)]).toEqual(['b\n', 'd\n']);
+
+    const firstKept = decideConflict(decision, 0, 'incoming');
+    expect(firstKept).toEqual({ kind: 'text', text: 'a\nS1\nc\n<<<<<<< dst\nD2\n=======\nS2\n>>>>>>> src\ne\n', conflictBases: ['d\n'] });
+    expect(decideConflict(firstKept, 0, 'base')).toEqual({ kind: 'text', text: 'a\nS1\nc\nd\ne\n', conflictBases: [] });
+  });
+
+  it("keeps each conflict's own base when conflicts repeat the same sides over different bases", () => {
+    const repeated = initialDecision(buildConflictDocument('x\n1\ny\n2\nz\n', 'x\nS\ny\nS\nz\n', 'x\nD\ny\nD\nz\n', labels))!;
+    expect(decideConflict(decideConflict(repeated, 0, 'incoming'), 0, 'base').text).toBe('x\nS\ny\n2\nz\n');
+    expect(decideConflict(decideConflict(repeated, 1, 'current'), 0, 'base').text).toBe('x\n1\ny\nD\nz\n');
+  });
+
+  it('knows no base once the text was edited by hand or in a tool, whose conflicts are no longer the merge\'s', () => {
+    expect(conflictBaseAt({ kind: 'text', text: '<<<<<<< dst\nmine\n=======\nS\n>>>>>>> src\n', edited: true }, 0)).toBeUndefined();
+    expect(conflictBaseAt({ kind: 'wholeFile', side: 'source' }, 0)).toBeUndefined();
   });
 
   it('binary files start without a decision', () => {

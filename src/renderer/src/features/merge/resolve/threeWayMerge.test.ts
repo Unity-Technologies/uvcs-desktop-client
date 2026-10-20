@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildConflictDocument,
-  conflictBases,
   countConflictRegions,
   hasConflictMarkers,
   keepConflictRegionBase,
@@ -15,7 +14,7 @@ const BASE = 'line1\nline2\nline3\nline4\nline5\n';
 describe('buildConflictDocument', () => {
   it('applies non-overlapping changes from both sides without conflicts', () => {
     const document = buildConflictDocument(BASE, 'line1 SRC\nline2\nline3\nline4\nline5\n', 'line1\nline2\nline3\nline4\nline5 DST\n', labels);
-    expect(document).toEqual({ text: 'line1 SRC\nline2\nline3\nline4\nline5 DST\n', conflictCount: 0, conflicts: [] });
+    expect(document).toEqual({ text: 'line1 SRC\nline2\nline3\nline4\nline5 DST\n', conflictCount: 0, conflictBases: [] });
   });
 
   it('wraps overlapping changes in markers, destination (current) first', () => {
@@ -26,7 +25,7 @@ describe('buildConflictDocument', () => {
   });
 
   it('does not report the same change on both sides as a conflict', () => {
-    expect(buildConflictDocument('a\nb\n', 'a\nB\n', 'a\nB\n', labels)).toEqual({ text: 'a\nB\n', conflictCount: 0, conflicts: [] });
+    expect(buildConflictDocument('a\nb\n', 'a\nB\n', 'a\nB\n', labels)).toEqual({ text: 'a\nB\n', conflictCount: 0, conflictBases: [] });
   });
 
   it('treats content added on both sides of an empty base as a conflict', () => {
@@ -45,7 +44,7 @@ describe('buildConflictDocument', () => {
 
   it('merges files of lone CRs line by line, keeping their CRs', () => {
     const document = buildConflictDocument('a\rb\rc\rd\r', 'a\rb\rc\rD\r', 'A\rb\rc\rd\r', labels);
-    expect(document).toEqual({ text: 'A\rb\rc\rD\r', conflictCount: 0, conflicts: [] });
+    expect(document).toEqual({ text: 'A\rb\rc\rD\r', conflictCount: 0, conflictBases: [] });
   });
 
   it('ends the markers of a file of lone CRs with CRs, so resolving leaves only CRs', () => {
@@ -92,12 +91,8 @@ describe('resolveConflictRegion', () => {
 describe('keeping the base of a conflict', () => {
   const document = buildConflictDocument('a\nb\nc\nd\ne\n', 'a\nS1\nc\nS2\ne\n', 'a\nD1\nc\nD2\ne\n', labels);
 
-  it('knows the base each conflict came from, its sides as written between the markers', () => {
-    expect(document.conflicts).toEqual([
-      { current: 'D1\n', base: 'b\n', incoming: 'S1\n' },
-      { current: 'D2\n', base: 'd\n', incoming: 'S2\n' },
-    ]);
-    expect(conflictBases(document.text, document)).toEqual(['b\n', 'd\n']);
+  it('knows the base each conflict came from, in order', () => {
+    expect(document.conflictBases).toEqual(['b\n', 'd\n']);
   });
 
   it('puts the base in place of one conflict and leaves the others untouched', () => {
@@ -106,38 +101,17 @@ describe('keeping the base of a conflict', () => {
     expect(keepConflictRegionBase(resolved, 0, 'b\n')).toBe('a\nb\nc\nd\ne\n');
   });
 
-  it('follows the conflicts left as others are decided, however they were', () => {
-    expect(conflictBases(resolveConflictRegion(document.text, 0, 'both'), document)).toEqual(['d\n']);
-    expect(conflictBases(resolveConflictRegion(document.text, 1, 'incoming'), document)).toEqual(['b\n']);
-  });
-
-  it('tells conflicts with the same sides apart while all of them are left, and knows no base once one went and their bases differ', () => {
-    const repeated = buildConflictDocument('x\n1\ny\n2\nz\n', 'x\nS\ny\nS\nz\n', 'x\nD\ny\nD\nz\n', labels);
-    expect(conflictBases(repeated.text, repeated)).toEqual(['1\n', '2\n']);
-    expect(conflictBases(resolveConflictRegion(repeated.text, 0, 'incoming'), repeated)).toEqual([undefined]);
-    expect(conflictBases(resolveConflictRegion(repeated.text, 1, 'incoming'), repeated)).toEqual([undefined]);
-
-    const sameBase = buildConflictDocument('x\n1\ny\n1\nz\n', 'x\nS\ny\nS\nz\n', 'x\nD\ny\nD\nz\n', labels);
-    expect(conflictBases(resolveConflictRegion(sameBase.text, 0, 'incoming'), sameBase)).toEqual(['1\n']);
-  });
-
-  it("knows no base for a conflict edited by hand, whose sides aren't the merge's any more", () => {
-    const edited = document.text.replace('D1\n', 'mine\n');
-    expect(conflictBases(edited, document)).toEqual([undefined, 'd\n']);
-  });
-
   it('keeps neither side where both added lines at the same place: the base has none there', () => {
     const added = buildConflictDocument('a\nc\n', 'a\nS\nc\n', 'a\nD\nc\n', labels);
-    const [base] = conflictBases(added.text, added);
-    expect(base).toBe('');
-    expect(keepConflictRegionBase(added.text, 0, base!)).toBe('a\nc\n');
+    expect(added.conflictBases).toEqual(['']);
+    expect(keepConflictRegionBase(added.text, 0, '')).toBe('a\nc\n');
   });
 
   it("keeps the base's own line breaks, and its last line without one at the end of the file", () => {
     const crlf = buildConflictDocument('a\r\nb\r\n', 'a\r\nS\r\n', 'a\r\nD\r\n', labels);
-    expect(keepConflictRegionBase(crlf.text, 0, conflictBases(crlf.text, crlf)[0]!)).toBe('a\r\nb\r\n');
+    expect(keepConflictRegionBase(crlf.text, 0, crlf.conflictBases[0]!)).toBe('a\r\nb\r\n');
     const unended = buildConflictDocument('a\nb', 'a\nS', 'a\nD', labels);
-    expect(keepConflictRegionBase(unended.text, 0, conflictBases(unended.text, unended)[0]!)).toBe('a\nb');
+    expect(keepConflictRegionBase(unended.text, 0, unended.conflictBases[0]!)).toBe('a\nb');
   });
 });
 
