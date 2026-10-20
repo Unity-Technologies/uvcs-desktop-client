@@ -1,13 +1,15 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
+import './testing/fakeWindow';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { VIEWS } from './app/navigation/viewRegistry';
 
 /**
  * What the window loads before its first frame: every module `main.tsx` reaches through static imports, every view
- * among them (`viewRegistry`), so each view paints its own loading state at once. The heavy libraries stay out of it,
- * each loaded on first use behind a lazy boundary inside a pane already laid out (`ChangeSelectionPane`,
- * `ItemDetailsPane`, `IncomingSession`, `LoadedFileDiff`): one static import of them from a view, even of a helper,
- * would put megabytes in front of every start.
+ * and page among them (`viewRegistry`, `pageRegistry`), so each paints its own layout at once (ARCHITECTURE.md "One
+ * layout from the first frame"). The heavy libraries stay out of it, each loaded on first use behind a lazy boundary
+ * at the leaf that uses it (`FileDiffViewer`, `AnnotationPane`, `FileConflictPanel`, and `LoadedFileDiff`'s viewers):
+ * one static import of them from a view, even of a helper, would put megabytes in front of every start.
  */
 const RENDERER_SOURCE = __dirname;
 const SHARED_SOURCE = resolve(__dirname, '../../shared');
@@ -15,7 +17,7 @@ const ENTRY = resolve(RENDERER_SOURCE, 'main.tsx');
 
 /**
  * Pierre's diff viewer, Shiki's grammars under it (reached directly too) and three.js, for 3D models: megabytes the
- * first frame never needs. A new heavy library joins them, and loads behind a lazy boundary in a pane already laid out.
+ * first frame never needs. A new heavy library joins them, and loads behind a lazy boundary at the leaf that uses it.
  */
 const HEAVY_PACKAGES = ['@pierre/diffs', 'shiki', 'three'];
 const HEAVY_SCOPES = ['@shikijs/'];
@@ -91,19 +93,24 @@ describe('startup bundle', () => {
     importedBy = staticGraph(ENTRY);
   });
 
-  it('holds every view and page, so each paints its own layout at once, never a fallback it then replaces', () => {
-    const registries = ['app/navigation/viewRegistry.ts', 'app/navigation/pageRegistry.tsx'];
-    const lazy = registries.filter((registry) => readFileSync(resolve(RENDERER_SOURCE, registry), 'utf8').includes('lazyComponent('));
+  it('holds every view, so each paints its own layout at once, never a fallback it then replaces', () => {
+    const modules = [...importedBy.keys()];
+    const missing = VIEWS.filter(({ component }) => !modules.some((module) => module.endsWith(`${component.name}.tsx`))).map((view) => view.id);
 
-    expect(lazy).toEqual([]);
+    expect(missing).toEqual([]);
+  });
+
+  it('holds every page, which the page registry imports, none lazily', () => {
+    const registry = readFileSync(resolve(RENDERER_SOURCE, 'app/navigation/pageRegistry.tsx'), 'utf8');
+
+    expect(registry).not.toMatch(/\b(lazy|lazyComponent)\s*\(/);
+    expect([...importedBy.keys()].some((module) => module.endsWith('pageRegistry.tsx'))).toBe(true);
   });
 
   it('leaves the heavy libraries to load on first use', () => {
     const heavy = [...importedBy.keys()].filter((module) => HEAVY_PACKAGES.includes(module) || HEAVY_SCOPES.some((scope) => module.startsWith(scope)));
 
     expect(heavy.map((module) => chainTo(module, importedBy))).toEqual([]);
-    // The walk reaches the views and pages (none is lazy), so it would see them import one.
-    expect([...importedBy.keys()].some((module) => module.endsWith('BranchExplorerView.tsx') || module.endsWith('MergePage.tsx'))).toBe(true);
   });
 
   it('reads imports as TypeScript emits them', () => {
