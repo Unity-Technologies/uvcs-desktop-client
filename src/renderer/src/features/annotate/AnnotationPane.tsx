@@ -1,4 +1,4 @@
-import { Calendar, GitCommitVertical, User } from 'lucide-react';
+import { Calendar, FileText, GitCommitVertical, User } from 'lucide-react';
 import { Suspense, useMemo, type ReactNode } from 'react';
 import type { ItemRevision } from '@shared/domain/history';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -103,6 +103,8 @@ export function AnnotationPane({ path, repository, revision, leading, history }:
         <EmptyState title="Couldn't annotate this file" description={error?.message} />
       ) : body === 'annotating' || !annotation ? (
         <CenteredSpinner />
+      ) : body === 'emptyFile' ? (
+        <EmptyState icon={<FileText size={22} />} title="Empty file" description="This file has no content." />
       ) : (
         <Suspense fallback={<CenteredSpinner />}>
           <AnnotatedCode key={spec} code={code} path={path} blocks={blocks} lineCount={annotation.lines.length} columns={columns} links={links} />
