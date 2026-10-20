@@ -24,7 +24,8 @@ interface MemberListProps {
 export const MemberList = forwardRef<HTMLDivElement, MemberListProps>(function MemberList({ rows, selected, onSelect, onAdd, onRemove, removeReason }, ref) {
   const listId = useId();
   const [filter, setFilter] = useState('');
-  const { filters, shown, selectedRow, selectedIndex: index } = memberListView(rows, selected, filter);
+  const view = memberListView(rows, selected, filter);
+  const { filters, query, shown, selectedRow, selectedIndex: index } = view;
   const reason = selectedRow ? removeReason(selectedRow) : 'Pick a user or group';
   const optionId = (name: string) => `${listId}-${encodeURIComponent(name)}`;
 
@@ -34,7 +35,7 @@ export const MemberList = forwardRef<HTMLDivElement, MemberListProps>(function M
       if (!reason) onRemove(selectedRow);
       return;
     }
-    const next = memberAfterKey({ filters, shown, selectedRow, selectedIndex: index }, event.key);
+    const next = memberAfterKey(view, event.key);
     if (next === undefined) return;
     event.preventDefault();
     onSelect(next);
@@ -56,7 +57,7 @@ export const MemberList = forwardRef<HTMLDivElement, MemberListProps>(function M
         />
       </header>
       {filters && <SearchField value={filter} onChange={setFilter} placeholder="Filter users and groups" width="100%" />}
-      <HighlightQuery query={filter}>
+      <HighlightQuery query={query}>
         <div
           ref={ref}
           role="listbox"

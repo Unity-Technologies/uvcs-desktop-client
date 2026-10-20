@@ -9,6 +9,11 @@ const FILTER_FROM = 8;
 export interface MemberListView {
   /** The list is long enough to show its filter field. */
   filters: boolean;
+  /**
+   * The filter that applies: none once the list is too short to show its field (removing a member can make it so),
+   * which would otherwise hide rows with no field left to clear it.
+   */
+  query: string;
   /** The rows the filter keeps, in the rows' order. */
   shown: MemberRow[];
   /** The selected row, which the remove button and shortcut act on. */
@@ -18,9 +23,12 @@ export interface MemberListView {
 }
 
 export function memberListView(rows: readonly MemberRow[], selected: string | undefined, filter: string): MemberListView {
-  const shown = rows.filter((row) => matchesWordFilter([row.label], filter));
+  const filters = rows.length > FILTER_FROM;
+  const query = filters ? filter : '';
+  const shown = rows.filter((row) => matchesWordFilter([row.label], query));
   return {
-    filters: rows.length > FILTER_FROM,
+    filters,
+    query,
     shown,
     selectedRow: rows.find((row) => row.member.name === selected),
     selectedIndex: shown.findIndex((row) => row.member.name === selected),
