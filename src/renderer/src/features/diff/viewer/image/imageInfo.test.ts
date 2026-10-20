@@ -16,8 +16,8 @@ describe('undecodedDescription', () => {
 
 describe('unpaintedNotice', () => {
   it('names the version that does not show, and why', () => {
-    expect(unpaintedNotice('new', 'psdWithoutComposite')).toBe("The version after doesn't show. Can't read this PSD: save it with Maximize Compatibility.");
-    expect(unpaintedNotice('old', 'tooLarge')).toBe("The version before doesn't show. Too large to show.");
+    expect(unpaintedNotice('new', 'psdWithoutComposite')).toBe("The version after is left out. Can't read this PSD: save it with Maximize Compatibility.");
+    expect(unpaintedNotice('old', 'tooLarge')).toBe('The version before is left out. Too large to show.');
   });
 });
 

@@ -324,7 +324,7 @@ makes each into an image the browser paints before anything shows it (`usePainta
   the colors shown, "as shown", not the file's values. 16-bit channels show as 8 bits.
 - **What can't be painted** (a PSD saved without "Maximize Compatibility" or in CMYK, Lab, indexed or 32 bits, a header
   past the limit, a damaged file; `imagePairView`): a version that can't, beside one that can, leaves that one shown
-  alone, as an added or deleted image is, under a line saying which version doesn't show and why (`unpaintedNotice`):
+  alone, as an added or deleted image is, under a line saying which version is left out and why (`unpaintedNotice`):
   a PSD saved again without "Maximize Compatibility" still shows as it was. When none can, an image past the pixel
   limit reads as one past the byte limit ("This image is too large to preview", the sizes, and "Open file" for a
   workspace file: `TOO_LARGE_TITLES`, `sizeChange`, `OpenFileButton`, shared with `NothingToDiff`), and any other
