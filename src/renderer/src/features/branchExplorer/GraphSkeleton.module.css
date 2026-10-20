@@ -1,0 +1,45 @@
+/* As the list skeletons (`ui/Skeleton`): after a short beat, fading toward the bottom and the right, in their grey. */
+.skeleton {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  animation: var(--keyframes-fade-in) var(--duration-normal) var(--duration-fast) var(--ease-out) both;
+}
+
+/* The canvas's date ruler (`drawDateRuler`): its strip, without dates; as tall as `DATE_RULER_HEIGHT`. */
+.ruler {
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-subtle);
+}
+
+.graph {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  mask-image: linear-gradient(to bottom, #000 30%, transparent 85%), linear-gradient(to right, #000 55%, transparent);
+  mask-composite: intersect;
+  animation: var(--keyframes-pulse) 1.2s ease-in-out infinite alternate;
+}
+
+.band {
+  fill: var(--bg-hover);
+}
+
+.mark {
+  fill: var(--bg-active);
+}
+
+.link {
+  fill: none;
+  stroke: var(--bg-active);
+  stroke-width: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .graph {
+    animation: none;
+  }
+}

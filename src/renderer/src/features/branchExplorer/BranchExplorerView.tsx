@@ -10,7 +10,6 @@ import { EVERYONE, isEveryone, pickedNames } from '../../lib/peopleFilter';
 import { pluralize } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
-import { CenteredSpinner } from '../../ui/Spinner';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
@@ -26,6 +25,7 @@ import { selectionFor, type GraphSelection } from './graphSelection';
 import { GraphFilterBar } from './GraphFilterBar';
 import { GraphNavControls } from './GraphNavControls';
 import { GraphSearch } from './GraphSearch';
+import { GraphSkeleton } from './GraphSkeleton';
 import type { GraphFocus } from './model/filterGraph';
 import { rememberedPerHistory } from './model/rememberedPerHistory';
 import { describeSelection } from './model/describeSelection';
@@ -240,7 +240,17 @@ export function BranchExplorerView() {
     </ViewHeader>
   );
 
-  if (isLoading) return <>{header}<CenteredSpinner /></>;
+  // The graph's pane and the details' in place while the history is read; nothing is selected yet, so the details are blank.
+  if (isLoading) {
+    return (
+      <>
+        {header}
+        <div className={styles.body}>
+          <ListWithDetails widthKey="branchExplorer" hideDetails={!detailsOpen} list={<GraphSkeleton />} details={null} />
+        </div>
+      </>
+    );
+  }
   if (error) return <>{header}<EmptyState title="Couldn't load the history" description={error.message} /></>;
   if (layout && layout.columnCount === 0 && data && data.changesets.length > 0) {
     return (
