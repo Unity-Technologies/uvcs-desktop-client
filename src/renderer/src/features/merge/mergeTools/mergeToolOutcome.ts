@@ -41,6 +41,7 @@ export function toolOutcomeMessage(outcome: MergeToolOutcome, tool: string, file
       return { kind: 'success', title: `Resolved ${fileName} in ${tool}` };
     }
     case 'unchanged':
+      if (outcome.exitCode === null && tool === SMART_MERGE_NAME) return { kind: 'info', title: 'Stopped Smart Merge', detail: `${fileName} still needs your decision.` };
       if (outcome.exitCode === null) return { kind: 'info', title: `Stopped waiting for ${tool}`, detail: `Nothing was saved, so ${fileName} still needs your decision.` };
       return {
         kind: 'info',
