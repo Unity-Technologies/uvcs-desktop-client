@@ -31,7 +31,7 @@ describe('diffPaneOf', () => {
     expect(diffPaneOf({ listedCount: count, shownCount: count, ...nothingSelected })).toBe('blank');
   });
 
-  it('stays blank while filters hide every file, even with one still selected', () => {
-    expect(diffPaneOf({ listedCount: 2, shownCount: 0, entrySelected: true, folderSelected: false })).toBe('blank');
+  it('has no match while filters hide every file, even with one still selected', () => {
+    expect(diffPaneOf({ listedCount: 2, shownCount: 0, entrySelected: true, folderSelected: false })).toBe('noMatches');
   });
 });

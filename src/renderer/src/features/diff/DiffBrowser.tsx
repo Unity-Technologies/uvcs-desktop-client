@@ -8,7 +8,6 @@ import { useFileTree } from '../../components/useFileTree';
 import type { TreeFolderRow } from '../../lib/pathTree';
 import { pluralize } from '../../lib/text';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
-import { hidesEveryRow } from '../../lib/hidesEveryRow';
 import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
 import { SplitPane } from '../../ui/SplitPane';
@@ -54,8 +53,6 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
   const firstKey = entries[0] && diffEntryKey(entries[0]);
   const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, { isViewFilter: true, reading, actions: <ReviewModeButton workspacePath={workspacePath} /> });
   const shown = useMemo(() => review.narrow(filter.visible), [review.narrow, filter.visible]);
-  // Nothing to select while the filter and review mode hide every file: the diff pane stays blank.
-  const hidesAll = hidesEveryRow(entries.length, shown.length);
   const clearFilter = (): void => {
     filter.clear();
     review.showAll();
@@ -105,7 +102,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
           contextMenu={(selected) => diffEntryMenu(workspacePath, target, selected, { review, workspaceRepository, diffEntries: readEntries })}
           review={review}
           loading={reading}
-          noMatches={hidesAll && <NoMatches noun="files" onClear={clearFilter} />}
+          noMatches={pane === 'noMatches' && <NoMatches noun="files" onClear={clearFilter} />}
         />
       }
       second={
