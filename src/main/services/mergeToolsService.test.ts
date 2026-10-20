@@ -219,6 +219,23 @@ describe('Smart Merge', () => {
     expect(await merging).toEqual({ kind: 'stopped' });
   });
 
+  it('says it was stopped when the user stops it as it exits on its own, so no tool opens after', async () => {
+    let started: () => void = () => undefined;
+    const smartMergeStarted = new Promise<void>((resolve) => (started = resolve));
+    vi.mocked(launchMergeTool).mockImplementation((_executable, _args, signal) => {
+      started();
+      // It ends with its own exit code (conflicts left), the stop arriving too late to kill it.
+      return new Promise((resolve) => signal.addEventListener('abort', () => resolve({ exitCode: 2, errorOutput: '', seconds: 1 })));
+    });
+    const { service } = mergeTools({}, SMART_MERGE);
+
+    const merging = service.smartMerge(PREFAB);
+    await smartMergeStarted;
+    await service.stopWaiting(PREFAB.sessionId);
+
+    expect(await merging).toEqual({ kind: 'stopped' });
+  });
+
   it('starts merge tools with their window shown', async () => {
     vi.mocked(launchMergeTool).mockResolvedValue({ exitCode: 0, errorOutput: '', seconds: 30 });
     const { service } = mergeTools({ cat: CAT_VERSIONS }, SMART_MERGE);
