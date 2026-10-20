@@ -24,10 +24,9 @@ export function deletedItemRestores(selected: DiffEntry[], diffEntries: DiffEntr
  * anywhere in the workspace ("Restore to…"). None for anything else a diff lists.
  */
 export function restoreMenuEntries(workspacePath: string, selected: DiffEntry[], diffEntries: DiffEntry[], workspaceRepository: string | undefined): GroupedEntry[] {
-  const restored = restoredEntries(selected, diffEntries, workspaceRepository);
-  if (!restored) return [];
-  const restores = restored.map(restoreOf);
-  const restore = menuAction('restore', () => void restoreDeletedItems(workspacePath, restores), { label: restoreLabel(restored, selected) });
+  const restores = deletedItemRestores(selected, diffEntries, workspaceRepository);
+  if (!restores) return [];
+  const restore = menuAction('restore', () => void restoreDeletedItems(workspacePath, restores), { label: restoreLabel(restores, selected) });
   if (restores.length > 1) return [restore];
   return [restore, menuAction('restoreTo', () => void restoreDeletedItemTo(workspacePath, restores[0]!))];
 }
@@ -52,10 +51,14 @@ function restoreOf(entry: DiffEntry): DeletedItemRestore {
   return { revision: { revisionId: entry.baseRevisionId, repository: entry.repository }, path: entry.path };
 }
 
-/** What comes back: a file, a folder, the folder a selected file comes back with, or a count. */
-function restoreLabel(restored: DiffEntry[], selected: DiffEntry[]): string {
-  if (restored.length > 1) return `Restore ${pluralize(restored.length, 'item')}`;
-  const [only] = restored as [DiffEntry];
-  if (only.itemType !== 'directory') return 'Restore file';
-  return selected.length === 1 && selected[0]!.path === only.path ? 'Restore folder' : `Restore folder ${fileNameOf(only.path)}`;
+/**
+ * What comes back: a count, the file or folder selected, or the folder the selection comes back with (a restore no
+ * selected entry is: `deletedItemRestores` took its outermost deleted folder).
+ */
+function restoreLabel(restores: DeletedItemRestore[], selected: DiffEntry[]): string {
+  if (restores.length > 1) return `Restore ${pluralize(restores.length, 'item')}`;
+  const { path } = restores[0]!;
+  const itself = selected.find((entry) => entry.path === path);
+  if (!itself) return `Restore folder ${fileNameOf(path)}`;
+  return itself.itemType === 'directory' ? 'Restore folder' : 'Restore file';
 }
