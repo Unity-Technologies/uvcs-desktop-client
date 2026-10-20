@@ -342,20 +342,25 @@ describe('runMerge into a server branch', () => {
     let resultFiles: Record<string, string> = {};
     const { cm, commands } = fakeCmClient({
       'merge br:/main/task': async ({ args }) => {
-        if (!args.includes('--merge')) return mergeOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('art/b.png', 31));
+        if (!args.includes('--merge')) return mergeOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('art/b.png', 31), fileConflict('art/c.png', 32));
         const { resolutions } = JSON.parse(await readFile(optionValue(args, '--fileconflictsresolutionsfile=')!, 'utf8')) as { resolutions: { path: string; resultFile: string }[] };
         for (const { path, resultFile } of resolutions) resultFiles[path] = await readFile(resultFile, 'utf8');
         return mergeOutput(['CHANGESET', 'cs:12@/main@eco@local']);
       },
-      ls: treeListing('eco@local', 'src/a.txt', 'art/b.png'),
-      cat: fakeCat((spec) => (spec === 'itemid:31#cs:1@eco@local' ? 'base bytes' : undefined)),
+      ls: treeListing('eco@local', 'src/a.txt', 'art/b.png', 'art/c.png'),
+      cat: fakeCat((spec) => ({ 'itemid:31#cs:1@eco@local': 'base b', 'itemid:32#cs:1@eco@local': 'base c' })[spec]),
     });
-    const keepBase: MergeResolutions = { directoryConflicts: [], files: { '/src/a.txt': { choice: 'base', text: 'base as read\n' }, '/art/b.png': { choice: 'base' } } };
+    const keepBase: MergeResolutions = {
+      directoryConflicts: [],
+      files: { '/src/a.txt': { choice: 'base', text: 'base as read\n' }, '/art/b.png': { choice: 'base' }, '/art/c.png': { choice: 'base' } },
+    };
 
     expect(await runMerge(cm, workspacePath, TO_MAIN, keepBase, recordingContext().context)).toEqual({ changesetId: 12 });
-    expect(resultFiles).toEqual({ '/src/a.txt': 'base as read\n', '/art/b.png': 'base bytes' });
+    expect(resultFiles).toEqual({ '/src/a.txt': 'base as read\n', '/art/b.png': 'base b', '/art/c.png': 'base c' });
     const cats = commands.filter((command) => command.args[0] === 'cat');
-    expect(cats.map(({ args, via }) => ({ spec: args[1]!.split(';')[0], via }))).toEqual([{ spec: 'itemid:31#cs:1@eco@local', via: 'execute' }]);
+    expect(cats.map(({ args, via }) => ({ specs: args.slice(1).map((arg) => arg.split(';')[0]), via }))).toEqual([
+      { specs: ['itemid:31#cs:1@eco@local', 'itemid:32#cs:1@eco@local'], via: 'execute' },
+    ]);
   });
 
   it("merges nothing when a base kept can't be saved for cm to check in", async () => {
