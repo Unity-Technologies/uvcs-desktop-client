@@ -1,10 +1,13 @@
 import { Check, File, ImageOff } from 'lucide-react';
 import { useState } from 'react';
 import type { FileContent, ImageBytes } from '@shared/domain/content';
+import { currentExternalApps } from '../../../components/externalApps/externalApps';
 import { PathLabel } from '../../../components/PathLabel';
 import { useImageUrl } from '../../diff/viewer/image/useImageUrl';
 import { formatSize } from '../../../lib/formatDate';
+import { ActionContextMenu } from '../../../ui/menu/ActionContextMenu';
 import { Spinner } from '../../../ui/Spinner';
+import { versionAppEntries, type OpenableVersion } from './conflictVersionOpening';
 import type { KeptVersion } from './fileConflictDecision';
 import type { ConflictContents } from './loadedConflict';
 import type { MergeLabels } from '../mergeDescription';
@@ -19,6 +22,8 @@ interface WholeFileChoiceProps {
   labels: MergeLabels;
   /** The file has a common ancestor to keep (not one added on both sides). */
   withBase: boolean;
+  /** The versions that open in other apps: a card's menu opens its own. */
+  versions: OpenableVersion[];
   chosen: KeptVersion | undefined;
   onChoose: (version: KeptVersion) => void;
 }
@@ -27,7 +32,8 @@ interface WholeFileChoiceProps {
  * For files that can't be merged line by line (binaries): pick the version to keep, each side's or the base's, its
  * preview showing once read.
  */
-export function WholeFileChoice({ contents, error, labels, withBase, chosen, onChoose }: WholeFileChoiceProps) {
+export function WholeFileChoice({ contents, error, labels, withBase, versions, chosen, onChoose }: WholeFileChoiceProps) {
+  const openableOf = (version: KeptVersion) => versions.find((openable) => openable.version === version);
   return (
     <div className={styles.choices}>
       <div className={styles.options}>
@@ -38,6 +44,7 @@ export function WholeFileChoice({ contents, error, labels, withBase, chosen, onC
           base={contents?.base}
           error={error}
           selected={chosen === 'destination'}
+          openable={openableOf('destination')}
           onSelect={() => onChoose('destination')}
         />
         <VersionCard
@@ -47,16 +54,18 @@ export function WholeFileChoice({ contents, error, labels, withBase, chosen, onC
           base={contents?.base}
           error={error}
           selected={chosen === 'source'}
+          openable={openableOf('source')}
           onSelect={() => onChoose('source')}
         />
         {withBase && (
           <VersionCard
             title="Keep base"
-            subtitle="Common ancestor"
+            subtitle="Before either side changed it"
             content={contents?.base}
             base={undefined}
             error={error}
             selected={chosen === 'base'}
+            openable={openableOf('base')}
             onSelect={() => onChoose('base')}
           />
         )}
@@ -74,15 +83,18 @@ interface VersionCardProps {
   base: FileContent | undefined;
   error: Error | undefined;
   selected: boolean;
+  /** Its version, to open in another app from the card's menu; none when it can't be opened. */
+  openable: OpenableVersion | undefined;
   onSelect: () => void;
 }
 
-function VersionCard({ title, subtitle, content, base, error, selected, onSelect }: VersionCardProps) {
+/** A version to keep; its menu (right-click, or the keyboard's menu key) lists the apps to open it in. */
+function VersionCard({ title, subtitle, content, base, error, selected, openable, onSelect }: VersionCardProps) {
   // An image the browser can't decode (a damaged file, a format it doesn't read) shows as what it is, not a broken image.
   const [undecodableImage, setUndecodableImage] = useState<ImageBytes>();
   const undecodable = undecodableImage !== undefined && undecodableImage === content?.image;
   const imageUrl = useImageUrl(content?.image);
-  return (
+  const card = (
     <button className={styles.card} data-selected={selected} onClick={onSelect}>
       <div className={styles.preview}>
         {!content ? (
@@ -118,4 +130,6 @@ function VersionCard({ title, subtitle, content, base, error, selected, onSelect
       )}
     </button>
   );
+  if (!openable) return card;
+  return <ActionContextMenu entries={() => versionAppEntries(openable.open, currentExternalApps())}>{card}</ActionContextMenu>;
 }

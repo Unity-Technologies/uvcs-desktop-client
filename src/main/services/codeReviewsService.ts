@@ -84,9 +84,12 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
   };
 }
 
-/** The review as listed, its branch target by object id. */
+/** The review as listed: its branch target by object id, a changeset or shelve named by its number. */
 function summaryOf({ targetType, targetId, ...summary }: RawCodeReview): CodeReviewSummary {
-  return targetType === 'branch' ? { ...summary, targetBranchId: targetId } : summary;
+  if (targetType === 'branch') return { ...summary, targetBranchId: targetId };
+  if (targetType === 'changeset') return { ...summary, target: { kind: 'changeset', changesetId: targetId } };
+  if (targetType === 'shelve') return { ...summary, target: { kind: 'shelve', shelveId: targetId } };
+  return summary;
 }
 
 function targetOf({ targetType, targetId }: RawCodeReview, branchNames: ReadonlyMap<number, string>): CodeReviewTarget {

@@ -24,6 +24,14 @@ client's) are offered again by the "Welcome back" banner in Changes (`features/l
 automatically on arrival when they apply cleanly (`restoreOnArrival`). Changes still waiting to be brought (conflicts
 left for the merge view) are offered on the target, and as left ones on the source if the user goes back instead.
 
+A code review brings the reviewer its code through the same flows (`reviewedCodeAction`, in the review's menu and its
+page's header): "Switch to this branch" or "Switch to this changeset" is the branch's or changeset's own switch, and
+"Apply to workspace" applies the shelve as Changes applies someone else's (below), keeping it. It stays in its place,
+disabled, where the workspace already is (on the branch, or switched to that changeset or shelve; on a branch with
+that changeset loaded it isn't, as switching leaves the branch), and isn't offered where the target isn't named: a
+deleted branch, or a branch review in the palette (ARCHITECTURE.md "Menus"). Reviews are read in the workspace's
+repository, so none is ever on another.
+
 ## A workspace on a shelve
 
 `cm` keeps shelves as changesets numbered below zero: a workspace switched to shelve 3 reports changeset -3 in
