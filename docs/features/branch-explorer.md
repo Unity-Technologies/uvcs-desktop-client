@@ -20,6 +20,14 @@ float32, never sees the millions of px of a whole history (jagged circles and pi
 A link is hit within 6 px of the line itself (`distanceToCurve` cuts it into pieces of 8 px at most, however long),
 in screen px when zoomed out.
 
+## Loading
+
+While the history is read, the canvas's pane shows the date ruler and a few branches drawn with the graph's own
+measurements (`graphSkeletonShapes`, from `canvas/geometry`), pulsing as every skeleton does, beside a blank details
+pane: nothing is selected until the graph is in (ARCHITECTURE.md "One layout from the first frame"). With nothing to draw the
+panes stay: "No matching branches" where the graph goes when the Branches filter hides every branch, and "No history
+in this range" in the details pane (in the graph's while the details are closed).
+
 ## Keeping the place
 
 Only the first graph opens on the home badge (else the newest history).

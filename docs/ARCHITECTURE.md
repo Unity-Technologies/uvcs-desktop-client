@@ -674,7 +674,8 @@ renderer/src/
     people, the kinds an object list asks for) stay live. A switch in a pane's header stays with it (`DiffFrame`: a branch diff's
     "Whole branch | Changeset by changeset").
   - Loading: the panes stay, with placeholder rows at the real row height under the list's own column titles
-    (`ui/Skeleton`, `TableSkeleton`, `FileTreeSkeleton`, `FileTreeList`'s `loading`), the details as
+    (`ui/Skeleton`, `TableSkeleton`, `FileTreeSkeleton`, `FileTreeList`'s `loading`; a graph's bands, header cards and
+    changesets at the graph's own measurements, `GraphSkeleton`), the details as
     `DetailsPanelSkeleton`, a viewer's pane blank. A list whose query hasn't started yet (it waits on the
     repository's name) is loading, never empty: TanStack's `isPending`, not `isLoading`.
   - Nothing there: the list keeps its pane (its count reads 0) and the empty state takes the details pane

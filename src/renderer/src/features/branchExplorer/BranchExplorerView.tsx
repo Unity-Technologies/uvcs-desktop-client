@@ -10,7 +10,6 @@ import { EVERYONE, isEveryone, pickedNames } from '../../lib/peopleFilter';
 import { pluralize } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
-import { CenteredSpinner } from '../../ui/Spinner';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
@@ -26,6 +25,7 @@ import { selectionFor, type GraphSelection } from './graphSelection';
 import { GraphFilterBar } from './GraphFilterBar';
 import { GraphNavControls } from './GraphNavControls';
 import { GraphSearch } from './GraphSearch';
+import { GraphSkeleton } from './GraphSkeleton';
 import type { GraphFocus } from './model/filterGraph';
 import { rememberedPerHistory } from './model/rememberedPerHistory';
 import { describeSelection } from './model/describeSelection';
@@ -47,7 +47,7 @@ const NO_REVIEWS: ReadonlyMap<number, CodeReviewSummary> = new Map();
 export function BranchExplorerView() {
   const workspacePath = useWorkspacePath();
   const { data: workspace } = useWorkspaceInfo();
-  const { data, isLoading, isFetching, isPlaceholderData, error } = useBranchExplorerData();
+  const { data, isPending, isFetching, isPlaceholderData, error } = useBranchExplorerData();
   const preferences = useBranchExplorerPreferences();
   const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, detailsOpen, people, showComments, showAvatars } = preferences;
 
@@ -240,21 +240,48 @@ export function BranchExplorerView() {
     </ViewHeader>
   );
 
-  if (isLoading) return <>{header}<CenteredSpinner /></>;
+  // The graph's pane and the details' in place while the history is read; nothing is selected yet, so the details are blank.
+  if (isPending) {
+    return (
+      <>
+        {header}
+        <div className={styles.body}>
+          <ListWithDetails widthKey="branchExplorer" hideDetails={!detailsOpen} list={<GraphSkeleton />} details={null} />
+        </div>
+      </>
+    );
+  }
   if (error) return <>{header}<EmptyState title="Couldn't load the history" description={error.message} /></>;
+  // Nothing to draw keeps the two panes too: the filters' notice where the graph goes, the empty range beside it.
   if (layout && layout.columnCount === 0 && data && data.changesets.length > 0) {
     return (
       <>
         {header}
-        <NoMatches icon={<GitGraph size={22} />} noun="branches" hint="Check some branches in the Branches filter, or show every branch again." onClear={clearFilters} />
+        <div className={styles.body}>
+          <ListWithDetails
+            widthKey="branchExplorer"
+            hideDetails={!detailsOpen}
+            list={<NoMatches icon={<GitGraph size={22} />} noun="branches" hint="Check some branches in the Branches filter, or show every branch again." onClear={clearFilters} />}
+            details={null}
+          />
+        </div>
       </>
     );
   }
   if (!layout || layout.columnCount === 0) {
+    const emptyRange = <EmptyState icon={<GitGraph size={22} />} title="No history in this range" description="Choose a longer date range to see more changesets." />;
     return (
       <>
         {header}
-        <EmptyState icon={<GitGraph size={22} />} title="No history in this range" description="Choose a longer date range to see more changesets." />
+        <div className={styles.body}>
+          <ListWithDetails
+            widthKey="branchExplorer"
+            hideDetails={!detailsOpen}
+            // With the details closed, the graph's pane says it.
+            list={detailsOpen ? <div className={styles.emptyGraph} /> : emptyRange}
+            details={emptyRange}
+          />
+        </div>
       </>
     );
   }

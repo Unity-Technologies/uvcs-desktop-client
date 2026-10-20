@@ -3,3 +3,9 @@
   flex: 1;
   min-height: 0;
 }
+
+/* The graph's pane with nothing to draw in the range: the details beside it say so. */
+.emptyGraph {
+  flex: 1;
+  min-width: 0;
+}
