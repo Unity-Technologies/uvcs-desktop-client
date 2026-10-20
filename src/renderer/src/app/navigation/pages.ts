@@ -17,13 +17,20 @@ export type Page =
   | { kind: 'history'; path: string; revision?: RevisionRef; select?: HistorySelection; view?: 'annotate' }
   /**
    * `focusPath` preselects a file in the diff. `branchHead`, for a branch, is the head it was seen at: the diff is
-   * then the one a details panel may already have read, not a second `cm diff`.
+   * then the one a details panel may already have read, not a second `cm diff`. `sideNames`, for a range whose specs
+   * don't say what its sides are (two branches' heads), names them in the header, older side first.
    */
-  | { kind: 'diff'; title: string; target: DiffTarget; focusPath?: string; branchHead?: number }
+  | { kind: 'diff'; title: string; target: DiffTarget; focusPath?: string; branchHead?: number; sideNames?: readonly [DiffSideName, DiffSideName] }
   /** `task`: a task branch merged into a branch on the server, which the page also offers to finish (`TaskMerge`). */
   | { kind: 'merge'; request: MergeRequest; task?: TaskMerge }
   | { kind: 'codeReview'; reviewId: number; focusPath?: string }
   | { kind: 'browseRepository'; changesetId: number };
+
+/** A side of a range diff in words (`main`), and what it is exactly in its tooltip (`/main at changeset 12`). */
+export interface DiffSideName {
+  label: string;
+  tooltip: string;
+}
 
 /** A revision of a history: the one a changeset made, or one by its id (which finds it wherever the file was then). */
 type HistorySelection = { changesetId: number } | { revisionId: number };
