@@ -1,7 +1,8 @@
 // `npm run e2e`: a light pass over the built app (run `npm run build` first), against the fake `cm` and a workspace
-// in a temp folder (scripts/e2e/README.md). Opens the workspace, visits every view, a diff, a model diff, a branch's permissions, the command palette and
-// Settings, switches the theme; fails on any renderer error, any `cm` command the fake doesn't know, or a view that
-// doesn't show. It asserts only that things appear, never pixels or copy. Screenshots go to <tmp>/uvcs-e2e-shots.
+// in a temp folder (scripts/e2e/README.md). Opens the workspace, visits every view, a diff, a diff in a new window, a
+// model diff, a branch's permissions, the command palette and Settings, switches the theme; fails on any renderer
+// error, any `cm` command the fake doesn't know, or a view that doesn't show. It asserts only that things appear, never
+// pixels or copy. Screenshots go to <tmp>/uvcs-e2e-shots.
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -120,6 +121,20 @@ try {
     // The 3D view, and what changed in it: the fixture renamed the crate's material slot.
     await main.getByLabel('3D view of the model').waitFor();
     await main.getByRole('region', { name: 'What changed' }).waitFor();
+  });
+  await step('A diff in a new window', async () => {
+    await window.getByRole('navigation').getByRole('button', { name: /^Changesets( \d+)?$/ }).click();
+    await main.getByRole('button', { name: 'Open diff' }).click();
+    const opened = app.waitForEvent('window');
+    await main.getByRole('button', { name: 'Open in new window' }).click();
+    const pageWindow = await opened;
+    pageWindow.on('pageerror', (error) => errors.push(`page window pageerror: ${error.message}`));
+    pageWindow.on('console', (message) => message.type() === 'error' && errors.push(`page window console.error: ${message.text()}`));
+    // The diff moved: its window shows it, with its one option, and this window is back on the list.
+    await pageWindow.getByRole('button', { name: 'Follow selection' }).waitFor({ timeout: TIMEOUT_MS });
+    await pageWindow.getByText('src/player.cs', { exact: true }).first().waitFor({ timeout: TIMEOUT_MS });
+    await main.getByRole('heading', { level: 1, name: 'Changesets', exact: true }).waitFor();
+    await pageWindow.close();
   });
   await step('Permissions', async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Branches( \d+)?$/ }).click();
