@@ -21,7 +21,7 @@ export function useCodeReviews(filter: CodeReviewFilter) {
 
 export function useCodeReview(reviewId: number) {
   const workspacePath = useWorkspacePath();
-  // Opened from a list that read it, the page shows at once, then reads it again as it would anyway.
+  // Opened from a list that read it, the page shows at once, as fresh as that list: read again only once it's stale.
   const listed = () => listedReview(listsRead(workspacePath), reviewId);
   return useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'codeReviews', 'review', reviewId),
@@ -31,11 +31,15 @@ export function useCodeReview(reviewId: number) {
   });
 }
 
-/** Every code review query read in the workspace: lists, and the single reviews and summaries, which `listedReview` skips. */
+/**
+ * Every code review query read in the workspace (lists, and the single reviews and summaries, which `listedReview`
+ * skips), but those an operation marked stale and nobody read again: their copy may hold an old status.
+ */
 function listsRead(workspacePath: string): { data: unknown; readAt: number }[] {
   return queryClient
     .getQueryCache()
     .findAll({ queryKey: queryKeys.inWorkspace(workspacePath, 'codeReviews') })
+    .filter((query) => !query.state.isInvalidated)
     .map((query) => ({ data: query.state.data, readAt: query.state.dataUpdatedAt }));
 }
 
