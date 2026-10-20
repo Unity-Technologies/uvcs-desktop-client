@@ -94,21 +94,21 @@ function HunkChoices({ labels, conflictIndex, onChoose, onKeepBase }: HunkChoice
   const { source, destination } = labels.roles;
   return (
     <span className={styles.choices} role="group" aria-label={`Resolve conflict ${conflictIndex + 1}`}>
-      <Button size="small" variant="secondary" data-tip={`From ${labels.destination}`} onClick={() => onChoose('current')}>
-        Keep {destination.name.toLowerCase()}
-      </Button>
-      <Button size="small" variant="secondary" data-tip={`From ${labels.source}`} onClick={() => onChoose('incoming')}>
-        Keep {source.name.toLowerCase()}
-      </Button>
-      <Button size="small" variant="secondary" data-tip={`${destination.name} first, then ${source.name.toLowerCase()}`} onClick={() => onChoose('both')}>
-        Keep both
-      </Button>
-      {onKeepBase && (
-        <Button size="small" variant="secondary" data-tip="As it was before either side changed it" onClick={onKeepBase}>
-          Keep base
-        </Button>
-      )}
+      <HunkChoice label={destination.name} tip={`From ${labels.destination}`} onClick={() => onChoose('current')} />
+      <HunkChoice label={source.name} tip={`From ${labels.source}`} onClick={() => onChoose('incoming')} />
+      <HunkChoice label="Both" tip={`${destination.name} first, then ${source.name.toLowerCase()}`} onClick={() => onChoose('both')} />
+      {onKeepBase && <HunkChoice label="Base" tip="As it was before either side changed it" onClick={onKeepBase} />}
     </span>
+  );
+}
+
+/** "Keep yours", or just "Yours" where the conflict's header is too narrow for every choice in full (its CSS). */
+function HunkChoice({ label, tip, onClick }: { label: string; tip: string; onClick: () => void }) {
+  return (
+    <Button size="small" variant="secondary" aria-label={`Keep ${label.toLowerCase()}`} data-tip={tip} onClick={onClick}>
+      <span className={styles.fullLabel}>Keep {label.toLowerCase()}</span>
+      <span className={styles.shortLabel}>{label}</span>
+    </Button>
   );
 }
 

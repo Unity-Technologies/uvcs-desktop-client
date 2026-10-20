@@ -6,6 +6,8 @@
   gap: var(--space-2);
   min-width: 0;
   font-family: var(--font-ui);
+  /* Its width decides how the choices read (below). */
+  container-type: inline-size;
 }
 
 .side {
@@ -41,4 +43,19 @@
   height: 22px;
   padding-inline: var(--space-2);
   font-size: var(--text-xs);
+}
+
+/* Every choice in full ("Keep incoming") where the header has room; just the version ("Incoming") where it hasn't. */
+.shortLabel {
+  display: none;
+}
+
+@container (max-width: 440px) {
+  .fullLabel {
+    display: none;
+  }
+
+  .shortLabel {
+    display: inline;
+  }
 }
