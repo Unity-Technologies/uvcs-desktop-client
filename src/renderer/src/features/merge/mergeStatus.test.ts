@@ -46,6 +46,10 @@ describe('directoryConflictStatus', () => {
     expect(directoryConflictStatus(undefined)).toBe('needsDecision');
     expect(directoryConflictStatus({ choice: 'rename', newName: 'b' })).toBe('keepingBoth');
   });
+
+  it('still needs a decision while "Keep both" has no name the merge can take', () => {
+    for (const newName of ['', '  ', 'a/b', 'a\\b', '.', '..']) expect(directoryConflictStatus({ choice: 'rename', newName })).toBe('needsDecision');
+  });
 });
 
 describe('presentStatus', () => {

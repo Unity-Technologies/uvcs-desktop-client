@@ -34,6 +34,11 @@ describe('collectResolutions', () => {
     expect(collectResolutions({ plan, fileStates: [automatic, manual], directoryResolutions: [{ choice: 'source' }] })).toBeNull();
   });
 
+  it('waits while "Keep both" has no name the merge can take', () => {
+    for (const newName of ['', 'a/b', '..']) expect(collectResolutions({ plan, fileStates: [automatic], directoryResolutions: [{ choice: 'rename', newName }] })).toBeNull();
+    expect(collectResolutions({ plan, fileStates: [automatic], directoryResolutions: [{ choice: 'rename', newName: 't (task).txt' }] })).not.toBeNull();
+  });
+
   it("collects each file's own decision, in a workspace merge or into a server branch alike", () => {
     const decided = state('/manual.txt', { decidedByUser: true, resolution: { choice: 'destination' } });
     expect(collectResolutions({ plan, fileStates: [automatic, decided], directoryResolutions: [{ choice: 'source' }], comment: 'Merge' })).toEqual({
