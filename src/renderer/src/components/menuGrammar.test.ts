@@ -264,6 +264,31 @@ describe('the menu grammar', () => {
   });
 });
 
+describe('Compare with another', () => {
+  const comparing = (menu: MenuEntry[]) => topEntries(menu).filter((entry) => entry.id === 'compare').map((entry) => entry.label);
+
+  it('compares one branch, changeset or label with another of its kind, wherever it shows', () => {
+    expect(comparing(MENUS.branch!())).toEqual(['Compare with another branch…']);
+    expect(comparing(MENUS.currentBranch!())).toEqual(['Compare with another branch…']);
+    expect(comparing(MENUS.graphBranch!())).toEqual(['Compare with another branch…']);
+    expect(comparing(MENUS.changeset!())).toEqual(['Compare with another changeset…']);
+    expect(comparing(MENUS.graphChangeset!())).toEqual(['Compare with another changeset…']);
+    expect(comparing(MENUS.label!())).toEqual(['Compare with another label…']);
+  });
+
+  it("sits with a branch's other views: its changesets, then comparing, then the Branch Explorer", () => {
+    const navigating = (menu: MenuEntry[]) => topEntries(menu).filter((entry) => groupOf(entry) === 'navigate').map((entry) => entry.label);
+    expect(navigating(MENUS.branch!())).toEqual(['Show changesets', 'Compare with another branch…', 'Show in Branch Explorer']);
+    expect(navigating(MENUS.graphBranch!()).slice(0, 2)).toEqual(['Show changesets', 'Compare with another branch…']);
+  });
+
+  it('leaves it out of a selection of several, which compares them or nothing', () => {
+    expect(comparing(MENUS.branches!())).toEqual([]);
+    expect(comparing(MENUS.changesetInterval!())).toEqual([]);
+    expect(comparing(MENUS.labelPair!())).toEqual([]);
+  });
+});
+
 /** What a menu shows, flattened with the "Copy" submenu's entries: the words, icons and order people read. */
 function reading(menu: MenuEntry[]): string[] {
   return topEntries(menu).flatMap((entry) => {

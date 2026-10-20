@@ -72,7 +72,7 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
 
   const chooseBranch = async (): Promise<void> => {
     const picked = await pickBranch({ title: 'Work on a branch', description: 'The new workspace switches to it.' });
-    if (picked) setExistingBranch(picked);
+    if (picked) setExistingBranch(picked.name);
   };
 
   const create = async (): Promise<void> => {
