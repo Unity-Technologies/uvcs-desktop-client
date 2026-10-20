@@ -1,5 +1,6 @@
 import type { DiffEntry } from '@shared/domain/diff';
 import type { DeletedItemRestore } from '@shared/domain/explorer';
+import { inWorkspaceRepository } from '@shared/domain/repository';
 import { menuAction } from '../../components/menuWords';
 import type { GroupedEntry } from '../../lib/menuGroups';
 import { pluralize } from '../../lib/text';
@@ -7,11 +8,12 @@ import { restoreDeletedItems, restoreDeletedItemTo } from './restoreDeleted';
 
 /**
  * What restoring these entries of a diff brings back, each where it was: the revision each deletion removed. Null
- * unless every entry was deleted, in the workspace's own repository: `cm undelete` restores no xlinked item, and
- * finds the revision only in the workspace's repository (`undeleteArgs`).
+ * unless every entry was deleted, in the workspace's own repository, and none is an xlink: `cm undelete` restores no
+ * xlink nor xlinked item, and finds the revision only in the workspace's repository (`undeleteArgs`).
  */
 export function deletedItemRestores(entries: DiffEntry[], workspaceRepository: string | undefined): DeletedItemRestore[] | null {
-  const restorable = (entry: DiffEntry) => entry.status === 'deleted' && entry.baseRevisionId >= 0 && workspaceRepository !== undefined && entry.repository === workspaceRepository;
+  const restorable = (entry: DiffEntry) =>
+    entry.status === 'deleted' && entry.itemType !== 'xlink' && entry.baseRevisionId >= 0 && inWorkspaceRepository(entry.repository, workspaceRepository) === true;
   if (entries.length === 0 || !entries.every(restorable)) return null;
   return entries.map((entry) => ({ revision: { revisionId: entry.baseRevisionId, repository: entry.repository }, path: entry.path }));
 }

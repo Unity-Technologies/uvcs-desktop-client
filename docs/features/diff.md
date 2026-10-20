@@ -131,15 +131,17 @@ menu, in the diff page and a details panel's changed files, as a pending change:
 "Restore N items" where it was, and for one item "Restore to…" any path in the workspace (`restoreMenuEntries`,
 `restoreDeleted`). `cm undelete <revid:N> <path>` writes the revision the deletion removed (the entry's
 `baseRevisionId`) and records it as copied; a folder comes back with everything it held then. It is offered only when
-every selected item was deleted, in the workspace's own repository (`deletedItemRestores`): `cm` restores no xlinked
-item and finds a bare id only there (`undeleteArgs`). Incoming offers none: what it deletes is still in the workspace.
+every selected item was deleted, in the workspace's own repository, and none is an xlink (`deletedItemRestores`):
+`cm` restores no xlink nor xlinked item, and finds a bare id only there (`undeleteArgs`). Incoming offers none: what it deletes is still in the workspace.
 
 - `cm` takes one item a command, so several are one operation running one each (`restoreDeletedItems` in main),
-  which stops between two; each is a user's pick, never a loop over a list. `undelete` counts as a transfer
-  (`runsLong`): a folder downloads all it held, so it runs as a process, never holding a pooled shell.
+  which stops between two. A folder row of a tree selects every deleted file under it, so past
+  `MAX_RESTORED_WITHOUT_ASKING` (20) items it asks first: each is a process and a round trip to the server.
+  `undelete` counts as a transfer (`runsLong`): a folder downloads all it held, so it runs as a process, never
+  holding a pooled shell.
 - Every place is checked on disk before any `cm`, and nothing is restored if one fails: `cm` refuses a path that holds
   an item ("The restore path should not exist"), but into a folder that's gone it writes the files and then fails,
-  leaving them private. The toast says which, and to restore it elsewhere. `cm` also refuses an item the workspace
+  leaving them private. The toast says which; for one item it offers "Restore to…", starting from where it was. `cm` also refuses an item the workspace
   still loads ("The item 35 is already loaded on tree"), shown as it prints it.
 - The official client asks to confirm first; nothing is lost here (the item comes back as a change to undo or check
   in), so it doesn't.
