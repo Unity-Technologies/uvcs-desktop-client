@@ -72,7 +72,8 @@ export interface MergeToolRequest {
   names: { base: string; yours: string; incoming: string };
   /**
    * Try Smart Merge before opening the tool, when the file is a Unity asset and a Unity Editor is installed: set while
-   * nothing was decided for the file. Once something was, the tool opens on it, so the user can always get there.
+   * the user decided nothing for the file yet (`decidedByUser`). Once they did, the tool opens on it, so they can
+   * always get there.
    */
   trySmartMergeFirst: boolean;
 }
