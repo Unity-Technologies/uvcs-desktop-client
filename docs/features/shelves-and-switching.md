@@ -50,8 +50,8 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
   check-in.
 - **A changelist at a time**: grouped by changelists, a changelist's menu (`changelistMenu`) offers "Check in this
   changelist" and "Shelve this changelist", which ready the panel rather than run (`prepareChangelistCheckin`): its
-  changes checked alone (those the filters hide too), the panel in that mode (kept with the draft,
-  `CheckinDraft.mode`), its description as the comment unless the user wrote one (a comment another changelist's
+  changes checked alone (those the filters hide too), the panel in that mode (Changes holds it, `PendingChangesPanes`,
+  so it goes back to Check in when Changes shows again, as after the caret), its description as the comment unless the user wrote one (a comment another changelist's
   description filled counts as none; one filled from a description since edited counts as the user's), and the caret
   at the end of the summary (`focusAfterMenu` leaves it there as the menu closes). What is checked is the prepared
   changelist's paths (`PreparedChangelist` in the draft, read by `includedBy`), not exclusions: a change that appears

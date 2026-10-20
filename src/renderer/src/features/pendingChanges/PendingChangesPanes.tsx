@@ -1,5 +1,5 @@
 import { GitMerge } from 'lucide-react';
-import { useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Changelist, PendingChange, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
@@ -82,6 +82,8 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const setIncluded = useCheckinDraftStore((state) => state.setIncluded);
   const [selection, setSelection] = useViewSelection('changes');
   const summaryRef = useRef<HTMLInputElement>(null);
+  // Back to checking in each time Changes shows, as a shelve is a detour.
+  const [checkinMode, setCheckinMode] = useState<CheckinMode>('checkin');
 
   const allChanges = snapshot?.changes ?? NO_CHANGES;
   const changelists = snapshot?.changelists ?? NO_CHANGELISTS;
@@ -139,7 +141,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   // The changelist's changes checked alone, then the caret after the comment: writing or reading it is the way on.
   const prepareChangelist = (changelist: Changelist, mode: CheckinMode): void => {
     prepareChangelistCheckin({ workspacePath, changelist, allChanges, changelists });
-    useCheckinDraftStore.getState().setMode(workspacePath, mode);
+    setCheckinMode(mode);
     focusAtEnd(summaryRef.current, checkinDraftOf(workspacePath).summary);
   };
 
@@ -242,6 +244,8 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
               behindDescription={behind && behindDescription(behind)}
               allReviewed={review.on && reviewed.total > 0 && reviewed.reviewed === reviewed.total}
               recentComments={settings.recentComments}
+              mode={checkinMode}
+              onModeChange={setCheckinMode}
               busy={submit.busy}
               onCheckin={submit.checkin}
               onShelve={submit.shelve}

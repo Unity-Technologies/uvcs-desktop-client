@@ -11,7 +11,7 @@ import { ResizeHandle } from '../../ui/ResizeHandle';
 import { canChangeCheckinMode, checkinButtonLabel, checkinDisabledReason, type CheckinMode } from './checkinButton';
 import { CheckinButtonWording } from './CheckinButtonWording';
 import { CheckinModeMenu, describeMode } from './CheckinModeMenu';
-import { useCheckinDraftStore, useCheckinMessage, useCheckinMode } from './checkinDraftStore';
+import { useCheckinDraftStore, useCheckinMessage } from './checkinDraftStore';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { describeUpload, type UploadSummary } from './uploadSummary';
 import styles from './CheckinPanel.module.css';
@@ -41,6 +41,9 @@ interface CheckinPanelProps {
   /** Review mode is on and every included change is reviewed. */
   allReviewed: boolean;
   recentComments: string[];
+  /** Whether the button checks in or shelves: the caret beside it sets it, and so does a changelist's menu. */
+  mode: CheckinMode;
+  onModeChange: (mode: CheckinMode) => void;
   busy: boolean;
   onCheckin: () => Promise<void>;
   /** `keep`: the changes stay in the workspace; otherwise they are undone once shelved. */
@@ -60,14 +63,12 @@ export function CheckinPanel({
   behindDescription,
   allReviewed,
   recentComments,
+  mode,
+  onModeChange: setMode,
   busy,
   onCheckin,
   onShelve,
 }: CheckinPanelProps) {
-  // Kept with the workspace's draft, where a changelist's "Shelve this changelist" sets it too.
-  const mode = useCheckinMode(workspacePath);
-  const setDraftMode = useCheckinDraftStore((state) => state.setMode);
-  const setMode = (next: CheckinMode): void => setDraftMode(workspacePath, next);
   const [keepShelved, setKeepShelved] = useState(false);
   const descriptionHeight = usePendingChangesViewStore((state) => state.descriptionHeight);
   const setDescriptionHeight = usePendingChangesViewStore((state) => state.setDescriptionHeight);

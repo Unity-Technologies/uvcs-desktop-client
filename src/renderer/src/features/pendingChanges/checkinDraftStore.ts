@@ -1,16 +1,13 @@
 import { useMemo } from 'react';
 import { create } from 'zustand';
-import type { CheckinMode } from './checkinButton';
 import { withIncluded, type CheckinChoice, type PreparedChangelist } from './checkinSelection';
 
 interface CheckinDraft extends CheckinChoice {
   summary: string;
   description: string;
-  /** What the panel's button does: check in, or shelve (the caret beside it, or a changelist's "Shelve this changelist"). */
-  mode: CheckinMode;
 }
 
-const EMPTY_DRAFT: CheckinDraft = { summary: '', description: '', excludedPaths: new Set(), prepared: null, mode: 'checkin' };
+const EMPTY_DRAFT: CheckinDraft = { summary: '', description: '', excludedPaths: new Set(), prepared: null };
 
 interface CheckinDraftStore {
   drafts: Record<string, CheckinDraft>;
@@ -20,7 +17,6 @@ interface CheckinDraftStore {
   prepareChangelist: (workspacePath: string, prepared: PreparedChangelist) => void;
   /** Once the prepared changelist is checked in or shelved: back to every file but those the user left out. */
   endPrepared: (workspacePath: string) => void;
-  setMode: (workspacePath: string, mode: CheckinMode) => void;
   /** After a check-in: the comment goes, the files left out stay left out. */
   clearMessage: (workspacePath: string) => void;
 }
@@ -37,7 +33,6 @@ export const useCheckinDraftStore = create<CheckinDraftStore>((set) => {
       updateDraft(workspacePath, (draft) => ({ ...draft, ...withIncluded(draft, paths, included) })),
     prepareChangelist: (workspacePath, prepared) => updateDraft(workspacePath, (draft) => ({ ...draft, prepared })),
     endPrepared: (workspacePath) => updateDraft(workspacePath, (draft) => ({ ...draft, prepared: null })),
-    setMode: (workspacePath, mode) => updateDraft(workspacePath, (draft) => ({ ...draft, mode })),
     clearMessage: (workspacePath) => updateDraft(workspacePath, (draft) => ({ ...draft, summary: '', description: '' })),
   };
 });
@@ -59,8 +54,4 @@ export function useCheckinChoice(workspacePath: string): CheckinChoice {
   const excludedPaths = useCheckinDraftStore((state) => (state.drafts[workspacePath] ?? EMPTY_DRAFT).excludedPaths);
   const prepared = useCheckinDraftStore((state) => (state.drafts[workspacePath] ?? EMPTY_DRAFT).prepared);
   return useMemo(() => ({ excludedPaths, prepared }), [excludedPaths, prepared]);
-}
-
-export function useCheckinMode(workspacePath: string): CheckinMode {
-  return useCheckinDraftStore((state) => (state.drafts[workspacePath] ?? EMPTY_DRAFT).mode);
 }
