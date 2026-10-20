@@ -32,7 +32,7 @@ import { previewMerge } from './previewMerge';
  *    takes each file's decision from a resolutions file (`fileConflictResolutionsFile`).
  * 3. For workspace merges, each conflicting file is then written with its resolution: the text decided, the source's
  *    text as the page read it, or else (binaries) the source's revision, all with one `cm cat`. A version that can't
- *    be saved leaves its file as yours, named in the result (`incomingNotSaved`, or `incomingMaybeNotSaved` when `cm`
+ *    be saved leaves its file as yours, named in the result (`keptVersionNotSaved`, or `keptVersionMaybeNotSaved` when `cm`
  *    didn't tell): the merge is in the workspace by then.
  * If anything looks different from the plan the user reviewed, it stops before changing the workspace.
  */
@@ -83,7 +83,7 @@ export async function runMerge(
 
     context.reportProgress('Writing resolved files');
     const { notSaved, maybeNotSaved } = await writeFileConflictResolutions(cm, workspacePath, request, plan, resolutions.files);
-    return { ...(notSaved.length > 0 && { incomingNotSaved: notSaved }), ...(maybeNotSaved.length > 0 && { incomingMaybeNotSaved: maybeNotSaved }) };
+    return { ...(notSaved.length > 0 && { keptVersionNotSaved: notSaved }), ...(maybeNotSaved.length > 0 && { keptVersionMaybeNotSaved: maybeNotSaved }) };
   });
 }
 
@@ -140,8 +140,8 @@ async function writeFileConflictResolutions(
   request: MergeRequest,
   plan: MergePlan,
   resolutions: Record<string, FileConflictResolution>,
-): Promise<UnsavedIncoming> {
-  const incomingReads: IncomingRead[] = [];
+): Promise<UnsavedVersions> {
+  const keptVersionReads: KeptVersionRead[] = [];
   for (const conflict of plan.fileConflicts) {
     const resolution = resolutions[conflict.path]!;
     const target = toAbsolutePath(workspacePath, conflict.path.replace(/^\//, ''));
@@ -151,17 +151,17 @@ async function writeFileConflictResolutions(
       await retryWhileBusy(() => writeFile(target, text, 'utf8'));
     } else if (resolution.choice === 'source') {
       const source = spec.itemAt(conflict.itemId, mergeSourcePoint(request, conflict.sourceChangeset), conflict.repository);
-      incomingReads.push({ path: conflict.path, spec: source, repository: conflict.repository, target, size: -1 });
+      keptVersionReads.push({ path: conflict.path, spec: source, repository: conflict.repository, target, size: -1 });
     }
   }
-  return saveIncomingVersions(cm, workspacePath, incomingReads);
+  return saveKeptVersions(cm, workspacePath, keptVersionReads);
 }
 
 /** An incoming version for `cm cat` to save over a conflicting file, with the file's path in the plan. */
-type IncomingRead = CatRead & { path: string };
+type KeptVersionRead = CatRead & { path: string };
 
 /** The files whose incoming version a merge couldn't save: those known to still hold yours, and those that may. */
-interface UnsavedIncoming {
+interface UnsavedVersions {
   notSaved: string[];
   maybeNotSaved: string[];
 }
@@ -173,8 +173,8 @@ interface UnsavedIncoming {
  * version again changes nothing, and what fails again may not hold the incoming version. A file another program
  * holds open on Windows fails too, with no retry: `cm` writes it, not `retryWhileBusy`.
  */
-async function saveIncomingVersions(cm: CmClient, workspacePath: string, reads: IncomingRead[]): Promise<UnsavedIncoming> {
-  const unsaved: UnsavedIncoming = { notSaved: [], maybeNotSaved: [] };
+async function saveKeptVersions(cm: CmClient, workspacePath: string, reads: KeptVersionRead[]): Promise<UnsavedVersions> {
+  const unsaved: UnsavedVersions = { notSaved: [], maybeNotSaved: [] };
   for (const batch of catBatchesOf(reads, (read) => read)) {
     let uncertain = await saveOnce(cm, workspacePath, batch, unsaved);
     if (uncertain.length > 0) uncertain = await saveOnce(cm, workspacePath, uncertain, unsaved);
@@ -187,7 +187,7 @@ async function saveIncomingVersions(cm: CmClient, workspacePath: string, reads: 
  * One `cm cat` of the reads: those it named as not found join `unsaved`; returns those it may not have written, when
  * some line of its failure names nothing.
  */
-async function saveOnce(cm: CmClient, workspacePath: string, reads: IncomingRead[], unsaved: UnsavedIncoming): Promise<IncomingRead[]> {
+async function saveOnce(cm: CmClient, workspacePath: string, reads: KeptVersionRead[], unsaved: UnsavedVersions): Promise<KeptVersionRead[]> {
   const failure = await cm.execute(catArgs(reads), { cwd: workspacePath }).then(
     () => null,
     (error: unknown) => error,

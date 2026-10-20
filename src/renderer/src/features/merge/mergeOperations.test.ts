@@ -57,7 +57,7 @@ describe('completing a merge', () => {
   });
 
   it("says which files still hold yours when the merge couldn't save their incoming version, and which may", async () => {
-    fakeApi.answer('merge.run', () => ({ incomingNotSaved: ['/Assets/Grass.png', '/Assets/Rock.png'], incomingMaybeNotSaved: ['/Assets/Lamp.glb'] }));
+    fakeApi.answer('merge.run', () => ({ keptVersionNotSaved: ['/Assets/Grass.png', '/Assets/Rock.png'], keptVersionMaybeNotSaved: ['/Assets/Lamp.glb'] }));
     navigation.openPage({ kind: 'merge', request: intoWorkspace });
 
     await completeMerge(ws, intoWorkspace, resolutions);
@@ -71,7 +71,7 @@ describe('completing a merge', () => {
   });
 
   it('says which files may not hold the incoming version when none is known to still hold yours', async () => {
-    fakeApi.answer('merge.run', () => ({ incomingMaybeNotSaved: ['/Assets/Lamp.glb'] }));
+    fakeApi.answer('merge.run', () => ({ keptVersionMaybeNotSaved: ['/Assets/Lamp.glb'] }));
     navigation.openPage({ kind: 'merge', request: intoWorkspace });
 
     await completeMerge(ws, intoWorkspace, resolutions);

@@ -141,7 +141,7 @@ describe('runMerge into the workspace', () => {
     });
     const resolutions: MergeResolutions = { directoryConflicts: [], files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'source' } } };
 
-    expect(await runMerge(cm, workspacePath, FROM_TASK, resolutions, recordingContext().context)).toEqual({ incomingNotSaved: ['/src/b.txt'] });
+    expect(await runMerge(cm, workspacePath, FROM_TASK, resolutions, recordingContext().context)).toEqual({ keptVersionNotSaved: ['/src/b.txt'] });
     expect(await readFile(join(workspacePath, 'src', 'a.txt'), 'utf8')).toBe('incoming version\n');
   });
 
@@ -158,7 +158,7 @@ describe('runMerge into the workspace', () => {
   it('tries a cm cat that failed naming none once more, and says its files may not hold the incoming version when it fails again', async () => {
     const { cm, lines } = keepingTwoIncoming(cmFails('The connection was closed.'));
 
-    expect(await runMerge(cm, workspacePath, FROM_TASK, bothIncoming, recordingContext().context)).toEqual({ incomingMaybeNotSaved: ['/src/a.txt', '/src/b.txt'] });
+    expect(await runMerge(cm, workspacePath, FROM_TASK, bothIncoming, recordingContext().context)).toEqual({ keptVersionMaybeNotSaved: ['/src/a.txt', '/src/b.txt'] });
     expect(lines().filter((line) => line.startsWith('cat'))).toHaveLength(2);
   });
 
@@ -174,8 +174,8 @@ describe('runMerge into the workspace', () => {
     const { cm } = keepingTwoIncoming(cmFails('The specified revision was not found itemid:30#cs:3@eco@local\nError downloading a revision.'));
 
     expect(await runMerge(cm, workspacePath, FROM_TASK, bothIncoming, recordingContext().context)).toEqual({
-      incomingNotSaved: ['/src/a.txt'],
-      incomingMaybeNotSaved: ['/src/b.txt'],
+      keptVersionNotSaved: ['/src/a.txt'],
+      keptVersionMaybeNotSaved: ['/src/b.txt'],
     });
   });
 
