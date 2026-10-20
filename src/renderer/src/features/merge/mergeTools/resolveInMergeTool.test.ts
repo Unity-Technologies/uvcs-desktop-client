@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { MergeTool, MergeToolOutcome, SmartMergeOutcome, SmartMergeRequest } from '@shared/domain/mergeTools';
 import { WORKSPACE_ROLES, type MergeLabels } from '../mergeDescription';
 import type { FileConflictState } from '../resolve/useFileConflicts';
+import { stopMergeToolSession } from './mergeToolSessions';
 import { resolveInMergeTool, type OpenTool } from './resolveInMergeTool';
 
 const vsCode: MergeTool = { id: 'vscode', name: 'VS Code', origin: 'known', executable: 'code', args: [], defaultArgs: [], canBringToFront: true };
@@ -79,6 +80,21 @@ describe('resolveInMergeTool', () => {
 
     expect(shown).toEqual(['VS Code (front)', null]);
     expect(methods).toEqual(['mergeTools.resolve']);
+  });
+
+  it('opens nothing when the user stops Smart Merge just as it ends on its own, too late for main to stop it', async () => {
+    fakeApi.answer('mergeTools.stopWaiting', async () => undefined);
+    fakeApi.answer('mergeTools.smartMerge', async ({ sessionId }: SmartMergeRequest) => {
+      // Skip, Stop or leaving the page, while main already has Smart Merge's answer: it finds nothing to stop.
+      void stopMergeToolSession(sessionId);
+      return { kind: 'notMerged' };
+    });
+    fakeApi.answer('mergeTools.resolve', async () => ({ kind: 'resolved', text: 'never\n' }));
+
+    const session = await resolveInMergeTool('/wk', prefab(), vsCode, labels, () => undefined, { quiet: true, smartMerge: true, stillUndecided: () => true });
+
+    expect(session).toEqual({ outcome: { kind: 'unchanged', exitCode: null, errorOutput: '' }, decision: undefined });
+    expect(fakeApi.methods()).toEqual(['mergeTools.smartMerge', 'mergeTools.stopWaiting']);
   });
 
   it('opens nothing more when the user stops Smart Merge', async () => {
