@@ -5,6 +5,7 @@ import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import { isHeaderRow } from '../../lib/groupedPathTree';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { pluralize } from '../../lib/text';
+import { hidesEveryRow } from '../../lib/hidesEveryRow';
 import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
 import { ChangesetDetails } from '../changesets/ChangesetDetails';
@@ -77,7 +78,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
 
   const focusedFile = files?.find((file) => diffEntryKey(file) === selection.anchor);
   // Nothing to select while the filters hide every file: the detail pane shows no file.
-  const hidesAll = Boolean(files?.length) && filter.visible.length === 0;
+  const hidesAll = hidesEveryRow(files?.length ?? 0, filter.visible.length);
   const focusedGroup = focusedFile ? undefined : rows.filter(isHeaderRow).find((row) => row.key === selection.anchor);
   const firstFile = files && scope.kind === 'all' ? firstIncomingFile(files, collides) : undefined;
 

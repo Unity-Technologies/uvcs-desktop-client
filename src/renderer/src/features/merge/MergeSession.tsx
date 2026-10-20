@@ -7,6 +7,7 @@ import { useGroupedFileTree } from '../../components/useGroupedFileTree';
 import { isHeaderRow } from '../../lib/groupedPathTree';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { pluralize } from '../../lib/text';
+import { hidesEveryRow } from '../../lib/hidesEveryRow';
 import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
 import { defaultMergeComment } from '../mergeTask/mergeTaskSummary';
@@ -72,7 +73,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   const filter = useChangeFilter(items, itemPath, mergeItemTones, { isViewFilter: true });
   const content = useMemo(() => ({ groups: mergeItemGroups(filter.visible) }), [filter.visible]);
   // Nothing to select while the filters hide every item: the detail pane stays blank.
-  const hidesAll = items.length > 0 && filter.visible.length === 0;
+  const hidesAll = hidesEveryRow(items.length, filter.visible.length);
   const { rows, tree, toggleCollapsed, rowKeyOf } = useGroupedFileTree(content, itemKey, folderListScope(workspacePath, `merge:${request.sourceSpec}:${request.destinationBranch ?? ''}`), selectedKey);
   const latestRowKeyOf = useRef(rowKeyOf);
   latestRowKeyOf.current = rowKeyOf;
