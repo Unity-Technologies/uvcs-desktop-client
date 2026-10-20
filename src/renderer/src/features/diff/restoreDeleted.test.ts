@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
 
 import type { DeletedItemRestore } from '@shared/domain/explorer';
+import { useNavigation } from '../../app/navigation/navigationStore';
 import { answerPrompts, askedDialogs } from '../../testing/fakeDialogs';
 import { pressToastAction, shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
 import { restoreDeletedItems, restoreDeletedItemTo } from './restoreDeleted';
@@ -18,6 +19,7 @@ const restoresAsked = () => fakeApi.argsOf('explorer.restoreDeleted').map((args)
 describe('restoreDeletedItems', () => {
   it('brings the items back as pending changes, then leads to them', async () => {
     fakeApi.answer('explorer.restoreDeleted', () => undefined);
+    useNavigation.setState({ view: 'changesets', pages: [] });
 
     await restoreDeletedItems(ws, [enemy, docs]);
 
@@ -27,7 +29,7 @@ describe('restoreDeletedItems', () => {
     expect(whereTheWindowIs().view).toBe('changes');
   });
 
-  it("names the one item restored", async () => {
+  it('names the one item restored', async () => {
     fakeApi.answer('explorer.restoreDeleted', () => undefined);
 
     await restoreDeletedItems(ws, [enemy]);
