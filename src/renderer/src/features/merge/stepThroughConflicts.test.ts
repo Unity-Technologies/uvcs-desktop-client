@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { arrivalChange, currentAfterChange, plannedMove, positionLabel } from '../diff/viewer/changeNavigation';
+import { arrivalChange, plannedMove, positionLabel, type ChangePosition } from '../diff/viewer/changeNavigation';
 import { fileSteps, type PendingArrival } from '../diff/viewer/fileSteps';
+import { positionAfterChange, pressStep } from '../diff/viewer/stepNavigation';
 import { conflictStepKeys } from './conflictSteps';
+import { ConflictPlace } from './resolve/conflictRows';
 
 /**
- * Stepping through the conflicts of the merge page (⌥↓ ⌥↑, F7 ⇧F7, the arrows around "2 of 3"), as `ConflictNavigator`
- * does with the list's `FileStepsContext` (`conflictStepKeys`): past a file's last conflict on to the first of the next
- * file still waiting for the user, past its first back to the last of the previous one; files decided or merged
- * automatically are passed by. Resolving a conflict takes it out of the file, and the next move goes on from there.
+ * Stepping through the conflicts of the merge page (⌥↓ ⌥↑, F7 ⇧F7, the arrows around "2 of 3"), with the decisions
+ * `ConflictNavigator` takes (`pressStep`, `positionAfterChange`, `ConflictPlace`) and the list's `FileStepsContext`
+ * (`conflictStepKeys`): past a file's last conflict on to the first of the next file still waiting for the user, past
+ * its first back to the last of the previous one; files decided or merged automatically are passed by. Resolving a
+ * conflict takes it out of the file, and the next move goes on to the one that took its place. The files are short:
+ * every conflict is in view, none starts above its top.
  */
 
 interface ListedFile {
@@ -17,11 +21,13 @@ interface ListedFile {
   decided?: boolean;
 }
 
+/** No conflict starts above the top of the view: every one is in it. */
+const ALL_IN_VIEW = (): number => 0;
+
 class MergePage {
   private shown = '';
-  private current: number | null = null;
-  /** How many conflicts start above the top of the view: where the first move goes from. */
-  private above = 0;
+  private position: ChangePosition = { count: 0, current: null, above: 0 };
+  private place = new ConflictPlace();
   private readonly pending: { current: PendingArrival | null } = { current: null };
 
   constructor(private readonly files: Record<string, ListedFile>) {
@@ -30,40 +36,42 @@ class MergePage {
 
   /** The file shown and the arrows' "2 of 3". */
   get header(): string {
-    return `${this.shown}: ${positionLabel({ count: this.count, current: this.current }, 'conflict')}`;
+    return `${this.shown}: ${positionLabel(this.position, 'conflict')}`;
   }
 
   press(direction: 1 | -1): this {
-    const steps = this.steps();
-    const move = plannedMove({ count: this.count, current: this.current, above: this.above }, direction, steps.canStep(direction));
-    if (move?.to === 'change') this.current = move.index;
-    else if (move?.to === 'file') steps.step(direction);
+    const outcome = pressStep(this.position, direction, this.steps(), () => this.place.above(ALL_IN_VIEW));
+    if (typeof outcome === 'number') {
+      this.position = { ...this.position, current: outcome };
+      this.place.moved();
+    }
     return this;
   }
 
   goesTo(direction: 1 | -1): string | null {
-    return plannedMove({ count: this.count, current: this.current, above: this.above }, direction, this.steps().canStep(direction))?.to ?? null;
+    return plannedMove(this.position, direction, this.steps().canStep(direction))?.to ?? null;
   }
 
-  /** Keeps a side of the conflict moved to: it leaves the text, which stays where it was in the view. */
-  resolveCurrent(): this {
+  /** Keeps a side of the conflict at `index`, with its header's choices: it leaves the text. */
+  resolve(index: number): this {
     const file = this.files[this.shown]!;
     const before = Array.from({ length: file.conflicts });
     file.conflicts -= 1;
     if (file.conflicts === 0) file.decided = true;
-    this.above = this.current ?? this.above;
-    this.current = currentAfterChange(this.current, before, Array.from({ length: file.conflicts }));
+    this.place.resolvedAt(index);
+    this.position = positionAfterChange(this.position, before, Array.from({ length: file.conflicts }), this.place.aboveAfterChange());
     return this;
+  }
+
+  /** Keeps a side of the conflict moved to. */
+  resolveCurrent(): this {
+    return this.resolve(this.position.current!);
   }
 
   /** Clicks a file in the list. */
   select(path: string): this {
     this.open(path);
     return this;
-  }
-
-  private get count(): number {
-    return this.files[this.shown]!.conflicts;
   }
 
   private steps() {
@@ -74,9 +82,10 @@ class MergePage {
 
   private open(path: string): void {
     this.shown = path;
-    this.above = 0;
+    this.place = new ConflictPlace();
+    const count = this.files[path]!.conflicts;
     const arrival = this.steps().takeArrival(path);
-    this.current = arrival ? arrivalChange(arrival, this.count) : null;
+    this.position = { count, current: arrival ? arrivalChange(arrival, count) : null, above: 0 };
   }
 }
 
@@ -113,7 +122,7 @@ describe('stepping through the conflicts of a merge', () => {
     expect([page.press(-1).header, page.press(-1).header, page.press(-1).header]).toEqual(['logo.png: 1 of 1', 'Level.cs: 3 of 3', 'Level.cs: 2 of 3']);
   });
 
-  it('goes on from the conflict resolved to the one that followed it, or to the next file past the last', () => {
+  it('goes on from the conflict resolved to the one that took its place, not back to the first in view', () => {
     const page = merge().select('Level.cs').press(1).press(1);
     expect(page.header).toBe('Level.cs: 2 of 3');
     expect(page.resolveCurrent().header).toBe('Level.cs: 2 conflicts');
@@ -121,16 +130,21 @@ describe('stepping through the conflicts of a merge', () => {
     expect(page.resolveCurrent().press(1).header).toBe('logo.png: 1 of 1');
   });
 
-  it('goes back up to a conflict left above the one resolved', () => {
+  it('goes back up to the conflict before the one resolved', () => {
     const page = merge().select('Level.cs').press(1).press(1);
     expect(page.resolveCurrent().press(-1).header).toBe('Level.cs: 1 of 2');
-    expect(page.resolveCurrent().header).toBe('Level.cs: 1 conflict');
   });
 
-  it('keeps its place in the list from a file just decided, which it no longer goes back to', () => {
+  it('goes on from a conflict resolved without moving to it first', () => {
+    const page = merge().select('Level.cs');
+    expect(page.resolve(1).press(1).header).toBe('Level.cs: 2 of 2');
+  });
+
+  it("goes straight on to the files around it once the file shown is decided, which it doesn't go back to", () => {
     const page = merge().select('Level.cs');
     for (let conflict = 0; conflict < 3; conflict++) page.press(1).resolveCurrent();
     expect(page.header).toBe('Level.cs: No conflicts');
+    expect(page.goesTo(1)).toBe('file');
     expect(page.press(-1).header).toBe('Enemy.cs: 1 of 1');
     expect(page.press(1).header).toBe('logo.png: 1 of 1');
   });
