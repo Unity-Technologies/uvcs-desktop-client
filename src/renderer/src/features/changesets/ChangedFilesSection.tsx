@@ -8,7 +8,6 @@ import { useChangeFilter } from '../../components/useChangeFilter';
 import { useFileTree } from '../../components/useFileTree';
 import { firstFilesOf, pathTreeKeyMove } from '../../lib/pathTree';
 import { moveRovingFocus, ROVING_ITEM } from '../../lib/rovingFocus';
-import { pluralize } from '../../lib/text';
 import { DetailsChangesPane } from '../../ui/DetailsChangesPane';
 import { useDetailsLayoutStore } from '../../ui/detailsLayoutStore';
 import { DetailsEmpty, DetailsSkeleton } from '../../ui/DetailsSection';
@@ -21,11 +20,10 @@ import { diffEntryTones } from '../diff/diffEntrySources';
 import { DiffEntryRow } from '../diff/DiffEntryRow';
 import { useDiffReview } from '../diff/review/useDiffReview';
 import { useDiffEntries } from '../diff/useDiffEntries';
+import { changedFilesView } from './changedFilesView';
 import styles from './ChangedFilesSection.module.css';
 
 const MAX_LISTED_FILES = 300;
-/** Short lists read at a glance; longer ones get the path and status filter. */
-const FILTER_FROM = 8;
 
 const NO_ENTRIES: DiffEntry[] = [];
 
@@ -57,8 +55,7 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
   const listRef = useRef<HTMLDivElement>(null);
   // The same menu as in the diff, review marks included, read once the files are asked for or shown from the cache.
   const review = useDiffReview(target, entries ?? NO_ENTRIES, requested || entries !== undefined);
-  const shown = entries && !collapsed ? entries : undefined;
-  const filterShown = shown !== undefined && shown.length > FILTER_FROM;
+  const view = changedFilesView({ listedCount: entries?.length, matchingCount: visible.length, requested, failed: Boolean(error), collapsed });
 
   const onListKeyDown = (event: KeyboardEvent): void => {
     const list = listRef.current;
@@ -80,13 +77,13 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
   return (
     // No "Open diff" here: the panel's primary action at the top opens it.
     <DetailsChangesPane
-      title={entries ? `${pluralize(entries.length, 'file')} changed` : 'Changes'}
-      action={shown && shown.length > 0 && !filterShown && <FileListLayoutMenu />}
-      expanded={Boolean(shown?.length)}
-      disclosure={entries && { open: !collapsed, toggle: () => set({ changesCollapsed: !collapsed }) }}
+      title={view.title}
+      action={view.layoutMenu && <FileListLayoutMenu />}
+      expanded={view.expanded}
+      disclosure={view.collapsible ? { open: !collapsed, toggle: () => set({ changesCollapsed: !collapsed }) } : undefined}
     >
       <div className={styles.content}>
-        {!entries && !requested && (
+        {view.offersToShow && (
           <button
             className={styles.show}
             onClick={() => {
@@ -99,12 +96,12 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
           </button>
         )}
         {error && <DetailsEmpty>{error.message}</DetailsEmpty>}
-        {!entries && requested && !error && <DetailsSkeleton />}
-        {shown?.length === 0 && <DetailsEmpty>No file changes.</DetailsEmpty>}
-        {filterShown && <div className={styles.filter}>{bar}</div>}
-        {shown && shown.length > 0 && visible.length === 0 && <DetailsEmpty>No files match the filter.</DetailsEmpty>}
+        {view.loading && <DetailsSkeleton />}
+        {view.noChanges && <DetailsEmpty>No file changes.</DetailsEmpty>}
+        {view.filters && <div className={styles.filter}>{bar}</div>}
+        {view.noMatches && <DetailsEmpty>No files match the filter.</DetailsEmpty>}
       </div>
-      {shown && shown.length > 0 && (
+      {view.listsFiles && (
         <HighlightQuery query={query}>
           <div ref={listRef} className={styles.files} onKeyDown={onListKeyDown}>
             {listed.rows.map((row) =>
