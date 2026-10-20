@@ -46,14 +46,19 @@ export function lineMarksCss({ preview = [], leaving = [], restoredAt = [], pick
 /** How many of a change's lines light up when it's moved to: enough to see where it starts. */
 const FLASHED_LINES = 200;
 
-/**
- * CSS lighting up, for a moment, the change the diff's navigation moved to (`round` counts the moves, so moving to the
- * same change again lights it again). With reduced motion it's lit without fading, as long as the viewer keeps it.
- */
-export function changeFlashCss(lines: ChangedLine[], round: number): string {
-  if (lines.length === 0) return '';
+/** The rows of a change's lines and their numbers, for `flashCss`: its first lines, enough to see where it starts. */
+export function changeRows(lines: ChangedLine[]): string {
   const shown = lines.slice(0, FLASHED_LINES);
-  const rows = [content(shown), gutter(shown)].join(',');
+  return shown.length === 0 ? '' : [content(shown), gutter(shown)].join(',');
+}
+
+/**
+ * CSS lighting up, for a moment, the `rows` (a selector) a view's navigation moved to: a diff's change
+ * (`changeRows`), a merged file's conflict (`round` counts the moves, so moving to the same one again lights it
+ * again). With reduced motion they're lit without fading, as long as the view keeps them.
+ */
+export function flashCss(rows: string, round: number): string {
+  if (rows === '') return '';
   const name = `change-flash-${round % 2}`;
   return [
     `@media (prefers-reduced-motion:no-preference){${rows}{animation:${name} 1.2s var(--ease-out) forwards}}`,
