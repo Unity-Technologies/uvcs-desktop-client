@@ -5,8 +5,15 @@
  */
 export type ObjectListState = 'loading' | 'nothing' | 'noMatches' | 'listed';
 
-/** `filtering`: filters are on, so no rows means they hide every row read, not that there is none. */
-export function objectListState(loading: boolean, rowCount: number, filtering: boolean): ObjectListState {
+interface ObjectListRead {
+  /** No rows have been read yet. */
+  loading: boolean;
+  rowCount: number;
+  /** Filters are on: no rows means they hide every row read, not that there is none. */
+  filtering: boolean;
+}
+
+export function objectListState({ loading, rowCount, filtering }: ObjectListRead): ObjectListState {
   if (loading) return 'loading';
   if (rowCount > 0) return 'listed';
   return filtering ? 'noMatches' : 'nothing';

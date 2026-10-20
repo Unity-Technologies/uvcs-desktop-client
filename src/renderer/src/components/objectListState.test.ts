@@ -3,16 +3,16 @@ import { objectListState } from './objectListState';
 
 describe('objectListState', () => {
   it('shows a skeleton until rows are read, whatever the filters', () => {
-    expect(objectListState(true, 0, false)).toBe('loading');
-    expect(objectListState(true, 0, true)).toBe('loading');
+    expect(objectListState({ loading: true, rowCount: 0, filtering: false })).toBe('loading');
+    expect(objectListState({ loading: true, rowCount: 0, filtering: true })).toBe('loading');
   });
 
   it('lists the rows read', () => {
-    expect(objectListState(false, 3, true)).toBe('listed');
+    expect(objectListState({ loading: false, rowCount: 3, filtering: true })).toBe('listed');
   });
 
   it('tells filters hiding every row apart from there being none', () => {
-    expect(objectListState(false, 0, true)).toBe('noMatches');
-    expect(objectListState(false, 0, false)).toBe('nothing');
+    expect(objectListState({ loading: false, rowCount: 0, filtering: true })).toBe('noMatches');
+    expect(objectListState({ loading: false, rowCount: 0, filtering: false })).toBe('nothing');
   });
 });

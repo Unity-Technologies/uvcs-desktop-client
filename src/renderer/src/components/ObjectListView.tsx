@@ -45,7 +45,7 @@ interface ObjectListViewProps<Row> extends Omit<TableProps<Row>, 'selectFirstRow
  */
 export function ObjectListView<Row>({ widthKey, loading, error, errorTitle, filtering, noMatches, emptyState, query, details, noun, ...table }: ObjectListViewProps<Row>) {
   if (error) return <EmptyState title={errorTitle} description={error.message} />;
-  const state = objectListState(loading, table.rows.length, filtering);
+  const state = objectListState({ loading, rowCount: table.rows.length, filtering });
   if (state === 'loading') return <ListWithDetailsSkeleton widthKey={widthKey} columns={table.columns} />;
   return (
     <ListWithDetails
