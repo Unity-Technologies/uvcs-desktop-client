@@ -40,7 +40,7 @@ import { changesByChangelist, prepareChangelistCheckin } from './changelistCheck
 import { changelistMenu } from './changelistMenu';
 import { moveToChangelist } from './changelistOperations';
 import { changeTones } from './changeTone';
-import { checkinDraftOf, useCheckinDraftStore, useExcludedPaths } from './checkinDraftStore';
+import { checkinDraftOf, useCheckinChoice, useCheckinDraftStore } from './checkinDraftStore';
 import { pendingChangeMenu } from './pendingChangeMenu';
 import { addFilterRules, openChange, undoChanges } from './pendingChangeOperations';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
@@ -78,7 +78,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   // Only what the list shows: dragging the description's height or typing the comment doesn't render the list again.
   const layout = useFileListLayoutStore((state) => state.layout);
   const grouping = usePendingChangesViewStore((state) => state.grouping);
-  const excludedPaths = useExcludedPaths(workspacePath);
+  const checkinChoice = useCheckinChoice(workspacePath);
   const setIncluded = useCheckinDraftStore((state) => state.setIncluded);
   const [selection, setSelection] = useViewSelection('changes');
   const summaryRef = useRef<HTMLInputElement>(null);
@@ -96,7 +96,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
     review.showAll();
   };
   const { rows, changesByKey, fileKeys, checkboxInset, toggleCollapsed } = useChangeRows({ changes, changelists, layout, grouping, scope: folderListScope(workspacePath, 'changes') });
-  const { isIncluded, included, upload, shelvable, shelvableUpload, bulkPrivate } = useCheckinSelection(allChanges, excludedPaths);
+  const { isIncluded, included, upload, shelvable, shelvableUpload, bulkPrivate } = useCheckinSelection(allChanges, checkinChoice);
   // The changes shown are some of all of them: the checked ones they leave out are the rest.
   const hiddenIncludedCount = useMemo(() => included.length - changes.filter(isIncluded).length, [changes, included, isIncluded]);
   const reviewed = useMemo(() => reviewProgress(included, review.statusOf), [included, review.statusOf]);
@@ -138,7 +138,8 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
 
   // The changelist's changes checked alone, then the caret after the comment: writing or reading it is the way on.
   const prepareChangelist = (changelist: Changelist, mode: CheckinMode): void => {
-    prepareChangelistCheckin({ workspacePath, mode, changelist, allChanges, changelists });
+    prepareChangelistCheckin({ workspacePath, changelist, allChanges, changelists });
+    useCheckinDraftStore.getState().setMode(workspacePath, mode);
     focusAtEnd(summaryRef.current, checkinDraftOf(workspacePath).summary);
   };
 

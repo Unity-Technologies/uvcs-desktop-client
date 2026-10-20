@@ -14,9 +14,39 @@ export interface CheckinSelection {
   bulkPrivate: BulkPrivate | null;
 }
 
+/**
+ * A changelist readied to check in or shelve alone ("Check in this changelist"): only these paths go in, so a change
+ * that appears meanwhile (an editor saving, a new `.meta`) stays out. Checking files by hand adds or takes them here.
+ */
+export interface PreparedChangelist {
+  name: string;
+  paths: ReadonlySet<string>;
+}
+
+/** What the user checked for the next check-in. */
+export interface CheckinChoice {
+  /** Paths the user unchecked. New changes are included by default, so we remember exclusions. */
+  excludedPaths: ReadonlySet<string>;
+  /** While set, it alone says what goes in; `excludedPaths` waits, as it was, for it to end. */
+  prepared: PreparedChangelist | null;
+}
+
 /** Whether a change goes into the check-in: any that can be checked in, unless its box was unchecked. */
-export function includedBy(excludedPaths: ReadonlySet<string>): (change: PendingChange) => boolean {
+export function includedBy({ excludedPaths, prepared }: CheckinChoice): (change: PendingChange) => boolean {
+  if (prepared) return (change) => isCheckinCandidate(change) && prepared.paths.has(change.path);
   return (change) => isCheckinCandidate(change) && !excludedPaths.has(change.path);
+}
+
+/** The choice once the user checks (or unchecks) `paths` by hand: in a prepared changelist's paths while there is one. */
+export function withIncluded(choice: CheckinChoice, paths: string[], included: boolean): CheckinChoice {
+  if (choice.prepared) {
+    const preparedPaths = new Set(choice.prepared.paths);
+    paths.forEach((path) => (included ? preparedPaths.add(path) : preparedPaths.delete(path)));
+    return { ...choice, prepared: { ...choice.prepared, paths: preparedPaths } };
+  }
+  const excludedPaths = new Set(choice.excludedPaths);
+  paths.forEach((path) => (included ? excludedPaths.delete(path) : excludedPaths.add(path)));
+  return { ...choice, excludedPaths };
 }
 
 /** What a check-in of `allChanges` takes, and what follows from it: what it uploads, what a shelve takes, bulk private files. */

@@ -1,7 +1,5 @@
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { joinComment, splitComment } from '../../lib/comment';
-import type { CheckinMode } from './checkinButton';
-import { isCheckinCandidate } from './changeCategories';
 import { checkinDraftOf, useCheckinDraftStore } from './checkinDraftStore';
 
 /** The changes of each user changelist, by its name; the default changelist's are in none. */
@@ -18,9 +16,8 @@ export function changesByChangelist(changes: PendingChange[]): ReadonlyMap<strin
 
 interface ChangelistCheckin {
   workspacePath: string;
-  mode: CheckinMode;
   changelist: Changelist;
-  /** Every pending change, those the filters hide too: the ones outside the changelist are left out of the check-in. */
+  /** Every pending change, those the filters hide too: the changelist's are the ones checked. */
   allChanges: PendingChange[];
   /** Every user changelist: a comment one of their descriptions filled is no comment of the user's. */
   changelists: Changelist[];
@@ -28,16 +25,15 @@ interface ChangelistCheckin {
 
 /**
  * Readies the check-in panel to check in or shelve one changelist, as "Check in this changelist" and "Shelve this
- * changelist" do: its changes checked and every other one unchecked, the panel in that mode, and the changelist's
- * description as the comment unless the user wrote one. Nothing runs yet: the user reads or writes the comment and
- * presses the panel's button, so a changelist goes through the check-in every other does (the empty-comment warning,
- * "Update & check in", the question about piles of private files).
+ * changelist" do: its changes checked alone (`PreparedChangelist`, until it is checked in or shelved), and the
+ * changelist's description as the comment unless the user wrote one. Nothing runs yet: the user reads or writes the
+ * comment and presses the panel's button, so a changelist goes through the check-in every other does (the
+ * empty-comment warning, "Update & check in", the question about piles of private files).
  */
-export function prepareChangelistCheckin({ workspacePath, mode, changelist, allChanges, changelists }: ChangelistCheckin): void {
+export function prepareChangelistCheckin({ workspacePath, changelist, allChanges, changelists }: ChangelistCheckin): void {
   const store = useCheckinDraftStore.getState();
-  const outside = allChanges.filter((change) => change.changelist !== changelist.name && isCheckinCandidate(change));
-  store.setExcluded(workspacePath, outside.map((change) => change.path));
-  store.setMode(workspacePath, mode);
+  const paths = allChanges.filter((change) => change.changelist === changelist.name).map((change) => change.path);
+  store.prepareChangelist(workspacePath, { name: changelist.name, paths: new Set(paths) });
   if (!userWroteComment(workspacePath, changelists)) store.setMessage(workspacePath, splitComment(changelist.description));
 }
 
