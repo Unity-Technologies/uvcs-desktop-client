@@ -46,5 +46,6 @@ row has the changeset's menu (`changesetMenu`), the same as in History.
 
 The update bar (`UpdateBar`, `collisionMessages`) says what updating does and waits for every conflict to be decided;
 conflicts resolve with the merge page's panel and runs (docs/features/merge.md). Keeping the base keeps the revision the
-workspace had loaded: its text as read, or, for a binary, saved by `cm cat` before anything changes, so a base that
-can't be read stops the update with nothing undone (`updateMergingConflicts`). Sandbox: `scripts/sandboxes/incoming.sh`.
+workspace had loaded: its text as read, or, for a binary, the file undoing the conflicting files writes back, copied
+before updating (`saveBasesKept`; downloaded by `cm cat` only where undoing left no file). A base that can't be saved
+stops the update and puts the local versions back. Sandbox: `scripts/sandboxes/incoming.sh`.

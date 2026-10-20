@@ -15,12 +15,11 @@ import { checkOutAgain, copyInto, putLocalVersionsBack, saveLocalVersions, type 
 
 /**
  * Updates a workspace whose local changes collide with incoming ones, without an external merge tool:
- * 1. Save the bases kept the page holds no text of, and back up the local version of every conflicting file (kept
- *    afterwards, just in case).
- * 2. Undo those files so the update can proceed, and update.
+ * 1. Back up the local version of every conflicting file (kept afterwards, just in case).
+ * 2. Undo those files so the update can proceed, keep a copy of the bases kept (`saveBasesKept`), and update.
  * 3. Write each file's resolution (in a later second than `cm` wrote them: `waitForNextSecond`) and check out again
  *    the files that were checked out.
- * If undoing or updating fails, the local versions are put back as they were.
+ * If undoing, saving a base or updating fails, the local versions are put back as they were.
  */
 export async function updateWithMerge(
   cm: CmClient,
@@ -59,10 +58,11 @@ export async function updateMergingConflicts(
 
   return withTempDirectory(async (basesDirectory) => {
     context.reportProgress('Saving your local versions');
-    const bases = await saveBasesKept(cm, workspacePath, conflicts, resolutions, basesDirectory, context.signal);
     const local = await saveLocalVersions(cm, workspacePath, conflicts, backupsRoot);
+    let bases: ReadonlyMap<string, string>;
     try {
       await cm.query(['undo', ...local.files.map((file) => file.path)], { cwd: workspacePath });
+      bases = await saveBasesKept(cm, workspacePath, local, resolutions, basesDirectory, context);
       await update();
     } catch (error) {
       await putLocalVersionsBack(cm, workspacePath, local);
@@ -77,38 +77,54 @@ export async function updateMergingConflicts(
 }
 
 /**
- * Saves into `directory` the bases kept that the page holds no text of (binaries, text in another encoding): the
- * revision the workspace had loaded, which no file on disk holds once changed. One `cm cat` per batch, in a process
- * (binaries run to hundreds of MB), before anything changes: a base that can't be read stops the update. Returns
- * where each was saved, by path.
+ * Saves into `directory` the bases kept that the page holds no text of (binaries, text in another encoding), once the
+ * conflicting files were undone and before updating: the revision the workspace had loaded, which undoing just wrote
+ * back, so it is copied with no download. Only a file undoing left nothing at is downloaded, with one `cm cat` per
+ * batch, in a process (binaries run to hundreds of MB). Returns where each was saved, by path; throws when one can't
+ * be.
  */
 async function saveBasesKept(
   cm: CmClient,
   workspacePath: string,
-  conflicts: UpdateConflict[],
+  local: LocalVersions,
   resolutions: UpdateResolutions,
   directory: string,
-  signal: AbortSignal,
+  context: OperationContext,
 ): Promise<Map<string, string>> {
-  const reads = conflicts
-    .filter((conflict) => {
-      const resolution = resolutions[conflict.path]!;
-      return resolution.choice === 'base' && resolution.text === undefined;
-    })
-    .map((conflict, index): CatRead & { path: string } => ({
-      path: conflict.path,
-      spec: spec.revision({ revisionId: conflict.baseRevisionId, repository: conflict.repository }),
-      repository: conflict.repository,
-      target: join(directory, `base-${index + 1}`),
-      size: -1,
-    }));
-  for (const batch of catBatchesOf(reads, (read) => read)) {
-    await cm.execute(catArgs(batch), { cwd: workspacePath, signal }).catch((error: unknown) => {
+  const kept = local.files.filter(({ conflict }) => {
+    const resolution = resolutions[conflict.path]!;
+    return resolution.choice === 'base' && resolution.text === undefined;
+  });
+  if (kept.length === 0) return new Map();
+
+  context.reportProgress('Saving the bases you kept');
+  const saved = new Map<string, string>();
+  const downloads: (CatRead & { path: string })[] = [];
+  for (const [index, { conflict, path }] of kept.entries()) {
+    const target = join(directory, `base-${index + 1}`);
+    saved.set(conflict.path, target);
+    if (await copiedIfThere(path, target)) continue;
+    const revision = spec.revision({ revisionId: conflict.baseRevisionId, repository: conflict.repository });
+    downloads.push({ path: conflict.path, spec: revision, repository: conflict.repository, target, size: -1 });
+  }
+  for (const batch of catBatchesOf(downloads, (read) => read)) {
+    await cm.execute(catArgs(batch), { cwd: workspacePath, signal: context.signal }).catch((error: unknown) => {
       const files = batch.map((read) => basename(read.path)).join(', ');
-      throw new Error(`Couldn't read the base of ${files} to keep it, so nothing was updated. ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Couldn't read the base of ${files} to keep it. ${error instanceof Error ? error.message : String(error)}`);
     });
   }
-  return new Map(reads.map((read) => [read.path, read.target]));
+  return saved;
+}
+
+/** Copies `source` into `target`; false when there's no file at `source`. */
+async function copiedIfThere(source: string, target: string): Promise<boolean> {
+  try {
+    await copyInto(source, target);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+    throw error;
+  }
 }
 
 /** The files that need merging to update and have no resolution yet. */
