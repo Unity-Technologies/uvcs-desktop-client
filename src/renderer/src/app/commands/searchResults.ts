@@ -1,7 +1,7 @@
 import type { StatusTone } from '../../components/StatusBadge';
 import type { Icon, MenuEntry } from '../../lib/actions';
 import { pluralize } from '../../lib/text';
-import type { SectionId } from './paletteScope';
+import { isInScope, LIST_ORDER, type PaletteScope, type SectionId } from './paletteScope';
 
 export interface SearchResult {
   /** Unique across all groups. */
@@ -71,6 +71,15 @@ export function moreLabel({ heading, more }: Pick<ShownGroup, 'heading' | 'more'
 const STRONG_MATCH = 0.7;
 /** How far below the best match a result may score and still be shown, once the best one is strong. */
 const MAX_DISTANCE_FROM_BEST = 0.4;
+
+/**
+ * The palette's sections as they show: those with results that the scope takes, the best matches first while the
+ * user searches (`rankGroups`), else in `LIST_ORDER`, what is at hand first.
+ */
+export function shownSections(groups: SearchGroup[], text: string, scope: PaletteScope): SearchGroup[] {
+  const shown = groups.filter((group) => group.results.length > 0 && isInScope(group.section, scope));
+  return text ? rankGroups(shown) : shown.sort((a, b) => LIST_ORDER.indexOf(a.section) - LIST_ORDER.indexOf(b.section));
+}
 
 /**
  * Puts the groups with the best matches first, whatever their kind, and each group's best matches first.

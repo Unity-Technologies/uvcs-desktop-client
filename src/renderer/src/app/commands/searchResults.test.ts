@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { collapseGroups, COLLAPSED_ROWS, moreLabel, rankGroups, type SearchGroup, type SearchResult } from './searchResults';
+import { collapseGroups, COLLAPSED_ROWS, moreLabel, rankGroups, shownSections, type SearchGroup, type SearchResult } from './searchResults';
 
 function result(id: string, quality?: number): SearchResult {
   return { id, icon: () => null, label: id, quality, run: () => {} };
@@ -8,6 +8,28 @@ function result(id: string, quality?: number): SearchResult {
 function ids(groups: SearchGroup[]): string[][] {
   return groups.map((group) => [group.heading, ...group.results.map((item) => item.id)]);
 }
+
+describe('shownSections', () => {
+  const groups: SearchGroup[] = [
+    { section: 'commands', heading: 'Commands', results: [result('checkin', 0.6)] },
+    { section: 'changesets', heading: 'Changesets', results: [] },
+    { section: 'branches', heading: 'Branches', results: [result('task', 0.9)] },
+    { section: 'files', heading: 'Files', results: [result('app.ts', 0.3)] },
+  ];
+
+  it('lists what is at hand first without a search, leaving out empty sections', () => {
+    expect(ids(shownSections(groups, '', 'all')).map(([heading]) => heading)).toEqual(['Files', 'Branches', 'Commands']);
+  });
+
+  it('puts the best matches first while searching', () => {
+    expect(ids(shownSections(groups, 'ta', 'all')).map(([heading]) => heading)).toEqual(['Branches', 'Commands']);
+  });
+
+  it('keeps only the sections the scope takes', () => {
+    expect(ids(shownSections(groups, '', 'commands')).map(([heading]) => heading)).toEqual(['Commands']);
+    expect(ids(shownSections(groups, '', 'refs')).map(([heading]) => heading)).toEqual(['Branches']);
+  });
+});
 
 describe('rankGroups', () => {
   it('puts the group with the best match first and drops weak matches when there is a strong one', () => {

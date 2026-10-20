@@ -13,8 +13,8 @@ import { useCommandStore } from './commandStore';
 import { PaletteFooter } from './PaletteFooter';
 import { PaletteRow } from './PaletteRow';
 import { isPaletteTextKey } from './paletteTextKeys';
-import { isInScope, LIST_ORDER, parseScope, type SectionId } from './paletteScope';
-import { collapseGroups, COLLAPSED_ROWS, moreLabel, rankGroups, type SearchGroup, type SearchResult } from './searchResults';
+import { parseScope, type SectionId } from './paletteScope';
+import { collapseGroups, COLLAPSED_ROWS, moreLabel, shownSections, type SearchGroup, type SearchResult } from './searchResults';
 import { usePaletteSearch } from './usePaletteSearch';
 import { useWorkspaceResults } from './useWorkspaceResults';
 import styles from './CommandPalette.module.css';
@@ -62,8 +62,7 @@ function OpenPalette({ close }: { close: () => void }) {
       ? commandIndex.rank(text, MAX_COMMANDS).map((index) => commandResult(commands[index]!, text))
       : commands.map((command) => commandResult(command));
     const commandGroup: SearchGroup = { section: 'commands', heading: 'Commands', results: commandResults };
-    const all = [commandGroup, ...objectGroups, workspaceGroup].filter((group) => group.results.length > 0 && isInScope(group.section, scope));
-    return text ? rankGroups(all) : all.sort((a, b) => LIST_ORDER.indexOf(a.section) - LIST_ORDER.indexOf(b.section));
+    return shownSections([commandGroup, ...objectGroups, workspaceGroup], text, scope);
   }, [commands, commandIndex, text, scope, objectGroups, workspaceGroup]);
 
   // A prefix asks for one kind of thing, so its sections show in full.
