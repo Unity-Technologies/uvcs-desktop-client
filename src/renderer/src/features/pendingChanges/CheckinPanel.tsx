@@ -38,9 +38,14 @@ interface CheckinPanelProps {
   behindCount: number;
   /** Under the button while behind, e.g. "1 new changeset from Ana on this branch". */
   behindDescription: string | null;
+  /** The changelist whose files alone are checked ("Check in this changelist"), or null. */
+  preparedChangelist: string | null;
   /** Review mode is on and every included change is reviewed. */
   allReviewed: boolean;
   recentComments: string[];
+  /** Whether the button checks in or shelves: the caret beside it sets it, and so does a changelist's menu. */
+  mode: CheckinMode;
+  onModeChange: (mode: CheckinMode) => void;
   busy: boolean;
   onCheckin: () => Promise<void>;
   /** `keep`: the changes stay in the workspace; otherwise they are undone once shelved. */
@@ -58,13 +63,15 @@ export function CheckinPanel({
   merging,
   behindCount,
   behindDescription,
+  preparedChangelist,
   allReviewed,
   recentComments,
+  mode,
+  onModeChange: setMode,
   busy,
   onCheckin,
   onShelve,
 }: CheckinPanelProps) {
-  const [mode, setMode] = useState<CheckinMode>('checkin');
   const [keepShelved, setKeepShelved] = useState(false);
   const descriptionHeight = usePendingChangesViewStore((state) => state.descriptionHeight);
   const setDescriptionHeight = usePendingChangesViewStore((state) => state.setDescriptionHeight);
@@ -163,6 +170,11 @@ export function CheckinPanel({
         <CheckinModeMenu mode={mode} disabled={!canChangeCheckinMode(listedCount, busy)} onChange={setMode} />
       </div>
       {updatesFirst && behindDescription && <div className={styles.behind}>{behindDescription}</div>}
+      {preparedChangelist !== null && (
+        <div className={styles.prepared} data-tip="Only its files are checked, until they are checked in or shelved">
+          Changelist {preparedChangelist}
+        </div>
+      )}
     </div>
   );
 }

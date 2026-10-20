@@ -12,6 +12,7 @@ import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialo
 import { openCreateLabelDialog } from '../labels/CreateLabelDialog';
 import {
   deleteChangeset,
+  diffWithAnotherChangeset,
   editChangesetComment,
   mergeChangesetTo,
   moveChangesetToBranch,
@@ -75,6 +76,7 @@ function singleChangesetMenu(context: ChangesetMenuContext, changeset: Changeset
     ),
     menuAction('newLabel', () => openCreateLabelDialog(workspacePath, changeset.id)),
     menuAction('newCodeReview', () => openCreateCodeReviewDialog(workspacePath, { kind: 'changeset', value: String(changeset.id) })),
+    menuAction('compare', () => void diffWithAnotherChangeset(changeset), { label: 'Compare with another changeset…' }),
     menuAction('browse', () => navigation.openPage({ kind: 'browseRepository', changesetId: changeset.id }), { label: 'Browse repository at this changeset' }),
     !place.inBranchExplorer && menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'changeset', id: changeset.id, date: changeset.date })),
     copySubmenu('Changeset', changesetCopyTexts(workspacePath, changeset, context.repository), { shortcut: hotkey('listCopy') }),

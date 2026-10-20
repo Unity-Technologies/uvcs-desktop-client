@@ -2,8 +2,9 @@ import { commandFailure, fakeApi } from '../../testing/fakeWindow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const asked = vi.hoisted(() => ({
-  picked: undefined as string | undefined,
-  picker: undefined as { exclude?: string } | undefined,
+  /** The branch the picker hands back, as the branch list read it. */
+  picked: undefined as Pick<Branch, 'name' | 'headChangeset'> | undefined,
+  picker: undefined as { title?: string; exclude?: string } | undefined,
   switches: [] as unknown[][],
   /** Whether the switch goes through (false: the user cancelled it, or it failed). */
   switchSucceeds: true,
@@ -11,7 +12,7 @@ const asked = vi.hoisted(() => ({
 vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
 vi.mock('./BranchPickerDialog', () => ({
-  pickBranch: async (options: { exclude?: string }) => {
+  pickBranch: async (options: { title: string; exclude?: string }) => {
     asked.picker = options;
     return asked.picked;
   },
@@ -28,7 +29,7 @@ import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
 import { answerConfirms, answerPrompts } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
-import { createBranchAndSwitch, deleteBranches, mergeTo, renameBranch, setBranchesHidden, switchToBranch, type SwitchToNewBranch } from './branchOperations';
+import { createBranchAndSwitch, deleteBranches, diffWithAnotherBranch, mergeTo, renameBranch, setBranchesHidden, switchToBranch, type SwitchToNewBranch } from './branchOperations';
 
 const ws = '/ws';
 const branch = (name: string, guid = `guid-${name}`): Branch => ({ id: 1, name, parent: '/main', comment: '', owner: 'ana', date: '', headChangeset: 5, guid, repository: 'game@local' });
@@ -210,7 +211,7 @@ describe('branch operations', () => {
 
 describe('merging to another branch', () => {
   it('opens the server merge into the branch picked, never offering the branch itself', async () => {
-    asked.picked = '/main';
+    asked.picked = { name: '/main', headChangeset: 3 };
 
     await mergeTo('br:/main/task', '/main/task');
 
@@ -219,7 +220,7 @@ describe('merging to another branch', () => {
   });
 
   it('carries a task branch to the merge page, which then also offers to finish it', async () => {
-    asked.picked = '/main/other';
+    asked.picked = { name: '/main/other', headChangeset: 3 };
     const task = { branch: { id: 7, name: '/main/task', parent: '/main', comment: '' }, choices: { markReviewed: false, hideBranch: false } };
 
     await mergeTo('br:/main/task', '/main/task', task);
@@ -231,6 +232,43 @@ describe('merging to another branch', () => {
     await mergeTo('lb:v1', 'v1');
 
     expect(asked.picker?.exclude).toBeUndefined();
+    expect(whereTheWindowIs().pages).toEqual([]);
+  });
+});
+
+describe('comparing with another branch', () => {
+  const head = (name: string, headChangeset: number): Branch => ({ ...branch(name), headChangeset });
+
+  it("compares the two branches' heads, the older head on the left, naming each branch in the header", async () => {
+    asked.picked = head('/main', 12);
+
+    await diffWithAnotherBranch(head('/main/task', 40));
+
+    expect(asked.picker).toEqual({ title: 'Compare task with…', exclude: '/main/task' });
+    expect(whereTheWindowIs().pages).toEqual([
+      {
+        kind: 'diff',
+        title: 'main → task',
+        target: { kind: 'range', fromSpec: 'cs:12', toSpec: 'cs:40' },
+        sideNames: [
+          { label: 'main', tooltip: '/main at changeset 12' },
+          { label: 'task', tooltip: '/main/task at changeset 40' },
+        ],
+      },
+    ]);
+  });
+
+  it('names two branches of the same name by as much of their paths as tells them apart', async () => {
+    asked.picked = head('/main/b/fix', 7);
+
+    await diffWithAnotherBranch(head('/main/a/fix', 9));
+
+    expect(whereTheWindowIs().pages.map((page) => page.kind === 'diff' && page.title)).toEqual(['b/fix → a/fix']);
+  });
+
+  it('opens nothing when the picker is dismissed', async () => {
+    await diffWithAnotherBranch(head('/main/task', 40));
+
     expect(whereTheWindowIs().pages).toEqual([]);
   });
 });

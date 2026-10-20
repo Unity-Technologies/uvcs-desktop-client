@@ -10,14 +10,16 @@ import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { toast } from '../../ui/toast/toastStore';
 import { pickBranch } from '../branches/BranchPickerDialog';
+import { pickChangeset } from './ChangesetPickerDialog';
 import { askForChangesetComment } from './EditCommentDialog';
 
 export function openChangesetDiff(changeset: Pick<Changeset, 'id'>, focusPath?: string): void {
   navigation.openPage({ kind: 'diff', title: `Changeset ${changeset.id}`, target: { kind: 'changeset', changesetId: changeset.id }, focusPath });
 }
 
-/** Compares the state after the older changeset with the state after the newer one. */
-export function openRangeDiff(older: Pick<Changeset, 'id'>, newer: Pick<Changeset, 'id'>): void {
+/** Compares the state after the older changeset (on the left) with the state after the newer one, in either order. */
+export function openRangeDiff(first: Pick<Changeset, 'id'>, second: Pick<Changeset, 'id'>): void {
+  const [older, newer] = first.id <= second.id ? [first, second] : [second, first];
   navigation.openPage({
     kind: 'diff',
     title: `Changesets ${older.id} → ${newer.id}`,
@@ -25,17 +27,22 @@ export function openRangeDiff(older: Pick<Changeset, 'id'>, newer: Pick<Changese
   });
 }
 
+export async function diffWithAnotherChangeset(changeset: Pick<Changeset, 'id'>): Promise<void> {
+  const other = await pickChangeset({ title: `Compare changeset ${changeset.id} with…`, exclude: changeset.id });
+  if (other !== undefined) openRangeDiff(changeset, { id: other });
+}
+
 export function openMerge(request: MergeRequest): void {
   navigation.openPage({ kind: 'merge', request });
 }
 
 export async function mergeChangesetTo(changeset: Pick<Changeset, 'id' | 'branch'>): Promise<void> {
-  const destinationBranch = await pickBranch({
+  const destination = await pickBranch({
     title: `Merge changeset ${changeset.id} to…`,
     description: 'The merge happens on the server; your workspace is not touched.',
     exclude: changeset.branch,
   });
-  if (destinationBranch) openMerge({ kind: 'merge', sourceSpec: `cs:${changeset.id}`, destinationBranch });
+  if (destination) openMerge({ kind: 'merge', sourceSpec: `cs:${changeset.id}`, destinationBranch: destination.name });
 }
 
 export function switchToChangeset(workspacePath: string, changeset: Pick<Changeset, 'id'>): Promise<boolean> {

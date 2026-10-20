@@ -1,5 +1,6 @@
 import {
   AppWindow,
+  Archive,
   ArchiveRestore,
   ArrowDownToLine,
   ArrowLeftToLine,
@@ -33,6 +34,7 @@ import {
   FolderSearch,
   FolderTree,
   GitBranchPlus,
+  GitCommitHorizontal,
   GitCommitVertical,
   GitCompareArrows,
   GitGraph,
@@ -120,6 +122,10 @@ export const MENU_WORDS = {
   revert: word('act', RotateCcw),
   apply: word('act', ArchiveRestore),
   applyAndDelete: word('act', ArchiveRestore, 'Apply and delete'),
+  // The changes it holds checked in or shelved; the words name the object ("Check in this changelist"). The icons are
+  // the check-in panel's for each mode (`describeMode`).
+  checkin: word('act', GitCommitHorizontal),
+  shelve: word('act', Archive),
   include: word('act', SquareCheckBig, 'Include in check-in'),
   exclude: word('act', Square, 'Exclude from check-in'),
   review: word('act', CircleCheck),
@@ -166,7 +172,8 @@ export const MENU_WORDS = {
   history: word('navigate', History, 'View history'),
   annotate: word('navigate', ScanText, 'Annotate'),
   annotateRevision: word('navigate', ScanText, 'Annotate this revision'),
-  compare: word('navigate', GitCompareArrows, 'Compare with another label…'),
+  // The words name the kind of object picked ("Compare with another branch…").
+  compare: word('navigate', GitCompareArrows),
   browse: word('navigate', FolderTree),
   changesets: word('navigate', GitCommitVertical, 'Show changesets'),
   showInBranchExplorer: word('navigate', GitGraph, 'Show in Branch Explorer'),

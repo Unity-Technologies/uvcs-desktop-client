@@ -207,7 +207,7 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   lock: () => lockMenu(ws, [lock]),
   syncBranch: () => syncBranchMenu([branch], 'game@cloud', { push: () => {}, pull: () => {} }),
   attributeType: () => attributeTypeMenu(ws, [{ name: 'status', comment: '' } as never]),
-  changelist: () => changelistMenu(ws, { name: 'ui', description: '' } as never),
+  changelist: () => changelistMenu(ws, { name: 'ui', description: '' }, { changes: [{ ...change, changelist: 'ui' }], prepare: () => {} }),
   workspace: () => workspaceMenu({ name: 'game', path: ws, guid: 'w' }, () => {}),
   missingWorkspace: () => missingWorkspaceMenu({ name: 'game', path: ws, guid: 'w' }, () => {}),
   repository: () => repositoryMenu({ id: '1', name: 'game', server: 'local', owner: '', spec: repository }, () => {}),
@@ -261,6 +261,31 @@ describe('the menu grammar', () => {
 
   it.each(Object.entries(MENUS))('%s: what opens a dialog ends with "…", and nothing else does', (_name, build) => {
     for (const entry of topEntries(build())) expect(entry.label).not.toMatch(/\.\.\.$/);
+  });
+});
+
+describe('Compare with another', () => {
+  const comparing = (menu: MenuEntry[]) => topEntries(menu).filter((entry) => entry.id === 'compare').map((entry) => entry.label);
+
+  it('compares one branch, changeset or label with another of its kind, wherever it shows', () => {
+    expect(comparing(MENUS.branch!())).toEqual(['Compare with another branch…']);
+    expect(comparing(MENUS.currentBranch!())).toEqual(['Compare with another branch…']);
+    expect(comparing(MENUS.graphBranch!())).toEqual(['Compare with another branch…']);
+    expect(comparing(MENUS.changeset!())).toEqual(['Compare with another changeset…']);
+    expect(comparing(MENUS.graphChangeset!())).toEqual(['Compare with another changeset…']);
+    expect(comparing(MENUS.label!())).toEqual(['Compare with another label…']);
+  });
+
+  it("sits with a branch's other views: its changesets, then comparing, then the Branch Explorer", () => {
+    const navigating = (menu: MenuEntry[]) => topEntries(menu).filter((entry) => groupOf(entry) === 'navigate').map((entry) => entry.label);
+    expect(navigating(MENUS.branch!())).toEqual(['Show changesets', 'Compare with another branch…', 'Show in Branch Explorer']);
+    expect(navigating(MENUS.graphBranch!()).slice(0, 2)).toEqual(['Show changesets', 'Compare with another branch…']);
+  });
+
+  it('leaves it out of a selection of several, which compares them or nothing', () => {
+    expect(comparing(MENUS.branches!())).toEqual([]);
+    expect(comparing(MENUS.changesetInterval!())).toEqual([]);
+    expect(comparing(MENUS.labelPair!())).toEqual([]);
   });
 });
 
