@@ -76,17 +76,29 @@ export function keepConflictRegionBase(text: string, conflictIndex: number, base
 }
 
 /**
- * The base of each conflict region left in `text`, in order: that of the document's next conflict whose sides it
- * still holds, as regions are only ever taken out whole. None for a region whose sides were edited by hand.
+ * The base of each conflict region left in `text`, found by its sides among the document's conflicts. Conflicts with
+ * the same sides are told apart only while every one of them is left (in order) or when their bases are the same:
+ * once one is decided, which is which can't be told. None for a region whose sides were edited by hand.
  */
 export function conflictBases(text: string, document: ConflictDocument): (string | undefined)[] {
-  let next = 0;
-  return conflictRegionsOf(splitLines(text)).map(({ current, incoming }) => {
-    const [currentText, incomingText] = [current.join(''), incoming.join('')];
-    const found = document.conflicts.findIndex((conflict, index) => index >= next && conflict.current === currentText && conflict.incoming === incomingText);
-    if (found < 0) return undefined;
-    next = found + 1;
-    return document.conflicts[found]!.base;
+  const sidesOf = (current: string, incoming: string): string => `${current}\u0000${incoming}`;
+  const basesBySides = new Map<string, string[]>();
+  for (const { current, incoming, base } of document.conflicts) {
+    const key = sidesOf(current, incoming);
+    basesBySides.set(key, [...(basesBySides.get(key) ?? []), base]);
+  }
+
+  const regions = conflictRegionsOf(splitLines(text)).map(({ current, incoming }) => sidesOf(current.join(''), incoming.join('')));
+  const leftBySides = new Map<string, number>();
+  for (const key of regions) leftBySides.set(key, (leftBySides.get(key) ?? 0) + 1);
+
+  const seenBySides = new Map<string, number>();
+  return regions.map((key) => {
+    const bases = basesBySides.get(key) ?? [];
+    const seen = seenBySides.get(key) ?? 0;
+    seenBySides.set(key, seen + 1);
+    if (bases.length === leftBySides.get(key)) return bases[seen];
+    return bases.length > 0 && bases.every((base) => base === bases[0]) ? bases[0] : undefined;
   });
 }
 
