@@ -34,11 +34,5 @@ export function incomingFileMenu(selected: DiffEntry[], context: IncomingFileMen
   const { workspacePath, scope, loadedChangeset, headChangeset } = context;
   const conflicts = scope.kind === 'all' ? selected.flatMap((file) => context.conflictOf(file.path) ?? []) : [];
   const target = incomingDiffTarget(scope, loadedChangeset, headChangeset);
-  return diffEntryMenu(
-    workspacePath,
-    target,
-    selected,
-    undefined,
-    conflictMenuEntries(conflicts, { ...context, labels: UPDATE_LABELS, yoursInWorkspace: true }),
-  );
+  return diffEntryMenu(workspacePath, target, selected, { added: conflictMenuEntries(conflicts, { ...context, labels: UPDATE_LABELS, yoursInWorkspace: true }) });
 }

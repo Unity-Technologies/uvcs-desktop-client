@@ -17,7 +17,6 @@ import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { diffEntryKey } from '../diff/DiffEntryList';
 import { diffEntryMenu } from '../diff/diffEntryMenu';
 import { listedEntries } from '../diff/listedEntries';
-import { restoreMenuEntries } from '../diff/restoreMenuEntries';
 import { diffEntryTones } from '../diff/diffEntrySources';
 import { DiffEntryRow } from '../diff/DiffEntryRow';
 import { useDiffReview } from '../diff/review/useDiffReview';
@@ -62,7 +61,7 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
   const filterShown = shown !== undefined && shown.length > FILTER_FROM;
 
   // The same menu as in the diff, deleted items offering to come back.
-  const menuOf = (items: DiffEntry[]) => diffEntryMenu(workspacePath, target, items, review, restoreMenuEntries(workspacePath, items, workspaceRepository));
+  const menuOf = (items: DiffEntry[]) => diffEntryMenu(workspacePath, target, items, { review, workspaceRepository });
 
   const onListKeyDown = (event: KeyboardEvent): void => {
     const list = listRef.current;

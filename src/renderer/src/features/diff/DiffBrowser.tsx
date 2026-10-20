@@ -19,7 +19,6 @@ import { diffEntryMenu } from './diffEntryMenu';
 import { entryToFocus } from './diffFocus';
 import { EntryDiff } from './EntryDiff';
 import { listedEntries } from './listedEntries';
-import { restoreMenuEntries } from './restoreMenuEntries';
 import { useDiffReview } from './review/useDiffReview';
 import { FileStepsContext, useFileSteps } from './viewer/fileSteps';
 import { AssetsPointContext, diffAssetsPoint } from './viewer/model/assetsPoints';
@@ -93,7 +92,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
           filterBar={filter.bar}
           selection={selection}
           onSelectionChange={setSelection}
-          contextMenu={(selected) => diffEntryMenu(workspacePath, target, selected, review, restoreMenuEntries(workspacePath, selected, workspaceRepository))}
+          contextMenu={(selected) => diffEntryMenu(workspacePath, target, selected, { review, workspaceRepository })}
           review={review}
           loading={reading}
           noMatches={hidesAll && <NoMatches noun="files" onClear={clearFilter} />}
