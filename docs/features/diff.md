@@ -67,7 +67,7 @@ content whole: changes made to the file after the diff go too, which the confirm
   its own: none of them offers it.
 - Only one file whose content changed, in place or moved too, of the workspace's repository (`canRevertFromDiff`):
   `cm revert` finds the item by its id and takes its content back, keeping its name, so a pure move has nothing to
-  revert; an added file had no older version, a deleted one is the undelete's, a folder or an xlink has no content to
+  revert; an added file had no older version, a deleted one comes back otherwise ("Restoring deleted items"), a folder or an xlink has no content to
   take back, and an xlinked repository's changesets aren't the diff's.
 - Incoming offers none: its changes aren't in the workspace yet (`diffEntryMenu` without `workspaceRepository`).
 - `cm revert` finds the file where the diff names it, in the workspace: a file moved or deleted since fails with
@@ -167,6 +167,50 @@ the renderer (`discardLines`). Without unsaved edits it's shown at once and writ
 stack for the session, kept through a visit to another workspace (⌘Z in the diff: `DiscardHistory`; past
 `MAX_DISCARD_HISTORY_CHARS` of text the oldest of any file go, as each keeps the whole file before and after); with
 some, it's one more edit in the editor, unsaved, and ⌘Z takes it back like typing (`diffDiscards`).
+
+## Restoring deleted items
+
+An item a diff shows deleted (a changeset's, branch's, shelve's or range's; a file or a folder) comes back from its
+menu, in the diff page and a details panel's changed files, as a pending change: "Restore file", "Restore folder" or
+"Restore N items" where it was, and for one item "Restore to…" any path in the workspace, typed with `/` (or `\`
+on Windows: `typedRestorePath`) (`restoreMenuEntries`, `restoreDeleted`). `cm undelete <revid:N> <path>` writes the revision the deletion removed (the entry's
+`baseRevisionId`) and records it as copied; a folder comes back with everything it held then. It is offered only when
+every selected item was deleted, in the workspace's own repository, and none is an xlink (`deletedItemRestores`):
+`cm` restores no xlink nor xlinked item, and finds a bare id only there (`undeleteArgs`). Incoming offers none: what
+it deletes is still in the workspace (`diffEntryMenu` without `workspaceRepository`).
+
+- `cm diff` lists a deleted folder alone, but where a diff lists it with its files the list shows only the files
+  (`listedEntries`): a file of a deleted folder comes back with the outermost folder the diff deleted ("Restore folder
+  docs"), as `cm` restores nothing into a folder that's gone, and a folder row's files are one restore of it
+  (`deletedItemRestores`, given every entry of the diff: `diffEntryMenu`'s `diffEntries`).
+- `cm` takes one item a command, so several are one operation running one each (`restoreDeletedItems` in main),
+  which stops between two. A folder row of a tree selects every deleted file under it, so past
+  `MAX_RESTORED_WITHOUT_ASKING` (20) items it asks first: each is a process and a round trip to the server.
+  `undelete` counts as a transfer (`runsLong`): a folder downloads all it held, so it runs as a process, never
+  holding a pooled shell.
+- Every place is checked on disk before any `cm`, and nothing is restored if one fails: `cm` refuses a path that holds
+  an item ("The restore path should not exist"), but into a folder that's gone it writes the files and then fails,
+  leaving them private. Main also refuses a revision of another repository than the workspace's (read from the status header the window's info
+  shares, `headers.status`), whatever the renderer asked: the bare id would name another item there.
+- `cm`'s own refusals read in the app's words (`undeleteRefusal`): an item the workspace still loads ("The item 35
+  is already loaded on tree on path '/src/a.cs'" becomes "The workspace already has this item, at src/a.cs"), a folder
+  holding an xlink, a place taken after the check. Only English output is recognized, on purpose: `cm` in another
+  language shows its own words, as any other failure does.
+- A refusal crosses as data, never as text to match (`RestoreOutcome`: how many came back, and the `RestoreRefusal`'s
+  kind, path and words), stopping the rest: the error toast says what came back before it ("Restored 2 of 5 items")
+  and offers what helps (`refusalAction`): "Restore to…" for an item whose place is taken or whose folder is gone,
+  starting from where it was, then going on with the items the refusal left behind; and "Show in Files" where the
+  workspace already has it. Stopped, the info toast says what came back too, or only "Stopped" when nothing did. Any other failure fails the operation, as `cm` tells it.
+- Not handled: "Restore to…" a path under an xlink. `cm` looks the bare id up in the xlinked repository there, where
+  it may name another item or none; knowing where xlinks are would take a `cm` read of its own.
+- `cm undelete` takes the workspace's path as `cm` names it: given a link to it (`/tmp/…` for `/private/tmp/…` on
+  macOS) it writes the files, then fails with "Item path not in workspace", leaving them private. The app's workspace
+  paths come from `cm`, so only a hand-typed command meets it.
+- The official client asks to confirm first; nothing is lost here (the item comes back as a change to undo or check
+  in), so it asks only past `MAX_RESTORED_WITHOUT_ASKING` items, for the time they take.
+
+`scripts/sandboxes/deletes.sh` builds changesets that delete a file, a folder, an accented name, a path a new file
+took, and (cs:5) 25 files one by one, more than are restored without asking.
 
 ## Moving through changes
 

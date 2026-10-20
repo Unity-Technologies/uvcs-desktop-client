@@ -1,0 +1,38 @@
+import { describe, expect, it } from 'vitest';
+import { undeleteRefusal } from './undeleteRefusal';
+
+describe('undeleteRefusal', () => {
+  it('says where the workspace already has the item, whatever path it was asked to go to', () => {
+    expect(undeleteRefusal("The item 35 is already loaded on tree on path '/src/Enemy.cs'.", 'src/Old/Enemy.cs')).toEqual({
+      kind: 'alreadyLoaded',
+      path: 'src/Old/Enemy.cs',
+      loadedPath: 'src/Enemy.cs',
+      message: 'The workspace already has this item, at src/Enemy.cs.',
+    });
+  });
+
+  it('reads paths with spaces, accents and quotes', () => {
+    expect(undeleteRefusal("The item 7 is already loaded on tree on path '/notes/Café 'menú'.txt'.\n", 'a.txt')?.loadedPath).toBe("notes/Café 'menú'.txt");
+  });
+
+  it('says that xlinks can’t come back', () => {
+    expect(undeleteRefusal('Undelete operation is not supported for xlinks.', 'lib')).toEqual({
+      kind: 'xlink',
+      path: 'lib',
+      message: 'lib is or holds an xlink, and xlinks can’t be restored.',
+    });
+  });
+
+  it('says the place is taken, should something take it after the app checked', () => {
+    expect(undeleteRefusal('The restore path should not exist.', 'src/Enemy.cs')).toEqual({
+      kind: 'placeTaken',
+      path: 'src/Enemy.cs',
+      message: 'src/Enemy.cs is already in the workspace. Restore it to another path.',
+    });
+  });
+
+  it('leaves any other failure, and cm in another language, as cm tells it', () => {
+    expect(undeleteRefusal('Could not connect to the server.', 'src/Enemy.cs')).toBeNull();
+    expect(undeleteRefusal('La ruta de restauración no debería existir.', 'src/Enemy.cs')).toBeNull();
+  });
+});

@@ -69,14 +69,6 @@ export function pointForModel(point: AssetsPoint, modelPath: string): AssetsPoin
   return { ...point, before: { kind: 'changes', changes } };
 }
 
-/**
- * Whether a revision of `repository` is in the workspace's: undefined while the workspace's isn't known yet, when no
- * point is given (a revision of an xlinked repository would list the wrong tree meanwhile).
- */
-export function inWorkspaceRepository(repository: string, workspaceRepository: string | undefined): boolean | undefined {
-  return workspaceRepository === undefined ? undefined : repository === workspaceRepository;
-}
-
 /** Two revisions of a history, each at the changeset that made it, where it has one (`historyPointOf`). */
 export function revisionsAssetsPoint(points: HistoryPoints): AssetsPointFinder {
   return (side, source) => {

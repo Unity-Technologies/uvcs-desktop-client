@@ -137,6 +137,9 @@ export const MENU_WORDS = {
   resolveIn: word('act', Merge),
   // A conflicting file back to how the merge started it, the user's decision dropped.
   startOver: word('act', RotateCcw, 'Start over'),
+  // A deleted item brought back as a pending change; the words name it ("Restore file", "Restore 3 items").
+  restore: word('act', ArchiveRestore),
+  restoreTo: word('act', FolderInput, 'Restore to…'),
   add: word('act', Plus),
   checkout: word('act', PenLine, 'Check out'),
   status: word('act', CircleDot, 'Set status'),

@@ -1,7 +1,8 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import type { ExplorerApi } from '@shared/api/explorer';
-import type { ItemMove, RevisionType } from '@shared/domain/explorer';
+import type { DeletedItemRestore, ItemMove, RevisionType } from '@shared/domain/explorer';
+import { repositorySpec } from '@shared/domain/specs';
 import { parseItemDetails } from '../cm/itemDetailsXml';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { parseTreeItems, TREE_ITEM_FORMAT, withoutHash } from '../cm/treeItems';
@@ -9,10 +10,11 @@ import { listWorkspacePaths } from '../files/listWorkspacePaths';
 import { revisionFilesOf } from '../files/WorkspaceCopies';
 import { moveArgs, moveItems } from '../files/moveItems';
 import { renamePrivate } from '../files/renamePrivate';
+import { restoreDeletedItems } from '../files/restoreDeletedItems';
 import { toAbsolutePath, toAbsolutePaths } from '../files/workspacePaths';
 import type { ServiceContext } from './ServiceContext';
 
-export function createExplorerService({ cm, operations, workspaceCopies }: ServiceContext): ExplorerApi {
+export function createExplorerService({ cm, operations, workspaceCopies, headers }: ServiceContext): ExplorerApi {
   const inWorkspace = (workspacePath: string) => ({ cwd: workspacePath });
 
   /**
@@ -57,6 +59,15 @@ export function createExplorerService({ cm, operations, workspaceCopies }: Servi
     return operations.run(operationId, (context) => moveItems(workspacePath, moves, mover, context));
   }
 
+  function restoreDeleted(workspacePath: string, restores: DeletedItemRestore[], operationId: string) {
+    const restorer = { cm: (args: string[]) => cm.query(args, inWorkspace(workspacePath)) };
+    return operations.run(operationId, async (context) => {
+      // The workspace's repository, from the header its window's info reads too (a local read, shared while fresh).
+      const { repositoryName, server } = await headers.status(workspacePath);
+      return restoreDeletedItems(workspacePath, repositorySpec(repositoryName, server), restores, restorer, context);
+    });
+  }
+
   async function renameItemOnDisk(workspacePath: string, fromPath: string, toPath: string) {
     await renamePrivate(toAbsolutePath(workspacePath, fromPath), toAbsolutePath(workspacePath, toPath));
   }
@@ -83,6 +94,7 @@ export function createExplorerService({ cm, operations, workspaceCopies }: Servi
     move,
     renamePrivate: renameItemOnDisk,
     moveItems: moveItemsInto,
+    restoreDeleted,
     create,
     changeRevisionType,
   };
