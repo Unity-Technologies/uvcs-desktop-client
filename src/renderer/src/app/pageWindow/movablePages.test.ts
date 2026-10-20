@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { Page } from '../navigation/pages';
-import { asMovablePage, isMovablePage, pageWindowOpening } from './movablePages';
+import { asMovablePage, asPage, isMovablePage, pageWindowOpening } from './movablePages';
 
 const BRANCH_TARGET = { kind: 'branch', branch: '/main/task' } as const;
 const DIFF: Page = { kind: 'diff', title: 'Branch /main/task', target: BRANCH_TARGET, branchHead: 42 };
@@ -19,6 +19,12 @@ describe('the pages that open in a window of their own', () => {
     expect(asMovablePage(DIFF)).toEqual(DIFF);
     expect(asMovablePage(MERGE)).toBeNull();
     expect(asMovablePage({ kind: 'settings' })).toBeNull();
+  });
+
+  it('come back to the workspace window as any page it shows, a merge too', () => {
+    expect(asPage(MERGE)).toEqual(MERGE);
+    expect(asPage(HISTORY)).toEqual(HISTORY);
+    expect(asPage({ kind: 'settings' })).toBeNull();
   });
 });
 

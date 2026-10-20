@@ -1,4 +1,4 @@
-import type { PageWindowOpening, PageWindowPage } from '../domain/pageWindow';
+import type { PageSeed, PageWindowOpening, PageWindowPage } from '../domain/pageWindow';
 
 /**
  * One window per workspace, and the page windows it opened (a diff, a history… in a window of its own: `openPage`),
@@ -25,7 +25,9 @@ export interface WindowsApi {
    */
   followSelection(following: boolean): Promise<void>;
   /** What is selected in this workspace window, as the page showing its changes: the page window following it shows it. */
-  selectionShown(page: PageWindowPage): Promise<void>;
+  selectionShown(page: PageWindowPage, seed?: PageSeed): Promise<void>;
   /** From a page window: brings its workspace window forward, and runs the command there (a view's ⌘1…) if given one. */
   showWorkspaceWindow(commandId?: string): Promise<void>;
+  /** From a page window: its workspace window comes forward and opens a page only it shows (a merge: `pageRequested`). */
+  openPageInWorkspaceWindow(page: PageWindowPage): Promise<void>;
 }

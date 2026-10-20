@@ -12,6 +12,13 @@ export function isMovablePage(page: Page): boolean {
   return MOVABLE_KINDS.includes(page.kind);
 }
 
+const PAGE_KINDS: readonly Page['kind'][] = [...MOVABLE_KINDS, 'merge'];
+
+/** A page a page window asks its workspace window to open (`pageRequested`), when it is one; null otherwise. */
+export function asPage(value: PageWindowPage): Page | null {
+  return (PAGE_KINDS as readonly string[]).includes(value.kind) ? (value as unknown as Page) : null;
+}
+
 /**
  * The page a page window was given (its address, a followed selection), when it is one that opens in a window of its
  * own; null otherwise. Only this app's pages travel there (`windows.openPage`), so its kind is all there is to check.

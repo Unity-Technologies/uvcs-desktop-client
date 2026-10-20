@@ -1,6 +1,6 @@
 import type { UpdateStatus } from './domain/appUpdate';
 import type { OperationProgress } from './domain/operation';
-import type { PageWindowPage } from './domain/pageWindow';
+import type { PageSeed, PageWindowPage } from './domain/pageWindow';
 import type { AppSettings } from './domain/settings';
 import type { KeptAsideFile } from './domain/switchWithChanges';
 import type { WorkspaceChange } from './domain/workspaceChange';
@@ -63,7 +63,9 @@ export interface UvcsEvents {
   /** A page window follows this workspace window's selection (`windows.selectionShown`), or none does anymore. */
   selectionFollowed: { followed: boolean };
   /** What is selected in the workspace window, for the page window following it to show. */
-  selectionToFollow: { page: PageWindowPage };
+  selectionToFollow: { page: PageWindowPage; seed?: PageSeed };
+  /** One of this workspace window's page windows asks it to open a page only it shows (a merge). */
+  pageRequested: { page: PageWindowPage };
 }
 
 export type UvcsEventName = keyof UvcsEvents;

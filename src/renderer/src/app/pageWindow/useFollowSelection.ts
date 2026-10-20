@@ -6,7 +6,9 @@ import { afterLeaving } from '../navigation/leaveGuard';
 import { useNavigation } from '../navigation/navigationStore';
 import type { Page } from '../navigation/pages';
 import { pageKey, pagesForFollowed } from './followSelection';
+import { useSession } from '../workspace/sessionStore';
 import { asMovablePage } from './movablePages';
+import { plantPageSeed } from './pageSeeds';
 import { usePageWindow } from './pageWindowStore';
 
 /**
@@ -18,7 +20,14 @@ export function useFollowSelection(): void {
   const following = usePageWindow((state) => state.following);
   const [selected, setSelected] = useState<Page | null>(null);
   useUvcsEvent('followingChanged', ({ following: now }) => usePageWindow.setState({ following: now }));
-  useUvcsEvent('selectionToFollow', ({ page }) => setSelected(asMovablePage(page)));
+  useUvcsEvent('selectionToFollow', ({ page, seed }) => {
+    if (seed) plantPageSeed(useSession.getState().workspacePath ?? '', seed);
+    setSelected(asMovablePage(page));
+  });
+  // A selection from before is no longer what's selected: turned on again, the window waits for its window's.
+  useEffect(() => {
+    if (!following) setSelected(null);
+  }, [following]);
   const settled = useSettledValue(selected, selected ? pageKey(selected) : '');
   const settledKey = settled ? pageKey(settled) : '';
 

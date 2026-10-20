@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useCommandStore, type Command } from './commandStore';
-import { runMenuCommand } from './useMenuCommands';
+import { menuCommandTarget, runMenuCommand } from './useMenuCommands';
 
 const noDialog = { querySelector: () => null };
 const behindDialog = { querySelector: () => ({}) as Element };
@@ -54,5 +54,22 @@ describe('runMenuCommand', () => {
 
     expect(latest).toHaveBeenCalledOnce();
     expect(gone).not.toHaveBeenCalled();
+  });
+});
+
+const PAGE_WINDOW_COMMANDS = [{ id: 'goto.branches' }, { id: 'app.commandPalette' }];
+
+describe('where a menu bar command runs', () => {
+  it('runs in a workspace window whatever it is: one it lacks just does nothing', () => {
+    expect(menuCommandTarget('branch.switch', [{ id: 'branch.switch' }], false)).toBe('here');
+    expect(menuCommandTarget('branch.switch', [], false)).toBe('here');
+  });
+
+  it("goes from a page window to its workspace window when the page window doesn't have it (Switch branch)", () => {
+    expect(menuCommandTarget('branch.switch', PAGE_WINDOW_COMMANDS, true)).toBe('workspaceWindow');
+  });
+
+  it("runs in a page window when it has it: a view's command, which sends itself on", () => {
+    expect(menuCommandTarget('goto.branches', PAGE_WINDOW_COMMANDS, true)).toBe('here');
   });
 });

@@ -1,4 +1,4 @@
-import { ChevronLeft, Crosshair } from 'lucide-react';
+import { Crosshair } from 'lucide-react';
 import { useEffect } from 'react';
 import { useShortcut } from '../../lib/useShortcut';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -7,9 +7,11 @@ import { ToggleChip } from '../../ui/ToggleChip';
 import { useNavigation } from '../navigation/navigationStore';
 import { PageContent, pageTitle } from '../navigation/pageRegistry';
 import { useBackButtons } from '../navigation/useBackButtons';
+import { Breadcrumb } from '../shell/Breadcrumb';
 import { TopBar } from '../shell/TopBar';
 import { useWorkspaceWatcher } from '../shell/useWorkspaceWatcher';
 import { useWorkspaceInfo } from '../workspace/useWorkspace';
+import { pageKey } from './followSelection';
 import { pageWindowGoBack } from './pageWindowNavigation';
 import { usePageWindow } from './pageWindowStore';
 import { usePageWindowCommands } from './usePageWindowCommands';
@@ -37,20 +39,13 @@ export function PageWindowScreen() {
     <div className={styles.screen}>
       <TopBar end={<FollowSelectionChip />}>
         <div className={styles.title}>
-          {previous && (
-            <>
-              <button className={styles.back} onClick={pageWindowGoBack}>
-                <ChevronLeft size={15} />
-                {pageTitle(previous)}
-              </button>
-              <span className={styles.separator}>/</span>
-            </>
-          )}
-          <span className={styles.current}>{pageTitle(page)}</span>
+          <Breadcrumb back={previous && { label: pageTitle(previous), onClick: pageWindowGoBack }} current={pageTitle(page)} />
         </div>
       </TopBar>
       <main className={styles.content}>
-        <PageContent key={pages.length} page={page} />
+        {/* Keyed by what it shows: a followed selection replaces the page with another of the same depth, whose state
+            (a branch diff's selected changeset) mustn't carry over. */}
+        <PageContent key={`${pages.length}:${pageKey(page)}`} page={page} />
       </main>
     </div>
   );

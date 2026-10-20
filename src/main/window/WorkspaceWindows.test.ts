@@ -466,6 +466,31 @@ describe('page windows', () => {
     expect(windows.commandLogOf(game.webContents as never)).toBe(game.webContents);
   });
 
+  it('tell a page loaded again whether it follows or is followed, as it starts not knowing', () => {
+    const { windows, game, page } = withPageWindow();
+    page.webContents.emit('did-finish-load');
+    game.webContents.emit('did-finish-load');
+    expect([...sentTo(page), ...sentTo(game)]).toEqual([]);
+
+    windows.follow(page.webContents.id, true);
+    page.webContents.sent.length = 0;
+    game.webContents.sent.length = 0;
+    page.webContents.emit('did-finish-load');
+    game.webContents.emit('did-finish-load');
+    expect(sentTo(page)).toEqual([['followingChanged', { following: true }]]);
+    expect(sentTo(game)).toEqual([['selectionFollowed', { followed: true }]]);
+  });
+
+  it('open a page only their workspace window shows (a merge) there, bringing it forward', () => {
+    const { windows, game, page } = withPageWindow();
+    const merge = { kind: 'merge', request: { kind: 'merge', sourceSpec: 'cs:7' } };
+    page.focus();
+
+    windows.openInWorkspaceWindow(page.webContents.id, merge);
+    expect(fakeElectron.focused()).toBe(game);
+    expect(sentTo(game)).toEqual([['pageRequested', { page: merge }]]);
+  });
+
   it('bring their workspace window forward, running a command there when asked', () => {
     const { windows, game, page } = withPageWindow();
     page.focus();

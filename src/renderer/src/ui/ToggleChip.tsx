@@ -2,17 +2,17 @@ import { ChevronDown } from 'lucide-react';
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import styles from './ToggleChip.module.css';
 
-interface ToggleChipProps {
+interface ToggleChipProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onChange'> {
   pressed: boolean;
   onChange: (pressed: boolean) => void;
   icon?: ReactNode;
   children: ReactNode;
 }
 
-/** An on/off filter such as "Mine" or "Show hidden". */
-export function ToggleChip({ pressed, onChange, icon, children }: ToggleChipProps) {
+/** An on/off filter such as "Mine" or "Show hidden"; other attributes (a `Tooltip`'s) reach its button. */
+export function ToggleChip({ pressed, onChange, icon, children, ...rest }: ToggleChipProps) {
   return (
-    <button type="button" className={styles.chip} aria-pressed={pressed} onClick={() => onChange(!pressed)}>
+    <button type="button" className={styles.chip} aria-pressed={pressed} {...rest} onClick={() => onChange(!pressed)}>
       {icon}
       {children}
     </button>

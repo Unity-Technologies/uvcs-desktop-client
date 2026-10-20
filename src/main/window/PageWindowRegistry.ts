@@ -52,6 +52,10 @@ export class PageWindowRegistry {
     return [...this.entries].filter(([, entry]) => entry.owner === owner && entry.workspacePath !== workspacePath).map(([viewer]) => viewer);
   }
 
+  isFollowing(viewer: number): boolean {
+    return this.entries.get(viewer)?.following ?? false;
+  }
+
   /** The page window following a workspace window's selection, if one does. */
   followerOf(owner: number): number | undefined {
     for (const [viewer, entry] of this.entries) if (entry.owner === owner && entry.following) return viewer;

@@ -3,7 +3,7 @@ import { useIncomingNotificationClicks } from '../../features/incoming/incomingN
 import { useKeptAsideNotice } from '../../features/leftChanges/keptAsideNotice';
 import { useMergeCommands } from '../../features/merge/useMergeCommands';
 import { useNavigation } from '../navigation/navigationStore';
-import { useFollowedByPageWindow } from '../pageWindow/useShowInFollowingWindow';
+import { useOwnPageWindows } from '../pageWindow/useShowInFollowingWindow';
 import { viewDefinition } from '../navigation/viewRegistry';
 import { SplitPane } from '../../ui/SplitPane';
 import { CommandLogPanel } from './CommandLogPanel';
@@ -30,7 +30,7 @@ export function WorkspaceScreen() {
   useMergeCommands();
   useIncomingNotificationClicks();
   useKeptAsideNotice();
-  useFollowedByPageWindow();
+  useOwnPageWindows();
   const contentRef = useRef<HTMLDivElement>(null);
   useMainFocus(contentRef);
 
