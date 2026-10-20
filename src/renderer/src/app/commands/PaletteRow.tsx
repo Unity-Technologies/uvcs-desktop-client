@@ -41,7 +41,11 @@ export function PaletteRow({ result, selected, menuOpen, onMenuOpenChange, onRun
       data-menu-open={menuOpen}
       disabled={result.disabled}
       onSelect={onRun}
-      // cmdk's click runs the result: a Shift-click that opens it in a new window is taken first (the actions button keeps its clicks).
+      // cmdk's click runs the result here, so a Shift-click that opens it in a new window is taken first (the actions
+      // button keeps its clicks). It relies on two facts a cmdk or React upgrade must keep: cmdk's Item spreads its
+      // props (`...etc`) before setting its own `onClick`, so this capture handler reaches the element; and React runs
+      // capture handlers from the root's native capture listener before any bubble handler, so `stopPropagation`
+      // here keeps cmdk's `onClick` from running.
       onClickCapture={(event) => {
         if (!actionsRef.current?.contains(event.target as Node) && onRunInNewWindow(event)) event.stopPropagation();
       }}

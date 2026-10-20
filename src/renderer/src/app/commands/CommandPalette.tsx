@@ -6,7 +6,7 @@ import { useShortcut } from '../../lib/useShortcut';
 import { HighlightQuery } from '../../ui/Highlight';
 import { Spinner } from '../../ui/Spinner';
 import { useSession } from '../workspace/sessionStore';
-import { windowAskedBy } from '../workspace/workspaceWindowChoice';
+import { newWindowRunOf } from '../workspace/workspaceWindowChoice';
 import { useCommandPalette } from './commandPaletteStore';
 import { commandResult, commandSearchText, paletteCommands } from './commandResults';
 import { useCommandStore } from './commandStore';
@@ -80,10 +80,11 @@ function OpenPalette({ close }: { close: () => void }) {
 
   /** Shift on Enter or a click opens a result that can open in a new window (a workspace) there; true when it did. */
   const ranInNewWindow = (result: SearchResult | undefined, event: MouseEvent | KeyboardEvent): boolean => {
-    if (!result?.runInNewWindow || windowAskedBy(event) !== 'newWindow') return false;
+    const runInNewWindow = newWindowRunOf(result, event);
+    if (!runInNewWindow) return false;
     event.preventDefault();
     close();
-    result.runInNewWindow();
+    runInNewWindow();
     return true;
   };
 
