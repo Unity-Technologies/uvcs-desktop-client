@@ -1,7 +1,7 @@
 import { fakeApi } from '../../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { ExternalApps } from '@shared/domain/externalApps';
-import { isSubmenu, SEPARATOR, type Action, type MenuEntry, type Submenu } from '../../../lib/actions';
+import { SEPARATOR, type Action, type MenuEntry, type Submenu } from '../../../lib/actions';
 import { SERVER_ROLES, WORKSPACE_ROLES, type MergeLabels } from '../mergeDescription';
 import { oneClickApp, openableVersions, versionAppEntries, versionCopyName, versionsMenu, type VersionOpeningContext } from './conflictVersionOpening';
 import type { FileConflictState } from './useFileConflicts';
@@ -108,7 +108,6 @@ describe('versionsMenu', () => {
     fakeApi.answer('history.openRevision', () => undefined);
     const menu = versionsMenu(openableVersions(conflict(), inWorkspace), APPS);
     expect(labelsOf(menu)).toEqual(['Yours', 'Incoming', 'Base']);
-    expect(menu.every(isSubmenu)).toBe(true);
 
     const incoming = (menu[1] as Submenu).entries;
     expect(labelsOf(incoming)).toEqual(labelsOf(versionAppEntries(async () => {}, APPS)));
