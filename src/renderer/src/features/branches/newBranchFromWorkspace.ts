@@ -15,7 +15,7 @@ const MAIN_BRANCH = '/main';
  */
 export async function newBranchFromWorkspace(workspace: WorkspaceInfo): Promise<void> {
   const loaded = loadedOrigin(workspace);
-  if (loaded && workspace.selector.kind === 'branch' && workspace.selector.name === MAIN_BRANCH) {
+  if (loaded && branchWorkedOn(workspace.selector) === MAIN_BRANCH) {
     openCreateBranchDialog(workspace.path, loaded);
     return;
   }
