@@ -13,8 +13,9 @@ export type OlderSide = { kind: 'changeset'; changesetId: number } | { kind: 'pa
 
 /**
  * The older side of a diff, or null where no changeset names it: a branch's diff starts from its common ancestor with
- * its parent (`--integration`), which no read names; a range between labels from a label, which `history.revertTo`
- * doesn't take; a shelve's base is no changeset of the shelve's.
+ * its parent (`--integration`), which no read names; a shelve's base is no changeset of the shelve's. A range between
+ * labels starts from a label: `cm revert` takes `<file>#lb:<label>`, but `history.revertTo` takes a changeset number,
+ * so label ranges are left out until it takes a spec.
  */
 export function olderSideOf(target: DiffTarget): OlderSide | null {
   if (target.kind === 'changeset') return { kind: 'parentOf', changesetId: target.changesetId };
