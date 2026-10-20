@@ -1,5 +1,5 @@
 import { FileSearch, Folder } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useState } from 'react';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
@@ -9,6 +9,7 @@ import type { TreeFolderRow } from '../../lib/pathTree';
 import { pluralize } from '../../lib/text';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
+import { NoMatches } from '../../ui/NoMatches';
 import { SplitPane } from '../../ui/SplitPane';
 import { ReviewModeButton } from '../review/ReviewModeButton';
 import { diffEntryTones } from './diffEntrySources';
@@ -50,6 +51,12 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
   const firstKey = entries[0] && diffEntryKey(entries[0]);
   const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, { isViewFilter: true, reading, actions: <ReviewModeButton workspacePath={workspacePath} /> });
   const shown = useMemo(() => review.narrow(filter.visible), [review.narrow, filter.visible]);
+  // Nothing to select while the filter and review mode hide every file: the diff pane stays blank.
+  const hidesAll = entries.length > 0 && shown.length === 0;
+  const clearFilter = (): void => {
+    filter.clear();
+    review.showAll();
+  };
   const { rows, tree, toggleCollapsed } = useFileTree(shown, diffEntryKey, folderListScope(workspacePath, `diff:${JSON.stringify(target)}`), selection.anchor);
   // A folder the keyboard (or a click) is on, in a tree.
   const focusedFolder = focused ? undefined : rows.find((row): row is TreeFolderRow<DiffEntry> => row.type === 'folder' && row.key === selection.anchor);
@@ -62,8 +69,9 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
   const findAssetsPoint = useMemo(() => diffAssetsPoint(readEntries, target), [readEntries, target]);
   const fileSteps = useFileSteps({ keys: rowKeys, current: selection.anchor, select: (key) => setSelection(singleSelection(key)), pathOf: (key) => key });
 
-  // The file asked for once the files are read, else the first: something is always selected for the diff pane.
-  useEffect(() => {
+  // The file asked for once the files are read, else the first, before the list paints: something is always selected
+  // for the diff pane. A selected file the diff no longer holds (read again after a check-in) gives way the same.
+  useLayoutEffect(() => {
     if (focused || focusedFolder || !firstKey) return;
     const initial = entryToFocus(entries, initialPath);
     setSelection(singleSelection(initial ? diffEntryKey(initial) : firstKey));
@@ -86,10 +94,11 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
           contextMenu={(selected) => diffEntryMenu(workspacePath, target, selected, review)}
           review={review}
           loading={reading}
+          noMatches={hidesAll && <NoMatches noun="files" onClear={clearFilter} />}
         />
       }
       second={
-        reading ? null : entries.length === 0 ? (
+        reading || hidesAll ? null : entries.length === 0 ? (
           <EmptyState icon={<FileSearch size={22} />} title="No differences" description="There are no file changes to show." />
         ) : focused ? (
           <FileStepsContext.Provider value={fileSteps}>

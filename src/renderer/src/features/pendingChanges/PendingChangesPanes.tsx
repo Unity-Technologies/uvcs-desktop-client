@@ -11,6 +11,7 @@ import { useSettings } from '../../app/settings/useSettings';
 import { singleSelection } from '../../lib/selection';
 import { useSettledValue } from '../../lib/useSettled';
 import { HighlightQuery } from '../../ui/Highlight';
+import { NoMatches } from '../../ui/NoMatches';
 import { ListSkeleton } from '../../ui/Skeleton';
 import { SplitPane } from '../../ui/SplitPane';
 import { useChangeset } from '../changesets/useChangeset';
@@ -25,7 +26,7 @@ import { ChangesList } from './ChangesList';
 import { ChangesSummaryBar } from './ChangesSummaryBar';
 import { CheckinAfterUpdateNotice } from './CheckinAfterUpdateNotice';
 import { CheckinPanel } from './CheckinPanel';
-import { HiddenCheckedNotice, NoFilterMatches } from './FilterNotices';
+import { HiddenCheckedNotice } from './FilterNotices';
 import { LockedByOthersNotice } from './locks/LockedByOthersNotice';
 import { usePendingLocks } from './locks/usePendingLocks';
 import type { PendingReview } from './review/usePendingReview';
@@ -140,7 +141,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
     ) : panesState === 'nothingPending' ? (
       <div className={styles.nothingListed} />
     ) : panesState === 'noMatches' ? (
-      <NoFilterMatches onClear={clearFilter} />
+      <NoMatches noun="changes" onClear={clearFilter} />
     ) : (
       <HighlightQuery query={query}>
         <ChangesList

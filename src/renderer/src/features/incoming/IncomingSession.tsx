@@ -6,6 +6,7 @@ import { isHeaderRow } from '../../lib/groupedPathTree';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { pluralize } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
+import { NoMatches } from '../../ui/NoMatches';
 import { ChangesetDetails } from '../changesets/ChangesetDetails';
 import { changesetMenu } from '../changesets/changesetMenu';
 import { diffEntryKey } from '../diff/DiffEntryList';
@@ -75,6 +76,8 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const resolutions = updateResolutionsOf(states);
 
   const focusedFile = files?.find((file) => diffEntryKey(file) === selection.anchor);
+  // Nothing to select while the filters hide every file: the detail pane shows no file.
+  const hidesAll = Boolean(files?.length) && filter.visible.length === 0;
   const focusedGroup = focusedFile ? undefined : rows.filter(isHeaderRow).find((row) => row.key === selection.anchor);
   const firstFile = files && scope.kind === 'all' ? firstIncomingFile(files, collides) : undefined;
 
@@ -123,6 +126,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
     if (showsChangeset && scopedChangeset) {
       return <ChangesetDetails key={scopedChangeset.id} changeset={scopedChangeset} menu={changesetMenu(menuContext, [scopedChangeset])} withChangedFiles={false} />;
     }
+    if (hidesAll) return null;
     if (selectedConflict) {
       return (
         <FileConflictPanel
@@ -179,6 +183,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
               toggleCollapsed={toggleFolder}
               query={filter.query}
               filterBar={filter.bar}
+              noMatches={hidesAll && <NoMatches noun="files" onClear={filter.clear} />}
               selection={selection}
               onSelectionChange={selectFiles}
               contextMenu={fileMenu}

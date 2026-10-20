@@ -32,10 +32,12 @@ interface IncomingFilesProps {
   contextMenu: (files: DiffEntry[]) => MenuEntry[];
   /** Where a file that collides with local changes stands. */
   markOf: (file: DiffEntry) => ReactNode;
+  /** While the filters hide every file: `NoMatches`. */
+  noMatches?: ReactNode;
 }
 
 /** Incoming's files: what the whole update brings, or what one changeset changed, as every list of changed files shows them. */
-export function IncomingFiles({ changeset, onShowAll, files, summary, rows, tree, toggleCollapsed, query, filterBar, selection, onSelectionChange, contextMenu, markOf }: IncomingFilesProps) {
+export function IncomingFiles({ changeset, onShowAll, files, summary, rows, tree, toggleCollapsed, query, filterBar, selection, onSelectionChange, contextMenu, markOf, noMatches }: IncomingFilesProps) {
   return (
     <div className={styles.files}>
       <div className={styles.header}>
@@ -62,6 +64,7 @@ export function IncomingFiles({ changeset, onShowAll, files, summary, rows, tree
           contextMenu={contextMenu}
           label={changeset ? `Files changed in cs:${changeset.id}` : 'Incoming files'}
           loading={!files}
+          noMatches={noMatches}
         />
       )}
     </div>

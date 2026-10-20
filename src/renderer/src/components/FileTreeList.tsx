@@ -38,6 +38,8 @@ interface FileTreeListProps<T, G> {
   label: string;
   /** The files are still being read: placeholder rows, at the real row height, under the filter bar. */
   loading?: boolean;
+  /** Under the filter bar while the filters hide every file: `NoMatches`. */
+  noMatches?: ReactNode;
 }
 
 const rowKey = <T, G>(row: GroupedTreeRow<T, G>): string => row.key;
@@ -63,6 +65,7 @@ export function FileTreeList<T, G>({
   letterMoves = false,
   label,
   loading = false,
+  noMatches,
 }: FileTreeListProps<T, G>) {
   const grouped = isGroupedList(rows);
   const columns: Column<GroupedTreeRow<T, G>>[] = [
@@ -105,6 +108,7 @@ export function FileTreeList<T, G>({
             onRowKeyDown={onRowKeyDown}
             hideHeader
             label={tree ? `${label}, by folder` : label}
+            empty={noMatches}
           />
         </HighlightQuery>
       )}

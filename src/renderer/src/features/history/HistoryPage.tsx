@@ -124,7 +124,8 @@ export function HistoryPage({ page }: PageProps<'history'>) {
           )
         }
         second={
-          !history ? null : rows.length === 0 ? (
+          // Nothing to select while the filters hide every revision.
+          !history || (rows.length > 0 && filters.visible.length === 0) ? null : rows.length === 0 ? (
             <EmptyState icon={<History size={22} />} title="No history yet" />
           ) : (
             <RevisionPane

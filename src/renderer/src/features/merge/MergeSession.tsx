@@ -8,6 +8,7 @@ import { isHeaderRow } from '../../lib/groupedPathTree';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { pluralize } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
+import { NoMatches } from '../../ui/NoMatches';
 import { defaultMergeComment } from '../mergeTask/mergeTaskSummary';
 import type { TaskMerge } from '../mergeTask/taskMerge';
 import { ResolveInWorkspaceMenu } from '../mergeTask/ResolveInWorkspaceMenu';
@@ -70,6 +71,8 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   const preferredTool = primaryMergeTool(mergeTools);
   const filter = useChangeFilter(items, itemPath, mergeItemTones, { isViewFilter: true });
   const content = useMemo(() => ({ groups: mergeItemGroups(filter.visible) }), [filter.visible]);
+  // Nothing to select while the filters hide every item: the detail pane stays blank.
+  const hidesAll = items.length > 0 && filter.visible.length === 0;
   const { rows, tree, toggleCollapsed, rowKeyOf } = useGroupedFileTree(content, itemKey, folderListScope(workspacePath, `merge:${request.sourceSpec}:${request.destinationBranch ?? ''}`), selectedKey);
   const latestRowKeyOf = useRef(rowKeyOf);
   latestRowKeyOf.current = rowKeyOf;
@@ -158,6 +161,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
           labels={labels}
           query={filter.query}
           filterBar={filter.bar}
+          noMatches={hidesAll && <NoMatches noun="files" onClear={filter.clear} />}
           selection={selection}
           onSelectionChange={setSelection}
           contextMenu={(selectedItems) =>
@@ -179,7 +183,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
         />
       }
       detail={
-        shown ? (
+        hidesAll ? null : shown ? (
           <MergeDetail
             workspacePath={workspacePath}
             item={shown}

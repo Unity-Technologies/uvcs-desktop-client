@@ -28,10 +28,12 @@ interface MergeItemListProps {
   selection: SelectionState;
   onSelectionChange: (selection: SelectionState) => void;
   contextMenu: (items: MergeItem[]) => MenuEntry[];
+  /** While the filters hide every item: `NoMatches`. */
+  noMatches?: ReactNode;
 }
 
 /** What the merge does, item by item, as every list of changed files shows its files: in groups, as a list or a tree. */
-export function MergeItemList({ rows, progress, tree, toggleCollapsed, typeOf, labels, query, filterBar, selection, onSelectionChange, contextMenu }: MergeItemListProps) {
+export function MergeItemList({ rows, progress, tree, toggleCollapsed, typeOf, labels, query, filterBar, selection, onSelectionChange, contextMenu, noMatches }: MergeItemListProps) {
 
   const renderItem = (row: PathTreeRow<MergeItem>, level: number) => {
     if (row.type === 'folder') {
@@ -61,6 +63,7 @@ export function MergeItemList({ rows, progress, tree, toggleCollapsed, typeOf, l
       onSelectionChange={onSelectionChange}
       contextMenu={contextMenu}
       label="Files to merge"
+      noMatches={noMatches}
     />
   );
 }
