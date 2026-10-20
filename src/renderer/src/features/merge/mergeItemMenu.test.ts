@@ -103,6 +103,7 @@ describe('mergeItemMenu', () => {
       'resolveIn',
       'keepDestination',
       'keepSource',
+      'keepBase',
       'history',
       'annotate',
       'saveAs',
@@ -234,10 +235,16 @@ describe('mergeItemMenu', () => {
     expect(ids(menuOf([directoryConflict('changeDelete')]))).not.toContain('keepBoth');
   });
 
+  it('offers no "Keep base" when undoing a changeset: its base is the change being undone', () => {
+    const undone = conflict('a.ts', { file: { key: '/a.ts', path: 'a.ts', ...versions, baseIsUndoneChange: true } });
+    expect(ids(menuOf([undone, conflict('b.ts')]))).not.toContain('keepBase');
+    expect(ids(menuOf([conflict('b.ts')]))).toContain('keepBase');
+  });
+
   it('settles several conflicting files at once, leaving the changes that apply cleanly alone, and copies them all', () => {
     const decide = vi.fn();
     const menu = menuOf([conflict('a.ts'), change('changed'), conflict('b.ts')], { decide });
-    expect(ids(menu)).toEqual(['keepDestination', 'keepSource', 'copy']);
+    expect(ids(menu)).toEqual(['keepDestination', 'keepSource', 'keepBase', 'copy']);
     (entry(menu, 'keepSource') as Action).run();
     expect(decide.mock.calls.map(([key]) => key)).toEqual(['/a.ts', '/b.ts']);
     expect(isSubmenu(entry(menu, 'copy'))).toBe(true);

@@ -70,23 +70,23 @@ function mergeSuccess(request: MergeRequest, taskBranch: string | undefined, res
 }
 
 /**
- * A workspace merge is applied even when some incoming versions couldn't be saved: those files still hold yours, and
- * those `cm` didn't tell about may not hold the incoming version. Files by name, as the run's notes name them.
+ * A workspace merge is applied even when some versions kept (incoming, or the base) couldn't be saved: those files
+ * still hold yours, and those `cm` didn't tell about may not hold the version kept. Files by name, as the run's notes name them.
  */
-function workspaceMergeSuccess({ incomingNotSaved = [], incomingMaybeNotSaved = [] }: MergeResult): OperationSuccess {
-  const total = incomingNotSaved.length + incomingMaybeNotSaved.length;
+function workspaceMergeSuccess({ keptVersionNotSaved = [], keptVersionMaybeNotSaved = [] }: MergeResult): OperationSuccess {
+  const total = keptVersionNotSaved.length + keptVersionMaybeNotSaved.length;
   if (total === 0) return { title: 'Merge applied to your workspace' };
   const names = (paths: string[]): string => listNames(paths.map(fileNameOf));
   const title =
-    incomingNotSaved.length > 0
-      ? `still ${incomingNotSaved.length === 1 ? 'holds' : 'hold'} yours`
-      : 'may not hold the incoming version';
+    keptVersionNotSaved.length > 0
+      ? `still ${keptVersionNotSaved.length === 1 ? 'holds' : 'hold'} yours`
+      : 'may not hold the version you kept';
   return {
     kind: 'info',
-    title: `Merge applied, but ${pluralize(incomingNotSaved.length || total, 'file')} ${title}`,
+    title: `Merge applied, but ${pluralize(keptVersionNotSaved.length || total, 'file')} ${title}`,
     detail: [
-      incomingNotSaved.length > 0 && `The incoming version of ${names(incomingNotSaved)} couldn't be saved.`,
-      incomingMaybeNotSaved.length > 0 && `${names(incomingMaybeNotSaved)} may not hold the incoming version.`,
+      keptVersionNotSaved.length > 0 && `Couldn't save the version you kept of ${names(keptVersionNotSaved)}.`,
+      keptVersionMaybeNotSaved.length > 0 && `${names(keptVersionMaybeNotSaved)} may not hold the version you kept.`,
       `Check ${total === 1 ? 'it' : 'them'} before checking in.`,
     ]
       .filter(Boolean)

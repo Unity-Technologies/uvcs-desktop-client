@@ -7,7 +7,8 @@ import type { StepView } from '../../diff/viewer/useStepNavigation';
 import { highlightedLanguage, syntaxHighlighting } from '../../diff/viewer/syntaxHighlighting';
 import type { MergeLabels } from '../mergeDescription';
 import { conflictHunkCss, shortenBranch } from './conflictHunkCss';
-import { countConflictRegions, resolveConflictRegion, type ConflictRegionChoice } from './threeWayMerge';
+import type { ConflictBlockChoice } from './fileConflictDecision';
+import { countConflictRegions } from './threeWayMerge';
 import { useConflictView } from './useConflictView';
 import { usePierreOptions } from './usePierreOptions';
 import styles from './ConflictHunks.module.css';
@@ -19,24 +20,26 @@ interface ConflictHunksProps {
   /** The merged text, conflicts between markers. */
   text: string;
   labels: MergeLabels;
+  /** Whether conflict number `conflictIndex` offers keeping its base (`conflictBaseAt`, `offersKeepBase`); none offers it without. */
+  offersBase?: (conflictIndex: number) => boolean;
   /** Receives this view's side of stepping through its conflicts (`ConflictNavigator`). */
   viewRef: RefObject<StepView | null>;
   /** Absent while the conflicts can't be decided here (a merge tool has the file): labels only, no choices. */
-  onChange?: (text: string) => void;
+  onDecide?: (conflictIndex: number, choice: ConflictBlockChoice) => void;
 }
 
 /**
  * The merged file, read-only, shown with lone CRs as LFs; choices resolve the text with its own line breaks. Each conflict reads as two labeled blocks instead of raw markers: a header naming the
  * destination's side with the choices for this conflict, its lines, then the source's side and its lines.
  */
-export function ConflictHunks({ path, text, labels, viewRef, onChange }: ConflictHunksProps) {
+export function ConflictHunks({ path, text, labels, offersBase, viewRef, onDecide }: ConflictHunksProps) {
   const pierreOptions = usePierreOptions(text);
   const surfaceRef = useRef<HTMLDivElement>(null);
   const resolvedAt = useConflictView(viewRef, surfaceRef);
   // Every choice for one conflict goes through here: the next move goes on to the conflict that takes its place.
-  const resolve = (index: number, resolvedText: string): void => {
+  const resolve = (index: number, choice: ConflictBlockChoice): void => {
     resolvedAt(index, countConflictRegions(text));
-    onChange?.(resolvedText);
+    onDecide?.(index, choice);
   };
   const { source, destination } = labels.roles;
   // Highlighted like a read-only diff of its two sides, which Pierre highlights as a file each, about as long as the
@@ -72,11 +75,12 @@ export function ConflictHunks({ path, text, labels, viewRef, onChange }: Conflic
                 <span className={styles.role}>{destination.name}</span>
                 <span className={styles.branch}>{shortenBranch(labels.destination)}</span>
               </span>
-              {onChange && (
+              {onDecide && (
                 <HunkChoices
                   labels={labels}
                   conflictIndex={action.conflictIndex}
-                  onChoose={(choice) => resolve(action.conflictIndex, resolveConflictRegion(text, action.conflictIndex, choice))}
+                  withBase={offersBase?.(action.conflictIndex) ?? false}
+                  onChoose={(choice) => resolve(action.conflictIndex, choice)}
                 />
               )}
             </div>
@@ -88,20 +92,33 @@ export function ConflictHunks({ path, text, labels, viewRef, onChange }: Conflic
   );
 }
 
-function HunkChoices({ labels, conflictIndex, onChoose }: { labels: MergeLabels; conflictIndex: number; onChoose: (choice: ConflictRegionChoice) => void }) {
+interface HunkChoicesProps {
+  labels: MergeLabels;
+  conflictIndex: number;
+  /** "Keep base" is offered: the conflict's base is known (not after a hand edit) and keeping it makes sense. */
+  withBase: boolean;
+  onChoose: (choice: ConflictBlockChoice) => void;
+}
+
+function HunkChoices({ labels, conflictIndex, withBase, onChoose }: HunkChoicesProps) {
   const { source, destination } = labels.roles;
   return (
     <span className={styles.choices} role="group" aria-label={`Resolve conflict ${conflictIndex + 1}`}>
-      <Button size="small" variant="secondary" data-tip={`From ${labels.destination}`} onClick={() => onChoose('current')}>
-        Keep {destination.name.toLowerCase()}
-      </Button>
-      <Button size="small" variant="secondary" data-tip={`From ${labels.source}`} onClick={() => onChoose('incoming')}>
-        Keep {source.name.toLowerCase()}
-      </Button>
-      <Button size="small" variant="secondary" data-tip={`${destination.name} first, then ${source.name.toLowerCase()}`} onClick={() => onChoose('both')}>
-        Keep both
-      </Button>
+      <HunkChoice label={destination.name} tip={`From ${labels.destination}`} onClick={() => onChoose('current')} />
+      <HunkChoice label={source.name} tip={`From ${labels.source}`} onClick={() => onChoose('incoming')} />
+      <HunkChoice label="Both" tip={`${destination.name} first, then ${source.name.toLowerCase()}`} onClick={() => onChoose('both')} />
+      {withBase && <HunkChoice label="Base" tip="As it was before either side changed it" onClick={() => onChoose('base')} />}
     </span>
+  );
+}
+
+/** "Keep yours", or just "Yours" where the conflict's header is too narrow for every choice in full (its CSS). */
+function HunkChoice({ label, tip, onClick }: { label: string; tip: string; onClick: () => void }) {
+  return (
+    <Button size="small" variant="secondary" aria-label={`Keep ${label.toLowerCase()}`} data-tip={tip} onClick={onClick}>
+      <span className={styles.fullLabel}>Keep {label.toLowerCase()}</span>
+      <span className={styles.shortLabel}>{label}</span>
+    </Button>
   );
 }
 

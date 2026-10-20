@@ -11,6 +11,8 @@ export interface ConflictLabels {
 export interface ConflictDocument {
   text: string;
   conflictCount: number;
+  /** The base each conflict came from, in order, its lines joined as they were: the markers hold only the sides. */
+  conflictBases: string[];
 }
 
 const MARKER_START = '<<<<<<< ';
@@ -27,23 +29,24 @@ export function buildConflictDocument(base: string, source: string, destination:
   const lineBreak = dominantLineBreak(destinationLines) ?? dominantLineBreak(sourceLines) ?? dominantLineBreak(baseLines) ?? '\n';
   const regions = diff3Merge(destinationLines, baseLines, sourceLines);
   const ended = (text: string): string => (text === '' || endsWithLineBreak(text) ? text : text + lineBreak);
-  let conflictCount = 0;
+  const conflictBases: string[] = [];
 
   const text = regions
     .map((region) => {
       if ('ok' in region) return region.ok.join('');
-      conflictCount++;
+      const { a, o, b } = region.conflict;
+      conflictBases.push(o.join(''));
       return [
         `${MARKER_START}${labels.destination}${lineBreak}`,
-        ended(region.conflict.a.join('')),
+        ended(a.join('')),
         `${MARKER_SEPARATOR}${lineBreak}`,
-        ended(region.conflict.b.join('')),
+        ended(b.join('')),
         `${MARKER_END}${labels.source}${lineBreak}`,
       ].join('');
     })
     .join('');
 
-  return { text, conflictCount };
+  return { text, conflictCount: conflictBases.length, conflictBases };
 }
 
 /** Whether text (e.g. edited by hand) still contains unresolved conflict markers. */
@@ -56,6 +59,22 @@ export type ConflictRegionChoice = 'current' | 'incoming' | 'both';
 
 /** Replaces the conflict region number `conflictIndex` (0-based) with the chosen side(s). */
 export function resolveConflictRegion(text: string, conflictIndex: number, choice: ConflictRegionChoice): string {
+  return replaceConflictRegion(text, conflictIndex, ({ current, incoming }) => [...(choice !== 'incoming' ? current : []), ...(choice !== 'current' ? incoming : [])]);
+}
+
+/** Replaces the conflict region number `conflictIndex` (0-based) with its base (`ConflictDocument.conflictBases`), as it was. */
+export function keepConflictRegionBase(text: string, conflictIndex: number, base: string): string {
+  return replaceConflictRegion(text, conflictIndex, () => [base]);
+}
+
+/** A conflict region's lines between its markers, and the line its end marker is on (the last, when it has none). */
+interface ConflictRegionLines {
+  current: string[];
+  incoming: string[];
+  end: number;
+}
+
+function replaceConflictRegion(text: string, conflictIndex: number, replacement: (region: ConflictRegionLines) => string[]): string {
   const lines = splitLines(text);
   const output: string[] = [];
   let index = -1;
@@ -66,19 +85,24 @@ export function resolveConflictRegion(text: string, conflictIndex: number, choic
       output.push(line);
       continue;
     }
-
-    const current: string[] = [];
-    const incoming: string[] = [];
-    let side = current;
-    for (position++; position < lines.length && !lines[position]!.startsWith(MARKER_END); position++) {
-      if (lines[position]!.trimEnd() === MARKER_SEPARATOR) side = incoming;
-      else side.push(lines[position]!);
-    }
-
-    if (choice !== 'incoming') output.push(...current);
-    if (choice !== 'current') output.push(...incoming);
+    const region = readConflictRegion(lines, position);
+    output.push(...replacement(region));
+    position = region.end;
   }
   return output.join('');
+}
+
+/** The region whose start marker is on line `start`. */
+function readConflictRegion(lines: string[], start: number): ConflictRegionLines {
+  const current: string[] = [];
+  const incoming: string[] = [];
+  let side = current;
+  let position = start + 1;
+  for (; position < lines.length && !lines[position]!.startsWith(MARKER_END); position++) {
+    if (lines[position]!.trimEnd() === MARKER_SEPARATOR) side = incoming;
+    else side.push(lines[position]!);
+  }
+  return { current, incoming, end: position };
 }
 
 /** Resolves every conflict region the same way. */

@@ -8,11 +8,13 @@ const document = buildConflictDocument('a\nb\nc\nd\ne\n', 'a\nS1\nc\nS2\ne\n', '
 describe('conflict choices', () => {
   it('keeps a whole version, or both sides of every conflict', () => {
     expect(decisionFor('source', document)).toEqual({ kind: 'wholeFile', side: 'source' });
+    expect(decisionFor('base', document)).toEqual({ kind: 'wholeFile', side: 'base' });
     expect(decisionFor('both', document)).toEqual({ kind: 'text', text: 'a\nD1\nS1\nc\nD2\nS2\ne\n' });
   });
 
   it('shows the choice the decision stands for', () => {
     expect(chosenConflictChoice('keepingDestination', { kind: 'wholeFile', side: 'destination' }, document)).toBe('destination');
+    expect(chosenConflictChoice('keepingBase', { kind: 'wholeFile', side: 'base' }, document)).toBe('base');
     expect(chosenConflictChoice('combined', decisionFor('both', document), document)).toBe('both');
     expect(chosenConflictChoice('edited', { kind: 'text', text: 'x\n', edited: true }, document)).toBe('byHand');
   });

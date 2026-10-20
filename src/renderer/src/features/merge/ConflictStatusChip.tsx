@@ -10,6 +10,7 @@ const ICONS: Record<ConflictStatus, LucideIcon> = {
   needsDecision: CircleAlert,
   keepingDestination: Check,
   keepingSource: Check,
+  keepingBase: Check,
   keepingBoth: Check,
   combined: Check,
   edited: PencilLine,

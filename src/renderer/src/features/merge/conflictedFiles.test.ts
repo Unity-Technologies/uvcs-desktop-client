@@ -12,6 +12,7 @@ describe('conflictedFilesOf', () => {
         key: '/src/a.cs',
         path: 'src/a.cs',
         base: { kind: 'spec', spec: 'itemid:27#cs:3@lib@local', fileName: '/src/a.cs' },
+        baseName: 'cs:3',
         source: { kind: 'spec', spec: 'itemid:27#cs:5@lib@local', fileName: '/src/a.cs' },
         destination: { kind: 'revision', revision: { revisionId: 432, repository: 'lib@local' }, fileName: '/src/a.cs' },
       },
@@ -22,6 +23,21 @@ describe('conflictedFilesOf', () => {
     const [texture, code] = conflictedFilesOf(plan([{ ...conflict, path: '/a.png', destinationIsBinary: true }, conflict]), { kind: 'merge', sourceSpec: 'br:/main/task' });
     expect(texture?.isKnownBinary).toBe(true);
     expect(code?.isKnownBinary).toBeUndefined();
+  });
+
+  it('marks the base of a changeset being undone as that change, which keeping would put back', () => {
+    // Undoing cs:2 prints `FILE_CONFLICT|/f.txt|2|1|3|…`: the base is the changeset undone, the source its parent.
+    const [undone] = conflictedFilesOf(plan([{ ...conflict, baseChangeset: 2, sourceChangeset: 1 }]), { kind: 'subtractive', sourceSpec: 'cs:2' });
+    expect(undone?.baseIsUndoneChange).toBe(true);
+    expect(conflictedFilesOf(plan([conflict]), { kind: 'cherryPick', sourceSpec: 'cs:5' })[0]?.baseIsUndoneChange).toBeUndefined();
+    const [undoneRange] = conflictedFilesOf(plan([{ ...conflict, baseChangeset: 4, sourceChangeset: 1 }]), { kind: 'subtractive', sourceSpec: 'cs:4', intervalOriginSpec: 'cs:1' });
+    expect(undoneRange?.baseIsUndoneChange).toBe(true);
+  });
+
+  it("names each file's base by its own changeset, which under a writable xlink isn't the merge's", () => {
+    const [main, xlinked] = conflictedFilesOf(plan([conflict, { ...conflict, path: '/lib/b.cs', baseChangeset: 41, repository: 'xlinked@local' }]), { kind: 'merge', sourceSpec: 'br:/main/task' });
+    expect([main?.baseName, xlinked?.baseName]).toEqual(['cs:3', 'cs:41']);
+    expect(conflictedFilesOf(plan([{ ...conflict, baseChangeset: -1 }]), { kind: 'merge', sourceSpec: 'br:/main/task' })[0]?.baseName).toBeUndefined();
   });
 
   it("reads a shelve's version at the shelve, and nothing for a file with no common ancestor", () => {

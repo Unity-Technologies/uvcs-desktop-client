@@ -10,12 +10,11 @@ import { formatSize } from '../../../lib/formatDate';
 import { ActionContextMenu } from '../../../ui/menu/ActionContextMenu';
 import { Spinner } from '../../../ui/Spinner';
 import { versionAppEntries, type OpenableVersion } from './conflictVersionOpening';
+import type { KeptVersion } from './fileConflictDecision';
 import type { ConflictContents } from './loadedConflict';
 import type { MergeLabels } from '../mergeDescription';
 import { ModelSinceBase, ModelVersionThumbnail } from './ModelVersionPreview';
 import styles from './WholeFileChoice.module.css';
-
-type Side = 'source' | 'destination';
 
 interface WholeFileChoiceProps {
   /** Its versions, once read: the cards can be picked before (a known binary is decided without its bytes). */
@@ -23,15 +22,22 @@ interface WholeFileChoiceProps {
   /** Why the versions couldn't be read. */
   error: Error | undefined;
   labels: MergeLabels;
+  /** Where the base is (`ConflictedFile.baseName`). */
+  baseName: string | undefined;
+  /** The file has a common ancestor to keep (not one added on both sides). */
+  withBase: boolean;
   /** The versions that open in other apps: a card's menu opens its own. */
   versions: OpenableVersion[];
-  chosen: Side | undefined;
-  onChoose: (side: Side) => void;
+  chosen: KeptVersion | undefined;
+  onChoose: (version: KeptVersion) => void;
 }
 
-/** For files that can't be merged line by line (binaries): pick the version to keep, its preview showing once read. */
-export function WholeFileChoice({ contents, error, labels, versions, chosen, onChoose }: WholeFileChoiceProps) {
-  const openableOf = (side: Side) => versions.find((version) => version.version === side);
+/**
+ * For files that can't be merged line by line (binaries): pick the version to keep, each side's or the base's, its
+ * preview showing once read.
+ */
+export function WholeFileChoice({ contents, error, labels, baseName, withBase, versions, chosen, onChoose }: WholeFileChoiceProps) {
+  const openableOf = (version: KeptVersion) => versions.find((openable) => openable.version === version);
   return (
     <div className={styles.choices}>
       <div className={styles.options}>
@@ -55,6 +61,18 @@ export function WholeFileChoice({ contents, error, labels, versions, chosen, onC
           openable={openableOf('source')}
           onSelect={() => onChoose('source')}
         />
+        {withBase && (
+          <VersionCard
+            title="Keep base"
+            subtitle={baseName ?? 'the common ancestor'}
+            content={contents?.base}
+            base={undefined}
+            error={error}
+            selected={chosen === 'base'}
+            openable={openableOf('base')}
+            onSelect={() => onChoose('base')}
+          />
+        )}
       </div>
     </div>
   );

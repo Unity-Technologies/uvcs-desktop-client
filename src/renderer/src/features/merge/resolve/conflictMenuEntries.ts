@@ -5,6 +5,7 @@ import { withoutAction, type Action, type MenuEntry } from '../../../lib/actions
 import type { GroupedEntry } from '../../../lib/menuGroups';
 import { oneClickApp, openableVersions, opensAsBinary, type VersionOpeningContext } from './conflictVersionOpening';
 import type { FileConflictDecision } from './fileConflictDecision';
+import { offersKeepBase } from './conflictPanelView';
 import { keepVersionEntries } from './keepVersionEntries';
 import type { FileConflictState } from './useFileConflicts';
 
@@ -22,8 +23,8 @@ export interface ConflictMenuContext extends VersionOpeningContext {
 /**
  * What the conflicting files selected add to the menu of a list of changed files, the same on the merge page and in
  * Incoming: one of them, "Resolve in <tool>" and "Open version ▸" with each side's version and the base; any, Keep
- * yours or incoming (`keepVersionEntries`); one the user decided, Start over. A file a tool (or Smart Merge) has open
- * is settled by its outcome, as its toolbar says: nothing here decides it meanwhile. Nothing is read to build it.
+ * yours, incoming or base (`keepVersionEntries`); one the user decided, Start over. A file a tool (or Smart Merge) has
+ * open is settled by its outcome, as its toolbar says: nothing here decides it meanwhile. Nothing is read to build it.
  */
 export function conflictMenuEntries(selected: FileConflictState[], context: ConflictMenuContext): GroupedEntry[] {
   const single = selected.length === 1 ? selected[0]! : null;
@@ -31,7 +32,7 @@ export function conflictMenuEntries(selected: FileConflictState[], context: Conf
   return [
     ...(single ? singleConflictEntries(single, context) : []),
     ...keepVersionEntries(
-      settleable.map((state) => state.file.key),
+      settleable.map((state) => ({ key: state.file.key, offersBase: offersKeepBase(state) })),
       context.labels,
       context.decide,
     ),

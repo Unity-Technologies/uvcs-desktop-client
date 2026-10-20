@@ -29,6 +29,12 @@ describe('assertResolutionsComplete', () => {
     expect(() => assertResolutionsComplete(plan, { directoryConflicts: [{ choice: 'source' }], files: {} })).toThrow(/a\.txt/);
   });
 
+  it('refuses to keep the base of a file added on both sides, which has none', () => {
+    const addedOnBoth = { ...plan, directoryConflicts: [], fileConflicts: [{ ...plan.fileConflicts[0]!, baseChangeset: -1 }] };
+    expect(() => assertResolutionsComplete(addedOnBoth, { directoryConflicts: [], files: { '/a.txt': { choice: 'base' } } })).toThrow(/a\.txt has no base/);
+    expect(() => assertResolutionsComplete(plan, { directoryConflicts: [{ choice: 'source' }], files: { '/a.txt': { choice: 'base' } } })).not.toThrow();
+  });
+
   it('refuses when directory conflicts are missing decisions', () => {
     expect(() => assertResolutionsComplete(plan, { directoryConflicts: [], files: { '/a.txt': { choice: 'source' } } })).toThrow();
   });

@@ -1,4 +1,5 @@
 import { hasLineTooLongToEdit } from '../../diff/viewer/longLines';
+import { conflictBaseAt } from './fileConflictDecision';
 import type { FileConflictState } from './useFileConflicts';
 
 /**
@@ -23,6 +24,19 @@ export function rendersVersions(state: FileConflictState): boolean {
   if (!state.isBinary || !contents) return false;
   const versions = [contents.base, contents.source, contents.destination].filter((content) => content.size > 0);
   return versions.length > 0 && (versions.every((content) => content.model) || versions.every((content) => content.image));
+}
+
+/**
+ * Whether keeping the base is offered: only for a file that has one, and not when the merge undoes a changeset, whose
+ * base is the change being undone (`ConflictedFile.baseIsUndoneChange`): keeping it would put that change back.
+ */
+export function offersKeepBase(state: FileConflictState): boolean {
+  return hasBase(state) && !state.file.baseIsUndoneChange;
+}
+
+/** Whether conflict number `conflictIndex` of the file's text offers keeping its base: the file offers it, and that conflict's is known. */
+export function offersConflictBase(state: FileConflictState, conflictIndex: number): boolean {
+  return offersKeepBase(state) && conflictBaseAt(state.decision, conflictIndex) !== undefined;
 }
 
 /** A file added on both sides has no common ancestor to show. */

@@ -8,9 +8,9 @@ import { LoadedFileDiff } from '../../diff/viewer/LoadedFileDiff';
 import type { StepView } from '../../diff/viewer/useStepNavigation';
 import type { MergeLabels } from '../mergeDescription';
 import { ConflictHunks } from './ConflictHunks';
-import { mergedText, textToEdit, type PanelView } from './conflictPanelView';
+import { mergedText, offersConflictBase, offersKeepBase, textToEdit, type PanelView } from './conflictPanelView';
 import type { OpenableVersion } from './conflictVersionOpening';
-import type { FileConflictDecision } from './fileConflictDecision';
+import { decideConflict, type FileConflictDecision } from './fileConflictDecision';
 import { HandEditor } from './HandEditor';
 import { ReadOnlyText } from './ReadOnlyText';
 import type { FileConflictState } from './useFileConflicts';
@@ -48,6 +48,8 @@ export function ConflictBody({ workspacePath, state, labels, versions, view, edi
         contents={contents}
         error={state.error}
         labels={labels}
+        baseName={file.baseName}
+        withBase={offersKeepBase(state)}
         versions={versions}
         chosen={decision?.kind === 'wholeFile' ? decision.side : undefined}
         onChoose={(side) => onDecide({ kind: 'wholeFile', side })}
@@ -63,14 +65,15 @@ export function ConflictBody({ workspacePath, state, labels, versions, view, edi
   switch (view) {
     case 'conflicts':
       // The merge tool has the file: picking sides here meanwhile would be overwritten by what it saves.
-      if (state.openTool) return <ConflictHunks path={file.path} text={decision?.kind === 'text' ? decision.text : ''} labels={labels} viewRef={conflictViewRef} />;
+      if (state.openTool || decision?.kind !== 'text') return <ConflictHunks path={file.path} text={decision?.kind === 'text' ? decision.text : ''} labels={labels} viewRef={conflictViewRef} />;
       return (
         <ConflictHunks
           path={file.path}
-          text={decision?.kind === 'text' ? decision.text : ''}
+          text={decision.text}
           labels={labels}
+          offersBase={(conflictIndex) => offersConflictBase(state, conflictIndex)}
           viewRef={conflictViewRef}
-          onChange={(text) => onDecide({ kind: 'text', text, edited: decision?.kind === 'text' && decision.edited })}
+          onDecide={(conflictIndex, choice) => onDecide(decideConflict(decision, conflictIndex, choice))}
         />
       );
     case 'changes':

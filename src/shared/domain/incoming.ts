@@ -85,7 +85,7 @@ export interface IncomingChangesetsRequest {
 
 /**
  * How to resolve an update conflict, keyed by path. `source` keeps the incoming version,
- * `destination` keeps the local one.
+ * `destination` keeps the local one, `base` the revision the workspace had loaded.
  */
 export type UpdateResolutions = Record<string, FileConflictResolution>;
 

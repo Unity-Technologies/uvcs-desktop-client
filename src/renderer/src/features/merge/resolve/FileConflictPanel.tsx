@@ -14,7 +14,7 @@ import { MergeToolButton, type ConflictToolActions } from '../mergeTools/MergeTo
 import { MergeToolOpenBanner } from '../mergeTools/MergeToolOpenBanner';
 import { fileConflictStatus, fileConflictTool } from '../mergeStatus';
 import { chosenConflictChoice, decisionFor, hasConflicts, type ConflictChoice } from './conflictChoices';
-import { FRESH_PANEL, conflictsToStep, editInAppUnavailable, effectiveView, hasBase, justDecided, rememberConflicts, rendersVersions, type PanelMemory, type PanelView } from './conflictPanelView';
+import { FRESH_PANEL, conflictsToStep, editInAppUnavailable, effectiveView, hasBase, justDecided, offersKeepBase, rememberConflicts, rendersVersions, type PanelMemory, type PanelView } from './conflictPanelView';
 import { ConflictNavigator } from './ConflictNavigator';
 import { openableVersions } from './conflictVersionOpening';
 import type { FileConflictDecision } from './fileConflictDecision';
@@ -114,6 +114,7 @@ export function FileConflictPanel({ workspacePath, state, labels, yoursInWorkspa
                 {toolButton}
                 <KeepChoices
                   labels={labels}
+                  withBase={offersKeepBase(state)}
                   chosen={chosenConflictChoice(status, state.decision, state.document)}
                   onChoose={choose}
                   onStartOver={state.decidedByUser ? onStartOver : undefined}

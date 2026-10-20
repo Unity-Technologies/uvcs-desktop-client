@@ -24,6 +24,8 @@ export interface ConflictedFile {
   /** Shown to the user and used to pick syntax highlighting. */
   path: string;
   base: ContentSource;
+  /** Where the base is, as the sides name their branch: `cs:12` (its own changeset, an xlinked repository's under a writable xlink), "your loaded changeset". */
+  baseName?: string;
   source: ContentSource;
   destination: ContentSource;
   /**
@@ -32,6 +34,11 @@ export interface ConflictedFile {
    * versions read tell.
    */
   isKnownBinary?: boolean;
+  /**
+   * The merge undoes a changeset (subtractive): `cm` takes that changeset as the base and its parent as the source, so
+   * the base is the very change being undone, and keeping it isn't offered (`offersKeepBase`).
+   */
+  baseIsUndoneChange?: boolean;
 }
 
 export interface FileConflictState {

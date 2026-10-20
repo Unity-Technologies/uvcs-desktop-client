@@ -1,7 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import type { FileContent } from '@shared/domain/content';
 import { LONGEST_DRAWN_LINE, LONGEST_EDITED_LINE } from '../../diff/viewer/longLines';
-import { FRESH_PANEL, conflictsToStep, editInAppUnavailable, effectiveView, justDecided, mergedText, rememberConflicts, rendersVersions, textToEdit, type PanelMemory } from './conflictPanelView';
+import {
+  FRESH_PANEL,
+  conflictsToStep,
+  editInAppUnavailable,
+  effectiveView,
+  hasBase,
+  justDecided,
+  mergedText,
+  offersConflictBase,
+  offersKeepBase,
+  rememberConflicts,
+  rendersVersions,
+  textToEdit,
+  type PanelMemory,
+} from './conflictPanelView';
 import type { FileConflictState } from './useFileConflicts';
 
 const text = (value: string): FileContent => ({ text: value, isBinary: false, size: value.length });
@@ -22,6 +36,35 @@ function stateOf(overrides: Partial<FileConflictState> = {}): FileConflictState 
     ...overrides,
   };
 }
+
+/** A file with a common ancestor: one a test keeps the base of. */
+const withBaseFile = (overrides: Partial<FileConflictState> = {}): FileConflictState =>
+  stateOf({ file: { ...stateOf().file, base: { kind: 'spec', spec: 'itemid:7#cs:4@game@local', fileName: 'src/a.ts' } }, ...overrides });
+
+describe('hasBase', () => {
+  it('offers keeping the base only for a file that has one: not one added on both sides', () => {
+    expect(hasBase(withBaseFile())).toBe(true);
+    expect(hasBase(stateOf())).toBe(false);
+    expect(hasBase(stateOf({ isBinary: true, document: undefined }))).toBe(false);
+  });
+});
+
+describe('offersKeepBase', () => {
+  it('offers keeping a base the file has, but not the change an undo takes away', () => {
+    expect(offersKeepBase(withBaseFile())).toBe(true);
+    expect(offersKeepBase(stateOf())).toBe(false);
+    expect(offersKeepBase(withBaseFile({ file: { ...withBaseFile().file, baseIsUndoneChange: true } }))).toBe(false);
+  });
+});
+
+describe('offersConflictBase', () => {
+  const marked = { kind: 'text' as const, text: MARKED, conflictBases: ['base\n'] };
+  it('offers keeping one conflict\'s base when the file offers its base and that conflict\'s is known', () => {
+    expect(offersConflictBase(withBaseFile({ decision: marked }), 0)).toBe(true);
+    expect(offersConflictBase(withBaseFile({ decision: { kind: 'text', text: MARKED, edited: true } }), 0)).toBe(false);
+    expect(offersConflictBase(withBaseFile({ decision: marked, file: { ...withBaseFile().file, baseIsUndoneChange: true } }), 0)).toBe(false);
+  });
+});
 
 describe('effectiveView', () => {
   it('opens on the conflicts while any is left, then on what the merge changes', () => {
@@ -75,6 +118,7 @@ describe('mergedText', () => {
   it('is the resolved text, or the version kept whole', () => {
     expect(mergedText(stateOf({ decision: { kind: 'text', text: 'both' }, remainingConflicts: 0 }))).toBe('both');
     expect(mergedText(stateOf({ decision: { kind: 'wholeFile', side: 'source' }, remainingConflicts: 0 }))).toBe('theirs');
+    expect(mergedText(withBaseFile({ decision: { kind: 'wholeFile', side: 'base' }, remainingConflicts: 0 }))).toBe('base');
   });
 
   it('is nothing for a binary', () => {
