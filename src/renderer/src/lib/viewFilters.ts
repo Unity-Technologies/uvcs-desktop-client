@@ -19,9 +19,15 @@ export interface ViewFilterActions<Filters> {
  * One store per view for its filters, remembered the same way everywhere: the time range, the kinds, the view
  * options and whether it shows only the user's rows are kept across sessions; the text typed and the people picked by
  * name (the repository's) are kept for the session. `cleared` holds what "Clear filters" resets besides the text and
- * the people: the kinds and statuses that narrow the list.
+ * the people: the kinds and statuses that narrow the list. `forSession` names the view's own filters that hold the
+ * repository's objects (a branch picked by name), kept for the session as the people picked by name are.
  */
-export function createViewFilters<Filters extends ViewFilters>(name: string, defaults: Filters, cleared: Partial<Filters> = {}) {
+export function createViewFilters<Filters extends ViewFilters>(
+  name: string,
+  defaults: Filters,
+  cleared: Partial<Filters> = {},
+  forSession: readonly (keyof Filters)[] = [],
+) {
   return create<Filters & ViewFilterActions<Filters>>()(
     persist(
       (set) =>
@@ -33,7 +39,7 @@ export function createViewFilters<Filters extends ViewFilters>(name: string, def
       {
         name,
         version: 1,
-        partialize: (state) => rememberedFilters(state),
+        partialize: (state) => rememberedFilters(state, forSession),
         migrate: (persisted) => restoredFilters(persisted, defaults) as Filters & ViewFilterActions<Filters>,
       },
     ),
@@ -51,9 +57,10 @@ export function isFiltering<Filters extends ViewFilters>(filters: Filters, clear
   return (Object.keys(cleared) as (keyof Filters)[]).some((key) => filters[key] !== cleared[key]);
 }
 
-/** What is kept across sessions: everything but the text, the actions and the people picked by name. */
-export function rememberedFilters<Filters extends ViewFilters>(state: Filters): Partial<Filters> {
-  const kept = Object.fromEntries(Object.entries(state).filter(([key, value]) => key !== 'text' && typeof value !== 'function')) as Partial<Filters>;
+/** What is kept across sessions: everything but the text, the actions, the people picked by name and `forSession`. */
+export function rememberedFilters<Filters extends ViewFilters>(state: Filters, forSession: readonly (keyof Filters)[] = []): Partial<Filters> {
+  const forgotten = new Set<PropertyKey>(['text', ...forSession]);
+  const kept = Object.fromEntries(Object.entries(state).filter(([key, value]) => !forgotten.has(key) && typeof value !== 'function')) as Partial<Filters>;
   return { ...kept, people: rememberedPick(state.people) };
 }
 

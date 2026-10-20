@@ -25,6 +25,8 @@ export interface SearchResult {
   /** Everything else that can be done with it (Tab), the same menu it has in its own view. */
   menu?: () => MenuEntry[];
   run: () => void;
+  /** Opens it in a new window instead, with Shift held on Enter or a click (`windowAskedBy`): a workspace. */
+  runInNewWindow?: () => void;
   /** Runs without closing the palette, e.g. to search for more. */
   keepOpen?: boolean;
   /** Stays visible in a collapsed section, e.g. "search all changesets" after the matches. */

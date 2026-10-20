@@ -97,6 +97,7 @@ export const MENU_WORDS = {
   openReview: word('primary', ExternalLink, 'Open review'),
   release: word('primary', LockOpen, 'Release lock'),
   openWorkspace: word('primary', FolderOpen, 'Open workspace'),
+  openInNewWindow: word('primary', AppWindow, 'Open in new window'),
   locate: word('primary', FolderSearch, 'Locate or recreate…'),
 
   // Opening it in other apps, and the file manager (`openOnDiskEntries`, `openRevisionEntries`): a file's Enter too.
@@ -164,6 +165,7 @@ export const MENU_WORDS = {
   annotateRevision: word('navigate', ScanText, 'Annotate this revision'),
   compare: word('navigate', GitCompareArrows, 'Compare with another label…'),
   browse: word('navigate', FolderTree),
+  changesets: word('navigate', GitCommitVertical, 'Show changesets'),
   showInBranchExplorer: word('navigate', GitGraph, 'Show in Branch Explorer'),
   locks: word('navigate', Lock, 'Show locks'),
   showInLocks: word('navigate', Lock, 'Show in Locks'),
