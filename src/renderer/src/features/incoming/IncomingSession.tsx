@@ -74,10 +74,14 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const runPlans = useRunOffer(states, run);
   const [updating, setUpdating] = useState(false);
 
-  const pendingConflictPaths = new Set(states.filter((state) => !state.resolution).map((state) => state.file.key));
+  const pendingConflictPaths = useMemo(() => new Set(states.filter((state) => !state.resolution).map((state) => state.file.key)), [states]);
   // A conflicting file's arrows go on past its first or last conflict to the files around it that need merging.
+  const conflictKeys = useMemo(
+    () => conflictStepKeys(rows, selection.anchor, (file: DiffEntry) => pendingConflictPaths.has(file.path)),
+    [rows, selection.anchor, pendingConflictPaths],
+  );
   const conflictSteps = useFileSteps({
-    keys: conflictStepKeys(rows, selection.anchor, (file: DiffEntry) => pendingConflictPaths.has(file.path)),
+    keys: conflictKeys,
     current: selection.anchor,
     select: (key) => selectFiles(singleSelection(key)),
     pathOf: (key) => key,
