@@ -1,30 +1,22 @@
-import { useEffect, useImperativeHandle, useRef, type RefObject } from 'react';
+import { useImperativeHandle, useRef, type RefObject } from 'react';
 import { scrollToRows } from '../../diff/viewer/changeView';
 import { pierreShadowRoot } from '../../diff/viewer/pierreDom';
 import { useChangeFlash } from '../../diff/viewer/useChangeFlash';
 import { useShadowStyle } from '../../diff/viewer/useShadowStyle';
 import type { StepView } from '../../diff/viewer/useStepNavigation';
-import { ConflictPlace, conflictLinesSelector, conflictsAbove } from './conflictRows';
+import { ConflictPlace, conflictLinesSelector, conflictsAbove, type SurfaceScroll } from './conflictRows';
 
 /**
  * The conflicts view's side of stepping through its conflicts (`ConflictNavigator`): a conflict moved to is scrolled
  * a few rows from the top unless it's all in view, and lit for a moment. Pierre draws each conflict as a row of
  * actions (`data-merge-conflict-actions`, holding our header), its lines and marker rows, down to `marker-end`.
- * Returns what to call when a conflict is resolved in the view (`ConflictPlace.resolvedAt`): the next move goes on to
- * the one that took its place.
+ * Returns what to call when a conflict is resolved in the view, by its index among the `count` left
+ * (`ConflictPlace.resolvedAt`): the next move goes on to the one that took its place.
  */
-export function useConflictView(viewRef: RefObject<StepView | null>, surfaceRef: RefObject<HTMLElement | null>): (index: number) => void {
+export function useConflictView(viewRef: RefObject<StepView | null>, surfaceRef: RefObject<HTMLElement | null>): (index: number, count: number) => void {
   const flash = useChangeFlash();
   useShadowStyle(surfaceRef, flash.css);
   const place = useRef(new ConflictPlace());
-
-  // Scrolled by the user: the view stands where the screen says again (a move's own scrolling doesn't wheel).
-  useEffect(() => {
-    const surface = surfaceRef.current;
-    const moved = (): void => place.current.moved();
-    surface?.addEventListener('wheel', moved, { passive: true });
-    return () => surface?.removeEventListener('wheel', moved);
-  }, [surfaceRef]);
 
   useImperativeHandle(viewRef, () => ({
     isShown: () => actionRows(surfaceRef.current).length > 0,
@@ -42,11 +34,15 @@ export function useConflictView(viewRef: RefObject<StepView | null>, surfaceRef:
         const surface = surfaceRef.current;
         if (!surface) return 0;
         return conflictsAbove(actionRows(surface), (row) => row.getBoundingClientRect().top, surface.getBoundingClientRect().top);
-      }),
-    aboveAfterChange: () => place.current.aboveAfterChange(),
+      }, scrollOf(surfaceRef.current)),
+    aboveAfterChange: (count) => place.current.aboveAfterChange(count),
   }));
 
-  return (index) => place.current.resolvedAt(index);
+  return (index, count) => place.current.resolvedAt(index, count, scrollOf(surfaceRef.current));
+}
+
+function scrollOf(surface: HTMLElement | null): SurfaceScroll {
+  return surface ? { top: surface.scrollTop, max: surface.scrollHeight - surface.clientHeight } : { top: 0, max: 0 };
 }
 
 function actionRows(surface: HTMLElement | null): Element[] {

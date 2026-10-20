@@ -68,7 +68,7 @@ export function FileConflictPanel({ workspacePath, state, labels, yoursInWorkspa
     isShown: () => conflictView.current?.isShown() ?? false,
     reveal: (index) => conflictView.current?.reveal(index),
     countAbove: () => conflictView.current?.countAbove() ?? 0,
-    aboveAfterChange: () => conflictView.current?.aboveAfterChange() ?? 0,
+    aboveAfterChange: (count) => conflictView.current?.aboveAfterChange(count) ?? 0,
   };
   const navigator = conflictCount !== null && (
     <ConflictNavigator count={conflictCount} view={view === 'choice' ? WHOLE_FILE_CHOICE : conflictsOnScreen} frame={panelRef} path={state.file.path} />

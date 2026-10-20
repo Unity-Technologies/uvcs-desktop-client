@@ -40,10 +40,10 @@ export interface StepView {
   /** How many steps start above the top of the view, read from the screen: where the first move goes from. */
   countAbove: () => number;
   /**
-   * The same once the steps changed, while rendering, without reading the screen: where the view last stood (a diff's
-   * line at its top), or just before the conflict resolved there.
+   * The same once the steps changed (to `count` of them), while rendering, without reading the screen: where the view
+   * last stood (a diff's line at its top), or just before the conflict resolved there.
    */
-  aboveAfterChange: () => number;
+  aboveAfterChange: (count: number) => number;
 }
 
 interface StepNavigationOptions {
@@ -74,7 +74,7 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts }:
   // The steps changed: the one moved to stays while there are as many.
   const [known, setKnown] = useState(steps);
   if (known !== steps) {
-    const after = positionAfterChange({ count: known.length, current, above }, known, steps, view.aboveAfterChange());
+    const after = positionAfterChange({ count: known.length, current, above }, known, steps, view.aboveAfterChange(steps.length));
     setKnown(steps);
     setCurrent(after.current);
     setAbove(after.above);

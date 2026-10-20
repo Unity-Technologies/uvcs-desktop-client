@@ -174,8 +174,10 @@ its views' segments included (`STEP_FRAME`), from the list and with nothing focu
 top unless it's all in view, and lights up (`useConflictView`: Pierre draws each one from its actions row down to its
 end marker). Every conflict shown is one still to decide: resolving one with its header's choices takes it out of the
 text and the count, and the next move goes on to the one that took its place, or back to the one before it
-(`ConflictPlace`: the screen can't tell, with every conflict in view), until the user scrolls the view. A binary waiting for the version to keep is
-one conflict, "1 of 1"; a file that couldn't be read has none, and its arrows still go on. The views that are diffs
+(`ConflictPlace`: the screen can't tell, with every conflict in view). That holds until the view is scrolled more than
+a few rows away, however it scrolls (the shorter text pulling it back at the end of the file doesn't count), or the
+conflicts change otherwise (started over, saved by a merge tool). A binary waiting for the version to keep is one
+conflict, "1 of 1"; a file that couldn't be read has none, and its arrows still go on. The views that are diffs
 (Changes, Yours, Incoming) keep their own arrows through their changes, and the base none. But a file whose last
 conflict is resolved while it shows keeps the conflict arrows over its Changes, "No conflicts", so the next move goes
 straight on to the next file that waits instead of through the changes the merge makes; picking the Changes view

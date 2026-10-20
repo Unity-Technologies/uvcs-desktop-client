@@ -23,6 +23,8 @@ interface ListedFile {
 
 /** No conflict starts above the top of the view: every one is in it. */
 const ALL_IN_VIEW = (): number => 0;
+/** The view never scrolls: the file is short. */
+const UNSCROLLED = { top: 0, max: 0 };
 
 class MergePage {
   private shown = '';
@@ -40,7 +42,7 @@ class MergePage {
   }
 
   press(direction: 1 | -1): this {
-    const outcome = pressStep(this.position, direction, this.steps(), () => this.place.above(ALL_IN_VIEW));
+    const outcome = pressStep(this.position, direction, this.steps(), () => this.place.above(ALL_IN_VIEW, UNSCROLLED));
     if (typeof outcome === 'number') {
       this.position = { ...this.position, current: outcome };
       this.place.moved();
@@ -58,8 +60,8 @@ class MergePage {
     const before = Array.from({ length: file.conflicts });
     file.conflicts -= 1;
     if (file.conflicts === 0) file.decided = true;
-    this.place.resolvedAt(index);
-    this.position = positionAfterChange(this.position, before, Array.from({ length: file.conflicts }), this.place.aboveAfterChange());
+    this.place.resolvedAt(index, before.length, UNSCROLLED);
+    this.position = positionAfterChange(this.position, before, Array.from({ length: file.conflicts }), this.place.aboveAfterChange(file.conflicts));
     return this;
   }
 

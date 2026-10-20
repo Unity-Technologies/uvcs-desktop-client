@@ -7,7 +7,7 @@ import type { StepView } from '../../diff/viewer/useStepNavigation';
 import { highlightedLanguage, syntaxHighlighting } from '../../diff/viewer/syntaxHighlighting';
 import type { MergeLabels } from '../mergeDescription';
 import { conflictHunkCss, shortenBranch } from './conflictHunkCss';
-import { resolveConflictRegion, type ConflictRegionChoice } from './threeWayMerge';
+import { countConflictRegions, resolveConflictRegion, type ConflictRegionChoice } from './threeWayMerge';
 import { useConflictView } from './useConflictView';
 import { usePierreOptions } from './usePierreOptions';
 import styles from './ConflictHunks.module.css';
@@ -32,8 +32,12 @@ interface ConflictHunksProps {
 export function ConflictHunks({ path, text, labels, viewRef, onChange }: ConflictHunksProps) {
   const pierreOptions = usePierreOptions(text);
   const surfaceRef = useRef<HTMLDivElement>(null);
-  // A conflict resolved here: the next move goes on to the one that takes its place.
   const resolvedAt = useConflictView(viewRef, surfaceRef);
+  // Every choice for one conflict goes through here: the next move goes on to the conflict that takes its place.
+  const resolve = (index: number, resolvedText: string): void => {
+    resolvedAt(index, countConflictRegions(text));
+    onChange?.(resolvedText);
+  };
   const { source, destination } = labels.roles;
   // Highlighted like a read-only diff of its two sides, which Pierre highlights as a file each, about as long as the
   // text: in Pierre's workers past what the main thread highlights at once, plain past what's worth it.
@@ -72,10 +76,7 @@ export function ConflictHunks({ path, text, labels, viewRef, onChange }: Conflic
                 <HunkChoices
                   labels={labels}
                   conflictIndex={action.conflictIndex}
-                  onChoose={(choice) => {
-                    resolvedAt(action.conflictIndex);
-                    onChange(resolveConflictRegion(text, action.conflictIndex, choice));
-                  }}
+                  onChoose={(choice) => resolve(action.conflictIndex, resolveConflictRegion(text, action.conflictIndex, choice))}
                 />
               )}
             </div>
