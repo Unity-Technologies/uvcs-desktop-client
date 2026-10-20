@@ -17,8 +17,8 @@ export function changesByChangelist(changes: PendingChange[]): ReadonlyMap<strin
 interface ChangelistCheckin {
   workspacePath: string;
   changelist: Changelist;
-  /** Every pending change, those the filters hide too: the changelist's are the ones checked. */
-  allChanges: PendingChange[];
+  /** Its pending changes, those the filters hide too (`changesByChangelist`). */
+  changes: PendingChange[];
   /** Every user changelist: a comment one of their descriptions filled is no comment of the user's. */
   changelists: Changelist[];
 }
@@ -30,10 +30,9 @@ interface ChangelistCheckin {
  * comment and presses the panel's button, so a changelist goes through the check-in every other does (the
  * empty-comment warning, "Update & check in", the question about piles of private files).
  */
-export function prepareChangelistCheckin({ workspacePath, changelist, allChanges, changelists }: ChangelistCheckin): void {
+export function prepareChangelistCheckin({ workspacePath, changelist, changes, changelists }: ChangelistCheckin): void {
   const store = useCheckinDraftStore.getState();
-  const paths = allChanges.filter((change) => change.changelist === changelist.name).map((change) => change.path);
-  store.prepareChangelist(workspacePath, { name: changelist.name, paths: new Set(paths) });
+  store.prepareChangelist(workspacePath, { name: changelist.name, paths: new Set(changes.map((change) => change.path)) });
   if (!userWroteComment(workspacePath, changelists)) store.setMessage(workspacePath, splitComment(changelist.description));
 }
 

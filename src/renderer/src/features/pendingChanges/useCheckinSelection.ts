@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { checkinSelectionOf, includedBy, type CheckinChoice, type CheckinSelection } from './checkinSelection';
+import { checkinSelectionOf, currentChoice, includedBy, type CheckinChoice, type CheckinSelection } from './checkinSelection';
 
 /**
  * What a check-in takes and what follows from it. Selecting a row or typing the comment renders the view again, so
  * this goes over tens of thousands of changes only when they or their checks change.
  */
 export function useCheckinSelection(allChanges: PendingChange[], choice: CheckinChoice): CheckinSelection {
-  const isIncluded = useMemo(() => includedBy(choice), [choice]);
+  const isIncluded = useMemo(() => includedBy(currentChoice(choice, allChanges)), [choice, allChanges]);
   return useMemo(() => checkinSelectionOf(allChanges, isIncluded), [allChanges, isIncluded]);
 }

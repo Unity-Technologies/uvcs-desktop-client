@@ -37,6 +37,19 @@ export function includedBy({ excludedPaths, prepared }: CheckinChoice): (change:
   return (change) => isCheckinCandidate(change) && !excludedPaths.has(change.path);
 }
 
+/** Whether any of a prepared changelist's files is still pending. */
+export function preparedStillPending(prepared: PreparedChangelist, allChanges: PendingChange[]): boolean {
+  return allChanges.some((change) => prepared.paths.has(change.path));
+}
+
+/**
+ * The choice that holds for `allChanges`: a prepared changelist none of whose files is pending anymore (undone, shelved
+ * away by a switch, checked in from outside the app) has ended, and the files the user left out are the only ones out.
+ */
+export function currentChoice(choice: CheckinChoice, allChanges: PendingChange[]): CheckinChoice {
+  return choice.prepared && !preparedStillPending(choice.prepared, allChanges) ? { ...choice, prepared: null } : choice;
+}
+
 /** The choice once the user checks (or unchecks) `paths` by hand: in a prepared changelist's paths while there is one. */
 export function withIncluded(choice: CheckinChoice, paths: string[], included: boolean): CheckinChoice {
   if (choice.prepared) {

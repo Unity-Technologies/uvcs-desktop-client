@@ -57,7 +57,9 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
   changelist's paths (`PreparedChangelist` in the draft, read by `includedBy`), not exclusions: a change that appears
   meanwhile (an editor saving, a new `.meta`) stays out, and checking files by hand adds or takes them there. A
   successful check-in or shelve ends it (`endPrepared`), and the files the user had left out before are the only ones
-  left out again; a failed or cancelled one keeps it. The button does what it always does: one `cm checkin` or
+  left out again; a failed or cancelled one keeps it. It ends too once none of its files is pending anymore (undone,
+  shelved away by a switch, checked in from outside the app: `preparedStillPending`, `currentChoice`), or else every
+  change made later would stay unchecked. The button does what it always does: one `cm checkin` or
   shelve of those paths, the empty-comment warning, "Update & check in".
   Running at once was dropped: it skipped reading the comment, which a changelist's description only suggests. "Undo N
   changes…" opens the Undo dialog on its changes. The default changelist has no menu of its own: right-clicking it

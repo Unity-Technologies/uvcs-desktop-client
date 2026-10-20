@@ -48,6 +48,7 @@ import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { useChangeRows } from './useChangeRows';
 import { useCheckinPanelSubmit } from './useCheckinPanelSubmit';
 import type { CheckinMode } from './checkinButton';
+import { preparedStillPending, type PreparedChangelist } from './checkinSelection';
 import { useCheckinSelection } from './useCheckinSelection';
 import { useSortedChanges } from './useSortedChanges';
 import styles from './PendingChangesView.module.css';
@@ -116,6 +117,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
     summaryRef,
   );
   useMergeComment(workspacePath, snapshot);
+  useEndPreparedWhenGone(workspacePath, snapshot, checkinChoice.prepared);
 
   const focused = selection.anchor === null ? undefined : changesByKey.get(selection.anchor);
   // Holding ↓ moves through the list at once; the diff (a read and an editor to lay out) follows where it stops.
@@ -143,7 +145,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const prepareChangelist = (changelist: Changelist, mode: CheckinMode): void => {
     // Rendered at once, so the summary holds the comment before the caret goes after it.
     flushSync(() => {
-      prepareChangelistCheckin({ workspacePath, changelist, allChanges, changelists });
+      prepareChangelistCheckin({ workspacePath, changelist, changes: changelistChanges.get(changelist.name) ?? NO_CHANGES, changelists });
       setCheckinMode(mode);
     });
     focusAtEnd(summaryRef.current);
@@ -281,6 +283,17 @@ function useCheckinAfterUpdate(workspacePath: string, workspace: WorkspaceInfo |
   const forget = useCheckinAfterUpdateStore((state) => state.forget);
   const message = checkinAfterUpdateMessage(rejectedCheckin, { branch: branchName, loadedChangeset: workspace?.loadedChangeset ?? undefined }, includedCount);
   return message ? { message, dismiss: () => forget(workspacePath) } : null;
+}
+
+/**
+ * Ends a prepared changelist once none of its files is pending (`preparedStillPending`), so changes made later are
+ * checked as usual; until then `currentChoice` already reads it so.
+ */
+function useEndPreparedWhenGone(workspacePath: string, snapshot: PendingChangesSnapshot | undefined, prepared: PreparedChangelist | null): void {
+  const endPrepared = useCheckinDraftStore((state) => state.endPrepared);
+  useEffect(() => {
+    if (snapshot && prepared && !preparedStillPending(prepared, snapshot.changes)) endPrepared(workspacePath);
+  }, [snapshot, prepared]);
 }
 
 /** Checking in completes a pending merge: its comment starts with where the merge comes from, unless one is written. */
