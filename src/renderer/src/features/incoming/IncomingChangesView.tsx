@@ -9,6 +9,7 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { IncomingChangesetsHeading } from './IncomingChangesetsHeading';
 import { IncomingPanes } from './IncomingPanes';
 import { IncomingSession } from './IncomingSession';
+import { incomingViewState } from './incomingViewState';
 import { useIncomingChanges } from './useIncomingChanges';
 
 export function IncomingChangesView() {
@@ -26,7 +27,8 @@ export function IncomingChangesView() {
   const header = headerSaying(incoming?.branch ? branchLabel(incoming.branch) : undefined);
 
   // The panes keep their layout while reading and once up to date; not being on a branch, or failing, takes the body.
-  if (isPending) {
+  const state = incomingViewState(incoming, isPending, error !== null);
+  if (state.kind === 'reading') {
     return (
       <>
         {header}
@@ -42,9 +44,9 @@ export function IncomingChangesView() {
       </>
     );
   }
-  if (error || !incoming) return <>{header}<EmptyState title="Couldn't check for incoming changes" description={error?.message} /></>;
+  if (state.kind === 'failed') return <>{header}<EmptyState title="Couldn't check for incoming changes" description={error?.message} /></>;
 
-  if (!incoming.branch) {
+  if (state.kind === 'notOnBranch') {
     return (
       <>
         {header}
@@ -53,7 +55,7 @@ export function IncomingChangesView() {
     );
   }
 
-  if (incoming.changesetCount === 0) {
+  if (state.kind === 'upToDate') {
     return (
       <>
         {header}
@@ -62,5 +64,5 @@ export function IncomingChangesView() {
     );
   }
 
-  return <IncomingSession key={incoming.headChangeset} workspacePath={workspacePath} incoming={incoming} header={headerSaying} />;
+  return <IncomingSession key={state.incoming.headChangeset} workspacePath={workspacePath} incoming={state.incoming} header={headerSaying} />;
 }
