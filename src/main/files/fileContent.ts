@@ -1,5 +1,5 @@
 import { extname } from 'node:path';
-import type { FileContent, ImageBytes, ModelBytes, ModelFormat } from '@shared/domain/content';
+import { DECODED_IMAGE_TYPES, type FileContent, type ImageBytes, type ModelBytes, type ModelFormat } from '@shared/domain/content';
 
 /** Past this, a text diff is too slow to compute and too long to read. */
 export const MAX_TEXT_BYTES = 10 * 1024 * 1024;
@@ -24,6 +24,14 @@ const IMAGE_MIME_TYPES: Record<string, string> = {
   '.bmp': 'image/bmp',
   '.webp': 'image/webp',
   '.ico': 'image/x-icon',
+  // Unity's texture formats, which the renderer decodes itself before painting them.
+  '.tga': DECODED_IMAGE_TYPES.tga,
+  '.tif': DECODED_IMAGE_TYPES.tiff,
+  '.tiff': DECODED_IMAGE_TYPES.tiff,
+  '.exr': DECODED_IMAGE_TYPES.exr,
+  '.hdr': DECODED_IMAGE_TYPES.hdr,
+  '.psd': DECODED_IMAGE_TYPES.psd,
+  '.psb': DECODED_IMAGE_TYPES.psd,
 };
 /**
  * Images written as text: shown both as a text diff and rendered (the renderer only ever paints them through `<img>`,

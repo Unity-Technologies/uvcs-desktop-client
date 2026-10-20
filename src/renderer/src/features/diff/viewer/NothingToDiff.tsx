@@ -1,11 +1,12 @@
-import { AppWindow, FileText } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import type { FileContent } from '@shared/domain/content';
-import { formatSize } from '../../../lib/formatDate';
 import { Button } from '../../../ui/Button';
 import { EmptyState } from '../../../ui/EmptyState';
 import { comparisonMethodLabel, type ComparisonMethod } from './comparisonMethod';
 import type { DiffBody } from './diffBody';
+import { sizeChange, TOO_LARGE_TITLES } from './fileSizeWords';
 import { IGNORED_DIFFERENCE_TITLES, ignoredDifference } from './ignoredDifference';
+import { OpenFileButton } from './OpenFileButton';
 
 interface NothingToDiffProps {
   /** Why there is no diff to show. */
@@ -40,20 +41,10 @@ export function NothingToDiff({ reason, left, right, identicalDescription, compa
         <EmptyState
           title={TOO_LARGE_TITLES[left.tooLarge ?? right.tooLarge ?? 'text']}
           description={sizeChange(left, right)}
-          action={openFile && <Button icon={<AppWindow size={13} />} onClick={openFile}>Open file</Button>}
+          action={openFile && <OpenFileButton onClick={openFile} />}
         />
       );
     case 'binary':
       return <EmptyState title="Binary file" description={`${sizeChange(left, right)}. Binary contents can't be compared as text.`} />;
   }
-}
-
-const TOO_LARGE_TITLES: Record<NonNullable<FileContent['tooLarge']>, string> = {
-  text: 'This file is too large to show a diff',
-  image: 'This image is too large to preview',
-  model: 'This model is too large to preview',
-};
-
-function sizeChange(left: FileContent, right: FileContent): string {
-  return `${formatSize(left.size)} → ${formatSize(right.size)}`;
 }

@@ -1,9 +1,31 @@
 import { describe, expect, it } from 'vitest';
-import { changedLabel, colorHex, sideLabel } from './imageInfo';
+import { changedLabel, colorHex, sideLabel, undecodedDescription, undecodedTip, unpaintedNotice } from './imageInfo';
 
 describe('sideLabel', () => {
   it('shows dimensions and size', () => {
     expect(sideLabel({ width: 64, height: 32 }, 178)).toBe('64×32 · 178 B');
+  });
+});
+
+describe('undecodedDescription', () => {
+  it("gives the sizes as a binary diff does, then why the image can't show", () => {
+    expect(undecodedDescription({ size: 1024 }, { size: 2048 }, 'psdWithoutComposite')).toBe("1.0 KB → 2.0 KB. Can't read this PSD: save it with Maximize Compatibility.");
+    expect(undecodedDescription({ size: 0 }, { size: 178 }, 'tooLarge')).toBe('0 B → 178 B. Too large to show.');
+  });
+});
+
+describe('unpaintedNotice', () => {
+  it('names the version that does not show, and why', () => {
+    expect(unpaintedNotice('new', 'psdWithoutComposite')).toBe("The version after is left out. Can't read this PSD: save it with Maximize Compatibility.");
+    expect(unpaintedNotice('old', 'tooLarge')).toBe('The version before is left out. Too large to show.');
+  });
+});
+
+describe('undecodedTip', () => {
+  it('says why a preview shows no image, and a damaged file in general words', () => {
+    expect(undecodedTip('psdColorMode')).toBe("Can't read this PSD: save it as 8 or 16-bit RGB");
+    expect(undecodedTip('unreadable')).toBe("Couldn't display this image");
+    expect(undecodedTip(undefined)).toBe("Couldn't display this image");
   });
 });
 

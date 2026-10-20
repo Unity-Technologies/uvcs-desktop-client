@@ -1,4 +1,7 @@
+import type { FileContent } from '@shared/domain/content';
 import { formatSize } from '../../../../lib/formatDate';
+import { imageProblemWords, type ImageProblem } from '../../../../lib/images/imageProblems';
+import { sizeChange } from '../fileSizeWords';
 import type { Size } from './composedFrame';
 
 /** How much of a pair differs at the tolerance, which the Differences mode counts for the info strip. */
@@ -13,6 +16,31 @@ export type Rgba = readonly [number, number, number, number];
 /** "1024×768 · 245 KB": one revision's identity card for the info strip. */
 export function sideLabel(image: Size, bytes: number): string {
   return `${image.width}×${image.height} · ${formatSize(bytes)}`;
+}
+
+/** What the info strip's "HDR" beside a high dynamic range image (`highDynamicRange`) means. */
+export const HIGH_DYNAMIC_RANGE_TIP = 'High dynamic range, shown clamped to 0–1: what is brighter than white in the file shows as white';
+
+/**
+ * What a pair the viewer can't paint shows in its place: the binary diff's sizes, and why in plain words
+ * (`imageProblemWords`).
+ */
+export function undecodedDescription(old: Pick<FileContent, 'size'>, next: Pick<FileContent, 'size'>, problem: ImageProblem): string {
+  return `${sizeChange(old, next)}. ${capitalized(imageProblemWords(problem))}.`;
+}
+
+/** The line over a version shown alone because the other can't be painted (`imagePairView`). */
+export function unpaintedNotice(side: 'old' | 'new', problem: ImageProblem): string {
+  return `The version ${side === 'old' ? 'before' : 'after'} is left out. ${capitalized(imageProblemWords(problem))}.`;
+}
+
+/** Why a preview shows no image (the merge page's cards), for its tooltip; a damaged file, or none told, in general words. */
+export function undecodedTip(problem: ImageProblem | undefined): string {
+  return problem === undefined || problem === 'unreadable' ? "Couldn't display this image" : capitalized(imageProblemWords(problem));
+}
+
+function capitalized(words: string): string {
+  return `${words.charAt(0).toUpperCase()}${words.slice(1)}`;
 }
 
 /**

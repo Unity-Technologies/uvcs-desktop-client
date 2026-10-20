@@ -1,13 +1,18 @@
-// The image formats a Unity project's textures come in, by file name, and each one's size read from its header before
-// anything decodes it: a texture claiming 30000 × 30000 pixels is refused unread, never decoded into gigabytes.
+// The image formats a Unity project's textures come in, by file name or by content, and each one's size read from its
+// header before anything decodes it: an image claiming 30000 × 30000 pixels is refused unread, never decoded into
+// gigabytes.
 
 /**
- * How a texture decodes: by the browser (`createImageBitmap`), by three's loaders (TGA, TIFF, EXR, Radiance HDR), by
- * the app's own reader (Photoshop's PSD and PSB), or not at all (DDS, KTX, anything else: GPU formats and the rare).
+ * How an image decodes: by the browser (`createImageBitmap`, `<img>`), by three's loaders (TGA, TIFF, EXR, Radiance
+ * HDR), by the app's own reader (Photoshop's PSD and PSB), or not at all (DDS, KTX, anything else: GPU formats and the
+ * rare).
  */
-export type TextureFormat = 'browser' | 'tga' | 'tiff' | 'exr' | 'hdr' | 'psd' | 'unsupported';
+export type ImageFormat = 'browser' | 'tga' | 'tiff' | 'exr' | 'hdr' | 'psd' | 'unsupported';
 
-const FORMATS: Record<string, TextureFormat> = {
+const PNG = [0x89, 0x50, 0x4e, 0x47];
+const EXR = [0x76, 0x2f, 0x31, 0x01];
+
+const FORMATS: Record<string, ImageFormat> = {
   png: 'browser',
   jpg: 'browser',
   jpeg: 'browser',
@@ -23,9 +28,23 @@ const FORMATS: Record<string, TextureFormat> = {
   psb: 'psd',
 };
 
-export function textureFormatOf(fileName: string): TextureFormat {
+export function imageFormatOf(fileName: string): ImageFormat {
   const extension = /\.([^./\\]+)$/.exec(fileName)?.[1]?.toLowerCase() ?? '';
   return FORMATS[extension] ?? 'unsupported';
+}
+
+/**
+ * The format the bytes' signature tells, whatever the file is named (a PNG saved as `.tga`); null for a TGA, which has
+ * no signature, and for bytes no format read here starts with.
+ */
+export function imageFormatOfContent(bytes: Uint8Array): ImageFormat | null {
+  const isWebp = ascii(bytes, 0, 4) === 'RIFF' && ascii(bytes, 8, 4) === 'WEBP';
+  if (startsWith(bytes, PNG) || startsWith(bytes, [0xff, 0xd8, 0xff]) || ascii(bytes, 0, 4) === 'GIF8' || ascii(bytes, 0, 2) === 'BM' || isWebp) return 'browser';
+  if (ascii(bytes, 0, 4) === '8BPS') return 'psd';
+  if (startsWith(bytes, EXR)) return 'exr';
+  if (ascii(bytes, 0, 2) === '#?') return 'hdr';
+  if (startsWith(bytes, [0x49, 0x49, 42, 0]) || startsWith(bytes, [0x4d, 0x4d, 0, 42])) return 'tiff';
+  return null;
 }
 
 export interface ImageSize {
@@ -33,29 +52,41 @@ export interface ImageSize {
   height: number;
 }
 
-/** The size the file's header says, or null when the header doesn't read as its format's. */
-export function imageSizeOf(bytes: Uint8Array, fileName: string): ImageSize | null {
+/** A side past this, or more pixels than this, is refused before decoding: decoding allocates every pixel at once. */
+export const MAX_IMAGE_SIDE = 16384;
+export const MAX_IMAGE_PIXELS = 8192 * 8192;
+
+/** Why an image of this size isn't decoded; null when it may be. */
+export function sizeProblem({ width, height }: ImageSize): 'tooLarge' | null {
+  return width > MAX_IMAGE_SIDE || height > MAX_IMAGE_SIDE || width * height > MAX_IMAGE_PIXELS ? 'tooLarge' : null;
+}
+
+/**
+ * The size the file's header says, or null when the header doesn't read as its format's. Every format is told by its
+ * signature but TGA, which has none: its header is read only when `format` says the file is one.
+ */
+export function imageSizeOf(bytes: Uint8Array, format: ImageFormat): ImageSize | null {
   try {
-    const size = headerSize(bytes, fileName);
+    const size = headerSize(bytes, format);
     return size && size.width > 0 && size.height > 0 && Number.isFinite(size.width) && Number.isFinite(size.height) ? size : null;
   } catch {
     return null;
   }
 }
 
-function headerSize(bytes: Uint8Array, fileName: string): ImageSize | null {
+function headerSize(bytes: Uint8Array, format: ImageFormat): ImageSize | null {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  if (startsWith(bytes, [0x89, 0x50, 0x4e, 0x47])) return { width: view.getUint32(16), height: view.getUint32(20) };
+  if (startsWith(bytes, PNG)) return { width: view.getUint32(16), height: view.getUint32(20) };
   if (startsWith(bytes, [0xff, 0xd8])) return jpegSize(bytes, view);
   if (ascii(bytes, 0, 4) === 'GIF8') return { width: view.getUint16(6, true), height: view.getUint16(8, true) };
   if (ascii(bytes, 0, 2) === 'BM') return bmpSize(view);
   if (ascii(bytes, 0, 4) === 'RIFF' && ascii(bytes, 8, 4) === 'WEBP') return webpSize(bytes, view);
   if (ascii(bytes, 0, 4) === '8BPS') return { width: view.getUint32(18), height: view.getUint32(14) };
-  if (startsWith(bytes, [0x76, 0x2f, 0x31, 0x01])) return exrSize(bytes, view);
+  if (startsWith(bytes, EXR)) return exrSize(bytes, view);
   if (ascii(bytes, 0, 2) === '#?') return radianceSize(bytes);
   if (ascii(bytes, 0, 2) === 'II' || ascii(bytes, 0, 2) === 'MM') return tiffSize(bytes, view);
-  // TGA has no signature: its header, by the name.
-  if (textureFormatOf(fileName) === 'tga' && bytes.length >= 18) return { width: view.getUint16(12, true), height: view.getUint16(14, true) };
+  // TGA has no signature: its header, when the file is said to be one.
+  if (format === 'tga' && bytes.length >= 18) return { width: view.getUint16(12, true), height: view.getUint16(14, true) };
   return null;
 }
 

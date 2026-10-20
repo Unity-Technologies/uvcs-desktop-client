@@ -16,7 +16,7 @@ const worker = vi.hoisted(() => {
   };
   return state;
 });
-vi.mock('./textureWorkerSession', () => ({
+vi.mock('../../imageDecoding/imageDecodingSession', () => ({
   decodeOffThread: (request: TextureDecodeRequest) =>
     new Promise<TextureDecoded>((answer) => {
       worker.asked.push({ name: request.name, answer });

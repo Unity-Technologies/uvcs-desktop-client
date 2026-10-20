@@ -238,7 +238,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
     case 'image':
       body = (
         <Suspense fallback={<CenteredSpinner />}>
-          <ImageDiffViewer original={left} modified={shownRendering} mode={imageMode} />
+          <ImageDiffViewer original={left} modified={shownRendering} mode={imageMode} openFile={openEditable} />
         </Suspense>
       );
       break;

@@ -1,6 +1,8 @@
 // The formats a browser can't decode, as 8-bit RGBA pixels, the top row first: TGA, TIFF, OpenEXR and Radiance HDR
-// through three's loaders (pure JavaScript, no DOM: they run in the texture worker and in tests), Photoshop's through
-// `readPsd`. A high dynamic range image shows as a base map would: clamped to 0-1 and encoded as sRGB.
+// through three's loaders (pure JavaScript, no DOM: they run in the image decoding worker and in tests), Photoshop's through
+// `readPsd`, for the model diff's textures (`decodeTexture`) and the image diff (`paintableImage`). A high dynamic range
+// image shows as a base map would: clamped to 0-1 and encoded as sRGB, which both show and the pixel inspector tells
+// "as shown". Load it only in a worker: three's loaders stay out of the page's bundle.
 
 import { FloatType } from 'three';
 import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
@@ -8,12 +10,12 @@ import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
 import { TGALoader } from 'three/examples/jsm/loaders/TGALoader.js';
 import { TIFFLoader } from 'three/examples/jsm/loaders/TIFFLoader.js';
 import { readPsd } from './psdImage';
-import type { TextureFormat } from './textureFormats';
-import type { TextureProblem } from './textureProblems';
+import type { ImageFormat } from './imageFormats';
+import type { ImageProblem } from './imageProblems';
 
-export type PixelFormat = Exclude<TextureFormat, 'browser' | 'unsupported'>;
+export type PixelFormat = Exclude<ImageFormat, 'browser' | 'unsupported'>;
 
-export type PixelsRead = { kind: 'image'; width: number; height: number; rgba: Uint8ClampedArray } | { kind: 'failed'; problem: TextureProblem };
+export type PixelsRead = { kind: 'image'; width: number; height: number; rgba: Uint8ClampedArray } | { kind: 'failed'; problem: ImageProblem };
 
 export function decodePixels(bytes: Uint8Array, format: PixelFormat): PixelsRead {
   if (format === 'psd') {
