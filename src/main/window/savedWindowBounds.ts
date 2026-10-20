@@ -11,9 +11,12 @@ interface OpeningBounds {
   maximized: boolean;
 }
 
+/** Where windows of each kind are saved: workspace windows, and page windows (a diff in a window of its own) apart. */
+export type SavedBoundsKey = 'windowBounds' | 'pageWindowBounds';
+
 /** The saved window bounds, fitted to the displays attached now. */
-export function loadWindowBounds(settings: SettingsStore): OpeningBounds {
-  const saved = settings.get().windowBounds;
+export function loadWindowBounds(settings: SettingsStore, key: SavedBoundsKey = 'windowBounds'): OpeningBounds {
+  const saved = settings.get()[key];
   return { bounds: restoreWindowBounds(saved, displayWorkAreas()), maximized: saved?.maximized ?? false };
 }
 
@@ -38,10 +41,10 @@ function displayWorkAreas(): Rect[] {
 }
 
 /** Saves the window's bounds while it moves or resizes (after a short pause) and when it closes. */
-export function keepWindowBoundsSaved(window: BrowserWindow, settings: SettingsStore): void {
+export function keepWindowBoundsSaved(window: BrowserWindow, settings: SettingsStore, key: SavedBoundsKey = 'windowBounds'): void {
   const save = (): void => {
     if (window.isDestroyed()) return;
-    settings.update({ windowBounds: savedBoundsOf(window) });
+    settings.update({ [key]: savedBoundsOf(window) });
   };
 
   let timer: ReturnType<typeof setTimeout> | undefined;

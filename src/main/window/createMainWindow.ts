@@ -1,13 +1,14 @@
 import { join } from 'node:path';
 import { app, BrowserWindow, nativeTheme, shell } from 'electron';
+import type { PageWindowPage } from '@shared/domain/pageWindow';
 import type { SavedWindow } from '@shared/domain/settings';
-import { startingWorkspaceQuery } from '@shared/startingWorkspace';
+import { pageWindowQuery, startingWorkspaceQuery } from '@shared/startingWorkspace';
 import { WINDOW_BACKGROUND, windowChrome } from '@shared/windowChrome';
 import { sendEventTo } from '../ipc/sendEvent';
 import type { SettingsStore } from '../settings/SettingsStore';
 import { isWebAddress } from '../system/webAddress';
 import { windowIcon } from './appIcon';
-import { cascadedWindowBounds, keepWindowBoundsSaved, loadWindowBounds, reopenedWindowBounds } from './savedWindowBounds';
+import { cascadedWindowBounds, keepWindowBoundsSaved, loadWindowBounds, reopenedWindowBounds, type SavedBoundsKey } from './savedWindowBounds';
 import { titleBarOptions } from './titleBar';
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH } from './windowBounds';
 
@@ -23,6 +24,12 @@ interface MainWindowOptions {
   reopen?: SavedWindow;
   /** Shows without taking the focus: a window reopened at launch behind the one that had it. */
   inBackground?: boolean;
+  /**
+   * A page window's page (`windows.openPage`), shown in `workspacePath`. Without `cascadeFrom`, it opens where the last
+   * page window was left (`pageWindowBounds`: on the other display, say), and its bounds are saved apart from the
+   * workspace windows'.
+   */
+  page?: PageWindowPage;
 }
 
 /**
@@ -31,9 +38,10 @@ interface MainWindowOptions {
  */
 export function createMainWindow(
   settings: SettingsStore,
-  { cascadeFrom, workspacePath, reopen, inBackground }: MainWindowOptions = {},
+  { cascadeFrom, workspacePath, reopen, inBackground, page }: MainWindowOptions = {},
 ): BrowserWindow {
-  const { bounds, maximized } = openingBounds(settings, { cascadeFrom, reopen });
+  const boundsKey = page ? 'pageWindowBounds' : 'windowBounds';
+  const { bounds, maximized } = openingBounds(settings, { cascadeFrom, reopen }, boundsKey);
   const window = new BrowserWindow({
     ...DEFAULT_SIZE,
     ...bounds,
@@ -51,7 +59,7 @@ export function createMainWindow(
     },
   });
 
-  keepWindowBoundsSaved(window, settings);
+  keepWindowBoundsSaved(window, settings, boundsKey);
   window.once('ready-to-show', () => {
     // Maximizing also shows the window, so it waits until the page can paint.
     if (maximized) window.maximize();
@@ -68,13 +76,13 @@ export function createMainWindow(
     return { action: 'deny' };
   });
 
-  loadPage(window, startingWorkspaceQuery(workspacePath, reopen?.view));
+  loadPage(window, page && workspacePath ? pageWindowQuery(workspacePath, page) : startingWorkspaceQuery(workspacePath, reopen?.view));
   return window;
 }
 
-function openingBounds(settings: SettingsStore, { cascadeFrom, reopen }: Pick<MainWindowOptions, 'cascadeFrom' | 'reopen'>) {
+function openingBounds(settings: SettingsStore, { cascadeFrom, reopen }: Pick<MainWindowOptions, 'cascadeFrom' | 'reopen'>, key: SavedBoundsKey) {
   if (reopen) return reopenedWindowBounds(reopen.bounds);
-  return cascadeFrom ? cascadedWindowBounds(cascadeFrom) : loadWindowBounds(settings);
+  return cascadeFrom ? cascadedWindowBounds(cascadeFrom) : loadWindowBounds(settings, key);
 }
 
 /** The development server's page while `npm run dev` serves it (hot reload), else the built one. */

@@ -76,6 +76,8 @@ export interface AppSettings {
   customEditors: CustomEditor[];
   /** Null until the window is first moved or resized. */
   windowBounds: SavedWindowBounds | null;
+  /** Where the last page window (a diff in a window of its own) was left; null until one is moved or resized. */
+  pageWindowBounds: SavedWindowBounds | null;
   /** The windows open when the app last quit, the focused one last; none when it quit with no window open. */
   openWindows: SavedWindow[];
   /**
@@ -110,6 +112,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   terminal: AUTO_APP,
   customEditors: [],
   windowBounds: null,
+  pageWindowBounds: null,
   openWindows: [],
   legacySettingsImported: false,
 };
