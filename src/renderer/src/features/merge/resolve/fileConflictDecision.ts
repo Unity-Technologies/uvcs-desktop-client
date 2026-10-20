@@ -39,9 +39,14 @@ export function decideConflict(decision: TextDecision, conflictIndex: number, ch
   return { kind: 'text', text, ...(decision.edited && { edited: true }), ...(conflictBases && { conflictBases }) };
 }
 
-/** The base of conflict number `conflictIndex` left in the decision's text, while known. */
+/**
+ * The base of conflict number `conflictIndex` left in the decision's text, while known: none when the bases carried
+ * don't match the conflicts the text holds, rather than one that may be another conflict's.
+ */
 export function conflictBaseAt(decision: FileConflictDecision | undefined, conflictIndex: number): string | undefined {
-  return decision?.kind === 'text' ? decision.conflictBases?.[conflictIndex] : undefined;
+  if (decision?.kind !== 'text' || !decision.conflictBases) return undefined;
+  if (countConflictRegions(decision.text) !== decision.conflictBases.length) return undefined;
+  return decision.conflictBases[conflictIndex];
 }
 
 /**
