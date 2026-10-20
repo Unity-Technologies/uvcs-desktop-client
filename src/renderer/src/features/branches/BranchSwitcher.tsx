@@ -17,10 +17,10 @@ import { useBranches } from './useBranches';
 
 /** The branch switcher's list (`branchSwitcherGroups`): picking a branch switches the workspace to it. */
 export function BranchSwitcher({ workspace, onDone }: { workspace: WorkspaceInfo; onDone: () => void }) {
-  const { data: branches = [] } = useBranches();
+  const { data: branches } = useBranches();
   const recentGuids = useRecentBranchGuids(workspace.path);
   const currentBranch = branchWorkedOn(workspace.selector);
-  const groups = useMemo(() => branchSwitcherGroups(branches, recentGuids), [branches, recentGuids]);
+  const groups = useMemo(() => branchSwitcherGroups(branches ?? [], recentGuids), [branches, recentGuids]);
 
   const pick = (branch: Branch): void => {
     onDone();
@@ -31,6 +31,7 @@ export function BranchSwitcher({ workspace, onDone }: { workspace: WorkspaceInfo
     <BranchSearchList
       groups={groups}
       currentBranch={currentBranch}
+      loading={branches === undefined}
       placeholder="Switch to branch…"
       onPick={pick}
       // Actions close the popup first (dialogs and pages open without it on top); copying keeps it open.

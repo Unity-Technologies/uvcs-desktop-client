@@ -10,7 +10,7 @@ import { HighlightQuery } from '../../ui/Highlight';
 import { KeyHints } from '../../ui/KeyHints';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { BranchSearchItem } from './BranchSearchItem';
-import { branchSearchRows, type BranchGroup } from './branchSearchRows';
+import { branchSearchEmptyText, branchSearchRows, type BranchGroup } from './branchSearchRows';
 import styles from './BranchSearchList.module.css';
 
 const GROUP_HEIGHT = 28;
@@ -26,10 +26,12 @@ interface BranchSearchListProps {
   menu?: (branch: Branch) => MenuEntry[];
   /** Next to the filter field, e.g. a "New branch" button. */
   action?: ReactNode;
+  /** The branches are still read: the list says nothing yet. */
+  loading?: boolean;
 }
 
 /** A searchable, keyboard-driven list of branches in titled groups. Virtualized: repositories can have thousands of branches. */
-export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 'Find a branch', menu, action }: BranchSearchListProps) {
+export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 'Find a branch', menu, action, loading = false }: BranchSearchListProps) {
   const [query, setQuery] = useState('');
   const [highlighted, setHighlighted] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
@@ -38,6 +40,7 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
   const listboxId = useId();
 
   const { rows, branches } = useMemo(() => branchSearchRows(groups, query), [groups, query]);
+  const emptyText = branchSearchEmptyText(query, loading);
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => listRef.current,
@@ -99,7 +102,7 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
       </div>
       <HighlightQuery query={query}>
         <div ref={listRef} className={styles.list}>
-          {branches.length === 0 && <div className={styles.empty}>No branches match “{query}”.</div>}
+          {branches.length === 0 && emptyText && <div className={styles.empty}>{emptyText}</div>}
           <div id={listboxId} role="listbox" aria-label="Branches" className={styles.rows} style={{ height: virtualizer.getTotalSize() }}>
             {virtualizer.getVirtualItems().map((virtualRow) => {
               const row = rows[virtualRow.index]!;

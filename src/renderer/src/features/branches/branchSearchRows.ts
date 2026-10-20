@@ -26,3 +26,9 @@ export function branchSearchRows(groups: BranchGroup[], query: string): { rows: 
   }
   return { rows, branches };
 }
+
+/** What the branch list says when it shows no branch; null while the branches are still read. */
+export function branchSearchEmptyText(query: string, loading: boolean): string | null {
+  if (loading) return null;
+  return query.trim() ? `No branches match “${query}”.` : 'No branches.';
+}
