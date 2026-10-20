@@ -50,6 +50,37 @@ export interface RunProgress {
   paused: boolean;
 }
 
+/** How the run strip speaks of the file at hand. */
+export interface RunStripWords {
+  /** "in VS Code", or "with Smart Merge". */
+  where: string;
+  skipTip: string;
+  stopTip: string;
+  /** Esc asks before stopping: a tool closes the file the user may be working on. */
+  confirmsStop: boolean;
+}
+
+/**
+ * The strip's words while the tool has the file, or while Smart Merge merges it first: it has no window to close and
+ * nothing the user saved, so stopping it needs no confirmation.
+ */
+export function runStripWords(toolName: string, smartMerging: boolean): RunStripWords {
+  if (smartMerging) {
+    return {
+      where: `with ${SMART_MERGE_NAME}`,
+      skipTip: `Stops ${SMART_MERGE_NAME} and goes on to the next file`,
+      stopTip: `Stops ${SMART_MERGE_NAME}; the file stays as it was`,
+      confirmsStop: false,
+    };
+  }
+  return {
+    where: `in ${toolName}`,
+    skipTip: `Closes it in ${toolName} and opens the next file`,
+    stopTip: `Closes it in ${toolName}; what you saved there so far is kept`,
+    confirmsStop: true,
+  };
+}
+
 /** "Resolving 2 of 5". */
 export function runPositionText(progress: RunProgress): string {
   return `${progress.position + 1} of ${progress.total}`;
