@@ -669,15 +669,20 @@ renderer/src/
 
 - **One layout from the first frame**: a view or page paints its final layout at once and keeps it while it loads,
   when nothing is there and when filters hide everything; only what fills it changes.
-  - Its header (title, count, actions, filters, switches) always shows.
+  - Its header (title, count, actions, filters, switches) always shows; a filter waits, disabled, until its list is
+    read (`useChangeFilter`'s `reading`). A switch in a pane's header stays with it (`DiffFrame`: a branch diff's
+    "Whole branch | Changeset by changeset").
   - Loading: the panes stay, with placeholder rows at the real row height under the list's own column titles
     (`ui/Skeleton`, `TableSkeleton`, `FileTreeSkeleton`, `FileTreeList`'s `loading`), the details as
     `DetailsPanelSkeleton`, a viewer's pane blank. A list whose query hasn't started yet (it waits on the
     repository's name) is loading, never empty: TanStack's `isPending`, not `isLoading`.
   - Nothing there: the list keeps its pane (its count reads 0) and the empty state takes the details pane
     (`changesPanesState`, `objectListState`).
-  - Filters hide everything: "No matching …" in the list, under its column titles (`DataTable`'s `empty`), beside
-    a blank details pane: there is nothing to select.
+  - Filters hide everything: "No matching …" (`NoMatches`) in the list, under its column titles (`DataTable`'s
+    `empty`, `FileTreeList`'s `noMatches`), beside a blank details pane: there is nothing to select.
+  - A page whose subject isn't read yet shows its frame, the header a skeleton (`CodeReviewPage`).
+  - The one shift left is a banner that says there is something to do, which shows only once that is known
+    (Incoming's update bar).
   - Only an error reading the whole view, and an outcome that ends a page (not on a branch, nothing to merge), take
     the whole body.
   - Every view and page is in the startup bundle (`viewRegistry`, `pageRegistry`), so none paints a fallback it then
@@ -694,6 +699,9 @@ renderer/src/
 
 - **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)`, so `invalidateWorkspace(path)` refreshes everything after an operation
   (or what it can touch: `invalidateWorkspace(path, affected)`, `runOperation({ affects })`).
+  A page opened from a list starts from the row that list already read, so it shows at once: a shelve
+  (`cachedShelve`), a code review (`listedReview`, as `initialData` as fresh as that list, never from a list an
+  operation marked stale).
 - **Refresh**: views refresh themselves when something changes, never on a timer except the incoming check (the app's
   own update check runs hourly too, against GitHub, never the server: features/updates.md).
   - `main/watch/WorkspaceWatcher` watches an open workspace (recursive on macOS/Windows; on Linux a watch per folder,
