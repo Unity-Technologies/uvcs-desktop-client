@@ -3,6 +3,7 @@ import type { QueryFilter } from '@shared/domain/query';
 import type { Label } from '@shared/domain/label';
 import { EVERYONE, pickedOwners } from '../../lib/peopleFilter';
 import { longerRangeHint } from '../../lib/longerRangeHint';
+import { typedChangesetNumber } from '../../lib/changesetNumber';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { sinceDateFor, type SincePreset } from '../../lib/sincePresets';
 import { formatCount } from '../../lib/text';
@@ -41,6 +42,27 @@ export function matchesSearch(changeset: Changeset, search: string, labels: read
     [String(changeset.id), changeset.comment, ...labels.map((label) => label.name), changeset.branch, ...userFilterTexts(changeset.owner)],
     search,
   );
+}
+
+/** A changeset a picker offers: one of those read, with its row, or one typed by number, older than those read. */
+export interface ChangesetChoice {
+  id: number;
+  changeset?: Changeset;
+}
+
+/**
+ * The changesets a changeset picker offers for `search`, leaving out `exclude` (the one being compared): the newest
+ * read (`recent`) that match it, and first the one whose number was typed (`1234`, `cs:1234`), even older than those
+ * read, so any changeset is reachable without listing them all.
+ */
+export function changesetChoices(recent: readonly Changeset[], exclude: number, search: string): ChangesetChoice[] {
+  const typed = typedChangesetNumber(search);
+  const matching = recent
+    .filter((changeset) => changeset.id !== exclude && changeset.id !== typed && matchesSearch(changeset, search))
+    .map((changeset) => ({ id: changeset.id, changeset }));
+  if (typed === undefined || typed === exclude) return matching;
+  const typedRow = recent.find((changeset) => changeset.id === typed);
+  return [typedRow ? { id: typed, changeset: typedRow } : { id: typed }, ...matching];
 }
 
 /** What to try when nothing shows: the filters only look through what the time range read. */
