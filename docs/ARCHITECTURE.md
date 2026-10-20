@@ -147,7 +147,7 @@ and many people use the same server. Every `cm` command other than local reads (
   a merge into a server branch the workspace too, refreshing the incoming check instead (`isAffectedByServerMerge`);
   shelving changes that stay in the workspace refreshes only the shelve lists, and shelving them away those and the workspace; a new, deleted or hidden branch only the
   branch lists and the Branch Explorer; a label edit the labels and the graph; an attribute or value edit only the
-  attributes; a code review created, edited, marked reviewed or deleted only the reviews (their lists and the branch chips); releasing a lock only the locks; deleting a shelve or discarding left changes only the shelve lists and the left changes, and applying or restoring one those, the workspace and its locks; adding, checking out, removing or undoing files only the workspace and its locks; a changeset's comment edited only what shows changesets, and one moved or deleted those, the branch lists and incoming. Reads refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
+  attributes; a code review created, edited, marked reviewed or deleted only the reviews (their lists and the branch chips); releasing a lock only the locks; deleting a shelve or discarding left changes only the shelve lists and the left changes, and applying or restoring one those, the workspace and its locks; adding, checking out, removing or undoing files only the workspace and its locks; restoring deleted items only the workspace (`isAffectedByRestoredItems`); a changeset's comment edited only what shows changesets, and one moved or deleted those, the branch lists and incoming. Reads refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
   the last (create a branch and switch to it: `createBranchAndSwitch`). Views keyed by the workspace info (`keyedByWorkspaceInfo`: left changes, the
   incoming check, the branch the workspace is on) wait for it, and when the operation gave them another key they are only
   marked stale: they are read under the new key as they show, never once more under the old one. Event-driven refreshes
@@ -289,7 +289,9 @@ Revision ids, item ids and changeset numbers are per repository, and an item und
 other servers) lives in the xlinked repository: `cm` looks a bare `revid:432251` up in the workspace's, where it is
 another file or none. So a revision is never a bare id: `RevisionRef` (`shared/domain/revision.ts`) is an id with its
 repository, set where `cm` names it, and every spec built from it names both (`spec.revision`: `revid:N@repo@server`,
-`spec.itemAt`: `itemid:N#cs:M@repo`), as the official client carries each diff item's mount repository.
+`spec.itemAt`: `itemid:N#cs:M@repo`), as the official client carries each diff item's mount repository. The one
+exception is `cm undelete`, which refuses any spec naming a repository and takes a bare id in the restore path's
+(`undeleteArgs`): the app restores only items of the workspace's own repository.
 
 - Each item records its repository as parsed: `cm diff --format={repository}` (`DiffEntry`, so every committed diff,
   Incoming and update conflicts), `cm ls` `<Repository>` (`TreeItem`: Files, Browse repository), `cm history`'s
@@ -962,7 +964,8 @@ renderer/src/
   - **One menu**: a file's menu is `changedFileMenu` (`components/`) in every list but Changes: its history (annotated
     or not), "Open this revision" and "Save this revision as…" for the version the list shows (a diff's newer side, a
     merge's incoming version; nothing to open for a deleted file or a folder), and Copy; a list adds its own after the
-    shared entries of each group (a diff the review mark, `diffEntryMenu`; a merge the ways to settle a conflict,
+    shared entries of each group (a diff the review mark and, given the workspace's repository, restoring what was
+    deleted: `diffEntryMenu`, features/diff.md "Restoring deleted items"; a merge the ways to settle a conflict,
     `mergeItemMenu`). Nothing is read to build it: what Open and Save as take out of the repository is a
     `RepositoryVersion` (a revision, or a path or item at a changeset, as a merge knows its sides), read when they run.
   - **Folders once**: a folder added or deleted along with what it holds is left out, its items say it already, but a

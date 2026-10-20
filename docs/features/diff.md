@@ -124,6 +124,29 @@ stack for the session, kept through a visit to another workspace (⌘Z in the di
 `MAX_DISCARD_HISTORY_CHARS` of text the oldest of any file go, as each keeps the whole file before and after); with
 some, it's one more edit in the editor, unsaved, and ⌘Z takes it back like typing (`diffDiscards`).
 
+## Restoring deleted items
+
+An item a diff shows deleted (a changeset's, branch's, shelve's or range's; a file or a folder) comes back from its
+menu, in the diff page and a details panel's changed files, as a pending change: "Restore file", "Restore folder" or
+"Restore N items" where it was, and for one item "Restore to…" any path in the workspace (`restoreMenuEntries`,
+`restoreDeleted`). `cm undelete <revid:N> <path>` writes the revision the deletion removed (the entry's
+`baseRevisionId`) and records it as copied; a folder comes back with everything it held then. It is offered only when
+every selected item was deleted, in the workspace's own repository (`deletedItemRestores`): `cm` restores no xlinked
+item and finds a bare id only there (`undeleteArgs`). Incoming offers none: what it deletes is still in the workspace.
+
+- `cm` takes one item a command, so several are one operation running one each (`restoreDeletedItems` in main),
+  which stops between two; each is a user's pick, never a loop over a list. `undelete` counts as a transfer
+  (`runsLong`): a folder downloads all it held, so it runs as a process, never holding a pooled shell.
+- Every place is checked on disk before any `cm`, and nothing is restored if one fails: `cm` refuses a path that holds
+  an item ("The restore path should not exist"), but into a folder that's gone it writes the files and then fails,
+  leaving them private. Both read "Restore it to another path" in the toast. `cm` also refuses an item the workspace
+  still loads ("The item 35 is already loaded on tree"), shown as it prints it.
+- The official client asks to confirm first; nothing is lost here (the item comes back as a change to undo or check
+  in), so it doesn't.
+
+`scripts/sandboxes/deletes.sh` builds changesets that delete a file, a folder, an accented name, and a path a new file
+took.
+
 ## Moving through changes
 
 Every text diff of two versions steps through its changes (`useChangeNavigation`: the
