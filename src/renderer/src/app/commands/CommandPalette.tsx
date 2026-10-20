@@ -1,11 +1,12 @@
 import { Command as Cmdk } from 'cmdk';
-import { useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { createFuzzyIndex } from '../../lib/fuzzyIndex';
 import { isRowMenuKey } from '../../lib/rowMenu';
 import { useShortcut } from '../../lib/useShortcut';
 import { HighlightQuery } from '../../ui/Highlight';
 import { Spinner } from '../../ui/Spinner';
 import { useSession } from '../workspace/sessionStore';
+import { newWindowRunOf } from '../workspace/workspaceWindowChoice';
 import { useCommandPalette } from './commandPaletteStore';
 import { commandResult, commandSearchText, paletteCommands } from './commandResults';
 import { useCommandStore } from './commandStore';
@@ -34,7 +35,8 @@ export function CommandPalette() {
 /**
  * One box for everything: commands, files, branches, labels, workspaces, changesets, shelves and code reviews, each kind in its
  * own section capped at a few rows ("N more" expands it). Empty, it lists what is at hand; typed, the sections with
- * the best matches come first. `>`, `@`, `/` and `#` narrow the search. Enter opens a result, Tab its actions.
+ * the best matches come first. `>`, `@`, `/` and `#` narrow the search. Enter opens a result (a workspace in a new
+ * window with Shift), Tab its actions.
  * Ranks everything itself (cmdk only renders and moves the selection).
  */
 function OpenPalette({ close }: { close: () => void }) {
@@ -76,6 +78,16 @@ function OpenPalette({ close }: { close: () => void }) {
     result.run();
   };
 
+  /** Shift on Enter or a click opens a result that can open in a new window (a workspace) there; true when it did. */
+  const ranInNewWindow = (result: SearchResult | undefined, event: MouseEvent | KeyboardEvent): boolean => {
+    const runInNewWindow = newWindowRunOf(result, event);
+    if (!runInNewWindow) return false;
+    event.preventDefault();
+    close();
+    runInNewWindow();
+    return true;
+  };
+
   const expand = (section: SectionId): void => {
     setExpanded((sections) => new Set(sections).add(section));
     // The first row that was held back takes the place of "N more".
@@ -86,6 +98,7 @@ function OpenPalette({ close }: { close: () => void }) {
     // Keys pressed in a row's actions menu bubble up here through its portal; they are the menu's, not cmdk's.
     if (event.target !== inputRef.current) return event.preventDefault();
     if (event.key === 'Escape') close();
+    if (event.key === 'Enter' && ranInNewWindow(selectedResult, event)) return;
     // Tab never leaves the palette: it opens the selected result's actions, when it has some.
     if (event.key === 'Tab' || isRowMenuKey(event)) {
       event.preventDefault();
@@ -136,6 +149,7 @@ function OpenPalette({ close }: { close: () => void }) {
                     onMenuOpenChange={(open) => setMenuFor(open ? result.id : null)}
                     onMenuClosed={() => inputRef.current?.focus()}
                     onRun={() => run(result)}
+                    onRunInNewWindow={(event) => ranInNewWindow(result, event)}
                     onLeave={close}
                   />
                 ))}

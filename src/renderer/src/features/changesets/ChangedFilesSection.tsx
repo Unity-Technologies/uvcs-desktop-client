@@ -60,9 +60,6 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
   const shown = entries && !collapsed ? entries : undefined;
   const filterShown = shown !== undefined && shown.length > FILTER_FROM;
 
-  // The same menu as in the diff, deleted items offering to come back.
-  const menuOf = (items: DiffEntry[]) => diffEntryMenu(workspacePath, target, items, { review, workspaceRepository });
-
   const onListKeyDown = (event: KeyboardEvent): void => {
     const list = listRef.current;
     if (!list) return;
@@ -112,13 +109,13 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
           <div ref={listRef} className={styles.files} onKeyDown={onListKeyDown}>
             {listed.rows.map((row) =>
               row.type === 'folder' ? (
-                <ActionContextMenu key={row.key} entries={() => menuOf(row.items)}>
+                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(workspacePath, target, row.items, { review, workspaceRepository })}>
                   <button className={styles.file} onClick={() => toggleCollapsed(row.key)} aria-expanded={!row.collapsed} {...ROVING_ITEM}>
                     <DiffEntryRow row={row} tree={tree} />
                   </button>
                 </ActionContextMenu>
               ) : (
-                <ActionContextMenu key={row.key} entries={() => menuOf([row.item])}>
+                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(workspacePath, target, [row.item], { review, workspaceRepository })}>
                   <button className={styles.file} onClick={() => onOpen(row.item.path)} {...ROVING_ITEM}>
                     <DiffEntryRow row={row} tree={tree} />
                   </button>

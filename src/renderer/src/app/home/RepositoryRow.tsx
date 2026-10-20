@@ -9,6 +9,7 @@ import { Button } from '../../ui/Button';
 import { Highlight } from '../../ui/Highlight';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
+import { windowAskedBy, workspaceOpener } from '../workspace/workspaceWindowChoice';
 import { repositoryMenu } from './homeMenus';
 import styles from './Home.module.css';
 
@@ -51,7 +52,7 @@ export function RepositoryRow({ repository, workspaces, expanded, onToggle, onOp
           </span>
         </button>
         {onlyWorkspace ? (
-          <Button size="small" onClick={() => onOpen(onlyWorkspace.path)}>
+          <Button size="small" onClick={(event) => workspaceOpener(onOpen)(onlyWorkspace.path, windowAskedBy(event))}>
             Open
           </Button>
         ) : (

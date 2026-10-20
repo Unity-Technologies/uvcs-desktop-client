@@ -97,6 +97,7 @@ export const MENU_WORDS = {
   openReview: word('primary', ExternalLink, 'Open review'),
   release: word('primary', LockOpen, 'Release lock'),
   openWorkspace: word('primary', FolderOpen, 'Open workspace'),
+  openInNewWindow: word('primary', AppWindow, 'Open in new window'),
   locate: word('primary', FolderSearch, 'Locate or recreate…'),
 
   // Opening it in other apps, and the file manager (`openOnDiskEntries`, `openRevisionEntries`): a file's Enter too.

@@ -2,16 +2,20 @@ import type { RepositorySummary } from '@shared/domain/repository';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
+import { hotkey } from '../../lib/shortcutRegistry';
 import { copySubmenu } from '../../components/copyMenu';
 import { openOnDiskEntries } from '../../components/externalApps/openWithMenu';
 import { menuAction } from '../../components/menuWords';
 import { openRepositoryPathPermissions, openRepositoryPermissions, openServerPermissions } from '../../features/permissions/openPermissions';
 import { forgetRecentWorkspace } from '../settings/useSettings';
+import type { OpenWorkspaceIn } from '../workspace/workspaceWindowChoice';
 import { deleteRepository, removeWorkspace, renameRepository, renameWorkspace } from './homeOperations';
 
-export function workspaceMenu(workspace: WorkspaceSummary, open: (path: string) => void): MenuEntry[] {
+/** A workspace's menu wherever it's listed (the home screen, the switcher, the palette); `open` opens it here or in a new window. */
+export function workspaceMenu(workspace: WorkspaceSummary, open: OpenWorkspaceIn): MenuEntry[] {
   return groupedMenu([
-    menuAction('openWorkspace', () => open(workspace.path)),
+    menuAction('openWorkspace', () => open(workspace.path, 'here')),
+    menuAction('openInNewWindow', () => open(workspace.path, 'newWindow'), { shortcut: hotkey('workspaceInNewWindow') }),
     ...openOnDiskEntries({ path: workspace.path, isFolder: true, isWorkspace: true }),
     copySubmenu('Workspace', { name: workspace.name, path: workspace.path }),
     menuAction('rename', () => void renameWorkspace(workspace)),
