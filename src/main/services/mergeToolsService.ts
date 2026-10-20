@@ -84,7 +84,7 @@ export function createMergeToolsService(
   async function smartMerged(smartMerge: SmartMergeTool, files: MergeToolFiles, start: Buffer, signal: AbortSignal): Promise<MergeToolOutcome | null> {
     const [yours, incoming] = await Promise.all([startOf(files.yours), startOf(files.incoming)]);
     if (!isUnityYaml(yours) || !isUnityYaml(incoming)) return null;
-    const run = await launchMergeTool(smartMerge.executable, fillArgs(SMART_MERGE_ARGS, files), signal).catch(() => null);
+    const run = await launchMergeTool(smartMerge.executable, fillArgs(SMART_MERGE_ARGS, files), signal, { hidden: true }).catch(() => null);
     const outcome = run && !signal.aborted ? judgeSmartMerge(run, await readIfThere(files.result)) : null;
     if (!outcome) await writeFile(files.result, start);
     return outcome;
