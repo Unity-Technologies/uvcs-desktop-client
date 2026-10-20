@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FileContent } from '@shared/domain/content';
 import { LONGEST_DRAWN_LINE, LONGEST_EDITED_LINE } from '../../diff/viewer/longLines';
-import { conflictsToStep, effectiveView, editInAppUnavailable, mergedText, rendersVersions, textToEdit } from './conflictPanelView';
+import { conflictsToStep, effectiveView, justDecided, editInAppUnavailable, mergedText, rendersVersions, textToEdit } from './conflictPanelView';
 import type { FileConflictState } from './useFileConflicts';
 
 const text = (value: string): FileContent => ({ text: value, isBinary: false, size: value.length });
@@ -92,22 +92,41 @@ describe('textToEdit', () => {
 
 describe('conflictsToStep', () => {
   it('steps through the conflicts left in the conflicts view', () => {
-    expect(conflictsToStep('conflicts', stateOf({ remainingConflicts: 3 }))).toBe(3);
+    expect(conflictsToStep('conflicts', stateOf({ remainingConflicts: 3 }), false)).toBe(3);
   });
 
   it("leaves a diff's changes to the diff's own arrows, and steps through nothing in the base or while the file loads", () => {
-    for (const view of ['changes', 'destination', 'source', 'base'] as const) expect(conflictsToStep(view, stateOf())).toBeNull();
-    expect(conflictsToStep('changes', stateOf({ status: 'loading', remainingConflicts: 0 }))).toBeNull();
+    for (const view of ['changes', 'destination', 'source', 'base'] as const) expect(conflictsToStep(view, stateOf(), false)).toBeNull();
+    expect(conflictsToStep('changes', stateOf({ status: 'loading', remainingConflicts: 0 }), false)).toBeNull();
   });
 
   it('takes a binary waiting for the version to keep as one conflict, and none once one is kept', () => {
     const binary = stateOf({ isBinary: true, document: undefined, decision: undefined, remainingConflicts: 0 });
-    expect(conflictsToStep('choice', binary)).toBe(1);
-    expect(conflictsToStep('choice', { ...binary, resolution: { choice: 'source' } })).toBe(0);
+    expect(conflictsToStep('choice', binary, false)).toBe(1);
+    expect(conflictsToStep('choice', { ...binary, resolution: { choice: 'source' } }, false)).toBe(0);
+  });
+
+  it('keeps the arrows, with none left, in a file just decided while shown: they go straight on to the next file', () => {
+    expect(conflictsToStep('changes', stateOf({ remainingConflicts: 0 }), true)).toBe(0);
   });
 
   it("has none in a file that couldn't be read, whose arrows still go on to the next file", () => {
-    expect(conflictsToStep('changes', stateOf({ status: 'error', remainingConflicts: 0 }))).toBe(0);
+    expect(conflictsToStep('changes', stateOf({ status: 'error', remainingConflicts: 0 }), false)).toBe(0);
+  });
+});
+
+describe('justDecided', () => {
+  const decided = stateOf({ remainingConflicts: 0, decision: { kind: 'text', text: 'merged' } });
+
+  it('is a file whose last conflict was resolved while it showed', () => {
+    expect(justDecided(true, undefined, decided)).toBe(true);
+    expect(justDecided(true, 'conflicts', decided)).toBe(true);
+  });
+
+  it("isn't a file that waits still, nor one decided before it showed, nor once the user picks its changes", () => {
+    expect(justDecided(true, undefined, stateOf())).toBe(false);
+    expect(justDecided(false, undefined, decided)).toBe(false);
+    expect(justDecided(true, 'changes', decided)).toBe(false);
   });
 });
 
