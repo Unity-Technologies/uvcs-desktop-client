@@ -259,7 +259,8 @@ and many people use the same server. Every `cm` command other than local reads (
   keeps them, not every parser (`ownCopy`; `OwnCopies` for a value many entries repeat, like a repository spec):
   `BranchNamesCache`, `WorkspaceCopies`, `RepositoryTrees`.
 - `cm find branch` leaves hidden branches out unless asked for (`hidden = 'true'`), and `cm find changeset` their
-  changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`); merges and labels come either way.
+  changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`; a list of one branch's changesets always asks for
+  it, `changesetsService`); merges and labels come either way.
 - Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments.
   Each is in a directory named with the app's process (`withTempDirectory`: `uvcs-<pid>-…`), deleted after the command;
   those a session killed mid-command left go as the next one starts (`removeLeftOverTempDirectories`, as the
