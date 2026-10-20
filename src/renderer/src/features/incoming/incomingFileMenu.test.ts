@@ -76,6 +76,15 @@ describe('incomingFileMenu', () => {
     expect(mergeOnly(menu).map(([id]) => id)).toEqual(['openVersion', 'resolveIn', 'keepDestination', 'keepSource']);
   });
 
+  it("opens a binary conflict's versions only from \"Open version\", as the merge page does", () => {
+    const state = conflictState('Assets/Hero.psd', { isBinary: true });
+    const ids = (menu: MenuEntry[]) => menu.flatMap((entry) => (typeof entry === 'object' && 'id' in entry && entry.id ? [entry.id] : []));
+    const menu = incomingFileMenu([file('Assets/Hero.psd')], context([state]));
+    expect(ids(menu)).not.toContain('openRevision');
+    expect(ids(menu)).not.toContain('openRevisionWith');
+    expect(ids(menu)).toEqual(expect.arrayContaining(['openVersion', 'saveAs']));
+  });
+
   it('offers Start over once the user decided the conflict, as the merge page does', () => {
     const state = conflictState('Assets/Player.cs', { decidedByUser: true });
     const menu = incomingFileMenu([file('Assets/Player.cs')], context([state]));
