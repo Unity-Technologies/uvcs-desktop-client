@@ -120,6 +120,26 @@ describe('changing the workspace', () => {
     expect(commands).toEqual([]);
   });
 
+  it('restores deleted items with one quick cm undelete each, which CmClient runs as a process: it downloads', async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'explorer-wk-'));
+    await mkdir(join(workspace, 'notes'));
+    const { service, commands } = explorer({ undelete: '' });
+
+    await service.restoreDeleted(
+      workspace,
+      [
+        { revision: { revisionId: 24, repository: 'game@local' }, path: 'docs' },
+        { revision: { revisionId: 16, repository: 'game@local' }, path: 'notes/Café menú.txt' },
+      ],
+      'op-1',
+    );
+
+    expect(commands.map(({ via, args }) => ({ via, args }))).toEqual([
+      { via: 'query', args: ['undelete', 'revid:24', join(workspace, 'docs')] },
+      { via: 'query', args: ['undelete', 'revid:16', join(workspace, 'notes', 'Café menú.txt')] },
+    ]);
+  });
+
   it('adds folders with everything in them, and changes revision types, with one command for all the items', async () => {
     const { service, lines } = explorer({ add: '', changerevisiontype: '' });
 
