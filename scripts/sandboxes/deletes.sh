@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Builds a repository whose changesets delete files and folders, to restore them from a diff: a file, a folder with
-# files and a subfolder in it, a name with spaces and accents, and a file whose path a new file took afterwards.
+# files and a subfolder in it, a name with spaces and accents, a file whose path a new file took afterwards, and 25
+# files deleted one by one (more than are restored without asking).
 # Usage: scripts/sandboxes/deletes.sh [repo-name [workspace-folder]]   → repo undelete-demo@local, workspace /tmp/uvcs-undelete
 # It deletes and recreates both, so it takes only names: the repository is always on the local server, the
 # workspace always a folder of /tmp. A `cm undelete` typed by hand there takes /private/tmp/…, as cm names it on macOS:
@@ -32,6 +33,8 @@ w docs/controls.md "Arrows to move."
 w docs/images/logo.svg '<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"/>'
 w "notes/Café menú.txt" "Coffee and cake."
 w README.md "# Undelete demo"
+mkdir -p levels
+for i in $(seq -w 1 25); do printf 'level %s\n' "$i" > "levels/Level$i.txt"; done
 commit "Initial project"
 
 cm rm src/Enemy.cs >/dev/null
@@ -43,4 +46,7 @@ cm rm src/Pickup.cs >/dev/null
 commit "Drop the pickup"
 w src/Pickup.cs "public class Pickup { int points; }"
 commit "A new pickup where the old one was"
-echo "Built $REPO in $WK: cs:2 deletes a file, a folder and a name with accents; cs:3 deletes src/Pickup.cs, which cs:4 adds anew"
+# Each file deleted on its own, the folder kept: 25 items to restore at once.
+for f in levels/Level*.txt; do cm rm "$f" >/dev/null; done
+commit "Drop every level"
+echo "Built $REPO in $WK: cs:2 deletes a file, a folder and a name with accents; cs:3 deletes src/Pickup.cs, which cs:4 adds anew; cs:5 deletes 25 levels"
