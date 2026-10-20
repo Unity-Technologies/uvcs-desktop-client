@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { create } from 'zustand';
-import { withIncluded, type CheckinChoice, type PreparedChangelist } from './checkinSelection';
+import { withEverythingIncluded, withIncluded, type CheckinChoice, type PreparedChangelist } from './checkinSelection';
 
 interface CheckinDraft extends CheckinChoice {
   summary: string;
@@ -13,6 +13,8 @@ interface CheckinDraftStore {
   drafts: Record<string, CheckinDraft>;
   setMessage: (workspacePath: string, message: { summary?: string; description?: string }) => void;
   setIncluded: (workspacePath: string, paths: string[], included: boolean) => void;
+  /** Checks every file, `paths` being all of them: ends a prepared changelist rather than growing it. */
+  includeEverything: (workspacePath: string, paths: string[]) => void;
   /** Checks a changelist's files alone ("Check in this changelist"), the files the user left out kept for later. */
   prepareChangelist: (workspacePath: string, prepared: PreparedChangelist) => void;
   /** Once the prepared changelist is checked in or shelved: back to every file but those the user left out. */
@@ -31,6 +33,7 @@ export const useCheckinDraftStore = create<CheckinDraftStore>((set) => {
     setMessage: (workspacePath, message) => updateDraft(workspacePath, (draft) => ({ ...draft, ...message })),
     setIncluded: (workspacePath, paths, included) =>
       updateDraft(workspacePath, (draft) => ({ ...draft, ...withIncluded(draft, paths, included) })),
+    includeEverything: (workspacePath, paths) => updateDraft(workspacePath, (draft) => ({ ...draft, ...withEverythingIncluded(draft, paths) })),
     prepareChangelist: (workspacePath, prepared) => updateDraft(workspacePath, (draft) => ({ ...draft, prepared })),
     endPrepared: (workspacePath) => updateDraft(workspacePath, (draft) => ({ ...draft, prepared: null })),
     clearMessage: (workspacePath) => updateDraft(workspacePath, (draft) => ({ ...draft, summary: '', description: '' })),

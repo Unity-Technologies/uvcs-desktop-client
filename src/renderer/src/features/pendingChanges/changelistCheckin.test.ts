@@ -156,6 +156,14 @@ describe('how a prepared changelist ends', () => {
     expect(selection([...defaultChanges, uiChanges[0]!]).included).toEqual([uiChanges[0]]);
   });
 
+  it('holds while the user unchecks every file: its files are still pending', () => {
+    prepare(ui);
+
+    useCheckinDraftStore.getState().setIncluded(ws, allChanges.map((candidate) => candidate.path), false);
+
+    expect(selection().included).toEqual([]);
+  });
+
   it('ends when the user checks every file, none hidden by the filters, back to the files they had left out', () => {
     useCheckinDraftStore.getState().setIncluded(ws, ['README.md'], false);
     prepare(ui);

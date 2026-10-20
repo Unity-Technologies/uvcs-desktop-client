@@ -82,6 +82,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const grouping = usePendingChangesViewStore((state) => state.grouping);
   const checkinChoice = useCheckinChoice(workspacePath);
   const setIncluded = useCheckinDraftStore((state) => state.setIncluded);
+  const includeEverything = useCheckinDraftStore((state) => state.includeEverything);
   const [selection, setSelection] = useViewSelection('changes');
   const summaryRef = useRef<HTMLInputElement>(null);
   // Back to checking in each time Changes shows, as a shelve is a detour.
@@ -139,6 +140,11 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
 
   const setIncludedChanges = (selected: PendingChange[], include: boolean): void =>
     setIncluded(workspacePath, selected.map((change) => change.path), include);
+  // The header's box with nothing hidden means every file: it ends a prepared changelist instead of growing it.
+  const setEveryShownIncluded = (shown: PendingChange[], include: boolean): void => {
+    if (include && changes.length === allChanges.length) includeEverything(workspacePath, shown.map((change) => change.path));
+    else setIncludedChanges(shown, include);
+  };
   const toggleIncluded = (toggled: ChangeRow[], include: boolean): void => setIncludedChanges(toggled.flatMap(changesUnderRow), include);
 
   // The changelist's changes checked alone, then the caret after the comment: writing or reading it is the way on.
@@ -206,7 +212,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
               changes={changes}
               totalCount={listedCount}
               isIncluded={isIncluded}
-              onSetIncluded={setIncludedChanges}
+              onSetIncluded={setEveryShownIncluded}
               onUndo={(selected) => void undoChanges(workspacePath, selected)}
               onUndoUnchanged={() => void undoUnchangedCheckouts(workspacePath)}
               checkboxInset={checkboxInset}
