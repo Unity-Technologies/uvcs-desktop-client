@@ -431,8 +431,11 @@ describe('opening', () => {
     expect(opening(MENUS.folder!())).toEqual([...words, REVEAL]);
     expect(opening(MENUS.currentWorkspace!())).toEqual([...words, 'Open in Finder']);
     expect(opening(MENUS.workspace!())).toEqual([...words, 'Open in Finder']);
-    expect(reading(MENUS.workspace!()).slice(0, 1)).toEqual([expect.stringContaining('openWorkspace | Open workspace')]);
-    expect(MENUS.workspace!()[1]).toBe(SEPARATOR);
+    expect(reading(MENUS.workspace!()).slice(0, 2)).toEqual([
+      expect.stringContaining('openWorkspace | Open workspace'),
+      expect.stringContaining('openInNewWindow | Open in new window'),
+    ]);
+    expect(MENUS.workspace!()[2]).toBe(SEPARATOR);
   });
 
   it("opens a revision first, in the user's editor or any other app", () => {
