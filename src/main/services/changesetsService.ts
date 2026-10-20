@@ -4,10 +4,16 @@ import { FOUND_CHANGESETS } from '../cm/foundObjects';
 import { readRecords } from '../cm/formatRecords';
 import type { ServiceContext } from './ServiceContext';
 
+/**
+ * `cm find changeset` leaves out the changesets of hidden branches unless asked for: a branch named in the filter
+ * shows its changesets whether it is hidden or not, while the list of every branch keeps hidden ones out.
+ */
+const IGNORE_HIDDEN = "ignorehidden = 'true'";
+
 export function createChangesetsService({ cm }: ServiceContext): ChangesetsApi {
   return {
     async list(workspacePath, filter) {
-      const output = await cm.query(findArgs(FOUND_CHANGESETS, filter, 'changesetid desc'), { cwd: workspacePath });
+      const output = await cm.query(findArgs(FOUND_CHANGESETS, filter, 'changesetid desc', filter.branch ? [IGNORE_HIDDEN] : []), { cwd: workspacePath });
       return readRecords(FOUND_CHANGESETS, output);
     },
 
