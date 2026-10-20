@@ -12,6 +12,7 @@ export function conflictedFilesOf(plan: MergePlan, request: MergeRequest): Confl
     key: conflict.path,
     path: conflict.path.replace(/^\//, ''),
     base: hasMergeBase(conflict) ? versionAt(conflict, baseVersionSpec(conflict)) : { kind: 'empty' },
+    ...(hasMergeBase(conflict) && { baseName: `cs:${conflict.baseChangeset}` }),
     source: versionAt(conflict, sourceVersionSpec(request, conflict)),
     destination: { kind: 'revision', revision: { revisionId: conflict.destinationRevisionId, repository: conflict.repository }, fileName: conflict.path },
     ...(conflict.destinationIsBinary && { isKnownBinary: true }),

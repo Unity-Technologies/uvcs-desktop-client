@@ -1,4 +1,5 @@
 import { hasLineTooLongToEdit } from '../../diff/viewer/longLines';
+import { conflictBaseAt } from './fileConflictDecision';
 import type { FileConflictState } from './useFileConflicts';
 
 /**
@@ -31,6 +32,11 @@ export function rendersVersions(state: FileConflictState): boolean {
  */
 export function offersKeepBase(state: FileConflictState): boolean {
   return hasBase(state) && !state.file.baseIsUndoneChange;
+}
+
+/** Whether conflict number `conflictIndex` of the file's text offers keeping its base: the file offers it, and that conflict's is known. */
+export function offersConflictBase(state: FileConflictState, conflictIndex: number): boolean {
+  return offersKeepBase(state) && conflictBaseAt(state.decision, conflictIndex) !== undefined;
 }
 
 /** A file added on both sides has no common ancestor to show. */

@@ -31,8 +31,6 @@ interface SideRole {
 /** Branch names for the conflict markers, and the words the page calls each side by. */
 export interface MergeLabels extends ConflictLabels {
   roles: { source: SideRole; destination: SideRole };
-  /** Where the common ancestor is, as the sides name their branch ("cs:12", "your loaded changeset"), when known. */
-  base?: string;
 }
 
 /** In a workspace the destination is the user's own version; merging into a server branch, neither side is. */
@@ -51,7 +49,6 @@ export function mergeLabels(request: MergeRequest, plan: MergePlan | undefined):
     source: request.sourceSpec.startsWith('cs:') ? plan?.contributors?.source.branch || describeSpec(request.sourceSpec) : describeSpec(request.sourceSpec),
     destination: request.destinationBranch ?? plan?.contributors?.destination.branch ?? 'your workspace',
     roles: request.destinationBranch ? SERVER_ROLES : WORKSPACE_ROLES,
-    ...(plan?.contributors?.base && { base: `cs:${plan.contributors.base.changesetId}` }),
   };
 }
 

@@ -23,6 +23,8 @@ export interface ConflictedFile {
   /** Shown to the user and used to pick syntax highlighting. */
   path: string;
   base: ContentSource;
+  /** Where the base is, as the sides name their branch: `cs:12` (its own changeset, an xlinked repository's under a writable xlink), "your loaded changeset". */
+  baseName?: string;
   source: ContentSource;
   destination: ContentSource;
   /**

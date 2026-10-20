@@ -22,6 +22,8 @@ interface WholeFileChoiceProps {
   /** Why the versions couldn't be read. */
   error: Error | undefined;
   labels: MergeLabels;
+  /** Where the base is (`ConflictedFile.baseName`). */
+  baseName: string | undefined;
   /** The file has a common ancestor to keep (not one added on both sides). */
   withBase: boolean;
   /** The versions that open in other apps: a card's menu opens its own. */
@@ -34,7 +36,7 @@ interface WholeFileChoiceProps {
  * For files that can't be merged line by line (binaries): pick the version to keep, each side's or the base's, its
  * preview showing once read.
  */
-export function WholeFileChoice({ contents, error, labels, withBase, versions, chosen, onChoose }: WholeFileChoiceProps) {
+export function WholeFileChoice({ contents, error, labels, baseName, withBase, versions, chosen, onChoose }: WholeFileChoiceProps) {
   const openableOf = (version: KeptVersion) => versions.find((openable) => openable.version === version);
   return (
     <div className={styles.choices}>
@@ -62,7 +64,7 @@ export function WholeFileChoice({ contents, error, labels, withBase, versions, c
         {withBase && (
           <VersionCard
             title="Keep base"
-            subtitle={labels.base ?? 'the common ancestor'}
+            subtitle={baseName ?? 'the common ancestor'}
             content={contents?.base}
             base={undefined}
             error={error}

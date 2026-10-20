@@ -8,9 +8,9 @@ import { LoadedFileDiff } from '../../diff/viewer/LoadedFileDiff';
 import type { StepView } from '../../diff/viewer/useStepNavigation';
 import type { MergeLabels } from '../mergeDescription';
 import { ConflictHunks } from './ConflictHunks';
-import { mergedText, offersKeepBase, textToEdit, type PanelView } from './conflictPanelView';
+import { mergedText, offersConflictBase, offersKeepBase, textToEdit, type PanelView } from './conflictPanelView';
 import type { OpenableVersion } from './conflictVersionOpening';
-import { conflictBaseAt, decideConflict, type FileConflictDecision } from './fileConflictDecision';
+import { decideConflict, type FileConflictDecision } from './fileConflictDecision';
 import { HandEditor } from './HandEditor';
 import { ReadOnlyText } from './ReadOnlyText';
 import type { FileConflictState } from './useFileConflicts';
@@ -48,6 +48,7 @@ export function ConflictBody({ workspacePath, state, labels, versions, view, edi
         contents={contents}
         error={state.error}
         labels={labels}
+        baseName={file.baseName}
         withBase={offersKeepBase(state)}
         versions={versions}
         chosen={decision?.kind === 'wholeFile' ? decision.side : undefined}
@@ -70,7 +71,7 @@ export function ConflictBody({ workspacePath, state, labels, versions, view, edi
           path={file.path}
           text={decision.text}
           labels={labels}
-          offersBase={(conflictIndex) => offersKeepBase(state) && conflictBaseAt(decision, conflictIndex) !== undefined}
+          offersBase={(conflictIndex) => offersConflictBase(state, conflictIndex)}
           viewRef={conflictViewRef}
           onDecide={(conflictIndex, choice) => onDecide(decideConflict(decision, conflictIndex, choice))}
         />
