@@ -86,6 +86,8 @@ export function versionsMenu(versions: OpenableVersion[], apps: ExternalApps): S
  * (`hero.INCOMING.psd`), as the merge tools get them, so the OS still picks the app by the extension.
  */
 export function versionCopyName(path: string, label: string): string {
+  // A name already near the file systems' 255-character limit fails to save with ENAMETOOLONG, and the toast says so:
+  // such names are rare enough not to cut, which would also cut what tells the versions apart.
   const name = fileNameOf(path);
   const extension = extensionOf(name);
   const tag = label.toUpperCase();
