@@ -28,15 +28,18 @@ async function resolve(state: FileConflictState, outcome: MergeToolOutcome) {
 }
 
 describe('resolveInMergeTool', () => {
-  it('lets Smart Merge try a file nothing was decided for, and marks the file as its when it merged it', async () => {
-    const { session, request } = await resolve(prefab(), { kind: 'resolved', text: 'merged\n', tool: 'Smart Merge' });
+  it('lets Smart Merge try a file the user decided nothing for, and marks the file as its when it merged it', async () => {
+    // An untouched file holds the automatic merge, with its markers, as its decision: not the user's.
+    const untouched = prefab({ decision: { kind: 'text', text: '<<<<<<< Yours\n' } });
+
+    const { session, request } = await resolve(untouched, { kind: 'resolved', text: 'merged\n', tool: 'Smart Merge' });
 
     expect(request.trySmartMergeFirst).toBe(true);
     expect(session.decision).toEqual({ kind: 'text', text: 'merged\n', tool: 'Smart Merge' });
   });
 
   it('opens the tool straight away on a file already decided, Smart Merge’s merge included', async () => {
-    const decided = prefab({ decision: { kind: 'text', text: 'merged\n', tool: 'Smart Merge' }, resolution: { choice: 'text', text: 'merged\n' } });
+    const decided = prefab({ decision: { kind: 'text', text: 'merged\n', tool: 'Smart Merge' }, decidedByUser: true, resolution: { choice: 'text', text: 'merged\n' } });
 
     const { request } = await resolve(decided, { kind: 'resolved', text: 'refined\n' });
 
