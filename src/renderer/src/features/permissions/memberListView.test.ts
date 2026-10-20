@@ -54,4 +54,22 @@ describe('the list of users and groups', () => {
     expect(memberAfterKey(memberListView(few, 'ana', ''), 'a')).toBeUndefined();
     expect(memberAfterKey(memberListView(many, 'ana', 'zzz'), 'ArrowDown')).toBeUndefined();
   });
+
+  it('drops its filter once the list is short enough to hide the field, so no row stays hidden', () => {
+    const view = memberListView(rowsNaming(['ana', 'bea', 'carla']), undefined, 'ana');
+
+    expect(view.filters).toBe(false);
+    expect(view.query).toBe('');
+    expect(names(view.shown)).toEqual(['ana', 'bea', 'carla']);
+  });
+
+  it('acts on no row while the filter hides the selected one', () => {
+    const view = memberListView(many, 'bea', 'ana');
+
+    expect(view.selectedRow).toBeUndefined();
+  });
+
+  it('goes to the first row shown when the selected one is hidden', () => {
+    expect(memberAfterKey(memberListView(many, 'bea', 'ana'), 'ArrowDown')).toBe('ana');
+  });
 });
