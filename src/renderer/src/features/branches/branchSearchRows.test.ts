@@ -48,12 +48,17 @@ describe('branchSearchRows', () => {
 
 describe('branchSearchEmptyText', () => {
   it('names the words typed that no branch matches', () => {
-    expect(branchSearchEmptyText('boost', false)).toBe('No branches match “boost”.');
+    expect(branchSearchEmptyText('boost', 'read')).toBe('No branches match “boost”.');
   });
 
   it('never quotes an empty search: a list with no branches says so, and one still loading says nothing', () => {
-    expect(branchSearchEmptyText('', false)).toBe('No branches.');
-    expect(branchSearchEmptyText('  ', false)).toBe('No branches.');
-    expect(branchSearchEmptyText('', true)).toBeNull();
+    expect(branchSearchEmptyText('', 'read')).toBe('No branches.');
+    expect(branchSearchEmptyText('  ', 'read')).toBe('No branches.');
+    expect(branchSearchEmptyText('', 'loading')).toBeNull();
+  });
+
+  it("says it couldn't read the branches, whatever was typed, instead of an empty list for good", () => {
+    expect(branchSearchEmptyText('', 'failed')).toBe("Couldn't read the branches.");
+    expect(branchSearchEmptyText('boost', 'failed')).toBe("Couldn't read the branches.");
   });
 });
