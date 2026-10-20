@@ -613,7 +613,11 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
    frame is the themed workspace screen or home screen, never the home screen on the way nor a frame without colors.
    The window shows on that frame (`ready-to-show`): the first render is synchronous (`flushSync` in `main.tsx`,
    `firstRender.test.ts`), as React otherwise commits a root on a later task, after the page's first frame in most
-   launches, and the window showed its background alone.
+   launches, and the window showed its background alone. Changes, where a workspace opens, is in the startup bundle
+   (`viewRegistry`; its diff pane loads on first use, `ChangeSelectionPane`): its first frame is its own loading
+   state, where a lazy view's first frame is `ViewFallback`, which it then replaces. It adds 140 kB to the bundle,
+   within noise at the first paint; Changes shows its data 25-30 ms sooner with the fake `cm`, as soon with the real
+   one (`scripts/perf/startup.mjs`, warm, against a build without it).
 5. `show()` holds the main process 35-55 ms (100+ when started from a terminal, which isn't the active app): what the
    page asks after its first paint waits behind it. That is why the page asks before rendering, and the main process
    earlier still.
