@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { flashCss } from '../../diff/viewer/lineMarksCss';
+import { FLASHED_LINES, flashCss } from '../../diff/viewer/lineMarksCss';
 import { ConflictPlace, conflictLinesSelector, conflictsAbove } from './conflictRows';
 
 describe('conflictsAbove', () => {
@@ -32,6 +32,11 @@ describe('conflictLinesSelector', () => {
   it("selects a conflict's lines by their index, so both sides light up", () => {
     expect(conflictLinesSelector(['2,2', '3,2'])).toBe('[data-line-index="2,2"],[data-line-index="3,2"]');
     expect(flashCss(conflictLinesSelector(['2,2']), 1)).toContain('[data-line-index="2,2"]{animation:change-flash-1 ');
+  });
+
+  it("lights a long conflict's first lines only, as a diff's change", () => {
+    const indexes = Array.from({ length: FLASHED_LINES + 50 }, (_, line) => `${line},${line}`);
+    expect(conflictLinesSelector(indexes).split(',[').length).toBe(FLASHED_LINES);
   });
 
   it('lights nothing for a conflict with no lines on screen', () => {

@@ -44,7 +44,7 @@ export function lineMarksCss({ preview = [], leaving = [], restoredAt = [], pick
 }
 
 /** How many of a change's lines light up when it's moved to: enough to see where it starts. */
-const FLASHED_LINES = 200;
+export const FLASHED_LINES = 200;
 
 /** The rows of a change's lines and their numbers, for `flashCss`: its first lines, enough to see where it starts. */
 export function changeRows(lines: ChangedLine[]): string {
