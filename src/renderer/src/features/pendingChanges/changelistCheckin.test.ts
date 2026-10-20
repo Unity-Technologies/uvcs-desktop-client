@@ -1,13 +1,13 @@
 import '../../testing/fakeWindow';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const steps = vi.hoisted(() => ({ checkins: [] as unknown[], shelves: [] as unknown[] }));
+const steps = vi.hoisted(() => ({ checkedIn: true, checkins: [] as unknown[], shelves: [] as unknown[] }));
 vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 vi.mock('../../app/navigation/leaveGuard', () => ({ settleBeforeLeaving: async () => true }));
 vi.mock('./checkinOperations', () => ({
   checkinChanges: async (options: unknown) => {
     steps.checkins.push(options);
-    return true;
+    return steps.checkedIn;
   },
   shelveChanges: async (...args: unknown[]) => {
     steps.shelves.push(args);
@@ -51,15 +51,16 @@ const defaultChanges = [change('README.md', ['changed']), change('notes.txt', ['
 const allChanges = [...defaultChanges, ...uiChanges, artChange, plainChange];
 
 /** What the panel checks in and shelves once the draft is as `prepareChangelistCheckin` left it. */
-const selection = () => checkinSelectionOf(allChanges, includedBy(checkinDraftOf(ws).excludedPaths));
+const selection = (changes = allChanges) => checkinSelectionOf(changes, includedBy(checkinDraftOf(ws)));
 
-function prepare(changelist: Changelist, mode: 'checkin' | 'shelve' = 'checkin'): void {
-  prepareChangelistCheckin({ workspacePath: ws, mode, changelist, allChanges, changelists });
+function prepare(changelist: Changelist, changelistsNow = changelists): void {
+  prepareChangelistCheckin({ workspacePath: ws, changelist, allChanges, changelists: changelistsNow });
 }
 
+const panelCheckin = (included: PendingChange[]) => ({ workspacePath: ws, included, pendingCount: allChanges.length, behind: false, bulkPrivate: null, warnOnEmptyComment: true });
+
 beforeEach(() => {
-  steps.checkins = [];
-  steps.shelves = [];
+  Object.assign(steps, { checkedIn: true, checkins: [], shelves: [] });
   useCheckinDraftStore.setState({ drafts: {} });
 });
 
@@ -80,14 +81,27 @@ describe('prepareChangelistCheckin', () => {
     prepare(ui);
 
     expect(selection().included).toEqual(uiChanges);
-    expect(checkinDraftOf(ws).mode).toBe('checkin');
   });
 
-  it("puts the panel in shelve mode, which takes what a shelve can of the changelist's changes: not the link", () => {
-    prepare(ui, 'shelve');
+  it("takes for a shelve what a shelve can of the changelist's changes: not the link", () => {
+    prepare(ui);
 
-    expect(checkinDraftOf(ws).mode).toBe('shelve');
     expect(selection().shelvable).toEqual(uiChanges.filter((candidate) => candidate.itemType !== 'symlink'));
+  });
+
+  it('leaves out a change that appears after it, outside the changelist (an editor saving, a new .meta)', () => {
+    prepare(ui);
+
+    const saved = change('Assets/Hud.cs.meta', ['changed']);
+    expect(selection([...allChanges, saved]).included).toEqual(uiChanges);
+  });
+
+  it('lets the user check or uncheck files by hand, inside the changelist or out of it', () => {
+    prepare(ui);
+    useCheckinDraftStore.getState().setIncluded(ws, ['src/menu.ts'], false);
+    useCheckinDraftStore.getState().setIncluded(ws, ['README.md'], true);
+
+    expect(selection().included.map((included) => included.path)).toEqual(['README.md', ...uiChanges.slice(1).map((included) => included.path)]);
   });
 
   it("takes the changelist's description as the comment, its first line as the summary", () => {
@@ -108,38 +122,66 @@ describe('prepareChangelistCheckin', () => {
     prepare(art);
     prepare(ui);
     expect(checkinDraftOf(ws)).toMatchObject({ summary: 'Polish the menus', description: 'Spacing and icons.' });
+    expect(selection().included).toEqual(uiChanges);
 
     prepare(plain);
     expect(checkinDraftOf(ws)).toMatchObject({ summary: '', description: '' });
+  });
+
+  // Only today's descriptions are compared: telling an old one from the user's own words would need to remember it.
+  it('keeps a comment filled from a description that has since been edited, as if the user wrote it', () => {
+    prepare(ui);
+    const edited = [{ ...ui, description: 'Polish the menus again' }, art, plain];
+
+    prepare(art, edited);
+
+    expect(checkinDraftOf(ws)).toMatchObject({ summary: 'Polish the menus', description: 'Spacing and icons.' });
   });
 });
 
 describe('checking in or shelving a changelist from the panel', () => {
   it("checks in the changelist's changes alone, in one check-in, with its description", async () => {
     prepare(ui);
-    const { included } = selection();
 
-    await checkinFromPanel({ workspacePath: ws, included, pendingCount: allChanges.length, behind: false, bulkPrivate: null, warnOnEmptyComment: true });
+    await checkinFromPanel(panelCheckin(selection().included));
 
     expect(steps.checkins).toEqual([{ workspacePath: ws, changes: uiChanges, comment: 'Polish the menus\n\nSpacing and icons.', updateFirst: false, quiet: false }]);
     expect(askedDialogs()).toEqual([]);
   });
 
+  it('checks the files left out again once the changelist is checked in, but those the user had unchecked before', async () => {
+    useCheckinDraftStore.getState().setIncluded(ws, ['README.md'], false);
+    prepare(ui);
+
+    await checkinFromPanel(panelCheckin(selection().included));
+
+    expect(selection([...defaultChanges, artChange, plainChange]).included).toEqual([defaultChanges[1], artChange, plainChange]);
+  });
+
+  it('keeps the changelist alone checked when the check-in did not happen', async () => {
+    steps.checkedIn = false;
+    prepare(ui);
+
+    await checkinFromPanel(panelCheckin(selection().included));
+
+    expect(selection().included).toEqual(uiChanges);
+  });
+
   it('still asks about an empty comment, for a changelist without a description', async () => {
     prepare(plain);
-    const { included } = selection();
 
-    expect(await checkinFromPanel({ workspacePath: ws, included, pendingCount: allChanges.length, behind: false, bulkPrivate: null, warnOnEmptyComment: true })).toBe('checkedIn');
+    expect(await checkinFromPanel(panelCheckin(selection().included))).toBe('checkedIn');
 
     expect(askedDialogs()).toEqual([{ kind: 'confirm', title: 'Check in without a comment?' }]);
     expect(steps.checkins).toEqual([expect.objectContaining({ changes: [plainChange], comment: '' })]);
   });
 
-  it("shelves the changelist's changes alone, with its description", async () => {
-    prepare(ui, 'shelve');
+  it("shelves the changelist's changes alone, with its description, then checks the others again", async () => {
+    prepare(ui);
 
-    await shelveFromPanel(ws, selection().shelvable, false);
+    await shelveFromPanel(ws, selection().shelvable, true);
 
-    expect(steps.shelves).toEqual([[ws, uiChanges.slice(0, 4), 'Polish the menus\n\nSpacing and icons.', false]]);
+    expect(steps.shelves).toEqual([[ws, uiChanges.slice(0, 4), 'Polish the menus\n\nSpacing and icons.', true]]);
+    expect(selection().included).toEqual(allChanges.filter((candidate) => candidate.path !== 'build/out.log'));
   });
 });

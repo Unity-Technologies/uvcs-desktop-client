@@ -12,14 +12,15 @@ describe('checkinDraftStore', () => {
     expect([...draft.excludedPaths]).toEqual(['private.txt', 'build/out.log']);
   });
 
-  it('keeps the panel checking in or shelving per workspace, and sets which files a check-in leaves out in one go', () => {
+  it('goes back to the files the user left out once a prepared changelist is done with', () => {
     const store = useCheckinDraftStore.getState();
-    store.setIncluded('/modes', ['a.txt'], false);
-    store.setMode('/modes', 'shelve');
-    store.setExcluded('/modes', ['b.txt', 'c.txt']);
-    const draft = useCheckinDraftStore.getState().drafts['/modes']!;
-    expect(draft.mode).toBe('shelve');
-    expect([...draft.excludedPaths].sort()).toEqual(['b.txt', 'c.txt']);
-    expect(useCheckinDraftStore.getState().drafts['/other']?.mode ?? 'checkin').toBe('checkin');
+    store.setIncluded('/prepared', ['a.txt'], false);
+    store.prepareChangelist('/prepared', { name: 'ui', paths: new Set(['b.txt']) });
+    store.setIncluded('/prepared', ['c.txt'], true);
+    expect([...useCheckinDraftStore.getState().drafts['/prepared']!.prepared!.paths].sort()).toEqual(['b.txt', 'c.txt']);
+
+    store.endPrepared('/prepared');
+
+    expect(useCheckinDraftStore.getState().drafts['/prepared']).toMatchObject({ prepared: null, excludedPaths: new Set(['a.txt']) });
   });
 });
