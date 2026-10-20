@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { SegmentedControl } from '../../ui/SegmentedControl';
-import { CenteredSpinner } from '../../ui/Spinner';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { GitSyncPanel } from './GitSyncPanel';
 import { RepositorySyncPanel } from './RepositorySyncPanel';
@@ -24,10 +23,9 @@ export function SyncView() {
           ]}
         />
       </ViewHeader>
-      {!workspace ? (
-        <CenteredSpinner />
-      ) : mode === 'repository' ? (
-        <RepositorySyncPanel localRepository={workspace.repository} />
+      {/* Before the workspace's info names the repository, the panel shows its layout with placeholders. */}
+      {mode === 'repository' || !workspace ? (
+        <RepositorySyncPanel localRepository={workspace?.repository} />
       ) : (
         <GitSyncPanel localRepository={workspace.repository} />
       )}
