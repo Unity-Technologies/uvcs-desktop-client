@@ -1,12 +1,14 @@
-import type { DeletedItemRestore } from '@shared/domain/explorer';
+import type { DeletedItemRestore, RestoreOutcome, RestoreRefusal } from '@shared/domain/explorer';
 import { api } from '../../api/client';
+import { navigation } from '../../app/navigation/navigationStore';
 import { viewChangesAction } from '../../app/navigation/viewChangesAction';
 import { runOperation } from '../../app/operations/runOperation';
 import { isAffectedByRestoredItems } from '../../app/refresh/refreshScopes';
 import { fileNameOf, pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
-import { useToastStore } from '../../ui/toast/toastStore';
+import { useToastStore, type ToastAction } from '../../ui/toast/toastStore';
+import { useFilesViewStore } from '../files/filesViewStore';
 import { itemNameProblem } from '../files/itemName';
 
 /**
@@ -18,7 +20,7 @@ export const MAX_RESTORED_WITHOUT_ASKING = 20;
 /**
  * Brings deleted items back as pending changes, as one operation (`cm undelete` each; a folder with all it held, which
  * may download a while), then leads to them in Changes. Several can be stopped between two items; more than
- * `MAX_RESTORED_WITHOUT_ASKING` ask first. A refused item offers "Restore to…".
+ * `MAX_RESTORED_WITHOUT_ASKING` ask first. A refusal says what came back before it, and what helps (`refusalAction`).
  */
 export async function restoreDeletedItems(workspacePath: string, restores: DeletedItemRestore[]): Promise<void> {
   const what = restores.length === 1 ? fileNameOf(restores[0]!.path) : pluralize(restores.length, 'item');
@@ -27,13 +29,13 @@ export async function restoreDeletedItems(workspacePath: string, restores: Delet
     title: `Restoring ${what}`,
     workspacePath,
     run: (operationId) => api.explorer.restoreDeleted(workspacePath, restores, operationId),
-    // Where one came back (it may be elsewhere than it was); several each where they were. No generic count of changes.
-    success: () => ({ title: `Restored ${what}`, detail: restores.length === 1 ? `At ${restores[0]!.path}` : 'Each where it was', action: viewChangesAction() }),
-    cancellable: restores.length > 1,
-    onFailure: (error) => {
-      showRefusal(workspacePath, restores, what, error);
-      return true;
+    success: (outcome) => {
+      if (outcome.refused) return showRefusal(workspacePath, restores, what, outcome, outcome.refused);
+      if (outcome.stopped) return { kind: 'info', title: `Restored ${outcome.restored} of ${pluralize(outcome.total, 'item')}`, detail: 'Stopped before the rest', action: viewChangesAction() };
+      // Where one came back (it may be elsewhere than it was); several each where they were. No generic count of changes.
+      return { title: `Restored ${what}`, detail: restores.length === 1 ? `At ${restores[0]!.path}` : 'Each where it was', action: viewChangesAction() };
     },
+    cancellable: restores.length > 1,
     affects: isAffectedByRestoredItems,
   });
 }
@@ -67,14 +69,38 @@ function confirmMany(what: string): Promise<boolean> {
   });
 }
 
-/** The failure, and for one item the way left: restoring it somewhere else, starting from where it was. */
-function showRefusal(workspacePath: string, restores: DeletedItemRestore[], what: string, error: unknown): void {
-  const single = restores.length === 1 ? restores[0]! : null;
+/**
+ * A refusal as an error toast, in place of the operation's card: what came back before it, why, and what helps.
+ * Returns null, for the card to go.
+ */
+function showRefusal(workspacePath: string, restores: DeletedItemRestore[], what: string, outcome: RestoreOutcome, refused: RestoreRefusal): null {
   useToastStore.getState().show({
     kind: 'error',
-    title: `Couldn’t restore ${what}`,
-    detail: error instanceof Error ? error.message : undefined,
-    error,
-    action: single ? { label: 'Restore to…', run: () => void restoreDeletedItemTo(workspacePath, single) } : undefined,
+    title: outcome.restored > 0 ? `Restored ${outcome.restored} of ${pluralize(outcome.total, 'item')}` : `Couldn’t restore ${what}`,
+    detail: refused.message,
+    action: refusalAction(workspacePath, restores, refused),
   });
+  return null;
+}
+
+/**
+ * What helps after a refusal: another place for an item whose place is taken or whose folder is gone, starting from
+ * where it was; the item where the workspace already has it. Nothing for an xlink or another repository's item.
+ */
+function refusalAction(workspacePath: string, restores: DeletedItemRestore[], refused: RestoreRefusal): ToastAction | undefined {
+  const restore = restores.find((each) => each.path === refused.path);
+  if ((refused.kind === 'placeTaken' || refused.kind === 'folderMissing') && restore) {
+    return { label: 'Restore to…', run: () => void restoreDeletedItemTo(workspacePath, restore) };
+  }
+  if (refused.kind === 'alreadyLoaded' && refused.loadedPath !== undefined) {
+    const loadedPath = refused.loadedPath;
+    return {
+      label: 'Show in Files',
+      run: () => {
+        navigation.goToView('files');
+        useFilesViewStore.getState().requestReveal(workspacePath, loadedPath);
+      },
+    };
+  }
+  return undefined;
 }

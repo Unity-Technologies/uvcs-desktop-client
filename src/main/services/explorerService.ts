@@ -64,7 +64,7 @@ export function createExplorerService({ cm, operations, workspaceCopies, headers
     return operations.run(operationId, async (context) => {
       // The workspace's repository, from the header its window's info reads too (a local read, shared while fresh).
       const { repositoryName, server } = await headers.status(workspacePath);
-      await restoreDeletedItems(workspacePath, repositorySpec(repositoryName, server), restores, restorer, context);
+      return restoreDeletedItems(workspacePath, repositorySpec(repositoryName, server), restores, restorer, context);
     });
   }
 

@@ -170,12 +170,17 @@ it deletes is still in the workspace (`diffEntryMenu` without `workspaceReposito
   holding a pooled shell.
 - Every place is checked on disk before any `cm`, and nothing is restored if one fails: `cm` refuses a path that holds
   an item ("The restore path should not exist"), but into a folder that's gone it writes the files and then fails,
-  leaving them private. The toast says which; for one item it offers "Restore to…", starting from where it was. Main
-  also refuses a revision of another repository than the workspace's (read from the status header the window's info
+  leaving them private. Main also refuses a revision of another repository than the workspace's (read from the status header the window's info
   shares, `headers.status`), whatever the renderer asked: the bare id would name another item there.
 - `cm`'s own refusals read in the app's words (`undeleteRefusal`): an item the workspace still loads ("The item 35
   is already loaded on tree on path '/src/a.cs'" becomes "The workspace already has this item, at src/a.cs"), a folder
-  holding an xlink, a place taken after the check.
+  holding an xlink, a place taken after the check. Only English output is recognized, on purpose: `cm` in another
+  language shows its own words, as any other failure does.
+- A refusal crosses as data, never as text to match (`RestoreOutcome`: how many came back, and the `RestoreRefusal`'s
+  kind, path and words), stopping the rest: the error toast says what came back before it ("Restored 2 of 5 items")
+  and offers what helps (`refusalAction`): "Restore to…" for an item whose place is taken or whose folder is gone,
+  starting from where it was, and "Show in Files" where the workspace already has it. Stopped, the info toast says
+  what came back too. Any other failure fails the operation, as `cm` tells it.
 - Not handled: "Restore to…" a path under an xlink. `cm` looks the bare id up in the xlinked repository there, where
   it may name another item or none; knowing where xlinks are would take a `cm` read of its own.
 - `cm undelete` takes the workspace's path as `cm` names it: given a link to it (`/tmp/…` for `/private/tmp/…` on
