@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Builds a branch to merge into main whose Unity prefabs conflict line by line: Player.prefab, where each side added
-# its own object (Smart Merge merges it on its own), Level.prefab, the same with thousands of objects (Smart Merge takes
-# a moment: the file reads "Merging…"), Pickup.prefab, added on both sides with different objects (merged from an
-# asset with no objects), and Enemy.prefab, renamed differently on each side (Smart Merge can't, so the merge tool
-# opens). Needs a Unity Editor installed for Smart Merge. Merge /main/feature from Branches.
+# its own object (Smart Merge merges it on its own), Level.prefab, the same with 3,000 objects, about 1.3 MB (Smart
+# Merge takes a moment: the file reads "Merging…"), Pickup.prefab, added on both sides (`cm` makes it a directory
+# conflict, never one for Smart Merge), and Enemy.prefab, renamed differently on each side (Smart Merge can't, so the
+# merge tool opens). Needs a Unity Editor installed for Smart Merge. Merge /main/feature from Branches.
 # Usage: scripts/sandboxes/smart-merge.sh [repo-name [workspace-folder]]   → repo smartmerge-demo@local, workspace /tmp/uvcs-smartmerge
 # It deletes and recreates both, so it takes only names: the repository is always on the local server, the
 # workspace always a folder of /tmp.
