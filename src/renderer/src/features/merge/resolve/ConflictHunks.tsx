@@ -32,7 +32,8 @@ interface ConflictHunksProps {
 export function ConflictHunks({ path, text, labels, viewRef, onChange }: ConflictHunksProps) {
   const pierreOptions = usePierreOptions(text);
   const surfaceRef = useRef<HTMLDivElement>(null);
-  useConflictView(viewRef, surfaceRef);
+  // A conflict resolved here: the next move goes on to the one that takes its place.
+  const resolvedAt = useConflictView(viewRef, surfaceRef);
   const { source, destination } = labels.roles;
   // Highlighted like a read-only diff of its two sides, which Pierre highlights as a file each, about as long as the
   // text: in Pierre's workers past what the main thread highlights at once, plain past what's worth it.
@@ -68,7 +69,14 @@ export function ConflictHunks({ path, text, labels, viewRef, onChange }: Conflic
                 <span className={styles.branch}>{shortenBranch(labels.destination)}</span>
               </span>
               {onChange && (
-                <HunkChoices labels={labels} conflictIndex={action.conflictIndex} onChoose={(choice) => onChange(resolveConflictRegion(text, action.conflictIndex, choice))} />
+                <HunkChoices
+                  labels={labels}
+                  conflictIndex={action.conflictIndex}
+                  onChoose={(choice) => {
+                    resolvedAt(action.conflictIndex);
+                    onChange(resolveConflictRegion(text, action.conflictIndex, choice));
+                  }}
+                />
               )}
             </div>
           )}

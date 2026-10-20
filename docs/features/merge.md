@@ -159,8 +159,9 @@ A conflicting file steps through its conflicts as a diff steps through its chang
 changes"), with the same keys, ⌥↓ ⌥↑ and F7 ⇧F7 (`nextConflict`, `previousConflict`), and arrows around "2 of 3" at
 the end of its view bar (`ConflictNavigator`, on `useStepNavigation`). A conflict moved to comes a few rows from the
 top unless it's all in view, and lights up (`useConflictView`: Pierre draws each one from its actions row down to its
-end marker). Every conflict shown is one still to decide: resolving one takes it out of the text and the count, and
-the next move goes on from the view, to the conflict that followed it. A binary waiting for the version to keep is
+end marker). Every conflict shown is one still to decide: resolving one with its header's choices takes it out of the
+text and the count, and the next move goes on to the one that took its place, or back to the one before it
+(`ConflictPlace`: the screen can't tell, with every conflict in view), until the user scrolls the view. A binary waiting for the version to keep is
 one conflict, "1 of 1"; a file that couldn't be read has none, and its arrows still go on. The views that are diffs
 (Changes, Yours, Incoming) keep their own arrows through their changes, and the base none.
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { flashCss } from '../../diff/viewer/lineMarksCss';
-import { conflictLinesSelector, conflictsAbove } from './conflictRows';
+import { ConflictPlace, conflictLinesSelector, conflictsAbove } from './conflictRows';
 
 describe('conflictsAbove', () => {
   it('counts the conflicts starting above the top of the view; one starting at the top is in view', () => {
@@ -8,6 +8,23 @@ describe('conflictsAbove', () => {
     expect(conflictsAbove([-400, 200, 900], 200)).toBe(1);
     expect(conflictsAbove([-400, -20, -1], 0)).toBe(3);
     expect(conflictsAbove([], 0)).toBe(0);
+  });
+});
+
+describe('ConflictPlace', () => {
+  it('stands where the screen says, and remembers it for when the conflicts change', () => {
+    const place = new ConflictPlace();
+    expect(place.above(() => 2)).toBe(2);
+    expect(place.aboveAfterChange()).toBe(2);
+  });
+
+  it('stands just before a conflict resolved in it, whatever the screen says, until the view moves', () => {
+    const place = new ConflictPlace();
+    place.resolvedAt(1);
+    expect(place.aboveAfterChange()).toBe(1);
+    expect(place.above(() => 0)).toBe(1);
+    place.moved();
+    expect(place.above(() => 0)).toBe(0);
   });
 });
 
