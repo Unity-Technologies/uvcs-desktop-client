@@ -1,20 +1,27 @@
 import { appBundleOf } from './appBundle';
 
 /** The OS's picture of a file or app as a data URL; undefined when it has none. */
-export type ReadThumbnail = (path: string) => Promise<string | undefined>;
+export type ReadImage = (path: string) => Promise<string | undefined>;
+
+/** The two ways the OS draws a path: its thumbnail (`nativeImage.createThumbnailFromPath`), or its icon (`app.getFileIcon`). */
+export interface IconReaders {
+  thumbnail: ReadImage;
+  fileIcon: ReadImage;
+}
 
 /**
- * Apps' own icons, for the editors, terminals and merge tools offered (macOS and Windows), each read once. The OS's
- * thumbnail of an app bundle or a program is its icon; `app.getFileIcon` was tried and draws the icon of the file type
- * instead (every macOS app the same). A program inside a macOS bundle shows the bundle's; a Windows `.cmd` launcher and
- * a Linux desktop entry have only a file's picture, so they show none.
+ * Apps' own icons, for the editors, terminals and merge tools offered (macOS and Windows), each read once. Each OS draws
+ * an app's icon a different way: macOS as the thumbnail of its bundle (its file icon is the file type's, every app the
+ * same); Windows as the program's file icon, the one Explorer shows (it has no thumbnail for a program: the thumbnail
+ * cache fails). A program inside a macOS bundle shows the bundle's; a Windows `.cmd` launcher and a Linux desktop entry
+ * have only a file's picture, so they show none.
  */
 export class AppIcons {
   private readonly read = new Map<string, Promise<string | undefined>>();
 
   constructor(
     private readonly platform: NodeJS.Platform,
-    private readonly thumbnail: ReadThumbnail,
+    private readonly readers: IconReaders,
   ) {}
 
   /** The icon of the app `program` (a bundle, a program, or a program inside a bundle) is. */
@@ -23,7 +30,8 @@ export class AppIcons {
     if (!location) return Promise.resolve(undefined);
     let icon = this.read.get(location);
     if (!icon) {
-      icon = this.thumbnail(location).catch(() => undefined);
+      const readImage = this.platform === 'win32' ? this.readers.fileIcon : this.readers.thumbnail;
+      icon = readImage(location).catch(() => undefined);
       this.read.set(location, icon);
     }
     return icon;
