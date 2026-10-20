@@ -1,15 +1,11 @@
 import { Files, Folder } from 'lucide-react';
-import { Suspense } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { formatCount, pluralize } from '../../lib/text';
-import { lazyComponent } from '../../lib/lazyComponent';
 import { EmptyState } from '../../ui/EmptyState';
 import { FileStepsContext, type FileSteps } from '../diff/viewer/fileSteps';
+import { ChangeDiffPanel } from './ChangeDiffPanel';
 import type { ChangeRow } from './changeRows';
 import type { ReviewMarks } from './review/pendingReviewStatus';
-
-// The diff viewer stays out of the startup bundle, which holds the rest of Changes (`viewRegistry`).
-const ChangeDiffPanel = lazyComponent(() => import('./ChangeDiffPanel').then((module) => module.ChangeDiffPanel));
 
 interface ChangeSelectionPaneProps {
   workspacePath: string;
@@ -31,10 +27,7 @@ export function ChangeSelectionPane({ workspacePath, selectedCount, diffChange, 
   if (diffChange) {
     return (
       <FileStepsContext.Provider value={fileSteps}>
-        {/* Blank for the moment its code loads: the pane is already in place, so nothing moves. */}
-        <Suspense fallback={null}>
-          <ChangeDiffPanel workspacePath={workspacePath} change={diffChange} reviewMark={reviewMarks.get(diffChange.path)} />
-        </Suspense>
+        <ChangeDiffPanel workspacePath={workspacePath} change={diffChange} reviewMark={reviewMarks.get(diffChange.path)} />
       </FileStepsContext.Provider>
     );
   }

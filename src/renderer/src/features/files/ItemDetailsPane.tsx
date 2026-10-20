@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { File, FileSymlink, Folder, History, Lock } from 'lucide-react';
-import { Suspense } from 'react';
 import type { TreeItem } from '@shared/domain/explorer';
 import { revisionRef } from '@shared/domain/revision';
 import { spec } from '@shared/domain/specs';
@@ -10,7 +9,6 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { useOtherRepository } from '../../app/workspace/useWorkspace';
 import { DetailsHeading } from '../../components/DetailsHeading';
 import type { MenuEntry } from '../../lib/actions';
-import { lazyComponent } from '../../lib/lazyComponent';
 import { formatDateTime, formatSize } from '../../lib/formatDate';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useSettledValue } from '../../lib/useSettled';
@@ -30,11 +28,8 @@ import { ItemBreadcrumb } from './ItemBreadcrumb';
 import { itemComparison } from './itemComparison';
 import { onDiskState, type PendingChangesIndex } from './itemStatus';
 import { itemTypeLabel } from './itemType';
+import { ItemViewer } from './ItemViewer';
 import { isWorkspaceRoot } from './workspaceRoot';
-
-// The file's diff and annotations (Pierre's viewer) load on first use: Files itself is in the startup bundle
-// (`viewRegistry`).
-const ItemViewer = lazyComponent(() => import('./ItemViewer').then((module) => module.ItemViewer));
 
 /** How the details name what the item is: a folder, a link, or any other file. */
 const DETAILS_KINDS = {
@@ -154,11 +149,8 @@ export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu,
       changes={
         isFile &&
         shownComparison && (
-          // Only the Files view switches "Diff | Annotate" with a key: Browse repository has no such command. Blank for
-          // the moment the viewer's code loads: the pane is already in place, so nothing moves.
-          <Suspense fallback={null}>
-            <ItemViewer workspacePath={workspacePath} item={shown} comparison={shownComparison} comment={comment} listings={listings} viewShortcut={inWorkspace ? hotkey('annotate') : undefined} />
-          </Suspense>
+          // Only the Files view switches "Diff | Annotate" with a key: Browse repository has no such command.
+          <ItemViewer workspacePath={workspacePath} item={shown} comparison={shownComparison} comment={comment} listings={listings} viewShortcut={inWorkspace ? hotkey('annotate') : undefined} />
         )
       }
     >
