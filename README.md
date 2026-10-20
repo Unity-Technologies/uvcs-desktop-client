@@ -74,7 +74,7 @@ runs each one only when needed, asks for many things in one command, and keeps w
 
 ## Privacy
 
-No telemetry, analytics or crash reports. What the app sends, and to whom: [PRIVACY.md](PRIVACY.md).
+No telemetry, analytics or crash reports. See [PRIVACY.md](PRIVACY.md).
 
 ## Build from source
 
