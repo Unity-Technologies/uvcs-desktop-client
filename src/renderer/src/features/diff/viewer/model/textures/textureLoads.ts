@@ -1,8 +1,8 @@
 // Texture files read and decoded for the Materials look, once per version of each file: keyed by it (`foundFileKey`:
 // a disk file's path, size and time written, a repository's revision) and how it's drawn, so the same texture used by
 // both versions of a model, by several slots, or by the next model, decodes once. Bytes are read where the file was
-// found (`api.unityAssets.read`: the disk, or its revision, downloaded) and handed to the image decoding worker, a few at a
-// time (`TEXTURES_IN_HAND`); only the decoded bitmaps are kept (`decodes`).
+// found (`api.unityAssets.read`: the disk, or its revision, downloaded) and handed to the image decoding worker, a few
+// at a time (`TEXTURES_IN_HAND`); only the decoded bitmaps are kept (`decodes`).
 
 import { concurrencyLimit } from '@shared/concurrencyLimit';
 import { downloadedAheadBytesOf, foundFileKey, MAX_DOWNLOADED_AHEAD_BYTES, type FoundFile } from '@shared/domain/unityAssets';
@@ -44,7 +44,8 @@ export function holdTextures(keys: Iterable<string>): () => void {
 /**
  * The textures read and decoded at once: each holds its file's bytes from its read until the worker has them, then
  * its pixels as it decodes. Reading all of a model's at once held every file in both processes (forty 4K PNGs, 1.2
- * GB, read together). Three: one is read while the worker decodes two (`decodeOffThread`).
+ * GB, read together). Three: one is read while the decoding worker has two in hand (`decodeOffThread`); the worker's two
+ * are shared with the image diff's paints (`imageDecodingSession`), so a texture may wait behind an image there.
  */
 export const TEXTURES_IN_HAND = 3;
 const inHand = concurrencyLimit(TEXTURES_IN_HAND);
