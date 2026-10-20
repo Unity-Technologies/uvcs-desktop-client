@@ -1,6 +1,6 @@
 import { AppWindow, FileText } from 'lucide-react';
 import type { FileContent } from '@shared/domain/content';
-import { formatSize } from '../../../lib/formatDate';
+import { sizeChange, TOO_LARGE_TITLES } from './fileSizeWords';
 import { Button } from '../../../ui/Button';
 import { EmptyState } from '../../../ui/EmptyState';
 import { comparisonMethodLabel, type ComparisonMethod } from './comparisonMethod';
@@ -46,14 +46,4 @@ export function NothingToDiff({ reason, left, right, identicalDescription, compa
     case 'binary':
       return <EmptyState title="Binary file" description={`${sizeChange(left, right)}. Binary contents can't be compared as text.`} />;
   }
-}
-
-const TOO_LARGE_TITLES: Record<NonNullable<FileContent['tooLarge']>, string> = {
-  text: 'This file is too large to show a diff',
-  image: 'This image is too large to preview',
-  model: 'This model is too large to preview',
-};
-
-function sizeChange(left: FileContent, right: FileContent): string {
-  return `${formatSize(left.size)} → ${formatSize(right.size)}`;
 }

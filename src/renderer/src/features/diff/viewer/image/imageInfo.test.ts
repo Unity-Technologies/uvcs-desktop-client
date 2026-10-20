@@ -14,8 +14,8 @@ describe('sideLabel', () => {
 
 describe('undecodedDescription', () => {
   it("gives the sizes as a binary diff does, then why the image can't show", () => {
-    expect(undecodedDescription(1024, 2048, 'psdWithoutComposite')).toBe("1.0 KB → 2.0 KB. Can't read this PSD: save it with Maximize Compatibility.");
-    expect(undecodedDescription(0, 178, 'tooLarge')).toBe('0 B → 178 B. Too large to show.');
+    expect(undecodedDescription({ size: 1024 }, { size: 2048 }, 'psdWithoutComposite')).toBe("1.0 KB → 2.0 KB. Can't read this PSD: save it with Maximize Compatibility.");
+    expect(undecodedDescription({ size: 0 }, { size: 178 }, 'tooLarge')).toBe('0 B → 178 B. Too large to show.');
   });
 });
 

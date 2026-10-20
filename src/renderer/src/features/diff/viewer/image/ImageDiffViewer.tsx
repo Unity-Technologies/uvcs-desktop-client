@@ -89,7 +89,7 @@ export function ImageDiffViewer({ original, modified, mode }: ImageDiffViewerPro
 
   // A side that can't be painted (a PSD saved without its composite, a damaged file): the binary diff, saying why.
   const problem = problemOf(oldState) ?? problemOf(newState);
-  if (problem) return <EmptyState title="Binary file" description={undecodedDescription(original.size, modified.size, problem)} />;
+  if (problem) return <EmptyState title="Binary file" description={undecodedDescription(original, modified, problem)} />;
   if (decoding || !frame) return spin ? <CenteredSpinner /> : null;
 
   return (
