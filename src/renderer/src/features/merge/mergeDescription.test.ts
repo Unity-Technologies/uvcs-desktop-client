@@ -32,6 +32,12 @@ describe('mergeLabels', () => {
     expect([intoBranch.roles.destination.name, intoBranch.roles.source.name]).toEqual(['Destination', 'Source']);
   });
 
+  it('names the base by its changeset, where the merge has one', () => {
+    const withBase = { ...plan, contributors: { ...plan.contributors!, base: { changesetId: 2, branch: '/main' } } };
+    expect(mergeLabels({ kind: 'merge', sourceSpec: 'br:/main/task' }, withBase).base).toBe('cs:2');
+    expect(mergeLabels({ kind: 'merge', sourceSpec: 'br:/main/task' }, plan).base).toBeUndefined();
+  });
+
   it('uses the server branch for merges into a branch', () => {
     expect(mergeLabels({ kind: 'merge', sourceSpec: 'br:/main', destinationBranch: '/main/release' }, plan).destination).toBe('/main/release');
   });
