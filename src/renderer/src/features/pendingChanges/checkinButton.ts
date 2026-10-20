@@ -6,6 +6,8 @@ export type CheckinMode = 'checkin' | 'shelve';
 
 interface CheckinButtonState {
   mode: CheckinMode;
+  /** How many changes are pending; undefined until they are read, when the button only names what it does. */
+  pendingCount: number | undefined;
   includedCount: number;
   branchName: string;
   uploadBytes: number;
@@ -39,13 +41,15 @@ interface CheckinButtonLabel {
  * size last: the top bar names the branch, while nothing else tells what the check-in uploads. Behind the branch head it updates first
  * ("Update & check in 4 changes"); once every change is reviewed, "Check in reviewed changes".
  */
-export function checkinButtonLabel({ mode, includedCount, branchName, uploadBytes, merging, behindCount, allReviewed, keepShelved }: CheckinButtonState): CheckinButtonLabel {
+export function checkinButtonLabel({ mode, pendingCount, includedCount, branchName, uploadBytes, merging, behindCount, allReviewed, keepShelved }: CheckinButtonState): CheckinButtonLabel {
   const size = includedCount > 0 && uploadBytes > 0 ? formatSize(uploadBytes) : null;
   if (mode === 'shelve') {
     const tip = keepShelved ? 'Shelve a copy; the changes stay here' : 'Shelve, then undo the changes here';
+    if (pendingCount === undefined) return { forms: [{ action: 'Shelve', size: null, target: null }], tip };
     if (includedCount === 0) return { forms: [{ action: 'Nothing to shelve', size: null, target: null }], tip };
     return { forms: shorterForms(`Shelve ${pluralize(includedCount, 'change')}`, `Shelve ${formatCount(includedCount)}`, '', size), tip };
   }
+  if (pendingCount === undefined) return { forms: [{ action: 'Check in', size: null, target: null }], tip: 'Check in' };
   if (includedCount === 0) return { forms: [{ action: 'Nothing to check in', size: null, target: null }], tip: 'Check in' };
   const tip = branchName ? `Check in to ${branchName}` : 'Check in';
   if (merging) return { forms: shorterForms('Check in merge', null, branchName, size), tip };
@@ -75,10 +79,22 @@ function sameText(a: CheckinButtonText, b: CheckinButtonText): boolean {
 
 /**
  * Why the check-in button can't be used right now, for its tooltip; null when it can. `count` is what the mode takes
- * of the `includedCount` changes checked: a shelve leaves private files and links out (`isShelvable`).
+ * of the `includedCount` changes checked: a shelve leaves private files and links out (`isShelvable`). `pendingCount`
+ * is undefined until the changes are read.
  */
-export function checkinDisabledReason(mode: CheckinMode, count: number, includedCount: number): string | null {
+export function checkinDisabledReason(mode: CheckinMode, count: number, includedCount: number, pendingCount: number | undefined): string | null {
   if (count > 0) return null;
+  if (pendingCount === undefined) return 'Reading the pending changes';
+  if (pendingCount === 0) return 'No pending changes';
   if (mode === 'checkin') return 'Select changes to check in';
   return includedCount > 0 ? "Private files and links can't be shelved" : 'Select changes to shelve';
+}
+
+/**
+ * Whether the mode caret beside the button can be used. With nothing pending (or not read yet) it is disabled with the
+ * button, as one split button. With changes but none of them checked it stays usable, so a shelve that can take none
+ * of them ("Private files and links can't be shelved") can always go back to checking in.
+ */
+export function canChangeCheckinMode(pendingCount: number | undefined, busy: boolean): boolean {
+  return !busy && pendingCount !== undefined && pendingCount > 0;
 }

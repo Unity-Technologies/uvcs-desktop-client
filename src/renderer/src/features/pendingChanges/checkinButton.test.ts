@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { checkinButtonLabel, checkinDisabledReason } from './checkinButton';
+import { canChangeCheckinMode, checkinButtonLabel, checkinDisabledReason } from './checkinButton';
 
 describe('checkinButtonLabel', () => {
-  const base = { mode: 'checkin' as const, includedCount: 4, branchName: '/main', uploadBytes: 1_150_000, merging: false, behindCount: 0, allReviewed: false };
+  const base = { mode: 'checkin' as const, pendingCount: 6, includedCount: 4, branchName: '/main', uploadBytes: 1_150_000, merging: false, behindCount: 0, allReviewed: false };
 
   const wordings = (label: ReturnType<typeof checkinButtonLabel>): string[] =>
     label.forms.map(({ action, size, target }) => [action, size && `(${size})`, target].filter(Boolean).join(' '));
@@ -41,6 +41,12 @@ describe('checkinButtonLabel', () => {
 
   it('says there is nothing to check in', () => {
     expect(wordings(checkinButtonLabel({ ...base, includedCount: 0 }))).toEqual(['Nothing to check in']);
+    expect(wordings(checkinButtonLabel({ ...base, pendingCount: 0, includedCount: 0 }))).toEqual(['Nothing to check in']);
+  });
+
+  it('only names what it does until the changes are read', () => {
+    expect(wordings(checkinButtonLabel({ ...base, pendingCount: undefined, includedCount: 0 }))).toEqual(['Check in']);
+    expect(wordings(checkinButtonLabel({ ...base, mode: 'shelve', pendingCount: undefined, includedCount: 0 }))).toEqual(['Shelve']);
   });
 
   it('checks in a merge', () => {
@@ -84,13 +90,34 @@ describe('checkinButtonLabel', () => {
 
 describe('checkinDisabledReason', () => {
   it('asks to select changes when none are checked', () => {
-    expect(checkinDisabledReason('checkin', 0, 0)).toBe('Select changes to check in');
-    expect(checkinDisabledReason('shelve', 0, 0)).toBe('Select changes to shelve');
-    expect(checkinDisabledReason('checkin', 2, 2)).toBeNull();
+    expect(checkinDisabledReason('checkin', 0, 0, 3)).toBe('Select changes to check in');
+    expect(checkinDisabledReason('shelve', 0, 0, 3)).toBe('Select changes to shelve');
+    expect(checkinDisabledReason('checkin', 2, 2, 3)).toBeNull();
   });
 
   it('says why a shelve of only private files is not possible', () => {
-    expect(checkinDisabledReason('shelve', 0, 3)).toBe("Private files and links can't be shelved");
-    expect(checkinDisabledReason('shelve', 1, 3)).toBeNull();
+    expect(checkinDisabledReason('shelve', 0, 3, 3)).toBe("Private files and links can't be shelved");
+    expect(checkinDisabledReason('shelve', 1, 3, 3)).toBeNull();
+  });
+
+  it('says nothing is pending, or that the changes are still being read', () => {
+    expect(checkinDisabledReason('checkin', 0, 0, 0)).toBe('No pending changes');
+    expect(checkinDisabledReason('shelve', 0, 0, 0)).toBe('No pending changes');
+    expect(checkinDisabledReason('checkin', 0, 0, undefined)).toBe('Reading the pending changes');
+  });
+});
+
+describe('canChangeCheckinMode', () => {
+  it('is disabled with the button while nothing is pending or the changes are being read', () => {
+    expect(canChangeCheckinMode(0, false)).toBe(false);
+    expect(canChangeCheckinMode(undefined, false)).toBe(false);
+  });
+
+  it('stays usable with changes, even none checked, so a shelve can go back to checking in', () => {
+    expect(canChangeCheckinMode(3, false)).toBe(true);
+  });
+
+  it('waits while a check-in or shelve runs', () => {
+    expect(canChangeCheckinMode(3, true)).toBe(false);
   });
 });
