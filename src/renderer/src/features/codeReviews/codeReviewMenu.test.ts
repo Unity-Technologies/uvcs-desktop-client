@@ -53,7 +53,7 @@ describe('getting the reviewed code into the workspace', () => {
 
   it("applies a shelve review's shelve to the workspace, keeping the shelve: it's someone else's", async () => {
     const menu = codeReviewMenu(ws, [reviewOf({ kind: 'shelve', shelveId: 3 })], onBranch('/main'));
-    expect(reviewedCodeEntry(menu)).toEqual([{ id: 'apply', label: 'Apply this shelve', disabled: false }]);
+    expect(reviewedCodeEntry(menu)).toEqual([{ id: 'apply', label: 'Apply to workspace', disabled: false }]);
 
     await actions(menu).find((entry) => entry.id === 'apply')!.run();
     expect(ran).toEqual(['apply /ws sh:3']);
@@ -67,7 +67,7 @@ describe('getting the reviewed code into the workspace', () => {
       { id: 'switch', label: 'Switch to this changeset', disabled: true, disabledReason: 'The workspace is already on this changeset' },
     ]);
     expect(reviewedCodeEntry(codeReviewMenu(ws, [reviewOf({ kind: 'shelve', shelveId: 3 })], { kind: 'shelve', name: '3' }))).toEqual([
-      { id: 'apply', label: 'Apply this shelve', disabled: true, disabledReason: 'The workspace is on this shelve' },
+      { id: 'apply', label: 'Apply to workspace', disabled: true, disabledReason: 'The workspace is already on this shelve' },
     ]);
   });
 
