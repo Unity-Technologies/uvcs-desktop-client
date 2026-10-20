@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, isAbsolute, relative, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, relative, resolve } from 'node:path';
 import './testing/fakeWindow';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { VIEWS } from './app/navigation/viewRegistry';
@@ -95,7 +95,7 @@ describe('startup bundle', () => {
 
   it('holds every view, so each paints its own layout at once, never a fallback it then replaces', () => {
     const modules = [...importedBy.keys()];
-    const missing = VIEWS.filter(({ component }) => !modules.some((module) => module.endsWith(`${component.name}.tsx`))).map((view) => view.id);
+    const missing = VIEWS.filter(({ component }) => !modules.some((module) => basename(module) === `${component.name}.tsx`)).map((view) => view.id);
 
     expect(missing).toEqual([]);
   });
