@@ -2,11 +2,12 @@ import { ChevronDown, Undo2 } from 'lucide-react';
 import { useMemo, type CSSProperties } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { SEPARATOR } from '../../lib/actions';
-import { formatCount, pluralize } from '../../lib/text';
+import { formatCount } from '../../lib/text';
 import { Checkbox, type CheckState } from '../../ui/Checkbox';
 import { SkeletonBar } from '../../ui/Skeleton';
 import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
+import { changesCountLabel } from './changesCountLabel';
 import { isCheckinCandidate, isControlled } from './changeCategories';
 import styles from './ChangesSummaryBar.module.css';
 
@@ -30,14 +31,17 @@ export function ChangesSummaryBar({ changes, totalCount, isIncluded, onSetInclud
     return { candidates, includedCount: candidates.filter(isIncluded).length, undoable: changes.filter(isControlled) };
   }, [changes, isIncluded]);
   const checkState: CheckState = includedCount === 0 ? false : includedCount === candidates.length ? true : 'mixed';
-  const filtered = totalCount !== undefined && changes.length !== totalCount;
+  const countLabel = changesCountLabel(totalCount, changes.length);
+  const filtered = countLabel !== null && changes.length !== totalCount;
+  // Nothing listed, or not read yet: no way to undo has anything to undo.
+  const nothingListed = !totalCount;
   const undoAllLabel = filtered ? `Undo the ${formatCount(undoable.length)} shown changes` : 'Undo all changes';
 
   return (
     <div className={styles.bar} style={{ '--checkbox-inset': `${checkboxInset}px` } as CSSProperties}>
       <Checkbox checked={checkState} disabled={candidates.length === 0} onChange={(checked) => onSetIncluded(candidates, checked)} />
       <span className={styles.label}>
-        {totalCount === undefined ? <SkeletonBar width="48px" /> : filtered ? `${formatCount(changes.length)} of ${formatCount(totalCount)}` : pluralize(totalCount, 'file')}
+        {countLabel ?? <SkeletonBar width="48px" />}
       </span>
       <div className={styles.undo}>
         <IconButton
@@ -55,7 +59,7 @@ export function ChangesSummaryBar({ changes, totalCount, isIncluded, onSetInclud
             { id: 'undoAll', label: `${undoAllLabel}…`, icon: Undo2, danger: true, disabled: undoable.length === 0, run: () => onUndo(undoable) },
           ]}
         >
-          <IconButton size="small" className={styles.undoMore} icon={<ChevronDown size={12} />} label="More ways to undo" />
+          <IconButton size="small" className={styles.undoMore} icon={<ChevronDown size={12} />} label="More ways to undo" disabled={nothingListed} />
         </ActionDropdownMenu>
       </div>
     </div>
