@@ -152,8 +152,8 @@ some, it's one more edit in the editor, unsaved, and ⌘Z takes it back like typ
 
 An item a diff shows deleted (a changeset's, branch's, shelve's or range's; a file or a folder) comes back from its
 menu, in the diff page and a details panel's changed files, as a pending change: "Restore file", "Restore folder" or
-"Restore N items" where it was, and for one item "Restore to…" any path in the workspace (`restoreMenuEntries`,
-`restoreDeleted`). `cm undelete <revid:N> <path>` writes the revision the deletion removed (the entry's
+"Restore N items" where it was, and for one item "Restore to…" any path in the workspace, typed with `/` (or `\`
+on Windows: `typedRestorePath`) (`restoreMenuEntries`, `restoreDeleted`). `cm undelete <revid:N> <path>` writes the revision the deletion removed (the entry's
 `baseRevisionId`) and records it as copied; a folder comes back with everything it held then. It is offered only when
 every selected item was deleted, in the workspace's own repository, and none is an xlink (`deletedItemRestores`):
 `cm` restores no xlink nor xlinked item, and finds a bare id only there (`undeleteArgs`). Incoming offers none: what
