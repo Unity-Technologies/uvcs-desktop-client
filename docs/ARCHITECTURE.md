@@ -670,6 +670,10 @@ renderer/src/
 `ui/` either): what they need from there is handed to them (`setAvatarPictureSource`) or lives a tier up
 (`rendererTiers.test.ts` checks it).
 
+- **Views are static, heavy libraries lazy**: every view is in the startup bundle (`viewRegistry`), so it paints its
+  own loading state at once. A heavy library (Pierre, Shiki, three.js) loads on first use, behind a `lazyComponent`
+  with its own `Suspense` inside a pane already laid out, and joins `HEAVY_PACKAGES` in `startupBundle.test.ts`, which
+  fails on a static import that reaches one (the numbers: "Start-up", step 4).
 - **Effects survive a second mount**: in development React's StrictMode mounts every component, runs its cleanup and
   mounts it again on the same DOM nodes. An effect that owns a resource builds a fresh one on each run and frees it in
   its cleanup, never leaving behind something its next run can't use: `useModelRenderer` gives each renderer a new
