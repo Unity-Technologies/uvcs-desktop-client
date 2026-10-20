@@ -2,9 +2,10 @@
 # Builds a small Unity project whose textures come in the formats the browser can't decode, for the image diff: a
 # changeset that repaints a TGA, a TIFF normal map, an EXR and an HDR sky (a sun brighter than white), an 8-bit PSD
 # with alpha and a 16-bit grayscale one, widens a TGA banner, adds a TGA and deletes a TIFF, and leaves two Photoshop
-# files the viewer can't read (one saved without "Maximize Compatibility", one in CMYK); and a branch, /main/retouch,
-# that conflicts with it on the TGA and the PSD with alpha (the merge page's version cards). The files are written by
-# textures/writeTextures.ts.
+# files the viewer can't read beside a version it can (one saved without "Maximize Compatibility", one in CMYK), and
+# two it can read neither version of (a PSD without its composite, a TGA claiming 20000 x 20000); and a branch,
+# /main/retouch, that conflicts with it on the TGA and the PSD with alpha (the merge page's version cards). The files
+# are written by textures/writeTextures.ts.
 # Usage: scripts/sandboxes/textures.sh [repo-name [workspace-folder]]   (from the repository root)
 #        → repo textures@local, workspace /tmp/uvcs-textures
 # It deletes and recreates both, so it takes only names: the repository is always on the local server, the

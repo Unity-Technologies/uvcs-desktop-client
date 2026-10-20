@@ -73,6 +73,14 @@ function cmykPsd(): Uint8Array {
   return bytes;
 }
 
+/** Only the header of a TGA claiming 20000 x 20000 pixels; `version` sets a byte, so its versions differ. */
+function hugeTga(version: number): Uint8Array {
+  const header = writeTga(1, 1, () => [version, 0, 0, 255]);
+  new DataView(header.buffer).setUint16(12, 20000, true);
+  new DataView(header.buffer).setUint16(14, 20000, true);
+  return header;
+}
+
 function filesOf(step: Step): Record<string, Uint8Array | null> {
   // The retouch branches off before the repaint: only the crate and the hero change there, both against the repaint.
   const repainted = step === 'repaint';
