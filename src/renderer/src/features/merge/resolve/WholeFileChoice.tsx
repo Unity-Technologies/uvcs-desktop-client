@@ -2,7 +2,9 @@ import { Check, File, ImageOff } from 'lucide-react';
 import { useState } from 'react';
 import type { FileContent, ImageBytes } from '@shared/domain/content';
 import { PathLabel } from '../../../components/PathLabel';
+import { undecodedTip } from '../../diff/viewer/image/imageInfo';
 import { useImageUrl } from '../../diff/viewer/image/useImageUrl';
+import { usePaintableImage } from '../../diff/viewer/image/usePaintableImage';
 import { formatSize } from '../../../lib/formatDate';
 import { Spinner } from '../../../ui/Spinner';
 import type { ConflictContents } from './loadedConflict';
@@ -63,10 +65,12 @@ interface VersionCardProps {
 }
 
 function VersionCard({ title, subtitle, content, base, error, selected, onSelect }: VersionCardProps) {
-  // An image the browser can't decode (a damaged file, a format it doesn't read) shows as what it is, not a broken image.
+  // Unity's texture formats decode first (`usePaintableImage`); an image that can't be painted (a damaged file, a PSD
+  // saved without its composite) shows as what it is, its tooltip saying why, not as a broken image.
   const [undecodableImage, setUndecodableImage] = useState<ImageBytes>();
-  const undecodable = undecodableImage !== undefined && undecodableImage === content?.image;
-  const imageUrl = useImageUrl(content?.image);
+  const paint = usePaintableImage(content?.image);
+  const undecodable = paint.status === 'failed' || (undecodableImage !== undefined && undecodableImage === content?.image);
+  const imageUrl = useImageUrl(paint.status === 'paintable' ? paint.image : undefined);
   return (
     <button className={styles.card} data-selected={selected} onClick={onSelect}>
       <div className={styles.preview}>
@@ -81,9 +85,13 @@ function VersionCard({ title, subtitle, content, base, error, selected, onSelect
         ) : content.model ? (
           <ModelVersionThumbnail content={content} title={title} />
         ) : content.image && !undecodable ? (
-          imageUrl && <img src={imageUrl} alt={title} className={styles.image} onError={() => setUndecodableImage(content.image)} />
+          paint.status === 'decoding' ? (
+            <Spinner size={20} />
+          ) : (
+            imageUrl && <img src={imageUrl} alt={title} className={styles.image} onError={() => setUndecodableImage(content.image)} />
+          )
         ) : (
-          <span className={styles.noPreview} data-tip={content.image ? "Couldn't display this image" : undefined}>
+          <span className={styles.noPreview} data-tip={content.image ? undecodedTip(paint.status === 'failed' ? paint.problem : undefined) : undefined}>
             {content.image ? <ImageOff size={28} /> : <File size={28} />}
           </span>
         )}

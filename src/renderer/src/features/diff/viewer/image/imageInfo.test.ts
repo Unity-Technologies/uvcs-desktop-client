@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changedLabel, colorHex, sideLabel, undecodedDescription } from './imageInfo';
+import { changedLabel, colorHex, sideLabel, undecodedDescription, undecodedTip } from './imageInfo';
 
 describe('sideLabel', () => {
   it('shows dimensions and size', () => {
@@ -16,6 +16,14 @@ describe('undecodedDescription', () => {
   it("gives the sizes as a binary diff does, then why the image can't show", () => {
     expect(undecodedDescription(1024, 2048, 'psdWithoutComposite')).toBe("1.0 KB → 2.0 KB. Can't read this PSD: save it with Maximize Compatibility.");
     expect(undecodedDescription(0, 178, 'tooLarge')).toBe('0 B → 178 B. Too large to show.');
+  });
+});
+
+describe('undecodedTip', () => {
+  it('says why a preview shows no image, and a damaged file in general words', () => {
+    expect(undecodedTip('psdColorMode')).toBe("Can't read this PSD: save it as 8 or 16-bit RGB");
+    expect(undecodedTip('unreadable')).toBe("Couldn't display this image");
+    expect(undecodedTip(undefined)).toBe("Couldn't display this image");
   });
 });
 

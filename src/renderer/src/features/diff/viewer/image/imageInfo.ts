@@ -24,8 +24,16 @@ export function sideLabel(image: Size & { highDynamicRange?: boolean }, bytes: n
  * (`imageProblemWords`).
  */
 export function undecodedDescription(oldBytes: number, newBytes: number, problem: ImageProblem): string {
-  const why = imageProblemWords(problem);
-  return `${formatSize(oldBytes)} → ${formatSize(newBytes)}. ${why.charAt(0).toUpperCase()}${why.slice(1)}.`;
+  return `${formatSize(oldBytes)} → ${formatSize(newBytes)}. ${capitalized(imageProblemWords(problem))}.`;
+}
+
+/** Why a preview shows no image (the merge page's cards), for its tooltip; a damaged file, or none told, in general words. */
+export function undecodedTip(problem: ImageProblem | undefined): string {
+  return problem === undefined || problem === 'unreadable' ? "Couldn't display this image" : capitalized(imageProblemWords(problem));
+}
+
+function capitalized(words: string): string {
+  return `${words.charAt(0).toUpperCase()}${words.slice(1)}`;
 }
 
 /**
