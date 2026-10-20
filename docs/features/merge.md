@@ -50,7 +50,8 @@ menu": history, open or save the incoming version, Copy) with what a merge adds 
 entries as in Incoming (`conflictMenuEntries`), "Resolve in <tool>" (the preferred one, `primaryMergeTool`; disabled while files resolve one by one), Keep yours or
 incoming, Start over once decided, annotate at the incoming revision `cm` names for it, and "Open version ▸" Yours (the
 workspace file; the destination's version merging into a server branch), Incoming and Base (`openableVersions`): a
-text in the user's editor, a binary with its default app (`oneClickApp`: the editors are for text). A binary's
+text in the user's editor, a binary with its default app (`oneClickApp`: the editors are for text; a known binary is one before its versions
+are read, `opensAsBinary`). A binary's
 versions open only from there: its menu drops the list's "Open this revision in <editor>" and "Open this revision
 with ▸", which would open the incoming one a second way, and keeps "Save this revision as…" (`withConflictOpening`,
 in Incoming too). A version taken

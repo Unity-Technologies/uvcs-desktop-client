@@ -58,8 +58,16 @@ export function openableVersions(state: Pick<FileConflictState, 'file'>, { works
  * The app a version opens in with one click ("Open version ▸ Incoming"): a text in the user's editor, as every file
  * opens; a binary with its default app, since the editors are for text (a PSD opens in Photoshop, not in VS Code).
  */
-export function oneClickApp(state: Pick<FileConflictState, 'isBinary'>, apps: ExternalApps): string | null {
-  return state.isBinary ? null : apps.editorId;
+export function oneClickApp(state: Pick<FileConflictState, 'isBinary' | 'file'>, apps: ExternalApps): string | null {
+  return opensAsBinary(state) ? null : apps.editorId;
+}
+
+/**
+ * Whether a conflict's versions open as a binary's: known to be one by its revision's type (`isKnownBinary`), or by its
+ * bytes once read. A binary `cm` keeps as text counts as text until its versions are read.
+ */
+export function opensAsBinary(state: Pick<FileConflictState, 'isBinary' | 'file'>): boolean {
+  return state.isBinary || state.file.isKnownBinary === true;
 }
 
 /**

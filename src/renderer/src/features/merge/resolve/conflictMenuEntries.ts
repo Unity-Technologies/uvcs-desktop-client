@@ -3,7 +3,7 @@ import { currentExternalApps } from '../../../components/externalApps/externalAp
 import { menuAction, menuSubmenu } from '../../../components/menuWords';
 import { withoutAction, type Action, type MenuEntry } from '../../../lib/actions';
 import type { GroupedEntry } from '../../../lib/menuGroups';
-import { oneClickApp, openableVersions, type VersionOpeningContext } from './conflictVersionOpening';
+import { oneClickApp, openableVersions, opensAsBinary, type VersionOpeningContext } from './conflictVersionOpening';
 import type { FileConflictDecision } from './fileConflictDecision';
 import { keepVersionEntries } from './keepVersionEntries';
 import type { FileConflictState } from './useFileConflicts';
@@ -44,7 +44,7 @@ export function conflictMenuEntries(selected: FileConflictState[], context: Conf
  */
 export function withConflictOpening(menu: MenuEntry[], selected: FileConflictState[]): MenuEntry[] {
   const single = selected.length === 1 ? selected[0]! : null;
-  if (!single?.isBinary) return menu;
+  if (!single || !opensAsBinary(single)) return menu;
   return withoutAction(withoutAction(menu, 'openRevision'), 'openRevisionWith');
 }
 
