@@ -168,6 +168,9 @@ quality: **if the tests pass, the app works as specified**. Test what matters, n
   switch, bring; a failure puts the changes back), a menu builder serving every place, a shortcut reaching its command.
 - **Specs**: a rule written in `docs/` deserves a test that enforces it; a rule for the whole repository becomes a
   static test ("Rules the tests enforce" below). A bug fix starts with a test that fails without it.
+- **Every case the feature names**: each case its doc in `docs/features/` and its sandbox script build (code moved
+  unchanged, a texture unreadable, a conflict on a directory) has a test. A case the sandbox shows and no test covers
+  is the bug that ships.
 
 **Don't test** what the type checker already proves, pass-through code, the libraries' own behavior (React, TanStack
 Query, Pierre), or implementation details (private helpers, call order nobody relies on). A test should fail only
