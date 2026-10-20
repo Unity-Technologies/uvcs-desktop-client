@@ -67,6 +67,7 @@ export function usePaletteSearch(workspacePath: string | null, query: string, sc
       term,
       currentBranch: workspace.data?.selector.kind === 'branch' ? workspace.data.selector.name : undefined,
       loadedChangeset: workspace.data?.loadedChangeset,
+      workspaceOn: workspace.data?.selector,
       changelists: pendingChanges.data?.changelists ?? [],
       changeAt: (changePath) => changeByPath.get(changePath),
     };
