@@ -10,7 +10,6 @@ describe('decisionFromTool', () => {
     expect(decisionFromTool({ kind: 'resolved', text: 'x\n' }, 'VS Code')).toEqual({ kind: 'text', text: 'x\n', tool: 'VS Code' });
     expect(decisionFromTool({ kind: 'unchanged', exitCode: 0, errorOutput: '' }, 'VS Code')).toBeUndefined();
   });
-
 });
 
 describe('toolOutcomeMessage', () => {
@@ -26,6 +25,14 @@ describe('toolOutcomeMessage', () => {
     expect(toolOutcomeMessage({ kind: 'resolved', text: 'x\n' }, 'Smart Merge', 'Player.prefab')).toEqual({
       kind: 'success',
       title: 'Merged Player.prefab with Smart Merge',
+    });
+  });
+
+  it('says Smart Merge was stopped, which has nothing saved to speak of', () => {
+    expect(toolOutcomeMessage({ kind: 'unchanged', exitCode: null, errorOutput: '' }, 'Smart Merge', 'Player.prefab')).toEqual({
+      kind: 'info',
+      title: 'Stopped Smart Merge',
+      detail: 'Player.prefab still needs your decision.',
     });
   });
 
