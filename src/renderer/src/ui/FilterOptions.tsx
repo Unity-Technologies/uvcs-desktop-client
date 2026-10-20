@@ -12,15 +12,17 @@ export interface FilterOption {
 }
 
 interface FilterOptionsProps {
+  /** What the options choose, for screen readers ("Branches"). */
+  label: string;
   options: FilterOption[];
   /** Several on at once (`checkbox`), or one of them (`radio`). */
   kind?: 'checkbox' | 'radio';
 }
 
 /** The options at the top of a filter's popover (`FilterPopover`), each a row with its check, above what it picks from. */
-export function FilterOptions({ options, kind = 'checkbox' }: FilterOptionsProps) {
+export function FilterOptions({ label, options, kind = 'checkbox' }: FilterOptionsProps) {
   return (
-    <div className={styles.options}>
+    <div role="group" aria-label={label} className={styles.options}>
       {options.map((option) => (
         <button
           key={option.id}

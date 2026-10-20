@@ -25,7 +25,7 @@ export function BranchFilterPopover({ branches }: { branches: readonly string[] 
         </MenuChip>
       }
     >
-      <FilterOptions options={options} />
+      <FilterOptions label="Which branches" options={options} />
       <BranchChecklist branches={branches} />
     </FilterPopover>
   );

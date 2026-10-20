@@ -48,15 +48,21 @@ export function BranchScopeFilter({ workspacePath, scope, currentBranch, onShowA
       onOpenChange={setOpen}
       width={360}
       trigger={
-        <MenuChip icon={<GitBranch size={13} />} active={scope.kind !== 'all'}>
+        <MenuChip icon={<GitBranch size={13} />} active={scope.kind !== 'all'} aria-label={chipName(scope)}>
           {scope.kind === 'all' ? 'All branches' : scope.kind === 'current' ? 'This branch' : <PathLabel path={scope.name} fitContent maxWidth={PICKED_BRANCH_MAX_WIDTH} />}
         </MenuChip>
       }
     >
-      <FilterOptions kind="radio" options={options} />
+      <FilterOptions label="Branches" kind="radio" options={options} />
       <BranchList workspacePath={workspacePath} currentBranch={currentBranch} onPick={(name) => choose(() => onPick(name))()} />
     </FilterPopover>
   );
+}
+
+/** The chip's accessible name, the whole branch included: the chip shows "This branch", or a path fitted to it. */
+function chipName(scope: BranchScope): string {
+  if (scope.kind === 'all') return 'Branch: All branches';
+  return scope.kind === 'current' ? `Branch: This branch, ${scope.name}` : `Branch: ${scope.name}`;
 }
 
 function BranchList({ workspacePath, currentBranch, onPick }: { workspacePath: string; currentBranch: string | undefined; onPick: (name: string) => void }) {
