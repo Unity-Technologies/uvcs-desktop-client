@@ -27,6 +27,22 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   saved text becomes the file's decision (markers left count as conflicts left). Text files only: no tool really
   merges binaries, so a binary keeps one of its versions, picked in the app (`waitsForTool`). "Stop waiting" kills the tool process and takes what was saved so far, as soon as it exits: a launcher's
   app still holding its output doesn't keep the file open.
+- **Smart Merge** (Unity's merge of scenes, prefabs and other assets by their objects: the `UnityYAMLMerge` program in
+  every Unity Editor) isn't a tool to pick: "Resolve in…" (and each file of a "Resolve N conflicts in…" run) tries it
+  first on a Unity asset the user decided nothing for yet (`trySmartMergeFirst`, from `decidedByUser`), and the chosen
+  tool opens only when it can't merge the file. A file goes to it when its two sides start with Unity's YAML header
+  (`isUnityYaml`), whatever its extension; it runs headless with no fallback tool (`SMART_MERGE_ARGS`: `merge -h
+  --force --fallback none`; `--force` lets it take `.mat`, `.asset`… beyond the `.unity`, `.prefab` and `.meta` it
+  knows by name, and it refuses what isn't Unity YAML anyway). Only exit code 0 counts (`judgeSmartMerge`): on 2
+  (conflicts left) it still writes a result holding the base's values where the sides disagree, so that result is
+  dropped and the tool opens on the file as it stood. Its merge reads "Resolved in Smart Merge"; Start over, or
+  "Resolve in…" again, then opens the tool (on its result). It comes from the newest Unity release installed
+  (`findSmartMerge`, `compareUnityVersions`: releases before alphas and betas), found as Unity Hub keeps editors
+  (`findUnityEditors`): its editors folder (`/Applications/Unity/Hub/Editor`, `C:\Program Files\Unity\Hub\Editor`,
+  `~/Unity/Hub/Editor`), the folder picked in the Hub (`secondaryInstallPath.json` in the Hub's config folder), the
+  editors located by hand (`editors-v2.json`, `editors.json`) and the install made without the Hub; inside an editor,
+  `Contents/Helpers` on macOS since Unity 6.3 (`Contents/Tools` before), `Data/Tools` on Windows and Linux. Settings'
+  Merge pane says which editor's it uses. Sandbox: `scripts/sandboxes/smart-merge.sh`.
 - The workspace is never touched: the outcome is a decision like any other, written when the merge completes.
 
 ## Merge page

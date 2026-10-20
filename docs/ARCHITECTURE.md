@@ -366,7 +366,8 @@ and the app keeps the decision. An editor or a terminal opens only on the user's
   `cm diff` always has `--format`. `main/cm/noExternalUi.test.ts` checks these statically, and that processes start
   only to run `cm`, to ask the OS which apps are installed (`readInstalledApps`), to open an editor or a terminal
   (`system/apps/launchApp.ts`, wired only in `createServices`), or from `main/merge/mergeTools/launch.ts`, imported
-  only by `mergeToolsService`.
+  only by `mergeToolsService` (which also runs Unity's Smart Merge through it, headless, before the tool the user
+  asked for: docs/features/merge.md).
 - `cm` processes run with stdin closed, so a console prompt fails instead of hanging.
 
 ## Secrets
