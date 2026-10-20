@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { writeExr, writeHdr, writeTga, writeTiff } from './testing/imageWriters';
 import { writePsd } from './testing/psdWriter';
-import { imageSizeOf, textureFormatOf } from './textureFormats';
+import { imageSizeOf, sizeProblem, textureFormatOf } from './textureFormats';
 
 const black = (): [number, number, number, number] => [0, 0, 0, 255];
 
@@ -61,5 +61,13 @@ describe('imageSizeOf', () => {
     expect(imageSizeOf(new Uint8Array([1, 2, 3]), 'a.png')).toBeNull();
     expect(imageSizeOf(new Uint8Array(4), 'a.tga')).toBeNull();
     expect(imageSizeOf(new Uint8Array([0xff, 0xd8, 0x00, 0x00, 0, 0, 0, 0, 0, 0, 0]), 'a.jpg')).toBeNull();
+  });
+});
+
+describe('sizeProblem', () => {
+  it('refuses before decoding an image past 16384 px on a side or 8192² pixels', () => {
+    expect(sizeProblem({ width: 16384, height: 4096 })).toBeNull();
+    expect(sizeProblem({ width: 16385, height: 16 })).toBe('tooLarge');
+    expect(sizeProblem({ width: 16384, height: 16384 })).toBe('tooLarge');
   });
 });

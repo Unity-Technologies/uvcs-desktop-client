@@ -5,8 +5,8 @@
 // (`bitmapIsOpaque`). Never on the UI thread.
 
 import { decodePixels } from './decodePixels';
-import { fittedSize, sizeProblem } from './textureBudget';
-import { imageSizeOf, textureFormatOf } from './textureFormats';
+import { fittedSize } from './textureBudget';
+import { imageSizeOf, sizeProblem, textureFormatOf } from './textureFormats';
 import { bitmapIsOpaque } from './textureOpacity';
 import type { TextureProblem } from './textureProblems';
 

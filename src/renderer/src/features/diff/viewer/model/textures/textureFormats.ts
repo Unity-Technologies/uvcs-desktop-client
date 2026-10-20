@@ -33,6 +33,15 @@ export interface ImageSize {
   height: number;
 }
 
+/** A side past this, or more pixels than this, is refused before decoding: decoding allocates every pixel at once. */
+export const MAX_TEXTURE_SIDE = 16384;
+export const MAX_TEXTURE_PIXELS = 8192 * 8192;
+
+/** Why an image of this size isn't decoded; null when it may be. */
+export function sizeProblem({ width, height }: ImageSize): 'tooLarge' | null {
+  return width > MAX_TEXTURE_SIDE || height > MAX_TEXTURE_SIDE || width * height > MAX_TEXTURE_PIXELS ? 'tooLarge' : null;
+}
+
 /** The size the file's header says, or null when the header doesn't read as its format's. */
 export function imageSizeOf(bytes: Uint8Array, fileName: string): ImageSize | null {
   try {

@@ -9,11 +9,11 @@ import { TGALoader } from 'three/examples/jsm/loaders/TGALoader.js';
 import { TIFFLoader } from 'three/examples/jsm/loaders/TIFFLoader.js';
 import { readPsd } from './psdImage';
 import type { TextureFormat } from './textureFormats';
-import type { TextureProblem } from './textureProblems';
+import type { ImageProblem } from './imageProblems';
 
 export type PixelFormat = Exclude<TextureFormat, 'browser' | 'unsupported'>;
 
-export type PixelsRead = { kind: 'image'; width: number; height: number; rgba: Uint8ClampedArray } | { kind: 'failed'; problem: TextureProblem };
+export type PixelsRead = { kind: 'image'; width: number; height: number; rgba: Uint8ClampedArray } | { kind: 'failed'; problem: ImageProblem };
 
 export function decodePixels(bytes: Uint8Array, format: PixelFormat): PixelsRead {
   if (format === 'psd') {
