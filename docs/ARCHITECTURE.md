@@ -807,8 +807,9 @@ renderer/src/
 - **Focus**: the list, tree or graph a view or page works on carries `MAIN_FOCUS` (`lib/mainFocus.ts`). `useMainFocus`
   focuses it after navigating and whenever focus falls to the document (a dialog, menu or popover closed), and hands it
   list keys pressed while nothing has focus. A closing menu gives focus back to its trigger unless its action opened
-  a dialog or put the caret in a field ("Check in this changelist": the comment), which keep it (`focusAfterMenu`). Views keep their list's selection while away (`useViewSelection`). Lists
-  expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container.
+  a dialog or put the caret in a field ("Check in this changelist": the comment), which keep it (`focusAfterMenu`;
+  the action runs first, `runAfterMenuCloses`). Views keep their list's selection while away (`useViewSelection`).
+  Lists expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container.
 - **Filters**: every list's filter marks what made a row match, by the same rule. A filter field takes each word typed
   in any order, each found in one of the texts the row shows (`matchesWordFilter`; users by the name shown and as stored,
   `userFilterTexts`), and `HighlightQuery` marks those words in each cell; a path cut to fit finds them in the whole
