@@ -42,17 +42,20 @@ export function sizeProblem({ width, height }: ImageSize): 'tooLarge' | null {
   return width > MAX_IMAGE_SIDE || height > MAX_IMAGE_SIDE || width * height > MAX_IMAGE_PIXELS ? 'tooLarge' : null;
 }
 
-/** The size the file's header says, or null when the header doesn't read as its format's. */
-export function imageSizeOf(bytes: Uint8Array, fileName: string): ImageSize | null {
+/**
+ * The size the file's header says, or null when the header doesn't read as its format's. Every format is told by its
+ * signature but TGA, which has none: its header is read only when `format` says the file is one.
+ */
+export function imageSizeOf(bytes: Uint8Array, format: ImageFormat): ImageSize | null {
   try {
-    const size = headerSize(bytes, fileName);
+    const size = headerSize(bytes, format);
     return size && size.width > 0 && size.height > 0 && Number.isFinite(size.width) && Number.isFinite(size.height) ? size : null;
   } catch {
     return null;
   }
 }
 
-function headerSize(bytes: Uint8Array, fileName: string): ImageSize | null {
+function headerSize(bytes: Uint8Array, format: ImageFormat): ImageSize | null {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   if (startsWith(bytes, [0x89, 0x50, 0x4e, 0x47])) return { width: view.getUint32(16), height: view.getUint32(20) };
   if (startsWith(bytes, [0xff, 0xd8])) return jpegSize(bytes, view);
@@ -63,8 +66,8 @@ function headerSize(bytes: Uint8Array, fileName: string): ImageSize | null {
   if (startsWith(bytes, [0x76, 0x2f, 0x31, 0x01])) return exrSize(bytes, view);
   if (ascii(bytes, 0, 2) === '#?') return radianceSize(bytes);
   if (ascii(bytes, 0, 2) === 'II' || ascii(bytes, 0, 2) === 'MM') return tiffSize(bytes, view);
-  // TGA has no signature: its header, by the name.
-  if (imageFormatOf(fileName) === 'tga' && bytes.length >= 18) return { width: view.getUint16(12, true), height: view.getUint16(14, true) };
+  // TGA has no signature: its header, when the file is said to be one.
+  if (format === 'tga' && bytes.length >= 18) return { width: view.getUint16(12, true), height: view.getUint16(14, true) };
   return null;
 }
 

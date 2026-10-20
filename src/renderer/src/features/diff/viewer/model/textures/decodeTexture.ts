@@ -25,7 +25,7 @@ export type TextureDecoded = { kind: 'decoded'; bitmap: ImageBitmap; opaque: boo
 export async function decodeTexture({ bytes, name, longest, flipY }: TextureDecodeRequest): Promise<TextureDecoded> {
   const format = imageFormatOf(name);
   if (format === 'unsupported') return { kind: 'failed', problem: 'unsupportedFormat' };
-  const size = imageSizeOf(bytes, name);
+  const size = imageSizeOf(bytes, format);
   if (!size) return { kind: 'failed', problem: 'unreadable' };
   const tooLarge = sizeProblem(size);
   if (tooLarge) return { kind: 'failed', problem: tooLarge };
