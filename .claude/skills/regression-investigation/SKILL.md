@@ -1,13 +1,15 @@
 ---
 name: regression-investigation
-description: Investigate and fix a reported bug in Unity Version Control — Desktop with a focus on root cause, whether it is a regression or was wrong from the start, and why the tests didn't catch it. Use when a defect is reported, when it may be a regression, or when the origin of unexpected behavior is unclear.
+description: Investigate and fix a reported bug in Unity Version Control — Desktop, find why the tests let it through, and leave the harness able to catch that kind of bug from then on. Use when a defect is reported, when it may be a regression, or when the origin of unexpected behavior is unclear.
 ---
 
 # Regression investigation
 
-The goal is the fix **and** the explanation: why the defect happened, when it got in, and why the test suite, which
-is this repository's only memory (CLAUDE.md "Tests are the quality gate"), let it through. Evidence over guesses; a
-targeted fix and a test that pins it over broad patches or new rules.
+The fix is only the start. The real target is the harness: every bug that got through shows a hole in the test suite,
+which is this repository's only memory (CLAUDE.md "Tests are the quality gate"), and the investigation ends when that
+hole is closed, so this bug and the bugs like it fail a test before they reach a user again. To get there: why the
+defect happened, when it got in, and why the tests let it through. Evidence over guesses; tests that pin the behavior
+over broad patches or new rules.
 
 Follow CLAUDE.md "Delivering work" as for any change: branch first (`fix/<topic>`), small commits, the failing test
 committed before the fix, a clean-context review, a pull request.
@@ -85,14 +87,22 @@ For a regression, also: did the breaking change's pull request add or change tes
 - Read the final diff for anything unrelated or test-only.
 - Report any check you couldn't run, and why. Never claim a pass you didn't see.
 
-## 7. Lessons learned
+## 7. Harden the harness
 
-Pragmatic: things go wrong sometimes. Draw a lesson only when this incident clearly supports it, and keep it
-proportionate:
+This is what the investigation is for. From the gap found in step 4, close it for the *kind* of bug, not just this
+one input:
 
-- Usually the lesson is the test itself, or a fixture corrected to look like real `cm` output.
-- A small, clear harness improvement this incident proves (a fake that answers more like `cm`, a missing e2e step,
-  logic moved out of a component so it can be tested) can go in the same pull request, in its own commit.
+- Pin the behavior the user relies on, at the layer where it broke, not only the line that was wrong: if the
+  dialog showed nothing, a test that its content is the moved code, whatever the next refactor does underneath.
+- Look for siblings: other callers of the code that broke, other cases sharing the faulty assumption (other
+  formats, other layouts, the other side of a diff). A test for each one that can break the same way.
+- Correct what misled the tests: a fixture that doesn't look like real `cm` output, a fake that answers what `cm`
+  never would, a helper tested apart from the way it's really called.
+- Move logic that only a screen could check out of a component into a pure, tested `.ts` module, or add the step to
+  `npm run e2e` when only the real app shows it.
+- Each of these goes in the same pull request, in its own commit.
+
+Stay pragmatic: things go wrong sometimes, and the improvement must be proportionate to what this incident proves.
 - Don't add hard requirements, new mandatory rules or generic validation layers to CLAUDE.md or the docs for one
   bug. A recurring weakness, seen more than once, earns a rule; one incident earns a recommendation.
 
@@ -106,6 +116,6 @@ In the pull request (its template's sections) and to the user, concise and audit
 4. **History**: the commit or pull request that brought it in, if established.
 5. **Coverage gap**: which kind from step 4, and why.
 6. **Fix and tests**: what changed and which checks ran.
-7. **Lessons learned**: what was improved, what's only recommended, or why nothing broader is needed.
+7. **Harness hardened**: the tests that now catch this kind of bug, what is only recommended, and why nothing broader is needed if so.
 
 Name what's still open rather than presenting a guess as a fact.
