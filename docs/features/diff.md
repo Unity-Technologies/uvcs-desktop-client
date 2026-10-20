@@ -30,6 +30,26 @@ is noise for anyone reading a branch, and the web code review and GitHub show on
 not decide first whether the branch received merges (as the official client does to show its button): that is the
 same common-ancestor calculation `--integration` already makes inside its one command.
 
+## Comparing two branches, changesets or labels
+
+Two objects of a kind are compared from a selection of two (labels, changesets), or from one object's menu, "Compare
+with another branch…", "…changeset…", "…label…" (the `compare` menu word), which asks for the other with a picker and
+opens a range diff (`kind: 'range'`), the older side on the left: `cm diff <older> <newer>`, one command, cached as
+immutable.
+
+- **Branches** compare their heads, `cm diff cs:<head> cs:<head>` (`diffBranches`): `cm diff` takes no two branch
+  specs (it reads the second as a path). The heads are the ones the branch lists read (`pickBranch` hands back the
+  branch picked, its head too), so nothing is asked to resolve them; a head moved since that list was read is the
+  list's staleness, as for a branch's own diff (`branchHead`). The header names each branch in words, its full name and
+  head in the tooltip (the diff page's `sideNames`), as `cs:` specs alone wouldn't say which branch is which.
+- **Changesets** are picked among the newest (`recentChangesetsQuery`: the palette's `cm find changeset ... limit
+  2000`, one cache entry for both, never read again on focus), or any other by typing its number (`changesetChoices`):
+  a repository's ~280k changesets are never listed. The rows match on what they show (number, the comment's first line,
+  the branch's own name). A number typed is offered when the read can't rule it out, older than those read when the
+  read stopped at its limit; any other shows as "No changeset N", which can't be picked, so
+  no diff opens on a changeset that doesn't exist. While the list is read, or when it couldn't be (said in its
+  place), a number typed can still be picked.
+
 ## Reverting a file
 
 A file a changeset's diff changed (the diff page, a details panel's changed files: a changeset's, a label's, a code

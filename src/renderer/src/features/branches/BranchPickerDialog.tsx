@@ -1,3 +1,4 @@
+import type { Branch } from '@shared/domain/branch';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { CenteredSpinner } from '../../ui/Spinner';
@@ -11,22 +12,18 @@ interface PickBranchOptions {
   exclude?: string;
 }
 
-/** Asks the user to choose a branch. Resolves to its full name, or undefined if dismissed. */
-export function pickBranch(options: PickBranchOptions): Promise<string | undefined> {
-  return askDialog<string>((finish) => <BranchPickerDialog {...options} finish={finish} />);
+/** Asks the user to choose a branch. Resolves to it as the branch list read it (its head too), or undefined if dismissed. */
+export function pickBranch(options: PickBranchOptions): Promise<Branch | undefined> {
+  return askDialog<Branch>((finish) => <BranchPickerDialog {...options} finish={finish} />);
 }
 
-function BranchPickerDialog({ title, description, exclude, finish }: PickBranchOptions & { finish: (branch: string | undefined) => void }) {
+function BranchPickerDialog({ title, description, exclude, finish }: PickBranchOptions & { finish: (branch: Branch | undefined) => void }) {
   const { data } = useBranches();
   const branches = data?.filter((branch) => branch.name !== exclude);
 
   return (
     <Dialog title={title} description={description} width={520} onClose={() => finish(undefined)}>
-      {branches ? (
-        <BranchSearchList groups={[{ title: 'Branches', branches }]} onPick={(branch) => finish(branch.name)} />
-      ) : (
-        <CenteredSpinner />
-      )}
+      {branches ? <BranchSearchList groups={[{ title: 'Branches', branches }]} onPick={finish} /> : <CenteredSpinner />}
     </Dialog>
   );
 }

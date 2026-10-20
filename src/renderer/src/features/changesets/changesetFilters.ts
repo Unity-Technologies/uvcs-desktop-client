@@ -1,11 +1,13 @@
 import type { Changeset } from '@shared/domain/changeset';
 import type { QueryFilter } from '@shared/domain/query';
+import { shortBranchName } from '@shared/domain/specs';
 import type { Label } from '@shared/domain/label';
 import { EVERYONE, isEveryone, pickedOwners, type PeoplePick } from '../../lib/peopleFilter';
 import { longerRangeHint } from '../../lib/longerRangeHint';
+import { typedChangesetNumber } from '../../lib/changesetNumber';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { sinceDateFor, type SincePreset } from '../../lib/sincePresets';
-import { formatCount } from '../../lib/text';
+import { firstLine, formatCount } from '../../lib/text';
 import { userFilterTexts } from '../../lib/userName';
 import type { ViewFilters } from '../../lib/viewFilters';
 
@@ -121,6 +123,46 @@ export function matchesSearch(changeset: Changeset, search: string, labels: read
     [String(changeset.id), changeset.comment, ...labels.map((label) => label.name), changeset.branch, ...userFilterTexts(changeset.owner)],
     search,
   );
+}
+
+/**
+ * A changeset a picker offers: one of those read, with its row; one typed by number that the read can't rule out
+ * (older than those read); or, `missing`, a number typed that names no changeset, offered but not picked.
+ */
+export interface ChangesetChoice {
+  id: number;
+  changeset?: Changeset;
+  missing?: true;
+}
+
+/**
+ * The changesets a changeset picker offers for `search`, leaving out `exclude` (the one being compared): the newest
+ * read (`recent`, at most `readLimit` of them; undefined while unread or when the read failed) whose row matches it,
+ * and first the one whose number was typed (`1234`, `cs:1234`), so any changeset is reachable without listing them all.
+ */
+export function changesetChoices(recent: readonly Changeset[] | undefined, readLimit: number, exclude: number, search: string): ChangesetChoice[] {
+  const typed = typedChangesetNumber(search);
+  const matching = (recent ?? [])
+    .filter((changeset) => changeset.id !== exclude && changeset.id !== typed && matchesWordFilter(changesetRowTexts(changeset), search))
+    .map((changeset) => ({ id: changeset.id, changeset }));
+  if (typed === undefined || typed === exclude) return matching;
+  return [typedChoice(typed, recent, readLimit), ...matching];
+}
+
+/** What a picker's row shows: the number, the comment's first line, the branch's own name. */
+function changesetRowTexts(changeset: Changeset): string[] {
+  return [String(changeset.id), firstLine(changeset.comment), shortBranchName(changeset.branch)];
+}
+
+/** A number typed: its row when read; else whether a changeset can have it, from what the read covered. */
+function typedChoice(id: number, recent: readonly Changeset[] | undefined, readLimit: number): ChangesetChoice {
+  const read = recent?.find((changeset) => changeset.id === id);
+  if (read) return { id, changeset: read };
+  if (!recent || recent.length === 0) return { id };
+  // Older than a read that stopped at its limit. A newer one would be checked in since the read, which is read again
+  // as new changesets come (`refreshScopes`: the changeset lists refresh on check-ins, the user's and others').
+  const olderThanRead = recent.length >= readLimit && id < Math.min(...recent.map((changeset) => changeset.id));
+  return olderThanRead ? { id } : { id, missing: true };
 }
 
 /** What to try when nothing shows: the filters only look through what the time range read. */

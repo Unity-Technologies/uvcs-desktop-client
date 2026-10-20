@@ -19,6 +19,11 @@ export function absolutePath(workspacePath: string, relativePath: string): strin
   return `${workspacePath}${separator}${relativePath.split('/').join(separator)}`;
 }
 
+/** The menu entry that undoes `count` changes: "Undo changes…" for one, "Undo 3 changes…" for several. */
+export function undoChangesLabel(count: number): string {
+  return count === 1 ? 'Undo changes…' : `Undo ${formatCount(count)} changes…`;
+}
+
 /** Undoes the controlled changes after confirming, shelving them first when the user ticks the backup option. */
 export async function undoChanges(workspacePath: string, changes: PendingChange[]): Promise<void> {
   const controlled = changes.filter(isControlled);

@@ -36,8 +36,10 @@ export function ActionDropdownMenu({ entries, align = 'end', children, open, onO
           sideOffset={4}
           onCloseAutoFocus={(event) => focusAfterMenu(event, onCloseAutoFocus)}
           // React bubbles events out of portals to the trigger's ancestors: an item picked (Enter clicks it too) must not
-          // also click the row the menu belongs to (the palette's Delete… opened the branch as well).
+          // also click the row the menu belongs to (the palette's Delete… opened the branch as well), nor press it (a
+          // changelist's "…" menu selected and folded the changelist).
           onClick={(event) => event.stopPropagation()}
+          onMouseDown={(event) => event.stopPropagation()}
         >
           <MenuEntries entries={entries} primitives={primitives} />
         </DropdownMenu.Content>
