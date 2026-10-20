@@ -1,7 +1,7 @@
 import type { ContentSource, RepositoryVersion } from '@shared/domain/content';
 import type { ExternalApps } from '@shared/domain/externalApps';
 import { openInEditor, openWithDefaultApp } from '../../../components/externalApps/externalAppOperations';
-import { openRevisionWithEntries } from '../../../components/externalApps/openWithMenu';
+import { openRevisionWithEntries, type OpenIn } from '../../../components/externalApps/openWithMenu';
 import { menuAction } from '../../../components/menuWords';
 import { SEPARATOR, type MenuEntry, type Submenu } from '../../../lib/actions';
 import { extensionOf, fileNameOf } from '../../../lib/text';
@@ -20,9 +20,6 @@ export interface VersionOpeningContext {
   /** "Yours" is the workspace file (a merge into the workspace, an update), not the destination's version on the server. */
   yoursInWorkspace: boolean;
 }
-
-/** Opens a version in an editor (by its id), or with the file's default app for `null`. */
-export type OpenIn = (editorId: string | null) => Promise<unknown>;
 
 /** A version of a conflicting file that can be opened in another app, named as the merge names it. */
 export interface OpenableVersion {
