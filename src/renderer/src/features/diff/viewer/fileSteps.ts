@@ -1,11 +1,12 @@
 import { createContext, useMemo, useRef } from 'react';
 
-/** Where a diff opens after a step from the file beside it: at its first change going down, its last going up. */
+/** Where a view opens after a step from the file beside it: at its first step going down, its last going up. */
 export type Arrival = 'first' | 'last';
 
 /**
- * The files of the list beside a diff, for its change navigation to go on past the first and last change, as the
- * official client does (`useChangeNavigation`). A list offers it around its diff (`FileStepsContext`).
+ * The files of the list beside a view (a diff, a conflicting file), for its navigation to go on past the first and last
+ * step (a change, a conflict), as the official client does (`useStepNavigation`). A list offers it around the view
+ * (`FileStepsContext`).
  */
 export interface FileSteps {
   /** Whether the list has a file after (1) or before (-1) the one shown. */

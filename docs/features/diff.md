@@ -182,7 +182,9 @@ or deleted file) is one change, "1 of 1"; a file with none to step through (an i
 keeps the arrows, "No changes", so stepping through the list never stops there. It steps through the files as the list
 shows them: in a tree, those in a closed folder are skipped. The list itself, its order and its List/Tree layout, are
 every list of changed files' (ARCHITECTURE.md "Lists of changed files"); a folder selected in it shows how many changes
-it holds instead of a diff.
+it holds instead of a diff. The stepping itself (the position, the keys, the arrival from a file beside it) is
+`useStepNavigation`, given the steps and a `StepView`: `useChangeNavigation` is it over a diff's change regions, and the
+merge page steps through conflicts with it (merge.md "Stepping through conflicts").
 
 ## Moved code
 
@@ -306,6 +308,56 @@ An image's bytes cross IPC as binary (`FileContent.image`, a `Uint8Array` and it
 most) and are painted from a blob URL that lives while it's shown (`useImageUrl`), never a data URL (35 MB of text for
 a 25 MB PNG, decoded again at every paint). The URL is revoked as the image changes, so what is painted is only ever
 the decode of the image's current URL (`shownDecodeState`): an `<img>` still given the one before fails to load.
+
+## Unity's texture formats
+
+TGA, TIFF, Photoshop (PSD and PSB), OpenEXR and Radiance HDR show in the image diff like any other image: every mode,
+the info strip, the pixel inspector, and the merge page's version cards (`WholeFileChoice`). Main reads them as images
+of their own type (`DECODED_IMAGE_TYPES`, by extension, within `MAX_IMAGE_BYTES` as every image), and the renderer
+makes each into an image the browser paints before anything shows it (`usePaintableImage`):
+
+- **Off the UI thread**: in the image decoding worker (`imageDecoding.worker`, a `paint` request; `paintOffThread`
+  in `imageDecodingSession`), never on the page's thread, where a 4K PSD or EXR would hold a paint; a worker that can't
+  start or dies fails the image. The session hands the worker at most two requests at a time, a texture's or an
+  image's, from one queue (it bounds the bytes in the worker's hands; two may be under way at once, as a texture's
+  decode awaits `createImageBitmap`); an image asked again while in hand is asked once, and one every viewer let go of
+  (`release`, in the effect's cleanup) before its turn is never handed over, so stepping through files queues only the
+  one on screen. The decoders are the textures' own (`lib/images`: `decodePixels`, three's loaders for TGA, TIFF, EXR
+  and HDR, `readPsd` for Photoshop), loaded only in the worker. A second worker for images was tried and set aside: a
+  second thread and a second copy of three's loaders, and a client that repeated the decoding worker's line for line.
+  What sharing costs, accepted for that: one queue, so a model's textures and an image diff wait for each other; and
+  one failure, so a parser that hangs on a file holds both, and a worker that dies fails textures and images alike
+  in that window until it reloads.
+- **By content first** (`imageFormatOfContent`: a PNG saved as `.tga` paints as the PNG it is, told on the page with
+  no trip to the worker: `needsDecoding`), else by its type; its size read from the header and refused past 16384 px
+  a side or 8192² pixels before decoding (`sizeProblem`, the model diff's limits, where a texture is drawn at 2048 px at
+  most). What an image costs at its size, 4 bytes a pixel each (256 MB at the limit): in the worker, its RGBA pixels and
+  its BMP while it is written (an EXR or HDR holds 16 bytes a pixel of floats first: 1 GB at the limit); on the page,
+  the decoded `<img>`, and, once Differences or the pixel inspector read it, its pixels (`rasterize`); the BMP itself
+  stays in a Blob, out of the page's heap. A browser image under the image cap has no pixel limit today.
+- **As a BMP** (`bmpOf`): the decoded pixels are written as a 32-bit BMP with an alpha mask, which `<img>` reads as it
+  is: no compression to spend time on, and a see-through pixel keeps its color. It crosses back from the worker as a
+  Blob (`PaintableImage`), a handle, and the page keeps only its URL. A PNG made through a canvas was set aside: the
+  canvas premultiplies alpha, losing the color of every transparent pixel, and encoding takes long. Chromium keeps a BMP
+  whose alpha is 0 in every pixel transparent, as the texture is (checked in the app: some BMP readers take such an
+  image as opaque, guessing its writer left alpha unset).
+- **High dynamic range** (EXR, HDR) shows as the model diff's textures do: clamped to 0-1 and encoded as sRGB. The info
+  strip says so ("HDR", its tooltip saying it shows clamped: `HIGH_DYNAMIC_RANGE_TIP`), and the pixel inspector tells
+  the colors shown, "as shown", not the file's values. 16-bit channels show as 8 bits.
+- **What can't be painted** (a PSD saved without "Maximize Compatibility" or in CMYK, Lab, indexed or 32 bits, a header
+  past the limit, a damaged file; `imagePairView`): a version that can't, beside one that can, leaves that one shown
+  alone, as an added or deleted image is, under a line saying which version is left out and why (`unpaintedNotice`):
+  a PSD saved again without "Maximize Compatibility" still shows as it was. When none can, an image past the pixel
+  limit reads as one past the byte limit ("This image is too large to preview", the sizes, and "Open file" for a
+  workspace file: `TOO_LARGE_TITLES`, `sizeChange`, `OpenFileButton`, shared with `NothingToDiff`), and any other
+  shows the binary diff's sizes and why, in the texture problems' words (`undecodedDescription`,
+  `imageProblemWords`). The header's mode switch stays over these: it is chosen before the versions decode. A merge
+  card shows its file icon with why in its tooltip (`undecodedTip`).
+- **The byte cap**: a PSD over `MAX_IMAGE_BYTES` (40 MB) is "too large to preview", as any image, though Photoshop files
+  often pass it. To do: the model diff reads its textures up to 256 MB through another path (`MAX_TEXTURE_FILE_BYTES`,
+  within the read's `MAX_MODEL_BYTES`); the image diff could read a texture as large, once a version's bytes crossing
+  IPC whole stops being the limit.
+- Nothing is kept once a viewer goes: going back to a file decodes it again.
 
 ## Images written as text
 

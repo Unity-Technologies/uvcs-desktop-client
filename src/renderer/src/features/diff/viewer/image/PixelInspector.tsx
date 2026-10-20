@@ -78,6 +78,8 @@ export function PixelInspector({ oldImage, newImage, frame, anchor, panZoom, sta
       ) : (
         <Swatch rgba={sample.new ?? sample.old} />
       )}
+      {/* A high dynamic range image is inspected as it shows, clamped: its file holds other values. */}
+      {(oldImage?.highDynamicRange || newImage?.highDynamicRange) && <span className={styles.faint}>as shown</span>}
     </div>
   );
 }

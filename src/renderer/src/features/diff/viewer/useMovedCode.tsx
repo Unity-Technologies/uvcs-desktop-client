@@ -4,6 +4,7 @@ import type { ChangedLine, DiffSide, DisplayMeta } from './changeBlocks';
 import { scrollToChange } from './changeView';
 import type { ComparisonMethod } from './comparisonMethod';
 import type { DiffLayout } from './diffPreferencesStore';
+import { changeRows } from './lineMarksCss';
 import { detectMovedBlocks, moveContaining, type MovedBlock } from './movedBlocks';
 import { MovedCode } from './MovedCode';
 import { openMovedCodeDialog } from './MovedCodeDialog';
@@ -59,7 +60,7 @@ export function useMovedCode({ diff, comparisonMethod, fileName, layout, contain
     const lines = linesOf(move, side);
     stopScrolling.current?.();
     stopScrolling.current = scrollToChange(container, { index: 0, lines, newStart: move.additions.start }, virtualizer);
-    flash.light(lines);
+    flash.light(changeRows(lines));
   };
 
   return <MovedCode containerRef={containerRef} root={root} virtualizer={virtualizer} moves={moves} layout={layout} hovered={shownHovered} onHover={setHovered} onGoTo={goTo} onCompare={(move) => openMovedCodeDialog({ move, meta: diff, fileName, comparisonMethod })} />;
