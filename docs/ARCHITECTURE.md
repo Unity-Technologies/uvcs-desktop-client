@@ -682,6 +682,9 @@ renderer/src/
 `ui/` either): what they need from there is handed to them (`setAvatarPictureSource`) or lives a tier up
 (`rendererTiers.test.ts` checks it).
 
+A component decides nothing: what it shows, enables, orders or sizes from data is computed by a pure, tested `.ts`
+module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests are the quality gate").
+
 - **One layout from the first frame**: a view or page paints its final layout at once and keeps it while it loads,
   when nothing is there and when filters hide everything; only what fills it changes.
   - Its header (title, count, actions, filters, switches) always shows. A filter over what is read waits, disabled,

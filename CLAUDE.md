@@ -173,8 +173,13 @@ quality: **if the tests pass, the app works as specified**. Test what matters, n
 Query, Pierre), or implementation details (private helpers, call order nobody relies on). A test should fail only
 when something a user or another layer relies on changes; one that breaks on every refactor is noise.
 
-Components (`.tsx`) aren't unit-tested (vitest runs `*.test.ts` only): keep their logic in pure `.ts` modules or hooks
-built on them, and verify what's on screen with Playwright.
+**A component decides nothing.** Components (`.tsx`) aren't unit-tested (vitest runs `*.test.ts` only, and component
+tests can't reach Pierre's shadow DOM, layout or canvas, where the risk is), so every choice made from data lives in a
+pure `.ts` module, or a hook built on one, with its tests: which state or case shows (empty, identical, error, too
+large), which items, labels and counts, what is enabled, ordering and filtering, sizes and positions, keyboard and
+selection. The component maps that result to JSX and wires events; only presentational conditionals stay (`open &&`,
+a class from a prop). The idiom: `diffBodyOf` (`features/diff/viewer/diffBody.ts`) names what the diff viewer shows,
+and the viewer only switches on it. What's on screen is verified with Playwright.
 
 **Super fast.** The number of tests doesn't matter; the time they take does (today about 5,200 tests in 7 s).
 The suite runs after every change, so it must take seconds, not minutes. A test never needs UVCS infrastructure: no
