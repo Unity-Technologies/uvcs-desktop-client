@@ -168,6 +168,13 @@ describe('mergeItemMenu', () => {
     expect(fakeApi.argsOf('system.openPath')).toEqual([['/ws/art/hero.psd']]);
   });
 
+  it("opens a binary conflict's incoming version only from \"Open version\", where it opens with its default app, and still saves it", () => {
+    const menu = menuOf([conflict('art/hero.psd', { isBinary: true })]);
+    expect(ids(menu)).not.toContain('openRevision');
+    expect(ids(menu)).not.toContain('openRevisionWith');
+    expect(ids(menu)).toEqual(expect.arrayContaining(['openVersion', 'saveAs']));
+  });
+
   it('opens the destination version as yours when merging into a branch on the server, where no workspace file is it', async () => {
     fakeApi.answer('history.openRevision', () => undefined);
     const serverLabels: MergeLabels = { ...labels, roles: SERVER_ROLES };
