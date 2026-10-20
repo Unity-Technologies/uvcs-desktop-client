@@ -47,4 +47,9 @@ describe('changePreviewOf', () => {
   it('says so when only the permissions change', () => {
     expect(changePreviewOf(change('permissions'), contributors, merge)).toEqual({ kind: 'permissionsOnly' });
   });
+
+  it('has no versions to compare when the plan named no source and destination, and never calls that a permissions change', () => {
+    for (const kind of ['added', 'changed', 'deleted', 'moved'] as const) expect(changePreviewOf(change(kind), undefined, merge)).toEqual({ kind: 'noVersions' });
+    expect(changePreviewOf(change('permissions'), undefined, merge)).toEqual({ kind: 'permissionsOnly' });
+  });
 });
