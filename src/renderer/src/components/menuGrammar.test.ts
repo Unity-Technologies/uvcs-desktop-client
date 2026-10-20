@@ -26,6 +26,7 @@ import { revisionMenu } from '../features/browseRepository/revisionMenu';
 import { changesetMenu } from '../features/changesets/changesetMenu';
 import { codeReviewMenu } from '../features/codeReviews/codeReviewMenu';
 import { diffEntryMenu } from '../features/diff/diffEntryMenu';
+import { restoreMenuEntries } from '../features/diff/restoreMenuEntries';
 import { fileMenu } from '../features/files/fileMenu';
 import { PendingChangesIndex } from '../features/files/itemStatus';
 import { historyMenu } from '../features/history/historyMenu';
@@ -160,6 +161,9 @@ const mergeDirectoryConflict = {
   conflict: { type: 'evilTwin', destination: { path: '/src/shared' }, source: { path: '/src/shared' } },
 } as never;
 
+const deletedEntry = { status: 'deleted', path: 'src/Enemy.cs', itemType: 'file', revisionId: -1, baseRevisionId: 18, repository } as const;
+const deletedFolder = { ...deletedEntry, path: 'docs', itemType: 'directory', baseRevisionId: 24 } as const;
+
 const MENUS: Record<string, () => MenuEntry[]> = {
   branch: () => branchMenu(ws, [branch], '/main'),
   currentBranch: () => branchMenu(ws, [branch], branch.name),
@@ -182,6 +186,8 @@ const MENUS: Record<string, () => MenuEntry[]> = {
       { kind: 'revision', revision: { revisionId: 40, changesetId: 5, itemType: 'file', repository, idSpec: 'revid:40@game@local', date: '' } } as never,
     ]),
   diffEntry: () => diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [{ path: '/src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39, repository } as never], { statusOf: () => 'unreviewed', toggle: () => {} } as never),
+  deletedDiffEntry: () => diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [deletedEntry], undefined, restoreMenuEntries(ws, [deletedEntry], repository)),
+  deletedDiffEntries: () => diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [deletedEntry, deletedFolder], undefined, restoreMenuEntries(ws, [deletedEntry, deletedFolder], repository)),
   mergeConflict: () => mergeItemMenu([mergeConflict], mergeContext),
   mergeChange: () => mergeItemMenu([{ kind: 'change', key: 'change:0', path: 'src/c.ts', change: { kind: 'changed', path: '/src/c.ts' } }], mergeContext),
   mergeDirectoryConflict: () => mergeItemMenu([mergeDirectoryConflict], mergeContext),
