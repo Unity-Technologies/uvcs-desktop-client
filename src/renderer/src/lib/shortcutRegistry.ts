@@ -147,7 +147,7 @@ export const SHORTCUTS = {
 
   merge: { area: 'Merge', label: 'Merge', keys: ['mod+enter'] },
   // The diff's keys: a conflict is to the merge page what a change is to a diff.
-  nextConflict: { area: 'Merge', label: 'Next conflict, on to the next file that needs you', keys: ['alt+down', 'f7'] },
+  nextConflict: { area: 'Merge', label: 'Next conflict', keys: ['alt+down', 'f7'] },
   previousConflict: { area: 'Merge', label: 'Previous conflict', keys: ['alt+up', 'shift+f7'] },
   resolveAllInTool: { area: 'Merge', label: 'Resolve the conflicts in the merge tool, one by one', keys: ['mod+shift+enter'] },
   stopResolvingInTool: { area: 'Merge', label: 'Stop resolving one by one', keys: ['escape'] },
