@@ -86,7 +86,8 @@ Base, the version before either side changed it, only for a file that has one: n
 is cut off. Below, short one-line views: "Conflicts" with the count left, then "Changes" (the destination now → after
 the merge), "Yours", "Incoming" and "Base". Conflicts read as labeled blocks instead of conflict markers
 (`conflictHunkCss` over Pierre's view): a header naming the destination's side with Keep yours / Keep incoming / Keep both
-/ Keep base for that conflict, its lines, the source's label and its lines. The markers hold only the sides: the
+/ Keep base for that conflict (in a narrow pane just Yours | Incoming | Both | Base, a container query), its lines, the
+source's label and its lines. The markers hold only the sides: the
 automatic merge keeps each conflict's base (`ConflictDocument.conflicts`), and a conflict left finds its own by its
 sides, in order (`conflictBases`), so Keep base is offered wherever the sides are still the merge's, not on one edited
 by hand, and not in a file with no base. While a tool has the file, a banner says so (Bring to
