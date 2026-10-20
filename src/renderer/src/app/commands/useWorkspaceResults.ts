@@ -6,6 +6,7 @@ import { workspaceMenu } from '../home/homeMenus';
 import { useSettings } from '../settings/useSettings';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
 import { useWorkspaceList } from '../workspace/workspaceQueries';
+import { workspaceOpener, type OpenWorkspaceIn } from '../workspace/workspaceWindowChoice';
 import type { SearchGroup, SearchResult } from './searchResults';
 
 /** Other workspaces to switch to: the recent ones, or every workspace whose name matches `term`. */
@@ -15,7 +16,7 @@ export function useWorkspaceResults(currentPath: string | null, term: string): S
   const openWorkspace = useOpenWorkspace();
 
   const results = useMemo(
-    () => workspaceResults(workspaces ?? [], recentWorkspacePaths, currentPath, term, openWorkspace),
+    () => workspaceResults(workspaces ?? [], recentWorkspacePaths, currentPath, term, workspaceOpener(openWorkspace)),
     // `openWorkspace` is a fresh function every render but always does the same.
     [workspaces, recentWorkspacePaths, currentPath, term],
   );
@@ -29,7 +30,7 @@ export function workspaceResults(
   recentPaths: readonly string[],
   currentPath: string | null,
   term: string,
-  open: (path: string) => void,
+  open: OpenWorkspaceIn,
 ): SearchResult[] {
   const others = workspaces.filter((workspace) => workspace.path !== currentPath);
   const shown = term
@@ -38,7 +39,7 @@ export function workspaceResults(
   return shown.map((workspace) => workspaceResult(workspace, term, open));
 }
 
-function workspaceResult(workspace: WorkspaceSummary, term: string, open: (path: string) => void): SearchResult {
+function workspaceResult(workspace: WorkspaceSummary, term: string, open: OpenWorkspaceIn): SearchResult {
   return {
     id: `workspace:${workspace.guid}`,
     icon: Layers,
@@ -48,6 +49,7 @@ function workspaceResult(workspace: WorkspaceSummary, term: string, open: (path:
     detailMatches: [],
     quality: term ? fuzzyMatchQuality(workspace.name, term) : undefined,
     menu: () => workspaceMenu(workspace, open),
-    run: () => open(workspace.path),
+    run: () => open(workspace.path, 'here'),
+    runInNewWindow: () => open(workspace.path, 'newWindow'),
   };
 }
