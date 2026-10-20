@@ -1,8 +1,9 @@
 import type { FileContent } from '@shared/domain/content';
-import type { RefObject } from 'react';
+import { useContext, type RefObject } from 'react';
 import { EmptyState } from '../../../ui/EmptyState';
 import { CenteredSpinner } from '../../../ui/Spinner';
 import { FileDiffViewer } from '../../diff/viewer/FileDiffViewer';
+import { FileStepsContext } from '../../diff/viewer/fileSteps';
 import { LoadedFileDiff } from '../../diff/viewer/LoadedFileDiff';
 import type { StepView } from '../../diff/viewer/useStepNavigation';
 import type { MergeLabels } from '../mergeDescription';
@@ -24,12 +25,15 @@ interface ConflictBodyProps {
   editing: boolean;
   /** Receives the conflicts view's side of stepping through them (`ConflictNavigator`). */
   conflictViewRef: RefObject<StepView | null>;
+  /** The Changes diff steps through its changes; not while the conflict arrows stand for the file (`justDecided`). */
+  changeArrows: boolean;
   onDecide: (decision: FileConflictDecision) => void;
 }
 
 /** Under a conflicting file's toolbar: its view, the hand editor, or a binary's versions to keep. */
-export function ConflictBody({ workspacePath, state, labels, view, editing, conflictViewRef, onDecide }: ConflictBodyProps) {
+export function ConflictBody({ workspacePath, state, labels, view, editing, conflictViewRef, changeArrows, onDecide }: ConflictBodyProps) {
   const { file, decision, contents } = state;
+  const fileSteps = useContext(FileStepsContext);
 
   if (state.status === 'loading') return <CenteredSpinner />;
   if (state.status === 'error') return <EmptyState title="Couldn't read this file" description={state.error?.message} />;
@@ -67,18 +71,21 @@ export function ConflictBody({ workspacePath, state, labels, view, editing, conf
       );
     case 'changes':
       return (
-        <LoadedFileDiff
-          workspacePath={workspacePath}
-          // The merged result lives in memory: nothing to read it from, nor to edit in place.
-          contents={{ original: file.destination, modified: { kind: 'empty' }, left: contents.destination, right: textContent(mergedText(state) ?? '') }}
-          fileName={file.path}
-          title={
-            <span className={styles.diffTitle} data-tip={labels.destination}>
-              {labels.roles.destination.name} now → after the merge
-            </span>
-          }
-          identicalDescription={`The merge leaves ${labels.roles.destination.version} of this file as it is.`}
-        />
+        <FileStepsContext.Provider value={changeArrows ? fileSteps : null}>
+          <LoadedFileDiff
+            workspacePath={workspacePath}
+            // The merged result lives in memory: nothing to read it from, nor to edit in place.
+            contents={{ original: file.destination, modified: { kind: 'empty' }, left: contents.destination, right: textContent(mergedText(state) ?? '') }}
+            fileName={file.path}
+            title={
+              <span className={styles.diffTitle} data-tip={labels.destination}>
+                {labels.roles.destination.name} now → after the merge
+              </span>
+            }
+            identicalDescription={`The merge leaves ${labels.roles.destination.version} of this file as it is.`}
+            stepsThroughChanges={changeArrows}
+          />
+        </FileStepsContext.Provider>
       );
     case 'destination':
     case 'source':

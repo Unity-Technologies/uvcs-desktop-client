@@ -60,13 +60,15 @@ interface LoadedFileDiffProps {
   compareControls?: ReactNode;
   /** Discarding changes brought the workspace file back to its loaded revision. */
   onMatchesBase?: () => void;
+  /** Steps through its changes with the header's arrows and keys (`useChangeNavigation`); off where a view around it steps. */
+  stepsThroughChanges?: boolean;
 }
 
 /**
  * One loaded pair of file versions, with the toolbar that fits how it's shown. A workspace file shown against its own
  * past is typed into directly, like in any editor: Discard and Save show up as soon as it has unsaved edits.
  */
-export function LoadedFileDiff({ workspacePath, contents, fileName, title, identicalDescription, compareControls, onMatchesBase }: LoadedFileDiffProps) {
+export function LoadedFileDiff({ workspacePath, contents, fileName, title, identicalDescription, compareControls, onMatchesBase, stepsThroughChanges = true }: LoadedFileDiffProps) {
   const { comparisonMethod, imageMode, modelMode, representations, setComparisonMethod, setRepresentation } = useDiffPreferences();
   const editablePath = canEditInPlace(contents.original, contents.modified) ? contents.modified.path : null;
   const sides = useMemo(
@@ -110,7 +112,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   // Beside a list of files, every diff keeps the arrows, to go on to the next file whatever this one is.
   const frame = useRef<HTMLDivElement>(null);
   const changeView = useRef<ChangeView>(null);
-  const navigation = useChangeNavigation(viewControls && !wholeFile ? (diffs.current?.meta ?? null) : null, changeView, frame, fileName);
+  const navigation = useChangeNavigation(stepsThroughChanges && viewControls && !wholeFile ? (diffs.current?.meta ?? null) : null, changeView, frame, fileName);
   const navigator = goesSomewhere(navigation) && <ChangeNavigator navigation={navigation} keysWhileTyping />;
   const openEditable = editablePath === null ? undefined : () => void openFile(absolutePath(workspacePath, editablePath));
   const discards = diffDiscards(workspacePath, buffer, onMatchesBase);

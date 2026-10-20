@@ -163,7 +163,10 @@ end marker). Every conflict shown is one still to decide: resolving one with its
 text and the count, and the next move goes on to the one that took its place, or back to the one before it
 (`ConflictPlace`: the screen can't tell, with every conflict in view), until the user scrolls the view. A binary waiting for the version to keep is
 one conflict, "1 of 1"; a file that couldn't be read has none, and its arrows still go on. The views that are diffs
-(Changes, Yours, Incoming) keep their own arrows through their changes, and the base none.
+(Changes, Yours, Incoming) keep their own arrows through their changes, and the base none. But a file whose last
+conflict is resolved while it shows keeps the conflict arrows over its Changes, "No conflicts", so the next move goes
+straight on to the next file that waits instead of through the changes the merge makes; picking the Changes view
+gives the diff its arrows back (`justDecided`, LoadedFileDiff's `stepsThroughChanges`).
 
 Past the last or first conflict, the arrows go on to the next file's first conflict or the previous file's last, as
 the list shows them, but only to the files still waiting for the user: those decided or merged automatically are

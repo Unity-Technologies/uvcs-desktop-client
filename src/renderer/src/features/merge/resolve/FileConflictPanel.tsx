@@ -14,7 +14,7 @@ import { MergeToolButton, type ConflictToolActions } from '../mergeTools/MergeTo
 import { MergeToolOpenBanner } from '../mergeTools/MergeToolOpenBanner';
 import { fileConflictStatus, fileConflictTool } from '../mergeStatus';
 import { chosenConflictChoice, decisionFor, hasConflicts, type ConflictChoice } from './conflictChoices';
-import { conflictsToStep, editInAppUnavailable, effectiveView, hasBase, rendersVersions, type PanelView } from './conflictPanelView';
+import { conflictsToStep, editInAppUnavailable, effectiveView, hasBase, justDecided, rendersVersions, type PanelView } from './conflictPanelView';
 import { ConflictNavigator } from './ConflictNavigator';
 import type { FileConflictDecision } from './fileConflictDecision';
 import { KeepChoices } from './KeepChoices';
@@ -54,7 +54,10 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
   const { source, destination } = labels.roles;
   const panelRef = useRef<HTMLDivElement>(null);
   const conflictView = useRef<StepView>(null);
-  const conflictCount = editing ? null : conflictsToStep(view, state);
+  // Its last conflict resolved here, the file keeps the conflict arrows: they go straight on to the next file.
+  const [sawConflicts, setSawConflicts] = useState(false);
+  if (!sawConflicts && state.remainingConflicts > 0) setSawConflicts(true);
+  const conflictCount = editing ? null : conflictsToStep(view, state, justDecided(sawConflicts, chosenView, state));
   const conflictsOnScreen: StepView = {
     isShown: () => conflictView.current?.isShown() ?? false,
     reveal: (index) => conflictView.current?.reveal(index),
@@ -158,6 +161,7 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
           view={view}
           editing={editing}
           conflictViewRef={conflictView}
+          changeArrows={conflictCount === null}
           onDecide={onDecide}
         />
       </Suspense>

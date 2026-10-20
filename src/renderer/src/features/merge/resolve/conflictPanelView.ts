@@ -47,14 +47,25 @@ export function textToEdit(state: FileConflictState): string {
 
 /**
  * How many conflicts the panel's arrows step through in `view` (`ConflictNavigator`): those left in its text, or one
- * for a binary still waiting for the version to keep; none in a file that couldn't be read, which still steps on to
- * the next file. Null where the view steps through its own changes (a diff), and in the base or a file still loading.
+ * for a binary still waiting for the version to keep; none in a file that couldn't be read, nor in one just decided
+ * while shown (`decidedHere`, `justDecided`), whose arrows go straight on to the next file instead of through the
+ * changes the merge makes. Null where the view steps through its own changes (a diff), and in the base or a file still
+ * loading.
  */
-export function conflictsToStep(view: PanelView, state: FileConflictState): number | null {
+export function conflictsToStep(view: PanelView, state: FileConflictState, decidedHere: boolean): number | null {
   if (view === 'choice') return state.resolution ? 0 : 1;
   if (state.status === 'error') return 0;
   if (view === 'conflicts' && state.status === 'ready') return state.remainingConflicts;
+  if (view === 'changes' && decidedHere) return 0;
   return null;
+}
+
+/**
+ * Whether a file was just decided while shown: it had conflicts (`sawConflicts`), has none left, and the user didn't
+ * pick its Changes view (`chosen`), whose diff then steps through the changes the merge makes.
+ */
+export function justDecided(sawConflicts: boolean, chosen: PanelView | undefined, state: FileConflictState): boolean {
+  return sawConflicts && state.remainingConflicts === 0 && chosen !== 'changes';
 }
 
 /**
