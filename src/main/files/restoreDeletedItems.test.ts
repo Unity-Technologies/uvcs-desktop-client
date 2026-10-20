@@ -55,7 +55,7 @@ describe('restoreDeletedItems', () => {
     const command = { commandLine: 'undelete revid:18 /ws/src/Old.cs', exitCode: 1, output: '', logEntryId: 1 };
     items.cm.mockRejectedValueOnce(new CmError("The item 35 is already loaded on tree on path '/src/Enemy.cs'.", command));
     const restoring = restoreDeletedItems(WORKSPACE, repository, [{ ...enemy, path: 'src/Old.cs' }], items, context());
-    await expect(restoring).rejects.toMatchObject({ message: 'src/Old.cs is already in the workspace, at src/Enemy.cs.', command });
+    await expect(restoring).rejects.toMatchObject({ message: 'The workspace already has this item, at src/Enemy.cs.', command });
   });
 
   it('stops at the first failure', async () => {

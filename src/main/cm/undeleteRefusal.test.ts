@@ -2,15 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { undeleteRefusal } from './undeleteRefusal';
 
 describe('undeleteRefusal', () => {
-  it('says where the workspace already has the item, in its own words', () => {
+  it('says where the workspace already has the item, whatever path it was asked to go to', () => {
     expect(undeleteRefusal("The item 35 is already loaded on tree on path '/src/Enemy.cs'.", 'src/Old/Enemy.cs')).toBe(
-      'src/Old/Enemy.cs is already in the workspace, at src/Enemy.cs.',
+      'The workspace already has this item, at src/Enemy.cs.',
     );
   });
 
   it('reads paths with spaces, accents and quotes', () => {
     expect(undeleteRefusal("The item 7 is already loaded on tree on path '/notes/Café 'menú'.txt'.\n", 'a.txt')).toBe(
-      "a.txt is already in the workspace, at notes/Café 'menú'.txt.",
+      "The workspace already has this item, at notes/Café 'menú'.txt.",
     );
   });
 

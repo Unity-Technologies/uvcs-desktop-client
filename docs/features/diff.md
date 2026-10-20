@@ -170,7 +170,7 @@ it deletes is still in the workspace (`diffEntryMenu` without `workspaceReposito
   also refuses a revision of another repository than the workspace's (read from the status header the window's info
   shares, `headers.status`), whatever the renderer asked: the bare id would name another item there.
 - `cm`'s own refusals read in the app's words (`undeleteRefusal`): an item the workspace still loads ("The item 35
-  is already loaded on tree on path '/src/a.cs'" becomes "… is already in the workspace, at src/a.cs"), a folder
+  is already loaded on tree on path '/src/a.cs'" becomes "The workspace already has this item, at src/a.cs"), a folder
   holding an xlink, a place taken after the check.
 - Not handled: "Restore to…" a path under an xlink. `cm` looks the bare id up in the xlinked repository there, where
   it may name another item or none; knowing where xlinks are would take a `cm` read of its own.

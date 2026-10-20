@@ -7,7 +7,8 @@ export function undeleteRefusal(output: string, path: string): string | null {
   const text = output.trim();
   // The item is still loaded somewhere in the workspace (`The item 35 is already loaded on tree on path '/src/a.cs'.`).
   const loaded = /^The item \d+ is already loaded on tree on path '\/(.*)'\.$/s.exec(text);
-  if (loaded) return `${path} is already in the workspace, at ${loaded[1]}.`;
+  // Named by where it is: `path` is where it was asked to go, which may be elsewhere ("Restore to…").
+  if (loaded) return `The workspace already has this item, at ${loaded[1]}.`;
   if (text === 'Undelete operation is not supported for xlinks.') return `${path} is or holds an xlink, and xlinks can’t be restored.`;
   // The app checks the place first; this is something taking it in between.
   if (text === 'The restore path should not exist.') return placeTaken(path);
