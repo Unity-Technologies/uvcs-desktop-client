@@ -4,7 +4,7 @@ import { FilterChecklist } from '../../ui/FilterChecklist';
 import { Highlight } from '../../ui/Highlight';
 import { useBranchExplorerPreferences } from './branchExplorerStore';
 import { branchChooser, setBranchesChosen } from './model/branchChoice';
-import styles from './BranchFilterPopover.module.css';
+import styles from './BranchChecklist.module.css';
 
 /**
  * The Branches filter's checklist: find branches by name and check them one by one or all that match. Rendered only

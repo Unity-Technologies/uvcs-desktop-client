@@ -133,10 +133,10 @@ export function CodeReviewsView() {
         selection={selection}
         onSelectionChange={setSelection}
         onActivate={(review) => openReview(review)}
-        contextMenu={(rows) => codeReviewMenu(workspacePath, rows)}
+        contextMenu={(rows) => codeReviewMenu(workspacePath, rows, workspace?.selector)}
         initialSort={{ columnId: 'date', descending: true }}
         noun="code review"
-        details={selected && <CodeReviewDetails key={selected.id} review={selected} menu={codeReviewMenu(workspacePath, [selected])} />}
+        details={selected && <CodeReviewDetails key={selected.id} review={selected} menu={codeReviewMenu(workspacePath, [selected], workspace?.selector)} />}
       />
     </>
   );

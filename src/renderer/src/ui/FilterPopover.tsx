@@ -8,15 +8,18 @@ interface FilterPopoverProps {
   children: ReactNode;
   /** Pixels. */
   width?: number;
+  /** Controlled, for a popover that closes on a pick (the Changesets' branch); left out, it opens and closes itself. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 /**
  * The popover of a filter that picks from many (branches, people): under its chip, its content rendered only while
  * open. Esc first empties the search typed in it, then closes it.
  */
-export function FilterPopover({ trigger, children, width = 300 }: FilterPopoverProps) {
+export function FilterPopover({ trigger, children, width = 300, open, onOpenChange }: FilterPopoverProps) {
   return (
-    <Popover.Root>
+    <Popover.Root open={open} onOpenChange={onOpenChange}>
       <Popover.Trigger asChild>{trigger}</Popover.Trigger>
       <Popover.Portal>
         <Popover.Content

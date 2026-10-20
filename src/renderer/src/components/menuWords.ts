@@ -171,6 +171,7 @@ export const MENU_WORDS = {
   annotateRevision: word('navigate', ScanText, 'Annotate this revision'),
   compare: word('navigate', GitCompareArrows, 'Compare with another label…'),
   browse: word('navigate', FolderTree),
+  changesets: word('navigate', GitCommitVertical, 'Show changesets'),
   showInBranchExplorer: word('navigate', GitGraph, 'Show in Branch Explorer'),
   locks: word('navigate', Lock, 'Show locks'),
   showInLocks: word('navigate', Lock, 'Show in Locks'),
