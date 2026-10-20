@@ -4,14 +4,15 @@ import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { branchLabel } from '../../lib/branchLabels';
 import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
-import { CenteredSpinner } from '../../ui/Spinner';
+import { ListSkeleton } from '../../ui/Skeleton';
 import { ViewHeader } from '../../ui/ViewHeader';
+import { IncomingPanes } from './IncomingPanes';
 import { IncomingSession } from './IncomingSession';
 import { useIncomingChanges } from './useIncomingChanges';
 
 export function IncomingChangesView() {
   const workspacePath = useWorkspacePath();
-  const { data: incoming, isLoading, isFetching, error } = useIncomingChanges();
+  const { data: incoming, isPending, isFetching, error } = useIncomingChanges();
 
   // The session says how many came in, as its list knows them (`incomingSubtitle`); before, only the branch.
   const headerSaying = (words: string | undefined) => (
@@ -23,7 +24,15 @@ export function IncomingChangesView() {
   );
   const header = headerSaying(incoming?.branch ? branchLabel(incoming.branch) : undefined);
 
-  if (isLoading) return <>{header}<CenteredSpinner /></>;
+  // The panes keep their layout while reading and once up to date; not being on a branch, or failing, takes the body.
+  if (isPending) {
+    return (
+      <>
+        {header}
+        <IncomingPanes list={<ListSkeleton rowHeight={28} />} detail={null} />
+      </>
+    );
+  }
   if (error || !incoming) return <>{header}<EmptyState title="Couldn't check for incoming changes" description={error?.message} /></>;
 
   if (!incoming.branch) {
@@ -39,7 +48,7 @@ export function IncomingChangesView() {
     return (
       <>
         {header}
-        <EmptyState icon={<CheckCircle2 size={22} />} title="You're up to date" />
+        <IncomingPanes list={null} detail={<EmptyState icon={<CheckCircle2 size={22} />} title="You're up to date" />} />
       </>
     );
   }
