@@ -8,6 +8,7 @@ import { useChangeset } from '../changesets/useChangeset';
 import { cachedShelve } from '../shelves/cachedShelve';
 import { ShelveSummary } from '../shelves/ShelveSummary';
 import { DiffBrowser } from './DiffBrowser';
+import { DiffFrame } from './DiffFrame';
 import { useDiffEntries } from './useDiffEntries';
 import styles from './TargetDiff.module.css';
 
@@ -24,20 +25,17 @@ export function TargetDiff({ target, toolbar, focusPath, branchHead }: TargetDif
   const { data: entries, error } = useDiffEntries(target, { branchHead });
 
   return (
-    <div className={styles.diff}>
-      <header className={styles.header}>
-        <div className={styles.description}>
-          {/* Keyed so another changeset (Branch diff's "By changeset") folds its own comment afresh (`FoldedComment`). */}
-          <TargetDescription key={JSON.stringify(target)} target={target} />
-        </div>
-        {toolbar}
-      </header>
+    <DiffFrame
+      // Keyed so another changeset (Branch diff's "By changeset") folds its own comment afresh (`FoldedComment`).
+      description={<TargetDescription key={JSON.stringify(target)} target={target} />}
+      toolbar={toolbar}
+    >
       {error ? (
         <EmptyState title="Couldn't calculate the differences" description={error.message} />
       ) : (
         <DiffBrowser key={JSON.stringify(target)} target={target} entries={entries} initialPath={focusPath} />
       )}
-    </div>
+    </DiffFrame>
   );
 }
 
