@@ -33,5 +33,7 @@ describe('runsLong', () => {
     expect(runsLong(['update', '--forcedetailedprogress'])).toBe(true);
     expect(runsLong(['checkin', '/ws/a.txt', '--machinereadable'])).toBe(true);
     expect(runsLong(['merge', 'br:/main/task', '--merge'])).toBe(true);
+    // A deleted folder comes back with everything it held, downloaded.
+    expect(runsLong(['undelete', 'revid:24', '/ws/docs'])).toBe(true);
   });
 });

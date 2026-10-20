@@ -1,7 +1,7 @@
 import { changesWorkspace } from '../watch/changesWorkspace';
 
-/** Commands that move data to or from the server however few files they name. */
-const TRANSFERS = new Set(['checkin', 'ci', 'merge', 'switch', 'update']);
+/** Commands that move data to or from the server however few files they name (`undelete`: a folder with all it held). */
+const TRANSFERS = new Set(['checkin', 'ci', 'merge', 'switch', 'undelete', 'update']);
 const RECURSIVE_FLAGS = new Set(['-r', '-R', '--recursive']);
 /** A workspace write of more paths than this can take seconds to minutes (undoing 20,000 files takes minutes). */
 export const MAX_QUICK_WRITE_PATHS = 50;

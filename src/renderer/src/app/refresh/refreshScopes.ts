@@ -169,6 +169,14 @@ export function isAffectedByPendingChangeEdit(key: QueryKey): boolean {
   return isAffectedByWorkspaceEdit(key) || isAffectedByLocks(key);
 }
 
+/**
+ * Deleted items were restored (`cm undelete`): the workspace's files, the items that came back and what is copied in.
+ * No lock: a restored item is no checkout.
+ */
+export function isAffectedByRestoredItems(key: QueryKey): boolean {
+  return isAffectedByWorkspaceEdit(key);
+}
+
 /** The workspace's files, the items that came or went, and what is checked out, added or moved. */
 function isAffectedByWorkspaceEdit(key: QueryKey): boolean {
   return isAffectedByFileChanges(key) || isAffectedByMovedPaths(key) || isAffectedByWorkspaceState(key);
