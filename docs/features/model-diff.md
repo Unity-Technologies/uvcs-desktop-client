@@ -602,7 +602,7 @@ heatmap's), and come back in the other modes. The merge cards' stills stay clay 
   be composed). Changes inside folders `ignore.conf` hides from the watcher aren't seen: an `Assets` folder is versioned
   content. Measured by hand on a project of 100,000 assets (1,000 folders): a GUID it lacks reads it all in about 2.1 s,
   once; the next lookup reads nothing. Tests count the reads (`ProjectAssetIndex.test.ts`).
-- **Formats** (`imageFormatOf`), decoded in a worker of their own (`texture.worker`), never on the UI thread (where it
+- **Formats** (`imageFormatOf`), decoded in a worker of their own (`imageDecoding.worker`), never on the UI thread (where it
   can't start, textures don't show): PNG, JPEG, GIF, BMP, WebP by the browser (`createImageBitmap`); TGA, TIFF (LZW
   too), EXR (DWAA too) and Radiance HDR by three's loaders (high dynamic range clamped and encoded as sRGB); PSD and PSB
   by the app's own reader of the composite image (`readPsd`: raw or RLE, 8 or 16 bits, RGB or grayscale, alpha; read by
@@ -614,7 +614,7 @@ heatmap's), and come back in the other modes. The merge cards' stills stay clay 
   an untrusted file parsed; the one thing it would add is flattening the layers of a PSD whose composite is blank.
   The decoders, the header sizes, the limits before decoding (`sizeProblem`) and the words for what doesn't decode
   (`imageProblemWords`) are pure helpers in `lib/images`, which the image diff decodes these formats with too, in the
-  same `texture.worker` (a `paint` request)
+  same `imageDecoding.worker` (a `paint` request)
   (diff.md "Unity's texture formats"); what only the look needs (the budget, flipping, the bitmaps) stays here.
 - **Budget** (`textureBudget`): at most 64 texture files a model (`MAX_TEXTURE_FILES`, both versions together, each file
   once); each drawn at most 2048 px on its longest side, 1024 past 24 textures, with mipmaps; refused before decoding

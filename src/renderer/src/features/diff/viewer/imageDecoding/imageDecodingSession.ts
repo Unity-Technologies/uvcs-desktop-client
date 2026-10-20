@@ -1,4 +1,4 @@
-// The client of the texture worker, for the Materials look's textures (`decodeOffThread`) and for the images the
+// The client of the image decoding worker, for the Materials look's textures (`decodeOffThread`) and for the images the
 // browser can't decode (`paintOffThread`): one worker for the app's life. At most two requests are in the worker at a
 // time, the rest waiting here: the worker decodes one at a time, and this bounds the bytes handed to it, each request
 // holding its file's bytes until the worker has decoded it. An image asked to paint again while it is in hand is
@@ -8,16 +8,16 @@
 
 import { concurrencyLimit } from '@shared/concurrencyLimit';
 import type { ImageBytes } from '@shared/domain/content';
-import type { PaintableImage } from '../../image/paintableImage';
-import type { TextureDecodeRequest, TextureDecoded } from './decodeTexture';
-import type { TextureWorkerRequest, TextureWorkerResponse } from './texture.worker';
+import type { PaintableImage } from '../image/paintableImage';
+import type { TextureDecodeRequest, TextureDecoded } from '../model/textures/decodeTexture';
+import type { ImageDecodingRequest, ImageDecodingResponse } from './imageDecoding.worker';
 
 const limited = concurrencyLimit(2);
 
 // Undefined until first asked for; null once it couldn't start or died.
 let worker: Worker | null | undefined;
 let lastRequestId = 0;
-const awaited = new Map<number, { resolve: (response: TextureWorkerResponse) => void; fail: () => void }>();
+const awaited = new Map<number, { resolve: (response: ImageDecodingResponse) => void; fail: () => void }>();
 const painting = new WeakMap<ImageBytes, Promise<PaintableImage>>();
 
 const FAILED_DECODE: TextureDecoded = { kind: 'failed', problem: 'unreadable' };
@@ -44,7 +44,7 @@ export function paintOffThread(image: ImageBytes): Promise<PaintableImage> {
 }
 
 /** The worker's answer, or null when it can't start or dies first. */
-function ask(request: (id: number) => TextureWorkerRequest, transfer: Transferable[]): Promise<TextureWorkerResponse | null> {
+function ask(request: (id: number) => ImageDecodingRequest, transfer: Transferable[]): Promise<ImageDecodingResponse | null> {
   const textureWorker = startedWorker();
   if (!textureWorker) return Promise.resolve(null);
   return new Promise((resolve) => {
@@ -57,8 +57,8 @@ function ask(request: (id: number) => TextureWorkerRequest, transfer: Transferab
 function startedWorker(): Worker | null {
   if (worker !== undefined) return worker;
   try {
-    worker = new Worker(new URL('./texture.worker.ts', import.meta.url), { type: 'module', name: 'Textures' });
-    worker.onmessage = ({ data: response }: MessageEvent<TextureWorkerResponse>) => {
+    worker = new Worker(new URL('./imageDecoding.worker.ts', import.meta.url), { type: 'module', name: 'Image decoding' });
+    worker.onmessage = ({ data: response }: MessageEvent<ImageDecodingResponse>) => {
       awaited.get(response.id)?.resolve(response);
       awaited.delete(response.id);
     };

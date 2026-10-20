@@ -1,5 +1,5 @@
 // An image the browser can't decode (TGA, TIFF, OpenEXR, Radiance HDR, Photoshop: `needsDecoding`) made into one it
-// paints, in the texture worker (`paintOffThread`): its format told by its content, else by its type; its size read from its header
+// paints, in the image decoding worker (`paintOffThread`): its format told by its content, else by its type; its size read from its header
 // and refused past what is decoded (`sizeProblem`) before anything decodes it; its pixels decoded (`decodePixels`) and
 // written as a BMP (`bmpOf`), which every image mode, the pixel inspector and the merge page's previews then paint as
 // they paint a PNG. A high dynamic range image shows as the model diff's textures do: clamped to 0-1, as sRGB.

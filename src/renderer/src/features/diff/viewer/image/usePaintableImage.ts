@@ -1,11 +1,11 @@
 // An image as the browser can paint it: the image itself for the types it decodes, or, for Unity's texture formats
-// (`needsDecoding`), the image the texture worker makes of it (`paintOffThread`). Whatever shows an image (the image
+// (`needsDecoding`), the image the image decoding worker makes of it (`paintOffThread`). Whatever shows an image (the image
 // diff, the merge page's previews) paints what this gives, from a blob URL (`useImageUrl`).
 
 import { useEffect, useMemo, useState } from 'react';
 import type { ImageBytes } from '@shared/domain/content';
 import { needsDecoding } from './decodedImageTypes';
-import { paintOffThread } from '../model/textures/textureWorkerSession';
+import { paintOffThread } from '../imageDecoding/imageDecodingSession';
 import { imageBlob } from './imageBlob';
 import type { PaintableImage } from './paintableImage';
 

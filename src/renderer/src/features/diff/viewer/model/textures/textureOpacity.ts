@@ -1,4 +1,4 @@
-// Whether a decoded texture has any see-through pixel, read once in the texture worker: a blended material over a
+// Whether a decoded texture has any see-through pixel, read once in the image decoding worker: a blended material over a
 // texture without one is drawn opaque (`drawnAlpha`). What the image's alpha is, not what its format could hold: an
 // RGBA PNG saved with every pixel opaque is opaque.
 

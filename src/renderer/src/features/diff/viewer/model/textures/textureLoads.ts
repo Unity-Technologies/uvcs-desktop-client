@@ -1,7 +1,7 @@
 // Texture files read and decoded for the Materials look, once per version of each file: keyed by it (`foundFileKey`:
 // a disk file's path, size and time written, a repository's revision) and how it's drawn, so the same texture used by
 // both versions of a model, by several slots, or by the next model, decodes once. Bytes are read where the file was
-// found (`api.unityAssets.read`: the disk, or its revision, downloaded) and handed to the texture worker, a few at a
+// found (`api.unityAssets.read`: the disk, or its revision, downloaded) and handed to the image decoding worker, a few at a
 // time (`TEXTURES_IN_HAND`); only the decoded bitmaps are kept (`decodes`).
 
 import { concurrencyLimit } from '@shared/concurrencyLimit';
@@ -10,7 +10,7 @@ import { api } from '../../../../../api/client';
 import type { TextureDecoded } from './decodeTexture';
 import { MAX_TEXTURE_FILE_BYTES } from './textureBudget';
 import { DecodeCache } from './decodeCache';
-import { decodeOffThread } from './textureWorkerSession';
+import { decodeOffThread } from '../../imageDecoding/imageDecodingSession';
 
 /** Where a texture's bytes come from: a file found (on disk or in the repository), or bytes at hand (an image a glTF holds). */
 export type TextureBytes = { kind: 'found'; file: FoundFile } | { kind: 'bytes'; bytes: Uint8Array; id: string };

@@ -1,4 +1,4 @@
-// One texture file's bytes as an ImageBitmap ready for the GPU, in the texture worker: its size checked from its
+// One texture file's bytes as an ImageBitmap ready for the GPU, in the image decoding worker: its size checked from its
 // header first, decoded by the browser or by `decodePixels`, shrunk to the budget's side (`fittedSize`), turned upside
 // down for the models whose UVs start at the image's bottom (FBX, OBJ, Unity's materials: three's `flipY`, which
 // WebGL can't apply to a bitmap), its alpha kept apart from its color, and whether any pixel is see-through

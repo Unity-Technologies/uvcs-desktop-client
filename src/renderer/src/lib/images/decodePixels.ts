@@ -1,5 +1,5 @@
 // The formats a browser can't decode, as 8-bit RGBA pixels, the top row first: TGA, TIFF, OpenEXR and Radiance HDR
-// through three's loaders (pure JavaScript, no DOM: they run in the texture worker and in tests), Photoshop's through
+// through three's loaders (pure JavaScript, no DOM: they run in the image decoding worker and in tests), Photoshop's through
 // `readPsd`, for the model diff's textures (`decodeTexture`) and the image diff (`paintableImage`). A high dynamic range
 // image shows as a base map would: clamped to 0-1 and encoded as sRGB, which both show and the pixel inspector tells
 // "as shown". Load it only in a worker: three's loaders stay out of the page's bundle.

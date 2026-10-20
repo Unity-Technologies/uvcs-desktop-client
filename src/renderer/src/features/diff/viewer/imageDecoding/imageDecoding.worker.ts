@@ -5,16 +5,16 @@
 // back (a bitmap, a BMP's Blob) is transferred or handed over, never copied. This file is only the messaging.
 
 import type { ImageBytes } from '@shared/domain/content';
-import { paintableImage, type PaintableImage } from '../../image/paintableImage';
-import { decodeTexture, type TextureDecodeRequest, type TextureDecoded } from './decodeTexture';
+import { paintableImage, type PaintableImage } from '../image/paintableImage';
+import { decodeTexture, type TextureDecodeRequest, type TextureDecoded } from '../model/textures/decodeTexture';
 
-export type TextureWorkerRequest = { id: number; decode: TextureDecodeRequest } | { id: number; paint: ImageBytes };
-export type TextureWorkerResponse = { id: number; decoded: TextureDecoded } | { id: number; painted: PaintableImage };
+export type ImageDecodingRequest = { id: number; decode: TextureDecodeRequest } | { id: number; paint: ImageBytes };
+export type ImageDecodingResponse = { id: number; decoded: TextureDecoded } | { id: number; painted: PaintableImage };
 
 // The renderer's tsconfig types the DOM, not lib.webworker: the worker's global with just what this file uses.
 const scope = self as unknown as {
-  onmessage: ((event: MessageEvent<TextureWorkerRequest>) => void) | null;
-  postMessage(message: TextureWorkerResponse, transfer?: Transferable[]): void;
+  onmessage: ((event: MessageEvent<ImageDecodingRequest>) => void) | null;
+  postMessage(message: ImageDecodingResponse, transfer?: Transferable[]): void;
 };
 
 // Every request is answered, a failure too: one left unanswered would leave its texture or image loading for good.

@@ -1,28 +1,28 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ImageBytes } from '@shared/domain/content';
-import type { TextureWorkerRequest, TextureWorkerResponse } from './texture.worker';
+import type { ImageDecodingRequest, ImageDecodingResponse } from './imageDecoding.worker';
 
 /** A worker that answers when the test says: it records what it was asked, and can crash. */
 class FakeWorker {
   static created: FakeWorker[] = [];
-  onmessage: ((event: { data: TextureWorkerResponse }) => void) | null = null;
+  onmessage: ((event: { data: ImageDecodingResponse }) => void) | null = null;
   onerror: (() => void) | null = null;
-  readonly asked: TextureWorkerRequest[] = [];
+  readonly asked: ImageDecodingRequest[] = [];
   terminated = false;
   /** Resolved with each request as it arrives, so a test awaits the request rather than a number of microtasks. */
-  private arrivals: ((request: TextureWorkerRequest) => void)[] = [];
+  private arrivals: ((request: ImageDecodingRequest) => void)[] = [];
 
   constructor() {
     FakeWorker.created.push(this);
   }
 
-  postMessage(request: TextureWorkerRequest): void {
+  postMessage(request: ImageDecodingRequest): void {
     this.asked.push(request);
     this.arrivals.shift()?.(request);
   }
 
   /** The next request, once the session sends it. */
-  nextRequest(): Promise<TextureWorkerRequest> {
+  nextRequest(): Promise<ImageDecodingRequest> {
     return new Promise((resolve) => this.arrivals.push(resolve));
   }
 
@@ -30,8 +30,8 @@ class FakeWorker {
     this.terminated = true;
   }
 
-  answer(request: TextureWorkerRequest): void {
-    const data: TextureWorkerResponse =
+  answer(request: ImageDecodingRequest): void {
+    const data: ImageDecodingResponse =
       'decode' in request ? { id: request.id, decoded: { kind: 'failed', problem: 'tooLarge' } } : { id: request.id, painted: { status: 'failed', problem: 'psdColorMode' } };
     this.onmessage?.({ data });
   }
@@ -39,9 +39,9 @@ class FakeWorker {
 
 const request = (name: string) => ({ bytes: new Uint8Array([1, 2, 3]), name, longest: 2048, flipY: true });
 const tga = (byte: number): ImageBytes => ({ bytes: new Uint8Array([byte]), mimeType: 'image/x-tga' });
-const nameOf = (asked: TextureWorkerRequest): string => ('decode' in asked ? asked.decode.name : 'paint');
+const nameOf = (asked: ImageDecodingRequest): string => ('decode' in asked ? asked.decode.name : 'paint');
 
-describe('textureWorkerSession', () => {
+describe('imageDecodingSession', () => {
   beforeEach(() => {
     FakeWorker.created = [];
     vi.stubGlobal('Worker', FakeWorker);
@@ -51,7 +51,7 @@ describe('textureWorkerSession', () => {
 
   /** The session with its worker started by a first decode, which the test gets to answer. */
   async function startedSession() {
-    const session = await import('./textureWorkerSession');
+    const session = await import('./imageDecodingSession');
     const first = session.decodeOffThread(request('first.png'));
     const [worker] = FakeWorker.created;
     return { session, worker: worker!, first };
