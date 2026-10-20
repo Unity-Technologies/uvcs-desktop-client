@@ -9,7 +9,7 @@ import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SegmentedControl } from '../../ui/SegmentedControl';
-import { CenteredSpinner } from '../../ui/Spinner';
+import { DetailsPanelSkeleton } from '../../ui/DetailsPanelSkeleton';
 import { DiffPage } from '../diff/DiffPage';
 import { deleteReviews, reassignReview, setReviewStatus } from './codeReviewOperations';
 import { describeTarget, reviewDiffTarget } from './reviewTarget';
@@ -23,7 +23,14 @@ const COMMENTS_HINT = 'Comments are available in the Unity Version Control web d
 export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
   const { data: review, isLoading, error } = useCodeReview(page.reviewId);
 
-  if (isLoading) return <CenteredSpinner />;
+  // Not in a list already read (opened from a branch chip, the palette, a link): the page's frame, its header a skeleton.
+  if (isLoading) {
+    return (
+      <div className={styles.page}>
+        <DetailsPanelSkeleton />
+      </div>
+    );
+  }
   if (error || !review) return <EmptyState title="Couldn't open the code review" description={error?.message} />;
 
   const diffTarget = reviewDiffTarget(review.target);
