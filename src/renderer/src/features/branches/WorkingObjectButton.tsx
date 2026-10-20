@@ -6,6 +6,7 @@ import { useRunningOperationOfKind } from '../../app/operations/runningOperation
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { PathLabel } from '../../components/PathLabel';
 import { SELECTOR_ICONS, workingObjectName } from '../../components/workingObject';
+import { splitComment } from '../../lib/comment';
 import { holdBackMenuKeyRelease, isListMenuKey, openContextMenuOf } from '../../lib/rowMenu';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ringValue } from '../../app/operations/progressBar';
@@ -38,7 +39,7 @@ export function WorkingObjectButton() {
   const SelectorIcon = SELECTOR_ICONS[workspace?.selector.kind ?? 'branch'];
   const title = workspace ? workingObjectTitle(workspace.selector) : '…';
   const { data: comment } = useWorkingObjectComment(workspace);
-  const firstLine = comment?.split('\n', 1)[0]?.trim();
+  const firstLine = comment === undefined ? undefined : splitComment(comment).summary;
   // Right-click (or the context-menu key, Shift+F10) offers what the workspace is on, as its list does; what that
   // needs is read once the pointer or focus is on the pill.
   const [menuWanted, setMenuWanted] = useState(false);
