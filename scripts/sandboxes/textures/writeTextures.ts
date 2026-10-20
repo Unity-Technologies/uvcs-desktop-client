@@ -96,6 +96,10 @@ function filesOf(step: Step): Record<string, Uint8Array | null> {
     // Photoshop files the viewer can't read: saved without "Maximize Compatibility" once repainted, and one in CMYK.
     'Assets/UI/Poster.psd': psd(128, 128, gray((x) => x * 2), { realComposite: !repainted }),
     'Assets/UI/Print.psd': repainted ? cmykPsd() : psd(64, 64, gray(() => 200)),
+    // Neither version paints: a PSD saved without its composite both times (its layers, which the viewer doesn't read,
+    // change), and a TGA whose header claims more pixels than are decoded (the bytes past its header left out).
+    'Assets/UI/Sketch.psd': writePsd({ width: 96, height: 96, mode: 'rgb', realComposite: false, layerBytes: repainted ? 300 : 200, sample: () => 0 }),
+    'Assets/Textures/Huge.tga': hugeTga(repainted ? 2 : 1),
     // Added and deleted: a single version shows alone.
     'Assets/Textures/Moss.tga': repainted ? writeTga(128, 128, gray((x, y) => 80 + ((x * y) % 90))) : null,
     'Assets/Textures/Old_Placeholder.tif': repainted ? null : writeTiff(64, 64, gray(() => 180)),
