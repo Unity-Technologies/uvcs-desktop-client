@@ -389,9 +389,10 @@ any other scheme (`file:`, `smb:`, `ms-msdt:`) to a program.
 
 ## What leaves the device
 
-Besides `cm`, which talks only to the user's own servers, the app reaches three places, all listed with what they
-receive in `PRIVACY.md` at the repository root. A change that sends anything new, or something more to any of them,
-updates `PRIVACY.md` in the same pull request. There is no telemetry, analytics or crash reporting.
+Besides `cm`, which talks only to the user's own servers, the app reaches the three places below, and nothing else.
+There is no telemetry, analytics or crash reporting. `PRIVACY.md` at the repository root is the app's privacy notice:
+its text changes only through review, so a change that sends anything new, or something more to any of these places,
+is raised for that review before it merges, never just written into `PRIVACY.md`.
 
 - **Gravatar**, for profile pictures, only once the user chose to show them ("Profile pictures (Gravatar)").
 - **GitHub**, for updates (`AppUpdates`, docs/features/updates.md).
