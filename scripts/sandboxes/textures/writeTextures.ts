@@ -6,6 +6,7 @@
 
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { crc32, deflateSync } from 'node:zlib';
 import { writeExr, writeHdr, writeTga, writeTiff, type Pixel } from '../../../src/renderer/src/lib/images/testing/imageWriters';
 import { writePsd } from '../../../src/renderer/src/lib/images/testing/psdWriter';
 
@@ -81,6 +82,26 @@ function hugeTga(version: number): Uint8Array {
   return header;
 }
 
+/** A PNG, RGBA, unfiltered: a signature, its header, its rows deflated, and its end, each chunk with its CRC. */
+function png(width: number, height: number, pixel: Pixel): Uint8Array {
+  const chunk = (type: string, data: Buffer): Buffer => {
+    const body = Buffer.concat([Buffer.from(type, 'latin1'), data]);
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(body));
+    return Buffer.concat([length, body, crc]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header.set([8, 6, 0, 0, 0], 8);
+  const rows = Buffer.alloc(height * (1 + width * 4));
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) rows.set(pixel(x, y), y * (1 + width * 4) + 1 + x * 4);
+  const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 13, 10, 26, 10]);
+  return new Uint8Array(Buffer.concat([signature, chunk('IHDR', header), chunk('IDAT', deflateSync(rows)), chunk('IEND', Buffer.alloc(0))]));
+}
+
 function filesOf(step: Step): Record<string, Uint8Array | null> {
   // The retouch branches off before the repaint: only the crate and the hero change there, both against the repaint.
   const repainted = step === 'repaint';
@@ -100,6 +121,8 @@ function filesOf(step: Step): Record<string, Uint8Array | null> {
     // change), and a TGA whose header claims more pixels than are decoded (the bytes past its header left out).
     'Assets/UI/Sketch.psd': writePsd({ width: 96, height: 96, mode: 'rgb', realComposite: false, layerBytes: repainted ? 300 : 200, sample: () => 0 }),
     'Assets/Textures/Huge.tga': hugeTga(repainted ? 2 : 1),
+    // A PNG saved under a texture's name: the viewer goes by its content.
+    'Assets/Textures/Decal.tga': png(64, 64, (x, y) => [repainted ? 40 : 220, 120, (x + y) * 2, 255]),
     // Added and deleted: a single version shows alone.
     'Assets/Textures/Moss.tga': repainted ? writeTga(128, 128, gray((x, y) => 80 + ((x * y) % 90))) : null,
     'Assets/Textures/Old_Placeholder.tif': repainted ? null : writeTiff(64, 64, gray(() => 180)),
