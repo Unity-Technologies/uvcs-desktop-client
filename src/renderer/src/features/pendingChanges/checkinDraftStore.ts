@@ -1,18 +1,24 @@
 import { create } from 'zustand';
+import type { CheckinMode } from './checkinButton';
 
 interface CheckinDraft {
   summary: string;
   description: string;
   /** Paths the user unchecked. New changes are included by default, so we remember exclusions. */
   excludedPaths: ReadonlySet<string>;
+  /** What the panel's button does: check in, or shelve (the caret beside it, or a changelist's "Shelve this changelist"). */
+  mode: CheckinMode;
 }
 
-const EMPTY_DRAFT: CheckinDraft = { summary: '', description: '', excludedPaths: new Set() };
+const EMPTY_DRAFT: CheckinDraft = { summary: '', description: '', excludedPaths: new Set(), mode: 'checkin' };
 
 interface CheckinDraftStore {
   drafts: Record<string, CheckinDraft>;
   setMessage: (workspacePath: string, message: { summary?: string; description?: string }) => void;
   setIncluded: (workspacePath: string, paths: string[], included: boolean) => void;
+  /** Leaves `excludedPaths` out of the check-in and includes everything else. */
+  setExcluded: (workspacePath: string, excludedPaths: string[]) => void;
+  setMode: (workspacePath: string, mode: CheckinMode) => void;
   /** After a check-in: the comment goes, the files left out stay left out. */
   clearMessage: (workspacePath: string) => void;
 }
@@ -31,6 +37,8 @@ export const useCheckinDraftStore = create<CheckinDraftStore>((set) => {
         paths.forEach((path) => (included ? excludedPaths.delete(path) : excludedPaths.add(path)));
         return { ...draft, excludedPaths };
       }),
+    setExcluded: (workspacePath, excludedPaths) => updateDraft(workspacePath, (draft) => ({ ...draft, excludedPaths: new Set(excludedPaths) })),
+    setMode: (workspacePath, mode) => updateDraft(workspacePath, (draft) => ({ ...draft, mode })),
     clearMessage: (workspacePath) => updateDraft(workspacePath, (draft) => ({ ...draft, summary: '', description: '' })),
   };
 });
@@ -49,4 +57,8 @@ export function useCheckinMessage(workspacePath: string): { summary: string; des
 
 export function useExcludedPaths(workspacePath: string): ReadonlySet<string> {
   return useCheckinDraftStore((state) => (state.drafts[workspacePath] ?? EMPTY_DRAFT).excludedPaths);
+}
+
+export function useCheckinMode(workspacePath: string): CheckinMode {
+  return useCheckinDraftStore((state) => (state.drafts[workspacePath] ?? EMPTY_DRAFT).mode);
 }

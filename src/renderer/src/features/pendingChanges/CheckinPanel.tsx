@@ -11,7 +11,7 @@ import { ResizeHandle } from '../../ui/ResizeHandle';
 import { canChangeCheckinMode, checkinButtonLabel, checkinDisabledReason, type CheckinMode } from './checkinButton';
 import { CheckinButtonWording } from './CheckinButtonWording';
 import { CheckinModeMenu, describeMode } from './CheckinModeMenu';
-import { useCheckinDraftStore, useCheckinMessage } from './checkinDraftStore';
+import { useCheckinDraftStore, useCheckinMessage, useCheckinMode } from './checkinDraftStore';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { describeUpload, type UploadSummary } from './uploadSummary';
 import styles from './CheckinPanel.module.css';
@@ -64,7 +64,10 @@ export function CheckinPanel({
   onCheckin,
   onShelve,
 }: CheckinPanelProps) {
-  const [mode, setMode] = useState<CheckinMode>('checkin');
+  // Kept with the workspace's draft, where a changelist's "Shelve this changelist" sets it too.
+  const mode = useCheckinMode(workspacePath);
+  const setDraftMode = useCheckinDraftStore((state) => state.setMode);
+  const setMode = (next: CheckinMode): void => setDraftMode(workspacePath, next);
   const [keepShelved, setKeepShelved] = useState(false);
   const descriptionHeight = usePendingChangesViewStore((state) => state.descriptionHeight);
   const setDescriptionHeight = usePendingChangesViewStore((state) => state.setDescriptionHeight);
