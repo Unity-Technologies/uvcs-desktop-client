@@ -9,12 +9,12 @@ export const PLATFORM = window.uvcs.platform;
 export const isMac = PLATFORM === 'darwin';
 
 /** How the window draws its title bar; `html[data-chrome]` lets the styles make room for it. */
-export const WINDOW_CHROME = windowChrome(window.uvcs.platform);
+export const WINDOW_CHROME = windowChrome(PLATFORM);
 
-export const REVEAL_LABEL = revealLabel(window.uvcs.platform);
+export const REVEAL_LABEL = revealLabel(PLATFORM);
 
-export const OPEN_IN_FILE_MANAGER_LABEL = openInFileManagerLabel(window.uvcs.platform);
+export const OPEN_IN_FILE_MANAGER_LABEL = openInFileManagerLabel(PLATFORM);
 
-export const TRASH_NAME = trashName(window.uvcs.platform);
+export const TRASH_NAME = trashName(PLATFORM);
 
-export const PROGRAM_PLACEHOLDER = programPlaceholder(window.uvcs.platform);
+export const PROGRAM_PLACEHOLDER = programPlaceholder(PLATFORM);
