@@ -1,6 +1,7 @@
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
+import { branchWorkedOn } from '../../components/workingObject';
 import { branchLabel } from '../../lib/branchLabels';
 import { toast } from '../../ui/toast/toastStore';
 import { openCreateBranchDialog, type NewBranchOrigin } from './CreateBranchDialog';
@@ -47,10 +48,11 @@ function loadedOrigin(workspace: WorkspaceInfo): NewBranchOrigin | null {
       card: { ...card, title: `Label ${selector.name} (changeset ${loadedChangeset}, what you have loaded)` },
     };
   }
+  const branch = branchWorkedOn(selector);
   return {
-    parentBranch: selector.kind === 'branch' ? selector.name : MAIN_BRANCH,
+    parentBranch: branch ?? MAIN_BRANCH,
     startingPoint: spec.changeset(loadedChangeset),
     startingPointLabel: `your workspace's changeset ${loadedChangeset}`,
-    card: { ...card, title: selector.kind === 'branch' ? `${branchLabel(selector.name)} (changeset ${loadedChangeset}, what you have loaded)` : `Changeset ${loadedChangeset} (what you have loaded)` },
+    card: { ...card, title: branch ? `${branchLabel(branch)} (changeset ${loadedChangeset}, what you have loaded)` : `Changeset ${loadedChangeset} (what you have loaded)` },
   };
 }

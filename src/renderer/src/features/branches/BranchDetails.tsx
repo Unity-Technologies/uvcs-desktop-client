@@ -6,6 +6,7 @@ import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowin
 import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { DetailsHeading } from '../../components/DetailsHeading';
 import { PLAIN_LINKS, type ObjectLinks } from '../../components/objectLinks';
+import { branchWorkedOn } from '../../components/workingObject';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
 import { Button } from '../../ui/Button';
@@ -28,7 +29,7 @@ interface BranchDetailsProps {
 
 export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [] }: BranchDetailsProps) {
   const { data: workspace } = useWorkspaceInfo();
-  const isCurrent = workspace?.selector.kind === 'branch' && workspace.selector.name === branch.name;
+  const isCurrent = branchWorkedOn(workspace?.selector) === branch.name;
   useShowInFollowingWindow(branchDiffPage(branch));
 
   return (

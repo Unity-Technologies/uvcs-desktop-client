@@ -2,6 +2,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { useEffect, useMemo } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { branchWorkedOn } from '../../components/workingObject';
 import { EmptyState } from '../../ui/EmptyState';
 import { LeftChangesBanner } from '../leftChanges/LeftChangesBanner';
 import { MergeTaskSuggestion } from '../mergeTask/MergeTaskSuggestion';
@@ -38,7 +39,8 @@ export function PendingChangesView() {
 
   if (error) return <>{header}<EmptyState title="Couldn't read pending changes" description={error.message} /></>;
 
-  const suggestion = workspace?.selector.kind === 'branch' && <MergeTaskSuggestion workspacePath={workspacePath} branchName={workspace.selector.name} />;
+  const branchName = branchWorkedOn(workspace?.selector);
+  const suggestion = branchName !== undefined && <MergeTaskSuggestion workspacePath={workspacePath} branchName={branchName} />;
   // Beside the empty list, where the diff goes: the layout never changes shape.
   const nothingPending =
     successMoment && workspace ? (

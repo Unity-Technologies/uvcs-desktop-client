@@ -3,6 +3,7 @@ import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
+import { branchWorkedOn } from '../../components/workingObject';
 import { branchQuery } from './useBranches';
 
 /**
@@ -12,7 +13,7 @@ import { branchQuery } from './useBranches';
  */
 export function useWorkingObjectComment(workspace: WorkspaceInfo | undefined) {
   const selector = workspace?.selector;
-  const branchName = selector?.kind === 'branch' ? selector.name : undefined;
+  const branchName = branchWorkedOn(selector);
   const branchComment = useQuery({
     ...branchQuery(workspace?.path ?? '', branchName ?? ''),
     select: (branch) => branch?.comment ?? '',
