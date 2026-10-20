@@ -41,7 +41,8 @@ class FakePage {
   constructor(
     paths: string[],
     private readonly inTool: Record<string, InTool>,
-    private readonly options: { asks?: boolean; atPause?: AtPause } = {},
+    /** `smartMerged`: files Smart Merge merges, before the tool would open on them. */
+    private readonly options: { asks?: boolean; atPause?: AtPause; smartMerged?: string[] } = {},
   ) {
     this.states = paths.map(conflict);
   }
@@ -50,8 +51,13 @@ class FakePage {
     return planRun(this.states, fakeMerge);
   }
 
-  decide(path: string): void {
-    this.states = this.states.map((state) => (state.file.path === path ? { ...state, resolution: { choice: 'source' }, decidedByUser: true } : state));
+  /** The file decided: in the app (keeping the incoming version), or by `tool`. */
+  decide(path: string, tool?: string): void {
+    const decided = (state: FileConflictState): FileConflictState =>
+      tool
+        ? { ...state, decision: { kind: 'text', text: 'merged\n', tool }, resolution: { choice: 'text', text: 'merged\n' }, decidedByUser: true }
+        : { ...state, resolution: { choice: 'source' }, decidedByUser: true };
+    this.states = this.states.map((state) => (state.file.path === path ? decided(state) : state));
   }
 
   async runOneByOne(): Promise<{ end: RunEnd; message: ReturnType<typeof runEndMessage> }> {
@@ -68,7 +74,7 @@ class FakePage {
       open: (key, previousKey) => this.events.push(previousKey ? `open ${key} after ${previousKey}` : `open ${key}`),
       resolve: async (key) => {
         const outcome = (this.inTool[key.slice(1)] ?? (() => saved))(this);
-        if (outcome?.kind === 'resolved') this.decide(key.slice(1));
+        if (outcome?.kind === 'resolved') this.decide(key.slice(1), this.options.smartMerged?.includes(key.slice(1)) ? 'Smart Merge' : undefined);
         return outcome;
       },
       asksWhenClosedUnsaved: () => this.options.asks ?? true,
@@ -85,6 +91,12 @@ describe('resolving one by one', () => {
     expect(page.positions).toEqual(['1 of 3', '2 of 3', '3 of 3']);
     expect(end).toEqual({ stopped: false });
     expect(message).toEqual({ kind: 'success', title: 'Resolved all 3 conflicts in FakeMerge' });
+  });
+
+  it('counts the files Smart Merge merged apart from those resolved in the tool', async () => {
+    const page = new FakePage(['a.prefab', 'b.prefab', 'c.ts'], {}, { smartMerged: ['a.prefab', 'b.prefab'] });
+    const { message } = await page.runOneByOne();
+    expect(message).toEqual({ kind: 'success', title: 'Resolved all 3 conflicts: 2 with Smart Merge, 1 in FakeMerge' });
   });
 
   it('skips the files decided in the app meanwhile, keeping their place in the count', async () => {

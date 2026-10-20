@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MergeTool } from '@shared/domain/mergeTools';
 import type { FileConflictState } from '../resolve/useFileConflicts';
-import { leftOutNote, planRun, runLabel, runPlans, runSummary } from './resolveRun';
+import { leftOutNote, planRun, runLabel, runPlans, runStripWords, runSummary } from './resolveRun';
 
 const tool = (id: string, changes: Partial<MergeTool> = {}): MergeTool => ({
   id,
@@ -81,28 +81,56 @@ describe('runSummary', () => {
   const plan = planRun(states, fakeMerge);
 
   it('celebrates when every file was resolved, still naming what was left out', () => {
-    expect(runSummary({ resolved: 2, total: 2, stopped: false }, plan)).toEqual({
+    expect(runSummary({ resolved: 2, total: 2, stopped: false, withSmartMerge: 0 }, plan)).toEqual({
       kind: 'success',
       title: 'Resolved both conflicts in FakeMerge',
       detail: 'Binary files keep one version: logo.png is left to you.',
     });
-    expect(runSummary({ resolved: 5, total: 5, stopped: false }, planRun([file('a.ts')], tool('UVCS merge tool')))).toEqual({ kind: 'success', title: 'Resolved all 5 conflicts in UVCS merge tool' });
+    expect(runSummary({ resolved: 5, total: 5, stopped: false, withSmartMerge: 0 }, planRun([file('a.ts')], tool('UVCS merge tool')))).toEqual({ kind: 'success', title: 'Resolved all 5 conflicts in UVCS merge tool' });
   });
 
   it('counts what still needs the user, and says when they stopped', () => {
-    expect(runSummary({ resolved: 4, total: 5, stopped: false }, planRun([file('a.ts')], tool('UVCS merge tool')))).toEqual({
+    expect(runSummary({ resolved: 4, total: 5, stopped: false, withSmartMerge: 0 }, planRun([file('a.ts')], tool('UVCS merge tool')))).toEqual({
       kind: 'info',
       title: 'Resolved 4 of 5 in UVCS merge tool',
       detail: '1 still needs you.',
     });
-    expect(runSummary({ resolved: 1, total: 3, stopped: true }, planRun([file('a.ts')], tool('UVCS merge tool'))).title).toBe('Stopped: resolved 1 of 3 in UVCS merge tool');
+    expect(runSummary({ resolved: 1, total: 3, stopped: true, withSmartMerge: 0 }, planRun([file('a.ts')], tool('UVCS merge tool'))).title).toBe('Stopped: resolved 1 of 3 in UVCS merge tool');
+  });
+
+  it('tells what Smart Merge merged apart from what the tool resolved', () => {
+    const three = planRun([file('a.prefab'), file('b.prefab'), file('c.ts')], tool('VS Code'));
+    expect(runSummary({ resolved: 3, total: 3, stopped: false, withSmartMerge: 2 }, three).title).toBe('Resolved all 3 conflicts: 2 with Smart Merge, 1 in VS Code');
+    expect(runSummary({ resolved: 3, total: 3, stopped: false, withSmartMerge: 3 }, three).title).toBe('Resolved all 3 conflicts with Smart Merge');
+    expect(runSummary({ resolved: 3, total: 5, stopped: false, withSmartMerge: 2 }, three).title).toBe('Resolved 3 of 5: 2 with Smart Merge, 1 in VS Code');
+    expect(runSummary({ resolved: 1, total: 2, stopped: true, withSmartMerge: 1 }, three).title).toBe('Stopped: resolved 1 of 2 with Smart Merge');
   });
 
   it('says only that it stopped when nothing was resolved yet', () => {
-    expect(runSummary({ resolved: 0, total: 12, stopped: true }, planRun([file('a.ts')], tool('UVCS merge tool')))).toEqual({
+    expect(runSummary({ resolved: 0, total: 12, stopped: true, withSmartMerge: 0 }, planRun([file('a.ts')], tool('UVCS merge tool')))).toEqual({
       kind: 'info',
       title: 'Stopped resolving in UVCS merge tool',
       detail: '12 still need you.',
+    });
+  });
+});
+
+describe('runStripWords', () => {
+  it('speaks of the tool while it has the file: skipping or stopping closes it, keeping what was saved, and Esc asks first', () => {
+    expect(runStripWords('VS Code', false)).toEqual({
+      where: 'in VS Code',
+      skipTip: 'Closes it in VS Code and opens the next file',
+      stopTip: 'Closes it in VS Code; what you saved there so far is kept',
+      confirmsStop: true,
+    });
+  });
+
+  it('speaks of Smart Merge while it merges: there is no window to close nor anything saved, so Esc stops at once', () => {
+    expect(runStripWords('VS Code', true)).toEqual({
+      where: 'with Smart Merge',
+      skipTip: 'Stops Smart Merge and goes on to the next file',
+      stopTip: 'Stops Smart Merge; the file stays as it was',
+      confirmsStop: false,
     });
   });
 });

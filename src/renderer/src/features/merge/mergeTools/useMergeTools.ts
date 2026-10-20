@@ -6,7 +6,7 @@ import { queryKeys } from '../../../api/queryKeys';
 import { queryClient } from '../../../app/queryClient';
 import { saveSettings, useSettings } from '../../../app/settings/useSettings';
 
-const NO_TOOLS: MergeToolList = { tools: [], preferredId: null };
+const NO_TOOLS: MergeToolList = { tools: [], preferredId: null, smartMerge: null };
 
 /**
  * The merge tools on offer. Looked for again when the settings about them change, or after a while (one may have been

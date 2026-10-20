@@ -27,6 +27,38 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   saved text becomes the file's decision (markers left count as conflicts left). Text files only: no tool really
   merges binaries, so a binary keeps one of its versions, picked in the app (`waitsForTool`). "Stop waiting" kills the tool process and takes what was saved so far, as soon as it exits: a launcher's
   app still holding its output doesn't keep the file open.
+- **Smart Merge** (Unity's merge of scenes, prefabs and other assets by their objects: the `UnityYAMLMerge` program in
+  every Unity Editor) isn't a tool to pick: "Resolve in…" (and each file of a "Resolve N conflicts in…" run) runs it
+  first on a Unity asset the user decided nothing for yet (`smartMergeVersions`, from `decidedByUser`), and the chosen
+  tool opens only when it doesn't merge the file. Two calls, so each phase shows what really happens:
+  `mergeTools.smartMerge` with the versions the page already read (no `cm` command), while the file reads "Merging…"
+  and its banner "Merging <file> with Smart Merge…" with Stop (stopping it opens nothing, even a stop that reaches main as Smart Merge ends on its own: the renderer remembers it, `stopMergeToolSession`, `wasStopped`); then, if it didn't merge,
+  `mergeTools.resolve` opens the tool as for any file. Without a Unity Editor (`MergeToolList.smartMerge` null) the
+  tool opens straight away: nothing shows Smart Merge at work. While Smart Merge (or a tool) has the file, its menu
+  offers no Keep or Start over, as its toolbar offers none (`conflictMenuEntries`); and should the user decide the file
+  meanwhile (from another file's selection), that decision stands: Smart Merge's merge is dropped and nothing opens
+  (`ResolveOptions.stillUndecided`). A file goes to it when its two sides start with Unity's YAML
+  header (`isUnityYaml`), whatever its extension: a `.meta` file has none and goes to the tool. A base revision
+  that was an empty file (checked in empty, then filled differently on each side) becomes an asset with no objects
+  (`EMPTY_UNITY_YAML`), as Smart Merge refuses an empty file; a file added on both sides never gets here, `cm` makes
+  it a directory conflict. It runs with
+  no window (`windowsHide` on Windows, `toolSpawnOptions`) and no fallback tool (`SMART_MERGE_ARGS`: `merge -h --force
+  --fallback none`; `--force` lets it take `.mat`, `.asset`… beyond the `.unity`, `.prefab` and `.meta` it knows by
+  name, and it refuses what isn't Unity YAML anyway). Only exit code 0 counts (`judgeSmartMerge`): on 2 (conflicts
+  left) it still writes a result holding the base's values where the sides disagree, so that result is dropped; 1
+  means it couldn't read or merge the file. A failure other than conflicts left is warned in the console (`[smart
+  merge]`, with the end of its stderr). Its merge reads "Merged by Smart Merge"; "Resolve in…" on it opens the tool on
+  Smart Merge's result, and Start over makes the file undecided again, so the next "Resolve in…" lets Smart Merge try
+  again. Its size ceiling is the page's: a version over `MAX_TEXT_BYTES` (10 MB) is a binary to the page, which no tool
+  opens, so Smart Merge isn't tried on it either. In practice it's lower: a text conflict of about 3.5 MB overflows the
+  stack of the page's own line merge (`diff3Merge`, as it loads the file), before Smart Merge could be asked. It comes
+  from the newest Unity release installed
+  (`findSmartMerge`, `compareUnityVersions`: releases before alphas and betas), found as Unity Hub keeps editors
+  (`findUnityEditors`): its editors folder (`/Applications/Unity/Hub/Editor`, `C:\Program Files\Unity\Hub\Editor`,
+  `~/Unity/Hub/Editor`), the folder picked in the Hub (`secondaryInstallPath.json` in the Hub's config folder), the
+  editors located by hand (`editors-v2.json`, `editors.json`) and the install made without the Hub; inside an editor,
+  `Contents/Helpers` on macOS since Unity 6.3 (`Contents/Tools` before), `Data/Tools` on Windows and Linux. Settings'
+  Merge pane says which editor's it uses. Sandbox: `scripts/sandboxes/smart-merge.sh`.
 - The workspace is never touched: the outcome is a decision like any other, written when the merge completes.
 
 ## Merge page
@@ -79,11 +111,11 @@ saved and closed (`useResolveRun`, `resolveRun`). Both carets pick the tool like
 (`toolChoiceEntries`): the button's tool is checked, and picking another (or adding one) only makes it the button's
 tool, the preferred one from then on; nothing opens until the button is clicked. Files the tool can't open (binaries, types it isn't for) are left
 out and named in its tooltip. While it runs, a strip takes the status's place: a step per file, "Resolving 2 of 5 ·
-app.ts in <tool>", Skip this file (closes it there) and Stop (Esc, confirmed while the tool has a file). The list marks
+app.ts in <tool>", Skip this file (closes it there) and Stop (Esc, confirmed while the tool has a file); while Smart Merge merges the file first, "with Smart Merge", Skip and Stop stop it, and Esc needs no confirmation (`runStripWords`). The list marks
 the file open and the selection follows it unless the user looks elsewhere, which never stops the run; files decided in
 the app meanwhile are skipped, a file closed unsaved keeps "Needs your decision" and pauses the strip ("closed without
 saving", Next file / Stop) unless the setting says to go on, and a tool that can't start stops the run with its reason.
-A toast sums it up ("Resolved 4 of 5 in <tool>", "1 still needs you") and focus goes to the first file still waiting,
+A toast sums it up ("Resolved 4 of 5 in <tool>", "1 still needs you"; what Smart Merge merged apart, "Resolved all 3 conflicts: 2 with Smart Merge, 1 in <tool>") and focus goes to the first file still waiting,
 or to Complete merge. With one file left, its own toolbar is the way.
 
 A conflicting file is read-only. Its toolbar holds the file, its status and the ways out: "Resolve in <tool>"

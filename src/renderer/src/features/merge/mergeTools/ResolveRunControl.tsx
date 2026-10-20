@@ -1,4 +1,5 @@
 import { Check, GalleryVerticalEnd, Pause, Settings, SkipForward } from 'lucide-react';
+import { SMART_MERGE_NAME } from '@shared/domain/mergeTools';
 import { openSettingsDialogAt } from '../../../app/settings/SettingsDialog';
 import { saveSettings, useSettings } from '../../../app/settings/useSettings';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../../lib/actions';
@@ -11,7 +12,7 @@ import { confirm } from '../../../ui/dialog/confirm';
 import { ProgressRing } from '../../../ui/ProgressRing';
 import { SplitButton } from '../../../ui/SplitButton';
 import type { FileConflictState } from '../resolve/useFileConflicts';
-import { leftOutNote, runLabel, runPlans, runPositionText, type RunPlan, type RunProgress } from './resolveRun';
+import { leftOutNote, runLabel, runPlans, runPositionText, runStripWords, type RunPlan, type RunProgress } from './resolveRun';
 import type { ResolveRun } from './useResolveRun';
 import { toolChoiceEntries } from './toolChoices';
 import { preferMergeTool, useMergeTools } from './useMergeTools';
@@ -89,11 +90,13 @@ function RunStrip({ states, run, progress }: { states: FileConflictState[]; run:
   const current = states.find((state) => state.file.key === progress.currentKey);
   const name = current ? fileNameOf(current.file.path) : '';
   const toolOpen = Boolean(current?.openTool);
+  // Smart Merge merges a Unity asset before the tool would open on it.
+  const words = runStripWords(progress.toolName, current?.openTool?.toolName === SMART_MERGE_NAME);
 
-  // Esc stops, asking first while the tool has a file: stopping closes it.
+  // Esc stops, asking first while the tool has a file: stopping closes it. Smart Merge has nothing to lose.
   const stopFromKeyboard = async (): Promise<void> => {
     if (isKeyboardTaken()) return;
-    if (toolOpen) {
+    if (toolOpen && words.confirmsStop) {
       const sure = await confirm({
         title: 'Stop resolving one by one?',
         message: `${progress.toolName} closes ${name}; what you saved there so far is kept.`,
@@ -130,13 +133,13 @@ function RunStrip({ states, run, progress }: { states: FileConflictState[]; run:
         Resolving {runPositionText(progress)}
         <span className={styles.position}>
           {' · '}
-          <strong>{name}</strong> in {progress.toolName}
+          <strong>{name}</strong> {words.where}
         </span>
       </span>
-      <Button size="small" variant="ghost" icon={<SkipForward size={13} />} data-tip={`Closes it in ${progress.toolName} and opens the next file`} onClick={run.skip}>
+      <Button size="small" variant="ghost" icon={<SkipForward size={13} />} data-tip={words.skipTip} onClick={run.skip}>
         Skip this file
       </Button>
-      <Button size="small" data-tip={`Closes it in ${progress.toolName}; what you saved there so far is kept`} data-tip-shortcut={hotkey('stopResolvingInTool')} onClick={run.stop}>
+      <Button size="small" data-tip={words.stopTip} data-tip-shortcut={hotkey('stopResolvingInTool')} onClick={run.stop}>
         Stop
       </Button>
     </div>

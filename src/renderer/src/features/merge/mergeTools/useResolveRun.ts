@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MergeTool, MergeToolOutcome } from '@shared/domain/mergeTools';
-import { api } from '../../../api/client';
 import { useSettings } from '../../../app/settings/useSettings';
 import { toast } from '../../../ui/toast/toastStore';
 import type { FileConflictState } from '../resolve/useFileConflicts';
 import { waitsForTool } from './mergeToolOutcome';
+import { stopMergeToolSession } from './mergeToolSessions';
 import { resolveOneByOne, runEndMessage, stopRun, type RunControl, type RunEnd } from './resolveOneByOne';
 import { planRun, type RunPlan, type RunProgress } from './resolveRun';
 
@@ -91,7 +91,7 @@ export function useResolveRun({ states, resolveInTool, onOpen, onEnd }: ResolveR
 
   const skip = (): void => {
     const session = openSession();
-    if (session) void api.mergeTools.stopWaiting(session);
+    if (session) void stopMergeToolSession(session);
   };
 
   const proceed = (): void => control.current?.answer?.(true);
@@ -100,7 +100,7 @@ export function useResolveRun({ states, resolveInTool, onOpen, onEnd }: ResolveR
     const run = control.current;
     if (!run) return;
     const session = openSession();
-    if (session) void api.mergeTools.stopWaiting(session);
+    if (session) void stopMergeToolSession(session);
     stopRun(run);
   };
 

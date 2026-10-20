@@ -1,6 +1,6 @@
 import { createServer, type AddressInfo, type Socket } from 'node:net';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { launchMergeTool } from './launch';
+import { launchMergeTool, toolSpawnOptions } from './launch';
 
 /** A tool made of a Node script, so the launch is tested the same on every OS. */
 const tool = (script: string): [string, string[]] => [process.execPath, ['-e', script]];
@@ -57,5 +57,17 @@ describe('launchMergeTool', () => {
       exitCode: 3,
       errorOutput: 'oops',
     });
+  });
+});
+
+describe('toolSpawnOptions', () => {
+  const signal = new AbortController().signal;
+
+  it('keeps a merge tool’s window visible: the user works in it', () => {
+    expect(toolSpawnOptions({ verbatim: false, signal, hidden: false })).toMatchObject({ windowsHide: false, stdio: ['ignore', 'pipe', 'pipe'] });
+  });
+
+  it('hides the console window of a program that works without one (Smart Merge on Windows)', () => {
+    expect(toolSpawnOptions({ verbatim: true, signal, hidden: true })).toMatchObject({ windowsHide: true, windowsVerbatimArguments: true, signal });
   });
 });
