@@ -9,7 +9,7 @@ import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SegmentedControl } from '../../ui/SegmentedControl';
-import { CenteredSpinner } from '../../ui/Spinner';
+import { SkeletonBar } from '../../ui/Skeleton';
 import { DiffPage } from '../diff/DiffPage';
 import { deleteReviews, reassignReview, setReviewStatus } from './codeReviewOperations';
 import { describeTarget, reviewDiffTarget } from './reviewTarget';
@@ -23,7 +23,15 @@ const COMMENTS_HINT = 'Comments are available in the Unity Version Control web d
 export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
   const { data: review, isLoading, error } = useCodeReview(page.reviewId);
 
-  if (isLoading) return <CenteredSpinner />;
+  // Not in a list already read (opened from a branch chip, the palette, a link): the page's frame, its header a skeleton.
+  if (isLoading) {
+    return (
+      <div className={styles.page}>
+        <ReviewHeaderSkeleton />
+        <div className={styles.changes} />
+      </div>
+    );
+  }
   if (error || !review) return <EmptyState title="Couldn't open the code review" description={error?.message} />;
 
   const diffTarget = reviewDiffTarget(review.target);
@@ -38,6 +46,23 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
         )}
       </div>
     </div>
+  );
+}
+
+/** The review's header while it's read: its three rows at their heights, a placeholder where each one's words go. */
+function ReviewHeaderSkeleton() {
+  return (
+    <header className={styles.header} aria-busy="true" aria-label="Loading">
+      <div className={`${styles.titleRow} ${styles.placeholderTitle}`}>
+        <SkeletonBar width="320px" />
+      </div>
+      <div className={`${styles.meta} ${styles.placeholderMeta}`}>
+        <SkeletonBar width="420px" />
+      </div>
+      <div className={`${styles.actions} ${styles.placeholderActions}`}>
+        <SkeletonBar width="260px" />
+      </div>
+    </header>
   );
 }
 

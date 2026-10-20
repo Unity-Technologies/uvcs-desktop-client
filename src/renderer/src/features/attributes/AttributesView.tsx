@@ -45,7 +45,7 @@ const COLUMNS: Column<AttributeType>[] = [
 
 export function AttributesView() {
   const workspacePath = useWorkspacePath();
-  const { data: types, isLoading, isFetching, error } = useAttributeTypes();
+  const { data: types, isPending, isFetching, error } = useAttributeTypes();
   const filters = useAttributesViewStore();
   const { text: search, people, update } = filters;
   const me = useWorkspaceUser();
@@ -82,20 +82,18 @@ export function AttributesView() {
       </ViewHeader>
       <ObjectListView
         widthKey="attributes"
-        loading={isLoading}
+        loading={isPending}
         error={error}
         errorTitle="Couldn't load attributes"
-        empty={
-          isFiltering(filters) ? (
-            <NoMatches icon={<Tags size={22} />} noun="attributes" onClear={filters.clear} />
-          ) : (
-            <EmptyState
-              icon={<Tags size={22} />}
-              title="No attributes"
-              description="Create an attribute, then set its value from the details of any branch, changeset or label."
-              action={<Button onClick={() => openCreateAttributeDialog(workspacePath)}>New attribute</Button>}
-            />
-          )
+        filtering={isFiltering(filters)}
+        noMatches={<NoMatches icon={<Tags size={22} />} noun="attributes" onClear={filters.clear} />}
+        emptyState={
+          <EmptyState
+            icon={<Tags size={22} />}
+            title="No attributes"
+            description="Create an attribute, then set its value from the details of any branch, changeset or label."
+            action={<Button onClick={() => openCreateAttributeDialog(workspacePath)}>New attribute</Button>}
+          />
         }
         query={search.trim()}
         rows={visible}

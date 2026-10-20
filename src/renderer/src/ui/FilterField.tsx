@@ -12,6 +12,8 @@ interface FilterFieldProps {
   placeholder: string;
   /** Pixels, or any CSS width. */
   width?: number | string;
+  /** Nothing to filter yet (the list is being read). */
+  disabled?: boolean;
 }
 
 /** Every filter bar's text field is this wide, so the chips after it line up from view to view. */
@@ -19,9 +21,9 @@ const FILTER_FIELD_WIDTH = 240;
 
 /**
  * The text filter of a view's filter bar, first in it. ⌘F (and / from anywhere but a text field) goes to it while it
- * shows; ↓ goes on to the list, and Esc empties it, then goes back to the list.
+ * shows and is enabled; ↓ goes on to the list, and Esc empties it, then goes back to the list.
  */
-export function FilterField({ value, onChange, placeholder, width = FILTER_FIELD_WIDTH }: FilterFieldProps) {
+export function FilterField({ value, onChange, placeholder, width = FILTER_FIELD_WIDTH, disabled }: FilterFieldProps) {
   const ref = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -48,6 +50,7 @@ export function FilterField({ value, onChange, placeholder, width = FILTER_FIELD
       placeholder={placeholder}
       width={width}
       aria-label={placeholder}
+      disabled={disabled}
       tip={{ text: placeholder, shortcut: hotkey('listFilter') }}
       onKeyDown={(event) => {
         if ((event.key === 'ArrowDown' || event.key === 'Escape') && focusMain(document)) event.preventDefault();

@@ -26,6 +26,8 @@ export interface ChangeFilterOptions {
   toneLabels?: Partial<Record<StatusTone, string>>;
   /** At the row's end, after the List/Tree switch: the list's own modes (the review mode toggle). */
   actions?: ReactNode;
+  /** The items are still being read: the field doesn't count them yet, and waits for them to filter anything. */
+  reading?: boolean;
 }
 
 const NO_TONE_LABELS: Partial<Record<StatusTone, string>> = {};
@@ -49,7 +51,7 @@ export function useChangeFilter<T>(
   items: T[],
   pathOf: (item: T) => string,
   tonesOf: (item: T) => readonly StatusTone[],
-  { isViewFilter = false, toneLabels = NO_TONE_LABELS, actions }: ChangeFilterOptions = {},
+  { isViewFilter = false, toneLabels = NO_TONE_LABELS, actions, reading = false }: ChangeFilterOptions = {},
 ): ChangeFilterResult<T> {
   const [query, setQuery] = useState('');
   const [chosenTones, setChosenTones] = useState<ReadonlySet<StatusTone>>(new Set());
@@ -77,12 +79,13 @@ export function useChangeFilter<T>(
       return next;
     });
 
+  const placeholder = changeFilterPlaceholder(reading ? undefined : items.length);
   const bar = (
     <div className={styles.bar}>
       {isViewFilter ? (
-        <FilterField value={query} onChange={setQuery} placeholder={changeFilterPlaceholder(items.length)} width="100%" />
+        <FilterField value={query} onChange={setQuery} placeholder={placeholder} width="100%" disabled={reading} />
       ) : (
-        <SearchField value={query} onChange={setQuery} placeholder={changeFilterPlaceholder(items.length)} width="100%" />
+        <SearchField value={query} onChange={setQuery} placeholder={placeholder} width="100%" disabled={reading} />
       )}
       {tones.map((tone) => {
         const count = counts.get(tone) ?? 0;
@@ -90,7 +93,7 @@ export function useChangeFilter<T>(
         const label = count > 0 ? `${name} (${formatCount(count)})` : name;
         return (
           <Tooltip key={tone} content={label}>
-            <button type="button" className={styles.chip} data-tone={tone} data-empty={count === 0} aria-pressed={activeTones.has(tone)} aria-label={label} onClick={() => toggle(tone)}>
+            <button type="button" className={styles.chip} data-tone={tone} data-empty={count === 0} aria-pressed={activeTones.has(tone)} aria-label={label} disabled={reading} onClick={() => toggle(tone)}>
               <StatusLetter letter={STATUS_LETTERS[tone]} />
             </button>
           </Tooltip>

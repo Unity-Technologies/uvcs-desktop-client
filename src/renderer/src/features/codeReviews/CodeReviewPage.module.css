@@ -82,3 +82,17 @@
   flex-direction: column;
   min-height: 0;
 }
+
+/* The skeleton's rows, as tall as the title, the meta line and the actions they stand for. */
+.placeholderTitle {
+  align-items: center;
+  height: 30px;
+}
+
+.placeholderMeta {
+  height: 22px;
+}
+
+.placeholderActions {
+  height: 28px;
+}

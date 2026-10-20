@@ -29,7 +29,7 @@ export function useIncomingFiles(scope: IncomingScope, updateFiles: DiffEntry[],
   const files = scope.kind === 'all' ? allListed : isSettled ? changesetListed : undefined;
 
   const tonesOf = useCallback((file: DiffEntry) => incomingFileTones(file, collides(file)), [collides]);
-  const filter = useChangeFilter(files ?? NO_FILES, diffEntryKey, tonesOf, { isViewFilter: true, toneLabels: INCOMING_TONE_LABELS });
+  const filter = useChangeFilter(files ?? NO_FILES, diffEntryKey, tonesOf, { isViewFilter: true, reading: !files, toneLabels: INCOMING_TONE_LABELS });
   const content = useMemo<FileListContent<DiffEntry, IncomingFileGroup>>(
     // Only the whole update is what updating merges: a changeset's files are what it did, without groups.
     () => (scope.kind === 'all' ? incomingFileContent(filter.visible, collides) : { sorted: filter.visible }),

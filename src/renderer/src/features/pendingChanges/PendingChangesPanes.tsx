@@ -1,6 +1,6 @@
 import { GitMerge } from 'lucide-react';
-import { useEffect, useMemo, useRef } from 'react';
-import type { PendingChange, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
+import { useEffect, useMemo, useRef, type ReactNode } from 'react';
+import type { Changelist, PendingChange, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
@@ -11,6 +11,8 @@ import { useSettings } from '../../app/settings/useSettings';
 import { singleSelection } from '../../lib/selection';
 import { useSettledValue } from '../../lib/useSettled';
 import { HighlightQuery } from '../../ui/Highlight';
+import { NoMatches } from '../../ui/NoMatches';
+import { ListSkeleton } from '../../ui/Skeleton';
 import { SplitPane } from '../../ui/SplitPane';
 import { useChangeset } from '../changesets/useChangeset';
 import { useFileSteps } from '../diff/viewer/fileSteps';
@@ -24,7 +26,7 @@ import { ChangesList } from './ChangesList';
 import { ChangesSummaryBar } from './ChangesSummaryBar';
 import { CheckinAfterUpdateNotice } from './CheckinAfterUpdateNotice';
 import { CheckinPanel } from './CheckinPanel';
-import { HiddenCheckedNotice, NoFilterMatches } from './FilterNotices';
+import { HiddenCheckedNotice } from './HiddenCheckedNotice';
 import { LockedByOthersNotice } from './locks/LockedByOthersNotice';
 import { usePendingLocks } from './locks/usePendingLocks';
 import type { PendingReview } from './review/usePendingReview';
@@ -33,6 +35,7 @@ import { checkinAfterUpdateMessage, useCheckinAfterUpdateStore } from './checkin
 import { undoUnchangedCheckouts } from './checkinOperations';
 import { matchesBranch } from './changeCategories';
 import { changesUnderRow, type ChangeRow } from './changeRows';
+import { changesPanesState } from './changesPanesState';
 import { changelistMenu } from './changelistMenu';
 import { moveToChangelist } from './changelistOperations';
 import { changeTones } from './changeTone';
@@ -47,19 +50,27 @@ import { useSortedChanges } from './useSortedChanges';
 import styles from './PendingChangesView.module.css';
 
 const changePath = (change: PendingChange): string => change.path;
+const NO_CHANGES: PendingChange[] = [];
+const NO_CHANGELISTS: Changelist[] = [];
 
 interface PendingChangesPanesProps {
   workspacePath: string;
   workspace: WorkspaceInfo | undefined;
-  snapshot: PendingChangesSnapshot;
+  /** The changes read; undefined until they are read the first time, while the list shows a skeleton of its rows. */
+  snapshot: PendingChangesSnapshot | undefined;
+  /** Beside the list, where the diff goes, once nothing is pending: the empty state, or what was just checked in. */
+  nothingPending: ReactNode;
   /** Review mode on the changes: the view keeps it while nothing is pending too, to see bursts and drop old marks. */
   review: PendingReview;
   /** When the snapshot was read: locks are read again with the changes, at most every 30 s. */
   readAt: number;
 }
 
-/** Changes with something pending: the list and the check-in panel, beside the diff of the change selected. */
-export function PendingChangesPanes({ workspacePath, workspace, snapshot, review, readAt }: PendingChangesPanesProps) {
+/**
+ * The list of changes and the check-in panel, beside the diff of the change selected. It keeps this shape from the
+ * first read on: a skeleton of rows while the changes load, and "0 files" beside `nothingPending` once nothing is.
+ */
+export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothingPending, review, readAt }: PendingChangesPanesProps) {
   const incomingSummary = useKnownIncomingSummary();
   const settings = useSettings();
   // Only what the list shows: dragging the description's height or typing the comment doesn't render the list again.
@@ -70,12 +81,12 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, review
   const [selection, setSelection] = useViewSelection('changes');
   const summaryRef = useRef<HTMLInputElement>(null);
 
-  const allChanges = snapshot.changes;
-  const { changelists } = snapshot;
+  const allChanges = snapshot?.changes ?? NO_CHANGES;
+  const changelists = snapshot?.changelists ?? NO_CHANGELISTS;
   const locks = usePendingLocks(workspacePath, workspace?.repository, allChanges, readAt);
   // Sorted once for the layout; filtering keeps the order, so typing in the filter or opening a folder never sorts again.
   const sorted = useSortedChanges(allChanges);
-  const { visible: filtered, query, clear: clearTextFilter, bar: filterBar } = useChangeFilter(sorted, changePath, changeTones, { isViewFilter: true, actions: <ReviewModeButton workspacePath={workspacePath} /> });
+  const { visible: filtered, query, clear: clearTextFilter, bar: filterBar } = useChangeFilter(sorted, changePath, changeTones, { isViewFilter: true, reading: !snapshot, actions: <ReviewModeButton workspacePath={workspacePath} /> });
   const changes = useMemo(() => review.narrow(filtered), [review.narrow, filtered]);
   const clearFilter = (): void => {
     clearTextFilter();
@@ -87,7 +98,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, review
   const hiddenIncludedCount = useMemo(() => included.length - changes.filter(isIncluded).length, [changes, included, isIncluded]);
   const reviewed = useMemo(() => reviewProgress(included, review.statusOf), [included, review.statusOf]);
   const { mergeChanges, onlyNeverCheckedIn } = useMemo(
-    () => ({ mergeChanges: allChanges.filter((change) => change.mergeInfo), onlyNeverCheckedIn: matchesBranch(allChanges) }),
+    () => ({ mergeChanges: allChanges.filter((change) => change.mergeInfo), onlyNeverCheckedIn: allChanges.length > 0 && matchesBranch(allChanges) }),
     [allChanges],
   );
   const branchName = workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined;
@@ -122,6 +133,38 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, review
     setIncluded(workspacePath, selected.map((change) => change.path), include);
   const toggleIncluded = (toggled: ChangeRow[], include: boolean): void => setIncludedChanges(toggled.flatMap(changesUnderRow), include);
 
+  const listedCount = snapshot && allChanges.length;
+  const panesState = changesPanesState(listedCount, changes.length);
+  const listBody =
+    panesState === 'reading' ? (
+      <ListSkeleton rowHeight={28} />
+    ) : panesState === 'nothingPending' ? (
+      <div className={styles.nothingListed} />
+    ) : panesState === 'noMatches' ? (
+      <NoMatches noun="changes" onClear={clearFilter} />
+    ) : (
+      <HighlightQuery query={query}>
+        <ChangesList
+          rows={rows}
+          selection={selection}
+          onSelectionChange={(next) => selectAfterLeaving(selection, next, setSelection)}
+          isIncluded={isIncluded}
+          onToggleIncluded={toggleIncluded}
+          onToggleCollapsed={toggleCollapsed}
+          onOpen={(change) => openChange(workspacePath, change)}
+          onMoveToChangelist={
+            grouping === 'changelist' ? (moved, changelist) => void moveToChangelist(workspacePath, changelist, moved) : undefined
+          }
+          contextMenu={(selected) =>
+            pendingChangeMenu(workspacePath, selected, changelists, { isIncluded, setIncluded: setIncludedChanges }, review, locks)
+          }
+          changelistMenu={(changelist) => changelistMenu(workspacePath, changelist)}
+          review={review}
+          locks={locks}
+        />
+      </HighlightQuery>
+    );
+
   return (
     <>
       {mergeChanges.length > 0 && (
@@ -138,7 +181,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, review
           <div className={styles.listPane}>
             <ChangesSummaryBar
               changes={changes}
-              totalCount={allChanges.length}
+              totalCount={listedCount}
               isIncluded={isIncluded}
               onSetIncluded={setIncludedChanges}
               onUndo={(selected) => void undoChanges(workspacePath, selected)}
@@ -147,30 +190,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, review
             />
             {filterBar}
             {review.bar}
-            {changes.length === 0 ? (
-              <NoFilterMatches onClear={clearFilter} />
-            ) : (
-              <HighlightQuery query={query}>
-                <ChangesList
-                  rows={rows}
-                  selection={selection}
-                  onSelectionChange={(next) => selectAfterLeaving(selection, next, setSelection)}
-                  isIncluded={isIncluded}
-                  onToggleIncluded={toggleIncluded}
-                  onToggleCollapsed={toggleCollapsed}
-                  onOpen={(change) => openChange(workspacePath, change)}
-                  onMoveToChangelist={
-                    grouping === 'changelist' ? (moved, changelist) => void moveToChangelist(workspacePath, changelist, moved) : undefined
-                  }
-                  contextMenu={(selected) =>
-                    pendingChangeMenu(workspacePath, selected, changelists, { isIncluded, setIncluded: setIncludedChanges }, review, locks)
-                  }
-                  changelistMenu={(changelist) => changelistMenu(workspacePath, changelist)}
-                  review={review}
-                  locks={locks}
-                />
-              </HighlightQuery>
-            )}
+            {listBody}
             {hiddenIncludedCount > 0 && <HiddenCheckedNotice count={hiddenIncludedCount} onClear={clearFilter} />}
             <LockedByOthersNotice changes={included} locks={locks} />
             {/* Files never checked in don't make a task unfinished: finishing it is offered as on a clean workspace. */}
@@ -198,6 +218,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, review
               summaryRef={summaryRef}
               workspacePath={workspacePath}
               includedCount={included.length}
+              listedCount={listedCount}
               upload={upload}
               shelvable={{ count: shelvable.length, upload: shelvableUpload }}
               branchName={workspace?.selector.name ?? ''}
@@ -213,14 +234,18 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, review
           </div>
         }
         second={
-          <ChangeSelectionPane
-            workspacePath={workspacePath}
-            selectedCount={countSelected(selection.selected, changesByKey)}
-            diffChange={focused && diffChange}
-            focusedFolder={focusedFolder}
-            fileSteps={fileSteps}
-            reviewMarks={review.marks}
-          />
+          panesState === 'reading' || panesState === 'noMatches' ? null : panesState === 'nothingPending' ? (
+            nothingPending
+          ) : (
+            <ChangeSelectionPane
+              workspacePath={workspacePath}
+              selectedCount={countSelected(selection.selected, changesByKey)}
+              diffChange={focused && diffChange}
+              focusedFolder={focusedFolder}
+              fileSteps={fileSteps}
+              reviewMarks={review.marks}
+            />
+          )
         }
       />
     </>
@@ -236,9 +261,9 @@ function useCheckinAfterUpdate(workspacePath: string, workspace: WorkspaceInfo |
 }
 
 /** Checking in completes a pending merge: its comment starts with where the merge comes from, unless one is written. */
-function useMergeComment(workspacePath: string, snapshot: PendingChangesSnapshot): void {
+function useMergeComment(workspacePath: string, snapshot: PendingChangesSnapshot | undefined): void {
   const setMessage = useCheckinDraftStore((state) => state.setMessage);
-  const { data: mergeSource } = useChangeset(snapshot.mergeLinks[0]?.sourceChangeset ?? null);
+  const { data: mergeSource } = useChangeset(snapshot?.mergeLinks[0]?.sourceChangeset ?? null);
   useEffect(() => {
     const draft = checkinDraftOf(workspacePath);
     if (mergeSource && !draft.summary && !draft.description) setMessage(workspacePath, { summary: `Merged from ${mergeSource.branch}` });

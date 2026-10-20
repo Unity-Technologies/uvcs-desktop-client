@@ -5,8 +5,9 @@ import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import { isHeaderRow } from '../../lib/groupedPathTree';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { pluralize } from '../../lib/text';
+import { hidesEveryRow } from '../../lib/hidesEveryRow';
 import { EmptyState } from '../../ui/EmptyState';
-import { SplitPane } from '../../ui/SplitPane';
+import { NoMatches } from '../../ui/NoMatches';
 import { ChangesetDetails } from '../changesets/ChangesetDetails';
 import { changesetMenu } from '../changesets/changesetMenu';
 import { diffEntryKey } from '../diff/DiffEntryList';
@@ -23,13 +24,13 @@ import { incomingFileMenu } from './incomingFileMenu';
 import { incomingSubtitle } from './incomingSubtitle';
 import { ALL_INCOMING, collidesWithLocal, firstIncomingFile, incomingFilesSummary, type IncomingScope } from './incomingScope';
 import { IncomingFiles } from './IncomingFiles';
+import { IncomingPanes } from './IncomingPanes';
 import { UpdateBar } from './UpdateBar';
 import { useIncomingChangesetList } from './useIncomingChangesets';
 import { UPDATE_LABELS, updateConflictFiles, updateResolutionsOf } from './updateConflictFiles';
 import { shelveBlockedAndUpdate, updateResolvingConflicts, updateToIncoming } from './updateOperations';
 import { useIncomingFiles } from './useIncomingFiles';
 import { useIncomingViewStore } from './incomingViewStore';
-import styles from './IncomingSession.module.css';
 
 interface IncomingSessionProps {
   workspacePath: string;
@@ -76,6 +77,8 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const resolutions = updateResolutionsOf(states);
 
   const focusedFile = files?.find((file) => diffEntryKey(file) === selection.anchor);
+  // Nothing to select while the filters hide every file: the detail pane shows no file.
+  const hidesAll = hidesEveryRow(files?.length ?? 0, filter.visible.length);
   const focusedGroup = focusedFile ? undefined : rows.filter(isHeaderRow).find((row) => row.key === selection.anchor);
   const firstFile = files && scope.kind === 'all' ? firstIncomingFile(files, collides) : undefined;
 
@@ -124,6 +127,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
     if (showsChangeset && scopedChangeset) {
       return <ChangesetDetails key={scopedChangeset.id} changeset={scopedChangeset} menu={changesetMenu(menuContext, [scopedChangeset])} withChangedFiles={false} />;
     }
+    if (hidesAll) return null;
     if (selectedConflict) {
       return (
         <FileConflictPanel
@@ -157,12 +161,9 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
         onShelveBlockedAndUpdate={() => void whileUpdating(() => shelveBlockedAndUpdate(workspacePath, incoming, resolutions))}
         run={run.progress || runPlans.length > 0 ? <ResolveRunControl states={states} run={run} plans={runPlans} /> : undefined}
       />
-      <SplitPane
-        initialSize={360}
-        minSize={240}
-        maxSize={640}
-        first={
-          <div className={styles.pane}>
+      <IncomingPanes
+        list={
+          <>
             <IncomingChangesetList
               changesets={changesetList.changesets}
               more={changesetList.more}
@@ -183,14 +184,15 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
               toggleCollapsed={toggleFolder}
               query={filter.query}
               filterBar={filter.bar}
+              noMatches={hidesAll && <NoMatches noun="files" onClear={filter.clear} />}
               selection={selection}
               onSelectionChange={selectFiles}
               contextMenu={fileMenu}
               markOf={(file) => <IncomingConflictMark file={file} conflictPaths={conflictPaths} conflictStates={conflictStates} blockedPaths={blockedPaths} />}
             />
-          </div>
+          </>
         }
-        second={detail()}
+        detail={detail()}
       />
     </>
   );

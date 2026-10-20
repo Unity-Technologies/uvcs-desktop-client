@@ -3,7 +3,7 @@ import { focusMain, isKeyboardTaken } from '../../lib/mainFocus';
 import { useNavigation } from '../navigation/navigationStore';
 import { isAimedAtMainList } from './mainFocusKeys';
 
-/** How long a view may take to show its list (loading lazily, then its data) before focus stops waiting for it. */
+/** How long a view may take to show its list (until its data shows) before focus stops waiting for it. */
 const WAIT_MS = 5000;
 
 /**
@@ -61,7 +61,7 @@ export function useMainFocus(contentRef: RefObject<HTMLElement | null>): void {
 }
 
 /**
- * Focuses the main list under `root` as soon as it shows (views load lazily, then read their data), giving up after
+ * Focuses the main list under `root` as soon as it shows (when the view's data arrives), giving up after
  * `WAIT_MS`, once the user clicks, or once focus goes anywhere else. Returns what stops waiting.
  */
 function waitToFocusMain(root: HTMLElement): () => void {

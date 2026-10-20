@@ -2,9 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import type { CodeReviewFilter } from '@shared/domain/codeReview';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
-import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
+import { queryClient, SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { compactFilter } from '../../lib/compactFilter';
+import { listedReviewIn } from './listedReview';
 import { latestReviewByBranch } from './reviewsByBranch';
 
 export function useCodeReviews(filter: CodeReviewFilter) {
@@ -20,9 +21,13 @@ export function useCodeReviews(filter: CodeReviewFilter) {
 
 export function useCodeReview(reviewId: number) {
   const workspacePath = useWorkspacePath();
+  // Opened from a list that read it, the page shows at once, as fresh as that list: read again only once it's stale.
+  const listed = () => listedReviewIn(queryClient, workspacePath, reviewId);
   return useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'codeReviews', 'review', reviewId),
     queryFn: () => api.codeReviews.get(workspacePath, reviewId),
+    initialData: () => listed()?.review,
+    initialDataUpdatedAt: () => listed()?.readAt,
   });
 }
 

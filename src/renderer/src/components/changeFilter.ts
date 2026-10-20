@@ -35,9 +35,9 @@ export function countTones(tonesOfEach: readonly (readonly StatusTone[])[]): Map
   return counts;
 }
 
-/** The filter field's placeholder: "Filter 1 file", "Filter 1,204 files". */
-export function changeFilterPlaceholder(count: number): string {
-  return `Filter ${pluralize(count, 'file')}`;
+/** The filter field's placeholder: "Filter 1 file", "Filter 1,204 files"; "Filter files" while they are read (undefined). */
+export function changeFilterPlaceholder(count: number | undefined): string {
+  return count === undefined ? 'Filter files' : `Filter ${pluralize(count, 'file')}`;
 }
 
 /** Whether a change shows: its path holds every word typed, and one of its statuses is chosen, if any is. */

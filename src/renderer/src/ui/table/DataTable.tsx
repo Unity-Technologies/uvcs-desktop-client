@@ -1,11 +1,12 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import type { MenuEntry } from '../../lib/actions';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
 import { holdBackMenuKeyRelease, isListMenuKey, openContextMenuOf } from '../../lib/rowMenu';
 import { isModPressed } from '../../lib/shortcuts';
 import { focusedKeyOf, selectOnArrow, selectOnClick, type SelectionState } from '../../lib/selection';
 import { ActionContextMenu } from '../menu/ActionContextMenu';
+import { anchorRevealStep } from './anchorReveal';
 import type { Column } from './column';
 import { DataTableHeader } from './DataTableHeader';
 import { DataTableRow } from './DataTableRow';
@@ -43,6 +44,8 @@ interface DataTableProps<Row> {
   hideHeader?: boolean;
   /** Rows as a list of entries, for tall rows of several lines in a list without column titles: each fills the width, with a hairline between. */
   divided?: boolean;
+  /** Stands for the rows while there are none (a filter's "No matching …"), under the column titles, which stay. */
+  empty?: ReactNode;
 }
 
 /**
@@ -68,6 +71,7 @@ export function DataTable<Row>({
   label,
   hideHeader = false,
   divided = false,
+  empty,
 }: DataTableProps<Row>) {
   const rowIdPrefix = useId();
   const rowId = (index: number): string => `${rowIdPrefix}-${index}`;
@@ -111,7 +115,9 @@ export function DataTable<Row>({
   // A selection kept from an earlier visit shows once its row is in.
   const revealedAnchor = useRef(false);
   useEffect(() => {
-    if (!revealedAnchor.current) revealedAnchor.current = reveal(selection.anchor);
+    const step = anchorRevealStep(orderedKeys.length, revealedAnchor.current);
+    if (step === 'forget') revealedAnchor.current = false;
+    else if (step === 'reveal') revealedAnchor.current = reveal(selection.anchor);
   }, [orderedKeys.length]);
 
   useKeepRowSelected({ enabled: selectFirstRow, orderedKeys, isShown, selection, onSelectionChange, focusRow: setFocusedKey });
@@ -186,6 +192,17 @@ export function DataTable<Row>({
       </div>
     </div>
   );
+
+  // No rows to move through: the column titles over the notice, a plain table rather than the grid, whose keys are for
+  // rows. Still the table's element, so its width keeps being watched (`useTableWidth`) for when the rows come back.
+  if (sortedRows.length === 0 && empty) {
+    return (
+      <div ref={tableRef} className={styles.table} role="table" aria-label={label}>
+        <DataTableHeader columns={shownColumns} sort={sort} onSort={toggleSort} hidden={hideHeader} />
+        {empty}
+      </div>
+    );
+  }
 
   return (
     <div

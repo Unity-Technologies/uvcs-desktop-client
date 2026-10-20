@@ -1,7 +1,8 @@
 import { ChevronDown, FileCheck2, PencilLine, RotateCcw } from 'lucide-react';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { PathLabel } from '../../../components/PathLabel';
 import { SEPARATOR } from '../../../lib/actions';
+import { lazyComponent } from '../../../lib/lazyComponent';
 import { fileNameOf, pluralize } from '../../../lib/text';
 import { Button } from '../../../ui/Button';
 import { ActionDropdownMenu } from '../../../ui/menu/ActionDropdownMenu';
@@ -12,12 +13,15 @@ import { MergeToolButton, type ConflictToolActions } from '../mergeTools/MergeTo
 import { MergeToolOpenBanner } from '../mergeTools/MergeToolOpenBanner';
 import { fileConflictStatus, fileConflictTool } from '../mergeStatus';
 import { chosenConflictChoice, decisionFor, hasConflicts, type ConflictChoice } from './conflictChoices';
-import { ConflictBody } from './ConflictBody';
 import { editInAppUnavailable, effectiveView, hasBase, rendersVersions, type PanelView } from './conflictPanelView';
 import type { FileConflictDecision } from './fileConflictDecision';
 import { KeepChoices } from './KeepChoices';
 import type { FileConflictState } from './useFileConflicts';
 import styles from './FileConflictPanel.module.css';
+
+// The versions and the merged text (Pierre, the 3D model viewer) load on first use, under the panel's header and
+// choices, which show at once.
+const ConflictBody = lazyComponent(() => import('./ConflictBody').then((module) => module.ConflictBody));
 
 interface FileConflictPanelProps {
   workspacePath: string;
@@ -126,14 +130,16 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
         </div>
       )}
 
-      <ConflictBody
-        workspacePath={workspacePath}
-        state={state}
-        labels={labels}
-        view={view}
-        editing={editing}
-        onDecide={onDecide}
-      />
+      <Suspense fallback={null}>
+        <ConflictBody
+          workspacePath={workspacePath}
+          state={state}
+          labels={labels}
+          view={view}
+          editing={editing}
+          onDecide={onDecide}
+        />
+      </Suspense>
     </div>
   );
 }

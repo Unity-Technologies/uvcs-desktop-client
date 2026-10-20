@@ -22,6 +22,11 @@
   background: var(--bg-hover);
 }
 
+/* The heading alone, once nothing comes in: nothing to fold. */
+.header[data-static]:hover {
+  background: none;
+}
+
 .header:focus-visible {
   box-shadow: var(--focus-ring-inset);
   outline: none;
@@ -36,6 +41,12 @@
 
 .chevron[data-collapsed='true'] {
   transform: none;
+}
+
+/* The chevron's room in a heading with nothing to fold (`IncomingChangesetsHeading`): its 13px icon. */
+.chevronPlace {
+  flex: none;
+  width: 13px;
 }
 
 .title {

@@ -11,21 +11,23 @@ import { RefreshButton } from './RefreshButton';
 
 interface PendingChangesHeaderProps {
   workspacePath: string;
-  /** How many changes are pending; undefined until read. */
+  /** How many changes are pending; undefined until read, and while nothing is pending: the list says "0 files". */
   pendingCount: number | undefined;
-  /** Nothing is pending: no count and no ways to lay out a list that isn't there. */
-  empty: boolean;
   fetching: boolean;
 }
 
-/** The Changes view's header: the count, how the list is grouped, and the view's buttons. The List/Tree switch is the filter bar's, as in every list of files. */
-export function PendingChangesHeader({ workspacePath, pendingCount, empty, fetching }: PendingChangesHeaderProps) {
+/**
+ * The Changes view's header: the count, how the list is grouped, and the view's buttons. It keeps its shape while the
+ * changes load and when nothing is pending, as the list beneath it does. The List/Tree switch is the filter bar's, as
+ * in every list of files.
+ */
+export function PendingChangesHeader({ workspacePath, pendingCount, fetching }: PendingChangesHeaderProps) {
   const grouping = usePendingChangesViewStore((state) => state.grouping);
   const setGrouping = usePendingChangesViewStore((state) => state.setGrouping);
   return (
     <ViewHeader
       title="Changes"
-      subtitle={pendingCount !== undefined && !empty && `${formatCount(pendingCount)} pending`}
+      subtitle={pendingCount !== undefined && `${formatCount(pendingCount)} pending`}
       actions={
         <>
           <MyShelvesButton />
@@ -34,16 +36,14 @@ export function PendingChangesHeader({ workspacePath, pendingCount, empty, fetch
         </>
       }
     >
-      {!empty && (
-        <SegmentedControl<ChangesGrouping>
-          value={grouping}
-          onChange={setGrouping}
-          segments={[
-            { value: 'none', label: 'Files' },
-            { value: 'changelist', label: 'Changelists' },
-          ]}
-        />
-      )}
+      <SegmentedControl<ChangesGrouping>
+        value={grouping}
+        onChange={setGrouping}
+        segments={[
+          { value: 'none', label: 'Files' },
+          { value: 'changelist', label: 'Changelists' },
+        ]}
+      />
     </ViewHeader>
   );
 }

@@ -67,7 +67,7 @@ export function LocksView() {
   const { text: filter, people, update } = filters;
   const me = useWorkspaceUser();
   const [selection, setSelection] = useViewSelection('locks');
-  const { data: locks, isLoading, error, isFetching } = useLocks(readsOnlyMyLocks(people));
+  const { data: locks, isPending, error, isFetching } = useLocks(readsOnlyMyLocks(people));
   const offered = usePeopleSeen('locks', locks, ownerOf);
   const lockRules = useLockRulesPage();
   useLockRulesCommand(lockRules);
@@ -112,16 +112,12 @@ export function LocksView() {
       {header}
       <ObjectListView
         widthKey="locks"
-        loading={isLoading}
+        loading={isPending}
         error={error}
         errorTitle="Couldn't read the locks"
-        empty={
-          isFiltering(filters) ? (
-            <NoMatches icon={<LockIcon size={22} />} noun="locks" hint={isOnlyMine(people) && !filter.trim() ? 'You hold no locks.' : undefined} onClear={filters.clear} />
-          ) : (
-            <EmptyState icon={<LockIcon size={22} />} title="Nothing is locked" description={RULES} />
-          )
-        }
+        filtering={isFiltering(filters)}
+        noMatches={<NoMatches icon={<LockIcon size={22} />} noun="locks" hint={isOnlyMine(people) && !filter.trim() ? 'You hold no locks.' : undefined} onClear={filters.clear} />}
+        emptyState={<EmptyState icon={<LockIcon size={22} />} title="Nothing is locked" description={RULES} />}
         query={filter}
         rows={visible}
         columns={COLUMNS}

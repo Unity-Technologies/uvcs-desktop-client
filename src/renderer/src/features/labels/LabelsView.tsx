@@ -58,7 +58,7 @@ export function LabelsView() {
   const { text: search, people, since, update } = filters;
   const me = useWorkspaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
-  const { data: labels, isLoading, isFetching, error } = useLabels(labelsQuery({ since, people: queriedPeople }));
+  const { data: labels, isPending, isFetching, error } = useLabels(labelsQuery({ since, people: queriedPeople }));
   const offered = usePeopleSeen('labels', labels, ownerOf);
   const [selection, setSelection] = useViewSelection('labels');
 
@@ -94,13 +94,13 @@ export function LabelsView() {
       </ViewHeader>
       <ObjectListView
         widthKey="labels"
-        loading={isLoading}
+        loading={isPending}
         error={error}
         errorTitle="Couldn't load labels"
-        empty={
-          filtering ? (
-            <NoMatches icon={<Tag size={22} />} noun="labels" hint={longerRangeHint(since, true)} onClear={filters.clear} />
-          ) : since !== 'anyTime' ? (
+        filtering={filtering}
+        noMatches={<NoMatches icon={<Tag size={22} />} noun="labels" hint={longerRangeHint(since, true)} onClear={filters.clear} />}
+        emptyState={
+          since !== 'anyTime' ? (
             <EmptyState icon={<Tag size={22} />} title="No labels" description={longerRangeHint(since, false)} />
           ) : (
             <EmptyState

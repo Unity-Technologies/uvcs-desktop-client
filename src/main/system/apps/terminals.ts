@@ -21,7 +21,7 @@ export interface FoundTerminal {
 }
 
 /**
- * macOS terminals: most open a folder given to `open -a` (GitHub Desktop runs `open -b`, the same); kitty, Alacritty
+ * macOS terminals: most open a folder given to `open -a` (`open -b` does the same); kitty, Alacritty
  * and WezTerm take it as an argument of their own program in the bundle.
  */
 function mac(id: string, name: string, identity: AppIdentity, program?: { path: string; args: (folder: string) => string[] }): KnownTerminal {

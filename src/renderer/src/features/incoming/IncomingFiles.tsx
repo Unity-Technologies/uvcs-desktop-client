@@ -9,7 +9,7 @@ import type { SelectionState } from '../../lib/selection';
 import { firstLine } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
-import { CenteredSpinner } from '../../ui/Spinner';
+import { SkeletonBar } from '../../ui/Skeleton';
 import { DiffEntryRow } from '../diff/DiffEntryRow';
 import { INCOMING_GROUP_TIPS, type IncomingFileGroup } from './incomingScope';
 import styles from './IncomingFiles.module.css';
@@ -32,10 +32,12 @@ interface IncomingFilesProps {
   contextMenu: (files: DiffEntry[]) => MenuEntry[];
   /** Where a file that collides with local changes stands. */
   markOf: (file: DiffEntry) => ReactNode;
+  /** While the filters hide every file: `NoMatches`. */
+  noMatches?: ReactNode;
 }
 
 /** Incoming's files: what the whole update brings, or what one changeset changed, as every list of changed files shows them. */
-export function IncomingFiles({ changeset, onShowAll, files, summary, rows, tree, toggleCollapsed, query, filterBar, selection, onSelectionChange, contextMenu, markOf }: IncomingFilesProps) {
+export function IncomingFiles({ changeset, onShowAll, files, summary, rows, tree, toggleCollapsed, query, filterBar, selection, onSelectionChange, contextMenu, markOf, noMatches }: IncomingFilesProps) {
   return (
     <div className={styles.files}>
       <div className={styles.header}>
@@ -44,10 +46,9 @@ export function IncomingFiles({ changeset, onShowAll, files, summary, rows, tree
         </span>
         {changeset && <IconButton icon={<X size={13} />} label="Show all incoming changes" size="small" onClick={onShowAll} />}
       </div>
-      {files && files.length > 0 && <div className={styles.summary}>{summary}</div>}
-      {!files ? (
-        <CenteredSpinner />
-      ) : files.length === 0 ? (
+      {/* While the files are read, their summary, filter and rows hold their places. */}
+      {(!files || files.length > 0) && <div className={styles.summary}>{files ? summary : <SkeletonBar width="160px" />}</div>}
+      {files?.length === 0 ? (
         <EmptyState icon={<FileSearch size={22} />} title="No file changes" />
       ) : (
         <FileTreeList
@@ -62,6 +63,8 @@ export function IncomingFiles({ changeset, onShowAll, files, summary, rows, tree
           onSelectionChange={onSelectionChange}
           contextMenu={contextMenu}
           label={changeset ? `Files changed in cs:${changeset.id}` : 'Incoming files'}
+          loading={!files}
+          noMatches={noMatches}
         />
       )}
     </div>

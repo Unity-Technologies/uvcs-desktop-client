@@ -7,8 +7,9 @@ import { useGroupedFileTree } from '../../components/useGroupedFileTree';
 import { isHeaderRow } from '../../lib/groupedPathTree';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { pluralize } from '../../lib/text';
+import { hidesEveryRow } from '../../lib/hidesEveryRow';
 import { EmptyState } from '../../ui/EmptyState';
-import { SplitPane } from '../../ui/SplitPane';
+import { NoMatches } from '../../ui/NoMatches';
 import { defaultMergeComment } from '../mergeTask/mergeTaskSummary';
 import type { TaskMerge } from '../mergeTask/taskMerge';
 import { ResolveInWorkspaceMenu } from '../mergeTask/ResolveInWorkspaceMenu';
@@ -20,6 +21,7 @@ import type { MergeCompletion } from './MergeCompleted';
 import { mergeLabels } from './mergeDescription';
 import { MergeHeader } from './MergeHeader';
 import { MergeItemList } from './MergeItemList';
+import { MergePanes } from './MergePanes';
 import { buildMergeItems, firstWaiting, inListOrder, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, mergeProgress, type MergeItem } from './mergeItems';
 import { mergeItemMenu } from './mergeItemMenu';
 import { mergeItemTypes } from './mergeItemTypes';
@@ -31,7 +33,6 @@ import { collectResolutions } from './mergeResolutions';
 import { conflictStatusOf, planProgress, summarizePlan } from './mergeStatus';
 import { useFileConflicts } from './resolve/useFileConflicts';
 import { useSelectionFollowsItem } from './useSelectionFollowsItem';
-import styles from './MergeSession.module.css';
 
 interface MergeSessionProps {
   workspacePath: string;
@@ -71,6 +72,8 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   const preferredTool = primaryMergeTool(mergeTools);
   const filter = useChangeFilter(items, itemPath, mergeItemTones, { isViewFilter: true });
   const content = useMemo(() => ({ groups: mergeItemGroups(filter.visible) }), [filter.visible]);
+  // Nothing to select while the filters hide every item: the detail pane stays blank.
+  const hidesAll = hidesEveryRow(items.length, filter.visible.length);
   const { rows, tree, toggleCollapsed, rowKeyOf } = useGroupedFileTree(content, itemKey, folderListScope(workspacePath, `merge:${request.sourceSpec}:${request.destinationBranch ?? ''}`), selectedKey);
   const latestRowKeyOf = useRef(rowKeyOf);
   latestRowKeyOf.current = rowKeyOf;
@@ -124,90 +127,86 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   };
 
   return (
-    <div className={styles.session}>
-      <MergeHeader
-        request={request}
-        plan={plan}
-        labels={labels}
-        progress={planProgress(conflictStatuses)}
-        summary={summarizePlan(plan.changes.length, conflictStatuses)}
-        intoServerBranch={intoServerBranch}
-        comment={comment}
-        onCommentChange={setComment}
-        canMerge={Boolean(resolutions) && !merging}
-        merging={merging}
-        onMerge={() => void merge()}
-        run={run.progress || runPlans.length > 0 ? { control: <ResolveRunControl states={fileStates} run={run} plans={runPlans} />, running: Boolean(run.progress) } : undefined}
-        options={finishing && <TaskMergeOptions review={finishing.review} choices={taskChoices} onChange={setTaskChoices} />}
-        alternative={
-          task &&
-          conflicting &&
-          request.destinationBranch && <ResolveInWorkspaceMenu workspacePath={workspacePath} sourceSpec={request.sourceSpec} destination={request.destinationBranch} task={task} />
-        }
-        mergeButtonRef={mergeButtonRef}
-      />
-      <SplitPane
-        initialSize={360}
-        minSize={240}
-        maxSize={640}
-        first={
-          <div ref={listRef} className={styles.list}>
-            <MergeItemList
-              rows={rows}
-              progress={progress}
-              tree={tree}
-              toggleCollapsed={toggleCollapsed}
-              typeOf={typeOf}
-              labels={labels}
-              query={filter.query}
-              filterBar={filter.bar}
-              selection={selection}
-              onSelectionChange={setSelection}
-              contextMenu={(selectedItems) =>
-                mergeItemMenu(mergeItemsActedOn(rows, selection.selected, selectedItems), {
-                  workspacePath,
-                  request,
-                  plan,
-                  progress,
-                  labels,
-                  itemTypeOf: typeOf,
-                  preferredTool,
-                  running: Boolean(run.progress),
-                  decide,
-                  reset,
-                  resolveIn: (key, tool) => void resolveInTool(key, tool),
-                  resolveDirectory: resolveDirectoryConflict,
-                })
-              }
-            />
-          </div>
-        }
-        second={
-          shown ? (
-            <MergeDetail
-              workspacePath={workspacePath}
-              item={shown}
-              progress={progress}
-              plan={plan}
-              labels={labels}
-              request={request}
-              toolActions={{ resolveIn: (key, tool) => void resolveInTool(key, tool), run: run.progress, runOffered: runPlans.length > 0 }}
-              onDecideFile={decide}
-              onStartOverFile={reset}
-              onResolveDirectory={resolveDirectoryConflict}
-            />
-          ) : selectedGroup ? (
-            <EmptyState
-              icon={<Folder size={24} />}
-              title={selectedGroup.type === 'group' ? selectedGroup.label : selectedGroup.path}
-              description={`${pluralize(selectedGroup.items.length, 'item')}. Select one to see what the merge does to it.`}
-            />
-          ) : (
-            <EmptyState title="Nothing selected" />
-          )
-        }
-      />
-    </div>
+    <MergePanes
+      header={
+        <MergeHeader
+          request={request}
+          plan={plan}
+          labels={labels}
+          progress={planProgress(conflictStatuses)}
+          summary={summarizePlan(plan.changes.length, conflictStatuses)}
+          intoServerBranch={intoServerBranch}
+          comment={comment}
+          onCommentChange={setComment}
+          canMerge={Boolean(resolutions) && !merging}
+          merging={merging}
+          onMerge={() => void merge()}
+          run={run.progress || runPlans.length > 0 ? { control: <ResolveRunControl states={fileStates} run={run} plans={runPlans} />, running: Boolean(run.progress) } : undefined}
+          options={finishing && <TaskMergeOptions review={finishing.review} choices={taskChoices} onChange={setTaskChoices} />}
+          alternative={
+            task &&
+            conflicting &&
+            request.destinationBranch && <ResolveInWorkspaceMenu workspacePath={workspacePath} sourceSpec={request.sourceSpec} destination={request.destinationBranch} task={task} />
+          }
+          mergeButtonRef={mergeButtonRef}
+        />
+      }
+      listRef={listRef}
+      list={
+        <MergeItemList
+          rows={rows}
+          progress={progress}
+          tree={tree}
+          toggleCollapsed={toggleCollapsed}
+          typeOf={typeOf}
+          labels={labels}
+          query={filter.query}
+          filterBar={filter.bar}
+          noMatches={hidesAll && <NoMatches noun="files" onClear={filter.clear} />}
+          selection={selection}
+          onSelectionChange={setSelection}
+          contextMenu={(selectedItems) =>
+            mergeItemMenu(mergeItemsActedOn(rows, selection.selected, selectedItems), {
+              workspacePath,
+              request,
+              plan,
+              progress,
+              labels,
+              itemTypeOf: typeOf,
+              preferredTool,
+              running: Boolean(run.progress),
+              decide,
+              reset,
+              resolveIn: (key, tool) => void resolveInTool(key, tool),
+              resolveDirectory: resolveDirectoryConflict,
+            })
+          }
+        />
+      }
+      detail={
+        hidesAll ? null : shown ? (
+          <MergeDetail
+            workspacePath={workspacePath}
+            item={shown}
+            progress={progress}
+            plan={plan}
+            labels={labels}
+            request={request}
+            toolActions={{ resolveIn: (key, tool) => void resolveInTool(key, tool), run: run.progress, runOffered: runPlans.length > 0 }}
+            onDecideFile={decide}
+            onStartOverFile={reset}
+            onResolveDirectory={resolveDirectoryConflict}
+          />
+        ) : selectedGroup ? (
+          <EmptyState
+            icon={<Folder size={24} />}
+            title={selectedGroup.type === 'group' ? selectedGroup.label : selectedGroup.path}
+            description={`${pluralize(selectedGroup.items.length, 'item')}. Select one to see what the merge does to it.`}
+          />
+        ) : (
+          <EmptyState title="Nothing selected" />
+        )
+      }
+    />
   );
 }
-

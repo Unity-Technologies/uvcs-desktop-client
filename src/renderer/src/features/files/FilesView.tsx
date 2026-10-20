@@ -9,7 +9,7 @@ import { ListWithDetails } from '../../components/ListWithDetails';
 import { NoSelection } from '../../components/NoSelection';
 import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
-import { ListSkeleton } from '../../ui/Skeleton';
+import { DetailsPanelSkeleton } from '../../ui/DetailsPanelSkeleton';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { usePendingLocks } from '../pendingChanges/locks/usePendingLocks';
 import { usePendingChanges } from '../pendingChanges/usePendingChanges';
@@ -20,7 +20,7 @@ import { directoryListingQuery } from './directoryListing';
 import { CutHint } from './CutHint';
 import { createItem, openItem, targetDirectoryFor } from './fileOperations';
 import { useFilesViewStore, useRevealRequest } from './filesViewStore';
-import { FileTreeTable } from './FileTreeTable';
+import { FileTreeSkeleton, FileTreeTable } from './FileTreeTable';
 import { FILE_TREE_WIDTH } from './fileTreeWidth';
 import { ancestorsOf, buildFileTreeRows } from './fileTreeRows';
 import { goToFile } from './GoToFileDialog';
@@ -103,7 +103,6 @@ export function FilesView() {
     </ViewHeader>
   );
 
-  if (isLoadingRoot) return <>{header}<ListSkeleton rowHeight={28} /></>;
   if (error) return <>{header}<EmptyState title="Couldn't list the workspace" description={error.message} /></>;
 
   return (
@@ -114,23 +113,30 @@ export function FilesView() {
         widthLimits={FILE_TREE_WIDTH}
         sized="list"
         list={
-          <FileTreeTable
-            rows={rows}
-            selection={selection}
-            onSelectionChange={(next) => selectAfterLeaving(selection, next, setSelection)}
-            onToggleDirectory={(directory) => (directory === '' ? setRootExpanded((shown) => !shown) : toggle(workspacePath, directory))}
-            onOpenFile={(item) => openItem(workspacePath, item)}
-            contextMenu={(items) => fileMenu(workspacePath, items, pendingIndex, locks)}
-            statusOf={(item) => itemStatus(item, pendingIndex)}
-            lockOf={(item) => locks.get(item.path)}
-            hasChangesInside={(directory) => pendingIndex.hasChangesInside(directory)}
-            revealPath={revealPath}
-            isCut={(item) => cutPaths.has(item.path)}
-            onGoToFile={() => openGoToFile()}
-          />
+          // The tree's own header over placeholder rows while the root is read: the layout never changes shape.
+          isLoadingRoot ? (
+            <FileTreeSkeleton />
+          ) : (
+            <FileTreeTable
+              rows={rows}
+              selection={selection}
+              onSelectionChange={(next) => selectAfterLeaving(selection, next, setSelection)}
+              onToggleDirectory={(directory) => (directory === '' ? setRootExpanded((shown) => !shown) : toggle(workspacePath, directory))}
+              onOpenFile={(item) => openItem(workspacePath, item)}
+              contextMenu={(items) => fileMenu(workspacePath, items, pendingIndex, locks)}
+              statusOf={(item) => itemStatus(item, pendingIndex)}
+              lockOf={(item) => locks.get(item.path)}
+              hasChangesInside={(directory) => pendingIndex.hasChangesInside(directory)}
+              revealPath={revealPath}
+              isCut={(item) => cutPaths.has(item.path)}
+              onGoToFile={() => openGoToFile()}
+            />
+          )
         }
         details={
-          focused && workspace && isWorkspaceRoot(focused) ? (
+          isLoadingRoot ? (
+            <DetailsPanelSkeleton />
+          ) : focused && workspace && isWorkspaceRoot(focused) ? (
             <WorkspaceRootDetails workspace={workspace} menu={focusedMenu} />
           ) : focused ? (
             <ItemDetailsPane

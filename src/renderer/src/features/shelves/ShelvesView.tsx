@@ -48,7 +48,7 @@ export function ShelvesView() {
   const { text: search, people, update } = filters;
   const me = useWorkspaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
-  const { data: shelves, isLoading, isFetching, error } = useShelves({ owners: pickedOwners(queriedPeople) });
+  const { data: shelves, isPending, isFetching, error } = useShelves({ owners: pickedOwners(queriedPeople) });
   const offered = usePeopleSeen('shelves', shelves, ownerOf);
   const [selection, setSelection] = useViewSelection('shelves');
 
@@ -74,16 +74,12 @@ export function ShelvesView() {
       </ViewHeader>
       <ObjectListView
         widthKey="shelves"
-        loading={isLoading}
+        loading={isPending}
         error={error}
         errorTitle="Couldn't load shelves"
-        empty={
-          isFiltering(filters) ? (
-            <NoMatches icon={<Archive size={22} />} noun="shelves" hint={isOnlyMine(people) && !search.trim() ? 'You have no shelves.' : undefined} onClear={filters.clear} />
-          ) : (
-            <EmptyState icon={<Archive size={22} />} title="No shelves" description="Shelve pending changes from the Changes view to save them without checking in." />
-          )
-        }
+        filtering={isFiltering(filters)}
+        noMatches={<NoMatches icon={<Archive size={22} />} noun="shelves" hint={isOnlyMine(people) && !search.trim() ? 'You have no shelves.' : undefined} onClear={filters.clear} />}
+        emptyState={<EmptyState icon={<Archive size={22} />} title="No shelves" description="Shelve pending changes from the Changes view to save them without checking in." />}
         query={search}
         rows={visible}
         columns={COLUMNS}

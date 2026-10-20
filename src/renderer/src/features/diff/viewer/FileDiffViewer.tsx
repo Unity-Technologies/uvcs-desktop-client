@@ -1,11 +1,15 @@
-import type { ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import type { ContentSource } from '@shared/domain/content';
+import { lazyComponent } from '../../../lib/lazyComponent';
 import { useSpinDelay } from '../../../lib/useSpinDelay';
 import { EmptyState } from '../../../ui/EmptyState';
 import { CenteredSpinner } from '../../../ui/Spinner';
 import { DiffViewerFrame } from './DiffViewerFrame';
-import { LoadedFileDiff } from './LoadedFileDiff';
 import { useDiffContents, type DiffContents } from './useDiffContents';
+
+// The viewers (Pierre, the image and 3D model viewers) load on first use: every view and page that shows a diff is in
+// the startup bundle (`startupBundle.test.ts`). Meanwhile the frame shows as it does while the versions load.
+const LoadedFileDiff = lazyComponent(() => import('./LoadedFileDiff').then((module) => module.LoadedFileDiff));
 
 interface FileDiffViewerProps {
   workspacePath: string;
@@ -44,7 +48,8 @@ export function FileDiffViewer({ workspacePath, original, modified, fileName, ti
     return <DiffViewerFrame title={title}>{spin && <CenteredSpinner />}</DiffViewerFrame>;
   }
   return (
-    <LoadedFileDiff
+    <Suspense fallback={<DiffViewerFrame title={title} />}>
+      <LoadedFileDiff
       // A new pair starts fresh: edits, blend and zoom belong to the file they were made on.
       key={pairKey(contents.data)}
       workspacePath={workspacePath}
@@ -54,7 +59,8 @@ export function FileDiffViewer({ workspacePath, original, modified, fileName, ti
       identicalDescription={identicalDescription}
       compareControls={compareControls}
       onMatchesBase={onMatchesBase}
-    />
+      />
+    </Suspense>
   );
 }
 

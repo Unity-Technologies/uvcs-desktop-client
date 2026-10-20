@@ -17,7 +17,8 @@ import styles from './MergeHeader.module.css';
 
 interface MergeHeaderProps {
   request: MergeRequest;
-  plan: MergePlan;
+  /** Undefined while it's calculated: the header shows what the request names, its button disabled. */
+  plan: MergePlan | undefined;
   labels: MergeLabels;
   /** Where the merge stands in a few words, e.g. "2 conflicts to decide". */
   progress: string;
@@ -80,7 +81,7 @@ export function MergeHeader({
           Preview
         </span>
         <MergeHeading title={title} />
-        {plan.contributors && (
+        {plan?.contributors && (
           <span className={styles.contributors}>
             <MergeContributors contributors={plan.contributors} labels={labels} />
           </span>
@@ -102,6 +103,8 @@ export function MergeHeader({
             onChange={(event) => onCommentChange(event.target.value)}
             placeholder="Changeset comment"
             aria-label="Changeset comment"
+            // Written once the plan is in: the session starts it from the plan's default comment.
+            disabled={!plan}
           />
           <div className={styles.spacer} />
           {alternative}
@@ -111,7 +114,7 @@ export function MergeHeader({
       {intoServerBranch && options}
 
       {!intoServerBranch && <BehindHeadNotice />}
-      {plan.warnings.map((warning) => (
+      {plan?.warnings.map((warning) => (
         <div key={warning} className={styles.notice}>
           <AlertTriangle size={13} />
           {warning}

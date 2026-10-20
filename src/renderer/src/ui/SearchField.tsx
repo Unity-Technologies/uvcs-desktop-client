@@ -2,7 +2,7 @@ import { Search } from 'lucide-react';
 import { forwardRef, type InputHTMLAttributes, type KeyboardEvent } from 'react';
 import styles from './Field.module.css';
 
-interface SearchFieldProps extends Pick<InputHTMLAttributes<HTMLInputElement>, 'aria-controls' | 'aria-activedescendant' | 'aria-label'> {
+interface SearchFieldProps extends Pick<InputHTMLAttributes<HTMLInputElement>, 'aria-controls' | 'aria-activedescendant' | 'aria-label' | 'disabled'> {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;

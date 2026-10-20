@@ -613,7 +613,11 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
    frame is the themed workspace screen or home screen, never the home screen on the way nor a frame without colors.
    The window shows on that frame (`ready-to-show`): the first render is synchronous (`flushSync` in `main.tsx`,
    `firstRender.test.ts`), as React otherwise commits a root on a later task, after the page's first frame in most
-   launches, and the window showed its background alone.
+   launches, and the window showed its background alone. Every view and page is in the startup bundle, the heavy
+   libraries out of it ("One layout from the first frame", in "Renderer"): the bundle grows from 1.9 to 2.7 MB, the
+   page's scripts run and the window shows 2-26 ms later (about 15), and Changes shows its data 6-70 ms sooner (about
+   30), as it waits for no chunk (`scripts/perf/startup.mjs`, fake and real `cm`, warm and cold, interleaved against
+   lazy views and pages).
 5. `show()` holds the main process 35-55 ms (100+ when started from a terminal, which isn't the active app): what the
    page asks after its first paint waits behind it. That is why the page asks before rendering, and the main process
    earlier still.
@@ -642,8 +646,9 @@ Tried and dropped, so they aren't proposed again:
 - Serving the renderer from a custom `app://` scheme with V8's code cache (`codeCache: true`): deserializing the
   cache (12 ms on the page's main thread) replaced the compile Chromium streams off it, and the protocol handler cost
   10 ms more: Changes showed its data at 375, 381 and 378 ms over `file://`, the scheme, and the scheme with the cache.
-- Preloading the Changes view's chunk before the first render: 10 ms sooner with the fake `cm` only; with the real
-  one `cm status` answers later and hides it.
+- Preloading the Changes view's chunk before the first render, when views loaded lazily: 10 ms sooner with the fake
+  `cm` only; with the real one `cm status` answers later and hides it. Bundling the views (step 4) was chosen for
+  their first frame, not for the time.
 
 ## Renderer
 
@@ -662,6 +667,30 @@ renderer/src/
 `ui/` either): what they need from there is handed to them (`setAvatarPictureSource`) or lives a tier up
 (`rendererTiers.test.ts` checks it).
 
+- **One layout from the first frame**: a view or page paints its final layout at once and keeps it while it loads,
+  when nothing is there and when filters hide everything; only what fills it changes.
+  - Its header (title, count, actions, filters, switches) always shows. A filter over what is read waits, disabled,
+    until it is read (`useChangeFilter`'s `reading`, History's text); filters that choose what is read (a time range,
+    people, the kinds an object list asks for) stay live. A switch in a pane's header stays with it (`DiffFrame`: a branch diff's
+    "Whole branch | Changeset by changeset").
+  - Loading: the panes stay, with placeholder rows at the real row height under the list's own column titles
+    (`ui/Skeleton`, `TableSkeleton`, `FileTreeSkeleton`, `FileTreeList`'s `loading`), the details as
+    `DetailsPanelSkeleton`, a viewer's pane blank. A list whose query hasn't started yet (it waits on the
+    repository's name) is loading, never empty: TanStack's `isPending`, not `isLoading`.
+  - Nothing there: the list keeps its pane (its count reads 0) and the empty state takes the details pane
+    (`changesPanesState`, `objectListState`).
+  - Filters hide everything: "No matching …" (`NoMatches`) in the list, under its column titles (`DataTable`'s
+    `empty`, `FileTreeList`'s `noMatches`), beside a blank details pane: there is nothing to select.
+  - A page whose subject isn't read yet shows its frame, the header a skeleton (`CodeReviewPage`).
+  - The one shift left is a banner that says there is something to do, which shows only once that is known
+    (Incoming's update bar).
+  - Only an error reading the whole view, and an outcome that ends a page (not on a branch, nothing to merge), take
+    the whole body.
+  - Every view and page is in the startup bundle (`viewRegistry`, `pageRegistry`), so none paints a fallback it then
+    replaces. A heavy library (Pierre, Shiki, three.js) loads on first use, behind a `lazyComponent` at the leaf that
+    uses it (`FileDiffViewer`'s `LoadedFileDiff`, `AnnotationPane`'s `AnnotatedCode`, `FileConflictPanel`'s
+    `ConflictBody`), whose fallback looks as that leaf does while its data loads; it joins `HEAVY_PACKAGES`, and
+    `startupBundle.test.ts` fails on a static import that reaches one. The numbers: "Start-up", step 4.
 - **Effects survive a second mount**: in development React's StrictMode mounts every component, runs its cleanup and
   mounts it again on the same DOM nodes. An effect that owns a resource builds a fresh one on each run and frees it in
   its cleanup, never leaving behind something its next run can't use: `useModelRenderer` gives each renderer a new
@@ -671,6 +700,9 @@ renderer/src/
 
 - **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)`, so `invalidateWorkspace(path)` refreshes everything after an operation
   (or what it can touch: `invalidateWorkspace(path, affected)`, `runOperation({ affects })`).
+  A page opened from a list starts from the row that list already read, so it shows at once: a shelve
+  (`cachedShelve`), a code review (`listedReview`, as `initialData` as fresh as that list, never from a list an
+  operation marked stale).
 - **Refresh**: views refresh themselves when something changes, never on a timer except the incoming check (the app's
   own update check runs hourly too, against GitHub, never the server: features/updates.md).
   - `main/watch/WorkspaceWatcher` watches an open workspace (recursive on macOS/Windows; on Linux a watch per folder,
@@ -806,12 +838,12 @@ renderer/src/
   - **Counts and empty lists**: the header counts what shows, "12 of 340" while filters hide some of what was read
     (`shownCount`). A list its filters empty says "No matching <things>" with Clear filters (`NoMatches`), which
     empties the text, shows everyone and turns the kinds off (`clear`, `isFiltering`); the time range stays, and the
-    hint says when a longer one could find more (`longerRangeHint`). A list with nothing to filter keeps its own first-use empty state.
+    hint says when a longer one could find more (`longerRangeHint`). A list with nothing to filter shows its own first-use empty state, in the details pane ("One layout from the first frame").
     Revealing a row the filters hide clears them (Show in Locks, the Branch Explorer's reveal).
   - The shelves list in Changes stays a quick list with "Mine | Everyone" (⇧⌘S), not a filter bar: it's a popover
     over Changes, and its "All shelves" hands its scope and text to the Shelves view.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
-- **List and details**: `ListWithDetails` (each view remembers its own details width, `widthKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. A view listing objects lays its body out with `ObjectListView` (the skeleton while loading, the error, its empty state, or the table with a row always selected and its details) and refreshes with `ViewRefreshButton`. Every
+- **List and details**: `ListWithDetails` (each view remembers its own details width, `widthKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. A view listing objects lays its body out with `ObjectListView` (the table with a row always selected and its details, a skeleton of them while loading, its empty state in the details pane, `NoMatches` under the column titles, or the error) and refreshes with `ViewRefreshButton`. Every
   kind reads the same way: the kind and status badges with the default action (what Enter does on the row) and the row's
   context menu behind "More actions"; a `DetailsHeading` (the comment's first line as the title and the rest as its
   description, or the object's name with the comment below; folded to a few lines with "Show more" and "Show less" by
@@ -971,4 +1003,5 @@ renderer/src/
     draw `--focus-outline` 2px out, and state rules with a shadow of their own restore the ring (`focusRings.test.ts`).
   - Motion uses the `--duration-*` and `--ease-*` tokens and the shared keyframes of `styles/global.css` (through
     `--keyframes-*`); reduced motion zeroes the durations, so only loops (spinners, skeleton pulses) opt out themselves.
-  - Lists that load show skeletons at their real row height (`ui/Skeleton`, `TableSkeleton`, `ListWithDetailsSkeleton`).
+  - Lists that load show skeletons at their real row height (`ui/Skeleton`, `TableSkeleton`, `ListWithDetailsSkeleton`),
+    inside the layout they will fill ("One layout from the first frame").

@@ -66,5 +66,6 @@ describe('changeFilterPlaceholder', () => {
     expect(changeFilterPlaceholder(1)).toBe('Filter 1 file');
     expect(changeFilterPlaceholder(0)).toBe('Filter 0 files');
     expect(changeFilterPlaceholder(1204)).toBe('Filter 1,204 files');
+    expect(changeFilterPlaceholder(undefined)).toBe('Filter files');
   });
 });

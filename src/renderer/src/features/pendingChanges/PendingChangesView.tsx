@@ -3,7 +3,6 @@ import { useEffect, useMemo } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { EmptyState } from '../../ui/EmptyState';
-import { ListSkeleton } from '../../ui/Skeleton';
 import { LeftChangesBanner } from '../leftChanges/LeftChangesBanner';
 import { MergeTaskSuggestion } from '../mergeTask/MergeTaskSuggestion';
 import { isCheckinCandidate } from './changeCategories';
@@ -19,7 +18,7 @@ const NO_CHANGES: PendingChange[] = [];
 export function PendingChangesView() {
   const workspacePath = useWorkspacePath();
   const { data: workspace, dataUpdatedAt: workspaceReadAt } = useWorkspaceInfo();
-  const { data: snapshot, isLoading, isFetching, isPlaceholderData, dataUpdatedAt, error } = usePendingChanges();
+  const { data: snapshot, isFetching, isPlaceholderData, dataUpdatedAt, error } = usePendingChanges();
   const allChanges = snapshot?.changes ?? NO_CHANGES;
   // Kept while nothing is pending too: a burst of changes counts from the empty workspace, and checked-in files lose their marks.
   const review = usePendingReview(workspacePath, allChanges, snapshot !== undefined && !isPlaceholderData);
@@ -35,32 +34,24 @@ export function PendingChangesView() {
   }, [successMoment, dataUpdatedAt, allChanges.length, workspaceReadAt, loadedChangeset]);
 
   const empty = snapshot?.changes.length === 0;
-  const header = <PendingChangesHeader workspacePath={workspacePath} pendingCount={snapshot && pendingCount} empty={empty} fetching={isFetching} />;
+  const header = <PendingChangesHeader workspacePath={workspacePath} pendingCount={empty ? undefined : snapshot && pendingCount} fetching={isFetching} />;
 
-  if (isLoading) return <>{header}<ListSkeleton rowHeight={28} /></>;
   if (error) return <>{header}<EmptyState title="Couldn't read pending changes" description={error.message} /></>;
-  if (!snapshot) return header;
 
-  if (empty) {
-    const suggestion = workspace?.selector.kind === 'branch' && <MergeTaskSuggestion workspacePath={workspacePath} branchName={workspace.selector.name} />;
-    return (
-      <>
-        {header}
-        <LeftChangesBanner />
-        {successMoment && workspace ? (
-          <SuccessEmptyState moment={successMoment} repositoryName={workspace.repositoryName} server={workspace.server} suggestion={suggestion} />
-        ) : (
-          <EmptyState icon={<CheckCircle2 size={24} />} title="No pending changes" description="Changes you make show up here." action={suggestion} />
-        )}
-      </>
+  const suggestion = workspace?.selector.kind === 'branch' && <MergeTaskSuggestion workspacePath={workspacePath} branchName={workspace.selector.name} />;
+  // Beside the empty list, where the diff goes: the layout never changes shape.
+  const nothingPending =
+    successMoment && workspace ? (
+      <SuccessEmptyState moment={successMoment} repositoryName={workspace.repositoryName} server={workspace.server} suggestion={suggestion} />
+    ) : (
+      <EmptyState icon={<CheckCircle2 size={24} />} title="No pending changes" description="Changes you make show up here." action={suggestion} />
     );
-  }
 
   return (
     <>
       {header}
       <LeftChangesBanner />
-      <PendingChangesPanes workspacePath={workspacePath} workspace={workspace} snapshot={snapshot} review={review} readAt={dataUpdatedAt} />
+      <PendingChangesPanes workspacePath={workspacePath} workspace={workspace} snapshot={snapshot} nothingPending={nothingPending} review={review} readAt={dataUpdatedAt} />
     </>
   );
 }

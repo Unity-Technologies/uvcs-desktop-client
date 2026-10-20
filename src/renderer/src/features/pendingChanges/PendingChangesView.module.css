@@ -28,3 +28,9 @@
 .taskSuggestion:empty {
   display: none;
 }
+
+/* Where the list goes when nothing is pending: it keeps the check-in panel at the bottom. */
+.nothingListed {
+  flex: 1;
+  min-height: 0;
+}

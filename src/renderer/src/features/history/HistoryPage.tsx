@@ -4,6 +4,7 @@ import type { PageProps } from '../../app/navigation/pages';
 import { useOtherRepository, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { detailsWidthOf, useDetailsWidthStore, type DetailsWidthLimits } from '../../components/detailsWidthStore';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
+import { hidesEveryRow } from '../../lib/hidesEveryRow';
 import { EmptyState } from '../../ui/EmptyState';
 import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
@@ -84,18 +85,14 @@ export function HistoryPage({ page }: PageProps<'history'>) {
 
   const header = (
     <ViewHeader title={page.path} count={history && filters.visible.length} total={rows.length}>
-      {rows.length > 0 && (
-        <FilterBar
-          text={<FilterField value={filters.search} onChange={filters.setSearch} placeholder="Filter revisions" />}
-          people={<PeopleFilter value={filters.people} onChange={filters.setPeople} people={filters.authors} mineTip="Revisions you checked in" />}
-        />
-      )}
+      <FilterBar
+        text={<FilterField value={filters.search} onChange={filters.setSearch} placeholder="Filter revisions" disabled={!history} />}
+        people={<PeopleFilter value={filters.people} onChange={filters.setPeople} people={filters.authors} mineTip="Revisions you checked in" />}
+      />
     </ViewHeader>
   );
 
   if (error) return <>{header}<EmptyState title="Couldn't load the history" description={error.message} /></>;
-  if (!history) return <>{header}<ListSkeleton rowHeight={HISTORY_ROW_HEIGHT} /></>;
-  if (rows.length === 0) return <>{header}<EmptyState icon={<History size={22} />} title="No history yet" /></>;
 
   return (
     <>
@@ -106,8 +103,12 @@ export function HistoryPage({ page }: PageProps<'history'>) {
         maxSize={LIST_WIDTH.max}
         size={listWidth}
         onSizeChange={(size) => setListWidth(LIST_WIDTH_KEY, size)}
+        // One layout from the first frame on: placeholder rows while the history is read, and "No history yet"
+        // beside an empty list.
         first={
-          filters.visible.length === 0 ? (
+          !history ? (
+            <ListSkeleton rowHeight={HISTORY_ROW_HEIGHT} />
+          ) : rows.length === 0 ? null : filters.visible.length === 0 ? (
             <NoMatches icon={<History size={22} />} noun="revisions" onClear={filters.clear} />
           ) : (
             <HighlightQuery query={filters.search}>
@@ -124,18 +125,23 @@ export function HistoryPage({ page }: PageProps<'history'>) {
           )
         }
         second={
-          <RevisionPane
-            path={page.path}
-            history={history}
-            focusedRow={focusedRow}
-            selectedRows={selectedRows}
-            menu={menu}
-            onBack={selection.back}
-            annotationHistory={annotationHistory}
-            otherRepository={otherRepository}
-            view={view}
-            onPickView={setView}
-          />
+          // Nothing to select while the filters hide every revision.
+          !history || hidesEveryRow(rows.length, filters.visible.length) ? null : rows.length === 0 ? (
+            <EmptyState icon={<History size={22} />} title="No history yet" />
+          ) : (
+            <RevisionPane
+              path={page.path}
+              history={history}
+              focusedRow={focusedRow}
+              selectedRows={selectedRows}
+              menu={menu}
+              onBack={selection.back}
+              annotationHistory={annotationHistory}
+              otherRepository={otherRepository}
+              view={view}
+              onPickView={setView}
+            />
+          )
         }
       />
     </>

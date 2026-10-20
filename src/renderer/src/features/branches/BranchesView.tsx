@@ -45,7 +45,7 @@ export function BranchesView() {
   const { text: search, people, layout, since, showHidden, update } = filters;
   const me = useWorkspaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
-  const { data: branches, isLoading, isFetching, error } = useBranches(branchesQuery({ since, people: queriedPeople, showHidden }));
+  const { data: branches, isPending, isFetching, error } = useBranches(branchesQuery({ since, people: queriedPeople, showHidden }));
   const offered = usePeopleSeen('branches', branches, ownerOf);
 
   const [selection, setSelection] = useViewSelection('branches');
@@ -110,16 +110,12 @@ export function BranchesView() {
       </ViewHeader>
       <ObjectListView
         widthKey="branches"
-        loading={isLoading}
+        loading={isPending}
         error={error}
         errorTitle="Couldn't load branches"
-        empty={
-          isFiltering(filters) ? (
-            <NoMatches icon={<GitBranch size={22} />} noun="branches" hint={longerRangeHint(since, true)} onClear={filters.clear} />
-          ) : (
-            <EmptyState icon={<GitBranch size={22} />} title="No branches" description={longerRangeHint(since, false)} />
-          )
-        }
+        filtering={isFiltering(filters)}
+        noMatches={<NoMatches icon={<GitBranch size={22} />} noun="branches" hint={longerRangeHint(since, true)} onClear={filters.clear} />}
+        emptyState={<EmptyState icon={<GitBranch size={22} />} title="No branches" description={longerRangeHint(since, false)} />}
         query={search}
         rows={rows}
         columns={columns}
