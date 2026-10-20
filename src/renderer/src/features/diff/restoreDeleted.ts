@@ -41,8 +41,11 @@ export async function restoreDeletedItems(workspacePath: string, restores: Delet
   });
 }
 
-/** Asks where in the workspace a deleted item comes back (where it was, to start with), and restores it there. */
-export async function restoreDeletedItemTo(workspacePath: string, restore: DeletedItemRestore): Promise<void> {
+/**
+ * Asks where in the workspace a deleted item comes back (where it was, to start with), and restores it there, along
+ * with the rest of `restores` (the items a refusal of this one left behind), in their order.
+ */
+export async function restoreDeletedItemTo(workspacePath: string, restore: DeletedItemRestore, restores: DeletedItemRestore[] = [restore]): Promise<void> {
   const path = await prompt({
     title: `Restore ${fileNameOf(restore.path)}`,
     label: 'Path in the workspace',
@@ -53,7 +56,8 @@ export async function restoreDeletedItemTo(workspacePath: string, restore: Delet
     validate: (typed) => restorePathProblem(typed, PLATFORM),
   });
   if (!path) return;
-  await restoreDeletedItems(workspacePath, [{ ...restore, path: typedRestorePath(path, PLATFORM) }]);
+  const elsewhere = { ...restore, path: typedRestorePath(path, PLATFORM) };
+  await restoreDeletedItems(workspacePath, restores.map((each) => (each === restore ? elsewhere : each)));
 }
 
 function confirmMany(what: string): Promise<boolean> {
@@ -73,7 +77,7 @@ function showRefusal(workspacePath: string, restores: DeletedItemRestore[], what
     kind: 'error',
     title: outcome.restored > 0 ? `Restored ${outcome.restored} of ${pluralize(outcome.total, 'item')}` : `Couldn’t restore ${what}`,
     detail: refused.message,
-    action: refusalAction(workspacePath, restores, refused),
+    action: refusalAction(workspacePath, restores.slice(outcome.restored), refused),
   });
   return null;
 }
@@ -82,10 +86,11 @@ function showRefusal(workspacePath: string, restores: DeletedItemRestore[], what
  * What helps after a refusal: another place for an item whose place is taken or whose folder is gone, starting from
  * where it was; the item where the workspace already has it. Nothing for an xlink or another repository's item.
  */
-function refusalAction(workspacePath: string, restores: DeletedItemRestore[], refused: RestoreRefusal): ToastAction | undefined {
-  const restore = restores.find((each) => each.path === refused.path);
+function refusalAction(workspacePath: string, notRestored: DeletedItemRestore[], refused: RestoreRefusal): ToastAction | undefined {
+  const restore = notRestored.find((each) => each.path === refused.path);
   if ((refused.kind === 'placeTaken' || refused.kind === 'folderMissing') && restore) {
-    return { label: 'Restore to…', run: () => void restoreDeletedItemTo(workspacePath, restore) };
+    // The rest goes on with it: the refusal stopped them too.
+    return { label: 'Restore to…', run: () => void restoreDeletedItemTo(workspacePath, restore, notRestored) };
   }
   if (refused.kind === 'alreadyLoaded' && refused.loadedPath !== undefined) {
     const loadedPath = refused.loadedPath;
