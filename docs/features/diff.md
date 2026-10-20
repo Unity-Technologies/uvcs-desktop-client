@@ -180,7 +180,7 @@ it deletes is still in the workspace (`diffEntryMenu` without `workspaceReposito
   kind, path and words), stopping the rest: the error toast says what came back before it ("Restored 2 of 5 items")
   and offers what helps (`refusalAction`): "Restore to…" for an item whose place is taken or whose folder is gone,
   starting from where it was, then going on with the items the refusal left behind; and "Show in Files" where the
-  workspace already has it. Stopped, the info toast says what came back too. Any other failure fails the operation, as `cm` tells it.
+  workspace already has it. Stopped, the info toast says what came back too, or only "Stopped" when nothing did. Any other failure fails the operation, as `cm` tells it.
 - Not handled: "Restore to…" a path under an xlink. `cm` looks the bare id up in the xlinked repository there, where
   it may name another item or none; knowing where xlinks are would take a `cm` read of its own.
 - `cm undelete` takes the workspace's path as `cm` names it: given a link to it (`/tmp/…` for `/private/tmp/…` on

@@ -32,6 +32,7 @@ export async function restoreDeletedItems(workspacePath: string, restores: Delet
     run: (operationId) => api.explorer.restoreDeleted(workspacePath, restores, operationId),
     success: (outcome) => {
       if (outcome.refused) return showRefusal(workspacePath, restores, what, outcome, outcome.refused);
+      if (outcome.stopped && outcome.restored === 0) return { kind: 'info', title: 'Stopped', detail: 'Nothing was restored' };
       if (outcome.stopped) return { kind: 'info', title: `Restored ${outcome.restored} of ${pluralize(outcome.total, 'item')}`, detail: 'Stopped before the rest', action: viewChangesAction() };
       // Where one came back (it may be elsewhere than it was); several each where they were. No generic count of changes.
       return { title: `Restored ${what}`, detail: restores.length === 1 ? `At ${restores[0]!.path}` : 'Each where it was', action: viewChangesAction() };
