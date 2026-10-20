@@ -17,6 +17,7 @@ import { diffEntryTones } from './diffEntrySources';
 import { DiffEntryList, diffEntryKey } from './DiffEntryList';
 import { diffEntryMenu } from './diffEntryMenu';
 import { entryToFocus } from './diffFocus';
+import { diffPaneOf } from './diffPane';
 import { EntryDiff } from './EntryDiff';
 import { listedEntries } from './listedEntries';
 import { useDiffReview } from './review/useDiffReview';
@@ -79,6 +80,8 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
     setSelection(singleSelection(initial ? diffEntryKey(initial) : firstKey));
   }, [focused, focusedFolder, firstKey]);
 
+  const pane = diffPaneOf({ listedCount: reading ? undefined : entries.length, shownCount: shown.length, entrySelected: focused !== undefined, folderSelected: focusedFolder !== undefined });
+
   useEffect(() => {
     if (!focused) return;
     useShownDiffFile.setState({ shown: { target, path: focused.path } });
@@ -106,9 +109,9 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
         />
       }
       second={
-        reading || hidesAll ? null : entries.length === 0 ? (
+        pane === 'noDifferences' ? (
           <EmptyState icon={<FileSearch size={22} />} title="No differences" description="There are no file changes to show." />
-        ) : focused ? (
+        ) : pane === 'entry' && focused ? (
           <FileStepsContext.Provider value={fileSteps}>
             <SiblingFinderContext.Provider value={findSibling}>
               <AssetsPointContext.Provider value={findAssetsPoint}>
@@ -116,7 +119,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
               </AssetsPointContext.Provider>
             </SiblingFinderContext.Provider>
           </FileStepsContext.Provider>
-        ) : focusedFolder ? (
+        ) : pane === 'folder' && focusedFolder ? (
           <EmptyState icon={<Folder size={24} />} title={focusedFolder.path} description={`${pluralize(focusedFolder.items.length, 'change')}. Select a file to see its diff.`} />
         ) : null
       }
