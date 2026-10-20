@@ -30,6 +30,30 @@ is noise for anyone reading a branch, and the web code review and GitHub show on
 not decide first whether the branch received merges (as the official client does to show its button): that is the
 same common-ancestor calculation `--integration` already makes inside its one command.
 
+## Reverting a file
+
+A file a changeset's diff changed (the diff page, a details panel's changed files: a changeset's, a label's, a code
+review's of a changeset) or a range of changesets changed has "Revert file to before this change…" in its menu
+(`revertFromDiffEntry`): the file goes back to the diff's older side as a pending change, `history.revertTo` (`cm
+revert <file>#cs:N`) with History's confirmation, which names the changeset it goes back to and, for a changeset's
+diff, the one it undoes ("Revert src/a.ts to changeset 37, before changeset 42?", `revertItemTo`'s `undoing`). It is
+the native client's "Revert changes" on a diff: undoing what the diff did to the file is what a diff is looked at for,
+and History already reverts to the newer side ("Revert file to this revision…"). Like the native one, it reverts the
+content whole: changes made to the file after the diff go too, which the confirmation's changeset number tells.
+
+- The older side is a changeset: a changeset's parent (`olderSideOf`, read on click by `readChangeset` from what the
+  diff's header or a list already read, else one `cm find`), a range's first changeset. A branch's diff starts at its
+  common ancestor with its parent, which nothing read names, a label range at a label, and a shelve at no changeset of
+  its own: none of them offers it.
+- Only one file whose content changed, in place or moved too, of the workspace's repository (`canRevertFromDiff`):
+  `cm revert` finds the item by its id and takes its content back, keeping its name, so a pure move has nothing to
+  revert; an added file had no older version, a deleted one is the undelete's, a folder or an xlink has no content to
+  take back, and an xlinked repository's changesets aren't the diff's.
+- Incoming offers none: its changes aren't in the workspace yet (`diffEntryMenu` without `workspaceRepository`).
+- `cm revert` finds the file where the diff names it, in the workspace: a file moved or deleted since fails with
+  `cm`'s message, and one with pending changes too ("must be checked in").
+- It refreshes what a checkout does (`isAffectedByPendingChangeEdit`).
+
 ## Editing in the diff
 
 A workspace file shown against its own past (loaded revision, reviewed copy, or nothing for an

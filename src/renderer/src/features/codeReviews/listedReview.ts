@@ -4,7 +4,8 @@ import { queryKeys } from '../../api/queryKeys';
 
 /**
  * A review as a list already read it (the Code reviews view's), with when that list was read: its page shows it at
- * once, as fresh as that list. Summaries (the branch chips') lack the target, so they don't count.
+ * once, as fresh as that list. A summary (the branch chips', the palette's) counts only with its target named: a
+ * changeset's or shelve's is, a branch's isn't (`CodeReviewSummary.target`).
  */
 export function listedReview(lists: readonly { data: unknown; readAt: number }[], reviewId: number): { review: CodeReview; readAt: number } | undefined {
   let found: { review: CodeReview; readAt: number } | undefined;
@@ -17,8 +18,8 @@ export function listedReview(lists: readonly { data: unknown; readAt: number }[]
 }
 
 /**
- * The review from the workspace's code review queries in `client` (lists; the single reviews and summaries are
- * skipped), but those an operation marked stale and nobody read again: their copy may hold an old status.
+ * The review from the workspace's code review queries in `client` (lists; the single reviews and summaries without
+ * their target are skipped), but those an operation marked stale and nobody read again: their copy may hold an old status.
  */
 export function listedReviewIn(client: QueryClient, workspacePath: string, reviewId: number): { review: CodeReview; readAt: number } | undefined {
   const lists = client
