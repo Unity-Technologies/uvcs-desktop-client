@@ -703,9 +703,10 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   - A page whose subject isn't read yet shows its frame, the header a skeleton (`CodeReviewPage`).
   - The one shift left is a banner that says there is something to do, which shows only once that is known
     (Incoming's update bar).
-  - Only an error reading the whole view with nothing read yet, and an outcome that ends a page (not on a branch,
-    nothing to merge), take the whole body. A read that fails after one that answered keeps what that one read, and
-    says so quietly in the header, its error in the tooltip ("Couldn't check again": `incomingRefreshFailed`).
+  - Only an error reading the whole view, and an outcome that ends a page (not on a branch, nothing to merge), take
+    the whole body. Incoming alone keeps what an earlier read found when reading again fails, and says so quietly in
+    its header, the error in the tooltip ("Couldn't check again": `incomingRefreshFailed`); the other views still give
+    the body to the error.
   - Every view and page is in the startup bundle (`viewRegistry`, `pageRegistry`), so none paints a fallback it then
     replaces. A heavy library (Pierre, Shiki, three.js) loads on first use, behind a `lazyComponent` at the leaf that
     uses it (`FileDiffViewer`'s `LoadedFileDiff`, `AnnotationPane`'s `AnnotatedCode`, `FileConflictPanel`'s

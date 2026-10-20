@@ -13,8 +13,8 @@ export type IncomingViewState =
 
 /**
  * `incoming`: what the query holds; `pending`: it has never answered; `failed`: its last read failed. A read that
- * fails after one that answered (a refresh, a focus) keeps what that one read, as the workspace screen does: only a
- * view with nothing read gives its body to the error.
+ * fails after one that answered (a refresh, a focus) keeps what that one read (`incomingRefreshFailed` says so in the
+ * header): only with nothing read does the error take the body.
  */
 export function incomingViewState(incoming: IncomingChanges | undefined, pending: boolean, failed: boolean): IncomingViewState {
   if (!incoming) return pending || !failed ? { kind: 'reading' } : { kind: 'failed' };
