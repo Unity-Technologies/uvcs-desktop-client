@@ -10,6 +10,7 @@ import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { toast } from '../../ui/toast/toastStore';
 import { pickBranch } from '../branches/BranchPickerDialog';
+import { pickChangeset } from './ChangesetPickerDialog';
 import { askForChangesetComment } from './EditCommentDialog';
 
 export function openChangesetDiff(changeset: Pick<Changeset, 'id'>, focusPath?: string): void {
@@ -23,6 +24,13 @@ export function openRangeDiff(older: Pick<Changeset, 'id'>, newer: Pick<Changese
     title: `Changesets ${older.id} → ${newer.id}`,
     target: { kind: 'range', fromSpec: `cs:${older.id}`, toSpec: `cs:${newer.id}` },
   });
+}
+
+export async function diffWithAnotherChangeset(changeset: Pick<Changeset, 'id'>): Promise<void> {
+  const other = await pickChangeset({ title: `Compare changeset ${changeset.id} with…`, exclude: changeset.id });
+  if (other === undefined) return;
+  const [older, newer] = other < changeset.id ? [other, changeset.id] : [changeset.id, other];
+  openRangeDiff({ id: older }, { id: newer });
 }
 
 export function openMerge(request: MergeRequest): void {

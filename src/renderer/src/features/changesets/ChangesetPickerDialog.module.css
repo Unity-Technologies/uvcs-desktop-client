@@ -1,0 +1,31 @@
+.icon {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.number {
+  flex: none;
+  min-width: 6ch;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.comment {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The branch in words (`branchLabel`), its own name: the comment keeps the room. */
+.branch {
+  flex: none;
+  max-width: 35%;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
