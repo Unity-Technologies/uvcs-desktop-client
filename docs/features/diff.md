@@ -139,7 +139,7 @@ item and finds a bare id only there (`undeleteArgs`). Incoming offers none: what
   (`runsLong`): a folder downloads all it held, so it runs as a process, never holding a pooled shell.
 - Every place is checked on disk before any `cm`, and nothing is restored if one fails: `cm` refuses a path that holds
   an item ("The restore path should not exist"), but into a folder that's gone it writes the files and then fails,
-  leaving them private. Both read "Restore it to another path" in the toast. `cm` also refuses an item the workspace
+  leaving them private. The toast says which, and to restore it elsewhere. `cm` also refuses an item the workspace
   still loads ("The item 35 is already loaded on tree"), shown as it prints it.
 - The official client asks to confirm first; nothing is lost here (the item comes back as a change to undo or check
   in), so it doesn't.
