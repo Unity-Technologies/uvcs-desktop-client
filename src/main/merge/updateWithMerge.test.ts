@@ -4,7 +4,8 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UpdateConflict, UpdateResolutions } from '@shared/domain/incoming';
 import { change, changesetsFound, diffRecord, pendingStatus, statusHeader } from '../cm/testing/cmOutput';
-import { cmFails, fakeCmClient } from '../cm/testing/fakeCmClient';
+import { fakeCat } from '../cm/testing/fakeCat';
+import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { recordingContext } from '../operations/testing/recordingContext';
 import { unresolvedConflicts, updateWithMerge } from './updateWithMerge';
 
@@ -35,13 +36,15 @@ interface Branch {
   failUpdate?: string;
   /** Undoing writes the loaded revision of the first file, then fails with this message. */
   failUndoAfterFirst?: string;
+  /** How `cm cat` saves revisions: the loaded one, `revid:1`, as "loaded\n" by default. */
+  cat?: CmAnswer;
 }
 
 /**
  * A workspace on /main at changeset 1 whose files a, b and c are changed locally (a checked out), while changeset 2
  * on /main changed the files `incoming` names. Undoing a file writes the loaded revision; updating writes changeset 2's.
  */
-function updatingCm(workspacePath: string, { incoming, failUpdate, failUndoAfterFirst }: Branch) {
+function updatingCm(workspacePath: string, { incoming, failUpdate, failUndoAfterFirst, cat = fakeCat((spec) => (spec === 'revid:1@eco@local' ? 'loaded\n' : undefined)) }: Branch) {
   const file = (name: string): string => join(workspacePath, 'src', name);
   return fakeCmClient({
     'status --header --xml': statusHeader('/main'),
@@ -62,6 +65,7 @@ function updatingCm(workspacePath: string, { incoming, failUpdate, failUndoAfter
       return '';
     },
     checkout: '',
+    cat,
   });
 }
 
@@ -95,6 +99,28 @@ describe('updateWithMerge', () => {
     // The local versions stay saved, just in case.
     expect(backupDirectory!.startsWith(backupsRoot)).toBe(true);
     expect(await readFile(join(backupDirectory!, 'src', 'c.txt'), 'utf8')).toBe('mine c.txt\n');
+  });
+
+  it("keeps the base, the revision the workspace had loaded: its text as read, else saved by one cm cat before anything changes", async () => {
+    const { cm, commands } = updatingCm(workspacePath, { incoming: changedOnBranch });
+    const keepingBase: UpdateResolutions = { 'src/a.txt': { choice: 'base', text: 'loaded as read\n' }, 'src/b.txt': { choice: 'base' }, 'src/c.txt': { choice: 'source' } };
+
+    await updateWithMerge(cm, workspacePath, keepingBase, backupsRoot, recordingContext().context);
+
+    expect([await read('a.txt'), await read('b.txt'), await read('c.txt')]).toEqual(['loaded as read\n', 'loaded\n', 'incoming c.txt\n']);
+    const ran = commands.map(({ args }) => args[0]).filter((command) => command === 'cat' || command === 'undo');
+    expect(ran).toEqual(['cat', 'undo']);
+    expect(commands.find(({ args }) => args[0] === 'cat')!.via).toBe('execute');
+  });
+
+  it("touches nothing when a base kept can't be read", async () => {
+    const { cm, ran } = updatingCm(workspacePath, { incoming: changedOnBranch, cat: fakeCat(() => undefined) });
+
+    await expect(updateWithMerge(cm, workspacePath, { ...resolved, 'src/b.txt': { choice: 'base' } }, backupsRoot, recordingContext().context)).rejects.toThrow(
+      /b\.txt/,
+    );
+    expect(ran('undo') || ran('update')).toBe(false);
+    expect(await read('b.txt')).toBe('mine b.txt\n');
   });
 
   it('undoes only the conflicting files before updating, and checks out again those that were checked out', async () => {
