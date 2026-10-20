@@ -60,7 +60,7 @@ export function WholeFileChoice({ contents, error, labels, withBase, versions, c
         {withBase && (
           <VersionCard
             title="Keep base"
-            subtitle="Before either side changed it"
+            subtitle={labels.base ?? 'the common ancestor'}
             content={contents?.base}
             base={undefined}
             error={error}

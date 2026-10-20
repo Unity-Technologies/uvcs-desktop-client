@@ -3,7 +3,7 @@ import { WORKSPACE_ROLES, type MergeLabels } from '../merge/mergeDescription';
 import type { ConflictedFile, FileConflictState } from '../merge/resolve/useFileConflicts';
 
 /** The labels of an update merge: the branch head comes in, the local changes are yours. */
-export const UPDATE_LABELS: MergeLabels = { source: 'the branch head', destination: 'your workspace', roles: WORKSPACE_ROLES };
+export const UPDATE_LABELS: MergeLabels = { source: 'the branch head', destination: 'your workspace', base: 'your loaded changeset', roles: WORKSPACE_ROLES };
 
 /** Where to read the loaded, incoming and local versions of each file that needs merging to update. */
 export function updateConflictFiles(conflicts: UpdateConflict[]): ConflictedFile[] {
