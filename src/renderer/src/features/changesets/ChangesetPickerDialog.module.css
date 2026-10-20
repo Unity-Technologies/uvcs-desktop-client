@@ -19,6 +19,12 @@
   white-space: nowrap;
 }
 
+/* What stands in for a comment: none, or a changeset typed by number, older than those read. */
+.muted {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
 /* The branch in words (`branchLabel`), its own name: the comment keeps the room. */
 .branch {
   flex: none;

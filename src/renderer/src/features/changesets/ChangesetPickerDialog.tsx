@@ -50,7 +50,7 @@ function ChangesetPickerDialog({ title, exclude, finish }: PickChangesetOptions 
             <span className={styles.number}>
               <Highlight text={String(id)} />
             </span>
-            <span className={styles.comment}>{changeset ? <Highlight text={firstLine(changeset.comment)} /> : `Changeset ${id}`}</span>
+            <span className={styles.comment}>{changeset ? <ChangesetComment comment={changeset.comment} /> : <span className={styles.muted}>Changeset {id}</span>}</span>
             {changeset && (
               <span className={styles.branch}>
                 <Highlight text={branchLabel(changeset.branch)} />
@@ -61,4 +61,9 @@ function ChangesetPickerDialog({ title, exclude, finish }: PickChangesetOptions 
       />
     </Dialog>
   );
+}
+
+function ChangesetComment({ comment }: { comment: string }) {
+  const title = firstLine(comment).trim();
+  return title ? <Highlight text={title} /> : <span className={styles.muted}>No comment</span>;
 }
