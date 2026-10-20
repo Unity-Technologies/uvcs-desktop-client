@@ -1,6 +1,6 @@
 /**
- * The user info of every URL in a text (`https://ana:token@host`, `https://token@host`: GitHub takes a token as the
- * user alone), up to the last `@` before the host's end, so a password holding `@` goes whole. The search stops at
+ * The user info of every URL in a text (a user and a password before the host's `@`, or a token alone as the user, as
+ * GitHub takes it), up to the last `@` before the host's end, so a password holding `@` goes whole. The search stops at
  * what ends a host or can't be in one (`/ ? #`, space, quotes, `< > \ ,`), so a URL with no path is never read up to
  * an `@` after it (`"https://github.com","ana@corp.com"`); a password holding one of those, unusual in a URL, isn't
  * found. An scp-like SSH remote (`git@github.com:team/game.git`) has no scheme and stays; an `ssh://` URL loses its
