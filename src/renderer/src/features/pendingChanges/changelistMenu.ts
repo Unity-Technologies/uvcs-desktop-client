@@ -3,7 +3,6 @@ import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
 import { groupedMenu, type GroupedEntry } from '../../lib/menuGroups';
 import { menuAction, menuSubmenu } from '../../components/menuWords';
-import { formatCount } from '../../lib/text';
 import type { CheckinMode } from './checkinButton';
 import { isCheckinCandidate, isControlled, isShelvable } from './changeCategories';
 import { DEFAULT_CHANGELIST_LABEL } from './changeRows';
@@ -14,7 +13,7 @@ import {
   moveToNewChangelist,
   renameChangelist,
 } from './changelistOperations';
-import { undoChanges } from './pendingChangeOperations';
+import { undoChanges, undoChangesLabel } from './pendingChangeOperations';
 
 /** "Move to changelist" for the selected changes; null when none of them can be moved. */
 export function moveToChangelistSubmenu(workspacePath: string, changes: PendingChange[], changelists: Changelist[]): GroupedEntry | null {
@@ -64,9 +63,7 @@ export function changelistMenu(workspacePath: string, changelist: Changelist, { 
     menuAction('rename', () => void renameChangelist(workspacePath, changelist)),
     menuAction('describe', () => void editChangelistDescription(workspacePath, changelist)),
     controlled.length > 0 &&
-      menuAction('undo', () => void undoChanges(workspacePath, controlled), {
-        label: controlled.length === 1 ? 'Undo changes…' : `Undo ${formatCount(controlled.length)} changes…`,
-      }),
+      menuAction('undo', () => void undoChanges(workspacePath, controlled), { label: undoChangesLabel(controlled.length) }),
     menuAction('delete', () => void deleteChangelist(workspacePath, changelist), { label: 'Delete changelist…' }),
   ]);
 }
