@@ -75,6 +75,7 @@ describe('mergedText', () => {
   it('is the resolved text, or the version kept whole', () => {
     expect(mergedText(stateOf({ decision: { kind: 'text', text: 'both' }, remainingConflicts: 0 }))).toBe('both');
     expect(mergedText(stateOf({ decision: { kind: 'wholeFile', side: 'source' }, remainingConflicts: 0 }))).toBe('theirs');
+    expect(mergedText(stateOf({ decision: { kind: 'wholeFile', side: 'base' }, remainingConflicts: 0 }))).toBe('base');
   });
 
   it('is nothing for a binary', () => {

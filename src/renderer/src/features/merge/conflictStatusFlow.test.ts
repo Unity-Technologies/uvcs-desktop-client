@@ -80,6 +80,25 @@ describe('a conflicting file, as the merge page shows it', () => {
     expect(reads(stateOf({ decision: decisionFor('destination', document) }), serverBranch)).toBe('Keeping destination');
   });
 
+  it('keeps the base, the version before either side changed it, carrying its text as read', () => {
+    const keptBase = stateOf({ decision: decisionFor('base', document) });
+    expect(reads(keptBase)).toBe('Keeping base');
+    expect(keptBase.resolution).toEqual({ choice: 'base', text: BASE.text });
+    expect(chosenConflictChoice(fileConflictStatus(keptBase), keptBase.decision, document)).toBe('base');
+    expect(blocksCompletion(keptBase)).toBe(false);
+  });
+
+  it('reads as keeping the base when the conflicts picked add up to it', () => {
+    const pickedBase = stateOf({ decision: { kind: 'text', text: BASE.text! } });
+    expect(reads(pickedBase)).toBe('Keeping base');
+  });
+
+  it("keeps a binary's base without its bytes, which cm saves when the merge completes", () => {
+    const kept = stateOf({ versions: [{}, {}, {}], isKnownBinary: true, decision: { kind: 'wholeFile', side: 'base' } });
+    expect(kept.resolution).toEqual({ choice: 'base' });
+    expect(reads(kept)).toBe('Keeping base');
+  });
+
   it('reads as keeping a side when the conflicts picked add up to that version', () => {
     const pickedIncoming = stateOf({ decision: { kind: 'text', text: SOURCE.text! } });
     expect(reads(pickedIncoming)).toBe('Keeping incoming');

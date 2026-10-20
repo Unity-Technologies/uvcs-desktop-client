@@ -23,13 +23,19 @@ describe('file conflict decisions', () => {
 
   it('keeps a whole version of the file', () => {
     expect(resolutionOf({ kind: 'wholeFile', side: 'source' })).toEqual({ choice: 'source' });
-    expect(resolutionOf({ kind: 'wholeFile', side: 'destination' }, 'incoming\n')).toEqual({ choice: 'destination' });
+    expect(resolutionOf({ kind: 'wholeFile', side: 'destination' }, { source: 'incoming\n' })).toEqual({ choice: 'destination' });
   });
 
   it("carries the incoming text when it writes back byte for byte, so the merge needn't read it again", () => {
-    expect(resolutionOf({ kind: 'wholeFile', side: 'source' }, '\uFEFFcafé\r\n')).toEqual({ choice: 'source', text: '\uFEFFcafé\r\n' });
+    expect(resolutionOf({ kind: 'wholeFile', side: 'source' }, { source: '\uFEFFcafé\r\n' })).toEqual({ choice: 'source', text: '\uFEFFcafé\r\n' });
     // Not UTF-8 (a Latin-1 é read as U+FFFD): only cm writes its bytes as they are.
-    expect(resolutionOf({ kind: 'wholeFile', side: 'source' }, 'caf\uFFFD\n')).toEqual({ choice: 'source' });
+    expect(resolutionOf({ kind: 'wholeFile', side: 'source' }, { source: 'caf\uFFFD\n' })).toEqual({ choice: 'source' });
+  });
+
+  it('carries the base text when it writes back byte for byte; else cm saves the base', () => {
+    expect(resolutionOf({ kind: 'wholeFile', side: 'base' }, { base: 'before\r\n', source: 'after\n' })).toEqual({ choice: 'base', text: 'before\r\n' });
+    expect(resolutionOf({ kind: 'wholeFile', side: 'base' }, { base: 'caf\uFFFD\n' })).toEqual({ choice: 'base' });
+    expect(resolutionOf({ kind: 'wholeFile', side: 'base' })).toEqual({ choice: 'base' });
   });
 
   it('binary files start without a decision', () => {
