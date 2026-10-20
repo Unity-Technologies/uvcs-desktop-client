@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { IncomingChanges } from '@shared/domain/incoming';
-import { incomingViewState } from './incomingViewState';
+import { incomingRefreshFailed, incomingViewState } from './incomingViewState';
 
 const details = { changesets: [], moreChangesets: false, files: [], conflicts: [], blockedPaths: [] };
 const behind: IncomingChanges = {
@@ -35,5 +35,17 @@ describe('incomingViewState', () => {
   it('is up to date with nothing new on the branch, and lists what came in otherwise', () => {
     expect(incomingViewState(upToDate, false, false)).toEqual({ kind: 'upToDate' });
     expect(incomingViewState(behind, false, false)).toEqual({ kind: 'incoming', incoming: behind });
+  });
+});
+
+describe('incomingRefreshFailed', () => {
+  it('says the check failed when it keeps what an earlier read found', () => {
+    expect(incomingRefreshFailed(behind, true)).toBe(true);
+    expect(incomingRefreshFailed(upToDate, true)).toBe(true);
+  });
+
+  it('has nothing to say when the read answered, or when the failure takes the whole view', () => {
+    expect(incomingRefreshFailed(behind, false)).toBe(false);
+    expect(incomingRefreshFailed(undefined, true)).toBe(false);
   });
 });
