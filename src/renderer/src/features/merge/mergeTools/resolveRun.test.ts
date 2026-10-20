@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MergeTool } from '@shared/domain/mergeTools';
 import type { FileConflictState } from '../resolve/useFileConflicts';
-import { leftOutNote, planRun, runLabel, runPlans, runSummary } from './resolveRun';
+import { leftOutNote, planRun, runLabel, runPlans, runStripWords, runSummary } from './resolveRun';
 
 const tool = (id: string, changes: Partial<MergeTool> = {}): MergeTool => ({
   id,
@@ -111,6 +111,26 @@ describe('runSummary', () => {
       kind: 'info',
       title: 'Stopped resolving in UVCS merge tool',
       detail: '12 still need you.',
+    });
+  });
+});
+
+describe('runStripWords', () => {
+  it('speaks of the tool while it has the file: skipping or stopping closes it, keeping what was saved, and Esc asks first', () => {
+    expect(runStripWords('VS Code', false)).toEqual({
+      where: 'in VS Code',
+      skipTip: 'Closes it in VS Code and opens the next file',
+      stopTip: 'Closes it in VS Code; what you saved there so far is kept',
+      confirmsStop: true,
+    });
+  });
+
+  it('speaks of Smart Merge while it merges: there is no window to close nor anything saved, so Esc stops at once', () => {
+    expect(runStripWords('VS Code', true)).toEqual({
+      where: 'with Smart Merge',
+      skipTip: 'Stops Smart Merge and goes on to the next file',
+      stopTip: 'Stops Smart Merge; the file stays as it was',
+      confirmsStop: false,
     });
   });
 });
