@@ -28,6 +28,19 @@ export interface MergeTool {
 export interface MergeToolList {
   tools: MergeTool[];
   preferredId: string | null;
+  /** Smart Merge, when a Unity Editor is installed: "Resolve in…" tries it first on Unity assets. */
+  smartMerge: SmartMergeTool | null;
+}
+
+/**
+ * Unity's Smart Merge (`UnityYAMLMerge`, in every Unity Editor): it merges scenes, prefabs and other Unity assets by
+ * their objects, without a window. It isn't a tool to pick: "Resolve in…" runs it first on a Unity asset nothing was
+ * decided for yet, and opens the chosen tool only when it can't merge the file on its own.
+ */
+export interface SmartMergeTool {
+  executable: string;
+  /** The Unity Editor it comes from, `6000.3.19f1`; empty for an editor installed without Unity Hub. */
+  editorVersion: string;
 }
 
 /** A merge app added by the user; known tools are found, not stored. */
@@ -57,6 +70,11 @@ export interface MergeToolRequest {
   startText: string;
   /** How each version is called in the tool's window, e.g. `Yours (/main/task)`. */
   names: { base: string; yours: string; incoming: string };
+  /**
+   * Try Smart Merge before opening the tool, when the file is a Unity asset and a Unity Editor is installed: set while
+   * nothing was decided for the file. Once something was, the tool opens on it, so the user can always get there.
+   */
+  trySmartMergeFirst: boolean;
 }
 
 /**
@@ -64,8 +82,11 @@ export interface MergeToolRequest {
  * saved; `unchanged` when the tool closed without saving, or the user stopped waiting; `failed` when it couldn't run.
  */
 export type MergeToolOutcome =
-  /** A text file saved: its merged text, conflict markers included if the user left some. */
-  | { kind: 'resolved'; text: string }
+  /**
+   * A text file saved: its merged text, conflict markers included if the user left some. `tool` names who merged it
+   * when it isn't the tool asked for: Smart Merge, which merged it before the tool had to open.
+   */
+  | { kind: 'resolved'; text: string; tool?: string }
   /** `exitCode` is null when the user stopped waiting; `errorOutput` is the end of what the tool wrote to stderr. */
   | { kind: 'unchanged'; exitCode: number | null; errorOutput: string }
   | { kind: 'failed'; message: string };

@@ -13,9 +13,12 @@ export function waitsForTool(state: FileConflictState): boolean {
   return state.status === 'ready' && !state.resolution && !state.openTool && !state.isBinary;
 }
 
-/** The decision a merge tool's outcome makes; none when nothing was saved. */
+/**
+ * The decision a merge tool's outcome makes; none when nothing was saved. It names who merged the file: Smart Merge
+ * when it merged it before the tool had to open.
+ */
 export function decisionFromTool(outcome: MergeToolOutcome, tool: string): FileConflictDecision | undefined {
-  if (outcome.kind === 'resolved') return { kind: 'text', text: outcome.text, tool };
+  if (outcome.kind === 'resolved') return { kind: 'text', text: outcome.text, tool: outcome.tool ?? tool };
   return undefined;
 }
 
@@ -29,6 +32,7 @@ export interface OutcomeMessage {
 export function toolOutcomeMessage(outcome: MergeToolOutcome, tool: string, fileName: string): OutcomeMessage {
   switch (outcome.kind) {
     case 'resolved': {
+      if (outcome.tool) return { kind: 'success', title: `Resolved ${fileName} with ${outcome.tool}` };
       const left = countConflictRegions(outcome.text);
       if (left > 0) {
         return {

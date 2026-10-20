@@ -1,10 +1,11 @@
-import { AUTO_MERGE_TOOL, type CustomMergeTool, type MergeTool, type MergeToolList } from '@shared/domain/mergeTools';
+import { AUTO_MERGE_TOOL, type CustomMergeTool, type MergeTool, type MergeToolList, type SmartMergeTool } from '@shared/domain/mergeTools';
 import { appBundleOf } from '../../system/apps/appBundle';
 import type { DetectedTool } from './detectTools';
 import { UVCS_TOOL_ID } from './knownTools';
 
 export interface MergeToolSources {
   detected: DetectedTool[];
+  smartMerge: SmartMergeTool | null;
   custom: CustomMergeTool[];
   /** The user's arguments for a tool, by its id. */
   argsOverrides: Record<string, string[]>;
@@ -25,7 +26,7 @@ export function mergeToolList(sources: MergeToolSources): MergeToolList {
   const custom = sources.custom.map((tool) => withArgs({ id: tool.id, name: tool.name, origin: 'custom', executable: tool.executable, defaultArgs: tool.args }));
 
   const tools = [...uvcs, ...others, ...custom];
-  return { tools, preferredId: preferredTool(tools, sources.preference) };
+  return { tools, preferredId: preferredTool(tools, sources.preference), smartMerge: sources.smartMerge };
 }
 
 /** The user's pick while it's still there; otherwise the UVCS tool, else the first one found. */

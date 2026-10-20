@@ -23,7 +23,9 @@ export interface MergeToolSession {
 /**
  * Opens one conflicting file in a merge tool and waits for it: `onOpen` reports it open, then closed (null). The
  * result file starts as the file stands in the app (the automatic merge with its markers, or the user's picks), so the
- * tool shows where things are. Tells the user how it went, unless `quiet` (resolving one by one tells it as a whole).
+ * tool shows where things are. A Unity asset nothing was decided for goes through Smart Merge first, and the tool
+ * opens only if it can't merge it (`MergeToolRequest.trySmartMergeFirst`). Tells the user how it went, unless `quiet`
+ * (resolving one by one tells it as a whole).
  */
 export async function resolveInMergeTool(
   workspacePath: string,
@@ -47,6 +49,7 @@ export async function resolveInMergeTool(
       incoming: state.file.source,
       startText: startText(state),
       names: toolVersionNames(labels),
+      trySmartMergeFirst: !state.decision,
     });
   } catch (error) {
     outcome = { kind: 'failed', message: error instanceof Error ? error.message : String(error) };

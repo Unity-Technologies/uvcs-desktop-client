@@ -10,6 +10,10 @@ describe('decisionFromTool', () => {
     expect(decisionFromTool({ kind: 'resolved', text: 'x\n' }, 'VS Code')).toEqual({ kind: 'text', text: 'x\n', tool: 'VS Code' });
     expect(decisionFromTool({ kind: 'unchanged', exitCode: 0, errorOutput: '' }, 'VS Code')).toBeUndefined();
   });
+
+  it('marks it as Smart Merge’s when Smart Merge merged it before the tool had to open', () => {
+    expect(decisionFromTool({ kind: 'resolved', text: 'x\n', tool: 'Smart Merge' }, 'VS Code')).toEqual({ kind: 'text', text: 'x\n', tool: 'Smart Merge' });
+  });
 });
 
 describe('toolOutcomeMessage', () => {
@@ -18,6 +22,13 @@ describe('toolOutcomeMessage', () => {
     expect(toolOutcomeMessage({ kind: 'resolved', text: '<<<<<<< a\nx\n=======\ny\n>>>>>>> b\n' }, 'VS Code', 'a.ts')).toMatchObject({
       kind: 'info',
       title: 'a.ts still has 1 conflict',
+    });
+  });
+
+  it('says Smart Merge resolved a Unity asset the tool never opened', () => {
+    expect(toolOutcomeMessage({ kind: 'resolved', text: 'x\n', tool: 'Smart Merge' }, 'VS Code', 'Player.prefab')).toEqual({
+      kind: 'success',
+      title: 'Resolved Player.prefab with Smart Merge',
     });
   });
 
