@@ -6,9 +6,9 @@ import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
 import { ListSkeleton } from '../../ui/Skeleton';
 import { ViewHeader } from '../../ui/ViewHeader';
+import { IncomingChangesetsHeading } from './IncomingChangesetsHeading';
 import { IncomingPanes } from './IncomingPanes';
 import { IncomingSession } from './IncomingSession';
-import { NoIncomingChangesets } from './NoIncomingChangesets';
 import { useIncomingChanges } from './useIncomingChanges';
 
 export function IncomingChangesView() {
@@ -30,7 +30,15 @@ export function IncomingChangesView() {
     return (
       <>
         {header}
-        <IncomingPanes list={<ListSkeleton rowHeight={28} />} detail={null} />
+        <IncomingPanes
+          list={
+            <>
+              <IncomingChangesetsHeading count={undefined} />
+              <ListSkeleton rowHeight={28} />
+            </>
+          }
+          detail={null}
+        />
       </>
     );
   }
@@ -49,7 +57,7 @@ export function IncomingChangesView() {
     return (
       <>
         {header}
-        <IncomingPanes list={<NoIncomingChangesets />} detail={<EmptyState icon={<CheckCircle2 size={22} />} title="You're up to date" />} />
+        <IncomingPanes list={<IncomingChangesetsHeading count={0} />} detail={<EmptyState icon={<CheckCircle2 size={22} />} title="You're up to date" />} />
       </>
     );
   }

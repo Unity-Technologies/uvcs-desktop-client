@@ -43,6 +43,12 @@
   transform: none;
 }
 
+/* The chevron's room in a heading with nothing to fold (`IncomingChangesetsHeading`): its 13px icon. */
+.chevronPlace {
+  flex: none;
+  width: 13px;
+}
+
 .title {
   flex: 1;
   overflow: hidden;
