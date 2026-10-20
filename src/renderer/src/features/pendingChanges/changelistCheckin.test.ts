@@ -150,6 +150,14 @@ describe('how a prepared changelist ends', () => {
     expect(selection(afterUndo).included).toEqual([defaultChanges[0], defaultChanges[1], edited]);
   });
 
+  // Undoing an added file leaves it on disk, private, at the same path: it is no longer the changelist's.
+  it('ends once its files left the changelist, even when one stays on disk as a private file', () => {
+    prepare(ui);
+
+    const leftPrivate = change('src/icons.ts', ['private']);
+    expect(selection([...defaultChanges, leftPrivate]).included).toEqual([defaultChanges[0], defaultChanges[1], leftPrivate]);
+  });
+
   it('holds while some of its files are pending', () => {
     prepare(ui);
 
