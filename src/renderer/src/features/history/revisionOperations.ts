@@ -3,6 +3,7 @@ import type { RevisionRef } from '@shared/domain/revision';
 import { api } from '../../api/client';
 import { currentExternalApps } from '../../components/externalApps/externalApps';
 import { runVoidAction } from '../../app/operations/runOperation';
+import { isAffectedByPendingChangeEdit } from '../../app/refresh/refreshScopes';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
 
@@ -37,7 +38,10 @@ export async function saveVersionAs(workspacePath: string, version: RepositoryVe
   }
 }
 
-/** Loads an old revision's content into the workspace; the result shows up as a pending change. */
+/**
+ * Loads an old revision's content into the workspace; the result shows up as a pending change. `cm revert` checks the
+ * file out, which may take its lock, so it refreshes what a checkout does.
+ */
 export async function revertItemTo(workspacePath: string, path: string, changesetId: number): Promise<void> {
   const confirmed = await confirm({
     title: `Revert ${path} to changeset ${changesetId}?`,
@@ -46,6 +50,6 @@ export async function revertItemTo(workspacePath: string, path: string, changese
   });
   if (!confirmed) return;
 
-  const reverted = await runVoidAction(workspacePath, "Couldn't revert the file", () => api.history.revertTo(workspacePath, path, changesetId));
+  const reverted = await runVoidAction(workspacePath, "Couldn't revert the file", () => api.history.revertTo(workspacePath, path, changesetId), isAffectedByPendingChangeEdit);
   if (reverted) toast.success(`Reverted ${path}`, `Content from changeset ${changesetId} is now a pending change.`);
 }
