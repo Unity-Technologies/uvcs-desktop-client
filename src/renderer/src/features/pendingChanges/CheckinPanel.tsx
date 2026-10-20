@@ -1,5 +1,5 @@
 import { ArrowDownToLine, GitMerge, History } from 'lucide-react';
-import { useState, type RefObject } from 'react';
+import { useEffect, useState, type RefObject } from 'react';
 import { splitComment } from '../../lib/comment';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
@@ -24,8 +24,8 @@ interface CheckinPanelProps {
   summaryRef: RefObject<HTMLInputElement | null>;
   /** Whose draft comment the fields show and edit. */
   workspacePath: string;
-  /** How many changes are pending; undefined until they are read. */
-  pendingCount: number | undefined;
+  /** How many changes the list holds, private ones too (the header counts only what checks in); undefined until read. */
+  listedCount: number | undefined;
   includedCount: number;
   /** What the included changes upload. */
   upload: UploadSummary;
@@ -50,7 +50,7 @@ interface CheckinPanelProps {
 export function CheckinPanel({
   summaryRef,
   workspacePath,
-  pendingCount,
+  listedCount,
   includedCount,
   upload,
   shelvable,
@@ -73,13 +73,13 @@ export function CheckinPanel({
   const onMessageChange = (message: { summary?: string; description?: string }): void => setMessage(workspacePath, message);
   const shelving = mode === 'shelve';
   const count = shelving ? shelvable.count : includedCount;
-  const disabledReason = checkinDisabledReason(mode, count, includedCount, pendingCount);
+  const disabledReason = checkinDisabledReason(mode, count, includedCount, listedCount);
   const canAct = disabledReason === null && !busy;
   const { icon: ModeIcon } = describeMode(mode);
   const uploaded = shelving ? shelvable.upload : upload;
   const label = checkinButtonLabel({
     mode,
-    pendingCount,
+    listedCount,
     includedCount: count,
     branchName,
     uploadBytes: uploaded.bytes,
@@ -100,6 +100,13 @@ export function CheckinPanel({
     }
   };
   useShortcut(hotkey('checkin'), () => void act(), canAct);
+
+  // The panel stays on screen while nothing is pending, where the mode caret is disabled: it goes back to checking in.
+  useEffect(() => {
+    if (listedCount !== 0) return;
+    setMode('checkin');
+    setKeepShelved(false);
+  }, [listedCount]);
 
   return (
     <div className={styles.panel}>
@@ -153,7 +160,7 @@ export function CheckinPanel({
         >
           <CheckinButtonWording forms={label.forms} />
         </Button>
-        <CheckinModeMenu mode={mode} disabled={!canChangeCheckinMode(pendingCount, busy)} onChange={setMode} />
+        <CheckinModeMenu mode={mode} disabled={!canChangeCheckinMode(listedCount, busy)} onChange={setMode} />
       </div>
       {updatesFirst && behindDescription && <div className={styles.behind}>{behindDescription}</div>}
     </div>

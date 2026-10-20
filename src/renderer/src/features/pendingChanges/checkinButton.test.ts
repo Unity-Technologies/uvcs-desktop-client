@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { canChangeCheckinMode, checkinButtonLabel, checkinDisabledReason } from './checkinButton';
 
 describe('checkinButtonLabel', () => {
-  const base = { mode: 'checkin' as const, pendingCount: 6, includedCount: 4, branchName: '/main', uploadBytes: 1_150_000, merging: false, behindCount: 0, allReviewed: false };
+  const base = { mode: 'checkin' as const, listedCount: 6, includedCount: 4, branchName: '/main', uploadBytes: 1_150_000, merging: false, behindCount: 0, allReviewed: false };
 
   const wordings = (label: ReturnType<typeof checkinButtonLabel>): string[] =>
     label.forms.map(({ action, size, target }) => [action, size && `(${size})`, target].filter(Boolean).join(' '));
@@ -41,12 +41,12 @@ describe('checkinButtonLabel', () => {
 
   it('says there is nothing to check in', () => {
     expect(wordings(checkinButtonLabel({ ...base, includedCount: 0 }))).toEqual(['Nothing to check in']);
-    expect(wordings(checkinButtonLabel({ ...base, pendingCount: 0, includedCount: 0 }))).toEqual(['Nothing to check in']);
+    expect(wordings(checkinButtonLabel({ ...base, listedCount: 0, includedCount: 0 }))).toEqual(['Nothing to check in']);
   });
 
   it('only names what it does until the changes are read', () => {
-    expect(wordings(checkinButtonLabel({ ...base, pendingCount: undefined, includedCount: 0 }))).toEqual(['Check in']);
-    expect(wordings(checkinButtonLabel({ ...base, mode: 'shelve', pendingCount: undefined, includedCount: 0 }))).toEqual(['Shelve']);
+    expect(wordings(checkinButtonLabel({ ...base, listedCount: undefined, includedCount: 0 }))).toEqual(['Check in']);
+    expect(wordings(checkinButtonLabel({ ...base, mode: 'shelve', listedCount: undefined, includedCount: 0 }))).toEqual(['Shelve']);
   });
 
   it('checks in a merge', () => {

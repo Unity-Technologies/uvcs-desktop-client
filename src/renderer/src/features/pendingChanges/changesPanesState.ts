@@ -5,9 +5,9 @@
  */
 export type ChangesPanesState = 'reading' | 'nothingPending' | 'noMatches' | 'listed';
 
-/** `pendingCount` is how many changes were read, undefined until they are; `shownCount`, how many the filters let through. */
-export function changesPanesState(pendingCount: number | undefined, shownCount: number): ChangesPanesState {
-  if (pendingCount === undefined) return 'reading';
-  if (pendingCount === 0) return 'nothingPending';
+/** `listedCount` is how many changes were read, undefined until they are; `shownCount`, how many the filters let through. */
+export function changesPanesState(listedCount: number | undefined, shownCount: number): ChangesPanesState {
+  if (listedCount === undefined) return 'reading';
+  if (listedCount === 0) return 'nothingPending';
   return shownCount === 0 ? 'noMatches' : 'listed';
 }

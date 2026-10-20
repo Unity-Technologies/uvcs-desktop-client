@@ -132,8 +132,8 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
     setIncluded(workspacePath, selected.map((change) => change.path), include);
   const toggleIncluded = (toggled: ChangeRow[], include: boolean): void => setIncludedChanges(toggled.flatMap(changesUnderRow), include);
 
-  const pendingCount = snapshot && allChanges.length;
-  const panesState = changesPanesState(pendingCount, changes.length);
+  const listedCount = snapshot && allChanges.length;
+  const panesState = changesPanesState(listedCount, changes.length);
   const listBody =
     panesState === 'reading' ? (
       <ListSkeleton rowHeight={28} />
@@ -180,7 +180,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
           <div className={styles.listPane}>
             <ChangesSummaryBar
               changes={changes}
-              totalCount={pendingCount}
+              totalCount={listedCount}
               isIncluded={isIncluded}
               onSetIncluded={setIncludedChanges}
               onUndo={(selected) => void undoChanges(workspacePath, selected)}
@@ -217,7 +217,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
               summaryRef={summaryRef}
               workspacePath={workspacePath}
               includedCount={included.length}
-              pendingCount={pendingCount}
+              listedCount={listedCount}
               upload={upload}
               shelvable={{ count: shelvable.length, upload: shelvableUpload }}
               branchName={workspace?.selector.name ?? ''}
