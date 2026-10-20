@@ -109,13 +109,13 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
           <div ref={listRef} className={styles.files} onKeyDown={onListKeyDown}>
             {listed.rows.map((row) =>
               row.type === 'folder' ? (
-                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(workspacePath, target, row.items, { review, workspaceRepository })}>
+                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(workspacePath, target, row.items, { review, workspaceRepository, diffEntries })}>
                   <button className={styles.file} onClick={() => toggleCollapsed(row.key)} aria-expanded={!row.collapsed} {...ROVING_ITEM}>
                     <DiffEntryRow row={row} tree={tree} />
                   </button>
                 </ActionContextMenu>
               ) : (
-                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(workspacePath, target, [row.item], { review, workspaceRepository })}>
+                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(workspacePath, target, [row.item], { review, workspaceRepository, diffEntries })}>
                   <button className={styles.file} onClick={() => onOpen(row.item.path)} {...ROVING_ITEM}>
                     <DiffEntryRow row={row} tree={tree} />
                   </button>

@@ -21,6 +21,8 @@ export interface DiffEntryMenuOptions {
    * deleted need it (`revertFromDiffEntry`, `restoreMenuEntries`).
    */
   workspaceRepository?: string;
+  /** Every entry of the diff, the folders its list hides included (`listedEntries`): what a deleted file comes back with. */
+  diffEntries?: DiffEntry[];
 }
 
 /**
@@ -28,9 +30,9 @@ export interface DiffEntryMenuOptions {
  * the diff's change (`revertFromDiffEntry`) or restore it where it was deleted (`restoreMenuEntries`), open or save the
  * newer revision, or jump to its history, annotated or not.
  */
-export function diffEntryMenu(workspacePath: string, target: DiffTarget, entries: DiffEntry[], { review, added = [], workspaceRepository }: DiffEntryMenuOptions = {}): MenuEntry[] {
+export function diffEntryMenu(workspacePath: string, target: DiffTarget, entries: DiffEntry[], { review, added = [], workspaceRepository, diffEntries = entries }: DiffEntryMenuOptions = {}): MenuEntry[] {
   const revert = revertFromDiffEntry(workspacePath, target, entries, workspaceRepository);
-  const restore = restoreMenuEntries(workspacePath, entries, workspaceRepository);
+  const restore = restoreMenuEntries(workspacePath, entries, diffEntries, workspaceRepository);
   return changedFileMenu(workspacePath, entries.map((entry) => changedFileOf(target, entry, entries.length === 1)), [review ? reviewMenuEntry(entries, review) : null, revert, ...restore, ...added]);
 }
 

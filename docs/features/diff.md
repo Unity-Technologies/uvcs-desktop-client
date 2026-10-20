@@ -159,6 +159,10 @@ every selected item was deleted, in the workspace's own repository, and none is 
 `cm` restores no xlink nor xlinked item, and finds a bare id only there (`undeleteArgs`). Incoming offers none: what
 it deletes is still in the workspace (`diffEntryMenu` without `workspaceRepository`).
 
+- `cm diff` lists a deleted folder alone, but where a diff lists it with its files the list shows only the files
+  (`listedEntries`): a file of a deleted folder comes back with the outermost folder the diff deleted ("Restore folder
+  docs"), as `cm` restores nothing into a folder that's gone, and a folder row's files are one restore of it
+  (`deletedItemRestores`, given every entry of the diff: `diffEntryMenu`'s `diffEntries`).
 - `cm` takes one item a command, so several are one operation running one each (`restoreDeletedItems` in main),
   which stops between two. A folder row of a tree selects every deleted file under it, so past
   `MAX_RESTORED_WITHOUT_ASKING` (20) items it asks first: each is a process and a round trip to the server.
