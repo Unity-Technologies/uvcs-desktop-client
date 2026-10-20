@@ -1,9 +1,8 @@
 import type { DrawContext } from './drawContext';
 import { textWidth } from './fitText';
-import { COLUMN_WIDTH, columnX } from './geometry';
+import { COLUMN_WIDTH, columnX, DATE_RULER_HEIGHT } from './geometry';
 import { rulerLabelX } from './rulerLabel';
 
-const RULER_HEIGHT = 26;
 /**
  * Minimum screen width of a date column. Zoomed out, days narrower than this merge into the column of the day
  * before, so the ruler never turns into slivers of cut dates and the canvas into a wash of lines.
@@ -65,7 +64,7 @@ export function drawDaySeparators({ ctx, scene }: DrawContext): void {
   ctx.globalAlpha = SEPARATOR_ALPHA;
   for (let index = 0; index < markCount; index++) {
     const { x } = marks[index]!;
-    if (x > 0) ctx.fillRect(Math.round(x), RULER_HEIGHT, 1, scene.size.height - RULER_HEIGHT);
+    if (x > 0) ctx.fillRect(Math.round(x), DATE_RULER_HEIGHT, 1, scene.size.height - DATE_RULER_HEIGHT);
   }
   ctx.restore();
 }
@@ -79,9 +78,9 @@ export function drawDateRuler({ ctx, scene }: DrawContext): void {
 
   ctx.save();
   ctx.fillStyle = palette.panel;
-  ctx.fillRect(0, 0, size.width, RULER_HEIGHT);
+  ctx.fillRect(0, 0, size.width, DATE_RULER_HEIGHT);
   ctx.fillStyle = palette.border;
-  ctx.fillRect(0, RULER_HEIGHT - 1, size.width, 1);
+  ctx.fillRect(0, DATE_RULER_HEIGHT - 1, size.width, 1);
 
   ctx.font = palette.fonts.ruler;
   ctx.textBaseline = 'middle';
@@ -92,16 +91,16 @@ export function drawDateRuler({ ctx, scene }: DrawContext): void {
     if (next < 6 || mark.x > size.width) continue;
     if (mark.x >= 0) {
       ctx.fillStyle = palette.border;
-      ctx.fillRect(Math.round(mark.x), 4, 1, RULER_HEIGHT - 8);
+      ctx.fillRect(Math.round(mark.x), 4, 1, DATE_RULER_HEIGHT - 8);
     }
     const label = dayLabel(mark.day);
     const labelX = rulerLabelX(mark.x, next, textWidth(ctx, label), size.width);
     ctx.save();
     ctx.beginPath();
-    ctx.rect(Math.max(0, mark.x), 0, Math.max(0, Math.min(next, size.width) - Math.max(0, mark.x)), RULER_HEIGHT);
+    ctx.rect(Math.max(0, mark.x), 0, Math.max(0, Math.min(next, size.width) - Math.max(0, mark.x)), DATE_RULER_HEIGHT);
     ctx.clip();
     ctx.fillStyle = palette.textTertiary;
-    ctx.fillText(label, labelX, RULER_HEIGHT / 2 + 0.5);
+    ctx.fillText(label, labelX, DATE_RULER_HEIGHT / 2 + 0.5);
     ctx.restore();
   }
   ctx.restore();

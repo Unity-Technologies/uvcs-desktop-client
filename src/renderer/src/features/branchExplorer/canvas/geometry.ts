@@ -25,6 +25,8 @@ export const HEADER_INSET = 10;
 export const HEADER_SPAN_COLUMNS = 4;
 export const HEADER_MAX_WIDTH = HEADER_SPAN_COLUMNS * COLUMN_WIDTH - 8 - HEADER_INSET;
 export const GRAPH_PADDING = { left: 56, top: 118, right: 140, bottom: 80 };
+/** The sticky strip of dates along the top of the canvas, in screen px. */
+export const DATE_RULER_HEIGHT = 26;
 
 export function columnX(column: number): number {
   return GRAPH_PADDING.left + column * COLUMN_WIDTH;
