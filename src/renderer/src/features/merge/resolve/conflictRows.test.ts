@@ -19,19 +19,41 @@ describe('conflictsAbove', () => {
 });
 
 describe('ConflictPlace', () => {
+  /** The surface scrolled to `top`, of the most it can (`max`). */
+  const at = (top: number, max = 2000) => ({ top, max });
+
   it('stands where the screen says, and remembers it for when the conflicts change', () => {
     const place = new ConflictPlace();
-    expect(place.above(() => 2)).toBe(2);
-    expect(place.aboveAfterChange()).toBe(2);
+    expect(place.above(() => 2, at(0))).toBe(2);
+    expect(place.aboveAfterChange(3)).toBe(2);
   });
 
-  it('stands just before a conflict resolved in it, whatever the screen says, until the view moves', () => {
+  it('stands just before a conflict resolved in it, whatever the screen says, and as often as it is asked', () => {
     const place = new ConflictPlace();
-    place.resolvedAt(1);
-    expect(place.aboveAfterChange()).toBe(1);
-    expect(place.above(() => 0)).toBe(1);
+    place.resolvedAt(1, 3, at(400));
+    expect(place.aboveAfterChange(2)).toBe(1);
+    expect(place.aboveAfterChange(2)).toBe(1);
+    expect(place.above(() => 0, at(400))).toBe(1);
     place.moved();
-    expect(place.above(() => 0)).toBe(0);
+    expect(place.above(() => 0, at(400))).toBe(0);
+  });
+
+  it('is moved by a drag, not by the re-layout of the shorter text nor a nudge', () => {
+    const place = new ConflictPlace();
+    place.resolvedAt(2, 3, at(1200, 1200));
+    // The text lost the conflict's rows at the end of the file: the surface can't scroll as far.
+    expect(place.above(() => 0, at(1000, 1000))).toBe(2);
+    expect(place.above(() => 0, at(1030, 1030 + 400))).toBe(2);
+    expect(place.above(() => 0, at(300, 1000))).toBe(0);
+  });
+
+  it('forgets the conflict resolved once the conflicts change otherwise: started over, saved by a merge tool', () => {
+    const place = new ConflictPlace();
+    expect(place.above(() => 0, at(0))).toBe(0);
+    place.resolvedAt(1, 3, at(0));
+    expect(place.aboveAfterChange(2)).toBe(1);
+    expect(place.aboveAfterChange(4)).toBe(0);
+    expect(place.above(() => 3, at(0))).toBe(3);
   });
 });
 
