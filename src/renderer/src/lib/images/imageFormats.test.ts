@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { writeExr, writeHdr, writeTga, writeTiff } from './testing/imageWriters';
 import { writePsd } from './testing/psdWriter';
-import { imageFormatOf, imageSizeOf, sizeProblem } from './imageFormats';
+import { imageFormatOf, imageFormatOfContent, imageSizeOf, sizeProblem } from './imageFormats';
 
 const black = (): [number, number, number, number] => [0, 0, 0, 255];
 
@@ -69,5 +69,23 @@ describe('sizeProblem', () => {
     expect(sizeProblem({ width: 16384, height: 4096 })).toBeNull();
     expect(sizeProblem({ width: 16385, height: 16 })).toBe('tooLarge');
     expect(sizeProblem({ width: 16384, height: 16384 })).toBe('tooLarge');
+  });
+});
+
+describe('imageFormatOfContent', () => {
+  it('tells each format by its signature, whatever the file is named', () => {
+    expect(imageFormatOfContent(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 13, 10, 26, 10]))).toBe('browser');
+    expect(imageFormatOfContent(new Uint8Array([0xff, 0xd8, 0xff, 0xe0]))).toBe('browser');
+    expect(imageFormatOfContent(writeTiff(2, 2, black))).toBe('tiff');
+    expect(imageFormatOfContent(writeExr(2, 2, black))).toBe('exr');
+    expect(imageFormatOfContent(writeHdr(2, 2, black))).toBe('hdr');
+    expect(imageFormatOfContent(writePsd({ width: 2, height: 2, mode: 'rgb', sample: () => 0 }))).toBe('psd');
+  });
+
+  it('tells nothing of a TGA, which has no signature, nor of bytes no image starts with', () => {
+    expect(imageFormatOfContent(writeTga(2, 2, black))).toBeNull();
+    expect(imageFormatOfContent(writeTga(2, 2, black, { bottomUp: false }))).toBeNull();
+    expect(imageFormatOfContent(new Uint8Array([1, 2, 3, 4]))).toBeNull();
+    expect(imageFormatOfContent(new Uint8Array())).toBeNull();
   });
 });
