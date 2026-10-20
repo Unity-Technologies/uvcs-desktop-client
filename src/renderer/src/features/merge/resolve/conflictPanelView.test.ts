@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FileContent } from '@shared/domain/content';
 import { LONGEST_DRAWN_LINE, LONGEST_EDITED_LINE } from '../../diff/viewer/longLines';
-import { conflictsToStep, effectiveView, justDecided, editInAppUnavailable, mergedText, rendersVersions, textToEdit } from './conflictPanelView';
+import { FRESH_PANEL, conflictsToStep, effectiveView, justDecided, rememberConflicts, type PanelMemory, editInAppUnavailable, mergedText, rendersVersions, textToEdit } from './conflictPanelView';
 import type { FileConflictState } from './useFileConflicts';
 
 const text = (value: string): FileContent => ({ text: value, isBinary: false, size: value.length });
@@ -117,16 +117,25 @@ describe('conflictsToStep', () => {
 
 describe('justDecided', () => {
   const decided = stateOf({ remainingConflicts: 0, decision: { kind: 'text', text: 'merged' } });
+  const opened = (state: FileConflictState): PanelMemory => rememberConflicts(FRESH_PANEL, state);
 
-  it('is a file whose last conflict was resolved while it showed', () => {
-    expect(justDecided(true, undefined, decided)).toBe(true);
-    expect(justDecided(true, 'conflicts', decided)).toBe(true);
+  it('is a file whose last conflict was resolved while it showed, whatever view the user picks', () => {
+    const memory = rememberConflicts(opened(stateOf({ remainingConflicts: 2 })), decided);
+    expect(justDecided(memory, decided)).toBe(true);
+    expect(justDecided({ ...memory, chosen: 'changes' }, decided)).toBe(true);
   });
 
-  it("isn't a file that waits still, nor one decided before it showed, nor once the user picks its changes", () => {
-    expect(justDecided(true, undefined, stateOf())).toBe(false);
-    expect(justDecided(false, undefined, decided)).toBe(false);
-    expect(justDecided(true, 'changes', decided)).toBe(false);
+  it("isn't a file that waits still, nor one decided before it showed", () => {
+    expect(justDecided(opened(stateOf()), stateOf())).toBe(false);
+    expect(justDecided(opened(decided), decided)).toBe(false);
+  });
+
+  it('opens the conflicts again once started over, and is just decided once they are resolved again', () => {
+    const before = { ...opened(decided), chosen: 'source' as const };
+    const startedOver = rememberConflicts(before, stateOf({ remainingConflicts: 2 }));
+    expect(startedOver.chosen).toBeUndefined();
+    expect(justDecided(startedOver, stateOf({ remainingConflicts: 2 }))).toBe(false);
+    expect(justDecided(rememberConflicts(startedOver, decided), decided)).toBe(true);
   });
 });
 
