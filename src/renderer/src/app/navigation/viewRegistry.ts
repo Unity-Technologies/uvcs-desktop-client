@@ -15,6 +15,7 @@ import {
 import type { ComponentType } from 'react';
 import { useIncomingChangesBadge } from '../../features/incoming/useIncomingChangesBadge';
 import { useLeftChangesSummary } from '../../features/leftChanges/useLeftChanges';
+import { PendingChangesView } from '../../features/pendingChanges/PendingChangesView';
 import { usePendingChangesBadge } from '../../features/pendingChanges/usePendingChanges';
 import type { Icon } from '../../lib/actions';
 import { lazyComponent } from '../../lib/lazyComponent';
@@ -23,7 +24,9 @@ import { isMac } from '../../lib/platform';
 import { viewShortcut } from '../../lib/shortcutRegistry';
 import type { ViewId } from './views';
 
-// Views load on first visit so the app starts fast.
+// Views load on first visit so the app starts fast. Changes, where a workspace opens, is in the startup bundle: its
+// first frame is its own loading state (header, list skeleton, check-in panel), never a generic fallback that it then
+// replaces; its diff pane loads on first use instead (`ChangeSelectionPane`).
 const AttributesView = lazyComponent(() => import('../../features/attributes/AttributesView').then((module) => module.AttributesView));
 const BranchExplorerView = lazyComponent(() => import('../../features/branchExplorer/BranchExplorerView').then((module) => module.BranchExplorerView));
 const BranchesView = lazyComponent(() => import('../../features/branches/BranchesView').then((module) => module.BranchesView));
@@ -33,7 +36,6 @@ const FilesView = lazyComponent(() => import('../../features/files/FilesView').t
 const IncomingChangesView = lazyComponent(() => import('../../features/incoming/IncomingChangesView').then((module) => module.IncomingChangesView));
 const LabelsView = lazyComponent(() => import('../../features/labels/LabelsView').then((module) => module.LabelsView));
 const LocksView = lazyComponent(() => import('../../features/locks/LocksView').then((module) => module.LocksView));
-const PendingChangesView = lazyComponent(() => import('../../features/pendingChanges/PendingChangesView').then((module) => module.PendingChangesView));
 const ShelvesView = lazyComponent(() => import('../../features/shelves/ShelvesView').then((module) => module.ShelvesView));
 const SyncView = lazyComponent(() => import('../../features/sync/SyncView').then((module) => module.SyncView));
 
