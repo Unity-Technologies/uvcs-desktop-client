@@ -13,11 +13,9 @@ This desktop client has no backend. All version-control operations run on your d
 If your server is Unity-hosted, this app doesn't change where your data lives. Repository data is loaded into memory
 for your current session only and is never uploaded. There is no telemetry, analytics or crash reporting.
 
-Besides your UVCS server, the app makes two connections that aren't optional, and they send no data of yours beyond
-what any web request carries:
+Besides your UVCS server, the app makes two connections that aren't optional:
 
-- **Update checks (GitHub, by Microsoft, USA).** The app checks GitHub for new releases, sending the standard IP
-  address and user-agent of a web request.
+- **Update checks (GitHub, by Microsoft, USA).** The app checks GitHub for new releases, sending your IP address.
 - **Spell-checking dictionaries (Google, USA).** On Windows and Linux, the app downloads a spell-checking dictionary
-  for your system's language from Google's servers, sending the standard IP address and user-agent of a web request
-  and the dictionary's language. On macOS, the system's own spellchecker is used and nothing is downloaded.
+  for your system's language from Google's servers, sending your IP address and the dictionary's language.
+  On macOS, the system's own spellchecker is used and nothing is downloaded.
