@@ -13,6 +13,7 @@ import { openChangesetDiff } from '../changesets/changesetOperations';
 import { AgeLegend } from './AgeLegend';
 import { useAnnotateOptions, type AnnotateColumns } from './annotateOptionsStore';
 import { annotationBlocks, distinctAuthors } from './annotationBlocks';
+import { annotationBodyOf } from './annotationBody';
 import type { BlockLinks } from './blockLinks';
 import { revisionBefore } from './revisionBefore';
 import { useFileAnnotation } from './useFileAnnotation';
@@ -74,6 +75,7 @@ export function AnnotationPane({ path, repository, revision, leading, history }:
   );
 
   const revisionLabel = revision && `cs:${revision.changesetId}`;
+  const body = annotationBodyOf(annotation, Boolean(error));
 
   return (
     <div className={styles.pane}>
@@ -97,9 +99,9 @@ export function AnnotationPane({ path, repository, revision, leading, history }:
         </PaneToolbarGroup>
       </PaneToolbar>
 
-      {error ? (
-        <EmptyState title="Couldn't annotate this file" description={error.message} />
-      ) : !annotation ? (
+      {body === 'failed' ? (
+        <EmptyState title="Couldn't annotate this file" description={error?.message} />
+      ) : body === 'annotating' || !annotation ? (
         <CenteredSpinner />
       ) : (
         <Suspense fallback={<CenteredSpinner />}>
