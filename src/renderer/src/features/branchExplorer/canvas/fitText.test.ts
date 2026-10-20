@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fitBranchName } from './fitText';
+import { fitBranchName, summaryOf } from './fitText';
 
 /** A context whose every character is 1px wide, in a font of its own so the cache never answers for another test. */
 function context(font: string): CanvasRenderingContext2D {
@@ -22,5 +22,17 @@ describe('fitBranchName', () => {
   it('cuts a leaf too wide on its own in its middle, after a hint that it has parents', () => {
     const fitted = fitBranchName(context('leaf'), '/main/rendering-pipeline-integration-with-asset-bundles', 24);
     expect(fitted).toBe('…/rendering-p…et-bundles');
+  });
+});
+
+describe('summaryOf', () => {
+  it("takes a comment's first line as its summary", () => {
+    expect(summaryOf('Snappier steering\n\nTuned the curve.')).toBe('Snappier steering');
+    expect(summaryOf('')).toBe('');
+  });
+
+  it('skips the blank lines a comment starts with, and reads CRLF as a line end', () => {
+    expect(summaryOf('\n  \nFix crash on load\nDetails')).toBe('Fix crash on load');
+    expect(summaryOf('Fix crash\r\nDetails')).toBe('Fix crash');
   });
 });

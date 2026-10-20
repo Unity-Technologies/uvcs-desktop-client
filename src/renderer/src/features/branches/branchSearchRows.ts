@@ -26,3 +26,18 @@ export function branchSearchRows(groups: BranchGroup[], query: string): { rows: 
   }
   return { rows, branches };
 }
+
+/** Where the branches a list shows stand: still read, couldn't be read, or read (kept when a later read fails). */
+export type BranchesRead = 'loading' | 'failed' | 'read';
+
+export function branchesRead({ data, isError }: { data: unknown; isError: boolean }): BranchesRead {
+  if (data !== undefined) return 'read';
+  return isError ? 'failed' : 'loading';
+}
+
+/** What the branch list says when it shows no branch; null while the branches are still read. */
+export function branchSearchEmptyText(query: string, read: BranchesRead): string | null {
+  if (read === 'loading') return null;
+  if (read === 'failed') return "Couldn't read the branches.";
+  return query.trim() ? `No branches match “${query}”.` : 'No branches.';
+}

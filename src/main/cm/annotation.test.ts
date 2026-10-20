@@ -22,4 +22,8 @@ describe('parseAnnotation', () => {
       { changesetId: 4, owner: 'bob@example.com', date: '2026-09-20T10:00:00+02:00', branch: '/main/ui', comment: 'Multi\nline', isMerge: true },
     ]);
   });
+
+  it('reads the nothing an empty file prints as no lines', () => {
+    expect(parseAnnotation('')).toEqual({ lines: [], changesets: [] });
+  });
 });

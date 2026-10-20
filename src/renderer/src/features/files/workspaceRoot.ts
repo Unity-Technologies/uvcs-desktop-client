@@ -1,5 +1,6 @@
 import type { TreeItem } from '@shared/domain/explorer';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
+import { branchWorkedOn } from '../../components/workingObject';
 
 /** The top row of the Files tree, as in the Plastic desktop GUI: the workspace folder itself, named by its full path. */
 export function workspaceRootItem(workspace: Pick<WorkspaceInfo, 'path' | 'selector' | 'loadedChangeset' | 'repository'>): TreeItem {
@@ -12,7 +13,7 @@ export function workspaceRootItem(workspace: Pick<WorkspaceInfo, 'path' | 'selec
     isPrivate: false,
     isCheckedOut: false,
     changeset: workspace.loadedChangeset,
-    branch: workspace.selector.kind === 'branch' ? workspace.selector.name : '',
+    branch: branchWorkedOn(workspace.selector) ?? '',
     owner: '',
     revisionId: 0,
     parentRevisionId: -1,

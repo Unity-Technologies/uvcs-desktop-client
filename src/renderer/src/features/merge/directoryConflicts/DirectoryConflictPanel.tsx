@@ -4,6 +4,7 @@ import { RENAMEABLE_CONFLICTS, type ConflictSide, type DirectoryConflict, type D
 import { PathLabel } from '../../../components/PathLabel';
 import { TextField } from '../../../ui/TextField';
 import type { MergeLabels } from '../mergeDescription';
+import { renameNameProblem } from './renameNameProblem';
 import { suggestRename } from './renameSuggestion';
 import styles from './DirectoryConflictPanel.module.css';
 
@@ -58,7 +59,7 @@ export function DirectoryConflictPanel({ conflict, labels, resolution, onResolve
                 label={`New name for ${destination.name.toLowerCase()}`}
                 value={resolution.newName}
                 onChange={(event) => onResolve({ choice: 'rename', newName: event.target.value })}
-                error={/[\\/]/.test(resolution.newName) || !resolution.newName.trim() ? 'Enter a file name without folders.' : undefined}
+                error={renameNameProblem(resolution.newName)}
               />
             )}
           </Option>

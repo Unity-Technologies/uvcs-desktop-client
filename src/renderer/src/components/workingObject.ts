@@ -42,3 +42,8 @@ export function selectorChip(selector: WorkspaceSelector): { icon: Icon; text: s
     tipSub: fullName,
   };
 }
+
+/** The branch a workspace is on, by its full name; undefined while it is on a changeset, a label or a shelve. */
+export function branchWorkedOn(selector: WorkspaceSelector | null | undefined): string | undefined {
+  return selector?.kind === 'branch' ? selector.name : undefined;
+}

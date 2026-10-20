@@ -1,6 +1,7 @@
 import { ChevronDown, GitBranch, GitMerge } from 'lucide-react';
 import { navigation } from '../../app/navigation/navigationStore';
 import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
+import { branchWorkedOn } from '../../components/workingObject';
 import { Button } from '../../ui/Button';
 import { DescribedMenu } from '../../ui/menu/DescribedMenu';
 import { workspaceResolutions, type ConflictPath } from './conflictPaths';
@@ -21,7 +22,7 @@ interface ResolveInWorkspaceMenuProps {
  */
 export function ResolveInWorkspaceMenu({ workspacePath, sourceSpec, destination, task }: ResolveInWorkspaceMenuProps) {
   const { data: workspace } = useWorkspaceInfo();
-  const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined;
+  const currentBranch = branchWorkedOn(workspace?.selector);
   const taskBranch = task.branch.name;
 
   const resolve = (path: ConflictPath): void => {

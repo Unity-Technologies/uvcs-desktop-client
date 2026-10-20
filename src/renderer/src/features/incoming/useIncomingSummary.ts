@@ -9,6 +9,7 @@ import { branchHeadMovedOnServer } from '../../app/refresh/headChanges';
 import { refreshQueries } from '../../app/refresh/refreshQueries';
 import { isAffectedByNewChangesets } from '../../app/refresh/refreshScopes';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { branchWorkedOn } from '../../components/workingObject';
 import { notifyIncoming } from './incomingNotifications';
 import { incomingPollInterval } from './incomingPollInterval';
 
@@ -72,7 +73,8 @@ function incomingSummaryKey(workspacePath: string, loaded: LoadedBranch | undefi
 
 function loadedBranchOf({ selector, loadedChangeset }: WorkspaceInfo): LoadedBranch {
   // Only a shelve has no loaded changeset, and a shelve is no branch.
-  return selector.kind === 'branch' && loadedChangeset !== null ? { branch: selector.name, loadedChangeset } : null;
+  const branch = branchWorkedOn(selector);
+  return branch !== undefined && loadedChangeset !== null ? { branch, loadedChangeset } : null;
 }
 
 async function checkIncoming(workspacePath: string, loaded: LoadedBranch, queryKey: readonly unknown[]): Promise<IncomingSummary> {

@@ -1,3 +1,5 @@
+import type { WorkspaceSelector } from '@shared/domain/workspace';
+import { branchWorkedOn } from '../../components/workingObject';
 import { branchLabel } from '../../lib/branchLabels';
 import { formatSize } from '../../lib/formatDate';
 import { formatCount, pluralize } from '../../lib/text';
@@ -9,7 +11,8 @@ interface CheckinButtonState {
   /** How many changes the list holds; undefined until they are read, when the button only names what it does. */
   listedCount: number | undefined;
   includedCount: number;
-  branchName: string;
+  /** What the workspace is loaded from: the button names a branch it checks in to, and nothing else. */
+  workingOn: WorkspaceSelector | undefined;
   uploadBytes: number;
   /** A merge is pending: checking in completes it. */
   merging: boolean;
@@ -41,7 +44,8 @@ interface CheckinButtonLabel {
  * size last: the top bar names the branch, while nothing else tells what the check-in uploads. Behind the branch head it updates first
  * ("Update & check in 4 changes"); once every change is reviewed, "Check in reviewed changes".
  */
-export function checkinButtonLabel({ mode, listedCount, includedCount, branchName, uploadBytes, merging, behindCount, allReviewed, keepShelved }: CheckinButtonState): CheckinButtonLabel {
+export function checkinButtonLabel({ mode, listedCount, includedCount, workingOn, uploadBytes, merging, behindCount, allReviewed, keepShelved }: CheckinButtonState): CheckinButtonLabel {
+  const branchName = branchWorkedOn(workingOn) ?? '';
   const size = includedCount > 0 && uploadBytes > 0 ? formatSize(uploadBytes) : null;
   if (mode === 'shelve') {
     const tip = keepShelved ? 'Shelve a copy; the changes stay here' : 'Shelve, then undo the changes here';

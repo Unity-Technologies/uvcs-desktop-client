@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { branchWorkedOn } from '../../components/workingObject';
 import { isCheckinCandidate } from '../../features/pendingChanges/changeCategories';
 // The palette lists changes as the flat list does.
 import { sortChanges } from '../../features/pendingChanges/changeOrder';
@@ -65,7 +66,7 @@ export function usePaletteSearch(workspacePath: string | null, query: string, sc
     const context: ResultContext = {
       workspacePath: path,
       term,
-      currentBranch: workspace.data?.selector.kind === 'branch' ? workspace.data.selector.name : undefined,
+      currentBranch: branchWorkedOn(workspace.data?.selector),
       loadedChangeset: workspace.data?.loadedChangeset,
       workspaceOn: workspace.data?.selector,
       changelists: pendingChanges.data?.changelists ?? [],

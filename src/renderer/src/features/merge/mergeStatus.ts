@@ -1,4 +1,4 @@
-import type { DirectoryConflictResolution, MergeChange } from '@shared/domain/merge';
+import { directoryConflictDecided, type DirectoryConflictResolution, type MergeChange } from '@shared/domain/merge';
 import { SMART_MERGE_NAME } from '@shared/domain/mergeTools';
 import type { StatusTone as ChangeTone } from '../../components/StatusBadge';
 import { pluralize } from '../../lib/text';
@@ -73,9 +73,8 @@ export function conflictStatusOf(item: MergeItem, progress: MergeProgress): Conf
 }
 
 export function directoryConflictStatus(resolution: DirectoryConflictResolution | undefined): ConflictStatus {
-  switch (resolution?.choice) {
-    case undefined:
-      return 'needsDecision';
+  if (!resolution || !directoryConflictDecided(resolution)) return 'needsDecision';
+  switch (resolution.choice) {
     case 'source':
       return 'keepingSource';
     case 'destination':

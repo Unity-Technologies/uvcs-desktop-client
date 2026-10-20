@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { spec } from '@shared/domain/specs';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { branchWorkedOn } from '../../components/workingObject';
 import { branchLabel } from '../../lib/branchLabels';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { prompt } from '../../ui/dialog/prompt';
@@ -14,7 +15,7 @@ import { openMerge } from './mergeOperations';
 export function useMergeCommands(): void {
   const { data: workspace } = useWorkspaceInfo();
   const workspacePath = useWorkspacePath();
-  const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined;
+  const currentBranch = branchWorkedOn(workspace?.selector);
 
   const commands = useMemo<Command[]>(
     () => [

@@ -89,8 +89,10 @@ with ▸", which would open the incoming one a second way, and keeps "Save this 
 in Incoming too). A version taken
 out of the repository opens under a name that tells which it is (`versionCopyName`: `hero.INCOMING.psd`, as the merge
 tools name theirs), so two versions open side by side in one app don't look alike; a directory conflict its
-panel's choices, Keep both under the name the panel suggests. A directory conflict holding another conflict (a folder
-added on both sides, a file in it changed on both) is its folder's row in a tree: selecting that row selects the
+panel's choices, Keep both under the name the panel suggests. Keep both counts as decided only while its name is one
+name, never a path, `.` or `..` (`isValidRenameName`, which main checks again; the field says what is wrong:
+`renameNameProblem`). A directory conflict holding another conflict (a folder added on both sides, a file in it
+changed on both) is its folder's row in a tree: selecting that row selects the
 conflict, and its menu acts on it alone (`mergeItemAt`, `mergeItemsActedOn`). A clean change isn't annotated: `cm` names only the
 merge's changesets, where the file may not have changed. A folder added with its files is listed once, through them
 (ARCHITECTURE.md "Folders once"). The page starts on the first item that needs the user in the order the list shows

@@ -1,4 +1,4 @@
-import { Calendar, GitCommitVertical, User } from 'lucide-react';
+import { Calendar, FileText, GitCommitVertical, User } from 'lucide-react';
 import { Suspense, useMemo, type ReactNode } from 'react';
 import type { ItemRevision } from '@shared/domain/history';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -13,6 +13,7 @@ import { openChangesetDiff } from '../changesets/changesetOperations';
 import { AgeLegend } from './AgeLegend';
 import { useAnnotateOptions, type AnnotateColumns } from './annotateOptionsStore';
 import { annotationBlocks, distinctAuthors } from './annotationBlocks';
+import { annotationBodyOf } from './annotationBody';
 import type { BlockLinks } from './blockLinks';
 import { revisionBefore } from './revisionBefore';
 import { useFileAnnotation } from './useFileAnnotation';
@@ -74,6 +75,7 @@ export function AnnotationPane({ path, repository, revision, leading, history }:
   );
 
   const revisionLabel = revision && `cs:${revision.changesetId}`;
+  const body = annotationBodyOf(annotation, Boolean(error));
 
   return (
     <div className={styles.pane}>
@@ -97,10 +99,12 @@ export function AnnotationPane({ path, repository, revision, leading, history }:
         </PaneToolbarGroup>
       </PaneToolbar>
 
-      {error ? (
-        <EmptyState title="Couldn't annotate this file" description={error.message} />
-      ) : !annotation ? (
+      {body === 'failed' ? (
+        <EmptyState title="Couldn't annotate this file" description={error?.message} />
+      ) : body === 'annotating' || !annotation ? (
         <CenteredSpinner />
+      ) : body === 'emptyFile' ? (
+        <EmptyState icon={<FileText size={22} />} title="Empty file" description="This file has no content." />
       ) : (
         <Suspense fallback={<CenteredSpinner />}>
           <AnnotatedCode key={spec} code={code} path={path} blocks={blocks} lineCount={annotation.lines.length} columns={columns} links={links} />

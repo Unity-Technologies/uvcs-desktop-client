@@ -2,13 +2,21 @@ import { describe, expect, it } from 'vitest';
 import { canChangeCheckinMode, checkinButtonLabel, checkinDisabledReason } from './checkinButton';
 
 describe('checkinButtonLabel', () => {
-  const base = { mode: 'checkin' as const, listedCount: 6, includedCount: 4, branchName: '/main', uploadBytes: 1_150_000, merging: false, behindCount: 0, allReviewed: false };
+  const base = { mode: 'checkin' as const, listedCount: 6, includedCount: 4, workingOn: { kind: 'branch' as const, name: '/main' }, uploadBytes: 1_150_000, merging: false, behindCount: 0, allReviewed: false };
 
   const wordings = (label: ReturnType<typeof checkinButtonLabel>): string[] =>
     label.forms.map(({ action, size, target }) => [action, size && `(${size})`, target].filter(Boolean).join(' '));
 
+  it('names no target off a branch: a changeset, a label or a shelve is not where a check-in goes', () => {
+    for (const workingOn of [{ kind: 'label', name: 'v1.0' }, { kind: 'changeset', name: '42' }, { kind: 'shelve', name: '3' }] as const) {
+      const label = checkinButtonLabel({ ...base, includedCount: 3, uploadBytes: 0, workingOn });
+      expect(wordings(label)[0]).toBe('Check in 3 changes');
+      expect(label.tip).toBe('Check in');
+    }
+  });
+
   it('names the count, the upload size and the branch, and keeps the size longest', () => {
-    expect(wordings(checkinButtonLabel({ ...base, branchName: '/main/task' }))).toEqual([
+    expect(wordings(checkinButtonLabel({ ...base, workingOn: { kind: 'branch', name: '/main/task' } }))).toEqual([
       'Check in 4 changes (1.1 MB) to task',
       'Check in 4 changes (1.1 MB)',
       'Check in 4 (1.1 MB)',
@@ -21,13 +29,13 @@ describe('checkinButtonLabel', () => {
   });
 
   it('names a branch by its leaf, and the whole branch in the tooltip', () => {
-    const label = checkinButtonLabel({ ...base, branchName: '/main/task1008874/task1008874d' });
+    const label = checkinButtonLabel({ ...base, workingOn: { kind: 'branch', name: '/main/task1008874/task1008874d' } });
     expect(wordings(label)[0]).toBe('Check in 4 changes (1.1 MB) to task1008874d');
     expect(label.tip).toBe('Check in to /main/task1008874/task1008874d');
   });
 
   it('cuts a very long branch name in its middle, so the button can still name it', () => {
-    const label = checkinButtonLabel({ ...base, branchName: '/main/ThisBranchNameHasOneLongSegmentWithNoSlashToBreakAtAsSomeTeamsNameBranchesAfterTheirWholeTicketTitle' });
+    const label = checkinButtonLabel({ ...base, workingOn: { kind: 'branch', name: '/main/ThisBranchNameHasOneLongSegmentWithNoSlashToBreakAtAsSomeTeamsNameBranchesAfterTheirWholeTicketTitle' } });
     expect(wordings(label)[0]).toBe('Check in 4 changes (1.1 MB) to ThisBranchNameHasOne…eirWholeTicketTitle');
   });
 

@@ -1,5 +1,6 @@
 import { ArrowDownToLine, GitMerge, History } from 'lucide-react';
 import { useEffect, useState, type RefObject } from 'react';
+import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { splitComment } from '../../lib/comment';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
@@ -31,7 +32,8 @@ interface CheckinPanelProps {
   upload: UploadSummary;
   /** What a shelve takes of the included changes: private files stay out. */
   shelvable: { count: number; upload: UploadSummary };
-  branchName: string;
+  /** What the workspace is loaded from (`checkinButtonLabel` names only a branch). */
+  workingOn: WorkspaceSelector | undefined;
   /** A merge is pending: checking in completes it. */
   merging: boolean;
   /** Changesets on the branch the workspace doesn't have: checking in updates first. */
@@ -59,7 +61,7 @@ export function CheckinPanel({
   includedCount,
   upload,
   shelvable,
-  branchName,
+  workingOn,
   merging,
   behindCount,
   behindDescription,
@@ -88,7 +90,7 @@ export function CheckinPanel({
     mode,
     listedCount,
     includedCount: count,
-    branchName,
+    workingOn,
     uploadBytes: uploaded.bytes,
     merging,
     behindCount,

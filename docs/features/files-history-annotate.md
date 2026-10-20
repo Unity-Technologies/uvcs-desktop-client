@@ -72,6 +72,8 @@ history does; the rest of the cell only picks. Walking back selects the revision
 and Pierre's code render only the lines in view, at one pinned line height (`annotationLayout`); the code highlights as a
 read-only diff does (`syntaxHighlighting`). A pinned revision's annotation is cached as immutable, the workspace's
 follows its edits (`isImmutableAnnotation`). A line too long to draw is cut, not wrapped: diff.md "Long lines".
+Under its toolbar the pane shows a spinner while it annotates, why it couldn't, the code, or "Empty file" for a file
+with no line to annotate, never an empty box (`annotationBodyOf`).
 
 ## Moving items (cut and paste)
 

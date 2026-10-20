@@ -1,4 +1,4 @@
-import type { DirectoryConflict, DirectoryConflictResolution, MergeChange, MergePlan } from '@shared/domain/merge';
+import { directoryConflictDecided, type DirectoryConflict, type DirectoryConflictResolution, type MergeChange, type MergePlan } from '@shared/domain/merge';
 import { comparePaths } from '@shared/pathOrder';
 import { statusTones } from '../../components/changeFilter';
 import type { StatusTone } from '../../components/StatusBadge';
@@ -75,7 +75,7 @@ function isConflict(item: MergeItem): boolean {
 }
 
 export function needsDecision(item: MergeItem, progress: MergeProgress): boolean {
-  if (item.kind === 'directoryConflict') return !progress.directoryResolutions[item.index];
+  if (item.kind === 'directoryConflict') return !directoryConflictDecided(progress.directoryResolutions[item.index]);
   if (item.kind === 'fileConflict') return !fileStateOf(item, progress).resolution;
   return false;
 }

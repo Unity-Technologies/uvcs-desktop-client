@@ -9,12 +9,15 @@ import { hotkey } from '../../lib/shortcutRegistry';
 import { HighlightQuery } from '../../ui/Highlight';
 import { KeyHints } from '../../ui/KeyHints';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
+import { ListSkeleton } from '../../ui/Skeleton';
 import { BranchSearchItem } from './BranchSearchItem';
-import { branchSearchRows, type BranchGroup } from './branchSearchRows';
+import { branchSearchEmptyText, branchSearchRows, type BranchesRead, type BranchGroup } from './branchSearchRows';
 import styles from './BranchSearchList.module.css';
 
 const GROUP_HEIGHT = 28;
 const BRANCH_HEIGHT = 44;
+/** Placeholder rows while the branches are read: a short list's height, so the popup doesn't open small and grow. */
+const LOADING_ROWS = 6;
 
 interface BranchSearchListProps {
   groups: BranchGroup[];
@@ -26,10 +29,12 @@ interface BranchSearchListProps {
   menu?: (branch: Branch) => MenuEntry[];
   /** Next to the filter field, e.g. a "New branch" button. */
   action?: ReactNode;
+  /** Where the branches stand (`branchesRead`): the list keeps its frame while they're read, and says when they can't be. */
+  read?: BranchesRead;
 }
 
 /** A searchable, keyboard-driven list of branches in titled groups. Virtualized: repositories can have thousands of branches. */
-export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 'Find a branch', menu, action }: BranchSearchListProps) {
+export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 'Find a branch', menu, action, read = 'read' }: BranchSearchListProps) {
   const [query, setQuery] = useState('');
   const [highlighted, setHighlighted] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
@@ -38,6 +43,7 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
   const listboxId = useId();
 
   const { rows, branches } = useMemo(() => branchSearchRows(groups, query), [groups, query]);
+  const emptyText = branchSearchEmptyText(query, read);
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => listRef.current,
@@ -99,7 +105,13 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
       </div>
       <HighlightQuery query={query}>
         <div ref={listRef} className={styles.list}>
-          {branches.length === 0 && <div className={styles.empty}>No branches match “{query}”.</div>}
+          {read === 'loading' && (
+            // Placeholder rows at the branches' own height while they're read, so the list opens at the size it keeps.
+            <div className={styles.loading} style={{ height: BRANCH_HEIGHT * LOADING_ROWS }}>
+              <ListSkeleton rowHeight={BRANCH_HEIGHT} />
+            </div>
+          )}
+          {branches.length === 0 && emptyText && <div className={styles.empty}>{emptyText}</div>}
           <div id={listboxId} role="listbox" aria-label="Branches" className={styles.rows} style={{ height: virtualizer.getTotalSize() }}>
             {virtualizer.getVirtualItems().map((virtualRow) => {
               const row = rows[virtualRow.index]!;

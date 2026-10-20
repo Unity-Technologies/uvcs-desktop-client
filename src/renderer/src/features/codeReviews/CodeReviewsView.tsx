@@ -6,6 +6,7 @@ import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ObjectListView } from '../../components/ObjectListView';
+import { branchWorkedOn } from '../../components/workingObject';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { ChoiceChip } from '../../ui/ChoiceChip';
@@ -55,7 +56,7 @@ export function CodeReviewsView() {
   );
   const visibleKeys = useMemo(() => visible.map(reviewKey), [visible]);
   const selectWhenShown = useSelectCreated(visibleKeys, setSelection);
-  const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : '';
+  const currentBranch = branchWorkedOn(workspace?.selector) ?? '';
   // On the workspace's branch, and selected once the refreshed list shows it.
   const newReview = useCallback(
     () => openCreateCodeReviewDialog(workspacePath, { kind: 'branch', value: currentBranch }, (reviewId) => selectWhenShown(String(reviewId))),

@@ -2,6 +2,7 @@ import type { Shelve } from '@shared/domain/shelve';
 import { spec } from '@shared/domain/specs';
 import { openInNewWindow } from '../../app/pageWindow/openInNewWindow';
 import type { MenuEntry } from '../../lib/actions';
+import { splitComment } from '../../lib/comment';
 import { groupedMenu } from '../../lib/menuGroups';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
@@ -47,7 +48,7 @@ export function shelveMenu(workspacePath: string, shelves: ShelveInfo[], { left 
     menuAction('apply', () => void apply(left), { label: left ? 'Restore' : 'Apply to workspace' }),
     !left && mine && menuAction('applyAndDelete', () => void apply(true)),
     menuAction('newCodeReview', () =>
-      openCreateCodeReviewDialog(workspacePath, { kind: 'shelve', value: String(shelve.id), title: shelve.comment.split('\n')[0] }),
+      openCreateCodeReviewDialog(workspacePath, { kind: 'shelve', value: String(shelve.id), title: splitComment(shelve.comment).summary }),
     ),
     copySubmenu('Shelve', shelveCopyTexts(shelve), { shortcut: hotkey('listCopy') }),
     mine &&

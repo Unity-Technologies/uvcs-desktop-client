@@ -2,6 +2,7 @@ import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
 import type { Label } from '@shared/domain/label';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
+import { branchWorkedOn } from '../../components/workingObject';
 import type { MenuEntry } from '../../lib/actions';
 import { changesetMenu } from '../changesets/changesetMenu';
 import { labelMenu } from '../labels/labelMenu';
@@ -23,7 +24,7 @@ const LOADING: MenuEntry[] = [{ id: 'loading', label: 'Loading…', disabled: tr
  * show. A shelve there is treated as someone else's: the pill doesn't know whose it is, and deleting stays in the lists.
  */
 export function workingObjectMenu(workspace: WorkspaceInfo, object: WorkingObject | undefined): MenuEntry[] {
-  const currentBranch = workspace.selector.kind === 'branch' ? workspace.selector.name : undefined;
+  const currentBranch = branchWorkedOn(workspace.selector);
   switch (object?.kind) {
     case 'branch':
       return branchMenu(workspace.path, [object.branch], currentBranch);

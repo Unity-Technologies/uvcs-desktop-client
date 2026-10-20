@@ -73,6 +73,12 @@ describe('merge items', () => {
     expect(firstWaiting(items, mergeProgress([fileState(true)], [{ choice: 'source' }]))).toBeUndefined();
   });
 
+  it('still waits on a directory conflict kept both under a name the merge can\'t take', () => {
+    const items = buildMergeItems(plan, [file]);
+    expect(firstWaiting(items, mergeProgress([fileState(true)], [{ choice: 'rename', newName: '..' }]))?.path).toBe('twin.txt');
+    expect(firstWaiting(items, mergeProgress([fileState(true)], [{ choice: 'rename', newName: 'twin (task).txt' }]))).toBeUndefined();
+  });
+
   it("reads a conflicting file's state by its key, never a stale copy in the item", () => {
     const [, conflicted] = buildMergeItems(plan, [file]);
     const state = fileState(true);

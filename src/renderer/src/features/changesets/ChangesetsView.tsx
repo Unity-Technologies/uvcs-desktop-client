@@ -5,6 +5,7 @@ import { useCommands, type Command } from '../../app/commands/commandStore';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ObjectListView } from '../../components/ObjectListView';
+import { branchWorkedOn } from '../../components/workingObject';
 import { EmptyState } from '../../ui/EmptyState';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { useLabelsByChangeset } from '../labels/useLabelsByChangeset';
@@ -54,7 +55,7 @@ export function ChangesetsView() {
   const me = useWorkspaceUser();
   const [selection, setSelection] = useViewSelection('changesets');
 
-  const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined;
+  const currentBranch = branchWorkedOn(workspace?.selector);
   const branchScope = branchScopeIn(filters, workspacePath, currentBranch);
   const branch = branchOf(branchScope);
   // A picked branch shows with its own time range and people; the remembered ones stay for when the pick is cleared.

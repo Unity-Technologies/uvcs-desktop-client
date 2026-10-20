@@ -9,6 +9,7 @@ import { useFileListLayoutStore } from '../../components/fileListLayoutStore';
 import { selectAfterLeaving } from '../../app/navigation/leaveGuard';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { useSettings } from '../../app/settings/useSettings';
+import { branchWorkedOn } from '../../components/workingObject';
 import { singleSelection } from '../../lib/selection';
 import { useSettledValue } from '../../lib/useSettled';
 import { HighlightQuery } from '../../ui/Highlight';
@@ -109,7 +110,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
     () => ({ mergeChanges: allChanges.filter((change) => change.mergeInfo), onlyNeverCheckedIn: allChanges.length > 0 && matchesBranch(allChanges) }),
     [allChanges],
   );
-  const branchName = workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined;
+  const branchName = branchWorkedOn(workspace?.selector);
   const behind = behindBranch(incomingSummary, branchName, mergeChanges.length > 0);
   const checkinAfterUpdate = useCheckinAfterUpdate(workspacePath, workspace, branchName, included.length);
   const submit = useCheckinPanelSubmit(
@@ -251,7 +252,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
               listedCount={listedCount}
               upload={upload}
               shelvable={{ count: shelvable.length, upload: shelvableUpload }}
-              branchName={workspace?.selector.name ?? ''}
+              workingOn={workspace?.selector}
               merging={mergeChanges.length > 0}
               behindCount={behind?.count ?? 0}
               behindDescription={behind && behindDescription(behind)}

@@ -688,6 +688,9 @@ renderer/src/
 `ui/` either): what they need from there is handed to them (`setAvatarPictureSource`) or lives a tier up
 (`rendererTiers.test.ts` checks it).
 
+A component decides nothing: what it shows, enables, orders or sizes from data is computed by a pure, tested `.ts`
+module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests are the quality gate").
+
 - **One layout from the first frame**: a view or page paints its final layout at once and keeps it while it loads,
   when nothing is there and when filters hide everything; only what fills it changes.
   - Its header (title, count, actions, filters, switches) always shows. A filter over what is read waits, disabled,
@@ -707,7 +710,9 @@ renderer/src/
   - The one shift left is a banner that says there is something to do, which shows only once that is known
     (Incoming's update bar).
   - Only an error reading the whole view, and an outcome that ends a page (not on a branch, nothing to merge), take
-    the whole body.
+    the whole body. Incoming alone keeps what an earlier read found when reading again fails, and says so quietly in
+    its header, the error in the tooltip ("Couldn't check again": `incomingRefreshFailed`); the other views still give
+    the body to the error.
   - Every view and page is in the startup bundle (`viewRegistry`, `pageRegistry`), so none paints a fallback it then
     replaces. A heavy library (Pierre, Shiki, three.js) loads on first use, behind a `lazyComponent` at the leaf that
     uses it (`FileDiffViewer`'s `LoadedFileDiff`, `AnnotationPane`'s `AnnotatedCode`, `FileConflictPanel`'s

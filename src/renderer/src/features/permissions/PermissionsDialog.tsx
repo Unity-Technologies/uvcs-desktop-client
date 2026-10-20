@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PermissionTarget } from '@shared/domain/permissions';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
+import { pluralize } from '../../lib/text';
 import { Button } from '../../ui/Button';
 import { confirm } from '../../ui/dialog/confirm';
 import { Dialog } from '../../ui/dialog/Dialog';
@@ -18,6 +19,7 @@ import { PathScope } from './PathScope';
 import { PermissionsEditor } from './PermissionsEditor';
 import { useMemberNames, usePermissions } from './permissionsQueries';
 import { changeCount, draftChanges, EMPTY_DRAFT, setOwner, undoMember, type PermissionsDraft } from './permissionsDraft';
+import { permissionsSaveButton } from './permissionsSave';
 import { describeTarget } from './permissionTargets';
 import { savePermissions } from './savePermissions';
 import styles from './PermissionsDialog.module.css';
@@ -32,8 +34,6 @@ export interface PermissionsDialogOptions {
 export function openPermissionsDialog(options: PermissionsDialogOptions): void {
   openDialog((close) => <PermissionsDialog {...options} onClose={close} />);
 }
-
-const changesWord = (count: number) => (count === 1 ? '1 change' : `${count} changes`);
 
 function PermissionsDialog({ target: opened, workspacePath, onClose }: PermissionsDialogOptions & { onClose: () => void }) {
   const [target, setTarget] = useState(opened);
@@ -50,11 +50,12 @@ function PermissionsDialog({ target: opened, workspacePath, onClose }: Permissio
   const count = changeCount(changes);
   const isNewGroup = target.kind === 'path' && Boolean(target.tag) && permissions?.ownAcl === false;
   const branches = parseBranchList(newBranches);
-  const canSave = count > 0 && !saving && (!isNewGroup || branches.length > 0);
+  const saveButton = permissionsSaveButton({ changeCount: count, saving, createsGroup: isNewGroup, groupBranchCount: branches.length });
+  const canSave = saveButton.enabled;
 
   /** Runs `then` once any changes not saved are confirmed gone. */
   const leaving = async (then: () => void): Promise<void> => {
-    if (count > 0 && !(await confirm({ title: `Discard ${changesWord(count)}?`, message: 'They haven’t been saved.', confirmLabel: 'Discard', danger: true }))) return;
+    if (count > 0 && !(await confirm({ title: `Discard ${pluralize(count, 'change')}?`, message: 'They haven’t been saved.', confirmLabel: 'Discard', danger: true }))) return;
     then();
   };
 
@@ -122,13 +123,13 @@ function PermissionsDialog({ target: opened, workspacePath, onClose }: Permissio
             )}
             {count > 0 && (
               <Button variant="ghost" size="small" icon={reviewing ? <ChevronDown size={14} /> : <ChevronRight size={14} />} aria-expanded={reviewing} onClick={() => setReviewing(!reviewing)}>
-                {changesWord(count)}
+                {pluralize(count, 'change')}
               </Button>
             )}
           </span>
           <Button onClick={() => void leaving(onClose)}>Cancel</Button>
-          <Button variant="primary" disabled={!canSave} loading={saving} data-tip={canSave ? undefined : count > 0 ? 'Name the branches of the new group first' : 'Nothing changed yet'} data-tip-shortcut={hotkey('savePermissions')} onClick={() => void save()}>
-            {count > 1 ? `Save ${changesWord(count)}` : 'Save'}
+          <Button variant="primary" disabled={!canSave} loading={saving} data-tip={saveButton.disabledReason} data-tip-shortcut={hotkey('savePermissions')} onClick={() => void save()}>
+            {saveButton.label}
           </Button>
         </div>
       }

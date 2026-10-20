@@ -9,6 +9,7 @@ import type { Column } from '../../ui/table/column';
 import { DataTable } from '../../ui/table/DataTable';
 import { TableSkeleton } from '../../ui/table/TableSkeleton';
 import { useChangesets } from '../changesets/useChangesets';
+import { branchChangesetPane } from './branchChangesetPane';
 import { DiffFrame } from './DiffFrame';
 import { TargetDiff } from './TargetDiff';
 
@@ -57,6 +58,7 @@ function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; 
   }, [selectedId, firstId]);
 
   if (error) return <EmptyState title="Couldn't load the branch changesets" description={error.message} />;
+  const pane = branchChangesetPane(changesets, selectedId);
 
   return (
     <SplitPane
@@ -73,14 +75,14 @@ function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; 
       }
       second={
         // The mode switch stays in the diff's header while the changesets are read, and when there are none.
-        !changesets ? (
+        pane.kind === 'reading' ? (
           <DiffFrame toolbar={toolbar}>{null}</DiffFrame>
-        ) : selectedId === null ? (
+        ) : pane.kind === 'noChangesets' ? (
           <DiffFrame toolbar={toolbar}>
             <EmptyState title="This branch has no changesets" />
           </DiffFrame>
         ) : (
-          <TargetDiff target={{ kind: 'changeset', changesetId: selectedId }} toolbar={toolbar} focusPath={focusPath} />
+          <TargetDiff target={{ kind: 'changeset', changesetId: pane.changesetId }} toolbar={toolbar} focusPath={focusPath} />
         )
       }
     />

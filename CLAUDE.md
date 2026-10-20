@@ -168,15 +168,23 @@ quality: **if the tests pass, the app works as specified**. Test what matters, n
   switch, bring; a failure puts the changes back), a menu builder serving every place, a shortcut reaching its command.
 - **Specs**: a rule written in `docs/` deserves a test that enforces it; a rule for the whole repository becomes a
   static test ("Rules the tests enforce" below). A bug fix starts with a test that fails without it.
+- **Every case the feature names**: each case a feature's doc (`docs/features/`) names, or its sandbox script builds,
+  has a test (code moved unchanged, a texture unreadable, a conflict on a directory). A case the sandbox shows and no
+  test covers is the bug that ships.
 
 **Don't test** what the type checker already proves, pass-through code, the libraries' own behavior (React, TanStack
 Query, Pierre), or implementation details (private helpers, call order nobody relies on). A test should fail only
 when something a user or another layer relies on changes; one that breaks on every refactor is noise.
 
-Components (`.tsx`) aren't unit-tested (vitest runs `*.test.ts` only): keep their logic in pure `.ts` modules or hooks
-built on them, and verify what's on screen with Playwright.
+**A component decides nothing.** Components (`.tsx`) aren't unit-tested (vitest runs `*.test.ts` only, and component
+tests can't reach Pierre's shadow DOM, layout or canvas, where the risk is), so every choice made from data lives in a
+pure `.ts` module, or a hook built on one, with its tests: which state or case shows (empty, identical, error, too
+large), which items, labels and counts, what is enabled, ordering and filtering, sizes and positions, keyboard and
+selection. The component maps that result to JSX and wires events; only presentational conditionals stay (`open &&`,
+a class from a prop). The idiom: `diffBodyOf` (`features/diff/viewer/diffBody.ts`) names what the diff viewer shows,
+and the viewer only switches on it. What's on screen is verified with Playwright.
 
-**Super fast.** The number of tests doesn't matter; the time they take does (today about 5,200 tests in 7 s).
+**Super fast.** The number of tests doesn't matter; the time they take does (today about 6,100 tests in 8 s).
 The suite runs after every change, so it must take seconds, not minutes. A test never needs UVCS infrastructure: no
 `cm` installation, server, account, network or real workspace.
 
