@@ -1,3 +1,4 @@
+import { win32 } from 'node:path';
 import type { AppFileSystem } from '../../system/apps/appFileSystem';
 import { pathFor, programFiles, type Whereabouts } from '../../system/apps/whereabouts';
 
@@ -20,7 +21,7 @@ export function findUnityEditors(where: Whereabouts, fs: AppFileSystem): UnityEd
   const inHubFolders = hubEditorFolders(where, fs).flatMap((folder) =>
     fs.list(folder).map((version) => ({ version, folder: path.join(folder, version, ...editorFolderInVersion(where)) })),
   );
-  return [...inHubFolders, ...locatedInHub(where, fs), ...beforeTheHub(where)];
+  return [...inHubFolders, ...locatedInHub(where, fs), ...beforeTheHub(where, fs)];
 }
 
 /** Where a Hub install keeps the editor, under its version's folder. */
@@ -82,9 +83,15 @@ function parseHubEditors(text: string | null): { version: string; program: strin
 }
 
 /** The one editor installed without the Hub, where its installer put it; its version isn't in its path. */
-function beforeTheHub(where: Whereabouts): UnityEditor[] {
-  if (where.platform === 'darwin') return [{ version: '', folder: '/Applications/Unity/Unity.app' }];
-  if (where.platform === 'win32') return [{ version: '', folder: programFiles(where, 'Unity\\Editor')[0]! }];
+function beforeTheHub(where: Whereabouts, fs: AppFileSystem): UnityEditor[] {
+  if (where.platform === 'darwin') {
+    const app = '/Applications/Unity/Unity.app';
+    return fs.exists(app) ? [{ version: '', folder: app }] : [];
+  }
+  if (where.platform === 'win32') {
+    const folder = programFiles(where, 'Unity\\Editor')[0]!;
+    return fs.exists(win32.join(folder, 'Unity.exe')) ? [{ version: '', folder }] : [];
+  }
   return [];
 }
 

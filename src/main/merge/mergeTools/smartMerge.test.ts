@@ -36,7 +36,7 @@ describe('findSmartMerge', () => {
   it('skips a newer editor that lacks it, and falls back to an alpha, then to the editor installed before the Hub', () => {
     const fs = fakeFileSystem([`${MAC_HUB}/6000.3.19f1/Unity.app`, `${MAC_HUB}/6000.7.0a2/Unity.app/Contents/Helpers/UnityYAMLMerge`]);
     expect(findSmartMerge(mac, fs)?.editorVersion).toBe('6000.7.0a2');
-    expect(findSmartMerge(mac, fakeFileSystem(['/Applications/Unity/Unity.app/Contents/Tools/UnityYAMLMerge']))).toEqual({
+    expect(findSmartMerge(mac, fakeFileSystem(['/Applications/Unity/Unity.app', '/Applications/Unity/Unity.app/Contents/Tools/UnityYAMLMerge']))).toEqual({
       executable: '/Applications/Unity/Unity.app/Contents/Tools/UnityYAMLMerge',
       editorVersion: '',
     });
