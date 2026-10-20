@@ -5,7 +5,7 @@ import { FileDiffViewer } from '../../diff/viewer/FileDiffViewer';
 import { LoadedFileDiff } from '../../diff/viewer/LoadedFileDiff';
 import type { MergeLabels } from '../mergeDescription';
 import { ConflictHunks } from './ConflictHunks';
-import { hasBase, mergedText, textToEdit, type PanelView } from './conflictPanelView';
+import { mergedText, offersKeepBase, textToEdit, type PanelView } from './conflictPanelView';
 import type { OpenableVersion } from './conflictVersionOpening';
 import type { FileConflictDecision } from './fileConflictDecision';
 import { HandEditor } from './HandEditor';
@@ -40,7 +40,7 @@ export function ConflictBody({ workspacePath, state, labels, versions, view, edi
         contents={contents}
         error={state.error}
         labels={labels}
-        withBase={hasBase(state)}
+        withBase={offersKeepBase(state)}
         versions={versions}
         chosen={decision?.kind === 'wholeFile' ? decision.side : undefined}
         onChoose={(side) => onDecide({ kind: 'wholeFile', side })}
@@ -62,7 +62,7 @@ export function ConflictBody({ workspacePath, state, labels, versions, view, edi
           path={file.path}
           text={decision?.kind === 'text' ? decision.text : ''}
           labels={labels}
-          document={hasBase(state) ? state.document : undefined}
+          document={offersKeepBase(state) ? state.document : undefined}
           onChange={(text) => onDecide({ kind: 'text', text, edited: decision?.kind === 'text' && decision.edited })}
         />
       );

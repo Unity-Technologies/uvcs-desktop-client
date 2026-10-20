@@ -25,6 +25,14 @@ export function rendersVersions(state: FileConflictState): boolean {
   return versions.length > 0 && (versions.every((content) => content.model) || versions.every((content) => content.image));
 }
 
+/**
+ * Whether keeping the base is offered: only for a file that has one, and not when the merge undoes a changeset, whose
+ * base is the change being undone (`ConflictedFile.baseIsUndoneChange`): keeping it would put that change back.
+ */
+export function offersKeepBase(state: FileConflictState): boolean {
+  return hasBase(state) && !state.file.baseIsUndoneChange;
+}
+
 /** A file added on both sides has no common ancestor to show. */
 export function hasBase(state: FileConflictState): boolean {
   return state.file.base.kind !== 'empty';

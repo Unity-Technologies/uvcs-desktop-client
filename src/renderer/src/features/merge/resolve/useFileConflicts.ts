@@ -31,6 +31,11 @@ export interface ConflictedFile {
    * versions read tell.
    */
   isKnownBinary?: boolean;
+  /**
+   * The merge undoes a changeset (subtractive): `cm` takes that changeset as the base and its parent as the source, so
+   * the base is the very change being undone, and keeping it isn't offered (`offersKeepBase`).
+   */
+  baseIsUndoneChange?: boolean;
 }
 
 export interface FileConflictState {

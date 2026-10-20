@@ -4,16 +4,16 @@ import { pluralize } from '../../../lib/text';
 import type { MergeLabels } from '../mergeDescription';
 import type { FileConflictDecision, KeptVersion } from './fileConflictDecision';
 
-/** A conflicting file selected, and whether it has a common ancestor to keep (not one added on both sides). */
+/** A conflicting file selected, and whether keeping its base is offered (`offersKeepBase`). */
 export interface SelectedConflict {
   key: string;
-  hasBase: boolean;
+  offersBase: boolean;
 }
 
 /**
  * The menu entries of the selected conflicting files that settle them by keeping one version whole, as a file's
  * toolbar's "Keep" does (`KeepChoices`): "Keep yours", "Keep incoming" (the sides' names, `MergeLabels.roles`) and,
- * when every one of them has a base, "Keep base"; "for 3 files" when several are. None without conflicting files.
+ * when every one of them offers it (`offersKeepBase`), "Keep base"; "for 3 files" when several are. None without conflicting files.
  */
 export function keepVersionEntries(conflicts: SelectedConflict[], labels: MergeLabels, decide: (key: string, decision: FileConflictDecision) => void): GroupedEntry[] {
   if (conflicts.length === 0) return [];
@@ -24,6 +24,6 @@ export function keepVersionEntries(conflicts: SelectedConflict[], labels: MergeL
   return [
     menuAction('keepDestination', keep('destination'), { label: `Keep ${labels.roles.destination.name.toLowerCase()}${forFiles}` }),
     menuAction('keepSource', keep('source'), { label: `Keep ${labels.roles.source.name.toLowerCase()}${forFiles}` }),
-    ...(conflicts.every((conflict) => conflict.hasBase) ? [menuAction('keepBase', keep('base'), { label: `Keep base${forFiles}` })] : []),
+    ...(conflicts.every((conflict) => conflict.offersBase) ? [menuAction('keepBase', keep('base'), { label: `Keep base${forFiles}` })] : []),
   ];
 }

@@ -4,8 +4,8 @@ import type { Action } from '../../../lib/actions';
 import { UPDATE_LABELS } from '../../incoming/updateConflictFiles';
 import { keepVersionEntries } from './keepVersionEntries';
 
-/** A conflicting file, with a base unless said otherwise. */
-const file = (key: string, hasBase = true) => ({ key, hasBase });
+/** A conflicting file, offering its base unless said otherwise. */
+const file = (key: string, offersBase = true) => ({ key, offersBase });
 
 describe('keepVersionEntries', () => {
   it("settles a conflicting file by keeping one side whole, in the sides' own words", () => {

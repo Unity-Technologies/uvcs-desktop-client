@@ -5,7 +5,7 @@ import { withoutAction, type Action, type MenuEntry } from '../../../lib/actions
 import type { GroupedEntry } from '../../../lib/menuGroups';
 import { oneClickApp, openableVersions, opensAsBinary, type VersionOpeningContext } from './conflictVersionOpening';
 import type { FileConflictDecision } from './fileConflictDecision';
-import { hasBase } from './conflictPanelView';
+import { offersKeepBase } from './conflictPanelView';
 import { keepVersionEntries } from './keepVersionEntries';
 import type { FileConflictState } from './useFileConflicts';
 
@@ -30,7 +30,7 @@ export function conflictMenuEntries(selected: FileConflictState[], context: Conf
   return [
     ...(single ? singleConflictEntries(single, context) : []),
     ...keepVersionEntries(
-      selected.map((state) => ({ key: state.file.key, hasBase: hasBase(state) })),
+      selected.map((state) => ({ key: state.file.key, offersBase: offersKeepBase(state) })),
       context.labels,
       context.decide,
     ),
