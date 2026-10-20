@@ -1,7 +1,7 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 
-import { VIEWS, viewDefinition } from './viewRegistry';
+import { VIEWS } from './viewRegistry';
 
 const LAZY = Symbol.for('react.lazy');
 
@@ -21,11 +21,9 @@ describe('views', () => {
     expect(new Set(VIEWS.map((view) => view.shortcut)).size).toBe(VIEWS.length);
   });
 
-  it('paints Changes, where a workspace opens, as its own loading state: never a generic fallback it then replaces', () => {
-    const changes = viewDefinition('changes').component;
-    const others = VIEWS.filter((view) => view.id !== 'changes').map((view) => view.component);
+  it('paints each view as its own loading state at once: none loads lazily behind a generic fallback it then replaces', () => {
+    const lazyViews = VIEWS.filter(({ component }) => '$$typeof' in component && component.$$typeof === LAZY).map((view) => view.id);
 
-    expect('$$typeof' in changes && changes.$$typeof === LAZY).toBe(false);
-    expect(others.every((component) => '$$typeof' in component && component.$$typeof === LAZY)).toBe(true);
+    expect(lazyViews).toEqual([]);
   });
 });
