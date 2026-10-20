@@ -1,6 +1,9 @@
+import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { CodeReview } from '@shared/domain/codeReview';
-import { listedReview } from './listedReview';
+import { queryKeys } from '../../api/queryKeys';
+import { createQueryClient } from '../../app/queryClient';
+import { listedReview, listedReviewIn } from './listedReview';
 
 const review = (id: number, title: string): CodeReview => ({ id, title, status: 'Under review', owner: 'ana', assignee: 'bo', date: '2026-10-01', target: { kind: 'branch', branch: '/main/task' } });
 
@@ -18,5 +21,24 @@ describe('listedReview', () => {
     const summary = { id: 4, title: 'chip', status: 'Under review', owner: 'ana', assignee: 'bo', date: '2026-10-01' };
 
     expect(listedReview([{ data: [summary], readAt: 300 }, { data: review(4, 'single'), readAt: 400 }], 4)).toBeUndefined();
+  });
+});
+
+describe('listedReviewIn', () => {
+  const listKey = queryKeys.inWorkspace('/wk', 'codeReviews', { sinceDate: '2026-09-01' });
+
+  it('finds the review in a list the cache holds', () => {
+    const client = createQueryClient();
+    client.setQueryData(listKey, [review(4, 'listed')]);
+
+    expect(listedReviewIn(client, '/wk', 4)?.review).toEqual(review(4, 'listed'));
+  });
+
+  it('never takes it from a list an operation marked stale and nobody read again', async () => {
+    const client = createQueryClient();
+    client.setQueryData(listKey, [review(4, 'old status')]);
+    await client.invalidateQueries({ queryKey: queryKeys.inWorkspace('/wk', 'codeReviews') });
+
+    expect(listedReviewIn(client, '/wk', 4)).toBeUndefined();
   });
 });

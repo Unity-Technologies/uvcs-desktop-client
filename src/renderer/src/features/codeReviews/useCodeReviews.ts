@@ -5,7 +5,7 @@ import { queryKeys } from '../../api/queryKeys';
 import { queryClient, SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { compactFilter } from '../../lib/compactFilter';
-import { listedReview } from './listedReview';
+import { listedReviewIn } from './listedReview';
 import { latestReviewByBranch } from './reviewsByBranch';
 
 export function useCodeReviews(filter: CodeReviewFilter) {
@@ -22,25 +22,13 @@ export function useCodeReviews(filter: CodeReviewFilter) {
 export function useCodeReview(reviewId: number) {
   const workspacePath = useWorkspacePath();
   // Opened from a list that read it, the page shows at once, as fresh as that list: read again only once it's stale.
-  const listed = () => listedReview(listsRead(workspacePath), reviewId);
+  const listed = () => listedReviewIn(queryClient, workspacePath, reviewId);
   return useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'codeReviews', 'review', reviewId),
     queryFn: () => api.codeReviews.get(workspacePath, reviewId),
     initialData: () => listed()?.review,
     initialDataUpdatedAt: () => listed()?.readAt,
   });
-}
-
-/**
- * Every code review query read in the workspace (lists, and the single reviews and summaries, which `listedReview`
- * skips), but those an operation marked stale and nobody read again: their copy may hold an old status.
- */
-function listsRead(workspacePath: string): { data: unknown; readAt: number }[] {
-  return queryClient
-    .getQueryCache()
-    .findAll({ queryKey: queryKeys.inWorkspace(workspacePath, 'codeReviews') })
-    .filter((query) => !query.state.isInvalidated)
-    .map((query) => ({ data: query.state.data, readAt: query.state.dataUpdatedAt }));
 }
 
 /** The newest reviews of the repository as `cm` lists them, branch targets by id; `text` narrows them by title. */
