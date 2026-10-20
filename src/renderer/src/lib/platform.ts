@@ -3,7 +3,10 @@ import { programPlaceholder } from './programPlaceholder';
 import { openInFileManagerLabel, revealLabel } from '@shared/revealLabel';
 import { trashName } from './trashName';
 
-export const isMac = window.uvcs.platform === 'darwin';
+/** The OS the app runs on, for the pure helpers that take it. */
+export const PLATFORM = window.uvcs.platform;
+
+export const isMac = PLATFORM === 'darwin';
 
 /** How the window draws its title bar; `html[data-chrome]` lets the styles make room for it. */
 export const WINDOW_CHROME = windowChrome(window.uvcs.platform);

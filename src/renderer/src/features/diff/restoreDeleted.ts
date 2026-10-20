@@ -4,12 +4,13 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { viewChangesAction } from '../../app/navigation/viewChangesAction';
 import { runOperation } from '../../app/operations/runOperation';
 import { isAffectedByRestoredItems } from '../../app/refresh/refreshScopes';
+import { PLATFORM } from '../../lib/platform';
 import { fileNameOf, pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { useToastStore, type ToastAction } from '../../ui/toast/toastStore';
 import { useFilesViewStore } from '../files/filesViewStore';
-import { itemNameProblem } from '../files/itemName';
+import { restorePathProblem, typedRestorePath } from './restorePath';
 
 /**
  * Items restored without asking first. `cm undelete` takes one item a command, a process each (`runsLong`): a folder
@@ -49,16 +50,10 @@ export async function restoreDeletedItemTo(workspacePath: string, restore: Delet
     initialValue: restore.path,
     acceptInitialValue: true,
     confirmLabel: 'Restore',
-    validate: restorePathProblem,
+    validate: (typed) => restorePathProblem(typed, PLATFORM),
   });
   if (!path) return;
-  await restoreDeletedItems(workspacePath, [{ ...restore, path: path.trim() }]);
-}
-
-/** Why a typed path can't take a restored item, as far as the renderer can tell: main checks the disk. */
-function restorePathProblem(path: string): string | undefined {
-  if (path.trim().startsWith('/')) return 'A path in the workspace starts with a folder or a name, not “/”';
-  return itemNameProblem(path, [], { allowFolders: true });
+  await restoreDeletedItems(workspacePath, [{ ...restore, path: typedRestorePath(path, PLATFORM) }]);
 }
 
 function confirmMany(what: string): Promise<boolean> {
