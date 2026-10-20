@@ -34,11 +34,12 @@ same common-ancestor calculation `--integration` already makes inside its one co
 
 A file a changeset's diff changed (the diff page, a details panel's changed files: a changeset's, a label's, a code
 review's of a changeset) or a range of changesets changed has "Revert file to before this change…" in its menu
-(`revertFromDiffEntry`): the file goes back to the diff's older side as a pending change, `history.revertTo` (`cm revert
-<file>#cs:N`) with History's confirmation, which names the changeset (`revertItemTo`). It is the native client's
-"Revert changes" on a diff: undoing what the diff did to the file is what a diff is looked at for, and History already
-reverts to the newer side ("Revert file to this revision…"). Like the native one, it reverts the content whole: changes
-made to the file after the diff go too, which the confirmation's changeset number tells.
+(`revertFromDiffEntry`): the file goes back to the diff's older side as a pending change, `history.revertTo` (`cm
+revert <file>#cs:N`) with History's confirmation, which names the changeset it goes back to and, for a changeset's
+diff, the one it undoes ("Revert src/a.ts to changeset 37, before changeset 42?", `revertItemTo`'s `undoing`). It is
+the native client's "Revert changes" on a diff: undoing what the diff did to the file is what a diff is looked at for,
+and History already reverts to the newer side ("Revert file to this revision…"). Like the native one, it reverts the
+content whole: changes made to the file after the diff go too, which the confirmation's changeset number tells.
 
 - The older side is a changeset: a changeset's parent (`olderSideOf`, read on click by `readChangeset` from what the
   diff's header or a list already read, else one `cm find`), a range's first changeset. A branch's diff starts at its

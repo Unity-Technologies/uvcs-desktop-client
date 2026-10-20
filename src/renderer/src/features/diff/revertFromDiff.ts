@@ -53,10 +53,14 @@ export function revertFromDiffEntry(workspacePath: string, target: DiffTarget, e
   return menuAction('revert', () => void revertToOlderSide(workspacePath, entry.path, olderSide), { label: 'Revert file to before this change…' });
 }
 
-/** Reverts the file to the older side's changeset, after confirming it by number (`revertItemTo`). */
+/**
+ * Reverts the file to the older side's changeset, after confirming it by number (`revertItemTo`), and for a changeset's
+ * diff the changeset it undoes too.
+ */
 export async function revertToOlderSide(workspacePath: string, path: string, olderSide: OlderSide): Promise<void> {
   const changesetId = await changesetOf(workspacePath, olderSide);
-  if (changesetId !== undefined) await revertItemTo(workspacePath, path, changesetId);
+  const undoing = olderSide.kind === 'parentOf' ? olderSide.changesetId : undefined;
+  if (changesetId !== undefined) await revertItemTo(workspacePath, path, changesetId, undoing);
 }
 
 async function changesetOf(workspacePath: string, olderSide: OlderSide): Promise<number | undefined> {
