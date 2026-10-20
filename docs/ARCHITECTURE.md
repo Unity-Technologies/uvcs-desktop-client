@@ -973,6 +973,4 @@ renderer/src/
     `--keyframes-*`); reduced motion zeroes the durations, so only loops (spinners, skeleton pulses) opt out themselves.
   - Lists that load show skeletons at their real row height (`ui/Skeleton`, `TableSkeleton`, `ListWithDetailsSkeleton`),
     inside the layout they will fill: the header's controls, the filter bar and the split stay, and only the rows are
-    placeholders. Changes keeps that shape when nothing is pending too: the list says "0 files" and the empty state
-    (or the success moment) takes the diff's pane, as GitHub Desktop does (`changesPanesState`); the check-in button
-    and its mode caret are disabled as one (`canChangeCheckinMode`).
+    placeholders. Changes keeps that shape when nothing is pending too (`changesPanesState`).
