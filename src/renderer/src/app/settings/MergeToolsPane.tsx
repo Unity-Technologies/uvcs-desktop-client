@@ -12,11 +12,12 @@ import { appIcon } from '../../components/externalApps/appIcon';
 import { AUTOMATIC_CHOICE_ICON } from './automaticApp';
 import { AUTOMATIC_MERGE_TOOL_RULE, automaticMergeToolDescription } from './automaticMergeTool';
 import { SettingsChoice } from './SettingsChoice';
+import { smartMergeNote } from './smartMergeNote';
 import styles from './SettingsDialog.module.css';
 
 /** Which merge tool "Resolve in…" opens, and how it's called. */
 export function MergeToolsPane() {
-  const { tools, preferred } = useMergeTools();
+  const { tools, preferred, smartMerge } = useMergeTools();
   const { mergeTool: choice, askWhenMergeToolClosesUnsaved } = useSettings();
   const automatic = choice === AUTO_MERGE_TOOL || !tools.some((tool) => tool.id === choice);
 
@@ -53,6 +54,14 @@ export function MergeToolsPane() {
           Add another app…
         </Button>
       </section>
+      {smartMerge && (
+        <section className={styles.section}>
+          <h2 className={styles.heading}>Unity scenes, prefabs and assets</h2>
+          <p className={styles.note} title={smartMerge.executable}>
+            {smartMergeNote(smartMerge, preferred?.name)}
+          </p>
+        </section>
+      )}
       {preferred && <ToolArguments key={`${preferred.id}:${preferred.args.join('\0')}`} tool={preferred} />}
       <section className={styles.section}>
         <h2 className={styles.heading}>Resolving one by one</h2>
