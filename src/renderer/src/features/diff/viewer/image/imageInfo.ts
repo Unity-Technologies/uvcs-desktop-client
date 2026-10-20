@@ -29,6 +29,11 @@ export function undecodedDescription(old: Pick<FileContent, 'size'>, next: Pick<
   return `${sizeChange(old, next)}. ${capitalized(imageProblemWords(problem))}.`;
 }
 
+/** The line over a version shown alone because the other can't be painted (`imagePairView`). */
+export function unpaintedNotice(side: 'old' | 'new', problem: ImageProblem): string {
+  return `The version ${side === 'old' ? 'before' : 'after'} doesn't show. ${capitalized(imageProblemWords(problem))}.`;
+}
+
 /** Why a preview shows no image (the merge page's cards), for its tooltip; a damaged file, or none told, in general words. */
 export function undecodedTip(problem: ImageProblem | undefined): string {
   return problem === undefined || problem === 'unreadable' ? "Couldn't display this image" : capitalized(imageProblemWords(problem));

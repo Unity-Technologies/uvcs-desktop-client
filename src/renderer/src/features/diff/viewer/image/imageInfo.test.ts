@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changedLabel, colorHex, sideLabel, undecodedDescription, undecodedTip } from './imageInfo';
+import { changedLabel, colorHex, sideLabel, undecodedDescription, undecodedTip, unpaintedNotice } from './imageInfo';
 
 describe('sideLabel', () => {
   it('shows dimensions and size', () => {
@@ -16,6 +16,13 @@ describe('undecodedDescription', () => {
   it("gives the sizes as a binary diff does, then why the image can't show", () => {
     expect(undecodedDescription({ size: 1024 }, { size: 2048 }, 'psdWithoutComposite')).toBe("1.0 KB → 2.0 KB. Can't read this PSD: save it with Maximize Compatibility.");
     expect(undecodedDescription({ size: 0 }, { size: 178 }, 'tooLarge')).toBe('0 B → 178 B. Too large to show.');
+  });
+});
+
+describe('unpaintedNotice', () => {
+  it('names the version that does not show, and why', () => {
+    expect(unpaintedNotice('new', 'psdWithoutComposite')).toBe("The version after doesn't show. Can't read this PSD: save it with Maximize Compatibility.");
+    expect(unpaintedNotice('old', 'tooLarge')).toBe("The version before doesn't show. Too large to show.");
   });
 });
 

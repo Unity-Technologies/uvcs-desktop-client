@@ -294,9 +294,18 @@ makes each into an image the browser paints before anything shows it (`usePainta
   strip says so ("HDR, clamped"), and the pixel inspector tells the colors shown, "as shown", not the file's values.
   16-bit channels show as 8 bits.
 - **What can't be painted** (a PSD saved without "Maximize Compatibility" or in CMYK, Lab, indexed or 32 bits, a header
-  past the limit, a damaged file) shows the binary diff's sizes and why, in the texture problems' words
-  (`undecodedDescription`, `imageProblemWords`); a merge card shows its file icon with why in its tooltip
-  (`undecodedTip`). A PSD over `MAX_IMAGE_BYTES` (40 MB) is "too large to preview", as any image.
+  past the limit, a damaged file; `imagePairView`): a version that can't, beside one that can, leaves that one shown
+  alone, as an added or deleted image is, under a line saying which version doesn't show and why (`unpaintedNotice`):
+  a PSD saved again without "Maximize Compatibility" still shows as it was. When none can, an image past the pixel
+  limit reads as one past the byte limit ("This image is too large to preview", the sizes, and "Open file" for a
+  workspace file: `TOO_LARGE_TITLES`, `sizeChange`, `OpenFileButton`, shared with `NothingToDiff`), and any other
+  shows the binary diff's sizes and why, in the texture problems' words (`undecodedDescription`,
+  `imageProblemWords`). The header's mode switch stays over these: it is chosen before the versions decode. A merge
+  card shows its file icon with why in its tooltip (`undecodedTip`).
+- **The byte cap**: a PSD over `MAX_IMAGE_BYTES` (40 MB) is "too large to preview", as any image, though Photoshop files
+  often pass it. To do: the model diff reads its textures up to 256 MB through another path (`MAX_TEXTURE_FILE_BYTES`,
+  within the read's `MAX_MODEL_BYTES`); the image diff could read a texture as large, once a version's bytes crossing
+  IPC whole stops being the limit.
 - Nothing is kept once a viewer goes: going back to a file decodes it again.
 
 ## Images written as text

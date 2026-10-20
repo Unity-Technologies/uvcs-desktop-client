@@ -1,11 +1,12 @@
-import { AppWindow, FileText } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import type { FileContent } from '@shared/domain/content';
-import { sizeChange, TOO_LARGE_TITLES } from './fileSizeWords';
 import { Button } from '../../../ui/Button';
 import { EmptyState } from '../../../ui/EmptyState';
 import { comparisonMethodLabel, type ComparisonMethod } from './comparisonMethod';
 import type { DiffBody } from './diffBody';
+import { sizeChange, TOO_LARGE_TITLES } from './fileSizeWords';
 import { IGNORED_DIFFERENCE_TITLES, ignoredDifference } from './ignoredDifference';
+import { OpenFileButton } from './OpenFileButton';
 
 interface NothingToDiffProps {
   /** Why there is no diff to show. */
@@ -40,7 +41,7 @@ export function NothingToDiff({ reason, left, right, identicalDescription, compa
         <EmptyState
           title={TOO_LARGE_TITLES[left.tooLarge ?? right.tooLarge ?? 'text']}
           description={sizeChange(left, right)}
-          action={openFile && <Button icon={<AppWindow size={13} />} onClick={openFile}>Open file</Button>}
+          action={openFile && <OpenFileButton onClick={openFile} />}
         />
       );
     case 'binary':
