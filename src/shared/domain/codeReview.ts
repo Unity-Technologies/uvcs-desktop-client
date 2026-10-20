@@ -11,7 +11,8 @@ export type CodeReviewTarget =
 
 /**
  * A review as `cm find review` lists it. A branch target comes as the branch's object id: enough to find the review of
- * a branch already read (branch lists have ids), while its name takes the list of every branch (`CodeReview`).
+ * a branch already read (branch lists have ids), while its name takes the list of every branch (`CodeReview`). A
+ * changeset or shelve target is named by its number in the same record, so it comes named (`target`).
  */
 export interface CodeReviewSummary {
   id: number;
@@ -22,6 +23,8 @@ export interface CodeReviewSummary {
   date: string;
   /** Object id of the reviewed branch; none for other targets. */
   targetBranchId?: number;
+  /** The reviewed changeset or shelve; a branch only once its name is read (`CodeReview`). */
+  target?: CodeReviewTarget;
 }
 
 /** A review with its target named. */
