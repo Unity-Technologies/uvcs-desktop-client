@@ -1,8 +1,9 @@
 import { Folder } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import { isHeaderRow } from '../../lib/groupedPathTree';
+import { lazyComponent } from '../../lib/lazyComponent';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { pluralize } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
@@ -14,11 +15,9 @@ import { fileConflictStatus, fileConflictTool } from '../merge/mergeStatus';
 import { ResolveRunControl, useRunOffer } from '../merge/mergeTools/ResolveRunControl';
 import { useResolveRun } from '../merge/mergeTools/useResolveRun';
 import { primaryMergeTool, useMergeTools } from '../merge/mergeTools/useMergeTools';
-import { FileConflictPanel } from '../merge/resolve/FileConflictPanel';
 import { useFileConflicts } from '../merge/resolve/useFileConflicts';
 import { IncomingChangesetList } from './IncomingChangesetList';
 import { IncomingConflictMark } from './IncomingConflictMark';
-import { IncomingFileDiff } from './IncomingDetail';
 import { incomingFileMenu } from './incomingFileMenu';
 import { incomingSubtitle } from './incomingSubtitle';
 import { ALL_INCOMING, collidesWithLocal, firstIncomingFile, incomingFilesSummary, type IncomingScope } from './incomingScope';
@@ -28,6 +27,11 @@ import { useIncomingChangesetList } from './useIncomingChangesets';
 import { UPDATE_LABELS, updateConflictFiles, updateResolutionsOf } from './updateConflictFiles';
 import { shelveBlockedAndUpdate, updateResolvingConflicts, updateToIncoming } from './updateOperations';
 import { useIncomingFiles } from './useIncomingFiles';
+
+// The file's diff and its conflict (the text and 3D model viewers) load on first use: Incoming itself is in the
+// startup bundle (`viewRegistry`).
+const FileConflictPanel = lazyComponent(() => import('../merge/resolve/FileConflictPanel').then((module) => module.FileConflictPanel));
+const IncomingFileDiff = lazyComponent(() => import('./IncomingDetail').then((module) => module.IncomingFileDiff));
 import { useIncomingViewStore } from './incomingViewStore';
 import styles from './IncomingSession.module.css';
 
@@ -190,7 +194,8 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
             />
           </div>
         }
-        second={detail()}
+        // Blank for the moment a viewer's code loads: the pane is already in place, so nothing moves.
+        second={<Suspense fallback={null}>{detail()}</Suspense>}
       />
     </>
   );
