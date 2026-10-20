@@ -28,6 +28,10 @@ describe('deletedItemRestores', () => {
     expect(deletedItemRestores([deleted('src/Enemy.cs')], undefined)).toBeNull();
   });
 
+  it('restores no deleted xlink, which cm undelete refuses', () => {
+    expect(deletedItemRestores([deleted('lib', 'xlink', 30)], repository)).toBeNull();
+  });
+
   it('needs the revision the deletion removed', () => {
     expect(deletedItemRestores([deleted('src/Enemy.cs', 'file', -1)], repository)).toBeNull();
   });

@@ -2,12 +2,13 @@ import { fakeApi } from '../../testing/fakeWindow';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
+vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
 import type { DeletedItemRestore } from '@shared/domain/explorer';
 import { useNavigation } from '../../app/navigation/navigationStore';
-import { answerPrompts, askedDialogs } from '../../testing/fakeDialogs';
+import { answerConfirms, answerPrompts, askedDialogs } from '../../testing/fakeDialogs';
 import { pressToastAction, shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
-import { restoreDeletedItems, restoreDeletedItemTo } from './restoreDeleted';
+import { MAX_RESTORED_WITHOUT_ASKING, restoreDeletedItems, restoreDeletedItemTo } from './restoreDeleted';
 
 const ws = '/ws';
 const repository = 'game@local';
@@ -46,14 +47,51 @@ describe('restoreDeletedItems', () => {
     expect(refreshed()).toEqual(['explorer', 'info', 'pendingChanges', 'review']);
   });
 
-  it('says why when an item can’t come back', async () => {
+  it('says why when an item can’t come back, and offers to restore it elsewhere, starting from where it was', async () => {
     fakeApi.answer('explorer.restoreDeleted', () => {
       throw new Error('src/Enemy.cs is already in the workspace. Restore it to another path.');
     });
 
     await restoreDeletedItems(ws, [enemy]);
 
-    expect(shownToasts()).toEqual([expect.objectContaining({ kind: 'error', title: 'Restoring Enemy.cs failed' })]);
+    expect(shownToasts()).toEqual([
+      { kind: 'error', title: 'Couldn’t restore Enemy.cs', detail: 'src/Enemy.cs is already in the workspace. Restore it to another path.', action: 'Restore to…' },
+    ]);
+    answerPrompts(undefined);
+    pressToastAction('Couldn’t restore Enemy.cs');
+    await Promise.resolve();
+    expect(askedDialogs()).toEqual([expect.objectContaining({ kind: 'prompt', initialValue: 'src/Enemy.cs' })]);
+  });
+
+  it('says why several items can’t come back, with nothing to restore elsewhere for all of them', async () => {
+    fakeApi.answer('explorer.restoreDeleted', () => {
+      throw new Error('docs is already in the workspace. Restore it to another path.');
+    });
+
+    await restoreDeletedItems(ws, [enemy, docs]);
+
+    expect(shownToasts()).toEqual([{ kind: 'error', title: 'Couldn’t restore 2 items', detail: 'docs is already in the workspace. Restore it to another path.' }]);
+  });
+
+  it('asks first past a few items, as each comes back with a command of its own', async () => {
+    fakeApi.answer('explorer.restoreDeleted', () => undefined);
+    const many = Array.from({ length: MAX_RESTORED_WITHOUT_ASKING + 1 }, (_, index) => ({ ...enemy, path: `src/File${index}.cs` }));
+    answerConfirms(false);
+
+    await restoreDeletedItems(ws, many);
+
+    expect(askedDialogs()).toEqual([expect.objectContaining({ kind: 'confirm', title: `Restore ${many.length} items?` })]);
+    expect(fakeApi.methods()).toEqual([]);
+  });
+
+  it('restores a few items without asking', async () => {
+    fakeApi.answer('explorer.restoreDeleted', () => undefined);
+    const few = Array.from({ length: MAX_RESTORED_WITHOUT_ASKING }, (_, index) => ({ ...enemy, path: `src/File${index}.cs` }));
+
+    await restoreDeletedItems(ws, few);
+
+    expect(askedDialogs()).toEqual([]);
+    expect(restoresAsked()).toEqual([few]);
   });
 });
 
@@ -78,6 +116,7 @@ describe('restoreDeletedItemTo', () => {
     expect(validate!('../Enemy.cs')).toBeDefined();
     expect(validate!('src//Enemy.cs')).toBeDefined();
     expect(validate!('src\\Enemy.cs')).toBeDefined();
+    expect(validate!('/src/Enemy.cs')).toBe('A path in the workspace starts with a folder or a name, not “/”');
   });
 
   it('restores nothing when cancelled', async () => {
