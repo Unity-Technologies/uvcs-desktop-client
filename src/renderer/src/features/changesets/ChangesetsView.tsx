@@ -1,4 +1,4 @@
-import { GitBranch, GitCommitVertical } from 'lucide-react';
+import { GitCommitVertical } from 'lucide-react';
 import { useMemo } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
 import { useCommands, type Command } from '../../app/commands/commandStore';
@@ -16,12 +16,25 @@ import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { SincePicker } from '../../components/SincePicker';
 import { matchesPeople, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
-import { isFiltering } from '../../lib/viewFilters';
 import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
 import { NoMatches } from '../../ui/NoMatches';
-import { ToggleChip } from '../../ui/ToggleChip';
-import { changesetsCap, CLEARED_CHANGESET_FILTERS, matchesSearch, noChangesetsHint, toQueryFilter } from './changesetFilters';
+import { BranchScopeFilter } from './BranchScopeFilter';
+import {
+  ALL_BRANCHES,
+  branchOf,
+  branchScopeIn,
+  changesetsCap,
+  CURRENT_BRANCH,
+  isFilteringChangesets,
+  matchesSearch,
+  noChangesetsHint,
+  pickedBranchFilters,
+  shownFilters,
+  shownFiltersChange,
+  toQueryFilter,
+  type ShownFilters,
+} from './changesetFilters';
 import { useChangesetFilters } from './changesetsViewStore';
 import { changesetMenu } from './changesetMenu';
 import { openChangesetDiff, openRangeDiff } from './changesetOperations';
@@ -37,17 +50,19 @@ export function ChangesetsView() {
   const workspacePath = useWorkspacePath();
   const { data: workspace } = useWorkspaceInfo();
   const filters = useChangesetFilters();
-  const { text, people, since, onlyCurrentBranch, update } = filters;
+  const { text, update } = filters;
   const me = useWorkspaceUser();
   const [selection, setSelection] = useViewSelection('changesets');
 
   const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined;
+  const branchScope = branchScopeIn(filters, workspacePath, currentBranch);
+  const branch = branchOf(branchScope);
+  // A picked branch shows with its own time range and people; the remembered ones stay for when the pick is cleared.
+  const { since, people } = shownFilters(filters, workspacePath);
+  const updateShown = (change: Partial<ShownFilters>) => update(shownFiltersChange(filters.pickedBranch, workspacePath, change));
   // The text is matched locally; only the other filters trigger a new `cm find`.
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
-  const queryFilter = useMemo(
-    () => toQueryFilter({ since, people: queriedPeople, onlyCurrentBranch }, currentBranch, new Date()),
-    [since, queriedPeople, onlyCurrentBranch, currentBranch],
-  );
+  const queryFilter = useMemo(() => toQueryFilter({ since, people: queriedPeople }, branch, new Date()), [since, queriedPeople, branch]);
   const { data: changesets, isPending, error } = useChangesets(queryFilter);
 
   const labelsByChangeset = useLabelsByChangeset();
@@ -80,20 +95,22 @@ export function ChangesetsView() {
   );
 
   const cap = changesets && changesetsCap(visible.length, changesets.length, since);
-  const filtering = isFiltering(filters, CLEARED_CHANGESET_FILTERS);
+  const filtering = isFilteringChangesets(text, { since, people }, branchScope);
   const header = (
     <ViewHeader title="Changesets" count={cap ? undefined : changesets && visible.length} total={changesets?.length} subtitle={cap}>
       <FilterBar
         text={<FilterField value={text} onChange={(value) => update({ text: value })} placeholder="Filter changesets" />}
-        people={<PeopleFilter value={people} onChange={(value) => update({ people: value })} people={offered} mineTip="Changesets you checked in" />}
-        time={<SincePicker value={since} onChange={(value) => update({ since: value })} />}
+        people={<PeopleFilter value={people} onChange={(value) => updateShown({ people: value })} people={offered} mineTip="Changesets you checked in" />}
+        time={<SincePicker value={since} onChange={(value) => updateShown({ since: value })} />}
         kinds={
-          // Only while the workspace is on a branch.
-          currentBranch && (
-            <ToggleChip pressed={onlyCurrentBranch} icon={<GitBranch size={13} />} onChange={(value) => update({ onlyCurrentBranch: value })}>
-              This branch
-            </ToggleChip>
-          )
+          <BranchScopeFilter
+            workspacePath={workspacePath}
+            scope={branchScope}
+            currentBranch={currentBranch}
+            onShowAll={() => update(ALL_BRANCHES)}
+            onShowCurrent={() => update(CURRENT_BRANCH)}
+            onPick={(name) => update(pickedBranchFilters(workspacePath, name))}
+          />
         }
       />
     </ViewHeader>

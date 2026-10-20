@@ -19,6 +19,9 @@ export interface DiskTarget {
   isWorkspace?: boolean;
 }
 
+/** Opens a file in an editor (by its id), or with its default app for `null`: a revision saved first, or a file on disk. */
+export type OpenIn = (editorId: string | null) => Promise<unknown>;
+
 /** The app "Open in…" uses, in the "Open with" submenus: "Visual Studio Code (default)", as macOS' own Open With menu says. */
 export function appLabel(app: ExternalApp, defaultId: string | null): string {
   return app.id === defaultId ? `${app.name} (default)` : app.name;
@@ -67,21 +70,26 @@ export function openWithEntries(target: DiskTarget, apps: ExternalApps): MenuEnt
  * editor), then "Open this revision with ▸". `open` saves the revision and opens it in an editor, or with its default
  * app for `null`.
  */
-export function openRevisionEntries(open: (editorId: string | null) => Promise<unknown>, apps: ExternalApps = currentExternalApps()): (GroupedEntry & (Action | Submenu))[] {
+export function openRevisionEntries(open: OpenIn, apps: ExternalApps = currentExternalApps()): (GroupedEntry & (Action | Submenu))[] {
   const editor = defaultEditor(apps);
   return [
     menuAction('openRevision', () => void open(editor?.id ?? null), { label: editor ? `Open this revision in ${editor.name}` : 'Open this revision' }),
-    menuSubmenu(
-      'openRevisionWith',
-      tidyMenu([
-        ...apps.editors.map((app) => appEntry(app, apps.editorId, () => void open(app.id))),
-        SEPARATOR,
-        ...(editor ? [defaultAppEntry(() => void open(null))] : []),
-        SEPARATOR,
-        ...otherAppEntries(open),
-      ]),
-    ),
+    menuSubmenu('openRevisionWith', openRevisionWithEntries(open, apps)),
   ];
+}
+
+/**
+ * Every editor to open a saved revision in, the user's marked; its default app when the user has an editor; then
+ * another app, and the apps' settings. `open` saves the revision and opens it in an editor, or with its default app for `null`.
+ */
+export function openRevisionWithEntries(open: OpenIn, apps: ExternalApps): MenuEntry[] {
+  return tidyMenu([
+    ...apps.editors.map((app) => appEntry(app, apps.editorId, () => void open(app.id))),
+    SEPARATOR,
+    ...(defaultEditor(apps) ? [defaultAppEntry(() => void open(null))] : []),
+    SEPARATOR,
+    ...otherAppEntries(open),
+  ]);
 }
 
 function appEntry(app: ExternalApp, defaultId: string | null, run: () => void): Action {

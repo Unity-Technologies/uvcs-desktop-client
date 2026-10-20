@@ -97,6 +97,15 @@ describe('code review list', () => {
     expect(summaries.map((summary) => summary.targetBranchId)).toEqual([37, undefined]);
     expect(lines()).toHaveLength(1);
   });
+
+  it('names the changeset and shelve targets of summaries from the same records, a branch only by its id', async () => {
+    const { service, lines } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_TASK1, ON_CHANGESET, ON_SHELVE) });
+
+    const summaries = await service.listSummaries(WORKSPACE, {});
+
+    expect(summaries.map((summary) => summary.target)).toEqual([undefined, { kind: 'changeset', changesetId: 120 }, { kind: 'shelve', shelveId: 3 }]);
+    expect(lines()).toHaveLength(1);
+  });
 });
 
 describe('one code review', () => {

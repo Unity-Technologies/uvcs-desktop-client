@@ -51,6 +51,7 @@ export function MergeDetail({
           workspacePath={workspacePath}
           state={fileStateOf(item, progress)}
           labels={labels}
+          yoursInWorkspace={!request.destinationBranch}
           toolActions={toolActions}
           onDecide={(decision) => onDecideFile(item.file.key, decision)}
           onStartOver={() => onStartOverFile(item.file.key)}

@@ -1,4 +1,5 @@
 import { Archive, File, Folder, GitBranch, GitCommitVertical, MessageSquareCode, Tag } from 'lucide-react';
+import type { WorkspaceSelector } from '@shared/domain/workspace';
 import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
@@ -40,6 +41,8 @@ export interface ResultContext {
   term: string;
   currentBranch?: string;
   loadedChangeset?: number | null;
+  /** What the workspace is on, for the menus that switch to an object (`codeReviewMenu`). */
+  workspaceOn?: WorkspaceSelector;
   changelists: Changelist[];
   changeAt: (path: string) => PendingChange | undefined;
 }
@@ -161,7 +164,8 @@ export function shelveResult(shelve: Shelve, context: ResultContext): SearchResu
   };
 }
 
-export function codeReviewResult(review: CodeReviewSummary, { workspacePath, term }: ResultContext): SearchResult {
+export function codeReviewResult(review: CodeReviewSummary, context: ResultContext): SearchResult {
+  const { workspacePath, term } = context;
   return {
     id: `codeReview:${review.id}`,
     icon: MessageSquareCode,
@@ -169,7 +173,7 @@ export function codeReviewResult(review: CodeReviewSummary, { workspacePath, ter
     detail: `${review.status} · ${displayName(review.owner)}`,
     detailMatches: [],
     quality: wordMatchQuality(review.title, term),
-    menu: () => codeReviewMenu(workspacePath, [review]),
+    menu: () => codeReviewMenu(workspacePath, [review], context.workspaceOn),
     run: () => openReview(review),
   };
 }

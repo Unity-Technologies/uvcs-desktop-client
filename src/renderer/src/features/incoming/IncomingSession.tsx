@@ -135,6 +135,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
           workspacePath={workspacePath}
           state={selectedConflict}
           labels={UPDATE_LABELS}
+          yoursInWorkspace
           toolActions={{ resolveIn: (key, tool) => void resolveInTool(key, tool), run: run.progress, runOffered: runPlans.length > 0 }}
           onDecide={(decision) => decide(selectedConflict.file.key, decision)}
           onStartOver={() => reset(selectedConflict.file.key)}
