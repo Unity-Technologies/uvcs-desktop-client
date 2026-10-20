@@ -38,13 +38,40 @@ describe('changesets', () => {
     expect(commands).toMatchObject([
       {
         via: 'query',
-        args: findQueryArgs(FOUND_CHANGESETS, `where date >= '${roundTripDate('2026-09-01')}' and branch = '/main/task1' order by changesetid desc limit 100`),
+        args: findQueryArgs(
+          FOUND_CHANGESETS,
+          `where ignorehidden = 'true' and date >= '${roundTripDate('2026-09-01')}' and branch = '/main/task1' order by changesetid desc limit 100`,
+        ),
         options: { cwd: WORKSPACE },
       },
     ]);
     expect(listed.map((changeset) => [changeset.id, changeset.parent, changeset.repository])).toEqual([
       [12, 11, 'game@local'],
       [11, 10, 'game@local'],
+    ]);
+  });
+
+  // `cm find changeset` leaves a hidden branch's changesets out unless `ignorehidden` brings them in: a branch asked
+  // for by name shows its changesets, hidden or not; the list of every branch keeps hidden branches out.
+  it("lists a branch's changesets whether the branch is hidden or not, and every branch's without hidden ones", async () => {
+    const { service, lines } = changesets({ 'find changeset': '' });
+
+    await service.list(WORKSPACE, { branch: '/main/to-hide' });
+    await service.list(WORKSPACE, { sinceDate: '2026-09-01' });
+
+    expect(lines()).toEqual([
+      foundLine(FOUND_CHANGESETS, "where ignorehidden = 'true' and branch = '/main/to-hide' order by changesetid desc"),
+      foundLine(FOUND_CHANGESETS, `where date >= '${roundTripDate('2026-09-01')}' order by changesetid desc`),
+    ]);
+  });
+
+  it('asks for nested and non-ASCII branch names as written', async () => {
+    const { service, lines } = changesets({ 'find changeset': '' });
+
+    await service.list(WORKSPACE, { branch: '/main/características-del-niño/日本語のブランチ名-テスト', limit: 2000 });
+
+    expect(lines()).toEqual([
+      foundLine(FOUND_CHANGESETS, "where ignorehidden = 'true' and branch = '/main/características-del-niño/日本語のブランチ名-テスト' order by changesetid desc limit 2000"),
     ]);
   });
 
