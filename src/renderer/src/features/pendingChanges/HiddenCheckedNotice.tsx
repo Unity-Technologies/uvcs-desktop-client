@@ -1,6 +1,6 @@
 import { EyeOff } from 'lucide-react';
 import { pluralize } from '../../lib/text';
-import styles from './FilterNotices.module.css';
+import styles from './HiddenCheckedNotice.module.css';
 
 /** Check in takes every checked change, shown or not; this says so when the filter hides some of them. */
 export function HiddenCheckedNotice({ count, onClear }: { count: number; onClear: () => void }) {

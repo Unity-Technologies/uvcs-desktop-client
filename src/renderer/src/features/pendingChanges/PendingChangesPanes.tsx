@@ -26,7 +26,7 @@ import { ChangesList } from './ChangesList';
 import { ChangesSummaryBar } from './ChangesSummaryBar';
 import { CheckinAfterUpdateNotice } from './CheckinAfterUpdateNotice';
 import { CheckinPanel } from './CheckinPanel';
-import { HiddenCheckedNotice } from './FilterNotices';
+import { HiddenCheckedNotice } from './HiddenCheckedNotice';
 import { LockedByOthersNotice } from './locks/LockedByOthersNotice';
 import { usePendingLocks } from './locks/usePendingLocks';
 import type { PendingReview } from './review/usePendingReview';
