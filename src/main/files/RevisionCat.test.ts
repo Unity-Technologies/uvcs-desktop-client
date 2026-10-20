@@ -14,6 +14,11 @@ const version = (itemId: number, repository = 'eco@local'): CatRevision => ({ sp
 const revision = (revisionId: number): CatRevision => ({ spec: `revid:${revisionId}@eco@local`, repository: 'eco@local' });
 /** What the server holds: every item and revision but 404, its content naming it. */
 const SERVER = fakeCat((spec) => (/^(?:itemid|revid):404\b/.test(spec) ? undefined : `content of ${spec}`));
+/**
+ * A server whose `cm cat` succeeds without writing: what the tests of how hundreds of reads are batched take. A read
+ * that succeeded is never looked for on disk, and writing every file took past vitest's 5 s on Windows' CI runners.
+ */
+const BATCHING_SERVER: typeof SERVER = async () => '';
 
 /** Runs the reads asked so far when the test says, as if every IPC call had arrived together. */
 function manualSchedule() {
@@ -22,14 +27,14 @@ function manualSchedule() {
 }
 
 /** `cm cat` answering only once the test releases it: what runs at once, and what waits, can be told. */
-function heldCat() {
+function heldCat(answer: typeof SERVER = SERVER) {
   const releases: (() => void)[] = [];
   let asked: (() => void) | null = null;
   let held = true;
   const cat: CmAnswer = (command) => {
     asked?.();
-    if (!held) return SERVER(command);
-    return new Promise((resolve) => releases.push(() => resolve(SERVER(command))));
+    if (!held) return answer(command);
+    return new Promise((resolve) => releases.push(() => resolve(answer(command))));
   };
   const releaseAll = () => releases.splice(0).forEach((release) => release());
   return {
@@ -96,7 +101,7 @@ describe('RevisionCat', () => {
   });
 
   it('reads a backlog past what quick cm cats serve in full batches, each a process, every command line one Windows can start; the last few quick', async () => {
-    const { fake, flush, save } = await setUp(SERVER, { longFolder: true });
+    const { fake, flush, save } = await setUp(BATCHING_SERVER, { longFolder: true });
     const saved = Promise.all(Array.from({ length: 400 }, (_, i) => save(version(1000 + i))));
     flush();
     await saved;
@@ -131,7 +136,7 @@ describe('RevisionCat', () => {
   });
 
   it('runs at most two cm cats at once: the reads asked meanwhile wait, and the next batch is formed from them as one ends', async () => {
-    const held = heldCat();
+    const held = heldCat(BATCHING_SERVER);
     const { fake, flush, save } = await setUp(held.cat);
     const backlog = (from: number) => Array.from({ length: MAX_QUICK_BACKLOG + 1 }, (_, i) => save(version(from + i)));
     const first = backlog(1000);
@@ -155,7 +160,7 @@ describe('RevisionCat', () => {
   });
 
   it("reads a revision another view asks for while a merge's versions load in the next cm cat, not after all of them", async () => {
-    const held = heldCat();
+    const held = heldCat(BATCHING_SERVER);
     const { fake, flush, save } = await setUp(held.cat, { longFolder: true });
     const loading = Array.from({ length: 400 }, (_, i) => save(version(1000 + i)));
     flush();
