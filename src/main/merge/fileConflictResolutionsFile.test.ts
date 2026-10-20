@@ -50,7 +50,7 @@ describe('fileConflictResolutionsFile', () => {
     ]);
     expect(file.resultFiles).toEqual([
       { file: join(directory, 'result-1'), text: 'base\n' },
-      { file: join(directory, 'result-2'), revision: { spec: 'itemid:1#cs:1@game@local', repository: 'game@local' } },
+      { file: join(directory, 'result-2'), revision: { spec: 'itemid:1#cs:1@game@local', repository: 'game@local', path: '/b.png' } },
     ]);
   });
 
@@ -58,6 +58,6 @@ describe('fileConflictResolutionsFile', () => {
     const file = fileConflictResolutionsFile(plan('/docs/café "notes"\\x.md'), { '/docs/café "notes"\\x.md': { choice: 'text', text: 'ü\r\n' } }, directory);
 
     expect(JSON.parse(file.json).resolutions).toEqual([{ path: '/docs/café "notes"\\x.md', resultFile: join(directory, 'result-1') }]);
-    expect(file.resultFiles[0]!.text).toBe('ü\r\n');
+    expect(file.resultFiles).toEqual([{ file: join(directory, 'result-1'), text: 'ü\r\n' }]);
   });
 });

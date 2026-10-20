@@ -339,12 +339,12 @@ describe('runMerge into a server branch', () => {
   });
 
   it("keeps the base in a result file, cm can't keep it by name: its text as read, else the base's revision saved by one cm cat first", async () => {
-    let resultFiles: string[] = [];
+    let resultFiles: Record<string, string> = {};
     const { cm, commands } = fakeCmClient({
       'merge br:/main/task': async ({ args }) => {
         if (!args.includes('--merge')) return mergeOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('art/b.png', 31));
-        const { resolutions } = JSON.parse(await readFile(optionValue(args, '--fileconflictsresolutionsfile=')!, 'utf8')) as { resolutions: { resultFile: string }[] };
-        resultFiles = await Promise.all(resolutions.map(({ resultFile }) => readFile(resultFile, 'utf8')));
+        const { resolutions } = JSON.parse(await readFile(optionValue(args, '--fileconflictsresolutionsfile=')!, 'utf8')) as { resolutions: { path: string; resultFile: string }[] };
+        for (const { path, resultFile } of resolutions) resultFiles[path] = await readFile(resultFile, 'utf8');
         return mergeOutput(['CHANGESET', 'cs:12@/main@eco@local']);
       },
       ls: treeListing('eco@local', 'src/a.txt', 'art/b.png'),
@@ -353,7 +353,7 @@ describe('runMerge into a server branch', () => {
     const keepBase: MergeResolutions = { directoryConflicts: [], files: { '/src/a.txt': { choice: 'base', text: 'base as read\n' }, '/art/b.png': { choice: 'base' } } };
 
     expect(await runMerge(cm, workspacePath, TO_MAIN, keepBase, recordingContext().context)).toEqual({ changesetId: 12 });
-    expect(resultFiles).toEqual(['base as read\n', 'base bytes']);
+    expect(resultFiles).toEqual({ '/src/a.txt': 'base as read\n', '/art/b.png': 'base bytes' });
     const cats = commands.filter((command) => command.args[0] === 'cat');
     expect(cats.map(({ args, via }) => ({ spec: args[1]!.split(';')[0], via }))).toEqual([{ spec: 'itemid:31#cs:1@eco@local', via: 'execute' }]);
   });

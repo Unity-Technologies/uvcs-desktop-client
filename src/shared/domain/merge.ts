@@ -129,6 +129,11 @@ export type FileConflictResolution =
    */
   | { choice: 'source'; text?: string }
   | { choice: 'destination' }
+  /**
+   * Keep the common ancestor's version, which neither side has any more: only a file with a base. `text` as for the
+   * source; without it, `cm cat` saves the base's revision.
+   */
+  | { choice: 'base'; text?: string }
   /** The merged text written by the user or merged automatically. */
   | { choice: 'text'; text: string };
 
@@ -150,11 +155,11 @@ export interface MergeResult {
    */
   destinationMoved?: boolean;
   /**
-   * A workspace merge's conflicting files, by their plan path, that still hold the destination's version: their
-   * incoming version, kept by the user, couldn't be saved after `cm merge` ran (`runMerge`).
+   * A workspace merge's conflicting files, by their plan path, that still hold the destination's version: the version
+   * the user kept (incoming, or the base) couldn't be saved after `cm merge` ran (`runMerge`).
    */
   keptVersionNotSaved?: string[];
-  /** Files whose incoming version may not have been saved: `cm` failed without telling which, twice. */
+  /** Files whose kept version may not have been saved: `cm` failed without telling which, twice. */
   keptVersionMaybeNotSaved?: string[];
 }
 

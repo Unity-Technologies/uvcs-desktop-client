@@ -1,7 +1,6 @@
 import { writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import {
-  mergeSourcePoint,
   type DirectoryConflictResolution,
   type FileConflictResolution,
   type MergePlan,
@@ -9,7 +8,6 @@ import {
   type MergeResolutions,
   type MergeResult,
 } from '@shared/domain/merge';
-import { spec } from '@shared/domain/specs';
 import { catArgs, catBatchesOf, explainCatFailure, type CatRead } from '../cm/catBatches';
 import type { CmClient } from '../cm/CmClient';
 import { parseCreatedChangeset, parseDestinationMoved, parseMergePlan } from '../cm/mergeOutput';
@@ -20,6 +18,7 @@ import { retryWhileBusy } from '../files/whileBusy';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { OperationContext } from '../operations/OperationTracker';
 import { fileConflictResolutionsFile } from './fileConflictResolutionsFile';
+import { baseVersionSpec, sourceVersionSpec } from './keptVersionSpec';
 import { fileConflictArgs, MACHINE_READABLE_ARGS, mergeSourceArgs } from './mergeArgs';
 import { assertResolutionsComplete, describeUnmergeablePlan } from './mergeRules';
 import { previewMerge } from './previewMerge';
@@ -31,7 +30,7 @@ import { previewMerge } from './previewMerge';
  *    so nothing is decided behind the user's back and no external merge tool opens. A merge into a server branch
  *    takes each file's decision from a resolutions file (`fileConflictResolutionsFile`).
  * 3. For workspace merges, each conflicting file is then written with its resolution: the text decided, the source's
- *    text as the page read it, or else (binaries) the source's revision, all with one `cm cat`. A version that can't
+ *    or base's text as the page read it, or else (binaries) that revision, all with one `cm cat`. A version that can't
  *    be saved leaves its file as yours, named in the result (`keptVersionNotSaved`, or `keptVersionMaybeNotSaved` when `cm`
  *    didn't tell): the merge is in the workspace by then.
  * If anything looks different from the plan the user reviewed, it stops before changing the workspace.
@@ -53,7 +52,7 @@ export async function runMerge(
     const fileConflictResolutionsPath = join(directory, 'file-conflict-resolutions.json');
     if (request.destinationBranch) {
       await writeFile(commentsFile, resolutions.comment ?? '', 'utf8');
-      await writeServerFileConflictResolutions(plan, resolutions.files, directory, fileConflictResolutionsPath);
+      await writeServerFileConflictResolutions(cm, workspacePath, plan, resolutions.files, directory, fileConflictResolutionsPath, context.signal);
     }
 
     const mergeArgs = [
@@ -87,14 +86,32 @@ export async function runMerge(
   });
 }
 
+/**
+ * Writes the files `cm merge --to` reads each file conflict's decision from: the merged texts, and the bases kept that
+ * the page holds no text of, saved by `cm cat` (one per batch, in a process: binaries run to hundreds of MB). Before
+ * `cm merge` runs, so a base that can't be read stops the merge with nothing merged.
+ */
 async function writeServerFileConflictResolutions(
+  cm: CmClient,
+  workspacePath: string,
   plan: MergePlan,
   resolutions: Record<string, FileConflictResolution>,
   directory: string,
   fileConflictResolutionsPath: string,
+  signal: AbortSignal,
 ): Promise<void> {
   const { json, resultFiles } = fileConflictResolutionsFile(plan, resolutions, directory);
-  for (const { file, text } of resultFiles) await writeFile(file, text, 'utf8');
+  const revisions: KeptVersionRead[] = [];
+  for (const resultFile of resultFiles) {
+    if ('text' in resultFile) await writeFile(resultFile.file, resultFile.text, 'utf8');
+    else revisions.push({ ...resultFile.revision, target: resultFile.file, size: -1 });
+  }
+  for (const batch of catBatchesOf(revisions, (read) => read)) {
+    await cm.execute(catArgs(batch), { cwd: workspacePath, signal }).catch((error: unknown) => {
+      const files = batch.map((read) => basename(read.path)).join(', ');
+      throw new Error(`Couldn't read the base of ${files} to keep it, so nothing was merged. ${error instanceof Error ? error.message : String(error)}`);
+    });
+  }
   await writeFile(fileConflictResolutionsPath, json, 'utf8');
 }
 
@@ -127,12 +144,12 @@ function resolveConflictArgs(resolution: DirectoryConflictResolution): string[] 
 }
 
 /**
- * Writes each file's decision: a text as it is, and the incoming versions the page holds no text of (binaries, text in
- * another encoding) saved by `cm` straight into the workspace, all of them with one `cm cat` per batch
+ * Writes each file's decision: a text as it is, and the incoming versions or bases kept the page holds no text of
+ * (binaries, text in another encoding) saved by `cm` straight into the workspace, all of them with one `cm cat` per batch
  * (`catBatchesOf`), in a process even for one: binaries run to hundreds of MB, and a pooled session held that long
  * stalls every read behind it. `cm merge` has run by then: the writes take no cancel signal, as stopping them would
  * leave the merge half applied. `--file=` refuses a read-only file where `<spec>;<file>` doesn't check: these files are
- * checked out by the merge, so writable, either way. Returns the files whose incoming version couldn't be saved.
+ * checked out by the merge, so writable, either way. Returns the files whose kept version couldn't be saved.
  */
 async function writeFileConflictResolutions(
   cm: CmClient,
@@ -149,28 +166,28 @@ async function writeFileConflictResolutions(
     const text = textToWrite(resolution);
     if (text !== undefined) {
       await retryWhileBusy(() => writeFile(target, text, 'utf8'));
-    } else if (resolution.choice === 'source') {
-      const source = spec.itemAt(conflict.itemId, mergeSourcePoint(request, conflict.sourceChangeset), conflict.repository);
-      keptVersionReads.push({ path: conflict.path, spec: source, repository: conflict.repository, target, size: -1 });
+    } else if (resolution.choice === 'source' || resolution.choice === 'base') {
+      const kept = resolution.choice === 'source' ? sourceVersionSpec(request, conflict) : baseVersionSpec(conflict);
+      keptVersionReads.push({ path: conflict.path, spec: kept, repository: conflict.repository, target, size: -1 });
     }
   }
   return saveKeptVersions(cm, workspacePath, keptVersionReads);
 }
 
-/** An incoming version for `cm cat` to save over a conflicting file, with the file's path in the plan. */
+/** A version kept (incoming, or the base) for `cm cat` to save over a conflicting file, with the file's path in the plan. */
 type KeptVersionRead = CatRead & { path: string };
 
-/** The files whose incoming version a merge couldn't save: those known to still hold yours, and those that may. */
+/** The files whose kept version a merge couldn't save: those known to still hold yours, and those that may. */
 interface UnsavedVersions {
   notSaved: string[];
   maybeNotSaved: string[];
 }
 
 /**
- * Saves the incoming versions, every batch even when one fails: the merge is in the workspace already, so a failure
+ * Saves the versions kept, every batch even when one fails: the merge is in the workspace already, so a failure
  * only names the files left holding yours. A revision `cm cat` names as not found wasn't saved; a failure some line of
  * which names nothing (a download that failed, a dropped connection) is tried once more for the others, as saving a
- * version again changes nothing, and what fails again may not hold the incoming version. A file another program
+ * version again changes nothing, and what fails again may not hold the version kept. A file another program
  * holds open on Windows fails too, with no retry: `cm` writes it, not `retryWhileBusy`.
  */
 async function saveKeptVersions(cm: CmClient, workspacePath: string, reads: KeptVersionRead[]): Promise<UnsavedVersions> {
