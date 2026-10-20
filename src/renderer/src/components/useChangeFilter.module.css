@@ -44,8 +44,13 @@
   opacity: 0.35;
 }
 
-.chip:hover {
+.chip:hover:not(:disabled) {
   opacity: 0.85;
+}
+
+/* While the list is read there is nothing to filter: the chips wait. */
+.chip:disabled {
+  cursor: default;
 }
 
 .chip[aria-pressed='true'] {

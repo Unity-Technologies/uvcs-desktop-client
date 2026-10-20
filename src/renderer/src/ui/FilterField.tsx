@@ -21,7 +21,7 @@ const FILTER_FIELD_WIDTH = 240;
 
 /**
  * The text filter of a view's filter bar, first in it. ⌘F (and / from anywhere but a text field) goes to it while it
- * shows; ↓ goes on to the list, and Esc empties it, then goes back to the list.
+ * shows and is enabled; ↓ goes on to the list, and Esc empties it, then goes back to the list.
  */
 export function FilterField({ value, onChange, placeholder, width = FILTER_FIELD_WIDTH, disabled }: FilterFieldProps) {
   const ref = useRef<HTMLInputElement>(null);
