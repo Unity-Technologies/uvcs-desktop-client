@@ -6,8 +6,8 @@ ARCHITECTURE.md ("No external tool opens by itself").
 
 ## Finding apps
 
-One way to find apps serves the editors, the terminals and the merge tools (docs/features/merge.md), GitHub Desktop's
-(`app/src/lib/editors`, `app/src/lib/shells`), which asks each OS where an app is installed rather than guessing paths:
+One way to find apps serves the editors, the terminals and the merge tools (docs/features/merge.md), which asks each
+OS where an app is installed rather than guessing paths:
 
 - **Identity** (`APP_IDENTITIES`, `AppIdentity`): each app is described once, however many roles it plays (VS Code is an
   editor and a merge tool): its bundle identifiers on macOS, its "Apps & features" display name and publisher on
@@ -23,7 +23,7 @@ One way to find apps serves the editors, the terminals and the merge tools (docs
   installed, else on the PATH (`findFirst`, `findOnPath`), as the merge tools always did.
 - **When** (`InstalledAppsCache`): the records are read when first needed, shared by the merge tools and the apps list,
   and read again once older than a minute (`INSTALLED_APPS_RECHECK_MS`): an app installed meanwhile shows up without a
-  restart (GitHub Desktop needs one). A failed read counts as no records and is tried again. The renderer reads the
+  restart. A failed read counts as no records and is tried again. The renderer reads the
   list at the root of every window (`useExternalApps`), stale after a minute; menus only read it as last read
   (`currentExternalApps`), so building a menu starts nothing.
 - **Icons** (`AppIcons`): the apps list and the merge tools carry each app's own icon, read once per location with

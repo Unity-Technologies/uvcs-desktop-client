@@ -39,7 +39,7 @@ export function PendingChangesView() {
   if (error) return <>{header}<EmptyState title="Couldn't read pending changes" description={error.message} /></>;
 
   const suggestion = workspace?.selector.kind === 'branch' && <MergeTaskSuggestion workspacePath={workspacePath} branchName={workspace.selector.name} />;
-  // Beside the empty list, where the diff goes, as GitHub Desktop does: the layout never changes shape.
+  // Beside the empty list, where the diff goes: the layout never changes shape.
   const nothingPending =
     successMoment && workspace ? (
       <SuccessEmptyState moment={successMoment} repositoryName={workspace.repositoryName} server={workspace.server} suggestion={suggestion} />

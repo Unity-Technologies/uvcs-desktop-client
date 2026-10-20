@@ -4,7 +4,7 @@ const BUNDLE_ID_ATTRIBUTE = 'kMDItemCFBundleIdentifier';
 
 /**
  * The `mdfind` arguments asking Spotlight, in one query, where every app with one of these bundle identifiers is: an
- * app is found wherever it was installed, not only in /Applications (GitHub Desktop asks Launch Services the same).
+ * app is found wherever it was installed, not only in /Applications.
  * Each line of the answer names the bundle and the identifier it matched (`-attr`).
  */
 export function bundleQueryArgs(bundleIds: string[]): string[] {

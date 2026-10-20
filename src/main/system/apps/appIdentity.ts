@@ -6,7 +6,7 @@ import type { InstalledApps } from './installedApps';
 import type { Whereabouts } from './whereabouts';
 
 /**
- * How each OS knows an installed app, to find it wherever it was installed (GitHub Desktop's way): its bundle
+ * How each OS knows an installed app, to find it wherever it was installed: its bundle
  * identifiers on macOS, its "Apps & features" entry on Windows, its desktop entry on Linux. Shared by every role an
  * app plays (an editor, a merge tool, a terminal), so each app is described once (`APP_IDENTITIES`).
  */
