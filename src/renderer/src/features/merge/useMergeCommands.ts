@@ -26,7 +26,7 @@ export function useMergeCommands(): void {
         shortcut: hotkey('mergeFromBranch'),
         run: async () => {
           const branch = await pickBranch({ title: 'Merge from branch', exclude: currentBranch });
-          if (branch) openMerge({ kind: 'merge', sourceSpec: spec.branch(branch) });
+          if (branch) openMerge({ kind: 'merge', sourceSpec: spec.branch(branch.name) });
         },
       },
       {
@@ -38,7 +38,7 @@ export function useMergeCommands(): void {
         run: async () => {
           if (!currentBranch) return;
           const destination = await pickBranch({ title: `Merge ${branchLabel(currentBranch)} into`, exclude: currentBranch });
-          if (destination) openMerge({ kind: 'merge', sourceSpec: spec.branch(currentBranch), destinationBranch: destination });
+          if (destination) openMerge({ kind: 'merge', sourceSpec: spec.branch(currentBranch), destinationBranch: destination.name });
         },
       },
       {

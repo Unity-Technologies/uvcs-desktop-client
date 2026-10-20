@@ -43,7 +43,7 @@ export function labelMenu(workspacePath: string, labels: LabelInfo[], place: Men
     single && menuAction('merge', () => mergeFromLabel(single)),
     single && menuAction('mergeTo', () => void mergeTo(spec.label(single.name), single.name)),
     single && menuAction('newBranch', () => void createBranchFromLabel(workspacePath, single).then((name) => name && place.onBranchCreated?.(name))),
-    single && menuAction('compare', () => void diffWithAnotherLabel(single)),
+    single && menuAction('compare', () => void diffWithAnotherLabel(single), { label: 'Compare with another label…' }),
     single && menuAction('browse', () => browseLabel(single), { label: 'Browse repository at this label' }),
     single &&
       !place.inBranchExplorer &&

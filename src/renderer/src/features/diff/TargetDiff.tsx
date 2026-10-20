@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { DiffTarget } from '@shared/domain/diff';
+import type { DiffSideName } from '../../app/navigation/pages';
 import { EmptyState } from '../../ui/EmptyState';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { PathLabel } from '../../components/PathLabel';
@@ -19,15 +20,17 @@ interface TargetDiffProps {
   focusPath?: string;
   /** For a branch, the head it's diffed at (see `useDiffEntries`). */
   branchHead?: number;
+  /** For a range, its sides named where their specs don't say what they are (two branches' heads). */
+  sideNames?: readonly [DiffSideName, DiffSideName];
 }
 
-export function TargetDiff({ target, toolbar, focusPath, branchHead }: TargetDiffProps) {
+export function TargetDiff({ target, toolbar, focusPath, branchHead, sideNames }: TargetDiffProps) {
   const { data: entries, error } = useDiffEntries(target, { branchHead });
 
   return (
     <DiffFrame
       // Keyed so another changeset (Branch diff's "By changeset") folds its own comment afresh (`FoldedComment`).
-      description={<TargetDescription key={JSON.stringify(target)} target={target} />}
+      description={<TargetDescription key={JSON.stringify(target)} target={target} sideNames={sideNames} />}
       toolbar={toolbar}
     >
       {error ? (
@@ -39,16 +42,18 @@ export function TargetDiff({ target, toolbar, focusPath, branchHead }: TargetDif
   );
 }
 
-function TargetDescription({ target }: { target: DiffTarget }) {
+function TargetDescription({ target, sideNames }: { target: DiffTarget; sideNames?: readonly [DiffSideName, DiffSideName] }) {
   switch (target.kind) {
     case 'changeset':
       return <ChangesetDescription changesetId={target.changesetId} />;
-    case 'range':
+    case 'range': {
+      const [from, to] = sideNames ?? [{ label: target.fromSpec }, { label: target.toSpec }];
       return (
         <div className={styles.title}>
-          Changes from <code>{target.fromSpec}</code> to <code>{target.toSpec}</code>
+          Changes from <code data-tip={from.tooltip}>{from.label}</code> to <code data-tip={to.tooltip}>{to.label}</code>
         </div>
       );
+    }
     case 'branch':
       return (
         <div className={styles.branchTitle}>
