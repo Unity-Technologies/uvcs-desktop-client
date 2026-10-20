@@ -1,5 +1,5 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import type { MenuEntry } from '../../lib/actions';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
 import { holdBackMenuKeyRelease, isListMenuKey, openContextMenuOf } from '../../lib/rowMenu';
@@ -43,6 +43,8 @@ interface DataTableProps<Row> {
   hideHeader?: boolean;
   /** Rows as a list of entries, for tall rows of several lines in a list without column titles: each fills the width, with a hairline between. */
   divided?: boolean;
+  /** Stands for the rows while there are none (a filter's "No matching …"), under the column titles, which stay. */
+  empty?: ReactNode;
 }
 
 /**
@@ -68,6 +70,7 @@ export function DataTable<Row>({
   label,
   hideHeader = false,
   divided = false,
+  empty,
 }: DataTableProps<Row>) {
   const rowIdPrefix = useId();
   const rowId = (index: number): string => `${rowIdPrefix}-${index}`;
@@ -204,7 +207,7 @@ export function DataTable<Row>({
       {...MAIN_FOCUS}
     >
       <DataTableHeader columns={shownColumns} sort={sort} onSort={toggleSort} hidden={hideHeader} />
-      {contextMenu ? <ActionContextMenu entries={() => contextMenu(selectedRows())}>{body}</ActionContextMenu> : body}
+      {sortedRows.length === 0 && empty ? empty : contextMenu ? <ActionContextMenu entries={() => contextMenu(selectedRows())}>{body}</ActionContextMenu> : body}
     </div>
   );
 }

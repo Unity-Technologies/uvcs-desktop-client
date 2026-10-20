@@ -5,20 +5,28 @@ import { DataTable } from '../ui/table/DataTable';
 import { ListWithDetails } from './ListWithDetails';
 import { ListWithDetailsSkeleton } from './ListWithDetailsSkeleton';
 import { NoSelection } from './NoSelection';
+import { objectListState } from './objectListState';
 
 type TableProps<Row> = Parameters<typeof DataTable<Row>>[0];
 
-interface ObjectListViewProps<Row> extends Omit<TableProps<Row>, 'selectFirstRow'> {
+interface ObjectListViewProps<Row> extends Omit<TableProps<Row>, 'selectFirstRow' | 'empty'> {
   /** Whose details width this is: each view remembers its own. */
   widthKey: string;
-  /** The rows are being read for the first time: a skeleton of the view's layout. */
+  /**
+   * No rows have been read yet: a skeleton of the view's layout. TanStack's `isPending`, not `isLoading`: a query
+   * still waiting to start (on the repository's name) has read nothing either, and must never read as empty.
+   */
   loading: boolean;
   /** The rows couldn't be read. */
   error: Error | null;
   /** What says the rows couldn't be read: "Couldn't load labels". */
   errorTitle: string;
-  /** What shows when no row does: `NoMatches` while filters hide every row read, else the view's first-use state. */
-  empty: ReactNode;
+  /** Filters are on: an empty list means they hide every row read, not that there is none. */
+  filtering: boolean;
+  /** In the list, under its column titles, while the filters hide every row: `NoMatches`. */
+  noMatches: ReactNode;
+  /** In the details pane while there is no row at all: the view's first-use state. */
+  emptyState: ReactNode;
   /** The filter text, marked in every cell that shows it. */
   query: string;
   /** The focused row's details, or undefined when no row is focused. */
@@ -29,22 +37,24 @@ interface ObjectListViewProps<Row> extends Omit<TableProps<Row>, 'selectFirstRow
 
 /**
  * The body of every view listing objects (branches, changesets, labels, shelves, code reviews, locks, attributes),
- * under its header and filter bar: a skeleton while loading, the error, the empty state, or the table (a row always
- * selected) with the focused row's details beside it (ARCHITECTURE.md "List and details").
+ * under its header and filter bar: the table (a row always selected) with the focused row's details beside it
+ * (ARCHITECTURE.md "List and details"). It keeps that layout from the first frame on: a skeleton of it while
+ * loading; with no rows, the column titles over `noMatches` while filters hide them, else the empty state beside them.
+ * Only an error reading the rows takes the whole body.
  */
-export function ObjectListView<Row>({ widthKey, loading, error, errorTitle, empty, query, details, noun, ...table }: ObjectListViewProps<Row>) {
-  if (loading) return <ListWithDetailsSkeleton widthKey={widthKey} columns={table.columns} />;
+export function ObjectListView<Row>({ widthKey, loading, error, errorTitle, filtering, noMatches, emptyState, query, details, noun, ...table }: ObjectListViewProps<Row>) {
   if (error) return <EmptyState title={errorTitle} description={error.message} />;
-  if (table.rows.length === 0) return empty;
+  const state = objectListState(loading, table.rows.length, filtering);
+  if (state === 'loading') return <ListWithDetailsSkeleton widthKey={widthKey} columns={table.columns} />;
   return (
     <ListWithDetails
       widthKey={widthKey}
       list={
         <HighlightQuery query={query}>
-          <DataTable {...table} selectFirstRow />
+          <DataTable {...table} selectFirstRow empty={state === 'noMatches' ? noMatches : undefined} />
         </HighlightQuery>
       }
-      details={details ?? <NoSelection noun={noun} />}
+      details={state === 'nothing' ? emptyState : (details ?? <NoSelection noun={noun} />)}
     />
   );
 }

@@ -45,7 +45,7 @@ export function CodeReviewsView() {
   const me = useWorkspaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const [selection, setSelection] = useViewSelection('codeReviews');
-  const { data: reviews, isLoading, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, assignedToMe }));
+  const { data: reviews, isPending, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, assignedToMe }));
   const offered = usePeopleSeen('codeReviews', reviews, ownerOf);
 
   // The same rows while only the selection changes: the table sorts them again only when they change.
@@ -109,24 +109,22 @@ export function CodeReviewsView() {
       {header}
       <ObjectListView
         widthKey="codeReviews"
-        loading={isLoading}
+        loading={isPending}
         error={error}
         errorTitle="Couldn't read the code reviews"
-        empty={
-          isFiltering(filters, CLEARED_CODE_REVIEW_FILTERS) ? (
-            <NoMatches icon={<MessageSquareCode size={22} />} noun="code reviews" hint={longerRangeHint(since, true)} onClear={filters.clear} />
-          ) : (
-            <EmptyState
-              icon={<MessageSquareCode size={22} />}
-              title="No code reviews"
-              description={since === 'anyTime' ? 'Ask a teammate to look at a branch or changeset before it gets merged.' : 'None in this time range. Try a longer one, or ask a teammate for a review.'}
-              action={
-                <Button variant="primary" icon={<Plus size={14} />} onClick={newReview}>
-                  New review
-                </Button>
-              }
-            />
-          )
+        filtering={isFiltering(filters, CLEARED_CODE_REVIEW_FILTERS)}
+        noMatches={<NoMatches icon={<MessageSquareCode size={22} />} noun="code reviews" hint={longerRangeHint(since, true)} onClear={filters.clear} />}
+        emptyState={
+          <EmptyState
+            icon={<MessageSquareCode size={22} />}
+            title="No code reviews"
+            description={since === 'anyTime' ? 'Ask a teammate to look at a branch or changeset before it gets merged.' : 'None in this time range. Try a longer one, or ask a teammate for a review.'}
+            action={
+              <Button variant="primary" icon={<Plus size={14} />} onClick={newReview}>
+                New review
+              </Button>
+            }
+          />
         }
         query={search}
         rows={visible}

@@ -48,7 +48,7 @@ export function ChangesetsView() {
     () => toQueryFilter({ since, people: queriedPeople, onlyCurrentBranch }, currentBranch, new Date()),
     [since, queriedPeople, onlyCurrentBranch, currentBranch],
   );
-  const { data: changesets, isLoading, error } = useChangesets(queryFilter);
+  const { data: changesets, isPending, error } = useChangesets(queryFilter);
 
   const labelsByChangeset = useLabelsByChangeset();
   const offered = usePeopleSeen('changesets', changesets, ownerOf);
@@ -104,16 +104,12 @@ export function ChangesetsView() {
       {header}
       <ObjectListView
         widthKey="changesets"
-        loading={isLoading}
+        loading={isPending}
         error={error}
         errorTitle="Couldn't load changesets"
-        empty={
-          filtering ? (
-            <NoMatches icon={<GitCommitVertical size={22} />} noun="changesets" hint={noChangesetsHint(since, true)} onClear={filters.clear} />
-          ) : (
-            <EmptyState icon={<GitCommitVertical size={22} />} title="No changesets" description={noChangesetsHint(since, false)} />
-          )
-        }
+        filtering={filtering}
+        noMatches={<NoMatches icon={<GitCommitVertical size={22} />} noun="changesets" hint={noChangesetsHint(since, true)} onClear={filters.clear} />}
+        emptyState={<EmptyState icon={<GitCommitVertical size={22} />} title="No changesets" description={noChangesetsHint(since, false)} />}
         query={text}
         rows={visible}
         columns={columns}
