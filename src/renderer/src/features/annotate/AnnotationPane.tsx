@@ -1,8 +1,9 @@
 import { Calendar, GitCommitVertical, User } from 'lucide-react';
-import { useMemo, type ReactNode } from 'react';
+import { Suspense, useMemo, type ReactNode } from 'react';
 import type { ItemRevision } from '@shared/domain/history';
 import { navigation } from '../../app/navigation/navigationStore';
 import { useOtherRepository } from '../../app/workspace/useWorkspace';
+import { lazyComponent } from '../../lib/lazyComponent';
 import { pluralize } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
@@ -10,13 +11,15 @@ import { PaneToolbar, PaneToolbarGroup } from '../../ui/PaneToolbar';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { openChangesetDiff } from '../changesets/changesetOperations';
 import { AgeLegend } from './AgeLegend';
-import { AnnotatedCode } from './AnnotatedCode';
 import { useAnnotateOptions, type AnnotateColumns } from './annotateOptionsStore';
 import { annotationBlocks, distinctAuthors } from './annotationBlocks';
 import type { BlockLinks } from './blockLinks';
 import { revisionBefore } from './revisionBefore';
 import { useFileAnnotation } from './useFileAnnotation';
 import styles from './AnnotationPane.module.css';
+
+// The highlighted code (Pierre) loads on first use, behind the spinner the pane shows while it annotates.
+const AnnotatedCode = lazyComponent(() => import('./AnnotatedCode').then((module) => module.AnnotatedCode));
 
 /** The history list an annotation sits beside, which then says which revision is annotated. */
 export interface AnnotationHistory {
@@ -99,7 +102,9 @@ export function AnnotationPane({ path, repository, revision, leading, history }:
       ) : !annotation ? (
         <CenteredSpinner />
       ) : (
-        <AnnotatedCode key={spec} code={code} path={path} blocks={blocks} lineCount={annotation.lines.length} columns={columns} links={links} />
+        <Suspense fallback={<CenteredSpinner />}>
+          <AnnotatedCode key={spec} code={code} path={path} blocks={blocks} lineCount={annotation.lines.length} columns={columns} links={links} />
+        </Suspense>
       )}
     </div>
   );
