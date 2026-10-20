@@ -252,7 +252,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
               listedCount={listedCount}
               upload={upload}
               shelvable={{ count: shelvable.length, upload: shelvableUpload }}
-              branchName={workspace?.selector.name ?? ''}
+              branchName={branchName ?? ''}
               merging={mergeChanges.length > 0}
               behindCount={behind?.count ?? 0}
               behindDescription={behind && behindDescription(behind)}
