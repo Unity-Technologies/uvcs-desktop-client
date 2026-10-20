@@ -117,7 +117,8 @@ async function saveBasesKept(
 }
 
 /**
- * Copies `source` into `target`, a temp file, without reading it into memory (binaries run to hundreds of MB); false
+ * Copies `source` into `target`, a temp file, with `copyFile`: this copy never holds the file in memory. Writing it
+ * back into the workspace later does (`copyInto`, as for yours): `cm` needs the file freshly modified there. False
  * when there's no file at `source`.
  */
 async function copiedIfThere(source: string, target: string): Promise<boolean> {
