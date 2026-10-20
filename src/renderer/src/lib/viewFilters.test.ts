@@ -29,6 +29,11 @@ describe('rememberedFilters', () => {
     const state = { ...DEFAULTS, text: 'fix', people: { mine: true, others: ['ana'] }, update: () => undefined };
     expect(rememberedFilters(state)).toEqual({ people: MINE, since: 'lastMonth', status: 'any', layout: 'list' });
   });
+
+  it("keeps for the session only what the view says is the repository's, such as a branch picked by name", () => {
+    const state = { ...DEFAULTS, branch: '/main/task' };
+    expect(rememberedFilters(state, ['branch'])).toEqual({ people: EVERYONE, since: 'lastMonth', status: 'any', layout: 'list' });
+  });
 });
 
 describe('restoredFilters', () => {

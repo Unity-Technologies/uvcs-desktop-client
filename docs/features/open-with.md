@@ -70,6 +70,9 @@ workspace", a history row's "Open diff of changeset"), a separator between them 
 - **A revision** (history, Browse repository, a diff's files, `openRevisionEntries`): "Open this revision in <editor>"
   (plain, its default app, without an editor; a double-click in Browse repository does the same), then "Open this
   revision with ▸" as a file's. The revision is saved to a temp file first (`revisionFiles.open`), as before.
+- **A conflict's version** (a binary conflict's "Open version" in its toolbar, its cards' menus: `versionAppEntries`):
+  plain "Open" is the file's default app even when the user has an editor, then every app, "Choose another app…" and
+  "Manage apps…", none marked "(default)" (docs/features/merge.md "Merge page").
 - **Words**: "Open in <app>" for a named app, "Open with ▸" for choosing one, as Finder, Explorer and VS Code say them.
 - The palette ("Open workspace in <editor>", "Open workspace in <terminal>"), File's "Open in Editor" and "Open in
   Terminal", and the workspace switcher's popover open the workspace the same way.

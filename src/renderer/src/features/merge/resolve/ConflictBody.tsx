@@ -6,6 +6,7 @@ import { LoadedFileDiff } from '../../diff/viewer/LoadedFileDiff';
 import type { MergeLabels } from '../mergeDescription';
 import { ConflictHunks } from './ConflictHunks';
 import { mergedText, textToEdit, type PanelView } from './conflictPanelView';
+import type { OpenableVersion } from './conflictVersionOpening';
 import type { FileConflictDecision } from './fileConflictDecision';
 import { HandEditor } from './HandEditor';
 import { ReadOnlyText } from './ReadOnlyText';
@@ -17,6 +18,8 @@ interface ConflictBodyProps {
   workspacePath: string;
   state: FileConflictState;
   labels: MergeLabels;
+  /** A binary's versions that open in other apps, from its cards' menus. */
+  versions: OpenableVersion[];
   view: PanelView;
   /** The user is editing the text in the app. */
   editing: boolean;
@@ -24,7 +27,7 @@ interface ConflictBodyProps {
 }
 
 /** Under a conflicting file's toolbar: its view, the hand editor, or a binary's versions to keep. */
-export function ConflictBody({ workspacePath, state, labels, view, editing, onDecide }: ConflictBodyProps) {
+export function ConflictBody({ workspacePath, state, labels, versions, view, editing, onDecide }: ConflictBodyProps) {
   const { file, decision, contents } = state;
 
   if (state.status === 'loading') return <CenteredSpinner />;
@@ -37,6 +40,7 @@ export function ConflictBody({ workspacePath, state, labels, view, editing, onDe
         contents={contents}
         error={state.error}
         labels={labels}
+        versions={versions}
         chosen={decision?.kind === 'wholeFile' ? decision.side : undefined}
         onChoose={(side) => onDecide({ kind: 'wholeFile', side })}
       />
