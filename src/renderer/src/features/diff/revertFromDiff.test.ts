@@ -18,8 +18,10 @@ const ws = '/ws';
 const repository = 'game@local';
 const ofChangeset: DiffTarget = { kind: 'changeset', changesetId: 42 };
 
+/** A diff's entry as `parseDiffEntries` reads it: an item only moved keeps its revision on both sides. */
 function entry(status: DiffStatus = 'changed', itemType: ItemType = 'file', inRepository = repository): DiffEntry {
-  return { status, path: 'src/a.ts', itemType, baseRevisionId: 39, revisionId: status === 'deleted' ? -1 : 40, repository: inRepository };
+  const revisionId = status === 'deleted' ? -1 : status === 'moved' ? 39 : 40;
+  return { status, path: 'src/a.ts', itemType, baseRevisionId: 39, revisionId, repository: inRepository };
 }
 
 function changeset(id: number, parent: number): Changeset {
@@ -75,6 +77,16 @@ describe("a diff's file menu", () => {
 });
 
 describe('reverting a file from a diff', () => {
+  it("runs from the file's menu, reverting it to the older side once confirmed", async () => {
+    fakeApi.answer('changesets.get', () => changeset(42, 37));
+    const reverted = new Promise((resolve) => fakeApi.answer('history.revertTo', (...args: unknown[]) => resolve(args)));
+
+    revertEntry(diffEntryMenu(ws, ofChangeset, [entry()], { workspaceRepository: repository }))!.run();
+
+    expect(await reverted).toEqual([ws, 'src/a.ts', 37]);
+    expect(askedDialogs()).toHaveLength(1);
+  });
+
   it("reverts a changeset's file to the changeset's parent, read once", async () => {
     fakeApi.answer('changesets.get', () => changeset(42, 37));
     const refreshed = watchRefreshes(ws);
