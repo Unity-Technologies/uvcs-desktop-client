@@ -41,8 +41,8 @@ export function reviewedCodeAction(workspacePath: string, target: CodeReviewTarg
     case 'shelve':
       return {
         word: 'apply',
-        label: 'Apply this shelve',
-        ...(isWhereWorkspaceIs('shelve', String(target.shelveId)) && { disabledReason: 'The workspace is on this shelve' }),
+        label: 'Apply to workspace',
+        ...(isWhereWorkspaceIs('shelve', String(target.shelveId)) && { disabledReason: 'The workspace is already on this shelve' }),
         run: () => applyShelve(workspacePath, target.shelveId, false),
       };
     case 'unknown':

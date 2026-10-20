@@ -26,7 +26,7 @@ left for the merge view) are offered on the target, and as left ones on the sour
 
 A code review brings the reviewer its code through the same flows (`reviewedCodeAction`, in the review's menu and its
 page's header): "Switch to this branch" or "Switch to this changeset" is the branch's or changeset's own switch, and
-"Apply this shelve" applies the shelve as Changes applies someone else's (below), keeping it. It stays in its place,
+"Apply to workspace" applies the shelve as Changes applies someone else's (below), keeping it. It stays in its place,
 disabled, where the workspace already is (on the branch, or switched to that changeset or shelve; on a branch with
 that changeset loaded it isn't, as switching leaves the branch), and isn't offered where the target isn't named: a
 deleted branch, or the palette's reviews, read without their targets (`listSummaries`). Reviews are read in the
