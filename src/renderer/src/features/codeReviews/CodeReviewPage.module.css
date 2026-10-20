@@ -67,7 +67,14 @@
   flex: 1;
 }
 
+/* In a narrow window the switch's words give way after the hint, cut with an ellipsis: Assign and Delete stay in view. */
+.reviewedCode {
+  min-width: 0;
+}
+
 .hint {
+  /* Gives way first, far before the buttons. */
+  flex-shrink: 1000;
   overflow: hidden;
   min-width: 0;
   color: var(--text-tertiary);
