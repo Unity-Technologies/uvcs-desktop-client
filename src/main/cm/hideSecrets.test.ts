@@ -30,6 +30,11 @@ describe('commandLineForLog', () => {
 });
 
 describe('outputForLog', () => {
+  it('leaves the error a sync to an unreachable Git server prints as it is: it names the address, not the URL', () => {
+    const printed = 'Error: An error occurred while connecting to Git: Connection refused [::ffff:127.0.0.1]:9 (127.0.0.1:9)';
+    expect(outputForLog(printed)).toBe(printed);
+  });
+
   it('hides a token the output echoes back', () => {
     expect(outputForLog('Error: could not reach https://ana:ghp_123@github.com/game.git\r\nretry')).toBe('Error: could not reach https://•••@github.com/game.git\r\nretry');
     expect(outputForLog("fatal: Authentication failed for 'https://ghp_s3cr3t@github.com/team/game.git/'")).toBe(
