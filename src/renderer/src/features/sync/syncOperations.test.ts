@@ -72,11 +72,15 @@ describe('sync operations', () => {
 
   it('names the Git remote without its credentials when the sync fails', async () => {
     fakeApi.answer('sync.syncWithGit', () => {
-      throw commandFailure('Authentication failed');
+      // The failure as main sends it: `CmError` hides the URL's credentials (`outputForLog`).
+      throw commandFailure("fatal: Authentication failed for 'https://•••@github.com/team/game.git/'");
     });
 
     await syncWithGit(ws, { repository: 'game@local', url: 'https://ana:ghp_s3cr3t@github.com/team/game.git' });
 
-    expect(shownToasts()).toEqual([{ kind: 'error', title: 'Syncing with https://github.com/team/game.git failed', detail: 'Authentication failed' }]);
+    expect(shownToasts()).toEqual([
+      { kind: 'error', title: 'Syncing with https://github.com/team/game.git failed', detail: "fatal: Authentication failed for 'https://•••@github.com/team/game.git/'" },
+    ]);
+    expect(JSON.stringify(shownToasts())).not.toContain('ghp_s3cr3t');
   });
 });

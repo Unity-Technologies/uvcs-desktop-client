@@ -15,23 +15,25 @@ describe('commandLineForLog', () => {
     expect(commandLineForLog(['sync', 'r', 'git', 'u', '--pwd='])).toBe('cm sync r git u --pwd=•••');
   });
 
-  it('hides a token in a URL, keeping the host and the user', () => {
-    expect(commandLineForLog(['sync', 'r', 'git', 'https://ana:ghp_123@github.com/team/game.git'])).toBe(
-      'cm sync r git https://ana:•••@github.com/team/game.git',
-    );
+  it("hides a URL's user and password, keeping the host", () => {
+    expect(commandLineForLog(['sync', 'r', 'git', 'https://ana:ghp_123@github.com/team/game.git'])).toBe('cm sync r git https://•••@github.com/team/game.git');
   });
 
-  it('leaves a URL with only a user, or a repository spec, alone', () => {
-    expect(commandLineForLog(['sync', 'r', 'git', 'https://ana@github.com/game.git', 'br:/main@game@cloud:8087'])).toBe(
-      'cm sync r git https://ana@github.com/game.git br:/main@game@cloud:8087',
-    );
+  it("hides a token passed as the URL's user alone, as GitHub takes it", () => {
+    expect(commandLineForLog(['sync', 'r', 'git', 'https://ghp_s3cr3t@github.com/team/game.git'])).toBe('cm sync r git https://•••@github.com/team/game.git');
+  });
+
+  it('leaves an SSH remote, an @ in a path and a repository spec alone', () => {
+    const args = ['sync', 'r', 'git', 'git@github.com:team/game.git', 'https://github.com/team/user@example.git', 'br:/main@game@cloud:8087'];
+    expect(commandLineForLog(args)).toBe(`cm ${args.join(' ')}`);
   });
 });
 
 describe('outputForLog', () => {
   it('hides a token the output echoes back', () => {
-    expect(outputForLog('Error: could not reach https://ana:ghp_123@github.com/game.git\r\nretry')).toBe(
-      'Error: could not reach https://ana:•••@github.com/game.git\r\nretry',
+    expect(outputForLog('Error: could not reach https://ana:ghp_123@github.com/game.git\r\nretry')).toBe('Error: could not reach https://•••@github.com/game.git\r\nretry');
+    expect(outputForLog("fatal: Authentication failed for 'https://ghp_s3cr3t@github.com/team/game.git/'")).toBe(
+      "fatal: Authentication failed for 'https://•••@github.com/team/game.git/'",
     );
   });
 });
@@ -39,6 +41,6 @@ describe('outputForLog', () => {
 describe('textForLog', () => {
   it('hides the secrets of a command line an error quotes, and a token in a URL', () => {
     const text = 'Error: cm sync r git https://ana:ghp_123@example.com/game --user=ana --pwd=s3cret failed\n    at run (index.js:1:2)';
-    expect(textForLog(text)).toBe('Error: cm sync r git https://ana:•••@example.com/game --user=ana --pwd=••• failed\n    at run (index.js:1:2)');
+    expect(textForLog(text)).toBe('Error: cm sync r git https://•••@example.com/game --user=ana --pwd=••• failed\n    at run (index.js:1:2)');
   });
 });

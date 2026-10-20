@@ -21,6 +21,12 @@ describe('readActivityProgress', () => {
     });
   });
 
+  it('hides the credentials of a URL a line shows as is', () => {
+    expect(readProgress(readActivityProgress, ['Connecting to https://ghp_s3cr3t@github.com/team/game.git'])?.stageLabel).toBe(
+      'Connecting to https://•••@github.com/team/game.git',
+    );
+  });
+
   it('skips the result lines', () => {
     expect(readProgress(readActivityProgress, ['Pulling', "CHANGESET cs:4@br:/main@repo@local (mount:'/')"])?.stageLabel).toBe('Pulling');
   });
