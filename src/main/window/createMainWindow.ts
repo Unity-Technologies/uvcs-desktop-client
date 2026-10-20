@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { app, BrowserWindow, nativeTheme, shell } from 'electron';
-import type { PageWindowPage } from '@shared/domain/pageWindow';
+import type { PageSeed, PageWindowPage } from '@shared/domain/pageWindow';
 import type { SavedWindow } from '@shared/domain/settings';
 import { pageWindowQuery, startingWorkspaceQuery } from '@shared/startingWorkspace';
 import { WINDOW_BACKGROUND, windowChrome } from '@shared/windowChrome';
@@ -30,6 +30,8 @@ interface MainWindowOptions {
    * workspace windows'.
    */
   page?: PageWindowPage;
+  /** What the page shows, already read where it opened (`PageSeed`). */
+  seed?: PageSeed;
 }
 
 /**
@@ -38,7 +40,7 @@ interface MainWindowOptions {
  */
 export function createMainWindow(
   settings: SettingsStore,
-  { cascadeFrom, workspacePath, reopen, inBackground, page }: MainWindowOptions = {},
+  { cascadeFrom, workspacePath, reopen, inBackground, page, seed }: MainWindowOptions = {},
 ): BrowserWindow {
   const boundsKey = page ? 'pageWindowBounds' : 'windowBounds';
   const { bounds, maximized } = openingBounds(settings, { cascadeFrom, reopen }, boundsKey);
@@ -76,7 +78,7 @@ export function createMainWindow(
     return { action: 'deny' };
   });
 
-  loadPage(window, page && workspacePath ? pageWindowQuery(workspacePath, page) : startingWorkspaceQuery(workspacePath, reopen?.view));
+  loadPage(window, page && workspacePath ? pageWindowQuery(workspacePath, page, seed) : startingWorkspaceQuery(workspacePath, reopen?.view));
   return window;
 }
 

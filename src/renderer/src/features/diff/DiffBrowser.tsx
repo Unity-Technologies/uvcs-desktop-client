@@ -1,5 +1,5 @@
 import { FileSearch, Folder } from 'lucide-react';
-import { useLayoutEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
@@ -23,6 +23,7 @@ import { useDiffReview } from './review/useDiffReview';
 import { FileStepsContext, useFileSteps } from './viewer/fileSteps';
 import { AssetsPointContext, diffAssetsPoint } from './viewer/model/assetsPoints';
 import { diffSibling, SiblingFinderContext } from './viewer/model/modelSiblings';
+import { useShownDiffFile } from './shownDiffFile';
 
 const NO_ENTRIES: DiffEntry[] = [];
 
@@ -77,6 +78,12 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
     const initial = entryToFocus(entries, initialPath);
     setSelection(singleSelection(initial ? diffEntryKey(initial) : firstKey));
   }, [focused, focusedFolder, firstKey]);
+
+  useEffect(() => {
+    if (!focused) return;
+    useShownDiffFile.setState({ shown: { target, path: focused.path } });
+    return () => useShownDiffFile.setState({ shown: null });
+  }, [target, focused?.path]);
 
   return (
     <SplitPane

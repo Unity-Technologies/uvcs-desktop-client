@@ -27,7 +27,8 @@ export function useChangeset(changesetId: number | null, repository?: string) {
   });
 }
 
-function listedChangeset(workspacePath: string, changesetId: number | null): { changeset: Changeset; readAt: number } | undefined {
+/** The changeset from a list of the workspace's changesets already read, and when that list was read. */
+export function listedChangeset(workspacePath: string, changesetId: number | null): { changeset: Changeset; readAt: number } | undefined {
   if (changesetId === null) return undefined;
   for (const query of queryClient.getQueryCache().findAll({ queryKey: queryKeys.inWorkspace(workspacePath, 'changesets') })) {
     const changeset = Array.isArray(query.state.data) ? (query.state.data as Changeset[]).find((listed) => listed.id === changesetId) : undefined;
