@@ -24,6 +24,13 @@ describe('conflictedFilesOf', () => {
     expect(code?.isKnownBinary).toBeUndefined();
   });
 
+  it('marks the base of a changeset being undone as that change, which keeping would put back', () => {
+    // Undoing cs:2 prints `FILE_CONFLICT|/f.txt|2|1|3|…`: the base is the changeset undone, the source its parent.
+    const [undone] = conflictedFilesOf(plan([{ ...conflict, baseChangeset: 2, sourceChangeset: 1 }]), { kind: 'subtractive', sourceSpec: 'cs:2' });
+    expect(undone?.baseIsUndoneChange).toBe(true);
+    expect(conflictedFilesOf(plan([conflict]), { kind: 'cherryPick', sourceSpec: 'cs:5' })[0]?.baseIsUndoneChange).toBeUndefined();
+  });
+
   it("reads a shelve's version at the shelve, and nothing for a file with no common ancestor", () => {
     const [file] = conflictedFilesOf(plan([{ ...conflict, baseChangeset: -1 }]), { kind: 'merge', sourceSpec: 'sh:9' });
     expect(file).toMatchObject({ base: { kind: 'empty' }, source: { spec: 'itemid:27#sh:9@lib@local' } });

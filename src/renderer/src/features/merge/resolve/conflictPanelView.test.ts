@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FileContent } from '@shared/domain/content';
 import { LONGEST_DRAWN_LINE, LONGEST_EDITED_LINE } from '../../diff/viewer/longLines';
-import { effectiveView, editInAppUnavailable, hasBase, mergedText, rendersVersions, textToEdit } from './conflictPanelView';
+import { effectiveView, editInAppUnavailable, hasBase, mergedText, offersKeepBase, rendersVersions, textToEdit } from './conflictPanelView';
 import type { FileConflictState } from './useFileConflicts';
 
 const text = (value: string): FileContent => ({ text: value, isBinary: false, size: value.length });
@@ -32,6 +32,14 @@ describe('hasBase', () => {
     expect(hasBase(withBaseFile())).toBe(true);
     expect(hasBase(stateOf())).toBe(false);
     expect(hasBase(stateOf({ isBinary: true, document: undefined }))).toBe(false);
+  });
+});
+
+describe('offersKeepBase', () => {
+  it('offers keeping a base the file has, but not the change an undo takes away', () => {
+    expect(offersKeepBase(withBaseFile())).toBe(true);
+    expect(offersKeepBase(stateOf())).toBe(false);
+    expect(offersKeepBase(withBaseFile({ file: { ...withBaseFile().file, baseIsUndoneChange: true } }))).toBe(false);
   });
 });
 
