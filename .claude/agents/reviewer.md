@@ -43,10 +43,10 @@ these is missing, say so in your report as a finding.
   prints it; a bug fix has a test that fails without it; nothing sleeps, polls, reads the clock or depends on the OS's
   separators. Flag tests that only restate the implementation. A case the area's `docs/features/*.md` or its
   sandbox script (`scripts/sandboxes/`) names that no test covers is a finding.
-- **Components decide nothing**: a `.tsx` that chooses from data (which state or case shows, which items, labels or
-  counts, enablement, ordering, filtering, sizes, keyboard or selection) instead of taking it from a pure, tested `.ts`
-  module is a must-fix (CLAUDE.md "Tests are the quality gate"). Presentational conditionals (`open &&`, a class from
-  a prop) are fine.
+- **Components decide nothing**: a decision the change adds or alters in a `.tsx` (choosing from data which state or
+  case shows, which items, labels or counts, enablement, ordering, filtering, sizes, keyboard or selection) instead of
+  taking it from a pure, tested `.ts` module is a must-fix (CLAUDE.md "Tests are the quality gate"). Presentational
+  conditionals (`open &&`, a class from a prop) are fine; decisions the change doesn't touch are a note at most.
 - **Docs**: what `docs/` says is still true; a new rule is written in one place and named so it can be grepped.
 - **Commits**: one logical change each, messages in the product's words, failing test before the fix, refactors alone,
   the branch named `<kind>/<topic>`.
