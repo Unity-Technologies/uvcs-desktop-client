@@ -1,6 +1,7 @@
 import { FileDiff, Tag } from 'lucide-react';
 import type { LabelInfo } from '@shared/domain/label';
 import { spec } from '@shared/domain/specs';
+import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { DetailsHeading } from '../../components/DetailsHeading';
 import { PLAIN_LINKS, type ObjectLinks } from '../../components/objectLinks';
 import type { MenuEntry } from '../../lib/actions';
@@ -11,7 +12,7 @@ import { DetailsPanel } from '../../ui/DetailsPanel';
 import { AttributeChips } from '../attributes/AttributeChips';
 import { BranchChip } from '../branches/BranchChip';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
-import { saveLabelComment, showLabelChanges } from './labelOperations';
+import { labelDiffPage, saveLabelComment, showLabelChanges } from './labelOperations';
 import { copiedWhat } from '../../components/copyMenu';
 
 interface LabelDetailsProps {
@@ -23,6 +24,7 @@ interface LabelDetailsProps {
 }
 
 export function LabelDetails({ workspacePath, label, menu, links = PLAIN_LINKS }: LabelDetailsProps) {
+  useShowInFollowingWindow(labelDiffPage(label));
   return (
     <DetailsPanel
       icon={<Tag />}
