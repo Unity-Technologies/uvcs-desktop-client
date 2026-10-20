@@ -60,7 +60,7 @@ with the same name", `directoryConflictWords`), not `cm`'s ("Evil twin conflict"
 `scripts/sandboxes/merge-conflicts.sh`. A text with a line too long to draw unwrapped wraps, as in a diff, and isn't edited in the app:
 diff.md "Long lines".
 Every status reads as what the merge will do, never as done (`mergeStatus`): "Will merge automatically", "Needs your
-decision", then the user's choice ("Keeping yours", "Keeping incoming", "Combined", "Edited by you"; "Open in VS Code…",
+decision", then the user's choice ("Keeping yours", "Keeping incoming", "Keeping base", "Combined", "Edited by you"; "Open in VS Code…",
 "Resolved in VS Code" for merge tools): an icon in the list and a chip in the file's toolbar, with a short tooltip. Sides
 are "Yours"/"Incoming" in a workspace and "Destination"/"Source" when merging into a server branch (`mergeLabels`), always
 next to their branch. Copy stays short: labels name things, tooltips define them, no sentence restates what the page shows.
@@ -81,15 +81,19 @@ or to Complete merge. With one file left, its own toolbar is the way.
 
 A conflicting file is read-only. Its toolbar holds the file, its status and the ways out: "Resolve in <tool>"
 (`MergeToolButton`, a split button, primary while the file waits and the header offers nothing; disabled during a run:
-the other tools found, "Choose another app…", "Edit the text in the app" and the settings behind the caret), then "Keep Yours | Incoming | Both" for the whole file (`KeepChoices`, `conflictChoices`)
-and Start over. In a narrow pane the controls wrap within themselves, the Keep choices under the tool's button, so none
+the other tools found, "Choose another app…", "Edit the text in the app" and the settings behind the caret), then "Keep Yours | Incoming | Both | Base" for the whole file (`KeepChoices`, `conflictChoices`;
+Base, the version before either side changed it, only for a file that has one: not one added on both sides) and Start over. In a narrow pane the controls wrap within themselves, the Keep choices under the tool's button, so none
 is cut off. Below, short one-line views: "Conflicts" with the count left, then "Changes" (the destination now → after
 the merge), "Yours", "Incoming" and "Base". Conflicts read as labeled blocks instead of conflict markers
 (`conflictHunkCss` over Pierre's view): a header naming the destination's side with Keep yours / Keep incoming / Keep both
-for that conflict, its lines, the source's label and its lines. While a tool has the file, a banner says so (Bring to
+/ Keep base for that conflict, its lines, the source's label and its lines. The markers hold only the sides: the
+automatic merge keeps each conflict's base (`ConflictDocument.conflicts`), and a conflict left finds its own by its
+sides, in order (`conflictBases`), so Keep base is offered wherever the sides are still the merge's, not on one edited
+by hand, and not in a file with no base. While a tool has the file, a banner says so (Bring to
 front, Stop waiting), its conflicts show without choices and the merge can't complete; a toast tells how it ended.
 Editing the text in the app opens a banner with Done and Discard edits; the choice shows picked and "Changes" shows what
-it produces. Binary conflicts offer the two versions to keep, as cards, and no merge tool; one whose versions render (3D models,
+it produces. Binary conflicts offer the versions to keep as cards, each side's and the base's (where the file has one),
+and no merge tool; one whose versions render (3D models,
 images: `rendersVersions`) also shows each side against the base and the base itself ("Choose | Yours | Incoming |
 Base"), and a model's cards tell what each side changed since the base (docs/features/model-diff.md "In a merge"). A
 binary's versions (textures, models, scenes: up to hundreds of MB each) are read only while it shows (below); its
@@ -107,22 +111,27 @@ branch opens instead (`followUpMerge`), with a toast saying why. The page reads 
 no refresh, not even the one after the merge, previews it again.
 
 Complete merge writes each conflicting file's decision into the workspace, after `cm merge` (`runMerge`): the text
-decided, or, keeping the incoming version of a text file, the text the page read (`resolutionOf` carries it when it
-writes back byte for byte, UTF-8); the incoming binaries and text in other encodings are saved by `cm` straight into
-the workspace, all of them with one `cm cat` per batch (`catBatchesOf`), in a process: the page never holds their
-bytes, and keeping yours reads nothing. Once `cm merge` ran, cancelling doesn't stop these writes: the merge is in the
-workspace by then, so an incoming version that can't be saved leaves its file as yours, and the merge's toast names it
+decided, or, keeping the incoming version or the base of a text file, the text the page read (`resolutionOf` carries
+it when it writes back byte for byte, UTF-8); the incoming versions and bases of binaries and of text in other
+encodings are saved by `cm` straight into the workspace (the item at the source's point or at the base's changeset,
+`sourceVersionSpec`, `baseVersionSpec`), all of them with one `cm cat` per batch (`catBatchesOf`), in a process: the page never holds their
+bytes, and keeping yours reads nothing. `cm merge` has no option to keep the base: the app writes it like any decided
+text. Once `cm merge` ran, cancelling doesn't stop these writes: the merge is in the
+workspace by then, so a version kept that can't be saved leaves its file as yours, and the merge's toast names it
 ("Merge applied, but 2 files still hold yours", `keptVersionNotSaved`). `cm cat` goes on after a problem: it prints a
 `not found <spec>` line per revision it can't resolve and a line naming nothing per download that failed
 (`explainCatFailure`, shared with `RevisionCat`). A failure with such an unnamed line is tried once more for the files
 it didn't name, as saving a version again changes nothing; what fails again is worded as uncertain ("may not hold the
-incoming version", `keptVersionMaybeNotSaved`). `cm merge --merge` can't take each file's decision in a workspace
+version you kept", `keptVersionMaybeNotSaved`). `cm merge --merge` can't take each file's decision in a workspace
 (`--fileconflictsresolutionsfile` works only with `--to`), and `--keepsource` keeps every file's.
 A merge into a server branch has no workspace to write in: `cm merge --to` reads every file's decision from a JSON file
 (`--fileconflictsresolutionsfile`, written by `fileConflictResolutionsFile`): `{ "resolutions": [{ "path", "keep": "source" |
 "destination" } | { "path", "resultFile" }] }`, by the path `cm merge` printed in the plan. A side kept, even an
 incoming text the page read, is named, so `cm` uploads nothing for it; a decided text goes in a result file whose bytes
-`cm` checks in as they are. `cm` leaves both files alone; `runMerge`'s temp folder holds them until it ends.
+`cm` checks in as they are. The file names no base to keep, so a base kept goes in a result file too: its text as the
+page read it, or its revision saved there by `cm cat` (one per batch, in a process) before `cm merge` runs, which a
+base that can't be read stops with nothing merged. `cm` leaves both files alone; `runMerge`'s temp folder holds them
+until it ends.
 
 Merges hold thousands of conflicting files and changes. A binary never merges line by line, so its status is "Needs
 your decision" before any of its versions is read: the preview's `cm ls` of the destination's tree names each
