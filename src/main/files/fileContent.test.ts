@@ -26,6 +26,17 @@ describe('toFileContent', () => {
     expect(Buffer.isBuffer(content.image!.bytes)).toBe(false);
   });
 
+  it('keeps the bytes of the textures the renderer decodes itself, of their own type', () => {
+    const types = ['a.TGA', 'b.tif', 'c.tiff', 'd.exr', 'e.hdr', 'f.psd', 'g.PSB'].map((name) => toFileContent(Buffer.from([0, 1, 2]), name).image?.mimeType);
+    expect(types).toEqual(['image/x-tga', 'image/tiff', 'image/tiff', 'image/x-exr', 'image/vnd.radiance', 'image/vnd.adobe.photoshop', 'image/vnd.adobe.photoshop']);
+    expect(toFileContent(Buffer.from([0, 1, 2]), 'a.tga')).toMatchObject({ isBinary: true, size: 3 });
+  });
+
+  it('keeps nothing of a texture over the image cap', () => {
+    const size = MAX_IMAGE_BYTES + 1;
+    expect(toFileContent(Buffer.alloc(size), 'Albedo.psd')).toEqual({ isBinary: true, size, tooLarge: 'image' });
+  });
+
   it('does not encode images over the cap', () => {
     const size = MAX_IMAGE_BYTES + 1;
     expect(toFileContent(Buffer.alloc(size), 'huge.png')).toEqual({ isBinary: true, size, tooLarge: 'image' });
