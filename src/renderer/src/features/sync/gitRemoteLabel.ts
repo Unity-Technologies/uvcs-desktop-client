@@ -1,5 +1,4 @@
-/** A URL's user info (`https://user:token@host`): a token pasted into a Git URL may be the user alone. */
-const USER_INFO = /^([a-z][a-z0-9+.-]*:\/\/)[^\s/@]*@/i;
+import { withoutUrlUserInfo } from '@shared/urlUserInfo';
 
 /**
  * How the app names a Git remote in titles and toasts: the URL as typed, without its user info, which may carry a
@@ -7,5 +6,5 @@ const USER_INFO = /^([a-z][a-z0-9+.-]*:\/\/)[^\s/@]*@/i;
  * SSH remote (`git@github.com:team/game.git`) names only its account and stays as it is.
  */
 export function gitRemoteLabel(url: string): string {
-  return url.replace(USER_INFO, '$1');
+  return withoutUrlUserInfo(url);
 }

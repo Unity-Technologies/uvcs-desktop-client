@@ -1,4 +1,5 @@
 import { escapeRegExp } from '@shared/escapeRegExp';
+import { withoutUrlUserInfo } from '@shared/urlUserInfo';
 
 /** What a hidden secret shows as in the command log, errors and console warnings. */
 const HIDDEN_SECRET = '•••';
@@ -6,8 +7,6 @@ const HIDDEN_SECRET = '•••';
 /** Options whose value is a secret (`cm sync ... git --pwd=`). Add any new one the app passes. */
 const SECRET_OPTIONS = ['--pwd='];
 
-/** The password in a URL's user info (`https://user:token@host`), as a Git URL pasted with a token carries. */
-const URL_PASSWORD = /(\b[a-z][a-z0-9+.-]*:\/\/[^\s/:@]*):[^\s/@]+@/gi;
 
 /**
  * The command line as the command log, a `CmError` and the `[server budget]` warning show it: every command is logged
@@ -17,9 +16,12 @@ export function commandLineForLog(args: readonly string[]): string {
   return `cm ${args.map(hideSecretArgument).join(' ')}`;
 }
 
-/** A failed command's output, which may echo back the URL it was given. */
+/**
+ * A failed command's output, which may echo back the URL it was given: a URL's whole user info is hidden
+ * (`https://•••@github.com/…`), as a Git URL pasted with a token carries it as the user alone or after one.
+ */
 export function outputForLog(output: string): string {
-  return output.replace(URL_PASSWORD, `$1:${HIDDEN_SECRET}@`);
+  return withoutUrlUserInfo(output, `${HIDDEN_SECRET}@`);
 }
 
 /**

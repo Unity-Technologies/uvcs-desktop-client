@@ -377,11 +377,15 @@ and the app keeps the decision. An editor or a terminal opens only on the user's
 ## Secrets
 
 Every command is logged, sent to the window's command log and quoted in its `CmError`, so a secret passed to `cm` is
-hidden before any of them sees it: `commandLineForLog` and `outputForLog` (`main/cm/hideSecrets.ts`) show the values of
-`SECRET_OPTIONS` (`--pwd=`, which a Git sync takes) and a URL's password (`https://user:token@host`) as `•••`. A new
-option that carries a secret joins `SECRET_OPTIONS`. `cm sync` takes the password only on its command line, so it
-still shows in the process list while the sync runs; never pass a secret where `cm` offers a file instead. The
-window's own titles and toasts name a Git remote without its URL's user info (`gitRemoteLabel`).
+hidden before any of them sees it: `commandLineForLog` and `outputForLog` (`main/cm/hideSecrets.ts`) show as `•••`
+the values of `SECRET_OPTIONS` (`--pwd=`, which a Git sync takes) and the whole user info of every URL
+(`https://user:token@host` and `https://token@host` both read `https://•••@host`, as GitHub takes a token as the user
+alone; `withoutUrlUserInfo`, `shared/urlUserInfo.ts`). The same goes for the `[server budget]` and `[organization id]`
+warnings, an error nothing caught (`textForLog`) and the lines a push, pull or sync shows as its progress
+(`readActivityProgress`). An SSH remote (`git@host:path`) and an `@` in a path are left as they are. A new option that
+carries a secret joins `SECRET_OPTIONS`. `cm sync` takes the password only on its command line, so it still shows in
+the process list while the sync runs; never pass a secret where `cm` offers a file instead. The window's own titles
+and toasts name a Git remote by the same rule, its user info dropped (`gitRemoteLabel`).
 
 The renderer is untrusted: windows run with `contextIsolation` and `sandbox` (`createMainWindow`), reach main only
 through the one invoke channel, and never open a window of their own: a link that would opens outside the app
