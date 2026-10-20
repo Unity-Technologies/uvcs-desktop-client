@@ -91,12 +91,19 @@ describe('startup bundle', () => {
     importedBy = staticGraph(ENTRY);
   });
 
+  it('holds every view and page, so each paints its own layout at once, never a fallback it then replaces', () => {
+    const registries = ['app/navigation/viewRegistry.ts', 'app/navigation/pageRegistry.tsx'];
+    const lazy = registries.filter((registry) => readFileSync(resolve(RENDERER_SOURCE, registry), 'utf8').includes('lazyComponent('));
+
+    expect(lazy).toEqual([]);
+  });
+
   it('leaves the heavy libraries to load on first use', () => {
     const heavy = [...importedBy.keys()].filter((module) => HEAVY_PACKAGES.includes(module) || HEAVY_SCOPES.some((scope) => module.startsWith(scope)));
 
     expect(heavy.map((module) => chainTo(module, importedBy))).toEqual([]);
-    // The walk reaches the views (none is lazy: `viewRegistry.test.ts`), so it would see them import one.
-    expect([...importedBy.keys()].some((module) => module.endsWith('BranchExplorerView.tsx'))).toBe(true);
+    // The walk reaches the views and pages (none is lazy), so it would see them import one.
+    expect([...importedBy.keys()].some((module) => module.endsWith('BranchExplorerView.tsx') || module.endsWith('MergePage.tsx'))).toBe(true);
   });
 
   it('reads imports as TypeScript emits them', () => {

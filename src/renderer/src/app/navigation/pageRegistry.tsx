@@ -1,13 +1,13 @@
-import { lazyComponent } from '../../lib/lazyComponent';
+import { BrowseRepositoryPage } from '../../features/browseRepository/BrowseRepositoryPage';
+import { CodeReviewPage } from '../../features/codeReviews/CodeReviewPage';
+import { DiffPage } from '../../features/diff/DiffPage';
+import { HistoryPage } from '../../features/history/HistoryPage';
+import { MergePage } from '../../features/merge/MergePage';
 import { fileNameOf } from '../../lib/text';
 import type { Page } from './pages';
 
-// Pages load when first opened so the app starts fast.
-const BrowseRepositoryPage = lazyComponent(() => import('../../features/browseRepository/BrowseRepositoryPage').then((module) => module.BrowseRepositoryPage));
-const CodeReviewPage = lazyComponent(() => import('../../features/codeReviews/CodeReviewPage').then((module) => module.CodeReviewPage));
-const DiffPage = lazyComponent(() => import('../../features/diff/DiffPage').then((module) => module.DiffPage));
-const HistoryPage = lazyComponent(() => import('../../features/history/HistoryPage').then((module) => module.HistoryPage));
-const MergePage = lazyComponent(() => import('../../features/merge/MergePage').then((module) => module.MergePage));
+// Pages are in the startup bundle, as views are (`viewRegistry`): each one's first frame is its own layout. What is
+// heavy beneath them loads on first use (`startupBundle.test.ts`).
 
 export function PageContent({ page }: { page: Page }) {
   switch (page.kind) {
