@@ -18,6 +18,16 @@ const docs: DeletedItemRestore = { revision: { revisionId: 24, repository }, pat
 /** What main answers when every item came back. */
 const restoredAll = { restored: 1, total: 1 };
 
+/** The restores main is asked for next, answered as all restored. */
+function nextRestore(): Promise<unknown> {
+  return new Promise((resolve) =>
+    fakeApi.answer('explorer.restoreDeleted', (_workspacePath: string, restores: unknown) => {
+      resolve(restores);
+      return restoredAll;
+    }),
+  );
+}
+
 const restoresAsked = () => fakeApi.argsOf('explorer.restoreDeleted').map((args) => args[1]);
 
 describe('restoreDeletedItems', () => {
@@ -70,9 +80,24 @@ describe('restoreDeletedItems', () => {
     await restoreDeletedItems(ws, [enemy, guide]);
 
     expect(shownToasts()).toEqual([{ kind: 'error', title: 'Couldn’t restore 2 items', detail: message, action: 'Restore to…' }]);
-    answerPrompts(undefined);
+    // Restored elsewhere, it goes on with the rest, none of which came back.
+    const resumed = nextRestore();
+    answerPrompts('notes/a.md');
     pressToastAction('Couldn’t restore 2 items');
     expect(askedDialogs()).toEqual([expect.objectContaining({ kind: 'prompt', initialValue: 'docs/a.md' })]);
+    expect(await resumed).toEqual([enemy, { ...guide, path: 'notes/a.md' }]);
+  });
+
+  it('goes on after the item restored elsewhere, past those that came back', async () => {
+    const message = 'docs is already in the workspace. Restore it to another path.';
+    fakeApi.answer('explorer.restoreDeleted', () => ({ restored: 1, total: 3, refused: { kind: 'placeTaken', path: 'docs', message } }));
+
+    await restoreDeletedItems(ws, [enemy, docs, { ...enemy, path: 'src/Boss.cs' }]);
+
+    const resumed = nextRestore();
+    answerPrompts('old-docs');
+    pressToastAction('Restored 1 of 3 items');
+    expect(await resumed).toEqual([{ ...docs, path: 'old-docs' }, { ...enemy, path: 'src/Boss.cs' }]);
   });
 
   it('shows where the workspace already has an item, as another path would not help', async () => {
@@ -111,6 +136,14 @@ describe('restoreDeletedItems', () => {
     await restoreDeletedItems(ws, [enemy, docs, enemy, enemy, enemy]);
 
     expect(shownToasts()).toEqual([{ kind: 'info', title: 'Restored 2 of 5 items', detail: 'Stopped before the rest', action: 'View changes' }]);
+  });
+
+  it('says only that it stopped when nothing came back', async () => {
+    fakeApi.answer('explorer.restoreDeleted', () => ({ restored: 0, total: 25, stopped: true }));
+
+    await restoreDeletedItems(ws, [enemy, docs]);
+
+    expect(shownToasts()).toEqual([{ kind: 'info', title: 'Stopped', detail: 'Nothing was restored' }]);
   });
 
   it('tells any other failure as cm told it', async () => {
