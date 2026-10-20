@@ -14,6 +14,7 @@ import type { AppUpdates } from '../update/AppUpdates';
 import type { RepositoryTrees } from '../unity/RepositoryTrees';
 import type { RevisionDownloads } from '../unity/RevisionDownloads';
 import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
+import type { HandedOverDiffs } from '../window/HandedOverDiffs';
 import type { WorkspaceWindows } from '../window/WorkspaceWindows';
 import type { LeftChangesFinder } from '../workspace/leftChanges';
 import type { WorkspaceHeaders } from '../workspace/WorkspaceHeaders';
@@ -28,6 +29,8 @@ export interface ServiceContext {
   settings: SettingsStore;
   watchers: WorkspaceWatchers;
   windows: WorkspaceWindows;
+  /** The diffs a window hands to the page window it opens, read once there instead of with `cm diff` (`HandedOverDiffs`). */
+  handedOverDiffs: HandedOverDiffs;
   headers: WorkspaceHeaders;
   /** The revisions listings named, read from the workspace's disk where its files are those revisions (`WorkspaceCopies`). */
   workspaceCopies: WorkspaceCopies;

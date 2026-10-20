@@ -4,9 +4,11 @@ import type { CmClient } from '../cm/CmClient';
 import { DIFF_FORMAT, parseDiffEntries } from '../cm/diffEntries';
 import type { ServiceContext } from './ServiceContext';
 
-export function createDiffService({ cm }: ServiceContext): DiffApi {
+export function createDiffService({ cm, handedOverDiffs }: ServiceContext): DiffApi {
   return {
-    entries(workspacePath, target) {
+    async entries(workspacePath, target) {
+      const handedOver = handedOverDiffs.take(workspacePath, target);
+      if (handedOver) return handedOver;
       if (target.kind === 'branch') return branchEntries(cm, workspacePath, `br:${target.branch}`);
       return diffEntries(cm, workspacePath, targetSpecs(target));
     },

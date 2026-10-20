@@ -1,9 +1,11 @@
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import type { DiffEntry } from '@shared/domain/diff';
 import { DIFF_FORMAT } from '../cm/diffEntries';
 import { formatOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient } from '../cm/testing/fakeCmClient';
+import { HandedOverDiffs } from '../window/HandedOverDiffs';
 import { createDiffService } from './diffService';
 import { serviceContext } from './testing/serviceContext';
 
@@ -36,6 +38,22 @@ describe('diff entries', () => {
     await service.entries(WORKSPACE, { kind: 'range', fromSpec: 'cs:10', toSpec: 'lb:v1.0' });
 
     expect(commands.map((command) => command.args.slice(1, -2))).toEqual([['br:/main/task1', '--integration'], ['sh:3'], ['cs:10', 'lb:v1.0']]);
+  });
+});
+
+describe('a diff handed to a page window', () => {
+  it("is read once without cm, from what the window that opened it already read; again, it asks cm", async () => {
+    const handedOverDiffs = new HandedOverDiffs();
+    const fake = fakeCmClient({ diff: PLAYER_CHANGED });
+    const service = createDiffService(serviceContext(fake.cm, { handedOverDiffs }));
+    const target = { kind: 'changeset', changesetId: 37 } as const;
+    const handed: DiffEntry[] = [{ status: 'added', path: 'src/enemy.cs', itemType: 'file', baseRevisionId: -1, revisionId: 38, repository: 'game@local' }];
+    handedOverDiffs.hand(WORKSPACE, target, handed);
+
+    expect(await service.entries(WORKSPACE, target)).toEqual(handed);
+    expect(fake.commands).toEqual([]);
+    await service.entries(WORKSPACE, target);
+    expect(fake.lines()).toEqual([`diff cs:37 --repositorypaths --format=${DIFF_FORMAT}`]);
   });
 });
 
