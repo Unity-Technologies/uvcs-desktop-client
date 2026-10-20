@@ -85,7 +85,7 @@ function workspaceMergeSuccess({ keptVersionNotSaved = [], keptVersionMaybeNotSa
     kind: 'info',
     title: `Merge applied, but ${pluralize(keptVersionNotSaved.length || total, 'file')} ${title}`,
     detail: [
-      keptVersionNotSaved.length > 0 && `The version you kept of ${names(keptVersionNotSaved)} couldn't be saved.`,
+      keptVersionNotSaved.length > 0 && `Couldn't save the version you kept of ${names(keptVersionNotSaved)}.`,
       keptVersionMaybeNotSaved.length > 0 && `${names(keptVersionMaybeNotSaved)} may not hold the version you kept.`,
       `Check ${total === 1 ? 'it' : 'them'} before checking in.`,
     ]
