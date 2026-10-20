@@ -1,13 +1,14 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { Branch } from '@shared/domain/branch';
-import { EVERYONE, MINE } from '../../lib/peopleFilter';
+import { MINE } from '../../lib/peopleFilter';
+import { rememberedFilters } from '../../lib/viewFilters';
 import { whereTheWindowIs } from '../../testing/operationOutcome';
 import { branchMenu } from '../branches/branchMenu';
 import { graphMenu } from '../branchExplorer/graphMenu';
-import { branch as graphBranch, sampleHistory } from '../branchExplorer/model/graphFixtures';
+import { sampleHistory } from '../branchExplorer/model/graphFixtures';
 import { layoutGraph } from '../branchExplorer/model/layoutGraph';
-import { CURRENT_BRANCH } from './changesetFilters';
+import { CHANGESET_SESSION_FILTERS, CURRENT_BRANCH, pickedBranchFilters } from './changesetFilters';
 import { useChangesetFilters } from './changesetsViewStore';
 import { showBranchChangesets } from './showBranchChangesets';
 
@@ -20,13 +21,19 @@ function filtersShown() {
 }
 
 describe('Show changesets', () => {
-  it("opens Changesets on the branch's changesets, any time, with no text or people hiding some", () => {
-    useChangesetFilters.getState().update({ text: 'fix', people: MINE, since: 'lastWeek', ...CURRENT_BRANCH });
+  // One rule for both ways to pick a branch: its history shows, and what the view remembers stays as it was.
+  it('leaves what the view remembers as it was, from the menu and from the branch chip alike', () => {
+    const store = useChangesetFilters;
+    store.getState().update({ text: 'fix', people: MINE, since: 'lastWeek', ...CURRENT_BRANCH });
+    const remembered = () => rememberedFilters(store.getState(), CHANGESET_SESSION_FILTERS);
+    const before = remembered();
 
     showBranchChangesets(WORKSPACE, NESTED);
-
-    expect(filtersShown()).toEqual({ text: '', people: EVERYONE, since: 'anyTime', onlyCurrentBranch: false, pickedBranch: { workspacePath: WORKSPACE, name: NESTED } });
+    expect(remembered()).toEqual(before);
     expect(whereTheWindowIs().view).toBe('changesets');
+
+    store.getState().update(pickedBranchFilters(WORKSPACE, '/main/task'));
+    expect(remembered()).toEqual(before);
   });
 
   it("is in a branch's menu, in the Branches view and the Branch Explorer alike", () => {
@@ -38,7 +45,7 @@ describe('Show changesets', () => {
     (fromList as { run: () => void }).run();
     expect(filtersShown().pickedBranch).toEqual({ workspacePath: WORKSPACE, name: '/main/task' });
 
-    const layout = layoutGraph({ ...sampleHistory(), branches: [...sampleHistory().branches, graphBranch('/main/task', '/main', 5)] });
+    const layout = layoutGraph(sampleHistory());
     const context = { workspacePath: WORKSPACE, layout, currentBranch: '/main', loadedChangeset: 6, repository: 'game@local', goToChangeset: () => {}, showRelatedTo: () => {}, revealCreatedBranch: () => {} };
     const fromGraph = entryOf(graphMenu({ kind: 'branch', lane: layout.lanesByBranch.get('/main/a')! }, context));
     (fromGraph as { run: () => void }).run();
