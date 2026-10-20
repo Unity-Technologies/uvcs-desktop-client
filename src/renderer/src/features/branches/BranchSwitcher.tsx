@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { COPY_ENTRY_IDS } from '../../components/copyMenu';
+import { branchWorkedOn } from '../../components/workingObject';
 import { runningFirst } from '../../lib/actions';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { Button } from '../../ui/Button';
@@ -18,7 +19,7 @@ import { useBranches } from './useBranches';
 export function BranchSwitcher({ workspace, onDone }: { workspace: WorkspaceInfo; onDone: () => void }) {
   const { data: branches = [] } = useBranches();
   const recentGuids = useRecentBranchGuids(workspace.path);
-  const currentBranch = workspace.selector.kind === 'branch' ? workspace.selector.name : undefined;
+  const currentBranch = branchWorkedOn(workspace.selector);
   const groups = useMemo(() => branchSwitcherGroups(branches, recentGuids), [branches, recentGuids]);
 
   const pick = (branch: Branch): void => {

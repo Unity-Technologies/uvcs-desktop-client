@@ -10,6 +10,7 @@ import { useWorkspaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { SincePicker } from '../../components/SincePicker';
+import { branchWorkedOn } from '../../components/workingObject';
 import { matchesPeople, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
 import { longerRangeHint } from '../../lib/longerRangeHint';
@@ -50,7 +51,7 @@ export function BranchesView() {
 
   const [selection, setSelection] = useViewSelection('branches');
 
-  const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined;
+  const currentBranch = branchWorkedOn(workspace?.selector);
   // The tree lists siblings by name: sorted once per read, so typing a filter only filters.
   const listed = useMemo(() => (layout === 'tree' ? sortBranchesByName(branches ?? []) : (branches ?? [])), [layout, branches]);
   const matching = useMemo(() => filterBranches(listed, search, (owner) => matchesPeople(people, me, owner)), [listed, search, people, me]);

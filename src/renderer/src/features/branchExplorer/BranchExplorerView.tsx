@@ -6,6 +6,7 @@ import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useWorkspaceUser } from '../../app/account/accounts';
 import { ListWithDetails } from '../../components/ListWithDetails';
+import { branchWorkedOn } from '../../components/workingObject';
 import { EVERYONE, isEveryone, pickedNames } from '../../lib/peopleFilter';
 import { pluralize } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
@@ -64,7 +65,7 @@ export function BranchExplorerView() {
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(new Set());
 
   const repository = workspace?.repository ?? '';
-  const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : null;
+  const currentBranch = branchWorkedOn(workspace?.selector) ?? null;
   const homeChangeset = workspace?.loadedChangeset ?? null;
   // On a label or a changeset, the workspace's changes go on the loaded changeset's branch.
   const pendingBranch = useMemo(() => pendingBranchOf(currentBranch, homeChangeset, data?.changesets), [currentBranch, homeChangeset, data]);

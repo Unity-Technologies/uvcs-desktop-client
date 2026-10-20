@@ -1,6 +1,6 @@
 import { Archive, GitBranch, GitCommitVertical, Tag } from 'lucide-react';
 import { describe, expect, it } from 'vitest';
-import { selectorChip, workingObjectName } from './workingObject';
+import { branchWorkedOn, selectorChip, workingObjectName } from './workingObject';
 
 describe('workingObjectName', () => {
   it('shows branches and labels by name', () => {
@@ -23,5 +23,15 @@ describe('selectorChip', () => {
     expect(selectorChip({ kind: 'changeset', name: '12' })).toEqual({ icon: GitCommitVertical, text: 'cs:12', tip: 'Changeset', tipSub: 'cs:12' });
     expect(selectorChip({ kind: 'label', name: 'v1.0' }).icon).toBe(Tag);
     expect(selectorChip({ kind: 'shelve', name: '3' }).icon).toBe(Archive);
+  });
+});
+
+describe('branchWorkedOn', () => {
+  it('names the branch a workspace is on, and none while it is on anything else', () => {
+    expect(branchWorkedOn({ kind: 'branch', name: '/main/task' })).toBe('/main/task');
+    expect(branchWorkedOn({ kind: 'changeset', name: '12' })).toBeUndefined();
+    expect(branchWorkedOn({ kind: 'label', name: 'v1.0' })).toBeUndefined();
+    expect(branchWorkedOn({ kind: 'shelve', name: '3' })).toBeUndefined();
+    expect(branchWorkedOn(undefined)).toBeUndefined();
   });
 });
