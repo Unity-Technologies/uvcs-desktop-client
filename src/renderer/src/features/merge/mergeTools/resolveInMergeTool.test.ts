@@ -24,12 +24,24 @@ const prefab = (changes: Partial<FileConflictState> = {}): FileConflictState => 
   ...changes,
 });
 
-/** Resolves the file, main answering Smart Merge with `smartMerged` and the tool with `saved`; what showed as open. */
-async function resolve(state: FileConflictState, smartMerged: SmartMergeOutcome, saved: MergeToolOutcome = { kind: 'resolved', text: 'by hand\n' }) {
-  fakeApi.answer('mergeTools.smartMerge', async () => smartMerged);
+/**
+ * Resolves the file, main answering Smart Merge with `smartMerged` and the tool with `saved`; what showed as open.
+ * `decidedMeanwhile`: the user decides the file in the app while Smart Merge runs. `withUnity`: Smart Merge was found.
+ */
+async function resolve(
+  state: FileConflictState,
+  smartMerged: SmartMergeOutcome,
+  { saved = { kind: 'resolved', text: 'by hand\n' }, decidedMeanwhile = false, withUnity = true }: { saved?: MergeToolOutcome; decidedMeanwhile?: boolean; withUnity?: boolean } = {},
+) {
+  let decided = false;
+  fakeApi.answer('mergeTools.smartMerge', async () => {
+    decided = decidedMeanwhile;
+    return smartMerged;
+  });
   fakeApi.answer('mergeTools.resolve', async () => saved);
   const shown: (string | null)[] = [];
-  const session = await resolveInMergeTool('/wk', state, vsCode, labels, (open: OpenTool | null) => shown.push(open && `${open.toolName}${open.canBringToFront ? ' (front)' : ''}`), true);
+  const onOpen = (open: OpenTool | null) => shown.push(open && `${open.toolName}${open.canBringToFront ? ' (front)' : ''}`);
+  const session = await resolveInMergeTool('/wk', state, vsCode, labels, onOpen, { quiet: true, smartMerge: withUnity, stillUndecided: () => !decided });
   return { session, shown, methods: fakeApi.methods() };
 }
 
@@ -50,6 +62,23 @@ describe('resolveInMergeTool', () => {
     expect(session.decision).toEqual({ kind: 'text', text: 'by hand\n', tool: 'VS Code' });
     expect(shown).toEqual(['Smart Merge', null, 'VS Code (front)', null]);
     expect(methods).toEqual(['mergeTools.smartMerge', 'mergeTools.resolve']);
+  });
+
+  it.each([{ kind: 'merged', text: 'merged\n' }, { kind: 'notMerged' }] as const)(
+    'keeps what the user decided in the app while Smart Merge ran, and opens nothing (Smart Merge: $kind)',
+    async (smartMerged) => {
+      const { session, methods } = await resolve(prefab(), smartMerged, { decidedMeanwhile: true });
+
+      expect(session).toEqual({ outcome: { kind: 'unchanged', exitCode: null, errorOutput: '' }, decision: undefined });
+      expect(methods).toEqual(['mergeTools.smartMerge']);
+    },
+  );
+
+  it('opens the tool straight away without a Unity Editor, never showing Smart Merge at work', async () => {
+    const { shown, methods } = await resolve(prefab(), { kind: 'merged', text: 'never\n' }, { withUnity: false });
+
+    expect(shown).toEqual(['VS Code (front)', null]);
+    expect(methods).toEqual(['mergeTools.resolve']);
   });
 
   it('opens nothing more when the user stops Smart Merge', async () => {

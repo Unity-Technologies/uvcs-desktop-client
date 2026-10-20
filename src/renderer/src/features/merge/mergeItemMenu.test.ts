@@ -242,4 +242,15 @@ describe('mergeItemMenu', () => {
     expect(decide.mock.calls.map(([key]) => key)).toEqual(['/a.ts', '/b.ts']);
     expect(isSubmenu(entry(menu, 'copy'))).toBe(true);
   });
+
+  it('settles nothing for a file a tool or Smart Merge has open, as its toolbar offers nothing then: the outcome decides it', () => {
+    const open = { sessionId: 's', toolName: 'Smart Merge', canBringToFront: false };
+    expect(ids(menuOf([conflict('a.prefab', { openTool: open, decidedByUser: true })]))).not.toContain('keepDestination');
+    expect(ids(menuOf([conflict('a.prefab', { openTool: open, decidedByUser: true })]))).not.toContain('startOver');
+
+    const decide = vi.fn();
+    const menu = menuOf([conflict('a.prefab', { openTool: open }), conflict('b.ts')], { decide });
+    (entry(menu, 'keepSource') as Action).run();
+    expect(decide.mock.calls.map(([key]) => key)).toEqual(['/b.ts']);
+  });
 });
