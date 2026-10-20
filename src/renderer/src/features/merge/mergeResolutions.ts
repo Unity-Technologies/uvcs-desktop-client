@@ -1,4 +1,5 @@
 import type { DirectoryConflictResolution, FileConflictResolution, MergePlan, MergeResolutions } from '@shared/domain/merge';
+import { directoryConflictStatus } from './mergeStatus';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
 interface CollectResolutionsInput {
@@ -11,7 +12,7 @@ interface CollectResolutionsInput {
 /** Everything the merge needs, or null while any conflict still waits for the user. */
 export function collectResolutions({ plan, fileStates, directoryResolutions, comment }: CollectResolutionsInput): MergeResolutions | null {
   const directoryConflicts = plan.directoryConflicts.map((_, index) => directoryResolutions[index]);
-  if (directoryConflicts.some((resolution) => !resolution)) return null;
+  if (directoryConflicts.some((resolution) => directoryConflictStatus(resolution) === 'needsDecision')) return null;
 
   const files: Record<string, FileConflictResolution> = {};
   for (const state of fileStates) {

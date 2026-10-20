@@ -1,6 +1,6 @@
 import { FolderTree } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { RENAMEABLE_CONFLICTS, type ConflictSide, type DirectoryConflict, type DirectoryConflictResolution } from '@shared/domain/merge';
+import { isValidRenameName, RENAMEABLE_CONFLICTS, type ConflictSide, type DirectoryConflict, type DirectoryConflictResolution } from '@shared/domain/merge';
 import { PathLabel } from '../../../components/PathLabel';
 import { TextField } from '../../../ui/TextField';
 import type { MergeLabels } from '../mergeDescription';
@@ -58,7 +58,7 @@ export function DirectoryConflictPanel({ conflict, labels, resolution, onResolve
                 label={`New name for ${destination.name.toLowerCase()}`}
                 value={resolution.newName}
                 onChange={(event) => onResolve({ choice: 'rename', newName: event.target.value })}
-                error={/[\\/]/.test(resolution.newName) || !resolution.newName.trim() ? 'Enter a file name without folders.' : undefined}
+                error={isValidRenameName(resolution.newName) ? undefined : 'Enter a file name without folders.'}
               />
             )}
           </Option>

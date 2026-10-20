@@ -197,5 +197,13 @@ export function hasMergeBase(conflict: FileConflict): boolean {
   return conflict.baseChangeset >= 0;
 }
 
+/**
+ * Whether "Keep both" can rename the destination's item to `newName`: one name in its folder, never a path, `.` or
+ * `..`. The merge page counts the conflict as decided only then, and the merge refuses anything else.
+ */
+export function isValidRenameName(newName: string): boolean {
+  return newName.trim() !== '' && !/[\\/]/.test(newName) && newName !== '.' && newName !== '..';
+}
+
 /** Directory conflicts where keeping both items under a new name is possible. */
 export const RENAMEABLE_CONFLICTS: ReadonlySet<DirectoryConflictType> = new Set(['evilTwin', 'movedEvilTwin', 'addMove', 'moveAdd']);

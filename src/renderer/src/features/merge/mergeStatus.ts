@@ -1,4 +1,4 @@
-import type { DirectoryConflictResolution, MergeChange } from '@shared/domain/merge';
+import { isValidRenameName, type DirectoryConflictResolution, type MergeChange } from '@shared/domain/merge';
 import { SMART_MERGE_NAME } from '@shared/domain/mergeTools';
 import type { StatusTone as ChangeTone } from '../../components/StatusBadge';
 import { pluralize } from '../../lib/text';
@@ -81,7 +81,7 @@ export function directoryConflictStatus(resolution: DirectoryConflictResolution 
     case 'destination':
       return 'keepingDestination';
     case 'rename':
-      return 'keepingBoth';
+      return isValidRenameName(resolution.newName) ? 'keepingBoth' : 'needsDecision';
   }
 }
 
