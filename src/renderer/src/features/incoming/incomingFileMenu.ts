@@ -2,7 +2,7 @@ import type { DiffEntry } from '@shared/domain/diff';
 import type { MergeTool } from '@shared/domain/mergeTools';
 import type { MenuEntry } from '../../lib/actions';
 import { diffEntryMenu } from '../diff/diffEntryMenu';
-import { conflictMenuEntries } from '../merge/resolve/conflictMenuEntries';
+import { conflictMenuEntries, withConflictOpening } from '../merge/resolve/conflictMenuEntries';
 import type { FileConflictDecision } from '../merge/resolve/fileConflictDecision';
 import type { FileConflictState } from '../merge/resolve/useFileConflicts';
 import { incomingDiffTarget, type IncomingScope } from './incomingScope';
@@ -34,11 +34,12 @@ export function incomingFileMenu(selected: DiffEntry[], context: IncomingFileMen
   const { workspacePath, scope, loadedChangeset, headChangeset } = context;
   const conflicts = scope.kind === 'all' ? selected.flatMap((file) => context.conflictOf(file.path) ?? []) : [];
   const target = incomingDiffTarget(scope, loadedChangeset, headChangeset);
-  return diffEntryMenu(
+  const menu = diffEntryMenu(
     workspacePath,
     target,
     selected,
     undefined,
     conflictMenuEntries(conflicts, { ...context, labels: UPDATE_LABELS, yoursInWorkspace: true }),
   );
+  return withConflictOpening(menu, conflicts);
 }

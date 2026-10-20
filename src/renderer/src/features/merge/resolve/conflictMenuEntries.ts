@@ -1,7 +1,7 @@
 import type { MergeTool } from '@shared/domain/mergeTools';
 import { currentExternalApps } from '../../../components/externalApps/externalApps';
 import { menuAction, menuSubmenu } from '../../../components/menuWords';
-import type { Action } from '../../../lib/actions';
+import { withoutAction, type Action, type MenuEntry } from '../../../lib/actions';
 import type { GroupedEntry } from '../../../lib/menuGroups';
 import { oneClickApp, openableVersions, type VersionOpeningContext } from './conflictVersionOpening';
 import type { FileConflictDecision } from './fileConflictDecision';
@@ -35,6 +35,17 @@ export function conflictMenuEntries(selected: FileConflictState[], context: Conf
     ),
     ...(single?.decidedByUser ? [menuAction('startOver', () => context.reset(single.file.key))] : []),
   ];
+}
+
+/**
+ * A list's menu once the conflicts selected are in it: one binary conflict opens its versions only from "Open version
+ * ▸", with their default app; the list's own "Open this revision in <editor>" would open the incoming one a second
+ * way, in an editor. Saving it stays.
+ */
+export function withConflictOpening(menu: MenuEntry[], selected: FileConflictState[]): MenuEntry[] {
+  const single = selected.length === 1 ? selected[0]! : null;
+  if (!single?.isBinary) return menu;
+  return withoutAction(withoutAction(menu, 'openRevision'), 'openRevisionWith');
 }
 
 /** "Resolve in <tool>" (a text file, a tool found) and "Open version ▸" with each side's version and the base. */

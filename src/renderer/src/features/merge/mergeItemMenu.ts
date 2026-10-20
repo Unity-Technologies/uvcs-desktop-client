@@ -9,7 +9,7 @@ import type { GroupedEntry } from '../../lib/menuGroups';
 import { annotatedHistory } from '../history/annotatedHistory';
 import { suggestRename } from './directoryConflicts/renameSuggestion';
 import { fileStateOf, type MergeItem, type MergeProgress } from './mergeItems';
-import { conflictMenuEntries, type ConflictMenuContext } from './resolve/conflictMenuEntries';
+import { conflictMenuEntries, withConflictOpening, type ConflictMenuContext } from './resolve/conflictMenuEntries';
 
 /** What the merge page knows and can do, for the menu of what it lists. */
 export interface MergeMenuContext extends Omit<ConflictMenuContext, 'yoursInWorkspace'> {
@@ -34,7 +34,8 @@ export function mergeItemMenu(items: MergeItem[], context: MergeMenuContext): Me
     ...(single?.kind === 'directoryConflict' ? directoryConflictEntries(single, context) : []),
   ];
   const files = items.map((item) => changedFileOf(item, context));
-  return changedFileMenu(context.workspacePath, single ? files : files.map((file) => ({ ...file, history: null, annotation: null, version: null })), added);
+  const menu = changedFileMenu(context.workspacePath, single ? files : files.map((file) => ({ ...file, history: null, annotation: null, version: null })), added);
+  return withConflictOpening(menu, conflicts);
 }
 
 /** Keep yours, keep incoming, and keep both (yours under the name its panel suggests) where both can stay. */
