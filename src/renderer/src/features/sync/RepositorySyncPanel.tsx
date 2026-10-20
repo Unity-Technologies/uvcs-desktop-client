@@ -4,19 +4,21 @@ import type { Branch } from '@shared/domain/branch';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { PathLabel } from '../../components/PathLabel';
 import { RepositoryPicker } from '../../components/RepositoryPicker';
+import { hidesEveryRow } from '../../lib/hidesEveryRow';
 import { EMPTY_SELECTION } from '../../lib/selection';
 import { Button } from '../../ui/Button';
 import { prompt } from '../../ui/dialog/prompt';
 import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
+import { NoMatches } from '../../ui/NoMatches';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { FilterField } from '../../ui/FilterField';
-import { CenteredSpinner } from '../../ui/Spinner';
 import { UserLabel } from '../../ui/Avatar';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { userFilterTexts } from '../../lib/userName';
 import type { Column } from '../../ui/table/column';
 import { DataTable } from '../../ui/table/DataTable';
+import { TableSkeleton } from '../../ui/table/TableSkeleton';
 import { useBranches } from '../branches/useBranches';
 import { syncBranchMenu, type BranchSync } from './syncBranchMenu';
 import { pullBranch, pushBranch } from './syncOperations';
@@ -30,7 +32,7 @@ export function RepositorySyncPanel({ localRepository }: { localRepository: stri
   const setRemote = useSyncTargetStore((state) => state.setRemote);
   const [filter, setFilter] = useState('');
   const [selection, setSelection] = useState(EMPTY_SELECTION);
-  const { data: branches, isLoading } = useBranches();
+  const { data: branches, isPending } = useBranches();
 
   // Arrowing through a repository's 20,000 branches renders the panel on every step: the rows, their columns and their
   // filter stay the same objects, so the table neither sorts nor filters them again.
@@ -90,13 +92,15 @@ export function RepositorySyncPanel({ localRepository }: { localRepository: stri
         </Button>
       </div>
 
-      {isLoading ? (
-        <CenteredSpinner />
-      ) : shown.length === 0 ? (
-        <EmptyState title="No branches" />
+      {/* The table's own column titles over placeholder rows while the branches are read, and over what says why it's empty. */}
+      {isPending ? (
+        <TableSkeleton columns={columns} />
       ) : (
         <HighlightQuery query={filter}>
           <DataTable
+            empty={
+              hidesEveryRow(branches?.length ?? 0, shown.length) ? <NoMatches noun="branches" onClear={() => setFilter('')} /> : <EmptyState title="No branches" />
+            }
             rows={shown}
             columns={columns}
             rowKey={branchName}
