@@ -9,6 +9,7 @@ import { matchesShortcut } from '../../lib/shortcuts';
 import { treeArrowMove } from '../../lib/treeArrowMove';
 import type { Column } from '../../ui/table/column';
 import { DataTable } from '../../ui/table/DataTable';
+import { TableSkeleton } from '../../ui/table/TableSkeleton';
 import { fileTreeArrowRows, indentOf, type FileTreeRow } from './fileTreeRows';
 import { ItemIcon } from '../../components/ItemIcon';
 import { ItemRow } from '../../components/ItemRow';
@@ -24,6 +25,16 @@ import styles from './FileTreeTable.module.css';
 
 /** Below this width the tree shows names only: a deep path's name needs the room more than its date. */
 const MODIFIED_COLUMN_MIN_WIDTH = 420;
+
+// Where each column sits, shared with the skeleton, so the tree keeps its header and widths as it loads.
+const NAME_COLUMN = { id: 'name', header: 'Name' } as const;
+const DATE_COLUMN = { id: 'date', header: 'Modified', width: 112, secondary: true, hideBelow: MODIFIED_COLUMN_MIN_WIDTH } as const;
+const SKELETON_COLUMNS: Column<FileTreeRow>[] = [NAME_COLUMN, DATE_COLUMN].map((column) => ({ ...column, render: () => null }));
+
+/** The tree while the workspace's root is read: its header over placeholder rows, at the real row height. */
+export function FileTreeSkeleton() {
+  return <TableSkeleton columns={SKELETON_COLUMNS} rowHeight={28} />;
+}
 
 /** Stable, so the table doesn't re-key every row on each render (a selection change). */
 const rowKey = (row: FileTreeRow): string => row.item.path;
@@ -67,8 +78,7 @@ export function FileTreeTable({
   // Name and when it last changed: the rest (size, changeset, author, comment) is the selected item's, on its pane.
   const columns: Column<FileTreeRow>[] = [
     {
-      id: 'name',
-      header: 'Name',
+      ...NAME_COLUMN,
       render: (row) => (
         <NameCell
           row={row}
@@ -81,11 +91,7 @@ export function FileTreeTable({
       ),
     },
     {
-      id: 'date',
-      header: 'Modified',
-      width: 112,
-      secondary: true,
-      hideBelow: MODIFIED_COLUMN_MIN_WIDTH,
+      ...DATE_COLUMN,
       render: (row) => {
         const date = statusOf?.(row.item)?.onDisk?.date || row.item.date;
         return date && <RelativeTime date={date} />;
