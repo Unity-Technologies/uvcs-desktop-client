@@ -23,3 +23,9 @@
 .bar > div {
   height: 1px;
 }
+
+/* While the bars show, what the view scrolls into sight (the caret as it types or moves, a focused line) stops a gap
+   clear of them, not under them: the browser keeps it within the view less its scroll padding. */
+:has(> .bars) {
+  scroll-padding-bottom: calc(var(--scrollbar-size) + var(--space-2));
+}
