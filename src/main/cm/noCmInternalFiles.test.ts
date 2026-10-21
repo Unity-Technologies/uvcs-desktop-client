@@ -8,13 +8,13 @@ import { literalsOf, withoutComments } from '@shared/testing/sourceLiterals';
  * `cm` owns its files: the app asks `cm` commands, never reads what `cm` keeps for itself, whose format is `cm`'s to
  * change. Those are a workspace's metadata (`.plastic/`: `plastic.selector`, `plastic.wktree`, `changelists/`...) and
  * the user's config folder (`plasticConfigFolder`, `PLASTIC_HOME`: `client.conf`, `tokens.conf`, `plastic.workspaces`,
- * `*.token`, `<guid>.key`, `globalconfig/`...). This scans the literals of the app's sources for those names, and holds
- * each module that names them to the file system functions it may import. `testing/` folders are left out: their fakes play `cm`'s part, as the
- * smoke test's fixture does. The workspace's own rule files (`ignore.conf`...) are the user's, not `cm`'s.
+ * `*.token`, `<guid>.key`, `globalconfig/`...). This scans the literals of every app source under `src/` for those
+ * names, and holds each module allowed to name them (and the first-run import's parser) to exactly the file system
+ * functions it may import. `testing/` folders are left out: their fakes play `cm`'s part, as the smoke test's fixture
+ * does. The workspace's own rule files (`ignore.conf`...) are the user's, not `cm`'s.
  */
 
 const SRC_DIRECTORY = join(__dirname, '..', '..');
-const SCANNED_TIERS = ['main', 'renderer', 'shared'];
 
 /**
  * Plain-line files at the workspace's root that the user writes, often checked in, and no `cm` command manages: not
@@ -27,13 +27,12 @@ interface Allowance {
   why: string;
   /** Exactly what it imports from `node:fs` and `node:fs/promises`; types aside. */
   fileSystem: string[];
-  /** Every read it makes names one of these files. */
-  readsOnly?: Set<string>;
 }
 
 const ALLOWED: Record<string, Allowance> = {
   'main/plasticConfig/configFolder.ts': { fileSystem: [], why: 'where the official client keeps its config, for the first-run import' },
   'main/settings/importLegacySettings.ts': { fileSystem: ['readFileSync'], why: 'the first-run import, which reads plasticgui.conf once' },
+  'main/plasticConfig/recentBranchesConf.ts': { fileSystem: [], why: 'parses plasticgui.conf for the first-run import, which reads it' },
   'main/watch/classifyChange.ts': { fileSystem: [], why: 'the files cm rewrites in .plastic are refresh signals for the watcher' },
   'main/watch/WorkspaceWatcher.ts': { fileSystem: [], why: 'watches .plastic for rewrites' },
   'main/files/listWorkspacePaths.ts': { fileSystem: ['readdir'], why: 'skips .plastic when listing the workspace’s own files' },
@@ -44,24 +43,19 @@ const ALLOWED: Record<string, Allowance> = {
   },
 };
 
-/** The modules that reach the official client's config folder: the first-run import's. */
-const LEGACY_READERS = ['main/plasticConfig/configFolder.ts', 'main/plasticConfig/recentBranchesConf.ts', 'main/settings/importLegacySettings.ts'];
-
-const FILE_WRITES = new Set(
-  'writeFile writeFileSync appendFile appendFileSync rename renameSync mkdir mkdirSync rm rmSync unlink unlinkSync copyFile copyFileSync createWriteStream'.split(' '),
-);
-
 /**
- * A `.key` file of the config folder: `cm` names each after a GUID, `<guid>.key`, or `${id}.key` in a template. Any
- * other `*.key` would take a template's `${file.key}` or `${bar.motion?.key}` for one.
+ * A `.key` file of the config folder: `cm` names each after a GUID. Any other `*.key` would take a template's
+ * `${file.key}` or `${bar.motion?.key}` for one.
  */
 const KEY_FILE = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\.key$/;
-const KEY_FILE_AFTER_PLACEHOLDER = /\}\.key(?!\w)/;
+/** A file named in a template, `${server}.token` or `${id}.key`: an extension after a placeholder. */
+const FILE_AFTER_PLACEHOLDER = /\}\.(conf|token|key)(?!\w)/;
 
 /**
  * A file or folder `cm` keeps for itself: `.plastic` and the `plastic.*` files in it, the config folder (`plastic4`),
- * its `globalconfig` folder and its `*.conf`, `*.token` and `<guid>.key` files. `globalconfig` is matched as `cm`
- * writes it, so a `globalConfig` name isn't one; `plastic.exe` is the official client, a merge tool the user may pick.
+ * its `globalconfig` folder and its `*.conf`, `*.token` and `<guid>.key` files; an extension alone (`.conf`) names no
+ * file. `globalconfig` is matched as `cm` writes it, so a `globalConfig` name isn't one; `plastic.exe` is the official
+ * client, a merge tool the user may pick.
  */
 function isCmFileName(word: string): boolean {
   const name = word.toLowerCase();
@@ -72,21 +66,22 @@ function isCmFileName(word: string): boolean {
     name === '.plastic4' ||
     word === 'globalconfig' ||
     /^plastic\.(?!exe$)\w+$/.test(name) ||
-    /^[\w.-]*\.(conf|token)$/.test(name) ||
+    /^[\w.-]+\.(conf|token)$/.test(name) ||
     KEY_FILE.test(name)
   );
 }
 
 /** Whether a literal names one of `cm`'s files, in a path of either form or a regular expression. */
 function namesCmFile(literal: string): boolean {
-  return KEY_FILE_AFTER_PLACEHOLDER.test(literal) || literal.split(/[^\w.-]+/).some(isCmFileName);
+  return FILE_AFTER_PLACEHOLDER.test(literal) || literal.split(/[^\w.-]+/).some(isCmFileName);
 }
 
-/** Whether a module names `cm`'s files: in a literal, or the config folder's environment variable anywhere. */
-function namesCmFiles(code: string): boolean {
-  if (/\bPLASTIC_HOME\b/.test(code)) return true;
+/** What names `cm`'s files in a module: its literals that do, and the config folder's environment variable. */
+function cmFilesNamedIn(code: string): string[] {
+  const named = /\bPLASTIC_HOME\b/.test(code) ? ['PLASTIC_HOME'] : [];
   // Most modules can't name one: only those that hold the words are read literal by literal.
-  return /plastic|globalconfig|\.conf|\.token|\.key/i.test(code) && literalsOf(code).some(namesCmFile);
+  if (!/plastic|globalconfig|\.conf|\.token|\.key/i.test(code)) return named;
+  return [...named, ...literalsOf(code).filter(namesCmFile)];
 }
 
 const FILE_SYSTEM_MODULE = `['"](?:node:)?fs(?:/promises)?['"]`;
@@ -112,26 +107,10 @@ function fileSystemImportsOf(code: string): string[] {
   return names.sort();
 }
 
-/** Each call of one of `functions` in `code`, with its arguments. */
-function callsOf(code: string, functions: string[]): string[] {
-  const calls: string[] = [];
-  for (const match of code.matchAll(new RegExp(`\\b(${functions.join('|')})\\s*\\(`, 'g'))) {
-    let depth = 0;
-    let end = match.index + match[0].length - 1;
-    for (; end < code.length; end++) {
-      if (code[end] === '(') depth++;
-      if (code[end] === ')' && --depth === 0) break;
-    }
-    calls.push(code.slice(match.index, end + 1));
-  }
-  return calls;
-}
-
 const relative = (file: string): string => file.slice(SRC_DIRECTORY.length + 1).split(sep).join('/');
-const sources = SCANNED_TIERS.flatMap((tier) => filesUnder(join(SRC_DIRECTORY, tier), isAppSource))
+const sources = filesUnder(SRC_DIRECTORY, isAppSource)
   .map((file) => ({ file: relative(file), code: withoutComments(readFileSync(file, 'utf8')) }))
   .filter(({ file }) => !file.split('/').includes('testing'));
-const codeOf = (file: string): string => sources.find((source) => source.file === file)!.code;
 const filesWhere = (test: (code: string) => boolean): string[] => sources.filter(({ code }) => test(code)).map(({ file }) => file).sort();
 
 describe('namesCmFile', () => {
@@ -141,7 +120,7 @@ describe('namesCmFile', () => {
   });
 
   it('knows the config folder and its files', () => {
-    const names = ['plastic4', '~/.plastic4/client.conf', 'tokens.conf', 'plastic.workspaces', 'plasticgui.conf', 'cloud.server.token', '${server}.token'];
+    const names = ['plastic4', '~/.plastic4/client.conf', 'tokens.conf', 'plastic.workspaces', 'plasticgui.conf', 'cloud.server.token', '${server}.token', '${name}.conf'];
     expect(names.filter(namesCmFile)).toEqual(names);
   });
 
@@ -152,6 +131,10 @@ describe('namesCmFile', () => {
 
   it("leaves the workspace's rule files and other names alone", () => {
     expect(['ignore.conf', 'cloaked.conf', 'hidden_changes.conf', '.plasticignore', 'plastic.exe', 'plastic', 'Assets/Plastic/readme.md', 'conf'].filter(namesCmFile)).toEqual([]);
+  });
+
+  it('leaves an extension alone, which names no file', () => {
+    expect(['.conf', '.token', '.key', '*.conf', 'files ending in .token'].filter(namesCmFile)).toEqual([]);
   });
 
   it("leaves a template's `.key` reads and a `globalConfig` name alone", () => {
@@ -179,19 +162,18 @@ describe('fileSystemImportsOf', () => {
 
 describe("cm's own files", () => {
   it('are named only by the modules allowed to, each for its reason', () => {
-    expect(filesWhere(namesCmFiles)).toEqual(Object.keys(ALLOWED).sort());
+    const named = sources.filter(({ file }) => !(file in ALLOWED)).map(({ file, code }) => [file, cmFilesNamedIn(code)] as const);
+    const unlisted = Object.fromEntries(named.filter(([, names]) => names.length > 0));
+    expect(unlisted).toEqual({});
   });
 
-  it('are named only by modules that import from the file system just what their reason needs', () => {
-    const imports = Object.fromEntries(Object.keys(ALLOWED).map((file) => [file, fileSystemImportsOf(codeOf(file))]));
+  it('are named only by modules that import from the file system exactly what their reason needs', () => {
+    const importsOf = (file: string): string[] => {
+      const source = sources.find((candidate) => candidate.file === file);
+      return source ? fileSystemImportsOf(source.code) : ['no such module'];
+    };
+    const imports = Object.fromEntries(Object.keys(ALLOWED).map((file) => [file, importsOf(file)]));
     expect(imports).toEqual(Object.fromEntries(Object.entries(ALLOWED).map(([file, { fileSystem }]) => [file, [...fileSystem].sort()])));
-  });
-
-  it('are never read by a module allowed to read only some files: each read names one of them', () => {
-    const otherReads = Object.entries(ALLOWED).flatMap(([file, { fileSystem, readsOnly }]) =>
-      readsOnly && fileSystem.length > 0 ? callsOf(codeOf(file), fileSystem).filter((call) => !literalsOf(call).some((literal) => readsOnly.has(literal))) : [],
-    );
-    expect(otherReads).toEqual([]);
   });
 });
 
@@ -199,10 +181,5 @@ describe("the official client's config", () => {
   it('is reached only by the first-run import, wired once at start', () => {
     expect(filesWhere((code) => code.includes('plasticConfigFolder('))).toEqual(['main/plasticConfig/configFolder.ts', 'main/startup/settings.ts']);
     expect(filesWhere((code) => /from '\.\.?\/(\.\.\/)?plasticConfig\//.test(code))).toEqual(['main/settings/importLegacySettings.ts', 'main/startup/settings.ts']);
-  });
-
-  it('is only read: the modules that reach it import no way to write a file', () => {
-    const writers = LEGACY_READERS.filter((file) => fileSystemImportsOf(codeOf(file)).some((name) => name === '*' || FILE_WRITES.has(name)));
-    expect(writers).toEqual([]);
   });
 });
