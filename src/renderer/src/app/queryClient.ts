@@ -1,9 +1,9 @@
 import { QueryClient, type Query } from '@tanstack/react-query';
-import type { WorkspaceInfo } from '@shared/domain/workspace';
+import type { WorkspaceInfo, WorkspaceSelector } from '@shared/domain/workspace';
 import { queryKeys, workspaceKey } from '../api/queryKeys';
 import { boundUnusedQueries } from './boundUnusedQueries';
 import { heldContentBytes } from './heldContentBytes';
-import { workspaceInfoKeyMoved, type WorkspaceInfoPart } from './refresh/headChanges';
+import { selectorChanged, workspaceInfoKeyMoved, type WorkspaceInfoPart } from './refresh/headChanges';
 import { trackWindowFocus } from './refresh/trackWindowFocus';
 
 trackWindowFocus();
@@ -102,11 +102,20 @@ export async function invalidateWorkspaceIn(
     client.invalidateQueries({ queryKey, predicate: (query) => keyed(query) && !moved(query) }),
     // The lists of workspaces show this one's branch too: read again as they show, as reading every head costs a
     // `cm wi` per workspace (`workspaceHeadsQuery`).
-    selectorMoved(before, after) && client.invalidateQueries({ queryKey: queryKeys.everyWorkspaceHeads, refetchType: 'none' }),
+    selectorMoved(selectorIn(before), selectorIn(after)) && client.invalidateQueries({ queryKey: queryKeys.everyWorkspaceHeads, refetchType: 'none' }),
   ]);
 }
 
+/**
+ * The selector of what the cache holds under the workspace info's key, if it holds one: `getQueryData` only casts, so
+ * a value put there by other code (a placeholder, a partial entry) has none to compare.
+ */
+function selectorIn(cached: unknown): WorkspaceSelector | undefined {
+  const selector = (cached as { selector?: unknown } | undefined)?.selector as Partial<WorkspaceSelector> | undefined;
+  return typeof selector?.kind === 'string' && typeof selector.name === 'string' ? (selector as WorkspaceSelector) : undefined;
+}
+
 /** Whether the workspace is on another branch, label, changeset or shelve than before the operation. */
-function selectorMoved(before: WorkspaceInfo | undefined, after: WorkspaceInfo | undefined): boolean {
-  return before !== undefined && after !== undefined && workspaceInfoKeyMoved('selector', before, after);
+function selectorMoved(before: WorkspaceSelector | undefined, after: WorkspaceSelector | undefined): boolean {
+  return before !== undefined && after !== undefined && selectorChanged({ selector: before }, { selector: after });
 }
