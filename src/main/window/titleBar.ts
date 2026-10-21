@@ -8,11 +8,16 @@ const TRAFFIC_LIGHTS = { x: 16, y: 16 };
 const TRAFFIC_LIGHTS_ABOVE_MIDDLE = TITLE_BAR_HEIGHT / 2 - TRAFFIC_LIGHTS.y;
 
 /**
- * The top bar's height in window points at a page zoom (View > Zoom In, Zoom Out: `zoomPage`): the page draws it
- * `TITLE_BAR_HEIGHT` CSS pixels tall, and the zoom scales those.
+ * The top bar's height in window points at a page zoom (View > Zoom In, Zoom Out: `zoomPage`), unrounded: the page
+ * draws it `TITLE_BAR_HEIGHT` CSS pixels tall, and the zoom scales those.
  */
+function scaledTopBarHeight(zoom: number): number {
+  return TITLE_BAR_HEIGHT * zoom;
+}
+
+/** The top bar's height in whole window points at a page zoom. */
 export function topBarHeightAt(zoom: number): number {
-  return Math.round(TITLE_BAR_HEIGHT * zoom);
+  return Math.round(scaledTopBarHeight(zoom));
 }
 
 /**
@@ -20,7 +25,7 @@ export function topBarHeightAt(zoom: number): number {
  * in window points: `--window-zoom`), and centered in the top bar, which grows and shrinks with the zoom.
  */
 export function trafficLightsAt(zoom: number): Point {
-  const y = Math.round((TITLE_BAR_HEIGHT * zoom) / 2 - TRAFFIC_LIGHTS_ABOVE_MIDDLE);
+  const y = Math.round(scaledTopBarHeight(zoom) / 2 - TRAFFIC_LIGHTS_ABOVE_MIDDLE);
   return { x: TRAFFIC_LIGHTS.x, y: Math.max(0, y) };
 }
 
