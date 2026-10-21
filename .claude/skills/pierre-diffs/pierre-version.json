@@ -1,10 +1,12 @@
 {
   "package": "@pierre/diffs",
-  "version": "1.5.1",
-  "source": "https://github.com/pierrecomputer/pierre/tree/diffs-v1.5.1/skills/diffs",
-  "commit": "8f360ae1b39fcbbdaccacbcd8dbbf94fb10a3c38",
+  "version": "1.6.0",
+  "source": "https://github.com/pierrecomputer/pierre/tree/diffs-v1.6.0/skills/diffs",
+  "commit": "5fb74016274614422ff63cfe5afa2bfef9f4c087",
+  "installedWith": "npx skills add https://github.com/pierrecomputer/pierre/tree/diffs-v1.6.0/skills --skill diffs --skill highlights -a claude-code --copy -y, then the folders renamed to pierre-diffs and pierre-highlights and skills-lock.json removed",
   "localChanges": [
-    "LICENSE.md: Pierre's LICENSE.md (Apache-2.0) from the same tag, which the skill folder doesn't include",
-    "SKILL.md: the link to ../highlights/SKILL.md points to that file on GitHub at the same tag, as the highlights skill isn't installed"
+    "Folder and SKILL.md name: pierre-diffs instead of diffs, so the skill reads as Pierre's beside the app's own diff code",
+    "SKILL.md: the link to the highlights skill points to ../pierre-highlights/SKILL.md",
+    "LICENSE.md: Pierre's LICENSE.md (Apache-2.0) from the same tag, which the skill folder doesn't include"
   ]
 }

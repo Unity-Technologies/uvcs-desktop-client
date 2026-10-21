@@ -3,7 +3,7 @@ name: pierre-diffs
 description:
   Use when an app uses @pierre/diffs to render or edit code files, diffs,
   patches, merge conflicts, or CodeView review surfaces, including React,
-  vanilla JavaScript, SSR, workers, annotations, selection, and custom Shiki
+  vanilla JavaScript, SSR, workers, annotations, selection, and custom syntax
   languages or themes.
 ---
 
@@ -13,7 +13,7 @@ Use `@pierre/diffs` to render syntax-highlighted files and diffs. Use its
 optional editor, SSR, and worker entries for those capabilities.
 
 For standalone HTML or token generation with `@pierre/highlights`, read the
-[highlights skill](https://github.com/pierrecomputer/pierre/blob/diffs-v1.5.1/skills/highlights/SKILL.md).
+[highlights skill](../pierre-highlights/SKILL.md).
 
 ## Install
 
@@ -48,4 +48,4 @@ Install `react` and `react-dom` when the app uses the React entry.
 | Preload markup on the server        | [Use SSR](references/recipe-ssr.md)                                      |
 | Highlight through a worker pool     | [Use workers](references/recipe-workers.md)                              |
 | Add line annotations and selection  | [Add annotations and selection](references/recipe-annotations.md)        |
-| Register a Shiki language or theme  | [Register custom highlighting](references/recipe-custom-highlighting.md) |
+| Register a custom language or theme | [Register custom highlighting](references/recipe-custom-highlighting.md) |
