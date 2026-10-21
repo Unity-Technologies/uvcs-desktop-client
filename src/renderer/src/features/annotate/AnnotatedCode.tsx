@@ -1,9 +1,10 @@
 import { Virtualizer } from '@pierre/diffs';
-import { useCallback, useMemo, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { useCallback, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
 import { fileNameOf } from '../../lib/text';
 import { displayName } from '../../lib/userName';
+import { PaneScrollbars } from '../diff/viewer/PaneScrollbars';
 import { AnnotationGutter } from './AnnotationGutter';
 import { AnnotationRules } from './AnnotationRules';
 import type { AnnotateColumns } from './annotateOptionsStore';
@@ -28,18 +29,22 @@ interface AnnotatedCodeProps {
 /**
  * Highlighted code (Pierre) with the annotation gutter beside it and the blocks' rules over both. All three live in one
  * scroll container and share a pinned line height (`annotationLayout`), so they scroll together without any syncing
- * code. Files can be huge: everything renders only the lines in view, and the code is highlighted as a read-only diff
- * would be (`syntaxHighlighting`: on the main thread, in Pierre's workers after showing as plain text, or not at all).
+ * code; the code alone scrolls sideways, beside the gutter, with its scrollbar at the bottom of the view
+ * (`PaneScrollbars`). Files can be huge: everything renders only the lines in view, and the code is highlighted as a
+ * read-only diff would be (`syntaxHighlighting`: on the main thread, in Pierre's workers after showing as plain text,
+ * or not at all).
  * The keyboard walks the blocks (⌥↓ ⌥↑, with ⇧ those of the same changeset), Enter shows the block's revision and
  * Space its card.
  */
 export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }: AnnotatedCodeProps) {
   const [virtualizer] = useState(() => new Virtualizer());
   const [scroller, setScroller] = useState<HTMLDivElement | null>(null);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
   const attachScroller = useCallback(
     (element: HTMLDivElement | null) => {
       if (element) virtualizer.setup(element);
       else virtualizer.cleanUp();
+      scrollerRef.current = element;
       setScroller(element);
     },
     [virtualizer],
@@ -119,6 +124,7 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
         <HighlightedCode className={styles.code} code={code} path={path} virtualizer={virtualizer} />
         <AnnotationRules blocks={blocks} shown={shown} lineHeight={ANNOTATION_LINE_HEIGHT} highlighted={highlighted} />
       </div>
+      <PaneScrollbars containerRef={scrollerRef} />
       <BlockCard blocks={blocks} cardState={cardState} picked={picked} scroller={scroller} links={links} />
       <span className="visually-hidden" aria-live="polite">
         {pickedBlock &&
