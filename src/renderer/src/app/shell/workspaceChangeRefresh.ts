@@ -3,7 +3,7 @@ import type { WatchCoverage } from '@shared/api/workspaces';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { mergeWorkspaceChanges, type WorkspaceChange } from '@shared/domain/workspaceChange';
 import { queryKeys, workspaceKey } from '../../api/queryKeys';
-import { isKeyedByMovedInfo, isRefreshable, queryClient } from '../queryClient';
+import { isKeyedByMovedInfo, isRefreshable, markWorkspaceHeadsStaleIfMoved, queryClient } from '../queryClient';
 import { loadedChangesetChanged } from '../refresh/headChanges';
 import { refreshQueries } from '../refresh/refreshQueries';
 import {
@@ -67,6 +67,7 @@ export async function refreshForChange(workspacePath: string, change: WorkspaceC
         refetchType: 'none',
       }),
       refreshQueries({ queryKey: workspaceKey(workspacePath), predicate: (query) => rest(query) && !isKeyedByMovedInfo(query, before, after) }),
+      markWorkspaceHeadsStaleIfMoved(queryClient, before, after),
     ]);
   }
 }

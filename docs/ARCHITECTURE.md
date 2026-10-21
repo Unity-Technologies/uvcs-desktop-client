@@ -145,8 +145,10 @@ and many people use the same server. Every `cm` command other than local reads (
   this machine (`LOCAL_COMMANDS`). Each is a few ms in a warm pooled `cm shell` that answers from any directory (before
   the pool is warm, a process each); one at a time across every window, so the directory's other session stays free
   for every other read. They are read again when a list shows once five minutes old
-  (`SLOW_CHANGING_QUERY`), when this window moved a workspace to another branch (`invalidateWorkspace`, which only
-  marks them stale) and on the home screen's Refresh; never on a window focus (`workspaceHeadsQuery`). The app never reads `cm`'s own files in `.plastic`, whose format is `cm`'s to change. `cm` is asked about the repository again
+  (`SLOW_CHANGING_QUERY`); after the workspace a window shows moved to another branch, by an operation or a switch its
+  watcher saw (`cm switch` in a terminal), they are only marked stale and read as a list next shows
+  (`markWorkspaceHeadsStaleIfMoved`); the home screen's Refresh reads them at once; never on a window focus
+  (`workspaceHeadsQuery`). A switch of a workspace no window shows isn't heard, and waits for the five minutes. The app never reads `cm`'s own files in `.plastic`, whose format is `cm`'s to change. `cm` is asked about the repository again
   (`repositoryOf`) only for recent workspaces `wi` couldn't tell (or named by a Unity organization's id: "Unity
   organizations").
 - **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`; `useSettledValue` for details that stay on screen as the selection moves, like a history's diff or any file's diff, `useDiffContents`, which shows a pair read before at once), `cm diff`

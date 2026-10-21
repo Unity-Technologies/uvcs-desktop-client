@@ -51,9 +51,11 @@ export function useRecentWorkspaceRepositories(workspaces: WorkspaceSummary[] | 
 
 /**
  * Repository and branch of every listed workspace, from a local `cm wi` of each (no server call, but one command per
- * workspace). Re-read when the list shows again once five minutes old, since switching a workspace elsewhere changes
- * its branch; at once when this window moved one to another branch (`invalidateWorkspace`) or on the home screen's
- * Refresh. Never on a window focus, which would run them all again each time the user comes back.
+ * workspace). Re-read as a list shows once five minutes old, since switching a workspace elsewhere changes its branch;
+ * marked stale, and so read as a list next shows, when the workspace this window shows moved to another branch, by an
+ * operation or a switch the watcher saw (`markWorkspaceHeadsStaleIfMoved`); read at once on the home screen's Refresh.
+ * A switch of a workspace no window of this app shows waits for the five minutes. Never on a window focus, which
+ * would run them all again each time the user comes back.
  */
 export function workspaceHeadsQuery(paths: string[]) {
   return queryOptions({
