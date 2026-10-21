@@ -3,7 +3,7 @@ import { changedLinePairs, MAX_WORD_DIFFED_LINE_PAIRS } from './changedLinePairs
 import { coveredMarks, lineWordMarks, markedRow, rowWordMarks, type MarkRange, type RenderedRow } from './wordMarkRows';
 
 /**
- * Makes Pierre (1.5.1) mark the words that changed in a diff typed into, as it does once it's saved; whether the diff
+ * Makes Pierre (1.6.0) mark the words that changed in a diff typed into, as it does once it's saved; whether the diff
  * was drawn again (not when its marks were right, or it has too many changes to mark). While the editor holds the
  * diff (its edit session), Pierre rebuilds only the rows typed into, from the editor's tokens and with no word marks,
  * and keeps the original's rows, marks and all, as they were: a line typed into showed as changed but none of its

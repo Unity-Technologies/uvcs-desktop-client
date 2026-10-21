@@ -1,7 +1,7 @@
 import { DiffHunksRenderer, type FileDiffMetadata } from '@pierre/diffs';
 
 /**
- * Makes Pierre (1.5.1) render a diff shown as plain text once instead of at every render. Its renderer on the main
+ * Makes Pierre (1.6.0) render a diff shown as plain text once instead of at every render. Its renderer on the main
  * thread (an editable diff, or a read-only one past what the workers highlight) renders the whole text again whenever
  * it renders (`renderDiff` takes the `forcePlainText` branch every time), so a virtualized diff rendered all its lines
  * for every few rows scrolled into view: a quarter of a second a step for 100,000 lines. The result is kept as Pierre

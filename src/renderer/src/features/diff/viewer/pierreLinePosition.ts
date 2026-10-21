@@ -3,7 +3,7 @@ import type { ChangedLine } from './changeBlocks';
 
 /**
  * Where a line of a diff that renders only the lines in view sits in the scrolling element, rendered or not: Pierre
- * (1.5.1) lays the diff out from line heights it knows or estimates (`VirtualizedFileDiff.getLinePosition`, from the
+ * (1.6.0) lays the diff out from line heights it knows or estimates (`VirtualizedFileDiff.getLinePosition`, from the
  * file's top, `top`), and the viewer's virtualizer holds that diff by its `diffs-container` (`observers`, private).
  * `pierreLinePosition.test.ts` fails when an update moves what this reaches.
  */
