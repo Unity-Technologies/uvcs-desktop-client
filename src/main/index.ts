@@ -36,6 +36,7 @@ import { appMenuInstaller, installDockMenu } from './window/appMenu';
 import { askToQuitWhenDone } from './window/askToQuitWhenDone';
 import { followAppTheme } from './window/followAppTheme';
 import { HandedOverDiffs } from './window/HandedOverDiffs';
+import { showProgressOnAppIcon } from './window/showProgressOnAppIcon';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders';
 
@@ -57,7 +58,7 @@ watchers.listen({ changed: (workspacePath, change) => workspaceCopies.forgetChan
 const revisionCat = new RevisionCat({ cm });
 const revisionDownloads = new RevisionDownloads({ cm, copies: workspaceCopies });
 const repositoryTrees = new RepositoryTrees({ cm, downloads: revisionDownloads });
-const operations = trackOperations(watchers);
+const operations = trackOperations(watchers, showProgressOnAppIcon());
 const updates = createAppUpdates({
   writesRunning: () => operations.writesRunning(),
   writesFinished: () => operations.writesFinished(),
