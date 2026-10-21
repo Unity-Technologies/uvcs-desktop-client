@@ -2,6 +2,7 @@ import { queryOptions, useQueries, useQuery } from '@tanstack/react-query';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
+import { SLOW_CHANGING_QUERY } from '../queryClient';
 import { useSettings } from '../settings/useSettings';
 
 export const workspaceListQuery = queryOptions({ queryKey: queryKeys.workspaces, queryFn: () => api.workspaces.list() });
@@ -34,7 +35,7 @@ export function workspaceRepositoryQuery(path: string) {
 /**
  * Repository of the recently used workspaces. Each lookup is a `cm` call, so this is limited to the few recent ones
  * and resolved once per session (`workspaceRepositoryQuery`), never for the whole workspace list. Paths in
- * `alreadyKnown` (e.g. told by their `.plastic` folder) are skipped.
+ * `alreadyKnown` (e.g. told by `cm wi`, `useWorkspaceHeads`) are skipped.
  */
 export function useRecentWorkspaceRepositories(workspaces: WorkspaceSummary[] | undefined, alreadyKnown: Record<string, unknown> = {}) {
   const { recentWorkspacePaths } = useSettings();
@@ -49,16 +50,28 @@ export function useRecentWorkspaceRepositories(workspaces: WorkspaceSummary[] | 
 }
 
 /**
- * Repository and branch of every listed workspace, read from their `.plastic` folders (no `cm` call). Re-read whenever
- * the list shows again, since switching a workspace elsewhere changes its branch.
+ * Repository and branch of every listed workspace, from a local `cm wi` of each (no server call, but one command per
+ * workspace). Re-read as a list shows once five minutes old, since switching a workspace elsewhere changes its branch;
+ * marked stale in this window (each window has its own query client), and so read as a list next shows here, when the
+ * workspace this window shows moved to another branch, by an operation or a switch the watcher saw
+ * (`markWorkspaceHeadsStaleIfMoved`); read at once on the home screen's Refresh. Other windows' lists, and a switch of
+ * a workspace no window of this app shows, wait for the five minutes. Never on a window focus, which would run them
+ * all again each time the user comes back.
  */
-export function useWorkspaceHeads(workspaces: WorkspaceSummary[] | undefined) {
-  const paths = (workspaces ?? []).map((workspace) => workspace.path);
-  return useQuery({
+export function workspaceHeadsQuery(paths: string[]) {
+  return queryOptions({
     queryKey: queryKeys.workspaceHeads(paths),
     queryFn: () => api.workspaces.heads(paths),
     enabled: paths.length > 0,
+    ...WORKSPACE_HEADS_REFRESH,
   });
+}
+
+/** When the heads are read again: as a list shows once five minutes old, never on a window focus. */
+export const WORKSPACE_HEADS_REFRESH = SLOW_CHANGING_QUERY;
+
+export function useWorkspaceHeads(workspaces: WorkspaceSummary[] | undefined) {
+  return useQuery(workspaceHeadsQuery((workspaces ?? []).map((workspace) => workspace.path)));
 }
 
 /** Which of these recent paths (ones `cm` doesn't list) lost their folder. */

@@ -19,7 +19,7 @@ const FINDABLE = {
   shelve: repository.SHELVES,
 };
 
-const { DIFFERENCES, FILES, LOCKS, OWNER, REPOSITORIES, REVISIONS, SERVER, WORKSPACE } = repository;
+const { DIFFERENCES, FILES, LOCKS, OWNER, REPOSITORIES, REPOSITORY_SPEC, REVISIONS, SERVER, WORKSPACE } = repository;
 
 const ACCOUNTS = [{ name: SERVER, server: SERVER, user: OWNER, workingmode: 'UPWorkingMode' }];
 const WORKSPACES = [{ wkname: WORKSPACE.name, wkpath: WORKSPACE.path, path: WORKSPACE.path, wkid: WORKSPACE.guid, guid: WORKSPACE.guid }];
@@ -33,6 +33,7 @@ const COMMANDS = {
   'workspace list': (args) => formatted(args, WORKSPACES),
   getworkspacefrompath: (args) => formatted(args, WORKSPACES),
   status: statusOutput,
+  wi: workspaceInfo,
   find: find,
   diff: (args) => formatted(args, DIFFERENCES),
   cat: cat,
@@ -113,6 +114,14 @@ function loadedContent(path) {
 function lockList(args) {
   const separator = (name) => args.find((arg) => arg.startsWith(`--${name}=`))?.slice(name.length + 3) ?? ' ';
   return LOCKS.map((lock) => Object.values(lock).join(separator('fieldseparator')) + separator('endlineseparator')).join('');
+}
+
+/** `cm wi <path> --machinereadable --fieldseparator=…`: the workspace's branch and repository, on one line. */
+function workspaceInfo([path, ...options]) {
+  if (path !== WORKSPACE.path) throw new Error(`${path} is not in a workspace.`);
+  const separator = options.find((option) => option.startsWith('--fieldseparator='))?.slice('--fieldseparator='.length);
+  if (!options.includes('--machinereadable') || !separator) throw new Error('The fake cm tells a workspace only --machinereadable, with a --fieldseparator');
+  return ['BR', WORKSPACE.branch, REPOSITORY_SPEC].join(separator) + '\n';
 }
 
 /** `records` printed through the command's `--format`. */

@@ -8,7 +8,7 @@ import { repositoryInStatusHeader, workspaceRepositoryLookup } from './workspace
 describe('repositoryInStatusHeader', () => {
   it('reads the repository spec', () => {
     expect(repositoryInStatusHeader('STATUS|25076|website|acme@cloud\n')).toBe('website@acme@cloud');
-    // A Unity organization's server by name, which `cm status --xml` and the selector file give by its id.
+    // A Unity organization's server by name, which `cm status --xml` gives by its id.
     expect(repositoryInStatusHeader('STATUS|51|3dtest/game|AcmeStudio@unity\n')).toBe('3dtest/game@AcmeStudio@unity');
   });
 

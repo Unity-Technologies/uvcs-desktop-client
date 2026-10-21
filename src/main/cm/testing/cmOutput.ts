@@ -54,8 +54,7 @@ export function statusHeader(name: string, { changeset = 1, type = 'Branch', rep
 
 /**
  * A Unity Cloud organization's server by the name people use, which `cm` prints and takes everywhere (`byName`), and
- * by the internal id UVCS keeps it under (`byId`), which `cm status --xml`, `cm history --xml` and the workspace's
- * `.plastic/plastic.selector` hold instead.
+ * by the internal id UVCS keeps it under (`byId`), which `cm status --xml` and `cm history --xml` print instead.
  */
 export const UNITY_ORGANIZATION = { byName: 'AcmeStudio@unity', byId: '2398571046213@cloud' } as const;
 

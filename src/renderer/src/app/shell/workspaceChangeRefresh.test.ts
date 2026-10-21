@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 
+import { queryKeys } from '../../api/queryKeys';
 import { showQuery, type QueryProbe } from '../../testing/queryProbes';
 import { IMMUTABLE_QUERY, keyedByWorkspaceInfo, queryClient } from '../queryClient';
 import { affectedByChange, HeldChanges, localQueryDefaults, refreshForChange } from './workspaceChangeRefresh';
@@ -130,6 +131,29 @@ describe('refreshForChange', () => {
     await refreshForChange(ws, change({ metadata: true }), true);
 
     expect(refetches({ keyedBySelector })).toEqual({ keyedBySelector: 1 });
+  });
+
+  it("marks the lists of workspaces' heads stale, without reading them, when a switch made elsewhere (cm in a terminal) moved the branch", async () => {
+    let branch = '/main';
+    await shown(['workspace', ws, 'info'], { read: () => info(branch) });
+    const heads = await shown([...queryKeys.workspaceHeads([ws, '/other'])]);
+    branch = '/main/task';
+
+    await refreshForChange(ws, change({ metadata: true }), true);
+
+    expect(refetches({ heads })).toEqual({ heads: 0 });
+    expect(queryClient.getQueryState(queryKeys.workspaceHeads([ws, '/other']))?.isInvalidated).toBe(true);
+  });
+
+  it("leaves the lists of workspaces' heads alone when the rewrite kept the branch", async () => {
+    let loaded = 10;
+    await shown(['workspace', ws, 'info'], { read: () => info('/main', loaded) });
+    await shown([...queryKeys.workspaceHeads([ws])]);
+    loaded = 11;
+
+    await refreshForChange(ws, change({ metadata: true }), true);
+
+    expect(queryClient.getQueryState(queryKeys.workspaceHeads([ws]))?.isInvalidated).toBe(false);
   });
 });
 

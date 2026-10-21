@@ -1,7 +1,8 @@
 import { fakeApi } from '../../testing/fakeWindow';
-import { QueryClient } from '@tanstack/react-query';
-import { describe, expect, it, vi } from 'vitest';
-import { workspaceRepositoryQuery } from './workspaceQueries';
+import { focusManager, QueryClient, QueryObserver } from '@tanstack/react-query';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createQueryClient } from '../queryClient';
+import { WORKSPACE_HEADS_REFRESH, workspaceHeadsQuery, workspaceRepositoryQuery } from './workspaceQueries';
 
 describe('workspaceRepositoryQuery', () => {
   it('asks cm about each recent workspace once a session, whatever order or company it comes back in', async () => {
@@ -36,5 +37,47 @@ describe('workspaceRepositoryQuery', () => {
     fakeApi.answer('workspaces.repositoryOf', () => null);
 
     expect(await new QueryClient().fetchQuery(workspaceRepositoryQuery('/wk/game'))).toBeNull();
+  });
+});
+
+describe('workspaceHeadsQuery', () => {
+  let client: QueryClient;
+  beforeEach(() => {
+    client = createQueryClient();
+    client.mount();
+    vi.useFakeTimers({ toFake: ['Date'] });
+  });
+  afterEach(() => {
+    client.unmount();
+    client.clear();
+    focusManager.setFocused(undefined);
+    vi.useRealTimers();
+  });
+
+  const { queryKey, ...query } = workspaceHeadsQuery(['/wk/game', '/wk/tools']);
+  /** Lets the client handle what just happened (a focus, a list mounting) and run the reads it starts. */
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  /** A list of workspaces showing (a mounted `useWorkspaceHeads`): counts the reads, until `hide`. */
+  function showList(reads: { count: number }): () => void {
+    const observer = new QueryObserver(client, { queryKey, queryFn: async () => ++reads.count, ...WORKSPACE_HEADS_REFRESH });
+    return observer.subscribe(() => {});
+  }
+
+  it('is refreshed as the rarely changing lists are', () => {
+    expect(query).toMatchObject(WORKSPACE_HEADS_REFRESH);
+  });
+
+  it('never reads every workspace again on a window focus, however old', async () => {
+    const reads = { count: 0 };
+    showList(reads);
+    await settle();
+
+    vi.advanceTimersByTime(60 * 60_000);
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await settle();
+
+    expect(reads.count).toBe(1);
   });
 });

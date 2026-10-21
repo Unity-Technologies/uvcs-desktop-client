@@ -5,7 +5,7 @@ const game = { name: 'game', path: '/wk/game', guid: 'g1' };
 const tools = { name: 'tools', path: '/wk/tools', guid: 'g2' };
 
 describe('recent workspaces', () => {
-  it("leaves to cm the workspaces whose selector file doesn't name their repository (a Unity organization's)", () => {
+  it("leaves to cm the workspaces whose head doesn't name their repository (a Unity organization's)", () => {
     const branch = { kind: 'branch', name: '/main' } as const;
     const heads = { '/wk/game': { repository: 'game@local', repositoryName: 'game', selector: branch }, '/wk/cloud': { repository: null, repositoryName: '3dtest/cloud', selector: branch } };
 
@@ -48,11 +48,11 @@ describe('entryMatches', () => {
 
 describe('describedEntry', () => {
   const branch = { kind: 'branch', name: '/main' } as const;
-  // A Unity organization's workspace: its selector file names the repository, its server only by an id.
+  // A Unity organization's workspace whose server `cm wi` names only by an id.
   const cloudHead = { repository: null, repositoryName: '3dtest/cloud', selector: branch };
   const cloud = { workspace: { name: 'cloud', path: '/wk/cloud', guid: 'g3' }, missing: false };
 
-  it("keeps the repository's name from the selector file while cm hasn't named its server", () => {
+  it("keeps the repository's name from its head while cm hasn't named its server", () => {
     const described = describedEntry(cloud, cloudHead, {});
 
     expect(described).toEqual({ ...cloud, repository: undefined, repositoryName: '3dtest/cloud', selector: branch });

@@ -11,7 +11,7 @@ export interface WorkspaceEntry {
   repository?: string | null;
   /** The repository's own name, known even while its server isn't (a Unity organization's, `WorkspaceHead`). */
   repositoryName?: string;
-  /** What it's loaded from, when its folder tells without asking `cm`. */
+  /** What it's loaded from, when known (`WorkspaceHead`). */
   selector?: WorkspaceSelector | null;
 }
 
@@ -32,16 +32,16 @@ export function recentWorkspaceEntries(workspaces: WorkspaceSummary[], recentPat
 }
 
 /**
- * The workspaces whose selector file names their repository; `cm` is asked about the recent ones among the rest
- * (`useRecentWorkspaceRepositories`): a Unity organization's, whose file keeps its server by an id people never see.
+ * The workspaces whose head names their repository; `cm` is asked about the recent ones among the rest
+ * (`useRecentWorkspaceRepositories`): a Unity organization's `cm wi` could name only by an id people never see.
  */
 export function headsNamingRepository(heads: Record<string, WorkspaceHead> = {}): Record<string, WorkspaceHead> {
   return Object.fromEntries(Object.entries(heads).filter(([, head]) => head.repository !== null));
 }
 
 /**
- * A listed workspace with what is cheaply known of it: its selector file's repository and branch, else the repository
- * `cm` named in the recent workspaces' lookup (`lookedUp`), keeping the file's repository name meanwhile.
+ * A listed workspace with what is cheaply known of it: its head's repository and branch, else the repository `cm`
+ * named in the recent workspaces' lookup (`lookedUp`), keeping the head's repository name meanwhile.
  */
 export function describedEntry(entry: Pick<WorkspaceEntry, 'workspace' | 'missing'>, head: WorkspaceHead | undefined, lookedUp: Record<string, string | null>): WorkspaceEntry {
   const repository = head?.repository ?? lookedUp[entry.workspace.path];

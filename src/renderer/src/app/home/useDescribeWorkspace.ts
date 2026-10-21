@@ -6,7 +6,7 @@ type Undescribed = Pick<WorkspaceEntry, 'workspace' | 'missing'>;
 
 /**
  * Tells each listed workspace's repository and branch where cheaply known, the same on the home screen and in the
- * switcher: the `.plastic` folder says, and `cm` is asked only about recent workspaces whose folder couldn't tell.
+ * switcher: a local `cm wi` of each (`useWorkspaceHeads`), and the recent workspaces it couldn't tell are looked up.
  */
 export function useDescribeWorkspace(workspaces: WorkspaceSummary[] | undefined): (entry: Undescribed) => WorkspaceEntry {
   const { data: heads, isFetched: headsRead } = useWorkspaceHeads(workspaces);

@@ -25,8 +25,8 @@ export interface WorkspacesApi {
    */
   repositoryOf(workspacePath: string, lookupId: string): Promise<string | null>;
   /**
-   * The repository and branch (or changeset, label, shelve) of each workspace, read from its `.plastic` folder: no `cm`
-   * call, cheap enough for every listed workspace. Workspaces whose folder can't tell are left out.
+   * The repository and branch (or changeset, label, shelve) of each workspace, from one local `cm wi` each (no server
+   * call), cheap enough for every listed workspace. Workspaces `cm` can't tell (a folder that is gone) are left out.
    */
   heads(workspacePaths: string[]): Promise<Record<string, WorkspaceHead>>;
   /** The paths whose folder doesn't exist (deleted, moved, or on a drive that isn't mounted). No `cm` call. */

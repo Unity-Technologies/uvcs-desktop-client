@@ -304,4 +304,22 @@ describe('other workspaces', () => {
     expect(await service.glance(WORKSPACE)).toEqual({ selector: { kind: 'branch', name: '/main/task1' }, pendingCount: 0 });
     expect(commands).toHaveLength(1);
   });
+
+  it('tells what every listed workspace works on with one local cm wi each, in a pooled shell in any directory', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'uvcs-heads-'));
+    const [game, cloud] = [join(root, 'game'), join(root, 'cloud game')];
+    await Promise.all([mkdir(game), mkdir(cloud)]);
+    const { service, commands } = workspaces({
+      wi: ({ args }) => (args[1] === game ? 'BR\u001f/main/task1\u001fgame@local\n' : `CS\u001f153\u001f3dtest/game@${UNITY_ORGANIZATION.byName}\n`),
+    });
+
+    expect(await service.heads([game, cloud, join(root, 'gone')])).toEqual({
+      [game]: { repository: 'game@local', repositoryName: 'game', selector: { kind: 'branch', name: '/main/task1' } },
+      [cloud]: { repository: `3dtest/game@${UNITY_ORGANIZATION.byName}`, repositoryName: '3dtest/game', selector: { kind: 'changeset', name: '153' } },
+    });
+    expect(commands.map(({ via, args, options }) => ({ via, path: args[1], options }))).toEqual([
+      { via: 'query', path: game, options: { anyDirectory: true } },
+      { via: 'query', path: cloud, options: { anyDirectory: true } },
+    ]);
+  });
 });

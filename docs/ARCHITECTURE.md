@@ -85,7 +85,11 @@ and many people use the same server. Every `cm` command other than local reads (
   needs in one command that returns N records (one `cm find` per list, one `cm ls` of every conflicting file:
   `withConflictRepositories`), and a second command only for the few items the first couldn't answer
   (`repositoryPath`). Reads go through `CmClient.query()`, so they reuse a warm `cm shell` instead of starting a
-  process; `execute()` is only for long, streamed or cancellable work.
+  process; `execute()` is only for long, streamed or cancellable work. The exception is a local read (`LOCAL_COMMANDS`)
+  that has no form for N, which runs once per workspace, never per row of a server list: the home screen's `cm wi`
+  of each workspace (`workspaceHeadsReader`, "Home", below), the recent workspaces' `cm status --header` it couldn't
+  tell (`workspaceRepositoryLookup`), and the switcher's `cm status --xml` of each workspace of the same repository
+  (`workspaces.glance`).
 - **Revisions asked together, one `cm cat` per batch**: every revision read by its spec (`content.read` of a
   `revision` or a `spec`: diffs, History, Incoming, a merge's conflicting files) goes through `RevisionCat`, which
   saves the reads asked together with one `cm cat <spec>;<file> <spec>;<file> …` per batch (`nextCatBatch`,
@@ -135,9 +139,19 @@ and many people use the same server. Every `cm` command other than local reads (
   that hardly change by themselves and are heavy to read use `SLOW_CHANGING_QUERY` (every branch, every label, attribute
   types, attribute values, the working object's comment, the palette's lists, the recent shelves in Changes, the user's and everyone's): five minutes, and focus never re-reads them. The Branch
   Explorer is kept five minutes and focus never re-reads all history. Local views skip focus while the watcher sees the disk.
-- **Home**: the repository and branch of every listed workspace come from its `.plastic/plastic.selector` file
-  (`workspaces.heads`); `cm` is asked only about recent workspaces whose file can't tell (or names a Unity
-  organization by its id: "Unity organizations").
+- **Home**: the repository and branch of every listed workspace come from a `cm wi <path> --machinereadable` of each
+  (`workspaces.heads`, `workspaceHeadsReader`), a local read with no form for N ("One command for N things"): `cm` has
+  no form that tells several workspaces at once (`cm workspace list --format` prints no selector), and `wi` only reads
+  this machine (`LOCAL_COMMANDS`). Each is a few ms in a warm pooled `cm shell` that answers from any directory (before
+  the pool is warm, a process each); one at a time across every window, so the directory's other session stays free
+  for every other read. They are read again when a list shows once five minutes old
+  (`SLOW_CHANGING_QUERY`); after the workspace a window shows moved to another branch, by an operation or a switch its
+  watcher saw (`cm switch` in a terminal), they are only marked stale in that window (each has its own query client)
+  and read as a list next shows there (`markWorkspaceHeadsStaleIfMoved`); the home screen's Refresh reads them at once;
+  never on a window focus (`workspaceHeadsQuery`). Other windows' lists, and a switch of a workspace no window shows,
+  wait for the five minutes. The app never reads `cm`'s own files in `.plastic`, whose format is `cm`'s to change. `cm` is asked about the repository again
+  (`repositoryOf`) only for recent workspaces `wi` couldn't tell (or named by a Unity organization's id: "Unity
+  organizations").
 - **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`; `useSettledValue` for details that stay on screen as the selection moves, like a history's diff or any file's diff, `useDiffContents`, which shows a pair read before at once), `cm diff`
   runs only on request, and immutable results (what a changeset, shelve or branch head changed, revisions by id, specs
   pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`; off screen, the last 100 holding at most 256 MB of files, `boundUnusedQueries`; diff.md "Memory") and skipped by refreshes.
@@ -323,8 +337,8 @@ by name, and never passes it to `cm`.
 
 - **Where the id form comes from**: `cm status --xml` (its header's `<Server>` and `<WkConfigName>`), `cm history
   --xml` (each revision's `<Server>`; both are `cm` printing what it stores, a leak to fix in `cm`, which older
-  versions keep), and the workspace's `.plastic/plastic.selector`, which keeps it by design. Everything else the app
-  reads names it: the machine-readable status header, `cm wi`, `--format` outputs, `cm ls`, `cm fileinfo`, `cm diff`,
+  versions keep), and the workspace's `.plastic/plastic.selector`, which keeps it by design (the app doesn't read
+  it). Everything else the app reads names it: the machine-readable status header, `cm wi`, `--format` outputs, `cm ls`, `cm fileinfo`, `cm diff`,
   `cm find`, `cm repository list`.
 - **Where the app takes the name instead**, each from an output `cm` already names it in, never by mapping ids to names
   itself (`isOrganizationIdServer`, `main/cm/organizationIds.ts`, only tells an id apart):
@@ -337,11 +351,12 @@ by name, and never passes it to `cm`.
     (`readWorkspaceGlance`) reads only its branch and pending changes: its row already shows the repository.
   - A file's history (`withServerOf`): from the item's repository, as the `cm ls` the history runs anyway names it
     (`workspaceItemArgs`, `{repspec}`), or the revision the history starts from.
-  - The home screen (`parseSelectorFile`): a selector file that keeps an id names no repository (`WorkspaceHead`'s
+  - The home screen (`parseWorkspaceInfo`): `cm wi` names the organization's server from `cm`'s local cache of
+    organizations, with no server call. Should it print the id instead, its head names no repository (`WorkspaceHead`'s
     `repository` null), so the recent workspaces' lookup asks `cm` (`repositoryOf`, the machine-readable header),
-    as for a file that can't be read: one query per workspace for the session (`workspaceRepositoryQuery`), two at a
+    as for a workspace `wi` can't tell: one query per workspace for the session (`workspaceRepositoryQuery`), two at a
     time across them in main (`workspaceRepositoryLookup`). Meanwhile, and for the workspaces past the recent ones,
-    the row shows the repository's own name, which the file tells (`repositoryName`, `describedEntry`), and no server.
+    the row shows the repository's own name, which `wi` tells (`repositoryName`, `describedEntry`), and no server.
   Should `cm` not answer, the id stays rather than a guess.
 - **What was saved under the id before**: nothing is migrated (that would be id-aware code to delete later). A
   shelve this app left on a Unity organization's workspace, recorded under the id, no longer matches the workspace's
@@ -601,7 +616,7 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   repository's avatar (`components/RepositoryAvatar`: a white initial on a solid `--avatar-*` fill, picked by
   `avatarColor` from the repository's short name, the workspace's own until it's known; a neutral square while
   loading), then its branch (`SelectorChip`) and server (`ServerChip`, the whole `name@server`
-  in its tooltip), told by `useDescribeWorkspace` (the `.plastic` folder, `cm` only for recent ones it can't tell). In
+  in its tooltip), told by `useDescribeWorkspace` (a local `cm wi` of each, `workspaceHeadsReader`; `cm status` only for recent ones it can't tell). In
   the switcher's narrow rows the server gives way first, down to its icon, then the branch's name.
 
 ## Start-up
