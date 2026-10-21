@@ -35,9 +35,10 @@ A fast, beautiful desktop client for Unity Version Control (Plastic SCM). Electr
    secrets, windows, and the renderer's shared conventions (data, refresh, menus, keyboard, filters, lists, styling).
 2. The feature doc of the area you touch, listed at the top of ARCHITECTURE.md (`docs/features/*.md`).
 3. The code next to what you change, and its tests: they show the idiom to follow.
-4. For Pierre's API (`@pierre/diffs`), the `pierre-diffs` skill (`.claude/skills/pierre-diffs`), and for its highlighter
-   (`@pierre/highlights`), the `pierre-highlights` skill (`.claude/skills/pierre-highlights`). We pin @pierre/diffs 1.6.1,
-   so check what they say against `node_modules`; updating @pierre/diffs means reinstalling both skills from its tag
+4. For Pierre's API (`@pierre/diffs`), the `pierre-diffs` skill (`.claude/skills/pierre-diffs`). The app highlights with
+   Shiki and doesn't use Pierre's own highlighter, @pierre/highlights (why: `docs/features/diff.md`); its
+   `pierre-highlights` skill is installed because the diffs skill links to it. We pin @pierre/diffs 1.6.1, so check what
+   they say against `node_modules`; updating @pierre/diffs means reinstalling both skills from its tag
    (`pierreSkillVersion.test.ts` names the command) and re-applying the `localChanges` each `pierre-version.json` lists.
 
 This file holds the rules and where to find things; ARCHITECTURE.md holds the details and the numbers. When they
