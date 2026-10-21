@@ -1,8 +1,10 @@
 import { app, BrowserWindow, Menu, shell, type MenuItemConstructorOptions } from 'electron';
+import { windowChrome } from '@shared/windowChrome';
 import { sendEventTo } from '../ipc/sendEvent';
 import { coalesced } from '../system/coalesced';
 import { BUG_REPORT_URL, DOCUMENTATION_URL, FEATURE_REQUEST_URL } from './appInfo';
 import { appMenuTemplate } from './appMenuTemplate';
+import { zoomPage } from './pageZoom';
 import { isMenuCommandEnabled } from './workspaceMenuCommands';
 import type { AppUpdates } from '../update/AppUpdates';
 import { focusWindow, type WorkspaceWindows } from './WorkspaceWindows';
@@ -64,6 +66,7 @@ function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates): void {
     requestFeature: () => void shell.openExternal(FEATURE_REQUEST_URL),
     showAboutPanel: () => app.showAboutPanel(),
     checkForUpdates: () => void updates.check(),
+    zoomPage: (window, change) => zoomPage(window, change, windowChrome(process.platform)),
   });
 
   const menu = Menu.buildFromTemplate(template);

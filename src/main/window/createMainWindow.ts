@@ -9,6 +9,7 @@ import type { SettingsStore } from '../settings/SettingsStore';
 import { isWebAddress } from '../system/webAddress';
 import { windowIcon } from './appIcon';
 import { cascadedWindowBounds, keepWindowBoundsSaved, loadWindowBounds, reopenedWindowBounds, type SavedBoundsKey } from './savedWindowBounds';
+import { followPageZoom } from './pageZoom';
 import { titleBarOptions } from './titleBar';
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH } from './windowBounds';
 
@@ -62,6 +63,7 @@ export function createMainWindow(
   });
 
   keepWindowBoundsSaved(window, settings, boundsKey);
+  followPageZoom(window, windowChrome(process.platform));
   window.once('ready-to-show', () => {
     // Maximizing also shows the window, so it waits until the page can paint.
     if (maximized) window.maximize();
