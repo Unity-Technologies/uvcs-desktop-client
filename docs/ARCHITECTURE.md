@@ -463,8 +463,8 @@ app's settings are the only source. The import never writes a file (`main/cm/noC
 
 Not covered, as they aren't the official client's settings: what `cm` itself reads from its `client.conf` (the default
 user `cm whoami` shows; `PendingChangesOnSwitchAction`, neutralized by `switchWithChanges`), the workspace's rule files
-(`ignore.conf`, `cloaked.conf`, `hidden_changes.conf`), and server objects the official client created (its automatic
-shelves, offered as left changes). Its merge tools (client.conf's `<MergeTools>`) aren't offered: the app finds the
+(`ignore.conf`, `cloaked.conf`, `hidden_changes.conf`, `writable.conf`, `readonly.conf`), and server objects the
+official client created (its automatic shelves, offered as left changes). Its merge tools (client.conf's `<MergeTools>`) aren't offered: the app finds the
 well-known tools itself, and the user adds any other (docs/features/merge.md); importing them would belong to
 `importLegacySettings` too.
 
@@ -483,11 +483,12 @@ to watch, skip or look for them, or to tell `cm`'s words:
 - `setupCheck`, which tells `cm`'s "client.conf not found" error.
 
 Only the first-run import (`plasticConfig/`, `importLegacySettings`) reads one of them, once ("Own config"). The
-workspace's rule files (`ignore.conf`, `cloaked.conf`, `hidden_changes.conf`) aren't `cm`'s but the user's: plain lines
-at the root, often checked in, and no `cm` command manages them; `filterRuleFile` adds to them and `WorkspaceWatcher`
-reads `ignore.conf` to skip folders. `main/cm/noCmInternalFiles.test.ts` scans the literals of `main/`, `renderer/`
-and `shared/` (their `testing/` fakes aside) for these names and holds each module to the file system functions its
-entry in `ALLOWED` lists; a new one joins it with its reason, or asks `cm`.
+workspace's rule files (`ignore.conf`, `cloaked.conf`, `hidden_changes.conf`, `writable.conf`, `readonly.conf`) aren't
+`cm`'s but the user's: plain lines at the root, often checked in, and no `cm` command manages them; `filterRuleFile`
+adds to them and the watcher skips the folders `ignore.conf` names (`readIgnoreRules`).
+`main/cm/noCmInternalFiles.test.ts` scans the literals of every app source under `src/` (its `testing/` fakes aside)
+for these names, and holds each module allowed to name them to exactly the file system functions its entry in
+`ALLOWED` lists; a new one joins it with its reason, or asks `cm`.
 
 ## Profile pictures (Gravatar)
 
