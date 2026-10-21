@@ -1,25 +1,22 @@
-import { DiffHunksRenderer, FileDiff, parseDiffFromFile, type DiffHunksRendererOptions, type FileDiffMetadata, type FileDiffOptions } from '@pierre/diffs';
+import { DiffHunksRenderer, parseDiffFromFile, type DiffHunksRendererOptions, type FileDiffMetadata } from '@pierre/diffs';
 import { looseLineKey, type LineDiffOptions } from './lineDiff';
 
 /**
  * Makes the diff Pierre works out while a file is typed into compare lines like the one it was given (`lineDiff`), in
- * `parseDiffOptions`, and show it right. Pierre (1.5.1) re-diffs every keystroke in the `DiffHunksRenderer` of its
- * `FileDiff`, and:
+ * `parseDiffOptions`, and show it right. Pierre (1.6.0) re-diffs every keystroke in the `DiffHunksRenderer` of its
+ * `FileDiff`, under the `parseDiffOptions` it hands it (`getDiffHunksRendererOptions`), and:
  *
- * 1. `FileDiff` never hands its renderer `parseDiffOptions` (`getDiffHunksRendererOptions` leaves them out), so typing
- *    re-diffed under Recognize all whatever the comparison method: spaces typed under Ignore whitespaces showed as a
- *    change until the file was saved and diffed anew.
- * 2. A keystroke that keeps the line count keeps the diff's change blocks as they were when the line's text, before and
+ * 1. A keystroke that keeps the line count keeps the diff's change blocks as they were when the line's text, before and
  *    after, is the text of no original line (`canRetainCanonicalBlocks`). Only `diff`'s own `ignoreWhitespace` and
  *    `stripTrailingCr` turn that shortcut off, not a comparator: a changed line typed back to its original with other
  *    indentation stayed a change. The renderer re-diffs from the whole text when a typed line equals an original line
  *    by the comparison but not in text (`looseLineKey`).
- * 3. Text typed back to the original's shows no change (`parseSessionChangeBlocks` returns none when `findDivergenceCore`
+ * 2. Text typed back to the original's shows no change (`parseSessionChangeBlocks` returns none when `findDivergenceCore`
  *    finds the texts the same), though a comparator can tell lines of the same text apart: lone CRs against LFs
  *    under Recognize all showed nothing changed until the file was saved. The renderer re-diffs the whole text then.
  *    Upstream, `editSessionHunks.ts` would take that shortcut only when lines compare as their text, as
  *    `canRetainCanonicalBlocks` does; this goes once it does.
- * 4. A keystroke the editor re-tokenizes to the end of a text ending with a line break hands the renderer the editor's
+ * 3. A keystroke the editor re-tokenizes to the end of a text ending with a line break hands the renderer the editor's
  *    empty last line too, which the diff has no row for. The editor appends one, the refresh after the keystroke only
  *    updates rows while there are as many as the diff has, and the rows stay as they were: the last line lost its
  *    change color and its number showed over the empty line's. The renderer re-renders the diff whole then, as it does
@@ -31,12 +28,6 @@ import { looseLineKey, type LineDiffOptions } from './lineDiff';
 export function installPierreLineComparison(): void {
   if (installed) return;
   installed = true;
-
-  const fileDiff = FileDiff.prototype as unknown as { getHunksRendererOptions(options: FileDiffOptions<unknown, unknown> | undefined): DiffHunksRendererOptions };
-  const hunksRendererOptions = fileDiff.getHunksRendererOptions;
-  fileDiff.getHunksRendererOptions = function (this: unknown, options) {
-    return { ...hunksRendererOptions.call(this, options), parseDiffOptions: options?.parseDiffOptions };
-  };
 
   const renderer = DiffHunksRenderer.prototype as unknown as SessionRenderer;
   const applySessionDocumentChange = renderer.applySessionDocumentChange;

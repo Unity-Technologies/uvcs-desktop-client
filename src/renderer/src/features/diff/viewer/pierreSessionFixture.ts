@@ -70,7 +70,7 @@ export async function typedIntoPierre(
   installPierreLineComparison();
   const parseDiffOptions = lineDiffOptions(original, current, method);
   const component = new FileDiff({ parseDiffOptions, theme: 'pierre-light', lineDiffType: 'word' });
-  // Its own renderer, made as Pierre makes it (`getHunksRendererOptions`, which `installPierreLineComparison` patches).
+  // Its own renderer, made as Pierre makes it (`getHunksRendererOptions`, which hands it `parseDiffOptions`).
   const renderer = (component as unknown as { hunksRenderer: DiffHunksRenderer }).hunksRenderer;
   const diff = shownDiff(lineDiff(original, modified, method, fileName).meta, sides, original, modified, true);
   renderer.beginEditSession(diff);
