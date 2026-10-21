@@ -89,10 +89,16 @@ export class AppIconProgress {
     const operation = this.running.get(operationId);
     if (!operation) return;
     this.running.delete(operationId);
-    if (failed && !this.windows.isFocused(operation.windowId)) this.unseenFailures.add(operation.windowId);
+    // A window gone meanwhile (a page window closing with its workspace window) has no icon left to tell.
+    const open = this.windows.ids().includes(operation.windowId);
+    if (failed && open && !this.windows.isFocused(operation.windowId)) this.unseenFailures.add(operation.windowId);
     this.show();
   }
 
+  /**
+   * Sets each open window's icon. Where the icon is the app's, every window sets the same value: closing any one of
+   * them then hands nothing over.
+   */
   private show(): void {
     for (const windowId of this.windows.ids()) {
       if (this.closing.has(windowId)) continue;

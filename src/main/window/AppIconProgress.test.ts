@@ -34,8 +34,8 @@ function operation() {
   return { finished, signal: controller.signal, finish, fail, cancel: () => controller.abort() };
 }
 
-/** Lets the icon see the operation settle. */
-const settled = () => new Promise<void>((resolve) => setImmediate(resolve));
+/** Waits for the operation to settle: the icon heard it first, as it listened from the start. */
+const settled = (finished: Promise<void>) => finished.catch(() => {});
 
 describe('AppIconProgress on Windows', () => {
   it("shows each window's operation on its own taskbar button", () => {
@@ -58,7 +58,7 @@ describe('AppIconProgress on Windows', () => {
     icon.started('checkin-1', 1, checkin.finished, checkin.signal);
 
     checkin.finish();
-    await settled();
+    await settled(checkin.finished);
 
     expect(last(1)).toEqual({ value: -1 });
   });
@@ -70,7 +70,7 @@ describe('AppIconProgress on Windows', () => {
     icon.started('update-1', 2, update.finished, update.signal);
 
     update.fail(new Error('The server is down'));
-    await settled();
+    await settled(update.finished);
     expect(last(2)).toEqual({ value: 1, mode: 'error' });
 
     state.focused = 2;
@@ -85,7 +85,7 @@ describe('AppIconProgress on Windows', () => {
     icon.started('update-1', 1, update.finished, update.signal);
 
     update.fail(new Error('The server is down'));
-    await settled();
+    await settled(update.finished);
 
     expect(last(1)).toEqual({ value: -1 });
   });
@@ -98,7 +98,7 @@ describe('AppIconProgress on Windows', () => {
 
     update.cancel();
     update.fail(new Error('Cancelled'));
-    await settled();
+    await settled(update.finished);
 
     expect(last(2)).toEqual({ value: -1 });
   });
@@ -109,12 +109,41 @@ describe('AppIconProgress on Windows', () => {
     const update = operation();
     icon.started('update-1', 2, update.finished, update.signal);
     update.fail(new Error('The server is down'));
-    await settled();
+    await settled(update.finished);
 
     const retry = operation();
     icon.started('update-2', 2, retry.finished, retry.signal);
 
     expect(last(2)).toEqual({ value: 1, mode: 'indeterminate' });
+  });
+
+  it('clears a window\'s own taskbar button as it closes, even while others show', () => {
+    const { windows, last } = fakeWindows();
+    const icon = new AppIconProgress(windows, 'win32');
+    const update = operation();
+    icon.started('update-1', 1, update.finished, update.signal);
+    icon.reported('update-1', downloading(0.5));
+
+    icon.windowClosing(1);
+
+    expect(last(1)).toEqual({ value: -1 });
+  });
+
+  it('remembers no failure for a window already gone (a page window closed with its workspace window)', async () => {
+    const { windows, last, state } = fakeWindows();
+    const icon = new AppIconProgress(windows, 'win32');
+    const update = operation();
+    icon.started('update-1', 2, update.finished, update.signal);
+    icon.windowClosing(2);
+    state.open = [1];
+    icon.windowClosed(2);
+
+    update.fail(new Error('The server is down'));
+    await settled(update.finished);
+    state.open = [1, 2];
+    icon.windowOpened();
+
+    expect(last(2)).toEqual({ value: -1 });
   });
 });
 
@@ -145,7 +174,7 @@ describe('AppIconProgress on the Dock and the Linux launcher', () => {
     icon.reported('update-1', downloading(0.5));
 
     update.fail(new Error('The server is down'));
-    await settled();
+    await settled(update.finished);
 
     expect(last(1)).toEqual({ value: -1 });
     expect(last(2)).toEqual({ value: -1 });
@@ -191,6 +220,38 @@ describe('AppIconProgress on the Dock and the Linux launcher', () => {
     expect(last(1)).toEqual({ value: 0.5 });
   });
 
+  it('clears the icon when a held-back close then goes ahead', () => {
+    const { windows, last, state } = fakeWindows([1]);
+    const icon = new AppIconProgress(windows, 'darwin');
+    const update = operation();
+    icon.started('update-1', 1, update.finished, update.signal);
+    icon.reported('update-1', downloading(0.5));
+    icon.windowClosing(1);
+    icon.windowKept(1);
+
+    icon.windowClosing(1);
+    icon.reported('update-1', downloading(0.7));
+    state.open = [];
+    icon.windowClosed(1);
+
+    expect(last(1)).toEqual({ value: -1 });
+  });
+
+  it('clears the icon when quitting closes every window, the last to start closing doing it', () => {
+    const { windows, last, calls } = fakeWindows();
+    const icon = new AppIconProgress(windows, 'darwin');
+    const update = operation();
+    icon.started('update-1', 1, update.finished, update.signal);
+    icon.reported('update-1', downloading(0.5));
+
+    icon.windowClosing(1);
+    icon.windowClosing(2);
+    icon.reported('update-1', downloading(0.7));
+
+    expect(last(2)).toEqual({ value: -1 });
+    expect(calls.filter((entry) => entry.call.value === 0.7)).toEqual([]);
+  });
+
   it('shows a running operation in a window opened after its own closed', () => {
     const { windows, last, state } = fakeWindows([1]);
     const icon = new AppIconProgress(windows, 'darwin');
@@ -228,7 +289,7 @@ describe('AppIconProgress', () => {
     const update = operation();
     icon.started('update-1', 1, update.finished, update.signal);
     update.finish();
-    await settled();
+    await settled(update.finished);
 
     icon.reported('update-1', downloading(1));
 
