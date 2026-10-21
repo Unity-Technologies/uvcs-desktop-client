@@ -4,15 +4,15 @@
   bottom: 0;
   left: 0;
   z-index: 2;
-  height: 10px;
-  margin-top: -10px;
+  height: var(--scrollbar-size);
+  margin-top: calc(-1 * var(--scrollbar-size));
   pointer-events: none;
 }
 
 .bar {
   position: absolute;
   bottom: 0;
-  height: 10px;
+  height: var(--scrollbar-size);
   overflow-x: auto;
   overflow-y: hidden;
   background: var(--bg-surface);
