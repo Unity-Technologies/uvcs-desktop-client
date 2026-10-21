@@ -1006,6 +1006,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     `useFileTree`), with a desktop list's selection of several rows and their menu, which acts on every item the
     selected rows stand for. A list renders its own rows (`DiffEntryRow`, `MergeItemList`'s) and adds its marks (a
     conflict's status, the review mark).
+    Changes puts its `ChangesSummaryBar` (the checkbox for every shown change, their count and undo) between the filter
+    bars and the rows: it acts on what the filters left, in the rows' checkbox column; above the filter, it read as
+    acting on every change.
   - **One menu**: a file's menu is `changedFileMenu` (`components/`) in every list but Changes: its history (annotated
     or not), "Open this revision" and "Save this revision as…" for the version the list shows (a diff's newer side, a
     merge's incoming version; nothing to open for a deleted file or a folder), and Copy; a list adds its own after the
