@@ -10,15 +10,22 @@ export interface Box extends Span {
   right: number;
 }
 
-/** Where a move's label goes: its center's height, and the point it's centered on (`center`) or ends at (`end`). */
+/**
+ * Where a move's label goes: its center's height, the point it's centered on (`center`) or ends at (`end`), and how
+ * wide it may be (null: as wide as its own style lets it).
+ */
 export interface LabelSpot {
   top: number;
   x: number;
   anchor: 'center' | 'end';
+  maxWidth: number | null;
 }
 
 /** The room between a label and the right edge of its pane, when it sits on the moved code's bottom edge. */
 const LABEL_INSET = 12;
+
+/** The room kept on each side of a label centered in a gap. */
+const GAP_MARGIN = 4;
 
 /**
  * Where the label of one of a move's places goes. Best in the empty rows across from it, the hatched gap Pierre leaves
@@ -34,8 +41,9 @@ export function labelSpot(place: Span, gapsAcross: Box[], ownPaneRight: number, 
     const overlap = { ...gap, top: Math.max(gap.top, place.top), bottom: Math.min(gap.bottom, place.bottom) };
     if (overlap.bottom - overlap.top >= needed && (!best || overlap.bottom - overlap.top > best.bottom - best.top)) best = overlap;
   }
-  if (best) return { top: (best.top + best.bottom) / 2, x: (best.left + best.right) / 2, anchor: 'center' };
-  return { top: place.bottom, x: ownPaneRight - LABEL_INSET, anchor: 'end' };
+  // No wider than the gap, so it never sticks out of its pane, past which the view doesn't scroll: its words shorten.
+  if (best) return { top: (best.top + best.bottom) / 2, x: (best.left + best.right) / 2, anchor: 'center', maxWidth: best.right - best.left - 2 * GAP_MARGIN };
+  return { top: place.bottom, x: ownPaneRight - LABEL_INSET, anchor: 'end', maxWidth: null };
 }
 
 /** The box a ribbon between two places is drawn in, down the diff: from the higher top to the lower bottom. */

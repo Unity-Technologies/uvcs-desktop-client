@@ -1,6 +1,6 @@
 import type { Virtualizer } from '@pierre/diffs';
 import { ArrowDown, ArrowUp, GitCompareArrows } from 'lucide-react';
-import { useEffect, useState, type RefObject } from 'react';
+import { useEffect, useState, type CSSProperties, type RefObject } from 'react';
 import type { ChangedLine, DiffSide } from './changeBlocks';
 import type { DiffLayout } from './diffPreferencesStore';
 import type { MovedBlock } from './movedBlocks';
@@ -82,7 +82,7 @@ export function MovedCode({ containerRef, root, virtualizer, moves, layout, hove
               className={styles.label}
               data-anchor={spot.anchor}
               data-hovered={move === hovered ? '' : undefined}
-              style={{ top: spot.top, left: spot.x }}
+              style={{ top: spot.top, left: spot.x, '--label-room': spot.maxWidth === null ? undefined : `${spot.maxWidth}px` } as CSSProperties}
               onPointerEnter={() => onHover(move)}
               onPointerLeave={() => onHover(undefined)}
             >
