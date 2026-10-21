@@ -530,9 +530,12 @@ safe, and the step of a multi-command operation (shelve, undo, switch, bring). N
   macOS Dock and Linux's launcher have one icon for the whole app, which shows every window's operations together,
   only once measured: the Dock draws Electron's indeterminate value as a full bar, which reads as done, and neither has
   a red bar. The Dock keeps a bar after its window is gone, so the last window clears it as it starts closing
-  (`windowClosing`), and sets it again if its page holds the close back. On Linux the bar needs the launcher to find
-  the app's `.desktop` file by Electron's name for the app: package.json's `desktopName`, which
-  `linux.syncDesktopName` gives the file (`scripts/build/linuxDesktopName.test.ts`). A badge count was left out on
+  (`windowClosing`), and sets it again if its page holds the close back. On Linux Electron sets the bar through the
+  LauncherEntry D-Bus API, which Ubuntu's dock and KDE Plasma's task manager show (plain GNOME Shell shows nothing),
+  and only for an app whose `.desktop` file is installed under Electron's name for it: package.json's `desktopName`,
+  which `linux.syncDesktopName` gives the file (`scripts/build/linuxDesktopName.test.ts`). A bare AppImage installs no
+  `.desktop` file, and integrators that rename it (`appimagekit_…`) break the match. The same name is the windows'
+  `WM_CLASS` and Wayland `app_id`, so the windows group under their launcher entry. A badge count was left out on
   purpose: the sidebar's badges (incoming, pending changes) already count, and one more on the icon would compete.
 
 ## Windows

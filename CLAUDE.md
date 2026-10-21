@@ -246,6 +246,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `scripts/build/thirdPartyNotices.test.ts`, `suppliedLicenses.test.ts` | every `SUPPLIED_LICENSES` text is a full license for the license package-lock.json names; `npm run build` fails on a bundled package without a license text |
 | `scripts/build/pinnedActions.test.ts`                     | every GitHub action is pinned to a commit SHA                     |
 | `scripts/build/pierreSkillVersion.test.ts`                | the `pierre-diffs` skill describes the @pierre/diffs version installed   |
+| `scripts/build/linuxDesktopName.test.ts`                 | the Linux `.desktop` file is named as Electron names the app (`desktopName`) |
 
 Not enforced yet: no `any` (there are none today). A static test for it is welcome.
 
