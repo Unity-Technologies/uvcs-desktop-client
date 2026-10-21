@@ -27,13 +27,13 @@ export interface WorkspaceInfo {
   loadedChangeset: number | null;
 }
 
-/** What a workspace works on, as its selector file says: `cm` reads and rewrites it, the app only reads it. */
+/** What a workspace works on, as `cm wi` tells it without asking the server. */
 export interface WorkspaceHead {
-  /** `name@server`; null when the file names its server by an id people never see (a Unity organization's). */
+  /** `name@server`; null when `cm` names its server only by an id people never see (a Unity organization's). */
   repository: string | null;
-  /** The repository's own name, which the file always tells. */
+  /** The repository's own name, which `cm` always tells. */
   repositoryName: string;
-  /** Null when the file loads something the app doesn't name (e.g. a custom selector). */
+  /** Null when it works on something the app doesn't name. */
   selector: WorkspaceSelector | null;
 }
 

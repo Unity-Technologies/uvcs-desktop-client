@@ -34,7 +34,7 @@ export function workspaceRepositoryQuery(path: string) {
 /**
  * Repository of the recently used workspaces. Each lookup is a `cm` call, so this is limited to the few recent ones
  * and resolved once per session (`workspaceRepositoryQuery`), never for the whole workspace list. Paths in
- * `alreadyKnown` (e.g. told by their `.plastic` folder) are skipped.
+ * `alreadyKnown` (e.g. told by `cm wi`, `useWorkspaceHeads`) are skipped.
  */
 export function useRecentWorkspaceRepositories(workspaces: WorkspaceSummary[] | undefined, alreadyKnown: Record<string, unknown> = {}) {
   const { recentWorkspacePaths } = useSettings();
@@ -49,8 +49,8 @@ export function useRecentWorkspaceRepositories(workspaces: WorkspaceSummary[] | 
 }
 
 /**
- * Repository and branch of every listed workspace, read from their `.plastic` folders (no `cm` call). Re-read whenever
- * the list shows again, since switching a workspace elsewhere changes its branch.
+ * Repository and branch of every listed workspace, from a local `cm wi` of each (no server call). Re-read whenever the
+ * list shows again, since switching a workspace elsewhere changes its branch.
  */
 export function useWorkspaceHeads(workspaces: WorkspaceSummary[] | undefined) {
   const paths = (workspaces ?? []).map((workspace) => workspace.path);
