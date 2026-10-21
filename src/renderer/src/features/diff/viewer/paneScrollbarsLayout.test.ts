@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { paneOverflows, paneScrollbarsCss, samePaneBars, showsPaneBars, type PaneBar } from './paneScrollbarsLayout';
+import { paneBarOf, paneOverflows, paneScrollbarsCss, samePaneBars, showsPaneBars, type PaneBar } from './paneScrollbarsLayout';
 
 const pane = (width: number, scrollWidth: number, left = 0): PaneBar => ({ left, width, scrollWidth });
 
@@ -62,5 +62,21 @@ describe('paneScrollbarsCss', () => {
     expect(PIERRE_CSS).toContain(`padding-top:${PIERRE_GAP}`);
     expect(PIERRE_CSS).toContain(`padding-bottom:max(0px, calc(${PIERRE_GAP} - var(--diffs-scrollbar-gutter)))`);
     expect(PIERRE_CSS).toContain('[data-code]::-webkit-scrollbar{width:0;height:var(--diffs-scrollbar-gutter)}');
+  });
+});
+
+describe('paneBarOf', () => {
+  const container = { left: 100, clientLeft: 0, scrollLeft: 0 };
+
+  it('puts a pane\'s bar where the pane is across the container, as wide as it, measuring its code', () => {
+    expect(paneBarOf({ left: 160, clientWidth: 500, scrollWidth: 1400 }, container)).toEqual({ left: 60, width: 500, scrollWidth: 1400 });
+  });
+
+  it('measures from inside the container\'s border, so a framed container gets no sideways scroll of its own', () => {
+    expect(paneBarOf({ left: 101, clientWidth: 500, scrollWidth: 1400 }, { ...container, clientLeft: 1 })).toEqual({ left: 0, width: 500, scrollWidth: 1400 });
+  });
+
+  it('counts what the container itself is scrolled sideways', () => {
+    expect(paneBarOf({ left: 60, clientWidth: 500, scrollWidth: 1400 }, { ...container, scrollLeft: 40 })).toEqual({ left: 0, width: 500, scrollWidth: 1400 });
   });
 });
