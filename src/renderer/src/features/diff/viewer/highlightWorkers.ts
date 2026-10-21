@@ -19,7 +19,7 @@ export function useHighlightWorkers(enabled: boolean): WorkerPoolManager | undef
 function highlightWorkers(theme: ReturnType<typeof pierreThemeName>): WorkerPoolManager {
   const workers = getOrCreateWorkerPoolSingleton({
     poolOptions: {
-      workerFactory: () => new Worker(new URL('@pierre/diffs/worker/worker.js', import.meta.url), { type: 'module', name: 'Syntax highlighting' }),
+      workerFactory: () => new Worker(new URL('./pierreHighlightWorker.ts', import.meta.url), { type: 'module', name: 'Syntax highlighting' }),
       poolSize: 1,
     },
     // The editor's markup (`useTokenTransformer`): the editor attaches to a diff the workers highlighted without Pierre
