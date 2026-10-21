@@ -6,7 +6,7 @@ const ROW = 20;
 describe('labelSpot', () => {
   it('centers the label in the empty rows across from the moved code', () => {
     const gap = { top: 100, bottom: 200, left: 600, right: 1000 };
-    expect(labelSpot({ top: 100, bottom: 200 }, [gap], 580, ROW)).toEqual({ top: 150, x: 800, anchor: 'center' });
+    expect(labelSpot({ top: 100, bottom: 200 }, [gap], 580, ROW)).toEqual({ top: 150, x: 800, anchor: 'center', maxWidth: 392 });
   });
 
   it('centers it on the widest part of a gap beside the moved code', () => {
@@ -14,18 +14,23 @@ describe('labelSpot', () => {
       { top: 0, bottom: 120, left: 600, right: 1000 },
       { top: 160, bottom: 400, left: 600, right: 1000 },
     ];
-    expect(labelSpot({ top: 100, bottom: 240 }, gaps, 580, ROW)).toEqual({ top: 200, x: 800, anchor: 'center' });
+    expect(labelSpot({ top: 100, bottom: 240 }, gaps, 580, ROW)).toEqual({ top: 200, x: 800, anchor: 'center', maxWidth: 392 });
   });
 
   it("puts it at the end of the moved code's bottom edge, clear of the change's chip, when no gap is across from half of it", () => {
     const quarter = { top: 175, bottom: 200, left: 600, right: 1000 };
-    expect(labelSpot({ top: 100, bottom: 200 }, [quarter], 580, ROW)).toEqual({ top: 200, x: 568, anchor: 'end' });
-    expect(labelSpot({ top: 100, bottom: 200 }, [], 580, ROW)).toEqual({ top: 200, x: 568, anchor: 'end' });
+    expect(labelSpot({ top: 100, bottom: 200 }, [quarter], 580, ROW)).toEqual({ top: 200, x: 568, anchor: 'end', maxWidth: null });
+    expect(labelSpot({ top: 100, bottom: 200 }, [], 580, ROW)).toEqual({ top: 200, x: 568, anchor: 'end', maxWidth: null });
+  });
+
+  it('keeps a centered label within its gap, however narrow the gap: it shortens instead of sticking out of the pane', () => {
+    const narrow = { top: 100, bottom: 200, left: 600, right: 700 };
+    expect(labelSpot({ top: 100, bottom: 200 }, [narrow], 580, ROW)).toEqual({ top: 150, x: 650, anchor: 'center', maxWidth: 92 });
   });
 
   it('takes a gap a row high at least, however short the moved code', () => {
     const sliver = { top: 30, bottom: 45, left: 600, right: 1000 };
-    expect(labelSpot({ top: 20, bottom: 50 }, [sliver], 580, ROW)).toEqual({ top: 50, x: 568, anchor: 'end' });
+    expect(labelSpot({ top: 20, bottom: 50 }, [sliver], 580, ROW)).toEqual({ top: 50, x: 568, anchor: 'end', maxWidth: null });
   });
 });
 
