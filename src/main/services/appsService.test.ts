@@ -16,7 +16,7 @@ const LIST: ExternalApps = {
 
 function service() {
   const catalog = { list: vi.fn(async () => LIST), openInEditor: vi.fn(async () => {}), openInTerminal: vi.fn(async () => {}) };
-  const icons = new AppIcons('darwin', async (path) => (path.includes('Code') ? 'data:image/png;base64,code' : undefined));
+  const icons = new AppIcons('darwin', { thumbnail: async (path) => (path.includes('Code') ? 'data:image/png;base64,code' : undefined), fileIcon: async () => undefined });
   return { catalog, apps: createAppsService({ apps: catalog as unknown as ExternalAppsCatalog, icons }, 'darwin') };
 }
 

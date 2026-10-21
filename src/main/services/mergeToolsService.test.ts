@@ -40,7 +40,7 @@ const CAT_VERSIONS: CmAnswer = async ({ args }) => {
 function mergeTools(answers: Record<string, CmAnswer>, smartMerge: SmartMergeTool | null = null) {
   const fake = fakeCmClient(answers);
   const settings = memorySettings({ mergeTool: MY_TOOL.id, customMergeTools: [MY_TOOL], mergeToolArgs: {} });
-  const apps = { installedApps: { get: async () => NO_INSTALLED_APPS } as never, icons: new AppIcons('linux', async () => undefined) };
+  const apps = { installedApps: { get: async () => NO_INSTALLED_APPS } as never, icons: new AppIcons('linux', { thumbnail: async () => undefined, fileIcon: async () => undefined }) };
   return { ...fake, service: createMergeToolsService(serviceContext(fake.cm, { settings }), apps, () => smartMerge) };
 }
 

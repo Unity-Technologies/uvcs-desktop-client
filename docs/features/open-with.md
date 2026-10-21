@@ -26,10 +26,12 @@ OS where an app is installed rather than guessing paths:
   restart. A failed read counts as no records and is tried again. The renderer reads the
   list at the root of every window (`useExternalApps`), stale after a minute; menus only read it as last read
   (`currentExternalApps`), so building a menu starts nothing.
-- **Icons** (`AppIcons`): the apps list and the merge tools carry each app's own icon, read once per location with
-  `nativeImage.createThumbnailFromPath`; a program inside a macOS bundle shows the bundle's. `app.getFileIcon` was
-  tried and rejected: on macOS it draws the icon of the file type, the same for every app. A Windows `.cmd` launcher
-  and a Linux desktop entry have only a file's picture, so they show none.
+- **Icons** (`AppIcons`): the apps list and the merge tools carry each app's own icon, read once per location, each
+  OS its own way (`IconReaders`). macOS: the bundle's thumbnail (`nativeImage.createThumbnailFromPath`); a program
+  inside a bundle shows the bundle's. `app.getFileIcon` was rejected there: it draws the icon of the file type, the
+  same for every app. Windows: the program's file icon (`app.getFileIcon`, the one Explorer shows); the thumbnail was
+  rejected there: Windows has none for a program ("Failed to get thumbnail from local thumbnail cache reference"). A
+  Windows `.cmd` launcher and a Linux desktop entry have only a file's picture, so they show none.
 
 ## The catalogs
 
