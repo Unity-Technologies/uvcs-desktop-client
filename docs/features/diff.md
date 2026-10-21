@@ -92,8 +92,12 @@ it's typed into). ⌘E puts the
 caret in the text and Esc leaves it for the file list; keys the editor handles never reach the app's shortcuts. Read and
 edit look the same: the editor is on as soon as the diff has its colors, so nothing in the diff moves when typing
 starts. Each pane of code
-scrolls sideways on its own and its bar would sit at the end of the file, so `PaneScrollbars` keeps one per pane at
-the bottom of the view (diffs, the whole-file editor, merge resolution). Every text diff, and the whole-file editor, renders only the
+scrolls sideways on its own and its bar would sit at the end of the file, shown only while hovered, so `PaneScrollbars`
+keeps one per pane at the bottom of the view, wherever Pierre shows code (diffs, the whole-file editor, merge
+resolution, moved code, Annotate; `codeScrollsSideways.test.ts`). The panes' own bars are hidden through Pierre's
+`--diffs-scrollbar-gutter-override` (`paneScrollbarsCss`), so the code ends with the gap it starts with (8 px), and
+while the bars show it leaves room for them under its last line: scrolled to the end, the last line sits whole above
+them. Every text diff, and the whole-file editor, renders only the
 lines in view (Pierre's `Virtualizer` on the diff's scrolling element): what's drawn again (a line added, a typing
 pause's word marks, a theme switch) costs those lines, not the file's. With every line of a 190 KB file shown, the
 typing pause's redraw took 0.45 s before; it's now under a frame. A file's language comes from its path
