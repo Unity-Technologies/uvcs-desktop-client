@@ -240,6 +240,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `styles/tokens.test.ts`, `focusRings.test.ts`             | text 4.5:1 and focus rings 3:1 in both themes                     |
 | `styles/noRawColors.test.ts`                              | colors come from `styles/tokens.css`; the few written out say why |
 | `renderer/src/noAiLookalikeIcons.test.ts`                 | no sparkles or wands: "Automatic" never reads as an AI feature    |
+| `renderer/src/codeScrollsSideways.test.ts`                | every place showing code with Pierre has `PaneScrollbars`         |
 | `window/workspaceMenuCommands.test.ts`                    | app menu commands match the workspace commands                    |
 | `main/cm/noCmInternalFiles.test.ts`                       | nothing reads `cm`'s own files (`.plastic/`, the config folder); only the first-run import reads the config, never writes it |
 | `scripts/build/dependencyLicenses.test.ts`                | every package in package-lock.json has a permissive license (`PERMISSIVE_LICENSES`) |
@@ -247,7 +248,6 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `scripts/build/pinnedActions.test.ts`                     | every GitHub action is pinned to a commit SHA                     |
 | `scripts/build/pierreSkillVersion.test.ts`                | the `pierre-diffs` skill describes the @pierre/diffs version installed   |
 | `scripts/build/linuxDesktopName.test.ts`                  | the Linux `.desktop` file is named as Electron names the app (`desktopName`) |
-| `renderer/src/codeScrollsSideways.test.ts`                | every place showing code with Pierre has `PaneScrollbars`         |
 
 Not enforced yet: no `any` (there are none today). A static test for it is welcome.
 
