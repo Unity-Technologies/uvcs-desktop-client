@@ -826,7 +826,12 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   `windowChrome`: macOS insets its traffic lights over the top bar's start; Windows hides its title bar and overlays
   its caption buttons on the top bar's end (`titleBarOverlay`, clear, symbols in the theme's text color; the page keeps
   `--caption-buttons-width` free), with a menu button at the bar's start (and Alt or F10) popping up the menu bar's menus;
-  Linux keeps the desktop's frame and menu bar. Native parts follow the app's theme (`followAppTheme`). The menus
+  Linux keeps the desktop's frame and menu bar. Native parts follow the app's theme (`followAppTheme`) and the page's
+  zoom (View > Zoom In, Zoom Out; Chromium keeps one per origin, so every window shares it and it outlives a restart):
+  the menu's own items (`zoomPage`, not Electron's zoom roles, which tell nobody) and each page load
+  (`followPageZoom`) center the traffic lights in the scaled top bar (`trafficLightsAt`) and make the caption buttons
+  as tall as it (`captionButtons`), and tell the page its zoom (`pageZoomChanged`, `--window-zoom`), which leaves the
+  lights the same room in window points. The menus
   (`main/window/appMenuTemplate`) have an app menu on macOS only; elsewhere File ends with Settings and Exit (Windows)
   or Quit (Linux), Help with Check for Updates and About, and `&` marks each item's Alt letter. The menus hold what
   a person looks for there: windows and workspaces (File), the branch work (Branch: switch, new, merges), the palette,
