@@ -49,16 +49,21 @@ export function useRecentWorkspaceRepositories(workspaces: WorkspaceSummary[] | 
 }
 
 /**
- * Repository and branch of every listed workspace, from a local `cm wi` of each (no server call). Re-read whenever the
- * list shows again, since switching a workspace elsewhere changes its branch.
+ * Repository and branch of every listed workspace, from a local `cm wi` of each (no server call, but one command per
+ * workspace). Re-read when the list shows again once stale, since switching a workspace elsewhere changes its branch;
+ * never on a window focus, which would run them all again each time the user comes back.
  */
-export function useWorkspaceHeads(workspaces: WorkspaceSummary[] | undefined) {
-  const paths = (workspaces ?? []).map((workspace) => workspace.path);
-  return useQuery({
+export function workspaceHeadsQuery(paths: string[]) {
+  return queryOptions({
     queryKey: queryKeys.workspaceHeads(paths),
     queryFn: () => api.workspaces.heads(paths),
     enabled: paths.length > 0,
+    refetchOnWindowFocus: false,
   });
+}
+
+export function useWorkspaceHeads(workspaces: WorkspaceSummary[] | undefined) {
+  return useQuery(workspaceHeadsQuery((workspaces ?? []).map((workspace) => workspace.path)));
 }
 
 /** Which of these recent paths (ones `cm` doesn't list) lost their folder. */

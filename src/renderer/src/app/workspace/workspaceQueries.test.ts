@@ -1,7 +1,9 @@
 import { fakeApi } from '../../testing/fakeWindow';
-import { QueryClient } from '@tanstack/react-query';
-import { describe, expect, it, vi } from 'vitest';
-import { workspaceRepositoryQuery } from './workspaceQueries';
+import { focusManager, QueryClient } from '@tanstack/react-query';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { showQuery } from '../../testing/queryProbes';
+import { createQueryClient } from '../queryClient';
+import { workspaceHeadsQuery, workspaceRepositoryQuery } from './workspaceQueries';
 
 describe('workspaceRepositoryQuery', () => {
   it('asks cm about each recent workspace once a session, whatever order or company it comes back in', async () => {
@@ -36,5 +38,35 @@ describe('workspaceRepositoryQuery', () => {
     fakeApi.answer('workspaces.repositoryOf', () => null);
 
     expect(await new QueryClient().fetchQuery(workspaceRepositoryQuery('/wk/game'))).toBeNull();
+  });
+});
+
+describe('workspaceHeadsQuery', () => {
+  let client: QueryClient;
+  beforeEach(() => {
+    client = createQueryClient();
+    client.mount();
+    vi.useFakeTimers({ toFake: ['Date'] });
+  });
+  afterEach(() => {
+    client.unmount();
+    client.clear();
+    focusManager.setFocused(undefined);
+    vi.useRealTimers();
+  });
+
+  it('never reads every workspace again on a window focus, and does when the list shows again once stale', async () => {
+    const { queryKey, queryFn: _read, ...options } = workspaceHeadsQuery(['/wk/game', '/wk/tools']);
+    const heads = await showQuery(client, queryKey, options);
+
+    vi.advanceTimersByTime(60 * 60_000);
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(heads.reads()).toBe(1);
+
+    heads.hide();
+    const shownAgain = await showQuery(client, queryKey, options);
+    expect(shownAgain.reads()).toBe(1);
   });
 });
