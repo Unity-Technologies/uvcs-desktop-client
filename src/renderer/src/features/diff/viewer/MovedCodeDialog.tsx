@@ -23,11 +23,6 @@ interface MovedCodeComparison {
   comparisonMethod: ComparisonMethod;
 }
 
-/** A row of the comparison, for its height: Pierre's line height, about. */
-const ROW_HEIGHT = 20;
-/** What the code takes past its rows: Pierre's gap above and below them, and the room of the pane scrollbars. */
-const CODE_FRAME = 'calc(2 * var(--diffs-gap-block, 8px) + var(--scrollbar-size))';
-
 /**
  * Compares a move's two places, what moved with what it became (`movedComparison`): only what changed on the way shows
  * as changed, and code moved as it was shows alone, saying so. Read-only, in the diff's own look, layout and comparison
@@ -38,11 +33,9 @@ export function openMovedCodeDialog(comparison: MovedCodeComparison): void {
 }
 
 function MovedCodeDialog({ move, meta, fileName, comparisonMethod, onClose }: MovedCodeComparison & { onClose: () => void }) {
-  const { layout } = useDiffPreferences();
   const comparison = useMemo(() => movedComparison(meta, move, comparisonMethod, fileName), [meta, move, comparisonMethod, fileName]);
   const { deletions, additions } = move;
   const scroller = useRef<HTMLDivElement>(null);
-  const rows = comparison.kind === 'unchanged' ? additions.count : layout === 'split' ? Math.max(deletions.count, additions.count) : deletions.count + additions.count;
   return (
     <Dialog
       title={`Moved from ${lines(deletions)} to ${lines(additions)}`}
@@ -55,7 +48,7 @@ function MovedCodeDialog({ move, meta, fileName, comparisonMethod, onClose }: Mo
         </Button>
       }
     >
-      <div ref={scroller} className={styles.diff} style={{ height: `min(56vh, calc(${rows * ROW_HEIGHT}px + ${CODE_FRAME}))` }}>
+      <div ref={scroller} className={styles.diff}>
         {comparison.kind === 'unchanged' ? (
           <UnchangedCode code={comparison.code} fileName={fileName} />
         ) : (
