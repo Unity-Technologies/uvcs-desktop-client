@@ -10,7 +10,7 @@ import { readUpdateProgress } from '../cm/progress/updateProgress';
 import { switchArgs, UPDATE_ARGS } from '../cm/updateArgs';
 import { readWorkingObjectComment } from '../cm/workingObjectComment';
 import { readWorkspaceGlance } from '../cm/workspaceGlance';
-import { readWorkspaceHeads } from '../cm/workspaceHeads';
+import { workspaceHeadsReader } from '../cm/workspaceHeads';
 import { workspaceRepositoryLookup } from '../cm/workspaceRepositories';
 import { findWorkspaceRoot } from '../cm/workspaceRoot';
 import { CmError } from '../cm/CmError';
@@ -25,6 +25,7 @@ const UPDATE_NEEDS_MERGE = 'Some of your local changes collide with incoming one
 export function createWorkspacesService({ cm, operations, watchers, windows, settings, headers }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): WorkspacesApi {
   const switchDependencies = { cm, settings, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'switch-backups') };
   const lookUpRepository = workspaceRepositoryLookup(cm);
+  const readHeads = workspaceHeadsReader(cm);
   /** Folders `create` made (they didn't exist or were empty): the only ones `discardNew` may delete. */
   const createdFolders = new Set<string>();
 
@@ -113,7 +114,7 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     info,
     workingObjectComment: (workspacePath, selector) => readWorkingObjectComment(cm, workspacePath, selector),
     repositoryOf,
-    heads: (workspacePaths) => readWorkspaceHeads(cm, workspacePaths),
+    heads: readHeads,
     findMissing: async (paths) => paths.filter((path) => !existsSync(path)),
     findRoot: (directory) => findWorkspaceRoot(cm, directory),
     create,

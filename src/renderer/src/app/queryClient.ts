@@ -54,6 +54,16 @@ export function isKeyedByMovedInfo(query: Query, before: WorkspaceInfo | undefin
   return part !== undefined && before !== undefined && after !== undefined && workspaceInfoKeyMoved(part, before, after);
 }
 
+/**
+ * The lists of workspaces (the home screen's, the switcher's) show this one's branch too: when it moved to another
+ * branch, label, changeset or shelve, they are read again as they next show, not now, as reading every head costs a
+ * `cm wi` per workspace (`workspaceHeadsQuery`).
+ */
+export async function markWorkspaceHeadsStaleIfMoved(client: QueryClient, before: WorkspaceInfo | undefined, after: WorkspaceInfo | undefined): Promise<void> {
+  if (before === undefined || after === undefined || !workspaceInfoKeyMoved('selector', before, after)) return;
+  await client.invalidateQueries({ queryKey: queryKeys.everyWorkspaceHeads, refetchType: 'none' });
+}
+
 export function isRefreshable(query: Query): boolean {
   return query.meta?.immutable !== true;
 }
@@ -100,5 +110,6 @@ export async function invalidateWorkspaceIn(
     others,
     client.invalidateQueries({ queryKey, predicate: (query) => keyed(query) && moved(query), refetchType: 'none' }),
     client.invalidateQueries({ queryKey, predicate: (query) => keyed(query) && !moved(query) }),
+    markWorkspaceHeadsStaleIfMoved(client, before, after),
   ]);
 }

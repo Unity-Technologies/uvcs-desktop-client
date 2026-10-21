@@ -1,4 +1,5 @@
 import { beforeEach } from 'vitest';
+import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { queryKeys } from '../api/queryKeys';
 import { useNavigation } from '../app/navigation/navigationStore';
 import type { Page } from '../app/navigation/pages';
@@ -41,8 +42,13 @@ export type WorkspaceArea = (typeof WORKSPACE_AREAS)[number];
  */
 export function watchRefreshes(workspacePath: string): () => WorkspaceArea[] {
   const keyOf = (area: WorkspaceArea) => queryKeys.inWorkspace(workspacePath, area, ...(AREA_DETAILS[area] ?? []));
-  for (const area of WORKSPACE_AREAS) queryClient.setQueryData(keyOf(area), 'read');
+  for (const area of WORKSPACE_AREAS) queryClient.setQueryData(keyOf(area), area === 'info' ? workspaceInfoAt(workspacePath) : 'read');
   return () => WORKSPACE_AREAS.filter((area) => queryClient.getQueryState(keyOf(area))?.isInvalidated);
+}
+
+/** The info a workspace's key holds, shaped as `api.workspaces.info` answers: the refreshes compare it before and after. */
+function workspaceInfoAt(path: string): WorkspaceInfo {
+  return { name: 'game', path, repository: 'game@local', repositoryName: 'game', server: 'local', selector: { kind: 'branch', name: '/main' }, loadedChangeset: 1 };
 }
 
 /** The rest of the key of an area whose refreshes go by it: the Files view's listing of the workspace root. */

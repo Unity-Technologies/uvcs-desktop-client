@@ -83,6 +83,26 @@ describe('invalidateWorkspace', () => {
     expect(isStale(key('leftChanges', '/main'))).toBe(true);
   });
 
+  it("marks the lists of workspaces' heads stale when the workspace moved to another branch, without reading them", async () => {
+    await showWorkspaceInfo(workspaceOn('/main', 10), workspaceOn('/main/task', 10));
+    const heads = await showQuery(client, queryKeys.workspaceHeads(['/work/game', '/work/tools']));
+
+    await invalidateWorkspaceIn(client, ws);
+
+    expect(heads.reads()).toBe(1);
+    expect(isStale(queryKeys.workspaceHeads(['/work/game', '/work/tools']))).toBe(true);
+  });
+
+  it("leaves the lists of workspaces' heads alone when the workspace stayed on its branch", async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    await showWorkspaceInfo(workspaceOn('/main', 10), workspaceOn('/main', 11));
+    await showQuery(client, queryKeys.workspaceHeads(['/work/game']), { staleTime: 5 * 60_000 });
+
+    await invalidateWorkspaceIn(client, ws);
+
+    expect(isStale(queryKeys.workspaceHeads(['/work/game']))).toBe(false);
+  });
+
   it('re-reads a view keyed by a part of the workspace info that stayed', async () => {
     await showWorkspaceInfo(workspaceOn('/main', 10), workspaceOn('/main', 11));
     const leftChanges = await showQuery(client, key('leftChanges', '/main'), { meta: keyedByWorkspaceInfo('selector') });
