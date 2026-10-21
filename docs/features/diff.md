@@ -97,7 +97,7 @@ keeps one per pane at the bottom of the view, wherever Pierre shows code (diffs,
 resolution, moved code, Annotate; `codeScrollsSideways.test.ts`). The panes' own bars are hidden through Pierre's
 `--diffs-scrollbar-gutter-override` (`paneScrollbarsCss`), so the code ends with the gap it starts with (8 px), and
 while the bars show it leaves room for them under its last line: scrolled to the end, the last line sits whole above
-them. Every text diff, and the whole-file editor, renders only the
+them, and the view's scroll padding keeps the caret typing past the bottom clear of them too. Every text diff, and the whole-file editor, renders only the
 lines in view (Pierre's `Virtualizer` on the diff's scrolling element): what's drawn again (a line added, a typing
 pause's word marks, a theme switch) costs those lines, not the file's. With every line of a 190 KB file shown, the
 typing pause's redraw took 0.45 s before; it's now under a frame. A file's language comes from its path
