@@ -465,7 +465,7 @@ well-known tools itself, and the user adds any other (docs/features/merge.md); i
 The app asks `cm`, never reads what `cm` keeps for itself, whose format is `cm`'s to change: a workspace's metadata
 (`.plastic/`: `plastic.selector`, `plastic.wktree`, `plastic.changes`, `changelists/`...) and the user's config folder
 (`plasticConfigFolder`, `PLASTIC_HOME`: `client.conf`, `tokens.conf`, `profiles.conf`, `plastic.workspaces`,
-`*.token`...). What a workspace works on is `cm wi`, its root `cm getworkspacefrompath`, its changelists `cm status
+`*.token`, `<guid>.key`, `globalconfig/`...). What a workspace works on is `cm wi`, its root `cm getworkspacefrompath`, its changelists `cm status
 --changelists`. The few modules that name those files do so only to watch, skip or look for them, or to tell `cm`'s
 words:
 
