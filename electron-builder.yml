@@ -48,7 +48,10 @@ win:
   target:
     - target: nsis
       arch: [x64, arm64]
+# The .desktop file is named after package.json's desktopName, the name Electron gives the app on Linux: the launcher
+# finds the app's icon by it, to show its progress bar (main/window/iconProgress.ts) and group its windows.
 linux:
   icon: build/icons
+  syncDesktopName: true
   artifactName: UnityVersionControl-${version}-Linux-${arch}.${ext}
   target: AppImage

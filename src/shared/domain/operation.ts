@@ -12,6 +12,12 @@ export type ProgressStage =
   | 'finishing'
   | 'working';
 
+/** Below this fraction an operation shows as not measured yet: a nearly empty bar would look stuck. */
+export const MEASURED_FROM = 0.01;
+
+/** Stages after the measured work (confirming a checkin, wrapping up): what was measured is all done. */
+export const WRAPPING_UP_STAGES: ReadonlySet<ProgressStage> = new Set<ProgressStage>(['confirming', 'finishing']);
+
 /** One command's progress, read from its output. */
 export interface CommandProgress {
   stage: ProgressStage;

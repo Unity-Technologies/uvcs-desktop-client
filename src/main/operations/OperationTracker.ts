@@ -14,7 +14,8 @@ export interface OperationContext {
 }
 
 type ProgressListener = (operationId: string, progress: OperationProgress) => void;
-type StartListener = (finished: Promise<unknown>) => void;
+/** An operation that changes a workspace started; `signal` aborts once it's cancelled. */
+type StartListener = (operationId: string, finished: Promise<unknown>, signal: AbortSignal) => void;
 
 /** Tracks long-running operations so they can report progress and be cancelled from the UI. */
 export class OperationTracker {
@@ -61,7 +62,7 @@ export class OperationTracker {
       finished = work(progress.context(controller.signal));
       if (writes) {
         this.writes.add(finished);
-        this.onStarted(finished);
+        this.onStarted(operationId, finished, controller.signal);
       }
       return await finished;
     } finally {

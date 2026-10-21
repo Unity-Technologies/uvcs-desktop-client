@@ -522,6 +522,23 @@ safe, and the step of a multi-command operation (shelve, undo, switch, bring). N
   by transforms on the compositor. `OperationCard` draws it in fixed rows and widths, then turns into the success
   message in place; the status bar, the branch pill (a switch) and the incoming chip (an update) show the same
   operation with a `ProgressRing`. A report renders only these (`useRunningOperationOfKind` for the pill and the chip).
+- The app's icon shows every operation that changes a workspace (`OperationTracker.run`), with no code of its own in
+  any feature: `trackOperations` hands each start and report to `AppIconProgress`, which draws them through
+  `BrowserWindow.setProgressBar` (`showProgressOnAppIcon`; the rules in `main/window/iconProgress.ts`). The icon shows
+  the whole operation, the steps before the current one done (`operationIconProgress`), and never goes back while it
+  runs: a bar that fills, empties for the next step and fills again reads as done and started over. Windows gives
+  each window its own taskbar button, which shows that window's operations: a pulse until they're measured, then the
+  fraction, and red for one that failed while its window was in the background, until the user comes back to it. The
+  macOS Dock and Linux's launcher have one icon for the whole app, which shows every window's operations together,
+  only once measured: the Dock draws Electron's indeterminate value as a full bar, which reads as done, and neither has
+  a red bar. The Dock keeps a bar after its window is gone, so the last window clears it as it starts closing
+  (`windowClosing`), and sets it again if its page holds the close back. On Linux Electron sets the bar through the
+  LauncherEntry D-Bus API, which Ubuntu's dock and KDE Plasma's task manager show (plain GNOME Shell shows nothing),
+  and only for an app whose `.desktop` file is installed under Electron's name for it: package.json's `desktopName`,
+  which `linux.syncDesktopName` gives the file (`scripts/build/linuxDesktopName.test.ts`). A bare AppImage installs no
+  `.desktop` file, and integrators that rename it (`appimagekit_…`) break the match. The same name is the windows'
+  `WM_CLASS` and Wayland `app_id`, so the windows group under their launcher entry. A badge count was left out on
+  purpose: the sidebar's badges (incoming, pending changes) already count, and one more on the icon would compete.
 
 ## Windows
 

@@ -1,6 +1,7 @@
 {
   "name": "uvcs-desktop",
   "productName": "Unity Version Control",
+  "desktopName": "com.unity.uvcs-desktop.desktop",
   "version": "0.1.4",
   "description": "A modern desktop client for Unity Version Control, powered by the cm CLI.",
   "author": "Unity Technologies",
