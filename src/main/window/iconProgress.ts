@@ -1,4 +1,4 @@
-import { WRAPPING_UP_STAGES, type OperationProgress } from '@shared/domain/operation';
+import { MEASURED_FROM, WRAPPING_UP_STAGES, type OperationProgress } from '@shared/domain/operation';
 
 /**
  * What the app's icon shows of the operations changing a workspace (the Dock on macOS, the taskbar button on Windows,
@@ -8,9 +8,6 @@ import { WRAPPING_UP_STAGES, type OperationProgress } from '@shared/domain/opera
 export type IconProgress = { mode: 'none' } | { mode: 'unmeasured' } | { mode: 'measured'; value: number } | { mode: 'failed' };
 
 export const NO_PROGRESS: IconProgress = { mode: 'none' };
-
-/** Below this an operation counts as not measured yet, as the progress card keeps sweeping (`nextProgressBar`). */
-const MEASURED_FROM = 0.01;
 
 /** What one running operation shows, from its latest progress (null until its first report). */
 export function operationIconProgress(progress: OperationProgress | null): IconProgress {
