@@ -58,9 +58,12 @@ export function workspaceHeadsQuery(paths: string[]) {
     queryKey: queryKeys.workspaceHeads(paths),
     queryFn: () => api.workspaces.heads(paths),
     enabled: paths.length > 0,
-    refetchOnWindowFocus: false,
+    ...WORKSPACE_HEADS_REFRESH,
   });
 }
+
+/** When the heads are read again: as the list shows once stale (the default), never on a window focus. */
+export const WORKSPACE_HEADS_REFRESH = { refetchOnWindowFocus: false } as const;
 
 export function useWorkspaceHeads(workspaces: WorkspaceSummary[] | undefined) {
   return useQuery(workspaceHeadsQuery((workspaces ?? []).map((workspace) => workspace.path)));

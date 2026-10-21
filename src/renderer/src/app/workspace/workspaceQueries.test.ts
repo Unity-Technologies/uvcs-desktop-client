@@ -3,7 +3,7 @@ import { focusManager, QueryClient } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { showQuery } from '../../testing/queryProbes';
 import { createQueryClient } from '../queryClient';
-import { workspaceHeadsQuery, workspaceRepositoryQuery } from './workspaceQueries';
+import { WORKSPACE_HEADS_REFRESH, workspaceHeadsQuery, workspaceRepositoryQuery } from './workspaceQueries';
 
 describe('workspaceRepositoryQuery', () => {
   it('asks cm about each recent workspace once a session, whatever order or company it comes back in', async () => {
@@ -56,7 +56,10 @@ describe('workspaceHeadsQuery', () => {
   });
 
   it('never reads every workspace again on a window focus, and does when the list shows again once stale', async () => {
-    const { queryKey, queryFn: _read, ...options } = workspaceHeadsQuery(['/wk/game', '/wk/tools']);
+    const query = workspaceHeadsQuery(['/wk/game', '/wk/tools']);
+    expect(query).toMatchObject(WORKSPACE_HEADS_REFRESH);
+    const { queryKey } = query;
+    const options = WORKSPACE_HEADS_REFRESH;
     const heads = await showQuery(client, queryKey, options);
 
     vi.advanceTimersByTime(60 * 60_000);
