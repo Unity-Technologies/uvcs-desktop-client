@@ -627,7 +627,7 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   repository's avatar (`components/RepositoryAvatar`: a white initial on a solid `--avatar-*` fill, picked by
   `avatarColor` from the repository's short name, the workspace's own until it's known; a neutral square while
   loading), then its branch (`SelectorChip`) and server (`ServerChip`, the whole `name@server`
-  in its tooltip), told by `useDescribeWorkspace` (the `.plastic` folder, `cm` only for recent ones it can't tell). In
+  in its tooltip), told by `useDescribeWorkspace` (a local `cm wi` of each, the server only for recent ones it can't tell). In
   the switcher's narrow rows the server gives way first, down to its icon, then the branch's name.
 
 ## Start-up
