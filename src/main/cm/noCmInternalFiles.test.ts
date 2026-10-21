@@ -35,11 +35,7 @@ const ALLOWED: Record<string, Allowance> = {
   'main/plasticConfig/configFolder.ts': { fileSystem: [], why: 'where the official client keeps its config, for the first-run import' },
   'main/settings/importLegacySettings.ts': { fileSystem: ['readFileSync'], why: 'the first-run import, which reads plasticgui.conf once' },
   'main/watch/classifyChange.ts': { fileSystem: [], why: 'the files cm rewrites in .plastic are refresh signals for the watcher' },
-  'main/watch/WorkspaceWatcher.ts': {
-    fileSystem: ['readFileSync'],
-    readsOnly: WORKSPACE_RULE_FILES,
-    why: 'watches .plastic for rewrites; reads ignore.conf to skip folders',
-  },
+  'main/watch/WorkspaceWatcher.ts': { fileSystem: [], why: 'watches .plastic for rewrites' },
   'main/files/listWorkspacePaths.ts': { fileSystem: ['readdir'], why: 'skips .plastic when listing the workspace’s own files' },
   'main/cm/setupCheck.ts': { fileSystem: [], why: 'tells cm’s “client.conf not found” error, what cm says without a configuration' },
   'main/system/draggedFolder.ts': {
