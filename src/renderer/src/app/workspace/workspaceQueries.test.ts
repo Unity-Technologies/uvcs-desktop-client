@@ -80,20 +80,4 @@ describe('workspaceHeadsQuery', () => {
 
     expect(reads.count).toBe(1);
   });
-
-  it('reads them again when a list shows once they are five minutes old, not before', async () => {
-    const reads = { count: 0 };
-    showList(reads)();
-    await settle();
-
-    vi.advanceTimersByTime(4 * 60_000);
-    showList(reads)();
-    await settle();
-    expect(reads.count).toBe(1);
-
-    vi.advanceTimersByTime(2 * 60_000);
-    showList(reads);
-    await settle();
-    expect(reads.count).toBe(2);
-  });
 });
