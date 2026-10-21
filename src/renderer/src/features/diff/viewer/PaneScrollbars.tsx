@@ -73,9 +73,9 @@ export function PaneScrollbars({ containerRef }: PaneScrollbarsProps) {
     });
   }, [bars]);
 
-  if (!showsPaneBars(bars)) return null;
+  // Rendered even with no bar to show: its view never scrolls sideways while it's there (`PaneScrollbars.module.css`).
   return (
-    <div className={styles.bars} aria-hidden {...{ [PANE_SCROLLBARS_ATTRIBUTE]: '' }}>
+    <div className={styles.bars} aria-hidden {...(showsPaneBars(bars) ? { [PANE_SCROLLBARS_ATTRIBUTE]: '' } : {})}>
       {bars.map((bar, index) =>
         paneOverflows(bar) ? (
           <div

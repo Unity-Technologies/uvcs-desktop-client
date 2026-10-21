@@ -1,5 +1,6 @@
 /* Stays at the bottom of the view, over the code, taking no room of its own: the code leaves room for it under its last
-   line (`paneScrollbarsCss`). */
+   line (`paneScrollbarsCss`). Clipped to the view: while a resize hasn't measured the panes again yet, a bar keeps its
+   old width for a few frames, and sticking out it would make the view scroll sideways. */
 .bars {
   position: sticky;
   bottom: 0;
@@ -7,6 +8,7 @@
   z-index: 2;
   height: var(--scrollbar-size);
   margin-top: calc(-1 * var(--scrollbar-size));
+  overflow: hidden;
   pointer-events: none;
 }
 
@@ -24,8 +26,14 @@
   height: 1px;
 }
 
+/* The view never scrolls sideways itself: its panes do, each with its bar here, so a bar of its own would only ever be a
+   second one under them. `div` outranks the view's own class (`overflow: auto`), whatever order the sheets load in. */
+div:has(> .bars) {
+  overflow-x: hidden;
+}
+
 /* While the bars show, what the view scrolls into sight (the caret as it types or moves, a focused line) stops a gap
    clear of them, not under them: the browser keeps it within the view less its scroll padding. */
-:has(> .bars) {
+:has(> .bars[data-pane-scrollbars]) {
   scroll-padding-bottom: calc(var(--scrollbar-size) + var(--space-2));
 }
