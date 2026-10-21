@@ -103,6 +103,18 @@ describe('invalidateWorkspace', () => {
     expect(isStale(queryKeys.workspaceHeads(['/work/game']))).toBe(false);
   });
 
+  it("refreshes the workspace, and leaves the workspaces' heads alone, while its info isn't one read from cm", async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    // The cache holds whatever was put under the key: here a placeholder, as the operation tests seed every area.
+    client.setQueryData(key('info'), 'read');
+    await showQuery(client, queryKeys.workspaceHeads(['/work/game']), { staleTime: 5 * 60_000 });
+
+    await expect(invalidateWorkspaceIn(client, ws)).resolves.toBeUndefined();
+
+    expect(isStale(key('info'))).toBe(true);
+    expect(isStale(queryKeys.workspaceHeads(['/work/game']))).toBe(false);
+  });
+
   it('re-reads a view keyed by a part of the workspace info that stayed', async () => {
     await showWorkspaceInfo(workspaceOn('/main', 10), workspaceOn('/main', 11));
     const leftChanges = await showQuery(client, key('leftChanges', '/main'), { meta: keyedByWorkspaceInfo('selector') });
