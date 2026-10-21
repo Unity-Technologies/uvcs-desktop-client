@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
+import { PANE_SCROLLBARS_ATTRIBUTE } from './paneScrollbarsDom';
 import { pierreShadowRoot } from './pierreDom';
 import { useShadowStyle } from './useShadowStyle';
 import { paneBarOf, paneOverflows, paneScrollbarsCss, samePaneBars, showsPaneBars, type PaneBar } from './paneScrollbarsLayout';
@@ -74,7 +75,7 @@ export function PaneScrollbars({ containerRef }: PaneScrollbarsProps) {
 
   if (!showsPaneBars(bars)) return null;
   return (
-    <div className={styles.bars} aria-hidden data-pane-scrollbars>
+    <div className={styles.bars} aria-hidden {...{ [PANE_SCROLLBARS_ATTRIBUTE]: '' }}>
       {bars.map((bar, index) =>
         paneOverflows(bar) ? (
           <div
@@ -93,9 +94,4 @@ export function PaneScrollbars({ containerRef }: PaneScrollbarsProps) {
       )}
     </div>
   );
-}
-
-/** How much of the bottom of `container`'s view the bars cover: their thickness while they show, else 0. */
-export function paneScrollbarsHeight(container: HTMLElement): number {
-  return container.querySelector<HTMLElement>(':scope > [data-pane-scrollbars]')?.offsetHeight ?? 0;
 }
