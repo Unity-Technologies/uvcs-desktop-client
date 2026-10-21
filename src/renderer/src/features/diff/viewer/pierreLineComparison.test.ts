@@ -36,6 +36,13 @@ describe('Pierre typed into under a comparison method', () => {
     expect(changesOf(session.diff)).toEqual([]);
   });
 
+  it('drops it too when the line typed back is out of the rows the editor renders', async () => {
+    const session = await typedIntoPierre('a\n  b\nc\nd\n', 'a\nB\nc\nd\n', 'ignoreWhitespace');
+    session.typeOutOfView(1, '\tb ');
+    expect(session.diff.additionLines[1]).toBe('\tb \n');
+    expect(changesOf(session.diff)).toEqual([]);
+  });
+
   it('still shows the changes a comparator sees in text typed back to the original', async () => {
     // Lone CRs against LFs: the same text as shown, every line different under Recognize all.
     const session = await typedIntoPierre('one\rtwo\rthree\r', 'one\ntwo\nthree\n', 'recognizeAll');

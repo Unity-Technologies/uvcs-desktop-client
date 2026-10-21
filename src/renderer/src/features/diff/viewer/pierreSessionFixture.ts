@@ -102,6 +102,13 @@ export async function typedIntoPierre(
       return keystroke(new Map([[index, [[0, '', text]]]]), [index, text]);
     },
     /**
+     * Types over line `index` outside the rows the editor renders (a paste that reaches past them): the editor hands
+     * the renderer the line's text, and no tokens for it. Whether the renderer asks for the diff to be rendered whole.
+     */
+    typeOutOfView(index: number, text: string): boolean {
+      return keystroke(new Map(), [index, text]);
+    },
+    /**
      * Types over line `index` as the editor reports it when it re-tokenizes from there: `lines` from it on. Whether
      * the renderer asks for the diff to be rendered whole.
      */
