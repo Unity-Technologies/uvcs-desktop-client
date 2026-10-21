@@ -108,7 +108,8 @@ lines in view, so `syntaxHighlighting` picks by size (both versions together), a
 thread: a diff up to 20 KB highlights there before it shows (about 0.1 s); up to 4 MB (400 KB if it's typed into) it
 renders only the lines in view, shows as plain text at once and takes its colors from Pierre's worker
 (`useHighlightWorkers`: 0.2 s for 2 x 16 KB, 1.2 s for 2 x 156 KB, 1.7 s for 2 x 190 KB of TypeScript, 12 s for
-2 x 1.6 MB; one worker, in the app's theme only, see Memory), in the editor's markup (`useTokenTransformer`). A diff
+2 x 1.6 MB; one worker, in the app's theme only, see Memory; started from `pierreHighlightWorker`, see Pierre
+workarounds), in the editor's markup (`useTokenTransformer`). A diff
 typed into gets its editor once the worker's colors are in (`attachesEditor`, `isReadyToEdit`): Pierre's edit session
 reuses them, where an editor attached earlier makes Pierre highlight the whole diff on the main thread (1.6 to 1.8 s
 for 2 x 190 KB of TypeScript, the app frozen). A click in the text (or ⌘E) before then waits for them, keeping what's
@@ -450,6 +451,11 @@ own every argument past the ones it reads (`pierreWrappedArguments.test.ts`), as
   Editing in the diff).
 - `pierrePlainTextWordDiffs`: a diff shown as plain text marks changed words past 1,000 lines (see Editing in the diff).
 - `pierreLinePosition`: where a line not rendered yet sits, to scroll to a change (see Moving through changes).
+- `pierreHighlightWorker`: the entry the highlighting worker starts from. Pierre's worker chunks import `worker.js`
+  back, and the development server loads it twice when the worker is started by Pierre's own URL: two copies answer
+  every request, and the one never set up fails (`pierreHighlightWorker.test.ts`). `electron.vite.config.ts`
+  pre-bundles it, so the first big diff doesn't make the development server reload the page. `useHighlightWorkers`
+  switches the worker's theme after the render: Pierre's components it highlights for update their own state then.
 - `boundedLineDiff`: every line diff, `diff`'s and Pierre's, keys lines once and stays linear (see Comparison method).
 
 ## Memory
