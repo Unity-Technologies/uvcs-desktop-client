@@ -451,7 +451,7 @@ It never writes to the official Desktop client's config (its settings folder, `p
 `client.conf`...) and never keeps reading it. Only on the first run, `importLegacySettings` reads the well-known values
 there so the user feels at home (each workspace's recent branches, `readRecentBranchesByWorkspace`); it records
 `legacySettingsImported` even when it found nothing or couldn't read a file, and never runs again: from then on the
-app's settings are the only source. `main/settings/ownConfig.test.ts` checks statically that only the import reaches
+app's settings are the only source. `main/cm/noCmInternalFiles.test.ts` checks statically that only the import reaches
 that folder and that nothing there writes a file.
 
 Not covered, as they aren't the official client's settings: what `cm` itself reads from its `client.conf` (the default
