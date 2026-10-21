@@ -149,6 +149,7 @@ describe('appMenuTemplate', () => {
       '&Refresh',
       '&Actual Size',
       'Zoom &In',
+      // The hidden Ctrl+= one.
       'Zoom &In',
       'Zoom &Out',
     ]);
