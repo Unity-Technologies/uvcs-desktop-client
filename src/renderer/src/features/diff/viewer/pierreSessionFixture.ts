@@ -113,7 +113,9 @@ export async function typedIntoPierre(
      * the renderer asks for the diff to be rendered whole.
      */
     retokenize(index: number, lines: string[]): boolean {
-      return keystroke(new Map(lines.map((text, offset) => [index + offset, [[0, '', text]]])), [index, lines[0] ?? '']);
+      const [typed] = lines;
+      if (typed === undefined) return false;
+      return keystroke(new Map(lines.map((text, offset) => [index + offset, [[0, '', text]]])), [index, typed]);
     },
     /**
      * The editor's text is now `text` (lone CRs shown as LFs), as it reports an edit that moves lines: its lines, each
