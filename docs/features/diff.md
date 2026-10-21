@@ -314,7 +314,8 @@ patches the places Pierre 1.6.0 doesn't (a keystroke's shortcut takes lines equa
 text, and text typed back to the original's shows no change), re-renders the diff whole when a keystroke leaves rows the diff doesn't have, and its
 test fails when a Pierre update moves them. `pierreTyping.test.ts` types into diffs of every kind of text (line
 breaks, final line breaks, whitespace, empty sides) under every method, checking after each keystroke that Pierre's
-diff is `lineDiff`'s and that the rows on screen are the diff's (`pierreSessionFixture`). `cm` commands keep their own
+diff is `lineDiff`'s and that the rows on screen are the diff's (`pierreSessionFixture`, which hands Pierre each
+keystroke as its editor does, with the line typed into and the document's line count). `cm` commands keep their own
 comparison: merges don't change with it.
 
 ## Line breaks
