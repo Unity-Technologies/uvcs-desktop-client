@@ -24,7 +24,7 @@ interface ChangesSummaryBarProps {
   checkboxInset: number;
 }
 
-/** Right above the list, under its filter: include or exclude every shown change, how many there are, and the ways to undo them. */
+/** Above the list: include or exclude every shown change, how many there are, and the ways to undo them. */
 export function ChangesSummaryBar({ changes, totalCount, isIncluded, onSetIncluded, onUndo, onUndoUnchanged, checkboxInset }: ChangesSummaryBarProps) {
   const { candidates, includedCount, undoable } = useMemo(() => {
     const candidates = changes.filter(isCheckinCandidate);
