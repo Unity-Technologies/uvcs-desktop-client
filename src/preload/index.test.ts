@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webFrame } from 'electron';
 import type { UvcsBridge } from '@shared/bridge';
 import { EVENT_CHANNEL, INVOKE_CHANNEL } from '@shared/ipc';
 
@@ -7,6 +7,7 @@ vi.mock('electron', () => ({
   contextBridge: { exposeInMainWorld: vi.fn() },
   ipcRenderer: { invoke: vi.fn(), on: vi.fn(), removeListener: vi.fn() },
   webUtils: { getPathForFile: vi.fn() },
+  webFrame: { getZoomFactor: vi.fn(() => 1) },
 }));
 
 type EventHandler = (event: unknown, name: string, payload: unknown) => void;
@@ -107,5 +108,11 @@ describe('the preload bridge', () => {
 
     vi.stubEnv('UVCS_RENDERER_PLATFORM', 'win32');
     expect((await exposedBridge()).platform).toBe('win32');
+  });
+
+  it('tells the renderer the zoom its page starts at, before its first frame', async () => {
+    vi.mocked(webFrame.getZoomFactor).mockReturnValueOnce(1.2 ** -2);
+
+    expect((await exposedBridge()).initialZoom).toBe(1.2 ** -2);
   });
 });

@@ -63,7 +63,7 @@ function on(name: string, listener: Listener): () => void {
 }
 
 const storage = memoryStorage();
-const uvcs: UvcsBridge = { platform: 'darwin', invoke, on: on as UvcsBridge['on'], pathForFile: () => '' };
+const uvcs: UvcsBridge = { platform: 'darwin', initialZoom: 1, invoke, on: on as UvcsBridge['on'], pathForFile: () => '' };
 const fakeWindow = Object.assign(new EventTarget(), {
   uvcs,
   localStorage: storage,
