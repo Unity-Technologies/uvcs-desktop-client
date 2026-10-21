@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 /**
  * The simple rules of an `ignore.conf`: an item name (`Library`) or a rooted path (`/Build/Output`), without
  * wildcards. Enough to skip the heavy folders editors and build tools churn (Unity's `Library/`, `Temp/`, `obj/`),
@@ -12,6 +15,17 @@ export interface IgnoreRules {
 }
 
 export const NO_IGNORE_RULES: IgnoreRules = { names: new Set(), rootedPaths: [] };
+
+/** The rules of the workspace's `ignore.conf`, read at once: a watch per folder skips ignored ones from the start. */
+export function readIgnoreRules(workspacePath: string): IgnoreRules {
+  let ignoreConf = '';
+  try {
+    ignoreConf = readFileSync(join(workspacePath, 'ignore.conf'), 'utf8');
+  } catch {
+    // No ignore.conf: nothing is ignored.
+  }
+  return parseIgnoreRules(ignoreConf);
+}
 
 export function parseIgnoreRules(ignoreConf: string): IgnoreRules {
   const lines = ignoreConf

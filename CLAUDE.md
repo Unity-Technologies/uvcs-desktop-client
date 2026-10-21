@@ -242,7 +242,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `styles/noRawColors.test.ts`                              | colors come from `styles/tokens.css`; the few written out say why |
 | `renderer/src/noAiLookalikeIcons.test.ts`                 | no sparkles or wands: "Automatic" never reads as an AI feature    |
 | `window/workspaceMenuCommands.test.ts`                    | app menu commands match the workspace commands                    |
-| `main/settings/ownConfig.test.ts`                         | only the first-run import reads the official client's config; nothing writes it |
+| `main/cm/noCmInternalFiles.test.ts`                       | nothing reads `cm`'s own files (`.plastic/`, the config folder); only the first-run import reads the config, never writes it |
 | `scripts/build/dependencyLicenses.test.ts`                | every package in package-lock.json has a permissive license (`PERMISSIVE_LICENSES`) |
 | `scripts/build/thirdPartyNotices.test.ts`, `suppliedLicenses.test.ts` | every `SUPPLIED_LICENSES` text is a full license for the license package-lock.json names; `npm run build` fails on a bundled package without a license text |
 | `scripts/build/pinnedActions.test.ts`                     | every GitHub action is pinned to a commit SHA                     |
@@ -271,7 +271,8 @@ Not enforced yet: no `any` (there are none today). A static test for it is welco
   Colors, motion and focus only through `styles/tokens.css`.
 - **Own config**: the app keeps its settings in its own store; it never writes to or keeps reading the official
   Desktop client's config, only imports well-known values once, on the first run (`importLegacySettings`;
-  ARCHITECTURE.md "Own config").
+  ARCHITECTURE.md "Own config"). Nor does it read `cm`'s own files (`.plastic/`, the config folder): it asks `cm`
+  (ARCHITECTURE.md "`cm` owns its files").
 - **Dependencies**: every package is a `devDependency`, because electron-vite bundles what the app runs into `out/`
   (`electron-builder.yml` ships no `node_modules`). Prefer none: a new one must do what a small module can't.
 - **Generated, never edited**: `out/`, `dist/`, `*.tsbuildinfo`, `node_modules/`.
