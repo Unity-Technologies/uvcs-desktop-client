@@ -1,5 +1,6 @@
-import type { MenuItemConstructorOptions } from 'electron';
+import type { BaseWindow, MenuItemConstructorOptions } from 'electron';
 import { openInFileManagerLabel } from '@shared/revealLabel';
+import type { PageZoomChange } from './pageZoom';
 
 export interface AppMenuContext {
   platform: NodeJS.Platform;
@@ -20,6 +21,8 @@ export interface AppMenuContext {
   showAboutPanel: () => void;
   /** Checks for updates with no window to hear the answer in: an update found shows in the next window. */
   checkForUpdates: () => void;
+  /** Zooms the page of the window the item was chosen in (`zoomPage`), the window's controls following it. */
+  zoomPage: (window: BaseWindow | undefined, change: PageZoomChange) => void;
 }
 
 /**
@@ -37,7 +40,7 @@ export function shownAccelerator(accelerator: string, isMac: boolean): string | 
  * Alt opens an item with (the menu bar shows it underlined); macOS has no such letters, so they're dropped there.
  */
 export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOptions[] {
-  const { platform, isPackaged, windowItems, newWindow, openDocumentation, reportIssue, requestFeature, showAboutPanel, checkForUpdates } = context;
+  const { platform, isPackaged, windowItems, newWindow, openDocumentation, reportIssue, requestFeature, showAboutPanel, checkForUpdates, zoomPage } = context;
   const isMac = platform === 'darwin';
   const label = (text: string): string => (isMac ? text.replaceAll('&', '') : text);
   const commandItem: AppMenuContext['commandItem'] = (text, commandId, accelerator, withoutWindow) =>
@@ -45,6 +48,12 @@ export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOpt
   const separator: MenuItemConstructorOptions = { type: 'separator' };
   const aboutItem = commandItem('&About Unity Version Control', 'app.about', undefined, showAboutPanel);
   const checkForUpdatesItem = commandItem('Check for &Updates…', 'app.checkForUpdates', undefined, checkForUpdates);
+  // Not Electron's zoom roles: the window's controls follow the zoom, which the roles change without telling.
+  const zoomItem = (text: string, change: PageZoomChange, accelerator: string): MenuItemConstructorOptions => ({
+    label: label(text),
+    accelerator,
+    click: (_item, window) => zoomPage(window, change),
+  });
 
   const template: MenuItemConstructorOptions[] = [
     {
@@ -74,11 +83,11 @@ export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOpt
         commandItem('Toggle &Sidebar', 'app.sidebar', 'CmdOrCtrl+\\'),
         commandItem('&Refresh', 'workspace.refresh', 'CmdOrCtrl+R'),
         separator,
-        { role: 'resetZoom' },
-        { role: 'zoomIn' },
+        zoomItem('&Actual Size', 'reset', 'CmdOrCtrl+0'),
+        zoomItem('Zoom &In', 'in', 'CmdOrCtrl+Plus'),
         // Ctrl+Plus needs Shift on most keyboards; Windows and Linux browsers zoom in with Ctrl+= too.
-        ...(isMac ? [] : [{ role: 'zoomIn' as const, accelerator: 'Ctrl+=', visible: false }]),
-        { role: 'zoomOut' },
+        ...(isMac ? [] : [{ ...zoomItem('Zoom &In', 'in', 'Ctrl+='), visible: false }]),
+        zoomItem('Zoom &Out', 'out', 'CmdOrCtrl+-'),
         separator,
         { role: 'togglefullscreen' },
         ...(isPackaged ? [] : [separator, { role: 'reload' as const }, { role: 'toggleDevTools' as const }]),

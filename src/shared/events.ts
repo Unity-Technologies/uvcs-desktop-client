@@ -54,6 +54,11 @@ export interface UvcsEvents {
   leaveRequested: Record<string, never>;
   /** The app's update moved on (`updates.status`); every window gets it. */
   updateStatusChanged: UpdateStatus;
+  /**
+   * The page's zoom factor (View > Zoom In, Zoom Out; 1 at 100%), as the page loads and whenever it changes: the page
+   * leaves the window's controls the same room in window points (`--window-zoom`).
+   */
+  pageZoomChanged: { zoom: number };
   /** Windows' Back command: a mouse's back button or a keyboard's Browser Back key. */
   navigateBack: Record<string, never>;
   /** The main process caught an error nothing else did, and kept running; every window gets it. */

@@ -1,6 +1,7 @@
-import type { MenuItemConstructorOptions } from 'electron';
+import type { BaseWindow, MenuItemConstructorOptions } from 'electron';
 import { describe, expect, it } from 'vitest';
 import { appMenuTemplate, shownAccelerator, type AppMenuContext } from './appMenuTemplate';
+import type { PageZoomChange } from './pageZoom';
 
 function templateOn(platform: NodeJS.Platform, links: Partial<AppMenuContext> = {}): MenuItemConstructorOptions[] {
   return appMenuTemplate({
@@ -14,6 +15,7 @@ function templateOn(platform: NodeJS.Platform, links: Partial<AppMenuContext> = 
     requestFeature: () => {},
     showAboutPanel: () => {},
     checkForUpdates: () => {},
+    zoomPage: () => {},
     ...links,
   });
 }
@@ -39,11 +41,36 @@ describe('appMenuTemplate', () => {
     expect(linux.some((item) => item.id === 'app.settings')).toBe(true);
   });
 
+  it('zooms the page from the View menu, in the window the item was chosen in', () => {
+    const zooms: [unknown, PageZoomChange][] = [];
+    const window = { id: 7 } as unknown as BaseWindow;
+    const items = submenuOf(templateOn('darwin', { zoomPage: (target, change) => void zooms.push([target, change]) }).find((menu) => menu.label === 'View')!);
+    const zoomItems = items.filter((item) => item.label && /Size|Zoom/.test(item.label));
+    expect(zoomItems.map(({ label, accelerator }) => ({ label, accelerator }))).toEqual([
+      { label: 'Actual Size', accelerator: 'CmdOrCtrl+0' },
+      { label: 'Zoom In', accelerator: 'CmdOrCtrl+Plus' },
+      { label: 'Zoom Out', accelerator: 'CmdOrCtrl+-' },
+    ]);
+    for (const item of zoomItems) (item.click as (item: unknown, window: BaseWindow) => void)({}, window);
+    expect(zooms).toEqual([
+      [window, 'reset'],
+      [window, 'in'],
+      [window, 'out'],
+    ]);
+  });
+
   it('zooms in with Ctrl+= as well off macOS, where Ctrl+Plus takes Shift', () => {
+    const zoomIn = (platform: NodeJS.Platform) =>
+      itemsOf(platform, 'View')
+        .filter((item) => item.label?.replaceAll('&', '') === 'Zoom In')
+        .map(({ accelerator, visible }) => ({ accelerator, visible }));
     for (const platform of ['win32', 'linux'] as const) {
-      expect(itemsOf(platform, 'View').filter((item) => item.role === 'zoomIn')).toEqual([{ role: 'zoomIn' }, { role: 'zoomIn', accelerator: 'Ctrl+=', visible: false }]);
+      expect(zoomIn(platform)).toEqual([
+        { accelerator: 'CmdOrCtrl+Plus', visible: undefined },
+        { accelerator: 'Ctrl+=', visible: false },
+      ]);
     }
-    expect(itemsOf('darwin', 'View').filter((item) => item.role === 'zoomIn')).toEqual([{ role: 'zoomIn' }]);
+    expect(zoomIn('darwin')).toEqual([{ accelerator: 'CmdOrCtrl+Plus', visible: undefined }]);
   });
 
   it('keeps Settings and Quit in the app menu on macOS', () => {
@@ -115,7 +142,17 @@ describe('appMenuTemplate', () => {
     const labels = (platform: NodeJS.Platform) =>
       templateOn(platform).flatMap((menu) => [menu.label ?? '', ...submenuOf(menu).map((item) => item.label ?? '')]);
     expect(labels('darwin').filter((label) => label.includes('&'))).toEqual([]);
-    expect(itemsOf('win32', 'View').map((item) => item.label).filter(Boolean)).toEqual(['Command &Palette…', 'Command &Log', 'Toggle &Sidebar', '&Refresh']);
+    expect(itemsOf('win32', 'View').map((item) => item.label).filter(Boolean)).toEqual([
+      'Command &Palette…',
+      'Command &Log',
+      'Toggle &Sidebar',
+      '&Refresh',
+      '&Actual Size',
+      'Zoom &In',
+      // The hidden Ctrl+= one.
+      'Zoom &In',
+      'Zoom &Out',
+    ]);
   });
 
   it('shows no accelerator Chromium would spell out off macOS ("Ctrl+Comma"), and every one on macOS', () => {

@@ -9,6 +9,7 @@ import { reportShownView } from './app/navigation/reportShownView';
 import { prefetchStartupQueries } from './app/startup/prefetchStartupQueries';
 import { openPageWindowFromAddress } from './app/pageWindow/openPageWindowFromAddress';
 import { openWorkspaceFromAddress } from './app/workspace/openWorkspaceFromAddress';
+import { exposePageZoom } from './app/shell/exposePageZoom';
 import { trackPointerReturnFocus } from './lib/inputModality';
 import { WINDOW_CHROME } from './lib/platform';
 import './styles/global.css';
@@ -22,6 +23,7 @@ setTimeout(() => {
 }, 1500);
 
 document.documentElement.dataset.chrome = WINDOW_CHROME;
+exposePageZoom();
 guardUnloading();
 trackPointerReturnFocus();
 // A page window shows one page of its workspace: no view to report, nor a first screen to read ahead.

@@ -14,10 +14,11 @@
   -webkit-app-region: no-drag;
 }
 
-/* macOS insets its traffic lights at the bar's start (`titleBarOptions`: 16px in, the three buttons 60px wide): the
-   home button starts 8px after them, the bar's gap, which it also leaves before the branch pill. */
+/* macOS insets its traffic lights at the bar's start (`trafficLightsAt`: 16pt in, the three buttons 60pt wide): the
+   home button starts 8pt after them, the bar's gap, which it also leaves before the branch pill. The page's zoom
+   scales CSS pixels but not the lights, so the room is 84pt whatever the zoom (`--window-zoom`). */
 :global([data-chrome='inset']) .topBar {
-  padding-left: 84px;
+  padding-left: calc(84px / var(--window-zoom, 1));
 }
 
 .topBar > .spacer {

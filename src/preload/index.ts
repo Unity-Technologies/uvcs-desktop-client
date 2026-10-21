@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, webUtils } from 'electron';
+import { contextBridge, ipcRenderer, webFrame, webUtils } from 'electron';
 import type { UvcsBridge } from '@shared/bridge';
 import type { UvcsEventName } from '@shared/events';
 import { EVENT_CHANNEL, INVOKE_CHANNEL } from '@shared/ipc';
@@ -35,6 +35,9 @@ const bridge: UvcsBridge = {
   // `UVCS_RENDERER_PLATFORM=win32` (or `linux`) previews another OS's shortcuts, copy and chrome from a Mac: the
   // renderer only, the menus and window frame stay the host's.
   platform: process.env.UVCS_RENDERER_PLATFORM || process.platform,
+
+  // Read here, synchronously: the page's first frame already leaves the traffic lights their room (`exposePageZoom`).
+  initialZoom: webFrame.getZoomFactor(),
 
   pathForFile: (file) => webUtils.getPathForFile(file),
 };

@@ -9,6 +9,7 @@ import type { SettingsStore } from '../settings/SettingsStore';
 import { isWebAddress } from '../system/webAddress';
 import { windowIcon } from './appIcon';
 import { cascadedWindowBounds, keepWindowBoundsSaved, loadWindowBounds, reopenedWindowBounds, type SavedBoundsKey } from './savedWindowBounds';
+import { fitWindowControls, followPageZoom } from './pageZoom';
 import { titleBarOptions } from './titleBar';
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH } from './windowBounds';
 
@@ -44,6 +45,7 @@ export function createMainWindow(
 ): BrowserWindow {
   const boundsKey = page ? 'pageWindowBounds' : 'windowBounds';
   const { bounds, maximized } = openingBounds(settings, { cascadeFrom, reopen }, boundsKey);
+  const chrome = windowChrome(process.platform);
   const window = new BrowserWindow({
     ...DEFAULT_SIZE,
     ...bounds,
@@ -52,7 +54,7 @@ export function createMainWindow(
     show: false,
     title: 'Unity Version Control',
     icon: windowIcon(process.platform, app.isPackaged),
-    ...titleBarOptions(windowChrome(process.platform), nativeTheme.shouldUseDarkColors),
+    ...titleBarOptions(chrome, nativeTheme.shouldUseDarkColors),
     backgroundColor: WINDOW_BACKGROUND[nativeTheme.shouldUseDarkColors ? 'dark' : 'light'],
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -62,7 +64,10 @@ export function createMainWindow(
   });
 
   keepWindowBoundsSaved(window, settings, boundsKey);
+  followPageZoom(window, chrome);
   window.once('ready-to-show', () => {
+    // The page has its zoom by now: the window shows with its controls where the zoomed top bar puts them.
+    fitWindowControls(window, chrome);
     // Maximizing also shows the window, so it waits until the page can paint.
     if (maximized) window.maximize();
     if (inBackground) window.showInactive();
