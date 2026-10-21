@@ -27,7 +27,8 @@
 }
 
 /* The view never scrolls sideways itself: its panes do, each with its bar here, so a bar of its own would only ever be a
-   second one under them. `div` outranks the view's own class (`overflow: auto`), whatever order the sheets load in. */
+   second one under them. `div` makes it outrank a single class (each view's `overflow: auto`), and no more, so each
+   view sets its overflow through one class (`codeScrollsSideways.test.ts`). */
 div:has(> .bars) {
   overflow-x: hidden;
 }

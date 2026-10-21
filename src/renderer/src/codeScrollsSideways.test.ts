@@ -63,12 +63,34 @@ describe('code shown with Pierre', () => {
     const css = source('features/diff/viewer/PaneScrollbars.module.css');
     expect(cssRule(css, 'div:has(> .bars)')).toMatch(/overflow-x: hidden;/);
     expect(cssRule(css, '.bars')).toMatch(/overflow: hidden;/);
-    expect(source('features/diff/viewer/PaneScrollbars.tsx')).not.toMatch(/return null;/);
+  });
+
+  // `div:has(> .bars)` outranks a single class, which is how each view sets its own `overflow: auto`, and no more.
+  it("sets its own overflow through a single class, which the bars' rule outranks", () => {
+    const overriding = Object.entries(HOST_SCROLLER_STYLES).flatMap(([file, scroller]) => {
+      const css = source(file);
+      expect(cssRule(css, scroller)).toMatch(/overflow: auto;/);
+      return [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)]
+        .filter((rule) => /(^|[\s;])overflow(-x)?:/.test(rule[2]!))
+        .map((rule) => rule[1]!.replace(/\/\*[\s\S]*?\*\//g, '').trim())
+        .filter((selector) => !/^\.[\w-]+$/.test(selector))
+        .map((selector) => `${file}: ${selector}`);
+    });
+    expect(overriding).toEqual([]);
   });
 });
 
+/** The style sheets of the views that hold code with Pierre and `PaneScrollbars`, with their scrolling element's class. */
+const HOST_SCROLLER_STYLES: Record<string, string> = {
+  'features/diff/viewer/TextDiff.module.css': '.diff',
+  'features/merge/resolve/TextSurface.module.css': '.surface',
+  'features/annotate/AnnotatedCode.module.css': '.scroller',
+  'features/diff/viewer/MovedCodeDialog.module.css': '.diff',
+};
+
 /** The declarations of the rule written for `selector` alone, at the start of a line of `css`. */
 function cssRule(css: string, selector: string): string {
-  const start = css.indexOf(`\n${selector} {`);
-  return start === -1 ? '' : css.slice(start, css.indexOf('}', start));
+  const lines = `\n${css}`;
+  const start = lines.indexOf(`\n${selector} {`);
+  return start === -1 ? '' : lines.slice(start, lines.indexOf('}', start));
 }
