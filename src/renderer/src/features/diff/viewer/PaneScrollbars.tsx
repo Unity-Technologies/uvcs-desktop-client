@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { pierreShadowRoot } from './pierreDom';
 import { useShadowStyle } from './useShadowStyle';
-import { paneOverflows, paneScrollbarsCss, samePaneBars, showsPaneBars, type PaneBar } from './paneScrollbarsLayout';
+import { paneBarOf, paneOverflows, paneScrollbarsCss, samePaneBars, showsPaneBars, type PaneBar } from './paneScrollbarsLayout';
 import styles from './PaneScrollbars.module.css';
 
 interface PaneScrollbarsProps {
@@ -44,7 +44,8 @@ export function PaneScrollbars({ containerRef }: PaneScrollbarsProps) {
         panes.current = found;
       }
       const view = container.getBoundingClientRect();
-      const next = found.map((pane) => ({ left: pane.getBoundingClientRect().left - view.left + container.scrollLeft, width: pane.clientWidth, scrollWidth: pane.scrollWidth }));
+      const placed = { left: view.left, clientLeft: container.clientLeft, scrollLeft: container.scrollLeft };
+      const next = found.map((pane) => paneBarOf({ left: pane.getBoundingClientRect().left, clientWidth: pane.clientWidth, scrollWidth: pane.scrollWidth }, placed));
       setBars((current) => (samePaneBars(current, next) ? current : next));
     };
     const schedule = (): void => {

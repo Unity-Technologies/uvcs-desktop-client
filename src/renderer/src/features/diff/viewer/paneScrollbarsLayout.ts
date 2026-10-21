@@ -14,10 +14,21 @@ export interface PaneBar {
 const NO_PANE_BARS_CSS = ':host{--diffs-scrollbar-gutter-override:0px}';
 
 /**
- * While the bars show, they stay over the bottom of the view, taking no room of its own (`PaneScrollbars.module.css`),
+ * While the bars show, they stay over the bottom of the view, taking no room of their own (`PaneScrollbars.module.css`),
  * so scrolled to the end they would cover the last line: the code makes room for them under it, past Pierre's gap.
  */
 const ROOM_FOR_PANE_BARS_CSS = '[data-code]{padding-bottom:calc(var(--diffs-gap-block,var(--diffs-gap-fallback)) + var(--scrollbar-size))}';
+
+/**
+ * The bar of a pane (its box on screen, the width of its code), placed in its scrolling container: from inside the
+ * container's border (`clientLeft`), where the bars are positioned, or a framed container would scroll sideways by it.
+ */
+export function paneBarOf(
+  pane: { left: number; clientWidth: number; scrollWidth: number },
+  container: { left: number; clientLeft: number; scrollLeft: number },
+): PaneBar {
+  return { left: pane.left - container.left - container.clientLeft + container.scrollLeft, width: pane.clientWidth, scrollWidth: pane.scrollWidth };
+}
 
 /** A pane needs a bar when its lines are wider than it (by more than the pixel its width may round off). */
 export function paneOverflows(bar: PaneBar): boolean {
