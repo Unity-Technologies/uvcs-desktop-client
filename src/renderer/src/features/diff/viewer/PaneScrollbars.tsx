@@ -1,18 +1,12 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { pierreShadowRoot } from './pierreDom';
 import { useShadowStyle } from './useShadowStyle';
+import { paneOverflows, samePaneBars, showsPaneBars, type PaneBar } from './paneScrollbarsLayout';
 import styles from './PaneScrollbars.module.css';
 
 interface PaneScrollbarsProps {
   /** The scrolling element around the diff, which holds its shadow root and these bars. */
   containerRef: RefObject<HTMLElement | null>;
-}
-
-/** Where a pane is across the container, and how wide its code is. */
-interface Bar {
-  left: number;
-  width: number;
-  scrollWidth: number;
 }
 
 /**
@@ -27,7 +21,7 @@ const HIDE_PANE_BARS_CSS = '[data-code]::-webkit-scrollbar{height:0}';
  * reached at the end of the file.
  */
 export function PaneScrollbars({ containerRef }: PaneScrollbarsProps) {
-  const [bars, setBars] = useState<Bar[]>([]);
+  const [bars, setBars] = useState<PaneBar[]>([]);
   const panes = useRef<HTMLElement[]>([]);
   const barElements = useRef<(HTMLDivElement | null)[]>([]);
   useShadowStyle(containerRef, HIDE_PANE_BARS_CSS);
@@ -57,7 +51,7 @@ export function PaneScrollbars({ containerRef }: PaneScrollbarsProps) {
       }
       const view = container.getBoundingClientRect();
       const next = found.map((pane) => ({ left: pane.getBoundingClientRect().left - view.left + container.scrollLeft, width: pane.clientWidth, scrollWidth: pane.scrollWidth }));
-      setBars((current) => (sameBars(current, next) ? current : next));
+      setBars((current) => (samePaneBars(current, next) ? current : next));
     };
     const schedule = (): void => {
       frame ||= requestAnimationFrame(measure);
@@ -83,11 +77,11 @@ export function PaneScrollbars({ containerRef }: PaneScrollbarsProps) {
     });
   }, [bars]);
 
-  if (!bars.some((bar) => bar.scrollWidth > bar.width + 1)) return null;
+  if (!showsPaneBars(bars)) return null;
   return (
     <div className={styles.bars} aria-hidden>
       {bars.map((bar, index) =>
-        bar.scrollWidth > bar.width + 1 ? (
+        paneOverflows(bar) ? (
           <div
             key={index}
             ref={(element) => void (barElements.current[index] = element)}
@@ -104,8 +98,4 @@ export function PaneScrollbars({ containerRef }: PaneScrollbarsProps) {
       )}
     </div>
   );
-}
-
-function sameBars(a: Bar[], b: Bar[]): boolean {
-  return a.length === b.length && a.every((bar, index) => bar.left === b[index]!.left && bar.width === b[index]!.width && bar.scrollWidth === b[index]!.scrollWidth);
 }
