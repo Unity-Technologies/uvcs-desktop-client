@@ -210,6 +210,9 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
         maxSize={720}
         first={
           <div className={styles.listPane}>
+            {/* Narrow the list first, then act on what's left: the summary's checkbox and undo sit right above the rows they act on. */}
+            {filterBar}
+            {review.bar}
             <ChangesSummaryBar
               changes={changes}
               totalCount={listedCount}
@@ -219,8 +222,6 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
               onUndoUnchanged={() => void undoUnchangedCheckouts(workspacePath)}
               checkboxInset={checkboxInset}
             />
-            {filterBar}
-            {review.bar}
             {listBody}
             {hiddenIncludedCount > 0 && <HiddenCheckedNotice count={hiddenIncludedCount} onClear={clearFilter} />}
             <LockedByOthersNotice changes={included} locks={locks} />
