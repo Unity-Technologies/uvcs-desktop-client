@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import type { WatchCoverage } from '@shared/api/workspaces';
 import type { WorkspaceChange } from '@shared/domain/workspaceChange';
@@ -7,7 +6,7 @@ import { ChangeBatcher } from './ChangeBatcher';
 import { changedFolder } from './changedFolder';
 import { ANY_FILE_EDIT, classifyChange, isChangelistFile, workspaceChangeOf } from './classifyChange';
 import { FolderTreeWatch } from './FolderTreeWatch';
-import { isIgnored, NO_IGNORE_RULES, parseIgnoreRules, type IgnoreRules } from './ignoreRules';
+import { isIgnored, NO_IGNORE_RULES, readIgnoreRules, type IgnoreRules } from './ignoreRules';
 import { OwnWrites } from './OwnWrites';
 import { watchFolder, type FolderWatch, type WatchFolder } from './watchFolder';
 
@@ -155,12 +154,6 @@ export class WorkspaceWatcher {
 
   /** Read at once, before any folder is walked: a watch per folder skips ignored ones. */
   private loadIgnoreRules(): void {
-    let ignoreConf = '';
-    try {
-      ignoreConf = readFileSync(join(this.workspacePath, 'ignore.conf'), 'utf8');
-    } catch {
-      // No ignore.conf: nothing is ignored.
-    }
-    this.ignoreRules = parseIgnoreRules(ignoreConf);
+    this.ignoreRules = readIgnoreRules(this.workspacePath);
   }
 }
