@@ -46,6 +46,12 @@ const ALLOWED: Record<string, Allowance> = {
 };
 
 /**
+ * What a module reaching the official client's config folder may take from the file system: only ways to read it.
+ * `open` isn't one, as its flags can write.
+ */
+const READ_ONLY_FILE_SYSTEM = new Set(['existsSync', 'readFile', 'readFileSync', 'readdir', 'readdirSync', 'stat', 'statSync', 'lstat', 'lstatSync', 'access', 'accessSync', 'createReadStream']);
+
+/**
  * A `.key` file of the config folder: `cm` names each after a GUID. Any other `*.key` would take a template's
  * `${file.key}` or `${bar.motion?.key}` for one.
  */
@@ -189,5 +195,12 @@ describe("the official client's config", () => {
   it('is reached only by the first-run import, wired once at start', () => {
     expect(filesWhere((code) => code.includes('plasticConfigFolder('))).toEqual(['main/plasticConfig/configFolder.ts', 'main/startup/settings.ts']);
     expect(filesWhere((code) => /from '\.\.?\/(\.\.\/)?plasticConfig\//.test(code))).toEqual(['main/settings/importLegacySettings.ts', 'main/startup/settings.ts']);
+  });
+
+  it('is only read: every module in plasticConfig/ takes from the file system only ways to read', () => {
+    const configModules = sources.filter(({ file }) => file.startsWith('main/plasticConfig/'));
+    const writes = configModules.flatMap(({ file, code }) => fileSystemImportsOf(code).filter((name) => !READ_ONLY_FILE_SYSTEM.has(name)).map((name) => `${file}: ${name}`));
+    expect(configModules.length).toBeGreaterThan(0);
+    expect(writes).toEqual([]);
   });
 });
