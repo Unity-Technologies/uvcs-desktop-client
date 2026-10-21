@@ -18,12 +18,13 @@ export function lineAtTop(scrollTop: number): number {
 
 /**
  * Where to scroll so `block` shows: null while its first line is in view, else a few lines from the top, with what
- * came before it for context.
+ * came before it for context. A line under the code's horizontal scrollbar (`coveredAtBottom`: its thickness while it
+ * shows, else 0) isn't in view.
  */
-export function scrollTopRevealing(block: AnnotationBlock, view: { scrollTop: number; height: number }): number | null {
+export function scrollTopRevealing(block: AnnotationBlock, view: { scrollTop: number; height: number; coveredAtBottom: number }): number | null {
   const top = CODE_PADDING_TOP + block.start * ANNOTATION_LINE_HEIGHT;
   const bottom = top + ANNOTATION_LINE_HEIGHT;
-  if (top >= view.scrollTop && bottom <= view.scrollTop + view.height) return null;
+  if (top >= view.scrollTop && bottom <= view.scrollTop + view.height - view.coveredAtBottom) return null;
   return top - CONTEXT_LINES * ANNOTATION_LINE_HEIGHT;
 }
 

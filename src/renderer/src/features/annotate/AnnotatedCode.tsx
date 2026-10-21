@@ -4,7 +4,7 @@ import { hotkey } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
 import { fileNameOf } from '../../lib/text';
 import { displayName } from '../../lib/userName';
-import { PaneScrollbars } from '../diff/viewer/PaneScrollbars';
+import { PaneScrollbars, paneScrollbarsHeight } from '../diff/viewer/PaneScrollbars';
 import { AnnotationGutter } from './AnnotationGutter';
 import { AnnotationRules } from './AnnotationRules';
 import type { AnnotateColumns } from './annotateOptionsStore';
@@ -67,7 +67,7 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
     if (index === null) return;
     cardState.card.close();
     setPicked(index);
-    const scrollTop = scrollTopRevealing(blocks[index]!, { scrollTop: scroller.scrollTop, height: scroller.clientHeight });
+    const scrollTop = scrollTopRevealing(blocks[index]!, { scrollTop: scroller.scrollTop, height: scroller.clientHeight, coveredAtBottom: paneScrollbarsHeight(scroller) });
     if (scrollTop !== null) scroller.scrollTop = scrollTop;
   };
 
