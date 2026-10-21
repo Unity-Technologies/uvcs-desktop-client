@@ -9,7 +9,7 @@ export function loadedChangesetChanged(before: LoadedState, after: LoadedState):
 }
 
 /** The workspace is on another branch, label, changeset or shelve. */
-export function selectorChanged(before: Pick<LoadedState, 'selector'>, after: Pick<LoadedState, 'selector'>): boolean {
+function selectorChanged(before: LoadedState, after: LoadedState): boolean {
   return before.selector.kind !== after.selector.kind || before.selector.name !== after.selector.name;
 }
 
