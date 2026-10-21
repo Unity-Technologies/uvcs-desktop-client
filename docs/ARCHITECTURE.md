@@ -85,8 +85,11 @@ and many people use the same server. Every `cm` command other than local reads (
   needs in one command that returns N records (one `cm find` per list, one `cm ls` of every conflicting file:
   `withConflictRepositories`), and a second command only for the few items the first couldn't answer
   (`repositoryPath`). Reads go through `CmClient.query()`, so they reuse a warm `cm shell` instead of starting a
-  process; `execute()` is only for long, streamed or cancellable work. The one exception is a local read with no
-  form for N: the home screen's `cm wi` of each workspace ("Home", below).
+  process; `execute()` is only for long, streamed or cancellable work. The exception is a local read (`LOCAL_COMMANDS`)
+  that has no form for N, which runs once per workspace, never per row of a server list: the home screen's `cm wi`
+  of each workspace (`workspaceHeadsReader`, "Home", below), the recent workspaces' `cm status --header` it couldn't
+  tell (`workspaceRepositoryLookup`), and the switcher's `cm status --xml` of each workspace of the same repository
+  (`workspaces.glance`).
 - **Revisions asked together, one `cm cat` per batch**: every revision read by its spec (`content.read` of a
   `revision` or a `spec`: diffs, History, Incoming, a merge's conflicting files) goes through `RevisionCat`, which
   saves the reads asked together with one `cm cat <spec>;<file> <spec>;<file> …` per batch (`nextCatBatch`,
@@ -137,11 +140,12 @@ and many people use the same server. Every `cm` command other than local reads (
   types, attribute values, the working object's comment, the palette's lists, the recent shelves in Changes, the user's and everyone's): five minutes, and focus never re-reads them. The Branch
   Explorer is kept five minutes and focus never re-reads all history. Local views skip focus while the watcher sees the disk.
 - **Home**: the repository and branch of every listed workspace come from a `cm wi <path> --machinereadable` of each
-  (`workspaces.heads`, `readWorkspaceHeads`): the one command the app runs per row. `cm` has no form that tells several
-  workspaces at once (`cm workspace list --format` prints no selector), and `wi` only reads this machine
-  (`LOCAL_COMMANDS`): a few ms each in a pooled `cm shell` that answers from any directory, one at a time so the
-  directory's other session stays free for every other read (157 workspaces in under a second). The app never reads
-  `cm`'s own files in `.plastic`, whose format is `cm`'s to change. `cm` is asked about the repository again
+  (`workspaces.heads`, `workspaceHeadsReader`), a local read with no form for N ("One command for N things"): `cm` has
+  no form that tells several workspaces at once (`cm workspace list --format` prints no selector), and `wi` only reads
+  this machine (`LOCAL_COMMANDS`). Each is a few ms in a warm pooled `cm shell` that answers from any directory (before
+  the pool is warm, a process each); one at a time across every window, so the directory's other session stays free
+  for every other read. They are read again when the list shows once stale, never on a window focus
+  (`workspaceHeadsQuery`). The app never reads `cm`'s own files in `.plastic`, whose format is `cm`'s to change. `cm` is asked about the repository again
   (`repositoryOf`) only for recent workspaces `wi` couldn't tell (or named by a Unity organization's id: "Unity
   organizations").
 - **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`; `useSettledValue` for details that stay on screen as the selection moves, like a history's diff or any file's diff, `useDiffContents`, which shows a pair read before at once), `cm diff`
@@ -608,7 +612,7 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   repository's avatar (`components/RepositoryAvatar`: a white initial on a solid `--avatar-*` fill, picked by
   `avatarColor` from the repository's short name, the workspace's own until it's known; a neutral square while
   loading), then its branch (`SelectorChip`) and server (`ServerChip`, the whole `name@server`
-  in its tooltip), told by `useDescribeWorkspace` (the `.plastic` folder, `cm` only for recent ones it can't tell). In
+  in its tooltip), told by `useDescribeWorkspace` (a local `cm wi` of each, `workspaceHeadsReader`; `cm status` only for recent ones it can't tell). In
   the switcher's narrow rows the server gives way first, down to its icon, then the branch's name.
 
 ## Start-up
