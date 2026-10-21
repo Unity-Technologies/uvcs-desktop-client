@@ -1,5 +1,5 @@
 import type { OperationProgress } from '@shared/domain/operation';
-import { combinedIconProgress, iconIsTheApp, operationIconProgress, progressBarCall, type IconProgress, type ProgressBarCall } from './iconProgress';
+import { combinedIconProgress, iconIsTheApp, NO_PROGRESS, operationIconProgress, progressBarCall, UNMEASURED, type IconProgress, type ProgressBarCall } from './iconProgress';
 
 /** The app's windows as the icon needs them, by `BrowserWindow.id`. */
 export interface IconWindows {
@@ -11,7 +11,8 @@ export interface IconWindows {
 
 interface RunningOperation {
   windowId: number;
-  progress: OperationProgress | null;
+  /** What it shows on the icon, from its reports so far. */
+  icon: IconProgress;
 }
 
 /**
@@ -35,7 +36,7 @@ export class AppIconProgress {
 
   /** An operation started from the window; `signal` tells a cancelled one from one that failed. */
   started(operationId: string, windowId: number, finished: Promise<unknown>, signal: AbortSignal): void {
-    this.running.set(operationId, { windowId, progress: null });
+    this.running.set(operationId, { windowId, icon: UNMEASURED });
     this.unseenFailures.delete(windowId);
     this.show();
     finished.then(
@@ -47,7 +48,7 @@ export class AppIconProgress {
   reported(operationId: string, progress: OperationProgress): void {
     const operation = this.running.get(operationId);
     if (!operation) return;
-    operation.progress = progress;
+    operation.icon = operationIconProgress(progress, operation.icon);
     this.show();
   }
 
@@ -67,7 +68,7 @@ export class AppIconProgress {
     this.closing.add(windowId);
     this.shown.delete(windowId);
     const othersShow = this.windows.ids().some((id) => id !== windowId && !this.closing.has(id));
-    if (!iconIsTheApp(this.platform) || !othersShow) this.windows.setProgressBar(windowId, progressBarCall({ mode: 'none' }, this.platform));
+    if (!iconIsTheApp(this.platform) || !othersShow) this.windows.setProgressBar(windowId, progressBarCall(NO_PROGRESS, this.platform));
     this.show();
   }
 
@@ -109,7 +110,7 @@ export class AppIconProgress {
     const running = [...this.running.values()].filter((operation) => wholeApp || operation.windowId === windowId);
     const failed = wholeApp ? this.unseenFailures.size > 0 : this.unseenFailures.has(windowId);
     return combinedIconProgress(
-      running.map((operation) => operationIconProgress(operation.progress)),
+      running.map((operation) => operation.icon),
       failed,
     );
   }

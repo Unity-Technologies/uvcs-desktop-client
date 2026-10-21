@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { OperationProgress } from '@shared/domain/operation';
-import { combinedIconProgress, iconIsTheApp, operationIconProgress, progressBarCall } from './iconProgress';
+import { combinedIconProgress, iconIsTheApp, operationIconProgress, progressBarCall, UNMEASURED } from './iconProgress';
 
 function progress(fraction: number | null, stage: OperationProgress['stage'] = 'downloading'): OperationProgress {
   return { stage, stageLabel: 'Downloading', fraction };
@@ -8,21 +8,37 @@ function progress(fraction: number | null, stage: OperationProgress['stage'] = '
 
 describe('operationIconProgress', () => {
   it('is not measured until the operation reports how far along it is', () => {
-    expect(operationIconProgress(null)).toEqual({ mode: 'unmeasured' });
-    expect(operationIconProgress(progress(null, 'calculating'))).toEqual({ mode: 'unmeasured' });
+    expect(operationIconProgress(progress(null, 'calculating'), UNMEASURED)).toEqual({ mode: 'unmeasured' });
   });
 
   it('shows how far along it is', () => {
-    expect(operationIconProgress(progress(0.42))).toEqual({ mode: 'measured', value: 0.42 });
+    expect(operationIconProgress(progress(0.42), UNMEASURED)).toEqual({ mode: 'measured', value: 0.42 });
   });
 
   it('is not measured while hardly anything is done, as the progress card keeps sweeping', () => {
-    expect(operationIconProgress(progress(0.005))).toEqual({ mode: 'unmeasured' });
+    expect(operationIconProgress(progress(0.005), UNMEASURED)).toEqual({ mode: 'unmeasured' });
   });
 
   it('is full while it wraps up after the measured work (a checkin confirming)', () => {
-    expect(operationIconProgress(progress(null, 'confirming'))).toEqual({ mode: 'measured', value: 1 });
-    expect(operationIconProgress(progress(null, 'finishing'))).toEqual({ mode: 'measured', value: 1 });
+    expect(operationIconProgress(progress(null, 'confirming'), UNMEASURED)).toEqual({ mode: 'measured', value: 1 });
+    expect(operationIconProgress(progress(null, 'finishing'), UNMEASURED)).toEqual({ mode: 'measured', value: 1 });
+  });
+
+  it('shows how far along the whole operation is, the steps before the current one done', () => {
+    const switching = { ...progress(0.5), step: { label: 'Switching', index: 3, count: 4 } };
+    expect(operationIconProgress(switching, UNMEASURED)).toEqual({ mode: 'measured', value: 0.625 });
+  });
+
+  it('counts the steps done while a later step measures nothing yet', () => {
+    const undoing = { ...progress(null, 'working'), step: { label: 'Undoing', index: 2, count: 4 } };
+    expect(operationIconProgress(undoing, UNMEASURED)).toEqual({ mode: 'measured', value: 0.25 });
+  });
+
+  it('never goes back: not for a stage that measures nothing, nor for a report behind the last', () => {
+    const shown = { mode: 'measured', value: 0.6 } as const;
+    expect(operationIconProgress(progress(null, 'applying'), shown)).toEqual(shown);
+    expect(operationIconProgress(progress(0.4), shown)).toEqual(shown);
+    expect(operationIconProgress(progress(0.7), shown)).toEqual({ mode: 'measured', value: 0.7 });
   });
 });
 

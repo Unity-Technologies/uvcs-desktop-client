@@ -9,11 +9,27 @@ export type IconProgress = { mode: 'none' } | { mode: 'unmeasured' } | { mode: '
 
 export const NO_PROGRESS: IconProgress = { mode: 'none' };
 
-/** What one running operation shows, from its latest progress (null until its first report). */
-export function operationIconProgress(progress: OperationProgress | null): IconProgress {
-  if (!progress) return { mode: 'unmeasured' };
-  if (progress.fraction === null) return WRAPPING_UP_STAGES.has(progress.stage) ? { mode: 'measured', value: 1 } : { mode: 'unmeasured' };
-  return progress.fraction < MEASURED_FROM ? { mode: 'unmeasured' } : { mode: 'measured', value: Math.min(progress.fraction, 1) };
+export const UNMEASURED: IconProgress = { mode: 'unmeasured' };
+
+/**
+ * What one running operation shows after a report, given what it showed before (`UNMEASURED` at its start): how far
+ * along the whole operation is, the steps before the current one done (a switch with changes shelves, undoes,
+ * switches and brings them back). It never goes back: a new step starting from nothing, or a stage that measures
+ * nothing between two that do, would empty a bar the user saw filling.
+ */
+export function operationIconProgress(progress: OperationProgress, previous: IconProgress): IconProgress {
+  const current = wholeOperationProgress(progress);
+  if (previous.mode !== 'measured') return current;
+  return current.mode === 'measured' && current.value > previous.value ? current : previous;
+}
+
+function wholeOperationProgress(progress: OperationProgress): IconProgress {
+  const { index, count } = progress.step ?? { index: 1, count: 1 };
+  // Wrapping up after the measured work (a checkin confirming), all of it is done.
+  const stepDone = progress.fraction ?? (WRAPPING_UP_STAGES.has(progress.stage) ? 1 : null);
+  if (stepDone === null && index === 1) return UNMEASURED;
+  const value = Math.min((index - 1 + (stepDone ?? 0)) / count, 1);
+  return value < MEASURED_FROM ? UNMEASURED : { mode: 'measured', value };
 }
 
 /**

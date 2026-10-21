@@ -522,7 +522,9 @@ safe, and the step of a multi-command operation (shelve, undo, switch, bring). N
   operation with a `ProgressRing`. A report renders only these (`useRunningOperationOfKind` for the pill and the chip).
 - The app's icon shows every operation that changes a workspace (`OperationTracker.run`), with no code of its own in
   any feature: `trackOperations` hands each start and report to `AppIconProgress`, which draws them through
-  `BrowserWindow.setProgressBar` (`showProgressOnAppIcon`; the rules in `main/window/iconProgress.ts`). Windows gives
+  `BrowserWindow.setProgressBar` (`showProgressOnAppIcon`; the rules in `main/window/iconProgress.ts`). The icon shows
+  the whole operation, the steps before the current one done (`operationIconProgress`), and never goes back while it
+  runs: a bar that fills, empties for the next step and fills again reads as done and started over. Windows gives
   each window its own taskbar button, which shows that window's operations: a pulse until they're measured, then the
   fraction, and red for one that failed while its window was in the background, until the user comes back to it. The
   macOS Dock and Linux's launcher have one icon for the whole app, which shows every window's operations together,
