@@ -100,5 +100,13 @@ export async function invalidateWorkspaceIn(
     others,
     client.invalidateQueries({ queryKey, predicate: (query) => keyed(query) && moved(query), refetchType: 'none' }),
     client.invalidateQueries({ queryKey, predicate: (query) => keyed(query) && !moved(query) }),
+    // The lists of workspaces show this one's branch too: read again as they show, as reading every head costs a
+    // `cm wi` per workspace (`workspaceHeadsQuery`).
+    selectorMoved(before, after) && client.invalidateQueries({ queryKey: queryKeys.everyWorkspaceHeads, refetchType: 'none' }),
   ]);
+}
+
+/** Whether the workspace is on another branch, label, changeset or shelve than before the operation. */
+function selectorMoved(before: WorkspaceInfo | undefined, after: WorkspaceInfo | undefined): boolean {
+  return before !== undefined && after !== undefined && workspaceInfoKeyMoved('selector', before, after);
 }
