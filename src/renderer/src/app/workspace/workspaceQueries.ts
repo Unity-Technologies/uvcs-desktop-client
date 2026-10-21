@@ -2,6 +2,7 @@ import { queryOptions, useQueries, useQuery } from '@tanstack/react-query';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
+import { SLOW_CHANGING_QUERY } from '../queryClient';
 import { useSettings } from '../settings/useSettings';
 
 export const workspaceListQuery = queryOptions({ queryKey: queryKeys.workspaces, queryFn: () => api.workspaces.list() });
@@ -50,8 +51,9 @@ export function useRecentWorkspaceRepositories(workspaces: WorkspaceSummary[] | 
 
 /**
  * Repository and branch of every listed workspace, from a local `cm wi` of each (no server call, but one command per
- * workspace). Re-read when the list shows again once stale, since switching a workspace elsewhere changes its branch;
- * never on a window focus, which would run them all again each time the user comes back.
+ * workspace). Re-read when the list shows again once five minutes old, since switching a workspace elsewhere changes
+ * its branch; at once when this window moved one to another branch (`invalidateWorkspace`) or on the home screen's
+ * Refresh. Never on a window focus, which would run them all again each time the user comes back.
  */
 export function workspaceHeadsQuery(paths: string[]) {
   return queryOptions({
@@ -62,8 +64,8 @@ export function workspaceHeadsQuery(paths: string[]) {
   });
 }
 
-/** When the heads are read again: as the list shows once stale (the default), never on a window focus. */
-export const WORKSPACE_HEADS_REFRESH = { refetchOnWindowFocus: false } as const;
+/** When the heads are read again: as a list shows once five minutes old, never on a window focus. */
+export const WORKSPACE_HEADS_REFRESH = SLOW_CHANGING_QUERY;
 
 export function useWorkspaceHeads(workspaces: WorkspaceSummary[] | undefined) {
   return useQuery(workspaceHeadsQuery((workspaces ?? []).map((workspace) => workspace.path)));

@@ -1,7 +1,6 @@
 import { fakeApi } from '../../testing/fakeWindow';
-import { focusManager, QueryClient } from '@tanstack/react-query';
+import { focusManager, QueryClient, QueryObserver } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { showQuery } from '../../testing/queryProbes';
 import { createQueryClient } from '../queryClient';
 import { WORKSPACE_HEADS_REFRESH, workspaceHeadsQuery, workspaceRepositoryQuery } from './workspaceQueries';
 
@@ -55,21 +54,46 @@ describe('workspaceHeadsQuery', () => {
     vi.useRealTimers();
   });
 
-  it('never reads every workspace again on a window focus, and does when the list shows again once stale', async () => {
-    const query = workspaceHeadsQuery(['/wk/game', '/wk/tools']);
+  const { queryKey, ...query } = workspaceHeadsQuery(['/wk/game', '/wk/tools']);
+  /** Lets the client handle what just happened (a focus, a list mounting) and run the reads it starts. */
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  /** A list of workspaces showing (a mounted `useWorkspaceHeads`): counts the reads, until `hide`. */
+  function showList(reads: { count: number }): () => void {
+    const observer = new QueryObserver(client, { queryKey, queryFn: async () => ++reads.count, ...WORKSPACE_HEADS_REFRESH });
+    return observer.subscribe(() => {});
+  }
+
+  it('is refreshed as the rarely changing lists are', () => {
     expect(query).toMatchObject(WORKSPACE_HEADS_REFRESH);
-    const { queryKey } = query;
-    const options = WORKSPACE_HEADS_REFRESH;
-    const heads = await showQuery(client, queryKey, options);
+  });
+
+  it('never reads every workspace again on a window focus, however old', async () => {
+    const reads = { count: 0 };
+    showList(reads);
+    await settle();
 
     vi.advanceTimersByTime(60 * 60_000);
     focusManager.setFocused(false);
     focusManager.setFocused(true);
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(heads.reads()).toBe(1);
+    await settle();
 
-    heads.hide();
-    const shownAgain = await showQuery(client, queryKey, options);
-    expect(shownAgain.reads()).toBe(1);
+    expect(reads.count).toBe(1);
+  });
+
+  it('reads them again when a list shows once they are five minutes old, not before', async () => {
+    const reads = { count: 0 };
+    showList(reads)();
+    await settle();
+
+    vi.advanceTimersByTime(4 * 60_000);
+    showList(reads)();
+    await settle();
+    expect(reads.count).toBe(1);
+
+    vi.advanceTimersByTime(2 * 60_000);
+    showList(reads);
+    await settle();
+    expect(reads.count).toBe(2);
   });
 });
