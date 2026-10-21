@@ -10,12 +10,12 @@ import { readUpdateProgress } from '../cm/progress/updateProgress';
 import { switchArgs, UPDATE_ARGS } from '../cm/updateArgs';
 import { readWorkingObjectComment } from '../cm/workingObjectComment';
 import { readWorkspaceGlance } from '../cm/workspaceGlance';
+import { readWorkspaceHeads } from '../cm/workspaceHeads';
 import { workspaceRepositoryLookup } from '../cm/workspaceRepositories';
 import { findWorkspaceRoot } from '../cm/workspaceRoot';
 import { CmError } from '../cm/CmError';
 import { checkNewWorkspaceFolder } from '../files/newWorkspaceFolder';
 import { callerId } from '../ipc/caller';
-import { readWorkspaceHeads } from '../workspace/selectorFile';
 import { readSwitchPreflight } from '../workspace/switchPreflight';
 import { switchWithChanges } from '../workspace/switchWithChanges';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
@@ -113,7 +113,7 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     info,
     workingObjectComment: (workspacePath, selector) => readWorkingObjectComment(cm, workspacePath, selector),
     repositoryOf,
-    heads: readWorkspaceHeads,
+    heads: (workspacePaths) => readWorkspaceHeads(cm, workspacePaths),
     findMissing: async (paths) => paths.filter((path) => !existsSync(path)),
     findRoot: (directory) => findWorkspaceRoot(cm, directory),
     create,
