@@ -1,7 +1,7 @@
 /**
  * A source's code without its comments: what a static test reads to find what the code does, not what its comments
  * explain. Strings are kept whole, so a `//` in one stays; a `'` or `"` ends at its line's end, so an apostrophe in JSX
- * text costs at most that line.
+ * text costs at most that line. A regular expression holding `/*` would open a comment (none does today).
  */
 export function withoutComments(source: string): string {
   const pieces: string[] = [];
@@ -22,15 +22,21 @@ export function withoutComments(source: string): string {
 }
 
 /**
- * The text of every string, template and regular expression literal in `source`, comments left out and escapes undone
- * (`\\.` reads `.`). A template is one literal, its `${...}` included. A `/` followed by no space starts a regular
- * expression up to the next `/` on its line: a JSX closing tag read that way only adds a literal, never hides one.
+ * The text of every string, template and regular expression literal in `source`, comments left out. An escaped
+ * punctuation mark reads as itself (`\.` as `.`, `\\` as `\`); an escaped letter or digit (`\b`, `\s`, `\n`) as a
+ * space, since it stands for no text of its own. A template is one literal, its `${...}` included. A `/` followed by
+ * no space starts a regular expression up to the next `/` on its line: a JSX closing tag read that way only adds a
+ * literal, never hides one.
  */
 export function literalsOf(source: string): string[] {
-  return [...withoutComments(source).matchAll(LITERAL)].map(([literal]) => literal.slice(1, -1).replace(/\\(.)/g, '$1'));
+  return [...withoutComments(source).matchAll(LITERAL)].map(([literal]) => unescaped(literal.slice(1, -1)));
 }
 
 const LITERAL = /'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"|`(?:\\[\s\S]|[^`\\])*`|\/(?![*/\s])(?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\\n[])+\//g;
+
+function unescaped(text: string): string {
+  return text.replace(/\\(.)/g, (_, char: string) => (/[A-Za-z0-9]/.test(char) ? ' ' : char));
+}
 
 function endOf(source: string, text: string, from: number): number {
   const index = source.indexOf(text, from);

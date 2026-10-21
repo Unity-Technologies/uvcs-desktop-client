@@ -23,4 +23,8 @@ describe('literalsOf', () => {
   it('reads regular expressions, and leaves divisions out', () => {
     expect(literalsOf("const re = /^\\.plastic(?:[\\\\/]|$)/; const half = a / b / 'c';")).toEqual(['^.plastic(?:[\\/]|$)', 'c']);
   });
+
+  it('reads an escaped letter as a space, so `\\b` or `\\s` joins no word', () => {
+    expect(literalsOf("/\\.plastic\\b/.test(a) || /\\s\\.plastic/.test(b) || 'a\\nb'")).toEqual(['.plastic ', ' .plastic', 'a b']);
+  });
 });
