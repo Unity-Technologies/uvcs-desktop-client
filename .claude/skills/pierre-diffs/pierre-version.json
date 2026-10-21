@@ -1,9 +1,9 @@
 {
   "package": "@pierre/diffs",
-  "version": "1.6.0",
-  "source": "https://github.com/pierrecomputer/pierre/tree/diffs-v1.6.0/skills/diffs",
-  "commit": "5fb74016274614422ff63cfe5afa2bfef9f4c087",
-  "installedWith": "npx skills add https://github.com/pierrecomputer/pierre/tree/diffs-v1.6.0/skills --skill diffs --skill highlights -a claude-code --copy -y, then the folders renamed to pierre-diffs and pierre-highlights and skills-lock.json removed",
+  "version": "1.6.1",
+  "source": "https://github.com/pierrecomputer/pierre/tree/diffs-v1.6.1/skills/diffs",
+  "commit": "cbc028ca863d6e662706dba87b50df3eeaebbfa7",
+  "installedWith": "npx skills add https://github.com/pierrecomputer/pierre/tree/diffs-v1.6.1/skills --skill diffs --skill highlights -a claude-code --copy -y, then the folders renamed to pierre-diffs and pierre-highlights and skills-lock.json removed",
   "localChanges": [
     "Folder and SKILL.md name: pierre-diffs instead of diffs, so the skill reads as Pierre's beside the app's own diff code",
     "SKILL.md: the link to the highlights skill points to ../pierre-highlights/SKILL.md",

@@ -36,7 +36,7 @@ A fast, beautiful desktop client for Unity Version Control (Plastic SCM). Electr
 2. The feature doc of the area you touch, listed at the top of ARCHITECTURE.md (`docs/features/*.md`).
 3. The code next to what you change, and its tests: they show the idiom to follow.
 4. For Pierre's API (`@pierre/diffs`), the `pierre-diffs` skill (`.claude/skills/pierre-diffs`), and for its highlighter
-   (`@pierre/highlights`), the `pierre-highlights` skill (`.claude/skills/pierre-highlights`). We pin @pierre/diffs 1.6.0,
+   (`@pierre/highlights`), the `pierre-highlights` skill (`.claude/skills/pierre-highlights`). We pin @pierre/diffs 1.6.1,
    so check what they say against `node_modules`; updating @pierre/diffs means reinstalling both skills from its tag
    (`pierreSkillVersion.test.ts` names the command) and re-applying the `localChanges` each `pierre-version.json` lists.
 
