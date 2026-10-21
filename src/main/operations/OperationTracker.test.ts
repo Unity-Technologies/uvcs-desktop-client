@@ -11,7 +11,7 @@ function tracker() {
   const started: Promise<unknown>[] = [];
   const operations = new OperationTracker(
     (_operationId, progress) => reports.push(progress),
-    (finished) => started.push(finished),
+    (_operationId, finished) => started.push(finished),
   );
   return { operations, reports, started };
 }
@@ -135,6 +135,19 @@ describe('OperationTracker', () => {
     started((work) => operations.run('update-1', work));
     started((work) => operations.read('find-2', work));
     expect(writes).toHaveLength(1);
+  });
+
+  it('tells which write started, with a signal that tells a cancelled one from one that failed', () => {
+    const starts: { operationId: string; signal: AbortSignal }[] = [];
+    const operations = new OperationTracker(
+      () => {},
+      (operationId, _finished, signal) => starts.push({ operationId, signal }),
+    );
+    started((work) => operations.run('update-1', work));
+    expect(starts.map((start) => [start.operationId, start.signal.aborted])).toEqual([['update-1', false]]);
+
+    operations.cancel('update-1');
+    expect(starts[0]!.signal.aborted).toBe(true);
   });
 });
 
