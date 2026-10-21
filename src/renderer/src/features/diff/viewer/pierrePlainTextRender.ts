@@ -13,11 +13,11 @@ export function installPierrePlainTextRender(): void {
   installed = true;
   const renderer = DiffHunksRenderer.prototype as unknown as PlainTextRenderer;
   const renderDiffWithHighlighter = renderer.renderDiffWithHighlighter;
-  renderer.renderDiffWithHighlighter = function (this: PlainTextRenderer, diff, highlighter, forcePlainText = false) {
+  renderer.renderDiffWithHighlighter = function (this: PlainTextRenderer, diff, highlighter, forcePlainText = false, ...rest) {
     const cache = this.renderCache;
     const kept = forcePlainText && cache?.result != null && !cache.highlighted && cache.isDirty !== true && cache.renderRange === undefined;
     if (kept && !this.getRenderOptions(diff).forceHighlight) return { result: cache.result, options: cache.options };
-    return renderDiffWithHighlighter.call(this, diff, highlighter, forcePlainText);
+    return renderDiffWithHighlighter.call(this, diff, highlighter, forcePlainText, ...rest);
   };
 }
 
@@ -27,5 +27,6 @@ let installed = false;
 interface PlainTextRenderer {
   renderCache: { diff: FileDiffMetadata; highlighted: boolean; isDirty?: boolean; options: unknown; result?: unknown; renderRange?: unknown } | undefined;
   getRenderOptions(diff: FileDiffMetadata): { options: unknown; forceHighlight: boolean };
-  renderDiffWithHighlighter(diff: FileDiffMetadata, highlighter: unknown, forcePlainText?: boolean): { result: unknown; options: unknown };
+  /** `rest` is what Pierre passes past the arguments this reads (1.6's `lazyLineAST`), handed on as it is. */
+  renderDiffWithHighlighter(diff: FileDiffMetadata, highlighter: unknown, forcePlainText?: boolean, ...rest: unknown[]): { result: unknown; options: unknown };
 }

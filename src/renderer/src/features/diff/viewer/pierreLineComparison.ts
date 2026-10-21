@@ -46,12 +46,12 @@ export function installPierreLineComparison(): void {
   };
 
   const updateRenderCache = renderer.updateRenderCache;
-  renderer.updateRenderCache = function (this: SessionRenderer, dirtyLines, themeType, lineCountChangeInFlight) {
+  renderer.updateRenderCache = function (this: SessionRenderer, dirtyLines, themeType, lineCountChangeInFlight, ...rest) {
     const key = looseLineKey(this.options.parseDiffOptions as LineDiffOptions | undefined);
     const session = this.editSessionActive && !lineCountChangeInFlight ? this.renderCache?.diff : undefined;
     const diff = key ? session : undefined;
     const before = diff && [...dirtyLines.keys()].map((line): [number, string | undefined] => [line, diff.additionLines[line]]);
-    const regionsChanged = updateRenderCache.call(this, dirtyLines, themeType, lineCountChangeInFlight);
+    const regionsChanged = updateRenderCache.call(this, dirtyLines, themeType, lineCountChangeInFlight, ...rest);
     if (!session || session.isPartial) return regionsChanged;
     if (!regionsChanged && diff && key && before && typedBackLoosely(diff, key, before)) {
       const previousLines = diff.additionLines.slice();
@@ -105,7 +105,8 @@ interface SessionRenderer {
   options: DiffHunksRendererOptions;
   editSessionActive: boolean;
   renderCache: { diff: FileDiffMetadata } | undefined;
-  updateRenderCache(dirtyLines: Map<number, unknown>, themeType: 'dark' | 'light', lineCountChangeInFlight?: boolean): boolean;
+  /** `rest` is what Pierre passes past the arguments this reads (1.6's `changedDocumentLines`, `documentLineCount`), handed on as it is. */
+  updateRenderCache(dirtyLines: Map<number, unknown>, themeType: 'dark' | 'light', lineCountChangeInFlight?: boolean, ...rest: unknown[]): boolean;
   applySessionDocumentChange(diff: FileDiffMetadata, previousAdditionLines: readonly string[]): void;
   applyRecomputePreservingSessionType(diff: FileDiffMetadata, update: Partial<FileDiffMetadata>): void;
 }
