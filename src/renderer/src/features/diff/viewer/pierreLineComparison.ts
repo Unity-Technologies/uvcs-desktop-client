@@ -37,12 +37,15 @@ export function installPierreLineComparison(): void {
   };
 
   const updateRenderCache = renderer.updateRenderCache;
-  renderer.updateRenderCache = function (this: SessionRenderer, dirtyLines, themeType, lineCountChangeInFlight, ...rest) {
+  renderer.updateRenderCache = function (this: SessionRenderer, dirtyLines, themeType, lineCountChangeInFlight, changedDocumentLines, ...rest) {
     const key = looseLineKey(this.options.parseDiffOptions as LineDiffOptions | undefined);
     const session = this.editSessionActive && !lineCountChangeInFlight ? this.renderCache?.diff : undefined;
     const diff = key ? session : undefined;
-    const before = diff && [...dirtyLines.keys()].map((line): [number, string | undefined] => [line, diff.additionLines[line]]);
-    const regionsChanged = updateRenderCache.call(this, dirtyLines, themeType, lineCountChangeInFlight, ...rest);
+    // The lines the keystroke changed: those the editor re-tokenized, which are only the rows it renders, and those it
+    // reports changed in its document (1.6's `changedDocumentLines`), which an edit reaching past the rows adds to.
+    const typed = new Set([...dirtyLines.keys(), ...(changedDocumentLines?.keys() ?? [])]);
+    const before = diff && [...typed].map((line): [number, string | undefined] => [line, diff.additionLines[line]]);
+    const regionsChanged = updateRenderCache.call(this, dirtyLines, themeType, lineCountChangeInFlight, changedDocumentLines, ...rest);
     if (!session || session.isPartial) return regionsChanged;
     if (!regionsChanged && diff && key && before && typedBackLoosely(diff, key, before)) {
       const previousLines = diff.additionLines.slice();
@@ -96,8 +99,8 @@ interface SessionRenderer {
   options: DiffHunksRendererOptions;
   editSessionActive: boolean;
   renderCache: { diff: FileDiffMetadata } | undefined;
-  /** `rest` is what Pierre passes past the arguments this reads (1.6's `changedDocumentLines`, `documentLineCount`), handed on as it is. */
-  updateRenderCache(dirtyLines: Map<number, unknown>, themeType: 'dark' | 'light', lineCountChangeInFlight?: boolean, ...rest: unknown[]): boolean;
+  /** `changedDocumentLines`: the lines the keystroke changed, as the editor reports them; `rest`, what Pierre passes past them (`documentLineCount`), handed on as it is. */
+  updateRenderCache(dirtyLines: Map<number, unknown>, themeType: 'dark' | 'light', lineCountChangeInFlight?: boolean, changedDocumentLines?: Map<number, string>, ...rest: unknown[]): boolean;
   applySessionDocumentChange(diff: FileDiffMetadata, previousAdditionLines: readonly string[]): void;
   applyRecomputePreservingSessionType(diff: FileDiffMetadata, update: Partial<FileDiffMetadata>): void;
 }
