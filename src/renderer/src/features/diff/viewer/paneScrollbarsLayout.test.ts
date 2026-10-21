@@ -2,7 +2,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { paneBarOf, paneOverflows, paneScrollbarsCss, samePaneBars, showsPaneBars, type PaneBar } from './paneScrollbarsLayout';
+import { PANE_SCROLLBARS_ATTRIBUTE } from './paneScrollbarsDom';
+import { barsElementAttributes, paneBarOf, paneOverflows, paneScrollbarsCss, samePaneBars, showsPaneBars, type PaneBar } from './paneScrollbarsLayout';
 
 const pane = (width: number, scrollWidth: number, left = 0): PaneBar => ({ left, width, scrollWidth });
 
@@ -78,5 +79,16 @@ describe('paneBarOf', () => {
 
   it('counts what the container itself is scrolled sideways', () => {
     expect(paneBarOf({ left: 60, clientWidth: 500, scrollWidth: 1400 }, { ...container, scrollLeft: 40 })).toEqual({ left: 0, width: 500, scrollWidth: 1400 });
+  });
+});
+
+describe('barsElementAttributes', () => {
+  it('marks the bars element while a bar shows: what measures the bars and pads the view for the caret', () => {
+    expect(barsElementAttributes([pane(600, 1400)])).toEqual({ [PANE_SCROLLBARS_ATTRIBUTE]: '' });
+  });
+
+  it('leaves it unmarked, still rendered, while no pane needs a bar or there are no panes yet', () => {
+    expect(barsElementAttributes([pane(600, 600)])).toEqual({});
+    expect(barsElementAttributes([])).toEqual({});
   });
 });

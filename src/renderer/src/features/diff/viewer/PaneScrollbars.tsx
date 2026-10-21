@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { PANE_SCROLLBARS_ATTRIBUTE } from './paneScrollbarsDom';
 import { pierreShadowRoot } from './pierreDom';
 import { useShadowStyle } from './useShadowStyle';
-import { paneBarOf, paneOverflows, paneScrollbarsCss, samePaneBars, showsPaneBars, type PaneBar } from './paneScrollbarsLayout';
+import { barsElementAttributes, paneBarOf, paneOverflows, paneScrollbarsCss, samePaneBars, showsPaneBars, type PaneBar } from './paneScrollbarsLayout';
 import styles from './PaneScrollbars.module.css';
 
 interface PaneScrollbarsProps {
@@ -73,9 +72,8 @@ export function PaneScrollbars({ containerRef }: PaneScrollbarsProps) {
     });
   }, [bars]);
 
-  // Rendered even with no bar to show: its view never scrolls sideways while it's there (`PaneScrollbars.module.css`).
   return (
-    <div className={styles.bars} aria-hidden {...(showsPaneBars(bars) ? { [PANE_SCROLLBARS_ATTRIBUTE]: '' } : {})}>
+    <div className={styles.bars} aria-hidden {...barsElementAttributes(bars)}>
       {bars.map((bar, index) =>
         paneOverflows(bar) ? (
           <div

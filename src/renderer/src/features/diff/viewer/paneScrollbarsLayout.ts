@@ -1,3 +1,5 @@
+import { PANE_SCROLLBARS_ATTRIBUTE } from './paneScrollbarsDom';
+
 /** Where a pane of the diff is across its scrolling container, and how wide its code is. */
 export interface PaneBar {
   left: number;
@@ -43,6 +45,15 @@ export function paneOverflows(bar: PaneBar): boolean {
 
 export function showsPaneBars(bars: readonly PaneBar[]): boolean {
   return bars.some(paneOverflows);
+}
+
+/**
+ * The attributes of the element that holds the bars, which `PaneScrollbars` renders whether or not a bar shows (its view
+ * never scrolls sideways while it's there): marked while one does, for what measures the bars (`paneScrollbarsHeight`)
+ * and for the view's scroll padding.
+ */
+export function barsElementAttributes(bars: readonly PaneBar[]): { [PANE_SCROLLBARS_ATTRIBUTE]?: '' } {
+  return showsPaneBars(bars) ? { [PANE_SCROLLBARS_ATTRIBUTE]: '' } : {};
 }
 
 /** The style for the diff's shadow root that makes the panes' bottoms right for the bars `PaneScrollbars` shows. */
