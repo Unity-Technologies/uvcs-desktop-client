@@ -55,4 +55,20 @@ describe('code shown with Pierre', () => {
     const withoutBars = SURFACES.filter((file) => !source(BARS_HELD_BY[file] ?? file).includes('<PaneScrollbars '));
     expect(withoutBars).toEqual([]);
   });
+
+  // The view's own bar would show under the panes' while anything in it stuck out sideways, as the bars did for the
+  // frames a resize takes to measure them again: the bars are clipped to the view, and the view, whichever it is,
+  // never scrolls sideways while `PaneScrollbars` is in it (mounted, it always renders its bars' element).
+  it('never scrolls sideways itself: only its panes do', () => {
+    const css = source('features/diff/viewer/PaneScrollbars.module.css');
+    expect(cssRule(css, 'div:has(> .bars)')).toMatch(/overflow-x: hidden;/);
+    expect(cssRule(css, '.bars')).toMatch(/overflow: hidden;/);
+    expect(source('features/diff/viewer/PaneScrollbars.tsx')).not.toMatch(/return null;/);
+  });
 });
+
+/** The declarations of the rule written for `selector` alone, at the start of a line of `css`. */
+function cssRule(css: string, selector: string): string {
+  const start = css.indexOf(`\n${selector} {`);
+  return start === -1 ? '' : css.slice(start, css.indexOf('}', start));
+}
