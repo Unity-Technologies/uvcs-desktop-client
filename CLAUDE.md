@@ -35,9 +35,11 @@ A fast, beautiful desktop client for Unity Version Control (Plastic SCM). Electr
    secrets, windows, and the renderer's shared conventions (data, refresh, menus, keyboard, filters, lists, styling).
 2. The feature doc of the area you touch, listed at the top of ARCHITECTURE.md (`docs/features/*.md`).
 3. The code next to what you change, and its tests: they show the idiom to follow.
-4. For Pierre's API (`@pierre/diffs`), the `pierre-diffs` skill (`.claude/skills/pierre-diffs`). We pin @pierre/diffs 1.5.1, so check
-   what it says against `node_modules`; updating @pierre/diffs means reinstalling the skill (`pierreSkillVersion.test.ts`)
-   and re-applying the `localChanges` its `pierre-version.json` lists.
+4. For Pierre's API (`@pierre/diffs`), the `pierre-diffs` skill (`.claude/skills/pierre-diffs`). The app highlights with
+   Shiki and doesn't use Pierre's own highlighter, @pierre/highlights (why: `docs/features/diff.md`); its
+   `pierre-highlights` skill is installed because the diffs skill links to it. We pin @pierre/diffs 1.6.1, so check what
+   they say against `node_modules`; updating @pierre/diffs means reinstalling both skills from its tag
+   (`pierreSkillVersion.test.ts` names the command) and re-applying the `localChanges` each `pierre-version.json` lists.
 
 This file holds the rules and where to find things; ARCHITECTURE.md holds the details and the numbers. When they
 seem to disagree, the code and its tests decide, and the doc gets fixed.
@@ -245,7 +247,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `scripts/build/dependencyLicenses.test.ts`                | every package in package-lock.json has a permissive license (`PERMISSIVE_LICENSES`) |
 | `scripts/build/thirdPartyNotices.test.ts`, `suppliedLicenses.test.ts` | every `SUPPLIED_LICENSES` text is a full license for the license package-lock.json names; `npm run build` fails on a bundled package without a license text |
 | `scripts/build/pinnedActions.test.ts`                     | every GitHub action is pinned to a commit SHA                     |
-| `scripts/build/pierreSkillVersion.test.ts`                | the `pierre-diffs` skill describes the @pierre/diffs version installed   |
+| `scripts/build/pierreSkillVersion.test.ts`                | the `pierre-diffs` and `pierre-highlights` skills describe the @pierre/diffs and @pierre/highlights versions installed |
 | `scripts/build/linuxDesktopName.test.ts`                  | the Linux `.desktop` file is named as Electron names the app (`desktopName`) |
 
 Not enforced yet: no `any` (there are none today). A static test for it is welcome.

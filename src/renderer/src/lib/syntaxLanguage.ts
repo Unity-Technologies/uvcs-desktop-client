@@ -1,4 +1,6 @@
-import { getFiletypeFromFileName, type BundledLanguage, type SupportedLanguages } from '@pierre/diffs';
+import { getFiletypeFromFileName, type SupportedLanguages } from '@pierre/diffs';
+// Pierre names its languages by Shiki's bundled grammars (`SupportedLanguages`), and stopped re-exporting their type in 1.6.
+import type { BundledLanguage } from 'shiki';
 import { lastSegment } from './paths';
 
 /** Names or extensions by the language they're written in: lower case, looked up so, and each a grammar Pierre bundles. */

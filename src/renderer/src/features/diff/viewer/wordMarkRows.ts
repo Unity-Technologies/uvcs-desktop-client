@@ -21,7 +21,7 @@ const DIFF_SPAN = 'data-diff-span';
 const TOKEN_CHAR = 'data-char';
 
 /**
- * The words two lines change, marked as Pierre (1.5.1) marks them when it renders a diff
+ * The words two lines change, marked as Pierre (1.6.1) marks them when it renders a diff
  * (`computeLineDiffDecorations` in `renderDiffWithHighlighter`): the same line diff (`diffWordsWithSpace`, or
  * `diffChars` for "char"), its spans joined as Pierre joins them (`pushOrJoinSpan`), nothing on lines longer than
  * `maxLineDiffLength`.

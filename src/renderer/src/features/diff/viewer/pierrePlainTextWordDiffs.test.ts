@@ -17,7 +17,7 @@ const diffOf = (lines: number, changed: (index: number) => boolean, fileName = '
 async function plainTextMarks(diff: FileDiffMetadata, options: { tokenizeMaxLength?: number } = { tokenizeMaxLength: 0 }) {
   installPierrePlainTextRender();
   installPierrePlainTextWordDiffs();
-  const renderer = new DiffHunksRenderer({ theme: 'github-light', lineDiffType: 'word', expandUnchanged: true, ...options });
+  const renderer = new DiffHunksRenderer({ theme: 'pierre-light', lineDiffType: 'word', expandUnchanged: true, ...options });
   await renderer.asyncRender(diff);
   return renderedWordMarks(renderer, renderer.renderDiff(diff)!);
 }
@@ -54,8 +54,8 @@ describe("Pierre's plain text render in the workers", () => {
   // only the rows in view (the diff is virtualized), and Pierre keeps the word diffs of such a render: no patch needed.
   it('keeps the word diffs of the rows in view', async () => {
     const diff = diffOf(10_000, (index) => index === 5_000);
-    const highlighter = await getSharedHighlighter({ themes: ['github-light'], langs: ['text'], preferredHighlighter: 'shiki-js' });
-    const options = { theme: 'github-light', useTokenTransformer: false, tokenizeMaxLineLength: 1_000, lineDiffType: 'word', maxLineDiffLength: 1_000 } as const;
+    const highlighter = await getSharedHighlighter({ themes: ['pierre-light'], langs: ['text'], preferredHighlighter: 'shiki-js' });
+    const options = { theme: 'pierre-light', useTokenTransformer: false, tokenizeMaxLineLength: 1_000, lineDiffType: 'word', maxLineDiffLength: 1_000 } as const;
     const { code } = renderDiffWithHighlighter(diff, highlighter, options, { forcePlainText: true, startingLine: 4_990, totalLines: 20, expandedHunks: true });
     expect(wordMarksIn(code.additionLines.filter(Boolean) as RenderedNode[])).toEqual(['gamma']);
   });

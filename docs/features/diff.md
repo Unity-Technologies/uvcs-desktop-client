@@ -100,12 +100,16 @@ typing pause's redraw took 0.45 s before; it's now under a frame. A file's langu
 (`lib/syntaxLanguage`, for diffs, annotations and merges alike): its whole name first (Dockerfile, Cargo.lock,
 .gitignore), then its longest extension (.gradle.kts before .kts), from tables of the grammars Pierre bundles (.NET
 projects are XML, Unity's assets YAML, its shaders HLSL), then Pierre's own guess; a test checks every one is in
-Pierre's bundle. Shiki reads whole files at once, never just the
+Pierre's bundle. Pierre 1.6's WebAssembly highlighter (`preferredHighlighter: 'highlights'`, 50 to 150 times
+faster than Shiki here) isn't used yet: the editor drops the added side's word marks with it
+(pierrecomputer/pierre#1210), it shows ShaderLab and the ignore lists as plain text with no fallback to Shiki, and the
+page's Content-Security-Policy would need `'wasm-unsafe-eval'`. Shiki reads whole files at once, never just the
 lines in view, so `syntaxHighlighting` picks by size (both versions together), at 1.5 to 4.5 ms a KB on the main
 thread: a diff up to 20 KB highlights there before it shows (about 0.1 s); up to 4 MB (400 KB if it's typed into) it
 renders only the lines in view, shows as plain text at once and takes its colors from Pierre's worker
 (`useHighlightWorkers`: 0.2 s for 2 x 16 KB, 1.2 s for 2 x 156 KB, 1.7 s for 2 x 190 KB of TypeScript, 12 s for
-2 x 1.6 MB; one worker, in the app's theme only, see Memory), in the editor's markup (`useTokenTransformer`). A diff
+2 x 1.6 MB; one worker, in the app's theme only, see Memory; started from `pierreHighlightWorker`, see Pierre
+workarounds), in the editor's markup (`useTokenTransformer`). A diff
 typed into gets its editor once the worker's colors are in (`attachesEditor`, `isReadyToEdit`): Pierre's edit session
 reuses them, where an editor attached earlier makes Pierre highlight the whole diff on the main thread (1.6 to 1.8 s
 for 2 x 190 KB of TypeScript, the app frozen). A click in the text (or ⌘E) before then waits for them, keeping what's
@@ -307,12 +311,12 @@ Every line diff (`diff`'s, Pierre's too) compares lines by id, each line's key r
 only within a budget (`boundedLineDiff`, `boundedDiff`): past it, lines found once in each text anchor them (patience
 diff) and what's between is diffed on its own, so a rewritten or much-changed file takes linear time, not minutes.
 While the file is typed into, Pierre re-diffs it itself, with the same `parseDiffOptions`: `pierreLineComparison`
-patches the places Pierre 1.5.1 doesn't (its `FileDiff` never hands them to the renderer that re-diffs each
-keystroke, a keystroke's shortcut takes lines equal only when they're the same text, and text typed back to the
-original's shows no change), re-renders the diff whole when a keystroke leaves rows the diff doesn't have, and its
+patches the places Pierre 1.6.1 doesn't (a keystroke's shortcut takes lines equal only when they're the same
+text, and text typed back to the original's shows no change), re-renders the diff whole when a keystroke leaves rows the diff doesn't have, and its
 test fails when a Pierre update moves them. `pierreTyping.test.ts` types into diffs of every kind of text (line
 breaks, final line breaks, whitespace, empty sides) under every method, checking after each keystroke that Pierre's
-diff is `lineDiff`'s and that the rows on screen are the diff's (`pierreSessionFixture`). `cm` commands keep their own
+diff is `lineDiff`'s and that the rows on screen are the diff's (`pierreSessionFixture`, which hands Pierre each
+keystroke as its editor does, with the line typed into and the document's line count). `cm` commands keep their own
 comparison: merges don't change with it.
 
 ## Line breaks
@@ -429,8 +433,9 @@ In a tree, a folder's mark marks every file in it, and shows how many are review
 
 ## Pierre workarounds
 
-Each place the viewer reaches into Pierre (1.5.1) or `diff` past their public API is one module named for it. Those
-that patch or read internals have a test that fails when an update moves them:
+Each place the viewer reaches into Pierre (1.6.1) or `diff` past their public API is one module named for it. Those
+that patch or read internals have a test that fails when an update moves them, and a method they wrap hands Pierre's
+own every argument past the ones it reads (`pierreWrappedArguments.test.ts`), as Pierre adds some:
 
 - `pierreDom`: where Pierre renders (the `diffs-container` shadow root, its rows' `data-line-type`, `data-line` and
   `data-column-number`), the gutter button slot moved to the hovered line, and hovering anew under a still pointer.
@@ -446,6 +451,11 @@ that patch or read internals have a test that fails when an update moves them:
   Editing in the diff).
 - `pierrePlainTextWordDiffs`: a diff shown as plain text marks changed words past 1,000 lines (see Editing in the diff).
 - `pierreLinePosition`: where a line not rendered yet sits, to scroll to a change (see Moving through changes).
+- `pierreHighlightWorker`: the entry the highlighting worker starts from. Pierre's worker chunks import `worker.js`
+  back, and the development server loads it twice when the worker is started by Pierre's own URL: two copies answer
+  every request, and the one never set up fails (`pierreHighlightWorker.test.ts`). `electron.vite.config.ts`
+  pre-bundles it, so the first big diff doesn't make the development server reload the page. `useHighlightWorkers`
+  switches the worker's theme after the render: Pierre's components it highlights for update their own state then.
 - `boundedLineDiff`: every line diff, `diff`'s and Pierre's, keys lines once and stays linear (see Comparison method).
 
 ## Memory

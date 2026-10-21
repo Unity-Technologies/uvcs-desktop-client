@@ -1,25 +1,22 @@
-import { DiffHunksRenderer, FileDiff, parseDiffFromFile, type DiffHunksRendererOptions, type FileDiffMetadata, type FileDiffOptions } from '@pierre/diffs';
+import { DiffHunksRenderer, parseDiffFromFile, type DiffHunksRendererOptions, type FileDiffMetadata } from '@pierre/diffs';
 import { looseLineKey, type LineDiffOptions } from './lineDiff';
 
 /**
  * Makes the diff Pierre works out while a file is typed into compare lines like the one it was given (`lineDiff`), in
- * `parseDiffOptions`, and show it right. Pierre (1.5.1) re-diffs every keystroke in the `DiffHunksRenderer` of its
- * `FileDiff`, and:
+ * `parseDiffOptions`, and show it right. Pierre (1.6.1) re-diffs every keystroke in the `DiffHunksRenderer` of its
+ * `FileDiff`, under the `parseDiffOptions` it hands it (`getDiffHunksRendererOptions`), and:
  *
- * 1. `FileDiff` never hands its renderer `parseDiffOptions` (`getDiffHunksRendererOptions` leaves them out), so typing
- *    re-diffed under Recognize all whatever the comparison method: spaces typed under Ignore whitespaces showed as a
- *    change until the file was saved and diffed anew.
- * 2. A keystroke that keeps the line count keeps the diff's change blocks as they were when the line's text, before and
+ * 1. A keystroke that keeps the line count keeps the diff's change blocks as they were when the line's text, before and
  *    after, is the text of no original line (`canRetainCanonicalBlocks`). Only `diff`'s own `ignoreWhitespace` and
  *    `stripTrailingCr` turn that shortcut off, not a comparator: a changed line typed back to its original with other
  *    indentation stayed a change. The renderer re-diffs from the whole text when a typed line equals an original line
  *    by the comparison but not in text (`looseLineKey`).
- * 3. Text typed back to the original's shows no change (`parseSessionChangeBlocks` returns none when `findDivergenceCore`
+ * 2. Text typed back to the original's shows no change (`parseSessionChangeBlocks` returns none when `findDivergenceCore`
  *    finds the texts the same), though a comparator can tell lines of the same text apart: lone CRs against LFs
  *    under Recognize all showed nothing changed until the file was saved. The renderer re-diffs the whole text then.
  *    Upstream, `editSessionHunks.ts` would take that shortcut only when lines compare as their text, as
  *    `canRetainCanonicalBlocks` does; this goes once it does.
- * 4. A keystroke the editor re-tokenizes to the end of a text ending with a line break hands the renderer the editor's
+ * 3. A keystroke the editor re-tokenizes to the end of a text ending with a line break hands the renderer the editor's
  *    empty last line too, which the diff has no row for. The editor appends one, the refresh after the keystroke only
  *    updates rows while there are as many as the diff has, and the rows stay as they were: the last line lost its
  *    change color and its number showed over the empty line's. The renderer re-renders the diff whole then, as it does
@@ -32,26 +29,23 @@ export function installPierreLineComparison(): void {
   if (installed) return;
   installed = true;
 
-  const fileDiff = FileDiff.prototype as unknown as { getHunksRendererOptions(options: FileDiffOptions<unknown, unknown> | undefined): DiffHunksRendererOptions };
-  const hunksRendererOptions = fileDiff.getHunksRendererOptions;
-  fileDiff.getHunksRendererOptions = function (this: unknown, options) {
-    return { ...hunksRendererOptions.call(this, options), parseDiffOptions: options?.parseDiffOptions };
-  };
-
   const renderer = DiffHunksRenderer.prototype as unknown as SessionRenderer;
   const applySessionDocumentChange = renderer.applySessionDocumentChange;
-  renderer.applySessionDocumentChange = function (this: SessionRenderer, diff, previousAdditionLines) {
-    applySessionDocumentChange.call(this, diff, previousAdditionLines);
+  renderer.applySessionDocumentChange = function (this: SessionRenderer, diff, previousAdditionLines, ...rest) {
+    applySessionDocumentChange.call(this, diff, previousAdditionLines, ...rest);
     rediffSameText(this, diff);
   };
 
   const updateRenderCache = renderer.updateRenderCache;
-  renderer.updateRenderCache = function (this: SessionRenderer, dirtyLines, themeType, lineCountChangeInFlight) {
+  renderer.updateRenderCache = function (this: SessionRenderer, dirtyLines, themeType, lineCountChangeInFlight, changedDocumentLines, ...rest) {
     const key = looseLineKey(this.options.parseDiffOptions as LineDiffOptions | undefined);
     const session = this.editSessionActive && !lineCountChangeInFlight ? this.renderCache?.diff : undefined;
     const diff = key ? session : undefined;
-    const before = diff && [...dirtyLines.keys()].map((line): [number, string | undefined] => [line, diff.additionLines[line]]);
-    const regionsChanged = updateRenderCache.call(this, dirtyLines, themeType, lineCountChangeInFlight);
+    // The lines the keystroke changed: those the editor re-tokenized, which are only the rows it renders, and those it
+    // reports changed in its document (1.6's `changedDocumentLines`), which an edit reaching past the rows adds to.
+    const typed = new Set([...dirtyLines.keys(), ...(changedDocumentLines?.keys() ?? [])]);
+    const before = diff && [...typed].map((line): [number, string | undefined] => [line, diff.additionLines[line]]);
+    const regionsChanged = updateRenderCache.call(this, dirtyLines, themeType, lineCountChangeInFlight, changedDocumentLines, ...rest);
     if (!session || session.isPartial) return regionsChanged;
     if (!regionsChanged && diff && key && before && typedBackLoosely(diff, key, before)) {
       const previousLines = diff.additionLines.slice();
@@ -105,8 +99,10 @@ interface SessionRenderer {
   options: DiffHunksRendererOptions;
   editSessionActive: boolean;
   renderCache: { diff: FileDiffMetadata } | undefined;
-  updateRenderCache(dirtyLines: Map<number, unknown>, themeType: 'dark' | 'light', lineCountChangeInFlight?: boolean): boolean;
-  applySessionDocumentChange(diff: FileDiffMetadata, previousAdditionLines: readonly string[]): void;
+  /** `changedDocumentLines`: the lines the keystroke changed, as the editor reports them; `rest`, what Pierre passes past them (`documentLineCount`), handed on as it is. */
+  updateRenderCache(dirtyLines: Map<number, unknown>, themeType: 'dark' | 'light', lineCountChangeInFlight?: boolean, changedDocumentLines?: Map<number, string>, ...rest: unknown[]): boolean;
+  /** `rest` is what Pierre may pass past the arguments this reads, handed on as it is. */
+  applySessionDocumentChange(diff: FileDiffMetadata, previousAdditionLines: readonly string[], ...rest: unknown[]): void;
   applyRecomputePreservingSessionType(diff: FileDiffMetadata, update: Partial<FileDiffMetadata>): void;
 }
 

@@ -33,7 +33,7 @@
     "release": "electron-vite build && electron-builder --publish always"
   },
   "devDependencies": {
-    "@pierre/diffs": "^1.5.1",
+    "@pierre/diffs": "^1.6.1",
     "@playwright/cli": "^0.1.22",
     "@radix-ui/react-context-menu": "^2.3.7",
     "@radix-ui/react-dialog": "^1.1.23",

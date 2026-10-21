@@ -2,7 +2,7 @@ import { DiffHunksRenderer, type FileDiffMetadata } from '@pierre/diffs';
 import { MAX_WORD_DIFFED_LINE_PAIRS, wordDiffedLinePairs } from './changedLinePairs';
 
 /**
- * Makes Pierre (1.5.1) mark the changed words of a diff shown as plain text, whatever its length. Its renderer on the
+ * Makes Pierre (1.6.1) mark the changed words of a diff shown as plain text, whatever its length. Its renderer on the
  * main thread (`renderDiffWithHighlighter` with `forcePlainText`: a "Large file", or a text file of any size) marks
  * none once the diff has more than 1,000 lines (its `unifiedLineCount` or `splitLineCount`), so a 10,000-line file
  * with one line changed showed no word marks. But words are diffed only for pairs of changed lines, whatever the
@@ -17,8 +17,8 @@ export function installPierrePlainTextWordDiffs(): void {
   installed = true;
   const renderer = DiffHunksRenderer.prototype as unknown as PlainTextRenderer;
   const renderDiffWithHighlighter = renderer.renderDiffWithHighlighter;
-  renderer.renderDiffWithHighlighter = function (this: PlainTextRenderer, diff, highlighter, forcePlainText = false) {
-    const render = () => renderDiffWithHighlighter.call(this, diff, highlighter, forcePlainText);
+  renderer.renderDiffWithHighlighter = function (this: PlainTextRenderer, diff, highlighter, forcePlainText = false, ...rest) {
+    const render = () => renderDiffWithHighlighter.call(this, diff, highlighter, forcePlainText, ...rest);
     if (!forcePlainText || wordDiffedLinePairs(diff) > MAX_WORD_DIFFED_LINE_PAIRS) return render();
     return withLineCountsHidden(diff, render);
   };
@@ -40,5 +40,6 @@ function withLineCountsHidden<T>(diff: FileDiffMetadata, render: () => T): T {
 
 /** The renderer's member this reaches: private. */
 interface PlainTextRenderer {
-  renderDiffWithHighlighter(diff: FileDiffMetadata, highlighter: unknown, forcePlainText?: boolean): unknown;
+  /** `rest` is what Pierre passes past the arguments this reads (1.6's `lazyLineAST`), handed on as it is. */
+  renderDiffWithHighlighter(diff: FileDiffMetadata, highlighter: unknown, forcePlainText?: boolean, ...rest: unknown[]): unknown;
 }

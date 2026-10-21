@@ -29,8 +29,9 @@ export default defineConfig(({ mode }) => ({
   renderer: {
     plugins: [react(), thirdPartyNotices.plugin()],
     define: developmentReact(mode),
-    // Pierre diffs tokenizes with Shiki; pre-bundle it for the browser.
-    optimizeDeps: { include: ['@pierre/diffs', '@pierre/diffs/react', '@pierre/diffs/edit'] },
+    // Pierre diffs tokenizes with Shiki; pre-bundle it for the browser. Its worker too (`pierreHighlightWorker`): found
+    // first inside the worker, it would be optimized only when the first diff opens, reloading the page.
+    optimizeDeps: { include: ['@pierre/diffs', '@pierre/diffs/react', '@pierre/diffs/edit', '@pierre/diffs/worker/worker.js'] },
     // Pierre's highlighting worker loads its languages in chunks, which only a module worker can.
     worker: { format: 'es', plugins: () => [thirdPartyNotices.plugin()] },
     resolve: {
