@@ -1002,7 +1002,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     do. A group only exists where the user acts on it differently; kinds of change are never groups, the chips filter by
     them.
   - **One list**: `FileTreeList` (`components/`) is every one of them but Changes, which adds checkboxes and drag and
-    drop, and the details panes' short lists: the filter bar, then the rows, grouped or not (`useGroupedFileTree`,
+    drop (its `ChangesSummaryBar`, the checkbox for every shown change, their count and undo, sits between the filter
+    and the rows: it acts on what the filter left, in the rows' checkbox column; above the filter, it read as acting on
+    every change), and the details panes' short lists: the filter bar, then the rows, grouped or not (`useGroupedFileTree`,
     `useFileTree`), with a desktop list's selection of several rows and their menu, which acts on every item the
     selected rows stand for. A list renders its own rows (`DiffEntryRow`, `MergeItemList`'s) and adds its marks (a
     conflict's status, the review mark).
