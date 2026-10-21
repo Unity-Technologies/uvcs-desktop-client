@@ -100,7 +100,10 @@ typing pause's redraw took 0.45 s before; it's now under a frame. A file's langu
 (`lib/syntaxLanguage`, for diffs, annotations and merges alike): its whole name first (Dockerfile, Cargo.lock,
 .gitignore), then its longest extension (.gradle.kts before .kts), from tables of the grammars Pierre bundles (.NET
 projects are XML, Unity's assets YAML, its shaders HLSL), then Pierre's own guess; a test checks every one is in
-Pierre's bundle. Shiki reads whole files at once, never just the
+Pierre's bundle. Pierre 1.6's WebAssembly highlighter (`preferredHighlighter: 'highlights'`, 50 to 150 times
+faster than Shiki here) isn't used yet: the editor drops the added side's word marks with it
+(pierrecomputer/pierre#1210), it shows ShaderLab and the ignore lists as plain text with no fallback to Shiki, and the
+page's Content-Security-Policy would need `'wasm-unsafe-eval'`. Shiki reads whole files at once, never just the
 lines in view, so `syntaxHighlighting` picks by size (both versions together), at 1.5 to 4.5 ms a KB on the main
 thread: a diff up to 20 KB highlights there before it shows (about 0.1 s); up to 4 MB (400 KB if it's typed into) it
 renders only the lines in view, shows as plain text at once and takes its colors from Pierre's worker
