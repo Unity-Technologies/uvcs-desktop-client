@@ -2,7 +2,7 @@ import { DiffHunksRenderer, type FileDiffMetadata } from '@pierre/diffs';
 import { MAX_WORD_DIFFED_LINE_PAIRS, wordDiffedLinePairs } from './changedLinePairs';
 
 /**
- * Makes Pierre (1.6.0) mark the changed words of a diff shown as plain text, whatever its length. Its renderer on the
+ * Makes Pierre (1.6.1) mark the changed words of a diff shown as plain text, whatever its length. Its renderer on the
  * main thread (`renderDiffWithHighlighter` with `forcePlainText`: a "Large file", or a text file of any size) marks
  * none once the diff has more than 1,000 lines (its `unifiedLineCount` or `splitLineCount`), so a 10,000-line file
  * with one line changed showed no word marks. But words are diffed only for pairs of changed lines, whatever the

@@ -3,7 +3,7 @@ import { looseLineKey, type LineDiffOptions } from './lineDiff';
 
 /**
  * Makes the diff Pierre works out while a file is typed into compare lines like the one it was given (`lineDiff`), in
- * `parseDiffOptions`, and show it right. Pierre (1.6.0) re-diffs every keystroke in the `DiffHunksRenderer` of its
+ * `parseDiffOptions`, and show it right. Pierre (1.6.1) re-diffs every keystroke in the `DiffHunksRenderer` of its
  * `FileDiff`, under the `parseDiffOptions` it hands it (`getDiffHunksRendererOptions`), and:
  *
  * 1. A keystroke that keeps the line count keeps the diff's change blocks as they were when the line's text, before and

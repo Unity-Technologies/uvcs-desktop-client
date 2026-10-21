@@ -310,7 +310,7 @@ Every line diff (`diff`'s, Pierre's too) compares lines by id, each line's key r
 only within a budget (`boundedLineDiff`, `boundedDiff`): past it, lines found once in each text anchor them (patience
 diff) and what's between is diffed on its own, so a rewritten or much-changed file takes linear time, not minutes.
 While the file is typed into, Pierre re-diffs it itself, with the same `parseDiffOptions`: `pierreLineComparison`
-patches the places Pierre 1.6.0 doesn't (a keystroke's shortcut takes lines equal only when they're the same
+patches the places Pierre 1.6.1 doesn't (a keystroke's shortcut takes lines equal only when they're the same
 text, and text typed back to the original's shows no change), re-renders the diff whole when a keystroke leaves rows the diff doesn't have, and its
 test fails when a Pierre update moves them. `pierreTyping.test.ts` types into diffs of every kind of text (line
 breaks, final line breaks, whitespace, empty sides) under every method, checking after each keystroke that Pierre's
@@ -432,7 +432,7 @@ In a tree, a folder's mark marks every file in it, and shows how many are review
 
 ## Pierre workarounds
 
-Each place the viewer reaches into Pierre (1.6.0) or `diff` past their public API is one module named for it. Those
+Each place the viewer reaches into Pierre (1.6.1) or `diff` past their public API is one module named for it. Those
 that patch or read internals have a test that fails when an update moves them, and a method they wrap hands Pierre's
 own every argument past the ones it reads (`pierreWrappedArguments.test.ts`), as Pierre adds some:
 
