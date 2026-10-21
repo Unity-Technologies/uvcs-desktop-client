@@ -12,6 +12,9 @@ export type ProgressStage =
   | 'finishing'
   | 'working';
 
+/** Stages after the measured work (confirming a checkin, wrapping up): what was measured is all done. */
+export const WRAPPING_UP_STAGES: ReadonlySet<ProgressStage> = new Set<ProgressStage>(['confirming', 'finishing']);
+
 /** One command's progress, read from its output. */
 export interface CommandProgress {
   stage: ProgressStage;

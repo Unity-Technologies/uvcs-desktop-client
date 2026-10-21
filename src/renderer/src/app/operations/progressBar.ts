@@ -1,4 +1,4 @@
-import type { OperationProgress, ProgressStage } from '@shared/domain/operation';
+import { WRAPPING_UP_STAGES, type OperationProgress } from '@shared/domain/operation';
 import { formatRemaining, nextBarMotion, REACH_MS, remainingMs, type BarMotion } from './progressMotion';
 
 /**
@@ -14,9 +14,6 @@ export interface ProgressBarState {
   remaining: string | null;
   motion: BarMotion | null;
 }
-
-/** Stages after the measured work: the bar stays full, shimmering. Any other unmeasured stage sweeps. */
-const WRAPPING_UP = new Set<ProgressStage>(['confirming', 'finishing']);
 
 /** Below this the bar keeps sweeping. */
 const VISIBLE_FROM = 0.01;
@@ -42,6 +39,7 @@ export function nextProgressBar(previous: ProgressBarState, progress: OperationP
     const remaining = remainingMs(motion);
     return { mode: 'fill', value: motion.to, durationMs: motion.durationMs, remaining: remaining === null ? null : formatRemaining(remaining), motion };
   }
-  if (WRAPPING_UP.has(progress.stage) && previous.motion?.key === key) return { mode: 'busy', value: 1, durationMs: REACH_MS, remaining: null, motion: previous.motion };
+  // Wrapping up after the measured work, the bar stays full, shimmering. Any other unmeasured stage sweeps.
+  if (WRAPPING_UP_STAGES.has(progress.stage) && previous.motion?.key === key) return { mode: 'busy', value: 1, durationMs: REACH_MS, remaining: null, motion: previous.motion };
   return { ...SWEEP, motion: previous.motion };
 }
