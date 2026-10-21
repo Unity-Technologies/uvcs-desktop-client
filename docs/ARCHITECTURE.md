@@ -451,7 +451,7 @@ It never writes to the official Desktop client's config (its settings folder, `p
 `client.conf`...) and never keeps reading it. Only on the first run, `importLegacySettings` reads the well-known values
 there so the user feels at home (each workspace's recent branches, `readRecentBranchesByWorkspace`); it records
 `legacySettingsImported` even when it found nothing or couldn't read a file, and never runs again: from then on the
-app's settings are the only source. The import never writes a file.
+app's settings are the only source. The import never writes a file (`main/cm/noCmInternalFiles.test.ts`).
 
 Not covered, as they aren't the official client's settings: what `cm` itself reads from its `client.conf` (the default
 user `cm whoami` shows; `PendingChangesOnSwitchAction`, neutralized by `switchWithChanges`), the workspace's rule files
@@ -464,20 +464,22 @@ well-known tools itself, and the user adds any other (docs/features/merge.md); i
 
 The app asks `cm`, never reads what `cm` keeps for itself, whose format is `cm`'s to change: a workspace's metadata
 (`.plastic/`: `plastic.selector`, `plastic.wktree`, `plastic.changes`, `changelists/`...) and the user's config folder
-(`plasticConfigFolder`: `client.conf`, `tokens.conf`, `profiles.conf`, `plastic.workspaces`, `*.token`...). What a
-workspace works on is `cm wi`, its root `cm getworkspacefrompath`, its changelists `cm status --changelists`. The few
-modules that name those files, each for a reason, never read them:
+(`plasticConfigFolder`, `PLASTIC_HOME`: `client.conf`, `tokens.conf`, `profiles.conf`, `plastic.workspaces`,
+`*.token`...). What a workspace works on is `cm wi`, its root `cm getworkspacefrompath`, its changelists `cm status
+--changelists`. The few modules that name those files do so only to watch, skip or look for them, or to tell `cm`'s
+words:
 
-- the first-run import (`plasticConfig/`, `importLegacySettings`), the one reader of the config folder, once;
-- the workspace watcher (`WorkspaceWatcher`, `classifyChange`): `.plastic` rewrites are refresh signals, never read;
+- the workspace watcher (`WorkspaceWatcher`, `classifyChange`): `.plastic` rewrites are refresh signals;
 - `listWorkspacePaths`, which skips `.plastic`, and `describeDraggedFolder`, which takes a `.plastic` folder above a
-  dragged one for a workspace while it's dragged (the drop asks `cm getworkspacefrompath`).
+  dragged one for a workspace while it's dragged (the drop asks `cm getworkspacefrompath`);
+- `setupCheck`, which tells `cm`'s "client.conf not found" error.
 
-The workspace's rule files (`ignore.conf`, `cloaked.conf`, `hidden_changes.conf`) are the user's, not `cm`'s: plain
-lines at the root, often checked in, and no `cm` command manages them; `filterRuleFile` adds to them and
-`WorkspaceWatcher` reads `ignore.conf` to skip folders. `main/cm/noCmInternalFiles.test.ts` scans the literals of
-`main/`, `renderer/` and `shared/` for these names and holds each module to what its entry in `ALLOWED` says it reads;
-a new one joins it with its reason, or asks `cm`.
+Only the first-run import (`plasticConfig/`, `importLegacySettings`) reads one of them, once ("Own config"). The
+workspace's rule files (`ignore.conf`, `cloaked.conf`, `hidden_changes.conf`) aren't `cm`'s but the user's: plain lines
+at the root, often checked in, and no `cm` command manages them; `filterRuleFile` adds to them and `WorkspaceWatcher`
+reads `ignore.conf` to skip folders. `main/cm/noCmInternalFiles.test.ts` scans the literals of `main/`, `renderer/`
+and `shared/` (their `testing/` fakes aside) for these names and holds each module to the file system functions its
+entry in `ALLOWED` lists; a new one joins it with its reason, or asks `cm`.
 
 ## Profile pictures (Gravatar)
 
