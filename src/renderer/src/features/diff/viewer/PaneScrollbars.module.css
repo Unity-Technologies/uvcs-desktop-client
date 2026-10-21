@@ -1,4 +1,5 @@
-/* Stays at the bottom of the view, over the last line, taking no room of its own. */
+/* Stays at the bottom of the view, over the code, taking no room of its own: the code leaves room for it under its last
+   line (`paneScrollbarsCss`). */
 .bars {
   position: sticky;
   bottom: 0;

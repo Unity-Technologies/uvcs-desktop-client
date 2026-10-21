@@ -1,19 +1,13 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { pierreShadowRoot } from './pierreDom';
 import { useShadowStyle } from './useShadowStyle';
-import { paneOverflows, samePaneBars, showsPaneBars, type PaneBar } from './paneScrollbarsLayout';
+import { paneOverflows, paneScrollbarsCss, samePaneBars, showsPaneBars, type PaneBar } from './paneScrollbarsLayout';
 import styles from './PaneScrollbars.module.css';
 
 interface PaneScrollbarsProps {
   /** The scrolling element around the diff, which holds its shadow root and these bars. */
   containerRef: RefObject<HTMLElement | null>;
 }
-
-/**
- * Hides the panes' own bars: they sit at the end of the file, out of sight, and show only while hovered. The pane
- * keeps the room it made for them.
- */
-const HIDE_PANE_BARS_CSS = '[data-code]::-webkit-scrollbar{height:0}';
 
 /**
  * A horizontal scrollbar for each pane of the diff whose lines are wider than it, kept at the bottom of the view. Each
@@ -24,7 +18,7 @@ export function PaneScrollbars({ containerRef }: PaneScrollbarsProps) {
   const [bars, setBars] = useState<PaneBar[]>([]);
   const panes = useRef<HTMLElement[]>([]);
   const barElements = useRef<(HTMLDivElement | null)[]>([]);
-  useShadowStyle(containerRef, HIDE_PANE_BARS_CSS);
+  useShadowStyle(containerRef, paneScrollbarsCss(showsPaneBars(bars)));
 
   useEffect(() => {
     const container = containerRef.current;
