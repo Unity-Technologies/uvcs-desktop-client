@@ -16,6 +16,12 @@ const NO_PANE_BARS_CSS = ':host{--diffs-scrollbar-gutter-override:0px}';
 /**
  * While the bars show, they stay over the bottom of the view, taking no room of their own (`PaneScrollbars.module.css`),
  * so scrolled to the end they would cover the last line: the code makes room for them under it, past Pierre's gap.
+ * It wins over Pierre's own padding of `[data-code]` because that one is in `@layer base` and this rule, in a style
+ * sheet of our own in the shadow root (`useShadowStyle`), is in no layer. Pierre's `Virtualizer` doesn't know of this
+ * room: it counts its gap alone under the last line (`getVirtualFilePaddingBottom`), so the code is a bar's thickness
+ * taller than it computes. That's harmless: the room is past the last line, where nothing is placed by that height
+ * (the lines in view and the spacers before them come from the lines above it), and scrolling to the end, or
+ * typing on the last line, still shows that line whole above the bars.
  */
 const ROOM_FOR_PANE_BARS_CSS = '[data-code]{padding-bottom:calc(var(--diffs-gap-block,var(--diffs-gap-fallback)) + var(--scrollbar-size))}';
 
