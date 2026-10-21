@@ -119,11 +119,14 @@ describe('unityAssets.find at a point of the repository', () => {
     const { find, fake, later } = await setUp(TREE_FOLDER);
     const branch: AssetsPoint = { kind: 'repository', at: BRANCH };
     const model = { paths: ['Game/Assets/Art/Tree/Tree.fbx'] };
+    const atChangeset = 'execute /Game/Assets/Art/Tree --tree=cs:12';
+    const atBranch = `execute /Game/Assets/Art/Tree --tree=${BRANCH}`;
     await Promise.all([find(model), find(model), find(model, branch), find(model, branch)]);
-    expect(lsLines(fake)).toHaveLength(2);
+    // Finds run together reach `cm` in whichever order their disk checks end (`unityProjectFound`, `isFolder`): each point once, in any order.
+    expect([...lsLines(fake)].sort()).toEqual([atChangeset, atBranch].sort());
     later(BRANCH_TREE_LIFE_MS);
     await Promise.all([find(model), find(model, branch)]);
-    expect(lsLines(fake)).toEqual(['execute /Game/Assets/Art/Tree --tree=cs:12', `execute /Game/Assets/Art/Tree --tree=${BRANCH}`, `execute /Game/Assets/Art/Tree --tree=${BRANCH}`]);
+    expect(lsLines(fake).slice(2)).toEqual([atBranch]);
   });
 
   it('lists again after a listing failed, and finds nothing where the point has no such folder', async () => {
