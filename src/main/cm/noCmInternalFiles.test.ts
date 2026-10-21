@@ -8,8 +8,8 @@ import { literalsOf, withoutComments } from '@shared/testing/sourceLiterals';
  * `cm` owns its files: the app asks `cm` commands, never reads what `cm` keeps for itself, whose format is `cm`'s to
  * change. Those are a workspace's metadata (`.plastic/`: `plastic.selector`, `plastic.wktree`, `changelists/`...) and
  * the user's config folder (`plasticConfigFolder`, `PLASTIC_HOME`: `client.conf`, `tokens.conf`, `plastic.workspaces`,
- * `*.token`...). This scans the literals of the app's sources for those names, and holds each module that names them
- * to the file system functions it may import. `testing/` folders are left out: their fakes play `cm`'s part, as the
+ * `*.token`, `<guid>.key`, `globalconfig/`...). This scans the literals of the app's sources for those names, and holds
+ * each module that names them to the file system functions it may import. `testing/` folders are left out: their fakes play `cm`'s part, as the
  * smoke test's fixture does. The workspace's own rule files (`ignore.conf`...) are the user's, not `cm`'s.
  */
 
@@ -56,25 +56,41 @@ const FILE_WRITES = new Set(
 );
 
 /**
- * A file or folder `cm` keeps for itself: `.plastic` and the `plastic.*` files in it, the config folder (`plastic4`) and
- * its `*.conf` and `*.token` files. `plastic.exe` is the official client, a merge tool the user may pick, not one.
+ * A `.key` file of the config folder: `cm` names each after a GUID, `<guid>.key`, or `${id}.key` in a template. Any
+ * other `*.key` would take a template's `${file.key}` or `${bar.motion?.key}` for one.
+ */
+const KEY_FILE = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\.key$/;
+const KEY_FILE_AFTER_PLACEHOLDER = /\}\.key(?!\w)/;
+
+/**
+ * A file or folder `cm` keeps for itself: `.plastic` and the `plastic.*` files in it, the config folder (`plastic4`),
+ * its `globalconfig` folder and its `*.conf`, `*.token` and `<guid>.key` files. `globalconfig` is matched as `cm`
+ * writes it, so a `globalConfig` name isn't one; `plastic.exe` is the official client, a merge tool the user may pick.
  */
 function isCmFileName(word: string): boolean {
   const name = word.toLowerCase();
   if (WORKSPACE_RULE_FILES.has(name)) return false;
-  return name === '.plastic' || name === 'plastic4' || name === '.plastic4' || /^plastic\.(?!exe$)\w+$/.test(name) || /^[\w.-]*\.(conf|token)$/.test(name);
+  return (
+    name === '.plastic' ||
+    name === 'plastic4' ||
+    name === '.plastic4' ||
+    word === 'globalconfig' ||
+    /^plastic\.(?!exe$)\w+$/.test(name) ||
+    /^[\w.-]*\.(conf|token)$/.test(name) ||
+    KEY_FILE.test(name)
+  );
 }
 
 /** Whether a literal names one of `cm`'s files, in a path of either form or a regular expression. */
 function namesCmFile(literal: string): boolean {
-  return literal.split(/[^\w.-]+/).some(isCmFileName);
+  return KEY_FILE_AFTER_PLACEHOLDER.test(literal) || literal.split(/[^\w.-]+/).some(isCmFileName);
 }
 
 /** Whether a module names `cm`'s files: in a literal, or the config folder's environment variable anywhere. */
 function namesCmFiles(code: string): boolean {
   if (/\bPLASTIC_HOME\b/.test(code)) return true;
   // Most modules can't name one: only those that hold the words are read literal by literal.
-  return /plastic|\.conf|\.token/i.test(code) && literalsOf(code).some(namesCmFile);
+  return /plastic|globalconfig|\.conf|\.token|\.key/i.test(code) && literalsOf(code).some(namesCmFile);
 }
 
 const FILE_SYSTEM_MODULE = `['"](?:node:)?fs(?:/promises)?['"]`;
@@ -133,8 +149,17 @@ describe('namesCmFile', () => {
     expect(names.filter(namesCmFile)).toEqual(names);
   });
 
+  it("knows the config folder's keys and its globalconfig folder", () => {
+    const names = ['15c18e91-96a7-4a76-b933-64524ec5d045.key', '${id}.key', '~/.plastic4/globalconfig', 'C:\\Users\\me\\AppData\\Local\\plastic4\\globalconfig\\x'];
+    expect(names.filter(namesCmFile)).toEqual(names);
+  });
+
   it("leaves the workspace's rule files and other names alone", () => {
     expect(['ignore.conf', 'cloaked.conf', 'hidden_changes.conf', '.plasticignore', 'plastic.exe', 'plastic', 'Assets/Plastic/readme.md', 'conf'].filter(namesCmFile)).toEqual([]);
+  });
+
+  it("leaves a template's `.key` reads and a `globalConfig` name alone", () => {
+    expect(['file:${file.key}', 'node:${hit.side}:${hit.key}', 'fill-${bar.motion?.key}', '${globalConfig}'].filter(namesCmFile)).toEqual([]);
   });
 });
 
