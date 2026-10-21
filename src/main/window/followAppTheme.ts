@@ -1,24 +1,21 @@
 import { BrowserWindow, nativeTheme } from 'electron';
-import { windowChrome } from '@shared/windowChrome';
+import { windowChrome, type WindowChrome } from '@shared/windowChrome';
 import type { SettingsStore } from '../settings/SettingsStore';
-import { captionButtons } from './titleBar';
+import { fitCaptionButtons } from './pageZoom';
 
 /**
  * What the OS draws for the app takes the theme the user picked, not only the OS's: menus, native dialogs, the
- * Windows caption buttons and a Linux title bar. The pages follow it too (`prefers-color-scheme`).
+ * Windows caption buttons (at the page's zoom) and a Linux title bar. The pages follow it too (`prefers-color-scheme`).
  */
-export function followAppTheme(settings: SettingsStore): void {
+export function followAppTheme(settings: SettingsStore, chrome: WindowChrome = windowChrome(process.platform)): void {
   const apply = (): void => {
     nativeTheme.themeSource = settings.get().theme;
   };
   apply();
   settings.onChanged((_settings, changes) => 'theme' in changes && apply());
 
-  if (windowChrome(process.platform) !== 'overlay') return;
-  // At each page's zoom, the height `followPageZoom` gave the buttons.
+  if (chrome !== 'overlay') return;
   nativeTheme.on('updated', () => {
-    for (const window of BrowserWindow.getAllWindows()) {
-      window.setTitleBarOverlay(captionButtons(nativeTheme.shouldUseDarkColors, window.webContents.getZoomFactor()));
-    }
+    for (const window of BrowserWindow.getAllWindows()) fitCaptionButtons(window);
   });
 }

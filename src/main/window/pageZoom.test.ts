@@ -67,13 +67,13 @@ describe('zoomPage', () => {
 });
 
 describe('followPageZoom', () => {
-  it('fits the controls to the zoom the page opens at, which Chromium keeps for every window', () => {
+  it('fits the controls to the zoom the page loads at, which Chromium keeps for every window; the page reads it itself', () => {
     const window = followingWindow('inset');
     window.webContents.zoomLevel = 1;
 
     window.webContents.emit('dom-ready');
 
     expect(window.windowButtonPosition).toEqual({ x: 16, y: 20 });
-    expect(zoomsSent(window)).toEqual([{ zoom: 1.2 }]);
+    expect(zoomsSent(window)).toEqual([]);
   });
 });

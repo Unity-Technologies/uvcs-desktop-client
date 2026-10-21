@@ -3,7 +3,7 @@ import type { BrowserWindowConstructorOptions, TitleBarOverlayOptions } from 'el
 
 /**
  * Just enough of Electron's `app`, `BrowserWindow`, `nativeTheme` and `shell` for the window logic: windows open,
- * close, focus, minimize, zoom and receive events, all in memory. Tests install it with
+ * close, focus, minimize, zoom and receive events, and the theme switches, all in memory. Tests install it with
  * `vi.mock('electron', async () => (await import('./testing/fakeElectron')).fakeElectron.module)` and reset it before
  * each test.
  */
@@ -147,6 +147,9 @@ const state = {
   zoomLevel: 0,
 };
 
+/** The OS theme: a test sets `shouldUseDarkColors` and emits `updated`, as a theme switch does. */
+const nativeTheme = Object.assign(new EventEmitter(), { shouldUseDarkColors: false, themeSource: 'system' });
+
 const app = Object.assign(new EventEmitter(), {
   isPackaged: true,
   /** Whether Electron finished starting (`app.isReady()`). */
@@ -160,10 +163,11 @@ export const fakeElectron = {
   module: {
     app,
     BrowserWindow: FakeWindow,
-    nativeTheme: { shouldUseDarkColors: false },
+    nativeTheme,
     shell: { openExternal: async (url: string) => void state.openedExternally.push(url) },
   },
   app,
+  nativeTheme,
   /** A new window, as `createMainWindow` would make. */
   newWindow: (): FakeWindow => new FakeWindow(),
   windows: (): FakeWindow[] => [...state.windows],
@@ -176,6 +180,8 @@ export const fakeElectron = {
     state.nextId = 1;
     state.openedExternally = [];
     state.zoomLevel = 0;
+    Object.assign(nativeTheme, { shouldUseDarkColors: false, themeSource: 'system' });
+    nativeTheme.removeAllListeners();
     app.isPackaged = true;
     app.ready = false;
     app.quits = 0;

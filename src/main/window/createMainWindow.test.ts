@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SavedWindowBounds } from '@shared/domain/settings';
 import { EVENT_CHANNEL } from '@shared/ipc';
 import { memorySettings } from '../settings/testing/memorySettings';
@@ -22,6 +22,15 @@ function open(): FakeWindow {
 }
 
 beforeEach(() => fakeElectron.reset());
+
+const PLATFORM = process.platform;
+
+/** Has the window logic run on another OS: `createMainWindow` reads `process.platform` for the title bar it draws. */
+function runOn(platform: NodeJS.Platform): void {
+  Object.defineProperty(process, 'platform', { value: platform });
+}
+
+afterEach(() => runOn(PLATFORM));
 
 describe('createMainWindow', () => {
   it('keeps the page untrusted: isolated from the preload, sandboxed, and without Node', () => {
@@ -90,5 +99,31 @@ describe('createMainWindow', () => {
     window.emit('app-command', {}, 'browser-backward');
     window.emit('app-command', {}, 'browser-forward');
     expect(window.webContents.sent).toEqual([[EVENT_CHANNEL, 'navigateBack', {}]]);
+  });
+
+  it('shows a window whose page opens zoomed with the traffic lights centered in its top bar, and again after a reload (macOS)', () => {
+    runOn('darwin');
+    const window = open();
+    window.webContents.zoomLevel = -2;
+
+    window.emit('ready-to-show');
+    expect(window).toMatchObject({ shown: true, windowButtonPosition: { x: 16, y: 9 } });
+
+    window.webContents.zoomLevel = 1;
+    window.webContents.emit('dom-ready');
+    expect(window.windowButtonPosition).toEqual({ x: 16, y: 20 });
+  });
+
+  it('shows a window whose page opens zoomed with the caption buttons as tall as its top bar, and again after a reload (Windows)', () => {
+    runOn('win32');
+    const window = open();
+    window.webContents.zoomLevel = -2;
+
+    window.emit('ready-to-show');
+    expect(window.titleBarOverlay).toMatchObject({ height: 31 });
+
+    window.webContents.zoomLevel = 1;
+    window.webContents.emit('dom-ready');
+    expect(window.titleBarOverlay).toMatchObject({ height: 53 });
   });
 });
