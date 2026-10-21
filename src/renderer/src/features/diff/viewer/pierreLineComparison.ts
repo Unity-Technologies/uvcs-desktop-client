@@ -31,8 +31,8 @@ export function installPierreLineComparison(): void {
 
   const renderer = DiffHunksRenderer.prototype as unknown as SessionRenderer;
   const applySessionDocumentChange = renderer.applySessionDocumentChange;
-  renderer.applySessionDocumentChange = function (this: SessionRenderer, diff, previousAdditionLines) {
-    applySessionDocumentChange.call(this, diff, previousAdditionLines);
+  renderer.applySessionDocumentChange = function (this: SessionRenderer, diff, previousAdditionLines, ...rest) {
+    applySessionDocumentChange.call(this, diff, previousAdditionLines, ...rest);
     rediffSameText(this, diff);
   };
 
@@ -101,7 +101,8 @@ interface SessionRenderer {
   renderCache: { diff: FileDiffMetadata } | undefined;
   /** `changedDocumentLines`: the lines the keystroke changed, as the editor reports them; `rest`, what Pierre passes past them (`documentLineCount`), handed on as it is. */
   updateRenderCache(dirtyLines: Map<number, unknown>, themeType: 'dark' | 'light', lineCountChangeInFlight?: boolean, changedDocumentLines?: Map<number, string>, ...rest: unknown[]): boolean;
-  applySessionDocumentChange(diff: FileDiffMetadata, previousAdditionLines: readonly string[]): void;
+  /** `rest` is what Pierre may pass past the arguments this reads, handed on as it is. */
+  applySessionDocumentChange(diff: FileDiffMetadata, previousAdditionLines: readonly string[], ...rest: unknown[]): void;
   applyRecomputePreservingSessionType(diff: FileDiffMetadata, update: Partial<FileDiffMetadata>): void;
 }
 

@@ -15,12 +15,12 @@ export function installPierreSessionEndRefresh(): void {
   installed = true;
   const renderer = DiffHunksRenderer.prototype as unknown as RefreshingRenderer;
   const refreshHighlightedResult = renderer.refreshHighlightedResult;
-  renderer.refreshHighlightedResult = function (this: RefreshingRenderer) {
+  renderer.refreshHighlightedResult = function (this: RefreshingRenderer, ...rest) {
     const diff = this.diff;
     return new Promise<void>((resolve) => {
       setTimeout(() => {
         if (diff === undefined || this.diff !== diff) return resolve();
-        refreshHighlightedResult.call(this).then(resolve, resolve);
+        refreshHighlightedResult.call(this, ...rest).then(resolve, resolve);
       }, 0);
     });
   };
@@ -31,5 +31,6 @@ let installed = false;
 /** The renderer's members this reaches: `refreshHighlightedResult` is public, `diff` private. */
 interface RefreshingRenderer {
   diff: FileDiffMetadata | undefined;
-  refreshHighlightedResult(): Promise<void>;
+  /** `rest` is what Pierre may pass, handed on as it is (it takes none in 1.6.1). */
+  refreshHighlightedResult(...rest: unknown[]): Promise<void>;
 }
