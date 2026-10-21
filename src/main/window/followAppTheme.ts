@@ -15,7 +15,10 @@ export function followAppTheme(settings: SettingsStore): void {
   settings.onChanged((_settings, changes) => 'theme' in changes && apply());
 
   if (windowChrome(process.platform) !== 'overlay') return;
+  // At each page's zoom, the height `followPageZoom` gave the buttons.
   nativeTheme.on('updated', () => {
-    for (const window of BrowserWindow.getAllWindows()) window.setTitleBarOverlay(captionButtons(nativeTheme.shouldUseDarkColors));
+    for (const window of BrowserWindow.getAllWindows()) {
+      window.setTitleBarOverlay(captionButtons(nativeTheme.shouldUseDarkColors, window.webContents.getZoomFactor()));
+    }
   });
 }
