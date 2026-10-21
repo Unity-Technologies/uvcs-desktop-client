@@ -141,7 +141,7 @@ and many people use the same server. Every `cm` command other than local reads (
   workspaces at once (`cm workspace list --format` prints no selector), and `wi` only reads this machine
   (`LOCAL_COMMANDS`): a few ms each in a pooled `cm shell` that answers from any directory, one at a time so the
   directory's other session stays free for every other read (157 workspaces in under a second). The app never reads
-  `cm`'s own files in `.plastic`, whose format is `cm`'s to change. `cm` is asked about the repository again
+  `cm`'s own files in `.plastic`, whose format is `cm`'s to change ("`cm` owns its files"). `cm` is asked about the repository again
   (`repositoryOf`) only for recent workspaces `wi` couldn't tell (or named by a Unity organization's id: "Unity
   organizations").
 - **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`; `useSettledValue` for details that stay on screen as the selection moves, like a history's diff or any file's diff, `useDiffContents`, which shows a pair read before at once), `cm diff`
@@ -451,14 +451,33 @@ It never writes to the official Desktop client's config (its settings folder, `p
 `client.conf`...) and never keeps reading it. Only on the first run, `importLegacySettings` reads the well-known values
 there so the user feels at home (each workspace's recent branches, `readRecentBranchesByWorkspace`); it records
 `legacySettingsImported` even when it found nothing or couldn't read a file, and never runs again: from then on the
-app's settings are the only source. `main/cm/noCmInternalFiles.test.ts` checks statically that only the import reaches
-that folder and that nothing there writes a file.
+app's settings are the only source. The import never writes a file.
 
 Not covered, as they aren't the official client's settings: what `cm` itself reads from its `client.conf` (the default
 user `cm whoami` shows; `PendingChangesOnSwitchAction`, neutralized by `switchWithChanges`), the workspace's rule files
-(`ignore.conf`, `cloaked.conf`, `hidden_changes.conf`) and `.plastic` metadata, and server objects the official client
-created (its automatic shelves, offered as left changes). Its merge tools (client.conf's `<MergeTools>`) aren't
-offered: the app finds the well-known tools itself, and the user adds any other (docs/features/merge.md).
+(`ignore.conf`, `cloaked.conf`, `hidden_changes.conf`), and server objects the official client created (its automatic
+shelves, offered as left changes). Its merge tools (client.conf's `<MergeTools>`) aren't offered: the app finds the
+well-known tools itself, and the user adds any other (docs/features/merge.md); importing them would belong to
+`importLegacySettings` too.
+
+## `cm` owns its files
+
+The app asks `cm`, never reads what `cm` keeps for itself, whose format is `cm`'s to change: a workspace's metadata
+(`.plastic/`: `plastic.selector`, `plastic.wktree`, `plastic.changes`, `changelists/`...) and the user's config folder
+(`plasticConfigFolder`: `client.conf`, `tokens.conf`, `profiles.conf`, `plastic.workspaces`, `*.token`...). What a
+workspace works on is `cm wi`, its root `cm getworkspacefrompath`, its changelists `cm status --changelists`. The few
+modules that name those files, each for a reason, never read them:
+
+- the first-run import (`plasticConfig/`, `importLegacySettings`), the one reader of the config folder, once;
+- the workspace watcher (`WorkspaceWatcher`, `classifyChange`): `.plastic` rewrites are refresh signals, never read;
+- `listWorkspacePaths`, which skips `.plastic`, and `describeDraggedFolder`, which takes a `.plastic` folder above a
+  dragged one for a workspace while it's dragged (the drop asks `cm getworkspacefrompath`).
+
+The workspace's rule files (`ignore.conf`, `cloaked.conf`, `hidden_changes.conf`) are the user's, not `cm`'s: plain
+lines at the root, often checked in, and no `cm` command manages them; `filterRuleFile` adds to them and
+`WorkspaceWatcher` reads `ignore.conf` to skip folders. `main/cm/noCmInternalFiles.test.ts` scans the literals of
+`main/`, `renderer/` and `shared/` for these names and holds each module to what its entry in `ALLOWED` says it reads;
+a new one joins it with its reason, or asks `cm`.
 
 ## Profile pictures (Gravatar)
 
