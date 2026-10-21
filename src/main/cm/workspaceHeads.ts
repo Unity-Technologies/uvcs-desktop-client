@@ -64,8 +64,9 @@ export type WorkspaceHeadsReader = (workspacePaths: string[]) => Promise<Record<
  * (`anyDirectory`), so the home screen starts no sessions per workspace. A folder that is gone is not asked about
  * (`cm wi` would answer for a workspace holding it); workspaces `cm` can't tell are left out. A `wi` that stalls (a
  * network drive that went away) holds the rows after it until the shell's read timeout stops it and that row is left
- * out (`shellCommandTimeoutMs`): a shorter bound would need a `signal`, which sends every read to a process of its own
- * instead of the pooled shell.
+ * out (`shellCommandTimeoutMs`): as the limiter is shared by every window, it holds every window's heads, and one of
+ * the shown directory's two sessions, while it lasts. A shorter bound would need a `signal`, which sends every read to
+ * a process of its own instead of the pooled shell.
  */
 export function workspaceHeadsReader(cm: CmClient): WorkspaceHeadsReader {
   const inTurn = concurrencyLimit(CONCURRENT_READS);
