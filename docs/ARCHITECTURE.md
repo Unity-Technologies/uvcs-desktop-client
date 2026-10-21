@@ -520,6 +520,18 @@ safe, and the step of a multi-command operation (shelve, undo, switch, bring). N
   by transforms on the compositor. `OperationCard` draws it in fixed rows and widths, then turns into the success
   message in place; the status bar, the branch pill (a switch) and the incoming chip (an update) show the same
   operation with a `ProgressRing`. A report renders only these (`useRunningOperationOfKind` for the pill and the chip).
+- The app's icon shows every operation that changes a workspace (`OperationTracker.run`), with no code of its own in
+  any feature: `trackOperations` hands each start and report to `AppIconProgress`, which draws them through
+  `BrowserWindow.setProgressBar` (`showProgressOnAppIcon`; the rules in `main/window/iconProgress.ts`). Windows gives
+  each window its own taskbar button, which shows that window's operations: a pulse until they're measured, then the
+  fraction, and red for one that failed while its window was in the background, until the user comes back to it. The
+  macOS Dock and Linux's launcher have one icon for the whole app, which shows every window's operations together,
+  only once measured: the Dock draws Electron's indeterminate value as a full bar, which reads as done, and neither has
+  a red bar. The Dock keeps a bar after its window is gone, so the last window clears it as it starts closing
+  (`windowClosing`), and sets it again if its page holds the close back. On Linux the bar needs the launcher to find
+  the app's `.desktop` file by Electron's name for the app: package.json's `desktopName`, which
+  `linux.syncDesktopName` gives the file (`scripts/build/linuxDesktopName.test.ts`). A badge count was left out on
+  purpose: the sidebar's badges (incoming, pending changes) already count, and one more on the icon would compete.
 
 ## Windows
 
