@@ -27,12 +27,14 @@ interface Allowance {
   why: string;
   /** Exactly what it imports from `node:fs` and `node:fs/promises`; types aside. */
   fileSystem: string[];
+  /** False for a module listed for its file system imports alone, which names none of `cm`'s files. */
+  names?: false;
 }
 
 const ALLOWED: Record<string, Allowance> = {
   'main/plasticConfig/configFolder.ts': { fileSystem: [], why: 'where the official client keeps its config, for the first-run import' },
   'main/settings/importLegacySettings.ts': { fileSystem: ['readFileSync'], why: 'the first-run import, which reads plasticgui.conf once' },
-  'main/plasticConfig/recentBranchesConf.ts': { fileSystem: [], why: 'parses plasticgui.conf for the first-run import, which reads it' },
+  'main/plasticConfig/recentBranchesConf.ts': { fileSystem: [], names: false, why: 'parses the plasticgui.conf text the first-run import reads' },
   'main/watch/classifyChange.ts': { fileSystem: [], why: 'the files cm rewrites in .plastic are refresh signals for the watcher' },
   'main/watch/WorkspaceWatcher.ts': { fileSystem: [], why: 'watches .plastic for rewrites' },
   'main/files/listWorkspacePaths.ts': { fileSystem: ['readdir'], why: 'skips .plastic when listing the workspace’s own files' },
@@ -165,6 +167,12 @@ describe("cm's own files", () => {
     const named = sources.filter(({ file }) => !(file in ALLOWED)).map(({ file, code }) => [file, cmFilesNamedIn(code)] as const);
     const unlisted = Object.fromEntries(named.filter(([, names]) => names.length > 0));
     expect(unlisted).toEqual({});
+  });
+
+  it('are still named by every module allowed to, so an entry no longer needed goes', () => {
+    const naming = Object.entries(ALLOWED).filter(([, { names }]) => names !== false);
+    const namingNone = naming.filter(([file]) => cmFilesNamedIn(sources.find((source) => source.file === file)?.code ?? '').length === 0);
+    expect(namingNone.map(([file]) => file)).toEqual([]);
   });
 
   it('are named only by modules that import from the file system exactly what their reason needs', () => {
