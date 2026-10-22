@@ -1,18 +1,15 @@
 import { useState } from 'react';
-import { api } from '../../../api/client';
-import { queryKeys } from '../../../api/queryKeys';
+import { ServerSelect } from '../../../components/ServerSelect';
 import { Button } from '../../../ui/Button';
 import { Checkbox } from '../../../ui/Checkbox';
 import { Dialog } from '../../../ui/dialog/Dialog';
 import { openDialog } from '../../../ui/dialog/dialogStore';
-import { ServerSelect } from '../../../components/ServerSelect';
 import { TextField } from '../../../ui/TextField';
 import { toast } from '../../../ui/toast/toastStore';
-import { queryClient } from '../../queryClient';
 import { useRepositories, useWorkspaceList } from '../../workspace/workspaceQueries';
 import { useDefaultWorkspaceRoot } from '../useDefaultWorkspaceRoot';
 import { defaultWorkspacePath, isRepositoryNameTaken, suggestWorkspaceName } from '../workspaceNaming';
-import { createRepositoryWithWorkspace } from './createRepositoryWithWorkspace';
+import { createNewRepository } from './createNewRepository';
 import { LocationField } from './LocationField';
 
 interface CreateRepositoryOptions {
@@ -46,32 +43,21 @@ function CreateRepositoryDialog({ server: initialServer, onWorkspaceCreated, onC
   const create = async (): Promise<void> => {
     if (!canCreate) return;
     setCreating(true);
-    const outcome = await createRepositoryWithWorkspace({
+    const outcome = await createNewRepository({
+      server,
+      name: name.trim(),
       created,
-      createRepository: () => api.repositories.create(server, name.trim()),
-      createWorkspace: withWorkspace
-        ? (repositorySpec) => api.workspaces.create({ name: workspaceName, path: workspacePath, repository: repositorySpec })
-        : undefined,
+      workspace: withWorkspace ? { name: workspaceName, path: workspacePath } : undefined,
     });
-    if (outcome.kind === 'repositoryFailed') {
-      toast.error("Couldn't create the repository", outcome.error);
-      setCreating(false);
-      return;
-    }
-    void queryClient.invalidateQueries({ queryKey: queryKeys.repositories(server) });
-    if (outcome.kind === 'workspaceFailed') {
-      setCreated(outcome.repositorySpec);
-      toast.error(`Created ${name.trim()}, but not its workspace`, outcome.error);
+    if (outcome.kind === 'failed') {
+      if (outcome.createdRepository) setCreated(outcome.createdRepository);
+      toast.error(outcome.title, outcome.error);
       setCreating(false);
       return;
     }
     onClose();
-    if (!outcome.workspace) {
-      toast.success(`Created ${outcome.repositorySpec}`);
-      return;
-    }
-    void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
-    onWorkspaceCreated(outcome.workspace.path);
+    if (outcome.workspace) onWorkspaceCreated(outcome.workspace.path);
+    else toast.success(`Created ${outcome.repositorySpec}`);
   };
 
   return (
