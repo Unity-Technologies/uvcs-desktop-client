@@ -26,14 +26,22 @@ function objectPart(object: LinkObject): string {
     case 'branch':
       return `branches/${object.name.split('/').filter(Boolean).map(encodeBranchSegment).join('/')}`;
     case 'label':
-      return `labels/${encodeSegment(object.name)}`;
+      return `labels/${encodeLabel(object.name)}`;
     case 'labelRange':
-      return `labels/${encodeSegment(object.from)}..${encodeSegment(object.to)}`;
+      return `labels/${encodeLabel(object.from)}..${encodeLabel(object.to)}`;
     case 'shelve':
       return `shelves/${object.id}`;
     case 'codeReview':
       return `${object.asMergeRequest ? 'merge-requests' : 'code-reviews'}/${object.id}`;
   }
+}
+
+/**
+ * A label's name: a dot next to another, or ending the name, is written `%2E`, so a name holding `..` (`v1..2`) is
+ * never read as a range of two labels, nor a range's names run into its `..`.
+ */
+function encodeLabel(name: string): string {
+  return encodeSegment(name).replace(/\./g, (dot, at: number, text: string) => (text[at - 1] === '.' || text[at + 1] === '.' || at === text.length - 1 ? '%2E' : dot));
 }
 
 /** A folder as `file:///` writes it: `/Users/ana/wk`, `C:/wk` → `/C:/wk`, each segment encoded but a drive's colon. */
