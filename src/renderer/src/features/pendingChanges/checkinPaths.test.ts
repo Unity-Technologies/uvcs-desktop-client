@@ -40,7 +40,26 @@ describe('checkinPathsOf', () => {
       addsPrivate: false,
       ...none,
     });
-    expect(checkinPathsOf([privateFolder, privateFile], [privateFolder, privateFile, notes])).toEqual({ paths: ['devops/tools/pub/pub-tests/T.cs'], addsPrivate: true, ...none });
+    const extra = file('devops/tools/pub/pub-tests/U.cs', ['private']);
+    expect(checkinPathsOf([privateFolder, privateFile], [privateFolder, privateFile, extra])).toEqual({ paths: ['devops/tools/pub/pub-tests/T.cs'], addsPrivate: true, ...none });
+  });
+
+  // A new project added whole: one path, not one per file, however many files it holds.
+  it('gives a private, added or moved folder alone when everything in it is checked', () => {
+    const project = folder('NewGame', ['private']);
+    const inside = [folder('NewGame/Assets', ['private']), file('NewGame/Assets/Hero.prefab', ['private']), file('NewGame/README.md', ['private'])];
+    const moved = folder('lib', ['moved']);
+    const movedFile = file('lib/b.cs', ['changed']);
+
+    expect(checkinPathsOf([project, ...inside, moved, movedFile], [project, ...inside, moved, movedFile, notes])).toEqual({ paths: ['NewGame', 'lib'], addsPrivate: true, ...none });
+  });
+
+  // Given, a checked-out folder (an xlink) takes what it holds: its files are given instead, as in the xlink case above.
+  it('never gives a checked-out folder alone for what it holds, even all checked', () => {
+    const checkedOut = folder('src', ['checkedOut']);
+    const a = file('src/a.cs', ['changed']);
+
+    expect(checkinPathsOf([checkedOut, a], [checkedOut, a]).paths).toEqual(['src/a.cs']);
   });
 
   it('gives a checked-out folder checked alone, and says what inside it goes in too', () => {
