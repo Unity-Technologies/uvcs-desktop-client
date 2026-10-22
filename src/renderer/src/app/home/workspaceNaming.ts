@@ -17,9 +17,25 @@ export function defaultWorkspacePath(root: string | undefined, name: string): st
   return root && folder ? joinPath(root, folder) : '';
 }
 
-/** Whether a repository named `name` (as typed) is already among `repositoryNames`: `cm` tells names apart by case. */
+/** Whether a repository name as typed (spaces around it aside) names the repository `repositoryName`: `cm` tells names apart by case. */
+function namesRepository(typed: string, repositoryName: string): boolean {
+  return typed.trim() === repositoryName;
+}
+
+/** Whether a repository named `name` (as typed) is already among `repositoryNames`. */
 export function isRepositoryNameTaken(name: string, repositoryNames: readonly string[]): boolean {
-  return repositoryNames.includes(name.trim());
+  return repositoryNames.some((repositoryName) => namesRepository(name, repositoryName));
+}
+
+/** The repository a name as typed names, if any. */
+export function repositoryNamed<Repository extends { name: string }>(name: string, repositories: readonly Repository[]): Repository | undefined {
+  return repositories.find((repository) => namesRepository(name, repository.name));
+}
+
+/** A repository whose name differs from the one typed only by case: to `cm` a different name, to a person likely the same. */
+export function repositoryNamedButForCase<Repository extends { name: string }>(name: string, repositories: readonly Repository[]): Repository | undefined {
+  const wanted = name.trim().toLowerCase();
+  return repositories.find((repository) => !namesRepository(name, repository.name) && repository.name.toLowerCase() === wanted);
 }
 
 /**

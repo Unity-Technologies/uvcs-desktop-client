@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultWorkspacePath, isRepositoryNameTaken, isWorkspaceNameTaken, suggestWorkspaceName } from './workspaceNaming';
+import { defaultWorkspacePath, isRepositoryNameTaken, isWorkspaceNameTaken, repositoryNamed, repositoryNamedButForCase, suggestWorkspaceName } from './workspaceNaming';
 
 describe('suggestWorkspaceName', () => {
   it('uses the last segment of sub-repository names', () => {
@@ -34,6 +34,34 @@ describe('isRepositoryNameTaken', () => {
 
   it('tells names apart by case, as cm does', () => {
     expect(isRepositoryNameTaken('Game', ['game'])).toBe(false);
+  });
+});
+
+describe('repositoryNamed', () => {
+  const repositories = [{ name: 'game' }, { name: 'acme/tools' }];
+
+  it('is the repository of the name as typed, without its surrounding spaces, by case as cm tells them apart', () => {
+    expect(repositoryNamed(' acme/tools ', repositories)).toEqual({ name: 'acme/tools' });
+    expect(repositoryNamed('Game', repositories)).toBeUndefined();
+    expect(repositoryNamed('', repositories)).toBeUndefined();
+  });
+});
+
+describe('repositoryNamedButForCase', () => {
+  const repositories = [{ name: 'game' }, { name: 'Game' }, { name: 'tools' }];
+
+  it('is a repository whose name differs only by case', () => {
+    expect(repositoryNamedButForCase('TOOLS ', repositories)).toEqual({ name: 'tools' });
+    expect(repositoryNamedButForCase('GAME', repositories)).toEqual({ name: 'game' });
+  });
+
+  it('is none for the exact name, or one that differs by more than case', () => {
+    expect(repositoryNamedButForCase('tools', repositories)).toBeUndefined();
+    expect(repositoryNamedButForCase('tool', repositories)).toBeUndefined();
+  });
+
+  it('skips the exact match to find one that differs only by case', () => {
+    expect(repositoryNamedButForCase('Game', repositories)).toEqual({ name: 'game' });
   });
 });
 
