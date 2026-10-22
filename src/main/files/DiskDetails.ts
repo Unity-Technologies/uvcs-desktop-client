@@ -10,9 +10,10 @@ export const MAX_READS_AT_ONCE = 16;
 /**
  * Reads what `cm status` records don't hold of each change from the disk: its size and modification date (what
  * `cm status --xml` reported: the file as it is on disk), and whether it is a link. A local read, free for the
- * server. Started as each change arrives (`add`), while `cm` still prints the rest: reading 500,000 files takes about
- * two seconds, half of what the command does, so most of it ends with the command. Folders and items gone from the
- * disk keep no size and no date (`0`, `''`): nothing reads them.
+ * server. Started as each change arrives (`add`), a few at a time; `cm status` prints its changes once it found them
+ * all, so the reads follow the command: a million files took 4 s more than the command's 5 s (500,000: 2 s), as many
+ * reads in worker threads would still take 2.5 s (macOS). Folders and items gone from the disk keep no size and no
+ * date (`0`, `''`): nothing reads them.
  */
 export class DiskDetails {
   private readonly changes: PendingChange[] = [];
