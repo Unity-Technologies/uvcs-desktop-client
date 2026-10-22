@@ -1,6 +1,5 @@
-import * as Popover from '@radix-ui/react-popover';
 import type { ReactNode } from 'react';
-import styles from './FilterPopover.module.css';
+import { Popover } from './Popover';
 
 interface FilterPopoverProps {
   /** The filter's chip; it opens the popover. */
@@ -19,23 +18,17 @@ interface FilterPopoverProps {
  */
 export function FilterPopover({ trigger, children, width = 300, open, onOpenChange }: FilterPopoverProps) {
   return (
-    <Popover.Root open={open} onOpenChange={onOpenChange}>
-      <Popover.Trigger asChild>{trigger}</Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content
-          className={styles.popover}
-          style={{ width }}
-          align="start"
-          sideOffset={4}
-          collisionPadding={8}
-          onEscapeKeyDown={(event) => {
-            // The field clears itself on Esc; only an empty one lets the popover close.
-            if (event.target instanceof HTMLInputElement && event.target.value) event.preventDefault();
-          }}
-        >
-          {children}
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
+    <Popover
+      trigger={trigger}
+      width={width}
+      open={open}
+      onOpenChange={onOpenChange}
+      onEscapeKeyDown={(event) => {
+        // The field clears itself on Esc; only an empty one lets the popover close.
+        if (event.target instanceof HTMLInputElement && event.target.value) event.preventDefault();
+      }}
+    >
+      {children}
+    </Popover>
   );
 }
