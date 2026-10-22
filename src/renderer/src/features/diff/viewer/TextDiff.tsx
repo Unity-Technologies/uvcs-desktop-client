@@ -17,6 +17,8 @@ import { collapsesUnchanged, linesSelectable, shownSelection } from './lineLinkM
 import { selectedRangeOf } from './linkedLines';
 import { scrollToLine } from './lineScroll';
 import { useLineLinks } from './useLineLinks';
+import { useLineTools } from './useLineTools';
+import { LineMenuArea } from './LineMenuArea';
 import type { LineDiff } from './lineDiff';
 import { HIDE_NO_NEWLINE_CSS, showsNoNewlineMarker } from './noNewlineMarker';
 import { PaneScrollbars } from './PaneScrollbars';
@@ -181,6 +183,16 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     onUndo: onUndoDiscard,
     markedLines,
   });
+  // The lines selected offer a link to them (a chip by them) and their menu, where they are selected for links.
+  const lineTools = useLineTools({
+    containerRef: container,
+    layout,
+    range: lineLinks.range,
+    select: lineLinks.select,
+    selectable: lineLinks.selectedLines !== undefined,
+    publishes: lineLinks.publishes,
+    textOf: (side) => (side === 'old' ? original : diffedText),
+  });
   const movedCode = useMovedCode({ diff: diff.meta, comparisonMethod, fileName, layout, containerRef: container, virtualizer, diffedText, typed: current });
   const tokenizeMaxLength = highlighting === 'off' ? 0 : undefined;
   const workers = useHighlightWorkers(highlighting === 'background');
@@ -229,57 +241,60 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
 
   return (
     <div className={styles.frame}>
-      <div
-        ref={setContainer}
-        className={styles.diff}
-        tabIndex={0}
-        role="region"
-        aria-label={`Diff of ${fileName}`}
-        onKeyDownCapture={onKeyDownCapture}
-        onKeyDown={onKeyDown}
-        onPointerDown={discard.onPointerDown}
-        onPointerDownCapture={(event) => {
-          pointerFocus.onPointerDownCapture(event);
-          if (!editable || edit || wholeFile) return;
-          const place = modifiedTextPositionAt(container.current, { x: event.clientX, y: event.clientY });
-          if (place) focusAt(place);
-        }}
-        onPointerMove={discard.onPointerMove}
-        onPointerLeave={discard.onPointerLeave}
-        onScroll={onViewScroll}
-        onFocus={pointerFocus.onFocus}
-        onBlur={pointerFocus.onBlur}
-      >
-        <EditProvider createEditor={createEditor}>
-          {wholeFile ? (
-            <VirtualizerContext.Provider value={virtualizer}>
-              <File file={newFile} options={fileOptions} edit onEditChange={(event) => onEdit?.(event.file.contents)} disableWorkerPool style={{ minHeight: '100%' }} />
-            </VirtualizerContext.Provider>
-          ) : (
-            <VirtualizerContext.Provider value={virtualizer}>
-              <WorkerPoolContext.Provider value={workers}>
-                <FileDiff
-                  // Pierre computes the diff once per pair of files, whatever the options say later, and takes the
-                  // workers and virtualizer when it's created; typing doesn't start it anew.
-                  key={`${comparisonMethod}:${editable ? 'editable' : 'read-only'}:${highlighting}`}
-                  fileDiff={fileDiff}
-                  options={options}
-                  selectedLines={shownSelection(discard.selectedLines, lineLinks.selectedLines)}
-                  renderGutterUtility={discard.renderGutterUtility}
-                  edit={edit}
-                  onEditChange={(event) => onEdit?.(event.editor.getText())}
-                  onEditComplete={() => 'reject'}
-                  disableWorkerPool={!workers}
-                  style={{ minHeight: '100%' }}
-                />
-              </WorkerPoolContext.Provider>
-            </VirtualizerContext.Provider>
-          )}
-        </EditProvider>
-        <PaneScrollbars containerRef={container} />
-        {discard.overlay}
-        {movedCode}
-      </div>
+      <LineMenuArea menu={lineTools.menu}>
+        <div
+          ref={setContainer}
+          className={styles.diff}
+          tabIndex={0}
+          role="region"
+          aria-label={`Diff of ${fileName}`}
+          onKeyDownCapture={onKeyDownCapture}
+          onKeyDown={onKeyDown}
+          onPointerDown={discard.onPointerDown}
+          onPointerDownCapture={(event) => {
+            pointerFocus.onPointerDownCapture(event);
+            if (!editable || edit || wholeFile) return;
+            const place = modifiedTextPositionAt(container.current, { x: event.clientX, y: event.clientY });
+            if (place) focusAt(place);
+          }}
+          onPointerMove={discard.onPointerMove}
+          onPointerLeave={discard.onPointerLeave}
+          onScroll={onViewScroll}
+          onFocus={pointerFocus.onFocus}
+          onBlur={pointerFocus.onBlur}
+        >
+          <EditProvider createEditor={createEditor}>
+            {wholeFile ? (
+              <VirtualizerContext.Provider value={virtualizer}>
+                <File file={newFile} options={fileOptions} edit onEditChange={(event) => onEdit?.(event.file.contents)} disableWorkerPool style={{ minHeight: '100%' }} />
+              </VirtualizerContext.Provider>
+            ) : (
+              <VirtualizerContext.Provider value={virtualizer}>
+                <WorkerPoolContext.Provider value={workers}>
+                  <FileDiff
+                    // Pierre computes the diff once per pair of files, whatever the options say later, and takes the
+                    // workers and virtualizer when it's created; typing doesn't start it anew.
+                    key={`${comparisonMethod}:${editable ? 'editable' : 'read-only'}:${highlighting}`}
+                    fileDiff={fileDiff}
+                    options={options}
+                    selectedLines={shownSelection(discard.selectedLines, lineLinks.selectedLines)}
+                    renderGutterUtility={discard.renderGutterUtility}
+                    edit={edit}
+                    onEditChange={(event) => onEdit?.(event.editor.getText())}
+                    onEditComplete={() => 'reject'}
+                    disableWorkerPool={!workers}
+                    style={{ minHeight: '100%' }}
+                  />
+                </WorkerPoolContext.Provider>
+              </VirtualizerContext.Provider>
+            )}
+          </EditProvider>
+          <PaneScrollbars containerRef={container} />
+          {discard.overlay}
+          {lineTools.chip}
+          {movedCode}
+        </div>
+      </LineMenuArea>
     </div>
   );
 }

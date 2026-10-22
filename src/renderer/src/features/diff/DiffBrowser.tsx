@@ -17,6 +17,8 @@ import { diffEntryTones } from './diffEntrySources';
 import { DiffEntryList, diffEntryKey } from './DiffEntryList';
 import { diffEntryMenu } from './diffEntryMenu';
 import { entryToFocus } from './diffFocus';
+import { diffEntryAnnotation } from './diffEntryHistory';
+import { navigation } from '../../app/navigation/navigationStore';
 import { diffPaneOf } from './diffPane';
 import { EntryDiff } from './EntryDiff';
 import { linkFocusOf, linkFocusOn } from './linkFocus';
@@ -86,7 +88,12 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   // The lines a link opened the diff on go once another file is selected: coming back leaves the file where it was.
   const linkFocus = useFocusUntilMoved(linkFocusOf(initialPath, initialLines), focused?.path);
   const focusOnShown = linkFocusOn(linkFocus, focused);
-  const lineLinks = useMemo<LineLinks>(() => ({ focus: focusOnShown, publishes: true }), [linkFocus, focused?.path]);
+  // The lines' menu annotates the file at them as the diff's newer side has it (`diffEntryAnnotation`), where it can.
+  const annotation = focused ? diffEntryAnnotation(target, focused) : null;
+  const lineLinks = useMemo<LineLinks>(
+    () => ({ focus: focusOnShown, publishes: true, annotateAt: annotation ? (lines) => navigation.openPage({ ...annotation, focusLines: lines }) : undefined }),
+    [linkFocus, focused?.path, annotation === null],
+  );
 
   const pane = diffPaneOf({ listedCount: reading ? undefined : entries.length, shownCount: shown.length, entrySelected: focused !== undefined, folderSelected: focusedFolder !== undefined });
 

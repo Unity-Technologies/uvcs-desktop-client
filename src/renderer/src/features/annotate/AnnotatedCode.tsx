@@ -5,7 +5,9 @@ import { matchesShortcut } from '../../lib/shortcuts';
 import { fileNameOf } from '../../lib/text';
 import { displayName } from '../../lib/userName';
 import { PaneScrollbars } from '../diff/viewer/PaneScrollbars';
+import { LineMenuArea } from '../diff/viewer/LineMenuArea';
 import { useLineLinks, type ScrollToLine } from '../diff/viewer/useLineLinks';
+import { useLineTools } from '../diff/viewer/useLineTools';
 import { paneScrollbarsHeight } from '../diff/viewer/paneScrollbarsDom';
 import { AnnotationGutter } from './AnnotationGutter';
 import { AnnotationRules } from './AnnotationRules';
@@ -99,54 +101,66 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
   };
 
   const lineLinks = useLineLinks({ path, selectable: true, containerRef: scrollerRef, shown: scroller !== null, scrollTo: scrollToAnnotatedLine });
+  const lineTools = useLineTools({
+    containerRef: scrollerRef,
+    layout: 'file',
+    range: lineLinks.range,
+    select: lineLinks.select,
+    selectable: true,
+    publishes: lineLinks.publishes,
+    textOf: () => code,
+  });
   const pickedBlock = blocks[picked];
 
   return (
-    <div
-      ref={attachScroller}
-      className={styles.scroller}
-      style={{ '--diffs-line-height': `${ANNOTATION_LINE_HEIGHT}px`, '--diffs-gap-block': `${CODE_PADDING_TOP}px` } as CSSProperties}
-      tabIndex={0}
-      role="region"
-      aria-label={`Annotated lines of ${fileNameOf(path)}`}
-      onKeyDown={onKeyDown}
-    >
-      <div className={styles.columns}>
-        <AnnotationGutter
-          blocks={blocks}
-          shown={shown}
-          columns={columns}
-          lineHeight={ANNOTATION_LINE_HEIGHT}
-          picked={picked}
-          onPick={(index) => setPicked(index === picked ? -1 : index)}
-          onHoverLabel={cardState.hover}
-          onPinCard={(index) => {
-            setPicked(index);
-            cardState.toggle(index);
-          }}
-          onShowRevision={(index) => {
-            setPicked(index);
-            links.showInHistory(blocks[index]!.changeset.changesetId);
-          }}
-          revisionTip={links.selectsInHistory ? 'Select this revision' : 'Show this revision in history'}
-          walkBack={links.walkBack}
-        />
-        <HighlightedCode
-          className={styles.code}
-          code={code}
-          path={path}
-          virtualizer={virtualizer}
-          selectionOptions={lineLinks.options}
-          selectedLines={lineLinks.selectedLines}
-        />
-        <AnnotationRules blocks={blocks} shown={shown} lineHeight={ANNOTATION_LINE_HEIGHT} highlighted={highlighted} />
+    <LineMenuArea menu={lineTools.menu}>
+      <div
+        ref={attachScroller}
+        className={styles.scroller}
+        style={{ '--diffs-line-height': `${ANNOTATION_LINE_HEIGHT}px`, '--diffs-gap-block': `${CODE_PADDING_TOP}px` } as CSSProperties}
+        tabIndex={0}
+        role="region"
+        aria-label={`Annotated lines of ${fileNameOf(path)}`}
+        onKeyDown={onKeyDown}
+      >
+        <div className={styles.columns}>
+          <AnnotationGutter
+            blocks={blocks}
+            shown={shown}
+            columns={columns}
+            lineHeight={ANNOTATION_LINE_HEIGHT}
+            picked={picked}
+            onPick={(index) => setPicked(index === picked ? -1 : index)}
+            onHoverLabel={cardState.hover}
+            onPinCard={(index) => {
+              setPicked(index);
+              cardState.toggle(index);
+            }}
+            onShowRevision={(index) => {
+              setPicked(index);
+              links.showInHistory(blocks[index]!.changeset.changesetId);
+            }}
+            revisionTip={links.selectsInHistory ? 'Select this revision' : 'Show this revision in history'}
+            walkBack={links.walkBack}
+          />
+          <HighlightedCode
+            className={styles.code}
+            code={code}
+            path={path}
+            virtualizer={virtualizer}
+            selectionOptions={lineLinks.options}
+            selectedLines={lineLinks.selectedLines}
+          />
+          <AnnotationRules blocks={blocks} shown={shown} lineHeight={ANNOTATION_LINE_HEIGHT} highlighted={highlighted} />
+        </div>
+        <PaneScrollbars containerRef={scrollerRef} />
+        <BlockCard blocks={blocks} cardState={cardState} picked={picked} scroller={scroller} links={links} />
+        {lineTools.chip}
+        <span className="visually-hidden" aria-live="polite">
+          {pickedBlock &&
+            `Lines ${pickedBlock.start + 1} to ${pickedBlock.end}: changeset ${pickedBlock.changeset.changesetId} by ${displayName(pickedBlock.changeset.owner)}`}
+        </span>
       </div>
-      <PaneScrollbars containerRef={scrollerRef} />
-      <BlockCard blocks={blocks} cardState={cardState} picked={picked} scroller={scroller} links={links} />
-      <span className="visually-hidden" aria-live="polite">
-        {pickedBlock &&
-          `Lines ${pickedBlock.start + 1} to ${pickedBlock.end}: changeset ${pickedBlock.changeset.changesetId} by ${displayName(pickedBlock.changeset.owner)}`}
-      </span>
-    </div>
+    </LineMenuArea>
   );
 }

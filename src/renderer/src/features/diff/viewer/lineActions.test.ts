@@ -12,12 +12,13 @@ describe('lineNumberHint', () => {
 
 describe('lineChipAnchor', () => {
   it('sits by the first line selected, on its side, however the range was dragged', () => {
-    expect(lineChipAnchor(range(52, 40))).toEqual({ side: 'additions', lineNumber: 40 });
-    expect(lineChipAnchor(range(7, 9, 'deletions'))).toEqual({ side: 'deletions', lineNumber: 7 });
+    expect(lineChipAnchor(range(52, 40), true)).toEqual({ side: 'additions', lineNumber: 40 });
+    expect(lineChipAnchor(range(7, 9, 'deletions'), true)).toEqual({ side: 'deletions', lineNumber: 7 });
   });
 
-  it('is none without a selection', () => {
-    expect(lineChipAnchor(null)).toBeNull();
+  it('is none without a selection, or where no link names the lines', () => {
+    expect(lineChipAnchor(null, true)).toBeNull();
+    expect(lineChipAnchor(range(1, 2), false)).toBeNull();
   });
 });
 

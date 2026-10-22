@@ -1,3 +1,4 @@
+import type { RowUnderPointer } from './lineActions';
 import type { ChangedLine } from './changeBlocks';
 
 /**
@@ -116,4 +117,19 @@ export function rowTextRange(row: Element, start: number, end: number): Range | 
     offset += length;
   }
   return null;
+}
+
+/**
+ * The row a pointer event is on, as Pierre marks it (`lineUnderPointer` reads it): the line number of its number cell
+ * (`data-column-number`) or code (`data-line`), its type, and side by side the pane it's in. Null off a row.
+ */
+export function rowUnderPointer(path: readonly EventTarget[]): RowUnderPointer | null {
+  const row = path.find((target): target is HTMLElement => target instanceof HTMLElement && (target.hasAttribute('data-column-number') || target.hasAttribute('data-line')));
+  if (!row) return null;
+  const pane = row.closest('[data-deletions], [data-additions]');
+  return {
+    lineNumber: Number(row.getAttribute('data-column-number') ?? row.getAttribute('data-line')),
+    lineType: row.getAttribute('data-line-type'),
+    pane: pane ? (pane.hasAttribute('data-deletions') ? 'deletions' : 'additions') : null,
+  };
 }

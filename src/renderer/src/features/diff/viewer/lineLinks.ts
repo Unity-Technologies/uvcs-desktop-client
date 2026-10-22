@@ -1,4 +1,5 @@
 import { createContext } from 'react';
+import type { FocusedLines } from '../../../app/navigation/pages';
 import type { SelectedLines } from '../selectedLinesStore';
 
 /**
@@ -13,6 +14,8 @@ import type { SelectedLines } from '../selectedLinesStore';
 export interface LineLinks {
   focus: SelectedLines | null;
   publishes: boolean;
+  /** Opens the file annotated at lines of the diff's newer side, where it can be annotated (the lines' menu). */
+  annotateAt?: (lines: FocusedLines) => void;
 }
 
 export const LineLinksContext = createContext<LineLinks | null>(null);

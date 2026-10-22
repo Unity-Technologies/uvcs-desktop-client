@@ -11,9 +11,12 @@ export function lineNumberHint(selecting: boolean): string | null {
   return selecting ? null : 'Click to select · Shift+click a range';
 }
 
-/** The line the "Copy link" chip sits by: the first of the lines selected, as the link names them; none without a selection. */
-export function lineChipAnchor(range: LineRange | null): ChangedLine | null {
-  const lines = linkedLinesOf(range);
+/**
+ * The line the "Copy link" chip sits by: the first of the lines selected, as the link names them; none without a
+ * selection, or where no link names them (`linkable`: a workspace's own changes, a history under an xlink).
+ */
+export function lineChipAnchor(range: LineRange | null, linkable: boolean): ChangedLine | null {
+  const lines = linkable ? linkedLinesOf(range) : null;
   return lines && { side: sideOf(lines), lineNumber: lines.first };
 }
 
