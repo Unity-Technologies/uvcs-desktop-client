@@ -1,7 +1,7 @@
 import type { KeyboardEvent } from 'react';
 import type { GroupedTreeRow } from '../../lib/groupedPathTree';
 import type { ListReview } from './useReviewMode';
-import { reviewableOf, shouldMarkReviewed, type ReviewStatusOf } from './reviewStatus';
+import { needsReview, reviewableOf, shouldMarkReviewed, type ReviewStatusOf } from './reviewStatus';
 
 /** The rows R moves through: the list's, the focused row's index in them, and how the list moves its selection. */
 export interface ReviewKeyList<T> {
@@ -16,8 +16,8 @@ export function isReviewKey(event: KeyboardEvent): boolean {
 }
 
 /**
- * R toggles the selection's marks. Marking one file moves on to the next file to review, so a review goes R, R, R
- * down the list, never stopping on a row R can't mark.
+ * R toggles the selection's marks. Marking one file moves on to the next file still to review, so a review goes R,
+ * R, R down the list, never stopping where R would do nothing or clear a mark.
  */
 export function toggleReviewedFromKey<T>(review: ListReview<T>, selected: T[], list: ReviewKeyList<T>): void {
   const reviewable = reviewableOf(selected, review.statusOf);
@@ -30,9 +30,9 @@ export function toggleReviewedFromKey<T>(review: ListReview<T>, selected: T[], l
 }
 
 /**
- * How many rows down the next one R can mark is: a file with something to review, or a closed folder or group holding
- * one. It passes directories (nothing to review) and open folders and groups (their files come next). Null when
- * none is left below.
+ * How many rows down the next one still to review is: a file never reviewed or changed since, or a closed folder or
+ * group holding one. It passes directories (nothing to review), files already reviewed (R there would clear the mark)
+ * and open folders and groups (their files come next). Null when none is left below.
  */
 export function stepToNextReviewable<T>(rows: readonly GroupedTreeRow<T, unknown>[], fromIndex: number, statusOf: ReviewStatusOf<T>): number | null {
   for (let index = fromIndex + 1; index < rows.length; index++) {
@@ -42,6 +42,6 @@ export function stepToNextReviewable<T>(rows: readonly GroupedTreeRow<T, unknown
 }
 
 function holdsReview<T>(row: GroupedTreeRow<T, unknown>, statusOf: ReviewStatusOf<T>): boolean {
-  if (row.type === 'file') return statusOf(row.item) !== null;
-  return row.collapsed && reviewableOf(row.items, statusOf).length > 0;
+  if (row.type === 'file') return needsReview(statusOf, row.item);
+  return row.collapsed && row.items.some((item) => needsReview(statusOf, item));
 }
