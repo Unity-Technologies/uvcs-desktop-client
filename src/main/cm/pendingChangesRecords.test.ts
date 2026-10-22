@@ -108,6 +108,18 @@ describe('PendingChangesReader', () => {
     ]);
   });
 
+  it('takes what the second printing of an item adds: the changelist and the merge it comes from, nothing empty', () => {
+    const output = pendingStatusInChangelists(WORKSPACE, [
+      { name: 'Default', changes: [change('CO', 'a.txt')] },
+      { name: 'UI work', changes: [change('CO', 'a.txt', { merge: 'Merge from 5' })] },
+    ]);
+    const [only, ...others] = read(output).changes;
+
+    expect(others).toEqual([]);
+    expect(only).toEqual({ path: 'a.txt', kinds: ['checkedOut'], itemType: 'file', size: 0, lastModified: '', changelist: 'UI work', mergeInfo: 'Merge from 5' });
+    expect(Object.values(only!)).not.toContain(undefined);
+  });
+
   it('fails on a change printed with fields it can not read, rather than show a clean workspace', () => {
     const output = formatOutput(['CO+CH', join(WORKSPACE, 'a.txt'), 'False', '12', 'NO_MERGES']);
     expect(() => read(output)).toThrow("cm status printed a change this app can't read");
