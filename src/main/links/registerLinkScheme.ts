@@ -37,27 +37,41 @@ export async function registerLinkScheme(os: SchemeRegistrar): Promise<void> {
     os.setAsDefaultProtocolClient(LINK_SCHEME, os.execPath, [LINK_SWITCH, '--']);
   } else if (os.platform === 'darwin') {
     os.setAsDefaultProtocolClient(LINK_SCHEME);
-  } else if (await writeLinuxDesktopEntry(os)) {
+  } else {
+    const written = await writeLinuxDesktopEntry(os);
+    if (written) await setDefaultOrForget(os, written);
+  }
+}
+
+/**
+ * Makes the entry just written the scheme's handler; one the desktop couldn't (no xdg-utils, a timeout) is removed,
+ * so the next launch writes it and tries again rather than finding it up to date.
+ */
+async function setDefaultOrForget(os: SchemeRegistrar, entryPath: string): Promise<void> {
+  try {
     await os.setDefaultLinkHandler(linkHandlerDesktopId(os.env.CHROME_DESKTOP!));
+  } catch (error) {
+    await os.removeFile(entryPath);
+    throw error;
   }
 }
 
 /**
  * Writes the AppImage's link handler entry where the desktop finds it, and removes the one an earlier version wrote
- * under the app's own id; whether it wrote it (it was missing or out of date).
+ * under the app's own id; the entry's path when it wrote it (it was missing or out of date), else null.
  */
-async function writeLinuxDesktopEntry(os: SchemeRegistrar): Promise<boolean> {
+async function writeLinuxDesktopEntry(os: SchemeRegistrar): Promise<string | null> {
   const appImage = os.env.APPIMAGE;
   const appDesktopId = os.env.CHROME_DESKTOP;
-  if (!appImage || !appDesktopId) return false;
+  if (!appImage || !appDesktopId) return null;
   const applications = join(os.env.XDG_DATA_HOME || join(os.homeDirectory, '.local', 'share'), 'applications');
   await removeOwnEntry(os, join(applications, appDesktopId));
   const path = join(applications, linkHandlerDesktopId(appDesktopId));
   const entry = linuxDesktopEntry(appImage, os.productName);
   const existing = await os.readText(path);
-  if (existing === entry || !mayWriteDesktopEntry(existing)) return false;
+  if (existing === entry || !mayWriteDesktopEntry(existing)) return null;
   await os.writeText(path, entry);
-  return true;
+  return path;
 }
 
 /** Removes an entry the app wrote itself (its marker), never one a package or another tool did. */
