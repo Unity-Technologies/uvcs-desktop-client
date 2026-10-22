@@ -256,10 +256,17 @@ and many people use the same server. Every `cm` command other than local reads (
   Only the header stays XML (`parseWorkspaceStatus`): the `STATUS` record names no selector. As `cm ls`'s, its
   records come in UTF-8 on Windows only from a `cm shell` (`processCommand`, `printsInConsoleCodePage`).
 - **XML remains** only where `--format` can't say it, for answers that stay small: the `cm status` header
-  (`parseWorkspaceStatus`: a local read); `cm history --format`
+  (`parseWorkspaceStatus`: a local read, under a KB); `cm history --format`
   has no revision type, which tells text from binary from a directory, and a revision from a move or a removal
-  (`itemHistoryArgs`); `cm fileinfo` reads one item or two, where records would save nothing (`parseItemDetails`,
-  `removedItemSpec`). XML goes through `parseXml`.
+  (`itemHistoryArgs`: one item's revisions, about 600 bytes each, a few MB for a file changed in thousands of
+  changesets); `cm fileinfo` reads one item or two, where records would save nothing (`parseItemDetails`,
+  `removedItemSpec`, `saveContent`, `explorerService`). XML goes through `parseXml`.
+- **A list that can grow takes records, read as they arrive** (`queryRecords`, `executeRecords`): pending changes
+  (`readPendingChanges`), the Branch Explorer, the Changesets and Branches lists, branch names. Lists still read as
+  one string (`query` then `parseRecords`) stay well under `MAX_OUTPUT_LENGTH` on the largest repositories, but grow
+  with them, and move to `queryRecords` next, the biggest first: a diff of a changeset or branch touching most of a
+  big tree (`diffService`, about 100 bytes a file), a `cm ls` of a whole tree (`explorerService`,
+  `withConflictRepositories`), a big file's annotations (`annotation`).
 - Never parse human-readable output when a machine format exists.
 - **Records are read as they arrive**: new code reads a `--format` command with `cm.queryRecords(args, readRecord,
   options)` (or `executeRecords`), where `readRecord` builds a row (a branch, a changeset) from each record's fields, or
@@ -281,7 +288,7 @@ and many people use the same server. Every `cm` command other than local reads (
     whole output; slices of decoded chunks would keep every chunk alive. Sharing one copy of repeated owners and branch
     names (a `Map`) saved a tenth of the peak for a quarter more time, the record's string being alive anyway: dropped.
 - Output already held as text (a cache's string, `ProfileList`; the callers read with `query()`, such as the `cm ls`
-  listings, annotate, diffs and the services' lists) is read with `parseRecords(output, readRecord)`: the same field
+  listings, annotate, diffs and the smaller services' lists) is read with `parseRecords(output, readRecord)`: the same field
   rules (`fieldsOf`), its records found in the string itself, with no copy into bytes (a million branches: 386 ms and
   581 MB of peak, where splitting the whole took 566 ms and 722 MB). Unlike `queryRecords`, it reads text after the
   last record as one more record, as it always did, so its callers read what they read before until they move to
