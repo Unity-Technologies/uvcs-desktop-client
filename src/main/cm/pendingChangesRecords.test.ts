@@ -121,6 +121,11 @@ describe('PendingChangesReader', () => {
     expect(changes).toEqual([{ path: 'docs/b.ts', kinds: ['changed', 'moved'], itemType: 'file', size: 0, lastModified: '', oldPath: 'src/b.ts', similarityPercent: 93 }]);
   });
 
+  it('reads no move of a deleted item printed with where it was: the deletion is all it is', () => {
+    const [deleted] = read(pendingStatus(WORKSPACE, change('DE+MV', 'docs/b.ts', { oldPath: 'src/b.ts' }))).changes;
+    expect(deleted).toEqual({ path: 'docs/b.ts', kinds: ['deleted'], itemType: 'file', size: 0, lastModified: '' });
+  });
+
   it('fails on a change printed with fields it can not read, rather than show a clean workspace', () => {
     const output = formatOutput(['CO+CH', join(WORKSPACE, 'a.txt'), 'False', '12', 'NO_MERGES']);
     expect(() => read(output)).toThrow("cm status printed a change this app can't read");
