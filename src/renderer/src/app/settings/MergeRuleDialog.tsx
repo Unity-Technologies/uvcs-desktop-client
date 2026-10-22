@@ -28,8 +28,6 @@ import {
 import { saveSettings } from './useSettings';
 import styles from './SettingsDialog.module.css';
 
-const NO_TOOL = 'No merge tool found';
-
 /** Edits a row of Settings › Merge: a rule's file types and what opens them, or every other file's tool. */
 export function openMergeRuleDialog(target: RuleTarget): void {
   openDialog((close) => <MergeRuleDialog target={target} close={close} />);
@@ -102,7 +100,7 @@ function MergeRuleDialog({ target, close }: { target: RuleTarget; close: () => v
             choice={fields.shownToolId ?? ''}
             usedId={null}
             automatic={null}
-            missingName={list.knownNames[fields.shownToolId ?? ''] ?? NO_TOOL}
+            missingName={fields.toolMissingName}
             onChoose={(toolId) => setDraft((current) => withTool(current, toolId))}
             onAdd={() => void addTool((toolId) => setDraft((current) => withTool(current, toolId)))()}
           />
@@ -150,7 +148,7 @@ function MergeRuleDialog({ target, close }: { target: RuleTarget; close: () => v
                 choice={fields.shownFallbackId ?? ''}
                 usedId={null}
                 automatic={null}
-                missingName={NO_TOOL}
+                missingName={fields.fallbackMissingName}
                 onChoose={(fallbackToolId) => change({ fallbackToolId })}
                 onAdd={() => void addTool((fallbackToolId) => change({ fallbackToolId }))()}
               />

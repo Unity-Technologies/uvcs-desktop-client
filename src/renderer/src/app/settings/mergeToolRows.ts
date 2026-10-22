@@ -63,6 +63,19 @@ export function mergeToolRows(rules: readonly MergeToolRule[], mergeTool: string
   ];
 }
 
+/** What every other file's row and pickers say when no merge tool was found at all. */
+export const NO_MERGE_TOOL = 'No merge tool found';
+
+/**
+ * What a tool picked that isn't here is called: UnityYAMLMerge by its id (no Unity Editor, or not that one), a known
+ * tool by its name, a tool of the user's removed since as such; with nothing picked, that no tool was found.
+ */
+export function missingToolName(toolId: string | null, list: MergeToolList): string {
+  if (!toolId) return NO_MERGE_TOOL;
+  if (isUnityYamlMergeId(toolId)) return UNITY_YAML_MERGE_NAME;
+  return list.knownNames[toolId] ?? 'A tool removed';
+}
+
 /** How a program is launched, as one command line: each word quoted where it needs to be. */
 export function commandLine(executable: string, args: readonly string[]): string {
   return formatArgs([executable, ...args]);
@@ -100,14 +113,14 @@ function toolSide(rule: MergeToolRule, list: MergeToolList, automaticTool: Merge
     return { toolName: UNITY_YAML_MERGE_NAME, toolDetail: pinned, toolIcon: Boxes, missing: false, toolTip };
   }
   const tool = toolById(list, rule.toolId);
-  if (!tool) return { toolName: list.knownNames[rule.toolId] ?? 'A tool removed', toolIcon: TriangleAlert, missing: true, toolTip: NOT_FOUND };
+  if (!tool) return { toolName: missingToolName(rule.toolId, list), toolIcon: TriangleAlert, missing: true, toolTip: NOT_FOUND };
   return toolOf(tool);
 }
 
 /** Every other file's tool: the one picked, or the one it resolves to while none is (or the one picked is gone). */
 function everyOtherFileTool(mergeTool: string, list: MergeToolList, automaticTool: MergeTool | undefined): ToolSide {
   const tool = toolById(list, mergeTool) ?? automaticTool;
-  if (!tool) return { toolName: 'No merge tool found', toolIcon: TriangleAlert, missing: true, toolTip: 'Install a merge tool, or choose a program: "Choose another app…"' };
+  if (!tool) return { toolName: NO_MERGE_TOOL, toolIcon: TriangleAlert, missing: true, toolTip: 'Install a merge tool, or choose a program: "Choose another app…"' };
   return toolOf(tool);
 }
 

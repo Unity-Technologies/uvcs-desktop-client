@@ -13,6 +13,7 @@ import {
 import { formatArgs, parseArgs } from '../../lib/argumentLine';
 import { hasOwnArgsToGoBackTo, mergeToolArgsProblem } from '../../features/merge/mergeTools/mergeToolArgs';
 import type { PickableApp } from './appPickerChoices';
+import { missingToolName } from './mergeToolRows';
 
 /** What the edit dialog edits: a rule (none yet for a new one), or every other file's tool. */
 export type RuleTarget = { kind: 'rule'; rule: MergeToolRule | null } | { kind: 'everyOtherFile'; mergeTool: string };
@@ -56,8 +57,11 @@ export interface DraftFields {
   shownToolId: string | null;
   /** "Unity Editor" and "If it can't merge": only for UnityYAMLMerge. */
   unityYamlMerge: boolean;
+  /** What "Opens in" calls its tool when it isn't here (`missingToolName`). */
+  toolMissingName: string;
   /** The tool "If it can't merge" shows. */
   shownFallbackId: string | null;
+  fallbackMissingName: string;
   /** None for UnityYAMLMerge (its arguments are fixed), or with no tool found. */
   args: ArgsField | undefined;
 }
@@ -108,12 +112,15 @@ export function draftFields(target: RuleTarget, draft: RuleDraft, list: MergeToo
   const shownToolId = resolvedToolId(draft.toolId, list);
   const unityYamlMerge = rule && draft.toolId === UNITY_YAML_MERGE_ID;
   const tool = list.tools.find((candidate) => candidate.id === shownToolId);
+  const shownFallbackId = resolvedToolId(draft.fallbackToolId, list);
   return {
     title: rule ? 'File types' : 'Every other file',
     files: rule,
     shownToolId,
+    toolMissingName: missingToolName(shownToolId, list),
     unityYamlMerge,
-    shownFallbackId: resolvedToolId(draft.fallbackToolId, list),
+    shownFallbackId,
+    fallbackMissingName: missingToolName(shownFallbackId, list),
     args: tool && !unityYamlMerge ? argsFieldOf(tool, draft.argsText) : undefined,
   };
 }

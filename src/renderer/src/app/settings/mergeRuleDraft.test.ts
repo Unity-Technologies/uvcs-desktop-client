@@ -104,6 +104,19 @@ describe('draftFields', () => {
   });
 });
 
+describe('a tool that isn’t here', () => {
+  const noUnity = { ...list, unityYamlMerges: [] };
+
+  it('is UnityYAMLMerge for a Unity rule on a computer with no Unity Editor, as the row says', () => {
+    expect(draftFields(ruleTarget, draftOf(ruleTarget, noUnity), noUnity)).toMatchObject({ shownToolId: 'unityyamlmerge', toolMissingName: 'UnityYAMLMerge' });
+  });
+
+  it('is no tool found when none was', () => {
+    const none = { ...list, tools: [], preferredId: null };
+    expect(draftFields(everyOtherFile, draftOf(everyOtherFile, none), none)).toMatchObject({ toolMissingName: 'No merge tool found', fallbackMissingName: 'No merge tool found' });
+  });
+});
+
 describe('saving', () => {
   it('asks a rule for a file type, and arguments that save the merge somewhere', () => {
     const empty = draftOf(newRule, list);

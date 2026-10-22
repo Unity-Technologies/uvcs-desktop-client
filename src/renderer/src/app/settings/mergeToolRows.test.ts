@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MergeTool, MergeToolList, MergeToolRule } from '@shared/domain/mergeTools';
-import { commandLine, EVERY_OTHER_FILE, fitFileTypes, fitsWidth, GUESSED_FIT, mergeToolRows } from './mergeToolRows';
+import { commandLine, EVERY_OTHER_FILE, missingToolName, fitFileTypes, fitsWidth, GUESSED_FIT, mergeToolRows } from './mergeToolRows';
 
 const tool = (id: string, name = id, origin: MergeTool['origin'] = 'known'): MergeTool => ({
   id,
@@ -49,6 +49,13 @@ describe('fitFileTypes', () => {
 
   it('guesses about 24 characters until the column is measured', () => {
     expect(fitFileTypes(UNITY, GUESSED_FIT)).toEqual({ shown: '.unity .prefab', more: 13 });
+  });
+});
+
+describe('missingToolName', () => {
+  it('names UnityYAMLMerge by its ids, a known tool by its name, a tool of the user’s removed as such, and nothing as none found', () => {
+    expect(['unityyamlmerge', 'unityyamlmerge:2019.4.0f1', 'kdiff3', 'custom:9'].map((id) => missingToolName(id, list))).toEqual(['UnityYAMLMerge', 'UnityYAMLMerge', 'KDiff3', 'A tool removed']);
+    expect(missingToolName(null, list)).toBe('No merge tool found');
   });
 });
 
@@ -101,6 +108,11 @@ describe('mergeToolRows', () => {
       ['KDiff3', true, 'Not found on this computer'],
       ['UnityYAMLMerge', true, 'Not found on this computer: no Unity Editor 2019.4.0f1'],
     ]);
+  });
+
+  it('says a Unity row is missing on a computer with no Unity Editor, why in its tooltip', () => {
+    const [row] = mergeToolRows([{ id: 'u', patterns: UNITY, toolId: 'unityyamlmerge' }], 'auto', { ...list, unityYamlMerges: [] });
+    expect(row).toMatchObject({ toolName: 'UnityYAMLMerge', missing: true, toolTip: 'Not found on this computer: no Unity Editor' });
   });
 
   it('shows a tool’s command line in its tooltip, a tool the user added like any', () => {
