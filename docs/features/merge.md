@@ -108,7 +108,9 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   meanwhile (from another file's selection), that decision stands: UnityYAMLMerge's merge is dropped and nothing opens
   (`ResolveOptions.stillUndecided`). A file goes to it when its two sides are text and start with
   Unity's YAML header (`isUnityYaml`), whatever its extension, or when it's a `.meta` file, by its name, which has no
-  header (`unityYamlMergeTakes`, the one test of the page and of main; in any case where the OS ignores it). A base
+  header (`unityYamlMergeTakes`, the one test of the page and of main; in any case where the OS ignores it). As tried
+  with the editors 2022.3 and 6000.5, UnityYAMLMerge itself refuses a `.meta` file ("not a valid text serialized YAML
+  file", exit code 1), so on one the fallback opens after it; the sandbox's `Player.prefab.meta` shows it. A base
   revision of Unity's YAML that was an empty file (checked in empty, then filled differently on each side) becomes an
   asset with no objects (`EMPTY_UNITY_YAML`), as UnityYAMLMerge refuses an empty file; a file added on both sides never gets here, `cm` makes
   it a directory conflict. It runs with
