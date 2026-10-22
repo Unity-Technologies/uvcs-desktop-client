@@ -49,6 +49,10 @@ describe('the draft of a row', () => {
     expect(ruleOf(started, 'u')).toEqual(unityRule);
   });
 
+  it('starts with each file type once, however the rule was stored', () => {
+    expect(draftOf({ kind: 'rule', rule: { id: 'd', patterns: ['.cs', '.vb', '.cs'], toolId: 'semantic' } }, list).patterns).toEqual(['.cs', '.vb']);
+  });
+
   it('starts a new rule in the tool every other file opens in, with no file type; every other file as stored', () => {
     expect(draftOf(newRule, list)).toMatchObject({ patterns: [], toolId: 'uvcs' });
     expect(draftOf(everyOtherFile, list).toolId).toBe('auto');

@@ -83,7 +83,8 @@ export function draftOf(target: RuleTarget, list: MergeToolList): RuleDraft {
   if (!rule) return { patterns: [], toolId: resolvedToolId(AUTO_MERGE_TOOL, list) ?? '', ...unset };
   const unity = isUnityYamlMergeId(rule.toolId);
   return {
-    patterns: rule.patterns,
+    // Each once, as the chips hold them (a rule written by hand, or imported, may repeat one).
+    patterns: addTokens([], rule.patterns),
     toolId: unity ? UNITY_YAML_MERGE_ID : rule.toolId,
     editorId: unity ? rule.toolId : UNITY_YAML_MERGE_ID,
     fallbackToolId: rule.fallbackToolId ?? AUTO_MERGE_TOOL,
