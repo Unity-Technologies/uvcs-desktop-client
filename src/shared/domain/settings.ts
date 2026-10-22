@@ -90,8 +90,9 @@ export interface AppSettings {
    */
   legacySettingsImported: boolean;
   /**
-   * The official client's merge tools (client.conf's `<MergeTools>`) became the rules above (`importLegacyMergeTools`),
-   * or there were none: they are never read again. Apart from `legacySettingsImported`, which came first.
+   * The official client's merge tools (client.conf's `<MergeTools>`) became the rules above (`importMergeTools`, in
+   * `importLegacySettings`), or there were none: they are never read again. Apart from `legacySettingsImported`, which
+   * came first.
    */
   mergeToolRulesImported: boolean;
 }

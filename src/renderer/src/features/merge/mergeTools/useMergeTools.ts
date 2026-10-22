@@ -18,14 +18,14 @@ const NO_TOOLS: MergeToolList = { tools: [], preferredId: null, smartMerge: null
  * The merge tools on offer. Looked for again when the settings about them change, or after a while (one may have been
  * installed meanwhile); finding them only checks a few paths.
  */
-export function useMergeTools(): MergeToolList & { preferred: MergeTool | undefined } {
+export function useMergeTools(): MergeToolList {
   const { mergeTool, customMergeTools, mergeToolArgs } = useSettings();
   const { data = NO_TOOLS } = useQuery({
     queryKey: [...queryKeys.mergeTools, mergeTool, customMergeTools, mergeToolArgs],
     queryFn: () => api.mergeTools.list(),
     staleTime: 60_000,
   });
-  return { ...data, preferred: data.tools.find((tool) => tool.id === data.preferredId) };
+  return data;
 }
 
 /**
