@@ -4,7 +4,7 @@
 # Merge takes a moment: the file reads "Merging…"), Pickup.prefab, added on both sides (`cm` makes it a directory
 # conflict, never one for Smart Merge), Enemy.prefab, renamed differently on each side (Smart Merge can't, so the
 # merge tool opens), and Player.prefab.meta, its importer's bundle name and variant set on each side, next to each other
-# (a line conflict: UnityYAMLMerge runs on it, as the Unity row names .meta, and gives it back, so the fallback opens). Needs a Unity Editor installed for Smart Merge. Merge /main/feature from Branches.
+# (a line conflict: UnityYAMLMerge rejects .meta files, so it opens straight in the merge tool). Needs a Unity Editor installed for Smart Merge. Merge /main/feature from Branches.
 # Usage: scripts/sandboxes/smart-merge.sh [repo-name [workspace-folder]]   → repo smartmerge-demo@local, workspace /tmp/uvcs-smartmerge
 # It deletes and recreates both, so it takes only names: the repository is always on the local server, the
 # workspace always a folder of /tmp.

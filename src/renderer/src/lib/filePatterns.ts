@@ -12,7 +12,10 @@ export function formatFilePatterns(patterns: readonly string[]): string {
   return patterns.map((pattern) => (/[\s,;]/.test(pattern) ? `"${pattern}"` : pattern)).join(' ');
 }
 
-export { fileNamesIgnoreCase } from '@shared/fileNames';
+/** File names differ only in case on Linux; Windows and macOS (by default) treat `A.cs` and `a.cs` as one file. */
+export function fileNamesIgnoreCase(platform: string): boolean {
+  return platform !== 'linux';
+}
 
 /** Whether the file at `path` (from the workspace's root, `/` between folders) matches the pattern. */
 export function matchesFilePattern(pattern: string, path: string, ignoreCase: boolean): boolean {

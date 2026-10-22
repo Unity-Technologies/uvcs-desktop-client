@@ -195,16 +195,6 @@ describe('Smart Merge', () => {
     ]);
   });
 
-  it('runs on a .meta file, which has no Unity header, and gives it back when it exits non-zero', async () => {
-    const META = 'fileFormatVersion: 2\nguid: 1\n';
-    const seen = smartMergeEnds(1, '');
-    const { service } = mergeTools({}, SMART_MERGE);
-
-    expect(await service.smartMerge({ ...PREFAB, path: 'Assets/Player.prefab.meta', base: '', yours: META, incoming: META })).toEqual({ kind: 'notMerged' });
-    expect(seen).toHaveLength(1);
-    expect(seen[0]!.files[0]).toBe('');
-  });
-
   it('runs nothing without a Unity Editor, or on sides that aren’t Unity assets', async () => {
     smartMergeEnds(0, 'never');
     const withoutUnity = mergeTools({}).service;
@@ -212,7 +202,8 @@ describe('Smart Merge', () => {
 
     expect(await withoutUnity.smartMerge(PREFAB)).toEqual({ kind: 'notMerged' });
     expect(await withUnity.smartMerge({ ...PREFAB, yours: 'fileFormatVersion: 2\n' })).toEqual({ kind: 'notMerged' });
-    expect(await withUnity.smartMerge({ ...PREFAB, path: 'Assets/notes.txt', yours: 'a\n', incoming: 'b\n' })).toEqual({ kind: 'notMerged' });
+    const META = 'fileFormatVersion: 2\nguid: 1\n';
+    expect(await withUnity.smartMerge({ ...PREFAB, path: 'Assets/Player.prefab.meta', yours: META, incoming: META })).toEqual({ kind: 'notMerged' });
     expect(launchMergeTool).not.toHaveBeenCalled();
   });
 

@@ -56,7 +56,7 @@ export interface UnityYamlMergeTool {
  * `UnityYAMLMerge merge <base> <left: theirs> <right: mine> <result>`, without ever opening anything: `-h` shows no
  * error dialog, `--fallback none` runs none of the tools its own `mergespecfile.txt` names on what it can't merge (the
  * rule's fallback opens instead). `--force` lets it merge any YAML-serialized asset a user adds to the row (`.asset`,
- * `.mat`, `.controller`…), not only the `.unity`, `.prefab` and `.meta` files it supports by default.
+ * `.mat`, `.controller`…), not only the `.unity` and `.prefab` files it knows by name.
  */
 export const UNITY_YAML_MERGE_ARGS = ['merge', '-h', '--force', '--fallback', 'none', '{base}', '{incoming}', '{yours}', '{result}'];
 
@@ -118,11 +118,12 @@ export interface MergeToolRule {
 }
 
 /**
- * The files UnityYAMLMerge supports by default (the Unity Manual's "Smart merge"): scenes, prefabs and `.meta` files.
- * Users add other YAML-serialized assets to the row (`.asset`, `.mat`, `.controller`…): `--force` in its arguments
- * (`UNITY_YAML_MERGE_ARGS`) lets it merge those too.
+ * Scenes and prefabs, as the official client sets them up. Unity's Manual lists `.meta` files as supported too, but
+ * UnityYAMLMerge rejects real ones ("not a valid text serialized YAML file") in every version tried, so a `.meta`
+ * conflict opens in the row of its own file type. Users add other YAML-serialized assets to the row (`.asset`, `.mat`,
+ * `.controller`…): `--force` in its arguments (`UNITY_YAML_MERGE_ARGS`) lets it merge those.
  */
-export const UNITY_YAML_PATTERNS = ['.unity', '.prefab', '.meta'];
+export const UNITY_YAML_PATTERNS = ['.unity', '.prefab'];
 
 /** Unity assets in UnityYAMLMerge, what it can't merge in every other file's tool. */
 export const UNITY_YAML_MERGE_RULE: MergeToolRule = { id: 'unity', patterns: UNITY_YAML_PATTERNS, toolId: UNITY_YAML_MERGE_ID, fallbackToolId: AUTO_MERGE_TOOL };

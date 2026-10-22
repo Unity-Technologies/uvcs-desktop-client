@@ -17,13 +17,10 @@ export function isUnityYaml(text: string): boolean {
 }
 
 /**
- * Whether UnityYAMLMerge runs on a conflicting file: both sides text, and either Unity assets saved as text (their
- * header) or a `.meta` file (by its name, in any case where the OS ignores it: it has no header, and UnityYAMLMerge
- * takes it by name). Anything else goes straight to the rule's fallback tool. One test for the page and for main.
+ * Whether UnityYAMLMerge runs on a conflicting file: both sides are Unity assets saved as text (their header), whatever
+ * the extension. Anything else, a `.meta` file too, goes straight to the rule's fallback tool: UnityYAMLMerge rejects
+ * real `.meta` files ("not a valid text serialized YAML file"). One test for the page and for main.
  */
-export function unityYamlMergeTakes(path: string, yours: string | undefined, incoming: string | undefined, ignoreCase: boolean): boolean {
-  if (yours === undefined || incoming === undefined) return false;
-  if (isUnityYaml(yours) && isUnityYaml(incoming)) return true;
-  const name = path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1);
-  return (ignoreCase ? name.toLowerCase() : name).endsWith('.meta');
+export function unityYamlMergeTakes(yours: string | undefined, incoming: string | undefined): boolean {
+  return yours !== undefined && incoming !== undefined && isUnityYaml(yours) && isUnityYaml(incoming);
 }

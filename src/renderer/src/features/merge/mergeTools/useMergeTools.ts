@@ -41,7 +41,7 @@ export function useFileMergers(): FileMergers {
   const { mergeToolRules } = useSettings();
   return useMemo(() => {
     const setup: MergeToolSetup = { tools, preferredId, rules: mergeToolRules, unityYamlMerges, ignoreCase: fileNamesIgnoreCase(PLATFORM) };
-    const fileOf = (state: FileConflictState): FileToMerge => ({ path: state.file.path, unityYamlMergeable: smartMergeVersions(state, fileNamesIgnoreCase(PLATFORM)) !== null });
+    const fileOf = (state: FileConflictState): FileToMerge => ({ path: state.file.path, unityYamlMergeable: smartMergeVersions(state) !== null });
     const mergerFor = (state: FileConflictState): Merger | undefined => mergeToolFor(fileOf(state), setup);
     return { mergerFor, othersFor: (state) => otherMergers(fileOf(state), mergerFor(state), setup) };
   }, [tools, preferredId, mergeToolRules, unityYamlMerges]);
