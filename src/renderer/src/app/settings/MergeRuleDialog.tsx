@@ -88,7 +88,7 @@ function MergeRuleDialog({ target, close }: { target: RuleTarget; close: () => v
               onChange={(patterns) => change({ patterns })}
             />
             <span className={fieldStyles.hint}>
-              {draft.patterns.length === 0 ? 'Add at least one file type' : 'Extensions, names or paths. Enter, a space or a comma adds one.'}
+              {fields.filesHint}
             </span>
           </div>
         )}

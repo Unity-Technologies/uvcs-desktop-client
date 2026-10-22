@@ -8,8 +8,7 @@ import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { openMergeRuleDialog } from './MergeRuleDialog';
 import { rowMenuEntries } from './mergeToolRules';
-import { EVERY_OTHER_FILE, mergeToolRows, type MergeToolRowView } from './mergeToolRows';
-import type { RuleTarget } from './mergeRuleDraft';
+import { EVERY_OTHER_FILE, mergeToolRows, rowTarget, type MergeToolRowView } from './mergeToolRows';
 import { SettingsGroup } from './SettingsGroup';
 import { useFilesFit } from './useFilesFit';
 import { saveSettings, useSettings } from './useSettings';
@@ -21,8 +20,7 @@ export function MergeToolsPane() {
   const { mergeTool, mergeToolRules, askWhenMergeToolClosesUnsaved } = useSettings();
   const [filesCell, fits] = useFilesFit();
   const rows = mergeToolRows(mergeToolRules, mergeTool, list, fits);
-  const targetOf = (id: string): RuleTarget =>
-    id === EVERY_OTHER_FILE ? { kind: 'everyOtherFile', mergeTool } : { kind: 'rule', rule: mergeToolRules.find((rule) => rule.id === id) ?? null };
+  const targetOf = (id: string) => rowTarget(id, mergeToolRules, mergeTool);
   const saveRules = (rules: MergeToolRule[]): void => void saveSettings({ mergeToolRules: rules });
 
   return (
@@ -73,7 +71,7 @@ function MergeToolRow({ row, filesRef, onEdit, menu }: MergeToolRowProps) {
   const ToolIcon = row.toolIcon;
   return (
     <div className={styles.rule} role="listitem">
-      <button type="button" className={styles.ruleMain} onClick={onEdit} aria-label={`${row.filesTip ?? row.files}: ${row.toolName}. Edit`}>
+      <button type="button" className={styles.ruleMain} onClick={onEdit} aria-label={row.label}>
         <span ref={filesRef} className={styles.ruleFiles} data-code={row.filesAreCode || undefined} data-tip={row.filesTip}>
           <span className={styles.ruleFilesShown}>{row.files}</span>
           {row.moreFiles > 0 && <span className={styles.ruleFilesMore}> +{row.moreFiles}</span>}
@@ -85,7 +83,7 @@ function MergeToolRow({ row, filesRef, onEdit, menu }: MergeToolRowProps) {
         </span>
       </button>
       <ActionDropdownMenu entries={menu}>
-        <IconButton size="small" className={styles.ruleMenu} icon={<MoreHorizontal size={14} />} label={`More for ${row.filesTip ?? row.files}`} />
+        <IconButton size="small" className={styles.ruleMenu} icon={<MoreHorizontal size={14} />} label={row.menuLabel} />
       </ActionDropdownMenu>
     </div>
   );

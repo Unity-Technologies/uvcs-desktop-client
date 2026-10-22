@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MergeTool, MergeToolList, MergeToolRule } from '@shared/domain/mergeTools';
-import { commandLine, EVERY_OTHER_FILE, missingToolName, fitFileTypes, fitsWidth, GUESSED_FIT, mergeToolRows } from './mergeToolRows';
+import { commandLine, EVERY_OTHER_FILE, missingToolName, rowTarget, fitFileTypes, fitsWidth, GUESSED_FIT, mergeToolRows } from './mergeToolRows';
 
 const tool = (id: string, name = id, origin: MergeTool['origin'] = 'known'): MergeTool => ({
   id,
@@ -128,6 +128,18 @@ describe('mergeToolRows', () => {
 
   it('says when no merge tool was found at all', () => {
     expect(reading([], 'auto', { ...list, tools: [], preferredId: null })).toEqual([['Every other file', 0, 'No merge tool found', undefined, true]]);
+  });
+
+  it('labels each row for screen readers by every file type and its tool, and its menu by the file types', () => {
+    const [rule, others] = mergeToolRows([{ id: 'u', patterns: UNITY, toolId: 'unityyamlmerge' }], 'auto', list);
+    expect(rule).toMatchObject({ label: `${UNITY.join(' ')}: UnityYAMLMerge. Edit`, menuLabel: `More for ${UNITY.join(' ')}` });
+    expect(others).toMatchObject({ label: 'Every other file: UVCS merge tool. Edit', menuLabel: 'More for Every other file' });
+  });
+
+  it('edits a row’s rule, or every other file’s tool as stored', () => {
+    const rules = [{ id: 'c', patterns: ['.cs'], toolId: 'semantic' }];
+    expect(rowTarget('c', rules, 'auto')).toEqual({ kind: 'rule', rule: rules[0] });
+    expect(rowTarget(EVERY_OTHER_FILE, rules, 'rider')).toEqual({ kind: 'everyOtherFile', mergeTool: 'rider' });
   });
 
   it('keeps every file type in the row’s tooltip', () => {

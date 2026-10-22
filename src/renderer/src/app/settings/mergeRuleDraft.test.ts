@@ -117,6 +117,14 @@ describe('a tool that isn’t here', () => {
   });
 });
 
+describe('filesHint', () => {
+  it('asks for a file type while there is none, as Save does, and says what the field takes once there is', () => {
+    const empty = draftOf(newRule, list);
+    expect(draftFields(newRule, empty, list).filesHint).toBe(saveProblem(newRule, empty, draftFields(newRule, empty, list)));
+    expect(draftFields(ruleTarget, draftOf(ruleTarget, list), list).filesHint).toBe('Extensions, names or paths. Enter, a space or a comma adds one.');
+  });
+});
+
 describe('saving', () => {
   it('asks a rule for a file type, and arguments that save the merge somewhere', () => {
     const empty = draftOf(newRule, list);

@@ -55,6 +55,8 @@ export interface DraftFields {
   files: boolean;
   /** The tool "Opens in" shows: the one stored, or the one it resolves to; none when no tool was found. */
   shownToolId: string | null;
+  /** Under "Files": what's missing to save, or what the field takes. */
+  filesHint: string;
   /** "Unity Editor" and "If it can't merge": only for UnityYAMLMerge. */
   unityYamlMerge: boolean;
   /** What "Opens in" calls its tool when it isn't here (`missingToolName`). */
@@ -65,6 +67,8 @@ export interface DraftFields {
   /** None for UnityYAMLMerge (its arguments are fixed), or with no tool found. */
   args: ArgsField | undefined;
 }
+
+const NO_FILE_TYPE = 'Add at least one file type';
 
 /** The draft a target starts from: a new rule in every other file's tool, else as the rule or the setting is. */
 export function draftOf(target: RuleTarget, list: MergeToolList): RuleDraft {
@@ -116,6 +120,7 @@ export function draftFields(target: RuleTarget, draft: RuleDraft, list: MergeToo
   return {
     title: rule ? 'File types' : 'Every other file',
     files: rule,
+    filesHint: draft.patterns.length === 0 ? NO_FILE_TYPE : 'Extensions, names or paths. Enter, a space or a comma adds one.',
     shownToolId,
     toolMissingName: missingToolName(shownToolId, list),
     unityYamlMerge,
@@ -139,7 +144,7 @@ export function argsToSave(fields: DraftFields): { tool: MergeTool; args: string
 
 /** Why Save can't save yet: a rule names at least one file type, and the arguments save the merge somewhere. */
 export function saveProblem(target: RuleTarget, draft: RuleDraft, fields: DraftFields): string | undefined {
-  if (target.kind === 'rule' && draft.patterns.length === 0) return 'Add at least one file type';
+  if (target.kind === 'rule' && draft.patterns.length === 0) return NO_FILE_TYPE;
   return fields.args?.problem;
 }
 

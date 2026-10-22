@@ -14,6 +14,7 @@ import { appIcon } from '../../components/externalApps/appIcon';
 import type { Icon } from '../../lib/actions';
 import { formatArgs } from '../../lib/argumentLine';
 import { formatFilePatterns } from '../../lib/filePatterns';
+import type { RuleTarget } from './mergeRuleDraft';
 
 /** The row of every other file: always last, it can't move nor go. */
 export const EVERY_OTHER_FILE = 'everyOtherFile';
@@ -49,6 +50,10 @@ export interface MergeToolRowView {
   missing: boolean;
   /** The tool's tooltip: how it's launched, the command line; or why it's missing. */
   toolTip: string;
+  /** For screen readers: the row's every file type and tool, and that it edits ("….cs .vb: Semantic Merge. Edit"). */
+  label: string;
+  /** Its "…" button's, naming the row by its file types. */
+  menuLabel: string;
 }
 
 /** The rows: each rule, then every other file. */
@@ -57,10 +62,20 @@ export function mergeToolRows(rules: readonly MergeToolRule[], mergeTool: string
   return [
     ...rules.map((rule): MergeToolRowView => {
       const { shown, more } = fitFileTypes(rule.patterns, fits);
-      return { id: rule.id, files: shown, moreFiles: more, filesTip: formatFilePatterns(rule.patterns), filesAreCode: true, ...toolSide(rule, list, automaticTool) };
+      return labeled({ id: rule.id, files: shown, moreFiles: more, filesTip: formatFilePatterns(rule.patterns), filesAreCode: true, ...toolSide(rule, list, automaticTool) });
     }),
-    { id: EVERY_OTHER_FILE, files: 'Every other file', moreFiles: 0, filesAreCode: false, ...everyOtherFileTool(mergeTool, list, automaticTool) },
+    labeled({ id: EVERY_OTHER_FILE, files: 'Every other file', moreFiles: 0, filesAreCode: false, ...everyOtherFileTool(mergeTool, list, automaticTool) }),
   ];
+}
+
+/** What a row edits: its rule, or every other file's tool. */
+export function rowTarget(id: string, rules: readonly MergeToolRule[], mergeTool: string): RuleTarget {
+  return id === EVERY_OTHER_FILE ? { kind: 'everyOtherFile', mergeTool } : { kind: 'rule', rule: rules.find((rule) => rule.id === id) ?? null };
+}
+
+function labeled(row: Omit<MergeToolRowView, 'label' | 'menuLabel'>): MergeToolRowView {
+  const files = row.filesTip ?? row.files;
+  return { ...row, label: `${files}: ${row.toolName}. Edit`, menuLabel: `More for ${files}` };
 }
 
 /** What every other file's row and pickers say when no merge tool was found at all. */
