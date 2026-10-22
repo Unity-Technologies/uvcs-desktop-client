@@ -11,6 +11,12 @@ export interface PickableApp {
   /** Where it is, under its name. */
   location: string;
   icon?: string;
+  /** Its picture where the OS gives no icon (UnityYAMLMerge, which has no app of its own). */
+  glyph?: Icon;
+  /** Muted after its name in the list, telling apart apps of one name ("2022.3.10f1"). */
+  detail?: string;
+  /** Starts a group of its own in the list, after a separator. */
+  startsGroup?: boolean;
 }
 
 /**
@@ -69,7 +75,7 @@ export function pickedApp(choices: AppPickerChoices): PickedApp {
   }
   const picked = apps.find((app) => app.id === choice);
   if (!picked) return { label: missingName ?? choice, description: 'Not found on this computer', icon: AppWindow };
-  return { label: picked.name, description: picked.location, icon: appIcon(picked) ?? AppWindow };
+  return { label: picked.name, description: picked.location, icon: appIcon(picked) ?? picked.glyph ?? AppWindow };
 }
 
 /** The drop-down's entries, the choice made checked. */
@@ -86,7 +92,10 @@ export function appPickerEntries(choices: AppPickerChoices): MenuEntry[] {
       run: () => onChoose(automatic.id),
     },
     SEPARATOR,
-    ...apps.map((app) => ({ id: app.id, label: app.name, icon: appIcon(app), checked: !isAuto && app.id === choice, run: () => onChoose(app.id) })),
+    ...apps.flatMap((app) => [
+      ...(app.startsGroup ? [SEPARATOR] : []),
+      { id: app.id, label: app.name, detail: app.detail, icon: appIcon(app) ?? app.glyph, checked: !isAuto && app.id === choice, run: () => onChoose(app.id) },
+    ]),
     SEPARATOR,
     ...(offersSystem ? [{ id: SYSTEM_APP, label: SYSTEM_APP_LABEL, icon: AppWindow, checked: choice === SYSTEM_APP, run: () => onChoose(SYSTEM_APP) }] : []),
     ...(onAdd ? [{ id: 'add', label: 'Choose another app…', icon: FolderOpen, run: onAdd }] : []),

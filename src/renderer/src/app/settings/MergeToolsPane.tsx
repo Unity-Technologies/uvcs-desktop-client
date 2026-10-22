@@ -1,6 +1,6 @@
 import { MoreHorizontal, Plus } from 'lucide-react';
 import { useState } from 'react';
-import type { MergeToolList, MergeToolRule } from '@shared/domain/mergeTools';
+import { AUTO_MERGE_TOOL, type MergeToolList, type MergeToolRule } from '@shared/domain/mergeTools';
 import { addMergeTool } from '../../features/merge/mergeTools/CustomMergeToolDialog';
 import { openMergeToolArgsDialog } from '../../features/merge/mergeTools/MergeToolArgsDialog';
 import { currentSettings, preferMergeTool, useMergeTools } from '../../features/merge/mergeTools/useMergeTools';
@@ -18,7 +18,9 @@ import {
   AUTOMATIC_MERGE_TOOL_CHOICE,
   changedPatterns,
   changeRule,
+  hasFallback,
   howItOpensEntries,
+  missingToolName,
   newRuleToolId,
   pickableTools,
   ruleMenuEntries,
@@ -105,10 +107,29 @@ function RuleRow({ rule, rules, list, focused }: { rule: MergeToolRule; rules: M
         onBlur={save}
         onKeyDown={(event) => event.key === 'Enter' && save()}
       />
-      <ToolPicker label={name} list={list} choice={rule.toolId} automatic={null} onChoose={(toolId) => void saveRules((current) => changeRule(current, rule.id, { toolId }))} />
+      <ToolPicker
+        label={name}
+        list={list}
+        choice={rule.toolId}
+        automatic={null}
+        withUnityYamlMerge
+        onChoose={(toolId) => void saveRules((current) => changeRule(current, rule.id, { toolId }))}
+      />
       <ActionDropdownMenu entries={menu}>
         <IconButton size="small" icon={<MoreHorizontal size={14} />} label={`More for ${name}`} />
       </ActionDropdownMenu>
+      {hasFallback(rule) && (
+        <div className={styles.ruleFallback}>
+          <span className={styles.ruleFallbackLabel}>If it can't merge, open</span>
+          <ToolPicker
+            label={`what UnityYAMLMerge can't merge in ${name}`}
+            list={list}
+            choice={rule.fallbackToolId ?? AUTO_MERGE_TOOL}
+            automatic={AUTOMATIC_MERGE_TOOL_CHOICE}
+            onChoose={(fallbackToolId) => void saveRules((current) => changeRule(current, rule.id, { fallbackToolId }))}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -118,11 +139,13 @@ interface ToolPickerProps {
   list: MergeToolList;
   choice: string;
   automatic: AutomaticChoice | null;
+  /** Offers UnityYAMLMerge too: a row's own tool, not a fallback or every other file's. */
+  withUnityYamlMerge?: boolean;
   onChoose: (choice: string) => void;
 }
 
 /** A row's tool, as a compact drop-down: the tools found, another app, and how the one picked opens. */
-function ToolPicker({ label, list, choice, automatic, onChoose }: ToolPickerProps) {
+function ToolPicker({ label, list, choice, automatic, withUnityYamlMerge = false, onChoose }: ToolPickerProps) {
   const picked = toolInUse(list, choice, automatic);
   const addAndPick = async (): Promise<void> => {
     const added = await addMergeTool();
@@ -132,11 +155,11 @@ function ToolPicker({ label, list, choice, automatic, onChoose }: ToolPickerProp
     <AppPicker
       compact
       label={`Tool for ${label}`}
-      apps={pickableTools(list.tools)}
+      apps={pickableTools(list, withUnityYamlMerge)}
       choice={choice}
       usedId={picked?.id ?? null}
       automatic={automatic}
-      missingName={list.knownNames[choice]}
+      missingName={missingToolName(list, choice)}
       onChoose={onChoose}
       onAdd={() => void addAndPick()}
       more={howItOpensEntries(picked, openMergeToolArgsDialog)}

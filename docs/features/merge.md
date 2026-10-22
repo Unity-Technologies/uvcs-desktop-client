@@ -34,7 +34,10 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   nothing imported, the rows are Unity assets in UnityYAMLMerge (`UNITY_YAML_MERGE_RULE`, `UNITY_YAML_PATTERNS`: scenes,
   prefabs and the assets Unity saves as YAML, not `.meta` files, which have no Unity YAML header) and C#, Visual Basic
   and Java in Semantic Merge (`SEMANTIC_MERGE_RULE`), as the official client sends them. Each row's tool is a compact
-  drop-down (`AppPicker` with `compact`, `appPickerEntries`), its file types typed in place, its "…" menu moving it up
+  drop-down (`AppPicker` with `compact`, `appPickerEntries`): the tools found, then UnityYAMLMerge, the newest editor's
+  and each installed editor's by its version (`pickableTools`; "Smart Merge" only in its description, as Unity's name
+  for it). A row of UnityYAMLMerge has a second line, "If it can't merge, open [tool ▾]", Automatic by default
+  (`hasFallback`). Its file types are typed in place, its "…" menu moving it up
   or down or removing it (`ruleMenuEntries`); "Add a file type" adds a row in every other file's tool. Binary files have
   no rows: no tool opens them.
 - **Imported once** from the official client (client.conf's `<MergeTools>`, `readLegacyMergeTools`,

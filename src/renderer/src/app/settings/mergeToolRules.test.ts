@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MergeToolRule } from '@shared/domain/mergeTools';
 import { SEPARATOR, type Action } from '../../lib/actions';
-import { addRule, AUTOMATIC_MERGE_TOOL_CHOICE, changedPatterns, changeRule, howItOpensEntries, moveRule, newRuleToolId, removeRule, ruleMenuEntries, ruleName, toolInUse } from './mergeToolRules';
+import { addRule, AUTOMATIC_MERGE_TOOL_CHOICE, changedPatterns, changeRule, hasFallback, howItOpensEntries, missingToolName, pickableTools, moveRule, newRuleToolId, removeRule, ruleMenuEntries, ruleName, toolInUse } from './mergeToolRules';
 import type { MergeTool, MergeToolList } from '@shared/domain/mergeTools';
 
 const rule = (id: string): MergeToolRule => ({ id, patterns: [`.${id}`], toolId: 'uvcs' });
@@ -90,5 +90,39 @@ describe('howItOpensEntries', () => {
     entry!.run();
     expect(opened).toEqual(['meld']);
     expect(howItOpensEntries(undefined, () => {})).toEqual([]);
+  });
+});
+
+describe('pickableTools', () => {
+  const tool = (id: string): MergeTool => ({ id, name: id, origin: 'known', executable: `/bin/${id}`, args: [], defaultArgs: [], canBringToFront: false });
+  const merge = (editorVersion: string) => ({ id: `unityyamlmerge:${editorVersion}`, executable: `/Unity/${editorVersion}/UnityYAMLMerge`, editorVersion });
+  const list: MergeToolList = { tools: [tool('uvcs'), tool('meld')], preferredId: 'uvcs', knownNames: { semantic: 'Semantic Merge' }, unityYamlMerges: [merge('6000.3.19f1'), merge('2022.3.10f1')] };
+
+  it('lists the tools found, and for a row’s own tool UnityYAMLMerge: the newest editor’s, then each editor’s', () => {
+    expect(pickableTools(list, true).map(({ id, name, detail, startsGroup }) => [id, name, detail, startsGroup])).toEqual([
+      ['uvcs', 'uvcs', undefined, undefined],
+      ['meld', 'meld', undefined, undefined],
+      ['unityyamlmerge', 'UnityYAMLMerge', 'Newest editor', true],
+      ['unityyamlmerge:6000.3.19f1', 'UnityYAMLMerge', '6000.3.19f1', undefined],
+      ['unityyamlmerge:2022.3.10f1', 'UnityYAMLMerge', '2022.3.10f1', undefined],
+    ]);
+    expect(pickableTools(list, true)[2]).toMatchObject({ location: "Unity's Smart Merge, from Unity 6000.3.19f1" });
+  });
+
+  it('lists the tools alone for a fallback or every other file, and without a Unity Editor', () => {
+    expect(pickableTools(list, false).map((app) => app.id)).toEqual(['uvcs', 'meld']);
+    expect(pickableTools({ ...list, unityYamlMerges: [] }, true).map((app) => app.id)).toEqual(['uvcs', 'meld']);
+  });
+
+  it('names a tool picked that isn’t here: a known one by its name, UnityYAMLMerge from an editor gone as UnityYAMLMerge', () => {
+    expect(missingToolName(list, 'semantic')).toBe('Semantic Merge');
+    expect(missingToolName(list, 'unityyamlmerge:2019.4.0f1')).toBe('UnityYAMLMerge');
+    expect(missingToolName(list, 'custom:9')).toBeUndefined();
+  });
+});
+
+describe('hasFallback', () => {
+  it('is a row of UnityYAMLMerge, the newest editor’s or one editor’s', () => {
+    expect([hasFallback({ id: 'a', patterns: [], toolId: 'unityyamlmerge' }), hasFallback({ id: 'b', patterns: [], toolId: 'unityyamlmerge:2022.3.10f1' }), hasFallback({ id: 'c', patterns: [], toolId: 'meld' })]).toEqual([true, true, false]);
   });
 });

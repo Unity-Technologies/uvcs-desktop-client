@@ -78,6 +78,16 @@ describe('appPickerEntries, for a merge tool', () => {
   });
 });
 
+describe('appPickerEntries, with apps of one name', () => {
+  it('tells them apart by their detail, a group of their own after a separator, with their glyph', () => {
+    const glyph = () => null;
+    const apps = [app('uvcs', 'UVCS merge tool'), { id: 'u', name: 'UnityYAMLMerge', location: 'x', detail: '2022.3.10f1', startsGroup: true, glyph }];
+    const entries = appPickerEntries(choices({ apps, choice: 'u', automatic: null, offersSystem: false, onAdd: undefined }));
+    expect(reading(entries)).toEqual(['UVCS merge tool', '---', 'UnityYAMLMerge ✓']);
+    expect(entries[2]).toMatchObject({ detail: '2022.3.10f1', icon: glyph });
+  });
+});
+
 describe('pickedApp', () => {
   it('names a tool picked that is not found here, saying so', () => {
     expect(pickedApp(choices({ choice: 'semantic', automatic: null, missingName: 'Semantic Merge' }))).toMatchObject({ label: 'Semantic Merge', description: 'Not found on this computer' });

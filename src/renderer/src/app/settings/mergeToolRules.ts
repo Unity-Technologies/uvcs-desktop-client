@@ -1,5 +1,14 @@
-import { ArrowDown, ArrowUp, SlidersHorizontal, Trash2 } from 'lucide-react';
-import { AUTO_MERGE_TOOL, type MergeTool, type MergeToolList, type MergeToolRule } from '@shared/domain/mergeTools';
+import { ArrowDown, ArrowUp, Boxes, SlidersHorizontal, Trash2 } from 'lucide-react';
+import {
+  AUTO_MERGE_TOOL,
+  isUnityYamlMergeId,
+  UNITY_YAML_MERGE_ID,
+  UNITY_YAML_MERGE_NAME,
+  type MergeTool,
+  type MergeToolList,
+  type MergeToolRule,
+  type UnityYamlMergeTool,
+} from '@shared/domain/mergeTools';
 import { formatFilePatterns, parseFilePatterns } from '../../lib/filePatterns';
 import { SEPARATOR, type MenuEntry } from '../../lib/actions';
 import { automaticChoice, type AutomaticChoice, type PickableApp } from './appPickerChoices';
@@ -10,9 +19,40 @@ export const AUTOMATIC_MERGE_TOOL_RULE = "The UVCS merge tool when it's installe
 /** Every other file's tool: "Automatic", or one picked. */
 export const AUTOMATIC_MERGE_TOOL_CHOICE: AutomaticChoice = { ...automaticChoice(AUTOMATIC_MERGE_TOOL_RULE), id: AUTO_MERGE_TOOL };
 
-/** The merge tools as a picker lists them. */
-export function pickableTools(tools: MergeTool[]): PickableApp[] {
-  return tools.map((tool) => ({ id: tool.id, name: tool.name, location: tool.executable, icon: tool.icon }));
+/**
+ * What a picker lists: the tools found, and, for a row's own tool, UnityYAMLMerge: the newest editor's, then each
+ * editor's by its version (Smart Merge, Unity's name for it, in its description).
+ */
+export function pickableTools(list: MergeToolList, withUnityYamlMerge: boolean): PickableApp[] {
+  const tools = list.tools.map((tool) => ({ id: tool.id, name: tool.name, location: tool.executable, icon: tool.icon }));
+  const [newest] = list.unityYamlMerges;
+  if (!withUnityYamlMerge || !newest) return tools;
+  const unityYamlMerge = (id: string, merge: UnityYamlMergeTool, detail: string): PickableApp => ({
+    id,
+    name: UNITY_YAML_MERGE_NAME,
+    location: `Unity's Smart Merge, from ${editorName(merge)}`,
+    glyph: Boxes,
+    detail,
+  });
+  return [
+    ...tools,
+    { ...unityYamlMerge(UNITY_YAML_MERGE_ID, newest, 'Newest editor'), startsGroup: true },
+    ...list.unityYamlMerges.filter((merge) => merge.editorVersion).map((merge) => unityYamlMerge(merge.id, merge, merge.editorVersion)),
+  ];
+}
+
+/** What to call a tool picked that isn't found here: a known tool's name, or UnityYAMLMerge from an editor gone. */
+export function missingToolName(list: MergeToolList, id: string): string | undefined {
+  return list.knownNames[id] ?? (isUnityYamlMergeId(id) ? UNITY_YAML_MERGE_NAME : undefined);
+}
+
+/** A row of UnityYAMLMerge says what opens what it can't merge. */
+export function hasFallback(rule: MergeToolRule): boolean {
+  return isUnityYamlMergeId(rule.toolId);
+}
+
+function editorName(merge: UnityYamlMergeTool): string {
+  return merge.editorVersion ? `Unity ${merge.editorVersion}` : 'Unity';
 }
 
 /**
