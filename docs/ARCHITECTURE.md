@@ -672,10 +672,11 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   of its own, its progress card, its refreshes). `cm workspace create` already puts it on /main with nothing loaded, so
   there is no switch. A failed update leaves the workspace created and open, reported as any failed update. Recreating a
   missing workspace downloads its files the same way; a new repository's workspace isn't updated: it has nothing yet.
-  The New workspace dialog can create its repository too (Existing / New repository, on the same server:
-  `newWorkspaceFormOf`, `createNewWorkspace`), with the same steps as the New repository dialog's workspace
-  (`createNewRepository`): `cm repository create`, then `cm workspace create`, and no update. A workspace that fails
-  after its repository was made keeps it: trying again creates only the workspace (`createRepositoryWithWorkspace`).
+  The New workspace dialog can create its repository too: its Repository field is editable, suggesting the server's
+  repositories; a name the server has is that repository, any other (by case, as `cm` tells them apart) is created with
+  the workspace (`newWorkspaceFormOf`, `createNewWorkspace`), with the same steps as the New repository dialog's
+  workspace (`createNewRepository`): `cm repository create`, then `cm workspace create`, and no update. A workspace that
+  fails after its repository was made keeps it: trying again creates only the workspace (`createRepositoryWithWorkspace`).
 - "New workspace for a task" (`features/taskWorkspace`) creates a child of /main at its head (or takes an existing branch),
   a workspace next to the current one, and switches it (a plain `cm switch`: it's empty); a failure removes the new
   workspace and keeps the branch. The switcher shows the branch and pending changes of the other workspaces of the same

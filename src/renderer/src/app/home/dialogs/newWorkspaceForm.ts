@@ -1,11 +1,8 @@
+import type { RepositorySummary } from '@shared/domain/repository';
 import { lastSegment } from '../../../lib/paths';
-import { splitRepositorySpec } from '../../../lib/servers';
-import { defaultWorkspacePath, isRepositoryNameTaken, isWorkspaceNameTaken, suggestWorkspaceName } from '../workspaceNaming';
+import { defaultWorkspacePath, isWorkspaceNameTaken, suggestWorkspaceName } from '../workspaceNaming';
 
-/** Whether the New workspace dialog works with a repository that exists, or creates one along with the workspace. */
-export type RepositorySource = 'existing' | 'new';
-
-/** The repository a new workspace works with, as the dialog's choice resolves it. */
+/** The repository a new workspace works with, as the dialog's Repository field resolves it. */
 export type WorkspaceRepository =
   | { kind: 'existing'; spec: string }
   /** `created` is the spec of the repository an earlier try made before its workspace failed: only the workspace is left. */
@@ -13,15 +10,11 @@ export type WorkspaceRepository =
 
 /** What the New workspace dialog holds: what the user chose and typed, and what it read. */
 export interface NewWorkspaceFormInput {
-  source: RepositorySource;
-  /** The server shown, shared by both sources. */
   server: string;
-  /** The repository picked in the list, when one is. */
-  existing: { spec: string; name: string } | undefined;
-  /** The new repository's name as typed. */
-  newName: string;
-  /** The names of the repositories on `server`, once read. */
-  repositoryNames: readonly string[];
+  /** The Repository field as typed or picked from its suggestions. */
+  repositoryName: string;
+  /** The repositories on `server`; undefined until read. */
+  repositories: readonly RepositorySummary[] | undefined;
   /** The spec of the repository an earlier try made before its workspace failed. */
   created: string | undefined;
   /** What the user typed in the workspace name field; undefined until they type. */
@@ -38,65 +31,60 @@ export interface NewWorkspaceFormInput {
 
 /** What the New workspace dialog shows and allows. */
 export interface NewWorkspaceForm {
-  /** Undefined until the choice names a repository that can be used. */
+  /** Undefined until the Repository field names one that can be used. */
   repository: WorkspaceRepository | undefined;
+  /** The name typed is none of the server's repositories: one is created with the workspace. */
+  createsRepository: boolean;
+  /** An earlier try made the repository: the server and repository can no longer change. */
+  repositoryLocked: boolean;
   workspaceName: string;
   workspaceNameTaken: boolean;
   path: string;
-  /** The new repository's name is already on the server, and no earlier try of this dialog made it. */
-  showsRepositoryNameTaken: boolean;
-  /** An earlier try made the repository: the choice of repository can no longer change. */
-  choiceLocked: boolean;
   canCreate: boolean;
 }
 
 export function newWorkspaceFormOf(input: NewWorkspaceFormInput): NewWorkspaceForm {
-  const choiceLocked = input.created !== undefined;
-  const newNameTaken = !choiceLocked && isRepositoryNameTaken(input.newName, input.repositoryNames);
-  const repository = repositoryOf(input, newNameTaken);
+  const repository = repositoryOf(input);
   const workspaceName = workspaceNameShown(input);
   const workspaceNameTaken = isWorkspaceNameTaken(workspaceName, input.workspaceNames);
   const path = input.chosenPath ?? defaultWorkspacePath(input.root, workspaceName);
   return {
     repository,
+    createsRepository: repository?.kind === 'new' && !repository.created,
+    repositoryLocked: input.created !== undefined,
     workspaceName,
     workspaceNameTaken,
     path,
-    showsRepositoryNameTaken: input.source === 'new' && newNameTaken,
-    choiceLocked,
     canCreate: Boolean(repository && workspaceName.trim() && path && !workspaceNameTaken && !input.creating),
   };
 }
 
-/** The server whose repositories the dialog reads (to pick one, or to see a new name is free); none when the caller fixed the repository. */
-export function serverToList(server: string, repositoryFixed: boolean): string | null {
-  return repositoryFixed ? null : server;
+/** The server whose repositories the dialog reads (to suggest them, and to tell a new name); none when the caller fixed the repository. */
+export function serverToList(server: string, fixed: RepositorySummary | undefined): string | null {
+  return fixed ? null : server;
 }
 
-/** What the user typed as the workspace name once they pick a repository: a pick names it afresh, unless a folder named it. */
-export function typedNameAfterPicking(typedName: string | undefined, initialPath: string | undefined): string | undefined {
-  return initialPath ? typedName : undefined;
+/** The repositories the Repository field can name: the one the caller fixed, else the server's as read. */
+export function repositoriesToName(fixed: RepositorySummary | undefined, listed: readonly RepositorySummary[] | undefined): readonly RepositorySummary[] | undefined {
+  return fixed ? [fixed] : listed;
 }
 
-function repositoryOf(input: NewWorkspaceFormInput, newNameTaken: boolean): WorkspaceRepository | undefined {
-  if (input.source === 'existing') {
-    const picked = pickedOnServer(input);
-    return picked && { kind: 'existing', spec: picked.spec };
-  }
-  const name = input.newName.trim();
-  if (input.created) return { kind: 'new', server: input.server, name, created: input.created };
-  return name && !newNameTaken ? { kind: 'new', server: input.server, name } : undefined;
+/**
+ * A name the server has is that repository; any other is one to create. `cm` tells repository names apart by case, so
+ * only the exact name matches. Until the list is read nothing can be told, so nothing is named.
+ */
+function repositoryOf({ server, repositoryName, repositories, created }: NewWorkspaceFormInput): WorkspaceRepository | undefined {
+  const name = repositoryName.trim();
+  if (created) return { kind: 'new', server, name, created };
+  if (!name || !repositories) return undefined;
+  const existing = repositories.find((repository) => repository.name === name);
+  return existing ? { kind: 'existing', spec: existing.spec } : { kind: 'new', server, name };
 }
 
-/** The repository picked counts only while its server is the one shown: the picker shows nothing picked otherwise. */
-function pickedOnServer({ existing, server }: NewWorkspaceFormInput): NewWorkspaceFormInput['existing'] {
-  return existing && splitRepositorySpec(existing.spec).server === server ? existing : undefined;
-}
-
-/** What the user typed, else the folder's name, else a name after the repository chosen or being created. */
-function workspaceNameShown(input: NewWorkspaceFormInput): string {
-  if (input.typedName !== undefined) return input.typedName;
-  if (input.initialPath) return lastSegment(input.initialPath);
-  const repositoryName = (input.source === 'existing' ? (pickedOnServer(input)?.name ?? '') : input.newName).trim();
-  return repositoryName ? suggestWorkspaceName(repositoryName, input.workspaceNames) : '';
+/** What the user typed, else the folder's name, else a name after the repository. */
+function workspaceNameShown({ typedName, initialPath, repositoryName, workspaceNames }: NewWorkspaceFormInput): string {
+  if (typedName !== undefined) return typedName;
+  if (initialPath) return lastSegment(initialPath);
+  const name = repositoryName.trim();
+  return name ? suggestWorkspaceName(name, workspaceNames) : '';
 }

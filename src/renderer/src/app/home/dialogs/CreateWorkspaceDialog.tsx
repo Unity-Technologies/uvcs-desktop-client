@@ -1,19 +1,17 @@
 import { useState } from 'react';
 import type { RepositorySummary } from '@shared/domain/repository';
-import { NewRepositoryFields } from '../../../components/NewRepositoryFields';
-import { RepositoryPicker } from '../../../components/RepositoryPicker';
+import { RepositoryNameCombobox } from '../../../components/RepositoryNameCombobox';
 import { splitRepositorySpec } from '../../../lib/servers';
 import { Button } from '../../../ui/Button';
 import { Dialog } from '../../../ui/dialog/Dialog';
 import { openDialog } from '../../../ui/dialog/dialogStore';
-import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { TextField } from '../../../ui/TextField';
 import { toast } from '../../../ui/toast/toastStore';
 import { useRepositories, useWorkspaceList } from '../../workspace/workspaceQueries';
 import { useDefaultWorkspaceRoot } from '../useDefaultWorkspaceRoot';
 import { createNewWorkspace } from './createNewWorkspace';
 import { LocationField } from './LocationField';
-import { newWorkspaceFormOf, serverToList, typedNameAfterPicking, type RepositorySource } from './newWorkspaceForm';
+import { newWorkspaceFormOf, repositoriesToName, serverToList } from './newWorkspaceForm';
 
 interface CreateWorkspaceOptions {
   repository?: RepositorySummary;
@@ -21,11 +19,6 @@ interface CreateWorkspaceOptions {
   path?: string;
   onCreated: (workspacePath: string) => void;
 }
-
-const SOURCES: { value: RepositorySource; label: string }[] = [
-  { value: 'existing', label: 'Existing repository' },
-  { value: 'new', label: 'New repository' },
-];
 
 export function openCreateWorkspaceDialog(options: CreateWorkspaceOptions): void {
   openDialog((close) => <CreateWorkspaceDialog {...options} onClose={close} />);
@@ -35,22 +28,19 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
   const { data: workspaces } = useWorkspaceList();
   const root = useDefaultWorkspaceRoot();
 
-  const [source, setSource] = useState<RepositorySource>('existing');
   const [server, setServer] = useState(() => (initialRepository ? splitRepositorySpec(initialRepository.spec).server : 'local'));
-  const [existing, setExisting] = useState<RepositorySummary | undefined>(initialRepository);
-  const [newName, setNewName] = useState('');
+  const [repositoryName, setRepositoryName] = useState(initialRepository?.name ?? '');
   const [created, setCreated] = useState<string>();
   const [typedName, setTypedName] = useState<string>();
   const [chosenPath, setChosenPath] = useState(initialPath);
   const [creating, setCreating] = useState(false);
-  const { data: repositories } = useRepositories(serverToList(server, Boolean(initialRepository)));
+  const { data: listed, error } = useRepositories(serverToList(server, initialRepository));
+  const repositories = repositoriesToName(initialRepository, listed);
 
   const form = newWorkspaceFormOf({
-    source,
     server,
-    existing,
-    newName,
-    repositoryNames: (repositories ?? []).map((repository) => repository.name),
+    repositoryName,
+    repositories,
     created,
     typedName,
     initialPath,
@@ -59,11 +49,6 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
     root,
     creating,
   });
-
-  const pickExisting = (picked: RepositorySummary): void => {
-    setExisting(picked);
-    setTypedName(typedNameAfterPicking(typedName, initialPath));
-  };
 
   const create = async (): Promise<void> => {
     if (!form.canCreate || !form.repository) return;
@@ -98,21 +83,16 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
       {initialRepository ? (
         <TextField label="Repository" value={initialRepository.spec} readOnly />
       ) : (
-        <>
-          {!form.choiceLocked && <SegmentedControl<RepositorySource> label="Repository" value={source} onChange={setSource} stretch segments={SOURCES} />}
-          {source === 'existing' ? (
-            <RepositoryPicker value={existing?.spec ?? null} onChange={pickExisting} server={server} onServerChange={setServer} />
-          ) : (
-            <NewRepositoryFields
-              server={server}
-              onServerChange={setServer}
-              name={newName}
-              onNameChange={setNewName}
-              nameTaken={form.showsRepositoryNameTaken}
-              locked={form.choiceLocked}
-            />
-          )}
-        </>
+        <RepositoryNameCombobox
+          server={server}
+          onServerChange={setServer}
+          name={repositoryName}
+          onNameChange={setRepositoryName}
+          repositories={repositories}
+          error={error?.message}
+          createsRepository={form.createsRepository}
+          locked={form.repositoryLocked}
+        />
       )}
       <TextField
         label="Workspace name"
