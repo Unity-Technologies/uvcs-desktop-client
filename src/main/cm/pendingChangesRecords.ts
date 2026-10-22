@@ -100,7 +100,8 @@ export class PendingChangesReader {
     if (!kinds) return undefined;
     const path = this.paths.relative(printedPath);
     const change: PendingChange = { path, kinds, itemType: isFolder === 'True' ? 'directory' : 'file', size: 0, lastModified: '' };
-    if (moved) {
+    // A deleted item printed with where it was (`DE+MV`) is only deleted (`listedCodes`): no move to show.
+    if (moved && (kinds.includes('moved') || kinds.includes('locallyMoved'))) {
       change.oldPath = this.paths.relative(printedOldPath);
       const percent = similarityPercentOf(similarity);
       if (percent > 0) change.similarityPercent = percent;
