@@ -8,3 +8,10 @@
   flex: 1;
   min-width: 0;
 }
+
+/* A server, then a repository, side by side: the proportions `RepositoryPicker` gives them elsewhere. */
+.repositoryRow {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: var(--space-3);
+}

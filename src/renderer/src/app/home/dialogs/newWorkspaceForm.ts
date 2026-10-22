@@ -1,6 +1,6 @@
 import type { RepositorySummary } from '@shared/domain/repository';
 import { lastSegment } from '../../../lib/paths';
-import { defaultWorkspacePath, isWorkspaceNameTaken, suggestWorkspaceName } from '../workspaceNaming';
+import { defaultWorkspacePath, isWorkspaceNameTaken, repositoryNamed, repositoryNamedButForCase, suggestWorkspaceName } from '../workspaceNaming';
 
 /** The repository a new workspace works with, as the dialog's Repository field resolves it. */
 export type WorkspaceRepository =
@@ -15,6 +15,8 @@ export interface NewWorkspaceFormInput {
   repositoryName: string;
   /** The repositories on `server`; undefined until read. */
   repositories: readonly RepositorySummary[] | undefined;
+  /** Reading the repositories on `server` failed. */
+  repositoriesFailed: boolean;
   /** The spec of the repository an earlier try made before its workspace failed. */
   created: string | undefined;
   /** What the user typed in the workspace name field; undefined until they type. */
@@ -33,8 +35,12 @@ export interface NewWorkspaceFormInput {
 export interface NewWorkspaceForm {
   /** Undefined until the Repository field names one that can be used. */
   repository: WorkspaceRepository | undefined;
+  /** Whether the server's repositories, which the Repository field suggests, are being read, couldn't be, or are. */
+  repositoryList: 'loading' | 'failed' | 'ready';
   /** The name typed is none of the server's repositories: one is created with the workspace. */
   createsRepository: boolean;
+  /** What the Repository field notes under it: a repository will be created, or one is named like it but for case. */
+  repositoryNote: { kind: 'creates' } | { kind: 'differsByCase'; existingName: string } | undefined;
   /** An earlier try made the repository: the server and repository can no longer change. */
   repositoryLocked: boolean;
   workspaceName: string;
@@ -48,9 +54,12 @@ export function newWorkspaceFormOf(input: NewWorkspaceFormInput): NewWorkspaceFo
   const workspaceName = workspaceNameShown(input);
   const workspaceNameTaken = isWorkspaceNameTaken(workspaceName, input.workspaceNames);
   const path = input.chosenPath ?? defaultWorkspacePath(input.root, workspaceName);
+  const createsRepository = repository?.kind === 'new' && !repository.created;
   return {
     repository,
-    createsRepository: repository?.kind === 'new' && !repository.created,
+    repositoryList: input.repositoriesFailed ? 'failed' : input.repositories ? 'ready' : 'loading',
+    createsRepository,
+    repositoryNote: createsRepository ? noteOnCreating(input) : undefined,
     repositoryLocked: input.created !== undefined,
     workspaceName,
     workspaceNameTaken,
@@ -77,8 +86,14 @@ function repositoryOf({ server, repositoryName, repositories, created }: NewWork
   const name = repositoryName.trim();
   if (created) return { kind: 'new', server, name, created };
   if (!name || !repositories) return undefined;
-  const existing = repositories.find((repository) => repository.name === name);
+  const existing = repositoryNamed(name, repositories);
   return existing ? { kind: 'existing', spec: existing.spec } : { kind: 'new', server, name };
+}
+
+/** A name that differs only by case from a repository's is likely a slip: it is told apart from a plainly new name. */
+function noteOnCreating({ repositoryName, repositories }: NewWorkspaceFormInput): NewWorkspaceForm['repositoryNote'] {
+  const lookalike = repositoryNamedButForCase(repositoryName, repositories ?? []);
+  return lookalike ? { kind: 'differsByCase', existingName: lookalike.name } : { kind: 'creates' };
 }
 
 /** What the user typed, else the folder's name, else a name after the repository. */

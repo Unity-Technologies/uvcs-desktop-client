@@ -11,6 +11,7 @@ const input: NewWorkspaceFormInput = {
   server: 'acme@cloud',
   repositoryName: '',
   repositories: onServer,
+  repositoriesFailed: false,
   created: undefined,
   typedName: undefined,
   initialPath: undefined,
@@ -29,7 +30,9 @@ describe('newWorkspaceFormOf', () => {
     it("is the server's repository of the name picked or typed, without the spaces around", () => {
       expect(newWorkspaceFormOf({ ...input, repositoryName: ' game ' })).toEqual({
         repository: { kind: 'existing', spec: 'game@acme@cloud' },
+        repositoryList: 'ready',
         createsRepository: false,
+        repositoryNote: undefined,
         repositoryLocked: false,
         workspaceName: 'game',
         workspaceNameTaken: false,
@@ -42,17 +45,36 @@ describe('newWorkspaceFormOf', () => {
       expect(newWorkspaceFormOf({ ...input, repositoryName: 'jump ' })).toMatchObject({
         repository: { kind: 'new', server: 'acme@cloud', name: 'jump' },
         createsRepository: true,
+        repositoryNote: { kind: 'creates' },
         workspaceName: 'jump',
         canCreate: true,
       });
     });
 
-    it('matches names by case, as cm tells them apart', () => {
-      expect(newWorkspaceFormOf({ ...input, repositoryName: 'Game' }).repository).toEqual({ kind: 'new', server: 'acme@cloud', name: 'Game' });
+    it('matches names by case, as cm tells them apart, and warns of the repository named like it but for case', () => {
+      expect(newWorkspaceFormOf({ ...input, repositoryName: 'Game' })).toMatchObject({
+        repository: { kind: 'new', server: 'acme@cloud', name: 'Game' },
+        createsRepository: true,
+        repositoryNote: { kind: 'differsByCase', existingName: 'game' },
+      });
     });
 
     it("names none until the server's repositories are read: a name can't be told new before", () => {
-      expect(newWorkspaceFormOf({ ...input, repositoryName: 'game', repositories: undefined })).toMatchObject({ repository: undefined, createsRepository: false, canCreate: false });
+      expect(newWorkspaceFormOf({ ...input, repositoryName: 'game', repositories: undefined })).toMatchObject({
+        repositoryList: 'loading',
+        repository: undefined,
+        createsRepository: false,
+        repositoryNote: undefined,
+        canCreate: false,
+      });
+    });
+
+    it('says the list failed rather than loading, and names nothing', () => {
+      expect(newWorkspaceFormOf({ ...input, repositoryName: 'game', repositories: undefined, repositoriesFailed: true })).toMatchObject({
+        repositoryList: 'failed',
+        repository: undefined,
+        canCreate: false,
+      });
     });
 
     it('keeps the repository an earlier try made, and locks it, though the server now lists it', () => {
@@ -60,6 +82,7 @@ describe('newWorkspaceFormOf', () => {
       expect(newWorkspaceFormOf({ ...input, repositoryName: 'jump', repositories: listed, created: 'jump@acme@cloud' })).toMatchObject({
         repository: { kind: 'new', server: 'acme@cloud', name: 'jump', created: 'jump@acme@cloud' },
         createsRepository: false,
+        repositoryNote: undefined,
         repositoryLocked: true,
         canCreate: true,
       });

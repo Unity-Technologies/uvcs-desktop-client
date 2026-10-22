@@ -674,7 +674,9 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   missing workspace downloads its files the same way; a new repository's workspace isn't updated: it has nothing yet.
   The New workspace dialog can create its repository too: its Repository field is editable, suggesting the server's
   repositories; a name the server has is that repository, any other (by case, as `cm` tells them apart) is created with
-  the workspace (`newWorkspaceFormOf`, `createNewWorkspace`), with the same steps as the New repository dialog's
+  the workspace (`newWorkspaceFormOf`, `createNewWorkspace`). As a slip would create a repository on a shared server,
+  the button then says "Create repository and workspace", and a name that differs from a repository's only by case
+  names it (`repositoryNamedButForCase`). It creates with the same steps as the New repository dialog's
   workspace (`createNewRepository`): `cm repository create`, then `cm workspace create`, and no update. A workspace that
   fails after its repository was made keeps it: trying again creates only the workspace (`createRepositoryWithWorkspace`).
 - "New workspace for a task" (`features/taskWorkspace`) creates a child of /main at its head (or takes an existing branch),

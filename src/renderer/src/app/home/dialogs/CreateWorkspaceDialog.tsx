@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { RepositorySummary } from '@shared/domain/repository';
-import { RepositoryNameCombobox } from '../../../components/RepositoryNameCombobox';
 import { splitRepositorySpec } from '../../../lib/servers';
 import { Button } from '../../../ui/Button';
 import { Dialog } from '../../../ui/dialog/Dialog';
@@ -11,6 +10,7 @@ import { useRepositories, useWorkspaceList } from '../../workspace/workspaceQuer
 import { useDefaultWorkspaceRoot } from '../useDefaultWorkspaceRoot';
 import { createNewWorkspace } from './createNewWorkspace';
 import { LocationField } from './LocationField';
+import { RepositoryNameCombobox } from './RepositoryNameCombobox';
 import { newWorkspaceFormOf, repositoriesToName, serverToList } from './newWorkspaceForm';
 
 interface CreateWorkspaceOptions {
@@ -41,6 +41,7 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
     server,
     repositoryName,
     repositories,
+    repositoriesFailed: Boolean(error),
     created,
     typedName,
     initialPath,
@@ -75,7 +76,7 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
         <>
           <Button onClick={onClose}>Cancel</Button>
           <Button type="submit" variant="primary" disabled={!form.canCreate} loading={creating}>
-            Create workspace
+            {form.createsRepository ? 'Create repository and workspace' : 'Create workspace'}
           </Button>
         </>
       }
@@ -90,8 +91,7 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
           onNameChange={setRepositoryName}
           repositories={repositories}
           error={error?.message}
-          createsRepository={form.createsRepository}
-          locked={form.repositoryLocked}
+          form={form}
         />
       )}
       <TextField
