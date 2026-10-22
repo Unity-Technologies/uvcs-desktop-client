@@ -1,4 +1,5 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
+import type { CheckState } from '../../ui/Checkbox';
 import { BulkPrivateTally, bulkPrivateFiles, isPrivateFolderAt, privateFoldersOf, type BulkPrivate, type PrivateFolders } from './bulkPrivate';
 import { isCheckinCandidate, isShelvable } from './changeCategories';
 import { UploadTally, uploadKindOf, type UploadKind, type UploadSummary } from './uploadSummary';
@@ -191,12 +192,27 @@ function selectionOf(
 }
 
 /**
- * How many of the changes listed (`listed`: what the filters show, review mode's "Unreviewed" too) are checked: the
- * selection's count when they are what the filter shows, counted again only when review mode narrows them.
+ * The checks of the changes listed (what the filters show, review mode's "Unreviewed" too) that can go in
+ * (`candidates`, found once per list): how many are checked, from the selection's count when they are what the filter
+ * shows and counted again only when review mode narrows them; and how a row asks whether one is (`isChosen`), null
+ * while every one is (`everyCandidateIncluded`), so a folder of a million needs no asking.
  */
-export function checkedAmong(listed: PendingChange[], matchingFilter: PendingChange[], selection: Pick<CheckinSelection, 'isIncluded' | 'shownIncludedCount'>): number {
-  if (listed === matchingFilter) return selection.shownIncludedCount;
-  let count = 0;
-  for (const change of listed) if (selection.isIncluded(change)) count++;
-  return count;
+export interface ShownChecks {
+  candidates: PendingChange[];
+  checked: number;
+  isChosen: ((change: PendingChange) => boolean) | null;
+}
+
+export function shownChecksOf(candidates: PendingChange[], listed: PendingChange[], matchingFilter: PendingChange[], selection: CheckinSelection): ShownChecks {
+  const isChosen = selection.everyCandidateIncluded ? null : selection.isIncluded;
+  if (listed === matchingFilter) return { candidates, checked: selection.shownIncludedCount, isChosen };
+  let checked = 0;
+  for (const change of candidates) if (selection.isIncluded(change)) checked++;
+  return { candidates, checked, isChosen };
+}
+
+/** The check of the box above the list, over every change shown that can go in. */
+export function shownCheckState({ candidates, checked }: ShownChecks): CheckState {
+  if (checked === 0) return false;
+  return checked === candidates.length ? true : 'mixed';
 }

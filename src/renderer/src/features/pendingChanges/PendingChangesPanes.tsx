@@ -49,7 +49,7 @@ import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { useChangeRows } from './useChangeRows';
 import { useCheckinPanelSubmit } from './useCheckinPanelSubmit';
 import type { CheckinMode } from './checkinButton';
-import { checkedAmong, checkinFactsOf, currentChoice, type PreparedChangelist, preparedStillPending } from './checkinSelection';
+import { checkinFactsOf, shownChecksOf, currentChoice, type PreparedChangelist, preparedStillPending } from './checkinSelection';
 import { useCheckinSelection } from './useCheckinSelection';
 import { useSortedChanges } from './useSortedChanges';
 import styles from './PendingChangesView.module.css';
@@ -109,8 +109,8 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const listed = useMemo(() => ({ all: sorted, matchingFilter: filtered, index, facts }), [sorted, filtered, index, facts]);
   const checkinSelection = useCheckinSelection(listed, checkinChoice);
   const { isIncluded, included, hiddenIncludedCount, upload, shelvable, shelvableUpload, bulkPrivate } = checkinSelection;
-  const shownCandidates = useMemo(() => changes.filter(isCheckinCandidate).length, [changes]);
-  const shownChecks = useMemo(() => ({ candidates: shownCandidates, checked: checkedAmong(changes, filtered, checkinSelection) }), [shownCandidates, changes, filtered, checkinSelection]);
+  const shownCandidates = useMemo(() => changes.filter(isCheckinCandidate), [changes]);
+  const shownChecks = useMemo(() => shownChecksOf(shownCandidates, changes, filtered, checkinSelection), [shownCandidates, changes, filtered, checkinSelection]);
   const allReviewed = useMemo(() => isAllReviewed(review.on, included, review.statusOf), [review.on, included, review.statusOf]);
   const { mergeChanges, onlyNeverCheckedIn } = useMemo(
     () => ({ mergeChanges: allChanges.filter((change) => change.mergeInfo), onlyNeverCheckedIn: allChanges.length > 0 && matchesBranch(allChanges) }),
@@ -181,8 +181,6 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
           rows={rows}
           selection={selection}
           onSelectionChange={(next) => selectAfterLeaving(selection, next, setSelection)}
-          isIncluded={isIncluded}
-          everyCandidateIncluded={checkinSelection.everyCandidateIncluded}
           shownChecks={shownChecks}
           onToggleIncluded={toggleIncluded}
           onToggleCollapsed={toggleCollapsed}
@@ -225,7 +223,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
             <ChangesSummaryBar
               changes={changes}
               totalCount={listedCount}
-              includedCount={shownChecks.checked}
+              checks={shownChecks}
               onSetIncluded={setEveryShownIncluded}
               onUndo={(selected) => void undoChanges(workspacePath, selected)}
               onUndoUnchanged={() => void undoUnchangedCheckouts(workspacePath)}

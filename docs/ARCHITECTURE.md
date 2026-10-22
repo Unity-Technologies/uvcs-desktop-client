@@ -1096,7 +1096,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   layout (`candidatesUnderRow`): a click on a box then asks each change once whether it goes in, under the check-in
   rules (`consistentlyIncluded`, below), in one pass that adds everything up (`checkinSelectionOf`). With every box
   checked and nothing filtered, nothing is asked (`everyCandidateIncluded`), and a folder holding every change shown
-  takes its check from the count (`checkStateOver`'s `shown`). A click costs about 20 ms for 100,000 changes, 90 ms
+  takes its check from the count (`shownChecksOf`, `checkStateOver`); unchecked paths no longer pending don't count
+  (`everyBoxChecked`). A click costs about 20 ms for 100,000 changes, 90 ms
   for 500,000 and 170 ms for a million (a production build on a Mac); unchecking everything at once twice that.
 - **Lists of changed files** read and work the same everywhere: Changes, every diff (changeset, branch, shelve, code
   review: `DiffEntryList`), the details panels' changed files (`ChangedFilesSection`), Incoming and the merge page.

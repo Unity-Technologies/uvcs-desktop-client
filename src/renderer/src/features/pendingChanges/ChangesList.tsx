@@ -11,7 +11,8 @@ import { treeArrowMove } from '../../lib/treeArrowMove';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { GroupRowContent, ItemRowContent, type RowActions, type ToggleIncluded } from './ChangeRowContent';
 import { indexChangeRows, perRow } from './changeRowIndex';
-import { candidatesUnderRow, checkStateOver, spaceToggle, type ShownChecks } from './changeRowChecks';
+import { candidatesUnderRow, checkStateOver, spaceToggle } from './changeRowChecks';
+import type { ShownChecks } from './checkinSelection';
 import { changeTreeArrowRows, rowIndent, treeLevel } from './changeRowLevels';
 import { menuTargetOf, type ChangeRow } from './changeRows';
 import type { PendingLocks } from './locks/pendingLocks';
@@ -31,11 +32,7 @@ interface ChangesListProps {
   rows: ChangeRow[];
   selection: SelectionState;
   onSelectionChange: (selection: SelectionState) => void;
-  /** Whether a change goes into the check-in. */
-  isIncluded: (change: PendingChange) => boolean;
-  /** Every change that can go in does (`CheckinSelection.everyCandidateIncluded`): a folder's check needs no asking. */
-  everyCandidateIncluded: boolean;
-  /** How many changes shown can go in, and how many are checked: what a folder holding them all shows. */
+  /** The checks of the changes shown (`shownChecksOf`): how a row asks whether a change is checked, and how many are. */
   shownChecks: ShownChecks;
   /** Checks or unchecks what the rows stand for, all at once. */
   onToggleIncluded: ToggleIncluded;
@@ -55,8 +52,6 @@ export function ChangesList({
   rows,
   selection,
   onSelectionChange,
-  isIncluded,
-  everyCandidateIncluded,
   shownChecks,
   onToggleIncluded,
   onToggleCollapsed,
@@ -86,7 +81,7 @@ export function ChangesList({
   const focusedRow = rows[focusedIndex];
   // A folder's check and mark go over everything in it: worked out once per row, not on every arrow key.
   const candidatesOf = useMemo(() => perRow(candidatesUnderRow), [rows]);
-  const checkStateOf = useMemo(() => perRow((row) => checkStateOver(candidatesOf(row), everyCandidateIncluded ? null : isIncluded, shownChecks)), [candidatesOf, isIncluded, everyCandidateIncluded, shownChecks]);
+  const checkStateOf = useMemo(() => perRow((row) => checkStateOver(candidatesOf(row), shownChecks.isChosen, { candidates: shownChecks.candidates.length, checked: shownChecks.checked })), [candidatesOf, shownChecks]);
   const reviewStatusOf = useMemo(() => perRow((row) => (review.on ? rowReviewStatus(row, review.statusOf) : null)), [rows, review.on, review.statusOf]);
   const reviewPartialOf = useMemo(() => perRow((row) => (review.on && row.type === 'folder' ? partialReviewCount(row.items, review.statusOf) : null)), [rows, review.on, review.statusOf]);
 

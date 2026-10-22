@@ -4,7 +4,7 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import { bulkPrivateFiles } from './bulkPrivate';
 import { isShelvable } from './changeCategories';
 import { consistentlyIncluded, indexPending, neededWith } from './checkinDependencies';
-import { checkedAmong, checkinFactsOf, everyBoxChecked, checkinSelectionOf, includedBy, type CheckinChoice, type ListedChanges } from './checkinSelection';
+import { checkinFactsOf, everyBoxChecked, shownCheckState, shownChecksOf, checkinSelectionOf, includedBy, type CheckinChoice, type ListedChanges } from './checkinSelection';
 import { uploadSummary } from './uploadSummary';
 
 /** Changes listed, of which the filter shows `matchingFilter`: all of them when nothing filters. */
@@ -165,16 +165,25 @@ describe('checkinSelectionOf, over many changes', () => {
   });
 });
 
-describe('checkedAmong', () => {
-  it('takes the count the selection made of what the filter shows, and counts again what review mode narrows it to', () => {
+describe('shownChecksOf', () => {
+  it("takes the count the selection made of what the filter shows, and counts again what review mode narrows it to", () => {
     const listed = listing(all, [edited, added, link]);
     const selection = checkinSelectionOf(listed, unchecking(['src/new.ts']));
     let asked = 0;
     const counting = { ...selection, isIncluded: (item: PendingChange) => (asked++, selection.isIncluded(item)) };
 
-    expect(checkedAmong(listed.matchingFilter, listed.matchingFilter, counting)).toBe(2);
+    const shown = shownChecksOf([edited, added, link], listed.matchingFilter, listed.matchingFilter, counting);
+    expect(shown).toMatchObject({ checked: 2 });
+    expect(shownCheckState(shown)).toBe('mixed');
     expect(asked).toBe(0);
-    expect(checkedAmong([edited, added], listed.matchingFilter, counting)).toBe(1);
+    expect(shownChecksOf([edited, added], [edited, added], listed.matchingFilter, counting).checked).toBe(1);
+  });
+
+  it('lets a row ask nothing while every box is checked and nothing filtered', () => {
+    const listed = listing(all);
+    expect(shownChecksOf([edited], all, all, checkinSelectionOf(listed, unchecking([]))).isChosen).toBeNull();
+    expect(shownChecksOf([edited], all, all, checkinSelectionOf(listed, unchecking(['src/a.ts']))).isChosen).not.toBeNull();
+    expect(shownCheckState({ candidates: [edited], checked: 1, isChosen: null })).toBe(true);
   });
 });
 

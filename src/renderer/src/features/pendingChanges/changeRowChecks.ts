@@ -15,7 +15,7 @@ export function candidatesUnderRow(row: ChangeRow): PendingChange[] {
  * how many changes shown can go in, and how many are checked; a row holding as many holds them all (the folders above
  * everything), and takes its check from them without asking.
  */
-export function checkStateOver(candidates: PendingChange[], isChosen: ((change: PendingChange) => boolean) | null, shown?: ShownChecks): CheckState | null {
+export function checkStateOver(candidates: PendingChange[], isChosen: ((change: PendingChange) => boolean) | null, shown?: ShownCount): CheckState | null {
   if (candidates.length === 0) return null;
   if (isChosen === null) return true;
   let checked = 0;
@@ -25,8 +25,8 @@ export function checkStateOver(candidates: PendingChange[], isChosen: ((change: 
   return checked === candidates.length ? true : 'mixed';
 }
 
-/** How many changes shown can go into a check-in, and how many of them are checked (`checkedAmong`). */
-export interface ShownChecks {
+/** How many changes shown can go into a check-in, and how many of them are checked (`shownChecksOf`). */
+export interface ShownCount {
   candidates: number;
   checked: number;
 }
