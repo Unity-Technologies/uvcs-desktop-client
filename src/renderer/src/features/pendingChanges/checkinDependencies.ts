@@ -109,12 +109,16 @@ export function consistentlyIncluded(isChecked: (change: PendingChange) => boole
   const leftOutAt = new Map<string, boolean>([['', false]]);
   const takenWholeAt = new Map<string, boolean>([['', false]]);
 
-  /** Whether a folder at or above this one is needed by what it holds and unchecked. */
+  /** An item where a move left, and a deleted folder, go in only with their moves. */
+  const waitsForMove = (change: PendingChange): boolean =>
+    (hasAny(change, NEEDED_BY_WHAT_IT_HOLDS) && !hasAny(change, MOVED) && index.movedFrom.get(change.path)?.some((move) => !isChecked(move)) === true) ||
+    (isDeletedFolder(change) && index.movedOutOf.get(change.path)?.some((move) => !isChecked(move)) === true);
+  /** Whether a folder at or above this one is needed by what it holds and left out: unchecked, or waiting for its move. */
   const leftOut = (folder: string): boolean => {
     const known = leftOutAt.get(folder);
     if (known !== undefined) return known;
     const holder = index.byPath.get(folder);
-    const answer = (holder !== undefined && needsIt(holder) && !isChecked(holder)) || leftOut(parentOf(folder));
+    const answer = (holder !== undefined && needsIt(holder) && (!isChecked(holder) || waitsForMove(holder))) || leftOut(parentOf(folder));
     leftOutAt.set(folder, answer);
     return answer;
   };
@@ -131,9 +135,7 @@ export function consistentlyIncluded(isChecked: (change: PendingChange) => boole
     if (change.mergeInfo && !wholeMerge) return false;
     const parent = parentOf(change.path);
     if (leftOut(parent)) return false;
-    // An item where a move left, and a deleted folder, go in only with their moves.
-    if (hasAny(change, NEEDED_BY_WHAT_IT_HOLDS) && !hasAny(change, MOVED) && index.movedFrom.get(change.path)?.some((move) => !isChecked(move))) return false;
-    if (isDeletedFolder(change) && index.movedOutOf.get(change.path)?.some((move) => !isChecked(move))) return false;
+    if (waitsForMove(change)) return false;
     return isChecked(change) || (goesInWithMovedFolder(change) && takenWhole(parent));
   };
   return includedNow;
