@@ -139,14 +139,6 @@ describe('importLegacySettings', () => {
       expect(openSettings().get().mergeToolRules).toEqual([]);
     });
 
-    it('run again under their new shape for a user whose merge tools the first import took', () => {
-      const { legacyFolder, settingsFile, openSettings } = setUp({ 'client.conf': CLIENT_CONF });
-      mkdirSync(join(settingsFile, '..'));
-      writeFileSync(settingsFile, JSON.stringify({ legacySettingsImported: true, mergeToolRulesImported: true, unityMergeTool: 'kdiff3', mergeToolRules: [{ id: 'old', patterns: ['.shader'], toolId: 'rider' }] }));
-      importLegacySettings(openSettings(), legacyFolder);
-      expect(openSettings().get().mergeToolRules.map((rule) => rule.toolId)).toEqual(['unityyamlmerge', 'rider']);
-    });
-
     it('leave C# in VS Code for a user who picked VS Code, with or without client.conf', () => {
       for (const files of [{ 'client.conf': CLIENT_CONF_OWN_TOOL }, {}] as Record<string, string>[]) {
         const { legacyFolder, settingsFile, openSettings } = setUp(files);

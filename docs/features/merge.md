@@ -69,8 +69,7 @@ Binary files have
   no rows: no tool opens them.
 - **Imported once** from the official client (client.conf's `<MergeTools>`, `readLegacyMergeTools`,
   `legacyMergeToolSettings`; ARCHITECTURE.md "Own config"), on the first run that has rows of this shape (`legacyMergeToolsImported`,
-  apart from the recent branches' import, so a user who ran the app before gets it too; a leftover `unityMergeTool` or
-  `mergeToolRulesImported` from an earlier build is ignored). With nothing to import, the rows are the app's own
+  apart from the recent branches' import, so a user who ran the app before gets it too). With nothing to import, the rows are the app's own
   (`DEFAULT_MERGE_TOOL_RULES`), without Semantic Merge's for a user who picked their own tool. Each entry for some files
   becomes a row, by the official client's order; its entry for every text file becomes every other file's tool, only
   while the user's is still `auto` (not picked yet), and nothing after it is read, as the client never goes past it (even when the app can't read its tool). An entry whose

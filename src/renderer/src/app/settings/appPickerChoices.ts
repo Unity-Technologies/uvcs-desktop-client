@@ -18,8 +18,8 @@ export interface PickableApp {
 }
 
 /**
- * The choice that leaves picking the app to the app ("Automatic", or "Same as others" for a merge tool): it uses
- * the app `usedId` names, and says what it would pick (`rule`) while it picks none.
+ * The choice that leaves picking the app to the app ("Automatic", for the editor and the terminal): it uses the app
+ * `usedId` names, and says what it would pick (`rule`) while it picks none.
  */
 export interface AutomaticChoice {
   id: string;
