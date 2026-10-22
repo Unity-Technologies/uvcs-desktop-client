@@ -16,6 +16,8 @@ export interface PendingIndex {
   movedFrom: ReadonlyMap<string, PendingChange[]>;
   /** What each folder with a change of its own (moved, added, private, deleted) holds, at any depth. */
   inside: ReadonlyMap<string, PendingChange[]>;
+  /** The changes of a pending merge, which cm checks in only all at once. */
+  merged: PendingChange[];
 }
 
 export function indexPending(pending: PendingChange[]): PendingIndex {
@@ -30,16 +32,18 @@ export function indexPending(pending: PendingChange[]): PendingIndex {
       if (holder && isFolder(holder) && !isOnlyCheckedOut(holder)) appendTo(inside, folder, change);
     }
   }
-  return { byPath, movedFrom, inside };
+  return { byPath, movedFrom, inside, merged: pending.filter((change) => change.mergeInfo) };
 }
 
 /**
  * What checking `changes` checks with them, so the check-in is one cm takes: the private, added or moved folders
  * holding them; for a moved folder, everything inside it but private items (cm takes it all, and they go in only when
- * one is checked); the move away from where an added item now is; and for a deleted folder, the moves out of it.
+ * one is checked); the move away from where an added item now is; for a deleted folder, the moves out of it; and for
+ * a merge's change, all of the merge's ("All merge changes must be checked in together").
  */
 export function neededWith(changes: PendingChange[], index: PendingIndex): PendingChange[] {
   return closure(changes, (change) => [
+    ...(change.mergeInfo ? index.merged : []),
     ...foldersAbove(change.path).flatMap((folder) => neededFolder(folder, index)),
     ...(isMovedFolder(change) ? (index.inside.get(change.path) ?? []).filter(goesInWithMovedFolder) : []),
     ...(hasAny(change, NEEDED_BY_WHAT_IT_HOLDS) && !hasAny(change, MOVED) ? (index.movedFrom.get(change.path) ?? []) : []),
@@ -50,10 +54,11 @@ export function neededWith(changes: PendingChange[], index: PendingIndex): Pendi
 /**
  * What unchecking `changes` unchecks with them, the other way round: what a private, added, moved or deleted folder
  * holds; for a change inside a moved folder, the folder and all it holds (it goes in whole or not at all); the item
- * added where a move left; and the deleted folder a move leaves.
+ * added where a move left; the deleted folder a move leaves; and for a merge's change, all of the merge's.
  */
 export function needingThem(changes: PendingChange[], index: PendingIndex): PendingChange[] {
   return closure(changes, (change) => [
+    ...(change.mergeInfo ? index.merged : []),
     ...(isFolder(change) && !isOnlyCheckedOut(change) ? (index.inside.get(change.path) ?? []) : []),
     ...(goesInWithMovedFolder(change) ? foldersAbove(change.path).flatMap((folder) => movedFolderAt(folder, index)) : []),
     ...(change.oldPath && hasAny(change, MOVED) ? addedAt(change.oldPath, index) : []),
@@ -64,7 +69,7 @@ export function needingThem(changes: PendingChange[], index: PendingIndex): Pend
 /**
  * Whether a change goes in, from whether its box is checked, made consistent: one whose needed folder is unchecked
  * doesn't (a new file appearing in a folder the user left out), and one inside a checked moved folder does (a new
- * file appearing in it: cm takes it with the folder).
+ * file appearing in it: cm takes it with the folder). A merge goes in whole or not at all.
  */
 export function consistentlyIncluded(isChecked: (change: PendingChange) => boolean, index: PendingIndex): (change: PendingChange) => boolean {
   const checkedFolder = (folder: string, test: (holder: PendingChange) => boolean): boolean => {
@@ -73,6 +78,7 @@ export function consistentlyIncluded(isChecked: (change: PendingChange) => boole
   };
   // Asked once per change and row: the answer is kept, as the list renders rows again on every scroll.
   const answers = new Map<string, boolean>();
+  const wholeMerge = index.merged.every(isChecked);
   return (change) => {
     const known = answers.get(change.path);
     if (known !== undefined) return known;
@@ -82,6 +88,7 @@ export function consistentlyIncluded(isChecked: (change: PendingChange) => boole
   };
 
   function includedNow(change: PendingChange): boolean {
+    if (change.mergeInfo && !wholeMerge) return false;
     const folders = foldersAbove(change.path);
     const needsAnUnchecked = folders.some((folder) => {
       const holder = index.byPath.get(folder);
