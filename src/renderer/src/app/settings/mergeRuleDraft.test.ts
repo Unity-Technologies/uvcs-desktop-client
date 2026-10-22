@@ -90,9 +90,13 @@ describe('draftFields', () => {
   });
 
   it('shows "How <tool> opens" for a tool: its arguments, Back to its own when they differ, Remove for the user’s own', () => {
-    expect(draftFields(ruleTarget, draft({}), list).args).toMatchObject({ tool: { id: 'semantic' }, text: '{base} {result}', problem: undefined, canGoBack: false, removable: false });
+    expect(draftFields(ruleTarget, draft({}), list).args).toMatchObject({ tool: { id: 'semantic' }, text: '{base} {result}', problem: undefined, canGoBack: false, remove: undefined });
     expect(draftFields(ruleTarget, draft({ argsText: '--out {result}' }), list).args).toMatchObject({ canGoBack: true });
-    expect(draftFields(ruleTarget, draft({ toolId: 'custom:1', argsText: '--out {result}' }), list).args).toMatchObject({ canGoBack: false, removable: true });
+    expect(draftFields(ruleTarget, draft({ toolId: 'custom:1', argsText: '--out {result}' }), list).args).toMatchObject({ canGoBack: false });
+  });
+
+  it('removes a tool the user added everywhere, saying the rows that open in it go too', () => {
+    expect(draftFields(ruleTarget, draft({ toolId: 'custom:1' }), list).args!.remove).toEqual({ label: 'Remove Mine', tip: 'Removes Mine, and every row that opens in it' });
   });
 
   it('shows the tool every other file really opens in, and its arguments, with no files', () => {

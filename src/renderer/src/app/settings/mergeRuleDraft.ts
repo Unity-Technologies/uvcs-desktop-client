@@ -41,8 +41,11 @@ export interface ArgsField {
   problem: string | undefined;
   /** A known tool whose arguments differ from its own: "Back to its own arguments". */
   canGoBack: boolean;
-  /** A tool the user added: "Remove <tool>". */
-  removable: boolean;
+  /**
+   * A tool the user added: "Remove <tool>", and what it does (its tooltip). It removes the tool everywhere, the rows
+   * that open in it this one too, so the dialog closes with it.
+   */
+  remove: { label: string; tip: string } | undefined;
 }
 
 /** What the dialog shows for the draft. */
@@ -184,7 +187,7 @@ function argsFieldOf(tool: MergeTool, argsText: string | null): ArgsField {
     text,
     problem: mergeToolArgsProblem(args),
     canGoBack: hasOwnArgsToGoBackTo({ ...tool, args }),
-    removable: tool.origin === 'custom',
+    remove: tool.origin === 'custom' ? { label: `Remove ${tool.name}`, tip: `Removes ${tool.name}, and every row that opens in it` } : undefined,
   };
 }
 

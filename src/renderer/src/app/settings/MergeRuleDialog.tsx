@@ -1,6 +1,5 @@
 import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { AUTO_MERGE_TOOL } from '@shared/domain/mergeTools';
 import { addMergeTool, PLACEHOLDER_HINT } from '../../features/merge/mergeTools/CustomMergeToolDialog';
 import { currentSettings, preferMergeTool, removeCustomMergeTool, setMergeToolArgs, useMergeTools } from '../../features/merge/mergeTools/useMergeTools';
 import { formatArgs } from '../../lib/argumentLine';
@@ -57,9 +56,10 @@ function MergeRuleDialog({ target, close }: { target: RuleTarget; close: () => v
     const added = await addMergeTool();
     if (added) pick(added.id);
   };
+  // Removing the tool removes the rows that open in it, this one too: there's nothing left to edit.
   const removeTool = async (toolId: string): Promise<void> => {
     await removeCustomMergeTool(toolId);
-    setDraft((current) => withTool(current, AUTO_MERGE_TOOL));
+    close();
   };
 
   return (
@@ -117,16 +117,16 @@ function MergeRuleDialog({ target, close }: { target: RuleTarget; close: () => v
               hint={`${PLACEHOLDER_HINT} They apply wherever ${args.tool.name} opens.`}
               onChange={(event) => change({ argsText: event.target.value })}
             />
-            {(args.canGoBack || args.removable) && (
+            {(args.canGoBack || args.remove) && (
               <div className={styles.argsActions}>
                 {args.canGoBack && (
                   <Button size="small" variant="ghost" className={styles.linkButton} onClick={() => change({ argsText: formatArgs(args.tool.defaultArgs) })}>
                     Back to its own arguments
                   </Button>
                 )}
-                {args.removable && (
-                  <Button size="small" variant="ghost" icon={<Trash2 size={13} />} onClick={() => void removeTool(args.tool.id)}>
-                    Remove {args.tool.name}
+                {args.remove && (
+                  <Button size="small" variant="ghost" icon={<Trash2 size={13} />} data-tip={args.remove.tip} onClick={() => void removeTool(args.tool.id)}>
+                    {args.remove.label}
                   </Button>
                 )}
               </div>

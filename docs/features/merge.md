@@ -51,7 +51,8 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   the UVCS merge tool, Semantic Merge, UnityYAMLMerge with the path of the editor's picked under it, as every tool shows
   the program that runs, and Smart Merge, Unity's name for it, only in its tooltip, then the others found and the user's, `toolChoices`), then for a tool "How <tool>
   opens", its arguments in place (stored per tool, so they apply wherever it opens; "Back to its own arguments",
-  "Remove <tool>" for the user's own; saved with the rule, `argsToSave`), or for UnityYAMLMerge (whose arguments are
+  "Remove <tool>" for the user's own, which removes it everywhere with the rows that open in it, this one too, and
+  closes the dialog; saved with the rule, `argsToSave`), or for UnityYAMLMerge (whose arguments are
   fixed, `UNITY_YAML_MERGE_ARGS`) "Unity Editor" (a select: "Newest installed (6000.5.0f1)", then each installed
   version; one gone stays, saying so: `editorOptions`) and "If it can't merge" (`fallbackChoices`). A long menu scrolls within the window (`Menu.module.css`). Save stays off until a rule has a
   file type and the arguments name `{result}` (`saveProblem`); a new rule is added only on Save. No dialog opens over
