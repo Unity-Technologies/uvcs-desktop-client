@@ -69,8 +69,8 @@ export async function typedIntoPierre(
 ) {
   installPierreLineComparison();
   const parseDiffOptions = lineDiffOptions(original, current, method);
-  const component = new FileDiff({ parseDiffOptions, theme: 'github-light', lineDiffType: 'word' });
-  // Its own renderer, made as Pierre makes it (`getHunksRendererOptions`, which `installPierreLineComparison` patches).
+  const component = new FileDiff({ parseDiffOptions, theme: 'pierre-light', lineDiffType: 'word' });
+  // Its own renderer, made as Pierre makes it (`getHunksRendererOptions`, which hands it `parseDiffOptions`).
   const renderer = (component as unknown as { hunksRenderer: DiffHunksRenderer }).hunksRenderer;
   const diff = shownDiff(lineDiff(original, modified, method, fileName).meta, sides, original, modified, true);
   renderer.beginEditSession(diff);
@@ -82,8 +82,13 @@ export async function typedIntoPierre(
   };
   // The rows on screen: rendered whole at first, and whenever the renderer asks for it or the lines move.
   let onScreen = rowsNow();
-  const keystroke = (dirtyLines: Map<number, [number, string, string][]>): boolean => {
-    const whole = renderer.updateRenderCache(dirtyLines, 'light');
+  // As Pierre's editor reports a keystroke that keeps the line count: the lines it re-tokenized (`dirtyLines`), the
+  // line typed into as its document holds it, line break and all (`changedDocumentLines`), and its document's line
+  // count, an empty last line after a final line break included (`documentLineCount`).
+  const keystroke = (dirtyLines: Map<number, [number, string, string][]>, typed: [number, string]): boolean => {
+    const [index, text] = typed;
+    const changedDocumentLines = new Map([[index, `${text}${lineBreakOf(diff.additionLines[index] ?? '')}`]]);
+    const whole = renderer.updateRenderCache(dirtyLines, 'light', false, changedDocumentLines, documentLineCount(diff.additionLines));
     if (whole) onScreen = rowsNow();
     return whole;
   };
@@ -94,14 +99,23 @@ export async function typedIntoPierre(
     /** Types over line `index` (0-based) so it reads `text`, as the editor reports a keystroke within a line. Whether
      * the renderer asks for the diff to be rendered whole. */
     type(index: number, text: string): boolean {
-      return keystroke(new Map([[index, [[0, '', text]]]]));
+      return keystroke(new Map([[index, [[0, '', text]]]]), [index, text]);
+    },
+    /**
+     * Types over line `index` outside the rows the editor renders (a paste that reaches past them): the editor hands
+     * the renderer the line's text, and no tokens for it. Whether the renderer asks for the diff to be rendered whole.
+     */
+    typeOutOfView(index: number, text: string): boolean {
+      return keystroke(new Map(), [index, text]);
     },
     /**
      * Types over line `index` as the editor reports it when it re-tokenizes from there: `lines` from it on. Whether
      * the renderer asks for the diff to be rendered whole.
      */
     retokenize(index: number, lines: string[]): boolean {
-      return keystroke(new Map(lines.map((text, offset) => [index + offset, [[0, '', text]]])));
+      const [typed] = lines;
+      if (typed === undefined) return false;
+      return keystroke(new Map(lines.map((text, offset) => [index + offset, [[0, '', text]]])), [index, typed]);
     },
     /**
      * The editor's text is now `text` (lone CRs shown as LFs), as it reports an edit that moves lines: its lines, each
@@ -125,4 +139,15 @@ export async function typedIntoPierre(
       return renderedWordMarks(renderer, renderer.renderDiff(diff)!);
     },
   };
+}
+
+/** The line break a line ends with, as the editor's document keeps it: none for the last line without one. */
+function lineBreakOf(line: string): string {
+  return /\r\n$|\n$|\r$/.exec(line)?.[0] ?? '';
+}
+
+/** How many lines the editor's document has for these lines: one more, empty, after a final line break. */
+function documentLineCount(lines: readonly string[]): number {
+  const last = lines.at(-1);
+  return last === undefined || lineBreakOf(last) !== '' ? lines.length + 1 : lines.length;
 }

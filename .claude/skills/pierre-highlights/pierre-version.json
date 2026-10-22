@@ -1,0 +1,12 @@
+{
+  "package": "@pierre/highlights",
+  "version": "0.2.0",
+  "source": "https://github.com/pierrecomputer/pierre/tree/diffs-v1.6.1/skills/highlights",
+  "commit": "cbc028ca863d6e662706dba87b50df3eeaebbfa7",
+  "installedWith": "with the pierre-diffs skill: see its pierre-version.json",
+  "localChanges": [
+    "Folder and SKILL.md name: pierre-highlights instead of highlights",
+    "SKILL.md and references/themes.md: the links to the diffs skill point to ../pierre-diffs",
+    "LICENSE.md: Pierre's LICENSE.md (Apache-2.0) from the same tag, which the skill folder doesn't include"
+  ]
+}

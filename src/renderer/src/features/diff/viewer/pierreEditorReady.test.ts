@@ -10,7 +10,7 @@ const diffOf = (modified: string) => lineDiff('const a = 1;\nconst b = 2;\n', mo
 
 /** A diff component whose renderer rendered `diff` highlighted, as Pierre's workers hand it back. */
 async function rendered(diff: ReturnType<typeof diffOf>, useTokenTransformer: boolean) {
-  const component = new FileDiff({ theme: 'github-light', useTokenTransformer });
+  const component = new FileDiff({ theme: 'pierre-light', useTokenTransformer });
   const renderer = (component as unknown as { hunksRenderer: DiffHunksRenderer }).hunksRenderer;
   await renderer.asyncRender(diff);
   renderer.renderDiff(diff);
@@ -26,7 +26,7 @@ describe('isReadyToEdit', () => {
   it("isn't before it's highlighted in that markup", async () => {
     const diff = diffOf('const a = 1;\nconst b = 3;\n');
     expect(isReadyToEdit(await rendered(diff, false), diff)).toBe(false);
-    expect(isReadyToEdit(new FileDiff({ theme: 'github-light', useTokenTransformer: true }), diff)).toBe(false);
+    expect(isReadyToEdit(new FileDiff({ theme: 'pierre-light', useTokenTransformer: true }), diff)).toBe(false);
   });
 
   it("isn't for a diff other than the one highlighted", async () => {

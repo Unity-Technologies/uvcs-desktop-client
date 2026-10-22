@@ -14,7 +14,7 @@ const MODIFIED = 'namespace Codice.Client;\nusing Codice.CM.Common;\nclass Main 
 /** The words a diff of these texts marks as changed, rendered from scratch. */
 async function freshWordMarks(original: string, modified: string) {
   const diff = lineDiff(original, modified, 'recognizeAll', 'file.ts').meta;
-  const renderer = new DiffHunksRenderer({ theme: 'github-light', lineDiffType: 'word', useTokenTransformer: true });
+  const renderer = new DiffHunksRenderer({ theme: 'pierre-light', lineDiffType: 'word', useTokenTransformer: true });
   return renderedWordMarks(renderer, await renderer.asyncRender(diff));
 }
 

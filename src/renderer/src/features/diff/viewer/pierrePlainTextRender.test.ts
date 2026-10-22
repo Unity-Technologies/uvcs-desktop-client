@@ -10,7 +10,7 @@ const text = (lines: number, changed: (index: number) => boolean) =>
 async function plainTextRenderer() {
   installPierrePlainTextRender();
   const diff = lineDiff(text(3_000, () => false), text(3_000, (index) => index % 10 === 0), 'recognizeAll', 'file.ts').meta;
-  const renderer = new DiffHunksRenderer({ theme: 'github-light', tokenizeMaxLength: 0, expandUnchanged: true });
+  const renderer = new DiffHunksRenderer({ theme: 'pierre-light', tokenizeMaxLength: 0, expandUnchanged: true });
   await renderer.asyncRender(diff);
   renderer.renderDiff(diff);
   const internals = renderer as unknown as { renderCache: { result: unknown } };
@@ -33,7 +33,7 @@ describe('installPierrePlainTextRender', () => {
     const { renderer, diff } = await plainTextRenderer();
     const range = { startingLine: 1_000, totalLines: 20, bufferBefore: 0, bufferAfter: 0 };
     const kept = renderer.renderCodeAST('additions', renderer.renderDiff(diff, range)!);
-    const fresh = new DiffHunksRenderer({ theme: 'github-light', tokenizeMaxLength: 0, expandUnchanged: true });
+    const fresh = new DiffHunksRenderer({ theme: 'pierre-light', tokenizeMaxLength: 0, expandUnchanged: true });
     await fresh.asyncRender(diff);
     expect(kept).toEqual(fresh.renderCodeAST('additions', fresh.renderDiff(diff, range)!));
   });
@@ -45,7 +45,7 @@ describe('installPierrePlainTextRender', () => {
     renderer.renderDiff(other);
     expect(result()).not.toBe(first);
     const second = result();
-    renderer.setOptions({ theme: 'github-dark', tokenizeMaxLength: 0, expandUnchanged: true });
+    renderer.setOptions({ theme: 'pierre-dark', tokenizeMaxLength: 0, expandUnchanged: true });
     await renderer.asyncRender(other);
     renderer.renderDiff(other);
     expect(result()).not.toBe(second);

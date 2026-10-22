@@ -1,7 +1,7 @@
 import { areDiffTargetsEqual, type DiffHunksRenderer, type FileDiffMetadata } from '@pierre/diffs';
 
 /**
- * Whether the editor can attach to this diff component without Pierre (1.5.1) highlighting the diff again on the main
+ * Whether the editor can attach to this diff component without Pierre (1.6.1) highlighting the diff again on the main
  * thread: its renderer has `diff` highlighted in the editor's markup (`editorRenderReady`: the token transformer's
  * `data-char` spans), as Pierre's workers hand it back when they're told to (`useTokenTransformer`). Pierre's edit
  * session reuses that render (`beginEditSession` with the diff it starts from); attached earlier, the session

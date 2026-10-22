@@ -1,4 +1,5 @@
 import { getOrCreateWorkerPoolSingleton, type WorkerPoolManager } from '@pierre/diffs/worker';
+import { useEffect } from 'react';
 import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
 import { pierreThemeName } from './pierreOptions';
 
@@ -8,7 +9,14 @@ import { pierreThemeName } from './pierreOptions';
  */
 export function useHighlightWorkers(enabled: boolean): WorkerPoolManager | undefined {
   const theme = pierreThemeName(useResolvedTheme());
-  return enabled ? highlightWorkers(theme) : undefined;
+  const workers = enabled ? highlightWorkers(theme) : undefined;
+  // After the render, not during it: with the theme already resolved, Pierre 1.6's `setRenderOptions` tells the
+  // components it highlights for at once (`onThemeChange`), and each sets its own state, which React refuses from
+  // another component's render ("Cannot update a component while rendering a different component").
+  useEffect(() => {
+    if (workers && workers.getDiffRenderOptions().theme !== theme) void workers.setRenderOptions({ theme });
+  }, [workers, theme]);
+  return workers;
 }
 
 /**
@@ -19,13 +27,12 @@ export function useHighlightWorkers(enabled: boolean): WorkerPoolManager | undef
 function highlightWorkers(theme: ReturnType<typeof pierreThemeName>): WorkerPoolManager {
   const workers = getOrCreateWorkerPoolSingleton({
     poolOptions: {
-      workerFactory: () => new Worker(new URL('@pierre/diffs/worker/worker.js', import.meta.url), { type: 'module', name: 'Syntax highlighting' }),
+      workerFactory: () => new Worker(new URL('./pierreHighlightWorker.ts', import.meta.url), { type: 'module', name: 'Syntax highlighting' }),
       poolSize: 1,
     },
     // The editor's markup (`useTokenTransformer`): the editor attaches to a diff the workers highlighted without Pierre
     // highlighting it again on the main thread (`isReadyToEdit`), and a read-only diff shows the same.
     highlighterOptions: { theme, lineDiffType: 'word', useTokenTransformer: true },
   });
-  if (workers.getDiffRenderOptions().theme !== theme) void workers.setRenderOptions({ theme });
   return workers;
 }
