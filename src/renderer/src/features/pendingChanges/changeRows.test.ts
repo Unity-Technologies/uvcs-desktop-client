@@ -4,7 +4,7 @@ import { comparePaths } from '@shared/pathOrder';
 import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
 import type { FileListLayout } from '../../components/fileListLayoutStore';
 import { treeArrowMove } from '../../lib/treeArrowMove';
-import { rowCheckState } from './changeRowChecks';
+import { candidatesUnderRow, checkStateOver } from './changeRowChecks';
 import { changeTreeArrowRows, LEVEL_INDENT, rowIndent, topLevelCheckboxInset, treeLevel } from './changeRowLevels';
 import { sortChanges } from './changeOrder';
 import { changesUnderRow, collapseRows, layoutChangeRows, menuTargetOf, type ChangeRow, type ChangesGrouping } from './changeRows';
@@ -45,7 +45,7 @@ describe('buildChangeRows', () => {
   it('reports a mixed check state when only some changes are checked', () => {
     const rows = buildChangeRows({ ...base, grouping: 'changelist' });
     expect(rows[0]).toMatchObject({ type: 'group' });
-    expect(rowCheckState(rows[0]!, (item) => item.path === 'src/b.ts')).toBe('mixed');
+    expect(checkStateOver(candidatesUnderRow(rows[0]!), (item) => item.path === 'src/b.ts')).toBe('mixed');
   });
 
   it('groups by changelist, keeping empty user changelists visible', () => {
@@ -106,7 +106,7 @@ describe('buildChangeRows', () => {
     const rows = buildChangeRows({ ...base, changes: [change('privs/a.txt', ['private']), folder, change('private.txt', ['private'])], layout: 'tree' });
     expect(rows.map((row) => row.key)).toEqual(['change:private.txt', 'folder:all:privs', 'change:privs/a.txt']);
     expect(rows[1]).toMatchObject({ item: folder });
-    expect(rowCheckState(rows[1]!, (item) => item !== folder)).toBe('mixed');
+    expect(checkStateOver(candidatesUnderRow(rows[1]!), (item) => item !== folder)).toBe('mixed');
     expect(changesUnderRow(rows[1]!).map((item) => item.path)).toEqual(['privs', 'privs/a.txt']);
   });
 
@@ -144,12 +144,12 @@ describe('buildChangeRows', () => {
       changes: [change('bin/out.log', ['ignored']), change('src/a.ts', ['changed']), change('src/build.log', ['ignored'])],
       layout: 'tree',
     });
-    expect(rows.filter((row) => row.type === 'folder').map((row) => [row.path, row.type === 'folder' && rowCheckState(row, () => true)])).toEqual([
+    expect(rows.filter((row) => row.type === 'folder').map((row) => [row.path, row.type === 'folder' && checkStateOver(candidatesUnderRow(row), () => true)])).toEqual([
       ['bin', null],
       ['src', true],
     ]);
     const files = rows.filter((row) => row.type === 'file');
-    expect(files.map((row) => rowCheckState(row, (item) => item.path !== 'src/a.ts'))).toEqual([null, false, null]);
+    expect(files.map((row) => checkStateOver(candidatesUnderRow(row), (item) => item.path !== 'src/a.ts'))).toEqual([null, false, null]);
   });
 
   it('hides the contents of collapsed folders', () => {

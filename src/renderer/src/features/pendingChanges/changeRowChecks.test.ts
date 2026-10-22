@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { candidatesUnderRow, checkStateOver, rowCheckState, spaceToggle } from './changeRowChecks';
+import { candidatesUnderRow, checkStateOver, spaceToggle } from './changeRowChecks';
 import { sortChanges } from './changeOrder';
 import { layoutChangeRows, type ChangeRow } from './changeRows';
 
@@ -13,7 +13,7 @@ const rows = layoutChangeRows({
   grouping: 'none',
 });
 const row = (key: string): ChangeRow => rows.find((candidate) => candidate.key === key)!;
-const checkedPaths = (paths: string[]) => (candidate: ChangeRow) => rowCheckState(candidate, (item) => paths.includes(item.path));
+const checkedPaths = (paths: string[]) => (candidate: ChangeRow) => checkStateOver(candidatesUnderRow(candidate), (item) => paths.includes(item.path));
 
 describe('spaceToggle', () => {
   it('checks the selected files unless every one already is', () => {

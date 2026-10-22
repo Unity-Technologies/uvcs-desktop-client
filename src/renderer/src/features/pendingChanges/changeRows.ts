@@ -31,7 +31,7 @@ interface Group {
 /**
  * Flattens pending changes into the rows of the list: changelist headers, optional folders and changes. Every row, as
  * if nothing was collapsed: opening or closing a folder only leaves rows out (`collapseRows`). What is checked is left
- * to `rowCheckState`: checking files doesn't lay tens of thousands of rows out again either.
+ * to `checkStateOver`: checking files doesn't lay tens of thousands of rows out again either.
  */
 export function layoutChangeRows({ sorted, changelists, layout, grouping }: LayoutInput): ChangeRow[] {
   if (grouping === 'none') {
