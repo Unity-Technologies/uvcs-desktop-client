@@ -9,17 +9,19 @@ import type { LinkTarget } from '../../app/links/linkNavigation';
  * (`…/branches/main/-/browse/Assets/Player.cs`); its lines pinned to the changeset the workspace has loaded, as line
  * numbers shift along a branch (`…/changesets/28/-/browse/Player.cs#L40`). The repository's version, never the
  * workspace's own edits. None for an item the repository doesn't hold (private, ignored), one under an xlink (another
- * repository's), a workspace on a shelve, or lines of an older version.
+ * repository's), a workspace on a shelve, or lines of an older version, or of an item with pending changes (`changed`),
+ * whose viewer shows the workspace's own lines, not the repository's.
  */
 export function filesItemLink(
   workspace: Pick<WorkspaceInfo, 'repository' | 'selector' | 'loadedChangeset'>,
   item: Pick<TreeItem, 'path' | 'repository'>,
   lines?: LinkLines,
+  { changed = false } = {},
 ): LinkTarget | null {
   if (item.repository !== workspace.repository) return null;
   const page = { kind: 'browse', path: `/${item.path}` } as const;
   if (lines) {
-    if (lines.side === 'old' || workspace.loadedChangeset === null) return null;
+    if (changed || lines.side === 'old' || workspace.loadedChangeset === null) return null;
     return { object: { kind: 'changeset', id: workspace.loadedChangeset }, page, lines };
   }
   const object = workspaceObject(workspace);
@@ -34,8 +36,9 @@ export function filesShownLink(
   workspace: Pick<WorkspaceInfo, 'repository' | 'selector' | 'loadedChangeset'>,
   item: Pick<TreeItem, 'path' | 'repository'>,
   selected: { path: string; lines: LinkLines } | null,
+  options: { changed?: boolean } = {},
 ): LinkTarget | null {
-  const lines = selected?.path === item.path ? filesItemLink(workspace, item, selected.lines) : null;
+  const lines = selected?.path === item.path ? filesItemLink(workspace, item, selected.lines, options) : null;
   return lines ?? filesItemLink(workspace, item);
 }
 
