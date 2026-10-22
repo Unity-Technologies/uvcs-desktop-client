@@ -63,6 +63,8 @@ describe('formatLink and parseLink', () => {
     { ...game, repository: 'my game', object: { kind: 'branch', name: '/main/Mi rama/señal (2)' } },
     { ...game, object: { kind: 'branch', name: '/main/a+b/c#1' } },
     { ...game, object: { kind: 'label', name: "fix(2)!'*" } },
+    { ...game, object: { kind: 'label', name: 'v1..2' } },
+    { ...game, object: { kind: 'labelRange', from: 'a..b', to: 'c' } },
     { ...game, repository: 'art/textures', object: { kind: 'changeset', id: 1 } },
     { ...game, object: { kind: 'changeset', id: 1 }, page: { kind: 'diffFile', path: '/Assets/Cafe\u0301 ?#%.png' } },
     { kind: 'workspace', folder: '/Users/ana/My Projects/日本', page: { kind: 'view', view: 'changes', path: '/a b.cs' } },
@@ -182,6 +184,15 @@ describe('parseLink', () => {
       'uvcs://acme.unity/repos/game/changesets/1" --inspect',
       'uvcs:///',
       'uvcs://showchangeset=cs:12',
+      // What decoding brings back must hold to the same rules as what's written: no line breaks, quotes, or a path
+      // stepping out through an encoded separator.
+      'uvcs://acme.unity/repos/game/changesets/1/-/files/a%0A--inspect',
+      'uvcs://acme.unity/repos/game/changesets/1/-/files/a%22b',
+      'uvcs://acme.unity/repos/game/changesets/1/-/files/a%2F..%2F..%2Fb',
+      'uvcs://acme.unity/repos/game/changesets/1/-/files/a%5C..%5Cb',
+      'uvcs:///wk/game/-/history/..%2F..%2Fetc%2Fhosts',
+      'uvcs://acme.unity/repos/game/branches/main%2F..%2Fx',
+      'uvcs://acme.unity/repos/game/changesets/99999999999999999999999',
       `uvcs://acme.unity/repos/game/-/files/${'a/'.repeat(5000)}`,
     ])('%j is malformed', (text) => {
       expect(parseLink(text)).toMatchObject({ problem: { kind: 'malformed' } });

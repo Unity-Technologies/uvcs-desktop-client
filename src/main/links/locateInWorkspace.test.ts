@@ -29,6 +29,11 @@ describe('locateInWorkspace', () => {
     expect(found).toEqual({ root: 'C:\\Users\\ana\\wk', itemPath: 'Assets/Player.cs' });
   });
 
+  it('finds an item at the root whose name starts with two dots', async () => {
+    const found = await locateInWorkspace('/wk/..config', { findRoot: async () => '/wk', resolve: async (path) => path, platform: 'linux' });
+    expect(found).toEqual({ root: '/wk', itemPath: '..config' });
+  });
+
   it('finds nothing outside any workspace', async () => {
     expect(await locateInWorkspace('/elsewhere/a.ts', { findRoot: async () => null, resolve: async (path) => path, platform: 'linux' })).toBeNull();
   });
