@@ -6,7 +6,7 @@ import type {
   PendingChangesFilter,
   PendingChangesSnapshot,
 } from '../domain/pendingChanges';
-import type { ShelvedAway } from '../domain/shelve';
+import type { ShelveAwayRequest, ShelvedAway } from '../domain/shelve';
 
 export interface PendingChangesApi {
   list(workspacePath: string, filter: PendingChangesFilter): Promise<PendingChangesSnapshot>;
@@ -25,7 +25,8 @@ export interface PendingChangesApi {
    * Shelves the changes (every pending change when `paths` is null), checks the shelve holds them all, then undoes them
    * and moves the files they added aside until the shelve is applied.
    */
-  shelveAndUndo(workspacePath: string, paths: string[] | null, comment: string, operationId: string): Promise<ShelvedAway>;
+  /** Shelves away the requested changes, or every pending change when null. */
+  shelveAndUndo(workspacePath: string, request: ShelveAwayRequest | null, comment: string, operationId: string): Promise<ShelvedAway>;
   createChangelist(workspacePath: string, changelist: Changelist): Promise<void>;
   /** Renames or describes the changelist `name`: only the fields `edit` holds, one command each. */
   editChangelist(workspacePath: string, name: string, edit: Partial<Changelist>): Promise<void>;

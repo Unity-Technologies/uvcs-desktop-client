@@ -316,7 +316,7 @@ describe('shelveChanges', () => {
 
     expect(await shelveChanges({ workspacePath: ws, ...shelving([change('a.ts'), change('b.ts')]), comment: ' WIP ', keep: false })).toBe(true);
 
-    expect(fakeApi.argsOf('pendingChanges.shelveAndUndo')[0]!.slice(0, 3)).toEqual([ws, ['a.ts', 'b.ts'], 'WIP']);
+    expect(fakeApi.argsOf('pendingChanges.shelveAndUndo')[0]!.slice(0, 3)).toEqual([ws, { paths: ['a.ts', 'b.ts'], targets: ['a.ts', 'b.ts'] }, 'WIP']);
     expect(refreshed()).toEqual(['explorer', 'info', 'pendingChanges', 'review', 'shelves']);
   });
 

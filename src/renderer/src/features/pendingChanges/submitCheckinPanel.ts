@@ -5,7 +5,7 @@ import { fileNameOf, listNames, pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { bulkPrivateMessage, type BulkPrivate } from './bulkPrivate';
 import { checkinChanges, shelveChanges } from './checkinOperations';
-import { checkinPathsOf, foldersPullingIn, type CheckinPaths } from './checkinPaths';
+import { checkinPathsOf, type CheckinPaths } from './checkinPaths';
 import { checkinDraftOf, useCheckinDraftStore } from './checkinDraftStore';
 import { FILTER_LIST_FILES } from './pendingChangeOperations';
 import { successCardTellsCheckin } from './successMoment';
@@ -44,8 +44,9 @@ export async function checkinFromPanel(request: PanelCheckin, whileRunning: Whil
   if (!comment.trim() && request.warnOnEmptyComment && !(await confirmCheckinWithoutComment())) return 'writeComment';
   if (!(await settleBeforeLeaving())) return 'notCheckedIn';
   if (request.bulkPrivate && !(await confirmBulkPrivateCheckin(request.bulkPrivate))) return 'notCheckedIn';
-  const { paths, addsPrivate, pulledIn } = checkinPathsOf(included, request.allChanges);
-  if (pulledIn.length > 0 && !(await confirmPulledIn('checkin', { paths, addsPrivate, pulledIn }))) return 'notCheckedIn';
+  const plan = checkinPathsOf(included, request.allChanges);
+  const { paths, addsPrivate, pulledIn } = plan;
+  if (pulledIn.length > 0 && !(await confirmPulledIn('checkin', plan))) return 'notCheckedIn';
   const changes = [...included, ...pulledIn];
   const checkedIn = await whileRunning(() =>
     checkinChanges({
@@ -108,7 +109,7 @@ function confirmPulledIn(mode: 'checkin' | 'shelve', plan: CheckinPaths): Promis
   const count = plan.pulledIn.length;
   const action = mode === 'checkin' ? 'check in' : 'shelve';
   return confirm({
-    title: `Also ${action} ${pluralize(count, 'change')} inside ${listNames(foldersPullingIn(plan))}?`,
+    title: `Also ${action} ${pluralize(count, 'change')} inside ${listNames(plan.pullingFolders)}?`,
     message: `A folder is ${mode === 'checkin' ? 'checked in' : 'shelved'} with everything inside it, so ${listNames(plan.pulledIn.map((change) => fileNameOf(change.path)))} ${count === 1 ? 'goes' : 'go'} too.`,
     confirmLabel: `${mode === 'checkin' ? 'Check' : 'Shelve'} ${count === 1 ? 'it' : 'them'}${mode === 'checkin' ? ' in' : ''} too`,
   });

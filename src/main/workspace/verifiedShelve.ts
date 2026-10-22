@@ -40,8 +40,10 @@ export async function createVerifiedShelve(
   onlyPaths?: string[],
 ): Promise<CreatedShelve> {
   const targets = onlyPaths ? toAbsolutePaths(workspacePath, onlyPaths) : [];
+  // Given paths, `--dependencies` takes the added folders above them too, as a check-in does (`checkinArgs`).
+  const dependencies = onlyPaths ? ['--dependencies'] : [];
   const output = await withTempFile(comment, (commentsFile) =>
-    cm.execute(['shelveset', 'create', ...targets, '--all', `-commentsfile=${commentsFile}`], {
+    cm.execute(['shelveset', 'create', ...targets, '--all', ...dependencies, `-commentsfile=${commentsFile}`], {
       cwd: workspacePath,
       onOutputLine: context.progressOf(readShelveProgress),
     }),

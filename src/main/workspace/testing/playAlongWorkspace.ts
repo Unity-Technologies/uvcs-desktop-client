@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { AUTOMATIC_SHELVE_COMMENT } from '@shared/domain/shelve';
 import {
@@ -64,6 +64,15 @@ interface Shelve {
 }
 
 const isAdded = (codes: string): boolean => codes.split('+').includes('AD');
+
+/**
+ * Whether `cm shelveset create <targets> --dependencies` takes the pending path: everything under a target, and the
+ * checkouts and adds of the folders above one.
+ */
+function shelvesWith(path: string, codes: string, targets: string[]): boolean {
+  const takenAlong = codes.split('+').every((code) => code === 'CO' || code === 'AD');
+  return targets.some((target) => target === path || path.startsWith(`${target}/`) || (takenAlong && target.startsWith(`${path}/`)));
+}
 const isUnchangedCheckout = (codes: string): boolean => codes === 'CO';
 
 /**
@@ -100,9 +109,9 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
   const createShelve = async ({ args }: FakeCmCommand): Promise<string> => {
     const comment = readFileSync(optionValue(args, '-commentsfile=')!, 'utf8');
     const targets = args.slice(2).filter((arg) => !arg.startsWith('-')).map(relative);
-    const shelved = Object.entries(pending).filter(([path, codes]) => codes !== 'PR' && (targets.length === 0 || targets.includes(path)) && path !== fail.shelveMisses);
+    const shelved = Object.entries(pending).filter(([path, codes]) => codes !== 'PR' && (targets.length === 0 || shelvesWith(path, codes, targets)) && path !== fail.shelveMisses);
     const id = nextShelveId++;
-    const addedContents = Object.fromEntries(shelved.filter(([path, codes]) => isAdded(codes) && existsSync(onDisk(path))).map(([path]) => [path, readFileSync(onDisk(path), 'utf8')]));
+    const addedContents = Object.fromEntries(shelved.filter(([path, codes]) => isAdded(codes) && existsSync(onDisk(path)) && statSync(onDisk(path)).isFile()).map(([path]) => [path, readFileSync(onDisk(path), 'utf8')]));
     shelves.set(id, { comment, changes: Object.fromEntries(shelved), addedContents });
     return fail.shelveSplits ? shelvesCreated({ id }, { id: 3, repository: 'lib@local' }) : shelvesCreated({ id });
   };

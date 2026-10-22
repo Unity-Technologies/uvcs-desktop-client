@@ -1,4 +1,4 @@
-import type { ShelvedAway, Shelve } from '@shared/domain/shelve';
+import type { ShelveAwayRequest, ShelvedAway, Shelve } from '@shared/domain/shelve';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -50,14 +50,14 @@ async function shelvePendingChangesFirst(workspacePath: string, shelveId: number
 }
 
 /**
- * Shelves changes (every pending change when `paths` is null) and undoes them: they wait in the shelve, and Undo
+ * Shelves changes (every pending change when `request` is null) and undoes them: they wait in the shelve, and Undo
  * puts them back at once.
  */
-export function shelveAway(workspacePath: string, paths: string[] | null, comment: string): Promise<ShelvedAway | undefined> {
+export function shelveAway(workspacePath: string, request: ShelveAwayRequest | null, comment: string): Promise<ShelvedAway | undefined> {
   return runOperation({
-    title: paths ? `Shelving ${pluralize(paths.length, 'change')}` : 'Shelving your changes',
+    title: request ? `Shelving ${pluralize(request.paths.length, 'change')}` : 'Shelving your changes',
     workspacePath,
-    run: (operationId) => api.pendingChanges.shelveAndUndo(workspacePath, paths, comment, operationId),
+    run: (operationId) => api.pendingChanges.shelveAndUndo(workspacePath, request, comment, operationId),
     affects: isAffectedByShelvingAway,
     cancellable: false,
     success: ({ shelveId, count }) => ({

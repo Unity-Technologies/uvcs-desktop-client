@@ -1,5 +1,5 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import type { ShelvedAway } from '@shared/domain/shelve';
+import type { ShelveAwayRequest, ShelvedAway } from '@shared/domain/shelve';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { toAbsolutePaths } from '../files/workspacePaths';
@@ -16,7 +16,8 @@ import { readWorkspaceIdentity } from './workspaceIdentity';
 const IN_MERGE = "A merge in progress can't be shelved away. Check it in or undo it first, or shelve and keep the changes.";
 
 /**
- * Shelves changes away, as switching leaves them (`switchWithChanges`), so they are only in the shelve:
+ * Shelves changes away (`request.paths`: every change, null for the whole workspace; `request.targets`: the paths cm is
+ * given for them, which take some along: `checkinPathsOf`), as switching leaves them (`switchWithChanges`), so they are only in the shelve:
  * 1. Shelve them with the user's comment and check the shelve holds them all (otherwise nothing is undone).
  * 2. Record the shelve (`reason: 'shelve'`: not offered as left changes), undo the changes, and move the files they
  *    added, now private, aside. Applying the shelve puts those and the changelists back (`LeftChangesFinder.apply`).
@@ -25,18 +26,19 @@ const IN_MERGE = "A merge in progress can't be shelved away. Check it in or undo
 export async function shelveAndUndo(
   deps: ShelveFlowDependencies,
   workspacePath: string,
-  paths: string[] | null,
+  request: ShelveAwayRequest | null,
   comment: string,
   context: OperationContext,
 ): Promise<ShelvedAway> {
   const { cm, records } = deps;
+  const paths = request?.paths ?? null;
   const snapshot = await readPendingSnapshot(cm, workspacePath);
   const changes = shelvedAwayChanges(snapshot.changes, paths);
   if (changes.some((change) => change.mergeInfo)) throw new Error(IN_MERGE);
 
   const workspace = await readWorkspaceIdentity(cm, workspacePath);
   context.beginStep('Shelving your changes', 1, 2);
-  const shelve = await createVerifiedShelve(cm, workspacePath, changes, comment, context, paths ?? undefined);
+  const shelve = await createVerifiedShelve(cm, workspacePath, changes, comment, context, request?.targets);
   const record = newShelveRecord(workspace, shelve.id, shelvedContents(snapshot, changes), { mode: 'leave', reason: 'shelve', objectRef: '', target: NO_TARGET });
   records.save(record);
 

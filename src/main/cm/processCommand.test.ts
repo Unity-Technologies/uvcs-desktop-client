@@ -20,7 +20,7 @@ describe('processCommand', () => {
     const [line, exit] = input!.split('\n');
     expect(exit).toBe('exit');
     expect(line!.startsWith('checkin "/Users/ana/work/My Project/Assets/Textures/Level 0/texture_0.png" ')).toBe(true);
-    expect(line!.endsWith(' --all --private -commentsfile=/tmp/comment.txt --machinereadable --symlink')).toBe(true);
+    expect(line!.endsWith(' --all --dependencies --private -commentsfile=/tmp/comment.txt --machinereadable --symlink')).toBe(true);
     expect(line!.split('texture_').length - 1).toBe(20_000);
   });
 

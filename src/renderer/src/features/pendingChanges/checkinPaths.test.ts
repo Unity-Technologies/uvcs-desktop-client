@@ -111,6 +111,6 @@ describe('checkinPathsOf', () => {
     const inner = folder('lib/core', ['checkedOut']);
     const deep = file('lib/core/c.cs', ['changed']);
 
-    expect(checkinPathsOf([moved, inner], [moved, inner, deep])).toEqual({ paths: ['lib', 'lib/core'], addsPrivate: false, pulledIn: [deep] });
+    expect(checkinPathsOf([moved, inner], [moved, inner, deep])).toEqual({ paths: ['lib', 'lib/core'], addsPrivate: false, pulledIn: [deep], pullingFolders: ['lib'] });
   });
 });

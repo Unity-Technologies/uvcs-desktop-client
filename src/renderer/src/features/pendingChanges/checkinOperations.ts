@@ -123,7 +123,7 @@ interface ShelveOptions {
 export async function shelveChanges({ workspacePath, changes, paths, comment, keep }: ShelveOptions): Promise<boolean> {
   const shelveComment = comment.trim() || (await prompt({ title: 'Shelve changes', label: 'Comment', confirmLabel: 'Shelve' }));
   if (!shelveComment) return false;
-  if (!keep) return (await shelveAway(workspacePath, paths, shelveComment)) !== undefined;
+  if (!keep) return (await shelveAway(workspacePath, { paths: changes.map((change) => change.path), targets: paths }, shelveComment)) !== undefined;
 
   const shelveId = await runOperation({
     title: `Shelving ${pluralize(changes.length, 'change')}`,
