@@ -9,8 +9,8 @@ vi.mock('./checkinOperations', () => ({
     steps.checkins.push(options);
     return steps.checkedIn;
   },
-  shelveChanges: async (...args: unknown[]) => {
-    steps.shelves.push(args);
+  shelveChanges: async (options: unknown) => {
+    steps.shelves.push(options);
     return true;
   },
 }));
@@ -65,12 +65,12 @@ const panelCheckin = ({ included, hiddenIncludedCount }: CheckinSelection) => ({
   workspacePath: ws,
   included,
   hiddenIncludedCount,
-  pendingCount: allChanges.length,
+  allChanges,
   behind: false,
   bulkPrivate: null,
   warnOnEmptyComment: true,
 });
-const panelShelve = ({ shelvable, hiddenIncludedCount }: CheckinSelection) => ({ workspacePath: ws, shelvable, hiddenIncludedCount });
+const panelShelve = ({ shelvable, hiddenIncludedCount }: CheckinSelection) => ({ workspacePath: ws, shelvable, hiddenIncludedCount, allChanges });
 
 beforeEach(() => {
   Object.assign(steps, { checkedIn: true, checkins: [], shelves: [] });
@@ -227,7 +227,17 @@ describe('checking in or shelving a changelist from the panel', () => {
 
     await checkinFromPanel(panelCheckin(selection()));
 
-    expect(steps.checkins).toEqual([{ workspacePath: ws, changes: uiChanges, comment: 'Polish the menus\n\nSpacing and icons.', updateFirst: false, quiet: false }]);
+    expect(steps.checkins).toEqual([
+      {
+        workspacePath: ws,
+        changes: uiChanges,
+        paths: uiChanges.map((candidate) => candidate.path),
+        addsPrivate: false,
+        comment: 'Polish the menus\n\nSpacing and icons.',
+        updateFirst: false,
+        quiet: false,
+      },
+    ]);
     expect(askedDialogs()).toEqual([]);
   });
 
@@ -263,7 +273,9 @@ describe('checking in or shelving a changelist from the panel', () => {
 
     await shelveFromPanel(panelShelve(selection()), true);
 
-    expect(steps.shelves).toEqual([[ws, uiChanges.slice(0, 4), 'Polish the menus\n\nSpacing and icons.', true]]);
+    expect(steps.shelves).toEqual([
+      { workspacePath: ws, changes: uiChanges.slice(0, 4), paths: uiChanges.slice(0, 4).map((candidate) => candidate.path), comment: 'Polish the menus\n\nSpacing and icons.', keep: true },
+    ]);
     expect(selection().included).toEqual(allChanges.filter((candidate) => candidate.path !== 'build/out.log'));
   });
 });
