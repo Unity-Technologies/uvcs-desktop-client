@@ -1160,7 +1160,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     conflict's status, the review mark).
     Changes puts its `ChangesSummaryBar` (the checkbox for every shown change, their count and undo) between the filter
     bars and the rows: it acts on what the filters left, in the rows' checkbox column; above the filter, it read as
-    acting on every change.
+    acting on every change. A rule above and below it sets it apart from the filter bars, so it reads as the list's
+    header rather than a third toolbar row.
   - **One menu**: a file's menu is `changedFileMenu` (`components/`) in every list but Changes: its history (annotated
     or not), "Open this revision" and "Save this revision as…" for the version the list shows (a diff's newer side, a
     merge's incoming version; nothing to open for a deleted file or a folder), and Copy; a list adds its own after the
