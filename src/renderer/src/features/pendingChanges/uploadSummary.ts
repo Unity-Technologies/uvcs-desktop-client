@@ -15,23 +15,41 @@ export interface UploadSummary {
   largest: PendingChange | null;
 }
 
+/** What a change adds to an upload: nothing, or its bytes as a new file or as an edited one (`uploadKindOf`). */
+export type UploadKind = 'none' | 'new' | 'edited';
+
+export function uploadKindOf(change: PendingChange): UploadKind {
+  if (change.itemType === 'directory' || !existsOnDisk(change)) return 'none';
+  const category = categoryOf(change);
+  if (category === 'added' || category === 'private') return 'new';
+  return hasContentChanges(change) ? 'edited' : 'none';
+}
+
+/** Adds changes up into an `UploadSummary`, each with its `uploadKindOf` worked out beforehand when many are added again and again. */
+export class UploadTally {
+  private bytes = 0;
+  private newFiles = 0;
+  private editedFiles = 0;
+  private largest: PendingChange | null = null;
+
+  add(change: PendingChange, kind: UploadKind = uploadKindOf(change)): void {
+    if (kind === 'none') return;
+    this.bytes += change.size;
+    if (kind === 'new') this.newFiles++;
+    else this.editedFiles++;
+    if (!this.largest || change.size > this.largest.size) this.largest = change;
+  }
+
+  summary(): UploadSummary {
+    return { bytes: this.bytes, newFiles: this.newFiles, editedFiles: this.editedFiles, largest: this.largest };
+  }
+}
+
 /** One pass over the changes: checking a box goes over tens of thousands of them again. */
 export function uploadSummary(changes: PendingChange[]): UploadSummary {
-  let bytes = 0;
-  let newFiles = 0;
-  let editedFiles = 0;
-  let largest: PendingChange | null = null;
-  for (const change of changes) {
-    if (change.itemType === 'directory' || !existsOnDisk(change)) continue;
-    const category = categoryOf(change);
-    const isNew = category === 'added' || category === 'private';
-    if (!isNew && !hasContentChanges(change)) continue;
-    bytes += change.size;
-    if (isNew) newFiles++;
-    else editedFiles++;
-    if (!largest || change.size > largest.size) largest = change;
-  }
-  return { bytes, newFiles, editedFiles, largest };
+  const tally = new UploadTally();
+  for (const change of changes) tally.add(change);
+  return tally.summary();
 }
 
 /** For the button's tooltip: "Uploads 1.1 MB: 3 new files, 2 edited" and, with several files, "Largest: Hero.psd · 820 KB". */

@@ -1,25 +1,29 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { CheckState } from '../../ui/Checkbox';
 import { isCheckinCandidate } from './changeCategories';
-import type { ChangeRow } from './changeRows';
+import { changesUnderRow, type ChangeRow } from './changeRows';
 
 /** A file's check, or a folder's or changelist's over what it holds that can go into a check-in; null when none can (ignored files). */
 export function rowCheckState(row: ChangeRow, isChecked: (change: PendingChange) => boolean): CheckState | null {
-  if (row.type === 'file') return isCheckinCandidate(row.item) ? isChecked(row.item) : null;
-  return combinedCheckState(row.items, isChecked);
+  return checkStateOver(candidatesUnderRow(row), isChecked);
 }
 
-function combinedCheckState(changes: PendingChange[], isChecked: (change: PendingChange) => boolean): CheckState | null {
-  let candidates = 0;
+/** What a row holds that can go into a check-in: found once per layout, as a folder can hold a million. */
+export function candidatesUnderRow(row: ChangeRow): PendingChange[] {
+  return changesUnderRow(row).filter(isCheckinCandidate);
+}
+
+/**
+ * The check of a row holding `candidates` (`candidatesUnderRow`): `isChosen` tells whether each is checked, null when
+ * every one is (`CheckinSelection.isChosen`), which a folder of a million then tells at once.
+ */
+export function checkStateOver(candidates: PendingChange[], isChosen: ((change: PendingChange) => boolean) | null): CheckState | null {
+  if (candidates.length === 0) return null;
+  if (isChosen === null) return true;
   let checked = 0;
-  for (const change of changes) {
-    if (!isCheckinCandidate(change)) continue;
-    candidates++;
-    if (isChecked(change)) checked++;
-  }
-  if (candidates === 0) return null;
+  for (const change of candidates) if (isChosen(change)) checked++;
   if (checked === 0) return false;
-  return checked === candidates ? true : 'mixed';
+  return checked === candidates.length ? true : 'mixed';
 }
 
 /** What Space checks or unchecks, and which way. */

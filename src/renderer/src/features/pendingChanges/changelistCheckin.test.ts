@@ -19,7 +19,7 @@ import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { askedDialogs } from '../../testing/fakeDialogs';
 import { changesByChangelist, prepareChangelistCheckin } from './changelistCheckin';
 import { checkinDraftOf, useCheckinDraftStore } from './checkinDraftStore';
-import { checkinSelectionOf, currentChoice, includedBy } from './checkinSelection';
+import { checkinCandidatesOf, checkinSelectionOf, currentChoice } from './checkinSelection';
 import { checkinFromPanel, shelveFromPanel } from './submitCheckinPanel';
 
 const ws = '/ws';
@@ -51,7 +51,7 @@ const defaultChanges = [change('README.md', ['changed']), change('notes.txt', ['
 const allChanges = [...defaultChanges, ...uiChanges, artChange, plainChange];
 
 /** What the panel checks in and shelves once the draft is as `prepareChangelistCheckin` left it. */
-const selection = (changes = allChanges) => checkinSelectionOf(changes, includedBy(currentChoice(checkinDraftOf(ws), changes)));
+const selection = (changes = allChanges) => checkinSelectionOf(checkinCandidatesOf(changes), currentChoice(checkinDraftOf(ws), changes));
 
 function prepare(changelist: Changelist, changelistsNow = changelists): void {
   const changes = changesByChangelist(allChanges).get(changelist.name) ?? [];

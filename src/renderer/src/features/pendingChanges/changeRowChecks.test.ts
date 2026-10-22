@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { rowCheckState, spaceToggle } from './changeRowChecks';
+import { candidatesUnderRow, checkStateOver, rowCheckState, spaceToggle } from './changeRowChecks';
 import { sortChanges } from './changeOrder';
 import { layoutChangeRows, type ChangeRow } from './changeRows';
 
@@ -30,5 +30,18 @@ describe('spaceToggle', () => {
 
   it('leaves a folder holding nothing to check in alone', () => {
     expect(spaceToggle([], row('folder:all:bin'), checkedPaths([]))).toEqual({ rows: [], include: false });
+  });
+});
+
+describe('checkStateOver', () => {
+  it("checks a folder over what it holds that can go in, and tells a folder of thousands checked at once while every box is", () => {
+    const folder = row('folder:all:src');
+    const candidates = candidatesUnderRow(folder);
+    let asked = 0;
+
+    expect(checkStateOver(candidates, (item) => (asked++, item.path === 'src/a.ts'))).toBe('mixed');
+    expect(asked).toBe(2);
+    expect(checkStateOver(candidates, null)).toBe(true);
+    expect(checkStateOver(candidatesUnderRow(row('folder:all:bin')), null)).toBeNull();
   });
 });
