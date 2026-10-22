@@ -94,13 +94,15 @@ function readObject(word: string, segments: readonly string[]): ObjectReading {
     case 'labels':
       return readLabels(first);
     case 'shelves':
-    case 'shelvesets':
+    case 'shelvesets': {
       const shelve = idIn(first.replace(/^-/, ''));
       return shelve === null ? malformed('Its shelve number is not valid.') : { object: { kind: 'shelve', id: shelve }, length: 1 };
-    default:
+    }
+    default: {
       const review = idIn(first);
       if (review === null) return malformed('Its code review number is not valid.');
       return { object: { kind: 'codeReview', id: review, ...(word === 'merge-requests' ? { asMergeRequest: true } : {}) }, length: 1 };
+    }
   }
 }
 
