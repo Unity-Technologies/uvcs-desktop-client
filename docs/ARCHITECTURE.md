@@ -674,13 +674,13 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   there is no switch. A failed update leaves the workspace created and open, reported as any failed update. Recreating a
   missing workspace downloads its files the same way; a new repository's workspace isn't updated: it has nothing yet.
   The New workspace dialog can create its repository too: its Repository field is editable, suggesting the server's
-  repositories (`ui/Combobox`: its arrow lists them all whatever the field holds, typing narrows them; a native
-  `<datalist>` was dropped, as it lists only what matches the text, so a dropped folder's name left its arrow empty); a name the server has is that repository, any other (by case, as `cm` tells them apart) is created with
-  the workspace (`newWorkspaceFormOf`, `createNewWorkspace`). As a slip would create a repository on a shared server,
-  the button then says "Create repository and workspace", and a name that differs from a repository's only by case
-  names it (`repositoryNamedButForCase`). It creates with the same steps as the New repository dialog's
-  workspace (`createNewRepository`): `cm repository create`, then `cm workspace create`, and no update. A workspace that
-  fails after its repository was made keeps it: trying again creates only the workspace (`createRepositoryWithWorkspace`).
+  repositories (`ui/Combobox`: "Big lists render only the rows in view"); a name the server has is that repository,
+  any other (by case, as `cm` tells them apart) is created with the workspace (`newWorkspaceFormOf`,
+  `createNewWorkspace`). As a slip would create a repository on a shared server, the button then says "Create
+  repository and workspace", and a name that differs from a repository's only by case names it
+  (`repositoryNamedButForCase`). It creates with the same steps as the New repository dialog's workspace
+  (`createNewRepository`): `cm repository create`, then `cm workspace create`, and no update. A workspace that fails
+  after its repository was made keeps it: trying again creates only the workspace (`createRepositoryWithWorkspace`).
 - "New workspace for a task" (`features/taskWorkspace`) creates a child of /main at its head (or takes an existing branch),
   a workspace next to the current one, and switches it (a plain `cm switch`: it's empty); a failure removes the new
   workspace and keeps the branch. The switcher shows the branch and pending changes of the other workspaces of the same
@@ -1025,7 +1025,12 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   virtualizer's `rangeExtractor`); a list whose rows take the focus themselves keeps it by the row's key, not its index
   (`repositoryRowIndex`), and acts on keys only from a row's own button, never its ⋯ menu's (`movesBetweenRows`). The filtering and sorting behind
   such a list is memoized on its inputs, so a hover or a key doesn't redo it (`memberCandidates` sorts once per list
-  read). A suggestions list (`<datalist>`) holds the best few matches, never every object (`branchSuggestions`).
+  read). A suggestions list (`<datalist>`) holds the best few matches, never every object (`branchSuggestions`). A
+  field that may hold any value or one of a server's (the New workspace dialog's repository) is a `ui/Combobox`: its
+  arrow, or ↓, lists every option whatever the field holds, only the rows in view rendered, and typing narrows them
+  (`comboboxState`: typing highlights no row, so Enter keeps a new name). A `<datalist>` was dropped there: Chromium
+  lists only the options matching the field's text, so the arrow of a field prefilled with a dropped folder's name
+  showed nothing.
 - **Long names**: branch names run past 120 characters (`/main/child-br-cr-sample/empty-branch2/child_1/subtask/merge-test`),
   so nothing that shows one may overflow, wrap a row or push another control out. Each place names a branch one of two
   ways, by what it does with it:
