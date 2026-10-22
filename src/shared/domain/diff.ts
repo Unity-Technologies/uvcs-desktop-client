@@ -1,3 +1,4 @@
+import type { XlinkTarget } from './explorer';
 import type { ItemType } from './pendingChanges';
 
 export type DiffStatus = 'added' | 'changed' | 'deleted' | 'moved';
@@ -26,3 +27,12 @@ export type DiffTarget =
   | { kind: 'range'; fromSpec: string; toSpec: string }
   | { kind: 'branch'; branch: string }
   | { kind: 'shelve'; shelveId: number };
+
+/**
+ * Where a changed xlink of a diff points on each side (`DiffApi.xlinkSides`): null on a side it isn't on (added,
+ * deleted), and on one whose tree `cm ls` can't read (a shelve, a label) or where the xlink lies under another xlink.
+ */
+export interface XlinkSides {
+  before: XlinkTarget | null;
+  after: XlinkTarget | null;
+}

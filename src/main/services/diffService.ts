@@ -1,7 +1,10 @@
 import type { DiffApi } from '@shared/api/diff';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
+import type { XlinkTarget } from '@shared/domain/explorer';
 import type { CmClient } from '../cm/CmClient';
 import { DIFF_FORMAT, parseDiffEntries } from '../cm/diffEntries';
+import { isNotInTreeError } from '../cm/missingItem';
+import { parentPointOf, readsSide, xlinkAfterPoint, xlinkBeforePoint, xlinkIn, xlinkListArgs, type XlinkSidePoint } from '../cm/xlinkSides';
 import type { ServiceContext } from './ServiceContext';
 
 export function createDiffService({ cm, handedOverDiffs }: ServiceContext): DiffApi {
@@ -12,7 +15,32 @@ export function createDiffService({ cm, handedOverDiffs }: ServiceContext): Diff
       if (target.kind === 'branch') return branchEntries(cm, workspacePath, `br:${target.branch}`);
       return diffEntries(cm, workspacePath, targetSpecs(target));
     },
+
+    async xlinkSides(workspacePath, target, { path, oldPath, status }) {
+      const before = xlinkBeforePoint(target);
+      const after = xlinkAfterPoint(target);
+      const [beforeTarget, afterTarget] = await Promise.all([
+        readsSide(before, 'before', status) ? xlinkAt(cm, workspacePath, before, oldPath ?? path) : null,
+        readsSide(after, 'after', status) ? xlinkAt(cm, workspacePath, after, path) : null,
+      ]);
+      return { before: beforeTarget, after: afterTarget };
+    },
   };
+}
+
+/**
+ * Where the xlink at `path` points at one side: one quick `cm ls` of its folder, after a `cm find` naming the side's
+ * changeset when it is a parent. A folder that isn't in that tree (added after it) has no xlink there.
+ */
+async function xlinkAt(cm: CmClient, workspacePath: string, side: NonNullable<XlinkSidePoint>, path: string): Promise<XlinkTarget | null> {
+  const point = side.kind === 'point' ? side.spec : parentPointOf(await cm.query(side.findArgs, { cwd: workspacePath }));
+  if (point === null) return null;
+  try {
+    return xlinkIn(await cm.query(xlinkListArgs(path, point), { cwd: workspacePath }), path);
+  } catch (error) {
+    if (isNotInTreeError(error)) return null;
+    throw error;
+  }
 }
 
 /**
