@@ -21,7 +21,7 @@ import { useFileSteps } from '../diff/viewer/fileSteps';
 import { useKnownIncomingSummary } from '../incoming/useKnownIncomingSummary';
 import { MergeTaskSuggestion } from '../mergeTask/MergeTaskSuggestion';
 import { ReviewModeButton } from '../review/ReviewModeButton';
-import { reviewProgress } from '../review/reviewStatus';
+import { isAllReviewed } from '../review/reviewStatus';
 import { BulkPrivateNotice } from './BulkPrivateNotice';
 import { ChangeSelectionPane } from './ChangeSelectionPane';
 import { ChangesList } from './ChangesList';
@@ -110,7 +110,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const checkinSelection = useCheckinSelection(listed, checkinChoice);
   const { isIncluded, included, hiddenIncludedCount, upload, shelvable, shelvableUpload, bulkPrivate } = checkinSelection;
   const shownChecked = useMemo(() => checkedAmong(changes, filtered, checkinSelection), [changes, filtered, checkinSelection]);
-  const reviewed = useMemo(() => reviewProgress(included, review.statusOf), [included, review.statusOf]);
+  const allReviewed = useMemo(() => isAllReviewed(review.on, included, review.statusOf), [review.on, included, review.statusOf]);
   const { mergeChanges, onlyNeverCheckedIn } = useMemo(
     () => ({ mergeChanges: allChanges.filter((change) => change.mergeInfo), onlyNeverCheckedIn: allChanges.length > 0 && matchesBranch(allChanges) }),
     [allChanges],
@@ -265,7 +265,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
               behindCount={behind?.count ?? 0}
               behindDescription={behind && behindDescription(behind)}
               preparedChangelist={preparedChangelist}
-              allReviewed={review.on && reviewed.total > 0 && reviewed.reviewed === reviewed.total}
+              allReviewed={allReviewed}
               recentComments={settings.recentComments}
               mode={checkinMode}
               onModeChange={setCheckinMode}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupReviewStatus, hasMark, needsReview, partialReviewCount, reviewableOf, reviewProgress, shouldMarkReviewed, shownStatusOf, type ReviewStatus } from './reviewStatus';
+import { groupReviewStatus, hasMark, isAllReviewed, needsReview, partialReviewCount, reviewableOf, reviewProgress, shouldMarkReviewed, shownStatusOf, type ReviewStatus } from './reviewStatus';
 
 const statuses: Record<string, ReviewStatus | null> = { a: 'reviewed', b: 'changedSinceReview', d: 'unreviewed', folder: null };
 const statusOf = (item: string): ReviewStatus | null => statuses[item] ?? null;
@@ -42,5 +42,18 @@ describe('review status', () => {
     const items = ['a', 'b', 'd', 'folder'];
     expect(items.map(shownStatusOf(statusOf, true))).toEqual(['reviewed', 'changedSinceReview', 'unreviewed', null]);
     expect(items.map(shownStatusOf(statusOf, false))).toEqual(['unreviewed', 'unreviewed', 'unreviewed', null]);
+  });
+});
+
+describe('isAllReviewed', () => {
+  it('tells whether every item to review is reviewed, going over none while review mode is off', () => {
+    let asked = 0;
+    const statusOf = (item: string) => (asked++, item === 'folder' ? null : item === 'a' ? 'reviewed' : 'unreviewed');
+
+    expect(isAllReviewed(false, ['a', 'b'], statusOf)).toBe(false);
+    expect(asked).toBe(0);
+    expect(isAllReviewed(true, ['a', 'b'], statusOf)).toBe(false);
+    expect(isAllReviewed(true, ['a', 'folder'], statusOf)).toBe(true);
+    expect(isAllReviewed(true, ['folder'], statusOf)).toBe(false);
   });
 });

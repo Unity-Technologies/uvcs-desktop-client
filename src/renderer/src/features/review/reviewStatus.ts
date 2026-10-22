@@ -55,3 +55,10 @@ export function partialReviewCount<T>(items: readonly T[], statusOf: ReviewStatu
   const { total, reviewed } = reviewProgress(items, statusOf);
   return reviewed > 0 && reviewed < total ? `${reviewed}/${total}` : null;
 }
+
+/** Whether review mode is on and every item to review in it is reviewed; off, nothing is gone over (a million changes a click). */
+export function isAllReviewed<T>(on: boolean, items: readonly T[], statusOf: ReviewStatusOf<T>): boolean {
+  if (!on) return false;
+  const { total, reviewed } = reviewProgress(items, statusOf);
+  return total > 0 && reviewed === total;
+}
