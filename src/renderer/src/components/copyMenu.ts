@@ -52,10 +52,14 @@ export function copiedWhat(noun: string, kind: CopyKind, count = 1): string {
 /**
  * An object's one "Copy" submenu, the same in every menu it shows in: the texts it has, in `COPY_KINDS` order, each
  * showing what it copies. `count` is how many objects the texts hold, one per line. `shortcut` goes on the first
- * entry, the one ⌘C copies where the list binds it.
+ * entry, the one ⌘C copies where the list binds it, and `linkShortcut` on its link, the one ⇧⌘C copies there.
  */
-export function copySubmenu(noun: string, texts: CopyTexts, { count = 1, shortcut }: { count?: number; shortcut?: string } = {}): GroupedEntry | null {
-  const entries: Action[] = copyEntries(noun, texts, count);
+export function copySubmenu(
+  noun: string,
+  texts: CopyTexts,
+  { count = 1, shortcut, linkShortcut }: { count?: number; shortcut?: string; linkShortcut?: string } = {},
+): GroupedEntry | null {
+  const entries: Action[] = copyEntries(noun, texts, count).map((entry) => (linkShortcut && entry.id === 'copy.link' ? { ...entry, shortcut: linkShortcut } : entry));
   if (entries.length === 0) return null;
   if (shortcut) entries[0] = { ...entries[0]!, shortcut };
   return menuSubmenu('copy', entries);

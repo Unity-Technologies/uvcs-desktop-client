@@ -71,7 +71,7 @@ export function branchMenu(workspacePath: string, branches: BranchInfo[], curren
     single && menuAction('changesets', () => showBranchChangesets(workspacePath, single.name)),
     single && menuAction('compare', () => void diffWithAnotherBranch(single), { label: 'Compare with another branch…' }),
     single && !place.inBranchExplorer && menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'branch', name: single.name, date: single.date })),
-    single && copySubmenu('Branch', branchCopyTexts(workspacePath, single), { shortcut: hotkey('listCopy') }),
+    single && copySubmenu('Branch', branchCopyTexts(workspacePath, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     single && menuAction('rename', () => void renameBranch(workspacePath, single), { shortcut: hotkey('rename') }),
     single && menuAction('permissions', () => openObjectPermissions(workspacePath, 'branch', single)),
     visible.length > 0 &&

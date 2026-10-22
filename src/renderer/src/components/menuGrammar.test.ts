@@ -378,6 +378,7 @@ describe('Copy', () => {
 
   it('copies a branch as its name, spec, full spec and comment, the name with ⌘C', async () => {
     expect(copyEntries(branchMenu(ws, [branch], '/main'))[0]!.shortcut).toBe('mod+c');
+    expect(copyEntries(branchMenu(ws, [branch], '/main')).find((entry) => entry.id === 'copy.link')!.shortcut).toBe('mod+shift+c');
     expect(await copiedBy(branchMenu(ws, [branch], '/main'))).toEqual([
       'Branch name: /main/task',
       'Branch link: uvcs://local/repos/game/branches/main/task',

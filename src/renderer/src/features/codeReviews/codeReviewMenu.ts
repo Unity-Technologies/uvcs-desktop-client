@@ -46,7 +46,7 @@ export function codeReviewMenu(workspacePath: string, reviews: CodeReviewSummary
         })),
       ),
     single && menuAction('assign', () => void reassignReview(workspacePath, single)),
-    single && copySubmenu('Code review', codeReviewCopyTexts(workspacePath, single), { shortcut: hotkey('listCopy') }),
+    single && copySubmenu('Code review', codeReviewCopyTexts(workspacePath, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     menuAction('delete', () => void deleteReviews(workspacePath, reviews), single ? {} : { label: `Delete ${reviews.length} reviews…` }),
   ]);
 }

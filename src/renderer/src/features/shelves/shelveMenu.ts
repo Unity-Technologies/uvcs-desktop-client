@@ -52,7 +52,7 @@ export function shelveMenu(workspacePath: string, shelves: ShelveInfo[], { left 
     menuAction('newCodeReview', () =>
       openCreateCodeReviewDialog(workspacePath, { kind: 'shelve', value: String(shelve.id), title: splitComment(shelve.comment).summary }),
     ),
-    copySubmenu('Shelve', shelveCopyTexts(workspacePath, shelve), { shortcut: hotkey('listCopy') }),
+    copySubmenu('Shelve', shelveCopyTexts(workspacePath, shelve), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     mine &&
       menuAction('delete', async () => {
         if ((await deleteShelve(workspacePath, shelve.id)) && onDeleted) onDeleted();

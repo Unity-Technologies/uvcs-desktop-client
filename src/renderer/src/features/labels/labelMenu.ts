@@ -53,7 +53,7 @@ export function labelMenu(workspacePath: string, labels: LabelInfo[], place: Men
     single &&
       !place.inBranchExplorer &&
       menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'label', name: single.name, changeset: single.changeset, date: single.date })),
-    single && copySubmenu('Label', labelCopyTexts(workspacePath, single), { shortcut: hotkey('listCopy') }),
+    single && copySubmenu('Label', labelCopyTexts(workspacePath, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     single && menuAction('rename', () => void renameLabel(workspacePath, single), { shortcut: hotkey('rename') }),
     single && menuAction('permissions', () => openObjectPermissions(workspacePath, 'label', single)),
     menuAction('delete', () => void deleteLabels(workspacePath, labels), single ? {} : { label: `Delete ${labels.length} labels…` }),
