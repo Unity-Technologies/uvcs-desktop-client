@@ -7,9 +7,12 @@ import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import type { XlinkTarget } from '@shared/domain/explorer';
 import { listsTree } from '@shared/domain/specs';
 import { equalsCondition, findQueryArgs } from './findQuery';
-import { FOUND_CHANGESETS } from './foundObjects';
-import { readRecords } from './formatRecords';
+import { foundObjects } from './foundObjects';
+import { integerValue, readRecords } from './formatRecords';
 import { parseTreeItems, TREE_ITEM_FORMAT } from './treeItems';
+
+/** A changeset's parent, the one field the older side needs. */
+export const FOUND_PARENTS = foundObjects('changeset', ['parent'], (value) => ({ parent: integerValue(value('parent')) }));
 
 /** A side of a diff: a point whose tree `cm ls` reads, or a changeset whose parent is that point. */
 export type XlinkSidePoint = { kind: 'point'; spec: string } | { kind: 'parentOf'; findArgs: string[] } | null;
@@ -32,11 +35,11 @@ export function xlinkAfterPoint(target: DiffTarget): XlinkSidePoint {
 export function xlinkBeforePoint(target: DiffTarget): XlinkSidePoint {
   switch (target.kind) {
     case 'changeset':
-      return { kind: 'parentOf', findArgs: findQueryArgs(FOUND_CHANGESETS, `where changesetid = ${target.changesetId}`) };
+      return { kind: 'parentOf', findArgs: findQueryArgs(FOUND_PARENTS, `where changesetid = ${target.changesetId}`) };
     case 'range':
       return { kind: 'point', spec: target.fromSpec };
     case 'branch':
-      return { kind: 'parentOf', findArgs: findQueryArgs(FOUND_CHANGESETS, `where ${equalsCondition('branch', target.branch)} order by changesetid asc limit 1`) };
+      return { kind: 'parentOf', findArgs: findQueryArgs(FOUND_PARENTS, `where ${equalsCondition('branch', target.branch)} order by changesetid asc limit 1`) };
     case 'shelve':
       return null;
   }
@@ -44,7 +47,7 @@ export function xlinkBeforePoint(target: DiffTarget): XlinkSidePoint {
 
 /** The point the `cm find` of `xlinkBeforePoint` names: the found changeset's parent; none before the first changeset. */
 export function parentPointOf(findOutput: string): string | null {
-  const parent = readRecords(FOUND_CHANGESETS, findOutput)[0]?.parent;
+  const parent = readRecords(FOUND_PARENTS, findOutput)[0]?.parent;
   return parent === undefined || parent < 0 ? null : `cs:${parent}`;
 }
 

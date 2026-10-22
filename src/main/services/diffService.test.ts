@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
 import { DIFF_FORMAT } from '../cm/diffEntries';
-import { FOUND_CHANGESETS } from '../cm/foundObjects';
+import { FOUND_PARENTS } from '../cm/xlinkSides';
 import { formatOutput, recordsOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { TREE_ITEMS } from '../cm/treeItems';
@@ -106,7 +106,7 @@ function xlinks(answers: Record<string, CmAnswer>) {
 describe('Where a changed xlink points', () => {
   it("reads a branch's head and where it started: one cm find, then one quick cm ls of the xlink's folder at each", async () => {
     const { service, commands } = xlinks({
-      find: recordsOutput(FOUND_CHANGESETS, { changesetid: 279931, parent: 279866 }),
+      find: recordsOutput(FOUND_PARENTS, { parent: 279866 }),
       'ls /plugins --tree=cs:279866': pluginsAt(17309),
       'ls /plugins --tree=br:/main/task1': pluginsAt(17361),
     });
@@ -148,7 +148,7 @@ describe('Where a changed xlink points', () => {
   });
 
   it('fails on any other cm error', async () => {
-    const { service } = xlinks({ find: recordsOutput(FOUND_CHANGESETS, { changesetid: 37, parent: 36 }), ls: cmFails('The server is not available') });
+    const { service } = xlinks({ find: recordsOutput(FOUND_PARENTS, { parent: 36 }), ls: cmFails('The server is not available') });
 
     await expect(service.xlinkSides(WORKSPACE, { kind: 'changeset', changesetId: 37 }, XLINK)).rejects.toThrow('The server is not available');
   });
