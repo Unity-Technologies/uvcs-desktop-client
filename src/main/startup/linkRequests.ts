@@ -1,10 +1,11 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname } from 'node:path';
 import { app } from 'electron';
 import { linkArgument } from '../links/linkArgument';
 import { LinkRequests } from '../links/LinkRequests';
 import { registerLinkScheme } from '../links/registerLinkScheme';
+import { setDefaultLinkHandler } from '../links/xdgMime';
 import type { WorkspaceWindows } from '../window/WorkspaceWindows';
 
 /**
@@ -47,6 +48,8 @@ export function registerAsLinkHandler(): void {
       await mkdir(dirname(path), { recursive: true });
       await writeFile(path, text, 'utf8');
     },
+    removeFile: (path) => rm(path, { force: true }),
+    setDefaultLinkHandler,
     setAsDefaultProtocolClient: (protocol, path, args) => (path ? app.setAsDefaultProtocolClient(protocol, path, args) : app.setAsDefaultProtocolClient(protocol)),
   }).catch((error: unknown) => console.warn('[links] Could not register as the handler of uvcs:// links', error));
 }
