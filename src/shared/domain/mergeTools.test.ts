@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isUnityYamlMergeId, unityYamlMergeId, unityYamlMergeOf, type UnityYamlMergeTool } from './mergeTools';
+import { editorVersionOf, isUnityYamlMergeId, unityYamlMergeId, unityYamlMergeOf, type UnityYamlMergeTool } from './mergeTools';
 
 const merge = (editorVersion: string): UnityYamlMergeTool => ({ id: unityYamlMergeId(editorVersion), executable: `/Unity/${editorVersion}/UnityYAMLMerge`, editorVersion });
 const installed = [merge('6000.3.19f1'), merge('2022.3.10f1')];
@@ -17,5 +17,11 @@ describe('UnityYAMLMerge ids', () => {
 
   it('tells UnityYAMLMerge from the tools that open a window', () => {
     expect(['unityyamlmerge', 'unityyamlmerge:2022.3.10f1', 'uvcs', 'custom:1'].map(isUnityYamlMergeId)).toEqual([true, true, false, false]);
+  });
+
+  it('reads the version a pinned id names, and none for the newest editor’s', () => {
+    expect(editorVersionOf('unityyamlmerge:2022.3.10f1')).toBe('2022.3.10f1');
+    expect(editorVersionOf('unityyamlmerge')).toBeUndefined();
+    expect(editorVersionOf('uvcs')).toBeUndefined();
   });
 });

@@ -59,6 +59,9 @@ export interface PickedApp {
   tip?: string;
 }
 
+/** What a picker, a row or a dialog says of an app or tool picked that isn't here. */
+export const NOT_FOUND_HERE = 'Not found on this computer';
+
 export const SYSTEM_APP_LABEL = "Each file's default app";
 
 /**
@@ -73,7 +76,7 @@ export function pickedApp(choices: AppPickerChoices): PickedApp {
     return { label: automatic.label, description: automaticAppDescription(used?.name, automatic.rule), icon: AUTOMATIC_CHOICE_ICON };
   }
   const picked = apps.find((app) => app.id === choice);
-  if (!picked) return { label: missingName ?? choice, description: 'Not found on this computer', icon: AppWindow };
+  if (!picked) return { label: missingName ?? choice, description: NOT_FOUND_HERE, icon: AppWindow };
   return { label: picked.name, description: picked.location, icon: appIcon(picked) ?? picked.glyph ?? AppWindow, tip: picked.tip };
 }
 

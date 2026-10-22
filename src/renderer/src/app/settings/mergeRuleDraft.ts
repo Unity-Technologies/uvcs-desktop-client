@@ -2,10 +2,12 @@ import { Boxes } from 'lucide-react';
 import {
   AUTO_MERGE_TOOL,
   isUnityYamlMergeId,
+  editorVersionOf,
   SEMANTIC_TOOL_ID,
   UNITY_YAML_MERGE_ID,
   UNITY_YAML_MERGE_NAME,
   unityYamlMergeOf,
+  UVCS_TOOL_ID,
   type MergeTool,
   type MergeToolList,
   type MergeToolRule,
@@ -13,7 +15,7 @@ import {
 import { formatArgs, parseArgs } from '../../lib/argumentLine';
 import { addTokens, allTokens } from '../../lib/tokenInput';
 import { hasOwnArgsToGoBackTo, mergeToolArgsProblem } from '../../features/merge/mergeTools/mergeToolArgs';
-import type { PickableApp } from './appPickerChoices';
+import { NOT_FOUND_HERE, type PickableApp } from './appPickerChoices';
 import { missingToolName } from './mergeToolRows';
 
 /** What the edit dialog edits: a rule (none yet for a new one), or every other file's tool. */
@@ -179,11 +181,11 @@ export function toolChoices(target: RuleTarget, list: MergeToolList, editorId: s
   const unityYamlMerge: PickableApp = {
     id: UNITY_YAML_MERGE_ID,
     name: UNITY_YAML_MERGE_NAME,
-    location: unityYamlMergeOf(list.unityYamlMerges, editorId)?.executable ?? 'Not found on this computer',
+    location: unityYamlMergeOf(list.unityYamlMerges, editorId)?.executable ?? NOT_FOUND_HERE,
     glyph: Boxes,
     tip: "Unity's Smart Merge: it merges scenes, prefabs and other assets by their objects, without a window",
   };
-  const after = Math.max(...['uvcs', SEMANTIC_TOOL_ID].map((id) => tools.findIndex((tool) => tool.id === id))) + 1;
+  const after = Math.max(...[UVCS_TOOL_ID, SEMANTIC_TOOL_ID].map((id) => tools.findIndex((tool) => tool.id === id))) + 1;
   return [...tools.slice(0, after), unityYamlMerge, ...tools.slice(after)];
 }
 
@@ -208,7 +210,7 @@ export function editorOptions(list: MergeToolList, editorId: string): EditorOpti
     ...list.unityYamlMerges.filter((merge) => merge.editorVersion).map((merge) => ({ value: merge.id, label: merge.editorVersion })),
   ];
   if (editorId === UNITY_YAML_MERGE_ID || unityYamlMergeOf(list.unityYamlMerges, editorId)) return options;
-  return [...options, { value: editorId, label: `${editorId.slice(UNITY_YAML_MERGE_ID.length + 1)} (not found on this computer)` }];
+  return [...options, { value: editorId, label: `${editorVersionOf(editorId) ?? editorId} (${NOT_FOUND_HERE.toLowerCase()})` }];
 }
 
 function argsFieldOf(tool: MergeTool, argsText: string | null): ArgsField {

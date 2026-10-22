@@ -2,8 +2,8 @@ import { AppWindow, Boxes, TriangleAlert } from 'lucide-react';
 import {
   AUTO_MERGE_TOOL,
   isUnityYamlMergeId,
+  editorVersionOf,
   UNITY_YAML_MERGE_ARGS,
-  UNITY_YAML_MERGE_ID,
   UNITY_YAML_MERGE_NAME,
   unityYamlMergeOf,
   type MergeTool,
@@ -14,6 +14,7 @@ import { appIcon } from '../../components/externalApps/appIcon';
 import type { Icon } from '../../lib/actions';
 import { formatArgs } from '../../lib/argumentLine';
 import { formatFilePatterns } from '../../lib/filePatterns';
+import { NOT_FOUND_HERE } from './appPickerChoices';
 import type { RuleTarget } from './mergeRuleDraft';
 
 /** The row of every other file: always last, it can't move nor go. */
@@ -115,20 +116,18 @@ function rowText(quoted: readonly string[], count: number): string {
 
 type ToolSide = Pick<MergeToolRowView, 'toolName' | 'toolDetail' | 'toolIcon' | 'missing' | 'toolTip'>;
 
-const NOT_FOUND = 'Not found on this computer';
-
 function toolSide(rule: MergeToolRule, list: MergeToolList, automaticTool: MergeTool | undefined): ToolSide {
   if (isUnityYamlMergeId(rule.toolId)) {
     const merge = unityYamlMergeOf(list.unityYamlMerges, rule.toolId);
-    const pinned = rule.toolId === UNITY_YAML_MERGE_ID ? undefined : rule.toolId.slice(UNITY_YAML_MERGE_ID.length + 1);
-    if (!merge) return { toolName: UNITY_YAML_MERGE_NAME, toolDetail: pinned, toolIcon: TriangleAlert, missing: true, toolTip: `${NOT_FOUND}: no Unity Editor${pinned ? ` ${pinned}` : ''}` };
+    const pinned = editorVersionOf(rule.toolId);
+    if (!merge) return { toolName: UNITY_YAML_MERGE_NAME, toolDetail: pinned, toolIcon: TriangleAlert, missing: true, toolTip: `${NOT_FOUND_HERE}: no Unity Editor${pinned ? ` ${pinned}` : ''}` };
     const fallbackId = rule.fallbackToolId ?? AUTO_MERGE_TOOL;
     const fallback = fallbackId === AUTO_MERGE_TOOL ? automaticTool : (toolById(list, fallbackId) ?? automaticTool);
     const toolTip = `${commandLine(merge.executable, UNITY_YAML_MERGE_ARGS)}\nIf it can't merge: ${fallback?.name ?? 'no merge tool found'}`;
     return { toolName: UNITY_YAML_MERGE_NAME, toolDetail: pinned, toolIcon: Boxes, missing: false, toolTip };
   }
   const tool = toolById(list, rule.toolId);
-  if (!tool) return { toolName: missingToolName(rule.toolId, list), toolIcon: TriangleAlert, missing: true, toolTip: NOT_FOUND };
+  if (!tool) return { toolName: missingToolName(rule.toolId, list), toolIcon: TriangleAlert, missing: true, toolTip: NOT_FOUND_HERE };
   return toolOf(tool);
 }
 

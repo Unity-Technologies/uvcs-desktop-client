@@ -1,5 +1,5 @@
 import { posix, win32 } from 'node:path';
-import { SEMANTIC_TOOL_ID } from '@shared/domain/mergeTools';
+import { SEMANTIC_TOOL_ID, UVCS_TOOL_ID } from '@shared/domain/mergeTools';
 import { APP_IDENTITIES } from '../../system/apps/appIdentities';
 import type { AppIdentity } from '../../system/apps/appIdentity';
 import { localPrograms, macApps, programFiles, type Whereabouts } from '../../system/apps/whereabouts';
@@ -83,7 +83,7 @@ function jetbrains(id: string, name: string, identity: AppIdentity, apps: string
   };
 }
 
-export const UVCS_TOOL_ID = 'uvcs';
+export { UVCS_TOOL_ID };
 
 /**
  * The Desktop GUI, run as one of its tools: `xmerge` (the UVCS merge tool) or `semanticmerge` (Semantic Merge, which

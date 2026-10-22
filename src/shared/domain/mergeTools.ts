@@ -68,6 +68,11 @@ export function unityYamlMergeId(editorVersion: string): string {
   return `${UNITY_YAML_MERGE_ID}:${editorVersion}`;
 }
 
+/** The version a UnityYAMLMerge id pins (`2022.3.10f1`); none for the newest editor's. */
+export function editorVersionOf(id: string): string | undefined {
+  return id.startsWith(`${UNITY_YAML_MERGE_ID}:`) ? id.slice(UNITY_YAML_MERGE_ID.length + 1) : undefined;
+}
+
 /** The id names UnityYAMLMerge, the newest editor's or one editor's. */
 export function isUnityYamlMergeId(id: string): boolean {
   return id === UNITY_YAML_MERGE_ID || id.startsWith(`${UNITY_YAML_MERGE_ID}:`);
@@ -88,6 +93,9 @@ export interface CustomMergeTool {
 
 /** `auto`: the UVCS merge tool when it's installed, otherwise the first tool found. */
 export const AUTO_MERGE_TOOL = 'auto';
+
+/** The UVCS merge tool: the Desktop GUI run as `xmerge`. */
+export const UVCS_TOOL_ID = 'uvcs';
 
 /** The UVCS merge tool's semantic merge (the Desktop GUI run as `semanticmerge`): it merges code by its declarations. */
 export const SEMANTIC_TOOL_ID = 'semantic';

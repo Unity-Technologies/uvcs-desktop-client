@@ -154,7 +154,7 @@ function MergeRuleDialog({ target, close }: { target: RuleTarget; close: () => v
             <div className={fieldStyles.field}>
               <span className={fieldStyles.label}>If it can't merge</span>
               <AppPicker
-                    label="If it can't merge"
+                label="If it can't merge"
                 apps={fallbackChoices(list)}
                 choice={fields.shownFallbackId ?? ''}
                 usedId={null}
