@@ -6,6 +6,8 @@ import styles from './Dialog.module.css';
 interface DialogProps {
   title: string;
   description?: ReactNode;
+  /** A small control at the header's top right, for something the dialog rarely needs changed (where it starts). */
+  headerAction?: ReactNode;
   width?: number;
   onClose: () => void;
   /** Submitting the form (e.g. pressing Enter) runs this. */
@@ -14,7 +16,7 @@ interface DialogProps {
   children?: ReactNode;
 }
 
-export function Dialog({ title, description, width, onClose, onSubmit, footer, children }: DialogProps) {
+export function Dialog({ title, description, headerAction, width, onClose, onSubmit, footer, children }: DialogProps) {
   const submit = (event: FormEvent): void => {
     event.preventDefault();
     onSubmit?.();
@@ -32,8 +34,11 @@ export function Dialog({ title, description, width, onClose, onSubmit, footer, c
         >
           <form onSubmit={submit} style={{ display: 'contents' }}>
             <div className={styles.header}>
-              <RadixDialog.Title className={styles.title}>{title}</RadixDialog.Title>
-              {description && <RadixDialog.Description className={styles.description}>{description}</RadixDialog.Description>}
+              <div className={styles.heading}>
+                <RadixDialog.Title className={styles.title}>{title}</RadixDialog.Title>
+                {description && <RadixDialog.Description className={styles.description}>{description}</RadixDialog.Description>}
+              </div>
+              {headerAction}
             </div>
             {children && <div className={styles.body}>{children}</div>}
             {footer && <div className={styles.footer}>{footer}</div>}
