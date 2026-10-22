@@ -5,9 +5,9 @@ const FOCUS = { path: 'a.cs', lines: { side: 'new', first: 3, last: 3 } } as con
 const shown = (view: 'history' | 'annotate') => ({ path: 'a.cs', changesetId: 7, view, otherRepository: false });
 
 describe('historyLineLinks', () => {
-  it("shows a link's lines only annotated, and publishes the lines selected", () => {
+  it("shows a link's lines and publishes the lines selected only annotated, where a history's link names lines", () => {
     expect(historyLineLinks(FOCUS, shown('annotate'))).toEqual({ focus: FOCUS, publishes: true });
-    expect(historyLineLinks(FOCUS, shown('history'))).toEqual({ focus: null, publishes: true });
+    expect(historyLineLinks(FOCUS, shown('history'))).toEqual({ focus: null, publishes: false });
     expect(historyLineLinks(FOCUS, null).focus).toBeNull();
   });
 });

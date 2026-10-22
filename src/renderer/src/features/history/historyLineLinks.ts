@@ -7,7 +7,11 @@ export function historyPlace(shown: ShownRevision | null): string | undefined {
   return shown ? `${shown.changesetId}:${shown.view}` : undefined;
 }
 
-/** A history's lines for links: a link's lines show only annotated, as only an annotation shows a file's lines whole. */
+/**
+ * A history's lines for links: only annotated, as only an annotation shows a file's lines whole and a history's link
+ * names lines only there: a link's lines show, and the lines selected are published (for the chip and ⇧⌘C).
+ */
 export function historyLineLinks(focus: SelectedLines | null, shown: ShownRevision | null): LineLinks {
-  return { focus: shown?.view === 'annotate' ? focus : null, publishes: true };
+  const annotated = shown?.view === 'annotate';
+  return { focus: annotated ? focus : null, publishes: annotated };
 }
