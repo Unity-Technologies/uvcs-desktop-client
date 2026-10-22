@@ -1,7 +1,6 @@
 .list {
   flex: 1;
   min-height: 0;
-  padding: var(--space-1) 0;
   overflow: auto;
   outline: none;
 }

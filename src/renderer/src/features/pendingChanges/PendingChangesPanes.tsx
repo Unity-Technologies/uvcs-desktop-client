@@ -6,6 +6,7 @@ import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useFileListLayoutStore } from '../../components/fileListLayoutStore';
+import { ListToolbar } from '../../components/ListToolbar';
 import { selectAfterLeaving } from '../../app/navigation/leaveGuard';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { useSettings } from '../../app/settings/useSettings';
@@ -218,8 +219,10 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
         first={
           <div className={styles.listPane}>
             {/* Narrow the list first, then act on what's left: the summary's checkbox and undo sit right above the rows they act on. */}
-            {filterBar}
-            {review.bar}
+            <ListToolbar>
+              {filterBar}
+              {review.bar}
+            </ListToolbar>
             <ChangesSummaryBar
               changes={changes}
               totalCount={listedCount}

@@ -1,4 +1,5 @@
 import type { MergeRequest } from '@shared/domain/merge';
+import { ListToolbar } from '../../components/ListToolbar';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { ListSkeleton } from '../../ui/Skeleton';
 import { mergeLabels } from './mergeDescription';
@@ -35,7 +36,7 @@ export function MergeCalculating({ request }: { request: MergeRequest }) {
       }
       list={
         <>
-          {filter.bar}
+          <ListToolbar>{filter.bar}</ListToolbar>
           <ListSkeleton rowHeight={28} />
         </>
       }

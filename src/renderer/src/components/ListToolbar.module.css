@@ -1,0 +1,10 @@
+/* A rule under each row: the filter's always meets the pane toolbar's across the split, review strip or not. */
+.toolbar {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+}
+
+.toolbar > * {
+  border-bottom: 1px solid var(--border-subtle);
+}

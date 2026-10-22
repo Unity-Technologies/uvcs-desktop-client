@@ -8,6 +8,7 @@ import { ListSkeleton } from '../ui/Skeleton';
 import type { Column } from '../ui/table/column';
 import { DataTable } from '../ui/table/DataTable';
 import { FileTreeCell } from './FileTreeCell';
+import { ListToolbar } from './ListToolbar';
 import { TreeGroupLabel } from './TreeGroupLabel';
 import styles from './FileTreeList.module.css';
 
@@ -30,8 +31,8 @@ interface FileTreeListProps<T, G> {
   onSelectionChange: (selection: SelectionState) => void;
   /** The menu of the selected rows, for every item they stand for: a folder's or a group's, all it holds. */
   contextMenu?: (items: T[]) => MenuEntry[];
-  /** Keys of the list's own (e.g. the review key), on the selected rows' items; true when handled. */
-  onItemsKeyDown?: (event: KeyboardEvent, selectedItems: T[], moveBy: (step: number) => void) => boolean;
+  /** Keys of the list's own (e.g. the review key), on the selected rows' items, the focused row at `focusedIndex` in `rows`; true when handled. */
+  onItemsKeyDown?: (event: KeyboardEvent, selectedItems: T[], moveBy: (step: number) => void, focusedIndex: number) => boolean;
   /** J and K move like ↓ and ↑, for lists read one file after another. */
   letterMoves?: boolean;
   /** For screen readers: what the files are ("Changed files"). */
@@ -77,7 +78,7 @@ export function FileTreeList<T, G>({
   ];
 
   const onRowKeyDown = (event: KeyboardEvent, focused: GroupedTreeRow<T, G>, moveBy: (step: number) => void): void => {
-    if (onItemsKeyDown?.(event, itemsUnderRows(rows.filter((row) => selection.selected.has(row.key))), moveBy)) return;
+    if (onItemsKeyDown?.(event, itemsUnderRows(rows.filter((row) => selection.selected.has(row.key))), moveBy, rows.indexOf(focused))) return;
     const move = groupedTreeKeyMove(rows, rows.indexOf(focused), event.key);
     if (!move) return;
     event.preventDefault();
@@ -87,8 +88,10 @@ export function FileTreeList<T, G>({
 
   return (
     <div className={styles.list}>
-      {filterBar}
-      {belowFilterBar}
+      <ListToolbar>
+        {filterBar}
+        {belowFilterBar}
+      </ListToolbar>
       {loading ? (
         <ListSkeleton rowHeight={ROW_HEIGHT} />
       ) : (

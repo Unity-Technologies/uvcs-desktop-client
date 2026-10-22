@@ -48,6 +48,9 @@ interface DataTableProps<Row> {
   empty?: ReactNode;
 }
 
+/** The room above the first row and below the last of a list without column titles: `--space-1`. */
+const HEADERLESS_INSET = 4;
+
 /**
  * The app's list of rows: sortable columns, the selection of a desktop list (click, ⌘/Ctrl, Shift, the arrows,
  * PageUp/PageDown, Home/End, ⌘A), Enter or a double click to open, and the rows' context menu. Only the rows in view
@@ -90,11 +93,16 @@ export function DataTable<Row>({
   const focused = focusedKeyOf(focusedKey, selection, isShown);
   const focusedIndex = focused === null ? -1 : orderedKeys.indexOf(focused);
 
+  // Without column titles, plain rows keep off the edges above and below them, as Changes' do; the virtualizer owns
+  // that room, so scrolling a row into view still shows it whole.
+  const inset = hideHeader && !divided ? HEADERLESS_INSET : 0;
   const virtualizer = useVirtualizer({
     count: sortedRows.length,
     getScrollElement: () => viewportRef.current,
     estimateSize: () => rowHeight,
     overscan: 12,
+    paddingStart: inset,
+    paddingEnd: inset,
   });
 
   /** Scrolls a shown row into view; false when it isn't shown (yet). */
