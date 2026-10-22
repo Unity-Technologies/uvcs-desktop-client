@@ -30,13 +30,18 @@ uvcs:///<workspace folder>[/-/<page>[/<path>]][#<lines>]                   works
 | --- | --- |
 | `…/repos/game` | the repository: a workspace on it (see "Opening a link") |
 | `…/repos/game/-/<view>` | a view of that workspace: `changes`, `incoming`, `files`, `changesets`, `branch-explorer`, `branches`, `labels`, `shelves`, `attributes`, `code-reviews`, `locks`, `sync` |
-| `…/repos/game/-/files/<path>` | the Files view, the item revealed |
+| `…/repos/game/-/files/<path>`, `…/-/changes/<path>` | the Files view, the item revealed; Changes, its change selected |
+| `…/repos/game/-/browse[/<path>]` | the repository at the head of /main, the item selected |
+| `…/repos/game/-/history/<path>`, `…/-/annotate/<path>` | the item's history, or the item annotated, as the workspace has it |
 | `…/changesets/4207` | the changeset's diff |
 | `…/changesets/4200..4207` | the diff of a range: what 4201 to 4207 changed |
 | `…/branches/main/task001` | the branch's diff |
 | `…/labels/v1.2`, `…/labels/v1.1..v1.2` | the label's diff, or between two labels |
 | `…/shelves/12` | the shelve's diff |
 | `…/code-reviews/311`, `…/merge-requests/311` | the code review |
+
+A workspace link takes the same views and pages but `browse` (`uvcs:///wk/game/-/history/a.cs`); its item is the
+workspace's own.
 
 Pages inside an object (`…/<object>/-/<page>`):
 
@@ -130,14 +135,16 @@ badges.
   details' More actions, the Branch Explorer, the branch pill, the palette): changesets, branches, labels, shelves,
   code reviews, and a repository on the home screen. A file's menu in a diff, a review, a history or Browse
   repository has it too: the change to that file there, or the file as it was.
-- **Copy link** on a diff's and a review's header (`CopyLinkButton`): the link to what the page shows, as a
+- **Copy link** in every page's header (`CopyLinkButton`: a diff, a review, a history, Browse repository; a page
+  window's top bar too): the link to what the page shows, as a
   browser's address bar is, the file selected and the lines selected included ("Copy link to line 42 of Player.cs",
   `copyLinkLabel`).
 - **⇧⌘C (Ctrl+Shift+C) and the palette's "Copy link"** copy a link to whatever is in front (`useCopyLinkCommand`): the
   page (`pageLinkTarget`), else the object selected in the view (its Copy ▸ Link, offered by `useCopyCommand`), else
   the view itself.
 - **After a check-in or an update**, its "Copy link" copies the changeset's link, or the range's (`successLinkObject`).
-- Nothing local is ever copied as a link: Changes and the Files view offer none, and the app writes no workspace link.
+- Nothing local is ever copied as a link: Changes and the Files view offer none (⇧⌘C copies nothing there,
+  `viewLinkTarget`), and the app writes no workspace link.
 
 Pasting a link into the palette offers to open it, saying what it opens (`linkGroupIn`, `linkDescription`), and
 File ▸ Open Link… (the palette's "Open link…") asks for one, the clipboard's already in the field (`askAndOpenLink`).
