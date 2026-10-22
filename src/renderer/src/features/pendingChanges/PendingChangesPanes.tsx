@@ -181,6 +181,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
           selection={selection}
           onSelectionChange={(next) => selectAfterLeaving(selection, next, setSelection)}
           isIncluded={isIncluded}
+          everyCandidateIncluded={checkinSelection.everyCandidateIncluded}
           onToggleIncluded={toggleIncluded}
           onToggleCollapsed={toggleCollapsed}
           onOpen={(change) => openChange(workspacePath, change)}

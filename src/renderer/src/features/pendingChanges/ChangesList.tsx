@@ -33,6 +33,8 @@ interface ChangesListProps {
   onSelectionChange: (selection: SelectionState) => void;
   /** Whether a change goes into the check-in. */
   isIncluded: (change: PendingChange) => boolean;
+  /** Every change that can go in does (`CheckinSelection.everyCandidateIncluded`): a folder's check needs no asking. */
+  everyCandidateIncluded: boolean;
   /** Checks or unchecks what the rows stand for, all at once. */
   onToggleIncluded: ToggleIncluded;
   onToggleCollapsed: (rowKey: string) => void;
@@ -52,6 +54,7 @@ export function ChangesList({
   selection,
   onSelectionChange,
   isIncluded,
+  everyCandidateIncluded,
   onToggleIncluded,
   onToggleCollapsed,
   onOpen,
@@ -80,7 +83,7 @@ export function ChangesList({
   const focusedRow = rows[focusedIndex];
   // A folder's check and mark go over everything in it: worked out once per row, not on every arrow key.
   const candidatesOf = useMemo(() => perRow(candidatesUnderRow), [rows]);
-  const checkStateOf = useMemo(() => perRow((row) => checkStateOver(candidatesOf(row), isIncluded)), [candidatesOf, isIncluded]);
+  const checkStateOf = useMemo(() => perRow((row) => checkStateOver(candidatesOf(row), everyCandidateIncluded ? null : isIncluded)), [candidatesOf, isIncluded, everyCandidateIncluded]);
   const reviewStatusOf = useMemo(() => perRow((row) => (review.on ? rowReviewStatus(row, review.statusOf) : null)), [rows, review.on, review.statusOf]);
   const reviewPartialOf = useMemo(() => perRow((row) => (review.on && row.type === 'folder' ? partialReviewCount(row.items, review.statusOf) : null)), [rows, review.on, review.statusOf]);
 
