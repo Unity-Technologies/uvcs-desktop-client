@@ -20,6 +20,11 @@ export function copyPageObjectLink(workspacePath: string, page: Page): Promise<v
   return copyTarget(workspacePath, pageObjectTarget(page, shownFileNow(page)));
 }
 
+/** Copies a link to lines selected outside any page (the Files view: `LineLinks.linkOf`), as the chip and menu do. */
+export function copyLinesLink(workspacePath: string, target: LinkTarget | null): Promise<void> {
+  return copyTarget(workspacePath, target, nextTimeHint(formatShortcut(hotkey('copyLink'))));
+}
+
 async function copyTarget(workspacePath: string, target: LinkTarget | null, hint?: string): Promise<void> {
   if (target) copyToClipboard(await workspaceLinkTo(workspacePath, target)(), 'Link', hint);
 }

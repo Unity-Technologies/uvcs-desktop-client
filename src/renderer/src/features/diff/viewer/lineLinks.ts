@@ -1,4 +1,5 @@
 import { createContext } from 'react';
+import type { LinkTarget } from '../../../app/links/linkNavigation';
 import type { FocusedLines } from '../../../app/navigation/pages';
 import type { SelectedLines } from '../selectedLinesStore';
 
@@ -16,6 +17,11 @@ export interface LineLinks {
   publishes: boolean;
   /** Opens the file annotated at lines of the diff's newer side, where it can be annotated (the lines' menu). */
   annotateAt?: (lines: FocusedLines) => void;
+  /**
+   * The link to lines selected where the code shows in no page (the Files view, `filesItemLink`), which the line chip
+   * and the lines' menu copy; a page's lines are named by the page (`pageLinkTarget`).
+   */
+  linkOf?: (lines: FocusedLines) => LinkTarget | null;
 }
 
 export const LineLinksContext = createContext<LineLinks | null>(null);

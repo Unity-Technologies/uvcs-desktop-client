@@ -36,8 +36,9 @@ export function useLineTools({ containerRef, layout, range, select, selectable, 
   chip: ReactNode;
   menu: { enabled: boolean; onContextMenu: (event: MouseEvent) => void; entries: () => MenuEntry[] };
 } {
-  const annotateAt = useContext(LineLinksContext)?.annotateAt;
-  const link = usePageLineLink(publishes);
+  const lineLinks = useContext(LineLinksContext);
+  const annotateAt = lineLinks?.annotateAt;
+  const link = usePageLineLink(publishes, lineLinks?.linkOf);
   const linkable = link.target !== null;
   const anchor = lineChipAnchor(range, linkable);
   const menuLines = useRef<FocusedLines | null>(null);
