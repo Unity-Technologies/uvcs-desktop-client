@@ -1,27 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { fileNamesIgnoreCase, formatFilePatterns, matchesAnyFilePattern, matchesFilePattern, parseFilePatterns } from './filePatterns';
+import { fileNamesIgnoreCase, formatFilePatterns, matchesAnyFilePattern, matchesFilePattern } from './filePatterns';
+import { allTokens } from './tokenInput';
 
 const matches = (pattern: string, path: string, ignoreCase = false): boolean => matchesFilePattern(pattern, path, ignoreCase);
 
-describe('parseFilePatterns', () => {
-  it('splits on spaces, commas and semicolons, as typed or as the official client wrote them', () => {
-    expect(parseFilePatterns('.cs .vb')).toEqual(['.cs', '.vb']);
-    expect(parseFilePatterns('.prefab;.unity')).toEqual(['.prefab', '.unity']);
-    expect(parseFilePatterns(' .cs,  *.shader ;; ')).toEqual(['.cs', '*.shader']);
-  });
-
-  it('reads nothing from an empty field', () => {
-    expect(parseFilePatterns('  ')).toEqual([]);
-  });
-
-  it('reads a pattern holding a space in double quotes', () => {
-    expect(parseFilePatterns('"Assets/Third Party/**" .cs')).toEqual(['Assets/Third Party/**', '.cs']);
-  });
-
-  it('reads back what formatFilePatterns shows, quoting what holds a separator, imported patterns included', () => {
+describe('formatFilePatterns', () => {
+  it('quotes what holds a separator, so the token field reads it back, imported patterns included', () => {
     const patterns = ['.cs', 'Assets/**', 'Assets/Third Party/**', 'My Level.unity', 'a,b.txt'];
     expect(formatFilePatterns(patterns)).toBe('.cs Assets/** "Assets/Third Party/**" "My Level.unity" "a,b.txt"');
-    expect(parseFilePatterns(formatFilePatterns(patterns))).toEqual(patterns);
+    expect(allTokens(formatFilePatterns(patterns))).toEqual(patterns);
   });
 });
 

@@ -1,5 +1,3 @@
-import { allTokens } from './tokenInput';
-
 /**
  * File patterns as people type them to name a kind of file: an extension (`.cs`), a wildcard name (`*.prefab`,
  * `Level?.unity`) or a path (`Assets/Data/**`). A pattern without `/` matches the file's name, wherever it is; one with
@@ -7,14 +5,9 @@ import { allTokens } from './tokenInput';
  */
 
 /**
- * The patterns typed in one field, separated by spaces, commas or semicolons (as the official client wrote them); a
- * pattern holding any of those goes in double quotes (`"Assets/Third Party/**"`).
+ * The patterns as one line shows them, quoted where they hold a separator (a space, comma or semicolon), so that
+ * `allTokens` (`lib/tokenInput`) reads them back.
  */
-export function parseFilePatterns(text: string): string[] {
-  return allTokens(text);
-}
-
-/** The patterns as one field shows them, quoted where they hold a separator, so that `parseFilePatterns` reads them back. */
 export function formatFilePatterns(patterns: readonly string[]): string {
   return patterns.map((pattern) => (/[\s,;]/.test(pattern) ? `"${pattern}"` : pattern)).join(' ');
 }
