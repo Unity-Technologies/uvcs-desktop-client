@@ -32,8 +32,13 @@ export async function openLink(text: string): Promise<void> {
   const reading = parseLink(text);
   if ('problem' in reading) return showLinkFailure(reading.problem);
   const { link } = reading;
+  return toldIfFailed(() => (link.kind === 'workspace' ? openWorkspaceLink(link) : openRepositoryLink(link)));
+}
+
+/** Runs what opens a link, telling in a toast when it fails (`cm` gone, the window closed meanwhile). */
+async function toldIfFailed(open: () => Promise<void>): Promise<void> {
   try {
-    await (link.kind === 'workspace' ? openWorkspaceLink(link) : openRepositoryLink(link));
+    await open();
   } catch (error) {
     toast.error("Couldn't open the link", error);
   }
@@ -177,6 +182,7 @@ async function createWorkspaceFor(link: RepositoryLink): Promise<void> {
   const server = profiles.find((profile) => sameServer(profile.server, link.server))?.server ?? link.server;
   openCreateWorkspaceDialog({
     repository: { id: '', name: link.repository, server, owner: '', spec: repositorySpec(link.repository, server) },
-    onCreated: (workspacePath) => void openIn(workspacePath, link, () => showHere(workspacePath, link, link)),
+    // The dialog calls it and goes: it tells its own failure.
+    onCreated: (workspacePath) => toldIfFailed(() => openIn(workspacePath, link, () => showHere(workspacePath, link, link))),
   });
 }
