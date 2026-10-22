@@ -19,7 +19,7 @@ type LegacyTool = { kind: 'tool'; toolId: string } | { kind: 'custom'; tool: Omi
  * after Smart Merge where Unity assets open. Entries for binary files are left out (the app keeps one version of a
  * binary), as are regular expressions, and anything the official client would never reach (after its entry for every
  * file). The client sends C#, Visual Basic and Java to Semantic Merge when its own merge tool takes every file:
- * that becomes a rule too.
+ * that becomes a rule too, while every other file still opens in that tool here (not in one the user picked).
  */
 export function legacyMergeToolSettings(entries: LegacyMergeToolEntry[], current: ImportedMergeToolSettings): ImportedMergeToolSettings {
   const customTools: CustomMergeTool[] = [...current.customMergeTools];
@@ -58,7 +58,8 @@ export function legacyMergeToolSettings(entries: LegacyMergeToolEntry[], current
 
   const mergeTool = current.mergeTool === AUTO_MERGE_TOOL && everyOtherFile && everyOtherFile !== UVCS_TOOL_ID ? everyOtherFile : current.mergeTool;
   const defaultToolId = mergeTool === AUTO_MERGE_TOOL ? UVCS_TOOL_ID : mergeTool;
-  if ((everyOtherFile ?? UVCS_TOOL_ID) === UVCS_TOOL_ID) rules.push(...semanticRule(rules));
+  // As the client does, but only while every other file opens in its own tool: a user who picked theirs keeps C# there.
+  if (defaultToolId === UVCS_TOOL_ID) rules.push(...semanticRule(rules));
 
   return {
     mergeTool,

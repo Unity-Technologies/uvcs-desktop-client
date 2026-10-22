@@ -106,6 +106,8 @@ describe('importLegacySettings', () => {
       '\r\n',
     );
 
+    const CLIENT_CONF_OWN_TOOL = clientConf(mergeTools(mergeToolData('enTextFile', '*', ['plastic xmerge -b="@basefile" -r="@output"'])));
+
     it("become the app's rules on the first run, read from client.conf without writing it", () => {
       const { legacyFolder, openSettings } = setUp({ 'client.conf': CLIENT_CONF });
       const before = snapshot(legacyFolder);
@@ -132,6 +134,18 @@ describe('importLegacySettings', () => {
       openSettings().update({ mergeToolRules: [] });
       importLegacySettings(openSettings(), legacyFolder);
       expect(openSettings().get().mergeToolRules).toEqual([]);
+    });
+
+    it('leave C# in VS Code for a user who picked VS Code, with or without client.conf', () => {
+      for (const files of [{ 'client.conf': CLIENT_CONF_OWN_TOOL }, {}] as Record<string, string>[]) {
+        const { legacyFolder, settingsFile, openSettings } = setUp(files);
+        mkdirSync(join(settingsFile, '..'));
+        writeFileSync(settingsFile, JSON.stringify({ legacySettingsImported: true, mergeTool: 'vscode' }));
+        importLegacySettings(openSettings(), legacyFolder);
+        const rules = openSettings().get().mergeToolRules;
+        expect(rules.filter((rule) => rule.toolId === 'semantic')).toEqual([]);
+        expect(openSettings().get().mergeTool).toBe('vscode');
+      }
     });
 
     it("keep the app's defaults when the official client has none, or its file can't be read, and count as done", () => {

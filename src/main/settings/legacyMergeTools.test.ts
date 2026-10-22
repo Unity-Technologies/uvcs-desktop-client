@@ -134,6 +134,12 @@ describe('legacyMergeToolSettings', () => {
     expect(legacyMergeToolSettings(entries, fresh)).toMatchObject({ mergeTool: 'meld', mergeToolRules: [] });
   });
 
+  it('sends no C#, VB or Java to Semantic Merge for a user who picked their own tool for every other file', () => {
+    const imported = legacyMergeToolSettings([text('.shader', 'rider "@output"'), text('*', XMERGE_WINDOWS)], { ...fresh, mergeTool: 'vscode' });
+    expect(imported).toMatchObject({ mergeTool: 'vscode', mergeToolRules: [{ patterns: ['.shader'], toolId: 'rider' }] });
+    expect(imported.mergeToolRules).toHaveLength(1);
+  });
+
   it('keeps the user’s own pick for every other file over the client’s', () => {
     const imported = legacyMergeToolSettings([text('*', 'meld "@output"')], { ...fresh, mergeTool: 'vscode' });
     expect(imported.mergeTool).toBe('vscode');
