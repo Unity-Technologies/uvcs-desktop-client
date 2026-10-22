@@ -34,7 +34,7 @@ import type { PendingReview } from './review/usePendingReview';
 import { behindBranch, behindDescription } from './checkinBehind';
 import { checkinAfterUpdateMessage, useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { undoUnchangedCheckouts } from './checkinOperations';
-import { matchesBranch } from './changeCategories';
+import { isCheckinCandidate, matchesBranch } from './changeCategories';
 import { changesUnderRow, type ChangeRow } from './changeRows';
 import { indexPending, pathsCheckedTogether } from './checkinDependencies';
 import { changesPanesState } from './changesPanesState';
@@ -109,7 +109,8 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const listed = useMemo(() => ({ all: sorted, matchingFilter: filtered, index, facts }), [sorted, filtered, index, facts]);
   const checkinSelection = useCheckinSelection(listed, checkinChoice);
   const { isIncluded, included, hiddenIncludedCount, upload, shelvable, shelvableUpload, bulkPrivate } = checkinSelection;
-  const shownChecked = useMemo(() => checkedAmong(changes, filtered, checkinSelection), [changes, filtered, checkinSelection]);
+  const shownCandidates = useMemo(() => changes.filter(isCheckinCandidate).length, [changes]);
+  const shownChecks = useMemo(() => ({ candidates: shownCandidates, checked: checkedAmong(changes, filtered, checkinSelection) }), [shownCandidates, changes, filtered, checkinSelection]);
   const allReviewed = useMemo(() => isAllReviewed(review.on, included, review.statusOf), [review.on, included, review.statusOf]);
   const { mergeChanges, onlyNeverCheckedIn } = useMemo(
     () => ({ mergeChanges: allChanges.filter((change) => change.mergeInfo), onlyNeverCheckedIn: allChanges.length > 0 && matchesBranch(allChanges) }),
@@ -182,6 +183,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
           onSelectionChange={(next) => selectAfterLeaving(selection, next, setSelection)}
           isIncluded={isIncluded}
           everyCandidateIncluded={checkinSelection.everyCandidateIncluded}
+          shownChecks={shownChecks}
           onToggleIncluded={toggleIncluded}
           onToggleCollapsed={toggleCollapsed}
           onOpen={(change) => openChange(workspacePath, change)}
@@ -223,7 +225,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
             <ChangesSummaryBar
               changes={changes}
               totalCount={listedCount}
-              includedCount={shownChecked}
+              includedCount={shownChecks.checked}
               onSetIncluded={setEveryShownIncluded}
               onUndo={(selected) => void undoChanges(workspacePath, selected)}
               onUndoUnchanged={() => void undoUnchangedCheckouts(workspacePath)}

@@ -11,15 +11,24 @@ export function candidatesUnderRow(row: ChangeRow): PendingChange[] {
 /**
  * A file's check, or a folder's or changelist's over what it holds that can go into a check-in (`candidates`:
  * `candidatesUnderRow`), null when nothing can (ignored files). `isChosen` tells whether each is checked, null when
- * every one is (`CheckinSelection.isChosen`), which a folder of a million then tells at once.
+ * every one is (`CheckinSelection.everyCandidateIncluded`), which a folder of a million then tells at once. `shown`:
+ * how many changes shown can go in, and how many are checked; a row holding as many holds them all (the folders above
+ * everything), and takes its check from them without asking.
  */
-export function checkStateOver(candidates: PendingChange[], isChosen: ((change: PendingChange) => boolean) | null): CheckState | null {
+export function checkStateOver(candidates: PendingChange[], isChosen: ((change: PendingChange) => boolean) | null, shown?: ShownChecks): CheckState | null {
   if (candidates.length === 0) return null;
   if (isChosen === null) return true;
   let checked = 0;
-  for (const change of candidates) if (isChosen(change)) checked++;
+  if (shown && candidates.length === shown.candidates) checked = shown.checked;
+  else for (const change of candidates) if (isChosen(change)) checked++;
   if (checked === 0) return false;
   return checked === candidates.length ? true : 'mixed';
+}
+
+/** How many changes shown can go into a check-in, and how many of them are checked (`checkedAmong`). */
+export interface ShownChecks {
+  candidates: number;
+  checked: number;
 }
 
 /** What Space checks or unchecks, and which way. */
