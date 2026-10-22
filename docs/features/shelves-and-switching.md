@@ -33,9 +33,11 @@ its button reads "Undo & switch" or "Create & undo changes" in red (`switchButto
 notes follow it (`switchNotes`: nothing is shelved, locks are released). The main process undoes the changes as Undo
 in Changes does (added files stay, private) and switches, shelving nothing (`discardChanges`). With no shelve, a
 failure can't put anything back: the error says some changes may be undone already and nothing was switched, or that
-they were undone and the switch didn't finish. "Review changes", on the left of the footer (also when a merge blocks
-the switch), closes the dialog, doing nothing, and opens Changes. The new-branch dialog's "Start from" is a compact
-list (`OptionCards` `layout="list"`): a radio row per starting point, the chosen one's description once under them.
+they were undone and the switch didn't finish. "Review changes", on the left of the footer, closes the dialog, doing
+nothing, and opens Changes: in the switch's question also when a merge blocks the switch, in the new-branch dialog
+only while it asks (`newBranchSwitch`, which decides what that dialog shows about switching). The new-branch dialog's
+"Start from" is a compact list (`OptionCards` `layout="list"`): a radio row per starting point, the chosen one's
+description once under them.
 
 A code review brings the reviewer its code through the same flows (`reviewedCodeAction`, in the review's menu and its
 page's header): "Switch to this branch" or "Switch to this changeset" is the branch's or changeset's own switch, and

@@ -68,6 +68,30 @@ export function switchButton(action: SwitchChangesAction | null): PrimaryButton 
   return action === 'discard' ? { label: 'Undo & switch', variant: 'danger' } : { label: 'Switch', variant: 'primary' };
 }
 
+/** What the new-branch dialog shows about switching to the new branch, from the checkbox, the plan and the choice. */
+export interface NewBranchSwitch {
+  /** The question to ask about the pending changes, and "Review changes" with it; null when there is none. */
+  question: { choice: SwitchChoice; preflight: SwitchPreflight } | null;
+  /** The workspace stays where it is despite the checkbox: a merge is unfinished. */
+  blockedByMerge: boolean;
+  button: PrimaryButton;
+}
+
+/** Decides `NewBranchSwitch`. `pending` is undefined until the workspace was read. */
+export function newBranchSwitch(
+  switchAfter: boolean,
+  pending: { preflight: SwitchPreflight; plan: SwitchPlan } | undefined,
+  action: SwitchChangesAction | null,
+): NewBranchSwitch {
+  const plan = switchAfter ? pending?.plan : undefined;
+  const blockedByMerge = plan?.kind === 'blockedByMerge';
+  return {
+    question: plan?.kind === 'ask' && pending ? { choice: plan.choice, preflight: pending.preflight } : null,
+    blockedByMerge,
+    button: createBranchButton(action, switchAfter && !blockedByMerge),
+  };
+}
+
 /** The new-branch dialog's primary button: as `switchButton`, when the workspace is to switch to the new branch. */
 export function createBranchButton(action: SwitchChangesAction | null, switching: boolean): PrimaryButton {
   return switching && action === 'discard' ? { label: 'Create & undo changes', variant: 'danger' } : { label: 'Create branch', variant: 'primary' };
