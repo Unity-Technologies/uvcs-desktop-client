@@ -160,7 +160,7 @@ try {
     await window.getByRole('dialog').getByRole('combobox').waitFor();
   });
   await step('A link pasted in the palette', async () => {
-    // The official client's shape, as people paste what they were sent: it opens the changeset's diff, on the file.
+    // The official client's shape, as people paste what they were sent: it opens the changeset's diff.
     await window.keyboard.type('plastic://local/repos/demo/changesets/3/diff');
     await window.getByRole('dialog').getByRole('option', { name: /^Changeset 3/ }).click();
     await main.getByText('src/player.cs', { exact: true }).first().waitFor();
