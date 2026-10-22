@@ -49,7 +49,9 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
 ⇧⌘S, "Your shelves…" in the palette), shown while the user has shelves in this repository from the last three months.
 
 - **Shelving** (the check-in panel's Shelve mode) undoes what it shelves: `shelveAndUndo` (`main/workspace`) is the
-  switch flow's first half. It shelves with the user's comment, checks the shelve holds every change (`createVerifiedShelve`),
+  switch flow's first half. It shelves with the user's comment, giving cm only the paths it must (`ShelveAwayRequest`'s
+  `targets`, from `checkinPathsOf`: ARCHITECTURE.md "Parsing `cm` output") while recording and undoing every change the
+  shelve takes (its `paths`, the folders cm took along included), checks the shelve holds every change (`createVerifiedShelve`),
   records it as a switch shelve record with `reason: 'shelve'`, undoes the changes and moves the files they added aside;
   a failure puts them back. The toast offers Undo (apply and delete). "Keep the changes here", under the comment, is the
   other way (a plain `cm shelveset create`), asked for each time: the panel goes back to checking in after a shelve.

@@ -302,12 +302,25 @@ and many people use the same server. Every `cm` command other than local reads (
   an info toast ("Nothing to check in"); with any other change in, no changeset is a failure (`expectedCheckinResult`).
 - `cm checkin` and `cm shelveset create` take everything under each path they're given, and nothing makes them take a
   folder alone (paths read from stdin too): `--all` adds every change there, `--private` every private item. Given a
-  path, they take along the checkouts and adds of the folders above it, while a moved, deleted or private folder must
-  be given itself ("depend on others that need to be included"). So Changes never gives cm a checked-out or added
-  folder holding something checked, and asks for `--private` only when a private item is checked
-  (`checkinPathsOf`, `CheckinRequest.addsPrivate`). What a folder it must give takes along unchecked is `pulledIn`, and
-  the check-in or shelve asks first ("Also check in 2 changes inside lib?"). A checkout inside a writable xlink checks
-  the xlink out: cm status lists it as a checked-out folder, and given, it took every private item inside the xlink.
+  path, they take along the checkouts of the folders above it, and with `--dependencies` their adds and private
+  folders, nothing else in them; a moved or deleted folder must be given itself ("the change '/lib' must be selected
+  too"), and so must all of a pending merge ("All merge changes must be checked in together"). So Changes gives cm as
+  little as it takes (`checkinPathsOf`): never a checked-out folder holding something checked, `--private` only when a
+  private item is checked (`CheckinRequest.addsPrivate`), and a private, added or moved folder whose all is checked
+  alone, one path for a new project however many files it holds (`wholeFolders`). A checkout inside a writable xlink
+  checks the xlink out: cm status lists it as a checked-out folder, and given, it took every private item inside the
+  xlink. Shelving away gives cm those paths but undoes every change the shelve takes (`ShelveAwayRequest`).
+- **What a check-in needs is checked with it**, in the list as the user clicks, never asked at the end: checking a change
+  checks the private, added or moved folders holding it, all of a moved folder but its private items, the move away
+  from where an added item now is, the moves out of a deleted folder, and all of a pending merge; unchecking one
+  unchecks what can't go in without it (`neededWith`, `needingThem`, `pathsCheckedTogether`). Read back, the checks are
+  made consistent (`consistentlyIncluded`): a new file in a folder left out stays out, one in a checked moved folder goes
+  in. What a shown change needs goes in even while the filter hides it, and the button counts it. The one question
+  left is for private items inside a moved folder once another private item is checked: cm would take them, and only
+  the user checks a private item (`pulledIn`, "Also check in 2 changes inside lib?"). The legacy client asks about
+  dependencies in a dialog when Check in is pressed; that was dropped as breaking the flow at its last step. All of it
+  is indexed once per read of the changes (`indexPending`), so a click looks up only the folders above what it touched,
+  on lists of tens of thousands.
 
 ## Xlinks
 
