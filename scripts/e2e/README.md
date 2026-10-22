@@ -28,7 +28,7 @@ answers "Not now" and, once the app quits, checks was saved (`gravatarChoiceAske
   (`where.cjs`); other conditions keep every object.
 - `repository.cjs` is the synthetic repository: 3 branches, 8 changesets (one incoming), 2 labels, a shelve, a code
   review, an attribute, a lock, the repository's and server's permissions (`showacl`), the workspace's files and the revisions `cm cat` and `cm diff` answer. `status.cjs`
-  answers `cm status --xml`, `tree.cjs` `cm ls --format=…`.
+  answers `cm status --header --xml` and the changes as `--machinereadable` records, `tree.cjs` `cm ls --format=…`.
 - A command, `find` object or `--format` field it doesn't know fails with exit code 1, naming it, and the smoke test
   fails listing it. **When a view starts running a new `cm` command, teach the fake**: add it to `COMMANDS`, with its
   objects in `repository.cjs`, output shaped as the app's parser reads it (its tests show real `cm` output).

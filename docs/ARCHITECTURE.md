@@ -255,7 +255,11 @@ and many people use the same server. Every `cm` command other than local reads (
   similarity comes in `cm`'s culture (`85,5%`). Records hold no size, date or file type: Changes reads the size, the
   date and whether a file is a link from the disk as the records arrive (`DiskDetails`, a local read; what `--xml`
   reported was the disk's too), and tells no binary file from a text one (the row's icon follows the file's extension).
-  Only the header stays XML (`parseWorkspaceStatus`): the `STATUS` record names no selector. As `cm ls`'s, its
+  Only the header stays XML (`parseWorkspaceStatus`): the `STATUS` record names no selector. It stays a `query()`
+  (`readPendingChanges`): it answers most workspaces in milliseconds and runs on every refresh, which a process would
+  make 100–150 ms slower each time (about half a second more on Windows, where it needs a `cm shell` of its own for
+  UTF-8: `printsInConsoleCodePage`); a workspace of a million changes holds one of its two sessions for 5–7 s, while
+  the other keeps answering the workspace's other reads. As `cm ls`'s, its
   records come in UTF-8 on Windows only from a `cm shell` (`processCommand`, `printsInConsoleCodePage`).
 - **XML remains** only where `--format` can't say it, for answers that stay small: the `cm status` header
   (`parseWorkspaceStatus`: a local read, under a KB); `cm history --format`
@@ -1090,8 +1094,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   (0.5-0.6 ms a step). What each change adds to a check-in is worked out once a read (`checkinCandidatesOf`: its
   upload, whether a shelve takes it, the folder a private file counts in), and what each folder holds that can go in
   once a layout (`candidatesUnderRow`): a click on a box then only asks each change whether its box is checked
-  (`checkinSelectionOf`), and nothing while every box is (`isChosen` null). A click took 0.36 s for a million changes
-  before, and 0.1 s since.
+  (`checkinSelectionOf`), and nothing while every box is (`isChosen` null).
 - **Lists of changed files** read and work the same everywhere: Changes, every diff (changeset, branch, shelve, code
   review: `DiffEntryList`), the details panels' changed files (`ChangedFilesSection`), Incoming and the merge page.
   - **One order**: by path, folder by folder, names as people read them (`file_2` before `file_10`, case only between
