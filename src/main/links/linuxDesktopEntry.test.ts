@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { linuxDesktopEntry, mayWriteDesktopEntry } from './linuxDesktopEntry';
+import { linkHandlerDesktopId, linuxDesktopEntry, mayWriteDesktopEntry } from './linuxDesktopEntry';
 
 describe('linuxDesktopEntry', () => {
   it('runs the AppImage as the handler of uvcs:// links, hidden from the menus', () => {
@@ -33,5 +33,11 @@ describe('mayWriteDesktopEntry', () => {
 
   it("never touches a package's or another tool's entry", () => {
     expect(mayWriteDesktopEntry('[Desktop Entry]\nName=Unity Version Control\nExec=/opt/uvcs/uvcs-desktop %U\n')).toBe(false);
+  });
+});
+
+describe('linkHandlerDesktopId', () => {
+  it("is an id of its own beside the app's, which the launcher matches the app's windows by", () => {
+    expect(linkHandlerDesktopId('com.unity.uvcs-desktop.desktop')).toBe('com.unity.uvcs-desktop.link-handler.desktop');
   });
 });

@@ -4,10 +4,20 @@ import { LINK_SWITCH } from './linkArgument';
 export const MANAGED_KEY = 'X-UVCS-Desktop-Managed';
 
 /**
- * The desktop entry that makes an AppImage open `uvcs://` links (an AppImage registers nothing itself): the app at
- * `appImage`, run as the scheme's handler (`--uvcs-link -- %u`). Hidden from the desktop's menus (`NoDisplay`), which
- * stay the job of the user's AppImage integration, if any: it only names the handler. `%u` is empty when nothing opens
- * a link, and the launch is then the app's plain start.
+ * The desktop id of the entry that opens `uvcs://` links, apart from the app's own (`com.unity.uvcs-desktop.desktop`,
+ * Electron's `CHROME_DESKTOP`). The launcher matches the app's windows to an entry by that id, for their icon and the
+ * progress bar (`iconProgress`): an icon-less hidden entry under it would win over the user's AppImage integration
+ * (AppImageLauncher, Gear Lever, appimaged) and the app would show a generic icon. So the handler has an id of its own.
+ */
+export function linkHandlerDesktopId(appDesktopId: string): string {
+  return `${appDesktopId.replace(/\.desktop$/, '')}.link-handler.desktop`;
+}
+
+/**
+ * The desktop entry that makes an AppImage open `uvcs://` links (an AppImage registers nothing itself), under
+ * `linkHandlerDesktopId`: the app at `appImage`, run as the scheme's handler (`--uvcs-link -- %u`). Hidden from the
+ * desktop's menus (`NoDisplay`), which stay the job of the user's AppImage integration, if any: it only names the
+ * handler. `%u` is empty when nothing opens a link, and the launch is then the app's plain start.
  */
 export function linuxDesktopEntry(appImage: string, name: string): string {
   return [

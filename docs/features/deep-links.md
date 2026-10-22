@@ -17,7 +17,8 @@ uvcs:///<workspace folder>[/-/<page>[/<path>]][#<lines>]                   works
   their folders), so they open for anyone with access. They are the only links the app writes.
 - **Workspace links** have no server, as `file:///` has no host: they name a folder on this computer, written as
   `file:///` writes it (`uvcs:///C:/wk/game` on Windows). They are for agents and scripts on the same computer ("open
-  the file I just changed in Changes"); the app never copies one.
+  the file I just changed in Changes"); the app never copies one. A workspace on a network share named by its UNC
+  path (`\\server\share\wk`) has no workspace link: the link has no room for the share's host.
 - **`/-/`** separates the object from a page inside it, after every object, as GitLab does: a branch's name holds `/`,
   so nothing else could tell where it ends. A branch or folder named `-` is written `%2D`.
 - **Lines** go in the fragment: `#L42`, `#L40-L52`; in a diff, a line only the older side has (a deleted one) is
@@ -152,14 +153,17 @@ The installers ask nothing more: installing the app is what makes it open `uvcs:
 - **Windows**: the NSIS installer writes `HKCU\Software\Classes\uvcs` (per user, no administrator) running
   `"<exe>" --uvcs-link -- "%1"`, and its uninstaller removes it (`build/installer.nsh`); electron-builder's NSIS
   writes no protocol itself. Every silent update writes it again.
-- **Linux**: an AppImage registers nothing. The app writes its own desktop entry where the desktop finds it
-  (`$XDG_DATA_HOME/applications/<desktopName>`, `~/.local/share` by default; `linuxDesktopEntry`:
-  `Exec="$APPIMAGE" --uvcs-link -- %u`, `MimeType=x-scheme-handler/uvcs;`) and makes it the scheme's handler
-  (Electron runs `xdg-settings`). The entry is `NoDisplay`: it names the handler only, and the desktop's menus stay
-  the job of the user's AppImage integration, if any. It is written when missing or out of date (the AppImage moved),
-  and only then registered, as `xdg-settings` holds the main process a moment. An entry the app didn't write (marked
-  `X-UVCS-Desktop-Managed`) is left alone. A package (deb, rpm) would declare the scheme in its own `.desktop`, from
-  `protocols`.
+- **Linux**: an AppImage registers nothing. The app writes a desktop entry for links where the desktop finds it
+  (`$XDG_DATA_HOME/applications`, `~/.local/share` by default; `linuxDesktopEntry`: `Exec="$APPIMAGE" --uvcs-link --
+  %u`, `MimeType=x-scheme-handler/uvcs;`, `NoDisplay`) and makes it the scheme's handler (`xdg-mime default`,
+  `setDefaultLinkHandler`). The entry has an id of its own, `com.unity.uvcs-desktop.link-handler.desktop`
+  (`linkHandlerDesktopId`), never the app's (`desktopName`): the launcher matches the app's windows to the entry
+  named by the app's id, for their icon and progress bar, and an icon-less hidden entry there would win over the
+  user's AppImage integration (AppImageLauncher, Gear Lever, appimaged), giving the app a generic icon. That is also
+  why it runs `xdg-mime` itself: Electron's `setAsDefaultProtocolClient` registers only the app's own id there. The
+  entry is written when missing or out of date (the AppImage moved), and only then registered; one under the app's
+  id that an earlier version wrote is removed. An entry the app didn't write (marked `X-UVCS-Desktop-Managed`) is left
+  alone. A package (deb, rpm) would declare the scheme in its own `.desktop`, from `protocols`.
 - Every packaged launch registers again (`registerLinkScheme`: `setAsDefaultProtocolClient` on Windows and macOS), so
   the scheme comes back if another app took it. Development builds never register: they would take links from the
   installed app. `schemeRegistration.test.ts` keeps the installers' scheme and command the app's.
