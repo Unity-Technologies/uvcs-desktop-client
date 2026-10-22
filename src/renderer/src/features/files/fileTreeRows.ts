@@ -86,10 +86,6 @@ export function ancestorsOf(path: string): string[] {
   return segments.slice(0, -1).map((_, index) => segments.slice(0, index + 1).join('/'));
 }
 
-export function parentOf(path: string): string {
-  return path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
-}
-
 /** Whether an item's name, or a name listed anywhere below it, holds every word of the filter; each directory is searched once. */
 function matcherFor(filter: string, childrenByDirectory: ReadonlyMap<string, TreeItem[]>): (item: TreeItem) => boolean {
   const directoryMatches = new Map<string, boolean>();

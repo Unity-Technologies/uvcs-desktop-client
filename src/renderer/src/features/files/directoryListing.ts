@@ -2,7 +2,7 @@ import type { TreeItem } from '@shared/domain/explorer';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
-import { parentOf } from './fileTreeRows';
+import { parentOf } from '../../lib/paths';
 
 /**
  * A workspace folder's listing (`''` is the root): one query shared by the Files tree, Go to file's actions, Paste and

@@ -1,6 +1,6 @@
 import { Copy, Pencil } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import { splitComment, type CommentParts } from '../lib/comment';
+import { shownComment, splitComment, type CommentParts, type SavedComment } from '../lib/comment';
 import { copyToClipboard } from '../ui/copyToClipboard';
 import { IconButton } from '../ui/IconButton';
 import { CommentEditor } from './CommentEditor';
@@ -12,18 +12,27 @@ interface DetailsHeadingProps {
   name?: ReactNode;
   comment?: string;
   /**
-   * Saves an edited comment, resolving to false when it couldn't (the editor then stays open); without it the heading
-   * is read-only (cm can't change every object's comment).
+   * Saves an edited comment, resolving to whether it saved (one that couldn't stays in its editor); without it the
+   * heading is read-only (cm can't change every object's comment).
    */
-  onSave?: (comment: string) => Promise<unknown>;
+  onSave?: (comment: string) => Promise<boolean>;
 }
 
 /**
  * The title and description at the top of a details panel, read like a commit message: the first line of the comment
- * as the title, the rest below it in muted text, folded when long. Editable in place where cm can edit the comment.
+ * as the title, the rest below it in muted text, folded when long. Editable in place where cm can edit the comment;
+ * a comment saved shows at once, not the old one until the refresh reads it (`shownComment`). Its panel is keyed by
+ * the object, so what it saved never shows on another one.
  */
-export function DetailsHeading({ name, comment = '', onSave }: DetailsHeadingProps) {
+export function DetailsHeading({ name, comment: given = '', onSave }: DetailsHeadingProps) {
   const [draft, setDraft] = useState<CommentParts | null>(null);
+  const [lastSaved, setLastSaved] = useState<SavedComment | null>(null);
+  const comment = shownComment(given, lastSaved);
+  const save = async (edited: string): Promise<boolean> => {
+    const saved = (await onSave?.(edited)) === true;
+    if (saved) setLastSaved({ saved: edited, replaced: given });
+    return saved;
+  };
   const parts = name === undefined ? splitComment(comment) : { summary: '', description: comment.trim() };
   const edit = onSave ? () => setDraft(parts) : undefined;
 
@@ -31,7 +40,7 @@ export function DetailsHeading({ name, comment = '', onSave }: DetailsHeadingPro
     return (
       <div className={styles.heading} data-named={name !== undefined}>
         {name !== undefined && <h2 className={`${styles.title} selectable`}>{name}</h2>}
-        <CommentEditor draft={draft} original={comment} opened={parts} withSummary={name === undefined} onChange={setDraft} onSave={onSave} onClose={() => setDraft(null)} />
+        <CommentEditor draft={draft} original={comment} opened={parts} withSummary={name === undefined} onChange={setDraft} onSave={save} onClose={() => setDraft(null)} />
       </div>
     );
   }

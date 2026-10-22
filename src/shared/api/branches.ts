@@ -8,6 +8,8 @@ export interface BranchesApi {
   create(workspacePath: string, request: CreateBranchRequest): Promise<void>;
   /** `newName` is the last segment only: renaming `/main/task` to `feature` gives `/main/feature`. */
   rename(workspacePath: string, branch: string, newName: string): Promise<void>;
+  /** Replaces the branch's comment; an empty one removes it. */
+  editComment(workspacePath: string, branch: string, comment: string): Promise<void>;
   delete(workspacePath: string, branches: string[]): Promise<void>;
   setHidden(workspacePath: string, branches: string[], hidden: boolean): Promise<void>;
   /** The GUIDs of the branches this workspace switched to lately, newest first, from the app's settings. */

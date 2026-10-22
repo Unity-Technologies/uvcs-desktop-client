@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TreeItem } from '@shared/domain/explorer';
 import { treeArrowMove } from '../../lib/treeArrowMove';
-import { ancestorsOf, buildFileTreeRows, fileTreeArrowRows, indentOf, parentOf, sortItems } from './fileTreeRows';
+import { ancestorsOf, buildFileTreeRows, fileTreeArrowRows, indentOf, sortItems } from './fileTreeRows';
 
 function item(path: string, itemType: TreeItem['itemType'] = 'file'): TreeItem {
   return {
@@ -105,11 +105,6 @@ describe('path helpers', () => {
   it('returns ancestors outermost first', () => {
     expect(ancestorsOf('a/b/c.ts')).toEqual(['a', 'a/b']);
     expect(ancestorsOf('c.ts')).toEqual([]);
-  });
-
-  it('returns the parent directory', () => {
-    expect(parentOf('a/b/c.ts')).toBe('a/b');
-    expect(parentOf('c.ts')).toBe('');
   });
 });
 

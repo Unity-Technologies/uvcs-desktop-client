@@ -1,6 +1,6 @@
 import type { Branch, CreateBranchRequest } from '@shared/domain/branch';
 import { shortBranchName, spec } from '@shared/domain/specs';
-import type { PendingChangesAction } from '@shared/domain/switchWithChanges';
+import type { SwitchChangesAction } from '@shared/domain/switchWithChanges';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageOf } from '../../app/navigation/pages';
@@ -21,7 +21,7 @@ import { rememberRecentBranch } from './recentBranches';
  * Resolves to whether the workspace switched. `pendingChanges` is the choice already made for the pending changes, if
  * any. The switch's words (its progress, its question, its toast) name the branch by its own name (`branchLabel`).
  */
-export function switchToBranch(workspacePath: string, branch: string, pendingChanges?: PendingChangesAction): Promise<boolean> {
+export function switchToBranch(workspacePath: string, branch: string, pendingChanges?: SwitchChangesAction): Promise<boolean> {
   void rememberRecentBranch(workspacePath, branch);
   return switchWorkspace(workspacePath, spec.branch(branch), branchLabel(branch), pendingChanges);
 }
@@ -33,7 +33,7 @@ export interface SwitchToNewBranch {
   /** A merge in progress keeps the workspace where it is, even when a switch was requested. */
   blockedByMerge: boolean;
   /** The choice already made for the pending changes, if any. */
-  pendingChanges?: PendingChangesAction;
+  pendingChanges?: SwitchChangesAction;
   /** What the workspace is on, to say where it stayed. */
   workspaceOn?: string;
 }
@@ -85,6 +85,11 @@ export async function renameBranch(workspacePath: string, branch: Pick<Branch, '
   });
   if (!newName) return;
   await runAction(workspacePath, "Couldn't rename the branch", () => api.branches.rename(workspacePath, branch.name, newName));
+}
+
+/** Resolves to whether it saved, so a comment that couldn't be saved stays in its editor. */
+export function saveBranchComment(workspacePath: string, branch: Pick<Branch, 'name'>, comment: string): Promise<boolean> {
+  return runVoidAction(workspacePath, "Couldn't update the comment", () => api.branches.editComment(workspacePath, branch.name, comment), isAffectedByBranchList);
 }
 
 export async function deleteBranches(workspacePath: string, branches: Pick<Branch, 'name'>[]): Promise<void> {

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { countCalls } from '@shared/testing/countCalls';
-import { bulkPrivateFiles } from './bulkPrivate';
-import { checkinCandidatesOf, checkinSelectionOf, includedBy, shownIncludedCount, type CheckinChoice } from './checkinSelection';
-import { uploadSummary } from './uploadSummary';
+import { indexPending } from './checkinDependencies';
+import { checkinSelectionOf, includedBy, type CheckinChoice, type ListedChanges } from './checkinSelection';
+
+/** Changes listed, of which the filter shows `matchingFilter`: all of them when nothing filters. */
+const listing = (all: PendingChange[], matchingFilter = all): ListedChanges => ({ all, matchingFilter, index: indexPending(all) });
 
 /** The choice of a user who unchecked `paths`. */
 const unchecking = (paths: string[]): CheckinChoice => ({ excludedPaths: new Set(paths), prepared: null });
@@ -29,14 +30,53 @@ describe('includedBy', () => {
 });
 
 describe('checkinSelectionOf', () => {
-  it('checks in every included change, whatever the filter shows: the filter only narrows the list', () => {
-    const selection = checkinSelectionOf(checkinCandidatesOf(all), unchecking(['src/new.ts']));
+  it('checks in the checked changes, but those the user unchecked', () => {
+    const selection = checkinSelectionOf(listing(all), includedBy(unchecking(['src/new.ts'])));
 
     expect(selection.included).toEqual([edited, privateFile, link]);
   });
 
+  // Filtered by Changed: the private file stays checked, out of sight, and out of the check-in.
+  it('checks in only the checked changes the filter shows, keeping the hidden ones checked for when they show again', () => {
+    const isIncluded = includedBy(unchecking([]));
+    const selection = checkinSelectionOf(listing(all, [edited, link]), isIncluded);
+
+    expect(selection.included).toEqual([edited, link]);
+    expect(selection.upload.bytes).toBe(101);
+    expect(isIncluded(privateFile)).toBe(true);
+  });
+
+  // Filtered by name on "file.c", the private folders it needs don't show: they go in with it, as cm needs them.
+  it('takes with a shown change the hidden ones it needs, and counts them', () => {
+    const foo = { ...change('foo', ['private'], 0), itemType: 'directory' as const };
+    const fileC = change('foo/file.c', ['private']);
+    const listed = [foo, fileC, edited];
+
+    const selection = checkinSelectionOf(listing(listed, [fileC]), includedBy(unchecking([])));
+
+    expect(selection.included).toEqual([foo, fileC]);
+    expect(selection.hiddenIncludedCount).toBe(1);
+  });
+
+  // The added file is unchecked, the ignored and hidden ones are never checked: the private file alone waits.
+  it('counts the checked changes the filter hides, for the button to say why it has nothing to take', () => {
+    const isIncluded = includedBy(unchecking(['src/new.ts']));
+
+    expect(checkinSelectionOf(listing(all, [edited, link]), isIncluded).hiddenIncludedCount).toBe(1);
+    expect(checkinSelectionOf(listing(all), isIncluded).hiddenIncludedCount).toBe(0);
+  });
+
+  // Filtered by Changed over 60 generated private files: none of them goes in, so there is nothing to warn about.
+  it('shelves, and warns about many private files, only from what the filter shows', () => {
+    const generated = Array.from({ length: 60 }, (_, index) => change(`gen/f${index}.cs`, ['private']));
+    const isIncluded = includedBy(unchecking([]));
+
+    expect(checkinSelectionOf(listing([edited, ...generated]), isIncluded).bulkPrivate?.fileCount).toBe(60);
+    expect(checkinSelectionOf(listing([edited, ...generated], [edited]), isIncluded)).toMatchObject({ included: [edited], shelvable: [edited], bulkPrivate: null });
+  });
+
   it('shelves what a shelve can take: no private files, no links', () => {
-    const selection = checkinSelectionOf(checkinCandidatesOf(all), unchecking([]));
+    const selection = checkinSelectionOf(listing(all), includedBy(unchecking([])));
 
     expect(selection.shelvable).toEqual([edited, added]);
     expect(selection.shelvableUpload.bytes).toBe(120);
@@ -46,56 +86,7 @@ describe('checkinSelectionOf', () => {
   it('warns about many private files only when they are included', () => {
     const generated = Array.from({ length: 60 }, (_, index) => change(`gen/f${index}.cs`, ['private']));
 
-    expect(checkinSelectionOf(checkinCandidatesOf(generated), unchecking([])).bulkPrivate?.fileCount).toBe(60);
-    expect(checkinSelectionOf(checkinCandidatesOf(generated), unchecking(generated.map((item) => item.path))).bulkPrivate).toBeNull();
-  });
-});
-
-describe('checkinSelectionOf, over many changes', () => {
-  // Private folders holding private files, edits, links and ignored files, as a big read brings them.
-  const many = [
-    change('gen', ['private'], 0, 'directory'),
-    change('gen/obj', ['private'], 0, 'directory'),
-    ...Array.from({ length: 3_000 }, (_, index): PendingChange => {
-      if (index % 5 === 0) return change(`src/f${index % 40}/edit${index}.ts`, ['checkedOut', 'changed'], index);
-      if (index % 7 === 0) return change(`src/link${index}`, ['changed'], 1, 'symlink');
-      if (index % 11 === 0) return change(`build/out${index}.bin`, ['ignored'], index);
-      return change(`${index % 3 ? 'gen' : 'gen/obj'}/sub${index % 20}/p${index}.g`, ['private'], index);
-    }),
-  ];
-  const candidates = checkinCandidatesOf(many);
-
-  /** What the selection is, worked out the plain way, change by change. */
-  function plainly(choice: CheckinChoice) {
-    const included = many.filter(includedBy(choice));
-    const shelvable = included.filter((item) => item.itemType !== 'symlink' && !item.kinds.includes('private'));
-    return { included, upload: uploadSummary(included), shelvable, shelvableUpload: uploadSummary(shelvable), bulkPrivate: bulkPrivateFiles(included) };
-  }
-
-  it.each([
-    ['everything checked', unchecking([])],
-    ['a few files unchecked', unchecking(['src/f0/edit0.ts', 'gen/sub1/p1.g', 'src/link7'])],
-    ['a private folder unchecked, its files still in', unchecking(['gen/obj'])],
-    ['every private file unchecked', unchecking(many.filter((item) => item.kinds.includes('private')).map((item) => item.path))],
-    ['a changelist prepared', { excludedPaths: new Set<string>(), prepared: { name: 'ui', paths: new Set(['src/f5/edit5.ts', 'gen/sub2/p2.g']) } }],
-  ])('takes what going over every change takes: %s', (_, choice) => {
-    const { isIncluded: _isIncluded, isChosen: _isChosen, ...selection } = checkinSelectionOf(candidates, choice);
-    expect(selection).toEqual(plainly(choice));
-  });
-
-  it("finds a click's selection with one look at the box of each candidate, and none while every box is checked", () => {
-    const choice = unchecking(['src/f0/edit0.ts']);
-    const { calls } = countCalls(Set.prototype, 'has', () => checkinSelectionOf(candidates, choice));
-    expect(calls).toBe(candidates.changes.length);
-    expect(countCalls(Set.prototype, 'has', () => checkinSelectionOf(candidates, unchecking([]))).calls).toBe(0);
-  });
-});
-
-describe('shownIncludedCount', () => {
-  it('counts the checked changes among those shown, without going over them when every change is shown', () => {
-    const selection = checkinSelectionOf(checkinCandidatesOf(all), unchecking(['src/new.ts']));
-
-    expect(shownIncludedCount(all, all.length, selection)).toBe(3);
-    expect(shownIncludedCount([edited, added, ignored], all.length, selection)).toBe(1);
+    expect(checkinSelectionOf(listing(generated), includedBy(unchecking([]))).bulkPrivate?.fileCount).toBe(60);
+    expect(checkinSelectionOf(listing(generated), includedBy(unchecking(generated.map((item) => item.path)))).bulkPrivate).toBeNull();
   });
 });

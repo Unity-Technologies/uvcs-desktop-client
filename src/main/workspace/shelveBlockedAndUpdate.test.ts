@@ -96,7 +96,7 @@ describe('shelveBlockedAndUpdate', () => {
 
     const blocked = join(workspacePath, 'src', 'old.txt');
     expect(lines().filter((line) => /^(shelveset|undo|update)/.test(line))).toEqual([
-      expect.stringMatching(new RegExp(`^shelveset create ${blocked.replace(/\\/g, '\\\\')} --all -commentsfile=`)),
+      expect.stringMatching(new RegExp(`^shelveset create ${blocked.replace(/\\/g, '\\\\')} --all --dependencies -commentsfile=`)),
       `undo ${blocked} --symlink`,
       expect.stringMatching(/^update /),
     ]);

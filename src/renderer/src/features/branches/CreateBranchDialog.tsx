@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { PendingChangesAction, SwitchPreflight } from '@shared/domain/switchWithChanges';
+import type { SwitchChangesAction, SwitchPreflight } from '@shared/domain/switchWithChanges';
 import { api } from '../../api/client';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
@@ -54,7 +54,7 @@ function CreateBranchDialog({ workspacePath, origins, onFinish }: CreateBranchDi
   const [switchAfter, setSwitchAfter] = useState(true);
   const [creating, setCreating] = useState(false);
   const pending = usePendingChangesPlan(workspacePath, origin.parentBranch);
-  const [action, setAction] = useState<PendingChangesAction | null>(null);
+  const [action, setAction] = useState<SwitchChangesAction | null>(null);
 
   useEffect(() => {
     if (pending?.plan.kind === 'ask') setAction(pending.plan.choice.defaultAction);
@@ -140,7 +140,7 @@ function usePendingChangesPlan(workspacePath: string, parentBranch: string): Pen
   useEffect(() => {
     let current = true;
     void Promise.all([api.workspaces.switchPreflight(workspacePath, `br:${parentBranch}`), api.settings.get()])
-      .then(([preflight, settings]) => current && setState({ preflight, plan: planSwitch(preflight, settings.pendingChangesOnSwitch, 'bring') }))
+      .then(([preflight, settings]) => current && setState({ preflight, plan: planSwitch(preflight, settings.pendingChangesOnSwitch, 'newBranch') }))
       .catch(() => undefined);
     return () => {
       current = false;

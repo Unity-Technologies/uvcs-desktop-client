@@ -108,9 +108,9 @@ describe('shelveAway', () => {
     fakeApi.answer('pendingChanges.shelveAndUndo', () => ({ shelveId: 40, count: 2 }));
     const refreshed = watchRefreshes(ws);
 
-    expect(await shelveAway(ws, ['a.txt', 'b.txt'], 'Spike')).toEqual({ shelveId: 40, count: 2 });
+    expect(await shelveAway(ws, { paths: ['a.txt', 'b.txt'], targets: ['a.txt', 'b.txt'] }, 'Spike')).toEqual({ shelveId: 40, count: 2 });
 
-    expect(fakeApi.argsOf('pendingChanges.shelveAndUndo')).toEqual([[ws, ['a.txt', 'b.txt'], 'Spike', expect.any(String)]]);
+    expect(fakeApi.argsOf('pendingChanges.shelveAndUndo')).toEqual([[ws, { paths: ['a.txt', 'b.txt'], targets: ['a.txt', 'b.txt'] }, 'Spike', expect.any(String)]]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Shelved 2 changes', detail: 'In shelve 40', action: 'Undo' }]);
     expect(refreshed()).toEqual(['explorer', 'info', 'pendingChanges', 'review', 'shelves']);
   });
@@ -123,7 +123,7 @@ describe('shelveAway', () => {
         return { kind: 'applied', count: 2 };
       }),
     );
-    await shelveAway(ws, ['a.txt', 'b.txt'], 'Spike');
+    await shelveAway(ws, { paths: ['a.txt', 'b.txt'], targets: ['a.txt', 'b.txt'] }, 'Spike');
 
     pressToastAction('Shelved 2 changes');
 

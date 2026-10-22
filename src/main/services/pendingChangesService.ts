@@ -34,7 +34,7 @@ export function createPendingChangesService({ cm, operations }: ServiceContext, 
     return operations.run(operationId, ({ signal, progressOf }) =>
       withTempFile(request.comment, async (commentsFile) => {
         const output = await explainLockedItems('checked in', () =>
-          cm.execute(checkinArgs(toAbsolutePaths(workspacePath, request.paths), commentsFile), {
+          cm.execute(checkinArgs(toAbsolutePaths(workspacePath, request.paths), commentsFile, request.addsPrivate), {
             cwd: workspacePath,
             signal,
             onOutputLine: progressOf(readCheckinProgress),
@@ -71,7 +71,8 @@ export function createPendingChangesService({ cm, operations }: ServiceContext, 
       withTempFile(comment, async (commentsFile) => {
         // `--summaryformat` prints just the shelve, in any language, and nothing else: no stages to follow.
         reportProgress('Uploading your changes');
-        const args = ['shelveset', 'create', ...toAbsolutePaths(workspacePath, paths), '--all', `-commentsfile=${commentsFile}`, '--summaryformat'];
+        // `--dependencies`: the added folders above a path, as a check-in takes them (`checkinArgs`).
+        const args = ['shelveset', 'create', ...toAbsolutePaths(workspacePath, paths), '--all', '--dependencies', `-commentsfile=${commentsFile}`, '--summaryformat'];
         return createdShelveId(await cm.execute(args, { cwd: workspacePath }));
       }),
     );
@@ -110,8 +111,8 @@ export function createPendingChangesService({ cm, operations }: ServiceContext, 
     checkout,
     addFilterRules,
     shelve,
-    shelveAndUndo: (workspacePath, paths, comment, operationId) =>
-      operations.run(operationId, (context) => shelveAndUndo(shelveAwayDependencies, workspacePath, paths, comment, context)),
+    shelveAndUndo: (workspacePath, request, comment, operationId) =>
+      operations.run(operationId, (context) => shelveAndUndo(shelveAwayDependencies, workspacePath, request, comment, context)),
     createChangelist,
     editChangelist,
     deleteChangelist,

@@ -8,21 +8,31 @@ How pending changes survive switches, updates and shelving, and how two people s
 `cm switch` only ever runs on a clean workspace (`main/workspace/switchWithChanges.ts`), whatever client.conf's
 `PendingChangesOnSwitchAction` says. The renderer's single entry point is `switchWorkspace`
 (`app/shell/workspaceOperations.ts`): preflight, then ask (or follow the setting) whether to leave the changes or
-bring them along. What the pending changes allow is one rule for the preflight and the switch (`switchApproach`):
-nothing pending switches as is, checkouts without edits are undone without asking, an unfinished merge is refused, and
-anything else is shelved. The main process then shelves them with the official automatic-shelve comment
-(`createAutomaticShelve`), checks the shelve holds them all (`createVerifiedShelve`), records it in the settings
-(`switchShelves`, built by `newShelveRecord`), undoes, moves added files aside (`moveNewItemsAside`, until the shelve
-brings them back: `putBack`, which never overwrites another item that took a file's place meanwhile; that file stays
-in the app's data folder and the window says so, naming it, with a way to reveal it: `filesKeptAside`,
-`noteKeptAside`), switches, and merges the shelve on the target (bring, `applyShelveCleanly`). Stopping is honoured
-only until the changes are shelved. Failures put the changes back (`rollBackSwitch`), switching back first if the
-switch moved the workspace halfway; when that isn't possible the error says which shelve holds them and where to
-restore them. Every flow that shelves changes out of the workspace (switch, shelve away, update) puts them back the same
-way (`putBackAfterFailure`). Left shelves (the app's and the official
+bring them along (or, asked, undo them: below). What the pending changes allow is one rule for the preflight and the
+switch (`switchApproach`): nothing pending switches as is, checkouts without edits are undone without asking, an
+unfinished merge is refused, and anything else is shelved, unless the user chose to undo it. The main process then
+shelves them with the official automatic-shelve comment (`createAutomaticShelve`), checks the shelve holds them all
+(`createVerifiedShelve`), records it in the settings (`switchShelves`, built by `newShelveRecord`), undoes, moves
+added files aside (`moveNewItemsAside`, until the shelve brings them back: `putBack`, which never overwrites another
+item that took a file's place meanwhile; that file stays in the app's data folder and the window says so, naming it,
+with a way to reveal it: `filesKeptAside`, `noteKeptAside`), switches, and merges the shelve on the target (bring,
+`applyShelveCleanly`). Stopping is honoured only until the changes are shelved. Failures put the changes back
+(`rollBackSwitch`), switching back first if the switch moved the workspace halfway; when that isn't possible the error
+says which shelve holds them and where to restore them. Every flow that shelves changes out of the workspace (switch,
+shelve away, update) puts them back the same way (`putBackAfterFailure`). Left shelves (the app's and the official
 client's) are offered again by the "Welcome back" banner in Changes (`features/leftChanges`), or restored
 automatically on arrival when they apply cleanly (`restoreOnArrival`). Changes still waiting to be brought (conflicts
 left for the merge view) are offered on the target, and as left ones on the source if the user goes back instead.
+
+The switch's question (`SwitchWithChangesDialog`, `planSwitch` with the `switch` flow) also offers undoing the changes
+(`SwitchChangesAction` `discard`). It is never preselected nor a setting (`PendingChangesOnSwitch` is leave or bring),
+its button reads "Undo & switch" in red (`switchButton`), and its notes follow it (`switchNotes`: nothing is shelved,
+locks are released). The main process undoes the changes as Undo in Changes does (added files stay, private) and
+switches, shelving nothing (`discardChanges`). With no shelve, a failure can't put anything back: the error says some
+changes may be undone already and nothing was switched, or that they were undone and the switch didn't finish. The
+new-branch dialog (the `newBranch` flow) doesn't offer it: a new branch is made to carry on with the changes. "Review
+changes", on the left of the question's footer (also when a merge blocks the switch), cancels the switch and opens
+Changes.
 
 A code review brings the reviewer its code through the same flows (`reviewedCodeAction`, in the review's menu and its
 page's header): "Switch to this branch" or "Switch to this changeset" is the branch's or changeset's own switch, and
@@ -49,7 +59,9 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
 ⇧⌘S, "Your shelves…" in the palette), shown while the user has shelves in this repository from the last three months.
 
 - **Shelving** (the check-in panel's Shelve mode) undoes what it shelves: `shelveAndUndo` (`main/workspace`) is the
-  switch flow's first half. It shelves with the user's comment, checks the shelve holds every change (`createVerifiedShelve`),
+  switch flow's first half. It shelves with the user's comment, giving cm only the paths it must (`ShelveAwayRequest`'s
+  `targets`, from `checkinPathsOf`: ARCHITECTURE.md "Parsing `cm` output") while recording and undoing every change the
+  shelve takes (its `paths`, the folders cm took along included), checks the shelve holds every change (`createVerifiedShelve`),
   records it as a switch shelve record with `reason: 'shelve'`, undoes the changes and moves the files they added aside;
   a failure puts them back. The toast offers Undo (apply and delete). "Keep the changes here", under the comment, is the
   other way (a plain `cm shelveset create`), asked for each time: the panel goes back to checking in after a shelve.
@@ -58,7 +70,8 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
   check-in.
 - **A changelist at a time**: grouped by changelists, a changelist's menu (`changelistMenu`) offers "Check in this
   changelist" and "Shelve this changelist", which ready the panel rather than run (`prepareChangelistCheckin`): its
-  changes checked alone (those the filters hide too), the panel in that mode (Changes holds it, `PendingChangesPanes`,
+  changes checked alone, with what they need outside it (`neededWith`), and every filter cleared, "Unreviewed" too, so all of them show and go in (ARCHITECTURE.md
+  "Filters": a check-in takes what the filters show), the panel in that mode (Changes holds it, `PendingChangesPanes`,
   so it is back to Check in each time Changes shows, as after choosing Shelve with the caret), its description as the
   comment unless the user wrote one (a comment another changelist's description filled counts as none; one filled from a
   description since edited counts as the user's), and the caret at the end of the summary (ARCHITECTURE.md "Focus": a
@@ -67,7 +80,8 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
   saving, a new `.meta`) stays out, and checking files by hand adds or takes them there. While it lasts, a quiet
   "Changelist ui" under the panel's button says why only its files are checked. It ends, and the files the user had left
   out before are the only ones left out again, in three ways: a successful check-in or shelve (`endPrepared`; a failed
-  or cancelled one keeps it); no pending change left in the changelist (undone, shelved away by a switch, checked in
+  or cancelled one keeps it, and so does one while a filter typed since hides some of its checked files, still to go
+  in: `endPreparedUnlessHidden`); no pending change left in the changelist (undone, shelved away by a switch, checked in
   from outside the app: `preparedStillPending`, `currentChoice`; an added file undone stays on disk, private, but is no
   longer the changelist's), or else every change made later would stay unchecked; and checking every file with the
   list's header box while the filters hide none (`includeEverything`). The button does what it always does: one `cm

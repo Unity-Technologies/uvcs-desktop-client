@@ -18,6 +18,14 @@ export const AUTOMATIC_SHELVE_COMMENT = 'Automatic shelve created during switch 
 /** How applying a shelve to the workspace went. `cm` merges only into a workspace without pending changes. */
 export type ShelveApplyResult = { kind: 'applied'; count: number } | { kind: 'conflicts' } | { kind: 'pendingChanges' };
 
+/** Some changes to shelve away. */
+export interface ShelveAwayRequest {
+  /** Every change shelved, and undone once it is. */
+  paths: string[];
+  /** The paths cm is given for them: it takes everything under each, and some folders along (`checkinPathsOf`). */
+  targets: string[];
+}
+
 /** Changes shelved and undone in the workspace: they are in the shelve only, until it is applied. */
 export interface ShelvedAway {
   shelveId: number;

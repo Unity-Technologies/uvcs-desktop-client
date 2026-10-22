@@ -1,14 +1,18 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { BulkPrivateTally, bulkPrivateFiles, isPrivateFolderAt, privateFoldersOf, type BulkPrivate, type PrivateFolders } from './bulkPrivate';
+import { bulkPrivateFiles, type BulkPrivate } from './bulkPrivate';
 import { isCheckinCandidate, isShelvable } from './changeCategories';
-import { UploadTally, uploadKindOf, type UploadKind, type UploadSummary } from './uploadSummary';
+import { uploadSummary, type UploadSummary } from './uploadSummary';
+import { neededWith, type PendingIndex } from './checkinDependencies';
 
 export interface CheckinSelection {
   isIncluded: (change: PendingChange) => boolean;
-  /** Whether a change that can go into the check-in is checked; null when every one is, so nothing needs asking. */
-  isChosen: ((change: PendingChange) => boolean) | null;
-  /** Every checked change, including those the filter hides: the filter only narrows what is shown. */
+  /**
+   * The checked changes the filter shows, and what they need that it hides (`neededWith`): the rest it hides stay out
+   * of the check-in, still checked for when they show again.
+   */
   included: PendingChange[];
+  /** How many checked changes the filter hides. */
+  hiddenIncludedCount: number;
   upload: UploadSummary;
   /** What a shelve takes of them: private files stay out. */
   shelvable: PendingChange[];
@@ -73,72 +77,41 @@ export function withIncluded(choice: CheckinChoice, paths: string[], included: b
 }
 
 /**
- * The changes of a read that can go into a check-in, with what each adds to one worked out once for the read: a click
- * on a box then only goes over them asking whether each is checked (`checkinSelectionOf`), where working it all out
- * again took a third of a second a click for a million changes. Everything checked, the read's own selection.
+ * The changes Changes lists: all of them, and those its text and status filters show (`useChangeFilter`'s `visible`,
+ * the very list when nothing filters). Review mode's "Unreviewed" filter isn't one of them: it hides each file as it's
+ * reviewed, and those are the ones to check in.
  */
-export interface CheckinCandidates {
-  changes: PendingChange[];
-  uploadKinds: UploadKind[];
-  shelvable: Uint8Array;
-  privateFolders: PrivateFolders;
-  everything: Omit<CheckinSelection, 'isIncluded' | 'isChosen'>;
-}
-
-export function checkinCandidatesOf(allChanges: PendingChange[]): CheckinCandidates {
-  const changes = allChanges.filter(isCheckinCandidate);
-  const facts = { changes, uploadKinds: changes.map(uploadKindOf), shelvable: Uint8Array.from(changes, (change) => (isShelvable(change) ? 1 : 0)), privateFolders: privateFoldersOf(changes) };
-  return { ...facts, everything: selectionOf(facts, () => true) };
-}
-
-/** What a check-in of the candidates takes as the user chose (`currentChoice`), and what follows from it: what it uploads, what a shelve takes, bulk private files. */
-export function checkinSelectionOf(candidates: CheckinCandidates, choice: CheckinChoice): CheckinSelection {
-  const isIncluded = includedBy(choice);
-  if (!choice.prepared && choice.excludedPaths.size === 0) return { isIncluded, isChosen: null, ...candidates.everything };
-  const { prepared, excludedPaths } = choice;
-  const isChosen = prepared ? (change: PendingChange) => prepared.paths.has(change.path) : (change: PendingChange) => !excludedPaths.has(change.path);
-  return { isIncluded, isChosen, ...selectionOf(candidates, isChosen) };
-}
-
-/** One pass over the candidates, taking those `isChosen` takes. */
-function selectionOf(candidates: Omit<CheckinCandidates, 'everything'>, isChosen: (change: PendingChange) => boolean): Omit<CheckinSelection, 'isIncluded' | 'isChosen'> {
-  const { changes, uploadKinds, shelvable: canShelve, privateFolders } = candidates;
-  const included: PendingChange[] = [];
-  const shelvable: PendingChange[] = [];
-  const [upload, shelvableUpload] = [new UploadTally(), new UploadTally()];
-  const bulk = new BulkPrivateTally(privateFolders);
-  let privateFolderLeftOut = false;
-  changes.forEach((change, index) => {
-    if (!isChosen(change)) {
-      privateFolderLeftOut ||= isPrivateFolderAt(privateFolders, index);
-      return;
-    }
-    const kind = uploadKinds[index];
-    included.push(change);
-    upload.add(change, kind);
-    if (canShelve[index]) {
-      shelvable.push(change);
-      shelvableUpload.add(change, kind);
-    }
-    bulk.add(change, index);
-  });
-  return {
-    included,
-    upload: upload.summary(),
-    shelvable,
-    shelvableUpload: shelvableUpload.summary(),
-    // Without one of their private folders, files are counted in another: worked out again for them.
-    bulkPrivate: privateFolderLeftOut ? bulkPrivateFiles(included) : bulk.result(),
-  };
+export interface ListedChanges {
+  all: PendingChange[];
+  matchingFilter: PendingChange[];
+  /** All of them, indexed for what each needs (`indexPending`). */
+  index: PendingIndex;
 }
 
 /**
- * How many of the shown changes are checked: all that are, when the list shows every change (no filter), counted
- * again only while a filter leaves some out.
+ * The changes shown and checked, and what they need that the filter hides (a private file's private folder while
+ * filtering by Changed): checked with them, they go in with them. In the listed order.
  */
-export function shownIncludedCount(shown: PendingChange[], allCount: number, selection: Pick<CheckinSelection, 'included' | 'isIncluded'>): number {
-  if (shown.length === allCount) return selection.included.length;
-  let count = 0;
-  for (const change of shown) if (selection.isIncluded(change)) count++;
-  return count;
+function withWhatTheyNeed(shown: PendingChange[], all: PendingChange[], index: PendingIndex, isIncluded: (change: PendingChange) => boolean): PendingChange[] {
+  const going = new Set(neededWith(shown, index).filter(isIncluded).map((change) => change.path));
+  return all.filter((change) => going.has(change.path));
+}
+
+/**
+ * What a check-in takes of the changes the filter shows, and what follows from it: what it uploads, what a shelve
+ * takes, bulk private files. What you see is what goes in, with what it needs: a checked change the filter hides could
+ * slip a private file into a changeset unseen, while one left out stays pending and shows again once the filter clears.
+ */
+export function checkinSelectionOf({ all, matchingFilter, index }: ListedChanges, isIncluded: (change: PendingChange) => boolean): CheckinSelection {
+  const included = matchingFilter === all ? all.filter(isIncluded) : withWhatTheyNeed(matchingFilter.filter(isIncluded), all, index, isIncluded);
+  const shelvable = included.filter(isShelvable);
+  return {
+    isIncluded,
+    included,
+    hiddenIncludedCount: matchingFilter === all ? 0 : all.filter(isIncluded).length - included.length,
+    upload: uploadSummary(included),
+    shelvable,
+    shelvableUpload: uploadSummary(shelvable),
+    bulkPrivate: bulkPrivateFiles(included),
+  };
 }

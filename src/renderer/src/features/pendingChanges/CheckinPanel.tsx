@@ -27,7 +27,10 @@ interface CheckinPanelProps {
   workspacePath: string;
   /** How many changes the list holds, private ones too (the header counts only what checks in); undefined until read. */
   listedCount: number | undefined;
+  /** The checked changes the filter shows, which the button takes. */
   includedCount: number;
+  /** The checked changes the filter hides, which wait for it to show them. */
+  hiddenIncludedCount: number;
   /** What the included changes upload. */
   upload: UploadSummary;
   /** What a shelve takes of the included changes: private files stay out. */
@@ -59,6 +62,7 @@ export function CheckinPanel({
   workspacePath,
   listedCount,
   includedCount,
+  hiddenIncludedCount,
   upload,
   shelvable,
   workingOn,
@@ -82,7 +86,7 @@ export function CheckinPanel({
   const onMessageChange = (message: { summary?: string; description?: string }): void => setMessage(workspacePath, message);
   const shelving = mode === 'shelve';
   const count = shelving ? shelvable.count : includedCount;
-  const disabledReason = checkinDisabledReason(mode, count, includedCount, listedCount);
+  const disabledReason = checkinDisabledReason(mode, count, includedCount, listedCount, hiddenIncludedCount);
   const canAct = disabledReason === null && !busy;
   const { icon: ModeIcon } = describeMode(mode);
   const uploaded = shelving ? shelvable.upload : upload;

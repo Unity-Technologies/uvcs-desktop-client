@@ -162,8 +162,8 @@ and many people use the same server. Every `cm` command other than local reads (
   operation can change (`refreshScopes.ts`, `runOperation({ affects })`, `runAction(..., affects)`): a checkin, an update
   or a merge from a branch leave labels, shelves, attributes, reviews, left changes and changesets already read alone;
   a merge into a server branch the workspace too, refreshing the incoming check instead (`isAffectedByServerMerge`);
-  shelving changes that stay in the workspace refreshes only the shelve lists, and shelving them away those and the workspace; a new, deleted or hidden branch only the
-  branch lists and the Branch Explorer; a label edit the labels and the graph; an attribute or value edit only the
+  shelving changes that stay in the workspace refreshes only the shelve lists, and shelving them away those and the workspace; a new, deleted or hidden branch, or one whose comment was edited, only the
+  branch lists and the Branch Explorer (the top bar's branch comment comes from a branch query); a label edit the labels and the graph; an attribute or value edit only the
   attributes; a code review created, edited, marked reviewed or deleted only the reviews (their lists and the branch chips); releasing a lock only the locks; deleting a shelve or discarding left changes only the shelve lists and the left changes, and applying or restoring one those, the workspace and its locks; adding, checking out, removing, undoing or reverting files only the workspace and its locks; restoring deleted items only the workspace (`isAffectedByRestoredItems`); a changeset's comment edited only what shows changesets, and one moved or deleted those, the branch lists and incoming. Reads refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
   the last (create a branch and switch to it: `createBranchAndSwitch`). Views keyed by the workspace info (`keyedByWorkspaceInfo`: left changes, the
   incoming check, the branch the workspace is on) wait for it, and when the operation gave them another key they are only
@@ -324,6 +324,29 @@ and many people use the same server. Every `cm` command other than local reads (
   `NO_CHANGES_APPLIED` instead of `CHANGESET cs:N@…` and exits 0 (`readCheckinOutput`). When every change checked in was
   a checkout without edits (`isUnchangedCheckout`: `CO`, not `CO+CH`, in `cm status --iscochanged`), Changes says so in
   an info toast ("Nothing to check in"); with any other change in, no changeset is a failure (`expectedCheckinResult`).
+- `cm checkin` and `cm shelveset create` take everything under each path they're given, and nothing makes them take a
+  folder alone (paths read from stdin too): `--all` adds every change there, `--private` every private item. Given a
+  path, they take along the checkouts of the folders above it, and with `--dependencies` their adds and private
+  folders, nothing else in them; a moved or deleted folder must be given itself ("the change '/lib' must be selected
+  too"), and so must all of a pending merge ("All merge changes must be checked in together"). So Changes gives cm as
+  little as it takes (`checkinPathsOf`): never a checked-out folder holding something checked, `--private` only when a
+  private item is checked (`CheckinRequest.addsPrivate`), and a private, added or moved folder alone when everything
+  in it is checked: one path for a new project, however many files it holds. A checkout inside a writable xlink
+  checks the xlink out: cm status lists it as a checked-out folder, and given, it took every private item inside the
+  xlink. Shelving away gives cm those paths but undoes every change the shelve takes (`ShelveAwayRequest`).
+- **What a check-in needs is checked with it**, in the list as the user clicks, never asked at the end: checking a change
+  checks the private, added or moved folders holding it, all of a moved folder but its private items, the move away
+  from where an added item now is, the moves out of a deleted folder, and all of a pending merge; unchecking one
+  unchecks what can't go in without it (`neededWith`, `needingThem`, `pathsCheckedTogether`). Read back, the checks are
+  made consistent (`consistentlyIncluded`): a new file in a folder left out stays out, one in a checked moved folder goes
+  in; an item added where a move left, or a deleted folder, waits for its moves. What a shown change needs goes in even
+  while the filter hides it, and the button counts it ("Filters"). A question is left only where a checked folder
+  must be given and holds what isn't checked (`pulledIn`, "Also check in 2 changes inside lib?"): private items inside
+  a moved folder once another private item is checked (only the user checks a private item), or an added or
+  checked-out folder checked while some of its files aren't. The legacy client asks about
+  dependencies in a dialog when Check in is pressed; that was dropped as breaking the flow at its last step. All of it
+  is indexed once per read of the changes (`indexPending`), so a click looks up only the folders above what it touched,
+  on lists of tens of thousands.
 
 ## Xlinks
 
@@ -974,6 +997,16 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     empties the text, shows everyone and turns the kinds off (`clear`, `isFiltering`); the time range stays, and the
     hint says when a longer one could find more (`longerRangeHint`). A list with nothing to filter shows its own first-use empty state, in the details pane ("One layout from the first frame").
     Revealing a row the filters hide clears them (Show in Locks, the Branch Explorer's reveal).
+  - **What shows is what goes in**: Changes checks in and shelves only the checked changes its text and status filters
+    show (`checkinSelectionOf` over `ListedChanges`, given `useChangeFilter`'s `visible`); a file under a collapsed
+    folder or changelist still goes in. Those the filters hide keep their check for when they show again, and the button
+    counts what goes in; while the filters hide every checked change, its tooltip says so (`checkinDisabledReason`).
+    The one exception: what a shown change needs to go in goes with it, hidden or not (a private file's private folder
+    while filtering by Changed: `neededWith`, "Parsing `cm` output"), and the button counts it.
+    Review mode's "Unreviewed" filter doesn't narrow it: it hides each file as it's reviewed, and those are the ones to
+    check in. "Check in this changelist" clears every filter, "Unreviewed" too, so all the changelist shows and goes
+    in, with what it needs. Checking in every checked change, those the filters hide too, with a notice saying how many, was dropped: a
+    filter on Changed left the private files it hid checked, and they went into the changeset unseen.
   - The shelves list in Changes stays a quick list with "Mine | Everyone" (⇧⌘S), not a filter bar: it's a popover
     over Changes, and its "All shelves" hands its scope and text to the Shelves view.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
@@ -981,12 +1014,13 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   kind reads the same way: the kind and status badges with the default action (what Enter does on the row) and the row's
   context menu behind "More actions"; a `DetailsHeading` (the comment's first line as the title and the rest as its
   description, or the object's name with the comment below; folded to a few lines with "Show more" and "Show less" by
-  `FoldedComment`, which a diff's header shares, see `features/diff.md` "The diff's header"; edited in place where cm can edit it, the title in a field that wraps and grows, and a comment left unedited saved as it was, `editedComment`; a name reads a size above a comment's title); a meta row (author ·
+  `FoldedComment`, which a diff's header shares, see `features/diff.md` "The diff's header"; edited in place where cm can edit it, the title in a field that wraps and grows, and a comment left unedited saved as it was, `editedComment`; the comment saved shows at once, not the old one until the refresh reads it, `shownComment`; a name reads a size above a comment's title); a meta row (author ·
   date · spec to copy · branch chip); attribute chips (`AttributeChips`); properties and relations behind "More details";
   then the changes pane under a remembered splitter (`DetailsChangesPane`), its title a disclosure once the list is read
-  that hides it and shows it again from the cache, remembered for every panel as More details is (`changesCollapsed`). cm edits changeset, attribute and label
-  comments (a label's by applying it again to its changeset, `labelCommentArgs`); branch and shelve comments stay
-  read-only: no `cm` command or client API edits them. Selecting a row must stay cheap (Server
+  that hides it and shows it again from the cache, remembered for every panel as More details is (`changesCollapsed`). cm edits changeset, attribute, branch and label
+  comments (a branch's with `cm branch editcomment`, the comment in a file, offered only from cm 11.0.16.10512
+  on, `editsBranchComments`: an older cm takes the unknown subcommand as a branch to create; a label's by applying it again to its
+  changeset, `labelCommentArgs`); shelve comments stay read-only: no `cm` command or client API edits them. Selecting a row must stay cheap (Server
   budget: Selection); the changed files' `cm diff` runs only on request (`ChangedFilesSection`). The panel's parts are
   primitives of their own in `ui/` (`DetailsSection`, `DetailsEmpty`, `DetailsSkeleton`, `DetailsBadge`,
   `DetailsCopyable`, `DetailsLink`, `DetailsDisclosure`, `MoreDetails`), each imported from its own module. Lists are

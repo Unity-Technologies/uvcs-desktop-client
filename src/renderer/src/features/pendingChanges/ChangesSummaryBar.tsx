@@ -16,8 +16,7 @@ interface ChangesSummaryBarProps {
   changes: PendingChange[];
   /** How many changes were read; undefined until they are, when the count is a placeholder. */
   totalCount: number | undefined;
-  /** How many of `changes` are checked. */
-  includedCount: number;
+  isIncluded: (change: PendingChange) => boolean;
   onSetIncluded: (changes: PendingChange[], included: boolean) => void;
   onUndo: (changes: PendingChange[]) => void;
   onUndoUnchanged: () => void;
@@ -26,9 +25,11 @@ interface ChangesSummaryBarProps {
 }
 
 /** Above the list: include or exclude every shown change, how many there are, and the ways to undo them. */
-export function ChangesSummaryBar({ changes, totalCount, includedCount, onSetIncluded, onUndo, onUndoUnchanged, checkboxInset }: ChangesSummaryBarProps) {
-  // Gone over once per list shown: checking a box only changes the count.
-  const { candidates, undoable } = useMemo(() => ({ candidates: changes.filter(isCheckinCandidate), undoable: changes.filter(isControlled) }), [changes]);
+export function ChangesSummaryBar({ changes, totalCount, isIncluded, onSetIncluded, onUndo, onUndoUnchanged, checkboxInset }: ChangesSummaryBarProps) {
+  const { candidates, includedCount, undoable } = useMemo(() => {
+    const candidates = changes.filter(isCheckinCandidate);
+    return { candidates, includedCount: candidates.filter(isIncluded).length, undoable: changes.filter(isControlled) };
+  }, [changes, isIncluded]);
   const checkState: CheckState = includedCount === 0 ? false : includedCount === candidates.length ? true : 'mixed';
   const countLabel = changesCountLabel(totalCount, changes.length);
   const filtered = countLabel !== null && changes.length !== totalCount;

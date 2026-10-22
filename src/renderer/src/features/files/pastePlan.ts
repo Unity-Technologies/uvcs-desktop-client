@@ -1,6 +1,6 @@
 import type { ItemMove, TreeItem } from '@shared/domain/explorer';
 import type { CutItem } from './cutItemsStore';
-import { parentOf } from './fileTreeRows';
+import { parentOf } from '../../lib/paths';
 
 /** The folder cut items would move into (`''` is the root), and whether it's private. */
 export interface PasteTarget {

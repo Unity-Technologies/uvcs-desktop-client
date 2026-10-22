@@ -20,6 +20,11 @@ describe('switchToast', () => {
     );
   });
 
+  it('says the changes were undone, as the user chose', () => {
+    expect(words(switchToast({ kind: 'discarded', count: 4 }, '/main/task'))).toEqual({ kind: 'success', title: 'Switched to /main/task', detail: 'Undid 4 changes.', action: undefined });
+    expect(switchToast({ kind: 'discarded', count: 1, restored: { count: 2 } }, '/main/task').detail).toBe('Undid 1 change. Restored the 2 changes you left here.');
+  });
+
   it('offers the changes restored or brought along', () => {
     expect(words(switchToast({ kind: 'switched', restored: { count: 2 } }, '/main/task'))).toEqual({
       kind: 'success',

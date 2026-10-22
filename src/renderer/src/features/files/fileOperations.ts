@@ -9,7 +9,7 @@ import { prompt } from '../../ui/dialog/prompt';
 import { absolutePath, deletePrivateFiles } from '../pendingChanges/pendingChangeOperations';
 import { listedItems } from './directoryListing';
 import { useFilesViewStore } from './filesViewStore';
-import { parentOf } from './fileTreeRows';
+import { parentOf } from '../../lib/paths';
 import { itemNameProblem } from './itemName';
 
 /** Opens a file as its menu's first entry does: in the user's editor, or with its default app (`openFile`). */
