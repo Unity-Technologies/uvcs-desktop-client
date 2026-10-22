@@ -674,7 +674,8 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   there is no switch. A failed update leaves the workspace created and open, reported as any failed update. Recreating a
   missing workspace downloads its files the same way; a new repository's workspace isn't updated: it has nothing yet.
   The New workspace dialog can create its repository too: its Repository field is editable, suggesting the server's
-  repositories; a name the server has is that repository, any other (by case, as `cm` tells them apart) is created with
+  repositories (`ui/Combobox`: its arrow lists them all whatever the field holds, typing narrows them; a native
+  `<datalist>` was dropped, as it lists only what matches the text, so a dropped folder's name left its arrow empty); a name the server has is that repository, any other (by case, as `cm` tells them apart) is created with
   the workspace (`newWorkspaceFormOf`, `createNewWorkspace`). As a slip would create a repository on a shared server,
   the button then says "Create repository and workspace", and a name that differs from a repository's only by case
   names it (`repositoryNamedButForCase`). It creates with the same steps as the New repository dialog's
