@@ -88,10 +88,15 @@ A link never changes anything: it opens a page. It never switches a workspace, u
 creates anything without the user saying so in a dialog. A diff, a review, a history or a browse reads the server;
 the workspace only gives the page a window and a repository to read.
 
-1. **The OS hands it to the app** (`main/links`): macOS as `open-url`, Windows and Linux as the argument after
-   `--uvcs-link --` (`linkArgument`), at launch or to the running app (`second-instance`). The command line is read for
-   nothing else then, so a link can't slip a switch in. A link arriving before a window can take it waits for one.
-2. **The window that takes it** is the one in front, or a new one when none is open (`windowForLink`).
+1. **The OS hands it to the app** (`receiveLinks`, `main/links`): macOS as `open-url` (listened to before Electron
+   finishes launching), Windows and Linux as the argument after `--uvcs-link --` (`linkArgument`), at launch or to the
+   running app (`second-instance`). Such a launch names nothing else: the command line is read for no folder or
+   switch, so a link can't slip one in. A development run takes a `uvcs://` argument as its link too
+   (`npm run app:debug -- uvcs://…`). A link arriving before the first windows opened, often the one that launched
+   the app, waits for them (`LinkRequests`): the session opens as usual, then the link goes to its window in front.
+2. **The window that takes it** (`WorkspaceWindows.openLink`) is the focused workspace window (a page window's own
+   workspace window for a page window), else the last one used, else a new one on the home screen. It comes forward
+   and takes the link once (`windows.takeLink`, told by `linkRequested`).
 3. **The page reads it** (`parseLink`). A link it can't read says why in a dialog, never silently; one naming a page
    this version doesn't know says the app may need an update.
 4. **The workspace** (`linkDestination`, from the workspaces and their repositories the home screen reads, all local:
@@ -137,11 +142,15 @@ The installers ask nothing more: installing the app is what makes it open `uvcs:
 - **Windows**: the NSIS installer writes `HKCU\Software\Classes\uvcs` (per user, no administrator) running
   `"<exe>" --uvcs-link -- "%1"`, and its uninstaller removes it (`build/installer.nsh`); electron-builder's NSIS
   writes no protocol itself. Every silent update writes it again.
-- **Linux**: an AppImage registers nothing. At each launch the app writes its own desktop entry
-  (`~/.local/share/applications/<desktopName>.desktop`, `Exec="$APPIMAGE" --uvcs-link -- %u`,
-  `MimeType=x-scheme-handler/uvcs;`, `linuxDesktopEntry`) and makes it the scheme's default (`xdg-mime default`); an
-  entry it didn't write (a package's, AppImageLauncher's) is left alone. Moving the AppImage moves the entry with it at
-  the next launch.
-- Every packaged launch registers again (`setAsDefaultProtocolClient`), so the scheme comes back if another app took
-  it. Development builds never register: they would take links from the installed app.
+- **Linux**: an AppImage registers nothing. The app writes its own desktop entry where the desktop finds it
+  (`$XDG_DATA_HOME/applications/<desktopName>`, `~/.local/share` by default; `linuxDesktopEntry`:
+  `Exec="$APPIMAGE" --uvcs-link -- %u`, `MimeType=x-scheme-handler/uvcs;`) and makes it the scheme's handler
+  (Electron runs `xdg-settings`). The entry is `NoDisplay`: it names the handler only, and the desktop's menus stay
+  the job of the user's AppImage integration, if any. It is written when missing or out of date (the AppImage moved),
+  and only then registered, as `xdg-settings` holds the main process a moment. An entry the app didn't write (marked
+  `X-UVCS-Desktop-Managed`) is left alone. A package (deb, rpm) would declare the scheme in its own `.desktop`, from
+  `protocols`.
+- Every packaged launch registers again (`registerLinkScheme`: `setAsDefaultProtocolClient` on Windows and macOS), so
+  the scheme comes back if another app took it. Development builds never register: they would take links from the
+  installed app. `schemeRegistration.test.ts` keeps the installers' scheme and command the app's.
 - The app doesn't take `plastic://`: the official client owns it.
