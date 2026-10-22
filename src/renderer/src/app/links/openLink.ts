@@ -1,4 +1,4 @@
-import type { WorkspaceHead, WorkspaceSelector, WorkspaceSummary } from '@shared/domain/workspace';
+import type { WorkspaceHead, WorkspaceLocation, WorkspaceSelector, WorkspaceSummary } from '@shared/domain/workspace';
 import { repositorySpec } from '@shared/domain/specs';
 import { formatLink } from '@shared/links/formatLink';
 import type { RepositoryLink, WorkspaceLink } from '@shared/links/link';
@@ -8,6 +8,7 @@ import { api } from '../../api/client';
 import { showInBranchExplorer } from '../../features/branchExplorer/branchExplorerStore';
 import { useFilesViewStore } from '../../features/files/filesViewStore';
 import { requestLineFocus } from '../../features/pendingChanges/changesLineFocus';
+import { changeRowKey } from '../../features/pendingChanges/changeRows';
 import { pendingChangesQuery } from '../../features/pendingChanges/usePendingChanges';
 import { toast } from '../../ui/toast/toastStore';
 import { openCreateWorkspaceDialog } from '../home/dialogs/CreateWorkspaceDialog';
@@ -69,8 +70,12 @@ async function openRepositoryLink(link: RepositoryLink): Promise<void> {
 async function openWorkspaceLink(link: WorkspaceLink): Promise<void> {
   const location = await api.workspaces.locate(link.folder);
   if (!location) return showLinkFailure({ kind: 'notInWorkspace', folder: link.folder });
-  const { root, itemPath: item } = location;
-  if (useSession.getState().workspacePath !== root) return openIn(root, link, () => openWorkspaceLink(link));
+  const show = (): Promise<void> => showWorkspaceItem(location, link);
+  return useSession.getState().workspacePath === location.root ? show() : openIn(location.root, link, show);
+}
+
+/** What a workspace link opens in its workspace, this window's now. */
+async function showWorkspaceItem({ root, itemPath: item }: WorkspaceLocation, link: WorkspaceLink): Promise<void> {
   const target: LinkTarget = link.page || !item ? link : { page: { kind: 'view', view: (await hasChange(root, item)) ? 'changes' : 'files', path: `/${item}` }, lines: link.lines };
   return showHere(root, target, null);
 }
@@ -111,7 +116,7 @@ function navigate(workspacePath: string, where: LinkNavigation): void {
   if (show?.kind === 'branchExplorer') return showInBranchExplorer(show.target);
   if (show?.kind === 'files') useFilesViewStore.getState().requestReveal(workspacePath, show.path);
   if (show?.kind === 'change') {
-    selectInView(workspacePath, 'changes', `change:${show.path}`);
+    selectInView(workspacePath, 'changes', changeRowKey(show.path));
     if (show.lines) requestLineFocus(workspacePath, show.path, show.lines);
   }
   navigation.goToView(where.view);
