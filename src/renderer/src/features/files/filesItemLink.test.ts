@@ -30,6 +30,11 @@ describe('filesItemLink', () => {
     expect(filesItemLink({ ...ON_TASK, selector: { kind: 'shelve', name: '3' }, loadedChangeset: null }, PLAYER)).toBeNull();
     expect(filesItemLink(ON_TASK, PLAYER, { side: 'old', first: 4, last: 4 })).toBeNull();
   });
+
+  it("names no lines of an item with pending changes, whose viewer shows the workspace's own lines", () => {
+    expect(filesItemLink(ON_TASK, PLAYER, LINES, { changed: true })).toBeNull();
+    expect(filesShownLink(ON_TASK, PLAYER, { path: 'Assets/Player.cs', lines: LINES }, { changed: true })).toEqual(filesItemLink(ON_TASK, PLAYER));
+  });
 });
 
 describe('filesShownLink', () => {
