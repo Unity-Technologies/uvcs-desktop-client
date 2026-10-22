@@ -2,13 +2,14 @@ import { forwardRef, useId, type InputHTMLAttributes, type SelectHTMLAttributes,
 import { classNames } from '../lib/classNames';
 import styles from './Field.module.css';
 
-interface FieldChrome {
+export interface FieldChrome {
   label?: string;
   hint?: string;
   error?: string;
 }
 
-function FieldFrame({ id, label, hint, error, children }: FieldChrome & { id: string; children: React.ReactNode }) {
+/** A field's label above it and its error, or else its hint, below. */
+export function FieldFrame({ id, label, hint, error, children }: FieldChrome & { id: string; children: React.ReactNode }) {
   return (
     <div className={styles.field}>
       {label && (
