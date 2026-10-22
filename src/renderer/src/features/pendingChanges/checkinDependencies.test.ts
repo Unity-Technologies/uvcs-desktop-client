@@ -128,6 +128,16 @@ describe('consistentlyIncluded', () => {
     expect([movedAway, addedThere, gone, movedOut].filter(isIncluded)).toEqual([]);
   });
 
+  // cm mv src lib, lib unchecked, then a new src/ appears: the folder and what it holds wait for the move.
+  it('leaves out what a folder waiting for its move holds', () => {
+    const movedAway = folder('lib', ['moved'], 'src');
+    const newFolder = folder('src', ['private']);
+    const inNewFolder = file('src/a.cs', ['private']);
+    const isIncluded = consistentlyIncluded((change) => change !== movedAway, indexPending([movedAway, newFolder, inNewFolder]));
+
+    expect([movedAway, newFolder, inNewFolder].filter(isIncluded)).toEqual([]);
+  });
+
   it('takes a change in a checked moved folder even unchecked, as a file that appears in it, but no private file', () => {
     const checked = new Set(['lib']);
     const isIncluded = consistentlyIncluded((change) => checked.has(change.path), index);
@@ -183,11 +193,9 @@ describe('on a big list', () => {
     const merged = big.map((change) => ({ ...change, mergeInfo: 'Merge from 2' }));
     const mergeIndex = indexPending(merged);
 
-    const { calls } = countCalls(Map.prototype, 'has', () => {
-      neededWith([merged[0]!], mergeIndex);
-      needingThem([merged[0]!], mergeIndex);
-    });
+    const { result, calls } = countCalls(Map.prototype, 'has', () => [neededWith([merged[0]!], mergeIndex), needingThem([merged[0]!], mergeIndex)]);
 
+    expect(result.map((reached) => reached.length)).toEqual([20_000, 20_000]);
     expect(calls).toBeLessThanOrEqual(merged.length * 2 * 2);
   });
 
