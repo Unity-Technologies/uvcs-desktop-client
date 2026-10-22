@@ -256,6 +256,12 @@
   gap: var(--space-2);
 }
 
+.pickedDetail {
+  margin-left: var(--space-2);
+  color: var(--text-secondary);
+  font-weight: var(--weight-regular);
+}
+
 .pickerCompact[data-state='open'] {
   border-color: var(--accent);
 }

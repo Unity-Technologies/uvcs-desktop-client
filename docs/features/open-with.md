@@ -52,6 +52,8 @@ OS where an app is installed rather than guessing paths:
   catalog's order; a choice no longer installed falls back to it (`externalAppList`). The editor can also be each
   file's default app (`SYSTEM_APP`): no editor, files open as the OS opens them. Settings' Apps pane picks them with
   one drop-down each (`AppPicker`, `appPickerEntries`): a list of every app found would bury the terminal under it.
+  "Automatic" shows its own icon (`AUTOMATIC_CHOICE_ICON`: it picks, it isn't the app) and says which app it uses
+  (`pickedApp`); Settings › Merge's compact pickers show that app's name after the label.
 
 ## Menus
 

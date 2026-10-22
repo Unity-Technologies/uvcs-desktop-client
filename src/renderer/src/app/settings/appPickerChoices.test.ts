@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ExternalApp } from '@shared/domain/externalApps';
 import { isSubmenu, SEPARATOR, type Action, type MenuEntry } from '../../lib/actions';
 import { appPickerEntries, automaticChoice, pickedApp, type AppPickerChoices } from './appPickerChoices';
+import { AUTOMATIC_CHOICE_ICON } from './automaticApp';
 
 const app = (id: string, name: string): ExternalApp => ({ id, name, origin: 'known', location: `/Applications/${name}.app`, opensFolders: true });
 const EDITORS = [app('vscode', 'Visual Studio Code'), app('rider', 'JetBrains Rider')];
@@ -98,8 +99,8 @@ describe('pickedApp', () => {
     expect(pickedApp(choices({ choice: 'others', usedId: 'rider', automatic: sameAsOthers }))).toMatchObject({ label: 'Same as others', description: 'Uses JetBrains Rider' });
   });
 
-  it('shows Automatic with the app it uses, or the rule while it uses none', () => {
-    expect(pickedApp(choices())).toMatchObject({ label: 'Automatic', description: 'Uses Visual Studio Code' });
+  it('shows Automatic with its own icon and the app it uses, or the rule while it uses none', () => {
+    expect(pickedApp(choices())).toEqual({ label: 'Automatic', description: 'Uses Visual Studio Code', icon: AUTOMATIC_CHOICE_ICON, detail: 'Visual Studio Code' });
     expect(pickedApp(choices({ usedId: null }))).toMatchObject({ label: 'Automatic', description: 'The first editor found' });
   });
 

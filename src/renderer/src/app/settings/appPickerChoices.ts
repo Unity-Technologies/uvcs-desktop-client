@@ -61,17 +61,22 @@ export interface PickedApp {
   label: string;
   description: string;
   icon: Icon | undefined;
+  /** What the choice uses, muted after its label in a compact picker ("Automatic  UVCS merge tool"). */
+  detail?: string;
 }
 
 export const SYSTEM_APP_LABEL = "Each file's default app";
 
-/** The choice made, as the button shows it: an app with where it is, or "Automatic" with the app it uses. */
+/**
+ * The choice made, as the button shows it: an app with where it is, or "Automatic" with its own icon (it picks; it
+ * isn't the app) and the app it uses.
+ */
 export function pickedApp(choices: AppPickerChoices): PickedApp {
   const { apps, choice, usedId, automatic, offersSystem, missingName } = choices;
   if (offersSystem && choice === SYSTEM_APP) return { label: SYSTEM_APP_LABEL, description: 'As the OS opens it', icon: AppWindow };
   const used = apps.find((app) => app.id === usedId);
   if (automatic && isAutomatic(choices)) {
-    return { label: automatic.label, description: automaticAppDescription(used?.name, automatic.rule), icon: (used && appIcon(used)) ?? AUTOMATIC_CHOICE_ICON };
+    return { label: automatic.label, description: automaticAppDescription(used?.name, automatic.rule), icon: AUTOMATIC_CHOICE_ICON, detail: used?.name };
   }
   const picked = apps.find((app) => app.id === choice);
   if (!picked) return { label: missingName ?? choice, description: 'Not found on this computer', icon: AppWindow };

@@ -23,7 +23,10 @@ export function AppPicker({ label, compact = false, ...choices }: AppPickerProps
       >
         <span className={styles.pickerIcon}>{PickedIcon && <PickedIcon size={compact ? 16 : 18} />}</span>
         <span className={styles.choiceText}>
-          <span className={`${styles.choiceLabel} ${styles.oneLine}`}>{picked.label}</span>
+          <span className={`${styles.choiceLabel} ${styles.oneLine}`}>
+            {picked.label}
+            {compact && picked.detail && <span className={styles.pickedDetail}>{picked.detail}</span>}
+          </span>
           {!compact && (
             <span className={`${styles.choiceDescription} ${styles.oneLine}`} data-tip={picked.description}>
               {picked.description}
