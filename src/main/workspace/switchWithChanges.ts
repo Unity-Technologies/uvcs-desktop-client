@@ -1,5 +1,5 @@
 import type { PendingChangesSnapshot } from '@shared/domain/pendingChanges';
-import type { PendingChangesAction, SwitchResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
+import type { PendingChangesAction, SwitchChangesAction, SwitchResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { readWorkspaceLoad } from '../cm/workspaceStatus';
@@ -23,7 +23,7 @@ import { createAutomaticShelve } from './verifiedShelve';
 import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdentity';
 
 const IN_MERGE = "You're in the middle of a merge. Check it in or undo it before switching.";
-const NEEDS_CHOICE = 'The workspace has pending changes. Choose whether to leave them or bring them along.';
+const NEEDS_CHOICE = 'The workspace has pending changes. Choose whether to leave them, bring them along or undo them.';
 
 export interface SwitchDependencies extends ShelveFlowDependencies {
   /** Whether to restore changes left on the target as the switch arrives (`restoreLeftChangesAutomatically`). */
@@ -38,12 +38,13 @@ export interface SwitchDependencies extends ShelveFlowDependencies {
  * 3. Switch. Leaving is done; bringing merges the shelve on the target when it applies cleanly,
  *    or leaves the conflicts for the merge view.
  * If anything fails before the switch lands, the changes are put back where they were (`rollBackSwitch`).
+ * Discarding, which the user chose knowing the changes are lost, undoes them and switches, shelving nothing.
  */
 export async function switchWithChanges(
   deps: SwitchDependencies,
   workspacePath: string,
   targetSpec: string,
-  action: PendingChangesAction | undefined,
+  action: SwitchChangesAction | undefined,
   context: OperationContext,
 ): Promise<SwitchResult> {
   const workspace = await readWorkspaceIdentity(deps.cm, workspacePath);
@@ -58,7 +59,7 @@ async function switchFrom(
   workspace: WorkspaceIdentity,
   snapshot: PendingChangesSnapshot,
   targetSpec: string,
-  action: PendingChangesAction | undefined,
+  action: SwitchChangesAction | undefined,
   context: OperationContext,
 ): Promise<SwitchResult> {
   const { cm } = deps;
@@ -74,8 +75,27 @@ async function switchFrom(
       await runSwitch(cm, workspacePath, targetSpec, context);
       return { kind: 'undidUnchangedCheckouts', count: summary.pendingCount, restored: await restoreOnArrival(deps, workspacePath, withoutStop(context)) };
     case 'shelveChanges':
+      if (action === 'discard') return discardChanges(deps, workspacePath, summary.pendingCount, targetSpec, context);
       return shelveChanges(deps, workspacePath, workspace, snapshot, targetSpec, action, context);
   }
+}
+
+/**
+ * Undoes every change and switches. Nothing is shelved: the user chose to lose them. Added files stay on disk as
+ * private files, as Undo in Changes leaves them (one the target has at the same path is renamed by `cm switch`).
+ */
+async function discardChanges(deps: SwitchDependencies, workspacePath: string, count: number, targetSpec: string, context: OperationContext): Promise<SwitchResult> {
+  const { cm } = deps;
+  if (context.signal.aborted) throw new Error('The switch was cancelled.');
+  const committed = withoutStop(context);
+  committed.beginStep('Undoing your changes', 1, 2);
+  // Links too: without `--symlink` a checked-out link stays pending (and its target would be undone instead).
+  await cm.execute(onLinksThemselves('undo', '-r', workspacePath), { cwd: workspacePath });
+  await assertClean(cm, workspacePath);
+
+  committed.beginStep('Switching', 2, 2);
+  await runSwitch(cm, workspacePath, targetSpec, committed);
+  return { kind: 'discarded', count, restored: await restoreOnArrival(deps, workspacePath, committed) };
 }
 
 /** Shelves the changes and switches, then leaves them there or brings them along, as the user chose. */
