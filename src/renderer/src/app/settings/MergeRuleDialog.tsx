@@ -7,7 +7,7 @@ import { formatArgs } from '../../lib/argumentLine';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
-import { SelectField, TextField } from '../../ui/TextField';
+import { TextField } from '../../ui/TextField';
 import { TokenField } from '../../ui/TokenField';
 import fieldStyles from '../../ui/Field.module.css';
 import { AppPicker } from './AppPicker';
@@ -15,7 +15,8 @@ import {
   argsToSave,
   draftFields,
   draftOf,
-  editorOptions,
+  editorChoices,
+  editorName,
   fallbackChoices,
   ruleOf,
   savedDraft,
@@ -97,7 +98,6 @@ function MergeRuleDialog({ target, close }: { target: RuleTarget; close: () => v
         <div className={fieldStyles.field}>
           <span className={fieldStyles.label}>Opens in</span>
           <AppPicker
-            inline
             label="Opens in"
             apps={toolChoices(target, list)}
             choice={fields.shownToolId ?? ''}
@@ -136,18 +136,22 @@ function MergeRuleDialog({ target, close }: { target: RuleTarget; close: () => v
         )}
         {fields.unityYamlMerge && (
           <>
-            <SelectField label="Unity Editor" value={draft.editorId} onChange={(event) => change({ editorId: event.target.value })}>
-              {editorOptions(list, draft.editorId).map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </SelectField>
+            <div className={fieldStyles.field}>
+              <span className={fieldStyles.label}>Unity Editor</span>
+              <AppPicker
+                label="Unity Editor"
+                apps={editorChoices(list)}
+                choice={draft.editorId}
+                usedId={null}
+                automatic={null}
+                missingName={editorName(draft.editorId)}
+                onChoose={(editorId) => change({ editorId })}
+              />
+            </div>
             <div className={fieldStyles.field}>
               <span className={fieldStyles.label}>If it can't merge</span>
               <AppPicker
-                inline
-                label="If it can't merge"
+                    label="If it can't merge"
                 apps={fallbackChoices(list)}
                 choice={fields.shownFallbackId ?? ''}
                 usedId={null}

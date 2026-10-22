@@ -15,6 +15,8 @@ export interface PickableApp {
   glyph?: Icon;
   /** What it is, in the picker's tooltip, where its location doesn't say (UnityYAMLMerge: Unity's Smart Merge). */
   tip?: string;
+  /** Its words in the menu, where they say more than its name ("Newest installed (6000.5.0f1)"). */
+  menuLabel?: string;
 }
 
 /**
@@ -91,7 +93,7 @@ export function appPickerEntries(choices: AppPickerChoices): MenuEntry[] {
       run: () => onChoose(automatic.id),
     },
     SEPARATOR,
-    ...apps.map((app) => ({ id: app.id, label: app.name, icon: appIcon(app) ?? app.glyph, checked: !isAuto && app.id === choice, run: () => onChoose(app.id) })),
+    ...apps.map((app) => ({ id: app.id, label: app.menuLabel ?? app.name, icon: appIcon(app) ?? app.glyph, checked: !isAuto && app.id === choice, run: () => onChoose(app.id) })),
     SEPARATOR,
     ...(offersSystem ? [{ id: SYSTEM_APP, label: SYSTEM_APP_LABEL, icon: AppWindow, checked: choice === SYSTEM_APP, run: () => onChoose(SYSTEM_APP) }] : []),
     ...(onAdd ? [{ id: 'add', label: 'Choose another app…', icon: FolderOpen, run: onAdd }] : []),

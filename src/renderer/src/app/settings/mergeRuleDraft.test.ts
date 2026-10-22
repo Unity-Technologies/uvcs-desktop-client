@@ -4,7 +4,8 @@ import {
   argsToSave,
   draftFields,
   draftOf,
-  editorOptions,
+  editorChoices,
+  editorName,
   fallbackChoices,
   resolvedToolId,
   ruleOf,
@@ -138,17 +139,17 @@ describe('toolChoices', () => {
   });
 });
 
-describe('editorOptions', () => {
-  it('offers the newest installed first, then each installed version', () => {
-    expect(editorOptions(list, 'unityyamlmerge')).toEqual([
-      { value: 'unityyamlmerge', label: 'Newest installed (6000.5.0f1)' },
-      { value: 'unityyamlmerge:6000.5.0f1', label: '6000.5.0f1' },
-      { value: 'unityyamlmerge:2022.3.10f1', label: '2022.3.10f1' },
+describe('editorChoices', () => {
+  it('offers the newest installed first, then each installed version, the menu saying which is newest', () => {
+    expect(editorChoices(list).map(({ id, name, menuLabel, location }) => [id, name, menuLabel, location])).toEqual([
+      ['unityyamlmerge', 'Newest installed', 'Newest installed (6000.5.0f1)', 'Unity 6000.5.0f1'],
+      ['unityyamlmerge:6000.5.0f1', '6000.5.0f1', undefined, '/Unity/6000.5.0f1/UnityYAMLMerge'],
+      ['unityyamlmerge:2022.3.10f1', '2022.3.10f1', undefined, '/Unity/2022.3.10f1/UnityYAMLMerge'],
     ]);
   });
 
-  it('keeps a version picked that is no longer installed, saying so', () => {
-    expect(editorOptions(list, 'unityyamlmerge:2019.4.0f1').at(-1)).toEqual({ value: 'unityyamlmerge:2019.4.0f1', label: '2019.4.0f1 (not found on this computer)' });
-    expect(editorOptions({ ...list, unityYamlMerges: [] }, 'unityyamlmerge')).toEqual([{ value: 'unityyamlmerge', label: 'Newest installed' }]);
+  it('offers only "Newest installed" without a Unity Editor, and names a version gone by itself', () => {
+    expect(editorChoices({ ...list, unityYamlMerges: [] }).map((choice) => [choice.name, choice.menuLabel])).toEqual([['Newest installed', 'Newest installed']]);
+    expect(editorName('unityyamlmerge:2019.4.0f1')).toBe('2019.4.0f1');
   });
 });

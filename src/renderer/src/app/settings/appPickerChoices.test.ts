@@ -66,6 +66,15 @@ describe('appPickerEntries, for a merge tool', () => {
   });
 });
 
+describe('appPickerEntries, with words of its own in the menu', () => {
+  it('lists an app by its menu label, the button keeping its name', () => {
+    const apps = [{ id: 'n', name: 'Newest installed', menuLabel: 'Newest installed (6000.5.0f1)', location: 'Unity 6000.5.0f1' }];
+    const picked = choices({ apps, choice: 'n', automatic: null, offersSystem: false, onAdd: undefined });
+    expect(reading(appPickerEntries(picked))).toEqual(['Newest installed (6000.5.0f1) ✓']);
+    expect(pickedApp(picked).label).toBe('Newest installed');
+  });
+});
+
 describe('appPickerEntries, with an app the OS gave no icon', () => {
   it('draws its glyph, and shows what it is in the picked line’s tooltip', () => {
     const glyph = () => null;

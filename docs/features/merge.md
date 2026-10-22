@@ -33,11 +33,11 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   computer", named by `knownNames`); removing a tool of the user's drops its rows and makes it no row's fallback. With
   nothing imported, the rows are Unity assets in UnityYAMLMerge (`UNITY_YAML_MERGE_RULE`, `UNITY_YAML_PATTERNS`: scenes,
   prefabs and the assets Unity saves as YAML, not `.meta` files, which have no Unity YAML header) and C#, Visual Basic
-  and Java in Semantic Merge (`SEMANTIC_MERGE_RULE`), as the official client sends them. The pane lists the rows read-only, one line each, a list row's
-  height (`--row-height`), in one grid (`MergeToolsPane`, `mergeToolRows`): a rule's file types in the code font, as
-  many as the files column holds then "+N" (`fitFileTypes`; the column's width in the code font's characters,
-  `useFilesBudget` measuring it as the pane resizes, `filesBudget` deciding; every one in the tooltip; the list is cut,
-  never the count), then the tool: a fixed icon cell and its name, every icon in one column (the pinned Unity Editor's version
+  and Java in Semantic Merge (`SEMANTIC_MERGE_RULE`), as the official client sends them. The pane lists the rows read-only, one line each, all 34px
+  (`--merge-row-height`, a little roomier than a list's), in one grid (`MergeToolsPane`, `mergeToolRows`): a rule's
+  file types in the code font, as many as the files column holds then " +N" (`fitFileTypes`, by the text's width as the
+  row draws it: `useFilesFit` measures the column as the pane resizes and the text in its font, `fitsWidth`; every one
+  in the tooltip; the list is cut, never the count), then the tool: a fixed icon cell and its name, every icon in one column (the pinned Unity Editor's version
   after UnityYAMLMerge's name, quieter). The tool's tooltip is how it's launched, its command line quoted where needed
   (`commandLine`), with "If it can't merge: <tool>" for UnityYAMLMerge; a tool that isn't here shows its name quieter,
   a warning in its icon cell and why in the tooltip; with no merge tool at all, every other file's row reads "No merge
@@ -47,13 +47,14 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   Edit…). The dialog (`MergeRuleDialog`, `mergeRuleDraft`), each field a label, its control and its hint: "Files"
   (chips: `TokenField`, `lib/tokenInput`: a space, comma, semicolon or Enter makes a chip, double quotes keep spaces in
   one, pasting splits into chips, Backspace in an empty field takes the last away, each chip's × removes it, each value
-  once; Enter never submits), "Opens in" (one line, a field's height, where the tool is in its tooltip; each tool once:
+  once; Enter never submits), "Opens in" (the Apps page's picker, `AppPicker`: its icon, name and path; each tool once:
   the UVCS merge tool, Semantic Merge, UnityYAMLMerge with the newest editor's version under it and Smart Merge, Unity's
   name for it, only in its tooltip, then the others found and the user's, `toolChoices`), then for a tool "How <tool>
   opens", its arguments in place (stored per tool, so they apply wherever it opens; "Back to its own arguments",
   "Remove <tool>" for the user's own; saved with the rule, `argsToSave`), or for UnityYAMLMerge (whose arguments are
-  fixed, `UNITY_YAML_MERGE_ARGS`) "Unity Editor" ("Newest installed (6000.5.0f1)", then each installed version; one
-  gone stays, saying so: `editorOptions`) and "If it can't merge" (`fallbackChoices`). Save stays off until a rule has a
+  fixed, `UNITY_YAML_MERGE_ARGS`) "Unity Editor" (the same picker: "Newest installed", its version under it, then each
+  installed version, its path under it; one gone shows as not found: `editorChoices`) and "If it can't merge"
+  (`fallbackChoices`). A long menu scrolls within the window (`Menu.module.css`). Save stays off until a rule has a
   file type and the arguments name `{result}` (`saveProblem`); a new rule is added only on Save. No dialog opens over
   it but "Choose another app…", to add a program.
 - **No "Automatic" in Settings › Merge.** Every other file's tool and UnityYAMLMerge's fallback store `auto` until one

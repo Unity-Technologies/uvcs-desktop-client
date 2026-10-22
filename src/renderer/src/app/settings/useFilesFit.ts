@@ -1,20 +1,20 @@
 import { useCallback, useState } from 'react';
 import { textMeasurer } from '../../lib/measureText';
-import { DEFAULT_FILES_BUDGET, filesBudget } from './mergeToolRows';
+import { fitsWidth, GUESSED_FIT, type FitsColumn } from './mergeToolRows';
 
 /**
- * How many characters of file types Settings › Merge's files column holds now: a ref for a row's files cell, watched
- * as the pane resizes, its width read in the code font's characters (`filesBudget` decides).
+ * Whether a row's file types fit Settings › Merge's files column now: a ref for a row's files cell, watched as the pane
+ * resizes, the text measured as that cell draws it (the code font).
  */
-export function useFilesBudget(): [(element: HTMLElement | null) => void, number] {
-  const [budget, setBudget] = useState(DEFAULT_FILES_BUDGET);
+export function useFilesFit(): [(element: HTMLElement | null) => void, FitsColumn] {
+  const [fits, setFits] = useState<FitsColumn>(() => GUESSED_FIT);
   const ref = useCallback((element: HTMLElement | null) => {
     if (!element) return;
-    const charWidth = textMeasurer(element)('0000000000') / 10;
-    const observer = new ResizeObserver(([entry]) => entry && setBudget(filesBudget(entry.contentRect.width, charWidth)));
+    const widthOf = textMeasurer(element);
+    const observer = new ResizeObserver(([entry]) => entry && setFits(() => fitsWidth(entry.contentRect.width, widthOf)));
     observer.observe(element);
     // React 19 runs a ref's cleanup when the element goes.
     return () => observer.disconnect();
   }, []);
-  return [ref, budget];
+  return [ref, fits];
 }
