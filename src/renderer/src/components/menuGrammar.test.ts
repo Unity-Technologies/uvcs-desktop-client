@@ -38,6 +38,7 @@ import { mergeItemMenu, type MergeMenuContext } from '../features/merge/mergeIte
 import type { FileConflictState } from '../features/merge/resolve/useFileConflicts';
 import { changelistMenu } from '../features/pendingChanges/changelistMenu';
 import { pendingChangeMenu } from '../features/pendingChanges/pendingChangeMenu';
+import { lineMenu } from '../features/diff/viewer/lineMenu';
 import { shelveMenu } from '../features/shelves/shelveMenu';
 import { syncBranchMenu } from '../features/sync/syncBranchMenu';
 import { isSubmenu, SEPARATOR, withoutAction, type Action, type MenuEntry, type Submenu } from '../lib/actions';
@@ -224,11 +225,21 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   graphMergeLink: () => graphMenu({ kind: 'mergeLink', link: sampleHistory().mergeLinks[0]! }, graphContext),
 };
 
+/**
+ * Menus of lines of code, not of an object: what they copy is the lines' link and text, so they have their own "Copy …"
+ * entries and no object's "Copy" submenu. Every other rule of the grammar holds.
+ */
+const CODE_MENUS: Record<string, () => MenuEntry[]> = {
+  diffLines: () => lineMenu({ lines: { side: 'new', first: 40, last: 52 }, copyLink: () => {}, copyLines: () => {}, annotate: () => {} }),
+  annotatedLine: () => lineMenu({ lines: { side: 'new', first: 42, last: 42 }, copyLink: () => {}, copyLines: () => {} }),
+};
+const EVERY_MENU = { ...MENUS, ...CODE_MENUS };
+
 const wordOf = (entry: Action | Submenu): MenuWord | undefined => (entry.id ? (MENU_WORDS as Record<string, MenuWord>)[entry.id] : undefined);
 const topEntries = (menu: MenuEntry[]): (Action | Submenu)[] => menu.filter((entry): entry is Action | Submenu => entry !== SEPARATOR);
 
 describe('the menu grammar', () => {
-  it.each(Object.entries(MENUS))('%s: every entry is a word of the vocabulary, with its icon, group and (where fixed) words', (_name, build) => {
+  it.each(Object.entries(EVERY_MENU))('%s: every entry is a word of the vocabulary, with its icon, group and (where fixed) words', (_name, build) => {
     for (const entry of topEntries(build())) {
       const word = wordOf(entry);
       expect(word, `${entry.id ?? entry.label} is in MENU_WORDS`).toBeDefined();
@@ -239,7 +250,7 @@ describe('the menu grammar', () => {
     }
   });
 
-  it.each(Object.entries(MENUS))('%s: groups come in the grammar order, a separator between two groups and nowhere else', (_name, build) => {
+  it.each(Object.entries(EVERY_MENU))('%s: groups come in the grammar order, a separator between two groups and nowhere else', (_name, build) => {
     const menu = build();
     expect(menu.length).toBeGreaterThan(0);
     expect(menu[0]).not.toBe(SEPARATOR);
@@ -264,8 +275,16 @@ describe('the menu grammar', () => {
     expect(kinds).toEqual(COPY_KINDS.filter((kind) => kinds.includes(kind)));
   });
 
-  it.each(Object.entries(MENUS))('%s: what opens a dialog ends with "…", and nothing else does', (_name, build) => {
+  it.each(Object.entries(EVERY_MENU))('%s: what opens a dialog ends with "…", and nothing else does', (_name, build) => {
     for (const entry of topEntries(build())) expect(entry.label).not.toMatch(/\.\.\.$/);
+  });
+});
+
+describe('lines of code', () => {
+  it.each(Object.entries(CODE_MENUS))('%s: copies the lines\' link and text, and no object\'s Copy submenu', (_name, build) => {
+    const entries = topEntries(build());
+    expect(entries.filter((entry) => entry.id === 'copy')).toEqual([]);
+    expect(entries.filter((entry) => entry.label.startsWith('Copy')).map((entry) => entry.id)).toEqual(expect.arrayContaining(['copyLines']));
   });
 });
 
