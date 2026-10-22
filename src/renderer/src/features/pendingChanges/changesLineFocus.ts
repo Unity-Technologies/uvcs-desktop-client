@@ -25,6 +25,11 @@ export function lineFocusRequestFor(request: LineFocusRequest | null, workspaceP
   return request && request.workspacePath === workspacePath && request.path === path ? request.lines : undefined;
 }
 
+/** The lines taken for a change, while the diff shows that change: none once it shows another. */
+export function linesTakenFor(taken: { path: string; lines: FocusedLines } | null, path: string): FocusedLines | undefined {
+  return taken?.path === path ? taken.lines : undefined;
+}
+
 /**
  * The lines asked for in the change a diff shows (`requestLineFocus`), taken once it shows it; dropped once it shows
  * another, so coming back leaves the diff where the user left it.
@@ -38,8 +43,8 @@ export function useRequestedLineFocus(workspacePath: string, path: string): Focu
     setTaken({ path, lines });
     useLineFocusRequests.setState({ request: null });
   }, [request, workspacePath, path]);
-  useEffect(() => {
-    if (taken && taken.path !== path) setTaken(null);
-  }, [taken, path]);
-  return taken?.path === path ? taken.lines : undefined;
+  const lines = linesTakenFor(taken, path);
+  // Adjusted while rendering: another change shown drops them, so coming back doesn't scroll there again.
+  if (taken && !lines) setTaken(null);
+  return lines;
 }

@@ -24,6 +24,7 @@ import { listedEntries } from './listedEntries';
 import { useDiffReview } from './review/useDiffReview';
 import { FileStepsContext, useFileSteps } from './viewer/fileSteps';
 import { LineLinksContext, type LineLinks } from './viewer/lineLinks';
+import { useFocusUntilMoved } from './viewer/useFocusUntilMoved';
 import { AssetsPointContext, diffAssetsPoint } from './viewer/model/assetsPoints';
 import { diffSibling, SiblingFinderContext } from './viewer/model/modelSiblings';
 import { useShownDiffFile } from './shownDiffFile';
@@ -83,11 +84,8 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   }, [focused, focusedFolder, firstKey]);
 
   // The lines a link opened the diff on go once another file is selected: coming back leaves the file where it was.
-  const [linkFocus, setLinkFocus] = useState(() => linkFocusOf(initialPath, initialLines));
+  const linkFocus = useFocusUntilMoved(linkFocusOf(initialPath, initialLines), focused?.path);
   const focusOnShown = linkFocusOn(linkFocus, focused);
-  useEffect(() => {
-    if (linkFocus && focused && !focusOnShown) setLinkFocus(null);
-  }, [focused?.path]);
   const lineLinks = useMemo<LineLinks>(() => ({ focus: focusOnShown, publishes: true }), [linkFocus, focused?.path]);
 
   const pane = diffPaneOf({ listedCount: reading ? undefined : entries.length, shownCount: shown.length, entrySelected: focused !== undefined, folderSelected: focusedFolder !== undefined });
