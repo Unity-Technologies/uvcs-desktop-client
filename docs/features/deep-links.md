@@ -67,7 +67,13 @@ Pages inside an object (`…/<object>/-/<page>`):
 - **Repository names** are one segment: a `/` in one is `%2F`.
 - **Everything else** (each folder or branch name, a file's name) is percent-encoded as UTF-8 (`%20` for a space).
   The app writes a `+` as `%2B` and reads a bare `+` as a space, as the official client's links write spaces.
-- `formatLink` writes every link, `parseLink` reads them (`shared/links`); the two round-trip.
+- **Labels**: a dot next to another, or ending the name, is `%2E` (`encodeLabel`), so `v1..2` is never read as a
+  range of two labels.
+- **What no link carries**: a name decoded to a line break, a quote or a backslash, a `/` anywhere but a repository's
+  name, `.` and `..`, a number past a safe integer: `parseLink` refuses them (`decodedAll`, `idIn`, a link pasted from
+  anywhere being untrusted text). So the app offers no link to a file, branch or label named with one (`writesAsLink`):
+  a quote and a backslash are legal in a name on macOS and Linux.
+- `formatLink` writes every link, `parseLink` reads them (`shared/links`); every link the app offers round-trips.
 
 ### Older links
 

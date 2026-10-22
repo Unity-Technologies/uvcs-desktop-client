@@ -13,8 +13,9 @@ interface SelectedLinesState {
 }
 
 /**
- * The lines selected in the gutter of the committed diff on screen (a changeset's, a branch's, a shelve's, a review's:
- * `useLineLinks`), for "Copy link" to name them (`#L40-L52`). Each window has its own.
+ * The lines selected on screen, for "Copy link" to name them (`#L40-L52`): in the gutter of a committed diff (a
+ * changeset's, a branch's, a shelve's, a review's: `useLineLinks`), a history's diff or annotations, and a file
+ * browsed at a changeset. Each window has its own.
  */
 export const useSelectedLines = create<SelectedLinesState>(() => ({ selected: null }));
 

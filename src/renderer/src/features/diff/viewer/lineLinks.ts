@@ -6,8 +6,9 @@ import type { SelectedLines } from '../selectedLinesStore';
  * - `focus`: the lines a link opened the page on (`#L42`), in that file (a repository path, as `DiffEntry.path`):
  *   the file's diff opens scrolled to them, marked;
  * - `publishes`: the lines selected in its gutter are the ones "Copy link" names (`selectedLinesStore`): a committed
- *   diff's (`DiffBrowser`), not a workspace's own changes, which no link names.
- * Without one (a history's diff, a merge's), lines can still be selected, for nothing but to look at them.
+ *   diff's (`DiffBrowser`) and a history's (`HistoryPage`, its diff and annotations), not a workspace's own changes,
+ *   which no link names.
+ * Without one (a merge's diff), lines can still be selected, for nothing but to look at them.
  */
 export interface LineLinks {
   focus: SelectedLines | null;

@@ -244,7 +244,8 @@ merge page steps through conflicts with it (merge.md "Stepping through conflicts
 
 A diff's line numbers select lines, as on GitHub: a click selects one, Shift+click or a drag a range (`useLineLinks`,
 Pierre's line selection). Those of a committed diff (a changeset's, branch's, label's, shelve's, range's or review's:
-`DiffBrowser`, which says so through `LineLinksContext`) are the ones "Copy link" names (`#L40-L52`, `#old-L7` on the
+`DiffBrowser`, which says so through `LineLinksContext`), a history's (`HistoryPage`, its diff and annotations) and a
+file browsed at a changeset are the ones "Copy link" names (`#L40-L52`, `#old-L7` on the
 older side): `selectedLinesStore` keeps the file and lines selected in the diff on screen (`selectedLinesIn`), forgotten
 as the file leaves it. A selection across both sides (unified, from a removed line to an added one) keeps its end on the
 newer side (`linkedLinesOf`). A workspace file's diff picks lines to discard them instead (`useBlockDiscard`).
