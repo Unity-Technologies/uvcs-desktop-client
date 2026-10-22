@@ -18,6 +18,7 @@ vi.mock('./checkinOperations', () => ({
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { askedDialogs } from '../../testing/fakeDialogs';
 import { changesByChangelist, prepareChangelistCheckin } from './changelistCheckin';
+import { indexPending } from './checkinDependencies';
 import { checkinDraftOf, useCheckinDraftStore } from './checkinDraftStore';
 import { checkinSelectionOf, currentChoice, includedBy, type CheckinSelection } from './checkinSelection';
 import { checkinFromPanel, shelveFromPanel } from './submitCheckinPanel';
@@ -52,13 +53,13 @@ const allChanges = [...defaultChanges, ...uiChanges, artChange, plainChange];
 
 /** What the panel checks in and shelves once the draft is as `prepareChangelistCheckin` left it, of the changes the filter shows. */
 const selection = (changes = allChanges, matchingFilter = changes) =>
-  checkinSelectionOf({ all: changes, matchingFilter }, includedBy(currentChoice(checkinDraftOf(ws), changes)));
+  checkinSelectionOf({ all: changes, matchingFilter, index: indexPending(changes) }, includedBy(currentChoice(checkinDraftOf(ws), changes)));
 
 const filterCleared = vi.fn();
 
 function prepare(changelist: Changelist, changelistsNow = changelists): void {
   const changes = changesByChangelist(allChanges).get(changelist.name) ?? [];
-  prepareChangelistCheckin({ workspacePath: ws, changelist, changes, changelists: changelistsNow, clearFilter: filterCleared });
+  prepareChangelistCheckin({ workspacePath: ws, changelist, changes, index: indexPending(allChanges), changelists: changelistsNow, clearFilter: filterCleared });
 }
 
 const panelCheckin = ({ included, hiddenIncludedCount }: CheckinSelection) => ({
@@ -102,6 +103,16 @@ describe('prepareChangelistCheckin', () => {
     prepare(ui);
 
     expect(filterCleared).toHaveBeenCalledOnce();
+  });
+
+  // A private file in the changelist can't go in without its private folder, which is in no changelist.
+  it('checks what its changes need with them, outside the changelist', () => {
+    const generated = { ...change('gen', ['private']), itemType: 'directory' as const };
+    const generatedFile = change('gen/Api.cs', ['private'], 'api');
+    const api: Changelist = { name: 'api', description: '' };
+    prepareChangelistCheckin({ workspacePath: ws, changelist: api, changes: [generatedFile], index: indexPending([generated, generatedFile]), changelists: [api], clearFilter: filterCleared });
+
+    expect([...checkinDraftOf(ws).prepared!.paths].sort()).toEqual(['gen', 'gen/Api.cs']);
   });
 
   it("takes for a shelve what a shelve can of the changelist's changes: not the link", () => {

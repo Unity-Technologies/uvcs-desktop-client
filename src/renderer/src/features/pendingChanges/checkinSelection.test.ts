@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
+import { indexPending } from './checkinDependencies';
 import { checkinSelectionOf, includedBy, type CheckinChoice, type ListedChanges } from './checkinSelection';
 
 /** Changes listed, of which the filter shows `matchingFilter`: all of them when nothing filters. */
-const listing = (all: PendingChange[], matchingFilter = all): ListedChanges => ({ all, matchingFilter });
+const listing = (all: PendingChange[], matchingFilter = all): ListedChanges => ({ all, matchingFilter, index: indexPending(all) });
 
 /** The choice of a user who unchecked `paths`. */
 const unchecking = (paths: string[]): CheckinChoice => ({ excludedPaths: new Set(paths), prepared: null });
@@ -43,6 +44,18 @@ describe('checkinSelectionOf', () => {
     expect(selection.included).toEqual([edited, link]);
     expect(selection.upload.bytes).toBe(101);
     expect(isIncluded(privateFile)).toBe(true);
+  });
+
+  // Filtered by name on "file.c", the private folders it needs don't show: they go in with it, as cm needs them.
+  it('takes with a shown change the hidden ones it needs, and counts them', () => {
+    const foo = { ...change('foo', ['private'], 0), itemType: 'directory' as const };
+    const fileC = change('foo/file.c', ['private']);
+    const listed = [foo, fileC, edited];
+
+    const selection = checkinSelectionOf(listing(listed, [fileC]), includedBy(unchecking([])));
+
+    expect(selection.included).toEqual([foo, fileC]);
+    expect(selection.hiddenIncludedCount).toBe(1);
   });
 
   // The added file is unchecked, the ignored and hidden ones are never checked: the private file alone waits.
