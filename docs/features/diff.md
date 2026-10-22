@@ -65,8 +65,8 @@ of the xlink's folder at each side (`cm ls /<folder> --tree=<point>`, which name
 itself; a range's, its two points; a branch's, where it started (the parent of its first changeset) and its head. A
 branch's diff starts at its common ancestor with its parent (`--integration`), which no read names cheaply: the
 branch's start is the same point unless the branch merged from its parent, so the side is called "Where the branch
-started", not "Before". A shelve's tree and a label's can't be listed (`listsTree`), nor a path under another xlink,
-so there the panel shows only the files. A changeset's or a range's answer is cached as immutable; a branch's is
+started", not "Before". A shelve's tree and a label's can't be listed (`listsTree`), so there the panel shows only the
+files; `cm ls` reaches through xlinks, so an xlink under another is read as any other. A changeset's or a range's answer is cached as immutable; a branch's is
 re-read as the server lists are (`SLOW_CHANGING_QUERY`).
 
 Not shown: the xlink's branch expansion rules, which only `cm xlink --show` prints, and only for a workspace's own

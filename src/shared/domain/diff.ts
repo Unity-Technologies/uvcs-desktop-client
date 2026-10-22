@@ -30,7 +30,8 @@ export type DiffTarget =
 
 /**
  * Where a changed xlink of a diff points on each side (`DiffApi.xlinkSides`): null on a side it isn't on (added,
- * deleted), and on one whose tree `cm ls` can't read (a shelve, a label) or where the xlink lies under another xlink.
+ * deleted), on one whose tree `cm ls` can't read (a shelve, a label), and where its folder isn't in that tree. `cm ls`
+ * reaches through xlinks, so one under another is read as any other.
  */
 export interface XlinkSides {
   before: XlinkTarget | null;
