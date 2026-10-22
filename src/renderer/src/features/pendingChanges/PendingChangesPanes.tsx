@@ -94,10 +94,10 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const locks = usePendingLocks(workspacePath, workspace?.repository, allChanges, readAt);
   // Sorted once for the layout; filtering keeps the order, so typing in the filter or opening a folder never sorts again.
   const sorted = useSortedChanges(allChanges);
-  const { visible: filtered, query, clear: clearTextFilter, bar: filterBar } = useChangeFilter(sorted, changePath, changeTones, { isViewFilter: true, reading: !snapshot, actions: <ReviewModeButton workspacePath={workspacePath} /> });
+  const { visible: filtered, query, clear: clearChangeFilter, bar: filterBar } = useChangeFilter(sorted, changePath, changeTones, { isViewFilter: true, reading: !snapshot, actions: <ReviewModeButton workspacePath={workspacePath} /> });
   const changes = useMemo(() => review.narrow(filtered), [review.narrow, filtered]);
   const clearFilter = (): void => {
-    clearTextFilter();
+    clearChangeFilter();
     review.showAll();
   };
   const { rows, changesByKey, fileKeys, checkboxInset, toggleCollapsed } = useChangeRows({ changes, changelists, layout, grouping, scope: folderListScope(workspacePath, 'changes') });
@@ -153,7 +153,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const prepareChangelist = (changelist: Changelist, mode: CheckinMode): void => {
     // Rendered at once, so the summary holds the comment before the caret goes after it.
     flushSync(() => {
-      clearTextFilter();
+      clearChangeFilter();
       prepareChangelistCheckin({ workspacePath, changelist, changes: changelistChanges.get(changelist.name) ?? NO_CHANGES, changelists });
       setCheckinMode(mode);
     });
