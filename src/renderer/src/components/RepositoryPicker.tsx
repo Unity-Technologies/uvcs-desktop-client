@@ -13,11 +13,16 @@ interface RepositoryPickerProps {
   /** Repositories that can't be picked, e.g. the source of a push. */
   exclude?: string;
   label?: string;
+  /** The server shown, when the caller keeps it (e.g. to share it with other fields); the picker keeps its own otherwise. */
+  server?: string;
+  onServerChange?: (server: string) => void;
 }
 
 /** Picks a server, then one of its repositories. */
-export function RepositoryPicker({ value, onChange, exclude, label = 'Repository' }: RepositoryPickerProps) {
-  const [server, setServer] = useState(() => (value ? splitRepositorySpec(value).server : 'local'));
+export function RepositoryPicker({ value, onChange, exclude, label = 'Repository', server: shownServer, onServerChange }: RepositoryPickerProps) {
+  const [ownServer, setOwnServer] = useState(() => (value ? splitRepositorySpec(value).server : 'local'));
+  const server = shownServer ?? ownServer;
+  const setServer = onServerChange ?? setOwnServer;
   const { data: repositories, isLoading, error } = useRepositories(server);
   const choices = (repositories ?? []).filter((repository) => repository.spec !== exclude);
 
