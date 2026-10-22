@@ -1173,8 +1173,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     moved one stays, a move listing the folder alone (`withoutRepeatedFolders`, `lib/enclosingFolders`: `listedEntries`
     for a diff, Incoming and a details panel's changed files, so their counts agree; `buildMergeItems` for a merge).
 - **File icons**: `ItemIcon` draws every file as the same filled Lucide page (`--icon-file` on `--icon-file-fill`) beside solid
-  folders (`itemIconShape`), so every row reads with one weight, and an xlink as the same solid folder with a link cut
-  out of it, in every list (Files lists an xlink as a directory, so its row passes `xlink` for the icon alone): it
+  folders (`itemIconShape`), so every row reads with one weight, and an xlink as the same solid folder with an arrow
+  badge cut into its bottom-right corner (`FolderXlinkIcon`: one color, the cutout and arrow transparent), in every list (Files lists an xlink as a directory, so its row passes `xlink` for the icon alone): it
   never reads as a directory; where it points shows on selecting it (`xlinkSummary`, `XlinkDiff`); a glyph on the page tells the
   file's family (`fileFamilyOf`, by name
   first, then its longest extension: `Form.Designer.cs` before `.cs`), and only the glyph takes the family's tint

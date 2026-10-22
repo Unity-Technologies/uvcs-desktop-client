@@ -16,13 +16,9 @@
   fill: var(--icon-folder);
 }
 
-/* An xlink is a folder like any other, a link cut out of its body: the surface's color shows through. */
-.icon > .xlinkGlyph {
-  inset: auto;
-  left: 3px;
-  top: 5px;
-  color: var(--bg-surface);
-  stroke-width: 3;
+/* An xlink's folder takes the directory's color; its cutout and arrow are transparent, so the row shows through. */
+.xlink {
+  color: var(--icon-folder);
 }
 
 /* Every file is the same filled page, whatever its glyph: all read with one weight. */

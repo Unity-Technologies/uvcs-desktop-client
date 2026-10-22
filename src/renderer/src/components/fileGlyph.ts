@@ -32,13 +32,13 @@ export const FAMILY_GLYPHS: Record<FileFamily, LucideIcon | null> = {
 };
 
 /**
- * What an item's icon draws: a folder, an xlink's folder with its link, or the page with a glyph (none for the plain
+ * What an item's icon draws: a folder, an xlink's folder with its arrow badge, or the page with a glyph (none for the plain
  * page) tinted by its family.
  */
 export type ItemIconShape = { kind: 'folder' } | { kind: 'xlink' } | { kind: 'page'; family: FileFamily; glyph: LucideIcon | null };
 
 /**
- * The icon of an item: a folder for directories, a folder with a link for xlinks, so one never reads as the other; for a file, its family's glyph by its name, a file `cm`
+ * The icon of an item: a folder for directories, a folder with an arrow badge for xlinks, so one never reads as the other; for a file, its family's glyph by its name, a file `cm`
  * calls binary counting as one when its name tells nothing; a symlink's own arrow, untinted.
  */
 export function itemIconShape(itemType: ItemType, name: string): ItemIconShape {
