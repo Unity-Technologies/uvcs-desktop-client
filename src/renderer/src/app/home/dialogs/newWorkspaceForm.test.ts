@@ -1,7 +1,7 @@
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { RepositorySummary } from '@shared/domain/repository';
-import { newWorkspaceFormOf, repositoriesToName, serverToList, type NewWorkspaceFormInput } from './newWorkspaceForm';
+import { initialRepositoryName, newWorkspaceFormOf, repositoriesToName, serverToList, type NewWorkspaceFormInput } from './newWorkspaceForm';
 
 const root = join('Users', 'me', 'wkspaces');
 const repositoryOnServer = (name: string): RepositorySummary => ({ id: name, name, server: 'acme@cloud', owner: 'me', spec: `${name}@acme@cloud` });
@@ -137,5 +137,26 @@ describe('repositoriesToName', () => {
   it("names the fixed repository as it is, never one to create", () => {
     const fixed = repositoryOnServer('game');
     expect(newWorkspaceFormOf({ ...input, repositoryName: 'game', repositories: repositoriesToName(fixed, undefined) }).repository).toEqual({ kind: 'existing', spec: fixed.spec });
+  });
+});
+
+describe('initialRepositoryName', () => {
+  it("proposes a dropped folder's name for the repository, as for the workspace", () => {
+    expect(initialRepositoryName(undefined, join('projects', 'jump'))).toBe('jump');
+    expect(initialRepositoryName(undefined, `${join('projects', 'jump')}${sep}`)).toBe('jump');
+  });
+
+  it('is the repository the caller fixed, whatever the folder', () => {
+    expect(initialRepositoryName(onServer[0], join('projects', 'jump'))).toBe('game');
+  });
+
+  it('is empty when the dialog opens with neither', () => {
+    expect(initialRepositoryName(undefined, undefined)).toBe('');
+  });
+
+  it('names an existing repository when the folder is named like one, and one to create otherwise', () => {
+    const fromFolder = (folder: string) => newWorkspaceFormOf({ ...input, repositoryName: initialRepositoryName(undefined, folder), initialPath: folder, chosenPath: folder });
+    expect(fromFolder(join('projects', 'game'))).toMatchObject({ repository: { kind: 'existing', spec: 'game@acme@cloud' }, workspaceName: 'game' });
+    expect(fromFolder(join('projects', 'jump'))).toMatchObject({ repository: { kind: 'new', name: 'jump' }, repositoryNote: { kind: 'creates' }, workspaceName: 'jump' });
   });
 });
