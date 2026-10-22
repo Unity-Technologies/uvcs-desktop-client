@@ -106,6 +106,27 @@ describe('consistentlyIncluded', () => {
   });
 });
 
+// cm refuses part of a merge: "All merge changes must be checked in together".
+describe('a pending merge', () => {
+  const merged = (change: PendingChange): PendingChange => ({ ...change, mergeInfo: 'Merge from 2' });
+  const replaced = merged(file('src/a.cs', ['replaced']));
+  const copiedFolder = merged(folder('src/feature', ['copied']));
+  const copied = merged(file('src/feature/f.cs', ['copied']));
+  const mine = file('notes.txt', ['changed']);
+  const merging = indexPending([replaced, copiedFolder, copied, mine]);
+
+  it('checks and unchecks all its changes together, and nothing else', () => {
+    expect(paths(neededWith([copied], merging))).toEqual(['src/a.cs', 'src/feature', 'src/feature/f.cs']);
+    expect(paths(needingThem([replaced], merging))).toEqual(['src/a.cs', 'src/feature', 'src/feature/f.cs']);
+  });
+
+  it('leaves it all out when any of its changes is unchecked', () => {
+    const isIncluded = consistentlyIncluded((change) => change.path !== 'src/a.cs', merging);
+
+    expect([replaced, copiedFolder, copied, mine].filter(isIncluded)).toEqual([mine]);
+  });
+});
+
 // Checking a box in a list of tens of thousands must not walk the list: only the folders above what was clicked.
 describe('on a big list', () => {
   const big = Array.from({ length: 20_000 }, (_, at) => file(`game/assets/level${at % 50}/props/item${at}.prefab`, ['checkedOut', 'changed']));
