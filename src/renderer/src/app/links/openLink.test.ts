@@ -140,7 +140,7 @@ describe('a repository link', () => {
 describe('a workspace link', () => {
   it('opens a file in Changes when it has a pending change, at its lines', async () => {
     workspaces({ [GAME]: head('game@acme@unity') }, { current: GAME });
-    fakeApi.answer('workspaces.findRoot', async () => GAME);
+    fakeApi.answer('workspaces.locate', async (path: string) => ({ root: GAME, itemPath: path.endsWith('Player.cs') ? 'Assets/Player.cs' : '' }));
     fakeApi.answer('pendingChanges.list', async () => ({ changes: [{ path: 'Assets/Player.cs' }] }));
 
     await openLink(`uvcs://${GAME.replaceAll('\\', '/').replace(/^(?!\/)/, '/')}/Assets/Player.cs#L42`);
@@ -151,7 +151,7 @@ describe('a workspace link', () => {
 
   it('reveals a file without changes in Files', async () => {
     workspaces({ [GAME]: head('game@acme@unity') }, { current: GAME });
-    fakeApi.answer('workspaces.findRoot', async () => GAME);
+    fakeApi.answer('workspaces.locate', async (path: string) => ({ root: GAME, itemPath: path.endsWith('Player.cs') ? 'Assets/Player.cs' : '' }));
     fakeApi.answer('pendingChanges.list', async () => ({ changes: [] }));
 
     await openLink(`uvcs://${GAME.replaceAll('\\', '/').replace(/^(?!\/)/, '/')}/Assets/Player.cs`);
@@ -162,7 +162,7 @@ describe('a workspace link', () => {
 
   it('goes to the window for its workspace when this one shows another', async () => {
     workspaces({ [GAME]: head('game@acme@unity') }, { current: TOOLS });
-    fakeApi.answer('workspaces.findRoot', async () => GAME);
+    fakeApi.answer('workspaces.locate', async (path: string) => ({ root: GAME, itemPath: path.endsWith('Player.cs') ? 'Assets/Player.cs' : '' }));
     fakeApi.answer('windows.openLinkIn', async () => 'handedOver');
 
     await openLink('uvcs:///wk/game/-/incoming');
@@ -171,7 +171,7 @@ describe('a workspace link', () => {
   });
 
   it("tells in a toast when the workspaces can't be read", async () => {
-    fakeApi.answer('workspaces.findRoot', async () => {
+    fakeApi.answer('workspaces.locate', async () => {
       throw new Error('cm is gone');
     });
 
@@ -181,7 +181,7 @@ describe('a workspace link', () => {
   });
 
   it('says so for a folder no workspace holds', async () => {
-    fakeApi.answer('workspaces.findRoot', async () => null);
+    fakeApi.answer('workspaces.locate', async () => null);
 
     await openLink('uvcs:///tmp/elsewhere');
 

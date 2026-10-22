@@ -102,8 +102,10 @@ the workspace only gives the page a window and a repository to read.
 4. **The workspace** (`linkDestination`, from the workspaces and their repositories the home screen reads, all local:
    `cm workspace list`, `cm wi`; `cm status` only for one `cm wi` names by an organization's id, and only when its
    repository's own name is the link's):
-   - a workspace link: the workspace holding that folder (`cm getworkspacefrompath`); a folder in none says so. A
-     file named with no page shows in Changes when it has a pending change, in Files otherwise.
+   - a workspace link: the workspace holding that folder (`workspaces.locate`: `cm getworkspacefrompath`, then both
+     paths with their links followed, as `cm` names the root as it is on disk: `/private/tmp/wk` for `/tmp/wk` on
+     macOS, a junction on Windows); a folder in none says so. A file named with no page shows in Changes when it has a
+     pending change, in Files otherwise.
    - this window's workspace, when it is on the repository;
    - else another window's, the last focused first, which comes forward and opens it (`windows.openLinkIn`);
    - else the only workspace on the repository, in this window if it shows the home screen, else in a new one: the

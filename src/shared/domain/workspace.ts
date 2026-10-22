@@ -46,5 +46,12 @@ export interface WorkspaceGlance {
   pendingCount: number;
 }
 
+/** Where an item is in the workspace holding it: the workspace's root as `cm` names it, and the item's path there. */
+export interface WorkspaceLocation {
+  root: string;
+  /** Relative to the root with forward slashes (`Assets/Player.cs`), as the app names items; '' for the root itself. */
+  itemPath: string;
+}
+
 /** Whether a folder can hold a new workspace: `available` when it doesn't exist or is empty. */
 export type NewFolderCheck = 'available' | 'notEmpty' | 'notAFolder';

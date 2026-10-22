@@ -1,5 +1,5 @@
 import type { SwitchChangesAction, SwitchPreflight, SwitchResult } from '../domain/switchWithChanges';
-import type { NewFolderCheck, WorkspaceGlance, WorkspaceHead, WorkspaceInfo, WorkspaceSelector, WorkspaceSummary } from '../domain/workspace';
+import type { NewFolderCheck, WorkspaceGlance, WorkspaceHead, WorkspaceInfo, WorkspaceLocation, WorkspaceSelector, WorkspaceSummary } from '../domain/workspace';
 
 export interface CreateWorkspaceRequest {
   name: string;
@@ -33,6 +33,12 @@ export interface WorkspacesApi {
   findMissing(paths: string[]): Promise<string[]>;
   /** Returns the workspace root containing the given directory, or null. A workspace moved on disk is re-registered at its new place. */
   findRoot(directory: string): Promise<string | null>;
+  /**
+   * The workspace holding a file or folder, and the item's path in it (forward slashes, '' for the root), with links
+   * followed on both sides (macOS's `/tmp`, a junction, a linked home): what a workspace link names. One local
+   * `cm getworkspacefrompath`; null outside any workspace.
+   */
+  locate(path: string): Promise<WorkspaceLocation | null>;
   create(request: CreateWorkspaceRequest): Promise<WorkspaceSummary>;
   rename(workspacePath: string, newName: string): Promise<void>;
   /** Unregisters the workspace; files on disk are kept. */

@@ -9,7 +9,6 @@ import { showInBranchExplorer } from '../../features/branchExplorer/branchExplor
 import { useFilesViewStore } from '../../features/files/filesViewStore';
 import { requestLineFocus } from '../../features/pendingChanges/changesLineFocus';
 import { pendingChangesQuery } from '../../features/pendingChanges/usePendingChanges';
-import { PLATFORM } from '../../lib/platform';
 import { toast } from '../../ui/toast/toastStore';
 import { openCreateWorkspaceDialog } from '../home/dialogs/CreateWorkspaceDialog';
 import { navigation } from '../navigation/navigationStore';
@@ -23,7 +22,6 @@ import { workspaceHeadsQuery, workspaceListQuery, workspaceRepositoryQuery } fro
 import { linkDestination, type WorkspaceOnRepository } from './linkDestination';
 import { offerNewWorkspace, pickLinkWorkspace, showLinkFailure, type LinkWorkspaceChoice } from './linkDialogs';
 import { linkLookup, linkNavigation, type LinkLooked, type LinkNavigation, type LinkTarget } from './linkNavigation';
-import { workspaceItemPath } from './workspaceItemPath';
 
 /**
  * Opens a `uvcs://` link in this window or the one for it (docs/features/deep-links.md, "Opening a link"): a link the
@@ -69,9 +67,9 @@ async function openRepositoryLink(link: RepositoryLink): Promise<void> {
  * one shows in Changes when it has changes, in Files otherwise.
  */
 async function openWorkspaceLink(link: WorkspaceLink): Promise<void> {
-  const root = await api.workspaces.findRoot(link.folder);
-  const item = root === null ? null : workspaceItemPath(root, link.folder, PLATFORM);
-  if (root === null || item === null) return showLinkFailure({ kind: 'notInWorkspace', folder: link.folder });
+  const location = await api.workspaces.locate(link.folder);
+  if (!location) return showLinkFailure({ kind: 'notInWorkspace', folder: link.folder });
+  const { root, itemPath: item } = location;
   if (useSession.getState().workspacePath !== root) return openIn(root, link, () => openWorkspaceLink(link));
   const target: LinkTarget = link.page || !item ? link : { page: { kind: 'view', view: (await hasChange(root, item)) ? 'changes' : 'files', path: `/${item}` }, lines: link.lines };
   return showHere(root, target, null);
