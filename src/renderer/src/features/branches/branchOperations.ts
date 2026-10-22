@@ -140,8 +140,11 @@ export async function mergeTo(sourceSpec: string, sourceName: string, task?: Tas
   navigation.openPage({ kind: 'merge', request: { kind: 'merge', sourceSpec, destinationBranch: destination.name }, ...(task && { task }) });
 }
 
-/** The diff of what a branch brings, at the head it's known at, so the diff its details panel already read is reused. */
-export function branchDiffPage({ name, headChangeset }: Pick<Branch, 'name' | 'headChangeset'>, focusPath?: string): PageOf<'diff'> {
+/**
+ * The diff of what a branch brings, at the head it's known at, so the diff its details panel already read is reused;
+ * at its head now when none is known (a link names only the branch).
+ */
+export function branchDiffPage({ name, headChangeset }: Pick<Branch, 'name'> & Partial<Pick<Branch, 'headChangeset'>>, focusPath?: string): PageOf<'diff'> {
   return { kind: 'diff', title: `Branch ${branchLabel(name)}`, target: { kind: 'branch', branch: name }, focusPath, branchHead: headChangeset };
 }
 

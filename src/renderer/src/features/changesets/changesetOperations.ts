@@ -25,12 +25,13 @@ export function openChangesetDiff(changeset: Pick<Changeset, 'id'>, focusPath?: 
 
 /** Compares the state after the older changeset (on the left) with the state after the newer one, in either order. */
 export function openRangeDiff(first: Pick<Changeset, 'id'>, second: Pick<Changeset, 'id'>): void {
-  const [older, newer] = first.id <= second.id ? [first, second] : [second, first];
-  navigation.openPage({
-    kind: 'diff',
-    title: `Changesets ${older.id} → ${newer.id}`,
-    target: { kind: 'range', fromSpec: `cs:${older.id}`, toSpec: `cs:${newer.id}` },
-  });
+  navigation.openPage(rangeDiffPage(first.id, second.id));
+}
+
+/** The diff from the state after one changeset (on the left) to the state after another, as given. */
+export function rangeDiffPage(from: number, to: number, focusPath?: string): PageOf<'diff'> {
+  const [older, newer] = from <= to ? [from, to] : [to, from];
+  return { kind: 'diff', title: `Changesets ${older} → ${newer}`, target: { kind: 'range', fromSpec: `cs:${older}`, toSpec: `cs:${newer}` }, focusPath };
 }
 
 export async function diffWithAnotherChangeset(changeset: Pick<Changeset, 'id'>): Promise<void> {

@@ -33,11 +33,12 @@ export function showLabelChanges(label: Label, focusPath?: string): void {
 /** Compares two labels, older one on the left. */
 export function diffLabels(first: Label, second: Label): void {
   const [older, newer] = first.changeset <= second.changeset ? [first, second] : [second, first];
-  navigation.openPage({
-    kind: 'diff',
-    title: `${older.name} → ${newer.name}`,
-    target: { kind: 'range', fromSpec: spec.label(older.name), toSpec: spec.label(newer.name) },
-  });
+  navigation.openPage(labelRangeDiffPage(older.name, newer.name));
+}
+
+/** The diff from one label (on the left) to another. */
+export function labelRangeDiffPage(older: string, newer: string, focusPath?: string): PageOf<'diff'> {
+  return { kind: 'diff', title: `${older} → ${newer}`, target: { kind: 'range', fromSpec: spec.label(older), toSpec: spec.label(newer) }, focusPath };
 }
 
 export async function diffWithAnotherLabel(label: Label): Promise<void> {
