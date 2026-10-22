@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { FIELD_SEPARATOR, RECORD_SEPARATOR, type RecordLayout } from '../formatRecords';
 import { findQueryArgs } from '../findQuery';
 import { TREE_ITEMS } from '../treeItems';
@@ -64,34 +65,47 @@ export function machineReadableStatusHeader(repository: string, server: string, 
 }
 
 interface ChangeOptions {
-  /** `MergesInfo`: set while the change is part of a merge in progress, as `cm` writes it (` (Merge from 12)`). */
+  /** The merges the change comes from, as `cm` joins them (`Merge from 12`, `Merge from 12+Cherrypick from 3`). */
   merge?: string;
-  /** `OldPath`: where a moved item was. */
+  /** Where a moved item was, workspace-relative. */
   oldPath?: string;
-  revisionType?: 'enTextFile' | 'enBinaryFile' | 'enDirectory' | 'enSymLink';
-  lastModified?: string;
+  /** A moved item's similarity, as `cm` prints it in its culture (`100%`, `85,5%`). */
+  similarity?: string;
+  folder?: boolean;
 }
 
-/** A `<Change>` of `cm status --xml`: `type` is its codes as `cm` joins them (`CO+CH`, `AD`, `PR`). */
-export function change(
-  type: string,
-  path: string,
-  { merge = '', oldPath = '', revisionType = 'enTextFile', lastModified = '2026-09-25T08:26:09+02:00' }: ChangeOptions = {},
-): string {
-  return `<Change><Type>${type}</Type><Path>${path}</Path><OldPath>${oldPath}</OldPath><MergesInfo>${merge}</MergesInfo><SimilarityPerUnit>0</SimilarityPerUnit><Size>3</Size><RevisionType>${revisionType}</RevisionType><LastModified>${lastModified}</LastModified></Change>`;
+/** A change of `cm status`: `codes` as `cm` joins them (`CO+CH`, `AD`, `PR`), at a workspace-relative path. */
+export interface StatusChange extends ChangeOptions {
+  codes: string;
+  path: string;
 }
 
-/** `cm status --xml` listing `changes` (in the default changelist). */
-export function pendingStatus(...changes: string[]): string {
-  return `<?xml version="1.0" encoding="utf-8"?><StatusOutput><WorkspaceStatus><Status><Changeset>1</Changeset></Status></WorkspaceStatus><Changes>${changes.join('')}</Changes></StatusOutput>`;
+/** A change for `pendingStatus` and `pendingStatusInChangelists`. */
+export function change(codes: string, path: string, options: ChangeOptions = {}): StatusChange {
+  return { codes, path, ...options };
 }
 
-/** `cm status --xml --changelists`: each changelist with its changes. */
-export function pendingStatusInChangelists(changelists: { name: string; description?: string; changes: string[] }[]): string {
-  const lists = changelists
-    .map(({ name, description = '', changes }) => `<Changelist><Name>${name}</Name><Description>${description}</Description><Changes>${changes.join('')}</Changes></Changelist>`)
-    .join('');
-  return `<?xml version="1.0" encoding="utf-8"?><StatusOutput><WorkspaceStatus><Status><Changeset>1</Changeset></Status></WorkspaceStatus><Changelists>${lists}</Changelists></StatusOutput>`;
+/**
+ * `cm status … --machinereadable` (`statusRecordsArgs`) of the workspace at `workspacePath` listing `changes`, without
+ * `--changelists`: the `STATUS` record, then each change with its absolute path, as `cm` prints it on this OS.
+ */
+export function pendingStatus(workspacePath: string, ...changes: StatusChange[]): string {
+  return formatOutput(STATUS_RECORD, ...changes.map((item) => changeRecord(workspacePath, item)));
+}
+
+/** `cm status --changelists … --machinereadable`: each changelist (`Default` for the default one) followed by its changes. */
+export function pendingStatusInChangelists(workspacePath: string, changelists: { name: string; description?: string; changes: StatusChange[] }[]): string {
+  const records = changelists.flatMap(({ name, description = '', changes }) => [['CHLIST', name, description], ...changes.map((item) => changeRecord(workspacePath, item))]);
+  return formatOutput(STATUS_RECORD, ...records);
+}
+
+const STATUS_RECORD = ['STATUS', 1, 'eco', 'local'];
+
+/** `<codes> <path> <is folder> <merges>`; a moved item `<codes> <similarity> <old path> <path> <is folder> <merges>`. */
+function changeRecord(workspacePath: string, { codes, path, oldPath, similarity = '100%', merge = 'NO_MERGES', folder = false }: StatusChange): string[] {
+  const absolute = (relative: string): string => join(workspacePath, ...relative.split('/'));
+  const where = oldPath === undefined ? [absolute(path)] : [similarity, absolute(oldPath), absolute(path)];
+  return [codes, ...where, folder ? 'True' : 'False', merge];
 }
 
 /** A GUID whose last digits are `id`, so each object's is its own. */

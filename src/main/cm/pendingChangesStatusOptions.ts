@@ -1,10 +1,8 @@
 import type { PendingChangesFilter } from '@shared/domain/pendingChanges';
 
-/** `cm status` of what Changes lists: checkouts told apart from unchanged ones, changelists, and each kind of change the filter shows. */
-export function pendingChangesStatusArgs(filter: PendingChangesFilter): string[] {
+/** `cm status` options of what Changes lists: checkouts told apart from unchanged ones, changelists, and each kind of change the filter shows. */
+export function pendingChangesStatusOptions(filter: PendingChangesFilter): string[] {
   return [
-    'status',
-    '--xml',
     '--iscochanged',
     '--changelists',
     '--controlledchanged',

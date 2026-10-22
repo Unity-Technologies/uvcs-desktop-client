@@ -43,7 +43,7 @@ you touch:
      done (`WorkspaceWatchers` `onStopped`), and the home folder's once a window opens a workspace and none shows the
      home screen (`showsHomeScreen`) and no window shows a workspace in the home folder itself. Each session is a
      process of about 80 MB, so a query with no `cwd` that answers the same in any directory (`profile list`,
-     `profile delete`, `whoami`, `workspace list`, `status --xml <path>`, `getworkspacefrompath <path>`) says so
+     `profile delete`, `whoami`, `workspace list`, `status <path>`, `getworkspacefrompath <path>`) says so
      (`anyDirectory`) and runs in a workspace a window shows (`shownDirectory`), a ready one first, instead of
      starting the home folder's two; it starts them only when no window shows a workspace. A workspace is shown once
      its window watches it (`CmClient.show`, until `release`), and the first window's for `OPENING_SHOW_MS` from when
@@ -90,8 +90,8 @@ and many people use the same server. Every `cm` command other than local reads (
   process; `execute()` is only for long, streamed or cancellable work. The exception is a local read (`LOCAL_COMMANDS`)
   that has no form for N, which runs once per workspace, never per row of a server list: the home screen's `cm wi`
   of each workspace (`workspaceHeadsReader`, "Home", below), the recent workspaces' `cm status --header` it couldn't
-  tell (`workspaceRepositoryLookup`), and the switcher's `cm status --xml` of each workspace of the same repository
-  (`workspaces.glance`).
+  tell (`workspaceRepositoryLookup`), and the switcher's two `cm status` of each workspace of the same repository, its
+  header and its changes counted (`workspaces.glance`, `readWorkspaceGlance`).
 - **Revisions asked together, one `cm cat` per batch**: every revision read by its spec (`content.read` of a
   `revision` or a `spec`: diffs, History, Incoming, a merge's conflicting files) goes through `RevisionCat`, which
   saves the reads asked together with one `cm cat <spec>;<file> <spec>;<file> …` per batch (`nextCatBatch`,
@@ -240,11 +240,39 @@ and many people use the same server. Every `cm` command other than local reads (
 - **Dates** in `cm find` come in `FIND_DATE_FORMAT` (`--dateformat=o`, ISO 8601 round trip, `findCommand`), which
   also sets how the query's dates are read: a day is spelled `roundTripDate` (`whereClause`). Without it `cm` prints
   the format its client config sets. `cm ls` takes `{date:o}`; it prints `0001-01-01…` for an item with no date.
-- **XML remains** only where `--format` can't say it: `cm status` has none, and `--machinereadable` has neither the
-  changelists nor the merge info (`parsePendingChanges`, `parseWorkspaceStatus`: a local read); `cm history --format`
+- **`cm status` as records**: it has no `--format`, but `--machinereadable` with control-character separators
+  (`statusRecordsArgs`) prints records `RecordReader` reads as they arrive (`PendingChangesReader`): a `STATUS` record,
+  with `--changelists` each `CHLIST <name> <description>` before its changes, each change as `<codes> <path> <is
+  folder> <merges>` (a move `<codes> <similarity> <old path> <path> …`), and `CONFLICT_MARKERS <path>`. 100,000 changes
+  print 9 MB where `--xml` printed 60 MB, in half the time (0.9 s against 1.8 s; 500,000: 46 MB in 4.6 s against
+  300 MB in 9 s, past `MAX_OUTPUT_LENGTH` as one string). A change prints every code of the item at once (`CH+MV`):
+  `listedCodes` reads it as `--xml` listed it (a deleted item is only deleted, an added one only added; an item in no
+  category, a cloaked folder, isn't listed). Its paths are absolute, from the root `cm` keeps, which may differ from the
+  app's in case, composition or a link resolved (`PrintedWorkspacePaths`); an item printed twice is one change with
+  both kinds, as `--xml` merged it (a deleted file whose path a new file took prints `PR` then `DE`, and stays a
+  deletion; one in several changelists is in the first); a change with other fields than these fails the read rather
+  than show a clean workspace; merges are joined by `+` (`Merge from 3+Cherrypick from 7`), shown joined by `, ` as `--xml` did; the
+  similarity comes in `cm`'s culture (`85,5%`). Records hold no size, date or file type: Changes reads the size, the
+  date and whether a file is a link from the disk as the records arrive (`DiskDetails`, a local read; what `--xml`
+  reported was the disk's too), and tells no binary file from a text one (the row's icon follows the file's extension).
+  Only the header stays XML (`parseWorkspaceStatus`): the `STATUS` record names no selector. It stays a `query()`
+  (`readPendingChanges`): it answers most workspaces in milliseconds and runs on every refresh, which a process would
+  make 100–150 ms slower each time (about half a second more on Windows, where it needs a `cm shell` of its own for
+  UTF-8: `printsInConsoleCodePage`); a workspace of a million changes holds one of its two sessions for 5–7 s, while
+  the other keeps answering the workspace's other reads. As `cm ls`'s, its
+  records come in UTF-8 on Windows only from a `cm shell` (`processCommand`, `printsInConsoleCodePage`).
+- **XML remains** only where `--format` can't say it, for answers that stay small: the `cm status` header
+  (`parseWorkspaceStatus`: a local read, under a KB); `cm history --format`
   has no revision type, which tells text from binary from a directory, and a revision from a move or a removal
-  (`itemHistoryArgs`); `cm fileinfo` reads one item or two, where records would save nothing (`parseItemDetails`,
-  `removedItemSpec`). XML goes through `parseXml`.
+  (`itemHistoryArgs`: one item's revisions, about 600 bytes each, a few MB for a file changed in thousands of
+  changesets); `cm fileinfo` reads one item or two, where records would save nothing (`parseItemDetails`,
+  `removedItemSpec`, `saveContent`, `explorerService`). XML goes through `parseXml`.
+- **A list that can grow takes records, read as they arrive** (`queryRecords`, `executeRecords`): pending changes
+  (`readPendingChanges`), the Branch Explorer, the Changesets and Branches lists, branch names. Lists still read as
+  one string (`query` then `parseRecords`) stay well under `MAX_OUTPUT_LENGTH` on the largest repositories, but grow
+  with them, and move to `queryRecords` next, the biggest first: a diff of a changeset or branch touching most of a
+  big tree (`diffService`, about 100 bytes a file), a `cm ls` of a whole tree (`explorerService`,
+  `withConflictRepositories`), a big file's annotations (`annotation`).
 - Never parse human-readable output when a machine format exists.
 - **Records are read as they arrive**: new code reads a `--format` command with `cm.queryRecords(args, readRecord,
   options)` (or `executeRecords`), where `readRecord` builds a row (a branch, a changeset) from each record's fields, or
@@ -266,7 +294,7 @@ and many people use the same server. Every `cm` command other than local reads (
     whole output; slices of decoded chunks would keep every chunk alive. Sharing one copy of repeated owners and branch
     names (a `Map`) saved a tenth of the peak for a quarter more time, the record's string being alive anyway: dropped.
 - Output already held as text (a cache's string, `ProfileList`; the callers read with `query()`, such as the `cm ls`
-  listings, annotate, diffs and the services' lists) is read with `parseRecords(output, readRecord)`: the same field
+  listings, annotate, diffs and the smaller services' lists) is read with `parseRecords(output, readRecord)`: the same field
   rules (`fieldsOf`), its records found in the string itself, with no copy into bytes (a million branches: 386 ms and
   581 MB of peak, where splitting the whole took 566 ms and 722 MB). Unlike `queryRecords`, it reads text after the
   last record as one more record, as it always did, so its callers read what they read before until they move to
@@ -293,7 +321,7 @@ and many people use the same server. Every `cm` command other than local reads (
   process comes in the console's code page on Windows (437, 850: other scripts become `?`), while a `cm shell` prints
   it in UTF-8, so there a process that prints text (diffs, merges, updates, logs) runs as a `cm shell` of its own
   (`processCommand`, `printsInConsoleCodePage`); only error messages stay in the code page. Windows' CRLF becomes LF before any parser sees the output, and relative paths
-  in `cm status --xml` get forward slashes.
+  in `cm status` get forward slashes.
 - On macOS `cm` reads names decomposed (NFD), as it reports them: local paths go to it so (`inCmPathForm`), or
   `cm checkin` of a composed `é.txt` finds no change. Branch names, queries and server paths are left as written.
 - `cm checkin` first undoes the checkouts whose content is the loaded revision's; with nothing left it prints
@@ -1063,14 +1091,24 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   `cm merge` names no item types, so a path with others under it is a folder (`mergeItemTypes`). Locks are read for
   pending changes only (Files, Changes): other lists would need a `cm lock list` of their own. The Changes list renders
   its file and folder rows memoized with stable callbacks: holding ↓ over 100,000 changes re-renders none of them
-  (0.5-0.6 ms a step).
+  (0.5-0.6 ms a step). What each change adds to a check-in is worked out once a read (`checkinFactsOf`: its upload,
+  whether a shelve takes it, the folder a private file counts in), and what each folder holds that can go in once a
+  layout (`candidatesUnderRow`): a click on a box then asks each change once whether it goes in, under the check-in
+  rules (`consistentlyIncluded`, below), in one pass that adds everything up (`checkinSelectionOf`). With every box
+  checked and nothing filtered, nothing is asked (`everyCandidateIncluded`), and a folder holding every change shown
+  takes its check from the count (`shownChecksOf`, `checkStateOver`); unchecked paths no longer pending don't count
+  (`everyBoxChecked`). A click costs about 20 ms for 100,000 changes, 90 ms
+  for 500,000 and 170 ms for a million (a production build on a Mac); unchecking everything at once twice that.
 - **Lists of changed files** read and work the same everywhere: Changes, every diff (changeset, branch, shelve, code
   review: `DiffEntryList`), the details panels' changed files (`ChangedFilesSection`), Incoming and the merge page.
   - **One order**: by path, folder by folder, names as people read them (`file_2` before `file_10`, case only between
     names otherwise equal; different names read the same, "v01" and "v1" or a name in two Unicode forms, by their code
     units, so each folder's files stay together): `comparePaths` (`shared/pathOrder`), used where the files are read
     (`parseDiffEntries`, `parseMergePlan`) and by Changes (`sortChanges`, once a read: `useSortedChanges`; filtering
-    keeps the order, and `layoutChangeRows` lays the changes out as they come). A list and a tree show the files in the same
+    keeps the order, and `layoutChangeRows` lays the changes out as they come). `cm status` prints the changes in no
+    order, so Changes sorts them folder by folder (`sortByPath`): a million in 0.9 s, where sorting the whole list took
+    2 s. A read that kept most changes as they were (`sharePendingChanges`, in any order) starts from the last order and
+    sorts only the others (`sortedFromPrevious`): 0.1 s for a million with one file edited. A list and a tree show the files in the same
     order. Ordering by kind of change first was tried and rejected: it split a folder's changes apart, and a row jumped
     to another group when its status changed; the status chips of the filter bar (`useChangeFilter`) are how to look at
     one kind. Sorting controls were rejected too: the only other order anyone asked for is by kind, which the chips

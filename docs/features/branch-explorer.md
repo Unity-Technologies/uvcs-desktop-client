@@ -46,8 +46,8 @@ don't count), they show as the changeset they will become, as the official clien
 workspace's branch (its band reaches it before rows are packed), with the home badge moved to it and a dashed line
 back to the loaded changeset, arching over the band when the branch went on without the workspace. Each merge in
 progress (merge, cherry pick, subtractive, intervals) is a dotted link into it in its kind's color. They come from
-the pending changes already read (`cm status --xml` names a change's merges only in its `MergesInfo`: `Merge from 58,
-Cherrypick from 3 to 7`, read by `mergeLinksOf`), so nothing is asked of the server and the watcher refreshes them;
+the pending changes already read (`cm status` names a change's merges only in its record's last field, which
+`PendingChangesReader` joins as `Merge from 58, Cherrypick from 3 to 7`, read by `mergeLinksOf`), so nothing is asked of the server and the watcher refreshes them;
 the history is laid out again only when the pending changeset appears, goes or changes what it draws, never re-read.
 Hovering tells what it holds; it is selected like a changeset (its details: the changes, what they are on, the
 merges in progress, Open Changes, also Enter and a double-click), and the arrow keys stop at it as the next changeset

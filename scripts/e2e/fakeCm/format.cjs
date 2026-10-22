@@ -17,8 +17,4 @@ function formatRecords(template, records) {
   return records.map((record) => `${fillFormat(template, record)}\n`).join('');
 }
 
-function escapeXml(value) {
-  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
-}
-
-module.exports = { escapeXml, fillFormat, formatRecords };
+module.exports = { fillFormat, formatRecords };

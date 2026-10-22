@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { comparePaths } from './pathOrder';
+import { compareNames, comparePaths, sortByPath } from './pathOrder';
 
 describe('comparePaths', () => {
   it('puts everything in a folder right after it', () => {
@@ -39,5 +39,34 @@ describe('comparePaths', () => {
     // Each folder once in a row: the two spellings are two folders on disk.
     expect(folders.filter((folder, index) => folder !== folders[index - 1])).toHaveLength(2);
     expect(comparePaths(`${composed}/a`, `${decomposed}/a`)).not.toBe(0);
+  });
+});
+
+describe('sortByPath', () => {
+  const PATHS = [
+    'src/b', 'Src/c', 'Src/a', 'src/a/x', 'src/B.txt', 'src', 'src-old/a', 'src/a b', 'x/file10', 'x/file2', 'x/File1', 'é/a', 'e/b', 'a/b', 'a/b/c',
+    'a-b.txt', 'a', 'a/c.txt', 'ab', 'Levels/v01/a.txt', 'Levels/v1/b.txt', 'Levels/v01/c.txt', 'caf\u00e9/b', 'cafe\u0301/a', 'folder/', 'b',
+  ];
+
+  it('sorts as comparePaths does, folders right before what they hold', () => {
+    const shuffled = [...PATHS].reverse();
+    expect(sortByPath(shuffled, (path) => path)).toEqual([...PATHS].sort(comparePaths));
+    const serverPaths = ['/src/b', '/src', '/Src/a', '/a10', '/a2/x'];
+    expect(sortByPath(serverPaths, (path) => path)).toEqual([...serverPaths].sort(comparePaths));
+  });
+
+  it('keeps the items of one path in the order they came', () => {
+    const items = [{ path: 'a/x', id: 1 }, { path: 'a', id: 2 }, { path: 'a/x', id: 3 }];
+    expect(sortByPath(items, (item) => item.path).map((item) => item.id)).toEqual([2, 1, 3]);
+  });
+
+  it('compares the names of each folder among themselves only: a few per path, not one per level of a whole sort', () => {
+    const paths = Array.from({ length: 5_000 }, (_, index) => `Assets/Level${(index * 7919) % 100}/item${(index * 104729) % 5_000}.prefab`);
+    let comparisons = 0;
+    const sorted = sortByPath(paths, (path) => path, (a, b) => (comparisons++, compareNames(a, b)));
+
+    expect(sorted).toEqual([...paths].sort(comparePaths));
+    // 100 folders of 50: about 50·log2(50) a folder, where sorting all the paths compares each about log2(5,000) = 12 times.
+    expect(comparisons / paths.length).toBeLessThan(7);
   });
 });

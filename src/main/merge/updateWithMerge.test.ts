@@ -55,8 +55,8 @@ function updatingCm(
     'status --header --xml': statusHeader('/main'),
     'find changeset': changesetsFound('/main', { id: 2, owner: 'ana' }),
     'diff cs:1 cs:2': incoming,
-    'status --xml --controlledchanged --changed': pendingStatus(change('CO+CH', 'src/a.txt'), change('CH', 'src/b.txt'), change('CH', 'src/c.txt')),
-    'status --xml --checkout': pendingStatus(change('CO+CH', 'src/a.txt')),
+    'status --controlledchanged --changed': pendingStatus(workspacePath, change('CO+CH', 'src/a.txt'), change('CH', 'src/b.txt'), change('CH', 'src/c.txt')),
+    'status --checkout': pendingStatus(workspacePath, change('CO+CH', 'src/a.txt')),
     undo: async ({ args }) => {
       for (const path of args.slice(1)) {
         if (undoLeavesNoFile.some((name) => path.endsWith(name))) await rm(path);

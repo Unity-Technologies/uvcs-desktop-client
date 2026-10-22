@@ -1,13 +1,15 @@
 import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import type { OperationProgress } from '@shared/domain/operation';
 import type { PendingChangesFilter } from '@shared/domain/pendingChanges';
 import { CmError } from '../cm/CmError';
+import { statusRecordsArgs } from '../cm/pendingChangesRecords';
 import { change, pendingStatus } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { DiskDetails } from '../files/DiskDetails';
 import { OperationTracker } from '../operations/OperationTracker';
 import { createPendingChangesService } from './pendingChangesService';
 import type { SwitchContext } from './ServiceContext';
@@ -25,8 +27,6 @@ function pendingChanges(answers: Record<string, CmAnswer>, operations?: Operatio
   return { ...fake, service: createPendingChangesService(context, {} as SwitchContext), operations: context.operations };
 }
 
-const STATUS_XML = pendingStatus(change('CH', 'src/player.cs'));
-
 // As the server formats ITEMS_ALREADY_LOCKED: the header, then one line per item.
 const LOCKED_OUTPUT = 'These items are exclusively checked out by: \n/art/Hero.fbx (wk:ana-wk owner:ana)\n';
 
@@ -40,19 +40,55 @@ const NO_FILTER: PendingChangesFilter = {
 };
 
 describe('pending changes list', () => {
-  it('reads the pending changes with one local cm status in the workspace', async () => {
-    const { service, commands } = pendingChanges({ status: STATUS_XML });
+  it('reads the pending changes with one local cm status in the workspace, as records read as they arrive', async () => {
+    const { service, commands } = pendingChanges({ status: pendingStatus(WORKSPACE, change('CH', 'src/player.cs')) });
 
     const snapshot = await service.list(WORKSPACE, NO_FILTER);
 
     expect(commands).toMatchObject([
       {
         via: 'query',
-        line: 'status --xml --iscochanged --changelists --controlledchanged --changed --localdeleted',
+        args: statusRecordsArgs('--iscochanged', '--changelists', '--controlledchanged', '--changed', '--localdeleted'),
         options: { cwd: WORKSPACE },
+        readsRecords: true,
       },
     ]);
     expect(snapshot.changes.map((change) => [change.path, change.kinds])).toEqual([['src/player.cs', ['changed']]]);
+  });
+
+  it("reads each file's size and date from the disk, which cm status records don't hold, and none of a deleted one", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'uvcs-pending-'));
+    await writeFile(join(workspace, 'new.txt'), 'twelve bytes');
+    const { service } = pendingChanges({ status: pendingStatus(workspace, change('PR', 'new.txt'), change('LD', 'gone.txt')) });
+
+    const { changes } = await service.list(workspace, NO_FILTER);
+
+    expect(changes[0]).toMatchObject({ path: 'new.txt', size: 12 });
+    expect(Date.parse(changes[0]!.lastModified)).toBeGreaterThan(0);
+    expect(changes[1]).toEqual({ path: 'gone.txt', kinds: ['locallyDeleted'], itemType: 'file', size: 0, lastModified: '' });
+  });
+
+  // A junction, so Windows makes it without Developer Mode; on macOS `/tmp` is such a link to `/private/tmp`.
+  it('reads a workspace reached through a link, whose paths cm prints from the folder the link resolves to', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'uvcs-linked-'));
+    const target = join(root, 'target');
+    const link = join(root, 'link');
+    await mkdir(target);
+    await symlink(target, link, 'junction');
+    const { service } = pendingChanges({ status: pendingStatus(await realpath(link), change('CH', 'src/a.ts')) });
+
+    const { changes } = await service.list(link, NO_FILTER);
+
+    expect(changes.map((item) => item.path)).toEqual(['src/a.ts']);
+  });
+
+  it('stops reading files from the disk once cm status fails', async () => {
+    const stop = vi.spyOn(DiskDetails.prototype, 'stop');
+    onTestFinished(() => stop.mockRestore());
+    const { service } = pendingChanges({ status: cmFails('Error: the workspace is locked') });
+
+    await expect(service.list(WORKSPACE, NO_FILTER)).rejects.toThrow('the workspace is locked');
+    expect(stop).toHaveBeenCalledOnce();
   });
 });
 

@@ -33,7 +33,7 @@ export async function readWorkspaceStatus(cm: CmClient, workspacePath: string): 
 
 /**
  * What the workspace has loaded, without its repository: one `cm status --header --xml`, for what needs no more. XML,
- * as `cm status` has no `--format` (`parsePendingChanges`).
+ * as `cm status` has no `--format`, and its records (`--machinereadable`) don't name the selector.
  */
 export async function readWorkspaceLoad(cm: CmClient, workspacePath: string): Promise<Pick<WorkspaceStatus, 'selector' | 'loadedChangeset'>> {
   const { selector, loadedChangeset } = await readStatusHeader(cm, workspacePath);

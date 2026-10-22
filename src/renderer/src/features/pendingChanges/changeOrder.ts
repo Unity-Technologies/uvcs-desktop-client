@@ -1,23 +1,36 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { comparePaths } from '@shared/pathOrder';
+import { comparePaths, sortByPath } from '@shared/pathOrder';
 
 /**
- * The order the rows show changes in, flat or a tree: by path, as every list of files (`comparePaths`). Sorted once
- * (`useSortedChanges`): filtering keeps the order, and `layoutChangeRows` lays changes out as they come.
+ * The order the rows show changes in, flat or a tree: by path, as every list of files (`comparePaths`), sorted folder
+ * by folder (`sortByPath`), as `cm status` prints them in no order. Sorted once (`useSortedChanges`): filtering keeps
+ * the order, and `layoutChangeRows` lays changes out as they come.
  */
 export function sortChanges(changes: PendingChange[]): PendingChange[] {
-  return [...changes].sort((a, b) => comparePaths(a.path, b.path));
+  return sortByPath(changes, (change) => change.path);
 }
 
 /**
- * `changes` with those also in `previous` (the very objects: a read keeps the changes it found as they were) in the
- * order `previous` had them, then the others. A read that changed a few changes of a sorted list gives a list nearly
- * in order, which sorting goes through in about one comparison a change.
+ * `changes` in `sortChanges` order, from the order a read before had (`previous`, sorted): the changes also in it (the
+ * very objects: `sharePendingChanges` keeps those found as they were) stay in that order, and only the others are
+ * sorted, then merged in, one comparison each. A refresh that changed a few of a million changes goes over them about
+ * once, where sorting again took a second. A read that kept fewer than half is sorted afresh.
  */
-export function inPreviousOrder(changes: PendingChange[], previous: PendingChange[]): PendingChange[] {
+export function sortedFromPrevious(changes: PendingChange[], previous: PendingChange[]): PendingChange[] {
   const current = new Set(changes);
   const kept = previous.filter((change) => current.has(change));
   if (kept.length === changes.length) return kept;
+  if (kept.length < changes.length / 2) return sortChanges(changes);
   const keptSet = new Set(kept);
-  return [...kept, ...changes.filter((change) => !keptSet.has(change))];
+  return mergedByPath(kept, sortChanges(changes.filter((change) => !keptSet.has(change))));
+}
+
+/** Two lists sorted by path as one. */
+function mergedByPath(a: PendingChange[], b: PendingChange[]): PendingChange[] {
+  const merged: PendingChange[] = [];
+  let [i, j] = [0, 0];
+  while (i < a.length && j < b.length) merged.push(comparePaths(a[i]!.path, b[j]!.path) <= 0 ? a[i++]! : b[j++]!);
+  while (i < a.length) merged.push(a[i++]!);
+  while (j < b.length) merged.push(b[j++]!);
+  return merged;
 }

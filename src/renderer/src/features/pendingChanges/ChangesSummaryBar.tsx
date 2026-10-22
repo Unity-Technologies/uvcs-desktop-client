@@ -3,12 +3,13 @@ import { useMemo, type CSSProperties } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { SEPARATOR } from '../../lib/actions';
 import { formatCount } from '../../lib/text';
-import { Checkbox, type CheckState } from '../../ui/Checkbox';
+import { Checkbox } from '../../ui/Checkbox';
 import { SkeletonBar } from '../../ui/Skeleton';
 import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { changesCountLabel } from './changesCountLabel';
-import { isCheckinCandidate, isControlled } from './changeCategories';
+import { isControlled } from './changeCategories';
+import { shownCheckState, type ShownChecks } from './checkinSelection';
 import styles from './ChangesSummaryBar.module.css';
 
 interface ChangesSummaryBarProps {
@@ -16,7 +17,8 @@ interface ChangesSummaryBarProps {
   changes: PendingChange[];
   /** How many changes were read; undefined until they are, when the count is a placeholder. */
   totalCount: number | undefined;
-  isIncluded: (change: PendingChange) => boolean;
+  /** The checks of `changes` (`shownChecksOf`). */
+  checks: ShownChecks;
   onSetIncluded: (changes: PendingChange[], included: boolean) => void;
   onUndo: (changes: PendingChange[]) => void;
   onUndoUnchanged: () => void;
@@ -25,12 +27,10 @@ interface ChangesSummaryBarProps {
 }
 
 /** Above the list: include or exclude every shown change, how many there are, and the ways to undo them. */
-export function ChangesSummaryBar({ changes, totalCount, isIncluded, onSetIncluded, onUndo, onUndoUnchanged, checkboxInset }: ChangesSummaryBarProps) {
-  const { candidates, includedCount, undoable } = useMemo(() => {
-    const candidates = changes.filter(isCheckinCandidate);
-    return { candidates, includedCount: candidates.filter(isIncluded).length, undoable: changes.filter(isControlled) };
-  }, [changes, isIncluded]);
-  const checkState: CheckState = includedCount === 0 ? false : includedCount === candidates.length ? true : 'mixed';
+export function ChangesSummaryBar({ changes, totalCount, checks, onSetIncluded, onUndo, onUndoUnchanged, checkboxInset }: ChangesSummaryBarProps) {
+  const { candidates } = checks;
+  const undoable = useMemo(() => changes.filter(isControlled), [changes]);
+  const checkState = shownCheckState(checks);
   const countLabel = changesCountLabel(totalCount, changes.length);
   const filtered = countLabel !== null && changes.length !== totalCount;
   // Nothing listed, or not read yet: no way to undo has anything to undo.

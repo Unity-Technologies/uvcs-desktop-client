@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { selectOnArrow, type SelectionState } from '../../lib/selection';
 import { indexChangeRows, perRow } from './changeRowIndex';
-import { rowCheckState } from './changeRowChecks';
+import { candidatesUnderRow, checkStateOver } from './changeRowChecks';
 import { layoutChangeRows, type ChangeRow } from './changeRows';
 
 const change = (path: string, kinds: PendingChange['kinds'] = ['changed'], changelist?: string): PendingChange => ({ path, kinds, itemType: 'file', size: 1, lastModified: '', changelist });
@@ -43,7 +43,7 @@ describe('holding ↓ over thousands of changes', () => {
   it('works out the check of each row that comes into view once, not on every step', () => {
     const index = indexChangeRows(rows);
     let looked = 0;
-    const checkStateOf = perRow((row) => rowCheckState(row, () => (looked++, true)));
+    const checkStateOf = perRow((row) => checkStateOver(candidatesUnderRow(row), () => (looked++, true)));
     let selection: SelectionState = { selected: new Set([index.rowKeys[0]!]), anchor: index.rowKeys[0]! };
     let focused: string | null = selection.anchor;
     const filesShown = new Set<ChangeRow>();

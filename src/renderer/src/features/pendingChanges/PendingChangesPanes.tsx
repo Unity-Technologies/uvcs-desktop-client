@@ -21,7 +21,7 @@ import { useFileSteps } from '../diff/viewer/fileSteps';
 import { useKnownIncomingSummary } from '../incoming/useKnownIncomingSummary';
 import { MergeTaskSuggestion } from '../mergeTask/MergeTaskSuggestion';
 import { ReviewModeButton } from '../review/ReviewModeButton';
-import { reviewProgress } from '../review/reviewStatus';
+import { isAllReviewed } from '../review/reviewStatus';
 import { BulkPrivateNotice } from './BulkPrivateNotice';
 import { ChangeSelectionPane } from './ChangeSelectionPane';
 import { ChangesList } from './ChangesList';
@@ -34,7 +34,7 @@ import type { PendingReview } from './review/usePendingReview';
 import { behindBranch, behindDescription } from './checkinBehind';
 import { checkinAfterUpdateMessage, useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { undoUnchangedCheckouts } from './checkinOperations';
-import { matchesBranch } from './changeCategories';
+import { isCheckinCandidate, matchesBranch } from './changeCategories';
 import { changesUnderRow, type ChangeRow } from './changeRows';
 import { indexPending, pathsCheckedTogether } from './checkinDependencies';
 import { changesPanesState } from './changesPanesState';
@@ -49,7 +49,7 @@ import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { useChangeRows } from './useChangeRows';
 import { useCheckinPanelSubmit } from './useCheckinPanelSubmit';
 import type { CheckinMode } from './checkinButton';
-import { currentChoice, preparedStillPending, type PreparedChangelist } from './checkinSelection';
+import { checkinFactsOf, shownChecksOf, currentChoice, type PreparedChangelist, preparedStillPending } from './checkinSelection';
 import { useCheckinSelection } from './useCheckinSelection';
 import { useSortedChanges } from './useSortedChanges';
 import styles from './PendingChangesView.module.css';
@@ -105,9 +105,13 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   // The sorted list, which the filter gives back as it is when nothing filters: nothing is hidden to count.
   // Indexed once per read of the changes: checking a box looks up only the folders above what was clicked.
   const index = useMemo(() => indexPending(sorted), [sorted]);
-  const listed = useMemo(() => ({ all: sorted, matchingFilter: filtered, index }), [sorted, filtered, index]);
-  const { isIncluded, included, hiddenIncludedCount, upload, shelvable, shelvableUpload, bulkPrivate } = useCheckinSelection(listed, checkinChoice);
-  const reviewed = useMemo(() => reviewProgress(included, review.statusOf), [included, review.statusOf]);
+  const facts = useMemo(() => checkinFactsOf(sorted), [sorted]);
+  const listed = useMemo(() => ({ all: sorted, matchingFilter: filtered, index, facts }), [sorted, filtered, index, facts]);
+  const checkinSelection = useCheckinSelection(listed, checkinChoice);
+  const { isIncluded, included, hiddenIncludedCount, upload, shelvable, shelvableUpload, bulkPrivate } = checkinSelection;
+  const shownCandidates = useMemo(() => changes.filter(isCheckinCandidate), [changes]);
+  const shownChecks = useMemo(() => shownChecksOf(shownCandidates, changes, filtered, checkinSelection), [shownCandidates, changes, filtered, checkinSelection]);
+  const allReviewed = useMemo(() => isAllReviewed(review.on, included, review.statusOf), [review.on, included, review.statusOf]);
   const { mergeChanges, onlyNeverCheckedIn } = useMemo(
     () => ({ mergeChanges: allChanges.filter((change) => change.mergeInfo), onlyNeverCheckedIn: allChanges.length > 0 && matchesBranch(allChanges) }),
     [allChanges],
@@ -177,7 +181,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
           rows={rows}
           selection={selection}
           onSelectionChange={(next) => selectAfterLeaving(selection, next, setSelection)}
-          isIncluded={isIncluded}
+          shownChecks={shownChecks}
           onToggleIncluded={toggleIncluded}
           onToggleCollapsed={toggleCollapsed}
           onOpen={(change) => openChange(workspacePath, change)}
@@ -219,7 +223,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
             <ChangesSummaryBar
               changes={changes}
               totalCount={listedCount}
-              isIncluded={isIncluded}
+              checks={shownChecks}
               onSetIncluded={setEveryShownIncluded}
               onUndo={(selected) => void undoChanges(workspacePath, selected)}
               onUndoUnchanged={() => void undoUnchangedCheckouts(workspacePath)}
@@ -261,7 +265,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
               behindCount={behind?.count ?? 0}
               behindDescription={behind && behindDescription(behind)}
               preparedChangelist={preparedChangelist}
-              allReviewed={review.on && reviewed.total > 0 && reviewed.reviewed === reviewed.total}
+              allReviewed={allReviewed}
               recentComments={settings.recentComments}
               mode={checkinMode}
               onModeChange={setCheckinMode}
