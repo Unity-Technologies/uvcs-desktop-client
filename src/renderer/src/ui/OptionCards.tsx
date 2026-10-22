@@ -17,7 +17,8 @@ interface OptionCardsProps<T extends string> {
   onChange: (value: T) => void;
   /**
    * `cards`: a bordered card per option, its description under its title. `list`: a radio row per option, and only
-   * the chosen option's description, once, under the list, for a choice that should take little room.
+   * the chosen option's description, once, under the list, for a choice that should take little room. A disabled
+   * option's description (why it is disabled) would never show there, so `list` is for options never disabled.
    */
   layout?: 'cards' | 'list';
 }
@@ -27,22 +28,30 @@ export function OptionCards<T extends string>({ label, heading = false, cards, v
   const name = useId();
   const descriptionId = useId();
   const list = layout === 'list';
-  const chosen = cards.find((card) => card.value === value);
+  const chosenDescription = list ? cards.find((card) => card.value === value)?.description : undefined;
   return (
-    <div className={styles.group} role="radiogroup" aria-label={label} aria-describedby={list && chosen ? descriptionId : undefined} data-layout={layout}>
+    <div className={styles.group} role="radiogroup" aria-label={label} data-layout={layout}>
       {heading && <div className={styles.heading}>{label}</div>}
       {cards.map((card) => (
         <label key={card.value} className={styles.card} data-selected={value === card.value} data-disabled={card.disabled ?? false}>
-          <input type="radio" name={name} checked={value === card.value} disabled={card.disabled} onChange={() => onChange(card.value)} />
+          <input
+            type="radio"
+            name={name}
+            checked={value === card.value}
+            disabled={card.disabled}
+            // On the checked radio, so moving to another reads its description, which the list shows only once.
+            aria-describedby={chosenDescription && value === card.value ? descriptionId : undefined}
+            onChange={() => onChange(card.value)}
+          />
           <span className={styles.text}>
             <span className={styles.title}>{card.title}</span>
             {!list && <span className={styles.description}>{card.description}</span>}
           </span>
         </label>
       ))}
-      {list && chosen && (
+      {chosenDescription && (
         <div id={descriptionId} className={styles.listDescription}>
-          {chosen.description}
+          {chosenDescription}
         </div>
       )}
     </div>
