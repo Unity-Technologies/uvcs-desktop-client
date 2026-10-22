@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { PendingChangesAction, SwitchPreflight } from '@shared/domain/switchWithChanges';
+import type { SwitchChangesAction, SwitchPreflight } from '@shared/domain/switchWithChanges';
 import { navigation } from '../../app/navigation/navigationStore';
 import { branchLabels } from '../../lib/branchLabels';
 import { pluralize } from '../../lib/text';
@@ -8,7 +8,7 @@ import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { PendingChangesChoice } from './PendingChangesChoice';
 import { pendingChangesPronoun } from './pendingChangesWords';
-import type { SwitchChoice } from './switchOptions';
+import { switchButton, type SwitchChoice } from './switchOptions';
 import styles from './SwitchWithChangesDialog.module.css';
 
 interface SwitchWithChangesRequest {
@@ -20,8 +20,8 @@ interface SwitchWithChangesRequest {
 }
 
 /** Asks what happens to the pending changes before switching. Resolves with the choice, or undefined if cancelled. */
-export function askSwitchWithChanges(request: SwitchWithChangesRequest): Promise<PendingChangesAction | undefined> {
-  return askDialog<PendingChangesAction>((finish) => <SwitchWithChangesDialog {...request} onFinish={finish} />);
+export function askSwitchWithChanges(request: SwitchWithChangesRequest): Promise<SwitchChangesAction | undefined> {
+  return askDialog<SwitchChangesAction>((finish) => <SwitchWithChangesDialog {...request} onFinish={finish} />);
 }
 
 function SwitchWithChangesDialog({
@@ -30,9 +30,10 @@ function SwitchWithChangesDialog({
   choice,
   inMerge,
   onFinish,
-}: SwitchWithChangesRequest & { onFinish: (action: PendingChangesAction | undefined) => void }) {
-  const [action, setAction] = useState(choice.defaultAction);
+}: SwitchWithChangesRequest & { onFinish: (action: SwitchChangesAction | undefined) => void }) {
+  const [action, setAction] = useState<SwitchChangesAction | null>(choice.defaultAction);
   const cancel = (): void => onFinish(undefined);
+  const submit = switchButton(action);
   const [sourceName] = branchLabels(preflight.sourceName, targetName);
 
   return (
@@ -59,8 +60,8 @@ function SwitchWithChangesDialog({
         ) : (
           <>
             <Button onClick={cancel}>Cancel</Button>
-            <Button type="submit" variant="primary" disabled={!action} autoFocus>
-              Switch
+            <Button type="submit" variant={submit.variant} disabled={!action} autoFocus>
+              {submit.label}
             </Button>
           </>
         )

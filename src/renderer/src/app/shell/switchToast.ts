@@ -29,6 +29,8 @@ function changesEnding(result: SwitchResult, title: string): OperationSuccess {
       return { kind: 'success', title, detail: sentences(`Undid ${pluralize(result.count, 'unchanged checkout')}.`, restored) };
     case 'left':
       return { kind: 'success', title, detail: sentences(`${yourChanges(result.count)} on ${branchLabel(result.sourceName)}, in shelve ${result.shelveId}.`, restored) };
+    case 'discarded':
+      return { kind: 'success', title, detail: sentences(`Undid ${pluralize(result.count, 'change')}.`, restored) };
     case 'brought':
       return { kind: 'success', title, detail: 'Your changes came along.', action: viewChanges };
     case 'bringPending':
