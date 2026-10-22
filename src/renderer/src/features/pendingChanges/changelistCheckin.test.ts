@@ -20,7 +20,7 @@ import { askedDialogs } from '../../testing/fakeDialogs';
 import { changesByChangelist, prepareChangelistCheckin } from './changelistCheckin';
 import { indexPending } from './checkinDependencies';
 import { checkinDraftOf, useCheckinDraftStore } from './checkinDraftStore';
-import { checkinSelectionOf, currentChoice, includedBy, type CheckinSelection } from './checkinSelection';
+import { checkinFactsOf, type CheckinSelection, checkinSelectionOf, currentChoice, includedBy } from './checkinSelection';
 import { checkinFromPanel, shelveFromPanel } from './submitCheckinPanel';
 
 const ws = '/ws';
@@ -53,7 +53,7 @@ const allChanges = [...defaultChanges, ...uiChanges, artChange, plainChange];
 
 /** What the panel checks in and shelves once the draft is as `prepareChangelistCheckin` left it, of the changes the filter shows. */
 const selection = (changes = allChanges, matchingFilter = changes) =>
-  checkinSelectionOf({ all: changes, matchingFilter, index: indexPending(changes) }, includedBy(currentChoice(checkinDraftOf(ws), changes)));
+  checkinSelectionOf({ all: changes, matchingFilter, index: indexPending(changes), facts: checkinFactsOf(changes) }, includedBy(currentChoice(checkinDraftOf(ws), changes)));
 
 const filterCleared = vi.fn();
 

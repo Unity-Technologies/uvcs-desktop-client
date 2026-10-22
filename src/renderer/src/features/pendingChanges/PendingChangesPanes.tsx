@@ -49,7 +49,7 @@ import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { useChangeRows } from './useChangeRows';
 import { useCheckinPanelSubmit } from './useCheckinPanelSubmit';
 import type { CheckinMode } from './checkinButton';
-import { currentChoice, preparedStillPending, type PreparedChangelist } from './checkinSelection';
+import { checkinFactsOf, currentChoice, type PreparedChangelist, preparedStillPending } from './checkinSelection';
 import { useCheckinSelection } from './useCheckinSelection';
 import { useSortedChanges } from './useSortedChanges';
 import styles from './PendingChangesView.module.css';
@@ -105,7 +105,8 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   // The sorted list, which the filter gives back as it is when nothing filters: nothing is hidden to count.
   // Indexed once per read of the changes: checking a box looks up only the folders above what was clicked.
   const index = useMemo(() => indexPending(sorted), [sorted]);
-  const listed = useMemo(() => ({ all: sorted, matchingFilter: filtered, index }), [sorted, filtered, index]);
+  const facts = useMemo(() => checkinFactsOf(sorted), [sorted]);
+  const listed = useMemo(() => ({ all: sorted, matchingFilter: filtered, index, facts }), [sorted, filtered, index, facts]);
   const { isIncluded, included, hiddenIncludedCount, upload, shelvable, shelvableUpload, bulkPrivate } = useCheckinSelection(listed, checkinChoice);
   const reviewed = useMemo(() => reviewProgress(included, review.statusOf), [included, review.statusOf]);
   const { mergeChanges, onlyNeverCheckedIn } = useMemo(
