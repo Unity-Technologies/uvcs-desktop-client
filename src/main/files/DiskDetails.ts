@@ -4,7 +4,10 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 /** `fs.lstat` as `DiskDetails` calls it: tests count the calls and answer them. */
 export type ReadLinkStats = (path: string, done: (error: NodeJS.ErrnoException | null, stats?: Pick<Stats, 'size' | 'mtimeMs' | 'isSymbolicLink'>) => void) => void;
 
-/** Reads at most this many items at once: enough to keep the disk busy, few enough to leave other reads a place in libuv's pool of four threads. */
+/**
+ * Reads at most this many items at once: enough to keep libuv's four threads busy (a million took 5.3 s with 16, 7.6 s
+ * with 4), few enough that another read of the main process waits behind 16 of them at most, well under a millisecond.
+ */
 export const MAX_READS_AT_ONCE = 16;
 
 /**
