@@ -9,6 +9,11 @@ files:
   - '!out/THIRD_PARTY_NOTICES.txt'
   - package.json
 npmRebuild: false
+# uvcs:// links open in the app (docs/features/deep-links.md): Info.plist's CFBundleURLTypes on macOS, the .desktop
+# file's MimeType on Linux; the Windows installer registers it in build/installer.nsh.
+protocols:
+  name: Unity Version Control link
+  schemes: [uvcs]
 # Packs the Windows installer's archive with a filter its extractor can read: the arm64 installer otherwise leaves out
 # the app's .exe and DLLs.
 beforePack: ./scripts/build/windowsInstallerFilter.ts
@@ -48,6 +53,10 @@ win:
   target:
     - target: nsis
       arch: [x64, arm64]
+# Registers uvcs:// links for the user who installs, and removes them with the app (electron-builder's NSIS writes no
+# URL scheme itself): docs/features/deep-links.md, "Registering the scheme".
+nsis:
+  include: build/installer.nsh
 # The .desktop file is named after package.json's desktopName, the name Electron gives the app on Linux: the launcher
 # finds the app's icon by it, to show its progress bar (main/window/iconProgress.ts) and group its windows.
 linux:
