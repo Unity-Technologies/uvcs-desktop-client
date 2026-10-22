@@ -59,6 +59,15 @@ describe('registerLinkScheme', () => {
     expect(handlers).toHaveLength(1);
   });
 
+  it("tries again at the next launch when the desktop couldn't make it the handler (xdg-utils missing)", async () => {
+    const { os, handlers } = fakeOs('linux', APP_IMAGE_ENV);
+    const failing: SchemeRegistrar = { ...os, setDefaultLinkHandler: async () => Promise.reject(new Error('xdg-mime: not found')) };
+    await expect(registerLinkScheme(failing)).rejects.toThrow('xdg-mime');
+
+    await registerLinkScheme(os);
+    expect(handlers).toEqual(['com.unity.uvcs-desktop.link-handler.desktop']);
+  });
+
   it("removes the entry an earlier version wrote under the app's own id, never another tool's", async () => {
     const ours = fakeOs('linux', APP_IMAGE_ENV, { [APP_ENTRY_PATH]: linuxDesktopEntry(APP_IMAGE, 'Unity Version Control') });
     await registerLinkScheme(ours.os);
