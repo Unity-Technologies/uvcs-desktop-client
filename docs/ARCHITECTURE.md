@@ -1051,14 +1051,20 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   `cm merge` names no item types, so a path with others under it is a folder (`mergeItemTypes`). Locks are read for
   pending changes only (Files, Changes): other lists would need a `cm lock list` of their own. The Changes list renders
   its file and folder rows memoized with stable callbacks: holding ↓ over 100,000 changes re-renders none of them
-  (0.5-0.6 ms a step).
+  (0.5-0.6 ms a step). What each change adds to a check-in is worked out once a read (`checkinCandidatesOf`: its
+  upload, whether a shelve takes it, the folder a private file counts in), and what each folder holds that can go in
+  once a layout (`candidatesUnderRow`): a click on a box then only asks each change whether its box is checked
+  (`checkinSelectionOf`), and nothing while every box is (`isChosen` null). A click took 0.36 s for a million changes
+  before, and 0.1 s since.
 - **Lists of changed files** read and work the same everywhere: Changes, every diff (changeset, branch, shelve, code
   review: `DiffEntryList`), the details panels' changed files (`ChangedFilesSection`), Incoming and the merge page.
   - **One order**: by path, folder by folder, names as people read them (`file_2` before `file_10`, case only between
     names otherwise equal; different names read the same, "v01" and "v1" or a name in two Unicode forms, by their code
     units, so each folder's files stay together): `comparePaths` (`shared/pathOrder`), used where the files are read
     (`parseDiffEntries`, `parseMergePlan`) and by Changes (`sortChanges`, once a read: `useSortedChanges`; filtering
-    keeps the order, and `layoutChangeRows` lays the changes out as they come). A list and a tree show the files in the same
+    keeps the order, and `layoutChangeRows` lays the changes out as they come). `cm status` prints the changes in no
+    order, so Changes sorts them folder by folder (`sortByPath`): a million in 0.9 s, where sorting the whole list took
+    2 s. A list and a tree show the files in the same
     order. Ordering by kind of change first was tried and rejected: it split a folder's changes apart, and a row jumped
     to another group when its status changed; the status chips of the filter bar (`useChangeFilter`) are how to look at
     one kind. Sorting controls were rejected too: the only other order anyone asked for is by kind, which the chips
