@@ -34,6 +34,11 @@ describe('locateInWorkspace', () => {
     expect(found).toEqual({ root: '/wk', itemPath: '..config' });
   });
 
+  it("finds an item a Windows link names in another case than cm names the root, as Windows' file system compares", async () => {
+    const found = await locateInWorkspace('c:/users/ana/wk/game/Assets/Player.cs', { findRoot: async () => 'C:\\Users\\ana\\wk\\Game', resolve: async (path) => path, platform: 'win32' });
+    expect(found).toEqual({ root: 'C:\\Users\\ana\\wk\\Game', itemPath: 'Assets/Player.cs' });
+  });
+
   it('finds nothing outside any workspace', async () => {
     expect(await locateInWorkspace('/elsewhere/a.ts', { findRoot: async () => null, resolve: async (path) => path, platform: 'linux' })).toBeNull();
   });
