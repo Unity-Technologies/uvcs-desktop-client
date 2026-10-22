@@ -1097,7 +1097,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   named by its path, the folders dimmed. Extras go in one order: tags (`ItemTag`: a merge), where a conflict
   stands (the merge page's icons, `ConflictStatusChip`, in Incoming too), the review mark, then `ItemMark`s by the
   letter, a quiet icon whose words are in its tooltip (`LockMark`: "Locked by ana in art-wk", someone else's in the
-  alert tone; `XlinkMark`: "Xlink to thirdparty@17568"). A mark that leads somewhere is a button, its tooltip
+  alert tone). A mark that leads somewhere is a button, its tooltip
   saying where, that keeps the row's click and selection out of it; the row's menu offers the same to the keyboard: a
   lock mark ("· click to see all locks") and the file's "Show in Locks" open the Locks view on that lock
   (`showInLocks`, selecting it through `selectInView` before going there). Nothing but ignored items dims: a private item keeps
@@ -1173,8 +1173,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     moved one stays, a move listing the folder alone (`withoutRepeatedFolders`, `lib/enclosingFolders`: `listedEntries`
     for a diff, Incoming and a details panel's changed files, so their counts agree; `buildMergeItems` for a merge).
 - **File icons**: `ItemIcon` draws every file as the same filled Lucide page (`--icon-file` on `--icon-file-fill`) beside solid
-  folders (`itemIconShape`), so every row reads with one weight, and an xlink as a drawn folder with an arrow
-  (`FolderSymlink`), so it never reads as a directory; a glyph on the page tells the
+  folders (`itemIconShape`), so every row reads with one weight, and an xlink as the same solid folder with a link cut
+  out of it, in every list (Files lists an xlink as a directory, so its row passes `xlink` for the icon alone): it
+  never reads as a directory; where it points shows on selecting it (`xlinkSummary`, `XlinkDiff`); a glyph on the page tells the
   file's family (`fileFamilyOf`, by name
   first, then its longest extension: `Form.Designer.cs` before `.cs`), and only the glyph takes the family's tint
   (`FAMILY_GLYPHS`; its outline of the page stays neutral, found by its corners). The families are what matters in a

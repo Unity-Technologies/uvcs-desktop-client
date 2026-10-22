@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { File, FileSymlink, Folder, History, Lock } from 'lucide-react';
+import { File, FileSymlink, Folder, History, Link2, Lock } from 'lucide-react';
 import type { TreeItem } from '@shared/domain/explorer';
 import { revisionRef } from '@shared/domain/revision';
 import { spec } from '@shared/domain/specs';
@@ -8,6 +8,7 @@ import { queryKeys } from '../../api/queryKeys';
 import { navigation } from '../../app/navigation/navigationStore';
 import { useOtherRepository } from '../../app/workspace/useWorkspace';
 import { DetailsHeading } from '../../components/DetailsHeading';
+import { xlinkKind } from '../../components/xlinkWords';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime, formatSize } from '../../lib/formatDate';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -85,7 +86,8 @@ export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu,
   const size = isFile && (onDisk || item.isPrivate || item.revisionId > 0) ? formatSize(onDisk?.size ?? item.size) : '';
   // In a repository tree every item is a revision, with a history.
   const showsHistory = pendingIndex ? itemViews(item, pendingIndex).history : !isWorkspaceRoot(item);
-  const kind = DETAILS_KINDS[item.itemType === 'directory' || item.itemType === 'symlink' ? item.itemType : 'file'];
+  // An xlink lists as a directory; its heading names it as the diff's does ("Writable xlink").
+  const kind = item.xlink ? { icon: <Link2 />, noun: xlinkKind(item.xlink) } : DETAILS_KINDS[item.itemType === 'directory' || item.itemType === 'symlink' ? item.itemType : 'file'];
 
   const properties: Property[] = isFile
     ? [

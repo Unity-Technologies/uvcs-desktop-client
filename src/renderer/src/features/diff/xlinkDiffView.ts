@@ -1,5 +1,6 @@
 import type { DiffEntry, DiffTarget, XlinkSides } from '@shared/domain/diff';
 import type { XlinkTarget } from '@shared/domain/explorer';
+import { xlinkKind, xlinkRepository } from '../../components/xlinkWords';
 import { pluralize } from '../../lib/text';
 
 /** One side of a changed xlink: what the side is, and the changeset it points to there. */
@@ -48,7 +49,7 @@ export function xlinkDiffView(target: DiffTarget, xlink: DiffEntry, sides: Xlink
   const shown = sides && (sides.after ?? sides.before);
   const files = filesUnder(entries, xlink.path);
   return {
-    kind: shown ? (shown.writable ? 'Writable xlink' : 'Read-only xlink') : 'Xlink',
+    kind: shown ? xlinkKind(shown) : 'Xlink',
     target: sides ? targetView(target, sides) : null,
     files,
     filesTitle: files.length === 0 ? 'Files changed under it' : `${pluralize(files.length, 'file')} changed under it`,
@@ -57,20 +58,15 @@ export function xlinkDiffView(target: DiffTarget, xlink: DiffEntry, sides: Xlink
 
 function targetView(target: DiffTarget, { before, after }: XlinkSides): XlinkTargetView {
   const shown = after ?? before;
-  const repository = shown && repositoryOf(shown);
+  const repository = shown && xlinkRepository(shown);
   const [beforeLabel, afterLabel] = sideLabels(target);
   const sides = [before && sideView(beforeLabel, before, repository), after && sideView(afterLabel, after, repository)];
   return { repository, sides: sides.filter((side): side is XlinkSideView => side !== null), note: noteOf(target, before, after) };
 }
 
 function sideView(label: string, side: XlinkTarget, shownRepository: string | null): XlinkSideView {
-  const repository = repositoryOf(side);
+  const repository = xlinkRepository(side);
   return { label, changeset: `cs:${side.changeset}`, repository: repository === shownRepository ? null : repository };
-}
-
-function repositoryOf(side: XlinkTarget): string {
-  const repository = side.server ? `${side.repository}@${side.server}` : side.repository;
-  return side.path === '/' ? repository : `${repository} ${side.path}`;
 }
 
 function noteOf(target: DiffTarget, before: XlinkTarget | null, after: XlinkTarget | null): string | null {
@@ -78,7 +74,7 @@ function noteOf(target: DiffTarget, before: XlinkTarget | null, after: XlinkTarg
   if (!before && !after) return "Where it points can't be read here.";
   if (!before || !after) return null;
   if (before.writable !== after.writable) return after.writable ? 'It became writable.' : 'It became read-only.';
-  if (before.changeset === after.changeset && repositoryOf(before) === repositoryOf(after)) return 'It points to the same changeset; its settings changed.';
+  if (before.changeset === after.changeset && xlinkRepository(before) === xlinkRepository(after)) return 'It points to the same changeset; its settings changed.';
   return null;
 }
 
