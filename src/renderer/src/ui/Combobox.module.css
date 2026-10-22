@@ -56,13 +56,28 @@
   overflow-y: auto;
 }
 
+/* Only the rows in view render, each placed where it belongs, `OPTION_HEIGHT` tall. */
+.rows {
+  position: relative;
+}
+
 .option {
-  padding: 5px var(--space-2);
+  position: absolute;
+  right: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-2);
   border-radius: var(--radius-sm);
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
   cursor: default;
+}
+
+.optionText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .option[aria-selected='true'] {

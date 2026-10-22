@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import type { RepositorySummary } from '@shared/domain/repository';
 import { ServerSelect } from '../../../components/ServerSelect';
 import { Combobox } from '../../../ui/Combobox';
@@ -29,6 +30,8 @@ function noteText(note: NewWorkspaceForm['repositoryNote']): string | undefined 
 
 /** A server, then a repository named by picking one of its repositories or typing a new name. */
 export function RepositoryNameCombobox({ server, onServerChange, name, onNameChange, repositories, error, form }: RepositoryNameComboboxProps) {
+  const names = useMemo(() => repositories?.map((repository) => repository.name) ?? [], [repositories]);
+
   return (
     <div className={styles.repositoryRow}>
       <ServerSelect value={server} onChange={onServerChange} disabled={form.repositoryLocked} />
@@ -36,7 +39,7 @@ export function RepositoryNameCombobox({ server, onServerChange, name, onNameCha
         label="Repository"
         value={name}
         onChange={onNameChange}
-        options={repositories?.map((repository) => repository.name) ?? []}
+        options={names}
         optionsLabel="Repositories"
         placeholder={PLACEHOLDERS[form.repositoryList]}
         readOnly={form.repositoryLocked}
