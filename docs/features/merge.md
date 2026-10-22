@@ -37,7 +37,7 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   drop-down (`AppPicker` with `compact`, `appPickerEntries`): the tools found, then UnityYAMLMerge, the newest editor's
   and each installed editor's by its version (`pickableTools`; "Smart Merge" only in its description, as Unity's name
   for it). A row of UnityYAMLMerge has a second line, "If it can't merge, open [tool ▾]", Automatic by default
-  (`hasFallback`). Its file types are typed in place, its "…" menu moving it up
+  (`hasFallback`). Its file types are chips typed in place (`TokenField`, `lib/tokenInput`: a space, comma, semicolon or Enter makes a chip, double quotes keep spaces in one, pasting splits into chips, Backspace in an empty field takes the last away, each chip's × removes it, each value once), its "…" menu moving it up
   or down or removing it (`ruleMenuEntries`); "Add a file type" adds a row in every other file's tool. Binary files have
   no rows: no tool opens them.
 - **Imported once** from the official client (client.conf's `<MergeTools>`, `readLegacyMergeTools`,

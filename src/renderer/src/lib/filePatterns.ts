@@ -1,3 +1,5 @@
+import { allTokens } from './tokenInput';
+
 /**
  * File patterns as people type them to name a kind of file: an extension (`.cs`), a wildcard name (`*.prefab`,
  * `Level?.unity`) or a path (`Assets/Data/**`). A pattern without `/` matches the file's name, wherever it is; one with
@@ -9,18 +11,7 @@
  * pattern holding any of those goes in double quotes (`"Assets/Third Party/**"`).
  */
 export function parseFilePatterns(text: string): string[] {
-  const patterns: string[] = [];
-  let pattern = '';
-  let quoted = false;
-  for (const char of text) {
-    if (char === '"') quoted = !quoted;
-    else if (!quoted && /[\s,;]/.test(char)) {
-      if (pattern) patterns.push(pattern);
-      pattern = '';
-    } else pattern += char;
-  }
-  if (pattern) patterns.push(pattern);
-  return patterns;
+  return allTokens(text);
 }
 
 /** The patterns as one field shows them, quoted where they hold a separator, so that `parseFilePatterns` reads them back. */

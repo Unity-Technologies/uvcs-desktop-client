@@ -9,7 +9,7 @@ import {
   type MergeToolRule,
   type UnityYamlMergeTool,
 } from '@shared/domain/mergeTools';
-import { formatFilePatterns, parseFilePatterns } from '../../lib/filePatterns';
+import { formatFilePatterns } from '../../lib/filePatterns';
 import { SEPARATOR, type MenuEntry } from '../../lib/actions';
 import { automaticChoice, type AutomaticChoice, type PickableApp } from './appPickerChoices';
 
@@ -107,12 +107,6 @@ export function ruleMenuEntries(rules: readonly MergeToolRule[], id: string, sav
     SEPARATOR,
     { id: 'remove', label: 'Remove', icon: Trash2, danger: true, run: () => save(removeRule(rules, id)) },
   ];
-}
-
-/** The patterns a row's field holds once left, or null when they are the row's already (nothing to save). */
-export function changedPatterns(text: string, rule: MergeToolRule): string[] | null {
-  const patterns = parseFilePatterns(text);
-  return formatFilePatterns(patterns) === formatFilePatterns(rule.patterns) ? null : patterns;
 }
 
 /** After a picker's tools, how the tool in use opens ("How Meld opens…"); nothing while none is found. */

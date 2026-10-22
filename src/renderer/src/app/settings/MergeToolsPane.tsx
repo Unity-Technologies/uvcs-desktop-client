@@ -5,18 +5,16 @@ import { addMergeTool } from '../../features/merge/mergeTools/CustomMergeToolDia
 import { openMergeToolArgsDialog } from '../../features/merge/mergeTools/MergeToolArgsDialog';
 import { currentSettings, preferMergeTool, useMergeTools } from '../../features/merge/mergeTools/useMergeTools';
 import type { MenuEntry } from '../../lib/actions';
-import { formatFilePatterns } from '../../lib/filePatterns';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
-import { TextField } from '../../ui/TextField';
+import { TokenField } from '../../ui/TokenField';
 import { AppPicker } from './AppPicker';
 import type { AutomaticChoice } from './appPickerChoices';
 import {
   addRule,
   AUTOMATIC_MERGE_TOOL_CHOICE,
-  changedPatterns,
   changeRule,
   hasFallback,
   howItOpensEntries,
@@ -85,27 +83,18 @@ export function MergeToolsPane() {
 
 /** A row of file types: its patterns, edited in place and saved as the field is left, its tool, and its menu. */
 function RuleRow({ rule, rules, list, focused }: { rule: MergeToolRule; rules: MergeToolRule[]; list: MergeToolList; focused: boolean }) {
-  const [text, setText] = useState(formatFilePatterns(rule.patterns));
-  const save = (): void => {
-    const patterns = changedPatterns(text, rule);
-    setText(formatFilePatterns(patterns ?? rule.patterns));
-    if (patterns) void saveRules((current) => changeRule(current, rule.id, { patterns }));
-  };
   const menu: MenuEntry[] = ruleMenuEntries(rules, rule.id, (changed) => void saveSettings({ mergeToolRules: changed }));
   const name = ruleName(rule);
 
   return (
     <div className={styles.rule} role="listitem">
-      <TextField
-        className={styles.ruleField}
-        aria-label="File types"
-        data-tip="Extensions (.psd), names (*.prefab) or paths (Assets/Data/**), separated by spaces"
+      <TokenField
+        label={`File types of ${name}`}
+        tokens={rule.patterns}
+        tip="Extensions (.psd), names (*.prefab) or paths (Assets/Data/**)"
         placeholder=".psd .tga"
-        value={text}
         autoFocus={focused}
-        onChange={(event) => setText(event.target.value)}
-        onBlur={save}
-        onKeyDown={(event) => event.key === 'Enter' && save()}
+        onChange={(patterns) => void saveRules((current) => changeRule(current, rule.id, { patterns }))}
       />
       <ToolPicker
         label={name}

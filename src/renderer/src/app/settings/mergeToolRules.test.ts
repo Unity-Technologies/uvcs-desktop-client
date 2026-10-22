@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MergeToolRule } from '@shared/domain/mergeTools';
 import { SEPARATOR, type Action } from '../../lib/actions';
-import { addRule, AUTOMATIC_MERGE_TOOL_CHOICE, changedPatterns, changeRule, hasFallback, howItOpensEntries, missingToolName, pickableTools, moveRule, newRuleToolId, removeRule, ruleMenuEntries, ruleName, toolInUse } from './mergeToolRules';
+import { addRule, AUTOMATIC_MERGE_TOOL_CHOICE, changeRule, hasFallback, howItOpensEntries, missingToolName, pickableTools, moveRule, newRuleToolId, removeRule, ruleMenuEntries, ruleName, toolInUse } from './mergeToolRules';
 import type { MergeTool, MergeToolList } from '@shared/domain/mergeTools';
 
 const rule = (id: string): MergeToolRule => ({ id, patterns: [`.${id}`], toolId: 'uvcs' });
@@ -68,16 +68,6 @@ describe('ruleName', () => {
   it('names a row by its patterns, or as new before it has any', () => {
     expect(ruleName({ id: 'a', patterns: ['.cs', '.vb'], toolId: 'semantic' })).toBe('.cs .vb');
     expect(ruleName({ id: 'a', patterns: [], toolId: 'semantic' })).toBe('New file type');
-  });
-});
-
-describe('changedPatterns', () => {
-  const shaders: MergeToolRule = { id: 's', patterns: ['.shader', '.hlsl'], toolId: 'rider' };
-
-  it('reads the field once left, and is null when it holds the row’s patterns already, however typed', () => {
-    expect(changedPatterns('.shader, .hlsl ', shaders)).toBeNull();
-    expect(changedPatterns('.shader .cginc', shaders)).toEqual(['.shader', '.cginc']);
-    expect(changedPatterns('', shaders)).toEqual([]);
   });
 });
 
