@@ -22,6 +22,8 @@ interface StartingPointPickerProps {
 export function StartingPointPicker({ cards, value, onChange }: StartingPointPickerProps) {
   const [open, setOpen] = useState(false);
   const choicesRef = useRef<HTMLDivElement>(null);
+  /** Whether the last input was a pointer: the arrow keys click a radio too, and those must not close the popover. */
+  const pointing = useRef(false);
   return (
     <Popover
       open={open}
@@ -42,9 +44,12 @@ export function StartingPointPicker({ cards, value, onChange }: StartingPointPic
       <div
         ref={choicesRef}
         className={styles.choices}
-        // A click on a card, not the arrow keys' synthetic click on a radio (`detail` 0).
-        onClick={(event) => event.detail > 0 && event.target instanceof Element && event.target.closest('label') && setOpen(false)}
+        onPointerDown={() => (pointing.current = true)}
+        // Closes on the radio's click, which a click anywhere on its card passes on once the choice changed; closing
+        // on the card's own click would remove the radios before that, and the choice would never change.
+        onClick={(event) => pointing.current && event.target instanceof HTMLInputElement && setOpen(false)}
         onKeyDown={(event) => {
+          pointing.current = false;
           if (event.key !== 'Enter' && event.key !== 'Tab') return;
           event.preventDefault();
           setOpen(false);
