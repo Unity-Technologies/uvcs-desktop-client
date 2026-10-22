@@ -167,11 +167,12 @@
   white-space: nowrap;
 }
 
-/* Settings › Merge: a row per kind of file (its files, its tool, its menu), tried top to bottom. */
+/* Settings › Merge: a row per kind of file (its files, its tool, its menu), tried top to bottom. One grid, each row a
+   subgrid, so the tool column is as wide as its longest choice (never cut) and lines up in every row. */
 .rules {
   container-type: inline-size;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) fit-content(60%) 28px;
   width: 100%;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
@@ -179,7 +180,8 @@
 
 .rule {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 28px;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
   gap: var(--space-2);
   padding: 6px var(--space-2) 6px var(--space-3);
@@ -191,7 +193,7 @@
 
 /* In a narrow window, the tool goes under the files. */
 @container (max-width: 380px) {
-  .rule {
+  .rules {
     grid-template-columns: minmax(0, 1fr) 28px;
   }
 
@@ -206,6 +208,8 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  /* "Unity scenes, prefabs and assets" breaks into even lines rather than leaving one word alone. */
+  text-wrap: balance;
 }
 
 .ruleField {
