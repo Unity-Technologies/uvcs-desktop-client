@@ -3,7 +3,7 @@ import { currentExternalApps } from '../../../components/externalApps/externalAp
 import { menuAction, menuSubmenu } from '../../../components/menuWords';
 import { withoutAction, type Action, type MenuEntry } from '../../../lib/actions';
 import type { ToolForFile } from '../mergeTools/resolveRun';
-import { toolChoiceEntries } from '../mergeTools/toolChoices';
+import { otherTools, toolChoiceEntries } from '../mergeTools/toolChoices';
 import type { GroupedEntry } from '../../../lib/menuGroups';
 import { oneClickApp, openableVersions, opensAsBinary, type VersionOpeningContext } from './conflictVersionOpening';
 import type { FileConflictDecision } from './fileConflictDecision';
@@ -71,7 +71,7 @@ function singleConflictEntries(state: FileConflictState, context: ConflictMenuCo
         }),
       ]
     : [];
-  const others = context.tools.filter((other) => other.id !== tool?.id);
+  const others = otherTools(context.tools, tool);
   const resolveWith =
     opens && !context.running && others.length > 0
       ? [menuSubmenu('resolveWith', toolChoiceEntries(others.map((other) => ({ tool: other, label: other.name })), (other) => context.resolveIn(state.file.key, other)))]

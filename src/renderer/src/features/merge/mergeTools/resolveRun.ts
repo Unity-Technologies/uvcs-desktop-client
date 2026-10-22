@@ -2,6 +2,7 @@ import { SMART_MERGE_NAME, type MergeTool } from '@shared/domain/mergeTools';
 import { fileNameOf, listNames, pluralize } from '../../../lib/text';
 import type { FileConflictState } from '../resolve/useFileConflicts';
 import { waitsForTool } from './mergeToolOutcome';
+import type { ToolChoice } from './toolChoices';
 
 /** A file of a run, and the tool it opens in. */
 export interface RunStep {
@@ -149,6 +150,11 @@ export function runTip(plan: RunPlan): string {
 /** A run of every file in one tool, behind the button's caret: "All in Meld · 5 conflicts". */
 export function allInLabel(plan: RunPlan): string {
   return `All in ${plan.picked?.name ?? ''} · ${pluralize(plan.steps.length, 'conflict')}`;
+}
+
+/** The runs behind the button's caret, every file in one tool: the plans after the first, by their tool. */
+export function allInChoices(plans: readonly RunPlan[]): ToolChoice[] {
+  return plans.slice(1).flatMap((plan) => (plan.picked ? [{ tool: plan.picked, label: allInLabel(plan) }] : []));
 }
 
 /**

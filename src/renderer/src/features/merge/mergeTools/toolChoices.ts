@@ -14,3 +14,8 @@ export interface ToolChoice {
 export function toolChoiceEntries(choices: ToolChoice[], open: (tool: MergeTool) => void): Action[] {
   return choices.map(({ tool, label }) => ({ id: `tool.${tool.id}`, label, icon: appIcon(tool), run: () => open(tool) }));
 }
+
+/** Every tool but the one given (the file's own, which its button or entry already names). */
+export function otherTools(tools: readonly MergeTool[], tool: MergeTool | undefined): MergeTool[] {
+  return tools.filter((other) => other.id !== tool?.id);
+}

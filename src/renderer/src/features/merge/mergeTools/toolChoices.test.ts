@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MergeTool } from '@shared/domain/mergeTools';
-import { toolChoiceEntries } from './toolChoices';
+import { otherTools, toolChoiceEntries } from './toolChoices';
 
 const tool = (id: string, name: string, icon?: string): MergeTool => ({ id, name, origin: 'known', executable: id, args: [], defaultArgs: [], canBringToFront: false, ...(icon && { icon }) });
 const choices = [
@@ -22,5 +22,13 @@ describe('toolChoiceEntries', () => {
     const opened: string[] = [];
     toolChoiceEntries(choices, (picked) => opened.push(picked.id))[1]!.run();
     expect(opened).toEqual(['cursor']);
+  });
+});
+
+describe('otherTools', () => {
+  it('lists every tool but the one given, all of them without one', () => {
+    const tools = [tool('uvcs', 'UVCS merge tool'), tool('meld', 'Meld')];
+    expect(otherTools(tools, tools[1]).map((other) => other.id)).toEqual(['uvcs']);
+    expect(otherTools(tools, undefined).map((other) => other.id)).toEqual(['uvcs', 'meld']);
   });
 });

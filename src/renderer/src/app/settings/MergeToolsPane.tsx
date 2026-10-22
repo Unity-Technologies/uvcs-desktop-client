@@ -1,11 +1,11 @@
-import { MoreHorizontal, Plus, SlidersHorizontal } from 'lucide-react';
+import { MoreHorizontal, Plus } from 'lucide-react';
 import { useState } from 'react';
 import type { MergeToolList, MergeToolRule } from '@shared/domain/mergeTools';
 import { addMergeTool } from '../../features/merge/mergeTools/CustomMergeToolDialog';
 import { openMergeToolArgsDialog } from '../../features/merge/mergeTools/MergeToolArgsDialog';
 import { currentSettings, preferMergeTool, useMergeTools } from '../../features/merge/mergeTools/useMergeTools';
 import type { MenuEntry } from '../../lib/actions';
-import { formatFilePatterns, parseFilePatterns } from '../../lib/filePatterns';
+import { formatFilePatterns } from '../../lib/filePatterns';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { IconButton } from '../../ui/IconButton';
@@ -16,7 +16,9 @@ import type { AutomaticChoice } from './appPickerChoices';
 import {
   addRule,
   AUTOMATIC_MERGE_TOOL_CHOICE,
+  changedPatterns,
   changeRule,
+  howItOpensEntries,
   newRuleToolId,
   pickableTools,
   ruleMenuEntries,
@@ -93,9 +95,9 @@ export function MergeToolsPane() {
 function RuleRow({ rule, rules, list, focused }: { rule: MergeToolRule; rules: MergeToolRule[]; list: MergeToolList; focused: boolean }) {
   const [text, setText] = useState(formatFilePatterns(rule.patterns));
   const save = (): void => {
-    const patterns = parseFilePatterns(text);
-    setText(formatFilePatterns(patterns));
-    if (formatFilePatterns(patterns) !== formatFilePatterns(rule.patterns)) void saveRules((current) => changeRule(current, rule.id, { patterns }));
+    const patterns = changedPatterns(text, rule);
+    setText(formatFilePatterns(patterns ?? rule.patterns));
+    if (patterns) void saveRules((current) => changeRule(current, rule.id, { patterns }));
   };
   const menu: MenuEntry[] = ruleMenuEntries(rules, rule.id, (changed) => void saveSettings({ mergeToolRules: changed }));
   const name = ruleName(rule);
@@ -147,7 +149,7 @@ function ToolPicker({ label, list, choice, automatic, onChoose }: ToolPickerProp
       missingName={list.knownNames[choice]}
       onChoose={onChoose}
       onAdd={() => void addAndPick()}
-      more={picked ? [{ id: 'howItOpens', label: `How ${picked.name} opens…`, icon: SlidersHorizontal, run: () => openMergeToolArgsDialog(picked) }] : []}
+      more={howItOpensEntries(picked, openMergeToolArgsDialog)}
     />
   );
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MergeTool } from '@shared/domain/mergeTools';
 import type { FileConflictState } from '../resolve/useFileConflicts';
-import { allInLabel, leftOutNote, planRun, runLabel, runPlans, runStripWords, runSummary, runTip, runTool } from './resolveRun';
+import { allInChoices, allInLabel, leftOutNote, planRun, runLabel, runPlans, runStripWords, runSummary, runTip, runTool } from './resolveRun';
 
 const tool = (id: string, changes: Partial<MergeTool> = {}): MergeTool => ({
   id,
@@ -108,6 +108,17 @@ describe('runTip', () => {
   it('says where the files open and how to go on', () => {
     expect(runTip(planRun(states, () => fakeMerge))).toBe('Opens each file in FakeMerge in turn: save and close it there to get the next');
     expect(runTip(planRun(states, (state) => (state.file.path === 'b.ts' ? otherMerge : fakeMerge)))).toBe('Opens each file in its merge tool in turn: save and close it there to get the next');
+  });
+});
+
+describe('allInChoices', () => {
+  it('offers every run after the first, each by its tool', () => {
+    const plans = runPlans(states, [fakeMerge, otherMerge], (state) => (state.file.path === 'b.ts' ? otherMerge : fakeMerge));
+    expect(allInChoices(plans).map(({ tool, label }) => [tool.id, label])).toEqual([
+      ['FakeMerge', 'All in FakeMerge · 2 conflicts'],
+      ['OtherMerge', 'All in OtherMerge · 2 conflicts'],
+    ]);
+    expect(allInChoices(plans.slice(0, 1))).toEqual([]);
   });
 });
 

@@ -6,7 +6,7 @@ import { SplitButton } from '../../../ui/SplitButton';
 import type { FileConflictState } from '../resolve/useFileConflicts';
 import { addMergeTool } from './CustomMergeToolDialog';
 import type { RunProgress } from './resolveRun';
-import { toolChoiceEntries } from './toolChoices';
+import { otherTools, toolChoiceEntries } from './toolChoices';
 import { useMergeToolFor, useMergeTools } from './useMergeTools';
 
 /** What the page offers to do with merge tools, for the file at hand. */
@@ -45,7 +45,7 @@ export function MergeToolButton({ state, actions, onEditInApp, editInAppUnavaila
 
   const menu: MenuEntry[] = tidyMenu([
     ...toolChoiceEntries(
-      tools.filter((tool) => tool.id !== primary?.id).map((tool) => ({ tool, label: tool.name })),
+      otherTools(tools, primary).map((tool) => ({ tool, label: tool.name })),
       resolve,
     ),
     SEPARATOR,

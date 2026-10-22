@@ -12,7 +12,7 @@ import { confirm } from '../../../ui/dialog/confirm';
 import { ProgressRing } from '../../../ui/ProgressRing';
 import { SplitButton } from '../../../ui/SplitButton';
 import type { FileConflictState } from '../resolve/useFileConflicts';
-import { allInLabel, leftOutNote, runLabel, runPlans, runPositionText, runStripWords, runTip, type RunPlan, type RunProgress } from './resolveRun';
+import { allInChoices, leftOutNote, runLabel, runPlans, runPositionText, runStripWords, runTip, type RunPlan, type RunProgress } from './resolveRun';
 import type { ResolveRun } from './useResolveRun';
 import { toolChoiceEntries } from './toolChoices';
 import { useMergeToolFor, useMergeTools } from './useMergeTools';
@@ -54,13 +54,10 @@ export function ResolveRunControl({ states, run, plans }: ResolveRunControlProps
 
 function RunButton({ plans, run }: { plans: RunPlan[]; run: ResolveRun }) {
   const { askWhenMergeToolClosesUnsaved } = useSettings();
-  const [offered, ...allIn] = plans as [RunPlan, ...RunPlan[]];
+  const offered = plans[0]!;
   // The caret starts the run with every file in one tool, this once; the button, each file in its own.
   const menu: MenuEntry[] = tidyMenu([
-    ...toolChoiceEntries(
-      allIn.flatMap((plan) => (plan.picked ? [{ tool: plan.picked, label: allInLabel(plan) }] : [])),
-      (tool) => run.start(tool),
-    ),
+    ...toolChoiceEntries(allInChoices(plans), (tool) => run.start(tool)),
     SEPARATOR,
     {
       id: 'askWhenUnsaved',
