@@ -33,12 +33,16 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   it up or down or removing it (`ruleMenuEntries`); "Add a file type" adds a row in every other file's tool. Binary
   files have no rows: no tool opens them.
 - **Imported once** from the official client (client.conf's `<MergeTools>`, `readLegacyMergeTools`,
-  `legacyMergeToolSettings`; ARCHITECTURE.md "Own config"), on the first run that has rows (`mergeToolRulesImported`,
-  apart from the recent branches' import, so a user who ran the app before gets it too). Each entry for some files
+  `legacyMergeToolSettings`; ARCHITECTURE.md "Own config"), on the first run that has rows of this shape (`legacyMergeToolsImported`,
+  apart from the recent branches' import, so a user who ran the app before gets it too; a leftover `unityMergeTool` or
+  `mergeToolRulesImported` from an earlier build is ignored). With nothing to import, the rows are the app's own
+  (`DEFAULT_MERGE_TOOL_RULES`), but Semantic Merge's for a user who picked their own tool. Each entry for some files
   becomes a row, by the official client's order; its entry for every text file becomes every other file's tool, only
-  while the user's is still Automatic, and nothing after it is read, as the client never goes past it (even when the app can't read its tool). A chain whose
-  first tool is `UnityYAMLMerge` sets where Unity assets open, from the tool chained after it (its stored path is
-  dropped: the app finds the newest Unity Editor itself). The client's own tools become the app's (`plastic xmerge`,
+  while the user's is still Automatic, and nothing after it is read, as the client never goes past it (even when the app can't read its tool). An entry whose
+  first tool is `UnityYAMLMerge` becomes a row of UnityYAMLMerge for its extensions, the tool chained after it its
+  fallback (Automatic when there's none, or when it's every other file's tool anyway: `withAutomaticFallback`); its
+  stored path is dropped, the app runs the newest Unity Editor's. With no such entry, the app's own Unity row comes
+  first (`UNITY_YAML_MERGE_RULE`). The client's own tools become the app's (`plastic xmerge`,
   `plasticgui`, `macmergetool`, `gtkmergetool` the UVCS merge tool; `semanticmerge` Semantic Merge); a known program
   (VS Code, Rider, KDiff3, P4Merge...) becomes the app's own entry for it, with the app's arguments; any other program
   becomes a tool of the user's, `@basefile` `@sourcefile` `@destinationfile` `@output` and their `…symbolic`s turned

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { UNITY_YAML_MERGE_RULE } from '@shared/domain/mergeTools';
 import { DEFAULT_SETTINGS } from '@shared/domain/settings';
 import type { LegacyMergeToolEntry } from '../plasticConfig/clientConfMergeTools';
 import { KNOWN_TOOLS } from '../merge/mergeTools/knownTools';
@@ -7,9 +8,11 @@ import { KNOWN_PROGRAMS, legacyMergeToolSettings, sendsCodeToSemanticMerge, type
 const fresh: ImportedMergeToolSettings = {
   mergeTool: DEFAULT_SETTINGS.mergeTool,
   mergeToolRules: DEFAULT_SETTINGS.mergeToolRules,
-  unityMergeTool: DEFAULT_SETTINGS.unityMergeTool,
   customMergeTools: [],
 };
+
+/** The rules imported, without the app's own Unity rule, which comes first when the client ran no UnityYAMLMerge. */
+const importedRules = ({ mergeToolRules }: ImportedMergeToolSettings) => mergeToolRules.filter((rule) => rule.id !== 'unity');
 
 const text = (patterns: string, ...commands: string[]): LegacyMergeToolEntry => ({ fileType: 'text', patterns: patterns.split(';'), commands });
 const any = (patterns: string, ...commands: string[]): LegacyMergeToolEntry => ({ fileType: 'any', patterns: patterns.split(';'), commands });
@@ -43,8 +46,10 @@ describe('legacyMergeToolSettings', () => {
 
     expect(legacyMergeToolSettings(entries, fresh)).toEqual({
       mergeTool: 'auto',
-      mergeToolRules: [{ id: 'imported:2', patterns: ['.cs', '.vb', '.java'], toolId: 'semantic' }],
-      unityMergeTool: 'others',
+      mergeToolRules: [
+        { id: 'imported:1', patterns: ['.prefab', '.unity'], toolId: 'unityyamlmerge', fallbackToolId: 'auto' },
+        { id: 'imported:3', patterns: ['.cs', '.vb', '.java'], toolId: 'semantic' },
+      ],
       customMergeTools: [],
     });
   });
@@ -54,8 +59,10 @@ describe('legacyMergeToolSettings', () => {
 
     expect(legacyMergeToolSettings(entries, fresh)).toEqual({
       mergeTool: 'auto',
-      mergeToolRules: [{ id: 'imported:semantic', patterns: ['.cs', '.vb', '.java'], toolId: 'semantic' }],
-      unityMergeTool: 'others',
+      mergeToolRules: [
+        { id: 'imported:1', patterns: ['.unity'], toolId: 'unityyamlmerge', fallbackToolId: 'auto' },
+        { id: 'imported:semantic', patterns: ['.cs', '.vb', '.java'], toolId: 'semantic' },
+      ],
       customMergeTools: [],
     });
   });
@@ -66,16 +73,21 @@ describe('legacyMergeToolSettings', () => {
 
   it('reads the Desktop GUI by any of its program names, and its semanticmerge as Semantic Merge', () => {
     const entries = [text('.java', '"/usr/local/bin/plasticgui" semanticmerge -r="@output"'), text('.swift', XMERGE_MAC), text('.go', '/opt/plasticscm5/client/linplasticx xmerge -r="@output"'), text('*', 'kdiff3 "@output"')];
-    expect(legacyMergeToolSettings(entries, fresh).mergeToolRules).toEqual([
+    expect(importedRules(legacyMergeToolSettings(entries, fresh))).toEqual([
       { id: 'imported:1', patterns: ['.java'], toolId: 'semantic' },
       { id: 'imported:2', patterns: ['.swift'], toolId: 'uvcs' },
       { id: 'imported:3', patterns: ['.go'], toolId: 'uvcs' },
     ]);
   });
 
-  it('opens Unity assets Smart Merge cannot merge in the tool chained after it, when that is not every other file’s', () => {
+  it('makes a UnityYAMLMerge entry a rule of it, the tool chained after it opening what it can’t merge', () => {
     const entries = [any('.prefab;.unity', SMART_MERGE_WINDOWS, '"C:\\Program Files\\KDiff3\\bin\\kdiff3.exe" "@basefile" "@output"'), text('*', XMERGE_WINDOWS)];
-    expect(legacyMergeToolSettings(entries, fresh).unityMergeTool).toBe('kdiff3');
+    expect(legacyMergeToolSettings(entries, fresh).mergeToolRules[0]).toEqual({ id: 'imported:1', patterns: ['.prefab', '.unity'], toolId: 'unityyamlmerge', fallbackToolId: 'kdiff3' });
+  });
+
+  it('adds the app’s own Unity rule first when the client ran no UnityYAMLMerge', () => {
+    expect(legacyMergeToolSettings([text('*', XMERGE_WINDOWS)], fresh).mergeToolRules[0]).toBe(UNITY_YAML_MERGE_RULE);
+    expect(legacyMergeToolSettings([any('.unity', SMART_MERGE_MAC)], fresh).mergeToolRules.filter((rule) => rule.toolId === 'unityyamlmerge')).toHaveLength(1);
   });
 
   it('makes a known program the app’s own entry for it, whatever its arguments were', () => {
@@ -87,7 +99,7 @@ describe('legacyMergeToolSettings', () => {
       text('*', 'p4merge "@basefile" "@sourcefile" "@destinationfile" "@output"'),
     ];
     const imported = legacyMergeToolSettings(entries, fresh);
-    expect(imported.mergeToolRules.map((rule) => rule.toolId)).toEqual(['vscode', 'pycharm', 'clion', 'opendiff']);
+    expect(importedRules(imported).map((rule) => rule.toolId)).toEqual(['vscode', 'pycharm', 'clion', 'opendiff']);
     expect(imported.mergeTool).toBe('p4merge');
     expect(imported.customMergeTools).toEqual([]);
   });
@@ -117,37 +129,39 @@ describe('legacyMergeToolSettings', () => {
     const entries = [text('.a', '/opt/tool "@output"'), text('.b', '/opt/tool "@output"'), text('.c', '/opt/mine "@output"')];
     const imported = legacyMergeToolSettings(entries, { ...fresh, customMergeTools: [own] });
     expect(imported.customMergeTools).toEqual([own, { id: 'custom:imported:2', name: 'tool', executable: '/opt/tool', args: ['{result}'] }]);
-    expect(imported.mergeToolRules.map((rule) => rule.toolId)).toEqual(['custom:imported:2', 'custom:imported:2', 'custom:1', 'semantic']);
+    expect(importedRules(imported).map((rule) => rule.toolId)).toEqual(['custom:imported:2', 'custom:imported:2', 'custom:1', 'semantic']);
   });
 
   it('leaves out what the app never opens a tool for: binary entries, binary merges, and commands that save nowhere', () => {
     const entries = [binary('.psd', 'photoshopmerge "@output"'), text('.png', BINMERGE_WINDOWS), text('.txt', 'notepad "@basefile"'), text('.md'), text('*', XMERGE_WINDOWS)];
-    expect(legacyMergeToolSettings(entries, fresh).mergeToolRules).toEqual([{ id: 'imported:semantic', patterns: ['.cs', '.vb', '.java'], toolId: 'semantic' }]);
+    expect(importedRules(legacyMergeToolSettings(entries, fresh))).toEqual([{ id: 'imported:semantic', patterns: ['.cs', '.vb', '.java'], toolId: 'semantic' }]);
   });
 
   it('leaves out regular expressions, keeping the patterns beside them', () => {
     const entries = [text('^Assets/.*\\.json$;.yaml;a|b', 'meld "@output"'), text('^only$', 'meld "@output"'), text('*', XMERGE_WINDOWS)];
-    expect(legacyMergeToolSettings(entries, fresh).mergeToolRules[0]).toEqual({ id: 'imported:1', patterns: ['.yaml'], toolId: 'meld' });
+    expect(importedRules(legacyMergeToolSettings(entries, fresh))[0]).toEqual({ id: 'imported:1', patterns: ['.yaml'], toolId: 'meld' });
   });
 
   it('keeps a pattern with spaces whole', () => {
-    expect(legacyMergeToolSettings([text('Assets/Third Party/*.json;.yaml', 'meld "@output"')], fresh).mergeToolRules[0]!.patterns).toEqual(['Assets/Third Party/*.json', '.yaml']);
+    expect(importedRules(legacyMergeToolSettings([text('Assets/Third Party/*.json;.yaml', 'meld "@output"')], fresh))[0]!.patterns).toEqual(['Assets/Third Party/*.json', '.yaml']);
   });
 
   it('stops at the entry for every text file, as the client never goes past it', () => {
     const entries = [text('*', 'meld "@output"'), text('.cs', 'kdiff3 "@output"')];
-    expect(legacyMergeToolSettings(entries, fresh)).toMatchObject({ mergeTool: 'meld', mergeToolRules: [] });
+    const imported = legacyMergeToolSettings(entries, fresh);
+    expect(imported.mergeTool).toBe('meld');
+    expect(importedRules(imported)).toEqual([]);
   });
 
   it('sends no C#, VB or Java to Semantic Merge for a user who picked their own tool for every other file', () => {
     const imported = legacyMergeToolSettings([text('.shader', 'rider "@output"'), text('*', XMERGE_WINDOWS)], { ...fresh, mergeTool: 'vscode' });
-    expect(imported).toMatchObject({ mergeTool: 'vscode', mergeToolRules: [{ patterns: ['.shader'], toolId: 'rider' }] });
-    expect(imported.mergeToolRules).toHaveLength(1);
+    expect(imported.mergeTool).toBe('vscode');
+    expect(importedRules(imported)).toEqual([{ id: 'imported:1', patterns: ['.shader'], toolId: 'rider' }]);
   });
 
   it('sends C#, VB and Java to Semantic Merge while every other file opens in the UVCS merge tool, Automatic or picked by name', () => {
     expect([sendsCodeToSemanticMerge('auto'), sendsCodeToSemanticMerge('uvcs'), sendsCodeToSemanticMerge('vscode')]).toEqual([true, true, false]);
-    expect(legacyMergeToolSettings([text('*', XMERGE_WINDOWS)], { ...fresh, mergeTool: 'uvcs' }).mergeToolRules.map((rule) => rule.toolId)).toEqual(['semantic']);
+    expect(importedRules(legacyMergeToolSettings([text('*', XMERGE_WINDOWS)], { ...fresh, mergeTool: 'uvcs' })).map((rule) => rule.toolId)).toEqual(['semantic']);
   });
 
   it('keeps the user’s own pick for every other file over the client’s', () => {
@@ -156,16 +170,16 @@ describe('legacyMergeToolSettings', () => {
   });
 
   it('adds Semantic Merge only for the languages no rule sends elsewhere, and only while the client’s own tool takes every other file', () => {
-    expect(legacyMergeToolSettings([text('.cs', 'rider "@output"'), text('*', XMERGE_WINDOWS)], fresh).mergeToolRules).toEqual([
+    expect(importedRules(legacyMergeToolSettings([text('.cs', 'rider "@output"'), text('*', XMERGE_WINDOWS)], fresh))).toEqual([
       { id: 'imported:1', patterns: ['.cs'], toolId: 'rider' },
       { id: 'imported:semantic', patterns: ['.vb', '.java'], toolId: 'semantic' },
     ]);
-    expect(legacyMergeToolSettings([text('*', 'meld "@output"')], fresh).mergeToolRules).toEqual([]);
+    expect(importedRules(legacyMergeToolSettings([text('*', 'meld "@output"')], fresh))).toEqual([]);
   });
 
   it('drops a rule that sends files where every other file goes anyway, unless a later rule could take them', () => {
     const entries = [text('*.txt', XMERGE_WINDOWS), text('.meta', XMERGE_WINDOWS), text('.gz', XMERGE_WINDOWS), text('.tar.gz', 'meld "@output"'), text('.json', 'meld "@output"'), text('*', XMERGE_WINDOWS)];
-    expect(legacyMergeToolSettings(entries, fresh).mergeToolRules.map((rule) => rule.patterns)).toEqual([['*.txt'], ['.gz'], ['.tar.gz'], ['.json'], ['.cs', '.vb', '.java']]);
+    expect(importedRules(legacyMergeToolSettings(entries, fresh)).map((rule) => rule.patterns)).toEqual([['*.txt'], ['.gz'], ['.tar.gz'], ['.json'], ['.cs', '.vb', '.java']]);
   });
 
   it('drops the switch before a variable the app can’t fill, when the variable was the whole argument', () => {
@@ -180,7 +194,7 @@ describe('legacyMergeToolSettings', () => {
 
   it('goes no further after the entry for every text file, even one whose tool it can’t read: every other file falls back to the UVCS merge tool, so C# goes to Semantic Merge', () => {
     const imported = legacyMergeToolSettings([text('*', 'notepad "@basefile"'), text('.cs', 'kdiff3 "@output"')], fresh);
-    expect(imported.mergeToolRules.map((rule) => rule.toolId)).toEqual(['semantic']);
+    expect(importedRules(imported).map((rule) => rule.toolId)).toEqual(['semantic']);
   });
 
   it('maps every known program to a tool the app knows', () => {
@@ -189,6 +203,6 @@ describe('legacyMergeToolSettings', () => {
   });
 
   it('runs a command after the official client’s /nowindow word as any other', () => {
-    expect(legacyMergeToolSettings([text('.cs', '/nowindow kdiff3 "@output"'), text('*', XMERGE_WINDOWS)], fresh).mergeToolRules[0]!.toolId).toBe('kdiff3');
+    expect(importedRules(legacyMergeToolSettings([text('.cs', '/nowindow kdiff3 "@output"'), text('*', XMERGE_WINDOWS)], fresh))[0]!.toolId).toBe('kdiff3');
   });
 });

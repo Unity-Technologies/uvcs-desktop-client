@@ -1,22 +1,23 @@
-import { AUTO_MERGE_TOOL, SAME_AS_OTHER_FILES, SEMANTIC_TOOL_ID, type CustomMergeTool, type MergeToolRule } from '@shared/domain/mergeTools';
+import { AUTO_MERGE_TOOL, SEMANTIC_TOOL_ID, UNITY_YAML_MERGE_ID, UNITY_YAML_MERGE_RULE, type CustomMergeTool, type MergeToolRule } from '@shared/domain/mergeTools';
 import type { AppSettings } from '@shared/domain/settings';
 import type { LegacyMergeToolEntry } from '../plasticConfig/clientConfMergeTools';
 import { UVCS_TOOL_ID } from '../merge/mergeTools/knownTools';
 
 /** The merge tool settings the official client's entries become. */
-export type ImportedMergeToolSettings = Pick<AppSettings, 'mergeTool' | 'mergeToolRules' | 'unityMergeTool' | 'customMergeTools'>;
+export type ImportedMergeToolSettings = Pick<AppSettings, 'mergeTool' | 'mergeToolRules' | 'customMergeTools'>;
 
 /**
- * What a command line of the official client opens: one of the app's own tools, a program of the user's, Smart Merge
- * (Unity's `UnityYAMLMerge`, which the app runs by itself on Unity assets), or nothing the app opens (a binary merge,
- * a command it can't read).
+ * What a command line of the official client opens: one of the app's own tools, a program of the user's, Unity's
+ * `UnityYAMLMerge` (whose stored path is dropped: the app finds the newest Unity Editor itself), or nothing the app
+ * opens (a binary merge, a command it can't read).
  */
 type LegacyTool = { kind: 'tool'; toolId: string } | { kind: 'custom'; tool: Omit<CustomMergeTool, 'id'> } | { kind: 'smartMerge' } | { kind: 'none' };
 
 /**
  * The official client's merge tools as the app's settings: each entry for some files becomes a rule, the one for
- * every text file the tool for every other file (only while the user's is still Automatic), and the tool chained
- * after Smart Merge where Unity assets open. Entries for binary files are left out (the app keeps one version of a
+ * every text file the tool for every other file (only while the user's is still Automatic). An entry running
+ * UnityYAMLMerge becomes a rule of it, the tool chained after it opening what it can't merge; with none, the app's own
+ * Unity rule comes first (`UNITY_YAML_MERGE_RULE`). Entries for binary files are left out (the app keeps one version of a
  * binary), as are regular expressions, and anything the official client would never reach (after its entry for every
  * file). The client sends C#, Visual Basic and Java to Semantic Merge when its own merge tool takes every file:
  * that becomes a rule too, while every other file still opens in that tool here (not in one the user picked).
@@ -35,13 +36,14 @@ export function legacyMergeToolSettings(entries: LegacyMergeToolEntry[], current
 
   const rules: MergeToolRule[] = [];
   let everyOtherFile: string | null = null;
-  let afterSmartMerge: string | null | undefined;
   for (const entry of entries) {
     if (entry.fileType === 'binary') continue;
     const [first, ...chained] = entry.commands.map(legacyTool);
     if (first?.kind === 'smartMerge') {
       // The tool chained after it opens what it can't merge.
-      afterSmartMerge ??= chained[0] ? toolIdOf(chained[0]) : null;
+      const patterns = entry.patterns.filter((pattern) => !isRegularExpression(pattern));
+      const fallbackToolId = (chained[0] && toolIdOf(chained[0])) || AUTO_MERGE_TOOL;
+      if (patterns.length > 0) rules.push({ id: `imported:${rules.length + 1}`, patterns, toolId: UNITY_YAML_MERGE_ID, fallbackToolId });
       continue;
     }
     const last = entry.commands.length > 0 ? legacyTool(entry.commands.at(-1)!) : undefined;
@@ -60,10 +62,10 @@ export function legacyMergeToolSettings(entries: LegacyMergeToolEntry[], current
   const defaultToolId = mergeTool === AUTO_MERGE_TOOL ? UVCS_TOOL_ID : mergeTool;
   if (sendsCodeToSemanticMerge(mergeTool)) rules.push(...semanticRule(rules));
 
+  const unityRules = rules.some((rule) => rule.toolId === UNITY_YAML_MERGE_ID) ? [] : [UNITY_YAML_MERGE_RULE];
   return {
     mergeTool,
-    mergeToolRules: withoutRedundantRules(rules, defaultToolId),
-    unityMergeTool: afterSmartMerge && afterSmartMerge !== defaultToolId ? afterSmartMerge : SAME_AS_OTHER_FILES,
+    mergeToolRules: [...unityRules, ...withoutRedundantRules(rules, defaultToolId).map((rule) => withAutomaticFallback(rule, defaultToolId))],
     customMergeTools: customTools,
   };
 }
@@ -74,6 +76,11 @@ export function legacyMergeToolSettings(entries: LegacyMergeToolEntry[], current
  */
 export function sendsCodeToSemanticMerge(mergeTool: string): boolean {
   return mergeTool === AUTO_MERGE_TOOL || mergeTool === UVCS_TOOL_ID;
+}
+
+/** A fallback that is every other file's tool anyway reads as Automatic, as the user would pick it. */
+function withAutomaticFallback(rule: MergeToolRule, defaultToolId: string): MergeToolRule {
+  return rule.fallbackToolId === defaultToolId ? { ...rule, fallbackToolId: AUTO_MERGE_TOOL } : rule;
 }
 
 /** C#, Visual Basic and Java in Semantic Merge, but those the rules before already send elsewhere. */

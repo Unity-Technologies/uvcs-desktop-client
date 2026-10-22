@@ -94,7 +94,7 @@ export interface AppSettings {
    * `importLegacySettings`), or there were none: they are never read again. Apart from `legacySettingsImported`, which
    * came first.
    */
-  mergeToolRulesImported: boolean;
+  legacyMergeToolsImported: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -127,5 +127,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   pageWindowBounds: null,
   openWindows: [],
   legacySettingsImported: false,
-  mergeToolRulesImported: false,
+  legacyMergeToolsImported: false,
 };

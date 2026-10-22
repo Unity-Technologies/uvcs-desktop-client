@@ -116,10 +116,12 @@ describe('importLegacySettings', () => {
       importLegacySettings(settings, legacyFolder);
 
       expect(settings.get()).toMatchObject({
-        mergeToolRulesImported: true,
+        legacyMergeToolsImported: true,
         mergeTool: 'meld',
-        unityMergeTool: 'kdiff3',
-        mergeToolRules: [{ id: 'imported:1', patterns: ['.shader'], toolId: 'rider' }],
+        mergeToolRules: [
+          { id: 'imported:1', patterns: ['.prefab', '.unity'], toolId: 'unityyamlmerge', fallbackToolId: 'kdiff3' },
+          { id: 'imported:2', patterns: ['.shader'], toolId: 'rider' },
+        ],
       });
       expect(snapshot(legacyFolder)).toEqual(before);
     });
@@ -129,11 +131,20 @@ describe('importLegacySettings', () => {
       mkdirSync(join(settingsFile, '..'));
       writeFileSync(settingsFile, JSON.stringify({ legacySettingsImported: true, mergeTool: 'vscode' }));
       importLegacySettings(openSettings(), legacyFolder);
-      expect(openSettings().get()).toMatchObject({ mergeToolRulesImported: true, mergeTool: 'vscode', mergeToolRules: [{ patterns: ['.shader'], toolId: 'rider' }] });
+      expect(openSettings().get()).toMatchObject({ legacyMergeToolsImported: true, mergeTool: 'vscode' });
+      expect(openSettings().get().mergeToolRules.map((rule) => rule.toolId)).toEqual(['unityyamlmerge', 'rider']);
 
       openSettings().update({ mergeToolRules: [] });
       importLegacySettings(openSettings(), legacyFolder);
       expect(openSettings().get().mergeToolRules).toEqual([]);
+    });
+
+    it('run again under their new shape for a user whose merge tools the first import took', () => {
+      const { legacyFolder, settingsFile, openSettings } = setUp({ 'client.conf': CLIENT_CONF });
+      mkdirSync(join(settingsFile, '..'));
+      writeFileSync(settingsFile, JSON.stringify({ legacySettingsImported: true, mergeToolRulesImported: true, unityMergeTool: 'kdiff3', mergeToolRules: [{ id: 'old', patterns: ['.shader'], toolId: 'rider' }] }));
+      importLegacySettings(openSettings(), legacyFolder);
+      expect(openSettings().get().mergeToolRules.map((rule) => rule.toolId)).toEqual(['unityyamlmerge', 'rider']);
     });
 
     it('leave C# in VS Code for a user who picked VS Code, with or without client.conf', () => {
@@ -162,7 +173,7 @@ describe('importLegacySettings', () => {
       for (const files of [{}, { 'client.conf': '<ClientConfigData />' }, { 'client.conf': '\u0000<<<' }] as Record<string, string>[]) {
         const { legacyFolder, openSettings } = setUp(files);
         importLegacySettings(openSettings(), legacyFolder);
-        expect(openSettings().get()).toMatchObject({ mergeToolRulesImported: true, mergeTool: 'auto', mergeToolRules: DEFAULT_SETTINGS.mergeToolRules, unityMergeTool: 'others' });
+        expect(openSettings().get()).toMatchObject({ legacyMergeToolsImported: true, mergeTool: 'auto', mergeToolRules: DEFAULT_SETTINGS.mergeToolRules, unityMergeTool: 'others' });
       }
     });
   });

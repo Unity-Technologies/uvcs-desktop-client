@@ -92,15 +92,47 @@ export interface MergeToolRule {
   id: string;
   /** `.cs`, `*.prefab`, a path such as `Assets/Data/**` (`matchesFilePattern`). None: the row matches nothing yet. */
   patterns: string[];
-  /** A tool id. A rule whose tool isn't found here is passed by. */
+  /** A tool id, or UnityYAMLMerge's (`isUnityYamlMergeId`). A rule whose tool isn't found here is passed by. */
   toolId: string;
+  /**
+   * With UnityYAMLMerge: the tool that opens what it can't merge, `auto` (every other file's) by default. Unused with
+   * any other tool.
+   */
+  fallbackToolId?: string;
 }
 
 /** Unity assets Smart Merge can't merge open where every other file would (`unityMergeTool`). */
 export const SAME_AS_OTHER_FILES = 'others';
 
-/** With nothing imported: C#, Visual Basic and Java in Semantic Merge, as the official client sends them. */
-export const DEFAULT_MERGE_TOOL_RULES: MergeToolRule[] = [{ id: 'semantic', patterns: ['.cs', '.vb', '.java'], toolId: SEMANTIC_TOOL_ID }];
+/**
+ * The Unity assets UnityYAMLMerge merges, by extension: scenes, prefabs and the assets Unity saves as YAML text. Not
+ * `.meta` files: they have no Unity YAML header, so UnityYAMLMerge never runs on them (`isUnityYaml`).
+ */
+export const UNITY_YAML_PATTERNS = [
+  '.unity',
+  '.prefab',
+  '.asset',
+  '.mat',
+  '.anim',
+  '.controller',
+  '.overrideController',
+  '.physicMaterial',
+  '.lighting',
+  '.mixer',
+  '.playable',
+  '.preset',
+  '.spriteatlas',
+  '.terrainlayer',
+];
+
+/** Unity assets in UnityYAMLMerge, what it can't merge in every other file's tool. */
+export const UNITY_YAML_MERGE_RULE: MergeToolRule = { id: 'unity', patterns: UNITY_YAML_PATTERNS, toolId: UNITY_YAML_MERGE_ID, fallbackToolId: AUTO_MERGE_TOOL };
+
+/** C#, Visual Basic and Java in Semantic Merge, as the official client sends them. */
+export const SEMANTIC_MERGE_RULE: MergeToolRule = { id: 'semantic', patterns: ['.cs', '.vb', '.java'], toolId: SEMANTIC_TOOL_ID };
+
+/** With nothing imported: Unity assets in UnityYAMLMerge, C#, Visual Basic and Java in Semantic Merge. */
+export const DEFAULT_MERGE_TOOL_RULES: MergeToolRule[] = [UNITY_YAML_MERGE_RULE, SEMANTIC_MERGE_RULE];
 
 export interface MergeToolRequest {
   /** Chosen by the caller, to cancel it or bring its window forward while it's open. */

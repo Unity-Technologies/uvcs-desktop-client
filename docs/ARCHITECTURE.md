@@ -484,7 +484,7 @@ It never writes to the official Desktop client's config (its settings folder, `p
 `client.conf`...) and never keeps reading it. Only on the first run, `importLegacySettings` reads the well-known values
 there so the user feels at home: each workspace's recent branches (`readRecentBranchesByWorkspace`) and which merge
 tool opens which files (client.conf's `<MergeTools>`, `readLegacyMergeTools`, `legacyMergeToolSettings`;
-docs/features/merge.md "Merge tools"). Each records that it ran (`legacySettingsImported`, `mergeToolRulesImported`,
+docs/features/merge.md "Merge tools"). Each records that it ran (`legacySettingsImported`, `legacyMergeToolsImported`,
 apart since the merge tools came later) even when it found nothing or couldn't read a file, and never runs again: from
 then on the app's settings are the only source. The import never writes a file (`main/cm/noCmInternalFiles.test.ts`).
 
