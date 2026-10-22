@@ -33,12 +33,22 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   computer", named by `knownNames`); removing a tool of the user's drops its rows and makes it no row's fallback. With
   nothing imported, the rows are Unity assets in UnityYAMLMerge (`UNITY_YAML_MERGE_RULE`, `UNITY_YAML_PATTERNS`: scenes,
   prefabs and the assets Unity saves as YAML, not `.meta` files, which have no Unity YAML header) and C#, Visual Basic
-  and Java in Semantic Merge (`SEMANTIC_MERGE_RULE`), as the official client sends them. Each row's tool is a compact
-  drop-down (`AppPicker` with `compact`, `appPickerEntries`): the tools found, then UnityYAMLMerge, the newest editor's
-  and each installed editor's by its version (`pickableTools`; "Smart Merge" only in its description, as Unity's name
-  for it). A row of UnityYAMLMerge has a second line, "If it can't merge, open [tool ▾]", Automatic by default
-  (`hasFallback`). Its file types are chips typed in place (`TokenField`, `lib/tokenInput`: a space, comma, semicolon or Enter makes a chip, double quotes keep spaces in one, pasting splits into chips, Backspace in an empty field takes the last away, each chip's × removes it, each value once), its "…" menu moving it up
-  or down or removing it (`ruleMenuEntries`); "Add a file type" adds a row in every other file's tool. Binary files have
+  and Java in Semantic Merge (`SEMANTIC_MERGE_RULE`), as the official client sends them. The pane lists the rows read-only, in one bordered group (`MergeToolsPane`,
+  `mergeToolRows`): a rule's file types on one line in the code font, as many as fit a character budget then "+N"
+  (`fitFileTypes`, `FILES_BUDGET`; every one in the tooltip), and what opens them on the right with its icon, a line
+  under it saying what UnityYAMLMerge falls back to ("else UVCS merge tool"; the version when the row pins an editor),
+  what Automatic uses, or that the tool isn't here; every other file's row last. In a narrow pane the tool goes under
+  the file types (a container query on the frame). A row's click, or Enter, opens its edit dialog; its "…", shown on
+  hover or focus, holds Edit…, Move up, Move down and Remove (`rowMenuEntries`; every other file's only Edit…). The
+  dialog (`MergeRuleDialog`, `mergeRuleDraft`) holds "Files" (chips: `TokenField`, `lib/tokenInput`: a space, comma,
+  semicolon or Enter makes a chip, double quotes keep spaces in one, pasting splits into chips, Backspace in an empty
+  field takes the last away, each chip's × removes it, each value once; Enter never submits), "Opens in" (each tool
+  once: Automatic for every other file only, the UVCS merge tool, Semantic Merge, UnityYAMLMerge with the newest
+  editor's version under it and Smart Merge, Unity's name for it, only in its tooltip, then the others found and the
+  user's, `toolChoices`), "How <tool> opens…" under it, and for UnityYAMLMerge "Unity Editor" ("Newest installed
+  (6000.5.0f1)", then each installed version; one gone stays, saying so: `editorOptions`) and "If it can't merge"
+  (Automatic first, `fallbackChoices`). Save stays off until a rule has a file type (`saveProblem`); a new rule is
+  added only on Save. Binary files have
   no rows: no tool opens them.
 - **Imported once** from the official client (client.conf's `<MergeTools>`, `readLegacyMergeTools`,
   `legacyMergeToolSettings`; ARCHITECTURE.md "Own config"), on the first run that has rows of this shape (`legacyMergeToolsImported`,

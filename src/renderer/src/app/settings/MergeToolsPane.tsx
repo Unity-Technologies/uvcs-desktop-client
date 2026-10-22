@@ -1,47 +1,27 @@
 import { MoreHorizontal, Plus } from 'lucide-react';
-import { useState } from 'react';
-import { AUTO_MERGE_TOOL, type MergeToolList, type MergeToolRule } from '@shared/domain/mergeTools';
-import { addMergeTool } from '../../features/merge/mergeTools/CustomMergeToolDialog';
-import { openMergeToolArgsDialog } from '../../features/merge/mergeTools/MergeToolArgsDialog';
-import { currentSettings, preferMergeTool, useMergeTools } from '../../features/merge/mergeTools/useMergeTools';
+import type { MergeToolRule } from '@shared/domain/mergeTools';
 import type { MenuEntry } from '../../lib/actions';
+import { useMergeTools } from '../../features/merge/mergeTools/useMergeTools';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
-import { TokenField } from '../../ui/TokenField';
-import { AppPicker } from './AppPicker';
-import type { AutomaticChoice } from './appPickerChoices';
-import {
-  addRule,
-  AUTOMATIC_MERGE_TOOL_CHOICE,
-  changeRule,
-  hasFallback,
-  howItOpensEntries,
-  missingToolName,
-  newRuleToolId,
-  pickableTools,
-  ruleMenuEntries,
-  ruleName,
-  toolInUse,
-} from './mergeToolRules';
+import { openMergeRuleDialog } from './MergeRuleDialog';
+import { rowMenuEntries } from './mergeToolRules';
+import { EVERY_OTHER_FILE, mergeToolRows, type MergeToolRowView } from './mergeToolRows';
+import type { RuleTarget } from './mergeRuleDraft';
+import { SettingsGroup } from './SettingsGroup';
 import { saveSettings, useSettings } from './useSettings';
 import styles from './SettingsDialog.module.css';
-
-const saveRules = (change: (rules: MergeToolRule[]) => MergeToolRule[]): Promise<void> => saveSettings({ mergeToolRules: change(currentSettings().mergeToolRules) });
 
 /** Which merge tool opens which files, tried top to bottom, and how resolving one by one goes on. */
 export function MergeToolsPane() {
   const list = useMergeTools();
   const { mergeTool, mergeToolRules, askWhenMergeToolClosesUnsaved } = useSettings();
-  // The row just added, whose file types come next.
-  const [addedId, setAddedId] = useState<string>();
-
-  const addFileType = (): void => {
-    const id = `rule:${crypto.randomUUID()}`;
-    setAddedId(id);
-    void saveRules((rules) => addRule(rules, id, newRuleToolId(list)));
-  };
+  const rows = mergeToolRows(mergeToolRules, mergeTool, list);
+  const targetOf = (id: string): RuleTarget =>
+    id === EVERY_OTHER_FILE ? { kind: 'everyOtherFile', mergeTool } : { kind: 'rule', rule: mergeToolRules.find((rule) => rule.id === id) ?? null };
+  const saveRules = (rules: MergeToolRule[]): void => void saveSettings({ mergeToolRules: rules });
 
   return (
     <>
@@ -49,109 +29,55 @@ export function MergeToolsPane() {
         A merge tool opens only when you ask, on one conflicting file or on each in turn. The first row that matches a file
         opens it; any tool can open it from the merge page too.
       </p>
-      <section className={styles.section}>
-        <h2 className={styles.heading}>Open conflicts in</h2>
+      <SettingsGroup title="Open conflicts in">
         <div className={styles.rulesFrame}>
           <div className={styles.rules} role="list" aria-label="Merge tool by file type">
-            {mergeToolRules.map((rule) => (
-              <RuleRow key={rule.id} rule={rule} rules={mergeToolRules} list={list} focused={rule.id === addedId} />
+            {rows.map((row) => (
+              <MergeToolRow
+                key={row.id}
+                row={row}
+                onEdit={() => openMergeRuleDialog(targetOf(row.id))}
+                menu={rowMenuEntries(mergeToolRules, row.id === EVERY_OTHER_FILE ? null : row.id, () => openMergeRuleDialog(targetOf(row.id)), saveRules)}
+              />
             ))}
-            <div className={styles.rule} role="listitem">
-              <div className={styles.ruleFiles}>
-                <span className={styles.oneLine}>Every other file</span>
-              </div>
-              <ToolPicker label="Every other file" list={list} choice={mergeTool} automatic={AUTOMATIC_MERGE_TOOL_CHOICE} onChoose={(choice) => void preferMergeTool(choice)} />
-              <span />
-            </div>
           </div>
         </div>
-        <Button size="small" icon={<Plus size={13} />} onClick={addFileType}>
+        <Button size="small" icon={<Plus size={13} />} onClick={() => openMergeRuleDialog({ kind: 'rule', rule: null })}>
           Add a file type
         </Button>
-      </section>
-      <section className={styles.section}>
-        <h2 className={styles.heading}>Resolving one by one</h2>
+      </SettingsGroup>
+      <SettingsGroup title="Resolving one by one">
         <Checkbox
           label="Ask before opening the next file when one is closed without saving"
           checked={askWhenMergeToolClosesUnsaved}
           onChange={(ask) => void saveSettings({ askWhenMergeToolClosesUnsaved: ask })}
         />
-      </section>
+      </SettingsGroup>
     </>
   );
 }
 
-/** A row of file types: its patterns, edited in place and saved as the field is left, its tool, and its menu. */
-function RuleRow({ rule, rules, list, focused }: { rule: MergeToolRule; rules: MergeToolRule[]; list: MergeToolList; focused: boolean }) {
-  const menu: MenuEntry[] = ruleMenuEntries(rules, rule.id, (changed) => void saveSettings({ mergeToolRules: changed }));
-  const name = ruleName(rule);
-
+/** A row, read-only: its file types, what opens them, and its "…" menu on hover or focus. Clicking it edits it. */
+function MergeToolRow({ row, onEdit, menu }: { row: MergeToolRowView; onEdit: () => void; menu: MenuEntry[] }) {
+  const ToolIcon = row.toolIcon;
   return (
     <div className={styles.rule} role="listitem">
-      <TokenField
-        label={`File types of ${name}`}
-        tokens={rule.patterns}
-        tip="Extensions (.psd), names (*.prefab) or paths (Assets/Data/**)"
-        placeholder=".psd .tga"
-        autoFocus={focused}
-        onChange={(patterns) => void saveRules((current) => changeRule(current, rule.id, { patterns }))}
-      />
-      <ToolPicker
-        label={name}
-        list={list}
-        choice={rule.toolId}
-        automatic={null}
-        withUnityYamlMerge
-        onChoose={(toolId) => void saveRules((current) => changeRule(current, rule.id, { toolId }))}
-      />
+      <button type="button" className={styles.ruleMain} onClick={onEdit} aria-label={`${row.filesTip ?? row.files}: ${row.toolName}. Edit`}>
+        <span className={styles.ruleFiles} data-code={row.filesAreCode || undefined} data-tip={row.filesTip}>
+          <span className={styles.ruleFilesShown}>{row.files}</span>
+          {row.moreFiles > 0 && <span className={styles.ruleFilesMore}>+{row.moreFiles}</span>}
+        </span>
+        <span className={styles.ruleTool}>
+          <span className={styles.ruleToolName}>
+            <span className={styles.ruleToolIcon}>{ToolIcon && <ToolIcon size={16} />}</span>
+            {row.toolName}
+          </span>
+          {row.toolNote && <span className={styles.ruleToolNote}>{row.toolNote}</span>}
+        </span>
+      </button>
       <ActionDropdownMenu entries={menu}>
-        <IconButton size="small" icon={<MoreHorizontal size={14} />} label={`More for ${name}`} />
+        <IconButton size="small" className={styles.ruleMenu} icon={<MoreHorizontal size={14} />} label={`More for ${row.files}`} />
       </ActionDropdownMenu>
-      {hasFallback(rule) && (
-        <div className={styles.ruleFallback}>
-          <span className={styles.ruleFallbackLabel}>If it can't merge, open</span>
-          <ToolPicker
-            label={`what UnityYAMLMerge can't merge in ${name}`}
-            list={list}
-            choice={rule.fallbackToolId ?? AUTO_MERGE_TOOL}
-            automatic={AUTOMATIC_MERGE_TOOL_CHOICE}
-            onChoose={(fallbackToolId) => void saveRules((current) => changeRule(current, rule.id, { fallbackToolId }))}
-          />
-        </div>
-      )}
     </div>
-  );
-}
-
-interface ToolPickerProps {
-  label: string;
-  list: MergeToolList;
-  choice: string;
-  automatic: AutomaticChoice | null;
-  /** Offers UnityYAMLMerge too: a row's own tool, not a fallback or every other file's. */
-  withUnityYamlMerge?: boolean;
-  onChoose: (choice: string) => void;
-}
-
-/** A row's tool, as a compact drop-down: the tools found, another app, and how the one picked opens. */
-function ToolPicker({ label, list, choice, automatic, withUnityYamlMerge = false, onChoose }: ToolPickerProps) {
-  const picked = toolInUse(list, choice, automatic);
-  const addAndPick = async (): Promise<void> => {
-    const added = await addMergeTool();
-    if (added) onChoose(added.id);
-  };
-  return (
-    <AppPicker
-      compact
-      label={`Tool for ${label}`}
-      apps={pickableTools(list, withUnityYamlMerge)}
-      choice={choice}
-      usedId={picked?.id ?? null}
-      automatic={automatic}
-      missingName={missingToolName(list, choice)}
-      onChoose={onChoose}
-      onAdd={() => void addAndPick()}
-      more={howItOpensEntries(picked, openMergeToolArgsDialog)}
-    />
   );
 }

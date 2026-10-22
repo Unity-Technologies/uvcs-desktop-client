@@ -71,7 +71,8 @@
 
 .input {
   flex: 1;
-  min-width: 64px;
+  /* Room for a few characters after the last chip, so a short list stays on one line. */
+  min-width: 4ch;
   height: 20px;
   padding: 0 2px;
   border: none;

@@ -13,10 +13,8 @@ export interface PickableApp {
   icon?: string;
   /** Its picture where the OS gives no icon (UnityYAMLMerge, which has no app of its own). */
   glyph?: Icon;
-  /** Muted after its name in the list, telling apart apps of one name ("2022.3.10f1"). */
-  detail?: string;
-  /** Starts a group of its own in the list, after a separator. */
-  startsGroup?: boolean;
+  /** What it is, in the picker's tooltip, where its location doesn't say (UnityYAMLMerge: Unity's Smart Merge). */
+  tip?: string;
 }
 
 /**
@@ -61,8 +59,8 @@ export interface PickedApp {
   label: string;
   description: string;
   icon: Icon | undefined;
-  /** What the choice uses, muted after its label in a compact picker ("Automatic  UVCS merge tool"). */
-  detail?: string;
+  /** The tooltip of the line under it, when it says more than the line. */
+  tip?: string;
 }
 
 export const SYSTEM_APP_LABEL = "Each file's default app";
@@ -76,11 +74,11 @@ export function pickedApp(choices: AppPickerChoices): PickedApp {
   if (offersSystem && choice === SYSTEM_APP) return { label: SYSTEM_APP_LABEL, description: 'As the OS opens it', icon: AppWindow };
   const used = apps.find((app) => app.id === usedId);
   if (automatic && isAutomatic(choices)) {
-    return { label: automatic.label, description: automaticAppDescription(used?.name, automatic.rule), icon: AUTOMATIC_CHOICE_ICON, detail: used?.name };
+    return { label: automatic.label, description: automaticAppDescription(used?.name, automatic.rule), icon: AUTOMATIC_CHOICE_ICON };
   }
   const picked = apps.find((app) => app.id === choice);
   if (!picked) return { label: missingName ?? choice, description: 'Not found on this computer', icon: AppWindow };
-  return { label: picked.name, description: picked.location, icon: appIcon(picked) ?? picked.glyph ?? AppWindow };
+  return { label: picked.name, description: picked.location, icon: appIcon(picked) ?? picked.glyph ?? AppWindow, tip: picked.tip };
 }
 
 /** The drop-down's entries, the choice made checked. */
@@ -97,10 +95,7 @@ export function appPickerEntries(choices: AppPickerChoices): MenuEntry[] {
       run: () => onChoose(automatic.id),
     },
     SEPARATOR,
-    ...apps.flatMap((app) => [
-      ...(app.startsGroup ? [SEPARATOR] : []),
-      { id: app.id, label: app.name, detail: app.detail, icon: appIcon(app) ?? app.glyph, checked: !isAuto && app.id === choice, run: () => onChoose(app.id) },
-    ]),
+    ...apps.map((app) => ({ id: app.id, label: app.name, icon: appIcon(app) ?? app.glyph, checked: !isAuto && app.id === choice, run: () => onChoose(app.id) })),
     SEPARATOR,
     ...(offersSystem ? [{ id: SYSTEM_APP, label: SYSTEM_APP_LABEL, icon: AppWindow, checked: choice === SYSTEM_APP, run: () => onChoose(SYSTEM_APP) }] : []),
     ...(onAdd ? [{ id: 'add', label: 'Choose another app…', icon: FolderOpen, run: onAdd }] : []),

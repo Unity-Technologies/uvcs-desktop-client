@@ -167,97 +167,163 @@
   white-space: nowrap;
 }
 
-/* Settings › Merge: a row per kind of file (its files, its tool, its menu), tried top to bottom. One grid, each row a
-   subgrid, so the tool column is as wide as its longest choice (never cut) and lines up in every row. */
-/* The size container of the rules: a container query styles what's inside it, never the container itself. */
+/* Settings › Merge: a list of rows (a rule's file types, or every other file, and what opens them), read-only, in one
+   bordered group; a row opens its edit dialog. The size container is the frame: a container query styles what's inside
+   it, never the container itself. */
 .rulesFrame {
   container-type: inline-size;
   width: 100%;
 }
 
 .rules {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) fit-content(60%) 28px;
-  width: 100%;
-  border: 1px solid var(--border-default);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
+  background: var(--bg-subtle);
 }
 
 .rule {
-  display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: subgrid;
-  /* A row of many file types grows as its chips wrap: its tool and menu stay on its first line. */
-  align-items: start;
-  gap: var(--space-2);
-  padding: 6px var(--space-2) 6px var(--space-3);
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .rule + .rule {
   border-top: 1px solid var(--border-subtle);
 }
 
-/* A row of UnityYAMLMerge: what opens what it can't merge, its picker under the row's tool. */
-.ruleFallback {
-  display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: subgrid;
+.rule:first-child > .ruleMain {
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.rule:last-child > .ruleMain {
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.ruleMain {
+  display: flex;
+  flex: 1;
   align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  /* Room on the right for the "…" button, which sits over the row. */
+  padding: 10px 40px 10px var(--space-3);
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
 }
 
-.ruleFallbackLabel {
-  justify-self: end;
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  white-space: nowrap;
+.ruleMain:hover {
+  background: var(--bg-hover);
 }
 
-/* In a narrow window, the tool goes under the files. */
-@container (max-width: 380px) {
-  .rules {
-    grid-template-columns: minmax(0, 1fr) 28px;
-  }
-
-  .rule > :nth-child(2) {
-    grid-row: 2;
-    grid-column: 1;
-  }
-
-  .ruleFallback {
-    display: flex;
-    gap: var(--space-2);
-  }
-
-  .ruleFallback > :last-child {
-    flex: 1;
-    min-width: 0;
-  }
+.ruleMain:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .ruleFiles {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex: 1;
+  gap: 0.6em;
   min-width: 0;
-  /* "Unity scenes, prefabs and assets" breaks into even lines rather than leaving one word alone. */
-  text-wrap: balance;
+  white-space: nowrap;
 }
 
-/* A row's tool: one line, the size of a field beside it. */
-.pickerCompact {
-  composes: choice;
-  height: var(--control-height);
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-md);
-  gap: var(--space-2);
+/* The file types shown: cut by the row if it must, never their count after them. */
+.ruleFilesShown {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.pickedDetail {
-  margin-left: var(--space-2);
+.ruleFilesMore {
+  flex: none;
   color: var(--text-secondary);
-  font-weight: var(--weight-regular);
 }
 
-.pickerCompact[data-state='open'] {
-  border-color: var(--accent);
+.ruleFiles[data-code] {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.ruleTool {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  max-width: 55%;
+}
+
+.ruleToolName {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 100%;
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+.ruleToolIcon {
+  display: flex;
+  flex: none;
+  color: var(--text-secondary);
+}
+
+.ruleToolNote {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The row's "…": shown while the row is hovered or something in it has focus, and while its menu is open. */
+.ruleMenu {
+  position: absolute;
+  right: var(--space-2);
+  opacity: 0;
+}
+
+.rule:hover .ruleMenu,
+.rule:focus-within .ruleMenu,
+.ruleMenu[data-state='open'] {
+  opacity: 1;
+}
+
+/* In a narrow window, what opens the files goes under them. */
+@container (max-width: 380px) {
+  .ruleMain {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-1);
+  }
+
+  .ruleFiles {
+    flex: none;
+  }
+
+  .ruleTool {
+    align-items: flex-start;
+    max-width: 100%;
+  }
+}
+
+/* The edit dialog of a row: its fields, one under the other. */
+.ruleForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* "How <tool> opens…": a quiet link under the picker. */
+.linkButton {
+  margin-top: -2px;
+  padding-left: 0;
+  color: var(--accent-text);
 }

@@ -79,13 +79,13 @@ describe('appPickerEntries, for a merge tool', () => {
   });
 });
 
-describe('appPickerEntries, with apps of one name', () => {
-  it('tells them apart by their detail, a group of their own after a separator, with their glyph', () => {
+describe('appPickerEntries, with an app the OS gave no icon', () => {
+  it('draws its glyph, and shows what it is in the picked line’s tooltip', () => {
     const glyph = () => null;
-    const apps = [app('uvcs', 'UVCS merge tool'), { id: 'u', name: 'UnityYAMLMerge', location: 'x', detail: '2022.3.10f1', startsGroup: true, glyph }];
-    const entries = appPickerEntries(choices({ apps, choice: 'u', automatic: null, offersSystem: false, onAdd: undefined }));
-    expect(reading(entries)).toEqual(['UVCS merge tool', '---', 'UnityYAMLMerge ✓']);
-    expect(entries[2]).toMatchObject({ detail: '2022.3.10f1', icon: glyph });
+    const apps = [app('uvcs', 'UVCS merge tool'), { id: 'u', name: 'UnityYAMLMerge', location: 'Unity 6000.5.0f1', glyph, tip: "Unity's Smart Merge" }];
+    const picked = choices({ apps, choice: 'u', automatic: null, offersSystem: false, onAdd: undefined });
+    expect(appPickerEntries(picked)[1]).toMatchObject({ label: 'UnityYAMLMerge', icon: glyph, checked: true });
+    expect(pickedApp(picked)).toMatchObject({ label: 'UnityYAMLMerge', description: 'Unity 6000.5.0f1', icon: glyph, tip: "Unity's Smart Merge" });
   });
 });
 
@@ -100,7 +100,7 @@ describe('pickedApp', () => {
   });
 
   it('shows Automatic with its own icon and the app it uses, or the rule while it uses none', () => {
-    expect(pickedApp(choices())).toEqual({ label: 'Automatic', description: 'Uses Visual Studio Code', icon: AUTOMATIC_CHOICE_ICON, detail: 'Visual Studio Code' });
+    expect(pickedApp(choices())).toEqual({ label: 'Automatic', description: 'Uses Visual Studio Code', icon: AUTOMATIC_CHOICE_ICON });
     expect(pickedApp(choices({ usedId: null }))).toMatchObject({ label: 'Automatic', description: 'The first editor found' });
   });
 
