@@ -62,6 +62,14 @@ describe('checkinPathsOf', () => {
     expect(checkinPathsOf([checkedOut, a], [checkedOut, a]).paths).toEqual(['src/a.cs']);
   });
 
+  // Unchecking a file in an added folder leaves the folder checked: given, it takes the file.
+  it('gives an added folder checked without its files, and says which go in too', () => {
+    const assets = folder('assets', ['added']);
+    const icon = file('assets/icon.png', ['added']);
+
+    expect(checkinPathsOf([assets], [assets, icon])).toEqual({ paths: ['assets'], addsPrivate: false, pulledIn: [icon], pullingFolders: ['assets'] });
+  });
+
   it('gives a checked-out folder checked alone, and says what inside it goes in too', () => {
     const checkedOut = folder('src', ['checkedOut']);
     const b = file('src/b.cs', ['changed']);
@@ -103,10 +111,19 @@ describe('checkinPathsOf', () => {
     const pulled = Array.from({ length: 20_000 }, (_, at) => file(`lib/level${at % 50}/item${at}.cs`, ['changed']));
     const checked = Array.from({ length: 20_000 }, (_, at) => file(`app/level${at % 50}/item${at}.cs`, ['changed']));
 
-    const { result, calls } = countCalls(Set.prototype, 'has', () => checkinPathsOf([moved, ...checked], [moved, ...checked, ...pulled]));
+    const lookups = (method: 'has' | 'get') => {
+      let calls = 0;
+      const sets = countCalls(Set.prototype, 'has', () => {
+        const maps = countCalls(Map.prototype, method, () => checkinPathsOf([moved, ...checked], [moved, ...checked, ...pulled]));
+        calls += maps.calls;
+        return maps.result;
+      });
+      return { result: sets.result, calls: calls + sets.calls };
+    };
 
-    expect(result.pulledIn).toHaveLength(20_000);
-    expect(calls).toBeLessThanOrEqual(40_001 * 8);
+    expect(lookups('has').result.pulledIn).toHaveLength(20_000);
+    expect(lookups('has').calls).toBeLessThanOrEqual(40_001 * 8);
+    expect(lookups('get').calls).toBeLessThanOrEqual(40_001 * 8);
   });
 
   it('never says that ignored, cloaked or hidden changes inside a folder go in: cm leaves them out', () => {

@@ -59,6 +59,25 @@ describe('neededWith', () => {
   });
 });
 
+describe('nested folders', () => {
+  const outer = folder('lib', ['moved'], 'src');
+  const inner = folder('lib/core', ['moved'], 'lib/base');
+  const deep = file('lib/core/a.cs', ['changed']);
+  const nested = indexPending([outer, inner, deep]);
+
+  it('checks and unchecks every moved folder above, and all they hold', () => {
+    expect(paths(neededWith([deep], nested))).toEqual(['lib', 'lib/core', 'lib/core/a.cs']);
+    expect(paths(needingThem([deep], nested))).toEqual(['lib', 'lib/core', 'lib/core/a.cs']);
+  });
+
+  it('unchecks only the file in an added folder: the folder can go in without it', () => {
+    const assets = folder('assets', ['added']);
+    const icon = file('assets/icon.png', ['added']);
+
+    expect(paths(needingThem([icon], indexPending([assets, icon])))).toEqual(['assets/icon.png']);
+  });
+});
+
 describe('needingThem', () => {
   it('unchecks what a private folder holds, at any depth', () => {
     expect(paths(needingThem([foo], index))).toEqual(['foo', 'foo/bar', 'foo/bar/file.c', 'foo/other.c']);
@@ -94,8 +113,19 @@ describe('consistentlyIncluded', () => {
     const unchecked = new Set(['foo']);
     const isIncluded = consistentlyIncluded((change) => !unchecked.has(change.path), index);
 
-    expect(pending.filter(isIncluded).map((change) => change.path)).not.toContain('foo/bar/file.c');
-    expect(isIncluded(inXlink)).toBe(true);
+    expect(pending.filter(isIncluded)).toEqual([lib, b, c, p, xlink, inXlink]);
+  });
+
+  // New changes are checked by default: one cm would refuse without what the user unchecked stays out.
+  it('leaves out an item added where a move left, and a deleted folder, while the move is unchecked', () => {
+    const movedAway = file('docs/old.md', ['moved'], 'readme.md');
+    const addedThere = file('readme.md', ['private']);
+    const gone = folder('old', ['deleted']);
+    const movedOut = file('keep/a.cs', ['moved'], 'old/a.cs');
+    const unchecked = new Set(['docs/old.md', 'keep/a.cs']);
+    const isIncluded = consistentlyIncluded((change) => !unchecked.has(change.path), indexPending([movedAway, addedThere, gone, movedOut]));
+
+    expect([movedAway, addedThere, gone, movedOut].filter(isIncluded)).toEqual([]);
   });
 
   it('takes a change in a checked moved folder even unchecked, as a file that appears in it, but no private file', () => {
@@ -147,6 +177,29 @@ describe('on a big list', () => {
     const { calls } = countCalls(Map.prototype, 'get', () => big.filter(isIncluded));
 
     expect(calls).toBeLessThanOrEqual(big.length * 5);
+  });
+
+  it('checks a merge of 20,000 changes walking it once', () => {
+    const merged = big.map((change) => ({ ...change, mergeInfo: 'Merge from 2' }));
+    const mergeIndex = indexPending(merged);
+
+    const { calls } = countCalls(Map.prototype, 'has', () => {
+      neededWith([merged[0]!], mergeIndex);
+      needingThem([merged[0]!], mergeIndex);
+    });
+
+    expect(calls).toBeLessThanOrEqual(merged.length * 2 * 2);
+  });
+
+  it('checks 500 deleted folders with 20,000 moves out of them looking up only their own moves', () => {
+    const deleted = Array.from({ length: 500 }, (_, at) => folder(`old${at}`, ['deleted']));
+    const moves = Array.from({ length: 20_000 }, (_, at) => file(`new/item${at}.cs`, ['moved'], `old${at % 500}/item${at}.cs`));
+    const movesIndex = indexPending([...deleted, ...moves]);
+
+    const { result, calls } = countCalls(String.prototype, 'startsWith', () => neededWith(deleted, movesIndex));
+
+    expect(result).toHaveLength(20_500);
+    expect(calls).toBeLessThanOrEqual(20_500);
   });
 
   it('indexes the list in one pass', () => {
