@@ -1,7 +1,8 @@
+import { UNITY_YAML_MERGE_ARGS } from '@shared/domain/mergeTools';
 import { describe, expect, it } from 'vitest';
 import { fakeFileSystem, linux, mac, windows } from '../../system/apps/testing/appFixtures';
 import { fillArgs } from './commandLine';
-import { findUnityYamlMerges, judgeSmartMerge, SMART_MERGE_ARGS, smartMergeWentWrong } from './smartMerge';
+import { findUnityYamlMerges, judgeSmartMerge, smartMergeWentWrong } from './smartMerge';
 
 const MAC_HUB = '/Applications/Unity/Hub/Editor';
 
@@ -52,10 +53,10 @@ describe('findUnityYamlMerges', () => {
   });
 });
 
-describe('SMART_MERGE_ARGS', () => {
+describe('UNITY_YAML_MERGE_ARGS', () => {
   it('merges incoming as its left (theirs) side and yours as its right (mine), opening nothing', () => {
     const files = { base: 'a.BASE.prefab', yours: 'a.YOURS.prefab', incoming: 'a.INCOMING.prefab', result: 'a.prefab', baseName: 'Base', yoursName: 'Yours', incomingName: 'Incoming', fileName: 'a.prefab' };
-    expect(fillArgs(SMART_MERGE_ARGS, files)).toEqual(['merge', '-h', '--force', '--fallback', 'none', 'a.BASE.prefab', 'a.INCOMING.prefab', 'a.YOURS.prefab', 'a.prefab']);
+    expect(fillArgs(UNITY_YAML_MERGE_ARGS, files)).toEqual(['merge', '-h', '--force', '--fallback', 'none', 'a.BASE.prefab', 'a.INCOMING.prefab', 'a.YOURS.prefab', 'a.prefab']);
   });
 });
 

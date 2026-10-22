@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { dialog } from 'electron';
 import type { MergeToolsApi } from '@shared/api/mergeTools';
 import type { ContentSource } from '@shared/domain/content';
-import { unityYamlMergeOf, type MergeToolOutcome, type MergeToolRequest, type SmartMergeOutcome, type SmartMergeRequest, type UnityYamlMergeTool } from '@shared/domain/mergeTools';
+import { UNITY_YAML_MERGE_ARGS, unityYamlMergeOf, type MergeToolOutcome, type MergeToolRequest, type SmartMergeOutcome, type SmartMergeRequest, type UnityYamlMergeTool } from '@shared/domain/mergeTools';
 import { EMPTY_UNITY_YAML, isUnityYaml } from '@shared/unityYaml';
 import { saveVersion } from '../files/saveContent';
 import { withTempDirectory } from '../files/tempFile';
@@ -14,7 +14,7 @@ import { detectKnownTools } from '../merge/mergeTools/detectTools';
 import { KNOWN_TOOLS } from '../merge/mergeTools/knownTools';
 import { activateApp, launchMergeTool } from '../merge/mergeTools/launch';
 import { mergeToolList } from '../merge/mergeTools/mergeToolList';
-import { findUnityYamlMerges, judgeSmartMerge, SMART_MERGE_ARGS, smartMergeWentWrong } from '../merge/mergeTools/smartMerge';
+import { findUnityYamlMerges, judgeSmartMerge, smartMergeWentWrong } from '../merge/mergeTools/smartMerge';
 import { toolFileNames } from '../merge/mergeTools/toolFileNames';
 import { judgeToolResult } from '../merge/mergeTools/toolResult';
 import { appBundleOf } from '../system/apps/appBundle';
@@ -91,7 +91,7 @@ export function createMergeToolsService(
     try {
       return await withTempDirectory(async (directory) => {
         const files = await writeSmartMergeFiles(request, directory);
-        const run = await launchMergeTool(smartMergeTool.executable, fillArgs(SMART_MERGE_ARGS, files), stop.signal, { hidden: true });
+        const run = await launchMergeTool(smartMergeTool.executable, fillArgs(UNITY_YAML_MERGE_ARGS, files), stop.signal, { hidden: true });
         // Stopped as it exited on its own: still stopped, or the tool would open after the user stopped (or left the page).
         if (stop.signal.aborted) return { kind: 'stopped' };
         if (smartMergeWentWrong(run)) console.warn('[smart merge]', `${request.path}: exit code ${run.exitCode}`, run.errorOutput);

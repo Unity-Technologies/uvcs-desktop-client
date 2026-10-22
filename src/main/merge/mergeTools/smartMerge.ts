@@ -24,13 +24,6 @@ function programInEditor(editor: UnityEditor, where: Whereabouts): string[] {
   return [path.join(editor.folder, 'Data', 'Tools', where.platform === 'win32' ? 'UnityYAMLMerge.exe' : 'UnityYAMLMerge')];
 }
 
-/**
- * `UnityYAMLMerge merge <base> <left: theirs> <right: mine> <result>`, without ever opening anything: `-h` shows no
- * error dialog, `--fallback none` runs no other tool on what it can't merge. `--force` lets it merge every Unity asset
- * (materials, animations, ScriptableObjects…), not only the `.unity`, `.prefab` and `.meta` files it knows by name: it
- * refuses a file that isn't Unity's YAML anyway.
- */
-export const SMART_MERGE_ARGS = ['merge', '-h', '--force', '--fallback', 'none', '{base}', '{incoming}', '{yours}', '{result}'];
 
 /**
  * What Smart Merge did, by its exit code: 0 merged every change; anything else (2: conflicts it left, 1: a file it

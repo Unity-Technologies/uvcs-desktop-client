@@ -96,7 +96,7 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   that was an empty file (checked in empty, then filled differently on each side) becomes an asset with no objects
   (`EMPTY_UNITY_YAML`), as UnityYAMLMerge refuses an empty file; a file added on both sides never gets here, `cm` makes
   it a directory conflict. It runs with
-  no window (`windowsHide` on Windows, `toolSpawnOptions`) and no fallback tool (`SMART_MERGE_ARGS`: `merge -h --force
+  no window (`windowsHide` on Windows, `toolSpawnOptions`) and no fallback tool (`UNITY_YAML_MERGE_ARGS`: `merge -h --force
   --fallback none`; `--force` lets it take `.mat`, `.asset`… beyond the `.unity`, `.prefab` and `.meta` it knows by
   name, and it refuses what isn't Unity YAML anyway). Only exit code 0 counts (`judgeSmartMerge`): on 2 (conflicts
   left) it still writes a result holding the base's values where the sides disagree, so that result is dropped; 1
