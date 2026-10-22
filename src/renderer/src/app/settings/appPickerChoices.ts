@@ -25,13 +25,11 @@ export interface AutomaticChoice {
   id: string;
   label: string;
   rule: string;
-  /** An app picked that isn't found here shows as this choice (Automatic); otherwise as itself, "Not found". */
-  coversMissing: boolean;
 }
 
 /** "Automatic", by its rule: an app picked that's gone shows as it, as the app falls back to it. */
 export function automaticChoice(rule: string): AutomaticChoice {
-  return { id: AUTO_APP, label: 'Automatic', rule, coversMissing: true };
+  return { id: AUTO_APP, label: 'Automatic', rule };
 }
 
 /** One setting's apps, as a drop-down: "Automatic", every app found, and for the editor each file's default app. */
@@ -50,8 +48,6 @@ export interface AppPickerChoices {
   onChoose: (choice: string) => void;
   /** Offers adding another app (the editor, a merge tool). */
   onAdd?: () => void;
-  /** Entries after the apps, about the app picked ("How Meld opens…"). */
-  more?: MenuEntry[];
 }
 
 /** What the drop-down's button shows: the choice, a line about it, and its icon. */
@@ -83,7 +79,7 @@ export function pickedApp(choices: AppPickerChoices): PickedApp {
 
 /** The drop-down's entries, the choice made checked. */
 export function appPickerEntries(choices: AppPickerChoices): MenuEntry[] {
-  const { apps, choice, usedId, automatic, offersSystem, onChoose, onAdd, more = [] } = choices;
+  const { apps, choice, usedId, automatic, offersSystem, onChoose, onAdd } = choices;
   const isAuto = isAutomatic(choices) && !(offersSystem && choice === SYSTEM_APP);
   const used = apps.find((app) => app.id === usedId);
   return tidyMenu([
@@ -99,12 +95,11 @@ export function appPickerEntries(choices: AppPickerChoices): MenuEntry[] {
     SEPARATOR,
     ...(offersSystem ? [{ id: SYSTEM_APP, label: SYSTEM_APP_LABEL, icon: AppWindow, checked: choice === SYSTEM_APP, run: () => onChoose(SYSTEM_APP) }] : []),
     ...(onAdd ? [{ id: 'add', label: 'Choose another app…', icon: FolderOpen, run: onAdd }] : []),
-    ...(more.length > 0 ? [SEPARATOR, ...more] : []),
   ]);
 }
 
 /** The automatic choice is made, or the app chosen isn't on offer anymore and shows as it. */
 function isAutomatic({ automatic, choice, apps }: AppPickerChoices): boolean {
   if (!automatic) return false;
-  return choice === automatic.id || (automatic.coversMissing && !apps.some((app) => app.id === choice));
+  return choice === automatic.id || !apps.some((app) => app.id === choice);
 }

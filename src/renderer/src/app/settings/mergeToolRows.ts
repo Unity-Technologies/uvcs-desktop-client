@@ -1,7 +1,8 @@
-import { AppWindow, Boxes } from 'lucide-react';
+import { AppWindow, Boxes, TriangleAlert } from 'lucide-react';
 import {
   AUTO_MERGE_TOOL,
   isUnityYamlMergeId,
+  UNITY_YAML_MERGE_ARGS,
   UNITY_YAML_MERGE_ID,
   UNITY_YAML_MERGE_NAME,
   unityYamlMergeOf,
@@ -11,8 +12,8 @@ import {
 } from '@shared/domain/mergeTools';
 import { appIcon } from '../../components/externalApps/appIcon';
 import type { Icon } from '../../lib/actions';
+import { formatArgs } from '../../lib/argumentLine';
 import { formatFilePatterns } from '../../lib/filePatterns';
-import { AUTOMATIC_CHOICE_ICON } from './automaticApp';
 
 /** The row of every other file: always last, it can't move nor go. */
 export const EVERY_OTHER_FILE = 'everyOtherFile';
@@ -23,7 +24,7 @@ export const EVERY_OTHER_FILE = 'everyOtherFile';
  */
 export const FILES_BUDGET = 24;
 
-/** One row of Settings › Merge, read-only: its files on the left, what opens them on the right. */
+/** One row of Settings › Merge, read-only and one line: its files on the left, what opens them on the right. */
 export interface MergeToolRowView {
   /** The rule's id, or `EVERY_OTHER_FILE`. */
   id: string;
@@ -36,9 +37,13 @@ export interface MergeToolRowView {
   /** In the code font: file types, not words. */
   filesAreCode: boolean;
   toolName: string;
+  /** After the name, quieter: the Unity Editor a row pins. */
+  toolDetail?: string;
   toolIcon: Icon | undefined;
-  /** Under the tool: what UnityYAMLMerge falls back to, what Automatic uses, or that the tool isn't here. */
-  toolNote?: string;
+  /** The tool isn't on this computer: its name steps back, a warning in place of its icon. */
+  missing: boolean;
+  /** The tool's tooltip: how it's launched, the command line; or why it's missing. */
+  toolTip: string;
 }
 
 /** The rows: each rule, then every other file. */
@@ -51,6 +56,11 @@ export function mergeToolRows(rules: readonly MergeToolRule[], mergeTool: string
     }),
     { id: EVERY_OTHER_FILE, files: 'Every other file', moreFiles: 0, filesAreCode: false, ...everyOtherFileTool(mergeTool, list, automaticTool) },
   ];
+}
+
+/** How a program is launched, as one command line: each word quoted where it needs to be. */
+export function commandLine(executable: string, args: readonly string[]): string {
+  return formatArgs([executable, ...args]);
 }
 
 /**
@@ -70,25 +80,34 @@ function fittedLength(quoted: readonly string[], count: number): number {
   return quoted.slice(0, count).join(' ').length + (rest > 0 ? ` +${rest}`.length : 0);
 }
 
-function toolSide(rule: MergeToolRule, list: MergeToolList, automaticTool: MergeTool | undefined): Pick<MergeToolRowView, 'toolName' | 'toolIcon' | 'toolNote'> {
+type ToolSide = Pick<MergeToolRowView, 'toolName' | 'toolDetail' | 'toolIcon' | 'missing' | 'toolTip'>;
+
+const NOT_FOUND = 'Not found on this computer';
+
+function toolSide(rule: MergeToolRule, list: MergeToolList, automaticTool: MergeTool | undefined): ToolSide {
   if (isUnityYamlMergeId(rule.toolId)) {
     const merge = unityYamlMergeOf(list.unityYamlMerges, rule.toolId);
-    if (!merge) return { toolName: UNITY_YAML_MERGE_NAME, toolIcon: Boxes, toolNote: 'Not found on this computer' };
+    const pinned = rule.toolId === UNITY_YAML_MERGE_ID ? undefined : rule.toolId.slice(UNITY_YAML_MERGE_ID.length + 1);
+    if (!merge) return { toolName: UNITY_YAML_MERGE_NAME, toolDetail: pinned, toolIcon: TriangleAlert, missing: true, toolTip: `${NOT_FOUND}: no Unity Editor${pinned ? ` ${pinned}` : ''}` };
     const fallbackId = rule.fallbackToolId ?? AUTO_MERGE_TOOL;
     const fallback = fallbackId === AUTO_MERGE_TOOL ? automaticTool : (toolById(list, fallbackId) ?? automaticTool);
-    // A row pinned to one editor says which; the newest editor's needs no saying.
-    const notes = [rule.toolId !== UNITY_YAML_MERGE_ID && merge.editorVersion, fallback && `else ${fallback.name}`].filter(Boolean);
-    return { toolName: UNITY_YAML_MERGE_NAME, toolIcon: Boxes, toolNote: notes.join(', ') || undefined };
+    const toolTip = `${commandLine(merge.executable, UNITY_YAML_MERGE_ARGS)}\nIf it can't merge: ${fallback?.name ?? 'no merge tool found'}`;
+    return { toolName: UNITY_YAML_MERGE_NAME, toolDetail: pinned, toolIcon: Boxes, missing: false, toolTip };
   }
   const tool = toolById(list, rule.toolId);
-  if (!tool) return { toolName: list.knownNames[rule.toolId] ?? 'A tool removed', toolIcon: AppWindow, toolNote: 'Not found on this computer' };
-  return { toolName: tool.name, toolIcon: appIcon(tool) ?? AppWindow };
+  if (!tool) return { toolName: list.knownNames[rule.toolId] ?? 'A tool removed', toolIcon: TriangleAlert, missing: true, toolTip: NOT_FOUND };
+  return toolOf(tool);
 }
 
-function everyOtherFileTool(mergeTool: string, list: MergeToolList, automaticTool: MergeTool | undefined): Pick<MergeToolRowView, 'toolName' | 'toolIcon' | 'toolNote'> {
-  const picked = mergeTool === AUTO_MERGE_TOOL ? undefined : toolById(list, mergeTool);
-  if (picked) return { toolName: picked.name, toolIcon: appIcon(picked) ?? AppWindow };
-  return { toolName: 'Automatic', toolIcon: AUTOMATIC_CHOICE_ICON, toolNote: automaticTool?.name ?? 'No merge tool found' };
+/** Every other file's tool: the one picked, or the one it resolves to while none is (or the one picked is gone). */
+function everyOtherFileTool(mergeTool: string, list: MergeToolList, automaticTool: MergeTool | undefined): ToolSide {
+  const tool = toolById(list, mergeTool) ?? automaticTool;
+  if (!tool) return { toolName: 'No merge tool found', toolIcon: TriangleAlert, missing: true, toolTip: 'Install a merge tool, or choose a program: "Choose another app…"' };
+  return toolOf(tool);
+}
+
+function toolOf(tool: MergeTool): ToolSide {
+  return { toolName: tool.name, toolIcon: appIcon(tool) ?? AppWindow, missing: false, toolTip: commandLine(tool.executable, tool.args) };
 }
 
 function toolById(list: MergeToolList, id: string): MergeTool | undefined {

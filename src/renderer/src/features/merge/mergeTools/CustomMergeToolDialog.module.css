@@ -13,8 +13,3 @@
   font-family: var(--font-mono);
   font-size: var(--text-sm);
 }
-
-/* Pushes Cancel and Save to the end, past the buttons about the tool itself. */
-.footerSpace {
-  flex: 1;
-}

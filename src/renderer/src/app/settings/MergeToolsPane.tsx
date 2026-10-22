@@ -57,7 +57,7 @@ export function MergeToolsPane() {
   );
 }
 
-/** A row, read-only: its file types, what opens them, and its "…" menu on hover or focus. Clicking it edits it. */
+/** A row, read-only and one line: its file types, what opens them, and its "…" menu on hover or focus. Clicking it edits it. */
 function MergeToolRow({ row, onEdit, menu }: { row: MergeToolRowView; onEdit: () => void; menu: MenuEntry[] }) {
   const ToolIcon = row.toolIcon;
   return (
@@ -67,16 +67,14 @@ function MergeToolRow({ row, onEdit, menu }: { row: MergeToolRowView; onEdit: ()
           <span className={styles.ruleFilesShown}>{row.files}</span>
           {row.moreFiles > 0 && <span className={styles.ruleFilesMore}>+{row.moreFiles}</span>}
         </span>
-        <span className={styles.ruleTool}>
-          <span className={styles.ruleToolName}>
-            <span className={styles.ruleToolIcon}>{ToolIcon && <ToolIcon size={16} />}</span>
-            {row.toolName}
-          </span>
-          {row.toolNote && <span className={styles.ruleToolNote}>{row.toolNote}</span>}
+        <span className={styles.ruleTool} data-missing={row.missing || undefined} data-tip={row.toolTip}>
+          <span className={styles.ruleToolIcon}>{ToolIcon && <ToolIcon size={16} />}</span>
+          <span className={styles.ruleToolName}>{row.toolName}</span>
+          {row.toolDetail && <span className={styles.ruleToolDetail}>{row.toolDetail}</span>}
         </span>
       </button>
       <ActionDropdownMenu entries={menu}>
-        <IconButton size="small" className={styles.ruleMenu} icon={<MoreHorizontal size={14} />} label={`More for ${row.files}`} />
+        <IconButton size="small" className={styles.ruleMenu} icon={<MoreHorizontal size={14} />} label={`More for ${row.filesTip ?? row.files}`} />
       </ActionDropdownMenu>
     </div>
   );

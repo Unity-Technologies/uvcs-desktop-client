@@ -18,12 +18,12 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   each with the three-way command line of its docs (cross-checked with Git's `mergetools/*`). The user can add any
   program with an arguments template (`{base}` `{yours}` `{incoming}` `{result}` and their `…Name`s;
   `CustomMergeToolDialog`, `addCustomMergeTool`, which picks it nowhere: the caller opens the file in it or picks it for
-  a row). Settings keep the user's tools and per-tool arguments ("How <tool> opens…", `MergeToolArgsDialog`).
+  a row). Settings keep the user's tools and per-tool arguments ("How <tool> opens", in the row's dialog below).
 - **What opens which file** (Settings › Merge, `MergeToolsPane`; `mergeToolFor`, `useFileMergers`): rows tried top to
   bottom, the first that matches wins (`mergeToolRules`), each a list of file patterns and a tool or UnityYAMLMerge;
   last, every other file (`mergeTool`: `auto`, the UVCS one, else the first found; a pick no longer on offer falls back
   to it). A file opens in a `Merger`: a tool, or UnityYAMLMerge with a fallback tool for what it can't merge
-  (`fallbackToolId`, Automatic: every other file's tool). A row of UnityYAMLMerge names the newest editor's
+  (`fallbackToolId`, `auto` until picked: every other file's tool). A row of UnityYAMLMerge names the newest editor's
   (`unityyamlmerge`) or one editor's (`unityyamlmerge:<version>`); on a file UnityYAMLMerge wouldn't run on (not Unity
   YAML on both sides, or decided by the user already: `smartMergeVersions`) the row opens its fallback straight away,
   so "Resolve in…" names what really opens. Patterns (`lib/filePatterns`) are extensions (`.cs`), names with `*` and
@@ -33,22 +33,35 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   computer", named by `knownNames`); removing a tool of the user's drops its rows and makes it no row's fallback. With
   nothing imported, the rows are Unity assets in UnityYAMLMerge (`UNITY_YAML_MERGE_RULE`, `UNITY_YAML_PATTERNS`: scenes,
   prefabs and the assets Unity saves as YAML, not `.meta` files, which have no Unity YAML header) and C#, Visual Basic
-  and Java in Semantic Merge (`SEMANTIC_MERGE_RULE`), as the official client sends them. The pane lists the rows read-only, in one bordered group (`MergeToolsPane`,
-  `mergeToolRows`): a rule's file types on one line in the code font, as many as fit a character budget then "+N"
-  (`fitFileTypes`, `FILES_BUDGET`; every one in the tooltip), and what opens them on the right with its icon, a line
-  under it saying what UnityYAMLMerge falls back to ("else UVCS merge tool"; the version when the row pins an editor),
-  what Automatic uses, or that the tool isn't here; every other file's row last. In a narrow pane the tool goes under
-  the file types (a container query on the frame). A row's click, or Enter, opens its edit dialog; its "…", shown on
-  hover or focus, holds Edit…, Move up, Move down and Remove (`rowMenuEntries`; every other file's only Edit…). The
-  dialog (`MergeRuleDialog`, `mergeRuleDraft`) holds "Files" (chips: `TokenField`, `lib/tokenInput`: a space, comma,
-  semicolon or Enter makes a chip, double quotes keep spaces in one, pasting splits into chips, Backspace in an empty
-  field takes the last away, each chip's × removes it, each value once; Enter never submits), "Opens in" (each tool
-  once: Automatic for every other file only, the UVCS merge tool, Semantic Merge, UnityYAMLMerge with the newest
-  editor's version under it and Smart Merge, Unity's name for it, only in its tooltip, then the others found and the
-  user's, `toolChoices`), "How <tool> opens…" under it, and for UnityYAMLMerge "Unity Editor" ("Newest installed
-  (6000.5.0f1)", then each installed version; one gone stays, saying so: `editorOptions`) and "If it can't merge"
-  (Automatic first, `fallbackChoices`). Save stays off until a rule has a file type (`saveProblem`); a new rule is
-  added only on Save. Binary files have
+  and Java in Semantic Merge (`SEMANTIC_MERGE_RULE`), as the official client sends them. The pane lists the rows read-only, one line each, all the same
+  height, in one grid (`MergeToolsPane`, `mergeToolRows`): a rule's file types in the code font, as many as fit a
+  character budget then "+N" (`fitFileTypes`, `FILES_BUDGET`; every one in the tooltip; the list is cut, never the
+  count), then the tool: a fixed icon cell and its name, every icon in one column (the pinned Unity Editor's version
+  after UnityYAMLMerge's name, quieter). The tool's tooltip is how it's launched, its command line quoted where needed
+  (`commandLine`), with "If it can't merge: <tool>" for UnityYAMLMerge; a tool that isn't here shows its name quieter,
+  a warning in its icon cell and why in the tooltip; with no merge tool at all, every other file's row reads "No merge
+  tool found". Every other file's row is last and names the tool that really runs. Only in a very narrow pane does the
+  tool go under the file types (a container query on the frame). A row's click, or Enter, opens its edit dialog; its
+  "…", shown on hover or focus, holds Edit…, Move up, Move down and Remove (`rowMenuEntries`; every other file's only
+  Edit…). The dialog (`MergeRuleDialog`, `mergeRuleDraft`), each field a label, its control and its hint: "Files"
+  (chips: `TokenField`, `lib/tokenInput`: a space, comma, semicolon or Enter makes a chip, double quotes keep spaces in
+  one, pasting splits into chips, Backspace in an empty field takes the last away, each chip's × removes it, each value
+  once; Enter never submits), "Opens in" (one line, a field's height, where the tool is in its tooltip; each tool once:
+  the UVCS merge tool, Semantic Merge, UnityYAMLMerge with the newest editor's version under it and Smart Merge, Unity's
+  name for it, only in its tooltip, then the others found and the user's, `toolChoices`), then for a tool "How <tool>
+  opens", its arguments in place (stored per tool, so they apply wherever it opens; "Back to its own arguments",
+  "Remove <tool>" for the user's own; saved with the rule, `argsToSave`), or for UnityYAMLMerge (whose arguments are
+  fixed, `UNITY_YAML_MERGE_ARGS`) "Unity Editor" ("Newest installed (6000.5.0f1)", then each installed version; one
+  gone stays, saying so: `editorOptions`) and "If it can't merge" (`fallbackChoices`). Save stays off until a rule has a
+  file type and the arguments name `{result}` (`saveProblem`); a new rule is added only on Save. No dialog opens over
+  it but "Choose another app…", to add a program.
+- **No "Automatic" in Settings › Merge.** Every other file's tool and UnityYAMLMerge's fallback store `auto` until one
+  is picked (`AUTO_MERGE_TOOL`: "not picked yet"), and the pane and the dialog show the tool it resolves to, the UVCS
+  merge tool, else the first found (`resolvedToolId`, `MergeToolList.preferredId`), as the merge page opens it; picking
+  one stores its id, while leaving it untouched keeps `auto` (`savedDraft`). An "Automatic" choice was tried and
+  dropped: it hid which tool runs and how it's launched, and its arguments couldn't be seen or edited. The Apps page
+  keeps its Automatic for editors and terminals.
+Binary files have
   no rows: no tool opens them.
 - **Imported once** from the official client (client.conf's `<MergeTools>`, `readLegacyMergeTools`,
   `legacyMergeToolSettings`; ARCHITECTURE.md "Own config"), on the first run that has rows of this shape (`legacyMergeToolsImported`,
@@ -56,9 +69,9 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   `mergeToolRulesImported` from an earlier build is ignored). With nothing to import, the rows are the app's own
   (`DEFAULT_MERGE_TOOL_RULES`), but Semantic Merge's for a user who picked their own tool. Each entry for some files
   becomes a row, by the official client's order; its entry for every text file becomes every other file's tool, only
-  while the user's is still Automatic, and nothing after it is read, as the client never goes past it (even when the app can't read its tool). An entry whose
+  while the user's is still `auto` (not picked yet), and nothing after it is read, as the client never goes past it (even when the app can't read its tool). An entry whose
   first tool is `UnityYAMLMerge` becomes a row of UnityYAMLMerge for its extensions, the tool chained after it its
-  fallback (Automatic when there's none, or when it's every other file's tool anyway: `withAutomaticFallback`); its
+  fallback (`auto` when there's none, or when it's every other file's tool anyway: `withAutomaticFallback`); its
   stored path is dropped, the app runs the newest Unity Editor's. With no such entry, the app's own Unity row comes
   first (`UNITY_YAML_MERGE_RULE`). The client's own tools become the app's (`plastic xmerge`,
   `plasticgui`, `macmergetool`, `gtkmergetool` the UVCS merge tool; `semanticmerge` Semantic Merge); a known program
@@ -68,7 +81,7 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   for (`@fileencoding`, `@mergetype`...) dropped, with the switch before it when the variable was the whole argument
   (`-e @fileencoding`). Left out: binary entries and binary merges, the client's own scripts
   (its `diffscripts` folder: Word documents, which are binary), regular expressions, a command that saves nowhere. While every other file opens in the UVCS merge tool once imported
-  (Automatic, or the UVCS merge tool picked by name: `sendsCodeToSemanticMerge`, the one test of both paths), C#, Visual Basic and Java go to Semantic Merge (the client does so), but those
+  (`auto`, or the UVCS merge tool picked by name: `sendsCodeToSemanticMerge`, the one test of both paths), C#, Visual Basic and Java go to Semantic Merge (the client does so), but those
   a row sends elsewhere; a user who picked their own tool for every other file keeps C# there, and with no client.conf
   to import such a user's default rows are emptied (`importMergeTools`); a row that sends files where every other file
   goes anyway, and that no later row could take, is dropped (the Windows client's `.meta` row).

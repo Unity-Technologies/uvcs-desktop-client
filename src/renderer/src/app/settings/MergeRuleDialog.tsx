@@ -1,18 +1,35 @@
+import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { addMergeTool } from '../../features/merge/mergeTools/CustomMergeToolDialog';
-import { openMergeToolArgsDialog } from '../../features/merge/mergeTools/MergeToolArgsDialog';
-import { currentSettings, preferMergeTool, useMergeTools } from '../../features/merge/mergeTools/useMergeTools';
+import { AUTO_MERGE_TOOL } from '@shared/domain/mergeTools';
+import { addMergeTool, PLACEHOLDER_HINT } from '../../features/merge/mergeTools/CustomMergeToolDialog';
+import { currentSettings, preferMergeTool, removeCustomMergeTool, setMergeToolArgs, useMergeTools } from '../../features/merge/mergeTools/useMergeTools';
+import { formatArgs } from '../../lib/argumentLine';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
-import { SelectField } from '../../ui/TextField';
+import { SelectField, TextField } from '../../ui/TextField';
 import { TokenField } from '../../ui/TokenField';
 import fieldStyles from '../../ui/Field.module.css';
 import { AppPicker } from './AppPicker';
-import { draftFields, draftOf, editorOptions, fallbackChoices, ruleOf, saveProblem, toolChoices, withRule, type RuleDraft, type RuleTarget } from './mergeRuleDraft';
-import { AUTOMATIC_MERGE_TOOL_CHOICE } from './mergeToolRules';
+import {
+  argsToSave,
+  draftFields,
+  draftOf,
+  editorOptions,
+  fallbackChoices,
+  ruleOf,
+  savedDraft,
+  saveProblem,
+  toolChoices,
+  withRule,
+  withTool,
+  type RuleDraft,
+  type RuleTarget,
+} from './mergeRuleDraft';
 import { saveSettings } from './useSettings';
 import styles from './SettingsDialog.module.css';
+
+const NO_TOOL = 'No merge tool found';
 
 /** Edits a row of Settings › Merge: a rule's file types and what opens them, or every other file's tool. */
 export function openMergeRuleDialog(target: RuleTarget): void {
@@ -24,17 +41,25 @@ function MergeRuleDialog({ target, close }: { target: RuleTarget; close: () => v
   const [draft, setDraft] = useState<RuleDraft>(() => draftOf(target, list));
   const change = (changes: Partial<RuleDraft>): void => setDraft((current) => ({ ...current, ...changes }));
   const fields = draftFields(target, draft, list);
-  const problem = saveProblem(target, draft);
+  const problem = saveProblem(target, draft, fields);
+  const { args } = fields;
 
   const save = async (): Promise<void> => {
     if (problem) return;
-    if (target.kind === 'everyOtherFile') await preferMergeTool(draft.toolId);
-    else await saveSettings({ mergeToolRules: withRule(currentSettings().mergeToolRules, ruleOf(draft, target.rule?.id ?? `rule:${crypto.randomUUID()}`)) });
+    const edited = argsToSave(fields);
+    if (edited) await setMergeToolArgs(edited.tool, edited.args);
+    const saved = savedDraft(target, draft, fields);
+    if (target.kind === 'everyOtherFile') await preferMergeTool(saved.toolId);
+    else await saveSettings({ mergeToolRules: withRule(currentSettings().mergeToolRules, ruleOf(saved, target.rule?.id ?? `rule:${crypto.randomUUID()}`)) });
     close();
   };
   const addTool = (pick: (toolId: string) => void) => async (): Promise<void> => {
     const added = await addMergeTool();
     if (added) pick(added.id);
+  };
+  const removeTool = async (toolId: string): Promise<void> => {
+    await removeCustomMergeTool(toolId);
+    setDraft((current) => withTool(current, AUTO_MERGE_TOOL));
   };
 
   return (
@@ -64,29 +89,51 @@ function MergeRuleDialog({ target, close }: { target: RuleTarget; close: () => v
               autoFocus
               onChange={(patterns) => change({ patterns })}
             />
-            <span className={fieldStyles.hint}>{problem ?? 'Extensions, names or paths. Enter, a space or a comma adds one.'}</span>
+            <span className={fieldStyles.hint}>
+              {draft.patterns.length === 0 ? 'Add at least one file type' : 'Extensions, names or paths. Enter, a space or a comma adds one.'}
+            </span>
           </div>
         )}
         <div className={fieldStyles.field}>
           <span className={fieldStyles.label}>Opens in</span>
           <AppPicker
+            inline
             label="Opens in"
             apps={toolChoices(target, list)}
-            choice={draft.toolId}
-            usedId={fields.automatic ? list.preferredId : null}
-            automatic={fields.automatic ? AUTOMATIC_MERGE_TOOL_CHOICE : null}
-            missingName={list.knownNames[draft.toolId]}
-            onChoose={(toolId) => change({ toolId })}
-            onAdd={() => void addTool((toolId) => change({ toolId }))()}
+            choice={fields.shownToolId ?? ''}
+            usedId={null}
+            automatic={null}
+            missingName={list.knownNames[fields.shownToolId ?? ''] ?? NO_TOOL}
+            onChoose={(toolId) => setDraft((current) => withTool(current, toolId))}
+            onAdd={() => void addTool((toolId) => setDraft((current) => withTool(current, toolId)))()}
           />
-          {fields.howItOpens && (
-            <div>
-              <Button size="small" variant="ghost" className={styles.linkButton} onClick={() => openMergeToolArgsDialog(fields.howItOpens!)}>
-                How {fields.howItOpens.name} opens…
-              </Button>
-            </div>
-          )}
         </div>
+        {args && (
+          <div className={fieldStyles.field}>
+            <TextField
+              label={`How ${args.tool.name} opens`}
+              className={styles.argsInput}
+              value={args.text}
+              error={args.problem}
+              hint={`${PLACEHOLDER_HINT} They apply wherever ${args.tool.name} opens.`}
+              onChange={(event) => change({ argsText: event.target.value })}
+            />
+            {(args.canGoBack || args.removable) && (
+              <div className={styles.argsActions}>
+                {args.canGoBack && (
+                  <Button size="small" variant="ghost" className={styles.linkButton} onClick={() => change({ argsText: formatArgs(args.tool.defaultArgs) })}>
+                    Back to its own arguments
+                  </Button>
+                )}
+                {args.removable && (
+                  <Button size="small" variant="ghost" icon={<Trash2 size={13} />} onClick={() => void removeTool(args.tool.id)}>
+                    Remove {args.tool.name}
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         {fields.unityYamlMerge && (
           <>
             <SelectField label="Unity Editor" value={draft.editorId} onChange={(event) => change({ editorId: event.target.value })}>
@@ -99,12 +146,13 @@ function MergeRuleDialog({ target, close }: { target: RuleTarget; close: () => v
             <div className={fieldStyles.field}>
               <span className={fieldStyles.label}>If it can't merge</span>
               <AppPicker
+                inline
                 label="If it can't merge"
                 apps={fallbackChoices(list)}
-                choice={draft.fallbackToolId}
-                usedId={list.preferredId}
-                automatic={AUTOMATIC_MERGE_TOOL_CHOICE}
-                missingName={list.knownNames[draft.fallbackToolId]}
+                choice={fields.shownFallbackId ?? ''}
+                usedId={null}
+                automatic={null}
+                missingName={NO_TOOL}
                 onChoose={(fallbackToolId) => change({ fallbackToolId })}
                 onAdd={() => void addTool((fallbackToolId) => change({ fallbackToolId }))()}
               />

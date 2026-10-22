@@ -1,11 +1,35 @@
 import { describe, expect, it } from 'vitest';
 import type { MergeTool, MergeToolList } from '@shared/domain/mergeTools';
-import { draftFields, draftOf, editorOptions, fallbackChoices, ruleOf, saveProblem, toolChoices, withRule, type RuleTarget } from './mergeRuleDraft';
+import {
+  argsToSave,
+  draftFields,
+  draftOf,
+  editorOptions,
+  fallbackChoices,
+  resolvedToolId,
+  ruleOf,
+  savedDraft,
+  saveProblem,
+  toolChoices,
+  withRule,
+  withTool,
+  type RuleDraft,
+  type RuleTarget,
+} from './mergeRuleDraft';
 
-const tool = (id: string, name = id): MergeTool => ({ id, name, origin: 'known', executable: `/bin/${id}`, args: [], defaultArgs: [], canBringToFront: false });
+const tool = (id: string, name = id, changes: Partial<MergeTool> = {}): MergeTool => ({
+  id,
+  name,
+  origin: 'known',
+  executable: `/bin/${id}`,
+  args: ['{base}', '{result}'],
+  defaultArgs: ['{base}', '{result}'],
+  canBringToFront: false,
+  ...changes,
+});
 const merge = (editorVersion: string) => ({ id: `unityyamlmerge:${editorVersion}`, executable: `/Unity/${editorVersion}/UnityYAMLMerge`, editorVersion });
 const list: MergeToolList = {
-  tools: [tool('uvcs', 'UVCS merge tool'), tool('semantic', 'Semantic Merge'), tool('vscode', 'Visual Studio Code'), tool('custom:1', 'Mine')],
+  tools: [tool('uvcs', 'UVCS merge tool'), tool('semantic', 'Semantic Merge'), tool('vscode', 'Visual Studio Code'), tool('custom:1', 'Mine', { origin: 'custom' })],
   preferredId: 'uvcs',
   knownNames: {},
   unityYamlMerges: [merge('6000.5.0f1'), merge('2022.3.10f1')],
@@ -14,21 +38,23 @@ const unityRule = { id: 'u', patterns: ['.unity', '.prefab'], toolId: 'unityyaml
 const ruleTarget: RuleTarget = { kind: 'rule', rule: unityRule };
 const newRule: RuleTarget = { kind: 'rule', rule: null };
 const everyOtherFile: RuleTarget = { kind: 'everyOtherFile', mergeTool: 'auto' };
+const draft = (changes: Partial<RuleDraft>): RuleDraft => ({ patterns: ['.cs'], toolId: 'semantic', editorId: 'unityyamlmerge', fallbackToolId: 'auto', argsText: null, ...changes });
 
 describe('the draft of a row', () => {
   it('starts a rule of UnityYAMLMerge with its editor and fallback apart, and saves it back the same', () => {
-    const draft = draftOf(ruleTarget, list);
-    expect(draft).toEqual({ patterns: ['.unity', '.prefab'], toolId: 'unityyamlmerge', editorId: 'unityyamlmerge:2022.3.10f1', fallbackToolId: 'vscode' });
-    expect(ruleOf(draft, 'u')).toEqual(unityRule);
+    const started = draftOf(ruleTarget, list);
+    expect(started).toEqual({ patterns: ['.unity', '.prefab'], toolId: 'unityyamlmerge', editorId: 'unityyamlmerge:2022.3.10f1', fallbackToolId: 'vscode', argsText: null });
+    expect(ruleOf(started, 'u')).toEqual(unityRule);
   });
 
-  it('starts a new rule in every other file’s tool, with no file type, and every other file as set', () => {
-    expect(draftOf(newRule, list)).toEqual({ patterns: [], toolId: 'uvcs', editorId: 'unityyamlmerge', fallbackToolId: 'auto' });
+  it('starts a new rule in the tool every other file opens in, with no file type; every other file as stored', () => {
+    expect(draftOf(newRule, list)).toMatchObject({ patterns: [], toolId: 'uvcs' });
     expect(draftOf(everyOtherFile, list).toolId).toBe('auto');
   });
 
-  it('saves a rule of another tool without a fallback', () => {
-    expect(ruleOf({ patterns: ['.cs'], toolId: 'semantic', editorId: 'unityyamlmerge:2022.3.10f1', fallbackToolId: 'vscode' }, 'c')).toEqual({ id: 'c', patterns: ['.cs'], toolId: 'semantic' });
+  it('saves a rule of another tool without a fallback, and shows a tool’s own arguments once another is picked', () => {
+    expect(ruleOf(draft({ editorId: 'unityyamlmerge:2022.3.10f1', fallbackToolId: 'vscode' }), 'c')).toEqual({ id: 'c', patterns: ['.cs'], toolId: 'semantic' });
+    expect(withTool(draft({ argsText: '{result}' }), 'vscode')).toMatchObject({ toolId: 'vscode', argsText: null });
   });
 
   it('puts a rule saved back in its place, and a new one last', () => {
@@ -41,23 +67,59 @@ describe('the draft of a row', () => {
   });
 });
 
-describe('draftFields', () => {
-  it('shows the files and, for UnityYAMLMerge, its editor and fallback; how a tool opens only for a tool found', () => {
-    expect(draftFields(ruleTarget, draftOf(ruleTarget, list), list)).toMatchObject({ title: 'File types', files: true, unityYamlMerge: true, automatic: false, howItOpens: undefined });
-    const semantic = { ...draftOf(ruleTarget, list), toolId: 'semantic' };
-    expect(draftFields(ruleTarget, semantic, list)).toMatchObject({ unityYamlMerge: false, howItOpens: { id: 'semantic' } });
-  });
-
-  it('shows only "Opens in", with Automatic, for every other file', () => {
-    expect(draftFields(everyOtherFile, draftOf(everyOtherFile, list), list)).toEqual({ title: 'Every other file', files: false, unityYamlMerge: false, automatic: true, howItOpens: undefined });
+describe('resolvedToolId', () => {
+  it('is the tool stored while it’s found, else the one every other file falls back to, else none', () => {
+    expect(resolvedToolId('vscode', list)).toBe('vscode');
+    expect(resolvedToolId('unityyamlmerge', list)).toBe('unityyamlmerge');
+    expect(resolvedToolId('auto', list)).toBe('uvcs');
+    expect(resolvedToolId('gone', list)).toBe('uvcs');
+    expect(resolvedToolId('auto', { ...list, tools: [], preferredId: null })).toBeNull();
   });
 });
 
-describe('saveProblem', () => {
-  it('asks a rule for a file type, and never every other file', () => {
-    expect(saveProblem(newRule, draftOf(newRule, list))).toBe('Add at least one file type');
-    expect(saveProblem(ruleTarget, draftOf(ruleTarget, list))).toBeUndefined();
-    expect(saveProblem(everyOtherFile, draftOf(everyOtherFile, list))).toBeUndefined();
+describe('draftFields', () => {
+  it('shows the files and, for UnityYAMLMerge, its editor and fallback, with no arguments (they are fixed)', () => {
+    expect(draftFields(ruleTarget, draftOf(ruleTarget, list), list)).toMatchObject({
+      title: 'File types',
+      files: true,
+      shownToolId: 'unityyamlmerge',
+      unityYamlMerge: true,
+      shownFallbackId: 'vscode',
+      args: undefined,
+    });
+  });
+
+  it('shows "How <tool> opens" for a tool: its arguments, Back to its own when they differ, Remove for the user’s own', () => {
+    expect(draftFields(ruleTarget, draft({}), list).args).toMatchObject({ tool: { id: 'semantic' }, text: '{base} {result}', problem: undefined, canGoBack: false, removable: false });
+    expect(draftFields(ruleTarget, draft({ argsText: '--out {result}' }), list).args).toMatchObject({ canGoBack: true });
+    expect(draftFields(ruleTarget, draft({ toolId: 'custom:1', argsText: '--out {result}' }), list).args).toMatchObject({ canGoBack: false, removable: true });
+  });
+
+  it('shows the tool every other file really opens in, and its arguments, with no files', () => {
+    expect(draftFields(everyOtherFile, draftOf(everyOtherFile, list), list)).toMatchObject({ title: 'Every other file', files: false, shownToolId: 'uvcs', args: { tool: { id: 'uvcs' } } });
+  });
+});
+
+describe('saving', () => {
+  it('asks a rule for a file type, and arguments that save the merge somewhere', () => {
+    const empty = draftOf(newRule, list);
+    expect(saveProblem(newRule, empty, draftFields(newRule, empty, list))).toBe('Add at least one file type');
+    const noResult = draft({ argsText: '{base}' });
+    expect(saveProblem(ruleTarget, noResult, draftFields(ruleTarget, noResult, list))).toBe('Include {result}: the file the tool saves the merge to.');
+    expect(saveProblem(everyOtherFile, draftOf(everyOtherFile, list), draftFields(everyOtherFile, draftOf(everyOtherFile, list), list))).toBeUndefined();
+  });
+
+  it('saves the arguments only when they were edited into something else', () => {
+    expect(argsToSave(draftFields(ruleTarget, draft({}), list))).toBeUndefined();
+    expect(argsToSave(draftFields(ruleTarget, draft({ argsText: '{base}  {result}' }), list))).toBeUndefined();
+    expect(argsToSave(draftFields(ruleTarget, draft({ argsText: '--out {result}' }), list))).toEqual({ tool: list.tools[1], args: ['--out', '{result}'] });
+  });
+
+  it('stores a rule’s real tool, and leaves every other file’s `auto` alone until one is picked', () => {
+    const fresh = draft({ toolId: 'auto' });
+    expect(savedDraft(newRule, fresh, draftFields(newRule, fresh, list)).toolId).toBe('uvcs');
+    const stored = draftOf(everyOtherFile, list);
+    expect(savedDraft(everyOtherFile, stored, draftFields(everyOtherFile, stored, list)).toolId).toBe('auto');
   });
 });
 
@@ -90,4 +152,3 @@ describe('editorOptions', () => {
     expect(editorOptions({ ...list, unityYamlMerges: [] }, 'unityyamlmerge')).toEqual([{ value: 'unityyamlmerge', label: 'Newest installed' }]);
   });
 });
-

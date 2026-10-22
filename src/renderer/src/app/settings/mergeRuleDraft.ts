@@ -10,6 +10,8 @@ import {
   type MergeToolList,
   type MergeToolRule,
 } from '@shared/domain/mergeTools';
+import { formatArgs, parseArgs } from '../../lib/argumentLine';
+import { hasOwnArgsToGoBackTo, mergeToolArgsProblem } from '../../features/merge/mergeTools/mergeToolArgs';
 import type { PickableApp } from './appPickerChoices';
 
 /** What the edit dialog edits: a rule (none yet for a new one), or every other file's tool. */
@@ -18,39 +20,64 @@ export type RuleTarget = { kind: 'rule'; rule: MergeToolRule | null } | { kind: 
 /** The dialog's fields as they stand, before Save. */
 export interface RuleDraft {
   patterns: string[];
-  /** A tool id; `unityyamlmerge` for UnityYAMLMerge, whichever editor's; `auto` for every other file's Automatic. */
+  /**
+   * The tool as stored: a tool id, `unityyamlmerge` for UnityYAMLMerge (whichever editor's), or `auto` while every
+   * other file's isn't picked yet (the dialog shows the tool it resolves to, `shownTool`).
+   */
   toolId: string;
   /** With UnityYAMLMerge: `unityyamlmerge` (the newest installed) or one editor's (`unityYamlMergeId`). */
   editorId: string;
-  /** With UnityYAMLMerge: what opens what it can't merge, `auto` by default. */
+  /** With UnityYAMLMerge: what opens what it can't merge, as stored (`auto`: not picked yet). */
   fallbackToolId: string;
+  /** The arguments typed for the tool shown; null while untouched (its own stay). */
+  argsText: string | null;
 }
 
-/** What the dialog shows for the draft: the fields that apply, and how the picked tool opens. */
+/** "How <tool> opens": the arguments of the tool shown, edited in place; stored per tool, wherever it opens. */
+export interface ArgsField {
+  tool: MergeTool;
+  text: string;
+  /** Why they can't be saved: no `{result}`. */
+  problem: string | undefined;
+  /** A known tool whose arguments differ from its own: "Back to its own arguments". */
+  canGoBack: boolean;
+  /** A tool the user added: "Remove <tool>". */
+  removable: boolean;
+}
+
+/** What the dialog shows for the draft. */
 export interface DraftFields {
   title: string;
   files: boolean;
+  /** The tool "Opens in" shows: the one stored, or the one it resolves to; none when no tool was found. */
+  shownToolId: string | null;
   /** "Unity Editor" and "If it can't merge": only for UnityYAMLMerge. */
   unityYamlMerge: boolean;
-  /** "Opens in" offers Automatic: every other file's row only. */
-  automatic: boolean;
-  /** The tool whose arguments "How <tool> opens…" edits: a tool found here, not UnityYAMLMerge nor Automatic. */
-  howItOpens: MergeTool | undefined;
+  /** The tool "If it can't merge" shows. */
+  shownFallbackId: string | null;
+  /** None for UnityYAMLMerge (its arguments are fixed), or with no tool found. */
+  args: ArgsField | undefined;
 }
 
 /** The draft a target starts from: a new rule in every other file's tool, else as the rule or the setting is. */
 export function draftOf(target: RuleTarget, list: MergeToolList): RuleDraft {
-  const unset = { editorId: UNITY_YAML_MERGE_ID, fallbackToolId: AUTO_MERGE_TOOL };
+  const unset = { editorId: UNITY_YAML_MERGE_ID, fallbackToolId: AUTO_MERGE_TOOL, argsText: null };
   if (target.kind === 'everyOtherFile') return { patterns: [], toolId: target.mergeTool, ...unset };
   const { rule } = target;
-  if (!rule) return { patterns: [], toolId: list.preferredId ?? list.tools[0]?.id ?? '', ...unset };
+  if (!rule) return { patterns: [], toolId: resolvedToolId(AUTO_MERGE_TOOL, list) ?? '', ...unset };
   const unity = isUnityYamlMergeId(rule.toolId);
   return {
     patterns: rule.patterns,
     toolId: unity ? UNITY_YAML_MERGE_ID : rule.toolId,
     editorId: unity ? rule.toolId : UNITY_YAML_MERGE_ID,
     fallbackToolId: rule.fallbackToolId ?? AUTO_MERGE_TOOL,
+    argsText: null,
   };
+}
+
+/** The draft with another tool picked: its own arguments show. */
+export function withTool(draft: RuleDraft, toolId: string): RuleDraft {
+  return { ...draft, toolId, argsText: null };
 }
 
 /** The rule the draft saves as, under `id`; a fallback only with UnityYAMLMerge. */
@@ -64,20 +91,46 @@ export function withRule(rules: readonly MergeToolRule[], rule: MergeToolRule): 
   return rules.some((other) => other.id === rule.id) ? rules.map((other) => (other.id === rule.id ? rule : other)) : [...rules, rule];
 }
 
+/**
+ * The tool a stored id stands for: itself while it's found, else the one every other file falls back to (the UVCS
+ * merge tool, else the first found: `MergeToolList.preferredId`). Null when no tool was found.
+ */
+export function resolvedToolId(toolId: string, list: MergeToolList): string | null {
+  if (toolId === UNITY_YAML_MERGE_ID || list.tools.some((tool) => tool.id === toolId)) return toolId;
+  return list.preferredId ?? list.tools[0]?.id ?? null;
+}
+
 export function draftFields(target: RuleTarget, draft: RuleDraft, list: MergeToolList): DraftFields {
   const rule = target.kind === 'rule';
+  const shownToolId = resolvedToolId(draft.toolId, list);
+  const unityYamlMerge = rule && draft.toolId === UNITY_YAML_MERGE_ID;
+  const tool = list.tools.find((candidate) => candidate.id === shownToolId);
   return {
     title: rule ? 'File types' : 'Every other file',
     files: rule,
-    unityYamlMerge: rule && draft.toolId === UNITY_YAML_MERGE_ID,
-    automatic: !rule,
-    howItOpens: list.tools.find((tool) => tool.id === draft.toolId),
+    shownToolId,
+    unityYamlMerge,
+    shownFallbackId: resolvedToolId(draft.fallbackToolId, list),
+    args: tool && !unityYamlMerge ? argsFieldOf(tool, draft.argsText) : undefined,
   };
 }
 
-/** Why Save can't save yet: a rule names at least one file type. */
-export function saveProblem(target: RuleTarget, draft: RuleDraft): string | undefined {
-  return target.kind === 'rule' && draft.patterns.length === 0 ? 'Add at least one file type' : undefined;
+/** What Save stores: a rule names the tool shown (a real one); every other file keeps `auto` until one is picked. */
+export function savedDraft(target: RuleTarget, draft: RuleDraft, fields: DraftFields): RuleDraft {
+  return target.kind === 'rule' && fields.shownToolId ? { ...draft, toolId: fields.shownToolId } : draft;
+}
+
+/** The arguments to save with the draft: the tool's, when they were edited into something else; none otherwise. */
+export function argsToSave(fields: DraftFields): { tool: MergeTool; args: string[] } | undefined {
+  const args = fields.args && parseArgs(fields.args.text);
+  if (!fields.args || !args || args.join('\0') === fields.args.tool.args.join('\0')) return undefined;
+  return { tool: fields.args.tool, args };
+}
+
+/** Why Save can't save yet: a rule names at least one file type, and the arguments save the merge somewhere. */
+export function saveProblem(target: RuleTarget, draft: RuleDraft, fields: DraftFields): string | undefined {
+  if (target.kind === 'rule' && draft.patterns.length === 0) return 'Add at least one file type';
+  return fields.args?.problem;
 }
 
 /**
@@ -99,7 +152,7 @@ export function toolChoices(target: RuleTarget, list: MergeToolList): PickableAp
   return [...tools.slice(0, after), unityYamlMerge, ...tools.slice(after)];
 }
 
-/** "If it can't merge"'s tools: those that open a window, Automatic first (the picker adds it). */
+/** "If it can't merge"'s tools: those that open a window. */
 export function fallbackChoices(list: MergeToolList): PickableApp[] {
   return list.tools.map(pickable);
 }
@@ -121,6 +174,18 @@ export function editorOptions(list: MergeToolList, editorId: string): EditorOpti
   ];
   if (editorId === UNITY_YAML_MERGE_ID || unityYamlMergeOf(list.unityYamlMerges, editorId)) return options;
   return [...options, { value: editorId, label: `${editorId.slice(UNITY_YAML_MERGE_ID.length + 1)} (not found on this computer)` }];
+}
+
+function argsFieldOf(tool: MergeTool, argsText: string | null): ArgsField {
+  const text = argsText ?? formatArgs(tool.args);
+  const args = parseArgs(text);
+  return {
+    tool,
+    text,
+    problem: mergeToolArgsProblem(args),
+    canGoBack: hasOwnArgsToGoBackTo({ ...tool, args }),
+    removable: tool.origin === 'custom',
+  };
 }
 
 function pickable(tool: MergeTool): PickableApp {

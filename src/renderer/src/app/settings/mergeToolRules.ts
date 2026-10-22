@@ -1,13 +1,6 @@
 import { ArrowDown, ArrowUp, Pencil, Trash2 } from 'lucide-react';
-import { AUTO_MERGE_TOOL, type MergeToolRule } from '@shared/domain/mergeTools';
+import type { MergeToolRule } from '@shared/domain/mergeTools';
 import { SEPARATOR, type MenuEntry } from '../../lib/actions';
-import { automaticChoice, type AutomaticChoice } from './appPickerChoices';
-
-/** What "Automatic" picks for every other file, in its tooltip. */
-export const AUTOMATIC_MERGE_TOOL_RULE = "The UVCS merge tool when it's installed, else the first one found";
-
-/** Every other file's tool, and UnityYAMLMerge's fallback: "Automatic", or one picked. */
-export const AUTOMATIC_MERGE_TOOL_CHOICE: AutomaticChoice = { ...automaticChoice(AUTOMATIC_MERGE_TOOL_RULE), id: AUTO_MERGE_TOOL };
 
 export function removeRule(rules: readonly MergeToolRule[], id: string): MergeToolRule[] {
   return rules.filter((rule) => rule.id !== id);
