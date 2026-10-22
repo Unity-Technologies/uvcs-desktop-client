@@ -1,10 +1,10 @@
-import { mkdir, readFile, readlink, rename, rm, symlink, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, readlink, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import type { CmClient } from '../cm/CmClient';
-import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { waitForNextSecond } from '../files/nextSecond';
 import { toAbsolutePath } from '../files/workspacePaths';
+import { readPendingChanges } from './readPendingChanges';
 
 /**
  * A merge from a shelve loads the shelve's revisions of the files it brings, which are gone once the shelve is
@@ -15,11 +15,15 @@ import { toAbsolutePath } from '../files/workspacePaths';
  * copied file comes from it.
  */
 export async function detachReplacedFiles(cm: CmClient, workspacePath: string): Promise<void> {
-  const { changes } = parsePendingChanges(await cm.query(['status', '--xml', '--controlledchanged'], { cwd: workspacePath }));
-  const items = changes
-    .filter((change) => (change.kinds.includes('replaced') || change.kinds.includes('copied')) && !change.kinds.includes('moved') && change.itemType !== 'directory')
-    .map((change) => ({ path: toAbsolutePath(workspacePath, change.path), link: change.itemType === 'symlink', copied: !change.kinds.includes('replaced') }));
-  if (items.length === 0) return;
+  const { changes } = await readPendingChanges(cm, workspacePath, ['--controlledchanged']);
+  const detached = changes.filter((change) => (change.kinds.includes('replaced') || change.kinds.includes('copied')) && !change.kinds.includes('moved') && change.itemType !== 'directory');
+  if (detached.length === 0) return;
+  const items = await Promise.all(
+    detached.map(async (change) => {
+      const path = toAbsolutePath(workspacePath, change.path);
+      return { path, link: await isLink(path), copied: !change.kinds.includes('replaced') };
+    }),
+  );
 
   // A link's content is where it points: reading or writing the file would go through to its target.
   const contents = await Promise.all(items.map((item) => (item.link ? readlink(item.path) : readFile(item.path))));
@@ -32,6 +36,14 @@ export async function detachReplacedFiles(cm: CmClient, workspacePath: string): 
   const copied = items.filter((item) => item.copied).map((item) => item.path);
   if (replaced.length > 0) await cm.query(onLinksThemselves('checkout', ...replaced), { cwd: workspacePath });
   if (copied.length > 0) await cm.query(['add', ...copied], { cwd: workspacePath });
+}
+
+/** `cm status` records don't tell a link from a file: the disk does. */
+async function isLink(path: string): Promise<boolean> {
+  return lstat(path).then(
+    (stats) => stats.isSymbolicLink(),
+    () => false,
+  );
 }
 
 async function rewrite(path: string, content: Buffer): Promise<void> {

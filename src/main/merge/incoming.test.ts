@@ -86,7 +86,7 @@ describe('readIncomingChanges', () => {
       'status --header --xml': statusHeader('/main', { changeset: 41 }),
       'find changeset': changesets,
       'diff cs:41 cs:43': diffRecord('C', 'src/a.txt', { base: 10, revision: 20 }) + diffRecord('D', 'src/old.txt', { revision: 11 }),
-      'status --xml --controlledchanged --changed': pendingStatus(change('CH', 'src/a.txt'), change('CH', 'src/old.txt')),
+      'status --controlledchanged --changed': pendingStatus('/work', change('CH', 'src/a.txt'), change('CH', 'src/old.txt')),
     });
 
   it('reads what came in with one find, one diff from the loaded changeset to the head, and the local changes', async () => {
@@ -108,7 +108,7 @@ describe('readIncomingChanges', () => {
       'status --header --xml': statusHeader('/main', { changeset: 41 }),
       'find changeset': changesetsFound('/main', ...many),
       [`diff cs:41 cs:${43 + INCOMING_CHANGESETS_PAGE}`]: diffRecord('C', 'src/a.txt', { base: 10, revision: 20 }),
-      'status --xml --controlledchanged --changed': pendingStatus(),
+      'status --controlledchanged --changed': pendingStatus('/work'),
     });
 
     const changes = await readIncomingChanges(cm, '/work');

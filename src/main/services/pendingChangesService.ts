@@ -11,13 +11,13 @@ import type {
 import { checkinArgs } from '../cm/checkinArgs';
 import { readCheckinOutput } from '../cm/checkinOutput';
 import { explainLockedItems } from '../cm/lockedItems';
-import { pendingChangesStatusArgs } from '../cm/pendingChangesStatusArgs';
-import { parsePendingChanges } from '../cm/pendingChangesXml';
+import { pendingChangesStatusOptions } from '../cm/pendingChangesStatusOptions';
 import { readCheckinProgress } from '../cm/progress/checkinProgress';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { withTempFile } from '../files/tempFile';
 import { toAbsolutePaths } from '../files/workspacePaths';
 import { addFilterRules } from '../workspace/filterRuleFile';
+import { readPendingChanges } from '../workspace/readPendingChanges';
 import { shelveAndUndo } from '../workspace/shelveAndUndo';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
@@ -26,8 +26,8 @@ const DEFAULT_CHANGELIST = 'Default';
 export function createPendingChangesService({ cm, operations }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): PendingChangesApi {
   const shelveAwayDependencies = { cm, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'shelve-backups') };
 
-  async function list(workspacePath: string, filter: PendingChangesFilter): Promise<PendingChangesSnapshot> {
-    return parsePendingChanges(await cm.query(pendingChangesStatusArgs(filter), { cwd: workspacePath }));
+  function list(workspacePath: string, filter: PendingChangesFilter): Promise<PendingChangesSnapshot> {
+    return readPendingChanges(cm, workspacePath, pendingChangesStatusOptions(filter), { diskDetails: true });
   }
 
   function checkin(workspacePath: string, request: CheckinRequest, operationId: string): Promise<CheckinResult> {

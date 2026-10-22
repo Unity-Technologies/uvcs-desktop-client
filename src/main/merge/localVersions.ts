@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { UpdateConflict } from '@shared/domain/incoming';
 import type { CmClient } from '../cm/CmClient';
-import { parsePendingChanges } from '../cm/pendingChangesXml';
+import { readPendingChanges } from '../workspace/readPendingChanges';
 import { waitForNextSecond } from '../files/nextSecond';
 import { retryWhileBusy } from '../files/whileBusy';
 import { toAbsolutePath } from '../files/workspacePaths';
@@ -40,8 +40,8 @@ export async function checkOutAgain(cm: CmClient, workspacePath: string, local: 
 }
 
 async function readCheckedOutPaths(cm: CmClient, workspacePath: string): Promise<Set<string>> {
-  const xml = await cm.query(['status', '--xml', '--checkout'], { cwd: workspacePath });
-  return new Set(parsePendingChanges(xml).changes.map((change) => change.path));
+  const { changes } = await readPendingChanges(cm, workspacePath, ['--checkout']);
+  return new Set(changes.map((change) => change.path));
 }
 
 /**

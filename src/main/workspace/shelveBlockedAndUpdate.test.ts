@@ -38,7 +38,7 @@ interface Scenario {
 function blockedWorkspace(workspacePath: string, { pending: changed = ['src/old.txt', 'src/a.txt'], alsoIncoming = '', failUpdate = false, putBackConflicts = false, branchExists = true }: Scenario = {}) {
   let shelveComment = '';
   let pending = changed;
-  const pendingChanges = (): string => pendingStatus(...pending.map((path) => change('CH', path)));
+  const pendingChanges = (): string => pendingStatus(workspacePath, ...pending.map((path) => change('CH', path)));
   const shelveMerge: CmAnswer = ({ args }) => {
     if (args.includes('--merge')) return '';
     return mergeOutput(['APPLY', 'ADD', '/src/old.txt'], ...(putBackConflicts ? [['DIR_CONFLICT', 'CHG_RM', 'Change/Delete conflict', 'x', 'Modified /src/old.txt', 'Deleted /src/old.txt', '29', 'False', 'CHG', '/src/old.txt', 'RM', '/src/old.txt']] : []));
@@ -49,9 +49,9 @@ function blockedWorkspace(workspacePath: string, { pending: changed = ['src/old.
     'find changeset': changesetsFound('/main/task1', { id: 2, owner: 'ana' }),
     'find branch': branchExists ? branchFound('/main/task1', 37) : '',
     'diff cs:1 cs:2': diffRecord('D', 'src/old.txt', { revision: 11 }) + alsoIncoming,
-    'status --xml --controlledchanged --changed': pendingChanges,
-    'status --xml --iscochanged': pendingChanges,
-    'status --xml --checkout': pendingStatus(),
+    'status --controlledchanged --changed': pendingChanges,
+    'status --iscochanged': pendingChanges,
+    'status --checkout': pendingStatus(workspacePath),
     'status --short': () => pending.map((path) => `CH ${path}\n`).join(''),
     'shelveset create': async ({ args }) => {
       shelveComment = await readFile(optionValue(args, '-commentsfile=')!, 'utf8');

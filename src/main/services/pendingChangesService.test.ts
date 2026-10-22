@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { OperationProgress } from '@shared/domain/operation';
 import type { PendingChangesFilter } from '@shared/domain/pendingChanges';
 import { CmError } from '../cm/CmError';
+import { statusRecordsArgs } from '../cm/pendingChangesRecords';
 import { change, pendingStatus } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { OperationTracker } from '../operations/OperationTracker';
@@ -25,8 +26,6 @@ function pendingChanges(answers: Record<string, CmAnswer>, operations?: Operatio
   return { ...fake, service: createPendingChangesService(context, {} as SwitchContext), operations: context.operations };
 }
 
-const STATUS_XML = pendingStatus(change('CH', 'src/player.cs'));
-
 // As the server formats ITEMS_ALREADY_LOCKED: the header, then one line per item.
 const LOCKED_OUTPUT = 'These items are exclusively checked out by: \n/art/Hero.fbx (wk:ana-wk owner:ana)\n';
 
@@ -40,19 +39,32 @@ const NO_FILTER: PendingChangesFilter = {
 };
 
 describe('pending changes list', () => {
-  it('reads the pending changes with one local cm status in the workspace', async () => {
-    const { service, commands } = pendingChanges({ status: STATUS_XML });
+  it('reads the pending changes with one local cm status in the workspace, as records read as they arrive', async () => {
+    const { service, commands } = pendingChanges({ status: pendingStatus(WORKSPACE, change('CH', 'src/player.cs')) });
 
     const snapshot = await service.list(WORKSPACE, NO_FILTER);
 
     expect(commands).toMatchObject([
       {
         via: 'query',
-        line: 'status --xml --iscochanged --changelists --controlledchanged --changed --localdeleted',
+        args: statusRecordsArgs('--iscochanged', '--changelists', '--controlledchanged', '--changed', '--localdeleted'),
         options: { cwd: WORKSPACE },
+        readsRecords: true,
       },
     ]);
     expect(snapshot.changes.map((change) => [change.path, change.kinds])).toEqual([['src/player.cs', ['changed']]]);
+  });
+
+  it("reads each file's size and date from the disk, which cm status records don't hold, and none of a deleted one", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'uvcs-pending-'));
+    await writeFile(join(workspace, 'new.txt'), 'twelve bytes');
+    const { service } = pendingChanges({ status: pendingStatus(workspace, change('PR', 'new.txt'), change('LD', 'gone.txt')) });
+
+    const { changes } = await service.list(workspace, NO_FILTER);
+
+    expect(changes[0]).toMatchObject({ path: 'new.txt', size: 12 });
+    expect(Date.parse(changes[0]!.lastModified)).toBeGreaterThan(0);
+    expect(changes[1]).toEqual({ path: 'gone.txt', kinds: ['locallyDeleted'], itemType: 'file', size: 0, lastModified: '' });
   });
 });
 

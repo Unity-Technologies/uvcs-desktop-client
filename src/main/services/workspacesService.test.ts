@@ -4,7 +4,8 @@ import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { WebContents } from 'electron';
-import { change, formatOutput, machineReadableStatusHeader, statusHeader, UNITY_ORGANIZATION } from '../cm/testing/cmOutput';
+import { statusRecordsArgs } from '../cm/pendingChangesRecords';
+import { change, formatOutput, machineReadableStatusHeader, pendingStatus, statusHeader, UNITY_ORGANIZATION } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { UPDATE_ARGS } from '../cm/updateArgs';
 import { runForCaller } from '../ipc/caller';
@@ -289,20 +290,24 @@ describe('other workspaces', () => {
     ]);
   });
 
-  it("glances at another workspace's branch and pending changes with one local cm status, in any directory", async () => {
-    const withChanges = STATUS_HEADER.replace('</StatusOutput>', `<Changes>${change('CH', 'a.cs')}</Changes></StatusOutput>`);
-    const { service, commands } = workspaces({ status: withChanges });
+  it("glances at another workspace's branch and pending changes with two local cm status, in any directory", async () => {
+    const { service, commands } = workspaces({ 'status --header --xml': STATUS_HEADER, status: pendingStatus(WORKSPACE, change('CH', 'a.cs')) });
 
     expect(await service.glance(WORKSPACE)).toEqual({ selector: { kind: 'branch', name: '/main/task1' }, pendingCount: 1 });
-    expect(commands).toMatchObject([{ via: 'query', args: ['status', '--xml', WORKSPACE] }]);
-    expect(commands[0]?.options).toEqual({ anyDirectory: true });
+    expect(commands.map(({ via, args, options }) => ({ via, args, options }))).toEqual([
+      { via: 'query', args: ['status', '--header', '--xml', WORKSPACE], options: { anyDirectory: true } },
+      { via: 'query', args: statusRecordsArgs(WORKSPACE), options: { anyDirectory: true } },
+    ]);
   });
 
-  it("glances at a Unity organization's workspace with that one command, as the switcher shows no repository from it", async () => {
-    const { service, commands } = workspaces({ status: statusHeader('/main/task1', { repository: 'game', server: UNITY_ORGANIZATION.byId }) });
+  it("glances at a Unity organization's workspace with those two commands, as the switcher shows no repository from it", async () => {
+    const { service, commands } = workspaces({
+      'status --header --xml': statusHeader('/main/task1', { repository: 'game', server: UNITY_ORGANIZATION.byId }),
+      status: pendingStatus(WORKSPACE),
+    });
 
     expect(await service.glance(WORKSPACE)).toEqual({ selector: { kind: 'branch', name: '/main/task1' }, pendingCount: 0 });
-    expect(commands).toHaveLength(1);
+    expect(commands).toHaveLength(2);
   });
 
   it('tells what every listed workspace works on with one local cm wi each, in a pooled shell in any directory', async () => {

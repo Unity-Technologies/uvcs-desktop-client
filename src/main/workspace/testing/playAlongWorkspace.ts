@@ -12,6 +12,7 @@ import {
   shelvesFound,
   statusHeader,
   WORKSPACE_NAMES,
+  type StatusChange,
 } from '../../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, optionValue, type CmFailure, type FakeCmCommand } from '../../cm/testing/fakeCmClient';
 
@@ -85,13 +86,13 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
   const onDisk = (path: string): string => join(workspacePath, ...path.split('/'));
   const relative = (absolute: string): string => absolute.slice(workspacePath.length + 1).split(/[\\/]/).join('/');
 
-  const statusXml = (): string => {
+  const statusRecords = (): string => {
     const inList = new Set(changelists.flatMap((list) => list.paths));
-    const merge = scenario.mergingFrom ? `(Merge from ${scenario.mergingFrom})` : '';
-    const entries = (paths: string[]): string[] => paths.map((path) => change(pending[path]!, path, { merge }));
+    const merge = scenario.mergingFrom ? `Merge from ${scenario.mergingFrom}` : undefined;
+    const entries = (paths: string[]): StatusChange[] => paths.map((path) => change(pending[path]!, path, { merge }));
     const privates = [...privatePaths].filter((path) => existsSync(onDisk(path))).map((path) => change('PR', path));
     const controlled = Object.keys(pending).filter((path) => pending[path] !== 'PR');
-    return pendingStatusInChangelists([
+    return pendingStatusInChangelists(workspacePath, [
       { name: 'Default', changes: [...entries(controlled.filter((path) => !inList.has(path))), ...privates] },
       ...changelists.map((list) => ({ ...list, changes: entries(list.paths.filter((path) => path in pending)) })),
     ]);
@@ -165,7 +166,8 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
     'find branch': findBranch,
     'find shelve': () =>
       shelvesFound(...[...shelves].filter(([, shelve]) => shelve.comment.startsWith(AUTOMATIC_SHELVE_COMMENT)).map(([id, shelve]) => ({ id, comment: shelve.comment }))),
-    'status --xml': statusXml,
+    // Every `cm status` read of the changes, whatever it asks for.
+    status: statusRecords,
     'status --short': () => Object.entries(pending).filter(([, codes]) => codes !== 'PR').map(([path, codes]) => `${codes} ${path}\n`).join(''),
     'shelveset create': createShelve,
     'shelveset delete': ({ args }) => {

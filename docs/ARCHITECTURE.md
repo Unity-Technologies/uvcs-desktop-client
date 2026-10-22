@@ -43,7 +43,7 @@ you touch:
      done (`WorkspaceWatchers` `onStopped`), and the home folder's once a window opens a workspace and none shows the
      home screen (`showsHomeScreen`) and no window shows a workspace in the home folder itself. Each session is a
      process of about 80 MB, so a query with no `cwd` that answers the same in any directory (`profile list`,
-     `profile delete`, `whoami`, `workspace list`, `status --xml <path>`, `getworkspacefrompath <path>`) says so
+     `profile delete`, `whoami`, `workspace list`, `status <path>`, `getworkspacefrompath <path>`) says so
      (`anyDirectory`) and runs in a workspace a window shows (`shownDirectory`), a ready one first, instead of
      starting the home folder's two; it starts them only when no window shows a workspace. A workspace is shown once
      its window watches it (`CmClient.show`, until `release`), and the first window's for `OPENING_SHOW_MS` from when
@@ -90,8 +90,8 @@ and many people use the same server. Every `cm` command other than local reads (
   process; `execute()` is only for long, streamed or cancellable work. The exception is a local read (`LOCAL_COMMANDS`)
   that has no form for N, which runs once per workspace, never per row of a server list: the home screen's `cm wi`
   of each workspace (`workspaceHeadsReader`, "Home", below), the recent workspaces' `cm status --header` it couldn't
-  tell (`workspaceRepositoryLookup`), and the switcher's `cm status --xml` of each workspace of the same repository
-  (`workspaces.glance`).
+  tell (`workspaceRepositoryLookup`), and the switcher's two `cm status` of each workspace of the same repository, its
+  header and its changes counted (`workspaces.glance`, `readWorkspaceGlance`).
 - **Revisions asked together, one `cm cat` per batch**: every revision read by its spec (`content.read` of a
   `revision` or a `spec`: diffs, History, Incoming, a merge's conflicting files) goes through `RevisionCat`, which
   saves the reads asked together with one `cm cat <spec>;<file> <spec>;<file> …` per batch (`nextCatBatch`,
@@ -240,8 +240,23 @@ and many people use the same server. Every `cm` command other than local reads (
 - **Dates** in `cm find` come in `FIND_DATE_FORMAT` (`--dateformat=o`, ISO 8601 round trip, `findCommand`), which
   also sets how the query's dates are read: a day is spelled `roundTripDate` (`whereClause`). Without it `cm` prints
   the format its client config sets. `cm ls` takes `{date:o}`; it prints `0001-01-01…` for an item with no date.
-- **XML remains** only where `--format` can't say it: `cm status` has none, and `--machinereadable` has neither the
-  changelists nor the merge info (`parsePendingChanges`, `parseWorkspaceStatus`: a local read); `cm history --format`
+- **`cm status` as records**: it has no `--format`, but `--machinereadable` with control-character separators
+  (`statusRecordsArgs`) prints records `RecordReader` reads as they arrive (`PendingChangesReader`): a `STATUS` record,
+  with `--changelists` each `CHLIST <name> <description>` before its changes, each change as `<codes> <path> <is
+  folder> <merges>` (a move `<codes> <similarity> <old path> <path> …`), and `CONFLICT_MARKERS <path>`. 100,000 changes
+  print 9 MB where `--xml` printed 60 MB, in half the time (0.9 s against 1.8 s; 500,000: 46 MB in 4.6 s against
+  300 MB in 9 s, past `MAX_OUTPUT_LENGTH` as one string). A change prints every code of the item at once (`CH+MV`):
+  `listedCodes` reads it as `--xml` listed it (a deleted item is only deleted, an added one only added; an item in no
+  category, a cloaked folder, isn't listed). Its paths are absolute, from the root `cm` keeps, which may differ from the
+  app's in case or composition (`PrintedWorkspacePaths`); an item in several changelists is printed in each, kept in
+  the first; merges are joined by `+` (`Merge from 3+Cherrypick from 7`), shown joined by `, ` as `--xml` did; the
+  similarity comes in `cm`'s culture (`85,5%`). Records hold no size, date or file type: Changes reads the size, the
+  date and whether a file is a link from the disk as the records arrive (`DiskDetails`, a local read; what `--xml`
+  reported was the disk's too), and tells no binary file from a text one (the row's icon follows the file's extension).
+  Only the header stays XML (`parseWorkspaceStatus`): the `STATUS` record names no selector. As `cm ls`'s, its
+  records come in UTF-8 on Windows only from a `cm shell` (`processCommand`, `printsInConsoleCodePage`).
+- **XML remains** only where `--format` can't say it, for answers that stay small: the `cm status` header
+  (`parseWorkspaceStatus`: a local read); `cm history --format`
   has no revision type, which tells text from binary from a directory, and a revision from a move or a removal
   (`itemHistoryArgs`); `cm fileinfo` reads one item or two, where records would save nothing (`parseItemDetails`,
   `removedItemSpec`). XML goes through `parseXml`.
@@ -293,7 +308,7 @@ and many people use the same server. Every `cm` command other than local reads (
   process comes in the console's code page on Windows (437, 850: other scripts become `?`), while a `cm shell` prints
   it in UTF-8, so there a process that prints text (diffs, merges, updates, logs) runs as a `cm shell` of its own
   (`processCommand`, `printsInConsoleCodePage`); only error messages stay in the code page. Windows' CRLF becomes LF before any parser sees the output, and relative paths
-  in `cm status --xml` get forward slashes.
+  in `cm status` get forward slashes.
 - On macOS `cm` reads names decomposed (NFD), as it reports them: local paths go to it so (`inCmPathForm`), or
   `cm checkin` of a composed `é.txt` finds no change. Branch names, queries and server paths are left as written.
 - `cm checkin` first undoes the checkouts whose content is the loaded revision's; with nothing left it prints

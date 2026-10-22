@@ -15,8 +15,8 @@ import { DIFF_FORMAT, parseDiffEntries } from '../cm/diffEntries';
 import { FOUND_CHANGESETS } from '../cm/foundObjects';
 import { equalsCondition, findArgs } from '../cm/findQuery';
 import { readRecords, recordFormat } from '../cm/formatRecords';
-import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { readWorkspaceLoad } from '../cm/workspaceStatus';
+import { readPendingChanges } from '../workspace/readPendingChanges';
 import { findUpdateBlockers, findUpdateConflicts } from './updateCollisions';
 
 const NOTHING_INCOMING: NothingIncoming = { branch: null, changesetCount: 0, countCapped: false, authors: [] };
@@ -82,14 +82,13 @@ export async function readIncomingChanges(cm: CmClient, workspacePath: string): 
   const { summary, changesets, moreChangesets } = await readNewestIncomingChangesets(cm, workspacePath);
   if (!summary.branch || changesets.length === 0) return { ...summary, changesets, moreChangesets, files: [], conflicts: [], blockedPaths: [] };
 
-  const [diffOutput, statusXml] = await Promise.all([
+  const [diffOutput, { changes: local }] = await Promise.all([
     cm.query(['diff', spec.changeset(summary.loadedChangeset), spec.changeset(summary.headChangeset), '--repositorypaths', `--format=${DIFF_FORMAT}`], {
       cwd: workspacePath,
     }),
-    cm.query(['status', '--xml', '--controlledchanged', '--changed'], { cwd: workspacePath }),
+    readPendingChanges(cm, workspacePath, ['--controlledchanged', '--changed']),
   ]);
   const files = parseDiffEntries(diffOutput);
-  const local = parsePendingChanges(statusXml).changes;
 
   return { ...summary, changesets, moreChangesets, files, conflicts: findUpdateConflicts(files, local), blockedPaths: findUpdateBlockers(files, local) };
 }

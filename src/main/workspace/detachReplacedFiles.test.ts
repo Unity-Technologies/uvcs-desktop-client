@@ -7,7 +7,7 @@ import { fakeCmClient } from '../cm/testing/fakeCmClient';
 import { waitForNextSecond } from '../files/nextSecond';
 import { detachReplacedFiles } from './detachReplacedFiles';
 
-const replaced = (path: string, revisionType: 'enTextFile' | 'enSymLink', type = 'RP'): string => pendingStatus(change(type, path, { revisionType }));
+const replaced = (workspacePath: string, path: string, type = 'RP'): string => pendingStatus(workspacePath, change(type, path));
 
 /** A `cm` whose undo puts back the loaded revision with `undo`; `argsAsked` are the arguments of each command, in order. */
 function fakeCm(status: string, undo: () => Promise<void>) {
@@ -33,7 +33,7 @@ describe('detachReplacedFiles', () => {
     const file = join(workspacePath, 'a.txt');
     await writeFile(file, 'teh\n');
     const steps: string[] = [];
-    const { cm, argsAsked } = fakeCm(replaced('a.txt', 'enTextFile'), async () => {
+    const { cm, argsAsked } = fakeCm(replaced(workspacePath, 'a.txt'), async () => {
       // Like cm: the loaded revision, as many bytes as the shelved text.
       await writeFile(file, 'the\n');
       steps.push('undo');
@@ -55,7 +55,7 @@ describe('detachReplacedFiles', () => {
     await mkdir(join(workspacePath, 'src'));
     await writeFile(file, 'kept over the deletion\n');
     // Like cm: undoing the copy takes the file off the disk.
-    const { cm, argsAsked } = fakeCm(replaced('src/f5.txt', 'enTextFile', 'CO+CP'), () => rm(file));
+    const { cm, argsAsked } = fakeCm(replaced(workspacePath, 'src/f5.txt', 'CO+CP'), () => rm(file));
 
     await detachReplacedFiles(cm, workspacePath);
 
@@ -73,7 +73,7 @@ describe('detachReplacedFiles', () => {
     await writeFile(join(workspacePath, 'README.md'), 'readme\n');
     await writeFile(join(workspacePath, 'NOTES.md'), 'notes\n');
     await symlink('NOTES.md', link);
-    const { cm, argsAsked } = fakeCm(replaced('link', 'enSymLink'), async () => {
+    const { cm, argsAsked } = fakeCm(replaced(workspacePath, 'link'), async () => {
       await rm(link);
       await symlink('README.md', link);
     });
