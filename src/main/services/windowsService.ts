@@ -30,5 +30,8 @@ export function createWindowsService({ windows, handedOverDiffs }: ServiceContex
     selectionShown: async (page, seed) => windows.selectionShown(callerId(), page, seed),
     showWorkspaceWindow: async (commandId) => windows.showWorkspaceWindow(callerId(), commandId),
     openPageInWorkspaceWindow: async (page) => windows.openInWorkspaceWindow(callerId(), page),
+    takeLink: async () => windows.takeLink(callerId()),
+    openLinkIn: async (workspacePath, link) => windows.openLinkIn(callerId(), workspacePath, link),
+    shownWorkspaces: async () => windows.shownWorkspaces(),
   };
 }

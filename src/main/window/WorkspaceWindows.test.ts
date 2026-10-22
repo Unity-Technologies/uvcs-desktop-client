@@ -142,6 +142,55 @@ describe('a workspace requested from the OS (recent documents, the command line)
   });
 });
 
+describe('a link opened in a workspace (docs/features/deep-links.md)', () => {
+  const LINK = 'uvcs://acme.unity/repos/game/changesets/12';
+
+  it('goes to the window showing the workspace, which is told, comes forward and takes it once', () => {
+    const { windows, open, shows } = setUp();
+    const game = open();
+    shows(game, GAME);
+    const tools = open();
+    shows(tools, TOOLS);
+
+    expect(windows.openLinkIn(tools.webContents.id, GAME, LINK)).toBe('handedOver');
+    expect(fakeElectron.focused()).toBe(game);
+    expect(game.webContents.sent).toEqual([[EVENT_CHANNEL, 'linkRequested', {}]]);
+    expect(windows.takeLink(game.webContents.id)).toBe(LINK);
+    expect(windows.takeLink(game.webContents.id)).toBeNull();
+  });
+
+  it('is opened by the window asking when it shows the home screen', () => {
+    const { windows, open } = setUp();
+    const home = open();
+
+    expect(windows.openLinkIn(home.webContents.id, GAME, LINK)).toBe('openHere');
+    expect(fakeElectron.windows()).toHaveLength(1);
+  });
+
+  it('opens a new window on the workspace, which takes it, rather than leave the workspace the asking window shows', () => {
+    const { windows, open, shows } = setUp();
+    const tools = open();
+    shows(tools, TOOLS);
+
+    expect(windows.openLinkIn(tools.webContents.id, GAME, LINK)).toBe('handedOver');
+    const [, opened] = fakeElectron.windows();
+    expect(windows.workspaceIn(asBrowserWindow(opened!))).toBe(GAME);
+    expect(windows.takeLink(opened!.webContents.id)).toBe(LINK);
+  });
+
+  it('lists the workspaces shown, the last focused window first', () => {
+    const { windows, open, shows } = setUp();
+    const game = open();
+    shows(game, GAME);
+    open();
+    const tools = open();
+    shows(tools, TOOLS);
+    game.focus();
+
+    expect(windows.shownWorkspaces()).toEqual([GAME, TOOLS]);
+  });
+});
+
 describe('the first window at launch', () => {
   it('reopens the last workspace used', () => {
     const lastUsed = mkdtempSync(join(tmpdir(), 'uvcs-last-'));
