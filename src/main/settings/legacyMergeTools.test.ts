@@ -178,7 +178,7 @@ describe('legacyMergeToolSettings', () => {
     expect(legacyMergeToolSettings(entries, fresh).customMergeTools[0]).toMatchObject({ executable: "/home/o'neil/bin/mytool", args: ['{base}', '{result}'] });
   });
 
-  it('goes no further after the entry for every text file, even one whose tool it can’t read', () => {
+  it('goes no further after the entry for every text file, even one whose tool it can’t read: every other file falls back to the UVCS merge tool, so C# goes to Semantic Merge', () => {
     const imported = legacyMergeToolSettings([text('*', 'notepad "@basefile"'), text('.cs', 'kdiff3 "@output"')], fresh);
     expect(imported.mergeToolRules.map((rule) => rule.toolId)).toEqual(['semantic']);
   });
