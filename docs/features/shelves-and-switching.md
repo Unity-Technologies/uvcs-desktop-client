@@ -8,7 +8,11 @@ How pending changes survive switches, updates and shelving, and how two people s
 `cm switch` only ever runs on a clean workspace (`main/workspace/switchWithChanges.ts`), whatever client.conf's
 `PendingChangesOnSwitchAction` says. The renderer's single entry point is `switchWorkspace`
 (`app/shell/workspaceOperations.ts`): preflight, then ask (or follow the setting) whether to leave the changes or
-bring them along. What the pending changes allow is one rule for the preflight and the switch (`switchApproach`):
+bring them along. The switch's question (`SwitchWithChangesDialog`, `planSwitch` with the `switch` flow) also offers
+undoing them (`SwitchChangesAction` `discard`): never preselected nor a setting, its button reads "Undo & switch" in red
+(`switchButton`), and the main process undoes them as Undo in Changes does (added files stay, private) and switches,
+shelving nothing (`discardChanges`). The new-branch dialog (the `newBranch` flow) doesn't offer it: a new branch is made
+to carry on with the changes. "Review changes" in the question's footer cancels the switch and opens Changes. What the pending changes allow is one rule for the preflight and the switch (`switchApproach`):
 nothing pending switches as is, checkouts without edits are undone without asking, an unfinished merge is refused, and
 anything else is shelved. The main process then shelves them with the official automatic-shelve comment
 (`createAutomaticShelve`), checks the shelve holds them all (`createVerifiedShelve`), records it in the settings
