@@ -125,12 +125,25 @@ describe('a repository link', () => {
     fakeApi.answer('windows.openLinkIn', async () => 'handedOver');
 
     await openLink(CHANGESET_12);
-    vi.mocked(openCreateWorkspaceDialog).mock.calls[0]![0].onCreated(GAME);
-    // What it started settles within the task: the api answers at once.
-    await new Promise((resolve) => setTimeout(resolve));
+    // The dialog calls it as `void`; it hands back what it started, to await here.
+    await (vi.mocked(openCreateWorkspaceDialog).mock.calls[0]![0].onCreated(GAME) as unknown as Promise<void>);
 
     expect(fakeApi.argsOf('windows.openLinkIn')).toEqual([[GAME, CHANGESET_12]]);
     expect(useSession.getState().workspacePath).toBe(TOOLS);
+  });
+
+  it("tells in a toast when the workspace created for it can't take the link", async () => {
+    workspaces({ [TOOLS]: head('tools@acme@unity') }, { current: TOOLS });
+    vi.mocked(offerNewWorkspace).mockResolvedValue(true);
+    fakeApi.answer('repositories.servers', async () => []);
+    fakeApi.answer('windows.openLinkIn', async () => {
+      throw new Error('The window closed');
+    });
+
+    await openLink(CHANGESET_12);
+    await (vi.mocked(openCreateWorkspaceDialog).mock.calls[0]![0].onCreated(GAME) as unknown as Promise<void>);
+
+    expect(shownToasts()).toMatchObject([{ title: "Couldn't open the link" }]);
   });
 
   it("opens a label's diff at its changeset, or says the label isn't there", async () => {
