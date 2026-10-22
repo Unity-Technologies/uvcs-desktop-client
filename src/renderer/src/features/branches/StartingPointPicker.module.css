@@ -1,3 +1,6 @@
+/* The popover's height is bounded: many or long cards scroll rather than being cut off. */
 .choices {
+  min-height: 0;
   padding: var(--space-3);
+  overflow-y: auto;
 }
