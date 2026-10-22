@@ -16,17 +16,14 @@ interface SwitchOption {
   disabledReason?: string;
 }
 
-/**
- * Where the question comes up. Switching prefers leaving the changes, and also offers undoing them; a new branch
- * prefers bringing them, and never offers undoing them: a new branch is made to carry on with them.
- */
+/** Where the question comes up: switching prefers leaving the changes, a new branch bringing them along. */
 export type SwitchFlow = 'switch' | 'newBranch';
 
 export interface SwitchChoice {
   leave: SwitchOption;
   bring: SwitchOption;
-  /** Undoing the changes and switching; only offered when switching. */
-  discard?: SwitchOption;
+  /** Undoing the changes, losing them, then switching. */
+  discard: SwitchOption;
   /** Preselected, never `discard`: losing changes is always the user's explicit choice. Null when neither is possible. */
   defaultAction: PendingChangesAction | null;
 }
@@ -61,9 +58,19 @@ export function planSwitch(preflight: SwitchPreflight, setting: PendingChangesOn
   return { kind: 'ask', choice };
 }
 
+interface PrimaryButton {
+  label: string;
+  variant: ButtonVariant;
+}
+
 /** The primary button of the switch question: undoing the changes says so, in red, as it loses them. */
-export function switchButton(action: SwitchChangesAction | null): { label: string; variant: ButtonVariant } {
+export function switchButton(action: SwitchChangesAction | null): PrimaryButton {
   return action === 'discard' ? { label: 'Undo & switch', variant: 'danger' } : { label: 'Switch', variant: 'primary' };
+}
+
+/** The new-branch dialog's primary button: as `switchButton`, when the workspace is to switch to the new branch. */
+export function createBranchButton(action: SwitchChangesAction | null, switching: boolean): PrimaryButton {
+  return switching && action === 'discard' ? { label: 'Create & undo changes', variant: 'danger' } : { label: 'Create branch', variant: 'primary' };
 }
 
 /** The options for these changes, for a switch or the new-branch dialog. */
@@ -74,8 +81,7 @@ function switchChoice(preflight: SwitchPreflight, flow: SwitchFlow): SwitchChoic
   const other: PendingChangesAction = preferred === 'leave' ? 'bring' : 'leave';
   const enabled = { leave, bring };
   const defaultAction = enabled[preferred].enabled ? preferred : enabled[other].enabled ? other : null;
-  const choice = { leave, bring, defaultAction };
-  return flow === 'switch' ? { ...choice, discard: { enabled: true } } : choice;
+  return { leave, bring, discard: { enabled: true }, defaultAction };
 }
 
 /**
@@ -107,5 +113,5 @@ function option(disabledReason: string | undefined): SwitchOption {
 
 function disableAll(choice: SwitchChoice): SwitchChoice {
   const disabled = { enabled: false };
-  return { ...choice, leave: disabled, bring: disabled, ...(choice.discard && { discard: disabled }), defaultAction: null };
+  return { ...choice, leave: disabled, bring: disabled, discard: disabled, defaultAction: null };
 }

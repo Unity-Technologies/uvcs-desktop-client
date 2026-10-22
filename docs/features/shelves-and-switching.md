@@ -24,15 +24,18 @@ client's) are offered again by the "Welcome back" banner in Changes (`features/l
 automatically on arrival when they apply cleanly (`restoreOnArrival`). Changes still waiting to be brought (conflicts
 left for the merge view) are offered on the target, and as left ones on the source if the user goes back instead.
 
-The switch's question (`SwitchWithChangesDialog`, `planSwitch` with the `switch` flow) also offers undoing the changes
+Both places that ask what happens to the pending changes, the switch's question (`SwitchWithChangesDialog`,
+`planSwitch` with the `switch` flow, which prefers leaving them) and the new-branch dialog (`CreateBranchDialog`, the
+`newBranch` flow, which prefers bringing them), offer the same three options (`PendingChangesChoice`), notes
+(`PendingChangesNotes`) and "Review changes" (`ReviewChangesButton`). The third option undoes the changes
 (`SwitchChangesAction` `discard`). It is never preselected nor a setting (`PendingChangesOnSwitch` is leave or bring),
-its button reads "Undo & switch" in red (`switchButton`), and its notes follow it (`switchNotes`: nothing is shelved,
-locks are released). The main process undoes the changes as Undo in Changes does (added files stay, private) and
-switches, shelving nothing (`discardChanges`). With no shelve, a failure can't put anything back: the error says some
-changes may be undone already and nothing was switched, or that they were undone and the switch didn't finish. The
-new-branch dialog (the `newBranch` flow) doesn't offer it: a new branch is made to carry on with the changes. "Review
-changes", on the left of the question's footer (also when a merge blocks the switch), cancels the switch and opens
-Changes.
+its button reads "Undo & switch" or "Create & undo changes" in red (`switchButton`, `createBranchButton`), and the
+notes follow it (`switchNotes`: nothing is shelved, locks are released). The main process undoes the changes as Undo
+in Changes does (added files stay, private) and switches, shelving nothing (`discardChanges`). With no shelve, a
+failure can't put anything back: the error says some changes may be undone already and nothing was switched, or that
+they were undone and the switch didn't finish. "Review changes", on the left of the footer (also when a merge blocks
+the switch), closes the dialog, doing nothing, and opens Changes. The new-branch dialog's "Start from" is a compact
+list (`OptionCards` `layout="list"`): a radio row per starting point, the chosen one's description once under them.
 
 A code review brings the reviewer its code through the same flows (`reviewedCodeAction`, in the review's menu and its
 page's header): "Switch to this branch" or "Switch to this changeset" is the branch's or changeset's own switch, and

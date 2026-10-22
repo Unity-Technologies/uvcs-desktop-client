@@ -10,7 +10,9 @@ import { TextArea, TextField } from '../../ui/TextField';
 import { createBranchAndSwitch } from './branchOperations';
 import { validateBranchName } from './branchNames';
 import { PendingChangesChoice } from './PendingChangesChoice';
-import { planSwitch, type SwitchPlan } from './switchOptions';
+import { PendingChangesNotes } from './PendingChangesNotes';
+import { ReviewChangesButton } from './ReviewChangesButton';
+import { createBranchButton, planSwitch, switchNotes, type SwitchPlan } from './switchOptions';
 import styles from './CreateBranchDialog.module.css';
 
 export interface NewBranchOrigin {
@@ -64,6 +66,8 @@ function CreateBranchDialog({ workspacePath, origins, onFinish }: CreateBranchDi
   const fullName = topLevel ? `/${name.trim()}` : `${origin.parentBranch}/${name.trim()}`;
   const error = name ? validateBranchName(name.trim()) : undefined;
   const blockedByMerge = switchAfter && pending?.plan.kind === 'blockedByMerge';
+  const asking = switchAfter && pending?.plan.kind === 'ask';
+  const submit = createBranchButton(action, switchAfter);
 
   const create = async (): Promise<void> => {
     if (!name.trim() || error) return;
@@ -86,9 +90,10 @@ function CreateBranchDialog({ workspacePath, origins, onFinish }: CreateBranchDi
       onSubmit={() => void create()}
       footer={
         <>
+          {asking && <ReviewChangesButton dismiss={onClose} />}
           <Button onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="primary" disabled={!name.trim() || Boolean(error)} loading={creating}>
-            Create branch
+          <Button type="submit" variant={submit.variant} disabled={!name.trim() || Boolean(error)} loading={creating}>
+            {submit.label}
           </Button>
         </>
       }
@@ -120,15 +125,18 @@ function CreateBranchDialog({ workspacePath, origins, onFinish }: CreateBranchDi
       <Checkbox label="Top-level branch" checked={topLevel} onChange={setTopLevel} />
       <Checkbox label="Switch the workspace to the new branch" checked={switchAfter} onChange={setSwitchAfter} />
       {switchAfter && pending?.plan.kind === 'ask' && (
-        <PendingChangesChoice
-          source={pending.preflight.sourceName}
-          destination={name.trim() ? fullName : null}
-          choice={pending.plan.choice}
-          count={pending.preflight.pendingCount}
-          value={action}
-          onChange={setAction}
-          heading
-        />
+        <>
+          <PendingChangesChoice
+            source={pending.preflight.sourceName}
+            destination={name.trim() ? fullName : null}
+            choice={pending.plan.choice}
+            count={pending.preflight.pendingCount}
+            value={action}
+            onChange={setAction}
+            heading
+          />
+          <PendingChangesNotes notes={switchNotes(pending.preflight, action)} />
+        </>
       )}
       {blockedByMerge && <p className={styles.note}>You’re in the middle of a merge, so the workspace stays where it is. Check the merge in or undo it to switch.</p>}
     </Dialog>
