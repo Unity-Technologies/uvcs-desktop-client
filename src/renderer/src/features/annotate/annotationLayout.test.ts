@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AnnotationBlock } from './annotationBlocks';
-import { ANNOTATION_LINE_HEIGHT, CODE_PADDING_TOP, lineAtTop, roomAroundShown, scrollTopRevealing } from './annotationLayout';
+import { ANNOTATION_LINE_HEIGHT, CODE_PADDING_TOP, lineAtTop, roomAroundShown, scrollTopRevealing, scrollTopShowingLine } from './annotationLayout';
 
 const changeset = { changesetId: 1, owner: 'ana', date: '2026-01-01T00:00:00Z', branch: '/main', comment: '', isMerge: false };
 const block = (start: number, end: number): AnnotationBlock => ({ start, end, changeset, age: 1 });
@@ -45,5 +45,15 @@ describe('roomAroundShown', () => {
   it('keeps the whole file as room when no block is rendered', () => {
     expect(roomAroundShown(blocks, { first: 0, end: 0 })).toEqual({ above: 0, below: 21 });
     expect(roomAroundShown([], { first: 0, end: 0 })).toEqual({ above: 0, below: 0 });
+  });
+});
+
+describe('scrollTopShowingLine', () => {
+  it("puts a link's line a third of the way down the view", () => {
+    expect(scrollTopShowingLine(101, 600)).toBe(lineTop(100) - 200);
+  });
+
+  it('stays at the top for a line near it', () => {
+    expect(scrollTopShowingLine(2, 600)).toBe(0);
   });
 });

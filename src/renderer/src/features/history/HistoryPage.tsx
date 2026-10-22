@@ -15,6 +15,8 @@ import { SplitPane } from '../../ui/SplitPane';
 import { ViewHeader } from '../../ui/ViewHeader';
 import type { AnnotationHistory } from '../annotate/AnnotationPane';
 import { openChangesetDiff } from '../changesets/changesetOperations';
+import { LineLinksContext, type LineLinks } from '../diff/viewer/lineLinks';
+import { useFocusUntilMoved } from '../diff/viewer/useFocusUntilMoved';
 import { HISTORY_ROW_HEIGHT, HistoryList } from './HistoryList';
 import { historyMenu } from './historyMenu';
 import { historyRowKey, historyRows, revisionRowKey, type HistoryRow } from './historyRows';
@@ -51,6 +53,9 @@ export function HistoryPage({ page }: PageProps<'history'>) {
   });
   const selectedRows = useMemo(() => rows.filter((row) => selection.selection.selected.has(historyRowKey(row))), [rows, selection.selection]);
   const focusedRow = rows.find((row) => historyRowKey(row) === selection.selection.anchor);
+  // A link's lines (`#L42`) show annotated, on the revision the page opened on, until another one is selected.
+  const linkFocus = useFocusUntilMoved(page.focusLines ? { path: page.path, lines: page.focusLines } : null, focusedRow && `${historyRowKey(focusedRow)}:${view}`);
+  const lineLinks = useMemo<LineLinks>(() => ({ focus: view === 'annotate' ? linkFocus : null, publishes: true }), [linkFocus, view]);
 
   const { selectFromPane, selectAnew, walkBackTo } = selection;
   const annotationHistory = useMemo<AnnotationHistory>(
@@ -129,18 +134,20 @@ export function HistoryPage({ page }: PageProps<'history'>) {
           !history || hidesEveryRow(rows.length, filters.visible.length) ? null : rows.length === 0 ? (
             <EmptyState icon={<History size={22} />} title="No history yet" />
           ) : (
-            <RevisionPane
-              path={page.path}
-              history={history}
-              focusedRow={focusedRow}
-              selectedRows={selectedRows}
-              menu={menu}
-              onBack={selection.back}
-              annotationHistory={annotationHistory}
-              otherRepository={otherRepository}
-              view={view}
-              onPickView={setView}
-            />
+            <LineLinksContext.Provider value={lineLinks}>
+              <RevisionPane
+                path={page.path}
+                history={history}
+                focusedRow={focusedRow}
+                selectedRows={selectedRows}
+                menu={menu}
+                onBack={selection.back}
+                annotationHistory={annotationHistory}
+                otherRepository={otherRepository}
+                view={view}
+                onPickView={setView}
+              />
+            </LineLinksContext.Provider>
           )
         }
       />
