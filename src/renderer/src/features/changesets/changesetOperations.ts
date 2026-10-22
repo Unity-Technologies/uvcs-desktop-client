@@ -3,7 +3,7 @@ import type { MergeRequest } from '@shared/domain/merge';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageOf } from '../../app/navigation/pages';
-import { runAction, runRead, runVoidAction } from '../../app/operations/runOperation';
+import { runRead, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByChangesetComment, isAffectedByChangesetMove } from '../../app/refresh/refreshScopes';
 import { switchWorkspace } from '../../app/shell/workspaceOperations';
 import { branchLabel } from '../../lib/branchLabels';
@@ -60,8 +60,9 @@ export async function editChangesetComment(workspacePath: string, changeset: Pic
   if (comment !== undefined) await saveChangesetComment(workspacePath, changeset, comment);
 }
 
-export function saveChangesetComment(workspacePath: string, changeset: Pick<Changeset, 'id'>, comment: string): Promise<void | undefined> {
-  return runAction(workspacePath, "Couldn't update the comment", () => api.changesets.editComment(workspacePath, changeset.id, comment), isAffectedByChangesetComment);
+/** Resolves to whether it saved, so a comment that couldn't be saved stays in its editor. */
+export function saveChangesetComment(workspacePath: string, changeset: Pick<Changeset, 'id'>, comment: string): Promise<boolean> {
+  return runVoidAction(workspacePath, "Couldn't update the comment", () => api.changesets.editComment(workspacePath, changeset.id, comment), isAffectedByChangesetComment);
 }
 
 export async function moveChangesetToBranch(workspacePath: string, changeset: Pick<Changeset, 'id' | 'branch'>): Promise<void> {

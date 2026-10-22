@@ -27,7 +27,7 @@ vi.mock('../branches/BranchPickerDialog', () => ({
 import type { ChangesetInfo } from '@shared/domain/changeset';
 import { answerConfirms, answerPrompts } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
-import { deleteChangeset, diffWithAnotherChangeset, editChangesetComment, mergeChangesetTo, moveChangesetToBranch, readChangesetGuid, revertWorkspaceToChangeset } from './changesetOperations';
+import { deleteChangeset, diffWithAnotherChangeset, editChangesetComment, mergeChangesetTo, moveChangesetToBranch, readChangesetGuid, revertWorkspaceToChangeset, saveChangesetComment } from './changesetOperations';
 
 const ws = '/ws';
 const changeset = { id: 42, branch: '/main/task', comment: 'Old comment' };
@@ -51,6 +51,16 @@ describe('changeset operations', () => {
 
     expect(fakeApi.argsOf('changesets.editComment')).toEqual([[ws, 42, 'New comment']]);
     expect(refreshed()).toEqual(['annotate', 'branchExplorer', 'changesets', 'history']);
+  });
+
+  it('tells whether a comment was saved, so an unsaved one stays in its editor', async () => {
+    fakeApi.answer('changesets.editComment', () => {
+      throw new Error('offline');
+    });
+    expect(await saveChangesetComment(ws, changeset, 'New comment')).toBe(false);
+
+    fakeApi.answer('changesets.editComment', () => undefined);
+    expect(await saveChangesetComment(ws, changeset, 'New comment')).toBe(true);
   });
 
   it('saves nothing when the comment editor is cancelled', async () => {
