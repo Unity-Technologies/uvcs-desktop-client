@@ -81,7 +81,10 @@ export function isAffectedByCheckinOrUpdate(key: QueryKey): boolean {
   return !UNTOUCHED_BY_CHECKINS.includes(area(key) as string);
 }
 
-/** A branch was created, deleted, hidden or shown again: the lists of branches, not what the workspace has loaded. */
+/**
+ * A branch was created, deleted, hidden, shown again or described: the lists of branches (the top bar's comment comes
+ * from one), not what the workspace has loaded.
+ */
 export function isAffectedByBranchList(key: QueryKey): boolean {
   return area(key) === 'branches' || area(key) === 'branchExplorer';
 }

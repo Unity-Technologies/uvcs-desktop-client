@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { editedComment, joinComment, looksLikeMarkdown, splitComment, withSummaryText } from './comment';
+import { editedComment, joinComment, looksLikeMarkdown, shownComment, splitComment, withSummaryText } from './comment';
 
 describe('splitComment', () => {
   it('reads the first line as the summary and the rest as the description', () => {
@@ -80,6 +80,30 @@ describe('withSummaryText', () => {
   it('moves what follows a line end into the description, ahead of it', () => {
     expect(withSummaryText({ summary: '', description: 'Body' }, 'Title\r\nPasted line\nAnother')).toEqual({ summary: 'Title', description: 'Pasted line\nAnother\nBody' });
     expect(withSummaryText({ summary: '', description: '' }, 'Title\n')).toEqual({ summary: 'Title', description: '' });
+  });
+});
+
+describe('shownComment', () => {
+  const lastSaved = { saved: 'New comment', replaced: 'Old comment' };
+
+  it('shows the object as it is when nothing was saved', () => {
+    expect(shownComment('Old comment', null)).toBe('Old comment');
+  });
+
+  it('shows the saved comment while the object still says the one it replaced, before the refresh', () => {
+    expect(shownComment('Old comment', lastSaved)).toBe('New comment');
+  });
+
+  it("shows the object's comment once the refresh reads it", () => {
+    expect(shownComment('New comment', lastSaved)).toBe('New comment');
+  });
+
+  it('shows what the object says once it says anything else, as when someone edited it since', () => {
+    expect(shownComment('Their comment', lastSaved)).toBe('Their comment');
+  });
+
+  it('shows a comment removed as empty until the refresh', () => {
+    expect(shownComment('Old comment', { saved: '', replaced: 'Old comment' })).toBe('');
   });
 });
 

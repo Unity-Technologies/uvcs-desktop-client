@@ -13,7 +13,8 @@ interface CommentEditorProps {
   /** The parts the editor opened with: while the draft still reads them, saving leaves the comment as it was. */
   opened: CommentParts;
   onChange: (draft: CommentParts) => void;
-  onSave: (comment: string) => Promise<unknown>;
+  /** Resolves to whether it saved. */
+  onSave: (comment: string) => Promise<boolean>;
   onClose: () => void;
 }
 
@@ -33,7 +34,7 @@ export function CommentEditor({ draft, withSummary, original, opened, onChange, 
       const saved = await onSave(comment);
       setSaving(false);
       // A comment that couldn't be saved stays to try again (the failure shows as a toast).
-      if (saved === false) return;
+      if (!saved) return;
     }
     onClose();
   };
