@@ -10,16 +10,16 @@ How pending changes survive switches, updates and shelving, and how two people s
 (`app/shell/workspaceOperations.ts`): preflight, then ask (or follow the setting) whether to leave the changes or
 bring them along (or, asked, undo them: below). What the pending changes allow is one rule for the preflight and the
 switch (`switchApproach`): nothing pending switches as is, checkouts without edits are undone without asking, an
-unfinished merge is refused, and anything else is shelved, unless the user chose to undo it. The main process then shelves them with the official automatic-shelve comment
-(`createAutomaticShelve`), checks the shelve holds them all (`createVerifiedShelve`), records it in the settings
-(`switchShelves`, built by `newShelveRecord`), undoes, moves added files aside (`moveNewItemsAside`, until the shelve
-brings them back: `putBack`, which never overwrites another item that took a file's place meanwhile; that file stays
-in the app's data folder and the window says so, naming it, with a way to reveal it: `filesKeptAside`,
-`noteKeptAside`), switches, and merges the shelve on the target (bring, `applyShelveCleanly`). Stopping is honoured
-only until the changes are shelved. Failures put the changes back (`rollBackSwitch`), switching back first if the
-switch moved the workspace halfway; when that isn't possible the error says which shelve holds them and where to
-restore them. Every flow that shelves changes out of the workspace (switch, shelve away, update) puts them back the same
-way (`putBackAfterFailure`). Left shelves (the app's and the official
+unfinished merge is refused, and anything else is shelved, unless the user chose to undo it. The main process then
+shelves them with the official automatic-shelve comment (`createAutomaticShelve`), checks the shelve holds them all
+(`createVerifiedShelve`), records it in the settings (`switchShelves`, built by `newShelveRecord`), undoes, moves
+added files aside (`moveNewItemsAside`, until the shelve brings them back: `putBack`, which never overwrites another
+item that took a file's place meanwhile; that file stays in the app's data folder and the window says so, naming it,
+with a way to reveal it: `filesKeptAside`, `noteKeptAside`), switches, and merges the shelve on the target (bring,
+`applyShelveCleanly`). Stopping is honoured only until the changes are shelved. Failures put the changes back
+(`rollBackSwitch`), switching back first if the switch moved the workspace halfway; when that isn't possible the error
+says which shelve holds them and where to restore them. Every flow that shelves changes out of the workspace (switch,
+shelve away, update) puts them back the same way (`putBackAfterFailure`). Left shelves (the app's and the official
 client's) are offered again by the "Welcome back" banner in Changes (`features/leftChanges`), or restored
 automatically on arrival when they apply cleanly (`restoreOnArrival`). Changes still waiting to be brought (conflicts
 left for the merge view) are offered on the target, and as left ones on the source if the user goes back instead.
