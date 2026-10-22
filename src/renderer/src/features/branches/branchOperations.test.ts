@@ -29,7 +29,7 @@ import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
 import { answerConfirms, answerPrompts } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
-import { createBranchAndSwitch, deleteBranches, diffWithAnotherBranch, mergeTo, renameBranch, setBranchesHidden, switchToBranch, type SwitchToNewBranch } from './branchOperations';
+import { createBranchAndSwitch, deleteBranches, diffWithAnotherBranch, mergeTo, renameBranch, saveBranchComment, setBranchesHidden, switchToBranch, type SwitchToNewBranch } from './branchOperations';
 
 const ws = '/ws';
 const branch = (name: string, guid = `guid-${name}`): Branch => ({ id: 1, name, parent: '/main', comment: '', owner: 'ana', date: '', headChangeset: 5, guid, repository: 'game@local' });
@@ -167,6 +167,25 @@ describe('branch operations', () => {
     await renameBranch(ws, branch('/main/task'));
 
     expect(fakeApi.methods()).toEqual([]);
+  });
+
+  it('saves a comment refreshing only the branch lists and the graph, where the top bar reads it too', async () => {
+    fakeApi.answer('branches.editComment', () => undefined);
+    const refreshed = watchRefreshes(ws);
+
+    expect(await saveBranchComment(ws, branch('/main/task'), 'Login screen\n\nWith the new layout')).toBe(true);
+
+    expect(fakeApi.argsOf('branches.editComment')).toEqual([[ws, '/main/task', 'Login screen\n\nWith the new layout']]);
+    expect(refreshed()).toEqual(['branchExplorer', 'branches']);
+  });
+
+  it("tells a comment that couldn't be saved, so it stays in its editor", async () => {
+    fakeApi.answer('branches.editComment', () => {
+      throw commandFailure('You need the changecomment permission');
+    });
+
+    expect(await saveBranchComment(ws, branch('/main/task'), 'Login screen')).toBe(false);
+    expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't update the comment", detail: 'You need the changecomment permission' }]);
   });
 
   it('deletes the branches picked in one call, refreshing only the branch lists and the graph', async () => {

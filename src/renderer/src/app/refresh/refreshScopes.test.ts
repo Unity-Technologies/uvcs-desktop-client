@@ -154,7 +154,7 @@ describe('refresh scopes', () => {
     expect(isAffectedByChangesetMove(key('labels', {}))).toBe(false);
   });
 
-  it('refreshes the branch lists and the Branch Explorer when a branch is created, deleted or hidden', () => {
+  it('refreshes the branch lists and the Branch Explorer when a branch is created, deleted, hidden or described', () => {
     expect(isAffectedByBranchList(key('branches', {}))).toBe(true);
     expect(isAffectedByBranchList(key('branchExplorer', { sinceDate: '2026-08-26' }))).toBe(true);
     expect(isAffectedByBranchList(key('pendingChanges'))).toBe(false);

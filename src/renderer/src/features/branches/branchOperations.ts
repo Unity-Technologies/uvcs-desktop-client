@@ -87,6 +87,11 @@ export async function renameBranch(workspacePath: string, branch: Pick<Branch, '
   await runAction(workspacePath, "Couldn't rename the branch", () => api.branches.rename(workspacePath, branch.name, newName));
 }
 
+/** Resolves to whether it saved, so a comment that couldn't be saved stays in its editor. */
+export function saveBranchComment(workspacePath: string, branch: Pick<Branch, 'name'>, comment: string): Promise<boolean> {
+  return runVoidAction(workspacePath, "Couldn't update the comment", () => api.branches.editComment(workspacePath, branch.name, comment), isAffectedByBranchList);
+}
+
 export async function deleteBranches(workspacePath: string, branches: Pick<Branch, 'name'>[]): Promise<void> {
   const confirmed = await confirm({
     title: branches.length === 1 ? `Delete ${branches[0]!.name}?` : `Delete ${branches.length} branches?`,
