@@ -5,7 +5,7 @@ import type { FocusedLines } from '../../../app/navigation/pages';
 import { forgetSelectedLines, selectLines } from '../selectedLinesStore';
 import type { ChangedLine } from './changeBlocks';
 import { focusIn, LineLinksContext } from './lineLinks';
-import { linkedLinesOf, selectedRangeOf } from './linkedLines';
+import { initialSelectedRange, publishedSelection } from './lineLinkMode';
 import type { LineRange } from './lineSelection';
 
 /** Scrolls the view in `container` to a line, as the view lays its lines out; returns a function that stops it. */
@@ -33,10 +33,7 @@ type SelectionOptions = Pick<FileDiffOptions<undefined, undefined>, 'enableLineS
 export function useLineLinks({ path, selectable, containerRef, shown, scrollTo }: LineLinksOptions) {
   const lineLinks = useContext(LineLinksContext);
   const focusLines = focusIn(lineLinks, path);
-  const [selection, setSelection] = useState<{ path: string; range: LineRange | null }>(() => ({
-    path,
-    range: selectable && focusLines ? selectedRangeOf(focusLines) : null,
-  }));
+  const [selection, setSelection] = useState<{ path: string; range: LineRange | null }>(() => ({ path, range: initialSelectedRange(selectable, focusLines) }));
   const range = selection.path === path ? selection.range : null;
   const latestPath = useRef(path);
   latestPath.current = path;
@@ -44,8 +41,8 @@ export function useLineLinks({ path, selectable, containerRef, shown, scrollTo }
 
   const publishes = selectable && Boolean(lineLinks?.publishes);
   useEffect(() => {
-    if (!publishes) return;
-    selectLines(path, linkedLinesOf(range));
+    const published = publishedSelection(publishes, path, range);
+    if (published !== undefined) selectLines(path, published?.lines ?? null);
   }, [publishes, path, range]);
   useEffect(() => (publishes ? () => forgetSelectedLines(path) : undefined), [publishes, path]);
 

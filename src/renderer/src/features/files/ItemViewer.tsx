@@ -10,6 +10,7 @@ import { FileViewSwitch } from '../annotate/FileViewSwitch';
 import { FileDiffViewer } from '../diff/viewer/FileDiffViewer';
 import { ChangeDiffPanel } from '../pendingChanges/ChangeDiffPanel';
 import { ComparisonTitle } from './ComparisonTitle';
+import type { FileView } from '../annotate/fileView';
 import { useFilesViewStore } from './filesViewStore';
 import { canAnnotateComparison, type ItemComparison } from './itemComparison';
 import { itemRevision } from './itemRevision';
@@ -27,6 +28,14 @@ interface ItemViewerProps {
   listings: ReadonlyMap<string, TreeItem[]>;
   /** The key that switches "Diff | Annotate", where one does (the Files view's commands). */
   viewShortcut?: string;
+  /** "Diff | Annotate" as a page keeps it for itself; else the one every file shares (`useFilesViewStore`). */
+  fileViewChoice?: FileViewChoice;
+}
+
+/** A "Diff | Annotate" choice and how to change it. */
+export interface FileViewChoice {
+  fileView: FileView;
+  setFileView: (view: FileView) => void;
 }
 
 /**
@@ -34,8 +43,9 @@ interface ItemViewerProps {
  * (`itemComparison`), saying what it compares; or, switched with "Diff | Annotate" before that, the file annotated.
  * The tree keeps the keyboard; F6 moves it into the file to scroll it, and F6 or Esc back.
  */
-export function ItemViewer({ workspacePath, item, comparison, comment, listings, viewShortcut }: ItemViewerProps) {
-  const { fileView, setFileView } = useFilesViewStore();
+export function ItemViewer({ workspacePath, item, comparison, comment, listings, viewShortcut, fileViewChoice }: ItemViewerProps) {
+  const shared = useFilesViewStore();
+  const { fileView, setFileView } = fileViewChoice ?? shared;
   // A file with changes is annotated as it is on disk; any other as its revision, read once (a shelve's has none to annotate).
   const revision = comparison.kind === 'changes' ? undefined : itemRevision(item);
   const annotatable = canAnnotateComparison(comparison) && canAnnotate(item.itemType) && revision !== null;

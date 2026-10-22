@@ -13,6 +13,7 @@ import type { EditorHandle } from './editorHandle';
 import { attachesEditor, heldModifiedText, type HeldText } from './editorAttachment';
 import { escapeWhileTyping } from './escapeWhileTyping';
 import { useHighlightWorkers } from './highlightWorkers';
+import { collapsesUnchanged, linesSelectable, shownSelection } from './lineLinkMode';
 import { selectedRangeOf } from './linkedLines';
 import { scrollToLine } from './lineScroll';
 import { useLineLinks } from './useLineLinks';
@@ -160,13 +161,12 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   // A workspace file's diff picks lines of its own, to discard them; any other diff selects them for links.
   const lineLinks = useLineLinks({
     path: fileName,
-    selectable: !onDiscard && !editable,
+    selectable: linesSelectable({ discards: Boolean(onDiscard), editable }),
     containerRef: container,
     shown: canHighlight,
     scrollTo: (element, line) => scrollToLine(element, line, virtualizer),
   });
-  // A link's lines may be unchanged ones, which would be folded away: the file it opened shows them all.
-  const collapseUnchanged = preferences.collapseUnchanged && !lineLinks.focusLines;
+  const collapseUnchanged = collapsesUnchanged(preferences.collapseUnchanged, lineLinks.focusLines);
   // A workspace file's diff marks a link's lines as Pierre's selection until lines are picked to discard.
   const markedLines = useMemo(() => (lineLinks.focusLines ? selectedRangeOf(lineLinks.focusLines) : null), [lineLinks.focusLines]);
   const discard = useBlockDiscard({
@@ -264,7 +264,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
                   key={`${comparisonMethod}:${editable ? 'editable' : 'read-only'}:${highlighting}`}
                   fileDiff={fileDiff}
                   options={options}
-                  selectedLines={discard.selectedLines !== undefined ? discard.selectedLines : lineLinks.selectedLines}
+                  selectedLines={shownSelection(discard.selectedLines, lineLinks.selectedLines)}
                   renderGutterUtility={discard.renderGutterUtility}
                   edit={edit}
                   onEditChange={(event) => onEdit?.(event.editor.getText())}

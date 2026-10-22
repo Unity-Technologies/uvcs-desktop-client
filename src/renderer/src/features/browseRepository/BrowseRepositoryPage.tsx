@@ -16,11 +16,12 @@ import { useFocusUntilMoved } from '../diff/viewer/useFocusUntilMoved';
 import { useExpandedDirectories, useExpandedDirectoriesStore } from '../files/expandedDirectoriesStore';
 import { FileTreeSkeleton, FileTreeTable } from '../files/FileTreeTable';
 import { FILE_TREE_WIDTH } from '../files/fileTreeWidth';
-import { ancestorsOf, buildFileTreeRows } from '../files/fileTreeRows';
-import { useFilesViewStore } from '../files/filesViewStore';
+import { buildFileTreeRows } from '../files/fileTreeRows';
+import type { FileView } from '../annotate/fileView';
 import { ItemDetailsPane } from '../files/ItemDetailsPane';
 import { useTreeListings } from '../files/useTreeListings';
 import { openRevision } from '../history/revisionOperations';
+import { browseOpening } from './browseOpening';
 import { repositoryListingQuery } from './repositoryListing';
 import { revisionMenu } from './revisionMenu';
 
@@ -37,20 +38,20 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
   const [filter, setFilter] = useState('');
   // The field shows each keystroke at once; tens of thousands of open rows are filtered right after.
   const shownFilter = useDeferredValue(filter);
-  const [selection, setSelection] = useState<SelectionState>(() => (page.focusPath ? singleSelection(page.focusPath) : EMPTY_SELECTION));
-  const linkFocus = useFocusUntilMoved(page.focusPath && page.focusLines ? { path: page.focusPath, lines: page.focusLines } : null, selection.anchor ?? undefined);
+  const [opening] = useState(() => browseOpening(page));
+  const [selection, setSelection] = useState<SelectionState>(() => (opening.selected ? singleSelection(opening.selected) : EMPTY_SELECTION));
+  const linkFocus = useFocusUntilMoved(opening.focus, selection.anchor ?? undefined);
   const lineLinks = useMemo<LineLinks>(() => ({ focus: linkFocus, publishes: true }), [linkFocus]);
+  const [ownFileView, setOwnFileView] = useState<FileView | null>(opening.fileView);
+  const fileViewChoice = useMemo(() => (ownFileView ? { fileView: ownFileView, setFileView: setOwnFileView } : undefined), [ownFileView]);
   useEffect(() => {
-    if (!page.focusPath) return;
-    useExpandedDirectoriesStore.getState().expand(treeId, ancestorsOf(page.focusPath));
-    // A file's lines show in its content, which Annotate shows whole: a diff may fold them away, or not have them.
-    if (page.focusLines) useFilesViewStore.getState().setFileView('annotate');
+    if (opening.expand.length > 0) useExpandedDirectoriesStore.getState().expand(treeId, opening.expand);
   }, []);
 
   const { childrenByDirectory, isLoadingRoot, error } = useTreeListings((directory) => repositoryListingQuery(workspacePath, page.changesetId, directory), expanded);
   const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, filter: shownFilter }), [childrenByDirectory, expanded, shownFilter]);
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
-  const [revealPath, setRevealPath] = useState<string | null>(page.focusPath ?? null);
+  const [revealPath, setRevealPath] = useState<string | null>(opening.selected);
   const selectFolder = (path: string): void => {
     setSelection(singleSelection(path));
     setRevealPath(path);
@@ -100,6 +101,7 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
                 menu={revisionMenu(workspacePath, page.changesetId, repository, [focused])}
                 onSelectFolder={selectFolder}
                 listings={childrenByDirectory}
+                fileViewChoice={fileViewChoice}
               />
             </LineLinksContext.Provider>
           ) : (
