@@ -8,6 +8,7 @@ describe('checkinArgs', () => {
       '/wk/link',
       '/wk/src/a.ts',
       '--all',
+      '--dependencies',
       '--private',
       '-commentsfile=/tmp/comment.txt',
       '--machinereadable',
@@ -15,8 +16,9 @@ describe('checkinArgs', () => {
     ]);
   });
 
-  // `--private` adds every private item under each path given, whether the user checked it or not.
+  // `--private` adds every private item under each path given, whether the user checked it or not. `--dependencies`
+  // adds the private and added folders above a path, and nothing else in them.
   it('adds private items only when the user checked one', () => {
-    expect(checkinArgs(['/wk/src/a.ts'], '/tmp/comment.txt', false)).toEqual(['checkin', '/wk/src/a.ts', '--all', '-commentsfile=/tmp/comment.txt', '--machinereadable', '--symlink']);
+    expect(checkinArgs(['/wk/src/a.ts'], '/tmp/comment.txt', false)).toEqual(['checkin', '/wk/src/a.ts', '--all', '--dependencies', '-commentsfile=/tmp/comment.txt', '--machinereadable', '--symlink']);
   });
 });

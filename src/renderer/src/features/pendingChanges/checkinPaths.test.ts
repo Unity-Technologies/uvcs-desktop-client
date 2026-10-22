@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
+import { countCalls } from '@shared/testing/countCalls';
 import { checkinPathsOf } from './checkinPaths';
+
+const none = { pulledIn: [], pullingFolders: [] };
 
 const file = (path: string, kinds: PendingChange['kinds']): PendingChange => ({ path, kinds, itemType: 'file', size: 1, lastModified: '' });
 const folder = (path: string, kinds: PendingChange['kinds']): PendingChange => ({ path, kinds, itemType: 'directory', size: 0, lastModified: '' });
@@ -18,25 +21,33 @@ describe('checkinPathsOf', () => {
   it("leaves out a checked-out xlink holding checked files, so private items it holds don't go in", () => {
     const pending = [rootFile, xlink, inXlink, privateFolder, privateFile, notes];
 
-    expect(checkinPathsOf([rootFile, xlink, inXlink], pending)).toEqual({ paths: ['app/Root.cs', 'devops/src/build/Build.cs'], addsPrivate: false, pulledIn: [] });
+    expect(checkinPathsOf([rootFile, xlink, inXlink], pending)).toEqual({ paths: ['app/Root.cs', 'devops/src/build/Build.cs'], addsPrivate: false, ...none });
   });
 
-  // cm takes along the checkout or the add of the folders above any path it is given.
-  it('leaves out a checked-out or added folder holding checked files, as they take it along', () => {
+  // cm takes along the checkout of the folders above any path it is given, and with `--dependencies` their add.
+  it('leaves out a checked-out, added or private folder holding checked files, as they take it along', () => {
     const checkedOut = folder('src', ['checkedOut']);
     const a = file('src/a.cs', ['checkedOut', 'changed']);
     const b = file('src/b.cs', ['changed']);
     const added = folder('assets', ['added']);
     const icon = file('assets/icon.png', ['added']);
 
-    expect(checkinPathsOf([checkedOut, a, added, icon], [checkedOut, a, b, added, icon])).toEqual({ paths: ['src/a.cs', 'assets/icon.png'], addsPrivate: false, pulledIn: [] });
+    const inner = folder('src/ui', ['checkedOut']);
+    const deep = file('src/ui/menu.cs', ['changed']);
+
+    expect(checkinPathsOf([checkedOut, a, added, icon, inner, deep], [checkedOut, a, b, added, icon, inner, deep])).toEqual({
+      paths: ['src/a.cs', 'assets/icon.png', 'src/ui/menu.cs'],
+      addsPrivate: false,
+      ...none,
+    });
+    expect(checkinPathsOf([privateFolder, privateFile], [privateFolder, privateFile, notes])).toEqual({ paths: ['devops/tools/pub/pub-tests/T.cs'], addsPrivate: true, ...none });
   });
 
   it('gives a checked-out folder checked alone, and says what inside it goes in too', () => {
     const checkedOut = folder('src', ['checkedOut']);
     const b = file('src/b.cs', ['changed']);
 
-    expect(checkinPathsOf([checkedOut], [checkedOut, b])).toEqual({ paths: ['src'], addsPrivate: false, pulledIn: [b] });
+    expect(checkinPathsOf([checkedOut], [checkedOut, b])).toEqual({ paths: ['src'], addsPrivate: false, pulledIn: [b], pullingFolders: ['src'] });
   });
 
   // cm refuses a moved folder's files without it, and takes everything under it with it.
@@ -45,19 +56,38 @@ describe('checkinPathsOf', () => {
     const b = file('lib/b.cs', ['changed']);
     const p = file('lib/p.txt', ['private']);
 
-    expect(checkinPathsOf([moved], [moved, b, p])).toEqual({ paths: ['lib'], addsPrivate: false, pulledIn: [b] });
-    expect(checkinPathsOf([moved, notes], [moved, b, p, notes])).toEqual({ paths: ['lib', 'notes.txt'], addsPrivate: true, pulledIn: [b, p] });
+    expect(checkinPathsOf([moved], [moved, b, p])).toEqual({ paths: ['lib'], addsPrivate: false, pulledIn: [b], pullingFolders: ['lib'] });
+    expect(checkinPathsOf([moved, notes], [moved, b, p, notes])).toEqual({ paths: ['lib', 'notes.txt'], addsPrivate: true, pulledIn: [b, p], pullingFolders: ['lib'] });
   });
 
-  // cm refuses a private file without its private folder ("depend on others that need to be included").
-  it('gives a private folder with its checked files, and says which unchecked ones go in too', () => {
-    const extra = file('devops/tools/pub/pub-tests/U.cs', ['private']);
+  it('gives a deleted, locally moved, or checked-out and moved folder: cm takes none of them along', () => {
+    const gone = folder('old', ['deleted']);
+    const movedHere = folder('tools', ['locallyMoved']);
+    const both = folder('lib', ['checkedOut', 'moved']);
+    const inBoth = file('lib/a.cs', ['changed']);
 
-    expect(checkinPathsOf([privateFolder, privateFile], [privateFolder, privateFile, extra])).toEqual({
-      paths: ['devops/tools/pub/pub-tests', 'devops/tools/pub/pub-tests/T.cs'],
-      addsPrivate: true,
-      pulledIn: [extra],
-    });
+    expect(checkinPathsOf([gone, movedHere, both, inBoth], [gone, movedHere, both, inBoth])).toEqual({ paths: ['old', 'tools', 'lib', 'lib/a.cs'], addsPrivate: false, ...none });
+  });
+
+  it('names the outermost folders that take changes along, once each', () => {
+    const lib = folder('lib', ['moved']);
+    const core = folder('lib/core', ['moved']);
+    const src = folder('src', ['moved']);
+    const pulled = [file('lib/core/a.cs', ['changed']), file('lib/b.cs', ['changed']), file('src/c.cs', ['changed'])];
+
+    expect(checkinPathsOf([lib, core, src], [lib, core, src, ...pulled]).pullingFolders).toEqual(['lib', 'src']);
+  });
+
+  // 20,000 checked files and a folder taking along 20,000 more: one pass, looking up only the folders above each.
+  it('works it out on a big check-in looking up only the folders above each change', () => {
+    const moved = folder('lib', ['moved']);
+    const pulled = Array.from({ length: 20_000 }, (_, at) => file(`lib/level${at % 50}/item${at}.cs`, ['changed']));
+    const checked = Array.from({ length: 20_000 }, (_, at) => file(`app/level${at % 50}/item${at}.cs`, ['changed']));
+
+    const { result, calls } = countCalls(Set.prototype, 'has', () => checkinPathsOf([moved, ...checked], [moved, ...checked, ...pulled]));
+
+    expect(result.pulledIn).toHaveLength(20_000);
+    expect(calls).toBeLessThanOrEqual(40_001 * 8);
   });
 
   it('never says that ignored, cloaked or hidden changes inside a folder go in: cm leaves them out', () => {

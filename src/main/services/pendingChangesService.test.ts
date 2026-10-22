@@ -67,7 +67,7 @@ describe('checkin', () => {
     expect(commands).toHaveLength(1);
     expect(commands[0]).toMatchObject({
       via: 'execute',
-      args: ['checkin', at('src', 'player.cs'), at('assets', 'hero.png'), '--all', '--private', `-commentsfile=${seen.file}`, '--machinereadable', '--symlink'],
+      args: ['checkin', at('src', 'player.cs'), at('assets', 'hero.png'), '--all', '--dependencies', '--private', `-commentsfile=${seen.file}`, '--machinereadable', '--symlink'],
       options: { cwd: WORKSPACE },
     });
     expect(seen.content).toBe('Jump higher\n\nTuned for the new level');
@@ -194,7 +194,7 @@ describe('shelve', () => {
 
     expect(shelveId).toBe(12);
     expect(commands).toMatchObject([
-      { via: 'execute', args: ['shelveset', 'create', at('src', 'a.cs'), '--all', `-commentsfile=${seen.file}`, '--summaryformat'] },
+      { via: 'execute', args: ['shelveset', 'create', at('src', 'a.cs'), '--all', '--dependencies', `-commentsfile=${seen.file}`, '--summaryformat'] },
     ]);
     expect(seen.content).toBe('Half done');
     expect(existsSync(seen.file)).toBe(false);
