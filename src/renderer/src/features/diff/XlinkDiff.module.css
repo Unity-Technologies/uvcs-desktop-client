@@ -4,8 +4,8 @@
   flex-direction: column;
   gap: var(--space-4);
   min-height: 0;
-  max-width: 720px;
-  padding: var(--space-4);
+  /* The pane scrolls whole, its scrollbar at its edge; what it says reads in a column of 720px at most, centered. */
+  padding: var(--space-4) max(var(--space-4), calc((100% - 720px) / 2));
   overflow: auto;
 }
 
