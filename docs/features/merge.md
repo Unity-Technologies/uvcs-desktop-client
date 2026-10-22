@@ -57,7 +57,8 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   fixed, `UNITY_YAML_MERGE_ARGS`) "Unity Editor" (a select: "Newest installed (6000.5.0f1)", then each installed
   version; one gone stays, saying so: `editorOptions`) and "If it can't merge" (`fallbackChoices`). Its menus scroll when long (ARCHITECTURE.md "Long menus scroll"). Save stays off until a rule has a
   file type and the arguments name `{result}` (`saveProblem`); a new rule is added only on Save. No dialog opens over
-  it but "Choose another app…", to add a program.
+  it but "Choose another app…", to add a program, which shows and saves at once, before the list holds it
+  (`withAddedTools`; `savedDraft` keeps an id picked as it is).
 - **No "Automatic" in Settings › Merge.** Every other file's tool and UnityYAMLMerge's fallback store `auto` until one
   is picked (`AUTO_MERGE_TOOL`: "not picked yet"), and the pane and the dialog show the tool it resolves to, the UVCS
   merge tool, else the first found (`resolvedToolId`, `MergeToolList.preferredId`), as the merge page opens it; picking

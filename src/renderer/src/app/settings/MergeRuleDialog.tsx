@@ -1,5 +1,6 @@
 import { Trash2 } from 'lucide-react';
 import { useId, useState } from 'react';
+import type { MergeTool } from '@shared/domain/mergeTools';
 import { addMergeTool, PLACEHOLDER_HINT } from '../../features/merge/mergeTools/CustomMergeToolDialog';
 import { currentSettings, preferMergeTool, removeCustomMergeTool, setMergeToolArgs, useMergeTools } from '../../features/merge/mergeTools/useMergeTools';
 import { formatArgs } from '../../lib/argumentLine';
@@ -21,6 +22,7 @@ import {
   saveProblem,
   toolChoices,
   withRule,
+  withAddedTools,
   withTool,
   type RuleDraft,
   type RuleTarget,
@@ -34,7 +36,9 @@ export function openMergeRuleDialog(target: RuleTarget): void {
 }
 
 function MergeRuleDialog({ target, close }: { target: RuleTarget; close: () => void }) {
-  const list = useMergeTools();
+  // A tool added here shows, and saves, at once: the list holds it only once it's fetched again.
+  const [addedTools, setAddedTools] = useState<MergeTool[]>([]);
+  const list = withAddedTools(useMergeTools(), addedTools);
   const [draft, setDraft] = useState<RuleDraft>(() => draftOf(target, list));
   const change = (changes: Partial<RuleDraft>): void => setDraft((current) => ({ ...current, ...changes }));
   const fields = draftFields(target, draft, list);
@@ -53,7 +57,9 @@ function MergeRuleDialog({ target, close }: { target: RuleTarget; close: () => v
   };
   const addTool = (pick: (toolId: string) => void) => async (): Promise<void> => {
     const added = await addMergeTool();
-    if (added) pick(added.id);
+    if (!added) return;
+    setAddedTools((current) => [...current, added]);
+    pick(added.id);
   };
   // Removing the tool removes the rows that open in it, this one too: there's nothing left to edit.
   const removeTool = async (toolId: string): Promise<void> => {

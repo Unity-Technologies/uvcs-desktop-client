@@ -12,6 +12,7 @@ import {
   savedDraft,
   saveProblem,
   toolChoices,
+  withAddedTools,
   withRule,
   withTool,
   type RuleDraft,
@@ -149,6 +150,19 @@ describe('saving', () => {
     expect(argsToSave(draftFields(ruleTarget, draft({}), list))).toBeUndefined();
     expect(argsToSave(draftFields(ruleTarget, draft({ argsText: '{base}  {result}' }), list))).toBeUndefined();
     expect(argsToSave(draftFields(ruleTarget, draft({ argsText: '--out {result}' }), list))).toEqual({ tool: list.tools[1], args: ['--out', '{result}'] });
+  });
+
+  it('keeps a tool just added, which the list doesn’t hold yet, showing and saving it as picked', () => {
+    const picked = withTool(draft({}), 'custom:2');
+    const fields = draftFields(ruleTarget, picked, list);
+    expect(fields.shownToolId).toBe('custom:2');
+    expect(savedDraft(ruleTarget, picked, fields).toolId).toBe('custom:2');
+  });
+
+  it('holds the tools added in the dialog until the list does', () => {
+    const added = tool('custom:2', 'New one', { origin: 'custom' });
+    expect(withAddedTools(list, [added]).tools.map((each) => each.id)).toEqual(['uvcs', 'semantic', 'vscode', 'custom:1', 'custom:2']);
+    expect(withAddedTools({ ...list, tools: [...list.tools, added] }, [added]).tools.filter((each) => each.id === 'custom:2')).toHaveLength(1);
   });
 
   it('stores a rule’s real tool, and leaves every other file’s `auto` alone until one is picked', () => {

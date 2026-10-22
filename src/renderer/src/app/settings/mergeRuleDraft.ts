@@ -123,7 +123,8 @@ export function resolvedToolId(toolId: string, list: MergeToolList): string | nu
 
 export function draftFields(target: RuleTarget, draft: RuleDraft, list: MergeToolList): DraftFields {
   const rule = target.kind === 'rule';
-  const shownToolId = resolvedToolId(draft.toolId, list);
+  // A rule's own tool shows as picked, found or not (a row whose tool is gone is passed by); only `auto` resolves.
+  const shownToolId = rule && draft.toolId !== AUTO_MERGE_TOOL ? draft.toolId : resolvedToolId(draft.toolId, list);
   const unityYamlMerge = rule && draft.toolId === UNITY_YAML_MERGE_ID;
   const tool = list.tools.find((candidate) => candidate.id === shownToolId);
   const shownFallbackId = resolvedToolId(draft.fallbackToolId, list);
@@ -140,9 +141,18 @@ export function draftFields(target: RuleTarget, draft: RuleDraft, list: MergeToo
   };
 }
 
-/** What Save stores: a rule names the tool shown (a real one); every other file keeps `auto` until one is picked. */
+/**
+ * What Save stores: a rule names a real tool, the one shown when it was still `auto`; any id picked stays as picked,
+ * even one the list doesn't hold yet (a tool just added). Every other file keeps `auto` until one is picked.
+ */
 export function savedDraft(target: RuleTarget, draft: RuleDraft, fields: DraftFields): RuleDraft {
-  return target.kind === 'rule' && fields.shownToolId ? { ...draft, toolId: fields.shownToolId } : draft;
+  return target.kind === 'rule' && draft.toolId === AUTO_MERGE_TOOL && fields.shownToolId ? { ...draft, toolId: fields.shownToolId } : draft;
+}
+
+/** The tools found, with those added from the dialog that the list doesn't hold yet (it's fetched again meanwhile). */
+export function withAddedTools(list: MergeToolList, added: readonly MergeTool[]): MergeToolList {
+  const missing = added.filter((tool) => !list.tools.some((found) => found.id === tool.id));
+  return missing.length === 0 ? list : { ...list, tools: [...list.tools, ...missing] };
 }
 
 /** The arguments to save with the draft: the tool's, when they were edited into something else; none otherwise. */
