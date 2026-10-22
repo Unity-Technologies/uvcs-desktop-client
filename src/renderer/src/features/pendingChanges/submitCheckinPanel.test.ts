@@ -32,7 +32,7 @@ const change = (path: string, kinds: PendingChange['kinds'] = ['checkedOut', 'ch
 const included = [change('src/a.ts'), change('src/b.ts')];
 
 function panelCheckin(overrides: Partial<PanelCheckin> = {}): PanelCheckin {
-  return { workspacePath: ws, included, pendingCount: 3, behind: false, bulkPrivate: null, warnOnEmptyComment: true, ...overrides };
+  return { workspacePath: ws, included, hiddenIncludedCount: 0, pendingCount: 3, behind: false, bulkPrivate: null, warnOnEmptyComment: true, ...overrides };
 }
 
 function writeComment(summary: string, description = ''): void {
@@ -126,7 +126,7 @@ describe('shelveFromPanel', () => {
   it('shelves away with the draft comment, which goes along with the changes', async () => {
     writeComment('Half done');
 
-    expect(await shelveFromPanel(ws, included, false)).toBe(true);
+    expect(await shelveFromPanel({ workspacePath: ws, shelvable: included, hiddenIncludedCount: 0 }, false)).toBe(true);
 
     expect(steps.shelves).toEqual([[ws, included, 'Half done', false]]);
     expect(checkinDraftOf(ws).summary).toBe('');
@@ -135,7 +135,7 @@ describe('shelveFromPanel', () => {
   it('keeps the comment for the check-in when the changes stay here', async () => {
     writeComment('Half done');
 
-    await shelveFromPanel(ws, included, true);
+    await shelveFromPanel({ workspacePath: ws, shelvable: included, hiddenIncludedCount: 0 }, true);
 
     expect(checkinDraftOf(ws).summary).toBe('Half done');
   });
@@ -143,7 +143,7 @@ describe('shelveFromPanel', () => {
   it('shelves nothing while unsaved edits keep it waiting', async () => {
     steps.settled = false;
 
-    expect(await shelveFromPanel(ws, included, false)).toBe(false);
+    expect(await shelveFromPanel({ workspacePath: ws, shelvable: included, hiddenIncludedCount: 0 }, false)).toBe(false);
 
     expect(steps.shelves).toEqual([]);
   });

@@ -108,6 +108,13 @@ describe('checkinDisabledReason', () => {
     expect(checkinDisabledReason('shelve', 1, 3, 3)).toBeNull();
   });
 
+  // Filtered by Changed while only private files are checked: the user did select changes.
+  it('says the filter hides the checked changes when it shows none of them', () => {
+    expect(checkinDisabledReason('checkin', 0, 0, 3, 2)).toBe('The filter hides every checked change');
+    expect(checkinDisabledReason('shelve', 0, 0, 3, 2)).toBe('The filter hides every checked change');
+    expect(checkinDisabledReason('checkin', 1, 1, 3, 2)).toBeNull();
+  });
+
   it('says nothing is pending, or that the changes are still being read', () => {
     expect(checkinDisabledReason('checkin', 0, 0, 0)).toBe('No pending changes');
     expect(checkinDisabledReason('shelve', 0, 0, 0)).toBe('No pending changes');
