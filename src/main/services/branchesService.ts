@@ -51,6 +51,13 @@ export function createBranchesService({ cm, settings, headers }: ServiceContext,
     await cm.query(['branch', 'rename', `br:${branch}`, newName], { cwd: workspacePath });
   }
 
+  /** The comment goes in a file: a `cm shell` line can't carry quotes or line breaks. */
+  function editComment(workspacePath: string, branch: string, comment: string): Promise<void> {
+    return withTempFile(comment, async (commentsFile) => {
+      await cm.query(['branch', 'editcomment', `br:${branch}`, `-commentsfile=${commentsFile}`], { cwd: workspacePath });
+    });
+  }
+
   async function remove(workspacePath: string, branches: string[]): Promise<void> {
     await cm.query(['branch', 'delete', ...branches.map((branch) => `br:${branch}`)], { cwd: workspacePath });
   }
@@ -72,5 +79,5 @@ export function createBranchesService({ cm, settings, headers }: ServiceContext,
     settings.rememberRecentBranch(await workspaceGuid(workspacePath), branchGuid);
   }
 
-  return { list, get, create, rename, delete: remove, setHidden, recent, rememberRecent };
+  return { list, get, create, rename, editComment, delete: remove, setHidden, recent, rememberRecent };
 }

@@ -175,6 +175,26 @@ describe('branch writes', () => {
     expect(existsSync(seen.file)).toBe(false);
   });
 
+  it('replaces a comment with one quick command, the comment in a file deleted afterwards', async () => {
+    const { seen, answer } = readingFileOption('-commentsfile=');
+    const { service, commands } = branches({ 'branch editcomment': answer });
+
+    await service.editComment(WORKSPACE, '/main/task1', 'Fix the "jump" bug\nOn every level');
+
+    expect(commands).toMatchObject([{ via: 'query', args: ['branch', 'editcomment', 'br:/main/task1', `-commentsfile=${seen.file}`], options: { cwd: WORKSPACE } }]);
+    expect(seen.content).toBe('Fix the "jump" bug\nOn every level');
+    expect(existsSync(seen.file)).toBe(false);
+  });
+
+  it('removes a comment by replacing it with an empty one, and deletes the file when cm fails', async () => {
+    const { seen, answer } = readingFileOption('-commentsfile=', cmFails('Error: The branch /main/gone does not exist.'));
+    const { service } = branches({ 'branch editcomment': answer });
+
+    await expect(service.editComment(WORKSPACE, '/main/gone', '')).rejects.toThrow('does not exist');
+    expect(seen.content).toBe('');
+    expect(existsSync(seen.file)).toBe(false);
+  });
+
   it('renames, deletes, hides and unhides with one command for all the branches', async () => {
     const { service, lines } = branches({ branch: '' });
 
