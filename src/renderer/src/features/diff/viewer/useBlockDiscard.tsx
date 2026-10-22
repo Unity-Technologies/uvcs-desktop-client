@@ -9,6 +9,7 @@ import type { ComparisonMethod } from './comparisonMethod';
 import type { DiffLayout } from './diffPreferencesStore';
 import { LineDiscardButton, type HoveredLineStore } from './LineDiscardButton';
 import { lineMarksCss } from './lineMarksCss';
+import type { LineRange } from './lineSelection';
 import { moveGutterUtilityTo } from './pierreDom';
 import { useLineDiscarding, type DiscardRequest } from './useLineDiscarding';
 import { useLinePick } from './useLinePick';
@@ -31,6 +32,8 @@ interface BlockDiscardOptions {
   containerRef: RefObject<HTMLElement | null>;
   onDiscard?: (request: DiscardRequest) => void;
   onUndo?: () => void;
+  /** Lines shown selected while nothing is picked: a link's (`useLineLinks`), which a pick then replaces. */
+  markedLines?: LineRange | null;
 }
 
 type DiscardDiffOptions = Pick<
@@ -56,14 +59,14 @@ const GUTTER_CSS = [
  * change (the diff's navigation, `pickChange`). In the diff, ⌥⌘Z discards the picked lines, ⌘Z undoes the last discard
  * and Esc (or a click elsewhere) drops the pick. The discards themselves: `useLineDiscarding`.
  */
-export function useBlockDiscard({ enabled, diff, texts, typed, comparisonMethod, layout, containerRef, onDiscard, onUndo }: BlockDiscardOptions) {
+export function useBlockDiscard({ enabled, diff, texts, typed, comparisonMethod, layout, containerRef, onDiscard, onUndo, markedLines = null }: BlockDiscardOptions) {
   // The diff on screen, so every block lines up with what is shown.
   const meta = enabled ? diff : null;
   const blocks = useMemo(() => (meta ? listChangeBlocks(meta) : []), [meta]);
   const regions = useStableRegions(blocks);
   const typing = useTypingActivity(containerRef, typed);
   const [hovered] = useState<HoveredLineStore>(() => createStore<ChangedLine | null>(() => null));
-  const pick = useLinePick({ meta, blocks, layout, containerRef });
+  const pick = useLinePick({ meta, blocks, layout, containerRef, marked: markedLines });
   const picked = pick.picked;
   // The pointer's last place over the diff, to find what's under it once the lines move without it.
   const pointer = useRef<{ x: number; y: number } | null>(null);
@@ -139,7 +142,7 @@ export function useBlockDiscard({ enabled, diff, texts, typed, comparisonMethod,
   const pickedLines = picked?.lines ?? null;
   return {
     options,
-    selectedLines: enabled ? (picked?.range ?? null) : undefined,
+    selectedLines: enabled ? (picked?.range ?? markedLines) : undefined,
     renderGutterUtility: actionable
       ? (): ReactNode => <LineDiscardButton hovered={hovered} picked={pickedLines} onPreview={discarding.preview} onDiscard={discarding.discardClicked} />
       : undefined,

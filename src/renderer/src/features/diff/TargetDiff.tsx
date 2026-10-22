@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { DiffTarget } from '@shared/domain/diff';
-import type { DiffSideName } from '../../app/navigation/pages';
+import type { DiffSideName, FocusedLines } from '../../app/navigation/pages';
 import { EmptyState } from '../../ui/EmptyState';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { PathLabel } from '../../components/PathLabel';
@@ -18,13 +18,15 @@ interface TargetDiffProps {
   target: DiffTarget;
   toolbar?: ReactNode;
   focusPath?: string;
+  /** With `focusPath`: the file opens scrolled to these lines, selected (a link's `#L42`). */
+  focusLines?: FocusedLines;
   /** For a branch, the head it's diffed at (see `useDiffEntries`). */
   branchHead?: number;
   /** For a range, its sides named where their specs don't say what they are (two branches' heads). */
   sideNames?: readonly [DiffSideName, DiffSideName];
 }
 
-export function TargetDiff({ target, toolbar, focusPath, branchHead, sideNames }: TargetDiffProps) {
+export function TargetDiff({ target, toolbar, focusPath, focusLines, branchHead, sideNames }: TargetDiffProps) {
   const { data: entries, error } = useDiffEntries(target, { branchHead });
 
   return (
@@ -36,7 +38,7 @@ export function TargetDiff({ target, toolbar, focusPath, branchHead, sideNames }
       {error ? (
         <EmptyState title="Couldn't calculate the differences" description={error.message} />
       ) : (
-        <DiffBrowser key={JSON.stringify(target)} target={target} entries={entries} initialPath={focusPath} />
+        <DiffBrowser key={JSON.stringify(target)} target={target} entries={entries} initialPath={focusPath} initialLines={focusLines} />
       )}
     </DiffFrame>
   );
