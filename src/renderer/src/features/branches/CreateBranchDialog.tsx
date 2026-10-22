@@ -10,7 +10,7 @@ import { createBranchAndSwitch } from './branchOperations';
 import { validateBranchName } from './branchNames';
 import { PendingChangesChoice } from './PendingChangesChoice';
 import { PendingChangesNotes } from './PendingChangesNotes';
-import { ReviewChangesButton } from './ReviewChangesButton';
+import { GoToChangesButton } from './GoToChangesButton';
 import { chosenStartingPoint, startingPointCards, type NewBranchOrigin } from './newBranchOrigins';
 import { StartingPointPicker } from './StartingPointPicker';
 import { newBranchSwitch, planSwitch, switchNotes, type SwitchPlan } from './switchOptions';
@@ -80,7 +80,7 @@ function CreateBranchDialog({ workspacePath, origins, onFinish }: CreateBranchDi
       onSubmit={() => void create()}
       footer={
         <>
-          {question && <ReviewChangesButton dismiss={onClose} />}
+          {question && <GoToChangesButton dismiss={onClose} />}
           <Button onClick={onClose}>Cancel</Button>
           <Button type="submit" variant={submit.variant} disabled={!name.trim() || Boolean(error)} loading={creating}>
             {submit.label}

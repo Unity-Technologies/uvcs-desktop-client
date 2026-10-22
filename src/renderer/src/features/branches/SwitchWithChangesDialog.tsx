@@ -8,7 +8,7 @@ import { askDialog } from '../../ui/dialog/dialogStore';
 import { PendingChangesChoice } from './PendingChangesChoice';
 import { PendingChangesNotes } from './PendingChangesNotes';
 import { pendingChangesPronoun } from './pendingChangesWords';
-import { ReviewChangesButton } from './ReviewChangesButton';
+import { GoToChangesButton } from './GoToChangesButton';
 import { switchButton, switchNotes, type SwitchChoice } from './switchOptions';
 import styles from './SwitchWithChangesDialog.module.css';
 
@@ -49,14 +49,14 @@ function SwitchWithChangesDialog({
       footer={
         inMerge ? (
           <>
-            <ReviewChangesButton dismiss={cancel} />
+            <GoToChangesButton dismiss={cancel} />
             <Button variant="primary" onClick={cancel}>
               Cancel
             </Button>
           </>
         ) : (
           <>
-            <ReviewChangesButton dismiss={cancel} />
+            <GoToChangesButton dismiss={cancel} />
             <Button onClick={cancel}>Cancel</Button>
             <Button type="submit" variant={submit.variant} disabled={!action} autoFocus>
               {submit.label}

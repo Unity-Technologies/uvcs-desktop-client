@@ -27,7 +27,7 @@ left for the merge view) are offered on the target, and as left ones on the sour
 Both places that ask what happens to the pending changes, the switch's question (`SwitchWithChangesDialog`,
 `planSwitch` with the `switch` flow, which prefers leaving them) and the new-branch dialog (`CreateBranchDialog`, the
 `newBranch` flow, which prefers bringing them), offer the same three options (`PendingChangesChoice`), notes
-(`PendingChangesNotes`) and "Go to Changes" (`ReviewChangesButton`). The third option undoes the changes
+(`PendingChangesNotes`) and "Go to Changes" (`GoToChangesButton`). The third option undoes the changes
 (`SwitchChangesAction` `discard`). It is never preselected nor a setting (`PendingChangesOnSwitch` is leave or bring),
 its button reads "Undo & switch" or "Create & undo changes" in red (`switchButton`, `createBranchButton`), and the
 notes follow it (`switchNotes`: nothing is shelved, locks are released). The main process undoes the changes as Undo
