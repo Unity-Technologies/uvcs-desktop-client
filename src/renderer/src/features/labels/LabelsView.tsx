@@ -68,7 +68,7 @@ export function LabelsView() {
   );
   const selected = visible.find((label) => labelKey(label) === selection.anchor);
   useRenameCommand('Labels', 'label', selection.selected.size === 1 ? selected : undefined, (label) => void renameLabel(workspacePath, label));
-  useCopyCommand('Labels', 'Label', selection.selected.size === 1 && selected ? labelCopyTexts(selected) : undefined);
+  useCopyCommand('Labels', 'Label', selection.selected.size === 1 && selected ? labelCopyTexts(workspacePath, selected) : undefined);
   const filtering = isFiltering(filters);
 
   return (

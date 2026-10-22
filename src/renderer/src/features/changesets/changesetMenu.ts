@@ -1,5 +1,6 @@
 import type { ChangesetInfo } from '@shared/domain/changeset';
 import { spec } from '@shared/domain/specs';
+import { linkCopyText } from '../../app/links/linkTo';
 import { navigation } from '../../app/navigation/navigationStore';
 import { openInNewWindow } from '../../app/pageWindow/openInNewWindow';
 import type { MenuEntry } from '../../lib/actions';
@@ -39,6 +40,7 @@ export interface ChangesetMenuContext {
 export function changesetCopyTexts(workspacePath: string, changeset: ChangesetInfo, repository = changeset.repository): CopyTexts {
   return {
     number: String(changeset.id),
+    link: linkCopyText(workspacePath, repository, { object: { kind: 'changeset', id: changeset.id } }),
     spec: spec.changeset(changeset.id),
     fullSpec: repository && `${spec.changeset(changeset.id)}@${repository}`,
     comment: changeset.comment.trim(),

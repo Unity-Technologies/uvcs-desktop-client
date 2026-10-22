@@ -62,7 +62,7 @@ export function BranchesView() {
     [layout, matching, collapsed],
   );
   useRenameCommand('Branches', 'branch', selection.selected.size === 1 ? selected : undefined, (branch) => void renameBranch(workspacePath, branch));
-  useCopyCommand('Branches', 'Branch', selection.selected.size === 1 && selected ? branchCopyTexts(selected) : undefined);
+  useCopyCommand('Branches', 'Branch', selection.selected.size === 1 && selected ? branchCopyTexts(workspacePath, selected) : undefined);
 
   // From the selected branch's head, or else from what the workspace has loaded (nothing listed, a label loaded).
   const newBranch = (): void => {

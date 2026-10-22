@@ -2,6 +2,7 @@ import type { TreeItem } from '@shared/domain/explorer';
 import { otherRepository } from '@shared/domain/repository';
 import { revisionRef } from '@shared/domain/revision';
 import { spec } from '@shared/domain/specs';
+import { linkCopyText } from '../../app/links/linkTo';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
@@ -20,10 +21,14 @@ export function revisionMenu(workspacePath: string, changesetId: number, reposit
   const singleSpec =
     single && (otherRepository(single.repository, repository) ? spec.revision(single) : spec.serverPathAtChangeset(`/${single.path}`, changesetId));
 
+  // The item as it was at the changeset; one under an xlink has no path there to name it by.
+  const singleLink =
+    single && !otherRepository(single.repository, repository) && linkCopyText(workspacePath, repository, { object: { kind: 'changeset', id: changesetId }, page: { kind: 'browse', path: `/${single.path}` } });
+
   return groupedMenu([
     single && menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path, revision: revisionRef(single) })),
     ...(file ? openRevisionEntries((editorId) => openRevision(workspacePath, revisionRef(file), file.name, editorId)) : []),
     file && menuAction('saveAs', () => void saveRevisionAs(workspacePath, revisionRef(file), file.name)),
-    copySubmenu('', { serverPath: items.map((item) => `/${item.path}`).join('\n'), spec: singleSpec }, { count: items.length }),
+    copySubmenu('', { serverPath: items.map((item) => `/${item.path}`).join('\n'), link: singleLink, spec: singleSpec }, { count: items.length }),
   ]);
 }

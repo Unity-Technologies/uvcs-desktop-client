@@ -1,4 +1,4 @@
-import '../testing/fakeWindow';
+import { fakeApi } from '../testing/fakeWindow';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const copied = vi.hoisted(() => [] as { text: string; what: string }[]);
@@ -349,7 +349,8 @@ describe('one menu per object, the same everywhere', () => {
   });
 
   it("a changed file reads the same in a diff, Incoming and a merge, the merge only adding its own", () => {
-    const inDiff = diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [{ path: 'src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39, repository } as never]);
+    // A diff no link names (two branches' heads), as a merge's and Incoming's files have no one object to link to.
+    const inDiff = diffEntryMenu(ws, { kind: 'range', fromSpec: 'br:/main', toSpec: 'cs:5' }, [{ path: 'src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39, repository } as never]);
     expectOnlyAdds(mergeItemMenu([mergeConflict], mergeContext), inDiff);
     expectOnlyAdds(incomingFileMenu([incomingConflictFile], incomingContext), inDiff);
   });
@@ -379,6 +380,7 @@ describe('Copy', () => {
     expect(copyEntries(branchMenu(ws, [branch], '/main'))[0]!.shortcut).toBe('mod+c');
     expect(await copiedBy(branchMenu(ws, [branch], '/main'))).toEqual([
       'Branch name: /main/task',
+      'Branch link: uvcs://local/repos/game/branches/main/task',
       'Branch spec: br:/main/task',
       'Branch full spec: br:/main/task@game@local',
       'Branch comment: The task',
@@ -388,6 +390,7 @@ describe('Copy', () => {
   it('copies a changeset as its number, spec, full spec, comment and GUID', async () => {
     expect(await copiedBy(changesetMenu({ workspacePath: ws }, [changeset]))).toEqual([
       'Changeset number: 5',
+      'Changeset link: uvcs://local/repos/game/changesets/5',
       'Changeset spec: cs:5',
       'Changeset full spec: cs:5@game@local',
       'Changeset comment: Finish feature',
@@ -396,12 +399,13 @@ describe('Copy', () => {
   });
 
   it('copies a label as its name, spec, full spec and comment', async () => {
-    expect(await copiedBy(labelMenu(ws, [label]))).toEqual(['Label name: v1', 'Label spec: lb:v1', 'Label full spec: lb:v1@game@local', 'Label comment: First']);
+    expect(await copiedBy(labelMenu(ws, [label]))).toEqual(['Label name: v1', 'Label link: uvcs://local/repos/game/labels/v1', 'Label spec: lb:v1', 'Label full spec: lb:v1@game@local', 'Label comment: First']);
   });
 
   it('copies a shelve as its number, spec, full spec, comment and GUID', async () => {
     expect(await copiedBy(shelveMenu(ws, [shelve]))).toEqual([
       'Shelve number: 12',
+      'Shelve link: uvcs://local/repos/game/shelves/12',
       'Shelve spec: sh:12',
       'Shelve full spec: sh:12@game@local',
       'Shelve comment: Spike',
@@ -409,8 +413,15 @@ describe('Copy', () => {
     ]);
   });
 
-  it('copies a code review as its number and title', async () => {
-    expect(await copiedBy(codeReviewMenu(ws, [review]))).toEqual(['Code review number: 9', 'Code review title: Review the task']);
+  it("copies a code review as its number, title and link, in the workspace's repository", async () => {
+    fakeApi.answer('workspaces.info', async () => ({ repository: 'game@local' }));
+    expect(await copiedBy(codeReviewMenu(ws, [review]))).toEqual(['Code review number: 9', 'Code review title: Review the task', 'Code review link: uvcs://local/repos/game/code-reviews/9']);
+  });
+
+  it("copies a diff's file as the link to its change there", async () => {
+    fakeApi.answer('workspaces.info', async () => ({ repository: 'game@local' }));
+    const entry = { path: 'src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39, repository } as never;
+    expect(await copiedBy(diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [entry]))).toEqual(['Path: src/a.ts', 'Link: uvcs://local/repos/game/changesets/5/-/files/src/a.ts']);
   });
 
   it('copies files and pending changes as their paths, relative and full', async () => {
@@ -420,11 +431,12 @@ describe('Copy', () => {
   });
 
   it('leaves out what an object has no text for, like an empty comment', () => {
-    expect(copyEntries(branchMenu(ws, [{ ...branch, comment: '' }], '/main')).map((entry) => entry.label)).toEqual(['Name', 'Spec', 'Full spec']);
+    expect(copyEntries(branchMenu(ws, [{ ...branch, comment: '' }], '/main')).map((entry) => entry.label)).toEqual(['Name', 'Link', 'Spec', 'Full spec']);
   });
 
   it('shows what each entry copies next to it', () => {
-    expect(copyEntries(labelMenu(ws, [label])).map((entry) => entry.detail)).toEqual(['v1', 'lb:v1', 'lb:v1@game@local', undefined]);
+    // A link is too long to read beside its label, as a comment is.
+    expect(copyEntries(labelMenu(ws, [label])).map((entry) => entry.detail)).toEqual(['v1', undefined, 'lb:v1', 'lb:v1@game@local', undefined]);
   });
 });
 

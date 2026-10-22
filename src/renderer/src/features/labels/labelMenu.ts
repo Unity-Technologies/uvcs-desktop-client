@@ -1,5 +1,6 @@
 import type { LabelInfo } from '@shared/domain/label';
 import { spec } from '@shared/domain/specs';
+import { linkCopyText } from '../../app/links/linkTo';
 import { openInNewWindow } from '../../app/pageWindow/openInNewWindow';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
@@ -23,9 +24,10 @@ import {
 } from './labelOperations';
 
 /** What a label is copied as, first what ⌘C copies: `v1.0`, `lb:v1.0`, `lb:v1.0@repo@server`, its comment. */
-export function labelCopyTexts(label: Pick<LabelInfo, 'name' | 'comment' | 'repository'>): CopyTexts {
+export function labelCopyTexts(workspacePath: string, label: Pick<LabelInfo, 'name' | 'comment' | 'repository'>): CopyTexts {
   return {
     name: label.name,
+    link: linkCopyText(workspacePath, label.repository, { object: { kind: 'label', name: label.name } }),
     spec: spec.label(label.name),
     fullSpec: label.repository && `${spec.label(label.name)}@${label.repository}`,
     comment: label.comment.trim(),
@@ -51,7 +53,7 @@ export function labelMenu(workspacePath: string, labels: LabelInfo[], place: Men
     single &&
       !place.inBranchExplorer &&
       menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'label', name: single.name, changeset: single.changeset, date: single.date })),
-    single && copySubmenu('Label', labelCopyTexts(single), { shortcut: hotkey('listCopy') }),
+    single && copySubmenu('Label', labelCopyTexts(workspacePath, single), { shortcut: hotkey('listCopy') }),
     single && menuAction('rename', () => void renameLabel(workspacePath, single), { shortcut: hotkey('rename') }),
     single && menuAction('permissions', () => openObjectPermissions(workspacePath, 'label', single)),
     menuAction('delete', () => void deleteLabels(workspacePath, labels), single ? {} : { label: `Delete ${labels.length} labels…` }),

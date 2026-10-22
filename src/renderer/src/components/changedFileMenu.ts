@@ -5,7 +5,7 @@ import { openVersion, saveVersionAs } from '../features/history/revisionOperatio
 import type { MenuEntry } from '../lib/actions';
 import { groupedMenu, type GroupedEntry } from '../lib/menuGroups';
 import { fileNameOf } from '../lib/text';
-import { copySubmenu } from './copyMenu';
+import { copySubmenu, type CopyTexts } from './copyMenu';
 import { openRevisionEntries } from './externalApps/openWithMenu';
 import { menuAction } from './menuWords';
 
@@ -19,6 +19,8 @@ export interface ChangedFile {
   annotation: PageOf<'history'> | null;
   /** The version "Open this revision" and "Save this revision as…" take out of the repository; none for a deleted file or a folder. */
   version: RepositoryVersion | null;
+  /** The link to the file there (a diff's file: docs/features/deep-links.md); none where the list has none to share (a merge). */
+  link?: CopyTexts['link'];
 }
 
 /**
@@ -35,7 +37,7 @@ export function changedFileMenu(workspacePath: string, files: ChangedFile[], add
     single?.annotation && menuAction('annotate', () => navigation.openPage(single.annotation!)),
     ...(version ? openRevisionEntries((editorId) => openVersion(workspacePath, version, fileNameOf(single.path), editorId)) : []),
     version && menuAction('saveAs', () => void saveVersionAs(workspacePath, version, fileNameOf(single!.path))),
-    copySubmenu('', { path: files.map((file) => file.path).join('\n') }, { count: files.length }),
+    copySubmenu('', { path: files.map((file) => file.path).join('\n'), link: single?.link }, { count: files.length }),
     ...added,
   ]);
 }
