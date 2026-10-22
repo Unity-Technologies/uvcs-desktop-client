@@ -118,6 +118,21 @@ describe('a repository link', () => {
     expect(vi.mocked(openCreateWorkspaceDialog).mock.calls[0]![0].repository).toMatchObject({ name: 'game', server: 'ssl://host:8088', spec: 'game@ssl://host:8088' });
   });
 
+  it("opens the link in the workspace created for it as any link opens, never leaving this window's workspace", async () => {
+    workspaces({ [TOOLS]: head('tools@acme@unity') }, { current: TOOLS });
+    vi.mocked(offerNewWorkspace).mockResolvedValue(true);
+    fakeApi.answer('repositories.servers', async () => []);
+    fakeApi.answer('windows.openLinkIn', async () => 'handedOver');
+
+    await openLink(CHANGESET_12);
+    vi.mocked(openCreateWorkspaceDialog).mock.calls[0]![0].onCreated(GAME);
+    // What it started settles within the task: the api answers at once.
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(fakeApi.argsOf('windows.openLinkIn')).toEqual([[GAME, CHANGESET_12]]);
+    expect(useSession.getState().workspacePath).toBe(TOOLS);
+  });
+
   it("opens a label's diff at its changeset, or says the label isn't there", async () => {
     workspaces({ [GAME]: head('game@acme@unity') }, { current: GAME });
     fakeApi.answer('labels.get', async (_path: string, name: string) => (name === 'v1' ? { name: 'v1', changeset: 80 } : null));
