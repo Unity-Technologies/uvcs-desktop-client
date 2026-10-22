@@ -27,13 +27,13 @@ left for the merge view) are offered on the target, and as left ones on the sour
 Both places that ask what happens to the pending changes, the switch's question (`SwitchWithChangesDialog`,
 `planSwitch` with the `switch` flow, which prefers leaving them) and the new-branch dialog (`CreateBranchDialog`, the
 `newBranch` flow, which prefers bringing them), offer the same three options (`PendingChangesChoice`), notes
-(`PendingChangesNotes`) and "Review changes" (`ReviewChangesButton`). The third option undoes the changes
+(`PendingChangesNotes`) and "Go to Changes" (`ReviewChangesButton`). The third option undoes the changes
 (`SwitchChangesAction` `discard`). It is never preselected nor a setting (`PendingChangesOnSwitch` is leave or bring),
 its button reads "Undo & switch" or "Create & undo changes" in red (`switchButton`, `createBranchButton`), and the
 notes follow it (`switchNotes`: nothing is shelved, locks are released). The main process undoes the changes as Undo
 in Changes does (added files stay, private) and switches, shelving nothing (`discardChanges`). With no shelve, a
 failure can't put anything back: the error says some changes may be undone already and nothing was switched, or that
-they were undone and the switch didn't finish. "Review changes", on the left of the footer, closes the dialog, doing
+they were undone and the switch didn't finish. "Go to Changes", on the left of the footer, closes the dialog, doing
 nothing, and opens Changes: in the switch's question also when a merge blocks the switch, in the new-branch dialog
 only while it asks (`newBranchSwitch`, which decides what that dialog shows about switching). The new-branch dialog
 says where the branch starts in its header ("Starts at …"); with several starting points, "Start from" at its top

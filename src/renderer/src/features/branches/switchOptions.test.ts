@@ -104,7 +104,7 @@ describe('newBranchSwitch', () => {
     return { preflight: changes, plan: planSwitch(changes, 'ask', 'newBranch') };
   };
 
-  it('asks about the pending changes, with Review changes, when switching to the new branch', () => {
+  it('asks about the pending changes, with Go to Changes, when switching to the new branch', () => {
     const pending = pendingWith();
     const asked = newBranchSwitch(true, pending, 'discard');
     expect(asked.question).toEqual({ choice: pending.plan.kind === 'ask' ? pending.plan.choice : null, preflight: pending.preflight });
@@ -121,7 +121,7 @@ describe('newBranchSwitch', () => {
     expect(newBranchSwitch(true, { preflight, plan: { kind: 'plain' } }, null)).toEqual({ question: null, blockedByMerge: false, button: created });
   });
 
-  it('stays put during a merge: no question, no Review changes, a plain Create branch', () => {
+  it('stays put during a merge: no question, no Go to Changes, a plain Create branch', () => {
     expect(newBranchSwitch(true, pendingWith({ inMerge: true }), 'discard')).toEqual({ question: null, blockedByMerge: true, button: created });
   });
 });

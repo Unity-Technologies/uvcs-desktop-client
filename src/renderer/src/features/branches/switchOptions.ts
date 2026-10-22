@@ -70,7 +70,7 @@ export function switchButton(action: SwitchChangesAction | null): PrimaryButton 
 
 /** What the new-branch dialog shows about switching to the new branch, from the checkbox, the plan and the choice. */
 export interface NewBranchSwitch {
-  /** The question to ask about the pending changes, and "Review changes" with it; null when there is none. */
+  /** The question to ask about the pending changes, and "Go to Changes" with it; null when there is none. */
   question: { choice: SwitchChoice; preflight: SwitchPreflight } | null;
   /** The workspace stays where it is despite the checkbox: a merge is unfinished. */
   blockedByMerge: boolean;
