@@ -70,6 +70,17 @@ describe('DiskDetails', () => {
     expect(changes.every((change) => change.size > 0)).toBe(true);
   });
 
+  it('reads no more once stopped (the command failed), leaving the reads already started to end', () => {
+    const { readLinkStats, asked, answerAll } = heldLinkStats();
+    const details = new DiskDetails(readLinkStats);
+    for (let index = 0; index < 2_000; index++) details.add(pending(`f${index}.txt`), `/w/f${index}.txt`);
+    details.stop();
+    answerAll();
+    details.add(pending('late.txt'), '/w/late.txt');
+
+    expect(asked).toHaveLength(MAX_READS_AT_ONCE);
+  });
+
   it('reads the disk itself, and leaves a file that vanished meanwhile without details', async () => {
     const folder = await mkdtemp(join(tmpdir(), 'uvcs-disk-details-'));
     const file = join(folder, 'a.txt');
