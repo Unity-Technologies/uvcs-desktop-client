@@ -20,8 +20,8 @@ import { itemDecoration, type ItemDecoration } from './itemDecoration';
 import type { ItemStatus } from './itemStatus';
 import type { PendingLock } from '../pendingChanges/locks/pendingLocks';
 import { isWorkspaceRoot } from './workspaceRoot';
-import { XlinkMark } from './XlinkMark';
 import styles from './FileTreeTable.module.css';
+import { iconTypeOf } from './xlinkItem';
 
 /** Below this width the tree shows names only: a deep path's name needs the room more than its date. */
 const MODIFIED_COLUMN_MIN_WIDTH = 420;
@@ -162,7 +162,7 @@ function NameCell({ row, decoration, lock, changesInside, isCut, onToggle }: Nam
         <span className={styles.chevronSpace} />
       )}
       <ItemRow
-        icon={<ItemIcon itemType={item.itemType} name={item.name} />}
+        icon={<ItemIcon itemType={iconTypeOf(item)} name={item.name} />}
         label={
           // Cut in the middle, as every path is, keeping the extension; the root is named by its workspace.
           <span className={styles.label} data-root={isWorkspaceRoot(item)}>
@@ -171,7 +171,6 @@ function NameCell({ row, decoration, lock, changesInside, isCut, onToggle }: Nam
         }
         extras={
           <>
-            {item.xlink && <XlinkMark xlink={item.xlink} />}
             {lock && <LockMark lock={lock} />}
           </>
         }

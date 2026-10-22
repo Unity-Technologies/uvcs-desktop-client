@@ -136,7 +136,14 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
             <SiblingFinderContext.Provider value={findSibling}>
               <AssetsPointContext.Provider value={findAssetsPoint}>
                 <LineLinksContext.Provider value={lineLinks}>
-                  <EntryDiff workspacePath={workspacePath} entry={focused} reviewMarks={review.marks} />
+                  <EntryDiff
+                    workspacePath={workspacePath}
+                    target={target}
+                    entry={focused}
+                    entries={entries}
+                    onOpen={(entry) => setSelection(singleSelection(diffEntryKey(entry)))}
+                    reviewMarks={review.marks}
+                  />
                 </LineLinksContext.Provider>
               </AssetsPointContext.Provider>
             </SiblingFinderContext.Provider>

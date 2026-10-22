@@ -8,6 +8,7 @@ import { DetailsSection } from '../../ui/DetailsSection';
 import { PropertyList } from '../../ui/PropertyList';
 import { openChangesetDiff } from '../changesets/changesetOperations';
 import { showShelveChanges } from '../shelves/shelveOperations';
+import { xlinkDetailOf } from './xlinkItem';
 
 interface FolderDetailsProps {
   item: TreeItem;
@@ -38,7 +39,7 @@ export function FolderDetails({ item, contents, changesInside, details }: Folder
             value: lastChangeOf(item, otherRepository),
           },
           { label: 'Repository', value: details?.repository },
-          { label: 'Xlink to', value: details?.xlinkTarget },
+          { label: 'Xlink', value: xlinkDetailOf(item, details) },
           { label: 'Under xlink', value: details?.underXlinkTarget },
         ]}
       />

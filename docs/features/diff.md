@@ -50,6 +50,29 @@ immutable.
   no diff opens on a changeset that doesn't exist. While the list is read, or when it couldn't be (said in its
   place), a number typed can still be picked.
 
+## An xlink in a diff
+
+`cm diff` lists a changed xlink with no revision on either side, so there is no content to compare: selecting one
+shows `XlinkDiff` instead of a file diff. It says whether the xlink is writable, the repository it points to, the
+changeset it points to on each side (`cs:17309 → cs:17361`), and the diff's files under it, the ones `cm` lists for
+what the xlinked repository changed; clicking one selects it in the list. An added or deleted xlink shows its one side,
+and one whose target didn't change says what did (it became writable or read-only, or its other settings changed).
+`xlinkDiffView` decides what shows.
+
+Where it points is read once the selection settles on it (`useXlinkSides`, `DiffApi.xlinkSides`): one quick `cm ls`
+of the xlink's folder at each side (`cm ls /<folder> --tree=<point>`, which names the xlink after its target,
+`parseXlinkName`), after one `cm find` when the side is a changeset's parent. A changeset's sides are its parent and
+itself; a range's, its two points; a branch's, where it started (the parent of its first changeset) and its head. A
+branch's diff starts at its common ancestor with its parent (`--integration`), which no read names cheaply: the
+branch's start is the same point unless the branch merged from its parent, so the side is called "Where the branch
+started", not "Before". A shelve's tree and a label's can't be listed (`listsTree`), so there the panel shows only the
+files; `cm ls` reaches through xlinks, so an xlink under another is read as any other. A changeset's or a range's answer is cached as immutable; a branch's is
+re-read as the server lists are (`SLOW_CHANGING_QUERY`).
+
+Not shown: the xlink's branch expansion rules, which only `cm xlink --show` prints, and only for a workspace's own
+xlink. The official client shows the xlink as text in a file diff, rules included; its target changesets are what a
+reader of the diff needs.
+
 ## Reverting a file
 
 A file a changeset's diff changed (the diff page, a details panel's changed files: a changeset's, a label's, a code
