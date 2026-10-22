@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, SlidersHorizontal, Trash2 } from 'lucide-react';
-import { SAME_AS_OTHER_FILES, type MergeTool, type MergeToolList, type MergeToolRule, type SmartMergeTool } from '@shared/domain/mergeTools';
+import { AUTO_MERGE_TOOL, SAME_AS_OTHER_FILES, type MergeTool, type MergeToolList, type MergeToolRule, type SmartMergeTool } from '@shared/domain/mergeTools';
 import { formatFilePatterns, parseFilePatterns } from '../../lib/filePatterns';
 import { SEPARATOR, type MenuEntry } from '../../lib/actions';
 import { automaticChoice, type AutomaticChoice, type PickableApp } from './appPickerChoices';
@@ -8,10 +8,10 @@ import { automaticChoice, type AutomaticChoice, type PickableApp } from './appPi
 export const AUTOMATIC_MERGE_TOOL_RULE = "The UVCS merge tool when it's installed, else the first one found";
 
 /** Every other file's tool: "Automatic", or one picked. */
-export const AUTOMATIC_MERGE_TOOL_CHOICE: AutomaticChoice = automaticChoice(AUTOMATIC_MERGE_TOOL_RULE);
+export const AUTOMATIC_MERGE_TOOL_CHOICE: AutomaticChoice = { ...automaticChoice(AUTOMATIC_MERGE_TOOL_RULE), id: AUTO_MERGE_TOOL };
 
 /** Unity assets Smart Merge can't merge: where every other file opens, or one tool picked. */
-export const SAME_AS_OTHER_FILES_CHOICE: AutomaticChoice = { id: SAME_AS_OTHER_FILES, label: 'Same as others', rule: 'The tool every other file opens in' };
+export const SAME_AS_OTHER_FILES_CHOICE: AutomaticChoice = { id: SAME_AS_OTHER_FILES, label: 'Same as others', rule: 'The tool every other file opens in', coversMissing: false };
 
 export const UNITY_ROW_LABEL = 'Unity scenes, prefabs and assets';
 
@@ -35,10 +35,12 @@ export function pickableTools(tools: MergeTool[]): PickableApp[] {
 
 /**
  * The tool a row's picker shows in use: the one picked, or, for a choice that picks for the user ("Automatic", "Same as
- * other files"), every other file's. None while the one picked isn't found here.
+ * others"), every other file's. None while the one picked isn't found here (but where Automatic stands for it).
  */
 export function toolInUse(list: MergeToolList, choice: string, automatic: AutomaticChoice | null): MergeTool | undefined {
-  return list.tools.find((tool) => tool.id === choice) ?? (automatic ? list.tools.find((tool) => tool.id === list.preferredId) : undefined);
+  const picked = list.tools.find((tool) => tool.id === choice);
+  if (picked || !automatic || (choice !== automatic.id && !automatic.coversMissing)) return picked;
+  return list.tools.find((tool) => tool.id === list.preferredId);
 }
 
 /** What a row is called, in its picker's and menu's labels: its patterns, or "New file type" before it has any. */

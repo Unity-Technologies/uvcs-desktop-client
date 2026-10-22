@@ -21,11 +21,13 @@ export interface AutomaticChoice {
   id: string;
   label: string;
   rule: string;
+  /** An app picked that isn't found here shows as this choice (Automatic); otherwise as itself, "Not found". */
+  coversMissing: boolean;
 }
 
-/** "Automatic", by its rule. */
+/** "Automatic", by its rule: an app picked that's gone shows as it, as the app falls back to it. */
 export function automaticChoice(rule: string): AutomaticChoice {
-  return { id: AUTO_APP, label: 'Automatic', rule };
+  return { id: AUTO_APP, label: 'Automatic', rule, coversMissing: true };
 }
 
 /** One setting's apps, as a drop-down: "Automatic", every app found, and for the editor each file's default app. */
@@ -92,7 +94,8 @@ export function appPickerEntries(choices: AppPickerChoices): MenuEntry[] {
   ]);
 }
 
-/** The automatic choice is made, or the app chosen isn't on offer anymore, so the automatic one is used. */
+/** The automatic choice is made, or the app chosen isn't on offer anymore and shows as it. */
 function isAutomatic({ automatic, choice, apps }: AppPickerChoices): boolean {
-  return automatic !== null && (choice === automatic.id || !apps.some((app) => app.id === choice));
+  if (!automatic) return false;
+  return choice === automatic.id || (automatic.coversMissing && !apps.some((app) => app.id === choice));
 }

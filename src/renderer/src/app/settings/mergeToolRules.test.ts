@@ -64,8 +64,10 @@ describe('toolInUse', () => {
     expect(toolInUse(list, 'others', SAME_AS_OTHER_FILES_CHOICE)?.id).toBe('uvcs');
   });
 
-  it('is none while the tool a row picked isn’t found here', () => {
+  it('is none while the tool a row picked isn’t found here, but where Automatic stands for it', () => {
     expect(toolInUse(list, 'semantic', null)).toBeUndefined();
+    expect(toolInUse(list, 'kdiff3', SAME_AS_OTHER_FILES_CHOICE)).toBeUndefined();
+    expect(toolInUse(list, 'kdiff3', AUTOMATIC_MERGE_TOOL_CHOICE)?.id).toBe('uvcs');
   });
 
   it('gives a new row every other file’s tool, else the first found', () => {
