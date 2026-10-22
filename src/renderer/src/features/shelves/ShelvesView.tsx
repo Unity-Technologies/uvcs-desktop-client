@@ -57,7 +57,7 @@ export function ShelvesView() {
     [shelves, people, me, search],
   );
   const selected = visible.find((shelve) => shelveKey(shelve) === selection.anchor);
-  useCopyCommand('Shelves', 'Shelve', selection.selected.size === 1 && selected ? shelveCopyTexts(selected) : undefined);
+  useCopyCommand('Shelves', 'Shelve', selection.selected.size === 1 && selected ? shelveCopyTexts(workspacePath, selected) : undefined);
 
   return (
     <>

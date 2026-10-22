@@ -1,5 +1,5 @@
 import type { CreateLabelRequest, LabelsApi } from '@shared/api/labels';
-import { findArgs } from '../cm/findQuery';
+import { equalsCondition, findArgs } from '../cm/findQuery';
 import { FOUND_LABELS } from '../cm/foundObjects';
 import { readRecords } from '../cm/formatRecords';
 import { labelCommentArgs } from '../cm/labelCommentArgs';
@@ -11,6 +11,11 @@ export function createLabelsService({ cm }: ServiceContext): LabelsApi {
     async list(workspacePath, filter) {
       const output = await cm.query(findArgs(FOUND_LABELS, filter, 'date desc'), { cwd: workspacePath });
       return readRecords(FOUND_LABELS, output);
+    },
+
+    async get(workspacePath, name) {
+      const output = await cm.query(findArgs(FOUND_LABELS, {}, null, [equalsCondition('name', name)]), { cwd: workspacePath });
+      return readRecords(FOUND_LABELS, output).find((label) => label.name === name) ?? null;
     },
 
     create(workspacePath, request: CreateLabelRequest) {

@@ -11,6 +11,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
 import { DetailsPanelSkeleton } from '../../ui/DetailsPanelSkeleton';
 import { ViewHeader } from '../../ui/ViewHeader';
+import { LineLinksContext } from '../diff/viewer/lineLinks';
 import { usePendingLocks } from '../pendingChanges/locks/usePendingLocks';
 import { usePendingChanges } from '../pendingChanges/usePendingChanges';
 import { useExpandedDirectories, useExpandedDirectoriesStore } from './expandedDirectoriesStore';
@@ -28,6 +29,7 @@ import { ItemDetailsPane } from './ItemDetailsPane';
 import { itemStatus, PendingChangesIndex } from './itemStatus';
 import { GO_TO_FILE_SHORTCUT, useFileCommands } from './useFileCommands';
 import { useCutPasteCommands } from './useCutPasteCommands';
+import { useFilesItemLinks } from './useFilesItemLinks';
 import { useTreeListings } from './useTreeListings';
 import { singleSelection } from '../../lib/selection';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -56,6 +58,7 @@ export function FilesView() {
   const selectedItems = useMemo(() => rows.filter((row) => selection.selected.has(row.item.path)).map((row) => row.item), [rows, selection]);
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
   const focusedMenu = focused ? fileMenu(workspacePath, [focused], pendingIndex, locks) : [];
+  const lineLinks = useFilesItemLinks(workspace, focused, pendingIndex);
 
   const revealRequest = useRevealRequest(workspacePath);
   useEffect(() => {
@@ -139,15 +142,17 @@ export function FilesView() {
           ) : focused && workspace && isWorkspaceRoot(focused) ? (
             <WorkspaceRootDetails workspace={workspace} menu={focusedMenu} />
           ) : focused ? (
-            <ItemDetailsPane
-              workspacePath={workspacePath}
-              item={focused}
-              pendingIndex={pendingIndex}
-              lock={locks.get(focused.path)}
-              menu={focusedMenu}
-              onSelectFolder={selectFolder}
-              listings={childrenByDirectory}
-            />
+            <LineLinksContext.Provider value={lineLinks}>
+              <ItemDetailsPane
+                workspacePath={workspacePath}
+                item={focused}
+                pendingIndex={pendingIndex}
+                lock={locks.get(focused.path)}
+                menu={focusedMenu}
+                onSelectFolder={selectFolder}
+                listings={childrenByDirectory}
+              />
+            </LineLinksContext.Provider>
           ) : (
             <NoSelection noun="file" />
           )

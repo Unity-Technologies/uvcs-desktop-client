@@ -25,6 +25,8 @@ import { RevisionDownloads } from './unity/RevisionDownloads';
 import { CommandLogRelay } from './startup/commandLogRelay';
 import { openFirstWindow, readFirstScreenAhead, type FirstScreenRead } from './startup/firstWindow';
 import { handleLaunchRequests, isTheRunningApp, launchNamesAFolder } from './startup/launchRequests';
+import { receiveLinks, registerAsLinkHandler } from './startup/linkRequests';
+import type { LinkRequests } from './links/LinkRequests';
 import { trackOperations } from './startup/operationTracking';
 import { ignoreOwnCommandWrites } from './startup/ownWrites';
 import { handleQuitting, Quitting } from './startup/quitting';
@@ -113,7 +115,7 @@ const api = createServices({
 });
 const early = new EarlyCalls(apiMethods(api));
 
-function start(launched: Promise<void>, readAhead: FirstScreenRead): void {
+function start(launched: Promise<void>, readAhead: FirstScreenRead, links: LinkRequests): void {
   if (!app.isPackaged) app.dock?.setIcon(DEVELOPMENT_DOCK_ICON);
   sendSettingsChanges(settings, (changed) => sendEvent('settingsChanged', changed));
   void revisionDownloads.removeLeftOvers();
@@ -123,7 +125,11 @@ function start(launched: Promise<void>, readAhead: FirstScreenRead): void {
   handleQuitting(quitting);
   installDockMenu(windows);
   updates.checkPeriodically();
-  const openFirst = (): void => openFirstWindow({ cm, windows, early, settings, commandLog }, readAhead);
+  registerAsLinkHandler();
+  const openFirst = (): void => {
+    openFirstWindow({ cm, windows, early, settings, commandLog }, readAhead);
+    links.windowsOpened();
+  };
   void launched.then(openFirst, openFirst);
   // macOS keeps the app running with no window; clicking the Dock icon then opens the home screen.
   app.on('activate', () => windows.all().length === 0 && windows.open());
@@ -131,9 +137,10 @@ function start(launched: Promise<void>, readAhead: FirstScreenRead): void {
 
 if (isTheRunningApp()) {
   const launched = handleLaunchRequests(windows, (folder) => findWorkspaceRoot(cm, folder));
+  const links = receiveLinks(windows);
   // `cm` doesn't need Electron ready: the first screen's commands run while it gets there.
   const readAhead = readFirstScreenAhead({ cm, windows, early, settings }, launchNamesAFolder());
-  void app.whenReady().then(() => start(launched, readAhead));
+  void app.whenReady().then(() => start(launched, readAhead, links));
 } else {
   app.quit();
 }

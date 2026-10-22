@@ -13,6 +13,7 @@ import { readWorkspaceGlance } from '../cm/workspaceGlance';
 import { workspaceHeadsReader } from '../cm/workspaceHeads';
 import { workspaceRepositoryLookup } from '../cm/workspaceRepositories';
 import { findWorkspaceRoot } from '../cm/workspaceRoot';
+import { locateInWorkspace } from '../links/locateInWorkspace';
 import { CmError } from '../cm/CmError';
 import { checkNewWorkspaceFolder } from '../files/newWorkspaceFolder';
 import { callerId } from '../ipc/caller';
@@ -117,6 +118,7 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
     heads: readHeads,
     findMissing: async (paths) => paths.filter((path) => !existsSync(path)),
     findRoot: (directory) => findWorkspaceRoot(cm, directory),
+    locate: (path) => locateInWorkspace(path, { findRoot: (target) => findWorkspaceRoot(cm, target) }),
     create,
     rename,
     remove,

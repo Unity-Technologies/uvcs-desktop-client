@@ -38,6 +38,8 @@ interface Reopening {
  */
 export class WorkspaceWindows {
   private readonly requested = new Map<number, string>();
+  /** The `uvcs://` link each window was handed and hasn't taken yet (`takeLink`), by web contents id. */
+  private readonly links = new Map<number, string>();
   /** A workspace picked from the Dock or named on the command line before any window existed (it launched the app). */
   private launchRequest: string | null = null;
   /** The window that had the focus last: it keeps it when the session opens again, as the app may quit from the Dock. */
@@ -75,6 +77,7 @@ export class WorkspaceWindows {
     });
     window.on('closed', () => {
       this.requested.delete(viewer);
+      this.links.delete(viewer);
       this.views.delete(viewer);
       if (this.lastFocused === window) this.lastFocused = null;
       this.pageWindowsOf(viewer).forEach((pageWindow) => pageWindow.close());
@@ -260,6 +263,56 @@ export class WorkspaceWindows {
     const workspacePath = this.requested.get(viewer) ?? null;
     this.requested.delete(viewer);
     return workspacePath;
+  }
+
+  /** Hands a window a `uvcs://` link to open (its page takes it: `takeLink`) and brings it forward. */
+  handLink(window: BrowserWindow, link: string): void {
+    this.links.set(window.webContents.id, link);
+    sendEventTo(window.webContents, 'linkRequested', {});
+    focusWindow(window);
+  }
+
+  /** The link the window was handed, once. */
+  takeLink(viewer: number): string | null {
+    const link = this.links.get(viewer) ?? null;
+    this.links.delete(viewer);
+    return link;
+  }
+
+  /**
+   * Opens a link in a workspace (`windows.openLinkIn`): the window showing it takes it; else the caller opens both when
+   * it shows the home screen (`openHere`); else a new window on the workspace takes it. A link never takes a window
+   * away from the workspace it shows.
+   */
+  openLinkIn(caller: number, workspacePath: string, link: string): 'handedOver' | 'openHere' {
+    const showing = this.windowShowing(workspacePath);
+    if (showing) {
+      this.handLink(showing, link);
+      return 'handedOver';
+    }
+    const callerShowsHome = !this.pages.isPageWindow(caller) && this.byViewer(caller) !== undefined && this.shownBy(caller) === undefined;
+    if (callerShowsHome) return 'openHere';
+    this.links.set(this.open(workspacePath).webContents.id, link);
+    return 'handedOver';
+  }
+
+  /** The workspaces the workspace windows show, the last focused window's first. */
+  shownWorkspaces(): string[] {
+    const inFocusOrder = inSessionOrder(this.all(), this.lastFocused).reverse();
+    return [...new Set(inFocusOrder.flatMap((window) => this.workspaceIn(window) ?? []))];
+  }
+
+  /**
+   * Hands a link the OS sent to the window in front (docs/features/deep-links.md, "Opening a link"): the focused
+   * workspace window, the workspace window of a focused page window, else the last one focused or opened, else a new
+   * window on the home screen. Its page finds the workspace the link needs.
+   */
+  openLink(link: string): void {
+    const focused = BrowserWindow.getFocusedWindow();
+    const owner = focused ? this.ownerWindowOf(focused.webContents.id) : undefined;
+    const inFront = owner ?? (focused && !this.pages.isPageWindow(focused.webContents.id) ? focused : undefined);
+    const lastUsed = this.lastFocused && !this.lastFocused.isDestroyed() ? this.lastFocused : this.all().at(-1);
+    this.handLink(inFront ?? lastUsed ?? this.open(), link);
   }
 
   /** Brings the app forward: the last focused window, or a new one when all were closed. */

@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { revisionRef } from '@shared/domain/revision';
 import type { PageProps } from '../../app/navigation/pages';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
@@ -11,17 +11,25 @@ import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { DetailsPanelSkeleton } from '../../ui/DetailsPanelSkeleton';
+import { LineLinksContext, type LineLinks } from '../diff/viewer/lineLinks';
+import { useFocusUntilMoved } from '../diff/viewer/useFocusUntilMoved';
 import { useExpandedDirectories, useExpandedDirectoriesStore } from '../files/expandedDirectoriesStore';
 import { FileTreeSkeleton, FileTreeTable } from '../files/FileTreeTable';
 import { FILE_TREE_WIDTH } from '../files/fileTreeWidth';
 import { buildFileTreeRows } from '../files/fileTreeRows';
+import type { FileView } from '../annotate/fileView';
 import { ItemDetailsPane } from '../files/ItemDetailsPane';
 import { useTreeListings } from '../files/useTreeListings';
 import { openRevision } from '../history/revisionOperations';
+import { browseOpening } from './browseOpening';
+import { publishShownBrowseItem } from './shownBrowseItem';
 import { repositoryListingQuery } from './repositoryListing';
 import { revisionMenu } from './revisionMenu';
 
-/** The repository as it was at a changeset: read-only, no workspace needed. */
+/**
+ * The repository as it was at a changeset: read-only, no workspace needed. Opened on an item (`focusPath`, a link's),
+ * its folders open and it's selected; on a file's lines (`focusLines`), the file shows annotated, scrolled to them.
+ */
 export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
   const workspacePath = useWorkspacePath();
   const repository = useWorkspaceInfo().data?.repository;
@@ -31,12 +39,23 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
   const [filter, setFilter] = useState('');
   // The field shows each keystroke at once; tens of thousands of open rows are filtered right after.
   const shownFilter = useDeferredValue(filter);
-  const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
+  const [opening] = useState(() => browseOpening(page));
+  const [selection, setSelection] = useState<SelectionState>(() => (opening.selected ? singleSelection(opening.selected) : EMPTY_SELECTION));
+  const linkFocus = useFocusUntilMoved(opening.focus, selection.anchor ?? undefined);
+  const lineLinks = useMemo<LineLinks>(() => ({ focus: linkFocus, publishes: true }), [linkFocus]);
+  const [ownFileView, setOwnFileView] = useState<FileView | null>(opening.fileView);
+  const fileViewChoice = useMemo(() => (ownFileView ? { fileView: ownFileView, setFileView: setOwnFileView } : undefined), [ownFileView]);
+  useEffect(() => {
+    if (opening.expand.length > 0) useExpandedDirectoriesStore.getState().expand(treeId, opening.expand);
+  }, []);
 
   const { childrenByDirectory, isLoadingRoot, error } = useTreeListings((directory) => repositoryListingQuery(workspacePath, page.changesetId, directory), expanded);
   const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, filter: shownFilter }), [childrenByDirectory, expanded, shownFilter]);
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
-  const [revealPath, setRevealPath] = useState<string | null>(null);
+  // What the page's link names (its header, ⇧⌘C): the item selected now, not the one it opened on.
+  useEffect(() => publishShownBrowseItem(focused ? { changesetId: page.changesetId, path: focused.path } : null), [page.changesetId, focused?.path]);
+  useEffect(() => () => publishShownBrowseItem(null), []);
+  const [revealPath, setRevealPath] = useState<string | null>(opening.selected);
   const selectFolder = (path: string): void => {
     setSelection(singleSelection(path));
     setRevealPath(path);
@@ -79,13 +98,16 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
           isLoadingRoot ? (
             <DetailsPanelSkeleton />
           ) : focused ? (
-            <ItemDetailsPane
-              workspacePath={workspacePath}
-              item={focused}
-              menu={revisionMenu(workspacePath, page.changesetId, repository, [focused])}
-              onSelectFolder={selectFolder}
-              listings={childrenByDirectory}
-            />
+            <LineLinksContext.Provider value={lineLinks}>
+              <ItemDetailsPane
+                workspacePath={workspacePath}
+                item={focused}
+                menu={revisionMenu(workspacePath, page.changesetId, repository, [focused])}
+                onSelectFolder={selectFolder}
+                listings={childrenByDirectory}
+                fileViewChoice={fileViewChoice}
+              />
+            </LineLinksContext.Provider>
           ) : (
             <NoSelection noun="file" />
           )

@@ -1,7 +1,8 @@
-import { AppWindow, Command as CommandIcon, Info, Keyboard, PanelLeft, RefreshCw, Settings } from 'lucide-react';
+import { AppWindow, Command as CommandIcon, Info, Keyboard, Link, PanelLeft, RefreshCw, Settings } from 'lucide-react';
 import { useMemo } from 'react';
 import { api } from '../../api/client';
 import { openAboutDialog } from '../about/AboutDialog';
+import { askAndOpenLink } from '../links/askAndOpenLink';
 import { openSettingsDialog } from '../settings/SettingsDialog';
 import { checkForUpdates } from '../updates/updateStore';
 import { SIDEBAR_SHORTCUT, toggleSidebar, useSidebarCollapsed } from '../shell/sidebarStore';
@@ -50,6 +51,14 @@ export function useAppCommands(): void {
         keywords: ['window'],
         shortcut: hotkey('newWindow'),
         run: () => void api.windows.openHome(),
+      },
+      {
+        id: 'app.openLink',
+        group: 'App',
+        label: 'Open link…',
+        icon: Link,
+        keywords: ['uvcs', 'plastic', 'url', 'paste'],
+        run: () => void askAndOpenLink(),
       },
       { id: 'app.about', group: 'App', label: 'About Unity Version Control', icon: Info, keywords: ['version'], run: openAboutDialog },
       {

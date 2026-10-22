@@ -1,4 +1,5 @@
 import { app } from 'electron';
+import { isLinkLaunch } from '../links/linkArgument';
 import { handleRecentDocumentRequests } from '../window/recentDocuments';
 import { workspaceArgument } from '../window/workspaceArgument';
 import type { WorkspaceWindows } from '../window/WorkspaceWindows';
@@ -47,7 +48,9 @@ export function launchNamesAFolder(launch: Launch = { argv: process.argv, workin
   return namedFolder(launch) !== null;
 }
 
+/** A later launch's folder, or the app brought forward; a later launch for a link is `receiveLinks`'s. */
 function openLaterLaunchRequest(windows: WorkspaceWindows, findRoot: FindWorkspaceRoot, launch: Launch): void {
+  if (isLinkLaunch(launch.argv)) return;
   const folder = namedFolder(launch);
   if (!folder) {
     windows.focusAny();

@@ -42,6 +42,7 @@ import {
   GitPullRequest,
   GitPullRequestArrow,
   History,
+  Link,
   Layers,
   Lock,
   LockOpen,
@@ -179,6 +180,8 @@ export const MENU_WORDS = {
   history: word('navigate', History, 'View history'),
   annotate: word('navigate', ScanText, 'Annotate'),
   annotateRevision: word('navigate', ScanText, 'Annotate this revision'),
+  // Lines of code (`lineMenu`): who last changed them, as the diff's newer side has them.
+  annotateLine: word('navigate', ScanText),
   // The words name the kind of object picked ("Compare with another branch…").
   compare: word('navigate', GitCompareArrows),
   browse: word('navigate', FolderTree),
@@ -202,6 +205,9 @@ export const MENU_WORDS = {
   // The clipboard: Cut, Copy, Paste, as everywhere.
   cut: word('clipboard', Scissors, 'Cut'),
   copy: word('clipboard', Copy, 'Copy'),
+  // Lines of code (`lineMenu`): a link to them ("Copy link to lines 40–52"), and their text.
+  copyLineLink: word('clipboard', Link),
+  copyLines: word('clipboard', Copy),
   paste: word('clipboard', ClipboardPaste, 'Paste'),
 
   // What it's called, says or is filed under.

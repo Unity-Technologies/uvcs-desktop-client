@@ -1,4 +1,6 @@
 .scroller {
+  /* What sits over the code (the lines' "Copy link" chip) is placed in its scrolled content. */
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow: auto;

@@ -1,5 +1,8 @@
 import type { TreeItem } from '@shared/domain/explorer';
+import { isWritable, repositoryLinkTo } from '../../app/links/linkTo';
 import { navigation } from '../../app/navigation/navigationStore';
+import { queryClient } from '../../app/queryClient';
+import { workspaceInfoQuery } from '../../app/workspace/useWorkspace';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
 import { openOnDiskEntries } from '../../components/externalApps/openWithMenu';
@@ -19,6 +22,7 @@ import {
   targetDirectoryFor,
 } from './fileOperations';
 import { cutAction, pasteAction } from './cutPasteActions';
+import { filesItemLink } from './filesItemLink';
 import { fileMenuTargets, itemViews } from './fileMenuTargets';
 import { useFilesViewStore } from './filesViewStore';
 import type { PendingChangesIndex } from './itemStatus';
@@ -40,6 +44,16 @@ function showAnnotated(workspacePath: string, path: string): void {
   const view = useFilesViewStore.getState();
   view.setFileView('annotate');
   view.requestReveal(workspacePath, path);
+}
+
+/**
+ * The link to an item, on what the workspace is on (`filesItemLink`), from the workspace's info its window already
+ * read; none for an item no link names (private, under an xlink) or before the info is read.
+ */
+export function itemLinkText(workspacePath: string, item: TreeItem): string | null {
+  const workspace = queryClient.getQueryData(workspaceInfoQuery(workspacePath).queryKey);
+  const target = workspace ? filesItemLink(workspace, item) : null;
+  return workspace && target && isWritable(target) ? repositoryLinkTo(workspace.repository, target) : null;
 }
 
 /** Who may check in under the item's path, on every branch (a secured path). */
@@ -75,7 +89,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
     ...(single ? openOnDiskEntries({ path: absolutePath(workspacePath, single.path), isFolder: single.itemType === 'directory' }) : []),
     // Cut and Paste move items into another folder.
     !hasRoot && cutAction(workspacePath, items),
-    itemCopySubmenu(workspacePath, items.map((item) => item.path)),
+    itemCopySubmenu(workspacePath, items.map((item) => item.path), single ? itemLinkText(workspacePath, single) : null),
     pasteAction(workspacePath, items),
     single && !hasRoot && menuAction('rename', () => void renameItem(workspacePath, single), { shortcut: FILE_SHORTCUTS.rename }),
     typedFiles.length > 0 &&

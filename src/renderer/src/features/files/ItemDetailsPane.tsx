@@ -28,7 +28,7 @@ import { ItemBreadcrumb } from './ItemBreadcrumb';
 import { itemComparison } from './itemComparison';
 import { onDiskState, type PendingChangesIndex } from './itemStatus';
 import { itemTypeLabel } from './itemType';
-import { ItemViewer } from './ItemViewer';
+import { ItemViewer, type FileViewChoice } from './ItemViewer';
 import { isWorkspaceRoot } from './workspaceRoot';
 
 /** How the details name what the item is: a folder, a link, or any other file. */
@@ -50,6 +50,8 @@ interface ItemDetailsPaneProps {
   onSelectFolder: (path: string) => void;
   /** The tree's listings, by folder, as opened: a folder's contents, and the files a model needs beside it. */
   listings: ReadonlyMap<string, TreeItem[]>;
+  /** A file's "Diff | Annotate", where the page keeps its own (`ItemViewer`). */
+  fileViewChoice?: FileViewChoice;
 }
 
 /**
@@ -58,7 +60,7 @@ interface ItemDetailsPaneProps {
  * what it holds. The heading follows the selection at once; the viewer and what `cm` is asked once it settles, without
  * remounting, so arrowing through the tree reads and renders no file it passes.
  */
-export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu, onSelectFolder, listings }: ItemDetailsPaneProps) {
+export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu, onSelectFolder, listings, fileViewChoice }: ItemDetailsPaneProps) {
   const shown = useSettledValue(item, item.path);
   const settled = shown.path === item.path;
   const inWorkspace = pendingIndex !== undefined;
@@ -150,7 +152,7 @@ export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu,
         isFile &&
         shownComparison && (
           // Only the Files view switches "Diff | Annotate" with a key: Browse repository has no such command.
-          <ItemViewer workspacePath={workspacePath} item={shown} comparison={shownComparison} comment={comment} listings={listings} viewShortcut={inWorkspace ? hotkey('annotate') : undefined} />
+          <ItemViewer workspacePath={workspacePath} item={shown} comparison={shownComparison} comment={comment} listings={listings} viewShortcut={inWorkspace ? hotkey('annotate') : undefined} fileViewChoice={fileViewChoice} />
         )
       }
     >

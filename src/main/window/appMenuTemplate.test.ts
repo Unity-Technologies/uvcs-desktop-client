@@ -104,9 +104,18 @@ describe('appMenuTemplate', () => {
     expect(opened).toEqual(['bug report', 'feature request']);
   });
 
-  it('goes Home, creates and opens workspaces from File, and leaves updating one to the incoming chip', () => {
+  it('goes Home, creates and opens workspaces and links from File, and leaves updating one to the incoming chip', () => {
     const ids = itemsOf('darwin', 'File').map((item) => item.id).filter(Boolean);
-    expect(ids).toEqual(['app.newWindow', 'app.home', 'workspace.newForTask', 'workspace.open', 'workspace.openInEditor', 'workspace.openTerminal', 'workspace.openInFileManager']);
+    expect(ids).toEqual([
+      'app.newWindow',
+      'app.home',
+      'workspace.newForTask',
+      'workspace.open',
+      'app.openLink',
+      'workspace.openInEditor',
+      'workspace.openTerminal',
+      'workspace.openInFileManager',
+    ]);
   });
 
   it("opens the workspace from File in each OS's file manager", () => {

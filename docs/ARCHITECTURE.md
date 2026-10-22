@@ -28,6 +28,7 @@ you touch:
 | `features/locks.md`                     | Lock rules: where they are edited, and why not in the app                      |
 | `features/permissions.md`               | Permissions: the ACL model, `cm showacl`/`cm acl` quirks, the dialog, where it's reachable |
 | `features/page-windows.md`              | A page (a diff, a history, a review) in a new window: where it's offered, how it belongs to its workspace window, Follow selection |
+| `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 
 ## How a request flows
 
@@ -631,7 +632,9 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   saved (on macOS, every window was closed before quitting), the first window reopens the last workspace used. Development builds start on one home screen, where automated UI checks pick a workspace. A new
   window opens on the home screen. A new window asked to open a workspace
   takes it at start (`system.takeRequestedWorkspace`), as does a folder the installed app is launched with on Windows
-  and Linux (`workspaceArgument`; a second launch hands it to the running app). The first window waits until `cm` has
+  and Linux (`workspaceArgument`; a second launch hands it to the running app). A launch for a `uvcs://` link names no
+  folder: the link goes to the window in front once the first windows opened (`receiveLinks`,
+  features/deep-links.md). The first window waits until `cm` has
   found the workspace holding that folder (`handleLaunchRequests`), which may take longer than Electron takes to start.
   The Window menu lists them; closing the last one keeps the app on macOS, and the Dock icon opens the home screen (its
   menu offers New Window under the recent workspaces, `installDockMenu`); elsewhere it quits.
@@ -919,8 +922,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   Branch Explorer". One exception: the palette's code reviews of a branch have no "Switch to this branch", as its
   searches read reviews without branch names (`listSummaries`; naming them would read every branch,
   `BranchNamesCache`), while changeset and shelve reviews come named (`CodeReviewSummary.target`) and keep it. "Copy ▸" (`copySubmenu`) lists what the object has in one order (name or number, title, paths,
-  spec, full spec with `@repository`, comment, GUID), each with what it copies, and the toast names it ("Branch spec
-  copied"); ⌘C in a list copies its first entry (`useCopyCommand`) unless text is selected. Items that open a dialog
+  its link, spec, full spec with `@repository`, comment, GUID), each with what it copies, and the toast names it ("Branch spec
+  copied"); ⌘C in a list copies its first entry (`useCopyCommand`) unless text is selected, ⇧⌘C a link to what is in
+  front (`useCopyLinkCommand`, features/deep-links.md). Items that open a dialog
   end with "…"; submenus hold real sets of choices, the choice made checked after its label (`checked`), so the icon
   in front stays the item's own (an app's). `menuGrammar.test.ts` checks every builder and every place. A menu's
   content is in a portal, but React bubbles its events to the row its trigger sits in: `ActionDropdownMenu` keeps its

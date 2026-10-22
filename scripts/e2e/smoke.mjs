@@ -1,6 +1,6 @@
 // `npm run e2e`: a light pass over the built app (run `npm run build` first), against the fake `cm` and a workspace
 // in a temp folder (scripts/e2e/README.md). Opens the workspace, visits every view, a diff, a diff in a new window, a
-// model diff, a branch's permissions, the command palette and Settings, switches the theme; fails on any renderer
+// model diff, a branch's permissions, the command palette, a link pasted in it and Settings, switches the theme; fails on any renderer
 // error, any `cm` command the fake doesn't know, or a view that doesn't show. It asserts only that things appear, never
 // pixels or copy. Screenshots go to <tmp>/uvcs-e2e-shots.
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -158,6 +158,14 @@ try {
   await step('Command palette', async () => {
     await window.keyboard.press('ControlOrMeta+K');
     await window.getByRole('dialog').getByRole('combobox').waitFor();
+  });
+  await step('A link pasted in the palette', async () => {
+    // The official client's shape, as people paste what they were sent: it opens the changeset's diff.
+    await window.keyboard.type('plastic://local/repos/demo/changesets/3/diff');
+    await window.getByRole('dialog').getByRole('option', { name: /^Changeset 3/ }).click();
+    await main.getByText('src/player.cs', { exact: true }).first().waitFor();
+    await main.getByRole('button', { name: /^Copy link/ }).waitFor();
+    await window.keyboard.press('ControlOrMeta+K');
   });
   await step('Settings and dark theme', async () => {
     await window.keyboard.press('Escape');

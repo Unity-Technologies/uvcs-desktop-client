@@ -13,6 +13,11 @@ describe('workspaceArgument', () => {
     expect(workspaceArgument(argv, 'C:\\', 'win32')).toBe('\\\\server\\share\\wk');
   });
 
+  it('is nothing for a launch naming a link, which is no folder', () => {
+    expect(workspaceArgument(['C:\\Apps\\uvcs.exe', '--uvcs-link', '--', 'uvcs://local/repos/game'], 'C:\\', 'win32')).toBeNull();
+    expect(workspaceArgument(['/opt/electron', '.', 'uvcs:///home/ana/wk'], '/home/ana', 'linux')).toBeNull();
+  });
+
   it('is nothing when the launch names no folder', () => {
     expect(workspaceArgument(['/opt/uvcs/uvcs-desktop', '--no-sandbox'], '/home/ana', 'linux')).toBeNull();
     expect(workspaceArgument(['C:\\Apps\\uvcs.exe'], 'C:\\', 'win32')).toBeNull();

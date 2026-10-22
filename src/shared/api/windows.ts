@@ -30,4 +30,17 @@ export interface WindowsApi {
   showWorkspaceWindow(commandId?: string): Promise<void>;
   /** From a page window: its workspace window comes forward and opens a page only it shows (a merge: `pageRequested`). */
   openPageInWorkspaceWindow(page: PageWindowPage): Promise<void>;
+  /**
+   * The `uvcs://` link this window was handed (by the OS: `linkRequested`; or by another window, `openLinkIn`), once;
+   * null if none. As written: the page reads it (`parseLink`) and says what's wrong with it.
+   */
+  takeLink(): Promise<string | null>;
+  /**
+   * Opens a link in a workspace (docs/features/deep-links.md, "Opening a link"): a window showing it comes forward and
+   * takes the link (`handedOver`); else this window opens the workspace and the link itself when it shows the home
+   * screen (`openHere`); else a new window opens on the workspace and takes the link (`handedOver`).
+   */
+  openLinkIn(workspacePath: string, link: string): Promise<'handedOver' | 'openHere'>;
+  /** The workspaces the workspace windows show now, the most recently focused one's first. */
+  shownWorkspaces(): Promise<string[]>;
 }

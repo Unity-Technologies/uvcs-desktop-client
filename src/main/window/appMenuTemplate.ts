@@ -64,6 +64,7 @@ export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOpt
         commandItem('&Home', 'app.home', 'CmdOrCtrl+Shift+H', newWindow),
         commandItem('New Workspace for a &Task…', 'workspace.newForTask'),
         commandItem('&Open Another Workspace…', 'workspace.open', 'CmdOrCtrl+Shift+O'),
+        commandItem('Open &Link…', 'app.openLink'),
         separator,
         commandItem('Open in &Editor', 'workspace.openInEditor'),
         commandItem('Open in &Terminal', 'workspace.openTerminal'),

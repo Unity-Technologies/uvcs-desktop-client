@@ -1,0 +1,4 @@
+/* The look of a change's "Revert change" chip, by the lines selected; quiet until hovered. */
+.chip {
+  composes: chip from './ChangeChip.module.css';
+}

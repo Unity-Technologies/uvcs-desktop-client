@@ -1,12 +1,12 @@
 import { CheckCircle2, Link } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { spec } from '@shared/domain/specs';
+import { repositorySpec, spec } from '@shared/domain/specs';
+import { repositoryLinkTo } from '../../app/links/linkTo';
 import { navigation } from '../../app/navigation/navigationStore';
-import { changesetLink } from '../../lib/plasticLink';
 import { Button } from '../../ui/Button';
 import { copyToClipboard } from '../../ui/copyToClipboard';
 import { EmptyState } from '../../ui/EmptyState';
-import type { SuccessMoment } from './successMoment';
+import { successLinkObject, type SuccessMoment } from './successMoment';
 import styles from './SuccessEmptyState.module.css';
 
 interface SuccessEmptyStateProps {
@@ -30,7 +30,7 @@ export function SuccessEmptyState({ moment, repositoryName, server, suggestion }
         ? { kind: 'diff', title: `Changesets ${fromChangeset + 1} to ${changesetId}`, target: { kind: 'range', fromSpec: spec.changeset(fromChangeset), toSpec: spec.changeset(changesetId) } }
         : { kind: 'diff', title: `Changeset ${changesetId}`, target: { kind: 'changeset', changesetId } },
     );
-  const link = changesetLink(repositoryName, server, changesetId, range ? fromChangeset : undefined);
+  const link = repositoryLinkTo(repositorySpec(repositoryName, server), { object: successLinkObject(moment) });
 
   return (
     <div className={styles.moment} role="status">

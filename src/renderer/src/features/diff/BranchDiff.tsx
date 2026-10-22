@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
+import type { FocusedLines } from '../../app/navigation/pages';
 import { avatarColumn, commentColumn, dateColumn, numberColumn } from '../../components/historyColumns';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
@@ -20,10 +21,11 @@ interface BranchDiffProps {
   branchHead?: number;
   /** The file to open on, in the whole branch and in each of its changesets. */
   focusPath?: string;
+  focusLines?: FocusedLines;
 }
 
 /** A branch's changes, either all at once or one changeset at a time. */
-export function BranchDiff({ branch, branchHead, focusPath }: BranchDiffProps) {
+export function BranchDiff({ branch, branchHead, focusPath, focusLines }: BranchDiffProps) {
   const [mode, setMode] = useState<BranchDiffMode>('wholeBranch');
   const modeToggle = (
     <SegmentedControl<BranchDiffMode>
@@ -36,7 +38,7 @@ export function BranchDiff({ branch, branchHead, focusPath }: BranchDiffProps) {
     />
   );
 
-  if (mode === 'wholeBranch') return <TargetDiff target={{ kind: 'branch', branch }} branchHead={branchHead} toolbar={modeToggle} focusPath={focusPath} />;
+  if (mode === 'wholeBranch') return <TargetDiff target={{ kind: 'branch', branch }} branchHead={branchHead} toolbar={modeToggle} focusPath={focusPath} focusLines={focusLines} />;
   return <ChangesetByChangeset branch={branch} toolbar={modeToggle} focusPath={focusPath} />;
 }
 

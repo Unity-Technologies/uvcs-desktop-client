@@ -10,6 +10,8 @@ export interface CreateLabelRequest {
 
 export interface LabelsApi {
   list(workspacePath: string, filter: QueryFilter): Promise<Label[]>;
+  /** One label by its name (a light `cm find`), or null when there is none: a link names labels so. */
+  get(workspacePath: string, name: string): Promise<Label | null>;
   create(workspacePath: string, request: CreateLabelRequest): Promise<void>;
   rename(workspacePath: string, label: string, newName: string): Promise<void>;
   /** Replaces the label's comment; it can't be emptied. */

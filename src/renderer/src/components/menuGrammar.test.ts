@@ -1,4 +1,4 @@
-import '../testing/fakeWindow';
+import { fakeApi } from '../testing/fakeWindow';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const copied = vi.hoisted(() => [] as { text: string; what: string }[]);
@@ -38,6 +38,7 @@ import { mergeItemMenu, type MergeMenuContext } from '../features/merge/mergeIte
 import type { FileConflictState } from '../features/merge/resolve/useFileConflicts';
 import { changelistMenu } from '../features/pendingChanges/changelistMenu';
 import { pendingChangeMenu } from '../features/pendingChanges/pendingChangeMenu';
+import { lineMenu } from '../features/diff/viewer/lineMenu';
 import { shelveMenu } from '../features/shelves/shelveMenu';
 import { syncBranchMenu } from '../features/sync/syncBranchMenu';
 import { isSubmenu, SEPARATOR, withoutAction, type Action, type MenuEntry, type Submenu } from '../lib/actions';
@@ -46,6 +47,7 @@ import { COPY_KINDS } from './copyMenu';
 import { MENU_WORDS, type MenuWord } from './menuWords';
 import { externalAppsKey } from './externalApps/externalApps';
 import { queryClient } from '../app/queryClient';
+import { workspaceInfoQuery } from '../app/workspace/useWorkspace';
 import { DEFAULT_SETTINGS } from '@shared/domain/settings';
 import type { ExternalApps } from '@shared/domain/externalApps';
 
@@ -96,6 +98,8 @@ const file: TreeItem = {
   repository,
   itemId: 4,
 };
+/** The workspace's info, as its window reads it: on /main, changeset 5 loaded. */
+const WORKSPACE_INFO = { name: 'ws', path: '/ws', repository: 'game@local', repositoryName: 'game', server: 'local', selector: { kind: 'branch', name: '/main' }, loadedChangeset: 5 } as const;
 const change: PendingChange = { path: 'src/a.ts', kinds: ['checkedOut', 'changed'], itemType: 'file', size: 10, lastModified: '' };
 const lock: Lock = {
   itemId: 1,
@@ -224,11 +228,21 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   graphMergeLink: () => graphMenu({ kind: 'mergeLink', link: sampleHistory().mergeLinks[0]! }, graphContext),
 };
 
+/**
+ * Menus of lines of code, not of an object: what they copy is the lines' link and text, so they have their own "Copy …"
+ * entries and no object's "Copy" submenu. Every other rule of the grammar holds.
+ */
+const CODE_MENUS: Record<string, () => MenuEntry[]> = {
+  diffLines: () => lineMenu({ lines: { side: 'new', first: 40, last: 52 }, copyLink: () => {}, copyLines: () => {}, annotate: () => {} }),
+  annotatedLine: () => lineMenu({ lines: { side: 'new', first: 42, last: 42 }, copyLink: () => {}, copyLines: () => {} }),
+};
+const EVERY_MENU = { ...MENUS, ...CODE_MENUS };
+
 const wordOf = (entry: Action | Submenu): MenuWord | undefined => (entry.id ? (MENU_WORDS as Record<string, MenuWord>)[entry.id] : undefined);
 const topEntries = (menu: MenuEntry[]): (Action | Submenu)[] => menu.filter((entry): entry is Action | Submenu => entry !== SEPARATOR);
 
 describe('the menu grammar', () => {
-  it.each(Object.entries(MENUS))('%s: every entry is a word of the vocabulary, with its icon, group and (where fixed) words', (_name, build) => {
+  it.each(Object.entries(EVERY_MENU))('%s: every entry is a word of the vocabulary, with its icon, group and (where fixed) words', (_name, build) => {
     for (const entry of topEntries(build())) {
       const word = wordOf(entry);
       expect(word, `${entry.id ?? entry.label} is in MENU_WORDS`).toBeDefined();
@@ -239,7 +253,7 @@ describe('the menu grammar', () => {
     }
   });
 
-  it.each(Object.entries(MENUS))('%s: groups come in the grammar order, a separator between two groups and nowhere else', (_name, build) => {
+  it.each(Object.entries(EVERY_MENU))('%s: groups come in the grammar order, a separator between two groups and nowhere else', (_name, build) => {
     const menu = build();
     expect(menu.length).toBeGreaterThan(0);
     expect(menu[0]).not.toBe(SEPARATOR);
@@ -264,8 +278,16 @@ describe('the menu grammar', () => {
     expect(kinds).toEqual(COPY_KINDS.filter((kind) => kinds.includes(kind)));
   });
 
-  it.each(Object.entries(MENUS))('%s: what opens a dialog ends with "…", and nothing else does', (_name, build) => {
+  it.each(Object.entries(EVERY_MENU))('%s: what opens a dialog ends with "…", and nothing else does', (_name, build) => {
     for (const entry of topEntries(build())) expect(entry.label).not.toMatch(/\.\.\.$/);
+  });
+});
+
+describe('lines of code', () => {
+  it.each(Object.entries(CODE_MENUS))('%s: copies the lines\' link and text, and no object\'s Copy submenu', (_name, build) => {
+    const entries = topEntries(build());
+    expect(entries.filter((entry) => entry.id === 'copy')).toEqual([]);
+    expect(entries.filter((entry) => entry.label.startsWith('Copy')).map((entry) => entry.id)).toEqual(expect.arrayContaining(['copyLines']));
   });
 });
 
@@ -349,7 +371,8 @@ describe('one menu per object, the same everywhere', () => {
   });
 
   it("a changed file reads the same in a diff, Incoming and a merge, the merge only adding its own", () => {
-    const inDiff = diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [{ path: 'src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39, repository } as never]);
+    // A diff no link names (two branches' heads), as a merge's and Incoming's files have no one object to link to.
+    const inDiff = diffEntryMenu(ws, { kind: 'range', fromSpec: 'br:/main', toSpec: 'cs:5' }, [{ path: 'src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39, repository } as never]);
     expectOnlyAdds(mergeItemMenu([mergeConflict], mergeContext), inDiff);
     expectOnlyAdds(incomingFileMenu([incomingConflictFile], incomingContext), inDiff);
   });
@@ -377,8 +400,10 @@ describe('Copy', () => {
 
   it('copies a branch as its name, spec, full spec and comment, the name with ⌘C', async () => {
     expect(copyEntries(branchMenu(ws, [branch], '/main'))[0]!.shortcut).toBe('mod+c');
+    expect(copyEntries(branchMenu(ws, [branch], '/main')).find((entry) => entry.id === 'copy.link')!.shortcut).toBe('mod+shift+c');
     expect(await copiedBy(branchMenu(ws, [branch], '/main'))).toEqual([
       'Branch name: /main/task',
+      'Branch link: uvcs://local/repos/game/branches/main/task',
       'Branch spec: br:/main/task',
       'Branch full spec: br:/main/task@game@local',
       'Branch comment: The task',
@@ -388,6 +413,7 @@ describe('Copy', () => {
   it('copies a changeset as its number, spec, full spec, comment and GUID', async () => {
     expect(await copiedBy(changesetMenu({ workspacePath: ws }, [changeset]))).toEqual([
       'Changeset number: 5',
+      'Changeset link: uvcs://local/repos/game/changesets/5',
       'Changeset spec: cs:5',
       'Changeset full spec: cs:5@game@local',
       'Changeset comment: Finish feature',
@@ -396,12 +422,13 @@ describe('Copy', () => {
   });
 
   it('copies a label as its name, spec, full spec and comment', async () => {
-    expect(await copiedBy(labelMenu(ws, [label]))).toEqual(['Label name: v1', 'Label spec: lb:v1', 'Label full spec: lb:v1@game@local', 'Label comment: First']);
+    expect(await copiedBy(labelMenu(ws, [label]))).toEqual(['Label name: v1', 'Label link: uvcs://local/repos/game/labels/v1', 'Label spec: lb:v1', 'Label full spec: lb:v1@game@local', 'Label comment: First']);
   });
 
   it('copies a shelve as its number, spec, full spec, comment and GUID', async () => {
     expect(await copiedBy(shelveMenu(ws, [shelve]))).toEqual([
       'Shelve number: 12',
+      'Shelve link: uvcs://local/repos/game/shelves/12',
       'Shelve spec: sh:12',
       'Shelve full spec: sh:12@game@local',
       'Shelve comment: Spike',
@@ -409,22 +436,32 @@ describe('Copy', () => {
     ]);
   });
 
-  it('copies a code review as its number and title', async () => {
-    expect(await copiedBy(codeReviewMenu(ws, [review]))).toEqual(['Code review number: 9', 'Code review title: Review the task']);
+  it("copies a code review as its number, title and link, in the workspace's repository", async () => {
+    fakeApi.answer('workspaces.info', async () => WORKSPACE_INFO);
+    expect(await copiedBy(codeReviewMenu(ws, [review]))).toEqual(['Code review number: 9', 'Code review title: Review the task', 'Code review link: uvcs://local/repos/game/code-reviews/9']);
   });
 
-  it('copies files and pending changes as their paths, relative and full', async () => {
-    expect(await copiedBy(fileMenu(ws, [file], new PendingChangesIndex([])))).toEqual(['Path: src/a.ts', 'Full path: /ws/src/a.ts']);
+  it("copies a diff's file as the link to its change there", async () => {
+    fakeApi.answer('workspaces.info', async () => WORKSPACE_INFO);
+    const entry = { path: 'src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39, repository } as never;
+    expect(await copiedBy(diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [entry]))).toEqual(['Path: src/a.ts', 'Link: uvcs://local/repos/game/changesets/5/-/files/src/a.ts']);
+  });
+
+  it("copies files and pending changes as their paths, relative and full, and a file as its link on the workspace's branch", async () => {
+    queryClient.setQueryData(workspaceInfoQuery(ws).queryKey, WORKSPACE_INFO);
+    expect(await copiedBy(fileMenu(ws, [file], new PendingChangesIndex([])))).toEqual(['Path: src/a.ts', 'Full path: /ws/src/a.ts', 'Link: uvcs://local/repos/game/branches/main/-/browse/src/a.ts']);
+    expect(copyEntries(fileMenu(ws, [{ ...file, repository: '', isPrivate: true }], new PendingChangesIndex([]))).map((entry) => entry.label)).toEqual(['Path', 'Full path']);
     copied.splice(0);
     expect(await copiedBy(pendingChangeMenu(ws, [change, { ...change, path: 'b.ts' }], []))).toEqual(['2 paths: src/a.ts\nb.ts', '2 full paths: /ws/src/a.ts\n/ws/b.ts']);
   });
 
   it('leaves out what an object has no text for, like an empty comment', () => {
-    expect(copyEntries(branchMenu(ws, [{ ...branch, comment: '' }], '/main')).map((entry) => entry.label)).toEqual(['Name', 'Spec', 'Full spec']);
+    expect(copyEntries(branchMenu(ws, [{ ...branch, comment: '' }], '/main')).map((entry) => entry.label)).toEqual(['Name', 'Link', 'Spec', 'Full spec']);
   });
 
   it('shows what each entry copies next to it', () => {
-    expect(copyEntries(labelMenu(ws, [label])).map((entry) => entry.detail)).toEqual(['v1', 'lb:v1', 'lb:v1@game@local', undefined]);
+    // A link is too long to read beside its label, as a comment is.
+    expect(copyEntries(labelMenu(ws, [label])).map((entry) => entry.detail)).toEqual(['v1', undefined, 'lb:v1', 'lb:v1@game@local', undefined]);
   });
 });
 

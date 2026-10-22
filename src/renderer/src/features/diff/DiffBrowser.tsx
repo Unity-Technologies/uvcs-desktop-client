@@ -1,6 +1,7 @@
 import { FileSearch, Folder } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
+import type { FocusedLines } from '../../app/navigation/pages';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
@@ -16,14 +17,19 @@ import { diffEntryTones } from './diffEntrySources';
 import { DiffEntryList, diffEntryKey } from './DiffEntryList';
 import { diffEntryMenu } from './diffEntryMenu';
 import { entryToFocus } from './diffFocus';
+import { diffEntryAnnotation } from './diffEntryHistory';
+import { navigation } from '../../app/navigation/navigationStore';
 import { diffPaneOf } from './diffPane';
 import { EntryDiff } from './EntryDiff';
+import { linkFocusOf, linkFocusOn } from './linkFocus';
 import { listedEntries } from './listedEntries';
 import { useDiffReview } from './review/useDiffReview';
 import { FileStepsContext, useFileSteps } from './viewer/fileSteps';
+import { LineLinksContext, type LineLinks } from './viewer/lineLinks';
+import { useFocusUntilMoved } from './viewer/useFocusUntilMoved';
 import { AssetsPointContext, diffAssetsPoint } from './viewer/model/assetsPoints';
 import { diffSibling, SiblingFinderContext } from './viewer/model/modelSiblings';
-import { useShownDiffFile } from './shownDiffFile';
+import { publishShownDiffFile } from './shownDiffFile';
 
 const NO_ENTRIES: DiffEntry[] = [];
 
@@ -33,13 +39,15 @@ interface DiffBrowserProps {
   entries: DiffEntry[] | undefined;
   /** The file to open on (by its path, or its old path for a move); the first file when it isn't in the diff. */
   initialPath?: string;
+  /** The lines of `initialPath` it opens scrolled to, selected (a link's `#L42`), until another file is selected. */
+  initialLines?: FocusedLines;
 }
 
 /**
  * A list of changed files next to the diff of the selected one, in one layout from the first frame on: placeholder
  * rows while the files are read, and "No differences" beside an empty list.
  */
-export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffBrowserProps) {
+export function DiffBrowser({ target, entries: diffEntries, initialPath, initialLines }: DiffBrowserProps) {
   const workspacePath = useWorkspacePath();
   const reading = diffEntries === undefined;
   const readEntries = diffEntries ?? NO_ENTRIES;
@@ -77,13 +85,28 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
     setSelection(singleSelection(initial ? diffEntryKey(initial) : firstKey));
   }, [focused, focusedFolder, firstKey]);
 
+  // The lines a link opened the diff on go once another file is selected: coming back leaves the file where it was.
+  const linkFocus = useFocusUntilMoved(linkFocusOf(initialPath, initialLines), focused?.path);
+  const focusOnShown = linkFocusOn(linkFocus, focused);
+  // The lines' menu annotates the file at them as the diff's newer side has it (`diffEntryAnnotation`), where it can.
+  const annotation = focused ? diffEntryAnnotation(target, focused) : null;
+  // Keyed by the file shown, not `annotation` or `target`, which are new objects each render: the diff is mounted per
+  // target (`TargetDiff`), so a file's path names its annotation.
+  const lineLinks = useMemo<LineLinks>(
+    () => ({ focus: focusOnShown, publishes: true, annotateAt: annotation ? (lines) => navigation.openPage({ ...annotation, focusLines: lines }) : undefined }),
+    [linkFocus, focused?.path, annotation === null],
+  );
+
   const pane = diffPaneOf({ listedCount: reading ? undefined : entries.length, shownCount: shown.length, entrySelected: focused !== undefined, folderSelected: focusedFolder !== undefined });
 
+  // By what the target is, not the object: a branch diff passes a new one each render, and leaving the file on screen
+  // (the cleanup) would say no file shows between two renders. Published by value too (`publishShownDiffFile`).
+  const targetKey = JSON.stringify(target);
   useEffect(() => {
     if (!focused) return;
-    useShownDiffFile.setState({ shown: { target, path: focused.path } });
-    return () => useShownDiffFile.setState({ shown: null });
-  }, [target, focused?.path]);
+    publishShownDiffFile({ target, path: focused.path });
+    return () => publishShownDiffFile(null);
+  }, [targetKey, focused?.path]);
 
   return (
     <SplitPane
@@ -112,7 +135,9 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
           <FileStepsContext.Provider value={fileSteps}>
             <SiblingFinderContext.Provider value={findSibling}>
               <AssetsPointContext.Provider value={findAssetsPoint}>
-                <EntryDiff workspacePath={workspacePath} entry={focused} reviewMarks={review.marks} />
+                <LineLinksContext.Provider value={lineLinks}>
+                  <EntryDiff workspacePath={workspacePath} entry={focused} reviewMarks={review.marks} />
+                </LineLinksContext.Provider>
               </AssetsPointContext.Provider>
             </SiblingFinderContext.Provider>
           </FileStepsContext.Provider>

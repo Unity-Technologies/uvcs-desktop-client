@@ -250,6 +250,10 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `scripts/build/pinnedActions.test.ts`                     | every GitHub action is pinned to a commit SHA                     |
 | `scripts/build/pierreSkillVersion.test.ts`                | the `pierre-diffs` and `pierre-highlights` skills describe the @pierre/diffs and @pierre/highlights versions installed |
 | `scripts/build/linuxDesktopName.test.ts`                  | the Linux `.desktop` file is named as Electron names the app (`desktopName`) |
+| `shared/links/parseLink.test.ts`                          | every link shape reads back as written; the official client's links keep opening |
+| `app/links/linkNavigation.test.ts`                        | every sidebar view has a link name, and every link name opens a view |
+| `components/menuGrammar.test.ts` (Copy)                   | every object's Copy menu offers its link                          |
+| `main/links/schemeRegistration.test.ts`                   | the installers register `uvcs://` with the command the app registers |
 
 Not enforced yet: no `any` (there are none today). A static test for it is welcome.
 
@@ -271,6 +275,13 @@ Not enforced yet: no `any` (there are none today). A static test for it is welco
 - **UI building blocks**: reuse before inventing — `ListWithDetails`/`DetailsPanel`, `ItemRow`, `FilterBar`,
   `menuWords`/`groupedMenu`, `openDialog`/`confirm`, `runOperation`. Shortcuts only through `lib/shortcutRegistry.ts`.
   Colors, motion and focus only through `styles/tokens.css`.
+- **Links (`uvcs://`)**: what a user looks at and would share can be linked to: an object, a page, a view, a file and
+  its lines (docs/features/deep-links.md holds the grammar, how links open and where they're copied). A change that adds
+  or moves something linkable keeps links in step in the same change: a new view gets its link name (`LINK_VIEWS`,
+  `LINK_VIEW_IDS`), a new page decides what a link to it names (`pageLinkTarget`, whose switch won't compile without it)
+  and how one opens it (`linkNavigation`), a new object's menu copies its link (Copy ▸ Link, its `*CopyTexts`); a page
+  or view that moves updates where links lead. Links only open things, never run an operation, and the links people
+  already shared keep opening: the grammar only grows (`parseLink`'s older shapes stay).
 - **Own config**: the app keeps its settings in its own store; it never writes to or keeps reading the official
   Desktop client's config, only imports well-known values once, on the first run (`importLegacySettings`;
   ARCHITECTURE.md "Own config"). Nor does it read `cm`'s own files (`.plastic/`, the config folder): it asks `cm`

@@ -7,6 +7,7 @@ import { copySubmenu } from '../../components/copyMenu';
 import { openOnDiskEntries } from '../../components/externalApps/openWithMenu';
 import { menuAction } from '../../components/menuWords';
 import { openRepositoryPathPermissions, openRepositoryPermissions, openServerPermissions } from '../../features/permissions/openPermissions';
+import { repositoryLinkTo } from '../links/linkTo';
 import { forgetRecentWorkspace } from '../settings/useSettings';
 import type { OpenWorkspaceIn } from '../workspace/workspaceWindowChoice';
 import { deleteRepository, removeWorkspace, renameRepository, renameWorkspace } from './homeOperations';
@@ -30,7 +31,7 @@ export function missingWorkspaceMenu(workspace: WorkspaceSummary, open: (path: s
 export function repositoryMenu(repository: RepositorySummary, createWorkspace: (repository: RepositorySummary) => void): MenuEntry[] {
   return groupedMenu([
     menuAction('newWorkspace', () => createWorkspace(repository)),
-    copySubmenu('Repository', { name: repository.name, spec: repository.spec }),
+    copySubmenu('Repository', { name: repository.name, link: repositoryLinkTo(repository.spec, {}), spec: repository.spec }),
     menuAction('rename', () => void renameRepository(repository)),
     menuAction('permissions', () => openRepositoryPermissions(repository.spec, { owner: repository.owner })),
     menuAction('pathPermissions', () => openRepositoryPathPermissions(repository.spec)),

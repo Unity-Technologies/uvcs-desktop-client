@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { LinkObject } from '@shared/links/link';
 import { branchLabel } from '../../lib/branchLabels';
 
 /** What just landed in the workspace: "Checked in cs:4", "Updated to cs:14". */
@@ -10,6 +11,11 @@ export interface SuccessMoment {
   /** A second line: the check-in's summary, or who the update brought changes from. */
   detail?: string;
   at: number;
+}
+
+/** What the moment's link names: the changeset, or the range an update of several changesets brought. */
+export function successLinkObject({ changesetId, fromChangeset }: Pick<SuccessMoment, 'changesetId' | 'fromChangeset'>): LinkObject {
+  return fromChangeset !== undefined && changesetId - fromChangeset > 1 ? { kind: 'changesetRange', from: fromChangeset, to: changesetId } : { kind: 'changeset', id: changesetId };
 }
 
 interface SuccessMomentStore {

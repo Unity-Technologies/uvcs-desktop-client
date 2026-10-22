@@ -1,5 +1,5 @@
 import { History } from 'lucide-react';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import type { PageProps } from '../../app/navigation/pages';
 import { useOtherRepository, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { detailsWidthOf, useDetailsWidthStore, type DetailsWidthLimits } from '../../components/detailsWidthStore';
@@ -15,15 +15,19 @@ import { SplitPane } from '../../ui/SplitPane';
 import { ViewHeader } from '../../ui/ViewHeader';
 import type { AnnotationHistory } from '../annotate/AnnotationPane';
 import { openChangesetDiff } from '../changesets/changesetOperations';
+import { LineLinksContext } from '../diff/viewer/lineLinks';
+import { useFocusUntilMoved } from '../diff/viewer/useFocusUntilMoved';
 import { HISTORY_ROW_HEIGHT, HistoryList } from './HistoryList';
 import { historyMenu } from './historyMenu';
 import { historyRowKey, historyRows, revisionRowKey, type HistoryRow } from './historyRows';
+import { historyLineLinks, historyPlace } from './historyLineLinks';
 import { initialHistoryRow } from './initialHistoryRow';
 import { RevisionPane } from './RevisionPane';
 import { usePageRevisionView } from './revisionView';
 import { useHistoryFilters } from './useHistoryFilters';
 import { useHistorySelection } from './useHistorySelection';
 import { useItemHistory } from './useItemHistory';
+import { publishShownRevision, shownRevisionOf } from './shownRevision';
 
 /** The revisions list on the left: as wide as it was left, the diff taking the rest. */
 const LIST_WIDTH: DetailsWidthLimits = { initial: 340, min: 260, max: 640 };
@@ -51,6 +55,15 @@ export function HistoryPage({ page }: PageProps<'history'>) {
   });
   const selectedRows = useMemo(() => rows.filter((row) => selection.selection.selected.has(historyRowKey(row))), [rows, selection.selection]);
   const focusedRow = rows.find((row) => historyRowKey(row) === selection.selection.anchor);
+  // What a link to the page names (`useShownRevision`), and a link's lines (`#L42`) shown on the revision the page
+  // opened on until another one is selected or the view switches.
+  const shownRevision = shownRevisionOf(page.path, focusedRow, view, Boolean(otherRepository));
+  const place = historyPlace(shownRevision);
+  const linkFocus = useFocusUntilMoved(page.focusLines ? { path: page.path, lines: page.focusLines } : null, place);
+  const lineLinks = useMemo(() => historyLineLinks(linkFocus, shownRevision), [linkFocus, place]);
+  // Every render, published only when it changed (`publishShownRevision`), and none once the page goes.
+  useEffect(() => publishShownRevision(shownRevision));
+  useEffect(() => () => publishShownRevision(null), []);
 
   const { selectFromPane, selectAnew, walkBackTo } = selection;
   const annotationHistory = useMemo<AnnotationHistory>(
@@ -129,18 +142,20 @@ export function HistoryPage({ page }: PageProps<'history'>) {
           !history || hidesEveryRow(rows.length, filters.visible.length) ? null : rows.length === 0 ? (
             <EmptyState icon={<History size={22} />} title="No history yet" />
           ) : (
-            <RevisionPane
-              path={page.path}
-              history={history}
-              focusedRow={focusedRow}
-              selectedRows={selectedRows}
-              menu={menu}
-              onBack={selection.back}
-              annotationHistory={annotationHistory}
-              otherRepository={otherRepository}
-              view={view}
-              onPickView={setView}
-            />
+            <LineLinksContext.Provider value={lineLinks}>
+              <RevisionPane
+                path={page.path}
+                history={history}
+                focusedRow={focusedRow}
+                selectedRows={selectedRows}
+                menu={menu}
+                onBack={selection.back}
+                annotationHistory={annotationHistory}
+                otherRepository={otherRepository}
+                view={view}
+                onPickView={setView}
+              />
+            </LineLinksContext.Provider>
           )
         }
       />

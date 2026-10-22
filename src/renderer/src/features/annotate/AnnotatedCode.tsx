@@ -5,12 +5,15 @@ import { matchesShortcut } from '../../lib/shortcuts';
 import { fileNameOf } from '../../lib/text';
 import { displayName } from '../../lib/userName';
 import { PaneScrollbars } from '../diff/viewer/PaneScrollbars';
+import { LineMenuArea } from '../diff/viewer/LineMenuArea';
+import { useLineLinks, type ScrollToLine } from '../diff/viewer/useLineLinks';
+import { useLineTools } from '../diff/viewer/useLineTools';
 import { paneScrollbarsHeight } from '../diff/viewer/paneScrollbarsDom';
 import { AnnotationGutter } from './AnnotationGutter';
 import { AnnotationRules } from './AnnotationRules';
 import type { AnnotateColumns } from './annotateOptionsStore';
 import { blocksInView, highlightedChangeset, walkedBlock, type AnnotationBlock } from './annotationBlocks';
-import { ANNOTATION_LINE_HEIGHT, CODE_PADDING_TOP, lineAtTop, scrollTopRevealing } from './annotationLayout';
+import { ANNOTATION_LINE_HEIGHT, CODE_PADDING_TOP, lineAtTop, scrollTopRevealing, scrollTopShowingLine } from './annotationLayout';
 import { BlockCard } from './BlockCard';
 import { HighlightedCode } from './HighlightedCode';
 import type { BlockLinks } from './blockLinks';
@@ -27,6 +30,12 @@ interface AnnotatedCodeProps {
   links: BlockLinks;
 }
 
+/** Every line is one row high: a link's line is where its number says. */
+const scrollToAnnotatedLine: ScrollToLine = (container, { lineNumber }) => {
+  container.scrollTop = scrollTopShowingLine(lineNumber, container.clientHeight);
+  return () => {};
+};
+
 /**
  * Highlighted code (Pierre) with the annotation gutter beside it and the blocks' rules over both. All three live in one
  * scroll container and share a pinned line height (`annotationLayout`), so they scroll together without any syncing
@@ -35,7 +44,8 @@ interface AnnotatedCodeProps {
  * read-only diff would be (`syntaxHighlighting`: on the main thread, in Pierre's workers after showing as plain text,
  * or not at all).
  * The keyboard walks the blocks (⌥↓ ⌥↑, with ⇧ those of the same changeset), Enter shows the block's revision and
- * Space its card.
+ * Space its card. Its line numbers select lines for a link, as a diff's do; a link's lines open scrolled to, selected
+ * (`useLineLinks`).
  */
 export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }: AnnotatedCodeProps) {
   const [virtualizer] = useState(() => new Virtualizer());
@@ -90,47 +100,67 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
     handler[1]();
   };
 
+  const lineLinks = useLineLinks({ path, selectable: true, containerRef: scrollerRef, shown: scroller !== null, scrollTo: scrollToAnnotatedLine });
+  const lineTools = useLineTools({
+    containerRef: scrollerRef,
+    layout: 'file',
+    range: lineLinks.range,
+    select: lineLinks.select,
+    selectable: true,
+    publishes: lineLinks.publishes,
+    textOf: () => code,
+  });
   const pickedBlock = blocks[picked];
 
   return (
-    <div
-      ref={attachScroller}
-      className={styles.scroller}
-      style={{ '--diffs-line-height': `${ANNOTATION_LINE_HEIGHT}px`, '--diffs-gap-block': `${CODE_PADDING_TOP}px` } as CSSProperties}
-      tabIndex={0}
-      role="region"
-      aria-label={`Annotated lines of ${fileNameOf(path)}`}
-      onKeyDown={onKeyDown}
-    >
-      <div className={styles.columns}>
-        <AnnotationGutter
-          blocks={blocks}
-          shown={shown}
-          columns={columns}
-          lineHeight={ANNOTATION_LINE_HEIGHT}
-          picked={picked}
-          onPick={(index) => setPicked(index === picked ? -1 : index)}
-          onHoverLabel={cardState.hover}
-          onPinCard={(index) => {
-            setPicked(index);
-            cardState.toggle(index);
-          }}
-          onShowRevision={(index) => {
-            setPicked(index);
-            links.showInHistory(blocks[index]!.changeset.changesetId);
-          }}
-          revisionTip={links.selectsInHistory ? 'Select this revision' : 'Show this revision in history'}
-          walkBack={links.walkBack}
-        />
-        <HighlightedCode className={styles.code} code={code} path={path} virtualizer={virtualizer} />
-        <AnnotationRules blocks={blocks} shown={shown} lineHeight={ANNOTATION_LINE_HEIGHT} highlighted={highlighted} />
+    <LineMenuArea menu={lineTools.menu}>
+      <div
+        ref={attachScroller}
+        className={styles.scroller}
+        style={{ '--diffs-line-height': `${ANNOTATION_LINE_HEIGHT}px`, '--diffs-gap-block': `${CODE_PADDING_TOP}px` } as CSSProperties}
+        tabIndex={0}
+        role="region"
+        aria-label={`Annotated lines of ${fileNameOf(path)}`}
+        onKeyDown={onKeyDown}
+      >
+        <div className={styles.columns}>
+          <AnnotationGutter
+            blocks={blocks}
+            shown={shown}
+            columns={columns}
+            lineHeight={ANNOTATION_LINE_HEIGHT}
+            picked={picked}
+            onPick={(index) => setPicked(index === picked ? -1 : index)}
+            onHoverLabel={cardState.hover}
+            onPinCard={(index) => {
+              setPicked(index);
+              cardState.toggle(index);
+            }}
+            onShowRevision={(index) => {
+              setPicked(index);
+              links.showInHistory(blocks[index]!.changeset.changesetId);
+            }}
+            revisionTip={links.selectsInHistory ? 'Select this revision' : 'Show this revision in history'}
+            walkBack={links.walkBack}
+          />
+          <HighlightedCode
+            className={styles.code}
+            code={code}
+            path={path}
+            virtualizer={virtualizer}
+            selectionOptions={lineLinks.options}
+            selectedLines={lineLinks.selectedLines}
+          />
+          <AnnotationRules blocks={blocks} shown={shown} lineHeight={ANNOTATION_LINE_HEIGHT} highlighted={highlighted} />
+        </div>
+        <PaneScrollbars containerRef={scrollerRef} />
+        <BlockCard blocks={blocks} cardState={cardState} picked={picked} scroller={scroller} links={links} />
+        {lineTools.chip}
+        <span className="visually-hidden" aria-live="polite">
+          {pickedBlock &&
+            `Lines ${pickedBlock.start + 1} to ${pickedBlock.end}: changeset ${pickedBlock.changeset.changesetId} by ${displayName(pickedBlock.changeset.owner)}`}
+        </span>
       </div>
-      <PaneScrollbars containerRef={scrollerRef} />
-      <BlockCard blocks={blocks} cardState={cardState} picked={picked} scroller={scroller} links={links} />
-      <span className="visually-hidden" aria-live="polite">
-        {pickedBlock &&
-          `Lines ${pickedBlock.start + 1} to ${pickedBlock.end}: changeset ${pickedBlock.changeset.changesetId} by ${displayName(pickedBlock.changeset.owner)}`}
-      </span>
-    </div>
+    </LineMenuArea>
   );
 }

@@ -142,6 +142,98 @@ describe('a workspace requested from the OS (recent documents, the command line)
   });
 });
 
+describe('a link opened in a workspace (docs/features/deep-links.md)', () => {
+  const LINK = 'uvcs://acme.unity/repos/game/changesets/12';
+
+  it('goes to the window showing the workspace, which is told, comes forward and takes it once', () => {
+    const { windows, open, shows } = setUp();
+    const game = open();
+    shows(game, GAME);
+    const tools = open();
+    shows(tools, TOOLS);
+
+    expect(windows.openLinkIn(tools.webContents.id, GAME, LINK)).toBe('handedOver');
+    expect(fakeElectron.focused()).toBe(game);
+    expect(game.webContents.sent).toEqual([[EVENT_CHANNEL, 'linkRequested', {}]]);
+    expect(windows.takeLink(game.webContents.id)).toBe(LINK);
+    expect(windows.takeLink(game.webContents.id)).toBeNull();
+  });
+
+  it('is opened by the window asking when it shows the home screen', () => {
+    const { windows, open } = setUp();
+    const home = open();
+
+    expect(windows.openLinkIn(home.webContents.id, GAME, LINK)).toBe('openHere');
+    expect(fakeElectron.windows()).toHaveLength(1);
+  });
+
+  it('opens a new window on the workspace, which takes it, rather than leave the workspace the asking window shows', () => {
+    const { windows, open, shows } = setUp();
+    const tools = open();
+    shows(tools, TOOLS);
+
+    expect(windows.openLinkIn(tools.webContents.id, GAME, LINK)).toBe('handedOver');
+    const [, opened] = fakeElectron.windows();
+    expect(windows.workspaceIn(asBrowserWindow(opened!))).toBe(GAME);
+    expect(windows.takeLink(opened!.webContents.id)).toBe(LINK);
+  });
+
+  it('lists the workspaces shown, the last focused window first', () => {
+    const { windows, open, shows } = setUp();
+    const game = open();
+    shows(game, GAME);
+    open();
+    const tools = open();
+    shows(tools, TOOLS);
+    game.focus();
+
+    expect(windows.shownWorkspaces()).toEqual([GAME, TOOLS]);
+  });
+
+  it('from the OS goes to the focused window, which takes it', () => {
+    const { windows, open, shows } = setUp();
+    const game = open();
+    shows(game, GAME);
+    const home = open();
+    game.focus();
+
+    windows.openLink(LINK);
+    expect(windows.takeLink(game.webContents.id)).toBe(LINK);
+    expect(windows.takeLink(home.webContents.id)).toBeNull();
+  });
+
+  it("from the OS goes to a focused page window's workspace window, which comes forward", () => {
+    const { windows, open, shows } = setUp();
+    const game = open();
+    shows(game, GAME);
+    const page = windows.openPage(game.webContents.id, { workspacePath: GAME, page: { kind: 'history', path: 'a.cs' } }) as unknown as FakeWindow;
+    page.focus();
+
+    windows.openLink(LINK);
+    expect(fakeElectron.focused()).toBe(game);
+    expect(windows.takeLink(game.webContents.id)).toBe(LINK);
+  });
+
+  it('from the OS goes to the window used last when none has the focus, else to a new one on the home screen', () => {
+    const { windows, open } = setUp();
+    const first = open();
+    first.focus();
+    open();
+    first.minimize();
+
+    windows.openLink(LINK);
+    expect(fakeElectron.focused()).toBe(first);
+    expect(windows.takeLink(first.webContents.id)).toBe(LINK);
+
+    first.close();
+    fakeElectron.windows()[0]!.close();
+    windows.openLink(LINK);
+    const [opened] = fakeElectron.windows();
+    expect(windows.workspaceIn(asBrowserWindow(opened!))).toBeUndefined();
+    expect(windows.takeLink(opened!.webContents.id)).toBe(LINK);
+  });
+});
+
 describe('the first window at launch', () => {
   it('reopens the last workspace used', () => {
     const lastUsed = mkdtempSync(join(tmpdir(), 'uvcs-last-'));

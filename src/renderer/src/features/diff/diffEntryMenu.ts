@@ -1,5 +1,6 @@
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { revisionIn } from '@shared/domain/revision';
+import { diffTargetObject, linkCopyText } from '../../app/links/linkTo';
 import { changedFileMenu, type ChangedFile } from '../../components/changedFileMenu';
 import type { MenuEntry } from '../../lib/actions';
 import type { GroupedEntry } from '../../lib/menuGroups';
@@ -33,16 +34,18 @@ export interface DiffEntryMenuOptions {
 export function diffEntryMenu(workspacePath: string, target: DiffTarget, entries: DiffEntry[], { review, added = [], workspaceRepository, diffEntries = entries }: DiffEntryMenuOptions = {}): MenuEntry[] {
   const revert = revertFromDiffEntry(workspacePath, target, entries, workspaceRepository);
   const restore = restoreMenuEntries(workspacePath, entries, diffEntries, workspaceRepository);
-  return changedFileMenu(workspacePath, entries.map((entry) => changedFileOf(target, entry, entries.length === 1)), [review ? reviewMenuEntry(entries, review) : null, revert, ...restore, ...added]);
+  return changedFileMenu(workspacePath, entries.map((entry) => changedFileOf(workspacePath, target, entry, entries.length === 1)), [review ? reviewMenuEntry(entries, review) : null, revert, ...restore, ...added]);
 }
 
-/** A diff's file as its menu needs it: the newer revision, or else the older one (a deleted file's). */
-function changedFileOf(target: DiffTarget, entry: DiffEntry, single: boolean): ChangedFile {
+/** A diff's file as its menu needs it: the newer revision, or else the older one (a deleted file's), and its link there. */
+function changedFileOf(workspacePath: string, target: DiffTarget, entry: DiffEntry, single: boolean): ChangedFile {
   const revision = revisionIn(entry.repository, entry.revisionId) ?? revisionIn(entry.repository, entry.baseRevisionId);
+  const object = single ? diffTargetObject(target) : null;
   return {
     path: entry.path,
     history: single ? diffEntryHistory(target, entry) : null,
     annotation: single ? diffEntryAnnotation(target, entry) : null,
     version: entry.itemType !== 'directory' && revision ? { kind: 'revision', revision, fileName: entry.path } : null,
+    ...(object && { link: linkCopyText(workspacePath, undefined, { object, page: { kind: 'diffFile', path: `/${entry.path}` } }) }),
   };
 }

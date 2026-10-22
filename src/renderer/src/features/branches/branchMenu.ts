@@ -1,5 +1,6 @@
 import { isMainBranch, type BranchInfo } from '@shared/domain/branch';
 import { spec } from '@shared/domain/specs';
+import { linkCopyText } from '../../app/links/linkTo';
 import { openInNewWindow } from '../../app/pageWindow/openInNewWindow';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
@@ -31,9 +32,10 @@ import { branchHeadOrigin } from './branchHeadOrigin';
 import { openCreateBranchDialog } from './CreateBranchDialog';
 
 /** What a branch is copied as, first what ⌘C copies: `/main/task`, `br:/main/task`, `br:/main/task@repo@server`. */
-export function branchCopyTexts(branch: Pick<BranchInfo, 'name' | 'comment' | 'repository'>): CopyTexts {
+export function branchCopyTexts(workspacePath: string, branch: Pick<BranchInfo, 'name' | 'comment' | 'repository'>): CopyTexts {
   return {
     name: branch.name,
+    link: linkCopyText(workspacePath, branch.repository, { object: { kind: 'branch', name: branch.name } }),
     spec: spec.branch(branch.name),
     fullSpec: branch.repository && `${spec.branch(branch.name)}@${branch.repository}`,
     comment: branch.comment.trim(),
@@ -69,7 +71,7 @@ export function branchMenu(workspacePath: string, branches: BranchInfo[], curren
     single && menuAction('changesets', () => showBranchChangesets(workspacePath, single.name)),
     single && menuAction('compare', () => void diffWithAnotherBranch(single), { label: 'Compare with another branch…' }),
     single && !place.inBranchExplorer && menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'branch', name: single.name, date: single.date })),
-    single && copySubmenu('Branch', branchCopyTexts(single), { shortcut: hotkey('listCopy') }),
+    single && copySubmenu('Branch', branchCopyTexts(workspacePath, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     single && menuAction('rename', () => void renameBranch(workspacePath, single), { shortcut: hotkey('rename') }),
     single && menuAction('permissions', () => openObjectPermissions(workspacePath, 'branch', single)),
     visible.length > 0 &&

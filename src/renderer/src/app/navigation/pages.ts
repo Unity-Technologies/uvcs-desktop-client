@@ -1,4 +1,5 @@
 import type { DiffTarget } from '@shared/domain/diff';
+import type { LinkLines } from '@shared/links/link';
 import type { MergeRequest } from '@shared/domain/merge';
 import type { RevisionRef } from '@shared/domain/revision';
 import type { TaskMerge } from '../../features/mergeTask/taskMerge';
@@ -14,17 +15,32 @@ export type Page =
    * shows it annotated (at the workspace's revision unless `select` says otherwise): what every "Annotate" outside the
    * Files view opens.
    */
-  | { kind: 'history'; path: string; revision?: RevisionRef; select?: HistorySelection; view?: 'annotate' }
+  | { kind: 'history'; path: string; revision?: RevisionRef; select?: HistorySelection; view?: 'annotate'; focusLines?: FocusedLines }
   /**
    * `focusPath` preselects a file in the diff. `branchHead`, for a branch, is the head it was seen at: the diff is
    * then the one a details panel may already have read, not a second `cm diff`. `sideNames`, for a range whose specs
-   * don't say what its sides are (two branches' heads), names them in the header, older side first.
+   * don't say what its sides are (two branches' heads), names them in the header, older side first. `focusLines`, with
+   * `focusPath`, scrolls that file's diff to those lines and selects them (a link's `#L42`).
    */
-  | { kind: 'diff'; title: string; target: DiffTarget; focusPath?: string; branchHead?: number; sideNames?: readonly [DiffSideName, DiffSideName] }
+  | {
+      kind: 'diff';
+      title: string;
+      target: DiffTarget;
+      focusPath?: string;
+      focusLines?: FocusedLines;
+      branchHead?: number;
+      /** The label whose changeset this diff is: what a link to the page names (`pageObjectTarget`). */
+      label?: string;
+      sideNames?: readonly [DiffSideName, DiffSideName];
+    }
   /** `task`: a task branch merged into a branch on the server, which the page also offers to finish (`TaskMerge`). */
   | { kind: 'merge'; request: MergeRequest; task?: TaskMerge }
-  | { kind: 'codeReview'; reviewId: number; focusPath?: string }
-  | { kind: 'browseRepository'; changesetId: number };
+  | { kind: 'codeReview'; reviewId: number; focusPath?: string; focusLines?: FocusedLines }
+  /** `focusPath` selects an item of the tree there (a repository path, as `DiffEntry.path`), `focusLines` its lines. */
+  | { kind: 'browseRepository'; changesetId: number; focusPath?: string; focusLines?: FocusedLines };
+
+/** Lines a page opens scrolled to and selected: a link's `#L40-L52`, of a diff's newer or older side. */
+export type FocusedLines = LinkLines;
 
 /** A side of a range diff in words (`main`), and what it is exactly in its tooltip (`/main at changeset 12`). */
 export interface DiffSideName {

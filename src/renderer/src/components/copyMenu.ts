@@ -6,10 +6,11 @@ import { menuSubmenu } from './menuWords';
 
 /**
  * What an object can be copied as, in the order every "Copy" submenu lists them: what people paste most first (its
- * name, number, title or path), then its specs (`br:/main/task`, `cs:42`, `lb:v1`, `sh:3`; the full one adds
- * `@repository`), then its comment and GUID. The first one an object has is what ⌘C copies in its list.
+ * name, number, title or path), then its link to share (`uvcs://…`, docs/features/deep-links.md), then its specs
+ * (`br:/main/task`, `cs:42`, `lb:v1`, `sh:3`; the full one adds `@repository`), then its comment and GUID. The first
+ * one an object has is what ⌘C copies in its list; its link is what ⇧⌘C copies (`useCopyLinkCommand`).
  */
-export const COPY_KINDS = ['name', 'number', 'title', 'path', 'fullPath', 'serverPath', 'spec', 'fullSpec', 'comment', 'guid'] as const;
+export const COPY_KINDS = ['name', 'number', 'title', 'path', 'fullPath', 'serverPath', 'link', 'spec', 'fullSpec', 'comment', 'guid'] as const;
 
 export type CopyKind = (typeof COPY_KINDS)[number];
 
@@ -25,14 +26,15 @@ const LABELS: Record<CopyKind, string> = {
   path: 'Path',
   fullPath: 'Full path',
   serverPath: 'Repository path',
+  link: 'Link',
   spec: 'Spec',
   fullSpec: 'Full spec',
   comment: 'Comment',
   guid: 'GUID',
 };
 
-/** Kinds whose text is prose, too long to show beside the label. */
-const PROSE: ReadonlySet<CopyKind> = new Set(['title', 'comment']);
+/** Kinds whose text is too long to show beside the label: prose, and links. */
+const PROSE: ReadonlySet<CopyKind> = new Set(['title', 'comment', 'link']);
 
 /** The ids of the entries of every "Copy" submenu, e.g. for the popups that stay open while copying. */
 export const COPY_ENTRY_IDS = COPY_KINDS.map((kind) => `copy.${kind}`);
@@ -50,10 +52,14 @@ export function copiedWhat(noun: string, kind: CopyKind, count = 1): string {
 /**
  * An object's one "Copy" submenu, the same in every menu it shows in: the texts it has, in `COPY_KINDS` order, each
  * showing what it copies. `count` is how many objects the texts hold, one per line. `shortcut` goes on the first
- * entry, the one ⌘C copies where the list binds it.
+ * entry, the one ⌘C copies where the list binds it, and `linkShortcut` on its link, the one ⇧⌘C copies there.
  */
-export function copySubmenu(noun: string, texts: CopyTexts, { count = 1, shortcut }: { count?: number; shortcut?: string } = {}): GroupedEntry | null {
-  const entries: Action[] = copyEntries(noun, texts, count);
+export function copySubmenu(
+  noun: string,
+  texts: CopyTexts,
+  { count = 1, shortcut, linkShortcut }: { count?: number; shortcut?: string; linkShortcut?: string } = {},
+): GroupedEntry | null {
+  const entries: Action[] = copyEntries(noun, texts, count).map((entry) => (linkShortcut && entry.id === 'copy.link' ? { ...entry, shortcut: linkShortcut } : entry));
   if (entries.length === 0) return null;
   if (shortcut) entries[0] = { ...entries[0]!, shortcut };
   return menuSubmenu('copy', entries);

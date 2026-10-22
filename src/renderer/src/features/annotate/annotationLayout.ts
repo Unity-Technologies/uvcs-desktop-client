@@ -28,6 +28,11 @@ export function scrollTopRevealing(block: AnnotationBlock, view: { scrollTop: nu
   return top - CONTEXT_LINES * ANNOTATION_LINE_HEIGHT;
 }
 
+/** Where to scroll so line `lineNumber` (1-based: a link's `#L42`) stands a third of the way down a view `height` tall. */
+export function scrollTopShowingLine(lineNumber: number, height: number): number {
+  return Math.max(0, CODE_PADDING_TOP + (lineNumber - 1) * ANNOTATION_LINE_HEIGHT - height / 3);
+}
+
 /** The lines above and below the blocks rendered (`shown`), which the gutter keeps as empty room. */
 export function roomAroundShown(blocks: readonly AnnotationBlock[], shown: RowRange): { above: number; below: number } {
   const lineCount = blocks.at(-1)?.end ?? 0;

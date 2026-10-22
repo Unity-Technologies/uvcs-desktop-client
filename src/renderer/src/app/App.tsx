@@ -12,6 +12,7 @@ import { AppErrorBoundary } from './errors/AppErrorBoundary';
 import { errorDetailsAction } from './errors/errorDetailsAction';
 import { FolderDropTarget } from './folderDrop/FolderDropTarget';
 import { HomeScreen } from './home/HomeScreen';
+import { useLinkRequests } from './links/useLinkRequests';
 import { OperationCard } from './operations/OperationCard';
 import { PageWindowScreen } from './pageWindow/PageWindowScreen';
 import { usePageWindow } from './pageWindow/pageWindowStore';
@@ -61,6 +62,7 @@ function Root() {
   useMenuCommands();
   useAppMenuKeys();
   useRequestedWorkspace();
+  useLinkRequests();
   useEffect(() => void loadUpdateStatus(), []);
   const workspacePath = useSession((state) => state.workspacePath);
   const isPageWindow = usePageWindow((state) => state.isPageWindow);

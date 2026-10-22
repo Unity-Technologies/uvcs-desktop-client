@@ -69,6 +69,8 @@ export interface UvcsEvents {
   selectionFollowed: { followed: boolean };
   /** What is selected in the workspace window, for the page window following it to show. */
   selectionToFollow: { page: PageWindowPage; seed?: PageSeed };
+  /** This window was handed a `uvcs://` link to open; `windows.takeLink` tells which. */
+  linkRequested: Record<string, never>;
   /** One of this workspace window's page windows asks it to open a page only it shows (a merge). */
   pageRequested: { page: PageWindowPage };
 }

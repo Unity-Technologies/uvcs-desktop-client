@@ -12,6 +12,7 @@ import { commandResult, commandSearchText, paletteCommands } from './commandResu
 import { useCommandStore } from './commandStore';
 import { PaletteFooter } from './PaletteFooter';
 import { PaletteRow } from './PaletteRow';
+import { linkGroupIn } from './linkResults';
 import { isPaletteTextKey } from './paletteTextKeys';
 import { parseScope, type SectionId } from './paletteScope';
 import { collapseGroups, COLLAPSED_ROWS, moreLabel, shownSections, type SearchGroup, type SearchResult } from './searchResults';
@@ -35,7 +36,7 @@ export function CommandPalette() {
 /**
  * One box for everything: commands, files, branches, labels, workspaces, changesets, shelves and code reviews, each kind in its
  * own section capped at a few rows ("N more" expands it). Empty, it lists what is at hand; typed, the sections with
- * the best matches come first. `>`, `@`, `/` and `#` narrow the search. Enter opens a result (a workspace in a new
+ * the best matches come first. `>`, `@`, `/` and `#` narrow the search; a pasted link opens it. Enter opens a result (a workspace in a new
  * window with Shift), Tab its actions.
  * Ranks everything itself (cmdk only renders and moves the selection).
  */
@@ -47,7 +48,9 @@ function OpenPalette({ close }: { close: () => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   // Ranking hundreds of thousands of paths takes a few frames; typing stays responsive meanwhile.
   const deferredQuery = useDeferredValue(query);
-  const { scope, text } = parseScope(deferredQuery);
+  // A pasted link is opened, not searched for: the searches, some of them on the server, get no text.
+  const linkGroup = useMemo(() => linkGroupIn(deferredQuery), [deferredQuery]);
+  const { scope, text } = parseScope(linkGroup ? '' : deferredQuery);
   const commandsByOwner = useCommandStore((state) => state.commandsByOwner);
   const workspacePath = useSession((state) => state.workspacePath);
   useFocusBackOnClose();
@@ -58,12 +61,13 @@ function OpenPalette({ close }: { close: () => void }) {
   const workspaceGroup = useWorkspaceResults(workspacePath, text);
 
   const groups = useMemo<SearchGroup[]>(() => {
+    if (linkGroup) return [linkGroup];
     const commandResults = text
       ? commandIndex.rank(text, MAX_COMMANDS).map((index) => commandResult(commands[index]!, text))
       : commands.map((command) => commandResult(command));
     const commandGroup: SearchGroup = { section: 'commands', heading: 'Commands', results: commandResults };
     return shownSections([commandGroup, ...objectGroups, workspaceGroup], text, scope);
-  }, [commands, commandIndex, text, scope, objectGroups, workspaceGroup]);
+  }, [linkGroup, commands, commandIndex, text, scope, objectGroups, workspaceGroup]);
 
   // A prefix asks for one kind of thing, so its sections show in full.
   const shown = collapseGroups(groups, scope === 'all' ? expanded : 'all');

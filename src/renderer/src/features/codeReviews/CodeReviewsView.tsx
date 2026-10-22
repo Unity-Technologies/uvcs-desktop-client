@@ -66,7 +66,7 @@ export function CodeReviewsView() {
     useMemo<Command[]>(() => [{ id: 'codeReviews.new', group: 'Code reviews', label: 'New code review…', icon: MessageSquareCode, run: newReview }], [newReview]),
   );
   const selected = visible.find((review) => reviewKey(review) === selection.anchor);
-  useCopyCommand('Code reviews', 'Code review', selection.selected.size === 1 && selected ? codeReviewCopyTexts(selected) : undefined);
+  useCopyCommand('Code reviews', 'Code review', selection.selected.size === 1 && selected ? codeReviewCopyTexts(workspacePath, selected) : undefined);
 
   const header = (
     <ViewHeader

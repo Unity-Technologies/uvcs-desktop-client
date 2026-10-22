@@ -1,5 +1,5 @@
 import * as ContextMenu from '@radix-ui/react-context-menu';
-import type { ReactNode } from 'react';
+import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import type { MenuEntry } from '../../lib/actions';
 import { MenuEntries, type MenuPrimitives } from './MenuEntries';
 import styles from './Menu.module.css';
@@ -20,12 +20,16 @@ interface ActionContextMenuProps {
   children: ReactNode;
   /** Where focus goes once the menu closes; back to the row it opened on by default. */
   onCloseAutoFocus?: (event: Event) => void;
+  /** Runs before the menu opens; preventing the event's default opens none. */
+  onContextMenu?: (event: ReactMouseEvent) => void;
 }
 
-export function ActionContextMenu({ entries, children, onCloseAutoFocus }: ActionContextMenuProps) {
+export function ActionContextMenu({ entries, children, onCloseAutoFocus, onContextMenu }: ActionContextMenuProps) {
   return (
     <ContextMenu.Root modal={false}>
-      <ContextMenu.Trigger asChild>{children}</ContextMenu.Trigger>
+      <ContextMenu.Trigger asChild onContextMenu={onContextMenu}>
+        {children}
+      </ContextMenu.Trigger>
       <ContextMenu.Portal>
         <ContextMenu.Content className={styles.content} onCloseAutoFocus={(event) => focusAfterMenu(event, onCloseAutoFocus)}>
           <OpenedEntries entries={entries} />

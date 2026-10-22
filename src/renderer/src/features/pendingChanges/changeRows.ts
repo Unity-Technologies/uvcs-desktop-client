@@ -46,13 +46,18 @@ export function collapseRows(rows: ChangeRow[], collapsed: ReadonlySet<string>):
   return collapseGroupedTreeRows(rows, collapsed);
 }
 
+/** The row of the change to an item, by its path: what selects it from elsewhere (`selectInView`, a link). */
+export function changeRowKey(path: string): string {
+  return `change:${path}`;
+}
+
 /** Kept per change: lists of tens of thousands of rows look keys up in maps and sets, which hash each new string again. */
 const changeKeys = new WeakMap<PendingChange, string>();
 
 export function changeKey(change: PendingChange): string {
   let key = changeKeys.get(change);
   if (key === undefined) {
-    key = `change:${change.path}`;
+    key = changeRowKey(change.path);
     changeKeys.set(change, key);
   }
   return key;

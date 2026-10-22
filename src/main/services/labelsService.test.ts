@@ -29,6 +29,14 @@ describe('labels', () => {
     expect(listed).toEqual([{ id: 80, name: 'v1.0', changeset: 12, branch: '/main', comment: 'First', owner: 'ana', date: '2026-09-25T10:00:00+02:00', repository: 'game@local' }]);
   });
 
+  it('finds one label by its name with one cm find, none when there is no such label', async () => {
+    const { service, commands } = labels({ "find label where name = 'v1.0'": recordsOutput(FOUND_LABELS, V1), "find label where name = 'v9'": '' });
+
+    expect(await service.get(WORKSPACE, 'v1.0')).toMatchObject({ name: 'v1.0', changeset: 12 });
+    expect(await service.get(WORKSPACE, 'v9')).toBeNull();
+    expect(commands).toMatchObject([{ via: 'query', args: findQueryArgs(FOUND_LABELS, "where name = 'v1.0'") }, { via: 'query' }]);
+  });
+
   it("labels the workspace's loaded changeset, or the one given, with the comment in a file deleted afterwards", async () => {
     const { seen, answer } = readingFileOption('-commentsfile=');
     const { service, commands } = labels({ 'label create': answer });
