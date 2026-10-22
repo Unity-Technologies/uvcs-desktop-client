@@ -2,7 +2,7 @@ import { useId, type SVGProps } from 'react';
 
 type FolderXlinkIconProps = SVGProps<SVGSVGElement> & { size?: number };
 
-/** Lucide's `Folder`, which `ItemIcon` draws for a directory, on its 24-unit grid: the xlink's folder is the same shape. */
+/** Lucide's `Folder`, which `ItemIcon` draws for a directory, on its 24-unit grid: an xlink's folder is the same. */
 const FOLDER_PATH = 'M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z';
 
 /**
