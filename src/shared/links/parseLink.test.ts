@@ -65,6 +65,7 @@ describe('formatLink and parseLink', () => {
     { ...game, object: { kind: 'label', name: "fix(2)!'*" } },
     { ...game, object: { kind: 'label', name: 'v1..2' } },
     { ...game, object: { kind: 'labelRange', from: 'a..b', to: 'c' } },
+    { ...game, object: { kind: 'labelRange', from: 'v1.', to: '.v2' } },
     { ...game, repository: 'art/textures', object: { kind: 'changeset', id: 1 } },
     { ...game, object: { kind: 'changeset', id: 1 }, page: { kind: 'diffFile', path: '/Assets/Cafe\u0301 ?#%.png' } },
     { kind: 'workspace', folder: '/Users/ana/My Projects/日本', page: { kind: 'view', view: 'changes', path: '/a b.cs' } },

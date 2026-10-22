@@ -61,7 +61,8 @@ function readRepositoryLink(body: string): LinkReading {
   // first word a link reads after it.
   const nameEnd = segments.findIndex((segment, index) => index > 1 && (OBJECT_WORDS.has(segment) || segment === '-' || segment === 'path'));
   if (nameEnd === -1 && segments.length > 2) return unknown(`It names "${decodeSegment(segments[2]!) ?? segments[2]}" in the repository.`);
-  const nameSegments = decodedAll(segments.slice(1, nameEnd === -1 ? undefined : nameEnd));
+  // A `/` in a repository's name is written `%2F` (a nested repository): it's the one part a `/` may decode in.
+  const nameSegments = decodedAll(segments.slice(1, nameEnd === -1 ? undefined : nameEnd), { slashes: true });
   if (!nameSegments) return malformed('Its repository name is not valid.');
   const base: RepositoryLink = { kind: 'repository', server, repository: nameSegments.join('/') };
   return readAfterRepository(base, nameEnd === -1 ? [] : segments.slice(nameEnd));
@@ -94,19 +95,25 @@ function readObject(word: string, segments: readonly string[]): ObjectReading {
       return readLabels(first);
     case 'shelves':
     case 'shelvesets':
-      return /^-?\d+$/.test(first) ? { object: { kind: 'shelve', id: Math.abs(Number(first)) }, length: 1 } : malformed('Its shelve number is not valid.');
+      const shelve = idIn(first.replace(/^-/, ''));
+      return shelve === null ? malformed('Its shelve number is not valid.') : { object: { kind: 'shelve', id: shelve }, length: 1 };
     default:
-      if (!/^\d+$/.test(first)) return malformed('Its code review number is not valid.');
-      return { object: { kind: 'codeReview', id: Number(first), ...(word === 'merge-requests' ? { asMergeRequest: true } : {}) }, length: 1 };
+      const review = idIn(first);
+      if (review === null) return malformed('Its code review number is not valid.');
+      return { object: { kind: 'codeReview', id: review, ...(word === 'merge-requests' ? { asMergeRequest: true } : {}) }, length: 1 };
   }
 }
 
 function readChangesets(segment: string): ObjectReading {
-  const single = /^(\d+)$/.exec(segment);
-  if (single) return { object: { kind: 'changeset', id: Number(single[1]) }, length: 1 };
-  const range = /^(\d+)\.\.(\d+)$/.exec(segment);
-  if (range) return { object: { kind: 'changesetRange', from: Number(range[1]), to: Number(range[2]) }, length: 1 };
-  return malformed('Its changeset number is not valid.');
+  const [from, to, ...more] = segment.split('..').map(idIn);
+  if (from === undefined || from === null || to === null || more.length > 0) return malformed('Its changeset number is not valid.');
+  return to === undefined ? { object: { kind: 'changeset', id: from }, length: 1 } : { object: { kind: 'changesetRange', from, to }, length: 1 };
+}
+
+/** An object's number (a changeset, a shelve, a review); null for anything else, a number too big to be one included. */
+function idIn(text: string): number | null {
+  const id = /^\d+$/.test(text) ? Number(text) : NaN;
+  return Number.isSafeInteger(id) ? id : null;
 }
 
 /**
@@ -200,7 +207,7 @@ function linesIn(fragment: string): LinkLines | undefined | null {
   if (!match) return undefined;
   const first = Number(match[2]);
   const last = match[3] === undefined ? first : Number(match[3]);
-  if (first < 1 || last < first) return null;
+  if (first < 1 || last < first || !Number.isSafeInteger(last)) return null;
   return { side: match[1] ? 'old' : 'new', first, last };
 }
 
@@ -219,10 +226,15 @@ function pathIn(segments: readonly string[]): string | null {
   return decoded ? pathOf(decoded) : null;
 }
 
-/** Every segment decoded; null when one is malformed, holds a `/` where it shouldn't matter, or is `.` or `..`. */
-function decodedAll(segments: readonly string[]): string[] | null {
+/**
+ * Every segment decoded; null when one is malformed, is `.` or `..`, or decodes to what no written link holds: a
+ * separator (`%2F`, `%5C`: a path stepping out through one), a line break or a quote (which would end a `cm shell`
+ * argument). `slashes` lets a `/` through, for a repository's name.
+ */
+function decodedAll(segments: readonly string[], { slashes = false } = {}): string[] | null {
+  const forbidden = slashes ? /[\\\u0000-\u001f\u007f"]/ : /[/\\\u0000-\u001f\u007f"]/;
   const decoded = segments.map(decodeSegment);
-  return decoded.every((segment): segment is string => segment !== null && segment !== '.' && segment !== '..') ? decoded : null;
+  return decoded.every((segment): segment is string => segment !== null && segment !== '.' && segment !== '..' && !forbidden.test(segment)) ? decoded : null;
 }
 
 function withoutTrailingSlash(text: string): string {
