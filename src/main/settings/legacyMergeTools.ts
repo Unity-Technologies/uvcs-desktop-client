@@ -151,12 +151,21 @@ function legacyTool(command: string): LegacyTool {
   if (!program) return { kind: 'none' };
   const name = programName(program);
   if (name === 'unityyamlmerge') return { kind: 'smartMerge' };
+  if (isOfficialClientScript(program)) return { kind: 'none' };
   if (UVCS_GUI_PROGRAMS.has(name)) return toolOrNone(UVCS_GUI_COMMANDS[args[0]?.toLowerCase() ?? '']);
   if (name in UVCS_STANDALONE_TOOLS) return toolOrNone(UVCS_STANDALONE_TOOLS[name]);
   if (KNOWN_PROGRAMS[name]) return { kind: 'tool', toolId: KNOWN_PROGRAMS[name] };
   const appArgs = args.flatMap(withAppPlaceholders);
   if (!appArgs.some((arg) => arg.includes('{result}'))) return { kind: 'none' };
   return { kind: 'custom', tool: { name: programName(program, false), executable: program, args: appArgs } };
+}
+
+/**
+ * The official client's own scripts (its `diffscripts` folder: Word documents merged through Word), for binary files no
+ * tool opens in the app.
+ */
+function isOfficialClientScript(program: string): boolean {
+  return program.split(/[\\/]/).some((folder) => folder.toLowerCase() === 'diffscripts');
 }
 
 function toolOrNone(toolId: string | null | undefined): LegacyTool {

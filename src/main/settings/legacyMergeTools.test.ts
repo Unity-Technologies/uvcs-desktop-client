@@ -30,7 +30,7 @@ const XMERGE_MAC = '"/usr/local/bin/plasticgui" xmerge -b="@basefile" -s="@sourc
 const GTKMERGETOOL = 'gtkmergetool -b="@basefile" -bn="@basesymbolic" -s="@sourcefile" -sn="@sourcesymbolic" -d="@destinationfile" -a -r="@output"';
 
 describe('legacyMergeToolSettings', () => {
-  it("takes the official client's Windows defaults: Unity assets after Smart Merge, C#/VB/Java in Semantic Merge, the rest in the UVCS merge tool", () => {
+  it("takes the official client's Windows defaults: Unity assets after Smart Merge, C#/VB/Java in Semantic Merge, the rest in the UVCS merge tool, leaving out its Word script", () => {
     const entries = [
       any('.doc;.docx', WORD_MERGE_WINDOWS),
       any('.prefab;.unity', SMART_MERGE_WINDOWS, XMERGE_WINDOWS),
@@ -42,14 +42,9 @@ describe('legacyMergeToolSettings', () => {
 
     expect(legacyMergeToolSettings(entries, fresh)).toEqual({
       mergeTool: 'auto',
-      mergeToolRules: [
-        { id: 'imported:1', patterns: ['.doc', '.docx'], toolId: 'custom:imported:1' },
-        { id: 'imported:3', patterns: ['.cs', '.vb', '.java'], toolId: 'semantic' },
-      ],
+      mergeToolRules: [{ id: 'imported:2', patterns: ['.cs', '.vb', '.java'], toolId: 'semantic' }],
       unityMergeTool: 'others',
-      customMergeTools: [
-        { id: 'custom:imported:1', name: 'merge-doc', executable: 'C:\\Program Files\\PlasticSCM5\\client\\diffscripts\\merge-doc.exe', args: ['{yours}', '{incoming}', '{result}'] },
-      ],
+      customMergeTools: [],
     });
   });
 

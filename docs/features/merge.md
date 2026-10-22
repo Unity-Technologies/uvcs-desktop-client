@@ -43,8 +43,8 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   (VS Code, Rider, KDiff3, P4Merge...) becomes the app's own entry for it, with the app's arguments; any other program
   becomes a tool of the user's, `@basefile` `@sourcefile` `@destinationfile` `@output` and their `…symbolic`s turned
   into `{base}` `{incoming}` `{yours}` `{result}` and their names, an argument holding a variable the app has no value
-  for (`@fileencoding`, `@mergetype`...) dropped. Left out: binary entries and binary merges, regular expressions, a
-  command that saves nowhere. While the client's own tool takes every other file, C#, Visual Basic and Java go to
+  for (`@fileencoding`, `@mergetype`...) dropped. Left out: binary entries and binary merges, the client's own scripts
+  (its `diffscripts` folder: Word documents, which are binary), regular expressions, a command that saves nowhere. While the client's own tool takes every other file, C#, Visual Basic and Java go to
   Semantic Merge (the client does so), but those a row sends elsewhere; a row that sends files where every other file
   goes anyway, and that no later row could take, is dropped (the Windows client's `.meta` row).
 - `mergeTools.resolve` saves the three versions to temp files named after the file (`a.BASE.ts`...), writes the result
