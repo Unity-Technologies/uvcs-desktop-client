@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '@shared/domain/settings';
 import type { LegacyMergeToolEntry } from '../plasticConfig/clientConfMergeTools';
-import { legacyMergeToolSettings, type ImportedMergeToolSettings } from './legacyMergeTools';
+import { KNOWN_TOOLS } from '../merge/mergeTools/knownTools';
+import { KNOWN_PROGRAMS, legacyMergeToolSettings, type ImportedMergeToolSettings } from './legacyMergeTools';
 
 const fresh: ImportedMergeToolSettings = {
   mergeTool: DEFAULT_SETTINGS.mergeTool,
@@ -160,6 +161,26 @@ describe('legacyMergeToolSettings', () => {
   it('drops a rule that sends files where every other file goes anyway, unless a later rule could take them', () => {
     const entries = [text('*.txt', XMERGE_WINDOWS), text('.meta', XMERGE_WINDOWS), text('.gz', XMERGE_WINDOWS), text('.tar.gz', 'meld "@output"'), text('.json', 'meld "@output"'), text('*', XMERGE_WINDOWS)];
     expect(legacyMergeToolSettings(entries, fresh).mergeToolRules.map((rule) => rule.patterns)).toEqual([['*.txt'], ['.gz'], ['.tar.gz'], ['.json'], ['.cs', '.vb', '.java']]);
+  });
+
+  it('drops the switch before a variable the app can’t fill, when the variable was the whole argument', () => {
+    const entries = [text('*', 'mytool -e @fileencoding /T @filetype --out "@output" -m=@mergetype --keep "@basefile"')];
+    expect(legacyMergeToolSettings(entries, fresh).customMergeTools[0]!.args).toEqual(['--out', '{result}', '--keep', '{base}']);
+  });
+
+  it('reads a single quote inside a word as part of it', () => {
+    const entries = [text('*', "/home/o'neil/bin/mytool '@basefile' \"@output\"")];
+    expect(legacyMergeToolSettings(entries, fresh).customMergeTools[0]).toMatchObject({ executable: "/home/o'neil/bin/mytool", args: ['{base}', '{result}'] });
+  });
+
+  it('goes no further after the entry for every text file, even one whose tool it can’t read', () => {
+    const imported = legacyMergeToolSettings([text('*', 'notepad "@basefile"'), text('.cs', 'kdiff3 "@output"')], fresh);
+    expect(imported.mergeToolRules.map((rule) => rule.toolId)).toEqual(['semantic']);
+  });
+
+  it('maps every known program to a tool the app knows', () => {
+    const ids = new Set(KNOWN_TOOLS.map((tool) => tool.id));
+    expect(Object.values(KNOWN_PROGRAMS).filter((id) => !ids.has(id))).toEqual([]);
   });
 
   it('runs a command after the official client’s /nowindow word as any other', () => {

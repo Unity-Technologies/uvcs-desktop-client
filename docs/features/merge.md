@@ -36,14 +36,15 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   `legacyMergeToolSettings`; ARCHITECTURE.md "Own config"), on the first run that has rows (`mergeToolRulesImported`,
   apart from the recent branches' import, so a user who ran the app before gets it too). Each entry for some files
   becomes a row, by the official client's order; its entry for every text file becomes every other file's tool, only
-  while the user's is still Automatic, and nothing after it is read, as the client never goes past it. A chain whose
+  while the user's is still Automatic, and nothing after it is read, as the client never goes past it (even when the app can't read its tool). A chain whose
   first tool is `UnityYAMLMerge` sets where Unity assets open, from the tool chained after it (its stored path is
   dropped: the app finds the newest Unity Editor itself). The client's own tools become the app's (`plastic xmerge`,
   `plasticgui`, `macmergetool`, `gtkmergetool` the UVCS merge tool; `semanticmerge` Semantic Merge); a known program
   (VS Code, Rider, KDiff3, P4Merge...) becomes the app's own entry for it, with the app's arguments; any other program
   becomes a tool of the user's, `@basefile` `@sourcefile` `@destinationfile` `@output` and their `…symbolic`s turned
   into `{base}` `{incoming}` `{yours}` `{result}` and their names, an argument holding a variable the app has no value
-  for (`@fileencoding`, `@mergetype`...) dropped. Left out: binary entries and binary merges, the client's own scripts
+  for (`@fileencoding`, `@mergetype`...) dropped, with the switch before it when the variable was the whole argument
+  (`-e @fileencoding`). Left out: binary entries and binary merges, the client's own scripts
   (its `diffscripts` folder: Word documents, which are binary), regular expressions, a command that saves nowhere. While every other file opens in the UVCS merge tool once imported
   (Automatic, or the client's own tool), C#, Visual Basic and Java go to Semantic Merge (the client does so), but those
   a row sends elsewhere; a user who picked their own tool for every other file keeps C# there, and with no client.conf

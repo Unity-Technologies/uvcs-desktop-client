@@ -46,12 +46,12 @@ export function legacyMergeToolSettings(entries: LegacyMergeToolEntry[], current
     }
     const last = entry.commands.length > 0 ? legacyTool(entry.commands.at(-1)!) : undefined;
     const toolId = last ? toolIdOf(last) : null;
-    if (!toolId) continue;
+    // The client goes no further for a text file, even when the app can't read its tool for every one.
     if (entry.patterns.includes('*')) {
-      // The client goes no further for a text file.
       everyOtherFile = toolId;
       break;
     }
+    if (!toolId) continue;
     const patterns = entry.patterns.filter((pattern) => !isRegularExpression(pattern));
     if (patterns.length > 0) rules.push({ id: `imported:${rules.length + 1}`, patterns, toolId });
   }
@@ -117,7 +117,7 @@ const UVCS_STANDALONE_TOOLS: Record<string, string | null> = {
 };
 
 /** Programs the app knows as its own tools (`KNOWN_TOOLS`), by the names they're run with: the app's arguments for them, which it tests, are used. */
-const KNOWN_PROGRAMS: Record<string, string> = {
+export const KNOWN_PROGRAMS: Record<string, string> = {
   code: 'vscode',
   'code-insiders': 'vscodeInsiders',
   cursor: 'cursor',
@@ -154,9 +154,9 @@ function legacyTool(command: string): LegacyTool {
   if (name === 'unityyamlmerge') return { kind: 'smartMerge' };
   if (isOfficialClientScript(program)) return { kind: 'none' };
   if (UVCS_GUI_PROGRAMS.has(name)) return toolOrNone(UVCS_GUI_COMMANDS[args[0]?.toLowerCase() ?? '']);
-  if (name in UVCS_STANDALONE_TOOLS) return toolOrNone(UVCS_STANDALONE_TOOLS[name]);
-  if (KNOWN_PROGRAMS[name]) return { kind: 'tool', toolId: KNOWN_PROGRAMS[name] };
-  const appArgs = args.flatMap(withAppPlaceholders);
+  if (Object.hasOwn(UVCS_STANDALONE_TOOLS, name)) return toolOrNone(UVCS_STANDALONE_TOOLS[name]);
+  if (Object.hasOwn(KNOWN_PROGRAMS, name)) return { kind: 'tool', toolId: KNOWN_PROGRAMS[name]! };
+  const appArgs = withAppPlaceholders(args);
   if (!appArgs.some((arg) => arg.includes('{result}'))) return { kind: 'none' };
   return { kind: 'custom', tool: { name: programName(program, false), executable: program, args: appArgs } };
 }
@@ -181,7 +181,8 @@ function programName(program: string, lowercase = true): string {
 
 /**
  * The words of a command line as the official client writes them: spaces between words, quotes around a word with
- * spaces (or around a value, `-b="@basefile"`), dropped. Backslashes are Windows' folder separators, not escapes.
+ * spaces (or around a value, `-b="@basefile"`), dropped. Backslashes are Windows' folder separators, not escapes, and a
+ * single quote opens a quote only at a word's start (`/home/o'neil/tool` is one word).
  */
 function commandWords(command: string): string[] {
   const words: string[] = [];
@@ -192,7 +193,7 @@ function commandWords(command: string): string[] {
     if (quote) {
       if (char === quote) quote = null;
       else word += char;
-    } else if (char === '"' || char === "'") {
+    } else if (char === '"' || (char === "'" && !started)) {
       quote = char;
       started = true;
     } else if (/\s/.test(char)) {
@@ -222,13 +223,26 @@ const PLACEHOLDERS: Record<string, string> = {
 const UNFILLED = ['filetype', 'comparationmethod', 'fileencoding', 'resultencoding', 'mergetype', 'progress', 'extrainfofile', 'basehash', 'sourcehash', 'destinationhash'];
 const VARIABLE = new RegExp(`@(${[...Object.keys(PLACEHOLDERS), ...UNFILLED].sort((a, b) => b.length - a.length).join('|')})`, 'g');
 
-/** The argument in the app's placeholders; none when it holds a variable the app can't fill, as an option left empty could mislead the tool. */
-function withAppPlaceholders(arg: string): string[] {
-  let unfilled = false;
-  const converted = arg.replace(VARIABLE, (_variable, name: string) => {
-    if (PLACEHOLDERS[name]) return PLACEHOLDERS[name];
-    unfilled = true;
-    return '';
-  });
-  return unfilled ? [] : [converted];
+/**
+ * The arguments in the app's placeholders. One holding a variable the app can't fill is dropped, as an option left empty
+ * could mislead the tool, and so is the switch before it when the variable was the whole argument (`-e @fileencoding`).
+ */
+function withAppPlaceholders(args: readonly string[]): string[] {
+  const converted: string[] = [];
+  for (const arg of args) {
+    let unfilled = false;
+    const withPlaceholders = arg.replace(VARIABLE, (_variable, name: string) => {
+      if (PLACEHOLDERS[name]) return PLACEHOLDERS[name];
+      unfilled = true;
+      return '';
+    });
+    if (!unfilled) converted.push(withPlaceholders);
+    else if (/^@\w+$/.test(arg) && isSwitch(converted.at(-1))) converted.pop();
+  }
+  return converted;
+}
+
+/** `-e`, `--encoding`, `/E`: an option whose value comes as the next argument. */
+function isSwitch(arg: string | undefined): boolean {
+  return arg !== undefined && /^(-{1,2}[^=:\s]+|\/[^/\\=:\s]+)$/.test(arg);
 }
