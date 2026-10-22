@@ -23,9 +23,9 @@ describe('FAMILY_GLYPHS', () => {
 });
 
 describe('itemIconShape', () => {
-  it('draws directories and xlinks as folders', () => {
+  it('draws directories as folders, and xlinks apart from them', () => {
     expect(itemIconShape('directory', 'src')).toEqual({ kind: 'folder' });
-    expect(itemIconShape('xlink', 'thirdparty')).toEqual({ kind: 'folder' });
+    expect(itemIconShape('xlink', 'thirdparty')).toEqual({ kind: 'xlink' });
   });
 
   it("draws a file's family by its name, a binary one cm names so counting as a binary when its name tells nothing", () => {

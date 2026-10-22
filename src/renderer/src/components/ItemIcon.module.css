@@ -16,6 +16,11 @@
   fill: var(--icon-folder);
 }
 
+/* An xlink is drawn, not filled: a folder of another repository, its arrow showing through. */
+.xlink {
+  color: var(--icon-folder);
+}
+
 /* Every file is the same filled page, whatever its glyph: all read with one weight. */
 .page {
   color: var(--icon-file);
