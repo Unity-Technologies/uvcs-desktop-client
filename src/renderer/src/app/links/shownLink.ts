@@ -47,13 +47,15 @@ function fileIn(focusPath: string | undefined, shown: ShownFile | null): Pick<Li
 }
 
 /**
- * The file a page shows, from the diff on screen (`useShownDiffFile`: a diff's, or a review's): none when that diff
- * is another page's, or the page shows no diff.
+ * The file a page shows and the lines selected in it: a diff's or a review's from the diff on screen
+ * (`useShownDiffFile`), none when that diff is another page's; an annotation's or a browsed file's from the lines
+ * selected (`useSelectedLines`).
  */
-export function shownFileOf(page: Page | undefined, onScreen: { target: DiffTarget; path: string } | null): ShownFile | null {
+export function shownFileOf(page: Page | undefined, onScreen: { target: DiffTarget; path: string } | null, selected: Required<ShownFile> | null): ShownFile | null {
+  if (page?.kind === 'history' || page?.kind === 'browseRepository') return selected;
   if (!onScreen || (page?.kind !== 'diff' && page?.kind !== 'codeReview')) return null;
   if (page.kind === 'diff' && JSON.stringify(onScreen.target) !== JSON.stringify(page.target)) return null;
-  return { path: onScreen.path };
+  return selected?.path === onScreen.path ? selected : { path: onScreen.path };
 }
 
 /** What a link to a view with nothing selected names: the view, in the workspace's repository. */

@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WorkspaceHead } from '@shared/domain/workspace';
 import { useFilesViewStore } from '../../features/files/filesViewStore';
+import { requestLineFocus } from '../../features/pendingChanges/changesLineFocus';
 import { fakeApi } from '../../testing/fakeWindow';
 import { shownToasts, whereTheWindowIs } from '../../testing/operationOutcome';
 import { openCreateWorkspaceDialog } from '../home/dialogs/CreateWorkspaceDialog';
@@ -12,6 +13,7 @@ import { openLink } from './openLink';
 
 vi.mock('./linkDialogs', () => ({ showLinkFailure: vi.fn(), pickLinkWorkspace: vi.fn(), offerNewWorkspace: vi.fn() }));
 vi.mock('../home/dialogs/CreateWorkspaceDialog', () => ({ openCreateWorkspaceDialog: vi.fn() }));
+vi.mock('../../features/pendingChanges/changesLineFocus', () => ({ requestLineFocus: vi.fn() }));
 
 const GAME = join('/wk', 'game');
 const GAME_TASK = join('/wk', 'game-task');
@@ -144,6 +146,7 @@ describe('a workspace link', () => {
     await openLink(`uvcs://${GAME.replaceAll('\\', '/').replace(/^(?!\/)/, '/')}/Assets/Player.cs#L42`);
 
     expect(whereTheWindowIs().view).toBe('changes');
+    expect(requestLineFocus).toHaveBeenCalledWith(GAME, 'Assets/Player.cs', { side: 'new', first: 42, last: 42 });
   });
 
   it('reveals a file without changes in Files', async () => {

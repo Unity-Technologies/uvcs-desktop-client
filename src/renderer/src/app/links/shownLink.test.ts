@@ -44,14 +44,22 @@ describe('shownFileOf', () => {
   const target = { kind: 'changeset', changesetId: 12 } as const;
 
   it("takes the file of the diff on screen when it is the page's, a review's whatever it compares", () => {
-    expect(shownFileOf({ kind: 'diff', title: 'Changeset 12', target }, { target, path: 'a.cs' })).toEqual({ path: 'a.cs' });
-    expect(shownFileOf({ kind: 'codeReview', reviewId: 3 }, { target, path: 'b.cs' })).toEqual({ path: 'b.cs' });
+    expect(shownFileOf({ kind: 'diff', title: 'Changeset 12', target }, { target, path: 'a.cs' }, null)).toEqual({ path: 'a.cs' });
+    expect(shownFileOf({ kind: 'codeReview', reviewId: 3 }, { target, path: 'b.cs' }, null)).toEqual({ path: 'b.cs' });
+  });
+
+  it('takes the lines selected in the file shown, or in an annotation or a browsed file', () => {
+    const selected = { path: 'a.cs', lines: LINES };
+    expect(shownFileOf({ kind: 'diff', title: 'Changeset 12', target }, { target, path: 'a.cs' }, selected)).toEqual(selected);
+    expect(shownFileOf({ kind: 'diff', title: 'Changeset 12', target }, { target, path: 'b.cs' }, selected)).toEqual({ path: 'b.cs' });
+    expect(shownFileOf({ kind: 'history', path: 'a.cs', view: 'annotate' }, null, selected)).toEqual(selected);
+    expect(shownFileOf({ kind: 'browseRepository', changesetId: 3 }, null, null)).toBeNull();
   });
 
   it("takes none from another page's diff, or for a page with none", () => {
-    expect(shownFileOf({ kind: 'diff', title: 'Changeset 13', target: { kind: 'changeset', changesetId: 13 } }, { target, path: 'a.cs' })).toBeNull();
-    expect(shownFileOf({ kind: 'history', path: 'a.cs' }, { target, path: 'a.cs' })).toBeNull();
-    expect(shownFileOf(undefined, { target, path: 'a.cs' })).toBeNull();
+    expect(shownFileOf({ kind: 'diff', title: 'Changeset 13', target: { kind: 'changeset', changesetId: 13 } }, { target, path: 'a.cs' }, null)).toBeNull();
+    expect(shownFileOf({ kind: 'history', path: 'a.cs' }, { target, path: 'a.cs' }, null)).toBeNull();
+    expect(shownFileOf(undefined, { target, path: 'a.cs' }, null)).toBeNull();
   });
 });
 

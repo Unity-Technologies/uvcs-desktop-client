@@ -7,6 +7,7 @@ import { parseLink } from '@shared/links/parseLink';
 import { api } from '../../api/client';
 import { showInBranchExplorer } from '../../features/branchExplorer/branchExplorerStore';
 import { useFilesViewStore } from '../../features/files/filesViewStore';
+import { requestLineFocus } from '../../features/pendingChanges/changesLineFocus';
 import { pendingChangesQuery } from '../../features/pendingChanges/usePendingChanges';
 import { PLATFORM } from '../../lib/platform';
 import { toast } from '../../ui/toast/toastStore';
@@ -111,7 +112,10 @@ function navigate(workspacePath: string, where: LinkNavigation): void {
   const { show } = where;
   if (show?.kind === 'branchExplorer') return showInBranchExplorer(show.target);
   if (show?.kind === 'files') useFilesViewStore.getState().requestReveal(workspacePath, show.path);
-  if (show?.kind === 'change') selectInView(workspacePath, 'changes', `change:${show.path}`);
+  if (show?.kind === 'change') {
+    selectInView(workspacePath, 'changes', `change:${show.path}`);
+    if (show.lines) requestLineFocus(workspacePath, show.path, show.lines);
+  }
   navigation.goToView(where.view);
 }
 
