@@ -81,13 +81,15 @@ describe('PendingChangesReader', () => {
       { name: 'Default', description: 'Default Unity VCS changelist', changes: [change('PR', 'a.txt')] },
       { name: 'UI work', description: 'polish', changes: [change('CO+CH', 'b.txt'), change('CO', 'c.txt')] },
       { name: 'Merge from cs:2', description: 'Files affected by the merge process', changes: [change('RP', 'm.txt', { merge: 'Merge from 2' })] },
-      { name: 'Hidden changes', changes: [change('CO', 'c.txt'), change('CH+HC', 'h.txt')] },
+      { name: 'Merge from cs:3', description: 'Files affected by the merge process', changes: [change('RP', 'm.txt', { merge: 'Merge from 2' })] },
+      { name: 'Hidden changes', changes: [change('CH+HC', 'h.txt')] },
     ]);
     const { changes, changelists } = read(output);
 
     expect(changelists).toEqual([
       { name: 'UI work', description: 'polish' },
       { name: 'Merge from cs:2', description: 'Files affected by the merge process' },
+      { name: 'Merge from cs:3', description: 'Files affected by the merge process' },
       { name: 'Hidden changes', description: '' },
     ]);
     expect(changes.map((item) => [item.path, item.changelist, item.kinds])).toEqual([
@@ -99,25 +101,24 @@ describe('PendingChangesReader', () => {
     ]);
   });
 
-  it('reads an item printed twice as one change: a deleted file whose path a new file took stays a deletion', () => {
-    const { changes } = read(pendingStatus(WORKSPACE, change('PR', 'a.txt'), change('CH', 'b.txt'), change('DE', 'a.txt')));
+  it('reads an item printed twice as one change, its kinds in the order --xml listed them: a deleted file a new file took stays a deletion', () => {
+    const output = pendingStatusInChangelists(WORKSPACE, [
+      { name: 'Default', changes: [change('PR', 'a.txt'), change('CH', 'b.txt')] },
+      { name: 'Merge from cs:5', changes: [change('DE', 'a.txt', { merge: 'Merge from 5' })] },
+    ]);
+    const { changes } = read(output);
 
     expect(changes).toEqual([
-      { path: 'a.txt', kinds: ['private', 'deleted'], itemType: 'file', size: 0, lastModified: '' },
+      { path: 'a.txt', kinds: ['deleted', 'private'], itemType: 'file', size: 0, lastModified: '', mergeInfo: 'Merge from 5', changelist: 'Merge from cs:5' },
       { path: 'b.txt', kinds: ['changed'], itemType: 'file', size: 0, lastModified: '' },
     ]);
+    expect(Object.values(changes[0]!)).not.toContain(undefined);
   });
 
-  it('takes what the second printing of an item adds: the changelist and the merge it comes from, nothing empty', () => {
-    const output = pendingStatusInChangelists(WORKSPACE, [
-      { name: 'Default', changes: [change('CO', 'a.txt')] },
-      { name: 'UI work', changes: [change('CO', 'a.txt', { merge: 'Merge from 5' })] },
-    ]);
-    const [only, ...others] = read(output).changes;
+  it('reads a moved file that changed, which cm prints as a change then a move, as one change with where it was', () => {
+    const { changes } = read(pendingStatus(WORKSPACE, change('CH', 'docs/b.ts'), change('MV', 'docs/b.ts', { oldPath: 'src/b.ts', similarity: '93%' })));
 
-    expect(others).toEqual([]);
-    expect(only).toEqual({ path: 'a.txt', kinds: ['checkedOut'], itemType: 'file', size: 0, lastModified: '', changelist: 'UI work', mergeInfo: 'Merge from 5' });
-    expect(Object.values(only!)).not.toContain(undefined);
+    expect(changes).toEqual([{ path: 'docs/b.ts', kinds: ['changed', 'moved'], itemType: 'file', size: 0, lastModified: '', oldPath: 'src/b.ts', similarityPercent: 93 }]);
   });
 
   it('fails on a change printed with fields it can not read, rather than show a clean workspace', () => {
