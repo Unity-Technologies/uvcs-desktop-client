@@ -2,6 +2,7 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import { bulkPrivateFiles, type BulkPrivate } from './bulkPrivate';
 import { isCheckinCandidate, isShelvable } from './changeCategories';
 import { uploadSummary, type UploadSummary } from './uploadSummary';
+import { neededWith, type PendingIndex } from './checkinDependencies';
 
 export interface CheckinSelection {
   isIncluded: (change: PendingChange) => boolean;
@@ -80,6 +81,17 @@ export function withIncluded(choice: CheckinChoice, paths: string[], included: b
 export interface ListedChanges {
   all: PendingChange[];
   matchingFilter: PendingChange[];
+  /** All of them, indexed for what each needs (`indexPending`). */
+  index: PendingIndex;
+}
+
+/**
+ * The changes shown and checked, and what they need that the filter hides (a private file's private folder while
+ * filtering by Changed): checked with them, they go in with them. In the listed order.
+ */
+function withWhatTheyNeed(shown: PendingChange[], all: PendingChange[], index: PendingIndex, isIncluded: (change: PendingChange) => boolean): PendingChange[] {
+  const going = new Set(neededWith(shown, index).filter(isIncluded).map((change) => change.path));
+  return all.filter((change) => going.has(change.path));
 }
 
 /**
@@ -87,8 +99,8 @@ export interface ListedChanges {
  * takes, bulk private files. What you see is what goes in: a checked change the filter hides could slip a private file
  * into a changeset unseen, while one left out stays pending and shows again once the filter clears.
  */
-export function checkinSelectionOf({ all, matchingFilter }: ListedChanges, isIncluded: (change: PendingChange) => boolean): CheckinSelection {
-  const included = matchingFilter.filter(isIncluded);
+export function checkinSelectionOf({ all, matchingFilter, index }: ListedChanges, isIncluded: (change: PendingChange) => boolean): CheckinSelection {
+  const included = matchingFilter === all ? all.filter(isIncluded) : withWhatTheyNeed(matchingFilter.filter(isIncluded), all, index, isIncluded);
   const shelvable = included.filter(isShelvable);
   return {
     isIncluded,

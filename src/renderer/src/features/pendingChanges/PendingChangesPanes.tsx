@@ -36,6 +36,7 @@ import { checkinAfterUpdateMessage, useCheckinAfterUpdateStore } from './checkin
 import { undoUnchangedCheckouts } from './checkinOperations';
 import { matchesBranch } from './changeCategories';
 import { changesUnderRow, type ChangeRow } from './changeRows';
+import { indexPending, pathsCheckedTogether } from './checkinDependencies';
 import { changesPanesState } from './changesPanesState';
 import { changesByChangelist, prepareChangelistCheckin } from './changelistCheckin';
 import { changelistMenu } from './changelistMenu';
@@ -102,7 +103,9 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   };
   const { rows, changesByKey, fileKeys, checkboxInset, toggleCollapsed } = useChangeRows({ changes, changelists, layout, grouping, scope: folderListScope(workspacePath, 'changes') });
   // The sorted list, which the filter gives back as it is when nothing filters: nothing is hidden to count.
-  const listed = useMemo(() => ({ all: sorted, matchingFilter: filtered }), [sorted, filtered]);
+  // Indexed once per read of the changes: checking a box looks up only the folders above what was clicked.
+  const index = useMemo(() => indexPending(sorted), [sorted]);
+  const listed = useMemo(() => ({ all: sorted, matchingFilter: filtered, index }), [sorted, filtered, index]);
   const { isIncluded, included, hiddenIncludedCount, upload, shelvable, shelvableUpload, bulkPrivate } = useCheckinSelection(listed, checkinChoice);
   const reviewed = useMemo(() => reviewProgress(included, review.statusOf), [included, review.statusOf]);
   const { mergeChanges, onlyNeverCheckedIn } = useMemo(
@@ -139,8 +142,9 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
     if (!focused && !focusedFolder && firstChangeKey) setSelection(singleSelection(firstChangeKey));
   }, [focused, focusedFolder, firstChangeKey]);
 
+  // What the clicked changes need goes with them, and what needs them comes out with them (`pathsCheckedTogether`).
   const setIncludedChanges = (selected: PendingChange[], include: boolean): void =>
-    setIncluded(workspacePath, selected.map((change) => change.path), include);
+    setIncluded(workspacePath, pathsCheckedTogether(selected, include, index), include);
   // The header's box with nothing hidden means every file: it ends a prepared changelist instead of growing it.
   const setEveryShownIncluded = (shown: PendingChange[], include: boolean): void => {
     if (include && changes.length === allChanges.length) includeEverything(workspacePath, shown.map((change) => change.path));
@@ -152,7 +156,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const prepareChangelist = (changelist: Changelist, mode: CheckinMode): void => {
     // Rendered at once, so the summary holds the comment before the caret goes after it.
     flushSync(() => {
-      prepareChangelistCheckin({ workspacePath, changelist, changes: changelistChanges.get(changelist.name) ?? NO_CHANGES, changelists, clearFilter });
+      prepareChangelistCheckin({ workspacePath, changelist, changes: changelistChanges.get(changelist.name) ?? NO_CHANGES, index, changelists, clearFilter });
       setCheckinMode(mode);
     });
     focusAtEnd(summaryRef.current);

@@ -1,5 +1,6 @@
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { joinComment, splitComment } from '../../lib/comment';
+import { neededWith, type PendingIndex } from './checkinDependencies';
 import { checkinDraftOf, useCheckinDraftStore } from './checkinDraftStore';
 
 /** The changes of each user changelist, by its name; the default changelist's are in none. */
@@ -19,6 +20,8 @@ interface ChangelistCheckin {
   changelist: Changelist;
   /** Its pending changes, those the filters hide too (`changesByChangelist`). */
   changes: PendingChange[];
+  /** Every pending change: what the changelist's changes need goes in with them (`neededWith`). */
+  index: PendingIndex;
   /** Every user changelist: a comment one of their descriptions filled is no comment of the user's. */
   changelists: Changelist[];
   /** Clears Changes' filters, "Unreviewed" too: a check-in takes only what they show, and all the changelist goes in. */
@@ -32,10 +35,10 @@ interface ChangelistCheckin {
  * comment and presses the panel's button, so a changelist goes through the check-in every other does (the
  * empty-comment warning, "Update & check in", the question about piles of private files).
  */
-export function prepareChangelistCheckin({ workspacePath, changelist, changes, changelists, clearFilter }: ChangelistCheckin): void {
+export function prepareChangelistCheckin({ workspacePath, changelist, changes, index, changelists, clearFilter }: ChangelistCheckin): void {
   clearFilter();
   const store = useCheckinDraftStore.getState();
-  store.prepareChangelist(workspacePath, { name: changelist.name, paths: new Set(changes.map((change) => change.path)) });
+  store.prepareChangelist(workspacePath, { name: changelist.name, paths: new Set(neededWith(changes, index).map((change) => change.path)) });
   if (!userWroteComment(workspacePath, changelists)) store.setMessage(workspacePath, splitComment(changelist.description));
 }
 
