@@ -19,6 +19,8 @@ export interface PendingIndex {
   inside: ReadonlyMap<string, PendingChange[]>;
   /** The changes of a pending merge, which cm checks in only all at once. */
   merged: PendingChange[];
+  /** The moves out of each deleted folder: from inside it to outside it. */
+  movedOutOf: ReadonlyMap<string, PendingChange[]>;
 }
 
 export function indexPending(pending: PendingChange[]): PendingIndex {
@@ -37,11 +39,17 @@ export function indexPending(pending: PendingChange[]): PendingIndex {
     holdersAt.set(folder, holders);
     return holders;
   };
+  const movedOutOf = new Map<string, PendingChange[]>();
   for (const change of pending) {
-    if (change.oldPath && hasAny(change, MOVED)) appendTo(movedFrom, change.oldPath, change);
     for (const folder of holdersOf(parentOf(change.path))) appendTo(inside, folder, change);
+    if (!change.oldPath || !hasAny(change, MOVED)) continue;
+    appendTo(movedFrom, change.oldPath, change);
+    for (const folder of holdersOf(parentOf(change.oldPath))) {
+      const holder = byPath.get(folder);
+      if (holder && isDeletedFolder(holder) && !isUnder(change.path, folder)) appendTo(movedOutOf, folder, change);
+    }
   }
-  return { byPath, movedFrom, inside, merged: pending.filter((change) => change.mergeInfo) };
+  return { byPath, movedFrom, inside, merged: pending.filter((change) => change.mergeInfo), movedOutOf };
 }
 
 /**
@@ -51,15 +59,15 @@ export function indexPending(pending: PendingChange[]): PendingIndex {
  * a merge's change, all of the merge's ("All merge changes must be checked in together").
  */
 export function neededWith(changes: PendingChange[], index: PendingIndex): PendingChange[] {
-  return closure(changes, (change, reach) => {
-    if (change.mergeInfo) index.merged.forEach(reach);
+  return closure(changes, (change, reach, once) => {
+    if (change.mergeInfo) once('merge', () => index.merged.forEach(reach));
     forEachFolderAbove(change.path, (folder) => {
       const holder = index.byPath.get(folder);
       if (holder && needsIt(holder)) reach(holder);
     });
     if (isMovedFolder(change)) for (const held of index.inside.get(change.path) ?? []) if (goesInWithMovedFolder(held)) reach(held);
     if (hasAny(change, NEEDED_BY_WHAT_IT_HOLDS) && !hasAny(change, MOVED)) index.movedFrom.get(change.path)?.forEach(reach);
-    if (isDeletedFolder(change)) movesOutOf(change.path, index).forEach(reach);
+    if (isDeletedFolder(change)) index.movedOutOf.get(change.path)?.forEach(reach);
   });
 }
 
@@ -69,8 +77,8 @@ export function neededWith(changes: PendingChange[], index: PendingIndex): Pendi
  * added where a move left; the deleted folder a move leaves; and for a merge's change, all of the merge's.
  */
 export function needingThem(changes: PendingChange[], index: PendingIndex): PendingChange[] {
-  return closure(changes, (change, reach) => {
-    if (change.mergeInfo) index.merged.forEach(reach);
+  return closure(changes, (change, reach, once) => {
+    if (change.mergeInfo) once('merge', () => index.merged.forEach(reach));
     if (isFolder(change) && !isOnlyCheckedOut(change)) index.inside.get(change.path)?.forEach(reach);
     if (goesInWithMovedFolder(change)) {
       forEachFolderAbove(change.path, (folder) => {
@@ -92,7 +100,8 @@ export function needingThem(changes: PendingChange[], index: PendingIndex): Pend
 /**
  * Whether a change goes in, from whether its box is checked, made consistent: one whose needed folder is unchecked
  * doesn't (a new file appearing in a folder the user left out), and one inside a checked moved folder does (a new
- * file appearing in it: cm takes it with the folder). A merge goes in whole or not at all.
+ * file appearing in it: cm takes it with the folder). A merge goes in whole or not at all, and an item added where a
+ * move left, or a deleted folder, only with the moves they need.
  */
 export function consistentlyIncluded(isChecked: (change: PendingChange) => boolean, index: PendingIndex): (change: PendingChange) => boolean {
   const wholeMerge = index.merged.every(isChecked);
@@ -122,6 +131,9 @@ export function consistentlyIncluded(isChecked: (change: PendingChange) => boole
     if (change.mergeInfo && !wholeMerge) return false;
     const parent = parentOf(change.path);
     if (leftOut(parent)) return false;
+    // An item where a move left, and a deleted folder, go in only with their moves.
+    if (hasAny(change, NEEDED_BY_WHAT_IT_HOLDS) && !hasAny(change, MOVED) && index.movedFrom.get(change.path)?.some((move) => !isChecked(move))) return false;
+    if (isDeletedFolder(change) && index.movedOutOf.get(change.path)?.some((move) => !isChecked(move))) return false;
     return isChecked(change) || (goesInWithMovedFolder(change) && takenWhole(parent));
   };
   return includedNow;
@@ -138,24 +150,29 @@ function appendTo(lists: Map<string, PendingChange[]>, key: string, change: Pend
   else lists.set(key, [change]);
 }
 
-/** The changes reached from `start` by `next`, each once, `start` first: no list is built for a step. */
-function closure(start: PendingChange[], next: (change: PendingChange, reach: (found: PendingChange) => void) => void): PendingChange[] {
+/**
+ * The changes reached from `start` by `next`, each once, `start` first: no list is built for a step, and a step shared
+ * by many (all of a merge) runs `once`, so a merge of 20,000 changes is walked once, not once per change.
+ */
+function closure(
+  start: PendingChange[],
+  next: (change: PendingChange, reach: (found: PendingChange) => void, once: (step: string, run: () => void) => void) => void,
+): PendingChange[] {
   const reached = new Map(start.map((change) => [change.path, change]));
   const queue = [...start];
+  const done = new Set<string>();
   const reach = (found: PendingChange): void => {
     if (reached.has(found.path)) return;
     reached.set(found.path, found);
     queue.push(found);
   };
-  for (let change = queue.pop(); change; change = queue.pop()) next(change, reach);
+  const once = (step: string, run: () => void): void => {
+    if (done.has(step)) return;
+    done.add(step);
+    run();
+  };
+  for (let change = queue.pop(); change; change = queue.pop()) next(change, reach, once);
   return [...reached.values()];
-}
-
-/** The moves whose item was inside the deleted folder and now lives outside it. */
-function movesOutOf(folder: string, index: PendingIndex): PendingChange[] {
-  const moves: PendingChange[] = [];
-  for (const [oldPath, moved] of index.movedFrom) if (isUnder(oldPath, folder)) moves.push(...moved.filter((move) => !isUnder(move.path, folder)));
-  return moves;
 }
 
 /** A change cm takes with the moved folder holding it: any it checks in, but private items (only with `--private`). */
@@ -197,9 +214,3 @@ function forEachFolderAbove(path: string, visit: (folder: string) => void): void
   for (let end = path.indexOf('/'); end !== -1; end = path.indexOf('/', end + 1)) visit(path.slice(0, end));
 }
 
-/** Every folder above the path, outermost first ("a/b/c.cs": "a", "a/b"). */
-export function foldersAbove(path: string): string[] {
-  const folders: string[] = [];
-  for (let end = path.indexOf('/'); end !== -1; end = path.indexOf('/', end + 1)) folders.push(path.slice(0, end));
-  return folders;
-}
