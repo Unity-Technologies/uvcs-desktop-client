@@ -3,8 +3,10 @@ import type {
   LeaveDisabledReason,
   PendingChangesAction,
   PendingChangesOnSwitch,
+  SwitchChangesAction,
   SwitchPreflight,
 } from '@shared/domain/switchWithChanges';
+import type { ButtonVariant } from '../../ui/Button';
 import { branchLabel } from '../../lib/branchLabels';
 import { pluralize } from '../../lib/text';
 
@@ -14,13 +16,19 @@ interface SwitchOption {
   disabledReason?: string;
 }
 
+/**
+ * Where the question comes up. Switching prefers leaving the changes, and also offers undoing them; a new branch
+ * prefers bringing them, and never offers undoing them: a new branch is made to carry on with them.
+ */
+export type SwitchFlow = 'switch' | 'newBranch';
+
 export interface SwitchChoice {
   leave: SwitchOption;
   bring: SwitchOption;
-  /** Preselected; null when neither option is possible. */
+  /** Undoing the changes and switching; only offered when switching. */
+  discard?: SwitchOption;
+  /** Preselected, never `discard`: losing changes is always the user's explicit choice. Null when neither is possible. */
   defaultAction: PendingChangesAction | null;
-  /** Things worth knowing before choosing (private files, locks, older left changes). */
-  notes: string[];
 }
 
 /** What switching with these pending changes takes. */
@@ -43,37 +51,52 @@ const LEAVE_DISABLED: Record<LeaveDisabledReason, string> = {
   shelveSource: 'Changes can’t be left on a shelve.',
 };
 
-/** Decides whether to ask, and what to offer, from what the workspace holds. `preferred` is the flow's default choice. */
-export function planSwitch(preflight: SwitchPreflight, setting: PendingChangesOnSwitch, preferred: PendingChangesAction): SwitchPlan {
+/** Decides whether to ask, and what to offer, from what the workspace holds and where the question comes up. */
+export function planSwitch(preflight: SwitchPreflight, setting: PendingChangesOnSwitch, flow: SwitchFlow): SwitchPlan {
   if (preflight.pendingCount === 0 || preflight.unchangedCheckoutsOnly) return { kind: 'plain' };
 
-  const choice = switchChoice(preflight, preferred);
+  const choice = switchChoice(preflight, flow);
   if (preflight.inMerge) return { kind: 'blockedByMerge', choice: disableAll(choice) };
   if (setting !== 'ask' && choice[setting].enabled) return { kind: 'automatic', action: setting };
   return { kind: 'ask', choice };
 }
 
-/** The two options for these changes; also used by the new-branch dialog. */
-function switchChoice(preflight: SwitchPreflight, preferred: PendingChangesAction): SwitchChoice {
+/** The primary button of the switch question: undoing the changes says so, in red, as it loses them. */
+export function switchButton(action: SwitchChangesAction | null): { label: string; variant: ButtonVariant } {
+  return action === 'discard' ? { label: 'Undo & switch', variant: 'danger' } : { label: 'Switch', variant: 'primary' };
+}
+
+/** The options for these changes, for a switch or the new-branch dialog. */
+function switchChoice(preflight: SwitchPreflight, flow: SwitchFlow): SwitchChoice {
   const leave = option(preflight.leaveDisabledReason && LEAVE_DISABLED[preflight.leaveDisabledReason]);
   const bring = option(preflight.bringDisabledReason && BRING_DISABLED[preflight.bringDisabledReason]);
+  const preferred: PendingChangesAction = flow === 'switch' ? 'leave' : 'bring';
   const other: PendingChangesAction = preferred === 'leave' ? 'bring' : 'leave';
   const enabled = { leave, bring };
   const defaultAction = enabled[preferred].enabled ? preferred : enabled[other].enabled ? other : null;
-  return { leave, bring, defaultAction, notes: switchNotes(preflight) };
+  const choice = { leave, bring, defaultAction };
+  return flow === 'switch' ? { ...choice, discard: { enabled: true } } : choice;
 }
 
-function switchNotes(preflight: SwitchPreflight): string[] {
+/**
+ * Things worth knowing before choosing (private files, locks, older left changes), for the option chosen: undoing the
+ * changes shelves nothing, and releases the locks for good. Null, as nothing is chosen yet, reads as shelving them.
+ */
+export function switchNotes(preflight: SwitchPreflight, action: SwitchChangesAction | null): string[] {
+  const shelving = action !== 'discard';
   const notes: string[] = [];
   if (preflight.privateCount > 0) {
     const one = preflight.privateCount === 1;
-    notes.push(`${pluralize(preflight.privateCount, 'private file')} ${one ? 'isn’t shelved: it stays' : 'aren’t shelved: they stay'} in the folder.`);
+    const stays = shelving ? (one ? 'isn’t shelved: it stays' : 'aren’t shelved: they stay') : one ? 'stays' : 'stay';
+    notes.push(`${pluralize(preflight.privateCount, 'private file')} ${stays} in the folder.`);
   }
   if (preflight.lockedPaths.length > 0) {
-    notes.push(`Your locks on ${pluralize(preflight.lockedPaths.length, 'file')} are released while the changes are shelved.`);
+    const released = shelving ? 'are released while the changes are shelved' : 'are released';
+    notes.push(`Your locks on ${pluralize(preflight.lockedPaths.length, 'file')} ${released}.`);
   }
   if (preflight.leftShelveCount > 0) {
-    notes.push(`You already left changes on ${branchLabel(preflight.sourceName)}. They stay; leaving these makes another shelve next to them.`);
+    const leftHere = `You already left changes on ${branchLabel(preflight.sourceName)}.`;
+    notes.push(action === 'leave' || action === null ? `${leftHere} They stay; leaving these makes another shelve next to them.` : `${leftHere} They stay.`);
   }
   return notes;
 }
@@ -83,5 +106,6 @@ function option(disabledReason: string | undefined): SwitchOption {
 }
 
 function disableAll(choice: SwitchChoice): SwitchChoice {
-  return { ...choice, leave: { enabled: false }, bring: { enabled: false }, defaultAction: null };
+  const disabled = { enabled: false };
+  return { ...choice, leave: disabled, bring: disabled, ...(choice.discard && { discard: disabled }), defaultAction: null };
 }

@@ -1,5 +1,5 @@
 import type { IncomingChanges } from '@shared/domain/incoming';
-import type { PendingChangesAction } from '@shared/domain/switchWithChanges';
+import type { SwitchChangesAction } from '@shared/domain/switchWithChanges';
 import { api } from '../../api/client';
 import { askSwitchWithChanges } from '../../features/branches/SwitchWithChangesDialog';
 import { planSwitch } from '../../features/branches/switchOptions';
@@ -42,14 +42,14 @@ export async function updateUnlessUpToDate(workspacePath: string): Promise<void>
 
 /**
  * Switches the workspace to a branch, changeset, label or shelve spec: every switch in the app goes through here.
- * With pending changes it asks (or follows the setting) whether to leave them behind or bring them along;
+ * With pending changes it asks (or follows the setting) whether to leave them behind, bring them along or undo them;
  * `pendingChanges` skips the question when the caller already asked. Resolves to whether the workspace switched.
  */
 export async function switchWorkspace(
   workspacePath: string,
   targetSpec: string,
   displayName: string,
-  pendingChanges?: PendingChangesAction,
+  pendingChanges?: SwitchChangesAction,
 ): Promise<boolean> {
   if (refuseWhileBusy(workspacePath)) return false;
   const action = pendingChanges ?? (await choosePendingChangesAction(workspacePath, targetSpec, displayName));
@@ -68,12 +68,12 @@ export async function switchWorkspace(
 }
 
 /** Undefined: nothing to decide. Null: the user cancelled, or the switch isn't possible. */
-async function choosePendingChangesAction(workspacePath: string, targetSpec: string, displayName: string): Promise<PendingChangesAction | undefined | null> {
+async function choosePendingChangesAction(workspacePath: string, targetSpec: string, displayName: string): Promise<SwitchChangesAction | undefined | null> {
   const preflight = await runRead(`Couldn't switch to ${displayName}`, () => api.workspaces.switchPreflight(workspacePath, targetSpec));
   if (!preflight) return null;
 
   const { pendingChangesOnSwitch } = await api.settings.get();
-  const plan = planSwitch(preflight, pendingChangesOnSwitch, 'leave');
+  const plan = planSwitch(preflight, pendingChangesOnSwitch, 'switch');
   switch (plan.kind) {
     case 'plain':
       return undefined;

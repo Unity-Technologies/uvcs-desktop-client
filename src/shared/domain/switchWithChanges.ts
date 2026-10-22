@@ -1,5 +1,11 @@
-/** What happens to pending changes when the workspace switches: they stay behind in a shelve, or come along. */
+/** What happens to pending changes shelved by a switch: they stay behind in the shelve, or come along. */
 export type PendingChangesAction = 'leave' | 'bring';
+
+/**
+ * What a switch does with the pending changes: shelve them (`PendingChangesAction`), or undo them, losing them
+ * (`discard`). Discarding is only ever chosen in the switch dialog: no setting does it without asking.
+ */
+export type SwitchChangesAction = PendingChangesAction | 'discard';
 
 /** The setting: ask every time, or always do the same. */
 export type PendingChangesOnSwitch = 'ask' | PendingChangesAction;
@@ -35,6 +41,8 @@ export type SwitchResult = (
   | { kind: 'undidUnchangedCheckouts'; count: number; restored?: RestoredChanges }
   | { kind: 'left'; shelveId: number; count: number; sourceName: string; restored?: RestoredChanges }
   | { kind: 'brought' }
+  /** The changes were undone before switching, as the user chose: they are gone. */
+  | { kind: 'discarded'; count: number; restored?: RestoredChanges }
   /** Switched, but the changes wait in the shelve until the user resolves how they merge on the target. */
   | { kind: 'bringPending'; shelveId: number; conflictCount: number }
 ) & { renamedPrivates?: RenamedPrivateFile[] };

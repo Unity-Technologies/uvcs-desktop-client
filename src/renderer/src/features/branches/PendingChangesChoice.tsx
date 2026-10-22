@@ -1,4 +1,4 @@
-import type { PendingChangesAction } from '@shared/domain/switchWithChanges';
+import type { SwitchChangesAction } from '@shared/domain/switchWithChanges';
 import { branchLabel, branchLabels } from '../../lib/branchLabels';
 import { OptionCards, type OptionCard } from '../../ui/OptionCards';
 import { pendingChangesPronoun } from './pendingChangesWords';
@@ -9,25 +9,25 @@ interface PendingChangesChoiceProps {
   source: string;
   /** Where the workspace is going, e.g. `/main/t2`; null for a branch not named yet. */
   destination: string | null;
-  choice: Pick<SwitchChoice, 'leave' | 'bring'>;
+  choice: Pick<SwitchChoice, 'leave' | 'bring' | 'discard'>;
   /** How many changes there are, so one reads "it" and several "them". */
   count: number;
-  value: PendingChangesAction | null;
-  onChange: (value: PendingChangesAction) => void;
+  value: SwitchChangesAction | null;
+  onChange: (value: SwitchChangesAction) => void;
   /** Show "Your pending changes" above the cards, where the question isn't asked around them. */
   heading?: boolean;
 }
 
 /**
  * What happens to pending changes on a switch, in the same words wherever it comes up (switching, creating
- * a branch and switching to it): leave them behind in a shelve, or bring them along. Both branches go by their own
- * names (`branchLabels`), the one the changes are on in full in its tooltip.
+ * a branch and switching to it): leave them behind in a shelve, bring them along, or, where the choice offers it,
+ * undo them. Both branches go by their own names (`branchLabels`), the one the changes are on in full in its tooltip.
  */
 export function PendingChangesChoice({ source, destination, choice, count, value, onChange, heading = false }: PendingChangesChoiceProps) {
   const [sourceName, destinationName] = destination === null ? [branchLabel(source), null] : branchLabels(source, destination);
   const where = destinationName ?? 'the new branch';
   const them = pendingChangesPronoun(count);
-  const cards: OptionCard<PendingChangesAction>[] = [
+  const cards: OptionCard<SwitchChangesAction>[] = [
     {
       value: 'leave',
       title: <>Leave {them} on <code data-tip={source}>{sourceName}</code></>,
@@ -41,5 +41,13 @@ export function PendingChangesChoice({ source, destination, choice, count, value
       disabled: !choice.bring.enabled,
     },
   ];
+  if (choice.discard) {
+    cards.push({
+      value: 'discard',
+      title: <>Undo {them}</>,
+      description: 'Your edits are lost, with no shelve to restore. Added files stay in the folder as private files.',
+      disabled: !choice.discard.enabled,
+    });
+  }
   return <OptionCards label="Your pending changes" heading={heading} cards={cards} value={value} onChange={onChange} />;
 }

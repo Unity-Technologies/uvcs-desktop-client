@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { PendingChangesAction } from '@shared/domain/switchWithChanges';
+import type { SwitchChangesAction } from '@shared/domain/switchWithChanges';
 import { recordingContext } from '../operations/testing/recordingContext';
 import { memorySettings } from '../settings/testing/memorySettings';
 import { switchWithChanges, type SwitchDependencies } from './switchWithChanges';
@@ -27,7 +27,7 @@ function workspaceWith(scenario: WorkspaceScenario, { restoreLeftChangesAutomati
   return { ...workspace, ...playAlongDependencies(workspace.cm, workspacePath, memorySettings({ restoreLeftChangesAutomatically })) };
 }
 
-function switchTo(deps: SwitchDependencies, target: string, action?: PendingChangesAction, context = recordingContext().context) {
+function switchTo(deps: SwitchDependencies, target: string, action?: SwitchChangesAction, context = recordingContext().context) {
   return switchWithChanges(deps, workspacePath, target, action, context);
 }
 
@@ -64,7 +64,7 @@ describe('switching a workspace without changes', () => {
 });
 
 describe('switching with changes refuses, touching nothing,', () => {
-  const refuses = async (scenario: WorkspaceScenario, target: string, action: PendingChangesAction | undefined, message: string | RegExp) => {
+  const refuses = async (scenario: WorkspaceScenario, target: string, action: SwitchChangesAction | undefined, message: string | RegExp) => {
     const { deps, lines, pending } = workspaceWith(scenario);
     const before = { ...pending() };
 
@@ -73,8 +73,8 @@ describe('switching with changes refuses, touching nothing,', () => {
     expect(pending()).toEqual(before);
   };
 
-  it('until the user chooses to leave or bring the changes', () =>
-    refuses({ pending: EDITED_AND_ADDED }, 'br:/main/task2', undefined, 'The workspace has pending changes. Choose whether to leave them or bring them along.'));
+  it('until the user chooses to leave, bring or undo the changes', () =>
+    refuses({ pending: EDITED_AND_ADDED }, 'br:/main/task2', undefined, 'The workspace has pending changes. Choose whether to leave them, bring them along or undo them.'));
 
   it('in the middle of a merge, which no shelve can hold', () =>
     refuses({ pending: { 'src/a.txt': 'CH' }, mergingFrom: 3 }, 'br:/main/task2', 'leave', "You're in the middle of a merge. Check it in or undo it before switching."));
@@ -174,6 +174,94 @@ describe('leaving the changes', () => {
     const { deps } = workspaceWith({ pending: { ...EDITED_AND_ADDED, 'src/notes.txt': 'PR' }, privateInTheWay: 'src/notes.txt' });
 
     expect(await switchTo(deps, 'br:/main/task2', 'leave')).toMatchObject({ renamedPrivates: [{ path: 'src/notes.txt', renamedTo: 'src/notes.txt.private.0' }] });
+  });
+});
+
+describe('undoing the changes', () => {
+  it('undoes them and switches, shelving nothing: the user chose to lose them', async () => {
+    const { deps, lines, shelves, records, branch, pending } = workspaceWith({ pending: EDITED_AND_ADDED });
+
+    expect(await switchTo(deps, 'br:/main/task2', 'discard')).toEqual({ kind: 'discarded', count: 2 });
+    expect(writes(lines())).toEqual(['undo -r', 'switch br:/main/task2']);
+    // Links themselves too, as when shelving.
+    expect(lines()).toContain(`undo -r ${workspacePath} --symlink`);
+    expect(shelves()).toEqual([]);
+    expect(records.forWorkspace('a0411612-d36e-4eca-b9b5-97acad5969ea')).toEqual([]);
+    expect(branch()).toBe('/main/task2');
+    expect(pending()).toEqual({});
+  });
+
+  it('keeps added files on disk as private files, as Undo in Changes does', async () => {
+    const { deps } = workspaceWith({ pending: EDITED_AND_ADDED });
+
+    await switchTo(deps, 'br:/main/task2', 'discard');
+    expect(addedFileIsHere()).toBe(true);
+  });
+
+  it('undoes them on a shelve too, where changes can’t be left', async () => {
+    const { deps, branch } = workspaceWith({ pending: EDITED_AND_ADDED, onShelve: 4 });
+
+    expect(await switchTo(deps, 'br:/main/task2', 'discard')).toMatchObject({ kind: 'discarded' });
+    expect(branch()).toBe('/main/task2');
+  });
+
+  it('touches nothing once stopped before undoing', async () => {
+    const { deps, lines, pending } = workspaceWith({ pending: EDITED_AND_ADDED });
+    const stop = new AbortController();
+    stop.abort();
+
+    await expect(switchTo(deps, 'br:/main/task2', 'discard', recordingContext(stop.signal).context)).rejects.toThrow('The switch was cancelled.');
+    expect(writes(lines())).toEqual([]);
+    expect(pending()).toEqual(EDITED_AND_ADDED);
+  });
+
+  it('stays where it is when changes are still pending after undoing them, saying some may be undone', async () => {
+    const { deps, lines, branch } = workspaceWith({ pending: EDITED_AND_ADDED, fail: { undoLeavesChanges: true } });
+
+    await expect(switchTo(deps, 'br:/main/task2', 'discard')).rejects.toThrow(
+      'Some changes are still pending after undoing them. Some of your changes may be undone already; nothing was switched.',
+    );
+    expect(writes(lines())).toEqual(['undo -r']);
+    expect(branch()).toBe('/main/task1');
+  });
+
+  it('stays where it is when undoing fails, without a shelve to put anything back from', async () => {
+    const { deps, ran, shelves, records, branch } = workspaceWith({ pending: EDITED_AND_ADDED, fail: { undo: 'The file is in use.' } });
+
+    await expect(switchTo(deps, 'br:/main/task2', 'discard')).rejects.toThrow('The file is in use. Some of your changes may be undone already; nothing was switched.');
+    expect(ran('switch')).toBe(false);
+    expect(branch()).toBe('/main/task1');
+    expect(shelves()).toEqual([]);
+    expect(records.forWorkspace('a0411612-d36e-4eca-b9b5-97acad5969ea')).toEqual([]);
+  });
+
+  it('says the changes are already undone when the switch fails', async () => {
+    const { deps, lines, shelves, pending } = workspaceWith({ pending: EDITED_AND_ADDED, fail: { switchTo: '/main/task2' } });
+
+    await expect(switchTo(deps, 'br:/main/task2', 'discard')).rejects.toThrow(
+      "Access to the path is denied. Your changes were undone, as you chose, but the switch didn't finish.",
+    );
+    // Nothing to put back: no shelve, and no switching back to restore one.
+    expect(writes(lines())).toEqual(['undo -r', 'switch br:/main/task2']);
+    expect(shelves()).toEqual([]);
+    expect(pending()).toEqual({});
+  });
+
+  it('switches as a step that can’t be stopped: the changes are already gone', async () => {
+    const { deps, commands } = workspaceWith({ pending: EDITED_AND_ADDED });
+    const { context } = recordingContext();
+
+    await switchTo(deps, 'br:/main/task2', 'discard', context);
+    expect(commands.find((command) => command.args[0] === 'switch')!.options?.signal).not.toBe(context.signal);
+  });
+
+  it('restores changes left on the target, as any switch does', async () => {
+    const workspace = workspaceWith({ branch: '/main/task2', pending: { 'src/b.txt': 'CH' } }, { restoreLeftChangesAutomatically: true });
+    await switchTo(workspace.deps, 'br:/main/task1', 'leave');
+    workspace.pending()['src/c.txt'] = 'CH';
+
+    expect(await switchTo(workspace.deps, 'br:/main/task2', 'discard')).toEqual({ kind: 'discarded', count: 1, restored: { count: 1 } });
+    expect(workspace.pending()).toEqual({ 'src/b.txt': 'CH' });
   });
 });
 
