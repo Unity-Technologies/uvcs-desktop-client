@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { File, FileSymlink, Folder, History, Link2, Lock } from 'lucide-react';
+import { File, FileSymlink, Folder, History, Lock } from 'lucide-react';
+import type { ReactNode } from 'react';
 import type { TreeItem } from '@shared/domain/explorer';
 import { revisionRef } from '@shared/domain/revision';
 import { spec } from '@shared/domain/specs';
@@ -8,7 +9,7 @@ import { queryKeys } from '../../api/queryKeys';
 import { navigation } from '../../app/navigation/navigationStore';
 import { useOtherRepository } from '../../app/workspace/useWorkspace';
 import { DetailsHeading } from '../../components/DetailsHeading';
-import { xlinkKind } from '../../components/xlinkWords';
+import { FolderXlinkIcon } from '../../components/FolderXlinkIcon';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime, formatSize } from '../../lib/formatDate';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -31,12 +32,14 @@ import { onDiskState, type PendingChangesIndex } from './itemStatus';
 import { itemTypeLabel } from './itemType';
 import { ItemViewer, type FileViewChoice } from './ItemViewer';
 import { isWorkspaceRoot } from './workspaceRoot';
+import { detailsKindOf, type DetailsKind } from './xlinkItem';
 
-/** How the details name what the item is: a folder, a link, or any other file. */
-const DETAILS_KINDS = {
-  directory: { icon: <Folder />, noun: 'Folder' },
-  symlink: { icon: <FileSymlink />, noun: 'Link' },
-  file: { icon: <File />, noun: 'File' },
+/** The heading's icon for each kind of item (`detailsKindOf`): an xlink's is the one every list draws. */
+const DETAILS_ICONS: Record<DetailsKind['icon'], ReactNode> = {
+  xlink: <FolderXlinkIcon />,
+  directory: <Folder />,
+  symlink: <FileSymlink />,
+  file: <File />,
 };
 
 interface ItemDetailsPaneProps {
@@ -86,8 +89,7 @@ export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu,
   const size = isFile && (onDisk || item.isPrivate || item.revisionId > 0) ? formatSize(onDisk?.size ?? item.size) : '';
   // In a repository tree every item is a revision, with a history.
   const showsHistory = pendingIndex ? itemViews(item, pendingIndex).history : !isWorkspaceRoot(item);
-  // An xlink lists as a directory; its heading names it as the diff's does ("Writable xlink").
-  const kind = item.xlink ? { icon: <Link2 />, noun: xlinkKind(item.xlink) } : DETAILS_KINDS[item.itemType === 'directory' || item.itemType === 'symlink' ? item.itemType : 'file'];
+  const kind = detailsKindOf(item);
 
   const properties: Property[] = isFile
     ? [
@@ -105,7 +107,7 @@ export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu,
 
   return (
     <DetailsPanel
-      icon={kind.icon}
+      icon={DETAILS_ICONS[kind.icon]}
       kind={[kind.noun, size].filter(Boolean).join(' · ')}
       heading={
         <>

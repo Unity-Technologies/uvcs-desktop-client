@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import type { ItemDetails, TreeItem } from '@shared/domain/explorer';
 import { navigation } from '../../app/navigation/navigationStore';
-import { xlinkSummary } from '../../components/xlinkWords';
 import { useOtherRepository } from '../../app/workspace/useWorkspace';
 import { pluralize } from '../../lib/text';
 import { DetailsLink } from '../../ui/DetailsLink';
@@ -9,6 +8,7 @@ import { DetailsSection } from '../../ui/DetailsSection';
 import { PropertyList } from '../../ui/PropertyList';
 import { openChangesetDiff } from '../changesets/changesetOperations';
 import { showShelveChanges } from '../shelves/shelveOperations';
+import { xlinkDetailOf } from './xlinkItem';
 
 interface FolderDetailsProps {
   item: TreeItem;
@@ -39,7 +39,7 @@ export function FolderDetails({ item, contents, changesInside, details }: Folder
             value: lastChangeOf(item, otherRepository),
           },
           { label: 'Repository', value: details?.repository },
-          { label: 'Xlink', value: item.xlink ? xlinkSummary(item.xlink) : details?.xlinkTarget },
+          { label: 'Xlink', value: xlinkDetailOf(item, details) },
           { label: 'Under xlink', value: details?.underXlinkTarget },
         ]}
       />
