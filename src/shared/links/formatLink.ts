@@ -1,5 +1,5 @@
 import type { Link, LinkLines, LinkObject, LinkPage } from './link';
-import { encodeBranchSegment, encodePath, encodeSegment, serverAuthority } from './linkSegments';
+import { encodeBranchSegment, encodePath, encodeSegment, serverAuthority, UNWRITABLE_IN_NAMES } from './linkSegments';
 
 export const LINK_SCHEME = 'uvcs';
 
@@ -10,6 +10,21 @@ export const LINK_SCHEME = 'uvcs';
 export function formatLink(link: Link): string {
   const place = link.kind === 'repository' ? repositoryPart(link.server, link.repository, link.object) : workspacePart(link.folder);
   return `${LINK_SCHEME}://${place}${link.page ? `/-/${pagePart(link.page)}` : ''}${link.lines ? `#${linesPart(link.lines)}` : ''}`;
+}
+
+/**
+ * Whether a link can name what it would name: a file, folder, branch or label holding a quote, a line break or a
+ * backslash (each legal on macOS and Linux) can't be, as `parseLink` refuses what decodes to one. The app offers no
+ * link to such a name rather than one that won't open.
+ */
+export function writesAsLink(link: Link): boolean {
+  const names = [...(link.kind === 'repository' && link.object ? objectNames(link.object) : []), ...(link.page && 'path' in link.page && link.page.path ? [link.page.path] : [])];
+  return !names.some((name) => UNWRITABLE_IN_NAMES.test(name));
+}
+
+function objectNames(object: LinkObject): string[] {
+  if (object.kind === 'branch' || object.kind === 'label') return [object.name];
+  return object.kind === 'labelRange' ? [object.from, object.to] : [];
 }
 
 function repositoryPart(server: string, repository: string, object: LinkObject | undefined): string {

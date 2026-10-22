@@ -3,6 +3,12 @@
  * percent-encoded as UTF-8, a server's organization joined by `.`.
  */
 
+/**
+ * What no name in a link may hold, decoded (`parseLink`'s `decodedAll`), so no link writes it (`writesAsLink`): a
+ * line break or a quote, which would end a `cm shell` argument, and a backslash, a separator on Windows.
+ */
+export const UNWRITABLE_IN_NAMES = /[\\\u0000-\u001f\u007f"]/;
+
 /** Words a link reads as its own where a branch's segments go: a branch segment spelling one is written encoded. */
 const BRANCH_KEYWORDS: ReadonlySet<string> = new Set(['-', 'diff', 'path']);
 

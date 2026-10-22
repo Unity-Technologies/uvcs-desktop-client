@@ -1,5 +1,5 @@
 import { LINK_VIEWS, type Link, type LinkLines, type LinkObject, type LinkPage, type LinkView, type RepositoryLink } from './link';
-import { decodeSegment, isBranchKeyword, pathOf, serverOf } from './linkSegments';
+import { decodeSegment, isBranchKeyword, pathOf, serverOf, UNWRITABLE_IN_NAMES } from './linkSegments';
 import { specLink } from './specLink';
 
 /**
@@ -232,9 +232,10 @@ function pathIn(segments: readonly string[]): string | null {
  * argument). `slashes` lets a `/` through, for a repository's name.
  */
 function decodedAll(segments: readonly string[], { slashes = false } = {}): string[] | null {
-  const forbidden = slashes ? /[\\\u0000-\u001f\u007f"]/ : /[/\\\u0000-\u001f\u007f"]/;
   const decoded = segments.map(decodeSegment);
-  return decoded.every((segment): segment is string => segment !== null && segment !== '.' && segment !== '..' && !forbidden.test(segment)) ? decoded : null;
+  const valid = (segment: string | null): segment is string =>
+    segment !== null && segment !== '.' && segment !== '..' && !UNWRITABLE_IN_NAMES.test(segment) && (slashes || !segment.includes('/'));
+  return decoded.every(valid) ? decoded : null;
 }
 
 function withoutTrailingSlash(text: string): string {

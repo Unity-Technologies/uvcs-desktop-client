@@ -4,7 +4,7 @@ import type { ShownRevision } from '../../features/history/shownRevision';
 import type { Page } from '../navigation/pages';
 import type { ViewId } from '../navigation/views';
 import { LINK_VIEW_IDS, type LinkTarget } from './linkNavigation';
-import { diffTargetObject } from './linkTo';
+import { diffTargetObject, isWritable } from './linkTo';
 
 /** The file the page in front shows (a repository path, as `DiffEntry.path`), and the lines selected in it. */
 export interface ShownFile {
@@ -20,6 +20,11 @@ export interface ShownFile {
  * a browse shows. Null for a page no link names (a merge, a diff of two branches' heads).
  */
 export function pageLinkTarget(page: Page, shown: ShownFile | null): LinkTarget | null {
+  const target = pageTargetOf(page, shown);
+  return target && isWritable(target) ? target : null;
+}
+
+function pageTargetOf(page: Page, shown: ShownFile | null): LinkTarget | null {
   switch (page.kind) {
     case 'diff': {
       const object = diffTargetObject(page.target);

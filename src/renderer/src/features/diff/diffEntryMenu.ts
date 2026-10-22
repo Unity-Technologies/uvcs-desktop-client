@@ -1,6 +1,6 @@
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { revisionIn } from '@shared/domain/revision';
-import { diffTargetObject, workspaceLinkTo } from '../../app/links/linkTo';
+import { diffTargetObject, linkCopyText } from '../../app/links/linkTo';
 import { changedFileMenu, type ChangedFile } from '../../components/changedFileMenu';
 import type { MenuEntry } from '../../lib/actions';
 import type { GroupedEntry } from '../../lib/menuGroups';
@@ -46,6 +46,6 @@ function changedFileOf(workspacePath: string, target: DiffTarget, entry: DiffEnt
     history: single ? diffEntryHistory(target, entry) : null,
     annotation: single ? diffEntryAnnotation(target, entry) : null,
     version: entry.itemType !== 'directory' && revision ? { kind: 'revision', revision, fileName: entry.path } : null,
-    ...(object && { link: workspaceLinkTo(workspacePath, { object, page: { kind: 'diffFile', path: `/${entry.path}` } }) }),
+    ...(object && { link: linkCopyText(workspacePath, undefined, { object, page: { kind: 'diffFile', path: `/${entry.path}` } }) }),
   };
 }

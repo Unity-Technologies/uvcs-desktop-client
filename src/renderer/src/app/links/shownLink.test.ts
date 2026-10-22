@@ -12,6 +12,10 @@ describe('pageLinkTarget', () => {
     expect(pageLinkTarget(page, null)).toEqual({ object: { kind: 'changeset', id: 12 }, page: { kind: 'diffFile', path: '/a.cs' } });
   });
 
+  it('names no file a link could not carry, a quote in its name', () => {
+    expect(pageLinkTarget({ kind: 'diff', title: 'Changeset 12', target: { kind: 'changeset', changesetId: 12 } }, { path: 'docs/say "hi".md' })).toBeNull();
+  });
+
   it("names no diff of two branches' heads, nor a merge", () => {
     expect(pageLinkTarget({ kind: 'diff', title: 'a → b', target: { kind: 'range', fromSpec: 'cs:3', toSpec: 'br:/main' } }, null)).toBeNull();
     expect(pageLinkTarget({ kind: 'merge', request: { kind: 'merge', sourceSpec: 'br:/main/task' } } as never, null)).toBeNull();

@@ -1,5 +1,5 @@
 import type { DiffTarget } from '@shared/domain/diff';
-import { formatLink } from '@shared/links/formatLink';
+import { formatLink, writesAsLink } from '@shared/links/formatLink';
 import type { LinkObject } from '@shared/links/link';
 import { splitRepositorySpec } from '../../lib/servers';
 import { queryClient } from '../queryClient';
@@ -20,9 +20,18 @@ export function workspaceLinkTo(workspacePath: string, target: LinkTarget): () =
   return async () => repositoryLinkTo((await queryClient.fetchQuery(workspaceInfoQuery(workspacePath))).repository, target);
 }
 
-/** What a link copies: the object's own repository when known (it may be an xlinked one), else the workspace's. */
-export function linkCopyText(workspacePath: string, repository: string | undefined, target: LinkTarget): string | (() => Promise<string>) {
+/**
+ * What a link copies: the object's own repository when known (it may be an xlinked one), else the workspace's; null
+ * for a name no link can carry (`writesAsLink`).
+ */
+export function linkCopyText(workspacePath: string, repository: string | undefined, target: LinkTarget): string | (() => Promise<string>) | null {
+  if (!isWritable(target)) return null;
   return repository ? repositoryLinkTo(repository, target) : workspaceLinkTo(workspacePath, target);
+}
+
+/** Whether a link can name the target (`writesAsLink`), whatever repository it's in. */
+export function isWritable(target: LinkTarget): boolean {
+  return writesAsLink({ kind: 'repository', server: 'local', repository: 'repository', ...target });
 }
 
 /** What a diff compares, as a link names it; null for one no link names (two branches' heads, mixed points). */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatLink } from './formatLink';
+import { formatLink, writesAsLink } from './formatLink';
 import type { Link } from './link';
 import { parseLink } from './parseLink';
 
@@ -212,5 +212,19 @@ describe('parseLink', () => {
     ])('%j names something this version does not know', (text) => {
       expect(parseLink(text)).toMatchObject({ problem: { kind: 'unknown' } });
     });
+  });
+});
+
+describe('writesAsLink', () => {
+  it("can't name a file, branch or label holding a quote, a line break or a backslash: parseLink would refuse it", () => {
+    expect(writesAsLink({ ...game, object: { kind: 'changeset', id: 1 }, page: { kind: 'diffFile', path: '/docs/say "hi".md' } })).toBe(false);
+    expect(writesAsLink({ ...game, object: { kind: 'changeset', id: 1 }, page: { kind: 'diffFile', path: '/a\\b.cs' } })).toBe(false);
+    expect(writesAsLink({ ...game, object: { kind: 'labelRange', from: 'v1', to: 'v2\n' } })).toBe(false);
+  });
+
+  it('names everything else, as it reads back', () => {
+    const link = { ...game, object: { kind: 'branch', name: '/main/Mi rama (2)' }, page: { kind: 'diffFile', path: "/it's a file.cs" } } as const;
+    expect(writesAsLink(link)).toBe(true);
+    expect(parseLink(formatLink(link))).toEqual({ link });
   });
 });

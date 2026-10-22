@@ -1,7 +1,7 @@
 import { canAnnotate } from '@shared/domain/annotate';
 import type { ItemRevision } from '@shared/domain/history';
 import { revisionRef } from '@shared/domain/revision';
-import { workspaceLinkTo } from '../../app/links/linkTo';
+import { linkCopyText } from '../../app/links/linkTo';
 import type { MenuEntry } from '../../lib/actions';
 import { copySubmenu } from '../../components/copyMenu';
 import { openRevisionEntries } from '../../components/externalApps/openWithMenu';
@@ -49,7 +49,7 @@ export function historyMenu({ workspacePath, path, ofWorkspaceFile, otherReposit
       copySubmenu('Revision', {
         path,
         // The change the revision's changeset made to the file; under an xlink, the path isn't the other repository's.
-        link: inWorkspaceRepository && workspaceLinkTo(workspacePath, { object: { kind: 'changeset', id: revision.changesetId }, page: { kind: 'diffFile', path: `/${path}` } }),
+        link: inWorkspaceRepository && linkCopyText(workspacePath, undefined, { object: { kind: 'changeset', id: revision.changesetId }, page: { kind: 'diffFile', path: `/${path}` } }),
         spec: revision.idSpec,
       }),
   ]);

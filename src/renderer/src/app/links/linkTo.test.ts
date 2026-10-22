@@ -19,6 +19,12 @@ describe('linkCopyText', () => {
   });
 });
 
+describe('linkCopyText', () => {
+  it('copies no link to a name a link could not carry', () => {
+    expect(linkCopyText('/ws', 'game@local', { object: { kind: 'changeset', id: 1 }, page: { kind: 'diffFile', path: '/say "hi".md' } })).toBeNull();
+  });
+});
+
 describe('diffTargetObject', () => {
   it('names what a diff compares', () => {
     expect(diffTargetObject({ kind: 'changeset', changesetId: 5 })).toEqual({ kind: 'changeset', id: 5 });
