@@ -58,9 +58,9 @@ export function MergeToolsPane() {
         <div className={styles.rulesFrame}>
           <div className={styles.rules} role="list" aria-label="Merge tool by file type">
             <div className={styles.rule} role="listitem">
-              <div className={styles.ruleFiles} data-tip={unityRowTip(list.smartMerge)}>
+              <div className={styles.ruleFiles} data-tip={unityRowTip(list.unityYamlMerges[0] ?? null)}>
                 <span>{UNITY_ROW_LABEL}</span>
-                <span className={`${styles.choiceDescription} ${styles.oneLine}`}>{unityRowNote(list.smartMerge)}</span>
+                <span className={`${styles.choiceDescription} ${styles.oneLine}`}>{unityRowNote(list.unityYamlMerges[0] ?? null)}</span>
               </div>
               <ToolPicker label={UNITY_ROW_LABEL} list={list} choice={unityMergeTool} automatic={SAME_AS_OTHER_FILES_CHOICE} onChoose={(choice) => void saveSettings({ unityMergeTool: choice })} />
               <span />

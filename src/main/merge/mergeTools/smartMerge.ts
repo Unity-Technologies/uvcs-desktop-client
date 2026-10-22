@@ -1,4 +1,4 @@
-import type { SmartMergeOutcome, SmartMergeTool } from '@shared/domain/mergeTools';
+import { unityYamlMergeId, type SmartMergeOutcome, type UnityYamlMergeTool } from '@shared/domain/mergeTools';
 import type { AppFileSystem } from '../../system/apps/appFileSystem';
 import { pathFor, type Whereabouts } from '../../system/apps/whereabouts';
 import type { ToolRun } from './launch';
@@ -6,16 +6,15 @@ import { findUnityEditors, type UnityEditor } from './unityEditors';
 import { compareUnityVersions } from './unityVersion';
 
 /**
- * Smart Merge, the `UnityYAMLMerge` program every Unity Editor ships with, from the newest editor installed (releases
- * before alphas and betas: `compareUnityVersions`). Null when there's no Unity Editor here.
+ * The `UnityYAMLMerge` program (Unity's Smart Merge) of every Unity Editor installed, the newest first (releases
+ * before alphas and betas: `compareUnityVersions`). None when there's no Unity Editor here.
  */
-export function findSmartMerge(where: Whereabouts, fs: AppFileSystem): SmartMergeTool | null {
+export function findUnityYamlMerges(where: Whereabouts, fs: AppFileSystem): UnityYamlMergeTool[] {
   const editors = findUnityEditors(where, fs).sort((a, b) => compareUnityVersions(a.version, b.version));
-  for (const editor of editors) {
+  return editors.flatMap((editor) => {
     const executable = programInEditor(editor, where).find((candidate) => fs.exists(candidate));
-    if (executable) return { executable, editorVersion: editor.version };
-  }
-  return null;
+    return executable ? [{ id: unityYamlMergeId(editor.version), executable, editorVersion: editor.version }] : [];
+  });
 }
 
 /** macOS editors keep it in `Contents/Helpers` since Unity 6.3, in `Contents/Tools` before; the others in `Data/Tools`. */

@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, SlidersHorizontal, Trash2 } from 'lucide-react';
-import { AUTO_MERGE_TOOL, SAME_AS_OTHER_FILES, type MergeTool, type MergeToolList, type MergeToolRule, type SmartMergeTool } from '@shared/domain/mergeTools';
+import { AUTO_MERGE_TOOL, SAME_AS_OTHER_FILES, type MergeTool, type MergeToolList, type MergeToolRule, type UnityYamlMergeTool } from '@shared/domain/mergeTools';
 import { formatFilePatterns, parseFilePatterns } from '../../lib/filePatterns';
 import { SEPARATOR, type MenuEntry } from '../../lib/actions';
 import { automaticChoice, type AutomaticChoice, type PickableApp } from './appPickerChoices';
@@ -16,12 +16,12 @@ export const SAME_AS_OTHER_FILES_CHOICE: AutomaticChoice = { id: SAME_AS_OTHER_F
 export const UNITY_ROW_LABEL = 'Unity scenes, prefabs and assets';
 
 /** The line under the Unity row's name: Smart Merge goes first, or why it doesn't. */
-export function unityRowNote(smartMerge: SmartMergeTool | null): string {
+export function unityRowNote(smartMerge: UnityYamlMergeTool | null): string {
   return smartMerge ? 'Smart Merge first' : 'No Unity Editor for Smart Merge';
 }
 
 /** The Unity row's tooltip: what Smart Merge does, from which editor, and where the tool comes in. */
-export function unityRowTip(smartMerge: SmartMergeTool | null): string {
+export function unityRowTip(smartMerge: UnityYamlMergeTool | null): string {
   const tool = 'The tool opens only what it can’t merge.';
   if (!smartMerge) return `Smart Merge, in every Unity Editor, merges them by their objects. ${tool}`;
   const editor = smartMerge.editorVersion ? `Unity ${smartMerge.editorVersion}` : 'Unity';

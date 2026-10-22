@@ -33,22 +33,41 @@ export interface MergeToolList {
   preferredId: string | null;
   /** Every known tool's name by its id, found or not: a rule naming one that isn't here still says which. */
   knownNames: Record<string, string>;
-  /** Smart Merge, when a Unity Editor is installed: "Resolve in…" runs it first on Unity assets (`smartMerge`). */
-  smartMerge: SmartMergeTool | null;
+  /** UnityYAMLMerge from each Unity Editor installed, the newest first; none without a Unity Editor. */
+  unityYamlMerges: UnityYamlMergeTool[];
 }
 
 /** Unity's own name for its merge of scenes, prefabs and other assets (the Unity Manual's "Smart merge"). */
 export const UNITY_YAML_MERGE_NAME = 'UnityYAMLMerge';
 
 /**
- * Unity's Smart Merge (`UnityYAMLMerge`, in every Unity Editor): it merges scenes, prefabs and other Unity assets by
- * their objects, without a window. It isn't a tool to pick: "Resolve in…" runs it first on a Unity asset the user
- * decided nothing for yet, and opens the chosen tool only when it can't merge the file on its own.
+ * UnityYAMLMerge, the program every Unity Editor ships with (Unity's Smart Merge): it merges scenes, prefabs and other
+ * Unity assets by their objects, without a window. A rule picks it like a tool, and a tool opens what it can't merge.
  */
-export interface SmartMergeTool {
+export interface UnityYamlMergeTool {
+  /** `unityyamlmerge:6000.3.19f1` (`unityYamlMergeId`), to pin a rule to this editor's. */
+  id: string;
   executable: string;
   /** The Unity Editor it comes from, `6000.3.19f1`; empty for an editor installed without Unity Hub. */
   editorVersion: string;
+}
+
+/** UnityYAMLMerge from the newest Unity Editor installed, whichever it is at the time. */
+export const UNITY_YAML_MERGE_ID = 'unityyamlmerge';
+
+/** UnityYAMLMerge from one Unity Editor, by its version. */
+export function unityYamlMergeId(editorVersion: string): string {
+  return `${UNITY_YAML_MERGE_ID}:${editorVersion}`;
+}
+
+/** The id names UnityYAMLMerge, the newest editor's or one editor's. */
+export function isUnityYamlMergeId(id: string): boolean {
+  return id === UNITY_YAML_MERGE_ID || id.startsWith(`${UNITY_YAML_MERGE_ID}:`);
+}
+
+/** The UnityYAMLMerge an id names among those installed (newest first); none when that editor isn't installed. */
+export function unityYamlMergeOf(merges: readonly UnityYamlMergeTool[], id: string): UnityYamlMergeTool | undefined {
+  return id === UNITY_YAML_MERGE_ID ? merges[0] : merges.find((merge) => merge.id === id);
 }
 
 /** A merge app added by the user; known tools are found, not stored. */
@@ -107,6 +126,8 @@ export interface MergeToolRequest {
  */
 export interface SmartMergeRequest {
   sessionId: string;
+  /** Which UnityYAMLMerge: `unityyamlmerge` (the newest editor's) or one editor's (`unityYamlMergeId`). */
+  toolId: string;
   /** The file's workspace path, for its name and extension. */
   path: string;
   base: string;

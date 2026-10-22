@@ -105,7 +105,7 @@ export function useFileConflicts(workspacePath: string, files: ConflictedFile[],
     setDecisions((current) => ({ ...current, [key]: decision }));
   }, []);
 
-  const hasSmartMerge = useMergeTools().smartMerge !== null;
+  const hasSmartMerge = useMergeTools().unityYamlMerges.length > 0;
 
   const reset = useCallback((key: string) => {
     setDecisions(({ [key]: _discarded, ...rest }) => rest);

@@ -1,4 +1,4 @@
-import { UNITY_YAML_MERGE_NAME, type MergeTool, type MergeToolOutcome, type SmartMergeOutcome, type SmartMergeRequest } from '@shared/domain/mergeTools';
+import { UNITY_YAML_MERGE_ID, UNITY_YAML_MERGE_NAME, type MergeTool, type MergeToolOutcome, type SmartMergeOutcome, type SmartMergeRequest } from '@shared/domain/mergeTools';
 import { api } from '../../../api/client';
 import { fileNameOf } from '../../../lib/text';
 import { toast } from '../../../ui/toast/toastStore';
@@ -56,7 +56,7 @@ export async function resolveInMergeTool(
 ): Promise<MergeToolSession> {
   const versions = options.smartMerge ? smartMergeVersions(state) : null;
   if (versions) {
-    const smartMerged = await runSmartMerge(versions, onOpen);
+    const smartMerged = await runSmartMerge({ ...versions, toolId: UNITY_YAML_MERGE_ID }, onOpen);
     if (!options.stillUndecided()) return { outcome: NOTHING_SAVED, decision: undefined };
     if (smartMerged) return ended(smartMerged, UNITY_YAML_MERGE_NAME, state, options);
   }

@@ -45,7 +45,7 @@ describe('the rules of Settings › Merge', () => {
 
 describe('the Unity row', () => {
   it('says Smart Merge goes first, from which Unity Editor, or that none was found', () => {
-    const smartMerge = { executable: '/u/UnityYAMLMerge', editorVersion: '6000.5.0f1' };
+    const smartMerge = { id: 'unityyamlmerge:6000.5.0f1', executable: '/u/UnityYAMLMerge', editorVersion: '6000.5.0f1' };
     expect(unityRowNote(smartMerge)).toBe('Smart Merge first');
     expect(unityRowTip(smartMerge)).toBe('Smart Merge (Unity 6000.5.0f1) merges them by their objects, without opening anything. The tool opens only what it can’t merge.');
     expect(unityRowTip({ ...smartMerge, editorVersion: '' })).toContain('Smart Merge (Unity) merges');
@@ -56,7 +56,7 @@ describe('the Unity row', () => {
 
 describe('toolInUse', () => {
   const tool = (id: string): MergeTool => ({ id, name: id, origin: 'known', executable: id, args: [], defaultArgs: [], canBringToFront: false });
-  const list: MergeToolList = { tools: [tool('uvcs'), tool('meld')], preferredId: 'uvcs', knownNames: {}, smartMerge: null };
+  const list: MergeToolList = { tools: [tool('uvcs'), tool('meld')], preferredId: 'uvcs', knownNames: {}, unityYamlMerges: [] };
 
   it('is the tool picked, or every other file’s for a choice that picks for the user', () => {
     expect(toolInUse(list, 'meld', null)?.id).toBe('meld');

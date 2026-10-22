@@ -8,7 +8,7 @@ import type { FileConflictState } from '../resolve/useFileConflicts';
  * sides (a `.meta` file has no Unity header: it goes to the tool). The page already read the versions: Smart Merge reads
  * nothing from `cm`. An untouched file holds the automatic merge as its decision, which isn't the user's.
  */
-export function smartMergeVersions(state: FileConflictState): Omit<SmartMergeRequest, 'sessionId'> | null {
+export function smartMergeVersions(state: FileConflictState): Omit<SmartMergeRequest, 'sessionId' | 'toolId'> | null {
   if (state.decidedByUser || !isUnityAsset(state)) return null;
   const { base, source, destination } = state.contents!;
   return { path: state.file.path, base: base.text ?? '', yours: destination.text!, incoming: source.text! };

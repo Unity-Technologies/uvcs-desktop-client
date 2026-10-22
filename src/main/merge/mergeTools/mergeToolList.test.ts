@@ -8,7 +8,7 @@ const sources: MergeToolSources = {
   detected: [known('uvcs', '/Applications/PlasticSCM.app/Contents/MacOS/macplasticx'), known('vscode', '/usr/local/bin/code')],
   custom: [{ id: 'custom:1', name: 'My tool', executable: '/opt/mytool', args: ['{base}', '{result}'] }],
   argsOverrides: { vscode: ['--wait', '{result}'] },
-  smartMerge: null,
+  unityYamlMerges: [],
   preference: 'auto',
   platform: 'darwin',
 };

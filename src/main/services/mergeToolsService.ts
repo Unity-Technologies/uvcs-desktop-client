@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { dialog } from 'electron';
 import type { MergeToolsApi } from '@shared/api/mergeTools';
 import type { ContentSource } from '@shared/domain/content';
-import type { MergeToolOutcome, MergeToolRequest, SmartMergeOutcome, SmartMergeRequest, SmartMergeTool } from '@shared/domain/mergeTools';
+import { unityYamlMergeOf, type MergeToolOutcome, type MergeToolRequest, type SmartMergeOutcome, type SmartMergeRequest, type UnityYamlMergeTool } from '@shared/domain/mergeTools';
 import { EMPTY_UNITY_YAML, isUnityYaml } from '@shared/unityYaml';
 import { saveVersion } from '../files/saveContent';
 import { withTempDirectory } from '../files/tempFile';
@@ -14,7 +14,7 @@ import { detectKnownTools } from '../merge/mergeTools/detectTools';
 import { KNOWN_TOOLS } from '../merge/mergeTools/knownTools';
 import { activateApp, launchMergeTool } from '../merge/mergeTools/launch';
 import { mergeToolList } from '../merge/mergeTools/mergeToolList';
-import { findSmartMerge, judgeSmartMerge, SMART_MERGE_ARGS, smartMergeWentWrong } from '../merge/mergeTools/smartMerge';
+import { findUnityYamlMerges, judgeSmartMerge, SMART_MERGE_ARGS, smartMergeWentWrong } from '../merge/mergeTools/smartMerge';
 import { toolFileNames } from '../merge/mergeTools/toolFileNames';
 import { judgeToolResult } from '../merge/mergeTools/toolResult';
 import { appBundleOf } from '../system/apps/appBundle';
@@ -28,15 +28,18 @@ interface OpenTool {
   bundle: string | null;
 }
 
-/** Where Smart Merge is: looked for on each call, as the other tools are. Passed in so tests don't see this machine's. */
-export type SmartMergeFinder = (where: Whereabouts) => SmartMergeTool | null;
+/**
+ * Every Unity Editor's UnityYAMLMerge, the newest first: looked for on each call, as the other tools are. Passed in so
+ * tests don't see this machine's.
+ */
+export type UnityYamlMergeFinder = (where: Whereabouts) => UnityYamlMergeTool[];
 
-const findSmartMergeOnDisk: SmartMergeFinder = (where) => findSmartMerge(where, diskFileSystem);
+const findUnityYamlMergesOnDisk: UnityYamlMergeFinder = (where) => findUnityYamlMerges(where, diskFileSystem);
 
 export function createMergeToolsService(
   { cm, settings, workspaceCopies }: ServiceContext,
   { installedApps, icons }: Pick<AppsContext, 'installedApps' | 'icons'>,
-  smartMergeFinder: SmartMergeFinder = findSmartMergeOnDisk,
+  unityYamlMergeFinder: UnityYamlMergeFinder = findUnityYamlMergesOnDisk,
 ): MergeToolsApi {
   const open = new Map<string, OpenTool>();
 
@@ -45,7 +48,7 @@ export function createMergeToolsService(
     const { mergeTool, customMergeTools, mergeToolArgs } = settings.get();
     return mergeToolList({
       detected: detectKnownTools(KNOWN_TOOLS, where, diskFileSystem, await installedApps.get()),
-      smartMerge: smartMergeFinder(where),
+      unityYamlMerges: unityYamlMergeFinder(where),
       custom: customMergeTools,
       argsOverrides: mergeToolArgs,
       preference: mergeTool,
@@ -74,13 +77,13 @@ export function createMergeToolsService(
   }
 
   /**
-   * Runs Smart Merge on the versions given, hidden, with no fallback tool. Anything short of a full merge is
-   * `notMerged`, and the merge tool takes over: no Unity Editor, sides that aren't Unity assets, Smart Merge failing to
-   * start or leaving conflicts. What went wrong (other than conflicts left) is warned in the console, for diagnosis.
+   * Runs the UnityYAMLMerge the request names on the versions given, hidden, with no fallback tool. Anything short of a
+   * full merge is `notMerged`, and the merge tool takes over: that editor not installed, sides that aren't Unity
+   * assets, UnityYAMLMerge failing to start or leaving conflicts. What went wrong (other than conflicts left) is warned in the console, for diagnosis.
    */
   async function smartMerge(request: SmartMergeRequest): Promise<SmartMergeOutcome> {
     const where: Whereabouts = { platform: process.platform, env: process.env, home: homedir(), cmPath: cm.executable };
-    const smartMergeTool = smartMergeFinder(where);
+    const smartMergeTool = unityYamlMergeOf(unityYamlMergeFinder(where), request.toolId);
     if (!smartMergeTool || !isUnityYaml(request.yours) || !isUnityYaml(request.incoming)) return { kind: 'notMerged' };
 
     const stop = new AbortController();

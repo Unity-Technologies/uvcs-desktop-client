@@ -82,8 +82,9 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   again. Its size ceiling is the page's: a version over `MAX_TEXT_BYTES` (10 MB) is a binary to the page, which no tool
   opens, so Smart Merge isn't tried on it either. In practice it's lower: a text conflict of about 3.5 MB overflows the
   stack of the page's own line merge (`diff3Merge`, as it loads the file), before Smart Merge could be asked. It comes
-  from the newest Unity release installed
-  (`findSmartMerge`, `compareUnityVersions`: releases before alphas and betas), found as Unity Hub keeps editors
+  from every Unity Editor installed, the newest release first
+  (`findUnityYamlMerges`, `compareUnityVersions`: releases before alphas and betas; `UnityYamlMergeTool`, its id
+  `unityyamlmerge:<version>`, and `unityyamlmerge` for the newest one, `unityYamlMergeOf`), found as Unity Hub keeps editors
   (`findUnityEditors`): its editors folder (`/Applications/Unity/Hub/Editor`, `C:\Program Files\Unity\Hub\Editor`,
   `~/Unity/Hub/Editor`), the folder picked in the Hub (`secondaryInstallPath.json` in the Hub's config folder), the
   editors located by hand (`editors-v2.json`, `editors.json`) and the install made without the Hub; inside an editor,

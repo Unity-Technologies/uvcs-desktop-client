@@ -12,7 +12,7 @@ import type { FileConflictState } from '../resolve/useFileConflicts';
 import { mergeToolFor } from './mergeToolFor';
 import { isUnityAsset } from './smartMergeVersions';
 
-const NO_TOOLS: MergeToolList = { tools: [], preferredId: null, smartMerge: null, knownNames: {} };
+const NO_TOOLS: MergeToolList = { tools: [], preferredId: null, unityYamlMerges: [], knownNames: {} };
 
 /**
  * The merge tools on offer. Looked for again when the settings about them change, or after a while (one may have been
