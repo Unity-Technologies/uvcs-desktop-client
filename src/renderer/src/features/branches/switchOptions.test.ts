@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SwitchPreflight } from '@shared/domain/switchWithChanges';
-import { planSwitch, switchButton, switchNotes } from './switchOptions';
+import { createBranchButton, newBranchSwitch, planSwitch, switchButton, switchNotes } from './switchOptions';
 
 const preflight: SwitchPreflight = {
   sourceName: '/main/t1',
@@ -55,16 +55,12 @@ describe('planSwitch', () => {
     ]);
   });
 
-  it('offers undoing the changes when switching, never preselected', () => {
+  it('offers undoing the changes, never preselected', () => {
     expect(planSwitch(preflight, 'ask', 'switch')).toMatchObject({ kind: 'ask', choice: { discard: { enabled: true }, defaultAction: 'leave' } });
+    expect(planSwitch(preflight, 'ask', 'newBranch')).toMatchObject({ kind: 'ask', choice: { discard: { enabled: true }, defaultAction: 'bring' } });
     // Where neither shelving option is possible, undoing them is still the user's to pick.
     const stuck = planSwitch({ ...preflight, bringDisabledReason: 'shelve', leaveDisabledReason: 'shelveSource' }, 'ask', 'switch');
     expect(stuck).toMatchObject({ kind: 'ask', choice: { discard: { enabled: true }, defaultAction: null } });
-  });
-
-  it('never offers undoing the changes for a new branch, made to carry on with them', () => {
-    const plan = planSwitch(preflight, 'ask', 'newBranch');
-    expect(plan.kind === 'ask' && plan.choice.discard).toBeUndefined();
   });
 
   it('blocks undoing the changes during a merge too', () => {
@@ -98,6 +94,44 @@ describe('switchNotes', () => {
       'You already left changes on t1. They stay.',
     ]);
     expect(switchNotes({ ...everything, privateCount: 1 }, 'discard')[0]).toBe('1 private file stays in the folder.');
+  });
+});
+
+describe('newBranchSwitch', () => {
+  const created = { label: 'Create branch', variant: 'primary' };
+  const pendingWith = (overrides: Partial<SwitchPreflight> = {}) => {
+    const changes = { ...preflight, ...overrides };
+    return { preflight: changes, plan: planSwitch(changes, 'ask', 'newBranch') };
+  };
+
+  it('asks about the pending changes, with Go to Changes, when switching to the new branch', () => {
+    const pending = pendingWith();
+    const asked = newBranchSwitch(true, pending, 'discard');
+    expect(asked.question).toEqual({ choice: pending.plan.kind === 'ask' ? pending.plan.choice : null, preflight: pending.preflight });
+    expect(asked).toMatchObject({ blockedByMerge: false, button: { label: 'Create & undo changes', variant: 'danger' } });
+  });
+
+  it('asks nothing when not switching, even with Undo chosen before', () => {
+    expect(newBranchSwitch(false, pendingWith(), 'discard')).toEqual({ question: null, blockedByMerge: false, button: created });
+  });
+
+  it('asks nothing until the workspace was read, nor when the setting or nothing pending decides', () => {
+    expect(newBranchSwitch(true, undefined, null)).toEqual({ question: null, blockedByMerge: false, button: created });
+    expect(newBranchSwitch(true, { preflight, plan: { kind: 'automatic', action: 'bring' } }, 'bring')).toEqual({ question: null, blockedByMerge: false, button: created });
+    expect(newBranchSwitch(true, { preflight, plan: { kind: 'plain' } }, null)).toEqual({ question: null, blockedByMerge: false, button: created });
+  });
+
+  it('stays put during a merge: no question, no Go to Changes, a plain Create branch', () => {
+    expect(newBranchSwitch(true, pendingWith({ inMerge: true }), 'discard')).toEqual({ question: null, blockedByMerge: true, button: created });
+  });
+});
+
+describe('createBranchButton', () => {
+  it('says the changes are undone, in red, only when switching to the new branch undoes them', () => {
+    expect(createBranchButton('discard', true)).toEqual({ label: 'Create & undo changes', variant: 'danger' });
+    expect(createBranchButton('discard', false)).toEqual({ label: 'Create branch', variant: 'primary' });
+    expect(createBranchButton('bring', true)).toEqual({ label: 'Create branch', variant: 'primary' });
+    expect(createBranchButton(null, true)).toEqual({ label: 'Create branch', variant: 'primary' });
   });
 });
 

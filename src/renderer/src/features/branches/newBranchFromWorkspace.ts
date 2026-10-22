@@ -4,7 +4,8 @@ import { api } from '../../api/client';
 import { branchWorkedOn } from '../../components/workingObject';
 import { branchLabel } from '../../lib/branchLabels';
 import { toast } from '../../ui/toast/toastStore';
-import { openCreateBranchDialog, type NewBranchOrigin } from './CreateBranchDialog';
+import { openCreateBranchDialog } from './CreateBranchDialog';
+import type { NewBranchOrigin } from './newBranchOrigins';
 
 const MAIN_BRANCH = '/main';
 
@@ -26,7 +27,11 @@ export async function newBranchFromWorkspace(workspace: WorkspaceInfo): Promise<
         parentBranch: MAIN_BRANCH,
         startingPoint: spec.changeset(mainHead.id),
         startingPointLabel: `the latest ${MAIN_BRANCH} (changeset ${mainHead.id})`,
-        card: { title: `${branchLabel(MAIN_BRANCH)} (latest, changeset ${mainHead.id})`, description: 'Start something new, independent of your current work.' },
+        card: {
+          name: branchLabel(MAIN_BRANCH),
+          title: `${branchLabel(MAIN_BRANCH)} (latest, changeset ${mainHead.id})`,
+          description: 'Start something new, independent of your current work.',
+        },
       }
     : null;
   const [first, ...rest] = [main, loaded].filter((origin) => origin !== null);
@@ -38,14 +43,14 @@ export async function newBranchFromWorkspace(workspace: WorkspaceInfo): Promise<
 function loadedOrigin(workspace: WorkspaceInfo): NewBranchOrigin | null {
   const { selector, loadedChangeset } = workspace;
   if (loadedChangeset === null) return null;
-  const card = { title: '', description: 'Continue building on its existing changes.' };
+  const description = 'Continue building on its existing changes.';
 
   if (selector.kind === 'label') {
     return {
       parentBranch: MAIN_BRANCH,
       startingPoint: spec.label(selector.name),
       startingPointLabel: `label ${selector.name} (changeset ${loadedChangeset})`,
-      card: { ...card, title: `Label ${selector.name} (changeset ${loadedChangeset}, what you have loaded)` },
+      card: { name: `label ${selector.name}`, title: `Label ${selector.name} (changeset ${loadedChangeset}, what you have loaded)`, description },
     };
   }
   const branch = branchWorkedOn(selector);
@@ -53,6 +58,8 @@ function loadedOrigin(workspace: WorkspaceInfo): NewBranchOrigin | null {
     parentBranch: branch ?? MAIN_BRANCH,
     startingPoint: spec.changeset(loadedChangeset),
     startingPointLabel: `your workspace's changeset ${loadedChangeset}`,
-    card: { ...card, title: branch ? `${branchLabel(branch)} (changeset ${loadedChangeset}, what you have loaded)` : `Changeset ${loadedChangeset} (what you have loaded)` },
+    card: branch
+      ? { name: branchLabel(branch), title: `${branchLabel(branch)} (changeset ${loadedChangeset}, what you have loaded)`, description }
+      : { name: `changeset ${loadedChangeset}`, title: `Changeset ${loadedChangeset} (what you have loaded)`, description },
   };
 }

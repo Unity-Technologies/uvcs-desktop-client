@@ -5,24 +5,16 @@ import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
-import { OptionCards } from '../../ui/OptionCards';
 import { TextArea, TextField } from '../../ui/TextField';
 import { createBranchAndSwitch } from './branchOperations';
 import { validateBranchName } from './branchNames';
 import { PendingChangesChoice } from './PendingChangesChoice';
-import { planSwitch, type SwitchPlan } from './switchOptions';
+import { PendingChangesNotes } from './PendingChangesNotes';
+import { GoToChangesButton } from './GoToChangesButton';
+import { chosenStartingPoint, startingPointCards, type NewBranchOrigin } from './newBranchOrigins';
+import { StartingPointPicker } from './StartingPointPicker';
+import { newBranchSwitch, planSwitch, switchNotes, type SwitchPlan } from './switchOptions';
 import styles from './CreateBranchDialog.module.css';
-
-export interface NewBranchOrigin {
-  /** The branch the new one hangs from, e.g. `/main`. */
-  parentBranch: string;
-  /** Where it starts: `cs:12` or `lb:v1`. */
-  startingPoint: string;
-  /** How to describe the starting point to the user, e.g. "changeset 12". */
-  startingPointLabel: string;
-  /** How it reads as one of several "Start from" cards. */
-  card?: { title: string; description: string };
-}
 
 /**
  * `origins` holds one starting point, or several to choose from (the first is the default). Resolves with the new
@@ -63,7 +55,8 @@ function CreateBranchDialog({ workspacePath, origins, onFinish }: CreateBranchDi
 
   const fullName = topLevel ? `/${name.trim()}` : `${origin.parentBranch}/${name.trim()}`;
   const error = name ? validateBranchName(name.trim()) : undefined;
-  const blockedByMerge = switchAfter && pending?.plan.kind === 'blockedByMerge';
+  const { question, blockedByMerge, button: submit } = newBranchSwitch(switchAfter, pending, action);
+  const startingPoints = startingPointCards(origins);
 
   const create = async (): Promise<void> => {
     if (!name.trim() || error) return;
@@ -80,15 +73,17 @@ function CreateBranchDialog({ workspacePath, origins, onFinish }: CreateBranchDi
   return (
     <Dialog
       title="New branch"
-      description={origins.length === 1 ? `Starts at ${origin.startingPointLabel}.` : undefined}
-      width={origins.length > 1 || pending?.plan.kind === 'ask' ? 500 : undefined}
+      description={`Starts at ${origin.startingPointLabel}.`}
+      headerAction={startingPoints && <StartingPointPicker cards={startingPoints} value={originIndex} chosen={chosenStartingPoint(origin)} onChange={setOriginIndex} />}
+      width={question ? 500 : undefined}
       onClose={onClose}
       onSubmit={() => void create()}
       footer={
         <>
+          {question && <GoToChangesButton dismiss={onClose} />}
           <Button onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="primary" disabled={!name.trim() || Boolean(error)} loading={creating}>
-            Create branch
+          <Button type="submit" variant={submit.variant} disabled={!name.trim() || Boolean(error)} loading={creating}>
+            {submit.label}
           </Button>
         </>
       }
@@ -102,32 +97,22 @@ function CreateBranchDialog({ workspacePath, origins, onFinish }: CreateBranchDi
         hint={name.trim() ? `Full name: ${fullName}` : topLevel ? 'A top-level branch, like /main.' : `A child of ${origin.parentBranch}.`}
         onChange={(event) => setName(event.target.value)}
       />
-      {origins.length > 1 && (
-        <OptionCards
-          label="Start from"
-          heading
-          cards={origins.map((candidate, index) => ({
-            value: String(index),
-            title: candidate.card?.title ?? candidate.startingPointLabel,
-            description: candidate.card?.description ?? '',
-          }))}
-          value={String(originIndex)}
-          onChange={(value) => setOriginIndex(Number(value))}
-        />
-      )}
       <TextArea label="Comment" value={comment} placeholder="What is this branch for?" onChange={(event) => setComment(event.target.value)} />
       <Checkbox label="Top-level branch" checked={topLevel} onChange={setTopLevel} />
       <Checkbox label="Switch the workspace to the new branch" checked={switchAfter} onChange={setSwitchAfter} />
-      {switchAfter && pending?.plan.kind === 'ask' && (
-        <PendingChangesChoice
-          source={pending.preflight.sourceName}
-          destination={name.trim() ? fullName : null}
-          choice={pending.plan.choice}
-          count={pending.preflight.pendingCount}
-          value={action}
-          onChange={setAction}
-          heading
-        />
+      {question && (
+        <>
+          <PendingChangesChoice
+            source={question.preflight.sourceName}
+            destination={name.trim() ? fullName : null}
+            choice={question.choice}
+            count={question.preflight.pendingCount}
+            value={action}
+            onChange={setAction}
+            heading
+          />
+          <PendingChangesNotes notes={switchNotes(question.preflight, action)} />
+        </>
       )}
       {blockedByMerge && <p className={styles.note}>You’re in the middle of a merge, so the workspace stays where it is. Check the merge in or undo it to switch.</p>}
     </Dialog>

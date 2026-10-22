@@ -20,8 +20,8 @@ interface PendingChangesChoiceProps {
 
 /**
  * What happens to pending changes on a switch, in the same words wherever it comes up (switching, creating
- * a branch and switching to it): leave them behind in a shelve, bring them along, or, where the choice offers it,
- * undo them. Both branches go by their own names (`branchLabels`), the one the changes are on in full in its tooltip.
+ * a branch and switching to it): leave them behind in a shelve, bring them along, or undo them. Both branches go by
+ * their own names (`branchLabels`), the one the changes are on in full in its tooltip.
  */
 export function PendingChangesChoice({ source, destination, choice, count, value, onChange, heading = false }: PendingChangesChoiceProps) {
   const [sourceName, destinationName] = destination === null ? [branchLabel(source), null] : branchLabels(source, destination);
@@ -40,14 +40,12 @@ export function PendingChangesChoice({ source, destination, choice, count, value
       description: choice.bring.disabledReason ?? `Shelved, then applied on ${where}. If a file conflicts, you decide how to merge it.`,
       disabled: !choice.bring.enabled,
     },
-  ];
-  if (choice.discard) {
-    cards.push({
+    {
       value: 'discard',
       title: <>Undo {them}</>,
       description: 'Your edits are lost, with no shelve to restore. Added files stay in the folder as private files.',
       disabled: !choice.discard.enabled,
-    });
-  }
+    },
+  ];
   return <OptionCards label="Your pending changes" heading={heading} cards={cards} value={value} onChange={onChange} />;
 }

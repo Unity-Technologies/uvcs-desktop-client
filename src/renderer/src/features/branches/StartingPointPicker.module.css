@@ -1,0 +1,18 @@
+/* The popover's height is bounded: many or long cards scroll rather than being cut off. */
+.choices {
+  min-height: 0;
+  padding: var(--space-3);
+  overflow-y: auto;
+}
+
+/* Beside the dialog's title: a long branch name is cut, and the tooltip names it in full. */
+.trigger {
+  max-width: 240px;
+}
+
+.chosen {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
