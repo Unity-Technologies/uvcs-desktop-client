@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '@shared/domain/settings';
 import type { LegacyMergeToolEntry } from '../plasticConfig/clientConfMergeTools';
 import { KNOWN_TOOLS } from '../merge/mergeTools/knownTools';
-import { KNOWN_PROGRAMS, legacyMergeToolSettings, type ImportedMergeToolSettings } from './legacyMergeTools';
+import { KNOWN_PROGRAMS, legacyMergeToolSettings, sendsCodeToSemanticMerge, type ImportedMergeToolSettings } from './legacyMergeTools';
 
 const fresh: ImportedMergeToolSettings = {
   mergeTool: DEFAULT_SETTINGS.mergeTool,
@@ -143,6 +143,11 @@ describe('legacyMergeToolSettings', () => {
     const imported = legacyMergeToolSettings([text('.shader', 'rider "@output"'), text('*', XMERGE_WINDOWS)], { ...fresh, mergeTool: 'vscode' });
     expect(imported).toMatchObject({ mergeTool: 'vscode', mergeToolRules: [{ patterns: ['.shader'], toolId: 'rider' }] });
     expect(imported.mergeToolRules).toHaveLength(1);
+  });
+
+  it('sends C#, VB and Java to Semantic Merge while every other file opens in the UVCS merge tool, Automatic or picked by name', () => {
+    expect([sendsCodeToSemanticMerge('auto'), sendsCodeToSemanticMerge('uvcs'), sendsCodeToSemanticMerge('vscode')]).toEqual([true, true, false]);
+    expect(legacyMergeToolSettings([text('*', XMERGE_WINDOWS)], { ...fresh, mergeTool: 'uvcs' }).mergeToolRules.map((rule) => rule.toolId)).toEqual(['semantic']);
   });
 
   it('keeps the user’s own pick for every other file over the client’s', () => {

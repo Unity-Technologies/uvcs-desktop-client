@@ -1,9 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { AUTO_MERGE_TOOL } from '@shared/domain/mergeTools';
 import { readLegacyMergeTools } from '../plasticConfig/clientConfMergeTools';
 import { readRecentBranchesByWorkspace } from '../plasticConfig/recentBranchesConf';
-import { legacyMergeToolSettings } from './legacyMergeTools';
+import { legacyMergeToolSettings, sendsCodeToSemanticMerge } from './legacyMergeTools';
 import type { SettingsStore } from './SettingsStore';
 
 /**
@@ -36,7 +35,7 @@ function importMergeTools(settings: SettingsStore, legacyConfigFolder: string): 
   const entries = readLegacyMergeTools(readLegacyFile(legacyConfigFolder, 'client.conf'));
   if (entries) settings.update({ mergeToolRulesImported: true, ...legacyMergeToolSettings(entries, current) });
   // Nothing to import: the default rows send C# to Semantic Merge, which a user who picked their own tool never asked for.
-  else settings.update({ mergeToolRulesImported: true, ...(current.mergeTool !== AUTO_MERGE_TOOL && { mergeToolRules: [] }) });
+  else settings.update({ mergeToolRulesImported: true, ...(!sendsCodeToSemanticMerge(current.mergeTool) && { mergeToolRules: [] }) });
 }
 
 /** The file's text; none when it can't be read (no official client, no permission, a folder in its place). */

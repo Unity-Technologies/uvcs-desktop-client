@@ -46,7 +46,7 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   for (`@fileencoding`, `@mergetype`...) dropped, with the switch before it when the variable was the whole argument
   (`-e @fileencoding`). Left out: binary entries and binary merges, the client's own scripts
   (its `diffscripts` folder: Word documents, which are binary), regular expressions, a command that saves nowhere. While every other file opens in the UVCS merge tool once imported
-  (Automatic, or the client's own tool), C#, Visual Basic and Java go to Semantic Merge (the client does so), but those
+  (Automatic, or the UVCS merge tool picked by name: `sendsCodeToSemanticMerge`, the one test of both paths), C#, Visual Basic and Java go to Semantic Merge (the client does so), but those
   a row sends elsewhere; a user who picked their own tool for every other file keeps C# there, and with no client.conf
   to import such a user's default rows are emptied (`importMergeTools`); a row that sends files where every other file
   goes anyway, and that no later row could take, is dropped (the Windows client's `.meta` row).

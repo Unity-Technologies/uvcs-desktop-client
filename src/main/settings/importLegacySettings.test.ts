@@ -148,6 +148,16 @@ describe('importLegacySettings', () => {
       }
     });
 
+    it('send C# to Semantic Merge for a user who picked the UVCS merge tool by name, as for Automatic, with or without client.conf', () => {
+      for (const files of [{ 'client.conf': CLIENT_CONF_OWN_TOOL }, {}] as Record<string, string>[]) {
+        const { legacyFolder, settingsFile, openSettings } = setUp(files);
+        mkdirSync(join(settingsFile, '..'));
+        writeFileSync(settingsFile, JSON.stringify({ legacySettingsImported: true, mergeTool: 'uvcs' }));
+        importLegacySettings(openSettings(), legacyFolder);
+        expect(openSettings().get().mergeToolRules.filter((rule) => rule.toolId === 'semantic').map((rule) => rule.patterns)).toEqual([['.cs', '.vb', '.java']]);
+      }
+    });
+
     it("keep the app's defaults when the official client has none, or its file can't be read, and count as done", () => {
       for (const files of [{}, { 'client.conf': '<ClientConfigData />' }, { 'client.conf': '\u0000<<<' }] as Record<string, string>[]) {
         const { legacyFolder, openSettings } = setUp(files);

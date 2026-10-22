@@ -58,8 +58,7 @@ export function legacyMergeToolSettings(entries: LegacyMergeToolEntry[], current
 
   const mergeTool = current.mergeTool === AUTO_MERGE_TOOL && everyOtherFile && everyOtherFile !== UVCS_TOOL_ID ? everyOtherFile : current.mergeTool;
   const defaultToolId = mergeTool === AUTO_MERGE_TOOL ? UVCS_TOOL_ID : mergeTool;
-  // As the client does, but only while every other file opens in its own tool: a user who picked theirs keeps C# there.
-  if (defaultToolId === UVCS_TOOL_ID) rules.push(...semanticRule(rules));
+  if (sendsCodeToSemanticMerge(mergeTool)) rules.push(...semanticRule(rules));
 
   return {
     mergeTool,
@@ -67,6 +66,14 @@ export function legacyMergeToolSettings(entries: LegacyMergeToolEntry[], current
     unityMergeTool: afterSmartMerge && afterSmartMerge !== defaultToolId ? afterSmartMerge : SAME_AS_OTHER_FILES,
     customMergeTools: customTools,
   };
+}
+
+/**
+ * Whether C#, Visual Basic and Java go to Semantic Merge, as the official client sends them: only while every other
+ * file opens in the UVCS merge tool (Automatic, or picked by name). A user who picked their own tool keeps C# there.
+ */
+export function sendsCodeToSemanticMerge(mergeTool: string): boolean {
+  return mergeTool === AUTO_MERGE_TOOL || mergeTool === UVCS_TOOL_ID;
 }
 
 /** C#, Visual Basic and Java in Semantic Merge, but those the rules before already send elsewhere. */
