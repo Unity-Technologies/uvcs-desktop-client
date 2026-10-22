@@ -20,7 +20,8 @@ interface PendingChangesChoiceProps {
 
 /**
  * What happens to pending changes on a switch, in the same words wherever it comes up (switching, creating
- * a branch and switching to it): leave them behind in a shelve, bring them along, or undo them. Both branches go by their own names (`branchLabels`), the one the changes are on in full in its tooltip.
+ * a branch and switching to it): leave them behind in a shelve, bring them along, or undo them. Both branches go by
+ * their own names (`branchLabels`), the one the changes are on in full in its tooltip.
  */
 export function PendingChangesChoice({ source, destination, choice, count, value, onChange, heading = false }: PendingChangesChoiceProps) {
   const [sourceName, destinationName] = destination === null ? [branchLabel(source), null] : branchLabels(source, destination);
