@@ -54,7 +54,7 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   "Remove <tool>" for the user's own, which removes it everywhere with the rows that open in it, this one too, and
   closes the dialog; saved with the rule, `argsToSave`), or for UnityYAMLMerge (whose arguments are
   fixed, `UNITY_YAML_MERGE_ARGS`) "Unity Editor" (a select: "Newest installed (6000.5.0f1)", then each installed
-  version; one gone stays, saying so: `editorOptions`) and "If it can't merge" (`fallbackChoices`). A long menu scrolls within the window (`Menu.module.css`). Save stays off until a rule has a
+  version; one gone stays, saying so: `editorOptions`) and "If it can't merge" (`fallbackChoices`). Its menus scroll when long (ARCHITECTURE.md "Long menus scroll"). Save stays off until a rule has a
   file type and the arguments name `{result}` (`saveProblem`); a new rule is added only on Save. No dialog opens over
   it but "Choose another app…", to add a program.
 - **No "Automatic" in Settings › Merge.** Every other file's tool and UnityYAMLMerge's fallback store `auto` until one

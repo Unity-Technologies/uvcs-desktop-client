@@ -870,6 +870,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   the sidebar's size or entries change, the ones in More kept laid out out of sight for that.
   There is no Annotate page: "Annotate" outside the Files view opens the file's history annotated (`annotatedHistory`).
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.
+- **Long menus scroll** within the room the window leaves them (`ui/menu/Menu.module.css`: Radix measures it), never
+  running off-screen: a picker of many tools, a long "Open with ▸".
 - **Menus**: one grammar for every object's menu (`lib/menuGroups`): the default action (what Enter does in the app:
   open the workspace, a diff), every way to open it in other apps (the editor, the terminal, "Open with ▸", Reveal:
   `openOnDiskEntries`, docs/features/open-with.md; a file's Enter is its "Open in <editor>"), what it does (switch, apply, check out), merges, what it creates, where it leads (history,
