@@ -4,6 +4,8 @@ import { useShortcut } from '../../lib/useShortcut';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { Tooltip } from '../../ui/Tooltip';
 import { ToggleChip } from '../../ui/ToggleChip';
+import { CopyLinkButton } from '../links/CopyLinkButton';
+import { useCopyLinkCommand } from '../links/useCopyLinkCommand';
 import { useNavigation } from '../navigation/navigationStore';
 import { PageContent, pageTitle } from '../navigation/pageRegistry';
 import { useBackButtons } from '../navigation/useBackButtons';
@@ -20,13 +22,15 @@ import styles from './PageWindowScreen.module.css';
 
 /**
  * A page window: one page of the workspace (a diff, a history…), opened from a workspace window to read beside it,
- * often on another display. Its top bar says what it shows, and offers to follow that window's selection.
+ * often on another display. Its top bar says what it shows, copies a link to it, and offers to follow that window's
+ * selection.
  */
 export function PageWindowScreen() {
   const pages = useNavigation((state) => state.pages);
   useWorkspaceWatcher();
   useFollowSelection();
   usePageWindowCommands();
+  useCopyLinkCommand();
   usePageWindowTitle();
   useShortcut(hotkey('back'), pageWindowGoBack);
   useBackButtons(pageWindowGoBack);
@@ -37,7 +41,14 @@ export function PageWindowScreen() {
 
   return (
     <div className={styles.screen}>
-      <TopBar end={<FollowSelectionChip />}>
+      <TopBar
+        end={
+          <>
+            <CopyLinkButton page={page} />
+            <FollowSelectionChip />
+          </>
+        }
+      >
         <div className={styles.title}>
           <Breadcrumb back={previous && { label: pageTitle(previous), onClick: pageWindowGoBack }} current={pageTitle(page)} />
         </div>

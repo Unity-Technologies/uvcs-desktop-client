@@ -1,7 +1,7 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import { VIEW_IDS } from '../navigation/views';
-import { copyLinkLabel, pageLinkTarget, viewLinkTarget } from './shownLink';
+import { copyLinkLabel, pageLinkTarget, shownFileOf, viewLinkTarget } from './shownLink';
 
 const LINES = { side: 'new', first: 40, last: 52 } as const;
 
@@ -37,6 +37,21 @@ describe('pageLinkTarget', () => {
   it('names a browsed changeset and the item selected in it', () => {
     expect(pageLinkTarget({ kind: 'browseRepository', changesetId: 7, focusPath: 'Assets' }, null)).toEqual({ object: { kind: 'changeset', id: 7 }, page: { kind: 'browse', path: '/Assets' } });
     expect(pageLinkTarget({ kind: 'browseRepository', changesetId: 7 }, null)).toEqual({ object: { kind: 'changeset', id: 7 }, page: { kind: 'browse', path: '/' } });
+  });
+});
+
+describe('shownFileOf', () => {
+  const target = { kind: 'changeset', changesetId: 12 } as const;
+
+  it("takes the file of the diff on screen when it is the page's, a review's whatever it compares", () => {
+    expect(shownFileOf({ kind: 'diff', title: 'Changeset 12', target }, { target, path: 'a.cs' })).toEqual({ path: 'a.cs' });
+    expect(shownFileOf({ kind: 'codeReview', reviewId: 3 }, { target, path: 'b.cs' })).toEqual({ path: 'b.cs' });
+  });
+
+  it("takes none from another page's diff, or for a page with none", () => {
+    expect(shownFileOf({ kind: 'diff', title: 'Changeset 13', target: { kind: 'changeset', changesetId: 13 } }, { target, path: 'a.cs' })).toBeNull();
+    expect(shownFileOf({ kind: 'history', path: 'a.cs' }, { target, path: 'a.cs' })).toBeNull();
+    expect(shownFileOf(undefined, { target, path: 'a.cs' })).toBeNull();
   });
 });
 

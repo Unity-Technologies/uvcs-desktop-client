@@ -17,10 +17,15 @@
   font-size: var(--text-sm);
 }
 
-/* Quiet, at the end of the breadcrumb: an option for a second display, not a step of the page. */
+/* Quiet, at the end of the breadcrumb: a link to share and an option for a second display, not steps of the page. */
+.copyLink,
 .newWindow {
   margin-left: auto;
   color: var(--text-tertiary);
+}
+
+.copyLink + .newWindow {
+  margin-left: 0;
 }
 
 .content {

@@ -1,13 +1,14 @@
+import type { DiffTarget } from '@shared/domain/diff';
 import type { LinkLines } from '@shared/links/link';
 import type { Page } from '../navigation/pages';
 import type { ViewId } from '../navigation/views';
 import { LINK_VIEW_IDS, type LinkTarget } from './linkNavigation';
 import { diffTargetObject } from './linkTo';
 
-/** Lines selected in the page in front, and the file they're in (a repository path, as `DiffEntry.path`). */
-export interface SelectedLines {
+/** The file the page in front shows (a repository path, as `DiffEntry.path`), and the lines selected in it. */
+export interface ShownFile {
   path: string;
-  lines: LinkLines;
+  lines?: LinkLines;
 }
 
 /**
@@ -15,22 +16,22 @@ export interface SelectedLines {
  * are copied"): the object a diff or a review shows, the file shown or the lines selected in it, the item a history or
  * a browse shows. Null for a page no link names (a merge, a diff of two branches' heads).
  */
-export function pageLinkTarget(page: Page, selected: SelectedLines | null): LinkTarget | null {
+export function pageLinkTarget(page: Page, shown: ShownFile | null): LinkTarget | null {
   switch (page.kind) {
     case 'diff': {
       const object = diffTargetObject(page.target);
-      return object && { object, ...fileIn(page.focusPath, selected) };
+      return object && { object, ...fileIn(page.focusPath, shown) };
     }
     case 'codeReview':
-      return { object: { kind: 'codeReview', id: page.reviewId }, ...fileIn(page.focusPath, selected) };
+      return { object: { kind: 'codeReview', id: page.reviewId }, ...fileIn(page.focusPath, shown) };
     case 'history': {
       const object = page.select && 'changesetId' in page.select ? ({ kind: 'changeset', id: page.select.changesetId } as const) : undefined;
-      const lines = selected?.path === page.path ? { lines: selected.lines } : {};
+      const lines = shown?.lines && shown.path === page.path ? { lines: shown.lines } : {};
       return { ...(object && { object }), page: { kind: page.view === 'annotate' ? 'annotate' : 'history', path: `/${page.path}` }, ...lines };
     }
     case 'browseRepository': {
-      const path = selected?.path ?? page.focusPath;
-      const lines = selected ? { lines: selected.lines } : {};
+      const path = shown?.path ?? page.focusPath;
+      const lines = shown?.lines ? { lines: shown.lines } : {};
       return { object: { kind: 'changeset', id: page.changesetId }, page: { kind: 'browse', path: `/${path ?? ''}` }, ...lines };
     }
     case 'merge':
@@ -38,10 +39,21 @@ export function pageLinkTarget(page: Page, selected: SelectedLines | null): Link
   }
 }
 
-/** The file a diff shows, and its selected lines: those the user selected, else the file it opened on. */
-function fileIn(focusPath: string | undefined, selected: SelectedLines | null): Pick<LinkTarget, 'page' | 'lines'> {
-  if (selected) return { page: { kind: 'diffFile', path: `/${selected.path}` }, lines: selected.lines };
-  return focusPath ? { page: { kind: 'diffFile', path: `/${focusPath}` } } : {};
+/** The file a diff shows and the lines selected in it, else the file it opened on. */
+function fileIn(focusPath: string | undefined, shown: ShownFile | null): Pick<LinkTarget, 'page' | 'lines'> {
+  const path = shown?.path ?? focusPath;
+  if (!path) return {};
+  return shown?.lines ? { page: { kind: 'diffFile', path: `/${path}` }, lines: shown.lines } : { page: { kind: 'diffFile', path: `/${path}` } };
+}
+
+/**
+ * The file a page shows, from the diff on screen (`useShownDiffFile`: a diff's, or a review's): none when that diff
+ * is another page's, or the page shows no diff.
+ */
+export function shownFileOf(page: Page | undefined, onScreen: { target: DiffTarget; path: string } | null): ShownFile | null {
+  if (!onScreen || (page?.kind !== 'diff' && page?.kind !== 'codeReview')) return null;
+  if (page.kind === 'diff' && JSON.stringify(onScreen.target) !== JSON.stringify(page.target)) return null;
+  return { path: onScreen.path };
 }
 
 /** What a link to a view with nothing selected names: the view, in the workspace's repository. */

@@ -8,6 +8,7 @@ import { useShortcut } from '../../lib/useShortcut';
 import { IconButton } from '../../ui/IconButton';
 import { isMovablePage } from '../pageWindow/movablePages';
 import { movePageToNewWindow } from '../pageWindow/openInNewWindow';
+import { CopyLinkButton } from '../links/CopyLinkButton';
 import { Breadcrumb } from './Breadcrumb';
 import styles from './PageFrame.module.css';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -22,6 +23,7 @@ export function PageFrame({ page }: { page: Page }) {
     <div className={styles.frame}>
       <div className={styles.breadcrumb}>
         <Breadcrumb back={{ label: previous ? pageTitle(previous) : viewDefinition(view).label, onClick: goBack }} current={pageTitle(page)} />
+        <CopyLinkButton className={styles.copyLink} page={page} />
         {isMovablePage(page) && (
           <IconButton
             className={styles.newWindow}

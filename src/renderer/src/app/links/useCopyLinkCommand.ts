@@ -8,22 +8,24 @@ import { useWorkspacePath } from '../workspace/useWorkspace';
 import type { LinkTarget } from './linkNavigation';
 import { workspaceLinkTo } from './linkTo';
 import { useSelectedObjectLink } from './selectedObjectLink';
-import { pageLinkTarget, viewLinkTarget, type SelectedLines } from './shownLink';
+import { pageLinkTarget, viewLinkTarget } from './shownLink';
+import { useShownFile } from './useShownFile';
 
 /**
  * "Copy link" (⇧⌘C, the palette): a link to what is in front, as a browser's address bar has one
  * (docs/features/deep-links.md, "Where links are copied"): the page (the file and the lines selected in it), else the
  * object selected in the view, else the view.
  */
-export function useCopyLinkCommand(selectedLines: SelectedLines | null = null): void {
+export function useCopyLinkCommand(): void {
   const workspacePath = useWorkspacePath();
   const top = useNavigation((state) => state.pages.at(-1));
   const view = useNavigation((state) => state.view);
   const objectLink = useSelectedObjectLink((state) => state.link);
+  const shownFile = useShownFile(top);
 
   useCommands(
     useMemo<Command[]>(() => {
-      const target: LinkTarget | null = top ? pageLinkTarget(top, selectedLines) : objectLink ? null : viewLinkTarget(view);
+      const target: LinkTarget | null = top ? pageLinkTarget(top, shownFile) : objectLink ? null : viewLinkTarget(view);
       const link = target ? workspaceLinkTo(workspacePath, target) : objectLink;
       return [
         {
@@ -37,7 +39,7 @@ export function useCopyLinkCommand(selectedLines: SelectedLines | null = null): 
           run: () => void copyLink(link),
         },
       ];
-    }, [workspacePath, top, view, objectLink, selectedLines]),
+    }, [workspacePath, top, view, objectLink, shownFile]),
   );
 }
 
