@@ -248,6 +248,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
               summaryRef={summaryRef}
               workspacePath={workspacePath}
               includedCount={included.length}
+              hiddenIncludedCount={hiddenIncludedCount}
               listedCount={listedCount}
               upload={upload}
               shelvable={{ count: shelvable.length, upload: shelvableUpload }}
