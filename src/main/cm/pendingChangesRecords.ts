@@ -31,6 +31,9 @@ const DEFAULT_CHANGELIST = 'Default';
 /** What `cm status --machinereadable` prints for a change that comes from no merge. */
 const NO_MERGES = 'NO_MERGES';
 
+/** What a change's first field holds: its codes (`CO+CH`), or `--` for none. */
+const CODES = /^(--|[A-Z]{2})(\+[A-Z]{2})*$/;
+
 /** A change printed with where it was (moved, locally moved): `<codes> <similarity> <old path> <path> <is folder> <merges>`. */
 const MOVED_FIELDS = 6;
 /** Any other change: `<codes> <path> <is folder> <merges>`. */
@@ -44,7 +47,8 @@ const CHANGE_FIELDS = 4;
  * workspace, which the server never sees.
  *
  * A change lists every code of the item at once (`CH+MV`), and reads as `cm status --xml` read it before
- * (`listedCodes`). An item in several changelists is printed in each, and kept in the first. Its path comes absolute,
+ * (`listedCodes`). An item printed twice is one change with both kinds, as `--xml` merged it: a deleted file whose
+ * path a new file took prints `PR` then `DE`, and stays a deletion; one in several changelists is in the first. Its path comes absolute,
  * made relative to the workspace (`PrintedWorkspacePaths`). Records hold neither the size nor the date nor whether a
  * file is a link: `onChange` gets each change with its absolute path, to read them from the disk (`DiskDetails`).
  */
@@ -52,7 +56,7 @@ export class PendingChangesReader {
   private readonly paths: PrintedWorkspacePaths;
   private readonly changelists: Changelist[] = [];
   private readonly mergeInfos = new Set<string>();
-  private readonly listed = new Set<string>();
+  private readonly listed = new Map<string, PendingChange>();
   /** One array of kinds for each combination of codes, shared by the changes that have it: most share a handful. */
   private readonly kindsByCodes = new Map<string, ChangeKind[] | null>();
   private changelist: string | undefined;
@@ -71,7 +75,10 @@ export class PendingChangesReader {
     if (tag === 'CHLIST') return this.startChangelist(fields);
     // What the workspace has loaded is read apart (`readWorkspaceStatus`), and Changes lists no conflict markers.
     if (tag === 'STATUS' || tag === 'CONFLICT_MARKERS') return undefined;
-    return fields.length === MOVED_FIELDS || fields.length === CHANGE_FIELDS ? this.changeOf(fields) : undefined;
+    if (fields.length === MOVED_FIELDS || fields.length === CHANGE_FIELDS) return this.changeOf(fields);
+    // A change printed with other fields than these (another `cm`) would be lost, and Changes look clean: it fails.
+    if (CODES.test(tag)) throw new Error(`cm status printed a change this app can't read: ${fields.join(' ')}`);
+    return undefined;
   };
 
   /** The snapshot of the changes read, with the changelists they are in and the merges they come from. */
@@ -92,9 +99,6 @@ export class PendingChangesReader {
     const kinds = this.kindsOf(codes);
     if (!kinds) return undefined;
     const path = this.paths.relative(printedPath);
-    if (this.listed.has(path)) return undefined;
-    this.listed.add(path);
-
     const change: PendingChange = { path, kinds, itemType: isFolder === 'True' ? 'directory' : 'file', size: 0, lastModified: '' };
     if (moved) {
       change.oldPath = this.paths.relative(printedOldPath);
@@ -106,6 +110,9 @@ export class PendingChangesReader {
       this.mergeInfos.add(change.mergeInfo);
     }
     if (this.changelist !== undefined) change.changelist = this.changelist;
+    const listed = this.listed.get(path);
+    if (listed) return void withTheOther(listed, change);
+    this.listed.set(path, change);
     this.onChange?.(change, printedPath);
     return change;
   }
@@ -119,6 +126,16 @@ export class PendingChangesReader {
       this.kindsByCodes.set(codes, kinds);
     }
     return kinds;
+  }
+}
+
+/** `listed` with what `other`, the same item printed again, adds: its kinds, and whatever `listed` doesn't say. */
+function withTheOther(listed: PendingChange, other: PendingChange): void {
+  // A new array: kinds are shared by every change with the same codes.
+  if (other.kinds.some((kind) => !listed.kinds.includes(kind))) listed.kinds = [...new Set([...listed.kinds, ...other.kinds])];
+  // Only the fields it has: nothing empty goes over IPC.
+  for (const field of ['oldPath', 'similarityPercent', 'mergeInfo', 'changelist'] as const) {
+    if (listed[field] === undefined && other[field] !== undefined) Object.assign(listed, { [field]: other[field] });
   }
 }
 

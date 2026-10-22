@@ -99,6 +99,20 @@ describe('PendingChangesReader', () => {
     ]);
   });
 
+  it('reads an item printed twice as one change: a deleted file whose path a new file took stays a deletion', () => {
+    const { changes } = read(pendingStatus(WORKSPACE, change('PR', 'a.txt'), change('CH', 'b.txt'), change('DE', 'a.txt')));
+
+    expect(changes).toEqual([
+      { path: 'a.txt', kinds: ['private', 'deleted'], itemType: 'file', size: 0, lastModified: '' },
+      { path: 'b.txt', kinds: ['changed'], itemType: 'file', size: 0, lastModified: '' },
+    ]);
+  });
+
+  it('fails on a change printed with fields it can not read, rather than show a clean workspace', () => {
+    const output = formatOutput(['CO+CH', join(WORKSPACE, 'a.txt'), 'False', '12', 'NO_MERGES']);
+    expect(() => read(output)).toThrow("cm status printed a change this app can't read");
+  });
+
   it('skips the header and the files left with conflict markers, which are no changes', () => {
     const output = formatOutput(['STATUS', 7, 'game', 'local'], ['CH', join(WORKSPACE, 'a.txt'), 'False', 'NO_MERGES'], ['CONFLICT_MARKERS', join(WORKSPACE, 'a.txt')]);
     expect(read(output).changes.map((item) => item.path)).toEqual(['a.txt']);
