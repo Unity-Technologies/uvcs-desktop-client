@@ -33,7 +33,7 @@ interface Allowance {
 
 const ALLOWED: Record<string, Allowance> = {
   'main/plasticConfig/configFolder.ts': { fileSystem: [], why: 'where the official client keeps its config, for the first-run import' },
-  'main/settings/importLegacySettings.ts': { fileSystem: ['readFileSync'], why: 'the first-run import, which reads plasticgui.conf once' },
+  'main/settings/importLegacySettings.ts': { fileSystem: ['readFileSync'], why: 'the first-run import, which reads plasticgui.conf and client.conf once' },
   'main/plasticConfig/recentBranchesConf.ts': { fileSystem: [], names: false, why: 'parses the plasticgui.conf text the first-run import reads' },
   'main/watch/classifyChange.ts': { fileSystem: [], why: 'the files cm rewrites in .plastic are refresh signals for the watcher' },
   'main/watch/WorkspaceWatcher.ts': { fileSystem: [], why: 'watches .plastic for rewrites' },
@@ -194,7 +194,12 @@ describe("cm's own files", () => {
 describe("the official client's config", () => {
   it('is reached only by the first-run import, wired once at start', () => {
     expect(filesWhere((code) => code.includes('plasticConfigFolder('))).toEqual(['main/plasticConfig/configFolder.ts', 'main/startup/settings.ts']);
-    expect(filesWhere((code) => /from '\.\.?\/(\.\.\/)?plasticConfig\//.test(code))).toEqual(['main/settings/importLegacySettings.ts', 'main/startup/settings.ts']);
+    // `legacyMergeTools` maps what the import read; it reads nothing.
+    expect(filesWhere((code) => /from '\.\.?\/(\.\.\/)?plasticConfig\//.test(code))).toEqual([
+      'main/settings/importLegacySettings.ts',
+      'main/settings/legacyMergeTools.ts',
+      'main/startup/settings.ts',
+    ]);
   });
 
   it('is only read: every module in plasticConfig/ takes from the file system only ways to read', () => {

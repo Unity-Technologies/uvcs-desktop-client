@@ -8,7 +8,7 @@ const sources: MergeToolSources = {
   detected: [known('uvcs', '/Applications/PlasticSCM.app/Contents/MacOS/macplasticx'), known('vscode', '/usr/local/bin/code')],
   custom: [{ id: 'custom:1', name: 'My tool', executable: '/opt/mytool', args: ['{base}', '{result}'] }],
   argsOverrides: { vscode: ['--wait', '{result}'] },
-  smartMerge: null,
+  unityYamlMerges: [],
   preference: 'auto',
   platform: 'darwin',
 };
@@ -22,7 +22,11 @@ describe('mergeToolList', () => {
       ['custom:1', 'My tool', 'custom'],
     ]);
     expect(tools[0]).toMatchObject({ canBringToFront: true });
-    expect(tools[1]).toMatchObject({ args: ['--wait', '{result}'], defaultArgs: KNOWN_TOOLS[1]!.args, canBringToFront: false });
+    expect(tools[1]).toMatchObject({ args: ['--wait', '{result}'], defaultArgs: KNOWN_TOOLS.find((tool) => tool.id === 'vscode')!.args, canBringToFront: false });
+  });
+
+  it('names every known tool, found or not, for the rules that name one this machine lacks', () => {
+    expect(mergeToolList(sources).knownNames).toMatchObject({ kdiff3: 'KDiff3', meld: 'Meld' });
   });
 
   it('prefers the user’s pick while it is there, else the UVCS tool, else the first', () => {

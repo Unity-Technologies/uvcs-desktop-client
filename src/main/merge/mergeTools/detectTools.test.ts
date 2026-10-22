@@ -24,6 +24,13 @@ const windows: Whereabouts = {
 const found = (where: Whereabouts, paths: string[]) => detectKnownTools(KNOWN_TOOLS, where, fakeFileSystem(paths)).map(({ tool, executable }) => [tool.id, executable]);
 
 describe('detectKnownTools', () => {
+  it('finds Semantic Merge wherever the UVCS merge tool is: the same Desktop GUI, run as its other tool', () => {
+    const [uvcs, semantic] = detectKnownTools(KNOWN_TOOLS, mac, fakeFileSystem(['/Applications/PlasticSCM.app/Contents/MacOS/macplasticx']));
+    expect(semantic).toEqual({ tool: KNOWN_TOOLS.find((tool) => tool.id === 'semantic'), executable: uvcs!.executable });
+    expect(semantic!.tool.args).toEqual(['semanticmerge', '-b={base}', '-bn={baseName}', '-s={incoming}', '-sn={incomingName}', '-d={yours}', '-dn={yoursName}', '-r={result}']);
+    expect(uvcs!.tool.args.slice(1)).toEqual(semantic!.tool.args.slice(1));
+  });
+
   it('finds macOS apps in /Applications and ~/Applications, then on the PATH', () => {
     expect(
       found(mac, [
@@ -34,6 +41,7 @@ describe('detectKnownTools', () => {
       ]),
     ).toEqual([
       ['uvcs', '/Applications/PlasticSCM.app/Contents/MacOS/macplasticx'],
+      ['semantic', '/Applications/PlasticSCM.app/Contents/MacOS/macplasticx'],
       ['vscode', '/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code'],
       ['rider', '/Users/me/Applications/Rider.app/Contents/MacOS/rider'],
       ['p4merge', '/usr/local/bin/p4merge'],
@@ -55,6 +63,7 @@ describe('detectKnownTools', () => {
       ]),
     ).toEqual([
       ['uvcs', 'C:\\Program Files\\PlasticSCM5\\client\\plastic.exe'],
+      ['semantic', 'C:\\Program Files\\PlasticSCM5\\client\\plastic.exe'],
       ['vscode', 'C:\\Users\\me\\AppData\\Local\\Programs\\Microsoft VS Code\\bin\\code.cmd'],
       ['rider', 'C:\\Program Files\\JetBrains\\JetBrains Rider 2026.2\\bin\\rider64.exe'],
     ]);
@@ -80,6 +89,7 @@ describe('detectKnownTools', () => {
     const linux: Whereabouts = { platform: 'linux', env: { PATH: '/usr/bin:/bin' }, home: '/home/me', cmPath: '/usr/bin/cm' };
     expect(found(linux, ['/usr/bin/plasticgui', '/usr/bin/meld', '/usr/bin/kdiff3', '/usr/share/code/bin/code', '/usr/bin/bcompare'])).toEqual([
       ['uvcs', '/usr/bin/plasticgui'],
+      ['semantic', '/usr/bin/plasticgui'],
       ['vscode', '/usr/share/code/bin/code'],
       ['kdiff3', '/usr/bin/kdiff3'],
       ['bcompare', '/usr/bin/bcompare'],
@@ -100,6 +110,9 @@ describe('detectKnownTools', () => {
 
   it("finds the UVCS merge tool as the Linux package installs it, next to cm, when cm isn't the /usr/bin link", () => {
     const linux: Whereabouts = { platform: 'linux', env: { PATH: '/home/me/bin' }, home: '/home/me', cmPath: '/opt/plasticscm5/client/cm' };
-    expect(found(linux, ['/usr/bin/plasticgui', '/opt/plasticscm5/client/linplasticx'])).toEqual([['uvcs', '/opt/plasticscm5/client/linplasticx']]);
+    expect(found(linux, ['/usr/bin/plasticgui', '/opt/plasticscm5/client/linplasticx'])).toEqual([
+      ['uvcs', '/opt/plasticscm5/client/linplasticx'],
+      ['semantic', '/opt/plasticscm5/client/linplasticx'],
+    ]);
   });
 });

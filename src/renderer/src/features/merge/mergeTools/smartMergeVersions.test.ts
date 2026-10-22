@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FileConflictState } from '../resolve/useFileConflicts';
-import { smartMergeVersions } from './smartMergeVersions';
+import { isUnityAsset, smartMergeVersions } from './smartMergeVersions';
 
 const UNITY = '%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n';
 const text = (value: string) => ({ text: value, isBinary: false, size: value.length });
@@ -18,7 +18,7 @@ const conflict = (path: string, versions: { base?: string; source: string; desti
 });
 
 describe('smartMergeVersions', () => {
-  it('hands Smart Merge the three versions of a Unity asset, whatever its extension', () => {
+  it('hands UnityYAMLMerge the three versions of a Unity asset, whatever its extension', () => {
     const material = conflict('Assets/Red.mat', { base: `${UNITY}b`, source: `${UNITY}s`, destination: `${UNITY}d` });
     expect(smartMergeVersions(material)).toEqual({ path: 'Assets/Red.mat', base: `${UNITY}b`, yours: `${UNITY}d`, incoming: `${UNITY}s` });
   });
@@ -32,7 +32,30 @@ describe('smartMergeVersions', () => {
     expect(smartMergeVersions(conflict('Assets/P.prefab', prefab, { decidedByUser: true }))).toBeNull();
     expect(smartMergeVersions(conflict('Assets/P.prefab', prefab, { isBinary: true }))).toBeNull();
     expect(smartMergeVersions(conflict('Assets/P.prefab', { ...prefab, source: 'fileFormatVersion: 2\n' }))).toBeNull();
-    expect(smartMergeVersions(conflict('Assets/Tex.png.meta', { base: 'guid: 1', source: 'guid: 2', destination: 'guid: 3' }))).toBeNull();
     expect(smartMergeVersions(conflict('Assets/P.prefab', prefab, { contents: undefined }))).toBeNull();
+  });
+});
+
+describe('isUnityAsset', () => {
+  const prefab = { base: `${UNITY}b`, source: `${UNITY}s`, destination: `${UNITY}d` };
+
+  it('is a Unity asset on both sides, whatever its extension, even once the user decided something for it', () => {
+    expect(isUnityAsset(conflict('Assets/Red.mat', prefab))).toBe(true);
+    expect(isUnityAsset(conflict('Assets/P.prefab', prefab, { decidedByUser: true }))).toBe(true);
+  });
+
+  it('is not one with a side that isn’t, nor a binary, nor before its versions are read', () => {
+    expect(isUnityAsset(conflict('Assets/P.prefab', { ...prefab, destination: 'plain' }))).toBe(false);
+    expect(isUnityAsset(conflict('Assets/P.prefab', prefab, { isBinary: true }))).toBe(false);
+    expect(isUnityAsset(conflict('Assets/P.prefab', prefab, { contents: undefined }))).toBe(false);
+  });
+});
+
+describe('a .meta file', () => {
+  const meta = { base: 'fileFormatVersion: 2\nguid: 1\n', source: 'fileFormatVersion: 2\nguid: 2\n', destination: 'fileFormatVersion: 2\nguid: 3\n' };
+
+  it('skips UnityYAMLMerge, which rejects it, and goes to the tool', () => {
+    expect(smartMergeVersions(conflict('Assets/Tex.png.meta', meta))).toBeNull();
+    expect(isUnityAsset(conflict('Assets/Tex.png.meta', meta))).toBe(false);
   });
 });

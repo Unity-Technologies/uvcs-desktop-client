@@ -3,6 +3,7 @@ import type { MergeTool, MergeToolOutcome } from '@shared/domain/mergeTools';
 import type { FileConflictState } from '../resolve/useFileConflicts';
 import { waitsForTool } from './mergeToolOutcome';
 import { resolveOneByOne, runEndMessage, stopRun, type RunControl, type RunEnd } from './resolveOneByOne';
+import { mergerName } from './mergeToolFor';
 import { planRun, type RunPlan } from './resolveRun';
 
 const fakeMerge: MergeTool = { id: 'FakeMerge', name: 'FakeMerge', origin: 'known', executable: 'fakemerge', args: [], defaultArgs: [], canBringToFront: false };
@@ -37,18 +38,20 @@ class FakePage {
   readonly run: RunControl = { stopped: false };
   readonly events: string[] = [];
   readonly positions: string[] = [];
+  readonly toolsShown: string[] = [];
+  readonly toolsOpened: string[] = [];
 
   constructor(
     paths: string[],
     private readonly inTool: Record<string, InTool>,
-    /** `smartMerged`: files Smart Merge merges, before the tool would open on them. */
-    private readonly options: { asks?: boolean; atPause?: AtPause; smartMerged?: string[] } = {},
+    /** `smartMerged`: files UnityYAMLMerge merges, before the tool would open on them; `toolFor`, each file's tool. */
+    private readonly options: { asks?: boolean; atPause?: AtPause; smartMerged?: string[]; toolFor?: (path: string) => MergeTool } = {},
   ) {
     this.states = paths.map(conflict);
   }
 
   get plan(): RunPlan {
-    return planRun(this.states, fakeMerge);
+    return planRun(this.states, (state) => ({ kind: 'tool', tool: this.options.toolFor?.(state.file.path) ?? fakeMerge }));
   }
 
   /** The file decided: in the app (keeping the incoming version), or by `tool`. */
@@ -66,15 +69,17 @@ class FakePage {
       stillWaits: (key) => this.states.some((state) => state.file.key === key && waitsForTool(state)),
       show: (progress) => {
         this.positions.push(`${progress.position + 1} of ${progress.total}`);
+        this.toolsShown.push(progress.toolName);
         if (!progress.paused) return;
         this.events.push(`paused on ${progress.currentKey}`);
         // The run waits for the answer right after showing the pause.
         queueMicrotask(() => (this.options.atPause ?? ((page) => page.run.answer!(true)))(this));
       },
       open: (key, previousKey) => this.events.push(previousKey ? `open ${key} after ${previousKey}` : `open ${key}`),
-      resolve: async (key) => {
+      resolve: async (key, merger) => {
+        this.toolsOpened.push(mergerName(merger));
         const outcome = (this.inTool[key.slice(1)] ?? (() => saved))(this);
-        if (outcome?.kind === 'resolved') this.decide(key.slice(1), this.options.smartMerged?.includes(key.slice(1)) ? 'Smart Merge' : undefined);
+        if (outcome?.kind === 'resolved') this.decide(key.slice(1), this.options.smartMerged?.includes(key.slice(1)) ? 'UnityYAMLMerge' : undefined);
         return outcome;
       },
       asksWhenClosedUnsaved: () => this.options.asks ?? true,
@@ -84,6 +89,15 @@ class FakePage {
 }
 
 describe('resolving one by one', () => {
+  it('opens each file in its own tool, the strip naming it', async () => {
+    const otherMerge: MergeTool = { ...fakeMerge, id: 'OtherMerge', name: 'OtherMerge' };
+    const page = new FakePage(['a.ts', 'b.cs'], {}, { toolFor: (path) => (path.endsWith('.cs') ? otherMerge : fakeMerge) });
+    const { message } = await page.runOneByOne();
+    expect(page.toolsOpened).toEqual(['FakeMerge', 'OtherMerge']);
+    expect(page.toolsShown).toEqual(['FakeMerge', 'OtherMerge']);
+    expect(message).toEqual({ kind: 'success', title: 'Resolved both conflicts' });
+  });
+
   it('opens each file once the one before is closed, in the list order, with the selection following it', async () => {
     const page = new FakePage(['a.ts', 'b.ts', 'c.ts'], {});
     const { end, message } = await page.runOneByOne();
@@ -93,10 +107,10 @@ describe('resolving one by one', () => {
     expect(message).toEqual({ kind: 'success', title: 'Resolved all 3 conflicts in FakeMerge' });
   });
 
-  it('counts the files Smart Merge merged apart from those resolved in the tool', async () => {
+  it('counts the files UnityYAMLMerge merged apart from those resolved in the tool', async () => {
     const page = new FakePage(['a.prefab', 'b.prefab', 'c.ts'], {}, { smartMerged: ['a.prefab', 'b.prefab'] });
     const { message } = await page.runOneByOne();
-    expect(message).toEqual({ kind: 'success', title: 'Resolved all 3 conflicts: 2 with Smart Merge, 1 in FakeMerge' });
+    expect(message).toEqual({ kind: 'success', title: 'Resolved all 3 conflicts: 2 with UnityYAMLMerge, 1 in FakeMerge' });
   });
 
   it('skips the files decided in the app meanwhile, keeping their place in the count', async () => {
@@ -184,7 +198,7 @@ describe('resolving one by one', () => {
 
 describe('runEndMessage', () => {
   it('keeps the sentence a tool already ended', () => {
-    const plan = planRun([conflict('a.ts')], fakeMerge);
+    const plan = planRun([conflict('a.ts')], () => ({ kind: 'tool', tool: fakeMerge }));
     const failure = { outcome: { kind: 'failed', message: 'Not found!' } as MergeToolOutcome, key: '/a.ts' };
     expect(runEndMessage(plan, { stopped: false, failure }, []).detail).toBe('Not found! Stopped resolving one by one.');
   });

@@ -1,38 +1,41 @@
 import { Check, GalleryVerticalEnd, Pause, Settings, SkipForward } from 'lucide-react';
-import { SMART_MERGE_NAME } from '@shared/domain/mergeTools';
 import { openSettingsDialogAt } from '../../../app/settings/SettingsDialog';
 import { saveSettings, useSettings } from '../../../app/settings/useSettings';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../../lib/actions';
 import { isKeyboardTaken } from '../../../lib/mainFocus';
 import { hotkey } from '../../../lib/shortcutRegistry';
-import { fileNameOf, pluralize } from '../../../lib/text';
+import { fileNameOf } from '../../../lib/text';
 import { useShortcut } from '../../../lib/useShortcut';
 import { Button } from '../../../ui/Button';
 import { confirm } from '../../../ui/dialog/confirm';
 import { ProgressRing } from '../../../ui/ProgressRing';
 import { SplitButton } from '../../../ui/SplitButton';
 import type { FileConflictState } from '../resolve/useFileConflicts';
-import { leftOutNote, runLabel, runPlans, runPositionText, runStripWords, type RunPlan, type RunProgress } from './resolveRun';
+import { allInChoices, leftOutNote, runLabel, runPlans, runPositionText, runStripWords, runTip, type RunPlan, type RunProgress } from './resolveRun';
 import type { ResolveRun } from './useResolveRun';
 import { toolChoiceEntries } from './toolChoices';
-import { preferMergeTool, useMergeTools } from './useMergeTools';
+import { useFileMergers, useMergeTools } from './useMergeTools';
 import styles from './ResolveRunControl.module.css';
 
 /** Resolving one by one is offered from two files waiting on: for one, the file's own "Resolve in…" says it all. */
 const MIN_FILES = 2;
 
-/** The run on offer, if any: what the header's "Resolve N conflicts in <tool>" starts. */
+/**
+ * The runs on offer, if any: the first is what the header's "Resolve N conflicts" starts, each file in its own tool;
+ * the others, every file in one tool.
+ */
 export function useRunOffer(states: FileConflictState[], run: ResolveRun): RunPlan[] {
-  const { tools, preferredId } = useMergeTools();
+  const { tools } = useMergeTools();
+  const { mergerFor } = useFileMergers();
   if (run.progress || states.some((state) => state.openTool)) return [];
-  const plans = runPlans(states, tools, preferredId);
-  return plans[0] && plans[0].keys.length >= MIN_FILES ? plans : [];
+  const plans = runPlans(states, tools, mergerFor);
+  return plans[0] && plans[0].steps.length >= MIN_FILES ? plans : [];
 }
 
 interface ResolveRunControlProps {
   states: FileConflictState[];
   run: ResolveRun;
-  /** `useRunOffer`: the first is the one the button starts. */
+  /** `useRunOffer`: the first is the one the button starts; the others, every file in one tool, behind its caret. */
   plans: RunPlan[];
 }
 
@@ -42,7 +45,7 @@ interface ResolveRunControlProps {
  */
 export function ResolveRunControl({ states, run, plans }: ResolveRunControlProps) {
   const offered = plans[0];
-  useShortcut(hotkey('resolveAllInTool'), () => offered && run.start(offered.tool), Boolean(offered));
+  useShortcut(hotkey('resolveAllInTool'), () => offered && run.start(null), Boolean(offered));
   if (run.progress) return <RunStrip states={states} run={run} progress={run.progress} />;
   if (!offered) return null;
   return <RunButton plans={plans} run={run} />;
@@ -51,13 +54,9 @@ export function ResolveRunControl({ states, run, plans }: ResolveRunControlProps
 function RunButton({ plans, run }: { plans: RunPlan[]; run: ResolveRun }) {
   const { askWhenMergeToolClosesUnsaved } = useSettings();
   const offered = plans[0]!;
-  // The caret only picks the run's tool (the preferred one); the run starts from the button.
+  // The caret starts the run with every file in one tool, this once; the button, each file in its own.
   const menu: MenuEntry[] = tidyMenu([
-    ...toolChoiceEntries(
-      plans.map((plan) => ({ tool: plan.tool, label: `${plan.tool.name} · ${pluralize(plan.keys.length, 'conflict')}` })),
-      offered.tool.id,
-      (toolId) => void preferMergeTool(toolId),
-    ),
+    ...toolChoiceEntries(allInChoices(plans), (merger) => run.start(merger)),
     SEPARATOR,
     {
       id: 'askWhenUnsaved',
@@ -75,10 +74,10 @@ function RunButton({ plans, run }: { plans: RunPlan[]; run: ResolveRun }) {
       icon={<GalleryVerticalEnd size={14} />}
       menu={menu}
       menuLabel="Resolve in another tool"
-      tip={`Opens each file in ${offered.tool.name} in turn: save and close it there to get the next`}
+      tip={runTip(offered)}
       tipSub={leftOutNote(offered)}
       shortcut={hotkey('resolveAllInTool')}
-      onClick={() => run.start(offered.tool)}
+      onClick={() => run.start(null)}
     >
       {runLabel(offered)}
     </SplitButton>
@@ -91,7 +90,7 @@ function RunStrip({ states, run, progress }: { states: FileConflictState[]; run:
   const name = current ? fileNameOf(current.file.path) : '';
   const toolOpen = Boolean(current?.openTool);
   // Smart Merge merges a Unity asset before the tool would open on it.
-  const words = runStripWords(progress.toolName, current?.openTool?.toolName === SMART_MERGE_NAME);
+  const words = runStripWords(progress.toolName, current?.openTool?.toolName);
 
   // Esc stops, asking first while the tool has a file: stopping closes it. Smart Merge has nothing to lose.
   const stopFromKeyboard = async (): Promise<void> => {
@@ -99,7 +98,7 @@ function RunStrip({ states, run, progress }: { states: FileConflictState[]; run:
     if (toolOpen && words.confirmsStop) {
       const sure = await confirm({
         title: 'Stop resolving one by one?',
-        message: `${progress.toolName} closes ${name}; what you saved there so far is kept.`,
+        message: `${words.toolName} closes ${name}; what you saved there so far is kept.`,
         confirmLabel: 'Stop',
       });
       if (!sure) return;

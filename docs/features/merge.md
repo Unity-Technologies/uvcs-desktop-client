@@ -11,15 +11,84 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
 
 - Found per OS (`knownTools`, `detectTools`), the editors' way (docs/features/open-with.md "Finding apps"): inside
   their app wherever the OS records it (`identity`, `inInstall`: a bundle Spotlight knows, a folder an uninstall entry
-  names), else at their usual locations, else on the PATH. Each shows its app's icon (`AppIcons`). The tools: the UVCS merge tool (the Desktop GUI run as `xmerge`: `macplasticx` in PlasticSCM.app, `plastic.exe` next to `cm.exe`, `plasticgui`), VS Code and its forks,
-  JetBrains IDEs, Sublime Merge, KDiff3, Beyond Compare, Meld, P4Merge, Araxis and FileMerge (`opendiff`, only with
-  Xcode) and WinMerge on Windows, each with the three-way command line of its docs (cross-checked with Git's `mergetools/*`). The user can add any program with an arguments template (`{base}` `{yours}`
-  `{incoming}` `{result}` and their `…Name`s). Settings keep the preferred tool (`auto`: the UVCS one, else the first
-  found; a pick no longer on offer falls back to it), the user's tools and per-tool arguments. Adding a tool
-  (`CustomMergeToolDialog`, `addCustomMergeTool`) makes it the preferred one; when the settings can't be saved, nothing
-  is picked and the dialog stays open with what the user typed. The official client's
-  merge tools (client.conf's `<MergeTools>`) aren't read, not even on the first run (ARCHITECTURE.md "Own config"):
-  the well-known tools are found anyway, and the user adds any other. Every tool opens every text file.
+  names), else at their usual locations, else on the PATH. Each shows its app's icon (`AppIcons`). The tools: the UVCS
+  merge tool and Semantic Merge (the Desktop GUI run as `xmerge` or `semanticmerge`, `uvcsGui`: `macplasticx` in
+  PlasticSCM.app, `plastic.exe` next to `cm.exe`, `plasticgui`), VS Code and its forks, JetBrains IDEs, Sublime Merge,
+  KDiff3, Beyond Compare, Meld, P4Merge, Araxis and FileMerge (`opendiff`, only with Xcode) and WinMerge on Windows,
+  each with the three-way command line of its docs (cross-checked with Git's `mergetools/*`). The user can add any
+  program with an arguments template (`{base}` `{yours}` `{incoming}` `{result}` and their `…Name`s;
+  `CustomMergeToolDialog`, `addCustomMergeTool`, which picks it nowhere: the caller opens the file in it or picks it for
+  a row). Settings keep the user's tools and per-tool arguments ("How <tool> opens", in the row's dialog below).
+- **What opens which file** (Settings › Merge, `MergeToolsPane`; `mergeToolFor`, `useFileMergers`): rows tried top to
+  bottom, the first that matches wins (`mergeToolRules`), each a list of file patterns and a tool or UnityYAMLMerge;
+  last, every other file (`mergeTool`: `auto`, the UVCS one, else the first found; a pick no longer on offer falls back
+  to it). A file opens in a `Merger`: a tool, or UnityYAMLMerge with a fallback tool for what it can't merge
+  (`fallbackToolId`, `auto` until picked: every other file's tool). A row of UnityYAMLMerge names the newest editor's
+  (`unityyamlmerge`) or one editor's (`unityyamlmerge:<version>`); on a file UnityYAMLMerge wouldn't run on (not Unity
+  YAML on both sides, or decided by the user already: `smartMergeVersions`) the row opens its fallback straight away,
+  so "Resolve in…" names what really opens. Patterns (`lib/filePatterns`) are extensions (`.cs`), names with `*` and
+  `?` (`*.prefab`), or paths from the workspace's root with `**` crossing folders (`Assets/Data/**`; one holding a space
+  goes in double quotes, `"Assets/Third Party/**"`), matched in any case on Windows and macOS and exactly on Linux
+  (`fileNamesIgnoreCase`). A row whose tool, or editor, isn't found here is passed by, and says so ("Not found on this
+  computer", named by `knownNames`); removing a tool of the user's drops its rows and makes it no row's fallback. With
+  nothing imported, the rows are Unity assets in UnityYAMLMerge (`UNITY_YAML_MERGE_RULE`, `UNITY_YAML_PATTERNS`: `.unity`,
+  `.prefab`, as the official client sets them up; Unity's Manual lists `.meta` too, but UnityYAMLMerge rejects real
+  `.meta` files, "not a valid text serialized YAML file", in every version tried, so a `.meta` conflict opens in its own
+  row's tool; users add other
+  YAML-serialized assets, `.asset`, `.mat`, `.controller`…, to the row) and C#, Visual Basic
+  and Java in Semantic Merge (`SEMANTIC_MERGE_RULE`), as the official client sends them. The pane lists the rows read-only, one line each, all 34px
+  (`--merge-row-height`, a little roomier than a list's), in one grid (`MergeToolsPane`, `mergeToolRows`): a rule's
+  file types in the code font, as many as the files column holds then " +N" (`fitFileTypes`, by the text's width as the
+  row draws it: `useFilesFit` measures the column as the pane resizes and the text in its font, `fitsWidth`; every one
+  in the tooltip; the list is cut, never the count), then the tool: a fixed icon cell and its name, every icon in one column (the pinned Unity Editor's version
+  after UnityYAMLMerge's name, quieter). The tool's tooltip is how it's launched, its command line quoted where needed
+  (`commandLine`), with "If it can't merge: <tool>" for UnityYAMLMerge; a tool that isn't here shows its name quieter,
+  a warning in its icon cell and why in the tooltip; with no merge tool at all, every other file's row reads "No merge
+  tool found". Every other file's row is last and names the tool that really runs. Only in a very narrow pane does the
+  tool go under the file types (a container query on the frame). A row's click, or Enter, opens its edit dialog; its
+  "…", shown on hover or focus, holds Edit…, Move up, Move down and Remove (`rowMenuEntries`; every other file's only
+  Edit…). The dialog (`MergeRuleDialog`, `mergeRuleDraft`), each field a label, its control and its hint: "Files"
+  (chips: `TokenField`, `lib/tokenInput`: a space, comma, semicolon or Enter makes a chip, double quotes keep spaces in
+  one, pasting splits into chips, Backspace in an empty field takes the last away, ArrowLeft moves onto the chips and
+  Backspace or Delete removes the one it's on (`tokenKey`), each chip's × removes it, each value once; its visible label
+  names it for screen readers; Enter never submits; what's typed but not a chip yet counts, and Save makes it chips: `draftPatterns`), "Opens in" (the Apps page's picker, `AppPicker`: its icon, name and path; each tool once:
+  the UVCS merge tool, Semantic Merge, UnityYAMLMerge with the path of the editor's picked under it, as every tool shows
+  the program that runs, and Smart Merge, Unity's name for it, only in its tooltip, then the others found and the user's, `toolChoices`), then for a tool "How <tool>
+  opens", its arguments in place (stored per tool, so they apply wherever it opens; "Back to its own arguments",
+  "Remove <tool>" for the user's own, which removes it everywhere with the rows that open in it, this one too, and
+  closes the dialog; saved with the rule, `argsToSave`), or for UnityYAMLMerge (whose arguments are
+  fixed, `UNITY_YAML_MERGE_ARGS`) "Unity Editor" (a select: "Newest installed (6000.5.0f1)", then each installed
+  version; one gone stays, saying so: `editorOptions`) and "If it can't merge" (`fallbackChoices`). Its menus scroll when long (ARCHITECTURE.md "Long menus scroll"). Save stays off until a rule has a
+  file type and the arguments name `{result}` (`saveProblem`); a new rule is added only on Save. No dialog opens over
+  it but "Choose another app…", to add a program, which shows and saves at once, before the list holds it
+  (`withAddedTools`; `savedDraft` keeps an id picked as it is). Binary files have no rows: no tool opens them.
+- **No "Automatic" in Settings › Merge.** Every other file's tool and UnityYAMLMerge's fallback store `auto` until one
+  is picked (`AUTO_MERGE_TOOL`: "not picked yet"), and the pane and the dialog show the tool it resolves to, the UVCS
+  merge tool, else the first found (`resolvedToolId`, `MergeToolList.preferredId`), as the merge page opens it; picking
+  one stores its id, while leaving it untouched keeps `auto` (`savedDraft`). An "Automatic" choice was tried and
+  dropped: it hid which tool runs and how it's launched, and its arguments couldn't be seen or edited. The Apps page
+  keeps its Automatic for editors and terminals.
+- **Imported once** from the official client (client.conf's `<MergeTools>`, `readLegacyMergeTools`,
+  `legacyMergeToolSettings`; ARCHITECTURE.md "Own config"), on the first run that has rows (`legacyMergeToolsImported`,
+  apart from the recent branches' import, so a user who ran the app before gets it too). With nothing to import, the rows are the app's own
+  (`DEFAULT_MERGE_TOOL_RULES`), without Semantic Merge's for a user who picked their own tool. Each entry for some files
+  becomes a row, by the official client's order; its entry for every text file becomes every other file's tool, only
+  while the user's is still `auto` (not picked yet), and nothing after it is read, as the client never goes past it (even when the app can't read its tool). An entry whose
+  first tool is `UnityYAMLMerge` becomes a row of UnityYAMLMerge for its extensions, the tool chained after it its
+  fallback (`auto` when there's none, or when it's every other file's tool anyway: `withAutomaticFallback`); its
+  stored path is dropped, the app runs the newest Unity Editor's. With no such entry, the app's own Unity row comes
+  first (`UNITY_YAML_MERGE_RULE`). The client's own tools become the app's (`plastic xmerge`,
+  `plasticgui`, `macmergetool`, `gtkmergetool` the UVCS merge tool; `semanticmerge` Semantic Merge); a known program
+  (VS Code, Rider, KDiff3, P4Merge...) becomes the app's own entry for it, with the app's arguments; any other program
+  becomes a tool of the user's, `@basefile` `@sourcefile` `@destinationfile` `@output` and their `…symbolic`s turned
+  into `{base}` `{incoming}` `{yours}` `{result}` and their names, an argument holding a variable the app has no value
+  for (`@fileencoding`, `@mergetype`...) dropped, with the switch before it when the variable was the whole argument
+  (`-e @fileencoding`). Left out: binary entries and binary merges, the client's own scripts
+  (its `diffscripts` folder: Word documents, which are binary), regular expressions, a command that saves nowhere. While every other file opens in the UVCS merge tool once imported
+  (`auto`, or the UVCS merge tool picked by name: `sendsCodeToSemanticMerge`, the one test of both paths), C#, Visual Basic and Java go to Semantic Merge (the client does so), but those
+  a row sends elsewhere; a user who picked their own tool for every other file keeps C# there, and with no client.conf
+  to import such a user gets the default rows without Semantic Merge's, the Unity row kept (`importMergeTools`); a row that sends files where every other file
+  goes anyway, and that no later row could take, is dropped (the Windows client's `.meta` row).
 - `mergeTools.resolve` saves the three versions to temp files named after the file (`a.BASE.ts`...), writes the result
   file with the file as it stands in the app (the automatic merge with its markers, or the user's picks), runs the
   tool without a shell (`.cmd` launchers through `cmd.exe`, arguments quoted: `spawnCommand`), and waits. Few tools tell saving from
@@ -27,38 +96,45 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   saved text becomes the file's decision (markers left count as conflicts left). Text files only: no tool really
   merges binaries, so a binary keeps one of its versions, picked in the app (`waitsForTool`). "Stop waiting" kills the tool process and takes what was saved so far, as soon as it exits: a launcher's
   app still holding its output doesn't keep the file open.
-- **Smart Merge** (Unity's merge of scenes, prefabs and other assets by their objects: the `UnityYAMLMerge` program in
-  every Unity Editor) isn't a tool to pick: "Resolve in…" (and each file of a "Resolve N conflicts in…" run) runs it
-  first on a Unity asset the user decided nothing for yet (`smartMergeVersions`, from `decidedByUser`), and the chosen
-  tool opens only when it doesn't merge the file. Two calls, so each phase shows what really happens:
-  `mergeTools.smartMerge` with the versions the page already read (no `cm` command), while the file reads "Merging…"
-  and its banner "Merging <file> with Smart Merge…" with Stop (stopping it opens nothing, even a stop that reaches main as Smart Merge ends on its own: the renderer remembers it, `stopMergeToolSession`, `wasStopped`); then, if it didn't merge,
-  `mergeTools.resolve` opens the tool as for any file. Without a Unity Editor (`MergeToolList.smartMerge` null) the
-  tool opens straight away: nothing shows Smart Merge at work. While Smart Merge (or a tool) has the file, its menu
+- **UnityYAMLMerge** (Unity's Smart Merge, by the Unity Manual's name for the tool, `UNITY_YAML_MERGE_NAME`: it merges
+  scenes, prefabs and other assets by their objects) runs only for a file whose row picks it, and only on Unity YAML the
+  user decided nothing for yet (`smartMergeVersions`, from `decidedByUser`): its fallback opens only when it doesn't
+  merge the file, and a toast says so ("UnityYAMLMerge couldn't merge Hero.prefab", `fallbackOpensMessage`; a run's
+  strip names the fallback once it has the file, `runStripWords`). Two calls, so each phase shows what really happens:
+  `mergeTools.smartMerge` with the versions the page already read and the editor the row names (no `cm` command), while
+  the file reads "Merging…" and its banner "Merging <file> with UnityYAMLMerge…" with Stop (stopping it opens nothing,
+  even a stop that reaches main as it ends on its own: the renderer remembers it, `stopMergeToolSession`,
+  `wasStopped`); then, if it didn't merge, `mergeTools.resolve` opens the fallback as any tool. With no fallback found,
+  the file fails to open and says why. While UnityYAMLMerge (or a tool) has the file, its menu
   offers no Keep or Start over, as its toolbar offers none (`conflictMenuEntries`); and should the user decide the file
-  meanwhile (from another file's selection), that decision stands: Smart Merge's merge is dropped and nothing opens
-  (`ResolveOptions.stillUndecided`). A file goes to it when its two sides start with Unity's YAML
-  header (`isUnityYaml`), whatever its extension: a `.meta` file has none and goes to the tool. A base revision
-  that was an empty file (checked in empty, then filled differently on each side) becomes an asset with no objects
-  (`EMPTY_UNITY_YAML`), as Smart Merge refuses an empty file; a file added on both sides never gets here, `cm` makes
+  meanwhile (from another file's selection), that decision stands: UnityYAMLMerge's merge is dropped and nothing opens
+  (`ResolveOptions.stillUndecided`). A file goes to it when its two sides are text and start with
+  Unity's YAML header (`isUnityYaml`), whatever its extension (`unityYamlMergeTakes`, the one test of the page and of
+  main); a `.meta` file has none, and UnityYAMLMerge rejects it anyway, so it opens straight in a tool, the rule's
+  fallback if a user adds `.meta` to the Unity row (the sandbox's `Player.prefab.meta` opens in every other file's). A base
+  revision of Unity's YAML that was an empty file (checked in empty, then filled differently on each side) becomes an
+  asset with no objects (`EMPTY_UNITY_YAML`), as UnityYAMLMerge refuses an empty file; a file added on both sides never gets here, `cm` makes
   it a directory conflict. It runs with
-  no window (`windowsHide` on Windows, `toolSpawnOptions`) and no fallback tool (`SMART_MERGE_ARGS`: `merge -h --force
-  --fallback none`; `--force` lets it take `.mat`, `.asset`… beyond the `.unity`, `.prefab` and `.meta` it knows by
-  name, and it refuses what isn't Unity YAML anyway). Only exit code 0 counts (`judgeSmartMerge`): on 2 (conflicts
+  no window (`windowsHide` on Windows, `toolSpawnOptions`) and no fallback tool of its own (`UNITY_YAML_MERGE_ARGS`: `merge -h
+  --force --fallback none`: `--fallback none` keeps the tools its `mergespecfile.txt` names from ever opening, the
+  rule's fallback opens instead; `--force` changes nothing for `.unity` and `.prefab`, and lets it merge any
+  YAML-serialized asset a user adds to the row instead of handing it back). Only exit code 0 counts (`judgeSmartMerge`): on 2 (conflicts
   left) it still writes a result holding the base's values where the sides disagree, so that result is dropped; 1
   means it couldn't read or merge the file. A failure other than conflicts left is warned in the console (`[smart
-  merge]`, with the end of its stderr). Its merge reads "Merged by Smart Merge"; "Resolve in…" on it opens the tool on
-  Smart Merge's result, and Start over makes the file undecided again, so the next "Resolve in…" lets Smart Merge try
+  merge]`, with the end of its stderr). Its merge reads "Merged by UnityYAMLMerge"; "Resolve in…" on it opens the tool on
+  UnityYAMLMerge's result, and Start over makes the file undecided again, so the next "Resolve in…" lets UnityYAMLMerge try
   again. Its size ceiling is the page's: a version over `MAX_TEXT_BYTES` (10 MB) is a binary to the page, which no tool
-  opens, so Smart Merge isn't tried on it either. In practice it's lower: a text conflict of about 3.5 MB overflows the
-  stack of the page's own line merge (`diff3Merge`, as it loads the file), before Smart Merge could be asked. It comes
-  from the newest Unity release installed
-  (`findSmartMerge`, `compareUnityVersions`: releases before alphas and betas), found as Unity Hub keeps editors
+  opens, so UnityYAMLMerge isn't tried on it either. In practice it's lower: a text conflict of about 3.5 MB overflows the
+  stack of the page's own line merge (`diff3Merge`, as it loads the file), before UnityYAMLMerge could be asked. It comes
+  from every Unity Editor installed, the newest release first
+  (`findUnityYamlMerges`, `compareUnityVersions`: releases before alphas and betas; `UnityYamlMergeTool`, its id
+  `unityyamlmerge:<version>`, and `unityyamlmerge` for the newest one, `unityYamlMergeOf`), found as Unity Hub keeps editors
   (`findUnityEditors`): its editors folder (`/Applications/Unity/Hub/Editor`, `C:\Program Files\Unity\Hub\Editor`,
   `~/Unity/Hub/Editor`), the folder picked in the Hub (`secondaryInstallPath.json` in the Hub's config folder), the
   editors located by hand (`editors-v2.json`, `editors.json`) and the install made without the Hub; inside an editor,
   `Contents/Helpers` on macOS since Unity 6.3 (`Contents/Tools` before), `Data/Tools` on Windows and Linux. Settings'
-  Merge pane says which editor's it uses. Sandbox: `scripts/sandboxes/smart-merge.sh`.
+  Unity row says whether it's found, and which editor's it uses in its tooltip (`unityRowNote`, `unityRowTip`).
+  Sandbox: `scripts/sandboxes/smart-merge.sh`.
 - The workspace is never touched: the outcome is a decision like any other, written when the merge completes.
 
 ## Merge page
@@ -79,7 +155,7 @@ The list (`MergeItemList`) is every list of changed files (ARCHITECTURE.md "List
 `mergeItemTones`), List or Tree, and several items selected at once, whose menu keeps yours or the incoming version of
 every conflicting file among them, or the base when every one of them has one (`keepVersionEntries`). One item's menu is any changed file's (ARCHITECTURE.md "One
 menu": history, open or save the incoming version, Copy) with what a merge adds (`mergeItemMenu`): a conflicting file, the same
-entries as in Incoming (`conflictMenuEntries`), "Resolve in <tool>" (the preferred one, `primaryMergeTool`; disabled while files resolve one by one), Keep yours,
+entries as in Incoming (`conflictMenuEntries`), "Resolve in <tool>" (what the file opens in, `useFileMergers`, UnityYAMLMerge included; disabled while files resolve one by one) and "Resolve with ▸" every other way, opening it there this once (`otherMergers`: every other tool, and UnityYAMLMerge on Unity YAML; none while files resolve one by one), Keep yours,
 incoming or base (where it has one), Start over once decided, annotate at the incoming revision `cm` names for it, and "Open version ▸" Yours (the
 workspace file; the destination's version merging into a server branch), Incoming and Base (`openableVersions`): a
 text in the user's editor, a binary with its default app (`oneClickApp`: the editors are for text; a known binary is one before its versions
@@ -106,23 +182,25 @@ decision", then the user's choice ("Keeping yours", "Keeping incoming", "Keeping
 are "Yours"/"Incoming" in a workspace and "Destination"/"Source" when merging into a server branch (`mergeLabels`), always
 next to their branch. Copy stays short: labels name things, tooltips define them, no sentence restates what the page shows.
 
-While two files or more wait for a decision the preferred tool can open, the header's primary action is "Resolve N
-conflicts in <tool>" (`ResolveRunControl`, ⇧⌘↩; the caret picks another tool, with how many files each opens, and
-whether a file closed unsaved asks before the next): the files open one after the other, each once the one before is
-saved and closed (`useResolveRun`, `resolveRun`). Both carets pick the tool like Checkin's picks how to check in
-(`toolChoiceEntries`): the button's tool is checked, and picking another (or adding one) only makes it the button's
-tool, the preferred one from then on; nothing opens until the button is clicked. Files the tool can't open (binaries, types it isn't for) are left
+While two files or more wait for a decision a tool can open, the header's primary action is "Resolve N conflicts in
+<tool>", or "Resolve N conflicts one by one" when they open in different tools (`ResolveRunControl`, ⇧⌘↩, `runLabel`,
+`runMerger`): the files open one after the other, each in what it opens in (`planRun`, `RunStep`), once the one before is
+saved and closed (`useResolveRun`, `resolveRun`). Its caret runs every file in one other tool, this once ("All in
+Meld · 5 conflicts", `runPlans`, `allInLabel`), and holds whether a file closed unsaved asks before the next. The
+carets never change the settings (`toolChoiceEntries`: picking a tool opens in it at once); Settings › Merge says
+which tool each file opens in. Files the tool can't open (binaries, types it isn't for) are left
 out and named in its tooltip. While it runs, a strip takes the status's place: a step per file, "Resolving 2 of 5 ·
-app.ts in <tool>", Skip this file (closes it there) and Stop (Esc, confirmed while the tool has a file); while Smart Merge merges the file first, "with Smart Merge", Skip and Stop stop it, and Esc needs no confirmation (`runStripWords`). The list marks
+app.ts in <tool>", Skip this file (closes it there) and Stop (Esc, confirmed while the tool has a file); while UnityYAMLMerge merges the file, "with UnityYAMLMerge", Skip and Stop stop it, and Esc needs no confirmation (`runStripWords`). The list marks
 the file open and the selection follows it unless the user looks elsewhere, which never stops the run; files decided in
 the app meanwhile are skipped, a file closed unsaved keeps "Needs your decision" and pauses the strip ("closed without
 saving", Next file / Stop) unless the setting says to go on, and a tool that can't start stops the run with its reason.
-A toast sums it up ("Resolved 4 of 5 in <tool>", "1 still needs you"; what Smart Merge merged apart, "Resolved all 3 conflicts: 2 with Smart Merge, 1 in <tool>") and focus goes to the first file still waiting,
+A toast sums it up ("Resolved 4 of 5 in <tool>", "1 still needs you"; what UnityYAMLMerge merged apart, "Resolved all 3 conflicts: 2 with UnityYAMLMerge, 1 in <tool>") and focus goes to the first file still waiting,
 or to Complete merge. With one file left, its own toolbar is the way.
 
 A conflicting file is read-only. Its toolbar holds the file, its status and the ways out: "Resolve in <tool>"
-(`MergeToolButton`, a split button, primary while the file waits and the header offers nothing; disabled during a run:
-the other tools found, "Choose another app…", "Edit the text in the app" and the settings behind the caret), then "Keep Yours | Incoming | Both | Base" for the whole file (`KeepChoices`, `conflictChoices`;
+(`MergeToolButton`, the file's own tool, a split button, primary while the file waits and the header offers nothing;
+disabled during a run: the other tools found, each opening the file at once, this once, "Choose another app…" (added,
+then opened), "Edit the text in the app" and the settings behind the caret), then "Keep Yours | Incoming | Both | Base" for the whole file (`KeepChoices`, `conflictChoices`;
 Base, the version before either side changed it, only for a file that has one: not one added on both sides, and never when undoing a changeset, where `cm` takes the changeset undone as the base and keeping it would put the change back: `offersKeepBase`, `baseIsUndoneChange`; the same rule for every Keep base below) and Start over. In a narrow pane the controls wrap within themselves, the Keep choices under the tool's button, so none
 is cut off. Below, short one-line views: "Conflicts" with the count left, then "Changes" (the destination now → after
 the merge), "Yours", "Incoming" and "Base". Conflicts read as labeled blocks instead of conflict markers

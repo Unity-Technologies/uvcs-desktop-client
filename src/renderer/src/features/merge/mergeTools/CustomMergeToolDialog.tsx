@@ -9,6 +9,7 @@ import { Dialog } from '../../../ui/dialog/Dialog';
 import { askDialog } from '../../../ui/dialog/dialogStore';
 import { TextField } from '../../../ui/TextField';
 import { programName } from '../../../lib/programName';
+import { mergeToolArgsProblem } from './mergeToolArgs';
 import { addCustomMergeTool } from './useMergeTools';
 import styles from './CustomMergeToolDialog.module.css';
 
@@ -17,8 +18,8 @@ const DEFAULT_ARGS = ['{base}', '{yours}', '{incoming}', '{result}'];
 
 export const PLACEHOLDER_HINT = '{base} {yours} {incoming} and {result}, where the tool saves; {baseName} {yoursName} {incomingName} name them.';
 
-/** Asks for a merge app to add; it becomes the preferred one. The tool, or undefined if cancelled. */
-export async function addMergeToolAndPick(): Promise<MergeTool | undefined> {
+/** Asks for a merge app to add, for the caller to open or pick it. The tool, or undefined if cancelled. */
+export async function addMergeTool(): Promise<MergeTool | undefined> {
   const id = await askDialog<string>((finish) => <CustomMergeToolDialog finish={finish} />);
   if (!id) return undefined;
   return (await api.mergeTools.list()).tools.find((tool) => tool.id === id);
@@ -29,7 +30,7 @@ function CustomMergeToolDialog({ finish }: { finish: (id: string | undefined) =>
   const [name, setName] = useState('');
   const [args, setArgs] = useState(formatArgs(DEFAULT_ARGS));
   const parsedArgs = parseArgs(args);
-  const argsError = parsedArgs.some((arg) => arg.includes('{result}')) ? undefined : 'Include {result}: the file the tool saves the merge to.';
+  const argsError = mergeToolArgsProblem(parsedArgs);
   const [saving, setSaving] = useState(false);
   const canSave = executable.trim() !== '' && !argsError && !saving;
 
@@ -59,7 +60,7 @@ function CustomMergeToolDialog({ finish }: { finish: (id: string | undefined) =>
         <>
           <Button onClick={() => finish(undefined)}>Cancel</Button>
           <Button type="submit" variant="primary" disabled={!canSave}>
-            Add and use
+            Add
           </Button>
         </>
       }

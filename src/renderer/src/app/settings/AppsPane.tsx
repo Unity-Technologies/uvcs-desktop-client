@@ -3,6 +3,7 @@ import { chooseEditor, preferEditor, preferTerminal, removeCustomEditor } from '
 import { useExternalApps } from '../../components/externalApps/externalApps';
 import { Button } from '../../ui/Button';
 import { AppPicker } from './AppPicker';
+import { automaticChoice } from './appPickerChoices';
 import { AUTOMATIC_EDITOR_RULE, AUTOMATIC_TERMINAL_RULE } from './automaticApp';
 import { SettingsGroup } from './SettingsGroup';
 import { useSettings } from './useSettings';
@@ -23,7 +24,7 @@ export function AppsPane() {
           apps={apps.editors}
           choice={editor}
           usedId={apps.editorId}
-          automaticRule={AUTOMATIC_EDITOR_RULE}
+          automatic={automaticChoice(AUTOMATIC_EDITOR_RULE)}
           offersSystem
           onChoose={(choice) => void preferEditor(choice)}
           onAdd={() => void addEditorAndPick()}
@@ -43,7 +44,7 @@ export function AppsPane() {
           apps={apps.terminals}
           choice={terminal}
           usedId={apps.terminalId}
-          automaticRule={AUTOMATIC_TERMINAL_RULE}
+          automatic={automaticChoice(AUTOMATIC_TERMINAL_RULE)}
           onChoose={(choice) => void preferTerminal(choice)}
         />
       </SettingsGroup>

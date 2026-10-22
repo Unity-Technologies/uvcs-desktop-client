@@ -24,26 +24,63 @@ export interface MergeTool {
   icon?: string;
 }
 
-/** The tools found, with the one "Resolve in…" uses: the user's choice, or else the UVCS tool, or else the first. */
+/**
+ * The tools found, with the one every file no rule matches opens in (`preferredId`): the user's choice, or else the
+ * UVCS tool, or else the first.
+ */
 export interface MergeToolList {
   tools: MergeTool[];
   preferredId: string | null;
-  /** Smart Merge, when a Unity Editor is installed: "Resolve in…" runs it first on Unity assets (`smartMerge`). */
-  smartMerge: SmartMergeTool | null;
+  /** Every known tool's name by its id, found or not: a rule naming one that isn't here still says which. */
+  knownNames: Record<string, string>;
+  /** UnityYAMLMerge from each Unity Editor installed, the newest first; none without a Unity Editor. */
+  unityYamlMerges: UnityYamlMergeTool[];
 }
 
 /** Unity's own name for its merge of scenes, prefabs and other assets (the Unity Manual's "Smart merge"). */
-export const SMART_MERGE_NAME = 'Smart Merge';
+export const UNITY_YAML_MERGE_NAME = 'UnityYAMLMerge';
 
 /**
- * Unity's Smart Merge (`UnityYAMLMerge`, in every Unity Editor): it merges scenes, prefabs and other Unity assets by
- * their objects, without a window. It isn't a tool to pick: "Resolve in…" runs it first on a Unity asset the user
- * decided nothing for yet, and opens the chosen tool only when it can't merge the file on its own.
+ * UnityYAMLMerge, the program every Unity Editor ships with (Unity's Smart Merge): it merges scenes, prefabs and other
+ * Unity assets by their objects, without a window. A rule picks it like a tool, and a tool opens what it can't merge.
  */
-export interface SmartMergeTool {
+export interface UnityYamlMergeTool {
+  /** `unityyamlmerge:6000.3.19f1` (`unityYamlMergeId`), to pin a rule to this editor's. */
+  id: string;
   executable: string;
   /** The Unity Editor it comes from, `6000.3.19f1`; empty for an editor installed without Unity Hub. */
   editorVersion: string;
+}
+
+/**
+ * `UnityYAMLMerge merge <base> <left: theirs> <right: mine> <result>`, without ever opening anything: `-h` shows no
+ * error dialog, `--fallback none` runs none of the tools its own `mergespecfile.txt` names on what it can't merge (the
+ * rule's fallback opens instead). `--force` lets it merge any YAML-serialized asset a user adds to the row (`.asset`,
+ * `.mat`, `.controller`…), not only the `.unity` and `.prefab` files it knows by name.
+ */
+export const UNITY_YAML_MERGE_ARGS = ['merge', '-h', '--force', '--fallback', 'none', '{base}', '{incoming}', '{yours}', '{result}'];
+
+/** UnityYAMLMerge from the newest Unity Editor installed, whichever it is at the time. */
+export const UNITY_YAML_MERGE_ID = 'unityyamlmerge';
+
+/** UnityYAMLMerge from one Unity Editor, by its version. */
+export function unityYamlMergeId(editorVersion: string): string {
+  return `${UNITY_YAML_MERGE_ID}:${editorVersion}`;
+}
+
+/** The version a UnityYAMLMerge id pins (`2022.3.10f1`); none for the newest editor's. */
+export function editorVersionOf(id: string): string | undefined {
+  return id.startsWith(`${UNITY_YAML_MERGE_ID}:`) ? id.slice(UNITY_YAML_MERGE_ID.length + 1) : undefined;
+}
+
+/** The id names UnityYAMLMerge, the newest editor's or one editor's. */
+export function isUnityYamlMergeId(id: string): boolean {
+  return id === UNITY_YAML_MERGE_ID || id.startsWith(`${UNITY_YAML_MERGE_ID}:`);
+}
+
+/** The UnityYAMLMerge an id names among those installed (newest first); none when that editor isn't installed. */
+export function unityYamlMergeOf(merges: readonly UnityYamlMergeTool[], id: string): UnityYamlMergeTool | undefined {
+  return id === UNITY_YAML_MERGE_ID ? merges[0] : merges.find((merge) => merge.id === id);
 }
 
 /** A merge app added by the user; known tools are found, not stored. */
@@ -56,6 +93,46 @@ export interface CustomMergeTool {
 
 /** `auto`: the UVCS merge tool when it's installed, otherwise the first tool found. */
 export const AUTO_MERGE_TOOL = 'auto';
+
+/** The UVCS merge tool: the Desktop GUI run as `xmerge`. */
+export const UVCS_TOOL_ID = 'uvcs';
+
+/** The UVCS merge tool's semantic merge (the Desktop GUI run as `semanticmerge`): it merges code by its declarations. */
+export const SEMANTIC_TOOL_ID = 'semantic';
+
+/**
+ * A row of Settings › Merge: a conflicting file whose path matches one of its patterns opens in its tool. Rows are
+ * tried in order, the first that matches wins (`mergeToolFor`); a file none matches opens in the `mergeTool` setting's.
+ */
+export interface MergeToolRule {
+  id: string;
+  /** `.cs`, `*.prefab`, a path such as `Assets/Data/**` (`matchesFilePattern`). None: the row matches nothing yet. */
+  patterns: string[];
+  /** A tool id, or UnityYAMLMerge's (`isUnityYamlMergeId`). A rule whose tool isn't found here is passed by. */
+  toolId: string;
+  /**
+   * With UnityYAMLMerge: the tool that opens what it can't merge, `auto` (every other file's) by default. Unused with
+   * any other tool.
+   */
+  fallbackToolId?: string;
+}
+
+/**
+ * Scenes and prefabs, as the official client sets them up. Unity's Manual lists `.meta` files as supported too, but
+ * UnityYAMLMerge rejects real ones ("not a valid text serialized YAML file") in every version tried, so a `.meta`
+ * conflict opens in the row of its own file type. Users add other YAML-serialized assets to the row (`.asset`, `.mat`,
+ * `.controller`…): `--force` in its arguments (`UNITY_YAML_MERGE_ARGS`) lets it merge those.
+ */
+export const UNITY_YAML_PATTERNS = ['.unity', '.prefab'];
+
+/** Unity assets in UnityYAMLMerge, what it can't merge in every other file's tool. */
+export const UNITY_YAML_MERGE_RULE: MergeToolRule = { id: 'unity', patterns: UNITY_YAML_PATTERNS, toolId: UNITY_YAML_MERGE_ID, fallbackToolId: AUTO_MERGE_TOOL };
+
+/** C#, Visual Basic and Java in Semantic Merge, as the official client sends them. */
+export const SEMANTIC_MERGE_RULE: MergeToolRule = { id: 'semantic', patterns: ['.cs', '.vb', '.java'], toolId: SEMANTIC_TOOL_ID };
+
+/** With nothing imported: Unity assets in UnityYAMLMerge, C#, Visual Basic and Java in Semantic Merge. */
+export const DEFAULT_MERGE_TOOL_RULES: MergeToolRule[] = [UNITY_YAML_MERGE_RULE, SEMANTIC_MERGE_RULE];
 
 export interface MergeToolRequest {
   /** Chosen by the caller, to cancel it or bring its window forward while it's open. */
@@ -81,6 +158,8 @@ export interface MergeToolRequest {
  */
 export interface SmartMergeRequest {
   sessionId: string;
+  /** Which UnityYAMLMerge: `unityyamlmerge` (the newest editor's) or one editor's (`unityYamlMergeId`). */
+  toolId: string;
   /** The file's workspace path, for its name and extension. */
   path: string;
   base: string;

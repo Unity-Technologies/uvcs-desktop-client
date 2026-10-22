@@ -1,4 +1,5 @@
 import { posix, win32 } from 'node:path';
+import { SEMANTIC_TOOL_ID, UVCS_TOOL_ID } from '@shared/domain/mergeTools';
 import { APP_IDENTITIES } from '../../system/apps/appIdentities';
 import type { AppIdentity } from '../../system/apps/appIdentity';
 import { localPrograms, macApps, programFiles, type Whereabouts } from '../../system/apps/whereabouts';
@@ -82,13 +83,17 @@ function jetbrains(id: string, name: string, identity: AppIdentity, apps: string
   };
 }
 
-export const UVCS_TOOL_ID = 'uvcs';
+export { UVCS_TOOL_ID };
 
-export const KNOWN_TOOLS: KnownTool[] = [
-  {
-    id: UVCS_TOOL_ID,
-    name: 'UVCS merge tool',
-    args: ['xmerge', ...UVCS_SIDES],
+/**
+ * The Desktop GUI, run as one of its tools: `xmerge` (the UVCS merge tool) or `semanticmerge` (Semantic Merge, which
+ * merges code by its declarations). Both take the same sides and save to `-r`.
+ */
+function uvcsGui(id: string, name: string, command: string): KnownTool {
+  return {
+    id,
+    name,
+    args: [command, ...UVCS_SIDES],
     locations: (where) => {
       if (where.platform === 'darwin') return macApps(where, 'PlasticSCM.app/Contents/MacOS/macplasticx');
       if (where.platform === 'win32') {
@@ -102,7 +107,12 @@ export const KNOWN_TOOLS: KnownTool[] = [
       return [posix.join(posix.dirname(where.cmPath), 'plasticgui'), posix.join(posix.dirname(where.cmPath), 'linplasticx'), '/opt/plasticscm5/client/linplasticx'];
     },
     commands: { darwin: ['plasticgui'], linux: ['plasticgui'], win32: ['plastic.exe'] },
-  },
+  };
+}
+
+export const KNOWN_TOOLS: KnownTool[] = [
+  uvcsGui(UVCS_TOOL_ID, 'UVCS merge tool', 'xmerge'),
+  uvcsGui(SEMANTIC_TOOL_ID, 'Semantic Merge', 'semanticmerge'),
   vscodeLike('vscode', 'Visual Studio Code', APP_IDENTITIES.vscode, 'Visual Studio Code', 'code', 'Microsoft VS Code'),
   vscodeLike('vscodeInsiders', 'VS Code Insiders', APP_IDENTITIES.vscodeInsiders, 'Visual Studio Code - Insiders', 'code-insiders', 'Microsoft VS Code Insiders'),
   vscodeLike('cursor', 'Cursor', APP_IDENTITIES.cursor, 'Cursor', 'cursor', 'cursor', 'resources\\app\\bin'),

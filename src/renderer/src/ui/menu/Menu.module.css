@@ -1,6 +1,9 @@
 .content {
   min-width: 200px;
   max-width: 360px;
+  /* A long menu scrolls within the room the window leaves it (Radix measures it), rather than running off-screen. */
+  max-height: var(--radix-dropdown-menu-content-available-height, var(--radix-context-menu-content-available-height, none));
+  overflow-y: auto;
   padding: var(--space-1);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);

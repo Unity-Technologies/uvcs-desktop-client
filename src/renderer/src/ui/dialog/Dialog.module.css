@@ -26,6 +26,11 @@
   outline: none;
 }
 
+/* Radix focuses the dialog itself when nothing in it takes focus first: never with a ring around the whole dialog. */
+.content:focus-visible {
+  box-shadow: var(--shadow-lg);
+}
+
 .header {
   display: flex;
   align-items: flex-start;

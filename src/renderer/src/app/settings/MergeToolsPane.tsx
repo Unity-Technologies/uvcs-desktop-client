@@ -1,123 +1,90 @@
-import { AppWindow, Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
-import { AUTO_MERGE_TOOL, type MergeTool } from '@shared/domain/mergeTools';
-import { formatArgs, parseArgs } from '../../lib/argumentLine';
-import { addMergeToolAndPick, PLACEHOLDER_HINT } from '../../features/merge/mergeTools/CustomMergeToolDialog';
-import { preferMergeTool, removeCustomMergeTool, setMergeToolArgs, useMergeTools } from '../../features/merge/mergeTools/useMergeTools';
+import { MoreHorizontal, Plus } from 'lucide-react';
+import type { MergeToolRule } from '@shared/domain/mergeTools';
+import type { MenuEntry } from '../../lib/actions';
+import { useMergeTools } from '../../features/merge/mergeTools/useMergeTools';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
-import { TextField } from '../../ui/TextField';
+import { IconButton } from '../../ui/IconButton';
+import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
+import { openMergeRuleDialog } from './MergeRuleDialog';
+import { rowMenuEntries } from './mergeToolRules';
+import { EVERY_OTHER_FILE, mergeToolRows, rowTarget, type MergeToolRowView } from './mergeToolRows';
+import { SettingsGroup } from './SettingsGroup';
+import { useFilesFit } from './useFilesFit';
 import { saveSettings, useSettings } from './useSettings';
-import { appIcon } from '../../components/externalApps/appIcon';
-import { AUTOMATIC_CHOICE_ICON } from './automaticApp';
-import { AUTOMATIC_MERGE_TOOL_RULE, automaticMergeToolDescription } from './automaticMergeTool';
-import { SettingsChoice } from './SettingsChoice';
-import { smartMergeNote } from './smartMergeNote';
 import styles from './SettingsDialog.module.css';
 
-/** Which merge tool "Resolve in…" opens, and how it's called. */
+/** Which merge tool opens which files, tried top to bottom, and how resolving one by one goes on. */
 export function MergeToolsPane() {
-  const { tools, preferred, smartMerge } = useMergeTools();
-  const { mergeTool: choice, askWhenMergeToolClosesUnsaved } = useSettings();
-  const automatic = choice === AUTO_MERGE_TOOL || !tools.some((tool) => tool.id === choice);
+  const list = useMergeTools();
+  const { mergeTool, mergeToolRules, askWhenMergeToolClosesUnsaved } = useSettings();
+  const [filesCell, fits] = useFilesFit();
+  const rows = mergeToolRows(mergeToolRules, mergeTool, list, fits);
+  const targetOf = (id: string) => rowTarget(id, mergeToolRules, mergeTool);
+  const saveRules = (rules: MergeToolRule[]): void => void saveSettings({ mergeToolRules: rules });
 
   return (
     <>
       <p className={styles.note}>
-        A merge tool opens only when you ask, on one conflicting file or on each in turn, and the file takes what you save
-        there. Merges and updates never open one by themselves.
+        A merge tool opens only when you ask, on one conflicting file or on each in turn. The first row that matches a file
+        opens it; any tool can open it from the merge page too.
       </p>
-      <section className={styles.section}>
-        <h2 className={styles.heading}>Resolve conflicts in</h2>
-        <div className={styles.choices} role="radiogroup" aria-label="Merge tool">
-          <SettingsChoice
-            icon={<AUTOMATIC_CHOICE_ICON size={18} />}
-            label="Automatic"
-            description={automaticMergeToolDescription(automatic ? preferred?.name : undefined)}
-            tip={AUTOMATIC_MERGE_TOOL_RULE}
-            selected={automatic}
-            onSelect={() => void preferMergeTool(AUTO_MERGE_TOOL)}
-          />
-          {tools.map((tool) => (
-            <SettingsChoice
-              key={tool.id}
-              icon={<ToolIcon tool={tool} />}
-              label={tool.name}
-              description={tool.executable}
-              tip={tool.executable}
-              selected={!automatic && tool.id === choice}
-              onSelect={() => void preferMergeTool(tool.id)}
-            />
-          ))}
+      <SettingsGroup title="Open conflicts in">
+        <div className={styles.rulesFrame}>
+          <div className={styles.rules} role="list" aria-label="Merge tool by file type">
+            {rows.map((row, index) => (
+              <MergeToolRow
+                key={row.id}
+                row={row}
+                filesRef={index === 0 ? filesCell : undefined}
+                onEdit={() => openMergeRuleDialog(targetOf(row.id))}
+                menu={rowMenuEntries(mergeToolRules, row.id === EVERY_OTHER_FILE ? null : row.id, () => openMergeRuleDialog(targetOf(row.id)), saveRules)}
+              />
+            ))}
+          </div>
         </div>
-        <Button size="small" icon={<Plus size={13} />} onClick={() => void addMergeToolAndPick()}>
-          Add another app…
+        <Button size="small" icon={<Plus size={13} />} onClick={() => openMergeRuleDialog({ kind: 'rule', rule: null })}>
+          Add a file type
         </Button>
-      </section>
-      {smartMerge && (
-        <section className={styles.section}>
-          <h2 className={styles.heading}>Unity scenes, prefabs and assets</h2>
-          <p className={styles.note} data-tip={smartMerge.executable}>
-            {smartMergeNote(smartMerge, preferred?.name)}
-          </p>
-        </section>
-      )}
-      {preferred && <ToolArguments key={`${preferred.id}:${preferred.args.join('\0')}`} tool={preferred} />}
-      <section className={styles.section}>
-        <h2 className={styles.heading}>Resolving one by one</h2>
+      </SettingsGroup>
+      <SettingsGroup title="Resolving one by one">
         <Checkbox
           label="Ask before opening the next file when one is closed without saving"
           checked={askWhenMergeToolClosesUnsaved}
           onChange={(ask) => void saveSettings({ askWhenMergeToolClosesUnsaved: ask })}
         />
-      </section>
+      </SettingsGroup>
     </>
   );
 }
 
-/** The preferred tool's arguments, editable; saved when the field is left or Enter is pressed. */
-function ToolArguments({ tool }: { tool: MergeTool }) {
-  const [text, setText] = useState(formatArgs(tool.args));
-  const args = parseArgs(text);
-  const error = args.some((arg) => arg.includes('{result}')) ? undefined : 'Include {result}: the file the tool saves the merge to.';
-  const save = (): void => {
-    if (!error && text !== formatArgs(tool.args)) void setMergeToolArgs(tool, args);
-  };
-  const customized = tool.origin !== 'custom' && tool.args.join('\0') !== tool.defaultArgs.join('\0');
-
-  return (
-    <section className={styles.section}>
-      <h2 className={styles.heading}>How {tool.name} is opened</h2>
-      <div className={styles.argsField}>
-        <TextField
-          className={styles.args}
-          aria-label={`Arguments for ${tool.name}`}
-          value={text}
-          error={error}
-          hint={PLACEHOLDER_HINT}
-          onChange={(event) => setText(event.target.value)}
-          onBlur={save}
-          onKeyDown={(event) => event.key === 'Enter' && save()}
-        />
-      </div>
-      <div className={styles.folderRow}>
-        {customized && (
-          <Button size="small" variant="ghost" onClick={() => void setMergeToolArgs(tool, null)}>
-            Back to its own arguments
-          </Button>
-        )}
-        {tool.origin === 'custom' && (
-          <Button size="small" variant="ghost" icon={<Trash2 size={13} />} onClick={() => void removeCustomMergeTool(tool.id)}>
-            Remove {tool.name}
-          </Button>
-        )}
-      </div>
-    </section>
-  );
+/** A row, read-only and one line: its file types, what opens them, and its "…" menu on hover or focus. Clicking it edits it. */
+interface MergeToolRowProps {
+  row: MergeToolRowView;
+  /** On one row's files cell: how wide the files column is (`useFilesFit`). */
+  filesRef?: (element: HTMLElement | null) => void;
+  onEdit: () => void;
+  menu: MenuEntry[];
 }
 
-/** The tool's app icon, as the Apps pane and the merge tool menu show it; a generic window where the OS gave none. */
-function ToolIcon({ tool }: { tool: MergeTool }) {
-  const Icon = appIcon(tool) ?? AppWindow;
-  return <Icon size={18} />;
+function MergeToolRow({ row, filesRef, onEdit, menu }: MergeToolRowProps) {
+  const ToolIcon = row.toolIcon;
+  return (
+    <div className={styles.rule} role="listitem">
+      <button type="button" className={styles.ruleMain} onClick={onEdit} aria-label={row.label}>
+        <span ref={filesRef} className={styles.ruleFiles} data-code={row.filesAreCode || undefined} data-tip={row.filesTip}>
+          <span className={styles.ruleFilesShown}>{row.files}</span>
+          {row.moreFiles > 0 && <span className={styles.ruleFilesMore}> +{row.moreFiles}</span>}
+        </span>
+        <span className={styles.ruleTool} data-missing={row.missing || undefined} data-tip={row.toolTip}>
+          <span className={styles.ruleToolIcon}>{ToolIcon && <ToolIcon size={16} />}</span>
+          <span className={styles.ruleToolName}>{row.toolName}</span>
+          {row.toolDetail && <span className={styles.ruleToolDetail}>{row.toolDetail}</span>}
+        </span>
+      </button>
+      <ActionDropdownMenu entries={menu}>
+        <IconButton size="small" className={styles.ruleMenu} icon={<MoreHorizontal size={14} />} label={row.menuLabel} />
+      </ActionDropdownMenu>
+    </div>
+  );
 }

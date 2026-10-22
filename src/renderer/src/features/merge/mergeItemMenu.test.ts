@@ -10,6 +10,7 @@ import { isSubmenu, type Action, type MenuEntry, type Submenu } from '../../lib/
 import { SERVER_ROLES, WORKSPACE_ROLES, type MergeLabels } from './mergeDescription';
 import { mergeProgress, type MergeItem } from './mergeItems';
 import { mergeItemMenu, type MergeMenuContext } from './mergeItemMenu';
+import type { Merger } from './mergeTools/mergeToolFor';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
 const labels: MergeLabels = { source: '/main/task', destination: '/main', roles: WORKSPACE_ROLES };
@@ -19,6 +20,7 @@ const plan = {
   fileConflicts: [{ path: '/src/a.ts', sourceChangeset: 11 }],
 } as MergePlan;
 const vscode: MergeTool = { id: 'vscode', name: 'Visual Studio Code', canBringToFront: true } as MergeTool;
+const vscodeMerger: Merger = { kind: 'tool', tool: vscode };
 
 const versions = {
   base: { kind: 'spec', spec: 'itemid:7#cs:9@game@local', fileName: '/src/a.ts' },
@@ -69,7 +71,8 @@ function context(more: Partial<MergeMenuContext> = {}): MergeMenuContext {
     progress: mergeProgress([], []),
     labels,
     itemTypeOf: () => 'file',
-    preferredTool: vscode,
+    mergerFor: () => vscodeMerger,
+    othersFor: () => [],
     running: false,
     decide: vi.fn(),
     reset: vi.fn(),
@@ -111,19 +114,40 @@ describe('mergeItemMenu', () => {
     ]);
   });
 
-  it('opens a conflicting file in the preferred merge tool, and offers starting over once the user decided it', () => {
+  it('opens a conflicting file in its own merge tool, and offers starting over once the user decided it', () => {
     const resolveIn = vi.fn();
     const menu = menuOf([conflict('src/a.ts', { decidedByUser: true })], { resolveIn });
     expect((entry(menu, 'resolveIn') as Action).label).toBe('Resolve in Visual Studio Code');
     (entry(menu, 'resolveIn') as Action).run();
-    expect(resolveIn).toHaveBeenCalledWith('/src/a.ts', vscode);
+    expect(resolveIn).toHaveBeenCalledWith('/src/a.ts', vscodeMerger);
     expect(ids(menu)).toContain('startOver');
   });
 
   it("offers no merge tool for a binary file, nor without one, and disables it while files resolve one by one", () => {
     expect(ids(menuOf([conflict('a.png', { isBinary: true })]))).not.toContain('resolveIn');
-    expect(ids(menuOf([conflict('src/a.ts')], { preferredTool: undefined }))).not.toContain('resolveIn');
+    expect(ids(menuOf([conflict('src/a.ts')], { mergerFor: () => undefined, othersFor: () => [] }))).not.toContain('resolveIn');
     expect((entry(menuOf([conflict('src/a.ts')], { running: true }), 'resolveIn') as Action).disabled).toBe(true);
+  });
+
+  it('opens each file in what its settings give it, and in any other way this once from "Resolve with"', () => {
+    const unity: Merger = { kind: 'unityYamlMerge', merge: { id: 'unityyamlmerge:6000.3.19f1', executable: 'u', editorVersion: '6000.3.19f1' }, fallback: vscode };
+    const meld: Merger = { kind: 'tool', tool: { id: 'meld', name: 'Meld', canBringToFront: false } as MergeTool };
+    const resolveIn = vi.fn();
+    const mergerFor = (state: FileConflictState) => (state.file.path.endsWith('.prefab') ? unity : vscodeMerger);
+    const menu = menuOf([conflict('Assets/Hero.prefab')], { mergerFor, othersFor: () => [vscodeMerger, meld], resolveIn });
+
+    expect((entry(menu, 'resolveIn') as Action).label).toBe('Resolve in UnityYAMLMerge');
+    expect(ids(menu).slice(ids(menu).indexOf('resolveIn'), ids(menu).indexOf('resolveIn') + 2)).toEqual(['resolveIn', 'resolveWith']);
+    const others = (entry(menu, 'resolveWith') as Submenu).entries as Action[];
+    expect(others.map((other) => other.label)).toEqual(['Visual Studio Code', 'Meld']);
+    others[1]!.run();
+    expect(resolveIn).toHaveBeenCalledWith('/Assets/Hero.prefab', meld);
+  });
+
+  it('offers no other way without one, nor while files resolve one by one', () => {
+    const meld: Merger = { kind: 'tool', tool: { id: 'meld', name: 'Meld' } as MergeTool };
+    expect(ids(menuOf([conflict('src/a.ts')]))).not.toContain('resolveWith');
+    expect(ids(menuOf([conflict('src/a.ts')], { othersFor: () => [meld], running: true }))).not.toContain('resolveWith');
   });
 
   it("opens a conflict's incoming and base versions from the repository, and yours from the workspace", async () => {
@@ -250,8 +274,8 @@ describe('mergeItemMenu', () => {
     expect(isSubmenu(entry(menu, 'copy'))).toBe(true);
   });
 
-  it('settles nothing for a file a tool or Smart Merge has open, as its toolbar offers nothing then: the outcome decides it', () => {
-    const open = { sessionId: 's', toolName: 'Smart Merge', canBringToFront: false };
+  it('settles nothing for a file a tool or UnityYAMLMerge has open, as its toolbar offers nothing then: the outcome decides it', () => {
+    const open = { sessionId: 's', toolName: 'UnityYAMLMerge', canBringToFront: false };
     expect(ids(menuOf([conflict('a.prefab', { openTool: open, decidedByUser: true })]))).not.toContain('keepDestination');
     expect(ids(menuOf([conflict('a.prefab', { openTool: open, decidedByUser: true })]))).not.toContain('startOver');
 

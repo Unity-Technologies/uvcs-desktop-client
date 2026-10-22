@@ -1,4 +1,5 @@
-import { SMART_MERGE_NAME, type MergeToolOutcome } from '@shared/domain/mergeTools';
+import { UNITY_YAML_MERGE_NAME, type MergeToolOutcome } from '@shared/domain/mergeTools';
+import { mergerName, type Merger } from './mergeToolFor';
 import { fileNameOf } from '../../../lib/text';
 import type { FileConflictState } from '../resolve/useFileConflicts';
 import { toolOutcomeMessage, type OutcomeMessage } from './mergeToolOutcome';
@@ -20,7 +21,7 @@ export interface RunSteps {
   /** The file opens in the tool: `previousKey` is the one before it, if any, to follow the run with the selection. */
   open: (key: string, previousKey: string | undefined) => void;
   /** Opens the file in the tool and waits for it to close; null when it couldn't be opened here (the page went away). */
-  resolve: (key: string) => Promise<MergeToolOutcome | null>;
+  resolve: (key: string, merger: Merger) => Promise<MergeToolOutcome | null>;
   /** Whether a file closed unsaved asks before the next one (the setting), rather than going on. */
   asksWhenClosedUnsaved: () => boolean;
 }
@@ -37,22 +38,22 @@ export interface RunEnd {
  * stops, unless the setting says to go on or no file after it still waits; a tool that fails to open stops the run.
  */
 export async function resolveOneByOne(plan: RunPlan, run: RunControl, steps: RunSteps): Promise<RunEnd> {
-  const total = plan.keys.length;
+  const total = plan.steps.length;
   let previousKey: string | undefined;
-  for (const [position, key] of plan.keys.entries()) {
+  for (const [position, { key, merger }] of plan.steps.entries()) {
     if (run.stopped) break;
     if (!steps.stillWaits(key)) continue;
-    const progress: RunProgress = { toolName: plan.tool.name, total, position, currentKey: key, paused: false };
+    const progress: RunProgress = { toolName: mergerName(merger), total, position, currentKey: key, paused: false };
     steps.show(progress);
     steps.open(key, previousKey);
     previousKey = key;
 
-    const outcome = await steps.resolve(key);
+    const outcome = await steps.resolve(key, merger);
     if (run.stopped || !outcome) break;
     if (outcome.kind === 'failed') return { stopped: run.stopped, failure: { outcome, key } };
     // Closed by the user without saving (not skipped from here): maybe they meant to stop, so ask before the next.
     const closedUnsaved = outcome.kind === 'unchanged' && outcome.exitCode !== null;
-    if (closedUnsaved && steps.asksWhenClosedUnsaved() && plan.keys.slice(position + 1).some(steps.stillWaits)) {
+    if (closedUnsaved && steps.asksWhenClosedUnsaved() && plan.steps.slice(position + 1).some((next) => steps.stillWaits(next.key))) {
       steps.show({ ...progress, paused: true });
       const goOn = await new Promise<boolean>((resolve) => (run.answer = resolve));
       run.answer = undefined;
@@ -76,11 +77,13 @@ export function runEndMessage(plan: RunPlan, end: RunEnd, states: readonly FileC
   const stateOf = (key: string): FileConflictState | undefined => states.find((state) => state.file.key === key);
   if (end.failure) {
     const { outcome, key } = end.failure;
-    const message = toolOutcomeMessage(outcome, plan.tool.name, fileNameOf(stateOf(key)?.file.path ?? key));
+    const step = plan.steps.find((candidate) => candidate.key === key);
+    const toolName = step ? mergerName(step.merger) : '';
+    const message = toolOutcomeMessage(outcome, toolName, fileNameOf(stateOf(key)?.file.path ?? key));
     const reason = message.detail && !/[.!?]$/.test(message.detail) ? `${message.detail}.` : message.detail;
     return { kind: 'error', title: message.title, detail: [reason, 'Stopped resolving one by one.'].filter(Boolean).join(' ') };
   }
-  const resolved = plan.keys.map(stateOf).filter((state) => state?.resolution);
-  const withSmartMerge = resolved.filter((state) => state?.decision?.kind === 'text' && state.decision.tool === SMART_MERGE_NAME).length;
-  return runSummary({ resolved: resolved.length, withSmartMerge, total: plan.keys.length, stopped: end.stopped }, plan);
+  const resolved = plan.steps.map((step) => stateOf(step.key)).filter((state) => state?.resolution);
+  const withSmartMerge = resolved.filter((state) => state?.decision?.kind === 'text' && state.decision.tool === UNITY_YAML_MERGE_NAME).length;
+  return runSummary({ resolved: resolved.length, withSmartMerge, total: plan.steps.length, stopped: end.stopped }, plan);
 }

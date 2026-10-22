@@ -1,17 +1,17 @@
 import { AppWindow, FolderOpen, PencilLine, Settings } from 'lucide-react';
-import type { MergeTool } from '@shared/domain/mergeTools';
 import { openSettingsDialogAt } from '../../../app/settings/SettingsDialog';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../../lib/actions';
 import { SplitButton } from '../../../ui/SplitButton';
 import type { FileConflictState } from '../resolve/useFileConflicts';
-import { addMergeToolAndPick } from './CustomMergeToolDialog';
+import { addMergeTool } from './CustomMergeToolDialog';
 import type { RunProgress } from './resolveRun';
-import { toolChoiceEntries } from './toolChoices';
-import { preferMergeTool, primaryMergeTool, useMergeTools } from './useMergeTools';
+import { mergerChoices, toolChoiceEntries } from './toolChoices';
+import { useFileMergers } from './useMergeTools';
+import { mergerName, type Merger } from './mergeToolFor';
 
 /** What the page offers to do with merge tools, for the file at hand. */
 export interface ConflictToolActions {
-  resolveIn: (key: string, tool: MergeTool) => void;
+  resolveIn: (key: string, merger: Merger) => void;
   /** Resolving one by one: its files open in turn, and no other opens meanwhile. */
   run: RunProgress | null;
   /** The page offers resolving every file one by one as its primary action: the file's own button steps back. */
@@ -29,29 +29,27 @@ interface MergeToolButtonProps {
 }
 
 /**
- * "Resolve in <tool>", for a text file: the preferred merge tool, with the others found behind the caret. Picking one
- * there (or adding one) only makes it the button's tool, the preferred one from then on (`toolChoiceEntries`). Nothing
- * opens until the user clicks the button.
+ * "Resolve in <tool>", for a text file: what it opens in by Settings › Merge (`useFileMergers`), with the other ways
+ * behind the caret (the tools found, and UnityYAMLMerge on Unity YAML). Picking one there (or adding one) opens the file in it at once, this once: the settings
+ * stay as they are.
  */
 export function MergeToolButton({ state, actions, onEditInApp, editInAppUnavailable = null, variant = 'primary' }: MergeToolButtonProps) {
-  const mergeTools = useMergeTools();
-  const { tools } = mergeTools;
-  const primary = primaryMergeTool(mergeTools);
-  const resolve = (tool: MergeTool): void => actions.resolveIn(state.file.key, tool);
+  const { mergerFor, othersFor } = useFileMergers();
+  const primary = mergerFor(state);
+  const resolve = (merger: Merger): void => actions.resolveIn(state.file.key, merger);
   const addAppAndResolve = async (): Promise<void> => {
-    const added = await addMergeToolAndPick();
-    if (added) resolve(added);
+    const added = await addMergeTool();
+    if (added) resolve({ kind: 'tool', tool: added });
   };
   const running = actions.run ? `Resolving one by one in ${actions.run.toolName}` : undefined;
 
   const menu: MenuEntry[] = tidyMenu([
     ...toolChoiceEntries(
-      tools.map((tool) => ({ tool, label: tool.name })),
-      primary?.id,
-      (toolId) => void preferMergeTool(toolId),
+      mergerChoices(othersFor(state)),
+      resolve,
     ),
     SEPARATOR,
-    { id: 'addApp', label: 'Choose another app…', icon: FolderOpen, run: () => void addMergeToolAndPick() },
+    { id: 'addApp', label: 'Choose another app…', icon: FolderOpen, run: () => void addAppAndResolve() },
     {
       id: 'editInApp',
       label: 'Edit the text in the app',
@@ -89,7 +87,7 @@ export function MergeToolButton({ state, actions, onEditInApp, editInAppUnavaila
       disabled={Boolean(running)}
       onClick={() => resolve(primary)}
     >
-      Resolve in {primary.name}
+      Resolve in {mergerName(primary)}
     </SplitButton>
   );
 }

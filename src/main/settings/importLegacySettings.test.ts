@@ -2,6 +2,8 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, statSync, writeFileS
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_SETTINGS } from '@shared/domain/settings';
+import { clientConf, mergeToolData, mergeTools } from '../plasticConfig/testing/clientConf';
 import { importLegacySettings } from './importLegacySettings';
 import { SettingsStore } from './SettingsStore';
 
@@ -91,5 +93,80 @@ describe('importLegacySettings', () => {
     importLegacySettings(settings, legacyFolder);
 
     expect(settings.get()).toMatchObject({ theme: 'dark', legacySettingsImported: true, recentBranchesByWorkspace: { [WK]: [guid(4)], [OTHER_WK]: [guid(9)] } });
+  });
+
+  describe('merge tools', () => {
+    const CLIENT_CONF = clientConf(
+      mergeTools(
+        mergeToolData(null, '.prefab;.unity', ['UnityYAMLMerge merge -p "@basefile" "@sourcefile" "@destinationfile" "@output"', 'kdiff3 "@basefile" "@output"']),
+        mergeToolData('enTextFile', '.shader', ['rider merge "@destinationfile" "@sourcefile" "@basefile" "@output"']),
+        mergeToolData('enTextFile', '*', ['meld "@output"']),
+        mergeToolData('enBinaryFile', '*', ['binmergetool -r="@output"']),
+      ),
+      '\r\n',
+    );
+
+    const CLIENT_CONF_OWN_TOOL = clientConf(mergeTools(mergeToolData('enTextFile', '*', ['plastic xmerge -b="@basefile" -r="@output"'])));
+
+    it("become the app's rules on the first run, read from client.conf without writing it", () => {
+      const { legacyFolder, openSettings } = setUp({ 'client.conf': CLIENT_CONF });
+      const before = snapshot(legacyFolder);
+      const settings = openSettings();
+
+      importLegacySettings(settings, legacyFolder);
+
+      expect(settings.get()).toMatchObject({
+        legacyMergeToolsImported: true,
+        mergeTool: 'meld',
+        mergeToolRules: [
+          { id: 'imported:1', patterns: ['.prefab', '.unity'], toolId: 'unityyamlmerge', fallbackToolId: 'kdiff3' },
+          { id: 'imported:2', patterns: ['.shader'], toolId: 'rider' },
+        ],
+      });
+      expect(snapshot(legacyFolder)).toEqual(before);
+    });
+
+    it('are imported once for a user whose recent branches were imported before', () => {
+      const { legacyFolder, settingsFile, openSettings } = setUp({ 'client.conf': CLIENT_CONF });
+      mkdirSync(join(settingsFile, '..'));
+      writeFileSync(settingsFile, JSON.stringify({ legacySettingsImported: true, mergeTool: 'vscode' }));
+      importLegacySettings(openSettings(), legacyFolder);
+      expect(openSettings().get()).toMatchObject({ legacyMergeToolsImported: true, mergeTool: 'vscode' });
+      expect(openSettings().get().mergeToolRules.map((rule) => rule.toolId)).toEqual(['unityyamlmerge', 'rider']);
+
+      openSettings().update({ mergeToolRules: [] });
+      importLegacySettings(openSettings(), legacyFolder);
+      expect(openSettings().get().mergeToolRules).toEqual([]);
+    });
+
+    it('leave C# in VS Code for a user who picked VS Code, with or without client.conf', () => {
+      for (const files of [{ 'client.conf': CLIENT_CONF_OWN_TOOL }, {}] as Record<string, string>[]) {
+        const { legacyFolder, settingsFile, openSettings } = setUp(files);
+        mkdirSync(join(settingsFile, '..'));
+        writeFileSync(settingsFile, JSON.stringify({ legacySettingsImported: true, mergeTool: 'vscode' }));
+        importLegacySettings(openSettings(), legacyFolder);
+        const rules = openSettings().get().mergeToolRules;
+        expect(rules.filter((rule) => rule.toolId === 'semantic')).toEqual([]);
+        expect(openSettings().get().mergeTool).toBe('vscode');
+      }
+    });
+
+    it('send C# to Semantic Merge for a user who picked the UVCS merge tool by name, as for Automatic, with or without client.conf', () => {
+      for (const files of [{ 'client.conf': CLIENT_CONF_OWN_TOOL }, {}] as Record<string, string>[]) {
+        const { legacyFolder, settingsFile, openSettings } = setUp(files);
+        mkdirSync(join(settingsFile, '..'));
+        writeFileSync(settingsFile, JSON.stringify({ legacySettingsImported: true, mergeTool: 'uvcs' }));
+        importLegacySettings(openSettings(), legacyFolder);
+        expect(openSettings().get().mergeToolRules.filter((rule) => rule.toolId === 'semantic').map((rule) => rule.patterns)).toEqual([['.cs', '.vb', '.java']]);
+      }
+    });
+
+    it("keep the app's defaults when the official client has none, or its file can't be read, and count as done", () => {
+      for (const files of [{}, { 'client.conf': '<ClientConfigData />' }, { 'client.conf': '\u0000<<<' }] as Record<string, string>[]) {
+        const { legacyFolder, openSettings } = setUp(files);
+        importLegacySettings(openSettings(), legacyFolder);
+        expect(openSettings().get()).toMatchObject({ legacyMergeToolsImported: true, mergeTool: 'auto', mergeToolRules: DEFAULT_SETTINGS.mergeToolRules });
+      }
+    });
   });
 });

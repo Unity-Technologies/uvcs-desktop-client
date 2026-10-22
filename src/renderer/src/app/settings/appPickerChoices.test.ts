@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { ExternalApp } from '@shared/domain/externalApps';
 import { isSubmenu, SEPARATOR, type Action, type MenuEntry } from '../../lib/actions';
-import { appPickerEntries, pickedApp, type AppPickerChoices } from './appPickerChoices';
+import { appPickerEntries, automaticChoice, pickedApp, type AppPickerChoices } from './appPickerChoices';
+import { AUTOMATIC_CHOICE_ICON } from './automaticApp';
 
 const app = (id: string, name: string): ExternalApp => ({ id, name, origin: 'known', location: `/Applications/${name}.app`, opensFolders: true });
 const EDITORS = [app('vscode', 'Visual Studio Code'), app('rider', 'JetBrains Rider')];
@@ -9,7 +10,7 @@ const choices = (parts: Partial<AppPickerChoices> = {}): AppPickerChoices => ({
   apps: EDITORS,
   choice: 'auto',
   usedId: 'vscode',
-  automaticRule: 'The first editor found',
+  automatic: automaticChoice('The first editor found'),
   offersSystem: true,
   onChoose: () => {},
   onAdd: () => {},
@@ -52,9 +53,36 @@ describe('appPickerEntries', () => {
   });
 });
 
+describe('appPickerEntries, for a merge tool', () => {
+  const tools = [app('uvcs', 'UVCS merge tool'), app('meld', 'Meld')];
+
+  it('offers only the tools where one must be picked, then adding another', () => {
+    const entries = appPickerEntries(choices({ apps: tools, choice: 'meld', usedId: 'meld', automatic: null, offersSystem: false }));
+    expect(reading(entries)).toEqual(['UVCS merge tool', 'Meld ✓', '---', 'Choose another app…']);
+  });
+
+  it('checks nothing while the tool picked is not found here', () => {
+    expect(reading(appPickerEntries(choices({ apps: tools, choice: 'semantic', automatic: null, offersSystem: false, onAdd: undefined })))).toEqual(['UVCS merge tool', 'Meld']);
+  });
+});
+
+describe('appPickerEntries, with an app the OS gave no icon', () => {
+  it('draws its glyph, and shows what it is in the picked line’s tooltip', () => {
+    const glyph = () => null;
+    const apps = [app('uvcs', 'UVCS merge tool'), { id: 'u', name: 'UnityYAMLMerge', location: 'Unity 6000.5.0f1', glyph, tip: "Unity's Smart Merge" }];
+    const picked = choices({ apps, choice: 'u', automatic: null, offersSystem: false, onAdd: undefined });
+    expect(appPickerEntries(picked)[1]).toMatchObject({ label: 'UnityYAMLMerge', icon: glyph, checked: true });
+    expect(pickedApp(picked)).toMatchObject({ label: 'UnityYAMLMerge', description: 'Unity 6000.5.0f1', icon: glyph, tip: "Unity's Smart Merge" });
+  });
+});
+
 describe('pickedApp', () => {
-  it('shows Automatic with the app it uses, or the rule while it uses none', () => {
-    expect(pickedApp(choices())).toMatchObject({ label: 'Automatic', description: 'Uses Visual Studio Code' });
+  it('names a tool picked that is not found here, saying so', () => {
+    expect(pickedApp(choices({ choice: 'semantic', automatic: null, missingName: 'Semantic Merge' }))).toMatchObject({ label: 'Semantic Merge', description: 'Not found on this computer' });
+  });
+
+  it('shows Automatic with its own icon and the app it uses, or the rule while it uses none', () => {
+    expect(pickedApp(choices())).toEqual({ label: 'Automatic', description: 'Uses Visual Studio Code', icon: AUTOMATIC_CHOICE_ICON });
     expect(pickedApp(choices({ usedId: null }))).toMatchObject({ label: 'Automatic', description: 'The first editor found' });
   });
 

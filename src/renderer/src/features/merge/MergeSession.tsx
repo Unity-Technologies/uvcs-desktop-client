@@ -29,7 +29,7 @@ import { mergeItemMenu } from './mergeItemMenu';
 import { mergeItemTypes } from './mergeItemTypes';
 import { ResolveRunControl, useRunOffer } from './mergeTools/ResolveRunControl';
 import { useResolveRun } from './mergeTools/useResolveRun';
-import { primaryMergeTool, useMergeTools } from './mergeTools/useMergeTools';
+import { useFileMergers } from './mergeTools/useMergeTools';
 import { completeMerge } from './mergeOperations';
 import { collectResolutions } from './mergeResolutions';
 import { conflictStatusOf, planProgress, summarizePlan } from './mergeStatus';
@@ -70,8 +70,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   const progress = useMemo(() => mergeProgress(fileStates, directoryResolutions), [fileStates, directoryResolutions]);
   const latest = useRef({ items, progress });
   const typeOf = useMemo(() => mergeItemTypes(plan.changes.map((change) => change.path)), [plan.changes]);
-  const mergeTools = useMergeTools();
-  const preferredTool = primaryMergeTool(mergeTools);
+  const { mergerFor, othersFor } = useFileMergers();
   const filter = useChangeFilter(items, itemPath, mergeItemTones, { isViewFilter: true });
   const content = useMemo(() => ({ groups: mergeItemGroups(filter.visible) }), [filter.visible]);
   // Nothing to select while the filters hide every item: the detail pane stays blank.
@@ -105,7 +104,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
       mergeButtonRef.current?.focus();
     }
   }, []);
-  const run = useResolveRun({ states: fileStates, resolveInTool, onOpen: followRun, onEnd: afterRun });
+  const run = useResolveRun({ states: fileStates, mergerFor, resolveInTool, onOpen: followRun, onEnd: afterRun });
   const runPlans = useRunOffer(fileStates, run);
 
   // Start on the first thing that needs the user, as the list shows them, else on its first row.
@@ -187,11 +186,12 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
               progress,
               labels,
               itemTypeOf: typeOf,
-              preferredTool,
+              mergerFor,
+              othersFor,
               running: Boolean(run.progress),
               decide,
               reset,
-              resolveIn: (key, tool) => void resolveInTool(key, tool),
+              resolveIn: (key, merger) => void resolveInTool(key, merger),
               resolveDirectory: resolveDirectoryConflict,
             })
           }
@@ -207,7 +207,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
               plan={plan}
               labels={labels}
               request={request}
-              toolActions={{ resolveIn: (key, tool) => void resolveInTool(key, tool), run: run.progress, runOffered: runPlans.length > 0 }}
+              toolActions={{ resolveIn: (key, merger) => void resolveInTool(key, merger), run: run.progress, runOffered: runPlans.length > 0 }}
               onDecideFile={decide}
               onStartOverFile={reset}
               onResolveDirectory={resolveDirectoryConflict}

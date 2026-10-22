@@ -2,13 +2,13 @@ import { useQueries } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ContentSource } from '@shared/domain/content';
 import type { FileConflictResolution } from '@shared/domain/merge';
-import type { MergeTool, MergeToolOutcome } from '@shared/domain/mergeTools';
+import type { MergeToolOutcome } from '@shared/domain/mergeTools';
+import type { Merger } from '../mergeTools/mergeToolFor';
 import { queryClient } from '../../../app/queryClient';
 import { useSettledValue } from '../../../lib/useSettled';
 import type { MergeLabels } from '../mergeDescription';
 import { resolveInMergeTool, type OpenTool } from '../mergeTools/resolveInMergeTool';
 import { stopMergeToolSession } from '../mergeTools/mergeToolSessions';
-import { useMergeTools } from '../mergeTools/useMergeTools';
 import { conflictVersionQuery } from './conflictVersionQuery';
 import { readsOnOpen, upFrontReads, versionReads, versionsOf } from './conflictVersionReads';
 import type { FileConflictDecision } from './fileConflictDecision';
@@ -105,7 +105,6 @@ export function useFileConflicts(workspacePath: string, files: ConflictedFile[],
     setDecisions((current) => ({ ...current, [key]: decision }));
   }, []);
 
-  const hasSmartMerge = useMergeTools().smartMerge !== null;
 
   const reset = useCallback((key: string) => {
     setDecisions(({ [key]: _discarded, ...rest }) => rest);
@@ -116,25 +115,24 @@ export function useFileConflicts(workspacePath: string, files: ConflictedFile[],
    * isn't there or is open already); `quiet` leaves telling how it went to the caller.
    */
   const resolveInTool = useCallback(
-    async (key: string, tool: MergeTool, quiet = false): Promise<MergeToolOutcome | null> => {
+    async (key: string, merger: Merger, quiet = false): Promise<MergeToolOutcome | null> => {
       const state = latest.current.states.find((candidate) => candidate.file.key === key);
       if (!state || latest.current.openTools[key]) return null;
       const { outcome, decision } = await resolveInMergeTool(
         workspacePath,
         state,
-        tool,
+        merger,
         labels,
         (open) => setOpenTools(({ [key]: _closed, ...others }) => (open ? { ...others, [key]: open } : others)),
         {
           quiet,
-          smartMerge: hasSmartMerge,
           stillUndecided: () => !latest.current.states.find((candidate) => candidate.file.key === key)?.decidedByUser,
         },
       );
       if (decision) decide(key, decision);
       return outcome;
     },
-    [workspacePath, labels, decide, hasSmartMerge],
+    [workspacePath, labels, decide],
   );
 
   // Leaving the merge stops waiting for the tools still open: what they save afterwards has nowhere to go.

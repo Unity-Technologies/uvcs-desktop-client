@@ -1,58 +1,62 @@
+import { UNITY_YAML_MERGE_ARGS } from '@shared/domain/mergeTools';
 import { describe, expect, it } from 'vitest';
 import { fakeFileSystem, linux, mac, windows } from '../../system/apps/testing/appFixtures';
 import { fillArgs } from './commandLine';
-import { findSmartMerge, judgeSmartMerge, SMART_MERGE_ARGS, smartMergeWentWrong } from './smartMerge';
+import { findUnityYamlMerges, judgeSmartMerge, smartMergeWentWrong } from './smartMerge';
 
 const MAC_HUB = '/Applications/Unity/Hub/Editor';
 
-describe('findSmartMerge', () => {
-  it('finds it in the newest Unity release on macOS, in Helpers since Unity 6.3 and in Tools before', () => {
+describe('findUnityYamlMerges', () => {
+  const found = (...args: Parameters<typeof findUnityYamlMerges>) => findUnityYamlMerges(...args).map(({ id, executable }) => [id, executable]);
+
+  it('finds every editor’s on macOS, the newest release first, in Helpers since Unity 6.3 and in Tools before', () => {
     const fs = fakeFileSystem([
       `${MAC_HUB}/2022.3.62f3/Unity.app/Contents/Tools/UnityYAMLMerge`,
       `${MAC_HUB}/6000.3.19f1/Unity.app/Contents/Helpers/UnityYAMLMerge`,
       `${MAC_HUB}/6000.7.0a2/Unity.app/Contents/Helpers/UnityYAMLMerge`,
     ]);
-    expect(findSmartMerge(mac, fs)).toEqual({ executable: `${MAC_HUB}/6000.3.19f1/Unity.app/Contents/Helpers/UnityYAMLMerge`, editorVersion: '6000.3.19f1' });
-    expect(findSmartMerge(mac, fakeFileSystem([`${MAC_HUB}/2022.3.62f3/Unity.app/Contents/Tools/UnityYAMLMerge`]))).toEqual({
-      executable: `${MAC_HUB}/2022.3.62f3/Unity.app/Contents/Tools/UnityYAMLMerge`,
-      editorVersion: '2022.3.62f3',
-    });
+    expect(found(mac, fs)).toEqual([
+      ['unityyamlmerge:6000.3.19f1', `${MAC_HUB}/6000.3.19f1/Unity.app/Contents/Helpers/UnityYAMLMerge`],
+      ['unityyamlmerge:2022.3.62f3', `${MAC_HUB}/2022.3.62f3/Unity.app/Contents/Tools/UnityYAMLMerge`],
+      ['unityyamlmerge:6000.7.0a2', `${MAC_HUB}/6000.7.0a2/Unity.app/Contents/Helpers/UnityYAMLMerge`],
+    ]);
   });
 
-  it('finds it in Data\\Tools on Windows and Data/Tools on Linux', () => {
+  it('finds them in Data\\Tools on Windows and Data/Tools on Linux', () => {
     const windowsFs = fakeFileSystem([
       'C:\\Program Files\\Unity\\Hub\\Editor\\2021.3.45f2\\Editor\\Data\\Tools\\UnityYAMLMerge.exe',
       'C:\\Program Files\\Unity\\Hub\\Editor\\6000.0.77f1\\Editor\\Data\\Tools\\UnityYAMLMerge.exe',
     ]);
-    expect(findSmartMerge(windows, windowsFs)).toEqual({
-      executable: 'C:\\Program Files\\Unity\\Hub\\Editor\\6000.0.77f1\\Editor\\Data\\Tools\\UnityYAMLMerge.exe',
-      editorVersion: '6000.0.77f1',
-    });
+    expect(found(windows, windowsFs)).toEqual([
+      ['unityyamlmerge:6000.0.77f1', 'C:\\Program Files\\Unity\\Hub\\Editor\\6000.0.77f1\\Editor\\Data\\Tools\\UnityYAMLMerge.exe'],
+      ['unityyamlmerge:2021.3.45f2', 'C:\\Program Files\\Unity\\Hub\\Editor\\2021.3.45f2\\Editor\\Data\\Tools\\UnityYAMLMerge.exe'],
+    ]);
 
     const linuxFs = fakeFileSystem(['/home/me/Unity/Hub/Editor/6000.0.77f1/Editor/Data/Tools/UnityYAMLMerge']);
-    expect(findSmartMerge(linux, linuxFs)).toEqual({ executable: '/home/me/Unity/Hub/Editor/6000.0.77f1/Editor/Data/Tools/UnityYAMLMerge', editorVersion: '6000.0.77f1' });
+    expect(findUnityYamlMerges(linux, linuxFs)).toEqual([
+      { id: 'unityyamlmerge:6000.0.77f1', executable: '/home/me/Unity/Hub/Editor/6000.0.77f1/Editor/Data/Tools/UnityYAMLMerge', editorVersion: '6000.0.77f1' },
+    ]);
   });
 
-  it('skips a newer editor that lacks it, and falls back to an alpha, then to the editor installed before the Hub', () => {
+  it('leaves out an editor that lacks it, and finds the one installed before the Hub, with no version', () => {
     const fs = fakeFileSystem([`${MAC_HUB}/6000.3.19f1/Unity.app`, `${MAC_HUB}/6000.7.0a2/Unity.app/Contents/Helpers/UnityYAMLMerge`]);
-    expect(findSmartMerge(mac, fs)?.editorVersion).toBe('6000.7.0a2');
-    expect(findSmartMerge(mac, fakeFileSystem(['/Applications/Unity/Unity.app', '/Applications/Unity/Unity.app/Contents/Tools/UnityYAMLMerge']))).toEqual({
-      executable: '/Applications/Unity/Unity.app/Contents/Tools/UnityYAMLMerge',
-      editorVersion: '',
-    });
+    expect(findUnityYamlMerges(mac, fs).map((merge) => merge.editorVersion)).toEqual(['6000.7.0a2']);
+    expect(findUnityYamlMerges(mac, fakeFileSystem(['/Applications/Unity/Unity.app', '/Applications/Unity/Unity.app/Contents/Tools/UnityYAMLMerge']))).toEqual([
+      { id: 'unityyamlmerge:', executable: '/Applications/Unity/Unity.app/Contents/Tools/UnityYAMLMerge', editorVersion: '' },
+    ]);
   });
 
-  it('finds nothing without a Unity Editor', () => {
-    expect(findSmartMerge(mac, fakeFileSystem([]))).toBeNull();
-    expect(findSmartMerge(windows, fakeFileSystem([]))).toBeNull();
-    expect(findSmartMerge(linux, fakeFileSystem([]))).toBeNull();
+  it('finds none without a Unity Editor', () => {
+    expect(findUnityYamlMerges(mac, fakeFileSystem([]))).toEqual([]);
+    expect(findUnityYamlMerges(windows, fakeFileSystem([]))).toEqual([]);
+    expect(findUnityYamlMerges(linux, fakeFileSystem([]))).toEqual([]);
   });
 });
 
-describe('SMART_MERGE_ARGS', () => {
+describe('UNITY_YAML_MERGE_ARGS', () => {
   it('merges incoming as its left (theirs) side and yours as its right (mine), opening nothing', () => {
     const files = { base: 'a.BASE.prefab', yours: 'a.YOURS.prefab', incoming: 'a.INCOMING.prefab', result: 'a.prefab', baseName: 'Base', yoursName: 'Yours', incomingName: 'Incoming', fileName: 'a.prefab' };
-    expect(fillArgs(SMART_MERGE_ARGS, files)).toEqual(['merge', '-h', '--force', '--fallback', 'none', 'a.BASE.prefab', 'a.INCOMING.prefab', 'a.YOURS.prefab', 'a.prefab']);
+    expect(fillArgs(UNITY_YAML_MERGE_ARGS, files)).toEqual(['merge', '-h', '--force', '--fallback', 'none', 'a.BASE.prefab', 'a.INCOMING.prefab', 'a.YOURS.prefab', 'a.prefab']);
   });
 });
 

@@ -1,5 +1,5 @@
 import { AUTO_APP, type CustomEditor } from './externalApps';
-import { AUTO_MERGE_TOOL, type CustomMergeTool } from './mergeTools';
+import { AUTO_MERGE_TOOL, DEFAULT_MERGE_TOOL_RULES, type CustomMergeTool, type MergeToolRule } from './mergeTools';
 import { DEFAULT_PENDING_CHANGES_FILTER, type PendingChangesFilter } from './pendingChanges';
 import type { PendingChangesOnSwitch, SwitchShelveRecord } from './switchWithChanges';
 
@@ -57,8 +57,10 @@ export interface AppSettings {
   gravatarChoiceAsked: boolean;
   /** Show an OS notification when someone checks in to the loaded branch while the window is in the background. */
   notifyOnIncoming: boolean;
-  /** The merge tool "Resolve in…" opens: `auto` (the UVCS merge tool, else the first found) or a tool id. */
+  /** The merge tool files no rule matches open in: `auto` (the UVCS merge tool, else the first found) or a tool id. */
   mergeTool: string;
+  /** Which tool opens which files, tried in order before `mergeTool` (Settings › Merge). */
+  mergeToolRules: MergeToolRule[];
   /** Merge apps the user added ("Choose another app…"). */
   customMergeTools: CustomMergeTool[];
   /** The user's arguments for a merge tool, by its id, instead of its own. */
@@ -85,6 +87,12 @@ export interface AppSettings {
    * are never read again.
    */
   legacySettingsImported: boolean;
+  /**
+   * The official client's merge tools (client.conf's `<MergeTools>`) became the rules above (`importMergeTools`, in
+   * `importLegacySettings`), or there were none: they are never read again. Apart from `legacySettingsImported`, which
+   * came first.
+   */
+  legacyMergeToolsImported: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -107,6 +115,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   mergeTool: AUTO_MERGE_TOOL,
   customMergeTools: [],
   mergeToolArgs: {},
+  mergeToolRules: DEFAULT_MERGE_TOOL_RULES,
   askWhenMergeToolClosesUnsaved: true,
   editor: AUTO_APP,
   terminal: AUTO_APP,
@@ -115,4 +124,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   pageWindowBounds: null,
   openWindows: [],
   legacySettingsImported: false,
+  legacyMergeToolsImported: false,
 };

@@ -13,7 +13,7 @@ export function AppPicker({ label, ...choices }: AppPickerChoices & { label: str
         <span className={styles.pickerIcon}>{PickedIcon && <PickedIcon size={18} />}</span>
         <span className={styles.choiceText}>
           <span className={styles.choiceLabel}>{picked.label}</span>
-          <span className={`${styles.choiceDescription} ${styles.oneLine}`} data-tip={picked.description}>
+          <span className={`${styles.choiceDescription} ${styles.oneLine}`} data-tip={picked.tip ?? picked.description}>
             {picked.description}
           </span>
         </span>

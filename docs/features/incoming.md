@@ -38,7 +38,7 @@ changeset it shows what that changeset did, its conflict mark still on its row.
 A file's menu is a diff's (`diffEntryMenu`, on `changedFileMenu`: history, annotate, open or save the revision, Copy),
 read from the scope's diff (`incomingDiffTarget`; built by `incomingFileMenu`). In "All incoming changes" the conflicts
 selected add what the merge page's do (`conflictMenuEntries`, docs/features/merge.md): one of them "Resolve in <tool>"
-and "Open version ▸ Yours / Incoming / Base" (Yours is the workspace file), any "Keep yours" and "Keep incoming" ("Keep base" too when
+(the file's own), "Resolve with ▸" any other this once, and "Open version ▸ Yours / Incoming / Base" (Yours is the workspace file), any "Keep yours" and "Keep incoming" ("Keep base" too when
 each has one), for several at once too, and Start over once decided. A changeset's files add none: they are what it did. A changeset's
 row has the changeset's menu (`changesetMenu`), the same as in History.
 

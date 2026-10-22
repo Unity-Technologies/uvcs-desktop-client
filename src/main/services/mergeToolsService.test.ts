@@ -3,7 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { MergeToolRequest, SmartMergeRequest, SmartMergeTool } from '@shared/domain/mergeTools';
+import type { MergeToolRequest, SmartMergeRequest, UnityYamlMergeTool } from '@shared/domain/mergeTools';
 import { cmFails, fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { launchMergeTool } from '../merge/mergeTools/launch';
 import { memorySettings } from '../settings/testing/memorySettings';
@@ -36,12 +36,12 @@ const CAT_VERSIONS: CmAnswer = async ({ args }) => {
   return '';
 };
 
-/** `smartMerge`: where Smart Merge is, standing in for this machine's Unity Editors; none by default. */
-function mergeTools(answers: Record<string, CmAnswer>, smartMerge: SmartMergeTool | null = null) {
+/** `unityYamlMerges`: every editor's UnityYAMLMerge, newest first, standing in for this machine's; none by default. */
+function mergeTools(answers: Record<string, CmAnswer>, ...unityYamlMerges: UnityYamlMergeTool[]) {
   const fake = fakeCmClient(answers);
   const settings = memorySettings({ mergeTool: MY_TOOL.id, customMergeTools: [MY_TOOL], mergeToolArgs: {} });
   const apps = { installedApps: { get: async () => NO_INSTALLED_APPS } as never, icons: new AppIcons('linux', { thumbnail: async () => undefined, fileIcon: async () => undefined }) };
-  return { ...fake, service: createMergeToolsService(serviceContext(fake.cm, { settings }), apps, () => smartMerge) };
+  return { ...fake, service: createMergeToolsService(serviceContext(fake.cm, { settings }), apps, () => unityYamlMerges) };
 }
 
 /** The tool as launched: its arguments and what each file held when it opened. */
@@ -119,10 +119,12 @@ describe('resolving a file in a merge tool', () => {
 });
 
 describe('Smart Merge', () => {
-  const SMART_MERGE: SmartMergeTool = { executable: join(tmpdir(), 'Unity', 'UnityYAMLMerge'), editorVersion: '6000.3.19f1' };
+  const SMART_MERGE: UnityYamlMergeTool = { id: 'unityyamlmerge:6000.3.19f1', executable: join(tmpdir(), 'Unity', 'UnityYAMLMerge'), editorVersion: '6000.3.19f1' };
+  const OLDER: UnityYamlMergeTool = { id: 'unityyamlmerge:2022.3.10f1', executable: join(tmpdir(), 'Unity2022', 'UnityYAMLMerge'), editorVersion: '2022.3.10f1' };
   const UNITY_HEADER = '%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n';
   const PREFAB: SmartMergeRequest = {
     sessionId: 'session-2',
+    toolId: 'unityyamlmerge',
     path: 'Assets/Player.prefab',
     base: `${UNITY_HEADER}base\n`,
     yours: `${UNITY_HEADER}yours\n`,
@@ -200,6 +202,8 @@ describe('Smart Merge', () => {
 
     expect(await withoutUnity.smartMerge(PREFAB)).toEqual({ kind: 'notMerged' });
     expect(await withUnity.smartMerge({ ...PREFAB, yours: 'fileFormatVersion: 2\n' })).toEqual({ kind: 'notMerged' });
+    const META = 'fileFormatVersion: 2\nguid: 1\n';
+    expect(await withUnity.smartMerge({ ...PREFAB, path: 'Assets/Player.prefab.meta', yours: META, incoming: META })).toEqual({ kind: 'notMerged' });
     expect(launchMergeTool).not.toHaveBeenCalled();
   });
 
@@ -245,11 +249,22 @@ describe('Smart Merge', () => {
     expect(vi.mocked(launchMergeTool).mock.calls.map(([executable, , , options]) => [executable, options?.hidden ?? false])).toEqual([[MY_TOOL.executable, false]]);
   });
 
-  it('lists Smart Merge apart from the tools to pick', async () => {
-    const { service } = mergeTools({}, SMART_MERGE);
+  it('lists every editor’s UnityYAMLMerge apart from the tools that open a window', async () => {
+    const { service } = mergeTools({}, SMART_MERGE, OLDER);
 
-    const { tools, smartMerge } = await service.list();
-    expect(smartMerge).toEqual(SMART_MERGE);
+    const { tools, unityYamlMerges } = await service.list();
+    expect(unityYamlMerges).toEqual([SMART_MERGE, OLDER]);
     expect(tools.map((tool) => tool.executable)).not.toContain(SMART_MERGE.executable);
+  });
+
+  it('runs the newest editor’s, or the one editor’s a rule names, and none for an editor no longer installed', async () => {
+    smartMergeEnds(0, `${UNITY_HEADER}merged\n`);
+    const { service } = mergeTools({}, SMART_MERGE, OLDER);
+
+    await service.smartMerge(PREFAB);
+    await service.smartMerge({ ...PREFAB, toolId: 'unityyamlmerge:2022.3.10f1' });
+    expect(await service.smartMerge({ ...PREFAB, toolId: 'unityyamlmerge:2019.4.0f1' })).toEqual({ kind: 'notMerged' });
+
+    expect(vi.mocked(launchMergeTool).mock.calls.map(([executable]) => executable)).toEqual([SMART_MERGE.executable, OLDER.executable]);
   });
 });
