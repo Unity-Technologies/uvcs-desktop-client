@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { checkedInMessage, isMomentOver, successCardTellsCheckin, type SuccessMoment } from './successMoment';
+import { checkedInMessage, isMomentOver, successCardTellsCheckin, successLinkObject, type SuccessMoment } from './successMoment';
 
 const moment: SuccessMoment = { verb: 'Checked in', changesetId: 4, at: 1_000 };
 const noChanges = { readAt: 2_000, count: 0 };
+
+describe('successLinkObject', () => {
+  it('names the changeset, or the range an update of several brought', () => {
+    expect(successLinkObject({ changesetId: 4 })).toEqual({ kind: 'changeset', id: 4 });
+    expect(successLinkObject({ changesetId: 14, fromChangeset: 13 })).toEqual({ kind: 'changeset', id: 14 });
+    expect(successLinkObject({ changesetId: 14, fromChangeset: 10 })).toEqual({ kind: 'changesetRange', from: 10, to: 14 });
+  });
+});
 
 describe('isMomentOver', () => {
   it('lasts while Changes stays empty on the changeset it tells, however long', () => {
