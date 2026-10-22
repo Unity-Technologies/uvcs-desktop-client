@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { indexPending } from './checkinDependencies';
-import { checkinSelectionOf, includedBy, type CheckinChoice, type ListedChanges } from './checkinSelection';
+import { bulkPrivateFiles } from './bulkPrivate';
+import { isShelvable } from './changeCategories';
+import { consistentlyIncluded, indexPending, neededWith } from './checkinDependencies';
+import { checkinFactsOf, checkinSelectionOf, includedBy, type CheckinChoice, type ListedChanges } from './checkinSelection';
+import { uploadSummary } from './uploadSummary';
 
 /** Changes listed, of which the filter shows `matchingFilter`: all of them when nothing filters. */
-const listing = (all: PendingChange[], matchingFilter = all): ListedChanges => ({ all, matchingFilter, index: indexPending(all) });
+const listing = (all: PendingChange[], matchingFilter = all): ListedChanges => ({ all, matchingFilter, index: indexPending(all), facts: checkinFactsOf(all) });
 
 /** The choice of a user who unchecked `paths`. */
 const unchecking = (paths: string[]): CheckinChoice => ({ excludedPaths: new Set(paths), prepared: null });
@@ -88,5 +91,78 @@ describe('checkinSelectionOf', () => {
 
     expect(checkinSelectionOf(listing(generated), includedBy(unchecking([]))).bulkPrivate?.fileCount).toBe(60);
     expect(checkinSelectionOf(listing(generated), includedBy(unchecking(generated.map((item) => item.path)))).bulkPrivate).toBeNull();
+  });
+});
+
+describe('checkinSelectionOf, over many changes', () => {
+  const folder = (path: string, kinds: PendingChange['kinds']): PendingChange => change(path, kinds, 0, 'directory');
+  // Nested private folders, a moved folder, a deleted folder a move leaves, a merge, edits, links and ignored files.
+  const many = [
+    folder('gen', ['private']),
+    folder('gen/obj', ['private']),
+    folder('moved', ['moved']),
+    { ...folder('old', ['deleted']) },
+    { ...change('kept/b.ts', ['moved'], 3), oldPath: 'old/b.ts' },
+    { ...change('m/merged.ts', ['replaced'], 4), mergeInfo: 'Merge from 5' },
+    { ...change('m/merged2.ts', ['changed'], 4), mergeInfo: 'Merge from 5' },
+    ...Array.from({ length: 3_000 }, (_, index): PendingChange => {
+      if (index % 5 === 0) return change(`src/f${index % 40}/edit${index}.ts`, ['checkedOut', 'changed'], index);
+      if (index % 7 === 0) return change(`src/link${index}`, ['changed'], 1, 'symlink');
+      if (index % 11 === 0) return change(`build/out${index}.bin`, ['ignored'], index);
+      if (index % 13 === 0) return change(`moved/in${index}.ts`, ['changed'], index);
+      return change(`${index % 3 ? 'gen' : 'gen/obj'}/sub${index % 20}/p${index}.g`, ['private'], index);
+    }),
+  ];
+  const listedAll = listing(many);
+  const edits = many.filter((item) => item.kinds.includes('changed'));
+  const listedEdits = { ...listedAll, matchingFilter: edits };
+
+  /** The selection worked out the plain way, change by change, as the check-in rules say. */
+  function plainly({ all, matchingFilter, index }: ListedChanges, isIncluded: (change: PendingChange) => boolean) {
+    const shown = matchingFilter.filter(isIncluded);
+    const going = new Set(neededWith(shown, index).filter(isIncluded));
+    const included = matchingFilter === all ? all.filter(isIncluded) : all.filter((item) => going.has(item));
+    const shelvable = included.filter(isShelvable);
+    return {
+      included,
+      hiddenIncludedCount: all.filter(isIncluded).length - included.length,
+      shownIncludedCount: shown.length,
+      upload: uploadSummary(included),
+      shelvable,
+      shelvableUpload: uploadSummary(shelvable),
+      bulkPrivate: bulkPrivateFiles(included),
+    };
+  }
+
+  const choices: [string, CheckinChoice][] = [
+    ['everything checked', unchecking([])],
+    ['a few files unchecked', unchecking(['src/f0/edit0.ts', 'gen/sub1/p1.g', 'src/link7'])],
+    ['a private folder unchecked', unchecking(['gen/obj'])],
+    ['a moved folder unchecked', unchecking(['moved'])],
+    ['the move a deleted folder waits for unchecked', unchecking(['kept/b.ts'])],
+    ['a merge change unchecked', unchecking(['m/merged.ts'])],
+    ['a changelist prepared', { excludedPaths: new Set<string>(), prepared: { name: 'ui', paths: new Set(['src/f5/edit5.ts', 'gen/sub2/p2.g', 'gen']) } }],
+  ];
+
+  it.each(choices.flatMap(([name, choice]) => [[`${name}, nothing filtered`, listedAll, choice] as const, [`${name}, filtered by Changed`, listedEdits, choice] as const]))(
+    'takes what going over every change takes: %s',
+    (_, listed, choice) => {
+      const isIncluded = consistentlyIncluded(includedBy(choice), listed.index);
+      const everyChecked = !choice.prepared && choice.excludedPaths.size === 0;
+      const { isIncluded: _isIncluded, everyCandidateIncluded: _every, ...selection } = checkinSelectionOf(listed, isIncluded, everyChecked);
+      expect(selection).toEqual(plainly(listed, isIncluded));
+    },
+  );
+
+  it('asks nothing of a change while every box is checked and nothing filters, and once each when one is unchecked', () => {
+    let asked = 0;
+    const counted = (isIncluded: (change: PendingChange) => boolean) => (item: PendingChange) => (asked++, isIncluded(item));
+
+    const everything = checkinSelectionOf(listedAll, counted(consistentlyIncluded(includedBy(unchecking([])), listedAll.index)), true);
+    expect(asked).toBe(0);
+    expect(everything.everyCandidateIncluded).toBe(true);
+
+    checkinSelectionOf(listedAll, counted(consistentlyIncluded(includedBy(unchecking(['src/f0/edit0.ts'])), listedAll.index)));
+    expect(asked).toBe(many.length);
   });
 });
