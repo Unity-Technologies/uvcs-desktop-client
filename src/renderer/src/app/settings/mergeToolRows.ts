@@ -18,11 +18,17 @@ import { formatFilePatterns } from '../../lib/filePatterns';
 /** The row of every other file: always last, it can't move nor go. */
 export const EVERY_OTHER_FILE = 'everyOtherFile';
 
+/** Characters of file types a row shows, "+N" included, until the files column was measured (`filesBudget`). */
+export const DEFAULT_FILES_BUDGET = 24;
+
 /**
- * Characters of file types a row shows, "+N" included: about what the narrowest row has room for in the code font, so
- * the count is never cut (the list before it may be, by the row).
+ * The characters of file types the files column holds, "+N" included: its width in the code font's characters (`0`'s
+ * advance), less one for the gap before the count. One at least: the first file type always shows (the row cuts it).
  */
-export const FILES_BUDGET = 24;
+export function filesBudget(columnWidth: number, charWidth: number): number {
+  if (charWidth <= 0) return DEFAULT_FILES_BUDGET;
+  return Math.max(1, Math.floor(columnWidth / charWidth) - 1);
+}
 
 /** One row of Settings › Merge, read-only and one line: its files on the left, what opens them on the right. */
 export interface MergeToolRowView {
@@ -47,11 +53,11 @@ export interface MergeToolRowView {
 }
 
 /** The rows: each rule, then every other file. */
-export function mergeToolRows(rules: readonly MergeToolRule[], mergeTool: string, list: MergeToolList): MergeToolRowView[] {
+export function mergeToolRows(rules: readonly MergeToolRule[], mergeTool: string, list: MergeToolList, budget = DEFAULT_FILES_BUDGET): MergeToolRowView[] {
   const automaticTool = toolById(list, list.preferredId ?? '') ?? list.tools[0];
   return [
     ...rules.map((rule): MergeToolRowView => {
-      const { shown, more } = fitFileTypes(rule.patterns, FILES_BUDGET);
+      const { shown, more } = fitFileTypes(rule.patterns, budget);
       return { id: rule.id, files: shown, moreFiles: more, filesTip: formatFilePatterns(rule.patterns), filesAreCode: true, ...toolSide(rule, list, automaticTool) };
     }),
     { id: EVERY_OTHER_FILE, files: 'Every other file', moreFiles: 0, filesAreCode: false, ...everyOtherFileTool(mergeTool, list, automaticTool) },

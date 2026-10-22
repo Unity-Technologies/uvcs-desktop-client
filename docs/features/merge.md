@@ -33,10 +33,11 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   computer", named by `knownNames`); removing a tool of the user's drops its rows and makes it no row's fallback. With
   nothing imported, the rows are Unity assets in UnityYAMLMerge (`UNITY_YAML_MERGE_RULE`, `UNITY_YAML_PATTERNS`: scenes,
   prefabs and the assets Unity saves as YAML, not `.meta` files, which have no Unity YAML header) and C#, Visual Basic
-  and Java in Semantic Merge (`SEMANTIC_MERGE_RULE`), as the official client sends them. The pane lists the rows read-only, one line each, all the same
-  height, in one grid (`MergeToolsPane`, `mergeToolRows`): a rule's file types in the code font, as many as fit a
-  character budget then "+N" (`fitFileTypes`, `FILES_BUDGET`; every one in the tooltip; the list is cut, never the
-  count), then the tool: a fixed icon cell and its name, every icon in one column (the pinned Unity Editor's version
+  and Java in Semantic Merge (`SEMANTIC_MERGE_RULE`), as the official client sends them. The pane lists the rows read-only, one line each, a list row's
+  height (`--row-height`), in one grid (`MergeToolsPane`, `mergeToolRows`): a rule's file types in the code font, as
+  many as the files column holds then "+N" (`fitFileTypes`; the column's width in the code font's characters,
+  `useFilesBudget` measuring it as the pane resizes, `filesBudget` deciding; every one in the tooltip; the list is cut,
+  never the count), then the tool: a fixed icon cell and its name, every icon in one column (the pinned Unity Editor's version
   after UnityYAMLMerge's name, quieter). The tool's tooltip is how it's launched, its command line quoted where needed
   (`commandLine`), with "If it can't merge: <tool>" for UnityYAMLMerge; a tool that isn't here shows its name quieter,
   a warning in its icon cell and why in the tooltip; with no merge tool at all, every other file's row reads "No merge

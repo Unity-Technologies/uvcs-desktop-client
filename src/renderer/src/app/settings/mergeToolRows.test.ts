@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MergeTool, MergeToolList, MergeToolRule } from '@shared/domain/mergeTools';
-import { commandLine, EVERY_OTHER_FILE, fitFileTypes, mergeToolRows } from './mergeToolRows';
+import { commandLine, DEFAULT_FILES_BUDGET, EVERY_OTHER_FILE, filesBudget, fitFileTypes, mergeToolRows } from './mergeToolRows';
 
 const tool = (id: string, name = id, origin: MergeTool['origin'] = 'known'): MergeTool => ({
   id,
@@ -38,6 +38,24 @@ describe('fitFileTypes', () => {
   });
 });
 
+describe('filesBudget', () => {
+  it('holds as many characters as the column’s width in the code font, less one for the gap before the count', () => {
+    expect(filesBudget(300, 7.2)).toBe(40);
+    expect(filesBudget(144, 7.2)).toBe(19);
+  });
+
+  it('holds one character at least, and the default until the font was measured', () => {
+    expect(filesBudget(4, 7.2)).toBe(1);
+    expect(filesBudget(300, 0)).toBe(DEFAULT_FILES_BUDGET);
+  });
+
+  it('fits more file types, and a smaller count, in a wider column', () => {
+    const UNITY_ROW = ['.unity', '.prefab', '.asset', '.mat', '.anim', '.controller', '.overrideController', '.physicMaterial', '.lighting', '.mixer', '.playable', '.preset', '.spriteatlas', '.terrainlayer'];
+    expect(fitFileTypes(UNITY_ROW, filesBudget(300, 7.2))).toEqual({ shown: '.unity .prefab .asset .mat .anim', more: 9 });
+    expect(fitFileTypes(UNITY_ROW, filesBudget(144, 7.2))).toEqual({ shown: '.unity .prefab', more: 12 });
+  });
+});
+
 describe('commandLine', () => {
   it('writes the program and its arguments as one line, quoting what holds a space', () => {
     expect(commandLine('/Applications/Visual Studio Code.app/code', ['--wait', '--merge', '{incoming}'])).toBe('"/Applications/Visual Studio Code.app/code" --wait --merge {incoming}');
@@ -46,6 +64,11 @@ describe('commandLine', () => {
 });
 
 describe('mergeToolRows', () => {
+  it('fits each row’s file types to the budget given', () => {
+    const [row] = mergeToolRows([{ id: 'u', patterns: UNITY, toolId: 'unityyamlmerge' }], 'auto', list, 40);
+    expect([row!.files, row!.moreFiles]).toEqual(['.unity .prefab .asset .mat .anim', 10]);
+  });
+
   it('reads each rule, then every other file, last, each on one line', () => {
     const rows = mergeToolRows([{ id: 'code', patterns: ['.cs', '.vb', '.java'], toolId: 'semantic' }], 'auto', list);
     expect(rows.map((row) => row.id)).toEqual(['code', EVERY_OTHER_FILE]);
