@@ -176,7 +176,10 @@
   width: 100%;
 }
 
+/* A merge rule's row: a little roomier than a list's (--row-height), with its "…" button inside. */
 .rules {
+  --merge-row-height: 34px;
+
   display: grid;
   grid-template-columns: minmax(0, 1fr) fit-content(55%) 32px;
   border: 1px solid var(--border-subtle);
@@ -215,7 +218,7 @@
   align-items: center;
   column-gap: var(--space-4);
   min-width: 0;
-  height: var(--row-height);
+  height: var(--merge-row-height);
   padding: 0 0 0 var(--space-3);
   border: none;
   border-radius: inherit;
@@ -232,7 +235,6 @@
 
 .ruleFiles {
   display: flex;
-  gap: 0.6em;
   min-width: 0;
   white-space: nowrap;
 }
@@ -252,6 +254,8 @@
 .ruleFilesMore {
   flex: none;
   color: var(--text-secondary);
+  /* Its leading space is the gap the fit counts (`fitFileTypes`). */
+  white-space: pre;
 }
 
 .ruleTool {
@@ -317,26 +321,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-}
-
-/* A dialog's picker on one line, a text field's height: icon, name, chevron; where it is in its tooltip. */
-.pickerInline {
-  composes: choice;
-  gap: var(--space-2);
-  height: var(--control-height);
-  padding: 0 var(--space-2);
-  border-color: var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--bg-input);
-}
-
-.pickerInline[data-state='open'] {
-  border-color: var(--accent);
-}
-
-.pickerInlineLabel {
-  flex: 1;
-  min-width: 0;
 }
 
 /* "How <tool> opens": the arguments as typed, in the code font. */

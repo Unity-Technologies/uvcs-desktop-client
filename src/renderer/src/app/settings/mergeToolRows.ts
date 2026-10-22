@@ -18,16 +18,15 @@ import { formatFilePatterns } from '../../lib/filePatterns';
 /** The row of every other file: always last, it can't move nor go. */
 export const EVERY_OTHER_FILE = 'everyOtherFile';
 
-/** Characters of file types a row shows, "+N" included, until the files column was measured (`filesBudget`). */
-export const DEFAULT_FILES_BUDGET = 24;
+/** Whether a row's files text fits its column: measured in the code font (`useFilesFit`), else by a guess. */
+export type FitsColumn = (text: string) => boolean;
 
-/**
- * The characters of file types the files column holds, "+N" included: its width in the code font's characters (`0`'s
- * advance), less one for the gap before the count. One at least: the first file type always shows (the row cuts it).
- */
-export function filesBudget(columnWidth: number, charWidth: number): number {
-  if (charWidth <= 0) return DEFAULT_FILES_BUDGET;
-  return Math.max(1, Math.floor(columnWidth / charWidth) - 1);
+/** Until the files column is measured: about what the narrowest row holds. */
+export const GUESSED_FIT: FitsColumn = (text) => text.length <= 24;
+
+/** Fits a column `width` pixels wide, by the text's measured width. */
+export function fitsWidth(width: number, widthOf: (text: string) => number): FitsColumn {
+  return (text) => widthOf(text) <= width;
 }
 
 /** One row of Settings › Merge, read-only and one line: its files on the left, what opens them on the right. */
@@ -53,11 +52,11 @@ export interface MergeToolRowView {
 }
 
 /** The rows: each rule, then every other file. */
-export function mergeToolRows(rules: readonly MergeToolRule[], mergeTool: string, list: MergeToolList, budget = DEFAULT_FILES_BUDGET): MergeToolRowView[] {
+export function mergeToolRows(rules: readonly MergeToolRule[], mergeTool: string, list: MergeToolList, fits: FitsColumn = GUESSED_FIT): MergeToolRowView[] {
   const automaticTool = toolById(list, list.preferredId ?? '') ?? list.tools[0];
   return [
     ...rules.map((rule): MergeToolRowView => {
-      const { shown, more } = fitFileTypes(rule.patterns, budget);
+      const { shown, more } = fitFileTypes(rule.patterns, fits);
       return { id: rule.id, files: shown, moreFiles: more, filesTip: formatFilePatterns(rule.patterns), filesAreCode: true, ...toolSide(rule, list, automaticTool) };
     }),
     { id: EVERY_OTHER_FILE, files: 'Every other file', moreFiles: 0, filesAreCode: false, ...everyOtherFileTool(mergeTool, list, automaticTool) },
@@ -70,20 +69,20 @@ export function commandLine(executable: string, args: readonly string[]): string
 }
 
 /**
- * The file types that fit `budget` characters with their "+N", separated by spaces; always the first, however long
- * (the row cuts it). Patterns with a space show in quotes, as typed.
+ * The file types that fit the column with their "+N", as the row draws them: `.unity .prefab +12`, the count after a
+ * space. Always the first, however long (the row cuts it). Patterns with a space show in quotes, as typed.
  */
-export function fitFileTypes(patterns: readonly string[], budget: number): { shown: string; more: number } {
+export function fitFileTypes(patterns: readonly string[], fits: FitsColumn): { shown: string; more: number } {
   const quoted = patterns.map((pattern) => formatFilePatterns([pattern]));
   let count = quoted.length;
-  while (count > 1 && fittedLength(quoted, count) > budget) count--;
+  while (count > 1 && !fits(rowText(quoted, count))) count--;
   return { shown: quoted.slice(0, count).join(' '), more: quoted.length - count };
 }
 
-/** The characters of the first `count` file types and the "+N" of the rest. */
-function fittedLength(quoted: readonly string[], count: number): number {
+/** The row's text with the first `count` file types: them, then " +N" for the rest. */
+function rowText(quoted: readonly string[], count: number): string {
   const rest = quoted.length - count;
-  return quoted.slice(0, count).join(' ').length + (rest > 0 ? ` +${rest}`.length : 0);
+  return quoted.slice(0, count).join(' ') + (rest > 0 ? ` +${rest}` : '');
 }
 
 type ToolSide = Pick<MergeToolRowView, 'toolName' | 'toolDetail' | 'toolIcon' | 'missing' | 'toolTip'>;

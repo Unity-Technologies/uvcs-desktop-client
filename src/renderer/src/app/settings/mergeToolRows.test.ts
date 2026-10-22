@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MergeTool, MergeToolList, MergeToolRule } from '@shared/domain/mergeTools';
-import { commandLine, DEFAULT_FILES_BUDGET, EVERY_OTHER_FILE, filesBudget, fitFileTypes, mergeToolRows } from './mergeToolRows';
+import { commandLine, EVERY_OTHER_FILE, fitFileTypes, fitsWidth, GUESSED_FIT, mergeToolRows } from './mergeToolRows';
 
 const tool = (id: string, name = id, origin: MergeTool['origin'] = 'known'): MergeTool => ({
   id,
@@ -24,35 +24,31 @@ const UNITY = ['.unity', '.prefab', '.asset', '.mat', '.anim', '.controller', '.
 const reading = (rules: MergeToolRule[], mergeTool = 'auto', tools = list) =>
   mergeToolRows(rules, mergeTool, tools).map((row) => [row.files, row.moreFiles, row.toolName, row.toolDetail, row.missing]);
 
+/** A column `chars` characters of the code font wide, every character 7.2 pixels as the font draws them. */
+const column = (chars: number) => fitsWidth(chars * 7.2, (text) => text.length * 7.2);
+
 describe('fitFileTypes', () => {
-  it('shows every file type that fits, then how many more, the count counted in', () => {
-    expect(fitFileTypes(['.cs', '.vb', '.java'], 24)).toEqual({ shown: '.cs .vb .java', more: 0 });
-    expect(fitFileTypes(UNITY, 24)).toEqual({ shown: '.unity .prefab', more: 13 });
-    expect(fitFileTypes(UNITY, 30)).toEqual({ shown: '.unity .prefab .asset .mat', more: 11 });
+  it('shows every file type that fits the column, then " +N" for the rest, the count and its space counted in', () => {
+    expect(fitFileTypes(['.cs', '.vb', '.java'], column(24))).toEqual({ shown: '.cs .vb .java', more: 0 });
+    expect(fitFileTypes(UNITY, column(24))).toEqual({ shown: '.unity .prefab', more: 13 });
+    // ".unity .prefab .asset .mat +11" is 30 characters: it fits 30, not 29.
+    expect(fitFileTypes(UNITY, column(30))).toEqual({ shown: '.unity .prefab .asset .mat', more: 11 });
+    expect(fitFileTypes(UNITY, column(29))).toEqual({ shown: '.unity .prefab .asset', more: 12 });
+  });
+
+  it('fills most of a wide column: at the default Settings width, about 215 pixels', () => {
+    const { shown, more } = fitFileTypes(UNITY, fitsWidth(215, (text) => text.length * 7.2));
+    expect(`${shown} +${more}`.length * 7.2).toBeGreaterThan(215 * 0.8);
   });
 
   it('shows the first file type however long, and quotes one with a space', () => {
-    expect(fitFileTypes(['Assets/Very/Long/Folder/Name/**', '.cs'], 10)).toEqual({ shown: 'Assets/Very/Long/Folder/Name/**', more: 1 });
-    expect(fitFileTypes(['My Art/**'], 24)).toEqual({ shown: '"My Art/**"', more: 0 });
-    expect(fitFileTypes([], 24)).toEqual({ shown: '', more: 0 });
-  });
-});
-
-describe('filesBudget', () => {
-  it('holds as many characters as the column’s width in the code font, less one for the gap before the count', () => {
-    expect(filesBudget(300, 7.2)).toBe(40);
-    expect(filesBudget(144, 7.2)).toBe(19);
+    expect(fitFileTypes(['Assets/Very/Long/Folder/Name/**', '.cs'], column(10))).toEqual({ shown: 'Assets/Very/Long/Folder/Name/**', more: 1 });
+    expect(fitFileTypes(['My Art/**'], column(24))).toEqual({ shown: '"My Art/**"', more: 0 });
+    expect(fitFileTypes([], column(24))).toEqual({ shown: '', more: 0 });
   });
 
-  it('holds one character at least, and the default until the font was measured', () => {
-    expect(filesBudget(4, 7.2)).toBe(1);
-    expect(filesBudget(300, 0)).toBe(DEFAULT_FILES_BUDGET);
-  });
-
-  it('fits more file types, and a smaller count, in a wider column', () => {
-    const UNITY_ROW = ['.unity', '.prefab', '.asset', '.mat', '.anim', '.controller', '.overrideController', '.physicMaterial', '.lighting', '.mixer', '.playable', '.preset', '.spriteatlas', '.terrainlayer'];
-    expect(fitFileTypes(UNITY_ROW, filesBudget(300, 7.2))).toEqual({ shown: '.unity .prefab .asset .mat .anim', more: 9 });
-    expect(fitFileTypes(UNITY_ROW, filesBudget(144, 7.2))).toEqual({ shown: '.unity .prefab', more: 12 });
+  it('guesses about 24 characters until the column is measured', () => {
+    expect(fitFileTypes(UNITY, GUESSED_FIT)).toEqual({ shown: '.unity .prefab', more: 13 });
   });
 });
 
@@ -64,8 +60,8 @@ describe('commandLine', () => {
 });
 
 describe('mergeToolRows', () => {
-  it('fits each row’s file types to the budget given', () => {
-    const [row] = mergeToolRows([{ id: 'u', patterns: UNITY, toolId: 'unityyamlmerge' }], 'auto', list, 40);
+  it('fits each row’s file types to its column', () => {
+    const [row] = mergeToolRows([{ id: 'u', patterns: UNITY, toolId: 'unityyamlmerge' }], 'auto', list, column(40));
     expect([row!.files, row!.moreFiles]).toEqual(['.unity .prefab .asset .mat .anim', 10]);
   });
 

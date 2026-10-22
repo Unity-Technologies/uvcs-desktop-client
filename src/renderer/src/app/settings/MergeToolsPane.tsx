@@ -11,7 +11,7 @@ import { rowMenuEntries } from './mergeToolRules';
 import { EVERY_OTHER_FILE, mergeToolRows, type MergeToolRowView } from './mergeToolRows';
 import type { RuleTarget } from './mergeRuleDraft';
 import { SettingsGroup } from './SettingsGroup';
-import { useFilesBudget } from './useFilesBudget';
+import { useFilesFit } from './useFilesFit';
 import { saveSettings, useSettings } from './useSettings';
 import styles from './SettingsDialog.module.css';
 
@@ -19,8 +19,8 @@ import styles from './SettingsDialog.module.css';
 export function MergeToolsPane() {
   const list = useMergeTools();
   const { mergeTool, mergeToolRules, askWhenMergeToolClosesUnsaved } = useSettings();
-  const [filesCell, budget] = useFilesBudget();
-  const rows = mergeToolRows(mergeToolRules, mergeTool, list, budget);
+  const [filesCell, fits] = useFilesFit();
+  const rows = mergeToolRows(mergeToolRules, mergeTool, list, fits);
   const targetOf = (id: string): RuleTarget =>
     id === EVERY_OTHER_FILE ? { kind: 'everyOtherFile', mergeTool } : { kind: 'rule', rule: mergeToolRules.find((rule) => rule.id === id) ?? null };
   const saveRules = (rules: MergeToolRule[]): void => void saveSettings({ mergeToolRules: rules });
@@ -63,7 +63,7 @@ export function MergeToolsPane() {
 /** A row, read-only and one line: its file types, what opens them, and its "…" menu on hover or focus. Clicking it edits it. */
 interface MergeToolRowProps {
   row: MergeToolRowView;
-  /** On one row's files cell: how wide the files column is (`useFilesBudget`). */
+  /** On one row's files cell: how wide the files column is (`useFilesFit`). */
   filesRef?: (element: HTMLElement | null) => void;
   onEdit: () => void;
   menu: MenuEntry[];
@@ -76,7 +76,7 @@ function MergeToolRow({ row, filesRef, onEdit, menu }: MergeToolRowProps) {
       <button type="button" className={styles.ruleMain} onClick={onEdit} aria-label={`${row.filesTip ?? row.files}: ${row.toolName}. Edit`}>
         <span ref={filesRef} className={styles.ruleFiles} data-code={row.filesAreCode || undefined} data-tip={row.filesTip}>
           <span className={styles.ruleFilesShown}>{row.files}</span>
-          {row.moreFiles > 0 && <span className={styles.ruleFilesMore}>+{row.moreFiles}</span>}
+          {row.moreFiles > 0 && <span className={styles.ruleFilesMore}> +{row.moreFiles}</span>}
         </span>
         <span className={styles.ruleTool} data-missing={row.missing || undefined} data-tip={row.toolTip}>
           <span className={styles.ruleToolIcon}>{ToolIcon && <ToolIcon size={16} />}</span>
