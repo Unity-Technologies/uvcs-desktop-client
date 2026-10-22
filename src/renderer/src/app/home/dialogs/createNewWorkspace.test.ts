@@ -1,8 +1,6 @@
 import { commandFailure, fakeApi } from '../../../testing/fakeWindow';
 import { describe, expect, it, vi } from 'vitest';
-import { queryKeys } from '../../../api/queryKeys';
 import { shownToasts } from '../../../testing/operationOutcome';
-import { queryClient } from '../../queryClient';
 import { createNewWorkspace } from './createNewWorkspace';
 
 const name = 'game';
@@ -54,50 +52,26 @@ describe('createNewWorkspace', () => {
       expect(shownToasts()).toEqual([]);
     });
 
-    it("refreshes the server's repositories and the workspace list", async () => {
-      fakeApi.answer('repositories.create', () => 'game@acme@cloud');
+    it('makes only the workspace once an earlier try made the repository', async () => {
       fakeApi.answer('workspaces.create', () => created);
-      queryClient.setQueryData(queryKeys.repositories('acme@cloud'), []);
-      queryClient.setQueryData(queryKeys.workspaces, []);
 
-      await createNewWorkspace({ name, path, repository: newRepository }, () => {});
+      await createNewWorkspace({ name, path, repository: { ...newRepository, created: 'game@acme@cloud' } }, () => {});
 
-      expect(queryClient.getQueryState(queryKeys.repositories('acme@cloud'))?.isInvalidated).toBe(true);
-      expect(queryClient.getQueryState(queryKeys.workspaces)?.isInvalidated).toBe(true);
+      expect(fakeApi.argsOf('workspaces.create')).toEqual([[{ name, path, repository: 'game@acme@cloud' }]]);
+      expect(fakeApi.methods()).toEqual(['workspaces.create']);
     });
 
-    it('says the repository failed, and makes no workspace', async () => {
-      const open = vi.fn();
-      fakeApi.answer('repositories.create', () => {
-        throw commandFailure('The repository game already exists');
-      });
-
-      const outcome = await createNewWorkspace({ name, path, repository: newRepository }, open);
-
-      expect(outcome).toMatchObject({ kind: 'failed', title: "Couldn't create the repository" });
-      expect(outcome).not.toHaveProperty('createdRepository');
-      expect(fakeApi.methods()).toEqual(['repositories.create']);
-      expect(open).not.toHaveBeenCalled();
-    });
-
-    it('tells a repository made from a workspace that failed, so trying again makes only the workspace', async () => {
+    it('passes a failure on, naming the repository made, and opens nothing', async () => {
       const open = vi.fn();
       fakeApi.answer('repositories.create', () => 'game@acme@cloud');
       fakeApi.answer('workspaces.create', () => {
         throw commandFailure('The path is already in use');
       });
-      queryClient.setQueryData(queryKeys.repositories('acme@cloud'), []);
 
       const outcome = await createNewWorkspace({ name, path, repository: newRepository }, open);
 
       expect(outcome).toMatchObject({ kind: 'failed', title: 'Created game, but not its workspace', createdRepository: 'game@acme@cloud' });
-      expect(queryClient.getQueryState(queryKeys.repositories('acme@cloud'))?.isInvalidated).toBe(true);
       expect(open).not.toHaveBeenCalled();
-
-      const retried = await createNewWorkspace({ name, path, repository: { ...newRepository, created: 'game@acme@cloud' } }, open);
-
-      expect(retried).toMatchObject({ kind: 'failed' });
-      expect(fakeApi.methods()).toEqual(['repositories.create', 'workspaces.create', 'workspaces.create']);
     });
   });
 });
