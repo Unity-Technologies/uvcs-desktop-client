@@ -142,6 +142,8 @@ export const MENU_WORDS = {
   keepBoth: word('act', Files, 'Keep both'),
   // A conflicting file opened in a merge tool; the words name the tool ("Resolve in Visual Studio Code").
   resolveIn: word('act', Merge),
+  // The same, in any other tool, this once: the entries name the tools.
+  resolveWith: word('act', Merge, 'Resolve with'),
   // A conflicting file back to how the merge started it, the user's decision dropped.
   startOver: word('act', RotateCcw, 'Start over'),
   // A deleted item brought back as a pending change; the words name it ("Restore file", "Restore 3 items").

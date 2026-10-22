@@ -8,19 +8,9 @@ export interface ToolChoice {
 }
 
 /**
- * The merge tools behind a split button's caret, each with its app's icon, as a choice like Checkin's: the button's
- * tool is checked, and picking
- * another only makes it the button's tool (`select`, the preferred one). Nothing opens until the user clicks the button
- * that names it.
+ * Merge tools to open now, each with its app's icon: picking one opens the file (or starts the run) in it this once.
+ * The settings stay as they are: Settings › Merge says which tool each file opens in.
  */
-export function toolChoiceEntries(choices: ToolChoice[], selectedId: string | undefined, select: (toolId: string) => void): Action[] {
-  return choices.map(({ tool, label }) => ({
-    id: tool.id,
-    label,
-    icon: appIcon(tool),
-    checked: tool.id === selectedId,
-    run: () => {
-      if (tool.id !== selectedId) select(tool.id);
-    },
-  }));
+export function toolChoiceEntries(choices: ToolChoice[], open: (tool: MergeTool) => void): Action[] {
+  return choices.map(({ tool, label }) => ({ id: `tool.${tool.id}`, label, icon: appIcon(tool), run: () => open(tool) }));
 }

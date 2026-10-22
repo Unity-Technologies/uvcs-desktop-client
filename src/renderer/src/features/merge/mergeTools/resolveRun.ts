@@ -3,33 +3,52 @@ import { fileNameOf, listNames, pluralize } from '../../../lib/text';
 import type { FileConflictState } from '../resolve/useFileConflicts';
 import { waitsForTool } from './mergeToolOutcome';
 
-/** Resolving the files that wait for the user in one merge tool, one after the other. */
-export interface RunPlan {
+/** A file of a run, and the tool it opens in. */
+export interface RunStep {
+  key: string;
   tool: MergeTool;
-  /** The files it opens, in the list's order. */
-  keys: string[];
-  /** Binary files waiting for the user, which no tool opens: left to them. */
-  left: FileConflictState[];
 }
 
-/** What the tool would go through now. */
-export function planRun(states: FileConflictState[], tool: MergeTool): RunPlan {
+/** Resolving the files that wait for the user one after the other, each in a merge tool. */
+export interface RunPlan {
+  /** The files it opens, in the list's order. */
+  steps: RunStep[];
+  /** Binary files waiting for the user, which no tool opens: left to them. */
+  left: FileConflictState[];
+  /** The tool picked for this run alone ("All in <tool>"); null when each file opens in its own (`mergeToolFor`). */
+  picked: MergeTool | null;
+}
+
+/** The tool a file opens in (`useMergeToolFor`); none when no tool was found. */
+export type ToolForFile = (state: FileConflictState) => MergeTool | undefined;
+
+/** What a run would go through now: each file in its own tool, or every one in the tool `picked`. */
+export function planRun(states: FileConflictState[], toolFor: ToolForFile, picked: MergeTool | null = null): RunPlan {
   const waiting = states.filter((state) => state.status === 'ready' && !state.resolution && !state.openTool);
-  return {
-    tool,
-    keys: waiting.filter(waitsForTool).map((state) => state.file.key),
-    left: waiting.filter((state) => !waitsForTool(state)),
-  };
+  const steps = waiting.filter(waitsForTool).flatMap((state) => {
+    const tool = picked ?? toolFor(state);
+    return tool ? [{ key: state.file.key, tool }] : [];
+  });
+  return { steps, left: waiting.filter((state) => !waitsForTool(state)), picked };
+}
+
+/** Every file of the run opens in this tool (picked for it, or each file's own being the same); null when they differ. */
+export function runTool(plan: RunPlan): MergeTool | null {
+  if (plan.picked) return plan.picked;
+  const [first, ...others] = plan.steps;
+  return first && others.every((step) => step.tool.id === first.tool.id) ? first.tool : null;
 }
 
 /**
- * The runs on offer, the preferred tool's first (else the first tool's), while any file waits for a tool; none
- * otherwise.
+ * The runs on offer while any file waits for a tool: each file in its own tool first, then every file in one tool,
+ * for each other tool. None otherwise.
  */
-export function runPlans(states: FileConflictState[], tools: MergeTool[], preferredId: string | null): RunPlan[] {
-  const plans = tools.map((tool) => planRun(states, tool)).filter((plan) => plan.keys.length > 0);
-  const first = plans.find((plan) => plan.tool.id === preferredId) ?? plans[0];
-  return first ? [first, ...plans.filter((plan) => plan !== first)] : [];
+export function runPlans(states: FileConflictState[], tools: MergeTool[], toolFor: ToolForFile): RunPlan[] {
+  const byFile = planRun(states, toolFor);
+  if (byFile.steps.length === 0) return [];
+  const sameTool = runTool(byFile);
+  const allIn = tools.filter((tool) => tool.id !== sameTool?.id).map((tool) => planRun(states, toolFor, tool));
+  return [byFile, ...allIn];
 }
 
 /** Why some files stay out of the run, e.g. "Binary files keep one version: logo.png is left to you". */
@@ -102,29 +121,44 @@ export interface RunEnding {
  */
 export function runSummary(ending: RunEnding, plan: RunPlan): { kind: 'success' | 'info'; title: string; detail?: string } {
   const { resolved, total, stopped } = ending;
-  const tool = plan.tool.name;
+  const tool = runTool(plan)?.name ?? null;
   const waiting = total - resolved;
   const by = resolvedBy(ending, tool);
   const title =
     resolved === total
       ? `Resolved ${allOf(total)}${by}`
       : stopped && resolved === 0
-        ? `Stopped resolving in ${tool}`
+        ? `Stopped resolving ${tool ? `in ${tool}` : 'one by one'}`
         : `${stopped ? 'Stopped: resolved' : 'Resolved'} ${resolved} of ${total}${by}`;
   const detail = [waiting > 0 && `${waiting} still ${waiting === 1 ? 'needs' : 'need'} you.`, leftOutNote(plan) && `${leftOutNote(plan)}.`].filter(Boolean).join(' ');
   return { kind: resolved === total ? 'success' : 'info', title, ...(detail && { detail }) };
 }
 
-/** "Resolve 5 conflicts in FakeMerge". */
+/** "Resolve 5 conflicts in FakeMerge", or "Resolve 5 conflicts one by one" when they open in different tools. */
 export function runLabel(plan: RunPlan): string {
-  return `Resolve ${pluralize(plan.keys.length, 'conflict')} in ${plan.tool.name}`;
+  const tool = runTool(plan);
+  return `Resolve ${pluralize(plan.steps.length, 'conflict')} ${tool ? `in ${tool.name}` : 'one by one'}`;
 }
 
-/** " in VS Code", " with Smart Merge", or ": 2 with Smart Merge, 1 in VS Code". */
-function resolvedBy({ resolved, withSmartMerge }: RunEnding, tool: string): string {
-  if (withSmartMerge === 0) return ` in ${tool}`;
+/** The button's tooltip: where the files open, and how to go on. */
+export function runTip(plan: RunPlan): string {
+  const tool = runTool(plan);
+  return `Opens each file in ${tool ? tool.name : 'its merge tool'} in turn: save and close it there to get the next`;
+}
+
+/** A run of every file in one tool, behind the button's caret: "All in Meld · 5 conflicts". */
+export function allInLabel(plan: RunPlan): string {
+  return `All in ${plan.picked?.name ?? ''} · ${pluralize(plan.steps.length, 'conflict')}`;
+}
+
+/**
+ * " in VS Code", " with Smart Merge", or ": 2 with Smart Merge, 1 in VS Code"; with files in different tools, nothing
+ * or "…, 1 in merge tools".
+ */
+function resolvedBy({ resolved, withSmartMerge }: RunEnding, tool: string | null): string {
+  if (withSmartMerge === 0) return tool ? ` in ${tool}` : '';
   if (withSmartMerge === resolved) return ` with ${SMART_MERGE_NAME}`;
-  return `: ${withSmartMerge} with ${SMART_MERGE_NAME}, ${resolved - withSmartMerge} in ${tool}`;
+  return `: ${withSmartMerge} with ${SMART_MERGE_NAME}, ${resolved - withSmartMerge} in ${tool ?? 'merge tools'}`;
 }
 
 function allOf(total: number): string {

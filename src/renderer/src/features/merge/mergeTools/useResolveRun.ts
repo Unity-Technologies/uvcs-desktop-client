@@ -6,10 +6,12 @@ import type { FileConflictState } from '../resolve/useFileConflicts';
 import { waitsForTool } from './mergeToolOutcome';
 import { stopMergeToolSession } from './mergeToolSessions';
 import { resolveOneByOne, runEndMessage, stopRun, type RunControl, type RunEnd } from './resolveOneByOne';
-import { planRun, type RunPlan, type RunProgress } from './resolveRun';
+import { planRun, type RunPlan, type RunProgress, type ToolForFile } from './resolveRun';
 
 interface ResolveRunOptions {
   states: FileConflictState[];
+  /** The tool each file opens in, unless the run is started in one picked for it. */
+  toolFor: ToolForFile;
   resolveInTool: (key: string, tool: MergeTool, quiet: boolean) => Promise<MergeToolOutcome | null>;
   /** A file opens in the tool: `previousKey` is the one before it, if any, to follow the run with the selection. */
   onOpen: (key: string, previousKey: string | undefined) => void;
@@ -20,7 +22,8 @@ interface ResolveRunOptions {
 /** What the page can do with the run. */
 export interface ResolveRun {
   progress: RunProgress | null;
-  start: (tool: MergeTool) => void;
+  /** Starts with each file in its own tool, or every one in the tool `picked` for this run alone. */
+  start: (picked: MergeTool | null) => void;
   /** Closes the tool on the file open (what it saved so far counts) and opens the next. */
   skip: () => void;
   /** Goes on with the next file after one was closed unsaved. */
@@ -31,22 +34,22 @@ export interface ResolveRun {
 type Ended = { plan: RunPlan; end: RunEnd };
 
 /**
- * Resolves every file waiting for the user in one merge tool, one after the other: the next opens once the user saves
- * and closes the one before. Never more than one tool open; files decided meanwhile are skipped; a file closed unsaved
+ * Resolves every file waiting for the user in a merge tool, one after the other: the next opens once the user saves
+ * and closes the one before. Each opens in its own tool, or all in one picked for the run. Never more than one tool open; files decided meanwhile are skipped; a file closed unsaved
  * asks whether to go on (or goes on, as the settings say); a tool that fails to open stops the run.
  */
-export function useResolveRun({ states, resolveInTool, onOpen, onEnd }: ResolveRunOptions): ResolveRun {
+export function useResolveRun({ states, toolFor, resolveInTool, onOpen, onEnd }: ResolveRunOptions): ResolveRun {
   const { askWhenMergeToolClosesUnsaved } = useSettings();
   const [progress, setProgress] = useState<RunProgress | null>(null);
   const [ended, setEnded] = useState<Ended>();
   const control = useRef<RunControl | null>(null);
-  const latest = useRef({ states, askWhenMergeToolClosesUnsaved, onOpen, resolveInTool });
-  latest.current = { states, askWhenMergeToolClosesUnsaved, onOpen, resolveInTool };
+  const latest = useRef({ states, toolFor, askWhenMergeToolClosesUnsaved, onOpen, resolveInTool });
+  latest.current = { states, toolFor, askWhenMergeToolClosesUnsaved, onOpen, resolveInTool };
 
-  const start = useCallback(async (tool: MergeTool): Promise<void> => {
+  const start = useCallback(async (picked: MergeTool | null): Promise<void> => {
     if (control.current || latest.current.states.some((state) => state.openTool)) return;
-    const plan = planRun(latest.current.states, tool);
-    if (plan.keys.length === 0) return;
+    const plan = planRun(latest.current.states, latest.current.toolFor, picked);
+    if (plan.steps.length === 0) return;
     const run: RunControl = { stopped: false };
     control.current = run;
     const end = await resolveOneByOne(plan, run, {
@@ -56,7 +59,7 @@ export function useResolveRun({ states, resolveInTool, onOpen, onEnd }: ResolveR
       },
       show: setProgress,
       open: (key, previousKey) => latest.current.onOpen(key, previousKey),
-      resolve: (key) => latest.current.resolveInTool(key, tool, true),
+      resolve: (key, tool) => latest.current.resolveInTool(key, tool, true),
       asksWhenClosedUnsaved: () => latest.current.askWhenMergeToolClosesUnsaved,
     });
     if (control.current !== run) return; // Left the page meanwhile.
@@ -104,5 +107,5 @@ export function useResolveRun({ states, resolveInTool, onOpen, onEnd }: ResolveR
     stopRun(run);
   };
 
-  return { progress, start: (tool) => void start(tool), skip, proceed, stop };
+  return { progress, start: (picked) => void start(picked), skip, proceed, stop };
 }

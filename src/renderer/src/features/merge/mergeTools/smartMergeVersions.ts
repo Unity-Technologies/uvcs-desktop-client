@@ -9,9 +9,14 @@ import type { FileConflictState } from '../resolve/useFileConflicts';
  * nothing from `cm`. An untouched file holds the automatic merge as its decision, which isn't the user's.
  */
 export function smartMergeVersions(state: FileConflictState): Omit<SmartMergeRequest, 'sessionId'> | null {
-  if (state.decidedByUser || state.isBinary || !state.contents) return null;
-  const { base, source, destination } = state.contents;
-  if (source.text === undefined || destination.text === undefined) return null;
-  if (!isUnityYaml(source.text) || !isUnityYaml(destination.text)) return null;
-  return { path: state.file.path, base: base.text ?? '', yours: destination.text, incoming: source.text };
+  if (state.decidedByUser || !isUnityAsset(state)) return null;
+  const { base, source, destination } = state.contents!;
+  return { path: state.file.path, base: base.text ?? '', yours: destination.text!, incoming: source.text! };
+}
+
+/** Both sides are Unity assets (Unity's YAML header, whatever the extension), which Smart Merge merges first. */
+export function isUnityAsset(state: FileConflictState): boolean {
+  if (state.isBinary || !state.contents) return false;
+  const { source, destination } = state.contents;
+  return source.text !== undefined && destination.text !== undefined && isUnityYaml(source.text) && isUnityYaml(destination.text);
 }

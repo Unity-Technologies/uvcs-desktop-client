@@ -69,7 +69,8 @@ function context(more: Partial<MergeMenuContext> = {}): MergeMenuContext {
     progress: mergeProgress([], []),
     labels,
     itemTypeOf: () => 'file',
-    preferredTool: vscode,
+    toolFor: () => vscode,
+    tools: [vscode],
     running: false,
     decide: vi.fn(),
     reset: vi.fn(),
@@ -111,7 +112,7 @@ describe('mergeItemMenu', () => {
     ]);
   });
 
-  it('opens a conflicting file in the preferred merge tool, and offers starting over once the user decided it', () => {
+  it('opens a conflicting file in its own merge tool, and offers starting over once the user decided it', () => {
     const resolveIn = vi.fn();
     const menu = menuOf([conflict('src/a.ts', { decidedByUser: true })], { resolveIn });
     expect((entry(menu, 'resolveIn') as Action).label).toBe('Resolve in Visual Studio Code');
@@ -122,8 +123,29 @@ describe('mergeItemMenu', () => {
 
   it("offers no merge tool for a binary file, nor without one, and disables it while files resolve one by one", () => {
     expect(ids(menuOf([conflict('a.png', { isBinary: true })]))).not.toContain('resolveIn');
-    expect(ids(menuOf([conflict('src/a.ts')], { preferredTool: undefined }))).not.toContain('resolveIn');
+    expect(ids(menuOf([conflict('src/a.ts')], { toolFor: () => undefined, tools: [] }))).not.toContain('resolveIn');
     expect((entry(menuOf([conflict('src/a.ts')], { running: true }), 'resolveIn') as Action).disabled).toBe(true);
+  });
+
+  it('opens each file in the tool its settings give it, and in any other this once from "Resolve with"', () => {
+    const rider = { id: 'rider', name: 'JetBrains Rider', canBringToFront: true } as MergeTool;
+    const meld = { id: 'meld', name: 'Meld', canBringToFront: false } as MergeTool;
+    const resolveIn = vi.fn();
+    const toolFor = (state: FileConflictState) => (state.file.path.endsWith('.cs') ? rider : vscode);
+    const menu = menuOf([conflict('src/Player.cs')], { toolFor, tools: [vscode, rider, meld], resolveIn });
+
+    expect((entry(menu, 'resolveIn') as Action).label).toBe('Resolve in JetBrains Rider');
+    expect(ids(menu).slice(ids(menu).indexOf('resolveIn'), ids(menu).indexOf('resolveIn') + 2)).toEqual(['resolveIn', 'resolveWith']);
+    const others = (entry(menu, 'resolveWith') as Submenu).entries as Action[];
+    expect(others.map((other) => other.label)).toEqual(['Visual Studio Code', 'Meld']);
+    others[1]!.run();
+    expect(resolveIn).toHaveBeenCalledWith('/src/Player.cs', meld);
+  });
+
+  it('offers no other tool with only one, nor while files resolve one by one', () => {
+    const rider = { id: 'rider', name: 'JetBrains Rider' } as MergeTool;
+    expect(ids(menuOf([conflict('src/a.ts')]))).not.toContain('resolveWith');
+    expect(ids(menuOf([conflict('src/a.ts')], { tools: [vscode, rider], running: true }))).not.toContain('resolveWith');
   });
 
   it("opens a conflict's incoming and base versions from the repository, and yours from the workspace", async () => {

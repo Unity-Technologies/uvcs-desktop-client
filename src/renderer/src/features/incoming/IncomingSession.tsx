@@ -16,7 +16,7 @@ import { conflictStepKeys } from '../merge/conflictSteps';
 import { fileConflictStatus, fileConflictTool } from '../merge/mergeStatus';
 import { ResolveRunControl, useRunOffer } from '../merge/mergeTools/ResolveRunControl';
 import { useResolveRun } from '../merge/mergeTools/useResolveRun';
-import { primaryMergeTool, useMergeTools } from '../merge/mergeTools/useMergeTools';
+import { useMergeToolFor, useMergeTools } from '../merge/mergeTools/useMergeTools';
 import { FileConflictPanel } from '../merge/resolve/FileConflictPanel';
 import { useFileConflicts } from '../merge/resolve/useFileConflicts';
 import { IncomingChangesetList } from './IncomingChangesetList';
@@ -56,7 +56,8 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   selectionRef.current = selection;
   const { changesetsCollapsed, toggleChangesets } = useIncomingViewStore();
   const changesetList = useIncomingChangesetList(incoming);
-  const mergeTools = useMergeTools();
+  const { tools } = useMergeTools();
+  const toolFor = useMergeToolFor();
 
   const conflictPaths = useMemo(() => new Set(incoming.conflicts.map((conflict) => conflict.path)), [incoming.conflicts]);
   const blockedPaths = useMemo(() => new Set(incoming.blockedPaths), [incoming.blockedPaths]);
@@ -70,7 +71,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
     setShowsChangeset(false);
     setSelection(singleSelection(key));
   }, []);
-  const run = useResolveRun({ states, resolveInTool, onOpen: followRun, onEnd: () => undefined });
+  const run = useResolveRun({ states, toolFor, resolveInTool, onOpen: followRun, onEnd: () => undefined });
   const runPlans = useRunOffer(states, run);
   const [updating, setUpdating] = useState(false);
 
@@ -127,10 +128,9 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const menuContext = { workspacePath, loadedChangeset: incoming.loadedChangeset, loadedBranch: incoming.branch ?? undefined };
   const scopedChangeset = scope.kind === 'changeset' ? changesetList.changesets.find((changeset) => changeset.id === scope.id) : undefined;
   // Conflicts are settled in the whole update, the merge updating makes; a changeset's files are what it did.
-  const preferredTool = primaryMergeTool(mergeTools);
   const conflictOf = (path: string) => (conflictPaths.has(path) ? states.find((state) => state.file.key === path) : undefined);
   const fileMenu = (selected: DiffEntry[]) =>
-    incomingFileMenu(selected, { workspacePath, scope, loadedChangeset: incoming.loadedChangeset, headChangeset: incoming.headChangeset, conflictOf, preferredTool, running: Boolean(run.progress), decide, reset, resolveIn: (key, tool) => void resolveInTool(key, tool) });
+    incomingFileMenu(selected, { workspacePath, scope, loadedChangeset: incoming.loadedChangeset, headChangeset: incoming.headChangeset, conflictOf, toolFor, tools, running: Boolean(run.progress), decide, reset, resolveIn: (key, tool) => void resolveInTool(key, tool) });
   const selectedConflict = scope.kind === 'all' && focusedFile ? states.find((state) => state.file.key === focusedFile.path) : undefined;
   // A binary's versions are read only while it shows.
   const shownConflictKey = selectedConflict?.file.key;

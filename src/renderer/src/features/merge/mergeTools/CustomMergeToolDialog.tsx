@@ -17,8 +17,8 @@ const DEFAULT_ARGS = ['{base}', '{yours}', '{incoming}', '{result}'];
 
 export const PLACEHOLDER_HINT = '{base} {yours} {incoming} and {result}, where the tool saves; {baseName} {yoursName} {incomingName} name them.';
 
-/** Asks for a merge app to add; it becomes the preferred one. The tool, or undefined if cancelled. */
-export async function addMergeToolAndPick(): Promise<MergeTool | undefined> {
+/** Asks for a merge app to add, for the caller to open or pick it. The tool, or undefined if cancelled. */
+export async function addMergeTool(): Promise<MergeTool | undefined> {
   const id = await askDialog<string>((finish) => <CustomMergeToolDialog finish={finish} />);
   if (!id) return undefined;
   return (await api.mergeTools.list()).tools.find((tool) => tool.id === id);

@@ -4,6 +4,7 @@ import type { MenuEntry } from '../../lib/actions';
 import { diffEntryMenu } from '../diff/diffEntryMenu';
 import { conflictMenuEntries, withConflictOpening } from '../merge/resolve/conflictMenuEntries';
 import type { FileConflictDecision } from '../merge/resolve/fileConflictDecision';
+import type { ToolForFile } from '../merge/mergeTools/resolveRun';
 import type { FileConflictState } from '../merge/resolve/useFileConflicts';
 import { incomingDiffTarget, type IncomingScope } from './incomingScope';
 import { UPDATE_LABELS } from './updateConflictFiles';
@@ -16,8 +17,10 @@ export interface IncomingFileMenuContext {
   headChangeset: number;
   /** The conflict of a path changed on both sides, by its path; none for the others. */
   conflictOf: (path: string) => FileConflictState | undefined;
-  /** The tool "Resolve in…" opens; none when no merge tool was found. */
-  preferredTool: MergeTool | undefined;
+  /** The tool each file opens in (`useMergeToolFor`); none when no merge tool was found. */
+  toolFor: ToolForFile;
+  /** Every merge tool found, for "Resolve with ▸". */
+  tools: MergeTool[];
   /** Files resolve one by one in a tool: no other opens meanwhile. */
   running: boolean;
   decide: (key: string, decision: FileConflictDecision) => void;

@@ -4,10 +4,10 @@ import { openSettingsDialogAt } from '../../../app/settings/SettingsDialog';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../../lib/actions';
 import { SplitButton } from '../../../ui/SplitButton';
 import type { FileConflictState } from '../resolve/useFileConflicts';
-import { addMergeToolAndPick } from './CustomMergeToolDialog';
+import { addMergeTool } from './CustomMergeToolDialog';
 import type { RunProgress } from './resolveRun';
 import { toolChoiceEntries } from './toolChoices';
-import { preferMergeTool, primaryMergeTool, useMergeTools } from './useMergeTools';
+import { useMergeToolFor, useMergeTools } from './useMergeTools';
 
 /** What the page offers to do with merge tools, for the file at hand. */
 export interface ConflictToolActions {
@@ -29,29 +29,27 @@ interface MergeToolButtonProps {
 }
 
 /**
- * "Resolve in <tool>", for a text file: the preferred merge tool, with the others found behind the caret. Picking one
- * there (or adding one) only makes it the button's tool, the preferred one from then on (`toolChoiceEntries`). Nothing
- * opens until the user clicks the button.
+ * "Resolve in <tool>", for a text file: the tool it opens in by Settings › Merge (`useMergeToolFor`), with the other
+ * tools found behind the caret. Picking one there (or adding one) opens the file in it at once, this once: the settings
+ * stay as they are.
  */
 export function MergeToolButton({ state, actions, onEditInApp, editInAppUnavailable = null, variant = 'primary' }: MergeToolButtonProps) {
-  const mergeTools = useMergeTools();
-  const { tools } = mergeTools;
-  const primary = primaryMergeTool(mergeTools);
+  const { tools } = useMergeTools();
+  const primary = useMergeToolFor()(state);
   const resolve = (tool: MergeTool): void => actions.resolveIn(state.file.key, tool);
   const addAppAndResolve = async (): Promise<void> => {
-    const added = await addMergeToolAndPick();
+    const added = await addMergeTool();
     if (added) resolve(added);
   };
   const running = actions.run ? `Resolving one by one in ${actions.run.toolName}` : undefined;
 
   const menu: MenuEntry[] = tidyMenu([
     ...toolChoiceEntries(
-      tools.map((tool) => ({ tool, label: tool.name })),
-      primary?.id,
-      (toolId) => void preferMergeTool(toolId),
+      tools.filter((tool) => tool.id !== primary?.id).map((tool) => ({ tool, label: tool.name })),
+      resolve,
     ),
     SEPARATOR,
-    { id: 'addApp', label: 'Choose another app…', icon: FolderOpen, run: () => void addMergeToolAndPick() },
+    { id: 'addApp', label: 'Choose another app…', icon: FolderOpen, run: () => void addAppAndResolve() },
     {
       id: 'editInApp',
       label: 'Edit the text in the app',
