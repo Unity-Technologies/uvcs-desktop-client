@@ -129,10 +129,19 @@ export class PendingChangesReader {
   }
 }
 
+/**
+ * Where `cm status --xml` listed each kind: its categories in their order (changed, deleted, moved, added), an item in
+ * several merged in that order. The kinds of an item printed twice keep it.
+ */
+const XML_CATEGORY: Partial<Record<ChangeKind, number>> = { deleted: 1, locallyDeleted: 1, moved: 2, locallyMoved: 2, added: 3, private: 3, ignored: 3 };
+const categoryRank = (kind: ChangeKind): number => XML_CATEGORY[kind] ?? 0;
+
 /** `listed` with what `other`, the same item printed again, adds: its kinds, and whatever `listed` doesn't say. */
 function withTheOther(listed: PendingChange, other: PendingChange): void {
   // A new array: kinds are shared by every change with the same codes.
-  if (other.kinds.some((kind) => !listed.kinds.includes(kind))) listed.kinds = [...new Set([...listed.kinds, ...other.kinds])];
+  if (other.kinds.some((kind) => !listed.kinds.includes(kind))) {
+    listed.kinds = [...new Set([...listed.kinds, ...other.kinds])].sort((a, b) => categoryRank(a) - categoryRank(b));
+  }
   // Only the fields it has: nothing empty goes over IPC.
   for (const field of ['oldPath', 'similarityPercent', 'mergeInfo', 'changelist'] as const) {
     if (listed[field] === undefined && other[field] !== undefined) Object.assign(listed, { [field]: other[field] });
