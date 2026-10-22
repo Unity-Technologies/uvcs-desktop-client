@@ -60,12 +60,21 @@
   line-height: 1.5;
 }
 
-.select {
+/* A text field with suggestions (`list`, a `<datalist>`) is an editable combobox: it wears the select's chevron. */
+.select,
+.input[list] {
   padding-right: 26px;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b8e98' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 8px center;
+}
+
+/* Chromium's own arrow for the suggestions, a black triangle in either theme, gives way to the chevron above; it stays
+   clickable, so a click there still opens the suggestions. */
+.input[list]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  cursor: pointer;
 }
 
 .search {
