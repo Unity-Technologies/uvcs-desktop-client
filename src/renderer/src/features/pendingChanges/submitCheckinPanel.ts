@@ -21,6 +21,8 @@ export interface PanelCheckin {
   workspacePath: string;
   /** The checked changes the filter shows (`checkinSelectionOf`). */
   included: PendingChange[];
+  /** How many checked changes the filter hides: a prepared changelist holds for them. */
+  hiddenIncludedCount: number;
   /** How many changes are pending in all: checking them all in leaves Changes empty. */
   pendingCount: number;
   /** The incoming check saw the branch move on: the check-in updates first. */
@@ -51,20 +53,38 @@ export async function checkinFromPanel(request: PanelCheckin, whileRunning: Whil
   );
   if (!checkedIn) return 'notCheckedIn';
   useCheckinDraftStore.getState().clearMessage(workspacePath);
-  useCheckinDraftStore.getState().endPrepared(workspacePath);
+  endPreparedUnlessHidden(workspacePath, request.hiddenIncludedCount);
   return 'checkedIn';
+}
+
+/** What the check-in panel's shelve takes. */
+export interface PanelShelve {
+  workspacePath: string;
+  /** What a shelve takes of the checked changes the filter shows. */
+  shelvable: PendingChange[];
+  /** How many checked changes the filter hides: a prepared changelist holds for them. */
+  hiddenIncludedCount: number;
 }
 
 /**
  * The check-in panel's shelve, with the draft's comment, of the files as they are on disk (as a check-in takes them).
  * Shelved away, the changes take their comment along; kept here, it stays for their check-in. True once shelved.
  */
-export async function shelveFromPanel(workspacePath: string, shelvable: PendingChange[], keep: boolean, whileRunning: WhileRunning = justRun): Promise<boolean> {
+export async function shelveFromPanel(request: PanelShelve, keep: boolean, whileRunning: WhileRunning = justRun): Promise<boolean> {
+  const { workspacePath, shelvable } = request;
   if (!(await settleBeforeLeaving())) return false;
   const shelved = await whileRunning(() => shelveChanges(workspacePath, shelvable, joinComment(checkinDraftOf(workspacePath)), keep));
   if (shelved && !keep) useCheckinDraftStore.getState().clearMessage(workspacePath);
-  if (shelved) useCheckinDraftStore.getState().endPrepared(workspacePath);
+  if (shelved) endPreparedUnlessHidden(workspacePath, request.hiddenIncludedCount);
   return shelved;
+}
+
+/**
+ * Ends a prepared changelist once checked in or shelved, unless the filter hid some of its checked files: those are
+ * still to go in, checked alone. Files the user unchecked by hand were left out on purpose, and don't keep it going.
+ */
+function endPreparedUnlessHidden(workspacePath: string, hiddenIncludedCount: number): void {
+  if (hiddenIncludedCount === 0) useCheckinDraftStore.getState().endPrepared(workspacePath);
 }
 
 /** Asked before a check-in without a comment, when the setting says to. */

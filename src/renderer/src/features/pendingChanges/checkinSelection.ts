@@ -7,6 +7,8 @@ export interface CheckinSelection {
   isIncluded: (change: PendingChange) => boolean;
   /** The checked changes the filter shows: those it hides stay out of the check-in, still checked for when they show again. */
   included: PendingChange[];
+  /** How many checked changes the filter hides. */
+  hiddenIncludedCount: number;
   upload: UploadSummary;
   /** What a shelve takes of them: private files stay out. */
   shelvable: PendingChange[];
@@ -71,16 +73,27 @@ export function withIncluded(choice: CheckinChoice, paths: string[], included: b
 }
 
 /**
- * What a check-in takes of the changes the filter shows (`shownChanges`), and what follows from it: what it uploads,
- * what a shelve takes, bulk private files. What you see is what goes in: a checked change the filter hides could slip a
- * private file into a changeset unseen, while one left out stays pending and shows again once the filter clears.
+ * The changes Changes lists: all of them, and those its text and status filters show (`useChangeFilter`'s `visible`,
+ * the very list when nothing filters). Review mode's "Unreviewed" filter isn't one of them: it hides each file as it's
+ * reviewed, and those are the ones to check in.
  */
-export function checkinSelectionOf(shownChanges: PendingChange[], isIncluded: (change: PendingChange) => boolean): CheckinSelection {
-  const included = shownChanges.filter(isIncluded);
+export interface ListedChanges {
+  all: PendingChange[];
+  matchingFilter: PendingChange[];
+}
+
+/**
+ * What a check-in takes of the changes the filter shows, and what follows from it: what it uploads, what a shelve
+ * takes, bulk private files. What you see is what goes in: a checked change the filter hides could slip a private file
+ * into a changeset unseen, while one left out stays pending and shows again once the filter clears.
+ */
+export function checkinSelectionOf({ all, matchingFilter }: ListedChanges, isIncluded: (change: PendingChange) => boolean): CheckinSelection {
+  const included = matchingFilter.filter(isIncluded);
   const shelvable = included.filter(isShelvable);
   return {
     isIncluded,
     included,
+    hiddenIncludedCount: matchingFilter === all ? 0 : all.filter(isIncluded).length - included.length,
     upload: uploadSummary(included),
     shelvable,
     shelvableUpload: uploadSummary(shelvable),

@@ -21,6 +21,8 @@ interface ChangelistCheckin {
   changes: PendingChange[];
   /** Every user changelist: a comment one of their descriptions filled is no comment of the user's. */
   changelists: Changelist[];
+  /** Clears Changes' filters, "Unreviewed" too: a check-in takes only what they show, and all the changelist goes in. */
+  clearFilter: () => void;
 }
 
 /**
@@ -30,7 +32,8 @@ interface ChangelistCheckin {
  * comment and presses the panel's button, so a changelist goes through the check-in every other does (the
  * empty-comment warning, "Update & check in", the question about piles of private files).
  */
-export function prepareChangelistCheckin({ workspacePath, changelist, changes, changelists }: ChangelistCheckin): void {
+export function prepareChangelistCheckin({ workspacePath, changelist, changes, changelists, clearFilter }: ChangelistCheckin): void {
+  clearFilter();
   const store = useCheckinDraftStore.getState();
   store.prepareChangelist(workspacePath, { name: changelist.name, paths: new Set(changes.map((change) => change.path)) });
   if (!userWroteComment(workspacePath, changelists)) store.setMessage(workspacePath, splitComment(changelist.description));

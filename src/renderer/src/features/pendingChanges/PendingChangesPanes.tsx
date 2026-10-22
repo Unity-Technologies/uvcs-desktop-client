@@ -101,9 +101,9 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
     review.showAll();
   };
   const { rows, changesByKey, fileKeys, checkboxInset, toggleCollapsed } = useChangeRows({ changes, changelists, layout, grouping, scope: folderListScope(workspacePath, 'changes') });
-  // The text and status filters narrow the check-in; the "Unreviewed" filter doesn't: it hides each file as it's
-  // reviewed, and those are the ones to check in.
-  const { isIncluded, included, upload, shelvable, shelvableUpload, bulkPrivate } = useCheckinSelection(allChanges, filtered, checkinChoice);
+  // The sorted list, which the filter gives back as it is when nothing filters: nothing is hidden to count.
+  const listed = useMemo(() => ({ all: sorted, matchingFilter: filtered }), [sorted, filtered]);
+  const { isIncluded, included, hiddenIncludedCount, upload, shelvable, shelvableUpload, bulkPrivate } = useCheckinSelection(listed, checkinChoice);
   const reviewed = useMemo(() => reviewProgress(included, review.statusOf), [included, review.statusOf]);
   const { mergeChanges, onlyNeverCheckedIn } = useMemo(
     () => ({ mergeChanges: allChanges.filter((change) => change.mergeInfo), onlyNeverCheckedIn: allChanges.length > 0 && matchesBranch(allChanges) }),
@@ -113,7 +113,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const behind = behindBranch(incomingSummary, branchName, mergeChanges.length > 0);
   const checkinAfterUpdate = useCheckinAfterUpdate(workspacePath, workspace, branchName, included.length);
   const submit = useCheckinPanelSubmit(
-    { workspacePath, included, pendingCount: allChanges.length, behind: behind !== null, bulkPrivate, warnOnEmptyComment: settings.warnOnEmptyComment },
+    { workspacePath, included, hiddenIncludedCount, pendingCount: allChanges.length, behind: behind !== null, bulkPrivate, warnOnEmptyComment: settings.warnOnEmptyComment },
     shelvable,
     summaryRef,
   );
@@ -149,12 +149,10 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const toggleIncluded = (toggled: ChangeRow[], include: boolean): void => setIncludedChanges(toggled.flatMap(changesUnderRow), include);
 
   // The changelist's changes checked alone, then the caret after the comment: writing or reading it is the way on.
-  // The filter clears, as a check-in takes only what it shows: every file of the changelist shows and goes in.
   const prepareChangelist = (changelist: Changelist, mode: CheckinMode): void => {
     // Rendered at once, so the summary holds the comment before the caret goes after it.
     flushSync(() => {
-      clearChangeFilter();
-      prepareChangelistCheckin({ workspacePath, changelist, changes: changelistChanges.get(changelist.name) ?? NO_CHANGES, changelists });
+      prepareChangelistCheckin({ workspacePath, changelist, changes: changelistChanges.get(changelist.name) ?? NO_CHANGES, changelists, clearFilter });
       setCheckinMode(mode);
     });
     focusAtEnd(summaryRef.current);
