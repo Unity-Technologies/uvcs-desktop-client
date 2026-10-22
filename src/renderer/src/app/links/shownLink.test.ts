@@ -1,7 +1,7 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import { VIEW_IDS } from '../navigation/views';
-import { copyLinkLabel, linkToCopy, pageLinkTarget, shownFileOf, viewLinkTarget } from './shownLink';
+import { copyLinkLabel, hasLinkToCopy, linkToCopy, pageLinkTarget, shownFileOf, viewLinkTarget } from './shownLink';
 
 const LINES = { side: 'new', first: 40, last: 52 } as const;
 
@@ -12,8 +12,9 @@ describe('pageLinkTarget', () => {
     expect(pageLinkTarget(page, null)).toEqual({ object: { kind: 'changeset', id: 12 }, page: { kind: 'diffFile', path: '/a.cs' } });
   });
 
-  it('names no file a link could not carry, a quote in its name', () => {
-    expect(pageLinkTarget({ kind: 'diff', title: 'Changeset 12', target: { kind: 'changeset', changesetId: 12 } }, { path: 'docs/say "hi".md' })).toBeNull();
+  it('names the diff alone when the file shown is one a link could not carry, a quote in its name', () => {
+    expect(pageLinkTarget({ kind: 'diff', title: 'Changeset 12', target: { kind: 'changeset', changesetId: 12 } }, { path: 'docs/say "hi".md' })).toEqual({ object: { kind: 'changeset', id: 12 } });
+    expect(pageLinkTarget({ kind: 'browseRepository', changesetId: 7 }, { path: 'say "hi".md' })).toBeNull();
   });
 
   it("names no diff of two branches' heads, nor a merge", () => {
@@ -137,5 +138,18 @@ describe('linkToCopy', () => {
     expect(linkToCopy({ top: undefined, shown: null, hasSelectedObject: false, view: 'locks' })).toEqual({ kind: 'target', target: { page: { kind: 'view', view: 'locks' } } });
     expect(linkToCopy({ top: undefined, shown: null, hasSelectedObject: false, view: 'changes' })).toBeNull();
     expect(linkToCopy({ top: { kind: 'diff', title: 'a → b', target: { kind: 'range', fromSpec: 'cs:3', toSpec: 'br:/main' } }, shown: null, hasSelectedObject: true, view: 'branches' })).toBeNull();
+  });
+});
+
+describe('hasLinkToCopy', () => {
+  it("has none for a history showing a revision of another repository (under an xlink), whose link it can't name", () => {
+    const history = { kind: 'history', path: 'lib/a.cs' } as const;
+    expect(hasLinkToCopy({ top: history, hasSelectedObject: false, view: 'files', shownOfOtherRepository: true })).toBe(false);
+    expect(hasLinkToCopy({ top: history, hasSelectedObject: false, view: 'files', shownOfOtherRepository: false })).toBe(true);
+  });
+
+  it("has the view's selected object's, else the view's", () => {
+    expect(hasLinkToCopy({ top: undefined, hasSelectedObject: true, view: 'changes', shownOfOtherRepository: false })).toBe(true);
+    expect(hasLinkToCopy({ top: undefined, hasSelectedObject: false, view: 'changes', shownOfOtherRepository: false })).toBe(false);
   });
 });
