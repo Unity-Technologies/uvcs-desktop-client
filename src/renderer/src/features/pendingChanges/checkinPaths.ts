@@ -1,6 +1,6 @@
 import type { ChangeKind, PendingChange } from '@shared/domain/pendingChanges';
 import { isCheckinCandidate } from './changeCategories';
-import { foldersAbove } from './checkinDependencies';
+import { parentOf } from './checkinDependencies';
 
 /**
  * A folder's changes that cm takes along with any path given from inside it, so the folder's own path needn't be
@@ -25,7 +25,8 @@ export interface CheckinPaths {
  * with no way to take a folder alone: `--private` adds every private item there, and `--all` every change. So a
  * folder cm takes along by itself (`TAKEN_ALONG`) is left out when something under it is given, and what a given folder
  * takes that wasn't checked is `pulledIn`, for the user to agree to first; a private, added or moved folder whose all is
- * checked goes alone (`wholeFolders`), as few paths as can be. Checking a change checks what it needs
+ * checked goes alone (none of what cm would take inside it is left unchecked): a new project added whole is one path,
+ * not one per file. A checked-out folder never goes alone: given, an xlink took the private files inside it. Checking a change checks what it needs
  * (`neededWith`), so that is only what the user can't check by hand: private items in a moved folder, once some other
  * private item is checked. A checkout inside a writable xlink checks the xlink out: given, it took every private file
  * inside the xlink. One pass over the changes, looking up only the folders above each.
@@ -34,18 +35,21 @@ export function checkinPathsOf(included: PendingChange[], pending: PendingChange
   const addsPrivate = included.some((change) => change.kinds.includes('private'));
   const includedPaths = new Set(included.map((change) => change.path));
   const left = pending.filter((change) => !includedPaths.has(change.path) && isCheckinCandidate(change) && (addsPrivate || !change.kinds.includes('private')));
-  const whole = wholeFolders(included, left);
-  const holdingIncluded = new Set(included.flatMap((change) => foldersAbove(change.path)));
+  const holdingLeft = foldersHolding(left);
+  const holdingIncluded = foldersHolding(included);
+  const whole = new Set(included.filter((change) => isFolder(change) && hasOwnChange(change) && !holdingLeft.has(change.path)).map((change) => change.path));
+  const insideWhole = nearestAbove(whole);
   const given = included.filter(
-    (change) => !foldersAbove(change.path).some((folder) => whole.has(folder)) && (!isFolder(change) || whole.has(change.path) || !isTakenAlong(change) || !holdingIncluded.has(change.path)),
+    (change) => insideWhole(parentOf(change.path)) === undefined && (!isFolder(change) || whole.has(change.path) || !isTakenAlong(change) || !holdingIncluded.has(change.path)),
   );
   const givenFolders = new Set(given.filter(isFolder).map((change) => change.path));
   if (givenFolders.size === 0) return { paths: given.map((change) => change.path), addsPrivate, pulledIn: [], pullingFolders: [] };
 
+  const outermostGiven = outermostAbove(givenFolders);
   const pulledIn: PendingChange[] = [];
   const pullingFolders = new Set<string>();
   for (const change of left) {
-    const outermost = foldersAbove(change.path).find((folder) => givenFolders.has(folder));
+    const outermost = outermostGiven(parentOf(change.path));
     if (outermost === undefined) continue;
     pulledIn.push(change);
     pullingFolders.add(outermost);
@@ -54,13 +58,39 @@ export function checkinPathsOf(included: PendingChange[], pending: PendingChange
 }
 
 /**
- * The checked private, added or moved folders cm can be given alone, taking all they hold: none of what it would take
- * inside them is left unchecked (`left`). A new project added whole is then one path, not one per file. A checked-out
- * folder never is: given, an xlink took the private files inside it.
+ * Every folder above the changes. Walking up stops at a folder already found, so 500,000 files in 10,000 folders cost
+ * about 510,000 steps, not one per folder above each file.
  */
-function wholeFolders(included: PendingChange[], left: PendingChange[]): ReadonlySet<string> {
-  const holdingLeft = new Set(left.flatMap((change) => foldersAbove(change.path)));
-  return new Set(included.filter((change) => isFolder(change) && hasOwnChange(change) && !holdingLeft.has(change.path)).map((change) => change.path));
+function foldersHolding(changes: PendingChange[]): ReadonlySet<string> {
+  const folders = new Set<string>();
+  for (const change of changes) {
+    for (let folder = parentOf(change.path); folder !== '' && !folders.has(folder); folder = parentOf(folder)) folders.add(folder);
+  }
+  return folders;
+}
+
+/** The nearest of `folders` at or above a folder ('' for none), worked out once per folder asked. */
+function nearestAbove(folders: ReadonlySet<string>): (folder: string) => string | undefined {
+  const found = new Map<string, string | undefined>([['', undefined]]);
+  const nearest = (folder: string): string | undefined => {
+    if (found.has(folder)) return found.get(folder);
+    const answer = folders.has(folder) ? folder : nearest(parentOf(folder));
+    found.set(folder, answer);
+    return answer;
+  };
+  return nearest;
+}
+
+/** The outermost of `folders` at or above a folder, worked out once per folder asked. */
+function outermostAbove(folders: ReadonlySet<string>): (folder: string) => string | undefined {
+  const found = new Map<string, string | undefined>([['', undefined]]);
+  const outermost = (folder: string): string | undefined => {
+    if (found.has(folder)) return found.get(folder);
+    const answer = outermost(parentOf(folder)) ?? (folders.has(folder) ? folder : undefined);
+    found.set(folder, answer);
+    return answer;
+  };
+  return outermost;
 }
 
 function hasOwnChange(folder: PendingChange): boolean {

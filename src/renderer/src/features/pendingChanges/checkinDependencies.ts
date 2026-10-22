@@ -24,13 +24,21 @@ export function indexPending(pending: PendingChange[]): PendingIndex {
   const byPath = new Map(pending.map((change) => [change.path, change]));
   const movedFrom = new Map<string, PendingChange[]>();
   const inside = new Map<string, PendingChange[]>();
-  // One pass, each change appended in place: a moved folder holding 40,000 files costs 40,000 appends, not a copy each.
+  // The folders with a change of their own at or above each folder, worked out once per folder: a change costs one
+  // lookup of its parent, however deep, and an append per such folder (at 500,000 changes, no list of parents each).
+  const holdersAt = new Map<string, readonly string[]>([['', []]]);
+  const holdersOf = (folder: string): readonly string[] => {
+    const known = holdersAt.get(folder);
+    if (known) return known;
+    const above = holdersOf(parentOf(folder));
+    const holder = byPath.get(folder);
+    const holders = holder && isFolder(holder) && !isOnlyCheckedOut(holder) ? [...above, folder] : above;
+    holdersAt.set(folder, holders);
+    return holders;
+  };
   for (const change of pending) {
     if (change.oldPath && hasAny(change, MOVED)) appendTo(movedFrom, change.oldPath, change);
-    for (const folder of foldersAbove(change.path)) {
-      const holder = byPath.get(folder);
-      if (holder && isFolder(holder) && !isOnlyCheckedOut(holder)) appendTo(inside, folder, change);
-    }
+    for (const folder of holdersOf(parentOf(change.path))) appendTo(inside, folder, change);
   }
   return { byPath, movedFrom, inside, merged: pending.filter((change) => change.mergeInfo) };
 }
@@ -42,13 +50,16 @@ export function indexPending(pending: PendingChange[]): PendingIndex {
  * a merge's change, all of the merge's ("All merge changes must be checked in together").
  */
 export function neededWith(changes: PendingChange[], index: PendingIndex): PendingChange[] {
-  return closure(changes, (change) => [
-    ...(change.mergeInfo ? index.merged : []),
-    ...foldersAbove(change.path).flatMap((folder) => neededFolder(folder, index)),
-    ...(isMovedFolder(change) ? (index.inside.get(change.path) ?? []).filter(goesInWithMovedFolder) : []),
-    ...(hasAny(change, NEEDED_BY_WHAT_IT_HOLDS) && !hasAny(change, MOVED) ? (index.movedFrom.get(change.path) ?? []) : []),
-    ...(isDeletedFolder(change) ? movesOutOf(change.path, index) : []),
-  ]);
+  return closure(changes, (change, reach) => {
+    if (change.mergeInfo) index.merged.forEach(reach);
+    forEachFolderAbove(change.path, (folder) => {
+      const holder = index.byPath.get(folder);
+      if (holder && needsIt(holder)) reach(holder);
+    });
+    if (isMovedFolder(change)) for (const held of index.inside.get(change.path) ?? []) if (goesInWithMovedFolder(held)) reach(held);
+    if (hasAny(change, NEEDED_BY_WHAT_IT_HOLDS) && !hasAny(change, MOVED)) index.movedFrom.get(change.path)?.forEach(reach);
+    if (isDeletedFolder(change)) movesOutOf(change.path, index).forEach(reach);
+  });
 }
 
 /**
@@ -57,13 +68,24 @@ export function neededWith(changes: PendingChange[], index: PendingIndex): Pendi
  * added where a move left; the deleted folder a move leaves; and for a merge's change, all of the merge's.
  */
 export function needingThem(changes: PendingChange[], index: PendingIndex): PendingChange[] {
-  return closure(changes, (change) => [
-    ...(change.mergeInfo ? index.merged : []),
-    ...(isFolder(change) && !isOnlyCheckedOut(change) ? (index.inside.get(change.path) ?? []) : []),
-    ...(goesInWithMovedFolder(change) ? foldersAbove(change.path).flatMap((folder) => movedFolderAt(folder, index)) : []),
-    ...(change.oldPath && hasAny(change, MOVED) ? addedAt(change.oldPath, index) : []),
-    ...(change.oldPath && hasAny(change, MOVED) ? foldersAbove(change.oldPath).flatMap((folder) => deletedFolderAt(folder, index)) : []),
-  ]);
+  return closure(changes, (change, reach) => {
+    if (change.mergeInfo) index.merged.forEach(reach);
+    if (isFolder(change) && !isOnlyCheckedOut(change)) index.inside.get(change.path)?.forEach(reach);
+    if (goesInWithMovedFolder(change)) {
+      forEachFolderAbove(change.path, (folder) => {
+        const holder = index.byPath.get(folder);
+        if (holder && isMovedFolder(holder)) reach(holder);
+      });
+    }
+    if (change.oldPath && hasAny(change, MOVED)) {
+      const there = index.byPath.get(change.oldPath);
+      if (there && hasAny(there, NEEDED_BY_WHAT_IT_HOLDS) && !hasAny(there, MOVED)) reach(there);
+      forEachFolderAbove(change.oldPath, (folder) => {
+        const holder = index.byPath.get(folder);
+        if (holder && isDeletedFolder(holder)) reach(holder);
+      });
+    }
+  });
 }
 
 /**
@@ -72,31 +94,36 @@ export function needingThem(changes: PendingChange[], index: PendingIndex): Pend
  * file appearing in it: cm takes it with the folder). A merge goes in whole or not at all.
  */
 export function consistentlyIncluded(isChecked: (change: PendingChange) => boolean, index: PendingIndex): (change: PendingChange) => boolean {
-  const checkedFolder = (folder: string, test: (holder: PendingChange) => boolean): boolean => {
-    const holder = index.byPath.get(folder);
-    return holder !== undefined && test(holder) && isChecked(holder);
-  };
-  // Asked once per change and row: the answer is kept, as the list renders rows again on every scroll.
-  const answers = new Map<string, boolean>();
   const wholeMerge = index.merged.every(isChecked);
-  return (change) => {
-    const known = answers.get(change.path);
+  // Worked out once per folder and kept: a change then costs a lookup of its folder, as cheap to ask again per row.
+  const leftOutAt = new Map<string, boolean>([['', false]]);
+  const takenWholeAt = new Map<string, boolean>([['', false]]);
+
+  /** Whether a folder at or above this one is needed by what it holds and unchecked. */
+  const leftOut = (folder: string): boolean => {
+    const known = leftOutAt.get(folder);
     if (known !== undefined) return known;
-    const answer = includedNow(change);
-    answers.set(change.path, answer);
+    const holder = index.byPath.get(folder);
+    const answer = (holder !== undefined && needsIt(holder) && !isChecked(holder)) || leftOut(parentOf(folder));
+    leftOutAt.set(folder, answer);
     return answer;
   };
-
-  function includedNow(change: PendingChange): boolean {
+  /** Whether a checked moved folder is at or above this one. */
+  const takenWhole = (folder: string): boolean => {
+    const known = takenWholeAt.get(folder);
+    if (known !== undefined) return known;
+    const holder = index.byPath.get(folder);
+    const answer = (holder !== undefined && isMovedFolder(holder) && isChecked(holder)) || takenWhole(parentOf(folder));
+    takenWholeAt.set(folder, answer);
+    return answer;
+  };
+  const includedNow = (change: PendingChange): boolean => {
     if (change.mergeInfo && !wholeMerge) return false;
-    const folders = foldersAbove(change.path);
-    const needsAnUnchecked = folders.some((folder) => {
-      const holder = index.byPath.get(folder);
-      return holder !== undefined && needsIt(holder) && !isChecked(holder);
-    });
-    if (needsAnUnchecked) return false;
-    return isChecked(change) || (goesInWithMovedFolder(change) && folders.some((folder) => checkedFolder(folder, isMovedFolder)));
-  }
+    const parent = parentOf(change.path);
+    if (leftOut(parent)) return false;
+    return isChecked(change) || (goesInWithMovedFolder(change) && takenWhole(parent));
+  };
+  return includedNow;
 }
 
 /** The paths a click checks or unchecks: the changes clicked and what they need, or what needs them (`neededWith`, `needingThem`). */
@@ -110,37 +137,17 @@ function appendTo(lists: Map<string, PendingChange[]>, key: string, change: Pend
   else lists.set(key, [change]);
 }
 
-function closure(start: PendingChange[], next: (change: PendingChange) => PendingChange[]): PendingChange[] {
+/** The changes reached from `start` by `next`, each once, `start` first: no list is built for a step. */
+function closure(start: PendingChange[], next: (change: PendingChange, reach: (found: PendingChange) => void) => void): PendingChange[] {
   const reached = new Map(start.map((change) => [change.path, change]));
   const queue = [...start];
-  for (let change = queue.pop(); change; change = queue.pop()) {
-    for (const found of next(change)) {
-      if (reached.has(found.path)) continue;
-      reached.set(found.path, found);
-      queue.push(found);
-    }
-  }
+  const reach = (found: PendingChange): void => {
+    if (reached.has(found.path)) return;
+    reached.set(found.path, found);
+    queue.push(found);
+  };
+  for (let change = queue.pop(); change; change = queue.pop()) next(change, reach);
   return [...reached.values()];
-}
-
-function neededFolder(folder: string, index: PendingIndex): PendingChange[] {
-  const holder = index.byPath.get(folder);
-  return holder && needsIt(holder) ? [holder] : [];
-}
-
-function movedFolderAt(folder: string, index: PendingIndex): PendingChange[] {
-  const holder = index.byPath.get(folder);
-  return holder && isMovedFolder(holder) ? [holder] : [];
-}
-
-function deletedFolderAt(folder: string, index: PendingIndex): PendingChange[] {
-  const holder = index.byPath.get(folder);
-  return holder && isDeletedFolder(holder) ? [holder] : [];
-}
-
-function addedAt(path: string, index: PendingIndex): PendingChange[] {
-  const there = index.byPath.get(path);
-  return there && hasAny(there, NEEDED_BY_WHAT_IT_HOLDS) && !hasAny(there, MOVED) ? [there] : [];
 }
 
 /** The moves whose item was inside the deleted folder and now lives outside it. */
@@ -182,6 +189,17 @@ function hasAny(change: PendingChange, kinds: ReadonlySet<ChangeKind>): boolean 
 
 function isUnder(path: string, folder: string): boolean {
   return path.startsWith(`${folder}/`);
+}
+
+/** The folder holding the path, '' at the top ("a/b/c.cs": "a/b"). */
+export function parentOf(path: string): string {
+  const end = path.lastIndexOf('/');
+  return end === -1 ? '' : path.slice(0, end);
+}
+
+/** Calls `visit` with each folder above the path, without building their list. */
+function forEachFolderAbove(path: string, visit: (folder: string) => void): void {
+  for (let end = path.indexOf('/'); end !== -1; end = path.indexOf('/', end + 1)) visit(path.slice(0, end));
 }
 
 /** Every folder above the path, outermost first ("a/b/c.cs": "a", "a/b"). */

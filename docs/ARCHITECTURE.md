@@ -307,7 +307,7 @@ and many people use the same server. Every `cm` command other than local reads (
   too"), and so must all of a pending merge ("All merge changes must be checked in together"). So Changes gives cm as
   little as it takes (`checkinPathsOf`): never a checked-out folder holding something checked, `--private` only when a
   private item is checked (`CheckinRequest.addsPrivate`), and a private, added or moved folder whose all is checked
-  alone, one path for a new project however many files it holds (`wholeFolders`). A checkout inside a writable xlink
+  alone, one path for a new project however many files it holds. A checkout inside a writable xlink
   checks the xlink out: cm status lists it as a checked-out folder, and given, it took every private item inside the
   xlink. Shelving away gives cm those paths but undoes every change the shelve takes (`ShelveAwayRequest`).
 - **What a check-in needs is checked with it**, in the list as the user clicks, never asked at the end: checking a change
