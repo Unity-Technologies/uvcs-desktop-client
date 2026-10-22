@@ -1,4 +1,5 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
+import { parentOf } from '../../lib/paths';
 import { fileNameOf, formatCount } from '../../lib/text';
 import { categoryOf } from './changeCategories';
 
@@ -51,6 +52,3 @@ function outermostPrivateFolder(path: string, privateFolders: ReadonlySet<string
   return undefined;
 }
 
-function parentOf(path: string): string {
-  return path.slice(0, Math.max(0, path.lastIndexOf('/')));
-}

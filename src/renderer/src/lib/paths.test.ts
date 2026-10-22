@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { joinPath, lastSegment, parentOfLocalPath } from './paths';
+import { joinPath, lastSegment, parentOf, parentOfLocalPath } from './paths';
 
 describe('paths', () => {
   it('joins with the separator the folder uses', () => {
@@ -15,5 +15,12 @@ describe('paths', () => {
     expect(parentOfLocalPath('/Users/me/wkspaces/game/')).toBe('/Users/me/wkspaces');
     expect(parentOfLocalPath('C:\\work\\game')).toBe('C:\\work');
     expect(parentOfLocalPath('/game')).toBe('/');
+  });
+});
+
+describe('parentOf', () => {
+  it('returns the folder holding a workspace-relative path, empty at the root', () => {
+    expect(parentOf('a/b/c.ts')).toBe('a/b');
+    expect(parentOf('c.ts')).toBe('');
   });
 });

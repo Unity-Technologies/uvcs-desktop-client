@@ -1,6 +1,6 @@
 import type { ChangeKind, PendingChange } from '@shared/domain/pendingChanges';
 import { isCheckinCandidate } from './changeCategories';
-import { parentOf } from './checkinDependencies';
+import { parentOf } from '../../lib/paths';
 
 /**
  * A folder's changes that cm takes along with any path given from inside it, so the folder's own path needn't be

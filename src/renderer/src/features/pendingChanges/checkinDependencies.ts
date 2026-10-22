@@ -1,4 +1,5 @@
 import type { ChangeKind, PendingChange } from '@shared/domain/pendingChanges';
+import { parentOf } from '../../lib/paths';
 import { isCheckinCandidate } from './changeCategories';
 
 /**
@@ -189,12 +190,6 @@ function hasAny(change: PendingChange, kinds: ReadonlySet<ChangeKind>): boolean 
 
 function isUnder(path: string, folder: string): boolean {
   return path.startsWith(`${folder}/`);
-}
-
-/** The folder holding the path, '' at the top ("a/b/c.cs": "a/b"). */
-export function parentOf(path: string): string {
-  const end = path.lastIndexOf('/');
-  return end === -1 ? '' : path.slice(0, end);
 }
 
 /** Calls `visit` with each folder above the path, without building their list. */
