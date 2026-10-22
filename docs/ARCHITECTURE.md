@@ -603,7 +603,9 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   saved (on macOS, every window was closed before quitting), the first window reopens the last workspace used. Development builds start on one home screen, where automated UI checks pick a workspace. A new
   window opens on the home screen. A new window asked to open a workspace
   takes it at start (`system.takeRequestedWorkspace`), as does a folder the installed app is launched with on Windows
-  and Linux (`workspaceArgument`; a second launch hands it to the running app). The first window waits until `cm` has
+  and Linux (`workspaceArgument`; a second launch hands it to the running app). A launch for a `uvcs://` link names no
+  folder: the link goes to the window in front once the first windows opened (`receiveLinks`,
+  features/deep-links.md). The first window waits until `cm` has
   found the workspace holding that folder (`handleLaunchRequests`), which may take longer than Electron takes to start.
   The Window menu lists them; closing the last one keeps the app on macOS, and the Dock icon opens the home screen (its
   menu offers New Window under the recent workspaces, `installDockMenu`); elsewhere it quits.

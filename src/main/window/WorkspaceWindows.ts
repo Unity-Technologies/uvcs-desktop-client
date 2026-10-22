@@ -302,6 +302,19 @@ export class WorkspaceWindows {
     return [...new Set(inFocusOrder.flatMap((window) => this.workspaceIn(window) ?? []))];
   }
 
+  /**
+   * Hands a link the OS sent to the window in front (docs/features/deep-links.md, "Opening a link"): the focused
+   * workspace window, the workspace window of a focused page window, else the last one focused or opened, else a new
+   * window on the home screen. Its page finds the workspace the link needs.
+   */
+  openLink(link: string): void {
+    const focused = BrowserWindow.getFocusedWindow();
+    const owner = focused ? this.ownerWindowOf(focused.webContents.id) : undefined;
+    const inFront = owner ?? (focused && !this.pages.isPageWindow(focused.webContents.id) ? focused : undefined);
+    const lastUsed = this.lastFocused && !this.lastFocused.isDestroyed() ? this.lastFocused : this.all().at(-1);
+    this.handLink(inFront ?? lastUsed ?? this.open(), link);
+  }
+
   /** Brings the app forward: the last focused window, or a new one when all were closed. */
   focusAny(): void {
     const window = BrowserWindow.getFocusedWindow() ?? this.all().at(-1);
