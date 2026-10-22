@@ -166,3 +166,62 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Settings › Merge: a row per kind of file (its files, its tool, its menu), tried top to bottom. */
+.rules {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+}
+
+.rule {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px var(--space-2) 6px var(--space-3);
+}
+
+.rule + .rule {
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* In a narrow window, the tool goes under the files. */
+@container (max-width: 380px) {
+  .rule {
+    grid-template-columns: minmax(0, 1fr) 28px;
+  }
+
+  .rule > :nth-child(2) {
+    grid-row: 2;
+    grid-column: 1;
+  }
+}
+
+.ruleFiles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ruleField {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+/* A row's tool: one line, the size of a field beside it. */
+.pickerCompact {
+  composes: choice;
+  height: var(--control-height);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-md);
+  gap: var(--space-2);
+}
+
+.pickerCompact[data-state='open'] {
+  border-color: var(--accent);
+}

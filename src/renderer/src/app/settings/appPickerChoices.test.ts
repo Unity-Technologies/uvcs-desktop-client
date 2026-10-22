@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ExternalApp } from '@shared/domain/externalApps';
 import { isSubmenu, SEPARATOR, type Action, type MenuEntry } from '../../lib/actions';
-import { appPickerEntries, pickedApp, type AppPickerChoices } from './appPickerChoices';
+import { appPickerEntries, automaticChoice, pickedApp, type AppPickerChoices } from './appPickerChoices';
 
 const app = (id: string, name: string): ExternalApp => ({ id, name, origin: 'known', location: `/Applications/${name}.app`, opensFolders: true });
 const EDITORS = [app('vscode', 'Visual Studio Code'), app('rider', 'JetBrains Rider')];
@@ -9,7 +9,7 @@ const choices = (parts: Partial<AppPickerChoices> = {}): AppPickerChoices => ({
   apps: EDITORS,
   choice: 'auto',
   usedId: 'vscode',
-  automaticRule: 'The first editor found',
+  automatic: automaticChoice('The first editor found'),
   offersSystem: true,
   onChoose: () => {},
   onAdd: () => {},
@@ -52,7 +52,36 @@ describe('appPickerEntries', () => {
   });
 });
 
+describe('appPickerEntries, for a merge tool', () => {
+  const tools = [app('uvcs', 'UVCS merge tool'), app('meld', 'Meld')];
+  const sameAsOthers = { id: 'others', label: 'Same as others', rule: 'The tool every other file opens in' };
+
+  it('offers a choice of its own in place of Automatic, naming the tool it uses', () => {
+    const entries = appPickerEntries(choices({ apps: tools, choice: 'others', usedId: 'uvcs', automatic: sameAsOthers, offersSystem: false }));
+    expect(reading(entries).slice(0, 4)).toEqual(['Same as others (UVCS merge tool) ✓', '---', 'UVCS merge tool', 'Meld']);
+  });
+
+  it('offers only the tools where one must be picked, then what is said about the one picked', () => {
+    const more = [{ id: 'howItOpens', label: 'How Meld opens…', run: () => {} }];
+    const entries = appPickerEntries(choices({ apps: tools, choice: 'meld', usedId: 'meld', automatic: null, offersSystem: false, more }));
+    expect(reading(entries)).toEqual(['UVCS merge tool', 'Meld ✓', '---', 'Choose another app…', '---', 'How Meld opens…']);
+  });
+
+  it('checks nothing while the tool picked is not found here', () => {
+    expect(reading(appPickerEntries(choices({ apps: tools, choice: 'semantic', automatic: null, offersSystem: false, onAdd: undefined })))).toEqual(['UVCS merge tool', 'Meld']);
+  });
+});
+
 describe('pickedApp', () => {
+  it('names a tool picked that is not found here, saying so', () => {
+    expect(pickedApp(choices({ choice: 'semantic', automatic: null, missingName: 'Semantic Merge' }))).toMatchObject({ label: 'Semantic Merge', description: 'Not found on this computer' });
+  });
+
+  it('shows the choice of its own with the tool it uses', () => {
+    const sameAsOthers = { id: 'others', label: 'Same as others', rule: 'The tool every other file opens in' };
+    expect(pickedApp(choices({ choice: 'others', usedId: 'rider', automatic: sameAsOthers }))).toMatchObject({ label: 'Same as others', description: 'Uses JetBrains Rider' });
+  });
+
   it('shows Automatic with the app it uses, or the rule while it uses none', () => {
     expect(pickedApp(choices())).toMatchObject({ label: 'Automatic', description: 'Uses Visual Studio Code' });
     expect(pickedApp(choices({ usedId: null }))).toMatchObject({ label: 'Automatic', description: 'The first editor found' });

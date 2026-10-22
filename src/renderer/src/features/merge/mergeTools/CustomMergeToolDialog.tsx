@@ -9,6 +9,7 @@ import { Dialog } from '../../../ui/dialog/Dialog';
 import { askDialog } from '../../../ui/dialog/dialogStore';
 import { TextField } from '../../../ui/TextField';
 import { programName } from '../../../lib/programName';
+import { mergeToolArgsProblem } from './mergeToolArgs';
 import { addCustomMergeTool } from './useMergeTools';
 import styles from './CustomMergeToolDialog.module.css';
 
@@ -29,7 +30,7 @@ function CustomMergeToolDialog({ finish }: { finish: (id: string | undefined) =>
   const [name, setName] = useState('');
   const [args, setArgs] = useState(formatArgs(DEFAULT_ARGS));
   const parsedArgs = parseArgs(args);
-  const argsError = parsedArgs.some((arg) => arg.includes('{result}')) ? undefined : 'Include {result}: the file the tool saves the merge to.';
+  const argsError = mergeToolArgsProblem(parsedArgs);
   const [saving, setSaving] = useState(false);
   const canSave = executable.trim() !== '' && !argsError && !saving;
 
@@ -59,7 +60,7 @@ function CustomMergeToolDialog({ finish }: { finish: (id: string | undefined) =>
         <>
           <Button onClick={() => finish(undefined)}>Cancel</Button>
           <Button type="submit" variant="primary" disabled={!canSave}>
-            Add and use
+            Add
           </Button>
         </>
       }

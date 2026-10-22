@@ -1,68 +1,82 @@
-import { AppWindow, Plus, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Plus, SlidersHorizontal } from 'lucide-react';
 import { useState } from 'react';
-import { AUTO_MERGE_TOOL, type MergeTool } from '@shared/domain/mergeTools';
-import { formatArgs, parseArgs } from '../../lib/argumentLine';
-import { addMergeTool, PLACEHOLDER_HINT } from '../../features/merge/mergeTools/CustomMergeToolDialog';
-import { preferMergeTool, removeCustomMergeTool, setMergeToolArgs, useMergeTools } from '../../features/merge/mergeTools/useMergeTools';
+import type { MergeToolList, MergeToolRule } from '@shared/domain/mergeTools';
+import { addMergeTool } from '../../features/merge/mergeTools/CustomMergeToolDialog';
+import { openMergeToolArgsDialog } from '../../features/merge/mergeTools/MergeToolArgsDialog';
+import { currentSettings, preferMergeTool, useMergeTools } from '../../features/merge/mergeTools/useMergeTools';
+import type { MenuEntry } from '../../lib/actions';
+import { formatFilePatterns, parseFilePatterns } from '../../lib/filePatterns';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
+import { IconButton } from '../../ui/IconButton';
+import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { TextField } from '../../ui/TextField';
+import { AppPicker } from './AppPicker';
+import type { AutomaticChoice } from './appPickerChoices';
+import {
+  addRule,
+  AUTOMATIC_MERGE_TOOL_CHOICE,
+  changeRule,
+  newRuleToolId,
+  pickableTools,
+  ruleMenuEntries,
+  ruleName,
+  SAME_AS_OTHER_FILES_CHOICE,
+  toolInUse,
+  UNITY_ROW_LABEL,
+  unityRowNote,
+  unityRowTip,
+} from './mergeToolRules';
 import { saveSettings, useSettings } from './useSettings';
-import { appIcon } from '../../components/externalApps/appIcon';
-import { AUTOMATIC_CHOICE_ICON } from './automaticApp';
-import { AUTOMATIC_MERGE_TOOL_RULE, automaticMergeToolDescription } from './automaticMergeTool';
-import { SettingsChoice } from './SettingsChoice';
-import { smartMergeNote } from './smartMergeNote';
 import styles from './SettingsDialog.module.css';
 
-/** Which merge tool "Resolve in…" opens, and how it's called. */
+const saveRules = (change: (rules: MergeToolRule[]) => MergeToolRule[]): Promise<void> => saveSettings({ mergeToolRules: change(currentSettings().mergeToolRules) });
+
+/** Which merge tool opens which files, tried top to bottom, and how resolving one by one goes on. */
 export function MergeToolsPane() {
-  const { tools, preferred, smartMerge } = useMergeTools();
-  const { mergeTool: choice, askWhenMergeToolClosesUnsaved } = useSettings();
-  const automatic = choice === AUTO_MERGE_TOOL || !tools.some((tool) => tool.id === choice);
+  const list = useMergeTools();
+  const { mergeTool, mergeToolRules, unityMergeTool, askWhenMergeToolClosesUnsaved } = useSettings();
+  // The row just added, whose file types come next.
+  const [addedId, setAddedId] = useState<string>();
+
+  const addFileType = (): void => {
+    const id = `rule:${crypto.randomUUID()}`;
+    setAddedId(id);
+    void saveRules((rules) => addRule(rules, id, newRuleToolId(list)));
+  };
 
   return (
     <>
       <p className={styles.note}>
-        A merge tool opens only when you ask, on one conflicting file or on each in turn, and the file takes what you save
-        there. Merges and updates never open one by themselves.
+        A merge tool opens only when you ask, on one conflicting file or on each in turn. The first row that matches a file
+        opens it; any tool can open it from the merge page too.
       </p>
       <section className={styles.section}>
-        <h2 className={styles.heading}>Resolve conflicts in</h2>
-        <div className={styles.choices} role="radiogroup" aria-label="Merge tool">
-          <SettingsChoice
-            icon={<AUTOMATIC_CHOICE_ICON size={18} />}
-            label="Automatic"
-            description={automaticMergeToolDescription(automatic ? preferred?.name : undefined)}
-            tip={AUTOMATIC_MERGE_TOOL_RULE}
-            selected={automatic}
-            onSelect={() => void preferMergeTool(AUTO_MERGE_TOOL)}
-          />
-          {tools.map((tool) => (
-            <SettingsChoice
-              key={tool.id}
-              icon={<ToolIcon tool={tool} />}
-              label={tool.name}
-              description={tool.executable}
-              tip={tool.executable}
-              selected={!automatic && tool.id === choice}
-              onSelect={() => void preferMergeTool(tool.id)}
-            />
+        <h2 className={styles.heading}>Open conflicts in</h2>
+        <div className={styles.rules} role="list" aria-label="Merge tool by file type">
+          <div className={styles.rule} role="listitem">
+            <div className={styles.ruleFiles} data-tip={unityRowTip(list.smartMerge)}>
+              <span>{UNITY_ROW_LABEL}</span>
+              <span className={`${styles.choiceDescription} ${styles.oneLine}`}>{unityRowNote(list.smartMerge)}</span>
+            </div>
+            <ToolPicker label={UNITY_ROW_LABEL} list={list} choice={unityMergeTool} automatic={SAME_AS_OTHER_FILES_CHOICE} onChoose={(choice) => void saveSettings({ unityMergeTool: choice })} />
+            <span />
+          </div>
+          {mergeToolRules.map((rule) => (
+            <RuleRow key={rule.id} rule={rule} rules={mergeToolRules} list={list} focused={rule.id === addedId} />
           ))}
+          <div className={styles.rule} role="listitem">
+            <div className={styles.ruleFiles}>
+              <span className={styles.oneLine}>Every other file</span>
+            </div>
+            <ToolPicker label="Every other file" list={list} choice={mergeTool} automatic={AUTOMATIC_MERGE_TOOL_CHOICE} onChoose={(choice) => void preferMergeTool(choice)} />
+            <span />
+          </div>
         </div>
-        <Button size="small" icon={<Plus size={13} />} onClick={() => void addMergeTool()}>
-          Add another app…
+        <Button size="small" icon={<Plus size={13} />} onClick={addFileType}>
+          Add a file type
         </Button>
       </section>
-      {smartMerge && (
-        <section className={styles.section}>
-          <h2 className={styles.heading}>Unity scenes, prefabs and assets</h2>
-          <p className={styles.note} data-tip={smartMerge.executable}>
-            {smartMergeNote(smartMerge, preferred?.name)}
-          </p>
-        </section>
-      )}
-      {preferred && <ToolArguments key={`${preferred.id}:${preferred.args.join('\0')}`} tool={preferred} />}
       <section className={styles.section}>
         <h2 className={styles.heading}>Resolving one by one</h2>
         <Checkbox
@@ -75,49 +89,65 @@ export function MergeToolsPane() {
   );
 }
 
-/** The preferred tool's arguments, editable; saved when the field is left or Enter is pressed. */
-function ToolArguments({ tool }: { tool: MergeTool }) {
-  const [text, setText] = useState(formatArgs(tool.args));
-  const args = parseArgs(text);
-  const error = args.some((arg) => arg.includes('{result}')) ? undefined : 'Include {result}: the file the tool saves the merge to.';
+/** A row of file types: its patterns, edited in place and saved as the field is left, its tool, and its menu. */
+function RuleRow({ rule, rules, list, focused }: { rule: MergeToolRule; rules: MergeToolRule[]; list: MergeToolList; focused: boolean }) {
+  const [text, setText] = useState(formatFilePatterns(rule.patterns));
   const save = (): void => {
-    if (!error && text !== formatArgs(tool.args)) void setMergeToolArgs(tool, args);
+    const patterns = parseFilePatterns(text);
+    setText(formatFilePatterns(patterns));
+    if (formatFilePatterns(patterns) !== formatFilePatterns(rule.patterns)) void saveRules((current) => changeRule(current, rule.id, { patterns }));
   };
-  const customized = tool.origin !== 'custom' && tool.args.join('\0') !== tool.defaultArgs.join('\0');
+  const menu: MenuEntry[] = ruleMenuEntries(rules, rule.id, (changed) => void saveSettings({ mergeToolRules: changed }));
+  const name = ruleName(rule);
 
   return (
-    <section className={styles.section}>
-      <h2 className={styles.heading}>How {tool.name} is opened</h2>
-      <div className={styles.argsField}>
-        <TextField
-          className={styles.args}
-          aria-label={`Arguments for ${tool.name}`}
-          value={text}
-          error={error}
-          hint={PLACEHOLDER_HINT}
-          onChange={(event) => setText(event.target.value)}
-          onBlur={save}
-          onKeyDown={(event) => event.key === 'Enter' && save()}
-        />
-      </div>
-      <div className={styles.folderRow}>
-        {customized && (
-          <Button size="small" variant="ghost" onClick={() => void setMergeToolArgs(tool, null)}>
-            Back to its own arguments
-          </Button>
-        )}
-        {tool.origin === 'custom' && (
-          <Button size="small" variant="ghost" icon={<Trash2 size={13} />} onClick={() => void removeCustomMergeTool(tool.id)}>
-            Remove {tool.name}
-          </Button>
-        )}
-      </div>
-    </section>
+    <div className={styles.rule} role="listitem">
+      <TextField
+        className={styles.ruleField}
+        aria-label="File types"
+        data-tip="Extensions (.psd), names (*.prefab) or paths (Assets/Data/**), separated by spaces"
+        placeholder=".psd .tga"
+        value={text}
+        autoFocus={focused}
+        onChange={(event) => setText(event.target.value)}
+        onBlur={save}
+        onKeyDown={(event) => event.key === 'Enter' && save()}
+      />
+      <ToolPicker label={name} list={list} choice={rule.toolId} automatic={null} onChoose={(toolId) => void saveRules((current) => changeRule(current, rule.id, { toolId }))} />
+      <ActionDropdownMenu entries={menu}>
+        <IconButton size="small" icon={<MoreHorizontal size={14} />} label={`More for ${name}`} />
+      </ActionDropdownMenu>
+    </div>
   );
 }
 
-/** The tool's app icon, as the Apps pane and the merge tool menu show it; a generic window where the OS gave none. */
-function ToolIcon({ tool }: { tool: MergeTool }) {
-  const Icon = appIcon(tool) ?? AppWindow;
-  return <Icon size={18} />;
+interface ToolPickerProps {
+  label: string;
+  list: MergeToolList;
+  choice: string;
+  automatic: AutomaticChoice | null;
+  onChoose: (choice: string) => void;
+}
+
+/** A row's tool, as a compact drop-down: the tools found, another app, and how the one picked opens. */
+function ToolPicker({ label, list, choice, automatic, onChoose }: ToolPickerProps) {
+  const picked = toolInUse(list, choice, automatic);
+  const addAndPick = async (): Promise<void> => {
+    const added = await addMergeTool();
+    if (added) onChoose(added.id);
+  };
+  return (
+    <AppPicker
+      compact
+      label={`Tool for ${label}`}
+      apps={pickableTools(list.tools)}
+      choice={choice}
+      usedId={picked?.id ?? null}
+      automatic={automatic}
+      missingName={list.knownNames[choice]}
+      onChoose={onChoose}
+      onAdd={() => void addAndPick()}
+      more={picked ? [{ id: 'howItOpens', label: `How ${picked.name} opens…`, icon: SlidersHorizontal, run: () => openMergeToolArgsDialog(picked) }] : []}
+    />
+  );
 }
