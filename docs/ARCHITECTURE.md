@@ -950,6 +950,13 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     empties the text, shows everyone and turns the kinds off (`clear`, `isFiltering`); the time range stays, and the
     hint says when a longer one could find more (`longerRangeHint`). A list with nothing to filter shows its own first-use empty state, in the details pane ("One layout from the first frame").
     Revealing a row the filters hide clears them (Show in Locks, the Branch Explorer's reveal).
+  - **What shows is what goes in**: Changes checks in and shelves only the checked changes its text and status filters
+    show (`checkinSelectionOf`, given `useChangeFilter`'s `visible`); those they hide keep their check for when they
+    show again, and the button counts what goes in. Review mode's "Unreviewed" filter doesn't narrow it: it hides each
+    file as it's reviewed, and those are the ones to check in. "Check in this changelist" clears the filters, so every
+    file of the changelist shows and goes in. Checking in every checked change, those the filters hide too, with a
+    notice saying how many, was dropped: a filter on Changed left the private files it hid checked, and they went
+    into the changeset unseen.
   - The shelves list in Changes stays a quick list with "Mine | Everyone" (⇧⌘S), not a filter bar: it's a popover
     over Changes, and its "All shelves" hands its scope and text to the Shelves view.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.

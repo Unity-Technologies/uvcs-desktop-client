@@ -28,7 +28,6 @@ import { ChangesList } from './ChangesList';
 import { ChangesSummaryBar } from './ChangesSummaryBar';
 import { CheckinAfterUpdateNotice } from './CheckinAfterUpdateNotice';
 import { CheckinPanel } from './CheckinPanel';
-import { HiddenCheckedNotice } from './HiddenCheckedNotice';
 import { LockedByOthersNotice } from './locks/LockedByOthersNotice';
 import { usePendingLocks } from './locks/usePendingLocks';
 import type { PendingReview } from './review/usePendingReview';
@@ -102,9 +101,9 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
     review.showAll();
   };
   const { rows, changesByKey, fileKeys, checkboxInset, toggleCollapsed } = useChangeRows({ changes, changelists, layout, grouping, scope: folderListScope(workspacePath, 'changes') });
-  const { isIncluded, included, upload, shelvable, shelvableUpload, bulkPrivate } = useCheckinSelection(allChanges, checkinChoice);
-  // The changes shown are some of all of them: the checked ones they leave out are the rest.
-  const hiddenIncludedCount = useMemo(() => included.length - changes.filter(isIncluded).length, [changes, included, isIncluded]);
+  // The text and status filters narrow the check-in; the "Unreviewed" filter doesn't: it hides each file as it's
+  // reviewed, and those are the ones to check in.
+  const { isIncluded, included, upload, shelvable, shelvableUpload, bulkPrivate } = useCheckinSelection(allChanges, filtered, checkinChoice);
   const reviewed = useMemo(() => reviewProgress(included, review.statusOf), [included, review.statusOf]);
   const { mergeChanges, onlyNeverCheckedIn } = useMemo(
     () => ({ mergeChanges: allChanges.filter((change) => change.mergeInfo), onlyNeverCheckedIn: allChanges.length > 0 && matchesBranch(allChanges) }),
@@ -223,7 +222,6 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
               checkboxInset={checkboxInset}
             />
             {listBody}
-            {hiddenIncludedCount > 0 && <HiddenCheckedNotice count={hiddenIncludedCount} onClear={clearFilter} />}
             <LockedByOthersNotice changes={included} locks={locks} />
             {/* Files never checked in don't make a task unfinished: finishing it is offered as on a clean workspace. */}
             {branchName && onlyNeverCheckedIn && (

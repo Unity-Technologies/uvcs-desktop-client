@@ -19,7 +19,7 @@ export type PanelCheckinOutcome = 'checkedIn' | 'notCheckedIn' | 'writeComment';
 
 export interface PanelCheckin {
   workspacePath: string;
-  /** The checked changes, including those the filter hides. */
+  /** The checked changes the filter shows (`checkinSelectionOf`). */
   included: PendingChange[];
   /** How many changes are pending in all: checking them all in leaves Changes empty. */
   pendingCount: number;

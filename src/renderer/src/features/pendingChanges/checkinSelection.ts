@@ -5,7 +5,7 @@ import { uploadSummary, type UploadSummary } from './uploadSummary';
 
 export interface CheckinSelection {
   isIncluded: (change: PendingChange) => boolean;
-  /** Every checked change, including those the filter hides: the filter only narrows what is shown. */
+  /** The checked changes the filter shows: those it hides stay out of the check-in, still checked for when they show again. */
   included: PendingChange[];
   upload: UploadSummary;
   /** What a shelve takes of them: private files stay out. */
@@ -70,9 +70,13 @@ export function withIncluded(choice: CheckinChoice, paths: string[], included: b
   return { ...choice, excludedPaths };
 }
 
-/** What a check-in of `allChanges` takes, and what follows from it: what it uploads, what a shelve takes, bulk private files. */
-export function checkinSelectionOf(allChanges: PendingChange[], isIncluded: (change: PendingChange) => boolean): CheckinSelection {
-  const included = allChanges.filter(isIncluded);
+/**
+ * What a check-in takes of the changes the filter shows (`shownChanges`), and what follows from it: what it uploads,
+ * what a shelve takes, bulk private files. What you see is what goes in: a checked change the filter hides could slip a
+ * private file into a changeset unseen, while one left out stays pending and shows again once the filter clears.
+ */
+export function checkinSelectionOf(shownChanges: PendingChange[], isIncluded: (change: PendingChange) => boolean): CheckinSelection {
+  const included = shownChanges.filter(isIncluded);
   const shelvable = included.filter(isShelvable);
   return {
     isIncluded,

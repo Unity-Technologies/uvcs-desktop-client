@@ -26,10 +26,29 @@ describe('includedBy', () => {
 });
 
 describe('checkinSelectionOf', () => {
-  it('checks in every included change, whatever the filter shows: the filter only narrows the list', () => {
+  it('checks in the checked changes, but those the user unchecked', () => {
     const selection = checkinSelectionOf(all, includedBy(unchecking(['src/new.ts'])));
 
     expect(selection.included).toEqual([edited, privateFile, link]);
+  });
+
+  // Filtered by Changed: the private file stays checked, out of sight, and out of the check-in.
+  it('checks in only the checked changes the filter shows, keeping the hidden ones checked for when they show again', () => {
+    const isIncluded = includedBy(unchecking([]));
+    const selection = checkinSelectionOf([edited, link], isIncluded);
+
+    expect(selection.included).toEqual([edited, link]);
+    expect(selection.upload.bytes).toBe(101);
+    expect(isIncluded(privateFile)).toBe(true);
+  });
+
+  // Filtered by Changed over 60 generated private files: none of them goes in, so there is nothing to warn about.
+  it('shelves, and warns about many private files, only from what the filter shows', () => {
+    const generated = Array.from({ length: 60 }, (_, index) => change(`gen/f${index}.cs`, ['private']));
+    const isIncluded = includedBy(unchecking([]));
+
+    expect(checkinSelectionOf([edited, ...generated], isIncluded).bulkPrivate?.fileCount).toBe(60);
+    expect(checkinSelectionOf([edited], isIncluded)).toMatchObject({ included: [edited], shelvable: [edited], bulkPrivate: null });
   });
 
   it('shelves what a shelve can take: no private files, no links', () => {
