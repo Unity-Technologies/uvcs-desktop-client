@@ -9,6 +9,7 @@ import type { SettingsStore } from '../settings/SettingsStore';
 import { applyShelveCleanly } from './applyShelveCleanly';
 import { moveNewItemsAside } from './moveNewItemsAside';
 import { shelvedContents, summarizePending } from './pendingSnapshot';
+import { failureReason } from './putShelvedChangesBack';
 import { readPendingSnapshot } from './readPendingChanges';
 import { privatesRenamedBySwitch } from './renamedPrivateFiles';
 import { restoreOnArrival } from './restoreOnArrival';
@@ -83,6 +84,7 @@ async function switchFrom(
 /**
  * Undoes every change and switches. Nothing is shelved: the user chose to lose them. Added files stay on disk as
  * private files, as Undo in Changes leaves them (one the target has at the same path is renamed by `cm switch`).
+ * With no shelve, a failure can't put anything back: its error says what is already undone instead.
  */
 async function discardChanges(deps: SwitchDependencies, workspacePath: string, count: number, targetSpec: string, context: OperationContext): Promise<SwitchResult> {
   const { cm } = deps;
@@ -90,11 +92,19 @@ async function discardChanges(deps: SwitchDependencies, workspacePath: string, c
   const committed = withoutStop(context);
   committed.beginStep('Undoing your changes', 1, 2);
   // Links too: without `--symlink` a checked-out link stays pending (and its target would be undone instead).
-  await cm.execute(onLinksThemselves('undo', '-r', workspacePath), { cwd: workspacePath });
-  await assertClean(cm, workspacePath);
+  try {
+    await cm.execute(onLinksThemselves('undo', '-r', workspacePath), { cwd: workspacePath });
+    await assertClean(cm, workspacePath);
+  } catch (error) {
+    throw new Error(`${failureReason(error)}. Some of your changes may be undone already; nothing was switched.`);
+  }
 
   committed.beginStep('Switching', 2, 2);
-  await runSwitch(cm, workspacePath, targetSpec, committed);
+  try {
+    await runSwitch(cm, workspacePath, targetSpec, committed);
+  } catch (error) {
+    throw new Error(`${failureReason(error)}. Your changes were undone, as you chose, but the switch didn't finish.`);
+  }
   return { kind: 'discarded', count, restored: await restoreOnArrival(deps, workspacePath, committed) };
 }
 

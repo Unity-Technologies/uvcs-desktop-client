@@ -215,12 +215,36 @@ describe('undoing the changes', () => {
     expect(pending()).toEqual(EDITED_AND_ADDED);
   });
 
-  it('stays where it is when changes are still pending after undoing them', async () => {
+  it('stays where it is when changes are still pending after undoing them, saying some may be undone', async () => {
     const { deps, lines, branch } = workspaceWith({ pending: EDITED_AND_ADDED, fail: { undoLeavesChanges: true } });
 
-    await expect(switchTo(deps, 'br:/main/task2', 'discard')).rejects.toThrow('Some changes are still pending after undoing them.');
+    await expect(switchTo(deps, 'br:/main/task2', 'discard')).rejects.toThrow(
+      'Some changes are still pending after undoing them. Some of your changes may be undone already; nothing was switched.',
+    );
     expect(writes(lines())).toEqual(['undo -r']);
     expect(branch()).toBe('/main/task1');
+  });
+
+  it('stays where it is when undoing fails, without a shelve to put anything back from', async () => {
+    const { deps, ran, shelves, records, branch } = workspaceWith({ pending: EDITED_AND_ADDED, fail: { undo: 'The file is in use.' } });
+
+    await expect(switchTo(deps, 'br:/main/task2', 'discard')).rejects.toThrow('The file is in use. Some of your changes may be undone already; nothing was switched.');
+    expect(ran('switch')).toBe(false);
+    expect(branch()).toBe('/main/task1');
+    expect(shelves()).toEqual([]);
+    expect(records.forWorkspace('a0411612-d36e-4eca-b9b5-97acad5969ea')).toEqual([]);
+  });
+
+  it('says the changes are already undone when the switch fails', async () => {
+    const { deps, lines, shelves, pending } = workspaceWith({ pending: EDITED_AND_ADDED, fail: { switchTo: '/main/task2' } });
+
+    await expect(switchTo(deps, 'br:/main/task2', 'discard')).rejects.toThrow(
+      "Access to the path is denied. Your changes were undone, as you chose, but the switch didn't finish.",
+    );
+    // Nothing to put back: no shelve, and no switching back to restore one.
+    expect(writes(lines())).toEqual(['undo -r', 'switch br:/main/task2']);
+    expect(shelves()).toEqual([]);
+    expect(pending()).toEqual({});
   });
 
   it('switches as a step that can’t be stopped: the changes are already gone', async () => {
