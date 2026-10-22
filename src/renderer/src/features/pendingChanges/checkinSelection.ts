@@ -135,9 +135,17 @@ export function checkinSelectionOf(listed: ListedChanges, choice: CheckinChoice)
   return { isIncluded, everyCandidateIncluded: false, ...selectionOf(listed, isIncluded, going, shown?.length) };
 }
 
-/** Whether no box is unchecked and no changelist is prepared. */
-export function everyBoxChecked({ prepared, excludedPaths }: CheckinChoice, _index: PendingIndex): boolean {
-  return !prepared && excludedPaths.size === 0;
+/**
+ * Whether no box of a pending change that can go in is unchecked, and no changelist is prepared: paths unchecked that
+ * are no longer pending (undone, checked in) leave every box checked.
+ */
+export function everyBoxChecked({ prepared, excludedPaths }: CheckinChoice, index: PendingIndex): boolean {
+  if (prepared) return false;
+  for (const path of excludedPaths) {
+    const change = index.byPath.get(path);
+    if (change && isCheckinCandidate(change)) return false;
+  }
+  return true;
 }
 
 /** The pass over the list: what `isIncluded` takes, or, while filtering, what is `going`. */
