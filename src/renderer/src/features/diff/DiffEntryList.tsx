@@ -47,10 +47,10 @@ export function DiffEntryList({ rows, tree, toggleCollapsed, query, filterBar, s
     return <DiffEntryRow row={row} level={level} tree={tree} extras={status && <ReviewToggle status={status} onToggle={() => toggle([row.item])} />} faded={status === 'reviewed'} />;
   };
 
-  const onItemsKeyDown = (event: KeyboardEvent, selected: DiffEntry[], moveBy: (step: number) => void): boolean => {
+  const onItemsKeyDown = (event: KeyboardEvent, selected: DiffEntry[], moveBy: (step: number) => void, focusedIndex: number): boolean => {
     if (!isReviewKey(event)) return false;
     event.preventDefault();
-    toggleReviewedFromKey(review, selected, () => moveBy(1));
+    toggleReviewedFromKey(review, selected, { rows, focusedIndex, moveBy });
     return true;
   };
 

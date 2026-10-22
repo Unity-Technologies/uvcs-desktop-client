@@ -150,7 +150,7 @@ export function ChangesList({
       else moveBy(move.step, false);
     } else if (isReviewKey(event)) {
       event.preventDefault();
-      toggleReviewedFromKey(review, selectedChanges(), () => moveBy(1, false));
+      toggleReviewedFromKey(review, selectedChanges(), { rows, focusedIndex, moveBy: (step) => moveBy(step, false) });
     } else if (event.key === ' ') {
       event.preventDefault();
       const toggle = spaceToggle(changeRows.filter((row) => selection.selected.has(row.key)), focusedRow, checkStateOf);
