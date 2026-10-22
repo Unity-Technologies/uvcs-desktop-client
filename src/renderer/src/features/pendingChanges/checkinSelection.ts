@@ -2,7 +2,7 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import { BulkPrivateTally, bulkPrivateFiles, isPrivateFolderAt, privateFoldersOf, type BulkPrivate, type PrivateFolders } from './bulkPrivate';
 import { isCheckinCandidate, isShelvable } from './changeCategories';
 import { UploadTally, uploadKindOf, type UploadKind, type UploadSummary } from './uploadSummary';
-import { neededWith, type PendingIndex } from './checkinDependencies';
+import { consistentlyIncluded, neededWith, type PendingIndex } from './checkinDependencies';
 
 export interface CheckinSelection {
   isIncluded: (change: PendingChange) => boolean;
@@ -101,17 +101,17 @@ export interface ListedChanges {
  * What each change of a read adds to a check-in, worked out once per read and aligned with the list (`all`): its
  * upload, whether a shelve takes it, the folder a private file counts in. A click on a box then only asks each change
  * whether it goes in (`checkinSelectionOf`), where working it all out again took a third of a second a click for a
- * million changes; and with every box checked, nothing at all (`everything`, worked out the first time it's asked).
+ * million changes; and with every box checked, nothing at all (`everythingCache`, filled the first time it's asked).
  */
 export interface CheckinFacts {
   uploadKinds: UploadKind[];
   shelvable: Uint8Array;
   privateFolders: PrivateFolders;
-  everything: { selection?: Omit<CheckinSelection, 'isIncluded' | 'everyCandidateIncluded'> };
+  everythingCache: { selection?: Omit<CheckinSelection, 'isIncluded' | 'everyCandidateIncluded'> };
 }
 
 export function checkinFactsOf(all: PendingChange[]): CheckinFacts {
-  return { uploadKinds: all.map(uploadKindOf), shelvable: Uint8Array.from(all, (change) => (isShelvable(change) ? 1 : 0)), privateFolders: privateFoldersOf(all), everything: {} };
+  return { uploadKinds: all.map(uploadKindOf), shelvable: Uint8Array.from(all, (change) => (isShelvable(change) ? 1 : 0)), privateFolders: privateFoldersOf(all), everythingCache: {} };
 }
 
 /**
@@ -120,18 +120,24 @@ export function checkinFactsOf(all: PendingChange[]): CheckinFacts {
  * slip a private file into a changeset unseen, while one left out stays pending and shows again once the filter clears.
  * The checked changes the filter shows and what they need that it hides (a private file's private folder while
  * filtering by Changed) are found once (`neededWith`); then one pass over the list takes them, in its order.
- * `everyChecked`: no box is unchecked and no changelist prepared, when, with nothing filtered, every change that can go
- * in does, as the read's facts already say.
+ * Whether each change goes in is the user's `choice` (`currentChoice`) under the check-in rules (`consistentlyIncluded`).
+ * With every box checked and nothing filtered, every change that can go in does, as the read's facts already say.
  */
-export function checkinSelectionOf(listed: ListedChanges, isIncluded: (change: PendingChange) => boolean, everyChecked = false): CheckinSelection {
+export function checkinSelectionOf(listed: ListedChanges, choice: CheckinChoice): CheckinSelection {
   const { all, matchingFilter, index, facts } = listed;
-  if (everyChecked && matchingFilter === all) {
-    facts.everything.selection ??= selectionOf(listed, isCheckinCandidate, null);
-    return { isIncluded, everyCandidateIncluded: true, ...facts.everything.selection };
+  const isIncluded = consistentlyIncluded(includedBy(choice), index);
+  if (matchingFilter === all && everyBoxChecked(choice, index)) {
+    facts.everythingCache.selection ??= selectionOf(listed, isCheckinCandidate, null);
+    return { isIncluded, everyCandidateIncluded: true, ...facts.everythingCache.selection };
   }
   const shown = matchingFilter === all ? null : matchingFilter.filter(isIncluded);
   const going = shown && new Set(neededWith(shown, index).filter(isIncluded));
   return { isIncluded, everyCandidateIncluded: false, ...selectionOf(listed, isIncluded, going, shown?.length) };
+}
+
+/** Whether no box is unchecked and no changelist is prepared. */
+export function everyBoxChecked({ prepared, excludedPaths }: CheckinChoice, _index: PendingIndex): boolean {
+  return !prepared && excludedPaths.size === 0;
 }
 
 /** The pass over the list: what `isIncluded` takes, or, while filtering, what is `going`. */
