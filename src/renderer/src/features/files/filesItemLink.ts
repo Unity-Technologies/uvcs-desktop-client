@@ -29,6 +29,15 @@ export function filesItemLink(
 }
 
 /**
+ * Whether the Files view's viewer publishes its selected lines (`LineLinks.publishes`): for an item a link names, not
+ * one with pending changes (its lines are the workspace's own), and not while a page covers the view, whose own lines
+ * are the ones a link names then (the view stays mounted under it).
+ */
+export function filesLinesPublished({ linkable, changed, covered }: { linkable: boolean; changed: boolean; covered: boolean }): boolean {
+  return linkable && !changed && !covered;
+}
+
+/**
  * What ⇧⌘C names in the Files view: the lines selected in the item's viewer when there are some (pinned), else the
  * item (`filesItemLink`).
  */

@@ -1,6 +1,6 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
-import { filesItemLink, filesShownLink } from './filesItemLink';
+import { filesItemLink, filesLinesPublished, filesShownLink } from './filesItemLink';
 
 const ON_TASK = { repository: 'game@local', selector: { kind: 'branch', name: '/main/task' }, loadedChangeset: 28 } as const;
 const PLAYER = { path: 'Assets/Player.cs', repository: 'game@local' };
@@ -42,5 +42,17 @@ describe('filesShownLink', () => {
     expect(filesShownLink(ON_TASK, PLAYER, { path: 'Assets/Player.cs', lines: LINES })?.lines).toEqual(LINES);
     expect(filesShownLink(ON_TASK, PLAYER, { path: 'Other.cs', lines: LINES })).toEqual(filesItemLink(ON_TASK, PLAYER));
     expect(filesShownLink(ON_TASK, PLAYER, { path: 'Assets/Player.cs', lines: { side: 'old', first: 1, last: 1 } })).toEqual(filesItemLink(ON_TASK, PLAYER));
+  });
+});
+
+describe('filesLinesPublished', () => {
+  it("publishes a linkable item's lines while the view is in front", () => {
+    expect(filesLinesPublished({ linkable: true, changed: false, covered: false })).toBe(true);
+  });
+
+  it("publishes none for a changed item, one no link names, or under a page, whose lines a link names then", () => {
+    expect(filesLinesPublished({ linkable: true, changed: true, covered: false })).toBe(false);
+    expect(filesLinesPublished({ linkable: false, changed: false, covered: false })).toBe(false);
+    expect(filesLinesPublished({ linkable: true, changed: false, covered: true })).toBe(false);
   });
 });

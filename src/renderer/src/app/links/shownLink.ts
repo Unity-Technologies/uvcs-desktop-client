@@ -1,8 +1,7 @@
 import type { DiffTarget } from '@shared/domain/diff';
-import type { ShownBrowseItem } from '../../features/browseRepository/shownBrowseItem';
 import { shortBranchName } from '@shared/domain/specs';
-import type { LinkObject } from '@shared/links/link';
-import type { LinkLines } from '@shared/links/link';
+import type { LinkLines, LinkObject } from '@shared/links/link';
+import type { ShownBrowseItem } from '../../features/browseRepository/shownBrowseItem';
 import type { ShownRevision } from '../../features/history/shownRevision';
 import type { Page } from '../navigation/pages';
 import type { ViewId } from '../navigation/views';
@@ -129,6 +128,11 @@ export function shownFileOf(
   if (!onScreen || (page?.kind !== 'diff' && page?.kind !== 'codeReview')) return null;
   if (page.kind === 'diff' && JSON.stringify(onScreen.target) !== JSON.stringify(page.target)) return null;
   return selected?.path === onScreen.path ? selected : { path: onScreen.path };
+}
+
+/** The link to a viewer's own selected lines where no page names them (the Files view: `LineLinks.linkOf`). */
+export function placeLinesTarget(publishes: boolean, linkOf: (lines: LinkLines) => LinkTarget | null, lines: LinkLines | null): LinkTarget | null {
+  return publishes && lines ? linkOf(lines) : null;
 }
 
 /** What "Copy link" copies (`useCopyLinkCommand`): a link it names, or the one the view's selected object offers. */

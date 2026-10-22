@@ -1,7 +1,9 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
+import type { LinkLines } from '@shared/links/link';
 import { VIEW_IDS } from '../navigation/views';
-import { copyLinkLabel, hasLinkToCopy, linkToCopy, nextTimeHint, objectLinkLabel, pageLinkTarget, pageObjectTarget, shownFileOf, viewLinkTarget } from './shownLink';
+import type { LinkTarget } from './linkNavigation';
+import { copyLinkLabel, hasLinkToCopy, placeLinesTarget, linkToCopy, nextTimeHint, objectLinkLabel, pageLinkTarget, pageObjectTarget, shownFileOf, viewLinkTarget } from './shownLink';
 
 const LINES = { side: 'new', first: 40, last: 52 } as const;
 
@@ -233,5 +235,14 @@ describe('nextTimeHint', () => {
   it('teaches the shortcut in the keys the OS shows', () => {
     expect(nextTimeHint(['⇧', '⌘', 'C'])).toBe('⇧⌘C copies it next time');
     expect(nextTimeHint(['Ctrl+Shift+C'])).toBe('Ctrl+Shift+C copies it next time');
+  });
+});
+
+describe('placeLinesTarget', () => {
+  it("names the viewer's own lines where it publishes them, nothing else", () => {
+    const linkOf = (lines: LinkLines): LinkTarget => ({ object: { kind: 'changeset', id: 28 }, page: { kind: 'browse', path: '/a.cs' }, lines });
+    expect(placeLinesTarget(true, linkOf, LINES)).toEqual(linkOf(LINES));
+    expect(placeLinesTarget(true, linkOf, null)).toBeNull();
+    expect(placeLinesTarget(false, linkOf, LINES)).toBeNull();
   });
 });

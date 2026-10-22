@@ -38,7 +38,7 @@ export function useLineTools({ containerRef, layout, range, select, selectable, 
 } {
   const lineLinks = useContext(LineLinksContext);
   const annotateAt = lineLinks?.annotateAt;
-  const link = usePageLineLink(publishes, lineLinks?.linkOf);
+  const link = usePageLineLink(publishes, lineLinks?.linkOf, linkedLinesOf(range));
   const linkable = link.target !== null;
   const anchor = lineChipAnchor(range, linkable);
   const menuLines = useRef<FocusedLines | null>(null);

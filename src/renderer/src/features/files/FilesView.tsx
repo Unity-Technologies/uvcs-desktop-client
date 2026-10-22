@@ -58,7 +58,7 @@ export function FilesView() {
   const selectedItems = useMemo(() => rows.filter((row) => selection.selected.has(row.item.path)).map((row) => row.item), [rows, selection]);
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
   const focusedMenu = focused ? fileMenu(workspacePath, [focused], pendingIndex, locks) : [];
-  const lineLinks = useFilesItemLinks(workspace, focused, focused !== undefined && pendingIndex.changeAt(focused.path) !== undefined);
+  const lineLinks = useFilesItemLinks(workspace, focused, pendingIndex);
 
   const revealRequest = useRevealRequest(workspacePath);
   useEffect(() => {
