@@ -11,7 +11,7 @@ import { validateBranchName } from './branchNames';
 import { PendingChangesChoice } from './PendingChangesChoice';
 import { PendingChangesNotes } from './PendingChangesNotes';
 import { ReviewChangesButton } from './ReviewChangesButton';
-import { startingPointCards, type NewBranchOrigin } from './newBranchOrigins';
+import { chosenStartingPoint, startingPointCards, type NewBranchOrigin } from './newBranchOrigins';
 import { StartingPointPicker } from './StartingPointPicker';
 import { newBranchSwitch, planSwitch, switchNotes, type SwitchPlan } from './switchOptions';
 import styles from './CreateBranchDialog.module.css';
@@ -74,7 +74,7 @@ function CreateBranchDialog({ workspacePath, origins, onFinish }: CreateBranchDi
     <Dialog
       title="New branch"
       description={`Starts at ${origin.startingPointLabel}.`}
-      headerAction={startingPoints && <StartingPointPicker cards={startingPoints} value={originIndex} onChange={setOriginIndex} />}
+      headerAction={startingPoints && <StartingPointPicker cards={startingPoints} value={originIndex} chosen={chosenStartingPoint(origin)} onChange={setOriginIndex} />}
       width={question ? 500 : undefined}
       onClose={onClose}
       onSubmit={() => void create()}

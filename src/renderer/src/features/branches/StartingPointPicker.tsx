@@ -10,6 +10,8 @@ interface StartingPointPickerProps {
   cards: OptionCard<string>[];
   /** The chosen origin's index. */
   value: number;
+  /** What the button shows for it (`chosenStartingPoint`). */
+  chosen: { name: string; title: string };
   onChange: (index: number) => void;
 }
 
@@ -19,7 +21,7 @@ interface StartingPointPickerProps {
  * as Esc, closes it back to its button. Out of the dialog's body, which then reads the same with one starting point or
  * several.
  */
-export function StartingPointPicker({ cards, value, onChange }: StartingPointPickerProps) {
+export function StartingPointPicker({ cards, value, chosen, onChange }: StartingPointPickerProps) {
   const [open, setOpen] = useState(false);
   const choicesRef = useRef<HTMLDivElement>(null);
   /** Whether the last input was a pointer: the arrow keys click a radio too, and those must not close the popover. */
@@ -36,8 +38,9 @@ export function StartingPointPicker({ cards, value, onChange }: StartingPointPic
         choicesRef.current?.querySelector<HTMLInputElement>('input:checked')?.focus();
       }}
       trigger={
-        <Button size="small" variant="ghost">
-          Start from <ChevronDown size={14} aria-hidden />
+        <Button size="small" variant="ghost" className={styles.trigger} data-tip={chosen.title}>
+          <span className={styles.chosen}>Start from: {chosen.name}</span>
+          <ChevronDown size={14} aria-hidden />
         </Button>
       }
     >

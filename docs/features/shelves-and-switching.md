@@ -37,8 +37,9 @@ they were undone and the switch didn't finish. "Review changes", on the left of 
 nothing, and opens Changes: in the switch's question also when a merge blocks the switch, in the new-branch dialog
 only while it asks (`newBranchSwitch`, which decides what that dialog shows about switching). The new-branch dialog
 says where the branch starts in its header ("Starts at …"); with several starting points, "Start from" at its top
-right (`StartingPointPicker`, the dialog's `headerAction`) opens them as explained cards in a popover, so the body
-reads the same with one starting point or several.
+right (`StartingPointPicker`, the dialog's `headerAction`), which names the chosen one shortly ("Start from: main",
+`chosenStartingPoint`), opens them as explained cards in a popover, so the body reads the same with one starting point
+or several.
 
 A code review brings the reviewer its code through the same flows (`reviewedCodeAction`, in the review's menu and its
 page's header): "Switch to this branch" or "Switch to this changeset" is the branch's or changeset's own switch, and

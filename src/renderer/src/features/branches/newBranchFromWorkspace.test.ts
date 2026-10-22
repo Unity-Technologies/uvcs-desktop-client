@@ -51,8 +51,9 @@ describe('a new branch from the workspace', () => {
 
     await newBranchFromWorkspace(workspaceOn({ kind: 'branch', name: '/main/child-br-cr-sample/empty-branch2/child_1/subtask/merge-test' }, 90));
 
-    const origins = opened[0]!.slice(1) as { parentBranch: string; card: { title: string } }[];
+    const origins = opened[0]!.slice(1) as { parentBranch: string; card: { name: string; title: string } }[];
     expect(origins.map((origin) => origin.card.title)).toEqual(['main (latest, changeset 120)', 'merge-test (changeset 90, what you have loaded)']);
+    expect(origins.map((origin) => origin.card.name)).toEqual(['main', 'merge-test']);
     expect(origins[1]!.parentBranch).toBe('/main/child-br-cr-sample/empty-branch2/child_1/subtask/merge-test');
   });
 
@@ -62,6 +63,7 @@ describe('a new branch from the workspace', () => {
     await newBranchFromWorkspace(workspaceOn({ kind: 'label', name: 'v1.0' }, 90));
 
     expect(offered()).toEqual(['/main @ cs:120', '/main @ lb:v1.0']);
+    expect((opened[0]![2] as { card: { name: string } }).card.name).toBe('label v1.0');
   });
 
   it('offers only the latest /main on a shelve, which no branch can start from', async () => {

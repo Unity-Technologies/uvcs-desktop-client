@@ -8,8 +8,16 @@ export interface NewBranchOrigin {
   startingPoint: string;
   /** How to describe the starting point to the user, e.g. "changeset 12". */
   startingPointLabel: string;
-  /** How it reads as one of several cards in "Start from" (`StartingPointPicker`). */
-  card?: { title: string; description: string };
+  /**
+   * How it reads as one of several in "Start from" (`StartingPointPicker`): its card, and `name`, short, on the
+   * picker's button once chosen ("main", "task001", "label v1").
+   */
+  card?: { name: string; title: string; description: string };
+}
+
+/** What "Start from"'s button shows for the chosen starting point: its short name, its card's title in the tooltip. */
+export function chosenStartingPoint(origin: NewBranchOrigin): { name: string; title: string } {
+  return { name: origin.card?.name ?? origin.startingPointLabel, title: origin.card?.title ?? origin.startingPointLabel };
 }
 
 /**
