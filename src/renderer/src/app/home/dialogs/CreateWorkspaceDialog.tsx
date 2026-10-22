@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { RepositorySummary } from '@shared/domain/repository';
+import { NewRepositoryFields } from '../../../components/NewRepositoryFields';
 import { RepositoryPicker } from '../../../components/RepositoryPicker';
+import { splitRepositorySpec } from '../../../lib/servers';
 import { Button } from '../../../ui/Button';
 import { Dialog } from '../../../ui/dialog/Dialog';
 import { openDialog } from '../../../ui/dialog/dialogStore';
@@ -9,11 +11,9 @@ import { TextField } from '../../../ui/TextField';
 import { toast } from '../../../ui/toast/toastStore';
 import { useRepositories, useWorkspaceList } from '../../workspace/workspaceQueries';
 import { useDefaultWorkspaceRoot } from '../useDefaultWorkspaceRoot';
-import { defaultWorkspacePath, isRepositoryNameTaken, isWorkspaceNameTaken } from '../workspaceNaming';
 import { createNewWorkspace } from './createNewWorkspace';
 import { LocationField } from './LocationField';
-import { NewRepositoryFields } from './NewRepositoryFields';
-import { chosenRepositoryName, workspaceNameShown, workspaceRepositoryOf, type RepositorySource } from './newWorkspaceForm';
+import { newWorkspaceFormOf, serverToList, typedNameAfterPicking, type RepositorySource } from './newWorkspaceForm';
 
 interface CreateWorkspaceOptions {
   repository?: RepositorySummary;
@@ -22,44 +22,53 @@ interface CreateWorkspaceOptions {
   onCreated: (workspacePath: string) => void;
 }
 
+const SOURCES: { value: RepositorySource; label: string }[] = [
+  { value: 'existing', label: 'Existing repository' },
+  { value: 'new', label: 'New repository' },
+];
+
 export function openCreateWorkspaceDialog(options: CreateWorkspaceOptions): void {
   openDialog((close) => <CreateWorkspaceDialog {...options} onClose={close} />);
 }
 
 function CreateWorkspaceDialog({ repository: initialRepository, path: initialPath, onCreated, onClose }: CreateWorkspaceOptions & { onClose: () => void }) {
   const { data: workspaces } = useWorkspaceList();
-  const takenNames = (workspaces ?? []).map((workspace) => workspace.name);
   const root = useDefaultWorkspaceRoot();
 
   const [source, setSource] = useState<RepositorySource>('existing');
+  const [server, setServer] = useState(() => (initialRepository ? splitRepositorySpec(initialRepository.spec).server : 'local'));
   const [existing, setExisting] = useState<RepositorySummary | undefined>(initialRepository);
-  const [newServer, setNewServer] = useState('local');
   const [newName, setNewName] = useState('');
-  /** Created by a try whose workspace failed: trying again creates only the workspace. */
   const [created, setCreated] = useState<string>();
   const [typedName, setTypedName] = useState<string>();
   const [chosenPath, setChosenPath] = useState(initialPath);
   const [creating, setCreating] = useState(false);
-  const { data: newServerRepositories } = useRepositories(source === 'new' ? newServer : null);
+  const { data: repositories } = useRepositories(serverToList(server, Boolean(initialRepository)));
 
-  const newNameTaken = isRepositoryNameTaken(newName, (newServerRepositories ?? []).map((repository) => repository.name));
-  const repository = workspaceRepositoryOf({ source, existingSpec: existing?.spec, newServer, newName, newNameTaken, created });
-  const repositoryName = chosenRepositoryName({ source, existingName: existing?.name, newName });
-  const name = workspaceNameShown({ typed: typedName, initialPath, repositoryName, takenNames });
-  const path = chosenPath ?? defaultWorkspacePath(root, name);
-  const nameTaken = isWorkspaceNameTaken(name, takenNames);
-  const canCreate = Boolean(repository && name.trim() && path && !nameTaken && !creating);
+  const form = newWorkspaceFormOf({
+    source,
+    server,
+    existing,
+    newName,
+    repositoryNames: (repositories ?? []).map((repository) => repository.name),
+    created,
+    typedName,
+    initialPath,
+    workspaceNames: (workspaces ?? []).map((workspace) => workspace.name),
+    chosenPath,
+    root,
+    creating,
+  });
 
   const pickExisting = (picked: RepositorySummary): void => {
     setExisting(picked);
-    // A repository picked names the workspace afresh, unless a dropped folder named it.
-    if (!initialPath) setTypedName(undefined);
+    setTypedName(typedNameAfterPicking(typedName, initialPath));
   };
 
   const create = async (): Promise<void> => {
-    if (!canCreate || !repository) return;
+    if (!form.canCreate || !form.repository) return;
     setCreating(true);
-    const outcome = await createNewWorkspace({ name: name.trim(), path, repository }, (createdPath) => {
+    const outcome = await createNewWorkspace({ name: form.workspaceName.trim(), path: form.path, repository: form.repository }, (createdPath) => {
       onClose();
       onCreated(createdPath);
     });
@@ -80,7 +89,7 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
       footer={
         <>
           <Button onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="primary" disabled={!canCreate} loading={creating}>
+          <Button type="submit" variant="primary" disabled={!form.canCreate} loading={creating}>
             Create workspace
           </Button>
         </>
@@ -90,40 +99,29 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
         <TextField label="Repository" value={initialRepository.spec} readOnly />
       ) : (
         <>
-          {!created && (
-            <SegmentedControl<RepositorySource>
-              label="Repository"
-              value={source}
-              onChange={setSource}
-              stretch
-              segments={[
-                { value: 'existing', label: 'Existing repository' },
-                { value: 'new', label: 'New repository' },
-              ]}
-            />
-          )}
+          {!form.choiceLocked && <SegmentedControl<RepositorySource> label="Repository" value={source} onChange={setSource} stretch segments={SOURCES} />}
           {source === 'existing' ? (
-            <RepositoryPicker value={existing?.spec ?? null} onChange={pickExisting} />
+            <RepositoryPicker value={existing?.spec ?? null} onChange={pickExisting} server={server} onServerChange={setServer} />
           ) : (
             <NewRepositoryFields
-              server={newServer}
-              onServerChange={setNewServer}
+              server={server}
+              onServerChange={setServer}
               name={newName}
               onNameChange={setNewName}
-              nameTaken={!created && newNameTaken}
-              locked={Boolean(created)}
+              nameTaken={form.showsRepositoryNameTaken}
+              locked={form.choiceLocked}
             />
           )}
         </>
       )}
       <TextField
         label="Workspace name"
-        value={name}
+        value={form.workspaceName}
         onChange={(event) => setTypedName(event.target.value)}
-        error={nameTaken ? 'There is already a workspace with this name.' : undefined}
+        error={form.workspaceNameTaken ? 'There is already a workspace with this name.' : undefined}
         autoFocus={Boolean(initialRepository)}
       />
-      <LocationField path={path} onChange={setChosenPath} pickerTitle="Choose the workspace folder" pickerFolder={root} />
+      <LocationField path={form.path} onChange={setChosenPath} pickerTitle="Choose the workspace folder" pickerFolder={root} />
     </Dialog>
   );
 }

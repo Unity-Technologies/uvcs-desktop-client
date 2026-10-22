@@ -1,70 +1,134 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { chosenRepositoryName, workspaceNameShown, workspaceRepositoryOf } from './newWorkspaceForm';
+import { newWorkspaceFormOf, serverToList, typedNameAfterPicking, type NewWorkspaceFormInput } from './newWorkspaceForm';
 
-const choice = { source: 'existing' as const, existingSpec: undefined, newServer: 'local', newName: '', newNameTaken: false, created: undefined };
+const root = join('Users', 'me', 'wkspaces');
+const game = { spec: 'game@local', name: 'game' };
 
-describe('workspaceRepositoryOf', () => {
-  it('is the repository picked, once one is', () => {
-    expect(workspaceRepositoryOf(choice)).toBeUndefined();
-    expect(workspaceRepositoryOf({ ...choice, existingSpec: 'game@local' })).toEqual({ kind: 'existing', spec: 'game@local' });
-  });
+const input: NewWorkspaceFormInput = {
+  source: 'existing',
+  server: 'local',
+  existing: undefined,
+  newName: '',
+  repositoryNames: [],
+  created: undefined,
+  typedName: undefined,
+  initialPath: undefined,
+  workspaceNames: [],
+  chosenPath: undefined,
+  root,
+  creating: false,
+};
 
-  it('is a repository to create on the server chosen, named as typed without the spaces around', () => {
-    expect(workspaceRepositoryOf({ ...choice, source: 'new', newServer: 'acme@cloud', newName: '  game ' })).toEqual({
-      kind: 'new',
-      server: 'acme@cloud',
-      name: 'game',
+describe('newWorkspaceFormOf', () => {
+  describe('with an existing repository', () => {
+    it('waits for a repository to be picked', () => {
+      expect(newWorkspaceFormOf(input)).toMatchObject({ repository: undefined, workspaceName: '', path: '', canCreate: false });
+    });
+
+    it("works with the repository picked, naming the workspace after it in the workspaces' folder", () => {
+      expect(newWorkspaceFormOf({ ...input, existing: game })).toEqual({
+        repository: { kind: 'existing', spec: 'game@local' },
+        workspaceName: 'game',
+        workspaceNameTaken: false,
+        path: join(root, 'game'),
+        showsRepositoryNameTaken: false,
+        choiceLocked: false,
+        canCreate: true,
+      });
+    });
+
+    it('forgets the repository picked once another server shows, as the picker does', () => {
+      expect(newWorkspaceFormOf({ ...input, existing: game, server: 'acme@cloud' })).toMatchObject({ repository: undefined, workspaceName: '', canCreate: false });
     });
   });
 
-  it('ignores the other source', () => {
-    expect(workspaceRepositoryOf({ ...choice, source: 'new', existingSpec: 'game@local' })).toBeUndefined();
-    expect(workspaceRepositoryOf({ ...choice, newName: 'game' })).toBeUndefined();
-  });
+  describe('with a new repository', () => {
+    const creating = { ...input, source: 'new' as const, server: 'acme@cloud' };
 
-  it('names no repository to create without a name, or with one already taken', () => {
-    expect(workspaceRepositoryOf({ ...choice, source: 'new', newName: '   ' })).toBeUndefined();
-    expect(workspaceRepositoryOf({ ...choice, source: 'new', newName: 'game', newNameTaken: true })).toBeUndefined();
-  });
+    it('creates it on the server shown, named as typed without the spaces around, and names the workspace after it', () => {
+      expect(newWorkspaceFormOf({ ...creating, newName: ' acme/game ' })).toMatchObject({
+        repository: { kind: 'new', server: 'acme@cloud', name: 'acme/game' },
+        workspaceName: 'game',
+        path: join(root, 'game'),
+        canCreate: true,
+      });
+    });
 
-  it('keeps the repository an earlier try created, though its name now shows as taken', () => {
-    expect(workspaceRepositoryOf({ ...choice, source: 'new', newName: 'game', newNameTaken: true, created: 'game@local' })).toEqual({
-      kind: 'new',
-      server: 'local',
-      name: 'game',
-      created: 'game@local',
+    it('ignores a repository picked before switching', () => {
+      expect(newWorkspaceFormOf({ ...creating, existing: game })).toMatchObject({ repository: undefined, canCreate: false });
+    });
+
+    it('needs a name', () => {
+      expect(newWorkspaceFormOf({ ...creating, newName: '   ' })).toMatchObject({ repository: undefined, canCreate: false });
+    });
+
+    it('says a name the server already has is taken, telling names apart by case as cm does', () => {
+      expect(newWorkspaceFormOf({ ...creating, newName: 'game', repositoryNames: ['game'] })).toMatchObject({
+        repository: undefined,
+        showsRepositoryNameTaken: true,
+        canCreate: false,
+      });
+      expect(newWorkspaceFormOf({ ...creating, newName: 'Game', repositoryNames: ['game'] })).toMatchObject({ showsRepositoryNameTaken: false, canCreate: true });
+    });
+
+    it('keeps a repository an earlier try made, locks the choice and shows no taken name, though the server now lists it', () => {
+      expect(newWorkspaceFormOf({ ...creating, newName: 'game', repositoryNames: ['game'], created: 'game@acme@cloud' })).toMatchObject({
+        repository: { kind: 'new', server: 'acme@cloud', name: 'game', created: 'game@acme@cloud' },
+        showsRepositoryNameTaken: false,
+        choiceLocked: true,
+        canCreate: true,
+      });
+    });
+
+    it('shows no taken name while an existing repository is chosen', () => {
+      expect(newWorkspaceFormOf({ ...input, newName: 'game', repositoryNames: ['game'] }).showsRepositoryNameTaken).toBe(false);
     });
   });
+
+  describe('the workspace name and folder', () => {
+    it('make the name unique among the workspaces, by case too', () => {
+      expect(newWorkspaceFormOf({ ...input, existing: game, workspaceNames: ['Game'] }).workspaceName).toBe('game-2');
+    });
+
+    it("take a dropped folder's name and the folder itself", () => {
+      const folder = join('projects', 'jump');
+      expect(newWorkspaceFormOf({ ...input, existing: game, initialPath: folder, chosenPath: folder })).toMatchObject({ workspaceName: 'jump', path: folder });
+    });
+
+    it('take what the user typed, even empty, and a folder they chose', () => {
+      const folder = join('elsewhere', 'mine');
+      expect(newWorkspaceFormOf({ ...input, existing: game, typedName: 'mine', chosenPath: folder })).toMatchObject({ workspaceName: 'mine', path: folder });
+      expect(newWorkspaceFormOf({ ...input, existing: game, typedName: '' })).toMatchObject({ workspaceName: '', path: '', canCreate: false });
+    });
+
+    it('refuse a name another workspace has', () => {
+      expect(newWorkspaceFormOf({ ...input, existing: game, typedName: 'Jump', workspaceNames: ['jump'] })).toMatchObject({ workspaceNameTaken: true, canCreate: false });
+    });
+
+    it('wait for the folder for new workspaces to be known', () => {
+      expect(newWorkspaceFormOf({ ...input, existing: game, root: undefined })).toMatchObject({ path: '', canCreate: false });
+    });
+  });
+
+  it('allows no second Create while one runs', () => {
+    expect(newWorkspaceFormOf({ ...input, existing: game, creating: true }).canCreate).toBe(false);
+  });
 });
 
-describe('workspaceNameShown', () => {
-  const sources = { typed: undefined, initialPath: undefined, repositoryName: '', takenNames: [] };
-
-  it('is empty until there is a repository to name it after', () => {
-    expect(workspaceNameShown(sources)).toBe('');
-    expect(workspaceNameShown({ ...sources, repositoryName: '  ' })).toBe('');
+describe('typedNameAfterPicking', () => {
+  it('names the workspace afresh after the repository picked', () => {
+    expect(typedNameAfterPicking('mine', undefined)).toBeUndefined();
   });
 
-  it('follows the repository, made unique among the workspaces', () => {
-    expect(workspaceNameShown({ ...sources, repositoryName: 'acme/game ' })).toBe('game');
-    expect(workspaceNameShown({ ...sources, repositoryName: 'game', takenNames: ['Game'] })).toBe('game-2');
-  });
-
-  it("is the folder's name when the dialog opened with one", () => {
-    expect(workspaceNameShown({ ...sources, initialPath: join('projects', 'jump'), repositoryName: 'game' })).toBe('jump');
-  });
-
-  it('is what the user typed, even empty', () => {
-    expect(workspaceNameShown({ ...sources, typed: 'mine', initialPath: join('projects', 'jump'), repositoryName: 'game' })).toBe('mine');
-    expect(workspaceNameShown({ ...sources, typed: '', repositoryName: 'game' })).toBe('');
+  it('keeps what the user typed when a folder named the workspace', () => {
+    expect(typedNameAfterPicking('mine', join('projects', 'jump'))).toBe('mine');
   });
 });
 
-describe('chosenRepositoryName', () => {
-  it('is the name of the repository picked, or of the one to create', () => {
-    expect(chosenRepositoryName({ source: 'existing', existingName: 'game', newName: 'jump' })).toBe('game');
-    expect(chosenRepositoryName({ source: 'existing', existingName: undefined, newName: 'jump' })).toBe('');
-    expect(chosenRepositoryName({ source: 'new', existingName: 'game', newName: 'jump' })).toBe('jump');
+describe('serverToList', () => {
+  it("reads the server's repositories, unless the caller fixed the repository", () => {
+    expect(serverToList('acme@cloud', false)).toBe('acme@cloud');
+    expect(serverToList('acme@cloud', true)).toBeNull();
   });
 });
