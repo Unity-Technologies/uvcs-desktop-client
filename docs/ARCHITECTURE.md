@@ -162,8 +162,8 @@ and many people use the same server. Every `cm` command other than local reads (
   operation can change (`refreshScopes.ts`, `runOperation({ affects })`, `runAction(..., affects)`): a checkin, an update
   or a merge from a branch leave labels, shelves, attributes, reviews, left changes and changesets already read alone;
   a merge into a server branch the workspace too, refreshing the incoming check instead (`isAffectedByServerMerge`);
-  shelving changes that stay in the workspace refreshes only the shelve lists, and shelving them away those and the workspace; a new, deleted or hidden branch only the
-  branch lists and the Branch Explorer; a label edit the labels and the graph; an attribute or value edit only the
+  shelving changes that stay in the workspace refreshes only the shelve lists, and shelving them away those and the workspace; a new, deleted or hidden branch, or one whose comment was edited, only the
+  branch lists and the Branch Explorer (the top bar's branch comment comes from a branch query); a label edit the labels and the graph; an attribute or value edit only the
   attributes; a code review created, edited, marked reviewed or deleted only the reviews (their lists and the branch chips); releasing a lock only the locks; deleting a shelve or discarding left changes only the shelve lists and the left changes, and applying or restoring one those, the workspace and its locks; adding, checking out, removing, undoing or reverting files only the workspace and its locks; restoring deleted items only the workspace (`isAffectedByRestoredItems`); a changeset's comment edited only what shows changesets, and one moved or deleted those, the branch lists and incoming. Reads refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
   the last (create a branch and switch to it: `createBranchAndSwitch`). Views keyed by the workspace info (`keyedByWorkspaceInfo`: left changes, the
   incoming check, the branch the workspace is on) wait for it, and when the operation gave them another key they are only
@@ -960,9 +960,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   `FoldedComment`, which a diff's header shares, see `features/diff.md` "The diff's header"; edited in place where cm can edit it, the title in a field that wraps and grows, and a comment left unedited saved as it was, `editedComment`; a name reads a size above a comment's title); a meta row (author ·
   date · spec to copy · branch chip); attribute chips (`AttributeChips`); properties and relations behind "More details";
   then the changes pane under a remembered splitter (`DetailsChangesPane`), its title a disclosure once the list is read
-  that hides it and shows it again from the cache, remembered for every panel as More details is (`changesCollapsed`). cm edits changeset, attribute and label
-  comments (a label's by applying it again to its changeset, `labelCommentArgs`); branch and shelve comments stay
-  read-only: no `cm` command or client API edits them. Selecting a row must stay cheap (Server
+  that hides it and shows it again from the cache, remembered for every panel as More details is (`changesCollapsed`). cm edits changeset, attribute, branch and label
+  comments (a branch's with `cm branch editcomment`, the comment in a file; a label's by applying it again to its
+  changeset, `labelCommentArgs`); shelve comments stay read-only: no `cm` command or client API edits them. Selecting a row must stay cheap (Server
   budget: Selection); the changed files' `cm diff` runs only on request (`ChangedFilesSection`). The panel's parts are
   primitives of their own in `ui/` (`DetailsSection`, `DetailsEmpty`, `DetailsSkeleton`, `DetailsBadge`,
   `DetailsCopyable`, `DetailsLink`, `DetailsDisclosure`, `MoreDetails`), each imported from its own module. Lists are
