@@ -44,11 +44,6 @@
   scrollbar-gutter: stable;
 }
 
-/* Without column titles, the rows keep off the edges above and below them, as Changes' do. */
-.table[data-headerless] .viewport {
-  padding: var(--space-1) 0;
-}
-
 .row {
   position: absolute;
   left: 0;

@@ -23,6 +23,8 @@ import { useChangelistDrop } from './useChangelistDrop';
 import styles from './ChangesList.module.css';
 
 const ROW_HEIGHT = 28;
+/** `--space-1`. */
+const LIST_INSET = 4;
 /** A little longer than the row-enter animation. */
 const ARRIVAL_WINDOW_MS = 600;
 /** Vim-style moves, next to the arrows. */
@@ -106,6 +108,9 @@ export function ChangesList({
     getScrollElement: () => viewportRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 16,
+    // The rows keep off the edges above and below them; the virtualizer owns that room, so a row scrolled into view shows whole.
+    paddingStart: LIST_INSET,
+    paddingEnd: LIST_INSET,
   });
   // The selected row stays in view, however it was selected (the diff going on to the next file).
   useEffect(() => {
