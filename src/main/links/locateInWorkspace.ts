@@ -29,6 +29,6 @@ export async function locateInWorkspace(path: string, { findRoot, resolve = real
     }
   };
   const relative = paths.relative(await resolved(root), await resolved(path));
-  if (relative.startsWith('..') || paths.isAbsolute(relative)) return null;
+  if (relative === '..' || relative.startsWith(`..${paths.sep}`) || paths.isAbsolute(relative)) return null;
   return { root, itemPath: relative.split(paths.sep).join('/') };
 }
