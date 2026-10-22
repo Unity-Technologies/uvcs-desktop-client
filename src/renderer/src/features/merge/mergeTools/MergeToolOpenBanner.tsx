@@ -1,5 +1,5 @@
 import { AppWindow } from 'lucide-react';
-import { SMART_MERGE_NAME } from '@shared/domain/mergeTools';
+import { UNITY_YAML_MERGE_NAME } from '@shared/domain/mergeTools';
 import { api } from '../../../api/client';
 import { Button } from '../../../ui/Button';
 import { Spinner } from '../../../ui/Spinner';
@@ -21,12 +21,12 @@ interface MergeToolOpenBannerProps {
  */
 export function MergeToolOpenBanner({ fileName, open, run }: MergeToolOpenBannerProps) {
   const last = run && run.position === run.total - 1;
-  if (open.toolName === SMART_MERGE_NAME) {
+  if (open.toolName === UNITY_YAML_MERGE_NAME) {
     return (
       <div className={styles.banner} role="status">
         <Spinner size={13} />
         <span className={styles.text}>
-          Merging <strong>{fileName}</strong> with Smart Merge…
+          Merging <strong>{fileName}</strong> with UnityYAMLMerge…
         </span>
         {!run && (
           <Button size="small" variant="ghost" data-tip="Leaves the file as it was" onClick={() => void stopMergeToolSession(open.sessionId)}>

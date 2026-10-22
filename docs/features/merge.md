@@ -58,11 +58,11 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   merges binaries, so a binary keeps one of its versions, picked in the app (`waitsForTool`). "Stop waiting" kills the tool process and takes what was saved so far, as soon as it exits: a launcher's
   app still holding its output doesn't keep the file open.
 - **Smart Merge** (Unity's merge of scenes, prefabs and other assets by their objects: the `UnityYAMLMerge` program in
-  every Unity Editor) isn't a tool to pick: "Resolve in…" (and each file of a "Resolve N conflicts" run) runs it
+  every Unity Editor, which the app names everywhere it shows, `UNITY_YAML_MERGE_NAME`, as the Unity Manual names the tool) isn't a tool to pick: "Resolve in…" (and each file of a "Resolve N conflicts" run) runs it
   first on a Unity asset the user decided nothing for yet (`smartMergeVersions`, from `decidedByUser`), and the file's
   tool opens only when it doesn't merge the file. Two calls, so each phase shows what really happens:
   `mergeTools.smartMerge` with the versions the page already read (no `cm` command), while the file reads "Merging…"
-  and its banner "Merging <file> with Smart Merge…" with Stop (stopping it opens nothing, even a stop that reaches main as Smart Merge ends on its own: the renderer remembers it, `stopMergeToolSession`, `wasStopped`); then, if it didn't merge,
+  and its banner "Merging <file> with UnityYAMLMerge…" with Stop (stopping it opens nothing, even a stop that reaches main as Smart Merge ends on its own: the renderer remembers it, `stopMergeToolSession`, `wasStopped`); then, if it didn't merge,
   `mergeTools.resolve` opens the tool as for any file. Without a Unity Editor (`MergeToolList.smartMerge` null) the
   tool opens straight away: nothing shows Smart Merge at work. While Smart Merge (or a tool) has the file, its menu
   offers no Keep or Start over, as its toolbar offers none (`conflictMenuEntries`); and should the user decide the file
@@ -77,7 +77,7 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   name, and it refuses what isn't Unity YAML anyway). Only exit code 0 counts (`judgeSmartMerge`): on 2 (conflicts
   left) it still writes a result holding the base's values where the sides disagree, so that result is dropped; 1
   means it couldn't read or merge the file. A failure other than conflicts left is warned in the console (`[smart
-  merge]`, with the end of its stderr). Its merge reads "Merged by Smart Merge"; "Resolve in…" on it opens the tool on
+  merge]`, with the end of its stderr). Its merge reads "Merged by UnityYAMLMerge"; "Resolve in…" on it opens the tool on
   Smart Merge's result, and Start over makes the file undecided again, so the next "Resolve in…" lets Smart Merge try
   again. Its size ceiling is the page's: a version over `MAX_TEXT_BYTES` (10 MB) is a binary to the page, which no tool
   opens, so Smart Merge isn't tried on it either. In practice it's lower: a text conflict of about 3.5 MB overflows the

@@ -26,8 +26,8 @@ const prefab = (changes: Partial<FileConflictState> = {}): FileConflictState => 
 });
 
 /**
- * Resolves the file, main answering Smart Merge with `smartMerged` and the tool with `saved`; what showed as open.
- * `decidedMeanwhile`: the user decides the file in the app while Smart Merge runs. `withUnity`: Smart Merge was found.
+ * Resolves the file, main answering UnityYAMLMerge with `smartMerged` and the tool with `saved`; what showed as open.
+ * `decidedMeanwhile`: the user decides the file in the app while UnityYAMLMerge runs. `withUnity`: UnityYAMLMerge was found.
  */
 async function resolve(
   state: FileConflictState,
@@ -47,26 +47,26 @@ async function resolve(
 }
 
 describe('resolveInMergeTool', () => {
-  it('takes Smart Merge’s merge of a Unity asset, showing Smart Merge at work and opening no tool', async () => {
+  it('takes UnityYAMLMerge’s merge of a Unity asset, showing UnityYAMLMerge at work and opening no tool', async () => {
     const { session, shown, methods } = await resolve(prefab(), { kind: 'merged', text: 'merged\n' });
 
-    expect(session.decision).toEqual({ kind: 'text', text: 'merged\n', tool: 'Smart Merge' });
-    expect(shown).toEqual(['Smart Merge', null]);
+    expect(session.decision).toEqual({ kind: 'text', text: 'merged\n', tool: 'UnityYAMLMerge' });
+    expect(shown).toEqual(['UnityYAMLMerge', null]);
     expect(methods).toEqual(['mergeTools.smartMerge']);
     const [[request]] = fakeApi.argsOf('mergeTools.smartMerge') as [[SmartMergeRequest]];
     expect(request).toMatchObject({ path: 'Assets/Player.prefab', base: `${UNITY}base\n`, yours: `${UNITY}yours\n`, incoming: `${UNITY}incoming\n` });
   });
 
-  it('opens the tool, then, when Smart Merge doesn’t merge the file', async () => {
+  it('opens the tool, then, when UnityYAMLMerge doesn’t merge the file', async () => {
     const { session, shown, methods } = await resolve(prefab(), { kind: 'notMerged' });
 
     expect(session.decision).toEqual({ kind: 'text', text: 'by hand\n', tool: 'VS Code' });
-    expect(shown).toEqual(['Smart Merge', null, 'VS Code (front)', null]);
+    expect(shown).toEqual(['UnityYAMLMerge', null, 'VS Code (front)', null]);
     expect(methods).toEqual(['mergeTools.smartMerge', 'mergeTools.resolve']);
   });
 
   it.each([{ kind: 'merged', text: 'merged\n' }, { kind: 'notMerged' }] as const)(
-    'keeps what the user decided in the app while Smart Merge ran, and opens nothing (Smart Merge: $kind)',
+    'keeps what the user decided in the app while UnityYAMLMerge ran, and opens nothing (UnityYAMLMerge: $kind)',
     async (smartMerged) => {
       const { session, methods } = await resolve(prefab(), smartMerged, { decidedMeanwhile: true });
 
@@ -75,17 +75,17 @@ describe('resolveInMergeTool', () => {
     },
   );
 
-  it('opens the tool straight away without a Unity Editor, never showing Smart Merge at work', async () => {
+  it('opens the tool straight away without a Unity Editor, never showing UnityYAMLMerge at work', async () => {
     const { shown, methods } = await resolve(prefab(), { kind: 'merged', text: 'never\n' }, { withUnity: false });
 
     expect(shown).toEqual(['VS Code (front)', null]);
     expect(methods).toEqual(['mergeTools.resolve']);
   });
 
-  it('opens nothing when the user stops Smart Merge just as it ends on its own, too late for main to stop it', async () => {
+  it('opens nothing when the user stops UnityYAMLMerge just as it ends on its own, too late for main to stop it', async () => {
     fakeApi.answer('mergeTools.stopWaiting', async () => undefined);
     fakeApi.answer('mergeTools.smartMerge', async ({ sessionId }: SmartMergeRequest) => {
-      // Skip, Stop or leaving the page, while main already has Smart Merge's answer: it finds nothing to stop.
+      // Skip, Stop or leaving the page, while main already has UnityYAMLMerge's answer: it finds nothing to stop.
       void stopMergeToolSession(sessionId);
       return { kind: 'notMerged' };
     });
@@ -97,15 +97,15 @@ describe('resolveInMergeTool', () => {
     expect(fakeApi.methods()).toEqual(['mergeTools.smartMerge', 'mergeTools.stopWaiting']);
   });
 
-  it('opens nothing more when the user stops Smart Merge', async () => {
+  it('opens nothing more when the user stops UnityYAMLMerge', async () => {
     const { session, methods } = await resolve(prefab(), { kind: 'stopped' });
 
     expect(session).toEqual({ outcome: { kind: 'unchanged', exitCode: null, errorOutput: '' }, decision: undefined });
     expect(methods).toEqual(['mergeTools.smartMerge']);
   });
 
-  it('opens the tool straight away once the user decided something, Smart Merge’s merge included', async () => {
-    const decided = prefab({ decision: { kind: 'text', text: 'merged\n', tool: 'Smart Merge' }, decidedByUser: true, resolution: { choice: 'text', text: 'merged\n' } });
+  it('opens the tool straight away once the user decided something, UnityYAMLMerge’s merge included', async () => {
+    const decided = prefab({ decision: { kind: 'text', text: 'merged\n', tool: 'UnityYAMLMerge' }, decidedByUser: true, resolution: { choice: 'text', text: 'merged\n' } });
 
     const { methods } = await resolve(decided, { kind: 'merged', text: 'never\n' });
 

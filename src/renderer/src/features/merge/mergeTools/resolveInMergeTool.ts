@@ -1,4 +1,4 @@
-import { SMART_MERGE_NAME, type MergeTool, type MergeToolOutcome, type SmartMergeOutcome, type SmartMergeRequest } from '@shared/domain/mergeTools';
+import { UNITY_YAML_MERGE_NAME, type MergeTool, type MergeToolOutcome, type SmartMergeOutcome, type SmartMergeRequest } from '@shared/domain/mergeTools';
 import { api } from '../../../api/client';
 import { fileNameOf } from '../../../lib/text';
 import { toast } from '../../../ui/toast/toastStore';
@@ -11,7 +11,7 @@ import { smartMergeVersions } from './smartMergeVersions';
 
 /**
  * A merge tool that has a file open, waiting for the user; or Smart Merge merging it, with no window (`toolName` is
- * `SMART_MERGE_NAME`, and nothing can be brought to the front).
+ * `UNITY_YAML_MERGE_NAME`, and nothing can be brought to the front).
  */
 export interface OpenTool {
   sessionId: string;
@@ -58,7 +58,7 @@ export async function resolveInMergeTool(
   if (versions) {
     const smartMerged = await runSmartMerge(versions, onOpen);
     if (!options.stillUndecided()) return { outcome: NOTHING_SAVED, decision: undefined };
-    if (smartMerged) return ended(smartMerged, SMART_MERGE_NAME, state, options);
+    if (smartMerged) return ended(smartMerged, UNITY_YAML_MERGE_NAME, state, options);
   }
   return ended(await openInTool(workspacePath, state, tool, labels, onOpen), tool.name, state, options);
 }
@@ -76,7 +76,7 @@ function ended(outcome: MergeToolOutcome, by: string, state: FileConflictState, 
 /** Smart Merge's outcome when it merged the file or the user stopped it; null when the tool is to open. */
 async function runSmartMerge(versions: Omit<SmartMergeRequest, 'sessionId'>, onOpen: (open: OpenTool | null) => void): Promise<MergeToolOutcome | null> {
   const sessionId = crypto.randomUUID();
-  onOpen({ sessionId, toolName: SMART_MERGE_NAME, canBringToFront: false });
+  onOpen({ sessionId, toolName: UNITY_YAML_MERGE_NAME, canBringToFront: false });
   try {
     const merged = await api.mergeTools.smartMerge({ sessionId, ...versions }).catch((): SmartMergeOutcome => ({ kind: 'notMerged' }));
     // Stopped here too late for main to stop it: still stopped, so no tool opens after the user said stop.

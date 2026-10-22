@@ -38,7 +38,7 @@ export interface MergeToolList {
 }
 
 /** Unity's own name for its merge of scenes, prefabs and other assets (the Unity Manual's "Smart merge"). */
-export const SMART_MERGE_NAME = 'Smart Merge';
+export const UNITY_YAML_MERGE_NAME = 'UnityYAMLMerge';
 
 /**
  * Unity's Smart Merge (`UnityYAMLMerge`, in every Unity Editor): it merges scenes, prefabs and other Unity assets by

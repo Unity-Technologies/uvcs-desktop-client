@@ -43,7 +43,7 @@ class FakePage {
   constructor(
     paths: string[],
     private readonly inTool: Record<string, InTool>,
-    /** `smartMerged`: files Smart Merge merges, before the tool would open on them; `toolFor`, each file's tool. */
+    /** `smartMerged`: files UnityYAMLMerge merges, before the tool would open on them; `toolFor`, each file's tool. */
     private readonly options: { asks?: boolean; atPause?: AtPause; smartMerged?: string[]; toolFor?: (path: string) => MergeTool } = {},
   ) {
     this.states = paths.map(conflict);
@@ -78,7 +78,7 @@ class FakePage {
       resolve: async (key, tool) => {
         this.toolsOpened.push(tool.name);
         const outcome = (this.inTool[key.slice(1)] ?? (() => saved))(this);
-        if (outcome?.kind === 'resolved') this.decide(key.slice(1), this.options.smartMerged?.includes(key.slice(1)) ? 'Smart Merge' : undefined);
+        if (outcome?.kind === 'resolved') this.decide(key.slice(1), this.options.smartMerged?.includes(key.slice(1)) ? 'UnityYAMLMerge' : undefined);
         return outcome;
       },
       asksWhenClosedUnsaved: () => this.options.asks ?? true,
@@ -106,10 +106,10 @@ describe('resolving one by one', () => {
     expect(message).toEqual({ kind: 'success', title: 'Resolved all 3 conflicts in FakeMerge' });
   });
 
-  it('counts the files Smart Merge merged apart from those resolved in the tool', async () => {
+  it('counts the files UnityYAMLMerge merged apart from those resolved in the tool', async () => {
     const page = new FakePage(['a.prefab', 'b.prefab', 'c.ts'], {}, { smartMerged: ['a.prefab', 'b.prefab'] });
     const { message } = await page.runOneByOne();
-    expect(message).toEqual({ kind: 'success', title: 'Resolved all 3 conflicts: 2 with Smart Merge, 1 in FakeMerge' });
+    expect(message).toEqual({ kind: 'success', title: 'Resolved all 3 conflicts: 2 with UnityYAMLMerge, 1 in FakeMerge' });
   });
 
   it('skips the files decided in the app meanwhile, keeping their place in the count', async () => {

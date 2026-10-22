@@ -18,7 +18,7 @@ const conflict = (path: string, versions: { base?: string; source: string; desti
 });
 
 describe('smartMergeVersions', () => {
-  it('hands Smart Merge the three versions of a Unity asset, whatever its extension', () => {
+  it('hands UnityYAMLMerge the three versions of a Unity asset, whatever its extension', () => {
     const material = conflict('Assets/Red.mat', { base: `${UNITY}b`, source: `${UNITY}s`, destination: `${UNITY}d` });
     expect(smartMergeVersions(material)).toEqual({ path: 'Assets/Red.mat', base: `${UNITY}b`, yours: `${UNITY}d`, incoming: `${UNITY}s` });
   });

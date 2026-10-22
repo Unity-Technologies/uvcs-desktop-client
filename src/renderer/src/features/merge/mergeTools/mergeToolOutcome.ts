@@ -1,4 +1,4 @@
-import { SMART_MERGE_NAME, type MergeToolOutcome } from '@shared/domain/mergeTools';
+import { UNITY_YAML_MERGE_NAME, type MergeToolOutcome } from '@shared/domain/mergeTools';
 import { pluralize } from '../../../lib/text';
 import type { MergeLabels } from '../mergeDescription';
 import type { FileConflictDecision } from '../resolve/fileConflictDecision';
@@ -29,7 +29,7 @@ export interface OutcomeMessage {
 export function toolOutcomeMessage(outcome: MergeToolOutcome, tool: string, fileName: string): OutcomeMessage {
   switch (outcome.kind) {
     case 'resolved': {
-      if (tool === SMART_MERGE_NAME) return { kind: 'success', title: `Merged ${fileName} with Smart Merge` };
+      if (tool === UNITY_YAML_MERGE_NAME) return { kind: 'success', title: `Merged ${fileName} with UnityYAMLMerge` };
       const left = countConflictRegions(outcome.text);
       if (left > 0) {
         return {
@@ -41,7 +41,7 @@ export function toolOutcomeMessage(outcome: MergeToolOutcome, tool: string, file
       return { kind: 'success', title: `Resolved ${fileName} in ${tool}` };
     }
     case 'unchanged':
-      if (outcome.exitCode === null && tool === SMART_MERGE_NAME) return { kind: 'info', title: 'Stopped Smart Merge', detail: `${fileName} still needs your decision.` };
+      if (outcome.exitCode === null && tool === UNITY_YAML_MERGE_NAME) return { kind: 'info', title: 'Stopped UnityYAMLMerge', detail: `${fileName} still needs your decision.` };
       if (outcome.exitCode === null) return { kind: 'info', title: `Stopped waiting for ${tool}`, detail: `Nothing was saved, so ${fileName} still needs your decision.` };
       return {
         kind: 'info',

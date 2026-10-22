@@ -21,17 +21,17 @@ describe('toolOutcomeMessage', () => {
     });
   });
 
-  it('says Smart Merge merged a Unity asset', () => {
-    expect(toolOutcomeMessage({ kind: 'resolved', text: 'x\n' }, 'Smart Merge', 'Player.prefab')).toEqual({
+  it('says UnityYAMLMerge merged a Unity asset', () => {
+    expect(toolOutcomeMessage({ kind: 'resolved', text: 'x\n' }, 'UnityYAMLMerge', 'Player.prefab')).toEqual({
       kind: 'success',
-      title: 'Merged Player.prefab with Smart Merge',
+      title: 'Merged Player.prefab with UnityYAMLMerge',
     });
   });
 
-  it('says Smart Merge was stopped, which has nothing saved to speak of', () => {
-    expect(toolOutcomeMessage({ kind: 'unchanged', exitCode: null, errorOutput: '' }, 'Smart Merge', 'Player.prefab')).toEqual({
+  it('says UnityYAMLMerge was stopped, which has nothing saved to speak of', () => {
+    expect(toolOutcomeMessage({ kind: 'unchanged', exitCode: null, errorOutput: '' }, 'UnityYAMLMerge', 'Player.prefab')).toEqual({
       kind: 'info',
-      title: 'Stopped Smart Merge',
+      title: 'Stopped UnityYAMLMerge',
       detail: 'Player.prefab still needs your decision.',
     });
   });

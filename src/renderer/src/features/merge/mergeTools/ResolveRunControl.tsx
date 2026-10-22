@@ -1,5 +1,5 @@
 import { Check, GalleryVerticalEnd, Pause, Settings, SkipForward } from 'lucide-react';
-import { SMART_MERGE_NAME } from '@shared/domain/mergeTools';
+import { UNITY_YAML_MERGE_NAME } from '@shared/domain/mergeTools';
 import { openSettingsDialogAt } from '../../../app/settings/SettingsDialog';
 import { saveSettings, useSettings } from '../../../app/settings/useSettings';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../../lib/actions';
@@ -91,7 +91,7 @@ function RunStrip({ states, run, progress }: { states: FileConflictState[]; run:
   const name = current ? fileNameOf(current.file.path) : '';
   const toolOpen = Boolean(current?.openTool);
   // Smart Merge merges a Unity asset before the tool would open on it.
-  const words = runStripWords(progress.toolName, current?.openTool?.toolName === SMART_MERGE_NAME);
+  const words = runStripWords(progress.toolName, current?.openTool?.toolName === UNITY_YAML_MERGE_NAME);
 
   // Esc stops, asking first while the tool has a file: stopping closes it. Smart Merge has nothing to lose.
   const stopFromKeyboard = async (): Promise<void> => {

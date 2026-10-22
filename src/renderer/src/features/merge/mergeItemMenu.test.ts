@@ -272,8 +272,8 @@ describe('mergeItemMenu', () => {
     expect(isSubmenu(entry(menu, 'copy'))).toBe(true);
   });
 
-  it('settles nothing for a file a tool or Smart Merge has open, as its toolbar offers nothing then: the outcome decides it', () => {
-    const open = { sessionId: 's', toolName: 'Smart Merge', canBringToFront: false };
+  it('settles nothing for a file a tool or UnityYAMLMerge has open, as its toolbar offers nothing then: the outcome decides it', () => {
+    const open = { sessionId: 's', toolName: 'UnityYAMLMerge', canBringToFront: false };
     expect(ids(menuOf([conflict('a.prefab', { openTool: open, decidedByUser: true })]))).not.toContain('keepDestination');
     expect(ids(menuOf([conflict('a.prefab', { openTool: open, decidedByUser: true })]))).not.toContain('startOver');
 

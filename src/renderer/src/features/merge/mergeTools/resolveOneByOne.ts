@@ -1,4 +1,4 @@
-import { SMART_MERGE_NAME, type MergeTool, type MergeToolOutcome } from '@shared/domain/mergeTools';
+import { UNITY_YAML_MERGE_NAME, type MergeTool, type MergeToolOutcome } from '@shared/domain/mergeTools';
 import { fileNameOf } from '../../../lib/text';
 import type { FileConflictState } from '../resolve/useFileConflicts';
 import { toolOutcomeMessage, type OutcomeMessage } from './mergeToolOutcome';
@@ -82,6 +82,6 @@ export function runEndMessage(plan: RunPlan, end: RunEnd, states: readonly FileC
     return { kind: 'error', title: message.title, detail: [reason, 'Stopped resolving one by one.'].filter(Boolean).join(' ') };
   }
   const resolved = plan.steps.map((step) => stateOf(step.key)).filter((state) => state?.resolution);
-  const withSmartMerge = resolved.filter((state) => state?.decision?.kind === 'text' && state.decision.tool === SMART_MERGE_NAME).length;
+  const withSmartMerge = resolved.filter((state) => state?.decision?.kind === 'text' && state.decision.tool === UNITY_YAML_MERGE_NAME).length;
   return runSummary({ resolved: resolved.length, withSmartMerge, total: plan.steps.length, stopped: end.stopped }, plan);
 }

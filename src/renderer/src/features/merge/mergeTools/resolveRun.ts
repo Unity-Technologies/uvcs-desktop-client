@@ -1,4 +1,4 @@
-import { SMART_MERGE_NAME, type MergeTool } from '@shared/domain/mergeTools';
+import { UNITY_YAML_MERGE_NAME, type MergeTool } from '@shared/domain/mergeTools';
 import { fileNameOf, listNames, pluralize } from '../../../lib/text';
 import type { FileConflictState } from '../resolve/useFileConflicts';
 import { waitsForTool } from './mergeToolOutcome';
@@ -87,9 +87,9 @@ export interface RunStripWords {
 export function runStripWords(toolName: string, smartMerging: boolean): RunStripWords {
   if (smartMerging) {
     return {
-      where: `with ${SMART_MERGE_NAME}`,
-      skipTip: `Stops ${SMART_MERGE_NAME} and goes on to the next file`,
-      stopTip: `Stops ${SMART_MERGE_NAME}; the file stays as it was`,
+      where: `with ${UNITY_YAML_MERGE_NAME}`,
+      skipTip: `Stops ${UNITY_YAML_MERGE_NAME} and goes on to the next file`,
+      stopTip: `Stops ${UNITY_YAML_MERGE_NAME}; the file stays as it was`,
       confirmsStop: false,
     };
   }
@@ -163,8 +163,8 @@ export function allInChoices(plans: readonly RunPlan[]): ToolChoice[] {
  */
 function resolvedBy({ resolved, withSmartMerge }: RunEnding, tool: string | null): string {
   if (withSmartMerge === 0) return tool ? ` in ${tool}` : '';
-  if (withSmartMerge === resolved) return ` with ${SMART_MERGE_NAME}`;
-  return `: ${withSmartMerge} with ${SMART_MERGE_NAME}, ${resolved - withSmartMerge} in ${tool ?? 'merge tools'}`;
+  if (withSmartMerge === resolved) return ` with ${UNITY_YAML_MERGE_NAME}`;
+  return `: ${withSmartMerge} with ${UNITY_YAML_MERGE_NAME}, ${resolved - withSmartMerge} in ${tool ?? 'merge tools'}`;
 }
 
 function allOf(total: number): string {

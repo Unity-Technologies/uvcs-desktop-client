@@ -149,18 +149,18 @@ describe('runSummary', () => {
     expect(runSummary({ resolved: 1, total: 3, stopped: true, withSmartMerge: 0 }, planRun([file('a.ts')], () => tool('UVCS merge tool'))).title).toBe('Stopped: resolved 1 of 3 in UVCS merge tool');
   });
 
-  it('tells what Smart Merge merged apart from what the tool resolved', () => {
+  it('tells what UnityYAMLMerge merged apart from what the tool resolved', () => {
     const three = planRun([file('a.prefab'), file('b.prefab'), file('c.ts')], () => tool('VS Code'));
-    expect(runSummary({ resolved: 3, total: 3, stopped: false, withSmartMerge: 2 }, three).title).toBe('Resolved all 3 conflicts: 2 with Smart Merge, 1 in VS Code');
-    expect(runSummary({ resolved: 3, total: 3, stopped: false, withSmartMerge: 3 }, three).title).toBe('Resolved all 3 conflicts with Smart Merge');
-    expect(runSummary({ resolved: 3, total: 5, stopped: false, withSmartMerge: 2 }, three).title).toBe('Resolved 3 of 5: 2 with Smart Merge, 1 in VS Code');
-    expect(runSummary({ resolved: 1, total: 2, stopped: true, withSmartMerge: 1 }, three).title).toBe('Stopped: resolved 1 of 2 with Smart Merge');
+    expect(runSummary({ resolved: 3, total: 3, stopped: false, withSmartMerge: 2 }, three).title).toBe('Resolved all 3 conflicts: 2 with UnityYAMLMerge, 1 in VS Code');
+    expect(runSummary({ resolved: 3, total: 3, stopped: false, withSmartMerge: 3 }, three).title).toBe('Resolved all 3 conflicts with UnityYAMLMerge');
+    expect(runSummary({ resolved: 3, total: 5, stopped: false, withSmartMerge: 2 }, three).title).toBe('Resolved 3 of 5: 2 with UnityYAMLMerge, 1 in VS Code');
+    expect(runSummary({ resolved: 1, total: 2, stopped: true, withSmartMerge: 1 }, three).title).toBe('Stopped: resolved 1 of 2 with UnityYAMLMerge');
   });
 
   it('names no tool when the files open in different ones', () => {
     const mixed = planRun([file('a.ts'), file('b.ts')], (state) => (state.file.path === 'b.ts' ? otherMerge : fakeMerge));
     expect(runSummary({ resolved: 2, total: 2, stopped: false, withSmartMerge: 0 }, mixed).title).toBe('Resolved both conflicts');
-    expect(runSummary({ resolved: 2, total: 3, stopped: false, withSmartMerge: 1 }, mixed).title).toBe('Resolved 2 of 3: 1 with Smart Merge, 1 in merge tools');
+    expect(runSummary({ resolved: 2, total: 3, stopped: false, withSmartMerge: 1 }, mixed).title).toBe('Resolved 2 of 3: 1 with UnityYAMLMerge, 1 in merge tools');
     expect(runSummary({ resolved: 0, total: 2, stopped: true, withSmartMerge: 0 }, mixed).title).toBe('Stopped resolving one by one');
   });
 
@@ -183,11 +183,11 @@ describe('runStripWords', () => {
     });
   });
 
-  it('speaks of Smart Merge while it merges: there is no window to close nor anything saved, so Esc stops at once', () => {
+  it('speaks of UnityYAMLMerge while it merges: there is no window to close nor anything saved, so Esc stops at once', () => {
     expect(runStripWords('VS Code', true)).toEqual({
-      where: 'with Smart Merge',
-      skipTip: 'Stops Smart Merge and goes on to the next file',
-      stopTip: 'Stops Smart Merge; the file stays as it was',
+      where: 'with UnityYAMLMerge',
+      skipTip: 'Stops UnityYAMLMerge and goes on to the next file',
+      stopTip: 'Stops UnityYAMLMerge; the file stays as it was',
       confirmsStop: false,
     });
   });
