@@ -1,5 +1,6 @@
 import { Link } from 'lucide-react';
 import { useMemo } from 'react';
+import { useShownRevision } from '../../features/history/shownRevision';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { copyToClipboard } from '../../ui/copyToClipboard';
 import { useCommands, type Command } from '../commands/commandStore';
@@ -9,7 +10,7 @@ import type { ViewId } from '../navigation/views';
 import { useWorkspacePath } from '../workspace/useWorkspace';
 import { workspaceLinkTo } from './linkTo';
 import { useSelectedObjectLink } from './selectedObjectLink';
-import { linkToCopy } from './shownLink';
+import { hasLinkToCopy, linkToCopy } from './shownLink';
 import { shownFileNow } from './useShownFile';
 
 /**
@@ -23,7 +24,8 @@ export function useCopyLinkCommand(): void {
   const top = useNavigation((state) => state.pages.at(-1));
   const view = useNavigation((state) => state.view);
   const hasSelectedObject = useSelectedObjectLink((state) => state.source !== null);
-  const hasLink = linkToCopy({ top, shown: null, hasSelectedObject, view }) !== null;
+  const shownOfOtherRepository = useShownRevision((state) => state.shown?.otherRepository === true);
+  const hasLink = hasLinkToCopy({ top, hasSelectedObject, view, shownOfOtherRepository });
 
   useCommands(
     useMemo<Command[]>(
