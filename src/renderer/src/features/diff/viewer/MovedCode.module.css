@@ -31,7 +31,8 @@
   z-index: 1;
   display: inline-flex;
   align-items: stretch;
-  max-width: 290px;
+  /* No wider than the room its spot leaves it (`labelSpot`'s `maxWidth`), when it's in a gap. */
+  max-width: min(290px, var(--label-room, 290px));
   height: 20px;
   border: 1px solid var(--diff-moved-outline);
   border-radius: var(--radius-full);

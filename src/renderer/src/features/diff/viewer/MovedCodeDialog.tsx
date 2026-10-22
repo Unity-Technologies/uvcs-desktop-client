@@ -1,5 +1,5 @@
 import { File, FileDiff } from '@pierre/diffs/react';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
 import { syntaxLanguage } from '../../../lib/syntaxLanguage';
 import { Button } from '../../../ui/Button';
@@ -11,6 +11,7 @@ import { useDiffPreferences } from './diffPreferencesStore';
 import type { LineDiff } from './lineDiff';
 import type { MovedBlock } from './movedBlocks';
 import { movedComparison } from './movedComparison';
+import { PaneScrollbars } from './PaneScrollbars';
 import { pierreDiffOptions, pierreFileOptions } from './pierreOptions';
 import styles from './MovedCodeDialog.module.css';
 
@@ -22,9 +23,6 @@ interface MovedCodeComparison {
   comparisonMethod: ComparisonMethod;
 }
 
-/** A row of the comparison, for its height: Pierre's line height, about. */
-const ROW_HEIGHT = 20;
-
 /**
  * Compares a move's two places, what moved with what it became (`movedComparison`): only what changed on the way shows
  * as changed, and code moved as it was shows alone, saying so. Read-only, in the diff's own look, layout and comparison
@@ -35,10 +33,9 @@ export function openMovedCodeDialog(comparison: MovedCodeComparison): void {
 }
 
 function MovedCodeDialog({ move, meta, fileName, comparisonMethod, onClose }: MovedCodeComparison & { onClose: () => void }) {
-  const { layout } = useDiffPreferences();
   const comparison = useMemo(() => movedComparison(meta, move, comparisonMethod, fileName), [meta, move, comparisonMethod, fileName]);
   const { deletions, additions } = move;
-  const rows = comparison.kind === 'unchanged' ? additions.count : layout === 'split' ? Math.max(deletions.count, additions.count) : deletions.count + additions.count;
+  const scroller = useRef<HTMLDivElement>(null);
   return (
     <Dialog
       title={`Moved from ${lines(deletions)} to ${lines(additions)}`}
@@ -51,12 +48,13 @@ function MovedCodeDialog({ move, meta, fileName, comparisonMethod, onClose }: Mo
         </Button>
       }
     >
-      <div className={styles.diff} style={{ height: `min(56vh, ${rows * ROW_HEIGHT + ROW_HEIGHT}px)` }}>
+      <div ref={scroller} className={styles.diff}>
         {comparison.kind === 'unchanged' ? (
           <UnchangedCode code={comparison.code} fileName={fileName} />
         ) : (
           <ComparedCode diff={comparison.diff} />
         )}
+        <PaneScrollbars containerRef={scroller} />
       </div>
     </Dialog>
   );

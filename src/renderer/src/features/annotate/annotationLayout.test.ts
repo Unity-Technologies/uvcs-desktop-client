@@ -15,7 +15,7 @@ describe('lineAtTop', () => {
 });
 
 describe('scrollTopRevealing', () => {
-  const view = { scrollTop: lineTop(10), height: 10 * ANNOTATION_LINE_HEIGHT };
+  const view = { scrollTop: lineTop(10), height: 10 * ANNOTATION_LINE_HEIGHT, coveredAtBottom: 0 };
 
   it('leaves a block whose first line is in view where it is', () => {
     expect(scrollTopRevealing(block(10, 30), view)).toBeNull();
@@ -25,6 +25,12 @@ describe('scrollTopRevealing', () => {
   it('brings a block out of view a few lines from the top', () => {
     expect(scrollTopRevealing(block(40, 41), view)).toBe(lineTop(37));
     expect(scrollTopRevealing(block(2, 12), view)).toBe(lineTop(-1));
+  });
+
+  it('brings in a block whose first line is under the scrollbar at the bottom of the view', () => {
+    const underBar = { ...view, coveredAtBottom: 10 };
+    expect(scrollTopRevealing(block(19, 20), underBar)).toBe(lineTop(16));
+    expect(scrollTopRevealing(block(18, 20), underBar)).toBeNull();
   });
 });
 

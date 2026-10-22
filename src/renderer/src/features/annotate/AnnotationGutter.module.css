@@ -1,3 +1,5 @@
+/* Stuck to the left: the view no longer scrolls sideways (the code does, in its pane), but code can still move it there,
+   as `focus()` bringing something into view. */
 .gutter {
   position: sticky;
   left: 0;

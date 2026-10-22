@@ -41,6 +41,8 @@
   --caption-buttons-width: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
   --view-header-height: 48px;
   --toolbar-height: 40px;
+  /* How thick the app's scrollbars are (global.css), on every OS: styled, they take room instead of overlaying. */
+  --scrollbar-size: 10px;
 
   /* Motion. Everything that appears eases out (fast start, soft landing); what moves between two places eases in
      and out. Durations drop to zero under prefers-reduced-motion (global.css), so animations built on them are
