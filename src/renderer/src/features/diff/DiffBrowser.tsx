@@ -92,11 +92,14 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
 
   const pane = diffPaneOf({ listedCount: reading ? undefined : entries.length, shownCount: shown.length, entrySelected: focused !== undefined, folderSelected: focusedFolder !== undefined });
 
+  // By what the target is, not the object: a branch diff passes a new one each render, and what listens to the file
+  // on screen (Copy link, in the page's header) renders the page again.
+  const targetKey = JSON.stringify(target);
   useEffect(() => {
     if (!focused) return;
     useShownDiffFile.setState({ shown: { target, path: focused.path } });
     return () => useShownDiffFile.setState({ shown: null });
-  }, [target, focused?.path]);
+  }, [targetKey, focused?.path]);
 
   return (
     <SplitPane
