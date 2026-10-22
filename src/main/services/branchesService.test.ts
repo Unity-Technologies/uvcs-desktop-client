@@ -186,12 +186,21 @@ describe('branch writes', () => {
     expect(existsSync(seen.file)).toBe(false);
   });
 
-  it('removes a comment by replacing it with an empty one, and deletes the file when cm fails', async () => {
+  it('removes a comment by replacing it with an empty one', async () => {
+    const { seen, answer } = readingFileOption('-commentsfile=');
+    const { service, commands } = branches({ 'branch editcomment': answer });
+
+    await service.editComment(WORKSPACE, '/main/task1', '');
+
+    expect(commands).toMatchObject([{ args: ['branch', 'editcomment', 'br:/main/task1', `-commentsfile=${seen.file}`] }]);
+    expect(seen.content).toBe('');
+  });
+
+  it('deletes the comment file when the comment cannot be replaced', async () => {
     const { seen, answer } = readingFileOption('-commentsfile=', cmFails('Error: The branch /main/gone does not exist.'));
     const { service } = branches({ 'branch editcomment': answer });
 
-    await expect(service.editComment(WORKSPACE, '/main/gone', '')).rejects.toThrow('does not exist');
-    expect(seen.content).toBe('');
+    await expect(service.editComment(WORKSPACE, '/main/gone', 'Gone')).rejects.toThrow('does not exist');
     expect(existsSync(seen.file)).toBe(false);
   });
 
