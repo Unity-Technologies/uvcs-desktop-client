@@ -25,7 +25,7 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   picked for them; then the user's rows (`mergeToolRules`), each a list of file patterns and a tool; last, every other
   file (`mergeTool`: `auto`, the UVCS one, else the first found; a pick no longer on offer falls back to it). Patterns
   (`lib/filePatterns`) are extensions (`.cs`), names with `*` and `?` (`*.prefab`), or paths from the workspace's root
-  with `**` crossing folders (`Assets/Data/**`), matched in any case on Windows and macOS and exactly on Linux
+  with `**` crossing folders (`Assets/Data/**`; one holding a space goes in double quotes, `"Assets/Third Party/**"`), matched in any case on Windows and macOS and exactly on Linux
   (`fileNamesIgnoreCase`). A row whose tool isn't found here is passed by, and says so ("Not found on this computer",
   named by `knownNames`); removing a tool of the user's drops its rows. With nothing imported, the rows are C#, Visual
   Basic and Java in Semantic Merge (`DEFAULT_MERGE_TOOL_RULES`), as the official client sends them. Each row's tool is a

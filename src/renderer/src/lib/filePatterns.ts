@@ -4,14 +4,28 @@
  * `/` matches the path from the workspace's root. `*` and `?` stay within a folder; `**` crosses folders.
  */
 
-/** The patterns typed in one field, separated by spaces, commas or semicolons (as the official client wrote them). */
+/**
+ * The patterns typed in one field, separated by spaces, commas or semicolons (as the official client wrote them); a
+ * pattern holding any of those goes in double quotes (`"Assets/Third Party/**"`).
+ */
 export function parseFilePatterns(text: string): string[] {
-  return text.split(/[\s,;]+/).filter((pattern) => pattern !== '');
+  const patterns: string[] = [];
+  let pattern = '';
+  let quoted = false;
+  for (const char of text) {
+    if (char === '"') quoted = !quoted;
+    else if (!quoted && /[\s,;]/.test(char)) {
+      if (pattern) patterns.push(pattern);
+      pattern = '';
+    } else pattern += char;
+  }
+  if (pattern) patterns.push(pattern);
+  return patterns;
 }
 
-/** The patterns as one field shows them. */
+/** The patterns as one field shows them, quoted where they hold a separator, so that `parseFilePatterns` reads them back. */
 export function formatFilePatterns(patterns: readonly string[]): string {
-  return patterns.join(' ');
+  return patterns.map((pattern) => (/[\s,;]/.test(pattern) ? `"${pattern}"` : pattern)).join(' ');
 }
 
 /** File names differ only in case on Linux; Windows and macOS (by default) treat `A.cs` and `a.cs` as one file. */
@@ -25,7 +39,8 @@ export function matchesFilePattern(pattern: string, path: string, ignoreCase: bo
   const wildcard = pattern.replace(/\\/g, '/').replace(/^\/+/, '');
   const byPath = wildcard.includes('/');
   const subject = byPath ? relativePath : relativePath.slice(relativePath.lastIndexOf('/') + 1);
-  return patternRegex(wildcard.startsWith('.') ? `*${wildcard}` : wildcard, ignoreCase).test(subject);
+  // `.cs` is any name ending so; a path starting with a dot (`.github/**`) is that folder.
+  return patternRegex(wildcard.startsWith('.') && !byPath ? `*${wildcard}` : wildcard, ignoreCase).test(subject);
 }
 
 /** Whether any of the patterns matches the file at `path`. */

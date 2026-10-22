@@ -129,6 +129,10 @@ describe('legacyMergeToolSettings', () => {
     expect(legacyMergeToolSettings(entries, fresh).mergeToolRules[0]).toEqual({ id: 'imported:1', patterns: ['.yaml'], toolId: 'meld' });
   });
 
+  it('keeps a pattern with spaces whole', () => {
+    expect(legacyMergeToolSettings([text('Assets/Third Party/*.json;.yaml', 'meld "@output"')], fresh).mergeToolRules[0]!.patterns).toEqual(['Assets/Third Party/*.json', '.yaml']);
+  });
+
   it('stops at the entry for every text file, as the client never goes past it', () => {
     const entries = [text('*', 'meld "@output"'), text('.cs', 'kdiff3 "@output"')];
     expect(legacyMergeToolSettings(entries, fresh)).toMatchObject({ mergeTool: 'meld', mergeToolRules: [] });

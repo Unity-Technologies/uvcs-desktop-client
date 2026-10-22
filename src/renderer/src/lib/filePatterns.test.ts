@@ -14,8 +14,14 @@ describe('parseFilePatterns', () => {
     expect(parseFilePatterns('  ')).toEqual([]);
   });
 
-  it('reads back what formatFilePatterns shows', () => {
-    expect(parseFilePatterns(formatFilePatterns(['.cs', 'Assets/**']))).toEqual(['.cs', 'Assets/**']);
+  it('reads a pattern holding a space in double quotes', () => {
+    expect(parseFilePatterns('"Assets/Third Party/**" .cs')).toEqual(['Assets/Third Party/**', '.cs']);
+  });
+
+  it('reads back what formatFilePatterns shows, quoting what holds a separator, imported patterns included', () => {
+    const patterns = ['.cs', 'Assets/**', 'Assets/Third Party/**', 'My Level.unity', 'a,b.txt'];
+    expect(formatFilePatterns(patterns)).toBe('.cs Assets/** "Assets/Third Party/**" "My Level.unity" "a,b.txt"');
+    expect(parseFilePatterns(formatFilePatterns(patterns))).toEqual(patterns);
   });
 });
 
@@ -40,6 +46,15 @@ describe('matchesFilePattern', () => {
     expect(matches('Assets/**/*.json', 'Assets/Data/Levels/one.json')).toBe(true);
     expect(matches('Assets/*.json', 'Assets/Data/one.json')).toBe(false);
     expect(matches('Assets/**/*.json', 'Packages/Assets/one.json')).toBe(false);
+  });
+
+  it('reads a path starting with a dot as that folder, not as an extension', () => {
+    expect(matches('.github/**', '.github/workflows/ci.yml')).toBe(true);
+    expect(matches('.github/**', 'docs.github/x')).toBe(false);
+  });
+
+  it('matches a path with spaces', () => {
+    expect(matches('Assets/Third Party/**', 'Assets/Third Party/Plugin/a.cs')).toBe(true);
   });
 
   it('takes the path with a leading slash or Windows separators alike', () => {
