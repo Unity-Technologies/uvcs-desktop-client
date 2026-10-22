@@ -3,7 +3,7 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import { bulkPrivateFiles } from './bulkPrivate';
 import { isShelvable } from './changeCategories';
 import { consistentlyIncluded, indexPending, neededWith } from './checkinDependencies';
-import { checkinFactsOf, checkinSelectionOf, includedBy, type CheckinChoice, type ListedChanges } from './checkinSelection';
+import { checkedAmong, checkinFactsOf, checkinSelectionOf, includedBy, type CheckinChoice, type ListedChanges } from './checkinSelection';
 import { uploadSummary } from './uploadSummary';
 
 /** Changes listed, of which the filter shows `matchingFilter`: all of them when nothing filters. */
@@ -164,5 +164,18 @@ describe('checkinSelectionOf, over many changes', () => {
 
     checkinSelectionOf(listedAll, counted(consistentlyIncluded(includedBy(unchecking(['src/f0/edit0.ts'])), listedAll.index)));
     expect(asked).toBe(many.length);
+  });
+});
+
+describe('checkedAmong', () => {
+  it('takes the count the selection made of what the filter shows, and counts again what review mode narrows it to', () => {
+    const listed = listing(all, [edited, added, link]);
+    const selection = checkinSelectionOf(listed, includedBy(unchecking(['src/new.ts'])));
+    let asked = 0;
+    const counting = { ...selection, isIncluded: (item: PendingChange) => (asked++, selection.isIncluded(item)) };
+
+    expect(checkedAmong(listed.matchingFilter, listed.matchingFilter, counting)).toBe(2);
+    expect(asked).toBe(0);
+    expect(checkedAmong([edited, added], listed.matchingFilter, counting)).toBe(1);
   });
 });

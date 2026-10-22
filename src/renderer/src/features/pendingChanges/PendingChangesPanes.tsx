@@ -49,7 +49,7 @@ import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { useChangeRows } from './useChangeRows';
 import { useCheckinPanelSubmit } from './useCheckinPanelSubmit';
 import type { CheckinMode } from './checkinButton';
-import { checkinFactsOf, currentChoice, type PreparedChangelist, preparedStillPending } from './checkinSelection';
+import { checkedAmong, checkinFactsOf, currentChoice, type PreparedChangelist, preparedStillPending } from './checkinSelection';
 import { useCheckinSelection } from './useCheckinSelection';
 import { useSortedChanges } from './useSortedChanges';
 import styles from './PendingChangesView.module.css';
@@ -107,7 +107,9 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const index = useMemo(() => indexPending(sorted), [sorted]);
   const facts = useMemo(() => checkinFactsOf(sorted), [sorted]);
   const listed = useMemo(() => ({ all: sorted, matchingFilter: filtered, index, facts }), [sorted, filtered, index, facts]);
-  const { isIncluded, included, hiddenIncludedCount, upload, shelvable, shelvableUpload, bulkPrivate } = useCheckinSelection(listed, checkinChoice);
+  const checkinSelection = useCheckinSelection(listed, checkinChoice);
+  const { isIncluded, included, hiddenIncludedCount, upload, shelvable, shelvableUpload, bulkPrivate } = checkinSelection;
+  const shownChecked = useMemo(() => checkedAmong(changes, filtered, checkinSelection), [changes, filtered, checkinSelection]);
   const reviewed = useMemo(() => reviewProgress(included, review.statusOf), [included, review.statusOf]);
   const { mergeChanges, onlyNeverCheckedIn } = useMemo(
     () => ({ mergeChanges: allChanges.filter((change) => change.mergeInfo), onlyNeverCheckedIn: allChanges.length > 0 && matchesBranch(allChanges) }),
@@ -220,7 +222,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
             <ChangesSummaryBar
               changes={changes}
               totalCount={listedCount}
-              isIncluded={isIncluded}
+              includedCount={shownChecked}
               onSetIncluded={setEveryShownIncluded}
               onUndo={(selected) => void undoChanges(workspacePath, selected)}
               onUndoUnchanged={() => void undoUnchangedCheckouts(workspacePath)}

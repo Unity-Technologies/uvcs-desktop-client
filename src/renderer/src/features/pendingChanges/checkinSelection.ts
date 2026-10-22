@@ -175,3 +175,14 @@ function selectionOf(
     bulkPrivate: privateFolderLeftOut ? bulkPrivateFiles(included) : bulk.result(),
   };
 }
+
+/**
+ * How many of the changes listed (`listed`: what the filters show, review mode's "Unreviewed" too) are checked: the
+ * selection's count when they are what the filter shows, counted again only when review mode narrows them.
+ */
+export function checkedAmong(listed: PendingChange[], matchingFilter: PendingChange[], selection: Pick<CheckinSelection, 'isIncluded' | 'shownIncludedCount'>): number {
+  if (listed === matchingFilter) return selection.shownIncludedCount;
+  let count = 0;
+  for (const change of listed) if (selection.isIncluded(change)) count++;
+  return count;
+}
