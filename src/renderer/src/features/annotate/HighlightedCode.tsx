@@ -1,5 +1,6 @@
 import type { SelectedLineRange, Virtualizer } from '@pierre/diffs';
-import { File, VirtualizerContext, WorkerPoolContext, type FileOptions } from '@pierre/diffs/react';
+import { File, VirtualizerContext, WorkerPoolContext } from '@pierre/diffs/react';
+import type { LineSelectionOptions } from '../diff/viewer/useLineLinks';
 import { useMemo } from 'react';
 import { useResolvedTheme } from '../../app/settings/useResolvedTheme';
 import { fileNameOf } from '../../lib/text';
@@ -15,7 +16,7 @@ interface HighlightedCodeProps {
   /** The annotation's, set up on its scrolling element: the code renders only the lines in view. */
   virtualizer: Virtualizer;
   /** Selecting lines by their numbers (`useLineLinks`), and the lines selected. */
-  selectionOptions: Pick<FileOptions<undefined, undefined>, 'enableLineSelection' | 'lineHoverHighlight' | 'onLineSelectionChange' | 'onLineSelected'>;
+  selectionOptions: LineSelectionOptions;
   selectedLines: SelectedLineRange | null | undefined;
 }
 

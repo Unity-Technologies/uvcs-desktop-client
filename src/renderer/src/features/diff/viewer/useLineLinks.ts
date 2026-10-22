@@ -1,10 +1,10 @@
 import type { SelectedLineRange } from '@pierre/diffs';
-import type { FileDiffOptions } from '@pierre/diffs/react';
 import { useContext, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { FocusedLines } from '../../../app/navigation/pages';
 import { forgetSelectedLines, selectLines } from '../selectedLinesStore';
 import type { ChangedLine } from './changeBlocks';
 import { focusIn, LineLinksContext } from './lineLinks';
+import { lineNumberHint } from './lineActions';
 import { initialSelectedRange, publishedSelection } from './lineLinkMode';
 import type { LineRange } from './lineSelection';
 
@@ -23,7 +23,25 @@ interface LineLinksOptions {
   scrollTo: ScrollToLine;
 }
 
-type SelectionOptions = Pick<FileDiffOptions<undefined, undefined>, 'enableLineSelection' | 'lineHoverHighlight' | 'onLineSelectionChange' | 'onLineSelected'>;
+type SelectionCallback = (range: SelectedLineRange | null) => void;
+
+/** Pierre's options for selecting lines and hinting how, the same for a diff (`FileDiff`) and a file (`File`). */
+export interface LineSelectionOptions {
+  enableLineSelection?: boolean;
+  lineHoverHighlight?: 'number';
+  onLineSelectionStart?: SelectionCallback;
+  onLineSelectionChange?: SelectionCallback;
+  onLineSelectionEnd?: SelectionCallback;
+  onLineSelected?: SelectionCallback;
+  onLineEnter?: (line: LineHover) => void;
+  onLineLeave?: (line: LineHover) => void;
+}
+
+/** What Pierre says of a line the pointer enters or leaves, a diff's or a file's. */
+interface LineHover {
+  numberElement: HTMLElement;
+  event: PointerEvent;
+}
 
 /**
  * A view's lines for links (a diff, an annotated file): a click on a line's number selects it, Shift+click or a drag a
@@ -48,11 +66,49 @@ export function useLineLinks({ path, selectable, containerRef, shown, scrollTo }
 
   useScrollToFocus(shown ? focusLines : undefined, containerRef, scrollTo);
 
-  const options = useMemo<SelectionOptions>(
-    () => (selectable ? { enableLineSelection: true, lineHoverHighlight: 'number', onLineSelectionChange: select, onLineSelected: select } : {}),
-    [selectable, select],
+  const hint = useLineNumberHint();
+  const options = useMemo<LineSelectionOptions>(
+    () => (selectable ? { enableLineSelection: true, lineHoverHighlight: 'number', onLineSelectionChange: select, onLineSelected: select, ...hint } : {}),
+    [selectable, select, hint],
   );
-  return { options, selectedLines: selectable ? range : undefined, focusLines };
+  return { options, selectedLines: selectable ? range : undefined, range: selectable ? range : null, select, publishes, focusLines };
+}
+
+/**
+ * The hint on a line number while the pointer is on it (`lineNumberHint`), through the app's tooltip (`data-tip`, set
+ * on Pierre's number cell as the pointer enters it, before the tooltip looks): none while a selection is dragged.
+ */
+function useLineNumberHint(): Pick<LineSelectionOptions, 'onLineEnter' | 'onLineLeave' | 'onLineSelectionStart' | 'onLineSelectionEnd'> {
+  const [hint] = useState(() => {
+    let selecting = false;
+    let hinted: HTMLElement | null = null;
+    const clear = (): void => {
+      hinted?.removeAttribute('data-tip');
+      hinted = null;
+    };
+    return {
+      onLineEnter: ({ numberElement, event }: LineHover): void => {
+        clear();
+        const tip = lineNumberHint(selecting);
+        // On the number only, not the line's code.
+        if (!tip || !event.composedPath().includes(numberElement)) return;
+        numberElement.setAttribute('data-tip', tip);
+        hinted = numberElement;
+        // Pierre says the pointer entered the line on its `pointermove`, after the `mouseover` the tooltip looks at:
+        // it's told again, now that the number has its tip.
+        numberElement.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, composed: true, clientX: event.clientX, clientY: event.clientY }));
+      },
+      onLineLeave: clear,
+      onLineSelectionStart: (): void => {
+        selecting = true;
+        clear();
+      },
+      onLineSelectionEnd: (): void => {
+        selecting = false;
+      },
+    };
+  });
+  return hint;
 }
 
 /**
