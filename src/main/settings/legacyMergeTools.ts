@@ -249,7 +249,10 @@ function withAppPlaceholders(args: readonly string[]): string[] {
   return converted;
 }
 
-/** `-e`, `--encoding`, `/E`: an option whose value comes as the next argument. */
+/**
+ * `-e`, `--encoding`, `/E`: an option whose value comes as the next argument. A guess the command line can't settle: a
+ * flag that takes no value (`-a @mergetype`) looks the same, and is dropped with the variable after it.
+ */
 function isSwitch(arg: string | undefined): boolean {
   return arg !== undefined && /^(-{1,2}[^=:\s]+|\/[^/\\=:\s]+)$/.test(arg);
 }
