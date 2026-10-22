@@ -24,10 +24,15 @@ export interface MergeTool {
   icon?: string;
 }
 
-/** The tools found, with the one "Resolve in…" uses: the user's choice, or else the UVCS tool, or else the first. */
+/**
+ * The tools found, with the one every file no rule matches opens in (`preferredId`): the user's choice, or else the
+ * UVCS tool, or else the first.
+ */
 export interface MergeToolList {
   tools: MergeTool[];
   preferredId: string | null;
+  /** Every known tool's name by its id, found or not: a rule naming one that isn't here still says which. */
+  knownNames: Record<string, string>;
   /** Smart Merge, when a Unity Editor is installed: "Resolve in…" runs it first on Unity assets (`smartMerge`). */
   smartMerge: SmartMergeTool | null;
 }
@@ -56,6 +61,27 @@ export interface CustomMergeTool {
 
 /** `auto`: the UVCS merge tool when it's installed, otherwise the first tool found. */
 export const AUTO_MERGE_TOOL = 'auto';
+
+/** The UVCS merge tool's semantic merge (the Desktop GUI run as `semanticmerge`): it merges code by its declarations. */
+export const SEMANTIC_TOOL_ID = 'semantic';
+
+/**
+ * A row of Settings › Merge: a conflicting file whose path matches one of its patterns opens in its tool. Rows are
+ * tried in order, the first that matches wins (`mergeToolFor`); a file none matches opens in the `mergeTool` setting's.
+ */
+export interface MergeToolRule {
+  id: string;
+  /** `.cs`, `*.prefab`, a path such as `Assets/Data/**` (`matchesFilePattern`). None: the row matches nothing yet. */
+  patterns: string[];
+  /** A tool id. A rule whose tool isn't found here is passed by. */
+  toolId: string;
+}
+
+/** Unity assets Smart Merge can't merge open where every other file would (`unityMergeTool`). */
+export const SAME_AS_OTHER_FILES = 'others';
+
+/** With nothing imported: C#, Visual Basic and Java in Semantic Merge, as the official client sends them. */
+export const DEFAULT_MERGE_TOOL_RULES: MergeToolRule[] = [{ id: 'semantic', patterns: ['.cs', '.vb', '.java'], toolId: SEMANTIC_TOOL_ID }];
 
 export interface MergeToolRequest {
   /** Chosen by the caller, to cancel it or bring its window forward while it's open. */
