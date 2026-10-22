@@ -33,9 +33,11 @@ export function ComboboxList({ id, label, options, active, onHighlight, onPick }
     rangeExtractor: (range) => keepRendered(defaultRangeExtractor(range), active, options.length),
   });
 
-  // The highlighted row stays in view: the option the field holds as the list opens, then each row the keys reach.
+  // The highlighted row stays in view: the option the field holds as the list opens, then each row the keys reach. Not a
+  // row the pointer highlights: scrolling a half-visible one into view would slide the next under the pointer, and creep.
+  const highlightedByPointer = useRef(-1);
   useEffect(() => {
-    if (active >= 0) virtualizer.scrollToIndex(active);
+    if (active >= 0 && active !== highlightedByPointer.current) virtualizer.scrollToIndex(active);
   }, [active, virtualizer]);
 
   return (
@@ -52,7 +54,11 @@ export function ComboboxList({ id, label, options, active, onHighlight, onPick }
               className={styles.option}
               style={{ top: row.start, height: row.size }}
               // A move, not an enter: a row that appears under a still pointer doesn't take Enter from a typed name.
-              onMouseMove={() => row.index !== active && onHighlight(row.index)}
+              onMouseMove={() => {
+                if (row.index === active) return;
+                highlightedByPointer.current = row.index;
+                onHighlight(row.index);
+              }}
               onClick={() => onPick(option)}
             >
               <span className={styles.optionText}>{option}</span>
