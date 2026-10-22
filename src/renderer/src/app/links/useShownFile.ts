@@ -1,5 +1,6 @@
 import { useShownDiffFile } from '../../features/diff/shownDiffFile';
 import { useSelectedLines } from '../../features/diff/selectedLinesStore';
+import { useShownRevision } from '../../features/history/shownRevision';
 import type { Page } from '../navigation/pages';
 import { shownFileOf, type ShownFile } from './shownLink';
 
@@ -7,5 +8,6 @@ import { shownFileOf, type ShownFile } from './shownLink';
 export function useShownFile(page: Page | undefined): ShownFile | null {
   const onScreen = useShownDiffFile((state) => state.shown);
   const selected = useSelectedLines((state) => state.selected);
-  return shownFileOf(page, onScreen, selected);
+  const revision = useShownRevision((state) => state.shown);
+  return shownFileOf(page, onScreen, selected, revision);
 }

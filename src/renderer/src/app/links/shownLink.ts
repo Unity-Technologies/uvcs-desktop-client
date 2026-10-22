@@ -1,5 +1,6 @@
 import type { DiffTarget } from '@shared/domain/diff';
 import type { LinkLines } from '@shared/links/link';
+import type { ShownRevision } from '../../features/history/shownRevision';
 import type { Page } from '../navigation/pages';
 import type { ViewId } from '../navigation/views';
 import { LINK_VIEW_IDS, type LinkTarget } from './linkNavigation';
@@ -9,6 +10,8 @@ import { diffTargetObject } from './linkTo';
 export interface ShownFile {
   path: string;
   lines?: LinkLines;
+  /** A history's: the revision it shows and how (`useShownRevision`), which may not be the one it opened on. */
+  revision?: ShownRevision;
 }
 
 /**
@@ -24,11 +27,8 @@ export function pageLinkTarget(page: Page, shown: ShownFile | null): LinkTarget 
     }
     case 'codeReview':
       return { object: { kind: 'codeReview', id: page.reviewId }, ...fileIn(page.focusPath, shown) };
-    case 'history': {
-      const object = page.select && 'changesetId' in page.select ? ({ kind: 'changeset', id: page.select.changesetId } as const) : undefined;
-      const lines = shown?.lines && shown.path === page.path ? { lines: shown.lines } : {};
-      return { ...(object && { object }), page: { kind: page.view === 'annotate' ? 'annotate' : 'history', path: `/${page.path}` }, ...lines };
-    }
+    case 'history':
+      return historyLinkTarget(page, shown);
     case 'browseRepository': {
       const path = shown?.path ?? page.focusPath;
       const lines = shown?.lines ? { lines: shown.lines } : {};
@@ -37,6 +37,21 @@ export function pageLinkTarget(page: Page, shown: ShownFile | null): LinkTarget 
     case 'merge':
       return null;
   }
+}
+
+/**
+ * A history's link: the revision it shows and how (else the one it opened on), with the lines selected in it
+ * annotated. None for an item of another repository than the workspace's (under an xlink): a link names the
+ * workspace's repository, where that changeset is another or none.
+ */
+function historyLinkTarget(page: Extract<Page, { kind: 'history' }>, shown: ShownFile | null): LinkTarget | null {
+  const revision = shown?.revision;
+  if (revision?.otherRepository) return null;
+  const openedOn = page.select && 'changesetId' in page.select ? page.select.changesetId : undefined;
+  const changesetId = revision?.changesetId ?? openedOn;
+  const view = revision?.view ?? (page.view === 'annotate' ? 'annotate' : 'history');
+  const lines = view === 'annotate' && shown?.lines && shown.path === page.path ? { lines: shown.lines } : {};
+  return { ...(changesetId !== undefined && { object: { kind: 'changeset', id: changesetId } }), page: { kind: view, path: `/${page.path}` }, ...lines };
 }
 
 /** The file a diff shows and the lines selected in it, else the file it opened on. */
@@ -49,9 +64,15 @@ function fileIn(focusPath: string | undefined, shown: ShownFile | null): Pick<Li
 /**
  * The file a page shows and the lines selected in it: a diff's or a review's from the diff on screen
  * (`useShownDiffFile`), none when that diff is another page's; an annotation's or a browsed file's from the lines
- * selected (`useSelectedLines`).
+ * selected (`useSelectedLines`), and a history's revision (`useShownRevision`).
  */
-export function shownFileOf(page: Page | undefined, onScreen: { target: DiffTarget; path: string } | null, selected: Required<ShownFile> | null): ShownFile | null {
+export function shownFileOf(
+  page: Page | undefined,
+  onScreen: { target: DiffTarget; path: string } | null,
+  selected: Required<Omit<ShownFile, 'revision'>> | null,
+  revision: ShownRevision | null = null,
+): ShownFile | null {
+  if (page?.kind === 'history' && revision?.path === page.path) return { ...(selected ?? { path: page.path }), revision };
   if (page?.kind === 'history' || page?.kind === 'browseRepository') return selected;
   if (!onScreen || (page?.kind !== 'diff' && page?.kind !== 'codeReview')) return null;
   if (page.kind === 'diff' && JSON.stringify(onScreen.target) !== JSON.stringify(page.target)) return null;

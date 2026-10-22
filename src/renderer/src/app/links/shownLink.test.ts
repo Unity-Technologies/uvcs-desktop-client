@@ -34,6 +34,40 @@ describe('pageLinkTarget', () => {
     expect(pageLinkTarget({ kind: 'history', path: 'a.cs' }, null)).toEqual({ page: { kind: 'history', path: '/a.cs' } });
   });
 
+  describe('a history', () => {
+    const shown = (changesetId: number, view: 'history' | 'annotate', otherRepository = false) => ({ path: 'a.cs', changesetId, view, otherRepository });
+
+    it('names the revision it shows, not the one it opened on', () => {
+      const page = { kind: 'history', path: 'a.cs', select: { changesetId: 9 } } as const;
+      expect(pageLinkTarget(page, { path: 'a.cs', revision: shown(4, 'history') })).toEqual({ object: { kind: 'changeset', id: 4 }, page: { kind: 'history', path: '/a.cs' } });
+    });
+
+    it('names the revision selected in a history opened on none', () => {
+      expect(pageLinkTarget({ kind: 'history', path: 'a.cs' }, { path: 'a.cs', revision: shown(6, 'history') })).toEqual({ object: { kind: 'changeset', id: 6 }, page: { kind: 'history', path: '/a.cs' } });
+    });
+
+    it('names the view it shows, the lines selected only annotated', () => {
+      const opened = { kind: 'history', path: 'a.cs', view: 'annotate' } as const;
+      expect(pageLinkTarget(opened, { path: 'a.cs', lines: LINES, revision: shown(6, 'history') })).toEqual({ object: { kind: 'changeset', id: 6 }, page: { kind: 'history', path: '/a.cs' } });
+      expect(pageLinkTarget({ kind: 'history', path: 'a.cs' }, { path: 'a.cs', lines: LINES, revision: shown(6, 'annotate') })).toEqual({
+        object: { kind: 'changeset', id: 6 },
+        page: { kind: 'annotate', path: '/a.cs' },
+        lines: LINES,
+      });
+    });
+
+    it("names nothing for an item of another repository: a link's changeset would be the workspace's", () => {
+      expect(pageLinkTarget({ kind: 'history', path: 'lib/a.cs' }, { path: 'lib/a.cs', revision: shown(3, 'history', true) })).toBeNull();
+    });
+
+    it("takes the revision the history on screen shows, with the lines selected in it", () => {
+      const selected = { path: 'a.cs', lines: LINES };
+      expect(shownFileOf({ kind: 'history', path: 'a.cs' }, null, selected, shown(6, 'annotate'))).toEqual({ ...selected, revision: shown(6, 'annotate') });
+      expect(shownFileOf({ kind: 'history', path: 'a.cs' }, null, null, shown(6, 'history'))).toEqual({ path: 'a.cs', revision: shown(6, 'history') });
+      expect(shownFileOf({ kind: 'history', path: 'b.cs' }, null, null, shown(6, 'history'))).toBeNull();
+    });
+  });
+
   it('names a browsed changeset and the item selected in it', () => {
     expect(pageLinkTarget({ kind: 'browseRepository', changesetId: 7, focusPath: 'Assets' }, null)).toEqual({ object: { kind: 'changeset', id: 7 }, page: { kind: 'browse', path: '/Assets' } });
     expect(pageLinkTarget({ kind: 'browseRepository', changesetId: 7 }, null)).toEqual({ object: { kind: 'changeset', id: 7 }, page: { kind: 'browse', path: '/' } });
