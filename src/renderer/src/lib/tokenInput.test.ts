@@ -23,6 +23,8 @@ describe('allTokens', () => {
     expect(allTokens('.unity .prefab\n.asset')).toEqual(['.unity', '.prefab', '.asset']);
     expect(allTokens('"My Level.unity"')).toEqual(['My Level.unity']);
     expect(allTokens('"Assets/Third Par')).toEqual(['Assets/Third Par']);
+    expect(allTokens('ab"c')).toEqual(['abc']);
+    expect(allTokens('.cs ab"c d')).toEqual(['.cs', 'abc d']);
     expect(allTokens('   ')).toEqual([]);
   });
 });

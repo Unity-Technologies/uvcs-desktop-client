@@ -30,10 +30,14 @@ export function typedTokens(text: string): TypedTokens {
   return { tokens, rest: text.slice(started) };
 }
 
-/** Every value in the text, the last one too: what Enter, pasting or leaving the field adds. */
+/**
+ * Every value in the text, the last one too: what Enter, pasting or leaving the field adds. Text left inside a quote
+ * that never closes (`ab"c`, `"Assets/Third Par`) is a value too, without its quotes: nothing typed is lost.
+ */
 export function allTokens(text: string): string[] {
   const { tokens, rest } = typedTokens(`${text} `);
-  return rest.startsWith('"') ? [...tokens, rest.replace(/"/g, '').trim()].filter(Boolean) : tokens;
+  const unclosed = rest.replace(/"/g, '').trim();
+  return unclosed ? [...tokens, unclosed] : tokens;
 }
 
 /** The values with the new ones after them, each once, in the order first given. */
