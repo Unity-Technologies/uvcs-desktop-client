@@ -19,18 +19,20 @@ export const MAX_READS_AT_ONCE = 16;
  * date (`0`, `''`): nothing reads them.
  */
 export class DiskDetails {
-  private readonly changes: PendingChange[] = [];
-  private readonly paths: string[] = [];
+  // A slot is let go once its read is done: a million changes keep alive only those still to read.
+  private readonly changes: (PendingChange | undefined)[] = [];
+  private readonly paths: (string | undefined)[] = [];
   private next = 0;
   private reading = 0;
   private closed = false;
+  private stopped = false;
   private settle: (() => void) | undefined;
 
   constructor(private readonly readLinkStats: ReadLinkStats = lstat) {}
 
   /** Reads `change`'s details from `absolutePath`, when it has any on disk. */
   add(change: PendingChange, absolutePath: string): void {
-    if (change.itemType === 'directory' || isGoneFromDisk(change)) return;
+    if (this.stopped || change.itemType === 'directory' || isGoneFromDisk(change)) return;
     this.changes.push(change);
     this.paths.push(absolutePath);
     this.readMore();
@@ -43,14 +45,24 @@ export class DiskDetails {
     return new Promise((resolve) => (this.settle = resolve));
   }
 
+  /** Starts no more reads (the command failed): those already started end, and what waits is let go. */
+  stop(): void {
+    this.stopped = true;
+    this.changes.length = this.next;
+    this.paths.length = this.next;
+  }
+
   private readMore(): void {
-    while (this.reading < MAX_READS_AT_ONCE && this.next < this.changes.length) {
+    while (!this.stopped && this.reading < MAX_READS_AT_ONCE && this.next < this.changes.length) {
       const index = this.next++;
       this.reading++;
-      this.readLinkStats(this.paths[index]!, (error, stats) => {
+      const [change, path] = [this.changes[index]!, this.paths[index]!];
+      this.changes[index] = undefined;
+      this.paths[index] = undefined;
+      this.readLinkStats(path, (error, stats) => {
         this.reading--;
         // A file removed meanwhile, or that can't be read, keeps no details; the next read sees how it is.
-        if (!error && stats) withDetails(this.changes[index]!, stats);
+        if (!error && stats) withDetails(change, stats);
         this.readMore();
         if (this.isDone()) this.settle?.();
       });

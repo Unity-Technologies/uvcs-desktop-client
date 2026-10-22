@@ -24,7 +24,11 @@ export async function readPendingChanges(
 ): Promise<PendingChangesSnapshot> {
   const details = diskDetails ? new DiskDetails() : undefined;
   const reader = new PendingChangesReader(workspacePath, platform, details && ((change, absolutePath) => details.add(change, absolutePath)));
-  const changes = await cm.queryRecords(statusRecordsArgs(...statusOptions), reader.read, { cwd: workspacePath });
+  const changes = await cm.queryRecords(statusRecordsArgs(...statusOptions), reader.read, { cwd: workspacePath }).catch((error: unknown) => {
+    // Nothing waits for the reads of a failed command: a million left to read would go on for seconds.
+    details?.stop();
+    throw error;
+  });
   await details?.finished();
   return reader.snapshot(changes);
 }
