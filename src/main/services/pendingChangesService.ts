@@ -34,7 +34,7 @@ export function createPendingChangesService({ cm, operations }: ServiceContext, 
     return operations.run(operationId, ({ signal, progressOf }) =>
       withTempFile(request.comment, async (commentsFile) => {
         const output = await explainLockedItems('checked in', () =>
-          cm.execute(checkinArgs(toAbsolutePaths(workspacePath, request.paths), commentsFile), {
+          cm.execute(checkinArgs(toAbsolutePaths(workspacePath, request.paths), commentsFile, request.addsPrivate), {
             cwd: workspacePath,
             signal,
             onOutputLine: progressOf(readCheckinProgress),

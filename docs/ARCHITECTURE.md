@@ -300,6 +300,14 @@ and many people use the same server. Every `cm` command other than local reads (
   `NO_CHANGES_APPLIED` instead of `CHANGESET cs:N@…` and exits 0 (`readCheckinOutput`). When every change checked in was
   a checkout without edits (`isUnchangedCheckout`: `CO`, not `CO+CH`, in `cm status --iscochanged`), Changes says so in
   an info toast ("Nothing to check in"); with any other change in, no changeset is a failure (`expectedCheckinResult`).
+- `cm checkin` and `cm shelveset create` take everything under each path they're given, and nothing makes them take a
+  folder alone (paths read from stdin too): `--all` adds every change there, `--private` every private item. Given a
+  path, they take along the checkouts and adds of the folders above it, while a moved, deleted or private folder must
+  be given itself ("depend on others that need to be included"). So Changes never gives cm a checked-out or added
+  folder holding something checked, and asks for `--private` only when a private item is checked
+  (`checkinPathsOf`, `CheckinRequest.addsPrivate`). What a folder it must give takes along unchecked is `pulledIn`, and
+  the check-in or shelve asks first ("Also check in 2 changes inside lib?"). A checkout inside a writable xlink checks
+  the xlink out: cm status lists it as a checked-out folder, and given, it took every private item inside the xlink.
 
 ## Xlinks
 

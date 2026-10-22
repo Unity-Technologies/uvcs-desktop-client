@@ -113,7 +113,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const behind = behindBranch(incomingSummary, branchName, mergeChanges.length > 0);
   const checkinAfterUpdate = useCheckinAfterUpdate(workspacePath, workspace, branchName, included.length);
   const submit = useCheckinPanelSubmit(
-    { workspacePath, included, hiddenIncludedCount, pendingCount: allChanges.length, behind: behind !== null, bulkPrivate, warnOnEmptyComment: settings.warnOnEmptyComment },
+    { workspacePath, included, hiddenIncludedCount, allChanges, behind: behind !== null, bulkPrivate, warnOnEmptyComment: settings.warnOnEmptyComment },
     shelvable,
     summaryRef,
   );

@@ -29,6 +29,9 @@ const ws = '/ws';
 const REJECTED = "MERGE_NEEDED A merge is needed from changeset 'cs:43@rep:game@repserver:local' to changeset 'cs:41@rep:game@repserver:local' in order to checkin.";
 
 const change = (path: string, kinds: PendingChange['kinds'] = ['checkedOut', 'changed']): PendingChange => ({ path, kinds, itemType: 'file', size: 1, lastModified: '' });
+/** Changes checked in by their own paths, as `checkinPathsOf` gives files. */
+const sending = (changes: PendingChange[]) => ({ changes, paths: changes.map((sent) => sent.path), addsPrivate: false });
+const shelving = (changes: PendingChange[]) => ({ changes, paths: changes.map((sent) => sent.path) });
 const created = (changesetId: number): CheckinResult => ({ kind: 'created', changesetId, branch: '/main' });
 
 function incoming(overrides: Partial<BranchIncomingChanges> = {}): BranchIncomingChanges {
@@ -79,9 +82,9 @@ describe('checkinChanges', () => {
     answerCheckins(created(44));
     answerSettings();
 
-    expect(await checkinChanges({ workspacePath: ws, changes: [change('src/a.ts'), change('src/b.ts')], comment: 'Add login\n\nDetails' })).toBe(true);
+    expect(await checkinChanges({ workspacePath: ws, ...sending([change('src/a.ts'), change('src/b.ts')]), comment: 'Add login\n\nDetails' })).toBe(true);
 
-    expect(fakeApi.argsOf('pendingChanges.checkin')[0]!.slice(0, 2)).toEqual([ws, { paths: ['src/a.ts', 'src/b.ts'], comment: 'Add login\n\nDetails' }]);
+    expect(fakeApi.argsOf('pendingChanges.checkin')[0]!.slice(0, 2)).toEqual([ws, { paths: ['src/a.ts', 'src/b.ts'], comment: 'Add login\n\nDetails', addsPrivate: false }]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Checked in cs:44 on main', action: 'View' }]);
     expect(useSuccessMomentStore.getState().moments[ws]).toMatchObject({ verb: 'Checked in', changesetId: 44, detail: 'Add login' });
     expect(settings.recentComments).toEqual(['Add login\n\nDetails']);
@@ -91,7 +94,7 @@ describe('checkinChanges', () => {
     answerCheckins(created(44));
     answerSettings();
 
-    await checkinChanges({ workspacePath: ws, changes: [change('a.ts')], comment: 'x', quiet: true });
+    await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: 'x', quiet: true });
 
     expect(shownToasts()).toEqual([]);
   });
@@ -101,11 +104,11 @@ describe('checkinChanges', () => {
     answerCheckins(created(44));
     answerSettings(older);
 
-    await checkinChanges({ workspacePath: ws, changes: [change('a.ts')], comment: '  comment 3 ' });
+    await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: '  comment 3 ' });
 
     expect(settings.recentComments).toEqual(['comment 3', ...older.filter((comment) => comment !== 'comment 3')]);
     answerCheckins(created(45));
-    await checkinChanges({ workspacePath: ws, changes: [change('a.ts')], comment: 'new' });
+    await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: 'new' });
     expect(settings.recentComments).toHaveLength(15);
     expect(settings.recentComments[0]).toBe('new');
   });
@@ -117,7 +120,7 @@ describe('checkinChanges', () => {
       throw new Error('The settings file is read-only');
     });
 
-    expect(await checkinChanges({ workspacePath: ws, changes: [change('a.ts')], comment: 'x', quiet: true })).toBe(true);
+    expect(await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: 'x', quiet: true })).toBe(true);
 
     expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't save the settings", detail: 'The settings file is read-only' }]);
   });
@@ -125,7 +128,7 @@ describe('checkinChanges', () => {
   it('remembers no empty comment', async () => {
     answerCheckins(created(44));
 
-    await checkinChanges({ workspacePath: ws, changes: [change('a.ts')], comment: '  ' });
+    await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: '  ' });
 
     expect(fakeApi.methods()).toEqual(['pendingChanges.checkin']);
   });
@@ -135,7 +138,7 @@ describe('checkinChanges', () => {
     answerSettings();
     const refreshed = watchRefreshes(ws);
 
-    await checkinChanges({ workspacePath: ws, changes: [change('a.ts')], comment: 'x' });
+    await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: 'x' });
 
     expect(refreshed()).toEqual(['annotate', 'branchExplorer', 'branches', 'changesets', 'explorer', 'history', 'incoming', 'info', 'locks', 'pendingChanges', 'review']);
   });
@@ -143,7 +146,7 @@ describe('checkinChanges', () => {
   it('says "Nothing to check in" when only checkouts without edits went in, and keeps the comment for a real one', async () => {
     answerCheckins({ kind: 'noChanges' });
 
-    const checkedIn = await checkinChanges({ workspacePath: ws, changes: [change('a.ts', ['checkedOut']), change('b.ts', ['checkedOut'])], comment: 'x' });
+    const checkedIn = await checkinChanges({ workspacePath: ws, ...sending([change('a.ts', ['checkedOut']), change('b.ts', ['checkedOut'])]), comment: 'x' });
 
     expect(checkedIn).toBe(false);
     expect(shownToasts()).toEqual([{ kind: 'info', title: 'Nothing to check in', detail: 'Released 2 checkouts without edits.' }]);
@@ -154,7 +157,7 @@ describe('checkinChanges', () => {
   it('fails when changes with content went in and no changeset came out', async () => {
     answerCheckins({ kind: 'noChanges' });
 
-    expect(await checkinChanges({ workspacePath: ws, changes: [change('a.ts')], comment: 'x' })).toBe(false);
+    expect(await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: 'x' })).toBe(false);
 
     expect(shownToasts()).toEqual([{ kind: 'error', title: 'Checking in 1 change failed', detail: 'The checkin finished but no changeset was created.' }]);
   });
@@ -164,7 +167,7 @@ describe('checkinChanges', () => {
       throw commandFailure('The item is locked by ana');
     });
 
-    expect(await checkinChanges({ workspacePath: ws, changes: [change('a.ts')], comment: 'x' })).toBe(false);
+    expect(await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: 'x' })).toBe(false);
 
     expect(shownToasts()).toEqual([{ kind: 'error', title: 'Checking in 1 change failed', detail: 'The item is locked by ana' }]);
     expect(dialogs.asked).toEqual([]);
@@ -179,7 +182,7 @@ describe('checkinChanges after the branch moved on (rejected by cm)', () => {
     fakeApi.answer('workspaces.update', () => undefined);
     dialogs.catchUp = 'updateAndCheckin';
 
-    expect(await checkinChanges({ workspacePath: ws, changes: [change('src/a.ts')], comment: 'Mine' })).toBe(true);
+    expect(await checkinChanges({ workspacePath: ws, ...sending([change('src/a.ts')]), comment: 'Mine' })).toBe(true);
 
     expect(dialogs.asked).toEqual([{ incoming: incoming(), overlapping: [], needsReview: false, rejected: true }]);
     expect(fakeApi.methods()).toEqual(['pendingChanges.checkin', 'merge.incomingChanges', 'workspaces.update', 'pendingChanges.checkin', 'settings.update']);
@@ -192,7 +195,7 @@ describe('checkinChanges after the branch moved on (rejected by cm)', () => {
     answerCheckins('rejected');
     fakeApi.answer('merge.incomingChanges', () => incoming({ files: [{ status: 'changed', path: 'src/a.ts', itemType: 'file', baseRevisionId: 1, revisionId: 2, repository: 'game@local' }] }));
 
-    await checkinChanges({ workspacePath: ws, changes: [change('src/a.ts')], comment: 'x' });
+    await checkinChanges({ workspacePath: ws, ...sending([change('src/a.ts')]), comment: 'x' });
 
     expect(dialogs.asked).toMatchObject([{ overlapping: ['src/a.ts'], needsReview: true, rejected: true }]);
   });
@@ -202,7 +205,7 @@ describe('checkinChanges after the branch moved on (rejected by cm)', () => {
     fakeApi.answer('merge.incomingChanges', () => incoming({ loadedChangeset: 40 }));
     dialogs.catchUp = 'review';
 
-    expect(await checkinChanges({ workspacePath: ws, changes: [change('src/a.ts')], comment: 'x' })).toBe(false);
+    expect(await checkinChanges({ workspacePath: ws, ...sending([change('src/a.ts')]), comment: 'x' })).toBe(false);
 
     expect(whereTheWindowIs().view).toBe('incoming');
     // Where cm said the workspace was when it refused, not where the incoming check read it later.
@@ -214,7 +217,7 @@ describe('checkinChanges after the branch moved on (rejected by cm)', () => {
     answerCheckins('rejected');
     fakeApi.answer('merge.incomingChanges', () => incoming());
 
-    expect(await checkinChanges({ workspacePath: ws, changes: [change('src/a.ts')], comment: 'x' })).toBe(false);
+    expect(await checkinChanges({ workspacePath: ws, ...sending([change('src/a.ts')]), comment: 'x' })).toBe(false);
 
     expect(fakeApi.methods()).toEqual(['pendingChanges.checkin', 'merge.incomingChanges']);
     expect(whereTheWindowIs().view).toBe('changes');
@@ -228,7 +231,7 @@ describe('checkinChanges after the branch moved on (rejected by cm)', () => {
     });
     dialogs.catchUp = 'updateAndCheckin';
 
-    expect(await checkinChanges({ workspacePath: ws, changes: [change('src/a.ts')], comment: 'x' })).toBe(false);
+    expect(await checkinChanges({ workspacePath: ws, ...sending([change('src/a.ts')]), comment: 'x' })).toBe(false);
 
     expect(fakeApi.argsOf('pendingChanges.checkin')).toHaveLength(1);
   });
@@ -237,7 +240,7 @@ describe('checkinChanges after the branch moved on (rejected by cm)', () => {
     answerCheckins('rejected');
     fakeApi.answer('merge.incomingChanges', () => incoming());
 
-    await checkinChanges({ workspacePath: ws, changes: [change('src/a.ts')], comment: 'x' });
+    await checkinChanges({ workspacePath: ws, ...sending([change('src/a.ts')]), comment: 'x' });
 
     expect(shownToasts()).toEqual([]);
   });
@@ -250,7 +253,7 @@ describe('checkinChanges with "Update & check in" (updateFirst)', () => {
     fakeApi.answer('merge.incomingChanges', () => incoming());
     fakeApi.answer('workspaces.update', () => undefined);
 
-    expect(await checkinChanges({ workspacePath: ws, changes: [change('src/a.ts')], comment: 'x', updateFirst: true })).toBe(true);
+    expect(await checkinChanges({ workspacePath: ws, ...sending([change('src/a.ts')]), comment: 'x', updateFirst: true })).toBe(true);
 
     expect(dialogs.asked).toEqual([]);
     expect(fakeApi.methods().slice(0, 3)).toEqual(['merge.incomingChanges', 'workspaces.update', 'pendingChanges.checkin']);
@@ -259,7 +262,7 @@ describe('checkinChanges with "Update & check in" (updateFirst)', () => {
   it('asks first when updating needs a decision: conflicts or blocked files', async () => {
     fakeApi.answer('merge.incomingChanges', () => incoming({ blockedPaths: ['src/moved.ts'] }));
 
-    await checkinChanges({ workspacePath: ws, changes: [change('src/a.ts')], comment: 'x', updateFirst: true });
+    await checkinChanges({ workspacePath: ws, ...sending([change('src/a.ts')]), comment: 'x', updateFirst: true });
 
     expect(dialogs.asked).toMatchObject([{ needsReview: true, rejected: false }]);
     expect(fakeApi.methods()).toEqual(['merge.incomingChanges']);
@@ -270,7 +273,7 @@ describe('checkinChanges with "Update & check in" (updateFirst)', () => {
     answerSettings();
     fakeApi.answer('merge.incomingChanges', () => incoming({ changesets: [], changesetCount: 0 }));
 
-    expect(await checkinChanges({ workspacePath: ws, changes: [change('src/a.ts')], comment: 'x', updateFirst: true })).toBe(true);
+    expect(await checkinChanges({ workspacePath: ws, ...sending([change('src/a.ts')]), comment: 'x', updateFirst: true })).toBe(true);
 
     expect(dialogs.asked).toEqual([]);
     expect(fakeApi.methods()).not.toContain('workspaces.update');
@@ -280,7 +283,7 @@ describe('checkinChanges with "Update & check in" (updateFirst)', () => {
     fakeApi.answer('merge.incomingChanges', () => incoming({ files: [{ status: 'deleted', path: 'src', itemType: 'directory', baseRevisionId: 1, revisionId: -1, repository: 'game@local' }] }));
     dialogs.catchUp = 'review';
 
-    await checkinChanges({ workspacePath: ws, changes: [change('src/a.ts')], comment: 'x', updateFirst: true });
+    await checkinChanges({ workspacePath: ws, ...sending([change('src/a.ts')]), comment: 'x', updateFirst: true });
 
     expect(useCheckinAfterUpdateStore.getState().rejected[ws]).toEqual({ branch: '/main', loadedChangeset: 41 });
   });
@@ -290,7 +293,7 @@ describe('checkinChanges with "Update & check in" (updateFirst)', () => {
       throw new Error('offline');
     });
 
-    expect(await checkinChanges({ workspacePath: ws, changes: [change('src/a.ts')], comment: 'x', updateFirst: true })).toBe(false);
+    expect(await checkinChanges({ workspacePath: ws, ...sending([change('src/a.ts')]), comment: 'x', updateFirst: true })).toBe(false);
 
     expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't check what came in", detail: 'offline' }]);
   });
@@ -300,7 +303,7 @@ describe('checkinChanges with "Update & check in" (updateFirst)', () => {
     answerCheckins(created(44));
     answerSettings();
 
-    await checkinChanges({ workspacePath: ws, changes: [change('a.ts')], comment: 'x' });
+    await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: 'x' });
 
     expect(useCheckinAfterUpdateStore.getState().rejected[ws]).toBeUndefined();
   });
@@ -311,7 +314,7 @@ describe('shelveChanges', () => {
     fakeApi.answer('pendingChanges.shelveAndUndo', () => ({ shelveId: 7, count: 2 }));
     const refreshed = watchRefreshes(ws);
 
-    expect(await shelveChanges(ws, [change('a.ts'), change('b.ts')], ' WIP ', false)).toBe(true);
+    expect(await shelveChanges({ workspacePath: ws, ...shelving([change('a.ts'), change('b.ts')]), comment: ' WIP ', keep: false })).toBe(true);
 
     expect(fakeApi.argsOf('pendingChanges.shelveAndUndo')[0]!.slice(0, 3)).toEqual([ws, ['a.ts', 'b.ts'], 'WIP']);
     expect(refreshed()).toEqual(['explorer', 'info', 'pendingChanges', 'review', 'shelves']);
@@ -321,19 +324,19 @@ describe('shelveChanges', () => {
     fakeApi.answer('pendingChanges.shelve', () => 8);
     const refreshed = watchRefreshes(ws);
 
-    expect(await shelveChanges(ws, [change('a.ts')], 'WIP', true)).toBe(true);
+    expect(await shelveChanges({ workspacePath: ws, ...shelving([change('a.ts')]), comment: 'WIP', keep: true })).toBe(true);
 
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Shelved as shelve 8', detail: 'Your changes are still in the workspace.' }]);
     expect(refreshed()).toEqual(['shelves']);
   });
 
   it('asks for a comment when there is none, and shelves nothing without one', async () => {
-    expect(await shelveChanges(ws, [change('a.ts')], '', true)).toBe(false);
+    expect(await shelveChanges({ workspacePath: ws, ...shelving([change('a.ts')]), comment: '', keep: true })).toBe(false);
     expect(fakeApi.methods()).toEqual([]);
 
     answerPrompts('Typed');
     fakeApi.answer('pendingChanges.shelve', () => 9);
-    await shelveChanges(ws, [change('a.ts')], '', true);
+    await shelveChanges({ workspacePath: ws, ...shelving([change('a.ts')]), comment: '', keep: true });
     expect(fakeApi.argsOf('pendingChanges.shelve')[0]![2]).toBe('Typed');
   });
 
@@ -342,7 +345,7 @@ describe('shelveChanges', () => {
       throw new Error('no space');
     });
 
-    expect(await shelveChanges(ws, [change('a.ts')], 'WIP', true)).toBe(false);
+    expect(await shelveChanges({ workspacePath: ws, ...shelving([change('a.ts')]), comment: 'WIP', keep: true })).toBe(false);
   });
 });
 

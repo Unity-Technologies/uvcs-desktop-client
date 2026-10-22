@@ -13,7 +13,7 @@ describe('processCommand', () => {
   });
 
   it('never starts a process with more than the limit: 20,000 paths go to a cm shell of its own, as one command line', () => {
-    const args = checkinArgs(manyPaths, '/tmp/comment.txt');
+    const args = checkinArgs(manyPaths, '/tmp/comment.txt', true);
     const { args: started, input } = processCommand(args);
     expect(started).toEqual(['shell', '--encoding=utf-8']);
     expect(fitsCommandLine(started)).toBe(true);

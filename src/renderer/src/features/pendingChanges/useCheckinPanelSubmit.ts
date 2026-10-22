@@ -34,6 +34,6 @@ export function useCheckinPanelSubmit(request: PanelCheckin, shelvable: PendingC
     if (outcome === 'writeComment') summaryRef.current?.focus();
     if (outcome === 'checkedIn') setSelection(EMPTY_SELECTION);
   };
-  const shelve = (keep: boolean): Promise<boolean> => shelveFromPanel({ workspacePath: request.workspacePath, shelvable, hiddenIncludedCount: request.hiddenIncludedCount }, keep, whileBusy);
+  const shelve = (keep: boolean): Promise<boolean> => shelveFromPanel({ workspacePath: request.workspacePath, shelvable, hiddenIncludedCount: request.hiddenIncludedCount, allChanges: request.allChanges }, keep, whileBusy);
   return { busy, checkin, shelve };
 }

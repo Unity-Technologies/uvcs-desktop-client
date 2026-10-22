@@ -1,10 +1,11 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { settleBeforeLeaving } from '../../app/navigation/leaveGuard';
 import { joinComment } from '../../lib/comment';
-import { pluralize } from '../../lib/text';
+import { fileNameOf, listNames, pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { bulkPrivateMessage, type BulkPrivate } from './bulkPrivate';
 import { checkinChanges, shelveChanges } from './checkinOperations';
+import { checkinPathsOf, foldersPullingIn, type CheckinPaths } from './checkinPaths';
 import { checkinDraftOf, useCheckinDraftStore } from './checkinDraftStore';
 import { FILTER_LIST_FILES } from './pendingChangeOperations';
 import { successCardTellsCheckin } from './successMoment';
@@ -23,8 +24,8 @@ export interface PanelCheckin {
   included: PendingChange[];
   /** How many checked changes the filter hides: a prepared changelist holds for them. */
   hiddenIncludedCount: number;
-  /** How many changes are pending in all: checking them all in leaves Changes empty. */
-  pendingCount: number;
+  /** Every pending change: what a folder given to cm takes along, and whether Changes ends up empty. */
+  allChanges: PendingChange[];
   /** The incoming check saw the branch move on: the check-in updates first. */
   behind: boolean;
   bulkPrivate: BulkPrivate | null;
@@ -34,7 +35,8 @@ export interface PanelCheckin {
 /**
  * The check-in panel's check-in, with the draft's comment: asks about an empty comment (when the setting says to),
  * takes the files as they are on disk (unsaved edits are saved first, or dropped, or it waits), asks about a pile of
- * private files, then checks in. A changeset clears the comment.
+ * private files and about the changes a folder takes along unchecked (`checkinPathsOf`), then checks in. A changeset
+ * clears the comment.
  */
 export async function checkinFromPanel(request: PanelCheckin, whileRunning: WhileRunning = justRun): Promise<PanelCheckinOutcome> {
   const { workspacePath, included } = request;
@@ -42,13 +44,18 @@ export async function checkinFromPanel(request: PanelCheckin, whileRunning: Whil
   if (!comment.trim() && request.warnOnEmptyComment && !(await confirmCheckinWithoutComment())) return 'writeComment';
   if (!(await settleBeforeLeaving())) return 'notCheckedIn';
   if (request.bulkPrivate && !(await confirmBulkPrivateCheckin(request.bulkPrivate))) return 'notCheckedIn';
+  const { paths, addsPrivate, pulledIn } = checkinPathsOf(included, request.allChanges);
+  if (pulledIn.length > 0 && !(await confirmPulledIn('checkin', { paths, addsPrivate, pulledIn }))) return 'notCheckedIn';
+  const changes = [...included, ...pulledIn];
   const checkedIn = await whileRunning(() =>
     checkinChanges({
       workspacePath,
-      changes: included,
+      changes,
+      paths,
+      addsPrivate,
       comment,
       updateFirst: request.behind,
-      quiet: successCardTellsCheckin(included.length, request.pendingCount),
+      quiet: successCardTellsCheckin(changes.length, request.allChanges.length),
     }),
   );
   if (!checkedIn) return 'notCheckedIn';
@@ -64,6 +71,8 @@ export interface PanelShelve {
   shelvable: PendingChange[];
   /** How many checked changes the filter hides: a prepared changelist holds for them. */
   hiddenIncludedCount: number;
+  /** Every pending change: what a folder given to cm takes along. */
+  allChanges: PendingChange[];
 }
 
 /**
@@ -73,7 +82,11 @@ export interface PanelShelve {
 export async function shelveFromPanel(request: PanelShelve, keep: boolean, whileRunning: WhileRunning = justRun): Promise<boolean> {
   const { workspacePath, shelvable } = request;
   if (!(await settleBeforeLeaving())) return false;
-  const shelved = await whileRunning(() => shelveChanges(workspacePath, shelvable, joinComment(checkinDraftOf(workspacePath)), keep));
+  const plan = checkinPathsOf(shelvable, request.allChanges);
+  if (plan.pulledIn.length > 0 && !(await confirmPulledIn('shelve', plan))) return false;
+  const shelved = await whileRunning(() =>
+    shelveChanges({ workspacePath, changes: [...shelvable, ...plan.pulledIn], paths: plan.paths, comment: joinComment(checkinDraftOf(workspacePath)), keep }),
+  );
   if (shelved && !keep) useCheckinDraftStore.getState().clearMessage(workspacePath);
   if (shelved) endPreparedUnlessHidden(workspacePath, request.hiddenIncludedCount);
   return shelved;
@@ -85,6 +98,20 @@ export async function shelveFromPanel(request: PanelShelve, keep: boolean, while
  */
 function endPreparedUnlessHidden(workspacePath: string, hiddenIncludedCount: number): void {
   if (hiddenIncludedCount === 0) useCheckinDraftStore.getState().endPrepared(workspacePath);
+}
+
+/**
+ * Asked before a folder takes along changes the user didn't check: cm can't check in or shelve a folder without
+ * everything inside it. Declined, the user checks those too, or unchecks the folder.
+ */
+function confirmPulledIn(mode: 'checkin' | 'shelve', plan: CheckinPaths): Promise<boolean> {
+  const count = plan.pulledIn.length;
+  const action = mode === 'checkin' ? 'check in' : 'shelve';
+  return confirm({
+    title: `Also ${action} ${pluralize(count, 'change')} inside ${listNames(foldersPullingIn(plan))}?`,
+    message: `A folder is ${mode === 'checkin' ? 'checked in' : 'shelved'} with everything inside it, so ${listNames(plan.pulledIn.map((change) => fileNameOf(change.path)))} ${count === 1 ? 'goes' : 'go'} too.`,
+    confirmLabel: `${mode === 'checkin' ? 'Check' : 'Shelve'} ${count === 1 ? 'it' : 'them'}${mode === 'checkin' ? ' in' : ''} too`,
+  });
 }
 
 /** Asked before a check-in without a comment, when the setting says to. */

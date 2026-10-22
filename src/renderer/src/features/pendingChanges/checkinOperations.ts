@@ -21,7 +21,11 @@ const MAX_RECENT_COMMENTS = 15;
 
 interface CheckinOptions {
   workspacePath: string;
+  /** Every change that goes in: what the user checked, and what a folder takes along once they agreed. */
   changes: PendingChange[];
+  /** What to give cm for them (`checkinPathsOf`). */
+  paths: string[];
+  addsPrivate: boolean;
   comment: string;
   /** The incoming check saw the branch move on: update (or review what came in) before checking in, not after a rejection. */
   updateFirst?: boolean;
@@ -35,7 +39,7 @@ interface CheckinOptions {
  * it does so up front.
  */
 export async function checkinChanges(options: CheckinOptions): Promise<boolean> {
-  const { workspacePath, changes, comment } = options;
+  const { workspacePath, changes, paths, addsPrivate, comment } = options;
   if (options.updateFirst) return catchUpAndCheckin({ ...options, updateFirst: false }, null);
 
   const rejected: { rejection?: CheckinRejection } = {};
@@ -43,7 +47,7 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
     title: `Checking in ${pluralize(changes.length, 'change')}`,
     workspacePath,
     run: async (operationId) =>
-      expectedCheckinResult(await api.pendingChanges.checkin(workspacePath, { paths: changes.map((change) => change.path), comment }, operationId), changes),
+      expectedCheckinResult(await api.pendingChanges.checkin(workspacePath, { paths, comment, addsPrivate }, operationId), changes),
     affects: isAffectedByCheckinOrUpdate,
     success: (done) => {
       if (done.kind === 'noChanges') return releasedCheckoutsNote(changes.length);
@@ -105,18 +109,26 @@ async function catchUpAndCheckin(options: CheckinOptions, rejection: CheckinReje
  * Shelves the given changes and undoes them, or with `keep` leaves them in the workspace. Resolves to true when a
  * shelve was created.
  */
-export async function shelveChanges(workspacePath: string, changes: PendingChange[], comment: string, keep: boolean): Promise<boolean> {
+interface ShelveOptions {
+  workspacePath: string;
+  /** Every change shelved: what the user checked, and what a folder takes along once they agreed. */
+  changes: PendingChange[];
+  /** What to give cm for them (`checkinPathsOf`): cm takes everything under each path. */
+  paths: string[];
+  comment: string;
+  /** The changes stay in the workspace; otherwise they are undone once shelved. */
+  keep: boolean;
+}
+
+export async function shelveChanges({ workspacePath, changes, paths, comment, keep }: ShelveOptions): Promise<boolean> {
   const shelveComment = comment.trim() || (await prompt({ title: 'Shelve changes', label: 'Comment', confirmLabel: 'Shelve' }));
   if (!shelveComment) return false;
-  if (!keep) {
-    const paths = changes.map((change) => change.path);
-    return (await shelveAway(workspacePath, paths, shelveComment)) !== undefined;
-  }
+  if (!keep) return (await shelveAway(workspacePath, paths, shelveComment)) !== undefined;
 
   const shelveId = await runOperation({
     title: `Shelving ${pluralize(changes.length, 'change')}`,
     workspacePath,
-    run: (operationId) => api.pendingChanges.shelve(workspacePath, changes.map((change) => change.path), shelveComment, operationId),
+    run: (operationId) => api.pendingChanges.shelve(workspacePath, paths, shelveComment, operationId),
     affects: isAffectedByShelving,
     success: (id) => ({ title: `Shelved as shelve ${id}`, detail: 'Your changes are still in the workspace.' }),
   });

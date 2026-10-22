@@ -17,6 +17,6 @@ describe('checkinArgs', () => {
 
   // `--private` adds every private item under each path given, whether the user checked it or not.
   it('adds private items only when the user checked one', () => {
-    expect(checkinArgs(['/wk/src/a.ts'], '/tmp/comment.txt', false)).toEqual(['checkin', '/wk/src/a.ts', '--all', '-commentsfile=/tmp/comment.txt', '--machinereadable']);
+    expect(checkinArgs(['/wk/src/a.ts'], '/tmp/comment.txt', false)).toEqual(['checkin', '/wk/src/a.ts', '--all', '-commentsfile=/tmp/comment.txt', '--machinereadable', '--symlink']);
   });
 });

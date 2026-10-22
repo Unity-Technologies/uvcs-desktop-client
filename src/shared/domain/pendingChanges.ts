@@ -83,8 +83,11 @@ export function isUnchangedCheckout(change: PendingChange): boolean {
 }
 
 export interface CheckinRequest {
+  /** What `checkinPathsOf` gives: cm takes everything under each path. */
   paths: string[];
   comment: string;
+  /** Private items go in (`--private`, every one under the paths): only when the user checked one. */
+  addsPrivate: boolean;
 }
 
 /**
