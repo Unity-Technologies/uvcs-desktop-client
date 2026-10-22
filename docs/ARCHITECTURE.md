@@ -961,7 +961,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   date · spec to copy · branch chip); attribute chips (`AttributeChips`); properties and relations behind "More details";
   then the changes pane under a remembered splitter (`DetailsChangesPane`), its title a disclosure once the list is read
   that hides it and shows it again from the cache, remembered for every panel as More details is (`changesCollapsed`). cm edits changeset, attribute, branch and label
-  comments (a branch's with `cm branch editcomment`, the comment in a file; a label's by applying it again to its
+  comments (a branch's with `cm branch editcomment`, the comment in a file, offered only from cm 11.0.16.10512
+  on, `editsBranchComments`: an older cm takes the unknown subcommand as a branch to create; a label's by applying it again to its
   changeset, `labelCommentArgs`); shelve comments stay read-only: no `cm` command or client API edits them. Selecting a row must stay cheap (Server
   budget: Selection); the changed files' `cm diff` runs only on request (`ChangedFilesSection`). The panel's parts are
   primitives of their own in `ui/` (`DetailsSection`, `DetailsEmpty`, `DetailsSkeleton`, `DetailsBadge`,
