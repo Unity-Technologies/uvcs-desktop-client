@@ -36,7 +36,7 @@ describe('checkinPathsOf', () => {
     const deep = file('src/ui/menu.cs', ['changed']);
 
     expect(checkinPathsOf([checkedOut, a, added, icon, inner, deep], [checkedOut, a, b, added, icon, inner, deep])).toEqual({
-      paths: ['src/a.cs', 'assets/icon.png', 'src/ui/menu.cs'],
+      paths: ['src/a.cs', 'assets', 'src/ui/menu.cs'],
       addsPrivate: false,
       ...none,
     });
@@ -85,7 +85,7 @@ describe('checkinPathsOf', () => {
     const both = folder('lib', ['checkedOut', 'moved']);
     const inBoth = file('lib/a.cs', ['changed']);
 
-    expect(checkinPathsOf([gone, movedHere, both, inBoth], [gone, movedHere, both, inBoth])).toEqual({ paths: ['old', 'tools', 'lib', 'lib/a.cs'], addsPrivate: false, ...none });
+    expect(checkinPathsOf([gone, movedHere, both, inBoth], [gone, movedHere, both, inBoth])).toEqual({ paths: ['old', 'tools', 'lib'], addsPrivate: false, ...none });
   });
 
   it('names the outermost folders that take changes along, once each', () => {

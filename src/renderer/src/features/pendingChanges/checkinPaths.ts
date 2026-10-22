@@ -24,29 +24,47 @@ export interface CheckinPaths {
  * The paths that check in `included` and as little else as cm allows. cm takes everything under each path it is given,
  * with no way to take a folder alone: `--private` adds every private item there, and `--all` every change. So a
  * folder cm takes along by itself (`TAKEN_ALONG`) is left out when something under it is given, and what a given folder
- * takes that wasn't checked is `pulledIn`, for the user to agree to first. Checking a change checks what it needs
+ * takes that wasn't checked is `pulledIn`, for the user to agree to first; a private, added or moved folder whose all is
+ * checked goes alone (`wholeFolders`), as few paths as can be. Checking a change checks what it needs
  * (`neededWith`), so that is only what the user can't check by hand: private items in a moved folder, once some other
  * private item is checked. A checkout inside a writable xlink checks the xlink out: given, it took every private file
  * inside the xlink. One pass over the changes, looking up only the folders above each.
  */
 export function checkinPathsOf(included: PendingChange[], pending: PendingChange[]): CheckinPaths {
   const addsPrivate = included.some((change) => change.kinds.includes('private'));
+  const includedPaths = new Set(included.map((change) => change.path));
+  const left = pending.filter((change) => !includedPaths.has(change.path) && isCheckinCandidate(change) && (addsPrivate || !change.kinds.includes('private')));
+  const whole = wholeFolders(included, left);
   const holdingIncluded = new Set(included.flatMap((change) => foldersAbove(change.path)));
-  const given = included.filter((change) => !isFolder(change) || !isTakenAlong(change) || !holdingIncluded.has(change.path));
+  const given = included.filter(
+    (change) => !foldersAbove(change.path).some((folder) => whole.has(folder)) && (!isFolder(change) || whole.has(change.path) || !isTakenAlong(change) || !holdingIncluded.has(change.path)),
+  );
   const givenFolders = new Set(given.filter(isFolder).map((change) => change.path));
   if (givenFolders.size === 0) return { paths: given.map((change) => change.path), addsPrivate, pulledIn: [], pullingFolders: [] };
 
-  const includedPaths = new Set(included.map((change) => change.path));
   const pulledIn: PendingChange[] = [];
   const pullingFolders = new Set<string>();
-  for (const change of pending) {
-    if (includedPaths.has(change.path) || !isCheckinCandidate(change) || (!addsPrivate && change.kinds.includes('private'))) continue;
+  for (const change of left) {
     const outermost = foldersAbove(change.path).find((folder) => givenFolders.has(folder));
     if (outermost === undefined) continue;
     pulledIn.push(change);
     pullingFolders.add(outermost);
   }
   return { paths: given.map((change) => change.path), addsPrivate, pulledIn, pullingFolders: [...pullingFolders] };
+}
+
+/**
+ * The checked private, added or moved folders cm can be given alone, taking all they hold: none of what it would take
+ * inside them is left unchecked (`left`). A new project added whole is then one path, not one per file. A checked-out
+ * folder never is: given, an xlink took the private files inside it.
+ */
+function wholeFolders(included: PendingChange[], left: PendingChange[]): ReadonlySet<string> {
+  const holdingLeft = new Set(left.flatMap((change) => foldersAbove(change.path)));
+  return new Set(included.filter((change) => isFolder(change) && hasOwnChange(change) && !holdingLeft.has(change.path)).map((change) => change.path));
+}
+
+function hasOwnChange(folder: PendingChange): boolean {
+  return folder.kinds.some((kind) => kind !== 'checkedOut');
 }
 
 // cm status reads an xlink as a directory (`enDirectory`).
