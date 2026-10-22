@@ -58,8 +58,12 @@ export function shownFileOf(page: Page | undefined, onScreen: { target: DiffTarg
   return selected?.path === onScreen.path ? selected : { path: onScreen.path };
 }
 
-/** What a link to a view with nothing selected names: the view, in the workspace's repository. */
-export function viewLinkTarget(view: ViewId): LinkTarget {
+/**
+ * What a link to a view with nothing selected names: the view, in the workspace's repository; none for Changes and
+ * Files, which show what is only on this computer (docs/features/deep-links.md, "Where links are copied").
+ */
+export function viewLinkTarget(view: ViewId): LinkTarget | null {
+  if (view === 'changes' || view === 'files') return null;
   const linkView = (Object.keys(LINK_VIEW_IDS) as (keyof typeof LINK_VIEW_IDS)[]).find((name) => LINK_VIEW_IDS[name] === view)!;
   return { page: { kind: 'view', view: linkView } };
 }

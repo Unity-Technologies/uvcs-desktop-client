@@ -5,6 +5,7 @@ import { copyToClipboard } from '../../ui/copyToClipboard';
 import { useCommands, type Command } from '../commands/commandStore';
 import { useNavigation } from '../navigation/navigationStore';
 import { useWorkspacePath } from '../workspace/useWorkspace';
+import type { LinkTarget } from './linkNavigation';
 import { workspaceLinkTo } from './linkTo';
 import { useSelectedObjectLink, type LinkText } from './selectedObjectLink';
 import { pageLinkTarget, viewLinkTarget } from './shownLink';
@@ -26,7 +27,7 @@ export function useCopyLinkCommand(): void {
   const pageTarget = top ? pageLinkTarget(top, shownFile) : null;
   const link: LinkText | null = top
     ? pageTarget && workspaceLinkTo(workspacePath, pageTarget)
-    : (objectLink?.current ?? workspaceLinkTo(workspacePath, viewLinkTarget(view)));
+    : (objectLink?.current ?? viewLink(workspacePath, viewLinkTarget(view)));
   const latest = useRef(link);
   latest.current = link;
   const hasLink = link !== null;
@@ -48,6 +49,10 @@ export function useCopyLinkCommand(): void {
       [hasLink],
     ),
   );
+}
+
+function viewLink(workspacePath: string, target: LinkTarget | null): LinkText | null {
+  return target && workspaceLinkTo(workspacePath, target);
 }
 
 async function copyLink(link: LinkText | null): Promise<void> {

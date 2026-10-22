@@ -64,9 +64,14 @@ describe('shownFileOf', () => {
 });
 
 describe('viewLinkTarget', () => {
-  it('names every view', () => {
-    for (const view of VIEW_IDS) expect(viewLinkTarget(view).page).toMatchObject({ kind: 'view' });
+  it('names every view showing what the repository holds', () => {
+    for (const view of VIEW_IDS.filter((view) => view !== 'changes' && view !== 'files')) expect(viewLinkTarget(view)?.page).toMatchObject({ kind: 'view' });
     expect(viewLinkTarget('codeReviews')).toEqual({ page: { kind: 'view', view: 'code-reviews' } });
+  });
+
+  it('names none for Changes and Files: what they show is only on this computer', () => {
+    expect(viewLinkTarget('changes')).toBeNull();
+    expect(viewLinkTarget('files')).toBeNull();
   });
 });
 
