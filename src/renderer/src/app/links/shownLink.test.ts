@@ -221,6 +221,7 @@ describe('objectLinkLabel', () => {
     expect(objectLinkLabel({ object: { kind: 'changesetRange', from: 3, to: 7 } })).toBe('Copy link to changesets 4–7');
     expect(objectLinkLabel({ object: { kind: 'labelRange', from: 'v1', to: 'v2' } })).toBe('Copy link to labels v1–v2');
     expect(objectLinkLabel({ object: { kind: 'codeReview', id: 311 } })).toBe('Copy link to code review 311');
+    expect(objectLinkLabel({ object: { kind: 'codeReview', id: 312, asMergeRequest: true } })).toBe('Copy link to merge request 312');
   });
 
   it("names a history's item, and a browsed item at its changeset", () => {

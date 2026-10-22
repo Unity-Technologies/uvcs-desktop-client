@@ -145,7 +145,8 @@ badges.
   window's top bar too): the link to what the page is about, never the file or lines it shows (`pageObjectTarget`): a
   diff's changeset, branch, label, shelve or range, a review, a history's item at the revision shown, a browsed
   changeset at the item shown ("Copy link to shelve 2", "… to history of Player.cs": `objectLinkLabel`).
-- **The lines selected**, in a committed diff, a history's annotations and a file annotated in Browse repository:
+- **The lines selected**, in a committed diff, a history's annotations, a file in Browse repository (its newer side) and
+  an unchanged file of the Files view:
   - a quiet **"Copy link" chip** by the first of them, at the right end of its pane, as a change's "Revert change"
     sits (`LineLinkChip`, placed by `lineChipAnchor`); its tooltip says what it copies ("Copy link to lines 40–52 of
     Player.cs", `copyLinkLabel`) and the ⇧⌘C that copies it too;

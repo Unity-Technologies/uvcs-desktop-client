@@ -90,6 +90,8 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   const focusOnShown = linkFocusOn(linkFocus, focused);
   // The lines' menu annotates the file at them as the diff's newer side has it (`diffEntryAnnotation`), where it can.
   const annotation = focused ? diffEntryAnnotation(target, focused) : null;
+  // Keyed by the file shown, not `annotation` or `target`, which are new objects each render: the diff is mounted per
+  // target (`TargetDiff`), so a file's path names its annotation.
   const lineLinks = useMemo<LineLinks>(
     () => ({ focus: focusOnShown, publishes: true, annotateAt: annotation ? (lines) => navigation.openPage({ ...annotation, focusLines: lines }) : undefined }),
     [linkFocus, focused?.path, annotation === null],

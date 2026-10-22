@@ -15,8 +15,8 @@ import { shownFileNow } from './useShownFile';
 
 /**
  * "Copy link" (⇧⌘C, the palette): a link to what is in front, as a browser's address bar has one
- * (docs/features/deep-links.md, "Where links are copied"): the page (the file and the lines selected in it), else the
- * object selected in the view, else the view (`linkToCopy`). What it copies is decided as it runs: the shell renders
+ * (docs/features/deep-links.md, "Where links are copied"): the lines selected in the page, else the page's own object,
+ * else the object selected in the view, else the view (`linkToCopy`). What it copies is decided as it runs: the shell renders
  * again only when whether there is a link changes, never as a selection moves.
  */
 export function useCopyLinkCommand(): void {

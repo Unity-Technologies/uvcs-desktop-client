@@ -139,8 +139,8 @@ export function placeLinesTarget(publishes: boolean, linkOf: (lines: LinkLines) 
 export type LinkToCopy = { kind: 'target'; target: LinkTarget } | { kind: 'selectedObject' } | null;
 
 /**
- * What "Copy link" copies, as a browser's address bar would: the page in front (with the file and lines it shows),
- * else the object selected in the view, else the view itself; nothing for a page or view no link names.
+ * What "Copy link" copies, as a browser's address bar would: the lines selected in the page in front, else the page's
+ * own object, else the object selected in the view, else the view itself; nothing for a page or view no link names.
  */
 export function linkToCopy({ top, shown, hasSelectedObject, view }: { top: Page | undefined; shown: ShownFile | null; hasSelectedObject: boolean; view: ViewId }): LinkToCopy {
   const target = top ? pageLinkToCopy(top, shown) : hasSelectedObject ? null : viewLinkTarget(view);
