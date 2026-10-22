@@ -195,7 +195,8 @@ function selectionOf(
  * The checks of the changes listed (what the filters show, review mode's "Unreviewed" too) that can go in
  * (`candidates`, found once per list): how many are checked, from the selection's count when they are what the filter
  * shows and counted again only when review mode narrows them; and how a row asks whether one is (`isChosen`), null
- * while every one is (`everyCandidateIncluded`), so a folder of a million needs no asking.
+ * while every one is (`everyCandidateIncluded`), so a folder of a million needs no asking. `candidates` is
+ * `listed.filter(isCheckinCandidate)`, which the caller keeps per list: a click doesn't filter it again.
  */
 export interface ShownChecks {
   candidates: PendingChange[];

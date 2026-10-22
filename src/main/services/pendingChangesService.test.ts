@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, realpath, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import type { OperationProgress } from '@shared/domain/operation';
 import type { PendingChangesFilter } from '@shared/domain/pendingChanges';
 import { CmError } from '../cm/CmError';
@@ -84,11 +84,11 @@ describe('pending changes list', () => {
 
   it('stops reading files from the disk once cm status fails', async () => {
     const stop = vi.spyOn(DiskDetails.prototype, 'stop');
+    onTestFinished(() => stop.mockRestore());
     const { service } = pendingChanges({ status: cmFails('Error: the workspace is locked') });
 
     await expect(service.list(WORKSPACE, NO_FILTER)).rejects.toThrow('the workspace is locked');
     expect(stop).toHaveBeenCalledOnce();
-    stop.mockRestore();
   });
 });
 

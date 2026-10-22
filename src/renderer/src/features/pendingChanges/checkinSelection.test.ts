@@ -151,17 +151,21 @@ describe('checkinSelectionOf, over many changes', () => {
     },
   );
 
-  it("asks only the merge's boxes while every box is checked and nothing filtered, and a few each when one is unchecked", () => {
+  it("asks only the merge's boxes while every box is checked and nothing filtered, and each box about once when one is unchecked", () => {
     const listed = listing(many);
-    const everything = countCalls(Set.prototype, 'has', () => checkinSelectionOf(listed, unchecking([])));
+    const everyBox = unchecking([]);
+    const everything = countCalls(everyBox.excludedPaths as Set<string>, 'has', () => checkinSelectionOf(listed, everyBox));
     // Only whether the pending merge's two changes are checked (`consistentlyIncluded` asks it once a click).
     expect(everything.calls).toBe(2);
     expect(everything.result.everyCandidateIncluded).toBe(true);
 
-    const oneUnchecked = countCalls(Set.prototype, 'has', () => checkinSelectionOf(listed, unchecking(['src/f0/edit0.ts'])));
+    const oneBox = unchecking(['src/f0/edit0.ts']);
+    const oneUnchecked = countCalls(oneBox.excludedPaths as Set<string>, 'has', () => checkinSelectionOf(listed, oneBox));
     expect(oneUnchecked.result.everyCandidateIncluded).toBe(false);
-    expect(oneUnchecked.calls).toBeGreaterThan(0);
-    expect(oneUnchecked.calls).toBeLessThan(3 * many.length);
+    // One pass: each change that can go in once, and the merge's and each folder's above them once more.
+    const candidates = many.filter((item) => !item.kinds.includes('ignored')).length;
+    expect(oneUnchecked.calls).toBeGreaterThanOrEqual(candidates);
+    expect(oneUnchecked.calls).toBeLessThan(candidates + 50);
   });
 });
 
