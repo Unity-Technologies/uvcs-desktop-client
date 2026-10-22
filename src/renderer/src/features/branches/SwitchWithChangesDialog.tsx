@@ -53,7 +53,9 @@ function SwitchWithChangesDialog({
       footer={
         inMerge ? (
           <>
-            <Button onClick={reviewChanges}>Review changes</Button>
+            <Button variant="ghost" className={styles.review} onClick={reviewChanges}>
+              Review changes
+            </Button>
             <Button variant="primary" onClick={cancel}>
               Cancel
             </Button>
