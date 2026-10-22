@@ -1,7 +1,7 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import { VIEW_IDS } from '../navigation/views';
-import { copyLinkLabel, pageLinkTarget, shownFileOf, viewLinkTarget } from './shownLink';
+import { copyLinkLabel, linkToCopy, pageLinkTarget, shownFileOf, viewLinkTarget } from './shownLink';
 
 const LINES = { side: 'new', first: 40, last: 52 } as const;
 
@@ -115,5 +115,23 @@ describe('copyLinkLabel', () => {
     expect(copyLinkLabel({ page: { kind: 'diffFile', path: '/src/Player.cs' }, lines: { side: 'old', first: 7, last: 7 } })).toBe('Copy link to line 7 of Player.cs');
     expect(copyLinkLabel({ page: { kind: 'diffFile', path: '/src/Player.cs' } })).toBe('Copy link to Player.cs');
     expect(copyLinkLabel({ object: { kind: 'changeset', id: 1 } })).toBe('Copy link');
+  });
+});
+
+describe('linkToCopy', () => {
+  const diff = { kind: 'diff', title: 'Changeset 12', target: { kind: 'changeset', changesetId: 12 } } as const;
+
+  it('copies the page in front, with the file and lines it shows, whatever the view has selected', () => {
+    expect(linkToCopy({ top: diff, shown: { path: 'a.cs', lines: LINES }, hasSelectedObject: true, view: 'branches' })).toEqual({
+      kind: 'target',
+      target: { object: { kind: 'changeset', id: 12 }, page: { kind: 'diffFile', path: '/a.cs' }, lines: LINES },
+    });
+  });
+
+  it("copies the view's selected object, else the view, and nothing for Changes and Files or a page no link names", () => {
+    expect(linkToCopy({ top: undefined, shown: null, hasSelectedObject: true, view: 'branches' })).toEqual({ kind: 'selectedObject' });
+    expect(linkToCopy({ top: undefined, shown: null, hasSelectedObject: false, view: 'locks' })).toEqual({ kind: 'target', target: { page: { kind: 'view', view: 'locks' } } });
+    expect(linkToCopy({ top: undefined, shown: null, hasSelectedObject: false, view: 'changes' })).toBeNull();
+    expect(linkToCopy({ top: { kind: 'diff', title: 'a → b', target: { kind: 'range', fromSpec: 'cs:3', toSpec: 'br:/main' } }, shown: null, hasSelectedObject: true, view: 'branches' })).toBeNull();
   });
 });

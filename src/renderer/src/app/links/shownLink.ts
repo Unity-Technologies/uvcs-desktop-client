@@ -79,6 +79,19 @@ export function shownFileOf(
   return selected?.path === onScreen.path ? selected : { path: onScreen.path };
 }
 
+/** What "Copy link" copies (`useCopyLinkCommand`): a link it names, or the one the view's selected object offers. */
+export type LinkToCopy = { kind: 'target'; target: LinkTarget } | { kind: 'selectedObject' } | null;
+
+/**
+ * What "Copy link" copies, as a browser's address bar would: the page in front (with the file and lines it shows),
+ * else the object selected in the view, else the view itself; nothing for a page or view no link names.
+ */
+export function linkToCopy({ top, shown, hasSelectedObject, view }: { top: Page | undefined; shown: ShownFile | null; hasSelectedObject: boolean; view: ViewId }): LinkToCopy {
+  const target = top ? pageLinkTarget(top, shown) : hasSelectedObject ? null : viewLinkTarget(view);
+  if (target) return { kind: 'target', target };
+  return !top && hasSelectedObject ? { kind: 'selectedObject' } : null;
+}
+
 /**
  * What a link to a view with nothing selected names: the view, in the workspace's repository; none for Changes and
  * Files, which show what is only on this computer (docs/features/deep-links.md, "Where links are copied").

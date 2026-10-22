@@ -11,3 +11,8 @@ export function useShownFile(page: Page | undefined): ShownFile | null {
   const revision = useShownRevision((state) => state.shown);
   return shownFileOf(page, onScreen, selected, revision);
 }
+
+/** The same, read once (a command running), so nothing re-renders as the selection moves. */
+export function shownFileNow(page: Page | undefined): ShownFile | null {
+  return shownFileOf(page, useShownDiffFile.getState().shown, useSelectedLines.getState().selected, useShownRevision.getState().shown);
+}
