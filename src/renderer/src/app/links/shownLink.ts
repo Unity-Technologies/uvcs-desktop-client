@@ -21,7 +21,10 @@ export interface ShownFile {
  */
 export function pageLinkTarget(page: Page, shown: ShownFile | null): LinkTarget | null {
   const target = pageTargetOf(page, shown);
-  return target && isWritable(target) ? target : null;
+  if (!target || isWritable(target)) return target;
+  // A file no link can carry (a quote in its name): a diff's or a review's object still can be.
+  const object = (page.kind === 'diff' || page.kind === 'codeReview') && target.object;
+  return object && isWritable({ object }) ? { object } : null;
 }
 
 function pageTargetOf(page: Page, shown: ShownFile | null): LinkTarget | null {
@@ -95,6 +98,15 @@ export function linkToCopy({ top, shown, hasSelectedObject, view }: { top: Page 
   const target = top ? pageLinkTarget(top, shown) : hasSelectedObject ? null : viewLinkTarget(view);
   if (target) return { kind: 'target', target };
   return !top && hasSelectedObject ? { kind: 'selectedObject' } : null;
+}
+
+/**
+ * Whether "Copy link" has a link to copy, to enable it (`useCopyLinkCommand`), from what the shell follows without
+ * rendering as a selection moves: a history showing a revision of another repository has none (`historyLinkTarget`).
+ */
+export function hasLinkToCopy({ top, hasSelectedObject, view, shownOfOtherRepository }: { top: Page | undefined; hasSelectedObject: boolean; view: ViewId; shownOfOtherRepository: boolean }): boolean {
+  if (top?.kind === 'history' && shownOfOtherRepository) return false;
+  return linkToCopy({ top, shown: null, hasSelectedObject, view }) !== null;
 }
 
 /**
