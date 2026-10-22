@@ -2,17 +2,20 @@ import { Copy } from 'lucide-react';
 import { useMemo, useRef } from 'react';
 import { copyDefault, type CopyTexts } from '../../components/copyMenu';
 import { hotkey } from '../../lib/shortcutRegistry';
+import { useOfferSelectedObjectLink } from '../links/selectedObjectLink';
 import { useCommands, type Command } from './commandStore';
 
 /**
  * ⌘C (Ctrl+C) copies the one object selected in a view's list (`texts`, undefined unless exactly one is) as the first
  * entry of its "Copy" submenu does: a branch's or label's name, a changeset's, shelve's or review's number. Text
- * selected on the page is copied instead, as anywhere (`CommandShortcuts`).
+ * selected on the page is copied instead, as anywhere (`CommandShortcuts`). Its link is what ⇧⌘C copies
+ * (`useCopyLinkCommand`).
  */
 export function useCopyCommand(group: string, noun: string, texts: CopyTexts | undefined): void {
   const latestTexts = useRef(texts);
   latestTexts.current = texts;
   const hasTexts = texts !== undefined;
+  useOfferSelectedObjectLink(texts?.link);
 
   useCommands(
     useMemo<Command[]>(

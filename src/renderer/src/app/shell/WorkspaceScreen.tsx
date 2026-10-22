@@ -15,6 +15,7 @@ import { COMMAND_LOG_HEIGHT, useCommandLogHost, useCommandLogStore } from './com
 import { useMainFocus } from './useMainFocus';
 import { useWindowTitle } from './useWindowTitle';
 import { useWorkspaceCommands } from './useWorkspaceCommands';
+import { useCopyLinkCommand } from '../links/useCopyLinkCommand';
 import { useWorkspaceWatcher } from './useWorkspaceWatcher';
 import styles from './WorkspaceScreen.module.css';
 
@@ -26,6 +27,7 @@ export function WorkspaceScreen() {
   useCommandLogHost();
   useWorkspaceWatcher();
   useWorkspaceCommands();
+  useCopyLinkCommand();
   useWindowTitle();
   useMergeCommands();
   useIncomingNotificationClicks();
