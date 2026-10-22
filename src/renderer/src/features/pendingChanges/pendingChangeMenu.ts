@@ -5,7 +5,8 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { annotatedHistory } from '../history/annotatedHistory';
 import { tidyMenu, type MenuEntry } from '../../lib/actions';
 import { groupedMenu, type GroupedEntry } from '../../lib/menuGroups';
-import { copySubmenu } from '../../components/copyMenu';
+import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
+import { hotkey } from '../../lib/shortcutRegistry';
 import { openOnDiskEntries } from '../../components/externalApps/openWithMenu';
 import { menuAction, menuSubmenu } from '../../components/menuWords';
 import { TRASH_NAME } from '../../lib/platform';
@@ -94,11 +95,11 @@ function inclusionEntries(changes: PendingChange[], { isIncluded, setIncluded }:
  * The "Copy" submenu of workspace items: their paths, relative to the workspace or full. One item's show beside their
  * labels; several are joined only when copied, since a right-click can hold 50,000 of them.
  */
-export function itemCopySubmenu(workspacePath: string, paths: string[]): GroupedEntry | null {
+export function itemCopySubmenu(workspacePath: string, paths: string[], link?: CopyTexts['link']): GroupedEntry | null {
   const relative = (): string => paths.join('\n');
   const full = (): string => paths.map((path) => absolutePath(workspacePath, path)).join('\n');
   if (paths.length === 0) return null;
-  if (paths.length === 1) return copySubmenu('', { path: relative(), fullPath: full() });
+  if (paths.length === 1) return copySubmenu('', { path: relative(), fullPath: full(), link }, { linkShortcut: link ? hotkey('copyLink') : undefined });
   return copySubmenu('', { path: async () => relative(), fullPath: async () => full() }, { count: paths.length });
 }
 

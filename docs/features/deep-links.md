@@ -160,8 +160,14 @@ badges.
   own object (`pageObjectTarget`, as its header), else the object selected in the view (its Copy ▸ Link, offered by
   `useCopyCommand`), else the view itself.
 - **After a check-in or an update**, its "Copy link" copies the changeset's link, or the range's (`successLinkObject`).
-- Nothing local is ever copied as a link: Changes and the Files view offer none (⇧⌘C copies nothing there,
-  `viewLinkTarget`), and the app writes no workspace link.
+- **The Files view**: an item's Copy ▸ Link, and ⇧⌘C on the selected one, copy it as the repository has it on what the
+  workspace is on (`…/branches/main/-/browse/Assets/Player.cs`), which stays useful as the branch moves on; lines
+  selected in its viewer get the chip and the menu, pinned to the changeset the workspace has loaded, as line numbers
+  shift along a branch (`…/changesets/28/-/browse/Player.cs#L40`; `filesItemLink`, `useFilesItemLinks`,
+  `LineLinks.linkOf`). It's the repository's version, never the workspace's own edits. A private or ignored item, one
+  under an xlink and a workspace on a shelve offer none.
+- Nothing only on this computer is copied as a link: Changes offers none (a pending change exists nowhere else), nor
+  does ⇧⌘C on the Changes or Files view itself (`viewLinkTarget`), and the app writes no workspace link.
 
 Pasting a link into the palette offers to open it, saying what it opens (`linkGroupIn`, `linkDescription`), and
 File ▸ Open Link… (the palette's "Open link…") asks for one, the clipboard's already in the field (`askAndOpenLink`).

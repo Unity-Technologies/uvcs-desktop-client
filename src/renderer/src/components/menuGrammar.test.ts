@@ -47,6 +47,7 @@ import { COPY_KINDS } from './copyMenu';
 import { MENU_WORDS, type MenuWord } from './menuWords';
 import { externalAppsKey } from './externalApps/externalApps';
 import { queryClient } from '../app/queryClient';
+import { workspaceInfoQuery } from '../app/workspace/useWorkspace';
 import { DEFAULT_SETTINGS } from '@shared/domain/settings';
 import type { ExternalApps } from '@shared/domain/externalApps';
 
@@ -97,6 +98,8 @@ const file: TreeItem = {
   repository,
   itemId: 4,
 };
+/** The workspace's info, as its window reads it: on /main, changeset 5 loaded. */
+const WORKSPACE_INFO = { name: 'ws', path: '/ws', repository: 'game@local', repositoryName: 'game', server: 'local', selector: { kind: 'branch', name: '/main' }, loadedChangeset: 5 } as const;
 const change: PendingChange = { path: 'src/a.ts', kinds: ['checkedOut', 'changed'], itemType: 'file', size: 10, lastModified: '' };
 const lock: Lock = {
   itemId: 1,
@@ -434,18 +437,20 @@ describe('Copy', () => {
   });
 
   it("copies a code review as its number, title and link, in the workspace's repository", async () => {
-    fakeApi.answer('workspaces.info', async () => ({ repository: 'game@local' }));
+    fakeApi.answer('workspaces.info', async () => WORKSPACE_INFO);
     expect(await copiedBy(codeReviewMenu(ws, [review]))).toEqual(['Code review number: 9', 'Code review title: Review the task', 'Code review link: uvcs://local/repos/game/code-reviews/9']);
   });
 
   it("copies a diff's file as the link to its change there", async () => {
-    fakeApi.answer('workspaces.info', async () => ({ repository: 'game@local' }));
+    fakeApi.answer('workspaces.info', async () => WORKSPACE_INFO);
     const entry = { path: 'src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39, repository } as never;
     expect(await copiedBy(diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [entry]))).toEqual(['Path: src/a.ts', 'Link: uvcs://local/repos/game/changesets/5/-/files/src/a.ts']);
   });
 
-  it('copies files and pending changes as their paths, relative and full', async () => {
-    expect(await copiedBy(fileMenu(ws, [file], new PendingChangesIndex([])))).toEqual(['Path: src/a.ts', 'Full path: /ws/src/a.ts']);
+  it("copies files and pending changes as their paths, relative and full, and a file as its link on the workspace's branch", async () => {
+    queryClient.setQueryData(workspaceInfoQuery(ws).queryKey, WORKSPACE_INFO);
+    expect(await copiedBy(fileMenu(ws, [file], new PendingChangesIndex([])))).toEqual(['Path: src/a.ts', 'Full path: /ws/src/a.ts', 'Link: uvcs://local/repos/game/branches/main/-/browse/src/a.ts']);
+    expect(copyEntries(fileMenu(ws, [{ ...file, repository: '', isPrivate: true }], new PendingChangesIndex([]))).map((entry) => entry.label)).toEqual(['Path', 'Full path']);
     copied.splice(0);
     expect(await copiedBy(pendingChangeMenu(ws, [change, { ...change, path: 'b.ts' }], []))).toEqual(['2 paths: src/a.ts\nb.ts', '2 full paths: /ws/src/a.ts\n/ws/b.ts']);
   });
