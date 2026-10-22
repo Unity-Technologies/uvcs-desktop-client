@@ -1,3 +1,5 @@
+import { mkdir, mkdtemp, realpath, symlink } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { change, formatOutput, pendingStatus, statusHeader } from './testing/cmOutput';
@@ -41,6 +43,18 @@ describe('readWorkspaceGlance', () => {
       [`status ${WORKSPACE}`]: formatOutput(['PR', join('/', 'elsewhere', 'a.txt'), 'False', 'NO_MERGES']),
     });
     expect(await readWorkspaceGlance(cm, WORKSPACE)).toEqual({ selector: { kind: 'branch', name: '/main/task-12' }, pendingCount: null });
+  });
+
+  it('counts the changes of a workspace reached through a link, whose paths cm prints from where it resolves', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'uvcs-glance-'));
+    const [target, link] = [join(root, 'target'), join(root, 'link')];
+    await mkdir(target);
+    await symlink(target, link, 'junction');
+    const { cm } = fakeCmClient({
+      'status --header --xml': statusHeader('/main', { repository: 'acme' }),
+      [`status ${link}`]: pendingStatus(await realpath(link), change('CH', 'a.txt')),
+    });
+    expect(await readWorkspaceGlance(cm, link)).toMatchObject({ pendingCount: 1 });
   });
 
   it('reads a clean workspace', () => {

@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
@@ -9,6 +9,7 @@ import { CmError } from '../cm/CmError';
 import { statusRecordsArgs } from '../cm/pendingChangesRecords';
 import { change, pendingStatus } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { DiskDetails } from '../files/DiskDetails';
 import { OperationTracker } from '../operations/OperationTracker';
 import { createPendingChangesService } from './pendingChangesService';
 import type { SwitchContext } from './ServiceContext';
@@ -65,6 +66,29 @@ describe('pending changes list', () => {
     expect(changes[0]).toMatchObject({ path: 'new.txt', size: 12 });
     expect(Date.parse(changes[0]!.lastModified)).toBeGreaterThan(0);
     expect(changes[1]).toEqual({ path: 'gone.txt', kinds: ['locallyDeleted'], itemType: 'file', size: 0, lastModified: '' });
+  });
+
+  // A junction, so Windows makes it without Developer Mode; on macOS `/tmp` is such a link to `/private/tmp`.
+  it('reads a workspace reached through a link, whose paths cm prints from the folder the link resolves to', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'uvcs-linked-'));
+    const target = join(root, 'target');
+    const link = join(root, 'link');
+    await mkdir(target);
+    await symlink(target, link, 'junction');
+    const { service } = pendingChanges({ status: pendingStatus(await realpath(link), change('CH', 'src/a.ts')) });
+
+    const { changes } = await service.list(link, NO_FILTER);
+
+    expect(changes.map((item) => item.path)).toEqual(['src/a.ts']);
+  });
+
+  it('stops reading files from the disk once cm status fails', async () => {
+    const stop = vi.spyOn(DiskDetails.prototype, 'stop');
+    const { service } = pendingChanges({ status: cmFails('Error: the workspace is locked') });
+
+    await expect(service.list(WORKSPACE, NO_FILTER)).rejects.toThrow('the workspace is locked');
+    expect(stop).toHaveBeenCalledOnce();
+    stop.mockRestore();
   });
 });
 
