@@ -22,6 +22,7 @@ import { ItemDetailsPane } from '../files/ItemDetailsPane';
 import { useTreeListings } from '../files/useTreeListings';
 import { openRevision } from '../history/revisionOperations';
 import { browseOpening } from './browseOpening';
+import { publishShownBrowseItem } from './shownBrowseItem';
 import { repositoryListingQuery } from './repositoryListing';
 import { revisionMenu } from './revisionMenu';
 
@@ -51,6 +52,9 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
   const { childrenByDirectory, isLoadingRoot, error } = useTreeListings((directory) => repositoryListingQuery(workspacePath, page.changesetId, directory), expanded);
   const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, filter: shownFilter }), [childrenByDirectory, expanded, shownFilter]);
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
+  // What the page's link names (its header, ⇧⌘C): the item selected now, not the one it opened on.
+  useEffect(() => publishShownBrowseItem(focused ? { changesetId: page.changesetId, path: focused.path } : null), [page.changesetId, focused?.path]);
+  useEffect(() => () => publishShownBrowseItem(null), []);
   const [revealPath, setRevealPath] = useState<string | null>(opening.selected);
   const selectFolder = (path: string): void => {
     setSelection(singleSelection(path));

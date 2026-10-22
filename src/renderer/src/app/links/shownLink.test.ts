@@ -102,6 +102,30 @@ describe('shownFileOf', () => {
   });
 });
 
+describe('shownFileOf, against lines selected elsewhere', () => {
+  const browse = { kind: 'browseRepository', changesetId: 7, focusPath: 'a.cs' } as const;
+
+  it('names the item Browse repository shows now, not the one it opened on', () => {
+    expect(shownFileOf(browse, null, null, null, { changesetId: 7, path: 'b.cs' })).toEqual({ path: 'b.cs' });
+    expect(pageObjectTarget(browse, shownFileOf(browse, null, null, null, { changesetId: 7, path: 'b.cs' }))).toEqual({
+      object: { kind: 'changeset', id: 7 },
+      page: { kind: 'browse', path: '/b.cs' },
+    });
+  });
+
+  it("takes no lines selected in another file (a view under the page) nor an older side's", () => {
+    expect(shownFileOf(browse, null, { path: 'src/search.ts', lines: LINES }, null, { changesetId: 7, path: 'a.cs' })).toEqual({ path: 'a.cs' });
+    expect(shownFileOf(browse, null, { path: 'a.cs', lines: { side: 'old', first: 4, last: 4 } }, null, { changesetId: 7, path: 'a.cs' })).toEqual({ path: 'a.cs' });
+    expect(shownFileOf(browse, null, { path: 'a.cs', lines: LINES }, null, { changesetId: 7, path: 'a.cs' })).toEqual({ path: 'a.cs', lines: LINES });
+    expect(shownFileOf({ kind: 'history', path: 'a.cs', view: 'annotate' }, null, { path: 'src/search.ts', lines: LINES })).toBeNull();
+  });
+
+  it("takes nothing from another page's browsed item, or before the page shows one", () => {
+    expect(shownFileOf(browse, null, null, null, { changesetId: 8, path: 'b.cs' })).toBeNull();
+    expect(shownFileOf(browse, null, null, null, null)).toBeNull();
+  });
+});
+
 describe('viewLinkTarget', () => {
   it('names every view showing what the repository holds', () => {
     for (const view of VIEW_IDS.filter((view) => view !== 'changes' && view !== 'files')) expect(viewLinkTarget(view)?.page).toMatchObject({ kind: 'view' });

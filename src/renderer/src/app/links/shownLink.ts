@@ -1,4 +1,5 @@
 import type { DiffTarget } from '@shared/domain/diff';
+import type { ShownBrowseItem } from '../../features/browseRepository/shownBrowseItem';
 import { shortBranchName } from '@shared/domain/specs';
 import type { LinkObject } from '@shared/links/link';
 import type { LinkLines } from '@shared/links/link';
@@ -113,9 +114,18 @@ export function shownFileOf(
   onScreen: { target: DiffTarget; path: string } | null,
   selected: Required<Omit<ShownFile, 'revision'>> | null,
   revision: ShownRevision | null = null,
+  browsed: ShownBrowseItem | null = null,
 ): ShownFile | null {
-  if (page?.kind === 'history' && revision?.path === page.path) return { ...(selected ?? { path: page.path }), revision };
-  if (page?.kind === 'history' || page?.kind === 'browseRepository') return selected;
+  // Lines selected count only in the file the page shows: a view under the page (Files) may have selected others.
+  const linesIn = (path: string): Pick<ShownFile, 'lines'> => (selected?.path === path ? { lines: selected.lines } : {});
+  if (page?.kind === 'history' && revision?.path === page.path) return { path: page.path, ...linesIn(page.path), revision };
+  if (page?.kind === 'history') return selected?.path === page.path ? selected : null;
+  if (page?.kind === 'browseRepository') {
+    if (browsed?.changesetId !== page.changesetId) return null;
+    // A browse link's lines are the item's as it was there: an older side's (its diff of the last change) have no link.
+    const lines = selected?.path === browsed.path && selected.lines.side === 'new' ? { lines: selected.lines } : {};
+    return { path: browsed.path, ...lines };
+  }
   if (!onScreen || (page?.kind !== 'diff' && page?.kind !== 'codeReview')) return null;
   if (page.kind === 'diff' && JSON.stringify(onScreen.target) !== JSON.stringify(page.target)) return null;
   return selected?.path === onScreen.path ? selected : { path: onScreen.path };
