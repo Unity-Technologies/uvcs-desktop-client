@@ -11,7 +11,7 @@ import { useDefaultWorkspaceRoot } from '../useDefaultWorkspaceRoot';
 import { createNewWorkspace } from './createNewWorkspace';
 import { LocationField } from './LocationField';
 import { RepositoryNameCombobox } from './RepositoryNameCombobox';
-import { newWorkspaceFormOf, repositoriesToName, serverToList } from './newWorkspaceForm';
+import { initialRepositoryName, newWorkspaceFormOf, repositoriesToName, serverToList } from './newWorkspaceForm';
 
 interface CreateWorkspaceOptions {
   repository?: RepositorySummary;
@@ -29,7 +29,7 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
   const root = useDefaultWorkspaceRoot();
 
   const [server, setServer] = useState(() => (initialRepository ? splitRepositorySpec(initialRepository.spec).server : 'local'));
-  const [repositoryName, setRepositoryName] = useState(initialRepository?.name ?? '');
+  const [repositoryName, setRepositoryName] = useState(() => initialRepositoryName(initialRepository, initialPath));
   const [created, setCreated] = useState<string>();
   const [typedName, setTypedName] = useState<string>();
   const [chosenPath, setChosenPath] = useState(initialPath);

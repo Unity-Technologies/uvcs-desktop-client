@@ -68,6 +68,15 @@ export function newWorkspaceFormOf(input: NewWorkspaceFormInput): NewWorkspaceFo
   };
 }
 
+/**
+ * What the Repository field starts with: the repository the caller fixed, else the name of the folder the dialog opened
+ * with (a dropped folder), as the workspace is named after it too; that names the server's repository of that name, or
+ * proposes one to create, as the official client does.
+ */
+export function initialRepositoryName(fixed: RepositorySummary | undefined, initialPath: string | undefined): string {
+  return fixed?.name ?? (initialPath ? lastSegment(initialPath) : '');
+}
+
 /** The server whose repositories the dialog reads (to suggest them, and to tell a new name); none when the caller fixed the repository. */
 export function serverToList(server: string, fixed: RepositorySummary | undefined): string | null {
   return fixed ? null : server;
