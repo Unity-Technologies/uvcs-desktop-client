@@ -482,16 +482,17 @@ says it's busy); a file that can't be read as settings is kept aside as `setting
 from the defaults.
 It never writes to the official Desktop client's config (its settings folder, `plasticConfigFolder`: `plasticgui.conf`,
 `client.conf`...) and never keeps reading it. Only on the first run, `importLegacySettings` reads the well-known values
-there so the user feels at home (each workspace's recent branches, `readRecentBranchesByWorkspace`); it records
-`legacySettingsImported` even when it found nothing or couldn't read a file, and never runs again: from then on the
-app's settings are the only source. The import never writes a file (`main/cm/noCmInternalFiles.test.ts`).
+there so the user feels at home: each workspace's recent branches (`readRecentBranchesByWorkspace`) and which merge
+tool opens which files (client.conf's `<MergeTools>`, `readLegacyMergeTools`, `legacyMergeToolSettings`;
+docs/features/merge.md "Merge tools"). Each records that it ran (`legacySettingsImported`, `mergeToolRulesImported`,
+apart since the merge tools came later) even when it found nothing or couldn't read a file, and never runs again: from
+then on the app's settings are the only source. The import never writes a file (`main/cm/noCmInternalFiles.test.ts`).
 
 Not covered, as they aren't the official client's settings: what `cm` itself reads from its `client.conf` (the default
 user `cm whoami` shows; `PendingChangesOnSwitchAction`, neutralized by `switchWithChanges`), the workspace's rule files
 (`ignore.conf`, `cloaked.conf`, `hidden_changes.conf`, `writable.conf`, `readonly.conf`), and server objects the
-official client created (its automatic shelves, offered as left changes). Its merge tools (client.conf's `<MergeTools>`) aren't offered: the app finds the
-well-known tools itself, and the user adds any other (docs/features/merge.md); importing them would belong to
-`importLegacySettings` too.
+official client created (its automatic shelves, offered as left changes). Its diff tools (client.conf's
+`<DiffTools>`) aren't imported: the app shows diffs itself.
 
 ## `cm` owns its files
 

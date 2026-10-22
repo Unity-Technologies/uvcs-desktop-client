@@ -11,15 +11,42 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
 
 - Found per OS (`knownTools`, `detectTools`), the editors' way (docs/features/open-with.md "Finding apps"): inside
   their app wherever the OS records it (`identity`, `inInstall`: a bundle Spotlight knows, a folder an uninstall entry
-  names), else at their usual locations, else on the PATH. Each shows its app's icon (`AppIcons`). The tools: the UVCS merge tool (the Desktop GUI run as `xmerge`: `macplasticx` in PlasticSCM.app, `plastic.exe` next to `cm.exe`, `plasticgui`), VS Code and its forks,
-  JetBrains IDEs, Sublime Merge, KDiff3, Beyond Compare, Meld, P4Merge, Araxis and FileMerge (`opendiff`, only with
-  Xcode) and WinMerge on Windows, each with the three-way command line of its docs (cross-checked with Git's `mergetools/*`). The user can add any program with an arguments template (`{base}` `{yours}`
-  `{incoming}` `{result}` and their `…Name`s). Settings keep the preferred tool (`auto`: the UVCS one, else the first
-  found; a pick no longer on offer falls back to it), the user's tools and per-tool arguments. Adding a tool
-  (`CustomMergeToolDialog`, `addCustomMergeTool`) makes it the preferred one; when the settings can't be saved, nothing
-  is picked and the dialog stays open with what the user typed. The official client's
-  merge tools (client.conf's `<MergeTools>`) aren't read, not even on the first run (ARCHITECTURE.md "Own config"):
-  the well-known tools are found anyway, and the user adds any other. Every tool opens every text file.
+  names), else at their usual locations, else on the PATH. Each shows its app's icon (`AppIcons`). The tools: the UVCS
+  merge tool and Semantic Merge (the Desktop GUI run as `xmerge` or `semanticmerge`, `uvcsGui`: `macplasticx` in
+  PlasticSCM.app, `plastic.exe` next to `cm.exe`, `plasticgui`), VS Code and its forks, JetBrains IDEs, Sublime Merge,
+  KDiff3, Beyond Compare, Meld, P4Merge, Araxis and FileMerge (`opendiff`, only with Xcode) and WinMerge on Windows,
+  each with the three-way command line of its docs (cross-checked with Git's `mergetools/*`). The user can add any
+  program with an arguments template (`{base}` `{yours}` `{incoming}` `{result}` and their `…Name`s;
+  `CustomMergeToolDialog`, `addCustomMergeTool`, which picks it nowhere: the caller opens the file in it or picks it for
+  a row). Settings keep the user's tools and per-tool arguments ("How <tool> opens…", `MergeToolArgsDialog`).
+- **Which tool opens which file** (Settings › Merge, `MergeToolsPane`; `mergeToolFor`, `useMergeToolFor`): rows tried
+  top to bottom, the first that matches wins. First Unity assets (by their content, `isUnityAsset`: Smart Merge goes
+  first, below), opening where every other file would ("Same as others", `unityMergeTool: 'others'`) or in a tool
+  picked for them; then the user's rows (`mergeToolRules`), each a list of file patterns and a tool; last, every other
+  file (`mergeTool`: `auto`, the UVCS one, else the first found; a pick no longer on offer falls back to it). Patterns
+  (`lib/filePatterns`) are extensions (`.cs`), names with `*` and `?` (`*.prefab`), or paths from the workspace's root
+  with `**` crossing folders (`Assets/Data/**`), matched in any case on Windows and macOS and exactly on Linux
+  (`fileNamesIgnoreCase`). A row whose tool isn't found here is passed by, and says so ("Not found on this computer",
+  named by `knownNames`); removing a tool of the user's drops its rows. With nothing imported, the rows are C#, Visual
+  Basic and Java in Semantic Merge (`DEFAULT_MERGE_TOOL_RULES`), as the official client sends them. Each row's tool is a
+  compact drop-down (`AppPicker` with `compact`, `appPickerEntries`), its file types typed in place, its "…" menu moving
+  it up or down or removing it (`ruleMenuEntries`); "Add a file type" adds a row in every other file's tool. Binary
+  files have no rows: no tool opens them.
+- **Imported once** from the official client (client.conf's `<MergeTools>`, `readLegacyMergeTools`,
+  `legacyMergeToolSettings`; ARCHITECTURE.md "Own config"), on the first run that has rows (`mergeToolRulesImported`,
+  apart from the recent branches' import, so a user who ran the app before gets it too). Each entry for some files
+  becomes a row, by the official client's order; its entry for every text file becomes every other file's tool, only
+  while the user's is still Automatic, and nothing after it is read, as the client never goes past it. A chain whose
+  first tool is `UnityYAMLMerge` sets where Unity assets open, from the tool chained after it (its stored path is
+  dropped: the app finds the newest Unity Editor itself). The client's own tools become the app's (`plastic xmerge`,
+  `plasticgui`, `macmergetool`, `gtkmergetool` the UVCS merge tool; `semanticmerge` Semantic Merge); a known program
+  (VS Code, Rider, KDiff3, P4Merge...) becomes the app's own entry for it, with the app's arguments; any other program
+  becomes a tool of the user's, `@basefile` `@sourcefile` `@destinationfile` `@output` and their `…symbolic`s turned
+  into `{base}` `{incoming}` `{yours}` `{result}` and their names, an argument holding a variable the app has no value
+  for (`@fileencoding`, `@mergetype`...) dropped. Left out: binary entries and binary merges, regular expressions, a
+  command that saves nowhere. While the client's own tool takes every other file, C#, Visual Basic and Java go to
+  Semantic Merge (the client does so), but those a row sends elsewhere; a row that sends files where every other file
+  goes anyway, and that no later row could take, is dropped (the Windows client's `.meta` row).
 - `mergeTools.resolve` saves the three versions to temp files named after the file (`a.BASE.ts`...), writes the result
   file with the file as it stands in the app (the automatic merge with its markers, or the user's picks), runs the
   tool without a shell (`.cmd` launchers through `cmd.exe`, arguments quoted: `spawnCommand`), and waits. Few tools tell saving from
@@ -28,8 +55,8 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   merges binaries, so a binary keeps one of its versions, picked in the app (`waitsForTool`). "Stop waiting" kills the tool process and takes what was saved so far, as soon as it exits: a launcher's
   app still holding its output doesn't keep the file open.
 - **Smart Merge** (Unity's merge of scenes, prefabs and other assets by their objects: the `UnityYAMLMerge` program in
-  every Unity Editor) isn't a tool to pick: "Resolve in…" (and each file of a "Resolve N conflicts in…" run) runs it
-  first on a Unity asset the user decided nothing for yet (`smartMergeVersions`, from `decidedByUser`), and the chosen
+  every Unity Editor) isn't a tool to pick: "Resolve in…" (and each file of a "Resolve N conflicts" run) runs it
+  first on a Unity asset the user decided nothing for yet (`smartMergeVersions`, from `decidedByUser`), and the file's
   tool opens only when it doesn't merge the file. Two calls, so each phase shows what really happens:
   `mergeTools.smartMerge` with the versions the page already read (no `cm` command), while the file reads "Merging…"
   and its banner "Merging <file> with Smart Merge…" with Stop (stopping it opens nothing, even a stop that reaches main as Smart Merge ends on its own: the renderer remembers it, `stopMergeToolSession`, `wasStopped`); then, if it didn't merge,
@@ -58,7 +85,8 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   `~/Unity/Hub/Editor`), the folder picked in the Hub (`secondaryInstallPath.json` in the Hub's config folder), the
   editors located by hand (`editors-v2.json`, `editors.json`) and the install made without the Hub; inside an editor,
   `Contents/Helpers` on macOS since Unity 6.3 (`Contents/Tools` before), `Data/Tools` on Windows and Linux. Settings'
-  Merge pane says which editor's it uses. Sandbox: `scripts/sandboxes/smart-merge.sh`.
+  Unity row says whether it's found, and which editor's it uses in its tooltip (`unityRowNote`, `unityRowTip`).
+  Sandbox: `scripts/sandboxes/smart-merge.sh`.
 - The workspace is never touched: the outcome is a decision like any other, written when the merge completes.
 
 ## Merge page
@@ -79,7 +107,7 @@ The list (`MergeItemList`) is every list of changed files (ARCHITECTURE.md "List
 `mergeItemTones`), List or Tree, and several items selected at once, whose menu keeps yours or the incoming version of
 every conflicting file among them, or the base when every one of them has one (`keepVersionEntries`). One item's menu is any changed file's (ARCHITECTURE.md "One
 menu": history, open or save the incoming version, Copy) with what a merge adds (`mergeItemMenu`): a conflicting file, the same
-entries as in Incoming (`conflictMenuEntries`), "Resolve in <tool>" (the preferred one, `primaryMergeTool`; disabled while files resolve one by one), Keep yours,
+entries as in Incoming (`conflictMenuEntries`), "Resolve in <tool>" (the file's own, `useMergeToolFor`; disabled while files resolve one by one) and "Resolve with ▸" every other tool, opening it there this once (none while files resolve one by one), Keep yours,
 incoming or base (where it has one), Start over once decided, annotate at the incoming revision `cm` names for it, and "Open version ▸" Yours (the
 workspace file; the destination's version merging into a server branch), Incoming and Base (`openableVersions`): a
 text in the user's editor, a binary with its default app (`oneClickApp`: the editors are for text; a known binary is one before its versions
@@ -106,12 +134,13 @@ decision", then the user's choice ("Keeping yours", "Keeping incoming", "Keeping
 are "Yours"/"Incoming" in a workspace and "Destination"/"Source" when merging into a server branch (`mergeLabels`), always
 next to their branch. Copy stays short: labels name things, tooltips define them, no sentence restates what the page shows.
 
-While two files or more wait for a decision the preferred tool can open, the header's primary action is "Resolve N
-conflicts in <tool>" (`ResolveRunControl`, ⇧⌘↩; the caret picks another tool, with how many files each opens, and
-whether a file closed unsaved asks before the next): the files open one after the other, each once the one before is
-saved and closed (`useResolveRun`, `resolveRun`). Both carets pick the tool like Checkin's picks how to check in
-(`toolChoiceEntries`): the button's tool is checked, and picking another (or adding one) only makes it the button's
-tool, the preferred one from then on; nothing opens until the button is clicked. Files the tool can't open (binaries, types it isn't for) are left
+While two files or more wait for a decision a tool can open, the header's primary action is "Resolve N conflicts in
+<tool>", or "Resolve N conflicts one by one" when they open in different tools (`ResolveRunControl`, ⇧⌘↩, `runLabel`,
+`runTool`): the files open one after the other, each in its own tool (`planRun`, `RunStep`), once the one before is
+saved and closed (`useResolveRun`, `resolveRun`). Its caret runs every file in one other tool, this once ("All in
+Meld · 5 conflicts", `runPlans`, `allInLabel`), and holds whether a file closed unsaved asks before the next. The
+carets never change the settings (`toolChoiceEntries`: picking a tool opens in it at once); Settings › Merge says
+which tool each file opens in. Files the tool can't open (binaries, types it isn't for) are left
 out and named in its tooltip. While it runs, a strip takes the status's place: a step per file, "Resolving 2 of 5 ·
 app.ts in <tool>", Skip this file (closes it there) and Stop (Esc, confirmed while the tool has a file); while Smart Merge merges the file first, "with Smart Merge", Skip and Stop stop it, and Esc needs no confirmation (`runStripWords`). The list marks
 the file open and the selection follows it unless the user looks elsewhere, which never stops the run; files decided in
@@ -121,8 +150,9 @@ A toast sums it up ("Resolved 4 of 5 in <tool>", "1 still needs you"; what Smart
 or to Complete merge. With one file left, its own toolbar is the way.
 
 A conflicting file is read-only. Its toolbar holds the file, its status and the ways out: "Resolve in <tool>"
-(`MergeToolButton`, a split button, primary while the file waits and the header offers nothing; disabled during a run:
-the other tools found, "Choose another app…", "Edit the text in the app" and the settings behind the caret), then "Keep Yours | Incoming | Both | Base" for the whole file (`KeepChoices`, `conflictChoices`;
+(`MergeToolButton`, the file's own tool, a split button, primary while the file waits and the header offers nothing;
+disabled during a run: the other tools found, each opening the file at once, this once, "Choose another app…" (added,
+then opened), "Edit the text in the app" and the settings behind the caret), then "Keep Yours | Incoming | Both | Base" for the whole file (`KeepChoices`, `conflictChoices`;
 Base, the version before either side changed it, only for a file that has one: not one added on both sides, and never when undoing a changeset, where `cm` takes the changeset undone as the base and keeping it would put the change back: `offersKeepBase`, `baseIsUndoneChange`; the same rule for every Keep base below) and Start over. In a narrow pane the controls wrap within themselves, the Keep choices under the tool's button, so none
 is cut off. Below, short one-line views: "Conflicts" with the count left, then "Changes" (the destination now → after
 the merge), "Yours", "Incoming" and "Base". Conflicts read as labeled blocks instead of conflict markers
