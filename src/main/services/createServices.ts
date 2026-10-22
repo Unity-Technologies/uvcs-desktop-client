@@ -99,8 +99,8 @@ async function readThumbnail(path: string): Promise<string | undefined> {
   return image.isEmpty() ? undefined : image.toDataURL();
 }
 
-/** Windows' 'normal' file icon is 32 px, enough for high-density screens. */
+/** Windows' 'large' file icon is 48 px: its 'normal' 32 px one, drawn at `ICON_SIZE`, looks soft at 200% scaling. */
 async function readFileIcon(path: string): Promise<string | undefined> {
-  const image = await app.getFileIcon(path, { size: 'normal' });
+  const image = await app.getFileIcon(path, { size: 'large' });
   return image.isEmpty() ? undefined : image.toDataURL();
 }
