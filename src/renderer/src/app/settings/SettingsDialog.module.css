@@ -169,8 +169,13 @@
 
 /* Settings › Merge: a row per kind of file (its files, its tool, its menu), tried top to bottom. One grid, each row a
    subgrid, so the tool column is as wide as its longest choice (never cut) and lines up in every row. */
-.rules {
+/* The size container of the rules: a container query styles what's inside it, never the container itself. */
+.rulesFrame {
   container-type: inline-size;
+  width: 100%;
+}
+
+.rules {
   display: grid;
   grid-template-columns: minmax(0, 1fr) fit-content(60%) 28px;
   width: 100%;

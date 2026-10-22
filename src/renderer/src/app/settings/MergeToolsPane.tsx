@@ -55,24 +55,26 @@ export function MergeToolsPane() {
       </p>
       <section className={styles.section}>
         <h2 className={styles.heading}>Open conflicts in</h2>
-        <div className={styles.rules} role="list" aria-label="Merge tool by file type">
-          <div className={styles.rule} role="listitem">
-            <div className={styles.ruleFiles} data-tip={unityRowTip(list.smartMerge)}>
-              <span>{UNITY_ROW_LABEL}</span>
-              <span className={`${styles.choiceDescription} ${styles.oneLine}`}>{unityRowNote(list.smartMerge)}</span>
+        <div className={styles.rulesFrame}>
+          <div className={styles.rules} role="list" aria-label="Merge tool by file type">
+            <div className={styles.rule} role="listitem">
+              <div className={styles.ruleFiles} data-tip={unityRowTip(list.smartMerge)}>
+                <span>{UNITY_ROW_LABEL}</span>
+                <span className={`${styles.choiceDescription} ${styles.oneLine}`}>{unityRowNote(list.smartMerge)}</span>
+              </div>
+              <ToolPicker label={UNITY_ROW_LABEL} list={list} choice={unityMergeTool} automatic={SAME_AS_OTHER_FILES_CHOICE} onChoose={(choice) => void saveSettings({ unityMergeTool: choice })} />
+              <span />
             </div>
-            <ToolPicker label={UNITY_ROW_LABEL} list={list} choice={unityMergeTool} automatic={SAME_AS_OTHER_FILES_CHOICE} onChoose={(choice) => void saveSettings({ unityMergeTool: choice })} />
-            <span />
-          </div>
-          {mergeToolRules.map((rule) => (
-            <RuleRow key={rule.id} rule={rule} rules={mergeToolRules} list={list} focused={rule.id === addedId} />
-          ))}
-          <div className={styles.rule} role="listitem">
-            <div className={styles.ruleFiles}>
-              <span className={styles.oneLine}>Every other file</span>
+            {mergeToolRules.map((rule) => (
+              <RuleRow key={rule.id} rule={rule} rules={mergeToolRules} list={list} focused={rule.id === addedId} />
+            ))}
+            <div className={styles.rule} role="listitem">
+              <div className={styles.ruleFiles}>
+                <span className={styles.oneLine}>Every other file</span>
+              </div>
+              <ToolPicker label="Every other file" list={list} choice={mergeTool} automatic={AUTOMATIC_MERGE_TOOL_CHOICE} onChoose={(choice) => void preferMergeTool(choice)} />
+              <span />
             </div>
-            <ToolPicker label="Every other file" list={list} choice={mergeTool} automatic={AUTOMATIC_MERGE_TOOL_CHOICE} onChoose={(choice) => void preferMergeTool(choice)} />
-            <span />
           </div>
         </div>
         <Button size="small" icon={<Plus size={13} />} onClick={addFileType}>
