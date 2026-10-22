@@ -1,0 +1,82 @@
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 0;
+  max-width: 720px;
+  padding: var(--space-4);
+  overflow: auto;
+}
+
+.target {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.repository,
+.note {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.name {
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+}
+
+/* Before → after, each side its label over its changeset. */
+.sides {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.label {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.changeset {
+  color: var(--text-primary);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+}
+
+.arrow {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.files {
+  display: flex;
+  flex-direction: column;
+  margin: calc(-1 * var(--space-2));
+  padding: 0;
+  list-style: none;
+}
+
+.file {
+  display: flex;
+  width: 100%;
+  height: 28px;
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.file:hover {
+  background: var(--bg-hover);
+}
