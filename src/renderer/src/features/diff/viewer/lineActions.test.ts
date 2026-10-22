@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lineChipAnchor, lineNumberCellSelector, lineNumberHint, linesText, linesWords, lineUnderPointer, rightClickSelection } from './lineActions';
+import { contextMenuSelection, copiedLinesWord, lineChipAnchor, lineNumberCellSelector, lineNumberHint, linesText, linesWords, lineUnderPointer, rightClickSelection } from './lineActions';
 
 const range = (start: number, end: number, side: 'additions' | 'deletions' = 'additions') => ({ start, side, end, endSide: side });
 
@@ -69,5 +69,27 @@ describe('linesWords', () => {
   it('names one line or a range', () => {
     expect(linesWords({ side: 'new', first: 42, last: 42 })).toBe('line 42');
     expect(linesWords({ side: 'new', first: 40, last: 52 })).toBe('lines 40–52');
+  });
+});
+
+describe('contextMenuSelection', () => {
+  const line = (lineNumber: number) => ({ side: 'additions', lineNumber }) as const;
+  const range = { start: 40, side: 'additions', end: 42, endSide: 'additions' } as const;
+
+  it('keeps the selection when the line clicked is in it, else selects that line', () => {
+    expect(contextMenuSelection(range, line(41))).toBe(range);
+    expect(contextMenuSelection(range, line(50))).toEqual({ start: 50, side: 'additions', end: 50, endSide: 'additions' });
+  });
+
+  it('acts on the selection off any line, and opens no menu with none', () => {
+    expect(contextMenuSelection(range, null)).toBe(range);
+    expect(contextMenuSelection(null, null)).toBeNull();
+  });
+});
+
+describe('copiedLinesWord', () => {
+  it('names one line or several', () => {
+    expect(copiedLinesWord({ side: 'new', first: 3, last: 3 })).toBe('Line');
+    expect(copiedLinesWord({ side: 'new', first: 3, last: 5 })).toBe('Lines');
   });
 });

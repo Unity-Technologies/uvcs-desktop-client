@@ -58,6 +58,20 @@ export function linesText(text: string, { first, last }: FocusedLines): string {
   return text.split(/\r\n|\n|\r/).slice(first - 1, last).join('\n');
 }
 
+/**
+ * The lines a right-click's menu acts on (`useLineTools`): the selection it makes on the line clicked
+ * (`rightClickSelection`), else what is selected; null off any line with none selected, where no menu opens.
+ */
+export function contextMenuSelection(selected: LineRange | null, clicked: ChangedLine | null): LineRange | null {
+  const selection = clicked ? rightClickSelection(selected, clicked) : selected;
+  return linkedLinesOf(selection) ? selection : null;
+}
+
+/** What the toast says "Copy line" copied: "Line", "Lines". */
+export function copiedLinesWord({ first, last }: FocusedLines): string {
+  return first === last ? 'Line' : 'Lines';
+}
+
 /** "line 42", "lines 40–52": how a menu names the lines selected. */
 export function linesWords({ first, last }: FocusedLines): string {
   return first === last ? `line ${first}` : `lines ${first}–${last}`;

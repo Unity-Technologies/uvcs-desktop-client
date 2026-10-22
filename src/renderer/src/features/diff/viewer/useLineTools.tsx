@@ -5,7 +5,7 @@ import { copyLinkLabel } from '../../../app/links/shownLink';
 import type { MenuEntry } from '../../../lib/actions';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { copyToClipboard } from '../../../ui/copyToClipboard';
-import { lineChipAnchor, linesText, lineUnderPointer, rightClickSelection, type CodeLayout } from './lineActions';
+import { contextMenuSelection, copiedLinesWord, lineChipAnchor, linesText, lineUnderPointer, type CodeLayout } from './lineActions';
 import { LineLinkChip } from './LineLinkChip';
 import { LineLinksContext } from './lineLinks';
 import { linkedLinesOf } from './linkedLines';
@@ -46,10 +46,10 @@ export function useLineTools({ containerRef, layout, range, select, selectable, 
   const onContextMenu = (event: MouseEvent): void => {
     const row = rowUnderPointer(event.nativeEvent.composedPath());
     const clicked = row && lineUnderPointer(row);
-    const selection = clicked ? rightClickSelection(range, clicked) : range;
+    const selection = contextMenuSelection(range, clicked);
     menuLines.current = linkedLinesOf(selection);
     // Off any line, with none selected: no menu, not even the system's.
-    if (!menuLines.current) return event.preventDefault();
+    if (!selection) return event.preventDefault();
     if (selection !== range) select(selection);
   };
 
@@ -59,7 +59,7 @@ export function useLineTools({ containerRef, layout, range, select, selectable, 
     return lineMenu({
       lines,
       copyLink: linkable ? link.copy : undefined,
-      copyLines: () => copyToClipboard(linesText(textOf(lines.side), lines), lines.first === lines.last ? 'Line' : 'Lines'),
+      copyLines: () => copyToClipboard(linesText(textOf(lines.side), lines), copiedLinesWord(lines)),
       annotate: annotateAt && (() => annotateAt(lines)),
     });
   };
