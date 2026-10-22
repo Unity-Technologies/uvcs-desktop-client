@@ -8,13 +8,9 @@ How pending changes survive switches, updates and shelving, and how two people s
 `cm switch` only ever runs on a clean workspace (`main/workspace/switchWithChanges.ts`), whatever client.conf's
 `PendingChangesOnSwitchAction` says. The renderer's single entry point is `switchWorkspace`
 (`app/shell/workspaceOperations.ts`): preflight, then ask (or follow the setting) whether to leave the changes or
-bring them along. The switch's question (`SwitchWithChangesDialog`, `planSwitch` with the `switch` flow) also offers
-undoing them (`SwitchChangesAction` `discard`): never preselected nor a setting, its button reads "Undo & switch" in red
-(`switchButton`), and the main process undoes them as Undo in Changes does (added files stay, private) and switches,
-shelving nothing (`discardChanges`). The new-branch dialog (the `newBranch` flow) doesn't offer it: a new branch is made
-to carry on with the changes. "Review changes" in the question's footer cancels the switch and opens Changes. What the pending changes allow is one rule for the preflight and the switch (`switchApproach`):
-nothing pending switches as is, checkouts without edits are undone without asking, an unfinished merge is refused, and
-anything else is shelved. The main process then shelves them with the official automatic-shelve comment
+bring them along (or, asked, undo them: below). What the pending changes allow is one rule for the preflight and the
+switch (`switchApproach`): nothing pending switches as is, checkouts without edits are undone without asking, an
+unfinished merge is refused, and anything else is shelved, unless the user chose to undo it. The main process then shelves them with the official automatic-shelve comment
 (`createAutomaticShelve`), checks the shelve holds them all (`createVerifiedShelve`), records it in the settings
 (`switchShelves`, built by `newShelveRecord`), undoes, moves added files aside (`moveNewItemsAside`, until the shelve
 brings them back: `putBack`, which never overwrites another item that took a file's place meanwhile; that file stays
@@ -27,6 +23,16 @@ way (`putBackAfterFailure`). Left shelves (the app's and the official
 client's) are offered again by the "Welcome back" banner in Changes (`features/leftChanges`), or restored
 automatically on arrival when they apply cleanly (`restoreOnArrival`). Changes still waiting to be brought (conflicts
 left for the merge view) are offered on the target, and as left ones on the source if the user goes back instead.
+
+The switch's question (`SwitchWithChangesDialog`, `planSwitch` with the `switch` flow) also offers undoing the changes
+(`SwitchChangesAction` `discard`). It is never preselected nor a setting (`PendingChangesOnSwitch` is leave or bring),
+its button reads "Undo & switch" in red (`switchButton`), and its notes follow it (`switchNotes`: nothing is shelved,
+locks are released). The main process undoes the changes as Undo in Changes does (added files stay, private) and
+switches, shelving nothing (`discardChanges`). With no shelve, a failure can't put anything back: the error says some
+changes may be undone already and nothing was switched, or that they were undone and the switch didn't finish. The
+new-branch dialog (the `newBranch` flow) doesn't offer it: a new branch is made to carry on with the changes. "Review
+changes", on the left of the question's footer (also when a merge blocks the switch), cancels the switch and opens
+Changes.
 
 A code review brings the reviewer its code through the same flows (`reviewedCodeAction`, in the review's menu and its
 page's header): "Switch to this branch" or "Switch to this changeset" is the branch's or changeset's own switch, and
