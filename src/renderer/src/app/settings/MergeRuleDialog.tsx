@@ -1,5 +1,5 @@
 import { Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { addMergeTool, PLACEHOLDER_HINT } from '../../features/merge/mergeTools/CustomMergeToolDialog';
 import { currentSettings, preferMergeTool, removeCustomMergeTool, setMergeToolArgs, useMergeTools } from '../../features/merge/mergeTools/useMergeTools';
 import { formatArgs } from '../../lib/argumentLine';
@@ -40,6 +40,7 @@ function MergeRuleDialog({ target, close }: { target: RuleTarget; close: () => v
   const fields = draftFields(target, draft, list);
   const problem = saveProblem(target, draft, fields);
   const { args } = fields;
+  const filesLabelId = useId();
 
   const save = async (): Promise<void> => {
     if (problem) return;
@@ -78,9 +79,12 @@ function MergeRuleDialog({ target, close }: { target: RuleTarget; close: () => v
       <div className={styles.ruleForm}>
         {fields.files && (
           <div className={fieldStyles.field}>
-            <span className={fieldStyles.label}>Files</span>
+            <span className={fieldStyles.label} id={filesLabelId}>
+              Files
+            </span>
             <TokenField
               label="Files"
+              labelledBy={filesLabelId}
               tokens={draft.patterns}
               placeholder=".psd .tga Assets/Data/**"
               tip="Extensions (.psd), names (*.prefab) or paths (Assets/Data/**)"

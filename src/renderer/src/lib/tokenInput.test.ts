@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addTokens, afterBackspace, allTokens, typedTokens, withoutToken } from './tokenInput';
+import { addTokens, allTokens, tokenKey, typedTokens, withoutToken } from './tokenInput';
 
 describe('typedTokens', () => {
   it('ends a value at a space, comma or semicolon, keeping what is still being typed', () => {
@@ -39,11 +39,34 @@ describe('addTokens', () => {
   });
 });
 
-describe('afterBackspace', () => {
-  it('takes the last value away from an empty field, and leaves a field with text to the text', () => {
-    expect(afterBackspace(['.cs', '.vb'], '')).toEqual(['.cs']);
-    expect(afterBackspace(['.cs', '.vb'], '.ja')).toBeNull();
-    expect(afterBackspace([], '')).toBeNull();
+describe('tokenKey', () => {
+  const chips = ['.cs', '.vb', '.java'];
+
+  it('takes the last chip away with Backspace in an empty input, and moves onto it with ArrowLeft', () => {
+    expect(tokenKey('Backspace', 'input', chips, '')).toEqual({ tokens: ['.cs', '.vb'], focus: 'input' });
+    expect(tokenKey('ArrowLeft', 'input', chips, '')).toEqual({ tokens: chips, focus: 2 });
+  });
+
+  it('leaves keys to the input while it holds text, or with no chip', () => {
+    expect(tokenKey('Backspace', 'input', chips, '.ja')).toBeNull();
+    expect(tokenKey('ArrowLeft', 'input', chips, '.ja')).toBeNull();
+    expect(tokenKey('Backspace', 'input', [], '')).toBeNull();
+    expect(tokenKey('a', 'input', chips, '')).toBeNull();
+  });
+
+  it('moves between chips, back to the input past the last', () => {
+    expect(tokenKey('ArrowLeft', 1, chips, '')).toEqual({ tokens: chips, focus: 0 });
+    expect(tokenKey('ArrowLeft', 0, chips, '')).toEqual({ tokens: chips, focus: 0 });
+    expect(tokenKey('ArrowRight', 1, chips, '')).toEqual({ tokens: chips, focus: 2 });
+    expect(tokenKey('ArrowRight', 2, chips, '')).toEqual({ tokens: chips, focus: 'input' });
+  });
+
+  it('removes the chip it’s on: Backspace goes to the one before, Delete stays where it was', () => {
+    expect(tokenKey('Backspace', 1, chips, '')).toEqual({ tokens: ['.cs', '.java'], focus: 0 });
+    expect(tokenKey('Backspace', 0, chips, '')).toEqual({ tokens: ['.vb', '.java'], focus: 0 });
+    expect(tokenKey('Delete', 1, chips, '')).toEqual({ tokens: ['.cs', '.java'], focus: 1 });
+    expect(tokenKey('Delete', 2, chips, '')).toEqual({ tokens: ['.cs', '.vb'], focus: 'input' });
+    expect(tokenKey('Delete', 0, ['.cs'], '')).toEqual({ tokens: [], focus: 'input' });
   });
 });
 

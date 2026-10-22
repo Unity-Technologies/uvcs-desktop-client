@@ -46,8 +46,9 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   "…", shown on hover or focus, holds Edit…, Move up, Move down and Remove (`rowMenuEntries`; every other file's only
   Edit…). The dialog (`MergeRuleDialog`, `mergeRuleDraft`), each field a label, its control and its hint: "Files"
   (chips: `TokenField`, `lib/tokenInput`: a space, comma, semicolon or Enter makes a chip, double quotes keep spaces in
-  one, pasting splits into chips, Backspace in an empty field takes the last away, each chip's × removes it, each value
-  once; Enter never submits; what's typed but not a chip yet counts, and Save makes it chips: `draftPatterns`), "Opens in" (the Apps page's picker, `AppPicker`: its icon, name and path; each tool once:
+  one, pasting splits into chips, Backspace in an empty field takes the last away, ArrowLeft moves onto the chips and
+  Backspace or Delete removes the one it's on (`tokenKey`), each chip's × removes it, each value once; its visible label
+  names it for screen readers; Enter never submits; what's typed but not a chip yet counts, and Save makes it chips: `draftPatterns`), "Opens in" (the Apps page's picker, `AppPicker`: its icon, name and path; each tool once:
   the UVCS merge tool, Semantic Merge, UnityYAMLMerge with the path of the editor's picked under it, as every tool shows
   the program that runs, and Smart Merge, Unity's name for it, only in its tooltip, then the others found and the user's, `toolChoices`), then for a tool "How <tool>
   opens", its arguments in place (stored per tool, so they apply wherever it opens; "Back to its own arguments",

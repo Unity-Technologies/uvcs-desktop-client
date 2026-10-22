@@ -45,9 +45,36 @@ export function addTokens(tokens: readonly string[], added: readonly string[]): 
   return [...new Set([...tokens, ...added])];
 }
 
-/** Backspace in an empty field takes the last value away; with text in it, Backspace edits the text (null). */
-export function afterBackspace(tokens: readonly string[], input: string): string[] | null {
-  return input === '' && tokens.length > 0 ? tokens.slice(0, -1) : null;
+/** Where the keyboard is in a token field: on a chip (its index), or in its input. */
+export type TokenFocus = number | 'input';
+
+/** What a key did: the values after it, and where the keyboard goes. */
+export interface TokenKeyResult {
+  tokens: string[];
+  focus: TokenFocus;
+}
+
+/**
+ * What a key does in a token field, or null when it's the input's own (typing, moving in its text). From an empty
+ * input, Backspace takes the last chip away and ArrowLeft moves onto it; on a chip, ArrowLeft and ArrowRight move
+ * between chips (past the last, back to the input), Backspace removes it and moves to the one before, Delete removes it
+ * and stays where it was (the next one, or the input).
+ */
+export function tokenKey(key: string, focus: TokenFocus, tokens: readonly string[], input: string): TokenKeyResult | null {
+  const last = tokens.length - 1;
+  if (focus === 'input') {
+    if (input !== '' || last < 0) return null;
+    if (key === 'Backspace') return { tokens: tokens.slice(0, -1), focus: 'input' };
+    if (key === 'ArrowLeft') return { tokens: [...tokens], focus: last };
+    return null;
+  }
+  if (key === 'ArrowLeft') return { tokens: [...tokens], focus: Math.max(0, focus - 1) };
+  if (key === 'ArrowRight') return { tokens: [...tokens], focus: focus < last ? focus + 1 : 'input' };
+  if (key !== 'Backspace' && key !== 'Delete') return null;
+  const remaining = withoutToken(tokens, focus);
+  if (remaining.length === 0) return { tokens: remaining, focus: 'input' };
+  if (key === 'Backspace') return { tokens: remaining, focus: Math.max(0, focus - 1) };
+  return { tokens: remaining, focus: focus < remaining.length ? focus : 'input' };
 }
 
 /** The values without the one at `index` (its chip's ×). */

@@ -38,6 +38,11 @@
   font-size: var(--text-sm);
 }
 
+.chip:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 .chipText {
   overflow: hidden;
   text-overflow: ellipsis;
