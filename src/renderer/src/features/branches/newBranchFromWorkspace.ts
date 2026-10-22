@@ -4,7 +4,8 @@ import { api } from '../../api/client';
 import { branchWorkedOn } from '../../components/workingObject';
 import { branchLabel } from '../../lib/branchLabels';
 import { toast } from '../../ui/toast/toastStore';
-import { openCreateBranchDialog, type NewBranchOrigin } from './CreateBranchDialog';
+import { openCreateBranchDialog } from './CreateBranchDialog';
+import type { NewBranchOrigin } from './newBranchOrigins';
 
 const MAIN_BRANCH = '/main';
 

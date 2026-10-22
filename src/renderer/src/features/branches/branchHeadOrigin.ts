@@ -1,6 +1,6 @@
 import type { Branch } from '@shared/domain/branch';
 import { spec } from '@shared/domain/specs';
-import type { NewBranchOrigin } from './CreateBranchDialog';
+import type { NewBranchOrigin } from './newBranchOrigins';
 
 /** A new child branch of `branch`, starting at its head: "New branch" on a branch, from its menu or the Branches view. */
 export function branchHeadOrigin(branch: Pick<Branch, 'name' | 'headChangeset'>): NewBranchOrigin {

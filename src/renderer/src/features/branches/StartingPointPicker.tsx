@@ -1,13 +1,13 @@
 import { ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '../../ui/Button';
-import { OptionCards } from '../../ui/OptionCards';
+import { OptionCards, type OptionCard } from '../../ui/OptionCards';
 import { Popover } from '../../ui/Popover';
-import type { NewBranchOrigin } from './CreateBranchDialog';
 import styles from './StartingPointPicker.module.css';
 
 interface StartingPointPickerProps {
-  origins: NewBranchOrigin[];
+  /** From `startingPointCards`. */
+  cards: OptionCard<string>[];
   /** The chosen origin's index. */
   value: number;
   onChange: (index: number) => void;
@@ -17,7 +17,7 @@ interface StartingPointPickerProps {
  * "Start from", at the new-branch dialog's top right: the starting points as cards, each explained, in a popover that
  * closes on a pick. Out of the dialog's body, which then reads the same with one starting point or several.
  */
-export function StartingPointPicker({ origins, value, onChange }: StartingPointPickerProps) {
+export function StartingPointPicker({ cards, value, onChange }: StartingPointPickerProps) {
   const [open, setOpen] = useState(false);
   return (
     <Popover
@@ -35,11 +35,7 @@ export function StartingPointPicker({ origins, value, onChange }: StartingPointP
         <OptionCards
           label="Start from"
           heading
-          cards={origins.map((origin, index) => ({
-            value: String(index),
-            title: origin.card?.title ?? origin.startingPointLabel,
-            description: origin.card?.description ?? '',
-          }))}
+          cards={cards}
           value={String(value)}
           onChange={(index) => {
             onChange(Number(index));
