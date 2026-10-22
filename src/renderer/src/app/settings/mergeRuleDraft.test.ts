@@ -4,6 +4,7 @@ import {
   argsToSave,
   draftFields,
   draftOf,
+  draftPatterns,
   editorOptions,
   fallbackChoices,
   resolvedToolId,
@@ -38,12 +39,12 @@ const unityRule = { id: 'u', patterns: ['.unity', '.prefab'], toolId: 'unityyaml
 const ruleTarget: RuleTarget = { kind: 'rule', rule: unityRule };
 const newRule: RuleTarget = { kind: 'rule', rule: null };
 const everyOtherFile: RuleTarget = { kind: 'everyOtherFile', mergeTool: 'auto' };
-const draft = (changes: Partial<RuleDraft>): RuleDraft => ({ patterns: ['.cs'], toolId: 'semantic', editorId: 'unityyamlmerge', fallbackToolId: 'auto', argsText: null, ...changes });
+const draft = (changes: Partial<RuleDraft>): RuleDraft => ({ patterns: ['.cs'], toolId: 'semantic', editorId: 'unityyamlmerge', fallbackToolId: 'auto', argsText: null, pendingFiles: '', ...changes });
 
 describe('the draft of a row', () => {
   it('starts a rule of UnityYAMLMerge with its editor and fallback apart, and saves it back the same', () => {
     const started = draftOf(ruleTarget, list);
-    expect(started).toEqual({ patterns: ['.unity', '.prefab'], toolId: 'unityyamlmerge', editorId: 'unityyamlmerge:2022.3.10f1', fallbackToolId: 'vscode', argsText: null });
+    expect(started).toEqual({ patterns: ['.unity', '.prefab'], toolId: 'unityyamlmerge', editorId: 'unityyamlmerge:2022.3.10f1', fallbackToolId: 'vscode', argsText: null, pendingFiles: '' });
     expect(ruleOf(started, 'u')).toEqual(unityRule);
   });
 
@@ -122,6 +123,16 @@ describe('filesHint', () => {
     const empty = draftOf(newRule, list);
     expect(draftFields(newRule, empty, list).filesHint).toBe(saveProblem(newRule, empty, draftFields(newRule, empty, list)));
     expect(draftFields(ruleTarget, draftOf(ruleTarget, list), list).filesHint).toBe('Extensions, names or paths. Enter, a space or a comma adds one.');
+  });
+});
+
+describe('file types typed but not chips yet', () => {
+  it('count: Save is on, and saves them as chips, each once', () => {
+    const typed = draft({ patterns: [], pendingFiles: '.psd' });
+    expect(saveProblem(newRule, typed, draftFields(newRule, typed, list))).toBeUndefined();
+    expect(draftFields(newRule, typed, list).filesHint).not.toBe('Add at least one file type');
+    expect(ruleOf(draft({ patterns: ['.cs'], pendingFiles: '.cs .vb' }), 'c').patterns).toEqual(['.cs', '.vb']);
+    expect(draftPatterns(draft({ patterns: ['.cs'], pendingFiles: '  ' }))).toEqual(['.cs']);
   });
 });
 

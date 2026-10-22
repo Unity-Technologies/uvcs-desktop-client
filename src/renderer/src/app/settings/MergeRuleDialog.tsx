@@ -86,6 +86,7 @@ function MergeRuleDialog({ target, close }: { target: RuleTarget; close: () => v
               tip="Extensions (.psd), names (*.prefab) or paths (Assets/Data/**)"
               autoFocus
               onChange={(patterns) => change({ patterns })}
+              onPendingChange={(pendingFiles) => change({ pendingFiles })}
             />
             <span className={fieldStyles.hint}>
               {fields.filesHint}

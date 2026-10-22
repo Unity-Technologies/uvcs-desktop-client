@@ -11,6 +11,7 @@ import {
   type MergeToolRule,
 } from '@shared/domain/mergeTools';
 import { formatArgs, parseArgs } from '../../lib/argumentLine';
+import { addTokens, allTokens } from '../../lib/tokenInput';
 import { hasOwnArgsToGoBackTo, mergeToolArgsProblem } from '../../features/merge/mergeTools/mergeToolArgs';
 import type { PickableApp } from './appPickerChoices';
 import { missingToolName } from './mergeToolRows';
@@ -32,6 +33,8 @@ export interface RuleDraft {
   fallbackToolId: string;
   /** The arguments typed for the tool shown; null while untouched (its own stay). */
   argsText: string | null;
+  /** Typed in "Files" but not a chip yet (`TokenField`'s pending text): it counts, and Save makes it chips. */
+  pendingFiles: string;
 }
 
 /** "How <tool> opens": the arguments of the tool shown, edited in place; stored per tool, wherever it opens. */
@@ -72,7 +75,7 @@ const NO_FILE_TYPE = 'Add at least one file type';
 
 /** The draft a target starts from: a new rule in every other file's tool, else as the rule or the setting is. */
 export function draftOf(target: RuleTarget, list: MergeToolList): RuleDraft {
-  const unset = { editorId: UNITY_YAML_MERGE_ID, fallbackToolId: AUTO_MERGE_TOOL, argsText: null };
+  const unset = { editorId: UNITY_YAML_MERGE_ID, fallbackToolId: AUTO_MERGE_TOOL, argsText: null, pendingFiles: '' };
   if (target.kind === 'everyOtherFile') return { patterns: [], toolId: target.mergeTool, ...unset };
   const { rule } = target;
   if (!rule) return { patterns: [], toolId: resolvedToolId(AUTO_MERGE_TOOL, list) ?? '', ...unset };
@@ -83,7 +86,13 @@ export function draftOf(target: RuleTarget, list: MergeToolList): RuleDraft {
     editorId: unity ? rule.toolId : UNITY_YAML_MERGE_ID,
     fallbackToolId: rule.fallbackToolId ?? AUTO_MERGE_TOOL,
     argsText: null,
+    pendingFiles: '',
   };
+}
+
+/** The file types the draft holds: its chips, and what's typed but not a chip yet. */
+export function draftPatterns(draft: RuleDraft): string[] {
+  return addTokens(draft.patterns, allTokens(draft.pendingFiles));
 }
 
 /** The draft with another tool picked: its own arguments show. */
@@ -93,8 +102,9 @@ export function withTool(draft: RuleDraft, toolId: string): RuleDraft {
 
 /** The rule the draft saves as, under `id`; a fallback only with UnityYAMLMerge. */
 export function ruleOf(draft: RuleDraft, id: string): MergeToolRule {
-  if (draft.toolId !== UNITY_YAML_MERGE_ID) return { id, patterns: draft.patterns, toolId: draft.toolId };
-  return { id, patterns: draft.patterns, toolId: draft.editorId, fallbackToolId: draft.fallbackToolId };
+  const patterns = draftPatterns(draft);
+  if (draft.toolId !== UNITY_YAML_MERGE_ID) return { id, patterns, toolId: draft.toolId };
+  return { id, patterns, toolId: draft.editorId, fallbackToolId: draft.fallbackToolId };
 }
 
 /** The rules with this one in its place, or last when it's new. */
@@ -120,7 +130,7 @@ export function draftFields(target: RuleTarget, draft: RuleDraft, list: MergeToo
   return {
     title: rule ? 'File types' : 'Every other file',
     files: rule,
-    filesHint: draft.patterns.length === 0 ? NO_FILE_TYPE : 'Extensions, names or paths. Enter, a space or a comma adds one.',
+    filesHint: draftPatterns(draft).length === 0 ? NO_FILE_TYPE : 'Extensions, names or paths. Enter, a space or a comma adds one.',
     shownToolId,
     toolMissingName: missingToolName(shownToolId, list),
     unityYamlMerge,
@@ -144,7 +154,7 @@ export function argsToSave(fields: DraftFields): { tool: MergeTool; args: string
 
 /** Why Save can't save yet: a rule names at least one file type, and the arguments save the merge somewhere. */
 export function saveProblem(target: RuleTarget, draft: RuleDraft, fields: DraftFields): string | undefined {
-  if (target.kind === 'rule' && draft.patterns.length === 0) return NO_FILE_TYPE;
+  if (target.kind === 'rule' && draftPatterns(draft).length === 0) return NO_FILE_TYPE;
   return fields.args?.problem;
 }
 

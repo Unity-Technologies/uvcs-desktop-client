@@ -7,6 +7,8 @@ interface TokenFieldProps {
   /** The values, one chip each. */
   tokens: string[];
   onChange: (tokens: string[]) => void;
+  /** What's typed but not a chip yet, as it changes: a form counts it, and makes it chips on submit. */
+  onPendingChange?: (text: string) => void;
   /** Names the field for screen readers ("File types"). */
   label: string;
   placeholder?: string;
@@ -20,8 +22,12 @@ interface TokenFieldProps {
  * chip (double quotes keep spaces in one), pasting splits into chips, Backspace in an empty field takes the last chip
  * away, and each chip's × removes it (by pointer; Backspace from the keyboard). What each key does is `lib/tokenInput`'s.
  */
-export function TokenField({ tokens, onChange, label, placeholder, tip, autoFocus }: TokenFieldProps) {
-  const [input, setInput] = useState('');
+export function TokenField({ tokens, onChange, onPendingChange, label, placeholder, tip, autoFocus }: TokenFieldProps) {
+  const [input, setTypedInput] = useState('');
+  const setInput = (text: string): void => {
+    setTypedInput(text);
+    onPendingChange?.(text);
+  };
   const inputRef = useRef<HTMLInputElement>(null);
   const add = (added: string[]): void => {
     if (added.length > 0) onChange(addTokens(tokens, added));
