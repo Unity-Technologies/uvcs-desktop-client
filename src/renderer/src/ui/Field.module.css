@@ -70,15 +70,6 @@
   background-position: right 8px center;
 }
 
-/* A read-only field offers no suggestions: no chevron, nothing to click. */
-.input[list]:read-only {
-  background-image: none;
-}
-
-.input[list]:read-only::-webkit-calendar-picker-indicator {
-  display: none;
-}
-
 /* Chromium's own arrow for the suggestions, a black triangle in either theme, gives way to the chevron above; it stays
    clickable, so a click there still opens the suggestions. */
 .input[list]::-webkit-calendar-picker-indicator {
