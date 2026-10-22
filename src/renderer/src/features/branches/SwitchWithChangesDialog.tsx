@@ -19,7 +19,10 @@ interface SwitchWithChangesRequest {
   inMerge: boolean;
 }
 
-/** Asks what happens to the pending changes before switching. Resolves with the choice, or undefined if cancelled. */
+/**
+ * Asks what happens to the pending changes before switching. Resolves with the choice, or undefined if cancelled,
+ * including when the user goes to review the changes first.
+ */
 export function askSwitchWithChanges(request: SwitchWithChangesRequest): Promise<SwitchChangesAction | undefined> {
   return askDialog<SwitchChangesAction>((finish) => <SwitchWithChangesDialog {...request} onFinish={finish} />);
 }
@@ -33,6 +36,10 @@ function SwitchWithChangesDialog({
 }: SwitchWithChangesRequest & { onFinish: (action: SwitchChangesAction | undefined) => void }) {
   const [action, setAction] = useState<SwitchChangesAction | null>(choice.defaultAction);
   const cancel = (): void => onFinish(undefined);
+  const reviewChanges = (): void => {
+    cancel();
+    navigation.goToView('changes');
+  };
   const submit = switchButton(action);
   const [sourceName] = branchLabels(preflight.sourceName, targetName);
 
@@ -45,20 +52,16 @@ function SwitchWithChangesDialog({
       footer={
         inMerge ? (
           <>
-            <Button
-              onClick={() => {
-                cancel();
-                navigation.goToView('changes');
-              }}
-            >
-              Review changes
-            </Button>
+            <Button onClick={reviewChanges}>Review changes</Button>
             <Button variant="primary" onClick={cancel}>
               Cancel
             </Button>
           </>
         ) : (
           <>
+            <Button variant="ghost" className={styles.review} onClick={reviewChanges}>
+              Review changes
+            </Button>
             <Button onClick={cancel}>Cancel</Button>
             <Button type="submit" variant={submit.variant} disabled={!action} autoFocus>
               {submit.label}
