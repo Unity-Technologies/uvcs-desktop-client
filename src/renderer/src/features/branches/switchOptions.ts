@@ -29,8 +29,6 @@ export interface SwitchChoice {
   discard?: SwitchOption;
   /** Preselected, never `discard`: losing changes is always the user's explicit choice. Null when neither is possible. */
   defaultAction: PendingChangesAction | null;
-  /** Things worth knowing before choosing (private files, locks, older left changes). */
-  notes: string[];
 }
 
 /** What switching with these pending changes takes. */
@@ -76,21 +74,29 @@ function switchChoice(preflight: SwitchPreflight, flow: SwitchFlow): SwitchChoic
   const other: PendingChangesAction = preferred === 'leave' ? 'bring' : 'leave';
   const enabled = { leave, bring };
   const defaultAction = enabled[preferred].enabled ? preferred : enabled[other].enabled ? other : null;
-  const choice = { leave, bring, defaultAction, notes: switchNotes(preflight) };
+  const choice = { leave, bring, defaultAction };
   return flow === 'switch' ? { ...choice, discard: { enabled: true } } : choice;
 }
 
-function switchNotes(preflight: SwitchPreflight): string[] {
+/**
+ * Things worth knowing before choosing (private files, locks, older left changes), for the option chosen: undoing the
+ * changes shelves nothing, and releases the locks for good. Null, as nothing is chosen yet, reads as shelving them.
+ */
+export function switchNotes(preflight: SwitchPreflight, action: SwitchChangesAction | null): string[] {
+  const shelving = action !== 'discard';
   const notes: string[] = [];
   if (preflight.privateCount > 0) {
     const one = preflight.privateCount === 1;
-    notes.push(`${pluralize(preflight.privateCount, 'private file')} ${one ? 'isn’t shelved: it stays' : 'aren’t shelved: they stay'} in the folder.`);
+    const stays = shelving ? (one ? 'isn’t shelved: it stays' : 'aren’t shelved: they stay') : one ? 'stays' : 'stay';
+    notes.push(`${pluralize(preflight.privateCount, 'private file')} ${stays} in the folder.`);
   }
   if (preflight.lockedPaths.length > 0) {
-    notes.push(`Your locks on ${pluralize(preflight.lockedPaths.length, 'file')} are released while the changes are shelved.`);
+    const released = shelving ? 'are released while the changes are shelved' : 'are released';
+    notes.push(`Your locks on ${pluralize(preflight.lockedPaths.length, 'file')} ${released}.`);
   }
   if (preflight.leftShelveCount > 0) {
-    notes.push(`You already left changes on ${branchLabel(preflight.sourceName)}. They stay; leaving these makes another shelve next to them.`);
+    const leftHere = `You already left changes on ${branchLabel(preflight.sourceName)}.`;
+    notes.push(action === 'leave' || action === null ? `${leftHere} They stay; leaving these makes another shelve next to them.` : `${leftHere} They stay.`);
   }
   return notes;
 }

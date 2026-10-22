@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SwitchPreflight } from '@shared/domain/switchWithChanges';
-import { planSwitch, switchButton } from './switchOptions';
+import { planSwitch, switchButton, switchNotes } from './switchOptions';
 
 const preflight: SwitchPreflight = {
   sourceName: '/main/t1',
@@ -20,7 +20,7 @@ describe('planSwitch', () => {
 
   it('asks, preselecting the flow’s default', () => {
     const plan = planSwitch(preflight, 'ask', 'switch');
-    expect(plan).toMatchObject({ kind: 'ask', choice: { leave: { enabled: true }, bring: { enabled: true }, defaultAction: 'leave', notes: [] } });
+    expect(plan).toMatchObject({ kind: 'ask', choice: { leave: { enabled: true }, bring: { enabled: true }, defaultAction: 'leave' } });
     expect(planSwitch(preflight, 'ask', 'newBranch')).toMatchObject({ choice: { defaultAction: 'bring' } });
   });
 
@@ -48,8 +48,7 @@ describe('planSwitch', () => {
   });
 
   it('notes private files, locks and older left changes', () => {
-    const plan = planSwitch({ ...preflight, privateCount: 1, lockedPaths: ['a.png', 'b.png'], leftShelveCount: 1 }, 'ask', 'switch');
-    expect(plan.kind === 'ask' && plan.choice.notes).toEqual([
+    expect(switchNotes({ ...preflight, privateCount: 1, lockedPaths: ['a.png', 'b.png'], leftShelveCount: 1 }, 'leave')).toEqual([
       '1 private file isn’t shelved: it stays in the folder.',
       'Your locks on 2 files are released while the changes are shelved.',
       'You already left changes on t1. They stay; leaving these makes another shelve next to them.',
@@ -70,6 +69,35 @@ describe('planSwitch', () => {
 
   it('blocks undoing the changes during a merge too', () => {
     expect(planSwitch({ ...preflight, inMerge: true }, 'ask', 'switch')).toMatchObject({ kind: 'blockedByMerge', choice: { discard: { enabled: false } } });
+  });
+});
+
+describe('switchNotes', () => {
+  const everything: SwitchPreflight = { ...preflight, privateCount: 2, lockedPaths: ['a.png'], leftShelveCount: 1 };
+
+  it('has nothing to say about a workspace with only changes', () => {
+    expect(switchNotes(preflight, 'leave')).toEqual([]);
+  });
+
+  it('speaks of shelving while nothing is chosen yet', () => {
+    expect(switchNotes(everything, null)).toEqual(switchNotes(everything, 'leave'));
+  });
+
+  it('mentions another shelve only when leaving these changes too', () => {
+    expect(switchNotes(everything, 'bring')).toEqual([
+      '2 private files aren’t shelved: they stay in the folder.',
+      'Your locks on 1 file are released while the changes are shelved.',
+      'You already left changes on t1. They stay.',
+    ]);
+  });
+
+  it('shelves nothing when undoing the changes, and releases the locks for good', () => {
+    expect(switchNotes(everything, 'discard')).toEqual([
+      '2 private files stay in the folder.',
+      'Your locks on 1 file are released.',
+      'You already left changes on t1. They stay.',
+    ]);
+    expect(switchNotes({ ...everything, privateCount: 1 }, 'discard')[0]).toBe('1 private file stays in the folder.');
   });
 });
 
