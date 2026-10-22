@@ -27,7 +27,7 @@ import { LineLinksContext, type LineLinks } from './viewer/lineLinks';
 import { useFocusUntilMoved } from './viewer/useFocusUntilMoved';
 import { AssetsPointContext, diffAssetsPoint } from './viewer/model/assetsPoints';
 import { diffSibling, SiblingFinderContext } from './viewer/model/modelSiblings';
-import { useShownDiffFile } from './shownDiffFile';
+import { publishShownDiffFile } from './shownDiffFile';
 
 const NO_ENTRIES: DiffEntry[] = [];
 
@@ -90,13 +90,13 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
 
   const pane = diffPaneOf({ listedCount: reading ? undefined : entries.length, shownCount: shown.length, entrySelected: focused !== undefined, folderSelected: focusedFolder !== undefined });
 
-  // By what the target is, not the object: a branch diff passes a new one each render, and what listens to the file
-  // on screen (Copy link, in the page's header) renders the page again.
+  // By what the target is, not the object: a branch diff passes a new one each render, and leaving the file on screen
+  // (the cleanup) would say no file shows between two renders. Published by value too (`publishShownDiffFile`).
   const targetKey = JSON.stringify(target);
   useEffect(() => {
     if (!focused) return;
-    useShownDiffFile.setState({ shown: { target, path: focused.path } });
-    return () => useShownDiffFile.setState({ shown: null });
+    publishShownDiffFile({ target, path: focused.path });
+    return () => publishShownDiffFile(null);
   }, [targetKey, focused?.path]);
 
   return (
