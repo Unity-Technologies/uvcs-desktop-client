@@ -75,6 +75,22 @@ describe('Where R moves after marking a file', () => {
     expect(list.steps).toEqual([3]);
   });
 
+  it('passes files already reviewed, so R, R, R never clears a mark', () => {
+    const list = reviewList({ 'a.ts': 'unreviewed', 'b.ts': 'reviewed', 'c.ts': 'changedSinceReview' });
+    list.pressR(['a.ts']);
+    expect(list.steps).toEqual([2]);
+  });
+
+  it('passes an open group, to its first file', () => {
+    const statusOf = (path: string) => (path.endsWith('.ts') ? 'unreviewed' : null);
+    expect(stepToNextReviewable([file('a.ts'), group('Default', ['b.ts']), file('b.ts')], 0, statusOf)).toBe(2);
+  });
+
+  it('passes a closed folder whose files are all reviewed', () => {
+    const statusOf = (path: string) => (path === 'a.ts' || path === 'c.ts' ? 'unreviewed' : 'reviewed');
+    expect(stepToNextReviewable([file('a.ts'), folder('done', ['done/b.ts'], true), file('c.ts')], 0, statusOf)).toBe(2);
+  });
+
   it('stays on the last file when only directories follow', () => {
     const list = reviewList({ 'a.ts': 'unreviewed', 'new dir': null });
     list.pressR(['a.ts']);
