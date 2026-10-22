@@ -23,7 +23,7 @@ export function mergeFromLabel(label: Label): void {
 
 /** The diff of what the labeled changeset changed. */
 export function labelDiffPage(label: Pick<Label, 'name' | 'changeset'>, focusPath?: string): PageOf<'diff'> {
-  return { kind: 'diff', title: `Label ${label.name}`, target: { kind: 'changeset', changesetId: label.changeset }, focusPath };
+  return { kind: 'diff', title: `Label ${label.name}`, target: { kind: 'changeset', changesetId: label.changeset }, label: label.name, focusPath };
 }
 
 export function showLabelChanges(label: Label, focusPath?: string): void {

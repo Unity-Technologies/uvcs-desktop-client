@@ -1,7 +1,7 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import { VIEW_IDS } from '../navigation/views';
-import { copyLinkLabel, hasLinkToCopy, linkToCopy, pageLinkTarget, shownFileOf, viewLinkTarget } from './shownLink';
+import { copyLinkLabel, hasLinkToCopy, linkToCopy, nextTimeHint, objectLinkLabel, pageLinkTarget, pageObjectTarget, shownFileOf, viewLinkTarget } from './shownLink';
 
 const LINES = { side: 'new', first: 40, last: 52 } as const;
 
@@ -133,6 +133,10 @@ describe('linkToCopy', () => {
     });
   });
 
+  it("copies the page's own object when no lines are selected, never the file it shows", () => {
+    expect(linkToCopy({ top: diff, shown: { path: 'a.cs' }, hasSelectedObject: true, view: 'branches' })).toEqual({ kind: 'target', target: { object: { kind: 'changeset', id: 12 } } });
+  });
+
   it("copies the view's selected object, else the view, and nothing for Changes and Files or a page no link names", () => {
     expect(linkToCopy({ top: undefined, shown: null, hasSelectedObject: true, view: 'branches' })).toEqual({ kind: 'selectedObject' });
     expect(linkToCopy({ top: undefined, shown: null, hasSelectedObject: false, view: 'locks' })).toEqual({ kind: 'target', target: { page: { kind: 'view', view: 'locks' } } });
@@ -151,5 +155,59 @@ describe('hasLinkToCopy', () => {
   it("has the view's selected object's, else the view's", () => {
     expect(hasLinkToCopy({ top: undefined, hasSelectedObject: true, view: 'changes', shownOfOtherRepository: false })).toBe(true);
     expect(hasLinkToCopy({ top: undefined, hasSelectedObject: false, view: 'changes', shownOfOtherRepository: false })).toBe(false);
+  });
+});
+
+describe('pageObjectTarget', () => {
+  const shown = { path: 'src/a.cs', lines: LINES };
+
+  it("names a diff's or a review's object, never the file or lines shown", () => {
+    expect(pageObjectTarget({ kind: 'diff', title: 'Shelve 2', target: { kind: 'shelve', shelveId: 2 } }, shown)).toEqual({ object: { kind: 'shelve', id: 2 } });
+    expect(pageObjectTarget({ kind: 'diff', title: 'Branch fuzzy', target: { kind: 'branch', branch: '/main/fuzzy' } }, shown)).toEqual({ object: { kind: 'branch', name: '/main/fuzzy' } });
+    expect(pageObjectTarget({ kind: 'codeReview', reviewId: 311 }, shown)).toEqual({ object: { kind: 'codeReview', id: 311 } });
+  });
+
+  it("names a label's diff by its label, not its changeset", () => {
+    expect(pageObjectTarget({ kind: 'diff', title: 'Label v1', target: { kind: 'changeset', changesetId: 9 }, label: 'v1' }, null)).toEqual({ object: { kind: 'label', name: 'v1' } });
+  });
+
+  it("names a history's item at the revision shown, without lines, and none under an xlink", () => {
+    const revision = { path: 'src/a.cs', changesetId: 6, view: 'annotate', otherRepository: false } as const;
+    expect(pageObjectTarget({ kind: 'history', path: 'src/a.cs' }, { ...shown, revision })).toEqual({ object: { kind: 'changeset', id: 6 }, page: { kind: 'history', path: '/src/a.cs' } });
+    expect(pageObjectTarget({ kind: 'history', path: 'src/a.cs' }, { path: 'src/a.cs', revision: { ...revision, otherRepository: true } })).toBeNull();
+  });
+
+  it('names a browsed changeset at the item shown, without lines', () => {
+    expect(pageObjectTarget({ kind: 'browseRepository', changesetId: 7 }, shown)).toEqual({ object: { kind: 'changeset', id: 7 }, page: { kind: 'browse', path: '/src/a.cs' } });
+  });
+
+  it("names no diff of two branches' heads", () => {
+    expect(pageObjectTarget({ kind: 'diff', title: 'a → b', target: { kind: 'range', fromSpec: 'br:/a', toSpec: 'br:/b' } }, null)).toBeNull();
+  });
+});
+
+describe('objectLinkLabel', () => {
+  it('names the object a page is about', () => {
+    expect(objectLinkLabel({ object: { kind: 'shelve', id: 2 } })).toBe('Copy link to shelve 2');
+    expect(objectLinkLabel({ object: { kind: 'changeset', id: 28 } })).toBe('Copy link to changeset 28');
+    expect(objectLinkLabel({ object: { kind: 'branch', name: '/main/fuzzy' } })).toBe('Copy link to branch fuzzy');
+    expect(objectLinkLabel({ object: { kind: 'label', name: 'v1' } })).toBe('Copy link to label v1');
+    expect(objectLinkLabel({ object: { kind: 'changesetRange', from: 3, to: 7 } })).toBe('Copy link to changesets 4–7');
+    expect(objectLinkLabel({ object: { kind: 'labelRange', from: 'v1', to: 'v2' } })).toBe('Copy link to labels v1–v2');
+    expect(objectLinkLabel({ object: { kind: 'codeReview', id: 311 } })).toBe('Copy link to code review 311');
+  });
+
+  it("names a history's item, and a browsed item at its changeset", () => {
+    expect(objectLinkLabel({ object: { kind: 'changeset', id: 6 }, page: { kind: 'history', path: '/src/a.cs' } })).toBe('Copy link to history of a.cs');
+    expect(objectLinkLabel({ object: { kind: 'changeset', id: 7 }, page: { kind: 'browse', path: '/src/a.cs' } })).toBe('Copy link to a.cs at changeset 7');
+    expect(objectLinkLabel({ object: { kind: 'changeset', id: 7 }, page: { kind: 'browse', path: '/' } })).toBe('Copy link to changeset 7');
+    expect(objectLinkLabel(null)).toBe('Copy link');
+  });
+});
+
+describe('nextTimeHint', () => {
+  it('teaches the shortcut in the keys the OS shows', () => {
+    expect(nextTimeHint(['⇧', '⌘', 'C'])).toBe('⇧⌘C copies it next time');
+    expect(nextTimeHint(['Ctrl+Shift+C'])).toBe('Ctrl+Shift+C copies it next time');
   });
 });

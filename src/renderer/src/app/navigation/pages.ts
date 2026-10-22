@@ -29,6 +29,8 @@ export type Page =
       focusPath?: string;
       focusLines?: FocusedLines;
       branchHead?: number;
+      /** The label whose changeset this diff is: what a link to the page names (`pageObjectTarget`). */
+      label?: string;
       sideNames?: readonly [DiffSideName, DiffSideName];
     }
   /** `task`: a task branch merged into a branch on the server, which the page also offers to finish (`TaskMerge`). */

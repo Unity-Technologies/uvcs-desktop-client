@@ -1,4 +1,6 @@
 import type { DiffTarget } from '@shared/domain/diff';
+import { shortBranchName } from '@shared/domain/specs';
+import type { LinkObject } from '@shared/links/link';
 import type { LinkLines } from '@shared/links/link';
 import type { ShownRevision } from '../../features/history/shownRevision';
 import type { Page } from '../navigation/pages';
@@ -41,6 +43,38 @@ function pageTargetOf(page: Page, shown: ShownFile | null): LinkTarget | null {
       const path = shown?.path ?? page.focusPath;
       const lines = shown?.lines ? { lines: shown.lines } : {};
       return { object: { kind: 'changeset', id: page.changesetId }, page: { kind: 'browse', path: `/${path ?? ''}` }, ...lines };
+    }
+    case 'merge':
+      return null;
+  }
+}
+
+/**
+ * What a page's own link names, its header's "Copy link" (`CopyLinkButton`): the object it is about, never the file or
+ * lines it shows (those are the line chip's, its menu's and a file's Copy ▸ Link). A diff's or review's object (a
+ * label's diff, its label); a history's item at the revision shown; a browse's changeset at the item shown. Null for a
+ * page no link names.
+ */
+export function pageObjectTarget(page: Page, shown: ShownFile | null): LinkTarget | null {
+  const target = pageObjectTargetOf(page, shown);
+  return target && isWritable(target) ? target : null;
+}
+
+function pageObjectTargetOf(page: Page, shown: ShownFile | null): LinkTarget | null {
+  switch (page.kind) {
+    case 'diff': {
+      const object = page.label !== undefined ? ({ kind: 'label', name: page.label } as const) : diffTargetObject(page.target);
+      return object && { object };
+    }
+    case 'codeReview':
+      return { object: { kind: 'codeReview', id: page.reviewId } };
+    case 'history': {
+      const target = historyLinkTarget(page, shown);
+      return target && { ...(target.object && { object: target.object }), page: { kind: 'history', path: `/${page.path}` } };
+    }
+    case 'browseRepository': {
+      const path = shown?.path ?? page.focusPath;
+      return { object: { kind: 'changeset', id: page.changesetId }, page: { kind: 'browse', path: `/${path ?? ''}` } };
     }
     case 'merge':
       return null;
@@ -95,9 +129,14 @@ export type LinkToCopy = { kind: 'target'; target: LinkTarget } | { kind: 'selec
  * else the object selected in the view, else the view itself; nothing for a page or view no link names.
  */
 export function linkToCopy({ top, shown, hasSelectedObject, view }: { top: Page | undefined; shown: ShownFile | null; hasSelectedObject: boolean; view: ViewId }): LinkToCopy {
-  const target = top ? pageLinkTarget(top, shown) : hasSelectedObject ? null : viewLinkTarget(view);
+  const target = top ? pageLinkToCopy(top, shown) : hasSelectedObject ? null : viewLinkTarget(view);
   if (target) return { kind: 'target', target };
   return !top && hasSelectedObject ? { kind: 'selectedObject' } : null;
+}
+
+/** A page's link "Copy link" copies: the lines selected in it when some are (as their chip), else its own (as its header). */
+function pageLinkToCopy(page: Page, shown: ShownFile | null): LinkTarget | null {
+  return shown?.lines ? pageLinkTarget(page, shown) : pageObjectTarget(page, shown);
 }
 
 /**
@@ -119,6 +158,39 @@ export function viewLinkTarget(view: ViewId): LinkTarget | null {
   return { page: { kind: 'view', view: linkView } };
 }
 
+/**
+ * What a page's header "Copy link" says it copies (`pageObjectTarget`): "Copy link to changeset 28", "… to branch
+ * fuzzy", "… to history of Player.cs", "… to Player.cs at changeset 7".
+ */
+export function objectLinkLabel(target: LinkTarget | null): string {
+  if (!target) return 'Copy link';
+  const path = target.page && 'path' in target.page ? target.page.path : undefined;
+  const name = path && path !== '/' ? path.split('/').at(-1) : undefined;
+  if (target.page?.kind === 'history' && name) return `Copy link to history of ${name}`;
+  const object = target.object && objectWords(target.object);
+  if (name && object) return `Copy link to ${name} at ${object}`;
+  return object ? `Copy link to ${object}` : 'Copy link';
+}
+
+function objectWords(object: LinkObject): string {
+  switch (object.kind) {
+    case 'changeset':
+      return `changeset ${object.id}`;
+    case 'changesetRange':
+      return `changesets ${object.from + 1}–${object.to}`;
+    case 'branch':
+      return `branch ${shortBranchName(object.name)}`;
+    case 'label':
+      return `label ${object.name}`;
+    case 'labelRange':
+      return `labels ${object.from}–${object.to}`;
+    case 'shelve':
+      return `shelve ${object.id}`;
+    case 'codeReview':
+      return `${object.asMergeRequest ? 'merge request' : 'code review'} ${object.id}`;
+  }
+}
+
 /** What "Copy link" says it copies, in its tooltip: "Copy link to lines 40–52 of Player.cs". */
 export function copyLinkLabel(target: LinkTarget | null): string {
   const path = target?.page && 'path' in target.page ? target.page.path : undefined;
@@ -126,4 +198,9 @@ export function copyLinkLabel(target: LinkTarget | null): string {
   if (!target?.lines || !name) return name ? `Copy link to ${name}` : 'Copy link';
   const { first, last } = target.lines;
   return first === last ? `Copy link to line ${first} of ${name}` : `Copy link to lines ${first}–${last} of ${name}`;
+}
+
+/** What the toast adds once a link was copied another way than the shortcut, to teach it: "⇧⌘C copies it next time". */
+export function nextTimeHint(shortcutKeys: readonly string[]): string {
+  return `${shortcutKeys.join('')} copies it next time`;
 }
