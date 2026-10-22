@@ -162,8 +162,9 @@ async function hasChange(workspacePath: string, path: string): Promise<boolean> 
 }
 
 /**
- * Offers to create a workspace on the repository, then opens the link in it, here, as a workspace created anywhere
- * opens. The server as the user's profiles name it (`ssl://host:8088`), which a link leaves the protocol out of.
+ * Offers to create a workspace on the repository, then opens the link in it as any link opens (`openIn`): here when
+ * this window shows the home screen, else in a window of its own. The server as the user's profiles name it
+ * (`ssl://host:8088`), which a link leaves the protocol out of.
  */
 async function createWorkspaceFor(link: RepositoryLink): Promise<void> {
   if (!(await offerNewWorkspace(link.repository))) return;
@@ -171,9 +172,6 @@ async function createWorkspaceFor(link: RepositoryLink): Promise<void> {
   const server = profiles.find((profile) => sameServer(profile.server, link.server))?.server ?? link.server;
   openCreateWorkspaceDialog({
     repository: { id: '', name: link.repository, server, owner: '', spec: repositorySpec(link.repository, server) },
-    onCreated: (workspacePath) => {
-      useSession.getState().openWorkspace(workspacePath);
-      void showHere(workspacePath, link, link);
-    },
+    onCreated: (workspacePath) => void openIn(workspacePath, link, () => showHere(workspacePath, link, link)),
   });
 }
