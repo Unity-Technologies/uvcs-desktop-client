@@ -69,7 +69,7 @@ Binary files have
   `legacyMergeToolSettings`; ARCHITECTURE.md "Own config"), on the first run that has rows of this shape (`legacyMergeToolsImported`,
   apart from the recent branches' import, so a user who ran the app before gets it too; a leftover `unityMergeTool` or
   `mergeToolRulesImported` from an earlier build is ignored). With nothing to import, the rows are the app's own
-  (`DEFAULT_MERGE_TOOL_RULES`), but Semantic Merge's for a user who picked their own tool. Each entry for some files
+  (`DEFAULT_MERGE_TOOL_RULES`), without Semantic Merge's for a user who picked their own tool. Each entry for some files
   becomes a row, by the official client's order; its entry for every text file becomes every other file's tool, only
   while the user's is still `auto` (not picked yet), and nothing after it is read, as the client never goes past it (even when the app can't read its tool). An entry whose
   first tool is `UnityYAMLMerge` becomes a row of UnityYAMLMerge for its extensions, the tool chained after it its
@@ -85,7 +85,7 @@ Binary files have
   (its `diffscripts` folder: Word documents, which are binary), regular expressions, a command that saves nowhere. While every other file opens in the UVCS merge tool once imported
   (`auto`, or the UVCS merge tool picked by name: `sendsCodeToSemanticMerge`, the one test of both paths), C#, Visual Basic and Java go to Semantic Merge (the client does so), but those
   a row sends elsewhere; a user who picked their own tool for every other file keeps C# there, and with no client.conf
-  to import such a user's default rows are emptied (`importMergeTools`); a row that sends files where every other file
+  to import such a user gets the default rows without Semantic Merge's, the Unity row kept (`importMergeTools`); a row that sends files where every other file
   goes anyway, and that no later row could take, is dropped (the Windows client's `.meta` row).
 - `mergeTools.resolve` saves the three versions to temp files named after the file (`a.BASE.ts`...), writes the result
   file with the file as it stands in the app (the automatic merge with its markers, or the user's picks), runs the
