@@ -5,14 +5,14 @@ import { shortBranchName } from '@shared/domain/specs';
 import { branchCreateArgs } from '../cm/branchCreateArgs';
 import { equalsCondition, findArgs } from '../cm/findQuery';
 import { FOUND_BRANCHES } from '../cm/foundObjects';
-import { readRecords } from '../cm/formatRecords';
+import { layoutReader } from '../cm/formatRecords';
 import { withTempFile } from '../files/tempFile';
 import type { BranchNamesContext, ServiceContext } from './ServiceContext';
 
 export function createBranchesService({ cm, settings, headers }: ServiceContext, { branchNames }: BranchNamesContext): BranchesApi {
   async function find(workspacePath: string, filter: QueryFilter, conditions: string[]): Promise<Branch[]> {
-    const output = await cm.query(findArgs(FOUND_BRANCHES, { ...filter, branch: undefined }, 'date desc', conditions), { cwd: workspacePath });
-    const branches = readRecords(FOUND_BRANCHES, output);
+    const args = findArgs(FOUND_BRANCHES, { ...filter, branch: undefined }, 'date desc', conditions);
+    const branches = await cm.queryRecords(args, layoutReader(FOUND_BRANCHES), { cwd: workspacePath });
     // The code review chips name branches by id: this list answers them.
     branchNames.remember(workspacePath, branches);
     return branches;

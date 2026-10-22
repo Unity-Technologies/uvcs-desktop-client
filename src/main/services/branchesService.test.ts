@@ -56,7 +56,7 @@ describe('branch list', () => {
     const listed = await service.list(WORKSPACE, { includeHidden: false });
 
     expect(commands).toMatchObject([
-      { via: 'query', args: findQueryArgs(FOUND_BRANCHES, "where hidden = 'false' order by date desc"), options: { cwd: WORKSPACE } },
+      { via: 'query', args: findQueryArgs(FOUND_BRANCHES, "where hidden = 'false' order by date desc"), options: { cwd: WORKSPACE }, readsRecords: true },
     ]);
     expect(listed.map((branch) => [branch.id, branch.name, branch.repository])).toEqual([
       [38, '/main/task2', 'game@local'],

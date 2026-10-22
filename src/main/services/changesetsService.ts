@@ -1,7 +1,7 @@
 import type { ChangesetsApi } from '@shared/api/changesets';
 import { findArgs, findQueryArgs } from '../cm/findQuery';
 import { FOUND_CHANGESETS } from '../cm/foundObjects';
-import { readRecords } from '../cm/formatRecords';
+import { layoutReader, readRecords } from '../cm/formatRecords';
 import type { ServiceContext } from './ServiceContext';
 
 /**
@@ -12,9 +12,10 @@ const IGNORE_HIDDEN = "ignorehidden = 'true'";
 
 export function createChangesetsService({ cm }: ServiceContext): ChangesetsApi {
   return {
-    async list(workspacePath, filter) {
-      const output = await cm.query(findArgs(FOUND_CHANGESETS, filter, 'changesetid desc', filter.branch ? [IGNORE_HIDDEN] : []), { cwd: workspacePath });
-      return readRecords(FOUND_CHANGESETS, output);
+    // Read as they arrive: every changeset of a large repository (280,000) is tens of MB.
+    list(workspacePath, filter) {
+      const args = findArgs(FOUND_CHANGESETS, filter, 'changesetid desc', filter.branch ? [IGNORE_HIDDEN] : []);
+      return cm.queryRecords(args, layoutReader(FOUND_CHANGESETS), { cwd: workspacePath });
     },
 
     async get(workspacePath, changesetId, repository) {

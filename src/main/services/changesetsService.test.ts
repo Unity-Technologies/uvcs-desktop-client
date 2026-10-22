@@ -43,6 +43,7 @@ describe('changesets', () => {
           `where ignorehidden = 'true' and date >= '${roundTripDate('2026-09-01')}' and branch = '/main/task1' order by changesetid desc limit 100`,
         ),
         options: { cwd: WORKSPACE },
+        readsRecords: true,
       },
     ]);
     expect(listed.map((changeset) => [changeset.id, changeset.parent, changeset.repository])).toEqual([
