@@ -1,0 +1,86 @@
+.box {
+  position: relative;
+}
+
+/* Room for the arrow, so a long name doesn't run under it. */
+.input {
+  padding-right: 28px;
+}
+
+.input:read-only {
+  padding-right: var(--space-2);
+}
+
+.arrow {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-tertiary);
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.arrow:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+/* Above the dialog it opens in (`Dialog.module.css`), as wide as the field. */
+.popover {
+  width: var(--radix-popover-trigger-width);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  z-index: 900;
+}
+
+.popover[data-state='open'] {
+  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
+}
+
+/* Its own height from the first frame: Radix sets the available height a frame later, and a list not yet scrollable
+   when it opens couldn't scroll to the option the field holds. */
+.list {
+  max-height: min(280px, var(--radix-popover-content-available-height, 280px));
+  padding: var(--space-1);
+  overflow-y: auto;
+}
+
+/* Only the rows in view render, each placed where it belongs, `OPTION_HEIGHT` tall. */
+.rows {
+  position: relative;
+}
+
+.option {
+  position: absolute;
+  right: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.optionText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.option[aria-selected='true'] {
+  background: var(--accent-soft);
+}

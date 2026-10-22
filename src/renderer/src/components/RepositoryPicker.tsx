@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import type { RepositorySummary } from '@shared/domain/repository';
-import { useRepositories, useServers } from '../app/workspace/workspaceQueries';
-import { serverChoiceLabel, splitRepositorySpec } from '../lib/servers';
+import { useRepositories } from '../app/workspace/workspaceQueries';
+import { splitRepositorySpec } from '../lib/servers';
 import { SelectField } from '../ui/TextField';
 import styles from './RepositoryPicker.module.css';
+import { ServerSelect } from './ServerSelect';
 
 interface RepositoryPickerProps {
   /** Selected repository spec (`name@server`). */
@@ -17,19 +18,12 @@ interface RepositoryPickerProps {
 /** Picks a server, then one of its repositories. */
 export function RepositoryPicker({ value, onChange, exclude, label = 'Repository' }: RepositoryPickerProps) {
   const [server, setServer] = useState(() => (value ? splitRepositorySpec(value).server : 'local'));
-  const { data: servers } = useServers();
   const { data: repositories, isLoading, error } = useRepositories(server);
   const choices = (repositories ?? []).filter((repository) => repository.spec !== exclude);
 
   return (
     <div className={styles.picker}>
-      <SelectField label="Server" value={server} onChange={(event) => setServer(event.target.value)}>
-        {(servers?.map((profile) => profile.server) ?? [server]).map((name) => (
-          <option key={name} value={name}>
-            {serverChoiceLabel(name)}
-          </option>
-        ))}
-      </SelectField>
+      <ServerSelect value={server} onChange={setServer} />
       <SelectField
         label={label}
         value={value && splitRepositorySpec(value).server === server ? value : ''}

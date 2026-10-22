@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import type { RepositorySummary } from '@shared/domain/repository';
-import { RepositoryPicker } from '../../../components/RepositoryPicker';
-import { lastSegment } from '../../../lib/paths';
+import { splitRepositorySpec } from '../../../lib/servers';
 import { Button } from '../../../ui/Button';
 import { Dialog } from '../../../ui/dialog/Dialog';
 import { openDialog } from '../../../ui/dialog/dialogStore';
 import { TextField } from '../../../ui/TextField';
 import { toast } from '../../../ui/toast/toastStore';
-import { useWorkspaceList } from '../../workspace/workspaceQueries';
+import { useRepositories, useWorkspaceList } from '../../workspace/workspaceQueries';
 import { useDefaultWorkspaceRoot } from '../useDefaultWorkspaceRoot';
-import { defaultWorkspacePath, isWorkspaceNameTaken, suggestWorkspaceName } from '../workspaceNaming';
-import { createWorkspaceAndUpdate } from './createWorkspaceAndUpdate';
+import { createNewWorkspace } from './createNewWorkspace';
 import { LocationField } from './LocationField';
+import { RepositoryNameCombobox } from './RepositoryNameCombobox';
+import { initialRepositoryName, newWorkspaceFormOf, repositoriesToName, serverToList } from './newWorkspaceForm';
 
 interface CreateWorkspaceOptions {
   repository?: RepositorySummary;
@@ -26,36 +26,41 @@ export function openCreateWorkspaceDialog(options: CreateWorkspaceOptions): void
 
 function CreateWorkspaceDialog({ repository: initialRepository, path: initialPath, onCreated, onClose }: CreateWorkspaceOptions & { onClose: () => void }) {
   const { data: workspaces } = useWorkspaceList();
-  const takenNames = (workspaces ?? []).map((workspace) => workspace.name);
   const root = useDefaultWorkspaceRoot();
 
-  const [repository, setRepository] = useState<RepositorySummary | undefined>(initialRepository);
-  const [name, setName] = useState(() => {
-    if (initialPath) return lastSegment(initialPath);
-    return initialRepository ? suggestWorkspaceName(initialRepository.name, takenNames) : '';
-  });
+  const [server, setServer] = useState(() => (initialRepository ? splitRepositorySpec(initialRepository.spec).server : 'local'));
+  const [repositoryName, setRepositoryName] = useState(() => initialRepositoryName(initialRepository, initialPath));
+  const [created, setCreated] = useState<string>();
+  const [typedName, setTypedName] = useState<string>();
   const [chosenPath, setChosenPath] = useState(initialPath);
   const [creating, setCreating] = useState(false);
+  const { data: listed, error } = useRepositories(serverToList(server, initialRepository));
+  const repositories = repositoriesToName(initialRepository, listed);
 
-  const path = chosenPath ?? defaultWorkspacePath(root, name);
-  const nameTaken = isWorkspaceNameTaken(name, takenNames);
-  const canCreate = Boolean(repository && name.trim() && path && !nameTaken && !creating);
-
-  const pickRepository = (picked: RepositorySummary): void => {
-    setRepository(picked);
-    if (!initialPath) setName(suggestWorkspaceName(picked.name, takenNames));
-  };
+  const form = newWorkspaceFormOf({
+    server,
+    repositoryName,
+    repositories,
+    repositoriesFailed: Boolean(error),
+    created,
+    typedName,
+    initialPath,
+    workspaceNames: (workspaces ?? []).map((workspace) => workspace.name),
+    chosenPath,
+    root,
+    creating,
+  });
 
   const create = async (): Promise<void> => {
-    if (!canCreate || !repository) return;
+    if (!form.canCreate || !form.repository) return;
     setCreating(true);
-    try {
-      await createWorkspaceAndUpdate({ name: name.trim(), path, repository: repository.spec }, (createdPath) => {
-        onClose();
-        onCreated(createdPath);
-      });
-    } catch (error) {
-      toast.error("Couldn't create the workspace", error);
+    const outcome = await createNewWorkspace({ name: form.workspaceName.trim(), path: form.path, repository: form.repository }, (createdPath) => {
+      onClose();
+      onCreated(createdPath);
+    });
+    if (outcome.kind === 'failed') {
+      if (outcome.createdRepository) setCreated(outcome.createdRepository);
+      toast.error(outcome.title, outcome.error);
       setCreating(false);
     }
   };
@@ -70,8 +75,8 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
       footer={
         <>
           <Button onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="primary" disabled={!canCreate} loading={creating}>
-            Create workspace
+          <Button type="submit" variant="primary" disabled={!form.canCreate} loading={creating}>
+            {form.createsRepository ? 'Create repository and workspace' : 'Create workspace'}
           </Button>
         </>
       }
@@ -79,16 +84,24 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
       {initialRepository ? (
         <TextField label="Repository" value={initialRepository.spec} readOnly />
       ) : (
-        <RepositoryPicker value={repository?.spec ?? null} onChange={pickRepository} />
+        <RepositoryNameCombobox
+          server={server}
+          onServerChange={setServer}
+          name={repositoryName}
+          onNameChange={setRepositoryName}
+          repositories={repositories}
+          error={error?.message}
+          form={form}
+        />
       )}
       <TextField
         label="Workspace name"
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-        error={nameTaken ? 'There is already a workspace with this name.' : undefined}
+        value={form.workspaceName}
+        onChange={(event) => setTypedName(event.target.value)}
+        error={form.workspaceNameTaken ? 'There is already a workspace with this name.' : undefined}
         autoFocus={Boolean(initialRepository)}
       />
-      <LocationField path={path} onChange={setChosenPath} pickerTitle="Choose the workspace folder" pickerFolder={root} />
+      <LocationField path={form.path} onChange={setChosenPath} pickerTitle="Choose the workspace folder" pickerFolder={root} />
     </Dialog>
   );
 }
