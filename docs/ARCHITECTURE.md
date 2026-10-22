@@ -306,8 +306,8 @@ and many people use the same server. Every `cm` command other than local reads (
   folders, nothing else in them; a moved or deleted folder must be given itself ("the change '/lib' must be selected
   too"), and so must all of a pending merge ("All merge changes must be checked in together"). So Changes gives cm as
   little as it takes (`checkinPathsOf`): never a checked-out folder holding something checked, `--private` only when a
-  private item is checked (`CheckinRequest.addsPrivate`), and a private, added or moved folder whose all is checked
-  alone, one path for a new project however many files it holds. A checkout inside a writable xlink
+  private item is checked (`CheckinRequest.addsPrivate`), and a private, added or moved folder alone when everything
+  in it is checked: one path for a new project, however many files it holds. A checkout inside a writable xlink
   checks the xlink out: cm status lists it as a checked-out folder, and given, it took every private item inside the
   xlink. Shelving away gives cm those paths but undoes every change the shelve takes (`ShelveAwayRequest`).
 - **What a check-in needs is checked with it**, in the list as the user clicks, never asked at the end: checking a change
@@ -315,9 +315,11 @@ and many people use the same server. Every `cm` command other than local reads (
   from where an added item now is, the moves out of a deleted folder, and all of a pending merge; unchecking one
   unchecks what can't go in without it (`neededWith`, `needingThem`, `pathsCheckedTogether`). Read back, the checks are
   made consistent (`consistentlyIncluded`): a new file in a folder left out stays out, one in a checked moved folder goes
-  in. What a shown change needs goes in even while the filter hides it, and the button counts it. The one question
-  left is for private items inside a moved folder once another private item is checked: cm would take them, and only
-  the user checks a private item (`pulledIn`, "Also check in 2 changes inside lib?"). The legacy client asks about
+  in; an item added where a move left, or a deleted folder, waits for its moves. What a shown change needs goes in even
+  while the filter hides it, and the button counts it ("Filters"). A question is left only where a checked folder
+  must be given and holds what isn't checked (`pulledIn`, "Also check in 2 changes inside lib?"): private items inside
+  a moved folder once another private item is checked (only the user checks a private item), or an added or
+  checked-out folder checked while some of its files aren't. The legacy client asks about
   dependencies in a dialog when Check in is pressed; that was dropped as breaking the flow at its last step. All of it
   is indexed once per read of the changes (`indexPending`), so a click looks up only the folders above what it touched,
   on lists of tens of thousands.
@@ -975,9 +977,11 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     show (`checkinSelectionOf` over `ListedChanges`, given `useChangeFilter`'s `visible`); a file under a collapsed
     folder or changelist still goes in. Those the filters hide keep their check for when they show again, and the button
     counts what goes in; while the filters hide every checked change, its tooltip says so (`checkinDisabledReason`).
+    The one exception: what a shown change needs to go in goes with it, hidden or not (a private file's private folder
+    while filtering by Changed: `neededWith`, "Parsing `cm` output"), and the button counts it.
     Review mode's "Unreviewed" filter doesn't narrow it: it hides each file as it's reviewed, and those are the ones to
     check in. "Check in this changelist" clears every filter, "Unreviewed" too, so all the changelist shows and goes
-    in. Checking in every checked change, those the filters hide too, with a notice saying how many, was dropped: a
+    in, with what it needs. Checking in every checked change, those the filters hide too, with a notice saying how many, was dropped: a
     filter on Changed left the private files it hid checked, and they went into the changeset unseen.
   - The shelves list in Changes stays a quick list with "Mine | Everyone" (⇧⌘S), not a filter bar: it's a popover
     over Changes, and its "All shelves" hands its scope and text to the Shelves view.

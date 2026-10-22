@@ -22,10 +22,9 @@ export interface PendingChangesApi {
   /** Shelves the changes and keeps them in the workspace. Resolves to the shelve's id. */
   shelve(workspacePath: string, paths: string[], comment: string, operationId: string): Promise<number>;
   /**
-   * Shelves the changes (every pending change when `paths` is null), checks the shelve holds them all, then undoes them
-   * and moves the files they added aside until the shelve is applied.
+   * Shelves away the requested changes (`ShelveAwayRequest`; every pending change when null), checks the shelve holds
+   * them all, then undoes them and moves the files they added aside until the shelve is applied.
    */
-  /** Shelves away the requested changes, or every pending change when null. */
   shelveAndUndo(workspacePath: string, request: ShelveAwayRequest | null, comment: string, operationId: string): Promise<ShelvedAway>;
   createChangelist(workspacePath: string, changelist: Changelist): Promise<void>;
   /** Renames or describes the changelist `name`: only the fields `edit` holds, one command each. */

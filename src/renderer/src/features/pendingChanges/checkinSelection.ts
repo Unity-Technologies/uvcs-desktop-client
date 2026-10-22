@@ -6,7 +6,10 @@ import { neededWith, type PendingIndex } from './checkinDependencies';
 
 export interface CheckinSelection {
   isIncluded: (change: PendingChange) => boolean;
-  /** The checked changes the filter shows: those it hides stay out of the check-in, still checked for when they show again. */
+  /**
+   * The checked changes the filter shows, and what they need that it hides (`neededWith`): the rest it hides stay out
+   * of the check-in, still checked for when they show again.
+   */
   included: PendingChange[];
   /** How many checked changes the filter hides. */
   hiddenIncludedCount: number;
@@ -96,8 +99,8 @@ function withWhatTheyNeed(shown: PendingChange[], all: PendingChange[], index: P
 
 /**
  * What a check-in takes of the changes the filter shows, and what follows from it: what it uploads, what a shelve
- * takes, bulk private files. What you see is what goes in: a checked change the filter hides could slip a private file
- * into a changeset unseen, while one left out stays pending and shows again once the filter clears.
+ * takes, bulk private files. What you see is what goes in, with what it needs: a checked change the filter hides could
+ * slip a private file into a changeset unseen, while one left out stays pending and shows again once the filter clears.
  */
 export function checkinSelectionOf({ all, matchingFilter, index }: ListedChanges, isIncluded: (change: PendingChange) => boolean): CheckinSelection {
   const included = matchingFilter === all ? all.filter(isIncluded) : withWhatTheyNeed(matchingFilter.filter(isIncluded), all, index, isIncluded);

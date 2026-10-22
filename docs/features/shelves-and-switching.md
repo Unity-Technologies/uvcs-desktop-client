@@ -60,7 +60,7 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
   check-in.
 - **A changelist at a time**: grouped by changelists, a changelist's menu (`changelistMenu`) offers "Check in this
   changelist" and "Shelve this changelist", which ready the panel rather than run (`prepareChangelistCheckin`): its
-  changes checked alone and every filter cleared, "Unreviewed" too, so all of them show and go in (ARCHITECTURE.md
+  changes checked alone, with what they need outside it (`neededWith`), and every filter cleared, "Unreviewed" too, so all of them show and go in (ARCHITECTURE.md
   "Filters": a check-in takes what the filters show), the panel in that mode (Changes holds it, `PendingChangesPanes`,
   so it is back to Check in each time Changes shows, as after choosing Shelve with the caret), its description as the
   comment unless the user wrote one (a comment another changelist's description filled counts as none; one filled from a
