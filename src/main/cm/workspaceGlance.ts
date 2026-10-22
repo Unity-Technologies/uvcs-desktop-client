@@ -14,7 +14,8 @@ export async function readWorkspaceGlance(cm: CmClient, workspacePath: string, p
   const reader = new PendingChangesReader(workspacePath, platform);
   const [header, changes] = await Promise.all([
     cm.query(['status', '--header', '--xml', workspacePath], { anyDirectory: true }),
-    cm.queryRecords(statusRecordsArgs(workspacePath), reader.read, { anyDirectory: true }),
+    // A count that fails (paths `cm` prints outside the root the app knows) leaves the branch to show.
+    cm.queryRecords(statusRecordsArgs(workspacePath), reader.read, { anyDirectory: true }).catch(() => null),
   ]);
-  return { selector: parseWorkspaceStatus(header).selector, pendingCount: changes.length };
+  return { selector: parseWorkspaceStatus(header).selector, pendingCount: changes?.length ?? null };
 }

@@ -43,7 +43,8 @@ export interface WorkspaceHead {
  */
 export interface WorkspaceGlance {
   selector: WorkspaceSelector;
-  pendingCount: number;
+  /** Null when they couldn't be counted. */
+  pendingCount: number | null;
 }
 
 /** Whether a folder can hold a new workspace: `available` when it doesn't exist or is empty. */
