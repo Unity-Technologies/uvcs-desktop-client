@@ -45,3 +45,19 @@ describe('checkStateOver', () => {
     expect(checkStateOver(candidatesUnderRow(row('folder:all:bin')), null)).toBeNull();
   });
 });
+
+describe('checkStateOver a row holding every change shown', () => {
+  it('takes the check from how many of the shown changes are checked, asking none of them', () => {
+    const folder = row('folder:all:src');
+    const candidates = candidatesUnderRow(folder);
+    let asked = 0;
+    const isChosen = (item: PendingChange) => (asked++, item.path === 'src/a.ts');
+
+    expect(checkStateOver(candidates, isChosen, { candidates: 2, checked: 1 })).toBe('mixed');
+    expect(checkStateOver(candidates, isChosen, { candidates: 2, checked: 0 })).toBe(false);
+    expect(asked).toBe(0);
+    // A row holding fewer than all of them counts its own.
+    expect(checkStateOver(candidates, isChosen, { candidates: 5, checked: 1 })).toBe('mixed');
+    expect(asked).toBe(2);
+  });
+});
