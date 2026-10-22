@@ -101,9 +101,6 @@ export interface MergeToolRule {
   fallbackToolId?: string;
 }
 
-/** Unity assets Smart Merge can't merge open where every other file would (`unityMergeTool`). */
-export const SAME_AS_OTHER_FILES = 'others';
-
 /**
  * The Unity assets UnityYAMLMerge merges, by extension: scenes, prefabs and the assets Unity saves as YAML text. Not
  * `.meta` files: they have no Unity YAML header, so UnityYAMLMerge never runs on them (`isUnityYaml`).

@@ -6,11 +6,13 @@ import type { MergePlan, MergeRequest } from '@shared/domain/merge';
 import type { Action, MenuEntry, Submenu } from '../../lib/actions';
 import { mergeProgress } from '../merge/mergeItems';
 import { mergeItemMenu } from '../merge/mergeItemMenu';
+import type { Merger } from '../merge/mergeTools/mergeToolFor';
 import type { FileConflictState } from '../merge/resolve/useFileConflicts';
 import { incomingFileMenu, type IncomingFileMenuContext } from './incomingFileMenu';
 import { UPDATE_LABELS } from './updateConflictFiles';
 
 const vscode: MergeTool = { id: 'vscode', name: 'Visual Studio Code', canBringToFront: true } as MergeTool;
+const vscodeMerger: Merger = { kind: 'tool', tool: vscode };
 const repository = 'game@local';
 const file = (path: string): DiffEntry => ({ path, itemType: 'file', status: 'changed', revisionId: 40, baseRevisionId: 39, repository }) as DiffEntry;
 const conflictState = (path: string, more: Partial<FileConflictState> = {}): FileConflictState =>
@@ -36,8 +38,8 @@ function context(conflicts: FileConflictState[], more: Partial<IncomingFileMenuC
     loadedChangeset: 1,
     headChangeset: 4,
     conflictOf: (path) => conflicts.find((state) => state.file.key === path),
-    toolFor: () => vscode,
-    tools: [vscode],
+    mergerFor: () => vscodeMerger,
+    othersFor: () => [],
     running: false,
     decide: vi.fn(),
     reset: vi.fn(),
@@ -61,8 +63,8 @@ const onMergePage = (state: FileConflictState) =>
     progress: mergeProgress([state], []),
     labels: UPDATE_LABELS,
     itemTypeOf: () => 'file',
-    toolFor: () => vscode,
-    tools: [vscode],
+    mergerFor: () => vscodeMerger,
+    othersFor: () => [],
     running: false,
     decide: vi.fn(),
     reset: vi.fn(),

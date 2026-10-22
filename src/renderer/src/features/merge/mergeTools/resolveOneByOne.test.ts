@@ -3,6 +3,7 @@ import type { MergeTool, MergeToolOutcome } from '@shared/domain/mergeTools';
 import type { FileConflictState } from '../resolve/useFileConflicts';
 import { waitsForTool } from './mergeToolOutcome';
 import { resolveOneByOne, runEndMessage, stopRun, type RunControl, type RunEnd } from './resolveOneByOne';
+import { mergerName } from './mergeToolFor';
 import { planRun, type RunPlan } from './resolveRun';
 
 const fakeMerge: MergeTool = { id: 'FakeMerge', name: 'FakeMerge', origin: 'known', executable: 'fakemerge', args: [], defaultArgs: [], canBringToFront: false };
@@ -50,7 +51,7 @@ class FakePage {
   }
 
   get plan(): RunPlan {
-    return planRun(this.states, (state) => this.options.toolFor?.(state.file.path) ?? fakeMerge);
+    return planRun(this.states, (state) => ({ kind: 'tool', tool: this.options.toolFor?.(state.file.path) ?? fakeMerge }));
   }
 
   /** The file decided: in the app (keeping the incoming version), or by `tool`. */
@@ -75,8 +76,8 @@ class FakePage {
         queueMicrotask(() => (this.options.atPause ?? ((page) => page.run.answer!(true)))(this));
       },
       open: (key, previousKey) => this.events.push(previousKey ? `open ${key} after ${previousKey}` : `open ${key}`),
-      resolve: async (key, tool) => {
-        this.toolsOpened.push(tool.name);
+      resolve: async (key, merger) => {
+        this.toolsOpened.push(mergerName(merger));
         const outcome = (this.inTool[key.slice(1)] ?? (() => saved))(this);
         if (outcome?.kind === 'resolved') this.decide(key.slice(1), this.options.smartMerged?.includes(key.slice(1)) ? 'UnityYAMLMerge' : undefined);
         return outcome;
@@ -197,7 +198,7 @@ describe('resolving one by one', () => {
 
 describe('runEndMessage', () => {
   it('keeps the sentence a tool already ended', () => {
-    const plan = planRun([conflict('a.ts')], () => fakeMerge);
+    const plan = planRun([conflict('a.ts')], () => ({ kind: 'tool', tool: fakeMerge }));
     const failure = { outcome: { kind: 'failed', message: 'Not found!' } as MergeToolOutcome, key: '/a.ts' };
     expect(runEndMessage(plan, { stopped: false, failure }, []).detail).toBe('Not found! Stopped resolving one by one.');
   });

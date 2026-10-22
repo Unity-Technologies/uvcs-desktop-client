@@ -19,19 +19,24 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   program with an arguments template (`{base}` `{yours}` `{incoming}` `{result}` and their `…Name`s;
   `CustomMergeToolDialog`, `addCustomMergeTool`, which picks it nowhere: the caller opens the file in it or picks it for
   a row). Settings keep the user's tools and per-tool arguments ("How <tool> opens…", `MergeToolArgsDialog`).
-- **Which tool opens which file** (Settings › Merge, `MergeToolsPane`; `mergeToolFor`, `useMergeToolFor`): rows tried
-  top to bottom, the first that matches wins. First Unity assets (by their content, `isUnityAsset`: Smart Merge goes
-  first, below), opening where every other file would ("Same as others", `unityMergeTool: 'others'`) or in a tool
-  picked for them; then the user's rows (`mergeToolRules`), each a list of file patterns and a tool; last, every other
-  file (`mergeTool`: `auto`, the UVCS one, else the first found; a pick no longer on offer falls back to it). Patterns
-  (`lib/filePatterns`) are extensions (`.cs`), names with `*` and `?` (`*.prefab`), or paths from the workspace's root
-  with `**` crossing folders (`Assets/Data/**`; one holding a space goes in double quotes, `"Assets/Third Party/**"`), matched in any case on Windows and macOS and exactly on Linux
-  (`fileNamesIgnoreCase`). A row whose tool isn't found here is passed by, and says so ("Not found on this computer",
-  named by `knownNames`); removing a tool of the user's drops its rows. With nothing imported, the rows are C#, Visual
-  Basic and Java in Semantic Merge (`DEFAULT_MERGE_TOOL_RULES`), as the official client sends them. Each row's tool is a
-  compact drop-down (`AppPicker` with `compact`, `appPickerEntries`), its file types typed in place, its "…" menu moving
-  it up or down or removing it (`ruleMenuEntries`); "Add a file type" adds a row in every other file's tool. Binary
-  files have no rows: no tool opens them.
+- **What opens which file** (Settings › Merge, `MergeToolsPane`; `mergeToolFor`, `useFileMergers`): rows tried top to
+  bottom, the first that matches wins (`mergeToolRules`), each a list of file patterns and a tool or UnityYAMLMerge;
+  last, every other file (`mergeTool`: `auto`, the UVCS one, else the first found; a pick no longer on offer falls back
+  to it). A file opens in a `Merger`: a tool, or UnityYAMLMerge with a fallback tool for what it can't merge
+  (`fallbackToolId`, Automatic: every other file's tool). A row of UnityYAMLMerge names the newest editor's
+  (`unityyamlmerge`) or one editor's (`unityyamlmerge:<version>`); on a file UnityYAMLMerge wouldn't run on (not Unity
+  YAML on both sides, or decided by the user already: `smartMergeVersions`) the row opens its fallback straight away,
+  so "Resolve in…" names what really opens. Patterns (`lib/filePatterns`) are extensions (`.cs`), names with `*` and
+  `?` (`*.prefab`), or paths from the workspace's root with `**` crossing folders (`Assets/Data/**`; one holding a space
+  goes in double quotes, `"Assets/Third Party/**"`), matched in any case on Windows and macOS and exactly on Linux
+  (`fileNamesIgnoreCase`). A row whose tool, or editor, isn't found here is passed by, and says so ("Not found on this
+  computer", named by `knownNames`); removing a tool of the user's drops its rows and makes it no row's fallback. With
+  nothing imported, the rows are Unity assets in UnityYAMLMerge (`UNITY_YAML_MERGE_RULE`, `UNITY_YAML_PATTERNS`: scenes,
+  prefabs and the assets Unity saves as YAML, not `.meta` files, which have no Unity YAML header) and C#, Visual Basic
+  and Java in Semantic Merge (`SEMANTIC_MERGE_RULE`), as the official client sends them. Each row's tool is a compact
+  drop-down (`AppPicker` with `compact`, `appPickerEntries`), its file types typed in place, its "…" menu moving it up
+  or down or removing it (`ruleMenuEntries`); "Add a file type" adds a row in every other file's tool. Binary files have
+  no rows: no tool opens them.
 - **Imported once** from the official client (client.conf's `<MergeTools>`, `readLegacyMergeTools`,
   `legacyMergeToolSettings`; ARCHITECTURE.md "Own config"), on the first run that has rows of this shape (`legacyMergeToolsImported`,
   apart from the recent branches' import, so a user who ran the app before gets it too; a leftover `unityMergeTool` or
@@ -61,20 +66,22 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   saved text becomes the file's decision (markers left count as conflicts left). Text files only: no tool really
   merges binaries, so a binary keeps one of its versions, picked in the app (`waitsForTool`). "Stop waiting" kills the tool process and takes what was saved so far, as soon as it exits: a launcher's
   app still holding its output doesn't keep the file open.
-- **Smart Merge** (Unity's merge of scenes, prefabs and other assets by their objects: the `UnityYAMLMerge` program in
-  every Unity Editor, which the app names everywhere it shows, `UNITY_YAML_MERGE_NAME`, as the Unity Manual names the tool) isn't a tool to pick: "Resolve in…" (and each file of a "Resolve N conflicts" run) runs it
-  first on a Unity asset the user decided nothing for yet (`smartMergeVersions`, from `decidedByUser`), and the file's
-  tool opens only when it doesn't merge the file. Two calls, so each phase shows what really happens:
-  `mergeTools.smartMerge` with the versions the page already read (no `cm` command), while the file reads "Merging…"
-  and its banner "Merging <file> with UnityYAMLMerge…" with Stop (stopping it opens nothing, even a stop that reaches main as Smart Merge ends on its own: the renderer remembers it, `stopMergeToolSession`, `wasStopped`); then, if it didn't merge,
-  `mergeTools.resolve` opens the tool as for any file. Without a Unity Editor (`MergeToolList.smartMerge` null) the
-  tool opens straight away: nothing shows Smart Merge at work. While Smart Merge (or a tool) has the file, its menu
+- **UnityYAMLMerge** (Unity's Smart Merge, by the Unity Manual's name for the tool, `UNITY_YAML_MERGE_NAME`: it merges
+  scenes, prefabs and other assets by their objects) runs only for a file whose row picks it, and only on Unity YAML the
+  user decided nothing for yet (`smartMergeVersions`, from `decidedByUser`): its fallback opens only when it doesn't
+  merge the file, and a toast says so ("UnityYAMLMerge couldn't merge Hero.prefab", `fallbackOpensMessage`; a run's
+  strip names the fallback once it has the file, `runStripWords`). Two calls, so each phase shows what really happens:
+  `mergeTools.smartMerge` with the versions the page already read and the editor the row names (no `cm` command), while
+  the file reads "Merging…" and its banner "Merging <file> with UnityYAMLMerge…" with Stop (stopping it opens nothing,
+  even a stop that reaches main as it ends on its own: the renderer remembers it, `stopMergeToolSession`,
+  `wasStopped`); then, if it didn't merge, `mergeTools.resolve` opens the fallback as any tool. With no fallback found,
+  the file fails to open and says why. While UnityYAMLMerge (or a tool) has the file, its menu
   offers no Keep or Start over, as its toolbar offers none (`conflictMenuEntries`); and should the user decide the file
-  meanwhile (from another file's selection), that decision stands: Smart Merge's merge is dropped and nothing opens
+  meanwhile (from another file's selection), that decision stands: UnityYAMLMerge's merge is dropped and nothing opens
   (`ResolveOptions.stillUndecided`). A file goes to it when its two sides start with Unity's YAML
   header (`isUnityYaml`), whatever its extension: a `.meta` file has none and goes to the tool. A base revision
   that was an empty file (checked in empty, then filled differently on each side) becomes an asset with no objects
-  (`EMPTY_UNITY_YAML`), as Smart Merge refuses an empty file; a file added on both sides never gets here, `cm` makes
+  (`EMPTY_UNITY_YAML`), as UnityYAMLMerge refuses an empty file; a file added on both sides never gets here, `cm` makes
   it a directory conflict. It runs with
   no window (`windowsHide` on Windows, `toolSpawnOptions`) and no fallback tool (`SMART_MERGE_ARGS`: `merge -h --force
   --fallback none`; `--force` lets it take `.mat`, `.asset`… beyond the `.unity`, `.prefab` and `.meta` it knows by
@@ -82,10 +89,10 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   left) it still writes a result holding the base's values where the sides disagree, so that result is dropped; 1
   means it couldn't read or merge the file. A failure other than conflicts left is warned in the console (`[smart
   merge]`, with the end of its stderr). Its merge reads "Merged by UnityYAMLMerge"; "Resolve in…" on it opens the tool on
-  Smart Merge's result, and Start over makes the file undecided again, so the next "Resolve in…" lets Smart Merge try
+  UnityYAMLMerge's result, and Start over makes the file undecided again, so the next "Resolve in…" lets UnityYAMLMerge try
   again. Its size ceiling is the page's: a version over `MAX_TEXT_BYTES` (10 MB) is a binary to the page, which no tool
-  opens, so Smart Merge isn't tried on it either. In practice it's lower: a text conflict of about 3.5 MB overflows the
-  stack of the page's own line merge (`diff3Merge`, as it loads the file), before Smart Merge could be asked. It comes
+  opens, so UnityYAMLMerge isn't tried on it either. In practice it's lower: a text conflict of about 3.5 MB overflows the
+  stack of the page's own line merge (`diff3Merge`, as it loads the file), before UnityYAMLMerge could be asked. It comes
   from every Unity Editor installed, the newest release first
   (`findUnityYamlMerges`, `compareUnityVersions`: releases before alphas and betas; `UnityYamlMergeTool`, its id
   `unityyamlmerge:<version>`, and `unityyamlmerge` for the newest one, `unityYamlMergeOf`), found as Unity Hub keeps editors
@@ -115,7 +122,7 @@ The list (`MergeItemList`) is every list of changed files (ARCHITECTURE.md "List
 `mergeItemTones`), List or Tree, and several items selected at once, whose menu keeps yours or the incoming version of
 every conflicting file among them, or the base when every one of them has one (`keepVersionEntries`). One item's menu is any changed file's (ARCHITECTURE.md "One
 menu": history, open or save the incoming version, Copy) with what a merge adds (`mergeItemMenu`): a conflicting file, the same
-entries as in Incoming (`conflictMenuEntries`), "Resolve in <tool>" (the file's own, `useMergeToolFor`; disabled while files resolve one by one) and "Resolve with ▸" every other tool, opening it there this once (none while files resolve one by one), Keep yours,
+entries as in Incoming (`conflictMenuEntries`), "Resolve in <tool>" (what the file opens in, `useFileMergers`, UnityYAMLMerge included; disabled while files resolve one by one) and "Resolve with ▸" every other way, opening it there this once (`otherMergers`: every other tool, and UnityYAMLMerge on Unity YAML; none while files resolve one by one), Keep yours,
 incoming or base (where it has one), Start over once decided, annotate at the incoming revision `cm` names for it, and "Open version ▸" Yours (the
 workspace file; the destination's version merging into a server branch), Incoming and Base (`openableVersions`): a
 text in the user's editor, a binary with its default app (`oneClickApp`: the editors are for text; a known binary is one before its versions
@@ -144,17 +151,17 @@ next to their branch. Copy stays short: labels name things, tooltips define them
 
 While two files or more wait for a decision a tool can open, the header's primary action is "Resolve N conflicts in
 <tool>", or "Resolve N conflicts one by one" when they open in different tools (`ResolveRunControl`, ⇧⌘↩, `runLabel`,
-`runTool`): the files open one after the other, each in its own tool (`planRun`, `RunStep`), once the one before is
+`runMerger`): the files open one after the other, each in what it opens in (`planRun`, `RunStep`), once the one before is
 saved and closed (`useResolveRun`, `resolveRun`). Its caret runs every file in one other tool, this once ("All in
 Meld · 5 conflicts", `runPlans`, `allInLabel`), and holds whether a file closed unsaved asks before the next. The
 carets never change the settings (`toolChoiceEntries`: picking a tool opens in it at once); Settings › Merge says
 which tool each file opens in. Files the tool can't open (binaries, types it isn't for) are left
 out and named in its tooltip. While it runs, a strip takes the status's place: a step per file, "Resolving 2 of 5 ·
-app.ts in <tool>", Skip this file (closes it there) and Stop (Esc, confirmed while the tool has a file); while Smart Merge merges the file first, "with Smart Merge", Skip and Stop stop it, and Esc needs no confirmation (`runStripWords`). The list marks
+app.ts in <tool>", Skip this file (closes it there) and Stop (Esc, confirmed while the tool has a file); while UnityYAMLMerge merges the file, "with UnityYAMLMerge", Skip and Stop stop it, and Esc needs no confirmation (`runStripWords`). The list marks
 the file open and the selection follows it unless the user looks elsewhere, which never stops the run; files decided in
 the app meanwhile are skipped, a file closed unsaved keeps "Needs your decision" and pauses the strip ("closed without
 saving", Next file / Stop) unless the setting says to go on, and a tool that can't start stops the run with its reason.
-A toast sums it up ("Resolved 4 of 5 in <tool>", "1 still needs you"; what Smart Merge merged apart, "Resolved all 3 conflicts: 2 with Smart Merge, 1 in <tool>") and focus goes to the first file still waiting,
+A toast sums it up ("Resolved 4 of 5 in <tool>", "1 still needs you"; what UnityYAMLMerge merged apart, "Resolved all 3 conflicts: 2 with UnityYAMLMerge, 1 in <tool>") and focus goes to the first file still waiting,
 or to Complete merge. With one file left, its own toolbar is the way.
 
 A conflicting file is read-only. Its toolbar holds the file, its status and the ways out: "Resolve in <tool>"

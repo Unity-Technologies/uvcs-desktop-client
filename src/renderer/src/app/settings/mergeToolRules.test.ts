@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MergeToolRule } from '@shared/domain/mergeTools';
 import { SEPARATOR, type Action } from '../../lib/actions';
-import { addRule, AUTOMATIC_MERGE_TOOL_CHOICE, changedPatterns, changeRule, howItOpensEntries, moveRule, newRuleToolId, removeRule, ruleMenuEntries, ruleName, SAME_AS_OTHER_FILES_CHOICE, toolInUse, unityRowNote, unityRowTip } from './mergeToolRules';
+import { addRule, AUTOMATIC_MERGE_TOOL_CHOICE, changedPatterns, changeRule, howItOpensEntries, moveRule, newRuleToolId, removeRule, ruleMenuEntries, ruleName, toolInUse } from './mergeToolRules';
 import type { MergeTool, MergeToolList } from '@shared/domain/mergeTools';
 
 const rule = (id: string): MergeToolRule => ({ id, patterns: [`.${id}`], toolId: 'uvcs' });
@@ -43,17 +43,6 @@ describe('the rules of Settings › Merge', () => {
   });
 });
 
-describe('the Unity row', () => {
-  it('says Smart Merge goes first, from which Unity Editor, or that none was found', () => {
-    const smartMerge = { id: 'unityyamlmerge:6000.5.0f1', executable: '/u/UnityYAMLMerge', editorVersion: '6000.5.0f1' };
-    expect(unityRowNote(smartMerge)).toBe('Smart Merge first');
-    expect(unityRowTip(smartMerge)).toBe('Smart Merge (Unity 6000.5.0f1) merges them by their objects, without opening anything. The tool opens only what it can’t merge.');
-    expect(unityRowTip({ ...smartMerge, editorVersion: '' })).toContain('Smart Merge (Unity) merges');
-    expect(unityRowNote(null)).toBe('No Unity Editor for Smart Merge');
-    expect(unityRowTip(null)).toBe('Smart Merge, in every Unity Editor, merges them by their objects. The tool opens only what it can’t merge.');
-  });
-});
-
 describe('toolInUse', () => {
   const tool = (id: string): MergeTool => ({ id, name: id, origin: 'known', executable: id, args: [], defaultArgs: [], canBringToFront: false });
   const list: MergeToolList = { tools: [tool('uvcs'), tool('meld')], preferredId: 'uvcs', knownNames: {}, unityYamlMerges: [] };
@@ -61,12 +50,10 @@ describe('toolInUse', () => {
   it('is the tool picked, or every other file’s for a choice that picks for the user', () => {
     expect(toolInUse(list, 'meld', null)?.id).toBe('meld');
     expect(toolInUse(list, 'auto', AUTOMATIC_MERGE_TOOL_CHOICE)?.id).toBe('uvcs');
-    expect(toolInUse(list, 'others', SAME_AS_OTHER_FILES_CHOICE)?.id).toBe('uvcs');
   });
 
   it('is none while the tool a row picked isn’t found here, but where Automatic stands for it', () => {
     expect(toolInUse(list, 'semantic', null)).toBeUndefined();
-    expect(toolInUse(list, 'kdiff3', SAME_AS_OTHER_FILES_CHOICE)).toBeUndefined();
     expect(toolInUse(list, 'kdiff3', AUTOMATIC_MERGE_TOOL_CHOICE)?.id).toBe('uvcs');
   });
 

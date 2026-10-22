@@ -1,4 +1,5 @@
-import { UNITY_YAML_MERGE_NAME, type MergeTool, type MergeToolOutcome } from '@shared/domain/mergeTools';
+import { UNITY_YAML_MERGE_NAME, type MergeToolOutcome } from '@shared/domain/mergeTools';
+import { mergerName, type Merger } from './mergeToolFor';
 import { fileNameOf } from '../../../lib/text';
 import type { FileConflictState } from '../resolve/useFileConflicts';
 import { toolOutcomeMessage, type OutcomeMessage } from './mergeToolOutcome';
@@ -20,7 +21,7 @@ export interface RunSteps {
   /** The file opens in the tool: `previousKey` is the one before it, if any, to follow the run with the selection. */
   open: (key: string, previousKey: string | undefined) => void;
   /** Opens the file in the tool and waits for it to close; null when it couldn't be opened here (the page went away). */
-  resolve: (key: string, tool: MergeTool) => Promise<MergeToolOutcome | null>;
+  resolve: (key: string, merger: Merger) => Promise<MergeToolOutcome | null>;
   /** Whether a file closed unsaved asks before the next one (the setting), rather than going on. */
   asksWhenClosedUnsaved: () => boolean;
 }
@@ -39,15 +40,15 @@ export interface RunEnd {
 export async function resolveOneByOne(plan: RunPlan, run: RunControl, steps: RunSteps): Promise<RunEnd> {
   const total = plan.steps.length;
   let previousKey: string | undefined;
-  for (const [position, { key, tool }] of plan.steps.entries()) {
+  for (const [position, { key, merger }] of plan.steps.entries()) {
     if (run.stopped) break;
     if (!steps.stillWaits(key)) continue;
-    const progress: RunProgress = { toolName: tool.name, total, position, currentKey: key, paused: false };
+    const progress: RunProgress = { toolName: mergerName(merger), total, position, currentKey: key, paused: false };
     steps.show(progress);
     steps.open(key, previousKey);
     previousKey = key;
 
-    const outcome = await steps.resolve(key, tool);
+    const outcome = await steps.resolve(key, merger);
     if (run.stopped || !outcome) break;
     if (outcome.kind === 'failed') return { stopped: run.stopped, failure: { outcome, key } };
     // Closed by the user without saving (not skipped from here): maybe they meant to stop, so ask before the next.
@@ -76,7 +77,8 @@ export function runEndMessage(plan: RunPlan, end: RunEnd, states: readonly FileC
   const stateOf = (key: string): FileConflictState | undefined => states.find((state) => state.file.key === key);
   if (end.failure) {
     const { outcome, key } = end.failure;
-    const toolName = plan.steps.find((step) => step.key === key)?.tool.name ?? '';
+    const step = plan.steps.find((candidate) => candidate.key === key);
+    const toolName = step ? mergerName(step.merger) : '';
     const message = toolOutcomeMessage(outcome, toolName, fileNameOf(stateOf(key)?.file.path ?? key));
     const reason = message.detail && !/[.!?]$/.test(message.detail) ? `${message.detail}.` : message.detail;
     return { kind: 'error', title: message.title, detail: [reason, 'Stopped resolving one by one.'].filter(Boolean).join(' ') };

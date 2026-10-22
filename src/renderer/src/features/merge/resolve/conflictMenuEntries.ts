@@ -1,9 +1,9 @@
-import type { MergeTool } from '@shared/domain/mergeTools';
 import { currentExternalApps } from '../../../components/externalApps/externalApps';
 import { menuAction, menuSubmenu } from '../../../components/menuWords';
 import { withoutAction, type Action, type MenuEntry } from '../../../lib/actions';
-import type { ToolForFile } from '../mergeTools/resolveRun';
-import { otherTools, toolChoiceEntries } from '../mergeTools/toolChoices';
+import { mergerName, type Merger } from '../mergeTools/mergeToolFor';
+import type { MergerForFile } from '../mergeTools/resolveRun';
+import { mergerChoices, toolChoiceEntries } from '../mergeTools/toolChoices';
 import type { GroupedEntry } from '../../../lib/menuGroups';
 import { oneClickApp, openableVersions, opensAsBinary, type VersionOpeningContext } from './conflictVersionOpening';
 import type { FileConflictDecision } from './fileConflictDecision';
@@ -13,15 +13,15 @@ import type { FileConflictState } from './useFileConflicts';
 
 /** What the menu of conflicting files needs, wherever they are resolved: the merge page and Incoming. */
 export interface ConflictMenuContext extends VersionOpeningContext {
-  /** The tool each file opens in (`useMergeToolFor`); none when no merge tool was found. */
-  toolFor: ToolForFile;
-  /** Every merge tool found, for "Resolve with ▸". */
-  tools: MergeTool[];
+  /** What each file opens in (`useFileMergers`); none when no merge tool was found. */
+  mergerFor: MergerForFile;
+  /** Every other way to open a file this once, for "Resolve with ▸" (`otherMergers`). */
+  othersFor: (state: FileConflictState) => Merger[];
   /** Files resolve one by one in a tool: no other opens meanwhile. */
   running: boolean;
   decide: (key: string, decision: FileConflictDecision) => void;
   reset: (key: string) => void;
-  resolveIn: (key: string, tool: MergeTool) => void;
+  resolveIn: (key: string, merger: Merger) => void;
 }
 
 /**
@@ -56,26 +56,23 @@ export function withConflictOpening(menu: MenuEntry[], selected: FileConflictSta
 }
 
 /**
- * "Resolve in <its tool>" and "Resolve with ▸" the other tools (a text file, a tool found, none resolving one by one),
+ * "Resolve in <what it opens in>" and "Resolve with ▸" the other ways (a text file, a tool found, none resolving one by one),
  * and "Open version ▸" with each side's version and the base.
  */
 function singleConflictEntries(state: FileConflictState, context: ConflictMenuContext): GroupedEntry[] {
-  const tool = context.toolFor(state);
-  const opens = tool && !state.isBinary && !state.openTool;
+  const merger = context.mergerFor(state);
+  const opens = merger && !state.isBinary && !state.openTool;
   const resolveIn = opens
     ? [
-        menuAction('resolveIn', () => context.resolveIn(state.file.key, tool), {
-          label: `Resolve in ${tool.name}`,
+        menuAction('resolveIn', () => context.resolveIn(state.file.key, merger), {
+          label: `Resolve in ${mergerName(merger)}`,
           disabled: context.running,
           disabledReason: context.running ? 'Files are resolving one by one' : undefined,
         }),
       ]
     : [];
-  const others = otherTools(context.tools, tool);
-  const resolveWith =
-    opens && !context.running && others.length > 0
-      ? [menuSubmenu('resolveWith', toolChoiceEntries(others.map((other) => ({ tool: other, label: other.name })), (other) => context.resolveIn(state.file.key, other)))]
-      : [];
+  const others = opens && !context.running ? context.othersFor(state) : [];
+  const resolveWith = others.length > 0 ? [menuSubmenu('resolveWith', toolChoiceEntries(mergerChoices(others), (other) => context.resolveIn(state.file.key, other)))] : [];
   return [...resolveIn, ...resolveWith, menuSubmenu('openVersion', versionEntries(state, context))];
 }
 

@@ -1,5 +1,4 @@
 import { Check, GalleryVerticalEnd, Pause, Settings, SkipForward } from 'lucide-react';
-import { UNITY_YAML_MERGE_NAME } from '@shared/domain/mergeTools';
 import { openSettingsDialogAt } from '../../../app/settings/SettingsDialog';
 import { saveSettings, useSettings } from '../../../app/settings/useSettings';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../../lib/actions';
@@ -15,7 +14,7 @@ import type { FileConflictState } from '../resolve/useFileConflicts';
 import { allInChoices, leftOutNote, runLabel, runPlans, runPositionText, runStripWords, runTip, type RunPlan, type RunProgress } from './resolveRun';
 import type { ResolveRun } from './useResolveRun';
 import { toolChoiceEntries } from './toolChoices';
-import { useMergeToolFor, useMergeTools } from './useMergeTools';
+import { useFileMergers, useMergeTools } from './useMergeTools';
 import styles from './ResolveRunControl.module.css';
 
 /** Resolving one by one is offered from two files waiting on: for one, the file's own "Resolve in…" says it all. */
@@ -27,9 +26,9 @@ const MIN_FILES = 2;
  */
 export function useRunOffer(states: FileConflictState[], run: ResolveRun): RunPlan[] {
   const { tools } = useMergeTools();
-  const toolFor = useMergeToolFor();
+  const { mergerFor } = useFileMergers();
   if (run.progress || states.some((state) => state.openTool)) return [];
-  const plans = runPlans(states, tools, toolFor);
+  const plans = runPlans(states, tools, mergerFor);
   return plans[0] && plans[0].steps.length >= MIN_FILES ? plans : [];
 }
 
@@ -57,7 +56,7 @@ function RunButton({ plans, run }: { plans: RunPlan[]; run: ResolveRun }) {
   const offered = plans[0]!;
   // The caret starts the run with every file in one tool, this once; the button, each file in its own.
   const menu: MenuEntry[] = tidyMenu([
-    ...toolChoiceEntries(allInChoices(plans), (tool) => run.start(tool)),
+    ...toolChoiceEntries(allInChoices(plans), (merger) => run.start(merger)),
     SEPARATOR,
     {
       id: 'askWhenUnsaved',
@@ -91,7 +90,7 @@ function RunStrip({ states, run, progress }: { states: FileConflictState[]; run:
   const name = current ? fileNameOf(current.file.path) : '';
   const toolOpen = Boolean(current?.openTool);
   // Smart Merge merges a Unity asset before the tool would open on it.
-  const words = runStripWords(progress.toolName, current?.openTool?.toolName === UNITY_YAML_MERGE_NAME);
+  const words = runStripWords(progress.toolName, current?.openTool?.toolName);
 
   // Esc stops, asking first while the tool has a file: stopping closes it. Smart Merge has nothing to lose.
   const stopFromKeyboard = async (): Promise<void> => {
@@ -99,7 +98,7 @@ function RunStrip({ states, run, progress }: { states: FileConflictState[]; run:
     if (toolOpen && words.confirmsStop) {
       const sure = await confirm({
         title: 'Stop resolving one by one?',
-        message: `${progress.toolName} closes ${name}; what you saved there so far is kept.`,
+        message: `${words.toolName} closes ${name}; what you saved there so far is kept.`,
         confirmLabel: 'Stop',
       });
       if (!sure) return;

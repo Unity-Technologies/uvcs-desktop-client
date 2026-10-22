@@ -173,7 +173,7 @@ describe('importLegacySettings', () => {
       for (const files of [{}, { 'client.conf': '<ClientConfigData />' }, { 'client.conf': '\u0000<<<' }] as Record<string, string>[]) {
         const { legacyFolder, openSettings } = setUp(files);
         importLegacySettings(openSettings(), legacyFolder);
-        expect(openSettings().get()).toMatchObject({ legacyMergeToolsImported: true, mergeTool: 'auto', mergeToolRules: DEFAULT_SETTINGS.mergeToolRules, unityMergeTool: 'others' });
+        expect(openSettings().get()).toMatchObject({ legacyMergeToolsImported: true, mergeTool: 'auto', mergeToolRules: DEFAULT_SETTINGS.mergeToolRules });
       }
     });
   });

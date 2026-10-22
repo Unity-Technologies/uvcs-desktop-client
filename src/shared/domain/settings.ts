@@ -1,5 +1,5 @@
 import { AUTO_APP, type CustomEditor } from './externalApps';
-import { AUTO_MERGE_TOOL, DEFAULT_MERGE_TOOL_RULES, SAME_AS_OTHER_FILES, type CustomMergeTool, type MergeToolRule } from './mergeTools';
+import { AUTO_MERGE_TOOL, DEFAULT_MERGE_TOOL_RULES, type CustomMergeTool, type MergeToolRule } from './mergeTools';
 import { DEFAULT_PENDING_CHANGES_FILTER, type PendingChangesFilter } from './pendingChanges';
 import type { PendingChangesOnSwitch, SwitchShelveRecord } from './switchWithChanges';
 
@@ -61,8 +61,6 @@ export interface AppSettings {
   mergeTool: string;
   /** Which tool opens which files, tried in order before `mergeTool` (Settings › Merge). */
   mergeToolRules: MergeToolRule[];
-  /** Where Unity assets open when Smart Merge can't merge them: `others` (as any other file) or a tool id. */
-  unityMergeTool: string;
   /** Merge apps the user added ("Choose another app…"). */
   customMergeTools: CustomMergeTool[];
   /** The user's arguments for a merge tool, by its id, instead of its own. */
@@ -118,7 +116,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   customMergeTools: [],
   mergeToolArgs: {},
   mergeToolRules: DEFAULT_MERGE_TOOL_RULES,
-  unityMergeTool: SAME_AS_OTHER_FILES,
   askWhenMergeToolClosesUnsaved: true,
   editor: AUTO_APP,
   terminal: AUTO_APP,

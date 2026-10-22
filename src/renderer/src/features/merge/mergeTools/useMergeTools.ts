@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { useCallback } from 'react';
-import type { CustomMergeTool, MergeTool, MergeToolList } from '@shared/domain/mergeTools';
+import { useMemo } from 'react';
+import { AUTO_MERGE_TOOL, type CustomMergeTool, type MergeTool, type MergeToolList } from '@shared/domain/mergeTools';
 import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
 import { api } from '../../../api/client';
 import { queryKeys } from '../../../api/queryKeys';
@@ -9,8 +9,8 @@ import { saveSettings, useSettings } from '../../../app/settings/useSettings';
 import { fileNamesIgnoreCase } from '../../../lib/filePatterns';
 import { PLATFORM } from '../../../lib/platform';
 import type { FileConflictState } from '../resolve/useFileConflicts';
-import { mergeToolFor } from './mergeToolFor';
-import { isUnityAsset } from './smartMergeVersions';
+import { mergeToolFor, otherMergers, type FileToMerge, type Merger, type MergeToolSetup } from './mergeToolFor';
+import { smartMergeVersions } from './smartMergeVersions';
 
 const NO_TOOLS: MergeToolList = { tools: [], preferredId: null, unityYamlMerges: [], knownNames: {} };
 
@@ -28,21 +28,23 @@ export function useMergeTools(): MergeToolList {
   return data;
 }
 
-/**
- * The tool each conflicting file opens in, by Settings › Merge (`mergeToolFor`): a Unity asset's own, the first rule
- * that matches it, else every other file's. None when no tool was found.
- */
-export function useMergeToolFor(): (state: FileConflictState) => MergeTool | undefined {
-  const { tools, preferredId } = useMergeTools();
-  const { mergeToolRules, unityMergeTool } = useSettings();
-  return useCallback(
-    (state) =>
-      mergeToolFor(
-        { path: state.file.path, unityAsset: isUnityAsset(state) },
-        { tools, preferredId, rules: mergeToolRules, unityMergeTool, ignoreCase: fileNamesIgnoreCase(PLATFORM) },
-      ),
-    [tools, preferredId, mergeToolRules, unityMergeTool],
-  );
+/** How each conflicting file merges, by Settings › Merge, and the other ways to open it this once. */
+export interface FileMergers {
+  /** What the file opens in (`mergeToolFor`); none when no tool was found. */
+  mergerFor: (state: FileConflictState) => Merger | undefined;
+  /** Every other way to open it this once (`otherMergers`). */
+  othersFor: (state: FileConflictState) => Merger[];
+}
+
+export function useFileMergers(): FileMergers {
+  const { tools, preferredId, unityYamlMerges } = useMergeTools();
+  const { mergeToolRules } = useSettings();
+  return useMemo(() => {
+    const setup: MergeToolSetup = { tools, preferredId, rules: mergeToolRules, unityYamlMerges, ignoreCase: fileNamesIgnoreCase(PLATFORM) };
+    const fileOf = (state: FileConflictState): FileToMerge => ({ path: state.file.path, unityYamlMergeable: smartMergeVersions(state) !== null });
+    const mergerFor = (state: FileConflictState): Merger | undefined => mergeToolFor(fileOf(state), setup);
+    return { mergerFor, othersFor: (state) => otherMergers(fileOf(state), mergerFor(state), setup) };
+  }, [tools, preferredId, mergeToolRules, unityYamlMerges]);
 }
 
 /** Makes the tool the one every file no rule names opens in (`auto`: the UVCS merge tool, else the first found). */
@@ -62,14 +64,15 @@ export async function addCustomMergeTool(tool: Omit<CustomMergeTool, 'id'>): Pro
 
 /** Removes the user's tool; every file that opened in it opens as if it had never been picked. */
 export function removeCustomMergeTool(toolId: string): Promise<void> {
-  const { customMergeTools, mergeTool, mergeToolArgs, mergeToolRules, unityMergeTool } = currentSettings();
+  const { customMergeTools, mergeTool, mergeToolArgs, mergeToolRules } = currentSettings();
   const { [toolId]: _dropped, ...otherArgs } = mergeToolArgs;
   return saveSettings({
     customMergeTools: customMergeTools.filter((tool) => tool.id !== toolId),
     mergeToolArgs: otherArgs,
-    mergeToolRules: mergeToolRules.filter((rule) => rule.toolId !== toolId),
+    mergeToolRules: mergeToolRules
+      .filter((rule) => rule.toolId !== toolId)
+      .map((rule) => (rule.fallbackToolId === toolId ? { ...rule, fallbackToolId: AUTO_MERGE_TOOL } : rule)),
     ...(mergeTool === toolId && { mergeTool: DEFAULT_SETTINGS.mergeTool }),
-    ...(unityMergeTool === toolId && { unityMergeTool: DEFAULT_SETTINGS.unityMergeTool }),
   });
 }
 

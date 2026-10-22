@@ -65,3 +65,8 @@ export function toolVersionNames(labels: MergeLabels): { base: string; yours: st
 function lastLine(text: string): string {
   return text.split('\n').filter((line) => line.trim()).at(-1)?.trim() ?? '';
 }
+
+/** UnityYAMLMerge couldn't merge the file, and its fallback opens on it: "UnityYAMLMerge couldn't merge Hero.prefab". */
+export function fallbackOpensMessage(fileName: string, toolName: string): { title: string; detail: string } {
+  return { title: `${UNITY_YAML_MERGE_NAME} couldn't merge ${fileName}`, detail: `Opening it in ${toolName}` };
+}

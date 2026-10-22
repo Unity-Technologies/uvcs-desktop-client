@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, SlidersHorizontal, Trash2 } from 'lucide-react';
-import { AUTO_MERGE_TOOL, SAME_AS_OTHER_FILES, type MergeTool, type MergeToolList, type MergeToolRule, type UnityYamlMergeTool } from '@shared/domain/mergeTools';
+import { AUTO_MERGE_TOOL, type MergeTool, type MergeToolList, type MergeToolRule } from '@shared/domain/mergeTools';
 import { formatFilePatterns, parseFilePatterns } from '../../lib/filePatterns';
 import { SEPARATOR, type MenuEntry } from '../../lib/actions';
 import { automaticChoice, type AutomaticChoice, type PickableApp } from './appPickerChoices';
@@ -9,24 +9,6 @@ export const AUTOMATIC_MERGE_TOOL_RULE = "The UVCS merge tool when it's installe
 
 /** Every other file's tool: "Automatic", or one picked. */
 export const AUTOMATIC_MERGE_TOOL_CHOICE: AutomaticChoice = { ...automaticChoice(AUTOMATIC_MERGE_TOOL_RULE), id: AUTO_MERGE_TOOL };
-
-/** Unity assets Smart Merge can't merge: where every other file opens, or one tool picked. */
-export const SAME_AS_OTHER_FILES_CHOICE: AutomaticChoice = { id: SAME_AS_OTHER_FILES, label: 'Same as others', rule: 'The tool every other file opens in', coversMissing: false };
-
-export const UNITY_ROW_LABEL = 'Unity scenes, prefabs and assets';
-
-/** The line under the Unity row's name: Smart Merge goes first, or why it doesn't. */
-export function unityRowNote(smartMerge: UnityYamlMergeTool | null): string {
-  return smartMerge ? 'Smart Merge first' : 'No Unity Editor for Smart Merge';
-}
-
-/** The Unity row's tooltip: what Smart Merge does, from which editor, and where the tool comes in. */
-export function unityRowTip(smartMerge: UnityYamlMergeTool | null): string {
-  const tool = 'The tool opens only what it can’t merge.';
-  if (!smartMerge) return `Smart Merge, in every Unity Editor, merges them by their objects. ${tool}`;
-  const editor = smartMerge.editorVersion ? `Unity ${smartMerge.editorVersion}` : 'Unity';
-  return `Smart Merge (${editor}) merges them by their objects, without opening anything. ${tool}`;
-}
 
 /** The merge tools as a picker lists them. */
 export function pickableTools(tools: MergeTool[]): PickableApp[] {

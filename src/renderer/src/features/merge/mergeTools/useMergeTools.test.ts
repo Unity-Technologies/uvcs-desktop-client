@@ -48,14 +48,18 @@ describe('removeCustomMergeTool', () => {
       ...DEFAULT_SETTINGS,
       customMergeTools: [mine],
       mergeTool: 'custom:1',
-      unityMergeTool: 'custom:1',
       mergeToolArgs: { 'custom:1': ['{result}'], rider: ['{result}'] },
-      mergeToolRules: [{ id: 'docs', patterns: ['.md'], toolId: 'custom:1' }, kept],
+      mergeToolRules: [{ id: 'docs', patterns: ['.md'], toolId: 'custom:1' }, kept, { id: 'unity', patterns: ['.prefab'], toolId: 'unityyamlmerge', fallbackToolId: 'custom:1' }],
     });
     fakeApi.answer('settings.update', (changes: Partial<AppSettings>) => ({ ...shownSettings()!, ...changes }));
 
     await removeCustomMergeTool('custom:1');
 
-    expect(shownSettings()).toMatchObject({ customMergeTools: [], mergeTool: 'auto', unityMergeTool: 'others', mergeToolArgs: { rider: ['{result}'] }, mergeToolRules: [kept] });
+    expect(shownSettings()).toMatchObject({
+      customMergeTools: [],
+      mergeTool: 'auto',
+      mergeToolArgs: { rider: ['{result}'] },
+      mergeToolRules: [kept, { id: 'unity', patterns: ['.prefab'], toolId: 'unityyamlmerge', fallbackToolId: 'auto' }],
+    });
   });
 });
