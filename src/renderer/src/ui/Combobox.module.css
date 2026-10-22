@@ -37,7 +37,6 @@
 /* Above the dialog it opens in (`Dialog.module.css`), as wide as the field. */
 .popover {
   width: var(--radix-popover-trigger-width);
-  max-height: min(280px, var(--radix-popover-content-available-height));
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   background: var(--bg-surface-raised);
@@ -50,8 +49,10 @@
   animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
 }
 
+/* Its own height from the first frame: Radix sets the available height a frame later, and a list not yet scrollable
+   when it opens couldn't scroll to the option the field holds. */
 .list {
-  max-height: inherit;
+  max-height: min(280px, var(--radix-popover-content-available-height, 280px));
   padding: var(--space-1);
   overflow-y: auto;
 }
