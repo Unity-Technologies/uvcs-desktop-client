@@ -6,13 +6,15 @@ interface ToggleChipProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 
   pressed: boolean;
   onChange: (pressed: boolean) => void;
   icon?: ReactNode;
+  /** `small` fits a slim strip (the review strip), as `Button`'s small does. */
+  size?: 'medium' | 'small';
   children: ReactNode;
 }
 
 /** An on/off filter such as "Mine" or "Show hidden"; other attributes (a `Tooltip`'s) reach its button. */
-export function ToggleChip({ pressed, onChange, icon, children, ...rest }: ToggleChipProps) {
+export function ToggleChip({ pressed, onChange, icon, size = 'medium', children, ...rest }: ToggleChipProps) {
   return (
-    <button type="button" className={styles.chip} aria-pressed={pressed} {...rest} onClick={() => onChange(!pressed)}>
+    <button type="button" className={styles.chip} data-size={size} aria-pressed={pressed} {...rest} onClick={() => onChange(!pressed)}>
       {icon}
       {children}
     </button>

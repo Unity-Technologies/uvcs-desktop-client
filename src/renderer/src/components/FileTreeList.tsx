@@ -8,6 +8,7 @@ import { ListSkeleton } from '../ui/Skeleton';
 import type { Column } from '../ui/table/column';
 import { DataTable } from '../ui/table/DataTable';
 import { FileTreeCell } from './FileTreeCell';
+import { ListToolbar } from './ListToolbar';
 import { TreeGroupLabel } from './TreeGroupLabel';
 import styles from './FileTreeList.module.css';
 
@@ -87,8 +88,10 @@ export function FileTreeList<T, G>({
 
   return (
     <div className={styles.list}>
-      {filterBar}
-      {belowFilterBar}
+      <ListToolbar>
+        {filterBar}
+        {belowFilterBar}
+      </ListToolbar>
       {loading ? (
         <ListSkeleton rowHeight={ROW_HEIGHT} />
       ) : (

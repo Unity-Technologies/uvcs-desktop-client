@@ -30,7 +30,7 @@ export function ReviewBar({ progress, onlyUnreviewed, onOnlyUnreviewedChange, on
       </span>
       <span className={styles.meter} style={{ '--progress': `${(reviewed / total) * 100}%` } as CSSProperties} />
       {(left > 0 || onlyUnreviewed) && (
-        <ToggleChip pressed={onlyUnreviewed} onChange={onOnlyUnreviewedChange}>
+        <ToggleChip size="small" pressed={onlyUnreviewed} onChange={onOnlyUnreviewedChange}>
           Unreviewed ({left})
         </ToggleChip>
       )}

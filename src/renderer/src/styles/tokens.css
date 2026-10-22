@@ -41,6 +41,8 @@
   --caption-buttons-width: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
   --view-header-height: 48px;
   --toolbar-height: 40px;
+  /* The slim bar over a pane (`PaneToolbar`) and over a list of files (`ListToolbar`'s filter), rule included. */
+  --pane-toolbar-height: 38px;
   /* How thick the app's scrollbars are (global.css), on every OS: styled, they take room instead of overlaying. */
   --scrollbar-size: 10px;
 

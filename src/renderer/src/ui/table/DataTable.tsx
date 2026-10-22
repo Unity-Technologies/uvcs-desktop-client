@@ -209,6 +209,7 @@ export function DataTable<Row>({
       ref={tableRef}
       className={styles.table}
       data-divided={divided || undefined}
+      data-headerless={hideHeader || undefined}
       tabIndex={0}
       role="grid"
       aria-label={label}

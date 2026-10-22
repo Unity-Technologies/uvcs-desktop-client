@@ -3,7 +3,9 @@
   flex: none;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-2);
+  /* As tall as the pane's toolbar across the split, the rule `ListToolbar` draws under it included, so the two meet. */
+  height: var(--pane-toolbar-height);
+  padding: 0 var(--space-2);
 }
 
 /* The List/Tree switch, set apart from the status chips. */
