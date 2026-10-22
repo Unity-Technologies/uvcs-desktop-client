@@ -89,7 +89,7 @@ The official client's `plastic://` links open here with their scheme changed to 
 | `…/code-reviews/311/reviewchanges`, `…/conversation` | the code review |
 | `?ui=gluon` | ignored |
 | `<server>/repos/a/b/changesets/…` (a `/` in the repository's name) | the repository `a/b` |
-| `uvcs://showchangeset=cs:12@game@acme@cloud` (and `showbranch`, `diffchangeset`, `diffbranch`) | the object the spec names |
+| `uvcs://showchangeset=<spec>` (and `showbranch`, `diffchangeset`, `diffbranch`), the spec as `cm` names it with its repository (`cs:12@game@acme@cloud`) | the object the spec names |
 
 The command palette takes a `plastic://` link as it is too, and the official client's web page around one
 (`https://cloud.unity.com/…/desktop?url=plastic://…`), as people paste what they were sent.

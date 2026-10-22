@@ -15,7 +15,10 @@ export const MAX_LINK_LENGTH = 8192;
 
 const OBJECT_WORDS: ReadonlySet<string> = new Set(['changesets', 'branches', 'labels', 'shelves', 'shelvesets', 'code-reviews', 'merge-requests']);
 
-/** The older links' way of naming a spec (`plastic://showchangeset=cs:12@game@acme@cloud`), and what each opens. */
+/**
+ * The older links' way of naming a spec (`plastic://showchangeset=<spec>`, the spec with its repository:
+ * `cs:12@game@acme@cloud`), and what each opens.
+ */
 const LEGACY_SPEC_LINK = /^(?:show|diff)(?:changeset|branch)=(.+)$/i;
 
 /**
