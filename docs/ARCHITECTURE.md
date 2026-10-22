@@ -28,6 +28,7 @@ you touch:
 | `features/locks.md`                     | Lock rules: where they are edited, and why not in the app                      |
 | `features/permissions.md`               | Permissions: the ACL model, `cm showacl`/`cm acl` quirks, the dialog, where it's reachable |
 | `features/page-windows.md`              | A page (a diff, a history, a review) in a new window: where it's offered, how it belongs to its workspace window, Follow selection |
+| `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 
 ## How a request flows
 
@@ -884,8 +885,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   Branch Explorer". One exception: the palette's code reviews of a branch have no "Switch to this branch", as its
   searches read reviews without branch names (`listSummaries`; naming them would read every branch,
   `BranchNamesCache`), while changeset and shelve reviews come named (`CodeReviewSummary.target`) and keep it. "Copy ▸" (`copySubmenu`) lists what the object has in one order (name or number, title, paths,
-  spec, full spec with `@repository`, comment, GUID), each with what it copies, and the toast names it ("Branch spec
-  copied"); ⌘C in a list copies its first entry (`useCopyCommand`) unless text is selected. Items that open a dialog
+  its link, spec, full spec with `@repository`, comment, GUID), each with what it copies, and the toast names it ("Branch spec
+  copied"); ⌘C in a list copies its first entry (`useCopyCommand`) unless text is selected, ⇧⌘C a link to what is in
+  front (`useCopyLinkCommand`, features/deep-links.md). Items that open a dialog
   end with "…"; submenus hold real sets of choices, the choice made checked after its label (`checked`), so the icon
   in front stays the item's own (an app's). `menuGrammar.test.ts` checks every builder and every place. A menu's
   content is in a portal, but React bubbles its events to the row its trigger sits in: `ActionDropdownMenu` keeps its

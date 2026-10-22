@@ -97,22 +97,26 @@ the workspace only gives the page a window and a repository to read.
 2. **The window that takes it** (`WorkspaceWindows.openLink`) is the focused workspace window (a page window's own
    workspace window for a page window), else the last one used, else a new one on the home screen. It comes forward
    and takes the link once (`windows.takeLink`, told by `linkRequested`).
-3. **The page reads it** (`parseLink`). A link it can't read says why in a dialog, never silently; one naming a page
-   this version doesn't know says the app may need an update.
+3. **The page reads it** (`openLink`, `parseLink`). A link it can't read says why in a dialog, never silently; one
+   naming a page this version doesn't know says the app may need an update and offers to check (`showLinkFailure`).
 4. **The workspace** (`linkDestination`, from the workspaces and their repositories the home screen reads, all local:
-   `cm workspace list`, `cm wi`):
-   - a workspace link: the workspace holding that folder (`cm getworkspacefrompath`); a folder in none says so.
+   `cm workspace list`, `cm wi`; `cm status` only for one `cm wi` names by an organization's id, and only when its
+   repository's own name is the link's):
+   - a workspace link: the workspace holding that folder (`cm getworkspacefrompath`); a folder in none says so. A
+     file named with no page shows in Changes when it has a pending change, in Files otherwise.
    - this window's workspace, when it is on the repository;
-   - else another window's, which comes forward and opens it;
+   - else another window's, the last focused first, which comes forward and opens it (`windows.openLinkIn`);
    - else the only workspace on the repository, in this window if it shows the home screen, else in a new one: the
      workspace a window shows is never left for a link;
-   - else, with several, the user picks one (`LinkWorkspacePicker`: name, folder, branch; the most recent first);
-   - else, with none, "No workspace for game yet" offers to create one (the New workspace dialog with the repository
-     filled in), then opens the link in it.
-5. **The page** (`linkPage`) opens on top of the view, so Back returns to where the user was; a file is selected and a
-   line scrolled to and marked. An object that doesn't exist or can't be read says so in the page, as any page does.
+   - else, with several, the user picks one (`pickLinkWorkspace`: name, branch, folder; the most recent first);
+   - else, with none, "No workspace on game yet" offers to create one (`offerNewWorkspace`, then the New workspace
+     dialog with the repository filled in, on the server as the user's profiles name it), then opens the link in it.
+5. **The page** (`linkNavigation`) opens on top of the view, so Back returns to where the user was; a file is selected
+   and its lines scrolled to and selected. A label's diff, and browsing a branch or the repository, first read the
+   label's changeset or the branch's head (`linkLookup`: `labels.get`, `branches.get`, a light `cm find`); one that
+   isn't there says so. An object that doesn't exist or can't be read says so in the page, as any page does.
 
-Opening a link runs no `cm` command of its own beyond those local reads: the page reads what it always reads.
+Opening a link runs no `cm` command of its own beyond those reads: the page reads what it always reads.
 
 ## Where links are copied
 
@@ -124,14 +128,18 @@ badges.
   code reviews, and a repository on the home screen. A file's menu in a diff, a review, a history or Browse
   repository has it too: the change to that file there, or the file as it was.
 - **Copy link** on a diff's and a review's header (`CopyLinkButton`): the link to what the page shows, as a
-  browser's address bar is, the file selected and the lines selected included ("Copy link to line 42 of Player.cs").
-- **⇧⌘C (Ctrl+Shift+C) and the palette's "Copy link"** copy the same for whatever is in front: the page, else the
-  selected object (`useCopyLinkCommand`).
-- **After a check-in**, its "Copy link" copies the changeset's link.
+  browser's address bar is, the file selected and the lines selected included ("Copy link to line 42 of Player.cs",
+  `copyLinkLabel`).
+- **⇧⌘C (Ctrl+Shift+C) and the palette's "Copy link"** copy a link to whatever is in front (`useCopyLinkCommand`): the
+  page (`pageLinkTarget`), else the object selected in the view (its Copy ▸ Link, offered by `useCopyCommand`), else
+  the view itself.
+- **After a check-in or an update**, its "Copy link" copies the changeset's link, or the range's (`successLinkObject`).
 - Nothing local is ever copied as a link: Changes and the Files view offer none, and the app writes no workspace link.
 
-The palette's **Open link** (and pasting a link into the palette) opens any link: `uvcs://`, `plastic://`, or a spec
-naming its repository (`cs:4207@game@acme@cloud`).
+Pasting a link into the palette offers to open it, saying what it opens (`linkGroupIn`, `linkDescription`), and
+File ▸ Open Link… (the palette's "Open link…") asks for one, the clipboard's already in the field (`askAndOpenLink`).
+Both take a `uvcs://` or `plastic://` link, the web page around one, or a spec naming its repository
+(`cs:4207@game@acme@cloud`, `linkInText`).
 
 ## Registering the scheme
 
