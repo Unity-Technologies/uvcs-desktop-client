@@ -58,17 +58,15 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   version; one gone stays, saying so: `editorOptions`) and "If it can't merge" (`fallbackChoices`). Its menus scroll when long (ARCHITECTURE.md "Long menus scroll"). Save stays off until a rule has a
   file type and the arguments name `{result}` (`saveProblem`); a new rule is added only on Save. No dialog opens over
   it but "Choose another app…", to add a program, which shows and saves at once, before the list holds it
-  (`withAddedTools`; `savedDraft` keeps an id picked as it is).
+  (`withAddedTools`; `savedDraft` keeps an id picked as it is). Binary files have no rows: no tool opens them.
 - **No "Automatic" in Settings › Merge.** Every other file's tool and UnityYAMLMerge's fallback store `auto` until one
   is picked (`AUTO_MERGE_TOOL`: "not picked yet"), and the pane and the dialog show the tool it resolves to, the UVCS
   merge tool, else the first found (`resolvedToolId`, `MergeToolList.preferredId`), as the merge page opens it; picking
   one stores its id, while leaving it untouched keeps `auto` (`savedDraft`). An "Automatic" choice was tried and
   dropped: it hid which tool runs and how it's launched, and its arguments couldn't be seen or edited. The Apps page
   keeps its Automatic for editors and terminals.
-Binary files have
-  no rows: no tool opens them.
 - **Imported once** from the official client (client.conf's `<MergeTools>`, `readLegacyMergeTools`,
-  `legacyMergeToolSettings`; ARCHITECTURE.md "Own config"), on the first run that has rows of this shape (`legacyMergeToolsImported`,
+  `legacyMergeToolSettings`; ARCHITECTURE.md "Own config"), on the first run that has rows (`legacyMergeToolsImported`,
   apart from the recent branches' import, so a user who ran the app before gets it too). With nothing to import, the rows are the app's own
   (`DEFAULT_MERGE_TOOL_RULES`), without Semantic Merge's for a user who picked their own tool. Each entry for some files
   becomes a row, by the official client's order; its entry for every text file becomes every other file's tool, only
