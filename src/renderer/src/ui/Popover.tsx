@@ -14,10 +14,15 @@ interface PopoverProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   onEscapeKeyDown?: (event: KeyboardEvent) => void;
+  /** Runs as it opens; prevent its default to focus something other than its first focusable element. */
+  onOpenAutoFocus?: (event: Event) => void;
 }
 
-/** A raised panel under its trigger, its content rendered only while open. Above dialogs, so one can open from them. */
-export function Popover({ trigger, children, width = 300, align = 'start', open, onOpenChange, onEscapeKeyDown }: PopoverProps) {
+/**
+ * A raised panel under its trigger, its content rendered only while open. Above dialogs, so one can open from them.
+ * New popovers use it (a filter's, `FilterPopover`, too) rather than Radix's directly, so they look and behave alike.
+ */
+export function Popover({ trigger, children, width = 300, align = 'start', open, onOpenChange, onEscapeKeyDown, onOpenAutoFocus }: PopoverProps) {
   return (
     <RadixPopover.Root open={open} onOpenChange={onOpenChange}>
       <RadixPopover.Trigger asChild>{trigger}</RadixPopover.Trigger>
@@ -29,6 +34,7 @@ export function Popover({ trigger, children, width = 300, align = 'start', open,
           sideOffset={4}
           collisionPadding={8}
           onEscapeKeyDown={onEscapeKeyDown}
+          onOpenAutoFocus={onOpenAutoFocus}
         >
           {children}
         </RadixPopover.Content>
