@@ -247,7 +247,9 @@ Pierre's line selection). Those of a committed diff (a changeset's, branch's, la
 `DiffBrowser`, which says so through `LineLinksContext`), a history's (`HistoryPage`, its diff and annotations) and a
 file browsed at a changeset are the ones "Copy link" names (`#L40-L52`, `#old-L7` on the
 older side): `selectedLinesStore` keeps the file and lines selected in the diff on screen (`selectedLinesIn`), forgotten
-as the file leaves it. A selection across both sides (unified, from a removed line to an added one) keeps its end on the
+as the file leaves it. A history offers them only annotated (`historyLineLinks`): its link names lines only there.
+What the lines selected offer (the "Copy link" chip by them, the right-click menu, the hint on line numbers) is
+deep-links.md "Where links are copied"; `useLineTools` wires them into `TextDiff` and `AnnotatedCode`. A selection across both sides (unified, from a removed line to an added one) keeps its end on the
 newer side (`linkedLinesOf`). A workspace file's diff picks lines to discard them instead (`useBlockDiscard`).
 
 A page opened on a file's lines (`focusPath` with `focusLines`, a link's) opens that file scrolled to them, a third of

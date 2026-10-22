@@ -142,12 +142,23 @@ badges.
   code reviews, and a repository on the home screen. A file's menu in a diff, a review, a history or Browse
   repository has it too: the change to that file there, or the file as it was.
 - **Copy link** in every page's header (`CopyLinkButton`: a diff, a review, a history, Browse repository; a page
-  window's top bar too): the link to what the page shows, as a
-  browser's address bar is, the file selected and the lines selected included ("Copy link to line 42 of Player.cs",
-  `copyLinkLabel`).
-- **⇧⌘C (Ctrl+Shift+C) and the palette's "Copy link"** copy a link to whatever is in front (`useCopyLinkCommand`): the
-  page (`pageLinkTarget`), else the object selected in the view (its Copy ▸ Link, offered by `useCopyCommand`), else
-  the view itself.
+  window's top bar too): the link to what the page is about, never the file or lines it shows (`pageObjectTarget`): a
+  diff's changeset, branch, label, shelve or range, a review, a history's item at the revision shown, a browsed
+  changeset at the item shown ("Copy link to shelve 2", "… to history of Player.cs": `objectLinkLabel`).
+- **The lines selected**, in a committed diff, a history's annotations and a file annotated in Browse repository:
+  - a quiet **"Copy link" chip** by the first of them, at the right end of its pane, as a change's "Revert change"
+    sits (`LineLinkChip`, placed by `lineChipAnchor`); its tooltip says what it copies ("Copy link to lines 40–52 of
+    Player.cs", `copyLinkLabel`) and the ⇧⌘C that copies it too;
+  - **a right-click on code** (`lineMenu`, `useLineTools`), which first selects the line clicked when it isn't
+    selected (`rightClickSelection`): "Annotate at this line" in a diff (the newer side's, `diffEntryAnnotation`),
+    "Copy link to line 42" (⇧⌘C) and "Copy line" (its text, `linesText`). Changes keeps its own: its lines are picked
+    to discard them, and no link names a pending change.
+  - Copied from either, the toast teaches the shortcut ("⇧⌘C copies it next time", `nextTimeHint`, `copyPageLink`).
+  - Line numbers say how on hover ("Click to select · Shift+click a range", `lineNumberHint`), not while dragging.
+- **⇧⌘C (Ctrl+Shift+C) and the palette's "Copy link"** copy the most specific thing in front (`useCopyLinkCommand`,
+  `linkToCopy`): the lines selected in the page when there are some (`pageLinkTarget`, as their chip), else the page's
+  own object (`pageObjectTarget`, as its header), else the object selected in the view (its Copy ▸ Link, offered by
+  `useCopyCommand`), else the view itself.
 - **After a check-in or an update**, its "Copy link" copies the changeset's link, or the range's (`successLinkObject`).
 - Nothing local is ever copied as a link: Changes and the Files view offer none (⇧⌘C copies nothing there,
   `viewLinkTarget`), and the app writes no workspace link.
