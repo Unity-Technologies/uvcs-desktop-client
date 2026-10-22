@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { api } from '../../../api/client';
-import { serverChoiceLabel } from '../../../lib/servers';
 import { queryKeys } from '../../../api/queryKeys';
 import { Button } from '../../../ui/Button';
 import { Checkbox } from '../../../ui/Checkbox';
 import { Dialog } from '../../../ui/dialog/Dialog';
 import { openDialog } from '../../../ui/dialog/dialogStore';
-import { SelectField, TextField } from '../../../ui/TextField';
+import { ServerSelect } from '../../../components/ServerSelect';
+import { TextField } from '../../../ui/TextField';
 import { toast } from '../../../ui/toast/toastStore';
 import { queryClient } from '../../queryClient';
-import { useRepositories, useServers, useWorkspaceList } from '../../workspace/workspaceQueries';
+import { useRepositories, useWorkspaceList } from '../../workspace/workspaceQueries';
 import { useDefaultWorkspaceRoot } from '../useDefaultWorkspaceRoot';
 import { defaultWorkspacePath, isRepositoryNameTaken, suggestWorkspaceName } from '../workspaceNaming';
 import { createRepositoryWithWorkspace } from './createRepositoryWithWorkspace';
@@ -26,7 +26,6 @@ export function openCreateRepositoryDialog(options: CreateRepositoryOptions): vo
 }
 
 function CreateRepositoryDialog({ server: initialServer, onWorkspaceCreated, onClose }: CreateRepositoryOptions & { onClose: () => void }) {
-  const { data: servers } = useServers();
   const { data: workspaces } = useWorkspaceList();
   const root = useDefaultWorkspaceRoot();
 
@@ -90,13 +89,7 @@ function CreateRepositoryDialog({ server: initialServer, onWorkspaceCreated, onC
         </>
       }
     >
-      <SelectField label="Server" value={server} disabled={Boolean(created)} onChange={(event) => setServer(event.target.value)}>
-        {(servers?.map((profile) => profile.server) ?? [server]).map((serverName) => (
-          <option key={serverName} value={serverName}>
-            {serverChoiceLabel(serverName)}
-          </option>
-        ))}
-      </SelectField>
+      <ServerSelect value={server} onChange={setServer} disabled={Boolean(created)} />
       <TextField
         label="Repository name"
         value={name}
