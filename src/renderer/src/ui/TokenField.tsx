@@ -18,7 +18,7 @@ interface TokenFieldProps {
 /**
  * A field of short values as chips that wrap onto more lines: a space, comma, semicolon or Enter makes what was typed a
  * chip (double quotes keep spaces in one), pasting splits into chips, Backspace in an empty field takes the last chip
- * away, and each chip's × removes it. What each key does is `lib/tokenInput`'s.
+ * away, and each chip's × removes it (by pointer; Backspace from the keyboard). What each key does is `lib/tokenInput`'s.
  */
 export function TokenField({ tokens, onChange, label, placeholder, tip, autoFocus }: TokenFieldProps) {
   const [input, setInput] = useState('');
@@ -58,7 +58,8 @@ export function TokenField({ tokens, onChange, label, placeholder, tip, autoFocu
       {tokens.map((token, index) => (
         <span key={token} className={styles.chip}>
           <span className={styles.chipText}>{token}</span>
-          <button type="button" className={styles.remove} aria-label={`Remove ${token}`} onClick={() => onChange(withoutToken(tokens, index))}>
+          {/* Out of the Tab order: Backspace takes chips away from the keyboard, and the field's input is what Tab reaches first. */}
+          <button type="button" tabIndex={-1} className={styles.remove} aria-label={`Remove ${token}`} onClick={() => onChange(withoutToken(tokens, index))}>
             <X size={11} />
           </button>
         </span>

@@ -5,6 +5,7 @@ import {
   SEMANTIC_TOOL_ID,
   UNITY_YAML_MERGE_ID,
   UNITY_YAML_MERGE_NAME,
+  unityYamlMergeOf,
   type MergeTool,
   type MergeToolList,
   type MergeToolRule,
@@ -134,16 +135,16 @@ export function saveProblem(target: RuleTarget, draft: RuleDraft, fields: DraftF
 
 /**
  * "Opens in"'s tools, each once: the UVCS merge tool, Semantic Merge, UnityYAMLMerge (for a rule, when a Unity Editor
- * is installed: the newest one's version under it, Smart Merge in its tooltip), then the others found and the user's.
+ * is installed; Smart Merge in its tooltip), then the others found and the user's. Each shows the path of the program
+ * that runs, UnityYAMLMerge the one of the Unity Editor picked (`editorId`).
  */
-export function toolChoices(target: RuleTarget, list: MergeToolList): PickableApp[] {
+export function toolChoices(target: RuleTarget, list: MergeToolList, editorId: string): PickableApp[] {
   const tools = list.tools.map(pickable);
-  const [newest] = list.unityYamlMerges;
-  if (target.kind !== 'rule' || !newest) return tools;
+  if (target.kind !== 'rule' || list.unityYamlMerges.length === 0) return tools;
   const unityYamlMerge: PickableApp = {
     id: UNITY_YAML_MERGE_ID,
     name: UNITY_YAML_MERGE_NAME,
-    location: newest.editorVersion ? `Unity ${newest.editorVersion}` : 'Unity',
+    location: unityYamlMergeOf(list.unityYamlMerges, editorId)?.executable ?? 'Not found on this computer',
     glyph: Boxes,
     tip: "Unity's Smart Merge: it merges scenes, prefabs and other assets by their objects, without a window",
   };
@@ -156,30 +157,23 @@ export function fallbackChoices(list: MergeToolList): PickableApp[] {
   return list.tools.map(pickable);
 }
 
-/**
- * "Unity Editor"'s choices: the newest installed first (named "Newest installed", "Newest installed (6000.5.0f1)" in
- * the menu, its version under it), then each installed version (its program's path under it). One picked that isn't
- * installed anymore shows as not found (the picker's `missingName`: its version).
- */
-export function editorChoices(list: MergeToolList): PickableApp[] {
-  const [newest] = list.unityYamlMerges;
-  return [
-    {
-      id: UNITY_YAML_MERGE_ID,
-      name: 'Newest installed',
-      menuLabel: newest?.editorVersion ? `Newest installed (${newest.editorVersion})` : 'Newest installed',
-      location: newest?.editorVersion ? `Unity ${newest.editorVersion}` : 'Unity',
-      glyph: Boxes,
-    },
-    ...list.unityYamlMerges
-      .filter((merge) => merge.editorVersion)
-      .map((merge): PickableApp => ({ id: merge.id, name: merge.editorVersion, location: merge.executable, glyph: Boxes })),
-  ];
+export interface EditorOption {
+  value: string;
+  label: string;
 }
 
-/** What a pinned editor no longer installed is called: its version. */
-export function editorName(editorId: string): string {
-  return editorId.slice(UNITY_YAML_MERGE_ID.length + 1);
+/**
+ * "Unity Editor": the newest installed first ("Newest installed (6000.5.0f1)"), then each installed version; one picked
+ * that isn't installed anymore stays, saying so.
+ */
+export function editorOptions(list: MergeToolList, editorId: string): EditorOption[] {
+  const [newest] = list.unityYamlMerges;
+  const options = [
+    { value: UNITY_YAML_MERGE_ID, label: newest?.editorVersion ? `Newest installed (${newest.editorVersion})` : 'Newest installed' },
+    ...list.unityYamlMerges.filter((merge) => merge.editorVersion).map((merge) => ({ value: merge.id, label: merge.editorVersion })),
+  ];
+  if (editorId === UNITY_YAML_MERGE_ID || unityYamlMergeOf(list.unityYamlMerges, editorId)) return options;
+  return [...options, { value: editorId, label: `${editorId.slice(UNITY_YAML_MERGE_ID.length + 1)} (not found on this computer)` }];
 }
 
 function argsFieldOf(tool: MergeTool, argsText: string | null): ArgsField {
