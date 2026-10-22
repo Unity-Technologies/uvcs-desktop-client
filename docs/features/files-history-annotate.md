@@ -80,7 +80,8 @@ Its line numbers select lines for "Copy link" as a diff's do (diff.md "Lines for
 a file's lines (`focusLines`, a link's) scrolls to them and selects them (`scrollTopShowingLine`), until another
 revision is selected or the view switches (`useFocusUntilMoved`). Browse repository opened on an item (`focusPath`)
 opens its folders and selects it; on a file's lines, it shows the file annotated (its whole content, where a diff of
-its last change may fold the lines away), scrolled to them.
+its last change may fold the lines away), scrolled to them (`browseOpening`). That "Diff | Annotate" is the page's own
+(`fileViewChoice`): the Files view keeps the one the user picked.
 
 ## Moving items (cut and paste)
 
