@@ -106,6 +106,7 @@ function CreateBranchDialog({ workspacePath, origins, onFinish }: CreateBranchDi
         <OptionCards
           label="Start from"
           heading
+          layout="list"
           cards={origins.map((candidate, index) => ({
             value: String(index),
             title: candidate.card?.title ?? candidate.startingPointLabel,
