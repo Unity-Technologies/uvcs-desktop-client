@@ -149,9 +149,11 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const toggleIncluded = (toggled: ChangeRow[], include: boolean): void => setIncludedChanges(toggled.flatMap(changesUnderRow), include);
 
   // The changelist's changes checked alone, then the caret after the comment: writing or reading it is the way on.
+  // The filter clears, as a check-in takes only what it shows: every file of the changelist shows and goes in.
   const prepareChangelist = (changelist: Changelist, mode: CheckinMode): void => {
     // Rendered at once, so the summary holds the comment before the caret goes after it.
     flushSync(() => {
+      clearTextFilter();
       prepareChangelistCheckin({ workspacePath, changelist, changes: changelistChanges.get(changelist.name) ?? NO_CHANGES, changelists });
       setCheckinMode(mode);
     });
