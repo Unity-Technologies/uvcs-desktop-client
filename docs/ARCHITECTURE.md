@@ -1091,10 +1091,13 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   `cm merge` names no item types, so a path with others under it is a folder (`mergeItemTypes`). Locks are read for
   pending changes only (Files, Changes): other lists would need a `cm lock list` of their own. The Changes list renders
   its file and folder rows memoized with stable callbacks: holding ↓ over 100,000 changes re-renders none of them
-  (0.5-0.6 ms a step). What each change adds to a check-in is worked out once a read (`checkinCandidatesOf`: its
-  upload, whether a shelve takes it, the folder a private file counts in), and what each folder holds that can go in
-  once a layout (`candidatesUnderRow`): a click on a box then only asks each change whether its box is checked
-  (`checkinSelectionOf`), and nothing while every box is (`isChosen` null).
+  (0.5-0.6 ms a step). What each change adds to a check-in is worked out once a read (`checkinFactsOf`: its upload,
+  whether a shelve takes it, the folder a private file counts in), and what each folder holds that can go in once a
+  layout (`candidatesUnderRow`): a click on a box then asks each change once whether it goes in, under the check-in
+  rules (`consistentlyIncluded`, below), in one pass that adds everything up (`checkinSelectionOf`). With every box
+  checked and nothing filtered, nothing is asked (`everyCandidateIncluded`), and a folder holding every change shown
+  takes its check from the count (`checkStateOver`'s `shown`). A click costs about 20 ms for 100,000 changes, 90 ms
+  for 500,000 and 170 ms for a million (a production build on a Mac); unchecking everything at once twice that.
 - **Lists of changed files** read and work the same everywhere: Changes, every diff (changeset, branch, shelve, code
   review: `DiffEntryList`), the details panels' changed files (`ChangedFilesSection`), Incoming and the merge page.
   - **One order**: by path, folder by folder, names as people read them (`file_2` before `file_10`, case only between
