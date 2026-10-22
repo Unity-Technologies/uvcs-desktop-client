@@ -31,8 +31,9 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   goes in double quotes, `"Assets/Third Party/**"`), matched in any case on Windows and macOS and exactly on Linux
   (`fileNamesIgnoreCase`). A row whose tool, or editor, isn't found here is passed by, and says so ("Not found on this
   computer", named by `knownNames`); removing a tool of the user's drops its rows and makes it no row's fallback. With
-  nothing imported, the rows are Unity assets in UnityYAMLMerge (`UNITY_YAML_MERGE_RULE`, `UNITY_YAML_PATTERNS`: scenes,
-  prefabs and the assets Unity saves as YAML, not `.meta` files, which have no Unity YAML header) and C#, Visual Basic
+  nothing imported, the rows are Unity assets in UnityYAMLMerge (`UNITY_YAML_MERGE_RULE`, `UNITY_YAML_PATTERNS`: `.unity`,
+  `.prefab` and `.meta`, what UnityYAMLMerge supports by default per the Unity Manual's "Smart merge"; users add other
+  YAML-serialized assets, `.asset`, `.mat`, `.controller`…, to the row) and C#, Visual Basic
   and Java in Semantic Merge (`SEMANTIC_MERGE_RULE`), as the official client sends them. The pane lists the rows read-only, one line each, all 34px
   (`--merge-row-height`, a little roomier than a list's), in one grid (`MergeToolsPane`, `mergeToolRows`): a rule's
   file types in the code font, as many as the files column holds then " +N" (`fitFileTypes`, by the text's width as the
@@ -105,14 +106,16 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   the file fails to open and says why. While UnityYAMLMerge (or a tool) has the file, its menu
   offers no Keep or Start over, as its toolbar offers none (`conflictMenuEntries`); and should the user decide the file
   meanwhile (from another file's selection), that decision stands: UnityYAMLMerge's merge is dropped and nothing opens
-  (`ResolveOptions.stillUndecided`). A file goes to it when its two sides start with Unity's YAML
-  header (`isUnityYaml`), whatever its extension: a `.meta` file has none and goes to the tool. A base revision
-  that was an empty file (checked in empty, then filled differently on each side) becomes an asset with no objects
-  (`EMPTY_UNITY_YAML`), as UnityYAMLMerge refuses an empty file; a file added on both sides never gets here, `cm` makes
+  (`ResolveOptions.stillUndecided`). A file goes to it when its two sides are text and start with
+  Unity's YAML header (`isUnityYaml`), whatever its extension, or when it's a `.meta` file, by its name, which has no
+  header (`unityYamlMergeTakes`, the one test of the page and of main; in any case where the OS ignores it). A base
+  revision of Unity's YAML that was an empty file (checked in empty, then filled differently on each side) becomes an
+  asset with no objects (`EMPTY_UNITY_YAML`), as UnityYAMLMerge refuses an empty file; a file added on both sides never gets here, `cm` makes
   it a directory conflict. It runs with
-  no window (`windowsHide` on Windows, `toolSpawnOptions`) and no fallback tool (`UNITY_YAML_MERGE_ARGS`: `merge -h --force
-  --fallback none`; `--force` lets it take `.mat`, `.asset`… beyond the `.unity`, `.prefab` and `.meta` it knows by
-  name, and it refuses what isn't Unity YAML anyway). Only exit code 0 counts (`judgeSmartMerge`): on 2 (conflicts
+  no window (`windowsHide` on Windows, `toolSpawnOptions`) and no fallback tool of its own (`UNITY_YAML_MERGE_ARGS`: `merge -h
+  --force --fallback none`: `--fallback none` keeps the tools its `mergespecfile.txt` names from ever opening, the
+  rule's fallback opens instead; `--force` changes nothing for `.unity`, `.prefab` and `.meta`, and lets it merge any
+  YAML-serialized asset a user adds to the row instead of handing it back). Only exit code 0 counts (`judgeSmartMerge`): on 2 (conflicts
   left) it still writes a result holding the base's values where the sides disagree, so that result is dropped; 1
   means it couldn't read or merge the file. A failure other than conflicts left is warned in the console (`[smart
   merge]`, with the end of its stderr). Its merge reads "Merged by UnityYAMLMerge"; "Resolve in…" on it opens the tool on

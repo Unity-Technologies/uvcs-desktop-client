@@ -6,7 +6,8 @@ import { dialog } from 'electron';
 import type { MergeToolsApi } from '@shared/api/mergeTools';
 import type { ContentSource } from '@shared/domain/content';
 import { UNITY_YAML_MERGE_ARGS, unityYamlMergeOf, type MergeToolOutcome, type MergeToolRequest, type SmartMergeOutcome, type SmartMergeRequest, type UnityYamlMergeTool } from '@shared/domain/mergeTools';
-import { EMPTY_UNITY_YAML, isUnityYaml } from '@shared/unityYaml';
+import { fileNamesIgnoreCase } from '@shared/fileNames';
+import { EMPTY_UNITY_YAML, isUnityYaml, unityYamlMergeTakes } from '@shared/unityYaml';
 import { saveVersion } from '../files/saveContent';
 import { withTempDirectory } from '../files/tempFile';
 import { fillArgs, type MergeToolFiles } from '../merge/mergeTools/commandLine';
@@ -84,7 +85,7 @@ export function createMergeToolsService(
   async function smartMerge(request: SmartMergeRequest): Promise<SmartMergeOutcome> {
     const where: Whereabouts = { platform: process.platform, env: process.env, home: homedir(), cmPath: cm.executable };
     const smartMergeTool = unityYamlMergeOf(unityYamlMergeFinder(where), request.toolId);
-    if (!smartMergeTool || !isUnityYaml(request.yours) || !isUnityYaml(request.incoming)) return { kind: 'notMerged' };
+    if (!smartMergeTool || !unityYamlMergeTakes(request.path, request.yours, request.incoming, fileNamesIgnoreCase(process.platform))) return { kind: 'notMerged' };
 
     const stop = new AbortController();
     open.set(request.sessionId, { stop, bundle: null });
@@ -113,7 +114,8 @@ export function createMergeToolsService(
   async function writeSmartMergeFiles(request: SmartMergeRequest, directory: string): Promise<MergeToolFiles> {
     const names = toolFileNames(request.path);
     const files = { base: join(directory, names.base), yours: join(directory, names.yours), incoming: join(directory, names.incoming), result: join(directory, names.result) };
-    await writeFile(files.base, request.base || EMPTY_UNITY_YAML, 'utf8');
+    // An asset with no objects for an empty base of Unity's YAML; a `.meta` has no header to stand for it.
+    await writeFile(files.base, request.base || (isUnityYaml(request.yours) ? EMPTY_UNITY_YAML : ''), 'utf8');
     await writeFile(files.yours, request.yours, 'utf8');
     await writeFile(files.incoming, request.incoming, 'utf8');
     return { ...files, baseName: 'Base', yoursName: 'Yours', incomingName: 'Incoming', fileName: names.result };

@@ -85,6 +85,18 @@ describe('resolveInMergeTool', () => {
     },
   );
 
+  it('runs UnityYAMLMerge on a .meta file, with no Unity header, opening the fallback when it can’t merge it', async () => {
+    const META = 'fileFormatVersion: 2\nguid: 1\n';
+    const meta = prefab({
+      file: { key: '/Assets/Player.prefab.meta', path: 'Assets/Player.prefab.meta', base: { kind: 'empty' }, source: { kind: 'empty' }, destination: { kind: 'empty' } },
+      contents: { base: text(META), source: text(META), destination: text(META) },
+    });
+    const { shown, methods } = await resolve(meta, { kind: 'notMerged' });
+
+    expect(methods).toEqual(['mergeTools.smartMerge', 'mergeTools.resolve']);
+    expect(shown).toEqual(['UnityYAMLMerge', null, 'VS Code (front)', null]);
+  });
+
   it('says when the fallback opens on what UnityYAMLMerge couldn’t merge', async () => {
     useToastStore.setState({ toasts: [] });
     await resolve(prefab(), { kind: 'notMerged' }, { quiet: false });

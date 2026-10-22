@@ -54,9 +54,9 @@ export interface UnityYamlMergeTool {
 
 /**
  * `UnityYAMLMerge merge <base> <left: theirs> <right: mine> <result>`, without ever opening anything: `-h` shows no
- * error dialog, `--fallback none` runs no other tool on what it can't merge. `--force` lets it merge every Unity asset
- * (materials, animations, ScriptableObjects…), not only the `.unity`, `.prefab` and `.meta` files it knows by name: it
- * refuses a file that isn't Unity's YAML anyway.
+ * error dialog, `--fallback none` runs none of the tools its own `mergespecfile.txt` names on what it can't merge (the
+ * rule's fallback opens instead). `--force` lets it merge any YAML-serialized asset a user adds to the row (`.asset`,
+ * `.mat`, `.controller`…), not only the `.unity`, `.prefab` and `.meta` files it supports by default.
  */
 export const UNITY_YAML_MERGE_ARGS = ['merge', '-h', '--force', '--fallback', 'none', '{base}', '{incoming}', '{yours}', '{result}'];
 
@@ -118,25 +118,11 @@ export interface MergeToolRule {
 }
 
 /**
- * The Unity assets UnityYAMLMerge merges, by extension: scenes, prefabs and the assets Unity saves as YAML text. Not
- * `.meta` files: they have no Unity YAML header, so UnityYAMLMerge never runs on them (`isUnityYaml`).
+ * The files UnityYAMLMerge supports by default (the Unity Manual's "Smart merge"): scenes, prefabs and `.meta` files.
+ * Users add other YAML-serialized assets to the row (`.asset`, `.mat`, `.controller`…): `--force` in its arguments
+ * (`UNITY_YAML_MERGE_ARGS`) lets it merge those too.
  */
-export const UNITY_YAML_PATTERNS = [
-  '.unity',
-  '.prefab',
-  '.asset',
-  '.mat',
-  '.anim',
-  '.controller',
-  '.overrideController',
-  '.physicMaterial',
-  '.lighting',
-  '.mixer',
-  '.playable',
-  '.preset',
-  '.spriteatlas',
-  '.terrainlayer',
-];
+export const UNITY_YAML_PATTERNS = ['.unity', '.prefab', '.meta'];
 
 /** Unity assets in UnityYAMLMerge, what it can't merge in every other file's tool. */
 export const UNITY_YAML_MERGE_RULE: MergeToolRule = { id: 'unity', patterns: UNITY_YAML_PATTERNS, toolId: UNITY_YAML_MERGE_ID, fallbackToolId: AUTO_MERGE_TOOL };

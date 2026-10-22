@@ -9,6 +9,8 @@ import { decisionFromTool, fallbackOpensMessage, toolOutcomeMessage, toolVersion
 import type { Merger } from './mergeToolFor';
 import { wasStopped } from './mergeToolSessions';
 import { smartMergeVersions } from './smartMergeVersions';
+import { fileNamesIgnoreCase } from '../../../lib/filePatterns';
+import { PLATFORM } from '../../../lib/platform';
 
 /**
  * A merge tool that has a file open, waiting for the user; or Smart Merge merging it, with no window (`toolName` is
@@ -55,7 +57,7 @@ export async function resolveInMergeTool(
 ): Promise<MergeToolSession> {
   if (merger.kind === 'tool') return ended(await openInTool(workspacePath, state, merger.tool, labels, onOpen), merger.tool.name, state, options);
 
-  const versions = smartMergeVersions(state);
+  const versions = smartMergeVersions(state, fileNamesIgnoreCase(PLATFORM));
   if (versions) {
     const smartMerged = await runSmartMerge({ ...versions, toolId: merger.merge.id }, onOpen);
     if (!options.stillUndecided()) return { outcome: NOTHING_SAVED, decision: undefined };
