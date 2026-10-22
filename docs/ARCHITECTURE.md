@@ -248,8 +248,10 @@ and many people use the same server. Every `cm` command other than local reads (
   300 MB in 9 s, past `MAX_OUTPUT_LENGTH` as one string). A change prints every code of the item at once (`CH+MV`):
   `listedCodes` reads it as `--xml` listed it (a deleted item is only deleted, an added one only added; an item in no
   category, a cloaked folder, isn't listed). Its paths are absolute, from the root `cm` keeps, which may differ from the
-  app's in case or composition (`PrintedWorkspacePaths`); an item in several changelists is printed in each, kept in
-  the first; merges are joined by `+` (`Merge from 3+Cherrypick from 7`), shown joined by `, ` as `--xml` did; the
+  app's in case, composition or a link resolved (`PrintedWorkspacePaths`); an item printed twice is one change with
+  both kinds, as `--xml` merged it (a deleted file whose path a new file took prints `PR` then `DE`, and stays a
+  deletion; one in several changelists is in the first); a change with other fields than these fails the read rather
+  than show a clean workspace; merges are joined by `+` (`Merge from 3+Cherrypick from 7`), shown joined by `, ` as `--xml` did; the
   similarity comes in `cm`'s culture (`85,5%`). Records hold no size, date or file type: Changes reads the size, the
   date and whether a file is a link from the disk as the records arrive (`DiskDetails`, a local read; what `--xml`
   reported was the disk's too), and tells no binary file from a text one (the row's icon follows the file's extension).
@@ -1064,7 +1066,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     (`parseDiffEntries`, `parseMergePlan`) and by Changes (`sortChanges`, once a read: `useSortedChanges`; filtering
     keeps the order, and `layoutChangeRows` lays the changes out as they come). `cm status` prints the changes in no
     order, so Changes sorts them folder by folder (`sortByPath`): a million in 0.9 s, where sorting the whole list took
-    2 s. A list and a tree show the files in the same
+    2 s. A read that kept most changes as they were (`sharePendingChanges`, in any order) starts from the last order and
+    sorts only the others (`sortedFromPrevious`): 0.1 s for a million with one file edited. A list and a tree show the files in the same
     order. Ordering by kind of change first was tried and rejected: it split a folder's changes apart, and a row jumped
     to another group when its status changed; the status chips of the filter bar (`useChangeFilter`) are how to look at
     one kind. Sorting controls were rejected too: the only other order anyone asked for is by kind, which the chips

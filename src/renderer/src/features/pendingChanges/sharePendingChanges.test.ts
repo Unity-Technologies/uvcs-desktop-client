@@ -33,6 +33,11 @@ describe('sharePendingChanges', () => {
     expect(shared.changes[1]).toBe(previous.changes[0]);
   });
 
+  it('keeps the whole snapshot when a read finds the same changes in another order, as cm status prints them in none', () => {
+    const previous = snapshot([change('a'), change('b'), change('c')]);
+    expect(sharePendingChanges(previous, reread(snapshot([change('c'), change('a'), change('b')])))).toBe(previous);
+  });
+
   it('tells other changelists', () => {
     const previous = snapshot([change('a')]);
     const described = sharePendingChanges(previous, reread(snapshot([change('a')], [{ name: 'UI', description: 'now described' }])));
