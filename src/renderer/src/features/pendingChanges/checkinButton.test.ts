@@ -98,14 +98,14 @@ describe('checkinButtonLabel', () => {
 
 describe('checkinDisabledReason', () => {
   it('asks to select changes when none are checked', () => {
-    expect(checkinDisabledReason('checkin', 0, 0, 3)).toBe('Select changes to check in');
-    expect(checkinDisabledReason('shelve', 0, 0, 3)).toBe('Select changes to shelve');
-    expect(checkinDisabledReason('checkin', 2, 2, 3)).toBeNull();
+    expect(checkinDisabledReason('checkin', 0, 0, 3, 0)).toBe('Select changes to check in');
+    expect(checkinDisabledReason('shelve', 0, 0, 3, 0)).toBe('Select changes to shelve');
+    expect(checkinDisabledReason('checkin', 2, 2, 3, 0)).toBeNull();
   });
 
   it('says why a shelve of only private files is not possible', () => {
-    expect(checkinDisabledReason('shelve', 0, 3, 3)).toBe("Private files and links can't be shelved");
-    expect(checkinDisabledReason('shelve', 1, 3, 3)).toBeNull();
+    expect(checkinDisabledReason('shelve', 0, 3, 3, 0)).toBe("Private files and links can't be shelved");
+    expect(checkinDisabledReason('shelve', 1, 3, 3, 0)).toBeNull();
   });
 
   // Filtered by Changed while only private files are checked: the user did select changes.
@@ -116,9 +116,9 @@ describe('checkinDisabledReason', () => {
   });
 
   it('says nothing is pending, or that the changes are still being read', () => {
-    expect(checkinDisabledReason('checkin', 0, 0, 0)).toBe('No pending changes');
-    expect(checkinDisabledReason('shelve', 0, 0, 0)).toBe('No pending changes');
-    expect(checkinDisabledReason('checkin', 0, 0, undefined)).toBe('Reading the pending changes');
+    expect(checkinDisabledReason('checkin', 0, 0, 0, 0)).toBe('No pending changes');
+    expect(checkinDisabledReason('shelve', 0, 0, 0, 0)).toBe('No pending changes');
+    expect(checkinDisabledReason('checkin', 0, 0, undefined, 0)).toBe('Reading the pending changes');
   });
 });
 

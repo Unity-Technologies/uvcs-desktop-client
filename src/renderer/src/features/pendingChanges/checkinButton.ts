@@ -87,7 +87,7 @@ function sameText(a: CheckinButtonText, b: CheckinButtonText): boolean {
  * (`isShelvable`). `listedCount` (every change listed) is undefined until the changes are read. `hiddenIncludedCount`
  * checked changes the filter hides go in only once it shows them.
  */
-export function checkinDisabledReason(mode: CheckinMode, count: number, includedCount: number, listedCount: number | undefined, hiddenIncludedCount = 0): string | null {
+export function checkinDisabledReason(mode: CheckinMode, count: number, includedCount: number, listedCount: number | undefined, hiddenIncludedCount: number): string | null {
   if (count > 0) return null;
   if (listedCount === undefined) return 'Reading the pending changes';
   if (listedCount === 0) return 'No pending changes';
