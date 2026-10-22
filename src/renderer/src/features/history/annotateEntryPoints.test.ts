@@ -74,7 +74,9 @@ describe('Annotate outside the Files view', () => {
 describe('the Annotate page', () => {
   it('is gone: nothing opens a page of that kind', () => {
     const renderer = join(__dirname, '..', '..');
-    const offenders = filesUnder(renderer, (name) => /\.tsx?$/.test(name)).filter((path) => /kind: 'annotate'|AnnotatePage/.test(readFileSync(path, 'utf8')) && !path.endsWith('annotateEntryPoints.test.ts'));
+    // A link's `annotate` page (`LinkPage`, docs/features/deep-links.md) opens the history annotated: its tests write one.
+    const exempt = ['annotateEntryPoints.test.ts', 'linkNavigation.test.ts'];
+    const offenders = filesUnder(renderer, (name) => /\.tsx?$/.test(name)).filter((path) => /kind: 'annotate'|AnnotatePage/.test(readFileSync(path, 'utf8')) && !exempt.some((name) => path.endsWith(name)));
     expect(offenders.map((path) => relative(renderer, path))).toEqual([]);
   });
 });
