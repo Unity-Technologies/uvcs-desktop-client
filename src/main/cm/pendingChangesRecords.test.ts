@@ -9,7 +9,7 @@ const WORKSPACE = join('/', 'work', 'game');
 
 /** Reads `output` as `CmClient.queryRecords` does: the records as they arrive, then the snapshot. */
 function read(output: string, workspacePath = WORKSPACE, platform: NodeJS.Platform = process.platform) {
-  const reader = new PendingChangesReader(workspacePath, platform);
+  const reader = new PendingChangesReader(workspacePath, { platform });
   const records = new RecordReader(reader.read);
   records.read(Buffer.from(output, 'utf8'));
   return reader.snapshot(records.finish());

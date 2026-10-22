@@ -1,6 +1,7 @@
 import type { WorkspaceGlance } from '@shared/domain/workspace';
 import type { CmClient } from './CmClient';
 import { PendingChangesReader, statusRecordsArgs } from './pendingChangesRecords';
+import { resolvedRootOf } from './printedWorkspacePaths';
 import { parseWorkspaceStatus } from './workspaceStatus';
 
 /**
@@ -11,7 +12,7 @@ import { parseWorkspaceStatus } from './workspaceStatus';
  * selector, and XML holding the changes passed `MAX_OUTPUT_LENGTH` past about 400,000 of them.
  */
 export async function readWorkspaceGlance(cm: CmClient, workspacePath: string, platform: NodeJS.Platform = process.platform): Promise<WorkspaceGlance> {
-  const reader = new PendingChangesReader(workspacePath, platform);
+  const reader = new PendingChangesReader(workspacePath, { platform, resolvedRoot: await resolvedRootOf(workspacePath) });
   const [header, changes] = await Promise.all([
     cm.query(['status', '--header', '--xml', workspacePath], { anyDirectory: true }),
     // A count that fails (paths `cm` prints outside the root the app knows) leaves the branch to show.

@@ -1,4 +1,4 @@
-import { realpathSync } from 'node:fs';
+import { realpath } from 'node:fs/promises';
 import { pathsOf, withForwardSlashes } from '../files/workspacePaths';
 
 /**
@@ -7,7 +7,8 @@ import { pathsOf, withForwardSlashes } from '../files/workspacePaths';
  * path the app has: another case on Windows and macOS, another composition of accents on macOS (`cm` writes names
  * decomposed). So the root is matched once, by its folders, against the first path, and every path after it starts
  * with what the first did: one comparison of its start each, for a million paths. A root reached through a link (`/tmp`
- * is `/private/tmp` on macOS) is matched as the disk resolves it, should `cm` have kept that one.
+ * is `/private/tmp` on macOS) is matched as the disk resolves it (`resolvedRoot`, read before the command, as a
+ * `realpath` can wait on a network drive), should `cm` have kept that one.
  */
 export class PrintedWorkspacePaths {
   private readonly separator: string;
@@ -16,7 +17,7 @@ export class PrintedWorkspacePaths {
   constructor(
     private readonly workspacePath: string,
     private readonly platform: NodeJS.Platform = process.platform,
-    private readonly resolvedRoot: (path: string) => string = realpathSync.native,
+    private readonly resolvedRoot?: string,
   ) {
     this.separator = pathsOf(platform).sep;
     this.printedRoot = asFolder(pathsOf(platform).normalize(workspacePath), this.separator);
@@ -30,7 +31,8 @@ export class PrintedWorkspacePaths {
 
   /** The start of `path` that names the workspace's root, however `cm` spelled it there (the root itself: all of it). */
   private rootAsPrintedIn(path: string): string {
-    const printedRoot = this.startMatching(path, this.printedRoot) ?? this.startMatching(path, this.resolved());
+    const resolved = this.resolvedRoot === undefined ? undefined : asFolder(this.resolvedRoot, this.separator);
+    const printedRoot = this.startMatching(path, this.printedRoot) ?? this.startMatching(path, resolved);
     if (printedRoot === undefined) throw new Error(`cm printed a path outside the workspace ${this.workspacePath}: ${path}`);
     return printedRoot;
   }
@@ -42,15 +44,6 @@ export class PrintedWorkspacePaths {
     const start = asFolder(path.split(this.separator).slice(0, rootFolders).join(this.separator), this.separator);
     return comparable(start, this.platform) === comparable(root, this.platform) ? start : undefined;
   }
-
-  /** The workspace's root as the disk resolves it, links followed; undefined if it can't. */
-  private resolved(): string | undefined {
-    try {
-      return asFolder(this.resolvedRoot(this.workspacePath), this.separator);
-    } catch {
-      return undefined;
-    }
-  }
 }
 
 function asFolder(path: string, separator: string): string {
@@ -61,4 +54,9 @@ function asFolder(path: string, separator: string): string {
 function comparable(path: string, platform: NodeJS.Platform): string {
   if (platform === 'win32') return path.toLowerCase();
   return platform === 'darwin' ? path.normalize('NFC').toLowerCase() : path;
+}
+
+/** The workspace's root as the disk resolves it, links followed (`PrintedWorkspacePaths`'s `resolvedRoot`); undefined if it can't. */
+export function resolvedRootOf(workspacePath: string): Promise<string | undefined> {
+  return realpath(workspacePath).catch(() => undefined);
 }

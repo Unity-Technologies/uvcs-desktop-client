@@ -1,6 +1,7 @@
-import type { PendingChangesSnapshot } from '@shared/domain/pendingChanges';
+import type { PendingChange, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import type { CmClient } from '../cm/CmClient';
 import { PendingChangesReader, statusRecordsArgs } from '../cm/pendingChangesRecords';
+import { resolvedRootOf } from '../cm/printedWorkspacePaths';
 import { DiskDetails } from '../files/DiskDetails';
 
 /** `cm status` options for everything a switch or a shelve has to take care of, private files included. */
@@ -23,7 +24,8 @@ export async function readPendingChanges(
   { diskDetails = false, platform = process.platform }: ReadOptions = {},
 ): Promise<PendingChangesSnapshot> {
   const details = diskDetails ? new DiskDetails() : undefined;
-  const reader = new PendingChangesReader(workspacePath, platform, details && ((change, absolutePath) => details.add(change, absolutePath)));
+  const onChange = details && ((change: PendingChange, absolutePath: string) => details.add(change, absolutePath));
+  const reader = new PendingChangesReader(workspacePath, { platform, resolvedRoot: await resolvedRootOf(workspacePath), onChange });
   const changes = await cm.queryRecords(statusRecordsArgs(...statusOptions), reader.read, { cwd: workspacePath }).catch((error: unknown) => {
     // Nothing waits for the reads of a failed command: a million left to read would go on for seconds.
     details?.stop();

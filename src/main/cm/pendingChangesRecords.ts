@@ -28,6 +28,14 @@ const CHANGE_KINDS: Record<string, ChangeKind> = {
 };
 
 const DEFAULT_CHANGELIST = 'Default';
+interface ReaderOptions {
+  platform?: NodeJS.Platform;
+  /** The workspace's root with links resolved (`realpath`), in case `cm` printed that one. */
+  resolvedRoot?: string;
+  /** Each change read, with its absolute path. */
+  onChange?: (change: PendingChange, absolutePath: string) => void;
+}
+
 /** What `cm status --machinereadable` prints for a change that comes from no merge. */
 const NO_MERGES = 'NO_MERGES';
 
@@ -61,12 +69,11 @@ export class PendingChangesReader {
   private readonly kindsByCodes = new Map<string, ChangeKind[] | null>();
   private changelist: string | undefined;
 
-  constructor(
-    workspacePath: string,
-    platform: NodeJS.Platform = process.platform,
-    private readonly onChange?: (change: PendingChange, absolutePath: string) => void,
-  ) {
-    this.paths = new PrintedWorkspacePaths(workspacePath, platform);
+  private readonly onChange?: (change: PendingChange, absolutePath: string) => void;
+
+  constructor(workspacePath: string, { platform = process.platform, resolvedRoot, onChange }: ReaderOptions = {}) {
+    this.paths = new PrintedWorkspacePaths(workspacePath, platform, resolvedRoot);
+    this.onChange = onChange;
   }
 
   /** Reads one record into its change, if it is one that Changes lists. */
