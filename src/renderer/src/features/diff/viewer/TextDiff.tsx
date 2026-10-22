@@ -13,6 +13,9 @@ import type { EditorHandle } from './editorHandle';
 import { attachesEditor, heldModifiedText, type HeldText } from './editorAttachment';
 import { escapeWhileTyping } from './escapeWhileTyping';
 import { useHighlightWorkers } from './highlightWorkers';
+import { selectedRangeOf } from './linkedLines';
+import { scrollToLine } from './lineScroll';
+import { useLineLinks } from './useLineLinks';
 import type { LineDiff } from './lineDiff';
 import { HIDE_NO_NEWLINE_CSS, showsNoNewlineMarker } from './noNewlineMarker';
 import { PaneScrollbars } from './PaneScrollbars';
@@ -106,7 +109,7 @@ const SHADOW_CSS = [
 export function TextDiff({ original, modified, current, diff, diffedText, wholeFile = false, fileName, comparisonMethod, sides = BOTH_SIDES, editable = false, editorRef, onEdit, onDiscard, onUndoDiscard, changeViewRef, onViewScroll, wrapsLongLines = false }: TextDiffProps) {
   const theme = useResolvedTheme();
   const preferences = useDiffPreferences();
-  const { layout, collapseUnchanged } = preferences;
+  const { layout } = preferences;
   const wrapLines = preferences.wrapLines || wrapsLongLines;
   const container = useRef<HTMLDivElement | null>(null);
   // Every diff (and the whole file) renders only the lines in view: files can be huge, and what's drawn again (a typing
@@ -153,6 +156,19 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   const parseDiffOptions = diff.options;
   // Pierre marks no words in the lines typed into, nor drops the original's old marks, until the file is saved.
   useWordMarksRefresh({ fileDiff: shownFileDiff, containerRef: container, current, shown: fileDiff });
+  const canHighlight = useSyntaxHighlighter(pierreThemeName(theme), fileName);
+  // A workspace file's diff picks lines of its own, to discard them; any other diff selects them for links.
+  const lineLinks = useLineLinks({
+    path: fileName,
+    selectable: !onDiscard && !editable,
+    containerRef: container,
+    shown: canHighlight,
+    scrollTo: (element, line) => scrollToLine(element, line, virtualizer),
+  });
+  // A link's lines may be unchanged ones, which would be folded away: the file it opened shows them all.
+  const collapseUnchanged = preferences.collapseUnchanged && !lineLinks.focusLines;
+  // A workspace file's diff marks a link's lines as Pierre's selection until lines are picked to discard.
+  const markedLines = useMemo(() => (lineLinks.focusLines ? selectedRangeOf(lineLinks.focusLines) : null), [lineLinks.focusLines]);
   const discard = useBlockDiscard({
     enabled: Boolean(onDiscard),
     diff: diff.meta,
@@ -163,6 +179,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     containerRef: container,
     onDiscard,
     onUndo: onUndoDiscard,
+    markedLines,
   });
   const movedCode = useMovedCode({ diff: diff.meta, comparisonMethod, fileName, layout, containerRef: container, virtualizer, diffedText, typed: current });
   const tokenizeMaxLength = highlighting === 'off' ? 0 : undefined;
@@ -170,11 +187,18 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   // An editable diff renders its tokens as the editor does (`useTokenTransformer`, which Pierre turns on once the editor
   // attaches) from the first render: otherwise the file is highlighted twice as it opens, before and after.
   const options = useMemo(
-    () => ({ ...pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }), parseDiffOptions, tokenizeMaxLength, useTokenTransformer: editable, onPostRender, ...discard.options }),
-    [theme, layout, collapseUnchanged, wrapLines, parseDiffOptions, tokenizeMaxLength, editable, onPostRender, discard.options],
+    () => ({
+      ...pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }),
+      parseDiffOptions,
+      tokenizeMaxLength,
+      useTokenTransformer: editable,
+      onPostRender,
+      ...lineLinks.options,
+      ...discard.options,
+    }),
+    [theme, layout, collapseUnchanged, wrapLines, parseDiffOptions, tokenizeMaxLength, editable, onPostRender, lineLinks.options, discard.options],
   );
   const fileOptions = useMemo(() => ({ ...pierreFileOptions({ theme, wrapLines }), tokenizeMaxLength }), [theme, wrapLines, tokenizeMaxLength]);
-  const canHighlight = useSyntaxHighlighter(pierreThemeName(theme), fileName);
   useShadowStyle(container, [SHADOW_CSS, showsNoNewlineMarker(original, diffedText) ? '' : HIDE_NO_NEWLINE_CSS, editable ? caretLineCss(shownText(diffedText)) : ''].join('\n'));
   const pointerFocus = usePointerFocusMark();
   useChangeView({ changeViewRef, containerRef: container, virtualizer, editor, pickChange: discard.pickChange });
@@ -240,7 +264,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
                   key={`${comparisonMethod}:${editable ? 'editable' : 'read-only'}:${highlighting}`}
                   fileDiff={fileDiff}
                   options={options}
-                  selectedLines={discard.selectedLines}
+                  selectedLines={discard.selectedLines !== undefined ? discard.selectedLines : lineLinks.selectedLines}
                   renderGutterUtility={discard.renderGutterUtility}
                   edit={edit}
                   onEditChange={(event) => onEdit?.(event.editor.getText())}

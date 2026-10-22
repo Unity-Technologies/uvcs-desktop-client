@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { ReviewMark } from '@shared/domain/review';
 import { api } from '../../api/client';
@@ -9,10 +9,12 @@ import { EmptyState } from '../../ui/EmptyState';
 import { toast } from '../../ui/toast/toastStore';
 import { DiffFileTitle } from '../diff/viewer/DiffFileTitle';
 import { FileDiffViewer } from '../diff/viewer/FileDiffViewer';
+import { LineLinksContext, type LineLinks } from '../diff/viewer/lineLinks';
 import { ONLY_MOVED } from '../diff/viewer/movedFrom';
 import { SinceReviewButton } from '../review/SinceReviewButton';
 import { describeKinds } from './changeCategories';
 import { changeDiffSources } from './changeDiffSources';
+import { useRequestedLineFocus } from './changesLineFocus';
 import { changeStatus } from './changeTone';
 
 interface ChangeDiffPanelProps {
@@ -29,6 +31,10 @@ export function ChangeDiffPanel({ workspacePath, change, reviewMark, title: ownT
   const [sinceReviewPath, setSinceReviewPath] = useState<string | null>(null);
   const canCompareWithReview = reviewMark?.state === 'changedSinceReview' && reviewMark.hasSnapshot;
   const sinceReview = canCompareWithReview && sinceReviewPath === change.path;
+  // A link's lines (`…/-/changes/a.cs#L42`, `requestLineFocus`): the diff opens scrolled to them, marked. Changes
+  // offers no link of its own: its lines aren't published.
+  const requestedLines = useRequestedLineFocus(workspacePath, change.path);
+  const lineLinks = useMemo<LineLinks>(() => ({ focus: requestedLines ? { path: change.path, lines: requestedLines } : null, publishes: false }), [requestedLines, change.path]);
 
   const title = ownTitle ?? <DiffFileTitle status={changeStatus(change)} path={change.path} oldPath={change.oldPath} />;
 
@@ -43,16 +49,18 @@ export function ChangeDiffPanel({ workspacePath, change, reviewMark, title: ownT
   );
 
   return (
-    <FileDiffViewer
-      workspacePath={workspacePath}
-      original={original}
-      modified={sources.modified}
-      fileName={change.path}
-      title={title}
-      identicalDescription={sinceReview ? 'The file is back to how it was when you reviewed it.' : change.oldPath ? ONLY_MOVED : undefined}
-      compareControls={compareControls}
-      onMatchesBase={change.kinds.includes('checkedOut') ? () => offerUndoCheckout(workspacePath, change.path) : undefined}
-    />
+    <LineLinksContext.Provider value={lineLinks}>
+      <FileDiffViewer
+        workspacePath={workspacePath}
+        original={original}
+        modified={sources.modified}
+        fileName={change.path}
+        title={title}
+        identicalDescription={sinceReview ? 'The file is back to how it was when you reviewed it.' : change.oldPath ? ONLY_MOVED : undefined}
+        compareControls={compareControls}
+        onMatchesBase={change.kinds.includes('checkedOut') ? () => offerUndoCheckout(workspacePath, change.path) : undefined}
+      />
+    </LineLinksContext.Provider>
   );
 }
 

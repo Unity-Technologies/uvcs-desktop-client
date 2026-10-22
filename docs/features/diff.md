@@ -240,6 +240,22 @@ it holds instead of a diff. The stepping itself (the position, the keys, the arr
 `useStepNavigation`, given the steps and a `StepView`: `useChangeNavigation` is it over a diff's change regions, and the
 merge page steps through conflicts with it (merge.md "Stepping through conflicts").
 
+## Lines for links
+
+A diff's line numbers select lines, as on GitHub: a click selects one, Shift+click or a drag a range (`useLineLinks`,
+Pierre's line selection). Those of a committed diff (a changeset's, branch's, label's, shelve's, range's or review's:
+`DiffBrowser`, which says so through `LineLinksContext`) are the ones "Copy link" names (`#L40-L52`, `#old-L7` on the
+older side): `selectedLinesStore` keeps the file and lines selected in the diff on screen (`selectedLinesIn`), forgotten
+as the file leaves it. A selection across both sides (unified, from a removed line to an added one) keeps its end on the
+newer side (`linkedLinesOf`). A workspace file's diff picks lines to discard them instead (`useBlockDiscard`).
+
+A page opened on a file's lines (`focusPath` with `focusLines`, a link's) opens that file scrolled to them, a third of
+the way down, and selected (`scrollToLine`, from where Pierre lays the line out, rendered or not); its unchanged lines
+show unfolded, as a link may name one (`collapseUnchanged` off for that file). Once: selecting another file drops them
+(`linkFocusOn`), so coming back leaves the file where the user was. Changes takes them from outside
+(`requestLineFocus`, `useRequestedLineFocus`): the pending change's diff scrolls to them and shows them as Pierre's
+selection until lines are picked to discard, Pierre echoing them back picking nothing (`useLinePick`'s `marked`).
+
 ## Moved code
 
 Every text diff tells code that moved from code removed and added, in the renderer, from the one `lineDiff` (no `cm`

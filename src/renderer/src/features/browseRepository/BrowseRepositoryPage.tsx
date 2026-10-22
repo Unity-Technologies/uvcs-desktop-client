@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { revisionRef } from '@shared/domain/revision';
 import type { PageProps } from '../../app/navigation/pages';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
@@ -11,17 +11,23 @@ import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { DetailsPanelSkeleton } from '../../ui/DetailsPanelSkeleton';
+import { LineLinksContext, type LineLinks } from '../diff/viewer/lineLinks';
+import { useFocusUntilMoved } from '../diff/viewer/useFocusUntilMoved';
 import { useExpandedDirectories, useExpandedDirectoriesStore } from '../files/expandedDirectoriesStore';
 import { FileTreeSkeleton, FileTreeTable } from '../files/FileTreeTable';
 import { FILE_TREE_WIDTH } from '../files/fileTreeWidth';
-import { buildFileTreeRows } from '../files/fileTreeRows';
+import { ancestorsOf, buildFileTreeRows } from '../files/fileTreeRows';
+import { useFilesViewStore } from '../files/filesViewStore';
 import { ItemDetailsPane } from '../files/ItemDetailsPane';
 import { useTreeListings } from '../files/useTreeListings';
 import { openRevision } from '../history/revisionOperations';
 import { repositoryListingQuery } from './repositoryListing';
 import { revisionMenu } from './revisionMenu';
 
-/** The repository as it was at a changeset: read-only, no workspace needed. */
+/**
+ * The repository as it was at a changeset: read-only, no workspace needed. Opened on an item (`focusPath`, a link's),
+ * its folders open and it's selected; on a file's lines (`focusLines`), the file shows annotated, scrolled to them.
+ */
 export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
   const workspacePath = useWorkspacePath();
   const repository = useWorkspaceInfo().data?.repository;
@@ -31,12 +37,20 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
   const [filter, setFilter] = useState('');
   // The field shows each keystroke at once; tens of thousands of open rows are filtered right after.
   const shownFilter = useDeferredValue(filter);
-  const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
+  const [selection, setSelection] = useState<SelectionState>(() => (page.focusPath ? singleSelection(page.focusPath) : EMPTY_SELECTION));
+  const linkFocus = useFocusUntilMoved(page.focusPath && page.focusLines ? { path: page.focusPath, lines: page.focusLines } : null, selection.anchor ?? undefined);
+  const lineLinks = useMemo<LineLinks>(() => ({ focus: linkFocus, publishes: true }), [linkFocus]);
+  useEffect(() => {
+    if (!page.focusPath) return;
+    useExpandedDirectoriesStore.getState().expand(treeId, ancestorsOf(page.focusPath));
+    // A file's lines show in its content, which Annotate shows whole: a diff may fold them away, or not have them.
+    if (page.focusLines) useFilesViewStore.getState().setFileView('annotate');
+  }, []);
 
   const { childrenByDirectory, isLoadingRoot, error } = useTreeListings((directory) => repositoryListingQuery(workspacePath, page.changesetId, directory), expanded);
   const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, filter: shownFilter }), [childrenByDirectory, expanded, shownFilter]);
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
-  const [revealPath, setRevealPath] = useState<string | null>(null);
+  const [revealPath, setRevealPath] = useState<string | null>(page.focusPath ?? null);
   const selectFolder = (path: string): void => {
     setSelection(singleSelection(path));
     setRevealPath(path);
@@ -79,13 +93,15 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
           isLoadingRoot ? (
             <DetailsPanelSkeleton />
           ) : focused ? (
-            <ItemDetailsPane
-              workspacePath={workspacePath}
-              item={focused}
-              menu={revisionMenu(workspacePath, page.changesetId, repository, [focused])}
-              onSelectFolder={selectFolder}
-              listings={childrenByDirectory}
-            />
+            <LineLinksContext.Provider value={lineLinks}>
+              <ItemDetailsPane
+                workspacePath={workspacePath}
+                item={focused}
+                menu={revisionMenu(workspacePath, page.changesetId, repository, [focused])}
+                onSelectFolder={selectFolder}
+                listings={childrenByDirectory}
+              />
+            </LineLinksContext.Provider>
           ) : (
             <NoSelection noun="file" />
           )

@@ -1,6 +1,7 @@
 import { FileSearch, Folder } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
+import type { FocusedLines } from '../../app/navigation/pages';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
@@ -18,9 +19,11 @@ import { diffEntryMenu } from './diffEntryMenu';
 import { entryToFocus } from './diffFocus';
 import { diffPaneOf } from './diffPane';
 import { EntryDiff } from './EntryDiff';
+import { linkFocusOf, linkFocusOn } from './linkFocus';
 import { listedEntries } from './listedEntries';
 import { useDiffReview } from './review/useDiffReview';
 import { FileStepsContext, useFileSteps } from './viewer/fileSteps';
+import { LineLinksContext, type LineLinks } from './viewer/lineLinks';
 import { AssetsPointContext, diffAssetsPoint } from './viewer/model/assetsPoints';
 import { diffSibling, SiblingFinderContext } from './viewer/model/modelSiblings';
 import { useShownDiffFile } from './shownDiffFile';
@@ -33,13 +36,15 @@ interface DiffBrowserProps {
   entries: DiffEntry[] | undefined;
   /** The file to open on (by its path, or its old path for a move); the first file when it isn't in the diff. */
   initialPath?: string;
+  /** The lines of `initialPath` it opens scrolled to, selected (a link's `#L42`), until another file is selected. */
+  initialLines?: FocusedLines;
 }
 
 /**
  * A list of changed files next to the diff of the selected one, in one layout from the first frame on: placeholder
  * rows while the files are read, and "No differences" beside an empty list.
  */
-export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffBrowserProps) {
+export function DiffBrowser({ target, entries: diffEntries, initialPath, initialLines }: DiffBrowserProps) {
   const workspacePath = useWorkspacePath();
   const reading = diffEntries === undefined;
   const readEntries = diffEntries ?? NO_ENTRIES;
@@ -77,6 +82,14 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
     setSelection(singleSelection(initial ? diffEntryKey(initial) : firstKey));
   }, [focused, focusedFolder, firstKey]);
 
+  // The lines a link opened the diff on go once another file is selected: coming back leaves the file where it was.
+  const [linkFocus, setLinkFocus] = useState(() => linkFocusOf(initialPath, initialLines));
+  const focusOnShown = linkFocusOn(linkFocus, focused);
+  useEffect(() => {
+    if (linkFocus && focused && !focusOnShown) setLinkFocus(null);
+  }, [focused?.path]);
+  const lineLinks = useMemo<LineLinks>(() => ({ focus: focusOnShown, publishes: true }), [linkFocus, focused?.path]);
+
   const pane = diffPaneOf({ listedCount: reading ? undefined : entries.length, shownCount: shown.length, entrySelected: focused !== undefined, folderSelected: focusedFolder !== undefined });
 
   useEffect(() => {
@@ -112,7 +125,9 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
           <FileStepsContext.Provider value={fileSteps}>
             <SiblingFinderContext.Provider value={findSibling}>
               <AssetsPointContext.Provider value={findAssetsPoint}>
-                <EntryDiff workspacePath={workspacePath} entry={focused} reviewMarks={review.marks} />
+                <LineLinksContext.Provider value={lineLinks}>
+                  <EntryDiff workspacePath={workspacePath} entry={focused} reviewMarks={review.marks} />
+                </LineLinksContext.Provider>
               </AssetsPointContext.Provider>
             </SiblingFinderContext.Provider>
           </FileStepsContext.Provider>

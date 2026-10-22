@@ -5,12 +5,13 @@ import { matchesShortcut } from '../../lib/shortcuts';
 import { fileNameOf } from '../../lib/text';
 import { displayName } from '../../lib/userName';
 import { PaneScrollbars } from '../diff/viewer/PaneScrollbars';
+import { useLineLinks, type ScrollToLine } from '../diff/viewer/useLineLinks';
 import { paneScrollbarsHeight } from '../diff/viewer/paneScrollbarsDom';
 import { AnnotationGutter } from './AnnotationGutter';
 import { AnnotationRules } from './AnnotationRules';
 import type { AnnotateColumns } from './annotateOptionsStore';
 import { blocksInView, highlightedChangeset, walkedBlock, type AnnotationBlock } from './annotationBlocks';
-import { ANNOTATION_LINE_HEIGHT, CODE_PADDING_TOP, lineAtTop, scrollTopRevealing } from './annotationLayout';
+import { ANNOTATION_LINE_HEIGHT, CODE_PADDING_TOP, lineAtTop, scrollTopRevealing, scrollTopShowingLine } from './annotationLayout';
 import { BlockCard } from './BlockCard';
 import { HighlightedCode } from './HighlightedCode';
 import type { BlockLinks } from './blockLinks';
@@ -27,6 +28,12 @@ interface AnnotatedCodeProps {
   links: BlockLinks;
 }
 
+/** Every line is one row high: a link's line is where its number says. */
+const scrollToAnnotatedLine: ScrollToLine = (container, { lineNumber }) => {
+  container.scrollTop = scrollTopShowingLine(lineNumber, container.clientHeight);
+  return () => {};
+};
+
 /**
  * Highlighted code (Pierre) with the annotation gutter beside it and the blocks' rules over both. All three live in one
  * scroll container and share a pinned line height (`annotationLayout`), so they scroll together without any syncing
@@ -35,7 +42,8 @@ interface AnnotatedCodeProps {
  * read-only diff would be (`syntaxHighlighting`: on the main thread, in Pierre's workers after showing as plain text,
  * or not at all).
  * The keyboard walks the blocks (⌥↓ ⌥↑, with ⇧ those of the same changeset), Enter shows the block's revision and
- * Space its card.
+ * Space its card. Its line numbers select lines for a link, as a diff's do; a link's lines open scrolled to, selected
+ * (`useLineLinks`).
  */
 export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }: AnnotatedCodeProps) {
   const [virtualizer] = useState(() => new Virtualizer());
@@ -90,6 +98,7 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
     handler[1]();
   };
 
+  const lineLinks = useLineLinks({ path, selectable: true, containerRef: scrollerRef, shown: scroller !== null, scrollTo: scrollToAnnotatedLine });
   const pickedBlock = blocks[picked];
 
   return (
@@ -122,7 +131,14 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
           revisionTip={links.selectsInHistory ? 'Select this revision' : 'Show this revision in history'}
           walkBack={links.walkBack}
         />
-        <HighlightedCode className={styles.code} code={code} path={path} virtualizer={virtualizer} />
+        <HighlightedCode
+          className={styles.code}
+          code={code}
+          path={path}
+          virtualizer={virtualizer}
+          selectionOptions={lineLinks.options}
+          selectedLines={lineLinks.selectedLines}
+        />
         <AnnotationRules blocks={blocks} shown={shown} lineHeight={ANNOTATION_LINE_HEIGHT} highlighted={highlighted} />
       </div>
       <PaneScrollbars containerRef={scrollerRef} />
