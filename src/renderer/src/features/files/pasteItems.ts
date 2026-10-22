@@ -8,7 +8,7 @@ import { toast } from '../../ui/toast/toastStore';
 import { cutItemsIn, useCutItemsStore } from './cutItemsStore';
 import { listedItems, readDirectoryListing } from './directoryListing';
 import { useFilesViewStore } from './filesViewStore';
-import { parentOf } from './fileTreeRows';
+import { parentOf } from '../../lib/paths';
 import { folderLabel, pasteFolderFor, planPaste, reverseMoves, type PastePlan } from './pastePlan';
 
 /** What pasting the cut items into the selection would do, from the listings already read (for menus and commands). */

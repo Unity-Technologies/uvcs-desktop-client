@@ -24,8 +24,9 @@ function workspaceWith(scenario: WorkspaceScenario = {}) {
   return { ...workspace, ...playAlongDependencies(workspace.cm, workspacePath) };
 }
 
-const shelve = (deps: ReturnType<typeof workspaceWith>['deps'], paths: string[] | null, comment = 'Half done') =>
-  shelveAndUndo(deps, workspacePath, paths, comment, recordingContext().context);
+/** Shelves away `paths`, giving cm the same paths, as for files: `targets` differ for a folder cm takes along. */
+const shelve = (deps: ReturnType<typeof workspaceWith>['deps'], paths: string[] | null, comment = 'Half done', targets = paths) =>
+  shelveAndUndo(deps, workspacePath, paths && { paths, targets: targets! }, comment, recordingContext().context);
 
 describe('shelveAndUndo', () => {
   it('shelves the chosen changes with the user’s comment and undoes only them, moving the added files aside', async () => {
@@ -37,6 +38,21 @@ describe('shelveAndUndo', () => {
     expect(pending()).toEqual({ 'src/other.txt': 'CH' });
     expect(existsSync(join(workspacePath, 'src', 'new.txt'))).toBe(false);
     expect(lines()).toContain(`undo ${join(workspacePath, 'src', 'a.txt')} ${join(workspacePath, 'src', 'new.txt')} --symlink`);
+  });
+
+  // cm shelves an added folder along with a file given inside it (`--dependencies`): given only what it must, the
+  // shelve still undoes, records and moves aside every change it took.
+  it('undoes and records the added folder cm took along with the file given, not only the paths it was given', async () => {
+    await mkdir(join(workspacePath, 'assets'));
+    await writeFile(join(workspacePath, 'assets', 'icon.png'), 'png');
+    const { deps, pending, lines, recordOf } = workspaceWith({ pending: { ...PENDING, assets: 'AD', 'assets/icon.png': 'AD' } });
+
+    expect(await shelve(deps, ['assets', 'assets/icon.png'], 'Half done', ['assets/icon.png'])).toEqual({ shelveId: 7, count: 2 });
+
+    expect(lines().find((line) => line.startsWith('shelveset create'))).toContain(`shelveset create ${join(workspacePath, 'assets', 'icon.png')} --all --dependencies -commentsfile=`);
+    expect(lines()).toContain(`undo ${join(workspacePath, 'assets')} ${join(workspacePath, 'assets', 'icon.png')} --symlink`);
+    expect(pending()).toEqual(PENDING);
+    expect([...recordOf(7)!.paths].sort()).toEqual(['assets', 'assets/icon.png']);
   });
 
   it('records the shelve as shelved away, never as changes left behind for "Welcome back"', async () => {

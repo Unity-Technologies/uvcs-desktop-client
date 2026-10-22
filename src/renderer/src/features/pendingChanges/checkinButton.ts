@@ -83,13 +83,15 @@ function sameText(a: CheckinButtonText, b: CheckinButtonText): boolean {
 
 /**
  * Why the check-in button can't be used right now, for its tooltip; null when it can. `count` is what the mode takes
- * of the `includedCount` changes checked: a shelve leaves private files and links out (`isShelvable`). `listedCount`
- * (every change listed) is undefined until the changes are read.
+ * of the `includedCount` changes checked the filter shows: a shelve leaves private files and links out
+ * (`isShelvable`). `listedCount` (every change listed) is undefined until the changes are read. `hiddenIncludedCount`
+ * checked changes the filter hides go in only once it shows them.
  */
-export function checkinDisabledReason(mode: CheckinMode, count: number, includedCount: number, listedCount: number | undefined): string | null {
+export function checkinDisabledReason(mode: CheckinMode, count: number, includedCount: number, listedCount: number | undefined, hiddenIncludedCount: number): string | null {
   if (count > 0) return null;
   if (listedCount === undefined) return 'Reading the pending changes';
   if (listedCount === 0) return 'No pending changes';
+  if (includedCount === 0 && hiddenIncludedCount > 0) return 'The filter hides every checked change';
   if (mode === 'checkin') return 'Select changes to check in';
   return includedCount > 0 ? "Private files and links can't be shelved" : 'Select changes to shelve';
 }

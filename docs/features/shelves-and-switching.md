@@ -49,7 +49,9 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
 ⇧⌘S, "Your shelves…" in the palette), shown while the user has shelves in this repository from the last three months.
 
 - **Shelving** (the check-in panel's Shelve mode) undoes what it shelves: `shelveAndUndo` (`main/workspace`) is the
-  switch flow's first half. It shelves with the user's comment, checks the shelve holds every change (`createVerifiedShelve`),
+  switch flow's first half. It shelves with the user's comment, giving cm only the paths it must (`ShelveAwayRequest`'s
+  `targets`, from `checkinPathsOf`: ARCHITECTURE.md "Parsing `cm` output") while recording and undoing every change the
+  shelve takes (its `paths`, the folders cm took along included), checks the shelve holds every change (`createVerifiedShelve`),
   records it as a switch shelve record with `reason: 'shelve'`, undoes the changes and moves the files they added aside;
   a failure puts them back. The toast offers Undo (apply and delete). "Keep the changes here", under the comment, is the
   other way (a plain `cm shelveset create`), asked for each time: the panel goes back to checking in after a shelve.
@@ -58,7 +60,8 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
   check-in.
 - **A changelist at a time**: grouped by changelists, a changelist's menu (`changelistMenu`) offers "Check in this
   changelist" and "Shelve this changelist", which ready the panel rather than run (`prepareChangelistCheckin`): its
-  changes checked alone (those the filters hide too), the panel in that mode (Changes holds it, `PendingChangesPanes`,
+  changes checked alone, with what they need outside it (`neededWith`), and every filter cleared, "Unreviewed" too, so all of them show and go in (ARCHITECTURE.md
+  "Filters": a check-in takes what the filters show), the panel in that mode (Changes holds it, `PendingChangesPanes`,
   so it is back to Check in each time Changes shows, as after choosing Shelve with the caret), its description as the
   comment unless the user wrote one (a comment another changelist's description filled counts as none; one filled from a
   description since edited counts as the user's), and the caret at the end of the summary (ARCHITECTURE.md "Focus": a
@@ -67,7 +70,8 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
   saving, a new `.meta`) stays out, and checking files by hand adds or takes them there. While it lasts, a quiet
   "Changelist ui" under the panel's button says why only its files are checked. It ends, and the files the user had left
   out before are the only ones left out again, in three ways: a successful check-in or shelve (`endPrepared`; a failed
-  or cancelled one keeps it); no pending change left in the changelist (undone, shelved away by a switch, checked in
+  or cancelled one keeps it, and so does one while a filter typed since hides some of its checked files, still to go
+  in: `endPreparedUnlessHidden`); no pending change left in the changelist (undone, shelved away by a switch, checked in
   from outside the app: `preparedStillPending`, `currentChoice`; an added file undone stays on disk, private, but is no
   longer the changelist's), or else every change made later would stay unchecked; and checking every file with the
   list's header box while the filters hide none (`includeEverything`). The button does what it always does: one `cm

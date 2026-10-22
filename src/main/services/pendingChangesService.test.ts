@@ -61,13 +61,13 @@ describe('checkin', () => {
     const { seen, answer } = readingFileOption('-commentsfile=', 'CI_START\nCHANGESET cs:43@br:/main/task1@game@local\n');
     const { service, commands } = pendingChanges({ checkin: answer });
 
-    const result = await service.checkin(WORKSPACE, { paths: ['src/player.cs', 'assets/hero.png'], comment: 'Jump higher\n\nTuned for the new level' }, 'op-1');
+    const result = await service.checkin(WORKSPACE, { paths: ['src/player.cs', 'assets/hero.png'], comment: 'Jump higher\n\nTuned for the new level', addsPrivate: true }, 'op-1');
 
     expect(result).toEqual({ kind: 'created', changesetId: 43, branch: '/main/task1' });
     expect(commands).toHaveLength(1);
     expect(commands[0]).toMatchObject({
       via: 'execute',
-      args: ['checkin', at('src', 'player.cs'), at('assets', 'hero.png'), '--all', '--private', `-commentsfile=${seen.file}`, '--machinereadable', '--symlink'],
+      args: ['checkin', at('src', 'player.cs'), at('assets', 'hero.png'), '--all', '--dependencies', '--private', `-commentsfile=${seen.file}`, '--machinereadable', '--symlink'],
       options: { cwd: WORKSPACE },
     });
     expect(seen.content).toBe('Jump higher\n\nTuned for the new level');
@@ -77,21 +77,21 @@ describe('checkin', () => {
   it('reports a checkin that found nothing left to record', async () => {
     const { service } = pendingChanges({ checkin: 'CI_START\nNO_CHANGES_APPLIED\n' });
 
-    expect(await service.checkin(WORKSPACE, { paths: ['a.txt'], comment: 'c' }, 'op-1')).toEqual({ kind: 'noChanges' });
+    expect(await service.checkin(WORKSPACE, { paths: ['a.txt'], comment: 'c', addsPrivate: false }, 'op-1')).toEqual({ kind: 'noChanges' });
   });
 
   it('deletes the comment file when the checkin fails', async () => {
     const { seen, answer } = readingFileOption('-commentsfile=', cmFails('Error: The server is unreachable.'));
     const { service } = pendingChanges({ checkin: answer });
 
-    await expect(service.checkin(WORKSPACE, { paths: ['a.txt'], comment: 'c' }, 'op-1')).rejects.toThrow('The server is unreachable.');
+    await expect(service.checkin(WORKSPACE, { paths: ['a.txt'], comment: 'c', addsPrivate: false }, 'op-1')).rejects.toThrow('The server is unreachable.');
     expect(existsSync(seen.file)).toBe(false);
   });
 
   it('names who holds the lock when a checkin meets items locked by someone else', async () => {
     const { service } = pendingChanges({ checkin: cmFails(LOCKED_OUTPUT) });
 
-    const error = await service.checkin(WORKSPACE, { paths: ['art/Hero.fbx'], comment: 'c' }, 'op-1').catch((caught: unknown) => caught);
+    const error = await service.checkin(WORKSPACE, { paths: ['art/Hero.fbx'], comment: 'c', addsPrivate: false }, 'op-1').catch((caught: unknown) => caught);
 
     expect(error).toBeInstanceOf(CmError);
     expect((error as CmError).message).toBe("Hero.fbx is locked by ana (workspace ana-wk), so it can't be checked in until the lock is released.");
@@ -102,7 +102,7 @@ describe('checkin', () => {
       checkin: runsUntilCancelled('Operation aborted'),
     });
 
-    const checkin = service.checkin(WORKSPACE, { paths: ['a.txt'], comment: 'c' }, 'op-7');
+    const checkin = service.checkin(WORKSPACE, { paths: ['a.txt'], comment: 'c', addsPrivate: false }, 'op-7');
     operations.cancel('op-7');
 
     await expect(checkin).rejects.toThrow('Operation aborted');
@@ -121,7 +121,7 @@ describe('checkin', () => {
       operations,
     );
 
-    await service.checkin(WORKSPACE, { paths: ['a.txt'], comment: 'c' }, 'op-1');
+    await service.checkin(WORKSPACE, { paths: ['a.txt'], comment: 'c', addsPrivate: false }, 'op-1');
 
     expect(progress.at(-1)).toMatchObject({ stage: 'uploading', fraction: 0.25 });
   });
@@ -194,7 +194,7 @@ describe('shelve', () => {
 
     expect(shelveId).toBe(12);
     expect(commands).toMatchObject([
-      { via: 'execute', args: ['shelveset', 'create', at('src', 'a.cs'), '--all', `-commentsfile=${seen.file}`, '--summaryformat'] },
+      { via: 'execute', args: ['shelveset', 'create', at('src', 'a.cs'), '--all', '--dependencies', `-commentsfile=${seen.file}`, '--summaryformat'] },
     ]);
     expect(seen.content).toBe('Half done');
     expect(existsSync(seen.file)).toBe(false);

@@ -13,14 +13,14 @@ describe('processCommand', () => {
   });
 
   it('never starts a process with more than the limit: 20,000 paths go to a cm shell of its own, as one command line', () => {
-    const args = checkinArgs(manyPaths, '/tmp/comment.txt');
+    const args = checkinArgs(manyPaths, '/tmp/comment.txt', true);
     const { args: started, input } = processCommand(args);
     expect(started).toEqual(['shell', '--encoding=utf-8']);
     expect(fitsCommandLine(started)).toBe(true);
     const [line, exit] = input!.split('\n');
     expect(exit).toBe('exit');
     expect(line!.startsWith('checkin "/Users/ana/work/My Project/Assets/Textures/Level 0/texture_0.png" ')).toBe(true);
-    expect(line!.endsWith(' --all --private -commentsfile=/tmp/comment.txt --machinereadable --symlink')).toBe(true);
+    expect(line!.endsWith(' --all --dependencies --private -commentsfile=/tmp/comment.txt --machinereadable --symlink')).toBe(true);
     expect(line!.split('texture_').length - 1).toBe(20_000);
   });
 

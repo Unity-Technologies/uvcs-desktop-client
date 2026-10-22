@@ -2,11 +2,17 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import { bulkPrivateFiles, type BulkPrivate } from './bulkPrivate';
 import { isCheckinCandidate, isShelvable } from './changeCategories';
 import { uploadSummary, type UploadSummary } from './uploadSummary';
+import { neededWith, type PendingIndex } from './checkinDependencies';
 
 export interface CheckinSelection {
   isIncluded: (change: PendingChange) => boolean;
-  /** Every checked change, including those the filter hides: the filter only narrows what is shown. */
+  /**
+   * The checked changes the filter shows, and what they need that it hides (`neededWith`): the rest it hides stay out
+   * of the check-in, still checked for when they show again.
+   */
   included: PendingChange[];
+  /** How many checked changes the filter hides. */
+  hiddenIncludedCount: number;
   upload: UploadSummary;
   /** What a shelve takes of them: private files stay out. */
   shelvable: PendingChange[];
@@ -70,13 +76,39 @@ export function withIncluded(choice: CheckinChoice, paths: string[], included: b
   return { ...choice, excludedPaths };
 }
 
-/** What a check-in of `allChanges` takes, and what follows from it: what it uploads, what a shelve takes, bulk private files. */
-export function checkinSelectionOf(allChanges: PendingChange[], isIncluded: (change: PendingChange) => boolean): CheckinSelection {
-  const included = allChanges.filter(isIncluded);
+/**
+ * The changes Changes lists: all of them, and those its text and status filters show (`useChangeFilter`'s `visible`,
+ * the very list when nothing filters). Review mode's "Unreviewed" filter isn't one of them: it hides each file as it's
+ * reviewed, and those are the ones to check in.
+ */
+export interface ListedChanges {
+  all: PendingChange[];
+  matchingFilter: PendingChange[];
+  /** All of them, indexed for what each needs (`indexPending`). */
+  index: PendingIndex;
+}
+
+/**
+ * The changes shown and checked, and what they need that the filter hides (a private file's private folder while
+ * filtering by Changed): checked with them, they go in with them. In the listed order.
+ */
+function withWhatTheyNeed(shown: PendingChange[], all: PendingChange[], index: PendingIndex, isIncluded: (change: PendingChange) => boolean): PendingChange[] {
+  const going = new Set(neededWith(shown, index).filter(isIncluded).map((change) => change.path));
+  return all.filter((change) => going.has(change.path));
+}
+
+/**
+ * What a check-in takes of the changes the filter shows, and what follows from it: what it uploads, what a shelve
+ * takes, bulk private files. What you see is what goes in, with what it needs: a checked change the filter hides could
+ * slip a private file into a changeset unseen, while one left out stays pending and shows again once the filter clears.
+ */
+export function checkinSelectionOf({ all, matchingFilter, index }: ListedChanges, isIncluded: (change: PendingChange) => boolean): CheckinSelection {
+  const included = matchingFilter === all ? all.filter(isIncluded) : withWhatTheyNeed(matchingFilter.filter(isIncluded), all, index, isIncluded);
   const shelvable = included.filter(isShelvable);
   return {
     isIncluded,
     included,
+    hiddenIncludedCount: matchingFilter === all ? 0 : all.filter(isIncluded).length - included.length,
     upload: uploadSummary(included),
     shelvable,
     shelvableUpload: uploadSummary(shelvable),
