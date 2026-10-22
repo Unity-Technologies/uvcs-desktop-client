@@ -12,7 +12,10 @@ interface NewRepositoryFieldsProps {
   locked: boolean;
 }
 
-/** The server and name of a repository to create, laid out as `RepositoryPicker` lays out a repository to pick. */
+/**
+ * The server and name of a repository to create, laid out as `RepositoryPicker` lays out a repository to pick. It lives
+ * next to the picker to share its layout (`RepositoryPicker.module.css`), so the two line up where a dialog swaps them.
+ */
 export function NewRepositoryFields({ server, onServerChange, name, onNameChange, nameTaken, locked }: NewRepositoryFieldsProps) {
   return (
     <div className={styles.picker}>
