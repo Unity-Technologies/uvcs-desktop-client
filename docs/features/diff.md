@@ -456,6 +456,9 @@ Its toggle (`ReviewModeButton`) ends the filter bar of the lists that review (Ch
 list (and its header, in Changes): the toggle never moves as the bar comes and goes, and it is the one way out of review mode. The view's header was
 rejected: far from the bar it opens, and in a different place in each view.
 In a tree, a folder's mark marks every file in it, and shows how many are reviewed while some are (`partialReviewCount`).
+R toggles the selection's marks; marking one file moves on to the next one still to review (`stepToNextReviewable`):
+past directories, which have nothing to review, files already reviewed, where R would clear the mark, and open folders
+and groups, whose files come next; a closed one holding a file to review is a stop. With none left below, it stays.
 
 ## Pierre workarounds
 
