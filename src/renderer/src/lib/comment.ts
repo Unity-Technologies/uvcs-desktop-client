@@ -45,6 +45,21 @@ export function withSummaryText(draft: CommentParts, text: string): CommentParts
   return { summary: text.slice(0, lineEnd), description: [rest, draft.description].filter((part) => part.trim()).join('\n') };
 }
 
+/** A comment a heading saved, and the one it replaced: what the object said when the save started. */
+export interface SavedComment {
+  saved: string;
+  replaced: string;
+}
+
+/**
+ * The comment a heading shows: the one it just saved while the object it was given still says what it replaced, so
+ * the old comment never shows again between the save and the refresh that reads the new one; the object's own once
+ * it says anything else (the refresh, or someone else's edit since).
+ */
+export function shownComment(comment: string, lastSaved: SavedComment | null): string {
+  return lastSaved && comment === lastSaved.replaced ? lastSaved.saved : comment;
+}
+
 const BLOCK_SYNTAX = [/^#{1,6}\s+\S/, /^\s*(```|~~~)/, /^\s*>\s?\S/];
 const LIST_ITEM = /^\s*([-*+]|\d+[.)])\s+\S/;
 const INLINE_SYNTAX = [/\[[^\]]+\]\(https?:\/\/[^\s)]+\)/, /\*\*[^*\n]+\*\*/, /`[^`\n]+`/];
