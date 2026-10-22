@@ -4,7 +4,7 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import { bulkPrivateFiles } from './bulkPrivate';
 import { isShelvable } from './changeCategories';
 import { consistentlyIncluded, indexPending, neededWith } from './checkinDependencies';
-import { checkedAmong, checkinFactsOf, checkinSelectionOf, includedBy, type CheckinChoice, type ListedChanges } from './checkinSelection';
+import { checkedAmong, checkinFactsOf, everyBoxChecked, checkinSelectionOf, includedBy, type CheckinChoice, type ListedChanges } from './checkinSelection';
 import { uploadSummary } from './uploadSummary';
 
 /** Changes listed, of which the filter shows `matchingFilter`: all of them when nothing filters. */
@@ -175,5 +175,16 @@ describe('checkedAmong', () => {
     expect(checkedAmong(listed.matchingFilter, listed.matchingFilter, counting)).toBe(2);
     expect(asked).toBe(0);
     expect(checkedAmong([edited, added], listed.matchingFilter, counting)).toBe(1);
+  });
+});
+
+describe('everyBoxChecked', () => {
+  it('reads every box checked once what the user unchecked is no longer pending (undone, checked in), or never goes in', () => {
+    const index = indexPending(all);
+
+    expect(everyBoxChecked(unchecking([]), index)).toBe(true);
+    expect(everyBoxChecked(unchecking(['src/a.ts']), index)).toBe(false);
+    expect(everyBoxChecked(unchecking(['src/gone.ts', 'build/out.bin']), index)).toBe(true);
+    expect(everyBoxChecked({ excludedPaths: new Set(), prepared: { name: 'ui', paths: new Set() } }, index)).toBe(false);
   });
 });
