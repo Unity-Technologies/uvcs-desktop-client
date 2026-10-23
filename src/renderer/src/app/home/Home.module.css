@@ -452,3 +452,41 @@
   gap: 8px;
   max-width: 420px;
 }
+
+/* A project picked, cut to fit the chip: Unity project names run long ("HidyUVCSToolbarButtonHunt"). */
+.projectChipName {
+  overflow: hidden;
+  max-width: 220px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectChoice {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.projectChoice[data-picked='true'] {
+  font-weight: var(--weight-semibold);
+}
+
+.projectChoiceName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectChoiceCount {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The project before a repository's own name, across all projects: quieter, as a path's folders are. */
+.rowProject {
+  color: var(--text-tertiary);
+}
