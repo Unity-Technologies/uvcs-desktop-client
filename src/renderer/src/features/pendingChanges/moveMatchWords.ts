@@ -87,11 +87,20 @@ export interface PairingTag {
   tip: string;
 }
 
-/** "Paired with Shotgun.cs", its tooltip saying the pick replaces that pairing; null for a candidate nothing paired. */
-export function pairingTag(change: PendingChange, candidate: MatchCandidate): PairingTag | null {
-  if (candidate.pairedWith === undefined) return null;
-  return {
-    label: `Paired with ${fileNameOf(candidate.pairedWith)}`,
-    tip: `Changes found it moved with ${candidate.pairedWith}. Picking it pairs it with ${fileNameOf(change.path)} instead.`,
-  };
+/**
+ * "Paired with Shotgun.cs", its tooltip saying which way Changes found it moved and that the pick records another
+ * move instead; null for a candidate nothing paired. On a detected move's own dialog, its other item is the move Changes
+ * found, which the pick records as it is.
+ */
+export function pairingTag(change: PendingChange, candidate: MatchCandidate, side: MatchSide): PairingTag | null {
+  const { pairedWith } = candidate;
+  if (pairedWith === undefined) return null;
+  if (pairedWith === change.path) return { label: 'Found by Changes', tip: 'Changes found this move. Picking it records it.' };
+  const name = fileNameOf(change.path);
+  // The candidates of a new item are deleted ones, found moved to another; those of a deleted item new ones, from another.
+  const tip =
+    side === 'new'
+      ? `Changes found it moved to ${pairedWith}. Picking it records it moved to ${name} instead.`
+      : `Changes found it moved from ${pairedWith}. Picking it records ${name} moved to it instead.`;
+  return { label: `Paired with ${fileNameOf(pairedWith)}`, tip };
 }

@@ -76,7 +76,7 @@ function MoveMatchDialog({ workspacePath, change, side, listed, finish }: MoveMa
           <ItemPathRow
             path={candidate.path}
             itemType={candidate.itemType}
-            extras={<CandidateExtras tag={pairingTag(change, candidate)} similarity={similarity} />}
+            extras={<CandidateExtras tag={pairingTag(change, candidate, side)} similarity={similarity} />}
           />
         )}
       />
