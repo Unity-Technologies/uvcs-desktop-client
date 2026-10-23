@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { FocusedLines } from '../../../app/navigation/pages';
-import { linesLayoutOf, lineOfRow, notedPlace, placeToRestore, relaysOut, scrollTopFor, type KeptPlace, type LineAtTop, type LinesLayout } from './keptPlace';
+import { keptOffset, linesLayoutOf, notedPlace, placeToRestore, relaysOut, type KeptPlace, type LinesLayout } from './keptPlace';
+import type { LineAtTop } from './rowPosition';
 
 const COLLAPSED: LinesLayout = { layout: 'split', collapseUnchanged: true, wrapLines: false };
 const ALL_LINES: LinesLayout = { ...COLLAPSED, collapseUnchanged: false };
-const NO_OVERRIDES = { wrapsLongLines: false, focusLines: undefined };
+const NO_OVERRIDES = { wrapsLongLines: false, focusLines: undefined, wholeFile: false, followsLayout: true };
 const LINK_LINES: FocusedLines = { side: 'new', first: 40, last: 40 };
 // Line 208 at the top, its row below the bar of the 207 lines collapsed above it.
-const LINE_208: LineAtTop = { line: { side: 'additions', lineNumber: 208 }, offset: 25 };
+const LINE_208: LineAtTop = { line: { side: 'additions', lineNumber: 208 }, offset: 25, height: 20 };
 
 describe('linesLayoutOf', () => {
   it('draws the lines as the preferences ask', () => {
@@ -20,6 +21,15 @@ describe('linesLayoutOf', () => {
 
   it("shows every line of a file opened on a link's lines", () => {
     expect(linesLayoutOf(COLLAPSED, { ...NO_OVERRIDES, focusLines: LINK_LINES }).collapseUnchanged).toBe(false);
+  });
+
+  it('collapses nothing in a file typed into whole: it has no unchanged lines', () => {
+    expect(linesLayoutOf(COLLAPSED, { ...NO_OVERRIDES, wholeFile: true }).collapseUnchanged).toBe(false);
+  });
+
+  it('lays a version shown alone out the same, split or unified', () => {
+    const alone = { ...NO_OVERRIDES, followsLayout: false };
+    expect(linesLayoutOf(COLLAPSED, alone)).toEqual(linesLayoutOf({ ...COLLAPSED, layout: 'unified' }, alone));
   });
 });
 
@@ -71,6 +81,22 @@ describe('notedPlace', () => {
   it('notes nothing with no line in view (the diff not drawn yet)', () => {
     expect(notedPlace(null, COLLAPSED, ALL_LINES, () => null)).toBeNull();
   });
+
+  it('drops a place kept for another layout when no line is in view to note', () => {
+    const kept: KeptPlace = { place: LINE_208, for: ALL_LINES };
+    expect(notedPlace(kept, ALL_LINES, COLLAPSED, () => null)).toBeNull();
+  });
+
+  it('notes nothing when collapsing or switching the layout of a file typed into whole', () => {
+    const whole = { ...NO_OVERRIDES, wholeFile: true, followsLayout: false };
+    expect(notedPlace(null, linesLayoutOf(COLLAPSED, whole), linesLayoutOf(ALL_LINES, whole), read)).toBeNull();
+    expect(notedPlace(null, linesLayoutOf(COLLAPSED, whole), linesLayoutOf({ ...COLLAPSED, layout: 'unified' }, whole), read)).toBeNull();
+  });
+
+  it('notes the place when wrapping a file typed into whole', () => {
+    const whole = { ...NO_OVERRIDES, wholeFile: true, followsLayout: false };
+    expect(notedPlace(null, linesLayoutOf(COLLAPSED, whole), linesLayoutOf({ ...COLLAPSED, wrapLines: true }, whole), read)).not.toBeNull();
+  });
 });
 
 describe('placeToRestore', () => {
@@ -86,31 +112,21 @@ describe('placeToRestore', () => {
   });
 });
 
-describe('lineOfRow', () => {
-  it('reads an added or unchanged line on the modified side', () => {
-    expect(lineOfRow('208', 'context')).toEqual({ side: 'additions', lineNumber: 208 });
-    expect(lineOfRow('212', 'change-addition')).toEqual({ side: 'additions', lineNumber: 212 });
+describe('keptOffset', () => {
+  it('puts a row that started in view where it stood, whatever its height now', () => {
+    expect(keptOffset(LINE_208, 20)).toBe(25);
+    expect(keptOffset(LINE_208, 200)).toBe(25);
+    expect(keptOffset({ ...LINE_208, offset: 0 }, 60)).toBe(0);
   });
 
-  it("reads a removed line on the original's side, by its own number", () => {
-    expect(lineOfRow('212', 'change-deletion')).toEqual({ side: 'deletions', lineNumber: 212 });
+  it('keeps as much of a row partly scrolled past scrolled past, wrapped or unwrapped', () => {
+    // Halfway through a line wrapped to ten rows, unwrapped to one: halfway through that one.
+    expect(keptOffset({ ...LINE_208, offset: -100, height: 200 }, 20)).toBe(-10);
+    // Halfway through a line one row high, wrapped to ten.
+    expect(keptOffset({ ...LINE_208, offset: -10, height: 20 }, 200)).toBe(-100);
   });
 
-  it('reads no line from what stands for none: a bar of collapsed lines, a gap', () => {
-    expect(lineOfRow(undefined, undefined)).toBeNull();
-    expect(lineOfRow('', 'context')).toBeNull();
-    expect(lineOfRow('0', 'context')).toBeNull();
-    expect(lineOfRow('abc', 'context')).toBeNull();
-  });
-});
-
-describe('scrollTopFor', () => {
-  it('puts the line where its row stood from the top of the view', () => {
-    expect(scrollTopFor(4160, 25)).toBe(4135);
-    expect(scrollTopFor(4160, -8)).toBe(4168);
-  });
-
-  it('never scrolls above the top of the file', () => {
-    expect(scrollTopFor(10, 25)).toBe(0);
+  it('keeps the offset of a row it had no height for', () => {
+    expect(keptOffset({ ...LINE_208, offset: -5, height: 0 }, 20)).toBe(-5);
   });
 });

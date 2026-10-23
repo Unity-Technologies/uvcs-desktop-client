@@ -2,7 +2,7 @@ import type { Virtualizer } from '@pierre/diffs';
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import { rowAtTopOf } from './changeView';
 import { useDiffPreferences } from './diffPreferencesStore';
-import { linesLayoutOf, notedPlace, placeToRestore, type KeptPlace, type LayoutOverrides, type LinesLayout } from './keptPlace';
+import { keptOffset, linesLayoutOf, notedPlace, placeToRestore, type KeptPlace, type LayoutOverrides, type LinesLayout } from './keptPlace';
 import { scrollToLine } from './lineScroll';
 
 interface KeptPlaceOptions {
@@ -41,7 +41,7 @@ export function useKeptPlace({ containerRef, virtualizer, shown, overrides }: Ke
     kept.current = null;
     const container = containerRef.current;
     if (!place || !container) return;
-    return scrollToLine(container, place.line, virtualizer, () => place.offset);
+    return scrollToLine(container, place.line, virtualizer, (_view, height) => keptOffset(place, height));
     // The layout as drawn, field by field: a new object for the same layout lays nothing out anew.
   }, [shown.layout, shown.collapseUnchanged, shown.wrapLines, containerRef, virtualizer]);
 }

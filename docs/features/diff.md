@@ -276,10 +276,13 @@ took, and (cs:5) 25 files one by one, more than are restored without asking.
 
 Switching how a text diff lays its lines out (unchanged lines collapsed or all shown, Split or Unified, wrapped or
 not) keeps the line at the top of the view where its row stood, so the code being read doesn't move (`useKeptPlace`,
-`keptPlace`). The line is read from the screen as the preference changes, before the diff draws again, and put back
-once Pierre laid the lines out anew, rendered or not (`scrollToLine`); a line that collapsing hides puts the bar
-standing for it there. Only a switch that changes what's drawn keeps it (`relaysOut`, from the layout as drawn,
-`linesLayoutOf`): not wrapping a file a long line already wraps, nor collapsing one a link's lines unfold.
+`keptPlace`). The line is read from the screen as the preference changes, before the diff draws again (`rowAtTopOf`,
+looking down the modified side and, across from a removed block, the original's: `topProbePoints`), and put back once
+Pierre laid the lines out anew, rendered or not (`scrollToLine`, `pierreLineBox`); a line that collapsing hides puts
+the bar standing for it there, and a row partly scrolled past stays as much scrolled past, a wrapped line unwrapped
+included (`keptOffset`). Only a switch that changes what's drawn keeps it (`relaysOut`, from the layout as drawn,
+`linesLayoutOf`): not wrapping a file a long line already wraps, collapsing one a link's lines unfold or a file typed
+into whole, nor Split | Unified for a version shown alone.
 
 ## Moving through changes
 

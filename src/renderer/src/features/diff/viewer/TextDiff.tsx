@@ -30,7 +30,7 @@ import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreO
 import { installPierrePlainTextRender } from './pierrePlainTextRender';
 import { installPierrePlainTextWordDiffs } from './pierrePlainTextWordDiffs';
 import { installPierreSessionEndRefresh } from './pierreSessionEndRefresh';
-import { caretLineCss, shownDiff, type DiffSides } from './shownDiff';
+import { caretLineCss, followsLayout, shownDiff, type DiffSides } from './shownDiff';
 import { highlightedLanguage, syntaxHighlighting } from './syntaxHighlighting';
 import { useBlockDiscard } from './useBlockDiscard';
 import { useChangeView } from './useChangeView';
@@ -169,7 +169,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     shown: canHighlight,
     scrollTo: (element, line) => scrollToLine(element, line, virtualizer),
   });
-  const layoutOverrides = { wrapsLongLines, focusLines: lineLinks.focusLines };
+  const layoutOverrides = { wrapsLongLines, focusLines: lineLinks.focusLines, wholeFile, followsLayout: followsLayout(sides, wholeFile) };
   const shownLayout = linesLayoutOf(preferences, layoutOverrides);
   const { collapseUnchanged, wrapLines } = shownLayout;
   // A workspace file's diff marks a link's lines as Pierre's selection until lines are picked to discard.

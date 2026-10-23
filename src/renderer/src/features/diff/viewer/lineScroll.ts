@@ -1,12 +1,15 @@
 import type { Virtualizer } from '@pierre/diffs';
 import type { ChangedLine } from './changeBlocks';
-import { scrollTopFor } from './keptPlace';
-import { pierreLinePosition } from './pierreLinePosition';
+import { pierreLineBox } from './pierreLinePosition';
+import { scrollTopFor } from './rowPosition';
 
 /** Frames to wait for the diff to lay the line out: it may only just have loaded. */
 const MAX_FRAMES = 60;
 /** Where a link's line goes in the view: a third of the way down, with what comes before it in view. */
 export const A_THIRD_DOWN = (container: HTMLElement): number => container.clientHeight / 3;
+
+/** How far below the top of the view a line goes, from the view and the line's height as laid out. */
+export type LinePlace = (container: HTMLElement, lineHeight: number) => number;
 
 /**
  * Scrolls the diff in `container` so `line` stands `fromTop` pixels below the top of the view (a third of the way
@@ -15,15 +18,15 @@ export const A_THIRD_DOWN = (container: HTMLElement): number => container.client
  * position is set right once more on the next frame, once rows above it rendered at their real height. Returns a
  * function that stops it.
  */
-export function scrollToLine(container: HTMLElement, line: ChangedLine, virtualizer: Virtualizer, fromTop: (container: HTMLElement) => number = A_THIRD_DOWN): () => void {
+export function scrollToLine(container: HTMLElement, line: ChangedLine, virtualizer: Virtualizer, fromTop: LinePlace = A_THIRD_DOWN): () => void {
   let frames = 0;
   let placed = 0;
   let frame = 0;
   const attempt = (): void => {
     const fileContainer = container.querySelector('diffs-container');
-    const top = fileContainer ? pierreLinePosition(virtualizer, fileContainer, line) : undefined;
-    if (top !== undefined) {
-      container.scrollTop = scrollTopFor(top, fromTop(container));
+    const box = fileContainer ? pierreLineBox(virtualizer, fileContainer, line) : undefined;
+    if (box) {
+      container.scrollTop = scrollTopFor(box.top, fromTop(container, box.height));
       placed++;
     }
     if (placed < 2 && ++frames < MAX_FRAMES) frame = requestAnimationFrame(attempt);
