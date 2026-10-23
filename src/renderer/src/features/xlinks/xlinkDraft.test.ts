@@ -154,6 +154,25 @@ describe('Branch expansion rules', () => {
   });
 });
 
+describe('Picking branches from a list', () => {
+  it("picks a rule's first branch among the workspace's, the second and the one it points to among its repository's", () => {
+    const fields = xlinkDialogFields(CREATE, filled({ repository: 'lib@acme@cloud' }));
+
+    expect(fields.workspaceBranches).toEqual({ title: 'Branch of this workspace', repository: undefined, unavailable: undefined });
+    expect(fields.xlinkedBranches).toEqual({ title: 'Branch of lib@acme@cloud', repository: 'lib@acme@cloud', unavailable: undefined });
+  });
+
+  it("can't list its repository's branches before a new xlink has one", () => {
+    expect(xlinkDialogFields(CREATE, filled({ repository: null })).xlinkedBranches.unavailable).toBe('Choose its repository first');
+  });
+
+  it("lists an edited xlink's own repository's", () => {
+    const target = edit(WRITABLE);
+
+    expect(xlinkDialogFields(target, draftOf(target)).xlinkedBranches.repository).toBe('lib@acme@cloud');
+  });
+});
+
 describe('Editing an xlink', () => {
   it('starts where it points, with its rules, cm’s own marked until edited', () => {
     const target = edit(WRITABLE, [

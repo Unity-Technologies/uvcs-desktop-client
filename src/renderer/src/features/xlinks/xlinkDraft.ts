@@ -81,6 +81,18 @@ export function withoutRule(draft: XlinkDraft, key: number): XlinkDraft {
   return { ...draft, rules: draft.rules.filter((rule) => rule.key !== key) };
 }
 
+/**
+ * Where a branch field's picker reads branches: a rule's `from` side the workspace's repository, its `to` side and
+ * the branch the xlink points to the xlinked one, which a new xlink has only once picked.
+ */
+export interface BranchSource {
+  title: string;
+  /** Another repository's than the workspace's (`name@server`); undefined for the workspace's own. */
+  repository: string | undefined;
+  /** Why it can't be picked from yet. */
+  unavailable: string | undefined;
+}
+
 /** What the dialog shows and lets the user change, from what is typed. */
 export interface XlinkDialogFields {
   title: string;
@@ -99,6 +111,10 @@ export interface XlinkDialogFields {
   pointHint: string | undefined;
   nameError: string | undefined;
   pointError: string | undefined;
+  /** The branches a rule's `from` side picks from: the workspace's. */
+  workspaceBranches: BranchSource;
+  /** The branches a rule's `to` side and the branch it points to pick from: the xlinked repository's. */
+  xlinkedBranches: BranchSource;
   /** What shows under a rule row, by its key: its problem, or that `cm` added it. */
   ruleNotes: ReadonlyMap<number, RuleNote>;
   /** Why it can't be saved yet; null once it can. */
@@ -147,6 +163,10 @@ export function xlinkDialogFields(target: XlinkDialogTarget, draft: XlinkDraft):
     pointHint: words.hint,
     nameError,
     pointError: draft.point.trim() === '' ? undefined : pointError,
+    workspaceBranches: { title: 'Branch of this workspace', repository: undefined, unavailable: undefined },
+    xlinkedBranches: draft.repository
+      ? { title: `Branch of ${draft.repository}`, repository: draft.repository, unavailable: undefined }
+      : { title: 'Branch of its repository', repository: undefined, unavailable: 'Choose its repository first' },
     ruleNotes: ruleNotesOf(draft.rules, ruleErrors),
     problem,
   };
