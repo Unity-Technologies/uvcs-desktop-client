@@ -19,13 +19,14 @@ it saves are decided by `xlinkDraft.ts` (`xlinkDialogFields`, `newXlinkOf`, `xli
 - **Writable** (`-w`): changes made under it are checked in to its repository. A read-only xlink may show a folder of
   its repository instead of all of it; a writable one can't (`cm`: "Only xlinks to root (/) are currently supported
   for writable Xlinks"), so the dialog offers the folder only while read-only.
-- **Branches by name or from a list**: every branch field (the branch it points to, both sides of a rule) takes a
-  name, or one picked from a branch list (`BranchField`, the app's `pickBranch`, as the legacy client offers its
-  branch explorer dialog there). A rule's first branch lists the workspace's repository's branches; its second and
-  the branch it points to the xlinked repository's (`BranchSource`, `xlinkedBranches`), one `cm find branch ... on
-  repository '<repo>'` (`findArgs`' `repository`), and only once a new xlink has its repository. Another
-  repository's branch ids are other branches, so that list never answers the workspace's names by id
-  (`BranchNamesCache`).
+- **Typed, or chosen from a list**: every field naming an object has a "Choose" button beside it (`PickField`), as
+  the legacy client offers its explorer dialogs there; the repository and server are chosen from lists already
+  (`RepositoryPicker`). What it points to opens the app's branch, changeset or label picker (`pickBranch`,
+  `pickChangeset`, `pickLabel`) on the xlinked repository; a rule's first branch the workspace's branches, its second
+  the xlinked repository's (`PickSource`: `pointSource`, `workspaceBranches`, `xlinkedBranches`). Another repository
+  is read with the same one `cm find ... on repository '<repo>'` (`findArgs`' `repository`; `queryKeys.objectList`
+  keeps its list apart), and only once a new xlink has its repository. Another repository's branch ids are other
+  branches, so that list never answers the workspace's names by id (`BranchNamesCache`).
 - **Relative server** (`-rs`): the repository is looked up on the server the workspace's repository is on, for
   repositories replicated to several servers. It stays relative when `cm xlink -e` names a server.
 - **Branch expansion rules**, a writable xlink's only (`cm` refuses them on a read-only one): a change made under the
