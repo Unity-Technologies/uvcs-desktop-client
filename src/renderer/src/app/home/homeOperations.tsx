@@ -8,6 +8,7 @@ import { prompt } from '../../ui/dialog/prompt';
 import { toast } from '../../ui/toast/toastStore';
 import { queryClient } from '../queryClient';
 import { forgetRecentWorkspace } from '../settings/useSettings';
+import { listedRepositories } from '../workspace/workspaceQueries';
 import { DeleteRepositoryDialog } from './dialogs/DeleteRepositoryDialog';
 import { isRepositoryNameTaken, isWorkspaceNameTaken } from './workspaceNaming';
 
@@ -50,7 +51,7 @@ export async function removeWorkspace(workspace: WorkspaceSummary): Promise<void
 }
 
 export async function renameRepository(repository: RepositorySummary): Promise<void> {
-  const names = (queryClient.getQueryData<RepositorySummary[]>(queryKeys.repositories(repository.server)) ?? []).map((listed) => listed.name);
+  const names = listedRepositories(queryClient, repository.server).map((listed) => listed.name);
   const newName = await prompt({
     title: 'Rename repository',
     label: 'Name',

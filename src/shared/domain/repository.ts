@@ -5,6 +5,14 @@ export interface RepositorySummary {
   owner: string;
   /** `name@server`, ready to use as a repository spec. */
   spec: string;
+  /** The Unity project it belongs to, in a Unity organization (`Racing` for `Racing/Game`); none elsewhere. */
+  project?: string;
+}
+
+/** What a server holds: its repositories by name, and in a Unity organization its projects by name, empty ones too. */
+export interface RepositoryListing {
+  repositories: RepositorySummary[];
+  projects: string[];
 }
 
 /** A server the client has credentials for, from `cm profile list`. */
