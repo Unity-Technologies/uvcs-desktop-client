@@ -1,3 +1,5 @@
+import { ranksBefore, scoreFrom, scoreText, toNeedle, WORD_SEPARATORS } from '@shared/fuzzyScore';
+
 export interface FuzzyIndex {
   /** Indexes of the best matches, best first. An empty query returns the first `limit` texts. */
   rank(query: string, limit: number): number[];
@@ -23,11 +25,7 @@ export function createFuzzyIndex(texts: readonly string[]): FuzzyIndex {
   const typed: { needle: string; matched: number[]; limit: number; best: number[] }[] = [];
 
   function isBetter(a: Match, b: Match): boolean {
-    if (a.score !== b.score) return a.score > b.score;
-    const [textA, textB] = [texts[a.index]!, texts[b.index]!];
-    const nameLengthA = textA.length - textA.lastIndexOf('/');
-    const nameLengthB = textB.length - textB.lastIndexOf('/');
-    return nameLengthA !== nameLengthB ? nameLengthA < nameLengthB : textA.length < textB.length;
+    return ranksBefore({ text: texts[a.index]!, score: a.score }, { text: texts[b.index]!, score: b.score });
   }
 
   return {
@@ -70,7 +68,6 @@ export function createFuzzyIndex(texts: readonly string[]): FuzzyIndex {
   };
 }
 
-const WORD_SEPARATORS = new Set(['/', '.', '_', '-', ' ']);
 
 /** Where the characters of `query` match in `text`, for highlighting a result the same way it was ranked. */
 export function fuzzyMatchPositions(text: string, query: string): number[] {
@@ -108,36 +105,4 @@ export function fuzzyMatchQuality(text: string, query: string): number {
     (position, index) => position === 0 || position === positions[index - 1]! + 1 || WORD_SEPARATORS.has(haystack[position - 1]!),
   );
   return (0.6 * anchored.length) / needle.length;
-}
-
-function toNeedle(query: string): string {
-  return query.trim().toLowerCase().replace(/\s+/g, '');
-}
-
-/** Matching from the start alone would let a letter early in the folders break up a run in the name, so try both. */
-function scoreText(haystack: string, needle: string, chars: readonly string[], nameStart: number): number {
-  return Math.max(scoreFrom(haystack, needle, chars, 0, nameStart), nameStart > 0 ? scoreFrom(haystack, needle, chars, nameStart, nameStart) : 0);
-}
-
-/**
- * Collects the matched indexes into `positions` when given; ranking leaves it out to avoid allocations.
- * Starts where the query appears whole, if it does: picking its first letters earlier would break the run.
- * `chars` are the needle's characters, split once per ranking.
- */
-function scoreFrom(haystack: string, needle: string, chars: readonly string[], start: number, nameStart: number, positions?: number[]): number {
-  let score = 1;
-  const run = haystack.indexOf(needle, start);
-  let position = (run === -1 ? start : run) - 1;
-
-  for (let i = 0; i < chars.length; i++) {
-    const found = haystack.indexOf(chars[i]!, position + 1);
-    if (found === -1) return 0;
-
-    if (found === position + 1) score += 3;
-    if (found >= nameStart) score += 2;
-    if (found === 0 || WORD_SEPARATORS.has(haystack[found - 1]!)) score += 2;
-    positions?.push(found);
-    position = found;
-  }
-  return score;
 }
