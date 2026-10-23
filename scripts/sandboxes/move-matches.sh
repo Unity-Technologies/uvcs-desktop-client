@@ -9,8 +9,12 @@
 #     it in src/Legacy/Weapons from 100% to 0% (every 5%, and 97, 88, 67, 33, 12 and 3%), and art/Textures/Weapon.png
 #     with 21 deleted ones in art/Textures/Old, by size.
 #   - 300 unrelated new files (0%), a log too large to measure (–), and a deleted folder with a new one.
-# Changes pairs on its own whatever is past its similarity setting: turn off "Detect moved and renamed files" in
-# Settings › Pending changes to see every deleted file, and every version, in Search matches.
+#   - A pairing the detection gets wrong, with "Detect moved and renamed files" on: src/Legacy/Arsenal/Weapon.cs
+#     became src/Gameplay/Rifle.cs (30%), but the detection pairs it with src/Gameplay/Gun.cs (40%). Search matches on
+#     Rifle.cs offers Weapon.cs, "Paired with Gun.cs", once the minimum is under 30%.
+# With the detection on, Changes pairs each deleted file with its most alike new one past its setting (20%): most of
+# the files above are paired so, and Search matches offers them as such. Turn it off in Settings › Pending changes to
+# see each deleted file on its own.
 # Usage: scripts/sandboxes/move-matches.sh   → repo move-matches-demo@local, workspace /tmp/uvcs-move-matches-demo
 set -euo pipefail
 REPO=move-matches-demo@local
@@ -45,6 +49,7 @@ for class in "${CLASSES[@]}"; do class_file "src/Legacy/$class.cs" "$class" 0; d
 bytes art/Textures/Hero.png 20000
 bytes art/Models/Hero.fbx 50000
 for name in Old1 Old2 Old3; do class_file "src/Retired/$name.cs" "$name" 0; done
+class_file src/Legacy/Arsenal/Weapon.cs Weapon 0
 # Similarity s% has (100 - s) / 2 % of the lines rewritten.
 for similarity in "${WEAPON_SIMILARITIES[@]}"; do
   class_file "src/Legacy/Weapons/WeaponSystemAt$similarity.cs" WeaponSystem $((LINES * (100 - similarity) / 200))
@@ -58,7 +63,7 @@ cm add -R . >/dev/null
 cm ci --all -c "Initial layout" >/dev/null
 
 # Deleted from disk, outside cm: Changes lists them as deleted.
-rm src/Legacy/*.cs src/Legacy/Weapons/*.cs art/Textures/Hero.png art/Models/Hero.fbx art/Textures/Old/*.png
+rm src/Legacy/*.cs src/Legacy/Weapons/*.cs src/Legacy/Arsenal/*.cs art/Textures/Hero.png art/Models/Hero.fbx art/Textures/Old/*.png
 rm -rf src/Retired
 
 # New versions of each class: similarity 100 - 5k% has (5k / 2)% of the lines rewritten.
@@ -69,6 +74,9 @@ for class in "${CLASSES[@]}"; do
     class_file "$folder/${class}At${similarity}.cs" "$class" $((LINES * step * 5 / 200))
   done
 done
+# Weapon.cs became Rifle.cs, rewritten more than Gun.cs, which the detection takes for it.
+class_file src/Gameplay/Gun.cs Weapon $((LINES * 60 / 200))
+class_file src/Gameplay/Rifle.cs Weapon $((LINES * 70 / 200))
 # The new file the deleted WeaponSystemAt*.cs and WeaponAt*.png were.
 class_file src/Gameplay/WeaponSystem.cs WeaponSystem 0
 bytes art/Textures/Weapon.png 20000
