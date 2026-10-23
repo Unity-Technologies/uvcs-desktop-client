@@ -16,7 +16,7 @@ export function useBranches(filter: QueryFilter = {}, repository?: string) {
   const query = compactFilter(filter);
   return useQuery({
     queryKey: queryKeys.objectList(workspacePath, 'branches', query, repository),
-    queryFn: () => api.branches.list(workspacePath, query, ...(repository ? [repository] : [])),
+    queryFn: () => api.branches.list(workspacePath, query, repository),
     placeholderData: (previous) => previous,
     ...SLOW_CHANGING_QUERY,
   });

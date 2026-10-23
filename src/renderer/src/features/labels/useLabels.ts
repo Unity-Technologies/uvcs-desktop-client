@@ -13,7 +13,7 @@ export function useLabels(filter: QueryFilter = {}, repository?: string) {
   const query = compactFilter(filter);
   return useQuery({
     queryKey: queryKeys.objectList(workspacePath, 'labels', query, repository),
-    queryFn: () => api.labels.list(workspacePath, query, ...(repository ? [repository] : [])),
+    queryFn: () => api.labels.list(workspacePath, query, repository),
     placeholderData: (previous) => previous,
     // Without a filter, every label (thousands on big repositories), which only change by label operations.
     ...SLOW_CHANGING_QUERY,

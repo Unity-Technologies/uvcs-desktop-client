@@ -23,7 +23,7 @@ const RECENT_CHANGESETS_FILTER: QueryFilter = { limit: RECENT_CHANGESETS };
 export function recentChangesetsQuery(workspacePath: string, repository?: string) {
   return {
     queryKey: queryKeys.objectList(workspacePath, 'changesets', RECENT_CHANGESETS_FILTER, repository),
-    queryFn: () => api.changesets.list(workspacePath, RECENT_CHANGESETS_FILTER, ...(repository ? [repository] : [])),
+    queryFn: () => api.changesets.list(workspacePath, RECENT_CHANGESETS_FILTER, repository),
     ...SLOW_CHANGING_QUERY,
     staleTime: RECENT_CHANGESETS_STALE_TIME,
     gcTime: RECENT_CHANGESETS_CACHE_TIME,
