@@ -202,6 +202,7 @@ export function BranchExplorerView() {
       select: setSelection,
       homeChangeset,
       repository,
+      inWorkspace: place.kind === 'workspace',
       canvas: canvasRef,
       goHome,
       find,
