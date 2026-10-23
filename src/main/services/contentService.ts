@@ -1,9 +1,10 @@
 import { readFile, stat, writeFile } from 'node:fs/promises';
 import { isMissingItemError, isNotInTreeError, isServerPathNotFoundError } from '../cm/missingItem';
+import { isPurgedRevisionError } from '../cm/purgedRevision';
 import type { ContentApi } from '@shared/api/content';
 import type { ContentSource, FileContent } from '@shared/domain/content';
 import { listsTree, repositoryOfSpec, spec } from '@shared/domain/specs';
-import { EMPTY_CONTENT, MAX_MODEL_BYTES, toFileContent } from '../files/fileContent';
+import { EMPTY_CONTENT, MAX_MODEL_BYTES, PURGED_CONTENT, toFileContent } from '../files/fileContent';
 import { explainLockedFile } from '../files/lockedFile';
 import type { CatRevision } from '../files/RevisionCat';
 import { saveContent } from '../files/saveContent';
@@ -17,8 +18,7 @@ export function createContentService({ cm, reviews, repositoryTrees, workspaceCo
     if (source.kind === 'empty') return EMPTY_CONTENT;
     if (source.kind === 'reviewSnapshot') return reviews.readSnapshot(workspacePath, source.path);
     if (source.kind === 'repositoryPath' && source.beside) return readBeside(workspacePath, source);
-    const { bytes, name } = await bytesOf(workspacePath, source);
-    return toFileContent(bytes, name);
+    return contentOf(await bytesOf(workspacePath, source));
   }
 
   /**
@@ -29,13 +29,13 @@ export function createContentService({ cm, reviews, repositoryTrees, workspaceCo
   async function readBeside(workspacePath: string, source: Extract<ContentSource, { kind: 'repositoryPath' }>): Promise<FileContent> {
     const listed = await listedRevisionOf(workspacePath, source);
     if (listed === null) return EMPTY_CONTENT;
-    const { bytes, name } = await bytesOf(workspacePath, listed);
-    return toFileContent(bytes, name);
+    return contentOf(await bytesOf(workspacePath, listed));
   }
 
   /**
-   * Null when the file isn't there (a model without a `.meta`): that is an answer, which the renderer keeps. Any other
-   * failure (the server, a locked file) fails, to be read again; a file past `MAX_MODEL_BYTES` fails unread.
+   * Null when the file isn't there (a model without a `.meta`), or its content was purged: that is an answer, which
+   * the renderer keeps. Any other failure (the server, a locked file) fails, to be read again; a file past
+   * `MAX_MODEL_BYTES` fails unread.
    */
   async function readBytes(workspacePath: string, asked: ContentSource): Promise<Uint8Array | null> {
     if (asked.kind === 'empty' || asked.kind === 'reviewSnapshot') return null;
@@ -50,7 +50,9 @@ export function createContentService({ cm, reviews, repositoryTrees, workspaceCo
       if (size > MAX_MODEL_BYTES) throw new Error(`${source.path} is too large to read`);
     }
     try {
-      const { bytes } = await bytesOf(workspacePath, source);
+      const read = await bytesOf(workspacePath, source);
+      if (read === PURGED_READ) return null;
+      const { bytes } = read;
       if (bytes.length > MAX_MODEL_BYTES) throw new Error(`${fileNameOfAny(source)} is too large to read`);
       // A plain Uint8Array: IPC copies it as binary (a Buffer would arrive as one too, pool slice and all).
       return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -79,8 +81,11 @@ export function createContentService({ cm, reviews, repositoryTrees, workspaceCo
     return { kind: 'revision' as const, revision: file.revision, fileName: source.path };
   }
 
-  /** A file's bytes from the disk or `cm cat`, and the name that tells what they are. */
-  async function bytesOf(workspacePath: string, source: Exclude<ContentSource, { kind: 'empty' | 'reviewSnapshot' }>): Promise<{ bytes: Buffer; name: string }> {
+  /**
+   * A file's bytes from the disk or `cm cat`, and the name that tells what they are; `PURGED_READ` where `cm cat` said
+   * the revision it was to write to the temp file was purged (`isPurgedRevisionError`).
+   */
+  async function bytesOf(workspacePath: string, source: Exclude<ContentSource, { kind: 'empty' | 'reviewSnapshot' }>): Promise<{ bytes: Buffer; name: string } | typeof PURGED_READ> {
     if (source.kind === 'workspaceFile') {
       const absolutePath = workspaceFileOf(workspacePath, source.path);
       const bytes = await readFile(absolutePath).catch((error: unknown) => {
@@ -95,9 +100,14 @@ export function createContentService({ cm, reviews, repositoryTrees, workspaceCo
     // The loaded revision of a workspace path: kept inside the workspace as a file on disk is.
     if (source.kind === 'workspaceBase') workspaceFileOf(workspacePath, source.path);
     return withTempPath(async (outputFile) => {
-      // A revision named by its spec goes with the others asked with it, in one `cm cat` (a merge's thousands of versions).
-      if (source.kind === 'revision' || source.kind === 'spec') await revisionCat.save(workspacePath, catRevisionOf(source), outputFile);
-      else await saveContent(cm, workspacePath, source, outputFile);
+      try {
+        // A revision named by its spec goes with the others asked with it, in one `cm cat` (a merge's thousands of versions).
+        if (source.kind === 'revision' || source.kind === 'spec') await revisionCat.save(workspacePath, catRevisionOf(source), outputFile);
+        else await saveContent(cm, workspacePath, source, outputFile);
+      } catch (error) {
+        if (isPurgedRevisionError(error, outputFile)) return PURGED_READ;
+        throw error;
+      }
       return { bytes: await readFile(outputFile), name: fileNameOf(source) };
     });
   }
@@ -111,6 +121,14 @@ export function createContentService({ cm, reviews, repositoryTrees, workspaceCo
   }
 
   return { read, readBytes, writeWorkspaceFile };
+}
+
+/** What `bytesOf` answers for a revision whose content was purged. */
+const PURGED_READ = Symbol('purged');
+
+/** The content of what `bytesOf` read: `PURGED_CONTENT` for a purged revision, an answer rather than a failure. */
+function contentOf(read: { bytes: Buffer; name: string } | typeof PURGED_READ): FileContent {
+  return read === PURGED_READ ? PURGED_CONTENT : toFileContent(read.bytes, read.name);
 }
 
 /** `cm` telling an item isn't there (`isMissingItemError`) or a tree that hasn't it (`isNotInTreeError`), or the disk. */

@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { MergeRequest, MergeResolutions } from '@shared/domain/merge';
 import { mergeOutput, statusHeader, treeListing } from '../cm/testing/cmOutput';
-import { fakeCat } from '../cm/testing/fakeCat';
+import { fakeCat, PURGED } from '../cm/testing/fakeCat';
 import { cmFails, fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { recordingContext } from '../operations/testing/recordingContext';
 import { runMerge } from './runMerge';
@@ -204,6 +204,14 @@ describe('runMerge into the workspace', () => {
     const { cm } = keepingTwoIncoming((command) => (attempts++ === 0 ? cmFails('The connection was closed.') : fakeCat(() => 'incoming version\n')(command)));
 
     expect(await runMerge(cm, workspacePath, FROM_TASK, bothIncoming, recordingContext().context)).toEqual({});
+    expect(await readFile(join(workspacePath, 'src', 'b.txt'), 'utf8')).toBe('incoming version\n');
+  });
+
+  it('says a file whose incoming version was purged does not hold it, with one cm cat: the line names its file', async () => {
+    const { cm, lines } = keepingTwoIncoming(fakeCat((spec) => (spec.startsWith('itemid:30#') ? PURGED : 'incoming version\n')));
+
+    expect(await runMerge(cm, workspacePath, FROM_TASK, bothIncoming, recordingContext().context)).toEqual({ keptVersionNotSaved: ['/src/a.txt'] });
+    expect(lines().filter((line) => line.startsWith('cat'))).toHaveLength(1);
     expect(await readFile(join(workspacePath, 'src', 'b.txt'), 'utf8')).toBe('incoming version\n');
   });
 

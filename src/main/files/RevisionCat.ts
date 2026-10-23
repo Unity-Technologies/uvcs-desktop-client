@@ -151,8 +151,8 @@ export class RevisionCat {
 
   /**
    * Runs `cm cat` of the reads and settles those it can tell about. `cm cat` writes every revision it found even when
-   * another failed, and names each it didn't find (`The specified revision was not found <spec>`): a read not written
-   * fails with its own line. When every line of the failure names such a read, the others were written whole;
+   * another failed, and names each it didn't write (`explainCatFailure`: not found, by its spec; purged, by its file):
+   * a read not written fails with its own line. When every line of the failure names such a read, the others were written whole;
    * otherwise (one cut short by a dropped connection, a failure naming nothing) they are returned, unexplained.
    */
   private async attempt(workspacePath: string, reads: WorkspaceReads, batch: Waiting[]): Promise<Unexplained | null> {
@@ -163,12 +163,12 @@ export class RevisionCat {
     if (failure === null) return batch.forEach((read) => read.resolve()), null;
     if (batch.length === 1) return batch[0]!.reject(failure), null;
     const written = await Promise.all(batch.map((read) => stat(read.target).then(() => true, () => false)));
-    const { notFound, everyLineExplained } = explainCatFailure(
+    const { unwritten, everyLineExplained } = explainCatFailure(
       batch.filter((_, i) => !written[i]),
       failure,
     );
-    notFound.forEach(({ read, line }) => read.reject((failure as CmError).withMessage(line)));
-    const missing = notFound.map(({ read }) => read);
+    unwritten.forEach(({ read, line }) => read.reject((failure as CmError).withMessage(line)));
+    const missing = unwritten.map(({ read }) => read);
     const rest = batch.filter((read) => !missing.includes(read));
     if (everyLineExplained) rest.filter((read) => written[batch.indexOf(read)]).forEach((read) => read.resolve());
     const unexplained = everyLineExplained ? rest.filter((read) => !written[batch.indexOf(read)]) : rest;

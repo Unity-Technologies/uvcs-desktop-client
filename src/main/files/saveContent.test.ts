@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { recordsOutput } from '../cm/testing/cmOutput';
 import { TREE_ITEM_FORMAT, TREE_ITEMS } from '../cm/treeItems';
 import { cmFails, fakeCmClient } from '../cm/testing/fakeCmClient';
-import { saveContent } from './saveContent';
+import { fakeCat, PURGED } from '../cm/testing/fakeCat';
+import { PURGED_VERSION_MESSAGE, saveContent, saveVersion } from './saveContent';
 
 const FILEINFO = `<?xml version="1.0" encoding="utf-8"?><FileInfos>
 <FileInfo><ServerPath>/docs</ServerPath><RepSpec>game@local</RepSpec><IsXlink>false</IsXlink></FileInfo>
@@ -137,5 +138,14 @@ describe('saveContent of a repository path known to be under an xlink', () => {
     const { cm, lines } = sharedArtCm();
     await expect(saveContent(cm, tmpdir(), { kind: 'repositoryPath', path: SHARED_BIN, at: 'sh:2', repository: 'art@local' }, 'out')).rejects.toThrow('under an xlink');
     expect(lines()).toEqual([]);
+  });
+});
+
+describe('saveVersion of a revision whose content was purged', () => {
+  it("fails saying so, rather than with cm's line naming the file it was to write", async () => {
+    const { cm } = fakeCmClient({ cat: fakeCat(() => PURGED) });
+    const copies = { read: async () => null };
+    const saved = saveVersion(cm, copies, tmpdir(), { kind: 'revision', revision: { revisionId: 13, repository: 'game@local' }, fileName: 'a.png' }, join(tmpdir(), 'a.png'));
+    await expect(saved).rejects.toThrow(PURGED_VERSION_MESSAGE);
   });
 });

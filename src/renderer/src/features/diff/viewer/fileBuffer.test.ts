@@ -94,6 +94,10 @@ describe("a file typed into in its diff, over the buffer's life", () => {
     expect(savedAsBase(readFromDisk('a\nB\n'), 'a\nB\n')).toBe(false);
     expect(savedAsBase({ ...readFromDisk('a\nB\n'), original: { kind: 'reviewSnapshot', path: 'a.ts' } }, 'a\nb\n')).toBe(false);
   });
+
+  it('never tells a save left the file as its loaded revision where that revision was purged, an emptied file included', () => {
+    expect(savedAsBase({ ...readFromDisk('a\nB\n'), left: { isBinary: false, size: 0, purged: true } }, '')).toBe(false);
+  });
 });
 
 describe('followsDisk', () => {

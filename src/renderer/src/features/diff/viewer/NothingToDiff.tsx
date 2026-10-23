@@ -1,4 +1,4 @@
-import { FileText } from 'lucide-react';
+import { ArchiveX, FileText } from 'lucide-react';
 import type { FileContent } from '@shared/domain/content';
 import { Button } from '../../../ui/Button';
 import { EmptyState } from '../../../ui/EmptyState';
@@ -10,7 +10,7 @@ import { OpenFileButton } from './OpenFileButton';
 
 interface NothingToDiffProps {
   /** Why there is no diff to show. */
-  reason: Extract<DiffBody, 'emptyFile' | 'noContentChanges' | 'onlyIgnoredChanges' | 'tooLarge' | 'binary'>;
+  reason: Extract<DiffBody, 'emptyFile' | 'noContentChanges' | 'onlyIgnoredChanges' | 'tooLarge' | 'binary' | 'purged'>;
   left: FileContent;
   right: FileContent;
   /** Why both versions are the same, e.g. "Moved without content changes". */
@@ -46,5 +46,7 @@ export function NothingToDiff({ reason, left, right, identicalDescription, compa
       );
     case 'binary':
       return <EmptyState title="Binary file" description={`${sizeChange(left, right)}. Binary contents can't be compared as text.`} />;
+    case 'purged':
+      return <EmptyState icon={<ArchiveX size={22} />} title="Content purged" description="Both versions were purged from the server." />;
   }
 }
