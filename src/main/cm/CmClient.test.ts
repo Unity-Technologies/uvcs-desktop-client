@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -29,7 +29,7 @@ interface ProcessRun {
 type Answer = (options?: CmProcessOptions) => CmResult;
 
 /** A `CmClient` over fake runners: every process and shell command is recorded and answered with `answer`. */
-function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer = ((): CmResult => ({ output: 'done\n', exitCode: 0 })) as Answer } = {}) {
+function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer = ((): CmResult => ({ output: 'done\n', exitCode: 0 })) as Answer, outsideWorkspaces = OUTSIDE_WORKSPACES } = {}) {
   const processes: ProcessRun[] = [];
   const shellCommands: { cwd: string; args: string[] }[] = [];
   const pools: { cmPath: string; disposed: boolean; shown: string[]; warmed: string[]; released: string[] }[] = [];
@@ -55,7 +55,7 @@ function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer
       };
     },
   };
-  const cm = new CmClient(() => CM_PATH, OUTSIDE_WORKSPACES, platform, runners);
+  const cm = new CmClient(() => CM_PATH, outsideWorkspaces, platform, runners);
   const logged: CommandLogEntry[] = [];
   cm.onCommandLogged((entry) => logged.push(entry));
   return { cm, processes, shellCommands, pools, logged };
@@ -158,6 +158,18 @@ describe('CmClient routing', () => {
     expect(shellCommands.map(({ cwd }) => cwd)).toEqual([OUTSIDE_WORKSPACES]);
     expect(processes.map(({ options }) => options.cwd)).toEqual([OUTSIDE_WORKSPACES]);
     expect(existsSync(OUTSIDE_WORKSPACES)).toBe(true);
+  });
+
+  it('makes the folder outside every workspace again for a new process when it was deleted during the session', async () => {
+    const outsideWorkspaces = join(mkdtempSync(join(tmpdir(), 'cm-client-')), 'outside-workspaces');
+    const { cm, processes } = fakeClient({ outsideWorkspaces });
+    await cm.execute(['diff', 'br:/main@game@local'], { outsideWorkspaces: true });
+
+    rmSync(outsideWorkspaces, { recursive: true });
+    await cm.execute(['diff', 'br:/task@game@local'], { outsideWorkspaces: true });
+
+    expect(existsSync(outsideWorkspaces)).toBe(true);
+    expect(processes.map(({ options }) => options.cwd)).toEqual([outsideWorkspaces, outsideWorkspaces]);
   });
 
   it('runs a query as a process of its own while no session of the directory is ready yet, and warms them up', async () => {

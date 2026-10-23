@@ -183,7 +183,10 @@ export class CmClient {
     return (anyDirectory ? this.shellPool.shownDirectory() : undefined) ?? homedir();
   }
 
-  /** Made on every use, not once: the OS or the user may delete it during the session, and making it is a cheap check once it exists. */
+  /**
+   * Made on every use, not once: the OS or the user may delete it during the session, and making it is a cheap check
+   * once it exists. A process started then runs in it; a `cm shell` already pooled there keeps the folder it started in.
+   */
   private outsideWorkspacesFolder(): string {
     mkdirSync(this.outsideWorkspaces, { recursive: true });
     return this.outsideWorkspaces;
