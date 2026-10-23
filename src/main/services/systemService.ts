@@ -71,7 +71,7 @@ export function createSystemService({ cm, operations, windows, settings }: Servi
     homeDirectory: async () => homedir(),
     cancelOperation: async (operationId) => operations.cancel(operationId),
     addRecentDocument: async (workspacePath) => app.addRecentDocument(workspacePath),
-    takeRequestedWorkspace: async () => windows.takeRequested(callerId()),
+    takeRequestedPlace: async () => windows.takeRequested(callerId()),
     // The one gate on Gravatar: nothing goes there until the user turned pictures on themselves.
     gravatar: async (user, size) => (showsGravatar(settings.get()) ? gravatars.picture(user, size) : null),
     notifyIncoming: async (workspacePath, message) => showIncomingNotification(windows, workspacePath, message),

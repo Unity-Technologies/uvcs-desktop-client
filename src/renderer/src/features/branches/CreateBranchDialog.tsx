@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { workspacePathOf, type Place } from '@shared/domain/place';
 import type { SwitchChangesAction, SwitchPreflight } from '@shared/domain/switchWithChanges';
 import { api } from '../../api/client';
 import { Button } from '../../ui/Button';
@@ -20,8 +21,8 @@ import styles from './CreateBranchDialog.module.css';
  * `origins` holds one starting point, or several to choose from (the first is the default). Resolves with the new
  * branch's full name once it is created (before any switch to it), or undefined if the dialog is dismissed.
  */
-export function openCreateBranchDialog(workspacePath: string, ...origins: [NewBranchOrigin, ...NewBranchOrigin[]]): Promise<string | undefined> {
-  return askDialog<string>((finish) => <CreateBranchDialog workspacePath={workspacePath} origins={origins} onFinish={finish} />);
+export function openCreateBranchDialog(place: Place, ...origins: [NewBranchOrigin, ...NewBranchOrigin[]]): Promise<string | undefined> {
+  return askDialog<string>((finish) => <CreateBranchDialog place={place} origins={origins} onFinish={finish} />);
 }
 
 interface PendingChangesState {
@@ -30,13 +31,13 @@ interface PendingChangesState {
 }
 
 interface CreateBranchDialogProps {
-  workspacePath: string;
+  place: Place;
   origins: NewBranchOrigin[];
   /** Closes the dialog with the created branch's name, or undefined when dismissed. */
   onFinish: (created: string | undefined) => void;
 }
 
-function CreateBranchDialog({ workspacePath, origins, onFinish }: CreateBranchDialogProps) {
+function CreateBranchDialog({ place, origins, onFinish }: CreateBranchDialogProps) {
   const onClose = (): void => onFinish(undefined);
   const [originIndex, setOriginIndex] = useState(0);
   const origin = origins[originIndex]!;
@@ -45,6 +46,7 @@ function CreateBranchDialog({ workspacePath, origins, onFinish }: CreateBranchDi
   const [topLevel, setTopLevel] = useState(false);
   const [switchAfter, setSwitchAfter] = useState(true);
   const [creating, setCreating] = useState(false);
+  const workspacePath = workspacePathOf(place);
   const pending = usePendingChangesPlan(workspacePath, origin.parentBranch);
   const [action, setAction] = useState<SwitchChangesAction | null>(null);
 
@@ -55,14 +57,14 @@ function CreateBranchDialog({ workspacePath, origins, onFinish }: CreateBranchDi
 
   const fullName = topLevel ? `/${name.trim()}` : `${origin.parentBranch}/${name.trim()}`;
   const error = name ? validateBranchName(name.trim()) : undefined;
-  const { question, blockedByMerge, button: submit } = newBranchSwitch(switchAfter, pending, action);
+  const { offered, question, blockedByMerge, button: submit } = newBranchSwitch(switchAfter, pending, action, workspacePath !== null);
   const startingPoints = startingPointCards(origins);
 
   const create = async (): Promise<void> => {
     if (!name.trim() || error) return;
     setCreating(true);
     const created = await createBranchAndSwitch(
-      workspacePath,
+      place,
       { name: fullName, startingPoint: origin.startingPoint, comment },
       { requested: switchAfter, blockedByMerge, pendingChanges: action ?? undefined, workspaceOn: pending?.preflight.sourceName },
       () => onFinish(fullName),
@@ -99,7 +101,7 @@ function CreateBranchDialog({ workspacePath, origins, onFinish }: CreateBranchDi
       />
       <TextArea label="Comment" value={comment} placeholder="What is this branch for?" onChange={(event) => setComment(event.target.value)} />
       <Checkbox label="Top-level branch" checked={topLevel} onChange={setTopLevel} />
-      <Checkbox label="Switch the workspace to the new branch" checked={switchAfter} onChange={setSwitchAfter} />
+      {offered && <Checkbox label="Switch the workspace to the new branch" checked={switchAfter} onChange={setSwitchAfter} />}
       {question && (
         <>
           <PendingChangesChoice
@@ -119,10 +121,14 @@ function CreateBranchDialog({ workspacePath, origins, onFinish }: CreateBranchDi
   );
 }
 
-/** Whether the workspace has pending changes to decide about when switching to the new branch (Bring preselected). */
-function usePendingChangesPlan(workspacePath: string, parentBranch: string): PendingChangesState | undefined {
+/**
+ * Whether the workspace has pending changes to decide about when switching to the new branch (Bring preselected).
+ * Nothing to read without a workspace.
+ */
+function usePendingChangesPlan(workspacePath: string | null, parentBranch: string): PendingChangesState | undefined {
   const [state, setState] = useState<PendingChangesState>();
   useEffect(() => {
+    if (workspacePath === null) return;
     let current = true;
     void Promise.all([api.workspaces.switchPreflight(workspacePath, `br:${parentBranch}`), api.settings.get()])
       .then(([preflight, settings]) => current && setState({ preflight, plan: planSwitch(preflight, settings.pendingChangesOnSwitch, 'newBranch') }))

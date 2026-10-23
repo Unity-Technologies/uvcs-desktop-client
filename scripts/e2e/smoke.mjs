@@ -13,6 +13,8 @@ import { createWorkspace } from './workspaceFixture.mjs';
 
 /** The sidebar's views by their accessible names, in its order (`VIEWS` in viewRegistry.ts): a new view is one line. */
 const VIEWS = ['Changes', 'Incoming', 'Files', 'Branch Explorer', 'Changesets', 'Branches', 'Labels', 'Shelves', 'Attributes', 'Code reviews', 'Locks', 'Sync'];
+/** Those a repository explored without a workspace shows (`showsView`): its Files are a branch's latest tree. */
+const REPOSITORY_VIEWS = VIEWS.filter((view) => !['Changes', 'Incoming', 'Sync'].includes(view));
 /** Long enough for a slow CI machine; waits end as soon as what they wait for shows. */
 const TIMEOUT_MS = 15_000;
 
@@ -77,6 +79,20 @@ const started = Date.now();
 try {
   const workspaceOnHome = window.getByRole('region', { name: 'All workspaces' }).getByRole('button', { name: /^demo / });
   await step('Home', () => workspaceOnHome.waitFor());
+  await step("A Unity organization's projects", async () => {
+    const sidebar = window.getByRole('navigation');
+    await sidebar.getByRole('button', { name: /^studio/ }).click();
+    await main.getByRole('heading', { level: 1, name: 'studio', exact: true }).waitFor();
+    await main.getByRole('button', { name: 'Project: All projects' }).click();
+    await window.keyboard.type('racing');
+    await window.keyboard.press('Enter');
+    await main.getByRole('button', { name: 'Project: Racing' }).waitFor();
+    // Inside its project, a repository goes by its own name; the other project's is filtered out.
+    await main.getByText('Game', { exact: true }).waitFor();
+    await main.getByText('Levels', { exact: true }).waitFor({ state: 'detached' });
+    await sidebar.getByRole('button', { name: /^Home/ }).click();
+    await workspaceOnHome.waitFor();
+  });
   await step('Open workspace', async () => {
     await workspaceOnHome.click();
     await window.getByRole('navigation').getByRole('button', { name: 'Switch workspace' }).waitFor();
@@ -165,6 +181,44 @@ try {
     await window.getByRole('dialog').getByRole('option', { name: /^Changeset 3/ }).click();
     await main.getByText('src/player.cs', { exact: true }).first().waitFor();
     await main.getByRole('button', { name: /^Copy link/ }).waitFor();
+    await window.keyboard.press('ControlOrMeta+K');
+  });
+  await step('Explore a repository', async () => {
+    await window.keyboard.press('Escape');
+    await window.getByRole('dialog').waitFor({ state: 'detached' });
+    await window.getByRole('button', { name: 'Home' }).first().click();
+    await window.getByRole('navigation').getByRole('button', { name: /^This computer/ }).click();
+    await window.getByRole('button', { name: 'Repository actions' }).first().click();
+    await window.getByRole('menuitem', { name: 'Explore', exact: true }).click();
+    await main.getByRole('heading', { level: 1, name: 'Branch Explorer', exact: true }).waitFor();
+    await window.getByRole('button', { name: 'Create workspace' }).waitFor();
+  });
+  for (const view of REPOSITORY_VIEWS) {
+    await step(`${view} of a repository`, async () => {
+      await window.getByRole('navigation').getByRole('button', { name: new RegExp(`^${view}( \\d+)?$`) }).click();
+      await main.getByRole('heading', { level: 1, name: view, exact: true }).waitFor();
+      await settled();
+    });
+  }
+  await step("A repository's file found by name", async () => {
+    await window.getByRole('navigation').getByRole('button', { name: /^Files/ }).click();
+    await main.getByRole('button', { name: 'Go to file' }).click();
+    const dialog = window.getByRole('dialog', { name: 'Go to file' });
+    await dialog.locator('input').fill('player');
+    await dialog.getByText('player.cs', { exact: false }).first().click();
+    await main.getByRole('row', { name: /player\.cs/ }).first().waitFor();
+  });
+  await step("A repository's changeset diff, in a new window too", async () => {
+    await window.getByRole('navigation').getByRole('button', { name: /^Changesets/ }).click();
+    await main.getByRole('button', { name: 'Open diff' }).click();
+    await main.getByText('src/player.cs', { exact: true }).first().waitFor();
+    const opened = app.waitForEvent('window');
+    await main.getByRole('button', { name: 'Open in new window' }).click();
+    const pageWindow = await opened;
+    pageWindow.on('pageerror', (error) => errors.push(`repository page window pageerror: ${error.message}`));
+    pageWindow.on('console', (message) => message.type() === 'error' && errors.push(`repository page window console.error: ${message.text()}`));
+    await pageWindow.getByText('src/player.cs', { exact: true }).first().waitFor({ timeout: TIMEOUT_MS });
+    await pageWindow.close();
     await window.keyboard.press('ControlOrMeta+K');
   });
   await step('Settings and dark theme', async () => {

@@ -1,6 +1,7 @@
 import { GitMerge } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
+import { workspacePlace } from '@shared/domain/place';
 import type { Changelist, PendingChange, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
@@ -96,7 +97,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const locks = usePendingLocks(workspacePath, workspace?.repository, allChanges, readAt);
   // Sorted once for the layout; filtering keeps the order, so typing in the filter or opening a folder never sorts again.
   const sorted = useSortedChanges(allChanges);
-  const { visible: filtered, query, clear: clearChangeFilter, bar: filterBar } = useChangeFilter(sorted, changePath, changeTones, { isViewFilter: true, reading: !snapshot, actions: <ReviewModeButton workspacePath={workspacePath} /> });
+  const { visible: filtered, query, clear: clearChangeFilter, bar: filterBar } = useChangeFilter(sorted, changePath, changeTones, { isViewFilter: true, reading: !snapshot, actions: <ReviewModeButton place={workspacePlace(workspacePath)} /> });
   const changes = useMemo(() => review.narrow(filtered), [review.narrow, filtered]);
   const clearFilter = (): void => {
     clearChangeFilter();

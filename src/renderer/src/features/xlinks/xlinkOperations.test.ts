@@ -6,6 +6,7 @@ const opened = vi.hoisted(() => [] as { target: XlinkDialogTarget; save: (draft:
 vi.mock('./XlinkDialog', () => ({ openXlinkDialog: (target: XlinkDialogTarget, save: (draft: XlinkDraft) => Promise<boolean>) => opened.push({ target, save }) }));
 
 import type { TreeItem, XlinkTarget } from '@shared/domain/explorer';
+import { workspacePlace } from '@shared/domain/place';
 import { queryClient } from '../../app/queryClient';
 import { shownToasts, watchRefreshes } from '../../testing/operationOutcome';
 import { directoryListingKey } from '../files/directoryListing';
@@ -47,7 +48,7 @@ describe('Creating an xlink', () => {
       },
     ]);
     expect(refreshes()).toEqual(['explorer', 'info', 'locks', 'pendingChanges', 'review']);
-    expect(useFilesViewStore.getState().revealRequest).toMatchObject({ workspacePath: ws, path: 'code/lib' });
+    expect(useFilesViewStore.getState().revealRequest).toMatchObject({ place: workspacePlace(ws), path: 'code/lib' });
   });
 
   it('keeps the dialog open, with what was typed, when cm refuses', async () => {

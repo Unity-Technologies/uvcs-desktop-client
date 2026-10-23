@@ -54,7 +54,9 @@ src/renderer/  React UI. Talks to main only through `api.<area>.<method>` (`rend
 ```
 
 - **Adding a capability**: ARCHITECTURE.md "How a request flows" (domain type → `shared/api` → service wired in
-  `createServices` → pure, tested `cm` helpers in `main/cm/` → a query or mutation in the renderer).
+  `createServices` → pure, tested `cm` helpers in `main/cm/` → a query or mutation in the renderer). What reads or
+  changes the server takes the window's `Place` (a workspace, or a repository with none) and runs through `cmPlace`;
+  only what needs the disk takes a workspace's path (ARCHITECTURE.md "Places").
 - **`CmClient`** is the single entry point to `cm`. Never spawn `cm` any other way.
 - **Renderer tiers**: `ui/` design-system primitives, `components/` domain-aware pieces shared by features,
   `features/<area>/` one folder per area, `lib/` pure helpers, `app/` the shell (navigation, palette, operations,
@@ -79,8 +81,12 @@ Before adding or changing a `cm` call, answer these (the why and the numbers: AR
 4. **When does it run?** Only on an event, a settled selection (`useSettled`), a focus once stale, or an operation —
    never on a timer (the incoming check is the one exception). Immutable results use `IMMUTABLE_QUERY`, heavy lists
    that rarely change `SLOW_CHANGING_QUERY`, equivalent filters share one query key (`compactFilter`).
-5. **What does it refresh?** An operation declares what it `affects` (`refreshScopes.ts`); reads refresh nothing.
-6. **Check it.** Watch the command log (⌘⇧L) while exercising the change and count the commands. Development builds
+5. **How is it read?** A list, anything that grows with the repository or the workspace, is read as it arrives
+   (`queryRecords`, `queryXmlElements`), never as one string; `query()` and `execute()` take only a small answer or an
+   operation, whose ends they keep. Each command says which in `COMMAND_OUTPUTS` (ARCHITECTURE.md "Parsing `cm`
+   output": "No list is one string").
+6. **What does it refresh?** An operation declares what it `affects` (`refreshScopes.ts`); reads refresh nothing.
+7. **Check it.** Watch the command log (⌘⇧L) while exercising the change and count the commands. Development builds
    warn `[server budget]` in the console when a server command repeats more than twice in ten seconds.
 
 ## Safety
@@ -147,8 +153,9 @@ npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click 
   whose merge has file and directory conflicts and changes in several folders: the merge page), `deletes.sh`
   (changesets deleting a file, a folder, an accented name, and a path a new file took: restoring deleted items),
   `smart-merge.sh` (Unity prefabs that conflict line by line, one Smart Merge merges and one it can't: needs a Unity
-  Editor installed), `xlinks.sh` (a writable xlink with branch expansion rules and a read-only one showing a folder of
-  its repository, with branches and a label to point them to: creating and editing xlinks).
+  Editor installed), `purged.sh` (changesets whose earlier, later or both versions a purge removed: needs the purge
+  permission on the local server), `xlinks.sh` (a writable xlink with branch expansion rules and a read-only one
+  showing a folder of its repository, with branches and a label to point them to: creating and editing xlinks).
   `scripts/perf/soak.mjs` catches leaks.
 - `UVCS_RENDERER_PLATFORM=win32` (or `linux`) previews another OS's shortcuts, copy and layout from a Mac (the page
   only: the menus and window frame stay the Mac's).
@@ -236,6 +243,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | --------------------------------------------------------- | ----------------------------------------------------------------- |
 | `main/cm/noExternalUi.test.ts`                            | `cm` never opens a tool; processes start only where allowed       |
 | `main/cm/noOredIdLookups.test.ts`                         | no `where id = 1 or id = 2 …` queries                             |
+| `main/cm/commandOutputs.test.ts`, `testing/fakeCmClient.test.ts` | no list is read as one string; every command says how it's read (`COMMAND_OUTPUTS`) |
 | `shared/noRuntimeDependencies.test.ts`                    | `shared/` imports only its own modules                            |
 | `renderer/src/rendererTiers.test.ts`                      | `lib/` and `ui/` never import the tiers above them                |
 | `lib/shortcutRegistry.test.ts`                            | every shortcut is in the registry; menu accelerators match; no Ctrl+Alt off Mac |

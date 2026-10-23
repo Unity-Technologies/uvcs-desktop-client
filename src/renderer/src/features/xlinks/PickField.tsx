@@ -1,3 +1,4 @@
+import { repositoryPlace } from '@shared/domain/place';
 import { FolderTree, GitBranch, GitCommitVertical, Tag } from 'lucide-react';
 import { useId, type InputHTMLAttributes } from 'react';
 import { classNames } from '../../lib/classNames';
@@ -30,13 +31,13 @@ async function pick({ kind, title, repository, point }: PickSource, value: strin
     case 'folder':
       return repository && point ? pickRepositoryFolder({ title, repository, point, current: value }) : undefined;
     case 'branch':
-      return (await pickBranch({ title, repository }))?.name;
+      return (await pickBranch({ title, place: repository ? repositoryPlace(repository) : undefined }))?.name;
     case 'changeset': {
-      const changeset = await pickChangeset({ title, repository });
+      const changeset = await pickChangeset({ title, place: repository ? repositoryPlace(repository) : undefined });
       return changeset === undefined ? undefined : String(changeset);
     }
     case 'label':
-      return (await pickLabel({ title, repository }))?.name;
+      return (await pickLabel({ title, place: repository ? repositoryPlace(repository) : undefined }))?.name;
   }
 }
 

@@ -4,8 +4,10 @@ import { hotkey } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
 import { fileNameOf } from '../../lib/text';
 import { displayName } from '../../lib/userName';
+import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
+import { lineMenuOf, menuLinesOf } from '../diff/viewer/codeTarget';
 import { PaneScrollbars } from '../diff/viewer/PaneScrollbars';
-import { LineMenuArea } from '../diff/viewer/LineMenuArea';
+import { useCodeMenu } from '../diff/viewer/useCodeMenu';
 import { useLineLinks, type ScrollToLine } from '../diff/viewer/useLineLinks';
 import { useLineTools } from '../diff/viewer/useLineTools';
 import { paneScrollbarsHeight } from '../diff/viewer/paneScrollbarsDom';
@@ -30,6 +32,9 @@ interface AnnotatedCodeProps {
   links: BlockLinks;
 }
 
+/** Annotated code is one read-only text. */
+const ANNOTATED_TEXT = { onlySide: 'additions' as const, typedInto: false };
+
 /** Every line is one row high: a link's line is where its number says. */
 const scrollToAnnotatedLine: ScrollToLine = (container, { lineNumber }) => {
   container.scrollTop = scrollTopShowingLine(lineNumber, container.clientHeight);
@@ -45,7 +50,8 @@ const scrollToAnnotatedLine: ScrollToLine = (container, { lineNumber }) => {
  * or not at all).
  * The keyboard walks the blocks (⌥↓ ⌥↑, with ⇧ those of the same changeset), Enter shows the block's revision and
  * Space its card. Its line numbers select lines for a link, as a diff's do; a link's lines open scrolled to, selected
- * (`useLineLinks`).
+ * (`useLineLinks`). A right-click opens the code's menu, read-only, with the lines' entries (`useCodeMenu`), and ⌃G goes to
+ * a line.
  */
 export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }: AnnotatedCodeProps) {
   const [virtualizer] = useState(() => new Virtualizer());
@@ -83,7 +89,8 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
   };
 
   const onKeyDown = (event: KeyboardEvent): void => {
-    if (event.target !== event.currentTarget) return;
+    codeMenu.onKeyDown(event);
+    if (event.defaultPrevented || event.target !== event.currentTarget) return;
     const handlers: [string, () => void][] = [
       // Before Esc leaves the pane: only while something is picked.
       ...(picked !== -1 ? ([[hotkey('annotateLetGo'), () => setPicked(-1)]] as [string, () => void][]) : []),
@@ -110,10 +117,19 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
     publishes: lineLinks.publishes,
     textOf: () => code,
   });
+  const codeMenu = useCodeMenu({
+    containerRef: scrollerRef,
+    scrollTo: scrollToAnnotatedLine,
+    fileName: path,
+    textOf: () => code,
+    sides: ANNOTATED_TEXT,
+    lines: menuLinesOf(lineLinks),
+    lineMenu: lineMenuOf(lineTools.menu),
+  });
   const pickedBlock = blocks[picked];
 
   return (
-    <LineMenuArea menu={lineTools.menu}>
+    <ActionContextMenu entries={codeMenu.entries} onContextMenu={codeMenu.onContextMenu}>
       <div
         ref={attachScroller}
         className={styles.scroller}
@@ -161,6 +177,6 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
             `Lines ${pickedBlock.start + 1} to ${pickedBlock.end}: changeset ${pickedBlock.changeset.changesetId} by ${displayName(pickedBlock.changeset.owner)}`}
         </span>
       </div>
-    </LineMenuArea>
+    </ActionContextMenu>
   );
 }

@@ -118,13 +118,13 @@ describe('LeftChangesFinder.apply', () => {
     await new LeftChangesFinder(fakeCm(shelvesFound()).cm, recordsOf([])).apply('/work', 9, true, context);
 
     expect(detachReplacedFiles).toHaveBeenCalled();
-    expect(deleteShelves).toHaveBeenCalledWith(expect.anything(), '/work', [{ id: 9, repository: 'eco@local' }]);
+    expect(deleteShelves).toHaveBeenCalledWith(expect.anything(), { cwd: '/work' }, [{ id: 9, repository: 'eco@local' }]);
   });
 
   it('always deletes changes left by a switch once back, as restoring them does', async () => {
     await new LeftChangesFinder(fakeCm(shelvesFound()).cm, recordsOf([leftRecord(2, 'br:/main/task1')])).apply('/work', 2, false, context);
 
-    expect(deleteShelves).toHaveBeenCalledWith(expect.anything(), '/work', [{ id: 2, repository: 'eco@local' }]);
+    expect(deleteShelves).toHaveBeenCalledWith(expect.anything(), { cwd: '/work' }, [{ id: 2, repository: 'eco@local' }]);
   });
 
   it("leaves another workspace's record alone: its moved-aside files and changelists aren't this workspace's", async () => {

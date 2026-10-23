@@ -1,7 +1,8 @@
+import type { Place } from '@shared/domain/place';
 import { useQuery } from '@tanstack/react-query';
 import { GitCommitVertical } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace } from '../../app/workspace/useWorkspace';
 import { branchLabel } from '../../lib/branchLabels';
 import { typedChangesetNumber } from '../../lib/changesetNumber';
 import { firstLine } from '../../lib/text';
@@ -17,8 +18,8 @@ interface PickChangesetOptions {
   title: string;
   /** The changeset not to offer: the one being compared. */
   exclude?: number;
-  /** Another repository's changesets than the workspace's (`name@server`), e.g. an xlinked one's. */
-  repository?: string;
+  /** Another place's changesets than the window's, e.g. an xlinked repository's (`repositoryPlace`). */
+  place?: Place;
 }
 
 /**
@@ -29,9 +30,9 @@ export async function pickChangeset(options: PickChangesetOptions): Promise<numb
   return (await askDialog<ChangesetChoice>((finish) => <ChangesetPickerDialog {...options} finish={finish} />))?.id;
 }
 
-function ChangesetPickerDialog({ title, exclude, repository, finish }: PickChangesetOptions & { finish: (choice: ChangesetChoice | undefined) => void }) {
-  const workspacePath = useWorkspacePath();
-  const { data: recent, error } = useQuery(recentChangesetsQuery(workspacePath, repository));
+function ChangesetPickerDialog({ title, exclude, place, finish }: PickChangesetOptions & { finish: (choice: ChangesetChoice | undefined) => void }) {
+  const windowPlace = usePlace();
+  const { data: recent, error } = useQuery(recentChangesetsQuery(place ?? windowPlace));
   const [search, setSearch] = useState('');
   const choices = useMemo(() => changesetChoices(recent, RECENT_CHANGESETS, exclude, search), [recent, exclude, search]);
   // A number typed is picked without the list: only an empty or text search waits for it.

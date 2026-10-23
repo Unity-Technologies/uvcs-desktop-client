@@ -18,6 +18,8 @@ export function focusAfterMenu(event: Event, otherwise?: (event: Event) => void)
  * have put it there; a field inside a closing popover has left the page by then.
  */
 function caretInField(): boolean {
-  const active = document.activeElement;
+  let active = document.activeElement;
+  // A field inside a shadow root (Pierre's editor, its search panel) leaves only its host as the document's.
+  while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
   return isTextEntry(active) && active.isConnected;
 }

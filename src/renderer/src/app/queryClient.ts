@@ -1,6 +1,7 @@
 import { QueryClient, type Query } from '@tanstack/react-query';
+import type { Place } from '@shared/domain/place';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
-import { queryKeys, workspaceKey } from '../api/queryKeys';
+import { placeKey, queryKeys, workspaceKey } from '../api/queryKeys';
 import { boundUnusedQueries } from './boundUnusedQueries';
 import { heldContentBytes } from './heldContentBytes';
 import { workspaceInfoKeyMoved, type WorkspaceInfoPart } from './refresh/headChanges';
@@ -86,6 +87,20 @@ export const queryClient = createQueryClient();
  */
 export function invalidateWorkspace(workspacePath: string, affected?: (queryKey: readonly unknown[]) => boolean): Promise<void> {
   return invalidateWorkspaceIn(queryClient, workspacePath, affected);
+}
+
+/**
+ * After an operation on the window's place: a workspace's queries as `invalidateWorkspace` refreshes them; a
+ * repository's, with no workspace info to follow, those `affected` keeps (all by default).
+ */
+export function invalidatePlace(place: Place, affected?: (queryKey: readonly unknown[]) => boolean): Promise<void> {
+  return invalidatePlaceIn(queryClient, place, affected);
+}
+
+/** `invalidatePlace` on a given client. */
+export function invalidatePlaceIn(client: QueryClient, place: Place, affected: (queryKey: readonly unknown[]) => boolean = () => true): Promise<void> {
+  if (place.kind === 'workspace') return invalidateWorkspaceIn(client, place.workspacePath, affected);
+  return client.invalidateQueries({ queryKey: placeKey(place), predicate: (query) => isRefreshable(query) && affected(query.queryKey) });
 }
 
 /** `invalidateWorkspace` on a given client. */

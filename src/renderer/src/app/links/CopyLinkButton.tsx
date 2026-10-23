@@ -12,8 +12,8 @@ import { useShownFile } from './useShownFile';
  * link names.
  */
 export function CopyLinkButton({ page, className }: { page: Page; className?: string }) {
-  const workspacePath = useSession((state) => state.workspacePath);
+  const place = useSession((state) => state.place);
   const target = pageObjectTarget(page, useShownFile(page));
-  if (!target || !workspacePath) return null;
-  return <IconButton className={className} size="small" icon={<Link size={14} />} label={objectLinkLabel(target)} onClick={() => void copyPageObjectLink(workspacePath, page)} />;
+  if (!target || !place) return null;
+  return <IconButton className={className} size="small" icon={<Link size={14} />} label={objectLinkLabel(target)} onClick={() => void copyPageObjectLink(place, page)} />;
 }

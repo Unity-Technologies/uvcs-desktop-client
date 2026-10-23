@@ -457,7 +457,7 @@ heatmap's), and come back in the other modes. The merge cards' stills stay clay 
   parent revisions (`lastChangeAssetsPoint`, `AssetsBefore` `changeset`). Anything else has no point (a merge's
   versions, a shelve's or a label's tree, which `cm ls` can't list, a revision of an xlinked repository in History or
   Files, whose tree's paths aren't the workspace's, and any revision there while the workspace's repository isn't
-  known yet, `inWorkspaceRepository`, which compares specs as `cm` names them: ARCHITECTURE.md "Unity organizations"): only what its file holds shows (a glTF's own images), never the
+  known yet, `inPlaceRepository`, which compares specs as `cm` names them: ARCHITECTURE.md "Unity organizations"): only what its file holds shows (a glTF's own images), never the
   disk's files, which may be another revision's. The disk's look was rejected for that reason: a model on a branch
   the workspace never loaded showed clay, and one at another revision showed the workspace's textures, wrong. Only the
   model's own `.meta` is read as the version's sibling (its remaps, with its import settings), and an OBJ's `.mtl`

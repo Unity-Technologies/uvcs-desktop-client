@@ -1,18 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { countCharactersRead } from '@shared/testing/countCharactersRead';
-import { parseDiffEntries } from './diffEntries';
-import { formatOutput } from './testing/cmOutput';
+import { mergedDiffEntries, readDiffEntry } from './diffEntries';
+import { formatOutput, recordsIn } from './testing/cmOutput';
+
+const diffEntriesIn = (output: string) => mergedDiffEntries(recordsIn(output, readDiffEntry));
 
 const GAME = '"game@local"';
 
-describe('parseDiffEntries', () => {
+describe('reading diff entries', () => {
   it('reads added, changed and deleted items sorted by path', () => {
     const output =
       formatOutput(['A', '"/src/ui.ts"', '""', '-1', '36', 'F', GAME]) +
       formatOutput(['C', '"/assets/logo.png"', '""', '13', '37', 'B', GAME]) +
       formatOutput(['D', '"/docs/notes.md"', '""', '-1', '14', 'F', GAME]);
 
-    expect(parseDiffEntries(output)).toEqual([
+    expect(diffEntriesIn(output)).toEqual([
       { status: 'changed', path: 'assets/logo.png', oldPath: undefined, itemType: 'binaryFile', baseRevisionId: 13, revisionId: 37, repository: 'game@local' },
       { status: 'deleted', path: 'docs/notes.md', oldPath: undefined, itemType: 'file', baseRevisionId: 14, revisionId: -1, repository: 'game@local' },
       { status: 'added', path: 'src/ui.ts', oldPath: undefined, itemType: 'file', baseRevisionId: -1, revisionId: 36, repository: 'game@local' },
@@ -35,7 +37,7 @@ describe('parseDiffEntries', () => {
       ]) +
       formatOutput(['A', '"/01project/src/client/plugins/editor-plugin/TestPlans/TASK-1234.md"', '""', '-1', '432300', 'F', '"editorGUI@acme@cloud"']);
 
-    expect(parseDiffEntries(output).map(({ path, itemType, baseRevisionId, revisionId, repository }) => ({ path, itemType, baseRevisionId, revisionId, repository }))).toEqual([
+    expect(diffEntriesIn(output).map(({ path, itemType, baseRevisionId, revisionId, repository }) => ({ path, itemType, baseRevisionId, revisionId, repository }))).toEqual([
       { path: '.github/code-style.md', itemType: 'file', baseRevisionId: 31303681, revisionId: 31327337, repository: 'acme@acme@cloud' },
       { path: '01project/src/client/plugins/editor-plugin', itemType: 'xlink', baseRevisionId: -1, revisionId: -1, repository: 'acme@acme@cloud' },
       {
@@ -57,31 +59,31 @@ describe('parseDiffEntries', () => {
 
   it('sorts numbered files as people read them', () => {
     const output = ['file_10.txt', 'file_2.txt', 'File_1.txt', 'file_100.txt'].map((name) => formatOutput(['A', `"/${name}"`, '""', '-1', '5', 'F', GAME])).join('');
-    expect(parseDiffEntries(output).map((entry) => entry.path)).toEqual(['File_1.txt', 'file_2.txt', 'file_10.txt', 'file_100.txt']);
+    expect(diffEntriesIn(output).map((entry) => entry.path)).toEqual(['File_1.txt', 'file_2.txt', 'file_10.txt', 'file_100.txt']);
   });
 
   it('lists everything in a folder right after it, as every list of files does', () => {
     const output = ['a-b.txt', 'a/c.txt', 'a', 'ab'].map((path) => formatOutput(['A', `"/${path}"`, '""', '-1', '5', 'F', GAME])).join('');
-    expect(parseDiffEntries(output).map((entry) => entry.path)).toEqual(['a', 'a/c.txt', 'a-b.txt', 'ab']);
+    expect(diffEntriesIn(output).map((entry) => entry.path)).toEqual(['a', 'a/c.txt', 'a-b.txt', 'ab']);
   });
 
   it('shows the same revision on both sides of a pure move', () => {
-    const [moved] = parseDiffEntries(formatOutput(['M', '"/docs/changelog.md"', '"/docs/notes.md"', '-1', '14', 'F', GAME]));
+    const [moved] = diffEntriesIn(formatOutput(['M', '"/docs/changelog.md"', '"/docs/notes.md"', '-1', '14', 'F', GAME]));
     expect(moved).toMatchObject({ status: 'moved', oldPath: 'docs/notes.md', baseRevisionId: 14, revisionId: 14 });
   });
 
   it('merges a moved and changed item into one entry', () => {
     const output = formatOutput(['C', '"/src/arith.ts"', '""', '55', '69', 'F', GAME]) + formatOutput(['M', '"/src/arith.ts"', '"/src/math.ts"', '-1', '69', 'F', GAME]);
-    expect(parseDiffEntries(output)).toEqual([
+    expect(diffEntriesIn(output)).toEqual([
       { status: 'moved', path: 'src/arith.ts', oldPath: 'src/math.ts', itemType: 'file', baseRevisionId: 55, revisionId: 69, repository: 'game@local' },
     ]);
   });
 
   it('reads a big diff in one pass: doubling it about doubles the work, sorting included', () => {
     const diffOf = (size: number) => formatOutput(...Array.from({ length: size }, (_, index) => ['C', `"/src/folder${index % 100}/file_${(index * 7919) % size}.ts"`, '""', '12', '13', 'F', GAME]));
-    const charactersReadFor = (size: number) => countCharactersRead(() => parseDiffEntries(diffOf(size))).charactersRead;
+    const charactersReadFor = (size: number) => countCharactersRead(() => diffEntriesIn(diffOf(size))).charactersRead;
     // About 2.2 (n·log n, the sort by path); a pass over the rest of the output per record reads 4 times as much.
     expect(charactersReadFor(4_000) / charactersReadFor(2_000)).toBeLessThan(2.5);
-    expect(parseDiffEntries(diffOf(2_000))).toHaveLength(2_000);
+    expect(diffEntriesIn(diffOf(2_000))).toHaveLength(2_000);
   });
 });

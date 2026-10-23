@@ -11,6 +11,7 @@ import type { AppIcons } from '../system/apps/AppIcons';
 import type { ExternalAppsCatalog } from '../system/apps/ExternalAppsCatalog';
 import type { InstalledAppsCache } from '../system/apps/installedApps';
 import type { AppUpdates } from '../update/AppUpdates';
+import type { RepositoryPathSearch } from '../files/RepositoryPathSearch';
 import type { RepositoryTrees } from '../unity/RepositoryTrees';
 import type { RevisionDownloads } from '../unity/RevisionDownloads';
 import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
@@ -40,6 +41,8 @@ export interface ServiceContext {
   revisionDownloads: RevisionDownloads;
   /** The repository's trees at the points a model viewer reads, listed once each and shared (`RepositoryTrees`). */
   repositoryTrees: RepositoryTrees;
+  /** A repository's files found by name, its trees listed once per changeset into the session's files (`RepositoryPathSearch`). */
+  repositoryPaths: RepositoryPathSearch;
   updates: AppUpdates;
   /** Branch names by object id, kept while a window shows the workspace (`BranchNamesCache`). */
   branchNames: BranchNamesCache;

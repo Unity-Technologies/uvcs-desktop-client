@@ -1,6 +1,7 @@
 import '../../testing/fakeWindow';
 import { focusManager, type QueryClient } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 import { createQueryClient } from '../../app/queryClient';
 import { showQuery } from '../../testing/queryProbes';
 import { reviewSummariesQuery } from './useCodeReviews';
@@ -27,7 +28,7 @@ async function focus(): Promise<void> {
 
 describe('the newest code reviews (branch chips, the palette)', () => {
   it('are a list read rarely: coming back to the window never reads them again, however old', async () => {
-    const { queryKey, queryFn: _read, ...options } = reviewSummariesQuery('/ws');
+    const { queryKey, queryFn: _read, ...options } = reviewSummariesQuery(workspacePlace('/ws'));
     const reviews = await showQuery(client, queryKey, options);
 
     vi.advanceTimersByTime(60 * 60_000);

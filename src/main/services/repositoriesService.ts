@@ -1,8 +1,10 @@
 import type { RepositoriesApi } from '@shared/api/repositories';
-import type { RepositorySummary } from '@shared/domain/repository';
-import { parseAccounts } from '../cm/accounts';
-import { parseRecords, recordFormat } from '../cm/formatRecords';
+import { isUnityOrganization } from '@shared/domain/organizations';
+import type { RepositoryListing } from '@shared/domain/repository';
+import { CmError } from '../cm/CmError';
+import { readFields } from '../cm/formatRecords';
 import { serverProfiles } from '../cm/profiles';
+import { repositoryListingOf, refusesTypeOption, repositoryListArgs } from '../cm/repositoryListing';
 import type { ProfilesContext, ServiceContext } from './ServiceContext';
 
 /** Remote servers can be slow or ask for credentials; don't let one hang the home screen. */
@@ -10,23 +12,23 @@ const LIST_TIMEOUT_MS = 20_000;
 
 export function createRepositoriesService({ cm }: ServiceContext, { profiles }: ProfilesContext): RepositoriesApi {
   async function servers() {
-    return serverProfiles(parseAccounts(await profiles.read()));
+    return serverProfiles(await profiles.read());
   }
 
-  async function list(server: string): Promise<RepositorySummary[]> {
-    const format = recordFormat(['repid', 'repname', 'repserver', 'repowner']);
-    const output = await cm.execute(['repository', 'list', server, `--format=${format}`], {
-      signal: AbortSignal.timeout(LIST_TIMEOUT_MS),
-    });
-    return parseRecords(output)
-      .map(([id = '', name = '', repositoryServer = server, owner = '']) => ({
-        id,
-        name,
-        server: repositoryServer,
-        owner,
-        spec: `${name}@${repositoryServer}`,
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+  /** A Unity organization's projects come with its repositories, in the same command. */
+  async function list(server: string): Promise<RepositoryListing> {
+    if (!isUnityOrganization(server)) return listOnce(server, false);
+    try {
+      return await listOnce(server, true);
+    } catch (error) {
+      if (!(error instanceof CmError) || !refusesTypeOption(error.message)) throw error;
+      return listOnce(server, false);
+    }
+  }
+
+  async function listOnce(server: string, withProjects: boolean): Promise<RepositoryListing> {
+    const records = await cm.executeRecords(repositoryListArgs(server, { withProjects }), readFields, { signal: AbortSignal.timeout(LIST_TIMEOUT_MS) });
+    return repositoryListingOf(records, server, { withProjects });
   }
 
   async function create(server: string, name: string): Promise<string> {

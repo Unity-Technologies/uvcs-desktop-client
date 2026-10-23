@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { GitBranch } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { workspacePlace } from '@shared/domain/place';
 import type { NewFolderCheck } from '@shared/domain/workspace';
 import { api } from '../../api/client';
 import { LocationField } from '../../app/home/dialogs/LocationField';
@@ -51,7 +52,7 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
   const [existingBranch, setExistingBranch] = useState(initialBranch);
   const [chosenFolder, setChosenFolder] = useState<string>();
   const [newWindow, setNewWindow] = useState(true);
-  const setup = useTaskWorkspaceSetup(workspacePath);
+  const setup = useTaskWorkspaceSetup(workspacePlace(workspacePath));
   const { running } = setup;
 
   const branchError = mode === 'new' ? validateBranchName(leaf.trim()) : undefined;
@@ -87,7 +88,7 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
       return;
     }
     onClose();
-    if (newWindow) void api.windows.openWorkspace(outcome.workspacePath);
+    if (newWindow) void api.windows.openPlace(workspacePlace(outcome.workspacePath));
     else openWorkspace(outcome.workspacePath);
   };
 

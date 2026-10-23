@@ -1,4 +1,5 @@
 import { Notification } from 'electron';
+import { workspacePlace } from '@shared/domain/place';
 import { sendEventTo } from '../ipc/sendEvent';
 import { focusWindow, type WorkspaceWindows } from './WorkspaceWindows';
 
@@ -15,7 +16,7 @@ export function showIncomingNotification(windows: WorkspaceWindows, workspacePat
   shown.add(notification);
   notification.on('click', () => {
     shown.delete(notification);
-    const window = windows.windowShowing(workspacePath);
+    const window = windows.windowShowing(workspacePlace(workspacePath));
     if (!window) return windows.focusAny();
     focusWindow(window);
     sendEventTo(window.webContents, 'incomingNotificationClicked', { workspacePath });

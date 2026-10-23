@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { LeftChanges } from '@shared/domain/switchWithChanges';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
@@ -55,6 +56,6 @@ export async function discardLeftChanges(workspacePath: string, shelves: LeftCha
   if (!confirmed) return;
 
   const ids = shelves.map((shelve) => shelve.shelveId);
-  const discarded = await runVoidAction(workspacePath, "Couldn't discard the shelved changes", () => api.leftChanges.discard(workspacePath, ids), isAffectedByShelveDeletion);
+  const discarded = await runVoidAction(workspacePlace(workspacePath), "Couldn't discard the shelved changes", () => api.leftChanges.discard(workspacePath, ids), isAffectedByShelveDeletion);
   if (discarded) toast.success(shelves.length === 1 ? `Discarded shelve ${ids[0]}` : `Discarded ${pluralize(ids.length, 'shelve')}`);
 }

@@ -1,3 +1,4 @@
+import type { Place } from '@shared/domain/place';
 import { useMemo } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import { Dialog } from '../../ui/dialog/Dialog';
@@ -11,8 +12,8 @@ interface PickBranchOptions {
   description?: string;
   /** A branch that can't be picked, e.g. the one the workspace is on. */
   exclude?: string;
-  /** Another repository's branches than the workspace's (`name@server`), e.g. an xlinked one's. */
-  repository?: string;
+  /** Another place's branches than the window's, e.g. an xlinked repository's (`repositoryPlace`). */
+  place?: Place;
 }
 
 /** Asks the user to choose a branch. Resolves to it as the branch list read it (its head too), or undefined if dismissed. */
@@ -20,8 +21,8 @@ export function pickBranch(options: PickBranchOptions): Promise<Branch | undefin
   return askDialog<Branch>((finish) => <BranchPickerDialog {...options} finish={finish} />);
 }
 
-function BranchPickerDialog({ title, description, exclude, repository, finish }: PickBranchOptions & { finish: (branch: Branch | undefined) => void }) {
-  const branchesQuery = useBranches({}, repository);
+function BranchPickerDialog({ title, description, exclude, place, finish }: PickBranchOptions & { finish: (branch: Branch | undefined) => void }) {
+  const branchesQuery = useBranches({}, place);
   const branches = useMemo(() => (branchesQuery.data ?? []).filter((branch) => branch.name !== exclude), [branchesQuery.data, exclude]);
 
   return (

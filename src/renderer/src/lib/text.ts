@@ -37,6 +37,11 @@ export function pluralize(count: number, singular: string, plural = `${singular}
   return `${formatCount(count)} ${count === 1 ? singular : plural}`;
 }
 
+/** How many of something a thing holds, as a quiet line says it: "No repositories", "1 repository", "12 repositories". */
+export function holdsCount(count: number, singular: string, plural = `${singular}s`): string {
+  return count === 0 ? `No ${plural}` : pluralize(count, singular, plural);
+}
+
 /** Names in a sentence, the first two and how many more: "a and b", "a, b and 3 others". */
 export function listNames(names: readonly string[]): string {
   if (names.length <= 2) return names.join(' and ');

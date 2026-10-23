@@ -16,7 +16,7 @@ you touch:
 
 | Doc                                     | Covers                                                                         |
 | --------------------------------------- | ------------------------------------------------------------------------------ |
-| `features/diff.md`                      | Comparing two branches, changesets or labels, editing, discarding, stepping through changes, comparison methods, line breaks, images, review marks, highlighting memory |
+| `features/diff.md`                      | Comparing two branches, changesets or labels, editing, the code's menu, discarding, stepping through changes, comparison methods, line breaks, images, review marks, highlighting memory |
 | `features/model-diff.md`                | 3D models (FBX, OBJ, glTF): reading them as Unity imports them, what changed in Unity's terms, the 3D view, materials and textures where each version is, the disk or the repository at its point (`api.unityAssets`) |
 | `features/merge.md`                     | The merge page, conflict resolution, external merge tools, finishing a task    |
 | `features/incoming.md`                  | Incoming: changesets and their files, conflicts with your changes, updating    |
@@ -27,6 +27,7 @@ you touch:
 | `features/updates.md`                   | The About dialog, reporting an issue, how the app updates (unsigned macOS too), What's New, releases, the app icon and CI |
 | `features/locks.md`                     | Lock rules: where they are edited, and why not in the app                      |
 | `features/permissions.md`               | Permissions: the ACL model, `cm showacl`/`cm acl` quirks, the dialog, where it's reachable |
+| `features/explore-repository.md`        | Exploring a repository without a workspace: the entry points, what its window shows and offers, Create workspace, links |
 | `features/page-windows.md`              | A page (a diff, a history, a review) in a new window: where it's offered, how it belongs to its workspace window, Follow selection |
 | `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 | `features/xlinks.md`                    | Creating and editing xlinks: where they point, writable ones, branch expansion rules, the `cm xlink` commands |
@@ -62,12 +63,13 @@ you touch:
      So is, on Windows, a command that prints text (see Parsing).
    - A pooled command may take two minutes, a workspace write half an hour (a few paths can still be a whole tree).
    - `queryRecords()` and `executeRecords()` run a command that prints `--format` records as `query()` and
-     `execute()` do, routing included, and read each record as it arrives (see Parsing: records).
-   - A command may print at most `MAX_OUTPUT_LENGTH` (256 MB) characters, shell or process: text output is read as one
-     string, and V8 refuses strings past about 512 MB. Records are never one string; the limit counts their bytes, which
-     bounds what reading them costs. Past it the command is killed (a session starts a new process)
-     and fails with a `CmError` (`CmOutputTooLargeError`), never a crash. A list that can get there needs a
-     server-side filter or a `limit` (Server budget: Queries).
+     `execute()` do, routing included, and read each record as it arrives (see Parsing: records); `queryXmlElements()`
+     reads an XML list element by element the same way (`cm history`), and `queryLines()` a list of one item a line
+     (`cm listusers`).
+   - No output is held as one string unless it is a small answer (Parsing: "No list is one string"): a list is read as
+     it arrives with no size limit, an answer stops past `MAX_TEXT_OUTPUT_LENGTH` (4 MB) with a `CmError`
+     (`CmOutputTooLargeError`; a session starts a new process), and an operation keeps the ends of what it prints and
+     is never stopped for its size.
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
    (see Renderer: Command log); one that ended without an exit code (stopped on a prompt, `cm` not found) is logged
    with -1, which the log and the error dialog word as "Stopped" (`commandEnding`), and one its caller cancelled is not
@@ -75,9 +77,55 @@ you touch:
 
 To add a capability: its types in `shared/domain`, the method in `shared/api/<area>.ts` (part of `UvcsApi`), the
 implementation in `main/services/<area>Service.ts` (wired in `createServices`), `cm` argument builders and parsers as
-pure, tested helpers in `main/cm/`, then a query or mutation in the renderer through `api.<area>.<method>`. The preload
+pure, tested helpers in `main/cm/`, then a query or mutation in the renderer through `api.<area>.<method>`. A method on
+the server takes a `Place` and runs its commands through `cmPlace`, tested in a workspace and in a repository with none
+("Places", below). The preload
 and the IPC channel never change: the preload gains no capability or channel; besides `invoke` and `on` it exposes only
 values the page needs synchronously before its first frame (`platform`, the starting zoom `initialZoom`).
+
+## Places: a workspace, or a repository with none
+
+What a window shows is a `Place` (`shared/domain/place.ts`): a workspace, or a repository explored without one. The
+server's objects (branches, changesets, labels, shelves, attributes, code reviews, locks, diffs, histories, annotations,
+a changeset's tree) read and change the same in both; only the disk (pending changes, switching, updating, merging into
+the workspace, editing a file) needs a workspace.
+
+- **APIs**: a method on the server takes a `Place`; a method on the disk takes a workspace's path, which a repository's
+  place has none of, so the type checker keeps the disk out of a repository's window.
+- **Commands are written once, through `cmPlace`** (`main/cm/cmPlace.ts`). In a workspace a command runs as it always
+  has: in the workspace's folder, which tells `cm` the repository, its arguments as written. With no workspace each
+  command names the repository itself: `cm find` ends with `on repository '<repository>'` (`findCommand`: anywhere but
+  last `cm` fails, "missing EndOfFile"), specs end with `@<repository>` (`CmPlace.spec`; one naming its repository
+  already, an xlinked item's, stays), a new branch or attribute is created by that spec (`CmPlace.newObject`: a bare
+  name in a workspace), and `cm codereview` takes `--repository` (`CmPlace.repositoryOption`: without it, outside a
+  workspace, `cm` fails with "Object reference not set to an instance of an object", after creating the review).
+- **Outside every workspace**: a repository's commands run in an empty folder of the app's (`CmRunOptions.outsideWorkspaces`,
+  `<userData>/outside-workspaces`), never in a workspace another window shows (`anyDirectory`): a command that forgot to
+  name its repository fails ("Not on workspace") instead of reading, or changing, that workspace's repository.
+- **The disk is a workspace's**: a read of its files, its loaded revision or a review snapshot asks `workspaceOf`, a
+  bug told as one for a repository; `WorkspaceCopies` (revisions read from the disk) is asked only in a workspace.
+- **Caches and queues key by place** (`placeId`: a workspace's path, `repository:<spec>` for a repository):
+  `BranchNamesCache`, `RevisionCat`, `RepositoryTrees`, `RevisionDownloads`, `HandedOverDiffs`, the review mode setting.
+  `BranchNamesCache` keeps a place's names only while a window shows it (its `isShown`): a workspace's while it is
+  watched, a repository's while a window explores it (`WorkspaceWindows.explores`); the last window to leave it lets
+  them go (`onRepositoryLeft`).
+- **Windows key by place** too: one window per place (`WorkspaceWindows.windowShowing`, `samePlace`), page windows
+  belonging to it, the session saving either (`SavedWindow.repository`). A window says it explores a repository
+  (`windows.exploring`, `useRepositoryShown`) as watching a workspace says it shows one. The renderer's session holds
+  the place (`useSession().place`; `workspacePath` is its workspace's, null while exploring), and each place has its
+  screen on one layout (`PlaceLayout`: `WorkspaceScreen`, `RepositoryScreen`), its views (`showsView`, `viewsOf`) and
+  its commands (`usePlaceCommands`, then `useWorkspaceCommands` or `useRepositoryCommands`).
+- **The renderer** keys a place's queries `queryKeys.inPlace(place, …)` (a workspace's are `inWorkspace`'s, so every
+  refresh scope reads both alike), refreshes them with `invalidatePlace` (`runAction` takes the place it changed), and
+  gets the window's place from `usePlace()`, its repository and server from `usePlaceRepository()` and
+  `usePlaceServer()`. `useWorkspaceInfo()` and `usePendingChanges()` are the place's workspace's: none for a repository.
+- **Menus**: an object's menu takes the place; what needs a workspace takes its path (`workspacePathOf`), so it isn't
+  there for a repository. The words whose action needs one are listed once (`NEEDS_A_WORKSPACE`, `menuWords`), and
+  `menuGrammar.test.ts` builds every object's menu for a repository and checks none of them is offered.
+
+Tried and dropped: a temporary workspace for a repository (the official client's way). `cm` makes only workspaces that
+every client lists (`cm lwk`, the official client's home), and one a crash leaves stays there; the app would have
+to special-case it wherever a workspace shows (watchers, recent workspaces, the session, the incoming check).
 
 ## Server budget
 
@@ -93,7 +141,8 @@ and many people use the same server. Every `cm` command other than local reads (
   that has no form for N, which runs once per workspace, never per row of a server list: the home screen's `cm wi`
   of each workspace (`workspaceHeadsReader`, "Home", below), the recent workspaces' `cm status --header` it couldn't
   tell (`workspaceRepositoryLookup`), and the switcher's two `cm status` of each workspace of the same repository, its
-  header and its changes counted (`workspaces.glance`, `readWorkspaceGlance`).
+  header and its changes counted (`workspaces.glance`, `readWorkspaceGlance`). An `--xml` header still asks the server
+  for the branch head ("`cm status` asks the server for its header", in "Parsing `cm` output").
 - **Revisions asked together, one `cm cat` per batch**: every revision read by its spec (`content.read` of a
   `revision` or a `spec`: diffs, History, Incoming, a merge's conflicting files) goes through `RevisionCat`, which
   saves the reads asked together with one `cm cat <spec>;<file> <spec>;<file> …` per batch (`nextCatBatch`,
@@ -110,8 +159,9 @@ and many people use the same server. Every `cm` command other than local reads (
   is all read so, a quick `cm cat` after another in one session, free between them for any other read: a small
   merge's few dozen versions in tens of ms, where a process costs 100-150 ms to start. Past it, batches go to
   processes of their own. `cm cat` writes every
-  revision it finds even when one fails, and names each it doesn't (`The specified revision was not found <spec>`):
-  that read fails alone with its line, and when every line names one, the others were written whole. A failure that
+  revision it finds even when one fails, and names each it doesn't: by its spec when it can't find it (`The specified
+  revision was not found <spec>`), by its file when its content was purged (`purgedTargetOf`; diff.md "A purged
+  version"). That read fails alone with its line, and when every line names one, the others were written whole. A failure that
   names nothing (a spec it can't take fails the command before it writes anything, a dropped connection) is narrowed
   down in halves (`narrowDown`): the half that fails again is split again, so one bad spec costs about two commands
   per halving, never one per read; when both halves fail, they all fail.
@@ -220,21 +270,44 @@ and many people use the same server. Every `cm` command other than local reads (
 
 ## Parsing `cm` output
 
+- **No list is one string.** V8 refuses strings past about 512 MB, and long before that one string costs the main
+  process what the whole output weighs, twice. So every command the app runs says what it prints
+  (`COMMAND_OUTPUTS`, `cmOutputKind` in `main/cm/commandOutputs.ts`), and that decides how it's read:
+  - a **list** (anything that grows with the repository, the workspace or the server: finds, `cm ls`, diffs,
+    annotations, histories, pending changes, lock, profile, workspace and repository lists, the merge preview, an
+    organization's members) is read as it arrives, `queryRecords`/`executeRecords` for `--format` records,
+    `queryXmlElements` for an XML list (`XmlElementReader`), `queryLines` for one item a line with no `--format`
+    (`LineReader`: `cm listusers`; `cm` writes errors to stderr, and a shell's `CommandResult` line is left out), and
+    never stopped for its size;
+  - an **answer** (one small object: `whoami`, a workspace's header, an item's details) is read whole by
+    `query`/`execute`, and stopped past `MAX_TEXT_OUTPUT_LENGTH` (4 MB);
+  - an **operation** (a write: undo, add, checkin, update, merge, cat...) may print a line per item, so `query`/`execute`
+    keep only its start and end (`TextLimit` `keepEnds`, `OutputBuffer`, the middle marked `leftOutMarker`), where
+    `cm` prints its result and its error, and never stop it: stopping a checkin halfway is worse than any output.
+    What a caller needs from a long run it takes from its lines as they arrive (`onOutputLine`): a merge keeps the
+    records that tell how it ended (`mergeOutcomeRecordOf`).
+
+  `query` and `execute` refuse a list and a command missing from `COMMAND_OUTPUTS` (`textOutputKind`), in `CmClient`
+  and in `fakeCmClient` alike, so a new list read as text fails its first test, and a new command says how it's read
+  before it runs once. No code parses a whole output as records: `RecordReader` is the one way records are read, and a
+  test reads an output string through it (`recordsIn`).
 - **Records, not XML.** A command that has `--format` is read as records: a `RecordLayout` names the fields it prints
   (`layoutFormat`, `recordFormat`: control-character separators, no ambiguity with paths or comments) and
-  `readRecords` reads each by name (`layoutReader`, the reader a streamed command takes too). Values arrive as printed
-  with CRLF turned into LF (`parseRecords`); a layout trims the free text it shows (comments, titles, attribute
+  `layoutReader` reads each by name. Values arrive as printed with CRLF turned into LF (`RecordReader`); a layout trims the free text it shows (comments, titles, attribute
   values), as XML parsing did, and leaves the rest as printed: names, paths, and the Branch Explorer's, annotate's and
   diff's records, where whitespace matters. Only `cm diff` quotes some values (`unquoted`). Each layout is declared
   once: the `cm find` objects in `foundObjects.ts` (`FOUND_BRANCHES`...; `findArgs`,
   `findQueryArgs`), `FOUND_REVIEWS`, `FOUND_ATTRIBUTE_TYPES`, `TREE_ITEMS` for `cm ls` (whether a listed item has a revision is one rule for every `cm ls`
   reader: `listedRevisionId`). For 19,807 branches, records
   are 2.6 MB where `cm find --xml` printed 9.1 MB, and parse in a third of the time (26 ms against 77; 115 against 365
-  for 100k, and past about 600k branches the XML passed `MAX_OUTPUT_LENGTH`). `--xml` also prints every field, some
+  for 100k, and past about 600k branches the XML passed what one string could hold). `--xml` also prints every field, some
   costing the server (`cm ls --xml` reads every item's GUID). A test writes the output as `cm` prints it for that
   layout (`recordsOutput`, `foundLine`). Anything with more than a few fields takes a `RecordLayout`; the small
-  positional readers of two to four fields stay as they are (`parseWorkspaceListing`, `parseWorkspaceItem`,
-  `parseBranchNames`, the incoming check, `parseAccounts`, the Branch Explorer's row builders `graphBranch`...).
+  positional readers of two to four fields stay as they are (`readWorkspaceListedItem`, `readWorkspaceItem`,
+  `parseBranchNames`, the incoming check, `readAccount`, the Branch Explorer's row builders `graphBranch`...). A
+  reader that needs every row before it can say anything (the repositories and projects, sorted apart) takes each
+  record's fields (`readFields`) and folds them after (`repositoryListingOf`); one that only needs to remember what
+  it saw keeps it as the records arrive (`AnnotationReader`, each changeset once).
 - **`cm ls` on Windows**: it asks `--encoding` of `--xml` only, so its records come in UTF-8 only from a `cm shell`: a
   listing that can't take a pooled one starts a `cm shell` of its own (`processCommand`, about half a second more
   than an `--xml` process), and a server path holding a quote, which no shell line can hold, prints in the console's
@@ -245,9 +318,9 @@ and many people use the same server. Every `cm` command other than local reads (
 - **`cm status` as records**: it has no `--format`, but `--machinereadable` with control-character separators
   (`statusRecordsArgs`) prints records `RecordReader` reads as they arrive (`PendingChangesReader`): a `STATUS` record,
   with `--changelists` each `CHLIST <name> <description>` before its changes, each change as `<codes> <path> <is
-  folder> <merges>` (a move `<codes> <similarity> <old path> <path> …`), and `CONFLICT_MARKERS <path>`. 100,000 changes
-  print 9 MB where `--xml` printed 60 MB, in half the time (0.9 s against 1.8 s; 500,000: 46 MB in 4.6 s against
-  300 MB in 9 s, past `MAX_OUTPUT_LENGTH` as one string). A change prints every code of the item at once (`CH+MV`):
+  folder> <merges>` (a move `<codes> <similarity> <old path> <path> …`), with `--compact` ("`cm status` asks the
+  server for its header", below). 100,000 changes print 9 MB where `--xml` printed 60 MB, in half the time (0.9 s against 1.8 s; 500,000: 46 MB in 4.6 s against
+  300 MB in 9 s, past what one string could hold). A change prints every code of the item at once (`CH+MV`):
   `listedCodes` reads it as `--xml` listed it (a deleted item is only deleted, an added one only added; an item in no
   category, a cloaked folder, isn't listed). Its paths are absolute, from the root `cm` keeps, which may differ from the
   app's in case, composition or a link resolved (`PrintedWorkspacePaths`); an item printed twice is one change with
@@ -263,23 +336,25 @@ and many people use the same server. Every `cm` command other than local reads (
   UTF-8: `printsInConsoleCodePage`); a workspace of a million changes holds one of its two sessions for 5–7 s, while
   the other keeps answering the workspace's other reads. As `cm ls`'s, its
   records come in UTF-8 on Windows only from a `cm shell` (`processCommand`, `printsInConsoleCodePage`).
-- **XML remains** only where `--format` can't say it, for answers that stay small: the `cm status` header
-  (`parseWorkspaceStatus`: a local read, under a KB); `cm history --format`
-  has no revision type, which tells text from binary from a directory, and a revision from a move or a removal
-  (`itemHistoryArgs`: one item's revisions, about 600 bytes each, a few MB for a file changed in thousands of
-  changesets); `cm fileinfo` reads one item or two, where records would save nothing (`parseItemDetails`,
-  `removedItemSpec`, `saveContent`, `explorerService`). XML goes through `parseXml`.
-- **A list that can grow takes records, read as they arrive** (`queryRecords`, `executeRecords`): pending changes
-  (`readPendingChanges`), the Branch Explorer, the Changesets and Branches lists, branch names. Lists still read as
-  one string (`query` then `parseRecords`) stay well under `MAX_OUTPUT_LENGTH` on the largest repositories, but grow
-  with them, and move to `queryRecords` next, the biggest first: a diff of a changeset or branch touching most of a
-  big tree (`diffService`, about 100 bytes a file), a `cm ls` of a whole tree (`explorerService`,
-  `withConflictRepositories`), a big file's annotations (`annotation`).
+- **`cm status` asks the server for its header**: unless `--compact` (or `--cset`, `--format`) is passed, `cm status`
+  works out the workspace header even when it prints none, and asks the server for the head of the branch: about
+  80 ms a command against Unity Cloud, in a warm `cm shell`, against about 20 ms with `--compact`. In machine-readable
+  mode that header adds only `CONFLICT_MARKERS <path>` records, which nothing reads, so the records (`statusRecordsArgs`)
+  and the machine-readable header (`machineReadableHeaderArgs`) pass `--compact` and stay local reads. The `--xml`
+  header (`readStatusHeader`, the switcher's `readWorkspaceGlance`) can't: `--compact` prints the legacy text, and
+  `--cset` drops the `<WkConfigName>` the selector is read from, so each costs that round trip.
+- **XML remains** only where `--format` can't say it: the `cm status` header (`parseWorkspaceStatus`: a local read,
+  under a KB) and `cm fileinfo` of one item or two (`parseItemDetails`, `removedItemSpec`), answers that stay small;
+  and `cm history`, whose `--format` has no revision type, which tells text from binary from a directory, and a
+  revision from a move or a removal (`itemHistoryArgs`: about 600 bytes a revision), read element by element as it
+  arrives (`queryXmlElements`, `HISTORY_RECORD`). XML goes through `parseXml`.
+- **The merge preview streams too**: `cm merge --machinereadable` ends its records with `--endlineseparator`
+  (`MERGE_PREVIEW_RECORD_ARGS`), as `cm status` and `cm lock list` do, and in that mode prints nothing else.
 - Never parse human-readable output when a machine format exists.
 - **Records are read as they arrive**: new code reads a `--format` command with `cm.queryRecords(args, readRecord,
   options)` (or `executeRecords`), where `readRecord` builds a row (a branch, a changeset) from each record's fields, or
-  `undefined` to leave it out. `RecordReader` takes stdout in byte chunks, from a pooled `cm shell` (`RecordOutput`)
-  or a process (`runCmProcess`'s `records`), and reads each record once its separator arrives, keeping only the one
+  `undefined` to leave it out. `RecordReader` takes stdout in byte chunks, from a pooled `cm shell` (`StreamOutput`)
+  or a process (`runCmProcess`'s `reading`), and reads each record once its separator arrives, keeping only the one
   still arriving: the output is never joined, copied for its CRLF, split into an array of records or held whole. A
   `cm find branch` of 1,000,000 branches (151 MB) costs the main process 451 MB of peak RSS instead of 722 MB, and
   427 ms instead of 566 ms, the rows holding 305 MB instead of 444 MB; 100,000 branches 79 MB of peak instead of 115 MB
@@ -295,15 +370,8 @@ and many people use the same server. Every `cm` command other than local reads (
     own record at most. Decoding each field on its own makes fresh strings but cost 30% more time than reading the
     whole output; slices of decoded chunks would keep every chunk alive. Sharing one copy of repeated owners and branch
     names (a `Map`) saved a tenth of the peak for a quarter more time, the record's string being alive anyway: dropped.
-- Output already held as text (a cache's string, `ProfileList`; the callers read with `query()`, such as the `cm ls`
-  listings, annotate, diffs and the smaller services' lists) is read with `parseRecords(output, readRecord)`: the same field
-  rules (`fieldsOf`), its records found in the string itself, with no copy into bytes (a million branches: 386 ms and
-  581 MB of peak, where splitting the whole took 566 ms and 722 MB). Unlike `queryRecords`, it reads text after the
-  last record as one more record, as it always did, so its callers read what they read before until they move to
-  `queryRecords`.
-- Values read from text output are slices of the command's whole output, which V8 keeps alive while any slice lives;
-  values read as records arrive, slices of their own record. A cache that keeps them past the answer copies them as it
-  keeps them, not every parser (`ownCopy`; `OwnCopies` for a value many entries repeat, like a repository spec):
+- Values read as records arrive are slices of their own record, which V8 keeps alive while any slice lives. A cache
+  that keeps them past the answer copies them as it keeps them, not every parser (`ownCopy`; `OwnCopies` for a value many entries repeat, like a repository spec):
   `BranchNamesCache`, `WorkspaceCopies`, `RepositoryTrees`.
 - `cm find branch` leaves hidden branches out unless asked for (`hidden = 'true'`), and `cm find changeset` their
   changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`; a list of one branch's changesets always asks for
@@ -400,7 +468,8 @@ by name, and never passes it to `cm`.
 - **Where the app takes the name instead**, each from an output `cm` already names it in, never by mapping ids to names
   itself (`isOrganizationIdServer`, `main/cm/organizationIds.ts`, only tells an id apart):
   - The workspace's repository and server (`WorkspaceInfo`, `readWorkspaceStatus`): from
-    `cm status --header --machinereadable` (`machineReadableHeaderArgs`), a local read
+    `cm status --header --machinereadable` (`machineReadableHeaderArgs`), a local read with `--compact` ("`cm status`
+    asks the server for its header")
     run only when the `--xml` header printed an id (`serverByName`). The header is shared for a few seconds
     (`WorkspaceHeaders`). Reads that need only what is loaded take `readWorkspaceLoad`, which has no server to misuse,
     and the header as printed (`parseWorkspaceStatus`) holds the id only as `printedServer`. The header's branch is
@@ -420,6 +489,27 @@ by name, and never passes it to `cm`.
   repository: it is offered as one another app left (adopted as foreign), its changelists are lost, and the folder
   where added files waited is no longer used to put them back. Review marks kept under the id's repository no longer
   show.
+- **Two kinds, and projects**: `cm` names a Unity organization `acme@unity` and an older cloud organization
+  `acme@cloud` (`serverKind`, `shared/domain/organizations.ts`), which `cm profile list` already tells: the home
+  sidebar groups them (`serverGroups`: Unity organizations, cloud organizations, servers), each kind with its icon
+  (`ServerIcon`; `OrganizationIcon` is the building Unity's apps draw). Only a Unity organization has projects: a
+  repository of type `Project`, which `cm repository list` leaves out unless asked with `--type=all`, and
+  `{reptype}` tells apart (`repositoryListArgs`). Neither is in `cm`'s help: `cm` keeps `--type` for its own use and
+  testing, so the app leans on an option `cm` doesn't promise. They come in the one command that lists the
+  repositories, asked only of a Unity organization; a `cm` refusing `--type` or its `all` (`refusesTypeOption`) is
+  asked again without it, and the list shows no projects. A project shows as the other clients draw it
+  (`ProjectIcon`): a white cube on a tile in one of six colors (`--project-*`), picked by the code of its GUID's last
+  character, the listing's `{repguid}` (`projectColor`), so it looks the same in every client; "All projects" is
+  indigo (`ALL_PROJECTS_COLOR`). All workspaces colors a project only once its organization's list was read
+  (`useReadProjects`, which asks nothing); until then its tile is neutral (`projectTileFill`). The cube and the
+  organization's building are Phosphor's Cube and Buildings (Bold), drawn from `@phosphor-icons/core`'s own SVGs
+  (`svgPathOf`), so its license ships in the third-party notices with the rest. A repository there is named after its
+  project, the part before the first `/` (`Racing/Game`: `projectPartOf`, `projectOfRepository`, `nameInProject`,
+  `nameWithProject`), which New repository builds from the project picked and Rename keeps (`repositoryRename`).
+  The Repositories view filters by project (`ProjectFilter`, remembered per organization: `useProjectPickStore`) and
+  All workspaces by organization and project (`PlaceFilter`, `placeOf`), from the repository each workspace already
+  names: no command. Display names ("UnityTechnologies" for `unity@unity`) come only from Unity's web API, which the
+  app doesn't call: it shows the organization's name as `cm` takes it.
 - **Kept so**: `fakeCmClient` fails a test whose code passes the id form to `cm` (`namesOrganizationById`; a profile's
   name is the id form itself, as `cm profile list` prints it, so `cm profile` is exempt), and development builds warn
   `[organization id]` in the console when a command does (`warnOnOrganizationIds`).
@@ -625,7 +715,7 @@ A workspace window may open page windows (a diff, a history… in a window of it
 belong to it and aren't workspace windows: `features/page-windows.md`.
 
 - `main/window/WorkspaceWindows` opens the windows; opening a workspace that another window shows brings that window
-  forward instead (`windows.focusWorkspace`, checked by `useOpenWorkspace`). The windows open as the installed app quits
+  forward instead (`windows.focusPlace`, checked by `useOpenWorkspace`). The windows open as the installed app quits
   (`saveSession`, from `Quitting`: each one's workspace or home screen, bounds, maximized and full screen, the last
   focused one last; `openWindows`) open again at its next launch where they were (`openFirst`, `windowsToReopen`: one
   per workspace, none for a folder that's gone), the focused one in front and the others shown behind it
@@ -635,7 +725,7 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   its last window closes (Windows, Linux), that window is saved as it closes (`Quitting.lastWindowClosing`). With none
   saved (on macOS, every window was closed before quitting), the first window reopens the last workspace used. Development builds start on one home screen, where automated UI checks pick a workspace. A new
   window opens on the home screen. A new window asked to open a workspace
-  takes it at start (`system.takeRequestedWorkspace`), as does a folder the installed app is launched with on Windows
+  takes it at start (`system.takeRequestedPlace`), as does a folder the installed app is launched with on Windows
   and Linux (`workspaceArgument`; a second launch hands it to the running app). A launch for a `uvcs://` link names no
   folder: the link goes to the window in front once the first windows opened (`receiveLinks`,
   features/deep-links.md). The first window waits until `cm` has
@@ -647,7 +737,7 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   (`useExpandedDirectories`, `useViewSelection`) or says which workspace it belongs to (`cutItemsIn`,
   `revealRequestIn`); otherwise the next workspace reads it, e.g. lists a folder only the last one has. The big part
   of what the window read of the workspace it leaves (for another one or the home screen) goes once its views unmount
-  (`useForgetLeftWorkspace`, `forgetWorkspace`): what nothing shows of its immutable results (revisions, what
+  (`useForgetLeftPlace`, `forgetPlace`): what nothing shows of its immutable results (revisions, what
   changesets changed) and of every content its diffs read, its own files too (`content`, `contentBytes`,
   `diffContents`, whatever their source). Each window has its own query client, and a workspace's revisions, kept an
   hour, held hundreds of MB after the window moved on. Its lists and info are light and stay until their usual
@@ -674,10 +764,11 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   (`ProfileList`: everyone asking while it runs takes its answer, a removed account makes it `forget` a read started
   before, and once one succeeded `cm` is configured for the session). Unconfigured, that read runs as a process:
   `cm shell` refuses to start, so no session is ever ready. No server is asked at start-up: the home screen works
-  without any. A workspace's server is checked as
-  the workspace opens, `cm checkconnection <server>` with the server its info names (`checkConnection`, once per server
-  until it answers), and a server out of reach or a failed sign-in show in a corner card naming it
-  (`ConnectionProblemCard`, `connectionProblemShown`) while the workspace works with what's local. Checking the default
+  without any. The server of the window's place is checked as
+  it opens, `cm checkconnection <server>` (`checkConnection`, once per server until it answers): a workspace's once its
+  info names it, a repository's explored without one from its spec (`serverOfPlace`). A server out of reach or a failed
+  sign-in show in a corner card naming it (`ConnectionProblemCard`, `connectionProblemShown`), while a workspace works
+  with what's local. Checking the default
   server at start-up, and stopping the app on its failure, was dropped: it left a user offline unable to open even the
   home screen, and named no server, as `cm checkconnection` prints none.
 - Dropping a folder on any window, home screen or workspace, opens its workspace in that window, or with Shift in a
@@ -701,8 +792,8 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   menu's key cap), the modifier a folder drop takes, and the one browsers use for a new window on all three OSs.
   With another modifier held too it opens here, and a missing workspace always opens here, whatever the keys: its
   screen locates, recreates or forgets it. The menu says the same: Open workspace, then Open in new window
-  (`workspaceMenu`), but not a missing workspace's. The new window asks `windows.openWorkspace`, so a workspace another
-  window shows comes forward instead; the new window remembers it as recent as it opens it (`useRequestedWorkspace`).
+  (`workspaceMenu`), but not a missing workspace's. The new window asks `windows.openPlace`, so a workspace another
+  window shows comes forward instead; the new window remembers it as recent as it opens it (`useRequestedPlace`).
 - A new workspace (the New workspace dialog: `createWorkspaceAndUpdate`) opens as soon as `cm workspace create` makes
   it, then gets the latest files of /main through the workspace's own Update (`updateWorkspace`: `cm update` in a process
   of its own, its progress card, its refreshes). `cm workspace create` already puts it on /main with nothing loaded, so
@@ -750,9 +841,10 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
    and opens the first window, and builds the menu bar right after creating it, before it shows. What `cm` logs
    before the window exists waits for it (`CommandLogRelay`), and the page's events sent while it still loads reach
    it once it has (`sendEventTo`), so its command log lists them.
-3. The window is created hidden, its background the page's `--bg-app` (`WINDOW_BACKGROUND`), and names the workspace
-   it opens in its page's address when the folder is there (`startingWorkspaceQuery`).
-4. The page opens that workspace (`openWorkspaceFromAddress`) and asks for its first screen's data
+3. The window is created hidden, its background the page's `--bg-app` (`WINDOW_BACKGROUND`), and names the place it
+   opens in its page's address: a workspace when the folder is there, a repository explored without one
+   (`startingPlaceQuery`).
+4. The page opens that place (`openPlaceFromAddress`) and asks for its first screen's data
    (`prefetchStartupQueries`) before its first render, and applies the theme as it renders (`useTheme`): its first
    frame is the themed workspace screen or home screen, never the home screen on the way nor a frame without colors.
    The window shows on that frame (`ready-to-show`): the first render is synchronous (`flushSync` in `main.tsx`,
@@ -783,7 +875,7 @@ shells answer only after about a second).
 Tried and dropped, so they aren't proposed again:
 - Showing the window as it is created (`show: true`): an empty frame shows 150 ms sooner, but `show()` then holds the
   main process while the page loads, which ran its scripts 150 ms later.
-- Asking the main process which workspace to open (`takeRequestedWorkspace`), or awaiting the settings, before the
+- Asking the main process which workspace to open (`takeRequestedPlace`), or awaiting the settings, before the
   first render: the wait paints an empty frame, the window shows on it, and `show()` holds the answer: the first
   render came 90 ms later.
 - Minifying the renderer bundle (1.7 MB to 0.73 MB): the page's scripts ran 0-8 ms sooner, within noise.
@@ -848,7 +940,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   memo. The production build runs each effect once and hides such a bug, so `npm run e2e` runs the smoke test over a
   development build too (scripts/e2e/README.md).
 
-- **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)`, so `invalidateWorkspace(path)` refreshes everything after an operation
+- **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)` (a place's, `queryKeys.inPlace`: "Places" above), so `invalidateWorkspace(path)` refreshes everything after an operation
   (or what it can touch: `invalidateWorkspace(path, affected)`, `runOperation({ affects })`).
   A page opened from a list starts from the row that list already read, so it shows at once: a shelve
   (`cachedShelve`), a code review (`listedReview`, as `initialData` as fresh as that list, never from a list an
@@ -922,8 +1014,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   hiding, permissions), and what undoes or deletes it last, in the danger tone; a separator between groups. Entries come from one
   vocabulary (`components/menuWords`: one id, icon, wording and group per concept) and `groupedMenu` orders them.
   One builder per kind (`branchMenu`, `changesetMenu`, `labelMenu`, `shelveMenu`, `codeReviewMenu`, `fileMenu`,
-  `pendingChangeMenu`) serves every place the object shows: its view, details' "More actions", the Branch Explorer,
-  the top bar's pill (right-click, `workingObjectMenu`), the switcher, the palette. A place only adds entries, at the
+  `pendingChangeMenu`) serves every host the object shows in (`MenuHost`): its view, details' "More actions", the Branch Explorer,
+  the top bar's pill (right-click, `workingObjectMenu`), the switcher, the palette. A host only adds entries, at the
   end of their group (`withEntries`: the graph's "Go to head changeset"); the Branch Explorer leaves out "Show in
   Branch Explorer". One exception: the palette's code reviews of a branch have no "Switch to this branch", as its
   searches read reviews without branch names (`listSummaries`; naming them would read every branch,
@@ -932,7 +1024,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   copied"); ⌘C in a list copies its first entry (`useCopyCommand`) unless text is selected, ⇧⌘C a link to what is in
   front (`useCopyLinkCommand`, features/deep-links.md). Items that open a dialog
   end with "…"; submenus hold real sets of choices, the choice made checked after its label (`checked`), so the icon
-  in front stays the item's own (an app's). `menuGrammar.test.ts` checks every builder and every place. A menu's
+  in front stays the item's own (an app's). `menuGrammar.test.ts` checks every builder and every host, in a workspace and in a repository with none. A menu's
   content is in a portal, but React bubbles its events to the row its trigger sits in: `ActionDropdownMenu` keeps its
   clicks and mouse presses from reaching that row (picking from a changelist's "…" selected and folded it).
 - **Back buttons**: a page goes back with the mouse's back button and, on Windows, the Browser Back key (the `app-command`
@@ -1128,7 +1220,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   - **One order**: by path, folder by folder, names as people read them (`file_2` before `file_10`, case only between
     names otherwise equal; different names read the same, "v01" and "v1" or a name in two Unicode forms, by their code
     units, so each folder's files stay together): `comparePaths` (`shared/pathOrder`), used where the files are read
-    (`parseDiffEntries`, `parseMergePlan`) and by Changes (`sortChanges`, once a read: `useSortedChanges`; filtering
+    (`mergedDiffEntries`, `mergePlanOf`) and by Changes (`sortChanges`, once a read: `useSortedChanges`; filtering
     keeps the order, and `layoutChangeRows` lays the changes out as they come). `cm status` prints the changes in no
     order, so Changes sorts them folder by folder (`sortByPath`): a million in 0.9 s, where sorting the whole list took
     2 s. A read that kept most changes as they were (`sharePendingChanges`, in any order) starts from the last order and

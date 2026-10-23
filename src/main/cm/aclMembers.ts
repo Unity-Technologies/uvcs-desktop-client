@@ -1,4 +1,5 @@
 import { EVERYONE, type MemberKind, type MemberRef } from '@shared/domain/permissions';
+import type { ReadLine } from './LineReader';
 
 /**
  * `cm showowner <spec>`: the spec as given, padded, then the owner and its kind, `User` or `Group`
@@ -22,13 +23,11 @@ export function ownerNamed(name: string, kind: MemberKind = 'user'): MemberRef {
   return name === 'all' ? { name: EVERYONE, kind: 'group' } : { name, kind };
 }
 
-/** `cm listusers <server> --onlyusers|--onlygroups`: one name a line, which may hold spaces. */
-export function parseMemberNames(output: string): string[] {
-  return output
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-}
+/**
+ * A line of `cm listusers <server> --onlyusers|--onlygroups`: one name, which may hold spaces, read as it arrives
+ * (`queryLines`): a big organization lists every member when the picker's search is empty.
+ */
+export const readMemberName: ReadLine<string> = (line) => line.trim() || undefined;
 
 /** `cm listusers` for one kind of member, only those containing `filter` when given (the server filters). */
 export function listMembersArgs(server: string, kind: MemberKind, filter?: string): string[] {

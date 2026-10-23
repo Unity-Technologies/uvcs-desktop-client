@@ -28,10 +28,11 @@ it saves are decided by `xlinkDraft.ts` (`xlinkDialogFields`, `newXlinkOf`, `xli
   the legacy client offers its explorer dialogs there; the repository and server are chosen from lists already
   (`RepositoryPicker`). What it points to opens the app's branch, changeset or label picker (`pickBranch`,
   `pickChangeset`, `pickLabel`) on the xlinked repository; a rule's first branch the workspace's branches, its second
-  the xlinked repository's (`PickSource`: `pointSource`, `workspaceBranches`, `xlinkedBranches`). Another repository
-  is read with the same one `cm find ... on repository '<repo>'` (`findArgs`' `repository`; `queryKeys.objectList`
-  keeps its list apart), and only once a new xlink has its repository. Another repository's branch ids are other
-  branches, so that list never answers the workspace's names by id (`BranchNamesCache`).
+  the xlinked repository's (`PickSource`: `pointSource`, `workspaceBranches`, `xlinkedBranches`). The xlinked
+  repository is a place of its own (`repositoryPlace`, ARCHITECTURE.md "Places"): the pickers list it as a window
+  exploring it would, one `cm find ... on repository '<repo>'` each, keyed apart from the workspace's lists
+  (`queryKeys.inPlace`), and only once a new xlink has its repository. So a list of it never stands for the
+  workspace's: its changesets and branches have other ids and GUIDs.
 - **Relative server** (`-rs`): the repository is looked up on the server the workspace's repository is on, for
   repositories replicated to several servers. It stays relative when `cm xlink -e` names a server.
 - **Branch expansion rules**, a writable xlink's only (`cm` refuses them on a read-only one): a change made under the

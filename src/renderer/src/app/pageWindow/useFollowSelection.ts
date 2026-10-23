@@ -21,7 +21,8 @@ export function useFollowSelection(): void {
   const [selected, setSelected] = useState<Page | null>(null);
   useUvcsEvent('followingChanged', ({ following: now }) => usePageWindow.setState({ following: now }));
   useUvcsEvent('selectionToFollow', ({ page, seed }) => {
-    if (seed) plantPageSeed(useSession.getState().workspacePath ?? '', seed);
+    const place = useSession.getState().place;
+    if (seed && place) plantPageSeed(place, seed);
     setSelected(asMovablePage(page));
   });
   // A selection from before is no longer what's selected: turned on again, the window waits for its window's.

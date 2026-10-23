@@ -2,8 +2,9 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { fitsCommandLine } from '../cm/commandLineLimit';
-import { catReadsOf, fakeCat } from '../cm/testing/fakeCat';
+import { catReadsOf, fakeCat, PURGED, purgedRevisionLine } from '../cm/testing/fakeCat';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { MAX_QUICK_BACKLOG, MAX_QUICK_CAT, MAX_RUNNING_CATS, RevisionCat, type CatRevision } from './RevisionCat';
 
@@ -56,7 +57,7 @@ async function setUp(answer: CmAnswer = SERVER, { longFolder = false } = {}) {
   const timing = manualSchedule();
   const cat = new RevisionCat({ cm: fake.cm, schedule: timing.schedule });
   const target = (name: string | number) => join(folder, `v${name}`);
-  const save = (asked: CatRevision, name: string | number = /^\w+:(\d+)/.exec(asked.spec)![1]!) => cat.save(WORKSPACE, asked, target(name));
+  const save = (asked: CatRevision, name: string | number = /^\w+:(\d+)/.exec(asked.spec)![1]!) => cat.save(workspacePlace(WORKSPACE), asked, target(name));
   return { fake, ...timing, cat, target, save };
 }
 
@@ -195,6 +196,18 @@ describe('RevisionCat', () => {
     expect(readsPerCommand(fake)).toEqual([['query', 4]]);
   });
 
+  it("fails a purged revision alone, with cm's line for it (which names its file), and keeps the others as written: no command more", async () => {
+    const purging = fakeCat((spec) => (spec.startsWith('revid:13@') ? PURGED : `content of ${spec}`));
+    const { fake, flush, save, target } = await setUp(purging);
+    const reads = [7, 13, 9].map((id) => save(revision(id)));
+    flush();
+    const results = await Promise.allSettled(reads);
+    expect(results.map((result) => result.status)).toEqual(['fulfilled', 'rejected', 'fulfilled']);
+    expect(results[1]).toMatchObject({ reason: { message: purgedRevisionLine(target(13), 13) } });
+    expect(await readFile(target(9), 'utf8')).toBe('content of revid:9@eco@local');
+    expect(readsPerCommand(fake)).toEqual([['query', 3]]);
+  });
+
   it('finds the one spec that failed a whole cm cat before it wrote anything, saying nothing of it, in halves: every other read is saved', async () => {
     const refusing: CmAnswer = (command) => (catReadsOf(command.args).some((read) => read.spec.startsWith('itemid:13#')) ? cmFails('Error: Incorrect object specification') : SERVER(command));
     const { fake, flush, save } = await setUp(refusing);
@@ -258,9 +271,17 @@ describe('RevisionCat', () => {
   it('reads each workspace in commands of its own, run in it', async () => {
     const { fake, flush, cat, target } = await setUp();
     const other = join(tmpdir(), 'other');
-    const saved = Promise.all([cat.save(WORKSPACE, version(1), target(1)), cat.save(other, version(2), target(2))]);
+    const saved = Promise.all([cat.save(workspacePlace(WORKSPACE), version(1), target(1)), cat.save(workspacePlace(other), version(2), target(2))]);
     flush();
     await saved;
     expect(fake.commands.map((command) => command.options.cwd)).toEqual([WORKSPACE, other]);
+  });
+
+  it('reads a repository with no workspace apart, outside every workspace', async () => {
+    const { fake, flush, cat, target } = await setUp();
+    const saved = Promise.all([cat.save(workspacePlace(WORKSPACE), version(1), target(1)), cat.save(repositoryPlace('eco@local'), version(2), target(2))]);
+    flush();
+    await saved;
+    expect(fake.commands.map((command) => command.options)).toEqual([{ cwd: WORKSPACE }, { outsideWorkspaces: true }]);
   });
 });

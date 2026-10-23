@@ -24,12 +24,14 @@ vi.mock('../branches/BranchPickerDialog', () => ({
   },
 }));
 
+import { workspacePlace } from '@shared/domain/place';
 import type { ChangesetInfo } from '@shared/domain/changeset';
 import { answerConfirms, answerPrompts } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
 import { deleteChangeset, diffWithAnotherChangeset, editChangesetComment, mergeChangesetTo, moveChangesetToBranch, readChangesetGuid, revertWorkspaceToChangeset, saveChangesetComment } from './changesetOperations';
 
 const ws = '/ws';
+const inWs = workspacePlace(ws);
 const changeset = { id: 42, branch: '/main/task', comment: 'Old comment' };
 const listed = (guid?: string): ChangesetInfo => ({ id: 42, branch: '/main/task', comment: '', owner: 'ana', date: '', parent: 41, guid });
 
@@ -47,9 +49,9 @@ describe('changeset operations', () => {
     fakeApi.answer('changesets.editComment', () => undefined);
     const refreshed = watchRefreshes(ws);
 
-    await editChangesetComment(ws, changeset);
+    await editChangesetComment(inWs, changeset);
 
-    expect(fakeApi.argsOf('changesets.editComment')).toEqual([[ws, 42, 'New comment']]);
+    expect(fakeApi.argsOf('changesets.editComment')).toEqual([[inWs, 42, 'New comment']]);
     expect(refreshed()).toEqual(['annotate', 'branchExplorer', 'changesets', 'history']);
   });
 
@@ -57,14 +59,14 @@ describe('changeset operations', () => {
     fakeApi.answer('changesets.editComment', () => {
       throw new Error('offline');
     });
-    expect(await saveChangesetComment(ws, changeset, 'New comment')).toBe(false);
+    expect(await saveChangesetComment(inWs, changeset, 'New comment')).toBe(false);
 
     fakeApi.answer('changesets.editComment', () => undefined);
-    expect(await saveChangesetComment(ws, changeset, 'New comment')).toBe(true);
+    expect(await saveChangesetComment(inWs, changeset, 'New comment')).toBe(true);
   });
 
   it('saves nothing when the comment editor is cancelled', async () => {
-    await editChangesetComment(ws, changeset);
+    await editChangesetComment(inWs, changeset);
 
     expect(fakeApi.methods()).toEqual([]);
   });
@@ -82,9 +84,9 @@ describe('changeset operations', () => {
     answerPrompts('/main/task/rescued');
     fakeApi.answer('changesets.moveToBranch', () => undefined);
 
-    await moveChangesetToBranch(ws, changeset);
+    await moveChangesetToBranch(inWs, changeset);
 
-    expect(fakeApi.argsOf('changesets.moveToBranch')).toEqual([[ws, 42, '/main/task/rescued']]);
+    expect(fakeApi.argsOf('changesets.moveToBranch')).toEqual([[inWs, 42, '/main/task/rescued']]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Moved changeset 42 to rescued' }]);
   });
 
@@ -94,23 +96,23 @@ describe('changeset operations', () => {
     fakeApi.answer('changesets.remove', () => undefined);
 
     const afterMove = watchRefreshes(ws);
-    await moveChangesetToBranch(ws, changeset);
+    await moveChangesetToBranch(inWs, changeset);
     expect(afterMove()).toEqual(['annotate', 'branchExplorer', 'branches', 'changesets', 'history', 'incoming']);
 
     const afterDelete = watchRefreshes(ws);
-    await deleteChangeset(ws, changeset);
+    await deleteChangeset(inWs, changeset);
     expect(afterDelete()).toEqual(['annotate', 'branchExplorer', 'branches', 'changesets', 'history', 'incoming']);
   });
 
   it('deletes a changeset only once confirmed, and reports a refusal with no success', async () => {
     answerConfirms(false);
-    await deleteChangeset(ws, changeset);
+    await deleteChangeset(inWs, changeset);
     expect(fakeApi.methods()).toEqual([]);
 
     fakeApi.answer('changesets.remove', () => {
       throw new Error('Only the last changeset of a branch can be deleted');
     });
-    await deleteChangeset(ws, changeset);
+    await deleteChangeset(inWs, changeset);
     expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't delete the changeset", detail: 'Only the last changeset of a branch can be deleted' }]);
   });
 
@@ -121,12 +123,12 @@ describe('changeset operations', () => {
   });
 
   it("copies a GUID already read without asking the server, and reads it once when the view didn't", async () => {
-    expect(await readChangesetGuid(ws, listed('known'))).toBe('known');
+    expect(await readChangesetGuid(inWs, listed('known'))).toBe('known');
     expect(fakeApi.methods()).toEqual([]);
 
     fakeApi.answer('changesets.get', () => ({ id: 42, guid: 'read' }));
-    expect(await readChangesetGuid(ws, listed())).toBe('read');
-    expect(fakeApi.argsOf('changesets.get')).toEqual([[ws, 42]]);
+    expect(await readChangesetGuid(inWs, listed())).toBe('read');
+    expect(fakeApi.argsOf('changesets.get')).toEqual([[inWs, 42]]);
   });
 });
 

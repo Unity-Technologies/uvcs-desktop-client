@@ -1,8 +1,13 @@
 import type { CreateBranchRequest } from '@shared/domain/branch';
+import type { CmPlace } from './cmPlace';
 
-/** `cm branch create` of the branch asked for, at its starting point, with the comment read from a file. */
-export function branchCreateArgs({ name, startingPoint }: Omit<CreateBranchRequest, 'comment'>, commentsFile: string): string[] {
-  return ['branch', 'create', name, ...startingPointOption(startingPoint), `-commentsfile=${commentsFile}`];
+/**
+ * `cm branch create` of the branch asked for, at its starting point, with the comment read from a file. In a workspace
+ * the name goes as written; with none, as the spec naming the repository (`br:/main/task@game@local`), as its
+ * starting point does.
+ */
+export function branchCreateArgs({ name, startingPoint }: Omit<CreateBranchRequest, 'comment'>, commentsFile: string, at: CmPlace): string[] {
+  return ['branch', 'create', at.newObject('br', name), ...startingPointOption(startingPoint && at.spec(startingPoint)), `-commentsfile=${commentsFile}`];
 }
 
 /** Without a starting point, `cm` starts the branch at the head of its parent. */

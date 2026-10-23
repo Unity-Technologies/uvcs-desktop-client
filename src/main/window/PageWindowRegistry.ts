@@ -1,7 +1,9 @@
+import { samePlace, type Place } from '@shared/domain/place';
+
 /** A page window (by web contents id): the workspace window it belongs to, and whether it follows that one's selection. */
 interface PageWindowEntry {
   owner: number;
-  workspacePath: string;
+  place: Place;
   following: boolean;
 }
 
@@ -21,8 +23,8 @@ const NOTHING_CHANGED: FollowChanges = { pageWindows: [], owner: null };
 export class PageWindowRegistry {
   private readonly entries = new Map<number, PageWindowEntry>();
 
-  add(viewer: number, owner: number, workspacePath: string): void {
-    this.entries.set(viewer, { owner, workspacePath, following: false });
+  add(viewer: number, owner: number, place: Place): void {
+    this.entries.set(viewer, { owner, place, following: false });
   }
 
   /** The page window closed: its owner is told when it followed its selection. */
@@ -47,9 +49,9 @@ export class PageWindowRegistry {
     return [...this.entries].filter(([, entry]) => entry.owner === owner).map(([viewer]) => viewer);
   }
 
-  /** The page windows of a workspace window that show another workspace than the one it shows now (none: the home screen). */
-  leftBehindBy(owner: number, workspacePath: string | undefined): number[] {
-    return [...this.entries].filter(([, entry]) => entry.owner === owner && entry.workspacePath !== workspacePath).map(([viewer]) => viewer);
+  /** The page windows of a place's window that show another place than the one it shows now (none: the home screen). */
+  leftBehindBy(owner: number, place: Place | undefined): number[] {
+    return [...this.entries].filter(([, entry]) => entry.owner === owner && (place === undefined || !samePlace(entry.place, place))).map(([viewer]) => viewer);
   }
 
   isFollowing(viewer: number): boolean {

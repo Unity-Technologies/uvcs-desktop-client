@@ -1,4 +1,7 @@
 import type { RepositorySummary } from '@shared/domain/repository';
+
+/** What the dialog reads of a repository: its name and spec (a server's listed one, or one explored without a workspace). */
+export type NamedRepository = Pick<RepositorySummary, 'name' | 'spec'>;
 import { lastSegment } from '../../../lib/paths';
 import { defaultWorkspacePath, isWorkspaceNameTaken, repositoryNamed, repositoryNamedButForCase, suggestWorkspaceName } from '../workspaceNaming';
 
@@ -14,7 +17,7 @@ export interface NewWorkspaceFormInput {
   /** The Repository field as typed or picked from its suggestions. */
   repositoryName: string;
   /** The repositories on `server`; undefined until read. */
-  repositories: readonly RepositorySummary[] | undefined;
+  repositories: readonly NamedRepository[] | undefined;
   /** Reading the repositories on `server` failed. */
   repositoriesFailed: boolean;
   /** The spec of the repository an earlier try made before its workspace failed. */
@@ -73,17 +76,17 @@ export function newWorkspaceFormOf(input: NewWorkspaceFormInput): NewWorkspaceFo
  * with (a dropped folder), as the workspace is named after it too; that names the server's repository of that name, or
  * proposes one to create, as the official client does.
  */
-export function initialRepositoryName(fixed: RepositorySummary | undefined, initialPath: string | undefined): string {
+export function initialRepositoryName(fixed: NamedRepository | undefined, initialPath: string | undefined): string {
   return fixed?.name ?? (initialPath ? lastSegment(initialPath) : '');
 }
 
 /** The server whose repositories the dialog reads (to suggest them, and to tell a new name); none when the caller fixed the repository. */
-export function serverToList(server: string, fixed: RepositorySummary | undefined): string | null {
+export function serverToList(server: string, fixed: NamedRepository | undefined): string | null {
   return fixed ? null : server;
 }
 
 /** The repositories the Repository field can name: the one the caller fixed, else the server's as read. */
-export function repositoriesToName(fixed: RepositorySummary | undefined, listed: readonly RepositorySummary[] | undefined): readonly RepositorySummary[] | undefined {
+export function repositoriesToName(fixed: NamedRepository | undefined, listed: readonly NamedRepository[] | undefined): readonly NamedRepository[] | undefined {
   return fixed ? [fixed] : listed;
 }
 

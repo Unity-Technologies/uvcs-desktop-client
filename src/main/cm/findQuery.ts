@@ -21,29 +21,43 @@ export function roundTripDate(day: string): string {
   return `${day}T00:00:00.0000000${sign}${hours}:${minutes}`;
 }
 
-/** `cm find <object> "<query>"`, printed through `format` (`--format=…`), its dates in `FIND_DATE_FORMAT`. */
-export function findCommand(object: string, query: string, format: string): string[] {
-  return ['find', object, query, format, `--dateformat=${FIND_DATE_FORMAT}`, '--nototal'].filter(Boolean);
+/**
+ * `cm find <object> "<query>"`, printed through `format` (`--format=…`), its dates in `FIND_DATE_FORMAT`. With
+ * `repository` (no workspace tells `cm` which: `CmPlace.repository`), the query ends with `on repository '…'`, last,
+ * after `order by` and `limit`: anywhere else `cm` fails ("missing EndOfFile at 'order'").
+ */
+export function findCommand(object: string, query: string, format: string, repository?: string): string[] {
+  return ['find', object, queryOn(query, repository), format, `--dateformat=${FIND_DATE_FORMAT}`, '--nototal'].filter(Boolean);
 }
 
 /**
- * Builds `cm find` arguments: `<object> "<where/order/limit>"`, printing the fields `found` reads (`readRecords`).
- * `orderBy` is null for objects `cm` cannot sort (shelves). `repository` (`name@server`) finds them in another
- * repository than the workspace's (an xlinked one): `on repository` goes last, after the order and limit, or `cm`
- * refuses the query ("missing EndOfFile at 'order'").
+ * `query` asking `repository`'s objects (`… on repository '…'`, last), or as written with none. The name is quoted as
+ * it is: a repository's name can't hold a quote (`cm repository create` refuses one), so it needs no escaping.
  */
-export function findArgs(found: FoundObjects<unknown>, filter: QueryFilter, orderBy: string | null, extraConditions: string[] = [], repository?: string): string[] {
-  const order = orderBy ? ` order by ${orderBy}` : '';
-  const limit = filter.limit ? ` limit ${filter.limit}` : '';
-  // A repository name holds no quote (`cm` refuses to create one), so it goes between quotes as it is.
-  const onRepository = repository ? ` on repository '${repository}'` : '';
-  const conditions = filter.text ? [...extraConditions, textCondition(found.object, filter.text)] : extraConditions;
-  return findCommand(found.object, `${whereClause(filter, conditions)}${order}${limit}${onRepository}`.trim(), layoutFormat(found));
+export function queryOn(query: string, repository: string | undefined): string {
+  return repository ? `${query} on repository '${repository}'`.trim() : query;
 }
 
-/** `cm find` arguments for the objects `found` reads that `query` keeps (`where …`), as written. */
-export function findQueryArgs(found: FoundObjects<unknown>, query: string): string[] {
-  return findCommand(found.object, query, layoutFormat(found));
+/**
+ * Builds `cm find` arguments: `<object> "<where/order/limit>"`, printing the fields `found` reads (`layoutReader`).
+ * `orderBy` is null for objects `cm` cannot sort (shelves).
+ */
+export function findArgs(
+  found: FoundObjects<unknown>,
+  filter: QueryFilter,
+  orderBy: string | null,
+  extraConditions: string[] = [],
+  repository?: string,
+): string[] {
+  const order = orderBy ? ` order by ${orderBy}` : '';
+  const limit = filter.limit ? ` limit ${filter.limit}` : '';
+  const conditions = filter.text ? [...extraConditions, textCondition(found.object, filter.text)] : extraConditions;
+  return findCommand(found.object, `${whereClause(filter, conditions)}${order}${limit}`.trim(), layoutFormat(found), repository);
+}
+
+/** `cm find` arguments for the objects `found` reads that `query` keeps (`where …`), as written, on `repository` if given. */
+export function findQueryArgs(found: FoundObjects<unknown>, query: string, repository?: string): string[] {
+  return findCommand(found.object, query, layoutFormat(found), repository);
 }
 
 /** The field `QueryFilter.text` searches in, per object. */

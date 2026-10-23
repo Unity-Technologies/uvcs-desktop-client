@@ -25,13 +25,15 @@ vi.mock('../../app/shell/workspaceOperations', () => ({
 }));
 
 import type { Branch } from '@shared/domain/branch';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
 import { answerConfirms, answerPrompts } from '../../testing/fakeDialogs';
-import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
+import { shownToasts, watchRefreshes, watchRepositoryRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
 import { createBranchAndSwitch, deleteBranches, diffWithAnotherBranch, mergeTo, renameBranch, saveBranchComment, setBranchesHidden, switchToBranch, type SwitchToNewBranch } from './branchOperations';
 
 const ws = '/ws';
+const inWs = workspacePlace(ws);
 const branch = (name: string, guid = `guid-${name}`): Branch => ({ id: 1, name, parent: '/main', comment: '', owner: 'ana', date: '', headChangeset: 5, guid, repository: 'game@local' });
 
 beforeEach(() => {
@@ -96,10 +98,10 @@ describe('creating a branch and switching to it', () => {
     const refreshed = watchRefreshes(ws);
     const order: string[] = [];
 
-    const created = await createBranchAndSwitch(ws, request, switchTo({ pendingChanges: 'bring' }), () => order.push(`created, ${asked.switches.length} switches`));
+    const created = await createBranchAndSwitch(inWs, request, switchTo({ pendingChanges: 'bring' }), () => order.push(`created, ${asked.switches.length} switches`));
 
     expect(created).toBe(true);
-    expect(fakeApi.argsOf('branches.create')).toEqual([[ws, request]]);
+    expect(fakeApi.argsOf('branches.create')).toEqual([[inWs, request]]);
     expect(order).toEqual(['created, 0 switches']);
     expect(asked.switches).toEqual([[ws, 'br:/main/task', 'task', 'bring']]);
     expect(refreshed()).toEqual([]);
@@ -109,7 +111,7 @@ describe('creating a branch and switching to it', () => {
   it('refreshes only the branch lists and the graph when the workspace stays, and says so', async () => {
     const refreshed = watchRefreshes(ws);
 
-    await createBranchAndSwitch(ws, request, switchTo({ requested: false }));
+    await createBranchAndSwitch(inWs, request, switchTo({ requested: false }));
 
     expect(asked.switches).toEqual([]);
     expect(refreshed()).toEqual(['branchExplorer', 'branches']);
@@ -120,7 +122,7 @@ describe('creating a branch and switching to it', () => {
     asked.switchSucceeds = false;
     const refreshed = watchRefreshes(ws);
 
-    await createBranchAndSwitch(ws, request, switchTo());
+    await createBranchAndSwitch(inWs, request, switchTo());
 
     expect(asked.switches).toHaveLength(1);
     expect(refreshed()).toEqual(['branchExplorer', 'branches']);
@@ -130,7 +132,7 @@ describe('creating a branch and switching to it', () => {
   it('never tries to switch in the middle of a merge', async () => {
     const refreshed = watchRefreshes(ws);
 
-    await createBranchAndSwitch(ws, request, switchTo({ blockedByMerge: true }));
+    await createBranchAndSwitch(inWs, request, switchTo({ blockedByMerge: true }));
 
     expect(asked.switches).toEqual([]);
     expect(refreshed()).toEqual(['branchExplorer', 'branches']);
@@ -144,7 +146,7 @@ describe('creating a branch and switching to it', () => {
     const refreshed = watchRefreshes(ws);
     let createdCalls = 0;
 
-    expect(await createBranchAndSwitch(ws, request, switchTo(), () => createdCalls++)).toBe(false);
+    expect(await createBranchAndSwitch(inWs, request, switchTo(), () => createdCalls++)).toBe(false);
 
     expect(createdCalls).toBe(0);
     expect(asked.switches).toEqual([]);
@@ -158,13 +160,13 @@ describe('branch operations', () => {
     answerPrompts('login');
     fakeApi.answer('branches.rename', () => undefined);
 
-    await renameBranch(ws, branch('/main/task'));
+    await renameBranch(inWs, branch('/main/task'));
 
-    expect(fakeApi.argsOf('branches.rename')).toEqual([[ws, '/main/task', 'login']]);
+    expect(fakeApi.argsOf('branches.rename')).toEqual([[inWs, '/main/task', 'login']]);
   });
 
   it('renames nothing when cancelled', async () => {
-    await renameBranch(ws, branch('/main/task'));
+    await renameBranch(inWs, branch('/main/task'));
 
     expect(fakeApi.methods()).toEqual([]);
   });
@@ -173,9 +175,9 @@ describe('branch operations', () => {
     fakeApi.answer('branches.editComment', () => undefined);
     const refreshed = watchRefreshes(ws);
 
-    expect(await saveBranchComment(ws, branch('/main/task'), 'Login screen\n\nWith the new layout')).toBe(true);
+    expect(await saveBranchComment(inWs, branch('/main/task'), 'Login screen\n\nWith the new layout')).toBe(true);
 
-    expect(fakeApi.argsOf('branches.editComment')).toEqual([[ws, '/main/task', 'Login screen\n\nWith the new layout']]);
+    expect(fakeApi.argsOf('branches.editComment')).toEqual([[inWs, '/main/task', 'Login screen\n\nWith the new layout']]);
     expect(refreshed()).toEqual(['branchExplorer', 'branches']);
   });
 
@@ -184,7 +186,7 @@ describe('branch operations', () => {
       throw commandFailure('You need the changecomment permission');
     });
 
-    expect(await saveBranchComment(ws, branch('/main/task'), 'Login screen')).toBe(false);
+    expect(await saveBranchComment(inWs, branch('/main/task'), 'Login screen')).toBe(false);
     expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't update the comment", detail: 'You need the changecomment permission' }]);
   });
 
@@ -192,9 +194,9 @@ describe('branch operations', () => {
     fakeApi.answer('branches.delete', () => undefined);
     const refreshed = watchRefreshes(ws);
 
-    await deleteBranches(ws, [branch('/main/a'), branch('/main/b')]);
+    await deleteBranches(inWs, [branch('/main/a'), branch('/main/b')]);
 
-    expect(fakeApi.argsOf('branches.delete')).toEqual([[ws, ['/main/a', '/main/b']]]);
+    expect(fakeApi.argsOf('branches.delete')).toEqual([[inWs, ['/main/a', '/main/b']]]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Deleted 2 branches' }]);
     expect(refreshed()).toEqual(['branchExplorer', 'branches']);
   });
@@ -202,7 +204,7 @@ describe('branch operations', () => {
   it('deletes nothing unless confirmed', async () => {
     answerConfirms(false);
 
-    await deleteBranches(ws, [branch('/main/a')]);
+    await deleteBranches(inWs, [branch('/main/a')]);
 
     expect(fakeApi.methods()).toEqual([]);
   });
@@ -212,7 +214,7 @@ describe('branch operations', () => {
       throw commandFailure('The branch is not empty');
     });
 
-    await deleteBranches(ws, [branch('/main/a')]);
+    await deleteBranches(inWs, [branch('/main/a')]);
 
     expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't delete the branch", detail: 'The branch is not empty' }]);
   });
@@ -221,10 +223,55 @@ describe('branch operations', () => {
     fakeApi.answer('branches.setHidden', () => undefined);
     const refreshed = watchRefreshes(ws);
 
-    await setBranchesHidden(ws, [branch('/main/a')], true);
+    await setBranchesHidden(inWs, [branch('/main/a')], true);
 
-    expect(fakeApi.argsOf('branches.setHidden')).toEqual([[ws, ['/main/a'], true]]);
+    expect(fakeApi.argsOf('branches.setHidden')).toEqual([[inWs, ['/main/a'], true]]);
     expect(refreshed()).toEqual(['branchExplorer', 'branches']);
+  });
+});
+
+describe('branches of a repository explored without a workspace', () => {
+  const repository = repositoryPlace('game@local');
+  const request = { name: '/main/task', comment: '' };
+
+  it('creates the branch there and never switches: there is no workspace to switch', async () => {
+    fakeApi.answer('branches.create', () => undefined);
+    const refreshed = watchRepositoryRefreshes('game@local');
+
+    expect(await createBranchAndSwitch(repository, request, { requested: true, blockedByMerge: false })).toBe(true);
+
+    expect(fakeApi.argsOf('branches.create')).toEqual([[repository, request]]);
+    expect(asked.switches).toEqual([]);
+    expect(refreshed()).toEqual(['branchExplorer', 'branches']);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Created task' }]);
+  });
+
+  it('comments, hides and deletes there, refreshing only its branch lists', async () => {
+    for (const method of ['editComment', 'setHidden', 'delete']) fakeApi.answer(`branches.${method}`, () => undefined);
+    answerConfirms(true);
+    const refreshed = watchRepositoryRefreshes('game@local');
+
+    await saveBranchComment(repository, branch('/main/task'), 'Login screen');
+    await setBranchesHidden(repository, [branch('/main/task')], true);
+    await deleteBranches(repository, [branch('/main/task')]);
+
+    expect(fakeApi.calls()).toEqual([
+      { method: 'branches.editComment', args: [repository, '/main/task', 'Login screen'] },
+      { method: 'branches.setHidden', args: [repository, ['/main/task'], true] },
+      { method: 'branches.delete', args: [repository, ['/main/task']] },
+    ]);
+    expect(refreshed()).toEqual(['branchExplorer', 'branches']);
+  });
+
+  it('renames there, refreshing every view of it: the name shows everywhere', async () => {
+    fakeApi.answer('branches.rename', () => undefined);
+    answerPrompts('login');
+    const refreshed = watchRepositoryRefreshes('game@local');
+
+    await renameBranch(repository, branch('/main/task'));
+
+    expect(fakeApi.argsOf('branches.rename')).toEqual([[repository, '/main/task', 'login']]);
+    expect(refreshed()).toContain('changesets');
   });
 });
 

@@ -3,6 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { dialog } from 'electron';
+import { workspacePlace } from '@shared/domain/place';
 import type { MergeToolsApi } from '@shared/api/mergeTools';
 import type { ContentSource } from '@shared/domain/content';
 import { UNITY_YAML_MERGE_ARGS, unityYamlMergeOf, type MergeToolOutcome, type MergeToolRequest, type SmartMergeOutcome, type SmartMergeRequest, type UnityYamlMergeTool } from '@shared/domain/mergeTools';
@@ -137,7 +138,7 @@ export function createMergeToolsService(
 
   function save(workspacePath: string, source: ContentSource, target: string): Promise<void> {
     if (source.kind === 'reviewSnapshot') throw new Error('A review snapshot is not a version to merge.');
-    return saveVersion(cm, workspaceCopies, workspacePath, source, target);
+    return saveVersion(cm, workspaceCopies, workspacePlace(workspacePath), source, target);
   }
 
   return {

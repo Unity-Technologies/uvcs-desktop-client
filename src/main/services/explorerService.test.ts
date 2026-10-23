@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { recordsOutput, statusHeader } from '../cm/testing/cmOutput';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { TREE_ITEM_FORMAT, TREE_ITEMS } from '../cm/treeItems';
@@ -66,9 +67,9 @@ describe('browsing the workspace', () => {
     const listed = listing({ wkpath: '/src/a.cs', repspec: 'rep:game@local', hash: contentHashOf(Buffer.from('class A {}\n')), size: 11 });
     const fake = fakeCmClient({ ls: listed });
     const context = serviceContext(fake.cm);
-    await createExplorerService(context).listRepositoryDirectory(workspace, 12, 'src');
+    await createExplorerService(context).listRepositoryDirectory(workspacePlace(workspace), 12, 'src');
 
-    const read = await createContentService(context).read(workspace, { kind: 'revision', revision: { revisionId: 52, repository: 'game@local' }, fileName: 'src/a.cs' });
+    const read = await createContentService(context).read(workspacePlace(workspace), { kind: 'revision', revision: { revisionId: 52, repository: 'game@local' }, fileName: 'src/a.cs' });
 
     expect(read.text).toBe('class A {}\n');
     expect(fake.ran('cat')).toBe(false);
@@ -77,9 +78,17 @@ describe('browsing the workspace', () => {
   it("lists a folder of a changeset's tree by its repository path", async () => {
     const { service, lines } = explorer({ ls: listing() });
 
-    await service.listRepositoryDirectory(WORKSPACE, 12, 'src');
+    await service.listRepositoryDirectory(workspacePlace(WORKSPACE), 12, 'src');
 
     expect(lines()).toEqual([`ls /src --tree=cs:12 ${TREE_ITEM_FORMAT}`]);
+  });
+
+  it("lists a folder of a changeset's tree of a repository with no workspace, naming it, outside every workspace", async () => {
+    const { service, commands } = explorer({ ls: listing() });
+
+    await service.listRepositoryDirectory(repositoryPlace('game@local'), 12, 'src');
+
+    expect(commands.map(({ args, options }) => [args.slice(0, 3), options])).toEqual([[['ls', '/src', '--tree=cs:12@game@local'], { outsideWorkspaces: true }]]);
   });
 
   it("reads an item's details with one quick cm fileinfo", async () => {

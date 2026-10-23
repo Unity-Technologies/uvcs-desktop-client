@@ -6,9 +6,12 @@ import { PrintedWorkspacePaths } from './printedWorkspacePaths';
 /**
  * `cm status` printing its records as `--format` does (`recordFormat`): `--machinereadable`, with the separators that
  * split them unambiguously. Its options first, so a command line reads as `status --controlledchanged … --machinereadable …`.
+ *
+ * `--compact`: without it, `cm status` asks the server for the head of the branch, for a header it doesn't print
+ * (ARCHITECTURE.md "`cm status` asks the server for its header").
  */
 export function statusRecordsArgs(...options: string[]): string[] {
-  return ['status', ...options, '--machinereadable', `--fieldseparator=${FIELD_SEPARATOR}`, `--endlineseparator=${RECORD_SEPARATOR}`];
+  return ['status', ...options, '--machinereadable', '--compact', `--fieldseparator=${FIELD_SEPARATOR}`, `--endlineseparator=${RECORD_SEPARATOR}`];
 }
 
 const CHANGE_KINDS: Record<string, ChangeKind> = {
@@ -49,10 +52,10 @@ const CHANGE_FIELDS = 4;
 
 /**
  * Reads `cm status` printed as records (`statusRecordsArgs`) as they arrive: a `STATUS` record first, then, with
- * `--changelists`, each changelist (`CHLIST <name> <description>`) followed by its changes, and the files left with
- * conflict markers (`CONFLICT_MARKERS <path>`). Records, not XML: 100,000 changes print 9 MB where `--xml` printed
- * 60 MB, and 500,000 passed `MAX_OUTPUT_LENGTH` as XML (ARCHITECTURE.md "Parsing `cm` output"). A local read of the
- * workspace, which the server never sees.
+ * `--changelists`, each changelist (`CHLIST <name> <description>`) followed by its changes; without `--compact`, the
+ * files left with conflict markers too (`CONFLICT_MARKERS <path>`). Records, not XML: 100,000 changes print 9 MB
+ * where `--xml` printed 60 MB, and 500,000 were too large to read as XML (ARCHITECTURE.md "Parsing `cm` output"). A
+ * local read of the workspace, which the server never sees.
  *
  * A change lists every code of the item at once (`CH+MV`), and reads as `cm status --xml` read it before
  * (`listedCodes`). An item printed twice is one change with both kinds, as `--xml` merged it: a deleted file whose

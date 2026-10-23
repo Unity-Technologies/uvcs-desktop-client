@@ -5,6 +5,7 @@ import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { Label } from '@shared/domain/label';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { Shelve } from '@shared/domain/shelve';
+import { workspacePathOf } from '@shared/domain/place';
 import { typedChangesetNumber } from '../../lib/changesetNumber';
 import type { FuzzyIndex } from '../../lib/fuzzyIndex';
 import { matchesAllWords } from '../../lib/matchesAllWords';
@@ -104,6 +105,7 @@ export function paletteGroups(input: PaletteGroupsInput): SearchGroup[] {
 }
 
 function listGroups({ scope, context, lists }: PaletteGroupsInput): SearchGroup[] {
+  const workspacePath = workspacePathOf(context.place);
   const branches = byRecency(lists.branches?.items ?? [], context.currentBranch, lists.recentBranchGuids);
   return [
     { section: 'branches', heading: 'Branches', results: firstOnes(branches).map((branch) => branchResult(branch, context)) },
@@ -116,7 +118,11 @@ function listGroups({ scope, context, lists }: PaletteGroupsInput): SearchGroup[
     {
       section: 'files',
       heading: 'Pending changes',
-      results: firstOnes(lists.changes).map((change) => fileResult({ path: change.path, isDirectory: change.itemType === 'directory' }, context)),
+      // A workspace's own: a repository explored without one has neither files nor pending changes.
+      results:
+        workspacePath === null
+          ? []
+          : firstOnes(lists.changes).map((change) => fileResult({ path: change.path, isDirectory: change.itemType === 'directory' }, workspacePath, context)),
     },
     { section: 'changesets', heading: 'Changesets', results: firstOnes(lists.changesets ?? []).map((changeset) => changesetResult(changeset, context)) },
     {
@@ -142,6 +148,7 @@ function byRecency(branches: readonly Branch[], currentBranch: string | undefine
 
 function searchGroups({ context, lists, server, changesetSearch }: PaletteGroupsInput): SearchGroup[] {
   const { term } = context;
+  const workspacePath = workspacePathOf(context.place);
   // A changeset typed (`1234` or `cs:1234`) opens it, whether or not it is recent.
   const changesetNumber = typedChangesetNumber(term);
   const withServerMatches = <T,>(local: SearchResult[], found: readonly T[] | undefined, textOf: (item: T) => string, toResult: (item: T) => SearchResult) =>
@@ -154,7 +161,7 @@ function searchGroups({ context, lists, server, changesetSearch }: PaletteGroups
   ).map((changeset) => changesetResult(changeset, context));
 
   return [
-    { section: 'files', heading: 'Files', results: ranked(lists.files, term).map((entry) => fileResult(entry, context)) },
+    { section: 'files', heading: 'Files', results: workspacePath === null ? [] : ranked(lists.files, term).map((entry) => fileResult(entry, workspacePath, context)) },
     {
       section: 'branches',
       heading: 'Branches',

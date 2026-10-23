@@ -1,5 +1,6 @@
 import '../../testing/fakeWindow';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 
 // The results' menus import feature modules that read the platform as they load.
 
@@ -19,7 +20,7 @@ const changeset = (comment: string): Changeset => ({ id: 12, comment, guid: 'c',
 const shelve = (comment: string): Shelve => ({ id: 4, comment, guid: 's', owner: 'ana', date: '2026-01-01T00:00:00Z', parentChangeset: 1, repository: 'repo@server' });
 
 function contextFor(term: string, changes: PendingChange[] = []): ResultContext {
-  return { workspacePath: '/ws', term, currentBranch: '/main', loadedChangeset: 1, changelists: [], changeAt: (path) => changes.find((candidate) => candidate.path === path) };
+  return { place: workspacePlace('/ws'), term, currentBranch: '/main', loadedChangeset: 1, changelists: [], changeAt: (path) => changes.find((candidate) => candidate.path === path) };
 }
 
 function actionIn(menu: MenuEntry[], id: string): Action | undefined {
@@ -33,18 +34,18 @@ afterEach(() => {
 
 describe('fileResult', () => {
   it('shows the name with its folder after it, marking in each the letters that matched', () => {
-    const result = fileResult({ path: 'src/app.ts', isDirectory: false }, contextFor('sapp'));
+    const result = fileResult({ path: 'src/app.ts', isDirectory: false }, '/ws', contextFor('sapp'));
 
     expect(result).toMatchObject({ label: 'app.ts', detail: 'src', labelMatches: [0, 1, 2], detailMatches: [0] });
   });
 
   it('shows no folder for a file at the workspace root', () => {
-    expect(fileResult({ path: 'README.md', isDirectory: false }, contextFor('')).detail).toBe('');
+    expect(fileResult({ path: 'README.md', isDirectory: false }, '/ws', contextFor('')).detail).toBe('');
   });
 
   it('wears the status letter of its pending change, if it has one', () => {
-    const withChange = fileResult({ path: 'src/app.ts', isDirectory: false }, contextFor('', [change]));
-    const withoutChange = fileResult({ path: 'src/other.ts', isDirectory: false }, contextFor('', [change]));
+    const withChange = fileResult({ path: 'src/app.ts', isDirectory: false }, '/ws', contextFor('', [change]));
+    const withoutChange = fileResult({ path: 'src/other.ts', isDirectory: false }, '/ws', contextFor('', [change]));
 
     expect(withChange.status).toEqual({ tone: changeStatus(change).tone, title: changeStatus(change).label });
     expect(withoutChange.status).toBeUndefined();
@@ -52,14 +53,14 @@ describe('fileResult', () => {
 
   it('shows the file in the Files view when run, as its menu’s “Show in Files” does', () => {
     const goToView = vi.spyOn(navigation, 'goToView').mockImplementation(() => {});
-    const result = fileResult({ path: 'src/app.ts', isDirectory: false }, contextFor(''));
+    const result = fileResult({ path: 'src/app.ts', isDirectory: false }, '/ws', contextFor(''));
 
     for (const run of [result.run, actionIn(result.menu!(), 'showInFiles')!.run]) {
       goToView.mockClear();
       useFilesViewStore.setState({ revealRequest: null });
       run();
       expect(goToView).toHaveBeenCalledWith('files');
-      expect(useFilesViewStore.getState().revealRequest).toEqual({ workspacePath: '/ws', path: 'src/app.ts', selected: undefined });
+      expect(useFilesViewStore.getState().revealRequest).toEqual({ place: workspacePlace('/ws'), path: 'src/app.ts', selected: undefined });
     }
   });
 });

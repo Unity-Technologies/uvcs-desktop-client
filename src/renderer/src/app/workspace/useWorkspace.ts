@@ -1,7 +1,9 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
+import { workspacePathOf, type Place } from '@shared/domain/place';
 import { otherRepository } from '@shared/domain/repository';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
+import { repositoryOfPlace, serverOfPlace } from './placeOrigin';
 import { useSession } from './sessionStore';
 
 /** The path of the open workspace. Only use it inside the workspace screen. */
@@ -11,13 +13,36 @@ export function useWorkspacePath(): string {
   return workspacePath;
 }
 
-export function useWorkspaceInfo() {
-  return useWorkspaceInfoOf(useWorkspacePath());
+/**
+ * What this window shows (`Place`), for the views that read and change the server's objects, which work the same with
+ * or without a workspace. Only use it inside the place's screen.
+ */
+export function usePlace(): Place {
+  const place = useSession((state) => state.place);
+  if (!place) throw new Error('No place is open.');
+  return place;
 }
 
-/** `repository` when it isn't the workspace's (an item under an xlink): see `otherRepository`. */
+/** The info of the place's workspace: none for a repository explored without one (the query never runs). */
+export function useWorkspaceInfo() {
+  return useWorkspaceInfoOf(workspacePathOf(usePlace()));
+}
+
+/** `repository` when it isn't the place's (an item under an xlink): see `otherRepository`. */
 export function useOtherRepository(repository: string | undefined): string | undefined {
-  return otherRepository(repository, useWorkspaceInfo().data?.repository);
+  return otherRepository(repository, usePlaceRepository());
+}
+
+/** The repository the window's place reads (`repositoryOfPlace`). */
+export function usePlaceRepository(): string | undefined {
+  const place = usePlace();
+  return repositoryOfPlace(place, useWorkspaceInfoOf(workspacePathOf(place)).data);
+}
+
+/** The server of the place's repository (`serverOfPlace`). */
+export function usePlaceServer(): string | undefined {
+  const place = usePlace();
+  return serverOfPlace(place, useWorkspaceInfoOf(workspacePathOf(place)).data);
 }
 
 export function workspaceInfoQuery(workspacePath: string) {

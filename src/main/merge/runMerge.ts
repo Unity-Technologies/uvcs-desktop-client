@@ -12,7 +12,7 @@ import {
 } from '@shared/domain/merge';
 import { catArgs, catBatchesOf, explainCatFailure, type CatRead } from '../cm/catBatches';
 import type { CmClient } from '../cm/CmClient';
-import { parseCreatedChangeset, parseDestinationMoved, parseMergePlan } from '../cm/mergeOutput';
+import { createdChangesetOf, destinationMovedIn, mergeOutcomeRecordOf, mergePlanOf } from '../cm/mergeOutput';
 import { directoryConflictIdentity } from './directoryConflictIdentity';
 import { readMergeProgress } from '../cm/progress/mergeProgress';
 import { withTempDirectory } from '../files/tempFile';
@@ -67,18 +67,24 @@ export async function runMerge(
       `--solvedconflictsfile=${join(directory, 'solved')}`,
       ...(request.destinationBranch ? [`--commentsfile=${commentsFile}`] : []),
     ];
-    const run = (args: string[]): Promise<string> =>
-      cm.execute(args, {
-        cwd: workspacePath,
-        signal: context.signal,
-        onOutputLine: context.progressOf(readMergeProgress),
-      });
+    /** Runs the merge, its progress read from its lines as they arrive, and keeps the records that tell how it ended. */
+    const run = async (args: string[]): Promise<string[][]> => {
+      const outcome: string[][] = [];
+      const progress = context.progressOf(readMergeProgress);
+      const onOutputLine = (line: string): void => {
+        progress(line);
+        const record = mergeOutcomeRecordOf(line);
+        if (record) outcome.push(record);
+      };
+      await cm.execute(args, { cwd: workspacePath, signal: context.signal, onOutputLine });
+      return outcome;
+    };
 
     await resolveDirectoryConflicts(plan, resolutions.directoryConflicts, (resolution) => run([...mergeArgs, ...resolveConflictArgs(resolution)]));
-    const output = await run(mergeArgs);
+    const outcome = await run(mergeArgs);
 
     if (request.destinationBranch) {
-      return { changesetId: parseCreatedChangeset(output), ...(parseDestinationMoved(output) && { destinationMoved: true }) };
+      return { changesetId: createdChangesetOf(outcome), ...(destinationMovedIn(outcome) && { destinationMoved: true }) };
     }
 
     context.reportProgress('Writing resolved files');
@@ -120,11 +126,11 @@ async function writeServerFileConflictResolutions(
 async function resolveDirectoryConflicts(
   plan: MergePlan,
   resolutions: DirectoryConflictResolution[],
-  solveNext: (resolution: DirectoryConflictResolution) => Promise<string>,
+  solveNext: (resolution: DirectoryConflictResolution) => Promise<string[][]>,
 ): Promise<void> {
   for (const [index, resolution] of resolutions.entries()) {
-    const output = await solveNext(resolution);
-    const remaining = parseMergePlan(output).directoryConflicts.map(directoryConflictIdentity);
+    const outcome = await solveNext(resolution);
+    const remaining = mergePlanOf(outcome).directoryConflicts.map(directoryConflictIdentity);
     const expected = plan.directoryConflicts.slice(index + 1).map(directoryConflictIdentity);
     if (remaining.join('\n') !== expected.join('\n')) {
       throw new Error('The merge changed while solving its directory conflicts, so nothing was merged. Review it again.');
@@ -186,7 +192,8 @@ interface UnsavedVersions {
 
 /**
  * Saves the versions kept, every batch even when one fails: the merge is in the workspace already, so a failure
- * only names the files left holding yours. A revision `cm cat` names as not found wasn't saved; a failure some line of
+ * only names the files left holding yours. A revision `cm cat` names as not written (not found, or purged:
+ * `explainCatFailure`) wasn't saved; a failure some line of
  * which names nothing (a download that failed, a dropped connection) is tried once more for the others, as saving a
  * version again changes nothing, and what fails again may not hold the version kept. A file another program
  * holds open on Windows fails too, with no retry: `cm` writes it, not `retryWhileBusy`.
@@ -202,7 +209,7 @@ async function saveKeptVersions(cm: CmClient, workspacePath: string, reads: Kept
 }
 
 /**
- * One `cm cat` of the reads: those it named as not found join `unsaved`; returns those it may not have written, when
+ * One `cm cat` of the reads: those it named as not written join `unsaved`; returns those it may not have written, when
  * some line of its failure names nothing.
  */
 async function saveOnce(cm: CmClient, workspacePath: string, reads: KeptVersionRead[], unsaved: UnsavedVersions): Promise<KeptVersionRead[]> {
@@ -211,8 +218,8 @@ async function saveOnce(cm: CmClient, workspacePath: string, reads: KeptVersionR
     (error: unknown) => error,
   );
   if (failure === null) return [];
-  const { notFound, everyLineExplained } = explainCatFailure(reads, failure);
-  const missing = notFound.map(({ read }) => read);
+  const { unwritten, everyLineExplained } = explainCatFailure(reads, failure);
+  const missing = unwritten.map(({ read }) => read);
   unsaved.notSaved.push(...missing.map((read) => read.path));
   return everyLineExplained ? [] : reads.filter((read) => !missing.includes(read));
 }

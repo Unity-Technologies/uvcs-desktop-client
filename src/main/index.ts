@@ -2,6 +2,7 @@
 import './errors/installUnexpectedErrorHandlers';
 import { join } from 'node:path';
 import { app } from 'electron';
+import { repositoryPlace } from '@shared/domain/place';
 import { BranchNamesCache } from './cm/BranchNamesCache';
 import { readBranchNames } from './cm/branchNames';
 import { CmClient } from './cm/CmClient';
@@ -20,6 +21,7 @@ import { RevisionCat } from './files/RevisionCat';
 import { removeLeftOverTempDirectories } from './files/tempFile';
 import { WorkspaceCopies } from './files/WorkspaceCopies';
 import { createServices } from './services/createServices';
+import { RepositoryPathSearch } from './files/RepositoryPathSearch';
 import { RepositoryTrees } from './unity/RepositoryTrees';
 import { RevisionDownloads } from './unity/RevisionDownloads';
 import { CommandLogRelay } from './startup/commandLogRelay';
@@ -43,16 +45,18 @@ import { WorkspaceWindows } from './window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders';
 
 const userData = app.getPath('userData');
-const cm = new CmClient(locateCm);
+// Commands of a repository explored without a workspace run here, where none can be read by mistake (`outsideWorkspaces`).
+const cm = new CmClient(locateCm, join(userData, 'outside-workspaces'));
 const settings = openSettings(userData);
 // What a workspace is loaded from, shared by the reads that follow one another as a window opens it.
 const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
 // Branch names by id, which code reviews name their branches by (`BranchNamesCache`), kept while a window shows the
 // workspace.
 const branchNames = new BranchNamesCache(
-  (workspacePath) => readBranchNames(cm, workspacePath),
+  (place) => readBranchNames(cm, place),
   Date.now,
-  (workspacePath) => isShown(watchers, workspacePath),
+  // A repository's names are kept while a window explores it (`windows.explores`); its last window lets them go.
+  (place) => (place.kind === 'workspace' ? isShown(watchers, place.workspacePath) : windows.explores(place.repository)),
 );
 const watchers = watchShownWorkspaces({ cm, headers, branchNames });
 const workspaceCopies = new WorkspaceCopies({ cm });
@@ -60,6 +64,7 @@ watchers.listen({ changed: (workspacePath, change) => workspaceCopies.forgetChan
 const revisionCat = new RevisionCat({ cm });
 const revisionDownloads = new RevisionDownloads({ cm, copies: workspaceCopies });
 const repositoryTrees = new RepositoryTrees({ cm, downloads: revisionDownloads });
+const repositoryPaths = new RepositoryPathSearch(cm);
 const operations = trackOperations(watchers, showProgressOnAppIcon());
 const updates = createAppUpdates({
   writesRunning: () => operations.writesRunning(),
@@ -71,6 +76,10 @@ const windows = new WorkspaceWindows({
   workspaceOf: (viewer) => watchers.workspaceOf(viewer),
   onWindowsChanged: () => app.isReady() && installMenuBar(),
   onClosed: (viewer) => watchers.release(viewer),
+  onRepositoryLeft: (repository) => {
+    branchNames.forget(repositoryPlace(repository));
+    repositoryPaths.forget(repository);
+  },
   onLastWindowClosing: () => quitting.lastWindowClosing(),
 });
 const installMenuBar = appMenuInstaller(windows, updates);
@@ -111,6 +120,7 @@ const api = createServices({
   revisionCat,
   revisionDownloads,
   repositoryTrees,
+  repositoryPaths,
   branchNames,
 });
 const early = new EarlyCalls(apiMethods(api));
@@ -119,6 +129,7 @@ function start(launched: Promise<void>, readAhead: FirstScreenRead, links: LinkR
   if (!app.isPackaged) app.dock?.setIcon(DEVELOPMENT_DOCK_ICON);
   sendSettingsChanges(settings, (changed) => sendEvent('settingsChanged', changed));
   void revisionDownloads.removeLeftOvers();
+  void repositoryPaths.removeLeftOvers();
   void removeLeftOverTempDirectories();
   registerApi(api, early);
   followAppTheme(settings);
@@ -152,4 +163,5 @@ app.on('window-all-closed', () => {
 app.on('will-quit', () => {
   cm.dispose();
   revisionDownloads.dispose();
+  repositoryPaths.dispose();
 });

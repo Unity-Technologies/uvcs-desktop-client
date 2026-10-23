@@ -5,7 +5,10 @@ import { EmptyState } from '../../ui/EmptyState';
 import { SearchField } from '../../ui/SearchField';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { openCreateWorkspaceDialog } from './dialogs/CreateWorkspaceDialog';
+import { PlaceFilter } from './PlaceFilter';
 import { useWorkspaceEntries } from './useWorkspaceEntries';
+import { organizationsOf, placeChoices, workspacesShown, type WorkspacePlace } from './workspacePlaces';
+import { useReadProjects } from '../workspace/workspaceQueries';
 import { WorkspaceList, type WorkspaceListHandle } from './WorkspaceList';
 import { WorkspaceListSkeleton } from './WorkspaceListSkeleton';
 import styles from './Home.module.css';
@@ -15,10 +18,16 @@ interface WorkspacesPanelProps {
   onOpenFolder: () => void;
 }
 
-/** Every workspace on this computer, by name. */
+/** Every workspace on this computer, by name, narrowed to where their repositories live if the user picks a place. */
 export function WorkspacesPanel({ onOpen, onOpenFolder }: WorkspacesPanelProps) {
   const [filter, setFilter] = useState('');
-  const { workspaces, all, isLoading, error } = useWorkspaceEntries(filter);
+  const [place, setPlace] = useState<WorkspacePlace | null>(null);
+  const { workspaces, all: everyEntry, isLoading, error } = useWorkspaceEntries('');
+  const organizations = organizationsOf(everyEntry);
+  const readProjects = useReadProjects(organizations);
+  // Every render: the entries are new each time (`useWorkspaceEntries`), and a few hundred cost nothing to place.
+  const choices = placeChoices(everyEntry, readProjects);
+  const all = workspacesShown(everyEntry, filter, place);
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<WorkspaceListHandle>(null);
 
@@ -27,7 +36,8 @@ export function WorkspacesPanel({ onOpen, onOpenFolder }: WorkspacesPanelProps) 
       <ViewHeader
         inTitleBar
         title="All workspaces"
-        count={workspaces?.length}
+        count={workspaces && all.length}
+        total={workspaces?.length}
         actions={
           <>
             <Button icon={<FolderOpen size={14} />} onClick={onOpenFolder}>
@@ -47,6 +57,7 @@ export function WorkspacesPanel({ onOpen, onOpenFolder }: WorkspacesPanelProps) 
           autoFocus
           onKeyDown={(event) => listRef.current?.takeSearchKey(event)}
         />
+        {choices.length > 0 && <PlaceFilter choices={choices} workspaceCount={everyEntry.length} place={place} onChange={setPlace} />}
       </ViewHeader>
 
       <div className={styles.list}>
@@ -56,6 +67,7 @@ export function WorkspacesPanel({ onOpen, onOpenFolder }: WorkspacesPanelProps) 
           <WorkspaceList
             ref={listRef}
             query={filter}
+            narrowed={place !== null}
             onOpen={onOpen}
             onLeaveTop={() => searchRef.current?.focus()}
             sections={[

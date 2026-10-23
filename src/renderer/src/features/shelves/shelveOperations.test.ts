@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
+import { workspacePlace } from '@shared/domain/place';
 import type { ShelveApplyResult } from '@shared/domain/shelve';
 import { useNavigation } from '../../app/navigation/navigationStore';
 import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
@@ -135,10 +136,10 @@ describe('deleteShelve', () => {
   it('deletes the shelve once confirmed, and says so', async () => {
     fakeApi.answer('shelves.delete', () => undefined);
 
-    expect(await deleteShelve(ws, 12)).toBe(true);
+    expect(await deleteShelve(workspacePlace(ws), 12)).toBe(true);
 
     expect(confirmTitles()).toEqual(['Delete shelve 12?']);
-    expect(fakeApi.argsOf('shelves.delete')).toEqual([[ws, 12]]);
+    expect(fakeApi.argsOf('shelves.delete')).toEqual([[workspacePlace(ws), 12]]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Deleted shelve 12' }]);
   });
 
@@ -146,7 +147,7 @@ describe('deleteShelve', () => {
     fakeApi.answer('shelves.delete', () => undefined);
     const refreshed = watchRefreshes(ws);
 
-    await deleteShelve(ws, 12);
+    await deleteShelve(workspacePlace(ws), 12);
 
     expect(refreshed()).toEqual(['leftChanges', 'shelves']);
   });
@@ -154,7 +155,7 @@ describe('deleteShelve', () => {
   it('deletes nothing unless confirmed', async () => {
     answerConfirms(false);
 
-    expect(await deleteShelve(ws, 12)).toBe(false);
+    expect(await deleteShelve(workspacePlace(ws), 12)).toBe(false);
 
     expect(fakeApi.methods()).toEqual([]);
   });
@@ -164,7 +165,7 @@ describe('deleteShelve', () => {
       throw commandFailure('Access denied');
     });
 
-    expect(await deleteShelve(ws, 12)).toBe(false);
+    expect(await deleteShelve(workspacePlace(ws), 12)).toBe(false);
 
     expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't delete the shelve", detail: 'Access denied' }]);
   });

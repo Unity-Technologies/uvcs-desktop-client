@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { Place } from '@shared/domain/place';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { EmptyState } from '../../ui/EmptyState';
 import { SinceReviewButton } from '../review/SinceReviewButton';
@@ -10,7 +11,7 @@ import { ONLY_MOVED } from './viewer/movedFrom';
 import { XlinkDiff } from './XlinkDiff';
 
 interface EntryDiffProps {
-  workspacePath: string;
+  place: Place;
   target: DiffTarget;
   entry: DiffEntry;
   /** The diff's files, for an xlink's: the ones under it. */
@@ -25,7 +26,7 @@ interface EntryDiffProps {
  * The diff of one file of a committed diff (`DiffBrowser`); a folder only says what happened to it, and an xlink where
  * it points (`XlinkDiff`).
  */
-export function EntryDiff({ workspacePath, target, entry, entries, onOpen, reviewMarks }: EntryDiffProps) {
+export function EntryDiff({ place, target, entry, entries, onOpen, reviewMarks }: EntryDiffProps) {
   // Per file: "Since review" is a way to look at one file, not a mode that follows the selection.
   const [sinceReviewPath, setSinceReviewPath] = useState<string | null>(null);
 
@@ -33,7 +34,7 @@ export function EntryDiff({ workspacePath, target, entry, entries, onOpen, revie
     return <EmptyState title={entry.path} description={`Directory · ${describeDiffEntry(entry)}`} />;
   }
   if (entry.itemType === 'xlink') {
-    return <XlinkDiff workspacePath={workspacePath} target={target} xlink={entry} entries={entries} onOpen={onOpen} />;
+    return <XlinkDiff place={place} target={target} xlink={entry} entries={entries} onOpen={onOpen} />;
   }
 
   const reviewedRevision = reviewedRevisionToCompare(reviewMarks, entry);
@@ -41,7 +42,7 @@ export function EntryDiff({ workspacePath, target, entry, entries, onOpen, revie
   const sources = diffEntrySources(entry);
   return (
     <FileDiffViewer
-      workspacePath={workspacePath}
+      place={place}
       original={sinceReview ? { kind: 'revision', revision: { revisionId: reviewedRevision, repository: entry.repository }, fileName: entry.path } : sources.original}
       modified={sources.modified}
       fileName={entry.path}

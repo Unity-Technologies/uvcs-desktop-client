@@ -8,6 +8,7 @@ export const LINK_SCHEME = 'uvcs';
  * `parseLink` reads it back as it was.
  */
 export function formatLink(link: Link): string {
+  if (link.kind === 'server') return `${LINK_SCHEME}://${serverPart(link.server, link.project)}`;
   const place = link.kind === 'repository' ? repositoryPart(link.server, link.repository, link.object) : workspacePart(link.folder);
   return `${LINK_SCHEME}://${place}${link.page ? `/-/${pagePart(link.page)}` : ''}${link.lines ? `#${linesPart(link.lines)}` : ''}`;
 }
@@ -18,6 +19,7 @@ export function formatLink(link: Link): string {
  * link to such a name rather than one that won't open.
  */
 export function writesAsLink(link: Link): boolean {
+  if (link.kind === 'server') return !link.project || !UNWRITABLE_IN_NAMES.test(link.project);
   const names = [...(link.kind === 'repository' && link.object ? objectNames(link.object) : []), ...(link.page && 'path' in link.page && link.page.path ? [link.page.path] : [])];
   return !names.some((name) => UNWRITABLE_IN_NAMES.test(name));
 }
@@ -25,6 +27,11 @@ export function writesAsLink(link: Link): boolean {
 function objectNames(object: LinkObject): string[] {
   if (object.kind === 'branch' || object.kind === 'label') return [object.name];
   return object.kind === 'labelRange' ? [object.from, object.to] : [];
+}
+
+/** `acme.unity`, or a project's repositories there: `acme.unity/projects/Racing` (a `/` in its name `%2F`). */
+function serverPart(server: string, project: string | undefined): string {
+  return project ? `${serverAuthority(server)}/projects/${encodeSegment(project)}` : serverAuthority(server);
 }
 
 function repositoryPart(server: string, repository: string, object: LinkObject | undefined): string {

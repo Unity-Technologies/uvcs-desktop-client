@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { listMembersArgs, ownerNamed, parseMemberNames, parseShowOwner } from './aclMembers';
+import { listMembersArgs, ownerNamed, parseShowOwner, readMemberName } from './aclMembers';
+import { LineReader } from './LineReader';
+
+/** The names `output` lists, read line by line as they arrive. */
+function memberNamesIn(output: string): string[] {
+  const reader = new LineReader(readMemberName);
+  reader.read(Buffer.from(output, 'utf8'));
+  reader.takeRest();
+  return reader.finish();
+}
 
 describe('parseShowOwner', () => {
   it('reads the owner and its kind after the spec, as cm prints them', () => {
@@ -35,7 +44,7 @@ describe('cm listusers', () => {
   });
 
   it('reads one name a line, spaces and other scripts kept, Windows line breaks and blank lines dropped', () => {
-    expect(parseMemberNames('Administrators\r\nWeb Devs\r\n开发者\r\n\r\n')).toEqual(['Administrators', 'Web Devs', '开发者']);
-    expect(parseMemberNames('')).toEqual([]);
+    expect(memberNamesIn('Administrators\r\nWeb Devs\r\n开发者\r\n\r\n')).toEqual(['Administrators', 'Web Devs', '开发者']);
+    expect(memberNamesIn('')).toEqual([]);
   });
 });

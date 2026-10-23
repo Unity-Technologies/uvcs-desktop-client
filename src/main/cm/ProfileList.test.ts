@@ -10,8 +10,8 @@ describe('ProfileList', () => {
   it('reads the profiles with one local query that runs in any directory, never their security config', async () => {
     const { cm, commands } = fakeCmClient({ 'profile list': PROFILES });
 
-    expect(await new ProfileList(cm).read()).toBe(PROFILES);
-    expect(commands).toMatchObject([{ via: 'query', args: ['profile', 'list', `--format=${ACCOUNT_FORMAT}`], options: { anyDirectory: true } }]);
+    expect(await new ProfileList(cm).read()).toEqual([{ name: 'local', server: 'local', user: 'ana', workingMode: 'NameWorkingMode' }]);
+    expect(commands).toMatchObject([{ via: 'query', readsRecords: true, args: ['profile', 'list', `--format=${ACCOUNT_FORMAT}`], options: { anyDirectory: true } }]);
   });
 
   it('answers everyone who asks while a read runs with that read, and reads again once it is done', async () => {
@@ -31,7 +31,7 @@ describe('ProfileList', () => {
       'profile list': async () => {
         const read = commands.length;
         await new Promise<void>((resolve) => finish.push(resolve));
-        return `read ${read}`;
+        return formatOutput([`read ${read}`]);
       },
     });
     const profiles = new ProfileList(cm);
@@ -40,12 +40,13 @@ describe('ProfileList', () => {
     profiles.forget();
     const fresh = profiles.read();
     finish[0]!();
-    expect(await old).toBe('read 1');
+    const named = async (read: Promise<{ name: string }[]>) => (await read).map(({ name }) => name);
+    expect(await named(old)).toEqual(['read 1']);
 
     const sharing = profiles.read();
     finish[1]!();
-    expect(await fresh).toBe('read 2');
-    expect(await sharing).toBe('read 2');
+    expect(await named(fresh)).toEqual(['read 2']);
+    expect(await named(sharing)).toEqual(['read 2']);
     expect(commands).toHaveLength(2);
   });
 

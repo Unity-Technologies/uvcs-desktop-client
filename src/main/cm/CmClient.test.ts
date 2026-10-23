@@ -1,4 +1,5 @@
-import { homedir } from 'node:os';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CommandLogEntry } from '@shared/events';
@@ -8,14 +9,20 @@ import { CmError } from './CmError';
 import { MAX_LOGGED_COMMAND_LINE } from '@shared/clipForLog';
 import type { CmResult } from './CmResult';
 import { RecordReader } from './formatRecords';
-import { CmOutputTooLargeError } from './outputLimit';
+import { CmOutputTooLargeError, textLimitOf } from './outputLimit';
+import type { OutputReading } from './outputReading';
 import { formatOutput } from './testing/cmOutput';
 import { MAX_QUICK_WRITE_PATHS } from './longCommands';
 import type { CmProcessOptions } from './runCmProcess';
 import { SHELL_ARGS } from './shellCommandLine';
+import { XmlElementReader } from './XmlElementReader';
+import { LineReader } from './LineReader';
 
 const CM_PATH = join('opt', 'plasticscm', 'cm');
+const asFields = (fields: string[]) => fields;
 const WORKSPACE = join(homedir(), 'wkspaces', 'game');
+/** Created on first use, so it's under the run's own temp folder (`vitest.tempDirectory.ts`). */
+const OUTSIDE_WORKSPACES = join(tmpdir(), 'outside-workspaces');
 
 interface ProcessRun {
   cmPath: string;
@@ -26,22 +33,24 @@ interface ProcessRun {
 type Answer = (options?: CmProcessOptions) => CmResult;
 
 /** A `CmClient` over fake runners: every process and shell command is recorded and answered with `answer`. */
-function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer = ((): CmResult => ({ output: 'done\n', exitCode: 0 })) as Answer } = {}) {
+function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer = ((): CmResult => ({ output: 'done\n', exitCode: 0 })) as Answer, outsideWorkspaces = OUTSIDE_WORKSPACES } = {}) {
   const processes: ProcessRun[] = [];
   const shellCommands: { cwd: string; args: string[] }[] = [];
+  const shellReadings: (OutputReading | undefined)[] = [];
   const pools: { cmPath: string; disposed: boolean; shown: string[]; warmed: string[]; released: string[] }[] = [];
   const runners: CmRunners = {
     runProcess: async (cmPath, args, options) => {
       processes.push({ cmPath, args, options });
-      return printed(answer(options), options.records);
+      return printed(answer(options), options.reading);
     },
     createShellPool: (cmPath) => {
       const pool = { cmPath, disposed: false, shown: [] as string[], warmed: [] as string[], released: [] as string[] };
       pools.push(pool);
       return {
-        run: async (cwd, args, records) => {
+        run: async (cwd, args, reading) => {
           shellCommands.push({ cwd, args });
-          return printed(answer(), records);
+          shellReadings.push(reading);
+          return printed(answer(), reading);
         },
         isReady: () => warm,
         shownDirectory: () => pool.shown.find((cwd) => !pool.released.includes(cwd)),
@@ -52,17 +61,17 @@ function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer
       };
     },
   };
-  const cm = new CmClient(() => CM_PATH, platform, runners);
+  const cm = new CmClient(() => CM_PATH, outsideWorkspaces, platform, runners);
   const logged: CommandLogEntry[] = [];
   cm.onCommandLogged((entry) => logged.push(entry));
-  return { cm, processes, shellCommands, pools, logged };
+  return { cm, processes, shellCommands, shellReadings, pools, logged };
 }
 
-/** What a runner gives for a command that printed `result.output`: with `records`, they read it, and the rest is its output. */
-function printed(result: CmResult, records: RecordReader<unknown> | undefined): CmResult {
-  if (!records) return result;
-  records.read(Buffer.from(result.output, 'utf8'));
-  return { output: records.takeRest(), exitCode: result.exitCode };
+/** What a runner gives for a command that printed `result.output`: streamed, its reader reads it, and the rest is its output. */
+function printed(result: CmResult, reading: OutputReading | undefined): CmResult {
+  if (!reading || !('stream' in reading)) return result;
+  reading.stream.read(Buffer.from(result.output, 'utf8'));
+  return { output: reading.stream.takeRest(), exitCode: result.exitCode };
 }
 
 /** The `CmError` a command fails with. */
@@ -87,7 +96,7 @@ describe('CmClient routing', () => {
   it('runs a query in the home directory when no workspace is given', async () => {
     const { cm, shellCommands } = fakeClient();
 
-    await cm.query(['profile', 'list']);
+    await cm.query(['whoami']);
 
     expect(shellCommands[0]?.cwd).toBe(homedir());
   });
@@ -96,20 +105,20 @@ describe('CmClient routing', () => {
     const { cm, shellCommands, pools } = fakeClient();
     cm.show(WORKSPACE);
 
-    await cm.query(['profile', 'list'], { anyDirectory: true });
+    await cm.query(['whoami'], { anyDirectory: true });
 
-    expect(shellCommands).toEqual([{ cwd: WORKSPACE, args: ['profile', 'list'] }]);
+    expect(shellCommands).toEqual([{ cwd: WORKSPACE, args: ['whoami'] }]);
     expect(pools[0]?.warmed).not.toContain(homedir());
   });
 
   it('runs a query that answers the same anywhere in the home directory when no window shows a workspace', async () => {
     const { cm, shellCommands } = fakeClient();
-    await cm.query(['status'], { cwd: WORKSPACE });
+    await cm.query(['status', '--header'], { cwd: WORKSPACE });
     shellCommands.length = 0;
 
-    await cm.query(['profile', 'list'], { anyDirectory: true });
+    await cm.query(['whoami'], { anyDirectory: true });
 
-    expect(shellCommands).toEqual([{ cwd: homedir(), args: ['profile', 'list'] }]);
+    expect(shellCommands).toEqual([{ cwd: homedir(), args: ['whoami'] }]);
   });
 
   it('runs a query that answers the same anywhere in the home directory while the workspace warmed up at launch is not watched', async () => {
@@ -117,9 +126,9 @@ describe('CmClient routing', () => {
     // The first window's workspace, warmed up before its page says it shows it: a broken or missing one never does.
     cm.warmUp(WORKSPACE);
 
-    await cm.query(['profile', 'list'], { anyDirectory: true });
+    await cm.query(['whoami'], { anyDirectory: true });
 
-    expect(shellCommands).toEqual([{ cwd: homedir(), args: ['profile', 'list'] }]);
+    expect(shellCommands).toEqual([{ cwd: homedir(), args: ['whoami'] }]);
   });
 
   it('runs a query that answers the same anywhere in the workspace the first window opens, then home if it never watches it', async () => {
@@ -133,16 +142,43 @@ describe('CmClient routing', () => {
       dispose: () => undefined,
     });
     const runProcess = async () => ({ output: '', exitCode: 0 });
-    const cm = new CmClient(() => CM_PATH, 'linux', { runProcess, createShellPool: (cmPath) => new CmShellPool(cmPath, session) });
+    const cm = new CmClient(() => CM_PATH, OUTSIDE_WORKSPACES, 'linux', { runProcess, createShellPool: (cmPath) => new CmShellPool(cmPath, session) });
 
     cm.showWhileOpening(WORKSPACE);
-    await cm.query(['profile', 'list'], { anyDirectory: true });
+    await cm.query(['whoami'], { anyDirectory: true });
     // Its page found it broken, and went to the home screen.
     vi.advanceTimersByTime(OPENING_SHOW_MS);
-    await cm.query(['profile', 'list'], { anyDirectory: true });
+    await cm.query(['whoami'], { anyDirectory: true });
 
     expect(ranIn).toEqual([WORKSPACE, homedir()]);
     cm.dispose();
+  });
+
+  it("runs a command naming its repository in the app's folder outside every workspace, even with one shown, creating it", async () => {
+    const { cm, shellCommands, processes, logged } = fakeClient();
+    cm.show(WORKSPACE);
+
+    await cm.queryRecords(['find', 'branch', "on repository 'game@local'"], asFields, { outsideWorkspaces: true });
+    await cm.executeRecords(['diff', 'br:/main@game@local'], asFields, { outsideWorkspaces: true });
+    await cm.query(['status', '--header'], { cwd: WORKSPACE });
+
+    expect(shellCommands.map(({ cwd }) => cwd)).toEqual([OUTSIDE_WORKSPACES, WORKSPACE]);
+    expect(processes.map(({ options }) => options.cwd)).toEqual([OUTSIDE_WORKSPACES]);
+    expect(existsSync(OUTSIDE_WORKSPACES)).toBe(true);
+    // The log tells them apart, for the window exploring the repository to show its own (`ranInPlace`).
+    expect(logged.map((entry) => entry.outsideWorkspaces ?? false)).toEqual([true, true, false]);
+  });
+
+  it('makes the folder outside every workspace again for a new process when it was deleted during the session', async () => {
+    const outsideWorkspaces = join(mkdtempSync(join(tmpdir(), 'cm-client-')), 'outside-workspaces');
+    const { cm, processes } = fakeClient({ outsideWorkspaces });
+    await cm.executeRecords(['diff', 'br:/main@game@local'], asFields, { outsideWorkspaces: true });
+
+    rmSync(outsideWorkspaces, { recursive: true });
+    await cm.executeRecords(['diff', 'br:/task@game@local'], asFields, { outsideWorkspaces: true });
+
+    expect(existsSync(outsideWorkspaces)).toBe(true);
+    expect(processes.map(({ options }) => options.cwd)).toEqual([outsideWorkspaces, outsideWorkspaces]);
   });
 
   it('runs a query as a process of its own while no session of the directory is ready yet, and warms them up', async () => {
@@ -161,7 +197,7 @@ describe('CmClient routing', () => {
   ])('runs a %s query as a process of its own', async (_kind, options) => {
     const { cm, processes, shellCommands } = fakeClient();
 
-    await cm.query(['find', 'changeset', '--nototal'], options);
+    await cm.query(['fileinfo', 'a.cs'], options);
 
     expect(shellCommands).toEqual([]);
     expect(processes).toHaveLength(1);
@@ -214,7 +250,7 @@ describe('CmClient routing', () => {
 
     await cm.execute(['update'], { cwd: WORKSPACE, signal, killSignal: 'SIGKILL', onOutputLine });
 
-    expect(processes[0]?.options).toEqual({ cwd: WORKSPACE, signal, killSignal: 'SIGKILL', onOutputLine });
+    expect(processes[0]?.options).toEqual({ cwd: WORKSPACE, signal, killSignal: 'SIGKILL', onOutputLine, reading: { text: textLimitOf('operation') } });
   });
 });
 
@@ -259,7 +295,7 @@ describe('CmClient command line too long for a process', () => {
   it('runs a text-printing process as a cm shell of its own on Windows, where a process prints in the console code page', async () => {
     const { cm, processes } = fakeClient({ platform: 'win32', answer: () => ({ output: 'Ñandú.txt\nCommandResult 0\n', exitCode: 0 }) });
 
-    const output = await cm.execute(['diff', 'cs:12', '--format={path}'], { cwd: WORKSPACE });
+    const output = await cm.execute(['getworkspacefrompath', 'Ñandú.txt', '--format={wkpath}'], { cwd: WORKSPACE });
 
     expect(processes[0]?.args).toEqual(SHELL_ARGS);
     expect(output).toBe('Ñandú.txt\n');
@@ -291,7 +327,7 @@ describe('CmClient records', () => {
     await expect(cm.queryRecords(['find', 'branch'], toBranch, { cwd: WORKSPACE })).resolves.toHaveLength(2);
 
     expect(shellCommands).toEqual([]);
-    expect(processes[0]?.options.records).toBeInstanceOf(RecordReader);
+    expect(processes[0]?.options.reading).toEqual({ stream: expect.any(RecordReader) });
   });
 
   it('reads the records of a slow command from a process of its own', async () => {
@@ -334,15 +370,73 @@ describe('CmClient records', () => {
   });
 });
 
+describe('CmClient output', () => {
+  it('refuses to read a list as one string, before running anything or warming a session up', async () => {
+    const { cm, processes, shellCommands, pools } = fakeClient();
+
+    await expect(cm.query(['find', 'branch'], { cwd: WORKSPACE })).rejects.toThrow('cm find branch prints a list');
+    await expect(cm.execute(['diff', 'cs:12'], { cwd: WORKSPACE })).rejects.toThrow('cm diff cs:12 prints a list');
+
+    expect(processes).toEqual([]);
+    expect(shellCommands).toEqual([]);
+    expect(pools[0]?.warmed).toEqual([]);
+  });
+
+  it('refuses a command no one said how to read', async () => {
+    const { cm, processes } = fakeClient();
+
+    await expect(cm.execute(['purge', 'register'])).rejects.toThrow("cm purge register isn't in COMMAND_OUTPUTS");
+    expect(processes).toEqual([]);
+  });
+
+  it("reads an answer whole, stopped past its limit, and keeps an operation's ends, in the shell and in a process", async () => {
+    const { cm, processes, shellReadings } = fakeClient();
+
+    await cm.query(['whoami']);
+    await cm.query(['undo', 'a.cs'], { cwd: WORKSPACE });
+    await cm.execute(['version']);
+    await cm.execute(['update'], { cwd: WORKSPACE });
+
+    expect(shellReadings).toEqual([{ text: textLimitOf('answer') }, { text: textLimitOf('operation') }]);
+    expect(processes.map(({ options }) => options.reading)).toEqual([{ text: textLimitOf('answer') }, { text: textLimitOf('operation') }]);
+  });
+
+  it('reads a list printed one item a line as it arrives, a pooled shell\'s result line left out', async () => {
+    const { cm, shellReadings } = fakeClient({ answer: () => ({ output: 'ana@corp.com\nbob@corp.com\n', exitCode: 0 }) });
+
+    const names = await cm.queryLines(['listusers', 'local', '--onlyusers'], (line) => line);
+
+    expect(names).toEqual(['ana@corp.com', 'bob@corp.com']);
+    expect(shellReadings).toEqual([{ stream: expect.any(LineReader) }]);
+  });
+
+  it("reads them from a cm shell of its own on Windows, its result line left out", async () => {
+    const { cm, processes } = fakeClient({ platform: 'win32', warm: false, answer: () => ({ output: 'ana@corp.com\nCommandResult 0\n', exitCode: 0 }) });
+
+    await expect(cm.queryLines(['listusers', 'local', '--onlyusers'], (line) => line)).resolves.toEqual(['ana@corp.com']);
+    expect(processes[0]?.args).toEqual(SHELL_ARGS);
+  });
+
+  it('reads the elements of an XML list as they arrive, into what its caller builds of each', async () => {
+    const history = '<RevisionHistoriesResult><RevisionHistories><RevisionHistory><Revisions><Revision><ChangesetNumber>3</ChangesetNumber></Revision><Revision><ChangesetNumber>7</ChangesetNumber></Revision></Revisions></RevisionHistory></RevisionHistories></RevisionHistoriesResult>';
+    const { cm, shellReadings } = fakeClient({ answer: () => ({ output: history, exitCode: 0 }) });
+
+    const changesets = await cm.queryXmlElements(['history', 'a.cs', '--xml'], 'Revision', (revision) => revision.ChangesetNumber, { cwd: WORKSPACE });
+
+    expect(changesets).toEqual(['3', '7']);
+    expect(shellReadings).toEqual([{ stream: expect.any(XmlElementReader) }]);
+  });
+});
+
 describe('CmClient arguments', () => {
   it('asks find and --xml output for UTF-8, in the shell and in a process', async () => {
     const { cm, processes, shellCommands } = fakeClient();
 
-    await cm.query(['find', 'branch', '--xml']);
-    await cm.execute(['status', '--xml']);
+    await cm.queryRecords(['find', 'branch'], asFields);
+    await cm.execute(['status', '--header', '--xml']);
 
-    expect(shellCommands[0]?.args).toEqual(['find', 'branch', '--xml', '--encoding=utf-8']);
-    expect(processes[0]?.args).toEqual(['status', '--xml', '--encoding=utf-8']);
+    expect(shellCommands[0]?.args).toEqual(['find', 'branch', '--encoding=utf-8']);
+    expect(processes[0]?.args).toEqual(['status', '--header', '--xml', '--encoding=utf-8']);
   });
 
   it('passes local paths decomposed on macOS, as cm reads them, and branch names as written', async () => {
@@ -441,7 +535,7 @@ describe('CmClient commands that end without an exit code', () => {
       },
     });
 
-    await expect(cm.query(['find', 'label', '--xml'])).rejects.toThrow('waiting for input');
+    await expect(cm.query(['fileinfo', 'a.cs', '--xml'])).rejects.toThrow('waiting for input');
 
     expect(logged).toMatchObject([{ exitCode: -1, viaShell: true, output: 'cm is waiting for input ("Password:").' }]);
   });
@@ -449,15 +543,15 @@ describe('CmClient commands that end without an exit code', () => {
   it('fails a command whose output was too large to read with a CmError naming it, to report from its details', async () => {
     const { cm, logged } = fakeClient({
       answer: () => {
-        throw new CmOutputTooLargeError(256 * 1024 * 1024);
+        throw new CmOutputTooLargeError(4 * 1024 * 1024);
       },
     });
 
-    const error = await failureOf(cm.query(['find', 'changeset', "where branch = '/main'", '--xml'], { cwd: WORKSPACE }));
+    const error = await failureOf(cm.query(['fileinfo', 'a.cs', '--xml'], { cwd: WORKSPACE }));
 
     expect(error).toMatchObject({
-      message: 'The command printed more than 256 MB, too much to read, and was stopped.',
-      command: { commandLine: "cm find changeset where branch = '/main' --xml --encoding=utf-8", exitCode: -1, logEntryId: logged[0]?.id },
+      message: 'The command printed more than 4 MB, too much to read, and was stopped.',
+      command: { commandLine: 'cm fileinfo a.cs --xml --encoding=utf-8', exitCode: -1, logEntryId: logged[0]?.id },
     });
   });
 });
@@ -484,9 +578,9 @@ describe('CmClient command log', () => {
   it('logs the command as cm ran it', async () => {
     const { cm, logged } = fakeClient();
 
-    await cm.query(['find', 'label', '--xml']);
+    await cm.query(['fileinfo', 'a.cs', '--xml']);
 
-    expect(logged[0]?.commandLine).toBe('cm find label --xml --encoding=utf-8');
+    expect(logged[0]?.commandLine).toBe('cm fileinfo a.cs --xml --encoding=utf-8');
   });
 
   it('logs a failed command with its output', async () => {
@@ -514,9 +608,9 @@ describe('CmClient command log', () => {
     const started: { args: readonly string[]; cwd: string; finished: Promise<unknown> }[] = [];
     cm.onCommandStarted((command) => started.push(command));
 
-    await cm.query(['find', 'label', '--xml'], { cwd: WORKSPACE });
+    await cm.query(['fileinfo', 'a.cs', '--xml'], { cwd: WORKSPACE });
 
-    expect(started).toMatchObject([{ args: ['find', 'label', '--xml', '--encoding=utf-8'], cwd: WORKSPACE }]);
+    expect(started).toMatchObject([{ args: ['fileinfo', 'a.cs', '--xml', '--encoding=utf-8'], cwd: WORKSPACE }]);
     await expect(started[0]?.finished).resolves.toEqual({ output: 'done\n', exitCode: 0 });
   });
 });
@@ -536,7 +630,7 @@ describe('CmClient sessions', () => {
     const locations = [CM_PATH, join('usr', 'local', 'bin', 'cm')];
     const processes: string[] = [];
     const pools: { cmPath: string; disposed: boolean }[] = [];
-    const cm = new CmClient(() => locations[0]!, 'linux', {
+    const cm = new CmClient(() => locations[0]!, OUTSIDE_WORKSPACES, 'linux', {
       runProcess: async (cmPath) => {
         processes.push(cmPath);
         return { output: '', exitCode: 0 };

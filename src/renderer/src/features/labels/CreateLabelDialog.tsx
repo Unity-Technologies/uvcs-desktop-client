@@ -1,25 +1,23 @@
 import { useState } from 'react';
-import { api } from '../../api/client';
-import { runVoidAction } from '../../app/operations/runOperation';
-import { isAffectedByLabels } from '../../app/refresh/refreshScopes';
-import { switchWorkspace } from '../../app/shell/workspaceOperations';
+import type { Place } from '@shared/domain/place';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import { TextArea, TextField } from '../../ui/TextField';
-import { toast } from '../../ui/toast/toastStore';
 import { validateLabelName } from './labelNames';
+import { createLabel, offersSwitchToNewLabel } from './createLabel';
 
 /**
- * Opens the "new label" dialog. Pass `changesetId` to label a specific changeset (e.g. from the
- * changesets view); otherwise the workspace's loaded changeset is labeled.
+ * Opens the "new label" dialog. Pass `changesetId` to label a specific changeset (e.g. from the changesets view);
+ * otherwise the workspace's loaded changeset is labeled, which a repository with no workspace hasn't (`newLabel`).
+ * Switching to the new label is offered in a workspace only (`offersSwitchToNewLabel`).
  */
-export function openCreateLabelDialog(workspacePath: string, changesetId?: number): void {
-  openDialog((close) => <CreateLabelDialog workspacePath={workspacePath} changesetId={changesetId} onClose={close} />);
+export function openCreateLabelDialog(place: Place, changesetId?: number): void {
+  openDialog((close) => <CreateLabelDialog place={place} changesetId={changesetId} onClose={close} />);
 }
 
-function CreateLabelDialog({ workspacePath, changesetId, onClose }: { workspacePath: string; changesetId?: number; onClose: () => void }) {
+function CreateLabelDialog({ place, changesetId, onClose }: { place: Place; changesetId?: number; onClose: () => void }) {
   const [name, setName] = useState('');
   const [comment, setComment] = useState('');
   const [switchAfter, setSwitchAfter] = useState(false);
@@ -30,16 +28,8 @@ function CreateLabelDialog({ workspacePath, changesetId, onClose }: { workspaceP
   const create = async (): Promise<void> => {
     if (!trimmed || error) return;
     setCreating(true);
-    const created = await runVoidAction(workspacePath, "Couldn't create the label", () =>
-      api.labels.create(workspacePath, { name: trimmed, changesetId, comment }),
-      isAffectedByLabels,
-    );
+    await createLabel(place, { name: trimmed, changesetId, comment }, { switchAfter, onCreated: onClose });
     setCreating(false);
-    if (!created) return;
-
-    onClose();
-    toast.success(`Created label ${trimmed}`);
-    if (switchAfter) await switchWorkspace(workspacePath, `lb:${trimmed}`, `label ${trimmed}`);
   };
 
   return (
@@ -59,7 +49,7 @@ function CreateLabelDialog({ workspacePath, changesetId, onClose }: { workspaceP
     >
       <TextField label="Name" value={name} placeholder="v1.2.0" autoFocus error={error} onChange={(event) => setName(event.target.value)} />
       <TextArea label="Comment" value={comment} placeholder="Release notes, milestone…" onChange={(event) => setComment(event.target.value)} />
-      <Checkbox label="Switch the workspace to the new label" checked={switchAfter} onChange={setSwitchAfter} />
+      {offersSwitchToNewLabel(place) && <Checkbox label="Switch the workspace to the new label" checked={switchAfter} onChange={setSwitchAfter} />}
     </Dialog>
   );
 }

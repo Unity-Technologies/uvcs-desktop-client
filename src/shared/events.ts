@@ -1,3 +1,4 @@
+import type { FoundPath, FoundPathsSource } from './domain/explorer';
 import type { UpdateStatus } from './domain/appUpdate';
 import type { OperationProgress } from './domain/operation';
 import type { PageSeed, PageWindowPage } from './domain/pageWindow';
@@ -13,6 +14,8 @@ export interface CommandLogEntry {
   durationMs: number;
   exitCode: number;
   viaShell: boolean;
+  /** It ran in the app's folder outside every workspace: for a repository explored without one (`CmRunOptions.outsideWorkspaces`). */
+  outsideWorkspaces?: true;
   /** Output is kept only for failed commands, to help diagnose them. It and the command line are clipped (`clipForLog`). */
   output: string;
 }
@@ -42,9 +45,11 @@ export interface UvcsEvents {
   /** The workspace's watch broke once started: changes made outside the app no longer show by themselves. */
   workspaceWatchBroken: { workspacePath: string };
   operationProgress: OperationProgressEvent;
+  /** The best paths a repository's search (`explorer.findRepositoryPaths`) found so far, as they change. */
+  repositoryPathsFound: { searchId: string; paths: FoundPath[]; source: FoundPathsSource };
   /** The settings changed, in this window or another one. */
   settingsChanged: AppSettings;
-  /** A workspace was picked from the OS recent documents; `system.takeRequestedWorkspace` tells which. */
+  /** A workspace was picked from the OS recent documents; `system.takeRequestedPlace` tells which. */
   workspaceOpenRequested: Record<string, never>;
   /** A native menu item was chosen; runs the registered command with this id. */
   menuCommand: { commandId: string };

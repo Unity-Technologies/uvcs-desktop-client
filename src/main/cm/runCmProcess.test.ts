@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RecordReader } from './formatRecords';
+import { textLimitOf } from './outputLimit';
 import { runCmProcess } from './runCmProcess';
 import { formatOutput } from './testing/cmOutput';
 
@@ -30,10 +31,23 @@ describe('runCmProcess', () => {
     await expect(runCmProcess(process.execPath, ['-e', script], { input: 'a b\n' })).resolves.toEqual({ output: 'A B\n', exitCode: 0 });
   });
 
-  it('stops a command whose output passes the limit, which it fails', async () => {
-    // Joined into one string at the end, past V8's limit it would throw where nothing catches it.
+  it('stops an answer whose output passes its limit, which it fails', async () => {
     const script = "process.stdout.write('x'.repeat(5000)); setInterval(() => process.stdout.write('x'), 10);";
-    await expect(runCmProcess(process.execPath, ['-e', script], { maxOutputLength: 1000 })).rejects.toThrow('printed more than 1000 characters');
+    const reading = { text: textLimitOf('answer', 1000) };
+    await expect(runCmProcess(process.execPath, ['-e', script], { reading })).rejects.toThrow('printed more than 1000 characters');
+  });
+
+  it("keeps only the ends of an operation's output past its limit, and lets it finish", async () => {
+    const script = "process.stdout.write('start\\n' + 'x'.repeat(5000) + '\\nError: the end', () => process.exit(1));";
+    const reading = { text: textLimitOf('operation', 1000) };
+
+    const { output, exitCode } = await runCmProcess(process.execPath, ['-e', script], { reading });
+
+    expect(exitCode).toBe(1);
+    expect(output.startsWith('start\n')).toBe(true);
+    expect(output.endsWith('\nError: the end')).toBe(true);
+    expect(output).toContain('more characters');
+    expect(output.length).toBeLessThan(1100);
   });
 });
 
@@ -46,7 +60,7 @@ describe('runCmProcess reading records', () => {
     const output = formatOutput(['1', 'Ñandú']).replaceAll('\n', '\r\n');
     const records = new RecordReader((fields) => fields);
 
-    const result = await runCmProcess(process.execPath, ['-e', printing(output, Buffer.from('1\u001fÑ').length - 1)], { records });
+    const result = await runCmProcess(process.execPath, ['-e', printing(output, Buffer.from('1\u001fÑ').length - 1)], { reading: { stream: records } });
 
     expect(result).toEqual({ output: '', exitCode: 0 });
     expect(records.finish()).toEqual([['1', 'Ñandú']]);
@@ -56,7 +70,7 @@ describe('runCmProcess reading records', () => {
     const records = new RecordReader((fields) => fields);
     const script = "process.stderr.write('Error: The branch does not exist.\\r\\n', () => process.exit(1));";
 
-    await expect(runCmProcess(process.execPath, ['-e', script], { records })).resolves.toEqual({ output: 'Error: The branch does not exist.\n', exitCode: 1 });
+    await expect(runCmProcess(process.execPath, ['-e', script], { reading: { stream: records } })).resolves.toEqual({ output: 'Error: The branch does not exist.\n', exitCode: 1 });
     expect(records.count).toBe(0);
   });
 
@@ -66,7 +80,7 @@ describe('runCmProcess reading records', () => {
     const cut = Buffer.from('1\u001fÑ').length - 1;
     const script = `const b = Buffer.from(${JSON.stringify(output)}); process.stdout.write(b.subarray(0, ${cut}), () => process.stderr.write('Warning: slow\\n', () => process.stdout.write(b.subarray(${cut}))));`;
 
-    await expect(runCmProcess(process.execPath, ['-e', script], { records })).resolves.toEqual({ output: 'Warning: slow\n', exitCode: 0 });
+    await expect(runCmProcess(process.execPath, ['-e', script], { reading: { stream: records } })).resolves.toEqual({ output: 'Warning: slow\n', exitCode: 0 });
     expect(records.finish()).toEqual([['1', 'Ñandú']]);
   });
 
@@ -74,17 +88,20 @@ describe('runCmProcess reading records', () => {
     const records = new RecordReader((fields) => fields);
     const error = "Error: The branch 'br:/main/gone' does not exist.\r\n";
 
-    await expect(runCmProcess(process.execPath, ['-e', printing(error, 5, 1)], { records })).resolves.toEqual({
+    await expect(runCmProcess(process.execPath, ['-e', printing(error, 5, 1)], { reading: { stream: records } })).resolves.toEqual({
       output: "Error: The branch 'br:/main/gone' does not exist.\n",
       exitCode: 1,
     });
     expect(records.count).toBe(0);
   });
 
-  it('stops a command whose records pass the limit, which it fails', async () => {
-    const script = "process.stdout.write('1\\u001e\\n'.repeat(2000)); setInterval(() => process.stdout.write('1\\u001e\\n'), 10);";
+  it('never stops a command for the size of what it streams', async () => {
     const records = new RecordReader((fields) => fields);
-    await expect(runCmProcess(process.execPath, ['-e', script], { records, maxOutputLength: 1000 })).rejects.toThrow('printed more than 1000 bytes');
+    // Built by the script: written into it, the output would pass Windows' command line limit.
+    const script = "process.stdout.write('1\\u001e\\n'.repeat(5000), () => process.exit(0));";
+
+    await expect(runCmProcess(process.execPath, ['-e', script], { reading: { stream: records } })).resolves.toEqual({ output: '', exitCode: 0 });
+    expect(records.count).toBe(5000);
   });
 
   it('fails a command whose records its caller cannot read, instead of never ending', async () => {
@@ -92,6 +109,6 @@ describe('runCmProcess reading records', () => {
     const records = new RecordReader(() => {
       throw new Error('Not a record');
     });
-    await expect(runCmProcess(process.execPath, ['-e', script], { records })).rejects.toThrow('Not a record');
+    await expect(runCmProcess(process.execPath, ['-e', script], { reading: { stream: records } })).rejects.toThrow('Not a record');
   });
 });

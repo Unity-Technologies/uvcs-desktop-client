@@ -1,8 +1,12 @@
 import type { CmClient, CmRecordsOptions, CmRunOptions } from '../CmClient';
 import { CmError } from '../CmError';
+import { textOutputKind } from '../commandOutputs';
 import { extractErrorMessage } from '../errorMessage';
 import { RecordReader, type ReadRecord } from '../formatRecords';
+import { LineReader, type ReadLine } from '../LineReader';
 import { namesOrganizationById } from '../organizationIds';
+import type { StreamReader } from '../outputReading';
+import { XmlElementReader, type ReadElement } from '../XmlElementReader';
 
 /**
  * How a command reached `cm`: as a quick one, a pooled `cm shell` (`query`, `queryRecords`), or as a long one, a process
@@ -16,7 +20,7 @@ export interface FakeCmCommand {
   /** The arguments joined by spaces, as the command log shows them without `cm`: `find branch --xml`. */
   line: string;
   options: CmRunOptions;
-  /** Whether its output was read into records as it arrived (`queryRecords`, `executeRecords`), not as one string. */
+  /** Whether its output was read as it arrived (`queryRecords`, `executeRecords`, `queryXmlElements`), not as text. */
   readsRecords: boolean;
 }
 
@@ -57,7 +61,8 @@ export interface FakeCm {
 
 /**
  * A fake `CmClient` that answers from synthetic output (written with `cmOutput`), records every command with whether it went through `query`
- * or `execute`, and fails the test on any command it has no answer for.
+ * or `execute`, and fails the test on any command it has no answer for. As `CmClient`, it refuses a list read as text
+ * (`textOutputKind`): a list is streamed (`queryRecords`).
  *
  * `answers` is keyed by the start of the command line (the arguments joined by spaces): `'find branch'` answers every
  * `cm find branch ...`, and the longest matching key wins, so `'find branch where name'` can answer apart.
@@ -71,6 +76,7 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
 
   async function run(via: CmVia, args: string[], options: CmRunOptions = {}, readsRecords = false): Promise<string> {
     const command: FakeCmCommand = { via, args, line: args.join(' '), options, readsRecords };
+    if (!readsRecords) textOutputKind(args);
     commands.push(command);
     if (namesOrganizationById(args)) throw new Error(`A Unity organization's server by its id reached cm (take it from an output that names it): cm ${command.line}`);
     const key = keys.find((candidate) => startsWithWords(command.line, candidate));
@@ -78,23 +84,28 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
     const answer = answers[key]!;
     const result = typeof answer === 'function' ? await answer(command) : answer;
     if (result instanceof CmFailure) throw failure(command, result, commands.length);
+    // As `CmClient`, a command run as a process of its own (`execute`) hands its lines listener each line it prints.
+    if (via === 'execute' && options.onOutputLine) result.split(/\r\n|\r|\n/).filter(Boolean).forEach(options.onOutputLine);
     return result;
   }
 
-  async function runRecords<T>(via: CmVia, args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions): Promise<T[]> {
+  async function runStreamed<T>(via: CmVia, args: string[], reader: StreamReader & { finish(): T[] }, options?: CmRecordsOptions): Promise<T[]> {
     const output = await run(via, args, options, true);
-    // Read as `CmClient` reads them: as they arrive, text after the last record no record.
-    const records = new RecordReader(readRecord);
-    records.read(Buffer.from(output, 'utf8'));
-    return records.finish();
+    // Read as `CmClient` reads them: as they arrive, text after the last item no item.
+    reader.read(Buffer.from(output, 'utf8'));
+    reader.takeRest();
+    return reader.finish();
   }
 
   const fake = {
     executable,
     query: (args: string[], options?: CmRunOptions) => run('query', args, options),
     execute: (args: string[], options?: CmRunOptions) => run('execute', args, options),
-    queryRecords: <T>(args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions) => runRecords('query', args, readRecord, options),
-    executeRecords: <T>(args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions) => runRecords('execute', args, readRecord, options),
+    queryRecords: <T>(args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions) => runStreamed('query', args, new RecordReader(readRecord), options),
+    executeRecords: <T>(args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions) => runStreamed('execute', args, new RecordReader(readRecord), options),
+    queryLines: <T>(args: string[], readLine: ReadLine<T>, options?: CmRecordsOptions) => runStreamed('query', args, new LineReader(readLine), options),
+    queryXmlElements: <T>(args: string[], element: string, readElement: ReadElement<T>, options?: CmRecordsOptions) =>
+      runStreamed('query', args, new XmlElementReader(element, readElement), options),
     warmUp: (cwd = '') => void warmedUp.push(cwd),
     show: (cwd: string) => void shown.push(cwd),
     release: (cwd: string) => void released.push(cwd),

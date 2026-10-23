@@ -1,5 +1,6 @@
 import { ArrowRight } from 'lucide-react';
 import { Fragment } from 'react';
+import type { Place } from '@shared/domain/place';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { DetailsEmpty, DetailsSection, DetailsSkeleton } from '../../ui/DetailsSection';
@@ -11,7 +12,7 @@ import { xlinkDiffView } from './xlinkDiffView';
 import styles from './XlinkDiff.module.css';
 
 interface XlinkDiffProps {
-  workspacePath: string;
+  place: Place;
   target: DiffTarget;
   xlink: DiffEntry;
   /** The diff's files, of which the ones under the xlink are listed. */
@@ -21,8 +22,8 @@ interface XlinkDiffProps {
 }
 
 /** A changed xlink of a diff: which changeset of which repository it points to on each side, and the files changed under it. */
-export function XlinkDiff({ workspacePath, target, xlink, entries, onOpen }: XlinkDiffProps) {
-  const sides = useXlinkSides(workspacePath, target, xlink);
+export function XlinkDiff({ place, target, xlink, entries, onOpen }: XlinkDiffProps) {
+  const sides = useXlinkSides(place, target, xlink);
   const view = xlinkDiffView(target, xlink, sides.data, entries);
 
   return (

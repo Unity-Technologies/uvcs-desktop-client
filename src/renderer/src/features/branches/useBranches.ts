@@ -1,22 +1,24 @@
 import { useQuery } from '@tanstack/react-query';
+import type { Place } from '@shared/domain/place';
 import type { QueryFilter } from '@shared/domain/query';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { keyedByWorkspaceInfo, queryClient, SLOW_CHANGING_QUERY } from '../../app/queryClient';
-import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace } from '../../app/workspace/useWorkspace';
 import { compactFilter } from '../../lib/compactFilter';
 
 /**
- * Branches matching `filter`. Without one, every branch: tens of thousands on big repositories, so read rarely.
- * `repository` (`name@server`) reads another repository's than the workspace's, an xlinked one's.
+ * Branches matching `filter`. Without one, every branch: tens of thousands on big repositories, so read rarely. `of`
+ * reads another place's than the window's, e.g. an xlinked repository's (`repositoryPlace`).
  */
-export function useBranches(filter: QueryFilter = {}, repository?: string) {
-  const workspacePath = useWorkspacePath();
+export function useBranches(filter: QueryFilter = {}, of?: Place) {
+  const windowPlace = usePlace();
+  const place = of ?? windowPlace;
   // `{ includeHidden: false }` and `{}` ask for the same branches: one cache entry, one `cm find`.
   const query = compactFilter(filter);
   return useQuery({
-    queryKey: queryKeys.objectList(workspacePath, 'branches', query, repository),
-    queryFn: () => api.branches.list(workspacePath, query, repository),
+    queryKey: queryKeys.inPlace(place, 'branches', query),
+    queryFn: () => api.branches.list(place, query),
     placeholderData: (previous) => previous,
     ...SLOW_CHANGING_QUERY,
   });
@@ -24,19 +26,18 @@ export function useBranches(filter: QueryFilter = {}, repository?: string) {
 
 /** One branch by name, without reading the whole list. */
 export function useBranch(name: string) {
-  const workspacePath = useWorkspacePath();
-  return useQuery({ ...branchQuery(workspacePath, name), ...SLOW_CHANGING_QUERY });
+  return useQuery({ ...branchQuery(usePlace(), name), ...SLOW_CHANGING_QUERY });
 }
 
 /** The same branch for code outside components; shares the cache (and a read in flight) with `useBranch`. */
-export function fetchBranch(workspacePath: string, name: string) {
-  return queryClient.fetchQuery({ ...branchQuery(workspacePath, name), staleTime: SLOW_CHANGING_QUERY.staleTime });
+export function fetchBranch(place: Place, name: string) {
+  return queryClient.fetchQuery({ ...branchQuery(place, name), staleTime: SLOW_CHANGING_QUERY.staleTime });
 }
 
-export function branchQuery(workspacePath: string, name: string) {
+export function branchQuery(place: Place, name: string) {
   return {
-    queryKey: queryKeys.inWorkspace(workspacePath, 'branches', 'byName', name),
-    queryFn: () => api.branches.get(workspacePath, name),
+    queryKey: queryKeys.inPlace(place, 'branches', 'byName', name),
+    queryFn: () => api.branches.get(place, name),
     // Views show the branch the workspace is on (its comment, whether it is a finished task): once it switches away,
     // the old branch isn't read again, only marked stale.
     meta: keyedByWorkspaceInfo('selector'),

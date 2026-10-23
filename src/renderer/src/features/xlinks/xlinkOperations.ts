@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { TreeItem, XlinkTarget } from '@shared/domain/explorer';
 import { api } from '../../api/client';
 import { runRead, runVoidAction } from '../../app/operations/runOperation';
@@ -12,8 +13,8 @@ export function createXlink(workspacePath: string, directory: string): void {
   const siblings = listedItems(workspacePath, directory)?.map((item) => item.name) ?? [];
   openXlinkDialog({ kind: 'create', directory, siblings }, async (draft) => {
     const xlink = newXlinkOf(directory, draft);
-    const created = await runVoidAction(workspacePath, "Couldn't create the xlink", () => api.xlinks.create(workspacePath, xlink), isAffectedByPendingChangeEdit);
-    if (created) useFilesViewStore.getState().requestReveal(workspacePath, xlink.path);
+    const created = await runVoidAction(workspacePlace(workspacePath), "Couldn't create the xlink", () => api.xlinks.create(workspacePath, xlink), isAffectedByPendingChangeEdit);
+    if (created) useFilesViewStore.getState().requestReveal(workspacePlace(workspacePath), xlink.path);
     return created;
   });
 }
@@ -25,6 +26,6 @@ export async function editXlink(workspacePath: string, item: Pick<TreeItem, 'pat
   const target: Extract<XlinkDialogTarget, { kind: 'edit' }> = { kind: 'edit', path: item.path, name: item.name, xlink: item.xlink, rules, added };
   openXlinkDialog(target, async (draft) => {
     const edit = xlinkEditOf(target, draft);
-    return edit !== null && runVoidAction(workspacePath, "Couldn't change the xlink", () => api.xlinks.edit(workspacePath, edit), isAffectedByPendingChangeEdit);
+    return edit !== null && runVoidAction(workspacePlace(workspacePath), "Couldn't change the xlink", () => api.xlinks.edit(workspacePath, edit), isAffectedByPendingChangeEdit);
   });
 }

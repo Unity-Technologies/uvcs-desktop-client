@@ -1,5 +1,6 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it, vi } from 'vitest';
+import { repositoryPlace, workspacePlace, type Place } from '@shared/domain/place';
 
 // The results' menus import feature modules that read the platform as they load.
 
@@ -56,11 +57,12 @@ interface Search {
   lists?: Partial<CachedLists>;
   server?: Partial<ServerMatches>;
   changesetSearch?: Partial<ChangesetSearch>;
+  place?: Place;
 }
 
 /** The palette's groups for what is typed; the server answered for the same term unless told otherwise. */
-function groupsFor({ term = '', scope = 'all', currentBranch, lists, server, changesetSearch }: Search): SearchGroup[] {
-  const context: ResultContext = { workspacePath: '/ws', term, currentBranch, loadedChangeset: 1, changelists: [], changeAt: () => undefined };
+function groupsFor({ term = '', scope = 'all', currentBranch, lists, server, changesetSearch, place = workspacePlace('/ws') }: Search): SearchGroup[] {
+  const context: ResultContext = { place, term, currentBranch, loadedChangeset: 1, changelists: [], changeAt: () => undefined };
   const input: PaletteGroupsInput = {
     scope,
     context,
@@ -118,6 +120,16 @@ describe('paletteGroups without a search', () => {
     expect(sections(groupsFor({ lists }))).toEqual(['branches', 'changesets']);
     expect(sections(groupsFor({ lists, scope: 'changesets' }))).toEqual(['changesets']);
     expect(sections(groupsFor({ lists, scope: 'files' }))).toEqual([]);
+  });
+
+  it('lists no pending changes or files in a repository explored without a workspace, its objects all the same', () => {
+    const lists = { changes: [change('src/a.ts')], changesets: [changeset(9, 'Fix')] };
+    const place = repositoryPlace('game@local');
+
+    expect(sections(groupsFor({ lists, place }))).toEqual(['changesets']);
+    const searched = sections(groupsFor({ lists: { ...lists, files: { items: [{ path: 'src/a.ts', isDirectory: false }], index: createFuzzyIndex(['src/a.ts']) }, branches: branches(branch(1, '/main/a.ts')) }, place, term: 'a.ts' }));
+    expect(searched).toContain('branches');
+    expect(searched).not.toContain('files');
   });
 
   it('lists nothing while the lists are still loading', () => {

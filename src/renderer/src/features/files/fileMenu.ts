@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { TreeItem } from '@shared/domain/explorer';
 import { isWritable, repositoryLinkTo } from '../../app/links/linkTo';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -46,7 +47,7 @@ export const FILE_SHORTCUTS = {
 function showAnnotated(workspacePath: string, path: string): void {
   const view = useFilesViewStore.getState();
   view.setFileView('annotate');
-  view.requestReveal(workspacePath, path);
+  view.requestReveal(workspacePlace(workspacePath), path);
 }
 
 /**

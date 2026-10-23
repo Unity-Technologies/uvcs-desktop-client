@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight, RotateCcw } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { Place } from '@shared/domain/place';
 import type { PermissionTarget } from '@shared/domain/permissions';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
@@ -26,8 +27,8 @@ import styles from './PermissionsDialog.module.css';
 
 export interface PermissionsDialogOptions {
   target: PermissionTarget;
-  /** The workspace it's opened from, whose lists show owners; none from the home screen. */
-  workspacePath?: string;
+  /** The place it's opened from, whose lists show owners; none from the home screen. */
+  place?: Place;
 }
 
 /** Opens the permissions of a server, repository, branch, label, attribute or path. */
@@ -35,7 +36,7 @@ export function openPermissionsDialog(options: PermissionsDialogOptions): void {
   openDialog((close) => <PermissionsDialog {...options} onClose={close} />);
 }
 
-function PermissionsDialog({ target: opened, workspacePath, onClose }: PermissionsDialogOptions & { onClose: () => void }) {
+function PermissionsDialog({ target: opened, place, onClose }: PermissionsDialogOptions & { onClose: () => void }) {
   const [target, setTarget] = useState(opened);
   const [draft, setDraft] = useState<PermissionsDraft>(EMPTY_DRAFT);
   const [newBranches, setNewBranches] = useState('');
@@ -69,7 +70,7 @@ function PermissionsDialog({ target: opened, workspacePath, onClose }: Permissio
   const save = async (): Promise<void> => {
     if (!canSave || !permissions) return;
     setSaving(true);
-    const saved = await savePermissions({ target, permissions, changes, branches: isNewGroup ? branches : undefined, workspacePath });
+    const saved = await savePermissions({ target, permissions, changes, branches: isNewGroup ? branches : undefined, place });
     setSaving(false);
     if (saved) onClose();
   };

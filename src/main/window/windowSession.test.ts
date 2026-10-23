@@ -24,6 +24,13 @@ describe('windowsToReopen', () => {
     expect(windowsToReopen([on(GAME, 10), on(TOOLS), on(GAME, 20)], () => true)).toEqual([on(TOOLS), on(GAME, 20)]);
   });
 
+  it('reopens a repository explored without a workspace, once, and never by a folder', () => {
+    const exploring = (repository: string, x = 0): SavedWindow => ({ repository, bounds: { ...BOUNDS, x }, fullScreen: false });
+    const saved = [exploring('game@local', 10), on(GAME), exploring('game@acme@cloud'), exploring('game@local', 20)];
+
+    expect(windowsToReopen(saved, () => false)).toEqual([exploring('game@acme@cloud'), exploring('game@local', 20)]);
+  });
+
   it('reopens nothing when nothing was saved', () => {
     expect(windowsToReopen([], () => true)).toEqual([]);
   });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FOUND_BRANCHES, FOUND_CHANGESETS, foundObjects } from './foundObjects';
-import { caseTolerantPattern, equalsCondition, findArgs, roundTripDate } from './findQuery';
+import { caseTolerantPattern, equalsCondition, findArgs, findQueryArgs, roundTripDate } from './findQuery';
 import { FOUND_REVIEWS } from './codeReviewRecords';
 
 const LABELS = foundObjects('label', ['name'], (value) => value('name'));
@@ -24,6 +24,17 @@ describe('findArgs', () => {
 
   it('leaves out a query with no condition, order or limit', () => {
     expect(findArgs(LABELS, {}, null)).toEqual(['find', 'label', '--format={name}\u001e', '--dateformat=o', '--nototal']);
+  });
+
+  // With no workspace, nothing tells cm the repository; `on repository` anywhere but last fails ("missing EndOfFile").
+  it('names the repository last, after the order and the limit, when no workspace tells cm which', () => {
+    expect(findArgs(FOUND_BRANCHES, { limit: 5 }, 'date desc', ["hidden = 'false'"], 'game@local')[2]).toBe(
+      "where hidden = 'false' order by date desc limit 5 on repository 'game@local'",
+    );
+    expect(findArgs(LABELS, {}, null, [], 'game@local')[2]).toBe("on repository 'game@local'");
+    expect(findQueryArgs(FOUND_CHANGESETS, 'where changesetid = 12', 'game@acme@cloud')[2]).toBe(
+      "where changesetid = 12 on repository 'game@acme@cloud'",
+    );
   });
 
   // `--dateformat` sets how `cm` reads the dates written in the query too: a bare day would fail to parse.

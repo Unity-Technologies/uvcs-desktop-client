@@ -1,9 +1,20 @@
+import type { Place } from '@shared/domain/place';
+
 /**
  * Every query about a workspace starts with `workspaceKey(path)`, so a single
  * invalidation refreshes all of its views after an operation changes it.
  */
 export function workspaceKey(workspacePath: string): readonly unknown[] {
   return ['workspace', workspacePath];
+}
+
+/**
+ * Every query about the place a window shows starts with `placeKey(place)`: a workspace's is `workspaceKey`, a
+ * repository's `['repository', spec]`. Both are two parts, so what follows (the area, its details) is where the
+ * refresh scopes read it (`refreshScopes.ts`) whichever the place.
+ */
+export function placeKey(place: Place): readonly unknown[] {
+  return place.kind === 'workspace' ? workspaceKey(place.workspacePath) : ['repository', place.repository];
 }
 
 export const queryKeys = {
@@ -31,13 +42,5 @@ export const queryKeys = {
   workspaceRepository: (path: string) => ['workspaceRepository', path] as const,
   missingWorkspacePaths: (paths: readonly string[]) => ['missingWorkspacePaths', paths] as const,
   inWorkspace: (workspacePath: string, ...parts: unknown[]) => [...workspaceKey(workspacePath), ...parts] as const,
-  /**
-   * A list of objects (`branches`, `changesets`, `labels`) read with `query`: the workspace's repository's under the
-   * key every view of them shares; another repository's (an xlinked one's, `name@server`) in an area of its own,
-   * `otherRepository`. What reads the workspace's lists from the cache scans their area (`listedChangeset`,
-   * `cachedBranch`) and must never take another repository's ids or GUIDs for its own; and no workspace operation
-   * changes another repository, so none refreshes them (the xlink dialog's pickers read them, slow changing).
-   */
-  objectList: (workspacePath: string, area: string, query: unknown, repository?: string) =>
-    repository ? queryKeys.inWorkspace(workspacePath, 'otherRepository', repository, area, query) : queryKeys.inWorkspace(workspacePath, area, query),
+  inPlace: (place: Place, ...parts: unknown[]) => [...placeKey(place), ...parts] as const,
 };

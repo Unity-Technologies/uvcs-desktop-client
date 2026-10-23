@@ -1,3 +1,5 @@
+import type { StreamReader } from './outputReading';
+
 /** Control characters, which never appear in names, paths or comments: records split without ambiguity. */
 export const FIELD_SEPARATOR = '\u001f';
 export const RECORD_SEPARATOR = '\u001e';
@@ -7,7 +9,7 @@ const CR_CODE = 0x0d;
 const LF_CODE = 0x0a;
 
 /**
- * Builds a `--format` value whose output `parseRecords` and `RecordReader` split unambiguously. A placeholder may carry
+ * Builds a `--format` value whose output `RecordReader` splits unambiguously. A placeholder may carry
  * a .NET format (`date:o`), which `cm ls` applies to its dates.
  */
 export function recordFormat(placeholders: readonly string[]): string {
@@ -17,33 +19,13 @@ export function recordFormat(placeholders: readonly string[]): string {
 /** What a caller builds of each record's fields (a branch, a changeset); undefined leaves the record out. */
 export type ReadRecord<T> = (fields: string[]) => T | undefined;
 
-const asFields: ReadRecord<string[]> = (fields) => fields;
-
-/**
- * The records of a whole `--format` output already held as text, read by `readRecord` (their fields, by default):
- * found in the string itself, so each record and its fields are slices of the output, with no copy. Text after the
- * last record is read as one more record.
- */
-export function parseRecords(output: string): string[][];
-export function parseRecords<T>(output: string, readRecord: ReadRecord<T>): T[];
-export function parseRecords<T>(output: string, readRecord?: ReadRecord<T>): (T | string[])[] {
-  const read = readRecord ?? asFields;
-  const rows: (T | string[])[] = [];
-  for (let start = 0; start <= output.length; ) {
-    const separator = output.indexOf(RECORD_SEPARATOR, start);
-    const end = separator < 0 ? output.length : separator;
-    const fieldsStart = start + lineBreakLengthIn(output, start, end);
-    const row = fieldsStart < end ? read(fieldsOf(output.slice(fieldsStart, end))) : undefined;
-    if (row !== undefined) rows.push(row);
-    start = end + 1;
-  }
-  return rows;
-}
+/** Each record as its fields: for a reader that folds the rows once they're all read (`repositoryListingOf`). */
+export const readFields: ReadRecord<string[]> = (fields) => fields;
 
 /**
  * The fields of one record's text, without the line break `cm` prints before it (after the previous record's
  * separator): each value as `cm` printed it, CRLF turned into LF (a comment written on Windows keeps its CRLF in the
- * repository). The rules of both `parseRecords` and `RecordReader`. Only `cm diff` quotes some of its values: `unquoted`.
+ * repository). Only `cm diff` quotes some of its values: `unquoted`.
  */
 function fieldsOf(record: string): string[] {
   return withLf(record).split(FIELD_SEPARATOR);
@@ -63,7 +45,7 @@ function fieldsOf(record: string): string[] {
  *
  * As `cm` prints them: a line break after each record's separator (CRLF on Windows, read as LF in fields too).
  */
-export class RecordReader<T> {
+export class RecordReader<T> implements StreamReader {
   private readonly rows: T[] = [];
   /** The bytes after the last record separator: the record still arriving, or text that is no record at all. */
   private incomplete: Buffer[] = [];
@@ -128,13 +110,6 @@ function lineBreakLength(bytes: Buffer, start: number, end: number): number {
   return 0;
 }
 
-/** `lineBreakLength` in text. */
-function lineBreakLengthIn(text: string, start: number, end: number): number {
-  if (start < end && text.charCodeAt(start) === LF_CODE) return 1;
-  if (start + 1 < end && text.charCodeAt(start) === CR_CODE && text.charCodeAt(start + 1) === LF_CODE) return 2;
-  return 0;
-}
-
 /** Windows ends lines with CRLF; parsers get LF, as everywhere else. */
 function withLf(text: string): string {
   return text.includes('\r') ? text.replaceAll('\r\n', '\n') : text;
@@ -147,7 +122,7 @@ export interface RecordLayout<T, Field extends string = string> {
   read: (value: (field: Field) => string) => T | undefined;
 }
 
-/** The `--format` that prints the layout's fields as `readRecords` reads them. */
+/** The `--format` that prints the layout's fields as `layoutReader` reads them. */
 export function layoutFormat(layout: RecordLayout<unknown>): string {
   return `--format=${recordFormat(layout.fields)}`;
 }
@@ -156,11 +131,6 @@ export function layoutFormat(layout: RecordLayout<unknown>): string {
 export function layoutReader<T, Field extends string>({ fields, read }: RecordLayout<T, Field>): ReadRecord<T> {
   const indexes = new Map(fields.map((field, index) => [field, index]));
   return (values) => read((field) => values[indexes.get(field)!] ?? '');
-}
-
-/** The items of an output printed through `layoutFormat`, already held as text. */
-export function readRecords<T, Field extends string>(layout: RecordLayout<T, Field>, output: string): T[] {
-  return parseRecords(output, layoutReader(layout));
 }
 
 /** A number `cm` printed; -1 where it printed none. */

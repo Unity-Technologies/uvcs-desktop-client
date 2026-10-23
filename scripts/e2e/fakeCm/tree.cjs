@@ -34,11 +34,17 @@ function childrenOf(folder) {
 /** An item as `--format` prints it: its fields named as `cm` names them; the listed folder itself is `.`. */
 function lsRecord({ path, type, loaded, changed, hash, size }, isListedFolder) {
   const name = isListedFolder ? '.' : path.split('/').pop();
-  const common = { name, wkpath: path, type, size, date: '2026-09-20T12:00:00.0000000+02:00', symlinktarget: '' };
+  // `{path}`: the item's path in the repository, as `cm ls -R --tree=…` prints it.
+  const common = { name, wkpath: path, path: `/${path.replace(/^\//, '')}`, type, size, date: '2026-09-20T12:00:00.0000000+02:00', symlinktarget: '' };
   const none = { checkout: '', changeset: '', branch: '', owner: '', revid: '', parentrevid: '', repspec: '', itemid: '', hash: '' };
   if (!loaded) return { ...common, ...none };
   const controlled = { checkout: '', changeset: WORKSPACE.changeset, branch: WORKSPACE.branch, owner: OWNER, revid: 201, parentrevid: changed ? 200 : -1, itemid: 301 };
   return { ...common, ...controlled, repspec: `rep:${REPOSITORY_SPEC}`, hash };
+}
+
+/** Every folder and file below `folder`, the deepest after their folders. */
+function descendantsOf(folder) {
+  return childrenOf(folder).flatMap((child) => (child.type === 'dir' ? [child, ...descendantsOf(child.path)] : [child]));
 }
 
 /** The answer to `cm ls <path> --format=…`: the path itself, then what a folder holds. */
@@ -46,7 +52,8 @@ function lsOutput(args) {
   const path = folderOf(args[0]);
   const file = FILES[path];
   const self = file ? { path, type: 'txt', loaded: file.loaded !== undefined, ...hashAndSize(file.loaded) } : { path, type: 'dir', loaded: true, ...hashAndSize('') };
-  const items = file ? [self] : [self, ...childrenOf(path)];
+  // `-R`: every item below the folder too, as Files' search of a repository lists its whole tree.
+  const items = file ? [self] : [self, ...(args.includes('-R') ? descendantsOf(path) : childrenOf(path))];
   const format = args.find((arg) => arg.startsWith('--format='));
   if (!format) throw new Error('The fake cm lists items only with --format');
   return formatRecords(format.slice('--format='.length), items.map((item, index) => lsRecord(item, index === 0 && !file)));

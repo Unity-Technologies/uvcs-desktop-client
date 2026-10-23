@@ -1,9 +1,10 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { PageWindowRegistry } from './PageWindowRegistry';
 
-const GAME = join('/work', 'game');
-const TOOLS = join('/work', 'tools');
+const GAME = workspacePlace(join('/work', 'game'));
+const TOOLS = workspacePlace(join('/work', 'tools'));
 const MAIN = 1;
 const OTHER_MAIN = 2;
 
@@ -32,6 +33,7 @@ describe('page windows', () => {
     expect(pages.leftBehindBy(MAIN, GAME)).toEqual([]);
     expect(pages.leftBehindBy(MAIN, TOOLS)).toEqual([10, 11]);
     expect(pages.leftBehindBy(MAIN, undefined)).toEqual([10, 11]);
+    expect(pages.leftBehindBy(MAIN, repositoryPlace('game@local'))).toEqual([10, 11]);
   });
 
   it('are forgotten once closed', () => {
