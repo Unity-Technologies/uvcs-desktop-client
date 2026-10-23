@@ -46,3 +46,9 @@ export interface XlinkEdit {
   removedRules: XlinkRule[];
   addedRules: XlinkRule[];
 }
+
+/** A branch's full name, as `cm` names it in specs and rules: `main/task1` and `/main/task1` are the same branch. */
+export function fullBranchName(name: string): string {
+  const trimmed = name.trim();
+  return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+}

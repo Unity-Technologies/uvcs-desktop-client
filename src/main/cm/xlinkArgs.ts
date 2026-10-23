@@ -3,13 +3,7 @@
 // and adds or deletes its branch expansion rules (`-ar`/`-dr <path> <rules>`). None of it reads or writes the
 // xlinked files: they come with the next update, so each is a quick command.
 
-import type { NewXlink, XlinkPoint, XlinkRule } from '@shared/domain/xlinks';
-
-/** A branch's full name, as `cm` names it in specs: `main/task1` and `/main/task1` are the same branch. */
-export function fullBranchName(name: string): string {
-  const trimmed = name.trim();
-  return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-}
+import { fullBranchName, type NewXlink, type XlinkPoint, type XlinkRule } from '@shared/domain/xlinks';
 
 /** Where an xlink points, as `cm xlink` takes it: a changeset, branch or label spec in its repository (`name@server`). */
 export function xlinkPointSpec(point: XlinkPoint, repository: string): string {
