@@ -75,6 +75,29 @@ describe('finding a file in a repository explored without a workspace', () => {
     expect(await readFile(join(tempFolder, folder, file!), 'utf8')).toBe('dAssets\nfAssets/Player.cs\nfAssets/PlayerController.cs\ndAssets/Players\nfAssets/Enemy.png\nfREADME.md\n');
   });
 
+  it('lists the tree ahead of the first search, once, which then joins that listing', async () => {
+    const { fake, search } = await setUp();
+
+    search.prepare(GAME, 12);
+    search.prepare(GAME, 12);
+    expect(paths(await search.search(GAME, 12, 'readme', { limit: 10 }))).toEqual(['README.md']);
+    search.prepare(GAME, 12);
+    expect(paths(await search.search(GAME, 12, 'enemy', { limit: 10 }))).toEqual(['Assets/Enemy.png']);
+
+    expect(fake.commands).toHaveLength(1);
+  });
+
+  it('lists again on the first search when the listing ahead of it failed', async () => {
+    let fails = true;
+    const { fake, search } = await setUp(() => (fails ? cmFails('The server is not available') : TREE));
+
+    search.prepare(GAME, 12);
+    await expect(search.search(GAME, 12, 'player', { limit: 10 })).rejects.toThrow('The server is not available');
+    fails = false;
+    expect(paths(await search.search(GAME, 12, 'readme', { limit: 10 }))).toEqual(['README.md']);
+    expect(fake.commands).toHaveLength(2);
+  });
+
   it('lists once for the searches asked while it lists', async () => {
     const { fake, search } = await setUp();
 

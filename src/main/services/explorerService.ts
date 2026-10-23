@@ -115,6 +115,7 @@ export function createExplorerService({ cm, operations, workspaceCopies, headers
     listDirectory,
     listRepositoryDirectory,
     findRepositoryPaths,
+    prepareRepositoryPaths: async (place, changesetId) => repositoryPaths.prepare(place, changesetId),
     stopFindingRepositoryPaths: async (searchId) => pathSearches.get(searchId)?.abort(),
     listAllPaths: listWorkspacePaths,
     details,

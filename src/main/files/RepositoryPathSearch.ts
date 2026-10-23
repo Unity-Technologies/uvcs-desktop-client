@@ -88,6 +88,15 @@ export class RepositoryPathSearch {
     if (!signal?.aborted && tree.file !== null) await this.matchFile(tree.file, best, signal, onUpdate);
   }
 
+  /**
+   * Starts listing the changeset's tree when it is neither listed nor listing: Go to file opened, so a search is coming,
+   * and the listing's seconds pass while the query is typed. The searches join it; a failure is the first search's.
+   */
+  prepare(place: RepositoryPlace, changesetId: number): void {
+    const tree = this.treeOf(place, changesetId);
+    if (tree.file === null) tree.listing ??= this.startListing(place, changesetId, tree);
+  }
+
   /** Lets a repository's trees go: its last window left it (`onRepositoryLeft`). A listing under way stops. */
   forget(repository: string): void {
     for (const tree of [...this.trees.values()]) if (tree.repository === repository) this.forgetTree(tree);

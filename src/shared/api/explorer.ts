@@ -13,6 +13,11 @@ export interface ExplorerApi {
    * `repositoryPathsFound` events with `searchId`. Fails as the listing does; a search stopped resolves what it found.
    */
   findRepositoryPaths(place: RepositoryPlace, changesetId: number, query: string, searchId: string): Promise<FoundPath[]>;
+  /**
+   * Starts listing a repository's tree at a changeset for `findRepositoryPaths`, unless it is listed or listing: Go to
+   * file opened, so the listing runs while the query is typed. Resolves at once; the searches meet its failure.
+   */
+  prepareRepositoryPaths(place: RepositoryPlace, changesetId: number): Promise<void>;
   /** Stops a search of `findRepositoryPaths`: a newer query replaced it, or its dialog closed. Its tree is kept. */
   stopFindingRepositoryPaths(searchId: string): Promise<void>;
   /** Every path in the workspace, private ones included, for quick "go to file" searches. Read from disk, not `cm`. */

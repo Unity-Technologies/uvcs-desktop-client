@@ -43,6 +43,22 @@ describe("finding a repository's files", () => {
     expect(sent).toEqual([['A', 'repositoryPathsFound', { searchId: 'search-1', paths: [{ path: 'Assets/Player.cs', isDirectory: false }], source: 'server' }]]);
   });
 
+  it('lists the tree when Go to file opens, ahead of its first search, which reads no more from the server', async () => {
+    let listed!: () => void;
+    const listing = new Promise<void>((resolve) => (listed = resolve));
+    const { service, commands } = await explorer(() => {
+      listed();
+      return TREE;
+    });
+
+    await service.prepareRepositoryPaths(GAME, 12);
+    await listing;
+    expect(commands.map(({ via, args }) => [via, args[0], args[3]])).toEqual([['execute', 'ls', '--tree=cs:12@game@local']]);
+
+    expect(await service.findRepositoryPaths(GAME, 12, 'player', 'search-1')).toEqual([{ path: 'Assets/Player.cs', isDirectory: false }]);
+    expect(commands).toHaveLength(1);
+  });
+
   it('stops a search by its id, the tree listing on for the next one, and stops nothing once it is done', async () => {
     const { service } = await explorer(runsUntilCancelled('cancelled'));
 
