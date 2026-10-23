@@ -44,3 +44,19 @@ export function nameInProject(name: string, project: string | undefined): string
 export function nameWithProject(name: string, project: string | null): string {
   return project ? `${project}/${name}` : name;
 }
+
+/** The six colors a Unity project's icon takes, in the order every Unity Version Control client picks them. */
+export const PROJECT_COLORS = ['crimson', 'orange', 'amber', 'teal', 'indigo', 'violet'] as const;
+
+export type ProjectColor = (typeof PROJECT_COLORS)[number];
+
+/**
+ * A project's color, as the other Unity Version Control clients pick it, so a project looks the same in all of them:
+ * by the code of its GUID's last character. "All projects" takes the one of the GUID they give it (`ALL_PROJECTS_GUID`).
+ */
+export function projectColor(guid: string): ProjectColor {
+  return guid ? PROJECT_COLORS[guid.charCodeAt(guid.length - 1) % PROJECT_COLORS.length]! : PROJECT_COLORS[0];
+}
+
+/** The GUID the other clients give "All projects", which makes its icon indigo. */
+export const ALL_PROJECTS_GUID = 'e11e65e3-654b-45c6-9b80-e3f2e0591dc4';

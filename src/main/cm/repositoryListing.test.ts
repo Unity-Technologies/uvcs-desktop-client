@@ -9,30 +9,38 @@ describe('repositoryListArgs', () => {
     expect(repositoryListArgs('acme@cloud', { withProjects: false })).toEqual(['repository', 'list', 'acme@cloud', '--format={repid}\u001f{repname}\u001f{repserver}\u001f{repowner}\u001e']);
   });
 
-  it("asks for every type and each one's type to list projects in the same command", () => {
+  it("asks for every type, each one's type and GUID, to list projects in the same command", () => {
     expect(repositoryListArgs(ORGANIZATION, { withProjects: true })).toEqual([
       'repository',
       'list',
       ORGANIZATION,
       '--type=all',
-      '--format={repid}\u001f{repname}\u001f{repserver}\u001f{repowner}\u001f{reptype}\u001e',
+      '--format={repid}\u001f{repname}\u001f{repserver}\u001f{repowner}\u001f{reptype}\u001f{repguid}\u001e',
     ]);
   });
 });
 
+const CLOUD_GUID = '7f3e2d1c-0b9a-4876-a543-210fedcba987';
+const RACING_GUID = '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f';
+const ARCHIVED_GUID = '9e8d7c6b-5a49-4382-b716-05f4e3d2c1b0';
+
 describe('parseRepositoryListing', () => {
   // As `cm repository list --type=all` prints a Unity organization: projects, repositories in them, and storage.
   const ORGANIZATION_LISTED = formatOutput(
-    ['7', 'Cloud Repositories', ORGANIZATION, 'ana', 'Project'],
-    ['12', 'Cloud Repositories/TextEditor', ORGANIZATION, 'ana', 'VCS'],
-    ['3', 'Racing', ORGANIZATION, 'ana', 'Project'],
-    ['4', 'Racing/Game', ORGANIZATION, 'bob', 'VCS'],
-    ['5', 'Archived', ORGANIZATION, 'ana', 'Project'],
-    ['6', 'storage-01', ORGANIZATION, 'ana', 'WorkspaceStorage'],
+    ['7', 'Cloud Repositories', ORGANIZATION, 'ana', 'Project', CLOUD_GUID],
+    ['12', 'Cloud Repositories/TextEditor', ORGANIZATION, 'ana', 'VCS', '5b0c3a52-1d7e-4f0b-9c4f-3e2a8b9d7c61'],
+    ['3', 'Racing', ORGANIZATION, 'ana', 'Project', RACING_GUID],
+    ['4', 'Racing/Game', ORGANIZATION, 'bob', 'VCS', '0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d'],
+    ['5', 'Archived', ORGANIZATION, 'ana', 'Project', ARCHIVED_GUID],
+    ['6', 'storage-01', ORGANIZATION, 'ana', 'WorkspaceStorage', 'c2d3e4f5-a6b7-4c8d-9e0f-1a2b3c4d5e6f'],
   );
 
-  it('reads the projects by name, empty ones too, apart from the repositories', () => {
-    expect(parseRepositoryListing(ORGANIZATION_LISTED, ORGANIZATION, { withProjects: true }).projects).toEqual(['Archived', 'Cloud Repositories', 'Racing']);
+  it('reads the projects by name, empty ones too, each with its GUID, apart from the repositories', () => {
+    expect(parseRepositoryListing(ORGANIZATION_LISTED, ORGANIZATION, { withProjects: true }).projects).toEqual([
+      { name: 'Archived', guid: ARCHIVED_GUID },
+      { name: 'Cloud Repositories', guid: CLOUD_GUID },
+      { name: 'Racing', guid: RACING_GUID },
+    ]);
   });
 
   it('reads each repository with its project, by name, leaving storage out', () => {
@@ -43,7 +51,7 @@ describe('parseRepositoryListing', () => {
   });
 
   it('keeps a repository no project names, without one', () => {
-    const listed = formatOutput(['3', 'Racing', ORGANIZATION, 'ana', 'Project'], ['9', 'legacy', ORGANIZATION, 'ana', 'VCS']);
+    const listed = formatOutput(['3', 'Racing', ORGANIZATION, 'ana', 'Project', RACING_GUID], ['9', 'legacy', ORGANIZATION, 'ana', 'VCS', CLOUD_GUID]);
 
     expect(parseRepositoryListing(listed, ORGANIZATION, { withProjects: true }).repositories).toEqual([
       { id: '9', name: 'legacy', server: ORGANIZATION, owner: 'ana', spec: `legacy@${ORGANIZATION}` },

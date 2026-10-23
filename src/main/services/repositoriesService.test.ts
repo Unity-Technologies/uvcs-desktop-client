@@ -45,12 +45,15 @@ describe('repositories', () => {
 
   it("lists a Unity organization's projects with its repositories, in the one command", async () => {
     const { service, lines } = repositories({
-      'repository list racing@unity --type=all': formatOutput(['3', 'Racing', 'racing@unity', 'ana', 'Project'], ['4', 'Racing/Game', 'racing@unity', 'bob', 'VCS']),
+      'repository list racing@unity --type=all': formatOutput(
+        ['3', 'Racing', 'racing@unity', 'ana', 'Project', '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f'],
+        ['4', 'Racing/Game', 'racing@unity', 'bob', 'VCS', '0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d'],
+      ),
     });
 
     expect(await service.list('racing@unity')).toEqual({
       repositories: [{ id: '4', name: 'Racing/Game', server: 'racing@unity', owner: 'bob', spec: 'Racing/Game@racing@unity', project: 'Racing' }],
-      projects: ['Racing'],
+      projects: [{ name: 'Racing', guid: '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f' }],
     });
     expect(lines()).toHaveLength(1);
   });
