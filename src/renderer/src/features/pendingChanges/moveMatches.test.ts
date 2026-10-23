@@ -35,12 +35,19 @@ describe('which changes can be matched', () => {
 });
 
 describe('the candidates', () => {
-  it('offers the other side only, of the same shape: files with files, folders with folders', () => {
+  it("offers the other side only, as cm's detection pairs them: folders with folders, text files with text files", () => {
     const player = deleted('src/Player.cs');
     const changes = [player, deleted('src/Enemy.cs'), added('src/Hero.cs'), added('tex/hero.png', 'binaryFile'), added('src/heroes', 'directory'), change('src/Map.cs', ['changed'])];
 
-    expect(paths(matchCandidates(player, changes))).toEqual(['src/Hero.cs', 'tex/hero.png']);
+    expect(paths(matchCandidates(player, changes))).toEqual(['src/Hero.cs']);
     expect(paths(matchCandidates(changes[4]!, [...changes, deleted('src/people', 'directory')]))).toEqual(['src/people']);
+  });
+
+  it('offers a binary file only binary files of its extension, whatever its case', () => {
+    const texture = deleted('art/hero.png', 'binaryFile');
+    const changes = [texture, added('art/new/Hero.PNG', 'binaryFile'), added('art/hero.psd', 'binaryFile'), added('art/hero.txt')];
+
+    expect(paths(matchCandidates(texture, changes))).toEqual(['art/new/Hero.PNG']);
   });
 
   it('offers deleted items for a new one', () => {

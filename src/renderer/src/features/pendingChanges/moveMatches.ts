@@ -18,10 +18,8 @@ export interface MoveMatch {
   to: string;
 }
 
-/** Files pair with files, folders with folders: `cm move` of a file onto a folder moves it inside the folder. */
-type MatchShape = 'file' | 'folder';
-
-const SHAPES: Partial<Record<ItemType, MatchShape>> = { file: 'file', binaryFile: 'file', directory: 'folder' };
+/** What can be one side of a move: `cm move` of a file onto a folder moves it inside the folder. */
+const MATCHABLE: ReadonlySet<ItemType> = new Set(['file', 'binaryFile', 'directory']);
 
 /**
  * The side of a move the change can take, or null. Only an item deleted from disk outside `cm` (a delete with `cm`
@@ -37,18 +35,24 @@ export function matchSideOf(change: PendingChange, changes: readonly PendingChan
 const NO_FOLDERS: ReadonlySet<string> = new Set();
 
 /**
- * The changes that could be the other side of the change's move, the same shape as it, the likeliest first
- * (`compareCandidates`).
+ * The changes that could be the other side of the change's move, the likeliest first (`compareCandidates`). As
+ * `cm`'s move detection pairs them (`isPairable`): folders with folders, text files with text files, and binary files
+ * with binary files of the same extension.
  */
 export function matchCandidates(change: PendingChange, changes: readonly PendingChange[]): PendingChange[] {
   const folders = privateFolders(changes);
   const side = sideOf(change, folders);
   if (side === null) return [];
   const otherSide: MatchSide = side === 'deleted' ? 'new' : 'deleted';
-  const shape = SHAPES[change.itemType];
   return changes
-    .filter((other) => SHAPES[other.itemType] === shape && sideOf(other, folders) === otherSide)
+    .filter((other) => isPairable(change, other) && sideOf(other, folders) === otherSide)
     .sort((a, b) => compareCandidates(change.path, a.path, b.path));
+}
+
+/** `cm` pairs only items of one type, and a binary file only with one of its extension (`bBinMatchingOnlySameExtension`). */
+function isPairable(change: PendingChange, other: PendingChange): boolean {
+  if (change.itemType !== other.itemType) return false;
+  return change.itemType !== 'binaryFile' || extensionOf(change.path)?.toLowerCase() === extensionOf(other.path)?.toLowerCase();
 }
 
 /** The candidates the dialog's search leaves: each word typed in the path (`matchesWordFilter`), as the list marks them. */
@@ -96,7 +100,7 @@ function folderDepth(path: string): number {
 }
 
 function sideOf(change: PendingChange, folders: ReadonlySet<string>): MatchSide | null {
-  if (change.kinds.length !== 1 || SHAPES[change.itemType] === undefined) return null;
+  if (change.kinds.length !== 1 || !MATCHABLE.has(change.itemType)) return null;
   if (change.kinds[0] === 'locallyDeleted') return 'deleted';
   return change.kinds[0] === 'private' && !isInPrivateFolder(change, folders) ? 'new' : null;
 }
