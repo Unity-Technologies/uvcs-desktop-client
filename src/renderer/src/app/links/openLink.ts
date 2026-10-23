@@ -182,7 +182,7 @@ async function createWorkspaceFor(link: RepositoryLink): Promise<void> {
   const profiles = await api.repositories.servers();
   const server = profiles.find((profile) => sameServer(profile.server, link.server))?.server ?? link.server;
   openCreateWorkspaceDialog({
-    repository: { id: '', name: link.repository, server, owner: '', spec: repositorySpec(link.repository, server) },
+    repository: { name: link.repository, spec: repositorySpec(link.repository, server) },
     // The dialog calls it and goes: it tells its own failure.
     onCreated: (workspacePath) => toldIfFailed(() => openIn(workspacePath, link, () => showHere(workspacePath, link, link))),
   });

@@ -116,7 +116,7 @@ describe('a repository link', () => {
     await openLink('uvcs://host:8088/repos/game/changesets/12');
 
     expect(offerNewWorkspace).toHaveBeenCalledWith('game');
-    expect(vi.mocked(openCreateWorkspaceDialog).mock.calls[0]![0].repository).toMatchObject({ name: 'game', server: 'ssl://host:8088', spec: 'game@ssl://host:8088' });
+    expect(vi.mocked(openCreateWorkspaceDialog).mock.calls[0]![0].repository).toMatchObject({ name: 'game', spec: 'game@ssl://host:8088' });
   });
 
   it("opens the link in the workspace created for it as any link opens, never leaving this window's workspace", async () => {
