@@ -48,7 +48,7 @@ its Files then shows the workspace's disk. Switching it to the branch is the wor
 ## Finding a file
 
 Go to file (⌘P, `/` in the tree, the palette's "Go to file…", the search button in Files' header) finds a file or folder of the
-branch Files shows by name, as a workspace's does (`goToRepositoryFile`), from 2 characters on (`searchesFor`). `cm`
+branch Files shows by name, as a workspace's does (`goToRepositoryFile`), from the first character (`searchesFor`: any query costs one read of the tree's file). `cm`
 filters no tree by name, so the first search of a changeset lists its whole tree, once (`RepositoryPathSearch`):
 
 - **One `cm ls / -R --tree=cs:<head>@<repository> --format={type}␟{path}␞`** (`repositoryPathsArgs`), in a process of

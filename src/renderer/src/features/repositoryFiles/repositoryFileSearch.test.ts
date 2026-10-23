@@ -5,12 +5,11 @@ const player = { path: 'Assets/Player.cs', isDirectory: false };
 const readme = { path: 'README.md', isDirectory: false };
 
 describe('searchesFor', () => {
-  it('searches from two characters on, spaces aside', () => {
+  it('searches from the first character, spaces aside', () => {
     expect(searchesFor('')).toBe(false);
-    expect(searchesFor('p')).toBe(false);
-    expect(searchesFor(' p ')).toBe(false);
-    expect(searchesFor('pl')).toBe(true);
-    expect(searchesFor('p l')).toBe(true);
+    expect(searchesFor('  ')).toBe(false);
+    expect(searchesFor('p')).toBe(true);
+    expect(searchesFor(' p ')).toBe(true);
   });
 });
 
@@ -18,7 +17,7 @@ describe('nextRepositoryFileSearch', () => {
   const searching = (searchId: string, paths = [player]): RepositoryFileSearch => ({ kind: 'searching', searchId, paths, source: 'server' });
 
   it('shows the best results as they come, then all of them', () => {
-    let search = nextRepositoryFileSearch({ kind: 'tooShort' }, { kind: 'started', searchId: 's1' });
+    let search = nextRepositoryFileSearch({ kind: 'empty' }, { kind: 'started', searchId: 's1' });
     expect(search).toEqual({ kind: 'searching', searchId: 's1', paths: [], source: null });
 
     search = nextRepositoryFileSearch(search, { kind: 'progress', searchId: 's1', paths: [player], source: 'server' });
@@ -34,21 +33,21 @@ describe('nextRepositoryFileSearch', () => {
     expect(nextRepositoryFileSearch({ kind: 'failed', message: 'Offline' }, { kind: 'started', searchId: 's2' })).toEqual({ kind: 'searching', searchId: 's2', paths: [], source: null });
   });
 
-  it('ignores what a search a newer query replaced tells, or one cleared by a query too short', () => {
+  it('ignores what a search a newer query replaced tells, or one cleared by emptying the query', () => {
     const current = searching('s2');
     expect(nextRepositoryFileSearch(current, { kind: 'progress', searchId: 's1', paths: [readme], source: 'disk' })).toBe(current);
     expect(nextRepositoryFileSearch(current, { kind: 'found', searchId: 's1', paths: [readme] })).toBe(current);
     expect(nextRepositoryFileSearch(current, { kind: 'failed', searchId: 's1', message: 'Offline' })).toBe(current);
 
-    const cleared = nextRepositoryFileSearch(current, { kind: 'tooShort' });
-    expect(cleared).toEqual({ kind: 'tooShort' });
+    const cleared = nextRepositoryFileSearch(current, { kind: 'empty' });
+    expect(cleared).toEqual({ kind: 'empty' });
     expect(nextRepositoryFileSearch(cleared, { kind: 'found', searchId: 's2', paths: [readme] })).toBe(cleared);
   });
 });
 
 describe('repositoryFileSearchView', () => {
-  it('asks for two characters before anything is searched', () => {
-    expect(repositoryFileSearchView({ kind: 'tooShort' }, 'p', '/main')).toEqual({ paths: [], loading: false, note: 'Type 2 or more characters to find a file in /main.' });
+  it('asks for a name before anything is searched', () => {
+    expect(repositoryFileSearchView({ kind: 'empty' }, '', '/main')).toEqual({ paths: [], loading: false, note: 'Type a name to find a file in /main.' });
   });
 
   it('waits for the first results, saying the first search reads the files from the server, and a later one only searches', () => {

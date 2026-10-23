@@ -1,18 +1,15 @@
 import type { FoundPath, FoundPathsSource } from '@shared/domain/explorer';
 
-/** Characters a query needs before a repository's files are searched: fewer would match nearly every path. */
-export const MIN_QUERY_LENGTH = 2;
-
 /** Where a search of a repository's files stands (`useRepositoryFileSearch`). */
 export type RepositoryFileSearch =
-  | { kind: 'tooShort' }
+  | { kind: 'empty' }
   | { kind: 'searching'; searchId: string; paths: FoundPath[]; source: FoundPathsSource | null }
   | { kind: 'found'; paths: FoundPath[] }
   | { kind: 'failed'; message: string };
 
-/** What happens to a search: the query too short, a search started, its best results so far, its end. */
+/** What happens to a search: the query emptied, a search started, its best results so far, its end. */
 export type RepositoryFileSearchEvent =
-  | { kind: 'tooShort' }
+  | { kind: 'empty' }
   | { kind: 'started'; searchId: string }
   | { kind: 'progress'; searchId: string; paths: FoundPath[]; source: FoundPathsSource }
   | { kind: 'found'; searchId: string; paths: FoundPath[] }
@@ -25,9 +22,12 @@ export interface RepositoryFileSearchView {
   note: string | null;
 }
 
-/** Whether a query is long enough to search (`MIN_QUERY_LENGTH`), its spaces aside. */
+/**
+ * Whether a query searches: from its first character, spaces aside. Any query costs one read of the tree's file, its
+ * best results alone kept (`BestPaths`), so a short one costs no more than a long one.
+ */
 export function searchesFor(query: string): boolean {
-  return query.replace(/\s+/g, '').length >= MIN_QUERY_LENGTH;
+  return query.trim() !== '';
 }
 
 /**
@@ -36,8 +36,8 @@ export function searchesFor(query: string): boolean {
  */
 export function nextRepositoryFileSearch(search: RepositoryFileSearch, event: RepositoryFileSearchEvent): RepositoryFileSearch {
   switch (event.kind) {
-    case 'tooShort':
-      return { kind: 'tooShort' };
+    case 'empty':
+      return { kind: 'empty' };
     case 'started':
       return { kind: 'searching', searchId: event.searchId, paths: resultsOf(search), source: null };
     default:
@@ -61,8 +61,8 @@ function resultsOf(search: RepositoryFileSearch): FoundPath[] {
 /** What the dialog says under its field, beside the results (none when there are results to show). */
 function repositoryFileSearchNote(search: RepositoryFileSearch, query: string, branch: string): string | null {
   switch (search.kind) {
-    case 'tooShort':
-      return `Type ${MIN_QUERY_LENGTH} or more characters to find a file in ${branch}.`;
+    case 'empty':
+      return `Type a name to find a file in ${branch}.`;
     case 'searching':
       if (search.paths.length > 0) return null;
       // The first search of a changeset lists its whole tree from the server: say so, it takes seconds.

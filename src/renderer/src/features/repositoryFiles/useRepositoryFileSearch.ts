@@ -15,13 +15,13 @@ const SEARCH_DELAY_MS = 150;
  */
 export function useRepositoryFileSearch(place: RepositoryPlace, changesetId: number, query: string): RepositoryFileSearch {
   const settled = useDebouncedValue(query, SEARCH_DELAY_MS);
-  const [search, dispatch] = useReducer(nextRepositoryFileSearch, { kind: 'tooShort' });
+  const [search, dispatch] = useReducer(nextRepositoryFileSearch, { kind: 'empty' });
 
   useUvcsEvent('repositoryPathsFound', ({ searchId, paths, source }) => dispatch({ kind: 'progress', searchId, paths, source }));
 
   useEffect(() => {
     if (!searchesFor(settled)) {
-      dispatch({ kind: 'tooShort' });
+      dispatch({ kind: 'empty' });
       return;
     }
     // Unique across windows: the main process tells searches apart by it, whichever window asked.
