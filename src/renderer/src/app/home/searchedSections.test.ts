@@ -14,6 +14,11 @@ describe('searchedSections', () => {
     expect(searchedSections([recent, all], 'ga')).toEqual([all]);
   });
 
+  it('leaves out the sections without matches while another filter narrows them, with no search', () => {
+    expect(searchedSections([recent, all], '', true)).toEqual([all]);
+    expect(searchedSections([{ id: 'all', entries: [] }], '', true)).toEqual([]);
+  });
+
   it('shows no section at all when the search finds nothing, so the list says it once', () => {
     expect(searchedSections([recent, { id: 'all', entries: [] }], 'zzz')).toEqual([]);
   });
