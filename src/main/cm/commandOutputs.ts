@@ -1,7 +1,8 @@
 /**
- * What a `cm` command prints, which decides how `CmClient` may read it (ARCHITECTURE.md "Reading `cm` output"). No
- * output that grows with the repository or the workspace is ever held as one string: V8 refuses strings past about
- * 512 MB, and long before that one string costs the main process what the whole output weighs, twice.
+ * What a `cm` command prints, which decides how `CmClient` may read it (ARCHITECTURE.md "Parsing `cm` output": "No
+ * list is one string"). No output that grows with the repository or the workspace is ever held as one string: V8
+ * refuses strings past about 512 MB, and long before that one string costs the main process what the whole output
+ * weighs, twice.
  *
  * - `list`: rows that grow with the repository or the workspace (branches, a tree, a diff, pending changes, an item's
  *   history). Read as they arrive (`queryRecords`, `executeRecords`, `queryXmlElements`); `query` and `execute` refuse it.

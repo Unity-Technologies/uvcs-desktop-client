@@ -120,7 +120,7 @@ export class WorkspaceCopies {
   }
 
   /**
-   * Remembers a workspace folder's own listing (the Files view's `cm ls`, `parseTreeItems`): its files' revisions, and that a
+   * Remembers a workspace folder's own listing (the Files view's `cm ls`, `readTreeItem`): its files' revisions, and that a
    * revision it doesn't name isn't there, so the folder isn't listed again for one until the workspace changes.
    */
   rememberFolder(workspacePath: string, folder: string, files: Iterable<RevisionFile>, listedAt = this.generationOf(workspacePath)): void {
@@ -257,7 +257,7 @@ async function readHashed(absolutePath: string, size: number, keepBytes: boolean
 }
 
 /**
- * The files of a `cm ls` listing (`parseTreeItems`) as the revisions they hold: neither folders nor links, nor a private item or a
+ * The files of a `cm ls` listing (`readTreeItem`) as the revisions they hold: neither folders nor links, nor a private item or a
  * checkout, which hold none.
  */
 export function revisionFilesOf(items: readonly ListedTreeItem[]): RevisionFile[] {

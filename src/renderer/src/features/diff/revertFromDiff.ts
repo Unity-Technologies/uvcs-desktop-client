@@ -37,7 +37,7 @@ export function canRevertFromDiff(entry: DiffEntry, workspaceRepository: string 
   return isFile && changedContent(entry) && workspaceRepository !== undefined && entry.repository === workspaceRepository;
 }
 
-/** A changed file, or a moved one that changed too: `parseDiffEntries` keeps the content change's two revisions. */
+/** A changed file, or a moved one that changed too: `mergedDiffEntries` keeps the content change's two revisions. */
 function changedContent(entry: DiffEntry): boolean {
   return entry.status === 'changed' || (entry.status === 'moved' && entry.baseRevisionId !== entry.revisionId);
 }

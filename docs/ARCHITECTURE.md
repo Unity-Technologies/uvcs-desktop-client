@@ -62,7 +62,8 @@ you touch:
      So is, on Windows, a command that prints text (see Parsing).
    - A pooled command may take two minutes, a workspace write half an hour (a few paths can still be a whole tree).
    - `queryRecords()` and `executeRecords()` run a command that prints `--format` records as `query()` and
-     `execute()` do, routing included, and read each record as it arrives (see Parsing: records).
+     `execute()` do, routing included, and read each record as it arrives (see Parsing: records); `queryXmlElements()`
+     reads an XML list element by element the same way (`cm history`).
    - No output is held as one string unless it is a small answer (Parsing: "No list is one string"): a list is read as
      it arrives with no size limit, an answer stops past `MAX_TEXT_OUTPUT_LENGTH` (4 MB) with a `CmError`
      (`CmOutputTooLargeError`; a session starts a new process), and an operation keeps the ends of what it prints and

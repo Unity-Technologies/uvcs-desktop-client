@@ -3,7 +3,7 @@ import type { PrintedMergePlan } from '../cm/mergeOutput';
 import { recordsIn, recordsOutput } from '../cm/testing/cmOutput';
 import { readTreeItem, TREE_ITEM_FORMAT, TREE_ITEMS } from '../cm/treeItems';
 
-const parseTreeItems = (output: string) => recordsIn(output, readTreeItem);
+const treeItemsIn = (output: string) => recordsIn(output, readTreeItem);
 import { conflictListingArgs, destinationTree, withRepositories } from './conflictRepositories';
 
 const XLINKED = '/01project/src/client/plugins/editor-plugin/Packages/com.acme.editor.tests/Infrastructure/DiffWindowMockExtensions.cs';
@@ -44,25 +44,25 @@ describe('conflictListingArgs', () => {
 
 describe('withRepositories', () => {
   it("names the xlinked repository of a file under a writable xlink, and the merged one's for the others, with the destination's revision there", () => {
-    expect(withRepositories(plan([XLINKED, OWN]), parseTreeItems(LISTING)).fileConflicts.map(({ path, repository, destinationRevisionId }) => ({ path, repository, destinationRevisionId }))).toEqual([
+    expect(withRepositories(plan([XLINKED, OWN]), treeItemsIn(LISTING)).fileConflicts.map(({ path, repository, destinationRevisionId }) => ({ path, repository, destinationRevisionId }))).toEqual([
       { path: XLINKED, repository: 'editorGUI@acme@cloud', destinationRevisionId: 432251 },
       { path: OWN, repository: 'acme@acme@cloud', destinationRevisionId: 31259533 },
     ]);
   });
 
   it("tells a binary by the type cm keeps for the destination's revision, with no byte of it read", () => {
-    expect(withRepositories(plan([OWN, TEXTURE]), parseTreeItems(LISTING)).fileConflicts.map(({ path, destinationIsBinary }) => ({ path, destinationIsBinary }))).toEqual([
+    expect(withRepositories(plan([OWN, TEXTURE]), treeItemsIn(LISTING)).fileConflicts.map(({ path, destinationIsBinary }) => ({ path, destinationIsBinary }))).toEqual([
       { path: OWN, destinationIsBinary: false },
       { path: TEXTURE, destinationIsBinary: true },
     ]);
   });
 
   it('fails rather than read a conflicting file in a repository it may not be in', () => {
-    expect(() => withRepositories(plan([XLINKED, '/elsewhere.cs']), parseTreeItems(LISTING))).toThrow('/elsewhere.cs');
+    expect(() => withRepositories(plan([XLINKED, '/elsewhere.cs']), treeItemsIn(LISTING))).toThrow('/elsewhere.cs');
   });
 
   it("fails rather than read a destination's version the listing names no revision of", () => {
-    const withoutRevision = parseTreeItems(LISTING).map((item) => (item.path === OWN.slice(1) ? { ...item, revisionId: -1 } : item));
+    const withoutRevision = treeItemsIn(LISTING).map((item) => (item.path === OWN.slice(1) ? { ...item, revisionId: -1 } : item));
     expect(() => withRepositories(plan([XLINKED, OWN]), withoutRevision)).toThrow(`Couldn't tell which version of ${OWN} the destination has.`);
   });
 
