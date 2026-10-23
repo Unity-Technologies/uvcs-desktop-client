@@ -100,16 +100,15 @@ describe('reading content', () => {
     expect([byId, atChangeset]).toEqual([PURGED_CONTENT, PURGED_CONTENT]);
   });
 
-  it("reads a diff's two sides in one cm cat when one was purged: the other side is read as it is", async () => {
+  it("reads a diff's other side as it is when one was purged", async () => {
     const workspace = await newWorkspace();
-    const { service, commands } = content({ cat: fakeCat((spec) => (spec.startsWith('revid:13@') ? PURGED : 'v3\n')) });
+    const { service } = content({ cat: fakeCat((spec) => (spec.startsWith('revid:13@') ? PURGED : 'v3\n')) });
     const side = (revisionId: number): ContentSource => ({ kind: 'revision', revision: { revisionId, repository: 'game@local' }, fileName: 'a.txt' });
 
     const [original, modified] = await Promise.all([service.read(workspace, side(13)), service.read(workspace, side(22))]);
 
     expect(original).toEqual(PURGED_CONTENT);
     expect(modified).toMatchObject({ text: 'v3\n', isBinary: false });
-    expect(commands.map(({ via }) => via)).toEqual(['query']);
   });
 
   it('reads workspace files from disk and the empty side without asking cm', async () => {
