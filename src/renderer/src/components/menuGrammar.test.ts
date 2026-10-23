@@ -215,7 +215,7 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   mergeSeveral: () => mergeItemMenu([mergeConflict, mergeConflict], mergeContext),
   incomingConflict: () => incomingFileMenu([incomingConflictFile], incomingContext),
   incomingSeveralConflicts: () => incomingFileMenu([incomingConflictFile, incomingConflictFile], incomingContext),
-  revision: () => revisionMenu(ws, 5, repository, [file]),
+  revision: () => revisionMenu(workspacePlace(ws), 5, repository, [file]),
   lock: () => lockMenu(ws, [lock]),
   syncBranch: () => syncBranchMenu([branch], 'game@cloud', { push: () => {}, pull: () => {} }),
   attributeType: () => attributeTypeMenu(workspacePlace(ws), [{ name: 'status', comment: '' } as never]),
@@ -247,6 +247,7 @@ const REPOSITORY_MENUS: Record<string, () => MenuEntry[]> = {
   repositoryCodeReview: () => codeReviewMenu(onRepository, [branchReview]),
   repositoryCodeReviews: () => codeReviewMenu(onRepository, [review, changesetReview]),
   repositoryShelve: () => shelveMenu(onRepository, [shelve]),
+  repositoryRevision: () => revisionMenu(onRepository, 5, repository, [file]),
   repositoryDiffEntry: () =>
     diffEntryMenu(onRepository, { kind: 'changeset', changesetId: 5 }, [deletedEntry], { review: { statusOf: () => 'unreviewed', toggle: () => {} } as never, workspaceRepository: repository }),
   repositoryHistory: () =>

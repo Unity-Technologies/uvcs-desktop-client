@@ -2,7 +2,9 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import type { ExplorerApi } from '@shared/api/explorer';
 import type { DeletedItemRestore, ItemMove, RevisionType } from '@shared/domain/explorer';
+import type { Place } from '@shared/domain/place';
 import { repositorySpec } from '@shared/domain/specs';
+import { cmPlace } from '../cm/cmPlace';
 import { parseItemDetails } from '../cm/itemDetailsXml';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { parseTreeItems, TREE_ITEM_FORMAT, withoutHash } from '../cm/treeItems';
@@ -18,12 +20,12 @@ export function createExplorerService({ cm, operations, workspaceCopies, headers
   const inWorkspace = (workspacePath: string) => ({ cwd: workspacePath });
 
   /**
-   * A folder's items, their revisions remembered: a diff of one the disk holds reads it there (`WorkspaceCopies`). The
-   * hashes stay here.
+   * A folder's items, their revisions remembered in a workspace: a diff of one the disk holds reads it there
+   * (`WorkspaceCopies`). The hashes stay here.
    */
-  function rememberedItems(workspacePath: string, output: string) {
+  function rememberedItems(place: Place, output: string) {
     const items = parseTreeItems(output);
-    workspaceCopies.remember(workspacePath, revisionFilesOf(items));
+    if (place.kind === 'workspace') workspaceCopies.remember(place.workspacePath, revisionFilesOf(items));
     return items.map(withoutHash);
   }
 
@@ -36,9 +38,10 @@ export function createExplorerService({ cm, operations, workspaceCopies, headers
     return items.map(withoutHash);
   }
 
-  async function listRepositoryDirectory(workspacePath: string, changesetId: number, directory: string) {
-    const output = await cm.query(['ls', `/${directory}`, `--tree=cs:${changesetId}`, TREE_ITEM_FORMAT], inWorkspace(workspacePath));
-    return rememberedItems(workspacePath, output);
+  async function listRepositoryDirectory(place: Place, changesetId: number, directory: string) {
+    const at = cmPlace(place);
+    const output = await cm.query(['ls', `/${directory}`, `--tree=${at.spec(`cs:${changesetId}`)}`, TREE_ITEM_FORMAT], at.options);
+    return rememberedItems(place, output);
   }
 
   async function details(workspacePath: string, path: string) {
