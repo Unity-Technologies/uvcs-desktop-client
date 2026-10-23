@@ -50,7 +50,7 @@ export function matchSideOf(change: PendingChange, changes: readonly PendingChan
   if (isOnly(change, 'locallyDeleted')) return isInside(change.path, detectedFolderMoves(changes)) ? null : 'deleted';
   if (!isOnly(change, 'private') && !isDetectedMove(change)) return null;
   // Only a new item needs the private folders: a right-click on any other change reads no list.
-  return isInside(change.path, privateFolders(changes)) ? null : 'new';
+  return isInside(change.path, unversionedFolders(changes)) ? null : 'new';
 }
 
 /**
@@ -79,9 +79,9 @@ function deletedItems(changes: readonly PendingChange[]): MatchCandidate[] {
   });
 }
 
-/** Where each item that came is: private, or the new item of a detected move; never inside a private folder. */
+/** Where each item that came is: private, or the new item of a detected move; never inside a folder `cm` can't move into. */
 function newItems(changes: readonly PendingChange[]): MatchCandidate[] {
-  const folders = privateFolders(changes);
+  const folders = unversionedFolders(changes);
   return changes.flatMap((change): MatchCandidate[] => {
     if (isInside(change.path, folders)) return [];
     if (isOnly(change, 'private')) return [{ path: change.path, itemType: change.itemType }];
@@ -145,8 +145,13 @@ function isOnly(change: PendingChange, kind: ChangeKind): boolean {
   return change.kinds.length === 1 && change.kinds[0] === kind;
 }
 
-function privateFolders(changes: readonly PendingChange[]): Set<string> {
-  return new Set(changes.filter((change) => change.itemType === 'directory' && change.kinds.includes('private')).map((change) => change.path));
+/**
+ * The folders `cm move` can't move an item into ("… is a private directory. It can't be moved."): private ones, and
+ * those the detection moved, which are under version control only where they were.
+ */
+function unversionedFolders(changes: readonly PendingChange[]): Set<string> {
+  const isPrivateFolder = (change: PendingChange) => change.itemType === 'directory' && change.kinds.includes('private');
+  return new Set([...changes.filter(isPrivateFolder).map((change) => change.path), ...detectedFolderMoves(changes)]);
 }
 
 /** Where the folders the detection moved are now. */
