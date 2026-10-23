@@ -30,3 +30,12 @@ export function parseDeletedFiles(output: string): Map<string, DeletedFile> {
   }
   return files;
 }
+
+/**
+ * The paths a failed `cm ls` couldn't find (`Item <path> not found.`, one line each, the others listed all the same),
+ * as it printed them; empty when it failed otherwise. A deleted item under a folder the move detection paired is
+ * listed by `cm status` at the folder's new path, where nothing is loaded.
+ */
+export function notFoundPaths(output: string): string[] {
+  return [...output.matchAll(/^Item (.+) not found\.\r?$/gm)].map((found) => found[1]!);
+}

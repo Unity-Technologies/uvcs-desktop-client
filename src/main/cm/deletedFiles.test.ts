@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { recordsOutput } from './testing/cmOutput';
-import { deletedFilesArgs, parseDeletedFiles } from './deletedFiles';
+import { deletedFilesArgs, notFoundPaths, parseDeletedFiles } from './deletedFiles';
 import { TREE_ITEM_FORMAT, TREE_ITEMS } from './treeItems';
 
 /** A record of `cm ls` in a workspace, as it prints one: the path relative to it, in the OS's separators. */
@@ -32,5 +32,19 @@ describe('the deleted files listed', () => {
     const output = recordsOutput(TREE_ITEMS, listed('src', 'dir', 0, 4), { ...listed('new.cs', 'txt', 10, 0), revid: '' });
 
     expect(parseDeletedFiles(output).size).toBe(0);
+  });
+});
+
+describe('the paths cm ls could not find', () => {
+  it('reads each one it names, as printed', () => {
+    const old2 = String.raw`c:\wk\src\Archive\Old2.cs`;
+    const old3 = String.raw`c:\wk\src\Archive\Old3.cs`;
+    const output = `Item ${old2} not found.\r\nItem ${old3} not found.\n${String.raw`src\Legacy\A.cs`}\u001ftxt`;
+
+    expect(notFoundPaths(output)).toEqual([old2, old3]);
+  });
+
+  it('reads none from another failure', () => {
+    expect(notFoundPaths('Error: the server is unreachable')).toEqual([]);
   });
 });

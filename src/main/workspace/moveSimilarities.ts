@@ -70,7 +70,7 @@ function similarityOf(pair: MovePair, deleted: Measured | undefined, added: Meas
 async function measureDeleted(paths: readonly string[], reads: SimilarityReads): Promise<Map<string, Measured>> {
   const measured = new Map<string, Measured>();
   if (paths.length === 0) return measured;
-  const listed = await reads.listDeleted(paths).catch((error: unknown) => {
+  const listed = await Promise.resolve(paths).then(reads.listDeleted).catch((error: unknown) => {
     reads.onUnreadable?.(paths.join(', '), error);
     return new Map<string, DeletedFile>();
   });

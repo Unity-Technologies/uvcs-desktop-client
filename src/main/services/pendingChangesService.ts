@@ -1,5 +1,5 @@
 import { open, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, normalize } from 'node:path';
 import { app } from 'electron';
 import type { PendingChangesApi } from '@shared/api/pendingChanges';
 import type {
@@ -13,7 +13,8 @@ import type {
 } from '@shared/domain/pendingChanges';
 import { spec } from '@shared/domain/specs';
 import { checkinArgs } from '../cm/checkinArgs';
-import { deletedFilesArgs, parseDeletedFiles } from '../cm/deletedFiles';
+import { CmError } from '../cm/CmError';
+import { deletedFilesArgs, notFoundPaths, parseDeletedFiles, type DeletedFile } from '../cm/deletedFiles';
 import { textForLog } from '../cm/hideSecrets';
 import { readCheckinOutput } from '../cm/checkinOutput';
 import { explainLockedItems } from '../cm/lockedItems';
@@ -83,7 +84,7 @@ export function createPendingChangesService({ cm, operations, revisionCat }: Ser
       // The paths come from the window, which isn't trusted: each one must be inside the workspace (`workspaceFileOf`).
       const fileOf = (path: string) => workspaceFileOf(workspacePath, path);
       return measureMoveSimilarities(pairs, {
-        listDeleted: async (paths) => parseDeletedFiles(await cm.query(deletedFilesArgs(paths.map(fileOf)), { cwd: workspacePath })),
+        listDeleted: (paths) => listDeletedFiles(workspacePath, paths.map(fileOf)),
         // By revision, in its repository: `RevisionCat` reads those asked together with a `cm cat` per repository.
         readDeleted: async ({ revision }) => {
           const target = join(directory, String(saved++));
@@ -95,6 +96,22 @@ export function createPendingChangesService({ cm, operations, revisionCat }: Ser
         onUnreadable: (path, error) => console.warn(`[search matches] Couldn't read ${path} to measure it:`, textForLog(String(error))),
       });
     });
+  }
+
+  /**
+   * The deleted files `cm ls` lists. It fails on a path it can't find, having listed the others: they are listed again
+   * without the paths it named (`notFoundPaths`), so one such path costs one more `cm ls`, never every file's measure.
+   */
+  async function listDeletedFiles(workspacePath: string, absolutePaths: readonly string[]): Promise<Map<string, DeletedFile>> {
+    const list = async (paths: readonly string[]) => parseDeletedFiles(await cm.query(deletedFilesArgs(paths), { cwd: workspacePath }));
+    try {
+      return await list(absolutePaths);
+    } catch (error) {
+      const missing = new Set(error instanceof CmError ? notFoundPaths(error.command.output).map((path) => comparablePath(path)) : []);
+      const found = absolutePaths.filter((path) => !missing.has(comparablePath(path)));
+      if (missing.size === 0 || found.length === 0 || found.length === absolutePaths.length) throw error;
+      return list(found);
+    }
   }
 
   async function checkout(workspacePath: string, paths: string[]): Promise<void> {
@@ -175,4 +192,9 @@ async function glanceAt(file: string): Promise<FileGlance> {
   } finally {
     await handle.close();
   }
+}
+
+/** A path as `cm` and the app may each spell it: Windows names a drive in either case and its paths ignore case. */
+function comparablePath(path: string, platform: NodeJS.Platform = process.platform): string {
+  return platform === 'win32' ? normalize(path).toLowerCase() : normalize(path);
 }

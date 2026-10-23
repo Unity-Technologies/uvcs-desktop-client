@@ -9,7 +9,7 @@ import { CmError } from '../cm/CmError';
 import { statusRecordsArgs } from '../cm/pendingChangesRecords';
 import { change, pendingStatus, recordsOutput } from '../cm/testing/cmOutput';
 import { catReadsOf, fakeCat } from '../cm/testing/fakeCat';
-import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer, type FakeCmCommand } from '../cm/testing/fakeCmClient';
 import { TREE_ITEMS } from '../cm/treeItems';
 import { DiskDetails } from '../files/DiskDetails';
 import { OperationTracker } from '../operations/OperationTracker';
@@ -248,14 +248,38 @@ describe('how alike the items of a move are', () => {
       await writeFile(join(workspace, ...path.split('/')), content);
     }
     const listed = Object.entries(deleted).map(([path, { type, content }], index) => ({ path, type, content, revid: 10 + index }));
-    // `cm ls` prints the path relative to the workspace, in the OS's separators.
-    const ls = recordsOutput(
-      TREE_ITEMS,
-      ...listed.map(({ path, type, content, revid }) => ({ name: path.split('/').pop()!, wkpath: path.split('/').join(sep), type, size: content.length, revid, repspec: 'rep:game@local', changeset: 3 })),
-    );
+    const absolute = (path: string) => join(workspace, ...path.split('/'));
+    // `cm ls` prints the path relative to the workspace, in the OS's separators, and fails on one it can't find, as
+    // it prints it, having listed the others.
+    const ls = ({ args }: FakeCmCommand) => {
+      const records = recordsOutput(
+        TREE_ITEMS,
+        ...listed
+          .filter(({ path }) => args.includes(absolute(path)))
+          .map(({ path, type, content, revid }) => ({ name: path.split('/').pop()!, wkpath: path.split('/').join(sep), type, size: content.length, revid, repspec: 'rep:game@local', changeset: 3 })),
+      );
+      const unknown = args.slice(1, -1).filter((arg) => !listed.some(({ path }) => absolute(path) === arg));
+      return unknown.length > 0 ? cmFails(`${unknown.map((path) => `Item ${path.toLowerCase()} not found.`).join('\n')}\n${records}`) : records;
+    };
     const cat = fakeCat((catSpec) => listed.find(({ revid }) => catSpec === `revid:${revid}@game@local`)?.content);
     return { workspace, ...pendingChanges({ ls, cat }) };
   }
+
+  it("lists again without a path cm ls couldn't find, and measures the others", async () => {
+    const { workspace, service, commands } = await measuring({ 'src/Player.cs': { type: 'txt', content: 'a\n' } }, { 'src/Hero.cs': 'a\n' });
+
+    const similarities = await service.moveSimilarities(workspace, [
+      { deleted: 'src/Archive/Old2.cs', added: 'src/Hero.cs' },
+      { deleted: 'src/Player.cs', added: 'src/Hero.cs' },
+    ]);
+
+    expect(similarities).toEqual(['notMeasured', 1]);
+    expect(commands.map(({ args }) => args.slice(0, -1))).toEqual([
+      ['ls', join(workspace, 'src', 'Archive', 'Old2.cs'), join(workspace, 'src', 'Player.cs')],
+      ['ls', join(workspace, 'src', 'Player.cs')],
+      ['cat', 'revid:10@game@local'],
+    ]);
+  });
 
   it('lists the deleted files with one cm ls, reads only the text ones by revision, and the new ones from disk', async () => {
     const { workspace, service, commands } = await measuring(
