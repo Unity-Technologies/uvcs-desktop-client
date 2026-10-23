@@ -1,13 +1,13 @@
 import { useState, type KeyboardEvent } from 'react';
 import type { RepositoryPlace } from '@shared/domain/place';
+import { goToFileKey } from '../../components/goToFileKeys';
+import { GoToFileList } from '../../components/GoToFileList';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { fuzzyMatchPositions } from '../../lib/fuzzyIndex';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { SearchField } from '../../ui/SearchField';
-import { CenteredSpinner } from '../../ui/Spinner';
-import styles from '../../components/GoToFileList.module.css';
-import { repositoryFileSearchNote } from './repositoryFileSearch';
+import { repositoryFileSearchView } from './repositoryFileSearch';
 import { useRepositoryFileSearch } from './useRepositoryFileSearch';
 
 interface RepositoryGoToFileOptions {
@@ -29,19 +29,15 @@ export function goToRepositoryFile(options: RepositoryGoToFileOptions): Promise<
 function RepositoryGoToFileDialog({ place, changesetId, branch, finish }: RepositoryGoToFileOptions & { finish: (path: string | undefined) => void }) {
   const [query, setQuery] = useState('');
   const [highlighted, setHighlighted] = useState(0);
-  const search = useRepositoryFileSearch(place, changesetId, query);
-  const results = search.kind === 'searching' || search.kind === 'found' ? search.paths : [];
-  const note = repositoryFileSearchNote(search, query, branch);
+  const { paths, loading, note } = repositoryFileSearchView(useRepositoryFileSearch(place, changesetId, query), query, branch);
+  const directories = new Set(paths.flatMap((found) => (found.isDirectory ? [found.path] : [])));
 
   const onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault();
-      const step = event.key === 'ArrowDown' ? 1 : -1;
-      setHighlighted((current) => Math.min(results.length - 1, Math.max(0, current + step)));
-    } else if (event.key === 'Enter' && results[highlighted]) {
-      event.preventDefault();
-      finish(results[highlighted]!.path);
-    }
+    const key = goToFileKey(event.key, highlighted, paths.length);
+    if (!key) return;
+    event.preventDefault();
+    if (key.kind === 'highlight') setHighlighted(key.index);
+    else finish(paths[key.index]!.path);
   };
 
   return (
@@ -58,17 +54,15 @@ function RepositoryGoToFileDialog({ place, changesetId, branch, finish }: Reposi
           width={570}
         />
       </div>
-      <div className={styles.results}>
-        {search.kind === 'searching' && results.length === 0 && <CenteredSpinner />}
-        {note && <div className={styles.empty}>{note}</div>}
-        {results.map(({ path, isDirectory }, index) => (
-          <div key={path} className={styles.resultRow} data-highlighted={index === highlighted} onMouseEnter={() => setHighlighted(index)}>
-            <button type="button" className={styles.result} onClick={() => finish(path)}>
-              <ItemPathRow path={path} itemType={isDirectory ? 'directory' : 'file'} matches={fuzzyMatchPositions(path, query)} />
-            </button>
-          </div>
-        ))}
-      </div>
+      <GoToFileList
+        paths={paths.map((found) => found.path)}
+        highlighted={highlighted}
+        onHighlight={setHighlighted}
+        onPick={finish}
+        loading={loading}
+        note={note}
+        row={(path) => <ItemPathRow path={path} itemType={directories.has(path) ? 'directory' : 'file'} matches={fuzzyMatchPositions(path, query)} />}
+      />
     </Dialog>
   );
 }
