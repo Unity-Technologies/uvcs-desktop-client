@@ -1,6 +1,6 @@
-import { Editor } from '@pierre/diffs/edit';
 import { EditProvider, File, VirtualizerContext } from '@pierre/diffs/react';
 import { useMemo, useState } from 'react';
+import { createAppEditor } from '../../diff/viewer/appEditor';
 import { PaneScrollbars } from '../../diff/viewer/PaneScrollbars';
 import { highlightedLanguage, syntaxHighlighting } from '../../diff/viewer/syntaxHighlighting';
 import { usePierreOptions } from './usePierreOptions';
@@ -14,8 +14,6 @@ interface HandEditorProps {
   text: string;
   onChange: (text: string) => void;
 }
-
-const createEditor: React.ComponentProps<typeof EditProvider>['createEditor'] = (type, options, key) => new Editor(type, options, key);
 
 /**
  * Resolving a conflict by hand: the merged text, free to change. The editor owns the document, so its start stays
@@ -34,7 +32,7 @@ export function HandEditor({ path, text, onChange }: HandEditorProps) {
   return (
     <div ref={setSurface} className={styles.surface}>
       <VirtualizerContext.Provider value={virtualizer}>
-        <EditProvider createEditor={createEditor}>
+        <EditProvider createEditor={createAppEditor}>
           <File file={file} disableWorkerPool options={options} edit onEditChange={(event) => onChange(diskText(event.file.contents, initialText))} />
         </EditProvider>
       </VirtualizerContext.Provider>
