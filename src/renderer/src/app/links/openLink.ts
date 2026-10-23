@@ -135,7 +135,7 @@ function navigate(place: Place, where: LinkNavigation): void {
   if (show?.kind === 'branchExplorer') return showInBranchExplorer(show.target);
   if (!showsView(place, where.view)) return navigation.goToView(firstViewOf(place));
   const workspacePath = workspacePathOf(place);
-  if (show?.kind === 'files' && workspacePath !== null) useFilesViewStore.getState().requestReveal(workspacePath, show.path);
+  if (show?.kind === 'files') useFilesViewStore.getState().requestReveal(place, show.path);
   if (show?.kind === 'change' && workspacePath !== null) {
     selectInView(place, 'changes', changeRowKey(show.path));
     if (show.lines) requestLineFocus(workspacePath, show.path, show.lines);

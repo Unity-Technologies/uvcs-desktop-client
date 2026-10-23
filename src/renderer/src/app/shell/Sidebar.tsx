@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { NavFooter, NavGroups, NavItem, Sidebar as SidebarColumn, type NavSection } from '../../ui/nav/SidebarNav';
 import { useNavigation } from '../navigation/navigationStore';
 import { sidebarGroups } from '../navigation/sidebarGroups';
-import { viewsOf, type ViewDefinition } from '../navigation/viewRegistry';
+import type { ViewDefinition } from '../navigation/viewRegistry';
 import { openSettingsDialog } from '../settings/SettingsDialog';
 import { usePlace } from '../workspace/useWorkspace';
 import { useSidebarCollapsed } from './sidebarStore';
@@ -11,11 +11,11 @@ import { SidebarToggleItem } from './SidebarToggleItem';
 
 /** The sidebar: the place's card (`card`), its views by group (`viewsOf`), then Settings and the rail toggle. */
 export function Sidebar({ card }: { card: ReactNode }) {
-  const views = viewsOf(usePlace());
+  const place = usePlace();
   const rail = useSidebarCollapsed();
   const activeView = useNavigation((state) => state.view);
-  const sections: NavSection[] = sidebarGroups(views).map(({ group, views: inGroup }) => ({
-    label: group,
+  const sections: NavSection[] = sidebarGroups(place).map(({ label, views: inGroup }) => ({
+    label,
     items: inGroup.map((view) => ({ key: view.id, element: <SidebarViewItem view={view} />, active: view.id === activeView })),
   }));
 

@@ -129,13 +129,14 @@ describe('a repository link', () => {
     expect(useSession.getState().workspacePath).toBe(TOOLS);
   });
 
-  it('opens it here in the window exploring the repository already, a workspace view leading to its first view', async () => {
+  it('opens it here in the window exploring the repository already: a path in its Files, a changeset its diff', async () => {
     workspaces({});
     useSession.getState().explore('game@acme@unity');
 
     useNavigation.setState({ view: 'labels' });
     await openLink('uvcs://acme.unity/repos/game/path/src/a.cs');
-    expect(whereTheWindowIs().view).toBe('branchExplorer');
+    expect(whereTheWindowIs().view).toBe('files');
+    expect(useFilesViewStore.getState().revealRequest).toMatchObject({ place: repositoryPlace('game@acme@unity'), path: 'src/a.cs' });
     await openLink(CHANGESET_12);
     expect(whereTheWindowIs().pages).toMatchObject([{ kind: 'diff', target: { kind: 'changeset', changesetId: 12 } }]);
   });
@@ -179,7 +180,7 @@ describe('a workspace link', () => {
     await openLink(`uvcs://${GAME.replaceAll('\\', '/').replace(/^(?!\/)/, '/')}/Assets/Player.cs`);
 
     expect(whereTheWindowIs().view).toBe('files');
-    expect(useFilesViewStore.getState().revealRequest).toMatchObject({ workspacePath: GAME, path: 'Assets/Player.cs' });
+    expect(useFilesViewStore.getState().revealRequest).toMatchObject({ place: workspacePlace(GAME), path: 'Assets/Player.cs' });
   });
 
   it('goes to the window for its workspace when this one shows another', async () => {

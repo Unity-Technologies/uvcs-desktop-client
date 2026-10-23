@@ -70,7 +70,7 @@ export async function renameItem(workspacePath: string, item: TreeItem): Promise
   await runAction(workspacePlace(workspacePath), `Couldn't rename ${item.name}`, async () => {
     if (item.isPrivate) await api.explorer.renamePrivate(workspacePath, item.path, newPath);
     else await api.explorer.move(workspacePath, item.path, newPath);
-    useFilesViewStore.getState().requestReveal(workspacePath, newPath);
+    useFilesViewStore.getState().requestReveal(workspacePlace(workspacePath), newPath);
   });
 }
 
@@ -90,7 +90,7 @@ export async function createItem(workspacePath: string, directory: string, kind:
   const path = directory ? `${directory}/${name}` : name;
   await runAction(workspacePlace(workspacePath), `Couldn't create ${fileNameOf(path)}`, async () => {
     await api.explorer.create(workspacePath, path, kind);
-    useFilesViewStore.getState().requestReveal(workspacePath, path);
+    useFilesViewStore.getState().requestReveal(workspacePlace(workspacePath), path);
   });
 }
 

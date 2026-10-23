@@ -61,7 +61,7 @@ export function FilesView() {
   const focusedMenu = focused ? fileMenu(workspacePath, [focused], pendingIndex, locks) : [];
   const lineLinks = useFilesItemLinks(workspace, focused, pendingIndex);
 
-  const revealRequest = useRevealRequest(workspacePath);
+  const revealRequest = useRevealRequest(workspacePlace(workspacePath));
   useEffect(() => {
     if (!revealRequest) return;
     const { path, selected = [path] } = revealRequest;
@@ -72,7 +72,7 @@ export function FilesView() {
   }, [revealRequest, expand, workspacePath]);
 
   const openGoToFile = useCallback(
-    (query?: string) => void goToFile(workspacePath, query).then((path) => path && useFilesViewStore.getState().requestReveal(workspacePath, path)),
+    (query?: string) => void goToFile(workspacePath, query).then((path) => path && useFilesViewStore.getState().requestReveal(workspacePlace(workspacePath), path)),
     [workspacePath],
   );
   useFileCommands(workspacePath, selectedItems, pendingIndex, locks, openGoToFile);

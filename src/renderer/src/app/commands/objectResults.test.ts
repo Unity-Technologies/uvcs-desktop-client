@@ -60,7 +60,7 @@ describe('fileResult', () => {
       useFilesViewStore.setState({ revealRequest: null });
       run();
       expect(goToView).toHaveBeenCalledWith('files');
-      expect(useFilesViewStore.getState().revealRequest).toEqual({ workspacePath: '/ws', path: 'src/app.ts', selected: undefined });
+      expect(useFilesViewStore.getState().revealRequest).toEqual({ place: workspacePlace('/ws'), path: 'src/app.ts', selected: undefined });
     }
   });
 });

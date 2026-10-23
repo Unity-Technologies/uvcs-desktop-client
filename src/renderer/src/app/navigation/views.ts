@@ -19,10 +19,11 @@ export const VIEW_IDS = [
 export type ViewId = (typeof VIEW_IDS)[number];
 
 /**
- * The views only a workspace has: its pending changes, what comes into it, its files on disk and syncing it. A
- * repository explored without a workspace shows every other one, each at its usual place and shortcut.
+ * The views only a workspace has: its pending changes, what comes into it and syncing it. A repository explored
+ * without a workspace shows every other one, each at its usual place and shortcut; its Files are a branch's latest
+ * tree (`RepositoryFilesView`) where a workspace's are its disk.
  */
-const WORKSPACE_VIEWS: readonly ViewId[] = ['changes', 'incoming', 'files', 'sync'];
+const WORKSPACE_VIEWS: readonly ViewId[] = ['changes', 'incoming', 'sync'];
 
 /** Whether the place shows the view. */
 export function showsView(place: Place, view: ViewId): boolean {

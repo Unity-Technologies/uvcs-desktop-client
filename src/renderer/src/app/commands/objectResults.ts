@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import { Archive, File, Folder, GitBranch, GitCommitVertical, MessageSquareCode, Tag } from 'lucide-react';
 import type { Place } from '@shared/domain/place';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
@@ -57,7 +58,7 @@ export function fileResult(entry: { path: string; isDirectory: boolean }, worksp
   const change = context.changeAt(entry.path);
   const reveal = (): void => {
     navigation.goToView('files');
-    useFilesViewStore.getState().requestReveal(workspacePath, entry.path);
+    useFilesViewStore.getState().requestReveal(workspacePlace(workspacePath), entry.path);
   };
   return {
     id: `file:${entry.path}`,

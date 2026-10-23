@@ -13,8 +13,8 @@ import { createWorkspace } from './workspaceFixture.mjs';
 
 /** The sidebar's views by their accessible names, in its order (`VIEWS` in viewRegistry.ts): a new view is one line. */
 const VIEWS = ['Changes', 'Incoming', 'Files', 'Branch Explorer', 'Changesets', 'Branches', 'Labels', 'Shelves', 'Attributes', 'Code reviews', 'Locks', 'Sync'];
-/** Those a repository explored without a workspace shows (`showsView`): none of a workspace's own. */
-const REPOSITORY_VIEWS = VIEWS.filter((view) => !['Changes', 'Incoming', 'Files', 'Sync'].includes(view));
+/** Those a repository explored without a workspace shows (`showsView`): its Files are a branch's latest tree. */
+const REPOSITORY_VIEWS = VIEWS.filter((view) => !['Changes', 'Incoming', 'Sync'].includes(view));
 /** Long enough for a slow CI machine; waits end as soon as what they wait for shows. */
 const TIMEOUT_MS = 15_000;
 
