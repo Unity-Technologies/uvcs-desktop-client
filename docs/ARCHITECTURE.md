@@ -109,8 +109,9 @@ and many people use the same server. Every `cm` command other than local reads (
   is all read so, a quick `cm cat` after another in one session, free between them for any other read: a small
   merge's few dozen versions in tens of ms, where a process costs 100-150 ms to start. Past it, batches go to
   processes of their own. `cm cat` writes every
-  revision it finds even when one fails, and names each it doesn't (`The specified revision was not found <spec>`):
-  that read fails alone with its line, and when every line names one, the others were written whole. A failure that
+  revision it finds even when one fails, and names each it doesn't: by its spec when it can't find it (`The specified
+  revision was not found <spec>`), by its file when its content was purged (`purgedTargetOf`; diff.md "A purged
+  version"). That read fails alone with its line, and when every line names one, the others were written whole. A failure that
   names nothing (a spec it can't take fails the command before it writes anything, a dropped connection) is narrowed
   down in halves (`narrowDown`): the half that fails again is split again, so one bad spec costs about two commands
   per halving, never one per read; when both halves fail, they all fail.

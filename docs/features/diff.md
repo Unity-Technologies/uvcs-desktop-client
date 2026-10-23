@@ -79,15 +79,22 @@ A purge (`cm purge`, where the server allows it) removes old revisions' content 
 history stay. `cm cat` of one fails with `Can't retrieve the content of the file '<file>' because the revision (id:N)
 was purged …`, naming the file it was to write, never the spec (`isPurgedRevisionError`, `purgedTargetOf`). In a batch
 it writes the other revisions and prints that line for each purged one, so `explainCatFailure` tells them apart by
-their file, with no command more. `ContentApi.read` answers such a version as `PURGED_CONTENT` (`FileContent.purged`),
-not as a failure: it never comes back, so it is cached as any revision.
+their file, with no command more (ARCHITECTURE.md "Server budget"). `ContentApi.read` answers such a version as
+`PURGED_CONTENT` (`FileContent.purged`), not as a failure: it never comes back, so it is cached as any revision.
 
 - A diff shows a purged version as a missing one (an added or deleted file's): the other version alone, under a line
   saying which was purged (`purgedVersionsOf`, `purgedNotice`). Both purged, it says so ("Content purged"). A binary's
   sizes say "Purged" for it (`sizeChange`).
-- The merge page never takes a purged version as an empty text, which would merge the file as emptied: its read fails
-  (`conflictVersionQuery`, `PURGED_VERSION_MESSAGE`).
-- Open and Save as of one fail saying it was purged (`saveVersion`), not with `cm`'s line naming a temp file.
+- The merge page never takes a purged version as an empty text, which would merge the file as emptied: the file reads
+  as failed, saying why (`loadConflict`, `UNMERGEABLE_PURGED_MESSAGE`). It is decided where the merge takes the
+  versions, not in their query, which the diff of a version shares.
+- Pending changes whose loaded revision was purged can't be discarded (`canDiscardChanges`): going back to a text that
+  isn't there would empty the file. Nor does saving one ever tell it matches its loaded revision (`savedAsBase`).
+- A model's companion (a `.bin`, a `.mtl`) whose content was purged reads as not there (`readBytes`' null).
+- Open and Save as of one fail saying it was purged (`saveVersion`, `PURGED_VERSION_MESSAGE`), not with `cm`'s line
+  naming a temp file.
+- Only a line naming the read's own file tells it was purged (`isPurgedRevisionError(error, target)`): a batch's
+  failure passed on whole to each of its reads may name another's. `cm` names the file as it was given, never resolved or shortened.
 - Only English output is recognized, as elsewhere; in another language the diff says it couldn't load the file.
 
 `scripts/sandboxes/purged.sh` builds a diff with each case: the later version purged, both, the earlier one.

@@ -186,7 +186,8 @@ interface UnsavedVersions {
 
 /**
  * Saves the versions kept, every batch even when one fails: the merge is in the workspace already, so a failure
- * only names the files left holding yours. A revision `cm cat` names as not found wasn't saved; a failure some line of
+ * only names the files left holding yours. A revision `cm cat` names as not written (not found, or purged:
+ * `explainCatFailure`) wasn't saved; a failure some line of
  * which names nothing (a download that failed, a dropped connection) is tried once more for the others, as saving a
  * version again changes nothing, and what fails again may not hold the version kept. A file another program
  * holds open on Windows fails too, with no retry: `cm` writes it, not `retryWhileBusy`.
@@ -202,7 +203,7 @@ async function saveKeptVersions(cm: CmClient, workspacePath: string, reads: Kept
 }
 
 /**
- * One `cm cat` of the reads: those it named as not found join `unsaved`; returns those it may not have written, when
+ * One `cm cat` of the reads: those it named as not written join `unsaved`; returns those it may not have written, when
  * some line of its failure names nothing.
  */
 async function saveOnce(cm: CmClient, workspacePath: string, reads: KeptVersionRead[], unsaved: UnsavedVersions): Promise<KeptVersionRead[]> {

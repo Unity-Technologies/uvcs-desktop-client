@@ -151,8 +151,8 @@ export class RevisionCat {
 
   /**
    * Runs `cm cat` of the reads and settles those it can tell about. `cm cat` writes every revision it found even when
-   * another failed, and names each it didn't find (`The specified revision was not found <spec>`): a read not written
-   * fails with its own line. When every line of the failure names such a read, the others were written whole;
+   * another failed, and names each it didn't write (`explainCatFailure`: not found, by its spec; purged, by its file):
+   * a read not written fails with its own line. When every line of the failure names such a read, the others were written whole;
    * otherwise (one cut short by a dropped connection, a failure naming nothing) they are returned, unexplained.
    */
   private async attempt(workspacePath: string, reads: WorkspaceReads, batch: Waiting[]): Promise<Unexplained | null> {

@@ -244,8 +244,9 @@ bytes, and keeping yours reads nothing. `cm merge` has no option to keep the bas
 text. Once `cm merge` ran, cancelling doesn't stop these writes: the merge is in the
 workspace by then, so a version kept that can't be saved leaves its file as yours, and the merge's toast names it
 ("Merge applied, but 2 files still hold yours", `keptVersionNotSaved`). `cm cat` goes on after a problem: it prints a
-`not found <spec>` line per revision it can't resolve and a line naming nothing per download that failed
-(`explainCatFailure`, shared with `RevisionCat`). A failure with such an unnamed line is tried once more for the files
+`not found <spec>` line per revision it can't resolve, a purged line naming the file of each revision whose content
+was purged (diff.md "A purged version"), and a line naming nothing per download that failed (`explainCatFailure`,
+shared with `RevisionCat`). A failure with such an unnamed line is tried once more for the files
 it didn't name, as saving a version again changes nothing; what fails again is worded as uncertain ("may not hold the
 version you kept", `keptVersionMaybeNotSaved`). `cm merge --merge` can't take each file's decision in a workspace
 (`--fileconflictsresolutionsfile` works only with `--to`), and `--keepsource` keeps every file's.
