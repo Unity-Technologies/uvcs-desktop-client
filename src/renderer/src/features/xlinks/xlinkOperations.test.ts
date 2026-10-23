@@ -65,7 +65,7 @@ describe('Editing an xlink', () => {
   it('reads a writable one’s rules before opening it, and saves only what changed', async () => {
     fakeApi.answer('xlinks.rules', () => [{ from: '/main', to: '/main/dev', userDefined: true }]);
     fakeApi.answer('xlinks.edit', () => undefined);
-    await editXlink(ws, lib);
+    await editXlink(ws, lib, false);
     const { target, save } = lastDialog();
     expect(target).toMatchObject({ kind: 'edit', rules: [{ from: '/main', to: '/main/dev', userDefined: true }] });
 
@@ -79,7 +79,7 @@ describe('Editing an xlink', () => {
   });
 
   it('opens a read-only one at once: it has no rules to read', async () => {
-    await editXlink(ws, { ...lib, xlink: { ...WRITABLE, writable: false } });
+    await editXlink(ws, { ...lib, xlink: { ...WRITABLE, writable: false } }, false);
 
     expect(lastDialog().target).toMatchObject({ kind: 'edit', rules: [] });
     expect(fakeApi.calls()).toEqual([]);
@@ -88,7 +88,7 @@ describe('Editing an xlink', () => {
   it('opens nothing when its rules can’t be read, and says why', async () => {
     fakeApi.answer('xlinks.rules', () => Promise.reject(new Error('The server is down')));
 
-    await editXlink(ws, lib);
+    await editXlink(ws, lib, false);
 
     expect(opened).toEqual([]);
     expect(shownToasts()).toEqual([expect.objectContaining({ kind: 'error', title: "Couldn't read the xlink" })]);

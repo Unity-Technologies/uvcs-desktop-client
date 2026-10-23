@@ -67,6 +67,11 @@ function xlinkSurroundingsOf(workspacePath: string, item: TreeItem): XlinkSurrou
   };
 }
 
+/** Whether the item at `path` is added and not checked in yet. */
+function isAdded(pendingChanges: PendingChangesIndex, path: string): boolean {
+  return pendingChanges.changeAt(path)?.kinds.includes('added') ?? false;
+}
+
 /** Who may check in under the item's path, on every branch (a secured path). */
 function pathPermissionsAction(workspacePath: string, item: TreeItem) {
   const unavailable = itemPathPermissionsUnavailable(workspacePath, item.repository);
@@ -107,7 +112,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
     itemCopySubmenu(workspacePath, items.map((item) => item.path), single ? itemLinkText(workspacePath, single) : null),
     pasteAction(workspacePath, items),
     single && !hasRoot && menuAction('rename', () => void renameItem(workspacePath, single), { shortcut: FILE_SHORTCUTS.rename }),
-    editedXlink && menuAction('editXlink', () => void editXlink(workspacePath, editedXlink)),
+    editedXlink && menuAction('editXlink', () => void editXlink(workspacePath, editedXlink, isAdded(pendingChanges, editedXlink.path))),
     typedFiles.length > 0 &&
       menuSubmenu('revisionType', [
         { id: 'type.bin', label: 'Binary', run: () => void changeRevisionType(workspacePath, typedFiles, 'bin') },

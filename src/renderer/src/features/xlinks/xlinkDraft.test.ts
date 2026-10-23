@@ -25,6 +25,7 @@ const edit = (xlink: XlinkTarget, rules = [{ from: '/main', to: '/main/dev', use
   name: 'lib',
   xlink,
   rules,
+  added: false,
 });
 
 /** A new xlink's draft, filled in enough to create it. */
@@ -204,5 +205,11 @@ describe('Editing an xlink', () => {
 
     expect(fields).toMatchObject({ title: 'Edit xlink lib', isNew: false, showsFolder: false, showsRules: false, saveLabel: 'Save' });
     expect(fields.description).toBe('Read-only xlink to art@local /sub. Saving checks it out: check it in to share it.');
+  });
+
+  it('says a new xlink, not checked in yet, isn’t checked out by saving: it stays added', () => {
+    const target = { ...edit(READ_ONLY, []), added: true };
+
+    expect(xlinkDialogFields(target, draftOf(target)).description).toBe('Read-only xlink to art@local /sub. Not checked in yet.');
   });
 });

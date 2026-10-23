@@ -19,10 +19,10 @@ export function createXlink(workspacePath: string, directory: string): void {
 }
 
 /** Opens the xlink at `item` to point it elsewhere or change its rules, once its rules are read (a writable one's). */
-export async function editXlink(workspacePath: string, item: Pick<TreeItem, 'path' | 'name'> & { xlink: XlinkTarget }): Promise<void> {
+export async function editXlink(workspacePath: string, item: Pick<TreeItem, 'path' | 'name'> & { xlink: XlinkTarget }, added: boolean): Promise<void> {
   const rules = item.xlink.writable ? await runRead("Couldn't read the xlink", () => api.xlinks.rules(workspacePath, item.path)) : [];
   if (!rules) return;
-  const target: Extract<XlinkDialogTarget, { kind: 'edit' }> = { kind: 'edit', path: item.path, name: item.name, xlink: item.xlink, rules };
+  const target: Extract<XlinkDialogTarget, { kind: 'edit' }> = { kind: 'edit', path: item.path, name: item.name, xlink: item.xlink, rules, added };
   openXlinkDialog(target, async (draft) => {
     const edit = xlinkEditOf(target, draft);
     return edit !== null && runVoidAction(workspacePath, "Couldn't change the xlink", () => api.xlinks.edit(workspacePath, edit), isAffectedByPendingChangeEdit);

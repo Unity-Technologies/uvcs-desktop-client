@@ -7,8 +7,11 @@ import { itemNameProblem } from '../files/itemName';
 export type XlinkDialogTarget =
   /** A new xlink in `directory` (`''` is the root), whose names it must not take. */
   | { kind: 'create'; directory: string; siblings: readonly string[] }
-  /** The xlink at `path`, with the rules it has (`XlinksApi.rules`). */
-  | { kind: 'edit'; path: string; name: string; xlink: XlinkTarget; rules: readonly XlinkExpansionRule[] };
+  /**
+   * The xlink at `path`, with the rules it has (`XlinksApi.rules`). `added` while it isn't checked in yet: saving
+   * changes the new xlink rather than checking it out.
+   */
+  | { kind: 'edit'; path: string; name: string; xlink: XlinkTarget; rules: readonly XlinkExpansionRule[]; added: boolean };
 
 export type XlinkPointKind = XlinkPoint['kind'];
 
@@ -131,7 +134,7 @@ export function xlinkDialogFields(target: XlinkDialogTarget, draft: XlinkDraft):
 
   return {
     title: isNew ? 'New xlink' : `Edit xlink ${target.name}`,
-    description: isNew ? descriptionOfNew(target.directory) : `${xlinkKind(target.xlink)} to ${xlinkRepository(target.xlink)}. Saving checks it out: check it in to share it.`,
+    description: isNew ? descriptionOfNew(target.directory) : descriptionOfEdited(target),
     saveLabel: isNew ? 'Create xlink' : 'Save',
     isNew,
     showsFolder: isNew && !draft.writable,
@@ -154,6 +157,11 @@ function ruleNotesOf(rows: readonly RuleRow[], errors: ReadonlyMap<number, strin
       return row.automatic ? [[row.key, { text: AUTOMATIC_RULE_NOTE, isError: false }]] : [];
     }),
   );
+}
+
+function descriptionOfEdited({ xlink, added }: Extract<XlinkDialogTarget, { kind: 'edit' }>): string {
+  const what = `${xlinkKind(xlink)} to ${xlinkRepository(xlink)}.`;
+  return added ? `${what} Not checked in yet.` : `${what} Saving checks it out: check it in to share it.`;
 }
 
 function descriptionOfNew(directory: string): string {
