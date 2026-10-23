@@ -9,13 +9,16 @@ import { nextRepositoryFileSearch, searchesFor, type RepositoryFileSearch } from
 const SEARCH_DELAY_MS = 150;
 
 /**
- * Searches a repository's files at a changeset by name as the query settles (`explorer.findRepositoryPaths`): the best
+ * Lists a repository's tree at a changeset as Go to file opens, and searches its files by name as the query settles (`explorer.findRepositoryPaths`): the best
  * found so far as they come (`repositoryPathsFound`), then all of them (`nextRepositoryFileSearch`). A newer query stops
  * the search before it (`stopFindingRepositoryPaths`).
  */
 export function useRepositoryFileSearch(place: RepositoryPlace, changesetId: number, query: string): RepositoryFileSearch {
   const settled = useDebouncedValue(query, SEARCH_DELAY_MS);
   const [search, dispatch] = useReducer(nextRepositoryFileSearch, { kind: 'empty' });
+
+  // The tree is listed as the dialog opens (`prepareRepositoryPaths`): its seconds pass while the query is typed.
+  useEffect(() => void api.explorer.prepareRepositoryPaths(place, changesetId), [place, changesetId]);
 
   useUvcsEvent('repositoryPathsFound', ({ searchId, paths, source }) => dispatch({ kind: 'progress', searchId, paths, source }));
 
