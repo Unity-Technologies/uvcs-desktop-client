@@ -1,6 +1,7 @@
 import { LINK_VIEWS, type Link, type LinkLines, type LinkObject, type LinkPage, type LinkView, type RepositoryLink, type WorkspaceLink } from './link';
 import { decodeSegment, isBranchKeyword, pathOf, serverOf, UNWRITABLE_IN_NAMES } from './linkSegments';
 import { specLink } from './specLink';
+import { isUnityOrganization } from '../domain/organizations';
 
 /**
  * What reading a link found: the link, or why it can't be opened. `unknown` is a link this version can read but names
@@ -61,7 +62,9 @@ function readRepositoryLink(body: string): LinkReading {
   const server = serverOf(authority);
   if (!server) return malformed('It names no server.');
   if (segments.length === 0) return { link: { kind: 'server', server } };
-  if (segments[0]?.toLowerCase() === 'projects') return readProjectLink(server, segments.slice(1));
+  if (segments[0]?.toLowerCase() === 'projects') {
+    return isUnityOrganization(server) ? readProjectLink(server, segments.slice(1)) : malformed('Only a Unity organization has projects.');
+  }
   if (segments[0]?.toLowerCase() !== 'repos' || !segments[1]) return malformed('It names no repository.');
   // The older links wrote a `/` in a repository's name as it is (`repos/game/art/changesets/…`): the name runs to the
   // first word a link reads after it.

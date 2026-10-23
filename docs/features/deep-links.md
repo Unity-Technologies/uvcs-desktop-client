@@ -17,8 +17,9 @@ uvcs:///<workspace folder>[/-/<page>[/<path>]][#<lines>]                   works
 - **Repository links** name a server and a repository, never anything of the person who copied them (their workspace,
   their folders), so they open for anyone with access. They are the only links the app writes.
 - **Server links** name a server's repositories, which the home screen shows: an organization's
-  (`uvcs://acme.unity`), or a Unity project's in it (`uvcs://acme.unity/projects/Racing`; `ServerLink`). They take no
-  page and no lines (a fragment is left out).
+  (`uvcs://acme.unity`), or a Unity project's in it (`uvcs://acme.unity/projects/Racing`; `ServerLink`). Only a Unity
+  organization has projects: `projects/` on another server is refused. They take no page and no lines (a fragment
+  is left out).
 - **Workspace links** have no server, as `file:///` has no host: they name a folder on this computer, written as
   `file:///` writes it (`uvcs:///C:/wk/game` on Windows). They are for agents and scripts on the same computer ("open
   the file I just changed in Changes"); the app never copies one. A workspace on a network share named by its UNC

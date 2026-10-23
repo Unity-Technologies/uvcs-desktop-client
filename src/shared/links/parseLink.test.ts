@@ -171,6 +171,8 @@ describe('parseLink', () => {
     it.each([
       'uvcs://acme.unity/projects',
       'uvcs://acme.unity/projects/%22Racing',
+      'uvcs://acme.cloud/projects/Racing',
+      'uvcs://host:8087/projects/Racing',
       'uvcs://acme.unity/branches/main',
       'uvcs://acme.unity/repos',
       'uvcs://acme.unity/repos/game/changesets/abc',
