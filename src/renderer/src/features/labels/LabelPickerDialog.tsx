@@ -23,7 +23,7 @@ export function pickLabel(options: PickLabelOptions): Promise<Label | undefined>
 }
 
 function LabelPickerDialog({ title, exclude, repository, finish }: PickLabelOptions & { finish: (label: Label | undefined) => void }) {
-  const { data: labels } = useLabels({}, repository);
+  const { data: labels, error } = useLabels({}, repository);
   const [search, setSearch] = useState('');
   const choices = useMemo(() => labelChoices(labels ?? [], exclude, search), [labels, exclude, search]);
 
@@ -37,9 +37,9 @@ function LabelPickerDialog({ title, exclude, repository, finish }: PickLabelOpti
         placeholder="Find a label"
         label="Labels"
         onPick={finish}
-        loading={!labels}
+        loading={!labels && !error}
         rowHeight={30}
-        empty="No labels found."
+        empty={error ? `Couldn't read the labels: ${error.message}` : 'No labels found.'}
         renderItem={(label) => (
           <>
             <Tag size={13} className={styles.icon} />
