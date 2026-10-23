@@ -312,9 +312,10 @@ it's off then; its Replace was ⌘H, which hides the app on macOS.
 **Keys.** The menu shows the keys the editor takes on each OS, from the registry's "Text" area (`textUndo`...
 `goToLine`). Replace is ⌥⌘F on macOS and Ctrl+H on Windows and Linux, where Pierre's Ctrl+Alt+F is AltGr+F on European
 layouts: `pierreEditorKeymap` gives the editor the registry's key, and Pierre's own still works. Go to line is ⌃G on
-macOS (⌘G is Find next there) and Ctrl+G elsewhere, from anywhere in the code; with Pierre's search panel open, Ctrl+G
-off macOS is its Find next. Ctrl+H typed in Pierre's search box doesn't switch it to Replace on Windows and Linux: the
-box takes its own keys, and only Pierre's ⌥⌘F (Ctrl+Alt+F) does there.
+macOS (⌘G is Find next there) and Ctrl+G elsewhere, from anywhere in the code, Pierre's search box included
+(`editorHasFocusIn`); with Pierre's search panel open, Ctrl+G off macOS is its Find next. Ctrl+H typed in Pierre's
+search box doesn't switch it to Replace on Windows and Linux: the box takes its own keys, and only Pierre's ⌥⌘F
+(Ctrl+Alt+F) does there.
 
 **Find and Replace** open Pierre's search panel, which `Editor` has no public way to open (`openPierreSearchPanel`, see
 Pierre workarounds): the menu presses the key that opens it on the editor's content element, its modifier held as Pierre

@@ -31,6 +31,15 @@ export function isTypingIn(container: Element | null | undefined): boolean {
   return focused instanceof HTMLElement && focused.isContentEditable;
 }
 
+/**
+ * Whether the editor in `container` has focus: its text, or its search panel (`data-search-panel`, which Pierre's
+ * editor draws in the same shadow root), whose keys are the editor's too.
+ */
+export function editorHasFocusIn(container: Element | null | undefined): boolean {
+  const focused = pierreShadowRoot(container)?.activeElement;
+  return focused instanceof HTMLElement && (focused.isContentEditable || focused.closest('[data-search-panel]') !== null);
+}
+
 /** The `data-line-type` of a changed line's rows. */
 export function changedLineType({ side }: Pick<ChangedLine, 'side'>): 'change-addition' | 'change-deletion' {
   return side === 'deletions' ? 'change-deletion' : 'change-addition';

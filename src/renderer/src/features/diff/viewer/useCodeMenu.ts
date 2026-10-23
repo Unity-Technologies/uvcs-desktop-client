@@ -31,7 +31,7 @@ import { deletionEdits } from './editorTextEdits';
 import { goToLineError, goToLineQuestion, lineToGoTo } from './goToLine';
 import type { LineRange } from './lineSelection';
 import type { ScrollToLine } from './useLineLinks';
-import { isTypingIn, pageTextSelection, rowUnderPointer } from './pierreDom';
+import { editorHasFocusIn, pageTextSelection, rowUnderPointer } from './pierreDom';
 import { openPierreSearchPanel } from './pierreSearchPanel';
 import { orderedSpan, shownLineCount, wholeTextSpan, type TextSpan } from './textSpans';
 
@@ -169,13 +169,13 @@ export function useCodeMenu({ containerRef, scrollTo, fileName, textOf, sides, e
     return codeMenu(state, actionsFor(on), latest.current.lineMenu?.lineEntries() ?? []);
   };
 
-  /** Go to line's key, from anywhere in the code: the text typed into, else the side whose lines are selected. */
+  /** Go to line's key, from anywhere in the code: the text typed into (its search box too), else the side whose lines are selected. */
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.defaultPrevented || !matchesShortcut(event.nativeEvent, hotkey('goToLine'))) return;
     event.preventDefault();
     event.stopPropagation();
     const { sides, lines: lineLinks } = latest.current;
-    const caret = isTypingIn(containerRef.current) ? editorSelections().at(-1) : undefined;
+    const caret = editorHasFocusIn(containerRef.current) ? editorSelections().at(-1) : undefined;
     const target = keyboardGoToLine(sides, caret ? caret.end.line + 1 : null, selectedSideLines(lineLinks?.range ?? null));
     void goToLine(target.side, target.typedInto, target.line);
   };

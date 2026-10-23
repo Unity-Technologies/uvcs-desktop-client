@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { changedLineType, lineRowSelector, numberCellSelector, pageTextSelection } from './pierreDom';
+import { changedLineType, editorHasFocusIn, lineRowSelector, numberCellSelector, pageTextSelection } from './pierreDom';
 
 describe('pierreDom', () => {
   it('names a changed line by its type in Pierre’s rows', () => {
@@ -29,6 +29,7 @@ class FakeText extends FakeNode {
 
 class FakeElement extends FakeNode {
   readonly children: FakeNode[] = [];
+  isContentEditable = false;
   shadowRoot: FakeShadowRoot | null = null;
   constructor(
     readonly tagName: string,
@@ -70,6 +71,7 @@ class FakeElement extends FakeNode {
 }
 
 class FakeShadowRoot extends FakeElement {
+  activeElement: FakeElement | null = null;
   selection: Partial<Selection> | null = null;
   getSelection(): Partial<Selection> | null {
     return this.selection;
@@ -166,3 +168,32 @@ describe('pageTextSelection', () => {
   });
 });
 
+describe('editorHasFocusIn', () => {
+  beforeEach(() => vi.stubGlobal('HTMLElement', FakeElement));
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** A diff whose shadow root has `focused` in focus, inside `panel` when given (Pierre's search panel). */
+  function focusedIn(focused: FakeElement | null, panel?: FakeElement): Element {
+    const root = new FakeShadowRoot('#shadow-root', {}, panel ? [panel] : focused ? [focused] : []);
+    root.activeElement = focused;
+    const host = new FakeElement('diffs-container');
+    host.shadowRoot = root;
+    return new FakeElement('DIV', {}, [host]) as unknown as Element;
+  }
+
+  it("is the editor's text, typed into", () => {
+    const content = new FakeElement('DIV');
+    content.isContentEditable = true;
+    expect(editorHasFocusIn(focusedIn(content))).toBe(true);
+  });
+
+  it("is the editor's search box too, whose keys are the editor's", () => {
+    const input = new FakeElement('INPUT');
+    expect(editorHasFocusIn(focusedIn(input, new FakeElement('DIV', { 'data-search-panel': '' }, [input])))).toBe(true);
+  });
+
+  it('is nothing else in the diff, nor a diff without focus', () => {
+    expect(editorHasFocusIn(focusedIn(new FakeElement('BUTTON')))).toBe(false);
+    expect(editorHasFocusIn(focusedIn(null))).toBe(false);
+  });
+});
