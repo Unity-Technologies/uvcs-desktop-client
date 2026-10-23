@@ -33,9 +33,11 @@ export const queryKeys = {
   inWorkspace: (workspacePath: string, ...parts: unknown[]) => [...workspaceKey(workspacePath), ...parts] as const,
   /**
    * A list of objects (`branches`, `changesets`, `labels`) read with `query`: the workspace's repository's under the
-   * key every view of them shares, another repository's (an xlinked one's, `name@server`) apart, in the same area so
-   * what refreshes the list refreshes it too.
+   * key every view of them shares; another repository's (an xlinked one's, `name@server`) in an area of its own,
+   * `otherRepository`. What reads the workspace's lists from the cache scans their area (`listedChangeset`,
+   * `cachedBranch`) and must never take another repository's ids or GUIDs for its own; and no workspace operation
+   * changes another repository, so none refreshes them (the xlink dialog's pickers read them, slow changing).
    */
   objectList: (workspacePath: string, area: string, query: unknown, repository?: string) =>
-    repository ? queryKeys.inWorkspace(workspacePath, area, 'onRepository', repository, query) : queryKeys.inWorkspace(workspacePath, area, query),
+    repository ? queryKeys.inWorkspace(workspacePath, 'otherRepository', repository, area, query) : queryKeys.inWorkspace(workspacePath, area, query),
 };
