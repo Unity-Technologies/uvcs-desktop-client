@@ -115,6 +115,17 @@ describe('the moves the detection made', () => {
     expect(matchSideOf(deleted('src/ArchiveOld.cs'), [folder])).toBe('deleted');
   });
 
+  // cm move refuses the destination: "src/Archive is a private directory. It can't be moved."
+  it('leaves out what is new inside a folder the detection moved, as inside a private folder', () => {
+    const folder = { ...change('src/Archive', ['locallyMoved'], 'directory'), oldPath: 'src/Retired' };
+    const newInside = added('src/Archive/Rifle.cs');
+    const detectedInside = detected('src/Archive/Gun.cs', 'src/Old/Shotgun.cs');
+
+    expect(paths(matchCandidates(weapon, [weapon, folder, newInside, detectedInside]))).toEqual([]);
+    expect(matchSideOf(newInside, [folder, newInside])).toBeNull();
+    expect(matchSideOf(detectedInside, [folder, detectedInside])).toBeNull();
+  });
+
   it('leaves out a detected move into a private folder from the new items', () => {
     const intoNew = detected('new/Gun.cs', 'src/Old/Shotgun.cs');
 
