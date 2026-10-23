@@ -71,7 +71,7 @@ describe('comparedVersions', () => {
     });
   });
 
-  it('reads yours where you moved it, and names both paths', () => {
+  it('reads yours where you moved it, and names both paths where both sides are files', () => {
     const deletedMoved = conflict('deleteMove', side('deleted', '/src/Menu.cs'), side('moved', '/src/ui/Menu.cs', '/src/Menu.cs'));
     expect(comparedVersions(deletedMoved, 'destination', contributors, merge)).toEqual({ original: at('/src/ui/Menu.cs', 'cs:40'), modified: empty, path: '/src/ui/Menu.cs' });
     const movedApart = conflict('divergentMove', side('moved', '/src/game/Menu.cs', '/src/Menu.cs'), side('moved', '/src/ui/Menu.cs', '/src/Menu.cs'));
