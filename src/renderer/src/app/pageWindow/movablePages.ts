@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { PageWindowOpening, PageWindowPage } from '@shared/domain/pageWindow';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { Page, PageOf } from '../navigation/pages';
@@ -32,7 +33,7 @@ export function asMovablePage(value: PageWindowPage): Page | null {
  * read of it (`cachedEntries`), so the page window doesn't run `cm diff` again.
  */
 export function pageWindowOpening(workspacePath: string, page: Page, cachedEntries: (page: PageOf<'diff'>) => DiffEntry[] | undefined): PageWindowOpening {
-  const opening: PageWindowOpening = { workspacePath, page };
+  const opening: PageWindowOpening = { place: workspacePlace(workspacePath), page };
   if (page.kind !== 'diff') return opening;
   const entries = cachedEntries(page);
   return entries ? { ...opening, diff: { target: page.target, entries } } : opening;

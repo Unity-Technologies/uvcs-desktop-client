@@ -1,6 +1,7 @@
 import '../../testing/fakeWindow';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 import type { WorkspaceHead } from '@shared/domain/workspace';
 import { useFilesViewStore } from '../../features/files/filesViewStore';
 import { requestLineFocus } from '../../features/pendingChanges/changesLineFocus';
@@ -66,14 +67,14 @@ describe('a repository link', () => {
 
     await openLink('plastic://acme.unity/repos/game/changesets/12/diff');
 
-    expect(fakeApi.argsOf('windows.openLinkIn')).toEqual([[GAME, 'uvcs://acme.unity/repos/game/changesets/12']]);
+    expect(fakeApi.argsOf('windows.openLinkIn')).toEqual([[workspacePlace(GAME), 'uvcs://acme.unity/repos/game/changesets/12']]);
     expect(whereTheWindowIs().pages).toEqual([]);
   });
 
   it('opens the only workspace on it here when this window shows the home screen, then the link', async () => {
     workspaces({ [GAME]: head('game@acme@unity') });
     fakeApi.answer('windows.openLinkIn', async () => 'openHere');
-    fakeApi.answer('windows.focusWorkspace', async () => false);
+    fakeApi.answer('windows.focusPlace', async () => false);
     fakeApi.answer('settings.rememberRecentWorkspace', async () => undefined);
     fakeApi.answer('system.addRecentDocument', async () => undefined);
 
@@ -104,7 +105,7 @@ describe('a repository link', () => {
     await openLink(CHANGESET_12);
 
     expect(fakeApi.argsOf('workspaces.repositoryOf').map(([path]) => path)).toEqual([GAME]);
-    expect(fakeApi.argsOf('windows.openLinkIn')).toEqual([[GAME, CHANGESET_12]]);
+    expect(fakeApi.argsOf('windows.openLinkIn')).toEqual([[workspacePlace(GAME), CHANGESET_12]]);
   });
 
   it('offers to create a workspace when none is on the repository, on the server as the profiles name it', async () => {
@@ -128,7 +129,7 @@ describe('a repository link', () => {
     // The dialog calls it as `void`; it hands back what it started, to await here.
     await (vi.mocked(openCreateWorkspaceDialog).mock.calls[0]![0].onCreated(GAME) as unknown as Promise<void>);
 
-    expect(fakeApi.argsOf('windows.openLinkIn')).toEqual([[GAME, CHANGESET_12]]);
+    expect(fakeApi.argsOf('windows.openLinkIn')).toEqual([[workspacePlace(GAME), CHANGESET_12]]);
     expect(useSession.getState().workspacePath).toBe(TOOLS);
   });
 
@@ -195,7 +196,7 @@ describe('a workspace link', () => {
 
     await openLink('uvcs:///wk/game/-/incoming');
 
-    expect(fakeApi.argsOf('windows.openLinkIn')).toEqual([[GAME, 'uvcs:///wk/game/-/incoming']]);
+    expect(fakeApi.argsOf('windows.openLinkIn')).toEqual([[workspacePlace(GAME), 'uvcs:///wk/game/-/incoming']]);
   });
 
   it("tells in a toast when the workspaces can't be read", async () => {

@@ -2,6 +2,7 @@
 import './errors/installUnexpectedErrorHandlers';
 import { join } from 'node:path';
 import { app } from 'electron';
+import { repositoryPlace } from '@shared/domain/place';
 import { BranchNamesCache } from './cm/BranchNamesCache';
 import { readBranchNames } from './cm/branchNames';
 import { CmClient } from './cm/CmClient';
@@ -53,7 +54,7 @@ const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
 const branchNames = new BranchNamesCache(
   (place) => readBranchNames(cm, place),
   Date.now,
-  (place) => place.kind === 'workspace' && isShown(watchers, place.workspacePath),
+  (place) => (place.kind === 'workspace' ? isShown(watchers, place.workspacePath) : windows.explores(place.repository)),
 );
 const watchers = watchShownWorkspaces({ cm, headers, branchNames });
 const workspaceCopies = new WorkspaceCopies({ cm });
@@ -72,6 +73,7 @@ const windows = new WorkspaceWindows({
   workspaceOf: (viewer) => watchers.workspaceOf(viewer),
   onWindowsChanged: () => app.isReady() && installMenuBar(),
   onClosed: (viewer) => watchers.release(viewer),
+  onRepositoryLeft: (repository) => branchNames.forget(repositoryPlace(repository)),
   onLastWindowClosing: () => quitting.lastWindowClosing(),
 });
 const installMenuBar = appMenuInstaller(windows, updates);

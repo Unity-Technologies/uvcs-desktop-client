@@ -1,4 +1,4 @@
-import { startingPageIn, startingSeedIn, startingWorkspaceIn } from '@shared/startingWorkspace';
+import { startingPageIn, startingPlaceIn, startingSeedIn } from '@shared/startingPlace';
 import { useNavigation } from '../navigation/navigationStore';
 import { queryClient } from '../queryClient';
 import { useSession } from '../workspace/sessionStore';
@@ -16,7 +16,8 @@ type AddressPage = { location: Pick<Location, 'search'> };
  * (`openWorkspaceFromAddress`). Its workspace window showed the workspace a moment ago: its folder is there.
  */
 export function openPageWindowFromAddress(page: AddressPage = window): boolean {
-  const workspacePath = startingWorkspaceIn(page.location.search);
+  const place = startingPlaceIn(page.location.search);
+  const workspacePath = place?.kind === 'workspace' ? place.workspacePath : null;
   const shown = startingPageIn(page.location.search);
   const movable = shown && asMovablePage(shown);
   if (!workspacePath || !movable) return false;

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { SavedWindowBounds } from '@shared/domain/settings';
 import { EVENT_CHANNEL } from '@shared/ipc';
 import { memorySettings } from '../settings/testing/memorySettings';
@@ -77,17 +78,18 @@ describe('createMainWindow', () => {
     expect(window).toMatchObject({ shown: false, shownInactive: true, fullScreen: false });
   });
 
-  it('starts the page on the workspace the window was opened for, and on the home screen without one', () => {
-    createMainWindow(memorySettings(), { workspacePath: '/work/game' });
+  it('starts the page on the place the window was opened for, and on the home screen without one', () => {
+    createMainWindow(memorySettings(), { place: workspacePlace('/work/game') });
+    createMainWindow(memorySettings(), { place: repositoryPlace('game@local') });
     createMainWindow(memorySettings());
 
-    expect(fakeElectron.windows().map((window) => window.loadedQuery)).toEqual([{ workspace: '/work/game' }, {}]);
+    expect(fakeElectron.windows().map((window) => window.loadedQuery)).toEqual([{ workspace: '/work/game' }, { repository: 'game@local' }, {}]);
   });
 
   it("starts a page window's page on the page it shows, where the last page window was left", () => {
     const page = { kind: 'diff', title: 'Changeset 7', target: { kind: 'changeset', changesetId: 7 } };
     vi.mocked(loadWindowBounds).mockClear();
-    createMainWindow(memorySettings(), { workspacePath: '/work/game', page });
+    createMainWindow(memorySettings(), { place: workspacePlace('/work/game'), page });
 
     expect(fakeElectron.windows().at(-1)!.loadedQuery).toEqual({ workspace: '/work/game', page: JSON.stringify(page) });
     expect(vi.mocked(loadWindowBounds).mock.calls[0]?.[1]).toBe('pageWindowBounds');

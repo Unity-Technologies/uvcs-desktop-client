@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { Page } from '../navigation/pages';
 import { asMovablePage, asPage, isMovablePage, pageWindowOpening } from './movablePages';
@@ -33,12 +34,12 @@ describe('opening a page in a window of its own', () => {
     const asked: unknown[] = [];
     const opening = pageWindowOpening('/work/game', DIFF, (diff) => (asked.push(diff.branchHead), [PLAYER]));
 
-    expect(opening).toEqual({ workspacePath: '/work/game', page: DIFF, diff: { target: BRANCH_TARGET, entries: [PLAYER] } });
+    expect(opening).toEqual({ place: workspacePlace('/work/game'), page: DIFF, diff: { target: BRANCH_TARGET, entries: [PLAYER] } });
     expect(asked).toEqual([42]);
   });
 
   it("hands nothing when the diff's files weren't read, nor for another page", () => {
-    expect(pageWindowOpening('/work/game', DIFF, () => undefined)).toEqual({ workspacePath: '/work/game', page: DIFF });
-    expect(pageWindowOpening('/work/game', HISTORY, () => [PLAYER])).toEqual({ workspacePath: '/work/game', page: HISTORY });
+    expect(pageWindowOpening('/work/game', DIFF, () => undefined)).toEqual({ place: workspacePlace('/work/game'), page: DIFF });
+    expect(pageWindowOpening('/work/game', HISTORY, () => [PLAYER])).toEqual({ place: workspacePlace('/work/game'), page: HISTORY });
   });
 });

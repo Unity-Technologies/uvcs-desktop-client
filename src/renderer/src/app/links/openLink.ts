@@ -91,7 +91,7 @@ async function showWorkspaceItem({ root, itemPath: item }: WorkspaceLocation, li
  * this window opens the workspace, then shows the link, when it shows the home screen.
  */
 async function openIn(workspacePath: string, link: RepositoryLink | WorkspaceLink, showOnceOpen: () => Promise<void>): Promise<void> {
-  if ((await api.windows.openLinkIn(workspacePath, formatLink(link))) === 'handedOver') return;
+  if ((await api.windows.openLinkIn(workspacePlace(workspacePath), formatLink(link))) === 'handedOver') return;
   await openUnlessShownElsewhere(workspacePath, useSession.getState().openWorkspace);
   return showOnceOpen();
 }

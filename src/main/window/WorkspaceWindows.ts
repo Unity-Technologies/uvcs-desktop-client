@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { app, BrowserWindow, type WebContents } from 'electron';
 import type { PageSeed, PageWindowOpening, PageWindowPage } from '@shared/domain/pageWindow';
+import { repositoryPlace, samePlace, workspacePathOf, workspacePlace, type Place } from '@shared/domain/place';
 import type { SavedWindow } from '@shared/domain/settings';
 import { sendEventTo } from '../ipc/sendEvent';
 import type { SettingsStore } from '../settings/SettingsStore';
@@ -17,6 +18,8 @@ interface WorkspaceWindowsOptions {
   /** A window opened, closed, got focus or changed title: the Window menu lists them. */
   onWindowsChanged: () => void;
   onClosed: (viewer: number) => void;
+  /** No window explores the repository anymore: what was kept of it while one did can go. */
+  onRepositoryLeft: (repository: string) => void;
   /** The last open window is closing, still open (`Quitting.lastWindowClosing`). */
   onLastWindowClosing: () => void;
 }
@@ -28,16 +31,20 @@ interface Reopening {
 }
 
 /**
- * One window per workspace: opening a workspace that another window shows focuses that window. A new window may
- * be asked to open a workspace as soon as its page starts (`takeRequested`). The windows open as the app quits open
- * again at the next launch (`saveSession`, `openFirst`).
+ * One window per place (`Place`: a workspace, or a repository explored without one): opening a place that another
+ * window shows focuses that window. A new window may be asked to open a place as soon as its page starts
+ * (`takeRequested`). The windows open as the app quits open again at the next launch (`saveSession`, `openFirst`).
+ * A window shows a workspace while it watches it (`workspaceOf`), a repository while it says it explores it
+ * (`repositoryShown`).
  *
- * A workspace window may open page windows (`openPage`: a diff, a history… in a window of its own, for another
- * display). They belong to it: they close with it or once it leaves their workspace, aren't workspace windows
- * (`all`), aren't saved for the next launch, and one of them may follow its selection (`follow`).
+ * A place's window may open page windows (`openPage`: a diff, a history… in a window of its own, for another
+ * display). They belong to it: they close with it or once it leaves their place, aren't place windows (`all`), aren't
+ * saved for the next launch, and one of them may follow its selection (`follow`).
  */
 export class WorkspaceWindows {
-  private readonly requested = new Map<number, string>();
+  private readonly requested = new Map<number, Place>();
+  /** The repository each window explores without a workspace, by web contents id (`repositoryShown`). */
+  private readonly explored = new Map<number, string>();
   /** The `uvcs://` link each window was handed and hasn't taken yet (`takeLink`), by web contents id. */
   private readonly links = new Map<number, string>();
   /** A workspace picked from the Dock or named on the command line before any window existed (it launched the app). */
@@ -50,19 +57,19 @@ export class WorkspaceWindows {
 
   constructor(private readonly options: WorkspaceWindowsOptions) {}
 
-  /** Opens a window on the home screen, or opening `workspacePath`; one reopened at launch opens where it was. */
-  open(workspacePath?: string, reopening?: Reopening): BrowserWindow {
+  /** Opens a window on the home screen, or opening `place`; one reopened at launch opens where it was. */
+  open(place?: Place, reopening?: Reopening): BrowserWindow {
     const cascadeFrom = reopening ? undefined : (BrowserWindow.getFocusedWindow() ?? this.all().at(-1));
-    // Its page starts on the workspace when its folder is there; for a missing one, the page's own check explains it.
-    const startsOn = workspacePath && existsSync(workspacePath) ? workspacePath : undefined;
-    const window = createMainWindow(this.options.settings, { cascadeFrom, workspacePath: startsOn, ...reopening });
+    // Its page starts on a workspace when its folder is there; for a missing one, the page's own check explains it.
+    const startsOn = place && (place.kind === 'repository' || existsSync(place.workspacePath)) ? place : undefined;
+    const window = createMainWindow(this.options.settings, { cascadeFrom, place: startsOn, ...reopening });
     const viewer = window.webContents.id;
     askBeforeUnloading(window);
     // A page loaded again (a reload) starts not knowing a page window follows it: it's told, or it would stop showing it.
     window.webContents.on('did-finish-load', () => {
       if (this.pages.followerOf(viewer) !== undefined) sendEventTo(window.webContents, 'selectionFollowed', { followed: true });
     });
-    if (workspacePath) this.requested.set(viewer, workspacePath);
+    if (place) this.requested.set(viewer, place);
     if (reopening?.reopen.view) this.views.set(viewer, reopening.reopen.view);
 
     const changed = (): void => this.options.onWindowsChanged();
@@ -77,6 +84,7 @@ export class WorkspaceWindows {
     });
     window.on('closed', () => {
       this.requested.delete(viewer);
+      this.stopExploring(viewer);
       this.links.delete(viewer);
       this.views.delete(viewer);
       if (this.lastFocused === window) this.lastFocused = null;
@@ -89,19 +97,19 @@ export class WorkspaceWindows {
   }
 
   /**
-   * Opens a page of the workspace in a window of its own, belonging to the caller's workspace window (a page window
-   * opening one gives it its own owner). It opens where the last page window was left, often on another display, or
-   * cascaded from the last one still open, or from its workspace window the first time.
+   * Opens a page of the place in a window of its own, belonging to the caller's place window (a page window opening
+   * one gives it its own owner). It opens where the last page window was left, often on another display, or cascaded
+   * from the last one still open, or from its place's window the first time.
    */
-  openPage(caller: number, { workspacePath, page, seed }: Pick<PageWindowOpening, 'workspacePath' | 'page' | 'seed'>): BrowserWindow | undefined {
+  openPage(caller: number, { place, page, seed }: Pick<PageWindowOpening, 'place' | 'page' | 'seed'>): BrowserWindow | undefined {
     const ownerId = this.pages.ownerOf(caller) ?? caller;
     const owner = this.byViewer(ownerId);
     if (!owner) return undefined;
     const lastPageWindow = this.pageWindowsOf(ownerId).at(-1);
     const cascadeFrom = lastPageWindow ?? (this.options.settings.get().pageWindowBounds ? undefined : owner);
-    const window = createMainWindow(this.options.settings, { cascadeFrom, workspacePath, page, seed });
+    const window = createMainWindow(this.options.settings, { cascadeFrom, place, page, seed });
     const viewer = window.webContents.id;
-    this.pages.add(viewer, ownerId, workspacePath);
+    this.pages.add(viewer, ownerId, place);
     askBeforeUnloading(window);
     // Its page loaded again (a reload) starts with Follow selection off: it's told it's on.
     window.webContents.on('did-finish-load', () => {
@@ -136,9 +144,42 @@ export class WorkspaceWindows {
     return (ownerId === undefined ? undefined : this.byViewer(ownerId)?.webContents) ?? caller;
   }
 
-  /** A window shows `workspacePath` now (none: the home screen): the page windows of the workspace it left close. */
+  /**
+   * A window shows `workspacePath` now (none: the home screen): the page windows of the place it left close. A window
+   * shows one place: one that explored a repository and made a workspace of it explores it no more.
+   */
   workspaceShown(viewer: number, workspacePath: string | undefined): void {
-    for (const pageWindow of this.pages.leftBehindBy(viewer, workspacePath)) this.byViewer(pageWindow)?.close();
+    if (workspacePath !== undefined) this.stopExploring(viewer);
+    this.placeShown(viewer, workspacePath === undefined ? undefined : workspacePlace(workspacePath));
+  }
+
+  /**
+   * A window explores `repository` without a workspace now (`windows.exploring`; none: it left it), as watching a
+   * workspace says it shows one: links, the Window menu, the session and its page windows go by it.
+   */
+  repositoryShown(viewer: number, repository: string | undefined): void {
+    if (this.explored.get(viewer) !== repository) this.stopExploring(viewer);
+    if (repository !== undefined) this.explored.set(viewer, repository);
+    this.placeShown(viewer, repository === undefined ? undefined : repositoryPlace(repository));
+    this.options.onWindowsChanged();
+  }
+
+  /** Whether a window explores `repository` without a workspace: its branch names are kept while one does. */
+  explores(repository: string): boolean {
+    return [...this.explored.values()].includes(repository);
+  }
+
+  /** The window explores no repository anymore; the last window to leave one lets it go (`onRepositoryLeft`). */
+  private stopExploring(viewer: number): void {
+    const repository = this.explored.get(viewer);
+    if (repository === undefined) return;
+    this.explored.delete(viewer);
+    if (!this.explores(repository)) this.options.onRepositoryLeft(repository);
+  }
+
+  /** The page windows of the place a window left close. */
+  private placeShown(viewer: number, place: Place | undefined): void {
+    for (const pageWindow of this.pages.leftBehindBy(viewer, place)) this.byViewer(pageWindow)?.close();
   }
 
   /** A page window starts or stops following its workspace window's selection; both hear it, and the one it took it from. */
@@ -171,7 +212,8 @@ export class WorkspaceWindows {
 
   /**
    * The workspace the window focused at launch opens (`openFirst`): the one that launched the app, else the one the
-   * focused window showed when the app quit, else the last one used (none, for the home screen, when its folder is gone).
+   * focused window showed when the app quit, else the last one used (none, for the home screen or a repository
+   * explored without a workspace, and when its folder is gone).
    */
   firstWorkspace(): string | undefined {
     if (this.launchRequest) return this.launchRequest;
@@ -190,10 +232,10 @@ export class WorkspaceWindows {
     const reopened = this.windowsToReopen();
     reopened.forEach((reopen, index) => {
       const behindAnother = index < reopened.length - 1 || launchRequest !== null;
-      this.open(reopen.workspacePath, { reopen, inBackground: behindAnother });
+      this.open(savedPlaceOf(reopen), { reopen, inBackground: behindAnother });
     });
-    if (launchRequest) this.showWorkspace(launchRequest);
-    else if (reopened.length === 0) this.open(this.lastUsedWorkspace());
+    if (launchRequest) this.showPlace(workspacePlace(launchRequest));
+    else if (reopened.length === 0) this.open(placeOfWorkspace(this.lastUsedWorkspace()));
   }
 
   /**
@@ -203,10 +245,10 @@ export class WorkspaceWindows {
    */
   saveSession({ withViews }: { withViews: boolean }): void {
     const openWindows = inSessionOrder(this.all(), this.lastFocused).map((window): SavedWindow => {
-      const workspacePath = this.workspaceIn(window);
-      const saved = { workspacePath, bounds: savedBoundsOf(window), fullScreen: window.isFullScreen() };
+      const place = this.placeIn(window);
+      const saved = { ...savedPlaceFields(place), bounds: savedBoundsOf(window), fullScreen: window.isFullScreen() };
       // The home screen has no view.
-      const view = withViews && workspacePath ? this.views.get(window.webContents.id) : undefined;
+      const view = withViews && place ? this.views.get(window.webContents.id) : undefined;
       return view ? { ...saved, view } : saved;
     });
     this.options.settings.update({ openWindows });
@@ -217,16 +259,19 @@ export class WorkspaceWindows {
     this.views.set(viewer, view);
   }
 
-  /** Focuses the window showing the workspace, or opens one for it. */
-  showWorkspace(workspacePath: string): void {
-    const showing = this.windowShowing(workspacePath);
+  /** Focuses the window showing the place, or opens one for it. */
+  showPlace(place: Place): void {
+    const showing = this.windowShowing(place);
     if (showing) focusWindow(showing);
-    else this.open(workspacePath);
+    else this.open(place);
   }
 
-  /** The window showing the workspace, other than `except`. */
-  windowShowing(workspacePath: string, except?: number): BrowserWindow | undefined {
-    return this.all().find((window) => window.webContents.id !== except && this.shownBy(window.webContents.id) === workspacePath);
+  /** The window showing the place, other than `except`. */
+  windowShowing(place: Place, except?: number): BrowserWindow | undefined {
+    return this.all().find((window) => {
+      const shown = this.shownBy(window.webContents.id);
+      return window.webContents.id !== except && shown !== undefined && samePlace(shown, place);
+    });
   }
 
   /**
@@ -238,17 +283,18 @@ export class WorkspaceWindows {
       this.requestAtLaunch(workspacePath);
       return;
     }
-    const showing = this.windowShowing(workspacePath);
+    const place = workspacePlace(workspacePath);
+    const showing = this.windowShowing(place);
     if (showing) {
       focusWindow(showing);
       return;
     }
     const home = this.all().find((window) => this.shownBy(window.webContents.id) === undefined);
     if (!home) {
-      this.open(workspacePath);
+      this.open(place);
       return;
     }
-    this.requested.set(home.webContents.id, workspacePath);
+    this.requested.set(home.webContents.id, place);
     sendEventTo(home.webContents, 'workspaceOpenRequested', {});
     focusWindow(home);
   }
@@ -258,11 +304,11 @@ export class WorkspaceWindows {
     this.launchRequest = workspacePath;
   }
 
-  /** The workspace the window was asked to open, once. */
-  takeRequested(viewer: number): string | null {
-    const workspacePath = this.requested.get(viewer) ?? null;
+  /** The place the window was asked to open, once. */
+  takeRequested(viewer: number): Place | null {
+    const place = this.requested.get(viewer) ?? null;
     this.requested.delete(viewer);
-    return workspacePath;
+    return place;
   }
 
   /** Hands a window a `uvcs://` link to open (its page takes it: `takeLink`) and brings it forward. */
@@ -280,19 +326,19 @@ export class WorkspaceWindows {
   }
 
   /**
-   * Opens a link in a workspace (`windows.openLinkIn`): the window showing it takes it; else the caller opens both when
-   * it shows the home screen (`openHere`); else a new window on the workspace takes it. A link never takes a window
-   * away from the workspace it shows.
+   * Opens a link in a place (`windows.openLinkIn`): the window showing it takes it; else the caller opens both when it
+   * shows the home screen (`openHere`); else a new window on the place takes it. A link never takes a window away from
+   * the place it shows.
    */
-  openLinkIn(caller: number, workspacePath: string, link: string): 'handedOver' | 'openHere' {
-    const showing = this.windowShowing(workspacePath);
+  openLinkIn(caller: number, place: Place, link: string): 'handedOver' | 'openHere' {
+    const showing = this.windowShowing(place);
     if (showing) {
       this.handLink(showing, link);
       return 'handedOver';
     }
     const callerShowsHome = !this.pages.isPageWindow(caller) && this.byViewer(caller) !== undefined && this.shownBy(caller) === undefined;
     if (callerShowsHome) return 'openHere';
-    this.links.set(this.open(workspacePath).webContents.id, link);
+    this.links.set(this.open(place).webContents.id, link);
     return 'handedOver';
   }
 
@@ -322,14 +368,20 @@ export class WorkspaceWindows {
     else this.open();
   }
 
-  /** The workspace the window shows; a window asked to open one counts as showing it while its page starts. */
-  workspaceIn(window: BrowserWindow): string | undefined {
+  /** The place the window shows; a window asked to open one counts as showing it while its page starts. */
+  placeIn(window: BrowserWindow): Place | undefined {
     return this.shownBy(window.webContents.id);
   }
 
-  /** Whether a window shows the home screen: one whose page shows no workspace and wasn't asked to open one. */
+  /** The workspace the window shows; none for the home screen or a repository explored without one. */
+  workspaceIn(window: BrowserWindow): string | undefined {
+    const place = this.placeIn(window);
+    return (place && workspacePathOf(place)) ?? undefined;
+  }
+
+  /** Whether a window shows the home screen: one whose page shows no place and wasn't asked to open one. */
   showsHomeScreen(): boolean {
-    return this.all().some((window) => this.workspaceIn(window) === undefined);
+    return this.all().some((window) => this.placeIn(window) === undefined);
   }
 
   /** The open workspace windows (and home screens) in the order they were opened, without their page windows. */
@@ -370,9 +422,27 @@ export class WorkspaceWindows {
     if (owner && ownerWindow) sendEventTo(ownerWindow.webContents, 'selectionFollowed', { followed: owner.followed });
   }
 
-  private shownBy(viewer: number): string | undefined {
-    return this.options.workspaceOf(viewer) ?? this.requested.get(viewer);
+  private shownBy(viewer: number): Place | undefined {
+    const workspacePath = this.options.workspaceOf(viewer);
+    if (workspacePath !== undefined) return workspacePlace(workspacePath);
+    const repository = this.explored.get(viewer);
+    return repository !== undefined ? repositoryPlace(repository) : this.requested.get(viewer);
   }
+}
+
+/** A saved window's place: its workspace, or the repository it explored; none for the home screen. */
+function savedPlaceOf({ workspacePath, repository }: SavedWindow): Place | undefined {
+  if (workspacePath) return workspacePlace(workspacePath);
+  return repository ? repositoryPlace(repository) : undefined;
+}
+
+function savedPlaceFields(place: Place | undefined): Pick<SavedWindow, 'workspacePath' | 'repository'> {
+  if (!place) return {};
+  return place.kind === 'workspace' ? { workspacePath: place.workspacePath } : { repository: place.repository };
+}
+
+function placeOfWorkspace(workspacePath: string | undefined): Place | undefined {
+  return workspacePath === undefined ? undefined : workspacePlace(workspacePath);
 }
 
 export function focusWindow(window: BrowserWindow): void {

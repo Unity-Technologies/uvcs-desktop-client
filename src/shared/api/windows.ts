@@ -1,14 +1,20 @@
 import type { PageSeed, PageWindowOpening, PageWindowPage } from '../domain/pageWindow';
+import type { Place } from '../domain/place';
 
 /**
- * One window per workspace, and the page windows it opened (a diff, a history… in a window of its own: `openPage`),
- * which belong to it.
+ * One window per place (a workspace, or a repository explored without one), and the page windows it opened (a diff,
+ * a history… in a window of its own: `openPage`), which belong to it.
  */
 export interface WindowsApi {
-  /** Opens the workspace in a new window, or brings forward the window that already shows it. */
-  openWorkspace(workspacePath: string): Promise<void>;
-  /** Brings forward another window showing the workspace; false when none does (open it here). */
-  focusWorkspace(workspacePath: string): Promise<boolean>;
+  /** Opens the place in a new window, or brings forward the window that already shows it. */
+  openPlace(place: Place): Promise<void>;
+  /** Brings forward another window showing the place; false when none does (open it here). */
+  focusPlace(place: Place): Promise<boolean>;
+  /**
+   * This window explores `repository` without a workspace now, or stopped (null): as watching a workspace
+   * (`workspaces.watch`) tells main the workspace a window shows.
+   */
+  exploring(repository: string | null): Promise<void>;
   /** Opens a new window on the home screen. */
   openHome(): Promise<void>;
   /** Answers `leaveRequested`: the window closes, the app quits or the page reloads as asked; nothing when false. */
@@ -17,7 +23,7 @@ export interface WindowsApi {
   viewShown(view: string): Promise<void>;
   /** Opens the menu bar's menus at a point of the window (in page pixels), where the window has no menu bar (Windows). */
   showAppMenu(position: { x: number; y: number }): Promise<void>;
-  /** Opens a page of the workspace in a window of its own, belonging to this window: it closes with it. */
+  /** Opens a page of the place in a window of its own, belonging to this window: it closes with it. */
   openPage(opening: PageWindowOpening): Promise<void>;
   /**
    * From a page window: it shows what is selected in its workspace window from now on (`selectionToFollow`), or stops.
@@ -36,11 +42,11 @@ export interface WindowsApi {
    */
   takeLink(): Promise<string | null>;
   /**
-   * Opens a link in a workspace (docs/features/deep-links.md, "Opening a link"): a window showing it comes forward and
-   * takes the link (`handedOver`); else this window opens the workspace and the link itself when it shows the home
-   * screen (`openHere`); else a new window opens on the workspace and takes the link (`handedOver`).
+   * Opens a link in a place (docs/features/deep-links.md, "Opening a link"): a window showing it comes forward and
+   * takes the link (`handedOver`); else this window opens the place and the link itself when it shows the home screen
+   * (`openHere`); else a new window opens on the place and takes the link (`handedOver`).
    */
-  openLinkIn(workspacePath: string, link: string): Promise<'handedOver' | 'openHere'>;
+  openLinkIn(place: Place, link: string): Promise<'handedOver' | 'openHere'>;
   /** The workspaces the workspace windows show now, the most recently focused one's first. */
   shownWorkspaces(): Promise<string[]>;
 }

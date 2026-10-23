@@ -1,6 +1,7 @@
+import { workspacePlace } from '@shared/domain/place';
 import '../../testing/fakeWindow';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { startingWorkspaceQuery } from '@shared/startingWorkspace';
+import { startingPlaceQuery } from '@shared/startingPlace';
 import { useNavigation } from '../navigation/navigationStore';
 import { queryClient } from '../queryClient';
 import { openWorkspaceFromAddress } from './openWorkspaceFromAddress';
@@ -22,7 +23,7 @@ function pageWith(query: Record<string, string>) {
 
 describe('openWorkspaceFromAddress', () => {
   it('opens the workspace the window was opened for, and the address forgets it for a reload', () => {
-    const page = pageWith(startingWorkspaceQuery('/work/game'));
+    const page = pageWith(startingPlaceQuery(workspacePlace('/work/game')));
 
     openWorkspaceFromAddress(page);
 
@@ -33,21 +34,21 @@ describe('openWorkspaceFromAddress', () => {
   });
 
   it('opens on Changes, or on the view a window reopened after an update showed', () => {
-    openWorkspaceFromAddress(pageWith(startingWorkspaceQuery('/work/game')));
+    openWorkspaceFromAddress(pageWith(startingPlaceQuery(workspacePlace('/work/game'))));
     expect(useNavigation.getState().view).toBe('changes');
 
-    openWorkspaceFromAddress(pageWith(startingWorkspaceQuery('/work/game', 'branchExplorer')));
+    openWorkspaceFromAddress(pageWith(startingPlaceQuery(workspacePlace('/work/game'), 'branchExplorer')));
     expect(useNavigation.getState().view).toBe('branchExplorer');
   });
 
   it('opens on Changes when the view named is one this version no longer has', () => {
-    openWorkspaceFromAddress(pageWith(startingWorkspaceQuery('/work/game', 'timeline')));
+    openWorkspaceFromAddress(pageWith(startingPlaceQuery(workspacePlace('/work/game'), 'timeline')));
 
     expect(useNavigation.getState().view).toBe('changes');
   });
 
   it('stays on the home screen in a window opened for none', () => {
-    const page = pageWith(startingWorkspaceQuery(undefined));
+    const page = pageWith(startingPlaceQuery(undefined));
 
     openWorkspaceFromAddress(page);
 

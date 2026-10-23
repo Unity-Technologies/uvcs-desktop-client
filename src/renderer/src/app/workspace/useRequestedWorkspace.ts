@@ -11,8 +11,8 @@ import { useOpenWorkspace } from './useOpenWorkspace';
 export function useRequestedWorkspace(): void {
   const openWorkspace = useOpenWorkspace();
   const openRequested = async (): Promise<void> => {
-    const path = await api.system.takeRequestedWorkspace();
-    if (path) openWorkspace(path);
+    const place = await api.system.takeRequestedPlace();
+    if (place?.kind === 'workspace') openWorkspace(place.workspacePath);
   };
 
   useEffect(() => {

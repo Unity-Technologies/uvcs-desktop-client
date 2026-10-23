@@ -1,6 +1,7 @@
+import { workspacePlace } from '@shared/domain/place';
 import { fakeApi } from '../../testing/fakeWindow';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { startingWorkspaceQuery } from '@shared/startingWorkspace';
+import { startingPlaceQuery } from '@shared/startingPlace';
 
 vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 vi.mock('../home/dialogs/CreateWorkspaceDialog', () => ({ openCreateWorkspaceDialog: vi.fn() }));
@@ -22,17 +23,17 @@ afterEach(() => {
 
 describe('openUnlessShownElsewhere', () => {
   it('brings forward the window that already shows the workspace instead of opening it twice', async () => {
-    fakeApi.answer('windows.focusWorkspace', () => true);
+    fakeApi.answer('windows.focusPlace', () => true);
     const open = vi.fn();
 
     await openUnlessShownElsewhere('/ws', open);
 
     expect(open).not.toHaveBeenCalled();
-    expect(fakeApi.methods()).toEqual(['windows.focusWorkspace']);
+    expect(fakeApi.methods()).toEqual(['windows.focusPlace']);
   });
 
   it('opens the workspace on its Changes view and remembers it as recent', async () => {
-    fakeApi.answer('windows.focusWorkspace', () => false);
+    fakeApi.answer('windows.focusPlace', () => false);
     fakeApi.answer('settings.rememberRecentWorkspace', () => undefined);
     fakeApi.answer('system.addRecentDocument', () => undefined);
     useNavigation.setState({ view: 'branches', pages: [] });
@@ -51,7 +52,7 @@ describe('returnToWorkspace', () => {
   afterEach(() => useNavigation.setState({ view: 'changes', pages: [] }));
 
   it('opens the workspace the window left on the view and pages it showed', async () => {
-    fakeApi.answer('windows.focusWorkspace', () => false);
+    fakeApi.answer('windows.focusPlace', () => false);
     const pages: Page[] = [{ kind: 'codeReview', reviewId: 7 }];
     useNavigation.setState({ view: 'branchExplorer', pages });
     const open = vi.fn();
@@ -60,11 +61,11 @@ describe('returnToWorkspace', () => {
 
     expect(open).toHaveBeenCalledWith('/ws');
     expect(useNavigation.getState()).toMatchObject({ view: 'branchExplorer', pages });
-    expect(fakeApi.methods()).toEqual(['windows.focusWorkspace']);
+    expect(fakeApi.methods()).toEqual(['windows.focusPlace']);
   });
 
   it('brings forward the window that opened it meanwhile instead of opening it twice', async () => {
-    fakeApi.answer('windows.focusWorkspace', () => true);
+    fakeApi.answer('windows.focusPlace', () => true);
     const open = vi.fn();
 
     await returnToWorkspace('/ws', open);
@@ -80,10 +81,10 @@ describe('a window reopened on a view after an update', () => {
   });
 
   it("keeps the view once the main process's request for its workspace comes, which only remembers it as recent", async () => {
-    fakeApi.answer('windows.focusWorkspace', () => false);
+    fakeApi.answer('windows.focusPlace', () => false);
     fakeApi.answer('settings.rememberRecentWorkspace', () => undefined);
     fakeApi.answer('system.addRecentDocument', () => undefined);
-    const location = { search: `?${new URLSearchParams(startingWorkspaceQuery('/ws', 'branchExplorer'))}`, pathname: '/index.html' };
+    const location = { search: `?${new URLSearchParams(startingPlaceQuery(workspacePlace('/ws'), 'branchExplorer'))}`, pathname: '/index.html' };
     // Replacing the address drops its query, as a browser does.
     openWorkspaceFromAddress({ location, history: { replaceState: () => void (location.search = '') } });
 

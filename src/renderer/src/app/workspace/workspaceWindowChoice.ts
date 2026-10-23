@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import { api } from '../../api/client';
 
 /** Where a workspace picked from a list opens: in this window, or in a new one beside it. */
@@ -22,13 +23,13 @@ export function windowAskedBy(event: HeldModifiers, { missing = false }: { missi
 }
 
 /**
- * Opens a workspace here with `openHere` (`useOpenWorkspace`), or in a new window: `windows.openWorkspace` brings
+ * Opens a workspace here with `openHere` (`useOpenWorkspace`), or in a new window: `windows.openPlace` brings
  * forward the window that already shows it instead (one window per workspace), and the new window remembers it as
  * recent as it opens it (`useRequestedWorkspace`).
  */
 export function workspaceOpener(openHere: (path: string) => void): OpenWorkspaceIn {
   return (path, where) => {
-    if (where === 'newWindow') void api.windows.openWorkspace(path);
+    if (where === 'newWindow') void api.windows.openPlace(workspacePlace(path));
     else openHere(path);
   };
 }

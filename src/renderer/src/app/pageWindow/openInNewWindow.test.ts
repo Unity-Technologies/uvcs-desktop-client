@@ -34,7 +34,7 @@ describe('moving a page to a new window', () => {
     movePageToNewWindow(DIFF);
 
     expect(fakeApi.argsOf('windows.openPage')).toEqual([
-      [{ workspacePath: WORKSPACE, page: { ...DIFF, focusPath: 'src/player.cs' }, diff: { target: TARGET, entries: [PLAYER] } }],
+      [{ place: workspacePlace(WORKSPACE), page: { ...DIFF, focusPath: 'src/player.cs' }, diff: { target: TARGET, entries: [PLAYER] } }],
     ]);
     expect(useNavigation.getState().pages).toEqual([]);
   });
@@ -44,6 +44,6 @@ describe('moving a page to a new window', () => {
 
     movePageToNewWindow(DIFF);
 
-    expect(fakeApi.argsOf('windows.openPage')).toEqual([[{ workspacePath: WORKSPACE, page: DIFF }]]);
+    expect(fakeApi.argsOf('windows.openPage')).toEqual([[{ place: workspacePlace(WORKSPACE), page: DIFF }]]);
   });
 });

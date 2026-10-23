@@ -1,5 +1,4 @@
 import { BrowserWindow, webContents } from 'electron';
-import { workspacePlace } from '@shared/domain/place';
 import type { WindowsApi } from '@shared/api/windows';
 import { callerId } from '../ipc/caller';
 import { popUpAppMenu } from '../window/appMenu';
@@ -9,12 +8,13 @@ import type { ServiceContext } from './ServiceContext';
 
 export function createWindowsService({ windows, handedOverDiffs }: ServiceContext): WindowsApi {
   return {
-    openWorkspace: async (workspacePath) => windows.showWorkspace(workspacePath),
-    focusWorkspace: async (workspacePath) => {
-      const other = windows.windowShowing(workspacePath, callerId());
+    openPlace: async (place) => windows.showPlace(place),
+    focusPlace: async (place) => {
+      const other = windows.windowShowing(place, callerId());
       if (other) focusWindow(other);
       return Boolean(other);
     },
+    exploring: async (repository) => windows.repositoryShown(callerId(), repository ?? undefined),
     openHome: async () => void windows.open(),
     continueLeaving: async (canLeave) => continueLeaving(callerId(), canLeave),
     viewShown: async (view) => windows.viewShown(callerId(), view),
@@ -23,16 +23,16 @@ export function createWindowsService({ windows, handedOverDiffs }: ServiceContex
       const window = caller && BrowserWindow.fromWebContents(caller);
       if (window) popUpAppMenu(window, position);
     },
-    openPage: async ({ workspacePath, page, diff, seed }) => {
-      if (diff) handedOverDiffs.hand(workspacePlace(workspacePath), diff.target, diff.entries);
-      windows.openPage(callerId(), { workspacePath, page, seed });
+    openPage: async ({ place, page, diff, seed }) => {
+      if (diff) handedOverDiffs.hand(place, diff.target, diff.entries);
+      windows.openPage(callerId(), { place, page, seed });
     },
     followSelection: async (following) => windows.follow(callerId(), following),
     selectionShown: async (page, seed) => windows.selectionShown(callerId(), page, seed),
     showWorkspaceWindow: async (commandId) => windows.showWorkspaceWindow(callerId(), commandId),
     openPageInWorkspaceWindow: async (page) => windows.openInWorkspaceWindow(callerId(), page),
     takeLink: async () => windows.takeLink(callerId()),
-    openLinkIn: async (workspacePath, link) => windows.openLinkIn(callerId(), workspacePath, link),
+    openLinkIn: async (place, link) => windows.openLinkIn(callerId(), place, link),
     shownWorkspaces: async () => windows.shownWorkspaces(),
   };
 }

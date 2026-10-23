@@ -1,7 +1,7 @@
 import '../../testing/fakeWindow';
 import { afterEach, describe, expect, it } from 'vitest';
 import { workspacePlace } from '@shared/domain/place';
-import { pageWindowQuery, startingWorkspaceQuery } from '@shared/startingWorkspace';
+import { pageWindowQuery, startingPlaceQuery } from '@shared/startingPlace';
 import { useNavigation } from '../navigation/navigationStore';
 import type { Page } from '../navigation/pages';
 import { queryClient } from '../queryClient';
@@ -24,7 +24,7 @@ describe('openPageWindowFromAddress', () => {
   it('starts a page window on its page, in its workspace, without checking its folder again', () => {
     const page: Page = { kind: 'diff', title: 'Changeset 7', target: { kind: 'changeset', changesetId: 7 } };
 
-    expect(openPageWindowFromAddress(addressOf(pageWindowQuery('/work/game', page)))).toBe(true);
+    expect(openPageWindowFromAddress(addressOf(pageWindowQuery(workspacePlace('/work/game'), page)))).toBe(true);
 
     expect(useSession.getState().workspacePath).toBe('/work/game');
     expect(useNavigation.getState().pages).toEqual([page]);
@@ -36,14 +36,14 @@ describe('openPageWindowFromAddress', () => {
     const shelve = { id: 4, guid: 'g4', comment: 'Wip', owner: 'ana', date: '2026-10-01T10:00:00Z', parentChangeset: 9, repository: 'game@local' };
     const page: Page = { kind: 'diff', title: 'Shelve 4', target: { kind: 'shelve', shelveId: 4 } };
 
-    openPageWindowFromAddress(addressOf(pageWindowQuery('/work/game', page, { readAt: 1_700_000_000_000, shelve })));
+    openPageWindowFromAddress(addressOf(pageWindowQuery(workspacePlace('/work/game'), page, { readAt: 1_700_000_000_000, shelve })));
 
     expect(cachedShelve(workspacePlace('/work/game'), 4)).toEqual(shelve);
   });
 
   it("leaves a workspace window to start as before, and a page that can't show in a window of its own", () => {
-    expect(openPageWindowFromAddress(addressOf(startingWorkspaceQuery('/work/game')))).toBe(false);
-    expect(openPageWindowFromAddress(addressOf(pageWindowQuery('/work/game', { kind: 'merge', request: {} })))).toBe(false);
+    expect(openPageWindowFromAddress(addressOf(startingPlaceQuery(workspacePlace('/work/game'))))).toBe(false);
+    expect(openPageWindowFromAddress(addressOf(pageWindowQuery(workspacePlace('/work/game'), { kind: 'merge', request: {} })))).toBe(false);
 
     expect(useSession.getState().workspacePath).toBeNull();
     expect(usePageWindow.getState().isPageWindow).toBe(false);
