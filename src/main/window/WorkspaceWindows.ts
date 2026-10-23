@@ -243,7 +243,7 @@ export class WorkspaceWindows {
       focusWindow(showing);
       return;
     }
-    const home = this.all().find((window) => this.shownBy(window.webContents.id) === undefined);
+    const home = this.homeWindow();
     if (!home) {
       this.open(workspacePath);
       return;
@@ -290,8 +290,7 @@ export class WorkspaceWindows {
       this.handLink(showing, link);
       return 'handedOver';
     }
-    const callerShowsHome = !this.pages.isPageWindow(caller) && this.byViewer(caller) !== undefined && this.shownBy(caller) === undefined;
-    if (callerShowsHome) return 'openHere';
+    if (this.showsHome(caller)) return 'openHere';
     this.links.set(this.open(workspacePath).webContents.id, link);
     return 'handedOver';
   }
@@ -302,8 +301,8 @@ export class WorkspaceWindows {
    * never takes a window away from the workspace it shows.
    */
   openLinkAtHome(caller: number, link: string): 'handedOver' | 'openHere' {
-    if (!this.pages.isPageWindow(caller) && this.byViewer(caller) !== undefined && this.shownBy(caller) === undefined) return 'openHere';
-    const home = this.all().find((window) => this.shownBy(window.webContents.id) === undefined);
+    if (this.showsHome(caller)) return 'openHere';
+    const home = this.homeWindow();
     if (home) this.handLink(home, link);
     else this.links.set(this.open().webContents.id, link);
     return 'handedOver';
@@ -368,6 +367,16 @@ export class WorkspaceWindows {
   private ownerWindowOf(pageWindow: number): BrowserWindow | undefined {
     const ownerId = this.pages.ownerOf(pageWindow);
     return ownerId === undefined ? undefined : this.byViewer(ownerId);
+  }
+
+  /** Whether the window is a workspace window showing the home screen (a page window never is). */
+  private showsHome(viewer: number): boolean {
+    return !this.pages.isPageWindow(viewer) && this.byViewer(viewer) !== undefined && this.shownBy(viewer) === undefined;
+  }
+
+  /** A workspace window showing the home screen, if any. */
+  private homeWindow(): BrowserWindow | undefined {
+    return this.all().find((window) => this.shownBy(window.webContents.id) === undefined);
   }
 
   private byViewer(viewer: number): BrowserWindow | undefined {

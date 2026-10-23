@@ -199,6 +199,18 @@ describe('a link opened in a workspace (docs/features/deep-links.md)', () => {
     expect(windows.workspaceIn(asBrowserWindow(tools))).toBe(TOOLS);
   });
 
+  it('never opens a link to repositories in a page window, which has no home screen', () => {
+    const { windows, open, shows } = setUp();
+    const game = open();
+    shows(game, GAME);
+    const page = windows.openPage(game.webContents.id, { workspacePath: GAME, page: { kind: 'history', path: 'a.cs' } }) as unknown as FakeWindow;
+
+    expect(windows.openLinkAtHome(page.webContents.id, SERVER_LINK)).toBe('handedOver');
+    const opened = fakeElectron.windows().at(-1)!;
+    expect(opened).not.toBe(page);
+    expect(windows.takeLink(opened.webContents.id)).toBe(SERVER_LINK);
+  });
+
   it('opens a new window on the home screen for a link to repositories when every window shows a workspace', () => {
     const { windows, open, shows } = setUp();
     const tools = open();
