@@ -272,6 +272,15 @@ it deletes is still in the workspace (`diffEntryMenu` without `workspaceReposito
 `scripts/sandboxes/deletes.sh` builds changesets that delete a file, a folder, an accented name, a path a new file
 took, and (cs:5) 25 files one by one, more than are restored without asking.
 
+## Keeping the place
+
+Switching how a text diff lays its lines out (unchanged lines collapsed or all shown, Split or Unified, wrapped or
+not) keeps the line at the top of the view where its row stood, so the code being read doesn't move (`useKeptPlace`,
+`keptPlace`). The line is read from the screen as the preference changes, before the diff draws again, and put back
+once Pierre laid the lines out anew, rendered or not (`scrollToLine`); a line that collapsing hides puts the bar
+standing for it there. Only a switch that changes what's drawn keeps it (`relaysOut`, from the layout as drawn,
+`linesLayoutOf`): not wrapping a file a long line already wraps, nor collapsing one a link's lines unfold.
+
 ## Moving through changes
 
 Every text diff of two versions steps through its changes (`useChangeNavigation`: the

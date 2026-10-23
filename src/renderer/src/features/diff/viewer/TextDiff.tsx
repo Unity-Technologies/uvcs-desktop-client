@@ -13,7 +13,8 @@ import type { EditorHandle } from './editorHandle';
 import { attachesEditor, heldModifiedText, type HeldText } from './editorAttachment';
 import { escapeWhileTyping } from './escapeWhileTyping';
 import { useHighlightWorkers } from './highlightWorkers';
-import { collapsesUnchanged, linesSelectable, shownSelection } from './lineLinkMode';
+import { linesLayoutOf } from './keptPlace';
+import { linesSelectable, shownSelection } from './lineLinkMode';
 import { selectedRangeOf } from './linkedLines';
 import { scrollToLine } from './lineScroll';
 import { useLineLinks } from './useLineLinks';
@@ -33,6 +34,7 @@ import { caretLineCss, shownDiff, type DiffSides } from './shownDiff';
 import { highlightedLanguage, syntaxHighlighting } from './syntaxHighlighting';
 import { useBlockDiscard } from './useBlockDiscard';
 import { useChangeView } from './useChangeView';
+import { useKeptPlace } from './useKeptPlace';
 import type { DiscardRequest } from './useLineDiscarding';
 import { useMovedCode } from './useMovedCode';
 import { usePierreEditor } from './usePierreEditor';
@@ -113,7 +115,6 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   const theme = useResolvedTheme();
   const preferences = useDiffPreferences();
   const { layout } = preferences;
-  const wrapLines = preferences.wrapLines || wrapsLongLines;
   const container = useRef<HTMLDivElement | null>(null);
   // Every diff (and the whole file) renders only the lines in view: files can be huge, and what's drawn again (a typing
   // pause's word marks, a line added, a theme switch) costs only those lines.
@@ -168,7 +169,9 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     shown: canHighlight,
     scrollTo: (element, line) => scrollToLine(element, line, virtualizer),
   });
-  const collapseUnchanged = collapsesUnchanged(preferences.collapseUnchanged, lineLinks.focusLines);
+  const layoutOverrides = { wrapsLongLines, focusLines: lineLinks.focusLines };
+  const shownLayout = linesLayoutOf(preferences, layoutOverrides);
+  const { collapseUnchanged, wrapLines } = shownLayout;
   // A workspace file's diff marks a link's lines as Pierre's selection until lines are picked to discard.
   const markedLines = useMemo(() => (lineLinks.focusLines ? selectedRangeOf(lineLinks.focusLines) : null), [lineLinks.focusLines]);
   const discard = useBlockDiscard({
@@ -213,6 +216,8 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   const fileOptions = useMemo(() => ({ ...pierreFileOptions({ theme, wrapLines }), tokenizeMaxLength }), [theme, wrapLines, tokenizeMaxLength]);
   useShadowStyle(container, [SHADOW_CSS, showsNoNewlineMarker(original, diffedText) ? '' : HIDE_NO_NEWLINE_CSS, editable ? caretLineCss(shownText(diffedText)) : ''].join('\n'));
   const pointerFocus = usePointerFocusMark();
+  // Switching how the lines are laid out keeps the line at the top where it was.
+  useKeptPlace({ containerRef: container, virtualizer, shown: shownLayout, overrides: layoutOverrides });
   useChangeView({ changeViewRef, containerRef: container, virtualizer, editor, pickChange: discard.pickChange });
   const isTyping = (): boolean => isTypingIn(container.current);
 
