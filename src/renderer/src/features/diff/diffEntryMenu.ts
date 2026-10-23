@@ -37,11 +37,11 @@ export function diffEntryMenu(place: Place, target: DiffTarget, entries: DiffEnt
   const workspacePath = workspacePathOf(place);
   const revert = workspacePath === null ? null : revertFromDiffEntry(workspacePath, target, entries, workspaceRepository);
   const restore = workspacePath === null ? [] : restoreMenuEntries(workspacePath, entries, diffEntries, workspaceRepository);
-  return changedFileMenu(place, entries.map((entry) => changedFileOf(workspacePath, target, entry, entries.length === 1)), [review ? reviewMenuEntry(entries, review) : null, revert, ...restore, ...added]);
+  return changedFileMenu(place, entries.map((entry) => changedFileOf(place, target, entry, entries.length === 1)), [review ? reviewMenuEntry(entries, review) : null, revert, ...restore, ...added]);
 }
 
 /** A diff's file as its menu needs it: the newer revision, or else the older one (a deleted file's), and its link there. */
-function changedFileOf(workspacePath: string | null, target: DiffTarget, entry: DiffEntry, single: boolean): ChangedFile {
+function changedFileOf(place: Place, target: DiffTarget, entry: DiffEntry, single: boolean): ChangedFile {
   const revision = revisionIn(entry.repository, entry.revisionId) ?? revisionIn(entry.repository, entry.baseRevisionId);
   const object = single ? diffTargetObject(target) : null;
   return {
@@ -49,6 +49,6 @@ function changedFileOf(workspacePath: string | null, target: DiffTarget, entry: 
     history: single ? diffEntryHistory(target, entry) : null,
     annotation: single ? diffEntryAnnotation(target, entry) : null,
     version: entry.itemType !== 'directory' && revision ? { kind: 'revision', revision, fileName: entry.path } : null,
-    ...(object && workspacePath !== null && { link: linkCopyText(workspacePath, undefined, { object, page: { kind: 'diffFile', path: `/${entry.path}` } }) }),
+    ...(object && { link: linkCopyText(place, undefined, { object, page: { kind: 'diffFile', path: `/${entry.path}` } }) }),
   };
 }

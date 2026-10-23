@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import { useRenameCommand } from '../../app/commands/useRenameCommand';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
-import { usePlace, useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ObjectListView } from '../../components/ObjectListView';
 import { useWorkspaceUser } from '../../app/account/accounts';
@@ -40,7 +40,6 @@ import { branchCopyTexts } from './branchMenu';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
 
 export function BranchesView() {
-  const workspacePath = useWorkspacePath();
   const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
   const filters = useBranchesViewStore();
@@ -63,7 +62,7 @@ export function BranchesView() {
     [layout, matching, collapsed],
   );
   useRenameCommand('Branches', 'branch', selection.selected.size === 1 ? selected : undefined, (branch) => void renameBranch(place, branch));
-  useCopyCommand('Branches', 'Branch', selection.selected.size === 1 && selected ? branchCopyTexts(workspacePath, selected) : undefined);
+  useCopyCommand('Branches', 'Branch', selection.selected.size === 1 && selected ? branchCopyTexts(place, selected) : undefined);
 
   // From the selected branch's head, or else from what the workspace has loaded (nothing listed, a label loaded).
   const newBranch = (): void => {

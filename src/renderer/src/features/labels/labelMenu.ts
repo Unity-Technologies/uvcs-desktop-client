@@ -25,10 +25,10 @@ import {
 } from './labelOperations';
 
 /** What a label is copied as, first what ⌘C copies: `v1.0`, `lb:v1.0`, `lb:v1.0@repo@server`, its comment. */
-export function labelCopyTexts(workspacePath: string, label: Pick<LabelInfo, 'name' | 'comment' | 'repository'>): CopyTexts {
+export function labelCopyTexts(place: Place, label: Pick<LabelInfo, 'name' | 'comment' | 'repository'>): CopyTexts {
   return {
     name: label.name,
-    link: linkCopyText(workspacePath, label.repository, { object: { kind: 'label', name: label.name } }),
+    link: linkCopyText(place, label.repository, { object: { kind: 'label', name: label.name } }),
     spec: spec.label(label.name),
     fullSpec: label.repository && `${spec.label(label.name)}@${label.repository}`,
     comment: label.comment.trim(),
@@ -55,11 +55,11 @@ export function labelMenu(place: Place, labels: LabelInfo[], host: MenuHost = {}
     single && workspacePath !== null && menuAction('mergeTo', () => void mergeTo(spec.label(single.name), single.name)),
     single && menuAction('newBranch', () => void createBranchFromLabel(place, single).then((name) => name && host.onBranchCreated?.(name))),
     single && menuAction('compare', () => void diffWithAnotherLabel(single), { label: 'Compare with another label…' }),
-    single && workspacePath !== null && menuAction('browse', () => browseLabel(single), { label: 'Browse repository at this label' }),
+    single && menuAction('browse', () => browseLabel(single), { label: 'Browse repository at this label' }),
     single &&
       !host.inBranchExplorer &&
       menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'label', name: single.name, changeset: single.changeset, date: single.date })),
-    single && workspacePath !== null && copySubmenu('Label', labelCopyTexts(workspacePath, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
+    single && copySubmenu('Label', labelCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     single && menuAction('rename', () => void renameLabel(place, single), { shortcut: hotkey('rename') }),
     single && menuAction('permissions', () => openObjectPermissions(place, 'label', single)),
     menuAction('delete', () => void deleteLabels(place, labels), single ? {} : { label: `Delete ${labels.length} labels…` }),

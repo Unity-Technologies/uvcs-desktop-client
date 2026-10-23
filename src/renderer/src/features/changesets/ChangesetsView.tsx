@@ -1,6 +1,5 @@
 import { GitCommitVertical } from 'lucide-react';
 import { useMemo } from 'react';
-import { workspacePathOf } from '@shared/domain/place';
 import type { Changeset } from '@shared/domain/changeset';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
@@ -50,7 +49,6 @@ const ownerOf = (changeset: Changeset): string => changeset.owner;
 
 export function ChangesetsView() {
   const place = usePlace();
-  const workspacePath = workspacePathOf(place);
   const { data: workspace } = useWorkspaceInfo();
   const filters = useChangesetFilters();
   const { text, update } = filters;
@@ -77,7 +75,7 @@ export function ChangesetsView() {
   );
   const selected = visible.filter((changeset) => selection.selected.has(changesetKey(changeset)));
   const focused = visible.find((changeset) => changesetKey(changeset) === selection.anchor);
-  useCopyCommand('Changesets', 'Changeset', selected.length === 1 && workspacePath !== null ? changesetCopyTexts(workspacePath, selected[0]!) : undefined);
+  useCopyCommand('Changesets', 'Changeset', selected.length === 1 ? changesetCopyTexts(place, selected[0]!) : undefined);
   const columns = useMemo(() => changesetColumns(workspace?.loadedChangeset, labelsByChangeset), [workspace?.loadedChangeset, labelsByChangeset]);
   const menuContext = { place, loadedChangeset: workspace?.loadedChangeset, loadedBranch: currentBranch };
 

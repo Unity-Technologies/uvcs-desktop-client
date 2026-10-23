@@ -1,6 +1,5 @@
 import { Plus, Tag } from 'lucide-react';
 import { useMemo } from 'react';
-import { workspacePathOf } from '@shared/domain/place';
 import type { Label } from '@shared/domain/label';
 import { useRenameCommand } from '../../app/commands/useRenameCommand';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
@@ -54,7 +53,6 @@ const COLUMNS: Column<Label>[] = [
 
 export function LabelsView() {
   const place = usePlace();
-  const workspacePath = workspacePathOf(place);
   const filters = useLabelsViewStore();
   const { text: search, people, since, update } = filters;
   const me = useWorkspaceUser();
@@ -69,7 +67,7 @@ export function LabelsView() {
   );
   const selected = visible.find((label) => labelKey(label) === selection.anchor);
   useRenameCommand('Labels', 'label', selection.selected.size === 1 ? selected : undefined, (label) => void renameLabel(place, label));
-  useCopyCommand('Labels', 'Label', selection.selected.size === 1 && selected && workspacePath !== null ? labelCopyTexts(workspacePath, selected) : undefined);
+  useCopyCommand('Labels', 'Label', selection.selected.size === 1 && selected ? labelCopyTexts(place, selected) : undefined);
   const filtering = isFiltering(filters);
 
   return (

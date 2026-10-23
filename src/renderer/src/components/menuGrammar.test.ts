@@ -281,11 +281,11 @@ describe('menus without a workspace', () => {
   });
 
   it("keeps what changes the server's objects, as in a workspace", () => {
-    expect(ids(REPOSITORY_MENUS.repositoryBranch!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'changesets', 'rename', 'hide', 'delete']));
-    expect(ids(REPOSITORY_MENUS.repositoryChangeset!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'compare', 'editComment', 'move', 'delete']));
+    expect(ids(REPOSITORY_MENUS.repositoryBranch!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'changesets', 'copy', 'rename', 'hide', 'delete']));
+    expect(ids(REPOSITORY_MENUS.repositoryChangeset!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'compare', 'browse', 'copy', 'editComment', 'move', 'delete']));
     expect(ids(REPOSITORY_MENUS.repositoryChangesetInterval!())).toEqual(['diffRange']);
     expect(ids(REPOSITORY_MENUS.repositoryChangeset!())).toContain('newLabel');
-    expect(ids(REPOSITORY_MENUS.repositoryLabel!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'compare', 'rename', 'delete']));
+    expect(ids(REPOSITORY_MENUS.repositoryLabel!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'compare', 'browse', 'copy', 'rename', 'delete']));
     expect(ids(REPOSITORY_MENUS.repositoryCodeReview!())).toEqual(expect.arrayContaining(['openReview', 'status', 'assign', 'delete']));
     expect(ids(REPOSITORY_MENUS.repositoryBranch!())).toContain('newCodeReview');
   });

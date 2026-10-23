@@ -12,8 +12,8 @@ import { codeReviewPage, deleteReviews, openReview, reassignReview, setReviewSta
 import { reviewedCodeAction } from './reviewedCode';
 
 /** What a code review is copied as, first what ⌘C copies: its number, then its title. */
-export function codeReviewCopyTexts(workspacePath: string, review: Pick<CodeReviewSummary, 'id' | 'title'>): CopyTexts {
-  return { number: String(review.id), title: review.title.trim(), link: linkCopyText(workspacePath, undefined, { object: { kind: 'codeReview', id: review.id } }) };
+export function codeReviewCopyTexts(place: Place, review: Pick<CodeReviewSummary, 'id' | 'title'>): CopyTexts {
+  return { number: String(review.id), title: review.title.trim(), link: linkCopyText(place, undefined, { object: { kind: 'codeReview', id: review.id } }) };
 }
 
 /**
@@ -49,9 +49,7 @@ export function codeReviewMenu(place: Place, reviews: CodeReviewSummary[], works
         })),
       ),
     single && menuAction('assign', () => void reassignReview(place, single)),
-    single &&
-      workspacePath !== null &&
-      copySubmenu('Code review', codeReviewCopyTexts(workspacePath, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
+    single && copySubmenu('Code review', codeReviewCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     menuAction('delete', () => void deleteReviews(place, reviews), single ? {} : { label: `Delete ${reviews.length} reviews…` }),
   ]);
 }

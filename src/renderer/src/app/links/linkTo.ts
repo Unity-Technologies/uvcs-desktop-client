@@ -1,3 +1,4 @@
+import type { Place } from '@shared/domain/place';
 import type { DiffTarget } from '@shared/domain/diff';
 import { formatLink, writesAsLink } from '@shared/links/formatLink';
 import type { LinkObject } from '@shared/links/link';
@@ -21,12 +22,13 @@ export function workspaceLinkTo(workspacePath: string, target: LinkTarget): () =
 }
 
 /**
- * What a link copies: the object's own repository when known (it may be an xlinked one), else the workspace's; null
- * for a name no link can carry (`writesAsLink`).
+ * What a link copies: the object's own repository when known (it may be an xlinked one), else the place's (a
+ * repository's own, or a workspace's from its info); null for a name no link can carry (`writesAsLink`).
  */
-export function linkCopyText(workspacePath: string, repository: string | undefined, target: LinkTarget): string | (() => Promise<string>) | null {
+export function linkCopyText(place: Place, repository: string | undefined, target: LinkTarget): string | (() => Promise<string>) | null {
   if (!isWritable(target)) return null;
-  return repository ? repositoryLinkTo(repository, target) : workspaceLinkTo(workspacePath, target);
+  if (repository) return repositoryLinkTo(repository, target);
+  return place.kind === 'repository' ? repositoryLinkTo(place.repository, target) : workspaceLinkTo(place.workspacePath, target);
 }
 
 /** Whether a link can name the target (`writesAsLink`), whatever repository it's in. */

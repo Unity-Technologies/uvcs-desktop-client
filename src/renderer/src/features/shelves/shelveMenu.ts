@@ -13,10 +13,10 @@ import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialo
 import { applyShelve, deleteShelve, shelveDiffPage, showShelveChanges } from './shelveOperations';
 
 /** What a shelve is copied as, first what ⌘C copies: `3`, `sh:3`, `sh:3@repo@server`, its comment and GUID. */
-export function shelveCopyTexts(workspacePath: string, shelve: ShelveInfo): CopyTexts {
+export function shelveCopyTexts(place: Place, shelve: ShelveInfo): CopyTexts {
   return {
     number: String(shelve.id),
-    link: linkCopyText(workspacePath, shelve.repository, { object: { kind: 'shelve', id: shelve.id } }),
+    link: linkCopyText(place, shelve.repository, { object: { kind: 'shelve', id: shelve.id } }),
     spec: spec.shelve(shelve.id),
     fullSpec: shelve.repository && `${spec.shelve(shelve.id)}@${shelve.repository}`,
     comment: shelve.comment.trim(),
@@ -55,7 +55,7 @@ export function shelveMenu(place: Place, shelves: ShelveInfo[], { left = false, 
     workspacePath !== null && menuAction('apply', () => void apply(workspacePath, left), { label: left ? 'Restore' : 'Apply to workspace' }),
     workspacePath !== null && !left && mine && menuAction('applyAndDelete', () => void apply(workspacePath, true)),
     menuAction('newCodeReview', () => openCreateCodeReviewDialog(place, { kind: 'shelve', value: String(shelve.id), title: splitComment(shelve.comment).summary })),
-    workspacePath !== null && copySubmenu('Shelve', shelveCopyTexts(workspacePath, shelve), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
+    copySubmenu('Shelve', shelveCopyTexts(place, shelve), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     mine &&
       menuAction('delete', async () => {
         if ((await deleteShelve(place, shelve.id)) && onDeleted) onDeleted();

@@ -1,6 +1,5 @@
 import { Archive } from 'lucide-react';
 import { useMemo } from 'react';
-import { workspacePathOf } from '@shared/domain/place';
 import type { Shelve } from '@shared/domain/shelve';
 import { spec } from '@shared/domain/specs';
 import { useWorkspaceUser } from '../../app/account/accounts';
@@ -45,7 +44,6 @@ const COLUMNS: Column<Shelve>[] = [
 
 export function ShelvesView() {
   const place = usePlace();
-  const workspacePath = workspacePathOf(place);
   const filters = useShelvesViewStore();
   const { text: search, people, update } = filters;
   const me = useWorkspaceUser();
@@ -59,7 +57,7 @@ export function ShelvesView() {
     [shelves, people, me, search],
   );
   const selected = visible.find((shelve) => shelveKey(shelve) === selection.anchor);
-  useCopyCommand('Shelves', 'Shelve', selection.selected.size === 1 && selected && workspacePath !== null ? shelveCopyTexts(workspacePath, selected) : undefined);
+  useCopyCommand('Shelves', 'Shelve', selection.selected.size === 1 && selected ? shelveCopyTexts(place, selected) : undefined);
 
   return (
     <>

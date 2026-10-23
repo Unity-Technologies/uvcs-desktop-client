@@ -1,6 +1,5 @@
 import { CircleDot, MessageSquareCode, Plus, UserCheck } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
-import { workspacePathOf } from '@shared/domain/place';
 import { CODE_REVIEW_STATUSES, MAX_LISTED_CODE_REVIEWS, type CodeReview } from '@shared/domain/codeReview';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
@@ -41,7 +40,6 @@ const ownerOf = (review: CodeReview): string => review.owner;
 
 export function CodeReviewsView() {
   const place = usePlace();
-  const workspacePath = workspacePathOf(place);
   const { data: workspace } = useWorkspaceInfo();
   const filters = useCodeReviewsViewStore();
   const { text: search, people, since, status, assignedToMe, update } = filters;
@@ -68,7 +66,7 @@ export function CodeReviewsView() {
     useMemo<Command[]>(() => [{ id: 'codeReviews.new', group: 'Code reviews', label: 'New code review…', icon: MessageSquareCode, run: newReview }], [newReview]),
   );
   const selected = visible.find((review) => reviewKey(review) === selection.anchor);
-  useCopyCommand('Code reviews', 'Code review', selection.selected.size === 1 && selected && workspacePath !== null ? codeReviewCopyTexts(workspacePath, selected) : undefined);
+  useCopyCommand('Code reviews', 'Code review', selection.selected.size === 1 && selected ? codeReviewCopyTexts(place, selected) : undefined);
 
   const header = (
     <ViewHeader

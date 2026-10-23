@@ -51,7 +51,7 @@ export function historyMenu({ place, path, ofWorkspaceFile, otherRepository, ann
       copySubmenu('Revision', {
         path,
         // The change the revision's changeset made to the file; under an xlink, the path isn't the other repository's.
-        link: inWorkspaceRepository && workspacePath !== null && linkCopyText(workspacePath, undefined, { object: { kind: 'changeset', id: revision.changesetId }, page: { kind: 'diffFile', path: `/${path}` } }),
+        link: inWorkspaceRepository && linkCopyText(place, undefined, { object: { kind: 'changeset', id: revision.changesetId }, page: { kind: 'diffFile', path: `/${path}` } }),
         spec: revision.idSpec,
       }),
   ]);

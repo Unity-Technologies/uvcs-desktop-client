@@ -1,5 +1,5 @@
 import type { ChangesetInfo } from '@shared/domain/changeset';
-import { workspacePathOf, workspacePlace, type Place } from '@shared/domain/place';
+import { workspacePathOf, type Place } from '@shared/domain/place';
 import { spec } from '@shared/domain/specs';
 import { linkCopyText } from '../../app/links/linkTo';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -38,14 +38,14 @@ export interface ChangesetMenuContext {
 }
 
 /** What a changeset is copied as, first what ⌘C copies: `42`, `cs:42`, `cs:42@repo@server`, its comment and GUID. */
-export function changesetCopyTexts(workspacePath: string, changeset: ChangesetInfo, repository = changeset.repository): CopyTexts {
+export function changesetCopyTexts(place: Place, changeset: ChangesetInfo, repository = changeset.repository): CopyTexts {
   return {
     number: String(changeset.id),
-    link: linkCopyText(workspacePath, repository, { object: { kind: 'changeset', id: changeset.id } }),
+    link: linkCopyText(place, repository, { object: { kind: 'changeset', id: changeset.id } }),
     spec: spec.changeset(changeset.id),
     fullSpec: repository && `${spec.changeset(changeset.id)}@${repository}`,
     comment: changeset.comment.trim(),
-    guid: changeset.guid ?? (() => readChangesetGuid(workspacePlace(workspacePath), changeset)),
+    guid: changeset.guid ?? (() => readChangesetGuid(place, changeset)),
   };
 }
 
@@ -85,11 +85,9 @@ function singleChangesetMenu(context: ChangesetMenuContext, changeset: Changeset
     menuAction('newLabel', () => openCreateLabelDialog(place, changeset.id)),
     menuAction('newCodeReview', () => openCreateCodeReviewDialog(place, { kind: 'changeset', value: String(changeset.id) })),
     menuAction('compare', () => void diffWithAnotherChangeset(changeset), { label: 'Compare with another changeset…' }),
-    workspacePath !== null &&
-      menuAction('browse', () => navigation.openPage({ kind: 'browseRepository', changesetId: changeset.id }), { label: 'Browse repository at this changeset' }),
+    menuAction('browse', () => navigation.openPage({ kind: 'browseRepository', changesetId: changeset.id }), { label: 'Browse repository at this changeset' }),
     !host.inBranchExplorer && menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'changeset', id: changeset.id, date: changeset.date })),
-    workspacePath !== null &&
-      copySubmenu('Changeset', changesetCopyTexts(workspacePath, changeset, context.repository), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
+    copySubmenu('Changeset', changesetCopyTexts(place, changeset, context.repository), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     menuAction('editComment', () => void editChangesetComment(place, changeset)),
     menuAction('move', () => void moveChangesetToBranch(place, changeset)),
     menuAction('delete', () => void deleteChangeset(place, changeset)),

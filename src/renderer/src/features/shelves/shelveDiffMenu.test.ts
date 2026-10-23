@@ -77,6 +77,6 @@ describe("a shelve's diff", () => {
     expect(menuOf(shelve('Spike')).appliesHere).toBe(true);
     const inRepository = shelveDiffMenu(repositoryPlace('game@local'), shelve('Spike'), { records: [], me: 'ana@example.com', onApplied: () => {}, onDeleted: () => {} });
     expect(inRepository.appliesHere).toBe(false);
-    expect(ids(inRepository.menu)).toEqual(['newCodeReview', 'delete']);
+    expect(ids(inRepository.menu)).toEqual(['newCodeReview', 'copy', 'delete']);
   });
 });

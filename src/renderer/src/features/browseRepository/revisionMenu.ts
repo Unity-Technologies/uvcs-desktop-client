@@ -1,4 +1,4 @@
-import { workspacePathOf, type Place } from '@shared/domain/place';
+import type { Place } from '@shared/domain/place';
 import type { TreeItem } from '@shared/domain/explorer';
 import { otherRepository } from '@shared/domain/repository';
 import { revisionRef } from '@shared/domain/revision';
@@ -18,17 +18,13 @@ import { openRevision, saveRevisionAs } from '../history/revisionOperations';
  */
 export function revisionMenu(place: Place, changesetId: number, repository: string | undefined, items: TreeItem[]): MenuEntry[] {
   const single = items.length === 1 ? items[0]! : null;
-  const workspacePath = workspacePathOf(place);
   const file = single && single.itemType !== 'directory' ? single : null;
   const singleSpec =
     single && (otherRepository(single.repository, repository) ? spec.revision(single) : spec.serverPathAtChangeset(`/${single.path}`, changesetId));
 
   // The item as it was at the changeset; one under an xlink has no path there to name it by.
   const singleLink =
-    single &&
-    workspacePath !== null &&
-    !otherRepository(single.repository, repository) &&
-    linkCopyText(workspacePath, repository, { object: { kind: 'changeset', id: changesetId }, page: { kind: 'browse', path: `/${single.path}` } });
+    single && !otherRepository(single.repository, repository) && linkCopyText(place, repository, { object: { kind: 'changeset', id: changesetId }, page: { kind: 'browse', path: `/${single.path}` } });
 
   return groupedMenu([
     single && menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path, revision: revisionRef(single) })),
