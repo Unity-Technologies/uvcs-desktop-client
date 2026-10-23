@@ -1,5 +1,5 @@
 import { CODE_REVIEW_STATUSES, type CodeReviewSummary } from '@shared/domain/codeReview';
-import { workspacePathOf, type Place } from '@shared/domain/place';
+import type { Place } from '@shared/domain/place';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { linkCopyText } from '../../app/links/linkTo';
 import { openInNewWindow } from '../../app/pageWindow/openInNewWindow';
@@ -25,9 +25,7 @@ export function codeReviewCopyTexts(place: Place, review: Pick<CodeReviewSummary
 export function codeReviewMenu(place: Place, reviews: CodeReviewSummary[], workspaceOn?: WorkspaceSelector): MenuEntry[] {
   if (reviews.length === 0) return [];
   const single = reviews.length === 1 ? reviews[0]! : null;
-  const workspacePath = workspacePathOf(place);
-  // Bringing the code to the workspace needs one.
-  const reviewedCode = single?.target && workspacePath !== null && reviewedCodeAction(workspacePath, single.target, workspaceOn);
+  const reviewedCode = single?.target && reviewedCodeAction(place, single.target, workspaceOn);
 
   return groupedMenu([
     single && menuAction('openReview', () => openReview(single)),
