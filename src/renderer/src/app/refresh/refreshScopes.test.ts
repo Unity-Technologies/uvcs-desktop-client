@@ -130,11 +130,14 @@ describe('refresh scopes', () => {
     expect(isAffectedByPendingChangeEdit(key('history', 'a.txt'))).toBe(false);
   });
 
-  it('refreshes the workspace, not its locks nor the repository, when deleted items are restored', () => {
+  it('refreshes the workspace, not its locks nor the repository, when a move is recorded by hand', () => {
     expect(isAffectedByRecordedMove(key('pendingChanges'))).toBe(true);
     expect(isAffectedByRecordedMove(key('explorer', 'allPaths'))).toBe(true);
     expect(isAffectedByRecordedMove(key('locks', {}))).toBe(false);
     expect(isAffectedByRecordedMove(key('history', 'a.txt'))).toBe(false);
+  });
+
+  it('refreshes the workspace, not its locks nor the repository, when deleted items are restored', () => {
     expect(isAffectedByRestoredItems(key('pendingChanges'))).toBe(true);
     expect(isAffectedByRestoredItems(key('explorer', 'directory', 'src'))).toBe(true);
     expect(isAffectedByRestoredItems(key('explorer', 'allPaths'))).toBe(true);
