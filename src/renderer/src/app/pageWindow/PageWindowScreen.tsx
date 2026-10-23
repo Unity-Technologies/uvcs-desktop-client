@@ -22,13 +22,13 @@ import { setFollowingSelection, useFollowSelection } from './useFollowSelection'
 import styles from './PageWindowScreen.module.css';
 
 /**
- * A page window: one page of the workspace (a diff, a history…), opened from a workspace window to read beside it,
- * often on another display. Its top bar says what it shows, copies a link to it, and offers to follow that window's
- * selection.
+ * A page window: one page of the place (a diff, a history…), opened from its window to read beside it, often on another
+ * display. Its top bar says what it shows, copies a link to it, and offers to follow that window's selection. A
+ * workspace's follows its disk (`WorkspaceWatch`); a repository explored without one has none.
  */
 export function PageWindowScreen() {
   const pages = useNavigation((state) => state.pages);
-  useWorkspaceWatcher();
+  const inWorkspace = usePlace().kind === 'workspace';
   useFollowSelection();
   usePageWindowCommands();
   useCopyLinkCommand();
@@ -42,6 +42,7 @@ export function PageWindowScreen() {
 
   return (
     <div className={styles.screen}>
+      {inWorkspace && <WorkspaceWatch />}
       <TopBar
         end={
           <>
@@ -61,6 +62,12 @@ export function PageWindowScreen() {
       </main>
     </div>
   );
+}
+
+/** Keeps a workspace's page in step with its disk (`useWorkspaceWatcher`), as its workspace window does. */
+function WorkspaceWatch() {
+  useWorkspaceWatcher();
+  return null;
 }
 
 /** Quiet until turned on: an outlined chip in the top bar's corner, lit while the window follows the selection. */
