@@ -43,7 +43,7 @@ export async function saveVersion(cm: CmClient, copies: Pick<WorkspaceCopies, 'r
   }
   await saveContent(cm, workspacePath, source, target).catch((error: unknown) => {
     // `cm`'s line names the temp file it was to write, which tells the user nothing.
-    throw isPurgedRevisionError(error) ? (error as CmError).withMessage(PURGED_VERSION_MESSAGE) : error;
+    throw isPurgedRevisionError(error, target) ? (error as CmError).withMessage(PURGED_VERSION_MESSAGE) : error;
   });
 }
 

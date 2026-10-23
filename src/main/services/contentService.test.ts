@@ -231,6 +231,13 @@ describe('reading the bytes of a model companion', () => {
     expect(written).toHaveLength(2);
   });
 
+  it('reads one whose content was purged as nothing, as one that is not there: the model shows without it', async () => {
+    const workspace = await newWorkspace();
+    const { service } = content({ cat: fakeCat(() => PURGED), ls: ASSETS_LISTING });
+
+    expect(await service.readBytes(workspace, { kind: 'repositoryPath', path: '/Assets/Barrel.bin', at: 'cs:12' })).toBeNull();
+  });
+
   describe('beside a revision of the model (a History, named at the path it was opened at)', () => {
     /** `cm ls <folder> --tree` as cm answers each folder at the point; a folder the tree hasn't fails as cm does. */
     const listings = (folders: Record<string, string>) => async ({ args }: FakeCmCommand) =>
@@ -250,6 +257,13 @@ describe('reading the bytes of a model companion', () => {
         ['query', 'cat', 'revid:41@eco@local'],
       ]);
       expect(written).toHaveLength(1);
+    });
+
+    it('reads one whose content was purged as purged, as any version read', async () => {
+      const workspace = await newWorkspace();
+      const { service } = content({ cat: fakeCat(() => PURGED), ls });
+
+      expect(await service.read(workspace, binBeside(43))).toEqual(PURGED_CONTENT);
     });
 
     it("reads one in a folder below the model's by its revision in that folder's listing, the model checked in its own", async () => {
