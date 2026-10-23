@@ -65,7 +65,7 @@ export function ShelvesView() {
         title="Shelves"
         count={shelves && visible.length}
         total={shelves?.length}
-        actions={<ViewRefreshButton workspacePath={workspacePath} fetching={isFetching} />}
+        actions={<ViewRefreshButton fetching={isFetching} />}
       >
         <FilterBar
           text={<FilterField value={search} onChange={(text) => update({ text })} placeholder="Filter shelves" />}

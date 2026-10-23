@@ -16,7 +16,7 @@ import styles from './ChangesetPickerDialog.module.css';
 interface PickChangesetOptions {
   title: string;
   /** The changeset not to offer: the one being compared. */
-  exclude: number;
+  exclude?: number;
 }
 
 /**

@@ -16,7 +16,7 @@ describe('api', () => {
   it('resolves with the value main answered', async () => {
     fakeApi.answer('labels.list', () => [{ id: 7 }]);
 
-    await expect(api.labels.list('/ws', {})).resolves.toEqual([{ id: 7 }]);
+    await expect(api.labels.list(workspacePlace('/ws'), {})).resolves.toEqual([{ id: 7 }]);
   });
 
   it('turns a remote error into an ApiError that keeps the failed command for the command log', async () => {

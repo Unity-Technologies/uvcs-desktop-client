@@ -122,7 +122,7 @@ export function labelResult(label: Label, context: ResultContext, match: NameMat
     quality: term ? fuzzyMatchQuality(label.name, term) : undefined,
     detail: `cs:${label.changeset} · ${formatRelativeDate(label.date)}`,
     detailMatches: [],
-    menu: () => labelMenu(workspacePath, [label]),
+    menu: () => labelMenu(workspacePlace(workspacePath), [label]),
     run: () => showLabelChanges(label),
   };
 }

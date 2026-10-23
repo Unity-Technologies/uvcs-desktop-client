@@ -88,7 +88,7 @@ export function LocksView() {
       total={locks?.length}
       actions={
         <>
-          <ViewRefreshButton workspacePath={workspacePath} fetching={isFetching} />
+          <ViewRefreshButton fetching={isFetching} />
           {lockRules && (
             <Button icon={<ExternalLink size={14} />} data-tip={lockRules.tip} onClick={() => openLockRules(lockRules)}>
               Lock rules

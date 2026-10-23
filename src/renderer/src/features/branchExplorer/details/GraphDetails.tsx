@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import { useWorkspaceInfo, useWorkspacePath } from '../../../app/workspace/useWorkspace';
 import type { ObjectLinks } from '../../../components/objectLinks';
 import { NoSelection } from '../../../components/NoSelection';
@@ -42,7 +43,7 @@ export function GraphDetails({ selection, layout, pendingChangeCount, menuFor, g
   };
 
   if (label) {
-    return <LabelDetails key={label.name} workspacePath={workspacePath} label={label} menu={menuFor({ kind: 'label', label, more: [] })} links={links} />;
+    return <LabelDetails key={label.name} place={workspacePlace(workspacePath)} label={label} menu={menuFor({ kind: 'label', label, more: [] })} links={links} />;
   }
   if (node) {
     return <GraphChangesetDetails key={node.changeset.id} node={node} layout={layout} menu={menuFor({ kind: 'changeset', id: node.changeset.id })} links={links} />;

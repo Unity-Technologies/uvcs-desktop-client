@@ -82,7 +82,7 @@ export function BranchesView() {
         total={branches?.length}
         actions={
           <>
-            <ViewRefreshButton workspacePath={workspacePath} fetching={isFetching} />
+            <ViewRefreshButton fetching={isFetching} />
             <Button variant="primary" icon={<GitBranchPlus size={14} />} onClick={newBranch} disabled={!workspace}>
               New branch
             </Button>

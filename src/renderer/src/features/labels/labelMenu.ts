@@ -1,4 +1,5 @@
 import type { LabelInfo } from '@shared/domain/label';
+import { workspacePathOf, type Place } from '@shared/domain/place';
 import { spec } from '@shared/domain/specs';
 import { linkCopyText } from '../../app/links/linkTo';
 import { openInNewWindow } from '../../app/pageWindow/openInNewWindow';
@@ -34,9 +35,14 @@ export function labelCopyTexts(workspacePath: string, label: Pick<LabelInfo, 'na
   };
 }
 
-/** The menu of the selected labels, the same wherever labels show: the Labels view, the Branch Explorer, the top bar, the palette and their details. */
-export function labelMenu(workspacePath: string, labels: LabelInfo[], host: MenuHost = {}): MenuEntry[] {
+/**
+ * The menu of the selected labels, the same wherever labels show: the Labels view, the Branch Explorer, the top bar,
+ * the palette and their details. What needs a workspace (switching to it, merging it in) isn't there for a repository
+ * explored without one.
+ */
+export function labelMenu(place: Place, labels: LabelInfo[], host: MenuHost = {}): MenuEntry[] {
   if (labels.length === 0) return [];
+  const workspacePath = workspacePathOf(place);
   const single = labels.length === 1 ? labels[0]! : null;
   const pair = labels.length === 2 ? ([labels[0]!, labels[1]!] as const) : null;
 
@@ -44,18 +50,18 @@ export function labelMenu(workspacePath: string, labels: LabelInfo[], host: Menu
     single && menuAction('diff', () => showLabelChanges(single)),
     single && menuAction('diffInNewWindow', () => openInNewWindow(labelDiffPage(single))),
     pair && menuAction('diffPair', () => diffLabels(pair[0], pair[1])),
-    single && menuAction('switch', () => void switchToLabel(workspacePath, single), { label: 'Switch to this label' }),
-    single && menuAction('merge', () => mergeFromLabel(single)),
-    single && menuAction('mergeTo', () => void mergeTo(spec.label(single.name), single.name)),
-    single && menuAction('newBranch', () => void createBranchFromLabel(workspacePath, single).then((name) => name && host.onBranchCreated?.(name))),
+    single && workspacePath !== null && menuAction('switch', () => void switchToLabel(workspacePath, single), { label: 'Switch to this label' }),
+    single && workspacePath !== null && menuAction('merge', () => mergeFromLabel(single)),
+    single && workspacePath !== null && menuAction('mergeTo', () => void mergeTo(spec.label(single.name), single.name)),
+    single && menuAction('newBranch', () => void createBranchFromLabel(place, single).then((name) => name && host.onBranchCreated?.(name))),
     single && menuAction('compare', () => void diffWithAnotherLabel(single), { label: 'Compare with another label…' }),
-    single && menuAction('browse', () => browseLabel(single), { label: 'Browse repository at this label' }),
+    single && workspacePath !== null && menuAction('browse', () => browseLabel(single), { label: 'Browse repository at this label' }),
     single &&
       !host.inBranchExplorer &&
       menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'label', name: single.name, changeset: single.changeset, date: single.date })),
-    single && copySubmenu('Label', labelCopyTexts(workspacePath, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
-    single && menuAction('rename', () => void renameLabel(workspacePath, single), { shortcut: hotkey('rename') }),
-    single && menuAction('permissions', () => openObjectPermissions(workspacePath, 'label', single)),
-    menuAction('delete', () => void deleteLabels(workspacePath, labels), single ? {} : { label: `Delete ${labels.length} labels…` }),
+    single && workspacePath !== null && copySubmenu('Label', labelCopyTexts(workspacePath, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
+    single && menuAction('rename', () => void renameLabel(place, single), { shortcut: hotkey('rename') }),
+    single && workspacePath !== null && menuAction('permissions', () => openObjectPermissions(workspacePath, 'label', single)),
+    menuAction('delete', () => void deleteLabels(place, labels), single ? {} : { label: `Delete ${labels.length} labels…` }),
   ]);
 }

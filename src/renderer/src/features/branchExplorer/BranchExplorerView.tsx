@@ -224,7 +224,7 @@ export function BranchExplorerView() {
             inputRef={searchRef}
             onLeave={() => canvasRef.current?.focus()}
           />
-          <ViewRefreshButton workspacePath={workspacePath} fetching={isFetching} />
+          <ViewRefreshButton fetching={isFetching} />
         </>
       }
     >

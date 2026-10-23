@@ -38,7 +38,7 @@ export function graphMenu(target: GraphTarget | null, context: GraphMenuContext)
       return graphBranchMenu(target.lane, context, host);
     case 'label': {
       const { label } = target;
-      return withEntries(labelMenu(context.workspacePath, [labelInfo(context.layout, label, context.repository ?? '')], host), [
+      return withEntries(labelMenu(workspacePlace(context.workspacePath), [labelInfo(context.layout, label, context.repository ?? '')], host), [
         menuAction('labeledChangeset', () => context.goToChangeset(label.changeset)),
       ]);
     }

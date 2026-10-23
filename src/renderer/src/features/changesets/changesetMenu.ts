@@ -82,7 +82,7 @@ function singleChangesetMenu(context: ChangesetMenuContext, changeset: Changeset
         startingPointLabel: `changeset ${changeset.id}`,
       }).then((name) => name && host.onBranchCreated?.(name)),
     ),
-    workspacePath !== null && menuAction('newLabel', () => openCreateLabelDialog(workspacePath, changeset.id)),
+    menuAction('newLabel', () => openCreateLabelDialog(place, changeset.id)),
     workspacePath !== null && menuAction('newCodeReview', () => openCreateCodeReviewDialog(workspacePath, { kind: 'changeset', value: String(changeset.id) })),
     menuAction('compare', () => void diffWithAnotherChangeset(changeset), { label: 'Compare with another changeset…' }),
     workspacePath !== null &&

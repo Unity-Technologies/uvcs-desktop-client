@@ -33,7 +33,7 @@ beforeEach(() => {
 describe('opening permissions from the menus', () => {
   it("opens a branch's, a label's and an attribute's, in their repository, with the owner their list read", () => {
     entry(branchMenu(workspacePlace(ws), [{ id: 1, name: '/main/task', parent: '/main', comment: '', owner: 'ana', date: '', headChangeset: 3, repository: 'game@local' }], '/main'), 'permissions')!.run();
-    entry(labelMenu(ws, [{ name: 'v1', changeset: 3, branch: '/main', comment: '', owner: 'bob', date: '', repository: 'other@acme@cloud' }]), 'permissions')!.run();
+    entry(labelMenu(workspacePlace(ws), [{ name: 'v1', changeset: 3, branch: '/main', comment: '', owner: 'bob', date: '', repository: 'other@acme@cloud' }]), 'permissions')!.run();
     entry(attributeTypeMenu(ws, [{ id: 1, name: 'status', comment: '', owner: '', date: '', repository: '' }]), 'permissions')!.run();
 
     expect(opened).toEqual([

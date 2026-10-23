@@ -23,7 +23,7 @@ export function useWorkingObject(workspace: WorkspaceInfo | undefined, wanted: b
   const changeset = useChangeset(kind === 'changeset' && wanted ? Number(name) : null);
   const labels = useQuery({
     queryKey: queryKeys.inWorkspace(path, 'labels', { text: name }),
-    queryFn: () => api.labels.list(path, { text: name }),
+    queryFn: () => api.labels.list(workspacePlace(path), { text: name }),
     enabled: kind === 'label' && wanted,
     ...SLOW_CHANGING_QUERY,
   });

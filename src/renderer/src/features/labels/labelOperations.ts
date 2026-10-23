@@ -1,5 +1,5 @@
-import { workspacePlace } from '@shared/domain/place';
 import type { LabelInfo as Label } from '@shared/domain/label';
+import type { Place } from '@shared/domain/place';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -11,6 +11,8 @@ import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { toast } from '../../ui/toast/toastStore';
 import { openCreateBranchDialog } from '../branches/CreateBranchDialog';
+import { pickChangeset } from '../changesets/ChangesetPickerDialog';
+import { openCreateLabelDialog } from './CreateLabelDialog';
 import { validateLabelName } from './labelNames';
 import { pickLabel } from './LabelPickerDialog';
 
@@ -52,26 +54,41 @@ export function browseLabel(label: Label): void {
 }
 
 /** Resolves to the new branch's name, once created. */
-export function createBranchFromLabel(workspacePath: string, label: Label): Promise<string | undefined> {
-  return openCreateBranchDialog(workspacePlace(workspacePath), {
+export function createBranchFromLabel(place: Place, label: Label): Promise<string | undefined> {
+  return openCreateBranchDialog(place, {
     parentBranch: label.branch,
     startingPoint: spec.label(label.name),
     startingPointLabel: `label ${label.name} (changeset ${label.changeset})`,
   });
 }
 
-export async function renameLabel(workspacePath: string, label: Label): Promise<void> {
+export async function renameLabel(place: Place, label: Label): Promise<void> {
   const newName = await prompt({ title: 'Rename label', label: 'New name', initialValue: label.name, confirmLabel: 'Rename', validate: validateLabelName });
   if (!newName) return;
-  await runAction(workspacePlace(workspacePath), "Couldn't rename the label", () => api.labels.rename(workspacePath, label.name, newName), isAffectedByLabels);
+  await runAction(place, "Couldn't rename the label", () => api.labels.rename(place, label.name, newName), isAffectedByLabels);
 }
 
 /** Resolves to whether it saved, so a comment that couldn't be saved stays in its editor. */
-export function saveLabelComment(workspacePath: string, label: Label, comment: string): Promise<boolean> {
-  return runVoidAction(workspacePlace(workspacePath), "Couldn't update the comment", () => api.labels.editComment(workspacePath, label, comment), isAffectedByLabels);
+export function saveLabelComment(place: Place, label: Label, comment: string): Promise<boolean> {
+  return runVoidAction(place, "Couldn't update the comment", () => api.labels.editComment(place, label, comment), isAffectedByLabels);
 }
 
-export async function deleteLabels(workspacePath: string, labels: Label[]): Promise<void> {
+/**
+ * A new label from the Labels view: on what the workspace has loaded, or, with no workspace (nothing loaded), on a
+ * changeset the user picks first.
+ */
+export async function newLabel(place: Place): Promise<void> {
+  if (place.kind === 'workspace') return openCreateLabelDialog(place);
+  const changesetId = await pickChangeset({ title: 'Label a changeset' });
+  if (changesetId !== undefined) openCreateLabelDialog(place, changesetId);
+}
+
+/** What the Labels view's empty state offers to label: the workspace's changeset, or any one with no workspace. */
+export function newLabelActionLabel(place: Place): string {
+  return place.kind === 'workspace' ? 'Label your workspace changeset' : 'Label a changeset';
+}
+
+export async function deleteLabels(place: Place, labels: Label[]): Promise<void> {
   const confirmed = await confirm({
     title: labels.length === 1 ? `Delete label ${labels[0]!.name}?` : `Delete ${labels.length} labels?`,
     message: 'The labeled changesets are kept. This cannot be undone.',
@@ -80,8 +97,8 @@ export async function deleteLabels(workspacePath: string, labels: Label[]): Prom
   });
   if (!confirmed) return;
 
-  const deleted = await runVoidAction(workspacePlace(workspacePath), "Couldn't delete the label", () =>
-    api.labels.delete(workspacePath, labels.map((label) => label.name)),
+  const deleted = await runVoidAction(place, "Couldn't delete the label", () =>
+    api.labels.delete(place, labels.map((label) => label.name)),
     isAffectedByLabels,
   );
   if (deleted) toast.success(labels.length === 1 ? `Deleted label ${labels[0]!.name}` : `Deleted ${labels.length} labels`);

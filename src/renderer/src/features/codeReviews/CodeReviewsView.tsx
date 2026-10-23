@@ -76,7 +76,7 @@ export function CodeReviewsView() {
       subtitle={reviews && reviews.length >= MAX_LISTED_CODE_REVIEWS && 'newest'}
       actions={
         <>
-          <ViewRefreshButton workspacePath={workspacePath} fetching={isFetching} />
+          <ViewRefreshButton fetching={isFetching} />
           <Button variant="primary" icon={<Plus size={14} />} onClick={newReview}>
             New review
           </Button>

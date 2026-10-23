@@ -32,7 +32,7 @@ export function workingObjectMenu(workspace: WorkspaceInfo, object: WorkingObjec
     case 'changeset':
       return changesetMenu({ place: workspacePlace(workspace.path), loadedChangeset: workspace.loadedChangeset, loadedBranch: object.changeset.branch }, [object.changeset]);
     case 'label':
-      return labelMenu(workspace.path, [object.label]);
+      return labelMenu(workspacePlace(workspace.path), [object.label]);
     case 'shelve':
       return shelveMenu(workspace.path, [object.shelve], { mine: false });
     default:

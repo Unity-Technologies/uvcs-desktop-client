@@ -68,7 +68,7 @@ export function AttributesView() {
         total={types?.length}
         actions={
           <>
-            <ViewRefreshButton workspacePath={workspacePath} fetching={isFetching} />
+            <ViewRefreshButton fetching={isFetching} />
             <Button variant="primary" icon={<Plus size={14} />} onClick={() => openCreateAttributeDialog(workspacePath)}>
               New attribute
             </Button>

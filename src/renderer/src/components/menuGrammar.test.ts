@@ -181,8 +181,8 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   branches: () => branchMenu(workspacePlace(ws), [branch, { ...branch, name: '/main/other', isHidden: true }], '/main'),
   changeset: () => changesetMenu({ place: workspacePlace(ws), loadedChangeset: 6, loadedBranch: '/main/a' }, [changeset]),
   changesetInterval: () => changesetMenu({ place: workspacePlace(ws) }, [changeset, { ...changeset, id: 2 }]),
-  label: () => labelMenu(ws, [label]),
-  labelPair: () => labelMenu(ws, [label, { ...label, name: 'v2' }]),
+  label: () => labelMenu(workspacePlace(ws), [label]),
+  labelPair: () => labelMenu(workspacePlace(ws), [label, { ...label, name: 'v2' }]),
   shelve: () => shelveMenu(ws, [shelve]),
   othersShelve: () => shelveMenu(ws, [shelve], { mine: false }),
   leftShelve: () => shelveMenu(ws, [shelve], { left: true }),
@@ -241,6 +241,8 @@ const REPOSITORY_MENUS: Record<string, () => MenuEntry[]> = {
   repositoryBranches: () => branchMenu(onRepository, [branch, { ...branch, name: '/main/other', isHidden: true }], undefined),
   repositoryChangeset: () => changesetMenu({ place: onRepository }, [changeset]),
   repositoryChangesetInterval: () => changesetMenu({ place: onRepository }, [changeset, { ...changeset, id: 2 }]),
+  repositoryLabel: () => labelMenu(onRepository, [label]),
+  repositoryLabelPair: () => labelMenu(onRepository, [label, { ...label, name: 'v2' }]),
 };
 
 /**
@@ -267,6 +269,8 @@ describe('menus without a workspace', () => {
     expect(ids(REPOSITORY_MENUS.repositoryBranch!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'changesets', 'rename', 'hide', 'delete']));
     expect(ids(REPOSITORY_MENUS.repositoryChangeset!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'compare', 'editComment', 'move', 'delete']));
     expect(ids(REPOSITORY_MENUS.repositoryChangesetInterval!())).toEqual(['diffRange']);
+    expect(ids(REPOSITORY_MENUS.repositoryChangeset!())).toContain('newLabel');
+    expect(ids(REPOSITORY_MENUS.repositoryLabel!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'compare', 'rename', 'delete']));
   });
 
   it('offers in a workspace what a repository leaves out, so the list names what each needs', () => {
@@ -389,11 +393,11 @@ describe('one menu per object, the same everywhere', () => {
   });
 
   it('a label reads the same in the Labels view, the top bar, the palette and the Branch Explorer', () => {
-    const common = labelMenu(ws, [label]);
+    const common = labelMenu(workspacePlace(ws), [label]);
     expectOnlyAdds(labelResult(label, resultContext).menu!(), common);
     expectOnlyAdds(workingObjectMenu({ ...workspace, selector: { kind: 'label', name: 'v1' } }, { kind: 'label', label }), common);
     const graph = graphMenu({ kind: 'label', label: sampleHistory().labels[0]!, more: [] }, graphContext);
-    expectOnlyAdds(graph, withoutAction(labelMenu(ws, [{ ...label, comment: '' }]), 'showInBranchExplorer'));
+    expectOnlyAdds(graph, withoutAction(labelMenu(workspacePlace(ws), [{ ...label, comment: '' }]), 'showInBranchExplorer'));
   });
 
   it('a shelve reads the same in the Shelves view, Changes, its diff, the top bar and the palette', () => {
@@ -455,7 +459,7 @@ describe('Copy', () => {
   });
 
   it('copies a label as its name, spec, full spec and comment', async () => {
-    expect(await copiedBy(labelMenu(ws, [label]))).toEqual(['Label name: v1', 'Label link: uvcs://local/repos/game/labels/v1', 'Label spec: lb:v1', 'Label full spec: lb:v1@game@local', 'Label comment: First']);
+    expect(await copiedBy(labelMenu(workspacePlace(ws), [label]))).toEqual(['Label name: v1', 'Label link: uvcs://local/repos/game/labels/v1', 'Label spec: lb:v1', 'Label full spec: lb:v1@game@local', 'Label comment: First']);
   });
 
   it('copies a shelve as its number, spec, full spec, comment and GUID', async () => {
@@ -494,7 +498,7 @@ describe('Copy', () => {
 
   it('shows what each entry copies next to it', () => {
     // A link is too long to read beside its label, as a comment is.
-    expect(copyEntries(labelMenu(ws, [label])).map((entry) => entry.detail)).toEqual(['v1', undefined, 'lb:v1', 'lb:v1@game@local', undefined]);
+    expect(copyEntries(labelMenu(workspacePlace(ws), [label])).map((entry) => entry.detail)).toEqual(['v1', undefined, 'lb:v1', 'lb:v1@game@local', undefined]);
   });
 });
 
@@ -515,7 +519,7 @@ describe('the top bar', () => {
     const onBranch = { ...workspace, selector: { kind: 'branch' as const, name: branch.name } };
     expect(reading(workingObjectMenu(onBranch, { kind: 'branch', branch }))).toEqual(reading(branchMenu(workspacePlace(ws), [branch], branch.name)));
     const onLabel = { ...workspace, selector: { kind: 'label' as const, name: 'v1' } };
-    expect(reading(workingObjectMenu(onLabel, { kind: 'label', label }))).toEqual(reading(labelMenu(ws, [label])));
+    expect(reading(workingObjectMenu(onLabel, { kind: 'label', label }))).toEqual(reading(labelMenu(workspacePlace(ws), [label])));
   });
 
   it('says it is loading until what the workspace is on is read', () => {
