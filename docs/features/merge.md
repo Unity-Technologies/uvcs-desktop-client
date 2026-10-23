@@ -173,7 +173,11 @@ conflict, and its menu acts on it alone (`mergeItemAt`, `mergeItemsActedOn`). A 
 merge's changesets, where the file may not have changed. A folder added with its files is listed once, through them
 (ARCHITECTURE.md "Folders once"). The page starts on the first item that needs the user in the order the list shows
 (`firstWaiting`), and goes back there after a run. Directory conflicts are named in plain words ("Added on both sides
-with the same name", `directoryConflictWords`), not `cm`'s ("Evil twin conflict"). Sandbox:
+with the same name", `directoryConflictWords`), not `cm`'s ("Evil twin conflict"). Under its choices, a directory
+conflict on a file diffs the incoming item with yours or with the base ("Incoming ↔ Yours", "Incoming ↔ Base",
+`comparisonsOf`, `comparedVersions`): each side read by its path at the merge's changesets (`MergePlan.contributors`),
+a side that deleted the item empty, and an item added on both sides empty at the base. No `cm` command beyond the two
+versions read. A folder or an xlink has none, nor a plan that didn't name the changesets. Sandbox:
 `scripts/sandboxes/merge-conflicts.sh`. A text with a line too long to draw unwrapped wraps, as in a diff, and isn't edited in the app:
 diff.md "Long lines".
 Every status reads as what the merge will do, never as done (`mergeStatus`): "Will merge automatically", "Needs your
