@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RepositorySummary } from '@shared/domain/repository';
-import { matchingProjects, noRepositoriesState, projectChoices, repositoriesInProject, repositoryTitle, shownProject } from './repositoryProjects';
+import { matchingProjects, noRepositoriesState, repositoriesInProject, repositoryTitle, shownProject } from './repositoryProjects';
 
 const SERVER = 'racing@unity';
 
@@ -16,18 +16,8 @@ const REPOSITORIES = [ART, EDITOR, GAME, LEGACY];
 
 const unityProject = (name: string) => ({ name, guid: `guid-of-${name}` });
 
-describe('projectChoices', () => {
-  it('offers every project, empty ones too, with its repositories counted', () => {
-    expect(projectChoices(['Archived', 'Cloud Repositories', 'Racing'].map(unityProject), REPOSITORIES)).toEqual([
-      { name: 'Archived', guid: 'guid-of-Archived', repositoryCount: 0 },
-      { name: 'Cloud Repositories', guid: 'guid-of-Cloud Repositories', repositoryCount: 1 },
-      { name: 'Racing', guid: 'guid-of-Racing', repositoryCount: 2 },
-    ]);
-  });
-});
-
 describe('matchingProjects', () => {
-  const choices = projectChoices(['Cloud Repositories', 'Racing', 'Racing Tools'].map(unityProject), REPOSITORIES);
+  const choices = ['Cloud Repositories', 'Racing', 'Racing Tools'].map(unityProject);
 
   it('finds the projects holding every word typed, in any order and case', () => {
     expect(matchingProjects(choices, 'tools rac').map((choice) => choice.name)).toEqual(['Racing Tools']);

@@ -1,4 +1,4 @@
-import { MapPin } from 'lucide-react';
+import { Globe, MapPin } from 'lucide-react';
 import { ProjectIcon } from '../../components/ProjectIcon';
 import { ServerIcon } from '../../components/ServerIcon';
 import { PickFilter } from './PickFilter';
@@ -15,17 +15,16 @@ interface PlaceFilterProps {
 export function PlaceFilter({ choices, place, onChange }: PlaceFilterProps) {
   return (
     <PickFilter
-      chip={{ icon: <MapPin size={13} />, label: placeLabel(place), active: place !== null }}
+      trigger={{ icon: <MapPin size={13} />, label: placeLabel(place) }}
       name="Place"
       rowsLabel="Places"
-      all={{ label: 'Everywhere', checked: place === null }}
+      all={{ icon: <Globe size={13} />, label: 'Everywhere', picked: place === null }}
       choices={choices}
       matching={matchingPlaces}
       rowOf={(choice) => ({
         key: placeKey(choice.place),
         icon: choice.place.project === undefined ? <ServerIcon server={choice.place.server} size={13} /> : <ProjectIcon guid={choice.guid} size={16} />,
         label: choice.label,
-        count: choice.workspaceCount,
         picked: samePlace(choice.place, place),
         nested: choice.place.project !== undefined,
       })}

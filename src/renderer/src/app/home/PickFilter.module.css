@@ -1,0 +1,73 @@
+/* Shaped as the search field beside it (`Field.module.css`'s input): a picker, not one more filter chip. */
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  max-width: 280px;
+  height: var(--control-height);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: var(--text-md);
+  outline: none;
+  transition: border-color var(--duration-fast);
+}
+
+.trigger:hover,
+.trigger[data-state='open'] {
+  border-color: var(--border-strong);
+}
+
+.trigger:focus-visible {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
+/* Unity project names run long ("HidyUVCSToolbarButtonHunt"): cut to fit. */
+.triggerLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevron {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.choice {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  height: 100%;
+}
+
+/* "All projects" heads the list, a rule between it and the projects, as the other clients set it apart. */
+.choice[data-all='true'] {
+  box-shadow: 0 1px 0 var(--border-subtle);
+}
+
+/* A project under its organization: its icon indented past the organization's, the checks still in one column. */
+.choice[data-nested='true'] .check {
+  margin-right: var(--space-4);
+}
+
+/* Every row keeps the check's room, so names line up whether it's picked or not. */
+.check {
+  display: flex;
+  flex: none;
+  width: 14px;
+  color: var(--accent);
+}
+
+.choiceName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
