@@ -417,6 +417,19 @@ by name, and never passes it to `cm`.
   repository: it is offered as one another app left (adopted as foreign), its changelists are lost, and the folder
   where added files waited is no longer used to put them back. Review marks kept under the id's repository no longer
   show.
+- **Two kinds, and projects**: `cm` names a Unity organization `acme@unity` and an older cloud organization
+  `acme@cloud` (`serverKind`, `shared/domain/organizations.ts`), which `cm profile list` already tells: the home
+  sidebar groups them (`serverGroups`: Unity organizations, cloud organizations, servers), each kind with its icon
+  (`ServerIcon`; `OrganizationIcon` is the building Unity's apps draw). Only a Unity organization has projects: a
+  repository of type `Project`, which `cm repository list` leaves out unless asked with its hidden `--type=all`, and
+  `{reptype}` tells apart (`repositoryListArgs`). They come in the one command that lists the repositories, asked only
+  of a Unity organization; a `cm` refusing `--type` (its error names the option, `refusesTypeOption`) is asked again
+  without it, and the list shows no projects. A repository there is named after its project (`Racing/Game`:
+  `projectOfRepository`, `nameInProject`, `nameWithProject`), which New repository builds from the project picked.
+  The Repositories view filters by project (`ProjectFilter`, remembered per organization: `useProjectPickStore`) and
+  All workspaces by organization and project (`PlaceFilter`, `placeOf`), from the repository each workspace already
+  names: no command. Display names ("UnityTechnologies" for `unity@unity`) come only from Unity's web API, which the
+  app doesn't call: it shows the organization's name as `cm` takes it.
 - **Kept so**: `fakeCmClient` fails a test whose code passes the id form to `cm` (`namesOrganizationById`; a profile's
   name is the id form itself, as `cm profile list` prints it, so `cm profile` is exempt), and development builds warn
   `[organization id]` in the console when a command does (`warnOnOrganizationIds`).
