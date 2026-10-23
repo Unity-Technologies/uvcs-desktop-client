@@ -35,6 +35,7 @@ export function findCommand(object: string, query: string, format: string): stri
 export function findArgs(found: FoundObjects<unknown>, filter: QueryFilter, orderBy: string | null, extraConditions: string[] = [], repository?: string): string[] {
   const order = orderBy ? ` order by ${orderBy}` : '';
   const limit = filter.limit ? ` limit ${filter.limit}` : '';
+  // A repository name holds no quote (`cm` refuses to create one), so it goes between quotes as it is.
   const onRepository = repository ? ` on repository '${repository}'` : '';
   const conditions = filter.text ? [...extraConditions, textCondition(found.object, filter.text)] : extraConditions;
   return findCommand(found.object, `${whereClause(filter, conditions)}${order}${limit}${onRepository}`.trim(), layoutFormat(found));
