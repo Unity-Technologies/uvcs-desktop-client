@@ -13,7 +13,7 @@ import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { TextField } from '../../../ui/TextField';
 import { FileDiffViewer } from '../../diff/viewer/FileDiffViewer';
 import type { MergeLabels } from '../mergeDescription';
-import { comparedVersions, comparisonSegments, comparisonsOf, identicalNoteOf, type DirectoryConflictComparison } from './directoryConflictComparison';
+import { comparedVersions, comparisonSegments, comparisonsOf, FIRST_COMPARISON, identicalNoteOf, type DirectoryConflictComparison } from './directoryConflictComparison';
 import { renameNameProblem } from './renameNameProblem';
 import { suggestRename } from './renameSuggestion';
 import styles from './DirectoryConflictPanel.module.css';
@@ -95,24 +95,25 @@ interface ComparisonProps {
 
 /** The incoming item diffed with yours or with the base, where the conflict has a file to compare (`comparisonsOf`). */
 function Comparison({ workspacePath, request, contributors, conflict, labels }: ComparisonProps) {
-  const [comparison, setComparison] = useState<DirectoryConflictComparison>('destination');
-  const comparisons = comparisonsOf(conflict, contributors);
+  const [comparison, setComparison] = useState(FIRST_COMPARISON);
+  const comparisons = comparisonsOf(conflict, contributors, request);
   if (comparisons.length === 0) return null;
-  const { original, modified } = comparedVersions(conflict, comparison, contributors, request);
+  const segments = comparisonSegments(comparisons, labels);
+  const { original, modified, path, oldPath } = comparedVersions(conflict, comparison, contributors, request);
 
   return (
     <section className={styles.comparison} aria-label="Compare">
-      {comparisons.length > 1 && (
+      {segments.length > 0 && (
         <div className={styles.comparisonBar}>
-          <SegmentedControl<DirectoryConflictComparison> value={comparison} onChange={setComparison} segments={comparisonSegments(comparisons, labels)} label="Compare" />
+          <SegmentedControl<DirectoryConflictComparison> value={comparison} onChange={setComparison} segments={segments} label="Compare" />
         </div>
       )}
       <FileDiffViewer
         workspacePath={workspacePath}
         original={original}
         modified={modified}
-        fileName={conflict.source.path}
-        title={<PathLabel path={conflict.source.path.replace(/^\//, '')} />}
+        fileName={path}
+        title={<PathLabel path={path.replace(/^\//, '')} oldPath={oldPath?.replace(/^\//, '')} />}
         identicalDescription={identicalNoteOf(conflict, comparison)}
       />
     </section>
