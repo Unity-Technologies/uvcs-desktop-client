@@ -341,6 +341,17 @@ describe('a link opened in a workspace (docs/features/deep-links.md)', () => {
     expect(windows.workspaceIn(asBrowserWindow(tools))).toBe(TOOLS);
   });
 
+  it('goes to a window on the home screen rather than leave the repository the asking window explores', () => {
+    const { windows, open } = setUp();
+    const exploring = open();
+    windows.repositoryShown(exploring.webContents.id, 'game@local');
+    const home = open();
+
+    expect(windows.openLinkAtHome(exploring.webContents.id, SERVER_LINK)).toBe('handedOver');
+    expect(windows.takeLink(home.webContents.id)).toBe(SERVER_LINK);
+    expect(windows.placeIn(asBrowserWindow(exploring))).toEqual(repositoryPlace('game@local'));
+  });
+
   it('never opens a link to repositories in a page window, which has no home screen', () => {
     const { windows, open, shows } = setUp();
     const game = open();
