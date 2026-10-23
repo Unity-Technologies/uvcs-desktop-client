@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdtemp, readdir, readFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -147,6 +147,15 @@ describe('finding a file in a repository explored without a workspace', () => {
     expect(await searching).toEqual([]);
     expect(fake.commands[0]!.options.signal?.aborted).toBe(false);
     search.dispose();
+  });
+
+  it('deletes the trees a crashed session left as the app starts, before any search', async () => {
+    const tempFolder = await mkdtemp(join(tmpdir(), 'path-search-'));
+    await mkdir(join(tempFolder, 'uvcs-trees-200-left'));
+    const search = new RepositoryPathSearch(fakeCmClient().cm, new SessionFolder({ prefix: 'uvcs-trees-', tempFolder, pid: 100, isRunning: () => false }));
+
+    await search.removeLeftOvers();
+    expect(await readdir(tempFolder)).toEqual([]);
   });
 
   it('deletes every tree as the app quits', async () => {

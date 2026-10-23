@@ -129,6 +129,7 @@ function start(launched: Promise<void>, readAhead: FirstScreenRead, links: LinkR
   if (!app.isPackaged) app.dock?.setIcon(DEVELOPMENT_DOCK_ICON);
   sendSettingsChanges(settings, (changed) => sendEvent('settingsChanged', changed));
   void revisionDownloads.removeLeftOvers();
+  void repositoryPaths.removeLeftOvers();
   void removeLeftOverTempDirectories();
   registerApi(api, early);
   followAppTheme(settings);

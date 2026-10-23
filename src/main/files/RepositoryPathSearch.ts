@@ -84,6 +84,11 @@ export class RepositoryPathSearch {
     }
   }
 
+  /** Deletes the trees sessions that crashed left: at start-up, never waiting for a first search. */
+  removeLeftOvers(): Promise<void> {
+    return this.folder.removeLeftOvers();
+  }
+
   /** Stops every listing and deletes every tree, at once: the app is quitting. */
   dispose(): void {
     for (const tree of this.trees.values()) tree.abort.abort();
