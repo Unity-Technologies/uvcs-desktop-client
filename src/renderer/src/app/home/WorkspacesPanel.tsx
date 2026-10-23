@@ -1,5 +1,5 @@
 import { FolderOpen, FolderPlus, Layers } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { SearchField } from '../../ui/SearchField';
@@ -25,7 +25,8 @@ export function WorkspacesPanel({ onOpen, onOpenFolder }: WorkspacesPanelProps) 
   const { workspaces, all: everyEntry, isLoading, error } = useWorkspaceEntries('');
   const organizations = organizationsOf(everyEntry);
   const readProjects = useReadProjects(organizations);
-  const choices = useMemo(() => placeChoices(everyEntry, readProjects), [everyEntry, readProjects]);
+  // Every render: the entries are new each time (`useWorkspaceEntries`), and a few hundred cost nothing to place.
+  const choices = placeChoices(everyEntry, readProjects);
   const all = workspacesShown(everyEntry, filter, place);
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<WorkspaceListHandle>(null);

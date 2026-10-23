@@ -26,7 +26,7 @@ export function describeServer(server: string): { label: string; detail?: string
   return { label: server };
 }
 
-/** A server as a choice in a list, named as the sidebar names it: `This computer`, `acme · Cloud`, `host:8087`. */
+/** A server as a choice in a list, named as the sidebar names it: `This computer`, `acme · Cloud organization`, `host:8087`. */
 export function serverChoiceLabel(server: string): string {
   const { label, detail } = describeServer(server);
   return detail ? `${label} · ${detail}` : label;

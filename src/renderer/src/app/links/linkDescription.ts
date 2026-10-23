@@ -4,7 +4,7 @@ import { branchLabel } from '../../lib/branchLabels';
 import { lastSegment } from '../../lib/paths';
 import { serverChoiceLabel } from '../../lib/servers';
 
-/** A link in words, as the palette's row for a pasted one says what it opens: "Changeset 12 · Player.cs", "game · acme · Cloud". */
+/** A link in words, as the palette's row for a pasted one says what it opens: "Changeset 12 · Player.cs", "game · acme · Unity organization". */
 export interface LinkDescription {
   label: string;
   detail: string;
