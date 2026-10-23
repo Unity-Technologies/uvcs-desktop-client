@@ -1,4 +1,5 @@
 import type { Place } from '@shared/domain/place';
+import type { Page } from './pages';
 
 export const VIEW_IDS = [
   'changes',
@@ -44,4 +45,12 @@ export function isViewId(value: string): value is ViewId {
  */
 export function viewCommandId(view: ViewId): string {
   return `goto.${view}`;
+}
+
+/**
+ * Whether the place shows the page: every page but the merge page, a workspace's (it merges into the workspace's
+ * files), which a repository explored without one never offers; one reaching it anyway says why, never fails.
+ */
+export function showsPage(place: Place, page: Pick<Page, 'kind'>): boolean {
+  return place.kind === 'workspace' || page.kind !== 'merge';
 }
