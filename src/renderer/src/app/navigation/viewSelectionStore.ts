@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
 import { create } from 'zustand';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
-import { useWorkspacePath } from '../workspace/useWorkspace';
+import { placeId, type Place } from '@shared/domain/place';
+import { usePlace } from '../workspace/useWorkspace';
 import type { ViewId } from './views';
 
 interface ViewSelectionStore {
@@ -19,17 +20,17 @@ const useViewSelectionStore = create<ViewSelectionStore>((set) => ({
  * coming back with ⌘1… or the sidebar finds the rows it left, ready for the arrows.
  */
 export function useViewSelection(view: ViewId): [SelectionState, (selection: SelectionState) => void] {
-  const key = selectionKey(useWorkspacePath(), view);
+  const key = selectionKey(usePlace(), view);
   const selection = useViewSelectionStore((state) => state.selections.get(key)) ?? EMPTY_SELECTION;
   const setSelection = useCallback((next: SelectionState) => useViewSelectionStore.getState().set(key, next), [key]);
   return [selection, setSelection];
 }
 
 /** Selects one row of a view from elsewhere, before going to it: the view opens on that row, scrolled to it. */
-export function selectInView(workspacePath: string, view: ViewId, rowKey: string): void {
-  useViewSelectionStore.getState().set(selectionKey(workspacePath, view), singleSelection(rowKey));
+export function selectInView(place: Place, view: ViewId, rowKey: string): void {
+  useViewSelectionStore.getState().set(selectionKey(place, view), singleSelection(rowKey));
 }
 
-function selectionKey(workspacePath: string, view: ViewId): string {
-  return `${workspacePath}\n${view}`;
+function selectionKey(place: Place, view: ViewId): string {
+  return `${placeId(place)}\n${view}`;
 }
