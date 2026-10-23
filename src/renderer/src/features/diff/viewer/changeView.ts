@@ -10,6 +10,10 @@ import { pierreLinePosition } from './pierreLinePosition';
 export interface ChangeView {
   /** Brings a change into view, lights it for a moment and, while typing, puts the caret on it. */
   reveal: (change: ChangeRegion) => void;
+  /** Brings a change into view as the diff opens, at once, without lighting or picking it. */
+  show: (change: ChangeRegion) => void;
+  /** Whether the diff opened on a link's lines (`useLineLinks`' `focusLines`), scrolled to them (`scrollToLine`). */
+  opensOnLines: () => boolean;
   /** The line of the modified file at the top of the view (`blocks` are the diff's); none before the diff shows. */
   lineAtTop: (blocks: ChangeBlock[]) => number | null;
 }
@@ -20,18 +24,26 @@ const CONTEXT_ROWS = 3;
 const MAX_FRAMES = 60;
 
 /**
- * Scrolls the diff in `container` so the change starts a few rows from the top, unless it's all in view already.
- * A big diff renders only the lines in view: a change not rendered yet is scrolled to where Pierre lays it out, then
- * set right once its rows render. Returns a function that stops it.
+ * Why a change is scrolled to: a move to it (a short way smoothly, unless it's all in view), or the diff opening on it
+ * (at once, unless it starts in view: a collapsed diff's first hunk, taller than the view, keeps the bar above it).
  */
-export function scrollToChange(container: HTMLElement, change: ChangeRegion, virtualizer: Virtualizer | undefined): () => void {
+export type ChangeScroll = 'move' | 'open';
+
+/**
+ * Scrolls the diff in `container` so the change starts a few rows from the top, unless it's in view already
+ * (`ChangeScroll`). A big diff renders only the lines in view: a change not rendered yet is scrolled to where Pierre
+ * lays it out, then set right once its rows render. Returns a function that stops it.
+ */
+export function scrollToChange(container: HTMLElement, change: ChangeRegion, virtualizer: Virtualizer | undefined, why: ChangeScroll): () => void {
   let frames = 0;
   let jumped = false;
   let frame = 0;
   const attempt = (): void => {
     const root = pierreShadowRoot(container);
     const first = root && rowOf(root, change.lines[0]!);
-    if (root && first) return scrollToRows(container, first, lastRows(root, change), !jumped);
+    // Where Pierre estimated it (`jumped`), a row in view may still be a few rows off: set right all the same.
+    if (first && why === 'open' && !jumped && startsInView(container, first)) return;
+    if (root && first) return scrollToRows(container, first, lastRows(root, change), why === 'move' && !jumped);
     const fileContainer = container.querySelector('diffs-container');
     const top = !jumped && virtualizer && fileContainer ? pierreLinePosition(virtualizer, fileContainer, change.lines[0]!) : undefined;
     if (top !== undefined) {
@@ -81,6 +93,12 @@ export function scrollToRows(container: HTMLElement, first: Element, last: Eleme
   // Smoothly only a short way: far away it would scroll through rows a big diff renders one screen after another.
   const near = Math.abs(target - container.scrollTop) < view.height * 2;
   container.scrollTo({ top: target, behavior: smooth && near && !prefersReducedMotion() ? 'smooth' : 'auto' });
+}
+
+function startsInView(container: HTMLElement, row: Element): boolean {
+  const view = container.getBoundingClientRect();
+  const top = row.getBoundingClientRect().top;
+  return top >= view.top && top < view.bottom;
 }
 
 /** The rows a change ends on: its last removed line and its last added one (side by side, either may go lower). */

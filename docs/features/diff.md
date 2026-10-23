@@ -293,7 +293,11 @@ the top of the view. The change comes a few rows from the top unless it's all in
 not rendered there yet is scrolled to where Pierre lays it out, `pierreLinePosition`; collapsed lines never hide one,
 as changes are always in the hunks shown), lights up for a moment and, where discards are, is picked for ⌥⌘Z. Past
 the last or first change, a diff beside a list of files (a diff page, Changes: `FileStepsContext`) goes on to the next
-file's first change or the previous file's last, asking about unsaved edits first. A version shown alone (an added
+file's first change or the previous file's last, asking about unsaved edits first. A diff opened any other way
+(picked in a list, from a link, on a page) opens with its first change in view, a few rows from the top unless it
+starts in view already (a collapsed diff's first hunk, whose bar stays above it: `ChangeScroll`), not lit nor counted
+until the first move goes to it (`openingStep`, `ChangeView.show`); one opened on a link's lines stays on them. It
+opens so once, as the diff first shows: changes typed or read later leave the view where it is. A version shown alone (an added
 or deleted file) is one change, "1 of 1"; a file with none to step through (an image, a binary, identical versions)
 keeps the arrows, "No changes", so stepping through the list never stops there. It steps through the files as the list
 shows them: in a tree, those in a closed folder are skipped. The list itself, its order and its List/Tree layout, are
@@ -321,6 +325,71 @@ show unfolded, as a link may name one (`collapseUnchanged` off for that file). O
 (`linkFocusOn`), so coming back leaves the file where the user was. Changes takes them from outside
 (`requestLineFocus`, `useRequestedLineFocus`): the pending change's diff scrolls to them and shows them as Pierre's
 selection until lines are picked to discard, Pierre echoing them back picking nothing (`useLinePick`'s `marked`).
+
+## The code's menu
+
+A right-click on code opens its menu (`codeMenu`, wired by `useCodeMenu`, every choice in `codeTarget`): every text
+diff's sides, the whole-file editor, a merge's hand-editing (`HandEditor`) and Annotate (`AnnotatedCode`). The merge
+page's conflicts (`ConflictHunks`) have none: Pierre numbers each side of a conflict there on its own (both read line
+3), so no line number or selection there names one text to go to or compare. It follows the menus' one grammar, so it
+reads, in groups: Undo, Redo; Find, Replace, Go to line…, Compare with clipboard; Cut, Copy, Paste; Delete, Select all.
+Where a diff selects lines for links (a committed diff, Annotate), the lines' own entries join it at the end of their
+groups ("Annotate at this line", "Copy link to line 42", "Copy line": `lineMenuEntries`). What it holds depends on the
+side right-clicked (`codeMenuTarget`):
+
+- **Typed into** (the newer side of a workspace file's diff once its editor is attached, the whole-file editor, a
+  merge's hand-editing): everything, through Pierre's editor. Undo and Redo are its history (`canUndo`, `canRedo`). Cut,
+  Copy and Paste are Pierre's own, as ⌘X, ⌘C and ⌘V (`runEditorClipboard`): the editor is focused and the page runs
+  `document.execCommand('cut' | 'copy')`, and since Chromium refuses a page's paste, the window pastes
+  (`windows.pasteClipboard`, Electron's `webContents.paste`). So several carets copy and paste their own pieces, a bare
+  caret's Cut and Copy take its whole line, and a paste takes the file's line breaks (Pierre's `TextDocument` keeps the
+  first one it reads: a CRLF file stays CRLF, which `diskText` wouldn't repair). Delete removes what every selection
+  holds (`deletionEdits`), Pierre's `applyEdits` moving the carets; Select all selects the whole text.
+- **Read-only** (every other side): only what reads it. Copy copies the text selected in the page, read from its rows
+  (`pageTextSelection`, `copiedPageText`); lines picked by their numbers have "Copy lines" instead. Select all selects
+  every line of the side, as Shift+click would, where lines are selected for links. Undo, Redo, Cut, Paste and Delete
+  aren't offered, nor Find and Replace: Pierre's search panel is its editor's, and a read-only side has none.
+- Entries that need a selection are off without one, their tooltip saying so (Delete, Compare with clipboard, a
+  read-only side's Copy; `codeMenuState`); Paste never waits on the clipboard.
+
+As the official client's menu did, but in the app's grammar and words. Its Delete with nothing selected did nothing, so
+it's off then; its Replace was ⌘H, which hides the app on macOS.
+
+**Keys.** The menu shows the keys the editor takes on each OS, from the registry's "Text" area (`textUndo`...
+`goToLine`). Replace is ⌥⌘F on macOS and Ctrl+H on Windows and Linux, where Pierre's Ctrl+Alt+F is AltGr+F on European
+layouts: `pierreEditorKeymap` gives the editor the registry's key, and Pierre's own still works. Go to line is ⌃G on
+macOS (⌘G is Find next there) and Ctrl+G elsewhere, from anywhere in the code, Pierre's search box included
+(`editorHasFocusIn`); with Pierre's search panel open, Ctrl+G off macOS is its Find next. Ctrl+H typed in Pierre's
+search box doesn't switch it to Replace on Windows and Linux: the box takes its own keys, and only Pierre's ⌥⌘F
+(Ctrl+Alt+F) does there.
+
+**Find and Replace** open Pierre's search panel, which `Editor` has no public way to open (`openPierreSearchPanel`, see
+Pierre workarounds): the menu presses the key that opens it on the editor's content element, its modifier held as Pierre
+reads the platform (`pierreReadsMac`), so Replace opens from the menu on a Mac previewing another OS
+(`UVCS_RENDERER_PLATFORM`) too.
+
+**Go to line…** asks for a line of the side it's on (`goToLine`: "Line number (1–240)", the caret's or the line
+right-clicked already in the field), takes only a line that side has and says which it has otherwise. The line scrolls a
+third of the way down (`scrollToLine`; Annotate's own rows in place); typed into, the caret goes to its start, and
+read-only, it is selected where lines are and focus comes back to the pane without its keyboard ring
+(`focusWithoutRing`): the line shows where the user is, and the dialog's keys would make Chromium ring the whole pane. A
+Tab into it still rings it. A line of a region "Collapse unchanged lines" folds away is shown first (`scrollToShownLine`
+in `TextDiff`, for a link's lines too): Pierre's `FileDiff.revealLine` expands only that region, from its nearer end,
+and an older side's line is the one as far into the same region on the newer side, which Pierre reveals
+(`lineToReveal`). ⌃G goes to a line of the text typed into while the caret is in it, else of the side whose lines are
+selected, else of the newer side (`keyboardGoToLine`).
+
+**Compare with clipboard** compares the code selected with the text on the clipboard, in the moved code's dialog
+(`openCodeComparisonDialog`): the clipboard on the left, the selection on the right, "Clipboard compared with lines
+12–18" over the file's name and version ("Player.cs (after)": `clipboardComparison`). The selection is the text
+selected, to the character, or the lines picked by their numbers; text selected across both sides of a unified diff is
+no one version's code, so it compares nothing. The menu only asks whether there is code (`hasCode`), and reads it once
+the entry is chosen. Both texts are compared as they show (`clipboardText`): line breaks are LF and each last line
+ended, so the clipboard's CRLF and a missing final line break don't show as changes. It's offered with a selection,
+whatever the clipboard holds: reading the clipboard as the menu opens would ask the OS for its content (an image, a huge
+text) at every right-click, and the menu would show before the answer. An empty clipboard, or one the page can't read,
+says so in a toast. The official client's "Add diff selection" then "Diff with previous selection" took two steps and
+kept the first selection; copying is the step people already know.
 
 ## Moved code
 
@@ -368,14 +437,15 @@ What shows (`useMovedCode`, `MovedCode`):
   one is beside half of it at least (`labelSpot`: the space that says the code is gone tells where it went), else at
   the right end of the place's bottom edge: the top edge is the change's chip's. In a pane narrower than 320 px it
   shows the arrow and the number only, the words in its tooltip.
-- The label's other button, "Compare moved code", opens the two places side by side (`openMovedCodeDialog`, of
-  `movedCopies`): a read-only diff of what moved with what it became, in the diff's look, layout and comparison
-  method, so only what changed on the way shows as changed. Code moved as it was, or with only what the method ignores
-  changed, shows alone, its note saying so ("Moved without changes", "Only whitespace differs"): a diff with no line
-  changes has no lines for Pierre to show (`movedComparison`). Its lines are numbered from the start of the moved code
-  (Pierre numbers a diff from 1); the title says where both places are. Putting the two places side by side in the
-  diff itself, each side scrolling on its own, was rejected: everything in the diff (its gaps, navigation, discards,
-  the editor, the labels) relies on both sides' rows lining up.
+- The label's other button, "Compare moved code", opens the two places side by side (`openMovedCodeDialog` of
+  `movedCopies`, in the dialog "Compare with clipboard" opens too, `openCodeComparisonDialog`): a read-only diff of what
+  moved with what it became, in the diff's look, layout and comparison method, so only what changed on the way shows as
+  changed. Code moved as it was, or with only what the method ignores changed, shows alone, its note saying so ("Moved
+  without changes", "Only whitespace differs"): a diff with no line changes has no lines for Pierre to show
+  (`movedComparison`). Its lines are numbered from the start of the moved code (Pierre numbers a diff from 1); the title
+  says where both places are. Putting the two places side by side in the diff itself, each side scrolling on its own,
+  was rejected: everything in the diff (its gaps, navigation, discards, the editor, the labels) relies on both sides'
+  rows lining up.
 - Pointing at moved code or its label lights the move up in both places and, side by side, draws a ribbon joining them
   (`ribbonPath`, level with the rows at both ends) over the last 24 px of the removed side's pane, where code is least
   likely to be, up to the seam; it goes once the pointer leaves, and the pointer and selections go through it. A place
@@ -529,7 +599,8 @@ that patch or read internals have a test that fails when an update moves them, a
 own every argument past the ones it reads (`pierreWrappedArguments.test.ts`), as Pierre adds some:
 
 - `pierreDom`: where Pierre renders (the `diffs-container` shadow root, its rows' `data-line-type`, `data-line` and
-  `data-column-number`), the gutter button slot moved to the hovered line, and hovering anew under a still pointer.
+  `data-column-number`), the gutter button slot moved to the hovered line, hovering anew under a still pointer, and
+  the text selected in the page (`pageTextSelection`, through Chromium's `ShadowRoot.getSelection`).
   The tests run without a page, so this one is checked on screen. Wrapping lines, a pane (`data-code`) has no box of
   its own (`display: contents`), and its code column stands for it (`paneRect`).
 - `movedCodeCss`, `MovedCode`, `useMovedWordMarks`: moved code recolored through Pierre's `--diffs-deletion-base` and
@@ -541,6 +612,15 @@ own every argument past the ones it reads (`pierreWrappedArguments.test.ts`), as
 - `pierreWordMarks`: a diff typed into marks the changed words once typing pauses, in the rows Pierre keeps (see
   Editing in the diff).
 - `pierrePlainTextWordDiffs`: a diff shown as plain text marks changed words past 1,000 lines (see Editing in the diff).
+- `pierreSearchPanel`: the code's menu opens Pierre's search panel, which 1.6.1's `Editor` opens only from its keymap
+  (`openSearchPanel`, `openSearchReplacePanel`, reaching the private `#openSearchPanel(mode)`), by pressing the key
+  that opens it on the editor's content element; `pierreSearchPanel.test.ts` checks through Pierre's own
+  `resolveEditorCommandFromKeyboardEvent` that the key reaches the command on every OS. The keymap it gives the editors
+  (`pierreEditorKeymap`) puts Replace on the registry's key (see The code's menu).
+- `editorClipboard`: the code's menu runs Pierre's own `copy`, `cut` and `paste` listeners (`runEditorClipboard`).
+  It relies on `Editor.focus()` (`#focus`) putting the window's selection inside the content element at once
+  (`#setWindowSelection`), DOM focus coming later (`queueRender`): `document.execCommand('copy' | 'cut')` fires where
+  the selection is. Checked on screen: several carets copy and paste their own pieces.
 - `pierreLinePosition`: where a line not rendered yet sits, to scroll to a change (see Moving through changes).
 - `pierreHighlightWorker`: the entry the highlighting worker starts from. Pierre's worker chunks import `worker.js`
   back, and the development server loads it twice when the worker is started by Pierre's own URL: two copies answer
