@@ -10,6 +10,7 @@ import fieldStyles from '../../ui/Field.module.css';
 import { IconButton } from '../../ui/IconButton';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { TextField } from '../../ui/TextField';
+import { BranchField } from './BranchField';
 import styles from './XlinkDialog.module.css';
 import {
   draftOf,
@@ -18,7 +19,7 @@ import {
   withPointKind,
   withRuleChange,
   xlinkDialogFields,
-  type RuleNote,
+  type XlinkDialogFields,
   type XlinkDialogTarget,
   type XlinkDraft,
   type XlinkPointKind,
@@ -75,15 +76,28 @@ function XlinkDialog({ target, save, onClose }: { target: XlinkDialogTarget; sav
         <span className={fieldStyles.label}>Points to</span>
         <SegmentedControl label="Points to" value={draft.pointKind} segments={POINT_SEGMENTS} onChange={(pointKind) => setDraft((current) => withPointKind(target, current, pointKind))} />
       </div>
-      <TextField
-        label={fields.pointLabel}
-        value={draft.point}
-        placeholder={fields.pointPlaceholder}
-        hint={fields.pointHint}
-        error={fields.pointError}
-        autoFocus={!fields.isNew}
-        onChange={(event) => change({ point: event.target.value })}
-      />
+      {draft.pointKind === 'branch' ? (
+        <BranchField
+          label={fields.pointLabel}
+          value={draft.point}
+          placeholder={fields.pointPlaceholder}
+          hint={fields.pointHint}
+          error={fields.pointError}
+          autoFocus={!fields.isNew}
+          source={fields.xlinkedBranches}
+          onChange={(point) => change({ point })}
+        />
+      ) : (
+        <TextField
+          label={fields.pointLabel}
+          value={draft.point}
+          placeholder={fields.pointPlaceholder}
+          hint={fields.pointHint}
+          error={fields.pointError}
+          autoFocus={!fields.isNew}
+          onChange={(event) => change({ point: event.target.value })}
+        />
+      )}
       {fields.isNew && (
         <>
           <Checkbox label="Writable: changes made in it are checked in to its repository" checked={draft.writable} onChange={(writable) => change({ writable })} />
@@ -93,17 +107,18 @@ function XlinkDialog({ target, save, onClose }: { target: XlinkDialogTarget; sav
       {fields.showsFolder && (
         <TextField label="Folder of the repository" value={draft.folder} placeholder="/" hint="The xlink shows only this folder." onChange={(event) => change({ folder: event.target.value })} />
       )}
-      {fields.showsRules && <ExpansionRules draft={draft} headings={fields.showsRuleHeadings} notes={fields.ruleNotes} onChange={setDraft} />}
+      {fields.showsRules && <ExpansionRules draft={draft} fields={fields} update={setDraft} />}
     </Dialog>
   );
 }
 
-function ExpansionRules({ draft, headings, notes, onChange }: { draft: XlinkDraft; headings: boolean; notes: ReadonlyMap<number, RuleNote>; onChange: (draft: XlinkDraft) => void }) {
+/** `update` takes a change of the latest draft: a branch picked from a list arrives after other typing. */
+function ExpansionRules({ draft, fields, update }: { draft: XlinkDraft; fields: XlinkDialogFields; update: (change: (current: XlinkDraft) => XlinkDraft) => void }) {
   return (
     <div className={fieldStyles.field}>
       <span className={fieldStyles.label}>Branch expansion rules</span>
       <span className={fieldStyles.hint}>Changes made in the xlink while on a branch of this workspace go to the branch of its repository named here.</span>
-      {headings && (
+      {fields.showsRuleHeadings && (
         <div className={styles.rules}>
           <div className={styles.row} aria-hidden>
             <span className={styles.columnHeading}>Working on</span>
@@ -112,13 +127,13 @@ function ExpansionRules({ draft, headings, notes, onChange }: { draft: XlinkDraf
             <span />
           </div>
           {draft.rules.map((rule) => {
-            const note = notes.get(rule.key);
+            const note = fields.ruleNotes.get(rule.key);
             return (
             <div key={rule.key} className={styles.row}>
-              <TextField aria-label="Working on" value={rule.from} placeholder="/main/task" onChange={(event) => onChange(withRuleChange(draft, rule.key, { from: event.target.value }))} />
+              <BranchField aria-label="Working on" value={rule.from} placeholder="/main/task" source={fields.workspaceBranches} onChange={(from) => update((current) => withRuleChange(current, rule.key, { from }))} />
               <ArrowRight size={14} className={styles.arrow} aria-hidden />
-              <TextField aria-label="Changes go to" value={rule.to} placeholder="/main/task" onChange={(event) => onChange(withRuleChange(draft, rule.key, { to: event.target.value }))} />
-              <IconButton icon={<X size={14} />} label="Remove rule" size="small" onClick={() => onChange(withoutRule(draft, rule.key))} />
+              <BranchField aria-label="Changes go to" value={rule.to} placeholder="/main/task" source={fields.xlinkedBranches} onChange={(to) => update((current) => withRuleChange(current, rule.key, { to }))} />
+              <IconButton icon={<X size={14} />} label="Remove rule" size="small" onClick={() => update((current) => withoutRule(current, rule.key))} />
               {note && <span className={classNames(note.isError ? fieldStyles.error : fieldStyles.hint, styles.note)}>{note.text}</span>}
             </div>
             );
@@ -126,7 +141,7 @@ function ExpansionRules({ draft, headings, notes, onChange }: { draft: XlinkDraf
         </div>
       )}
       <div>
-        <Button size="small" variant="ghost" icon={<Plus size={13} />} onClick={() => onChange(withNewRule(draft))}>
+        <Button size="small" variant="ghost" icon={<Plus size={13} />} onClick={() => update(withNewRule)}>
           Add rule
         </Button>
       </div>
