@@ -2,6 +2,7 @@ import type { Virtualizer } from '@pierre/diffs';
 import { prefersReducedMotion } from '../../../lib/reducedMotion';
 import type { ChangeBlock, ChangedLine, ChangeRegion } from './changeBlocks';
 import { modifiedLineAt } from './changeNavigation';
+import { lineOfRow, type LineAtTop } from './keptPlace';
 import { lineRowSelector, pierreShadowRoot } from './pierreDom';
 import { pierreLinePosition } from './pierreLinePosition';
 
@@ -44,10 +45,10 @@ export function scrollToChange(container: HTMLElement, change: ChangeRegion, vir
 }
 
 /**
- * The line of the modified file at the top of the view, read from the row there (on the modified side, side by
- * side): a removed line stands where it was.
+ * The first line in view, read from the row there (on the modified side, side by side): its own side and number,
+ * a removed line's on the original's.
  */
-export function lineAtTopOf(container: HTMLElement, blocks: ChangeBlock[]): number | null {
+export function rowAtTopOf(container: HTMLElement): LineAtTop | null {
   const root = pierreShadowRoot(container);
   if (!root) return null;
   const view = container.getBoundingClientRect();
@@ -55,10 +56,16 @@ export function lineAtTopOf(container: HTMLElement, blocks: ChangeBlock[]): numb
   // The first rows may be a separator of collapsed lines, or the gap across from removed lines.
   for (let y = view.top + 1; y < Math.min(view.bottom, view.top + 240); y += 8) {
     const row = root.elementFromPoint(x, y)?.closest<HTMLElement>('[data-line]');
-    const lineNumber = Number(row?.dataset.line);
-    if (row && lineNumber > 0) return modifiedLineAt(blocks, row.dataset.lineType === 'change-deletion' ? 'deletions' : 'additions', lineNumber);
+    const line = row && lineOfRow(row.dataset.line, row.dataset.lineType);
+    if (line) return { line, offset: row.getBoundingClientRect().top - view.top };
   }
   return null;
+}
+
+/** The line of the modified file at the top of the view (`rowAtTopOf`): a removed line stands where it was. */
+export function lineAtTopOf(container: HTMLElement, blocks: ChangeBlock[]): number | null {
+  const top = rowAtTopOf(container);
+  return top && modifiedLineAt(blocks, top.line.side, top.line.lineNumber);
 }
 
 /**
