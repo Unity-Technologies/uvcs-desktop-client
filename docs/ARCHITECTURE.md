@@ -425,13 +425,15 @@ by name, and never passes it to `cm`.
   `{reptype}` tells apart (`repositoryListArgs`). Neither is in `cm`'s help: `cm` keeps `--type` for its own use and
   testing, so the app leans on an option `cm` doesn't promise. They come in the one command that lists the
   repositories, asked only of a Unity organization; a `cm` refusing `--type` or its `all` (`refusesTypeOption`) is
-  asked again without it, and the list shows no projects. A project shows as the other clients draw it (`ProjectIcon`): a white
-  cube on a tile in one of six colors (`--project-*`), picked by the code of its GUID's last character, the
-  listing's `{repguid}` (`projectColor`), so it looks the same in every client; "All projects" is indigo
-  (`ALL_PROJECTS_GUID`). All workspaces colors a project only once its organization's list was read
-  (`useReadProjects`, which asks nothing); until then its tile is neutral. A repository there is named after its project, the part before the first `/`
-  (`Racing/Game`: `projectPartOf`, `projectOfRepository`, `nameInProject`, `nameWithProject`), which New repository
-  builds from the project picked and Rename keeps (`repositoryRename`).
+  asked again without it, and the list shows no projects. A project shows as the other clients draw it
+  (`ProjectIcon`): a white cube on a tile in one of six colors (`--project-*`), picked by the code of its GUID's last
+  character, the listing's `{repguid}` (`projectColor`), so it looks the same in every client; "All projects" is
+  indigo (`ALL_PROJECTS_COLOR`). All workspaces colors a project only once its organization's list was read
+  (`useReadProjects`, which asks nothing); until then its tile is neutral (`projectTileFill`). The cube and the
+  organization's building are Phosphor's Cube and Buildings (Bold), drawn from `@phosphor-icons/core`'s own SVGs
+  (`svgPathOf`), so its license ships in the third-party notices with the rest. A repository there is named after its
+  project, the part before the first `/` (`Racing/Game`: `projectPartOf`, `projectOfRepository`, `nameInProject`,
+  `nameWithProject`), which New repository builds from the project picked and Rename keeps (`repositoryRename`).
   The Repositories view filters by project (`ProjectFilter`, remembered per organization: `useProjectPickStore`) and
   All workspaces by organization and project (`PlaceFilter`, `placeOf`), from the repository each workspace already
   names: no command. Display names ("UnityTechnologies" for `unity@unity`) come only from Unity's web API, which the
