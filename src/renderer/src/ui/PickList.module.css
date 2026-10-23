@@ -8,6 +8,10 @@
   overflow-y: auto;
 }
 
+.list[data-in-popover] {
+  padding: var(--space-1);
+}
+
 /* Only the rows in view are rendered, each placed where it belongs. */
 .rows {
   position: relative;
