@@ -69,6 +69,9 @@ export class WorkspaceWindows {
     window.webContents.on('did-finish-load', () => {
       if (this.pages.followerOf(viewer) !== undefined) sendEventTo(window.webContents, 'selectionFollowed', { followed: true });
     });
+    // A page loading again runs none of its cleanups: it explores nothing until it says so (`windows.exploring`), or
+    // links and the Window menu would go to a window on the home screen.
+    window.webContents.on('did-navigate', () => this.stopExploring(viewer));
     if (place) this.requested.set(viewer, place);
     if (reopening?.reopen.view) this.views.set(viewer, reopening.reopen.view);
 
