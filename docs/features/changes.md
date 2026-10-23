@@ -56,13 +56,14 @@ isn't the one. "Search matches…" in either one's menu pairs them by hand, with
     time in a quick `cm cat`, one after another while at most `MAX_QUICK_BACKLOG` wait, in processes of their own past
     that. A path `cm ls` can't find fails it, the others listed all the same: they're listed again without the paths it
     named (`pathsNotFound`, matched on each OS's spelling of them), one more `cm ls`. Reading the records out of the
-    failure instead was left out: what a failure keeps is the command log's text, its secrets hidden. The new files are read from disk, 16 at a time,
-    each path checked to be inside the workspace (`workspaceFileOf`): the window isn't trusted.
+    failure instead was left out: what a failure keeps is the command log's text, its secrets hidden. The new files are
+    read from disk, 16 at a time, each path checked to be inside the workspace (`workspaceFileOf`): the window isn't
+    trusted.
   - Measured once as the dialog opens (`moveSimilaritiesQuery`): the slider, "Minimum similarity" (`PercentSlider`,
     as Settings' own), filters what was measured and runs nothing. The candidates are fixed, so no refresh reaches it:
     its key is an area no refresh scope names (`moveSimilaritiesKey`), and its `IMMUTABLE_QUERY` meta keeps it from the
-    refreshes of the whole workspace (the Refresh button, a loaded changeset that moved). It starts at 80%, as the official client's
-    does; a file the detection found too unlike shows once it's lowered (the empty list says so).
+    refreshes of the whole workspace (the Refresh button, a loaded changeset that moved). It starts at 80%, as the
+    official client's does; a file the detection found too unlike shows once it's lowered (the empty list says so).
   - Unrelated files cost no diff: one side holding lines the other lacks bounds the changes from below
     (`changesAtLeast`), and past the deleted file's lines it reads 0. Every diff stops at the deleted file's lines and
     at `MAX_DIFF_WORK`, and the main process yields between pairs: a diff runs in one go, answering no other call.
