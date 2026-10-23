@@ -30,6 +30,7 @@ you touch:
 | `features/explore-repository.md`        | Exploring a repository without a workspace: the entry points, what its window shows and offers, Create workspace, links |
 | `features/page-windows.md`              | A page (a diff, a history, a review) in a new window: where it's offered, how it belongs to its workspace window, Follow selection |
 | `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
+| `features/xlinks.md`                    | Creating and editing xlinks: where they point, writable ones, branch expansion rules, the `cm xlink` commands |
 
 ## How a request flows
 
@@ -422,6 +423,8 @@ and many people use the same server. Every `cm` command other than local reads (
   on lists of tens of thousands.
 
 ## Xlinks
+
+Creating and editing xlinks is in features/xlinks.md; this section is how items under one are read.
 
 Revision ids, item ids and changeset numbers are per repository, and an item under an xlink (nested ones too, and on
 other servers) lives in the xlinked repository: `cm` looks a bare `revid:432251` up in the workspace's, where it is

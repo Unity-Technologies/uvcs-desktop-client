@@ -7,9 +7,13 @@ import { keyedByWorkspaceInfo, queryClient, SLOW_CHANGING_QUERY } from '../../ap
 import { usePlace } from '../../app/workspace/useWorkspace';
 import { compactFilter } from '../../lib/compactFilter';
 
-/** Branches matching `filter`. Without one, every branch: tens of thousands on big repositories, so read rarely. */
-export function useBranches(filter: QueryFilter = {}) {
-  const place = usePlace();
+/**
+ * Branches matching `filter`. Without one, every branch: tens of thousands on big repositories, so read rarely. `of`
+ * reads another place's than the window's, e.g. an xlinked repository's (`repositoryPlace`).
+ */
+export function useBranches(filter: QueryFilter = {}, of?: Place) {
+  const windowPlace = usePlace();
+  const place = of ?? windowPlace;
   // `{ includeHidden: false }` and `{}` ask for the same branches: one cache entry, one `cm find`.
   const query = compactFilter(filter);
   return useQuery({

@@ -23,6 +23,13 @@ describe('cmOutputKind', () => {
     expect(cmOutputKind(['status', '--header', '--xml'])).toBe('answer');
   });
 
+  it("reads an xlink's own details as an answer, and creating or editing one as an operation", () => {
+    expect(cmOutputKind(['xlink', '--show', '/ws/lib'])).toBe('answer');
+    expect(cmOutputKind(['xlink', '-s', '/ws/lib'])).toBe('answer');
+    expect(cmOutputKind(['xlink', '-w', '/ws/lib', '/', 'cs:4@lib@local'])).toBe('operation');
+    expect(cmOutputKind(['xlink', '--addrules', '/ws/lib', 'br:/main-br:/main/dev'])).toBe('operation');
+  });
+
   it("reads a merge's machine-readable preview as a list, and a merge as an operation", () => {
     expect(cmOutputKind(['merge', 'br:/main/task', '--machinereadable', '--printcontributors'])).toBe('list');
     expect(cmOutputKind(['merge', 'br:/main/task', '--merge', '--machinereadable'])).toBe('operation');

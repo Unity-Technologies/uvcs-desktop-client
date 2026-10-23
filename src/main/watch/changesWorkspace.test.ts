@@ -9,6 +9,8 @@ describe('changesWorkspace', () => {
     expect(changesWorkspace(['shelveset', 'apply', 'sh:3'])).toBe(true);
     expect(changesWorkspace(['changelist', 'default', 'add', '/ws/a.txt'])).toBe(true);
     expect(changesWorkspace(['undelete', 'revid:18', '/ws/src/Enemy.cs'])).toBe(true);
+    expect(changesWorkspace(['xlink', '-w', '/ws/lib', '/', 'cs:4@lib@local'])).toBe(true);
+    expect(changesWorkspace(['xlink', '--addrules', '/ws/lib', 'br:/main-br:/main/dev'])).toBe(true);
   });
 
   it('leaves out reads and previews', () => {
@@ -17,6 +19,8 @@ describe('changesWorkspace', () => {
     expect(changesWorkspace(['shelveset', 'apply', 'sh:3', '--preview'])).toBe(false);
     expect(changesWorkspace(['changelist'])).toBe(false);
     expect(changesWorkspace(['label', 'create', 'lb:v1'])).toBe(false);
+    expect(changesWorkspace(['xlink', '--show', '/ws/lib'])).toBe(false);
+    expect(changesWorkspace(['xlink', '-s', '/ws/lib'])).toBe(false);
   });
 });
 

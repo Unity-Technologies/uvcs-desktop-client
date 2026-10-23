@@ -41,6 +41,8 @@ const COMMAND_OUTPUTS: Readonly<Record<string, KindOf>> = {
   profile: (args) => (args[1] === 'list' ? 'list' : 'operation'),
   repository: (args) => (args[1] === 'list' ? 'list' : 'operation'),
   workspace: (args) => (args[1] === 'list' ? 'list' : 'operation'),
+  // `--show` (or `-s`) prints one xlink and its rules; any other `cm xlink` creates or edits one.
+  xlink: (args) => (args.includes('--show') || args.includes('-s') ? 'answer' : 'operation'),
 
   // Answers.
   checkconnection: 'answer',

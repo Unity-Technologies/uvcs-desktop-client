@@ -1,3 +1,4 @@
+import type { Place } from '@shared/domain/place';
 import { useQuery } from '@tanstack/react-query';
 import { GitCommitVertical } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -17,6 +18,8 @@ interface PickChangesetOptions {
   title: string;
   /** The changeset not to offer: the one being compared. */
   exclude?: number;
+  /** Another place's changesets than the window's, e.g. an xlinked repository's (`repositoryPlace`). */
+  place?: Place;
 }
 
 /**
@@ -27,8 +30,9 @@ export async function pickChangeset(options: PickChangesetOptions): Promise<numb
   return (await askDialog<ChangesetChoice>((finish) => <ChangesetPickerDialog {...options} finish={finish} />))?.id;
 }
 
-function ChangesetPickerDialog({ title, exclude, finish }: PickChangesetOptions & { finish: (choice: ChangesetChoice | undefined) => void }) {
-  const { data: recent, error } = useQuery(recentChangesetsQuery(usePlace()));
+function ChangesetPickerDialog({ title, exclude, place, finish }: PickChangesetOptions & { finish: (choice: ChangesetChoice | undefined) => void }) {
+  const windowPlace = usePlace();
+  const { data: recent, error } = useQuery(recentChangesetsQuery(place ?? windowPlace));
   const [search, setSearch] = useState('');
   const choices = useMemo(() => changesetChoices(recent, RECENT_CHANGESETS, exclude, search), [recent, exclude, search]);
   // A number typed is picked without the list: only an empty or text search waits for it.

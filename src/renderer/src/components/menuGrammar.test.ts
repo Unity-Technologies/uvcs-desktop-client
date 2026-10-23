@@ -194,6 +194,7 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   shelveCodeReview: () => codeReviewMenu(workspacePlace(ws), [{ ...review, target: { kind: 'shelve', shelveId: 12 } }], workspace.selector),
   file: () => fileMenu(ws, [file], new PendingChangesIndex([])),
   folder: () => fileMenu(ws, [{ ...file, path: 'src', name: 'src', itemType: 'directory' }], new PendingChangesIndex([])),
+  xlink: () => fileMenu(ws, [{ ...file, path: 'lib', name: 'lib', itemType: 'directory', xlink: { writable: true, path: '/', changeset: 4, repository: 'lib', server: 'local' } }], new PendingChangesIndex([])),
   lockedFile: () => fileMenu(ws, [file], new PendingChangesIndex([change]), pendingLocks),
   pendingChange: () => pendingChangeMenu(ws, [change], [], { isIncluded: () => false, setIncluded: () => {} }),
   lockedPendingChange: () => pendingChangeMenu(ws, [change], [], { isIncluded: () => false, setIncluded: () => {} }, undefined, pendingLocks),

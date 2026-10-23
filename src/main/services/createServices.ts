@@ -42,6 +42,7 @@ import { createUnityAssetsService } from './unityAssetsService';
 import { createUpdatesService } from './updatesService';
 import { createWindowsService } from './windowsService';
 import { createWorkspacesService } from './workspacesService';
+import { createXlinksService } from './xlinksService';
 import type { AppsContext, BranchNamesContext, ProfilesContext, ServiceContext, SwitchContext } from './ServiceContext';
 
 export function createServices(context: ServiceContext): UvcsApi {
@@ -82,6 +83,7 @@ export function createServices(context: ServiceContext): UvcsApi {
     updates: createUpdatesService(context),
     windows: createWindowsService(context),
     workspaces: createWorkspacesService(context, switching),
+    xlinks: createXlinksService(context),
   };
 }
 
