@@ -1,5 +1,4 @@
 import type { ConnectionProblem, SetupProblem } from '@shared/domain/setup';
-import type { WorkspaceInfo } from '@shared/domain/workspace';
 
 /**
  * The connection problem the card shows (`ConnectionProblemCard`): the open workspace's server's, until dismissed for
@@ -7,16 +6,17 @@ import type { WorkspaceInfo } from '@shared/domain/workspace';
  */
 export function connectionProblemShown(
   problem: ConnectionProblem | null | undefined,
-  { workspaceOpen, dismissedServer }: { workspaceOpen: boolean; dismissedServer: string | null },
+  { placeOpen, dismissedServer }: { placeOpen: boolean; dismissedServer: string | null },
 ): ConnectionProblem | null {
-  if (!problem || !workspaceOpen || problem.server === dismissedServer) return null;
+  if (!problem || !placeOpen || problem.server === dismissedServer) return null;
   return problem;
 }
 
 /**
- * The server to check (`useConnectionCheck`): the open workspace's, once the setup check passed, as a `cm` without
- * configuration reaches no server. None while either is unknown, and none on the home screen.
+ * The server to check (`useConnectionCheck`): the window's place's (`serverOfPlace`: a workspace's, a repository
+ * explored without one), once the setup check passed, as a `cm` without configuration reaches no server. None while
+ * either is unknown, and none on the home screen.
  */
-export function serverToCheck(setupProblem: SetupProblem | null | undefined, workspace: Pick<WorkspaceInfo, 'server'> | undefined): string | undefined {
-  return setupProblem === null ? workspace?.server : undefined;
+export function serverToCheck(setupProblem: SetupProblem | null | undefined, placeServer: string | undefined): string | undefined {
+  return setupProblem === null ? placeServer : undefined;
 }
