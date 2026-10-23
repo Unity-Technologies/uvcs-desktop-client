@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chosenStartingPoint, startingPointCards, type NewBranchOrigin } from './newBranchOrigins';
+import { chosenStartingPoint, startingPointCards, type NewBranchOrigin, newBranchStart } from './newBranchOrigins';
 
 const latestMain: NewBranchOrigin = {
   parentBranch: '/main',
@@ -33,5 +33,17 @@ describe('chosenStartingPoint', () => {
 
   it('falls back to the label for a starting point without a card', () => {
     expect(chosenStartingPoint(loaded)).toEqual({ name: "your workspace's changeset 64", title: "your workspace's changeset 64" });
+  });
+});
+
+describe('newBranchStart', () => {
+  it("starts from the selected branch, else from the workspace's loaded changeset", () => {
+    expect(newBranchStart(true, true)).toBe('selectedBranch');
+    expect(newBranchStart(true, false)).toBe('selectedBranch');
+    expect(newBranchStart(false, true)).toBe('workspace');
+  });
+
+  it('waits for a branch to be selected in a repository explored without a workspace', () => {
+    expect(newBranchStart(false, false)).toBeNull();
   });
 });

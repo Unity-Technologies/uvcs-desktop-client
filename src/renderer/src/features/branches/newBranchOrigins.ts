@@ -32,3 +32,12 @@ export function startingPointCards(origins: NewBranchOrigin[]): OptionCard<strin
     description: origin.card?.description ?? '',
   }));
 }
+
+/**
+ * Where the Branches view's New branch starts: the selected branch's head, else what the workspace has loaded; with
+ * neither (a repository explored without a workspace, nothing selected) it waits for a branch to be selected.
+ */
+export function newBranchStart(hasSelectedBranch: boolean, inWorkspace: boolean): 'selectedBranch' | 'workspace' | null {
+  if (hasSelectedBranch) return 'selectedBranch';
+  return inWorkspace ? 'workspace' : null;
+}

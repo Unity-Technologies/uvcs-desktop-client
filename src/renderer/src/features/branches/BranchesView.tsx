@@ -35,6 +35,7 @@ import { buildBranchTree, sortBranchesByName, type BranchTreeRow } from './branc
 import { useCollapsedBranches } from './useCollapsedBranches';
 import { openCreateBranchDialog } from './CreateBranchDialog';
 import { newBranchFromWorkspace } from './newBranchFromWorkspace';
+import { newBranchStart } from './newBranchOrigins';
 import { useBranches } from './useBranches';
 import { branchCopyTexts } from './branchMenu';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
@@ -65,6 +66,7 @@ export function BranchesView() {
   useCopyCommand('Branches', 'Branch', selection.selected.size === 1 && selected ? branchCopyTexts(place, selected) : undefined);
 
   // From the selected branch's head, or else from what the workspace has loaded (nothing listed, a label loaded).
+  const start = newBranchStart(selected !== undefined, place.kind === 'workspace');
   const newBranch = (): void => {
     if (selected) void openCreateBranchDialog(place, branchHeadOrigin(selected));
     else if (workspace) void newBranchFromWorkspace(workspace);
@@ -82,7 +84,13 @@ export function BranchesView() {
         actions={
           <>
             <ViewRefreshButton fetching={isFetching} />
-            <Button variant="primary" icon={<GitBranchPlus size={14} />} onClick={newBranch} disabled={!workspace}>
+            <Button
+              variant="primary"
+              icon={<GitBranchPlus size={14} />}
+              onClick={newBranch}
+              disabled={start === null || (start === 'workspace' && !workspace)}
+              data-tip={start === null ? 'Select the branch to start from' : undefined}
+            >
               New branch
             </Button>
           </>
