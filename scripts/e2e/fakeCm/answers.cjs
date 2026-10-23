@@ -21,7 +21,20 @@ const FINDABLE = {
 
 const { DIFFERENCES, FILES, LOCKS, OWNER, REPOSITORIES, REPOSITORY_SPEC, REVISIONS, SERVER, WORKSPACE } = repository;
 
-const ACCOUNTS = [{ name: SERVER, server: SERVER, user: OWNER, workingmode: 'UPWorkingMode' }];
+/** A Unity organization the user signed in to, besides the workspace's server: the home screen lists its projects. */
+const ORGANIZATION = 'studio@unity';
+const ACCOUNTS = [
+  { name: SERVER, server: SERVER, user: OWNER, workingmode: 'UPWorkingMode' },
+  { name: ORGANIZATION, server: ORGANIZATION, user: OWNER, workingmode: 'SSOWorkingMode' },
+];
+/** As `cm repository list --type=all` prints a Unity organization: its projects, their repositories, and storage. */
+const ORGANIZATION_REPOSITORIES = [
+  { repid: 2, repname: 'Racing', repserver: ORGANIZATION, repowner: OWNER, reptype: 'Project' },
+  { repid: 3, repname: 'Racing/Game', repserver: ORGANIZATION, repowner: OWNER, reptype: 'VCS' },
+  { repid: 4, repname: 'Puzzle', repserver: ORGANIZATION, repowner: OWNER, reptype: 'Project' },
+  { repid: 5, repname: 'Puzzle/Levels', repserver: ORGANIZATION, repowner: OWNER, reptype: 'VCS' },
+  { repid: 6, repname: 'storage', repserver: ORGANIZATION, repowner: OWNER, reptype: 'WorkspaceStorage' },
+];
 const WORKSPACES = [{ wkname: WORKSPACE.name, wkpath: WORKSPACE.path, path: WORKSPACE.path, wkid: WORKSPACE.guid, guid: WORKSPACE.guid }];
 
 const COMMANDS = {
@@ -39,7 +52,7 @@ const COMMANDS = {
   cat: cat,
   ls: lsOutput,
   'lock list': lockList,
-  'repository list': (args) => formatted(args, REPOSITORIES),
+  'repository list': repositoryList,
   showacl: showAcl,
   showowner: ([spec]) => `${spec} ${OWNER} User\n`,
   listusers: ([, kind]) => (kind === '--onlygroups' ? 'Developers\nArtists\n' : `${OWNER}\nana@example.com\n`),
@@ -129,6 +142,12 @@ function formatted(args, records) {
   const format = args.find((arg) => arg.startsWith('--format='));
   if (!format) throw new Error('The fake cm lists objects only with --format');
   return formatRecords(format.slice('--format='.length), records);
+}
+
+/** `cm repository list <server>`: a Unity organization's projects come only with `--type=all`, as `cm` lists them. */
+function repositoryList(args) {
+  if (args[0] !== ORGANIZATION) return formatted(args, REPOSITORIES);
+  return formatted(args, args.includes('--type=all') ? ORGANIZATION_REPOSITORIES : ORGANIZATION_REPOSITORIES.filter((record) => record.reptype === 'VCS'));
 }
 
 /** The command, as the longest name `COMMANDS` knows (`lock list` before `lock`), and its arguments. */
