@@ -17,6 +17,12 @@ export interface WindowsApi {
   viewShown(view: string): Promise<void>;
   /** Opens the menu bar's menus at a point of the window (in page pixels), where the window has no menu bar (Windows). */
   showAppMenu(position: { x: number; y: number }): Promise<void>;
+  /**
+   * Pastes the clipboard where the calling window's focus is, as Edit ▸ Paste does (`webContents.paste`): the page gets
+   * a real paste event, which Pierre's editor spreads across its carets in the file's line breaks. A page can't paste
+   * by itself: Chromium refuses `document.execCommand('paste')`. Only the clipboard's text reaches the page, as a paste.
+   */
+  pasteClipboard(): Promise<void>;
   /** Opens a page of the workspace in a window of its own, belonging to this window: it closes with it. */
   openPage(opening: PageWindowOpening): Promise<void>;
   /**
