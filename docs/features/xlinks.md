@@ -18,7 +18,12 @@ it saves are decided by `xlinkDraft.ts` (`xlinkDialogFields`, `newXlinkOf`, `xli
   changeset it is on as the xlink is saved, and the xlink stays there until it is edited again.
 - **Writable** (`-w`): changes made under it are checked in to its repository. A read-only xlink may show a folder of
   its repository instead of all of it; a writable one can't (`cm`: "Only xlinks to root (/) are currently supported
-  for writable Xlinks"), so the dialog offers the folder only while read-only.
+  for writable Xlinks"), so the dialog offers the folder only while read-only. The folder is typed or chosen from the
+  repository's tree where the xlink points (`pickRepositoryFolder`, its rows and keys in `repositoryFolderTree.ts`),
+  read a folder at a time as it opens: one `cm ls <folder> --tree=<spec>` each (`XlinksApi.folders`). `cm ls` takes a
+  changeset or a branch of another repository but refuses a label, so a label's tree is read at its changeset, which
+  one `cm find label ... on repository` names first (`XlinksApi.treePoint`). Nested xlinks are left out: an xlink
+  can't show a folder of one.
 - **Typed, or chosen from a list**: every field naming an object has a "Choose" button beside it (`PickField`), as
   the legacy client offers its explorer dialogs there; the repository and server are chosen from lists already
   (`RepositoryPicker`). What it points to opens the app's branch, changeset or label picker (`pickBranch`,
