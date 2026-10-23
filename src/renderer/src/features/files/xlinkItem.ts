@@ -1,6 +1,7 @@
-import type { ItemDetails, TreeItem } from '@shared/domain/explorer';
+import type { ItemDetails, TreeItem, XlinkTarget } from '@shared/domain/explorer';
 import type { ItemType } from '@shared/domain/pendingChanges';
 import { xlinkKind, xlinkSummary } from '../../components/xlinkWords';
+import { parentOf } from '../../lib/paths';
 
 type ListedItem = Pick<TreeItem, 'itemType' | 'xlink'>;
 
@@ -26,4 +27,18 @@ export function detailsKindOf(item: ListedItem): DetailsKind {
 /** The details' "Xlink" row: where it points, from the listing, else as `cm fileinfo` words it. */
 export function xlinkDetailOf(item: Pick<TreeItem, 'xlink'>, details: Pick<ItemDetails, 'xlinkTarget'> | undefined): string | undefined {
   return item.xlink ? xlinkSummary(item.xlink) : details?.xlinkTarget;
+}
+
+/**
+ * The folder a new xlink made from an item goes into: the item itself, or a file's folder. Only a controlled folder
+ * takes one (`cm`: "is not in a workspace"), so none from a private item, whose folder may be private too.
+ */
+export function newXlinkDirectoryOf(item: Pick<TreeItem, 'path' | 'itemType' | 'isPrivate'>): string | null {
+  if (item.isPrivate) return null;
+  return item.itemType === 'directory' ? item.path : parentOf(item.path);
+}
+
+/** The item as an xlink to edit: a controlled one (a new one is edited too, before it is checked in). */
+export function editableXlinkOf<Item extends Pick<TreeItem, 'xlink' | 'isPrivate'>>(item: Item): (Item & { xlink: XlinkTarget }) | null {
+  return item.xlink && !item.isPrivate ? (item as Item & { xlink: XlinkTarget }) : null;
 }
