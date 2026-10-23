@@ -286,14 +286,15 @@ selection until lines are picked to discard, Pierre echoing them back picking no
 ## The code's menu
 
 A right-click on code opens its menu (`codeMenu`, wired by `useCodeMenu`, every choice in `codeTarget`): every text
-diff's sides and the whole-file editor. It follows the menus' one grammar, so it reads, in groups: Undo, Redo; Find,
-Replace, Go to line…, Compare with clipboard; Cut, Copy, Paste; Delete, Select all. Where a diff selects lines for links
-(a committed diff), the lines' own entries join it at the end of their groups ("Annotate at this line", "Copy link to
-line 42", "Copy line": `lineMenuEntries`). What it holds depends on the side right-clicked (`codeMenuTarget`):
+diff's sides, the whole-file editor and a merge's hand-editing (`HandEditor`). It follows the menus' one grammar, so it
+reads, in groups: Undo, Redo; Find, Replace, Go to line…, Compare with clipboard; Cut, Copy, Paste; Delete, Select all.
+Where a diff selects lines for links (a committed diff), the lines' own entries join it at the end of their groups
+("Annotate at this line", "Copy link to line 42", "Copy line": `lineMenuEntries`). What it holds depends on the side
+right-clicked (`codeMenuTarget`):
 
-- **Typed into** (the newer side of a workspace file's diff once its editor is attached, the whole-file editor):
-  everything, through Pierre's editor. Undo and Redo are its history (`canUndo`, `canRedo`). Cut, Copy and Paste are
-  Pierre's own, as ⌘X, ⌘C and ⌘V (`runEditorClipboard`): the editor is focused and the page runs
+- **Typed into** (the newer side of a workspace file's diff once its editor is attached, the whole-file editor, a
+  merge's hand-editing): everything, through Pierre's editor. Undo and Redo are its history (`canUndo`, `canRedo`). Cut,
+  Copy and Paste are Pierre's own, as ⌘X, ⌘C and ⌘V (`runEditorClipboard`): the editor is focused and the page runs
   `document.execCommand('cut' | 'copy')`, and since Chromium refuses a page's paste, the window pastes
   (`windows.pasteClipboard`, Electron's `webContents.paste`). So several carets copy and paste their own pieces, a bare
   caret's Cut and Copy take its whole line, and a paste takes the file's line breaks (Pierre's `TextDocument` keeps the
