@@ -176,8 +176,11 @@ merge's changesets, where the file may not have changed. A folder added with its
 with the same name", `directoryConflictWords`), not `cm`'s ("Evil twin conflict"). Under its choices, a directory
 conflict on a file diffs the incoming item with yours or with the base ("Incoming ↔ Yours", "Incoming ↔ Base",
 `comparisonsOf`, `comparedVersions`): each side read by its path at the merge's changesets (`MergePlan.contributors`),
-a side that deleted the item empty, and an item added on both sides empty at the base. No `cm` command beyond the two
-versions read. A folder or an xlink has none, nor a plan that didn't name the changesets. Sandbox:
+never by item id, since a directory conflict names no repository and an id under an xlink is another item; a side
+that deleted the item is empty. The base only in a merge (undoing, `cm`'s base is the changeset undone; cherry picking,
+the picked one's parent) and for an incoming item that was there before; it is read at the item's old path, so a folder
+above it moved too finds nothing and the diff says so. No `cm` command beyond the versions read. A folder or an xlink
+has no comparison, nor a plan that didn't name the changesets. Sandbox:
 `scripts/sandboxes/merge-conflicts.sh`. A text with a line too long to draw unwrapped wraps, as in a diff, and isn't edited in the app:
 diff.md "Long lines".
 Every status reads as what the merge will do, never as done (`mergeStatus`): "Will merge automatically", "Needs your
