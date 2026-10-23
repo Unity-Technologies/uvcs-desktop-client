@@ -9,6 +9,7 @@ import { menuAction } from '../../components/menuWords';
 import { openRepositoryPathPermissions, openRepositoryPermissions, openServerPermissions } from '../../features/permissions/openPermissions';
 import { repositoryLinkTo } from '../links/linkTo';
 import { forgetRecentWorkspace } from '../settings/useSettings';
+import { exploreRepository } from '../workspace/exploreRepository';
 import type { OpenWorkspaceIn } from '../workspace/workspaceWindowChoice';
 import { deleteRepository, removeWorkspace, renameRepository, renameWorkspace } from './homeOperations';
 
@@ -28,8 +29,14 @@ export function missingWorkspaceMenu(workspace: WorkspaceSummary, open: (path: s
   return groupedMenu([menuAction('locate', () => open(workspace.path)), menuAction('forget', () => void forgetRecentWorkspace(workspace.path))]);
 }
 
+/**
+ * A repository's menu on the home screen: exploring it without a workspace, here or in a new window (Shift on the
+ * row's Explore), or making a workspace of it, then what changes the repository itself.
+ */
 export function repositoryMenu(repository: RepositorySummary, createWorkspace: (repository: RepositorySummary) => void): MenuEntry[] {
   return groupedMenu([
+    menuAction('explore', () => exploreRepository(repository.spec, 'here')),
+    menuAction('exploreInNewWindow', () => exploreRepository(repository.spec, 'newWindow')),
     menuAction('newWorkspace', () => createWorkspace(repository)),
     copySubmenu('Repository', { name: repository.name, link: repositoryLinkTo(repository.spec, {}), spec: repository.spec }),
     menuAction('rename', () => void renameRepository(repository)),

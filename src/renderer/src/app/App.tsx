@@ -1,5 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useEffect } from 'react';
+import { placeId } from '@shared/domain/place';
 import { useExternalApps } from '../components/externalApps/externalApps';
 import { DialogHost } from '../ui/dialog/DialogHost';
 import { ToastHost } from '../ui/toast/ToastHost';
@@ -28,10 +29,10 @@ import { SetupProblemScreen } from './startup/SetupProblemScreen';
 import { useCmAvailability, useSetupCheck } from './startup/useCmAvailability';
 import { UpdateCard } from './updates/UpdateCard';
 import { loadUpdateStatus } from './updates/updateStore';
-import { useForgetLeftWorkspace } from './workspace/leftWorkspace';
+import { useForgetLeftPlace } from './workspace/leftPlace';
 import { useSession } from './workspace/sessionStore';
 import { useRequestedPlace } from './workspace/useRequestedPlace';
-import { WorkspaceGate } from './workspace/WorkspaceGate';
+import { PlaceScreen } from './workspace/PlaceScreen';
 
 export function App() {
   return (
@@ -64,9 +65,9 @@ function Root() {
   useRequestedPlace();
   useLinkRequests();
   useEffect(() => void loadUpdateStatus(), []);
-  const workspacePath = useSession((state) => state.workspacePath);
+  const place = useSession((state) => state.place);
   const isPageWindow = usePageWindow((state) => state.isPageWindow);
-  useForgetLeftWorkspace(workspacePath);
+  useForgetLeftPlace(place);
   const cm = useCmAvailability();
   const setup = useSetupCheck(cm.isSuccess);
 
@@ -79,7 +80,7 @@ function Root() {
   if (isPageWindow) return <PageWindowScreen />;
   return (
     <>
-      {workspacePath ? <WorkspaceGate key={workspacePath} /> : <HomeScreen />}
+      {place ? <PlaceScreen key={placeId(place)} place={place} /> : <HomeScreen />}
       <FolderDropTarget />
     </>
   );
