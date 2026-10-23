@@ -63,9 +63,14 @@ function byServer(a: string, b: string): number {
   return byKind || describeServer(a).label.localeCompare(describeServer(b).label, undefined, { sensitivity: 'base' });
 }
 
-/** The places whose name, or organization's, holds every word of `search`. */
+/**
+ * The places whose name, or organization's, holds every word of `search`, each matching project under its
+ * organization's row, so two organizations' projects of the same name still read apart.
+ */
 export function matchingPlaces(choices: readonly PlaceChoice[], search: string): PlaceChoice[] {
-  return choices.filter((choice) => matchesWordFilter([choice.label, choice.detail ?? ''], search));
+  const matching = new Set(choices.filter((choice) => matchesWordFilter([choice.label, choice.detail ?? ''], search)));
+  const holdingMatches = new Set([...matching].flatMap((choice) => (choice.place.project === undefined ? [] : [choice.place.server])));
+  return choices.filter((choice) => matching.has(choice) || (choice.place.project === undefined && holdingMatches.has(choice.place.server)));
 }
 
 /** Whether a workspace is in `place`: on its server, and in its project when it names one. All for none. */

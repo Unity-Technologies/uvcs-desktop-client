@@ -48,11 +48,21 @@ describe('placeChoices', () => {
 });
 
 describe('matchingPlaces', () => {
-  it("finds a project by its own name or its organization's", () => {
+  it("finds a project by its own name or its organization's, under its organization", () => {
     const choices = placeChoices([GAME, EDITOR, LEGACY]);
 
-    expect(matchingPlaces(choices, 'racing').map((choice) => choice.label)).toEqual(['Racing']);
-    expect(matchingPlaces(choices, 'studio cloud').map((choice) => choice.label)).toEqual(['Cloud Repositories']);
+    expect(matchingPlaces(choices, 'racing').map((choice) => choice.label)).toEqual(['studio', 'Racing']);
+    expect(matchingPlaces(choices, 'studio cloud').map((choice) => choice.label)).toEqual(['studio', 'Cloud Repositories']);
+  });
+
+  it("tells two organizations' projects of the same name apart by their organizations", () => {
+    const choices = placeChoices([EDITOR, { repository: 'Cloud Repositories/Sample@other@unity' }]);
+
+    expect(matchingPlaces(choices, 'cloud repositories').map((choice) => choice.label)).toEqual(['other', 'Cloud Repositories', 'studio', 'Cloud Repositories']);
+  });
+
+  it('finds an organization alone by its name', () => {
+    expect(matchingPlaces(placeChoices([LEGACY, GAME]), 'codice').map((choice) => choice.label)).toEqual(['codice']);
   });
 });
 
