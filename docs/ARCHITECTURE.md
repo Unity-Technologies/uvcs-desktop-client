@@ -103,6 +103,10 @@ the workspace, editing a file) needs a workspace.
   bug told as one for a repository; `WorkspaceCopies` (revisions read from the disk) is asked only in a workspace.
 - **Caches and queues key by place** (`placeId`: a workspace's path, `repository:<spec>` for a repository):
   `BranchNamesCache`, `RevisionCat`, `RepositoryTrees`, `RevisionDownloads`, `HandedOverDiffs`, the review mode setting.
+  `BranchNamesCache` keeps a place's names only while a window shows it (its `isShown`): a workspace's while it is
+  watched; a repository's never yet, so every code review list there reads every branch name again (two `cm find
+  branch`). Keeping them while a window explores the repository, and letting them go with its last one, comes with
+  the windows that explore one.
 - **The renderer** keys a place's queries `queryKeys.inPlace(place, …)` (a workspace's are `inWorkspace`'s, so every
   refresh scope reads both alike), refreshes them with `invalidatePlace` (`runAction` takes the place it changed), and
   gets the window's place from `usePlace()`, its repository and server from `usePlaceRepository()` and
