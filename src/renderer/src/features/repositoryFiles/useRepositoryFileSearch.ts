@@ -8,8 +8,6 @@ import { searchesFor, type RepositoryFileSearch } from './repositoryFileSearch';
 /** How long typing pauses before a search runs: each keystroke would scan the tree again. */
 const SEARCH_DELAY_MS = 150;
 
-let searches = 0;
-
 /**
  * Searches a repository's files at a changeset by name as the query settles (`explorer.findRepositoryPaths`): the best
  * found so far as they come (`repositoryPathsFound`), then all of them. A newer query stops the search before it
@@ -29,7 +27,8 @@ export function useRepositoryFileSearch(place: RepositoryPlace, changesetId: num
       setSearch({ kind: 'tooShort' });
       return;
     }
-    const searchId = `files-${++searches}`;
+    // Unique across windows: the main process tells searches apart by it, whichever window asked.
+    const searchId = crypto.randomUUID();
     current.current = searchId;
     setSearch((before) => ({ kind: 'searching', paths: before.kind === 'found' || before.kind === 'searching' ? before.paths : [], source: null }));
     api.explorer.findRepositoryPaths(place, changesetId, settled, searchId).then(

@@ -14,7 +14,7 @@ import { moveArgs, moveItems } from '../files/moveItems';
 import { renamePrivate } from '../files/renamePrivate';
 import { restoreDeletedItems } from '../files/restoreDeletedItems';
 import { toAbsolutePath, toAbsolutePaths } from '../files/workspacePaths';
-import { sendEventToCaller } from '../ipc/sendEvent';
+import { sendEventsToCaller } from '../ipc/sendEvent';
 import type { ServiceContext } from './ServiceContext';
 
 /** How many of a repository's paths a search keeps, the best first: as many as the workspace's Go to file shows. */
@@ -97,12 +97,14 @@ export function createExplorerService({ cm, operations, workspaceCopies, headers
 
   async function findRepositoryPaths(place: RepositoryPlace, changesetId: number, query: string, searchId: string) {
     const stop = new AbortController();
+    // The window is named now: the listing's records may arrive in the async context of another window's search.
+    const sendToCaller = sendEventsToCaller();
     pathSearches.set(searchId, stop);
     try {
       return await repositoryPaths.search(place, changesetId, query, {
         limit: FOUND_PATHS_LIMIT,
         signal: stop.signal,
-        onUpdate: (paths, source) => sendEventToCaller('repositoryPathsFound', { searchId, paths, source }),
+        onUpdate: (paths, source) => sendToCaller('repositoryPathsFound', { searchId, paths, source }),
       });
     } finally {
       pathSearches.delete(searchId);
