@@ -718,10 +718,11 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   (`ProfileList`: everyone asking while it runs takes its answer, a removed account makes it `forget` a read started
   before, and once one succeeded `cm` is configured for the session). Unconfigured, that read runs as a process:
   `cm shell` refuses to start, so no session is ever ready. No server is asked at start-up: the home screen works
-  without any. A workspace's server is checked as
-  the workspace opens, `cm checkconnection <server>` with the server its info names (`checkConnection`, once per server
-  until it answers), and a server out of reach or a failed sign-in show in a corner card naming it
-  (`ConnectionProblemCard`, `connectionProblemShown`) while the workspace works with what's local. Checking the default
+  without any. The server of the window's place is checked as
+  it opens, `cm checkconnection <server>` (`checkConnection`, once per server until it answers): a workspace's once its
+  info names it, a repository's explored without one from its spec (`serverOfPlace`). A server out of reach or a failed
+  sign-in show in a corner card naming it (`ConnectionProblemCard`, `connectionProblemShown`), while a workspace works
+  with what's local. Checking the default
   server at start-up, and stopping the app on its failure, was dropped: it left a user offline unable to open even the
   home screen, and named no server, as `cm checkconnection` prints none.
 - Dropping a folder on any window, home screen or workspace, opens its workspace in that window, or with Shift in a

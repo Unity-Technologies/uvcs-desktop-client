@@ -1,8 +1,9 @@
 import type { ConnectionProblem, SetupProblem } from '@shared/domain/setup';
 
 /**
- * The connection problem the card shows (`ConnectionProblemCard`): the open workspace's server's, until dismissed for
- * that server. The home screen has no workspace, so it shows none: it asks no server, and works without one.
+ * The connection problem the card shows (`ConnectionProblemCard`): the server's of the window's place (a workspace's,
+ * or a repository's explored without one: `serverOfPlace`), until dismissed for that server. The home screen shows
+ * none: it asks no server, and works without one.
  */
 export function connectionProblemShown(
   problem: ConnectionProblem | null | undefined,

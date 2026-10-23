@@ -27,6 +27,8 @@ window" is what browsers and the official client say.
   came from within the window, never past the one it opened on: `pageWindowGoBack`), and "Follow selection" at its
   end. No sidebar, status bar, command log or folder drop. Its title is "<page> — <workspace>", or the repository's name
   for a repository explored without a workspace (`placeName`).
+- **A workspace's follows its disk** as its window does (`WorkspaceWatch` in `PageWindowScreen`); a repository's,
+  explored without a workspace, has none to watch.
 - **Its address names its place and page** (`pageWindowQuery`, read by `openPageWindowFromAddress` before the first
   render), and keeps them: a reload shows the page again.
 - **It belongs to the window it was opened from**, a workspace's or a repository's explored without one

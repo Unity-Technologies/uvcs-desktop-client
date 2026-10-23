@@ -45,7 +45,12 @@ What needs the disk is never offered: the words listed in `NEEDS_A_WORKSPACE` (s
 cherry picking, applying a shelve, reverting, checking in, opening a file in an app), the workspace commands of the
 menu bar (`REPOSITORY_MENU_COMMANDS`: only the command log), editing or discarding in a diff (`editedFileIn`,
 `discardedFileIn`), releasing a lock (`unlocksIn`), switching to a new label (`offersSwitchToNewLabel`). Server merges
-(Merge to…, finishing a task) and a 3D model's Unity materials need a workspace for now.
+(Merge to…, finishing a task) and a 3D model's Unity materials need a workspace for now. `M` in the Branch Explorer merges
+nothing (`keyboardMergeSource`), and a merge page reached anyway says it needs a workspace instead of opening
+(`showsPage`, in `PageFrame`).
+
+A server out of reach, or wanting a sign-in, shows in the corner card as a workspace's does, the repository's server
+read from its spec (`serverOfPlace`); Settings ▸ Accounts lists its account first.
 
 ## Create workspace
 
