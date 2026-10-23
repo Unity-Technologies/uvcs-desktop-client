@@ -301,8 +301,9 @@ and many people use the same server. Every `cm` command other than local reads (
   layout (`recordsOutput`, `foundLine`). Anything with more than a few fields takes a `RecordLayout`; the small
   positional readers of two to four fields stay as they are (`readWorkspaceListedItem`, `readWorkspaceItem`,
   `parseBranchNames`, the incoming check, `readAccount`, the Branch Explorer's row builders `graphBranch`...). A
-  reader that needs every row before it can say anything (annotate's changesets once each, the repositories and
-  projects) takes each record's fields (`readFields`) and folds them after (`annotationOf`, `repositoryListingOf`).
+  reader that needs every row before it can say anything (the repositories and projects, sorted apart) takes each
+  record's fields (`readFields`) and folds them after (`repositoryListingOf`); one that only needs to remember what
+  it saw keeps it as the records arrive (`AnnotationReader`, each changeset once).
 - **`cm ls` on Windows**: it asks `--encoding` of `--xml` only, so its records come in UTF-8 only from a `cm shell`: a
   listing that can't take a pooled one starts a `cm shell` of its own (`processCommand`, about half a second more
   than an `--xml` process), and a server path holding a quote, which no shell line can hold, prints in the console's

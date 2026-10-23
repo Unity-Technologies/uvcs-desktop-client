@@ -19,7 +19,7 @@ export function recordFormat(placeholders: readonly string[]): string {
 /** What a caller builds of each record's fields (a branch, a changeset); undefined leaves the record out. */
 export type ReadRecord<T> = (fields: string[]) => T | undefined;
 
-/** Each record as its fields: for a reader that folds the rows once they're all read (`annotationOf`). */
+/** Each record as its fields: for a reader that folds the rows once they're all read (`repositoryListingOf`). */
 export const readFields: ReadRecord<string[]> = (fields) => fields;
 
 /**
