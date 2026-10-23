@@ -6,7 +6,7 @@ import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { SearchField } from '../../ui/SearchField';
 import { CenteredSpinner } from '../../ui/Spinner';
-import styles from '../files/GoToFileDialog.module.css';
+import styles from '../../components/GoToFileList.module.css';
 import { repositoryFileSearchNote } from './repositoryFileSearch';
 import { useRepositoryFileSearch } from './useRepositoryFileSearch';
 
