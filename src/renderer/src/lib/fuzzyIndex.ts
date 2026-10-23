@@ -68,7 +68,6 @@ export function createFuzzyIndex(texts: readonly string[]): FuzzyIndex {
   };
 }
 
-
 /** Where the characters of `query` match in `text`, for highlighting a result the same way it was ranked. */
 export function fuzzyMatchPositions(text: string, query: string): number[] {
   const haystack = text.toLowerCase();

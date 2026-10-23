@@ -176,7 +176,6 @@ export class RevisionDownloads {
     return this.sessionFolder.removeLeftOvers();
   }
 
-
   /**
    * Deletes the session's downloads, at once: the app is quitting. A file Windows still holds (an antivirus, a `cm cat`
    * not done) leaves the folder for the next session (`removeLeftOvers`): quitting never fails for it.
@@ -184,7 +183,6 @@ export class RevisionDownloads {
   dispose(): void {
     this.sessionFolder.dispose();
   }
-
 
   private download(place: Place, file: RevisionFile, key: string): Promise<string> {
     const under = this.downloading.get(key);
@@ -248,7 +246,6 @@ export class RevisionDownloads {
     );
     if (again.length > 0) await this.downloadBatch(again, folder, true);
   }
-
 
   private keep(key: string, file: { target: string; size: number }): void {
     this.forget(key);
