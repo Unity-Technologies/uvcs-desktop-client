@@ -35,13 +35,13 @@ export function historyMenu({ place, path, ofWorkspaceFile, otherRepository, ann
   const revision = row?.kind === 'revision' ? row.revision : null;
   const isFile = revision !== null && revision.itemType !== 'directory';
   const name = fileNameOf(path);
-  const inWorkspaceRepository = row && !otherRepository;
+  const inPlaceRepository = row && !otherRepository;
 
   return groupedMenu([
-    inWorkspaceRepository && menuAction('changesetDiff', () => openChangesetDiff({ id: changesetOf(row) }, path), { label: `Open diff of changeset ${changesetId}` }),
+    inPlaceRepository && menuAction('changesetDiff', () => openChangesetDiff({ id: changesetOf(row) }, path), { label: `Open diff of changeset ${changesetId}` }),
     isFile && ofWorkspaceFile && workspacePath !== null && menuAction('revert', () => void revertItemTo(workspacePath, path, revision.changesetId), { label: 'Revert file to this revision…' }),
     isFile && canAnnotate(revision.itemType) && menuAction('annotateRevision', () => annotate(revision)),
-    inWorkspaceRepository &&
+    inPlaceRepository &&
       menuAction('showInBranchExplorer', () =>
         showInBranchExplorer({ kind: 'changeset', id: changesetOf(row), date: dateOf(row) }),
       ),
@@ -51,7 +51,7 @@ export function historyMenu({ place, path, ofWorkspaceFile, otherRepository, ann
       copySubmenu('Revision', {
         path,
         // The change the revision's changeset made to the file; under an xlink, the path isn't the other repository's.
-        link: inWorkspaceRepository && linkCopyText(place, undefined, { object: { kind: 'changeset', id: revision.changesetId }, page: { kind: 'diffFile', path: `/${path}` } }),
+        link: inPlaceRepository && linkCopyText(place, undefined, { object: { kind: 'changeset', id: revision.changesetId }, page: { kind: 'diffFile', path: `/${path}` } }),
         spec: revision.idSpec,
       }),
   ]);

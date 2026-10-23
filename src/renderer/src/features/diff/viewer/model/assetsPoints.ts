@@ -82,10 +82,10 @@ export function revisionsAssetsPoint(points: HistoryPoints): AssetsPointFinder {
  * Files' last change of an item, made in `changeset`: the tree there, and before it, that tree with what the changeset
  * made undone. Only in the workspace's repository (as `revisionsAssetsPoint`); none for a shelve's change.
  */
-export function lastChangeAssetsPoint(changeset: number | null, repository: string, inWorkspaceRepository: boolean | undefined): AssetsPointFinder {
+export function lastChangeAssetsPoint(changeset: number | null, repository: string, inPlaceRepository: boolean | undefined): AssetsPointFinder {
   return (side, source) => {
     if (source.kind !== 'revision') return workspaceAssetsPoint(side, source);
-    if (!inWorkspaceRepository || changeset === null || changeset < 0) return null;
+    if (!inPlaceRepository || changeset === null || changeset < 0) return null;
     const at = `cs:${changeset}`;
     return side === 'modified' ? { kind: 'repository', at } : { kind: 'repository', at, before: { kind: 'changeset', changeset, repository } };
   };
