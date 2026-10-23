@@ -1,8 +1,8 @@
 import type { CmClient } from '../cm/CmClient';
 import { statusRecordsArgs } from '../cm/pendingChangesRecords';
 
-/** The records of `cm status --machinereadable` that are no change: its header, a changelist, conflict markers. */
-const NO_CHANGE_RECORDS = new Set(['STATUS', 'CHLIST', 'CONFLICT_MARKERS']);
+/** The records of `cm status --machinereadable` that are no change: its header, a file's conflict markers. */
+const NO_CHANGE_RECORDS = new Set(['STATUS', 'CONFLICT_MARKERS']);
 
 /**
  * Whether the workspace has pending changes (private files aside): `cm merge` refuses to merge into such a workspace,

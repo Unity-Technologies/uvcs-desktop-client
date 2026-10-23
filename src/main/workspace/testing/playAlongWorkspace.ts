@@ -7,6 +7,7 @@ import {
   diffRecord,
   formatOutput,
   mergePreviewOutput,
+  pendingStatus,
   pendingStatusInChangelists,
   shelvesCreated,
   shelvesFound,
@@ -106,6 +107,8 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
     const asksPrivates = args.includes('--private') || !args.some((arg) => CONTROLLED_KINDS.has(arg));
     const privates = asksPrivates ? [...privatePaths].filter((path) => existsSync(onDisk(path))).map((path) => change('PR', path)) : [];
     const controlled = Object.keys(pending).filter((path) => pending[path] !== 'PR');
+    // As `cm`: the changes in changelists only with `--changelists`.
+    if (!args.includes('--changelists')) return pendingStatus(workspacePath, ...entries(controlled), ...privates);
     return pendingStatusInChangelists(workspacePath, [
       { name: 'Default', changes: [...entries(controlled.filter((path) => !inList.has(path))), ...privates] },
       ...changelists.map((list) => ({ ...list, changes: entries(list.paths.filter((path) => path in pending)) })),
