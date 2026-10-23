@@ -189,6 +189,17 @@ describe('a repository explored without a workspace', () => {
     expect(page.isDestroyed()).toBe(false);
   });
 
+  it('forgets what a window explored once its page loads again (a reload), which says again what it shows', () => {
+    const { windows, open, onRepositoryLeft } = setUp();
+    const window = open();
+    windows.repositoryShown(window.webContents.id, 'game@local');
+
+    window.webContents.emit('did-navigate');
+    expect(windows.explores('game@local')).toBe(false);
+    expect(windows.windowShowing(GAME_REPOSITORY)).toBeUndefined();
+    expect(onRepositoryLeft).toHaveBeenCalledWith('game@local');
+  });
+
   it('forgets what a closed window explored', () => {
     const { windows, open } = setUp();
     const window = open();
