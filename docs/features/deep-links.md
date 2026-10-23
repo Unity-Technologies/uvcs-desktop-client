@@ -125,8 +125,9 @@ the workspace only gives the page a window and a repository to read.
    - else, with several, the user picks one (`pickLinkWorkspace`: name, branch, folder; the most recent first);
    - else, with none, the repository is explored without a workspace (`exploreFor`, docs/features/explore-repository.md),
      on the server as the user's profiles name it, as any place opens a link: the window exploring it, else this one
-     on the home screen, else a new one. A view only a workspace has (Files, from an older `/path/` link) opens the
-     repository's first view instead; its Create workspace makes one, without leaving it.
+     on the home screen, else a new one. A path (an older `/path/` link) opens in its Files, the latest of the main
+     branch, the item selected (`requestReveal`, by place); a view only a workspace has opens the repository's first
+     view instead. Its Create workspace makes a workspace of it, without leaving it.
 5. **The page** (`linkNavigation`) opens on top of the view, so Back returns to where the user was; a file is selected
    and its lines scrolled to and selected. A label's diff, and browsing a branch or the repository, first read the
    label's changeset or the branch's head (`linkLookup`: `labels.get`, `branches.get`, a light `cm find`); one that
@@ -147,8 +148,8 @@ badges.
   window's top bar too): the link to what the page is about, never the file or lines it shows (`pageObjectTarget`): a
   diff's changeset, branch, label, shelve or range, a review, a history's item at the revision shown, a browsed
   changeset at the item shown ("Copy link to shelve 2", "… to history of Player.cs": `objectLinkLabel`).
-- **The lines selected**, in a committed diff, a history's annotations, a file in Browse repository (its newer side) and
-  an unchanged file of the Files view:
+- **The lines selected**, in a committed diff, a history's annotations, a file in Browse repository (its newer side), an
+  unchanged file of the Files view, and a file of a repository's Files:
   - a quiet **"Copy link" chip** by the first of them, at the right end of its pane, as a change's "Revert change"
     sits (`LineLinkChip`, placed by `lineChipAnchor`); its tooltip says what it copies ("Copy link to lines 40–52 of
     Player.cs", `copyLinkLabel`) and the ⇧⌘C that copies it too;
@@ -168,7 +169,9 @@ badges.
   selected in its viewer get the chip and the menu, pinned to the changeset the workspace has loaded, as line numbers
   shift along a branch (`…/changesets/28/-/browse/Player.cs#L40`; `filesItemLink`, `useFilesItemLinks`,
   `LineLinks.linkOf`). It's the repository's version, never the workspace's own edits. A private or ignored item, one
-  under an xlink and a workspace on a shelve offer none.
+  under an xlink and a workspace on a shelve offer none. In a repository explored without a workspace, Files is a
+  branch's latest and links the same way: an item to the branch, its lines to the branch's head changeset
+  (`branchFilesOrigin`, given to `RepositoryTree` as its `linkOrigin`).
 - Nothing only on this computer is copied as a link: Changes offers none (a pending change exists nowhere else), nor
   does ⇧⌘C on the Changes or Files view itself (`viewLinkTarget`), and the app writes no workspace link.
 

@@ -1,37 +1,34 @@
-import { useEffect, useState } from 'react';
-import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
-import { ListWithDetails } from '../../components/ListWithDetails';
+import { useEffect, useMemo, useState } from 'react';
+import type { RepositoryPlace } from '@shared/domain/place';
+import { placeId } from '@shared/domain/place';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
-import { DetailsPanelSkeleton } from '../../ui/DetailsPanelSkeleton';
 import { EmptyState } from '../../ui/EmptyState';
 import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
 import { ViewHeader } from '../../ui/ViewHeader';
-import { useBranches } from '../branches/useBranches';
+import { useBranch } from '../branches/useBranches';
 import { browseOpening } from '../browseRepository/browseOpening';
-import { RepositoryTree } from '../browseRepository/RepositoryTree';
-import { FileTreeSkeleton } from '../files/FileTreeTable';
+import { RepositoryTree, RepositoryTreeSkeleton } from '../browseRepository/RepositoryTree';
 import { useFilesViewStore, useRevealRequest } from '../files/filesViewStore';
-import { FILE_TREE_WIDTH } from '../files/fileTreeWidth';
 import { FilesBranchPicker } from './FilesBranchPicker';
 import { useRepositoryFilesStore } from './repositoryFilesStore';
-import { filesBranchCaption, shownFilesBranch } from './shownFilesBranch';
+import { branchFilesOrigin, filesBranchCaption, filesBranchToRead, repositoryFilesBodyOf } from './shownFilesBranch';
 
 const WIDTH_KEY = 'repositoryFilesTree';
 
 /**
- * Files in a repository explored without a workspace (docs/features/explore-repository.md): the latest tree of a
- * branch, the main branch's until another is picked (`shownFilesBranch`, `FilesBranchPicker`), as Browse repository
- * shows a changeset's (`RepositoryTree`). Another branch keeps the item selected, when it has it; a path asked for (a
- * link's, `requestReveal`) opens its folders and is selected.
+ * Files in a repository explored without a workspace (docs/features/explore-repository.md "Files"): the latest tree of
+ * a branch, the main branch's until another is picked (`FilesBranchPicker`), as Browse repository shows a changeset's
+ * (`RepositoryTree`). It reads that branch alone (`filesBranchToRead`), and shows what `repositoryFilesBodyOf` says.
+ * Another branch keeps the item selected, when it has it; a path asked for (a link's, `requestReveal`) opens its
+ * folders and is selected; the folders open are the branch's, kept as its head moves.
  */
-export function RepositoryFilesView() {
-  const place = usePlace();
-  const repository = usePlaceRepository() ?? '';
-  const branchesQuery = useBranches();
+export function RepositoryFilesView({ place }: { place: RepositoryPlace }) {
+  const { repository } = place;
   const chosen = useRepositoryFilesStore((state) => state.chosenBranches[repository]);
-  const choose = useRepositoryFilesStore((state) => state.choose);
-  const branch = shownFilesBranch(branchesQuery.data, chosen);
+  const { choose, forget } = useRepositoryFilesStore.getState();
+  const branchRead = useBranch(filesBranchToRead(chosen));
+  const body = repositoryFilesBodyOf({ data: branchRead.data, error: branchRead.error }, chosen);
   const [filter, setFilter] = useState('');
   const [shownPath, setShownPath] = useState<string | null>(null);
   // A reveal opens the tree anew on its path: the tree reads where it opens only as it mounts.
@@ -43,38 +40,40 @@ export function RepositoryFilesView() {
     setReveals((count) => count + 1);
     useFilesViewStore.getState().revealed(revealRequest);
   }, [revealRequest]);
+  useEffect(() => {
+    if (body.kind === 'chosenGone') forget(repository);
+  }, [body.kind, repository]);
 
+  const shown = body.kind === 'tree' ? body.branch : null;
+  // One object per branch head: the links' hook keys its own memo by it.
+  const linkOrigin = useMemo(() => (shown ? branchFilesOrigin(repository, shown) : undefined), [repository, shown?.name, shown?.headChangeset]);
   const header = (
-    <ViewHeader
-      title="Files"
-      subtitle={branch ? filesBranchCaption(branch) : undefined}
-      actions={<ViewRefreshButton fetching={branchesQuery.isFetching} />}
-    >
+    <ViewHeader title="Files" subtitle={shown ? filesBranchCaption(shown) : undefined} actions={<ViewRefreshButton fetching={branchRead.isFetching} />}>
       <FilterBar
         text={<FilterField value={filter} onChange={setFilter} placeholder="Filter open folders" />}
-        kinds={branch && <FilesBranchPicker shown={branch} onPick={(picked) => choose(repository, picked.name)} />}
+        kinds={<FilesBranchPicker shown={shown?.name ?? null} onPick={(picked) => choose(repository, { name: picked.name, guid: picked.guid })} />}
       />
     </ViewHeader>
   );
 
-  if (branchesQuery.error && !branch) return <>{header}<EmptyState title="Couldn't read the branches" description={branchesQuery.error.message} /></>;
-  if (branchesQuery.data && !branch) return <>{header}<EmptyState title="No branches yet" description="The repository has nothing checked in." /></>;
-
   return (
     <>
       {header}
-      {branch ? (
+      {body.kind === 'error' && <EmptyState title="Couldn't read the branch" description={body.message} />}
+      {body.kind === 'pickBranch' && <EmptyState title="Pick a branch" description="Its latest files show here." />}
+      {(body.kind === 'loading' || body.kind === 'chosenGone') && <RepositoryTreeSkeleton widthKey={WIDTH_KEY} />}
+      {body.kind === 'tree' && (
         <RepositoryTree
           // A branch's latest tree is another changeset's: its tree starts anew, on the item selected before.
-          key={`${branch.headChangeset}:${reveals}`}
-          changesetId={branch.headChangeset}
+          key={`${body.branch.headChangeset}:${reveals}`}
+          changesetId={body.branch.headChangeset}
+          treeId={`${placeId(place)}#branch:${body.branch.guid}`}
           opening={browseOpening({ focusPath: shownPath ?? undefined })}
           filter={filter}
           widthKey={WIDTH_KEY}
           onShownItem={setShownPath}
+          linkOrigin={linkOrigin}
         />
-      ) : (
-        <ListWithDetails widthKey={WIDTH_KEY} widthLimits={FILE_TREE_WIDTH} sized="list" list={<FileTreeSkeleton />} details={<DetailsPanelSkeleton />} />
       )}
     </>
   );

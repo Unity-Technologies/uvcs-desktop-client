@@ -16,6 +16,7 @@ import { buildFileTreeRows } from '../files/fileTreeRows';
 import { FileTreeSkeleton, FileTreeTable } from '../files/FileTreeTable';
 import { FILE_TREE_WIDTH } from '../files/fileTreeWidth';
 import { ItemDetailsPane } from '../files/ItemDetailsPane';
+import { useFilesItemLinks } from '../files/useFilesItemLinks';
 import { useTreeListings } from '../files/useTreeListings';
 import { openRevision } from '../history/revisionOperations';
 import type { BrowseOpening } from './browseOpening';
@@ -33,6 +34,13 @@ interface RepositoryTreeProps {
   widthKey: string;
   /** The item selected now, for the link its host copies (Browse repository's page). */
   onShownItem?: (path: string | null) => void;
+  /** Whose folders open stay open: this changeset's by default; a branch's in Files, so a new head keeps them. */
+  treeId?: string;
+  /**
+   * Where the files come from, for their item and line links (`useFilesItemLinks`): a branch's latest in Files. None
+   * in Browse repository, whose page names the lines.
+   */
+  linkOrigin?: Parameters<typeof useFilesItemLinks>[0];
 }
 
 /**
@@ -40,17 +48,16 @@ interface RepositoryTreeProps {
  * the Files view of a repository explored without a workspace (`RepositoryFilesView`). Folders are listed as they
  * open, each once (`cm ls` of that folder at the changeset).
  */
-export function RepositoryTree({ changesetId, opening, filter, widthKey, onShownItem }: RepositoryTreeProps) {
+export function RepositoryTree({ changesetId, opening, filter, widthKey, onShownItem, treeId: ownTreeId, linkOrigin }: RepositoryTreeProps) {
   const place = usePlace();
   const repository = usePlaceRepository();
-  const treeId = `${placeId(place)}#cs:${changesetId}`;
+  const treeId = ownTreeId ?? `${placeId(place)}#cs:${changesetId}`;
   const expanded = useExpandedDirectories(treeId);
   const toggle = useExpandedDirectoriesStore((state) => state.toggle);
   // The field shows each keystroke at once; tens of thousands of open rows are filtered right after.
   const shownFilter = useDeferredValue(filter);
   const [selection, setSelection] = useState<SelectionState>(() => (opening.selected ? singleSelection(opening.selected) : EMPTY_SELECTION));
   const linkFocus = useFocusUntilMoved(opening.focus, selection.anchor ?? undefined);
-  const lineLinks = useMemo<LineLinks>(() => ({ focus: linkFocus, publishes: true }), [linkFocus]);
   const [ownFileView, setOwnFileView] = useState<FileView | null>(opening.fileView);
   const fileViewChoice = useMemo(() => (ownFileView ? { fileView: ownFileView, setFileView: setOwnFileView } : undefined), [ownFileView]);
   useEffect(() => {
@@ -60,6 +67,8 @@ export function RepositoryTree({ changesetId, opening, filter, widthKey, onShown
   const { childrenByDirectory, isLoadingRoot, error } = useTreeListings((directory) => repositoryListingQuery(place, changesetId, directory), expanded);
   const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, filter: shownFilter }), [childrenByDirectory, expanded, shownFilter]);
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
+  const itemLinks = useFilesItemLinks(linkOrigin, focused);
+  const lineLinks = useMemo<LineLinks>(() => (linkOrigin ? { ...itemLinks, focus: linkFocus } : { focus: linkFocus, publishes: true }), [linkOrigin, itemLinks, linkFocus]);
   useEffect(() => onShownItem?.(focused?.path ?? null), [focused?.path]);
   const [revealPath, setRevealPath] = useState<string | null>(opening.selected);
   const selectFolder = (path: string): void => {
@@ -68,17 +77,14 @@ export function RepositoryTree({ changesetId, opening, filter, widthKey, onShown
   };
 
   if (error) return <EmptyState title="Couldn't browse the repository" description={error.message} />;
+  if (isLoadingRoot) return <RepositoryTreeSkeleton widthKey={widthKey} />;
 
   return (
     <ListWithDetails
       widthKey={widthKey}
       widthLimits={FILE_TREE_WIDTH}
       sized="list"
-      // The tree's own header over placeholder rows while the root is read: the layout never changes shape.
       list={
-        isLoadingRoot ? (
-          <FileTreeSkeleton />
-        ) : (
           <HighlightQuery query={shownFilter}>
             <FileTreeTable
               rows={rows}
@@ -90,12 +96,9 @@ export function RepositoryTree({ changesetId, opening, filter, widthKey, onShown
               revealPath={revealPath}
             />
           </HighlightQuery>
-        )
       }
       details={
-        isLoadingRoot ? (
-          <DetailsPanelSkeleton />
-        ) : focused ? (
+        focused ? (
           <LineLinksContext.Provider value={lineLinks}>
             <ItemDetailsPane
               place={place}
@@ -112,4 +115,9 @@ export function RepositoryTree({ changesetId, opening, filter, widthKey, onShown
       }
     />
   );
+}
+
+/** The tree's own header over placeholder rows, and the details' placeholder, while its root is read: the layout never changes shape. */
+export function RepositoryTreeSkeleton({ widthKey }: { widthKey: string }) {
+  return <ListWithDetails widthKey={widthKey} widthLimits={FILE_TREE_WIDTH} sized="list" list={<FileTreeSkeleton />} details={<DetailsPanelSkeleton />} />;
 }

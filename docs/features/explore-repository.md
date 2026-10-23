@@ -1,6 +1,6 @@
 # Exploring a repository without a workspace
 
-A repository can be looked at without downloading it: its Branch Explorer, changesets, branches, labels, shelves,
+A repository can be looked at without downloading it: its files, Branch Explorer, changesets, branches, labels, shelves,
 attributes, code reviews and locks, their diffs and histories, in a window of its own, with nothing on disk. Liking what
 it shows, the user makes it a workspace from there, without leaving it. How the server's commands name the repository
 when no workspace tells `cm` which: ARCHITECTURE.md "Places".
@@ -19,34 +19,31 @@ place. A workspace on the same repository is another place, with its own window.
 
 ## What its window shows
 
-The views of the server, each at its usual place in the sidebar and its usual shortcut (`showsView`, `viewsOf`), the
-Branch Explorer first (`firstViewOf`): Files, Branch Explorer, Changesets, Branches, Labels, Shelves, Attributes, Code
-reviews, Locks; the sidebar groups Files as the Repository (`sidebarGroups`). Not a workspace's own: Changes, Incoming
+The views of the server, each at its usual place in the sidebar and its usual shortcut (`showsView`, `viewsOf`):
+Files, Branch Explorer, Changesets, Branches, Labels, Shelves, Attributes, Code reviews, Locks; the sidebar groups
+Files as the Repository (`sidebarGroups`). It opens on the Branch Explorer (`firstViewOf`). Not a workspace's own: Changes, Incoming
 and Sync. A view a repository doesn't show, named by a link or by a window reopened after an update, opens the first
 view instead.
 
 ## Files
 
-A branch's latest tree, read-only, as a code host shows a repository (`RepositoryFilesView`): the main branch's
-(found by its GUID, it may be renamed) until another is picked in the filter bar's branch chip (`FilesBranchPicker`,
-the branch switcher's list), and again once the one picked is gone (`shownFilesBranch`). The header says which:
-"Latest of /main · changeset 12" (`filesBranchCaption`). The tree is Browse repository's (`RepositoryTree`): a folder
-is listed as it opens, each once per changeset; a file shows its last change, its history and annotations. Another
-branch opens its tree on the item selected before, when it has it. The branch picked is kept per repository while the
-window lives (`useRepositoryFilesStore`), and a new head on refresh shows the branch's latest tree. A link to a path
-(`/path/…`) opens Files on it (`requestReveal`, by place). Its menus are Browse repository's (`revisionMenu`): a
-revision opens in an app or is saved as a copy; nothing is on disk to move, cut or paste. Create workspace makes a
-workspace's Files of it.
+A branch's latest tree, read-only, as a code host shows a repository (`RepositoryFilesView`): the main branch's until
+another is picked in the filter bar's branch chip (`FilesBranchPicker`, the branch switcher's list, read only once it
+opens). Files reads the branch shown alone, never every branch (`filesBranchToRead`: `branches.get`), and shows what
+`repositoryFilesBodyOf` says: the branch's latest tree; the main branch again once the one picked is gone, renamed, or
+another branch took its name (kept by name and GUID, `ChosenBranch`); a branch to pick where the main branch was
+renamed. The header says which: "Latest of /main · changeset 12" (`filesBranchCaption`).
 
-- **The top bar**: the search (`TopBarSearch`), **Create workspace**, the account on the repository's server.
-- **The sidebar's card** names the repository and its server as the home screen does (`RepositorySidebarCard`), and
-  opens the workspace switcher, which leads elsewhere only: nothing of a workspace's own to act on.
-- **The status bar** has the command log and the version: nothing runs on the repository, and it is on no branch.
-- **The command log's own scope** is "This repository": the commands run outside every workspace
-  (`CommandLogEntry.outsideWorkspaces`, `ranInPlace`).
-- **The window is titled** "<repository> — <server>" (`repositoryWindowTitle`).
-- **The palette** searches its branches, labels, changesets, shelves and code reviews; no files or pending changes
-  (`paletteGroups`): listing every file of a branch is a whole tree's `cm ls`, where Files reads a folder at a time.
+The tree is Browse repository's (`RepositoryTree`): a folder is listed as it opens, each once per changeset; a file
+shows its last change, its history and annotations; its menus are Browse repository's (`revisionMenu`: a revision
+opens in an app or is saved as a copy; nothing is on disk to move, cut or paste). Another branch opens its tree on the
+item selected before, when it has it. The folders open are the branch's (its tree id is the branch's GUID), so a new
+head on refresh shows the latest tree with them still open. The branch picked is kept per repository while the window
+lives (`useRepositoryFilesStore`). An item and its lines link as the workspace's Files do (`branchFilesOrigin`,
+`useFilesItemLinks`), and a link to a path (`/path/…`) opens Files on it (`requestReveal`, by place).
+
+Create workspace makes a workspace on the main branch, as the New workspace dialog does, whatever branch Files shows:
+its Files then shows the workspace's disk. Switching it to the branch is the workspace's own branch switch.
 
 ## What it offers, and what it doesn't
 
