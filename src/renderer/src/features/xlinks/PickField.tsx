@@ -28,7 +28,7 @@ const ICONS: Record<PickSource['kind'], typeof GitBranch> = { branch: GitBranch,
 async function pick({ kind, title, repository, point }: PickSource, value: string): Promise<string | undefined> {
   switch (kind) {
     case 'folder':
-      return repository && point ? pickRepositoryFolder({ title, repository, point, current: value.trim() || '/' }) : undefined;
+      return repository && point ? pickRepositoryFolder({ title, repository, point, current: value }) : undefined;
     case 'branch':
       return (await pickBranch({ title, repository }))?.name;
     case 'changeset': {

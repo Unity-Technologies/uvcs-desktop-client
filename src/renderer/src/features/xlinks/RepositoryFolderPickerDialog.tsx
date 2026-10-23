@@ -10,7 +10,7 @@ import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { Spinner } from '../../ui/Spinner';
-import { folderKey, folderRows, initiallyExpanded, toggled, type FolderListing } from './repositoryFolderTree';
+import { folderKey, folderRows, initiallyExpanded, openingFolder, toggled, type FolderListing } from './repositoryFolderTree';
 import styles from './RepositoryFolderPickerDialog.module.css';
 
 interface PickRepositoryFolderOptions {
@@ -31,7 +31,7 @@ export function pickRepositoryFolder(options: PickRepositoryFolderOptions): Prom
 function RepositoryFolderPickerDialog({ title, repository, point, current, finish }: PickRepositoryFolderOptions & { finish: (folder: string | undefined) => void }) {
   const workspacePath = useWorkspacePath();
   const [expanded, setExpanded] = useState(() => initiallyExpanded(current));
-  const [selected, setSelected] = useState(current);
+  const [selected, setSelected] = useState(() => openingFolder(current));
   // Read once a dialog shows it, and kept a while: browsing the same tree again asks nothing.
   const treeQuery = useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'xlinks', 'tree', repository, point),

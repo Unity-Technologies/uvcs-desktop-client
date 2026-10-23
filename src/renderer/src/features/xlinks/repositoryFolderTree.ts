@@ -1,3 +1,4 @@
+import { repositoryFolder } from '@shared/domain/xlinks';
 import { parentOf } from '../../lib/paths';
 
 /** What is known of a folder's folders: listed, being read, or not readable. Absent: never asked. */
@@ -23,13 +24,13 @@ export function parentFolder(path: string): string {
 
 /** The folder the picker opens on, selected: what the field holds, however it was typed. */
 export function openingFolder(typed: string): string {
-  return '/';
+  return repositoryFolder(typed);
 }
 
 /** The folders open as the picker opens: the root, and every folder above `chosen` so it shows. */
 export function initiallyExpanded(chosen: string): Set<string> {
   const expanded = new Set(['/']);
-  for (let folder = parentFolder(chosen); folder !== '/'; folder = parentFolder(folder)) expanded.add(folder);
+  for (let folder = parentFolder(openingFolder(chosen)); folder !== '/'; folder = parentFolder(folder)) expanded.add(folder);
   return expanded;
 }
 

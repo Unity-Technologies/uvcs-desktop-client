@@ -52,3 +52,12 @@ export function fullBranchName(name: string): string {
   const trimmed = name.trim();
   return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
 }
+
+/**
+ * A folder of a repository as `cm` takes it and the folder picker shows it: `/`-rooted, whatever separators and
+ * spaces it was typed with (`Assets\Lib\` → `/Assets/Lib`); `/` for the root.
+ */
+export function repositoryFolder(folder: string): string {
+  const parts = folder.split(/[\\/]/).map((part) => part.trim()).filter(Boolean);
+  return `/${parts.join('/')}`;
+}

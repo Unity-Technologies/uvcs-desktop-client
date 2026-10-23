@@ -1,7 +1,8 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { NewXlink } from '@shared/domain/xlinks';
-import { createXlinkArgs, labelChangesetArgs, repositoryFolder, repositoryFolderArgs, xlinkPointSpec, xlinkRuleArg, xlinkTreeSpec } from './xlinkArgs';
+import { repositoryFolder } from '@shared/domain/xlinks';
+import { createXlinkArgs, labelChangesetArgs, repositoryFolderArgs, xlinkPointSpec, xlinkRuleArg, xlinkTreeSpec } from './xlinkArgs';
 import { TREE_ITEM_FORMAT } from './treeItems';
 
 const LIB = join('wk', 'code', 'lib');

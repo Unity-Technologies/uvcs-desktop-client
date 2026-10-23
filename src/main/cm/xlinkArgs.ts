@@ -3,7 +3,7 @@
 // and adds or deletes its branch expansion rules (`-ar`/`-dr <path> <rules>`). None of it reads or writes the
 // xlinked files: they come with the next update, so each is a quick command.
 
-import { fullBranchName, type NewXlink, type XlinkPoint, type XlinkRule } from '@shared/domain/xlinks';
+import { fullBranchName, repositoryFolder, type NewXlink, type XlinkPoint, type XlinkRule } from '@shared/domain/xlinks';
 import { equalsCondition, findArgs } from './findQuery';
 import { FOUND_LABELS } from './foundObjects';
 import { TREE_ITEM_FORMAT } from './treeItems';
@@ -34,12 +34,6 @@ export function createXlinkArgs(absolutePath: string, xlink: NewXlink): string[]
   const folder = xlink.writable ? '/' : repositoryFolder(xlink.folder);
   const rules = xlink.writable ? xlink.rules.map(xlinkRuleArg) : [];
   return ['xlink', ...flags, absolutePath, folder, xlinkPointSpec(xlink.point, xlink.repository), ...rules];
-}
-
-/** A folder of the xlinked repository as `cm xlink` takes it: `/`-rooted, `Assets/Lib/` → `/Assets/Lib`. */
-export function repositoryFolder(folder: string): string {
-  const parts = folder.trim().split(/[\\/]/).filter(Boolean);
-  return `/${parts.join('/')}`;
 }
 
 export function editXlinkPointArgs(absolutePath: string, point: XlinkPoint, repository: string): string[] {
