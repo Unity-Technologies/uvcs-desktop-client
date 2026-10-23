@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DeletedFile } from '../cm/deletedFiles';
-import { MAX_SCORED_TEXT_BYTES, measureMoveSimilarities, type SimilarityReads } from './moveSimilarities';
+import { MAX_SCORED_TEXT_BYTES, measureMoveSimilarities, namedFew, type SimilarityReads } from './moveSimilarities';
 
 /** Binary content: a NUL byte in its start, as `looksBinary` tells it. */
 const binary = (size: number) => Buffer.alloc(size, 0);
@@ -148,5 +148,13 @@ describe('measuring the pairs of a Search matches', () => {
     const { io } = reads({ 'a.cs': '\uFEFFx\n' }, { 'b.cs': 'x\n' });
 
     expect(await measureMoveSimilarities([{ deleted: 'a.cs', added: 'b.cs' }], io)).toEqual([1]);
+  });
+});
+
+describe('the paths a warning names', () => {
+  it('names a few and counts the rest', () => {
+    expect(namedFew(['a.cs'])).toBe('a.cs');
+    expect(namedFew(['a.cs', 'b.cs', 'c.cs'])).toBe('a.cs, b.cs, c.cs');
+    expect(namedFew(['a.cs', 'b.cs', 'c.cs', 'd.cs', 'e.cs'])).toBe('a.cs, b.cs, c.cs and 2 more');
   });
 });

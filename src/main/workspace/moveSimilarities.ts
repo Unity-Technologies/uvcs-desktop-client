@@ -70,10 +70,13 @@ function similarityOf(pair: MovePair, deleted: Measured | undefined, added: Meas
 async function measureDeleted(paths: readonly string[], reads: SimilarityReads): Promise<Map<string, Measured>> {
   const measured = new Map<string, Measured>();
   if (paths.length === 0) return measured;
-  const listed = await Promise.resolve(paths).then(reads.listDeleted).catch((error: unknown) => {
-    reads.onUnreadable?.(paths.join(', '), error);
-    return new Map<string, DeletedFile>();
-  });
+  let listed: Map<string, DeletedFile>;
+  try {
+    listed = await reads.listDeleted(paths);
+  } catch (error) {
+    reads.onUnreadable?.(namedFew(paths), error);
+    listed = new Map();
+  }
   await Promise.all(
     paths.map(async (path) => {
       const file = listed.get(path.normalize('NFC'));
@@ -129,4 +132,10 @@ function textOf(bytes: Buffer): string {
 
 function unique(paths: readonly string[]): string[] {
   return [...new Set(paths)];
+}
+
+/** A few paths by name, the rest counted: a console line for hundreds of deleted files stays readable. */
+export function namedFew(paths: readonly string[], shown = 3): string {
+  const named = paths.slice(0, shown).join(', ');
+  return paths.length > shown ? `${named} and ${paths.length - shown} more` : named;
 }
