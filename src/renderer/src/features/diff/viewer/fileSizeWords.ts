@@ -10,7 +10,11 @@ export const TOO_LARGE_TITLES: Record<NonNullable<FileContent['tooLarge']>, stri
   model: 'This model is too large to preview',
 };
 
-/** "1.2 KB → 3.4 KB": the version before's size, then the version after's. */
-export function sizeChange(left: Pick<FileContent, 'size'>, right: Pick<FileContent, 'size'>): string {
-  return `${formatSize(left.size)} → ${formatSize(right.size)}`;
+/** "1.2 KB → 3.4 KB": the version before's size, then the version after's; "Purged" for one a purge removed. */
+export function sizeChange(left: Pick<FileContent, 'size' | 'purged'>, right: Pick<FileContent, 'size' | 'purged'>): string {
+  return `${sizeOf(left)} → ${sizeOf(right)}`;
+}
+
+function sizeOf(version: Pick<FileContent, 'size' | 'purged'>): string {
+  return version.purged ? 'Purged' : formatSize(version.size);
 }

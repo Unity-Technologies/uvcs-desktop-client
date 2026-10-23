@@ -2,7 +2,7 @@ import type { Virtualizer } from '@pierre/diffs';
 import type { Editor } from '@pierre/diffs/edit';
 import { useEffect, useImperativeHandle, useRef, type RefObject } from 'react';
 import type { ChangeRegion } from './changeBlocks';
-import { lineAtTopOf, scrollToChange, type ChangeView } from './changeView';
+import { lineAtTopOf, scrollToChange, type ChangeScroll, type ChangeView } from './changeView';
 import { changeRows } from './lineMarksCss';
 import { isTypingIn } from './pierreDom';
 import { useChangeFlash } from './useChangeFlash';
@@ -18,24 +18,32 @@ interface ChangeViewOptions {
   editor: RefObject<Editor | null>;
   /** Picks the change moved to, for ⌥⌘Z (`useBlockDiscard`). */
   pickChange: (change: ChangeRegion) => void;
+  /** The diff opened on a link's lines (`useLineLinks`' `focusLines`). */
+  opensOnLines: boolean;
 }
 
 /**
  * The diff's side of moving from change to change (`ChangeView`): a change moved to is scrolled into view, lit for a
- * moment and picked; while typing, the caret goes on to it.
+ * moment and picked; while typing, the caret goes on to it. The one a diff opens at is only scrolled into view.
  */
-export function useChangeView({ changeViewRef, containerRef, virtualizer, editor, pickChange }: ChangeViewOptions): void {
+export function useChangeView({ changeViewRef, containerRef, virtualizer, editor, pickChange, opensOnLines }: ChangeViewOptions): void {
   const changeFlash = useChangeFlash();
   useShadowStyle(containerRef, changeFlash.css);
   const stopScrolling = useRef<() => void>(undefined);
   useEffect(() => () => stopScrolling.current?.(), []);
 
+  const scrollTo = (change: ChangeRegion, why: ChangeScroll): HTMLElement | null => {
+    const container = containerRef.current;
+    if (!container) return null;
+    stopScrolling.current?.();
+    stopScrolling.current = scrollToChange(container, change, virtualizer, why);
+    return container;
+  };
+
   useImperativeHandle(changeViewRef, () => ({
     reveal: (change: ChangeRegion) => {
-      const container = containerRef.current;
+      const container = scrollTo(change, 'move');
       if (!container) return;
-      stopScrolling.current?.();
-      stopScrolling.current = scrollToChange(container, change, virtualizer);
       changeFlash.light(changeRows(change.lines));
       pickChange(change);
       // Typing goes on from the change (F7 while typing): the caret would otherwise bring the view back to it.
@@ -44,6 +52,8 @@ export function useChangeView({ changeViewRef, containerRef, virtualizer, editor
         typedInto.focus({ lineNumber: Math.min(change.newStart, typedInto.getText().split('\n').length), preventScroll: true });
       }
     },
+    show: (change: ChangeRegion) => void scrollTo(change, 'open'),
+    opensOnLines: () => opensOnLines,
     lineAtTop: (blocks) => (containerRef.current ? lineAtTopOf(containerRef.current, blocks) : null),
   }));
 }

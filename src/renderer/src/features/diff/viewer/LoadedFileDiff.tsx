@@ -1,4 +1,4 @@
-import { AppWindow, PencilOff, RefreshCw } from 'lucide-react';
+import { AppWindow, ArchiveX, PencilOff, RefreshCw } from 'lucide-react';
 import { Suspense, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Place } from '@shared/domain/place';
 import { openFile } from '../../../components/externalApps/externalAppOperations';
@@ -27,6 +27,7 @@ import { modelBesideMeta, modelOfMeta } from './model/modelMeta';
 import { SiblingFinderContext } from './model/modelSiblings';
 import { ModelModeSwitch } from './ModelModeSwitch';
 import { NothingToDiff } from './NothingToDiff';
+import { diffSidesOf, purgedNotice, purgedVersionsOf } from './purgedVersions';
 import { renderedEdits } from './renderedEdits';
 import { RepresentationSwitch } from './RepresentationSwitch';
 import { followsLayout } from './shownDiff';
@@ -73,10 +74,9 @@ export function LoadedFileDiff({ place, contents, fileName, title, identicalDesc
   const { comparisonMethod, imageMode, modelMode, representations, setComparisonMethod, setRepresentation } = useDiffPreferences();
   const editedFile = editedFileIn(place, contents.original, contents.modified);
   const editableInPlace = editedFile !== null;
-  const sides = useMemo(
-    () => ({ original: contents.original.kind !== 'empty', modified: contents.modified.kind !== 'empty' }),
-    [contents.original.kind, contents.modified.kind],
-  );
+  // A purged version shows as a missing one does: the other alone, under a line saying why (`purgedNotice`).
+  const purged = purgedVersionsOf(contents.left, contents.right);
+  const sides = useMemo(() => diffSidesOf(contents.original, contents.modified, purged), [contents.original, contents.modified, purged]);
   const buffer = useFileBuffer({ contents, file: editedFile, onMatchesBase });
   const { left, right } = buffer.shown;
   const current = buffer.unsaved ?? right.text ?? '';
@@ -277,8 +277,14 @@ export function LoadedFileDiff({ place, contents, fileName, title, identicalDesc
       );
   }
 
+  const purgedLine = purgedNotice(purged);
   return (
     <DiffViewerFrame ref={frame} title={title} controls={controls}>
+      {purgedLine && (
+        <DiffNotice tone="info" icon={<ArchiveX size={13} />}>
+          {purgedLine}
+        </DiffNotice>
+      )}
       {body}
     </DiffViewerFrame>
   );

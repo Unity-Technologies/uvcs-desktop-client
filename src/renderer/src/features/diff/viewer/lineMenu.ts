@@ -1,7 +1,6 @@
 import type { FocusedLines } from '../../../app/navigation/pages';
 import { menuAction } from '../../../components/menuWords';
-import type { MenuEntry } from '../../../lib/actions';
-import { groupedMenu } from '../../../lib/menuGroups';
+import type { GroupedEntry } from '../../../lib/menuGroups';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { linesWords } from './lineActions';
 
@@ -16,14 +15,14 @@ interface LineMenuContext {
 }
 
 /**
- * The menu of lines of code, on a right-click: who last changed them (the newer side's lines only: that's the
- * revision annotated), a link to them, and their text.
+ * The entries of lines of code, in the code's right-click menu (`codeMenu`): who last changed them (the newer side's
+ * lines only: that's the revision annotated), a link to them, and their text.
  */
-export function lineMenu({ lines, copyLink, copyLines, annotate }: LineMenuContext): MenuEntry[] {
+export function lineMenuEntries({ lines, copyLink, copyLines, annotate }: LineMenuContext): (GroupedEntry | false | undefined)[] {
   const one = lines.first === lines.last;
-  return groupedMenu([
+  return [
     annotate && lines.side === 'new' && menuAction('annotateLine', annotate, { label: one ? 'Annotate at this line' : 'Annotate at these lines' }),
     copyLink && menuAction('copyLineLink', copyLink, { label: `Copy link to ${linesWords(lines)}`, shortcut: hotkey('copyLink') }),
     menuAction('copyLines', copyLines, { label: one ? 'Copy line' : 'Copy lines' }),
-  ]);
+  ];
 }

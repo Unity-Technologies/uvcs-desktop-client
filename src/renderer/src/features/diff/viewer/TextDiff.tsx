@@ -1,4 +1,4 @@
-import { Virtualizer } from '@pierre/diffs';
+import { FileDiff as FileDiffInstance, Virtualizer } from '@pierre/diffs';
 import { EditProvider, File, FileDiff, VirtualizerContext, WorkerPoolContext } from '@pierre/diffs/react';
 import { useCallback, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
@@ -6,6 +6,7 @@ import { shownText } from '../../../lib/lineBreaks';
 import { focusMain } from '../../../lib/mainFocus';
 import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkey } from '../../../lib/shortcutRegistry';
+import { ActionContextMenu } from '../../../ui/menu/ActionContextMenu';
 import type { ChangeView } from './changeView';
 import type { ComparisonMethod } from './comparisonMethod';
 import { useDiffPreferences } from './diffPreferencesStore';
@@ -13,12 +14,16 @@ import type { EditorHandle } from './editorHandle';
 import { attachesEditor, heldModifiedText, type HeldText } from './editorAttachment';
 import { escapeWhileTyping } from './escapeWhileTyping';
 import { useHighlightWorkers } from './highlightWorkers';
-import { collapsesUnchanged, linesSelectable, shownSelection } from './lineLinkMode';
+import { linesLayoutOf } from './keptPlace';
+import { linesSelectable, shownSelection } from './lineLinkMode';
 import { selectedRangeOf } from './linkedLines';
 import { scrollToLine } from './lineScroll';
+import { lineToReveal } from './lineToReveal';
+import type { ChangedLine } from './changeBlocks';
 import { useLineLinks } from './useLineLinks';
 import { useLineTools } from './useLineTools';
-import { LineMenuArea } from './LineMenuArea';
+import { useCodeMenu } from './useCodeMenu';
+import { lineMenuOf, menuLinesOf, textDiffSides } from './codeTarget';
 import type { LineDiff } from './lineDiff';
 import { HIDE_NO_NEWLINE_CSS, showsNoNewlineMarker } from './noNewlineMarker';
 import { PaneScrollbars } from './PaneScrollbars';
@@ -29,10 +34,11 @@ import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreO
 import { installPierrePlainTextRender } from './pierrePlainTextRender';
 import { installPierrePlainTextWordDiffs } from './pierrePlainTextWordDiffs';
 import { installPierreSessionEndRefresh } from './pierreSessionEndRefresh';
-import { caretLineCss, shownDiff, type DiffSides } from './shownDiff';
+import { caretLineCss, followsLayout, shownDiff, type DiffSides } from './shownDiff';
 import { highlightedLanguage, syntaxHighlighting } from './syntaxHighlighting';
 import { useBlockDiscard } from './useBlockDiscard';
 import { useChangeView } from './useChangeView';
+import { useKeptPlace } from './useKeptPlace';
 import type { DiscardRequest } from './useLineDiscarding';
 import { useMovedCode } from './useMovedCode';
 import { usePierreEditor } from './usePierreEditor';
@@ -113,7 +119,6 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   const theme = useResolvedTheme();
   const preferences = useDiffPreferences();
   const { layout } = preferences;
-  const wrapLines = preferences.wrapLines || wrapsLongLines;
   const container = useRef<HTMLDivElement | null>(null);
   // Every diff (and the whole file) renders only the lines in view: files can be huge, and what's drawn again (a typing
   // pause's word marks, a line added, a theme switch) costs only those lines.
@@ -153,9 +158,19 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   const { editor, fileDiff: shownFileDiff, createEditor, focusAt, typeWhileAttaching } = usePierreEditor(editorRef, container, { attached: edit, attach: attachNow });
   const shownRef = useRef(fileDiff);
   shownRef.current = fileDiff;
+  // The diff Pierre rendered, to unfold the region holding a line before scrolling to it.
+  const renderedDiff = useRef<FileDiffInstance<unknown, unknown> | null>(null);
   const onPostRender = useCallback((_element: unknown, instance: object) => {
+    if (instance instanceof FileDiffInstance) renderedDiff.current = instance;
     if (isReadyToEdit(instance, shownRef.current)) setReadyToEdit((ready: unknown) => (ready === shownRef.current ? ready : shownRef.current));
   }, []);
+  // Going to a line (a link's, Go to line's) shows it first: with unchanged lines collapsed, its region is folded away
+  // and has no row to scroll to. Pierre's `revealLine` expands only that region, from its nearer end (`lineToReveal`).
+  const scrollToShownLine = (element: HTMLElement, line: ChangedLine): (() => void) => {
+    const newerLine = lineToReveal(latest.current.diff.meta.hunks, line.side, line.lineNumber);
+    if (newerLine !== null) renderedDiff.current?.revealLine(newerLine);
+    return scrollToLine(element, line, virtualizer);
+  };
   const parseDiffOptions = diff.options;
   // Pierre marks no words in the lines typed into, nor drops the original's old marks, until the file is saved.
   useWordMarksRefresh({ fileDiff: shownFileDiff, containerRef: container, current, shown: fileDiff });
@@ -166,9 +181,11 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     selectable: linesSelectable({ discards: Boolean(onDiscard), editable }),
     containerRef: container,
     shown: canHighlight,
-    scrollTo: (element, line) => scrollToLine(element, line, virtualizer),
+    scrollTo: scrollToShownLine,
   });
-  const collapseUnchanged = collapsesUnchanged(preferences.collapseUnchanged, lineLinks.focusLines);
+  const layoutOverrides = { wrapsLongLines, focusLines: lineLinks.focusLines, wholeFile, followsLayout: followsLayout(sides, wholeFile) };
+  const shownLayout = linesLayoutOf(preferences, layoutOverrides);
+  const { collapseUnchanged, wrapLines } = shownLayout;
   // A workspace file's diff marks a link's lines as Pierre's selection until lines are picked to discard.
   const markedLines = useMemo(() => (lineLinks.focusLines ? selectedRangeOf(lineLinks.focusLines) : null), [lineLinks.focusLines]);
   const discard = useBlockDiscard({
@@ -193,6 +210,17 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     publishes: lineLinks.publishes,
     textOf: (side) => (side === 'old' ? original : diffedText),
   });
+  // The code's right-click menu, the lines' entries in it where they're selected for links, and Go to line's key.
+  const codeMenu = useCodeMenu({
+    containerRef: container,
+    scrollTo: scrollToShownLine,
+    fileName,
+    textOf: (side) => (side === 'deletions' ? original : current),
+    sides: textDiffSides({ wholeFile, sides, editable, editorAttached: edit }),
+    editor,
+    lines: menuLinesOf(lineLinks),
+    lineMenu: lineMenuOf(lineTools.menu),
+  });
   const movedCode = useMovedCode({ diff: diff.meta, comparisonMethod, fileName, layout, containerRef: container, virtualizer, diffedText, typed: current });
   const tokenizeMaxLength = highlighting === 'off' ? 0 : undefined;
   const workers = useHighlightWorkers(highlighting === 'background');
@@ -213,7 +241,9 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   const fileOptions = useMemo(() => ({ ...pierreFileOptions({ theme, wrapLines }), tokenizeMaxLength }), [theme, wrapLines, tokenizeMaxLength]);
   useShadowStyle(container, [SHADOW_CSS, showsNoNewlineMarker(original, diffedText) ? '' : HIDE_NO_NEWLINE_CSS, editable ? caretLineCss(shownText(diffedText)) : ''].join('\n'));
   const pointerFocus = usePointerFocusMark();
-  useChangeView({ changeViewRef, containerRef: container, virtualizer, editor, pickChange: discard.pickChange });
+  // Switching how the lines are laid out keeps the line at the top where it was.
+  useKeptPlace({ containerRef: container, virtualizer, shown: shownLayout, overrides: layoutOverrides });
+  useChangeView({ changeViewRef, containerRef: container, virtualizer, editor, pickChange: discard.pickChange, opensOnLines: lineLinks.focusLines !== undefined });
   const isTyping = (): boolean => isTypingIn(container.current);
 
   const onKeyDownCapture = (event: KeyboardEvent): void => {
@@ -233,7 +263,8 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   // (check in, diff the file) don't see them.
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.defaultPrevented && isTyping()) return event.stopPropagation();
-    discard.onKeyDown(event);
+    codeMenu.onKeyDown(event);
+    if (!event.defaultPrevented) discard.onKeyDown(event);
   };
 
   // Usually a few milliseconds, and only the first time a language shows up.
@@ -241,7 +272,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
 
   return (
     <div className={styles.frame}>
-      <LineMenuArea menu={lineTools.menu}>
+      <ActionContextMenu entries={codeMenu.entries} onContextMenu={codeMenu.onContextMenu}>
         <div
           ref={setContainer}
           className={styles.diff}
@@ -294,7 +325,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
           {lineTools.chip}
           {movedCode}
         </div>
-      </LineMenuArea>
+      </ActionContextMenu>
     </div>
   );
 }

@@ -14,18 +14,28 @@ export function catReadsOf(args: readonly string[]): { spec: string; target: str
   });
 }
 
+/** What `contentOf` answers for a revision whose content a purge removed from the server. */
+export const PURGED = Symbol('purged');
+
+/** `cm cat`'s line for a revision whose content was purged: it names the file it was to write, not the spec. */
+export function purgedRevisionLine(target: string, revisionId: number): string {
+  return `Can't retrieve the content of the file '${target}' because the revision (id:${revisionId}) was purged and its content is no longer available.`;
+}
+
 /**
  * `cm cat` as `cm` does it, in either form: every revision `contentOf` knows is written to its file, even when another
- * isn't found; each one it doesn't know prints `The specified revision was not found <spec>` and fails the command.
+ * fails; each one it doesn't know prints `The specified revision was not found <spec>`, each purged one
+ * `purgedRevisionLine` (with the spec's number for its id), and either fails the command.
  */
-export function fakeCat(contentOf: (spec: string) => string | Buffer | undefined): (command: FakeCmCommand) => Promise<string | CmFailure> {
+export function fakeCat(contentOf: (spec: string) => string | Buffer | typeof PURGED | undefined): (command: FakeCmCommand) => Promise<string | CmFailure> {
   return async ({ args }) => {
-    const missing: string[] = [];
+    const failures: string[] = [];
     for (const { spec, target } of catReadsOf(args)) {
       const content = contentOf(spec);
-      if (content === undefined) missing.push(spec);
+      if (content === undefined) failures.push(`The specified revision was not found ${spec}`);
+      else if (content === PURGED) failures.push(purgedRevisionLine(target, Number(/\d+/.exec(spec)?.[0] ?? 0)));
       else await writeFile(target, content);
     }
-    return missing.length > 0 ? cmFails(missing.map((spec) => `The specified revision was not found ${spec}`).join('\n')) : '';
+    return failures.length > 0 ? cmFails(failures.join('\n')) : '';
   };
 }
