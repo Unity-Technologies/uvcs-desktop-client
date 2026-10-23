@@ -119,8 +119,8 @@ export interface CatFailureExplained<T> {
  * removed, and a line naming no spec per download that failed.
  */
 // A purged line names the file as `cm cat` was given it. Were it ever written otherwise (a short or case-changed path),
-// the line would name no read: the batch is then read again in halves, down to the read alone, which still fails as
-// purged (`isPurgedRevisionError`), at a few commands more.
+// the line would name no read: the batch would be read again in halves, down to the read alone, which would then fail
+// with `cm`'s own line rather than read as purged (`isPurgedRevisionError` matches its file too).
 export function explainCatFailure<T extends Pick<CatRead, 'spec' | 'target'>>(reads: readonly T[], failure: unknown): CatFailureExplained<T> {
   const lines = failureLines(failure);
   const unwritten = reads.flatMap((read) => {
