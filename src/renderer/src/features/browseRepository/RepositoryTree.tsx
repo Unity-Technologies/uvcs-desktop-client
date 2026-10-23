@@ -41,6 +41,8 @@ interface RepositoryTreeProps {
    * in Browse repository, whose page names the lines.
    */
   linkOrigin?: Parameters<typeof useFilesItemLinks>[0];
+  /** Opens Go to file from the tree's keys, as a workspace's tree does (Files' `goToRepositoryFile`). */
+  onGoToFile?: () => void;
 }
 
 /**
@@ -48,7 +50,7 @@ interface RepositoryTreeProps {
  * the Files view of a repository explored without a workspace (`RepositoryFilesView`). Folders are listed as they
  * open, each once (`cm ls` of that folder at the changeset).
  */
-export function RepositoryTree({ changesetId, opening, filter, widthKey, onShownItem, treeId: ownTreeId, linkOrigin }: RepositoryTreeProps) {
+export function RepositoryTree({ changesetId, opening, filter, widthKey, onShownItem, treeId: ownTreeId, linkOrigin, onGoToFile }: RepositoryTreeProps) {
   const place = usePlace();
   const repository = usePlaceRepository();
   const treeId = ownTreeId ?? `${placeId(place)}#cs:${changesetId}`;
@@ -94,6 +96,7 @@ export function RepositoryTree({ changesetId, opening, filter, widthKey, onShown
               onOpenFile={(item) => void openRevision(place, revisionRef(item), item.name)}
               contextMenu={(items) => revisionMenu(place, changesetId, repository, items)}
               revealPath={revealPath}
+              onGoToFile={onGoToFile}
             />
           </HighlightQuery>
       }

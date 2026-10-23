@@ -97,6 +97,7 @@ export function RepositoryFilesView({ place }: { place: RepositoryPlace }) {
           widthKey={WIDTH_KEY}
           onShownItem={setShownPath}
           linkOrigin={linkOrigin}
+          onGoToFile={openGoToFile}
         />
       )}
     </>
