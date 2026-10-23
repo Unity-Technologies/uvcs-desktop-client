@@ -6,9 +6,13 @@ import { PrintedWorkspacePaths } from './printedWorkspacePaths';
 /**
  * `cm status` printing its records as `--format` does (`recordFormat`): `--machinereadable`, with the separators that
  * split them unambiguously. Its options first, so a command line reads as `status --controlledchanged … --machinereadable …`.
+ *
+ * `--compact`: without it, `cm status` works out the workspace header even when it prints none, and asks the server for
+ * the head of the branch (about 80 ms against Unity Cloud, on every refresh). The header also finds the files left with
+ * conflict markers (`CONFLICT_MARKERS`), which no reader uses; the changes and changelists print the same.
  */
 export function statusRecordsArgs(...options: string[]): string[] {
-  return ['status', ...options, '--machinereadable', `--fieldseparator=${FIELD_SEPARATOR}`, `--endlineseparator=${RECORD_SEPARATOR}`];
+  return ['status', ...options, '--machinereadable', '--compact', `--fieldseparator=${FIELD_SEPARATOR}`, `--endlineseparator=${RECORD_SEPARATOR}`];
 }
 
 const CHANGE_KINDS: Record<string, ChangeKind> = {
@@ -49,8 +53,8 @@ const CHANGE_FIELDS = 4;
 
 /**
  * Reads `cm status` printed as records (`statusRecordsArgs`) as they arrive: a `STATUS` record first, then, with
- * `--changelists`, each changelist (`CHLIST <name> <description>`) followed by its changes, and the files left with
- * conflict markers (`CONFLICT_MARKERS <path>`). Records, not XML: 100,000 changes print 9 MB where `--xml` printed
+ * `--changelists`, each changelist (`CHLIST <name> <description>`) followed by its changes; without `--compact`, the
+ * files left with conflict markers too (`CONFLICT_MARKERS <path>`). Records, not XML: 100,000 changes print 9 MB where `--xml` printed
  * 60 MB, and 500,000 passed `MAX_OUTPUT_LENGTH` as XML (ARCHITECTURE.md "Parsing `cm` output"). A local read of the
  * workspace, which the server never sees.
  *

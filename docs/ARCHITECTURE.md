@@ -316,7 +316,9 @@ and many people use the same server. Every `cm` command other than local reads (
 - **`cm status` as records**: it has no `--format`, but `--machinereadable` with control-character separators
   (`statusRecordsArgs`) prints records `RecordReader` reads as they arrive (`PendingChangesReader`): a `STATUS` record,
   with `--changelists` each `CHLIST <name> <description>` before its changes, each change as `<codes> <path> <is
-  folder> <merges>` (a move `<codes> <similarity> <old path> <path> …`), and `CONFLICT_MARKERS <path>`. 100,000 changes
+  folder> <merges>` (a move `<codes> <similarity> <old path> <path> …`). `--compact` leaves out the header `cm` would
+  otherwise work out even though it prints none, which asks the server for the branch's head (about 80 ms against Unity
+  Cloud, on every refresh), and the `CONFLICT_MARKERS <path>` records that come with it, which nothing reads. 100,000 changes
   print 9 MB where `--xml` printed 60 MB, in half the time (0.9 s against 1.8 s; 500,000: 46 MB in 4.6 s against
   300 MB in 9 s, past what one string could hold). A change prints every code of the item at once (`CH+MV`):
   `listedCodes` reads it as `--xml` listed it (a deleted item is only deleted, an added one only added; an item in no
