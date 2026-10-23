@@ -27,7 +27,8 @@ import { fileMenuTargets, itemViews } from './fileMenuTargets';
 import { useFilesViewStore } from './filesViewStore';
 import type { PendingChangesIndex } from './itemStatus';
 import { isWorkspaceRoot } from './workspaceRoot';
-import { editableXlinkOf, newXlinkDirectoryOf } from './xlinkItem';
+import { listedItems } from './directoryListing';
+import { editableXlinkOf, isUnderXlink, newXlinkDirectoryOf, type XlinkSurroundings } from './xlinkItem';
 import { createXlink, editXlink } from '../xlinks/xlinkOperations';
 import { hotkey } from '../../lib/shortcutRegistry';
 
@@ -58,6 +59,14 @@ export function itemLinkText(workspacePath: string, item: TreeItem): string | nu
   return workspace && target && isWritable(target) ? repositoryLinkTo(workspace.repository, target) : null;
 }
 
+/** Where an item is as far as xlinks go, from what its window already read: the tree's listings, the workspace's info. */
+function xlinkSurroundingsOf(workspacePath: string, item: TreeItem): XlinkSurroundings {
+  return {
+    underXlink: isUnderXlink(item.path, (directory) => listedItems(workspacePath, directory)),
+    workspaceRepository: queryClient.getQueryData(workspaceInfoQuery(workspacePath).queryKey)?.repository,
+  };
+}
+
 /** Who may check in under the item's path, on every branch (a secured path). */
 function pathPermissionsAction(workspacePath: string, item: TreeItem) {
   const unavailable = itemPathPermissionsUnavailable(workspacePath, item.repository);
@@ -73,8 +82,9 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
   const { privateItems, checkoutCandidates, undoable, typedFiles } = fileMenuTargets(items, pendingChanges);
   const views = single && itemViews(single, pendingChanges);
   const directory = targetDirectoryFor(single ?? undefined);
-  const xlinkDirectory = single && newXlinkDirectoryOf(single);
-  const editedXlink = single && editableXlinkOf(single);
+  const surroundings = single && xlinkSurroundingsOf(workspacePath, single);
+  const xlinkDirectory = single && surroundings && newXlinkDirectoryOf(single, surroundings);
+  const editedXlink = single && surroundings && editableXlinkOf(single, surroundings);
   // The workspace root can't be renamed or deleted from here.
   const hasRoot = items.some(isWorkspaceRoot);
 
