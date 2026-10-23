@@ -1,6 +1,7 @@
 import type { ContentSource } from '@shared/domain/content';
 import { mergeSourcePoint, type ConflictSide, type DirectoryConflict, type MergeContributors, type MergeRequest } from '@shared/domain/merge';
 import { spec } from '@shared/domain/specs';
+import { ONLY_MOVED } from '../../diff/viewer/movedFrom';
 import type { MergeLabels } from '../mergeDescription';
 
 /** What a directory conflict's incoming side is compared with: yours (the destination) or the common ancestor. */
@@ -38,6 +39,14 @@ export function comparedVersions(
   const modified = sideVersion(conflict.source, mergeSourcePoint(request, contributors.source.changesetId));
   if (comparison === 'destination') return { original: sideVersion(conflict.destination, spec.changeset(contributors.destination.changesetId)), modified };
   return { original: baseVersion(conflict.source, spec.changeset(contributors.base?.changesetId ?? contributors.destination.changesetId)), modified };
+}
+
+/**
+ * Why a comparison may find both versions the same: compared with the base, an incoming move that kept the content.
+ * Otherwise the diff's own words ("The contents of both versions are identical").
+ */
+export function identicalNoteOf(conflict: DirectoryConflict, comparison: DirectoryConflictComparison): string | undefined {
+  return comparison === 'base' && conflict.source.operation === 'moved' ? ONLY_MOVED : undefined;
 }
 
 /** "Incoming ↔ Yours" and "Incoming ↔ Base", in the merge's words ("Source ↔ Destination" into a server branch). */

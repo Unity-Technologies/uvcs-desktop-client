@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { ContentSource } from '@shared/domain/content';
 import type { ConflictSide, DirectoryConflict, MergeContributors, MergeRequest } from '@shared/domain/merge';
 import { mergeLabels } from '../mergeDescription';
-import { comparedVersions, comparisonSegments, comparisonsOf } from './directoryConflictComparison';
+import { ONLY_MOVED } from '../../diff/viewer/movedFrom';
+import { comparedVersions, comparisonSegments, comparisonsOf, identicalNoteOf } from './directoryConflictComparison';
 
 const contributors: MergeContributors = {
   source: { changesetId: 42, branch: '/main/feature' },
@@ -74,5 +75,14 @@ describe('comparisonSegments', () => {
     expect(comparisonSegments(['destination', 'base'], workspace).map((segment) => segment.label)).toEqual(['Incoming ↔ Yours', 'Incoming ↔ Base']);
     const server = mergeLabels({ ...merge, destinationBranch: '/main' }, undefined);
     expect(comparisonSegments(['destination'], server)).toEqual([{ value: 'destination', label: 'Source ↔ Destination', title: '/main/feature against /main' }]);
+  });
+});
+
+describe('identicalNoteOf', () => {
+  it('says an incoming move kept the content when compared with the base, and leaves the rest to the diff', () => {
+    const moved = conflict('moveDelete', side('moved', '/assets/Legacy.cs', '/assets/old/Legacy.cs'), side('deleted', '/assets/old/Legacy.cs'));
+    expect(identicalNoteOf(moved, 'base')).toBe(ONLY_MOVED);
+    expect(identicalNoteOf(moved, 'destination')).toBeUndefined();
+    expect(identicalNoteOf(conflict('changeDelete', side('changed', '/a.cs'), side('deleted', '/a.cs')), 'base')).toBeUndefined();
   });
 });
