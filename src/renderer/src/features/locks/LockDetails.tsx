@@ -10,7 +10,8 @@ import { DetailsSection } from '../../ui/DetailsSection';
 import { PropertyList } from '../../ui/PropertyList';
 import { isReleasable, releaseLocks } from './lockOperations';
 
-export function LockDetails({ workspacePath, lock, menu }: { workspacePath: string; lock: Lock; menu: MenuEntry[] }) {
+/** `workspacePath` releases the lock from its button; with no workspace (null) the lock is only shown. */
+export function LockDetails({ workspacePath, lock, menu }: { workspacePath: string | null; lock: Lock; menu: MenuEntry[] }) {
   const nameStart = lock.path.lastIndexOf('/') + 1;
 
   return (
@@ -22,6 +23,7 @@ export function LockDetails({ workspacePath, lock, menu }: { workspacePath: stri
       author={{ user: lock.owner, date: lock.date }}
       badges={<DetailsBadge tone={isReleasable(lock) ? 'warning' : 'neutral'}>{lock.status}</DetailsBadge>}
       primaryAction={
+        workspacePath !== null &&
         isReleasable(lock) && (
           <Button variant="primary" size="small" icon={<LockOpen size={13} />} onClick={() => void releaseLocks(workspacePath, [lock])}>
             Release

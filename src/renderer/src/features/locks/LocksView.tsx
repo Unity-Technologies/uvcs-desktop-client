@@ -1,11 +1,12 @@
 import { ExternalLink, Lock as LockIcon, LockOpen } from 'lucide-react';
 import { useMemo } from 'react';
+import { workspacePathOf } from '@shared/domain/place';
 import type { Lock } from '@shared/domain/lock';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { ObjectListView } from '../../components/ObjectListView';
 import { PathLabel } from '../../components/PathLabel';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
-import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
@@ -62,7 +63,8 @@ const ownerOf = (lock: Lock): string => lock.owner;
 
 /** Exclusive checkouts on the repository: who holds what, and releasing them. */
 export function LocksView() {
-  const workspacePath = useWorkspacePath();
+  const place = usePlace();
+  const workspacePath = workspacePathOf(place);
   const filters = useLocksViewStore();
   const { text: filter, people, update } = filters;
   const me = useWorkspaceUser();
@@ -94,9 +96,11 @@ export function LocksView() {
               Lock rules
             </Button>
           )}
-          <Button icon={<LockOpen size={14} />} disabled={releasable.length === 0} onClick={() => void releaseLocks(workspacePath, releasable)}>
-            Release
-          </Button>
+          {workspacePath !== null && (
+            <Button icon={<LockOpen size={14} />} disabled={releasable.length === 0} onClick={() => void releaseLocks(workspacePath, releasable)}>
+              Release
+            </Button>
+          )}
         </>
       }
     >
@@ -124,10 +128,10 @@ export function LocksView() {
         rowKey={lockKey}
         selection={selection}
         onSelectionChange={setSelection}
-        contextMenu={(rows) => lockMenu(workspacePath, rows)}
+        contextMenu={(rows) => lockMenu(place, rows)}
         initialSort={{ columnId: 'date', descending: true }}
         noun="lock"
-        details={focused && <LockDetails key={lockKey(focused)} workspacePath={workspacePath} lock={focused} menu={lockMenu(workspacePath, [focused])} />}
+        details={focused && <LockDetails key={lockKey(focused)} workspacePath={workspacePath} lock={focused} menu={lockMenu(place, [focused])} />}
       />
     </>
   );

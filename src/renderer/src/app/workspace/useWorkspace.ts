@@ -1,5 +1,6 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { serverOfRepository } from '@shared/domain/permissions';
 import { workspacePathOf, workspacePlace, type Place } from '@shared/domain/place';
 import { otherRepository } from '@shared/domain/repository';
 import { api } from '../../api/client';
@@ -40,6 +41,13 @@ export function usePlaceRepository(): string | undefined {
   const place = usePlace();
   const workspaceRepository = useWorkspaceInfoOf(workspacePathOf(place)).data?.repository;
   return place.kind === 'repository' ? place.repository : workspaceRepository;
+}
+
+/** The server of the place's repository: a repository's own at once; a workspace's once its info is read. */
+export function usePlaceServer(): string | undefined {
+  const place = usePlace();
+  const workspaceServer = useWorkspaceInfoOf(workspacePathOf(place)).data?.server;
+  return place.kind === 'repository' ? serverOfRepository(place.repository) : workspaceServer;
 }
 
 export function workspaceInfoQuery(workspacePath: string) {
