@@ -6,6 +6,7 @@
 
 import { CmError } from './CmError';
 import { commandLineLength, MAX_COMMAND_LINE } from './commandLineLimit';
+import { purgedTargetOf } from './purgedRevision';
 
 /** One revision for `cm cat` to write to a file. */
 export interface CatRead {
@@ -100,7 +101,10 @@ export function catArgs(batch: readonly CatRead[]): string[] {
 
 /** What a failed `cm cat` told about its reads (`explainCatFailure`). */
 export interface CatFailureExplained<T> {
-  /** The reads it named as not found (`The specified revision was not found <spec>`), each with its line. */
+  /**
+   * The reads it named as not written, each with its line: not found (`The specified revision was not found <spec>`),
+   * or purged (`purgedTargetOf`, which names the read's file).
+   */
   unwritten: { read: T; line: string }[];
   /**
    * Every line it printed names one of them: the other reads were written whole. False when some line names none (a
@@ -111,12 +115,13 @@ export interface CatFailureExplained<T> {
 
 /**
  * What a failed `cm cat` told about `reads`. `cm cat` goes on after a problem: it writes every revision it can, prints
- * a `not found <spec>` line per revision it can't resolve, and a line naming no spec per download that failed.
+ * a `not found <spec>` line per revision it can't resolve, a purged line naming the file of each revision a purge
+ * removed, and a line naming no spec per download that failed.
  */
-export function explainCatFailure<T extends { spec: string }>(reads: readonly T[], failure: unknown): CatFailureExplained<T> {
+export function explainCatFailure<T extends Pick<CatRead, 'spec' | 'target'>>(reads: readonly T[], failure: unknown): CatFailureExplained<T> {
   const lines = failureLines(failure);
   const unwritten = reads.flatMap((read) => {
-    const line = lines.find((candidate) => candidate.endsWith(` ${read.spec}`));
+    const line = lines.find((candidate) => candidate.endsWith(` ${read.spec}`) || purgedTargetOf(candidate) === read.target);
     return line === undefined ? [] : [{ read, line }];
   });
   const everyLineExplained = lines.length > 0 && lines.every((line) => unwritten.some((named) => named.line === line));
