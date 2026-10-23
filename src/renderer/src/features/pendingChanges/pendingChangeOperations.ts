@@ -101,7 +101,7 @@ export function checkout(workspacePath: string, changes: PendingChange[]): Promi
 
 /** Search matches: asks which item is the other side of the change's move, and records the move. */
 export async function searchMatches(workspacePath: string, change: PendingChange, side: MatchSide, listed: readonly PendingChange[]): Promise<void> {
-  const match = await pickMoveMatch({ change, side, listed });
+  const match = await pickMoveMatch({ workspacePath, change, side, listed });
   if (!match) return;
   const recorded = await runVoidAction(
     workspacePath,
