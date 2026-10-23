@@ -218,7 +218,7 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   revision: () => revisionMenu(ws, 5, repository, [file]),
   lock: () => lockMenu(ws, [lock]),
   syncBranch: () => syncBranchMenu([branch], 'game@cloud', { push: () => {}, pull: () => {} }),
-  attributeType: () => attributeTypeMenu(ws, [{ name: 'status', comment: '' } as never]),
+  attributeType: () => attributeTypeMenu(workspacePlace(ws), [{ name: 'status', comment: '' } as never]),
   changelist: () => changelistMenu(ws, { name: 'ui', description: '' }, { changes: [{ ...change, changelist: 'ui' }], prepare: () => {} }),
   workspace: () => workspaceMenu({ name: 'game', path: ws, guid: 'w' }, () => {}),
   missingWorkspace: () => missingWorkspaceMenu({ name: 'game', path: ws, guid: 'w' }, () => {}),
@@ -243,6 +243,7 @@ const REPOSITORY_MENUS: Record<string, () => MenuEntry[]> = {
   repositoryChangesetInterval: () => changesetMenu({ place: onRepository }, [changeset, { ...changeset, id: 2 }]),
   repositoryLabel: () => labelMenu(onRepository, [label]),
   repositoryLabelPair: () => labelMenu(onRepository, [label, { ...label, name: 'v2' }]),
+  repositoryAttributeType: () => attributeTypeMenu(onRepository, [{ name: 'status', comment: '' } as never]),
 };
 
 /**

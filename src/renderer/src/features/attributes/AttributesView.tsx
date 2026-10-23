@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import type { AttributeType } from '@shared/domain/attribute';
 import { useRenameCommand } from '../../app/commands/useRenameCommand';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
-import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ObjectListView } from '../../components/ObjectListView';
 import { ObjectName } from '../../components/ObjectName';
@@ -44,7 +44,7 @@ const COLUMNS: Column<AttributeType>[] = [
 ];
 
 export function AttributesView() {
-  const workspacePath = useWorkspacePath();
+  const place = usePlace();
   const { data: types, isPending, isFetching, error } = useAttributeTypes();
   const filters = useAttributesViewStore();
   const { text: search, people, update } = filters;
@@ -58,7 +58,7 @@ export function AttributesView() {
     [types, people, me, search],
   );
   const selected = visible.find((type) => typeKey(type) === selection.anchor);
-  useRenameCommand('Attributes', 'attribute', selection.selected.size === 1 ? selected : undefined, (type) => void renameAttributeType(workspacePath, type));
+  useRenameCommand('Attributes', 'attribute', selection.selected.size === 1 ? selected : undefined, (type) => void renameAttributeType(place, type));
 
   return (
     <>
@@ -69,7 +69,7 @@ export function AttributesView() {
         actions={
           <>
             <ViewRefreshButton fetching={isFetching} />
-            <Button variant="primary" icon={<Plus size={14} />} onClick={() => openCreateAttributeDialog(workspacePath)}>
+            <Button variant="primary" icon={<Plus size={14} />} onClick={() => openCreateAttributeDialog(place)}>
               New attribute
             </Button>
           </>
@@ -92,7 +92,7 @@ export function AttributesView() {
             icon={<Tags size={22} />}
             title="No attributes"
             description="Create an attribute, then set its value from the details of any branch, changeset or label."
-            action={<Button onClick={() => openCreateAttributeDialog(workspacePath)}>New attribute</Button>}
+            action={<Button onClick={() => openCreateAttributeDialog(place)}>New attribute</Button>}
           />
         }
         query={search.trim()}
@@ -101,10 +101,10 @@ export function AttributesView() {
         rowKey={typeKey}
         selection={selection}
         onSelectionChange={setSelection}
-        onActivate={(type) => void editAttributeComment(workspacePath, type)}
-        contextMenu={(selectedTypes) => attributeTypeMenu(workspacePath, selectedTypes)}
+        onActivate={(type) => void editAttributeComment(place, type)}
+        contextMenu={(selectedTypes) => attributeTypeMenu(place, selectedTypes)}
         noun="attribute"
-        details={selected && <AttributeTypeDetails key={selected.name} workspacePath={workspacePath} type={selected} menu={attributeTypeMenu(workspacePath, [selected])} />}
+        details={selected && <AttributeTypeDetails key={selected.name} place={place} type={selected} menu={attributeTypeMenu(place, [selected])} />}
       />
     </>
   );

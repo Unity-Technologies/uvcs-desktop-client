@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const opened = vi.hoisted(() => [] as unknown[]);
 vi.mock('./PermissionsDialog', () => ({ openPermissionsDialog: (options: unknown) => opened.push(options) }));
 
-import { workspacePlace } from '@shared/domain/place';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { TreeItem } from '@shared/domain/explorer';
 import type { Action, MenuEntry } from '../../lib/actions';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
@@ -17,7 +17,7 @@ import { branchMenu } from '../branches/branchMenu';
 import { fileMenu } from '../files/fileMenu';
 import { PendingChangesIndex } from '../files/itemStatus';
 import { labelMenu } from '../labels/labelMenu';
-import { openWorkspaceRepositoryPermissions } from './openPermissions';
+import { openOwnRepositoryPermissions } from './openPermissions';
 
 const ws = '/ws';
 const workspace = { name: 'game', path: ws, repository: 'game@local', repositoryName: 'game', server: 'local', selector: { kind: 'branch', name: '/main' }, loadedChangeset: 6 } as WorkspaceInfo;
@@ -34,13 +34,13 @@ describe('opening permissions from the menus', () => {
   it("opens a branch's, a label's and an attribute's, in their repository, with the owner their list read", () => {
     entry(branchMenu(workspacePlace(ws), [{ id: 1, name: '/main/task', parent: '/main', comment: '', owner: 'ana', date: '', headChangeset: 3, repository: 'game@local' }], '/main'), 'permissions')!.run();
     entry(labelMenu(workspacePlace(ws), [{ name: 'v1', changeset: 3, branch: '/main', comment: '', owner: 'bob', date: '', repository: 'other@acme@cloud' }]), 'permissions')!.run();
-    entry(attributeTypeMenu(ws, [{ id: 1, name: 'status', comment: '', owner: '', date: '', repository: '' }]), 'permissions')!.run();
+    entry(attributeTypeMenu(workspacePlace(ws), [{ id: 1, name: 'status', comment: '', owner: '', date: '', repository: '' }]), 'permissions')!.run();
 
     expect(opened).toEqual([
-      { target: { kind: 'branch', server: 'local', repository: 'game@local', name: '/main/task', knownOwner: 'ana' }, workspacePath: ws },
-      { target: { kind: 'label', server: 'acme@cloud', repository: 'other@acme@cloud', name: 'v1', knownOwner: 'bob' }, workspacePath: ws },
+      { target: { kind: 'branch', server: 'local', repository: 'game@local', name: '/main/task', knownOwner: 'ana' }, place: workspacePlace(ws) },
+      { target: { kind: 'label', server: 'acme@cloud', repository: 'other@acme@cloud', name: 'v1', knownOwner: 'bob' }, place: workspacePlace(ws) },
       // An object listed without its repository is the workspace's.
-      { target: { kind: 'attribute', server: 'local', repository: 'game@local', name: 'status' }, workspacePath: ws },
+      { target: { kind: 'attribute', server: 'local', repository: 'game@local', name: 'status' }, place: workspacePlace(ws) },
     ]);
   });
 
@@ -48,7 +48,7 @@ describe('opening permissions from the menus', () => {
     entry(fileMenu(ws, [file('src/a.ts')], new PendingChangesIndex([])), 'pathPermissions')!.run();
     const xlinked = entry(fileMenu(ws, [file('lib/b.ts', 'thirdparty@local')], new PendingChangesIndex([])), 'pathPermissions')!;
 
-    expect(opened).toEqual([{ target: { kind: 'path', server: 'local', repository: 'game@local', name: '/src/a.ts' }, workspacePath: ws }]);
+    expect(opened).toEqual([{ target: { kind: 'path', server: 'local', repository: 'game@local', name: '/src/a.ts' }, place: workspacePlace(ws) }]);
     expect(xlinked).toMatchObject({ disabled: true, disabledReason: expect.stringContaining('xlink') });
   });
 
@@ -62,26 +62,36 @@ describe('opening permissions from the menus', () => {
     for (const id of ['permissions', 'pathPermissions', 'serverPermissions']) entry(menu, id)!.run();
 
     expect(opened).toEqual([
-      { target: { kind: 'repository', server: 'acme@cloud', repository: 'game@acme@cloud', name: 'game', knownOwner: 'ana' }, workspacePath: undefined },
-      { target: { kind: 'path', server: 'acme@cloud', repository: 'game@acme@cloud', name: '/' }, workspacePath: undefined },
-      { target: { kind: 'server', server: 'acme@cloud', name: 'acme@cloud' }, workspacePath: undefined },
+      { target: { kind: 'repository', server: 'acme@cloud', repository: 'game@acme@cloud', name: 'game', knownOwner: 'ana' }, place: undefined },
+      { target: { kind: 'path', server: 'acme@cloud', repository: 'game@acme@cloud', name: '/' }, place: undefined },
+      { target: { kind: 'server', server: 'acme@cloud', name: 'acme@cloud' }, place: undefined },
     ]);
   });
 
   it("opens the workspace's repository, paths and server from the palette", () => {
-    openWorkspaceRepositoryPermissions(ws, 'repository');
-    openWorkspaceRepositoryPermissions(ws, 'server');
+    openOwnRepositoryPermissions(workspacePlace(ws), 'repository');
+    openOwnRepositoryPermissions(workspacePlace(ws), 'server');
 
     expect(opened).toEqual([
-      { target: { kind: 'repository', server: 'local', repository: 'game@local', name: 'game' }, workspacePath: ws },
-      { target: { kind: 'server', server: 'local', name: 'local' }, workspacePath: ws },
+      { target: { kind: 'repository', server: 'local', repository: 'game@local', name: 'game' }, place: workspacePlace(ws) },
+      { target: { kind: 'server', server: 'local', name: 'local' }, place: workspacePlace(ws) },
+    ]);
+  });
+
+  it("opens a repository's own permissions with no workspace, its repository known from the start", () => {
+    openOwnRepositoryPermissions(repositoryPlace('game@local'), 'paths');
+    entry(branchMenu(repositoryPlace('game@local'), [{ id: 1, name: '/main/task', parent: '/main', comment: '', owner: 'ana', date: '', headChangeset: 3, repository: 'game@local' }], undefined), 'permissions')!.run();
+
+    expect(opened).toEqual([
+      { target: { kind: 'path', server: 'local', repository: 'game@local', name: '/' }, place: repositoryPlace('game@local') },
+      { target: { kind: 'branch', server: 'local', repository: 'game@local', name: '/main/task', knownOwner: 'ana' }, place: repositoryPlace('game@local') },
     ]);
   });
 
   it("says so when the workspace's repository isn't known yet, rather than guessing", () => {
     queryClient.removeQueries({ queryKey: queryKeys.inWorkspace(ws, 'info') });
 
-    openWorkspaceRepositoryPermissions(ws, 'repository');
+    openOwnRepositoryPermissions(workspacePlace(ws), 'repository');
 
     expect(opened).toEqual([]);
     expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't open the permissions", detail: 'The workspace’s repository isn’t known yet.' }]);

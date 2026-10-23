@@ -24,11 +24,16 @@ export interface CmPlace {
    * outside a workspace. One naming its repository already (an xlinked item's, `revid:45@lib@local`) stays as it is.
    */
   spec(objectSpec: string): string;
+  /**
+   * The name a command creates an object by: as written in a workspace (`/main/task`, `status`), and as the spec naming
+   * the repository outside one (`br:/main/task@game@local`, `att:status@game@local`).
+   */
+  newObject(specPrefix: 'br' | 'att', name: string): string;
 }
 
 export function cmPlace(place: Place): CmPlace {
   if (place.kind === 'workspace') {
-    return { options: { cwd: place.workspacePath }, repository: undefined, repositoryOption: [], spec: (objectSpec) => objectSpec };
+    return { options: { cwd: place.workspacePath }, repository: undefined, repositoryOption: [], spec: (objectSpec) => objectSpec, newObject: (_specPrefix, name) => name };
   }
   const { repository } = place;
   return {
@@ -36,6 +41,7 @@ export function cmPlace(place: Place): CmPlace {
     repository,
     repositoryOption: [`--repository=${repository}`],
     spec: (objectSpec) => (namesRepository(objectSpec) ? objectSpec : `${objectSpec}@${repository}`),
+    newObject: (specPrefix, name) => `${specPrefix}:${name}@${repository}`,
   };
 }
 

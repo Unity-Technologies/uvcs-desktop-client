@@ -7,8 +7,7 @@ import type { CmPlace } from './cmPlace';
  * starting point does.
  */
 export function branchCreateArgs({ name, startingPoint }: Omit<CreateBranchRequest, 'comment'>, commentsFile: string, at: CmPlace): string[] {
-  const branch = at.repository ? at.spec(`br:${name}`) : name;
-  return ['branch', 'create', branch, ...startingPointOption(startingPoint && at.spec(startingPoint)), `-commentsfile=${commentsFile}`];
+  return ['branch', 'create', at.newObject('br', name), ...startingPointOption(startingPoint && at.spec(startingPoint)), `-commentsfile=${commentsFile}`];
 }
 
 /** Without a starting point, `cm` starts the branch at the head of its parent. */

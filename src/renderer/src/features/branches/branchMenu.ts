@@ -75,7 +75,7 @@ export function branchMenu(place: Place, branches: BranchInfo[], currentBranch: 
     single && !host.inBranchExplorer && menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'branch', name: single.name, date: single.date })),
     single && workspacePath !== null && copySubmenu('Branch', branchCopyTexts(workspacePath, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     single && menuAction('rename', () => void renameBranch(place, single), { shortcut: hotkey('rename') }),
-    single && workspacePath !== null && menuAction('permissions', () => openObjectPermissions(workspacePath, 'branch', single)),
+    single && menuAction('permissions', () => openObjectPermissions(place, 'branch', single)),
     visible.length > 0 &&
       menuAction('hide', () => void setBranchesHidden(place, visible, true), { label: visible.length === 1 ? 'Hide' : `Hide ${visible.length} branches` }),
     hidden.length > 0 &&

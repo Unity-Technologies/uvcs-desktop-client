@@ -1,11 +1,10 @@
-import { workspacePlace } from '@shared/domain/place';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import type { AttributeValue } from '@shared/domain/attribute';
 import { api } from '../../api/client';
 import { runAction } from '../../app/operations/runOperation';
 import { isAffectedByAttributes } from '../../app/refresh/refreshScopes';
-import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace } from '../../app/workspace/useWorkspace';
 import { Markdown } from '../../components/Markdown';
 import { Button } from '../../ui/Button';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
@@ -25,7 +24,7 @@ type Opened = { name: string; mode: 'edit' | 'read' };
  * click a chip (or its pencil) to edit, its cross to remove, "Add attribute…" for a new one.
  */
 export function AttributeChips({ objectSpec }: { objectSpec: string }) {
-  const workspacePath = useWorkspacePath();
+  const place = usePlace();
   const { data: values } = useAttributeValues(objectSpec);
   const { data: types = [] } = useAttributeTypes();
   const [adding, setAdding] = useState<string | null>(null);
@@ -49,12 +48,12 @@ export function AttributeChips({ objectSpec }: { objectSpec: string }) {
 
   const save = async (attribute: string, value: string): Promise<void> => {
     close();
-    await runAction(workspacePlace(workspacePath), `Couldn't set ${attribute}`, () => api.attributes.setValue(workspacePath, objectSpec, attribute, value), isAffectedByAttributes);
+    await runAction(place, `Couldn't set ${attribute}`, () => api.attributes.setValue(place, objectSpec, attribute, value), isAffectedByAttributes);
   };
 
   const remove = (attribute: string): void => {
     if (opened?.name === attribute) close();
-    void runAction(workspacePlace(workspacePath), `Couldn't remove ${attribute}`, () => api.attributes.unsetValue(workspacePath, objectSpec, attribute), isAffectedByAttributes);
+    void runAction(place, `Couldn't remove ${attribute}`, () => api.attributes.unsetValue(place, objectSpec, attribute), isAffectedByAttributes);
   };
 
   const add = (attribute: string): void => {

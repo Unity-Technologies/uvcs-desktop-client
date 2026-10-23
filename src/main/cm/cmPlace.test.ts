@@ -11,6 +11,8 @@ describe('cmPlace in a workspace', () => {
     expect(inWorkspace.repositoryOption).toEqual([]);
     expect(inWorkspace.spec('br:/main/task')).toBe('br:/main/task');
     expect(inWorkspace.spec('serverpath:/src/a.cs#cs:12')).toBe('serverpath:/src/a.cs#cs:12');
+    expect(inWorkspace.newObject('br', '/main/task')).toBe('/main/task');
+    expect(inWorkspace.newObject('att', 'status')).toBe('status');
   });
 });
 
@@ -30,6 +32,11 @@ describe('cmPlace on a repository without a workspace', () => {
     expect(onRepository.spec('sh:3')).toBe('sh:3@game@local');
     expect(onRepository.spec('att:status')).toBe('att:status@game@local');
     expect(onRepository.spec('serverpath:/src/a.cs#br:/main')).toBe('serverpath:/src/a.cs#br:/main@game@local');
+  });
+
+  it('creates an object by the spec naming the repository', () => {
+    expect(onRepository.newObject('br', '/main/task')).toBe('br:/main/task@game@local');
+    expect(onRepository.newObject('att', 'status')).toBe('att:status@game@local');
   });
 
   it('leaves a spec that names its repository already: an xlinked repository stays the one named', () => {

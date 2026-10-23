@@ -1,7 +1,8 @@
+import type { Place } from '@shared/domain/place';
 import type { ObjectPermissions, PermissionTarget } from '@shared/domain/permissions';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
-import { invalidateWorkspace, queryClient } from '../../app/queryClient';
+import { invalidatePlace, queryClient } from '../../app/queryClient';
 import { isAffectedByPermissions } from '../../app/refresh/refreshScopes';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
@@ -14,8 +15,8 @@ export interface SaveRequest {
   changes: DraftChanges;
   /** The branches of a path's new group of branches. */
   branches?: string[];
-  /** The workspace the dialog was opened from, whose lists may show the owner. */
-  workspacePath?: string;
+  /** The place the dialog was opened from, whose lists may show the owner. */
+  place?: Place;
 }
 
 async function landedAnyway(target: PermissionTarget, changes: DraftChanges): Promise<boolean> {
@@ -35,7 +36,7 @@ const changesWord = (count: number) => (count === 1 ? '1 change' : `${count} cha
  * all were saved. Every object's permissions on the server are read again either way: the changes, and what objects
  * inherit from this one, show as they are now; after a failure, the changes that went through drop out of the draft.
  */
-export async function savePermissions({ target, permissions, changes, branches, workspacePath }: SaveRequest): Promise<boolean> {
+export async function savePermissions({ target, permissions, changes, branches, place }: SaveRequest): Promise<boolean> {
   const count = changeCount(changes);
   if (
     needsConfirmation(changes) &&
@@ -65,7 +66,7 @@ export async function savePermissions({ target, permissions, changes, branches, 
   } finally {
     await queryClient.invalidateQueries({ queryKey: queryKeys.permissionsOn(target.server) });
     if (changes.owner) {
-      if (workspacePath) void invalidateWorkspace(workspacePath, isAffectedByPermissions(target.kind, true));
+      if (place) void invalidatePlace(place, isAffectedByPermissions(target.kind, true));
       if (target.kind === 'repository') void queryClient.invalidateQueries({ queryKey: queryKeys.repositories(target.server) });
     }
   }
