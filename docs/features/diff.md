@@ -97,7 +97,8 @@ their file, with no command more (ARCHITECTURE.md "Server budget"). `ContentApi.
   failure passed on whole to each of its reads may name another's. `cm` names the file as it was given, never resolved or shortened.
 - Only English output is recognized, as elsewhere; in another language the diff says it couldn't load the file.
 
-`scripts/sandboxes/purged.sh` builds a diff with each case: the later version purged, both, the earlier one.
+`scripts/sandboxes/purged.sh` builds a diff with each case (the later version purged, both, the earlier one) and a
+branch whose merge has a purged base.
 
 ## Reverting a file
 
