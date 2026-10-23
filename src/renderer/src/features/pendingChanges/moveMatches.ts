@@ -47,10 +47,10 @@ const SHAPES: Partial<Record<ItemType, MatchShape>> = { file: 'file', binaryFile
  */
 export function matchSideOf(change: PendingChange, changes: readonly PendingChange[]): MatchSide | null {
   if (SHAPES[change.itemType] === undefined) return null;
-  if (isOnly(change, 'locallyDeleted')) return 'deleted';
+  if (isOnly(change, 'locallyDeleted')) return isInside(change.path, detectedFolderMoves(changes)) ? null : 'deleted';
   if (!isOnly(change, 'private') && !isDetectedMove(change)) return null;
   // Only a new item needs the private folders: a right-click on any other change reads no list.
-  return isInPrivateFolder(change.path, privateFolders(changes)) ? null : 'new';
+  return isInside(change.path, privateFolders(changes)) ? null : 'new';
 }
 
 /**
@@ -66,10 +66,15 @@ export function matchCandidates(change: PendingChange, changes: readonly Pending
   return candidates.filter((candidate) => SHAPES[candidate.itemType] === shape).sort((a, b) => compareCandidates(change.path, a.path, b.path));
 }
 
-/** Where each item that went was: deleted from disk, or the deleted item of a detected move. */
+/**
+ * Where each item that went was: deleted from disk, or the deleted item of a detected move. Not one inside a folder
+ * the detection moved: `cm status` lists it at the folder's new path, where nothing is loaded (`cm ls` finds no item
+ * there, and `cm move` no revision); the folder's own move is the one to pick.
+ */
 function deletedItems(changes: readonly PendingChange[]): MatchCandidate[] {
+  const movedFolders = detectedFolderMoves(changes);
   return changes.flatMap((change): MatchCandidate[] => {
-    if (isOnly(change, 'locallyDeleted')) return [{ path: change.path, itemType: change.itemType }];
+    if (isOnly(change, 'locallyDeleted')) return isInside(change.path, movedFolders) ? [] : [{ path: change.path, itemType: change.itemType }];
     return isDetectedMove(change) ? [{ path: change.oldPath!, itemType: change.itemType, pairedWith: change.path }] : [];
   });
 }
@@ -78,7 +83,7 @@ function deletedItems(changes: readonly PendingChange[]): MatchCandidate[] {
 function newItems(changes: readonly PendingChange[]): MatchCandidate[] {
   const folders = privateFolders(changes);
   return changes.flatMap((change): MatchCandidate[] => {
-    if (isInPrivateFolder(change.path, folders)) return [];
+    if (isInside(change.path, folders)) return [];
     if (isOnly(change, 'private')) return [{ path: change.path, itemType: change.itemType }];
     return isDetectedMove(change) ? [{ path: change.path, itemType: change.itemType, pairedWith: change.oldPath }] : [];
   });
@@ -144,7 +149,13 @@ function privateFolders(changes: readonly PendingChange[]): Set<string> {
   return new Set(changes.filter((change) => change.itemType === 'directory' && change.kinds.includes('private')).map((change) => change.path));
 }
 
-function isInPrivateFolder(path: string, folders: ReadonlySet<string>): boolean {
+/** Where the folders the detection moved are now. */
+function detectedFolderMoves(changes: readonly PendingChange[]): Set<string> {
+  return new Set(changes.filter((change) => change.itemType === 'directory' && isDetectedMove(change)).map((change) => change.path));
+}
+
+/** Whether the path is inside one of the folders (not one of them). */
+function isInside(path: string, folders: ReadonlySet<string>): boolean {
   for (let end = path.lastIndexOf('/'); end > 0; end = path.lastIndexOf('/', end - 1)) {
     if (folders.has(path.slice(0, end))) return true;
   }

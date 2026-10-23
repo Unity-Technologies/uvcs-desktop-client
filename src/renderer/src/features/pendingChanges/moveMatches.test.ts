@@ -106,6 +106,15 @@ describe('the moves the detection made', () => {
     expect(moveMatchOf(weapon, matchCandidates(weapon, changes)[0]!, 'deleted')).toEqual({ from: 'src/Weapon.cs', to: 'src/Gun.cs' });
   });
 
+  it("leaves out what's deleted inside a folder the detection moved: cm lists it where nothing is loaded", () => {
+    const folder = { ...change('src/Archive', ['locallyMoved'], 'directory'), oldPath: 'src/Retired' };
+    const inside = deleted('src/Archive/Old2.cs');
+
+    expect(paths(matchCandidates(rifle, [folder, inside, rifle]))).toEqual([]);
+    expect(matchSideOf(inside, [folder, inside])).toBeNull();
+    expect(matchSideOf(deleted('src/ArchiveOld.cs'), [folder])).toBe('deleted');
+  });
+
   it('leaves out a detected move into a private folder from the new items', () => {
     const intoNew = detected('new/Gun.cs', 'src/Old/Shotgun.cs');
 

@@ -20,7 +20,10 @@ isn't the one. "Search matches…" in either one's menu pairs them by hand, with
   folders, as `cm move` of a file onto a folder moves it inside the folder. Each detected move offers both its items:
   its new one to a deleted item, its deleted one, where it was (`oldPath`), to a new item, each tagged with what the
   detection paired it with ("Paired with Gun.cs", `pairingTag`). `cm move` of the pick records it instead: the item
-  the detection had paired goes back to deleted or new (tried in both directions). The official client offers them
+  the detection had paired goes back to deleted or new (tried in both directions). An item deleted inside a folder
+  the detection moved isn't offered: `cm status` lists it at the folder's new path (`src/Archive/Old2.cs` for
+  `src/Retired` → `src/Archive`), where nothing is loaded, so neither `cm ls` nor `cm move` finds it; the folder's
+  move is the one to pick. The official client offers them
   too: its search runs the detection again, from scratch, around the item. The likeliest first (`compareCandidates`):
   the same name (a move), then the same extension (a rename), then the closest folder, then path order. The dialog
   (`pickMoveMatch`) takes them from the pending changes the menu was built from, never a `cm status` of its own. While
@@ -42,7 +45,8 @@ isn't the one. "Search matches…" in either one's menu pairs them by hand, with
     warned in the main process's console (`[search matches]`); a failed measure says so in the dialog.
   - Folders aren't measured: `cm` measures a folder by its entries once their files are paired, which a pick by hand
     isn't. Their dialog has no slider.
-  - What it costs: one `cm ls` of the deleted paths, then only the deleted text files under the cap read by revision
+  - What it costs: one `cm ls` of the deleted paths (a path it can't find fails it, the others listed: they're listed
+    again without the paths it named, `notFoundPaths`), then only the deleted text files under the cap read by revision
     (`revid:N@repo`), asked together so `RevisionCat` batches them per repository (an xlinked one apart): up to four in
     one quick `cm cat` after another, more in processes of their own. The new files are read from disk, 16 at a time,
     each path checked to be inside the workspace (`workspaceFileOf`): the window isn't trusted.
