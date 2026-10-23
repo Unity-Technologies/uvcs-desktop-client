@@ -30,7 +30,10 @@ export function findCommand(object: string, query: string, format: string, repos
   return ['find', object, queryOn(query, repository), format, `--dateformat=${FIND_DATE_FORMAT}`, '--nototal'].filter(Boolean);
 }
 
-/** `query` asking `repository`'s objects (`… on repository '…'`, last), or as written with none. */
+/**
+ * `query` asking `repository`'s objects (`… on repository '…'`, last), or as written with none. The name is quoted as
+ * it is: a repository's name can't hold a quote (`cm repository create` refuses one), so it needs no escaping.
+ */
 export function queryOn(query: string, repository: string | undefined): string {
   return repository ? `${query} on repository '${repository}'`.trim() : query;
 }

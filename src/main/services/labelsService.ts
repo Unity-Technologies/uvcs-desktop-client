@@ -1,10 +1,10 @@
 import type { CreateLabelRequest, LabelsApi } from '@shared/api/labels';
+import type { Place } from '@shared/domain/place';
 import { cmPlace } from '../cm/cmPlace';
 import { equalsCondition, findArgs } from '../cm/findQuery';
 import { FOUND_LABELS } from '../cm/foundObjects';
 import { readRecords } from '../cm/formatRecords';
 import { labelCommentArgs } from '../cm/labelCommentArgs';
-import type { Place } from '@shared/domain/place';
 import { withTempFile } from '../files/tempFile';
 import type { ServiceContext } from './ServiceContext';
 

@@ -239,7 +239,7 @@ export type MenuWordId = keyof typeof MENU_WORDS;
 
 /**
  * The words whose action needs a workspace, so a repository explored without one never offers them
- * (docs/features/explore-repository.md): they change the files on disk or what the workspace is on (switch, merge into
+ * (ARCHITECTURE.md "Places"): they change the files on disk or what the workspace is on (switch, merge into
  * it, cherry pick, apply, revert, check in, shelve, resolve a conflict), or read and open them there (the editor, the
  * terminal, the file manager). The server's merges ("Merge to…", finishing a task) are here too: the merge page runs
  * in a workspace. `rename` or `delete` aren't: they serve branches and labels as well as files, and the menus of files
