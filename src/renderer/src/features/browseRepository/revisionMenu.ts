@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { TreeItem } from '@shared/domain/explorer';
 import { otherRepository } from '@shared/domain/repository';
 import { revisionRef } from '@shared/domain/revision';
@@ -27,8 +28,8 @@ export function revisionMenu(workspacePath: string, changesetId: number, reposit
 
   return groupedMenu([
     single && menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path, revision: revisionRef(single) })),
-    ...(file ? openRevisionEntries((editorId) => openRevision(workspacePath, revisionRef(file), file.name, editorId)) : []),
-    file && menuAction('saveAs', () => void saveRevisionAs(workspacePath, revisionRef(file), file.name)),
+    ...(file ? openRevisionEntries((editorId) => openRevision(workspacePlace(workspacePath), revisionRef(file), file.name, editorId)) : []),
+    file && menuAction('saveAs', () => void saveRevisionAs(workspacePlace(workspacePath), revisionRef(file), file.name)),
     copySubmenu('', { serverPath: items.map((item) => `/${item.path}`).join('\n'), link: singleLink, spec: singleSpec }, { count: items.length }),
   ]);
 }

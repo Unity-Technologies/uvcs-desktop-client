@@ -1,4 +1,5 @@
 import { BrowserWindow, webContents } from 'electron';
+import { workspacePlace } from '@shared/domain/place';
 import type { WindowsApi } from '@shared/api/windows';
 import { callerId } from '../ipc/caller';
 import { popUpAppMenu } from '../window/appMenu';
@@ -23,7 +24,7 @@ export function createWindowsService({ windows, handedOverDiffs }: ServiceContex
       if (window) popUpAppMenu(window, position);
     },
     openPage: async ({ workspacePath, page, diff, seed }) => {
-      if (diff) handedOverDiffs.hand(workspacePath, diff.target, diff.entries);
+      if (diff) handedOverDiffs.hand(workspacePlace(workspacePath), diff.target, diff.entries);
       windows.openPage(callerId(), { workspacePath, page, seed });
     },
     followSelection: async (following) => windows.follow(callerId(), following),

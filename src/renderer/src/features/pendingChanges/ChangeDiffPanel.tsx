@@ -52,7 +52,7 @@ export function ChangeDiffPanel({ workspacePath, change, reviewMark, title: ownT
   return (
     <LineLinksContext.Provider value={lineLinks}>
       <FileDiffViewer
-        workspacePath={workspacePath}
+        place={workspacePlace(workspacePath)}
         original={original}
         modified={sources.modified}
         fileName={change.path}

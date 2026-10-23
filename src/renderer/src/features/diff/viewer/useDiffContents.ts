@@ -1,4 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import type { Place } from '@shared/domain/place';
 import type { ContentSource, FileContent } from '@shared/domain/content';
 import { queryKeys } from '../../../api/queryKeys';
 import { queryClient } from '../../../app/queryClient';
@@ -19,15 +20,15 @@ export interface DiffContents {
  * settles on it (`useSettledValue`): holding ↓ through a list of files reads none of the files it passes, each one
  * or two `cm cat`s.
  */
-export function useDiffContents(workspacePath: string, original: ContentSource, modified: ContentSource) {
-  const queryKey = queryKeys.inWorkspace(workspacePath, 'diffContents', original, modified);
+export function useDiffContents(place: Place, original: ContentSource, modified: ContentSource) {
+  const queryKey = queryKeys.inPlace(place, 'diffContents', original, modified);
   const pair = JSON.stringify(queryKey);
   const settled = useSettledValue(pair, pair) === pair;
   return useQuery({
     queryKey,
     enabled: settled || queryClient.getQueryData(queryKey) !== undefined,
     queryFn: async (): Promise<DiffContents> => {
-      const [left, right] = await Promise.all([readContent(workspacePath, original), readContent(workspacePath, modified)]);
+      const [left, right] = await Promise.all([readContent(place, original), readContent(place, modified)]);
       return { original, modified, left, right };
     },
     ...contentCaching([original, modified]),
@@ -36,6 +37,6 @@ export function useDiffContents(workspacePath: string, original: ContentSource, 
 }
 
 /** Each side keeps its own cache entry, shared with other views of the same version. */
-function readContent(workspacePath: string, source: ContentSource): Promise<FileContent> {
-  return queryClient.fetchQuery(contentQuery(workspacePath, source));
+function readContent(place: Place, source: ContentSource): Promise<FileContent> {
+  return queryClient.fetchQuery(contentQuery(place, source));
 }

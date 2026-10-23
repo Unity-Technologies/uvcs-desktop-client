@@ -55,3 +55,12 @@ function namesRepository(objectSpec: string): boolean {
   if (hash >= 0) return objectSpec.includes('@', hash);
   return !/^(?:serverpath:|\/)/.test(objectSpec) && objectSpec.includes('@');
 }
+
+/**
+ * The workspace a read of its disk needs (its files, what it has loaded, a review snapshot). A repository explored
+ * without one has none, and its views never ask: asking is a bug, told as one.
+ */
+export function workspaceOf(place: Place, what: string): string {
+  if (place.kind === 'workspace') return place.workspacePath;
+  throw new Error(`${what} needs a workspace, and ${place.repository} is explored without one.`);
+}

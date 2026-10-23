@@ -197,18 +197,18 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   pendingChange: () => pendingChangeMenu(ws, [change], [], { isIncluded: () => false, setIncluded: () => {} }),
   lockedPendingChange: () => pendingChangeMenu(ws, [change], [], { isIncluded: () => false, setIncluded: () => {} }, undefined, pendingLocks),
   history: () =>
-    historyMenu({ workspacePath: ws, path: 'src/a.ts', ofWorkspaceFile: true, annotate: () => {} }, [
+    historyMenu({ place: workspacePlace(ws), path: 'src/a.ts', ofWorkspaceFile: true, annotate: () => {} }, [
       { kind: 'revision', revision: { revisionId: 40, changesetId: 5, itemType: 'file', repository, idSpec: 'revid:40@game@local', date: '' } } as never,
     ]),
   diffEntry: () =>
     diffEntryMenu(
-      ws,
+      workspacePlace(ws),
       { kind: 'changeset', changesetId: 5 },
       [{ status: 'changed', path: '/src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39, repository } as never],
       { review: { statusOf: () => 'unreviewed', toggle: () => {} } as never, workspaceRepository: repository },
     ),
-  deletedDiffEntry: () => diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [deletedEntry], { workspaceRepository: repository }),
-  deletedDiffEntries: () => diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [deletedEntry, deletedFolder], { workspaceRepository: repository }),
+  deletedDiffEntry: () => diffEntryMenu(workspacePlace(ws), { kind: 'changeset', changesetId: 5 }, [deletedEntry], { workspaceRepository: repository }),
+  deletedDiffEntries: () => diffEntryMenu(workspacePlace(ws), { kind: 'changeset', changesetId: 5 }, [deletedEntry, deletedFolder], { workspaceRepository: repository }),
   mergeConflict: () => mergeItemMenu([mergeConflict], mergeContext),
   mergeChange: () => mergeItemMenu([{ kind: 'change', key: 'change:0', path: 'src/c.ts', change: { kind: 'changed', path: '/src/c.ts' } }], mergeContext),
   mergeDirectoryConflict: () => mergeItemMenu([mergeDirectoryConflict], mergeContext),
@@ -247,6 +247,12 @@ const REPOSITORY_MENUS: Record<string, () => MenuEntry[]> = {
   repositoryCodeReview: () => codeReviewMenu(onRepository, [branchReview]),
   repositoryCodeReviews: () => codeReviewMenu(onRepository, [review, changesetReview]),
   repositoryShelve: () => shelveMenu(onRepository, [shelve]),
+  repositoryDiffEntry: () =>
+    diffEntryMenu(onRepository, { kind: 'changeset', changesetId: 5 }, [deletedEntry], { review: { statusOf: () => 'unreviewed', toggle: () => {} } as never, workspaceRepository: repository }),
+  repositoryHistory: () =>
+    historyMenu({ place: onRepository, path: 'src/a.ts', ofWorkspaceFile: false, annotate: () => {} }, [
+      { kind: 'revision', revision: { revisionId: 40, changesetId: 5, itemType: 'file', repository, idSpec: 'revid:40@game@local', date: '' } } as never,
+    ]),
   repositoryGraphChangeset: () => graphMenu({ kind: 'changeset', id: 5 }, { ...graphContext, place: onRepository, currentBranch: undefined, loadedChangeset: undefined }),
   repositoryGraphBranch: () => graphMenu({ kind: 'branch', lane }, { ...graphContext, place: onRepository, currentBranch: undefined, loadedChangeset: undefined }),
   repositoryGraphLabel: () => graphMenu({ kind: 'label', label: sampleHistory().labels[0]!, more: [] }, { ...graphContext, place: onRepository }),
@@ -418,7 +424,7 @@ describe('one menu per object, the same everywhere', () => {
 
   it("a changed file reads the same in a diff, Incoming and a merge, the merge only adding its own", () => {
     // A diff no link names (two branches' heads), as a merge's and Incoming's files have no one object to link to.
-    const inDiff = diffEntryMenu(ws, { kind: 'range', fromSpec: 'br:/main', toSpec: 'cs:5' }, [{ path: 'src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39, repository } as never]);
+    const inDiff = diffEntryMenu(workspacePlace(ws), { kind: 'range', fromSpec: 'br:/main', toSpec: 'cs:5' }, [{ path: 'src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39, repository } as never]);
     expectOnlyAdds(mergeItemMenu([mergeConflict], mergeContext), inDiff);
     expectOnlyAdds(incomingFileMenu([incomingConflictFile], incomingContext), inDiff);
   });
@@ -490,7 +496,7 @@ describe('Copy', () => {
   it("copies a diff's file as the link to its change there", async () => {
     fakeApi.answer('workspaces.info', async () => WORKSPACE_INFO);
     const entry = { path: 'src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39, repository } as never;
-    expect(await copiedBy(diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [entry]))).toEqual(['Path: src/a.ts', 'Link: uvcs://local/repos/game/changesets/5/-/files/src/a.ts']);
+    expect(await copiedBy(diffEntryMenu(workspacePlace(ws), { kind: 'changeset', changesetId: 5 }, [entry]))).toEqual(['Path: src/a.ts', 'Link: uvcs://local/repos/game/changesets/5/-/files/src/a.ts']);
   });
 
   it("copies files and pending changes as their paths, relative and full, and a file as its link on the workspace's branch", async () => {

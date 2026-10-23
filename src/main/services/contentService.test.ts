@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { formatOutput, recordsOutput, treeListingOutput, workspaceListingOutput } from '../cm/testing/cmOutput';
 import { TREE_ITEM_FORMAT, TREE_ITEMS } from '../cm/treeItems';
 import { cmFails, fakeCmClient, optionValue, type CmAnswer, type FakeCmCommand } from '../cm/testing/fakeCmClient';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { ContentSource } from '@shared/domain/content';
 import { catReadsOf, fakeCat } from '../cm/testing/fakeCat';
 import { RevisionCat } from '../files/RevisionCat';
@@ -64,7 +65,7 @@ describe('reading content', () => {
     const { written, answer } = catWriting('class Player {}\n');
     const { service, commands } = content({ cat: answer });
 
-    const read = await service.read(workspace, { kind: 'revision', revision: { revisionId: 45, repository: 'game@local' }, fileName: 'player.cs' });
+    const read = await service.read(workspacePlace(workspace), { kind: 'revision', revision: { revisionId: 45, repository: 'game@local' }, fileName: 'player.cs' });
 
     expect(read).toMatchObject({ text: 'class Player {}\n', isBinary: false });
     expect(commands).toMatchObject([{ via: 'query', args: ['cat', 'revid:45@game@local', `--file=${written[0]}`], options: { cwd: workspace } }]);
@@ -79,7 +80,7 @@ describe('reading content', () => {
       ls: LS_UNDER_XLINK,
     });
 
-    const read = await service.read(workspace, { kind: 'repositoryPath', path: '/lib/a.cs', at: 'cs:30' });
+    const read = await service.read(workspacePlace(workspace), { kind: 'repositoryPath', path: '/lib/a.cs', at: 'cs:30' });
 
     expect(read.text).toBe('xlinked\n');
     expect(commands.map(({ args }) => args.filter((arg) => !arg.startsWith('--file=')))).toEqual([
@@ -95,8 +96,8 @@ describe('reading content', () => {
     await writeFile(join(workspace, 'src', 'a.cs'), 'local edit\n');
     const { service, commands } = content({});
 
-    expect((await service.read(workspace, { kind: 'workspaceFile', path: 'src/a.cs' })).text).toBe('local edit\n');
-    expect(await service.read(workspace, { kind: 'empty' })).toEqual({ text: '', isBinary: false, size: 0 });
+    expect((await service.read(workspacePlace(workspace), { kind: 'workspaceFile', path: 'src/a.cs' })).text).toBe('local edit\n');
+    expect(await service.read(workspacePlace(workspace), { kind: 'empty' })).toEqual({ text: '', isBinary: false, size: 0 });
     expect(commands).toEqual([]);
   });
 
@@ -104,7 +105,7 @@ describe('reading content', () => {
     const snapshot = { text: 'reviewed\n', isBinary: false, size: 9 };
     const { service, commands } = content({}, { readSnapshot: async () => snapshot });
 
-    expect(await service.read('wk', { kind: 'reviewSnapshot', path: 'a.cs' })).toBe(snapshot);
+    expect(await service.read(workspacePlace('wk'), { kind: 'reviewSnapshot', path: 'a.cs' })).toBe(snapshot);
     expect(commands).toEqual([]);
   });
 });
@@ -140,7 +141,7 @@ describe("reading a merge's conflicting files", () => {
     const versions = versionsOf(50);
     const { service, commands } = mergePage(versions.length);
 
-    const read = await Promise.all(versions.map((source) => service.read(workspace, source)));
+    const read = await Promise.all(versions.map((source) => service.read(workspacePlace(workspace), source)));
 
     expect(read.map((one) => one.text)).toEqual(versions.map((source) => `text of ${(source as { spec: string }).spec}\n`));
     expect(commands.map((command) => [command.via, catReadsOf(command.args).length])).toEqual([['execute', versions.length]]);
@@ -151,7 +152,7 @@ describe("reading a merge's conflicting files", () => {
     const versions = versionsOf(20, (file) => (file % 2 === 0 ? 'eco@local' : 'lib@local'));
     const { service, commands } = mergePage(versions.length);
 
-    await Promise.all(versions.map((source) => service.read(workspace, source)));
+    await Promise.all(versions.map((source) => service.read(workspacePlace(workspace), source)));
 
     const repositoriesOf = (args: string[]) => new Set(catReadsOf(args).map(({ spec }) => spec.slice(spec.indexOf('@') + 1)));
     expect(commands.every((command) => repositoriesOf(command.args).size === 1)).toBe(true);
@@ -162,7 +163,7 @@ describe("reading a merge's conflicting files", () => {
     const versions = [...versionsOf(10), { kind: 'spec', spec: 'itemid:404#cs:7@eco@local', fileName: '/src/gone.cs' } as const];
     const { service } = mergePage(versions.length);
 
-    const results = await Promise.allSettled(versions.map((source) => service.read(workspace, source)));
+    const results = await Promise.allSettled(versions.map((source) => service.read(workspacePlace(workspace), source)));
 
     expect(results.filter((result) => result.status === 'rejected')).toEqual([{ status: 'rejected', reason: expect.objectContaining({ message: 'The specified revision was not found itemid:404#cs:7@eco@local' }) }]);
   });
@@ -187,7 +188,7 @@ describe('reading the bytes of a model companion', () => {
     await writeFile(join(workspace, 'Assets', 'Barrel.bin'), Buffer.from([1, 2, 3]));
     const { service, commands } = content({});
 
-    expect([...(await service.readBytes(workspace, { kind: 'workspaceFile', path: 'Assets/Barrel.bin' }))!]).toEqual([1, 2, 3]);
+    expect([...(await service.readBytes(workspacePlace(workspace), { kind: 'workspaceFile', path: 'Assets/Barrel.bin' }))!]).toEqual([1, 2, 3]);
     expect(commands).toEqual([]);
   });
 
@@ -196,8 +197,8 @@ describe('reading the bytes of a model companion', () => {
     const { written, answer } = catWriting('BIN');
     const { service, commands } = content({ cat: answer, ls: ASSETS_LISTING });
 
-    const bytes = await service.readBytes(workspace, { kind: 'repositoryPath', path: '/Assets/Barrel.bin', at: 'cs:12' });
-    await service.readBytes(workspace, { kind: 'repositoryPath', path: '/Assets/Barrel.gltf.meta', at: 'cs:12' });
+    const bytes = await service.readBytes(workspacePlace(workspace), { kind: 'repositoryPath', path: '/Assets/Barrel.bin', at: 'cs:12' });
+    await service.readBytes(workspacePlace(workspace), { kind: 'repositoryPath', path: '/Assets/Barrel.gltf.meta', at: 'cs:12' });
 
     expect(new TextDecoder().decode(bytes!)).toBe('BIN');
     expect(commands.map(({ via, args }) => [via, args[0], args[1]])).toEqual([
@@ -222,7 +223,7 @@ describe('reading the bytes of a model companion', () => {
       const { written, answer } = catWriting('BIN');
       const { service, commands } = content({ cat: answer, ls });
 
-      expect(new TextDecoder().decode((await service.readBytes(workspace, binBeside(43)))!)).toBe('BIN');
+      expect(new TextDecoder().decode((await service.readBytes(workspacePlace(workspace), binBeside(43)))!)).toBe('BIN');
       expect(commands.map(({ via, args }) => [via, args[0], args[1]])).toEqual([
         ['query', 'ls', '/Assets'],
         ['query', 'cat', 'revid:41@eco@local'],
@@ -236,7 +237,7 @@ describe('reading the bytes of a model companion', () => {
       const { service, commands } = content({ cat: answer, ls });
       const bin = { kind: 'repositoryPath' as const, path: '/Assets/buffers/Box.bin', at: 'cs:12', beside: { path: '/Assets/Barrel.gltf', revisionId: 43 } };
 
-      expect(await service.readBytes(workspace, bin)).not.toBeNull();
+      expect(await service.readBytes(workspacePlace(workspace), bin)).not.toBeNull();
       expect(commands.map(({ via, args }) => [via, args[0], args[1]])).toEqual([
         ['query', 'ls', '/Assets'],
         ['query', 'ls', '/Assets/buffers'],
@@ -248,8 +249,8 @@ describe('reading the bytes of a model companion', () => {
       const workspace = await newWorkspace();
       const { service, lines } = content({ ls });
 
-      expect(await service.readBytes(workspace, binBeside(7))).toBeNull();
-      expect(await service.readBytes(workspace, { ...binBeside(43), beside: { path: '/Assets/Old/Barrel.gltf', revisionId: 43 } })).toBeNull();
+      expect(await service.readBytes(workspacePlace(workspace), binBeside(7))).toBeNull();
+      expect(await service.readBytes(workspacePlace(workspace), { ...binBeside(43), beside: { path: '/Assets/Old/Barrel.gltf', revisionId: 43 } })).toBeNull();
       expect(lines().map((line) => line.split(' --format')[0])).toEqual(['ls /Assets --tree=cs:12', 'ls /Assets/Old --tree=cs:12']);
     });
 
@@ -259,9 +260,9 @@ describe('reading the bytes of a model companion', () => {
       const { service, lines } = content({ cat: answer, ls });
       const model = (revisionId: number, metaFolder = 'Assets') => ({ kind: 'repositoryPath' as const, path: '/Assets/Barrel.gltf', at: 'cs:12', beside: { path: `/${metaFolder}/Barrel.gltf.meta`, revisionId } });
 
-      expect((await service.read(workspace, model(42))).text).toBe('glTF');
-      expect(await service.read(workspace, model(5))).toEqual({ text: '', isBinary: false, size: 0 });
-      expect(await service.read(workspace, model(42, 'Renamed'))).toEqual({ text: '', isBinary: false, size: 0 });
+      expect((await service.read(workspacePlace(workspace), model(42))).text).toBe('glTF');
+      expect(await service.read(workspacePlace(workspace), model(5))).toEqual({ text: '', isBinary: false, size: 0 });
+      expect(await service.read(workspacePlace(workspace), model(42, 'Renamed'))).toEqual({ text: '', isBinary: false, size: 0 });
       expect(lines().map((line) => line.split(' --f')[0])).toEqual(['ls /Assets --tree=cs:12', 'cat revid:43@eco@local', 'ls /Renamed --tree=cs:12']);
     });
   });
@@ -269,16 +270,16 @@ describe('reading the bytes of a model companion', () => {
   it("reads a companion that isn't there as nothing, from the disk or from the tree's listing, without a failing command", async () => {
     const workspace = await newWorkspace();
     const { service, lines } = content({ ls: ASSETS_LISTING });
-    expect(await service.readBytes(workspace, { kind: 'workspaceFile', path: 'Assets/Hero.fbx.meta' })).toBeNull();
-    expect(await service.readBytes(workspace, { kind: 'repositoryPath', path: '/Assets/Hero.fbx.meta', at: 'cs:4' })).toBeNull();
-    expect(await service.readBytes(workspace, { kind: 'repositoryPath', path: '/Assets/Shared/Hero.fbx.meta', at: 'cs:4', repository: 'art@local' })).toBeNull();
+    expect(await service.readBytes(workspacePlace(workspace), { kind: 'workspaceFile', path: 'Assets/Hero.fbx.meta' })).toBeNull();
+    expect(await service.readBytes(workspacePlace(workspace), { kind: 'repositoryPath', path: '/Assets/Hero.fbx.meta', at: 'cs:4' })).toBeNull();
+    expect(await service.readBytes(workspacePlace(workspace), { kind: 'repositoryPath', path: '/Assets/Shared/Hero.fbx.meta', at: 'cs:4', repository: 'art@local' })).toBeNull();
     expect(lines().map((line) => line.split(' --format')[0])).toEqual(['ls /Assets --tree=cs:4', 'ls /Assets/Shared --tree=cs:4']);
   });
 
   it('reads a companion under an xlink by its revision in the xlinked repository, as the listing names it', async () => {
     const { answer } = catWriting('META');
     const { service, lines } = content({ cat: answer, ls: treeListingOutput({ path: 'Assets/Shared', type: 'xlink', revid: 3 }, { path: 'Assets/Shared/Hero.fbx.meta', type: 'txt', revid: 77, repository: 'art@local' }) });
-    expect(await service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Shared/Hero.fbx.meta', at: 'cs:3', repository: 'art@local' })).not.toBeNull();
+    expect(await service.readBytes(workspacePlace(await newWorkspace()), { kind: 'repositoryPath', path: '/Assets/Shared/Hero.fbx.meta', at: 'cs:3', repository: 'art@local' })).not.toBeNull();
     expect(lines()[1]).toMatch(/^cat revid:77@art@local --file=/);
   });
 
@@ -289,51 +290,51 @@ describe('reading the bytes of a model companion', () => {
 
     it.each(['cs:3', 'br:/main'])('reads it as nothing at %s, where the tree has no such folder', async (at) => {
       const { service, lines } = content({ cat: notFound, ls: notInTree });
-      expect(await service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at })).toBeNull();
+      expect(await service.readBytes(workspacePlace(await newWorkspace()), { kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at })).toBeNull();
       expect(lines().map((line) => line.split(' --format')[0])).toEqual([`ls /Assets --tree=${at}`]);
     });
 
     it.each(['sh:2', 'lb:v1.0'])("reads it as nothing at %s, whose tree cm ls can't list, from its one failing cm cat", async (at) => {
       const { service, lines } = content({ cat: notFound });
-      expect(await service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at })).toBeNull();
+      expect(await service.readBytes(workspacePlace(await newWorkspace()), { kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at })).toBeNull();
       expect(lines()).toHaveLength(1);
     });
 
     it("fails when the tree can't be asked: the file may well be there", async () => {
       const { service } = content({ cat: notFound, ls: cmFails('Error: The server is unreachable.') });
-      await expect(service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at: 'cs:3' })).rejects.toThrow();
+      await expect(service.readBytes(workspacePlace(await newWorkspace()), { kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at: 'cs:3' })).rejects.toThrow();
     });
 
     it.each(['The specified changeset cs:9 does not exist.', 'Specified branch /main/old does not exist'])(
       'fails when the tree tells the point is gone (%s), which says nothing of the file',
       async (gone) => {
         const { service } = content({ cat: notFound, ls: cmFails(gone) });
-        await expect(service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at: 'cs:9' })).rejects.toThrow();
-        await expect(service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Shared/Crate.fbx.meta', at: 'cs:9', repository: 'art@local' })).rejects.toThrow();
+        await expect(service.readBytes(workspacePlace(await newWorkspace()), { kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at: 'cs:9' })).rejects.toThrow();
+        await expect(service.readBytes(workspacePlace(await newWorkspace()), { kind: 'repositoryPath', path: '/Assets/Shared/Crate.fbx.meta', at: 'cs:9', repository: 'art@local' })).rejects.toThrow();
       },
     );
 
     it('fails for a revision not found, which names one that should be there', async () => {
       const { service } = content({ cat: ({ args }) => cmFails(`The specified revision was not found ${args[1]}`) });
-      await expect(service.readBytes(await newWorkspace(), { kind: 'revision', revision: { revisionId: 4, repository: 'game@local' }, fileName: 'a.bin' })).rejects.toThrow('not found');
+      await expect(service.readBytes(workspacePlace(await newWorkspace()), { kind: 'revision', revision: { revisionId: 4, repository: 'game@local' }, fileName: 'a.bin' })).rejects.toThrow('not found');
     });
   });
 
   it('fails on any other error, which is no answer about the file', async () => {
     const { service } = content({ cat: () => cmFails('Error: The server is unreachable.') });
-    await expect(service.readBytes(await newWorkspace(), { kind: 'revision', revision: { revisionId: 4, repository: 'game@local' }, fileName: 'a.bin' })).rejects.toThrow('unreachable');
+    await expect(service.readBytes(workspacePlace(await newWorkspace()), { kind: 'revision', revision: { revisionId: 4, repository: 'game@local' }, fileName: 'a.bin' })).rejects.toThrow('unreachable');
   });
 
   it('refuses a workspace file outside the workspace', async () => {
     const { service } = content({});
-    await expect(service.readBytes(await newWorkspace(), { kind: 'workspaceFile', path: '../../etc/passwd' })).rejects.toThrow('outside the workspace');
-    await expect(service.read(await newWorkspace(), { kind: 'workspaceFile', path: '../../etc/passwd' })).rejects.toThrow('outside the workspace');
+    await expect(service.readBytes(workspacePlace(await newWorkspace()), { kind: 'workspaceFile', path: '../../etc/passwd' })).rejects.toThrow('outside the workspace');
+    await expect(service.read(workspacePlace(await newWorkspace()), { kind: 'workspaceFile', path: '../../etc/passwd' })).rejects.toThrow('outside the workspace');
     await expect(service.writeWorkspaceFile(await newWorkspace(), '../outside.txt', 'x')).rejects.toThrow('outside the workspace');
   });
 
   it('reads nothing of an empty side', async () => {
     const { service } = content({});
-    expect(await service.readBytes(await newWorkspace(), { kind: 'empty' })).toBeNull();
+    expect(await service.readBytes(workspacePlace(await newWorkspace()), { kind: 'empty' })).toBeNull();
   });
 });
 
@@ -365,15 +366,15 @@ describe("reading a revision the workspace's disk holds", () => {
   it('reads the revisions the listing names from the disk, with no cm cat, where the files there are those revisions', async () => {
     const { workspace, fake, service } = await filesView(PROP_LISTING, { 'Prop/Pumpkin.obj': PUMPKIN, 'Prop/PumpkinMaterials.mtl': MTL });
 
-    expect((await service.read(workspace, revision(186))).text).toBe(PUMPKIN);
-    expect(new TextDecoder().decode((await service.readBytes(workspace, revision(185, 'Prop/PumpkinMaterials.mtl')))!)).toBe(MTL);
+    expect((await service.read(workspacePlace(workspace), revision(186))).text).toBe(PUMPKIN);
+    expect(new TextDecoder().decode((await service.readBytes(workspacePlace(workspace), revision(185, 'Prop/PumpkinMaterials.mtl')))!)).toBe(MTL);
     expect(fake.lines()).toEqual([`ls ${join(workspace, 'Prop')} ${TREE_ITEM_FORMAT} --symlink`]);
   });
 
   it("asks the workspace nothing more for a revision the Files view's listing of its folder doesn't name (the one before)", async () => {
     const { workspace, fake, service } = await filesView(PROP_LISTING, { 'Prop/Pumpkin.obj': PUMPKIN });
 
-    await service.read(workspace, revision(182));
+    await service.read(workspacePlace(workspace), revision(182));
 
     expect(fake.lines().map((line) => line.split(' ')[0])).toEqual(['ls', 'cat']);
   });
@@ -381,15 +382,15 @@ describe("reading a revision the workspace's disk holds", () => {
   it('downloads a revision whose file on disk was changed, even to the same size', async () => {
     const { workspace, fake, service } = await filesView(PROP_LISTING, { 'Prop/Pumpkin.obj': PUMPKIN.replace('0 0 0', '1 1 1'), 'Prop/PumpkinMaterials.mtl': `${MTL}# edited\n` });
 
-    expect((await service.read(workspace, revision(186))).text).toBe('downloaded');
-    expect((await service.read(workspace, revision(185, 'Prop/PumpkinMaterials.mtl'))).text).toBe('downloaded');
+    expect((await service.read(workspacePlace(workspace), revision(186))).text).toBe('downloaded');
+    expect((await service.read(workspacePlace(workspace), revision(185, 'Prop/PumpkinMaterials.mtl'))).text).toBe('downloaded');
     expect(cats(fake)).toEqual(['revid:186@eco@local', 'revid:185@eco@local']);
   });
 
   it("downloads a revision whose file isn't on disk (deleted, cloaked, moved away)", async () => {
     const { workspace, fake, service } = await filesView(PROP_LISTING, {});
 
-    expect((await service.read(workspace, revision(186))).text).toBe('downloaded');
+    expect((await service.read(workspacePlace(workspace), revision(186))).text).toBe('downloaded');
     expect(cats(fake)).toEqual(['revid:186@eco@local']);
   });
 
@@ -397,8 +398,8 @@ describe("reading a revision the workspace's disk holds", () => {
     const checkedOut = workspaceListingOutput('Prop', { path: 'Prop/Pumpkin.obj', revid: 186, size: PUMPKIN.length, hash: md5(PUMPKIN), checkedOut: true });
     const { workspace, fake, service } = await filesView(checkedOut, { 'Prop/Pumpkin.obj': PUMPKIN });
 
-    await service.read(workspace, revision(186));
-    await service.read(workspace, revision(132));
+    await service.read(workspacePlace(workspace), revision(186));
+    await service.read(workspacePlace(workspace), revision(132));
 
     expect(cats(fake)).toEqual(['revid:186@eco@local', 'revid:132@eco@local']);
   });
@@ -406,7 +407,7 @@ describe("reading a revision the workspace's disk holds", () => {
   it("downloads the same revision id of another repository (an xlinked one's)", async () => {
     const { workspace, fake, service } = await filesView(PROP_LISTING, { 'Prop/Pumpkin.obj': PUMPKIN });
 
-    await service.read(workspace, revision(186, 'Prop/Pumpkin.obj', 'art@local'));
+    await service.read(workspacePlace(workspace), revision(186, 'Prop/Pumpkin.obj', 'art@local'));
 
     expect(cats(fake)).toEqual(['revid:186@art@local']);
   });
@@ -415,7 +416,7 @@ describe("reading a revision the workspace's disk holds", () => {
     const xlinked = workspaceListingOutput('Prop', { path: 'Prop/Pumpkin.obj', revid: 9, size: PUMPKIN.length, hash: md5(PUMPKIN), repository: 'art@local' });
     const { workspace, fake, service } = await filesView(xlinked, { 'Prop/Pumpkin.obj': PUMPKIN });
 
-    expect((await service.read(workspace, revision(9, 'Prop/Pumpkin.obj', 'art@local'))).text).toBe(PUMPKIN);
+    expect((await service.read(workspacePlace(workspace), revision(9, 'Prop/Pumpkin.obj', 'art@local'))).text).toBe(PUMPKIN);
     expect(cats(fake)).toEqual([]);
   });
 
@@ -423,7 +424,7 @@ describe("reading a revision the workspace's disk holds", () => {
     const windows = workspaceListingOutput('Prop', { path: 'Prop\\Pumpkin.obj', revid: 186, size: PUMPKIN.length, hash: md5(PUMPKIN) });
     const { workspace, fake, service } = await filesView(windows, { 'Prop/Pumpkin.obj': PUMPKIN });
 
-    expect((await service.read(workspace, revision(186, 'Prop/Pumpkin.obj'))).text).toBe(PUMPKIN);
+    expect((await service.read(workspacePlace(workspace), revision(186, 'Prop/Pumpkin.obj'))).text).toBe(PUMPKIN);
     expect(cats(fake)).toEqual([]);
   });
 
@@ -433,8 +434,8 @@ describe("reading a revision the workspace's disk holds", () => {
     await mkdir(join(other, 'Prop'));
     await writeFile(join(other, 'Prop', 'Pumpkin.obj'), PUMPKIN);
 
-    await service.read(other, revision(186));
-    await service.read(workspace, revision(186));
+    await service.read(workspacePlace(other), revision(186));
+    await service.read(workspacePlace(workspace), revision(186));
 
     expect(cats(fake)).toEqual(['revid:186@eco@local']);
   });
@@ -445,7 +446,7 @@ describe("reading a revision the workspace's disk holds", () => {
     await writeFile(join(workspace, 'Assets', 'Barrel.bin'), 'BIN');
     const { service, lines } = content({ ls: treeListingOutput({ path: 'Assets', type: 'dir', revid: 40 }, { path: 'Assets/Barrel.bin', revid: 41, size: 3, hash: md5('BIN') }) });
 
-    expect(new TextDecoder().decode((await service.readBytes(workspace, { kind: 'repositoryPath', path: '/Assets/Barrel.bin', at: 'cs:12' }))!)).toBe('BIN');
+    expect(new TextDecoder().decode((await service.readBytes(workspacePlace(workspace), { kind: 'repositoryPath', path: '/Assets/Barrel.bin', at: 'cs:12' }))!)).toBe('BIN');
     expect(lines().map((line) => line.split(' --format')[0])).toEqual(['ls /Assets --tree=cs:12']);
   });
 });
@@ -464,8 +465,8 @@ describe("reading a committed diff's revisions (a changeset, a branch, a shelve,
     const { answer } = catWriting('after');
     const { service, lines } = content({ ls: PROP, cat: answer });
 
-    expect((await service.read(workspace, side(182))).text).toBe(BEFORE);
-    expect((await service.read(workspace, side(186))).text).toBe('after');
+    expect((await service.read(workspacePlace(workspace), side(182))).text).toBe(BEFORE);
+    expect((await service.read(workspacePlace(workspace), side(186))).text).toBe('after');
     expect(lines().map((line) => line.split(' --f')[0])).toEqual([`ls ${join(workspace, 'Prop')}`, 'cat revid:186@game@local']);
   });
 
@@ -476,7 +477,47 @@ describe("reading a committed diff's revisions (a changeset, a branch, a shelve,
     const { answer } = catWriting(BEFORE);
     const { service, ran } = content({ ls: PROP, cat: answer });
 
-    expect((await service.read(workspace, side(182))).text).toBe(BEFORE);
+    expect((await service.read(workspacePlace(workspace), side(182))).text).toBe(BEFORE);
     expect(ran('cat revid:182@game@local')).toBe(true);
+  });
+});
+
+describe('reading content in a repository explored without a workspace', () => {
+  const onRepository = repositoryPlace('game@local');
+
+  it('reads a revision and a spec naming the repository, outside every workspace, with no disk to look on', async () => {
+    const { answer } = catWriting('class Player {}\n');
+    const { service, commands } = content({ cat: answer });
+
+    await service.read(onRepository, { kind: 'revision', revision: { revisionId: 45, repository: 'game@local' }, fileName: 'player.cs' });
+    await service.read(onRepository, { kind: 'spec', spec: 'serverpath:/src/player.cs#cs:12', fileName: 'player.cs' });
+
+    expect(commands.map(({ args }) => args[1])).toEqual(['revid:45@game@local', 'serverpath:/src/player.cs#cs:12@game@local']);
+    expect(commands.every(({ options }) => options.outsideWorkspaces)).toBe(true);
+  });
+
+  it('reads a file under an xlink from the tree at its point, naming the repository on both reads', async () => {
+    const { answer } = catWriting('xlinked\n');
+    const { service, commands } = content({
+      cat: (command) => (command.args[1]!.startsWith('serverpath:') ? cmFails('Error: The specified item /lib/a.cs does not exist.') : answer(command)),
+      ls: LS_UNDER_XLINK,
+    });
+
+    expect((await service.read(onRepository, { kind: 'repositoryPath', path: '/lib/a.cs', at: 'cs:30' })).text).toBe('xlinked\n');
+
+    expect(commands.map(({ args }) => args.filter((arg) => !arg.startsWith('--file=')))).toEqual([
+      ['cat', 'serverpath:/lib/a.cs#cs:30@game@local'],
+      ['ls', '/lib/a.cs', '--tree=cs:30@game@local', TREE_ITEM_FORMAT],
+      ['cat', 'revid:432@lib@local'],
+    ]);
+  });
+
+  it("never reads a workspace's file, what it loaded or a review snapshot: there is none", async () => {
+    const { service, commands } = content({});
+
+    await expect(service.read(onRepository, { kind: 'workspaceFile', path: 'a.cs' })).rejects.toThrow('needs a workspace');
+    await expect(service.read(onRepository, { kind: 'workspaceBase', path: 'a.cs' })).rejects.toThrow('needs a workspace');
+    await expect(service.read(onRepository, { kind: 'reviewSnapshot', path: 'a.cs' })).rejects.toThrow('needs a workspace');
+    expect(commands).toEqual([]);
   });
 });

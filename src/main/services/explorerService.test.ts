@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 import { recordsOutput, statusHeader } from '../cm/testing/cmOutput';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { TREE_ITEM_FORMAT, TREE_ITEMS } from '../cm/treeItems';
@@ -68,7 +69,7 @@ describe('browsing the workspace', () => {
     const context = serviceContext(fake.cm);
     await createExplorerService(context).listRepositoryDirectory(workspace, 12, 'src');
 
-    const read = await createContentService(context).read(workspace, { kind: 'revision', revision: { revisionId: 52, repository: 'game@local' }, fileName: 'src/a.cs' });
+    const read = await createContentService(context).read(workspacePlace(workspace), { kind: 'revision', revision: { revisionId: 52, repository: 'game@local' }, fileName: 'src/a.cs' });
 
     expect(read.text).toBe('class A {}\n');
     expect(fake.ran('cat')).toBe(false);

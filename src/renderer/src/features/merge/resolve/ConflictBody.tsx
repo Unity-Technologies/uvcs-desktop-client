@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { FileContent } from '@shared/domain/content';
 import { useContext, type RefObject } from 'react';
 import { EmptyState } from '../../../ui/EmptyState';
@@ -80,7 +81,7 @@ export function ConflictBody({ workspacePath, state, labels, versions, view, edi
       return (
         <FileStepsContext.Provider value={changeArrows ? fileSteps : null}>
           <LoadedFileDiff
-            workspacePath={workspacePath}
+            place={workspacePlace(workspacePath)}
             // The merged result lives in memory: nothing to read it from, nor to edit in place.
             contents={{ original: file.destination, modified: { kind: 'empty' }, left: contents.destination, right: textContent(mergedText(state) ?? '') }}
             fileName={file.path}
@@ -98,7 +99,7 @@ export function ConflictBody({ workspacePath, state, labels, versions, view, edi
     case 'source':
       return (
         <FileDiffViewer
-          workspacePath={workspacePath}
+          place={workspacePlace(workspacePath)}
           original={file.base}
           modified={view === 'source' ? file.source : file.destination}
           fileName={file.path}
@@ -111,7 +112,7 @@ export function ConflictBody({ workspacePath, state, labels, versions, view, edi
       );
     case 'base':
       // A binary's base shows as what it is (a model, an image); a text's as its text.
-      if (state.isBinary) return <FileDiffViewer workspacePath={workspacePath} original={{ kind: 'empty' }} modified={file.base} fileName={file.path} title={<span className={styles.diffTitle}>Base</span>} />;
+      if (state.isBinary) return <FileDiffViewer place={workspacePlace(workspacePath)} original={{ kind: 'empty' }} modified={file.base} fileName={file.path} title={<span className={styles.diffTitle}>Base</span>} />;
       return <ReadOnlyText path={file.path} text={contents.base.text ?? ''} />;
     case 'choice':
       return null;

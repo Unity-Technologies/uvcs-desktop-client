@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { RepositoryVersion } from '@shared/domain/content';
 import { mergeSourcePoint, RENAMEABLE_CONFLICTS, type DirectoryConflictResolution, type MergePlan, type MergeRequest } from '@shared/domain/merge';
 import type { ItemType } from '@shared/domain/pendingChanges';
@@ -34,7 +35,7 @@ export function mergeItemMenu(items: MergeItem[], context: MergeMenuContext): Me
     ...(single?.kind === 'directoryConflict' ? directoryConflictEntries(single, context) : []),
   ];
   const files = items.map((item) => changedFileOf(item, context));
-  const menu = changedFileMenu(context.workspacePath, single ? files : files.map((file) => ({ ...file, history: null, annotation: null, version: null })), added);
+  const menu = changedFileMenu(workspacePlace(context.workspacePath), single ? files : files.map((file) => ({ ...file, history: null, annotation: null, version: null })), added);
   return withConflictOpening(menu, conflicts);
 }
 

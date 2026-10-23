@@ -1,3 +1,4 @@
+import { workspacePathOf, type Place } from '@shared/domain/place';
 import { canAnnotate } from '@shared/domain/annotate';
 import type { ItemRevision } from '@shared/domain/history';
 import { revisionRef } from '@shared/domain/revision';
@@ -14,7 +15,7 @@ import { changesetOf, dateOf, type HistoryRow } from './historyRows';
 import { openRevision, revertItemTo, saveRevisionAs } from './revisionOperations';
 
 interface HistoryMenuContext {
-  workspacePath: string;
+  place: Place;
   path: string;
   /** The history is of the workspace's file, which can be reverted, rather than of the item of a revision (browsing, a diff). */
   ofWorkspaceFile: boolean;
@@ -27,7 +28,8 @@ interface HistoryMenuContext {
   annotate: (revision: ItemRevision) => void;
 }
 
-export function historyMenu({ workspacePath, path, ofWorkspaceFile, otherRepository, annotate }: HistoryMenuContext, selected: HistoryRow[]): MenuEntry[] {
+export function historyMenu({ place, path, ofWorkspaceFile, otherRepository, annotate }: HistoryMenuContext, selected: HistoryRow[]): MenuEntry[] {
+  const workspacePath = workspacePathOf(place);
   const row = selected.length === 1 ? selected[0]! : null;
   const changesetId = row && changesetOf(row);
   const revision = row?.kind === 'revision' ? row.revision : null;
@@ -37,19 +39,19 @@ export function historyMenu({ workspacePath, path, ofWorkspaceFile, otherReposit
 
   return groupedMenu([
     inWorkspaceRepository && menuAction('changesetDiff', () => openChangesetDiff({ id: changesetOf(row) }, path), { label: `Open diff of changeset ${changesetId}` }),
-    isFile && ofWorkspaceFile && menuAction('revert', () => void revertItemTo(workspacePath, path, revision.changesetId), { label: 'Revert file to this revision…' }),
+    isFile && ofWorkspaceFile && workspacePath !== null && menuAction('revert', () => void revertItemTo(workspacePath, path, revision.changesetId), { label: 'Revert file to this revision…' }),
     isFile && canAnnotate(revision.itemType) && menuAction('annotateRevision', () => annotate(revision)),
     inWorkspaceRepository &&
       menuAction('showInBranchExplorer', () =>
         showInBranchExplorer({ kind: 'changeset', id: changesetOf(row), date: dateOf(row) }),
       ),
-    ...(isFile ? openRevisionEntries((editorId) => openRevision(workspacePath, revisionRef(revision), name, editorId)) : []),
-    isFile && menuAction('saveAs', () => void saveRevisionAs(workspacePath, revisionRef(revision), name)),
+    ...(isFile ? openRevisionEntries((editorId) => openRevision(place, revisionRef(revision), name, editorId)) : []),
+    isFile && menuAction('saveAs', () => void saveRevisionAs(place, revisionRef(revision), name)),
     revision &&
       copySubmenu('Revision', {
         path,
         // The change the revision's changeset made to the file; under an xlink, the path isn't the other repository's.
-        link: inWorkspaceRepository && linkCopyText(workspacePath, undefined, { object: { kind: 'changeset', id: revision.changesetId }, page: { kind: 'diffFile', path: `/${path}` } }),
+        link: inWorkspaceRepository && workspacePath !== null && linkCopyText(workspacePath, undefined, { object: { kind: 'changeset', id: revision.changesetId }, page: { kind: 'diffFile', path: `/${path}` } }),
         spec: revision.idSpec,
       }),
   ]);

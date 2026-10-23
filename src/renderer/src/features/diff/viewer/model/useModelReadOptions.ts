@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useContext, useMemo } from 'react';
+import type { Place } from '@shared/domain/place';
 import type { ContentSource, ModelBytes } from '@shared/domain/content';
 import { api } from '../../../../api/client';
 import { queryKeys } from '../../../../api/queryKeys';
@@ -15,15 +16,15 @@ import { useModelCompanions } from './useModelCompanions';
  * (outside a Unity project) or whose `.meta` can't be read has Unity's defaults. Null while any is being read.
  */
 export function useModelReadOptions(
-  workspacePath: string,
+  place: Place,
   side: DiffSide,
   source: ContentSource,
   model: ModelBytes | undefined,
   /** Settings already known (the `.meta` being diffed), which are not read again. */
   knownSettings?: ModelImportSettings,
 ): ModelReadOptions | null {
-  const companions = useModelCompanions(workspacePath, side, source, model);
-  const readSettings = useImportSettings(workspacePath, side, source, model !== undefined && knownSettings === undefined);
+  const companions = useModelCompanions(place, side, source, model);
+  const readSettings = useImportSettings(place, side, source, model !== undefined && knownSettings === undefined);
   // Kept while the known settings stay: new options each render have the model read again, render after render.
   const known = useMemo(() => (knownSettings ? { settings: knownSettings, from: 'meta' as const } : null), [knownSettings]);
   const settings = known ?? readSettings;
@@ -38,16 +39,16 @@ interface SettingsRead {
 const NO_META: SettingsRead = { settings: DEFAULT_IMPORT_SETTINGS, from: 'none' };
 const FAILED_READ: SettingsRead = { settings: DEFAULT_IMPORT_SETTINGS, from: 'failed' };
 
-function useImportSettings(workspacePath: string, side: DiffSide, source: ContentSource, wanted: boolean): SettingsRead | null {
+function useImportSettings(place: Place, side: DiffSide, source: ContentSource, wanted: boolean): SettingsRead | null {
   const findSibling = useContext(SiblingFinderContext);
   const path = sourcePathOf(source);
   const fileName = path?.split(/[\\/]/).pop();
   const meta = wanted && path !== null && fileName ? findSibling(side, source, path, `${fileName}.meta`) : null;
   const read = useQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'importSettings', meta),
+    queryKey: queryKeys.inPlace(place, 'importSettings', meta),
     // A `.meta` that isn't there (outside a Unity project) is an answer, kept as any other: Unity's defaults.
     queryFn: async (): Promise<SettingsRead> => {
-      const bytes = await api.content.readBytes(workspacePath, meta!);
+      const bytes = await api.content.readBytes(place, meta!);
       return bytes ? { settings: readImportSettings(new TextDecoder().decode(bytes)), from: 'meta' } : NO_META;
     },
     enabled: meta !== null,

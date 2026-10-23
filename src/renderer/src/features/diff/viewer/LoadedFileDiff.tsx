@@ -1,3 +1,4 @@
+import { workspacePathOf, type Place } from '@shared/domain/place';
 import { AppWindow, PencilOff, RefreshCw } from 'lucide-react';
 import { Suspense, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import { openFile } from '../../../components/externalApps/externalAppOperations';
@@ -51,7 +52,7 @@ const ModelMetaDiff = lazyComponent(() => import('./model/ModelMetaDiff').then((
 const IDENTICAL_DESCRIPTION = 'The contents of both versions are identical.';
 
 interface LoadedFileDiffProps {
-  workspacePath: string;
+  place: Place;
   contents: DiffContents;
   fileName: string;
   title?: ReactNode;
@@ -68,14 +69,16 @@ interface LoadedFileDiffProps {
  * One loaded pair of file versions, with the toolbar that fits how it's shown. A workspace file shown against its own
  * past is typed into directly, like in any editor: Discard and Save show up as soon as it has unsaved edits.
  */
-export function LoadedFileDiff({ workspacePath, contents, fileName, title, identicalDescription, compareControls, onMatchesBase, stepsThroughChanges = true }: LoadedFileDiffProps) {
+export function LoadedFileDiff({ place, contents, fileName, title, identicalDescription, compareControls, onMatchesBase, stepsThroughChanges = true }: LoadedFileDiffProps) {
   const { comparisonMethod, imageMode, modelMode, representations, setComparisonMethod, setRepresentation } = useDiffPreferences();
-  const editablePath = canEditInPlace(contents.original, contents.modified) ? contents.modified.path : null;
+  // Only a workspace's own file is typed into: a repository's versions never are.
+  const workspacePath = workspacePathOf(place);
+  const editablePath = workspacePath !== null && canEditInPlace(contents.original, contents.modified) ? contents.modified.path : null;
   const sides = useMemo(
     () => ({ original: contents.original.kind !== 'empty', modified: contents.modified.kind !== 'empty' }),
     [contents.original.kind, contents.modified.kind],
   );
-  const buffer = useFileBuffer({ workspacePath, contents, path: editablePath, onMatchesBase });
+  const buffer = useFileBuffer({ contents, file: workspacePath !== null && editablePath !== null ? { workspacePath, path: editablePath } : null, onMatchesBase });
   const { left, right } = buffer.shown;
   const current = buffer.unsaved ?? right.text ?? '';
   const dirty = buffer.unsaved !== null;
@@ -114,8 +117,8 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const changeView = useRef<ChangeView>(null);
   const navigation = useChangeNavigation(stepsThroughChanges && viewControls && !wholeFile ? (diffs.current?.meta ?? null) : null, changeView, frame, fileName);
   const navigator = goesSomewhere(navigation) && <ChangeNavigator navigation={navigation} keysWhileTyping />;
-  const openEditable = editablePath === null ? undefined : () => void openFile(absolutePath(workspacePath, editablePath));
-  const discards = diffDiscards(workspacePath, buffer, onMatchesBase);
+  const openEditable = workspacePath === null || editablePath === null ? undefined : () => void openFile(absolutePath(workspacePath, editablePath));
+  const discards = workspacePath === null ? null : diffDiscards(workspacePath, buffer, onMatchesBase);
   const identical = identicalDescription ?? IDENTICAL_DESCRIPTION;
   const recognizeAll = (): void => setComparisonMethod('recognizeAll');
 
@@ -192,7 +195,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
       body = (
         <Suspense fallback={<CenteredSpinner />}>
           <ModelMetaDiff
-            workspacePath={workspacePath}
+            place={place}
             sources={{ original: contents.original, modified: contents.modified }}
             texts={{ original: sides.original ? (left.text ?? '') : null, modified: sides.modified ? (dirty ? pausedText : (right.text ?? '')) : null }}
             mode={modelMode}
@@ -249,7 +252,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
       body = (
         <Suspense fallback={<CenteredSpinner />}>
           <ModelDiffViewer
-            workspacePath={workspacePath}
+            place={place}
             sources={{ original: contents.original, modified: contents.modified }}
             original={left}
             modified={shownRendering}

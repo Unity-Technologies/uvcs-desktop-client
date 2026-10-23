@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
-import { cmPlace } from './cmPlace';
+import { cmPlace, workspaceOf } from './cmPlace';
 
 describe('cmPlace in a workspace', () => {
   const inWorkspace = cmPlace(workspacePlace('/wk/game'));
@@ -52,5 +52,12 @@ describe('cmPlace on a repository without a workspace', () => {
 
   it("names a Unity organization's repository as it is written, server and all", () => {
     expect(cmPlace(repositoryPlace('game@acme@cloud')).spec('br:/main')).toBe('br:/main@game@acme@cloud');
+  });
+});
+
+describe('workspaceOf', () => {
+  it("is the workspace's path, and a bug told as one for a repository with no workspace", () => {
+    expect(workspaceOf(workspacePlace('/wk/game'), 'A file on disk')).toBe('/wk/game');
+    expect(() => workspaceOf(repositoryPlace('game@local'), 'A file on disk')).toThrow('A file on disk needs a workspace, and game@local is explored without one.');
   });
 });

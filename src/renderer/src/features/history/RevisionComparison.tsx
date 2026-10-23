@@ -5,7 +5,7 @@ import { revisionRef } from '@shared/domain/revision';
 import { inWorkspaceRepository } from '@shared/domain/repository';
 import { AssetsPointContext, revisionsAssetsPoint } from '../diff/viewer/model/assetsPoints';
 import { historySibling, SiblingFinderContext } from '../diff/viewer/model/modelSiblings';
-import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { FileDiffViewer } from '../diff/viewer/FileDiffViewer';
 import styles from './RevisionComparison.module.css';
 
@@ -20,8 +20,8 @@ interface RevisionComparisonProps {
 
 /** The diff between two revisions of a file. */
 export function RevisionComparison({ path, newer, older, leading }: RevisionComparisonProps) {
-  const workspacePath = useWorkspacePath();
-  const inWorkspace = inWorkspaceRepository(newer.repository, useWorkspaceInfo().data?.repository);
+  const place = usePlace();
+  const inWorkspace = inWorkspaceRepository(newer.repository, usePlaceRepository());
   const { findAssetsPoint, findSibling } = useMemo(() => {
     const points = { changesets: { original: older?.changesetId ?? null, modified: newer.changesetId }, inWorkspaceRepository: inWorkspace };
     return { findAssetsPoint: revisionsAssetsPoint(points), findSibling: historySibling(points) };
@@ -31,7 +31,7 @@ export function RevisionComparison({ path, newer, older, leading }: RevisionComp
     <AssetsPointContext.Provider value={findAssetsPoint}>
       <SiblingFinderContext.Provider value={findSibling}>
         <FileDiffViewer
-          workspacePath={workspacePath}
+          place={place}
           original={older ? revisionSource(older, path) : { kind: 'empty' }}
           modified={revisionSource(newer, path)}
           fileName={path}

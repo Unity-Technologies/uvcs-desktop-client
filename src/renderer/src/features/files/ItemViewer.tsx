@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { workspacePlace } from '@shared/domain/place';
 import { canAnnotate } from '@shared/domain/annotate';
 import type { TreeItem } from '@shared/domain/explorer';
 import { focusMain } from '../../lib/mainFocus';
@@ -85,11 +86,11 @@ export function ItemViewer({ workspacePath, item, comparison, comment, listings,
       {annotating ? (
         <AnnotationPane key={item.path} path={item.path} repository={item.repository} revision={revision ?? undefined} leading={viewSwitch} />
       ) : comparison.kind === 'lastChange' ? (
-        <RevisionChanges workspacePath={workspacePath} item={item} listings={listings} title={title} />
+        <RevisionChanges place={workspacePlace(workspacePath)} item={item} listings={listings} title={title} />
       ) : comparison.change ? (
         <ChangeDiffPanel workspacePath={workspacePath} change={comparison.change} title={title} />
       ) : (
-        <FileDiffViewer workspacePath={workspacePath} original={{ kind: 'empty' }} modified={{ kind: 'workspaceFile', path: item.path }} fileName={item.name} title={title} />
+        <FileDiffViewer place={workspacePlace(workspacePath)} original={{ kind: 'empty' }} modified={{ kind: 'workspaceFile', path: item.path }} fileName={item.name} title={title} />
       )}
     </div>
   );

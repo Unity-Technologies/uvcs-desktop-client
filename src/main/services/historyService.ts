@@ -1,5 +1,7 @@
 import type { HistoryApi } from '@shared/api/history';
+import type { Place } from '@shared/domain/place';
 import type { RevisionRef } from '@shared/domain/revision';
+import { cmPlace, workspaceOf } from '../cm/cmPlace';
 import {
   itemHistoryArgs,
   itemHistoryTarget,
@@ -35,12 +37,18 @@ export function createHistoryService({ cm, workspaceCopies }: ServiceContext, { 
   }
 
   return {
-    async forItem(workspacePath, path, revision) {
-      const workspaceItem = readWorkspaceItem(workspacePath, path, revision);
-      const historyOutput = await cm.query(itemHistoryArgs(itemHistoryTarget(workspacePath, path, revision)), { cwd: workspacePath });
+    /**
+     * Started from a revision, the item is read by it, which names its repository: the same with or without a
+     * workspace. Started from a path, it is a workspace's file.
+     */
+    async forItem(place: Place, path, revision) {
+      const { options } = cmPlace(place);
+      const workspacePath = revision ? null : workspaceOf(place, 'The history of a workspace file');
+      const workspaceItem = workspacePath === null ? Promise.resolve(undefined) : readWorkspaceItem(workspacePath, path, revision);
+      const historyOutput = await cm.query(itemHistoryArgs(itemHistoryTarget(workspacePath ?? '', path, revision)), options);
       const records = withServerOf(parseHistoryRecords(historyOutput), revision?.repository ?? (await workspaceItem)?.repository);
       const revisionsArgs = itemRevisionsArgs(records);
-      const revisionsOutput = revisionsArgs ? await cm.query(revisionsArgs, { cwd: workspacePath }) : '';
+      const revisionsOutput = revisionsArgs ? await cm.query(revisionsArgs, options) : '';
       return parseItemHistory(records, revisionsOutput, (await workspaceItem)?.revisionId);
     },
 

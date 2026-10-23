@@ -27,10 +27,9 @@ export interface FileBuffer {
 }
 
 interface FileBufferOptions {
-  workspacePath: string;
   contents: DiffContents;
-  /** The workspace file typed into; null for read-only diffs. */
-  path: string | null;
+  /** The workspace file typed into; null for read-only diffs (a repository's versions, any committed one). */
+  file: { workspacePath: string; path: string } | null;
   /** Saving left the file as its loaded revision. */
   onMatchesBase?: () => void;
 }
@@ -40,7 +39,7 @@ interface FileBufferOptions {
  * with some, it holds still and tells when the disk changed. Leaving the file (another file, another view) asks to
  * save or discard them; should the diff go away without asking, they are saved, so no work is ever lost.
  */
-export function useFileBuffer({ workspacePath, contents, path, onMatchesBase }: FileBufferOptions): FileBuffer {
+export function useFileBuffer({ contents, file, onMatchesBase }: FileBufferOptions): FileBuffer {
   const [buffer, setBuffer] = useState(() => openedBuffer(contents));
   const editor = useRef<EditorHandle | null>(null);
 
@@ -59,17 +58,17 @@ export function useFileBuffer({ workspacePath, contents, path, onMatchesBase }: 
 
   const save = async (): Promise<boolean> => {
     const text = latest.current.buffer.unsaved;
-    if (path === null || text === null) return true;
+    if (file === null || text === null) return true;
     try {
-      await api.content.writeWorkspaceFile(workspacePath, path, text);
+      await api.content.writeWorkspaceFile(file.workspacePath, file.path, text);
     } catch (error) {
-      toast.error(`Couldn't save ${fileNameOf(path)}`, error);
+      toast.error(`Couldn't save ${fileNameOf(file.path)}`, error);
       return false;
     }
     // Typing may have gone on while it was written: that stays unsaved.
     update(bufferAfterSave(latest.current.buffer, text));
-    showFileText(workspacePath, path, text);
-    void refreshFileViews(workspacePath);
+    showFileText(file.workspacePath, file.path, text);
+    void refreshFileViews(file.workspacePath);
     if (savedAsBase(contents, text)) onMatchesBase?.();
     return true;
   };
@@ -85,6 +84,7 @@ export function useFileBuffer({ workspacePath, contents, path, onMatchesBase }: 
   actions.current = { save, discard };
 
   const dirty = unsaved !== null;
+  const path = file?.path ?? null;
   useEffect(() => {
     if (!dirty || path === null) return;
     return guardLeaving(async () => {
@@ -98,11 +98,11 @@ export function useFileBuffer({ workspacePath, contents, path, onMatchesBase }: 
   useEffect(
     () => () => {
       const text = latest.current.buffer.unsaved;
-      if (path === null || text === null) return;
+      if (file === null || text === null) return;
       api.content
-        .writeWorkspaceFile(workspacePath, path, text)
-        .then(() => refreshFileViews(workspacePath))
-        .then(() => toast.success(`Saved your edits to ${fileNameOf(path)}`))
+        .writeWorkspaceFile(file.workspacePath, file.path, text)
+        .then(() => refreshFileViews(file.workspacePath))
+        .then(() => toast.success(`Saved your edits to ${fileNameOf(file.path)}`))
         .catch((error) => toast.error("Couldn't save your edits", error));
     },
     // Only when the diff goes away: the ref holds the latest text.

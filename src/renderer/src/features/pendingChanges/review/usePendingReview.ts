@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { workspacePlace } from '@shared/domain/place';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { useReviewMode, type ReviewMode } from '../../review/useReviewMode';
 import { pendingReviewStatusOf, type ReviewMarks } from './pendingReviewStatus';
@@ -19,7 +20,7 @@ export function usePendingReview(workspacePath: string, allChanges: PendingChang
   const statusOf = useMemo(() => pendingReviewStatusOf(marks), [marks]);
   const burst = useChangeBurst(workspacePath, allChanges, settled);
   const review = useReviewMode({
-    workspacePath,
+    place: workspacePlace(workspacePath),
     items: allChanges,
     statusOf,
     setReviewed: (changes, reviewed) => void setReviewed(workspacePath, changes.map((change) => change.path), reviewed),

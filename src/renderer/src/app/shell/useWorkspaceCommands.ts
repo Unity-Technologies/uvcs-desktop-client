@@ -96,7 +96,7 @@ export function useWorkspaceCommands(): void {
         label: reviewing ? 'Leave review mode' : 'Enter review mode',
         icon: ListChecks,
         keywords: ['review', 'reviewed', 'mark'],
-        run: () => void setReviewMode(workspacePath, !reviewing),
+        run: () => void setReviewMode(workspacePlace(workspacePath), !reviewing),
       },
       { id: 'app.home', group: 'Go to', label: 'Home', icon: House, shortcut: hotkey('home'), run: closeWorkspace },
       {

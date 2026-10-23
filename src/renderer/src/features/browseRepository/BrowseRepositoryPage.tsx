@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { workspacePlace } from '@shared/domain/place';
 import { revisionRef } from '@shared/domain/revision';
 import type { PageProps } from '../../app/navigation/pages';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
@@ -87,7 +88,7 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
                 selection={selection}
                 onSelectionChange={setSelection}
                 onToggleDirectory={(directory) => toggle(treeId, directory)}
-                onOpenFile={(item) => void openRevision(workspacePath, revisionRef(item), item.name)}
+                onOpenFile={(item) => void openRevision(workspacePlace(workspacePath), revisionRef(item), item.name)}
                 contextMenu={(items) => revisionMenu(workspacePath, page.changesetId, repository, items)}
                 revealPath={revealPath}
               />

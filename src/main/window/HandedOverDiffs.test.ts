@@ -1,10 +1,11 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { HandedOverDiffs } from './HandedOverDiffs';
 
-const GAME = join('/work', 'game');
-const TOOLS = join('/work', 'tools');
+const GAME = workspacePlace(join('/work', 'game'));
+const TOOLS = workspacePlace(join('/work', 'tools'));
 const PLAYER: DiffEntry = { status: 'changed', path: 'src/player.cs', itemType: 'file', baseRevisionId: 13, revisionId: 37, repository: 'game@local' };
 
 describe('HandedOverDiffs', () => {
@@ -25,5 +26,13 @@ describe('HandedOverDiffs', () => {
     expect(diffs.take(GAME, { kind: 'changeset', changesetId: 1 })).toBeUndefined();
     expect(diffs.take(GAME, { kind: 'changeset', changesetId: 2 })).toEqual([PLAYER]);
     expect(diffs.take(GAME, { kind: 'changeset', changesetId: 5 })).toEqual([PLAYER]);
+  });
+
+  it('keeps a repository with no workspace apart from a workspace on it', () => {
+    const diffs = new HandedOverDiffs();
+    diffs.hand(repositoryPlace('game@local'), { kind: 'changeset', changesetId: 1 }, [PLAYER]);
+
+    expect(diffs.take(GAME, { kind: 'changeset', changesetId: 1 })).toBeUndefined();
+    expect(diffs.take(repositoryPlace('game@local'), { kind: 'changeset', changesetId: 1 })).toEqual([PLAYER]);
   });
 });

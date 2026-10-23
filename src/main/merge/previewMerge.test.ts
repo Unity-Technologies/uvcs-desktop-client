@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 import type { ContentSource } from '@shared/domain/content';
 import type { MergeRequest } from '@shared/domain/merge';
 import { mergeOutput, recordsOutput, statusHeader, treeListing } from '../cm/testing/cmOutput';
@@ -117,7 +118,7 @@ describe("the merge page reading the destination's versions", () => {
     const content = createContentService(serviceContext(fake.cm, { workspaceCopies: copies }));
 
     const plan = await previewMerge(fake.cm, workspace, FROM_TASK, copies);
-    const read = await Promise.all(plan.fileConflicts.map((conflict) => content.read(workspace, destinationOf(conflict))));
+    const read = await Promise.all(plan.fileConflicts.map((conflict) => content.read(workspacePlace(workspace), destinationOf(conflict))));
 
     expect(read.map((one) => one.text)).toEqual(['destination a\n', 'destination b\n']);
     const afterThePreview = fake.lines().filter((line) => !line.startsWith('status') && !line.startsWith('merge'));

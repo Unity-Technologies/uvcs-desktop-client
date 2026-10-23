@@ -6,6 +6,7 @@
 
 import { Box as BoxIcon } from 'lucide-react';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import type { Place } from '@shared/domain/place';
 import type { ContentSource, FileContent } from '@shared/domain/content';
 import { useSpinDelay } from '../../../../lib/useSpinDelay';
 import { EmptyState } from '../../../../ui/EmptyState';
@@ -60,7 +61,7 @@ import styles from './ModelDiffViewer.module.css';
 const ROOMY_PANE = 820;
 
 interface ModelDiffViewerProps {
-  workspacePath: string;
+  place: Place;
   /** Where each version was read from: the files a model needs beside it (a glTF's `.bin`, its `.meta`) are read beside it. */
   sources: { original: ContentSource; modified: ContentSource };
   original: FileContent;
@@ -77,11 +78,11 @@ interface Picked {
   nodes: NodeRef[];
 }
 
-export function ModelDiffViewer({ workspacePath, sources, original, modified, mode, settings }: ModelDiffViewerProps) {
+export function ModelDiffViewer({ place, sources, original, modified, mode, settings }: ModelDiffViewerProps) {
   const modelBefore = useStableModel(original.model);
   const modelAfter = useStableModel(modified.model);
-  const optionsBefore = useModelReadOptions(workspacePath, 'original', sources.original, modelBefore, settings?.original);
-  const optionsAfter = useModelReadOptions(workspacePath, 'modified', sources.modified, modelAfter, settings?.modified);
+  const optionsBefore = useModelReadOptions(place, 'original', sources.original, modelBefore, settings?.original);
+  const optionsAfter = useModelReadOptions(place, 'modified', sources.modified, modelAfter, settings?.modified);
   const before = useReadModel(modelBefore, optionsBefore);
   const after = useReadModel(modelAfter, optionsAfter);
   const { modelDrawMode, setModelDrawMode, modelSurface, setModelSurface, modelToleranceShare, setModelToleranceShare, modelShowBones, setModelShowBones, modelChangesOpen, setModelChangesOpen } =
@@ -117,7 +118,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
     }),
     [old, next, modelBefore, modelAfter, optionsBefore, optionsAfter, sources.original, sources.modified, findSibling, findAssetsPoint],
   );
-  const materials = useModelMaterials(workspacePath, materialVersions, modelSurface === 'materials');
+  const materials = useModelMaterials(place, materialVersions, modelSurface === 'materials');
   const surface = shownSurface(modelSurface, materials.offered);
   const compares = diffsCompares(surface);
   const looksLoaded = texturesSettled(materials.report);

@@ -1,5 +1,6 @@
 import { fakeApi } from '../../testing/fakeWindow';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 import type { DiffEntry } from '@shared/domain/diff';
 import { useShownDiffFile } from '../../features/diff/shownDiffFile';
 import { diffEntriesKey } from '../../features/diff/useDiffEntries';
@@ -27,7 +28,7 @@ afterEach(() => {
 
 describe('moving a page to a new window', () => {
   it('opens it there on the file being read, with the files already read, and goes back to what was under it', () => {
-    queryClient.setQueryData(diffEntriesKey(WORKSPACE, TARGET), [PLAYER]);
+    queryClient.setQueryData(diffEntriesKey(workspacePlace(WORKSPACE), TARGET), [PLAYER]);
     useShownDiffFile.setState({ shown: { target: TARGET, path: 'src/player.cs' } });
 
     movePageToNewWindow(DIFF);
