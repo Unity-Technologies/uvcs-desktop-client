@@ -13,6 +13,8 @@ interface PickLabelOptions {
   title: string;
   /** A label not to offer, e.g. the one being compared. */
   exclude?: string;
+  /** Another repository's labels than the workspace's (`name@server`), e.g. an xlinked one's. */
+  repository?: string;
 }
 
 /** Asks the user to choose a label. Resolves to it, or undefined if dismissed. */
@@ -20,8 +22,8 @@ export function pickLabel(options: PickLabelOptions): Promise<Label | undefined>
   return askDialog<Label>((finish) => <LabelPickerDialog {...options} finish={finish} />);
 }
 
-function LabelPickerDialog({ title, exclude, finish }: PickLabelOptions & { finish: (label: Label | undefined) => void }) {
-  const { data: labels } = useLabels();
+function LabelPickerDialog({ title, exclude, repository, finish }: PickLabelOptions & { finish: (label: Label | undefined) => void }) {
+  const { data: labels } = useLabels({}, repository);
   const [search, setSearch] = useState('');
   const choices = useMemo(() => labelChoices(labels ?? [], exclude, search), [labels, exclude, search]);
 

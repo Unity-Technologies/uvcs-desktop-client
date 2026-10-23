@@ -140,7 +140,7 @@ export interface ChangesetChoice {
  * read (`recent`, at most `readLimit` of them; undefined while unread or when the read failed) whose row matches it,
  * and first the one whose number was typed (`1234`, `cs:1234`), so any changeset is reachable without listing them all.
  */
-export function changesetChoices(recent: readonly Changeset[] | undefined, readLimit: number, exclude: number, search: string): ChangesetChoice[] {
+export function changesetChoices(recent: readonly Changeset[] | undefined, readLimit: number, exclude: number | undefined, search: string): ChangesetChoice[] {
   const typed = typedChangesetNumber(search);
   const matching = (recent ?? [])
     .filter((changeset) => changeset.id !== exclude && changeset.id !== typed && matchesWordFilter(changesetRowTexts(changeset), search))

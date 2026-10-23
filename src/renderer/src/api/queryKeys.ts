@@ -31,4 +31,11 @@ export const queryKeys = {
   workspaceRepository: (path: string) => ['workspaceRepository', path] as const,
   missingWorkspacePaths: (paths: readonly string[]) => ['missingWorkspacePaths', paths] as const,
   inWorkspace: (workspacePath: string, ...parts: unknown[]) => [...workspaceKey(workspacePath), ...parts] as const,
+  /**
+   * A list of objects (`branches`, `changesets`, `labels`) read with `query`: the workspace's repository's under the
+   * key every view of them shares, another repository's (an xlinked one's, `name@server`) apart, in the same area so
+   * what refreshes the list refreshes it too.
+   */
+  objectList: (workspacePath: string, area: string, query: unknown, repository?: string) =>
+    repository ? queryKeys.inWorkspace(workspacePath, area, 'onRepository', repository, query) : queryKeys.inWorkspace(workspacePath, area, query),
 };

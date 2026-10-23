@@ -17,12 +17,13 @@ const RECENT_CHANGESETS_FILTER: QueryFilter = { limit: RECENT_CHANGESETS };
 
 /**
  * The newest changesets: one query, and one cache entry, shared by the palette and the changeset picker. A heavy read
- * (`SLOW_CHANGING_QUERY`): focus never reads it again, only a minute's staleness once a reader shows.
+ * (`SLOW_CHANGING_QUERY`): focus never reads it again, only a minute's staleness once a reader shows. `repository`
+ * (`name@server`) reads another repository's than the workspace's, an xlinked one's.
  */
-export function recentChangesetsQuery(workspacePath: string) {
+export function recentChangesetsQuery(workspacePath: string, repository?: string) {
   return {
-    queryKey: queryKeys.inWorkspace(workspacePath, 'changesets', RECENT_CHANGESETS_FILTER),
-    queryFn: () => api.changesets.list(workspacePath, RECENT_CHANGESETS_FILTER),
+    queryKey: queryKeys.objectList(workspacePath, 'changesets', RECENT_CHANGESETS_FILTER, repository),
+    queryFn: () => api.changesets.list(workspacePath, RECENT_CHANGESETS_FILTER, ...(repository ? [repository] : [])),
     ...SLOW_CHANGING_QUERY,
     staleTime: RECENT_CHANGESETS_STALE_TIME,
     gcTime: RECENT_CHANGESETS_CACHE_TIME,

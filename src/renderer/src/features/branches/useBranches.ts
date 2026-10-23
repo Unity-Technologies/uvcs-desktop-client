@@ -15,16 +15,11 @@ export function useBranches(filter: QueryFilter = {}, repository?: string) {
   // `{ includeHidden: false }` and `{}` ask for the same branches: one cache entry, one `cm find`.
   const query = compactFilter(filter);
   return useQuery({
-    queryKey: branchesKey(workspacePath, query, repository),
+    queryKey: queryKeys.objectList(workspacePath, 'branches', query, repository),
     queryFn: () => api.branches.list(workspacePath, query, ...(repository ? [repository] : [])),
     placeholderData: (previous) => previous,
     ...SLOW_CHANGING_QUERY,
   });
-}
-
-/** The workspace's branches under the key every branch view shares; another repository's apart, under its own. */
-export function branchesKey(workspacePath: string, query: QueryFilter, repository?: string) {
-  return repository ? queryKeys.inWorkspace(workspacePath, 'branches', 'onRepository', repository, query) : queryKeys.inWorkspace(workspacePath, 'branches', query);
 }
 
 /** One branch by name, without reading the whole list. */

@@ -16,7 +16,9 @@ import styles from './ChangesetPickerDialog.module.css';
 interface PickChangesetOptions {
   title: string;
   /** The changeset not to offer: the one being compared. */
-  exclude: number;
+  exclude?: number;
+  /** Another repository's changesets than the workspace's (`name@server`), e.g. an xlinked one's. */
+  repository?: string;
 }
 
 /**
@@ -27,9 +29,9 @@ export async function pickChangeset(options: PickChangesetOptions): Promise<numb
   return (await askDialog<ChangesetChoice>((finish) => <ChangesetPickerDialog {...options} finish={finish} />))?.id;
 }
 
-function ChangesetPickerDialog({ title, exclude, finish }: PickChangesetOptions & { finish: (choice: ChangesetChoice | undefined) => void }) {
+function ChangesetPickerDialog({ title, exclude, repository, finish }: PickChangesetOptions & { finish: (choice: ChangesetChoice | undefined) => void }) {
   const workspacePath = useWorkspacePath();
-  const { data: recent, error } = useQuery(recentChangesetsQuery(workspacePath));
+  const { data: recent, error } = useQuery(recentChangesetsQuery(workspacePath, repository));
   const [search, setSearch] = useState('');
   const choices = useMemo(() => changesetChoices(recent, RECENT_CHANGESETS, exclude, search), [recent, exclude, search]);
   // A number typed is picked without the list: only an empty or text search waits for it.
