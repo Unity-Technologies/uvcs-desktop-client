@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ALL_PROJECTS_GUID } from '@shared/domain/organizations';
+import { ALL_PROJECTS_COLOR } from '@shared/domain/organizations';
 import type { UnityProject } from '@shared/domain/repository';
 import { ProjectIcon } from '../../components/ProjectIcon';
 import { formatCount } from '../../lib/text';
@@ -40,7 +40,7 @@ export function ProjectFilter({ choices, project, onChange }: ProjectFilterProps
       onOpenChange={setOpen}
       width={320}
       trigger={
-        <MenuChip icon={<ProjectIcon guid={project?.guid ?? ALL_PROJECTS_GUID} size={16} />} active={project !== null} aria-label={`Project: ${project?.name ?? 'All projects'}`}>
+        <MenuChip icon={project ? <ProjectIcon guid={project.guid} size={16} /> : <ProjectIcon color={ALL_PROJECTS_COLOR} size={16} />} active={project !== null} aria-label={`Project: ${project?.name ?? 'All projects'}`}>
           <span className={styles.projectChipName}>{project?.name ?? 'All projects'}</span>
         </MenuChip>
       }
@@ -73,7 +73,7 @@ export function ProjectFilter({ choices, project, onChange }: ProjectFilterProps
 function AllProjectsLabel() {
   return (
     <span className={styles.projectChoice}>
-      <ProjectIcon guid={ALL_PROJECTS_GUID} />
+      <ProjectIcon color={ALL_PROJECTS_COLOR} />
       All projects
     </span>
   );

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_PROJECTS_GUID, isUnityOrganization, nameInProject, nameWithProject, projectColor, projectOfRepository, serverKind } from './organizations';
+import { isUnityOrganization, nameInProject, nameWithProject, projectColor, projectOfRepository, serverKind } from './organizations';
 
 describe('serverKind', () => {
   it('tells Unity organizations from cloud organizations by the alias cm names them with', () => {
@@ -72,8 +72,7 @@ describe('projectColor', () => {
     expect(projectColor('9f4c1b2e-0000-4000-8000-000000000005')).toBe('violet');
   });
 
-  it('makes All projects indigo, and a project without a GUID the first color', () => {
-    expect(projectColor(ALL_PROJECTS_GUID)).toBe('indigo');
+  it('gives a project without a GUID the first color', () => {
     expect(projectColor('')).toBe('crimson');
   });
 });

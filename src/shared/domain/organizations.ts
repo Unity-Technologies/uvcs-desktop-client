@@ -52,11 +52,11 @@ export type ProjectColor = (typeof PROJECT_COLORS)[number];
 
 /**
  * A project's color, as the other Unity Version Control clients pick it, so a project looks the same in all of them:
- * by the code of its GUID's last character. "All projects" takes the one of the GUID they give it (`ALL_PROJECTS_GUID`).
+ * by the code of its GUID's last character.
  */
 export function projectColor(guid: string): ProjectColor {
   return guid ? PROJECT_COLORS[guid.charCodeAt(guid.length - 1) % PROJECT_COLORS.length]! : PROJECT_COLORS[0];
 }
 
-/** The GUID the other clients give "All projects", which makes its icon indigo. */
-export const ALL_PROJECTS_GUID = 'e11e65e3-654b-45c6-9b80-e3f2e0591dc4';
+/** "All projects" is indigo in every client. */
+export const ALL_PROJECTS_COLOR: ProjectColor = 'indigo';
