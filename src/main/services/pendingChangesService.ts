@@ -11,10 +11,12 @@ import type {
   PendingChangesFilter,
   PendingChangesSnapshot,
 } from '@shared/domain/pendingChanges';
+import { workspacePlace } from '@shared/domain/place';
 import { spec } from '@shared/domain/specs';
 import { checkinArgs } from '../cm/checkinArgs';
 import { CmError } from '../cm/CmError';
-import { deletedFilesArgs, parseDeletedFiles, pathsNotFound, type DeletedFile } from '../cm/deletedFiles';
+import { deletedFilesArgs, deletedFilesOf, pathsNotFound, type DeletedFile } from '../cm/deletedFiles';
+import { readTreeItem } from '../cm/treeItems';
 import { textForLog } from '../cm/hideSecrets';
 import { readCheckinOutput } from '../cm/checkinOutput';
 import { explainLockedItems } from '../cm/lockedItems';
@@ -88,7 +90,7 @@ export function createPendingChangesService({ cm, operations, revisionCat }: Ser
         // By revision, in its repository: `RevisionCat` reads those asked together with a `cm cat` per repository.
         readDeleted: async ({ revision }) => {
           const target = join(directory, String(saved++));
-          await revisionCat.save(workspacePath, { spec: spec.revision(revision), repository: revision.repository }, target);
+          await revisionCat.save(workspacePlace(workspacePath), { spec: spec.revision(revision), repository: revision.repository }, target);
           return readFile(target);
         },
         glanceAtAdded: (path) => glanceAt(fileOf(path)),
@@ -107,7 +109,7 @@ export function createPendingChangesService({ cm, operations, revisionCat }: Ser
   async function listDeletedFiles(workspacePath: string, paths: readonly string[]): Promise<Map<string, DeletedFile>> {
     // The paths come from the window, which isn't trusted: each one must be inside the workspace (`workspaceFileOf`).
     const list = async (listed: readonly string[]) =>
-      parseDeletedFiles(await cm.query(deletedFilesArgs(listed.map((path) => workspaceFileOf(workspacePath, path))), { cwd: workspacePath }));
+      deletedFilesOf(await cm.queryRecords(deletedFilesArgs(listed.map((path) => workspaceFileOf(workspacePath, path))), readTreeItem, { cwd: workspacePath }));
     try {
       return await list(paths);
     } catch (error) {

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { recordsOutput } from './testing/cmOutput';
-import { deletedFilesArgs, notFoundPaths, parseDeletedFiles, pathsNotFound } from './deletedFiles';
-import { TREE_ITEM_FORMAT, TREE_ITEMS } from './treeItems';
+import { recordsIn, recordsOutput } from './testing/cmOutput';
+import { deletedFilesArgs, deletedFilesOf, notFoundPaths, pathsNotFound } from './deletedFiles';
+import { readTreeItem, TREE_ITEM_FORMAT, TREE_ITEMS } from './treeItems';
+
+const parseDeletedFiles = (output: string) => deletedFilesOf(recordsIn(output, readTreeItem));
 
 /** A record of `cm ls` in a workspace, as it prints one: the path relative to it, in the OS's separators. */
 const listed = (wkpath: string, type: string, size: number, revid: number, repspec = 'rep:game@local') =>

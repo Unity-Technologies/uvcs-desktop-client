@@ -105,7 +105,7 @@ export async function searchMatches(workspacePath: string, change: PendingChange
   const match = await pickMoveMatch({ workspacePath, change, side, listed });
   if (!match) return;
   const recorded = await runVoidAction(
-    workspacePath,
+    workspacePlace(workspacePath),
     "Couldn't match the items",
     () => api.pendingChanges.recordMove(workspacePath, match.from, match.to),
     isAffectedByRecordedMove,
