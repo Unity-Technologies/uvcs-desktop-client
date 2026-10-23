@@ -18,13 +18,34 @@ would lose the item's history. "Search matches…" in either one's menu pairs th
 - **What it offers** (`matchCandidates`): the other side of the same shape, files with files and folders with
   folders, as `cm move` of a file onto a folder moves it inside the folder. The likeliest first (`compareCandidates`):
   the same name (a move), then the same extension (a rename), then the closest folder, then path order. The dialog
-  (`pickMoveMatch`) takes them from the pending changes the menu was built from: it asks `cm` nothing, not even a
-  `cm status` once those are stale. While Changes hides
-  private files (`showPrivate`), a deleted item has none to offer, and the dialog says where to show them.
+  (`pickMoveMatch`) takes them from the pending changes the menu was built from, never a `cm status` of its own. While
+  Changes hides private files (`showPrivate`), a deleted item has none to offer, and the dialog says where to show them.
+- **How alike each file is** (`api.pendingChanges.moveSimilarities`, `main/workspace/moveSimilarity.ts`): as `cm`'s
+  own move detection measures it (`FileChangesMatcher` and `FileDiff.GetChangesPerUnit` in `cm`'s sources), so a file
+  the detection would pair at 30% reads 30% here, the same measure the official client's Search matches shows.
+  - Text with text: 1 less the lines a line diff adds and removes (Myers' D) per line of the deleted file, whitespace
+    and line ends ignored (`bIgnoreEolAndWhitespaces`), never below 0. A file is binary when its start holds a NUL
+    byte (`looksBinary`): `cm status --machinereadable` names no file's kind, and Changes reads no other status.
+  - Binary with binary of the same extension, whatever its case: by size alone, 1 less how far the sizes are apart per
+    byte of the deleted file (`bBinMatchingOnlySameExtension`). Nothing binary is read whole on the new side.
+  - Any other pair `cm` doesn't pair (`notPairable`), and the dialog leaves it out. A text file past
+    `MAX_SCORED_TEXT_BYTES`, or one that can't be read, isn't measured (`notMeasured`): its row shows a dash, last.
+  - Folders aren't measured: `cm` measures a folder by its entries once their files are paired, which a pick by hand
+    isn't. Their dialog has no slider.
+  - What it costs: the deleted files' loaded revisions with one `cm cat` of their workspace paths for all of them
+    (`RevisionCat`, which takes a workspace path as its spec), and the new files from disk, 16 at a time. Measured once
+    as the dialog opens (`staleTime: Infinity`): the slider, "Minimum similarity", filters what was measured and runs
+    nothing. It starts at 0: what's left to pair by hand is mostly what the detection found under its own minimum.
+  - Unrelated files cost no diff: one side holding lines the other lacks bounds the changes from below
+    (`changesAtLeast`), and past the deleted file's lines it reads 0. A similar pair's diff stops there too
+    (`maxEditLength`). The main process yields between pairs, so other calls don't wait behind hundreds of diffs.
 - **What it records** (`api.pendingChanges.recordMove`): one `cm move <deleted> <new>` in a pooled shell. With the
   source missing from disk and the destination there, `cm` only records the move and keeps the new item's content
   (`CH+MV` for a changed file); nothing on disk changes. It refreshes the workspace's views and leaves the locks alone
   (`isAffectedByRecordedMove`). There is no unpairing: undoing the move is undoing any moved, changed item, which puts
   the deleted item back as it was and drops the new item with its content (the Undo dialog's backup shelve keeps it).
 - `scripts/sandboxes/moves.sh` leaves a file and a folder of each side to pair (`src/lib/Rewritten.cs` and
-  `src/app/Rewrote.cs`, `src/legacy` and `src/modern`).
+  `src/app/Rewrote.cs`, `src/legacy` and `src/modern`). `scripts/sandboxes/move-matches.sh` leaves hundreds of new
+  files at known similarities (each named for its percentage) to five deleted classes and two deleted binary files,
+  with unrelated files, a log too large to measure and a `.psd` that isn't pairable; turn off "Detect moved and
+  renamed files" in Settings › Pending changes first, or `cm` pairs the most alike on its own.
