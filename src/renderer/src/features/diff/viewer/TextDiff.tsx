@@ -238,7 +238,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   const fileOptions = useMemo(() => ({ ...pierreFileOptions({ theme, wrapLines }), tokenizeMaxLength }), [theme, wrapLines, tokenizeMaxLength]);
   useShadowStyle(container, [SHADOW_CSS, showsNoNewlineMarker(original, diffedText) ? '' : HIDE_NO_NEWLINE_CSS, editable ? caretLineCss(shownText(diffedText)) : ''].join('\n'));
   const pointerFocus = usePointerFocusMark();
-  useChangeView({ changeViewRef, containerRef: container, virtualizer, editor, pickChange: discard.pickChange });
+  useChangeView({ changeViewRef, containerRef: container, virtualizer, editor, pickChange: discard.pickChange, opensOnLines: lineLinks.focusLines !== undefined });
   const isTyping = (): boolean => isTypingIn(container.current);
 
   const onKeyDownCapture = (event: KeyboardEvent): void => {
