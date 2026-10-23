@@ -97,9 +97,10 @@ describe('runCmProcess reading records', () => {
 
   it('never stops a command for the size of what it streams', async () => {
     const records = new RecordReader((fields) => fields);
-    const output = '1\u001e\n'.repeat(5000);
+    // Built by the script: written into it, the output would pass Windows' command line limit.
+    const script = "process.stdout.write('1\\u001e\\n'.repeat(5000), () => process.exit(0));";
 
-    await expect(runCmProcess(process.execPath, ['-e', printing(output, 7)], { reading: { stream: records } })).resolves.toEqual({ output: '', exitCode: 0 });
+    await expect(runCmProcess(process.execPath, ['-e', script], { reading: { stream: records } })).resolves.toEqual({ output: '', exitCode: 0 });
     expect(records.count).toBe(5000);
   });
 
