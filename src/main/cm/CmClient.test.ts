@@ -149,15 +149,18 @@ describe('CmClient routing', () => {
   });
 
   it("runs a command naming its repository in the app's folder outside every workspace, even with one shown, creating it", async () => {
-    const { cm, shellCommands, processes } = fakeClient();
+    const { cm, shellCommands, processes, logged } = fakeClient();
     cm.show(WORKSPACE);
 
     await cm.query(['find', 'branch', "on repository 'game@local'"], { outsideWorkspaces: true });
     await cm.execute(['diff', 'br:/main@game@local'], { outsideWorkspaces: true });
+    await cm.query(['status'], { cwd: WORKSPACE });
 
-    expect(shellCommands.map(({ cwd }) => cwd)).toEqual([OUTSIDE_WORKSPACES]);
+    expect(shellCommands.map(({ cwd }) => cwd)).toEqual([OUTSIDE_WORKSPACES, WORKSPACE]);
     expect(processes.map(({ options }) => options.cwd)).toEqual([OUTSIDE_WORKSPACES]);
     expect(existsSync(OUTSIDE_WORKSPACES)).toBe(true);
+    // The log tells them apart, for the window exploring the repository to show its own (`ranInPlace`).
+    expect(logged.map((entry) => entry.outsideWorkspaces ?? false)).toEqual([true, true, false]);
   });
 
   it('makes the folder outside every workspace again for a new process when it was deleted during the session', async () => {

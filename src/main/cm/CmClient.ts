@@ -260,6 +260,7 @@ export class CmClient {
       durationMs: Date.now() - startedAt,
       exitCode: result.exitCode,
       viaShell,
+      ...(cwd === this.outsideWorkspaces && { outsideWorkspaces: true as const }),
       output,
     };
     const logged = { ...entry, commandLine: clipForLog(commandLine, MAX_LOGGED_COMMAND_LINE), output: clipForLog(output, MAX_LOGGED_OUTPUT, 'ends') };

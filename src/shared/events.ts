@@ -13,6 +13,8 @@ export interface CommandLogEntry {
   durationMs: number;
   exitCode: number;
   viaShell: boolean;
+  /** It ran in the app's folder outside every workspace: for a repository explored without one (`CmRunOptions.outsideWorkspaces`). */
+  outsideWorkspaces?: true;
   /** Output is kept only for failed commands, to help diagnose them. It and the command line are clipped (`clipForLog`). */
   output: string;
 }
