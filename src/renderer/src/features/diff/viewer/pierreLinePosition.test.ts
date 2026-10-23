@@ -1,6 +1,6 @@
 import { VirtualizedFileDiff, Virtualizer } from '@pierre/diffs';
 import { describe, expect, it, vi } from 'vitest';
-import { pierreLinePosition, type VirtualizerInternals } from './pierreLinePosition';
+import { pierreLineBox, pierreLinePosition, type VirtualizerInternals } from './pierreLinePosition';
 
 describe('pierreLinePosition', () => {
   it("reaches the diff a virtualizer holds by its container, and the diff's line positions", () => {
@@ -15,6 +15,7 @@ describe('pierreLinePosition', () => {
 
     expect((virtualizer as unknown as VirtualizerInternals).observers.get(container)).toBe(diff);
     expect(pierreLinePosition(virtualizer, container, { side: 'additions', lineNumber: 3 })).toBe(160);
+    expect(pierreLineBox(virtualizer, container, { side: 'additions', lineNumber: 3 })).toEqual({ top: 160, height: 20 });
     expect(pierreLinePosition(virtualizer, {} as Element, { side: 'additions', lineNumber: 3 })).toBeUndefined();
     expect(typeof VirtualizedFileDiff.prototype.getLinePosition).toBe('function');
     vi.unstubAllGlobals();
