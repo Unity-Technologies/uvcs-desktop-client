@@ -51,8 +51,8 @@ menu bar (`REPOSITORY_MENU_COMMANDS`: only the command log), editing or discardi
 
 The top bar's Create workspace (and the palette's "Create workspace…", `useRepositoryCommands`) opens the New
 workspace dialog with the repository fixed (`createWorkspaceOfExplored`). Created, the window opens it on the view and
-pages it shows (every view of a repository is a workspace's too) while its files download (`createWorkspaceAndUpdate`),
-and remembers it as recent: the exploration goes on as the workspace's, nothing left. The main process hears the
+pages it shows (every view of a repository is a workspace's too), each view's rows still selected
+(`carryViewSelections`), while its files download (`createWorkspaceAndUpdate`), and remembers it as recent: the exploration goes on as the workspace's, nothing left. The main process hears the
 window shows a workspace now and stops counting it as exploring (`WorkspaceWindows.workspaceShown`).
 
 ## Tried and dropped
