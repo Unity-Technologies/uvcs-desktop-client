@@ -1,4 +1,5 @@
 import { isUnityOrganization, serverKind, type ServerKind } from '@shared/domain/organizations';
+import type { UnityProject } from '@shared/domain/repository';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { describeServer, splitRepositorySpec } from '../../lib/servers';
 import type { WorkspaceEntry } from './recentWorkspaces';
@@ -16,6 +17,8 @@ export interface PlaceChoice {
   label: string;
   /** The organization a project is in, as the sidebar names it. */
   detail?: string;
+  /** A project's GUID, which colors its icon, once its organization's list was read. */
+  guid?: string;
   workspaceCount: number;
 }
 
@@ -35,9 +38,10 @@ const KIND_ORDER: readonly ServerKind[] = ['unityOrganization', 'cloudOrganizati
 
 /**
  * Every place the workspaces are on, as the sidebar orders servers (Unity organizations, cloud organizations, this
- * computer, servers), each Unity organization followed by its projects, by name, each with its workspaces counted.
+ * computer, servers), each Unity organization followed by its projects, by name, each with its workspaces counted and,
+ * from the organizations' lists already read (`readProjects`), its GUID.
  */
-export function placeChoices(entries: readonly Pick<WorkspaceEntry, 'repository'>[]): PlaceChoice[] {
+export function placeChoices(entries: readonly Pick<WorkspaceEntry, 'repository'>[], readProjects: ReadonlyMap<string, readonly UnityProject[]> = new Map()): PlaceChoice[] {
   const servers = new Map<string, { count: number; projects: Map<string, number> }>();
   for (const entry of entries) {
     const place = placeOf(entry);
@@ -49,13 +53,23 @@ export function placeChoices(entries: readonly Pick<WorkspaceEntry, 'repository'
   }
   return [...servers.entries()].sort(([a], [b]) => byServer(a, b)).flatMap(([server, { count, projects }]) => {
     const organization = describeServer(server).label;
+    const guids = new Map((readProjects.get(server) ?? []).map((project) => [project.name, project.guid]));
     return [
       { place: { server }, label: organization, workspaceCount: count },
       ...[...projects.entries()]
         .sort(([a], [b]) => a.localeCompare(b))
-        .map(([project, workspaceCount]) => ({ place: { server, project }, label: project, detail: organization, workspaceCount })),
+        .map(([project, workspaceCount]) => withGuid({ place: { server, project }, label: project, detail: organization, workspaceCount }, guids.get(project))),
     ];
   });
+}
+
+function withGuid(choice: PlaceChoice, guid: string | undefined): PlaceChoice {
+  return guid === undefined ? choice : { ...choice, guid };
+}
+
+/** The Unity organizations the workspaces are on, whose projects' GUIDs their lists, once read, tell. */
+export function organizationsOf(entries: readonly Pick<WorkspaceEntry, 'repository'>[]): string[] {
+  return [...new Set(entries.flatMap((entry) => (placeOf(entry)?.project === undefined ? [] : [placeOf(entry)!.server])))].sort();
 }
 
 function byServer(a: string, b: string): number {

@@ -29,11 +29,11 @@ const ACCOUNTS = [
 ];
 /** As `cm repository list --type=all` prints a Unity organization: its projects, their repositories, and storage. */
 const ORGANIZATION_REPOSITORIES = [
-  { repid: 2, repname: 'Racing', repserver: ORGANIZATION, repowner: OWNER, reptype: 'Project' },
-  { repid: 3, repname: 'Racing/Game', repserver: ORGANIZATION, repowner: OWNER, reptype: 'VCS' },
-  { repid: 4, repname: 'Puzzle', repserver: ORGANIZATION, repowner: OWNER, reptype: 'Project' },
-  { repid: 5, repname: 'Puzzle/Levels', repserver: ORGANIZATION, repowner: OWNER, reptype: 'VCS' },
-  { repid: 6, repname: 'storage', repserver: ORGANIZATION, repowner: OWNER, reptype: 'WorkspaceStorage' },
+  { repid: 2, repname: 'Racing', repserver: ORGANIZATION, repowner: OWNER, reptype: 'Project', repguid: '00000000-0000-4000-8000-000000000002' },
+  { repid: 3, repname: 'Racing/Game', repserver: ORGANIZATION, repowner: OWNER, reptype: 'VCS', repguid: '00000000-0000-4000-8000-000000000003' },
+  { repid: 4, repname: 'Puzzle', repserver: ORGANIZATION, repowner: OWNER, reptype: 'Project', repguid: '00000000-0000-4000-8000-000000000004' },
+  { repid: 5, repname: 'Puzzle/Levels', repserver: ORGANIZATION, repowner: OWNER, reptype: 'VCS', repguid: '00000000-0000-4000-8000-000000000005' },
+  { repid: 6, repname: 'storage', repserver: ORGANIZATION, repowner: OWNER, reptype: 'WorkspaceStorage', repguid: '00000000-0000-4000-8000-000000000006' },
 ];
 const WORKSPACES = [{ wkname: WORKSPACE.name, wkpath: WORKSPACE.path, path: WORKSPACE.path, wkid: WORKSPACE.guid, guid: WORKSPACE.guid }];
 

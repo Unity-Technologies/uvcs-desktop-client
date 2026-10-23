@@ -1,5 +1,6 @@
 import { MapPin } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { ProjectIcon } from '../../components/ProjectIcon';
 import { ServerIcon } from '../../components/ServerIcon';
 import { formatCount } from '../../lib/text';
 import { FilterOptions } from '../../ui/FilterOptions';
@@ -54,7 +55,7 @@ export function PlaceFilter({ choices, place, onChange }: PlaceFilterProps) {
         empty="No matching places"
         renderItem={(choice) => (
           <span className={styles.projectChoice} data-picked={samePlace(choice.place, place)} data-nested={choice.place.project !== undefined}>
-            {choice.place.project === undefined && <ServerIcon server={choice.place.server} size={13} />}
+            {choice.place.project === undefined ? <ServerIcon server={choice.place.server} size={13} /> : <ProjectIcon guid={choice.guid} size={16} />}
             <span className={styles.projectChoiceName}>
               <Highlight text={choice.label} />
             </span>

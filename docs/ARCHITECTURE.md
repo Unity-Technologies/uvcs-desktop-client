@@ -424,7 +424,11 @@ by name, and never passes it to `cm`.
   repository of type `Project`, which `cm repository list` leaves out unless asked with its hidden `--type=all`, and
   `{reptype}` tells apart (`repositoryListArgs`). They come in the one command that lists the repositories, asked only
   of a Unity organization; a `cm` refusing `--type` (its error names the option, `refusesTypeOption`) is asked again
-  without it, and the list shows no projects. A repository there is named after its project (`Racing/Game`:
+  without it, and the list shows no projects. A project shows as the other clients draw it (`ProjectIcon`): a white
+  cube on a tile in one of six colors (`--project-*`), picked by the code of its GUID's last character, the
+  listing's `{repguid}` (`projectColor`), so it looks the same in every client; "All projects" is indigo
+  (`ALL_PROJECTS_GUID`). All workspaces colors a project only once its organization's list was read
+  (`useReadProjects`, which asks nothing); until then its tile is neutral. A repository there is named after its project (`Racing/Game`:
   `projectOfRepository`, `nameInProject`, `nameWithProject`), which New repository builds from the project picked.
   The Repositories view filters by project (`ProjectFilter`, remembered per organization: `useProjectPickStore`) and
   All workspaces by organization and project (`PlaceFilter`, `placeOf`), from the repository each workspace already

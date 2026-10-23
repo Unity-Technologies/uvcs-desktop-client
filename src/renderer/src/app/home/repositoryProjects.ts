@@ -1,18 +1,17 @@
 import { nameInProject } from '@shared/domain/organizations';
-import type { RepositorySummary } from '@shared/domain/repository';
+import type { RepositorySummary, UnityProject } from '@shared/domain/repository';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 
 /** A project to pick in a Unity organization's repositories, with how many of them it holds. */
-export interface ProjectChoice {
-  name: string;
+export interface ProjectChoice extends UnityProject {
   repositoryCount: number;
 }
 
 /** Every project of the organization by name (as listed), empty ones too, each with its repositories counted. */
-export function projectChoices(projects: readonly string[], repositories: readonly RepositorySummary[]): ProjectChoice[] {
+export function projectChoices(projects: readonly UnityProject[], repositories: readonly RepositorySummary[]): ProjectChoice[] {
   const counts = new Map<string, number>();
   for (const { project } of repositories) if (project) counts.set(project, (counts.get(project) ?? 0) + 1);
-  return projects.map((name) => ({ name, repositoryCount: counts.get(name) ?? 0 }));
+  return projects.map((project) => ({ ...project, repositoryCount: counts.get(project.name) ?? 0 }));
 }
 
 /** The projects whose name holds every word of `search`, in their order. */
@@ -21,8 +20,8 @@ export function matchingProjects(choices: readonly ProjectChoice[], search: stri
 }
 
 /** The project the list shows: the one picked while the organization still has it, else none (all projects). */
-export function shownProject(picked: string | undefined, projects: readonly string[]): string | null {
-  return picked !== undefined && projects.includes(picked) ? picked : null;
+export function shownProject(picked: string | undefined, projects: readonly UnityProject[]): UnityProject | null {
+  return (picked !== undefined && projects.find((project) => project.name === picked)) || null;
 }
 
 /** The repositories of `project`, or all of them for none. */

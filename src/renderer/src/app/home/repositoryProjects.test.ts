@@ -14,18 +14,20 @@ const EDITOR = repository('Cloud Repositories/TextEditor', 'Cloud Repositories')
 const LEGACY = repository('legacy');
 const REPOSITORIES = [ART, EDITOR, GAME, LEGACY];
 
+const unityProject = (name: string) => ({ name, guid: `guid-of-${name}` });
+
 describe('projectChoices', () => {
   it('offers every project, empty ones too, with its repositories counted', () => {
-    expect(projectChoices(['Archived', 'Cloud Repositories', 'Racing'], REPOSITORIES)).toEqual([
-      { name: 'Archived', repositoryCount: 0 },
-      { name: 'Cloud Repositories', repositoryCount: 1 },
-      { name: 'Racing', repositoryCount: 2 },
+    expect(projectChoices(['Archived', 'Cloud Repositories', 'Racing'].map(unityProject), REPOSITORIES)).toEqual([
+      { name: 'Archived', guid: 'guid-of-Archived', repositoryCount: 0 },
+      { name: 'Cloud Repositories', guid: 'guid-of-Cloud Repositories', repositoryCount: 1 },
+      { name: 'Racing', guid: 'guid-of-Racing', repositoryCount: 2 },
     ]);
   });
 });
 
 describe('matchingProjects', () => {
-  const choices = projectChoices(['Cloud Repositories', 'Racing', 'Racing Tools'], REPOSITORIES);
+  const choices = projectChoices(['Cloud Repositories', 'Racing', 'Racing Tools'].map(unityProject), REPOSITORIES);
 
   it('finds the projects holding every word typed, in any order and case', () => {
     expect(matchingProjects(choices, 'tools rac').map((choice) => choice.name)).toEqual(['Racing Tools']);
@@ -39,12 +41,12 @@ describe('matchingProjects', () => {
 
 describe('shownProject', () => {
   it('shows the project picked while the organization has it', () => {
-    expect(shownProject('Racing', ['Racing'])).toBe('Racing');
+    expect(shownProject('Racing', [unityProject('Racing')])).toEqual(unityProject('Racing'));
   });
 
   it('shows all projects when none was picked or the one picked is gone', () => {
-    expect(shownProject(undefined, ['Racing'])).toBeNull();
-    expect(shownProject('Deleted', ['Racing'])).toBeNull();
+    expect(shownProject(undefined, [unityProject('Racing')])).toBeNull();
+    expect(shownProject('Deleted', [unityProject('Racing')])).toBeNull();
   });
 });
 

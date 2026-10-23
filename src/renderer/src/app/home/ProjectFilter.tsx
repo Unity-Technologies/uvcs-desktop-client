@@ -1,5 +1,7 @@
-import { Box } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { ALL_PROJECTS_GUID } from '@shared/domain/organizations';
+import type { UnityProject } from '@shared/domain/repository';
+import { ProjectIcon } from '../../components/ProjectIcon';
 import { formatCount } from '../../lib/text';
 import { FilterOptions } from '../../ui/FilterOptions';
 import { FilterPopover } from '../../ui/FilterPopover';
@@ -14,7 +16,7 @@ const ROW_HEIGHT = 32;
 interface ProjectFilterProps {
   choices: ProjectChoice[];
   /** The project shown, none for all projects. */
-  project: string | null;
+  project: UnityProject | null;
   onChange: (project: string | null) => void;
 }
 
@@ -38,12 +40,12 @@ export function ProjectFilter({ choices, project, onChange }: ProjectFilterProps
       onOpenChange={setOpen}
       width={320}
       trigger={
-        <MenuChip icon={<Box size={13} />} active={project !== null} aria-label={`Project: ${project ?? 'All projects'}`}>
-          <span className={styles.projectChipName}>{project ?? 'All projects'}</span>
+        <MenuChip icon={<ProjectIcon guid={project?.guid ?? ALL_PROJECTS_GUID} size={16} />} active={project !== null} aria-label={`Project: ${project?.name ?? 'All projects'}`}>
+          <span className={styles.projectChipName}>{project?.name ?? 'All projects'}</span>
         </MenuChip>
       }
     >
-      <FilterOptions label="Projects" kind="radio" options={[{ id: 'all', label: 'All projects', checked: project === null, onSelect: () => choose(null) }]} />
+      <FilterOptions label="Projects" kind="radio" options={[{ id: 'all', label: <AllProjectsLabel />, checked: project === null, onSelect: () => choose(null) }]} />
       <PickList
         items={shown}
         itemKey={(choice) => choice.name}
@@ -55,7 +57,8 @@ export function ProjectFilter({ choices, project, onChange }: ProjectFilterProps
         rowHeight={ROW_HEIGHT}
         empty="No matching projects"
         renderItem={(choice) => (
-          <span className={styles.projectChoice} data-picked={choice.name === project}>
+          <span className={styles.projectChoice} data-picked={choice.name === project?.name}>
+            <ProjectIcon guid={choice.guid} />
             <span className={styles.projectChoiceName}>
               <Highlight text={choice.name} />
             </span>
@@ -64,5 +67,14 @@ export function ProjectFilter({ choices, project, onChange }: ProjectFilterProps
         )}
       />
     </FilterPopover>
+  );
+}
+
+function AllProjectsLabel() {
+  return (
+    <span className={styles.projectChoice}>
+      <ProjectIcon guid={ALL_PROJECTS_GUID} />
+      All projects
+    </span>
   );
 }

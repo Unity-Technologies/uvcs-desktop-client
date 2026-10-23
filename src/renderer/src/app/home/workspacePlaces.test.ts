@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isInPlace, matchingPlaces, placeChoices, placeLabel, placeOf, samePlace } from './workspacePlaces';
+import { isInPlace, matchingPlaces, organizationsOf, placeChoices, placeLabel, placeOf, samePlace } from './workspacePlaces';
 
 const GAME = { repository: 'Racing/Game@studio@unity' };
 const ART = { repository: 'Racing/Art@studio@unity' };
@@ -42,6 +42,16 @@ describe('placeChoices', () => {
     expect(choices[2]?.place).toEqual({ server: 'studio@unity', project: 'Racing' });
   });
 
+  it("colors a project by the GUID its organization's list, once read, gives it, and leaves the others without", () => {
+    const choices = placeChoices([GAME, EDITOR], new Map([['studio@unity', [{ name: 'Racing', guid: 'racing-guid' }]]]));
+
+    expect(choices.map((choice) => [choice.label, choice.guid])).toEqual([
+      ['studio', undefined],
+      ['Cloud Repositories', undefined],
+      ['Racing', 'racing-guid'],
+    ]);
+  });
+
   it('lists nothing for no workspace whose repository is known', () => {
     expect(placeChoices([RESOLVING])).toEqual([]);
   });
@@ -63,6 +73,12 @@ describe('matchingPlaces', () => {
 
   it('finds an organization alone by its name', () => {
     expect(matchingPlaces(placeChoices([LEGACY, GAME]), 'codice').map((choice) => choice.label)).toEqual(['codice']);
+  });
+});
+
+describe('organizationsOf', () => {
+  it('names each Unity organization whose projects the workspaces are in, once', () => {
+    expect(organizationsOf([GAME, ART, EDITOR, LEGACY, LOCAL, RESOLVING, { repository: 'Art/Main@other@unity' }])).toEqual(['other@unity', 'studio@unity']);
   });
 });
 

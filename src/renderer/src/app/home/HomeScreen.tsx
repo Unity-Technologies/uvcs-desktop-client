@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import type { UnityProject } from '@shared/domain/repository';
 import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
 import { useProjects, useServers } from '../workspace/workspaceQueries';
@@ -16,7 +17,7 @@ import { WelcomePanel } from './WelcomePanel';
 import { WorkspacesPanel } from './WorkspacesPanel';
 import styles from './Home.module.css';
 
-const NO_PROJECTS: string[] = [];
+const NO_PROJECTS: UnityProject[] = [];
 
 export function HomeScreen() {
   const section = useHomeSection((state) => state.section);
@@ -28,7 +29,7 @@ export function HomeScreen() {
   const shownServer = section.kind === 'server' ? section.server : '';
   const { data: projects = NO_PROJECTS } = useProjects(section.kind === 'server' ? section.server : null);
   const project = shownProject(useProjectPickStore((state) => state.picks[shownServer]), projects);
-  useHomeCommands(open, goHome, homeLink(section, project));
+  useHomeCommands(open, goHome, homeLink(section, project?.name ?? null));
   const openFolder = (): void => void openWorkspaceFolder(open);
 
   return (

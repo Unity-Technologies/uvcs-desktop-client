@@ -1,6 +1,6 @@
 import { Database, Plus, RefreshCw, ServerCog } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
-import type { RepositorySummary } from '@shared/domain/repository';
+import type { RepositorySummary, UnityProject } from '@shared/domain/repository';
 import { openServerPermissions } from '../../features/permissions/openPermissions';
 import { describeServer } from '../../lib/servers';
 import { Button } from '../../ui/Button';
@@ -31,7 +31,8 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const { data: repositories, isLoading, isFetching, error, refetch } = useRepositories(server);
   const { data: projects = NO_PROJECTS } = useProjects(server);
-  const project = shownProject(useProjectPickStore((store) => store.picks[server]), projects);
+  const shownOne = shownProject(useProjectPickStore((store) => store.picks[server]), projects);
+  const project = shownOne?.name ?? null;
   const pickProject = useProjectPickStore((store) => store.pick);
   const { all: workspaceEntries } = useWorkspaceEntries('');
   // Named as in the sidebar: "This computer", an organization's name.
@@ -72,7 +73,7 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
             if (event.key === 'ArrowDown' && listRef.current?.focusFirst()) event.preventDefault();
           }}
         />
-        {choices.length > 0 && <ProjectFilter choices={choices} project={project} onChange={(picked) => pickProject(server, picked)} />}
+        {choices.length > 0 && <ProjectFilter choices={choices} project={shownOne} onChange={(picked) => pickProject(server, picked)} />}
       </ViewHeader>
 
       <RepositoryList
@@ -104,7 +105,7 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
   );
 }
 
-const NO_PROJECTS: string[] = [];
+const NO_PROJECTS: UnityProject[] = [];
 
 function toggled(set: ReadonlySet<string>, item: string): Set<string> {
   const next = new Set(set);

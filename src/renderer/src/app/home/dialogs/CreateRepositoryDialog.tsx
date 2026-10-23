@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import type { UnityProject } from '@shared/domain/repository';
 import { ServerSelect } from '../../../components/ServerSelect';
 import { Button } from '../../../ui/Button';
 import { Checkbox } from '../../../ui/Checkbox';
@@ -21,7 +22,7 @@ interface CreateRepositoryOptions {
   onWorkspaceCreated: (workspacePath: string) => void;
 }
 
-const NO_PROJECTS: string[] = [];
+const NO_PROJECTS: UnityProject[] = [];
 
 export function openCreateRepositoryDialog(options: CreateRepositoryOptions): void {
   openDialog((close) => <CreateRepositoryDialog {...options} onClose={close} />);
@@ -40,10 +41,11 @@ function CreateRepositoryDialog({ server: initialServer, project: shownProject, 
   const [created, setCreated] = useState<string>();
   const { data: repositories } = useRepositories(server);
   const { data: projects = NO_PROJECTS } = useProjects(server);
+  const projectNames = useMemo(() => projects.map((listed) => listed.name), [projects]);
   // Undefined until picked: the dialog starts on the project the list shows, once the server's projects are read.
   const [pickedProject, setPickedProject] = useState<string | null>();
-  const project = pickedProject === undefined ? initialProject(shownProject, projects) : pickedProject;
-  const repository = newRepositoryOf({ name, project, projects, takenNames: (repositories ?? []).map((listed) => listed.name) });
+  const project = pickedProject === undefined ? initialProject(shownProject, projectNames) : pickedProject;
+  const repository = newRepositoryOf({ name, project, projects: projectNames, takenNames: (repositories ?? []).map((listed) => listed.name) });
 
   const workspaceName = suggestWorkspaceName(name.trim(), (workspaces ?? []).map((workspace) => workspace.name));
   const workspacePath = chosenPath ?? (name.trim() ? defaultWorkspacePath(root, workspaceName) : '');
@@ -95,7 +97,7 @@ function CreateRepositoryDialog({ server: initialServer, project: shownProject, 
           <option value="" disabled>
             Choose a project
           </option>
-          {projects.map((projectName) => (
+          {projectNames.map((projectName) => (
             <option key={projectName} value={projectName}>
               {projectName}
             </option>

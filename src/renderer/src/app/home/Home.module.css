@@ -493,5 +493,5 @@
 
 /* A project under its organization, in All workspaces' place filter: indented past the organization's icon. */
 .projectChoice[data-nested='true'] {
-  padding-left: calc(13px + var(--space-2));
+  padding-left: var(--space-4);
 }
