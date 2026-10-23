@@ -7,12 +7,12 @@ import { askDialog } from '../../ui/dialog/dialogStore';
 import { PickList } from '../../ui/PickList';
 import { matchCandidates, moveMatchOf, searchedCandidates, type MatchSide, type MoveMatch } from './moveMatches';
 import { emptyListWords, matchDialogWords } from './moveMatchWords';
-import { usePendingChangesOf } from './usePendingChanges';
 
 interface MoveMatchDialogProps {
-  workspacePath: string;
   change: PendingChange;
   side: MatchSide;
+  /** The changes the menu was built from, which the candidates come from: the dialog reads nothing. */
+  listed: readonly PendingChange[];
 }
 
 /** "Search matches": asks which item is the other side of the change's move. Resolves to the move, or undefined if dismissed. */
@@ -20,12 +20,10 @@ export function pickMoveMatch(props: MoveMatchDialogProps): Promise<MoveMatch | 
   return askDialog<MoveMatch>((finish) => <MoveMatchDialog {...props} finish={finish} />);
 }
 
-function MoveMatchDialog({ workspacePath, change, side, finish }: MoveMatchDialogProps & { finish: (match: MoveMatch | undefined) => void }) {
-  // The changes Changes already read: offering them asks `cm` nothing.
-  const { data: snapshot } = usePendingChangesOf(workspacePath);
+function MoveMatchDialog({ change, side, listed, finish }: MoveMatchDialogProps & { finish: (match: MoveMatch | undefined) => void }) {
   const { pendingChanges: filter } = useSettings();
   const [search, setSearch] = useState('');
-  const candidates = useMemo(() => matchCandidates(change, snapshot?.changes ?? []), [change, snapshot]);
+  const candidates = useMemo(() => matchCandidates(change, listed), [change, listed]);
   const shown = useMemo(() => searchedCandidates(candidates, search), [candidates, search]);
   const words = matchDialogWords(change, side, filter.showPrivate);
 
@@ -39,7 +37,6 @@ function MoveMatchDialog({ workspacePath, change, side, finish }: MoveMatchDialo
         placeholder={words.placeholder}
         label={words.listLabel}
         onPick={(candidate) => finish(moveMatchOf(change, candidate, side))}
-        loading={!snapshot}
         rowHeight={28}
         height={280}
         empty={emptyListWords(words, search)}

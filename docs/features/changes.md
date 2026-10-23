@@ -6,7 +6,7 @@ List or Tree, groups) follows ARCHITECTURE.md "Lists of changed files" and "Item
 ## Search matches: a move recorded by hand
 
 `cm status` pairs an item deleted from disk with a private one as a local move only when their contents are alike
-enough (Settings › Changes, "Similarity to consider a file moved": `moveSimilarityPercent`). A file renamed and
+enough (Settings › Pending changes, "Similarity to consider a file moved": `moveSimilarityPercent`). A file renamed and
 rewritten, or a folder renamed with its files changed, stays a deleted item and a private one, and checking them in
 would lose the item's history. "Search matches…" in either one's menu pairs them by hand.
 
@@ -18,7 +18,8 @@ would lose the item's history. "Search matches…" in either one's menu pairs th
 - **What it offers** (`matchCandidates`): the other side of the same shape, files with files and folders with
   folders, as `cm move` of a file onto a folder moves it inside the folder. The likeliest first (`compareCandidates`):
   the same name (a move), then the same extension (a rename), then the closest folder, then path order. The dialog
-  (`pickMoveMatch`) takes them from the pending changes Changes already read: it asks `cm` nothing. While Changes hides
+  (`pickMoveMatch`) takes them from the pending changes the menu was built from: it asks `cm` nothing, not even a
+  `cm status` once those are stale. While Changes hides
   private files (`showPrivate`), a deleted item has none to offer, and the dialog says where to show them.
 - **What it records** (`api.pendingChanges.recordMove`): one `cm move <deleted> <new>` in a pooled shell. With the
   source missing from disk and the destination there, `cm` only records the move and keeps the new item's content

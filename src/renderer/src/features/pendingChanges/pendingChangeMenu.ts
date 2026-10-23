@@ -69,7 +69,7 @@ export function pendingChangeMenu(
         label: privateChanges.length === 1 ? 'Add to version control' : `Add ${formatCount(privateChanges.length)} items to version control`,
       }),
     checkoutCandidates.length > 0 && menuAction('checkout', () => void checkout(workspacePath, checkoutCandidates)),
-    single && matchSide && menuAction('searchMatches', () => void searchMatches(workspacePath, single, matchSide)),
+    single && matchSide && listed && menuAction('searchMatches', () => void searchMatches(workspacePath, single, matchSide, listed)),
     single && hasRevisions(single) && menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path })),
     single &&
       hasRevisions(single) &&

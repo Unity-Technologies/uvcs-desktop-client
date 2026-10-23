@@ -29,8 +29,12 @@ const SHAPES: Partial<Record<ItemType, MatchShape>> = { file: 'file', binaryFile
  * folder can't: `cm move` refuses a destination whose folder isn't under version control.
  */
 export function matchSideOf(change: PendingChange, changes: readonly PendingChange[]): MatchSide | null {
-  return sideOf(change, privateFolders(changes));
+  // Only a private item needs the private folders: a right-click on any other change reads no list.
+  const folders = change.kinds.length === 1 && change.kinds[0] === 'private' ? privateFolders(changes) : NO_FOLDERS;
+  return sideOf(change, folders);
 }
+
+const NO_FOLDERS: ReadonlySet<string> = new Set();
 
 /**
  * The changes that could be the other side of the change's move, the same shape as it, the likeliest first
