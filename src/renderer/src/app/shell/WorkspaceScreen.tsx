@@ -9,7 +9,7 @@ import { SplitPane } from '../../ui/SplitPane';
 import { CommandLogPanel } from './CommandLogPanel';
 import { PageFrame } from './PageFrame';
 import { Sidebar } from './Sidebar';
-import { StatusBar } from './StatusBar';
+import { WorkspaceStatusBar } from './StatusBar';
 import { WorkspaceTopBar } from './WorkspaceTopBar';
 import { COMMAND_LOG_HEIGHT, useCommandLogHost, useCommandLogStore } from './commandLogStore';
 import { useMainFocus } from './useMainFocus';
@@ -70,7 +70,7 @@ export function WorkspaceScreen() {
           />
         </main>
       </div>
-      <StatusBar />
+      <WorkspaceStatusBar />
     </div>
   );
 }
