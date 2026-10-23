@@ -1,4 +1,4 @@
-import { rmSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -47,8 +47,12 @@ export class SessionFolder {
     return this.leftOvers;
   }
 
-  /** The folder, made the first time; made again on the next ask when making it failed. */
+  /** The folder, made the first time; made again on the next ask when making it failed, or it went (the OS cleared it). */
   path(): Promise<string> {
+    if (this.made !== null && !existsSync(this.made)) {
+      this.folder = null;
+      this.made = null;
+    }
     this.folder ??= this.removeLeftOvers()
       .then(() => mkdtemp(join(this.tempFolder, `${this.prefix}${this.pid}-`)))
       .then(

@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdir, mkdtemp, readdir } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -18,6 +18,15 @@ describe('SessionFolder', () => {
     expect(first).toBe(second);
     expect(first.startsWith(join(tempFolder, 'uvcs-trees-100-'))).toBe(true);
     expect(existsSync(first)).toBe(true);
+  });
+
+  it('is made again when it went while the app ran, as the OS clears its temp folder', async () => {
+    const folder = new SessionFolder({ prefix: 'uvcs-trees-', tempFolder: await inTemp(), pid: 100, isRunning: () => false });
+    const first = await folder.path();
+    await rm(first, { recursive: true });
+
+    const again = await folder.path();
+    expect(existsSync(again)).toBe(true);
   });
 
   it("deletes what crashed sessions left first, never a running app's nor another prefix's", async () => {
