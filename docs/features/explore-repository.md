@@ -73,4 +73,9 @@ window shows a workspace now and stops counting it as exploring (`WorkspaceWindo
 
 ## Tried and dropped
 
-A temporary workspace for each repository explored, the official client's way: ARCHITECTURE.md "Places".
+- A temporary workspace for each repository explored, the official client's way: ARCHITECTURE.md "Places".
+- Finding a file by name in a repository's Files (Go to file, the palette's files). `cm` filters no tree by name:
+  `cm find revision` takes an `item` but no pattern ("Integer operator like is not currently supported for item"), and
+  there is no `cm find item`. The only way is a whole tree's `cm ls -R --tree=…` per changeset searched, hundreds of
+  thousands of paths from a shared server to find one; folder by folder is no better. Files filters the folders open,
+  and a workspace's Go to file walks its own disk, which costs the server nothing.
