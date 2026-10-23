@@ -21,6 +21,11 @@ export function parentFolder(path: string): string {
   return path === '/' ? '/' : `/${parentOf(path.slice(1))}`;
 }
 
+/** The folder the picker opens on, selected: what the field holds, however it was typed. */
+export function openingFolder(typed: string): string {
+  return '/';
+}
+
 /** The folders open as the picker opens: the root, and every folder above `chosen` so it shows. */
 export function initiallyExpanded(chosen: string): Set<string> {
   const expanded = new Set(['/']);

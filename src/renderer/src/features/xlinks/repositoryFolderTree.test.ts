@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { folderKey, folderRows, initiallyExpanded, parentFolder, toggled, type FolderListing } from './repositoryFolderTree';
+import { folderKey, folderRows, initiallyExpanded, openingFolder, parentFolder, toggled, type FolderListing } from './repositoryFolderTree';
 
 const LISTINGS = new Map<string, FolderListing>([
   ['/', ['/Assets', '/Shaders']],
@@ -12,6 +12,14 @@ const summary = (rows: ReturnType<typeof folderRows>) => rows.map((row) => `${' 
 describe('The folder picker’s tree', () => {
   it('shows the root named after the repository, and the folders of each open folder under it', () => {
     expect(summary(folderRows('lib@local', LISTINGS, new Set(['/', '/Assets'])))).toEqual(['lib@local -', '  Assets -', '    Art', '    Lib +', '  Shaders +']);
+  });
+
+  it('opens on a folder typed in any form: without its slash, with backslashes or a trailing slash', () => {
+    for (const typed of ['Assets/Lib', 'Assets\\Lib', '/Assets/Lib/', ' /Assets//Lib ']) {
+      expect(openingFolder(typed)).toBe('/Assets/Lib');
+      expect([...initiallyExpanded(typed)]).toEqual(['/', '/Assets']);
+    }
+    expect(openingFolder('')).toBe('/');
   });
 
   it('opens on the folder already chosen, every folder above it open', () => {
