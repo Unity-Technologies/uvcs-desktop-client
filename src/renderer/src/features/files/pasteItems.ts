@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { ItemMove, TreeItem } from '@shared/domain/explorer';
 import { api } from '../../api/client';
 import { runOperation } from '../../app/operations/runOperation';
@@ -53,7 +54,7 @@ async function runMoves(workspacePath: string, moves: ItemMove[], title: string)
     affects: (key) => isAffectedByFileChangesIn(folders)(key) || isAffectedByMovedPaths(key),
   });
   if (!moved) return false;
-  useFilesViewStore.getState().requestReveal(workspacePath, moves[0]!.to, moves.map((move) => move.to));
+  useFilesViewStore.getState().requestReveal(workspacePlace(workspacePath), moves[0]!.to, moves.map((move) => move.to));
   return true;
 }
 
