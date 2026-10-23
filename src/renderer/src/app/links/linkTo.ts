@@ -21,6 +21,11 @@ export function workspaceLinkTo(workspacePath: string, target: LinkTarget): () =
   return async () => repositoryLinkTo((await queryClient.fetchQuery(workspaceInfoQuery(workspacePath))).repository, target);
 }
 
+/** The link to a target in the place's repository: a repository's own at once, a workspace's from its info. */
+export function placeLinkTo(place: Place, target: LinkTarget): () => Promise<string> {
+  return place.kind === 'repository' ? async () => repositoryLinkTo(place.repository, target) : workspaceLinkTo(place.workspacePath, target);
+}
+
 /**
  * What a link copies: the object's own repository when known (it may be an xlinked one), else the place's (a
  * repository's own, or a workspace's from its info); null for a name no link can carry (`writesAsLink`).
