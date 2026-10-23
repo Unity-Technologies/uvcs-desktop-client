@@ -3,6 +3,7 @@ import { CmError } from '../CmError';
 import { textOutputKind } from '../commandOutputs';
 import { extractErrorMessage } from '../errorMessage';
 import { RecordReader, type ReadRecord } from '../formatRecords';
+import { LineReader, type ReadLine } from '../LineReader';
 import { namesOrganizationById } from '../organizationIds';
 import type { StreamReader } from '../outputReading';
 import { XmlElementReader, type ReadElement } from '../XmlElementReader';
@@ -92,6 +93,7 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
     const output = await run(via, args, options, true);
     // Read as `CmClient` reads them: as they arrive, text after the last item no item.
     reader.read(Buffer.from(output, 'utf8'));
+    reader.takeRest();
     return reader.finish();
   }
 
@@ -101,6 +103,7 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
     execute: (args: string[], options?: CmRunOptions) => run('execute', args, options),
     queryRecords: <T>(args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions) => runStreamed('query', args, new RecordReader(readRecord), options),
     executeRecords: <T>(args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions) => runStreamed('execute', args, new RecordReader(readRecord), options),
+    queryLines: <T>(args: string[], readLine: ReadLine<T>, options?: CmRecordsOptions) => runStreamed('query', args, new LineReader(readLine), options),
     queryXmlElements: <T>(args: string[], element: string, readElement: ReadElement<T>, options?: CmRecordsOptions) =>
       runStreamed('query', args, new XmlElementReader(element, readElement), options),
     warmUp: (cwd = '') => void warmedUp.push(cwd),

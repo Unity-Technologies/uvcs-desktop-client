@@ -16,6 +16,7 @@ import type { OutputReading, StreamReader } from './outputReading';
 import { processCommand } from './processCommand';
 import { runCmProcess } from './runCmProcess';
 import { canRunInShell } from './shellCommandLine';
+import { LineReader, type ReadLine } from './LineReader';
 import { isShellResultLine, shellCommandResult } from './shellResultLine';
 import { withUtf8Output } from './utf8Output';
 import { XmlElementReader, type ReadElement } from './XmlElementReader';
@@ -149,6 +150,15 @@ export class CmClient {
   queryXmlElements<T>(args: string[], element: string, readElement: ReadElement<T>, options: CmRecordsOptions = {}): Promise<T[]> {
     const placed = this.placed(options);
     return this.runStreamed(args, new XmlElementReader(element, readElement), placed, this.runsInPooledShell(args, placed));
+  }
+
+  /**
+   * Runs a quick command whose list comes one item a line with no `--format` (`cm listusers`), where `query` would,
+   * and reads each line as it arrives (`LineReader`) into what `readLine` builds of it, as `queryRecords` reads records.
+   */
+  queryLines<T>(args: string[], readLine: ReadLine<T>, options: CmRecordsOptions = {}): Promise<T[]> {
+    const placed = this.placed(options);
+    return this.runStreamed(args, new LineReader(readLine), placed, this.runsInPooledShell(args, placed));
   }
 
   /** Prepares `cm shell` sessions for a working directory (defaults to the home directory). */

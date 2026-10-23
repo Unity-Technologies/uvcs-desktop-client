@@ -1,7 +1,7 @@
 import type { PermissionsApi } from '@shared/api/permissions';
 import { permissionSpec, type ObjectPermissions, type PermissionTarget } from '@shared/domain/permissions';
 import { aclCommands, pathBranchesArgs, removePathArgs, setOwnerArgs } from '../cm/aclArgs';
-import { listMembersArgs, ownerNamed, parseMemberNames, parseShowOwner } from '../cm/aclMembers';
+import { listMembersArgs, ownerNamed, parseShowOwner, readMemberName } from '../cm/aclMembers';
 import { CmError } from '../cm/CmError';
 import { isOwnAcl, parseExtendedAcl } from '../cm/extendedAcl';
 import type { ServiceContext } from './ServiceContext';
@@ -42,8 +42,8 @@ export function createPermissionsService({ cm }: ServiceContext): PermissionsApi
       return { ...acl, owner };
     },
 
-    async members(server, kind, filter) {
-      return parseMemberNames(await cm.query(listMembersArgs(server, kind, filter)));
+    members(server, kind, filter) {
+      return cm.queryLines(listMembersArgs(server, kind, filter), readMemberName);
     },
 
     async apply(target, changes) {

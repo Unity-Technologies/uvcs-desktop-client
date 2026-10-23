@@ -5,7 +5,8 @@
  * weighs, twice.
  *
  * - `list`: rows that grow with the repository or the workspace (branches, a tree, a diff, pending changes, an item's
- *   history). Read as they arrive (`queryRecords`, `executeRecords`, `queryXmlElements`); `query` and `execute` refuse it.
+ *   history, an organization's members). Read as they arrive (`queryRecords`, `executeRecords`, `queryXmlElements`,
+ *   `queryLines`); `query` and `execute` refuse it.
  * - `answer`: one small object (the user, a workspace's header, an item's details), read whole as text, and stopped
  *   past `MAX_TEXT_OUTPUT_LENGTH`.
  * - `operation`: a write, which may print a line per item it touched (an undo of 100,000 files). Its output only
@@ -26,6 +27,8 @@ const COMMAND_OUTPUTS: Readonly<Record<string, KindOf>> = {
   diff: 'list',
   find: 'list',
   history: 'list',
+  // One name a line, read as they arrive (`queryLines`): an organization's every member when unfiltered.
+  listusers: 'list',
   ls: 'list',
   // `--header` prints the header alone; without it, every pending change.
   status: (args) => (args.includes('--header') ? 'answer' : 'list'),
@@ -43,8 +46,6 @@ const COMMAND_OUTPUTS: Readonly<Record<string, KindOf>> = {
   checkconnection: 'answer',
   fileinfo: 'answer',
   getworkspacefrompath: 'answer',
-  // People, not the repository's data, and as lines: no `--format` to stream (a server of 50,000 users prints 1.5 MB).
-  listusers: 'answer',
   showacl: 'answer',
   showowner: 'answer',
   version: 'answer',

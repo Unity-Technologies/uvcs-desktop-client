@@ -16,6 +16,7 @@ import { MAX_QUICK_WRITE_PATHS } from './longCommands';
 import type { CmProcessOptions } from './runCmProcess';
 import { SHELL_ARGS } from './shellCommandLine';
 import { XmlElementReader } from './XmlElementReader';
+import { LineReader } from './LineReader';
 
 const CM_PATH = join('opt', 'plasticscm', 'cm');
 const asFields = (fields: string[]) => fields;
@@ -398,6 +399,22 @@ describe('CmClient output', () => {
 
     expect(shellReadings).toEqual([{ text: textLimitOf('answer') }, { text: textLimitOf('operation') }]);
     expect(processes.map(({ options }) => options.reading)).toEqual([{ text: textLimitOf('answer') }, { text: textLimitOf('operation') }]);
+  });
+
+  it('reads a list printed one item a line as it arrives, a pooled shell\'s result line left out', async () => {
+    const { cm, shellReadings } = fakeClient({ answer: () => ({ output: 'ana@corp.com\nbob@corp.com\n', exitCode: 0 }) });
+
+    const names = await cm.queryLines(['listusers', 'local', '--onlyusers'], (line) => line);
+
+    expect(names).toEqual(['ana@corp.com', 'bob@corp.com']);
+    expect(shellReadings).toEqual([{ stream: expect.any(LineReader) }]);
+  });
+
+  it("reads them from a cm shell of its own on Windows, its result line left out", async () => {
+    const { cm, processes } = fakeClient({ platform: 'win32', warm: false, answer: () => ({ output: 'ana@corp.com\nCommandResult 0\n', exitCode: 0 }) });
+
+    await expect(cm.queryLines(['listusers', 'local', '--onlyusers'], (line) => line)).resolves.toEqual(['ana@corp.com']);
+    expect(processes[0]?.args).toEqual(SHELL_ARGS);
   });
 
   it('reads the elements of an XML list as they arrive, into what its caller builds of each', async () => {

@@ -82,6 +82,7 @@ describe('members', () => {
     expect(await service.members('acme@cloud', 'group')).toEqual(['Administrators', 'Web Devs']);
     await service.members('acme@cloud', 'user', 'dan');
     expect(commands.map(({ via, line }) => `${via} ${line}`)).toEqual(['query listusers acme@cloud --onlygroups', 'query listusers acme@cloud --onlyusers --filter=dan']);
+    expect(commands.every((command) => command.readsRecords)).toBe(true);
   });
 });
 

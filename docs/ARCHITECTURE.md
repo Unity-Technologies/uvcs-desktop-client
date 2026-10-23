@@ -63,7 +63,8 @@ you touch:
    - A pooled command may take two minutes, a workspace write half an hour (a few paths can still be a whole tree).
    - `queryRecords()` and `executeRecords()` run a command that prints `--format` records as `query()` and
      `execute()` do, routing included, and read each record as it arrives (see Parsing: records); `queryXmlElements()`
-     reads an XML list element by element the same way (`cm history`).
+     reads an XML list element by element the same way (`cm history`), and `queryLines()` a list of one item a line
+     (`cm listusers`).
    - No output is held as one string unless it is a small answer (Parsing: "No list is one string"): a list is read as
      it arrives with no size limit, an answer stops past `MAX_TEXT_OUTPUT_LENGTH` (4 MB) with a `CmError`
      (`CmOutputTooLargeError`; a session starts a new process), and an operation keeps the ends of what it prints and
@@ -270,13 +271,14 @@ and many people use the same server. Every `cm` command other than local reads (
 - **No list is one string.** V8 refuses strings past about 512 MB, and long before that one string costs the main
   process what the whole output weighs, twice. So every command the app runs says what it prints
   (`COMMAND_OUTPUTS`, `cmOutputKind` in `main/cm/commandOutputs.ts`), and that decides how it's read:
-  - a **list** (anything that grows with the repository or the workspace: finds, `cm ls`, diffs, annotations,
-    histories, pending changes, lock, profile, workspace and repository lists, the merge preview) is read as it
-    arrives, `queryRecords`/`executeRecords` for `--format` records or `queryXmlElements` for an XML list
-    (`XmlElementReader`), and never stopped for its size;
-  - an **answer** (one small object: `whoami`, a workspace's header, an item's details; `listusers` too, whose names
-    come as lines with no `--format`, and grow with people, not data) is read whole by `query`/`execute`, and stopped
-    past `MAX_TEXT_OUTPUT_LENGTH` (4 MB);
+  - a **list** (anything that grows with the repository, the workspace or the server: finds, `cm ls`, diffs,
+    annotations, histories, pending changes, lock, profile, workspace and repository lists, the merge preview, an
+    organization's members) is read as it arrives, `queryRecords`/`executeRecords` for `--format` records,
+    `queryXmlElements` for an XML list (`XmlElementReader`), `queryLines` for one item a line with no `--format`
+    (`LineReader`: `cm listusers`; `cm` writes errors to stderr, and a shell's `CommandResult` line is left out), and
+    never stopped for its size;
+  - an **answer** (one small object: `whoami`, a workspace's header, an item's details) is read whole by
+    `query`/`execute`, and stopped past `MAX_TEXT_OUTPUT_LENGTH` (4 MB);
   - an **operation** (a write: undo, add, checkin, update, merge, cat...) may print a line per item, so `query`/`execute`
     keep only its start and end (`TextLimit` `keepEnds`, `OutputBuffer`, the middle marked `leftOutMarker`), where
     `cm` prints its result and its error, and never stop it: stopping a checkin halfway is worse than any output.

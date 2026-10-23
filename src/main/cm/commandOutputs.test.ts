@@ -7,6 +7,7 @@ describe('cmOutputKind', () => {
     [['ls', '/', '-R'], 'list'],
     [['diff', 'cs:12'], 'list'],
     [['annotate', 'a.cs'], 'list'],
+    [['listusers', 'local', '--onlyusers'], 'list'],
     [['history', 'a.cs', '--xml'], 'list'],
     [['lock', 'list'], 'list'],
     [['profile', 'list'], 'list'],
@@ -28,7 +29,7 @@ describe('cmOutputKind', () => {
     expect(cmOutputKind(['merge', 'br:/main/task'])).toBe('operation');
   });
 
-  it.each([['whoami'], ['version'], ['fileinfo', 'a.cs', '--xml'], ['getworkspacefrompath', '/wk'], ['wi', '/wk'], ['showacl', 'rep:game'], ['showowner', 'rep:game'], ['checkconnection'], ['listusers', 'local', '--onlyusers']])(
+  it.each([['whoami'], ['version'], ['fileinfo', 'a.cs', '--xml'], ['getworkspacefrompath', '/wk'], ['wi', '/wk'], ['showacl', 'rep:game'], ['showowner', 'rep:game'], ['checkconnection']])(
     'reads %j as an answer',
     (...args) => {
       expect(cmOutputKind(args)).toBe('answer');
