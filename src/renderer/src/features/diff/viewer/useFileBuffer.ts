@@ -3,6 +3,7 @@ import { api } from '../../../api/client';
 import { guardLeaving } from '../../../app/navigation/leaveGuard';
 import { fileNameOf } from '../../../lib/text';
 import { toast } from '../../../ui/toast/toastStore';
+import type { WorkspaceFile } from './canEditInPlace';
 import type { EditorHandle } from './editorHandle';
 import { bufferAfterDiscard, bufferAfterEdit, bufferAfterRead, bufferAfterSave, changedOnDisk, openedBuffer, savedAsBase, type FileBufferState } from './fileBuffer';
 import { refreshFileViews, showFileText } from './fileText';
@@ -29,7 +30,7 @@ export interface FileBuffer {
 interface FileBufferOptions {
   contents: DiffContents;
   /** The workspace file typed into; null for read-only diffs (a repository's versions, any committed one). */
-  file: { workspacePath: string; path: string } | null;
+  file: WorkspaceFile | null;
   /** Saving left the file as its loaded revision. */
   onMatchesBase?: () => void;
 }
