@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { api } from '../../api/client';
 import { useSettings } from '../../app/settings/useSettings';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { Dialog } from '../../ui/dialog/Dialog';
@@ -13,8 +12,7 @@ import {
   DEFAULT_MINIMUM_SIMILARITY,
   isMeasured,
   minimumNoteOf,
-  movePairsOf,
-  moveSimilaritiesKey,
+  moveSimilaritiesQuery,
   pairableCount,
   scoredCandidates,
   searchedRows,
@@ -45,15 +43,7 @@ function MoveMatchDialog({ workspacePath, change, side, listed, finish }: MoveMa
   const [minimum, setMinimum] = useState(DEFAULT_MINIMUM_SIMILARITY);
   const candidates = useMemo(() => matchCandidates(change, listed), [change, listed]);
   const measured = isMeasured(change, candidates.length);
-  const similarities = useQuery({
-    queryKey: moveSimilaritiesKey(workspacePath, change.path),
-    queryFn: () => api.pendingChanges.moveSimilarities(workspacePath, movePairsOf(change, candidates, side)),
-    enabled: measured,
-    // Measured once as the dialog opens: the slider filters what was measured.
-    staleTime: Infinity,
-    gcTime: 0,
-    retry: false,
-  });
+  const similarities = useQuery({ ...moveSimilaritiesQuery(workspacePath, change, candidates, side), enabled: measured });
   const rows = useMemo(() => scoredCandidates(candidates, similarities.data, minimum), [candidates, similarities.data, minimum]);
   const shown = useMemo(() => searchedRows(rows, search), [rows, search]);
   const pairable = pairableCount(similarities.data);

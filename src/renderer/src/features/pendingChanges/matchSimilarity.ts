@@ -1,5 +1,8 @@
 import type { MovePair, MoveSimilarity, PendingChange } from '@shared/domain/pendingChanges';
+import { queryOptions } from '@tanstack/react-query';
+import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
+import { IMMUTABLE_QUERY } from '../../app/queryClient';
 import { searchedCandidates, type MatchCandidate, type MatchSide } from './moveMatches';
 
 /**
@@ -21,12 +24,27 @@ export type MinimumNote = 'slider' | 'notMeasured' | null;
 export const DEFAULT_MINIMUM_SIMILARITY = 80;
 
 /**
- * The measure's query key: an area of its own, which no refresh names (`refreshScopes`). The candidates are fixed as
- * the dialog opens, so a file saved elsewhere meanwhile can't change the answer, and measuring again costs a `cm ls`,
- * the deleted files' `cm cat`s and a read of every new file.
+ * The measure's query key: an area of its own, which no refresh scope names (`refreshScopes`).
  */
 export function moveSimilaritiesKey(workspacePath: string, path: string) {
   return queryKeys.inWorkspace(workspacePath, 'moveSimilarities', path);
+}
+
+/**
+ * The measure, once per dialog. The candidates are fixed as the dialog opens, so nothing that happens meanwhile can
+ * change the answer, and measuring again costs a `cm ls`, the deleted files' `cm cat`s and a read of every new file:
+ * no refresh reaches it, not even one of the whole workspace (`IMMUTABLE_QUERY`: the Refresh button, a loaded
+ * changeset that moved). The slider filters what was measured; it is let go as the dialog closes (`gcTime: 0`).
+ */
+export function moveSimilaritiesQuery(workspacePath: string, change: PendingChange, candidates: readonly MatchCandidate[], side: MatchSide) {
+  return queryOptions({
+    queryKey: moveSimilaritiesKey(workspacePath, change.path),
+    queryFn: () => api.pendingChanges.moveSimilarities(workspacePath, movePairsOf(change, candidates, side)),
+    meta: IMMUTABLE_QUERY,
+    staleTime: Infinity,
+    gcTime: 0,
+    retry: false,
+  });
 }
 
 /** Only files are scored: `cm` scores a folder by its entries once its files are paired, which a pick by hand isn't. */
