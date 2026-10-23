@@ -93,7 +93,7 @@ function XlinkDialog({ target, save, onClose }: { target: XlinkDialogTarget; sav
         </>
       )}
       {fields.showsFolder && (
-        <TextField label="Folder of the repository" value={draft.folder} placeholder="/" hint="The xlink shows only this folder." onChange={(event) => change({ folder: event.target.value })} />
+        <PickField label="Folder of the repository" value={draft.folder} placeholder="/" hint="The xlink shows only this folder." source={fields.folderSource} onChange={(folder) => change({ folder })} />
       )}
       {fields.showsRules && <ExpansionRules draft={draft} fields={fields} update={setDraft} />}
     </Dialog>

@@ -1,0 +1,54 @@
+/* The repository's folders as a tree, scrolling inside the dialog on a big repository. */
+.tree {
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) 0;
+  outline: none;
+}
+
+.tree:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 28px;
+  padding-inline-end: var(--space-2);
+  cursor: default;
+  user-select: none;
+}
+
+.row:hover {
+  background: var(--bg-hover);
+}
+
+.row[aria-selected='true'] {
+  background: var(--bg-selected);
+}
+
+.chevron {
+  display: inline-flex;
+  width: 16px;
+  justify-content: center;
+  color: var(--text-tertiary);
+}
+
+.icon {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.failed {
+  font-size: var(--text-xs);
+  color: var(--status-deleted);
+}
