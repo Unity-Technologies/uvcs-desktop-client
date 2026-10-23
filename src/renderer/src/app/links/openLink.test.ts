@@ -27,7 +27,7 @@ function head(repository: string | null, branch = '/main'): WorkspaceHead {
 
 /** The user's workspaces and their repositories, the windows showing some, and this window's workspace (none: home). */
 function workspaces(heads: Record<string, WorkspaceHead>, { current = null as string | null, shown = [] as string[], recent = [] as string[] } = {}): void {
-  useSession.setState({ workspacePath: current, leftWorkspacePath: null });
+  useSession.setState({ place: current === null ? null : workspacePlace(current), workspacePath: current, leftWorkspacePath: null });
   fakeApi.answer('workspaces.list', async () => Object.keys(heads).map((path) => ({ path, name: path.split(/[\\/]/).at(-1), guid: path })));
   fakeApi.answer('workspaces.heads', async () => heads);
   fakeApi.answer('workspaces.info', async (path: string) => ({ path, repository: heads[path]?.repository }));

@@ -9,7 +9,7 @@ import { useSession } from './sessionStore';
 import { folderMissingQuery } from './useWorkspace';
 
 afterEach(() => {
-  useSession.setState({ workspacePath: null });
+  useSession.setState({ place: null, workspacePath: null });
   useNavigation.setState({ view: 'changes' });
   queryClient.clear();
 });

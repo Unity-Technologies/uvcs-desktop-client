@@ -53,7 +53,7 @@ const THEMES: { theme: ThemePreference; label: string; icon: Icon }[] = [
 /** Commands available everywhere inside a workspace. */
 export function useWorkspaceCommands(): void {
   const workspacePath = useWorkspacePath();
-  const closeWorkspace = useSession((state) => state.closeWorkspace);
+  const goHome = useSession((state) => state.goHome);
   const openWorkspace = useOpenWorkspace();
   const { theme, reviewModeWorkspaces, autoRefresh } = useSettings();
   const reviewing = reviewModeWorkspaces.includes(workspacePath);
@@ -98,7 +98,7 @@ export function useWorkspaceCommands(): void {
         keywords: ['review', 'reviewed', 'mark'],
         run: () => void setReviewMode(workspacePlace(workspacePath), !reviewing),
       },
-      { id: 'app.home', group: 'Go to', label: 'Home', icon: House, shortcut: hotkey('home'), run: closeWorkspace },
+      { id: 'app.home', group: 'Go to', label: 'Home', icon: House, shortcut: hotkey('home'), run: goHome },
       {
         id: 'workspace.open',
         group: 'Workspace',
@@ -194,7 +194,7 @@ export function useWorkspaceCommands(): void {
         run: () => updateSettings({ theme: choice }),
       })),
     ],
-    [workspacePath, closeWorkspace, openWorkspace, theme, reviewing, autoRefresh, commandLogOpen, updateSettings, editor, terminal],
+    [workspacePath, goHome, openWorkspace, theme, reviewing, autoRefresh, commandLogOpen, updateSettings, editor, terminal],
   );
 
   useCommands(commands);

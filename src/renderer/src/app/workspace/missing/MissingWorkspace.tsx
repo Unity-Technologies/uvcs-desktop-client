@@ -19,7 +19,7 @@ export function MissingWorkspace({ path, checking, onLookAgain }: MissingWorkspa
   // `cm` no longer lists a workspace whose folder is gone, so its folder name stands in for its name.
   const name = lastSegment(path);
   const open = useOpenWorkspace();
-  const closeWorkspace = useSession((state) => state.closeWorkspace);
+  const goHome = useSession((state) => state.goHome);
 
   return (
     <ScreenMessage
@@ -49,7 +49,7 @@ export function MissingWorkspace({ path, checking, onLookAgain }: MissingWorkspa
           >
             {checking ? 'Looking…' : 'Restored it? Look again'}
           </Button>
-          <Button variant="ghost" size="small" icon={<ArrowLeft size={13} />} onClick={closeWorkspace}>
+          <Button variant="ghost" size="small" icon={<ArrowLeft size={13} />} onClick={goHome}>
             All workspaces
           </Button>
         </>

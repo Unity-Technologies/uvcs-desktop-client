@@ -27,7 +27,7 @@ import styles from './WorkspaceSwitcher.module.css';
  */
 export function WorkspaceSwitcher({ currentPath, children }: { currentPath: string; children: ReactElement }) {
   const [open, setOpen] = useState(false);
-  const closeWorkspace = useSession((state) => state.closeWorkspace);
+  const goHome = useSession((state) => state.goHome);
   const openWorkspace = useOpenWorkspace();
   const openIn = workspaceOpener(openWorkspace);
   const returnFocus = useReturnFocus(open);
@@ -57,7 +57,7 @@ export function WorkspaceSwitcher({ currentPath, children }: { currentPath: stri
             <SwitcherAction icon={FolderGit2} onClick={closeThen(() => openTaskWorkspaceDialog({ workspacePath: currentPath }))}>
               New workspace for a task…
             </SwitcherAction>
-            <SwitcherAction icon={Layers} onClick={closeWorkspace}>
+            <SwitcherAction icon={Layers} onClick={goHome}>
               All workspaces and repositories…
             </SwitcherAction>
           </div>

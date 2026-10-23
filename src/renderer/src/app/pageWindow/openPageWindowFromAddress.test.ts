@@ -12,7 +12,7 @@ import { openPageWindowFromAddress } from './openPageWindowFromAddress';
 import { usePageWindow } from './pageWindowStore';
 
 afterEach(() => {
-  useSession.setState({ workspacePath: null });
+  useSession.setState({ place: null, workspacePath: null });
   useNavigation.setState({ view: 'changes', pages: [] });
   usePageWindow.setState({ isPageWindow: false });
   queryClient.clear();

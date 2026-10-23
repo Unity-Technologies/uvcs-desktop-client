@@ -12,7 +12,7 @@ import { hotkey } from '../../lib/shortcutRegistry';
 /** A workspace's top bar: its branch (and what's incoming) after the home button, the search and the account at the end. */
 export function WorkspaceTopBar() {
   const setCommandPaletteOpen = useCommandPalette((state) => state.setOpen);
-  const closeWorkspace = useSession((state) => state.closeWorkspace);
+  const goHome = useSession((state) => state.goHome);
 
   const end = (
     <>
@@ -32,7 +32,7 @@ export function WorkspaceTopBar() {
   );
 
   return (
-    <TopBar onHome={closeWorkspace} end={end}>
+    <TopBar onHome={goHome} end={end}>
       <div className={styles.branchControls}>
         <WorkingObjectButton />
         <IncomingChip />

@@ -76,7 +76,7 @@ describe('returnToWorkspace', () => {
 
 describe('a window reopened on a view after an update', () => {
   afterEach(() => {
-    useSession.setState({ workspacePath: null });
+    useSession.setState({ place: null, workspacePath: null });
     useNavigation.setState({ view: 'changes', pages: [] });
   });
 
