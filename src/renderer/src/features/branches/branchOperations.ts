@@ -1,4 +1,5 @@
 import type { Branch, CreateBranchRequest } from '@shared/domain/branch';
+import { workspacePathOf, type Place } from '@shared/domain/place';
 import { shortBranchName, spec } from '@shared/domain/specs';
 import type { SwitchChangesAction } from '@shared/domain/switchWithChanges';
 import { api } from '../../api/client';
@@ -10,7 +11,7 @@ import { switchWorkspace } from '../../app/shell/workspaceOperations';
 import { branchLabel, branchLabels } from '../../lib/branchLabels';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
-import { invalidateWorkspace } from '../../app/queryClient';
+import { invalidatePlace } from '../../app/queryClient';
 import { toast, useToastStore } from '../../ui/toast/toastStore';
 import type { TaskMerge } from '../mergeTask/taskMerge';
 import { validateBranchName } from './branchNames';
@@ -39,29 +40,30 @@ export interface SwitchToNewBranch {
 }
 
 /**
- * Creates a branch, then switches the workspace to it if asked. Two operations in a row refresh once, after the last
- * (ARCHITECTURE.md "Server budget"): creating refreshes nothing by itself, as a switch refreshes every view when it's
- * done; only when the workspace stays do the branch lists refresh. `onCreated` runs once the branch exists, before any
- * switch. Resolves to whether the branch was created.
+ * Creates a branch, then switches the workspace to it if asked; a repository explored without a workspace only creates
+ * it. Two operations in a row refresh once, after the last (ARCHITECTURE.md "Server budget"): creating refreshes nothing
+ * by itself, as a switch refreshes every view when it's done; only when the workspace stays do the branch lists
+ * refresh. `onCreated` runs once the branch exists, before any switch. Resolves to whether the branch was created.
  */
 export async function createBranchAndSwitch(
-  workspacePath: string,
+  place: Place,
   request: CreateBranchRequest,
   switchTo: SwitchToNewBranch,
   onCreated: () => void = () => undefined,
 ): Promise<boolean> {
   try {
-    await api.branches.create(workspacePath, request);
+    await api.branches.create(place, request);
   } catch (error) {
     toast.error("Couldn't create the branch", error);
     return false;
   }
   onCreated();
 
-  const switching = switchTo.requested && !switchTo.blockedByMerge;
+  const workspacePath = workspacePathOf(place);
+  const switching = workspacePath !== null && switchTo.requested && !switchTo.blockedByMerge;
   if (switching && (await switchToBranch(workspacePath, request.name, switchTo.pendingChanges))) return true;
-  void invalidateWorkspace(workspacePath, isAffectedByBranchList);
-  if (switchTo.requested) announceNotSwitched(workspacePath, request.name, switchTo.workspaceOn);
+  void invalidatePlace(place, isAffectedByBranchList);
+  if (workspacePath !== null && switchTo.requested) announceNotSwitched(workspacePath, request.name, switchTo.workspaceOn);
   else toast.success(`Created ${branchLabel(request.name)}`);
   return true;
 }
@@ -74,7 +76,7 @@ function announceNotSwitched(workspacePath: string, branch: string, workspaceOn:
   });
 }
 
-export async function renameBranch(workspacePath: string, branch: Pick<Branch, 'name'>): Promise<void> {
+export async function renameBranch(place: Place, branch: Pick<Branch, 'name'>): Promise<void> {
   const newName = await prompt({
     title: 'Rename branch',
     label: 'New name',
@@ -84,15 +86,15 @@ export async function renameBranch(workspacePath: string, branch: Pick<Branch, '
     validate: validateBranchName,
   });
   if (!newName) return;
-  await runAction(workspacePath, "Couldn't rename the branch", () => api.branches.rename(workspacePath, branch.name, newName));
+  await runAction(place, "Couldn't rename the branch", () => api.branches.rename(place, branch.name, newName));
 }
 
 /** Resolves to whether it saved, so a comment that couldn't be saved stays in its editor. */
-export function saveBranchComment(workspacePath: string, branch: Pick<Branch, 'name'>, comment: string): Promise<boolean> {
-  return runVoidAction(workspacePath, "Couldn't update the comment", () => api.branches.editComment(workspacePath, branch.name, comment), isAffectedByBranchList);
+export function saveBranchComment(place: Place, branch: Pick<Branch, 'name'>, comment: string): Promise<boolean> {
+  return runVoidAction(place, "Couldn't update the comment", () => api.branches.editComment(place, branch.name, comment), isAffectedByBranchList);
 }
 
-export async function deleteBranches(workspacePath: string, branches: Pick<Branch, 'name'>[]): Promise<void> {
+export async function deleteBranches(place: Place, branches: Pick<Branch, 'name'>[]): Promise<void> {
   const confirmed = await confirm({
     title: branches.length === 1 ? `Delete ${branches[0]!.name}?` : `Delete ${branches.length} branches?`,
     message: 'Only empty branches can be deleted. This cannot be undone.',
@@ -101,18 +103,18 @@ export async function deleteBranches(workspacePath: string, branches: Pick<Branc
   });
   if (!confirmed) return;
 
-  const deleted = await runVoidAction(workspacePath, "Couldn't delete the branch", () =>
-    api.branches.delete(workspacePath, branches.map((branch) => branch.name)),
+  const deleted = await runVoidAction(place, "Couldn't delete the branch", () =>
+    api.branches.delete(place, branches.map((branch) => branch.name)),
     isAffectedByBranchList,
   );
   if (deleted) toast.success(branches.length === 1 ? `Deleted ${branchLabel(branches[0]!.name)}` : `Deleted ${branches.length} branches`);
 }
 
-export function setBranchesHidden(workspacePath: string, branches: Pick<Branch, 'name'>[], hidden: boolean): Promise<void | undefined> {
+export function setBranchesHidden(place: Place, branches: Pick<Branch, 'name'>[], hidden: boolean): Promise<void | undefined> {
   return runAction(
-    workspacePath,
+    place,
     `Couldn't ${hidden ? 'hide' : 'unhide'} the branch`,
-    () => api.branches.setHidden(workspacePath, branches.map((branch) => branch.name), hidden),
+    () => api.branches.setHidden(place, branches.map((branch) => branch.name), hidden),
     isAffectedByBranchList,
   );
 }

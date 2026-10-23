@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CmShellSession, shellCommandTimeoutMs } from './CmShellSession';
 import { FIELD_SEPARATOR, RecordReader, RECORD_SEPARATOR } from './formatRecords';
 import { OutputBuffer } from './OutputBuffer';
+import { textLimitOf } from './outputLimit';
 import { formatOutput } from './testing/cmOutput';
 
 // Every session runs the fake below, but one test's, whose output comes in step with fake timers.
@@ -76,16 +77,26 @@ describe('CmShellSession', () => {
     await expect(next).resolves.toEqual({ output: 'restarted', exitCode: 0 });
   });
 
-  it('fails a command whose output passes the limit, and runs the next ones on a new process', async () => {
-    // A cm shell answer is read as one string, and V8 refuses strings past 512 MB: past the limit it is no answer.
-    session = new CmShellSession(process.execPath, fakeCmFolder, { maxOutputLength: 1000 });
-    const withinLimit = session.run(['print', '900']);
-    const tooLarge = session.run(['print', '5000']);
+  it('fails an answer whose output passes its limit, and runs the next ones on a new process', async () => {
+    session = new CmShellSession(process.execPath, fakeCmFolder);
+    const answer = { text: textLimitOf('answer', 1000) };
+    const withinLimit = session.run(['print', '900'], answer);
+    const tooLarge = session.run(['print', '5000'], answer);
     const next = session.run(['echo', 'recovered']);
 
     await expect(withinLimit).resolves.toMatchObject({ exitCode: 0 });
     await expect(tooLarge).rejects.toThrow('printed more than 1000 characters');
     await expect(next).resolves.toEqual({ output: 'recovered', exitCode: 0 });
+  });
+
+  it("keeps only the ends of an operation's output past its limit, and lets it finish", async () => {
+    session = new CmShellSession(process.execPath, fakeCmFolder);
+
+    const { output, exitCode } = await session.run(['print', '5000'], { text: textLimitOf('operation', 1000) });
+
+    expect(exitCode).toBe(0);
+    expect(output).toContain('more characters');
+    expect(output.length).toBeLessThan(1100);
   });
 
   it('fails the running command when reading its output throws, instead of crashing the app, and runs the next on a new process', async () => {
@@ -146,13 +157,14 @@ describe('CmShellSession', () => {
 
 describe('CmShellSession reading records', () => {
   const asFields = () => new RecordReader<string[]>((fields) => fields);
+  const streamed = (reader: RecordReader<unknown>) => ({ stream: reader });
   const tasks = (count: number) => Array.from({ length: count }, (_, id) => [String(id), `/main/tarea-ñ-${id}`]);
 
   it.each(['lf', 'crlf'])('reads the records a command prints, with %s line breaks, and leaves nothing as its output', async (lineBreaks) => {
     session = new CmShellSession(process.execPath, fakeCmFolder);
     const records = asFields();
 
-    const result = await session.run(['records', '3', lineBreaks], records);
+    const result = await session.run(['records', '3', lineBreaks], streamed(records));
 
     expect(result).toEqual({ output: '', exitCode: 0 });
     expect(records.finish()).toEqual(tasks(3));
@@ -162,7 +174,7 @@ describe('CmShellSession reading records', () => {
     session = new CmShellSession(process.execPath, fakeCmFolder);
     const records = asFields();
 
-    const [result, next] = await Promise.all([session.run(['records', '20000'], records), session.run(['echo', 'in-step'])]);
+    const [result, next] = await Promise.all([session.run(['records', '20000'], streamed(records)), session.run(['echo', 'in-step'])]);
 
     expect(result.exitCode).toBe(0);
     expect(records.finish()).toEqual(tasks(20_000));
@@ -173,7 +185,7 @@ describe('CmShellSession reading records', () => {
     session = new CmShellSession(process.execPath, fakeCmFolder);
     const records = asFields();
 
-    await expect(session.run(['fail'], records)).resolves.toEqual({ output: 'Something went wrong', exitCode: 1 });
+    await expect(session.run(['fail'], streamed(records))).resolves.toEqual({ output: 'Something went wrong', exitCode: 1 });
     expect(records.count).toBe(0);
   });
 
@@ -182,7 +194,7 @@ describe('CmShellSession reading records', () => {
     vi.mocked(spawn).mockReturnValueOnce(shell.process);
     session = new CmShellSession('cm', '/wk');
     const records = asFields();
-    const finished = session.run(['find', 'branch'], records);
+    const finished = session.run(['find', 'branch'], streamed(records));
     const printed = `${formatOutput(['1', '/main/tarea-ñ'], ['2', '"quoted"'])}CommandResult 0\n`;
     const output = Buffer.from(printed.replaceAll('\n', '\r\n'));
     // Inside the ñ, after the first record's separator, between CR and LF, inside the quotes, inside the result line.
@@ -204,7 +216,7 @@ describe('CmShellSession reading records', () => {
     vi.mocked(spawn).mockReturnValueOnce(shell.process);
     session = new CmShellSession('cm', '/wk');
     const records = asFields();
-    const finished = session.run(['find', 'branch'], records);
+    const finished = session.run(['find', 'branch'], streamed(records));
     const output = Buffer.from(`${formatOutput(['1', '/main/tarea-ñ'])}CommandResult 0\n`);
     const insideTheÑ = output.indexOf('ñ') + 1;
 
@@ -220,7 +232,7 @@ describe('CmShellSession reading records', () => {
     session = new CmShellSession(process.execPath, fakeCmFolder);
     const records = asFields();
 
-    await expect(session.run(['stderrfail'], records)).resolves.toEqual({ output: 'Error: The branch does not exist.\n', exitCode: 1 });
+    await expect(session.run(['stderrfail'], streamed(records))).resolves.toEqual({ output: 'Error: The branch does not exist.\n', exitCode: 1 });
     expect(records.count).toBe(0);
   });
 
@@ -234,7 +246,7 @@ describe('CmShellSession reading records', () => {
 
     shell.print('stray output\n');
     const records = asFields();
-    const next = session.run(['find', 'branch'], records);
+    const next = session.run(['find', 'branch'], streamed(records));
     shell.print(`${formatOutput(['1', '/main'])}CommandResult 0\n`);
 
     await expect(next).resolves.toEqual({ output: '', exitCode: 0 });
@@ -244,13 +256,14 @@ describe('CmShellSession reading records', () => {
   it('counts no output that comes while no command runs toward any limit', async () => {
     const shell = printedShellProcess();
     vi.mocked(spawn).mockReturnValueOnce(shell.process);
-    session = new CmShellSession('cm', '/wk', { maxOutputLength: 100 });
-    const first = session.run(['status']);
+    session = new CmShellSession('cm', '/wk');
+    const answer = { text: textLimitOf('answer', 100) };
+    const first = session.run(['status'], answer);
     shell.print('first\nCommandResult 0\n');
     await first;
 
     shell.print('x'.repeat(1000));
-    const next = session.run(['status']);
+    const next = session.run(['status'], answer);
     shell.print('next\nCommandResult 0\n');
 
     await expect(next).resolves.toEqual({ output: 'next', exitCode: 0 });
@@ -261,7 +274,7 @@ describe('CmShellSession reading records', () => {
     vi.mocked(spawn).mockReturnValueOnce(shell.process);
     session = new CmShellSession('cm', '/wk');
     const records = asFields();
-    const finished = session.run(['find', 'changeset'], records);
+    const finished = session.run(['find', 'changeset'], streamed(records));
 
     // A comment quoting a `cm shell` session ends a chunk; the rest of the record is already waiting in the pipe.
     shell.print(`1${FIELD_SEPARATOR}>cm shell\nCommandResult 0\n`);
@@ -271,21 +284,12 @@ describe('CmShellSession reading records', () => {
     expect(records.finish()).toEqual([['1', '>cm shell\nCommandResult 0\nstill the comment']]);
   });
 
-  it('fails a command whose records pass the limit, counted in bytes, and runs the next ones on a new process', async () => {
-    session = new CmShellSession(process.execPath, fakeCmFolder, { maxOutputLength: 1000 });
-    const tooLarge = session.run(['records', '200'], asFields());
-    const next = session.run(['echo', 'recovered']);
-
-    await expect(tooLarge).rejects.toThrow('printed more than 1000 bytes');
-    await expect(next).resolves.toEqual({ output: 'recovered', exitCode: 0 });
-  });
-
   it('fails a command whose records its caller cannot read, and runs the next ones on a new process', async () => {
     session = new CmShellSession(process.execPath, fakeCmFolder);
     const unreadable = new RecordReader(() => {
       throw new Error('Not a record');
     });
-    const failed = session.run(['records', '3'], unreadable);
+    const failed = session.run(['records', '3'], streamed(unreadable));
     const next = session.run(['echo', 'recovered']);
 
     await expect(failed).rejects.toThrow('Not a record');
@@ -294,7 +298,7 @@ describe('CmShellSession reading records', () => {
 
   it('fails a command stuck on a prompt while its records were expected', async () => {
     session = new CmShellSession(process.execPath, fakeCmFolder, { promptStallMs: 50 });
-    await expect(session.run(['prompt'], asFields())).rejects.toThrow('cm is waiting for input ("Select your system [0-1]:")');
+    await expect(session.run(['prompt'], streamed(asFields()))).rejects.toThrow('cm is waiting for input ("Select your system [0-1]:")');
   });
 });
 

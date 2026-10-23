@@ -4,7 +4,7 @@
 // the repository holding its revision (`{repspec}`), and its path is the workspace's (`{wkpath}`).
 
 import type { RevisionRef } from '@shared/domain/revision';
-import { parseRecords, recordFormat } from './formatRecords';
+import { recordFormat, type ReadRecord } from './formatRecords';
 
 /** An item of the tree, as listed. */
 export interface ListedItem {
@@ -32,21 +32,17 @@ export function treeListingArgs(folder: string, point: string, recursive: boolea
   return ['ls', `/${folder}`, `--tree=${point}`, ...(recursive ? ['-R'] : []), `--format=${recordFormat(FIELDS)}`];
 }
 
-/** The items listed, the folder itself included. */
-export function parseTreeListing(output: string): ListedItem[] {
-  return parseRecords(output).flatMap(([wkPath = '', type = '', size, revisionId, hash = '', repository = '', changeset, parentRevisionId]) => {
-    const revision = Number(revisionId);
-    if (!Number.isInteger(revision) || revision < 0) return [];
-    return [
-      {
-        path: wkPath.replaceAll('\\', '/').replace(/^\/+/, ''),
-        isFolder: type === 'dir' || type === 'xlink',
-        size: Number(size) || 0,
-        revision: { revisionId: revision, repository: repository.replace(/^rep:/, '') },
-        hash,
-        changeset: Number(changeset),
-        parentRevisionId: Number(parentRevisionId),
-      },
-    ];
-  });
-}
+/** One item listed, the folder itself included, read as it arrives (`queryRecords`); none without a revision. */
+export const readListedItem: ReadRecord<ListedItem> = ([wkPath = '', type = '', size, revisionId, hash = '', repository = '', changeset, parentRevisionId]) => {
+  const revision = Number(revisionId);
+  if (!Number.isInteger(revision) || revision < 0) return undefined;
+  return {
+    path: wkPath.replaceAll('\\', '/').replace(/^\/+/, ''),
+    isFolder: type === 'dir' || type === 'xlink',
+    size: Number(size) || 0,
+    revision: { revisionId: revision, repository: repository.replace(/^rep:/, '') },
+    hash,
+    changeset: Number(changeset),
+    parentRevisionId: Number(parentRevisionId),
+  };
+};

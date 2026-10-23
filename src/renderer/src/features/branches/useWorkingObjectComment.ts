@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { workspacePlace } from '@shared/domain/place';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -15,7 +16,7 @@ export function useWorkingObjectComment(workspace: WorkspaceInfo | undefined) {
   const selector = workspace?.selector;
   const branchName = branchWorkedOn(selector);
   const branchComment = useQuery({
-    ...branchQuery(workspace?.path ?? '', branchName ?? ''),
+    ...branchQuery(workspacePlace(workspace?.path ?? ''), branchName ?? ''),
     select: (branch) => branch?.comment ?? '',
     enabled: branchName !== undefined,
     ...SLOW_CHANGING_QUERY,

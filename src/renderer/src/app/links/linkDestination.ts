@@ -8,17 +8,17 @@ export interface WorkspaceOnRepository {
 }
 
 /**
- * Which workspace a repository link opens in (docs/features/deep-links.md, "Opening a link"):
- * - `here`: this window's workspace is on the repository;
- * - `workspace`: another window's, or the only one on it;
+ * Where a repository link opens (docs/features/deep-links.md, "Opening a link"):
+ * - `here`: this window's place is on the repository, a workspace or the repository explored without one;
+ * - `workspace`: another window's workspace, or the only one on it;
  * - `pick`: the user picks one of several, the most recently used first;
- * - `none`: no workspace is on the repository yet.
+ * - `explore`: no workspace is on the repository yet: it is explored without one (`exploreRepository`).
  */
-export type LinkDestination = { kind: 'here' } | { kind: 'workspace'; path: string } | { kind: 'pick'; paths: string[] } | { kind: 'none' };
+export type LinkDestination = { kind: 'here' } | { kind: 'workspace'; path: string } | { kind: 'pick'; paths: string[] } | { kind: 'explore' };
 
 export interface DestinationContext {
-  /** This window's workspace and its repository; null on the home screen. */
-  current: WorkspaceOnRepository | null;
+  /** The repository of this window's place (a workspace's, or one explored without it); null on the home screen. */
+  current: Pick<WorkspaceOnRepository, 'repository'> | null;
   workspaces: readonly WorkspaceOnRepository[];
   /** The workspaces the windows show, the last focused one's first (`windows.shownWorkspaces`). */
   shown: readonly string[];
@@ -27,13 +27,13 @@ export interface DestinationContext {
 }
 
 export function linkDestination(link: { server: string; repository: string }, { current, workspaces, shown, recent }: DestinationContext): LinkDestination {
-  const isOnRepository = (workspace: WorkspaceOnRepository): boolean => workspace.repository !== null && isRepository(workspace.repository, link);
+  const isOnRepository = (workspace: Pick<WorkspaceOnRepository, 'repository'>): boolean => workspace.repository !== null && isRepository(workspace.repository, link);
   if (current && isOnRepository(current)) return { kind: 'here' };
   const onRepository = workspaces.filter(isOnRepository).map((workspace) => workspace.path);
   const shownOne = shown.find((path) => onRepository.includes(path));
   if (shownOne) return { kind: 'workspace', path: shownOne };
   if (onRepository.length === 1) return { kind: 'workspace', path: onRepository[0]! };
-  if (onRepository.length === 0) return { kind: 'none' };
+  if (onRepository.length === 0) return { kind: 'explore' };
   return { kind: 'pick', paths: byRecentUse(onRepository, recent) };
 }
 

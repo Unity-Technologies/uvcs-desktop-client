@@ -1,7 +1,8 @@
 import { spawn } from 'node:child_process';
 import type { CmResult } from './CmResult';
-import type { RecordReader } from './formatRecords';
-import { CmOutputTooLargeError, MAX_OUTPUT_LENGTH } from './outputLimit';
+import { OutputBuffer } from './OutputBuffer';
+import { ANSWER_TEXT, CmOutputTooLargeError, MAX_TEXT_OUTPUT_LENGTH } from './outputLimit';
+import type { OutputReading, StreamReader } from './outputReading';
 
 export interface CmProcessOptions {
   cwd?: string;
@@ -12,16 +13,12 @@ export interface CmProcessOptions {
   /** Written to the command's stdin, which is then closed: what it reads, and nothing to answer a prompt with. */
   input?: string;
   /**
-   * The most the command may print (`MAX_OUTPUT_LENGTH`): past it, it is killed and fails. Characters of text; with
-   * `records`, bytes of stdout plus characters of stderr (its errors, a few lines), as the message says bytes.
+   * How its output is read (an answer's text by default): kept as text within its limit, an answer past it killed and
+   * failed; or its stdout streamed into a reader as it arrives (`CmClient.queryRecords`), never stopped for its size,
+   * the result's output then what it wrote to stderr and what followed its last item (`takeRest`), with no lines to
+   * report.
    */
-  maxOutputLength?: number;
-  /**
-   * Where the `--format` records the command prints on stdout go, read as they arrive (`CmClient.queryRecords`); the
-   * result's output is then what it wrote to stderr and what followed its last record (`takeRest`). Its output has no
-   * lines to report.
-   */
-  records?: RecordReader<unknown>;
+  reading?: OutputReading;
 }
 
 /**
@@ -39,39 +36,34 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
     });
     // A command that exits without reading its input closes the pipe first.
     child.stdin.on('error', () => undefined).end(options.input);
-    const { maxOutputLength = MAX_OUTPUT_LENGTH, records } = options;
-    const chunks: string[] = [];
-    let length = 0;
+    const { reading = { text: ANSWER_TEXT } } = options;
+    const stream = 'stream' in reading ? reading.stream : undefined;
+    // A stream's stderr is its errors, a few lines: kept as an operation's text would be, by its ends past the limit.
+    const text = 'text' in reading ? reading.text : { maxLength: MAX_TEXT_OUTPUT_LENGTH, past: 'keepEnds' as const };
+    const kept = new OutputBuffer(0, text.past === 'keepEnds' ? text.maxLength : undefined);
     let stopped = false;
     let pendingLine = '';
 
     const stop = (error: Error): void => {
       stopped = true;
-      chunks.length = 0;
+      kept.clear();
       child.kill('SIGKILL');
       reject(error);
     };
-    /** Whether the command may print `size` more: past the limit it is stopped. */
-    const admits = (size: number): boolean => {
-      if (stopped) return false;
-      length += size;
-      if (length <= maxOutputLength) return true;
-      stop(new CmOutputTooLargeError(maxOutputLength, records ? 'bytes' : 'characters'));
-      return false;
-    };
 
-    const collect = (text: string): void => {
-      if (!admits(text.length)) return;
-      chunks.push(text);
+    const collect = (chunk: string): void => {
+      if (stopped) return;
+      kept.append(chunk);
+      if (text.past === 'stop' && kept.length > text.maxLength) return stop(new CmOutputTooLargeError(text.maxLength));
       if (!options.onOutputLine) return;
 
       // A progress line rewritten in place (`\r`) counts as a line of its own.
-      const lines = (pendingLine + text).split(/\r\n|\r|\n/);
+      const lines = (pendingLine + chunk).split(/\r\n|\r|\n/);
       pendingLine = lines.pop() ?? '';
       lines.forEach(options.onOutputLine);
     };
-    const collectRecords = (reader: RecordReader<unknown>) => (chunk: Buffer): void => {
-      if (!admits(chunk.length)) return;
+    const readStream = (reader: StreamReader) => (chunk: Buffer): void => {
+      if (stopped) return;
       try {
         reader.read(chunk);
       } catch (error) {
@@ -80,11 +72,11 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
       }
     };
 
-    if (records) {
-      // Bytes: the reader finds records before decoding, so a character split between two chunks stays whole. Only
+    if (stream) {
+      // Bytes: the reader finds its items before decoding, so a character split between two chunks stays whole. Only
       // stdout's: what `cm` writes to stderr (its errors) is text of its own, which a write in the middle of a record
       // would otherwise land in.
-      child.stdout.on('data', collectRecords(records));
+      child.stdout.on('data', readStream(stream));
       child.stderr.setEncoding('utf8').on('data', collect);
     } else {
       // Decoded by the streams, so a character split between two chunks stays whole.
@@ -96,8 +88,8 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
       if (stopped) return;
       if (pendingLine) options.onOutputLine?.(pendingLine);
       // Windows ends lines with CRLF; parsers get LF, as from a `cm shell`.
-      const text = chunks.join('').replaceAll('\r\n', '\n');
-      const output = records ? text + records.takeRest() : text;
+      const printed = kept.textBefore(kept.length).replaceAll('\r\n', '\n');
+      const output = stream ? printed + stream.takeRest() : printed;
       resolve({ output, exitCode: code ?? -1 });
     });
   });

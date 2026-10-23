@@ -1,8 +1,10 @@
 import type { AttributesApi } from '@shared/api/attributes';
 import type { AttributeType, AttributeValue } from '@shared/domain/attribute';
+import type { Place } from '@shared/domain/place';
 import { FOUND_ATTRIBUTE_TYPES, FOUND_ATTRIBUTE_VALUES } from '../cm/attributeRecords';
-import { equalsCondition, findQueryArgs } from '../cm/findQuery';
-import { parseRecords, readRecords, recordFormat } from '../cm/formatRecords';
+import { cmPlace } from '../cm/cmPlace';
+import { equalsCondition, findQueryArgs, queryOn } from '../cm/findQuery';
+import { layoutReader, recordFormat } from '../cm/formatRecords';
 import { withTempFile } from '../files/tempFile';
 import type { ServiceContext } from './ServiceContext';
 
@@ -10,49 +12,56 @@ import type { ServiceContext } from './ServiceContext';
 const USED_VALUES_SAMPLE = 500;
 
 export function createAttributesService({ cm }: ServiceContext): AttributesApi {
-  async function listTypes(workspacePath: string): Promise<AttributeType[]> {
-    const output = await cm.query(findQueryArgs(FOUND_ATTRIBUTE_TYPES, ''), { cwd: workspacePath });
-    return readRecords(FOUND_ATTRIBUTE_TYPES, output);
+  function listTypes(place: Place): Promise<AttributeType[]> {
+    const at = cmPlace(place);
+    return cm.queryRecords(findQueryArgs(FOUND_ATTRIBUTE_TYPES, '', at.repository), layoutReader(FOUND_ATTRIBUTE_TYPES), at.options);
   }
 
-  async function createType(workspacePath: string, name: string, comment: string): Promise<void> {
-    await cm.query(['attribute', 'create', name], { cwd: workspacePath });
-    if (comment) await editTypeComment(workspacePath, name, comment);
+  async function createType(place: Place, name: string, comment: string): Promise<void> {
+    const at = cmPlace(place);
+    await cm.query(['attribute', 'create', at.newObject('att', name)], at.options);
+    if (comment) await editTypeComment(place, name, comment);
   }
 
-  async function renameType(workspacePath: string, name: string, newName: string): Promise<void> {
-    await cm.query(['attribute', 'rename', `att:${name}`, newName], { cwd: workspacePath });
+  async function renameType(place: Place, name: string, newName: string): Promise<void> {
+    const at = cmPlace(place);
+    await cm.query(['attribute', 'rename', at.spec(`att:${name}`), newName], at.options);
   }
 
-  async function editTypeComment(workspacePath: string, name: string, comment: string): Promise<void> {
-    await cm.query(['attribute', 'edit', `att:${name}`, comment], { cwd: workspacePath });
+  async function editTypeComment(place: Place, name: string, comment: string): Promise<void> {
+    const at = cmPlace(place);
+    await cm.query(['attribute', 'edit', at.spec(`att:${name}`), comment], at.options);
   }
 
-  async function deleteType(workspacePath: string, names: string[]): Promise<void> {
-    await cm.query(['attribute', 'delete', ...names.map((name) => `att:${name}`)], { cwd: workspacePath });
+  async function deleteType(place: Place, names: string[]): Promise<void> {
+    const at = cmPlace(place);
+    await cm.query(['attribute', 'delete', ...names.map((name) => at.spec(`att:${name}`))], at.options);
   }
 
-  async function valuesOf(workspacePath: string, objectSpec: string): Promise<AttributeValue[]> {
+  /** `objectSpec` as the object's lists name it (`br:/main`): the query names the repository, never the spec. */
+  function valuesOf(place: Place, objectSpec: string): Promise<AttributeValue[]> {
+    const at = cmPlace(place);
     const query = `where ${equalsCondition('srcobj', objectSpec)}`;
-    const output = await cm.query(findQueryArgs(FOUND_ATTRIBUTE_VALUES, query), { cwd: workspacePath });
-    return readRecords(FOUND_ATTRIBUTE_VALUES, output);
+    return cm.queryRecords(findQueryArgs(FOUND_ATTRIBUTE_VALUES, query, at.repository), layoutReader(FOUND_ATTRIBUTE_VALUES), at.options);
   }
 
-  async function usedValues(workspacePath: string, attribute: string): Promise<string[]> {
-    const query = `where ${equalsCondition('type', attribute)} limit ${USED_VALUES_SAMPLE}`;
-    const output = await cm.query(['find', 'attribute', query, `--format=${recordFormat(['value'])}`, '--nototal'], { cwd: workspacePath });
-    return parseRecords(output).map(([value = '']) => value.trim());
+  function usedValues(place: Place, attribute: string): Promise<string[]> {
+    const at = cmPlace(place);
+    const query = queryOn(`where ${equalsCondition('type', attribute)} limit ${USED_VALUES_SAMPLE}`, at.repository);
+    return cm.queryRecords(['find', 'attribute', query, `--format=${recordFormat(['value'])}`, '--nototal'], ([value = '']) => value.trim(), at.options);
   }
 
-  function setValue(workspacePath: string, objectSpec: string, attribute: string, value: string): Promise<void> {
+  function setValue(place: Place, objectSpec: string, attribute: string, value: string): Promise<void> {
+    const at = cmPlace(place);
     // Values may span several lines (e.g. Markdown), so they always travel through a file.
     return withTempFile(value, async (valueFile) => {
-      await cm.query(['attribute', 'set', `att:${attribute}`, objectSpec, `--valuecontents=${valueFile}`], { cwd: workspacePath });
+      await cm.query(['attribute', 'set', at.spec(`att:${attribute}`), at.spec(objectSpec), `--valuecontents=${valueFile}`], at.options);
     });
   }
 
-  async function unsetValue(workspacePath: string, objectSpec: string, attribute: string): Promise<void> {
-    await cm.query(['attribute', 'unset', `att:${attribute}`, objectSpec], { cwd: workspacePath });
+  async function unsetValue(place: Place, objectSpec: string, attribute: string): Promise<void> {
+    const at = cmPlace(place);
+    await cm.query(['attribute', 'unset', at.spec(`att:${attribute}`), at.spec(objectSpec)], at.options);
   }
 
   return { listTypes, createType, renameType, editTypeComment, deleteType, valuesOf, usedValues, setValue, unsetValue };

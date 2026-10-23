@@ -47,3 +47,12 @@ export function sendEventToCaller<Name extends UvcsEventName>(name: Name, payloa
   if (caller) sendEventTo(caller, name, payload);
   else sendEvent(name, payload);
 }
+
+/**
+ * Sends events to the window whose API call is running now, however long after: what a call starts may be carried on
+ * by work another call started (a search joining another window's listing), whose async context names that window.
+ */
+export function sendEventsToCaller(): <Name extends UvcsEventName>(name: Name, payload: UvcsEvents[Name]) => void {
+  const caller = currentCaller();
+  return (name, payload) => (caller ? sendEventTo(caller, name, payload) : sendEvent(name, payload));
+}

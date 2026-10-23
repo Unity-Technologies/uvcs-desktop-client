@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { FIELD_SEPARATOR, layoutReader, parseRecords, readRecords, RecordReader, recordFormat, RECORD_SEPARATOR } from './formatRecords';
-import { formatOutput } from './testing/cmOutput';
+import { FIELD_SEPARATOR, layoutReader, RecordReader, recordFormat, RECORD_SEPARATOR } from './formatRecords';
+import { formatOutput, recordsIn } from './testing/cmOutput';
 import { countCharactersRead } from '@shared/testing/countCharactersRead';
 import { countBytesRead } from './testing/countBytesRead';
 
@@ -14,36 +14,36 @@ describe('recordFormat', () => {
   });
 });
 
-describe('readRecords', () => {
+describe('layoutReader', () => {
   const NAMED = { fields: ['id', 'name'], read: (value: (field: string) => string) => (value('name') === '.' ? undefined : `${value('id')}:${value('name')}`) };
 
   it('reads each record by field name, and leaves out those its layout reads as nothing', () => {
-    expect(readRecords(NAMED, formatOutput(['1', '.'], ['2', 'a'], ['3']))).toEqual(['2:a', '3:']);
+    expect(recordsIn(formatOutput(['1', '.'], ['2', 'a'], ['3']), NAMED)).toEqual(['2:a', '3:']);
     expect(layoutReader(NAMED)(['4', 'b'])).toBe('4:b');
   });
 });
 
-describe('parseRecords', () => {
+describe('reading records', () => {
   it('reads each record as its fields', () => {
-    expect(parseRecords(formatOutput([1, '/main', 'jane'], [2, '/main/task', 'joe']))).toEqual([
+    expect(recordsIn(formatOutput([1, '/main', 'jane'], [2, '/main/task', 'joe']))).toEqual([
       ['1', '/main', 'jane'],
       ['2', '/main/task', 'joe'],
     ]);
   });
 
   it('reads nothing from an empty output', () => {
-    expect(parseRecords('')).toEqual([]);
-    expect(parseRecords('\n')).toEqual([]);
+    expect(recordsIn('')).toEqual([]);
+    expect(recordsIn('\n')).toEqual([]);
   });
 
   it('keeps empty fields, line breaks in a field and characters of any script', () => {
     const output = formatOutput(['', 'Multi\nline', 'Ñandú 日本語 🎮', '']);
-    expect(parseRecords(output)).toEqual([['', 'Multi\nline', 'Ñandú 日本語 🎮', '']]);
+    expect(recordsIn(output)).toEqual([['', 'Multi\nline', 'Ñandú 日本語 🎮', '']]);
   });
 
   it("reads Windows line breaks as the app's, in a field and after each record", () => {
     const output = `1${FIELD_SEPARATOR}first\r\nsecond${RECORD_SEPARATOR}\r\n2${FIELD_SEPARATOR}x\r${RECORD_SEPARATOR}\r\n`;
-    expect(parseRecords(output)).toEqual([
+    expect(recordsIn(output)).toEqual([
       ['1', 'first\nsecond'],
       ['2', 'x\r'],
     ]);
@@ -51,36 +51,18 @@ describe('parseRecords', () => {
 
   // `cm find`, `cm ls` and `cm annotate` print values as they are: a comment or a line of code between quotes is one.
   it('keeps the quotes a value starts and ends with', () => {
-    expect(parseRecords(formatOutput(['"WIP"', '"', 'in "the" middle']))).toEqual([['"WIP"', '"', 'in "the" middle']]);
+    expect(recordsIn(formatOutput(['"WIP"', '"', 'in "the" middle']))).toEqual([['"WIP"', '"', 'in "the" middle']]);
   });
 
   // A comment written on Windows keeps its CRLF in the repository; a `\r` left in it would make a one-line comment
   // read as two lines and keep a title prefilled from it out of the pooled `cm shell`.
   it('turns CRLF into LF inside a value', () => {
-    expect(parseRecords(formatOutput(['1', 'Fix crash\r\nin the HUD\r\n']))).toEqual([['1', 'Fix crash\nin the HUD\n']]);
-  });
-
-  it('reads text after the last record as one more record', () => {
-    expect(parseRecords(`${formatOutput(['1', 'a'])}2${FIELD_SEPARATOR}b`)).toEqual([
-      ['1', 'a'],
-      ['2', 'b'],
-    ]);
-  });
-
-  it('reads a big output in the string itself, in one pass, never copying it into bytes', () => {
-    const output = formatOutput(...Array.from({ length: 20_000 }, (_, id) => [id, `/main/task${id}`, '2026-09-25T10:11:12.0000000+02:00', `comment ${id}`]));
-
-    const { result, charactersRead } = countCharactersRead(() => countBytesRead(() => parseRecords(output)));
-
-    expect(result.bytesRead).toBe(0);
-    // About four reads of each character: the record separator, the carriage return, the field separators, the slice.
-    expect(charactersRead / output.length).toBeLessThan(6);
-    expect(result.result).toHaveLength(20_000);
+    expect(recordsIn(formatOutput(['1', 'Fix crash\r\nin the HUD\r\n']))).toEqual([['1', 'Fix crash\nin the HUD\n']]);
   });
 
   it('builds what its caller reads of each record, leaving out the records it skips', () => {
     const output = formatOutput(['1', 'a'], ['2', ''], ['3', 'c']);
-    expect(parseRecords(output, ([id = '', name = '']) => (name ? { id: Number(id), name } : undefined))).toEqual([
+    expect(recordsIn(output, ([id = '', name = '']) => (name ? { id: Number(id), name } : undefined))).toEqual([
       { id: 1, name: 'a' },
       { id: 3, name: 'c' },
     ]);

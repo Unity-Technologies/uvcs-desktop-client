@@ -1,5 +1,6 @@
 import { defaultRangeExtractor, useVirtualizer } from '@tanstack/react-virtual';
 import { forwardRef, useCallback, useImperativeHandle, useLayoutEffect, useRef, useState, type FocusEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { nameInProject } from '@shared/domain/organizations';
 import type { RepositorySummary } from '@shared/domain/repository';
 import { keepRendered } from '../../lib/keepRendered';
 import { HighlightQuery } from '../../ui/Highlight';
@@ -23,6 +24,8 @@ interface RepositoryListProps {
   rows: RepositoryListRow[];
   /** The filter the repositories' names are marked by. */
   query: string;
+  /** The Unity project shown, whose repositories go by their own names; none for all projects. */
+  project: string | null;
   /** Above the rows: the skeleton while loading, the error, the empty state. */
   placeholder?: ReactNode;
   onToggle: (repository: RepositorySummary) => void;
@@ -38,7 +41,7 @@ interface RepositoryListProps {
  * the row holding the focus stays rendered while scrolled away (`keepRendered`).
  */
 export const RepositoryList = forwardRef<RepositoryListHandle, RepositoryListProps>(function RepositoryList(
-  { rows, query, placeholder, onToggle, onOpen, onCreateWorkspace, onLeaveTop },
+  { rows, query, project, placeholder, onToggle, onOpen, onCreateWorkspace, onLeaveTop },
   ref,
 ) {
   const listRef = useRef<HTMLDivElement>(null);
@@ -135,6 +138,7 @@ export const RepositoryList = forwardRef<RepositoryListHandle, RepositoryListPro
         return (
           <RepositoryRow
             repository={row.repository}
+            project={project}
             workspaces={row.workspaces}
             expanded={row.expanded}
             onToggle={() => onToggle(row.repository)}
@@ -155,7 +159,7 @@ export const RepositoryList = forwardRef<RepositoryListHandle, RepositoryListPro
         return (
           <div className={styles.nested}>
             <button className={styles.nestedAction} onClick={() => onCreateWorkspace(row.repository)}>
-              + New workspace for {row.repository.name}
+              + New workspace for {nameInProject(row.repository.name, row.repository.project)}
             </button>
           </div>
         );

@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { MergeRequest } from '@shared/domain/merge';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
@@ -24,9 +25,9 @@ export async function finishMergedTask(
 ): Promise<void> {
   if (review) {
     await runAction(
-      workspacePath,
+      workspacePlace(workspacePath),
       "Couldn't mark the code review as reviewed",
-      () => api.codeReviews.update(workspacePath, review.id, { status: 'Reviewed' }),
+      () => api.codeReviews.update(workspacePlace(workspacePath), review.id, { status: 'Reviewed' }),
       isAffectedByCodeReviews,
     );
   }
@@ -39,5 +40,5 @@ export async function finishMergedTask(
 
 /** Hides a finished task's branch; true once hidden. Only the lists of branches change. */
 export function hideTaskBranch(workspacePath: string, taskBranch: string): Promise<boolean> {
-  return runVoidAction(workspacePath, "Couldn't hide the branch", () => api.branches.setHidden(workspacePath, [taskBranch], true), isAffectedByBranchList);
+  return runVoidAction(workspacePlace(workspacePath), "Couldn't hide the branch", () => api.branches.setHidden(workspacePlace(workspacePath), [taskBranch], true), isAffectedByBranchList);
 }

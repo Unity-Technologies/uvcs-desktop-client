@@ -1,0 +1,9 @@
+.tile {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--project-color);
+  color: var(--project-glyph);
+}

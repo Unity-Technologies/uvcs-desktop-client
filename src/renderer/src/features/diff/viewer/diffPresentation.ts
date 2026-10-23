@@ -1,7 +1,10 @@
 import type { FileContent } from '@shared/domain/content';
+import { purgedVersionsOf } from './purgedVersions';
 
 /** How a pair of file versions is shown. */
 export type DiffPresentation =
+  /** Both versions' content was purged from the server: there is nothing to show (`purgedVersionsOf`). */
+  | { kind: 'purged' }
   | { kind: 'tooLarge'; content: 'text' | 'image' | 'model' }
   /** Text on both sides. `empty`: both are 0 bytes (e.g. an added empty file). */
   | { kind: 'text'; empty: boolean; identical: boolean }
@@ -29,8 +32,12 @@ export function hasTwoRepresentations(left: FileContent, right: FileContent): bo
   return [left, right].every((side) => rendersAs(side, rendered) || side.size === 0);
 }
 
-/** `representation` only matters to files that have both (`hasTwoRepresentations`); others show as what they are. */
+/**
+ * `representation` only matters to files that have both (`hasTwoRepresentations`); others show as what they are. One
+ * purged version shows as a missing one does, the other alone.
+ */
 export function diffPresentation(left: FileContent, right: FileContent, representation: Representation = 'text'): DiffPresentation {
+  if (purgedVersionsOf(left, right) === 'both') return { kind: 'purged' };
   const tooLarge = left.tooLarge ?? right.tooLarge;
   if (tooLarge) return { kind: 'tooLarge', content: tooLarge };
   const rendered = renderedRepresentation(left, right);

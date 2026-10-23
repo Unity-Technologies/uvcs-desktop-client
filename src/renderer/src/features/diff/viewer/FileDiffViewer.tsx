@@ -1,4 +1,5 @@
 import { Suspense, type ReactNode } from 'react';
+import type { Place } from '@shared/domain/place';
 import type { ContentSource } from '@shared/domain/content';
 import { lazyComponent } from '../../../lib/lazyComponent';
 import { useSpinDelay } from '../../../lib/useSpinDelay';
@@ -12,7 +13,8 @@ import { useDiffContents, type DiffContents } from './useDiffContents';
 const LoadedFileDiff = lazyComponent(() => import('./LoadedFileDiff').then((module) => module.LoadedFileDiff));
 
 interface FileDiffViewerProps {
-  workspacePath: string;
+  /** Where the versions are read: a workspace, whose files it may edit, or a repository with none. */
+  place: Place;
   original: ContentSource;
   modified: ContentSource;
   /** Used for syntax highlighting. */
@@ -33,8 +35,8 @@ interface FileDiffViewerProps {
  * Switching files keeps the previous diff on screen until the next one loads; a spinner
  * only shows up when loading is slow.
  */
-export function FileDiffViewer({ workspacePath, original, modified, fileName, title, identicalDescription, compareControls, onMatchesBase }: FileDiffViewerProps) {
-  const contents = useDiffContents(workspacePath, original, modified);
+export function FileDiffViewer({ place, original, modified, fileName, title, identicalDescription, compareControls, onMatchesBase }: FileDiffViewerProps) {
+  const contents = useDiffContents(place, original, modified);
   const spin = useSpinDelay(contents.isPending || contents.isPlaceholderData);
 
   if (contents.error) {
@@ -52,7 +54,7 @@ export function FileDiffViewer({ workspacePath, original, modified, fileName, ti
       <LoadedFileDiff
       // A new pair starts fresh: edits, blend and zoom belong to the file they were made on.
       key={pairKey(contents.data)}
-      workspacePath={workspacePath}
+      place={place}
       contents={contents.data}
       fileName={fileName}
       title={title}

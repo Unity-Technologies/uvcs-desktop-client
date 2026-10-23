@@ -5,6 +5,7 @@ import { openDialog } from '../../ui/dialog/dialogStore';
 import { IconButton } from '../../ui/IconButton';
 import { CornerCard, CornerCardText } from '../../ui/toast/CornerCard';
 import { useWorkspaceInfoOf } from '../workspace/useWorkspace';
+import { serverOfPlace } from '../workspace/placeOrigin';
 import { useSession } from '../workspace/sessionStore';
 import { ConnectionProblemDialog } from './ConnectionProblemDialog';
 import { connectionProblemShown, serverToCheck } from './connectionProblemShown';
@@ -12,17 +13,19 @@ import { connectionProblemWords } from './connectionProblemWords';
 import { useCmAvailability, useConnectionCheck, useSetupCheck } from './useCmAvailability';
 
 /**
- * The corner card of the open workspace's server out of reach, or wanting a sign-in, while the workspace keeps
- * working with what's local (`connectionProblemShown`). The check runs once the workspace's info names its server.
+ * The corner card of the window's place's server out of reach, or wanting a sign-in, while a workspace keeps working
+ * with what's local (`connectionProblemShown`). The check runs once the server is known: a repository's at once, a
+ * workspace's once its info names it (`serverOfPlace`).
  */
 export function ConnectionProblemCard() {
+  const place = useSession((state) => state.place);
   const workspacePath = useSession((state) => state.workspacePath);
   const cm = useCmAvailability();
   const setup = useSetupCheck(cm.isSuccess);
   const { data: info } = useWorkspaceInfoOf(workspacePath);
-  const check = useConnectionCheck(serverToCheck(setup.data, info));
+  const check = useConnectionCheck(serverToCheck(setup.data, place ? serverOfPlace(place, info) : undefined));
   const [dismissedServer, setDismissedServer] = useState<string | null>(null);
-  const problem = connectionProblemShown(check.data, { workspaceOpen: workspacePath !== null, dismissedServer });
+  const problem = connectionProblemShown(check.data, { placeOpen: place !== null, dismissedServer });
   if (!problem) return null;
 
   const { title, explanation } = connectionProblemWords(problem);

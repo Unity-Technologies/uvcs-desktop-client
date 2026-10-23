@@ -33,7 +33,7 @@ describe('workspaceRepositoryLookup', () => {
 
     expect(await workspaceRepositoryLookup(cm)(first!, notCancelled())).toBe(`${first!.split(/[\\/]/).at(-1)}@local`);
     expect(commands).toMatchObject([
-      { via: 'execute', args: ['status', '--header', '--machinereadable', '--fieldseparator=|', first], options: { killSignal: 'SIGKILL' } },
+      { via: 'execute', args: ['status', '--header', '--machinereadable', '--compact', '--fieldseparator=|', first], options: { killSignal: 'SIGKILL' } },
     ]);
   });
 

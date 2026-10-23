@@ -1,4 +1,5 @@
 import { webContents, type WebContents } from 'electron';
+import { workspacePlace } from '@shared/domain/place';
 import type { BranchNamesCache } from '../cm/BranchNamesCache';
 import type { CmClient } from '../cm/CmClient';
 import { sendEventTo } from '../ipc/sendEvent';
@@ -31,7 +32,7 @@ export function watchShownWorkspaces(
     },
     stopped: (workspacePath) => {
       cm.release(workspacePath);
-      branchNames.forget(workspacePath);
+      branchNames.forget(workspacePlace(workspacePath));
     },
   };
   return new WorkspaceWatchers(listener, createWatcher);

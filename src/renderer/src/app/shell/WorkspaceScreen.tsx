@@ -1,76 +1,22 @@
-import { useRef } from 'react';
 import { useIncomingNotificationClicks } from '../../features/incoming/incomingNotifications';
 import { useKeptAsideNotice } from '../../features/leftChanges/keptAsideNotice';
 import { useMergeCommands } from '../../features/merge/useMergeCommands';
-import { useNavigation } from '../navigation/navigationStore';
-import { useOwnPageWindows } from '../pageWindow/useShowInFollowingWindow';
-import { viewDefinition } from '../navigation/viewRegistry';
-import { SplitPane } from '../../ui/SplitPane';
-import { CommandLogPanel } from './CommandLogPanel';
-import { PageFrame } from './PageFrame';
-import { Sidebar } from './Sidebar';
-import { StatusBar } from './StatusBar';
-import { WorkspaceTopBar } from './WorkspaceTopBar';
-import { COMMAND_LOG_HEIGHT, useCommandLogHost, useCommandLogStore } from './commandLogStore';
-import { useMainFocus } from './useMainFocus';
+import { PlaceLayout } from './PlaceLayout';
+import { WorkspaceStatusBar } from './StatusBar';
 import { useWindowTitle } from './useWindowTitle';
 import { useWorkspaceCommands } from './useWorkspaceCommands';
-import { useCopyLinkCommand } from '../links/useCopyLinkCommand';
 import { useWorkspaceWatcher } from './useWorkspaceWatcher';
-import styles from './WorkspaceScreen.module.css';
+import { WorkspaceSidebarCard } from './WorkspaceSidebarCard';
+import { WorkspaceTopBar } from './WorkspaceTopBar';
 
+/** A workspace's screen: every place's layout (`PlaceLayout`), with what only a workspace has: its disk watched, its commands, its merges. */
 export function WorkspaceScreen() {
-  const { view, pages } = useNavigation();
-  const commandLogOpen = useCommandLogStore((state) => state.open);
-  const commandLogHeight = useCommandLogStore((state) => state.height);
-  const setCommandLogHeight = useCommandLogStore((state) => state.setHeight);
-  useCommandLogHost();
   useWorkspaceWatcher();
   useWorkspaceCommands();
-  useCopyLinkCommand();
   useWindowTitle();
   useMergeCommands();
   useIncomingNotificationClicks();
   useKeptAsideNotice();
-  useOwnPageWindows();
-  const contentRef = useRef<HTMLDivElement>(null);
-  useMainFocus(contentRef);
 
-  const ActiveView = viewDefinition(view).component;
-  const topPage = pages.at(-1);
-
-  return (
-    <div className={styles.screen}>
-      <WorkspaceTopBar />
-      <div className={styles.body}>
-        <Sidebar />
-        <main className={styles.main}>
-          {/* The command log sits under the view, as tall as it was left; the view keeps the rest. */}
-          <SplitPane
-            direction="vertical"
-            sizedPane="second"
-            initialSize={COMMAND_LOG_HEIGHT.initial}
-            minSize={COMMAND_LOG_HEIGHT.min}
-            maxSize={COMMAND_LOG_HEIGHT.max}
-            restMinSize={COMMAND_LOG_HEIGHT.restMin}
-            size={commandLogHeight}
-            onSizeChange={setCommandLogHeight}
-            hideSized={!commandLogOpen}
-            first={
-              <div ref={contentRef} className={styles.content}>
-                {/* Views stay mounted under pages so going back keeps their scroll and selection. Keyed by the view so
-                    each one arrives with the view transition. */}
-                <div key={view} className={styles.layer} hidden={Boolean(topPage)}>
-                  <ActiveView key={view} />
-                </div>
-                {topPage && <PageFrame key={pages.length} page={topPage} />}
-              </div>
-            }
-            second={<CommandLogPanel />}
-          />
-        </main>
-      </div>
-      <StatusBar />
-    </div>
-  );
+  return <PlaceLayout topBar={<WorkspaceTopBar />} sidebarCard={<WorkspaceSidebarCard />} statusBar={<WorkspaceStatusBar />} />;
 }

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { placeId } from '@shared/domain/place';
+import { usePlace } from '../../app/workspace/useWorkspace';
 import { createPeopleSeen } from './peopleSeen';
 
 const peopleSeen = createPeopleSeen();
@@ -9,6 +10,6 @@ const peopleSeen = createPeopleSeen();
  * people on the server reads only theirs, so the others it showed before stay offered, with no query to list people.
  */
 export function usePeopleSeen<Row>(list: string, rows: readonly Row[] | undefined, ownerOf: (row: Row) => string): readonly string[] {
-  const workspacePath = useWorkspacePath();
-  return useMemo(() => peopleSeen.remember(workspacePath, list, (rows ?? []).map(ownerOf)), [workspacePath, list, rows, ownerOf]);
+  const place = placeId(usePlace());
+  return useMemo(() => peopleSeen.remember(place, list, (rows ?? []).map(ownerOf)), [place, list, rows, ownerOf]);
 }

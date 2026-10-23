@@ -1,4 +1,5 @@
 import type { CodeReviewTarget } from '@shared/domain/codeReview';
+import { workspacePathOf, type Place } from '@shared/domain/place';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { switchToBranch } from '../branches/branchOperations';
 import { switchToChangeset } from '../changesets/changesetOperations';
@@ -18,9 +19,12 @@ export interface ReviewedCodeAction {
  * (`switchWorkspace`, which asks about pending changes), or the shelve applied as Changes applies someone else's,
  * the shelve kept. Null when the reviewed code is unknown (a deleted branch). `workspaceOn` is what the workspace is
  * on, unknown while it's read: then nothing is disabled, and the switch finds out itself. Reviews are always the
- * workspace's repository's (`cm find review` runs in the workspace), so no target is ever in another repository.
+ * place's repository's (`cm find review` runs there), so no target is ever in another repository. Null too in a
+ * repository explored without a workspace: there is none to bring the code to.
  */
-export function reviewedCodeAction(workspacePath: string, target: CodeReviewTarget, workspaceOn: WorkspaceSelector | undefined): ReviewedCodeAction | null {
+export function reviewedCodeAction(place: Place, target: CodeReviewTarget, workspaceOn: WorkspaceSelector | undefined): ReviewedCodeAction | null {
+  const workspacePath = workspacePathOf(place);
+  if (workspacePath === null) return null;
   const isWhereWorkspaceIs = (kind: WorkspaceSelector['kind'], name: string): boolean => workspaceOn?.kind === kind && workspaceOn.name === name;
   switch (target.kind) {
     case 'branch':

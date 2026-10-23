@@ -1,7 +1,8 @@
 import type { MergePlan, MergeRequest } from '@shared/domain/merge';
 import type { CmClient } from '../cm/CmClient';
 import { CmError, SILENT_FAILURE_MESSAGE } from '../cm/CmError';
-import { parseMergePlan } from '../cm/mergeOutput';
+import { readFields } from '../cm/formatRecords';
+import { MERGE_PREVIEW_RECORD_ARGS, mergePlanOf } from '../cm/mergeOutput';
 import type { WorkspaceCopies } from '../files/WorkspaceCopies';
 import { withConflictRepositories } from './conflictRepositories';
 import { hasPendingChanges } from './hasPendingChanges';
@@ -17,13 +18,14 @@ export async function previewMerge(cm: CmClient, workspacePath: string, request:
   const intoWorkspace = !request.destinationBranch;
   if (intoWorkspace && (await hasPendingChanges(cm, workspacePath))) return PENDING_CHANGES_PLAN;
 
-  let output: string;
+  let records: string[][];
   try {
-    output = await cm.query(['merge', ...mergeSourceArgs(request), ...MACHINE_READABLE_ARGS, '--printcontributors'], { cwd: workspacePath });
+    const args = ['merge', ...mergeSourceArgs(request), ...MACHINE_READABLE_ARGS, ...MERGE_PREVIEW_RECORD_ARGS, '--printcontributors'];
+    records = await cm.queryRecords(args, readFields, { cwd: workspacePath });
   } catch (error) {
     throw await explainFailure(cm, workspacePath, request, error);
   }
-  return withConflictRepositories(cm, workspacePath, request, parseMergePlan(output), copies);
+  return withConflictRepositories(cm, workspacePath, request, mergePlanOf(records), copies);
 }
 
 /** The machine-readable preview can fail silently; the plain one explains why. */

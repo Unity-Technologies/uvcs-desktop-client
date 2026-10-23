@@ -4,41 +4,42 @@ import type { RevisionRef } from '@shared/domain/revision';
 import { repositorySpec, spec } from '@shared/domain/specs';
 import type { RevisionFile } from '../files/WorkspaceCopies';
 import { toAbsolutePath } from '../files/workspacePaths';
-import { parseRecords, recordFormat } from './formatRecords';
+import { recordFormat, type ReadRecord } from './formatRecords';
 import { isOrganizationIdServer } from './organizationIds';
-import { child, children, integer, parseXml, text, type XmlNode } from './parseXml';
+import { integer, text, type XmlNode } from './parseXml';
 import { onLinksThemselves } from './symlinkArgs';
 
 const ITEM_TYPES: Record<string, ItemType> = { txt: 'file', bin: 'binaryFile', dir: 'directory' };
 
+/** The item whose history is read: a workspace's file, or the item a revision is of. */
+export type HistoryItem = { workspacePath: string; path: string } | { revision: RevisionRef };
+
 /**
- * What `cm history` reads: the workspace's file, or with `revision` the item that revision is of, which the workspace
- * may not have (moved, deleted, not loaded). By its id in its repository, as no repository path reaches through an
- * xlink (`serverpath:/lib/a.cs#cs:12` finds nothing when `lib` is one).
+ * What `cm history` reads: the workspace's file, or the item a revision is of, which a workspace may not have (moved,
+ * deleted, not loaded) and a repository explored without one reads too. By its id in its repository, as no repository
+ * path reaches through an xlink (`serverpath:/lib/a.cs#cs:12` finds nothing when `lib` is one).
  */
-export function itemHistoryTarget(workspacePath: string, path: string, revision?: RevisionRef): string {
-  return revision ? `rev:${spec.revision(revision)}` : toAbsolutePath(workspacePath, path);
+export function itemHistoryTarget(item: HistoryItem): string {
+  return 'revision' in item ? `rev:${spec.revision(item.revision)}` : toAbsolutePath(item.workspacePath, item.path);
 }
 
 /**
  * The item's revisions, moves and removals. XML, not records: `cm history --format` has no revision type, which
- * tells a revision's kind (text, binary, directory) and a revision from a move or a removal.
+ * tells a revision's kind (text, binary, directory) and a revision from a move or a removal. Each `HISTORY_RECORD`
+ * element is read as it arrives (`queryXmlElements`): a file changed in thousands of changesets prints MBs.
  */
 export function itemHistoryArgs(target: string): string[] {
   return onLinksThemselves('history', target, '--moveddeleted', '--xml');
 }
 
-/** The records of `cm history --xml`: a move or removal is one without a revision type, whose branch field says what it did. */
-export function parseHistoryRecords(xml: string): XmlNode[] {
-  const histories = child(child(parseXml(xml, ['RevisionHistory', 'Revision']), 'RevisionHistoriesResult'), 'RevisionHistories');
-  return children(histories, 'RevisionHistory').flatMap((history) => children(child(history, 'Revisions'), 'Revision'));
-}
+/** The element of `cm history --xml` each record is: a move or removal is one without a revision type, whose branch field says what it did. */
+export const HISTORY_RECORD = 'Revision';
 
 /**
  * `cm history` has neither revision ids nor parents: one `cm find revision` of the item it names adds both. Null for a
  * history without revisions.
  */
-export function itemRevisionsArgs(records: XmlNode[]): string[] | null {
+export function itemRevisionsArgs(records: readonly XmlNode[]): string[] | null {
   const revision = records.find((record) => text(record.ItemId) !== '');
   if (!revision) return null;
   const repository = repositorySpec(text(revision.Repository), text(revision.Server));
@@ -70,12 +71,12 @@ export interface WorkspaceItem {
   size?: number;
 }
 
-export function parseWorkspaceItem(output: string): WorkspaceItem | undefined {
-  const [revision = '', repository = '', hash = '', size = ''] = parseRecords(output)[0] ?? [];
+/** The item `workspaceItemArgs` lists first; none for a record without a repository. */
+export const readWorkspaceItem: ReadRecord<WorkspaceItem> = ([revision = '', repository = '', hash = '', size = '']) => {
   const revisionId = Number.parseInt(revision, 10);
   if (repository === '') return undefined;
   return { ...(revisionId >= 0 && { revisionId }), repository: repository.replace(/^rep:/, ''), ...(hash && { hash }), ...(size !== '' && { size: Number(size) }) };
-}
+};
 
 /** The revision the workspace loaded at `path`, as `WorkspaceCopies` remembers it; none for a checkout or no hash. */
 export function loadedRevisionOf(item: WorkspaceItem | undefined, path: string): RevisionFile | undefined {
@@ -94,11 +95,19 @@ export function withServerOf(records: XmlNode[], repository: string | undefined)
   return records.map((record) => (isOrganizationIdServer(text(record.Server)) ? { ...record, Server: server } : record));
 }
 
+/** A revision `itemRevisionsArgs` found: its changeset, its id and its parent's. */
+export interface FoundRevisionIds {
+  changeset: number;
+  id: number;
+  parent: number;
+}
+
+/** One record of `itemRevisionsArgs`. */
+export const readFoundRevisionIds: ReadRecord<FoundRevisionIds> = ([changeset, id, parent]) => ({ changeset: Number(changeset), id: Number(id), parent: Number(parent) });
+
 /** Combines the history's records with the revisions `itemRevisionsArgs` found, each list newest first. */
-export function parseItemHistory(records: XmlNode[], revisionsOutput: string, workspaceRevisionId?: number): ItemHistory {
-  const revisionsByChangeset = new Map(
-    parseRecords(revisionsOutput).map(([changeset, id, parent]) => [Number(changeset), { id: Number(id), parent: Number(parent) }]),
-  );
+export function itemHistoryOf(records: readonly XmlNode[], revisions: readonly FoundRevisionIds[], workspaceRevisionId?: number): ItemHistory {
+  const revisionsByChangeset = new Map(revisions.map(({ changeset, id, parent }) => [changeset, { id, parent }]));
   const newestFirst = <T extends { changesetId: number }>(a: T, b: T): number => b.changesetId - a.changesetId;
 
   return {

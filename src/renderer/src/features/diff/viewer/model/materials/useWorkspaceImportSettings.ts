@@ -1,5 +1,6 @@
 import { useQueries } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { workspacePlace } from '@shared/domain/place';
 import { contentBytesQuery } from '../../contentQueries';
 import { readImportSettings, type ModelImportSettings } from '../modelImportSettings';
 import { takesWorkspaceSettings, type MaterialVersion } from './materialVersion';
@@ -8,25 +9,25 @@ const SIDES = ['before', 'after'] as const;
 
 /**
  * The import settings of the `.meta` the workspace has beside each version's model on disk, for a version none was
- * found for (`takesWorkspaceSettings`); undefined while it is read; null for the others and where the workspace has
- * none (or it can't be read).
+ * found for (`takesWorkspaceSettings`); undefined while it is read; null for the others, where the workspace has none
+ * (or it can't be read), and without a workspace (null), whose disk there isn't.
  */
 export function useWorkspaceImportSettings(
-  workspacePath: string,
+  workspacePath: string | null,
   versions: Record<'before' | 'after', MaterialVersion | null>,
 ): Record<'before' | 'after', ModelImportSettings | null | undefined> {
   const metas = useMemo(
     () =>
       SIDES.map((side) => {
         const version = versions[side];
-        return version?.path && takesWorkspaceSettings(version.options) ? `${version.path}.meta` : null;
+        return workspacePath !== null && version?.path && takesWorkspaceSettings(version.options) ? `${version.path}.meta` : null;
       }),
-    [versions],
+    [workspacePath, versions],
   );
   // Both versions of a file at one path read its `.meta` once.
   const paths = useMemo(() => [...new Set(metas.flatMap((path) => (path ? [path] : [])))], [metas]);
   const reads = useQueries({
-    queries: paths.map((path) => contentBytesQuery(workspacePath, { kind: 'workspaceFile', path })),
+    queries: workspacePath === null ? [] : paths.map((path) => contentBytesQuery(workspacePlace(workspacePath), { kind: 'workspaceFile', path })),
     combine: dataOf,
   });
   return useMemo(() => {

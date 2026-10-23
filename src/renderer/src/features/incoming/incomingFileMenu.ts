@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { MenuEntry } from '../../lib/actions';
 import { diffEntryMenu } from '../diff/diffEntryMenu';
@@ -37,7 +38,7 @@ export function incomingFileMenu(selected: DiffEntry[], context: IncomingFileMen
   const { workspacePath, scope, loadedChangeset, headChangeset } = context;
   const conflicts = scope.kind === 'all' ? selected.flatMap((file) => context.conflictOf(file.path) ?? []) : [];
   const target = incomingDiffTarget(scope, loadedChangeset, headChangeset);
-  const menu = diffEntryMenu(workspacePath, target, selected, {
+  const menu = diffEntryMenu(workspacePlace(workspacePath), target, selected, {
     added: conflictMenuEntries(conflicts, { ...context, labels: UPDATE_LABELS, yoursInWorkspace: true }),
   });
   return withConflictOpening(menu, conflicts);

@@ -1,8 +1,9 @@
 import { FileSearch, Folder } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { placeId } from '@shared/domain/place';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import type { FocusedLines } from '../../app/navigation/pages';
-import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useFileTree } from '../../components/useFileTree';
@@ -48,7 +49,7 @@ interface DiffBrowserProps {
  * rows while the files are read, and "No differences" beside an empty list.
  */
 export function DiffBrowser({ target, entries: diffEntries, initialPath, initialLines }: DiffBrowserProps) {
-  const workspacePath = useWorkspacePath();
+  const place = usePlace();
   const reading = diffEntries === undefined;
   const readEntries = diffEntries ?? NO_ENTRIES;
   const entries = useMemo(() => listedEntries(readEntries), [readEntries]);
@@ -59,14 +60,14 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   });
   const focused = entries.find((entry) => diffEntryKey(entry) === selection.anchor);
   const firstKey = entries[0] && diffEntryKey(entries[0]);
-  const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, { isViewFilter: true, reading, actions: <ReviewModeButton workspacePath={workspacePath} /> });
+  const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, { isViewFilter: true, reading, actions: <ReviewModeButton place={place} /> });
   const shown = useMemo(() => review.narrow(filter.visible), [review.narrow, filter.visible]);
   const clearFilter = (): void => {
     filter.clear();
     review.showAll();
   };
-  const { rows, tree, toggleCollapsed } = useFileTree(shown, diffEntryKey, folderListScope(workspacePath, `diff:${JSON.stringify(target)}`), selection.anchor);
-  const workspaceRepository = useWorkspaceInfo().data?.repository;
+  const { rows, tree, toggleCollapsed } = useFileTree(shown, diffEntryKey, folderListScope(placeId(place), `diff:${JSON.stringify(target)}`), selection.anchor);
+  const workspaceRepository = usePlaceRepository();
   // A folder the keyboard (or a click) is on, in a tree.
   const focusedFolder = focused ? undefined : rows.find((row): row is TreeFolderRow<DiffEntry> => row.type === 'folder' && row.key === selection.anchor);
   // The diff's change navigation goes on to the files before and after, as the list shows them.
@@ -122,7 +123,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
           filterBar={filter.bar}
           selection={selection}
           onSelectionChange={setSelection}
-          contextMenu={(selected) => diffEntryMenu(workspacePath, target, selected, { review, workspaceRepository, diffEntries: readEntries })}
+          contextMenu={(selected) => diffEntryMenu(place, target, selected, { review, workspaceRepository, diffEntries: readEntries })}
           review={review}
           loading={reading}
           noMatches={pane === 'noMatches' && <NoMatches noun="files" onClear={clearFilter} />}
@@ -137,7 +138,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
               <AssetsPointContext.Provider value={findAssetsPoint}>
                 <LineLinksContext.Provider value={lineLinks}>
                   <EntryDiff
-                    workspacePath={workspacePath}
+                    place={place}
                     target={target}
                     entry={focused}
                     entries={entries}

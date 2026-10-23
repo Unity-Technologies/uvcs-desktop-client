@@ -1,14 +1,13 @@
 import { FileDiff } from '@pierre/diffs';
-import { Editor, type EditorFocusOptions } from '@pierre/diffs/edit';
-import type { EditProvider } from '@pierre/diffs/react';
-import { useImperativeHandle, useRef, useState, type ComponentProps, type RefObject } from 'react';
+import type { Editor, EditorFocusOptions } from '@pierre/diffs/edit';
+import { useImperativeHandle, useRef, useState, type RefObject } from 'react';
 import { shownText } from '../../../lib/lineBreaks';
 import type { EditorHandle } from './editorHandle';
 import { MAX_WAIT_FOR_COLORS_MS } from './editorAttachment';
 import { isTypingIn } from './pierreDom';
+import { createAppEditor, type CreateEditor } from './appEditor';
 import { replacementEdit } from './replacementEdit';
 
-type CreateEditor = ComponentProps<typeof EditProvider>['createEditor'];
 
 interface Attachment {
   /** The editor is attached to the diff (`attachesEditor`). */
@@ -58,7 +57,7 @@ export function usePierreEditor(editorRef: RefObject<EditorHandle | null> | unde
         if (focus) attached.focus(focus.place);
         if (focus?.typed) typeAt(attached as unknown as Editor, focus.place, focus.typed);
       };
-      const created = new Editor(type, { ...options, onAttach }, key);
+      const created = createAppEditor(type, { ...options, onAttach }, key);
       editor.current = created as unknown as Editor;
       return created;
     };

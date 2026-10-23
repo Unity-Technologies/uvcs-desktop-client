@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { api } from '../../../api/client';
-import { useWorkspaceInfo, useWorkspacePath } from '../../../app/workspace/useWorkspace';
+import { usePlace, usePlaceRepository } from '../../../app/workspace/useWorkspace';
 import { useReviewMode, type ReviewMode } from '../../review/useReviewMode';
 import { diffReviewName, diffReviewStatusOf, type DiffReviewMarks } from './diffReview';
 import { diffReviewMarksKey, setDiffReviewed, type DiffReviewTarget } from './diffReviewOperations';
@@ -19,9 +19,9 @@ interface DiffReview extends ReviewMode<DiffEntry> {
  * `enabled` false reads no marks yet (a details panel whose changed files aren't asked for).
  */
 export function useDiffReview(target: DiffTarget, entries: DiffEntry[], enabled = true): DiffReview {
-  const workspacePath = useWorkspacePath();
-  const repository = useWorkspaceInfo().data?.repository ?? '';
-  const reviewTarget: DiffReviewTarget = { workspacePath, repository, name: diffReviewName(target) };
+  const place = usePlace();
+  const repository = usePlaceRepository() ?? '';
+  const reviewTarget: DiffReviewTarget = { place, repository, name: diffReviewName(target) };
   const { data } = useQuery({
     queryKey: diffReviewMarksKey(reviewTarget),
     queryFn: () => api.review.diffMarks(repository, reviewTarget.name),
@@ -31,7 +31,7 @@ export function useDiffReview(target: DiffTarget, entries: DiffEntry[], enabled 
   const marks = useMemo<DiffReviewMarks>(() => new Map((data ?? []).map((mark) => [mark.path, mark.revisionId])), [data]);
   const statusOf = useMemo(() => diffReviewStatusOf(marks), [marks]);
   const review = useReviewMode({
-    workspacePath,
+    place,
     items: entries,
     statusOf,
     setReviewed: (files, reviewed) => void setDiffReviewed(reviewTarget, files, reviewed),

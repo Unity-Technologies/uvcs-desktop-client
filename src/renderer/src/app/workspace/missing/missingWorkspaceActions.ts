@@ -27,5 +27,5 @@ export async function locateWorkspace(name: string, missingPath: string, open: (
 /** Forgets a workspace whose folder is gone. `cm` already leaves it out of its workspace list. */
 export async function forgetMissingWorkspace(missingPath: string): Promise<void> {
   await forgetRecentWorkspace(missingPath);
-  useSession.getState().closeWorkspace();
+  useSession.getState().goHome();
 }

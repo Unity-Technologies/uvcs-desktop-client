@@ -1,11 +1,15 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { isMenuCommandEnabled, WORKSPACE_MENU_COMMANDS } from './workspaceMenuCommands';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
+import { isMenuCommandEnabled, REPOSITORY_MENU_COMMANDS, WORKSPACE_MENU_COMMANDS } from './workspaceMenuCommands';
 
 const read = (path: string) => readFileSync(join(__dirname, path), 'utf8');
 const menuCommands = [...read('appMenuTemplate.ts').matchAll(/commandItem\([^,]+, '([^']+)'/g)].map(([, id]) => id);
+// Every place's commands (`usePlaceCommands`), and a workspace's own.
+const PLACE_COMMAND_SOURCES = ['../../renderer/src/app/shell/usePlaceCommands.ts'];
 const WORKSPACE_COMMAND_SOURCES = [
+  ...PLACE_COMMAND_SOURCES,
   '../../renderer/src/app/shell/useWorkspaceCommands.ts',
   '../../renderer/src/features/branches/useBranchCommands.ts',
   '../../renderer/src/features/merge/useMergeCommands.ts',
@@ -22,10 +26,16 @@ describe('workspace menu commands', () => {
   });
 
   it('are disabled on the home screen and enabled in a workspace; the others always are', () => {
-    expect(isMenuCommandEnabled('branch.switch', false)).toBe(false);
-    expect(isMenuCommandEnabled('branch.switch', true)).toBe(true);
-    expect(isMenuCommandEnabled('app.settings', false)).toBe(true);
-    expect(isMenuCommandEnabled('app.home', false)).toBe(true);
-    expect(isMenuCommandEnabled('workspace.open', false)).toBe(true);
+    expect(isMenuCommandEnabled('branch.switch', undefined)).toBe(false);
+    expect(isMenuCommandEnabled('branch.switch', workspacePlace('/wk'))).toBe(true);
+    expect(isMenuCommandEnabled('app.settings', undefined)).toBe(true);
+    expect(isMenuCommandEnabled('app.home', undefined)).toBe(true);
+    expect(isMenuCommandEnabled('workspace.open', undefined)).toBe(true);
+  });
+
+  it('are enabled in a repository explored without a workspace where every place registers them', () => {
+    const placeCommands = commandIdsIn(PLACE_COMMAND_SOURCES);
+    expect([...REPOSITORY_MENU_COMMANDS].sort()).toEqual(WORKSPACE_MENU_COMMANDS.filter((id) => placeCommands.has(id)).sort());
+    expect(WORKSPACE_MENU_COMMANDS.filter((id) => isMenuCommandEnabled(id, repositoryPlace('game@local')))).toEqual([...REPOSITORY_MENU_COMMANDS]);
   });
 });

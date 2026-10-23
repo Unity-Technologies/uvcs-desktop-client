@@ -59,7 +59,7 @@ describe('locateWorkspace', () => {
 
 describe('forgetMissingWorkspace', () => {
   it('drops it from the recent workspaces and goes back to the home screen', async () => {
-    useSession.setState({ workspacePath: '/projects/game' });
+    useSession.getState().openWorkspace('/projects/game');
     fakeApi.answer('settings.forgetRecentWorkspace', () => ({}));
 
     await forgetMissingWorkspace('/projects/game');

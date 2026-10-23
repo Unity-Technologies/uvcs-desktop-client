@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import type { Place } from '@shared/domain/place';
 import { branchWorkedOn } from '../../components/workingObject';
 import { isCheckinCandidate } from '../../features/pendingChanges/changeCategories';
 // The palette lists changes as the flat list does.
@@ -8,7 +9,7 @@ import type { ResultContext } from './objectResults';
 import { paletteGroups } from './paletteGroups';
 import { isSearching, type PaletteScope } from './paletteScope';
 import type { SearchGroup } from './searchResults';
-import { usePaletteLists } from './usePaletteLists';
+import { NOWHERE, usePaletteLists } from './usePaletteLists';
 import { useChangesetSearch, usePaletteServerSearch, useRefreshWhenMissing } from './usePaletteServerSearch';
 
 export interface PaletteSearch {
@@ -26,19 +27,19 @@ export interface PaletteSearch {
  * Without a search it lists what is at hand: the pending changes, the current, recent and newest branches, the
  * latest changesets and shelves. Sections outside `scope` are left out.
  */
-export function usePaletteSearch(workspacePath: string | null, query: string, scope: PaletteScope): PaletteSearch {
-  const enabled = Boolean(workspacePath);
-  const path = workspacePath ?? '';
+export function usePaletteSearch(shown: Place | null, query: string, scope: PaletteScope): PaletteSearch {
+  const enabled = shown !== null;
+  const place = shown ?? NOWHERE;
   const term = query.trim();
   const { files, pendingChanges, workspace, recentBranchGuids: recentBranches, branches, labels, changesets, shelves, codeReviews } =
-    usePaletteLists(workspacePath);
-  const server = usePaletteServerSearch(workspacePath, term, scope);
+    usePaletteLists(shown);
+  const server = usePaletteServerSearch(shown, term, scope);
   const { term: serverTerm, branches: foundBranches, labels: foundLabels, shelves: foundShelves, codeReviews: foundCodeReviews } = server;
-  const { term: changesetSearchTerm, found: foundChangesets, start: setChangesetSearchTerm } = useChangesetSearch(workspacePath);
+  const { term: changesetSearchTerm, found: foundChangesets, start: setChangesetSearchTerm } = useChangesetSearch(shown);
 
   // Branches and labels are cached in full, so a server match missing from them means they are out of date.
-  useRefreshWhenMissing(foundBranches.data, branches.data, path, 'branches');
-  useRefreshWhenMissing(foundLabels.data, labels.data, path, 'labels');
+  useRefreshWhenMissing(foundBranches.data, branches.data, place, 'branches');
+  useRefreshWhenMissing(foundLabels.data, labels.data, place, 'labels');
 
   const fileIndex = useMemo(() => createFuzzyIndex(files.data?.map((entry) => entry.path) ?? []), [files.data]);
   const branchIndex = useMemo(() => createFuzzyIndex(branches.data?.map((branch) => branch.name) ?? []), [branches.data]);
@@ -64,7 +65,7 @@ export function usePaletteSearch(workspacePath: string | null, query: string, sc
     if (!enabled) return [];
     const changeByPath = new Map(changes.map((change) => [change.path, change]));
     const context: ResultContext = {
-      workspacePath: path,
+      place,
       term,
       currentBranch: branchWorkedOn(workspace.data?.selector),
       loadedChangeset: workspace.data?.loadedChangeset,
@@ -96,7 +97,7 @@ export function usePaletteSearch(workspacePath: string | null, query: string, sc
     });
   }, [
     enabled,
-    path,
+    place,
     term,
     scope,
     serverTerm,

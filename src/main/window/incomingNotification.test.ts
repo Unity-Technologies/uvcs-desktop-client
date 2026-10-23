@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import { samePlace, workspacePlace, type Place } from '@shared/domain/place';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EVENT_CHANNEL } from '@shared/ipc';
 import { showIncomingNotification } from './incomingNotification';
@@ -29,7 +30,7 @@ beforeEach(() => {
 /** Windows where `game` (if given) shows /work/game. */
 function windowsShowing(game?: FakeWindow) {
   const focusAny = vi.fn();
-  const windows = { windowShowing: (path: string) => (path === '/work/game' ? game : undefined), focusAny } as unknown as WorkspaceWindows;
+  const windows = { windowShowing: (place: Place) => (samePlace(place, workspacePlace('/work/game')) ? game : undefined), focusAny } as unknown as WorkspaceWindows;
   return { windows, focusAny };
 }
 

@@ -1,5 +1,6 @@
 import { fakeApi } from '../../testing/fakeWindow';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 
 vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
@@ -77,7 +78,7 @@ describe('pasting the cut items', () => {
         ],
       },
     ]);
-    expect(useFilesViewStore.getState().revealRequest).toEqual({ workspacePath: ws, path: 'docs/a.ts', selected: ['docs/a.ts', 'docs/b.txt'] });
+    expect(useFilesViewStore.getState().revealRequest).toEqual({ place: workspacePlace(ws), path: 'docs/a.ts', selected: ['docs/a.ts', 'docs/b.txt'] });
     expect(cutPaths()).toEqual([]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Moved 2 items', detail: 'To /docs', action: 'Undo' }]);
   });

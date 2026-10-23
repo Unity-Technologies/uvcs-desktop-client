@@ -8,8 +8,8 @@ import type { XlinkTarget } from '@shared/domain/explorer';
 import { listsTree } from '@shared/domain/specs';
 import { equalsCondition, findQueryArgs } from './findQuery';
 import { foundObjects } from './foundObjects';
-import { integerValue, readRecords } from './formatRecords';
-import { parseTreeItems, TREE_ITEM_FORMAT } from './treeItems';
+import { integerValue } from './formatRecords';
+import { TREE_ITEM_FORMAT, type ListedTreeItem } from './treeItems';
 
 /** A changeset's parent, the one field the older side needs. */
 export const FOUND_PARENTS = foundObjects('changeset', ['parent'], (value) => ({ parent: integerValue(value('parent')) }));
@@ -31,23 +31,29 @@ export function xlinkAfterPoint(target: DiffTarget): XlinkSidePoint {
   }
 }
 
-/** The older side: the changeset's parent, the range's first point, where the branch started; none for a shelve. */
-export function xlinkBeforePoint(target: DiffTarget): XlinkSidePoint {
+/**
+ * The older side: the changeset's parent, the range's first point, where the branch started; none for a shelve. The
+ * `cm find` names `repository` when no workspace tells `cm` which.
+ */
+export function xlinkBeforePoint(target: DiffTarget, repository?: string): XlinkSidePoint {
   switch (target.kind) {
     case 'changeset':
-      return { kind: 'parentOf', findArgs: findQueryArgs(FOUND_PARENTS, `where changesetid = ${target.changesetId}`) };
+      return { kind: 'parentOf', findArgs: findQueryArgs(FOUND_PARENTS, `where changesetid = ${target.changesetId}`, repository) };
     case 'range':
       return { kind: 'point', spec: target.fromSpec };
     case 'branch':
-      return { kind: 'parentOf', findArgs: findQueryArgs(FOUND_PARENTS, `where ${equalsCondition('branch', target.branch)} order by changesetid asc limit 1`) };
+      return {
+        kind: 'parentOf',
+        findArgs: findQueryArgs(FOUND_PARENTS, `where ${equalsCondition('branch', target.branch)} order by changesetid asc limit 1`, repository),
+      };
     case 'shelve':
       return null;
   }
 }
 
 /** The point the `cm find` of `xlinkBeforePoint` names: the found changeset's parent; none before the first changeset. */
-export function parentPointOf(findOutput: string): string | null {
-  const parent = readRecords(FOUND_PARENTS, findOutput)[0]?.parent;
+export function parentPointOf(found: readonly { parent: number }[]): string | null {
+  const parent = found[0]?.parent;
   return parent === undefined || parent < 0 ? null : `cs:${parent}`;
 }
 
@@ -58,8 +64,8 @@ export function xlinkListArgs(path: string, point: string): string[] {
 }
 
 /** Where the xlink at `path` points in that listing; null when the folder holds no xlink there. */
-export function xlinkIn(listing: string, path: string): XlinkTarget | null {
-  return parseTreeItems(listing).find((item) => item.path === path)?.xlink ?? null;
+export function xlinkIn(listing: readonly ListedTreeItem[], path: string): XlinkTarget | null {
+  return listing.find((item) => item.path === path)?.xlink ?? null;
 }
 
 /** Whether a side is read at all: not where the xlink isn't (before an add, after a delete), nor a tree `cm ls` refuses. */

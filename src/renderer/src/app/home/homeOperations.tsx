@@ -8,8 +8,10 @@ import { prompt } from '../../ui/dialog/prompt';
 import { toast } from '../../ui/toast/toastStore';
 import { queryClient } from '../queryClient';
 import { forgetRecentWorkspace } from '../settings/useSettings';
+import { listedRepositories } from '../workspace/workspaceQueries';
 import { DeleteRepositoryDialog } from './dialogs/DeleteRepositoryDialog';
-import { isRepositoryNameTaken, isWorkspaceNameTaken } from './workspaceNaming';
+import { repositoryRename } from './repositoryRename';
+import { isWorkspaceNameTaken } from './workspaceNaming';
 
 async function runAndRefresh(failureTitle: string, action: () => Promise<unknown>, queryKey: readonly unknown[]): Promise<boolean> {
   try {
@@ -50,18 +52,21 @@ export async function removeWorkspace(workspace: WorkspaceSummary): Promise<void
 }
 
 export async function renameRepository(repository: RepositorySummary): Promise<void> {
-  const names = (queryClient.getQueryData<RepositorySummary[]>(queryKeys.repositories(repository.server)) ?? []).map((listed) => listed.name);
-  const newName = await prompt({
+  const rename = repositoryRename(
+    repository,
+    listedRepositories(queryClient, repository.server).map((listed) => listed.name),
+  );
+  const typed = await prompt({
     title: 'Rename repository',
     label: 'Name',
-    initialValue: repository.name,
+    initialValue: rename.initialName,
     confirmLabel: 'Rename',
-    validate: (name) => (isRepositoryNameTaken(name, names) ? 'There is already a repository with this name.' : undefined),
+    validate: (name) => (rename.isTaken(name) ? 'There is already a repository with this name.' : undefined),
   });
-  if (!newName) return;
+  if (!typed) return;
   await runAndRefresh(
     "Couldn't rename the repository",
-    () => api.repositories.rename(repository.spec, newName),
+    () => api.repositories.rename(repository.spec, rename.newName(typed)),
     queryKeys.repositories(repository.server),
   );
 }

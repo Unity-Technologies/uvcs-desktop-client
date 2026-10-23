@@ -4,15 +4,17 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
 
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
 import { answerConfirms, answerPrompts, askedDialogs } from '../../testing/fakeDialogs';
-import { shownToasts, watchRefreshes } from '../../testing/operationOutcome';
+import { shownToasts, watchRefreshes, watchRepositoryRefreshes } from '../../testing/operationOutcome';
 import { deleteReviews, reassignReview, setReviewStatus } from './codeReviewOperations';
 
 const ws = '/ws';
+const inWs = workspacePlace(ws);
 const review = (assignee: string, id = 31): CodeReviewSummary => ({ id, title: `Review ${id}`, status: 'Under review', owner: 'bob', assignee, date: '' });
 const workspaceOn = (server: string) =>
   queryClient.setQueryData<WorkspaceInfo>(queryKeys.inWorkspace(ws, 'info'), {
@@ -29,10 +31,10 @@ describe('changing a review status', () => {
   it('sets the status alone on a review someone is assigned to, asking nothing', async () => {
     fakeApi.answer('codeReviews.update', () => undefined);
 
-    await setReviewStatus(ws, review('ana'), 'Reviewed');
+    await setReviewStatus(inWs, review('ana'), 'Reviewed');
 
     expect(askedDialogs()).toEqual([]);
-    expect(fakeApi.argsOf('codeReviews.update')).toEqual([[ws, 31, { status: 'Reviewed', assignee: undefined }]]);
+    expect(fakeApi.argsOf('codeReviews.update')).toEqual([[inWs, 31, { status: 'Reviewed', assignee: undefined }]]);
   });
 
   it('asks for a reviewer first on a review nobody is assigned to (cm would keep its status), suggesting the user', async () => {
@@ -42,14 +44,14 @@ describe('changing a review status', () => {
     fakeApi.answer('codeReviews.update', () => undefined);
     answerPrompts('ana');
 
-    await setReviewStatus(ws, review(' '), 'Rework required');
+    await setReviewStatus(inWs, review(' '), 'Rework required');
 
     expect(askedDialogs().map((dialog) => dialog.initialValue)).toEqual(['ana']);
-    expect(fakeApi.argsOf('codeReviews.update')).toEqual([[ws, 31, { status: 'Rework required', assignee: 'ana' }]]);
+    expect(fakeApi.argsOf('codeReviews.update')).toEqual([[inWs, 31, { status: 'Rework required', assignee: 'ana' }]]);
   });
 
   it('changes nothing when the reviewer prompt is cancelled', async () => {
-    await setReviewStatus(ws, review(''), 'Reviewed');
+    await setReviewStatus(inWs, review(''), 'Reviewed');
 
     expect(fakeApi.methods()).toEqual([]);
   });
@@ -60,18 +62,18 @@ describe('review operations', () => {
     fakeApi.answer('codeReviews.update', () => undefined);
     answerPrompts('carl');
 
-    await reassignReview(ws, review('ana'));
+    await reassignReview(inWs, review('ana'));
 
     expect(askedDialogs().map((dialog) => dialog.initialValue)).toEqual(['ana']);
-    expect(fakeApi.argsOf('codeReviews.update')).toEqual([[ws, 31, { assignee: 'carl' }]]);
+    expect(fakeApi.argsOf('codeReviews.update')).toEqual([[inWs, 31, { assignee: 'carl' }]]);
   });
 
   it('deletes the reviews picked in one call, and tells it did', async () => {
     fakeApi.answer('codeReviews.remove', () => undefined);
 
-    expect(await deleteReviews(ws, [review('ana', 1), review('ana', 2)])).toBe(true);
+    expect(await deleteReviews(inWs, [review('ana', 1), review('ana', 2)])).toBe(true);
 
-    expect(fakeApi.argsOf('codeReviews.remove')).toEqual([[ws, [1, 2]]]);
+    expect(fakeApi.argsOf('codeReviews.remove')).toEqual([[inWs, [1, 2]]]);
   });
 
   it('refreshes only the reviews (their lists and the branch chips), never the history nor the workspace', async () => {
@@ -80,15 +82,15 @@ describe('review operations', () => {
     answerPrompts('carl');
 
     const afterStatus = watchRefreshes(ws);
-    await setReviewStatus(ws, review('ana'), 'Reviewed');
+    await setReviewStatus(inWs, review('ana'), 'Reviewed');
     expect(afterStatus()).toEqual(['codeReviews']);
 
     const afterAssign = watchRefreshes(ws);
-    await reassignReview(ws, review('ana'));
+    await reassignReview(inWs, review('ana'));
     expect(afterAssign()).toEqual(['codeReviews']);
 
     const afterDelete = watchRefreshes(ws);
-    await deleteReviews(ws, [review('ana')]);
+    await deleteReviews(inWs, [review('ana')]);
     expect(afterDelete()).toEqual(['codeReviews']);
   });
 
@@ -96,11 +98,25 @@ describe('review operations', () => {
     fakeApi.answer('codeReviews.remove', () => {
       throw new Error('Access denied');
     });
-    expect(await deleteReviews(ws, [review('ana')])).toBe(false);
+    expect(await deleteReviews(inWs, [review('ana')])).toBe(false);
     expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't delete the review", detail: 'Access denied' }]);
 
     answerConfirms(false);
-    expect(await deleteReviews(ws, [review('ana')])).toBe(false);
+    expect(await deleteReviews(inWs, [review('ana')])).toBe(false);
     expect(fakeApi.argsOf('codeReviews.remove')).toHaveLength(1);
+  });
+});
+
+describe('code reviews of a repository explored without a workspace', () => {
+  it('deletes there, refreshing only its reviews', async () => {
+    fakeApi.answer('codeReviews.remove', () => undefined);
+    answerConfirms(true);
+    const repository = repositoryPlace('game@local');
+    const refreshed = watchRepositoryRefreshes('game@local');
+
+    expect(await deleteReviews(repository, [review('ana', 1)])).toBe(true);
+
+    expect(fakeApi.argsOf('codeReviews.remove')).toEqual([[repository, [1]]]);
+    expect(refreshed()).toEqual(['codeReviews']);
   });
 });

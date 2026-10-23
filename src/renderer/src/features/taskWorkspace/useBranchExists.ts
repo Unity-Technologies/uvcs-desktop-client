@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { workspacePlace } from '@shared/domain/place';
 import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
 import { SELECTION_SETTLE_MS } from '../../lib/useSettled';
@@ -10,7 +11,7 @@ import { branchQuery } from '../branches/useBranches';
  */
 export function useBranchExists(workspacePath: string, branch: string | undefined): boolean | undefined {
   const settled = useDebouncedValue(branch, SELECTION_SETTLE_MS);
-  const { data } = useQuery({ ...branchQuery(workspacePath, settled ?? ''), ...SLOW_CHANGING_QUERY, enabled: Boolean(settled) });
+  const { data } = useQuery({ ...branchQuery(workspacePlace(workspacePath), settled ?? ''), ...SLOW_CHANGING_QUERY, enabled: Boolean(settled) });
   if (!branch || settled !== branch || data === undefined) return undefined;
   return data !== null;
 }

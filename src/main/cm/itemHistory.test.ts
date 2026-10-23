@@ -1,7 +1,18 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { itemHistoryTarget, itemRevisionsArgs, loadedRevisionOf, parseHistoryRecords, parseItemHistory, parseWorkspaceItem, withServerOf } from './itemHistory';
-import { formatOutput, UNITY_ORGANIZATION } from './testing/cmOutput';
+import { HISTORY_RECORD, itemHistoryOf, itemHistoryTarget, itemRevisionsArgs, loadedRevisionOf, readFoundRevisionIds, readWorkspaceItem, withServerOf } from './itemHistory';
+import type { XmlNode } from './parseXml';
+import { formatOutput, recordsIn, UNITY_ORGANIZATION } from './testing/cmOutput';
+import { XmlElementReader } from './XmlElementReader';
+
+/** The records of `cm history --xml`, read as they arrive. */
+function parseHistoryRecords(xml: string): XmlNode[] {
+  const reader = new XmlElementReader(HISTORY_RECORD, (record) => record);
+  reader.read(Buffer.from(xml, 'utf8'));
+  return reader.finish();
+}
+
+const parseWorkspaceItem = (output: string) => recordsIn(output, readWorkspaceItem)[0];
 
 const revision = (changeset: number, comment: string, type = 'txt'): string => `
   <Revision>
@@ -42,9 +53,9 @@ const xml = (revisions: string): string => `<?xml version="1.0" encoding="utf-8"
 
 /** `cm find revision --format={changeset}{id}{parent}` output. */
 
-const parse = (records: string, revisions: string) => parseItemHistory(parseHistoryRecords(xml(records)), revisions);
+const parse = (records: string, revisions: string) => itemHistoryOf(parseHistoryRecords(xml(records)), recordsIn(revisions, readFoundRevisionIds));
 
-describe('parseItemHistory', () => {
+describe('itemHistoryOf', () => {
   it('lists revisions newest first with their revision ids and parents', () => {
     const { revisions } = parse(revision(1, 'Initial import') + revision(4, 'Mention UI'), formatOutput([1, 15, -1], [4, 45, 15]));
 
@@ -121,12 +132,12 @@ describe('itemRevisionsArgs', () => {
 
 describe('itemHistoryTarget', () => {
   it("reads the workspace's file, or the item of a revision in its repository", () => {
-    expect(itemHistoryTarget('/work', 'src/a.cs')).toBe(join('/work', 'src', 'a.cs'));
-    expect(itemHistoryTarget('/work', 'src/a.cs', { revisionId: 432251, repository: 'editorGUI@acme@cloud' })).toBe('rev:revid:432251@editorGUI@acme@cloud');
+    expect(itemHistoryTarget({ workspacePath: '/work', path: 'src/a.cs' })).toBe(join('/work', 'src', 'a.cs'));
+    expect(itemHistoryTarget({ revision: { revisionId: 432251, repository: 'editorGUI@acme@cloud' } })).toBe('rev:revid:432251@editorGUI@acme@cloud');
   });
 });
 
-describe('parseWorkspaceItem', () => {
+describe('readWorkspaceItem', () => {
   it("reads the item's own revision and repository, listed before a directory's children", () => {
     expect(parseWorkspaceItem(formatOutput([100, 'rep:game@local']))).toEqual({ revisionId: 100, repository: 'game@local' });
     expect(parseWorkspaceItem(formatOutput([102, 'rep:lib@AcmeStudio@unity'], [100, 'rep:lib@AcmeStudio@unity']))).toEqual({
@@ -159,7 +170,7 @@ describe('withServerOf', () => {
   it("names a Unity organization's server, which cm history --xml prints by its id, after the item's repository", () => {
     const named = withServerOf(record(UNITY_ORGANIZATION.byId), 'game@AcmeStudio@unity');
 
-    expect(parseItemHistory(named, formatOutput([4, 45, 15])).revisions[0]).toMatchObject({ repository: 'game@AcmeStudio@unity', idSpec: 'revid:45@game@AcmeStudio@unity' });
+    expect(itemHistoryOf(named, recordsIn(formatOutput([4, 45, 15]), readFoundRevisionIds)).revisions[0]).toMatchObject({ repository: 'game@AcmeStudio@unity', idSpec: 'revid:45@game@AcmeStudio@unity' });
   });
 
   it('leaves servers by name, and the id when no repository names it', () => {

@@ -1,9 +1,12 @@
-import { PictureInPicture2 } from 'lucide-react';
+import { FolderX, PictureInPicture2 } from 'lucide-react';
 import { useNavigation } from '../navigation/navigationStore';
 import { PageContent, pageTitle } from '../navigation/pageRegistry';
 import type { Page } from '../navigation/pages';
 import { useBackButtons } from '../navigation/useBackButtons';
 import { viewDefinition } from '../navigation/viewRegistry';
+import { showsPage } from '../navigation/views';
+import { usePlace } from '../workspace/useWorkspace';
+import { EmptyState } from '../../ui/EmptyState';
 import { useShortcut } from '../../lib/useShortcut';
 import { IconButton } from '../../ui/IconButton';
 import { isMovablePage } from '../pageWindow/movablePages';
@@ -15,6 +18,7 @@ import { hotkey } from '../../lib/shortcutRegistry';
 
 export function PageFrame({ page }: { page: Page }) {
   const { view, pages, goBack } = useNavigation();
+  const place = usePlace();
   const previous = pages.at(-2);
   useShortcut(hotkey('back'), goBack);
   useBackButtons(goBack);
@@ -35,7 +39,11 @@ export function PageFrame({ page }: { page: Page }) {
         )}
       </div>
       <div className={styles.content}>
-        <PageContent page={page} />
+        {showsPage(place, page) ? (
+          <PageContent page={page} />
+        ) : (
+          <EmptyState icon={<FolderX size={20} />} title="This needs a workspace" description="Create a workspace of this repository to merge into it." />
+        )}
       </div>
     </div>
   );

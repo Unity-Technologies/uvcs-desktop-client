@@ -1,9 +1,20 @@
+import type { Place } from '@shared/domain/place';
+
 /**
  * Every query about a workspace starts with `workspaceKey(path)`, so a single
  * invalidation refreshes all of its views after an operation changes it.
  */
 export function workspaceKey(workspacePath: string): readonly unknown[] {
   return ['workspace', workspacePath];
+}
+
+/**
+ * Every query about the place a window shows starts with `placeKey(place)`: a workspace's is `workspaceKey`, a
+ * repository's `['repository', spec]`. Both are two parts, so what follows (the area, its details) is where the
+ * refresh scopes read it (`refreshScopes.ts`) whichever the place.
+ */
+export function placeKey(place: Place): readonly unknown[] {
+  return place.kind === 'workspace' ? workspaceKey(place.workspacePath) : ['repository', place.repository];
 }
 
 export const queryKeys = {
@@ -31,4 +42,5 @@ export const queryKeys = {
   workspaceRepository: (path: string) => ['workspaceRepository', path] as const,
   missingWorkspacePaths: (paths: readonly string[]) => ['missingWorkspacePaths', paths] as const,
   inWorkspace: (workspacePath: string, ...parts: unknown[]) => [...workspaceKey(workspacePath), ...parts] as const,
+  inPlace: (place: Place, ...parts: unknown[]) => [...placeKey(place), ...parts] as const,
 };

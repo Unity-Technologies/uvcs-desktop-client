@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { ContentSource, RepositoryVersion } from '@shared/domain/content';
 import type { ExternalApps } from '@shared/domain/externalApps';
 import { openInEditor, openWithDefaultApp } from '../../../components/externalApps/externalAppOperations';
@@ -38,7 +39,7 @@ export interface OpenableVersion {
 export function openableVersions(state: Pick<FileConflictState, 'file'>, { workspacePath, labels, yoursInWorkspace }: VersionOpeningContext): OpenableVersion[] {
   const { file } = state;
   const fromRepository = (version: ContentSource, label: string): OpenIn | undefined =>
-    version.kind === 'empty' ? undefined : (editorId) => openVersion(workspacePath, version as RepositoryVersion, versionCopyName(file.path, label), editorId);
+    version.kind === 'empty' ? undefined : (editorId) => openVersion(workspacePlace(workspacePath), version as RepositoryVersion, versionCopyName(file.path, label), editorId);
   const workspaceFile = absolutePath(workspacePath, file.path);
   const yours: OpenIn | undefined = yoursInWorkspace
     ? (editorId) => (editorId ? openInEditor(workspaceFile, editorId) : openWithDefaultApp(workspaceFile))

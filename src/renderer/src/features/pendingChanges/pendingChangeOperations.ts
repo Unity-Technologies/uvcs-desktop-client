@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { FilterRuleList, PendingChange } from '@shared/domain/pendingChanges';
 import { api } from '../../api/client';
 import { openFile } from '../../components/externalApps/externalAppOperations';
@@ -53,7 +54,7 @@ export async function undoChanges(workspacePath: string, changes: PendingChange[
     if (backupShelveId === undefined) return;
   }
 
-  const undone = await runVoidAction(workspacePath, "Couldn't undo the changes", () => api.pendingChanges.undo(workspacePath, paths), isAffectedByPendingChangeEdit);
+  const undone = await runVoidAction(workspacePlace(workspacePath), "Couldn't undo the changes", () => api.pendingChanges.undo(workspacePath, paths), isAffectedByPendingChangeEdit);
   if (!undone) return;
 
   const title = `Undid ${pluralize(controlled.length, 'change')}`;
@@ -83,17 +84,17 @@ export async function deletePrivateFiles(workspacePath: string, changes: Pick<Pe
   });
   if (!confirmed) return;
 
-  await runAction(workspacePath, "Couldn't delete the files", () =>
+  await runAction(workspacePlace(workspacePath), "Couldn't delete the files", () =>
     api.system.moveToTrash(changes.map((change) => absolutePath(workspacePath, change.path))),
   );
 }
 
 export function addToSourceControl(workspacePath: string, changes: PendingChange[]): Promise<void | undefined> {
-  return runAction(workspacePath, "Couldn't add the files", () => api.pendingChanges.add(workspacePath, changes.map((change) => change.path)), isAffectedByPendingChangeEdit);
+  return runAction(workspacePlace(workspacePath), "Couldn't add the files", () => api.pendingChanges.add(workspacePath, changes.map((change) => change.path)), isAffectedByPendingChangeEdit);
 }
 
 export function checkout(workspacePath: string, changes: PendingChange[]): Promise<void | undefined> {
-  return runAction(workspacePath, "Couldn't check out the files", () =>
+  return runAction(workspacePlace(workspacePath), "Couldn't check out the files", () =>
     api.pendingChanges.checkout(workspacePath, changes.map((change) => change.path)),
     isAffectedByPendingChangeEdit,
   );
@@ -113,7 +114,7 @@ export async function searchMatches(workspacePath: string, change: PendingChange
 }
 
 export async function addFilterRules(workspacePath: string, list: FilterRuleList, patterns: string[]): Promise<void> {
-  const added = await runVoidAction(workspacePath, "Couldn't update the rules", () => api.pendingChanges.addFilterRules(workspacePath, list, patterns));
+  const added = await runVoidAction(workspacePlace(workspacePath), "Couldn't update the rules", () => api.pendingChanges.addFilterRules(workspacePath, list, patterns));
   if (added) toast.success(`Added ${addedRulesWording(patterns)} to ${FILTER_LIST_FILES[list]}`);
 }
 

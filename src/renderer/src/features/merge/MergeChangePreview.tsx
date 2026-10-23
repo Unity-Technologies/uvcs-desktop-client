@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { MergeChange, MergeContributors, MergeRequest } from '@shared/domain/merge';
 import { EmptyState } from '../../ui/EmptyState';
 import { DiffFileTitle } from '../diff/viewer/DiffFileTitle';
@@ -24,7 +25,7 @@ export function MergeChangePreview({ workspacePath, request, change, contributor
   const { original, modified } = preview;
   return (
     <FileDiffViewer
-      workspacePath={workspacePath}
+      place={workspacePlace(workspacePath)}
       original={original}
       modified={modified}
       fileName={change.path}

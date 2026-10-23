@@ -7,8 +7,24 @@ describe('fakeCmClient', () => {
   it('fails any command it has no answer for, so a new command never goes unnoticed', async () => {
     const { cm } = fakeCmClient({ 'find branch': '' });
 
-    await expect(cm.query(['find', 'changeset'])).rejects.toThrow('Unexpected cm command (query): cm find changeset');
-    await expect(cm.query(['find', 'branchy'])).rejects.toThrow('Unexpected cm command');
+    await expect(cm.queryRecords(['find', 'changeset'], (fields) => fields)).rejects.toThrow('Unexpected cm command (query): cm find changeset');
+    await expect(cm.queryRecords(['find', 'branchy'], (fields) => fields)).rejects.toThrow('Unexpected cm command');
+  });
+
+  it('refuses a list read as one string, as CmClient does', async () => {
+    const { cm, commands } = fakeCmClient({ 'find branch': '' });
+
+    await expect(cm.query(['find', 'branch'])).rejects.toThrow('cm find branch prints a list');
+    expect(commands).toEqual([]);
+  });
+
+  it('hands each line of the output to the lines listener, as CmClient does', async () => {
+    const lines: string[] = [];
+    const { cm } = fakeCmClient({ update: 'Downloading\r\nUpdated 3 items\n' });
+
+    await cm.execute(['update'], { onOutputLine: (line) => lines.push(line) });
+
+    expect(lines).toEqual(['Downloading', 'Updated 3 items']);
   });
 
   it("fails a command naming a Unity organization's server by its id, which the app always names first", async () => {
@@ -19,23 +35,23 @@ describe('fakeCmClient', () => {
       ['find', 'revision', "where itemid = 7 on repository 'game@2398571046213@cloud'"],
       ['lock', 'list', '--repository=game@2398571046213@cloud'],
     ]) {
-      await expect(cm.query(args)).rejects.toThrow("A Unity organization's server by its id reached cm");
+      await expect(cm.queryRecords(args, (fields) => fields)).rejects.toThrow("A Unity organization's server by its id reached cm");
     }
     // A profile's name is the id form itself, as `cm profile list` prints it; and a changeset of a repository named so.
     await expect(cm.query(['profile', 'delete', '--name=2398571046213@cloud'])).resolves.toBe('');
-    await expect(cm.query(['find', 'changeset', 'cs:5@cloud', 'game@AcmeStudio@unity'])).resolves.toBe('');
+    await expect(cm.queryRecords(['find', 'changeset', 'cs:5@cloud', 'game@AcmeStudio@unity'], (fields) => fields)).resolves.toEqual([]);
   });
 
   it('answers with the longest key the command starts with, and records how each command was run', async () => {
-    const { cm, commands, linesVia } = fakeCmClient({ find: 'any', 'find branch': 'branches' });
+    const { cm, commands, linesVia } = fakeCmClient({ branch: 'any', 'branch create': 'created' });
 
-    expect(await cm.query(['find', 'branch', '--xml'], { cwd: 'wk' })).toBe('branches');
-    expect(await cm.execute(['find', 'changeset'])).toBe('any');
+    expect(await cm.query(['branch', 'create', 'br:/main/task'], { cwd: 'wk' })).toBe('created');
+    expect(await cm.execute(['branch', 'delete', 'br:/main/task'])).toBe('any');
     expect(commands.map(({ via, line, options }) => ({ via, line, options }))).toEqual([
-      { via: 'query', line: 'find branch --xml', options: { cwd: 'wk' } },
-      { via: 'execute', line: 'find changeset', options: {} },
+      { via: 'query', line: 'branch create br:/main/task', options: { cwd: 'wk' } },
+      { via: 'execute', line: 'branch delete br:/main/task', options: {} },
     ]);
-    expect(linesVia('execute')).toEqual(['find changeset']);
+    expect(linesVia('execute')).toEqual(['branch delete br:/main/task']);
   });
 
   it('answers a command read as records from the same --format output, recording how it was run', async () => {
@@ -68,7 +84,7 @@ describe('fakeCmClient', () => {
   it('tells whether a command starting with whole words was asked', async () => {
     const { cm, ran } = fakeCmClient({ find: '' });
 
-    await cm.query(['find', 'branch', '--xml']);
+    await cm.queryRecords(['find', 'branch', 'where name = 1'], (fields) => fields);
 
     expect([ran('find'), ran('find branch'), ran('find bran'), ran('find changeset')]).toEqual([true, true, false, false]);
   });

@@ -79,7 +79,7 @@ describe('workspace info', () => {
     });
     // Only an id asks the machine-readable header, a local read in the workspace's own sessions.
     expect(commands.filter(({ args }) => args.includes('--machinereadable'))).toMatchObject([
-      { via: 'query', args: ['status', '--header', '--machinereadable', '--fieldseparator=|', WORKSPACE], options: { cwd: WORKSPACE } },
+      { via: 'query', args: ['status', '--header', '--machinereadable', '--compact', '--fieldseparator=|', WORKSPACE], options: { cwd: WORKSPACE } },
     ]);
   });
 

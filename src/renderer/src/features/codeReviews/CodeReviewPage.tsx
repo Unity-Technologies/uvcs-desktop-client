@@ -2,7 +2,7 @@ import { Trash2, UserPlus } from 'lucide-react';
 import { CODE_REVIEW_STATUSES, type CodeReview, type CodeReviewStatus } from '@shared/domain/codeReview';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageProps } from '../../app/navigation/pages';
-import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { MENU_WORDS } from '../../components/menuWords';
 import { PathLabel } from '../../components/PathLabel';
 import { UserLabel } from '../../ui/Avatar';
@@ -69,14 +69,14 @@ function ReviewHeaderSkeleton() {
 }
 
 function ReviewHeader({ review }: { review: CodeReview }) {
-  const workspacePath = useWorkspacePath();
+  const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
-  // The review menu's own entry (`codeReviewMenu`), as a button: the reviewer gets the code to run it.
-  const reviewedCode = reviewedCodeAction(workspacePath, review.target, workspace?.selector);
+  // The review menu's own entry (`codeReviewMenu`), as a button: the reviewer gets the code to run it, in a workspace.
+  const reviewedCode = reviewedCodeAction(place, review.target, workspace?.selector);
   const ReviewedCodeIcon = reviewedCode && MENU_WORDS[reviewedCode.word].icon;
 
   const remove = async (): Promise<void> => {
-    if (await deleteReviews(workspacePath, [review])) navigation.goBack();
+    if (await deleteReviews(place, [review])) navigation.goBack();
   };
 
   return (
@@ -107,7 +107,7 @@ function ReviewHeader({ review }: { review: CodeReview }) {
       <div className={styles.actions}>
         <SegmentedControl<CodeReviewStatus>
           value={review.status}
-          onChange={(status) => void setReviewStatus(workspacePath, review, status)}
+          onChange={(status) => void setReviewStatus(place, review, status)}
           segments={CODE_REVIEW_STATUSES.map((status) => ({ value: status, label: status }))}
         />
         <div className={styles.spacer} />
@@ -126,7 +126,7 @@ function ReviewHeader({ review }: { review: CodeReview }) {
             {reviewedCode.label}
           </Button>
         )}
-        <Button icon={<UserPlus size={14} />} onClick={() => void reassignReview(workspacePath, review)}>
+        <Button icon={<UserPlus size={14} />} onClick={() => void reassignReview(place, review)}>
           Assign
         </Button>
         <Button variant="ghost" icon={<Trash2 size={14} />} onClick={() => void remove()}>

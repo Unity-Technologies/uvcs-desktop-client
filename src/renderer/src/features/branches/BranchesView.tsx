@@ -3,10 +3,10 @@ import { useMemo } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import { useRenameCommand } from '../../app/commands/useRenameCommand';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
-import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ObjectListView } from '../../components/ObjectListView';
-import { useWorkspaceUser } from '../../app/account/accounts';
+import { usePlaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { SincePicker } from '../../components/SincePicker';
@@ -35,16 +35,17 @@ import { buildBranchTree, sortBranchesByName, type BranchTreeRow } from './branc
 import { useCollapsedBranches } from './useCollapsedBranches';
 import { openCreateBranchDialog } from './CreateBranchDialog';
 import { newBranchFromWorkspace } from './newBranchFromWorkspace';
+import { newBranchButton } from './newBranchOrigins';
 import { useBranches } from './useBranches';
 import { branchCopyTexts } from './branchMenu';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
 
 export function BranchesView() {
-  const workspacePath = useWorkspacePath();
+  const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
   const filters = useBranchesViewStore();
   const { text: search, people, layout, since, showHidden, update } = filters;
-  const me = useWorkspaceUser();
+  const me = usePlaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const { data: branches, isPending, isFetching, error } = useBranches(branchesQuery({ since, people: queriedPeople, showHidden }));
   const offered = usePeopleSeen('branches', branches, ownerOf);
@@ -61,12 +62,13 @@ export function BranchesView() {
     () => (layout === 'tree' ? buildBranchTree(matching, collapsed) : matching.map((branch) => ({ branch, depth: 0, hasChildren: false, collapsed: false }))),
     [layout, matching, collapsed],
   );
-  useRenameCommand('Branches', 'branch', selection.selected.size === 1 ? selected : undefined, (branch) => void renameBranch(workspacePath, branch));
-  useCopyCommand('Branches', 'Branch', selection.selected.size === 1 && selected ? branchCopyTexts(workspacePath, selected) : undefined);
+  useRenameCommand('Branches', 'branch', selection.selected.size === 1 ? selected : undefined, (branch) => void renameBranch(place, branch));
+  useCopyCommand('Branches', 'Branch', selection.selected.size === 1 && selected ? branchCopyTexts(place, selected) : undefined);
 
   // From the selected branch's head, or else from what the workspace has loaded (nothing listed, a label loaded).
+  const button = newBranchButton(selected !== undefined, place.kind === 'workspace' ? { read: workspace !== undefined } : null);
   const newBranch = (): void => {
-    if (selected) void openCreateBranchDialog(workspacePath, branchHeadOrigin(selected));
+    if (selected) void openCreateBranchDialog(place, branchHeadOrigin(selected));
     else if (workspace) void newBranchFromWorkspace(workspace);
   };
 
@@ -81,8 +83,14 @@ export function BranchesView() {
         total={branches?.length}
         actions={
           <>
-            <ViewRefreshButton workspacePath={workspacePath} fetching={isFetching} />
-            <Button variant="primary" icon={<GitBranchPlus size={14} />} onClick={newBranch} disabled={!workspace}>
+            <ViewRefreshButton fetching={isFetching} />
+            <Button
+              variant="primary"
+              icon={<GitBranchPlus size={14} />}
+              onClick={newBranch}
+              disabled={!button.enabled}
+              data-tip={button.tip}
+            >
               New branch
             </Button>
           </>
@@ -124,9 +132,9 @@ export function BranchesView() {
         selection={selection}
         onSelectionChange={setSelection}
         onActivate={(row) => diffBranch(row.branch)}
-        contextMenu={(selectedRows) => branchMenu(workspacePath, selectedRows.map((row) => row.branch), currentBranch)}
+        contextMenu={(selectedRows) => branchMenu(place, selectedRows.map((row) => row.branch), currentBranch)}
         noun="branch"
-        details={selected && <BranchDetails key={selected.name} branch={selected} menu={branchMenu(workspacePath, [selected], currentBranch)} />}
+        details={selected && <BranchDetails key={selected.name} branch={selected} menu={branchMenu(place, [selected], currentBranch)} />}
       />
     </>
   );

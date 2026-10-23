@@ -1,3 +1,4 @@
+import type { Place } from '@shared/domain/place';
 import type { PageWindowOpening, PageWindowPage } from '@shared/domain/pageWindow';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { Page, PageOf } from '../navigation/pages';
@@ -28,11 +29,11 @@ export function asMovablePage(value: PageWindowPage): Page | null {
 }
 
 /**
- * What opens a page in a window of its own: its workspace, the page, and for a diff the files this window already
+ * What opens a page in a window of its own: its place, the page, and for a diff the files this window already
  * read of it (`cachedEntries`), so the page window doesn't run `cm diff` again.
  */
-export function pageWindowOpening(workspacePath: string, page: Page, cachedEntries: (page: PageOf<'diff'>) => DiffEntry[] | undefined): PageWindowOpening {
-  const opening: PageWindowOpening = { workspacePath, page };
+export function pageWindowOpening(place: Place, page: Page, cachedEntries: (page: PageOf<'diff'>) => DiffEntry[] | undefined): PageWindowOpening {
+  const opening: PageWindowOpening = { place, page };
   if (page.kind !== 'diff') return opening;
   const entries = cachedEntries(page);
   return entries ? { ...opening, diff: { target: page.target, entries } } : opening;

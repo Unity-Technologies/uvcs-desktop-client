@@ -106,23 +106,27 @@ describe('newBranchSwitch', () => {
 
   it('asks about the pending changes, with Go to Changes, when switching to the new branch', () => {
     const pending = pendingWith();
-    const asked = newBranchSwitch(true, pending, 'discard');
+    const asked = newBranchSwitch(true, pending, 'discard', true);
     expect(asked.question).toEqual({ choice: pending.plan.kind === 'ask' ? pending.plan.choice : null, preflight: pending.preflight });
     expect(asked).toMatchObject({ blockedByMerge: false, button: { label: 'Create & undo changes', variant: 'danger' } });
   });
 
   it('asks nothing when not switching, even with Undo chosen before', () => {
-    expect(newBranchSwitch(false, pendingWith(), 'discard')).toEqual({ question: null, blockedByMerge: false, button: created });
+    expect(newBranchSwitch(false, pendingWith(), 'discard', true)).toEqual({ offered: true, question: null, blockedByMerge: false, button: created });
   });
 
   it('asks nothing until the workspace was read, nor when the setting or nothing pending decides', () => {
-    expect(newBranchSwitch(true, undefined, null)).toEqual({ question: null, blockedByMerge: false, button: created });
-    expect(newBranchSwitch(true, { preflight, plan: { kind: 'automatic', action: 'bring' } }, 'bring')).toEqual({ question: null, blockedByMerge: false, button: created });
-    expect(newBranchSwitch(true, { preflight, plan: { kind: 'plain' } }, null)).toEqual({ question: null, blockedByMerge: false, button: created });
+    expect(newBranchSwitch(true, undefined, null, true)).toEqual({ offered: true, question: null, blockedByMerge: false, button: created });
+    expect(newBranchSwitch(true, { preflight, plan: { kind: 'automatic', action: 'bring' } }, 'bring', true)).toEqual({ offered: true, question: null, blockedByMerge: false, button: created });
+    expect(newBranchSwitch(true, { preflight, plan: { kind: 'plain' } }, null, true)).toEqual({ offered: true, question: null, blockedByMerge: false, button: created });
   });
 
   it('stays put during a merge: no question, no Go to Changes, a plain Create branch', () => {
-    expect(newBranchSwitch(true, pendingWith({ inMerge: true }), 'discard')).toEqual({ question: null, blockedByMerge: true, button: created });
+    expect(newBranchSwitch(true, pendingWith({ inMerge: true }), 'discard', true)).toEqual({ offered: true, question: null, blockedByMerge: true, button: created });
+  });
+
+  it('offers no switch and asks nothing in a repository explored without a workspace', () => {
+    expect(newBranchSwitch(true, undefined, null, false)).toEqual({ offered: false, question: null, blockedByMerge: false, button: created });
   });
 });
 

@@ -3,12 +3,16 @@ import { BRANCH_FORMAT, CHANGESET_FORMAT, LABEL_FORMAT, MERGE_FORMAT } from './b
 import { findCommand, whereClause } from './findQuery';
 
 /**
- * The `cm find` commands that load the Branch Explorer. `cm find branch` leaves hidden branches out unless asked for
- * (`hidden = 'true'`), and `cm find changeset` their changesets (`ignorehidden = 'true'` brings them in).
- * Hidden branches are always read, few as they are: the code review chips name them by id.
+ * The `cm find` commands that load the Branch Explorer, on `repository` when no workspace tells `cm` which. `cm find
+ * branch` leaves hidden branches out unless asked for (`hidden = 'true'`), and `cm find changeset` their changesets
+ * (`ignorehidden = 'true'` brings them in). Hidden branches are always read, few as they are: the code review chips
+ * name them by id.
  */
-export function branchExplorerFinds(query: BranchExplorerQuery): Record<'branches' | 'hiddenBranches' | 'changesets' | 'merges' | 'labels', string[]> {
-  const find = (object: string, where: string, format: string): string[] => findCommand(object, where, `--format=${format}`);
+export function branchExplorerFinds(
+  query: BranchExplorerQuery,
+  repository?: string,
+): Record<'branches' | 'hiddenBranches' | 'changesets' | 'merges' | 'labels', string[]> {
+  const find = (object: string, where: string, format: string): string[] => findCommand(object, where, `--format=${format}`, repository);
   const range = { sinceDate: query.sinceDate };
   const inRange = whereClause(range);
   return {

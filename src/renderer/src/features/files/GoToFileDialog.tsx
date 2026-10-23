@@ -1,6 +1,8 @@
 import { Ellipsis } from 'lucide-react';
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { TreeItem } from '@shared/domain/explorer';
+import { goToFileKey } from '../../components/goToFileKeys';
+import { GoToFileList } from '../../components/GoToFileList';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { runningFirst } from '../../lib/actions';
 import { createFuzzyIndex, fuzzyMatchPositions } from '../../lib/fuzzyIndex';
@@ -11,7 +13,6 @@ import { askDialog } from '../../ui/dialog/dialogStore';
 import { KeyHints } from '../../ui/KeyHints';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { SearchField } from '../../ui/SearchField';
-import { CenteredSpinner } from '../../ui/Spinner';
 import { changeStatus } from '../pendingChanges/changeTone';
 import { usePendingChanges } from '../pendingChanges/usePendingChanges';
 import { readListedItem } from './directoryListing';
@@ -57,13 +58,11 @@ function GoToFileDialog({ workspacePath, initialQuery, finish }: GoToFileDialogP
     runningFirst(fileMenu(workspacePath, [item], pendingIndex), () => finish(undefined));
 
   const onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    const key = goToFileKey(event.key, highlighted, results.length);
+    if (key) {
       event.preventDefault();
-      const step = event.key === 'ArrowDown' ? 1 : -1;
-      setHighlighted((current) => Math.min(results.length - 1, Math.max(0, current + step)));
-    } else if (event.key === 'Enter' && results[highlighted]) {
-      event.preventDefault();
-      finish(results[highlighted]);
+      if (key.kind === 'highlight') setHighlighted(key.index);
+      else finish(results[key.index]);
     } else if (isRowMenuKey(event) && results[highlighted]) {
       event.preventDefault();
       void openActions(results[highlighted]);
@@ -85,32 +84,30 @@ function GoToFileDialog({ workspacePath, initialQuery, finish }: GoToFileDialogP
           width={570}
         />
       </div>
-      <div className={styles.results}>
-        {isLoading && <CenteredSpinner />}
-        {!isLoading && results.length === 0 && <div className={styles.empty}>No files match “{query}”.</div>}
-        {results.map((path, index) => (
-          <div key={path} className={styles.resultRow} data-highlighted={index === highlighted} onMouseEnter={() => setHighlighted(index)}>
-            <button type="button" className={styles.result} onClick={() => finish(path)}>
-              <ResultRow path={path} isDirectory={directories.has(path)} matches={fuzzyMatchPositions(path, query)} pendingIndex={pendingIndex} />
+      <GoToFileList
+        paths={results}
+        highlighted={highlighted}
+        onHighlight={setHighlighted}
+        onPick={finish}
+        loading={isLoading}
+        note={!isLoading && results.length === 0 ? `No files match “${query}”.` : null}
+        row={(path) => <ResultRow path={path} isDirectory={directories.has(path)} matches={fuzzyMatchPositions(path, query)} pendingIndex={pendingIndex} />}
+        highlightedExtra={(path) => (
+          <ActionDropdownMenu
+            entries={actionsFor?.path === path ? actions(actionsFor) : []}
+            open={actionsFor?.path === path}
+            onOpenChange={(open) => (open ? void openActions(path) : setActionsFor(null))}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              inputRef.current?.focus();
+            }}
+          >
+            <button type="button" tabIndex={-1} className={styles.actions} aria-label="Actions" data-tip="Actions" data-tip-shortcut={hotkey('rowActions')}>
+              <Ellipsis size={15} />
             </button>
-            {index === highlighted && (
-              <ActionDropdownMenu
-                entries={actionsFor?.path === path ? actions(actionsFor) : []}
-                open={actionsFor?.path === path}
-                onOpenChange={(open) => (open ? void openActions(path) : setActionsFor(null))}
-                onCloseAutoFocus={(event) => {
-                  event.preventDefault();
-                  inputRef.current?.focus();
-                }}
-              >
-                <button type="button" tabIndex={-1} className={styles.actions} aria-label="Actions" data-tip="Actions" data-tip-shortcut={hotkey('rowActions')}>
-                  <Ellipsis size={15} />
-                </button>
-              </ActionDropdownMenu>
-            )}
-          </div>
-        ))}
-      </div>
+          </ActionDropdownMenu>
+        )}
+      />
       <KeyHints hints={[{ keys: hotkey('rowActions'), label: 'actions' }]} />
     </Dialog>
   );

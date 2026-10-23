@@ -1,5 +1,6 @@
 import type { BranchExplorerData, BranchExplorerQuery } from '../domain/branchExplorer';
+import type { Place } from '../domain/place';
 
 export interface BranchExplorerApi {
-  load(workspacePath: string, query: BranchExplorerQuery): Promise<BranchExplorerData>;
+  load(place: Place, query: BranchExplorerQuery): Promise<BranchExplorerData>;
 }

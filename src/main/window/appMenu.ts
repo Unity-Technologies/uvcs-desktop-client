@@ -28,7 +28,7 @@ function commandItem(label: string, commandId: string, accelerator?: string, wit
 }
 
 /**
- * The Window menu's list: every open window by the workspace it shows, each followed by its page windows (by their
+ * The Window menu's list: every open window by the place it shows, each followed by its page windows (by their
  * page's title), the focused one checked.
  */
 function windowItems(windows: WorkspaceWindows): MenuItemConstructorOptions[] {
@@ -40,7 +40,7 @@ function windowItems(windows: WorkspaceWindows): MenuItemConstructorOptions[] {
     click: () => focusWindow(window),
   });
   return windows.all().flatMap((window) => [
-    item(window, windows.workspaceIn(window) ? window.getTitle() : 'Home'),
+    item(window, windows.placeIn(window) ? window.getTitle() : 'Home'),
     ...windows.pageWindowsOf(window.webContents.id).map((pageWindow) => item(pageWindow, pageWindow.getTitle())),
   ]);
 }
@@ -70,10 +70,10 @@ function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates): void {
   });
 
   const menu = Menu.buildFromTemplate(template);
-  // A window on the home screen (or none) has no workspace commands to run.
+  // A window on the home screen (or none) has no workspace commands to run, and a repository's only some.
   const focused = BrowserWindow.getFocusedWindow();
-  const showsWorkspace = Boolean(focused && windows.workspaceIn(focused));
-  for (const item of menuItems(menu)) if (item.id && !item.role) item.enabled = isMenuCommandEnabled(item.id, showsWorkspace);
+  const shown = focused ? windows.placeIn(focused) : undefined;
+  for (const item of menuItems(menu)) if (item.id && !item.role) item.enabled = isMenuCommandEnabled(item.id, shown);
   Menu.setApplicationMenu(menu);
 }
 

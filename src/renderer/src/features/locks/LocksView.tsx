@@ -5,7 +5,7 @@ import { ItemPathRow } from '../../components/ItemPathRow';
 import { ObjectListView } from '../../components/ObjectListView';
 import { PathLabel } from '../../components/PathLabel';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
-import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
@@ -14,7 +14,7 @@ import { Highlight } from '../../ui/Highlight';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import type { Column } from '../../ui/table/column';
 import { lockFilterTexts, readsOnlyMyLocks } from './lockFilters';
-import { useWorkspaceUser } from '../../app/account/accounts';
+import { usePlaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { isOnlyMine, matchesPeople } from '../../lib/peopleFilter';
@@ -28,7 +28,7 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { LockDetails } from './LockDetails';
 import { lockKey } from './lockKey';
 import { lockMenu } from './lockMenu';
-import { isReleasable, releaseLocks } from './lockOperations';
+import { isReleasable, releaseLocks, unlocksIn } from './lockOperations';
 import { useLocks } from './useLocks';
 import { useLockRulesPage } from './useLockRulesPage';
 import { openLockRules, useLockRulesCommand } from './useLockRulesCommand';
@@ -62,10 +62,10 @@ const ownerOf = (lock: Lock): string => lock.owner;
 
 /** Exclusive checkouts on the repository: who holds what, and releasing them. */
 export function LocksView() {
-  const workspacePath = useWorkspacePath();
+  const place = usePlace();
   const filters = useLocksViewStore();
   const { text: filter, people, update } = filters;
-  const me = useWorkspaceUser();
+  const me = usePlaceUser();
   const [selection, setSelection] = useViewSelection('locks');
   const { data: locks, isPending, error, isFetching } = useLocks(readsOnlyMyLocks(people));
   const offered = usePeopleSeen('locks', locks, ownerOf);
@@ -88,15 +88,17 @@ export function LocksView() {
       total={locks?.length}
       actions={
         <>
-          <ViewRefreshButton workspacePath={workspacePath} fetching={isFetching} />
+          <ViewRefreshButton fetching={isFetching} />
           {lockRules && (
             <Button icon={<ExternalLink size={14} />} data-tip={lockRules.tip} onClick={() => openLockRules(lockRules)}>
               Lock rules
             </Button>
           )}
-          <Button icon={<LockOpen size={14} />} disabled={releasable.length === 0} onClick={() => void releaseLocks(workspacePath, releasable)}>
-            Release
-          </Button>
+          {unlocksIn(place) && (
+            <Button icon={<LockOpen size={14} />} disabled={releasable.length === 0} onClick={() => void releaseLocks(place, releasable)}>
+              Release
+            </Button>
+          )}
         </>
       }
     >
@@ -124,10 +126,10 @@ export function LocksView() {
         rowKey={lockKey}
         selection={selection}
         onSelectionChange={setSelection}
-        contextMenu={(rows) => lockMenu(workspacePath, rows)}
+        contextMenu={(rows) => lockMenu(place, rows)}
         initialSort={{ columnId: 'date', descending: true }}
         noun="lock"
-        details={focused && <LockDetails key={lockKey(focused)} workspacePath={workspacePath} lock={focused} menu={lockMenu(workspacePath, [focused])} />}
+        details={focused && <LockDetails key={lockKey(focused)} place={place} lock={focused} menu={lockMenu(place, [focused])} />}
       />
     </>
   );

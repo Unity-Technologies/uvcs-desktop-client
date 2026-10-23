@@ -2,6 +2,7 @@ import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { formatOutput, UNITY_ORGANIZATION } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { contentHashOf } from '../files/WorkspaceCopies';
@@ -54,7 +55,7 @@ describe('file history', () => {
       ls: formatOutput([45, `rep:game@${UNITY_ORGANIZATION.byName}`]),
     });
 
-    const itemHistory = await service.forItem(WORKSPACE, 'README.md');
+    const itemHistory = await service.forItem(workspacePlace(WORKSPACE), 'README.md');
 
     expect(itemHistory.revisions.map((item) => [item.repository, item.idSpec])).toEqual([
       ['game@AcmeStudio@unity', 'revid:45@game@AcmeStudio@unity'],
@@ -69,7 +70,7 @@ describe('file history', () => {
       'find revision': formatOutput([1, 15, -1], [4, 45, 15]),
     });
 
-    const itemHistory = await service.forItem(WORKSPACE, 'README.md', { revisionId: 45, repository: 'game@AcmeStudio@unity' });
+    const itemHistory = await service.forItem(workspacePlace(WORKSPACE), 'README.md', { revisionId: 45, repository: 'game@AcmeStudio@unity' });
 
     expect(itemHistory.revisions.map((item) => item.repository)).toEqual(['game@AcmeStudio@unity', 'game@AcmeStudio@unity']);
     expect(lines()).toHaveLength(2);
@@ -78,7 +79,7 @@ describe('file history', () => {
   it("reads a workspace file's history with three quick commands: the history, its revision ids, and the one loaded", async () => {
     const { service, commands } = history({ ...TWO_REVISIONS, ls: formatOutput([45, 'rep:game@local', 'aGFzaA==', 42]) });
 
-    const itemHistory = await service.forItem(WORKSPACE, 'README.md');
+    const itemHistory = await service.forItem(workspacePlace(WORKSPACE), 'README.md');
 
     expect(commands.map(({ via, args }) => [via, args])).toEqual([
       ['query', ['ls', README, '--format={revid}\u001f{repspec}\u001f{hash}\u001f{size}\u001e', '--symlink']],
@@ -95,7 +96,7 @@ describe('file history', () => {
   it("reads a revision's item by its id in its repository, which the workspace may not have", async () => {
     const { service, lines } = history(TWO_REVISIONS);
 
-    const itemHistory = await service.forItem(WORKSPACE, 'README.md', { revisionId: 45, repository: 'lib@local' });
+    const itemHistory = await service.forItem(workspacePlace(WORKSPACE), 'README.md', { revisionId: 45, repository: 'lib@local' });
 
     expect(lines()[0]).toBe('history rev:revid:45@lib@local --moveddeleted --xml --symlink');
     expect(lines().some((line) => line.startsWith('ls'))).toBe(false);
@@ -105,7 +106,7 @@ describe('file history', () => {
   it("shows the history when the workspace can't tell its loaded revision", async () => {
     const { service } = history({ ...TWO_REVISIONS, ls: cmFails('Error: The item README.md is not in the workspace.') });
 
-    const itemHistory = await service.forItem(WORKSPACE, 'README.md');
+    const itemHistory = await service.forItem(workspacePlace(WORKSPACE), 'README.md');
 
     expect(itemHistory.revisions).toHaveLength(2);
     expect(itemHistory.workspaceRevisionId).toBeUndefined();
@@ -114,7 +115,7 @@ describe('file history', () => {
   it('asks for no revision ids when the history has no revisions', async () => {
     const { service, lines } = history({ history: historyXml(''), ls: '' });
 
-    expect((await service.forItem(WORKSPACE, 'README.md')).revisions).toEqual([]);
+    expect((await service.forItem(workspacePlace(WORKSPACE), 'README.md')).revisions).toEqual([]);
     expect(lines().some((line) => line.startsWith('find'))).toBe(false);
   });
 });
@@ -125,15 +126,15 @@ describe("the workspace's revision in a history", () => {
     await writeFile(join(workspace, 'README.md'), '# Game\n');
     const fake = fakeCmClient({ ...TWO_REVISIONS, ls: formatOutput([45, 'rep:game@local', contentHashOf(Buffer.from('# Game\n')), 7]), cat: async ({ args }) => (await writeFile(optionValue(args, '--file=')!, 'downloaded'), '') });
     const context = serviceContext(fake.cm);
-    await createHistoryService(context, { apps: {} as never }).forItem(workspace, 'README.md');
+    await createHistoryService(context, { apps: {} as never }).forItem(workspacePlace(workspace), 'README.md');
     const content = createContentService(context);
     const workspaceRevision = { kind: 'revision' as const, revision: { revisionId: 45, repository: 'game@local' }, fileName: 'README.md' };
 
-    expect((await content.read(workspace, workspaceRevision)).text).toBe('# Game\n');
+    expect((await content.read(workspacePlace(workspace), workspaceRevision)).text).toBe('# Game\n');
     expect(fake.ran('cat')).toBe(false);
 
     await writeFile(join(workspace, 'README.md'), '# Gamf\n');
-    expect((await content.read(workspace, workspaceRevision)).text).toBe('downloaded');
+    expect((await content.read(workspacePlace(workspace), workspaceRevision)).text).toBe('downloaded');
     expect(fake.ran('cat revid:45@game@local')).toBe(true);
   });
 
@@ -142,10 +143,10 @@ describe("the workspace's revision in a history", () => {
     await writeFile(join(workspace, 'README.md'), '# Game\n');
     const fake = fakeCmClient({ ...TWO_REVISIONS, ls: formatOutput([45, 'rep:game@local', contentHashOf(Buffer.from('# Game\n')), 7]), cat: async ({ args }) => (await writeFile(optionValue(args, '--file=')!, 'older'), '') });
     const context = serviceContext(fake.cm);
-    await createHistoryService(context, { apps: {} as never }).forItem(workspace, 'README.md');
+    await createHistoryService(context, { apps: {} as never }).forItem(workspacePlace(workspace), 'README.md');
     const listedBefore = fake.lines().filter((line) => line.startsWith('ls')).length;
 
-    await createContentService(context).read(workspace, { kind: 'revision', revision: { revisionId: 15, repository: 'game@local' }, fileName: 'README.md' });
+    await createContentService(context).read(workspacePlace(workspace), { kind: 'revision', revision: { revisionId: 15, repository: 'game@local' }, fileName: 'README.md' });
 
     expect(fake.lines().filter((line) => line.startsWith('ls'))).toHaveLength(listedBefore);
     expect(fake.ran('cat revid:15@game@local')).toBe(true);
@@ -162,10 +163,10 @@ describe("the workspace's revision in a cloud repository's history", () => {
       ls: formatOutput([45, `rep:game@${UNITY_ORGANIZATION.byName}`, contentHashOf(Buffer.from('# Game\n')), 7]),
     });
     const context = serviceContext(fake.cm);
-    const { revisions } = await createHistoryService(context, { apps: {} as never }).forItem(workspace, 'README.md');
+    const { revisions } = await createHistoryService(context, { apps: {} as never }).forItem(workspacePlace(workspace), 'README.md');
     const newest = revisions[0]!;
 
-    const read = await createContentService(context).read(workspace, { kind: 'revision', revision: { revisionId: newest.revisionId, repository: newest.repository }, fileName: 'README.md' });
+    const read = await createContentService(context).read(workspacePlace(workspace), { kind: 'revision', revision: { revisionId: newest.revisionId, repository: newest.repository }, fileName: 'README.md' });
 
     expect(read.text).toBe('# Game\n');
     expect(fake.ran('cat')).toBe(false);
@@ -179,5 +180,24 @@ describe('revert', () => {
     await service.revertTo(WORKSPACE, 'README.md', 4);
 
     expect(commands).toMatchObject([{ via: 'query', args: ['revert', `${README}#cs:4`], options: { cwd: WORKSPACE } }]);
+  });
+});
+
+describe('history in a repository explored without a workspace', () => {
+  it("starts from a revision, by the item it is of, outside every workspace: the commands name its repository", async () => {
+    const { service, commands } = history(TWO_REVISIONS);
+
+    const { revisions } = await service.forItem(repositoryPlace('game@local'), 'README.md', { revisionId: 45, repository: 'game@local' });
+
+    expect(revisions).toHaveLength(2);
+    expect(commands.map(({ args }) => args.slice(0, 2).join(' '))).toEqual(['history rev:revid:45@game@local', 'find revision']);
+    expect(commands.every(({ options }) => options.outsideWorkspaces)).toBe(true);
+  });
+
+  it("can't start from a path, which names a workspace's file: a bug told as one", async () => {
+    const { service, commands } = history(TWO_REVISIONS);
+
+    await expect(service.forItem(repositoryPlace('game@local'), 'README.md')).rejects.toThrow('needs a workspace');
+    expect(commands).toEqual([]);
   });
 });
