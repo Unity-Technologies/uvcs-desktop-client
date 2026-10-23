@@ -1,5 +1,6 @@
 import type { CmClient, CmRecordsOptions, CmRunOptions } from '../CmClient';
 import { CmError } from '../CmError';
+import { textOutputKind } from '../commandOutputs';
 import { extractErrorMessage } from '../errorMessage';
 import { RecordReader, type ReadRecord } from '../formatRecords';
 import { namesOrganizationById } from '../organizationIds';
@@ -59,7 +60,8 @@ export interface FakeCm {
 
 /**
  * A fake `CmClient` that answers from synthetic output (written with `cmOutput`), records every command with whether it went through `query`
- * or `execute`, and fails the test on any command it has no answer for.
+ * or `execute`, and fails the test on any command it has no answer for. As `CmClient`, it refuses a list read as text
+ * (`textOutputKind`): a list is streamed (`queryRecords`).
  *
  * `answers` is keyed by the start of the command line (the arguments joined by spaces): `'find branch'` answers every
  * `cm find branch ...`, and the longest matching key wins, so `'find branch where name'` can answer apart.
@@ -73,6 +75,7 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
 
   async function run(via: CmVia, args: string[], options: CmRunOptions = {}, readsRecords = false): Promise<string> {
     const command: FakeCmCommand = { via, args, line: args.join(' '), options, readsRecords };
+    if (!readsRecords) textOutputKind(args);
     commands.push(command);
     if (namesOrganizationById(args)) throw new Error(`A Unity organization's server by its id reached cm (take it from an output that names it): cm ${command.line}`);
     const key = keys.find((candidate) => startsWithWords(command.line, candidate));
