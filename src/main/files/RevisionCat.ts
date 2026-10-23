@@ -163,12 +163,12 @@ export class RevisionCat {
     if (failure === null) return batch.forEach((read) => read.resolve()), null;
     if (batch.length === 1) return batch[0]!.reject(failure), null;
     const written = await Promise.all(batch.map((read) => stat(read.target).then(() => true, () => false)));
-    const { notFound, everyLineExplained } = explainCatFailure(
+    const { unwritten, everyLineExplained } = explainCatFailure(
       batch.filter((_, i) => !written[i]),
       failure,
     );
-    notFound.forEach(({ read, line }) => read.reject((failure as CmError).withMessage(line)));
-    const missing = notFound.map(({ read }) => read);
+    unwritten.forEach(({ read, line }) => read.reject((failure as CmError).withMessage(line)));
+    const missing = unwritten.map(({ read }) => read);
     const rest = batch.filter((read) => !missing.includes(read));
     if (everyLineExplained) rest.filter((read) => written[batch.indexOf(read)]).forEach((read) => read.resolve());
     const unexplained = everyLineExplained ? rest.filter((read) => !written[batch.indexOf(read)]) : rest;

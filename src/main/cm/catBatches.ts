@@ -101,7 +101,7 @@ export function catArgs(batch: readonly CatRead[]): string[] {
 /** What a failed `cm cat` told about its reads (`explainCatFailure`). */
 export interface CatFailureExplained<T> {
   /** The reads it named as not found (`The specified revision was not found <spec>`), each with its line. */
-  notFound: { read: T; line: string }[];
+  unwritten: { read: T; line: string }[];
   /**
    * Every line it printed names one of them: the other reads were written whole. False when some line names none (a
    * failed download, a dropped connection): any of the others may be unwritten.
@@ -115,12 +115,12 @@ export interface CatFailureExplained<T> {
  */
 export function explainCatFailure<T extends { spec: string }>(reads: readonly T[], failure: unknown): CatFailureExplained<T> {
   const lines = failureLines(failure);
-  const notFound = reads.flatMap((read) => {
+  const unwritten = reads.flatMap((read) => {
     const line = lines.find((candidate) => candidate.endsWith(` ${read.spec}`));
     return line === undefined ? [] : [{ read, line }];
   });
-  const everyLineExplained = lines.length > 0 && lines.every((line) => notFound.some((named) => named.line === line));
-  return { notFound, everyLineExplained };
+  const everyLineExplained = lines.length > 0 && lines.every((line) => unwritten.some((named) => named.line === line));
+  return { unwritten, everyLineExplained };
 }
 
 /** The lines a failed `cm` command printed; none for a failure that isn't `cm`'s. */

@@ -211,8 +211,8 @@ async function saveOnce(cm: CmClient, workspacePath: string, reads: KeptVersionR
     (error: unknown) => error,
   );
   if (failure === null) return [];
-  const { notFound, everyLineExplained } = explainCatFailure(reads, failure);
-  const missing = notFound.map(({ read }) => read);
+  const { unwritten, everyLineExplained } = explainCatFailure(reads, failure);
+  const missing = unwritten.map(({ read }) => read);
   unsaved.notSaved.push(...missing.map((read) => read.path));
   return everyLineExplained ? [] : reads.filter((read) => !missing.includes(read));
 }
