@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { ContentSource } from '@shared/domain/content';
+import type { ContentSource, FileContent } from '@shared/domain/content';
 import { canDiscardChanges } from './canDiscardChanges';
 
 const onDisk: ContentSource = { kind: 'workspaceFile', path: 'src/a.cs' };
 /** The original's content as read. */
-const READ = { text: 'a\n', isBinary: false, size: 2 };
+const READ: FileContent = { text: 'a\n', isBinary: false, size: 2 };
 
 describe('canDiscardChanges', () => {
   it('allows a workspace file against its loaded revision or its reviewed copy', () => {
