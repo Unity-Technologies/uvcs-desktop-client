@@ -43,7 +43,8 @@ import { WorkspaceWindows } from './window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders';
 
 const userData = app.getPath('userData');
-const cm = new CmClient(locateCm);
+// Commands of a repository explored without a workspace run here, where none can be read by mistake (`outsideWorkspaces`).
+const cm = new CmClient(locateCm, join(userData, 'outside-workspaces'));
 const settings = openSettings(userData);
 // What a workspace is loaded from, shared by the reads that follow one another as a window opens it.
 const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
