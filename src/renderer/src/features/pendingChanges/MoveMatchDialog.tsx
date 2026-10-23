@@ -8,6 +8,7 @@ import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { PercentSlider } from '../../ui/PercentSlider';
 import { PickList } from '../../ui/PickList';
+import { ItemTag } from '../../components/ItemTag';
 import {
   DEFAULT_MINIMUM_SIMILARITY,
   isScored,
@@ -21,7 +22,7 @@ import {
   similarityTip,
 } from './matchSimilarity';
 import { matchCandidates, moveMatchOf, type MatchSide, type MoveMatch } from './moveMatches';
-import { emptyListWords, matchDialogWords } from './moveMatchWords';
+import { emptyListWords, matchDialogWords, pairingTag, type PairingTag } from './moveMatchWords';
 import styles from './MoveMatchDialog.module.css';
 
 interface MoveMatchDialogProps {
@@ -84,16 +85,24 @@ function MoveMatchDialog({ workspacePath, change, side, listed, finish }: MoveMa
           <ItemPathRow
             path={candidate.path}
             itemType={candidate.itemType}
-            extras={
-              similarities.data && (
-                <span className={styles.similarity} data-tip={similarityTip(similarity)}>
-                  {similarityLabel(similarity)}
-                </span>
-              )
-            }
+            extras={<CandidateExtras tag={pairingTag(change, candidate)} similarity={similarities.data ? similarity : undefined} />}
           />
         )}
       />
     </Dialog>
+  );
+}
+
+/** What the detection paired the candidate with, then how alike it is, once measured (undefined until then). */
+function CandidateExtras({ tag, similarity }: { tag: PairingTag | null; similarity: number | null | undefined }) {
+  return (
+    <>
+      {tag && <ItemTag tip={tag.tip}>{tag.label}</ItemTag>}
+      {similarity !== undefined && (
+        <span className={styles.similarity} data-tip={similarityTip(similarity)}>
+          {similarityLabel(similarity)}
+        </span>
+      )}
+    </>
   );
 }

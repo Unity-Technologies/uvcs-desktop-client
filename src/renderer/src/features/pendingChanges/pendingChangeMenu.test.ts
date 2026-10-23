@@ -22,9 +22,11 @@ describe('Search matches', () => {
   const listed = [deleted, added];
   const offers = (menu: MenuEntry[]) => menu.some((entry) => entry !== SEPARATOR && entry.id === 'searchMatches');
 
-  it('is offered on one item deleted from disk or one private item', () => {
+  it('is offered on one item deleted from disk, one private item, or one move the detection made', () => {
+    const detected: PendingChange = { ...change('src/Gun.cs', ['locallyMoved']), oldPath: 'src/Weapon.cs' };
     expect(offers(pendingChangeMenu('/ws', [deleted], [], undefined, undefined, undefined, listed))).toBe(true);
     expect(offers(pendingChangeMenu('/ws', [added], [], undefined, undefined, undefined, listed))).toBe(true);
+    expect(offers(pendingChangeMenu('/ws', [detected], [], undefined, undefined, undefined, [...listed, detected]))).toBe(true);
   });
 
   it('is not offered on several items, on other changes, or where the list is not at hand (the palette)', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemType, PendingChange } from '@shared/domain/pendingChanges';
-import { emptyListWords, matchDialogWords, matchedMessage } from './moveMatchWords';
+import { emptyListWords, matchDialogWords, matchedMessage, pairingTag } from './moveMatchWords';
 
 const change = (path: string, itemType: ItemType = 'file'): PendingChange => ({ path, kinds: ['locallyDeleted'], itemType, size: 0, lastModified: '' });
 
@@ -55,5 +55,18 @@ describe('the Search matches words', () => {
 
   it('names the move recorded', () => {
     expect(matchedMessage({ from: 'src/Player.cs', to: 'src/game/Hero.cs' })).toBe('Matched Player.cs with src/game/Hero.cs');
+  });
+});
+
+describe('a candidate the detection paired', () => {
+  it('says what with, and that a pick pairs it with the change instead', () => {
+    expect(pairingTag(change('src/Rifle.cs'), { path: 'src/Old/Shotgun.cs', itemType: 'file', pairedWith: 'src/Gun.cs' })).toEqual({
+      label: 'Paired with Gun.cs',
+      tip: 'Changes found it moved with src/Gun.cs. Picking it pairs it with Rifle.cs instead.',
+    });
+  });
+
+  it('says nothing for a candidate nothing paired', () => {
+    expect(pairingTag(change('src/Rifle.cs'), { path: 'src/Weapon.cs', itemType: 'file' })).toBeNull();
   });
 });

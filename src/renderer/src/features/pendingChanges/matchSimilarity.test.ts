@@ -8,7 +8,7 @@ const deleted = change('src/Player.cs', ['locallyDeleted'], 'file', 120);
 const hero = change('src/Hero.cs', ['private'], 'file', 90);
 const enemy = change('src/Enemy.cs', ['private'], 'file', 40);
 const boss = change('src/Boss.cs', ['private'], 'file', 50);
-const paths = (rows: { candidate: PendingChange }[]) => rows.map((row) => row.candidate.path);
+const paths = (rows: { candidate: { path: string } }[]) => rows.map((row) => row.candidate.path);
 
 describe('the pairs measured', () => {
   it('puts the deleted file first, whichever side the dialog was opened on', () => {

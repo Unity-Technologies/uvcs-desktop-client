@@ -1,6 +1,6 @@
 import type { MovePair, MoveSimilarity, PendingChange } from '@shared/domain/pendingChanges';
 import { queryKeys } from '../../api/queryKeys';
-import { searchedCandidates, type MatchSide } from './moveMatches';
+import { searchedCandidates, type MatchCandidate, type MatchSide } from './moveMatches';
 
 /**
  * Search matches' similarity: how alike the change and each candidate are (`api.pendingChanges.moveSimilarities`, as
@@ -9,7 +9,7 @@ import { searchedCandidates, type MatchSide } from './moveMatches';
 
 /** A candidate and how alike it is to the change, from 0 to 1; null where it can't be told, or isn't measured yet. */
 export interface ScoredCandidate {
-  candidate: PendingChange;
+  candidate: MatchCandidate;
   similarity: number | null;
 }
 
@@ -31,7 +31,7 @@ export function isScored(change: PendingChange): boolean {
 }
 
 /** The pairs to measure, the deleted file first whichever side the change is, in the candidates' order. */
-export function movePairsOf(change: PendingChange, candidates: readonly PendingChange[], side: MatchSide): MovePair[] {
+export function movePairsOf(change: PendingChange, candidates: readonly MatchCandidate[], side: MatchSide): MovePair[] {
   return candidates.map(({ path }) => (side === 'deleted' ? { deleted: change.path, added: path } : { deleted: path, added: change.path }));
 }
 
@@ -40,7 +40,7 @@ export function movePairsOf(change: PendingChange, candidates: readonly PendingC
  * pair at least `minimumPercent` alike, the most alike first, then those it couldn't measure, last; equal ones keep
  * the candidates' order (`compareCandidates`).
  */
-export function scoredCandidates(candidates: readonly PendingChange[], similarities: readonly MoveSimilarity[] | undefined, minimumPercent: number): ScoredCandidate[] {
+export function scoredCandidates(candidates: readonly MatchCandidate[], similarities: readonly MoveSimilarity[] | undefined, minimumPercent: number): ScoredCandidate[] {
   if (!similarities) return candidates.map((candidate) => ({ candidate, similarity: null }));
   const minimum = minimumPercent / 100;
   const rows: ScoredCandidate[] = [];

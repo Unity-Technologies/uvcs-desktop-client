@@ -8,15 +8,20 @@ List or Tree, groups) follows ARCHITECTURE.md "Lists of changed files" and "Item
 `cm status` pairs an item deleted from disk with a private one as a local move only when their contents are alike
 enough (Settings › Pending changes, "Similarity to consider a file moved": `moveSimilarityPercent`). A file renamed and
 rewritten, or a folder renamed with its files changed, stays a deleted item and a private one, and checking them in
-would lose the item's history. "Search matches…" in either one's menu pairs them by hand.
+would lose the item's history. The detection can also pair the wrong items: the most alike, which the user knows
+isn't the one. "Search matches…" in either one's menu pairs them by hand, with the detection on or off.
 
 - **Who offers it** (`matchSideOf`, `features/pendingChanges/moveMatches.ts`): one change selected, deleted from disk
-  outside `cm` (`locallyDeleted`) or private, with nothing else pending on it; a file or a folder, never a link or an
-  xlink. Not an item deleted with `cm` (`deleted`): `cm move` can't find a revision for it ("Selector can't locate a
+  outside `cm` (`locallyDeleted`), private, or a move the detection made (`isDetectedMove`: `locallyMoved`, changed or
+  not, its row the new item), with nothing else pending on it; a file or a folder, never a link or an xlink. Not an item deleted with `cm` (`deleted`): `cm move` can't find a revision for it ("Selector can't locate a
   revision"), and undoing the delete would put the file back on disk first. Not a private item inside a private
   folder: `cm move` refuses a destination whose folder isn't under version control.
 - **What it offers** (`matchCandidates`): the other side of the same shape, files with files and folders with
-  folders, as `cm move` of a file onto a folder moves it inside the folder. The likeliest first (`compareCandidates`):
+  folders, as `cm move` of a file onto a folder moves it inside the folder. Each detected move offers both its items:
+  its new one to a deleted item, its deleted one, where it was (`oldPath`), to a new item, each tagged with what the
+  detection paired it with ("Paired with Gun.cs", `pairingTag`). `cm move` of the pick records it instead: the item
+  the detection had paired goes back to deleted or new (tried in both directions). The official client offers them
+  too: its search runs the detection again, from scratch, around the item. The likeliest first (`compareCandidates`):
   the same name (a move), then the same extension (a rename), then the closest folder, then path order. The dialog
   (`pickMoveMatch`) takes them from the pending changes the menu was built from, never a `cm status` of its own. While
   Changes hides private files (`showPrivate`), a deleted item has none to offer, and the dialog says where to show them.

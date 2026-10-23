@@ -1,6 +1,6 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { fileNameOf } from '../../lib/text';
-import type { MatchSide, MoveMatch } from './moveMatches';
+import type { MatchCandidate, MatchSide, MoveMatch } from './moveMatches';
 
 /** What the "Search matches" dialog says, for the change it was opened on. */
 export interface MatchDialogWords {
@@ -79,4 +79,19 @@ export function emptyListWords(words: MatchDialogWords, { search, shown, pairabl
 /** The toast once the move is recorded: "Matched Player.cs with src/game/Hero.cs". */
 export function matchedMessage({ from, to }: MoveMatch): string {
   return `Matched ${fileNameOf(from)} with ${to}`;
+}
+
+/** A candidate's tag when the detection paired it with another item: what with, and what a pick does to that. */
+export interface PairingTag {
+  label: string;
+  tip: string;
+}
+
+/** "Paired with Shotgun.cs", its tooltip saying the pick replaces that pairing; null for a candidate nothing paired. */
+export function pairingTag(change: PendingChange, candidate: MatchCandidate): PairingTag | null {
+  if (candidate.pairedWith === undefined) return null;
+  return {
+    label: `Paired with ${fileNameOf(candidate.pairedWith)}`,
+    tip: `Changes found it moved with ${candidate.pairedWith}. Picking it pairs it with ${fileNameOf(change.path)} instead.`,
+  };
 }
