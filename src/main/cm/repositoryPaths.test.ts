@@ -22,6 +22,16 @@ describe('readListedPath', () => {
       { path: 'lib/theme', isDirectory: true },
     ]);
   });
+
+  it('reads the paths Windows prints, its separators made forward slashes as the tree names them', () => {
+    const reader = new RecordReader(readListedPath);
+    reader.read(Buffer.from(formatOutput(['dir', '/'], ['dir', '/Assets'], ['txt', '/Assets\\Scripts\\Player.cs']), 'utf8'));
+
+    expect(reader.finish()).toEqual([
+      { path: 'Assets', isDirectory: true },
+      { path: 'Assets/Scripts/Player.cs', isDirectory: false },
+    ]);
+  });
 });
 
 describe('a tree file line', () => {

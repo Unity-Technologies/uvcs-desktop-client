@@ -15,9 +15,12 @@ export function repositoryPathsArgs(treeSpec: string): string[] {
   return ['ls', '/', '-R', `--tree=${treeSpec}`, `--format=${recordFormat(FIELDS)}`];
 }
 
-/** One record of `repositoryPathsArgs`: the item, its path without the leading slash; none for the root itself. */
+/**
+ * One record of `repositoryPathsArgs`: the item, its path without the leading slash; none for the root itself. On
+ * Windows `cm` joins the path below the root with backslashes (`/Assets\Player.cs`): read as the tree names it.
+ */
 export const readListedPath: ReadRecord<ListedPath> = ([type, path]) => {
-  const relative = path?.replace(/^\//, '') ?? '';
+  const relative = path?.replaceAll('\\', '/').replace(/^\//, '') ?? '';
   return relative ? { path: relative, isDirectory: type === 'dir' } : undefined;
 };
 
