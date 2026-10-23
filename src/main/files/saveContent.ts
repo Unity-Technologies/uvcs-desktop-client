@@ -4,7 +4,9 @@ import { basename, dirname } from 'node:path';
 import type { ContentSource } from '@shared/domain/content';
 import { listsTree, spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
+import type { CmError } from '../cm/CmError';
 import { isNotInTreeError } from '../cm/missingItem';
+import { isPurgedRevisionError } from '../cm/purgedRevision';
 import { removedItemSpec } from '../cm/removedItemSpec';
 import { parseTreeItems, TREE_ITEM_FORMAT } from '../cm/treeItems';
 import type { WorkspaceCopies } from './WorkspaceCopies';
@@ -39,8 +41,14 @@ export async function saveVersion(cm: CmClient, copies: Pick<WorkspaceCopies, 'r
     const onDisk = await copies.read(workspacePath, { path: source.fileName, revision: source.revision, hash: null, size: -1 });
     if (onDisk) return writeFile(target, onDisk);
   }
-  return saveContent(cm, workspacePath, source, target);
+  await saveContent(cm, workspacePath, source, target).catch((error: unknown) => {
+    // `cm`'s line names the temp file it was to write, which tells the user nothing.
+    throw isPurgedRevisionError(error) ? (error as CmError).withMessage(PURGED_VERSION_MESSAGE) : error;
+  });
 }
+
+/** Why a version whose content a purge removed can't be opened or saved. */
+export const PURGED_VERSION_MESSAGE = 'This version was purged from the server: its content is no longer available.';
 
 async function saveLoadedRevision(cm: CmClient, workspacePath: string, path: string, target: string): Promise<void> {
   const absolutePath = toAbsolutePath(workspacePath, path);
