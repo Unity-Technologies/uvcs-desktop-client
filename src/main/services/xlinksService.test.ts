@@ -71,6 +71,19 @@ describe('Editing an xlink', () => {
     expect(commands.every((command) => command.via === 'query')).toBe(true);
   });
 
+  it('puts the rules it dropped back when adding the new ones fails, so the xlink is as it was and Save can be tried again', async () => {
+    const { service, lines } = xlinks({
+      'xlink --deleterules': '',
+      [`xlink --addrules ${LIB} br:/main-br:/main/x`]: cmFails("The specified branch br:/main/x@lib@local can't be found."),
+      [`xlink --addrules ${LIB} br:/main-br:/main/dev`]: '',
+    });
+
+    const edited = service.edit(WORKSPACE, { path: 'code/lib', repository: 'lib@local', removedRules: [{ from: '/main', to: '/main/dev' }], addedRules: [{ from: '/main', to: '/main/x' }] });
+
+    await expect(edited).rejects.toThrow("can't be found");
+    expect(lines()).toEqual([`xlink --deleterules ${LIB} br:/main-br:/main/dev`, `xlink --addrules ${LIB} br:/main-br:/main/x`, `xlink --addrules ${LIB} br:/main-br:/main/dev`]);
+  });
+
   it('asks only for what changed', async () => {
     const { service, lines } = xlinks({ 'xlink --addrules': '' });
 
