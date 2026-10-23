@@ -47,9 +47,11 @@ its Files then shows the workspace's disk. Switching it to the branch is the wor
 
 ## Finding a file
 
-Go to file (⌘P, `/` in the tree, the palette's "Go to file…", the search button in Files' header) finds a file or folder of the
-branch Files shows by name, as a workspace's does (`goToRepositoryFile`), from the first character (`searchesFor`: any query costs one read of the tree's file). `cm`
-filters no tree by name, so the first search of a changeset lists its whole tree, once (`RepositoryPathSearch`):
+Go to file (⌘P, `/` in the tree, the palette's "Go to file…", the search button in Files' header) finds a file or
+folder of the branch Files shows by name, as a workspace's does (`goToRepositoryFile`), from the first character
+(`searchesFor`: any query costs one read of the tree's file, whatever its length). `cm` filters no tree by name, so
+the changeset's whole tree is listed once (`RepositoryPathSearch`), as Go to file opens (`prepareRepositoryPaths`):
+opening it says a search is coming, and the listing's seconds pass while the query is typed.
 
 - **One `cm ls / -R --tree=cs:<head>@<repository> --format={type}␟{path}␞`** (`repositoryPathsArgs`), in a process of
   its own (`executeRecords`): cancellable, and it never holds a pooled shell for its seconds. Its records are read as
@@ -69,8 +71,9 @@ filters no tree by name, so the first search of a changeset lists its whole tree
 - Paths read as the tree names them: forward slashes on every OS (Windows' `cm` prints `/Assets\Player.cs`), and an
   xlink as a folder.
 
-`cm` sends the tree only once it has built it, so the first results come with the whole listing: on that repository about 10 s,
-5 of them `cm ls` resolving each item's owner one by one, even with a format that prints no owner.
+`cm` sends the tree only once it has built it, so the first results come with the whole listing: on that repository
+about 10 s from opening Go to file, 5 of them `cm ls` resolving each item's owner one by one, even with a format that
+prints no owner. Closing Go to file leaves the listing running, for the next one.
 
 ## What it offers, and what it doesn't
 
