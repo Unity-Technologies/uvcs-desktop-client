@@ -17,6 +17,11 @@ describe('findArgs', () => {
     ]);
   });
 
+  it('finds objects of another repository last in the query, where cm takes it', () => {
+    expect(findArgs(FOUND_BRANCHES, { limit: 5 }, 'date desc', ["hidden = 'false'"], 'lib@acme@cloud')[2]).toBe("where hidden = 'false' order by date desc limit 5 on repository 'lib@acme@cloud'");
+    expect(findArgs(FOUND_BRANCHES, {}, null, [], 'lib@local')[2]).toBe("on repository 'lib@local'");
+  });
+
   it('leaves out a query with no condition, order or limit', () => {
     expect(findArgs(LABELS, {}, null)).toEqual(['find', 'label', '--format={name}\u001e', '--dateformat=o', '--nototal']);
   });

@@ -28,13 +28,16 @@ export function findCommand(object: string, query: string, format: string): stri
 
 /**
  * Builds `cm find` arguments: `<object> "<where/order/limit>"`, printing the fields `found` reads (`readRecords`).
- * `orderBy` is null for objects `cm` cannot sort (shelves).
+ * `orderBy` is null for objects `cm` cannot sort (shelves). `repository` (`name@server`) finds them in another
+ * repository than the workspace's (an xlinked one): `on repository` goes last, after the order and limit, or `cm`
+ * refuses the query ("missing EndOfFile at 'order'").
  */
-export function findArgs(found: FoundObjects<unknown>, filter: QueryFilter, orderBy: string | null, extraConditions: string[] = []): string[] {
+export function findArgs(found: FoundObjects<unknown>, filter: QueryFilter, orderBy: string | null, extraConditions: string[] = [], repository?: string): string[] {
   const order = orderBy ? ` order by ${orderBy}` : '';
   const limit = filter.limit ? ` limit ${filter.limit}` : '';
+  const onRepository = repository ? ` on repository '${repository}'` : '';
   const conditions = filter.text ? [...extraConditions, textCondition(found.object, filter.text)] : extraConditions;
-  return findCommand(found.object, `${whereClause(filter, conditions)}${order}${limit}`.trim(), layoutFormat(found));
+  return findCommand(found.object, `${whereClause(filter, conditions)}${order}${limit}${onRepository}`.trim(), layoutFormat(found));
 }
 
 /** `cm find` arguments for the objects `found` reads that `query` keeps (`where …`), as written. */
