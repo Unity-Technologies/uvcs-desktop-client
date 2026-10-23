@@ -237,6 +237,54 @@ export const MENU_WORDS = {
 
 export type MenuWordId = keyof typeof MENU_WORDS;
 
+/**
+ * The words whose action needs a workspace, so a repository explored without one never offers them
+ * (docs/features/explore-repository.md): they change the files on disk or what the workspace is on (switch, merge into
+ * it, cherry pick, apply, revert, check in, shelve, resolve a conflict), or read and open them there (the editor, the
+ * terminal, the file manager). The server's merges ("Merge to…", finishing a task) are here too: the merge page runs
+ * in a workspace. `rename` or `delete` aren't: they serve branches and labels as well as files, and the menus of files
+ * take a workspace's path, which a repository's window has none of. `menuGrammar.test.ts` builds every object's menu
+ * for a repository and checks none of these is there.
+ */
+export const NEEDS_A_WORKSPACE = [
+  'switch',
+  'revert',
+  'apply',
+  'applyAndDelete',
+  'checkin',
+  'shelve',
+  'include',
+  'exclude',
+  'keepDestination',
+  'keepSource',
+  'keepBase',
+  'keepBoth',
+  'resolveIn',
+  'startOver',
+  'restore',
+  'restoreTo',
+  'add',
+  'checkout',
+  'merge',
+  'mergeTask',
+  'mergeTo',
+  'cherryPick',
+  'subtractive',
+  'cherryPickRange',
+  'subtractiveRange',
+  'newFile',
+  'newFolder',
+  'openInEditor',
+  'terminal',
+  'reveal',
+  'openInFileManager',
+  'cut',
+  'paste',
+  'changelist',
+  'filterRules',
+  'revisionType',
+] as const satisfies readonly MenuWordId[];
+
 type ActionOptions = Partial<Pick<Action, 'label' | 'shortcut' | 'detail' | 'disabled' | 'disabledReason'>>;
 
 /** An entry of the vocabulary: its words (or `label`, where they name the object), icon and group. */

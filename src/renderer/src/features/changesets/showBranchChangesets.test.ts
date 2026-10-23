@@ -1,5 +1,6 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 import type { Branch } from '@shared/domain/branch';
 import { MINE } from '../../lib/peopleFilter';
 import { rememberedFilters } from '../../lib/viewFilters';
@@ -40,7 +41,7 @@ describe('Show changesets', () => {
     const branch: Branch = { id: 7, name: '/main/task', parent: '/main', comment: '', owner: 'ana', date: '2026-09-01T00:00:00Z', headChangeset: 5, guid: 'g', repository: 'game@local' };
     const entryOf = (menu: ReturnType<typeof branchMenu>) => menu.find((entry) => typeof entry === 'object' && 'id' in entry && entry.id === 'changesets');
 
-    const fromList = entryOf(branchMenu(WORKSPACE, [branch], '/main'));
+    const fromList = entryOf(branchMenu(workspacePlace(WORKSPACE), [branch], '/main'));
     expect(fromList).toMatchObject({ label: 'Show changesets' });
     (fromList as { run: () => void }).run();
     expect(filtersShown().pickedBranch).toMatchObject({ workspacePath: WORKSPACE, name: '/main/task' });
@@ -55,7 +56,7 @@ describe('Show changesets', () => {
 
   it('is offered for one branch at a time', () => {
     const branch: Branch = { id: 7, name: '/main/task', parent: '/main', comment: '', owner: 'ana', date: '', headChangeset: 5, guid: 'g', repository: 'game@local' };
-    const ids = branchMenu(WORKSPACE, [branch, { ...branch, id: 8, name: '/main/other' }], '/main').map((entry) => typeof entry === 'object' && 'id' in entry && entry.id);
+    const ids = branchMenu(workspacePlace(WORKSPACE), [branch, { ...branch, id: 8, name: '/main/other' }], '/main').map((entry) => typeof entry === 'object' && 'id' in entry && entry.id);
     expect(ids).not.toContain('changesets');
   });
 });

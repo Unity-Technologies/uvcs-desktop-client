@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { workspacePlace } from '@shared/domain/place';
 import type { Branch } from '@shared/domain/branch';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -17,7 +18,7 @@ export function useRecentBranchGuids(workspacePath: string, enabled = true): str
 /** Records a switch to `name` among the recent branches, before switching. */
 export async function rememberRecentBranch(workspacePath: string, name: string): Promise<void> {
   try {
-    const guid = cachedBranch(workspacePath, name)?.guid ?? (await fetchBranch(workspacePath, name))?.guid;
+    const guid = cachedBranch(workspacePath, name)?.guid ?? (await fetchBranch(workspacePlace(workspacePath), name))?.guid;
     if (!guid) return;
     await api.branches.rememberRecent(workspacePath, guid);
     void queryClient.invalidateQueries({ queryKey: recentBranchesKey(workspacePath) });

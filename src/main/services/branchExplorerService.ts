@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { BranchExplorerApi } from '@shared/api/branchExplorer';
 import type { BranchExplorerQuery } from '@shared/domain/branchExplorer';
 import { branchExplorerFinds } from '../cm/branchExplorerFinds';
@@ -21,7 +22,7 @@ export function createBranchExplorerService({ cm }: ServiceContext, { branchName
     ]);
 
     // The code review chips name branches by id (often finished tasks, hidden): these lists answer them.
-    branchNames.remember(workspacePath, [...visible, ...hidden], { complete: true });
+    branchNames.remember(workspacePlace(workspacePath), [...visible, ...hidden], { complete: true });
     const branches = query.includeHidden ? [...visible, ...hidden] : visible;
 
     return { branches: relevantBranches(branches, changesets, query.sinceDate), changesets, mergeLinks, labels };

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const opened = vi.hoisted(() => [] as unknown[]);
 vi.mock('./PermissionsDialog', () => ({ openPermissionsDialog: (options: unknown) => opened.push(options) }));
 
+import { workspacePlace } from '@shared/domain/place';
 import type { TreeItem } from '@shared/domain/explorer';
 import type { Action, MenuEntry } from '../../lib/actions';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
@@ -31,7 +32,7 @@ beforeEach(() => {
 
 describe('opening permissions from the menus', () => {
   it("opens a branch's, a label's and an attribute's, in their repository, with the owner their list read", () => {
-    entry(branchMenu(ws, [{ id: 1, name: '/main/task', parent: '/main', comment: '', owner: 'ana', date: '', headChangeset: 3, repository: 'game@local' }], '/main'), 'permissions')!.run();
+    entry(branchMenu(workspacePlace(ws), [{ id: 1, name: '/main/task', parent: '/main', comment: '', owner: 'ana', date: '', headChangeset: 3, repository: 'game@local' }], '/main'), 'permissions')!.run();
     entry(labelMenu(ws, [{ name: 'v1', changeset: 3, branch: '/main', comment: '', owner: 'bob', date: '', repository: 'other@acme@cloud' }]), 'permissions')!.run();
     entry(attributeTypeMenu(ws, [{ id: 1, name: 'status', comment: '', owner: '', date: '', repository: '' }]), 'permissions')!.run();
 

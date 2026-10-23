@@ -1,5 +1,6 @@
 import { FakeCommandFailure, fakeApi } from '../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 
 import { api, ApiError } from './client';
 
@@ -7,9 +8,9 @@ describe('api', () => {
   it('sends api.<area>.<method>(...args) to main as one invoke named "<area>.<method>"', async () => {
     fakeApi.answer('branches.list', () => []);
 
-    await api.branches.list('/ws', { limit: 5 });
+    await api.branches.list(workspacePlace('/ws'), { limit: 5 });
 
-    expect(fakeApi.calls()).toEqual([{ method: 'branches.list', args: ['/ws', { limit: 5 }] }]);
+    expect(fakeApi.calls()).toEqual([{ method: 'branches.list', args: [workspacePlace('/ws'), { limit: 5 }] }]);
   });
 
   it('resolves with the value main answered', async () => {

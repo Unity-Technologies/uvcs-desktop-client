@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { workspacePlace } from '@shared/domain/place';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -18,7 +19,7 @@ export function useWorkingObject(workspace: WorkspaceInfo | undefined, wanted: b
   const name = selector?.name ?? '';
   const path = workspace?.path ?? '';
 
-  const branch = useQuery({ ...branchQuery(path, name), enabled: kind === 'branch', ...SLOW_CHANGING_QUERY });
+  const branch = useQuery({ ...branchQuery(workspacePlace(path), name), enabled: kind === 'branch', ...SLOW_CHANGING_QUERY });
   const changeset = useChangeset(kind === 'changeset' && wanted ? Number(name) : null);
   const labels = useQuery({
     queryKey: queryKeys.inWorkspace(path, 'labels', { text: name }),

@@ -51,9 +51,9 @@ const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
 // Branch names by id, which code reviews name their branches by (`BranchNamesCache`), kept while a window shows the
 // workspace.
 const branchNames = new BranchNamesCache(
-  (workspacePath) => readBranchNames(cm, workspacePath),
+  (place) => readBranchNames(cm, place),
   Date.now,
-  (workspacePath) => isShown(watchers, workspacePath),
+  (place) => place.kind === 'workspace' && isShown(watchers, place.workspacePath),
 );
 const watchers = watchShownWorkspaces({ cm, headers, branchNames });
 const workspaceCopies = new WorkspaceCopies({ cm });

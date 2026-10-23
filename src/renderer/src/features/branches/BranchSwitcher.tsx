@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import { GitBranchPlus } from 'lucide-react';
 import { useMemo } from 'react';
 import type { Branch } from '@shared/domain/branch';
@@ -37,7 +38,7 @@ export function BranchSwitcher({ workspace, onDone }: { workspace: WorkspaceInfo
       placeholder="Switch to branch…"
       onPick={pick}
       // Actions close the popup first (dialogs and pages open without it on top); copying keeps it open.
-      menu={(branch) => runningFirst(branchMenu(workspace.path, [branch], currentBranch), onDone, COPY_ENTRY_IDS)}
+      menu={(branch) => runningFirst(branchMenu(workspacePlace(workspace.path), [branch], currentBranch), onDone, COPY_ENTRY_IDS)}
       action={
         <Button
           size="small"

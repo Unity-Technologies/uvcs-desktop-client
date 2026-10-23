@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -33,7 +34,7 @@ const ON_DELETED_BRANCH = review(8, 'Branch', 'id:99');
 /** Wired as `createServices` wires them: branch names come from the cache, which reads every branch only when it must. */
 function codeReviews(answers: Record<string, CmAnswer>) {
   const fake = fakeCmClient(answers);
-  const branchNames = new BranchNamesCache((workspacePath) => readBranchNames(fake.cm, workspacePath));
+  const branchNames = new BranchNamesCache((place) => readBranchNames(fake.cm, place));
   return { ...fake, branchNames, service: createCodeReviewsService(serviceContext(fake.cm), { branchNames }) };
 }
 
@@ -81,7 +82,7 @@ describe('code review list', () => {
 
   it('asks nothing more when the branch lists already read name every target', async () => {
     const { service, branchNames, lines } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_TASK1) });
-    branchNames.remember(WORKSPACE, [{ id: 37, name: '/main/task1' }]);
+    branchNames.remember(workspacePlace(WORKSPACE), [{ id: 37, name: '/main/task1' }]);
 
     const [listed] = await service.list(WORKSPACE, {});
 

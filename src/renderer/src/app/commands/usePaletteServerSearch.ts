@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import type { QueryFilter } from '@shared/domain/query';
@@ -29,7 +30,7 @@ export function usePaletteServerSearch(workspacePath: string | null, typed: stri
   return {
     term,
     searches,
-    branches: useQuery({ queryKey: branchesKey(path, textFilter), queryFn: () => api.branches.list(path, textFilter), ...server('branches') }),
+    branches: useQuery({ queryKey: branchesKey(path, textFilter), queryFn: () => api.branches.list(workspacePlace(path), textFilter), ...server('branches') }),
     labels: useQuery({ queryKey: labelsKey(path, textFilter), queryFn: () => api.labels.list(path, textFilter), ...server('labels') }),
     shelves: useQuery({ queryKey: shelvesKey(path, textFilter), queryFn: () => api.shelves.list(path, textFilter), ...server('shelves') }),
     codeReviews: useQuery({

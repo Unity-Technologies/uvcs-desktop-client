@@ -27,8 +27,12 @@ export function roundTripDate(day: string): string {
  * after `order by` and `limit`: anywhere else `cm` fails ("missing EndOfFile at 'order'").
  */
 export function findCommand(object: string, query: string, format: string, repository?: string): string[] {
-  const onRepository = repository ? `${query} on repository '${repository}'`.trim() : query;
-  return ['find', object, onRepository, format, `--dateformat=${FIND_DATE_FORMAT}`, '--nototal'].filter(Boolean);
+  return ['find', object, queryOn(query, repository), format, `--dateformat=${FIND_DATE_FORMAT}`, '--nototal'].filter(Boolean);
+}
+
+/** `query` asking `repository`'s objects (`… on repository '…'`, last), or as written with none. */
+export function queryOn(query: string, repository: string | undefined): string {
+  return repository ? `${query} on repository '${repository}'`.trim() : query;
 }
 
 /**

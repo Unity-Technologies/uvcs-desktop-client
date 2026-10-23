@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import { useQuery } from '@tanstack/react-query';
 import type { QueryFilter } from '@shared/domain/query';
 import { api } from '../../api/client';
@@ -30,7 +31,7 @@ export function usePaletteLists(workspacePath: string | null) {
     pendingChanges: usePendingChangesOf(workspacePath),
     workspace: useWorkspaceInfoOf(workspacePath),
     recentBranchGuids: useRecentBranchGuids(path, enabled),
-    branches: useQuery({ queryKey: branchesKey(path, {}), queryFn: () => api.branches.list(path, {}), ...cached }),
+    branches: useQuery({ queryKey: branchesKey(path, {}), queryFn: () => api.branches.list(workspacePlace(path), {}), ...cached }),
     labels: useQuery({ queryKey: labelsKey(path, {}), queryFn: () => api.labels.list(path, {}), ...cached }),
     // Older changesets are still reachable by number (`1234` or `cs:1234`) or by searching them all on demand.
     changesets: useQuery({ ...cached, ...recentChangesetsQuery(path) }),

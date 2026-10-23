@@ -1,3 +1,4 @@
+import { repositoryPlace } from '@shared/domain/place';
 import { beforeEach } from 'vitest';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { queryKeys } from '../api/queryKeys';
@@ -43,6 +44,13 @@ export type WorkspaceArea = (typeof WORKSPACE_AREAS)[number];
 export function watchRefreshes(workspacePath: string): () => WorkspaceArea[] {
   const keyOf = (area: WorkspaceArea) => queryKeys.inWorkspace(workspacePath, area, ...(AREA_DETAILS[area] ?? []));
   for (const area of WORKSPACE_AREAS) queryClient.setQueryData(keyOf(area), area === 'info' ? workspaceInfoAt(workspacePath) : 'read');
+  return () => WORKSPACE_AREAS.filter((area) => queryClient.getQueryState(keyOf(area))?.isInvalidated);
+}
+
+/** `watchRefreshes` for a repository explored without a workspace: the same areas, under the repository's key. */
+export function watchRepositoryRefreshes(repository: string): () => WorkspaceArea[] {
+  const keyOf = (area: WorkspaceArea) => queryKeys.inPlace(repositoryPlace(repository), area, ...(AREA_DETAILS[area] ?? []));
+  for (const area of WORKSPACE_AREAS) queryClient.setQueryData(keyOf(area), 'read');
   return () => WORKSPACE_AREAS.filter((area) => queryClient.getQueryState(keyOf(area))?.isInvalidated);
 }
 

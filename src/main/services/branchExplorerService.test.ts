@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -81,7 +82,7 @@ describe('Branch Explorer load', () => {
 
     await service.load(WORKSPACE, { includeHidden: false });
 
-    expect(await branchNames.resolve(WORKSPACE, [21, 37, 99])).toEqual(
+    expect(await branchNames.resolve(workspacePlace(WORKSPACE), [21, 37, 99])).toEqual(
       new Map([
         [21, '/main/old'],
         [37, '/main/task1'],

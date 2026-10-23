@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { CodeReviewsApi } from '@shared/api/codeReviews';
 import { MAX_LISTED_CODE_REVIEWS, type CodeReview, type CodeReviewFilter, type CodeReviewSummary, type CodeReviewTarget } from '@shared/domain/codeReview';
 import type { QueryFilter } from '@shared/domain/query';
@@ -35,7 +36,7 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
    */
   async function resolveTargets(workspacePath: string, reviews: RawCodeReview[]): Promise<CodeReview[]> {
     const branchIds = reviews.filter((review) => review.targetType === 'branch').map((review) => review.targetId);
-    const names = branchIds.length > 0 ? await branchNames.resolve(workspacePath, branchIds) : new Map<number, string>();
+    const names = branchIds.length > 0 ? await branchNames.resolve(workspacePlace(workspacePath), branchIds) : new Map<number, string>();
 
     return reviews.map((review) => ({
       ...summaryOf(review),

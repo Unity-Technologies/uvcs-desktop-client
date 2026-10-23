@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { ChangesetInfo } from '@shared/domain/changeset';
 import { spec } from '@shared/domain/specs';
 import { linkCopyText } from '../../app/links/linkTo';
@@ -73,7 +74,7 @@ function singleChangesetMenu(context: ChangesetMenuContext, changeset: Changeset
     menuAction('cherryPick', () => openMerge({ kind: 'cherryPick', sourceSpec: source }), { label: 'Cherry pick this changeset' }),
     menuAction('subtractive', () => openMerge({ kind: 'subtractive', sourceSpec: source })),
     menuAction('newBranch', () =>
-      void openCreateBranchDialog(workspacePath, {
+      void openCreateBranchDialog(workspacePlace(workspacePath), {
         parentBranch: changeset.branch,
         startingPoint: source,
         startingPointLabel: `changeset ${changeset.id}`,

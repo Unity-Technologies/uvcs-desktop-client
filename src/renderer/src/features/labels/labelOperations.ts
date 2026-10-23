@@ -53,7 +53,7 @@ export function browseLabel(label: Label): void {
 
 /** Resolves to the new branch's name, once created. */
 export function createBranchFromLabel(workspacePath: string, label: Label): Promise<string | undefined> {
-  return openCreateBranchDialog(workspacePath, {
+  return openCreateBranchDialog(workspacePlace(workspacePath), {
     parentBranch: label.branch,
     startingPoint: spec.label(label.name),
     startingPointLabel: `label ${label.name} (changeset ${label.changeset})`,

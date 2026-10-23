@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu, withEntries } from '../../lib/menuGroups';
@@ -74,7 +75,7 @@ function graphChangesetMenu(id: number, { workspacePath, layout, currentBranch, 
 
 function graphBranchMenu(lane: Lane, { workspacePath, layout, currentBranch, repository, goToChangeset, showRelatedTo }: GraphMenuContext, host: MenuHost): MenuEntry[] {
   const { branch, baseChangeset } = lane;
-  const menu = branchMenu(workspacePath, [{ ...branch, repository }], currentBranch, host);
+  const menu = branchMenu(workspacePlace(workspacePath), [{ ...branch, repository }], currentBranch, host);
   return withEntries(menu, [
     layout.nodes.has(branch.headChangeset) && menuAction('head', () => goToChangeset(branch.headChangeset)),
     baseChangeset !== null && menuAction('base', () => goToChangeset(baseChangeset)),

@@ -40,5 +40,5 @@ export async function finishMergedTask(
 
 /** Hides a finished task's branch; true once hidden. Only the lists of branches change. */
 export function hideTaskBranch(workspacePath: string, taskBranch: string): Promise<boolean> {
-  return runVoidAction(workspacePlace(workspacePath), "Couldn't hide the branch", () => api.branches.setHidden(workspacePath, [taskBranch], true), isAffectedByBranchList);
+  return runVoidAction(workspacePlace(workspacePath), "Couldn't hide the branch", () => api.branches.setHidden(workspacePlace(workspacePath), [taskBranch], true), isAffectedByBranchList);
 }

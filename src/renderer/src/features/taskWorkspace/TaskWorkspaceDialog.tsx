@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import { useQuery } from '@tanstack/react-query';
 import { GitBranch } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -51,7 +52,7 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
   const [existingBranch, setExistingBranch] = useState(initialBranch);
   const [chosenFolder, setChosenFolder] = useState<string>();
   const [newWindow, setNewWindow] = useState(true);
-  const setup = useTaskWorkspaceSetup(workspacePath);
+  const setup = useTaskWorkspaceSetup(workspacePlace(workspacePath));
   const { running } = setup;
 
   const branchError = mode === 'new' ? validateBranchName(leaf.trim()) : undefined;

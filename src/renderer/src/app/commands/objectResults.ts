@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import { Archive, File, Folder, GitBranch, GitCommitVertical, MessageSquareCode, Tag } from 'lucide-react';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import type { Branch } from '@shared/domain/branch';
@@ -106,7 +107,7 @@ export function branchResult(branch: Branch, context: ResultContext, match: Name
     detail: `${displayName(branch.owner)} · ${formatRelativeDate(branch.date)}`,
     detailMatches: [],
     isCurrent: branch.name === currentBranch,
-    menu: () => branchMenu(workspacePath, [branch], currentBranch),
+    menu: () => branchMenu(workspacePlace(workspacePath), [branch], currentBranch),
     run: () => diffBranch(branch),
   };
 }

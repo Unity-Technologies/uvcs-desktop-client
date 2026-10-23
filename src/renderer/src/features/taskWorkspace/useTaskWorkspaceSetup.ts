@@ -1,9 +1,10 @@
+import type { Place } from '@shared/domain/place';
 import { useRef, useState } from 'react';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { describeProgress } from '../../app/operations/describeProgress';
 import { nextProgressBar, SWEEP } from '../../app/operations/progressBar';
-import { invalidateWorkspace, queryClient } from '../../app/queryClient';
+import { invalidatePlace, queryClient } from '../../app/queryClient';
 import { isAffectedByBranchList } from '../../app/refresh/refreshScopes';
 import { describeTaskFailure, setUpTaskWorkspace, taskSteps, type TaskStep, type TaskStepState, type TaskWorkspaceOutcome, type TaskWorkspacePlan } from './setUpTaskWorkspace';
 import { taskWorkspaceActions } from './taskWorkspaceActions';
@@ -31,8 +32,8 @@ interface TaskWorkspaceSetup {
   stop: () => void;
 }
 
-/** A task workspace being set up from `workspacePath`: its steps as they go, and a failure's explanation. */
-export function useTaskWorkspaceSetup(workspacePath: string): TaskWorkspaceSetup {
+/** A task workspace being set up from the window's `place`: its steps as they go, and a failure's explanation. */
+export function useTaskWorkspaceSetup(place: Place): TaskWorkspaceSetup {
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<TaskSetupSteps>();
   const [failure, setFailure] = useState<{ message: string; reason: string } | null>(null);
@@ -50,7 +51,7 @@ export function useTaskWorkspaceSetup(workspacePath: string): TaskWorkspaceSetup
     const update = (change: (current: TaskSetupSteps) => Partial<TaskSetupSteps>): void =>
       setProgress((current) => current && { ...current, ...change(current) });
     operationId.current = crypto.randomUUID();
-    const actions = taskWorkspaceActions(workspacePath, operationId.current, (reported) =>
+    const actions = taskWorkspaceActions(place, operationId.current, (reported) =>
       update((current) => ({
         switchProgress: { text: describeProgress(reported), bar: nextProgressBar(current.switchProgress?.bar ?? SWEEP, reported, performance.now()) },
       })),
@@ -58,7 +59,7 @@ export function useTaskWorkspaceSetup(workspacePath: string): TaskWorkspaceSetup
     const outcome = await setUpTaskWorkspace(plan, actions, (step, state) => update((current) => ({ states: { ...current.states, [step]: state } })));
     operationId.current = null;
     void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
-    if (plan.newBranch) void invalidateWorkspace(workspacePath, isAffectedByBranchList);
+    if (plan.newBranch) void invalidatePlace(place, isAffectedByBranchList);
     setRunning(false);
     if (outcome.kind === 'failed') {
       setFailure({ message: describeTaskFailure(outcome), reason: outcome.error instanceof Error ? outcome.error.message : String(outcome.error) });

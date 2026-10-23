@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const copied = vi.hoisted(() => [] as { text: string; what: string }[]);
 vi.mock('../ui/copyToClipboard', () => ({ copyToClipboard: (text: string, what: string) => copied.push({ text, what }) }));
 
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
 import type { CodeReview, CodeReviewSummary } from '@shared/domain/codeReview';
@@ -44,7 +45,7 @@ import { syncBranchMenu } from '../features/sync/syncBranchMenu';
 import { isSubmenu, SEPARATOR, withoutAction, type Action, type MenuEntry, type Submenu } from '../lib/actions';
 import { groupOf, MENU_GROUPS } from '../lib/menuGroups';
 import { COPY_KINDS } from './copyMenu';
-import { MENU_WORDS, type MenuWord } from './menuWords';
+import { MENU_WORDS, NEEDS_A_WORKSPACE, type MenuWord } from './menuWords';
 import { externalAppsKey } from './externalApps/externalApps';
 import { queryClient } from '../app/queryClient';
 import { workspaceInfoQuery } from '../app/workspace/useWorkspace';
@@ -175,9 +176,9 @@ const deletedEntry = { status: 'deleted', path: 'src/Enemy.cs', itemType: 'file'
 const deletedFolder = { ...deletedEntry, path: 'docs', itemType: 'directory', baseRevisionId: 24 } as const;
 
 const MENUS: Record<string, () => MenuEntry[]> = {
-  branch: () => branchMenu(ws, [branch], '/main'),
-  currentBranch: () => branchMenu(ws, [branch], branch.name),
-  branches: () => branchMenu(ws, [branch, { ...branch, name: '/main/other', isHidden: true }], '/main'),
+  branch: () => branchMenu(workspacePlace(ws), [branch], '/main'),
+  currentBranch: () => branchMenu(workspacePlace(ws), [branch], branch.name),
+  branches: () => branchMenu(workspacePlace(ws), [branch, { ...branch, name: '/main/other', isHidden: true }], '/main'),
   changeset: () => changesetMenu({ workspacePath: ws, loadedChangeset: 6, loadedBranch: '/main/a' }, [changeset]),
   changesetInterval: () => changesetMenu({ workspacePath: ws }, [changeset, { ...changeset, id: 2 }]),
   label: () => labelMenu(ws, [label]),
@@ -231,6 +232,16 @@ const MENUS: Record<string, () => MenuEntry[]> = {
 };
 
 /**
+ * The object menus a repository explored without a workspace shows, built for one: none offers what needs a
+ * workspace (`NEEDS_A_WORKSPACE`), and every other rule of the grammar holds (they join `MENUS`' checks below).
+ */
+const onRepository = repositoryPlace(repository);
+const REPOSITORY_MENUS: Record<string, () => MenuEntry[]> = {
+  repositoryBranch: () => branchMenu(onRepository, [branch], undefined),
+  repositoryBranches: () => branchMenu(onRepository, [branch, { ...branch, name: '/main/other', isHidden: true }], undefined),
+};
+
+/**
  * Menus of lines of code, not of an object: what they copy is the lines' link and text, so they have their own "Copy …"
  * entries and no object's "Copy" submenu. Every other rule of the grammar holds.
  */
@@ -238,10 +249,26 @@ const CODE_MENUS: Record<string, () => MenuEntry[]> = {
   diffLines: () => lineMenu({ lines: { side: 'new', first: 40, last: 52 }, copyLink: () => {}, copyLines: () => {}, annotate: () => {} }),
   annotatedLine: () => lineMenu({ lines: { side: 'new', first: 42, last: 42 }, copyLink: () => {}, copyLines: () => {} }),
 };
-const EVERY_MENU = { ...MENUS, ...CODE_MENUS };
+const EVERY_MENU = { ...MENUS, ...REPOSITORY_MENUS, ...CODE_MENUS };
 
 const wordOf = (entry: Action | Submenu): MenuWord | undefined => (entry.id ? (MENU_WORDS as Record<string, MenuWord>)[entry.id] : undefined);
 const topEntries = (menu: MenuEntry[]): (Action | Submenu)[] => menu.filter((entry): entry is Action | Submenu => entry !== SEPARATOR);
+
+describe('menus without a workspace', () => {
+  const ids = (menu: MenuEntry[]): string[] => topEntries(menu).map((entry) => entry.id ?? '');
+
+  it.each(Object.entries(REPOSITORY_MENUS))('%s: offers nothing that needs a workspace', (_name, build) => {
+    expect(ids(build()).filter((id) => (NEEDS_A_WORKSPACE as readonly string[]).includes(id))).toEqual([]);
+  });
+
+  it("keeps what changes the server's objects, as in a workspace", () => {
+    expect(ids(REPOSITORY_MENUS.repositoryBranch!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'rename', 'hide', 'delete']));
+  });
+
+  it('offers in a workspace what a repository leaves out, so the list names what each needs', () => {
+    expect(ids(MENUS.branch!())).toEqual(expect.arrayContaining(['switch', 'merge', 'mergeTo', 'cherryPick']));
+  });
+});
 
 describe('the menu grammar', () => {
   it.each(Object.entries(EVERY_MENU))('%s: every entry is a word of the vocabulary, with its icon, group and (where fixed) words', (_name, build) => {
@@ -337,9 +364,9 @@ describe('one menu per object, the same everywhere', () => {
   const graphChangeset = { ...changeset, id: 5, branch: '/main/a', parent: 4, comment: 'Finish feature', guid: undefined };
 
   it('a branch reads the same in the Branches view, the switcher, the top bar, the palette and the Branch Explorer', () => {
-    const common = branchMenu(ws, [{ ...branch, name: '/main/a', parent: '/main', headChangeset: 5, comment: '' }], '/main');
+    const common = branchMenu(workspacePlace(ws), [{ ...branch, name: '/main/a', parent: '/main', headChangeset: 5, comment: '' }], '/main');
     const inGraph = withoutAction(common, 'showInBranchExplorer');
-    expectOnlyAdds(branchMenu(ws, [{ ...branch, name: '/main/a', parent: '/main', headChangeset: 5, comment: '' }], '/main'), common);
+    expectOnlyAdds(branchMenu(workspacePlace(ws), [{ ...branch, name: '/main/a', parent: '/main', headChangeset: 5, comment: '' }], '/main'), common);
     expectOnlyAdds(workingObjectMenu({ ...workspace, selector: { kind: 'branch', name: '/main' } }, { kind: 'branch', branch: { ...branch, name: '/main/a', parent: '/main', headChangeset: 5, comment: '' } }), common);
     expectOnlyAdds(branchResult({ ...branch, name: '/main/a', parent: '/main', headChangeset: 5, comment: '' }, resultContext).menu!(), common);
     const graph = graphMenu({ kind: 'branch', lane }, graphContext);
@@ -401,9 +428,9 @@ describe('Copy', () => {
   };
 
   it('copies a branch as its name, spec, full spec and comment, the name with ⌘C', async () => {
-    expect(copyEntries(branchMenu(ws, [branch], '/main'))[0]!.shortcut).toBe('mod+c');
-    expect(copyEntries(branchMenu(ws, [branch], '/main')).find((entry) => entry.id === 'copy.link')!.shortcut).toBe('mod+shift+c');
-    expect(await copiedBy(branchMenu(ws, [branch], '/main'))).toEqual([
+    expect(copyEntries(branchMenu(workspacePlace(ws), [branch], '/main'))[0]!.shortcut).toBe('mod+c');
+    expect(copyEntries(branchMenu(workspacePlace(ws), [branch], '/main')).find((entry) => entry.id === 'copy.link')!.shortcut).toBe('mod+shift+c');
+    expect(await copiedBy(branchMenu(workspacePlace(ws), [branch], '/main'))).toEqual([
       'Branch name: /main/task',
       'Branch link: uvcs://local/repos/game/branches/main/task',
       'Branch spec: br:/main/task',
@@ -458,7 +485,7 @@ describe('Copy', () => {
   });
 
   it('leaves out what an object has no text for, like an empty comment', () => {
-    expect(copyEntries(branchMenu(ws, [{ ...branch, comment: '' }], '/main')).map((entry) => entry.label)).toEqual(['Name', 'Link', 'Spec', 'Full spec']);
+    expect(copyEntries(branchMenu(workspacePlace(ws), [{ ...branch, comment: '' }], '/main')).map((entry) => entry.label)).toEqual(['Name', 'Link', 'Spec', 'Full spec']);
   });
 
   it('shows what each entry copies next to it', () => {
@@ -482,7 +509,7 @@ describe('shelves', () => {
 describe('the top bar', () => {
   it("offers what the workspace is on with that object's own menu", () => {
     const onBranch = { ...workspace, selector: { kind: 'branch' as const, name: branch.name } };
-    expect(reading(workingObjectMenu(onBranch, { kind: 'branch', branch }))).toEqual(reading(branchMenu(ws, [branch], branch.name)));
+    expect(reading(workingObjectMenu(onBranch, { kind: 'branch', branch }))).toEqual(reading(branchMenu(workspacePlace(ws), [branch], branch.name)));
     const onLabel = { ...workspace, selector: { kind: 'label' as const, name: 'v1' } };
     expect(reading(workingObjectMenu(onLabel, { kind: 'label', label }))).toEqual(reading(labelMenu(ws, [label])));
   });
