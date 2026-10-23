@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ChangeKind, ItemType, PendingChange } from '@shared/domain/pendingChanges';
-import { isScored, movePairsOf, moveSimilaritiesKey, pairableCount, scoredCandidates, searchedRows, showsMinimum, similarityLabel, similarityTip } from './matchSimilarity';
+import { isScored, movePairsOf, moveSimilaritiesKey, isMeasured, minimumNoteOf, pairableCount, scoredCandidates, searchedRows, similarityLabel, similarityTip } from './matchSimilarity';
 import { isAffectedByFileChanges, isAffectedByPendingChangeEdit, isAffectedByRecordedMove, isAffectedByWorkspaceState } from '../../app/refresh/refreshScopes';
 
 const change = (path: string, kinds: ChangeKind[], itemType: ItemType = 'file', size = 10): PendingChange => ({ path, kinds, itemType, size, lastModified: '' });
@@ -25,8 +25,10 @@ describe('the pairs measured', () => {
 describe('the rows', () => {
   const candidates = [hero, enemy, boss];
 
-  it('keeps the candidates as they are while the similarities are unknown', () => {
-    expect(paths(scoredCandidates(candidates, undefined, 50))).toEqual(['src/Hero.cs', 'src/Enemy.cs', 'src/Boss.cs']);
+  it('keeps the candidates as they are while the similarities are unknown, none of them measured yet', () => {
+    const rows = scoredCandidates(candidates, undefined, 50);
+    expect(paths(rows)).toEqual(['src/Hero.cs', 'src/Enemy.cs', 'src/Boss.cs']);
+    expect(rows.map((row) => row.similarity)).toEqual([undefined, undefined, undefined]);
   });
 
   it('orders by similarity, the most alike first, those it could not measure last', () => {
@@ -57,12 +59,23 @@ describe('the slider', () => {
     expect(pairableCount([0.5, 'notPairable', 'notMeasured'])).toBe(2);
   });
 
+  it('measures files with candidates only', () => {
+    expect(isMeasured(deleted, 3)).toBe(true);
+    expect(isMeasured(deleted, 0)).toBe(false);
+    expect(isMeasured(change('src', ['locallyDeleted'], 'directory'), 3)).toBe(false);
+  });
+
   it('shows for files with candidates, until none of them is known to pair', () => {
-    expect(showsMinimum(deleted, 3, undefined)).toBe(true);
-    expect(showsMinimum(deleted, 3, 2)).toBe(true);
-    expect(showsMinimum(deleted, 3, 0)).toBe(false);
-    expect(showsMinimum(deleted, 0, undefined)).toBe(false);
-    expect(showsMinimum(change('src', ['locallyDeleted'], 'directory'), 3, undefined)).toBe(false);
+    const note = (pairable: number | undefined, candidates = 3, failed = false) => minimumNoteOf({ change: deleted, candidates, pairable, failed });
+    expect(note(undefined)).toBe('slider');
+    expect(note(2)).toBe('slider');
+    expect(note(0)).toBeNull();
+    expect(note(undefined, 0)).toBeNull();
+    expect(minimumNoteOf({ change: change('src', ['locallyDeleted'], 'directory'), candidates: 3, pairable: undefined, failed: false })).toBeNull();
+  });
+
+  it('says measuring failed in its place', () => {
+    expect(minimumNoteOf({ change: deleted, candidates: 3, pairable: undefined, failed: true })).toBe('notMeasured');
   });
 });
 
