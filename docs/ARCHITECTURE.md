@@ -669,7 +669,7 @@ A workspace window may open page windows (a diff, a history… in a window of it
 belong to it and aren't workspace windows: `features/page-windows.md`.
 
 - `main/window/WorkspaceWindows` opens the windows; opening a workspace that another window shows brings that window
-  forward instead (`windows.focusWorkspace`, checked by `useOpenWorkspace`). The windows open as the installed app quits
+  forward instead (`windows.focusPlace`, checked by `useOpenWorkspace`). The windows open as the installed app quits
   (`saveSession`, from `Quitting`: each one's workspace or home screen, bounds, maximized and full screen, the last
   focused one last; `openWindows`) open again at its next launch where they were (`openFirst`, `windowsToReopen`: one
   per workspace, none for a folder that's gone), the focused one in front and the others shown behind it
@@ -679,7 +679,7 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   its last window closes (Windows, Linux), that window is saved as it closes (`Quitting.lastWindowClosing`). With none
   saved (on macOS, every window was closed before quitting), the first window reopens the last workspace used. Development builds start on one home screen, where automated UI checks pick a workspace. A new
   window opens on the home screen. A new window asked to open a workspace
-  takes it at start (`system.takeRequestedWorkspace`), as does a folder the installed app is launched with on Windows
+  takes it at start (`system.takeRequestedPlace`), as does a folder the installed app is launched with on Windows
   and Linux (`workspaceArgument`; a second launch hands it to the running app). A launch for a `uvcs://` link names no
   folder: the link goes to the window in front once the first windows opened (`receiveLinks`,
   features/deep-links.md). The first window waits until `cm` has
@@ -691,7 +691,7 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   (`useExpandedDirectories`, `useViewSelection`) or says which workspace it belongs to (`cutItemsIn`,
   `revealRequestIn`); otherwise the next workspace reads it, e.g. lists a folder only the last one has. The big part
   of what the window read of the workspace it leaves (for another one or the home screen) goes once its views unmount
-  (`useForgetLeftWorkspace`, `forgetWorkspace`): what nothing shows of its immutable results (revisions, what
+  (`useForgetLeftPlace`, `forgetPlace`): what nothing shows of its immutable results (revisions, what
   changesets changed) and of every content its diffs read, its own files too (`content`, `contentBytes`,
   `diffContents`, whatever their source). Each window has its own query client, and a workspace's revisions, kept an
   hour, held hundreds of MB after the window moved on. Its lists and info are light and stay until their usual
@@ -745,8 +745,8 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   menu's key cap), the modifier a folder drop takes, and the one browsers use for a new window on all three OSs.
   With another modifier held too it opens here, and a missing workspace always opens here, whatever the keys: its
   screen locates, recreates or forgets it. The menu says the same: Open workspace, then Open in new window
-  (`workspaceMenu`), but not a missing workspace's. The new window asks `windows.openWorkspace`, so a workspace another
-  window shows comes forward instead; the new window remembers it as recent as it opens it (`useRequestedWorkspace`).
+  (`workspaceMenu`), but not a missing workspace's. The new window asks `windows.openPlace`, so a workspace another
+  window shows comes forward instead; the new window remembers it as recent as it opens it (`useRequestedPlace`).
 - A new workspace (the New workspace dialog: `createWorkspaceAndUpdate`) opens as soon as `cm workspace create` makes
   it, then gets the latest files of /main through the workspace's own Update (`updateWorkspace`: `cm update` in a process
   of its own, its progress card, its refreshes). `cm workspace create` already puts it on /main with nothing loaded, so
@@ -794,9 +794,10 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
    and opens the first window, and builds the menu bar right after creating it, before it shows. What `cm` logs
    before the window exists waits for it (`CommandLogRelay`), and the page's events sent while it still loads reach
    it once it has (`sendEventTo`), so its command log lists them.
-3. The window is created hidden, its background the page's `--bg-app` (`WINDOW_BACKGROUND`), and names the workspace
-   it opens in its page's address when the folder is there (`startingWorkspaceQuery`).
-4. The page opens that workspace (`openWorkspaceFromAddress`) and asks for its first screen's data
+3. The window is created hidden, its background the page's `--bg-app` (`WINDOW_BACKGROUND`), and names the place it
+   opens in its page's address: a workspace when the folder is there, a repository explored without one
+   (`startingPlaceQuery`).
+4. The page opens that place (`openPlaceFromAddress`) and asks for its first screen's data
    (`prefetchStartupQueries`) before its first render, and applies the theme as it renders (`useTheme`): its first
    frame is the themed workspace screen or home screen, never the home screen on the way nor a frame without colors.
    The window shows on that frame (`ready-to-show`): the first render is synchronous (`flushSync` in `main.tsx`,
@@ -827,7 +828,7 @@ shells answer only after about a second).
 Tried and dropped, so they aren't proposed again:
 - Showing the window as it is created (`show: true`): an empty frame shows 150 ms sooner, but `show()` then holds the
   main process while the page loads, which ran its scripts 150 ms later.
-- Asking the main process which workspace to open (`takeRequestedWorkspace`), or awaiting the settings, before the
+- Asking the main process which workspace to open (`takeRequestedPlace`), or awaiting the settings, before the
   first render: the wait paints an empty frame, the window shows on it, and `show()` holds the answer: the first
   render came 90 ms later.
 - Minifying the renderer bundle (1.7 MB to 0.73 MB): the page's scripts ran 0-8 ms sooner, within noise.

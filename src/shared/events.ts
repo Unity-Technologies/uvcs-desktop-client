@@ -46,7 +46,7 @@ export interface UvcsEvents {
   operationProgress: OperationProgressEvent;
   /** The settings changed, in this window or another one. */
   settingsChanged: AppSettings;
-  /** A workspace was picked from the OS recent documents; `system.takeRequestedWorkspace` tells which. */
+  /** A workspace was picked from the OS recent documents; `system.takeRequestedPlace` tells which. */
   workspaceOpenRequested: Record<string, never>;
   /** A native menu item was chosen; runs the registered command with this id. */
   menuCommand: { commandId: string };

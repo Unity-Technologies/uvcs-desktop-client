@@ -4,7 +4,7 @@ import { repositoryPlace, workspacePlace, type Place } from './domain/place';
 /**
  * A window opened for a place (`WorkspaceWindows.open`: a workspace, or a repository explored without one) names it in
  * its page's address, so the page opens it before its first render (`openPlaceFromAddress`) and never draws the home
- * screen on the way. Asking the main process instead (`system.takeRequestedWorkspace`) would put a round trip before
+ * screen on the way. Asking the main process instead (`system.takeRequestedPlace`) would put a round trip before
  * the first render, and that waits behind the window's `show()` once an empty first frame made it ready to show. A
  * window reopened after restarting to install an update names the view it showed too, which it opens on instead of
  * its first view.

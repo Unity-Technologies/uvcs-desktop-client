@@ -7,12 +7,13 @@ import { ToggleChip } from '../../ui/ToggleChip';
 import { CopyLinkButton } from '../links/CopyLinkButton';
 import { useCopyLinkCommand } from '../links/useCopyLinkCommand';
 import { useNavigation } from '../navigation/navigationStore';
+import { placeName } from '../shell/windowTitle';
 import { PageContent, pageTitle } from '../navigation/pageRegistry';
 import { useBackButtons } from '../navigation/useBackButtons';
 import { Breadcrumb } from '../shell/Breadcrumb';
 import { TopBar } from '../shell/TopBar';
 import { useWorkspaceWatcher } from '../shell/useWorkspaceWatcher';
-import { useWorkspaceInfo } from '../workspace/useWorkspace';
+import { usePlace, useWorkspaceInfo } from '../workspace/useWorkspace';
 import { pageKey } from './followSelection';
 import { pageWindowGoBack } from './pageWindowNavigation';
 import { usePageWindow } from './pageWindowStore';
@@ -74,11 +75,16 @@ function FollowSelectionChip() {
   );
 }
 
-/** "<page> — <workspace>": what the OS lists the window as (the Window menu, Mission Control, the taskbar). */
+/**
+ * "<page> — <workspace>", or "<page> — <repository>" for a repository explored without one (`placeName`): what the OS
+ * lists the window as (the Window menu, Mission Control, the taskbar).
+ */
 function usePageWindowTitle(): void {
   const page = useNavigation((state) => state.pages.at(-1));
+  const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
+  const name = placeName(place, workspace);
   useEffect(() => {
-    if (page) document.title = workspace ? `${pageTitle(page)} — ${workspace.name}` : pageTitle(page);
-  }, [page, workspace]);
+    if (page) document.title = name ? `${pageTitle(page)} — ${name}` : pageTitle(page);
+  }, [page, name]);
 }

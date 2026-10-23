@@ -527,7 +527,7 @@ Why one highlighting worker. Measured on a task branch of a large production rep
   bytes a pixel: 36 MB for 3000 x 2400) in the image diff worker, so a new tolerance only renders the heatmap again;
   the pair goes as its viewer unmounts (`forgetComparedImages`). The bitmaps cross to the worker copied, not
   transferred: `rasterize` keeps them for the pixel inspector. A window that leaves a workspace forgets the contents
-  its diffs read, revisions and its own files alike (`forgetWorkspace`, ARCHITECTURE.md "Windows"). Measured on a
+  its diffs read, revisions and its own files alike (`forgetPlace`, ARCHITECTURE.md "Windows"). Measured on a
   changeset of big texts and 2400 x 2400 images, each in Differences: leaving the diff took the worker's buffers from
   30 MB to none, and switching the window to another workspace its query cache from 181 MB to none and the
   renderer's footprint from about 600 MB to 394.
