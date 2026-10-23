@@ -48,14 +48,12 @@ export function RepositoryFilesView() {
     <ViewHeader
       title="Files"
       subtitle={branch ? filesBranchCaption(branch) : undefined}
-      actions={
-        <>
-          <ViewRefreshButton fetching={branchesQuery.isFetching} />
-          {branch && <FilesBranchPicker shown={branch} onPick={(picked) => choose(repository, picked.name)} />}
-        </>
-      }
+      actions={<ViewRefreshButton fetching={branchesQuery.isFetching} />}
     >
-      <FilterBar text={<FilterField value={filter} onChange={setFilter} placeholder="Filter open folders" />} />
+      <FilterBar
+        text={<FilterField value={filter} onChange={setFilter} placeholder="Filter open folders" />}
+        kinds={branch && <FilesBranchPicker shown={branch} onPick={(picked) => choose(repository, picked.name)} />}
+      />
     </ViewHeader>
   );
 

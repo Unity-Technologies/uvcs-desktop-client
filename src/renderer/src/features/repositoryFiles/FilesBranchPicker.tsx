@@ -1,9 +1,9 @@
 import * as Popover from '@radix-ui/react-popover';
-import { ChevronDown, GitBranch } from 'lucide-react';
+import { GitBranch } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import { PathLabel } from '../../components/PathLabel';
-import { Button } from '../../ui/Button';
+import { MenuChip } from '../../ui/ToggleChip';
 import { useReturnFocus } from '../../ui/useReturnFocus';
 import { BranchSearchList } from '../branches/BranchSearchList';
 import { branchesRead } from '../branches/branchSearchRows';
@@ -27,10 +27,9 @@ export function FilesBranchPicker({ shown, onPick }: { shown: Branch; onPick: (b
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <Button icon={<GitBranch size={14} />} data-tip="The branch whose files show" aria-label={`Branch ${shown.name}`}>
+        <MenuChip icon={<GitBranch size={13} />} data-tip="The branch whose files show" aria-label={`Branch ${shown.name}`}>
           <PathLabel path={shown.name} fitContent maxWidth={NAME_MAX_WIDTH} tooltip={false} />
-          <ChevronDown size={14} className={styles.chevron} />
-        </Button>
+        </MenuChip>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content className={styles.popover} align="start" sideOffset={6} {...returnFocus}>
