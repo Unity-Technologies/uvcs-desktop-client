@@ -155,12 +155,15 @@ export class WorkspaceWindows {
 
   /**
    * A window explores `repository` without a workspace now (`windows.exploring`; none: it left it), as watching a
-   * workspace says it shows one: links, the Window menu, the session and its page windows go by it.
+   * workspace says it shows one: links, the Window menu, the session and its page windows go by it. One that left it
+   * for a workspace (Create workspace) keeps that workspace's page windows: the watch may say so first.
    */
   repositoryShown(viewer: number, repository: string | undefined): void {
     if (this.explored.get(viewer) !== repository) this.stopExploring(viewer);
     if (repository !== undefined) this.explored.set(viewer, repository);
-    this.placeShown(viewer, repository === undefined ? undefined : repositoryPlace(repository));
+    const workspacePath = this.options.workspaceOf(viewer);
+    const shown = workspacePath !== undefined ? workspacePlace(workspacePath) : repository === undefined ? undefined : repositoryPlace(repository);
+    this.placeShown(viewer, shown);
     this.options.onWindowsChanged();
   }
 

@@ -165,6 +165,30 @@ describe('a repository explored without a workspace', () => {
     expect(windows.placeIn(asBrowserWindow(window))).toEqual(workspacePlace(GAME));
   });
 
+  it("keeps exploring through a page's effects run twice (React's StrictMode): explored, left, explored again", () => {
+    const { windows, open } = setUp();
+    const window = open();
+
+    windows.repositoryShown(window.webContents.id, 'game@local');
+    windows.repositoryShown(window.webContents.id, undefined);
+    windows.repositoryShown(window.webContents.id, 'game@local');
+
+    expect(windows.explores('game@local')).toBe(true);
+    expect(windows.placeIn(asBrowserWindow(window))).toEqual(GAME_REPOSITORY);
+  });
+
+  it("keeps the page windows of the workspace a window made of the repository, whichever it hears of first", () => {
+    const { windows, open, shows } = setUp();
+    const window = open();
+    windows.repositoryShown(window.webContents.id, 'game@local');
+    shows(window, GAME);
+    windows.workspaceShown(window.webContents.id, GAME);
+    const page = windows.openPage(window.webContents.id, { place: workspacePlace(GAME), page: { kind: 'history', path: 'a.cs' } }) as unknown as FakeWindow;
+
+    windows.repositoryShown(window.webContents.id, undefined);
+    expect(page.isDestroyed()).toBe(false);
+  });
+
   it('forgets what a closed window explored', () => {
     const { windows, open } = setUp();
     const window = open();

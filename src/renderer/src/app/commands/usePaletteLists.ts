@@ -12,7 +12,10 @@ import { SLOW_CHANGING_QUERY } from '../queryClient';
 import { useWorkspaceInfoOf } from '../workspace/useWorkspace';
 import { branchesKey, labelsKey, shelvesKey } from './paletteQueryKeys';
 
-/** Keys the queries while the home screen shows, which never run then (`enabled`). */
+/**
+ * A placeholder place, never queried: the palette's hooks key their queries by it on the home screen, where no place
+ * is shown and every query is off (`enabled` false).
+ */
 export const NOWHERE: Place = repositoryPlace('');
 
 /** Keeps the lists between palette openings, so reopening it never starts from scratch. */

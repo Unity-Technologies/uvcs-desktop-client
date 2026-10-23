@@ -38,7 +38,7 @@ describe('linkDestination', () => {
     expect(linkDestination(LINK, context({ workspaces, recent: [TOOLS, GAME_TASK] }))).toEqual({ kind: 'pick', paths: [GAME_TASK, GAME] });
   });
 
-  it('finds none when no workspace is on it, nor one cm could not tell', () => {
+  it('explores the repository when no workspace is on it, nor one cm could not tell', () => {
     expect(linkDestination(LINK, context({ workspaces: [{ path: TOOLS, repository: 'tools@acme@unity' }, { path: GAME, repository: null }] }))).toEqual({ kind: 'explore' });
   });
 });
