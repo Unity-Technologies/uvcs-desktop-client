@@ -267,7 +267,7 @@ describe('how alike the items of a move are', () => {
     return { workspace, ...pendingChanges({ ls, cat }) };
   }
 
-  it("lists again without a path cm ls couldn't find, and measures the others", async () => {
+  it("narrows down a cm ls that fails on a path it can't find, and measures the others", async () => {
     const { workspace, service, commands } = await measuring({ 'src/Player.cs': { type: 'txt', content: 'a\n' } }, { 'src/Hero.cs': 'a\n' });
 
     const similarities = await service.moveSimilarities(workspace, [
@@ -276,10 +276,10 @@ describe('how alike the items of a move are', () => {
     ]);
 
     expect(similarities).toEqual(['notMeasured', 1]);
-    expect(commands.map(({ args }) => args.slice(0, -1))).toEqual([
+    expect(commands.map(({ args }) => args.slice(0, -1)).filter(([command]) => command === 'ls')).toEqual([
       ['ls', join(workspace, 'src', 'Archive', 'Old2.cs'), join(workspace, 'src', 'Player.cs')],
+      ['ls', join(workspace, 'src', 'Archive', 'Old2.cs')],
       ['ls', join(workspace, 'src', 'Player.cs')],
-      ['cat', 'revid:10@game@local'],
     ]);
   });
 

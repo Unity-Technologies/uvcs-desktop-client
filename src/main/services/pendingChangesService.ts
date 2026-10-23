@@ -14,8 +14,7 @@ import type {
 import { workspacePlace } from '@shared/domain/place';
 import { spec } from '@shared/domain/specs';
 import { checkinArgs } from '../cm/checkinArgs';
-import { CmError } from '../cm/CmError';
-import { deletedFilesArgs, deletedFilesOf, pathsNotFound, type DeletedFile } from '../cm/deletedFiles';
+import { deletedFilesArgs, deletedFilesOf, type DeletedFile } from '../cm/deletedFiles';
 import { readTreeItem } from '../cm/treeItems';
 import { textForLog } from '../cm/hideSecrets';
 import { readCheckinOutput } from '../cm/checkinOutput';
@@ -29,6 +28,7 @@ import { toAbsolutePaths, workspaceFileOf } from '../files/workspacePaths';
 import { addFilterRules } from '../workspace/filterRuleFile';
 import { readPendingChanges } from '../workspace/readPendingChanges';
 import { BINARY_SNIFF_BYTES, looksBinary } from '../files/fileContent';
+import { listNarrowingDown } from '../workspace/listNarrowingDown';
 import { measureMoveSimilarities, type FileGlance } from '../workspace/moveSimilarities';
 import { shelveAndUndo } from '../workspace/shelveAndUndo';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
@@ -101,23 +101,14 @@ export function createPendingChangesService({ cm, operations, revisionCat }: Ser
   }
 
   /**
-   * The deleted files `cm ls` lists. It fails on a path it can't find, having listed the others: they are listed again
-   * without the paths it named (`pathsNotFound`), so one such path costs one more `cm ls`, never every file's measure.
-   * Reading the records out of the failure's output instead was left out: what a failure keeps is the log's text,
-   * secrets hidden, and the folder rule (`matchCandidates`) already keeps out the paths `cm` is known not to find.
+   * The deleted files `cm ls` lists, narrowed down in halves where it fails on one it can't find (`listNarrowingDown`):
+   * the others are measured all the same.
    */
-  async function listDeletedFiles(workspacePath: string, paths: readonly string[]): Promise<Map<string, DeletedFile>> {
+  function listDeletedFiles(workspacePath: string, paths: readonly string[]): Promise<Map<string, DeletedFile>> {
     // The paths come from the window, which isn't trusted: each one must be inside the workspace (`workspaceFileOf`).
-    const list = async (listed: readonly string[]) =>
-      deletedFilesOf(await cm.queryRecords(deletedFilesArgs(listed.map((path) => workspaceFileOf(workspacePath, path))), readTreeItem, { cwd: workspacePath }));
-    try {
-      return await list(paths);
-    } catch (error) {
-      const missing = error instanceof CmError ? pathsNotFound(paths, error.command.output, process.platform) : new Set<string>();
-      const found = paths.filter((path) => !missing.has(path));
-      if (missing.size === 0 || found.length === 0) throw error;
-      return list(found);
-    }
+    return listNarrowingDown(paths, async (listed) =>
+      deletedFilesOf(await cm.queryRecords(deletedFilesArgs(listed.map((path) => workspaceFileOf(workspacePath, path))), readTreeItem, { cwd: workspacePath })),
+    );
   }
 
   async function checkout(workspacePath: string, paths: string[]): Promise<void> {

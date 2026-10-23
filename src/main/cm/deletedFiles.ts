@@ -31,26 +31,3 @@ export function deletedFilesOf(listed: Iterable<ListedTreeItem>): Map<string, De
   return files;
 }
 
-/**
- * The paths a failed `cm ls` couldn't find (`Item <path> not found.`, one line each, the others listed all the same),
- * as it printed them; empty when it failed otherwise. A deleted item under a folder the move detection paired is
- * listed by `cm status` at the folder's new path, where nothing is loaded.
- */
-export function notFoundPaths(output: string): string[] {
-  return [...output.matchAll(/^Item (.+) not found\.\r?$/gm)].map((found) => found[1]!);
-}
-
-/**
- * Which of the paths asked (workspace-relative, forward slashes) a failed `cm ls` named as not found. Each is matched
- * by the end of what `cm` printed, a whole name at a time: `cm` spells the workspace its own way (Windows: the drive
- * in lower case, backslashes; macOS: names decomposed, and maybe the real path behind a link, `/private/tmp`), and
- * Windows paths ignore case.
- */
-export function pathsNotFound(relativePaths: readonly string[], output: string, platform: NodeJS.Platform): Set<string> {
-  const comparable = (path: string) => {
-    const composed = path.replaceAll('\\', '/').normalize('NFC');
-    return platform === 'win32' ? composed.toLowerCase() : composed;
-  };
-  const printed = notFoundPaths(output).map((path) => `/${comparable(path).replace(/^\/+/, '')}`);
-  return new Set(relativePaths.filter((path) => printed.some((found) => found.endsWith(`/${comparable(path)}`))));
-}

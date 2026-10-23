@@ -54,9 +54,9 @@ isn't the one. "Search matches…" in either one's menu pairs them by hand, with
   - What it costs: one `cm ls` of the deleted paths, then only the deleted text files under the cap read by revision
     (`revid:N@repo`), asked together so `RevisionCat` batches them per repository (an xlinked one apart): four at a
     time in a quick `cm cat`, one after another while at most `MAX_QUICK_BACKLOG` wait, in processes of their own past
-    that. A path `cm ls` can't find fails it, the others listed all the same: they're listed again without the paths it
-    named (`pathsNotFound`, matched on each OS's spelling of them), one more `cm ls`. Reading the records out of the
-    failure instead was left out: what a failure keeps is the command log's text, its secrets hidden. The new files are
+    that. A path `cm ls` can't find fails it, its message in the records it streams, never in the error: the paths
+    are narrowed down in halves (`listNarrowingDown`), about two `cm ls` per halving for each path it can't find, and
+    when both halves of the first split fail, the listing itself failed, as `RevisionCat` decides. The new files are
     read from disk, 16 at a time, each path checked to be inside the workspace (`workspaceFileOf`): the window isn't
     trusted.
   - Measured once as the dialog opens (`moveSimilaritiesQuery`): the slider, "Minimum similarity" (`PercentSlider`,

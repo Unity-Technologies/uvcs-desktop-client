@@ -31,10 +31,25 @@ describe('listing what can be listed', () => {
     expect(calls).toHaveLength(1 + 2 * 4);
   });
 
-  it('lists nothing for a path that fails alone', async () => {
+  it('lists the others when several paths fail, in both halves of a part that fails', async () => {
+    const paths = Array.from({ length: 8 }, (_, index) => `p${index}`);
+    const { list } = listing(['p0', 'p2']);
+
+    expect([...(await listNarrowingDown(paths, list)).keys()].sort()).toEqual(['p1', 'p3', 'p4', 'p5', 'p6', 'p7']);
+  });
+
+  it('fails when every path does, a failure of the listing itself (the server, cm), after three calls', async () => {
+    const paths = Array.from({ length: 16 }, (_, index) => `p${index}`);
+    const { calls, list } = listing(paths);
+
+    await expect(listNarrowingDown(paths, list)).rejects.toThrow('The cm command failed.');
+    expect(calls).toHaveLength(3);
+  });
+
+  it('fails for a path that fails alone', async () => {
     const { list } = listing(['a']);
 
-    expect((await listNarrowingDown(['a'], list)).size).toBe(0);
+    await expect(listNarrowingDown(['a'], list)).rejects.toThrow();
   });
 
   it('asks nothing for no path', async () => {
