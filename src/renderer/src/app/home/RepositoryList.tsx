@@ -26,6 +26,8 @@ interface RepositoryListProps {
   query: string;
   /** The Unity project shown, whose repositories go by their own names; none for all projects. */
   project: string | null;
+  /** The organization's projects' GUIDs by name, which color their icons. */
+  projectGuids: ReadonlyMap<string, string>;
   /** Above the rows: the skeleton while loading, the error, the empty state. */
   placeholder?: ReactNode;
   onToggle: (repository: RepositorySummary) => void;
@@ -41,7 +43,7 @@ interface RepositoryListProps {
  * the row holding the focus stays rendered while scrolled away (`keepRendered`).
  */
 export const RepositoryList = forwardRef<RepositoryListHandle, RepositoryListProps>(function RepositoryList(
-  { rows, query, project, placeholder, onToggle, onOpen, onCreateWorkspace, onLeaveTop },
+  { rows, query, project, projectGuids, placeholder, onToggle, onOpen, onCreateWorkspace, onLeaveTop },
   ref,
 ) {
   const listRef = useRef<HTMLDivElement>(null);
@@ -139,6 +141,7 @@ export const RepositoryList = forwardRef<RepositoryListHandle, RepositoryListPro
           <RepositoryRow
             repository={row.repository}
             project={project}
+            projectGuids={projectGuids}
             workspaces={row.workspaces}
             expanded={row.expanded}
             onToggle={() => onToggle(row.repository)}

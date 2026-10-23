@@ -1,6 +1,7 @@
 import { ChevronRight, MoreHorizontal } from 'lucide-react';
 import type { RepositorySummary } from '@shared/domain/repository';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
+import { ProjectIcon } from '../../components/ProjectIcon';
 import { RepositoryAvatar } from '../../components/RepositoryAvatar';
 import { ROVING_ITEM } from '../../lib/rovingFocus';
 import { pluralize } from '../../lib/text';
@@ -11,13 +12,15 @@ import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { windowAskedBy, workspaceOpener } from '../workspace/workspaceWindowChoice';
 import { repositoryMenu } from './homeMenus';
-import { repositoryTitle } from './repositoryProjects';
+import { repositoryLabels } from './repositoryProjects';
 import styles from './Home.module.css';
 
 interface RepositoryRowProps {
   repository: RepositorySummary;
-  /** The Unity project the list shows, none for all projects (`repositoryTitle`). */
+  /** The Unity project the list shows, none for all projects (`repositoryLabels`). */
   project: string | null;
+  /** The organization's projects' GUIDs by name, which color their icons. */
+  projectGuids: ReadonlyMap<string, string>;
   /** The workspaces known to work on the repository. */
   workspaces: WorkspaceSummary[];
   /** Its workspaces show under it (`repositoryListRows`). */
@@ -27,10 +30,14 @@ interface RepositoryRowProps {
   onCreateWorkspace: (repository: RepositorySummary) => void;
 }
 
-export function RepositoryRow({ repository, project, workspaces, expanded, onToggle, onOpen, onCreateWorkspace }: RepositoryRowProps) {
+export function RepositoryRow({ repository, project, projectGuids, workspaces, expanded, onToggle, onOpen, onCreateWorkspace }: RepositoryRowProps) {
   const menu = () => repositoryMenu(repository, onCreateWorkspace);
   const onlyWorkspace = workspaces.length === 1 ? workspaces[0] : undefined;
-  const title = repositoryTitle(repository, project);
+  const title = repositoryLabels(repository, project);
+  const details = [
+    workspaces.length > 0 && pluralize(workspaces.length, 'workspace'),
+    repository.owner && `created by ${displayName(repository.owner)}`,
+  ].filter(Boolean);
 
   return (
     <ActionContextMenu entries={menu}>
@@ -42,21 +49,18 @@ export function RepositoryRow({ repository, project, workspaces, expanded, onTog
             <span className={styles.rowTitle}>
               {/* In a box of its own: the title's gap would open between the pieces a match splits the name into. */}
               <span>
-                {title.project && (
-                  <span className={styles.rowProject}>
-                    <Highlight text={title.project} /> /{' '}
-                  </span>
-                )}
                 <Highlight text={title.name} />
               </span>
             </span>
             <span className={styles.rowSubtitle}>
-              {[
-                workspaces.length > 0 && pluralize(workspaces.length, 'workspace'),
-                repository.owner && `created by ${displayName(repository.owner)}`,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
+              {title.project && (
+                <span className={styles.rowProject} data-tip={`In the project ${title.project.name}`}>
+                  <ProjectIcon guid={projectGuids.get(title.project.name)} size={12} />
+                  {title.project.named && <Highlight text={title.project.name} />}
+                </span>
+              )}
+              {title.project?.named && details.length > 0 && ' · '}
+              {details.join(' · ')}
             </span>
           </span>
         </button>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RepositorySummary } from '@shared/domain/repository';
-import { matchingProjects, noRepositoriesState, projectChoices, repositoriesInProject, repositoryTitle, shownProject } from './repositoryProjects';
+import { matchingProjects, noRepositoriesState, projectChoices, repositoriesInProject, repositoryLabels, shownProject } from './repositoryProjects';
 
 const SERVER = 'racing@unity';
 
@@ -61,18 +61,25 @@ describe('repositoriesInProject', () => {
   });
 });
 
-describe('repositoryTitle', () => {
-  it('names a repository by its own name inside the project shown', () => {
-    expect(repositoryTitle(GAME, 'Racing')).toEqual({ name: 'Game' });
+describe('repositoryLabels', () => {
+  it('names a repository by its own name inside the project shown, with no project', () => {
+    expect(repositoryLabels(GAME, 'Racing')).toEqual({ name: 'Game' });
   });
 
-  it('names its project before it across all projects', () => {
-    expect(repositoryTitle(GAME, null)).toEqual({ project: 'Racing', name: 'Game' });
+  it('names its project apart across all projects', () => {
+    expect(repositoryLabels(GAME, null)).toEqual({ name: 'Game', project: { name: 'Racing', named: true } });
+  });
+
+  it("doesn't repeat a project's name on the repository named after it", () => {
+    expect(repositoryLabels(repository('My project (11)/My project (11)', 'My project (11)'), null)).toEqual({
+      name: 'My project (11)',
+      project: { name: 'My project (11)', named: false },
+    });
   });
 
   it('names a repository in no project by its whole name', () => {
-    expect(repositoryTitle(LEGACY, null)).toEqual({ name: 'legacy' });
-    expect(repositoryTitle(repository('acme/tools'), null)).toEqual({ name: 'acme/tools' });
+    expect(repositoryLabels(LEGACY, null)).toEqual({ name: 'legacy' });
+    expect(repositoryLabels(repository('acme/tools'), null)).toEqual({ name: 'acme/tools' });
   });
 });
 

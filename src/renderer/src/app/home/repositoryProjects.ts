@@ -30,12 +30,14 @@ export function repositoriesInProject(repositories: readonly RepositorySummary[]
 }
 
 /**
- * How a repository's row names it: by its own name inside the project the list shows, its project before it otherwise
- * (`Racing` / `Game`), so all projects' repositories read apart.
+ * How a repository's row names it: by its own name (`Game` for `Racing/Game`), and, across all projects, its project
+ * on the quiet line under it (`project`): its name only where it isn't the repository's own (`named`), as most of a
+ * Unity organization's projects hold one repository of their name. Inside the project shown, no project.
  */
-export function repositoryTitle(repository: RepositorySummary, shown: string | null): { project?: string; name: string } {
+export function repositoryLabels(repository: RepositorySummary, shown: string | null): { name: string; project?: { name: string; named: boolean } } {
   const name = nameInProject(repository.name, repository.project);
-  return repository.project && repository.project !== shown ? { project: repository.project, name } : { name };
+  if (!repository.project || repository.project === shown) return { name };
+  return { name, project: { name: repository.project, named: repository.project !== name } };
 }
 
 /** What the list says when it shows no repository: none matching the text, none in the project picked, or none yet. */

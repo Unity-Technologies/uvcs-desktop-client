@@ -453,9 +453,16 @@
   max-width: 420px;
 }
 
-/* The project before a repository's own name, across all projects: quieter, as a path's folders are. */
+/* A repository's project, across all projects, at the start of its quiet line: the project's cube, and its name when
+   it isn't the repository's own. */
 .rowProject {
-  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+/* The cube sits on the text's middle, a small gap before the project's name. */
+.rowProject > span:first-child {
+  margin-right: 4px;
+  vertical-align: -2px;
 }
 
 /* A project under its organization, in All workspaces' place filter: indented past the organization's icon. */
