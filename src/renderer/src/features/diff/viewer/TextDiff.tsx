@@ -6,6 +6,7 @@ import { shownText } from '../../../lib/lineBreaks';
 import { focusMain } from '../../../lib/mainFocus';
 import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkey } from '../../../lib/shortcutRegistry';
+import { ActionContextMenu } from '../../../ui/menu/ActionContextMenu';
 import type { ChangeView } from './changeView';
 import type { ComparisonMethod } from './comparisonMethod';
 import { useDiffPreferences } from './diffPreferencesStore';
@@ -18,7 +19,8 @@ import { selectedRangeOf } from './linkedLines';
 import { scrollToLine } from './lineScroll';
 import { useLineLinks } from './useLineLinks';
 import { useLineTools } from './useLineTools';
-import { LineMenuArea } from './LineMenuArea';
+import { useCodeMenu } from './useCodeMenu';
+import { lineMenuOf, menuLinesOf, textDiffSides } from './codeTarget';
 import type { LineDiff } from './lineDiff';
 import { HIDE_NO_NEWLINE_CSS, showsNoNewlineMarker } from './noNewlineMarker';
 import { PaneScrollbars } from './PaneScrollbars';
@@ -193,6 +195,17 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     publishes: lineLinks.publishes,
     textOf: (side) => (side === 'old' ? original : diffedText),
   });
+  // The code's right-click menu, the lines' entries in it where they're selected for links, and Go to line's key.
+  const codeMenu = useCodeMenu({
+    containerRef: container,
+    scrollTo: (element, line) => scrollToLine(element, line, virtualizer),
+    fileName,
+    textOf: (side) => (side === 'deletions' ? original : current),
+    sides: textDiffSides({ wholeFile, sides, editable, editorAttached: edit }),
+    editor,
+    lines: menuLinesOf(lineLinks),
+    lineMenu: lineMenuOf(lineTools.menu),
+  });
   const movedCode = useMovedCode({ diff: diff.meta, comparisonMethod, fileName, layout, containerRef: container, virtualizer, diffedText, typed: current });
   const tokenizeMaxLength = highlighting === 'off' ? 0 : undefined;
   const workers = useHighlightWorkers(highlighting === 'background');
@@ -233,7 +246,8 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   // (check in, diff the file) don't see them.
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.defaultPrevented && isTyping()) return event.stopPropagation();
-    discard.onKeyDown(event);
+    codeMenu.onKeyDown(event);
+    if (!event.defaultPrevented) discard.onKeyDown(event);
   };
 
   // Usually a few milliseconds, and only the first time a language shows up.
@@ -241,7 +255,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
 
   return (
     <div className={styles.frame}>
-      <LineMenuArea menu={lineTools.menu}>
+      <ActionContextMenu entries={codeMenu.entries} onContextMenu={codeMenu.onContextMenu}>
         <div
           ref={setContainer}
           className={styles.diff}
@@ -294,7 +308,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
           {lineTools.chip}
           {movedCode}
         </div>
-      </LineMenuArea>
+      </ActionContextMenu>
     </div>
   );
 }

@@ -22,9 +22,9 @@ interface ComparedCode {
 }
 
 /**
- * Two pieces of code side by side (`codeComparison`), as "Compare moved code" shows what moved with what it became.
- * Read-only, in the diff's own look and layout; Pierre numbers the lines from the start of each piece, so the title
- * says where they are.
+ * Two pieces of code side by side (`codeComparison`): moved code with what it became ("Compare moved code"), or the
+ * clipboard with the code selected ("Compare with clipboard"). Read-only, in the diff's own look and layout; Pierre
+ * numbers the lines from the start of each piece, so the title says where they are.
  */
 export function openCodeComparisonDialog(compared: ComparedCode): void {
   openDialog((close) => <CodeComparisonDialog {...compared} onClose={close} />);

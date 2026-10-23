@@ -16,7 +16,7 @@ you touch:
 
 | Doc                                     | Covers                                                                         |
 | --------------------------------------- | ------------------------------------------------------------------------------ |
-| `features/diff.md`                      | Comparing two branches, changesets or labels, editing, discarding, stepping through changes, comparison methods, line breaks, images, review marks, highlighting memory |
+| `features/diff.md`                      | Comparing two branches, changesets or labels, editing, the code's menu, discarding, stepping through changes, comparison methods, line breaks, images, review marks, highlighting memory |
 | `features/model-diff.md`                | 3D models (FBX, OBJ, glTF): reading them as Unity imports them, what changed in Unity's terms, the 3D view, materials and textures where each version is, the disk or the repository at its point (`api.unityAssets`) |
 | `features/merge.md`                     | The merge page, conflict resolution, external merge tools, finishing a task    |
 | `features/incoming.md`                  | Incoming: changesets and their files, conflicts with your changes, updating    |
