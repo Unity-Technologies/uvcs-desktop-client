@@ -32,7 +32,7 @@ export function useServerAccount(server: string | undefined): { user: string; ac
 }
 
 /** Who you are on the server of the window's place (`usePlaceServer`, `useServerAccount`); undefined while it's read. */
-export function useWorkspaceUser(): string | undefined {
+export function usePlaceUser(): string | undefined {
   return useServerAccount(usePlaceServer())?.user;
 }
 

@@ -11,7 +11,7 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { useLabelsByChangeset } from '../labels/useLabelsByChangeset';
 import { changesetColumns } from './changesetColumns';
 import { ChangesetDetails } from './ChangesetDetails';
-import { useWorkspaceUser } from '../../app/account/accounts';
+import { usePlaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { SincePicker } from '../../components/SincePicker';
@@ -52,7 +52,7 @@ export function ChangesetsView() {
   const { data: workspace } = useWorkspaceInfo();
   const filters = useChangesetFilters();
   const { text, update } = filters;
-  const me = useWorkspaceUser();
+  const me = usePlaceUser();
   const [selection, setSelection] = useViewSelection('changesets');
 
   const currentBranch = branchWorkedOn(workspace?.selector);

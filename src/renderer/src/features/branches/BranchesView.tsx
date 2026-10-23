@@ -6,7 +6,7 @@ import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ObjectListView } from '../../components/ObjectListView';
-import { useWorkspaceUser } from '../../app/account/accounts';
+import { usePlaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { SincePicker } from '../../components/SincePicker';
@@ -44,7 +44,7 @@ export function BranchesView() {
   const { data: workspace } = useWorkspaceInfo();
   const filters = useBranchesViewStore();
   const { text: search, people, layout, since, showHidden, update } = filters;
-  const me = useWorkspaceUser();
+  const me = usePlaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const { data: branches, isPending, isFetching, error } = useBranches(branchesQuery({ since, people: queriedPeople, showHidden }));
   const offered = usePeopleSeen('branches', branches, ownerOf);

@@ -1,5 +1,5 @@
 import { ChevronDown, User, Users } from 'lucide-react';
-import { useWorkspaceUser } from '../../app/account/accounts';
+import { usePlaceUser } from '../../app/account/accounts';
 import { describePick, othersLabel, withMine, type PeoplePick } from '../../lib/peopleFilter';
 import { FilterPopover } from '../../ui/FilterPopover';
 import { AvatarStack } from './AvatarStack';
@@ -20,7 +20,7 @@ interface PeopleFilterProps {
  * (several at once), which reads who is picked ("Ana Diaz +2", their avatars stacked).
  */
 export function PeopleFilter({ value, onChange, people, mineTip }: PeopleFilterProps) {
-  const me = useWorkspaceUser();
+  const me = usePlaceUser();
   const others = value.others;
 
   return (

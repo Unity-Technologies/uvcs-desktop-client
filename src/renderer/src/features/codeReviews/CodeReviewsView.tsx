@@ -19,7 +19,7 @@ import { openCreateCodeReviewDialog } from './CreateCodeReviewDialog';
 import { useSelectCreated } from './useSelectCreated';
 import { useCodeReviews } from './useCodeReviews';
 import { SincePicker } from '../../components/SincePicker';
-import { useWorkspaceUser } from '../../app/account/accounts';
+import { usePlaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { matchesPeople, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
@@ -43,7 +43,7 @@ export function CodeReviewsView() {
   const { data: workspace } = useWorkspaceInfo();
   const filters = useCodeReviewsViewStore();
   const { text: search, people, since, status, assignedToMe, update } = filters;
-  const me = useWorkspaceUser();
+  const me = usePlaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const [selection, setSelection] = useViewSelection('codeReviews');
   const { data: reviews, isPending, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, assignedToMe }));

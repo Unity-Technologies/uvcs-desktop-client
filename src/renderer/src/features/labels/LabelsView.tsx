@@ -8,7 +8,7 @@ import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ObjectListView } from '../../components/ObjectListView';
 import { ObjectName } from '../../components/ObjectName';
 import { PathLabel } from '../../components/PathLabel';
-import { useWorkspaceUser } from '../../app/account/accounts';
+import { usePlaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { SincePicker } from '../../components/SincePicker';
@@ -55,7 +55,7 @@ export function LabelsView() {
   const place = usePlace();
   const filters = useLabelsViewStore();
   const { text: search, people, since, update } = filters;
-  const me = useWorkspaceUser();
+  const me = usePlaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const { data: labels, isPending, isFetching, error } = useLabels(labelsQuery({ since, people: queriedPeople }));
   const offered = usePeopleSeen('labels', labels, ownerOf);

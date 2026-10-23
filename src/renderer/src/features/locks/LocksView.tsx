@@ -14,7 +14,7 @@ import { Highlight } from '../../ui/Highlight';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import type { Column } from '../../ui/table/column';
 import { lockFilterTexts, readsOnlyMyLocks } from './lockFilters';
-import { useWorkspaceUser } from '../../app/account/accounts';
+import { usePlaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { isOnlyMine, matchesPeople } from '../../lib/peopleFilter';
@@ -65,7 +65,7 @@ export function LocksView() {
   const place = usePlace();
   const filters = useLocksViewStore();
   const { text: filter, people, update } = filters;
-  const me = useWorkspaceUser();
+  const me = usePlaceUser();
   const [selection, setSelection] = useViewSelection('locks');
   const { data: locks, isPending, error, isFetching } = useLocks(readsOnlyMyLocks(people));
   const offered = usePeopleSeen('locks', locks, ownerOf);

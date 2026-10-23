@@ -1,5 +1,5 @@
 import { ArchiveRestore, MoreHorizontal } from 'lucide-react';
-import { useWorkspaceUser } from '../../app/account/accounts';
+import { usePlaceUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
 import { useSettings } from '../../app/settings/useSettings';
 import { usePlace } from '../../app/workspace/useWorkspace';
@@ -18,7 +18,7 @@ import { applyShelve } from './shelveOperations';
 export function ShelveDiffActions({ shelveId }: { shelveId: number }) {
   const place = usePlace();
   const { switchShelves } = useSettings();
-  const me = useWorkspaceUser();
+  const me = usePlaceUser();
   const shelve = cachedShelve(place, shelveId);
   if (!shelve) return null;
 
