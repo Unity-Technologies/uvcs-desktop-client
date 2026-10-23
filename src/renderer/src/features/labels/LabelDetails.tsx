@@ -1,4 +1,5 @@
 import { FileDiff, Tag } from 'lucide-react';
+import type { Place } from '@shared/domain/place';
 import type { LabelInfo } from '@shared/domain/label';
 import { spec } from '@shared/domain/specs';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
@@ -16,20 +17,20 @@ import { labelDiffPage, saveLabelComment, showLabelChanges } from './labelOperat
 import { copiedWhat } from '../../components/copyMenu';
 
 interface LabelDetailsProps {
-  workspacePath: string;
+  place: Place;
   label: LabelInfo;
   /** The label's context menu, offered behind "More actions". */
   menu: MenuEntry[];
   links?: ObjectLinks;
 }
 
-export function LabelDetails({ workspacePath, label, menu, links = PLAIN_LINKS }: LabelDetailsProps) {
+export function LabelDetails({ place, label, menu, links = PLAIN_LINKS }: LabelDetailsProps) {
   useShowInFollowingWindow(labelDiffPage(label));
   return (
     <DetailsPanel
       icon={<Tag />}
       kind="Label"
-      heading={<DetailsHeading name={label.name} comment={label.comment} onSave={(comment) => saveLabelComment(workspacePath, label, comment)} />}
+      heading={<DetailsHeading name={label.name} comment={label.comment} onSave={(comment) => saveLabelComment(place, label, comment)} />}
       author={{ user: label.owner, date: label.date }}
       meta={[
         <DetailsCopyable key="changeset" text={spec.changeset(label.changeset)} what={copiedWhat('Changeset', 'spec')} />,

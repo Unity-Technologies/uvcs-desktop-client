@@ -1,4 +1,5 @@
-import { canDiscardChanges } from './canDiscardChanges';
+import type { Place } from '@shared/domain/place';
+import { discardedFileIn } from './canDiscardChanges';
 import { discardInFile, undoLastDiscard } from './discardInFile';
 import type { FileBuffer } from './useFileBuffer';
 import type { DiscardRequest } from './useLineDiscarding';
@@ -9,14 +10,15 @@ export interface DiffDiscards {
 }
 
 /**
- * How a diff discards changes, when it can (`canDiscardChanges`, else none). Without unsaved edits a discard is written
+ * How a diff discards changes, when it can (`discardedFileIn`, else none). Without unsaved edits a discard is written
  * at once (`discardInFile`), with an undo stack for the session; with some, it's one more edit in the editor: it stays
  * unsaved and ⌘Z takes it back like typing.
  */
-export function diffDiscards(workspacePath: string, buffer: FileBuffer, onMatchesBase: (() => void) | undefined): DiffDiscards | null {
+export function diffDiscards(place: Place, buffer: FileBuffer, onMatchesBase: (() => void) | undefined): DiffDiscards | null {
   const { original, modified, left } = buffer.shown;
-  if (!canDiscardChanges(original, modified, left)) return null;
-  const target = { workspacePath, path: modified.path, baseText: original.kind === 'workspaceBase' ? (left.text ?? '') : null, onMatchesBase };
+  const file = discardedFileIn(place, original, modified, left);
+  if (file === null) return null;
+  const target = { ...file, baseText: original.kind === 'workspaceBase' ? (left.text ?? '') : null, onMatchesBase };
   const current = buffer.unsaved ?? buffer.shown.right.text ?? '';
   const dirty = buffer.unsaved !== null;
   return {

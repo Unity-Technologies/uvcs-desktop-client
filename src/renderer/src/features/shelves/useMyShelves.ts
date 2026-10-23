@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { workspacePlace } from '@shared/domain/place';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
@@ -30,7 +31,7 @@ function useShelvesList(scope: ShelvesScope, enabled = true) {
   const filter = shelvesListFilter(scope);
   return useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'shelves', filter),
-    queryFn: () => api.shelves.list(workspacePath, filter),
+    queryFn: () => api.shelves.list(workspacePlace(workspacePath), filter),
     enabled,
     ...SLOW_CHANGING_QUERY,
   });
@@ -42,7 +43,7 @@ export function useShelvesSearch(scope: ShelvesScope, text: string) {
   const filter = shelvesSearchFilter(scope, useDebouncedValue(text, SEARCH_DELAY_MS));
   return useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'shelves', filter),
-    queryFn: () => api.shelves.list(workspacePath, filter!),
+    queryFn: () => api.shelves.list(workspacePlace(workspacePath), filter!),
     enabled: filter !== null,
   });
 }

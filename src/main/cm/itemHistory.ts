@@ -11,13 +11,16 @@ import { onLinksThemselves } from './symlinkArgs';
 
 const ITEM_TYPES: Record<string, ItemType> = { txt: 'file', bin: 'binaryFile', dir: 'directory' };
 
+/** The item whose history is read: a workspace's file, or the item a revision is of. */
+export type HistoryItem = { workspacePath: string; path: string } | { revision: RevisionRef };
+
 /**
- * What `cm history` reads: the workspace's file, or with `revision` the item that revision is of, which the workspace
- * may not have (moved, deleted, not loaded). By its id in its repository, as no repository path reaches through an
- * xlink (`serverpath:/lib/a.cs#cs:12` finds nothing when `lib` is one).
+ * What `cm history` reads: the workspace's file, or the item a revision is of, which a workspace may not have (moved,
+ * deleted, not loaded) and a repository explored without one reads too. By its id in its repository, as no repository
+ * path reaches through an xlink (`serverpath:/lib/a.cs#cs:12` finds nothing when `lib` is one).
  */
-export function itemHistoryTarget(workspacePath: string, path: string, revision?: RevisionRef): string {
-  return revision ? `rev:${spec.revision(revision)}` : toAbsolutePath(workspacePath, path);
+export function itemHistoryTarget(item: HistoryItem): string {
+  return 'revision' in item ? `rev:${spec.revision(item.revision)}` : toAbsolutePath(item.workspacePath, item.path);
 }
 
 /**

@@ -1,5 +1,6 @@
 import '../../testing/fakeWindow';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 import type { Shelve } from '@shared/domain/shelve';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
@@ -16,13 +17,13 @@ describe('cachedShelve', () => {
     queryClient.setQueryData(queryKeys.inWorkspace(ws, 'shelves', { text: 'login' }), undefined);
     queryClient.setQueryData(queryKeys.inWorkspace(ws, 'shelves', {}), [shelve(7), shelve(9)]);
 
-    expect(cachedShelve(ws, 9)).toEqual(shelve(9));
-    expect(cachedShelve(ws, 3)).toEqual(shelve(3));
+    expect(cachedShelve(workspacePlace(ws), 9)).toEqual(shelve(9));
+    expect(cachedShelve(workspacePlace(ws), 3)).toEqual(shelve(3));
   });
 
   it("is unknown when no list of this workspace read it: the diff page then offers nothing to apply", () => {
     queryClient.setQueryData(queryKeys.inWorkspace('/other', 'shelves', {}), [shelve(9)]);
 
-    expect(cachedShelve(ws, 9)).toBeUndefined();
+    expect(cachedShelve(workspacePlace(ws), 9)).toBeUndefined();
   });
 });

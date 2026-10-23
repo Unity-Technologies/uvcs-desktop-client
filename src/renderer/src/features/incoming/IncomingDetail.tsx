@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { DiffEntry } from '@shared/domain/diff';
 import { diffEntrySources, diffEntryStatus } from '../diff/diffEntrySources';
 import { DiffFileTitle } from '../diff/viewer/DiffFileTitle';
@@ -9,7 +10,7 @@ export function IncomingFileDiff({ workspacePath, file }: { workspacePath: strin
 
   return (
     <FileDiffViewer
-      workspacePath={workspacePath}
+      place={workspacePlace(workspacePath)}
       original={original}
       modified={modified}
       fileName={file.path}

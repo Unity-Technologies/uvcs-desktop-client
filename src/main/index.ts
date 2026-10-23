@@ -43,16 +43,19 @@ import { WorkspaceWindows } from './window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders';
 
 const userData = app.getPath('userData');
-const cm = new CmClient(locateCm);
+// Commands of a repository explored without a workspace run here, where none can be read by mistake (`outsideWorkspaces`).
+const cm = new CmClient(locateCm, join(userData, 'outside-workspaces'));
 const settings = openSettings(userData);
 // What a workspace is loaded from, shared by the reads that follow one another as a window opens it.
 const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
 // Branch names by id, which code reviews name their branches by (`BranchNamesCache`), kept while a window shows the
 // workspace.
 const branchNames = new BranchNamesCache(
-  (workspacePath) => readBranchNames(cm, workspacePath),
+  (place) => readBranchNames(cm, place),
   Date.now,
-  (workspacePath) => isShown(watchers, workspacePath),
+  // A repository's names are read each time, never kept: no window shows a repository without a workspace yet, so
+  // nothing would let them go.
+  (place) => place.kind === 'workspace' && isShown(watchers, place.workspacePath),
 );
 const watchers = watchShownWorkspaces({ cm, headers, branchNames });
 const workspaceCopies = new WorkspaceCopies({ cm });

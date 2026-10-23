@@ -31,15 +31,21 @@ export function xlinkAfterPoint(target: DiffTarget): XlinkSidePoint {
   }
 }
 
-/** The older side: the changeset's parent, the range's first point, where the branch started; none for a shelve. */
-export function xlinkBeforePoint(target: DiffTarget): XlinkSidePoint {
+/**
+ * The older side: the changeset's parent, the range's first point, where the branch started; none for a shelve. The
+ * `cm find` names `repository` when no workspace tells `cm` which.
+ */
+export function xlinkBeforePoint(target: DiffTarget, repository?: string): XlinkSidePoint {
   switch (target.kind) {
     case 'changeset':
-      return { kind: 'parentOf', findArgs: findQueryArgs(FOUND_PARENTS, `where changesetid = ${target.changesetId}`) };
+      return { kind: 'parentOf', findArgs: findQueryArgs(FOUND_PARENTS, `where changesetid = ${target.changesetId}`, repository) };
     case 'range':
       return { kind: 'point', spec: target.fromSpec };
     case 'branch':
-      return { kind: 'parentOf', findArgs: findQueryArgs(FOUND_PARENTS, `where ${equalsCondition('branch', target.branch)} order by changesetid asc limit 1`) };
+      return {
+        kind: 'parentOf',
+        findArgs: findQueryArgs(FOUND_PARENTS, `where ${equalsCondition('branch', target.branch)} order by changesetid asc limit 1`, repository),
+      };
     case 'shelve':
       return null;
   }

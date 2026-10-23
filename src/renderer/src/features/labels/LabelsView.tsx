@@ -3,12 +3,12 @@ import { useMemo } from 'react';
 import type { Label } from '@shared/domain/label';
 import { useRenameCommand } from '../../app/commands/useRenameCommand';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
-import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ObjectListView } from '../../components/ObjectListView';
 import { ObjectName } from '../../components/ObjectName';
 import { PathLabel } from '../../components/PathLabel';
-import { useWorkspaceUser } from '../../app/account/accounts';
+import { usePlaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { SincePicker } from '../../components/SincePicker';
@@ -28,10 +28,9 @@ import { EmptyState } from '../../ui/EmptyState';
 import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { ViewHeader } from '../../ui/ViewHeader';
-import { openCreateLabelDialog } from './CreateLabelDialog';
 import { LabelDetails } from './LabelDetails';
 import { labelMenu } from './labelMenu';
-import { renameLabel, showLabelChanges } from './labelOperations';
+import { newLabel, newLabelActionLabel, renameLabel, showLabelChanges } from './labelOperations';
 import { useLabelsViewStore } from './labelsViewStore';
 import { useLabels } from './useLabels';
 import { labelCopyTexts } from './labelMenu';
@@ -53,10 +52,10 @@ const COLUMNS: Column<Label>[] = [
 ];
 
 export function LabelsView() {
-  const workspacePath = useWorkspacePath();
+  const place = usePlace();
   const filters = useLabelsViewStore();
   const { text: search, people, since, update } = filters;
-  const me = useWorkspaceUser();
+  const me = usePlaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const { data: labels, isPending, isFetching, error } = useLabels(labelsQuery({ since, people: queriedPeople }));
   const offered = usePeopleSeen('labels', labels, ownerOf);
@@ -67,8 +66,8 @@ export function LabelsView() {
     [labels, people, me, search],
   );
   const selected = visible.find((label) => labelKey(label) === selection.anchor);
-  useRenameCommand('Labels', 'label', selection.selected.size === 1 ? selected : undefined, (label) => void renameLabel(workspacePath, label));
-  useCopyCommand('Labels', 'Label', selection.selected.size === 1 && selected ? labelCopyTexts(workspacePath, selected) : undefined);
+  useRenameCommand('Labels', 'label', selection.selected.size === 1 ? selected : undefined, (label) => void renameLabel(place, label));
+  useCopyCommand('Labels', 'Label', selection.selected.size === 1 && selected ? labelCopyTexts(place, selected) : undefined);
   const filtering = isFiltering(filters);
 
   return (
@@ -79,8 +78,8 @@ export function LabelsView() {
         total={labels?.length}
         actions={
           <>
-            <ViewRefreshButton workspacePath={workspacePath} fetching={isFetching} />
-            <Button variant="primary" icon={<Plus size={14} />} onClick={() => openCreateLabelDialog(workspacePath)}>
+            <ViewRefreshButton fetching={isFetching} />
+            <Button variant="primary" icon={<Plus size={14} />} onClick={() => void newLabel(place)}>
               New label
             </Button>
           </>
@@ -107,7 +106,7 @@ export function LabelsView() {
               icon={<Tag size={22} />}
               title="No labels"
               description="Labels mark important changesets, like releases."
-              action={<Button onClick={() => openCreateLabelDialog(workspacePath)}>Label your workspace changeset</Button>}
+              action={<Button onClick={() => void newLabel(place)}>{newLabelActionLabel(place)}</Button>}
             />
           )
         }
@@ -118,9 +117,9 @@ export function LabelsView() {
         selection={selection}
         onSelectionChange={setSelection}
         onActivate={(label) => showLabelChanges(label)}
-        contextMenu={(selectedLabels) => labelMenu(workspacePath, selectedLabels)}
+        contextMenu={(selectedLabels) => labelMenu(place, selectedLabels)}
         noun="label"
-        details={selected && <LabelDetails key={selected.name} workspacePath={workspacePath} label={selected} menu={labelMenu(workspacePath, [selected])} />}
+        details={selected && <LabelDetails key={selected.name} place={place} label={selected} menu={labelMenu(place, [selected])} />}
       />
     </>
   );

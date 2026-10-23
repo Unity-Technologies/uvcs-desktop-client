@@ -23,6 +23,13 @@ describe('The sides of a diff an xlink is read at', () => {
     expect(before?.kind === 'parentOf' && before.findArgs[2]).toBe("where branch = '/main/task1' order by changesetid asc limit 1");
   });
 
+  it("names the repository on the find of the side before, where no workspace tells cm which: last, after the limit", () => {
+    const branch = xlinkBeforePoint({ kind: 'branch', branch: '/main/task1' }, 'game@local');
+    expect(branch?.kind === 'parentOf' && branch.findArgs[2]).toBe("where branch = '/main/task1' order by changesetid asc limit 1 on repository 'game@local'");
+    const changeset = xlinkBeforePoint({ kind: 'changeset', changesetId: 37 }, 'game@local');
+    expect(changeset?.kind === 'parentOf' && changeset.findArgs[2]).toBe("where changesetid = 37 on repository 'game@local'");
+  });
+
   it('reads a range at its two points, and a shelve at neither', () => {
     const range = { kind: 'range', fromSpec: 'cs:10', toSpec: 'lb:v1.0' } as const;
     expect([xlinkBeforePoint(range), xlinkAfterPoint(range)]).toEqual([

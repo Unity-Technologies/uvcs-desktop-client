@@ -1,3 +1,4 @@
+import type { Place } from '@shared/domain/place';
 import type { RepositoryVersion } from '@shared/domain/content';
 import { navigation } from '../app/navigation/navigationStore';
 import type { PageOf } from '../app/navigation/pages';
@@ -28,15 +29,15 @@ export interface ChangedFile {
  * history (annotated or not), opening or saving its version, and Copy. Nothing is read to build it: each entry reads
  * what it needs when it runs.
  */
-export function changedFileMenu(workspacePath: string, files: ChangedFile[], added: (GroupedEntry | null)[] = []): MenuEntry[] {
+export function changedFileMenu(place: Place, files: ChangedFile[], added: (GroupedEntry | null)[] = []): MenuEntry[] {
   const single = files.length === 1 ? files[0]! : null;
   const version = single?.version;
   // What the list adds goes after the shared entries of its group, so every list reads the same with its own at the end.
   return groupedMenu([
     single?.history && menuAction('history', () => navigation.openPage(single.history!)),
     single?.annotation && menuAction('annotate', () => navigation.openPage(single.annotation!)),
-    ...(version ? openRevisionEntries((editorId) => openVersion(workspacePath, version, fileNameOf(single.path), editorId)) : []),
-    version && menuAction('saveAs', () => void saveVersionAs(workspacePath, version, fileNameOf(single!.path))),
+    ...(version ? openRevisionEntries((editorId) => openVersion(place, version, fileNameOf(single.path), editorId)) : []),
+    version && menuAction('saveAs', () => void saveVersionAs(place, version, fileNameOf(single!.path))),
     copySubmenu('', { path: files.map((file) => file.path).join('\n'), link: single?.link }, { count: files.length }),
     ...added,
   ]);

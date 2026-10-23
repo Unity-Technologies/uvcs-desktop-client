@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
+import { workspacePlace } from '@shared/domain/place';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { ReviewMark } from '@shared/domain/review';
 import { api } from '../../api/client';
@@ -51,7 +52,7 @@ export function ChangeDiffPanel({ workspacePath, change, reviewMark, title: ownT
   return (
     <LineLinksContext.Provider value={lineLinks}>
       <FileDiffViewer
-        workspacePath={workspacePath}
+        place={workspacePlace(workspacePath)}
         original={original}
         modified={sources.modified}
         fileName={change.path}
@@ -68,6 +69,6 @@ export function ChangeDiffPanel({ workspacePath, change, reviewMark, title: ownT
 function offerUndoCheckout(workspacePath: string, path: string): void {
   toast.success(`${fileNameOf(path)} is back to its loaded revision`, undefined, {
     label: 'Undo checkout',
-    run: () => void runVoidAction(workspacePath, "Couldn't undo the checkout", () => api.pendingChanges.undoUnchanged(workspacePath, [path]), isAffectedByPendingChangeEdit),
+    run: () => void runVoidAction(workspacePlace(workspacePath), "Couldn't undo the checkout", () => api.pendingChanges.undoUnchanged(workspacePath, [path]), isAffectedByPendingChangeEdit),
   });
 }

@@ -1,3 +1,4 @@
+import { mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import type { CommandLogEntry } from '@shared/events';
 import { CmError } from './CmError';
@@ -25,6 +26,12 @@ export interface CmRunOptions {
    * `cm shell`s, two more processes of about 80 MB each. The home folder's when only the home screen shows.
    */
   anyDirectory?: boolean;
+  /**
+   * A command that names its repository itself (a repository explored without a workspace, `cmPlace`): with no `cwd`,
+   * it runs in a folder of the app's that no workspace holds, so one that forgot to name it fails ("Not on workspace")
+   * instead of reading or changing the repository of a workspace it happened to run in.
+   */
+  outsideWorkspaces?: boolean;
   signal?: AbortSignal;
   /** Signal sent to the process when `signal` aborts (default SIGTERM). */
   killSignal?: NodeJS.Signals;
@@ -62,9 +69,13 @@ export class CmClient {
   private readonly startListeners = new Set<CommandStartedListener>();
   private nextCommandId = 1;
 
-  /** `locate` finds the `cm` executable; it runs again on `relocate()`. */
+  /**
+   * `locate` finds the `cm` executable; it runs again on `relocate()`. `outsideWorkspaces` is an empty folder of the
+   * app's, in no workspace, made as it's used (`CmRunOptions.outsideWorkspaces`).
+   */
   constructor(
     private readonly locate: () => string,
+    private readonly outsideWorkspaces: string,
     private readonly platform: NodeJS.Platform = process.platform,
     private readonly runners: CmRunners = CM_RUNNERS,
   ) {
@@ -101,13 +112,13 @@ export class CmClient {
    * anyway (`runsLong`: a workspace write of many files) gets a process of its own, as does one before the pool is warm.
    */
   query(args: string[], options: CmRunOptions = {}): Promise<string> {
-    const placed = { ...options, cwd: options.cwd ?? this.directoryForAny(options) };
+    const placed = this.placed(options);
     return this.run(args, placed, this.runsInPooledShell(args, placed));
   }
 
   /** Runs a long or cancellable command in its own process, streaming its output. */
   execute(args: string[], options: CmRunOptions = {}): Promise<string> {
-    return this.run(args, options, false);
+    return this.run(args, this.placed(options), false);
   }
 
   /**
@@ -116,13 +127,13 @@ export class CmClient {
    * big answer costs about what its rows weigh. Fails as `query` does.
    */
   queryRecords<T>(args: string[], readRecord: ReadRecord<T>, options: CmRecordsOptions = {}): Promise<T[]> {
-    const placed = { ...options, cwd: options.cwd ?? this.directoryForAny(options) };
+    const placed = this.placed(options);
     return this.runRecords(args, readRecord, placed, this.runsInPooledShell(args, placed));
   }
 
   /** Runs a long or cancellable command that prints `--format` records in its own process, reading them as `queryRecords` does. */
   executeRecords<T>(args: string[], readRecord: ReadRecord<T>, options: CmRecordsOptions = {}): Promise<T[]> {
-    return this.runRecords(args, readRecord, options, false);
+    return this.runRecords(args, readRecord, this.placed(options), false);
   }
 
   /** Prepares `cm shell` sessions for a working directory (defaults to the home directory). */
@@ -157,9 +168,28 @@ export class CmClient {
     this.shellPool.disposeAll();
   }
 
-  /** Where a query with no `cwd` runs: for one that runs the same anywhere, a directory a window shows; else home. */
-  private directoryForAny({ anyDirectory }: CmRunOptions): string {
+  /** The options with the directory the command runs in (`directoryOf`). */
+  private placed<T extends CmRunOptions>(options: T): T & { cwd: string } {
+    return { ...options, cwd: this.directoryOf(options) };
+  }
+
+  /**
+   * Where a command runs: its `cwd`; else, for one naming its repository, the folder outside every workspace; for a
+   * query that runs the same anywhere, a directory a window shows; else home.
+   */
+  private directoryOf({ cwd, anyDirectory, outsideWorkspaces }: CmRunOptions): string {
+    if (cwd !== undefined) return cwd;
+    if (outsideWorkspaces) return this.outsideWorkspacesFolder();
     return (anyDirectory ? this.shellPool.shownDirectory() : undefined) ?? homedir();
+  }
+
+  /**
+   * Made on every use, not once: the OS or the user may delete it during the session, and making it is a cheap check
+   * once it exists. A process started then runs in it; a `cm shell` already pooled there keeps the folder it started in.
+   */
+  private outsideWorkspacesFolder(): string {
+    mkdirSync(this.outsideWorkspaces, { recursive: true });
+    return this.outsideWorkspaces;
   }
 
   /**

@@ -4,6 +4,7 @@
 
 import { useQueries } from '@tanstack/react-query';
 import { useContext, useEffect, useMemo } from 'react';
+import type { Place } from '@shared/domain/place';
 import type { ContentSource, FileContent } from '@shared/domain/content';
 import { queryKeys } from '../../../../api/queryKeys';
 import { EmptyState } from '../../../../ui/EmptyState';
@@ -16,7 +17,7 @@ import { metaModelView, modelBesideMeta, modelOfMeta, modelReadsOfSides, type Me
 import { SiblingFinderContext, sourcePathOf, type DiffSide } from './modelSiblings';
 
 interface ModelMetaDiffProps {
-  workspacePath: string;
+  place: Place;
   /** Where each version of the `.meta` was read from: the model is read beside it. */
   sources: { original: ContentSource; modified: ContentSource };
   /** Each version of the `.meta`'s text (with unsaved edits, for the one typed into). */
@@ -29,11 +30,11 @@ interface ModelMetaDiffProps {
 const EMPTY: FileContent = { text: '', isBinary: false, size: 0 };
 
 /** A side without a model: built apart from the component, as `contentQuery` is, so its query keeps nothing of it. */
-function noContentQuery(workspacePath: string) {
-  return { queryKey: queryKeys.inWorkspace(workspacePath, 'content', null), queryFn: () => Promise.resolve(EMPTY) };
+function noContentQuery(place: Place) {
+  return { queryKey: queryKeys.inPlace(place, 'content', null), queryFn: () => Promise.resolve(EMPTY) };
 }
 
-export function ModelMetaDiff({ workspacePath, sources, texts, mode, onModelAbsent }: ModelMetaDiffProps) {
+export function ModelMetaDiff({ place, sources, texts, mode, onModelAbsent }: ModelMetaDiffProps) {
   const findSibling = useContext(SiblingFinderContext);
   // Each side's model is beside that side's `.meta`; a side without one (added, deleted) has no model to show.
   const modelSources = modelBesideMeta(findSibling, sources) ?? { original: null, modified: null };
@@ -41,7 +42,7 @@ export function ModelMetaDiff({ workspacePath, sources, texts, mode, onModelAbse
   // A `.meta` changed alone has the same model on both sides: read once, shown on both.
   const { reads: modelReads, readOf } = modelReadsOfSides(modelSources);
   const reads = useQueries({
-    queries: modelReads.map((source) => ({ ...(source ? contentQuery(workspacePath, source) : noContentQuery(workspacePath)), retry: false })),
+    queries: modelReads.map((source) => ({ ...(source ? contentQuery(place, source) : noContentQuery(place)), retry: false })),
   });
   const settings = useMemo(
     () => ({ original: readImportSettings(texts.original ?? ''), modified: readImportSettings(texts.modified ?? '') }),
@@ -68,7 +69,7 @@ export function ModelMetaDiff({ workspacePath, sources, texts, mode, onModelAbse
   if (view !== 'model' || !original || !modified) return <CenteredSpinner />;
   return (
     <ModelDiffViewer
-      workspacePath={workspacePath}
+      place={place}
       sources={{ original: modelSources.original ?? { kind: 'empty' }, modified: modelSources.modified ?? { kind: 'empty' } }}
       original={original}
       modified={modified}

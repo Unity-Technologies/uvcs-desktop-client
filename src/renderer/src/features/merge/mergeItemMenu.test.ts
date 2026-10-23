@@ -1,5 +1,6 @@
 import { fakeApi } from '../../testing/fakeWindow';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 import type { ExternalApps } from '@shared/domain/externalApps';
 import type { MergeTool } from '@shared/domain/mergeTools';
 import { DEFAULT_SETTINGS } from '@shared/domain/settings';
@@ -175,7 +176,7 @@ describe('mergeItemMenu', () => {
     versionEntry(menu, 'Yours').run();
     await settle();
 
-    expect(fakeApi.argsOf('history.openRevision')).toEqual([['/ws', versions.source, 'a.INCOMING.ts', 'vscode']]);
+    expect(fakeApi.argsOf('history.openRevision')).toEqual([[workspacePlace('/ws'), versions.source, 'a.INCOMING.ts', 'vscode']]);
     expect(fakeApi.argsOf('apps.openInEditor')).toEqual([['/ws/src/a.ts', 'vscode']]);
   });
 
@@ -189,7 +190,7 @@ describe('mergeItemMenu', () => {
     versionEntry(menu, 'Yours').run();
     await settle();
 
-    expect(fakeApi.argsOf('history.openRevision')).toEqual([['/ws', versions.base, 'hero.BASE.psd', undefined]]);
+    expect(fakeApi.argsOf('history.openRevision')).toEqual([[workspacePlace('/ws'), versions.base, 'hero.BASE.psd', undefined]]);
     expect(fakeApi.argsOf('system.openPath')).toEqual([['/ws/art/hero.psd']]);
   });
 
@@ -217,7 +218,7 @@ describe('mergeItemMenu', () => {
     fakeApi.answer('history.saveRevisionAs', () => null);
     (entry(menuOf([conflict('src/a.ts')]), 'saveAs') as Action).run();
     await settle();
-    expect(fakeApi.argsOf('history.saveRevisionAs')).toEqual([['/ws', versions.source, 'a.ts']]);
+    expect(fakeApi.argsOf('history.saveRevisionAs')).toEqual([[workspacePlace('/ws'), versions.source, 'a.ts']]);
   });
 
   it('offers a change that applies cleanly what any changed file has, never a choice: it is no conflict', () => {

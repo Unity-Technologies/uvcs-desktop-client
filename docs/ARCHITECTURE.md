@@ -74,9 +74,50 @@ you touch:
 
 To add a capability: its types in `shared/domain`, the method in `shared/api/<area>.ts` (part of `UvcsApi`), the
 implementation in `main/services/<area>Service.ts` (wired in `createServices`), `cm` argument builders and parsers as
-pure, tested helpers in `main/cm/`, then a query or mutation in the renderer through `api.<area>.<method>`. The preload
+pure, tested helpers in `main/cm/`, then a query or mutation in the renderer through `api.<area>.<method>`. A method on
+the server takes a `Place` and runs its commands through `cmPlace`, tested in a workspace and in a repository with none
+("Places", below). The preload
 and the IPC channel never change: the preload gains no capability or channel; besides `invoke` and `on` it exposes only
 values the page needs synchronously before its first frame (`platform`, the starting zoom `initialZoom`).
+
+## Places: a workspace, or a repository with none
+
+What a window shows is a `Place` (`shared/domain/place.ts`): a workspace, or a repository explored without one. The
+server's objects (branches, changesets, labels, shelves, attributes, code reviews, locks, diffs, histories, annotations,
+a changeset's tree) read and change the same in both; only the disk (pending changes, switching, updating, merging into
+the workspace, editing a file) needs a workspace.
+
+- **APIs**: a method on the server takes a `Place`; a method on the disk takes a workspace's path, which a repository's
+  place has none of, so the type checker keeps the disk out of a repository's window.
+- **Commands are written once, through `cmPlace`** (`main/cm/cmPlace.ts`). In a workspace a command runs as it always
+  has: in the workspace's folder, which tells `cm` the repository, its arguments as written. With no workspace each
+  command names the repository itself: `cm find` ends with `on repository '<repository>'` (`findCommand`: anywhere but
+  last `cm` fails, "missing EndOfFile"), specs end with `@<repository>` (`CmPlace.spec`; one naming its repository
+  already, an xlinked item's, stays), a new branch or attribute is created by that spec (`CmPlace.newObject`: a bare
+  name in a workspace), and `cm codereview` takes `--repository` (`CmPlace.repositoryOption`: without it, outside a
+  workspace, `cm` fails with "Object reference not set to an instance of an object", after creating the review).
+- **Outside every workspace**: a repository's commands run in an empty folder of the app's (`CmRunOptions.outsideWorkspaces`,
+  `<userData>/outside-workspaces`), never in a workspace another window shows (`anyDirectory`): a command that forgot to
+  name its repository fails ("Not on workspace") instead of reading, or changing, that workspace's repository.
+- **The disk is a workspace's**: a read of its files, its loaded revision or a review snapshot asks `workspaceOf`, a
+  bug told as one for a repository; `WorkspaceCopies` (revisions read from the disk) is asked only in a workspace.
+- **Caches and queues key by place** (`placeId`: a workspace's path, `repository:<spec>` for a repository):
+  `BranchNamesCache`, `RevisionCat`, `RepositoryTrees`, `RevisionDownloads`, `HandedOverDiffs`, the review mode setting.
+  `BranchNamesCache` keeps a place's names only while a window shows it (its `isShown`): a workspace's while it is
+  watched; a repository's never yet, so every code review list there reads every branch name again (two `cm find
+  branch`). Keeping them while a window explores the repository, and letting them go with its last one, comes with
+  the windows that explore one.
+- **The renderer** keys a place's queries `queryKeys.inPlace(place, …)` (a workspace's are `inWorkspace`'s, so every
+  refresh scope reads both alike), refreshes them with `invalidatePlace` (`runAction` takes the place it changed), and
+  gets the window's place from `usePlace()`, its repository and server from `usePlaceRepository()` and
+  `usePlaceServer()`. `useWorkspaceInfo()` and `usePendingChanges()` are the place's workspace's: none for a repository.
+- **Menus**: an object's menu takes the place; what needs a workspace takes its path (`workspacePathOf`), so it isn't
+  there for a repository. The words whose action needs one are listed once (`NEEDS_A_WORKSPACE`, `menuWords`), and
+  `menuGrammar.test.ts` builds every object's menu for a repository and checks none of them is offered.
+
+Tried and dropped: a temporary workspace for a repository (the official client's way). `cm` makes only workspaces that
+every client lists (`cm lwk`, the official client's home), and one a crash leaves stays there; the app would have
+to special-case it wherever a workspace shows (watchers, recent workspaces, the session, the incoming check).
 
 ## Server budget
 
@@ -846,7 +887,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   memo. The production build runs each effect once and hides such a bug, so `npm run e2e` runs the smoke test over a
   development build too (scripts/e2e/README.md).
 
-- **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)`, so `invalidateWorkspace(path)` refreshes everything after an operation
+- **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)` (a place's, `queryKeys.inPlace`: "Places" above), so `invalidateWorkspace(path)` refreshes everything after an operation
   (or what it can touch: `invalidateWorkspace(path, affected)`, `runOperation({ affects })`).
   A page opened from a list starts from the row that list already read, so it shows at once: a shelve
   (`cachedShelve`), a code review (`listedReview`, as `initialData` as fresh as that list, never from a list an
@@ -920,8 +961,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   hiding, permissions), and what undoes or deletes it last, in the danger tone; a separator between groups. Entries come from one
   vocabulary (`components/menuWords`: one id, icon, wording and group per concept) and `groupedMenu` orders them.
   One builder per kind (`branchMenu`, `changesetMenu`, `labelMenu`, `shelveMenu`, `codeReviewMenu`, `fileMenu`,
-  `pendingChangeMenu`) serves every place the object shows: its view, details' "More actions", the Branch Explorer,
-  the top bar's pill (right-click, `workingObjectMenu`), the switcher, the palette. A place only adds entries, at the
+  `pendingChangeMenu`) serves every host the object shows in (`MenuHost`): its view, details' "More actions", the Branch Explorer,
+  the top bar's pill (right-click, `workingObjectMenu`), the switcher, the palette. A host only adds entries, at the
   end of their group (`withEntries`: the graph's "Go to head changeset"); the Branch Explorer leaves out "Show in
   Branch Explorer". One exception: the palette's code reviews of a branch have no "Switch to this branch", as its
   searches read reviews without branch names (`listSummaries`; naming them would read every branch,
@@ -930,7 +971,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   copied"); ⌘C in a list copies its first entry (`useCopyCommand`) unless text is selected, ⇧⌘C a link to what is in
   front (`useCopyLinkCommand`, features/deep-links.md). Items that open a dialog
   end with "…"; submenus hold real sets of choices, the choice made checked after its label (`checked`), so the icon
-  in front stays the item's own (an app's). `menuGrammar.test.ts` checks every builder and every place. A menu's
+  in front stays the item's own (an app's). `menuGrammar.test.ts` checks every builder and every host, in a workspace and in a repository with none. A menu's
   content is in a portal, but React bubbles its events to the row its trigger sits in: `ActionDropdownMenu` keeps its
   clicks and mouse presses from reaching that row (picking from a changelist's "…" selected and folded it).
 - **Back buttons**: a page goes back with the mouse's back button and, on Windows, the Browser Back key (the `app-command`

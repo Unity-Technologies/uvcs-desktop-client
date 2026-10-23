@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { workspacePlace } from '@shared/domain/place';
 import type { QueryFilter } from '@shared/domain/query';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -29,12 +30,12 @@ export function usePaletteServerSearch(workspacePath: string | null, typed: stri
   return {
     term,
     searches,
-    branches: useQuery({ queryKey: branchesKey(path, textFilter), queryFn: () => api.branches.list(path, textFilter), ...server('branches') }),
-    labels: useQuery({ queryKey: labelsKey(path, textFilter), queryFn: () => api.labels.list(path, textFilter), ...server('labels') }),
-    shelves: useQuery({ queryKey: shelvesKey(path, textFilter), queryFn: () => api.shelves.list(path, textFilter), ...server('shelves') }),
+    branches: useQuery({ queryKey: branchesKey(path, textFilter), queryFn: () => api.branches.list(workspacePlace(path), textFilter), ...server('branches') }),
+    labels: useQuery({ queryKey: labelsKey(path, textFilter), queryFn: () => api.labels.list(workspacePlace(path), textFilter), ...server('labels') }),
+    shelves: useQuery({ queryKey: shelvesKey(path, textFilter), queryFn: () => api.shelves.list(workspacePlace(path), textFilter), ...server('shelves') }),
     codeReviews: useQuery({
-      queryKey: reviewSummariesKey(path, term),
-      queryFn: () => api.codeReviews.listSummaries(path, { text: term }),
+      queryKey: reviewSummariesKey(workspacePlace(path), term),
+      queryFn: () => api.codeReviews.listSummaries(workspacePlace(path), { text: term }),
       ...server('codeReviews'),
     }),
   };
@@ -50,7 +51,7 @@ export function useChangesetSearch(workspacePath: string | null) {
   const filter: QueryFilter = { text: term, limit: SERVER_SEARCH_LIMIT };
   const found = useQuery({
     queryKey: changesetsKey(path, filter),
-    queryFn: () => api.changesets.list(path, filter),
+    queryFn: () => api.changesets.list(workspacePlace(path), filter),
     enabled: Boolean(workspacePath) && term !== undefined,
     staleTime: SERVER_SEARCH_STALE_TIME,
   });

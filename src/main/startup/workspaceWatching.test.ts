@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { placeId, workspacePlace } from '@shared/domain/place';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
 import type { Watcher } from '../watch/WorkspaceWatchers';
 import { isShown, watchShownWorkspaces } from './workspaceWatching';
@@ -13,12 +14,12 @@ function quietWatcher(workspacePath: string): Watcher {
 function setUp() {
   const reads: string[] = [];
   const branchNames = new BranchNamesCache(
-    async (workspacePath) => {
-      reads.push(workspacePath);
+    async (place) => {
+      reads.push(placeId(place));
       return [{ id: 1, name: '/main' }];
     },
     Date.now,
-    (workspacePath) => isShown(watchers, workspacePath),
+    (place) => place.kind === 'workspace' && isShown(watchers, place.workspacePath),
   );
   const cm = { release: vi.fn() };
   const watchers = watchShownWorkspaces({ cm, headers: { forget: vi.fn() }, branchNames }, quietWatcher);
@@ -30,15 +31,15 @@ describe('watchShownWorkspaces', () => {
     const { watchers, cm, branchNames, reads } = setUp();
     await watchers.watch(1, '/wk/game');
     await watchers.watch(2, '/wk/game');
-    await branchNames.resolve('/wk/game', [1]);
+    await branchNames.resolve(workspacePlace('/wk/game'), [1]);
 
     watchers.release(1);
-    await branchNames.resolve('/wk/game', [1]);
+    await branchNames.resolve(workspacePlace('/wk/game'), [1]);
     expect(cm.release).not.toHaveBeenCalled();
     expect(reads).toEqual(['/wk/game']);
 
     watchers.release(2);
-    await branchNames.resolve('/wk/game', [1]);
+    await branchNames.resolve(workspacePlace('/wk/game'), [1]);
     expect(cm.release).toHaveBeenCalledWith('/wk/game');
     expect(reads).toEqual(['/wk/game', '/wk/game']);
   });
@@ -49,9 +50,9 @@ describe('watchShownWorkspaces', () => {
     watchers.release(1);
 
     // A Branch Explorer read that started while the window showed it.
-    branchNames.remember('/wk/game', [{ id: 1, name: '/main' }], { complete: true });
+    branchNames.remember(workspacePlace('/wk/game'), [{ id: 1, name: '/main' }], { complete: true });
 
-    await branchNames.resolve('/wk/game', [1]);
+    await branchNames.resolve(workspacePlace('/wk/game'), [1]);
     expect(reads).toEqual(['/wk/game']);
   });
 });

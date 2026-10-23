@@ -1,6 +1,7 @@
 import { ApiError, api } from '../../api/client';
 import { useCommandLogStore } from '../shell/commandLogStore';
-import { invalidateWorkspace } from '../queryClient';
+import type { Place } from '@shared/domain/place';
+import { invalidatePlace, invalidateWorkspace } from '../queryClient';
 import { toast, useToastStore, type Toast } from '../../ui/toast/toastStore';
 import { describeCompletion } from './describeProgress';
 import { stopOnce } from './stopOnce';
@@ -118,9 +119,12 @@ export function refuseWhileBusy(workspacePath: string, changesLoadedRevisions = 
   return Boolean(running);
 }
 
-/** Runs a quick action, reporting failures; refreshes the views it `affects` afterwards (`refreshScopes`), every view by default. */
+/**
+ * Runs a quick action, reporting failures; refreshes the views of `place` it `affects` afterwards (`refreshScopes`),
+ * every view by default.
+ */
 export async function runAction<T>(
-  workspacePath: string,
+  place: Place,
   failureTitle: string,
   action: () => Promise<T>,
   affects?: (queryKey: readonly unknown[]) => boolean,
@@ -131,7 +135,7 @@ export async function runAction<T>(
     toast.error(failureTitle, error);
     return undefined;
   } finally {
-    void invalidateWorkspace(workspacePath, affects);
+    void invalidatePlace(place, affects);
   }
 }
 
@@ -153,13 +157,13 @@ export async function runRead<T>(failureTitle: string, read: () => Promise<T>): 
  * since `undefined` can't tell a failure from a successful `void` action.
  */
 export async function runVoidAction(
-  workspacePath: string,
+  place: Place,
   failureTitle: string,
   action: () => Promise<void>,
   affects?: (queryKey: readonly unknown[]) => boolean,
 ): Promise<boolean> {
   const succeeded = await runAction(
-    workspacePath,
+    place,
     failureTitle,
     async () => {
       await action();

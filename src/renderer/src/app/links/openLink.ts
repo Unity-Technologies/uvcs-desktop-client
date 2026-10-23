@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { WorkspaceHead, WorkspaceLocation, WorkspaceSelector, WorkspaceSummary } from '@shared/domain/workspace';
 import { repositorySpec } from '@shared/domain/specs';
 import { formatLink } from '@shared/links/formatLink';
@@ -108,10 +109,10 @@ async function showHere(workspacePath: string, target: LinkTarget, link: Reposit
 
 async function readLookup(workspacePath: string, lookup: NonNullable<ReturnType<typeof linkLookup>>): Promise<LinkLooked | null> {
   if (lookup.kind === 'label') {
-    const label = await api.labels.get(workspacePath, lookup.name);
+    const label = await api.labels.get(workspacePlace(workspacePath), lookup.name);
     return label && { changesetId: label.changeset };
   }
-  const branch = await api.branches.get(workspacePath, lookup.name);
+  const branch = await api.branches.get(workspacePlace(workspacePath), lookup.name);
   return branch && { changesetId: branch.headChangeset };
 }
 

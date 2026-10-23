@@ -1,4 +1,5 @@
 import { Archive, File, Folder, GitBranch, GitCommitVertical, MessageSquareCode, Tag } from 'lucide-react';
+import { workspacePlace } from '@shared/domain/place';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
@@ -106,7 +107,7 @@ export function branchResult(branch: Branch, context: ResultContext, match: Name
     detail: `${displayName(branch.owner)} · ${formatRelativeDate(branch.date)}`,
     detailMatches: [],
     isCurrent: branch.name === currentBranch,
-    menu: () => branchMenu(workspacePath, [branch], currentBranch),
+    menu: () => branchMenu(workspacePlace(workspacePath), [branch], currentBranch),
     run: () => diffBranch(branch),
   };
 }
@@ -121,7 +122,7 @@ export function labelResult(label: Label, context: ResultContext, match: NameMat
     quality: term ? fuzzyMatchQuality(label.name, term) : undefined,
     detail: `cs:${label.changeset} · ${formatRelativeDate(label.date)}`,
     detailMatches: [],
-    menu: () => labelMenu(workspacePath, [label]),
+    menu: () => labelMenu(workspacePlace(workspacePath), [label]),
     run: () => showLabelChanges(label),
   };
 }
@@ -135,7 +136,7 @@ export function changesetResult(changeset: Changeset, context: ResultContext): S
     detail: `cs:${changeset.id} · ${displayName(changeset.owner)} · ${formatRelativeDate(changeset.date)}`,
     detailMatches: specMatches(`cs:${changeset.id}`, term),
     quality: term ? Math.max(wordMatchQuality(changeset.comment, term), wordMatchQuality(`cs:${changeset.id}`, term)) : undefined,
-    menu: () => changesetMenu({ workspacePath, loadedChangeset, loadedBranch: currentBranch }, [changeset]),
+    menu: () => changesetMenu({ place: workspacePlace(workspacePath), loadedChangeset, loadedBranch: currentBranch }, [changeset]),
     run: () => openChangesetDiff(changeset),
   };
 }
@@ -159,7 +160,7 @@ export function shelveResult(shelve: Shelve, context: ResultContext): SearchResu
     detail: `sh:${shelve.id} · ${displayName(shelve.owner)} · ${formatRelativeDate(shelve.date)}`,
     detailMatches: specMatches(`sh:${shelve.id}`, term),
     quality: term ? Math.max(wordMatchQuality(shelve.comment, term), wordMatchQuality(`sh:${shelve.id}`, term)) : undefined,
-    menu: () => shelveMenu(workspacePath, [shelve]),
+    menu: () => shelveMenu(workspacePlace(workspacePath), [shelve]),
     run: () => showShelveChanges(shelve),
   };
 }
@@ -173,7 +174,7 @@ export function codeReviewResult(review: CodeReviewSummary, context: ResultConte
     detail: `${review.status} · ${displayName(review.owner)}`,
     detailMatches: [],
     quality: wordMatchQuality(review.title, term),
-    menu: () => codeReviewMenu(workspacePath, [review], context.workspaceOn),
+    menu: () => codeReviewMenu(workspacePlace(workspacePath), [review], context.workspaceOn),
     run: () => openReview(review),
   };
 }

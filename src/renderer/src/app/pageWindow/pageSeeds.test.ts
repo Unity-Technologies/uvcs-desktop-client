@@ -1,5 +1,6 @@
 import '../../testing/fakeWindow';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 import type { Changeset } from '@shared/domain/changeset';
 import type { Shelve } from '@shared/domain/shelve';
 import { queryKeys } from '../../api/queryKeys';
@@ -38,7 +39,7 @@ describe('handing a page window what its page shows', () => {
       plantPageSeed(WS, { readAt: READ_AT, shelve: SHELVE });
       vi.advanceTimersByTime(60 * 60 * 1000);
 
-      expect(cachedShelve(WS, 4)).toEqual(SHELVE);
+      expect(cachedShelve(workspacePlace(WS), 4)).toEqual(SHELVE);
     } finally {
       vi.useRealTimers();
     }
@@ -47,7 +48,7 @@ describe('handing a page window what its page shows', () => {
   it('is found in the page window where its page looks, as read when its window read it', () => {
     plantPageSeed(WS, { readAt: READ_AT, changeset: CHANGESET, shelve: SHELVE });
 
-    expect(listedChangeset(WS, 10)).toEqual({ changeset: CHANGESET, readAt: READ_AT });
-    expect(cachedShelve(WS, 4)).toEqual(SHELVE);
+    expect(listedChangeset(workspacePlace(WS), 10)).toEqual({ changeset: CHANGESET, readAt: READ_AT });
+    expect(cachedShelve(workspacePlace(WS), 4)).toEqual(SHELVE);
   });
 });

@@ -1,5 +1,6 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 import type { Branch } from '@shared/domain/branch';
 import { MINE } from '../../lib/peopleFilter';
 import { rememberedFilters } from '../../lib/viewFilters';
@@ -28,11 +29,11 @@ describe('Show changesets', () => {
     const remembered = () => rememberedFilters(store.getState(), CHANGESET_SESSION_FILTERS);
     const before = remembered();
 
-    showBranchChangesets(WORKSPACE, NESTED);
+    showBranchChangesets(workspacePlace(WORKSPACE), NESTED);
     expect(remembered()).toEqual(before);
     expect(whereTheWindowIs().view).toBe('changesets');
 
-    store.getState().update(pickedBranchFilters(WORKSPACE, '/main/task'));
+    store.getState().update(pickedBranchFilters(workspacePlace(WORKSPACE), '/main/task'));
     expect(remembered()).toEqual(before);
   });
 
@@ -40,22 +41,22 @@ describe('Show changesets', () => {
     const branch: Branch = { id: 7, name: '/main/task', parent: '/main', comment: '', owner: 'ana', date: '2026-09-01T00:00:00Z', headChangeset: 5, guid: 'g', repository: 'game@local' };
     const entryOf = (menu: ReturnType<typeof branchMenu>) => menu.find((entry) => typeof entry === 'object' && 'id' in entry && entry.id === 'changesets');
 
-    const fromList = entryOf(branchMenu(WORKSPACE, [branch], '/main'));
+    const fromList = entryOf(branchMenu(workspacePlace(WORKSPACE), [branch], '/main'));
     expect(fromList).toMatchObject({ label: 'Show changesets' });
     (fromList as { run: () => void }).run();
-    expect(filtersShown().pickedBranch).toMatchObject({ workspacePath: WORKSPACE, name: '/main/task' });
+    expect(filtersShown().pickedBranch).toMatchObject({ pickedIn: WORKSPACE, name: '/main/task' });
 
     const layout = layoutGraph(sampleHistory());
-    const context = { workspacePath: WORKSPACE, layout, currentBranch: '/main', loadedChangeset: 6, repository: 'game@local', goToChangeset: () => {}, showRelatedTo: () => {}, revealCreatedBranch: () => {} };
+    const context = { place: workspacePlace(WORKSPACE), layout, currentBranch: '/main', loadedChangeset: 6, repository: 'game@local', goToChangeset: () => {}, showRelatedTo: () => {}, revealCreatedBranch: () => {} };
     const fromGraph = entryOf(graphMenu({ kind: 'branch', lane: layout.lanesByBranch.get('/main/a')! }, context));
     (fromGraph as { run: () => void }).run();
-    expect(filtersShown().pickedBranch).toMatchObject({ workspacePath: WORKSPACE, name: '/main/a' });
+    expect(filtersShown().pickedBranch).toMatchObject({ pickedIn: WORKSPACE, name: '/main/a' });
     expect(whereTheWindowIs().view).toBe('changesets');
   });
 
   it('is offered for one branch at a time', () => {
     const branch: Branch = { id: 7, name: '/main/task', parent: '/main', comment: '', owner: 'ana', date: '', headChangeset: 5, guid: 'g', repository: 'game@local' };
-    const ids = branchMenu(WORKSPACE, [branch, { ...branch, id: 8, name: '/main/other' }], '/main').map((entry) => typeof entry === 'object' && 'id' in entry && entry.id);
+    const ids = branchMenu(workspacePlace(WORKSPACE), [branch, { ...branch, id: 8, name: '/main/other' }], '/main').map((entry) => typeof entry === 'object' && 'id' in entry && entry.id);
     expect(ids).not.toContain('changesets');
   });
 });

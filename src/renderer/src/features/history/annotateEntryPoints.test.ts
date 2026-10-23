@@ -3,6 +3,7 @@ import '../../testing/fakeWindow';
 import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 import { filesUnder } from '@shared/testing/filesUnder';
 
 import type { DiffEntry } from '@shared/domain/diff';
@@ -52,7 +53,7 @@ describe('Annotate outside the Files view', () => {
 
   it("opens a changeset diff's file on the revision the diff shows", () => {
     const review = { statusOf: () => 'unreviewed', toggle: () => {} } as never;
-    expect(annotate(diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [diffEntry], { review }))).toEqual({
+    expect(annotate(diffEntryMenu(workspacePlace(ws), { kind: 'changeset', changesetId: 5 }, [diffEntry], { review }))).toEqual({
       kind: 'history',
       path: 'src/a.ts',
       revision: { revisionId: 40, repository: 'game@local' },
@@ -64,7 +65,7 @@ describe('Annotate outside the Files view', () => {
   it('annotates a history row in place, opening nothing', () => {
     const shown: ItemRevision[] = [];
     const revision = { revisionId: 40, changesetId: 5, itemType: 'file', repository: 'game@local', idSpec: 'revid:40@game@local' } as ItemRevision;
-    const context = { workspacePath: ws, path: 'src/a.ts', ofWorkspaceFile: true, annotate: (row: ItemRevision) => shown.push(row) };
+    const context = { place: workspacePlace(ws), path: 'src/a.ts', ofWorkspaceFile: true, annotate: (row: ItemRevision) => shown.push(row) };
     annotateEntry(historyMenu(context, [{ kind: 'revision', revision }]), 'annotateRevision')!.run();
     expect(shown).toEqual([revision]);
     expect(opened).toEqual([]);

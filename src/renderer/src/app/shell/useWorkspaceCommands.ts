@@ -22,11 +22,12 @@ import {
 import type { ThemePreference } from '@shared/domain/settings';
 import { defaultEditor, defaultTerminal, useExternalApps } from '../../components/externalApps/externalApps';
 import { openInEditor } from '../../components/externalApps/externalAppOperations';
-import { openWorkspaceRepositoryPermissions } from '../../features/permissions/openPermissions';
+import { openOwnRepositoryPermissions } from '../../features/permissions/openPermissions';
 import { setReviewMode } from '../../features/review/reviewModeSetting';
 import { openTaskWorkspaceDialog } from '../../features/taskWorkspace/TaskWorkspaceDialog';
 import type { Icon } from '../../lib/actions';
 import { useMemo } from 'react';
+import { workspacePlace } from '@shared/domain/place';
 import { useCommands, type Command } from '../commands/commandStore';
 import { viewCommands } from '../commands/viewCommands';
 import { navigation } from '../navigation/navigationStore';
@@ -95,7 +96,7 @@ export function useWorkspaceCommands(): void {
         label: reviewing ? 'Leave review mode' : 'Enter review mode',
         icon: ListChecks,
         keywords: ['review', 'reviewed', 'mark'],
-        run: () => void setReviewMode(workspacePath, !reviewing),
+        run: () => void setReviewMode(workspacePlace(workspacePath), !reviewing),
       },
       { id: 'app.home', group: 'Go to', label: 'Home', icon: House, shortcut: hotkey('home'), run: closeWorkspace },
       {
@@ -132,7 +133,7 @@ export function useWorkspaceCommands(): void {
         label: 'Repository permissions…',
         icon: ShieldCheck,
         keywords: ['security', 'acl', 'access', 'users', 'groups'],
-        run: () => openWorkspaceRepositoryPermissions(workspacePath, 'repository'),
+        run: () => openOwnRepositoryPermissions(workspacePlace(workspacePath), 'repository'),
       },
       {
         id: 'workspace.pathPermissions',
@@ -140,7 +141,7 @@ export function useWorkspaceCommands(): void {
         label: 'Path permissions…',
         icon: FolderLock,
         keywords: ['security', 'secured path', 'acl', 'access'],
-        run: () => openWorkspaceRepositoryPermissions(workspacePath, 'paths'),
+        run: () => openOwnRepositoryPermissions(workspacePlace(workspacePath), 'paths'),
       },
       {
         id: 'workspace.serverPermissions',
@@ -148,7 +149,7 @@ export function useWorkspaceCommands(): void {
         label: 'Server permissions…',
         icon: ServerCog,
         keywords: ['security', 'acl', 'access', 'repository server'],
-        run: () => openWorkspaceRepositoryPermissions(workspacePath, 'server'),
+        run: () => openOwnRepositoryPermissions(workspacePlace(workspacePath), 'server'),
       },
       {
         id: 'workspace.openTerminal',

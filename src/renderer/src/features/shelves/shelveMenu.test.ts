@@ -1,5 +1,6 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it, vi } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 
 const opened = vi.hoisted(() => [] as unknown[][]);
 vi.mock('../codeReviews/CreateCodeReviewDialog', () => ({ openCreateCodeReviewDialog: (...args: unknown[]) => opened.push(args) }));
@@ -11,7 +12,7 @@ const actions = (entries: MenuEntry[]): Action[] => entries.flatMap((entry) => (
 
 function reviewTitleOf(comment: string): unknown {
   opened.length = 0;
-  void actions(shelveMenu('/ws', [{ id: 12, comment, repository: 'game@local' }])).find((action) => action.id === 'newCodeReview')!.run();
+  void actions(shelveMenu(workspacePlace('/ws'), [{ id: 12, comment, repository: 'game@local' }])).find((action) => action.id === 'newCodeReview')!.run();
   return (opened[0]?.[1] as { title?: string } | undefined)?.title;
 }
 

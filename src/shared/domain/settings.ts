@@ -44,7 +44,10 @@ export interface AppSettings {
   restoreLeftChangesAutomatically: boolean;
   /** The shelves created while switching with pending changes, until they are restored or discarded. */
   switchShelves: SwitchShelveRecord[];
-  /** The workspaces whose Changes and diffs show review marks, progress and the Unreviewed filter. Off everywhere at first. */
+  /**
+   * The places whose Changes and diffs show review marks, progress and the Unreviewed filter, by `placeId`: a
+   * workspace's path, a repository explored without one as `repository:<spec>`. Off everywhere at first.
+   */
   reviewModeWorkspaces: string[];
   /** The offer to turn on review mode after a burst of changes was dismissed or taken: it never shows again. */
   reviewModeHintDone: boolean;

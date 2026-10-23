@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import { WORKSPACE_GUID } from '../cm/testing/cmOutput';
 import { recordingContext } from '../operations/testing/recordingContext';
@@ -114,7 +115,18 @@ describe('discarding left changes', () => {
     const backup = recordOf(7)!.backup!.directory;
     expect(existsSync(backup)).toBe(true);
 
-    await finder.discard(workspacePath, [7]);
+    await finder.discard(workspacePlace(workspacePath), [7]);
+
+    expect(shelves()).toEqual([]);
+    expect(existsSync(backup)).toBe(false);
+    expect(recordOf(7)).toBeUndefined();
+  });
+
+  it("forgets them too when deleted from the repository with no workspace: a record is the repository's", async () => {
+    const { finder, recordOf, shelves } = await leftAndBack({});
+    const backup = recordOf(7)!.backup!.directory;
+
+    await finder.discard(repositoryPlace('eco@local'), [7]);
 
     expect(shelves()).toEqual([]);
     expect(existsSync(backup)).toBe(false);

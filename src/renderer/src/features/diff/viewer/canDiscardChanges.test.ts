@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ContentSource, FileContent } from '@shared/domain/content';
-import { canDiscardChanges } from './canDiscardChanges';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
+import { canDiscardChanges, discardedFileIn } from './canDiscardChanges';
 
 const onDisk: ContentSource = { kind: 'workspaceFile', path: 'src/a.cs' };
 /** The original's content as read. */
@@ -26,5 +27,18 @@ describe('canDiscardChanges', () => {
 
   it("refuses a workspace file whose loaded revision was purged: going back to it would empty the file", () => {
     expect(canDiscardChanges({ kind: 'workspaceBase', path: 'src/a.cs' }, onDisk, { purged: true })).toBe(false);
+  });
+});
+
+describe('discardedFileIn', () => {
+  const base: ContentSource = { kind: 'workspaceBase', path: 'src/a.cs' };
+
+  it('names the workspace file a diff discards from', () => {
+    expect(discardedFileIn(workspacePlace('/wk'), base, onDisk, READ)).toEqual({ workspacePath: '/wk', path: 'src/a.cs' });
+  });
+
+  it('names none where changes are not discarded, nor in a repository explored without a workspace', () => {
+    expect(discardedFileIn(workspacePlace('/wk'), { kind: 'empty' }, onDisk, READ)).toBeNull();
+    expect(discardedFileIn(repositoryPlace('game@local'), base, onDisk, READ)).toBeNull();
   });
 });

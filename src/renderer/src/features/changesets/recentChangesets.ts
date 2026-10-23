@@ -1,3 +1,4 @@
+import type { Place } from '@shared/domain/place';
 import type { QueryFilter } from '@shared/domain/query';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -19,10 +20,10 @@ const RECENT_CHANGESETS_FILTER: QueryFilter = { limit: RECENT_CHANGESETS };
  * The newest changesets: one query, and one cache entry, shared by the palette and the changeset picker. A heavy read
  * (`SLOW_CHANGING_QUERY`): focus never reads it again, only a minute's staleness once a reader shows.
  */
-export function recentChangesetsQuery(workspacePath: string) {
+export function recentChangesetsQuery(place: Place) {
   return {
-    queryKey: queryKeys.inWorkspace(workspacePath, 'changesets', RECENT_CHANGESETS_FILTER),
-    queryFn: () => api.changesets.list(workspacePath, RECENT_CHANGESETS_FILTER),
+    queryKey: queryKeys.inPlace(place, 'changesets', RECENT_CHANGESETS_FILTER),
+    queryFn: () => api.changesets.list(place, RECENT_CHANGESETS_FILTER),
     ...SLOW_CHANGING_QUERY,
     staleTime: RECENT_CHANGESETS_STALE_TIME,
     gcTime: RECENT_CHANGESETS_CACHE_TIME,

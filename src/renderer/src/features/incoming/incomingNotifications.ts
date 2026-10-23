@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { IncomingSummary } from '@shared/domain/incoming';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -17,7 +18,7 @@ export async function notifyIncoming(workspacePath: string, before: IncomingSumm
     const settings = await queryClient.fetchQuery({ queryKey: queryKeys.settings, queryFn: () => api.settings.get(), staleTime: Infinity });
     if (!settings.notifyOnIncoming) return;
 
-    const newest = await api.changesets.get(workspacePath, after.headChangeset);
+    const newest = await api.changesets.get(workspacePlace(workspacePath), after.headChangeset);
     await api.system.notifyIncoming(workspacePath, incomingNotificationMessage(newest, after.branch, newChangesetCount(before, after)));
   } catch {
     // Nothing to report: the incoming chip shows the new changesets anyway.

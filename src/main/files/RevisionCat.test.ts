@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { fitsCommandLine } from '../cm/commandLineLimit';
 import { catReadsOf, fakeCat, PURGED, purgedRevisionLine } from '../cm/testing/fakeCat';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
@@ -56,7 +57,7 @@ async function setUp(answer: CmAnswer = SERVER, { longFolder = false } = {}) {
   const timing = manualSchedule();
   const cat = new RevisionCat({ cm: fake.cm, schedule: timing.schedule });
   const target = (name: string | number) => join(folder, `v${name}`);
-  const save = (asked: CatRevision, name: string | number = /^\w+:(\d+)/.exec(asked.spec)![1]!) => cat.save(WORKSPACE, asked, target(name));
+  const save = (asked: CatRevision, name: string | number = /^\w+:(\d+)/.exec(asked.spec)![1]!) => cat.save(workspacePlace(WORKSPACE), asked, target(name));
   return { fake, ...timing, cat, target, save };
 }
 
@@ -270,9 +271,17 @@ describe('RevisionCat', () => {
   it('reads each workspace in commands of its own, run in it', async () => {
     const { fake, flush, cat, target } = await setUp();
     const other = join(tmpdir(), 'other');
-    const saved = Promise.all([cat.save(WORKSPACE, version(1), target(1)), cat.save(other, version(2), target(2))]);
+    const saved = Promise.all([cat.save(workspacePlace(WORKSPACE), version(1), target(1)), cat.save(workspacePlace(other), version(2), target(2))]);
     flush();
     await saved;
     expect(fake.commands.map((command) => command.options.cwd)).toEqual([WORKSPACE, other]);
+  });
+
+  it('reads a repository with no workspace apart, outside every workspace', async () => {
+    const { fake, flush, cat, target } = await setUp();
+    const saved = Promise.all([cat.save(workspacePlace(WORKSPACE), version(1), target(1)), cat.save(repositoryPlace('eco@local'), version(2), target(2))]);
+    flush();
+    await saved;
+    expect(fake.commands.map((command) => command.options)).toEqual([{ cwd: WORKSPACE }, { outsideWorkspaces: true }]);
   });
 });

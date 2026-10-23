@@ -1,7 +1,8 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { placeId } from '@shared/domain/place';
 import { revisionRef } from '@shared/domain/revision';
 import type { PageProps } from '../../app/navigation/pages';
-import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { NoSelection } from '../../components/NoSelection';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
@@ -31,9 +32,9 @@ import { revisionMenu } from './revisionMenu';
  * its folders open and it's selected; on a file's lines (`focusLines`), the file shows annotated, scrolled to them.
  */
 export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
-  const workspacePath = useWorkspacePath();
-  const repository = useWorkspaceInfo().data?.repository;
-  const treeId = `${workspacePath}#cs:${page.changesetId}`;
+  const place = usePlace();
+  const repository = usePlaceRepository();
+  const treeId = `${placeId(place)}#cs:${page.changesetId}`;
   const expanded = useExpandedDirectories(treeId);
   const toggle = useExpandedDirectoriesStore((state) => state.toggle);
   const [filter, setFilter] = useState('');
@@ -49,7 +50,7 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
     if (opening.expand.length > 0) useExpandedDirectoriesStore.getState().expand(treeId, opening.expand);
   }, []);
 
-  const { childrenByDirectory, isLoadingRoot, error } = useTreeListings((directory) => repositoryListingQuery(workspacePath, page.changesetId, directory), expanded);
+  const { childrenByDirectory, isLoadingRoot, error } = useTreeListings((directory) => repositoryListingQuery(place, page.changesetId, directory), expanded);
   const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, filter: shownFilter }), [childrenByDirectory, expanded, shownFilter]);
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
   // What the page's link names (its header, ⇧⌘C): the item selected now, not the one it opened on.
@@ -87,8 +88,8 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
                 selection={selection}
                 onSelectionChange={setSelection}
                 onToggleDirectory={(directory) => toggle(treeId, directory)}
-                onOpenFile={(item) => void openRevision(workspacePath, revisionRef(item), item.name)}
-                contextMenu={(items) => revisionMenu(workspacePath, page.changesetId, repository, items)}
+                onOpenFile={(item) => void openRevision(place, revisionRef(item), item.name)}
+                contextMenu={(items) => revisionMenu(place, page.changesetId, repository, items)}
                 revealPath={revealPath}
               />
             </HighlightQuery>
@@ -100,9 +101,9 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
           ) : focused ? (
             <LineLinksContext.Provider value={lineLinks}>
               <ItemDetailsPane
-                workspacePath={workspacePath}
+                place={place}
                 item={focused}
-                menu={revisionMenu(workspacePath, page.changesetId, repository, [focused])}
+                menu={revisionMenu(place, page.changesetId, repository, [focused])}
                 onSelectFolder={selectFolder}
                 listings={childrenByDirectory}
                 fileViewChoice={fileViewChoice}

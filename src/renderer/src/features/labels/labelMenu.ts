@@ -1,4 +1,5 @@
 import type { LabelInfo } from '@shared/domain/label';
+import { workspacePathOf, type Place } from '@shared/domain/place';
 import { spec } from '@shared/domain/specs';
 import { linkCopyText } from '../../app/links/linkTo';
 import { openInNewWindow } from '../../app/pageWindow/openInNewWindow';
@@ -6,7 +7,7 @@ import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
-import { menuAction, type MenuPlace } from '../../components/menuWords';
+import { menuAction, type MenuHost } from '../../components/menuWords';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { mergeTo } from '../branches/branchOperations';
 import { openObjectPermissions } from '../permissions/openPermissions';
@@ -24,19 +25,24 @@ import {
 } from './labelOperations';
 
 /** What a label is copied as, first what ⌘C copies: `v1.0`, `lb:v1.0`, `lb:v1.0@repo@server`, its comment. */
-export function labelCopyTexts(workspacePath: string, label: Pick<LabelInfo, 'name' | 'comment' | 'repository'>): CopyTexts {
+export function labelCopyTexts(place: Place, label: Pick<LabelInfo, 'name' | 'comment' | 'repository'>): CopyTexts {
   return {
     name: label.name,
-    link: linkCopyText(workspacePath, label.repository, { object: { kind: 'label', name: label.name } }),
+    link: linkCopyText(place, label.repository, { object: { kind: 'label', name: label.name } }),
     spec: spec.label(label.name),
     fullSpec: label.repository && `${spec.label(label.name)}@${label.repository}`,
     comment: label.comment.trim(),
   };
 }
 
-/** The menu of the selected labels, the same wherever labels show: the Labels view, the Branch Explorer, the top bar, the palette and their details. */
-export function labelMenu(workspacePath: string, labels: LabelInfo[], place: MenuPlace = {}): MenuEntry[] {
+/**
+ * The menu of the selected labels, the same wherever labels show: the Labels view, the Branch Explorer, the top bar,
+ * the palette and their details. What needs a workspace (switching to it, merging it in) isn't there for a repository
+ * explored without one.
+ */
+export function labelMenu(place: Place, labels: LabelInfo[], host: MenuHost = {}): MenuEntry[] {
   if (labels.length === 0) return [];
+  const workspacePath = workspacePathOf(place);
   const single = labels.length === 1 ? labels[0]! : null;
   const pair = labels.length === 2 ? ([labels[0]!, labels[1]!] as const) : null;
 
@@ -44,18 +50,18 @@ export function labelMenu(workspacePath: string, labels: LabelInfo[], place: Men
     single && menuAction('diff', () => showLabelChanges(single)),
     single && menuAction('diffInNewWindow', () => openInNewWindow(labelDiffPage(single))),
     pair && menuAction('diffPair', () => diffLabels(pair[0], pair[1])),
-    single && menuAction('switch', () => void switchToLabel(workspacePath, single), { label: 'Switch to this label' }),
-    single && menuAction('merge', () => mergeFromLabel(single)),
-    single && menuAction('mergeTo', () => void mergeTo(spec.label(single.name), single.name)),
-    single && menuAction('newBranch', () => void createBranchFromLabel(workspacePath, single).then((name) => name && place.onBranchCreated?.(name))),
+    single && workspacePath !== null && menuAction('switch', () => void switchToLabel(workspacePath, single), { label: 'Switch to this label' }),
+    single && workspacePath !== null && menuAction('merge', () => mergeFromLabel(single)),
+    single && workspacePath !== null && menuAction('mergeTo', () => void mergeTo(spec.label(single.name), single.name)),
+    single && menuAction('newBranch', () => void createBranchFromLabel(place, single).then((name) => name && host.onBranchCreated?.(name))),
     single && menuAction('compare', () => void diffWithAnotherLabel(single), { label: 'Compare with another label…' }),
     single && menuAction('browse', () => browseLabel(single), { label: 'Browse repository at this label' }),
     single &&
-      !place.inBranchExplorer &&
+      !host.inBranchExplorer &&
       menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'label', name: single.name, changeset: single.changeset, date: single.date })),
-    single && copySubmenu('Label', labelCopyTexts(workspacePath, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
-    single && menuAction('rename', () => void renameLabel(workspacePath, single), { shortcut: hotkey('rename') }),
-    single && menuAction('permissions', () => openObjectPermissions(workspacePath, 'label', single)),
-    menuAction('delete', () => void deleteLabels(workspacePath, labels), single ? {} : { label: `Delete ${labels.length} labels…` }),
+    single && copySubmenu('Label', labelCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
+    single && menuAction('rename', () => void renameLabel(place, single), { shortcut: hotkey('rename') }),
+    single && menuAction('permissions', () => openObjectPermissions(place, 'label', single)),
+    menuAction('delete', () => void deleteLabels(place, labels), single ? {} : { label: `Delete ${labels.length} labels…` }),
   ]);
 }

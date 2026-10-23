@@ -1,5 +1,6 @@
 import { AppWindow, ArchiveX, PencilOff, RefreshCw } from 'lucide-react';
 import { Suspense, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import type { Place } from '@shared/domain/place';
 import { openFile } from '../../../components/externalApps/externalAppOperations';
 import { lazyComponent } from '../../../lib/lazyComponent';
 import { hotkey } from '../../../lib/shortcutRegistry';
@@ -9,7 +10,7 @@ import { Button } from '../../../ui/Button';
 import { CenteredSpinner } from '../../../ui/Spinner';
 import { absolutePath } from '../../pendingChanges/pendingChangeOperations';
 import { extensionOf } from '../../../lib/text';
-import { canEditInPlace, typesIntoDiff } from './canEditInPlace';
+import { editedFileIn, typesIntoDiff } from './canEditInPlace';
 import { ChangeNavigator } from './ChangeNavigator';
 import type { ChangeView } from './changeView';
 import { diffBodyOf } from './diffBody';
@@ -52,7 +53,7 @@ const ModelMetaDiff = lazyComponent(() => import('./model/ModelMetaDiff').then((
 const IDENTICAL_DESCRIPTION = 'The contents of both versions are identical.';
 
 interface LoadedFileDiffProps {
-  workspacePath: string;
+  place: Place;
   contents: DiffContents;
   fileName: string;
   title?: ReactNode;
@@ -69,13 +70,14 @@ interface LoadedFileDiffProps {
  * One loaded pair of file versions, with the toolbar that fits how it's shown. A workspace file shown against its own
  * past is typed into directly, like in any editor: Discard and Save show up as soon as it has unsaved edits.
  */
-export function LoadedFileDiff({ workspacePath, contents, fileName, title, identicalDescription, compareControls, onMatchesBase, stepsThroughChanges = true }: LoadedFileDiffProps) {
+export function LoadedFileDiff({ place, contents, fileName, title, identicalDescription, compareControls, onMatchesBase, stepsThroughChanges = true }: LoadedFileDiffProps) {
   const { comparisonMethod, imageMode, modelMode, representations, setComparisonMethod, setRepresentation } = useDiffPreferences();
-  const editablePath = canEditInPlace(contents.original, contents.modified) ? contents.modified.path : null;
+  const editedFile = editedFileIn(place, contents.original, contents.modified);
+  const editableInPlace = editedFile !== null;
   // A purged version shows as a missing one does: the other alone, under a line saying why (`purgedNotice`).
   const purged = purgedVersionsOf(contents.left, contents.right);
   const sides = useMemo(() => diffSidesOf(contents.original, contents.modified, purged), [contents.original, contents.modified, purged]);
-  const buffer = useFileBuffer({ workspacePath, contents, path: editablePath, onMatchesBase });
+  const buffer = useFileBuffer({ contents, file: editedFile, onMatchesBase });
   const { left, right } = buffer.shown;
   const current = buffer.unsaved ?? right.text ?? '';
   const dirty = buffer.unsaved !== null;
@@ -101,9 +103,9 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const metaModel = isText && modelFound && modelOfMeta(fileName) !== null ? modelBesideMeta(findSibling, { original: contents.original, modified: contents.modified }) : null;
   const metaAsModel = metaModel !== null && (representations.meta ?? 'model') === 'model';
   const wrapsLongLines = useMemo(() => isText && hasLineTooLongToDraw([left.text ?? '', right.text ?? '']), [isText, left.text, right.text]);
-  const editable = useMemo(() => isText && typesIntoDiff(editablePath !== null, [left.text ?? '', right.text ?? '']), [isText, editablePath, left.text, right.text]);
+  const editable = useMemo(() => isText && typesIntoDiff(editableInPlace, [left.text ?? '', right.text ?? '']), [isText, editableInPlace, left.text, right.text]);
   // A workspace file shown read-only all the same says why, with the way to edit it elsewhere.
-  const tooLongToType = isText && editablePath !== null && !editable;
+  const tooLongToType = isText && editableInPlace && !editable;
   const diffs = useLineDiffs({ isText, original: left.text ?? '', saved: right.text, current, comparisonMethod, fileName });
   const wholeFile = typedIntoWhole(editable, diffs.saved);
   // Nothing to view differently in an empty or unchanged file that only says so, nor in a .meta shown as its model.
@@ -114,8 +116,8 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const changeView = useRef<ChangeView>(null);
   const navigation = useChangeNavigation(stepsThroughChanges && viewControls && !wholeFile ? (diffs.current?.meta ?? null) : null, changeView, frame, fileName);
   const navigator = goesSomewhere(navigation) && <ChangeNavigator navigation={navigation} keysWhileTyping />;
-  const openEditable = editablePath === null ? undefined : () => void openFile(absolutePath(workspacePath, editablePath));
-  const discards = diffDiscards(workspacePath, buffer, onMatchesBase);
+  const openEditable = editedFile === null ? undefined : () => void openFile(absolutePath(editedFile.workspacePath, editedFile.path));
+  const discards = diffDiscards(place, buffer, onMatchesBase);
   const identical = identicalDescription ?? IDENTICAL_DESCRIPTION;
   const recognizeAll = (): void => setComparisonMethod('recognizeAll');
 
@@ -192,7 +194,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
       body = (
         <Suspense fallback={<CenteredSpinner />}>
           <ModelMetaDiff
-            workspacePath={workspacePath}
+            place={place}
             sources={{ original: contents.original, modified: contents.modified }}
             texts={{ original: sides.original ? (left.text ?? '') : null, modified: sides.modified ? (dirty ? pausedText : (right.text ?? '')) : null }}
             mode={modelMode}
@@ -249,7 +251,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
       body = (
         <Suspense fallback={<CenteredSpinner />}>
           <ModelDiffViewer
-            workspacePath={workspacePath}
+            place={place}
             sources={{ original: contents.original, modified: contents.modified }}
             original={left}
             modified={shownRendering}

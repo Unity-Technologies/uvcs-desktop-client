@@ -1,4 +1,5 @@
 import { api } from '../../api/client';
+import { workspacePlace } from '@shared/domain/place';
 import type { DiffEntry } from '@shared/domain/diff';
 import { shownFileOf } from '../../features/diff/shownDiffFile';
 import { diffEntriesKey } from '../../features/diff/useDiffEntries';
@@ -42,5 +43,5 @@ function onShownFile(page: Page): Page {
 
 /** The files of a diff this window already read (`useDiffEntries`'s query), at the branch head it was read at. */
 function cachedDiffEntries(workspacePath: string, { target, branchHead }: PageOf<'diff'>): DiffEntry[] | undefined {
-  return queryClient.getQueryData<DiffEntry[]>(diffEntriesKey(workspacePath, target, branchHead));
+  return queryClient.getQueryData<DiffEntry[]>(diffEntriesKey(workspacePlace(workspacePath), target, branchHead));
 }

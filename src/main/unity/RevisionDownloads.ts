@@ -10,8 +10,10 @@ import { rmSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { placeId, type Place } from '@shared/domain/place';
 import type { RevisionRef } from '@shared/domain/revision';
 import { spec } from '@shared/domain/specs';
+import { cmPlace } from '../cm/cmPlace';
 import type { CmClient } from '../cm/CmClient';
 import { catArgs, catBatchesOf, type CatRead } from '../cm/catBatches';
 import { MAX_MODEL_BYTES } from '../files/fileContent';
@@ -54,7 +56,8 @@ interface RevisionDownloadsOptions {
 }
 
 interface Waiting {
-  workspacePath: string;
+  /** Where the revision is read for: its `cm cat` runs where the place runs commands. */
+  place: Place;
   file: RevisionFile;
   key: string;
   /** Its file's name in the session's folder: one per download, so one let go and its download again never meet. */
@@ -103,9 +106,10 @@ export class RevisionDownloads {
    * The revision's bytes: the disk's file where it has them, else downloaded (once), if `mayDownload` says so (a
    * budget). Rejects when it can't be read.
    */
-  async read(workspacePath: string, file: RevisionFile, mayDownload: () => boolean = () => true): Promise<Buffer> {
+  async read(place: Place, file: RevisionFile, mayDownload: () => boolean = () => true): Promise<Buffer> {
     return this.whileChecking(async (doneChecking) => {
-      const onDisk = await this.copies.read(workspacePath, file);
+      // Only a workspace has a disk holding revisions.
+      const onDisk = place.kind === 'workspace' ? await this.copies.read(place.workspacePath, file) : null;
       if (onDisk) return onDisk;
       const key = keyOf(file.revision);
       const kept = this.kept.get(key);
@@ -118,13 +122,13 @@ export class RevisionDownloads {
       if (!this.downloading.has(key) && !mayDownload()) throw new Error(`${file.path} is past what is downloaded for one lookup`);
       // Past what is read, known by its size: refused before downloading it for nothing.
       if (file.size > MAX_MODEL_BYTES) throw new Error(`${file.path} is too large to read`);
-      const downloaded = this.download(workspacePath, file, key);
+      const downloaded = this.download(place, file, key);
       doneChecking();
       // A batch bigger than what is kept may let go of a download before its read reads it: it's downloaded again.
       return await readCapped(await downloaded).catch(async (error: unknown) => {
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
         this.forget(key);
-        return readCapped(await this.download(workspacePath, file, key));
+        return readCapped(await this.download(place, file, key));
       });
     });
   }
@@ -138,15 +142,15 @@ export class RevisionDownloads {
    * when read; one let go of meanwhile (other downloads past the budget) is downloaded again by its read, alone. A
    * revision past what is read is left for the read to refuse.
    */
-  async fetch(workspacePath: string, file: RevisionFile): Promise<void> {
+  async fetch(place: Place, file: RevisionFile): Promise<void> {
     const key = keyOf(file.revision);
     this.failedFetches.delete(key);
     return this.whileChecking(async (doneChecking) => {
-      if (await this.copies.has(workspacePath, file)) return;
+      if (place.kind === 'workspace' && (await this.copies.has(place.workspacePath, file))) return;
       const kept = this.kept.get(key);
       if (kept) return this.touch(key, kept);
       if (file.size > MAX_MODEL_BYTES) return;
-      const downloaded = this.download(workspacePath, file, key);
+      const downloaded = this.download(place, file, key);
       doneChecking();
       await downloaded.catch((error: unknown) => {
         if (this.failedFetches.size >= MAX_FAILED_FETCHES) this.failedFetches.clear();
@@ -198,11 +202,11 @@ export class RevisionDownloads {
     }
   }
 
-  private download(workspacePath: string, file: RevisionFile, key: string): Promise<string> {
+  private download(place: Place, file: RevisionFile, key: string): Promise<string> {
     const under = this.downloading.get(key);
     if (under) return under;
     const target = `${fileNameOf(key)}-${++this.downloads}`;
-    const started = new Promise<string>((resolve, reject) => this.waiting.push({ workspacePath, file, key, target, resolve, reject })).finally(() => this.downloading.delete(key));
+    const started = new Promise<string>((resolve, reject) => this.waiting.push({ place, file, key, target, resolve, reject })).finally(() => this.downloading.delete(key));
     this.downloading.set(key, started);
     this.downloadWhenAllChecked();
     return started;
@@ -241,7 +245,7 @@ export class RevisionDownloads {
     const targets = batch.map((one) => join(folder, one.target));
     // The OS's cleaning (macOS's of folders idle for days, systemd-tmpfiles) may have taken the folder meanwhile.
     const failure = await mkdir(folder, { recursive: true })
-      .then(() => this.cm.execute(catArgs(batch.map((one) => catReadOf(one, folder))), { cwd: batch[0]!.workspacePath }))
+      .then(() => this.cm.execute(catArgs(batch.map((one) => catReadOf(one, folder))), cmPlace(batch[0]!.place).options))
       .then(
         () => null,
         (error: unknown) => error,
@@ -299,17 +303,17 @@ export class RevisionDownloads {
 }
 
 /**
- * The waiting reads in batches of one `cm cat` each (`catBatchesOf`): one workspace each (`cm` runs in it), within
- * `MAX_BATCH_BYTES`, a revision of unknown size counting as `UNKNOWN_SIZE`.
+ * The waiting reads in batches of one `cm cat` each (`catBatchesOf`): one place each (`cm` runs where it runs
+ * commands), within `MAX_BATCH_BYTES`, a revision of unknown size counting as `UNKNOWN_SIZE`.
  */
-export function batchesOf<T extends { workspacePath: string; file: Pick<RevisionFile, 'revision' | 'size'>; target: string }>(waiting: readonly T[], folder: string): T[][] {
-  const byWorkspace = new Map<string, T[]>();
+export function batchesOf<T extends { place: Place; file: Pick<RevisionFile, 'revision' | 'size'>; target: string }>(waiting: readonly T[], folder: string): T[][] {
+  const byPlace = new Map<string, T[]>();
   for (const one of waiting) {
-    const reads = byWorkspace.get(one.workspacePath);
+    const reads = byPlace.get(placeId(one.place));
     if (reads) reads.push(one);
-    else byWorkspace.set(one.workspacePath, [one]);
+    else byPlace.set(placeId(one.place), [one]);
   }
-  return [...byWorkspace.values()].flatMap((reads) => catBatchesOf(reads, (one) => catReadOf(one, folder), { maxBytes: MAX_BATCH_BYTES, unknownSize: UNKNOWN_SIZE }));
+  return [...byPlace.values()].flatMap((reads) => catBatchesOf(reads, (one) => catReadOf(one, folder), { maxBytes: MAX_BATCH_BYTES, unknownSize: UNKNOWN_SIZE }));
 }
 
 /** A waiting read as `cm cat` takes it: its revision, into its file in the session's folder. */

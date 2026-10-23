@@ -1,5 +1,6 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
+import { workspacePlace } from '@shared/domain/place';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { api } from '../../../api/client';
 import { queryKeys } from '../../../api/queryKeys';
@@ -19,7 +20,7 @@ export function usePendingLocks(workspacePath: string, repository: string | unde
   const key = queryKeys.inWorkspace(workspacePath, 'locks', repository, 'pending');
   const query = (scope: 'mine' | 'all', onlyMine: boolean, scopeEnabled: boolean) => ({
     queryKey: [...key, scope],
-    queryFn: () => api.locks.list(workspacePath, repository!, { onlyMine, onlyThisWorkspace: onlyMine }),
+    queryFn: () => api.locks.list(workspacePlace(workspacePath), repository!, { onlyMine, onlyThisWorkspace: onlyMine }),
     enabled: scopeEnabled,
     staleTime: LOCKS_STALE_MS,
     placeholderData: keepPreviousData,

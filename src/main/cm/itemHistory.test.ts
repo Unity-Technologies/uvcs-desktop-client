@@ -121,8 +121,8 @@ describe('itemRevisionsArgs', () => {
 
 describe('itemHistoryTarget', () => {
   it("reads the workspace's file, or the item of a revision in its repository", () => {
-    expect(itemHistoryTarget('/work', 'src/a.cs')).toBe(join('/work', 'src', 'a.cs'));
-    expect(itemHistoryTarget('/work', 'src/a.cs', { revisionId: 432251, repository: 'editorGUI@acme@cloud' })).toBe('rev:revid:432251@editorGUI@acme@cloud');
+    expect(itemHistoryTarget({ workspacePath: '/work', path: 'src/a.cs' })).toBe(join('/work', 'src', 'a.cs'));
+    expect(itemHistoryTarget({ revision: { revisionId: 432251, repository: 'editorGUI@acme@cloud' } })).toBe('rev:revid:432251@editorGUI@acme@cloud');
   });
 });
 

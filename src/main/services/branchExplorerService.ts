@@ -1,14 +1,17 @@
 import type { BranchExplorerApi } from '@shared/api/branchExplorer';
 import type { BranchExplorerQuery } from '@shared/domain/branchExplorer';
+import type { Place } from '@shared/domain/place';
 import { branchExplorerFinds } from '../cm/branchExplorerFinds';
+import { cmPlace } from '../cm/cmPlace';
 import { graphBranch, graphChangeset, graphLabel, graphMergeLink } from '../cm/branchExplorerRecords';
 import type { BranchNamesContext, ServiceContext } from './ServiceContext';
 import { relevantBranches } from './relevantBranches';
 
 export function createBranchExplorerService({ cm }: ServiceContext, { branchNames }: BranchNamesContext): BranchExplorerApi {
-  async function load(workspacePath: string, query: BranchExplorerQuery) {
-    const finds = branchExplorerFinds(query);
-    const options = { cwd: workspacePath };
+  async function load(place: Place, query: BranchExplorerQuery) {
+    const at = cmPlace(place);
+    const finds = branchExplorerFinds(query, at.repository);
+    const { options } = at;
     // Each record is read as it arrives: a big repository's answers are hundreds of MB, never held whole. Merges are the
     // slowest query on big repositories, so they get their own process instead of waiting in line behind the pooled
     // `cm shell` sessions.
@@ -21,7 +24,7 @@ export function createBranchExplorerService({ cm }: ServiceContext, { branchName
     ]);
 
     // The code review chips name branches by id (often finished tasks, hidden): these lists answer them.
-    branchNames.remember(workspacePath, [...visible, ...hidden], { complete: true });
+    branchNames.remember(place, [...visible, ...hidden], { complete: true });
     const branches = query.includeHidden ? [...visible, ...hidden] : visible;
 
     return { branches: relevantBranches(branches, changesets, query.sinceDate), changesets, mergeLinks, labels };

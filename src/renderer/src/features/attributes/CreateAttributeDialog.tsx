@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { Place } from '@shared/domain/place';
 import { api } from '../../api/client';
 import { runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByAttributes } from '../../app/refresh/refreshScopes';
@@ -8,11 +9,11 @@ import { openDialog } from '../../ui/dialog/dialogStore';
 import { TextArea, TextField } from '../../ui/TextField';
 import { validateAttributeName } from './attributeNames';
 
-export function openCreateAttributeDialog(workspacePath: string): void {
-  openDialog((close) => <CreateAttributeDialog workspacePath={workspacePath} onClose={close} />);
+export function openCreateAttributeDialog(place: Place): void {
+  openDialog((close) => <CreateAttributeDialog place={place} onClose={close} />);
 }
 
-function CreateAttributeDialog({ workspacePath, onClose }: { workspacePath: string; onClose: () => void }) {
+function CreateAttributeDialog({ place, onClose }: { place: Place; onClose: () => void }) {
   const [name, setName] = useState('');
   const [comment, setComment] = useState('');
   const [creating, setCreating] = useState(false);
@@ -22,7 +23,7 @@ function CreateAttributeDialog({ workspacePath, onClose }: { workspacePath: stri
   const create = async (): Promise<void> => {
     if (!trimmed || error) return;
     setCreating(true);
-    const created = await runVoidAction(workspacePath, "Couldn't create the attribute", () => api.attributes.createType(workspacePath, trimmed, comment.trim()), isAffectedByAttributes);
+    const created = await runVoidAction(place, "Couldn't create the attribute", () => api.attributes.createType(place, trimmed, comment.trim()), isAffectedByAttributes);
     setCreating(false);
     if (created) onClose();
   };
