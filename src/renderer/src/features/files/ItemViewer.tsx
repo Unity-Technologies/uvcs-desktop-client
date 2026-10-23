@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import type { Place } from '@shared/domain/place';
+import { workspacePlace, type Place } from '@shared/domain/place';
 import { canAnnotate } from '@shared/domain/annotate';
 import type { TreeItem } from '@shared/domain/explorer';
 import { focusMain } from '../../lib/mainFocus';
@@ -90,7 +90,7 @@ export function ItemViewer({ place, item, comparison, comment, listings, viewSho
       ) : comparison.change ? (
         <ChangeDiffPanel workspacePath={comparison.workspacePath} change={comparison.change} title={title} />
       ) : (
-        <FileDiffViewer place={place} original={{ kind: 'empty' }} modified={{ kind: 'workspaceFile', path: item.path }} fileName={item.name} title={title} />
+        <FileDiffViewer place={workspacePlace(comparison.workspacePath)} original={{ kind: 'empty' }} modified={{ kind: 'workspaceFile', path: item.path }} fileName={item.name} title={title} />
       )}
     </div>
   );
