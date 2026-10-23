@@ -7,6 +7,8 @@ import { requestLineFocus } from '../../features/pendingChanges/changesLineFocus
 import { fakeApi } from '../../testing/fakeWindow';
 import { shownToasts, whereTheWindowIs } from '../../testing/operationOutcome';
 import { openCreateWorkspaceDialog } from '../home/dialogs/CreateWorkspaceDialog';
+import { useHomeSection } from '../home/homeSectionStore';
+import { useProjectPickStore } from '../home/projectPickStore';
 import { useSession } from '../workspace/sessionStore';
 import { offerNewWorkspace, pickLinkWorkspace, showLinkFailure } from './linkDialogs';
 import { openLink } from './openLink';
@@ -214,5 +216,30 @@ describe('a workspace link', () => {
     await openLink('uvcs:///tmp/elsewhere');
 
     expect(showLinkFailure).toHaveBeenCalledWith({ kind: 'notInWorkspace', folder: '/tmp/elsewhere' });
+  });
+});
+
+describe("a link to a server's repositories", () => {
+  it("shows them on this window's home screen, the project it names picked, as the user's profiles name the server", async () => {
+    useHomeSection.setState({ section: { kind: 'welcome' } });
+    useProjectPickStore.setState({ picks: {} });
+    fakeApi.answer('windows.openLinkAtHome', async () => 'openHere');
+    fakeApi.answer('repositories.servers', async () => [{ server: 'MyCroquerOrg@unity', user: 'ana', workingMode: 'SSOWorkingMode' }]);
+
+    await openLink('uvcs://mycroquerorg.unity/projects/Racing');
+
+    expect(fakeApi.argsOf('windows.openLinkAtHome')).toEqual([['uvcs://mycroquerorg.unity/projects/Racing']]);
+    expect(useHomeSection.getState().section).toEqual({ kind: 'server', server: 'MyCroquerOrg@unity' });
+    expect(useProjectPickStore.getState().picks).toEqual({ 'MyCroquerOrg@unity': 'Racing' });
+  });
+
+  it('leaves this window as it is when another window on the home screen took it', async () => {
+    useHomeSection.setState({ section: { kind: 'welcome' } });
+    fakeApi.answer('windows.openLinkAtHome', async () => 'handedOver');
+
+    await openLink('uvcs://acme.unity');
+
+    expect(useHomeSection.getState().section).toEqual({ kind: 'welcome' });
+    expect(fakeApi.methods()).not.toContain('repositories.list');
   });
 });

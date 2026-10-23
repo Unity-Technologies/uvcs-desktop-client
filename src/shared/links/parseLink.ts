@@ -1,4 +1,4 @@
-import { LINK_VIEWS, type Link, type LinkLines, type LinkObject, type LinkPage, type LinkView, type RepositoryLink } from './link';
+import { LINK_VIEWS, type Link, type LinkLines, type LinkObject, type LinkPage, type LinkView, type RepositoryLink, type WorkspaceLink } from './link';
 import { decodeSegment, isBranchKeyword, pathOf, serverOf, UNWRITABLE_IN_NAMES } from './linkSegments';
 import { specLink } from './specLink';
 
@@ -41,7 +41,8 @@ export function parseLink(text: string): LinkReading {
   if (lines === null) return malformed('Its line numbers are not valid.');
   const reading = readBody(body);
   if ('problem' in reading) return reading;
-  return { link: lines ? { ...reading.link, lines } : reading.link };
+  // A server's repositories have no lines to show: a fragment there is left out, as any other is.
+  return { link: lines && reading.link.kind !== 'server' ? { ...reading.link, lines } : reading.link };
 }
 
 function readBody(body: string): LinkReading {
@@ -59,6 +60,8 @@ function readRepositoryLink(body: string): LinkReading {
   const [authority = '', ...segments] = withoutTrailingSlash(body).split('/');
   const server = serverOf(authority);
   if (!server) return malformed('It names no server.');
+  if (segments.length === 0) return { link: { kind: 'server', server } };
+  if (segments[0]?.toLowerCase() === 'projects') return readProjectLink(server, segments.slice(1));
   if (segments[0]?.toLowerCase() !== 'repos' || !segments[1]) return malformed('It names no repository.');
   // The older links wrote a `/` in a repository's name as it is (`repos/game/art/changesets/…`): the name runs to the
   // first word a link reads after it.
@@ -69,6 +72,14 @@ function readRepositoryLink(body: string): LinkReading {
   if (!nameSegments) return malformed('Its repository name is not valid.');
   const base: RepositoryLink = { kind: 'repository', server, repository: nameSegments.join('/') };
   return readAfterRepository(base, nameEnd === -1 ? [] : segments.slice(nameEnd));
+}
+
+/** `…/projects/<project>`: a Unity organization's repositories in that project. */
+function readProjectLink(server: string, segments: readonly string[]): LinkReading {
+  if (segments.length === 0) return malformed('It names no project.');
+  if (segments.length > 1) return unknown(`It names "${decodeSegment(segments[1]!) ?? segments[1]}" in the project.`);
+  const [project] = decodedAll(segments, { slashes: true }) ?? [];
+  return project ? { link: { kind: 'server', server, project } } : malformed('Its project name is not valid.');
 }
 
 function readAfterRepository(base: RepositoryLink, segments: readonly string[]): LinkReading {
@@ -216,7 +227,7 @@ function linesIn(fragment: string): LinkLines | undefined | null {
   return { side: match[1] ? 'old' : 'new', first, last };
 }
 
-function withPage<L extends Link>(link: L, page: PageReading): LinkReading {
+function withPage<L extends RepositoryLink | WorkspaceLink>(link: L, page: PageReading): LinkReading {
   return 'problem' in page ? page : { link: { ...link, page: page.page } };
 }
 

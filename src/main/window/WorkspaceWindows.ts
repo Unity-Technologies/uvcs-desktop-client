@@ -296,6 +296,19 @@ export class WorkspaceWindows {
     return 'handedOver';
   }
 
+  /**
+   * Opens a link to a server's repositories, which the home screen shows (`windows.openLinkAtHome`): the caller opens
+   * it when it shows the home screen (`openHere`); else another window showing it takes it; else a new one does. A link
+   * never takes a window away from the workspace it shows.
+   */
+  openLinkAtHome(caller: number, link: string): 'handedOver' | 'openHere' {
+    if (!this.pages.isPageWindow(caller) && this.byViewer(caller) !== undefined && this.shownBy(caller) === undefined) return 'openHere';
+    const home = this.all().find((window) => this.shownBy(window.webContents.id) === undefined);
+    if (home) this.handLink(home, link);
+    else this.links.set(this.open().webContents.id, link);
+    return 'handedOver';
+  }
+
   /** The workspaces the workspace windows show, the last focused window's first. */
   shownWorkspaces(): string[] {
     const inFocusOrder = inSessionOrder(this.all(), this.lastFocused).reverse();

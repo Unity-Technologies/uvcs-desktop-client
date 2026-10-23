@@ -9,6 +9,8 @@ describe('linkDescription', () => {
     ['uvcs://host:8087/repos/game/code-reviews/311', 'Code review 311', 'game · host:8087'],
     ['uvcs://local/repos/game', 'game', 'game · This computer'],
     ['uvcs:///Users/ana/wk/game/-/changes/a.cs', 'game · a.cs', '/Users/ana/wk/game'],
+    ['uvcs://acme.unity/projects/Racing', 'Racing', 'Project · acme · Unity organization'],
+    ['uvcs://acme.cloud', 'Repositories', 'acme · Cloud organization'],
   ])('says %s opens %s', (text, label, detail) => {
     expect(linkDescription(text)).toEqual({ label, detail });
   });
