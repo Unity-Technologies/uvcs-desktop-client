@@ -1,5 +1,4 @@
 import { Trash2, UserPlus } from 'lucide-react';
-import { workspacePathOf } from '@shared/domain/place';
 import { CODE_REVIEW_STATUSES, type CodeReview, type CodeReviewStatus } from '@shared/domain/codeReview';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageProps } from '../../app/navigation/pages';
@@ -71,10 +70,9 @@ function ReviewHeaderSkeleton() {
 
 function ReviewHeader({ review }: { review: CodeReview }) {
   const place = usePlace();
-  const workspacePath = workspacePathOf(place);
   const { data: workspace } = useWorkspaceInfo();
   // The review menu's own entry (`codeReviewMenu`), as a button: the reviewer gets the code to run it, in a workspace.
-  const reviewedCode = workspacePath !== null && reviewedCodeAction(workspacePath, review.target, workspace?.selector);
+  const reviewedCode = reviewedCodeAction(place, review.target, workspace?.selector);
   const ReviewedCodeIcon = reviewedCode && MENU_WORDS[reviewedCode.word].icon;
 
   const remove = async (): Promise<void> => {

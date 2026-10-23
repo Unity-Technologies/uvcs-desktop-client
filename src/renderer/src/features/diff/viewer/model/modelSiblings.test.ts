@@ -76,7 +76,7 @@ describe('diffSibling', () => {
 });
 
 describe('historyPointOf', () => {
-  const points = { changesets: { original: 30, modified: 31 }, inWorkspaceRepository: true };
+  const points = { changesets: { original: 30, modified: 31 }, inPlaceRepository: true };
 
   it("is each side's own changeset, in the workspace's repository", () => {
     expect(historyPointOf(points, 'original')).toBe('cs:30');
@@ -84,8 +84,8 @@ describe('historyPointOf', () => {
   });
 
   it("is none under an xlink (a changeset of the xlinked repository, whose paths aren't the workspace's), while the repository isn't known, or for a side with no changeset", () => {
-    expect(historyPointOf({ ...points, inWorkspaceRepository: false }, 'modified')).toBeNull();
-    expect(historyPointOf({ ...points, inWorkspaceRepository: undefined }, 'modified')).toBeNull();
+    expect(historyPointOf({ ...points, inPlaceRepository: false }, 'modified')).toBeNull();
+    expect(historyPointOf({ ...points, inPlaceRepository: undefined }, 'modified')).toBeNull();
     expect(historyPointOf({ ...points, changesets: { original: null, modified: 31 } }, 'original')).toBeNull();
     expect(historyPointOf({ ...points, changesets: { original: -1, modified: 31 } }, 'original')).toBeNull();
   });
@@ -93,7 +93,7 @@ describe('historyPointOf', () => {
 
 describe('historySibling', () => {
   const at = (revisionId: number, fileName = 'Assets/Box With Spaces.gltf') => ({ kind: 'revision' as const, revision: { revisionId, repository: 'game@local' }, fileName });
-  const finder = historySibling({ changesets: { original: 30, modified: 31 }, inWorkspaceRepository: true });
+  const finder = historySibling({ changesets: { original: 30, modified: 31 }, inPlaceRepository: true });
 
   it("finds the file beside each revision in that revision's changeset, only where the revision itself is at its path then", () => {
     // The history's path is the one it was opened at: moved since or before, another item (or none) was there, and
@@ -117,7 +117,7 @@ describe('historySibling', () => {
   });
 
   it('finds none where a side has no point (`historyPointOf`), or for a name outside the folder', () => {
-    expect(historySibling({ changesets: { original: 30, modified: 31 }, inWorkspaceRepository: false })('modified', at(9), 'Assets/Box.gltf', 'Box.bin')).toBeNull();
+    expect(historySibling({ changesets: { original: 30, modified: 31 }, inPlaceRepository: false })('modified', at(9), 'Assets/Box.gltf', 'Box.bin')).toBeNull();
     expect(finder('modified', at(9), 'Assets/Box.gltf', '../Box.bin')).toBeNull();
   });
 

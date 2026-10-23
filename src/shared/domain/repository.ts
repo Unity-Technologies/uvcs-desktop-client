@@ -15,11 +15,12 @@ export interface ServerProfile {
 }
 
 /**
- * Whether an item of `repository` is in the workspace's: undefined while the workspace's isn't known yet, so a caller
- * doesn't act on an xlinked repository's item meanwhile (list the wrong tree, restore the wrong revision).
+ * Whether an item of `repository` is in the place's (a workspace's, or a repository explored without one): undefined
+ * while the place's isn't known yet, so a caller doesn't act on an xlinked repository's item meanwhile (list the wrong
+ * tree, restore the wrong revision).
  */
-export function inWorkspaceRepository(repository: string, workspaceRepository: string | undefined): boolean | undefined {
-  return workspaceRepository === undefined ? undefined : repository === workspaceRepository;
+export function inPlaceRepository(repository: string, placeRepository: string | undefined): boolean | undefined {
+  return placeRepository === undefined ? undefined : repository === placeRepository;
 }
 
 /**

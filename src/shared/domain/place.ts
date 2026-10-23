@@ -1,5 +1,5 @@
 /**
- * What a window shows: a workspace, or a repository explored without one (docs/features/explore-repository.md). The
+ * What a window shows: a workspace, or a repository explored without one (ARCHITECTURE.md "Places"). The
  * server's objects (branches, changesets, labels, diffs, histories…) read and change the same in both; only what lives
  * on the disk (pending changes, switching, updating, merging into the workspace) needs a workspace.
  *
@@ -41,6 +41,7 @@ export function placeId(place: Place): string {
   return place.kind === 'workspace' ? place.workspacePath : `repository:${place.repository}`;
 }
 
+/** Whether two places are the same one: windows, page windows and links compare them. */
 export function samePlace(a: Place, b: Place): boolean {
   return placeId(a) === placeId(b);
 }

@@ -4,7 +4,7 @@ import type { BranchExplorerData } from '@shared/domain/branchExplorer';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { usePlace, usePlaceRepository, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
-import { useWorkspaceUser } from '../../app/account/accounts';
+import { usePlaceUser } from '../../app/account/accounts';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { branchWorkedOn } from '../../components/workingObject';
 import { EVERYONE, isEveryone, pickedNames } from '../../lib/peopleFilter';
@@ -53,7 +53,7 @@ export function BranchExplorerView() {
   const preferences = useBranchExplorerPreferences();
   const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, detailsOpen, people, showComments, showAvatars } = preferences;
 
-  const me = useWorkspaceUser();
+  const me = usePlaceUser();
   const highlightedAuthors = useMemo(() => pickedNames(people, me), [people, me]);
   const canvasRef = useRef<GraphCanvasHandle>(null);
   const searchRef = useRef<HTMLInputElement>(null);

@@ -1,10 +1,10 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { serverOfRepository } from '@shared/domain/permissions';
 import { workspacePathOf, workspacePlace, type Place } from '@shared/domain/place';
 import { otherRepository } from '@shared/domain/repository';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
+import { repositoryOfPlace, serverOfPlace } from './placeOrigin';
 import { useSession } from './sessionStore';
 
 /** The path of the open workspace. Only use it inside the workspace screen. */
@@ -33,21 +33,16 @@ export function useOtherRepository(repository: string | undefined): string | und
   return otherRepository(repository, usePlaceRepository());
 }
 
-/**
- * The repository the window's place reads: a repository's own at once; a workspace's once its info is read, undefined
- * until then.
- */
+/** The repository the window's place reads (`repositoryOfPlace`). */
 export function usePlaceRepository(): string | undefined {
   const place = usePlace();
-  const workspaceRepository = useWorkspaceInfoOf(workspacePathOf(place)).data?.repository;
-  return place.kind === 'repository' ? place.repository : workspaceRepository;
+  return repositoryOfPlace(place, useWorkspaceInfoOf(workspacePathOf(place)).data);
 }
 
-/** The server of the place's repository: a repository's own at once; a workspace's once its info is read. */
+/** The server of the place's repository (`serverOfPlace`). */
 export function usePlaceServer(): string | undefined {
   const place = usePlace();
-  const workspaceServer = useWorkspaceInfoOf(workspacePathOf(place)).data?.server;
-  return place.kind === 'repository' ? serverOfRepository(place.repository) : workspaceServer;
+  return serverOfPlace(place, useWorkspaceInfoOf(workspacePathOf(place)).data);
 }
 
 export function workspaceInfoQuery(workspacePath: string) {

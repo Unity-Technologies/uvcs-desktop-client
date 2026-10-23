@@ -1,10 +1,10 @@
 import type { HistoryApi } from '@shared/api/history';
 import type { Place } from '@shared/domain/place';
-import type { RevisionRef } from '@shared/domain/revision';
 import { cmPlace, workspaceOf } from '../cm/cmPlace';
 import {
   itemHistoryArgs,
   itemHistoryTarget,
+  type HistoryItem,
   itemRevisionsArgs,
   loadedRevisionOf,
   parseHistoryRecords,
@@ -23,11 +23,10 @@ export function createHistoryService({ cm, workspaceCopies }: ServiceContext, { 
 
   /**
    * The file as the workspace has it, read from the workspace itself: which revision, and its repository by name; none
-   * when history starts from a revision (the workspace may not have its item), or when the workspace can't tell.
+   * when the workspace can't tell. History started from a revision reads none: the workspace may not have its item.
    * Remembered, so its diff reads it from the disk while the file there is still that revision (`WorkspaceCopies`).
    */
-  async function readWorkspaceItem(workspacePath: string, path: string, revision: RevisionRef | undefined): Promise<WorkspaceItem | undefined> {
-    if (revision !== undefined) return undefined;
+  async function readWorkspaceItem({ workspacePath, path }: { workspacePath: string; path: string }): Promise<WorkspaceItem | undefined> {
     const args = workspaceItemArgs(toAbsolutePath(workspacePath, path));
     const listedAt = workspaceCopies.generationOf(workspacePath);
     const item = await cm.query(args, { cwd: workspacePath }).then(parseWorkspaceItem, () => undefined);
@@ -43,9 +42,9 @@ export function createHistoryService({ cm, workspaceCopies }: ServiceContext, { 
      */
     async forItem(place: Place, path, revision) {
       const { options } = cmPlace(place);
-      const workspacePath = revision ? null : workspaceOf(place, 'The history of a workspace file');
-      const workspaceItem = workspacePath === null ? Promise.resolve(undefined) : readWorkspaceItem(workspacePath, path, revision);
-      const historyOutput = await cm.query(itemHistoryArgs(itemHistoryTarget(workspacePath ?? '', path, revision)), options);
+      const item: HistoryItem = revision ? { revision } : { workspacePath: workspaceOf(place, 'The history of a workspace file'), path };
+      const workspaceItem = 'workspacePath' in item ? readWorkspaceItem(item) : Promise.resolve(undefined);
+      const historyOutput = await cm.query(itemHistoryArgs(itemHistoryTarget(item)), options);
       const records = withServerOf(parseHistoryRecords(historyOutput), revision?.repository ?? (await workspaceItem)?.repository);
       const revisionsArgs = itemRevisionsArgs(records);
       const revisionsOutput = revisionsArgs ? await cm.query(revisionsArgs, options) : '';

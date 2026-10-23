@@ -1,6 +1,6 @@
 import { AppWindow, PencilOff, RefreshCw } from 'lucide-react';
 import { Suspense, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
-import { workspacePathOf, type Place } from '@shared/domain/place';
+import type { Place } from '@shared/domain/place';
 import { openFile } from '../../../components/externalApps/externalAppOperations';
 import { lazyComponent } from '../../../lib/lazyComponent';
 import { hotkey } from '../../../lib/shortcutRegistry';
@@ -10,7 +10,7 @@ import { Button } from '../../../ui/Button';
 import { CenteredSpinner } from '../../../ui/Spinner';
 import { absolutePath } from '../../pendingChanges/pendingChangeOperations';
 import { extensionOf } from '../../../lib/text';
-import { canEditInPlace, typesIntoDiff } from './canEditInPlace';
+import { editedFileIn, typesIntoDiff } from './canEditInPlace';
 import { ChangeNavigator } from './ChangeNavigator';
 import type { ChangeView } from './changeView';
 import { diffBodyOf } from './diffBody';
@@ -71,14 +71,13 @@ interface LoadedFileDiffProps {
  */
 export function LoadedFileDiff({ place, contents, fileName, title, identicalDescription, compareControls, onMatchesBase, stepsThroughChanges = true }: LoadedFileDiffProps) {
   const { comparisonMethod, imageMode, modelMode, representations, setComparisonMethod, setRepresentation } = useDiffPreferences();
-  // Only a workspace's own file is typed into: a repository's versions never are.
-  const workspacePath = workspacePathOf(place);
-  const editablePath = workspacePath !== null && canEditInPlace(contents.original, contents.modified) ? contents.modified.path : null;
+  const editedFile = editedFileIn(place, contents.original, contents.modified);
+  const editableInPlace = editedFile !== null;
   const sides = useMemo(
     () => ({ original: contents.original.kind !== 'empty', modified: contents.modified.kind !== 'empty' }),
     [contents.original.kind, contents.modified.kind],
   );
-  const buffer = useFileBuffer({ contents, file: workspacePath !== null && editablePath !== null ? { workspacePath, path: editablePath } : null, onMatchesBase });
+  const buffer = useFileBuffer({ contents, file: editedFile, onMatchesBase });
   const { left, right } = buffer.shown;
   const current = buffer.unsaved ?? right.text ?? '';
   const dirty = buffer.unsaved !== null;
@@ -104,9 +103,9 @@ export function LoadedFileDiff({ place, contents, fileName, title, identicalDesc
   const metaModel = isText && modelFound && modelOfMeta(fileName) !== null ? modelBesideMeta(findSibling, { original: contents.original, modified: contents.modified }) : null;
   const metaAsModel = metaModel !== null && (representations.meta ?? 'model') === 'model';
   const wrapsLongLines = useMemo(() => isText && hasLineTooLongToDraw([left.text ?? '', right.text ?? '']), [isText, left.text, right.text]);
-  const editable = useMemo(() => isText && typesIntoDiff(editablePath !== null, [left.text ?? '', right.text ?? '']), [isText, editablePath, left.text, right.text]);
+  const editable = useMemo(() => isText && typesIntoDiff(editableInPlace, [left.text ?? '', right.text ?? '']), [isText, editableInPlace, left.text, right.text]);
   // A workspace file shown read-only all the same says why, with the way to edit it elsewhere.
-  const tooLongToType = isText && editablePath !== null && !editable;
+  const tooLongToType = isText && editableInPlace && !editable;
   const diffs = useLineDiffs({ isText, original: left.text ?? '', saved: right.text, current, comparisonMethod, fileName });
   const wholeFile = typedIntoWhole(editable, diffs.saved);
   // Nothing to view differently in an empty or unchanged file that only says so, nor in a .meta shown as its model.
@@ -117,8 +116,8 @@ export function LoadedFileDiff({ place, contents, fileName, title, identicalDesc
   const changeView = useRef<ChangeView>(null);
   const navigation = useChangeNavigation(stepsThroughChanges && viewControls && !wholeFile ? (diffs.current?.meta ?? null) : null, changeView, frame, fileName);
   const navigator = goesSomewhere(navigation) && <ChangeNavigator navigation={navigation} keysWhileTyping />;
-  const openEditable = workspacePath === null || editablePath === null ? undefined : () => void openFile(absolutePath(workspacePath, editablePath));
-  const discards = workspacePath === null ? null : diffDiscards(workspacePath, buffer, onMatchesBase);
+  const openEditable = editedFile === null ? undefined : () => void openFile(absolutePath(editedFile.workspacePath, editedFile.path));
+  const discards = diffDiscards(place, buffer, onMatchesBase);
   const identical = identicalDescription ?? IDENTICAL_DESCRIPTION;
   const recognizeAll = (): void => setComparisonMethod('recognizeAll');
 

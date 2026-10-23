@@ -103,6 +103,10 @@ the workspace, editing a file) needs a workspace.
   bug told as one for a repository; `WorkspaceCopies` (revisions read from the disk) is asked only in a workspace.
 - **Caches and queues key by place** (`placeId`: a workspace's path, `repository:<spec>` for a repository):
   `BranchNamesCache`, `RevisionCat`, `RepositoryTrees`, `RevisionDownloads`, `HandedOverDiffs`, the review mode setting.
+  `BranchNamesCache` keeps a place's names only while a window shows it (its `isShown`): a workspace's while it is
+  watched; a repository's never yet, so every code review list there reads every branch name again (two `cm find
+  branch`). Keeping them while a window explores the repository, and letting them go with its last one, comes with
+  the windows that explore one.
 - **The renderer** keys a place's queries `queryKeys.inPlace(place, …)` (a workspace's are `inWorkspace`'s, so every
   refresh scope reads both alike), refreshes them with `invalidatePlace` (`runAction` takes the place it changed), and
   gets the window's place from `usePlace()`, its repository and server from `usePlaceRepository()` and
@@ -956,8 +960,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   hiding, permissions), and what undoes or deletes it last, in the danger tone; a separator between groups. Entries come from one
   vocabulary (`components/menuWords`: one id, icon, wording and group per concept) and `groupedMenu` orders them.
   One builder per kind (`branchMenu`, `changesetMenu`, `labelMenu`, `shelveMenu`, `codeReviewMenu`, `fileMenu`,
-  `pendingChangeMenu`) serves every place the object shows: its view, details' "More actions", the Branch Explorer,
-  the top bar's pill (right-click, `workingObjectMenu`), the switcher, the palette. A place only adds entries, at the
+  `pendingChangeMenu`) serves every host the object shows in (`MenuHost`): its view, details' "More actions", the Branch Explorer,
+  the top bar's pill (right-click, `workingObjectMenu`), the switcher, the palette. A host only adds entries, at the
   end of their group (`withEntries`: the graph's "Go to head changeset"); the Branch Explorer leaves out "Show in
   Branch Explorer". One exception: the palette's code reviews of a branch have no "Switch to this branch", as its
   searches read reviews without branch names (`listSummaries`; naming them would read every branch,
@@ -966,7 +970,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   copied"); ⌘C in a list copies its first entry (`useCopyCommand`) unless text is selected, ⇧⌘C a link to what is in
   front (`useCopyLinkCommand`, features/deep-links.md). Items that open a dialog
   end with "…"; submenus hold real sets of choices, the choice made checked after its label (`checked`), so the icon
-  in front stays the item's own (an app's). `menuGrammar.test.ts` checks every builder and every place. A menu's
+  in front stays the item's own (an app's). `menuGrammar.test.ts` checks every builder and every host, in a workspace and in a repository with none. A menu's
   content is in a portal, but React bubbles its events to the row its trigger sits in: `ActionDropdownMenu` keeps its
   clicks and mouse presses from reaching that row (picking from a changelist's "…" selected and folded it).
 - **Back buttons**: a page goes back with the mouse's back button and, on Windows, the Browser Back key (the `app-command`

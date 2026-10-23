@@ -15,7 +15,7 @@ vi.mock('../shelves/shelveOperations', async (importOriginal) => ({
   applyShelve: async (workspacePath: string, shelveId: number, andDelete: boolean) => void ran.push(`apply ${workspacePath} sh:${shelveId}${andDelete ? ' and delete' : ''}`),
 }));
 
-import { workspacePlace } from '@shared/domain/place';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { CodeReview, CodeReviewSummary, CodeReviewTarget } from '@shared/domain/codeReview';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { SEPARATOR, type Action, type MenuEntry } from '../../lib/actions';
@@ -86,6 +86,12 @@ describe('getting the reviewed code into the workspace', () => {
   it("isn't offered where the reviewed code is unknown: a deleted branch, or a review listed without its target", () => {
     expect(reviewedCodeEntry(codeReviewMenu(workspacePlace(ws), [reviewOf({ kind: 'unknown', description: 'an unknown branch' })], onBranch('/main')))).toEqual([]);
     expect(reviewedCodeEntry(codeReviewMenu(workspacePlace(ws), [summary], onBranch('/main')))).toEqual([]);
+  });
+
+  it("isn't offered in a repository explored without a workspace: there is none to bring the code to", () => {
+    for (const target of [{ kind: 'branch', branch: '/main/task' }, { kind: 'changeset', changesetId: 12 }, { kind: 'shelve', shelveId: 4 }] as CodeReviewTarget[]) {
+      expect(reviewedCodeEntry(codeReviewMenu(repositoryPlace('game@local'), [reviewOf(target)]))).toEqual([]);
+    }
   });
 
   it('is offered for one review only', () => {

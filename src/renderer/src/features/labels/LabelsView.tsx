@@ -1,6 +1,5 @@
 import { Plus, Tag } from 'lucide-react';
 import { useMemo } from 'react';
-import { workspacePathOf } from '@shared/domain/place';
 import type { Label } from '@shared/domain/label';
 import { useRenameCommand } from '../../app/commands/useRenameCommand';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
@@ -9,7 +8,7 @@ import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ObjectListView } from '../../components/ObjectListView';
 import { ObjectName } from '../../components/ObjectName';
 import { PathLabel } from '../../components/PathLabel';
-import { useWorkspaceUser } from '../../app/account/accounts';
+import { usePlaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { SincePicker } from '../../components/SincePicker';
@@ -54,10 +53,9 @@ const COLUMNS: Column<Label>[] = [
 
 export function LabelsView() {
   const place = usePlace();
-  const workspacePath = workspacePathOf(place);
   const filters = useLabelsViewStore();
   const { text: search, people, since, update } = filters;
-  const me = useWorkspaceUser();
+  const me = usePlaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const { data: labels, isPending, isFetching, error } = useLabels(labelsQuery({ since, people: queriedPeople }));
   const offered = usePeopleSeen('labels', labels, ownerOf);
@@ -69,7 +67,7 @@ export function LabelsView() {
   );
   const selected = visible.find((label) => labelKey(label) === selection.anchor);
   useRenameCommand('Labels', 'label', selection.selected.size === 1 ? selected : undefined, (label) => void renameLabel(place, label));
-  useCopyCommand('Labels', 'Label', selection.selected.size === 1 && selected && workspacePath !== null ? labelCopyTexts(workspacePath, selected) : undefined);
+  useCopyCommand('Labels', 'Label', selection.selected.size === 1 && selected ? labelCopyTexts(place, selected) : undefined);
   const filtering = isFiltering(filters);
 
   return (

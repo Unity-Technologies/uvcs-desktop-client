@@ -54,6 +54,7 @@ const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
 const branchNames = new BranchNamesCache(
   (place) => readBranchNames(cm, place),
   Date.now,
+  // A repository's names are kept while a window explores it (`windows.explores`); its last window lets them go.
   (place) => (place.kind === 'workspace' ? isShown(watchers, place.workspacePath) : windows.explores(place.repository)),
 );
 const watchers = watchShownWorkspaces({ cm, headers, branchNames });

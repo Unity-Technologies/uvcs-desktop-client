@@ -74,9 +74,9 @@ describe("a shelve's diff", () => {
   });
 
   it('offers its button to apply in a workspace only: a repository with no workspace has nothing to apply it to', () => {
-    expect(menuOf(shelve('Spike')).appliesHere).toBe(true);
+    expect(menuOf(shelve('Spike')).appliesTo).toBe(ws);
     const inRepository = shelveDiffMenu(repositoryPlace('game@local'), shelve('Spike'), { records: [], me: 'ana@example.com', onApplied: () => {}, onDeleted: () => {} });
-    expect(inRepository.appliesHere).toBe(false);
-    expect(ids(inRepository.menu)).toEqual(['newCodeReview', 'delete']);
+    expect(inRepository.appliesTo).toBeNull();
+    expect(ids(inRepository.menu)).toEqual(['newCodeReview', 'copy', 'delete']);
   });
 });

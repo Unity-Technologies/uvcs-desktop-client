@@ -1,9 +1,8 @@
 import { Archive } from 'lucide-react';
 import { useMemo } from 'react';
-import { workspacePathOf } from '@shared/domain/place';
 import type { Shelve } from '@shared/domain/shelve';
 import { spec } from '@shared/domain/specs';
-import { useWorkspaceUser } from '../../app/account/accounts';
+import { usePlaceUser } from '../../app/account/accounts';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { usePlace } from '../../app/workspace/useWorkspace';
@@ -45,10 +44,9 @@ const COLUMNS: Column<Shelve>[] = [
 
 export function ShelvesView() {
   const place = usePlace();
-  const workspacePath = workspacePathOf(place);
   const filters = useShelvesViewStore();
   const { text: search, people, update } = filters;
-  const me = useWorkspaceUser();
+  const me = usePlaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const { data: shelves, isPending, isFetching, error } = useShelves({ owners: pickedOwners(queriedPeople) });
   const offered = usePeopleSeen('shelves', shelves, ownerOf);
@@ -59,7 +57,7 @@ export function ShelvesView() {
     [shelves, people, me, search],
   );
   const selected = visible.find((shelve) => shelveKey(shelve) === selection.anchor);
-  useCopyCommand('Shelves', 'Shelve', selection.selected.size === 1 && selected && workspacePath !== null ? shelveCopyTexts(workspacePath, selected) : undefined);
+  useCopyCommand('Shelves', 'Shelve', selection.selected.size === 1 && selected ? shelveCopyTexts(place, selected) : undefined);
 
   return (
     <>

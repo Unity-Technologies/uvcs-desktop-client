@@ -33,10 +33,10 @@ import { branchHeadOrigin } from './branchHeadOrigin';
 import { openCreateBranchDialog } from './CreateBranchDialog';
 
 /** What a branch is copied as, first what ⌘C copies: `/main/task`, `br:/main/task`, `br:/main/task@repo@server`. */
-export function branchCopyTexts(workspacePath: string, branch: Pick<BranchInfo, 'name' | 'comment' | 'repository'>): CopyTexts {
+export function branchCopyTexts(place: Place, branch: Pick<BranchInfo, 'name' | 'comment' | 'repository'>): CopyTexts {
   return {
     name: branch.name,
-    link: linkCopyText(workspacePath, branch.repository, { object: { kind: 'branch', name: branch.name } }),
+    link: linkCopyText(place, branch.repository, { object: { kind: 'branch', name: branch.name } }),
     spec: spec.branch(branch.name),
     fullSpec: branch.repository && `${spec.branch(branch.name)}@${branch.repository}`,
     comment: branch.comment.trim(),
@@ -73,7 +73,7 @@ export function branchMenu(place: Place, branches: BranchInfo[], currentBranch: 
     single && menuAction('changesets', () => showBranchChangesets(place, single.name)),
     single && menuAction('compare', () => void diffWithAnotherBranch(single), { label: 'Compare with another branch…' }),
     single && !host.inBranchExplorer && menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'branch', name: single.name, date: single.date })),
-    single && workspacePath !== null && copySubmenu('Branch', branchCopyTexts(workspacePath, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
+    single && copySubmenu('Branch', branchCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     single && menuAction('rename', () => void renameBranch(place, single), { shortcut: hotkey('rename') }),
     single && menuAction('permissions', () => openObjectPermissions(place, 'branch', single)),
     visible.length > 0 &&

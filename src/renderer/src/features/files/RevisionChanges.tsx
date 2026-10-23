@@ -3,8 +3,8 @@ import type { Place } from '@shared/domain/place';
 import type { ContentSource } from '@shared/domain/content';
 import type { TreeItem } from '@shared/domain/explorer';
 import { FileDiffViewer } from '../diff/viewer/FileDiffViewer';
-import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
-import { inWorkspaceRepository } from '@shared/domain/repository';
+import { usePlaceRepository } from '../../app/workspace/useWorkspace';
+import { inPlaceRepository } from '@shared/domain/repository';
 import { AssetsPointContext, lastChangeAssetsPoint } from '../diff/viewer/model/assetsPoints';
 import { SiblingFinderContext } from '../diff/viewer/model/modelSiblings';
 import { lastChangeSibling } from './lastChangeSibling';
@@ -29,7 +29,7 @@ export function RevisionChanges({ place, item, listings, title }: RevisionChange
   const previous: ContentSource =
     item.parentRevisionId > 0 ? { kind: 'revision', revision: { revisionId: item.parentRevisionId, repository }, fileName: item.path } : { kind: 'empty' };
   const findSibling = useMemo(() => lastChangeSibling(item, listings), [item, listings]);
-  const inWorkspace = inWorkspaceRepository(repository, useWorkspaceInfo().data?.repository);
+  const inWorkspace = inPlaceRepository(repository, usePlaceRepository());
   const findAssetsPoint = useMemo(() => lastChangeAssetsPoint(item.changeset, repository, inWorkspace), [item.changeset, repository, inWorkspace]);
 
   return (

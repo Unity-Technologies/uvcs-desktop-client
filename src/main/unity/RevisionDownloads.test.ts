@@ -8,7 +8,7 @@ import { catReadsOf, fakeCat } from '../cm/testing/fakeCat';
 import { cmFails, fakeCmClient } from '../cm/testing/fakeCmClient';
 import { formatOutput } from '../cm/testing/cmOutput';
 import { WorkspaceCopies, type RevisionFile } from '../files/WorkspaceCopies';
-import { workspacePlace } from '@shared/domain/place';
+import { repositoryPlace, workspacePlace, type Place } from '@shared/domain/place';
 import { MAX_DOWNLOADED_AHEAD_BYTES } from '@shared/domain/unityAssets';
 import { batchesOf, MAX_BATCH_BYTES, MAX_KEPT_BYTES, RevisionDownloads } from './RevisionDownloads';
 
@@ -75,6 +75,13 @@ describe('RevisionDownloads', () => {
     expect(await Promise.all([2, 3].map((id) => text(downloads.read(workspacePlace(workspace), file(id)))))).toEqual(['leaves v2', 'moss v3']);
     expect(await text(downloads.read(workspacePlace(workspace), file(1)))).toBe('bark v1');
     expect(fake.commands).toHaveLength(2);
+  });
+
+  it('downloads every revision in a repository explored without a workspace, outside every workspace, with no disk to look on', async () => {
+    const { fake, downloads, text } = await setUp();
+    const place = repositoryPlace('eco@local');
+    expect(await Promise.all([text(downloads.read(place, file(1, 'Art/same.png', md5('bark v1'), 7))), text(downloads.read(place, file(2)))])).toEqual(['bark v1', 'leaves v2']);
+    expect(fake.commands.map((command) => [command.via, command.args.length, command.options])).toEqual([['execute', 3, { outsideWorkspaces: true }]]);
   });
 
   it('keeps at least twice what one fetch may download ahead: what a look fetched is still kept as it reads it', () => {
@@ -212,11 +219,16 @@ describe('RevisionDownloads', () => {
 });
 
 describe('batchesOf', () => {
-  const waiting = (revisionId: number, size: number, workspacePath = '/w', repository = 'eco@local') => ({ place: workspacePlace(workspacePath), target: `t${revisionId}`, file: { revision: { revisionId, repository }, size } });
+  const waiting = (revisionId: number, size: number, workspacePath = '/w', repository = 'eco@local', place: Place = workspacePlace(workspacePath)) => ({ place, target: `t${revisionId}`, file: { revision: { revisionId, repository }, size } });
 
   it('batches by workspace, by repository and by bytes, a revision past the limit alone', () => {
     const half = MAX_BATCH_BYTES / 2;
     const batches = batchesOf([waiting(1, half), waiting(2, half), waiting(3, 1), waiting(4, MAX_BATCH_BYTES * 2), waiting(5, 1, '/other'), waiting(6, 1, '/w', 'art@local')], '/tmp/s');
     expect(batches.map((batch) => batch.map((one) => one.file.revision.revisionId))).toEqual([[1, 2], [3], [4], [6], [5]]);
+  });
+
+  it('batches a repository explored without a workspace apart from a workspace on it', () => {
+    const batches = batchesOf([waiting(1, 1), waiting(2, 1, '', 'eco@local', repositoryPlace('eco@local')), waiting(3, 1)], '/tmp/s');
+    expect(batches.map((batch) => batch.map((one) => one.file.revision.revisionId))).toEqual([[1, 3], [2]]);
   });
 });

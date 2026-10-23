@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ContentSource } from '@shared/domain/content';
-import { canDiscardChanges } from './canDiscardChanges';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
+import { canDiscardChanges, discardedFileIn } from './canDiscardChanges';
 
 const onDisk: ContentSource = { kind: 'workspaceFile', path: 'src/a.cs' };
 
@@ -20,5 +21,18 @@ describe('canDiscardChanges', () => {
   it('refuses diffs whose modified side is not in the workspace', () => {
     expect(canDiscardChanges({ kind: 'workspaceBase', path: 'src/a.cs' }, { kind: 'empty' })).toBe(false);
     expect(canDiscardChanges({ kind: 'revision', revision: { revisionId: 1, repository: 'game@local' }, fileName: 'a.cs' }, { kind: 'revision', revision: { revisionId: 2, repository: 'game@local' }, fileName: 'a.cs' })).toBe(false);
+  });
+});
+
+describe('discardedFileIn', () => {
+  const base: ContentSource = { kind: 'workspaceBase', path: 'src/a.cs' };
+
+  it('names the workspace file a diff discards from', () => {
+    expect(discardedFileIn(workspacePlace('/wk'), base, onDisk)).toEqual({ workspacePath: '/wk', path: 'src/a.cs' });
+  });
+
+  it('names none where changes are not discarded, nor in a repository explored without a workspace', () => {
+    expect(discardedFileIn(workspacePlace('/wk'), { kind: 'empty' }, onDisk)).toBeNull();
+    expect(discardedFileIn(repositoryPlace('game@local'), base, onDisk)).toBeNull();
   });
 });

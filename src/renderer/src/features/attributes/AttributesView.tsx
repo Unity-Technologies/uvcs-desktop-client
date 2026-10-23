@@ -14,7 +14,7 @@ import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
-import { useWorkspaceUser } from '../../app/account/accounts';
+import { usePlaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { matchesPeople } from '../../lib/peopleFilter';
 import { isFiltering } from '../../lib/viewFilters';
@@ -48,7 +48,7 @@ export function AttributesView() {
   const { data: types, isPending, isFetching, error } = useAttributeTypes();
   const filters = useAttributesViewStore();
   const { text: search, people, update } = filters;
-  const me = useWorkspaceUser();
+  const me = usePlaceUser();
   const [selection, setSelection] = useViewSelection('attributes');
 
   // Every attribute type is read: people are matched among them.

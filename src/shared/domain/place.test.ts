@@ -14,7 +14,9 @@ describe('placeId', () => {
     expect(placeId(workspacePlace('C:\\wk\\game'))).toBe('C:\\wk\\game');
     expect(placeId(repositoryPlace('game@local'))).toBe('repository:game@local');
   });
+});
 
+describe('samePlace', () => {
   it('tells two places apart by what they are', () => {
     expect(samePlace(repositoryPlace('game@local'), repositoryPlace('game@local'))).toBe(true);
     expect(samePlace(repositoryPlace('game@local'), repositoryPlace('game@acme@cloud'))).toBe(false);

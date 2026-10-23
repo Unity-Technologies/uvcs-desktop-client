@@ -281,12 +281,12 @@ describe('menus without a workspace', () => {
   });
 
   it("keeps what changes the server's objects, as in a workspace", () => {
-    expect(ids(REPOSITORY_MENUS.repositoryBranch!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'changesets', 'rename', 'hide', 'delete']));
-    expect(ids(REPOSITORY_MENUS.repositoryChangeset!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'compare', 'editComment', 'move', 'delete']));
+    expect(ids(REPOSITORY_MENUS.repositoryBranch!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'changesets', 'copy', 'rename', 'hide', 'delete']));
+    expect(ids(REPOSITORY_MENUS.repositoryChangeset!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'compare', 'browse', 'copy', 'editComment', 'move', 'delete']));
     expect(ids(REPOSITORY_MENUS.repositoryChangesetInterval!())).toEqual(['diffRange']);
     expect(ids(REPOSITORY_MENUS.repositoryChangeset!())).toContain('newLabel');
-    expect(ids(REPOSITORY_MENUS.repositoryLabel!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'compare', 'rename', 'delete']));
-    expect(ids(REPOSITORY_MENUS.repositoryCodeReview!())).toEqual(expect.arrayContaining(['openReview', 'status', 'assign', 'delete']));
+    expect(ids(REPOSITORY_MENUS.repositoryLabel!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'compare', 'browse', 'copy', 'rename', 'delete']));
+    expect(ids(REPOSITORY_MENUS.repositoryCodeReview!())).toEqual(expect.arrayContaining(['openReview', 'status', 'assign', 'copy', 'delete']));
     expect(ids(REPOSITORY_MENUS.repositoryBranch!())).toContain('newCodeReview');
   });
 
@@ -493,6 +493,11 @@ describe('Copy', () => {
   it("copies a code review as its number, title and link, in the workspace's repository", async () => {
     fakeApi.answer('workspaces.info', async () => WORKSPACE_INFO);
     expect(await copiedBy(codeReviewMenu(workspacePlace(ws), [review]))).toEqual(['Code review number: 9', 'Code review title: Review the task', 'Code review link: uvcs://local/repos/game/code-reviews/9']);
+  });
+
+  it('copies a code review of a repository explored without a workspace with the link naming that repository, asking nothing', async () => {
+    expect(await copiedBy(codeReviewMenu(onRepository, [review]))).toEqual(['Code review number: 9', 'Code review title: Review the task', 'Code review link: uvcs://local/repos/game/code-reviews/9']);
+    expect(fakeApi.calls()).toEqual([]);
   });
 
   it("copies a diff's file as the link to its change there", async () => {

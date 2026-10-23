@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ContentSource } from '@shared/domain/content';
-import { canEditInPlace, typesIntoDiff } from './canEditInPlace';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
+import { canEditInPlace, editedFileIn, typesIntoDiff } from './canEditInPlace';
 import { LONGEST_DRAWN_LINE, LONGEST_EDITED_LINE } from './longLines';
 
 const onDisk: ContentSource = { kind: 'workspaceFile', path: 'src/a.cs' };
@@ -21,6 +22,18 @@ describe('canEditInPlace', () => {
   it('keeps read-only diffs whose modified side is not in the workspace', () => {
     expect(canEditInPlace({ kind: 'workspaceBase', path: 'src/a.cs' }, { kind: 'empty' })).toBe(false);
     expect(canEditInPlace({ kind: 'revision', revision: { revisionId: 1, repository: 'game@local' }, fileName: 'a.cs' }, { kind: 'revision', revision: { revisionId: 2, repository: 'game@local' }, fileName: 'a.cs' })).toBe(false);
+  });
+});
+
+describe('editedFileIn', () => {
+  it('names the workspace file a diff types into, an added one too', () => {
+    expect(editedFileIn(workspacePlace('/wk'), { kind: 'workspaceBase', path: 'src/a.cs' }, onDisk)).toEqual({ workspacePath: '/wk', path: 'src/a.cs' });
+    expect(editedFileIn(workspacePlace('/wk'), { kind: 'empty' }, onDisk)).toEqual({ workspacePath: '/wk', path: 'src/a.cs' });
+  });
+
+  it('names none for a read-only diff, nor in a repository explored without a workspace', () => {
+    expect(editedFileIn(workspacePlace('/wk'), { kind: 'spec', spec: 'serverpath:/src/a.cs#cs:3' }, onDisk)).toBeNull();
+    expect(editedFileIn(repositoryPlace('game@local'), { kind: 'empty' }, onDisk)).toBeNull();
   });
 });
 

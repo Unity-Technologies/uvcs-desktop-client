@@ -1,5 +1,5 @@
 import { ArchiveRestore, MoreHorizontal } from 'lucide-react';
-import { useWorkspaceUser } from '../../app/account/accounts';
+import { usePlaceUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
 import { useSettings } from '../../app/settings/useSettings';
 import { usePlace } from '../../app/workspace/useWorkspace';
@@ -18,28 +18,28 @@ import { applyShelve } from './shelveOperations';
 export function ShelveDiffActions({ shelveId }: { shelveId: number }) {
   const place = usePlace();
   const { switchShelves } = useSettings();
-  const me = useWorkspaceUser();
+  const me = usePlaceUser();
   const shelve = cachedShelve(place, shelveId);
   if (!shelve) return null;
 
-  const { appliesHere, left, menu } = shelveDiffMenu(place, shelve, {
+  const { appliesTo, left, menu } = shelveDiffMenu(place, shelve, {
     records: switchShelves,
     me,
     onApplied: () => navigation.goToView('changes'),
     onDeleted: () => navigation.goBack(),
   });
-  const apply = async (deleteShelve: boolean): Promise<void> => {
-    if (place.kind === 'workspace' && (await applyShelve(place.workspacePath, shelveId, deleteShelve))) navigation.goToView('changes');
+  const apply = async (workspacePath: string, deleteShelve: boolean): Promise<void> => {
+    if (await applyShelve(workspacePath, shelveId, deleteShelve)) navigation.goToView('changes');
   };
 
   return (
     <>
-      {appliesHere && (
+      {appliesTo !== null && (
         <Button
           variant="primary"
           icon={<ArchiveRestore size={14} />}
           data-tip={left ? 'Apply the changes and delete the shelve' : 'Merge the shelved changes into the workspace; the shelve stays'}
-          onClick={() => void apply(left)}
+          onClick={() => void apply(appliesTo, left)}
         >
           {left ? 'Restore' : 'Apply'}
         </Button>

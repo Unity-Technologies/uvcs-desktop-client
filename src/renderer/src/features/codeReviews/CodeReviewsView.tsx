@@ -1,6 +1,5 @@
 import { CircleDot, MessageSquareCode, Plus, UserCheck } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
-import { workspacePathOf } from '@shared/domain/place';
 import { CODE_REVIEW_STATUSES, MAX_LISTED_CODE_REVIEWS, type CodeReview } from '@shared/domain/codeReview';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
@@ -20,7 +19,7 @@ import { openCreateCodeReviewDialog } from './CreateCodeReviewDialog';
 import { useSelectCreated } from './useSelectCreated';
 import { useCodeReviews } from './useCodeReviews';
 import { SincePicker } from '../../components/SincePicker';
-import { useWorkspaceUser } from '../../app/account/accounts';
+import { usePlaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { matchesPeople, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
@@ -41,11 +40,10 @@ const ownerOf = (review: CodeReview): string => review.owner;
 
 export function CodeReviewsView() {
   const place = usePlace();
-  const workspacePath = workspacePathOf(place);
   const { data: workspace } = useWorkspaceInfo();
   const filters = useCodeReviewsViewStore();
   const { text: search, people, since, status, assignedToMe, update } = filters;
-  const me = useWorkspaceUser();
+  const me = usePlaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const [selection, setSelection] = useViewSelection('codeReviews');
   const { data: reviews, isPending, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, assignedToMe }));
@@ -68,7 +66,7 @@ export function CodeReviewsView() {
     useMemo<Command[]>(() => [{ id: 'codeReviews.new', group: 'Code reviews', label: 'New code review…', icon: MessageSquareCode, run: newReview }], [newReview]),
   );
   const selected = visible.find((review) => reviewKey(review) === selection.anchor);
-  useCopyCommand('Code reviews', 'Code review', selection.selected.size === 1 && selected && workspacePath !== null ? codeReviewCopyTexts(workspacePath, selected) : undefined);
+  useCopyCommand('Code reviews', 'Code review', selection.selected.size === 1 && selected ? codeReviewCopyTexts(place, selected) : undefined);
 
   const header = (
     <ViewHeader

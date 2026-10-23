@@ -1,4 +1,5 @@
 import type { ContentSource } from '@shared/domain/content';
+import { workspacePathOf, type Place } from '@shared/domain/place';
 import { hasLineTooLongToEdit } from './longLines';
 
 /**
@@ -10,6 +11,21 @@ export function canEditInPlace(original: ContentSource, modified: ContentSource)
   if (modified.kind !== 'workspaceFile') return false;
   if (original.kind === 'empty') return true;
   return (original.kind === 'workspaceBase' || original.kind === 'reviewSnapshot') && original.path === modified.path;
+}
+
+/** A file of a workspace, by its path in it. */
+export interface WorkspaceFile {
+  workspacePath: string;
+  path: string;
+}
+
+/**
+ * The workspace file a diff types into (`canEditInPlace`), or none. A place with no workspace has no file to type into:
+ * every version it shows is the repository's.
+ */
+export function editedFileIn(place: Place, original: ContentSource, modified: ContentSource): WorkspaceFile | null {
+  const workspacePath = workspacePathOf(place);
+  return workspacePath !== null && canEditInPlace(original, modified) ? { workspacePath, path: modified.path } : null;
 }
 
 /**
