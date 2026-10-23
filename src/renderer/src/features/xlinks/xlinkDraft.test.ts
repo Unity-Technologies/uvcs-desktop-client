@@ -158,8 +158,21 @@ describe('Picking branches from a list', () => {
   it("picks a rule's first branch among the workspace's, the second and the one it points to among its repository's", () => {
     const fields = xlinkDialogFields(CREATE, filled({ repository: 'lib@acme@cloud' }));
 
-    expect(fields.workspaceBranches).toEqual({ title: 'Branch of this workspace', repository: undefined, unavailable: undefined });
-    expect(fields.xlinkedBranches).toEqual({ title: 'Branch of lib@acme@cloud', repository: 'lib@acme@cloud', unavailable: undefined });
+    expect(fields.workspaceBranches).toEqual({ kind: 'branch', title: 'Branch of this workspace', chooseLabel: 'Choose a branch', repository: undefined, unavailable: undefined });
+    expect(fields.xlinkedBranches).toEqual({ kind: 'branch', title: 'Branch of lib@acme@cloud', chooseLabel: 'Choose a branch', repository: 'lib@acme@cloud', unavailable: undefined });
+    expect(fields.pointSource).toEqual(fields.xlinkedBranches);
+  });
+
+  it("picks the changeset or label it points to among its repository's, as it picks a branch", () => {
+    expect(xlinkDialogFields(CREATE, filled({ repository: 'lib@local', pointKind: 'changeset' })).pointSource).toEqual({
+      kind: 'changeset',
+      title: 'Changeset of lib@local',
+      chooseLabel: 'Choose a changeset',
+      repository: 'lib@local',
+      unavailable: undefined,
+    });
+    expect(xlinkDialogFields(CREATE, filled({ repository: 'lib@local', pointKind: 'label' })).pointSource).toMatchObject({ kind: 'label', title: 'Label of lib@local', chooseLabel: 'Choose a label' });
+    expect(xlinkDialogFields(CREATE, filled({ repository: null, pointKind: 'label' })).pointSource.unavailable).toBe('Choose its repository first');
   });
 
   it("can't list its repository's branches before a new xlink has one", () => {

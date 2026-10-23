@@ -82,11 +82,16 @@ export function withoutRule(draft: XlinkDraft, key: number): XlinkDraft {
 }
 
 /**
- * Where a branch field's picker reads branches: a rule's `from` side the workspace's repository, its `to` side and
- * the branch the xlink points to the xlinked one, which a new xlink has only once picked.
+ * What a field's "Choose" button picks, and where: a rule's `from` side among the workspace's branches; its `to` side
+ * and the branch, changeset or label the xlink points to among the xlinked repository's, which a new xlink has only
+ * once picked.
  */
-export interface BranchSource {
+export interface PickSource {
+  kind: XlinkPointKind;
+  /** The picker's title. */
   title: string;
+  /** The button's words. */
+  chooseLabel: string;
   /** Another repository's than the workspace's (`name@server`); undefined for the workspace's own. */
   repository: string | undefined;
   /** Why it can't be picked from yet. */
@@ -111,10 +116,12 @@ export interface XlinkDialogFields {
   pointHint: string | undefined;
   nameError: string | undefined;
   pointError: string | undefined;
-  /** The branches a rule's `from` side picks from: the workspace's. */
-  workspaceBranches: BranchSource;
-  /** The branches a rule's `to` side and the branch it points to pick from: the xlinked repository's. */
-  xlinkedBranches: BranchSource;
+  /** What the field of where it points picks: a branch, changeset or label of the xlinked repository. */
+  pointSource: PickSource;
+  /** What a rule's `from` side picks: a branch of the workspace's repository. */
+  workspaceBranches: PickSource;
+  /** What a rule's `to` side picks: a branch of the xlinked repository. */
+  xlinkedBranches: PickSource;
   /** What shows under a rule row, by its key: its problem, or that `cm` added it. */
   ruleNotes: ReadonlyMap<number, RuleNote>;
   /** Why it can't be saved yet; null once it can. */
@@ -163,13 +170,24 @@ export function xlinkDialogFields(target: XlinkDialogTarget, draft: XlinkDraft):
     pointHint: words.hint,
     nameError,
     pointError: draft.point.trim() === '' ? undefined : pointError,
-    workspaceBranches: { title: 'Branch of this workspace', repository: undefined, unavailable: undefined },
-    xlinkedBranches: draft.repository
-      ? { title: `Branch of ${draft.repository}`, repository: draft.repository, unavailable: undefined }
-      : { title: 'Branch of its repository', repository: undefined, unavailable: 'Choose its repository first' },
+    pointSource: xlinkedSource(draft.pointKind, draft.repository),
+    workspaceBranches: { kind: 'branch', title: 'Branch of this workspace', chooseLabel: 'Choose a branch', repository: undefined, unavailable: undefined },
+    xlinkedBranches: xlinkedSource('branch', draft.repository),
     ruleNotes: ruleNotesOf(draft.rules, ruleErrors),
     problem,
   };
+}
+
+const POINT_NOUNS: Record<XlinkPointKind, string> = { branch: 'branch', changeset: 'changeset', label: 'label' };
+
+/** Picking a `kind` of the xlinked repository, once there is one. */
+function xlinkedSource(kind: XlinkPointKind, repository: string | null): PickSource {
+  const noun = POINT_NOUNS[kind];
+  const chooseLabel = `Choose a ${noun}`;
+  const capitalized = noun[0]!.toUpperCase() + noun.slice(1);
+  return repository
+    ? { kind, title: `${capitalized} of ${repository}`, chooseLabel, repository, unavailable: undefined }
+    : { kind, title: `${capitalized} of its repository`, chooseLabel, repository: undefined, unavailable: 'Choose its repository first' };
 }
 
 function ruleNotesOf(rows: readonly RuleRow[], errors: ReadonlyMap<number, string>): Map<number, RuleNote> {
