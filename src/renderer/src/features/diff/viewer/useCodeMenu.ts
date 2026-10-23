@@ -99,8 +99,11 @@ export function useCodeMenu({ containerRef, scrollTo, fileName, textOf, sides, e
     const container = containerRef.current;
     const typedEditor = typedInto ? editorNow() : null;
     if (line === null || !container) return;
-    if (typedEditor) return typedEditor.focus({ lineNumber: line, character: 0 });
+    // Scrolled to first: the place shows the line there (a diff unfolds the region holding it), for the caret to land
+    // on a line on screen.
     latest.current.scrollTo(container, { side, lineNumber: line });
+    // The scroll placed the line; the caret mustn't move it again to the view's edge.
+    if (typedEditor) return typedEditor.focus({ lineNumber: line, character: 0, preventScroll: true });
     latest.current.lines?.select({ start: line, side, end: line, endSide: side });
     container.focus({ preventScroll: true });
   };

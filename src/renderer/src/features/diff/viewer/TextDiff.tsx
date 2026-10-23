@@ -1,4 +1,4 @@
-import { Virtualizer } from '@pierre/diffs';
+import { FileDiff as FileDiffInstance, Virtualizer } from '@pierre/diffs';
 import { EditProvider, File, FileDiff, VirtualizerContext, WorkerPoolContext } from '@pierre/diffs/react';
 import { useCallback, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
@@ -17,6 +17,8 @@ import { useHighlightWorkers } from './highlightWorkers';
 import { collapsesUnchanged, linesSelectable, shownSelection } from './lineLinkMode';
 import { selectedRangeOf } from './linkedLines';
 import { scrollToLine } from './lineScroll';
+import { lineToReveal } from './lineToReveal';
+import type { ChangedLine } from './changeBlocks';
 import { useLineLinks } from './useLineLinks';
 import { useLineTools } from './useLineTools';
 import { useCodeMenu } from './useCodeMenu';
@@ -155,9 +157,19 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   const { editor, fileDiff: shownFileDiff, createEditor, focusAt, typeWhileAttaching } = usePierreEditor(editorRef, container, { attached: edit, attach: attachNow });
   const shownRef = useRef(fileDiff);
   shownRef.current = fileDiff;
+  // The diff Pierre rendered, to unfold the region holding a line before scrolling to it.
+  const renderedDiff = useRef<FileDiffInstance<unknown, unknown> | null>(null);
   const onPostRender = useCallback((_element: unknown, instance: object) => {
+    if (instance instanceof FileDiffInstance) renderedDiff.current = instance;
     if (isReadyToEdit(instance, shownRef.current)) setReadyToEdit((ready: unknown) => (ready === shownRef.current ? ready : shownRef.current));
   }, []);
+  // Going to a line (a link's, Go to line's) shows it first: with unchanged lines collapsed, its region is folded away
+  // and has no row to scroll to. Pierre's `revealLine` expands only that region, from its nearer end (`lineToReveal`).
+  const scrollToShownLine = (element: HTMLElement, line: ChangedLine): (() => void) => {
+    const newerLine = lineToReveal(latest.current.diff.meta.hunks, line.side, line.lineNumber);
+    if (newerLine !== null) renderedDiff.current?.revealLine(newerLine);
+    return scrollToLine(element, line, virtualizer);
+  };
   const parseDiffOptions = diff.options;
   // Pierre marks no words in the lines typed into, nor drops the original's old marks, until the file is saved.
   useWordMarksRefresh({ fileDiff: shownFileDiff, containerRef: container, current, shown: fileDiff });
@@ -168,7 +180,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     selectable: linesSelectable({ discards: Boolean(onDiscard), editable }),
     containerRef: container,
     shown: canHighlight,
-    scrollTo: (element, line) => scrollToLine(element, line, virtualizer),
+    scrollTo: scrollToShownLine,
   });
   const collapseUnchanged = collapsesUnchanged(preferences.collapseUnchanged, lineLinks.focusLines);
   // A workspace file's diff marks a link's lines as Pierre's selection until lines are picked to discard.
@@ -198,7 +210,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   // The code's right-click menu, the lines' entries in it where they're selected for links, and Go to line's key.
   const codeMenu = useCodeMenu({
     containerRef: container,
-    scrollTo: (element, line) => scrollToLine(element, line, virtualizer),
+    scrollTo: scrollToShownLine,
     fileName,
     textOf: (side) => (side === 'deletions' ? original : current),
     sides: textDiffSides({ wholeFile, sides, editable, editorAttached: edit }),
