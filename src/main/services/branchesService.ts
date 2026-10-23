@@ -10,11 +10,12 @@ import { withTempFile } from '../files/tempFile';
 import type { BranchNamesContext, ServiceContext } from './ServiceContext';
 
 export function createBranchesService({ cm, settings, headers }: ServiceContext, { branchNames }: BranchNamesContext): BranchesApi {
-  async function find(workspacePath: string, filter: QueryFilter, conditions: string[]): Promise<Branch[]> {
-    const args = findArgs(FOUND_BRANCHES, { ...filter, branch: undefined }, 'date desc', conditions);
+  async function find(workspacePath: string, filter: QueryFilter, conditions: string[], repository?: string): Promise<Branch[]> {
+    const args = findArgs(FOUND_BRANCHES, { ...filter, branch: undefined }, 'date desc', conditions, repository);
     const branches = await cm.queryRecords(args, layoutReader(FOUND_BRANCHES), { cwd: workspacePath });
-    // The code review chips name branches by id: this list answers them.
-    branchNames.remember(workspacePath, branches);
+    // The code review chips name the workspace's branches by id: this list answers them. Another repository's ids
+    // are other branches.
+    if (!repository) branchNames.remember(workspacePath, branches);
     return branches;
   }
 
@@ -22,16 +23,16 @@ export function createBranchesService({ cm, settings, headers }: ServiceContext,
    * `cm find branch` leaves hidden branches out unless they are asked for, and `or` between the two finds neither:
    * hidden branches take a second query, only when wanted.
    */
-  async function findVisibleAndHidden(workspacePath: string, filter: QueryFilter, conditions: string[], withHidden: boolean): Promise<Branch[]> {
+  async function findVisibleAndHidden(workspacePath: string, filter: QueryFilter, conditions: string[], withHidden: boolean, repository?: string): Promise<Branch[]> {
     const [visible, hidden] = await Promise.all([
-      find(workspacePath, filter, [...conditions, "hidden = 'false'"]),
-      withHidden ? find(workspacePath, filter, [...conditions, "hidden = 'true'"]) : [],
+      find(workspacePath, filter, [...conditions, "hidden = 'false'"], repository),
+      withHidden ? find(workspacePath, filter, [...conditions, "hidden = 'true'"], repository) : [],
     ]);
     return [...visible, ...hidden.map((branch) => ({ ...branch, isHidden: true }))];
   }
 
-  async function list(workspacePath: string, filter: QueryFilter): Promise<Branch[]> {
-    const branches = await findVisibleAndHidden(workspacePath, filter, [], filter.includeHidden === true);
+  async function list(workspacePath: string, filter: QueryFilter, repository?: string): Promise<Branch[]> {
+    const branches = await findVisibleAndHidden(workspacePath, filter, [], filter.includeHidden === true, repository);
     return branches.sort((a, b) => b.date.localeCompare(a.date));
   }
 

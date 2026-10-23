@@ -2,7 +2,8 @@ import type { Branch, CreateBranchRequest } from '../domain/branch';
 import type { QueryFilter } from '../domain/query';
 
 export interface BranchesApi {
-  list(workspacePath: string, filter: QueryFilter): Promise<Branch[]>;
+  /** `repository` (`name@server`) lists another repository's branches than the workspace's, an xlinked one's. */
+  list(workspacePath: string, filter: QueryFilter, repository?: string): Promise<Branch[]>;
   /** One branch by its full name (a light `cm find`), or null when there is none. */
   get(workspacePath: string, name: string): Promise<Branch | null>;
   create(workspacePath: string, request: CreateBranchRequest): Promise<void>;

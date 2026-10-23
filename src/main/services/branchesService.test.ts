@@ -64,6 +64,16 @@ describe('branch list', () => {
     ]);
   });
 
+  it("lists an xlinked repository's branches with the same one cm find, leaving the workspace's names by id alone", async () => {
+    const { service, lines, branchNames } = branches({ 'find branch': recordsOutput(FOUND_BRANCHES, { ...TASK1, repname: 'lib', repserver: 'local' }) });
+
+    const listed = await service.list(WORKSPACE, { includeHidden: false }, 'lib@local');
+
+    expect(lines()).toEqual([expect.stringMatching(/^find branch where hidden = 'false' order by date desc on repository 'lib@local' --format=/)]);
+    expect(listed.map((branch) => [branch.name, branch.repository])).toEqual([['/main/task1', 'lib@local']]);
+    await expect(branchNames.resolve(WORKSPACE, [TASK1.id])).rejects.toThrow('The list read answers every name.');
+  });
+
   // Written out, not built by the code under test: what cm is asked, field separators and all.
   it('asks cm for the fields it reads as records, dates in the round-trip format', async () => {
     const { service, lines } = branches({ 'find branch': '' });
