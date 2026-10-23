@@ -6,7 +6,7 @@ import {
   change,
   diffRecord,
   formatOutput,
-  mergeOutput,
+  mergePreviewOutput,
   pendingStatusInChangelists,
   shelvesCreated,
   shelvesFound,
@@ -19,6 +19,9 @@ import { cmFails, fakeCmClient, optionValue, type CmFailure, type FakeCmCommand 
 /** Object ids of the branches the repository has. */
 const BRANCH_IDS: Record<string, number> = { '/main': 3, '/main/task1': 37, '/main/task2': 38 };
 
+
+/** The `cm status` options that ask for kinds of controlled changes, which leave private files out unless `--private` asks too. */
+const CONTROLLED_KINDS = new Set(['--controlledchanged', '--changed', '--localdeleted', '--checkout', '--added', '--deleted', '--moved']);
 export interface WorkspaceScenario {
   /** The branch the workspace is on. */
   branch?: string;
@@ -95,11 +98,13 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
   const onDisk = (path: string): string => join(workspacePath, ...path.split('/'));
   const relative = (absolute: string): string => absolute.slice(workspacePath.length + 1).split(/[\\/]/).join('/');
 
-  const statusRecords = (): string => {
+  const statusRecords = ({ args }: FakeCmCommand): string => {
     const inList = new Set(changelists.flatMap((list) => list.paths));
     const merge = scenario.mergingFrom ? `Merge from ${scenario.mergingFrom}` : undefined;
     const entries = (paths: string[]): StatusChange[] => paths.map((path) => change(pending[path]!, path, { merge }));
-    const privates = [...privatePaths].filter((path) => existsSync(onDisk(path))).map((path) => change('PR', path));
+    // As `cm`: a status asking for some kinds of changes lists private files only when it asks for them too.
+    const asksPrivates = args.includes('--private') || !args.some((arg) => CONTROLLED_KINDS.has(arg));
+    const privates = asksPrivates ? [...privatePaths].filter((path) => existsSync(onDisk(path))).map((path) => change('PR', path)) : [];
     const controlled = Object.keys(pending).filter((path) => pending[path] !== 'PR');
     return pendingStatusInChangelists(workspacePath, [
       { name: 'Default', changes: [...entries(controlled.filter((path) => !inList.has(path))), ...privates] },
@@ -159,7 +164,7 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
       const path = `/src/conflict${index}.txt`;
       return ['DIR_CONFLICT', 'CHG_RM', 'Change/Delete conflict', 'Changed and deleted.', `Modified ${path}`, `Deleted ${path}`, String(90 + index), 'False', 'CHG', path, 'RM', path];
     });
-    return mergeOutput(...Object.keys(shelve.changes).map((path) => ['APPLY', 'ADD', `/${path}`]), ...conflicts);
+    return mergePreviewOutput(...Object.keys(shelve.changes).map((path) => ['APPLY', 'ADD', `/${path}`]), ...conflicts);
   };
 
   const findBranch = ({ args }: FakeCmCommand): string => {
@@ -177,7 +182,6 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
       shelvesFound(...[...shelves].filter(([, shelve]) => shelve.comment.startsWith(AUTOMATIC_SHELVE_COMMENT)).map(([id, shelve]) => ({ id, comment: shelve.comment }))),
     // Every `cm status` read of the changes, whatever it asks for.
     status: statusRecords,
-    'status --short': () => Object.entries(pending).filter(([, codes]) => codes !== 'PR').map(([path, codes]) => `${codes} ${path}\n`).join(''),
     'shelveset create': createShelve,
     'shelveset delete': ({ args }) => {
       const id = Number(/^sh:(\d+)@/.exec(args[2]!)![1]);

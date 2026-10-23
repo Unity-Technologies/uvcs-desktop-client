@@ -3,23 +3,22 @@ import type { Place } from '@shared/domain/place';
 import { cmPlace } from '../cm/cmPlace';
 import { equalsCondition, findArgs } from '../cm/findQuery';
 import { FOUND_LABELS } from '../cm/foundObjects';
-import { readRecords } from '../cm/formatRecords';
+import { layoutReader } from '../cm/formatRecords';
 import { labelCommentArgs } from '../cm/labelCommentArgs';
 import { withTempFile } from '../files/tempFile';
 import type { ServiceContext } from './ServiceContext';
 
 export function createLabelsService({ cm }: ServiceContext): LabelsApi {
   return {
-    async list(place, filter) {
+    list(place, filter) {
       const at = cmPlace(place);
-      const output = await cm.query(findArgs(FOUND_LABELS, filter, 'date desc', [], at.repository), at.options);
-      return readRecords(FOUND_LABELS, output);
+      return cm.queryRecords(findArgs(FOUND_LABELS, filter, 'date desc', [], at.repository), layoutReader(FOUND_LABELS), at.options);
     },
 
     async get(place, name) {
       const at = cmPlace(place);
-      const output = await cm.query(findArgs(FOUND_LABELS, {}, null, [equalsCondition('name', name)], at.repository), at.options);
-      return readRecords(FOUND_LABELS, output).find((label) => label.name === name) ?? null;
+      const labels = await cm.queryRecords(findArgs(FOUND_LABELS, {}, null, [equalsCondition('name', name)], at.repository), layoutReader(FOUND_LABELS), at.options);
+      return labels.find((label) => label.name === name) ?? null;
     },
 
     async create(place, request: CreateLabelRequest) {

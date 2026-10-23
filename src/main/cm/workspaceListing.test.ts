@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { formatOutput } from './testing/cmOutput';
-import { parseWorkspaceListing, workspaceListingArgs } from './workspaceListing';
+import { formatOutput, recordsIn } from './testing/cmOutput';
+import { readWorkspaceListedItem, workspaceListingArgs } from './workspaceListing';
+
+const parseWorkspaceListing = (output: string) => recordsIn(output, readWorkspaceListedItem);
 
 describe('workspaceListingArgs', () => {
   it("lists a workspace folder's children with what tells each file's revision, links as themselves", () => {

@@ -1,6 +1,6 @@
 import type { TreeItem } from '@shared/domain/explorer';
 import type { ItemType } from '@shared/domain/pendingChanges';
-import { integerValue, layoutFormat, readRecords, type RecordLayout } from './formatRecords';
+import { integerValue, layoutFormat, layoutReader, type ReadRecord, type RecordLayout } from './formatRecords';
 import { parseXlinkName } from './xlinkName';
 
 const ITEM_TYPES: Record<string, ItemType> = {
@@ -24,7 +24,7 @@ export interface ListedTreeItem extends TreeItem {
 /**
  * The revision `cm ls` printed for an item: none (`undefined`) for a private item or one not loaded, which print
  * `{revid}` empty; -1 for a checkout, whose revision isn't loaded; else its id. Every `cm ls` reader decides by it
- * (`parseTreeItems`, `parseWorkspaceListing`).
+ * (`readTreeItem`, `readWorkspaceListedItem`).
  */
 export function listedRevisionId(revid: string): number | undefined {
   return revid === '' ? undefined : integerValue(revid);
@@ -51,7 +51,7 @@ export const TREE_ITEMS: RecordLayout<ListedTreeItem, TreeItemField> = {
 };
 
 /**
- * The `--format` of every `cm ls` read with `parseTreeItems`. Trade-off: `cm ls` asks `--encoding` of `--xml` only, so
+ * The `--format` of every `cm ls` read with `readTreeItem`. Trade-off: `cm ls` asks `--encoding` of `--xml` only, so
  * on Windows a listing that can't take a pooled `cm shell` starts a `cm shell` of its own for UTF-8 (about half a
  * second more than an `--xml` process; `processCommand`), and a server path holding a quote, which no shell line can
  * hold, prints in the console's code page.
@@ -59,16 +59,15 @@ export const TREE_ITEMS: RecordLayout<ListedTreeItem, TreeItemField> = {
 export const TREE_ITEM_FORMAT = layoutFormat(TREE_ITEMS);
 
 /**
- * Parses `cm ls --format=TREE_ITEM_FORMAT`. The listed directory itself is skipped.
+ * A record of `cm ls --format=TREE_ITEM_FORMAT`, which `queryRecords` reads as it arrives: a folder of 100,000 files
+ * or a whole tree (`-R`) grows with the repository. The listed directory itself is skipped.
  * Paths are made relative with forward slashes: `--tree` listings return server paths (`/src/a.ts`).
  * Names come from the path: an xlink's `{name}` is its target (`lib -> xlink -> / 12@lib@server`), read into `xlink`.
  * `{repspec}` (`rep:editorGUI@acme@cloud`) is the repository holding the item's revision: under an xlink, the xlinked
  * one. Workspace listings take `--symlink` (`onLinksThemselves`): without it a link to a folder reads as that folder,
  * children and paths included.
  */
-export function parseTreeItems(output: string): ListedTreeItem[] {
-  return readRecords(TREE_ITEMS, output);
-}
+export const readTreeItem: ReadRecord<ListedTreeItem> = layoutReader(TREE_ITEMS);
 
 function treeItem(value: (field: TreeItemField) => string): ListedTreeItem {
   const path = value('wkpath').replace(/\\/g, '/').replace(/^\//, '');

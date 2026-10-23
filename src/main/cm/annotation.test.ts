@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { parseAnnotation } from './annotation';
-import { formatOutput } from './testing/cmOutput';
+import { annotationOf } from './annotation';
+import { formatOutput, recordsIn } from './testing/cmOutput';
+
+const parseAnnotation = (output: string) => annotationOf(recordsIn(output));
 
 
 describe('parseAnnotation', () => {

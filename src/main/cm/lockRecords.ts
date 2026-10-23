@@ -1,8 +1,8 @@
 import type { Lock, LockStatus } from '@shared/domain/lock';
 import { repositorySpec } from '@shared/domain/specs';
-import { FIELD_SEPARATOR, RECORD_SEPARATOR } from './formatRecords';
+import { FIELD_SEPARATOR, RECORD_SEPARATOR, type ReadRecord } from './formatRecords';
 
-/** Arguments that make `cm lock list` print one parseable record per lock. */
+/** Arguments that make `cm lock list` print one record per lock, as `--format` records are (`readLock`). */
 export const LOCK_LIST_FORMAT_ARGS = [
   '--machinereadable',
   '--smartlocks',
@@ -12,27 +12,25 @@ export const LOCK_LIST_FORMAT_ARGS = [
 ];
 
 /**
- * Parses `cm lock list` in the smart-locks machine-readable layout:
- * repository, item id, guid, date, destination branch, destination revision,
- * holder branch, holder revision, status, owner, workspace, path.
+ * Reads a lock of `cm lock list` in the smart-locks machine-readable layout, as it arrives (`queryRecords`): repository,
+ * item id, guid, date, destination branch, destination revision, holder branch, holder revision, status, owner,
+ * workspace, path. None for a record with fewer fields.
  */
-export function parseLocks(output: string, repositoryServer: string): Lock[] {
-  return output
-    .split(RECORD_SEPARATOR)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => line.split(FIELD_SEPARATOR))
-    .filter((fields) => fields.length >= 12)
-    .map(([repository, itemId, guid, date, destinationBranch, , holderBranch, , status, owner, workspace, path]) => ({
-      repository: repositorySpec(repository!, repositoryServer),
+export function lockReader(repositoryServer: string): ReadRecord<Lock> {
+  return (fields) => {
+    if (fields.length < 12) return undefined;
+    const [repository = '', itemId, guid = '', date = '', destinationBranch = '', , holderBranch = '', , status, owner = '', workspace = '', path = ''] = fields;
+    return {
+      repository: repositorySpec(repository.trimStart(), repositoryServer),
       itemId: Number(itemId),
-      guid: guid!,
-      date: date!,
-      destinationBranch: destinationBranch!,
-      holderBranch: holderBranch!,
+      guid,
+      date,
+      destinationBranch,
+      holderBranch,
       status: status as LockStatus,
-      owner: owner!,
-      workspace: workspace!,
-      path: path!,
-    }));
+      owner,
+      workspace,
+      path: path.trimEnd(),
+    };
+  };
 }

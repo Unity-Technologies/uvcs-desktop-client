@@ -3,7 +3,7 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import { spec } from '@shared/domain/specs';
 import { automaticShelveComment, parseCreatedShelves, type CreatedShelve } from '../cm/automaticShelve';
 import type { CmClient, CmRunOptions } from '../cm/CmClient';
-import { DIFF_FORMAT, parseDiffEntries } from '../cm/diffEntries';
+import { queryDiffEntries } from '../cm/diffEntries';
 import { readShelveProgress } from '../cm/progress/shelveProgress';
 import { withTempFile } from '../files/tempFile';
 import { toAbsolutePaths } from '../files/workspacePaths';
@@ -66,9 +66,8 @@ export async function createVerifiedShelve(
 }
 
 /** The items a shelve changes. */
-export async function readShelveEntries(cm: CmClient, workspacePath: string, shelveId: number): Promise<DiffEntry[]> {
-  const output = await cm.query(['diff', spec.shelve(shelveId), '--repositorypaths', `--format=${DIFF_FORMAT}`], { cwd: workspacePath });
-  return parseDiffEntries(output);
+export function readShelveEntries(cm: CmClient, workspacePath: string, shelveId: number): Promise<DiffEntry[]> {
+  return queryDiffEntries(cm, [spec.shelve(shelveId)], { cwd: workspacePath });
 }
 
 /** Each spec names its shelve's repository, so `options` only say where it runs: a workspace's folder, or outside one. */

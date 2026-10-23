@@ -3,9 +3,11 @@ import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import type { XlinkTarget } from '@shared/domain/explorer';
 import type { CmClient } from '../cm/CmClient';
 import { cmPlace, type CmPlace } from '../cm/cmPlace';
-import { DIFF_FORMAT, parseDiffEntries } from '../cm/diffEntries';
+import { queryDiffEntries } from '../cm/diffEntries';
+import { layoutReader } from '../cm/formatRecords';
+import { readTreeItem } from '../cm/treeItems';
 import { isNotInTreeError } from '../cm/missingItem';
-import { parentPointOf, readsSide, xlinkAfterPoint, xlinkBeforePoint, xlinkIn, xlinkListArgs, type XlinkSidePoint } from '../cm/xlinkSides';
+import { FOUND_PARENTS, parentPointOf, readsSide, xlinkAfterPoint, xlinkBeforePoint, xlinkIn, xlinkListArgs, type XlinkSidePoint } from '../cm/xlinkSides';
 import type { ServiceContext } from './ServiceContext';
 
 export function createDiffService({ cm, handedOverDiffs }: ServiceContext): DiffApi {
@@ -36,10 +38,10 @@ export function createDiffService({ cm, handedOverDiffs }: ServiceContext): Diff
  * changeset when it is a parent. A folder that isn't in that tree (added after it) has no xlink there.
  */
 async function xlinkAt(cm: CmClient, at: CmPlace, side: NonNullable<XlinkSidePoint>, path: string): Promise<XlinkTarget | null> {
-  const point = side.kind === 'point' ? side.spec : parentPointOf(await cm.query(side.findArgs, at.options));
+  const point = side.kind === 'point' ? side.spec : parentPointOf(await cm.queryRecords(side.findArgs, layoutReader(FOUND_PARENTS), at.options));
   if (point === null) return null;
   try {
-    return xlinkIn(await cm.query(xlinkListArgs(path, at.spec(point)), at.options), path);
+    return xlinkIn(await cm.queryRecords(xlinkListArgs(path, at.spec(point)), readTreeItem, at.options), path);
   } catch (error) {
     if (isNotInTreeError(error)) return null;
     throw error;
@@ -60,9 +62,8 @@ async function branchEntries(cm: CmClient, at: CmPlace, branchSpec: string): Pro
 }
 
 /** `cm diff` of specs that name the place's repository where no workspace tells `cm` which. */
-async function diffEntries(cm: CmClient, at: CmPlace, specs: string[]): Promise<DiffEntry[]> {
-  const output = await cm.query(['diff', ...specs, '--repositorypaths', `--format=${DIFF_FORMAT}`], at.options);
-  return parseDiffEntries(output);
+function diffEntries(cm: CmClient, at: CmPlace, specs: string[]): Promise<DiffEntry[]> {
+  return queryDiffEntries(cm, specs, at.options);
 }
 
 function targetSpecs(target: Exclude<DiffTarget, { kind: 'branch' }>): string[] {

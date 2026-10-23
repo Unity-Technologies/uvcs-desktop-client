@@ -11,11 +11,17 @@ import type {
   MergePlanStatus,
 } from '@shared/domain/merge';
 import { comparePaths } from '@shared/pathOrder';
-import { FIELD_SEPARATOR } from './formatRecords';
+import { FIELD_SEPARATOR, RECORD_SEPARATOR } from './formatRecords';
 import { directoryConflictWords } from './directoryConflictWords';
 
 /** Separates fields in `cm merge --machinereadable` output. */
 export const MERGE_FIELD_SEPARATOR = FIELD_SEPARATOR;
+
+/**
+ * Ends each record of the preview (`cm merge --machinereadable --endlineseparator`), so its records are read as they
+ * arrive (`queryRecords`, `readFields`): a merge of a big branch lists every file it changes.
+ */
+export const MERGE_PREVIEW_RECORD_ARGS = [`--endlineseparator=${RECORD_SEPARATOR}`];
 
 /**
  * A conflicting file as `cm merge` prints it: its ids and changesets, without the repository they belong to nor the
@@ -54,13 +60,15 @@ const STATUSES: Record<string, MergePlanStatus> = {
   INVALID_INTERVAL: 'invalidInterval',
 };
 
-/** Parses the preview printed by `cm merge <spec> --machinereadable --printcontributors`. */
-export function parseMergePlan(output: string): PrintedMergePlan {
+/**
+ * The plan of the records `cm merge <spec> --machinereadable --printcontributors` printed, each its fields: the preview's
+ * (`MERGE_PREVIEW_RECORD_ARGS`), or those a merge run kept (`mergeOutcomeRecordOf`).
+ */
+export function mergePlanOf(records: readonly string[][]): PrintedMergePlan {
   const plan: PrintedMergePlan = { status: 'ready', changes: [], fileConflicts: [], directoryConflicts: [], warnings: [] };
   const contributors: Partial<MergeContributors> = {};
 
-  for (const line of output.split(/\r?\n/)) {
-    const [record, ...fields] = line.split(MERGE_FIELD_SEPARATOR);
+  for (const [record, ...fields] of records) {
     switch (record) {
       case 'STATUS':
         readStatus(plan, fields);
@@ -165,19 +173,33 @@ function parseSide([operationCode, firstPath, ...rest]: string[], description: s
   return [{ operation, path: firstPath!, description }, rest];
 }
 
-const CREATED_CHANGESET_RECORD = new RegExp(`^CHANGESET${MERGE_FIELD_SEPARATOR}cs:(\\d+)@`, 'm');
-const MERGE_NEEDED_RECORD = new RegExp(`^MERGE_NEEDED${MERGE_FIELD_SEPARATOR}`, 'm');
+/** The records of a merge run that tell how it ended: the directory conflicts left, the changeset made, a moved destination. */
+const OUTCOME_RECORDS = new Set(['DIR_CONFLICT', 'CHANGESET', 'MERGE_NEEDED']);
 
-/** Parses `CHANGESET cs:12@/main/task@repo@server` from a merge into a server branch. */
-export function parseCreatedChangeset(output: string): number | undefined {
-  const created = CREATED_CHANGESET_RECORD.exec(output);
-  return created ? Number(created[1]) : undefined;
+/**
+ * The fields of a line a merge run printed, when it's a record that tells how it ended: a run is read by its lines as
+ * they arrive (`onOutputLine`), and only these are kept, as it prints a line for each file it merges.
+ */
+export function mergeOutcomeRecordOf(line: string): string[] | undefined {
+  const fields = line.split(MERGE_FIELD_SEPARATOR);
+  return OUTCOME_RECORDS.has(fields[0] ?? '') ? fields : undefined;
+}
+
+const CREATED_CHANGESET = /^cs:(\d+)@/;
+
+/** The changeset `CHANGESET cs:12@/main/task@repo@server` names, printed by a merge into a server branch. */
+export function createdChangesetOf(records: readonly string[][]): number | undefined {
+  for (const [record, spec = ''] of records) {
+    const created = record === 'CHANGESET' ? CREATED_CHANGESET.exec(spec) : null;
+    if (created) return Number(created[1]);
+  }
+  return undefined;
 }
 
 /**
  * `MERGE_NEEDED 12 /main repo server`, printed by a merge into a server branch that someone checked in on meanwhile:
  * the merge's changeset is left beside the new head, and has to be merged into the branch to finish.
  */
-export function parseDestinationMoved(output: string): boolean {
-  return MERGE_NEEDED_RECORD.test(output);
+export function destinationMovedIn(records: readonly string[][]): boolean {
+  return records.some(([record]) => record === 'MERGE_NEEDED');
 }

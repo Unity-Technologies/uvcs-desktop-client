@@ -5,11 +5,12 @@ import {
   itemHistoryArgs,
   itemHistoryTarget,
   type HistoryItem,
+  HISTORY_RECORD,
+  itemHistoryOf,
   itemRevisionsArgs,
   loadedRevisionOf,
-  parseHistoryRecords,
-  parseItemHistory,
-  parseWorkspaceItem,
+  readFoundRevisionIds,
+  readWorkspaceItem,
   withServerOf,
   workspaceItemArgs,
   type WorkspaceItem,
@@ -26,10 +27,10 @@ export function createHistoryService({ cm, workspaceCopies }: ServiceContext, { 
    * when the workspace can't tell. History started from a revision reads none: the workspace may not have its item.
    * Remembered, so its diff reads it from the disk while the file there is still that revision (`WorkspaceCopies`).
    */
-  async function readWorkspaceItem({ workspacePath, path }: { workspacePath: string; path: string }): Promise<WorkspaceItem | undefined> {
+  async function workspaceItemOf({ workspacePath, path }: { workspacePath: string; path: string }): Promise<WorkspaceItem | undefined> {
     const args = workspaceItemArgs(toAbsolutePath(workspacePath, path));
     const listedAt = workspaceCopies.generationOf(workspacePath);
-    const item = await cm.query(args, { cwd: workspacePath }).then(parseWorkspaceItem, () => undefined);
+    const item = await cm.queryRecords(args, readWorkspaceItem, { cwd: workspacePath }).then(([first]) => first, () => undefined);
     const loaded = loadedRevisionOf(item, path);
     if (loaded) workspaceCopies.rememberHeld(workspacePath, [loaded], listedAt);
     return item;
@@ -43,12 +44,12 @@ export function createHistoryService({ cm, workspaceCopies }: ServiceContext, { 
     async forItem(place: Place, path, revision) {
       const { options } = cmPlace(place);
       const item: HistoryItem = revision ? { revision } : { workspacePath: workspaceOf(place, 'The history of a workspace file'), path };
-      const workspaceItem = 'workspacePath' in item ? readWorkspaceItem(item) : Promise.resolve(undefined);
-      const historyOutput = await cm.query(itemHistoryArgs(itemHistoryTarget(item)), options);
-      const records = withServerOf(parseHistoryRecords(historyOutput), revision?.repository ?? (await workspaceItem)?.repository);
+      const workspaceItem = 'workspacePath' in item ? workspaceItemOf(item) : Promise.resolve(undefined);
+      const history = await cm.queryXmlElements(itemHistoryArgs(itemHistoryTarget(item)), HISTORY_RECORD, (record) => record, options);
+      const records = withServerOf(history, revision?.repository ?? (await workspaceItem)?.repository);
       const revisionsArgs = itemRevisionsArgs(records);
-      const revisionsOutput = revisionsArgs ? await cm.query(revisionsArgs, options) : '';
-      return parseItemHistory(records, revisionsOutput, (await workspaceItem)?.revisionId);
+      const revisions = revisionsArgs ? await cm.queryRecords(revisionsArgs, readFoundRevisionIds, options) : [];
+      return itemHistoryOf(records, revisions, (await workspaceItem)?.revisionId);
     },
 
     async revertTo(workspacePath, path, changesetId) {

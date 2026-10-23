@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { PrintedMergePlan } from '../cm/mergeOutput';
-import { recordsOutput } from '../cm/testing/cmOutput';
-import { parseTreeItems, TREE_ITEM_FORMAT, TREE_ITEMS } from '../cm/treeItems';
+import { recordsIn, recordsOutput } from '../cm/testing/cmOutput';
+import { readTreeItem, TREE_ITEM_FORMAT, TREE_ITEMS } from '../cm/treeItems';
+
+const parseTreeItems = (output: string) => recordsIn(output, readTreeItem);
 import { conflictListingArgs, destinationTree, withRepositories } from './conflictRepositories';
 
 const XLINKED = '/01project/src/client/plugins/editor-plugin/Packages/com.acme.editor.tests/Infrastructure/DiffWindowMockExtensions.cs';

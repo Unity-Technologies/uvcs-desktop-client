@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { parseAccounts } from './accounts';
-import { formatOutput } from './testing/cmOutput';
+import { readAccount } from './accounts';
+import { formatOutput, recordsIn } from './testing/cmOutput';
+
+const parseAccounts = (output: string) => recordsIn(output, readAccount);
 
 
 describe('parseAccounts', () => {

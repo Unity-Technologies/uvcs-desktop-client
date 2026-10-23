@@ -51,17 +51,14 @@ describe('replication', () => {
     const tracker = new OperationTracker((_id, report) => progress.push(report), () => undefined);
     const { service } = sync(
       {
-        push: ({ options }) => {
-          options.onOutputLine?.('<STAGE:Fetching changesets>');
-          return REPLICATED;
-        },
+        push: `<STAGE:Fetching changesets>\n${REPLICATED}`,
       },
       tracker,
     );
 
     await service.push(WORKSPACE, { branch: '/main', from: 'game@local', to: 'game@cloud' }, 'op-1');
 
-    expect(progress.at(-1)).toMatchObject({ stage: 'working', stageLabel: 'Fetching changesets' });
+    expect(progress).toContainEqual(expect.objectContaining({ stage: 'working', stageLabel: 'Fetching changesets' }));
   });
 });
 

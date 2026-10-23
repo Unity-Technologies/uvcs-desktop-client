@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { MergeRequest, MergeResolutions } from '@shared/domain/merge';
-import { mergeOutput, statusHeader, treeListing } from '../cm/testing/cmOutput';
+import { changedStatus, mergeOutput, mergePreviewOutput, statusHeader, treeListing } from '../cm/testing/cmOutput';
+import { statusRecordsArgs } from '../cm/pendingChangesRecords';
 import { fakeCat, PURGED } from '../cm/testing/fakeCat';
 import { cmFails, fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { recordingContext } from '../operations/testing/recordingContext';
@@ -27,15 +28,15 @@ const noDecisions: MergeResolutions = { directoryConflicts: [], files: {} };
  * A `cm` merging /main/task: the preview prints `plan`, and each `--resolveconflict` run prints the directory
  * conflicts still left (`remainingAfterSolving`, one list per run). The final `--merge` prints `finalOutput`.
  */
-function mergingCm(plan: string[][], { remainingAfterSolving = [] as string[][][], finalOutput = '', pending = '' } = {}) {
+function mergingCm(plan: string[][], { remainingAfterSolving = [] as string[][][], finalOutput = '', pending = changedStatus() } = {}) {
   let solved = 0;
   const merge: CmAnswer = ({ args }) => {
     if (args.includes('--resolveconflict')) return mergeOutput(...CONTRIBUTORS, ...(remainingAfterSolving[solved++] ?? []));
     if (args.includes('--merge')) return finalOutput;
-    return mergeOutput(...CONTRIBUTORS, ...plan);
+    return mergePreviewOutput(...CONTRIBUTORS, ...plan);
   };
   return fakeCmClient({
-    'status --short': pending,
+    status: pending,
     'merge br:/main/task': merge,
     ls: treeListing('eco@local', 'src/a.txt', 'src/b.txt', 'src/c.txt'),
     cat: fakeCat(() => 'incoming version\n'),
@@ -114,9 +115,9 @@ describe('runMerge into the workspace', () => {
 
   it("writes the base kept: its text as the page read it, else the base's revision, in the incoming versions' cm cat", async () => {
     const { cm, commands } = fakeCmClient({
-      'status --short': '',
+      status: changedStatus(),
       'merge br:/main/task': ({ args }) =>
-        args.includes('--merge') ? '' : mergeOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31), fileConflict('src/c.txt', 32)),
+        args.includes('--merge') ? '' : mergePreviewOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31), fileConflict('src/c.txt', 32)),
       ls: treeListing('eco@local', 'src/a.txt', 'src/b.txt', 'src/c.txt'),
       cat: fakeCat((spec) => (spec.includes('#cs:1@') ? 'base version\n' : 'incoming version\n')),
     });
@@ -138,8 +139,8 @@ describe('runMerge into the workspace', () => {
 
   it("names a base kept that couldn't be saved among the files that still hold yours", async () => {
     const { cm } = fakeCmClient({
-      'status --short': '',
-      'merge br:/main/task': ({ args }) => (args.includes('--merge') ? '' : mergeOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30))),
+      status: changedStatus(),
+      'merge br:/main/task': ({ args }) => (args.includes('--merge') ? '' : mergePreviewOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30))),
       ls: treeListing('eco@local', 'src/a.txt'),
       cat: fakeCat(() => undefined),
     });
@@ -152,9 +153,9 @@ describe('runMerge into the workspace', () => {
   it('writes every incoming version kept even when cancelled once cm merged: the merge is in the workspace by then', async () => {
     const cancel = new AbortController();
     const { cm } = fakeCmClient({
-      'status --short': '',
+      status: changedStatus(),
       'merge br:/main/task': ({ args }) => {
-        if (!args.includes('--merge')) return mergeOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31));
+        if (!args.includes('--merge')) return mergePreviewOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31));
         cancel.abort();
         return '';
       },
@@ -171,8 +172,8 @@ describe('runMerge into the workspace', () => {
 
   it("completes, naming the files that still hold yours, when cm couldn't save their incoming version: the merge is in the workspace", async () => {
     const { cm } = fakeCmClient({
-      'status --short': '',
-      'merge br:/main/task': ({ args }) => (args.includes('--merge') ? '' : mergeOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31))),
+      status: changedStatus(),
+      'merge br:/main/task': ({ args }) => (args.includes('--merge') ? '' : mergePreviewOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31))),
       ls: treeListing('eco@local', 'src/a.txt', 'src/b.txt'),
       cat: fakeCat((spec) => (spec.startsWith('itemid:30#') ? 'incoming version\n' : undefined)),
     });
@@ -185,8 +186,8 @@ describe('runMerge into the workspace', () => {
   /** A `cm` merging two kept incoming files, a.txt and b.txt, whose `cm cat` answers `cat`. */
   const keepingTwoIncoming = (cat: CmAnswer) =>
     fakeCmClient({
-      'status --short': '',
-      'merge br:/main/task': ({ args }) => (args.includes('--merge') ? '' : mergeOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31))),
+      status: changedStatus(),
+      'merge br:/main/task': ({ args }) => (args.includes('--merge') ? '' : mergePreviewOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31))),
       ls: treeListing('eco@local', 'src/a.txt', 'src/b.txt'),
       cat,
     });
@@ -226,8 +227,8 @@ describe('runMerge into the workspace', () => {
 
   it('reads the incoming version of a shelve from the shelve, whose revisions no changeset holds', async () => {
     const { cm, lines } = fakeCmClient({
-      'status --short': '',
-      'merge sh:7': ({ args }) => (args.includes('--merge') ? '' : mergeOutput(...CONTRIBUTORS, fileConflict('src/b.txt', 31))),
+      status: changedStatus(),
+      'merge sh:7': ({ args }) => (args.includes('--merge') ? '' : mergePreviewOutput(...CONTRIBUTORS, fileConflict('src/b.txt', 31))),
       ls: treeListing('eco@local', 'src/b.txt'),
       cat: '',
     });
@@ -269,10 +270,10 @@ describe('runMerge into the workspace', () => {
   });
 
   it('refuses to merge into a workspace with pending changes, without asking cm for the merge', async () => {
-    const { cm, lines } = mergingCm([], { pending: 'CH /src/a.txt\n' });
+    const { cm, lines } = mergingCm([], { pending: changedStatus('src/a.txt') });
 
     await expect(runMerge(cm, workspacePath, FROM_TASK, noDecisions, recordingContext().context)).rejects.toThrow(/pending changes/);
-    expect(lines()).toEqual(['status --short --controlledchanged --changed --localdeleted']);
+    expect(lines()).toEqual([statusRecordsArgs('--controlledchanged', '--changed', '--localdeleted').join(' ')]);
   });
 
   it('refuses when there is nothing to merge', async () => {
@@ -295,7 +296,7 @@ describe('runMerge into a server branch', () => {
   const serverCm = (finalOutput: string, onMerge: (args: string[]) => Promise<void> = async () => {}) =>
     fakeCmClient({
       'merge br:/main/task': async ({ args }) => {
-        if (!args.includes('--merge')) return mergeOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31));
+        if (!args.includes('--merge')) return mergePreviewOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31));
         await onMerge(args);
         return finalOutput;
       },
@@ -350,7 +351,7 @@ describe('runMerge into a server branch', () => {
     let resultFiles: Record<string, string> = {};
     const { cm, commands } = fakeCmClient({
       'merge br:/main/task': async ({ args }) => {
-        if (!args.includes('--merge')) return mergeOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('art/b.png', 31), fileConflict('art/c.png', 32));
+        if (!args.includes('--merge')) return mergePreviewOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('art/b.png', 31), fileConflict('art/c.png', 32));
         const { resolutions } = JSON.parse(await readFile(optionValue(args, '--fileconflictsresolutionsfile=')!, 'utf8')) as { resolutions: { path: string; resultFile: string }[] };
         for (const { path, resultFile } of resolutions) resultFiles[path] = await readFile(resultFile, 'utf8');
         return mergeOutput(['CHANGESET', 'cs:12@/main@eco@local']);
@@ -373,7 +374,7 @@ describe('runMerge into a server branch', () => {
 
   it("merges nothing when a base kept can't be saved for cm to check in", async () => {
     const { cm, lines } = fakeCmClient({
-      'merge br:/main/task': ({ args }) => (args.includes('--merge') ? '' : mergeOutput(...CONTRIBUTORS, fileConflict('art/b.png', 31))),
+      'merge br:/main/task': ({ args }) => (args.includes('--merge') ? '' : mergePreviewOutput(...CONTRIBUTORS, fileConflict('art/b.png', 31))),
       ls: treeListing('eco@local', 'art/b.png'),
       cat: fakeCat(() => undefined),
     });

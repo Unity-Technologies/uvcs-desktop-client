@@ -5,14 +5,13 @@ import type { QueryFilter } from '@shared/domain/query';
 import { cmPlace } from '../cm/cmPlace';
 import { FOUND_REVIEWS, type RawCodeReview } from '../cm/codeReviewRecords';
 import { equalsCondition, findArgs } from '../cm/findQuery';
-import { readRecords } from '../cm/formatRecords';
+import { layoutReader } from '../cm/formatRecords';
 import type { BranchNamesContext, ServiceContext } from './ServiceContext';
 
 export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }: BranchNamesContext): CodeReviewsApi {
-  async function findReviews(place: Place, conditions: string[], filter: QueryFilter): Promise<RawCodeReview[]> {
+  function findReviews(place: Place, conditions: string[], filter: QueryFilter): Promise<RawCodeReview[]> {
     const at = cmPlace(place);
-    const output = await cm.query(findArgs(FOUND_REVIEWS, filter, 'date desc', conditions, at.repository), at.options);
-    return readRecords(FOUND_REVIEWS, output);
+    return cm.queryRecords(findArgs(FOUND_REVIEWS, filter, 'date desc', conditions, at.repository), layoutReader(FOUND_REVIEWS), at.options);
   }
 
   function findReviewById(place: Place, reviewId: number): Promise<RawCodeReview[]> {

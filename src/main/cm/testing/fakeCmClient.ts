@@ -3,6 +3,8 @@ import { CmError } from '../CmError';
 import { extractErrorMessage } from '../errorMessage';
 import { RecordReader, type ReadRecord } from '../formatRecords';
 import { namesOrganizationById } from '../organizationIds';
+import type { StreamReader } from '../outputReading';
+import { XmlElementReader, type ReadElement } from '../XmlElementReader';
 
 /**
  * How a command reached `cm`: as a quick one, a pooled `cm shell` (`query`, `queryRecords`), or as a long one, a process
@@ -16,7 +18,7 @@ export interface FakeCmCommand {
   /** The arguments joined by spaces, as the command log shows them without `cm`: `find branch --xml`. */
   line: string;
   options: CmRunOptions;
-  /** Whether its output was read into records as it arrived (`queryRecords`, `executeRecords`), not as one string. */
+  /** Whether its output was read as it arrived (`queryRecords`, `executeRecords`, `queryXmlElements`), not as text. */
   readsRecords: boolean;
 }
 
@@ -78,23 +80,28 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
     const answer = answers[key]!;
     const result = typeof answer === 'function' ? await answer(command) : answer;
     if (result instanceof CmFailure) throw failure(command, result, commands.length);
+    // As `CmClient`, a command whose lines are listened to hands each line its output prints.
+    options.onOutputLine && result.split(/\r\n|\r|\n/).filter(Boolean).forEach(options.onOutputLine);
     return result;
   }
 
-  async function runRecords<T>(via: CmVia, args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions): Promise<T[]> {
+  async function runStreamed<T>(via: CmVia, args: string[], reader: StreamReader & { finish(): T[] }, options?: CmRecordsOptions): Promise<T[]> {
     const output = await run(via, args, options, true);
-    // Read as `CmClient` reads them: as they arrive, text after the last record no record.
-    const records = new RecordReader(readRecord);
-    records.read(Buffer.from(output, 'utf8'));
-    return records.finish();
+    // Read as `CmClient` reads them: as they arrive, text after the last item no item.
+    reader.read(Buffer.from(output, 'utf8'));
+    return reader.finish();
   }
 
   const fake = {
     executable,
     query: (args: string[], options?: CmRunOptions) => run('query', args, options),
     execute: (args: string[], options?: CmRunOptions) => run('execute', args, options),
-    queryRecords: <T>(args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions) => runRecords('query', args, readRecord, options),
-    executeRecords: <T>(args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions) => runRecords('execute', args, readRecord, options),
+    queryRecords: <T>(args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions) => runStreamed('query', args, new RecordReader(readRecord), options),
+    executeRecords: <T>(args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions) => runStreamed('execute', args, new RecordReader(readRecord), options),
+    queryXmlElements: <T>(args: string[], element: string, readElement: ReadElement<T>, options: CmRecordsOptions & { arrays?: string[] } = {}) => {
+      const { arrays, ...runOptions } = options;
+      return runStreamed('query', args, new XmlElementReader(element, readElement, arrays), runOptions);
+    },
     warmUp: (cwd = '') => void warmedUp.push(cwd),
     show: (cwd: string) => void shown.push(cwd),
     release: (cwd: string) => void released.push(cwd),

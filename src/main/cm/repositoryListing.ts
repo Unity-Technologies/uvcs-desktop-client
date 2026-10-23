@@ -7,7 +7,7 @@
 
 import type { RepositoryListing, RepositorySummary, UnityProject } from '@shared/domain/repository';
 import { projectOfRepository } from '@shared/domain/organizations';
-import { parseRecords, recordFormat } from './formatRecords';
+import { recordFormat } from './formatRecords';
 
 const REPOSITORY_FIELDS = ['repid', 'repname', 'repserver', 'repowner'] as const;
 
@@ -22,11 +22,14 @@ export function repositoryListArgs(server: string, { withProjects }: { withProje
   return ['repository', 'list', server, '--type=all', `--format=${recordFormat([...REPOSITORY_FIELDS, 'reptype', 'repguid'])}`];
 }
 
-/** The repositories and projects `repositoryListArgs` printed, each by name; a repository knows its project. */
-export function parseRepositoryListing(output: string, server: string, { withProjects }: { withProjects: boolean }): RepositoryListing {
+/**
+ * The repositories and projects of the records `repositoryListArgs` printed (`readFields`), each by name; a repository
+ * knows its project.
+ */
+export function repositoryListingOf(records: readonly string[][], server: string, { withProjects }: { withProjects: boolean }): RepositoryListing {
   const repositories: RepositorySummary[] = [];
   const projects: UnityProject[] = [];
-  for (const [id = '', name = '', repositoryServer = server, owner = '', type = '', guid = ''] of parseRecords(output)) {
+  for (const [id = '', name = '', repositoryServer = server, owner = '', type = '', guid = ''] of records) {
     if (withProjects && type === PROJECT_TYPE) projects.push({ name, guid });
     else if (!withProjects || REPOSITORY_TYPES.has(type)) repositories.push({ id, name, server: repositoryServer, owner, spec: `${name}@${repositoryServer}` });
   }

@@ -11,10 +11,10 @@ import {
 } from '@shared/domain/incoming';
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
-import { DIFF_FORMAT, parseDiffEntries } from '../cm/diffEntries';
+import { queryDiffEntries } from '../cm/diffEntries';
 import { FOUND_CHANGESETS } from '../cm/foundObjects';
 import { equalsCondition, findArgs } from '../cm/findQuery';
-import { readRecords, recordFormat } from '../cm/formatRecords';
+import { layoutReader, recordFormat } from '../cm/formatRecords';
 import { readWorkspaceLoad } from '../cm/workspaceStatus';
 import { readPendingChanges } from '../workspace/readPendingChanges';
 import { findUpdateBlockers, findUpdateConflicts } from './updateCollisions';
@@ -82,13 +82,10 @@ export async function readIncomingChanges(cm: CmClient, workspacePath: string): 
   const { summary, changesets, moreChangesets } = await readNewestIncomingChangesets(cm, workspacePath);
   if (!summary.branch || changesets.length === 0) return { ...summary, changesets, moreChangesets, files: [], conflicts: [], blockedPaths: [] };
 
-  const [diffOutput, { changes: local }] = await Promise.all([
-    cm.query(['diff', spec.changeset(summary.loadedChangeset), spec.changeset(summary.headChangeset), '--repositorypaths', `--format=${DIFF_FORMAT}`], {
-      cwd: workspacePath,
-    }),
+  const [files, { changes: local }] = await Promise.all([
+    queryDiffEntries(cm, [spec.changeset(summary.loadedChangeset), spec.changeset(summary.headChangeset)], { cwd: workspacePath }),
     readPendingChanges(cm, workspacePath, ['--controlledchanged', '--changed']),
   ]);
-  const files = parseDiffEntries(diffOutput);
 
   return { ...summary, changesets, moreChangesets, files, conflicts: findUpdateConflicts(files, local), blockedPaths: findUpdateBlockers(files, local) };
 }
@@ -117,7 +114,7 @@ async function readNewestIncomingChangesets(cm: CmClient, workspacePath: string)
 export async function readIncomingChangesetPage(cm: CmClient, workspacePath: string, request: IncomingChangesetsRequest): Promise<IncomingChangesetPage> {
   const { branch, loadedChangeset, olderThan, limit } = request;
   const conditions = [`changesetid > ${loadedChangeset}`, ...(olderThan === undefined ? [] : [`changesetid < ${olderThan}`])];
-  const output = await cm.query(findArgs(FOUND_CHANGESETS, { branch, limit: limit + 1 }, 'changesetid desc', conditions), { cwd: workspacePath });
-  const found = readRecords(FOUND_CHANGESETS, output);
+  const args = findArgs(FOUND_CHANGESETS, { branch, limit: limit + 1 }, 'changesetid desc', conditions);
+  const found = await cm.queryRecords(args, layoutReader(FOUND_CHANGESETS), { cwd: workspacePath });
   return { changesets: found.slice(0, limit), more: found.length > limit };
 }

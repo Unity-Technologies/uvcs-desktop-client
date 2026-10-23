@@ -1,13 +1,14 @@
 import type { LocksApi } from '@shared/api/locks';
 import { cmPlace } from '../cm/cmPlace';
-import { LOCK_LIST_FORMAT_ARGS, parseLocks } from '../cm/lockRecords';
+import { LOCK_LIST_FORMAT_ARGS, lockReader } from '../cm/lockRecords';
 import type { ServiceContext } from './ServiceContext';
 
 export function createLocksService({ cm }: ServiceContext): LocksApi {
   return {
     // Every lock command names its repository: in a workspace or outside every one, it reads the same.
-    async list(place, repository, { onlyMine, onlyThisWorkspace = false }) {
-      const output = await cm.query(
+    list(place, repository, { onlyMine, onlyThisWorkspace = false }) {
+      const server = repository.slice(repository.indexOf('@') + 1);
+      return cm.queryRecords(
         [
           'lock',
           'list',
@@ -17,10 +18,9 @@ export function createLocksService({ cm }: ServiceContext): LocksApi {
           ...(onlyThisWorkspace ? ['--onlycurrentworkspace'] : []),
           ...LOCK_LIST_FORMAT_ARGS,
         ],
+        lockReader(server),
         cmPlace(place).options,
       );
-      const server = repository.slice(repository.indexOf('@') + 1);
-      return parseLocks(output, server);
     },
 
     async unlock(workspacePath, locks, { remove }) {

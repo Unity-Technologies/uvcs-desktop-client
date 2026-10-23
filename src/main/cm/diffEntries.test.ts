@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { countCharactersRead } from '@shared/testing/countCharactersRead';
-import { parseDiffEntries } from './diffEntries';
-import { formatOutput } from './testing/cmOutput';
+import { mergedDiffEntries, readDiffEntry } from './diffEntries';
+import { formatOutput, recordsIn } from './testing/cmOutput';
+
+const parseDiffEntries = (output: string) => mergedDiffEntries(recordsIn(output, readDiffEntry));
 
 const GAME = '"game@local"';
 
