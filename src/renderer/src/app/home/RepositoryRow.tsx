@@ -52,15 +52,17 @@ export function RepositoryRow({ repository, project, projectGuids, workspaces, e
                 <Highlight text={title.name} />
               </span>
             </span>
-            <span className={styles.rowSubtitle}>
-              {title.project && (
-                <span className={styles.rowProject} data-tip={`In the project ${title.project.name}`}>
-                  <ProjectIcon guid={projectGuids.get(title.project.name)} size={12} />
-                  {title.project.named && <Highlight text={title.project.name} />}
-                </span>
-              )}
-              {title.project?.named && details.length > 0 && ' · '}
-              {details.join(' · ')}
+            <span className={styles.repositorySubtitle}>
+              {title.project && <ProjectIcon guid={projectGuids.get(title.project)} size={14} />}
+              <span className={styles.repositorySubtitleText}>
+                {title.project && (
+                  <>
+                    <Highlight text={title.project} />
+                    {details.length > 0 && ' · '}
+                  </>
+                )}
+                {details.join(' · ')}
+              </span>
             </span>
           </span>
         </button>

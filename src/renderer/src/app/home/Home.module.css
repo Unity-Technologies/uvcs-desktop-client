@@ -350,6 +350,22 @@
   white-space: nowrap;
 }
 
+/* A repository's quiet line: across all projects, its project's cube centered on the line, before the text. */
+.repositorySubtitle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.repositorySubtitleText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .rowChip {
   flex: none;
   max-width: 28%;
@@ -451,18 +467,6 @@
   flex-direction: column;
   gap: 8px;
   max-width: 420px;
-}
-
-/* A repository's project, across all projects, at the start of its quiet line: the project's cube, and its name when
-   it isn't the repository's own. */
-.rowProject {
-  white-space: nowrap;
-}
-
-/* The cube sits on the text's middle, a small gap before the project's name. */
-.rowProject > span:first-child {
-  margin-right: 4px;
-  vertical-align: -2px;
 }
 
 /* A project under its organization, in All workspaces' place filter: indented past the organization's icon. */

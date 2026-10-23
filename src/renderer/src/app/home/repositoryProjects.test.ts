@@ -67,13 +67,13 @@ describe('repositoryLabels', () => {
   });
 
   it('names its project apart across all projects', () => {
-    expect(repositoryLabels(GAME, null)).toEqual({ name: 'Game', project: { name: 'Racing', named: true } });
+    expect(repositoryLabels(GAME, null)).toEqual({ name: 'Game', project: 'Racing' });
   });
 
-  it("doesn't repeat a project's name on the repository named after it", () => {
+  it('names the project of a repository named after it too, so every row says where it is', () => {
     expect(repositoryLabels(repository('My project (11)/My project (11)', 'My project (11)'), null)).toEqual({
       name: 'My project (11)',
-      project: { name: 'My project (11)', named: false },
+      project: 'My project (11)',
     });
   });
 
