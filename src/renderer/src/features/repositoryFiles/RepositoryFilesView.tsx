@@ -60,7 +60,7 @@ export function RepositoryFilesView({ place }: { place: RepositoryPlace }) {
     <>
       {header}
       {body.kind === 'error' && <EmptyState title="Couldn't read the branch" description={body.message} />}
-      {body.kind === 'pickBranch' && <EmptyState title="Pick a branch" description="Its latest files show here." />}
+      {body.kind === 'pickBranch' && <EmptyState title="No /main branch" description="Pick the branch whose latest files to show." />}
       {(body.kind === 'loading' || body.kind === 'chosenGone') && <RepositoryTreeSkeleton widthKey={WIDTH_KEY} />}
       {body.kind === 'tree' && (
         <RepositoryTree

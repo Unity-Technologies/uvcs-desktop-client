@@ -15,11 +15,7 @@ export function filesBranchToRead(chosen: ChosenBranch | undefined): string {
   return chosen?.name ?? MAIN_BRANCH_NAME;
 }
 
-/**
- * What the Files view of a repository explored without a workspace shows, from the branch it read
- * (`filesBranchToRead`): its latest tree; the branch picked gone, renamed or another one by that name since (its GUID
- * no longer the one picked), the main branch again; no main branch by that name (renamed), a branch to pick.
- */
+/** What the Files view of a repository explored without a workspace shows (`repositoryFilesBodyOf`). */
 export type RepositoryFilesBody =
   | { kind: 'loading' }
   | { kind: 'error'; message: string }
@@ -27,6 +23,11 @@ export type RepositoryFilesBody =
   | { kind: 'pickBranch' }
   | { kind: 'tree'; branch: Branch };
 
+/**
+ * What Files shows from the branch it read (`filesBranchToRead`): its latest tree; the branch picked gone, renamed or
+ * another one by that name since (its GUID no longer the one picked), the main branch again; no main branch by that
+ * name (renamed), a branch to pick.
+ */
 export function repositoryFilesBodyOf(read: { data: Branch | null | undefined; error: Error | null }, chosen: ChosenBranch | undefined): RepositoryFilesBody {
   if (read.error) return { kind: 'error', message: read.error.message };
   if (read.data === undefined) return { kind: 'loading' };

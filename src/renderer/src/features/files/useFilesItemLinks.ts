@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import type { TreeItem } from '@shared/domain/explorer';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
-
 import { repositoryLinkTo } from '../../app/links/linkTo';
 import { useNavigation } from '../../app/navigation/navigationStore';
 import { useOfferSelectedObjectLink } from '../../app/links/selectedObjectLink';
