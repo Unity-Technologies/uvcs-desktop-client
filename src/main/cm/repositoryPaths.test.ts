@@ -32,6 +32,16 @@ describe('readListedPath', () => {
       { path: 'Assets/Scripts/Player.cs', isDirectory: false },
     ]);
   });
+
+  it('reads an xlink as the folder the listing walks into', () => {
+    const reader = new RecordReader(readListedPath);
+    reader.read(Buffer.from(formatOutput(['dir', '/'], ['xlink', '/lib'], ['txt', '/lib/theme.css']), 'utf8'));
+
+    expect(reader.finish()).toEqual([
+      { path: 'lib', isDirectory: true },
+      { path: 'lib/theme.css', isDirectory: false },
+    ]);
+  });
 });
 
 describe('a tree file line', () => {
