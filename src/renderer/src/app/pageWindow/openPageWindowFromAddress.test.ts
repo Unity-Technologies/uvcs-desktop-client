@@ -1,6 +1,6 @@
 import '../../testing/fakeWindow';
 import { afterEach, describe, expect, it } from 'vitest';
-import { workspacePlace } from '@shared/domain/place';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { pageWindowQuery, startingPlaceQuery } from '@shared/startingPlace';
 import { useNavigation } from '../navigation/navigationStore';
 import type { Page } from '../navigation/pages';
@@ -30,6 +30,15 @@ describe('openPageWindowFromAddress', () => {
     expect(useNavigation.getState().pages).toEqual([page]);
     expect(usePageWindow.getState().isPageWindow).toBe(true);
     expect(queryClient.getQueryData(folderMissingQuery('/work/game').queryKey)).toBe(false);
+  });
+
+  it('starts a page window of a repository explored without a workspace in that repository', () => {
+    const page: Page = { kind: 'diff', title: 'Changeset 7', target: { kind: 'changeset', changesetId: 7 } };
+
+    expect(openPageWindowFromAddress(addressOf(pageWindowQuery(repositoryPlace('game@local'), page)))).toBe(true);
+
+    expect(useSession.getState()).toMatchObject({ place: repositoryPlace('game@local'), workspacePath: null });
+    expect(useNavigation.getState().pages).toEqual([page]);
   });
 
   it('starts with the row of what its page shows as its window had read it, without reading it again', () => {

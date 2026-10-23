@@ -32,14 +32,14 @@ describe('the pages that open in a window of their own', () => {
 describe('opening a page in a window of its own', () => {
   it("hands a diff's files already read to its window, read at the same branch head", () => {
     const asked: unknown[] = [];
-    const opening = pageWindowOpening('/work/game', DIFF, (diff) => (asked.push(diff.branchHead), [PLAYER]));
+    const opening = pageWindowOpening(workspacePlace('/work/game'), DIFF, (diff) => (asked.push(diff.branchHead), [PLAYER]));
 
     expect(opening).toEqual({ place: workspacePlace('/work/game'), page: DIFF, diff: { target: BRANCH_TARGET, entries: [PLAYER] } });
     expect(asked).toEqual([42]);
   });
 
   it("hands nothing when the diff's files weren't read, nor for another page", () => {
-    expect(pageWindowOpening('/work/game', DIFF, () => undefined)).toEqual({ place: workspacePlace('/work/game'), page: DIFF });
-    expect(pageWindowOpening('/work/game', HISTORY, () => [PLAYER])).toEqual({ place: workspacePlace('/work/game'), page: HISTORY });
+    expect(pageWindowOpening(workspacePlace('/work/game'), DIFF, () => undefined)).toEqual({ place: workspacePlace('/work/game'), page: DIFF });
+    expect(pageWindowOpening(workspacePlace('/work/game'), HISTORY, () => [PLAYER])).toEqual({ place: workspacePlace('/work/game'), page: HISTORY });
   });
 });

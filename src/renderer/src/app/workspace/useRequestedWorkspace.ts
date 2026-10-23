@@ -5,7 +5,7 @@ import { useOpenWorkspace } from './useOpenWorkspace';
 
 /**
  * Opens the workspace the main process asks this window to open: the one it was opened for (already open from the
- * page's address, `openWorkspaceFromAddress`: this remembers it as recent) and one picked from the OS recent documents
+ * page's address, `openPlaceFromAddress`: this remembers it as recent) and one picked from the OS recent documents
  * while the app runs.
  */
 export function useRequestedWorkspace(): void {

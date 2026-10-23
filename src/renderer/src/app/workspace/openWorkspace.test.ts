@@ -12,7 +12,7 @@ import { useNavigation } from '../navigation/navigationStore';
 import type { Page } from '../navigation/pages';
 import { queryClient } from '../queryClient';
 import { openFolder } from './openWorkspaceFolder';
-import { openWorkspaceFromAddress } from './openWorkspaceFromAddress';
+import { openPlaceFromAddress } from './openPlaceFromAddress';
 import { useSession } from './sessionStore';
 import { openUnlessShownElsewhere, returnToWorkspace } from './useOpenWorkspace';
 
@@ -86,7 +86,7 @@ describe('a window reopened on a view after an update', () => {
     fakeApi.answer('system.addRecentDocument', () => undefined);
     const location = { search: `?${new URLSearchParams(startingPlaceQuery(workspacePlace('/ws'), 'branchExplorer'))}`, pathname: '/index.html' };
     // Replacing the address drops its query, as a browser does.
-    openWorkspaceFromAddress({ location, history: { replaceState: () => void (location.search = '') } });
+    openPlaceFromAddress({ location, history: { replaceState: () => void (location.search = '') } });
 
     await openUnlessShownElsewhere('/ws', useSession.getState().openWorkspace);
 
