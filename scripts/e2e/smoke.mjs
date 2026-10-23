@@ -186,6 +186,14 @@ try {
       await settled();
     });
   }
+  await step("A repository's file found by name", async () => {
+    await window.getByRole('navigation').getByRole('button', { name: /^Files/ }).click();
+    await main.getByRole('button', { name: 'Go to file' }).click();
+    const dialog = window.getByRole('dialog', { name: 'Go to file' });
+    await dialog.locator('input').fill('player');
+    await dialog.getByText('player.cs', { exact: false }).first().click();
+    await main.getByRole('row', { name: /player\.cs/ }).first().waitFor();
+  });
   await step("A repository's changeset diff, in a new window too", async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Changesets/ }).click();
     await main.getByRole('button', { name: 'Open diff' }).click();

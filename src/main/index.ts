@@ -21,6 +21,7 @@ import { RevisionCat } from './files/RevisionCat';
 import { removeLeftOverTempDirectories } from './files/tempFile';
 import { WorkspaceCopies } from './files/WorkspaceCopies';
 import { createServices } from './services/createServices';
+import { RepositoryPathSearch } from './files/RepositoryPathSearch';
 import { RepositoryTrees } from './unity/RepositoryTrees';
 import { RevisionDownloads } from './unity/RevisionDownloads';
 import { CommandLogRelay } from './startup/commandLogRelay';
@@ -63,6 +64,7 @@ watchers.listen({ changed: (workspacePath, change) => workspaceCopies.forgetChan
 const revisionCat = new RevisionCat({ cm });
 const revisionDownloads = new RevisionDownloads({ cm, copies: workspaceCopies });
 const repositoryTrees = new RepositoryTrees({ cm, downloads: revisionDownloads });
+const repositoryPaths = new RepositoryPathSearch(cm);
 const operations = trackOperations(watchers, showProgressOnAppIcon());
 const updates = createAppUpdates({
   writesRunning: () => operations.writesRunning(),
@@ -74,7 +76,10 @@ const windows = new WorkspaceWindows({
   workspaceOf: (viewer) => watchers.workspaceOf(viewer),
   onWindowsChanged: () => app.isReady() && installMenuBar(),
   onClosed: (viewer) => watchers.release(viewer),
-  onRepositoryLeft: (repository) => branchNames.forget(repositoryPlace(repository)),
+  onRepositoryLeft: (repository) => {
+    branchNames.forget(repositoryPlace(repository));
+    repositoryPaths.forget(repository);
+  },
   onLastWindowClosing: () => quitting.lastWindowClosing(),
 });
 const installMenuBar = appMenuInstaller(windows, updates);
@@ -115,6 +120,7 @@ const api = createServices({
   revisionCat,
   revisionDownloads,
   repositoryTrees,
+  repositoryPaths,
   branchNames,
 });
 const early = new EarlyCalls(apiMethods(api));
@@ -123,6 +129,7 @@ function start(launched: Promise<void>, readAhead: FirstScreenRead, links: LinkR
   if (!app.isPackaged) app.dock?.setIcon(DEVELOPMENT_DOCK_ICON);
   sendSettingsChanges(settings, (changed) => sendEvent('settingsChanged', changed));
   void revisionDownloads.removeLeftOvers();
+  void repositoryPaths.removeLeftOvers();
   void removeLeftOverTempDirectories();
   registerApi(api, early);
   followAppTheme(settings);
@@ -156,4 +163,5 @@ app.on('window-all-closed', () => {
 app.on('will-quit', () => {
   cm.dispose();
   revisionDownloads.dispose();
+  repositoryPaths.dispose();
 });

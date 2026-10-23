@@ -45,6 +45,36 @@ lives (`useRepositoryFilesStore`). An item and its lines link as the workspace's
 Create workspace makes a workspace on the main branch, as the New workspace dialog does, whatever branch Files shows:
 its Files then shows the workspace's disk. Switching it to the branch is the workspace's own branch switch.
 
+## Finding a file
+
+Go to file (⌘P, `/` in the tree, the palette's "Go to file…", the search button in Files' header) finds a file or
+folder of the branch Files shows by name, as a workspace's does (`goToRepositoryFile`), from the first character
+(`searchesFor`: any query costs one read of the tree's file, whatever its length). `cm` filters no tree by name, so
+the changeset's whole tree is listed once (`RepositoryPathSearch`), as Go to file opens (`prepareRepositoryPaths`):
+opening it says a search is coming, and the listing's seconds pass while the query is typed.
+
+- **One `cm ls / -R --tree=cs:<head>@<repository> --format={type}␟{path}␞`** (`repositoryPathsArgs`), in a process of
+  its own (`executeRecords`): cancellable, and it never holds a pooled shell for its seconds. Its records are read as
+  they arrive, each written to a file of the session's (`SessionFolder`, `uvcs-trees-<pid>-…`) and offered to the
+  searches waiting, and nothing is kept: a search keeps its best 60 alone (`BestPaths`, ranked as the renderer's lists
+  rank, `shared/fuzzyScore`). The searches asked meanwhile join it (`repositoryPathsFound` tells each the best so far);
+  the dialog says it reads the files from the server meanwhile (`repositoryFileSearchView`).
+- **Every later search of that changeset reads the file**, never the server: on a large repository (79,000 items, 6.7 MB) about
+  120 ms. The file is written as `.partial` and renamed once whole, so a listing that failed or stopped leaves none.
+- **A repository keeps the 3 trees searched last** (`TREES_KEPT`): a window or two going back and forth between
+  branches never lists one again. Its last window leaving it deletes its trees (`forget`, from `onRepositoryLeft`), the
+  app quitting deletes them all (`dispose`), and the folder a crashed session left is deleted as the next one starts
+  (`removeLeftOvers`). A tree whose file went (the OS clearing its temp folder) is listed again.
+- A newer query stops the search before it (`stopFindingRepositoryPaths`), at once; the listing goes on for the next.
+  Each search is told apart by an id unique across windows, and its results go to the window that asked, even when it
+  joined a listing another window started.
+- Paths read as the tree names them: forward slashes on every OS (Windows' `cm` prints `/Assets\Player.cs`), and an
+  xlink as a folder.
+
+`cm` sends the tree only once it has built it, so the first results come with the whole listing: on that repository
+about 10 s from opening Go to file, 5 of them `cm ls` resolving each item's owner one by one, even with a format that
+prints no owner. Closing Go to file leaves the listing running, for the next one.
+
 ## What it offers, and what it doesn't
 
 Everything that reads or changes the server's objects works as in a workspace, through the same code
@@ -74,8 +104,8 @@ window shows a workspace now and stops counting it as exploring (`WorkspaceWindo
 ## Tried and dropped
 
 - A temporary workspace for each repository explored, the official client's way: ARCHITECTURE.md "Places".
-- Finding a file by name in a repository's Files (Go to file, the palette's files). `cm` filters no tree by name:
-  `cm find revision` takes an `item` but no pattern ("Integer operator like is not currently supported for item"), and
-  there is no `cm find item`. The only way is a whole tree's `cm ls -R --tree=…` per changeset searched, hundreds of
-  thousands of paths from a shared server to find one; folder by folder is no better. Files filters the folders open,
-  and a workspace's Go to file walks its own disk, which costs the server nothing.
+- Asking `cm` to filter a tree by name, for Go to file: it can't. `cm find revision` takes an `item` but no pattern
+  ("Integer operator like is not currently supported for item"), and there is no `cm find item`; hence one whole
+  listing per changeset ("Finding a file").
+- Keeping a repository's whole tree in memory to search it, as a workspace's Go to file keeps its paths: tens of MB of
+  strings for a big repository, held for every changeset searched. The file costs the same once, on disk.
