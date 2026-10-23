@@ -58,8 +58,6 @@ append src/app/Sibling.cs "changed after the move"
 append src/lib/Plain.cs "a plain change"
 cm co src/lib/Plain.cs >/dev/null 2>&1 || true
 # Moved outside cm, with content too different for the detection to tell: deleted and private for cm.
-rm src/lib/Rewritten.cs && printf '%s
-' 'namespace Game {' '  record Rewrote(int Id, string Name);' '}' > src/app/Rewrote.cs
-mv src/legacy src/modern && printf '%s
-' 'static class Importer { /* rewritten */ }' > src/modern/Importer.cs
+rm src/lib/Rewritten.cs && printf '%s\n' 'namespace Game {' '  record Rewrote(int Id, string Name);' '}' > src/app/Rewrote.cs
+mv src/legacy src/modern && printf '%s\n' 'static class Importer { /* rewritten */ }' > src/modern/Importer.cs
 echo "Built $REPO in $WK"
