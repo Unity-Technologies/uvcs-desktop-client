@@ -18,6 +18,7 @@ import { hotkey } from '../../lib/shortcutRegistry';
 
 export function PageFrame({ page }: { page: Page }) {
   const { view, pages, goBack } = useNavigation();
+  const place = usePlace();
   const previous = pages.at(-2);
   useShortcut(hotkey('back'), goBack);
   useBackButtons(goBack);
@@ -38,7 +39,7 @@ export function PageFrame({ page }: { page: Page }) {
         )}
       </div>
       <div className={styles.content}>
-        {showsPage(usePlace(), page) ? (
+        {showsPage(place, page) ? (
           <PageContent page={page} />
         ) : (
           <EmptyState icon={<FolderX size={20} />} title="This needs a workspace" description="Create a workspace of this repository to merge into it." />

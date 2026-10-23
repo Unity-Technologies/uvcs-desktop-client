@@ -177,7 +177,7 @@ describe('a repository explored without a workspace', () => {
     expect(windows.placeIn(asBrowserWindow(window))).toEqual(GAME_REPOSITORY);
   });
 
-  it("keeps the page windows of the workspace a window made of the repository, whichever it hears of first", () => {
+  it("keeps the page windows of the workspace a window made of the repository, its watch heard before it left the repository", () => {
     const { windows, open, shows } = setUp();
     const window = open();
     windows.repositoryShown(window.webContents.id, 'game@local');
