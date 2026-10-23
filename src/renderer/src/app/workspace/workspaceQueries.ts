@@ -1,4 +1,5 @@
-import { queryOptions, useQueries, useQuery } from '@tanstack/react-query';
+import { queryOptions, useQueries, useQuery, type QueryClient } from '@tanstack/react-query';
+import type { RepositoryListing, RepositorySummary, UnityProject } from '@shared/domain/repository';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -89,12 +90,41 @@ export function useServers() {
   return useQuery(serversQuery);
 }
 
-export function useRepositories(server: string | null) {
-  return useQuery({
+/** What a server holds, read once for its repositories and its projects alike (`useRepositories`, `useProjects`). */
+function repositoryListingQuery(server: string | null) {
+  return queryOptions({
     queryKey: queryKeys.repositories(server ?? ''),
     queryFn: () => api.repositories.list(server!),
     enabled: server !== null,
     staleTime: 60_000,
   });
+}
+
+const repositoriesOf = (listing: RepositoryListing): RepositorySummary[] => listing.repositories;
+const projectsOf = (listing: RepositoryListing): UnityProject[] => listing.projects;
+
+export function useRepositories(server: string | null) {
+  return useQuery({ ...repositoryListingQuery(server), select: repositoriesOf });
+}
+
+/** A Unity organization's projects by name, empty ones too; none elsewhere. Read with its repositories. */
+export function useProjects(server: string | null) {
+  return useQuery({ ...repositoryListingQuery(server), select: projectsOf });
+}
+
+/**
+ * The projects of the organizations already read, by server: for where projects show with no reason to list an
+ * organization (All workspaces' places). Nothing is asked of a server for them.
+ */
+export function useReadProjects(servers: readonly string[]): ReadonlyMap<string, UnityProject[]> {
+  return useQueries({
+    queries: servers.map((server) => ({ ...repositoryListingQuery(server), enabled: false, select: projectsOf })),
+    combine: (results) => new Map(results.flatMap((result, index) => (result.data ? [[servers[index]!, result.data] as const] : []))),
+  });
+}
+
+/** The repositories of `server` already read, for a check that reads nothing (a name taken). */
+export function listedRepositories(queryClient: QueryClient, server: string): RepositorySummary[] {
+  return queryClient.getQueryData<RepositoryListing>(queryKeys.repositories(server))?.repositories ?? [];
 }
 

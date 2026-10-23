@@ -34,6 +34,7 @@ export function createWindowsService({ windows, handedOverDiffs }: ServiceContex
     openPageInWorkspaceWindow: async (page) => windows.openInWorkspaceWindow(callerId(), page),
     takeLink: async () => windows.takeLink(callerId()),
     openLinkIn: async (place, link) => windows.openLinkIn(callerId(), place, link),
+    openLinkAtHome: async (link) => windows.openLinkAtHome(callerId(), link),
     shownWorkspaces: async () => windows.shownWorkspaces(),
   };
 }

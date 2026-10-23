@@ -53,6 +53,11 @@ export interface WindowsApi {
    * (`openHere`); else a new window opens on the place and takes the link (`handedOver`).
    */
   openLinkIn(place: Place, link: string): Promise<'handedOver' | 'openHere'>;
+  /**
+   * Opens a link to a server's repositories on a home screen: this window's when it shows it (`openHere`); else
+   * another window showing it, or a new one, comes forward and takes the link (`handedOver`).
+   */
+  openLinkAtHome(link: string): Promise<'handedOver' | 'openHere'>;
   /** The workspaces the workspace windows show now, the most recently focused one's first. */
   shownWorkspaces(): Promise<string[]>;
 }

@@ -97,6 +97,19 @@
   --diff-moved-tint: color-mix(in srgb, var(--change-moved) 75%, var(--bg-surface));
   --diff-moved-edited: color-mix(in srgb, var(--change-moved) 7%, transparent);
   --diff-moved-word: color-mix(in srgb, var(--change-moved) 28%, transparent);
+  /* Unity projects: a white cube on one of these, the colors every Unity Version Control client draws a project in,
+     picked by its GUID (`PROJECT_COLORS`, `projectColor`), so a project looks the same everywhere. Both themes: they
+     are the project's own, as an avatar's fill is. Written as the other clients have them, amber and orange included,
+     whose white cube is under 3:1: the tile is how people recognize a project across clients, and its name is always
+     beside it, so the tile carries nothing the text doesn't. */
+  --project-glyph: #ffffff;
+  --project-unknown: #8c959f;
+  --project-crimson: #e93d82;
+  --project-orange: #f76300;
+  --project-amber: #ffa600;
+  --project-teal: #12a594;
+  --project-indigo: #3e63dd;
+  --project-violet: #6e56cf;
 }
 
 :root,

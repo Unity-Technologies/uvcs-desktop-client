@@ -13,14 +13,16 @@ interface SearchFieldProps extends Pick<InputHTMLAttributes<HTMLInputElement>, '
   onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
   /** A tooltip naming the shortcut that comes to the field. */
   tip?: { text: string; shortcut: string };
+  /** Drawn as a popover's search bar, across its top with a rule under it, rather than as a bordered field. */
+  bare?: boolean;
 }
 
 export const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(function SearchField(
-  { value, onChange, placeholder = 'Filter', autoFocus, width = 220, onKeyDown, tip, ...aria },
+  { value, onChange, placeholder = 'Filter', autoFocus, width = 220, onKeyDown, tip, bare, ...aria },
   ref,
 ) {
   return (
-    <div className={styles.search} style={{ width }} data-tip={tip?.text} data-tip-shortcut={tip?.shortcut}>
+    <div className={styles.search} style={{ width }} data-bare={bare || undefined} data-tip={tip?.text} data-tip-shortcut={tip?.shortcut}>
       <Search size={13} className={styles.searchIcon} />
       <input
         ref={ref}

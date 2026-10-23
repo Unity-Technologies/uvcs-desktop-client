@@ -2,7 +2,7 @@ import { repositoryPlace, workspacePathOf, workspacePlace, type Place } from '@s
 import type { WorkspaceHead, WorkspaceLocation, WorkspaceSelector, WorkspaceSummary } from '@shared/domain/workspace';
 import { repositorySpec } from '@shared/domain/specs';
 import { formatLink } from '@shared/links/formatLink';
-import type { RepositoryLink, WorkspaceLink } from '@shared/links/link';
+import type { RepositoryLink, ServerLink, WorkspaceLink } from '@shared/links/link';
 import { sameServer } from '@shared/links/linkSegments';
 import { parseLink } from '@shared/links/parseLink';
 import { api } from '../../api/client';
@@ -12,6 +12,8 @@ import { requestLineFocus } from '../../features/pendingChanges/changesLineFocus
 import { changeRowKey } from '../../features/pendingChanges/changeRows';
 import { pendingChangesQuery } from '../../features/pendingChanges/usePendingChanges';
 import { toast } from '../../ui/toast/toastStore';
+import { useHomeSection } from '../home/homeSectionStore';
+import { useProjectPickStore } from '../home/projectPickStore';
 import { navigation } from '../navigation/navigationStore';
 import { firstViewOf, showsView } from '../navigation/views';
 import { selectInView } from '../navigation/viewSelectionStore';
@@ -21,10 +23,11 @@ import { exploreHere } from '../workspace/exploreRepository';
 import { openUnlessShownElsewhere } from '../workspace/useOpenWorkspace';
 import { useSession } from '../workspace/sessionStore';
 import { workspaceInfoQuery } from '../workspace/useWorkspace';
-import { workspaceHeadsQuery, workspaceListQuery, workspaceRepositoryQuery } from '../workspace/workspaceQueries';
+import { serversQuery, workspaceHeadsQuery, workspaceListQuery, workspaceRepositoryQuery } from '../workspace/workspaceQueries';
 import { linkDestination, type WorkspaceOnRepository } from './linkDestination';
 import { pickLinkWorkspace, showLinkFailure, type LinkWorkspaceChoice } from './linkDialogs';
 import { linkLookup, linkNavigation, type LinkLooked, type LinkNavigation, type LinkTarget } from './linkNavigation';
+import { serverLinkPlace } from './serverLinkPlace';
 
 /**
  * Opens a `uvcs://` link in this window or the one for it (docs/features/deep-links.md, "Opening a link"): a link the
@@ -34,7 +37,27 @@ export async function openLink(text: string): Promise<void> {
   const reading = parseLink(text);
   if ('problem' in reading) return showLinkFailure(reading.problem);
   const { link } = reading;
-  return toldIfFailed(() => (link.kind === 'workspace' ? openWorkspaceLink(link) : openRepositoryLink(link)));
+  return toldIfFailed(() => {
+    switch (link.kind) {
+      case 'workspace':
+        return openWorkspaceLink(link);
+      case 'server':
+        return openServerLink(link);
+      case 'repository':
+        return openRepositoryLink(link);
+    }
+  });
+}
+
+/**
+ * A server's repositories, a Unity project's when the link names one, on the home screen: this window's when it shows
+ * it, else another window's (`windows.openLinkAtHome`). No command beyond the list the home screen reads anyway.
+ */
+async function openServerLink(link: ServerLink): Promise<void> {
+  if ((await api.windows.openLinkAtHome(formatLink(link))) === 'handedOver') return;
+  const { server, project } = serverLinkPlace(link, await queryClient.fetchQuery(serversQuery));
+  useProjectPickStore.getState().pick(server, project);
+  useHomeSection.getState().show({ kind: 'server', server });
 }
 
 /** Runs what opens a link, telling in a toast when it fails (`cm` gone, the window closed meanwhile). */

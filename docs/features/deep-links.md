@@ -10,11 +10,16 @@ A link reads as a path, never a query (no `?file=…&line=…`): what it names, 
 
 ```
 uvcs://<server>/repos/<repo>[/<object>][/-/<page>[/<path>]][#<lines>]     repository links: shareable
+uvcs://<server>[/projects/<project>]                                       server links: shareable
 uvcs:///<workspace folder>[/-/<page>[/<path>]][#<lines>]                   workspace links: this computer only
 ```
 
 - **Repository links** name a server and a repository, never anything of the person who copied them (their workspace,
   their folders), so they open for anyone with access. They are the only links the app writes.
+- **Server links** name a server's repositories, which the home screen shows: an organization's
+  (`uvcs://acme.unity`), or a Unity project's in it (`uvcs://acme.unity/projects/Racing`; `ServerLink`). Only a Unity
+  organization has projects: `projects/` on another server is refused. They take no page and no lines (a fragment
+  is left out).
 - **Workspace links** have no server, as `file:///` has no host: they name a folder on this computer, written as
   `file:///` writes it (`uvcs:///C:/wk/game` on Windows). They are for agents and scripts on the same computer ("open
   the file I just changed in Changes"); the app never copies one. A workspace on a network share named by its UNC
@@ -64,7 +69,7 @@ Pages inside an object (`…/<object>/-/<page>`):
   there (`sameServer`). An organization's id form (`2398571046213@cloud`) is never written ("Unity organizations",
   ARCHITECTURE.md).
 - **Branches** lose their leading `/`: `/main/task001` → `branches/main/task001`.
-- **Repository names** are one segment: a `/` in one is `%2F`.
+- **Repository names** are one segment: a `/` in one is `%2F`. So are project names.
 - **Everything else** (each folder or branch name, a file's name) is percent-encoded as UTF-8 (`%20` for a space).
   The app writes a `+` as `%2B` and reads a bare `+` as a space, as the official client's links write spaces.
 - **Labels**: a dot next to another, or ending the name, is `%2E` (`encodeLabel`), so `v1..2` is never read as a
@@ -111,7 +116,12 @@ the workspace only gives the page a window and a repository to read.
    and takes the link once (`windows.takeLink`, told by `linkRequested`).
 3. **The page reads it** (`openLink`, `parseLink`). A link it can't read says why in a dialog, never silently; one
    naming a page this version doesn't know says the app may need an update and offers to check (`showLinkFailure`).
-4. **The workspace** (`linkDestination`, from the workspaces and their repositories the home screen reads, all local:
+4. **A server link** opens on a home screen, never taking a window away from the workspace or repository it shows
+   (`windows.openLinkAtHome`): this window's when it shows the home screen, else another window's, else a new one's.
+   It shows the server's repositories (as the user's profiles name the server, `serverLinkPlace`), the project the
+   link names picked, or all of them for none (`useProjectPickStore`, `useHomeSection`). It reads nothing beyond the
+   list the home screen reads anyway. A project the organization doesn't have shows all of them.
+5. **The workspace** (`linkDestination`, from the workspaces and their repositories the home screen reads, all local:
    `cm workspace list`, `cm wi`; `cm status` only for one `cm wi` names by an organization's id, and only when its
    repository's own name is the link's):
    - a workspace link: the workspace holding that folder (`workspaces.locate`: `cm getworkspacefrompath`, then both
@@ -128,7 +138,7 @@ the workspace only gives the page a window and a repository to read.
      on the home screen, else a new one. A path (an older `/path/` link) opens in its Files, the latest of the main
      branch, the item selected (`requestReveal`, by place); a view only a workspace has opens the repository's first
      view instead. Its Create workspace makes a workspace of it, without leaving it.
-5. **The page** (`linkNavigation`) opens on top of the view, so Back returns to where the user was; a file is selected
+6. **The page** (`linkNavigation`) opens on top of the view, so Back returns to where the user was; a file is selected
    and its lines scrolled to and selected. A label's diff, and browsing a branch or the repository, first read the
    label's changeset or the branch's head (`linkLookup`: `labels.get`, `branches.get`, a light `cm find`); one that
    isn't there says so. An object that doesn't exist or can't be read says so in the page, as any page does.
@@ -174,6 +184,8 @@ badges.
   under an xlink and a workspace on a shelve offer none. In a repository explored without a workspace, Files is a
   branch's latest and links the same way: an item to the branch, its lines to the branch's head changeset
   (`branchFilesOrigin`, given to `RepositoryTree` as its `linkOrigin`).
+- **The home screen**: ⇧⌘C and the palette's "Copy link" copy the server's repositories shown, the Unity project
+  picked when there is one (`homeLink`); the welcome and All workspaces have none.
 - Nothing only on this computer is copied as a link: Changes offers none (a pending change exists nowhere else), nor
   does ⇧⌘C on the Changes or Files view itself (`viewLinkTarget`), and the app writes no workspace link.
 

@@ -1,8 +1,18 @@
 /**
- * What a `uvcs://` link names (docs/features/deep-links.md): a repository's object and a page in it, or a workspace on
- * this computer and a page in it, and the lines to show. `formatLink` writes one, `parseLink` reads one.
+ * What a `uvcs://` link names (docs/features/deep-links.md): a repository's object and a page in it, a workspace on
+ * this computer and a page in it, and the lines to show; or a server's repositories, a Unity project's.
+ * `formatLink` writes one, `parseLink` reads one.
  */
-export type Link = RepositoryLink | WorkspaceLink;
+export type Link = RepositoryLink | WorkspaceLink | ServerLink;
+
+/** The repositories of a server or organization, on the home screen: a Unity organization's project's when named. */
+export interface ServerLink {
+  kind: 'server';
+  /** As `cm` takes it: `acme@unity`, `host:8087`, `local`. */
+  server: string;
+  /** A Unity project of the organization, by name. */
+  project?: string;
+}
 
 /** A link anyone with access can open: it names a server and a repository, never the workspace of who copied it. */
 export interface RepositoryLink {

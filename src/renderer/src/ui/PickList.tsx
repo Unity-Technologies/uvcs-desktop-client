@@ -30,6 +30,8 @@ interface PickListProps<T> {
   rowHeight: number;
   /** Pixels: the list keeps this height whatever the search leaves, so the dialog doesn't jump. Else it fits its rows, up to 320. */
   height?: number;
+  /** In a popover: the search as its top bar (`SearchField`'s `bare`), the rows inset from its edges. */
+  inPopover?: boolean;
 }
 
 /**
@@ -37,7 +39,7 @@ interface PickListProps<T> {
  * (↑↓ and Page Up / Down through the rows, Enter picks, Esc empties it), then the rows, only those in view rendered,
  * so thousands open at once.
  */
-export function PickList<T>({ items, itemKey, search, onSearchChange, placeholder, label, onPick, isDisabled, renderItem, empty, note, loading, rowHeight, height }: PickListProps<T>) {
+export function PickList<T>({ items, itemKey, search, onSearchChange, placeholder, label, onPick, isDisabled, renderItem, empty, note, loading, rowHeight, height, inPopover }: PickListProps<T>) {
   const listRef = useRef<HTMLDivElement>(null);
   const id = useId();
   const [active, setActive] = useState(0);
@@ -82,6 +84,7 @@ export function PickList<T>({ items, itemKey, search, onSearchChange, placeholde
         placeholder={placeholder}
         autoFocus
         width="100%"
+        bare={inPopover}
         aria-controls={`${id}-rows`}
         aria-activedescendant={!loading && items.length > 0 ? `${id}-${activeIndex}` : undefined}
         onKeyDown={onKeyDown}
@@ -91,7 +94,7 @@ export function PickList<T>({ items, itemKey, search, onSearchChange, placeholde
         <CenteredSpinner />
       ) : (
         <HighlightQuery query={search}>
-          <div ref={listRef} className={styles.list} style={height === undefined ? undefined : { height }}>
+          <div ref={listRef} className={styles.list} data-in-popover={inPopover || undefined} style={height === undefined ? undefined : { height }}>
             {items.length === 0 && <div className={styles.empty}>{empty}</div>}
             <div id={`${id}-rows`} role="listbox" aria-label={label} className={styles.rows} style={{ height: virtualizer.getTotalSize() }}>
               {virtualizer.getVirtualItems().map((row) => {

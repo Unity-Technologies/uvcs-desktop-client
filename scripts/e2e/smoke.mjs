@@ -79,6 +79,20 @@ const started = Date.now();
 try {
   const workspaceOnHome = window.getByRole('region', { name: 'All workspaces' }).getByRole('button', { name: /^demo / });
   await step('Home', () => workspaceOnHome.waitFor());
+  await step("A Unity organization's projects", async () => {
+    const sidebar = window.getByRole('navigation');
+    await sidebar.getByRole('button', { name: /^studio/ }).click();
+    await main.getByRole('heading', { level: 1, name: 'studio', exact: true }).waitFor();
+    await main.getByRole('button', { name: 'Project: All projects' }).click();
+    await window.keyboard.type('racing');
+    await window.keyboard.press('Enter');
+    await main.getByRole('button', { name: 'Project: Racing' }).waitFor();
+    // Inside its project, a repository goes by its own name; the other project's is filtered out.
+    await main.getByText('Game', { exact: true }).waitFor();
+    await main.getByText('Levels', { exact: true }).waitFor({ state: 'detached' });
+    await sidebar.getByRole('button', { name: /^Home/ }).click();
+    await workspaceOnHome.waitFor();
+  });
   await step('Open workspace', async () => {
     await workspaceOnHome.click();
     await window.getByRole('navigation').getByRole('button', { name: 'Switch workspace' }).waitFor();

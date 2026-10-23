@@ -29,6 +29,8 @@ interface WorkspaceListProps {
   query: string;
   /** Shown instead of every section when the search matches nothing. */
   noMatches: ReactNode;
+  /** Another filter than the search narrows the entries (a place picked): an empty section has matches none, not nothing yet. */
+  narrowed?: boolean;
   onOpen: (path: string) => void;
   /** ↑ on the first row: back to whatever leads into the list (the search field). */
   onLeaveTop?: () => void;
@@ -39,9 +41,9 @@ interface WorkspaceListProps {
  * across sections, Enter or a click opens one (in a new window with Shift: `windowAskedBy`); Enter in the search field
  * opens the first match.
  */
-export const WorkspaceList = forwardRef<WorkspaceListHandle, WorkspaceListProps>(function WorkspaceList({ sections, query, noMatches, onOpen, onLeaveTop }, ref) {
+export const WorkspaceList = forwardRef<WorkspaceListHandle, WorkspaceListProps>(function WorkspaceList({ sections, query, noMatches, narrowed, onOpen, onLeaveTop }, ref) {
   const listRef = useRef<HTMLDivElement>(null);
-  const shown = searchedSections(sections, query);
+  const shown = searchedSections(sections, query, narrowed);
   const first = query.trim() ? firstMatch(shown) : undefined;
   useImperativeHandle(ref, () => ({
     takeSearchKey: (event) => {

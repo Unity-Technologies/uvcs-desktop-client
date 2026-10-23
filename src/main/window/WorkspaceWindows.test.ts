@@ -286,6 +286,7 @@ describe('a workspace requested from the OS (recent documents, the command line)
 
 describe('a link opened in a workspace (docs/features/deep-links.md)', () => {
   const LINK = 'uvcs://acme.unity/repos/game/changesets/12';
+  const SERVER_LINK = 'uvcs://acme.unity/projects/Racing';
 
   it('goes to the window showing the workspace, which is told, comes forward and takes it once', () => {
     const { windows, open, shows } = setUp();
@@ -318,6 +319,60 @@ describe('a link opened in a workspace (docs/features/deep-links.md)', () => {
     const [, opened] = fakeElectron.windows();
     expect(windows.workspaceIn(asBrowserWindow(opened!))).toBe(GAME);
     expect(windows.takeLink(opened!.webContents.id)).toBe(LINK);
+  });
+
+  it('is opened by the window asking when a link to repositories finds it on the home screen', () => {
+    const { windows, open } = setUp();
+    const home = open();
+
+    expect(windows.openLinkAtHome(home.webContents.id, SERVER_LINK)).toBe('openHere');
+    expect(fakeElectron.windows()).toHaveLength(1);
+  });
+
+  it('goes to another window on the home screen rather than leave the workspace the asking window shows', () => {
+    const { windows, open, shows } = setUp();
+    const tools = open();
+    shows(tools, TOOLS);
+    const home = open();
+
+    expect(windows.openLinkAtHome(tools.webContents.id, SERVER_LINK)).toBe('handedOver');
+    expect(fakeElectron.focused()).toBe(home);
+    expect(windows.takeLink(home.webContents.id)).toBe(SERVER_LINK);
+    expect(windows.workspaceIn(asBrowserWindow(tools))).toBe(TOOLS);
+  });
+
+  it('goes to a window on the home screen rather than leave the repository the asking window explores', () => {
+    const { windows, open } = setUp();
+    const exploring = open();
+    windows.repositoryShown(exploring.webContents.id, 'game@local');
+    const home = open();
+
+    expect(windows.openLinkAtHome(exploring.webContents.id, SERVER_LINK)).toBe('handedOver');
+    expect(windows.takeLink(home.webContents.id)).toBe(SERVER_LINK);
+    expect(windows.placeIn(asBrowserWindow(exploring))).toEqual(repositoryPlace('game@local'));
+  });
+
+  it('never opens a link to repositories in a page window, which has no home screen', () => {
+    const { windows, open, shows } = setUp();
+    const game = open();
+    shows(game, GAME);
+    const page = windows.openPage(game.webContents.id, { place: workspacePlace(GAME), page: { kind: 'history', path: 'a.cs' } }) as unknown as FakeWindow;
+
+    expect(windows.openLinkAtHome(page.webContents.id, SERVER_LINK)).toBe('handedOver');
+    const opened = fakeElectron.windows().at(-1)!;
+    expect(opened).not.toBe(page);
+    expect(windows.takeLink(opened.webContents.id)).toBe(SERVER_LINK);
+  });
+
+  it('opens a new window on the home screen for a link to repositories when every window shows a workspace', () => {
+    const { windows, open, shows } = setUp();
+    const tools = open();
+    shows(tools, TOOLS);
+
+    expect(windows.openLinkAtHome(tools.webContents.id, SERVER_LINK)).toBe('handedOver');
+    const [, opened] = fakeElectron.windows();
+    expect(windows.workspaceIn(asBrowserWindow(opened!))).toBeUndefined();
+    expect(windows.takeLink(opened!.webContents.id)).toBe(SERVER_LINK);
   });
 
   it('lists the workspaces shown, the last focused window first', () => {

@@ -465,6 +465,27 @@ by name, and never passes it to `cm`.
   repository: it is offered as one another app left (adopted as foreign), its changelists are lost, and the folder
   where added files waited is no longer used to put them back. Review marks kept under the id's repository no longer
   show.
+- **Two kinds, and projects**: `cm` names a Unity organization `acme@unity` and an older cloud organization
+  `acme@cloud` (`serverKind`, `shared/domain/organizations.ts`), which `cm profile list` already tells: the home
+  sidebar groups them (`serverGroups`: Unity organizations, cloud organizations, servers), each kind with its icon
+  (`ServerIcon`; `OrganizationIcon` is the building Unity's apps draw). Only a Unity organization has projects: a
+  repository of type `Project`, which `cm repository list` leaves out unless asked with `--type=all`, and
+  `{reptype}` tells apart (`repositoryListArgs`). Neither is in `cm`'s help: `cm` keeps `--type` for its own use and
+  testing, so the app leans on an option `cm` doesn't promise. They come in the one command that lists the
+  repositories, asked only of a Unity organization; a `cm` refusing `--type` or its `all` (`refusesTypeOption`) is
+  asked again without it, and the list shows no projects. A project shows as the other clients draw it
+  (`ProjectIcon`): a white cube on a tile in one of six colors (`--project-*`), picked by the code of its GUID's last
+  character, the listing's `{repguid}` (`projectColor`), so it looks the same in every client; "All projects" is
+  indigo (`ALL_PROJECTS_COLOR`). All workspaces colors a project only once its organization's list was read
+  (`useReadProjects`, which asks nothing); until then its tile is neutral (`projectTileFill`). The cube and the
+  organization's building are Phosphor's Cube and Buildings (Bold), drawn from `@phosphor-icons/core`'s own SVGs
+  (`svgPathOf`), so its license ships in the third-party notices with the rest. A repository there is named after its
+  project, the part before the first `/` (`Racing/Game`: `projectPartOf`, `projectOfRepository`, `nameInProject`,
+  `nameWithProject`), which New repository builds from the project picked and Rename keeps (`repositoryRename`).
+  The Repositories view filters by project (`ProjectFilter`, remembered per organization: `useProjectPickStore`) and
+  All workspaces by organization and project (`PlaceFilter`, `placeOf`), from the repository each workspace already
+  names: no command. Display names ("UnityTechnologies" for `unity@unity`) come only from Unity's web API, which the
+  app doesn't call: it shows the organization's name as `cm` takes it.
 - **Kept so**: `fakeCmClient` fails a test whose code passes the id form to `cm` (`namesOrganizationById`; a profile's
   name is the id form itself, as `cm profile list` prints it, so `cm profile` is exempt), and development builds warn
   `[organization id]` in the console when a command does (`warnOnOrganizationIds`).
