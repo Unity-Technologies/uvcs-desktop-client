@@ -116,7 +116,7 @@ the workspace only gives the page a window and a repository to read.
    and takes the link once (`windows.takeLink`, told by `linkRequested`).
 3. **The page reads it** (`openLink`, `parseLink`). A link it can't read says why in a dialog, never silently; one
    naming a page this version doesn't know says the app may need an update and offers to check (`showLinkFailure`).
-4. **A server link** opens on a home screen, never taking a window away from the workspace it shows
+4. **A server link** opens on a home screen, never taking a window away from the workspace or repository it shows
    (`windows.openLinkAtHome`): this window's when it shows the home screen, else another window's, else a new one's.
    It shows the server's repositories (as the user's profiles name the server, `serverLinkPlace`), the project the
    link names picked, or all of them for none (`useProjectPickStore`, `useHomeSection`). It reads nothing beyond the
