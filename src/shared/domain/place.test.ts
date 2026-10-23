@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { placeId, repositoryPlace, samePlace, workspacePathOf, workspacePlace } from './place';
+import { placeId, repositoryPlace, workspacePathOf, workspacePlace } from './place';
 
 describe('workspacePathOf', () => {
   it("is the workspace's path, and none for a repository explored without a workspace", () => {
@@ -13,11 +13,5 @@ describe('placeId', () => {
     expect(placeId(workspacePlace('/wk/game'))).toBe('/wk/game');
     expect(placeId(workspacePlace('C:\\wk\\game'))).toBe('C:\\wk\\game');
     expect(placeId(repositoryPlace('game@local'))).toBe('repository:game@local');
-  });
-
-  it('tells two places apart by what they are', () => {
-    expect(samePlace(repositoryPlace('game@local'), repositoryPlace('game@local'))).toBe(true);
-    expect(samePlace(repositoryPlace('game@local'), repositoryPlace('game@acme@cloud'))).toBe(false);
-    expect(samePlace(workspacePlace('/wk/game'), repositoryPlace('game@local'))).toBe(false);
   });
 });
