@@ -14,7 +14,8 @@ export const MAX_IMAGE_BYTES = 40 * 1024 * 1024;
  * versions would hold too much of the renderer's memory.
  */
 export const MAX_MODEL_BYTES = 100 * 1024 * 1024;
-const BINARY_SNIFF_BYTES = 8000;
+/** How much of a file's start tells binary from text (`looksBinary`). */
+export const BINARY_SNIFF_BYTES = 8000;
 
 const IMAGE_MIME_TYPES: Record<string, string> = {
   '.png': 'image/png',
@@ -101,7 +102,10 @@ function plainBytes(bytes: Buffer): Uint8Array {
   return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 }
 
-/** A NUL byte near the start, as Git tells binary files: text in UTF-8 or a single-byte code page has none. */
-function looksBinary(bytes: Buffer): boolean {
+/**
+ * A NUL byte near the start, as Git tells binary files: text in UTF-8 or a single-byte code page has none. UTF-16
+ * text has them, so it reads as binary.
+ */
+export function looksBinary(bytes: Buffer): boolean {
   return bytes.subarray(0, BINARY_SNIFF_BYTES).includes(0);
 }

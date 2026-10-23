@@ -43,24 +43,9 @@
   font-weight: var(--weight-semibold);
 }
 
+/* Under its checkbox, in line with the checkbox's label. */
 .slider {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  width: 100%;
   padding-left: 23px;
-  color: var(--text-secondary);
-}
-
-.slider input {
-  flex: 1;
-  accent-color: var(--accent);
-}
-
-.sliderValue {
-  width: 36px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
 }
 
 .folderRow {

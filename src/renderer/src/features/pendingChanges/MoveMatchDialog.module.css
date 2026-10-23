@@ -1,0 +1,15 @@
+.minimum {
+  font-size: var(--text-sm);
+}
+
+.notMeasured {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.similarity {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
