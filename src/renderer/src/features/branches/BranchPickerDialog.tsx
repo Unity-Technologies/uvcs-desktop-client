@@ -11,6 +11,8 @@ interface PickBranchOptions {
   description?: string;
   /** A branch that can't be picked, e.g. the one the workspace is on. */
   exclude?: string;
+  /** Another repository's branches than the workspace's (`name@server`), e.g. an xlinked one's. */
+  repository?: string;
 }
 
 /** Asks the user to choose a branch. Resolves to it as the branch list read it (its head too), or undefined if dismissed. */
@@ -18,8 +20,8 @@ export function pickBranch(options: PickBranchOptions): Promise<Branch | undefin
   return askDialog<Branch>((finish) => <BranchPickerDialog {...options} finish={finish} />);
 }
 
-function BranchPickerDialog({ title, description, exclude, finish }: PickBranchOptions & { finish: (branch: Branch | undefined) => void }) {
-  const branchesQuery = useBranches();
+function BranchPickerDialog({ title, description, exclude, repository, finish }: PickBranchOptions & { finish: (branch: Branch | undefined) => void }) {
+  const branchesQuery = useBranches({}, repository);
   const branches = useMemo(() => (branchesQuery.data ?? []).filter((branch) => branch.name !== exclude), [branchesQuery.data, exclude]);
 
   return (

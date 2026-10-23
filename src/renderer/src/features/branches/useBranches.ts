@@ -6,17 +6,25 @@ import { keyedByWorkspaceInfo, queryClient, SLOW_CHANGING_QUERY } from '../../ap
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { compactFilter } from '../../lib/compactFilter';
 
-/** Branches matching `filter`. Without one, every branch: tens of thousands on big repositories, so read rarely. */
-export function useBranches(filter: QueryFilter = {}) {
+/**
+ * Branches matching `filter`. Without one, every branch: tens of thousands on big repositories, so read rarely.
+ * `repository` (`name@server`) reads another repository's than the workspace's, an xlinked one's.
+ */
+export function useBranches(filter: QueryFilter = {}, repository?: string) {
   const workspacePath = useWorkspacePath();
   // `{ includeHidden: false }` and `{}` ask for the same branches: one cache entry, one `cm find`.
   const query = compactFilter(filter);
   return useQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'branches', query),
-    queryFn: () => api.branches.list(workspacePath, query),
+    queryKey: branchesKey(workspacePath, query, repository),
+    queryFn: () => api.branches.list(workspacePath, query, ...(repository ? [repository] : [])),
     placeholderData: (previous) => previous,
     ...SLOW_CHANGING_QUERY,
   });
+}
+
+/** The workspace's branches under the key every branch view shares; another repository's apart, under its own. */
+export function branchesKey(workspacePath: string, query: QueryFilter, repository?: string) {
+  return repository ? queryKeys.inWorkspace(workspacePath, 'branches', 'onRepository', repository, query) : queryKeys.inWorkspace(workspacePath, 'branches', query);
 }
 
 /** One branch by name, without reading the whole list. */
