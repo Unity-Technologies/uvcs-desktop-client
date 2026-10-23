@@ -328,11 +328,13 @@ reads the platform (`pierreReadsMac`), so Replace opens from the menu on a Mac p
 **Go to line…** asks for a line of the side it's on (`goToLine`: "Line number (1–240)", the caret's or the line
 right-clicked already in the field), takes only a line that side has and says which it has otherwise. The line scrolls a
 third of the way down (`scrollToLine`; Annotate's own rows in place); typed into, the caret goes to its start, and
-read-only, it is selected where lines are. A line of a region "Collapse unchanged lines" folds away is shown first
-(`scrollToShownLine` in `TextDiff`, for a link's lines too): Pierre's `FileDiff.revealLine` expands only that region,
-from its nearer end, and an older side's line is the one as far into the same region on the newer side, which Pierre
-reveals (`lineToReveal`). ⌃G goes to a line of the text typed into while the caret is in it, else of the side whose
-lines are selected, else of the newer side (`keyboardGoToLine`).
+read-only, it is selected where lines are and focus comes back to the pane without its keyboard ring
+(`focusWithoutRing`): the line shows where the user is, and the dialog's keys would make Chromium ring the whole pane. A
+Tab into it still rings it. A line of a region "Collapse unchanged lines" folds away is shown first (`scrollToShownLine`
+in `TextDiff`, for a link's lines too): Pierre's `FileDiff.revealLine` expands only that region, from its nearer end,
+and an older side's line is the one as far into the same region on the newer side, which Pierre reveals
+(`lineToReveal`). ⌃G goes to a line of the text typed into while the caret is in it, else of the side whose lines are
+selected, else of the newer side (`keyboardGoToLine`).
 
 **Compare with clipboard** compares the code selected with the text on the clipboard, in the moved code's dialog
 (`openCodeComparisonDialog`): the clipboard on the left, the selection on the right, "Clipboard compared with lines

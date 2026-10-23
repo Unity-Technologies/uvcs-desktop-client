@@ -33,6 +33,7 @@ import type { LineRange } from './lineSelection';
 import type { ScrollToLine } from './useLineLinks';
 import { editorHasFocusIn, pageTextSelection, rowUnderPointer } from './pierreDom';
 import { openPierreSearchPanel } from './pierreSearchPanel';
+import { focusWithoutRing } from './usePointerFocusMark';
 import { orderedSpan, shownLineCount, wholeTextSpan, type TextSpan } from './textSpans';
 
 interface CodeMenuOptions {
@@ -105,7 +106,7 @@ export function useCodeMenu({ containerRef, scrollTo, fileName, textOf, sides, e
     // The scroll placed the line; the caret mustn't move it again to the view's edge.
     if (typedEditor) return typedEditor.focus({ lineNumber: line, character: 0, preventScroll: true });
     latest.current.lines?.select({ start: line, side, end: line, endSide: side });
-    container.focus({ preventScroll: true });
+    focusWithoutRing(container);
   };
 
   const compareWithClipboard = (selection: CodeFragment): void => {
