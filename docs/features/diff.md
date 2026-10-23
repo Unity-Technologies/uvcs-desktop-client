@@ -490,7 +490,8 @@ that patch or read internals have a test that fails when an update moves them, a
 own every argument past the ones it reads (`pierreWrappedArguments.test.ts`), as Pierre adds some:
 
 - `pierreDom`: where Pierre renders (the `diffs-container` shadow root, its rows' `data-line-type`, `data-line` and
-  `data-column-number`), the gutter button slot moved to the hovered line, and hovering anew under a still pointer.
+  `data-column-number`), the gutter button slot moved to the hovered line, hovering anew under a still pointer, and
+  the text selected in the page (`pageTextSelection`, through Chromium's `ShadowRoot.getSelection`).
   The tests run without a page, so this one is checked on screen. Wrapping lines, a pane (`data-code`) has no box of
   its own (`display: contents`), and its code column stands for it (`paneRect`).
 - `movedCodeCss`, `MovedCode`, `useMovedWordMarks`: moved code recolored through Pierre's `--diffs-deletion-base` and
