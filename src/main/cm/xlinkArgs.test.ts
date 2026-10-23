@@ -1,7 +1,8 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { NewXlink } from '@shared/domain/xlinks';
-import { createXlinkArgs, repositoryFolder, xlinkPointSpec, xlinkRuleArg } from './xlinkArgs';
+import { createXlinkArgs, labelChangesetArgs, repositoryFolder, repositoryFolderArgs, xlinkPointSpec, xlinkRuleArg, xlinkTreeSpec } from './xlinkArgs';
+import { TREE_ITEM_FORMAT } from './treeItems';
 
 const LIB = join('wk', 'code', 'lib');
 
@@ -60,5 +61,19 @@ describe('A folder of the xlinked repository', () => {
     expect(repositoryFolder('')).toBe('/');
     expect(repositoryFolder(' / ')).toBe('/');
     expect(repositoryFolder('Assets\\Lib\\')).toBe('/Assets/Lib');
+  });
+});
+
+describe('The tree of the repository an xlink points to', () => {
+  it('is listed at a changeset or a branch head as cm ls takes them; a label cm ls refuses is read at its changeset', () => {
+    expect(xlinkTreeSpec({ kind: 'changeset', changeset: 4 }, 'lib@local')).toBe('cs:4@lib@local');
+    expect(xlinkTreeSpec({ kind: 'branch', branch: 'main' }, 'lib@acme@cloud')).toBe('br:/main@lib@acme@cloud');
+    expect(xlinkTreeSpec({ kind: 'label', label: 'v1.0' }, 'lib@local')).toBeNull();
+    expect(labelChangesetArgs(' v1.0 ', 'lib@local')[2]).toBe("where name = 'v1.0' on repository 'lib@local'");
+  });
+
+  it('lists one folder at a time, rooted at /', () => {
+    expect(repositoryFolderArgs('Assets/Lib', 'cs:4@lib@local')).toEqual(['ls', '/Assets/Lib', '--tree=cs:4@lib@local', TREE_ITEM_FORMAT]);
+    expect(repositoryFolderArgs('/', 'cs:4@lib@local')[1]).toBe('/');
   });
 });

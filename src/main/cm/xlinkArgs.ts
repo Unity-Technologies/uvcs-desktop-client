@@ -4,6 +4,9 @@
 // xlinked files: they come with the next update, so each is a quick command.
 
 import { fullBranchName, type NewXlink, type XlinkPoint, type XlinkRule } from '@shared/domain/xlinks';
+import { equalsCondition, findArgs } from './findQuery';
+import { FOUND_LABELS } from './foundObjects';
+import { TREE_ITEM_FORMAT } from './treeItems';
 
 /** Where an xlink points, as `cm xlink` takes it: a changeset, branch or label spec in its repository (`name@server`). */
 export function xlinkPointSpec(point: XlinkPoint, repository: string): string {
@@ -53,4 +56,22 @@ export function deleteXlinkRulesArgs(absolutePath: string, rules: readonly Xlink
 
 export function showXlinkArgs(absolutePath: string): string[] {
   return ['xlink', '--show', absolutePath];
+}
+
+/**
+ * The tree `cm ls --tree=<spec>` lists where an xlink points: a changeset's or a branch head's, in its repository. A
+ * label's can't be listed (`cm`: "Incorrect object specification lb:…"): null, read at its changeset instead.
+ */
+export function xlinkTreeSpec(point: XlinkPoint, repository: string): string | null {
+  return point.kind === 'label' ? null : xlinkPointSpec(point, repository);
+}
+
+/** `cm find` of the changeset a label of `repository` is on, by its name. */
+export function labelChangesetArgs(label: string, repository: string): string[] {
+  return findArgs(FOUND_LABELS, {}, null, [equalsCondition('name', label.trim())], repository);
+}
+
+/** `cm ls` of a folder (`/Assets`) of the tree at `treeSpec`, which `parseTreeItems` reads. */
+export function repositoryFolderArgs(folder: string, treeSpec: string): string[] {
+  return ['ls', repositoryFolder(folder), `--tree=${treeSpec}`, TREE_ITEM_FORMAT];
 }
