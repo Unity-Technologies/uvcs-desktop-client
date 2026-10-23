@@ -25,7 +25,7 @@ export type LoadedConflict =
 export function loadConflict(versions: readonly VersionRead[], labels: ConflictLabels, previous?: LoadedConflict, knownBinary = false): LoadedConflict {
   if (knownBinary) return loadBinary(versions, labels, previous);
 
-  const error = versions.find((version) => version.error)?.error;
+  const error = readError(versions);
   if (error) return { status: 'error', error };
 
   const contents = contentsOf(versions);
@@ -44,11 +44,25 @@ export function loadConflict(versions: readonly VersionRead[], labels: ConflictL
 
 /** A known binary: ready for a decision at once, with its versions once read (the user opened it) or why they weren't. */
 function loadBinary(versions: readonly VersionRead[], labels: ConflictLabels, previous: LoadedConflict | undefined): LoadedConflict {
-  const error = versions.find((version) => version.error)?.error ?? undefined;
+  const error = readError(versions);
   const contents = error ? undefined : contentsOf(versions);
   if (previous?.status === 'ready' && previous.labels === labels && previous.error === error && sameContents(previous.contents, contents)) return previous;
   return { status: 'ready', labels, ...(contents && { contents }), ...(error && { error }) };
 }
+
+/**
+ * Why the versions can't be merged: a read that failed, or a version whose content was purged (`FileContent.purged`),
+ * which would merge as an empty text, the file emptied. Decided here, where the merge takes the versions, not in their
+ * read: the diff of a version reads the same query and keeps a purged one as an answer. One error, so a file's state
+ * stays the one built while it does.
+ */
+function readError(versions: readonly VersionRead[]): Error | undefined {
+  return versions.find((version) => version.error)?.error ?? (versions.some((version) => version.data?.purged) ? PURGED_VERSION_ERROR : undefined);
+}
+
+/** Why a file one of whose versions was purged can't be merged. */
+export const UNMERGEABLE_PURGED_MESSAGE = "A version of this file was purged from the server, so it can't be merged.";
+const PURGED_VERSION_ERROR = new Error(UNMERGEABLE_PURGED_MESSAGE);
 
 function contentsOf(versions: readonly VersionRead[]): ConflictContents | undefined {
   const [base, source, destination] = versions.map((version) => version.data);

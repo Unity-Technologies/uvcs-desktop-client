@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { FileContent } from '@shared/domain/content';
-import { loadConflict } from './loadedConflict';
+import { loadConflict, UNMERGEABLE_PURGED_MESSAGE } from './loadedConflict';
+
+const purged: FileContent = { isBinary: false, size: 0, purged: true };
 
 const labels = { source: '/main/task', destination: '/main' };
 const text = (value: string): FileContent => ({ text: value, isBinary: false, size: value.length });
@@ -14,6 +16,10 @@ describe('loadConflict', () => {
   it('fails when any version fails', () => {
     const error = new Error('gone');
     expect(loadConflict([...loaded(text('a\n'), text('b\n')), { error }], labels)).toEqual({ status: 'error', error });
+  });
+
+  it('fails when a version was purged, never merging it as an empty text', () => {
+    expect(loadConflict(loaded(purged, text('b\n'), text('c\n')), labels)).toEqual({ status: 'error', error: new Error(UNMERGEABLE_PURGED_MESSAGE) });
   });
 
   it('merges the versions once they are all there', () => {
@@ -58,5 +64,12 @@ describe('loadConflict of a known binary', () => {
   it("still waits for a decision when its versions can't be read, and says why", () => {
     const error = new Error('gone');
     expect(loadConflict([...loaded(text('a'), text('b')), { error }], labels, undefined, true)).toEqual({ status: 'ready', labels, error });
+  });
+
+  it('still waits for a decision when a version was purged, saying so, and keeps that state while it holds', () => {
+    const versions = loaded(text('a'), purged, text('c'));
+    const result = loadConflict(versions, labels, undefined, true);
+    expect(result).toEqual({ status: 'ready', labels, error: new Error(UNMERGEABLE_PURGED_MESSAGE) });
+    expect(loadConflict([...versions], labels, result, true)).toBe(result);
   });
 });
