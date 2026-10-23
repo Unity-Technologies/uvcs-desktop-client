@@ -20,9 +20,23 @@ place. A workspace on the same repository is another place, with its own window.
 ## What its window shows
 
 The views of the server, each at its usual place in the sidebar and its usual shortcut (`showsView`, `viewsOf`), the
-Branch Explorer first (`firstViewOf`): Branch Explorer, Changesets, Branches, Labels, Shelves, Attributes, Code
-reviews, Locks. Not a workspace's own: Changes, Incoming, Files (its files on disk) and Sync. A view a repository
-doesn't show, named by a link or by a window reopened after an update, opens the first view instead.
+Branch Explorer first (`firstViewOf`): Files, Branch Explorer, Changesets, Branches, Labels, Shelves, Attributes, Code
+reviews, Locks; the sidebar groups Files as the Repository (`sidebarGroups`). Not a workspace's own: Changes, Incoming
+and Sync. A view a repository doesn't show, named by a link or by a window reopened after an update, opens the first
+view instead.
+
+## Files
+
+A branch's latest tree, read-only, as a code host shows a repository (`RepositoryFilesView`): the main branch's
+(found by its GUID, it may be renamed) until another is picked in the filter bar's branch chip (`FilesBranchPicker`,
+the branch switcher's list), and again once the one picked is gone (`shownFilesBranch`). The header says which:
+"Latest of /main · changeset 12" (`filesBranchCaption`). The tree is Browse repository's (`RepositoryTree`): a folder
+is listed as it opens, each once per changeset; a file shows its last change, its history and annotations. Another
+branch opens its tree on the item selected before, when it has it. The branch picked is kept per repository while the
+window lives (`useRepositoryFilesStore`), and a new head on refresh shows the branch's latest tree. A link to a path
+(`/path/…`) opens Files on it (`requestReveal`, by place). Its menus are Browse repository's (`revisionMenu`): a
+revision opens in an app or is saved as a copy; nothing is on disk to move, cut or paste. Create workspace makes a
+workspace's Files of it.
 
 - **The top bar**: the search (`TopBarSearch`), **Create workspace**, the account on the repository's server.
 - **The sidebar's card** names the repository and its server as the home screen does (`RepositorySidebarCard`), and
@@ -32,7 +46,7 @@ doesn't show, named by a link or by a window reopened after an update, opens the
   (`CommandLogEntry.outsideWorkspaces`, `ranInPlace`).
 - **The window is titled** "<repository> — <server>" (`repositoryWindowTitle`).
 - **The palette** searches its branches, labels, changesets, shelves and code reviews; no files or pending changes
-  (`paletteGroups`).
+  (`paletteGroups`): listing every file of a branch is a whole tree's `cm ls`, where Files reads a folder at a time.
 
 ## What it offers, and what it doesn't
 
