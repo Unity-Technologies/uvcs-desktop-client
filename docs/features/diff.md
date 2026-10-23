@@ -329,14 +329,14 @@ What shows (`useMovedCode`, `MovedCode`):
   one is beside half of it at least (`labelSpot`: the space that says the code is gone tells where it went), else at
   the right end of the place's bottom edge: the top edge is the change's chip's. In a pane narrower than 320 px it
   shows the arrow and the number only, the words in its tooltip.
-- The label's other button, "Compare moved code", opens the two places side by side (`openMovedCodeDialog`, of
-  `movedCopies`): a read-only diff of what moved with what it became, in the diff's look, layout and comparison
-  method, so only what changed on the way shows as changed. Code moved as it was, or with only what the method ignores
-  changed, shows alone, its note saying so ("Moved without changes", "Only whitespace differs"): a diff with no line
-  changes has no lines for Pierre to show (`movedComparison`). Its lines are numbered from the start of the moved code
-  (Pierre numbers a diff from 1); the title says where both places are. Putting the two places side by side in the
-  diff itself, each side scrolling on its own, was rejected: everything in the diff (its gaps, navigation, discards,
-  the editor, the labels) relies on both sides' rows lining up.
+- The label's other button, "Compare moved code", opens the two places side by side (`openMovedCodeDialog` of
+  `movedCopies`, through `openCodeComparisonDialog`): a read-only diff of what moved with what it became, in the diff's
+  look, layout and comparison method, so only what changed on the way shows as changed. Code moved as it was, or with
+  only what the method ignores changed, shows alone, its note saying so ("Moved without changes", "Only whitespace
+  differs"): a diff with no line changes has no lines for Pierre to show (`movedComparison`). Its lines are numbered
+  from the start of the moved code (Pierre numbers a diff from 1); the title says where both places are. Putting the two
+  places side by side in the diff itself, each side scrolling on its own, was rejected: everything in the diff (its
+  gaps, navigation, discards, the editor, the labels) relies on both sides' rows lining up.
 - Pointing at moved code or its label lights the move up in both places and, side by side, draws a ribbon joining them
   (`ribbonPath`, level with the rows at both ends) over the last 24 px of the removed side's pane, where code is least
   likely to be, up to the seam; it goes once the pointer leaves, and the pointer and selections go through it. A place

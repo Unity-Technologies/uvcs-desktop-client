@@ -42,7 +42,7 @@ describe('code shown with Pierre', () => {
     expect(SURFACES).toEqual(
       expect.arrayContaining([
         'features/annotate/HighlightedCode.tsx',
-        'features/diff/viewer/MovedCodeDialog.tsx',
+        'features/diff/viewer/CodeComparisonDialog.tsx',
         'features/diff/viewer/TextDiff.tsx',
         'features/merge/resolve/ConflictHunks.tsx',
         'features/merge/resolve/HandEditor.tsx',
@@ -85,7 +85,7 @@ const HOST_SCROLLER_STYLES: Record<string, string> = {
   'features/diff/viewer/TextDiff.module.css': '.diff',
   'features/merge/resolve/TextSurface.module.css': '.surface',
   'features/annotate/AnnotatedCode.module.css': '.scroller',
-  'features/diff/viewer/MovedCodeDialog.module.css': '.diff',
+  'features/diff/viewer/CodeComparisonDialog.module.css': '.diff',
 };
 
 /** The declarations of the rule written for `selector` alone, at the start of a line of `css`. */
