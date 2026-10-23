@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { recordsOutput } from './testing/cmOutput';
-import { deletedFilesArgs, notFoundPaths, parseDeletedFiles } from './deletedFiles';
+import { deletedFilesArgs, notFoundPaths, parseDeletedFiles, pathsNotFound } from './deletedFiles';
 import { TREE_ITEM_FORMAT, TREE_ITEMS } from './treeItems';
 
 /** A record of `cm ls` in a workspace, as it prints one: the path relative to it, in the OS's separators. */
@@ -46,5 +46,31 @@ describe('the paths cm ls could not find', () => {
 
   it('reads none from another failure', () => {
     expect(notFoundPaths('Error: the server is unreachable')).toEqual([]);
+  });
+});
+
+describe('the asked paths cm ls named as not found', () => {
+  const failure = (...printed: string[]) => printed.map((path) => `Item ${path} not found.`).join('\n');
+
+  it("matches cm's Windows spelling: the drive in lower case, backslashes, any case", () => {
+    const output = failure(String.raw`c:\Users\ana\wk\src\Archive\Old2.cs`);
+
+    expect([...pathsNotFound(['src/Archive/Old2.cs', 'src/Legacy/A.cs'], output, 'win32')]).toEqual(['src/Archive/Old2.cs']);
+    expect([...pathsNotFound(['SRC/archive/old2.cs'], output, 'win32')]).toEqual(['SRC/archive/old2.cs']);
+  });
+
+  it("matches cm's macOS spelling, the workspace's real path and decomposed names, case kept", () => {
+    const output = failure('/private/tmp/wk/src/Archive/Plie\u0301.cs');
+
+    expect([...pathsNotFound(['src/Archive/Pli\u00e9.cs', 'src/archive/Pli\u00e9.cs'], output, 'darwin')]).toEqual(['src/Archive/Pli\u00e9.cs']);
+  });
+
+  it('matches a whole name only, never the end of another', () => {
+    expect([...pathsNotFound(['Old2.cs'], failure('/wk/src/XOld2.cs'), 'linux')]).toEqual([]);
+    expect([...pathsNotFound(['Old2.cs'], failure('/wk/Old2.cs'), 'linux')]).toEqual(['Old2.cs']);
+  });
+
+  it('names none from another failure', () => {
+    expect(pathsNotFound(['a.cs'], 'Error: the server is unreachable', 'linux').size).toBe(0);
   });
 });
