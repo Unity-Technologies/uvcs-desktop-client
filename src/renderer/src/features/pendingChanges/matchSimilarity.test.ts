@@ -1,6 +1,9 @@
+import '../../testing/fakeWindow';
+import type { Query } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
 import type { ChangeKind, ItemType, PendingChange } from '@shared/domain/pendingChanges';
-import { isScored, movePairsOf, moveSimilaritiesKey, isMeasured, minimumNoteOf, pairableCount, scoredCandidates, searchedRows, similarityLabel, similarityTip } from './matchSimilarity';
+import { isRefreshable } from '../../app/queryClient';
+import { isScored, movePairsOf, moveSimilaritiesKey, moveSimilaritiesQuery, isMeasured, minimumNoteOf, pairableCount, scoredCandidates, searchedRows, similarityLabel, similarityTip } from './matchSimilarity';
 import { isAffectedByFileChanges, isAffectedByPendingChangeEdit, isAffectedByRecordedMove, isAffectedByWorkspaceState } from '../../app/refresh/refreshScopes';
 
 const change = (path: string, kinds: ChangeKind[], itemType: ItemType = 'file', size = 10): PendingChange => ({ path, kinds, itemType, size, lastModified: '' });
@@ -86,6 +89,14 @@ describe('the measure, once asked', () => {
     for (const affected of [isAffectedByFileChanges, isAffectedByWorkspaceState, isAffectedByPendingChangeEdit, isAffectedByRecordedMove]) {
       expect(affected(key)).toBe(false);
     }
+  });
+
+  // The Refresh button refreshes every query of the workspace, and so does a loaded changeset that moved
+  // (`isAffectedByLoadedChangeset`): neither reaches a query refreshes skip.
+  it('is refreshed by no refresh of the whole workspace either', () => {
+    const query = moveSimilaritiesQuery('/ws', deleted, [hero], 'deleted');
+
+    expect(isRefreshable({ meta: query.meta } as Query)).toBe(false);
   });
 });
 
