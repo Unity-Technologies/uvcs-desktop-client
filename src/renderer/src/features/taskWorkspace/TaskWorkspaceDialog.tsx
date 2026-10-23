@@ -1,7 +1,7 @@
-import { workspacePlace } from '@shared/domain/place';
 import { useQuery } from '@tanstack/react-query';
 import { GitBranch } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { workspacePlace } from '@shared/domain/place';
 import type { NewFolderCheck } from '@shared/domain/workspace';
 import { api } from '../../api/client';
 import { LocationField } from '../../app/home/dialogs/LocationField';

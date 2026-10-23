@@ -1,5 +1,5 @@
-import { placeId, type Place } from '@shared/domain/place';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { placeId, type Place } from '@shared/domain/place';
 import { saveSettings, useSettings } from '../../app/settings/useSettings';
 import { ReviewBar } from './ReviewBar';
 import { ReviewModeHint } from './ReviewModeHint';

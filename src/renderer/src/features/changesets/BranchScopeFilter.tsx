@@ -1,6 +1,6 @@
-import { workspacePathOf, type Place } from '@shared/domain/place';
 import { GitBranch } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { workspacePathOf, type Place } from '@shared/domain/place';
 import { PathLabel } from '../../components/PathLabel';
 import { FilterOptions } from '../../ui/FilterOptions';
 import { FilterPopover } from '../../ui/FilterPopover';

@@ -1,6 +1,6 @@
-import { workspacePlace } from '@shared/domain/place';
 import { GitBranchPlus } from 'lucide-react';
 import { useMemo } from 'react';
+import { workspacePlace } from '@shared/domain/place';
 import type { Branch } from '@shared/domain/branch';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { COPY_ENTRY_IDS } from '../../components/copyMenu';

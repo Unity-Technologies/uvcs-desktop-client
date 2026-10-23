@@ -1,5 +1,5 @@
-import type { Place } from '@shared/domain/place';
 import { useState } from 'react';
+import type { Place } from '@shared/domain/place';
 import { api } from '../../api/client';
 import { runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByAttributes } from '../../app/refresh/refreshScopes';

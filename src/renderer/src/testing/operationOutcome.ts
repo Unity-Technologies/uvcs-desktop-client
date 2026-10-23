@@ -1,5 +1,5 @@
-import { repositoryPlace } from '@shared/domain/place';
 import { beforeEach } from 'vitest';
+import { repositoryPlace } from '@shared/domain/place';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { queryKeys } from '../api/queryKeys';
 import { useNavigation } from '../app/navigation/navigationStore';

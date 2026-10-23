@@ -1,6 +1,6 @@
-import { workspacePlace } from '@shared/domain/place';
 import type { FileContent } from '@shared/domain/content';
 import { useContext, type RefObject } from 'react';
+import { workspacePlace } from '@shared/domain/place';
 import { EmptyState } from '../../../ui/EmptyState';
 import { CenteredSpinner } from '../../../ui/Spinner';
 import { FileDiffViewer } from '../../diff/viewer/FileDiffViewer';

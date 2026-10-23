@@ -1,8 +1,8 @@
 import { MAX_LISTED_CODE_REVIEWS } from '@shared/domain/codeReview';
-import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
 import { readBranchNames } from '../cm/branchNames';
 import { FOUND_REVIEWS } from '../cm/codeReviewRecords';

@@ -1,5 +1,5 @@
-import { workspacePlace } from '@shared/domain/place';
 import { useQuery } from '@tanstack/react-query';
+import { workspacePlace } from '@shared/domain/place';
 import type { QueryFilter } from '@shared/domain/query';
 import { api } from '../../api/client';
 import { useRecentBranchGuids } from '../../features/branches/recentBranches';

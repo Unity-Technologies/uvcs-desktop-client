@@ -1,6 +1,6 @@
-import { repositoryPlace, workspacePlace, type Place } from '@shared/domain/place';
 import { fakeApi } from '../../testing/fakeWindow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { repositoryPlace, workspacePlace, type Place } from '@shared/domain/place';
 import type { OperationProgress } from '@shared/domain/operation';
 
 const refreshed = vi.hoisted(() => vi.fn(async (_workspacePath: string, _affected?: (key: readonly unknown[]) => boolean) => {}));

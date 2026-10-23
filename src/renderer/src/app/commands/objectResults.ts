@@ -1,5 +1,5 @@
-import { workspacePlace } from '@shared/domain/place';
 import { Archive, File, Folder, GitBranch, GitCommitVertical, MessageSquareCode, Tag } from 'lucide-react';
+import { workspacePlace } from '@shared/domain/place';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';

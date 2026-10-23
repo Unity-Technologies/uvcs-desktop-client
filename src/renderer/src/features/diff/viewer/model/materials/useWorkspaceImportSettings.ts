@@ -1,6 +1,6 @@
-import { workspacePlace } from '@shared/domain/place';
 import { useQueries } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { workspacePlace } from '@shared/domain/place';
 import { contentBytesQuery } from '../../contentQueries';
 import { readImportSettings, type ModelImportSettings } from '../modelImportSettings';
 import { takesWorkspaceSettings, type MaterialVersion } from './materialVersion';

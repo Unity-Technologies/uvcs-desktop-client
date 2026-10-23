@@ -1,5 +1,5 @@
-import type { Place } from '@shared/domain/place';
 import { useId, useMemo, useState } from 'react';
+import type { Place } from '@shared/domain/place';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction } from '../../app/operations/runOperation';

@@ -1,5 +1,5 @@
-import type { Place } from '@shared/domain/place';
 import { ListChecks } from 'lucide-react';
+import type { Place } from '@shared/domain/place';
 import { IconButton } from '../../ui/IconButton';
 import { setReviewMode, useReviewModeOn } from './reviewModeSetting';
 import styles from './ReviewModeButton.module.css';

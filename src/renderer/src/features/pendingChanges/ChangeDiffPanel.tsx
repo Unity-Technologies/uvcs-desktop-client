@@ -1,5 +1,5 @@
-import { workspacePlace } from '@shared/domain/place';
 import { useMemo, useState, type ReactNode } from 'react';
+import { workspacePlace } from '@shared/domain/place';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { ReviewMark } from '@shared/domain/review';
 import { api } from '../../api/client';

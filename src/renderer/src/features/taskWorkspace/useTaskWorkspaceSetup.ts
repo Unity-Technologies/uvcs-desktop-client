@@ -1,5 +1,5 @@
-import type { Place } from '@shared/domain/place';
 import { useRef, useState } from 'react';
+import type { Place } from '@shared/domain/place';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { describeProgress } from '../../app/operations/describeProgress';

@@ -19,7 +19,6 @@ import {
   Sun,
   TerminalSquare,
 } from 'lucide-react';
-import { workspacePlace } from '@shared/domain/place';
 import type { ThemePreference } from '@shared/domain/settings';
 import { defaultEditor, defaultTerminal, useExternalApps } from '../../components/externalApps/externalApps';
 import { openInEditor } from '../../components/externalApps/externalAppOperations';
@@ -28,6 +27,7 @@ import { setReviewMode } from '../../features/review/reviewModeSetting';
 import { openTaskWorkspaceDialog } from '../../features/taskWorkspace/TaskWorkspaceDialog';
 import type { Icon } from '../../lib/actions';
 import { useMemo } from 'react';
+import { workspacePlace } from '@shared/domain/place';
 import { useCommands, type Command } from '../commands/commandStore';
 import { viewCommands } from '../commands/viewCommands';
 import { navigation } from '../navigation/navigationStore';

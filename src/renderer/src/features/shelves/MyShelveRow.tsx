@@ -1,5 +1,5 @@
-import { workspacePlace } from '@shared/domain/place';
 import { MoreHorizontal } from 'lucide-react';
+import { workspacePlace } from '@shared/domain/place';
 import { COPY_ENTRY_IDS } from '../../components/copyMenu';
 import { runningFirst, withoutAction } from '../../lib/actions';
 import { Avatar } from '../../ui/Avatar';

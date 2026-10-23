@@ -1,5 +1,5 @@
-import { workspacePlace } from '@shared/domain/place';
 import { CheckCircle2, EyeOff, GitBranchPlus, GitBranch, X } from 'lucide-react';
+import { workspacePlace } from '@shared/domain/place';
 import { branchLabel } from '../../lib/branchLabels';
 import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';

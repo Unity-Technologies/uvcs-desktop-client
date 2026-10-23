@@ -1,6 +1,6 @@
-import { workspacePathOf, type Place } from '@shared/domain/place';
 import { AppWindow, PencilOff, RefreshCw } from 'lucide-react';
 import { Suspense, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import { workspacePathOf, type Place } from '@shared/domain/place';
 import { openFile } from '../../../components/externalApps/externalAppOperations';
 import { lazyComponent } from '../../../lib/lazyComponent';
 import { hotkey } from '../../../lib/shortcutRegistry';

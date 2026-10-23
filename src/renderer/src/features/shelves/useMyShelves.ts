@@ -1,5 +1,5 @@
-import { workspacePlace } from '@shared/domain/place';
 import { useQuery } from '@tanstack/react-query';
+import { workspacePlace } from '@shared/domain/place';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
