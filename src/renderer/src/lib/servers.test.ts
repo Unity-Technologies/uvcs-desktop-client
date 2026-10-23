@@ -12,14 +12,16 @@ describe('servers', () => {
 
   it('describes a server for people', () => {
     expect(describeServer('local')).toEqual({ label: 'This computer' });
-    expect(describeServer('acme@cloud')).toEqual({ label: 'acme', detail: 'Cloud' });
+    expect(describeServer('acme@unity')).toEqual({ label: 'acme', detail: 'Unity organization' });
+    expect(describeServer('acme@cloud')).toEqual({ label: 'acme', detail: 'Cloud organization' });
     expect(describeServer('*@cloud')).toEqual({ label: 'Any cloud organization', detail: 'Cloud' });
     expect(describeServer('host:8087')).toEqual({ label: 'host:8087' });
   });
 
   it('names a server as a choice as the sidebar does', () => {
     expect(serverChoiceLabel('local')).toBe('This computer');
-    expect(serverChoiceLabel('acme@cloud')).toBe('acme · Cloud');
+    expect(serverChoiceLabel('acme@cloud')).toBe('acme · Cloud organization');
+    expect(serverChoiceLabel('acme@unity')).toBe('acme · Unity organization');
     expect(serverChoiceLabel('ssl://host:8088')).toBe('ssl://host:8088');
   });
 

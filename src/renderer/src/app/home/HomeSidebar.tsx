@@ -9,6 +9,7 @@ import { useSidebarCollapsed } from '../shell/sidebarStore';
 import { SidebarToggleItem } from '../shell/SidebarToggleItem';
 import { useServers } from '../workspace/workspaceQueries';
 import { isSameSection, WELCOME, type HomeSection } from './homeSection';
+import { serverGroups } from './serverGroups';
 import { ServerMonogram } from './ServerMonogram';
 
 interface HomeSidebarProps {
@@ -31,13 +32,17 @@ export function HomeSidebar({ section, onSelect }: HomeSidebarProps) {
       ),
     };
   };
-  const repositories = (servers ?? []).map((profile) => {
-    const { label, detail } = describeServer(profile.server);
-    // Folded, every organization would be the same cloud: their initials tell them apart.
-    const icon = rail && profile.server !== 'local' ? <ServerMonogram label={label} /> : <ServerIcon server={profile.server} />;
-    const railLabel = profile.server === 'local' ? 'Local' : undefined;
-    return item({ kind: 'server', server: profile.server }, icon, label, { detail, railLabel });
-  });
+  const serverItem = (server: string): NavSectionItem => {
+    // The group names the kind of organization, so its entries need no detail of their own.
+    const { label } = describeServer(server);
+    // Folded, every organization would be the same icon: their initials tell them apart.
+    const icon = rail && server !== 'local' ? <ServerMonogram label={label} /> : <ServerIcon server={server} />;
+    const railLabel = server === 'local' ? 'Local' : undefined;
+    return item({ kind: 'server', server }, icon, label, { railLabel });
+  };
+  const serverSections = isLoading
+    ? [{ label: 'Servers', items: [{ key: 'loading', element: <CenteredSpinner /> }] }]
+    : serverGroups(servers ?? []).map((group) => ({ label: group.label, items: group.servers.map((profile) => serverItem(profile.server)) }));
 
   return (
     <Sidebar width={232} rail={rail}>
@@ -48,7 +53,7 @@ export function HomeSidebar({ section, onSelect }: HomeSidebarProps) {
             label: 'Workspaces',
             items: [item(WELCOME, <House size={15} />, 'Home'), item({ kind: 'all' }, <Layers size={15} />, 'All workspaces', { railLabel: 'All' })],
           },
-          { label: 'Repositories', items: isLoading ? [{ key: 'loading', element: <CenteredSpinner /> }] : repositories },
+          ...serverSections,
         ]}
       />
 

@@ -4,8 +4,8 @@ import { linkDescription } from './linkDescription';
 
 describe('linkDescription', () => {
   it.each([
-    ['uvcs://acme.unity/repos/game/changesets/12/-/files/Assets/Player.cs#L4', 'Changeset 12 · Player.cs', 'game · acme · Cloud'],
-    ['uvcs://acme.unity/repos/game/branches/main/task001', 'Branch task001', 'game · acme · Cloud'],
+    ['uvcs://acme.unity/repos/game/changesets/12/-/files/Assets/Player.cs#L4', 'Changeset 12 · Player.cs', 'game · acme · Unity organization'],
+    ['uvcs://acme.unity/repos/game/branches/main/task001', 'Branch task001', 'game · acme · Unity organization'],
     ['uvcs://host:8087/repos/game/code-reviews/311', 'Code review 311', 'game · host:8087'],
     ['uvcs://local/repos/game', 'game', 'game · This computer'],
     ['uvcs:///Users/ana/wk/game/-/changes/a.cs', 'game · a.cs', '/Users/ana/wk/game'],
