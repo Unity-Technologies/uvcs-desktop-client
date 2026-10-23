@@ -49,8 +49,9 @@ for name in Old1 Old2 Old3; do class_file "src/Retired/$name.cs" "$name" 0; done
 for similarity in "${WEAPON_SIMILARITIES[@]}"; do
   class_file "src/Legacy/Weapons/WeaponSystemAt$similarity.cs" WeaponSystem $((LINES * (100 - similarity) / 200))
 done
-# By size, against the new 20,000-byte Weapon.png: s% is a deleted file of 2,000,000 / (200 - s) bytes.
-for similarity in $(seq 0 5 100); do bytes "art/Textures/Old/WeaponAt$similarity.png" $((2000000 / (200 - similarity))); done
+# By size, against the new 20,000-byte Weapon.png: s% is a deleted file of 2,000,000 / (200 - s) bytes, rounded up so
+# the percentage shown, rounded down, is s.
+for similarity in $(seq 0 5 100); do bytes "art/Textures/Old/WeaponAt$similarity.png" $(((2000000 + 199 - similarity) / (200 - similarity))); done
 # The new files' folders, checked in empty: cm moves a file only into a folder under version control.
 mkdir -p "${FOLDERS[@]}" logs && for batch in $(seq 0 11); do mkdir -p "src/Generated/Batch$batch"; done
 cm add -R . >/dev/null
