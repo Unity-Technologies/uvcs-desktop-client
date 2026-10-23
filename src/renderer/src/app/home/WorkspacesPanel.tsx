@@ -57,7 +57,7 @@ export function WorkspacesPanel({ onOpen, onOpenFolder }: WorkspacesPanelProps) 
           autoFocus
           onKeyDown={(event) => listRef.current?.takeSearchKey(event)}
         />
-        {choices.length > 0 && <PlaceFilter choices={choices} place={place} onChange={setPlace} />}
+        {choices.length > 0 && <PlaceFilter choices={choices} workspaceCount={everyEntry.length} place={place} onChange={setPlace} />}
       </ViewHeader>
 
       <div className={styles.list}>

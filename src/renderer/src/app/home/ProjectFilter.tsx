@@ -1,18 +1,26 @@
 import { ALL_PROJECTS_COLOR } from '@shared/domain/organizations';
 import type { UnityProject } from '@shared/domain/repository';
 import { ProjectIcon } from '../../components/ProjectIcon';
+import { holdsCount } from '../../lib/text';
 import { PickFilter } from './PickFilter';
-import { matchingProjects } from './repositoryProjects';
+import { matchingProjects, type ProjectChoice } from './repositoryProjects';
 
 interface ProjectFilterProps {
-  projects: UnityProject[];
+  choices: ProjectChoice[];
+  /** Every repository of the organization, as "All projects" counts them. */
+  repositoryCount: number;
   /** The project shown, none for all projects. */
   project: UnityProject | null;
   onChange: (project: string | null) => void;
 }
 
-/** A Unity organization's project picker: all projects, or one found by name among the many an organization holds. */
-export function ProjectFilter({ projects, project, onChange }: ProjectFilterProps) {
+const repositoriesIn = (count: number): string => holdsCount(count, 'repository', 'repositories');
+
+/**
+ * A Unity organization's project picker: all projects, or one found by name among the many an organization holds,
+ * each with how many repositories it has.
+ */
+export function ProjectFilter({ choices, repositoryCount, project, onChange }: ProjectFilterProps) {
   return (
     <PickFilter
       trigger={{
@@ -21,10 +29,16 @@ export function ProjectFilter({ projects, project, onChange }: ProjectFilterProp
       }}
       name="Project"
       rowsLabel="Projects"
-      all={{ icon: <ProjectIcon color={ALL_PROJECTS_COLOR} />, label: 'All projects', picked: project === null }}
-      choices={projects}
+      all={{ icon: <ProjectIcon color={ALL_PROJECTS_COLOR} />, label: 'All projects', detail: repositoriesIn(repositoryCount), picked: project === null }}
+      choices={choices}
       matching={matchingProjects}
-      rowOf={(choice) => ({ key: choice.name, icon: <ProjectIcon guid={choice.guid} />, label: choice.name, picked: choice.name === project?.name })}
+      rowOf={(choice) => ({
+        key: choice.name,
+        icon: <ProjectIcon guid={choice.guid} />,
+        label: choice.name,
+        detail: repositoriesIn(choice.repositoryCount),
+        picked: choice.name === project?.name,
+      })}
       placeholder="Find a project"
       empty="No matching projects"
       onPick={(picked) => onChange(picked?.name ?? null)}

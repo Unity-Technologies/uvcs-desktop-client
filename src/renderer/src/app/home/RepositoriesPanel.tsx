@@ -12,7 +12,7 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { useProjects, useRepositories } from '../workspace/workspaceQueries';
 import { openCreateRepositoryDialog } from './dialogs/CreateRepositoryDialog';
 import { openCreateWorkspaceDialog } from './dialogs/CreateWorkspaceDialog';
-import { noRepositoriesState, repositoriesInProject, shownProject } from './repositoryProjects';
+import { noRepositoriesState, projectChoices, repositoriesInProject, shownProject } from './repositoryProjects';
 import { ProjectFilter } from './ProjectFilter';
 import { useProjectPickStore } from './projectPickStore';
 import { RepositoryList, type RepositoryListHandle } from './RepositoryList';
@@ -35,6 +35,7 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
   const project = shownOne?.name ?? null;
   const pickProject = useProjectPickStore((store) => store.pick);
   const { all: workspaceEntries } = useWorkspaceEntries('');
+  const choices = useMemo(() => projectChoices(projects, repositories ?? []), [projects, repositories]);
   // Named as in the sidebar: "This computer", an organization's name.
   const place = describeServer(server);
 
@@ -72,7 +73,7 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
             if (event.key === 'ArrowDown' && listRef.current?.focusFirst()) event.preventDefault();
           }}
         />
-        {projects.length > 0 && <ProjectFilter projects={projects} project={shownOne} onChange={(picked) => pickProject(server, picked)} />}
+        {choices.length > 0 && <ProjectFilter choices={choices} repositoryCount={repositories?.length ?? 0} project={shownOne} onChange={(picked) => pickProject(server, picked)} />}
       </ViewHeader>
 
       <RepositoryList

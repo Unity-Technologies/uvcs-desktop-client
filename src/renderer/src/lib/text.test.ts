@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extensionOf, fileNameOf, formatCount, formatCountAtLeast, pluralize, pluralizeAtLeast, shownCount } from './text';
+import { extensionOf, fileNameOf, formatCount, formatCountAtLeast, holdsCount, pluralize, pluralizeAtLeast, shownCount } from './text';
 
 describe('formatCount', () => {
   it('groups thousands', () => {
@@ -70,5 +70,13 @@ describe('a count that stopped counting', () => {
     expect(pluralizeAtLeast(1, true, 'changeset')).toBe('1+ changesets');
     expect(pluralizeAtLeast(1, false, 'changeset')).toBe('1 changeset');
     expect(pluralizeAtLeast(3, false, 'file')).toBe('3 files');
+  });
+});
+
+describe('holdsCount', () => {
+  it('says how many a thing holds, none in words', () => {
+    expect(holdsCount(0, 'repository', 'repositories')).toBe('No repositories');
+    expect(holdsCount(1, 'repository', 'repositories')).toBe('1 repository');
+    expect(holdsCount(1200, 'workspace')).toBe('1,200 workspaces');
   });
 });

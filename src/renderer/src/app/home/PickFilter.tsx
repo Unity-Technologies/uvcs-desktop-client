@@ -3,16 +3,18 @@ import { forwardRef, useMemo, useState, type ButtonHTMLAttributes, type ReactNod
 import { FilterPopover } from '../../ui/FilterPopover';
 import { Highlight } from '../../ui/Highlight';
 import { PickList } from '../../ui/PickList';
-import { pickFilterItems, type PickFilterItem } from './pickFilterItems';
 import styles from './PickFilter.module.css';
 
-const ROW_HEIGHT = 32;
+/** A name over a quiet line, as the branch lists' rows are. */
+const ROW_HEIGHT = 44;
 
 /** One choice of a `PickFilter`, as its row shows it. */
 export interface PickFilterRow {
   key: string;
   icon: ReactNode;
   label: string;
+  /** The quiet line under the label: what it holds ("4 repositories"). */
+  detail: string;
   picked: boolean;
   /** Under the row before it: a project under its organization. */
   nested?: boolean;
@@ -25,8 +27,8 @@ interface PickFilterProps<Choice> {
   name: string;
   /** What its rows are, for screen readers: "Projects", "Places". */
   rowsLabel: string;
-  /** The choice that filters nothing, the list's first row: "All projects", "Everywhere". */
-  all: { icon?: ReactNode; label: string; picked: boolean };
+  /** The choice that filters nothing ("All projects", "Everywhere"), pinned above the choices. */
+  all: Omit<PickFilterRow, 'key' | 'nested'>;
   choices: readonly Choice[];
   /** The choices `search` finds, in the order the list shows them. */
   matching: (choices: readonly Choice[], search: string) => Choice[];
@@ -39,20 +41,18 @@ interface PickFilterProps<Choice> {
 
 /**
  * The home screen's pickers of one of many by name (a Unity project, a place): a field-like button showing the choice,
- * opening a popover with a search across its top, then the choice that filters nothing and every choice, the one
- * picked checked, only the rows in view rendered.
+ * opening a popover with a search across its top, the choice that filters nothing pinned under it, then every choice
+ * the search finds, the one picked checked, only the rows in view rendered.
  */
 export function PickFilter<Choice>({ trigger, name, rowsLabel, all, choices, matching, rowOf, placeholder, empty, onPick }: PickFilterProps<Choice>) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const items = useMemo(() => pickFilterItems(matching(choices, search), search), [matching, choices, search]);
-  const choose = (item: PickFilterItem<Choice>): void => {
+  const shown = useMemo(() => matching(choices, search), [matching, choices, search]);
+  const choose = (choice: Choice | null): void => {
     setOpen(false);
     setSearch('');
-    onPick(item.kind === 'all' ? null : item.choice);
+    onPick(choice);
   };
-  const rowOfItem = (item: PickFilterItem<Choice>): PickFilterRow =>
-    item.kind === 'all' ? { key: '\u0000all', icon: all.icon, label: all.label, picked: all.picked } : rowOf(item.choice);
 
   return (
     <FilterPopover
@@ -63,8 +63,8 @@ export function PickFilter<Choice>({ trigger, name, rowsLabel, all, choices, mat
     >
       <PickList
         inPopover
-        items={items}
-        itemKey={(item) => rowOfItem(item).key}
+        items={shown}
+        itemKey={(choice) => rowOf(choice).key}
         search={search}
         onSearchChange={setSearch}
         placeholder={placeholder}
@@ -72,18 +72,30 @@ export function PickFilter<Choice>({ trigger, name, rowsLabel, all, choices, mat
         onPick={choose}
         rowHeight={ROW_HEIGHT}
         empty={empty}
-        renderItem={(item) => {
-          const row = rowOfItem(item);
-          return (
-            <span className={styles.choice} data-nested={row.nested === true} data-all={item.kind === 'all'}>
-              <span className={styles.check}>{row.picked && <Check size={14} />}</span>
-              {row.icon}
-              <span className={styles.choiceName}>{item.kind === 'all' ? row.label : <Highlight text={row.label} />}</span>
-            </span>
-          );
-        }}
+        note={
+          <div className={styles.pinned}>
+            <button type="button" className={styles.all} role="menuitemradio" aria-checked={all.picked} onClick={() => choose(null)}>
+              <PickRow row={all} />
+            </button>
+          </div>
+        }
+        renderItem={(choice) => <PickRow row={rowOf(choice)} highlighted />}
       />
     </FilterPopover>
+  );
+}
+
+/** A choice's row: the check's column, its icon, its name over what it holds. */
+function PickRow({ row, highlighted = false }: { row: Omit<PickFilterRow, 'key'>; highlighted?: boolean }) {
+  return (
+    <span className={styles.choice} data-nested={row.nested === true}>
+      <span className={styles.check}>{row.picked && <Check size={14} />}</span>
+      {row.icon}
+      <span className={styles.text}>
+        <span className={styles.label}>{highlighted ? <Highlight text={row.label} /> : row.label}</span>
+        <span className={styles.detail}>{row.detail}</span>
+      </span>
+    </span>
   );
 }
 

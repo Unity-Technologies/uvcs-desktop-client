@@ -29,15 +29,15 @@ describe('placeOf', () => {
 });
 
 describe('placeChoices', () => {
-  it('lists the servers as the sidebar orders them, each Unity organization with its projects, each once', () => {
+  it('lists the servers as the sidebar orders them, each Unity organization with its projects, counted', () => {
     const choices = placeChoices([LOCAL, LEGACY, GAME, EDITOR, ART, RESOLVING, UNKNOWN]);
 
-    expect(choices.map(({ label, detail }) => [label, detail])).toEqual([
-      ['studio', undefined],
-      ['Cloud Repositories', 'studio'],
-      ['Racing', 'studio'],
-      ['codice', undefined],
-      ['This computer', undefined],
+    expect(choices.map(({ label, detail, workspaceCount }) => [label, detail, workspaceCount])).toEqual([
+      ['studio', undefined, 3],
+      ['Cloud Repositories', 'studio', 1],
+      ['Racing', 'studio', 2],
+      ['codice', undefined, 1],
+      ['This computer', undefined, 1],
     ]);
     expect(choices[2]?.place).toEqual({ server: 'studio@unity', project: 'Racing' });
   });

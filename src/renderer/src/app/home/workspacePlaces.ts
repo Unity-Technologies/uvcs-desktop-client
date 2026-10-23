@@ -19,6 +19,7 @@ export interface PlaceChoice {
   detail?: string;
   /** A project's GUID, which colors its icon, once its organization's list was read. */
   guid?: string;
+  workspaceCount: number;
 }
 
 /**
@@ -37,26 +38,27 @@ const KIND_ORDER: readonly ServerKind[] = ['unityOrganization', 'cloudOrganizati
 
 /**
  * Every place the workspaces are on, as the sidebar orders servers (Unity organizations, cloud organizations, this
- * computer, servers), each Unity organization followed by its projects, by name, each with, from the organizations'
- * lists already read (`readProjects`), its GUID.
+ * computer, servers), each Unity organization followed by its projects, by name, each with its workspaces counted and,
+ * from the organizations' lists already read (`readProjects`), its GUID.
  */
 export function placeChoices(entries: readonly Pick<WorkspaceEntry, 'repository'>[], readProjects: ReadonlyMap<string, readonly UnityProject[]> = new Map()): PlaceChoice[] {
-  const projectsByServer = new Map<string, Set<string>>();
+  const servers = new Map<string, { count: number; projects: Map<string, number> }>();
   for (const entry of entries) {
     const place = placeOf(entry);
     if (!place) continue;
-    const projects = projectsByServer.get(place.server) ?? new Set<string>();
-    if (place.project) projects.add(place.project);
-    projectsByServer.set(place.server, projects);
+    const server = servers.get(place.server) ?? { count: 0, projects: new Map<string, number>() };
+    server.count++;
+    if (place.project) server.projects.set(place.project, (server.projects.get(place.project) ?? 0) + 1);
+    servers.set(place.server, server);
   }
-  return [...projectsByServer.entries()].sort(([a], [b]) => byServer(a, b)).flatMap(([server, projects]) => {
+  return [...servers.entries()].sort(([a], [b]) => byServer(a, b)).flatMap(([server, { count, projects }]) => {
     const organization = describeServer(server).label;
     const guids = new Map((readProjects.get(server) ?? []).map((project) => [project.name, project.guid]));
     return [
-      { place: { server }, label: organization },
-      ...[...projects]
-        .sort((a, b) => a.localeCompare(b))
-        .map((project) => withGuid({ place: { server, project }, label: project, detail: organization }, guids.get(project))),
+      { place: { server }, label: organization, workspaceCount: count },
+      ...[...projects.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([project, workspaceCount]) => withGuid({ place: { server, project }, label: project, detail: organization, workspaceCount }, guids.get(project))),
     ];
   });
 }
