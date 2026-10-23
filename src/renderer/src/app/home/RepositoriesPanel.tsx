@@ -56,7 +56,7 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
           <>
             <IconButton icon={<ServerCog size={14} />} label="Server permissions…" onClick={() => openServerPermissions(server)} />
             <IconButton icon={<RefreshCw size={14} />} label="Refresh" loading={isFetching} onClick={() => void refetch()} />
-            <Button variant="primary" icon={<Plus size={14} />} onClick={() => openCreateRepositoryDialog({ server, onWorkspaceCreated: onOpen })}>
+            <Button variant="primary" icon={<Plus size={14} />} onClick={() => openCreateRepositoryDialog({ server, project, onWorkspaceCreated: onOpen })}>
               New repository
             </Button>
           </>

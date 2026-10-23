@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isUnityOrganization, nameInProject, projectOfRepository, serverKind } from './organizations';
+import { isUnityOrganization, nameInProject, nameWithProject, projectOfRepository, serverKind } from './organizations';
 
 describe('serverKind', () => {
   it('tells Unity organizations from cloud organizations by the alias cm names them with', () => {
@@ -49,5 +49,16 @@ describe('nameInProject', () => {
 
   it('keeps the whole name of a repository in no project', () => {
     expect(nameInProject('Game', undefined)).toBe('Game');
+  });
+});
+
+describe('nameWithProject', () => {
+  it('names a repository after the project it is created in, as nameInProject reads it back', () => {
+    expect(nameWithProject('Game', 'Racing')).toBe('Racing/Game');
+    expect(nameInProject(nameWithProject('Game', 'Racing'), 'Racing')).toBe('Game');
+  });
+
+  it('keeps the name of a repository in no project', () => {
+    expect(nameWithProject('Game', null)).toBe('Game');
   });
 });

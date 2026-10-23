@@ -4,25 +4,30 @@ import { Button } from '../../../ui/Button';
 import { Checkbox } from '../../../ui/Checkbox';
 import { Dialog } from '../../../ui/dialog/Dialog';
 import { openDialog } from '../../../ui/dialog/dialogStore';
-import { TextField } from '../../../ui/TextField';
+import { SelectField, TextField } from '../../../ui/TextField';
 import { toast } from '../../../ui/toast/toastStore';
-import { useRepositories, useWorkspaceList } from '../../workspace/workspaceQueries';
+import { useProjects, useRepositories, useWorkspaceList } from '../../workspace/workspaceQueries';
 import { useDefaultWorkspaceRoot } from '../useDefaultWorkspaceRoot';
-import { defaultWorkspacePath, isRepositoryNameTaken, suggestWorkspaceName } from '../workspaceNaming';
+import { defaultWorkspacePath, suggestWorkspaceName } from '../workspaceNaming';
 import { createNewRepository } from './createNewRepository';
+import { initialProject, newRepositoryOf } from './newRepositoryForm';
 import { LocationField } from './LocationField';
 
 interface CreateRepositoryOptions {
   server: string;
+  /** The Unity project the repositories list shows, which the repository is created in unless another is picked. */
+  project?: string | null;
   /** Called with the new workspace path when the user also asked for a workspace. */
   onWorkspaceCreated: (workspacePath: string) => void;
 }
+
+const NO_PROJECTS: string[] = [];
 
 export function openCreateRepositoryDialog(options: CreateRepositoryOptions): void {
   openDialog((close) => <CreateRepositoryDialog {...options} onClose={close} />);
 }
 
-function CreateRepositoryDialog({ server: initialServer, onWorkspaceCreated, onClose }: CreateRepositoryOptions & { onClose: () => void }) {
+function CreateRepositoryDialog({ server: initialServer, project: shownProject, onWorkspaceCreated, onClose }: CreateRepositoryOptions & { onClose: () => void }) {
   const { data: workspaces } = useWorkspaceList();
   const root = useDefaultWorkspaceRoot();
 
@@ -34,18 +39,27 @@ function CreateRepositoryDialog({ server: initialServer, onWorkspaceCreated, onC
   /** Created by a try whose workspace failed: trying again creates only the workspace. */
   const [created, setCreated] = useState<string>();
   const { data: repositories } = useRepositories(server);
+  const { data: projects = NO_PROJECTS } = useProjects(server);
+  // Undefined until picked: the dialog starts on the project the list shows, once the server's projects are read.
+  const [pickedProject, setPickedProject] = useState<string | null>();
+  const project = pickedProject === undefined ? initialProject(shownProject, projects) : pickedProject;
+  const repository = newRepositoryOf({ name, project, projects, takenNames: (repositories ?? []).map((listed) => listed.name) });
 
   const workspaceName = suggestWorkspaceName(name.trim(), (workspaces ?? []).map((workspace) => workspace.name));
   const workspacePath = chosenPath ?? (name.trim() ? defaultWorkspacePath(root, workspaceName) : '');
-  const nameTaken = !created && isRepositoryNameTaken(name, (repositories ?? []).map((repository) => repository.name));
-  const canCreate = Boolean(name.trim() && !nameTaken && (!withWorkspace || workspacePath) && !creating);
+  const nameTaken = !created && repository.nameTaken;
+  const canCreate = Boolean(name.trim() && !nameTaken && !repository.needsProject && (!withWorkspace || workspacePath) && !creating);
+  const changeServer = (next: string): void => {
+    setServer(next);
+    setPickedProject(undefined);
+  };
 
   const create = async (): Promise<void> => {
     if (!canCreate) return;
     setCreating(true);
     const outcome = await createNewRepository({
       server,
-      name: name.trim(),
+      name: repository.fullName,
       created,
       workspace: withWorkspace ? { name: workspaceName, path: workspacePath } : undefined,
     });
@@ -75,7 +89,19 @@ function CreateRepositoryDialog({ server: initialServer, onWorkspaceCreated, onC
         </>
       }
     >
-      <ServerSelect value={server} onChange={setServer} disabled={Boolean(created)} />
+      <ServerSelect value={server} onChange={changeServer} disabled={Boolean(created)} />
+      {repository.asksProject && (
+        <SelectField label="Project" value={project ?? ''} disabled={Boolean(created)} onChange={(event) => setPickedProject(event.target.value || null)}>
+          <option value="" disabled>
+            Choose a project
+          </option>
+          {projects.map((projectName) => (
+            <option key={projectName} value={projectName}>
+              {projectName}
+            </option>
+          ))}
+        </SelectField>
+      )}
       <TextField
         label="Repository name"
         value={name}

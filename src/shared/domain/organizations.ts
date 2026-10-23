@@ -39,3 +39,8 @@ export function projectOfRepository(name: string, projects: ReadonlySet<string>)
 export function nameInProject(name: string, project: string | undefined): string {
   return project ? name.slice(project.length + 1) : name;
 }
+
+/** A repository's whole name in a project, as `cm` creates it there: `Game` in `Racing` → `Racing/Game`. */
+export function nameWithProject(name: string, project: string | null): string {
+  return project ? `${project}/${name}` : name;
+}
