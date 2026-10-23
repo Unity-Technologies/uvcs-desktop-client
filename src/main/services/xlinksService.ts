@@ -19,12 +19,20 @@ export function createXlinksService({ cm }: Pick<ServiceContext, 'cm'>): XlinksA
   }
 
   // Rules are dropped before any is added: a rule that changes keeps its branch, and `cm` refuses a second rule for it.
+  // When adding fails (a branch that doesn't exist), the dropped rules go back: the xlink keeps the rules the dialog
+  // still shows, and saving again drops them again. Pointing it again where it already points changes nothing.
   async function edit(workspacePath: string, { path, repository, point, removedRules, addedRules }: XlinkEdit) {
     const absolutePath = toAbsolutePath(workspacePath, path);
     const run = (args: string[]) => cm.query(args, inWorkspace(workspacePath));
     if (point) await run(editXlinkPointArgs(absolutePath, point, repository));
     if (removedRules.length > 0) await run(deleteXlinkRulesArgs(absolutePath, removedRules));
-    if (addedRules.length > 0) await run(addXlinkRulesArgs(absolutePath, addedRules));
+    if (addedRules.length === 0) return;
+    try {
+      await run(addXlinkRulesArgs(absolutePath, addedRules));
+    } catch (error) {
+      if (removedRules.length > 0) await run(addXlinkRulesArgs(absolutePath, removedRules));
+      throw error;
+    }
   }
 
   return { rules, create, edit };
