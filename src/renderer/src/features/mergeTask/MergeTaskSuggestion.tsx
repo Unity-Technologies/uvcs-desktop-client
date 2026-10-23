@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -22,7 +23,7 @@ export function MergeTaskSuggestion({ workspacePath, branchName, quiet }: { work
   const task = isTaskBranch(branch) ? branch : undefined;
   const { data: hasChangesets } = useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'mergeTaskHasChangesets', branchName, task?.headChangeset),
-    queryFn: async () => (await api.changesets.list(workspacePath, { branch: branchName, limit: 1 })).length > 0,
+    queryFn: async () => (await api.changesets.list(workspacePlace(workspacePath), { branch: branchName, limit: 1 })).length > 0,
     enabled: task !== undefined,
     // Keyed by the branch head: the answer only changes when the head moves, so refreshes skip it.
     staleTime: Infinity,

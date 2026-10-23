@@ -1,8 +1,9 @@
 import { GitCommitVertical } from 'lucide-react';
 import { useMemo } from 'react';
+import { workspacePathOf } from '@shared/domain/place';
 import type { Changeset } from '@shared/domain/changeset';
 import { useCommands, type Command } from '../../app/commands/commandStore';
-import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ObjectListView } from '../../components/ObjectListView';
 import { branchWorkedOn } from '../../components/workingObject';
@@ -48,7 +49,8 @@ const changesetKey = (changeset: Changeset): string => String(changeset.id);
 const ownerOf = (changeset: Changeset): string => changeset.owner;
 
 export function ChangesetsView() {
-  const workspacePath = useWorkspacePath();
+  const place = usePlace();
+  const workspacePath = workspacePathOf(place);
   const { data: workspace } = useWorkspaceInfo();
   const filters = useChangesetFilters();
   const { text, update } = filters;
@@ -56,11 +58,11 @@ export function ChangesetsView() {
   const [selection, setSelection] = useViewSelection('changesets');
 
   const currentBranch = branchWorkedOn(workspace?.selector);
-  const branchScope = branchScopeIn(filters, workspacePath, currentBranch);
+  const branchScope = branchScopeIn(filters, place, currentBranch);
   const branch = branchOf(branchScope);
   // A picked branch shows with its own time range and people; the remembered ones stay for when the pick is cleared.
-  const { since, people } = shownFilters(filters, workspacePath);
-  const updateShown = (change: Partial<ShownFilters>) => update(shownFiltersChange(filters.pickedBranch, workspacePath, change));
+  const { since, people } = shownFilters(filters, place);
+  const updateShown = (change: Partial<ShownFilters>) => update(shownFiltersChange(filters.pickedBranch, place, change));
   // The text is matched locally; only the other filters trigger a new `cm find`.
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const queryFilter = useMemo(() => toQueryFilter({ since, people: queriedPeople }, branch, new Date()), [since, queriedPeople, branch]);
@@ -75,9 +77,9 @@ export function ChangesetsView() {
   );
   const selected = visible.filter((changeset) => selection.selected.has(changesetKey(changeset)));
   const focused = visible.find((changeset) => changesetKey(changeset) === selection.anchor);
-  useCopyCommand('Changesets', 'Changeset', selected.length === 1 ? changesetCopyTexts(workspacePath, selected[0]!) : undefined);
+  useCopyCommand('Changesets', 'Changeset', selected.length === 1 && workspacePath !== null ? changesetCopyTexts(workspacePath, selected[0]!) : undefined);
   const columns = useMemo(() => changesetColumns(workspace?.loadedChangeset, labelsByChangeset), [workspace?.loadedChangeset, labelsByChangeset]);
-  const menuContext = { workspacePath, loadedChangeset: workspace?.loadedChangeset, loadedBranch: currentBranch };
+  const menuContext = { place, loadedChangeset: workspace?.loadedChangeset, loadedBranch: currentBranch };
 
   useCommands(
     useMemo<Command[]>(
@@ -105,12 +107,12 @@ export function ChangesetsView() {
         time={<SincePicker value={since} onChange={(value) => updateShown({ since: value })} />}
         kinds={
           <BranchScopeFilter
-            workspacePath={workspacePath}
+            place={place}
             scope={branchScope}
             currentBranch={currentBranch}
             onShowAll={() => update(ALL_BRANCHES)}
             onShowCurrent={() => update(CURRENT_BRANCH)}
-            onPick={(name) => update(pickedBranchFilters(workspacePath, name))}
+            onPick={(name) => update(pickedBranchFilters(place, name))}
           />
         }
       />

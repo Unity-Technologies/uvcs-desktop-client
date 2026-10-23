@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { PageSeed } from '@shared/domain/pageWindow';
 import { queryKeys } from '../../api/queryKeys';
 import { listedChangeset } from '../../features/changesets/useChangeset';
@@ -13,7 +14,7 @@ export function pageSeed(workspacePath: string, page: Page): PageSeed | undefine
   if (page.kind !== 'diff') return undefined;
   const { target } = page;
   if (target.kind === 'changeset') {
-    const listed = listedChangeset(workspacePath, target.changesetId);
+    const listed = listedChangeset(workspacePlace(workspacePath), target.changesetId);
     return listed && { readAt: listed.readAt, changeset: listed.changeset };
   }
   if (target.kind === 'shelve') {

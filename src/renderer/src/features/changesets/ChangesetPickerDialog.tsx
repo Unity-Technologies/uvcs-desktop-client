@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { GitCommitVertical } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace } from '../../app/workspace/useWorkspace';
 import { branchLabel } from '../../lib/branchLabels';
 import { typedChangesetNumber } from '../../lib/changesetNumber';
 import { firstLine } from '../../lib/text';
@@ -28,8 +28,7 @@ export async function pickChangeset(options: PickChangesetOptions): Promise<numb
 }
 
 function ChangesetPickerDialog({ title, exclude, finish }: PickChangesetOptions & { finish: (choice: ChangesetChoice | undefined) => void }) {
-  const workspacePath = useWorkspacePath();
-  const { data: recent, error } = useQuery(recentChangesetsQuery(workspacePath));
+  const { data: recent, error } = useQuery(recentChangesetsQuery(usePlace()));
   const [search, setSearch] = useState('');
   const choices = useMemo(() => changesetChoices(recent, RECENT_CHANGESETS, exclude, search), [recent, exclude, search]);
   // A number typed is picked without the list: only an empty or text search waits for it.

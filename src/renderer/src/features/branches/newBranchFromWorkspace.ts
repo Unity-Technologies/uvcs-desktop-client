@@ -22,7 +22,7 @@ export async function newBranchFromWorkspace(workspace: WorkspaceInfo): Promise<
     return;
   }
 
-  const [mainHead] = await api.changesets.list(workspace.path, { branch: MAIN_BRANCH, limit: 1 }).catch(() => []);
+  const [mainHead] = await api.changesets.list(workspacePlace(workspace.path), { branch: MAIN_BRANCH, limit: 1 }).catch(() => []);
   const main: NewBranchOrigin | null = mainHead
     ? {
         parentBranch: MAIN_BRANCH,

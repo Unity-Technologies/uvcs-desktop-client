@@ -29,11 +29,11 @@ describe('Show changesets', () => {
     const remembered = () => rememberedFilters(store.getState(), CHANGESET_SESSION_FILTERS);
     const before = remembered();
 
-    showBranchChangesets(WORKSPACE, NESTED);
+    showBranchChangesets(workspacePlace(WORKSPACE), NESTED);
     expect(remembered()).toEqual(before);
     expect(whereTheWindowIs().view).toBe('changesets');
 
-    store.getState().update(pickedBranchFilters(WORKSPACE, '/main/task'));
+    store.getState().update(pickedBranchFilters(workspacePlace(WORKSPACE), '/main/task'));
     expect(remembered()).toEqual(before);
   });
 
@@ -44,13 +44,13 @@ describe('Show changesets', () => {
     const fromList = entryOf(branchMenu(workspacePlace(WORKSPACE), [branch], '/main'));
     expect(fromList).toMatchObject({ label: 'Show changesets' });
     (fromList as { run: () => void }).run();
-    expect(filtersShown().pickedBranch).toMatchObject({ workspacePath: WORKSPACE, name: '/main/task' });
+    expect(filtersShown().pickedBranch).toMatchObject({ pickedIn: WORKSPACE, name: '/main/task' });
 
     const layout = layoutGraph(sampleHistory());
     const context = { workspacePath: WORKSPACE, layout, currentBranch: '/main', loadedChangeset: 6, repository: 'game@local', goToChangeset: () => {}, showRelatedTo: () => {}, revealCreatedBranch: () => {} };
     const fromGraph = entryOf(graphMenu({ kind: 'branch', lane: layout.lanesByBranch.get('/main/a')! }, context));
     (fromGraph as { run: () => void }).run();
-    expect(filtersShown().pickedBranch).toMatchObject({ workspacePath: WORKSPACE, name: '/main/a' });
+    expect(filtersShown().pickedBranch).toMatchObject({ pickedIn: WORKSPACE, name: '/main/a' });
     expect(whereTheWindowIs().view).toBe('changesets');
   });
 

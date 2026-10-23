@@ -136,7 +136,7 @@ export function changesetResult(changeset: Changeset, context: ResultContext): S
     detail: `cs:${changeset.id} · ${displayName(changeset.owner)} · ${formatRelativeDate(changeset.date)}`,
     detailMatches: specMatches(`cs:${changeset.id}`, term),
     quality: term ? Math.max(wordMatchQuality(changeset.comment, term), wordMatchQuality(`cs:${changeset.id}`, term)) : undefined,
-    menu: () => changesetMenu({ workspacePath, loadedChangeset, loadedBranch: currentBranch }, [changeset]),
+    menu: () => changesetMenu({ place: workspacePlace(workspacePath), loadedChangeset, loadedBranch: currentBranch }, [changeset]),
     run: () => openChangesetDiff(changeset),
   };
 }

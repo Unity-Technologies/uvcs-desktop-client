@@ -7,11 +7,16 @@ import { queryClient } from '../../app/queryClient';
 import { fetchBranch } from './useBranches';
 
 /**
- * The GUIDs of the branches the workspace switched to lately, newest first. They live in the app's settings (the
- * official Desktop client's are only imported once, `importLegacySettings`): cheap to read again.
+ * The GUIDs of the branches the workspace switched to lately, newest first; none without a workspace (null). They live
+ * in the app's settings (the official Desktop client's are only imported once, `importLegacySettings`): cheap to read
+ * again.
  */
-export function useRecentBranchGuids(workspacePath: string, enabled = true): string[] {
-  const { data } = useQuery({ queryKey: recentBranchesKey(workspacePath), queryFn: () => api.branches.recent(workspacePath), enabled: enabled && Boolean(workspacePath) });
+export function useRecentBranchGuids(workspacePath: string | null, enabled = true): string[] {
+  const { data } = useQuery({
+    queryKey: recentBranchesKey(workspacePath ?? ''),
+    queryFn: () => api.branches.recent(workspacePath!),
+    enabled: enabled && Boolean(workspacePath),
+  });
   return data ?? EMPTY;
 }
 

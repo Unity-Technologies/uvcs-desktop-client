@@ -34,7 +34,7 @@ export function usePaletteLists(workspacePath: string | null) {
     branches: useQuery({ queryKey: branchesKey(path, {}), queryFn: () => api.branches.list(workspacePlace(path), {}), ...cached }),
     labels: useQuery({ queryKey: labelsKey(path, {}), queryFn: () => api.labels.list(path, {}), ...cached }),
     // Older changesets are still reachable by number (`1234` or `cs:1234`) or by searching them all on demand.
-    changesets: useQuery({ ...cached, ...recentChangesetsQuery(path) }),
+    changesets: useQuery({ ...cached, ...recentChangesetsQuery(workspacePlace(path)) }),
     shelves: useQuery({ queryKey: shelvesKey(path, recentShelvesFilter), queryFn: () => api.shelves.list(path, recentShelvesFilter), ...cached }),
     // The same newest reviews the branch chips read (`useReviewsByBranch`): one query for both.
     codeReviews: useQuery({ ...reviewSummariesQuery(path), ...cached }),

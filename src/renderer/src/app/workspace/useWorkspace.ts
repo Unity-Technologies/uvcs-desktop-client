@@ -1,6 +1,6 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { workspacePlace, type Place } from '@shared/domain/place';
+import { workspacePathOf, workspacePlace, type Place } from '@shared/domain/place';
 import { otherRepository } from '@shared/domain/repository';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -22,13 +22,24 @@ export function usePlace(): Place {
   return useMemo(() => workspacePlace(workspacePath), [workspacePath]);
 }
 
+/** The info of the place's workspace: none for a repository explored without one (the query never runs). */
 export function useWorkspaceInfo() {
-  return useWorkspaceInfoOf(useWorkspacePath());
+  return useWorkspaceInfoOf(workspacePathOf(usePlace()));
 }
 
-/** `repository` when it isn't the workspace's (an item under an xlink): see `otherRepository`. */
+/** `repository` when it isn't the place's (an item under an xlink): see `otherRepository`. */
 export function useOtherRepository(repository: string | undefined): string | undefined {
-  return otherRepository(repository, useWorkspaceInfo().data?.repository);
+  return otherRepository(repository, usePlaceRepository());
+}
+
+/**
+ * The repository the window's place reads: a repository's own at once; a workspace's once its info is read, undefined
+ * until then.
+ */
+export function usePlaceRepository(): string | undefined {
+  const place = usePlace();
+  const workspaceRepository = useWorkspaceInfoOf(workspacePathOf(place)).data?.repository;
+  return place.kind === 'repository' ? place.repository : workspaceRepository;
 }
 
 export function workspaceInfoQuery(workspacePath: string) {

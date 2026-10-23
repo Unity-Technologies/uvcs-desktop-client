@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
+import { workspacePlace } from '@shared/domain/place';
 import type { Changeset } from '@shared/domain/changeset';
 import type { DiffEntry, DiffStatus, DiffTarget } from '@shared/domain/diff';
 import type { ItemType } from '@shared/domain/pendingChanges';
@@ -99,7 +100,7 @@ describe('reverting a file from a diff', () => {
 
     await revertFrom(ofChangeset);
 
-    expect(fakeApi.argsOf('changesets.get')).toEqual([[ws, 42]]);
+    expect(fakeApi.argsOf('changesets.get')).toEqual([[workspacePlace(ws), 42]]);
     expect(askedDialogs()).toEqual([{ kind: 'confirm', title: 'Revert src/a.ts to changeset 37, before changeset 42?' }]);
     expect(fakeApi.argsOf('history.revertTo')).toEqual([[ws, 'src/a.ts', 37]]);
     expect(refreshed()).toEqual(['explorer', 'info', 'locks', 'pendingChanges', 'review']);

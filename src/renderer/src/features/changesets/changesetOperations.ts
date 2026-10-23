@@ -1,4 +1,4 @@
-import { workspacePlace } from '@shared/domain/place';
+import type { Place } from '@shared/domain/place';
 import type { Changeset, ChangesetInfo } from '@shared/domain/changeset';
 import type { MergeRequest } from '@shared/domain/merge';
 import { api } from '../../api/client';
@@ -57,17 +57,17 @@ export function switchToChangeset(workspacePath: string, changeset: Pick<Changes
   return switchWorkspace(workspacePath, `cs:${changeset.id}`, `changeset ${changeset.id}`);
 }
 
-export async function editChangesetComment(workspacePath: string, changeset: Pick<Changeset, 'id' | 'comment'>): Promise<void> {
+export async function editChangesetComment(place: Place, changeset: Pick<Changeset, 'id' | 'comment'>): Promise<void> {
   const comment = await askForChangesetComment(changeset.id, changeset.comment);
-  if (comment !== undefined) await saveChangesetComment(workspacePath, changeset, comment);
+  if (comment !== undefined) await saveChangesetComment(place, changeset, comment);
 }
 
 /** Resolves to whether it saved, so a comment that couldn't be saved stays in its editor. */
-export function saveChangesetComment(workspacePath: string, changeset: Pick<Changeset, 'id'>, comment: string): Promise<boolean> {
-  return runVoidAction(workspacePlace(workspacePath), "Couldn't update the comment", () => api.changesets.editComment(workspacePath, changeset.id, comment), isAffectedByChangesetComment);
+export function saveChangesetComment(place: Place, changeset: Pick<Changeset, 'id'>, comment: string): Promise<boolean> {
+  return runVoidAction(place, "Couldn't update the comment", () => api.changesets.editComment(place, changeset.id, comment), isAffectedByChangesetComment);
 }
 
-export async function moveChangesetToBranch(workspacePath: string, changeset: Pick<Changeset, 'id' | 'branch'>): Promise<void> {
+export async function moveChangesetToBranch(place: Place, changeset: Pick<Changeset, 'id' | 'branch'>): Promise<void> {
   const branch = await prompt({
     title: `Move changeset ${changeset.id} to another branch`,
     label: 'Destination branch',
@@ -77,14 +77,14 @@ export async function moveChangesetToBranch(workspacePath: string, changeset: Pi
   });
   if (!branch) return;
 
-  const moved = await runVoidAction(workspacePlace(workspacePath), "Couldn't move the changeset", () =>
-    api.changesets.moveToBranch(workspacePath, changeset.id, branch),
+  const moved = await runVoidAction(place, "Couldn't move the changeset", () =>
+    api.changesets.moveToBranch(place, changeset.id, branch),
     isAffectedByChangesetMove,
   );
   if (moved) toast.success(`Moved changeset ${changeset.id} to ${branchLabel(branch)}`);
 }
 
-export async function deleteChangeset(workspacePath: string, changeset: Pick<Changeset, 'id'>): Promise<void> {
+export async function deleteChangeset(place: Place, changeset: Pick<Changeset, 'id'>): Promise<void> {
   const confirmed = await confirm({
     title: `Delete changeset ${changeset.id}?`,
     message: 'Only the last changeset of a branch can be deleted, and it is gone for good.',
@@ -93,7 +93,7 @@ export async function deleteChangeset(workspacePath: string, changeset: Pick<Cha
   });
   if (!confirmed) return;
 
-  const deleted = await runVoidAction(workspacePlace(workspacePath), "Couldn't delete the changeset", () => api.changesets.remove(workspacePath, changeset.id), isAffectedByChangesetMove);
+  const deleted = await runVoidAction(place, "Couldn't delete the changeset", () => api.changesets.remove(place, changeset.id), isAffectedByChangesetMove);
   if (deleted) toast.success(`Deleted changeset ${changeset.id}`);
 }
 
@@ -106,7 +106,7 @@ export function revertWorkspaceToChangeset(changeset: Pick<Changeset, 'id'>, loa
 }
 
 /** A changeset's GUID, read when a view that didn't read it (the Branch Explorer) copies it. */
-export function readChangesetGuid(workspacePath: string, changeset: ChangesetInfo): Promise<string | undefined> {
+export function readChangesetGuid(place: Place, changeset: ChangesetInfo): Promise<string | undefined> {
   if (changeset.guid) return Promise.resolve(changeset.guid);
-  return runRead("Couldn't read the changeset's GUID", async () => (await api.changesets.get(workspacePath, changeset.id)).guid);
+  return runRead("Couldn't read the changeset's GUID", async () => (await api.changesets.get(place, changeset.id)).guid);
 }

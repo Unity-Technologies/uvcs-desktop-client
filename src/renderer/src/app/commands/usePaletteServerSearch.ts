@@ -51,7 +51,7 @@ export function useChangesetSearch(workspacePath: string | null) {
   const filter: QueryFilter = { text: term, limit: SERVER_SEARCH_LIMIT };
   const found = useQuery({
     queryKey: changesetsKey(path, filter),
-    queryFn: () => api.changesets.list(path, filter),
+    queryFn: () => api.changesets.list(workspacePlace(path), filter),
     enabled: Boolean(workspacePath) && term !== undefined,
     staleTime: SERVER_SEARCH_STALE_TIME,
   });

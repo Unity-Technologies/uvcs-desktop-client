@@ -179,8 +179,8 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   branch: () => branchMenu(workspacePlace(ws), [branch], '/main'),
   currentBranch: () => branchMenu(workspacePlace(ws), [branch], branch.name),
   branches: () => branchMenu(workspacePlace(ws), [branch, { ...branch, name: '/main/other', isHidden: true }], '/main'),
-  changeset: () => changesetMenu({ workspacePath: ws, loadedChangeset: 6, loadedBranch: '/main/a' }, [changeset]),
-  changesetInterval: () => changesetMenu({ workspacePath: ws }, [changeset, { ...changeset, id: 2 }]),
+  changeset: () => changesetMenu({ place: workspacePlace(ws), loadedChangeset: 6, loadedBranch: '/main/a' }, [changeset]),
+  changesetInterval: () => changesetMenu({ place: workspacePlace(ws) }, [changeset, { ...changeset, id: 2 }]),
   label: () => labelMenu(ws, [label]),
   labelPair: () => labelMenu(ws, [label, { ...label, name: 'v2' }]),
   shelve: () => shelveMenu(ws, [shelve]),
@@ -239,6 +239,8 @@ const onRepository = repositoryPlace(repository);
 const REPOSITORY_MENUS: Record<string, () => MenuEntry[]> = {
   repositoryBranch: () => branchMenu(onRepository, [branch], undefined),
   repositoryBranches: () => branchMenu(onRepository, [branch, { ...branch, name: '/main/other', isHidden: true }], undefined),
+  repositoryChangeset: () => changesetMenu({ place: onRepository }, [changeset]),
+  repositoryChangesetInterval: () => changesetMenu({ place: onRepository }, [changeset, { ...changeset, id: 2 }]),
 };
 
 /**
@@ -262,7 +264,9 @@ describe('menus without a workspace', () => {
   });
 
   it("keeps what changes the server's objects, as in a workspace", () => {
-    expect(ids(REPOSITORY_MENUS.repositoryBranch!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'rename', 'hide', 'delete']));
+    expect(ids(REPOSITORY_MENUS.repositoryBranch!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'changesets', 'rename', 'hide', 'delete']));
+    expect(ids(REPOSITORY_MENUS.repositoryChangeset!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'compare', 'editComment', 'move', 'delete']));
+    expect(ids(REPOSITORY_MENUS.repositoryChangesetInterval!())).toEqual(['diffRange']);
   });
 
   it('offers in a workspace what a repository leaves out, so the list names what each needs', () => {
@@ -375,7 +379,7 @@ describe('one menu per object, the same everywhere', () => {
   });
 
   it('a changeset reads the same in the Changesets view, Incoming, the top bar, the palette and the Branch Explorer', () => {
-    const context = { workspacePath: ws, loadedChangeset: 6, loadedBranch: '/main' };
+    const context = { place: workspacePlace(ws), loadedChangeset: 6, loadedBranch: '/main' };
     const common = changesetMenu(context, [changeset]);
     expectOnlyAdds(changesetResult(changeset, resultContext).menu!(), common);
     expectOnlyAdds(workingObjectMenu({ ...workspace, selector: { kind: 'changeset', name: '5' }, loadedChangeset: 5 }, { kind: 'changeset', changeset }), changesetMenu({ ...context, loadedChangeset: 5 }, [changeset]));
@@ -440,7 +444,7 @@ describe('Copy', () => {
   });
 
   it('copies a changeset as its number, spec, full spec, comment and GUID', async () => {
-    expect(await copiedBy(changesetMenu({ workspacePath: ws }, [changeset]))).toEqual([
+    expect(await copiedBy(changesetMenu({ place: workspacePlace(ws) }, [changeset]))).toEqual([
       'Changeset number: 5',
       'Changeset link: uvcs://local/repos/game/changesets/5',
       'Changeset spec: cs:5',

@@ -69,7 +69,7 @@ function graphCodeReviewMenu(review: CodeReviewSummary, { workspacePath, layout,
 function graphChangesetMenu(id: number, { workspacePath, layout, currentBranch, loadedChangeset, repository, goToChangeset }: GraphMenuContext, host: MenuHost): MenuEntry[] {
   const changeset = layout.nodes.get(id)?.changeset;
   if (!changeset) return [];
-  const menu = changesetMenu({ workspacePath, loadedChangeset, loadedBranch: currentBranch, repository }, [changeset], host);
+  const menu = changesetMenu({ place: workspacePlace(workspacePath), loadedChangeset, loadedBranch: currentBranch, repository }, [changeset], host);
   return withEntries(menu, [layout.nodes.has(changeset.parent) && menuAction('parent', () => goToChangeset(changeset.parent))]);
 }
 
