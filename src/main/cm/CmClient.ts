@@ -68,11 +68,10 @@ export class CmClient {
   private readonly logListeners = new Set<CommandLogListener>();
   private readonly startListeners = new Set<CommandStartedListener>();
   private nextCommandId = 1;
-  private outsideWorkspacesCreated = false;
 
   /**
    * `locate` finds the `cm` executable; it runs again on `relocate()`. `outsideWorkspaces` is an empty folder of the
-   * app's, in no workspace, created on first use (`CmRunOptions.outsideWorkspaces`).
+   * app's, in no workspace, made as it's used (`CmRunOptions.outsideWorkspaces`).
    */
   constructor(
     private readonly locate: () => string,
@@ -184,9 +183,9 @@ export class CmClient {
     return (anyDirectory ? this.shellPool.shownDirectory() : undefined) ?? homedir();
   }
 
+  /** Made on every use, not once: the OS or the user may delete it during the session, and making it is a cheap check once it exists. */
   private outsideWorkspacesFolder(): string {
-    if (!this.outsideWorkspacesCreated) mkdirSync(this.outsideWorkspaces, { recursive: true });
-    this.outsideWorkspacesCreated = true;
+    mkdirSync(this.outsideWorkspaces, { recursive: true });
     return this.outsideWorkspaces;
   }
 
