@@ -47,7 +47,7 @@ its Files then shows the workspace's disk. Switching it to the branch is the wor
 
 ## Finding a file
 
-Go to file (⌘P, the palette's "Go to file…", the search button in Files' header) finds a file or folder of the
+Go to file (⌘P, `/` in the tree, the palette's "Go to file…", the search button in Files' header) finds a file or folder of the
 branch Files shows by name, as a workspace's does (`goToRepositoryFile`), from 2 characters on (`searchesFor`). `cm`
 filters no tree by name, so the first search of a changeset lists its whole tree, once (`RepositoryPathSearch`):
 
@@ -56,7 +56,7 @@ filters no tree by name, so the first search of a changeset lists its whole tree
   they arrive, each written to a file of the session's (`SessionFolder`, `uvcs-trees-<pid>-…`) and offered to the
   searches waiting, and nothing is kept: a search keeps its best 60 alone (`BestPaths`, ranked as the renderer's lists
   rank, `shared/fuzzyScore`). The searches asked meanwhile join it (`repositoryPathsFound` tells each the best so far);
-  the dialog says it reads the files from the server meanwhile (`repositoryFileSearchNote`).
+  the dialog says it reads the files from the server meanwhile (`repositoryFileSearchView`).
 - **Every later search of that changeset reads the file**, never the server: on a large repository (79,000 items, 6.7 MB) about
   120 ms. The file is written as `.partial` and renamed once whole, so a listing that failed or stopped leaves none.
 - **A repository keeps the 3 trees searched last** (`TREES_KEPT`): a window or two going back and forth between
@@ -64,6 +64,10 @@ filters no tree by name, so the first search of a changeset lists its whole tree
   app quitting deletes them all (`dispose`), and the folder a crashed session left is deleted as the next one starts
   (`removeLeftOvers`). A tree whose file went (the OS clearing its temp folder) is listed again.
 - A newer query stops the search before it (`stopFindingRepositoryPaths`), at once; the listing goes on for the next.
+  Each search is told apart by an id unique across windows, and its results go to the window that asked, even when it
+  joined a listing another window started.
+- Paths read as the tree names them: forward slashes on every OS (Windows' `cm` prints `/Assets\Player.cs`), and an
+  xlink as a folder.
 
 `cm` sends the tree only once it has built it, so the first results come with the whole listing: on that repository about 10 s,
 5 of them `cm ls` resolving each item's owner one by one, even with a format that prints no owner.
