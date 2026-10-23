@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { LabelInfo as Label } from '@shared/domain/label';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
@@ -62,12 +63,12 @@ export function createBranchFromLabel(workspacePath: string, label: Label): Prom
 export async function renameLabel(workspacePath: string, label: Label): Promise<void> {
   const newName = await prompt({ title: 'Rename label', label: 'New name', initialValue: label.name, confirmLabel: 'Rename', validate: validateLabelName });
   if (!newName) return;
-  await runAction(workspacePath, "Couldn't rename the label", () => api.labels.rename(workspacePath, label.name, newName), isAffectedByLabels);
+  await runAction(workspacePlace(workspacePath), "Couldn't rename the label", () => api.labels.rename(workspacePath, label.name, newName), isAffectedByLabels);
 }
 
 /** Resolves to whether it saved, so a comment that couldn't be saved stays in its editor. */
 export function saveLabelComment(workspacePath: string, label: Label, comment: string): Promise<boolean> {
-  return runVoidAction(workspacePath, "Couldn't update the comment", () => api.labels.editComment(workspacePath, label, comment), isAffectedByLabels);
+  return runVoidAction(workspacePlace(workspacePath), "Couldn't update the comment", () => api.labels.editComment(workspacePath, label, comment), isAffectedByLabels);
 }
 
 export async function deleteLabels(workspacePath: string, labels: Label[]): Promise<void> {
@@ -79,7 +80,7 @@ export async function deleteLabels(workspacePath: string, labels: Label[]): Prom
   });
   if (!confirmed) return;
 
-  const deleted = await runVoidAction(workspacePath, "Couldn't delete the label", () =>
+  const deleted = await runVoidAction(workspacePlace(workspacePath), "Couldn't delete the label", () =>
     api.labels.delete(workspacePath, labels.map((label) => label.name)),
     isAffectedByLabels,
   );

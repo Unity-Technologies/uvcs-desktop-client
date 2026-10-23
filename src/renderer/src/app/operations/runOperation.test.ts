@@ -1,9 +1,11 @@
+import { repositoryPlace, workspacePlace, type Place } from '@shared/domain/place';
 import { fakeApi } from '../../testing/fakeWindow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OperationProgress } from '@shared/domain/operation';
 
 const refreshed = vi.hoisted(() => vi.fn(async (_workspacePath: string, _affected?: (key: readonly unknown[]) => boolean) => {}));
-vi.mock('../queryClient', () => ({ invalidateWorkspace: refreshed }));
+const placeRefreshed = vi.hoisted(() => vi.fn(async (_place: Place, _affected?: (key: readonly unknown[]) => boolean) => {}));
+vi.mock('../queryClient', () => ({ invalidateWorkspace: refreshed, invalidatePlace: placeRefreshed }));
 
 import { ApiError } from '../../api/client';
 import { useToastStore, type Toast } from '../../ui/toast/toastStore';
@@ -16,6 +18,7 @@ const affectsBranches = (key: readonly unknown[]) => key[2] === 'branches';
 
 beforeEach(() => {
   refreshed.mockClear();
+  placeRefreshed.mockClear();
   useToastStore.setState({ toasts: [] });
   useRunningOperationsStore.setState({ operations: [] });
   useCommandLogStore.setState({ handledIds: new Set() });
@@ -250,25 +253,27 @@ describe('an update or a switch runs alone on its workspace', () => {
 });
 
 describe('runAction', () => {
-  it('resolves with the result and refreshes the views it affects', async () => {
-    await expect(runAction(ws, "Couldn't rename", async () => 'renamed', affectsBranches)).resolves.toBe('renamed');
+  const place = repositoryPlace('game@local');
 
-    expect(refreshed).toHaveBeenCalledWith(ws, affectsBranches);
+  it('resolves with the result and refreshes the views of its place it affects', async () => {
+    await expect(runAction(place, "Couldn't rename", async () => 'renamed', affectsBranches)).resolves.toBe('renamed');
+
+    expect(placeRefreshed).toHaveBeenCalledWith(place, affectsBranches);
   });
 
   it('shows the failure as an error toast, resolves undefined, and still refreshes', async () => {
-    const result = await runAction(ws, "Couldn't rename", async () => Promise.reject(new Error('Name taken')));
+    const result = await runAction(place, "Couldn't rename", async () => Promise.reject(new Error('Name taken')));
 
     expect(result).toBeUndefined();
     expect(toasts()).toMatchObject([{ kind: 'error', title: "Couldn't rename", detail: 'Name taken' }]);
-    expect(refreshed).toHaveBeenCalledWith(ws, undefined);
+    expect(placeRefreshed).toHaveBeenCalledWith(place, undefined);
   });
 });
 
 describe('runVoidAction', () => {
   it('tells a successful void action from a failed one', async () => {
-    await expect(runVoidAction(ws, 'Failed', async () => {})).resolves.toBe(true);
-    await expect(runVoidAction(ws, 'Failed', async () => Promise.reject(new Error('no')))).resolves.toBe(false);
+    await expect(runVoidAction(workspacePlace(ws), 'Failed', async () => {})).resolves.toBe(true);
+    await expect(runVoidAction(workspacePlace(ws), 'Failed', async () => Promise.reject(new Error('no')))).resolves.toBe(false);
   });
 });
 

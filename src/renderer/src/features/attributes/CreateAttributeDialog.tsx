@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import { useState } from 'react';
 import { api } from '../../api/client';
 import { runVoidAction } from '../../app/operations/runOperation';
@@ -22,7 +23,7 @@ function CreateAttributeDialog({ workspacePath, onClose }: { workspacePath: stri
   const create = async (): Promise<void> => {
     if (!trimmed || error) return;
     setCreating(true);
-    const created = await runVoidAction(workspacePath, "Couldn't create the attribute", () => api.attributes.createType(workspacePath, trimmed, comment.trim()), isAffectedByAttributes);
+    const created = await runVoidAction(workspacePlace(workspacePath), "Couldn't create the attribute", () => api.attributes.createType(workspacePath, trimmed, comment.trim()), isAffectedByAttributes);
     setCreating(false);
     if (created) onClose();
   };

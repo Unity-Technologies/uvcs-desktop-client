@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { RepositoryVersion } from '@shared/domain/content';
 import type { RevisionRef } from '@shared/domain/revision';
 import { api } from '../../api/client';
@@ -52,6 +53,6 @@ export async function revertItemTo(workspacePath: string, path: string, changese
   });
   if (!confirmed) return;
 
-  const reverted = await runVoidAction(workspacePath, "Couldn't revert the file", () => api.history.revertTo(workspacePath, path, changesetId), isAffectedByPendingChangeEdit);
+  const reverted = await runVoidAction(workspacePlace(workspacePath), "Couldn't revert the file", () => api.history.revertTo(workspacePath, path, changesetId), isAffectedByPendingChangeEdit);
   if (reverted) toast.success(`Reverted ${path}`, `Content from changeset ${changesetId} is now a pending change.`);
 }

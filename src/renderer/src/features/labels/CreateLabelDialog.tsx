@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import { useState } from 'react';
 import { api } from '../../api/client';
 import { runVoidAction } from '../../app/operations/runOperation';
@@ -30,7 +31,7 @@ function CreateLabelDialog({ workspacePath, changesetId, onClose }: { workspaceP
   const create = async (): Promise<void> => {
     if (!trimmed || error) return;
     setCreating(true);
-    const created = await runVoidAction(workspacePath, "Couldn't create the label", () =>
+    const created = await runVoidAction(workspacePlace(workspacePath), "Couldn't create the label", () =>
       api.labels.create(workspacePath, { name: trimmed, changesetId, comment }),
       isAffectedByLabels,
     );

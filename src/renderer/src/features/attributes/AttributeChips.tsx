@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import type { AttributeValue } from '@shared/domain/attribute';
@@ -48,12 +49,12 @@ export function AttributeChips({ objectSpec }: { objectSpec: string }) {
 
   const save = async (attribute: string, value: string): Promise<void> => {
     close();
-    await runAction(workspacePath, `Couldn't set ${attribute}`, () => api.attributes.setValue(workspacePath, objectSpec, attribute, value), isAffectedByAttributes);
+    await runAction(workspacePlace(workspacePath), `Couldn't set ${attribute}`, () => api.attributes.setValue(workspacePath, objectSpec, attribute, value), isAffectedByAttributes);
   };
 
   const remove = (attribute: string): void => {
     if (opened?.name === attribute) close();
-    void runAction(workspacePath, `Couldn't remove ${attribute}`, () => api.attributes.unsetValue(workspacePath, objectSpec, attribute), isAffectedByAttributes);
+    void runAction(workspacePlace(workspacePath), `Couldn't remove ${attribute}`, () => api.attributes.unsetValue(workspacePath, objectSpec, attribute), isAffectedByAttributes);
   };
 
   const add = (attribute: string): void => {

@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { CodeReview, CodeReviewStatus, CodeReviewSummary } from '@shared/domain/codeReview';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { api } from '../../api/client';
@@ -27,7 +28,7 @@ export async function setReviewStatus(workspacePath: string, review: CodeReviewS
     });
     if (assignee === undefined) return;
   }
-  await runAction(workspacePath, "Couldn't change the review status", () => api.codeReviews.update(workspacePath, review.id, { status, assignee }), isAffectedByCodeReviews);
+  await runAction(workspacePlace(workspacePath), "Couldn't change the review status", () => api.codeReviews.update(workspacePath, review.id, { status, assignee }), isAffectedByCodeReviews);
 }
 
 /** Whoever changes the status is likely the one reviewing: you on the workspace's server, if already known or quick to read. */
@@ -45,7 +46,7 @@ export async function reassignReview(workspacePath: string, review: CodeReviewSu
     confirmLabel: 'Assign',
   });
   if (assignee === undefined) return;
-  await runAction(workspacePath, "Couldn't assign the review", () => api.codeReviews.update(workspacePath, review.id, { assignee }), isAffectedByCodeReviews);
+  await runAction(workspacePlace(workspacePath), "Couldn't assign the review", () => api.codeReviews.update(workspacePath, review.id, { assignee }), isAffectedByCodeReviews);
 }
 
 /** Resolves to true when the reviews were deleted. */
@@ -58,7 +59,7 @@ export async function deleteReviews(workspacePath: string, reviews: CodeReviewSu
   if (!confirmed) return false;
 
   return runVoidAction(
-    workspacePath,
+    workspacePlace(workspacePath),
     "Couldn't delete the review",
     () => api.codeReviews.remove(workspacePath, reviews.map((review) => review.id)),
     isAffectedByCodeReviews,

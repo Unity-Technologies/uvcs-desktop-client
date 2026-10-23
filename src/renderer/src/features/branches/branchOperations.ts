@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { Branch, CreateBranchRequest } from '@shared/domain/branch';
 import { shortBranchName, spec } from '@shared/domain/specs';
 import type { SwitchChangesAction } from '@shared/domain/switchWithChanges';
@@ -84,12 +85,12 @@ export async function renameBranch(workspacePath: string, branch: Pick<Branch, '
     validate: validateBranchName,
   });
   if (!newName) return;
-  await runAction(workspacePath, "Couldn't rename the branch", () => api.branches.rename(workspacePath, branch.name, newName));
+  await runAction(workspacePlace(workspacePath), "Couldn't rename the branch", () => api.branches.rename(workspacePath, branch.name, newName));
 }
 
 /** Resolves to whether it saved, so a comment that couldn't be saved stays in its editor. */
 export function saveBranchComment(workspacePath: string, branch: Pick<Branch, 'name'>, comment: string): Promise<boolean> {
-  return runVoidAction(workspacePath, "Couldn't update the comment", () => api.branches.editComment(workspacePath, branch.name, comment), isAffectedByBranchList);
+  return runVoidAction(workspacePlace(workspacePath), "Couldn't update the comment", () => api.branches.editComment(workspacePath, branch.name, comment), isAffectedByBranchList);
 }
 
 export async function deleteBranches(workspacePath: string, branches: Pick<Branch, 'name'>[]): Promise<void> {
@@ -101,7 +102,7 @@ export async function deleteBranches(workspacePath: string, branches: Pick<Branc
   });
   if (!confirmed) return;
 
-  const deleted = await runVoidAction(workspacePath, "Couldn't delete the branch", () =>
+  const deleted = await runVoidAction(workspacePlace(workspacePath), "Couldn't delete the branch", () =>
     api.branches.delete(workspacePath, branches.map((branch) => branch.name)),
     isAffectedByBranchList,
   );
@@ -110,7 +111,7 @@ export async function deleteBranches(workspacePath: string, branches: Pick<Branc
 
 export function setBranchesHidden(workspacePath: string, branches: Pick<Branch, 'name'>[], hidden: boolean): Promise<void | undefined> {
   return runAction(
-    workspacePath,
+    workspacePlace(workspacePath),
     `Couldn't ${hidden ? 'hide' : 'unhide'} the branch`,
     () => api.branches.setHidden(workspacePath, branches.map((branch) => branch.name), hidden),
     isAffectedByBranchList,

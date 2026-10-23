@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import { useId, useMemo, useState } from 'react';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -47,7 +48,7 @@ function CreateCodeReviewDialog({ workspacePath, initialTarget, onClose, onCreat
     if (!isValid) return;
     setCreating(true);
     const reviewId = await runAction(
-      workspacePath,
+      workspacePlace(workspacePath),
       "Couldn't create the code review",
       () => api.codeReviews.create(workspacePath, { targetSpec, title: title.trim(), assignee: assignee.trim() || undefined }),
       isAffectedByCodeReviews,

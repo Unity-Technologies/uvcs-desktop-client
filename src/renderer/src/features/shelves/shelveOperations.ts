@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { ShelveAwayRequest, ShelvedAway, Shelve } from '@shared/domain/shelve';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
@@ -86,7 +87,7 @@ export async function deleteShelve(workspacePath: string, shelveId: number): Pro
   });
   if (!confirmed) return false;
 
-  const deleted = await runVoidAction(workspacePath, "Couldn't delete the shelve", () => api.shelves.delete(workspacePath, shelveId), isAffectedByShelveDeletion);
+  const deleted = await runVoidAction(workspacePlace(workspacePath), "Couldn't delete the shelve", () => api.shelves.delete(workspacePath, shelveId), isAffectedByShelveDeletion);
   if (deleted) toast.success(`Deleted shelve ${shelveId}`);
   return deleted;
 }

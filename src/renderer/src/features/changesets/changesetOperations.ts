@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { Changeset, ChangesetInfo } from '@shared/domain/changeset';
 import type { MergeRequest } from '@shared/domain/merge';
 import { api } from '../../api/client';
@@ -63,7 +64,7 @@ export async function editChangesetComment(workspacePath: string, changeset: Pic
 
 /** Resolves to whether it saved, so a comment that couldn't be saved stays in its editor. */
 export function saveChangesetComment(workspacePath: string, changeset: Pick<Changeset, 'id'>, comment: string): Promise<boolean> {
-  return runVoidAction(workspacePath, "Couldn't update the comment", () => api.changesets.editComment(workspacePath, changeset.id, comment), isAffectedByChangesetComment);
+  return runVoidAction(workspacePlace(workspacePath), "Couldn't update the comment", () => api.changesets.editComment(workspacePath, changeset.id, comment), isAffectedByChangesetComment);
 }
 
 export async function moveChangesetToBranch(workspacePath: string, changeset: Pick<Changeset, 'id' | 'branch'>): Promise<void> {
@@ -76,7 +77,7 @@ export async function moveChangesetToBranch(workspacePath: string, changeset: Pi
   });
   if (!branch) return;
 
-  const moved = await runVoidAction(workspacePath, "Couldn't move the changeset", () =>
+  const moved = await runVoidAction(workspacePlace(workspacePath), "Couldn't move the changeset", () =>
     api.changesets.moveToBranch(workspacePath, changeset.id, branch),
     isAffectedByChangesetMove,
   );
@@ -92,7 +93,7 @@ export async function deleteChangeset(workspacePath: string, changeset: Pick<Cha
   });
   if (!confirmed) return;
 
-  const deleted = await runVoidAction(workspacePath, "Couldn't delete the changeset", () => api.changesets.remove(workspacePath, changeset.id), isAffectedByChangesetMove);
+  const deleted = await runVoidAction(workspacePlace(workspacePath), "Couldn't delete the changeset", () => api.changesets.remove(workspacePath, changeset.id), isAffectedByChangesetMove);
   if (deleted) toast.success(`Deleted changeset ${changeset.id}`);
 }
 
