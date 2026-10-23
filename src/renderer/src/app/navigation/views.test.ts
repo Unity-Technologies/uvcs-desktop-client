@@ -11,7 +11,7 @@ describe('the views of a place', () => {
   });
 
   it("are the server's in a repository explored without a workspace: none of a workspace's own", () => {
-    expect(VIEW_IDS.filter((view) => !showsView(inRepository, view))).toEqual(['changes', 'incoming', 'files', 'sync']);
+    expect(VIEW_IDS.filter((view) => !showsView(inRepository, view))).toEqual(['changes', 'incoming', 'sync']);
   });
 
   it("open on a workspace's changes, and on a repository's Branch Explorer, which it shows", () => {

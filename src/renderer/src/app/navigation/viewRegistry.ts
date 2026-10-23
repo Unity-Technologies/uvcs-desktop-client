@@ -20,7 +20,7 @@ import { BranchExplorerView } from '../../features/branchExplorer/BranchExplorer
 import { BranchesView } from '../../features/branches/BranchesView';
 import { ChangesetsView } from '../../features/changesets/ChangesetsView';
 import { CodeReviewsView } from '../../features/codeReviews/CodeReviewsView';
-import { FilesView } from '../../features/files/FilesView';
+import { PlaceFilesView } from '../../features/files/PlaceFilesView';
 import { IncomingChangesView } from '../../features/incoming/IncomingChangesView';
 import { LabelsView } from '../../features/labels/LabelsView';
 import { LocksView } from '../../features/locks/LocksView';
@@ -56,7 +56,7 @@ export interface ViewDefinition {
 const SIDEBAR_VIEWS: Omit<ViewDefinition, 'shortcut'>[] = [
   { id: 'changes', label: 'Changes', icon: FileDiff, group: 'Workspace', component: PendingChangesView, useBadge: usePendingChangesBadge, useDot: useLeftChangesSummary },
   { id: 'incoming', label: 'Incoming', icon: ArrowDownToLine, group: 'Workspace', component: IncomingChangesView, useBadge: useIncomingChangesBadge },
-  { id: 'files', label: 'Files', icon: FolderTree, group: 'Workspace', component: FilesView },
+  { id: 'files', label: 'Files', icon: FolderTree, group: 'Workspace', component: PlaceFilesView },
   { id: 'branchExplorer', label: 'Branch Explorer', icon: GitGraph, group: 'History', component: BranchExplorerView },
   { id: 'changesets', label: 'Changesets', icon: GitCommitVertical, group: 'History', component: ChangesetsView },
   { id: 'branches', label: 'Branches', icon: GitBranch, group: 'History', component: BranchesView },
