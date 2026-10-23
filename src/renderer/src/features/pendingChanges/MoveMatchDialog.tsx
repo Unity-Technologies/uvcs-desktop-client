@@ -1,14 +1,25 @@
 import { useQuery } from '@tanstack/react-query';
-import { useId, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { api } from '../../api/client';
-import { queryKeys } from '../../api/queryKeys';
 import { useSettings } from '../../app/settings/useSettings';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
+import { PercentSlider } from '../../ui/PercentSlider';
 import { PickList } from '../../ui/PickList';
-import { DEFAULT_MINIMUM_SIMILARITY, isScored, movePairsOf, scoredCandidates, searchedRows, similarityLabel, similarityTip } from './matchSimilarity';
+import {
+  DEFAULT_MINIMUM_SIMILARITY,
+  isScored,
+  movePairsOf,
+  moveSimilaritiesKey,
+  pairableCount,
+  scoredCandidates,
+  searchedRows,
+  showsMinimum,
+  similarityLabel,
+  similarityTip,
+} from './matchSimilarity';
 import { matchCandidates, moveMatchOf, type MatchSide, type MoveMatch } from './moveMatches';
 import { emptyListWords, matchDialogWords } from './moveMatchWords';
 import styles from './MoveMatchDialog.module.css';
@@ -33,15 +44,17 @@ function MoveMatchDialog({ workspacePath, change, side, listed, finish }: MoveMa
   const candidates = useMemo(() => matchCandidates(change, listed), [change, listed]);
   const scored = isScored(change) && candidates.length > 0;
   const similarities = useQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'pendingChanges', 'moveSimilarities', change.path),
+    queryKey: moveSimilaritiesKey(workspacePath, change.path),
     queryFn: () => api.pendingChanges.moveSimilarities(workspacePath, movePairsOf(change, candidates, side)),
     enabled: scored,
-    // Measured once while the dialog shows: the slider filters what was measured.
+    // Measured once as the dialog opens: the slider filters what was measured.
     staleTime: Infinity,
     gcTime: 0,
+    retry: false,
   });
   const rows = useMemo(() => scoredCandidates(candidates, similarities.data, minimum), [candidates, similarities.data, minimum]);
   const shown = useMemo(() => searchedRows(rows, search), [rows, search]);
+  const pairable = pairableCount(similarities.data);
   const words = matchDialogWords(change, side, filter.showPrivate);
 
   return (
@@ -57,14 +70,21 @@ function MoveMatchDialog({ workspacePath, change, side, listed, finish }: MoveMa
         loading={scored && similarities.isPending}
         rowHeight={28}
         height={280}
-        empty={emptyListWords(words, search)}
-        note={scored && <MinimumSimilarity value={minimum} onChange={setMinimum} disabled={!similarities.data} />}
+        empty={emptyListWords(words, { search, shown: shown.length, pairable }, candidates.length)}
+        note={
+          similarities.isError ? (
+            <p className={styles.notMeasured}>{words.notMeasured}</p>
+          ) : (
+            showsMinimum(change, candidates.length, pairable) && (
+              <PercentSlider label="Minimum similarity" value={minimum} onChange={setMinimum} disabled={!similarities.data} className={styles.minimum} />
+            )
+          )
+        }
         renderItem={({ candidate, similarity }) => (
           <ItemPathRow
             path={candidate.path}
             itemType={candidate.itemType}
             extras={
-              scored &&
               similarities.data && (
                 <span className={styles.similarity} data-tip={similarityTip(similarity)}>
                   {similarityLabel(similarity)}
@@ -75,16 +95,5 @@ function MoveMatchDialog({ workspacePath, change, side, listed, finish }: MoveMa
         )}
       />
     </Dialog>
-  );
-}
-
-function MinimumSimilarity({ value, onChange, disabled }: { value: number; onChange: (value: number) => void; disabled: boolean }) {
-  const id = useId();
-  return (
-    <div className={styles.minimum}>
-      <label htmlFor={id}>Minimum similarity</label>
-      <input id={id} type="range" min={0} max={100} step={5} value={value} disabled={disabled} onChange={(event) => onChange(Number(event.target.value))} />
-      <span className={styles.minimumValue}>{value}%</span>
-    </div>
   );
 }

@@ -23,22 +23,31 @@ would lose the item's history. "Search matches…" in either one's menu pairs th
 - **How alike each file is** (`api.pendingChanges.moveSimilarities`, `main/workspace/moveSimilarity.ts`): as `cm`'s
   own move detection measures it (`FileChangesMatcher` and `FileDiff.GetChangesPerUnit` in `cm`'s sources), so a file
   the detection would pair at 30% reads 30% here, the same measure the official client's Search matches shows.
+  - Which kind each file is: a deleted file's is `cm`'s own revision type (`txt`, `bin`: its file type rules and
+    content set it), from one `cm ls` of every deleted path (`deletedFilesArgs`), with its loaded revision, repository
+    and size. A new file has no revision, so its start tells (`looksBinary`: a NUL byte; UTF-16 text reads as binary).
+    Changes can't tell either: `cm status --machinereadable` names no file's kind and no deleted file's size.
   - Text with text: 1 less the lines a line diff adds and removes (Myers' D) per line of the deleted file, whitespace
-    and line ends ignored (`bIgnoreEolAndWhitespaces`), never below 0. A file is binary when its start holds a NUL
-    byte (`looksBinary`): `cm status --machinereadable` names no file's kind, and Changes reads no other status.
+    and line ends ignored (`bIgnoreEolAndWhitespaces`), never below 0.
   - Binary with binary of the same extension, whatever its case: by size alone, 1 less how far the sizes are apart per
-    byte of the deleted file (`bBinMatchingOnlySameExtension`). Nothing binary is read whole on the new side.
-  - Any other pair `cm` doesn't pair (`notPairable`), and the dialog leaves it out. A text file past
-    `MAX_SCORED_TEXT_BYTES`, or one that can't be read, isn't measured (`notMeasured`): its row shows a dash, last.
+    byte of the deleted file (`bBinMatchingOnlySameExtension`). No binary file is read, on either side.
+  - Any other pair `cm` doesn't pair (`notPairable`), and the dialog leaves it out; when that leaves none, it says so
+    and hides the slider. A text file past `MAX_SCORED_TEXT_BYTES`, one that can't be read, or a pair whose diff would
+    take more than `MAX_DIFF_WORK` isn't measured (`notMeasured`): its row shows a dash, last. What couldn't be read is
+    warned in the main process's console (`[search matches]`); a failed measure says so in the dialog.
   - Folders aren't measured: `cm` measures a folder by its entries once their files are paired, which a pick by hand
     isn't. Their dialog has no slider.
-  - What it costs: the deleted files' loaded revisions with one `cm cat` of their workspace paths for all of them
-    (`RevisionCat`, which takes a workspace path as its spec), and the new files from disk, 16 at a time. Measured once
-    as the dialog opens (`staleTime: Infinity`): the slider, "Minimum similarity", filters what was measured and runs
-    nothing. It starts at 0: what's left to pair by hand is mostly what the detection found under its own minimum.
+  - What it costs: one `cm ls` of the deleted paths, then only the deleted text files under the cap read by revision
+    (`revid:N@repo`), asked together so `RevisionCat` batches them per repository (an xlinked one apart): up to four in
+    one quick `cm cat` after another, more in processes of their own. The new files are read from disk, 16 at a time,
+    each path checked to be inside the workspace (`workspaceFileOf`): the window isn't trusted.
+  - Measured once as the dialog opens: the slider, "Minimum similarity" (`PercentSlider`, as Settings' own), filters
+    what was measured and runs nothing. Its query key has an area no refresh names (`moveSimilaritiesKey`), as the
+    candidates are fixed: a file saved meanwhile measures nothing again. It starts at 0: what's left to pair by hand
+    is mostly what the detection found under its own minimum.
   - Unrelated files cost no diff: one side holding lines the other lacks bounds the changes from below
-    (`changesAtLeast`), and past the deleted file's lines it reads 0. A similar pair's diff stops there too
-    (`maxEditLength`). The main process yields between pairs, so other calls don't wait behind hundreds of diffs.
+    (`changesAtLeast`), and past the deleted file's lines it reads 0. Every diff stops at the deleted file's lines and
+    at `MAX_DIFF_WORK`, and the main process yields between pairs: a diff runs in one go, answering no other call.
 - **What it records** (`api.pendingChanges.recordMove`): one `cm move <deleted> <new>` in a pooled shell. With the
   source missing from disk and the destination there, `cm` only records the move and keeps the new item's content
   (`CH+MV` for a changed file); nothing on disk changes. It refreshes the workspace's views and leaves the locks alone

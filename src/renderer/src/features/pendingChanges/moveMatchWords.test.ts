@@ -13,6 +13,9 @@ describe('the Search matches words', () => {
       listLabel: 'New files',
       empty: 'No new files in Changes.',
       noMatches: 'No matching new files.',
+      noneOfItsKind: 'No new files of its kind: a text file pairs with text files, a binary one with its extension.',
+      noneThisAlike: 'No new files this alike. Lower the minimum to see more.',
+      notMeasured: "Couldn't measure how alike they are.",
     });
   });
 
@@ -29,12 +32,25 @@ describe('the Search matches words', () => {
     expect(matchDialogWords(change('a.cs'), 'new', false).empty).toBe('No deleted files in Changes.');
   });
 
-  it('says the search found nothing only while there is a search', () => {
+  describe('the empty list', () => {
     const words = matchDialogWords(change('a.cs'), 'deleted', true);
 
-    expect(emptyListWords(words, '')).toBe('No new files in Changes.');
-    expect(emptyListWords(words, '  ')).toBe('No new files in Changes.');
-    expect(emptyListWords(words, 'hero')).toBe('No matching new files.');
+    it('says nothing while it shows rows', () => {
+      expect(emptyListWords(words, { search: '', shown: 3, pairable: 3 }, 3)).toBeNull();
+    });
+
+    it('says the search found nothing only while there is a search', () => {
+      expect(emptyListWords(words, { search: 'hero', shown: 0, pairable: 3 }, 3)).toBe('No matching new files.');
+      expect(emptyListWords(words, { search: '  ', shown: 0, pairable: undefined }, 0)).toBe('No new files in Changes.');
+    });
+
+    it("says when none is of its kind, which cm wouldn't pair", () => {
+      expect(emptyListWords(words, { search: '', shown: 0, pairable: 0 }, 12)).toBe('No new files of its kind: a text file pairs with text files, a binary one with its extension.');
+    });
+
+    it('says when the minimum hides them all, and how to see them', () => {
+      expect(emptyListWords(words, { search: '', shown: 0, pairable: 40 }, 40)).toBe('No new files this alike. Lower the minimum to see more.');
+    });
   });
 
   it('names the move recorded', () => {

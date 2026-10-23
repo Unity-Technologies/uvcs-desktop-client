@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ChangeKind, ItemType, PendingChange } from '@shared/domain/pendingChanges';
-import { isScored, movePairsOf, scoredCandidates, searchedRows, similarityLabel, similarityTip } from './matchSimilarity';
+import { isScored, movePairsOf, moveSimilaritiesKey, pairableCount, scoredCandidates, searchedRows, showsMinimum, similarityLabel, similarityTip } from './matchSimilarity';
+import { isAffectedByFileChanges, isAffectedByPendingChangeEdit, isAffectedByRecordedMove, isAffectedByWorkspaceState } from '../../app/refresh/refreshScopes';
 
 const change = (path: string, kinds: ChangeKind[], itemType: ItemType = 'file', size = 10): PendingChange => ({ path, kinds, itemType, size, lastModified: '' });
 const deleted = change('src/Player.cs', ['locallyDeleted'], 'file', 120);
@@ -47,6 +48,31 @@ describe('the rows', () => {
 
   it('keeps the candidates order between equally alike ones', () => {
     expect(paths(scoredCandidates(candidates, [0.4, 0.4, 0.4], 0))).toEqual(['src/Hero.cs', 'src/Enemy.cs', 'src/Boss.cs']);
+  });
+});
+
+describe('the slider', () => {
+  it('counts the candidates cm would pair, once measured', () => {
+    expect(pairableCount(undefined)).toBeUndefined();
+    expect(pairableCount([0.5, 'notPairable', 'notMeasured'])).toBe(2);
+  });
+
+  it('shows for files with candidates, until none of them is known to pair', () => {
+    expect(showsMinimum(deleted, 3, undefined)).toBe(true);
+    expect(showsMinimum(deleted, 3, 2)).toBe(true);
+    expect(showsMinimum(deleted, 3, 0)).toBe(false);
+    expect(showsMinimum(deleted, 0, undefined)).toBe(false);
+    expect(showsMinimum(change('src', ['locallyDeleted'], 'directory'), 3, undefined)).toBe(false);
+  });
+});
+
+describe('the measure, once asked', () => {
+  // A file saved while the dialog shows would measure everything again: a cm ls, cm cats and every new file read.
+  it("is refreshed by no edit of the workspace's files or state", () => {
+    const key = moveSimilaritiesKey('/ws', 'src/Player.cs');
+    for (const affected of [isAffectedByFileChanges, isAffectedByWorkspaceState, isAffectedByPendingChangeEdit, isAffectedByRecordedMove]) {
+      expect(affected(key)).toBe(false);
+    }
   });
 });
 

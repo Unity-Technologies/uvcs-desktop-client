@@ -18,8 +18,14 @@ export interface MoveMatch {
   to: string;
 }
 
-/** What can be one side of a move: `cm move` of a file onto a folder moves it inside the folder. */
-const MATCHABLE: ReadonlySet<ItemType> = new Set(['file', 'binaryFile', 'directory']);
+/**
+ * Files pair with files, folders with folders: `cm move` of a file onto a folder moves it inside the folder. Changes
+ * knows no file's kind (`cm status --machinereadable` names none), so text and binary are told apart as they're
+ * measured; any kind of file is one shape here.
+ */
+type MatchShape = 'file' | 'folder';
+
+const SHAPES: Partial<Record<ItemType, MatchShape>> = { file: 'file', binaryFile: 'file', directory: 'folder' };
 
 /**
  * The side of a move the change can take, or null. Only an item deleted from disk outside `cm` (a delete with `cm`
@@ -45,7 +51,7 @@ export function matchCandidates(change: PendingChange, changes: readonly Pending
   if (side === null) return [];
   const otherSide: MatchSide = side === 'deleted' ? 'new' : 'deleted';
   return changes
-    .filter((other) => other.itemType === change.itemType && sideOf(other, folders) === otherSide)
+    .filter((other) => SHAPES[other.itemType] === SHAPES[change.itemType] && sideOf(other, folders) === otherSide)
     .sort((a, b) => compareCandidates(change.path, a.path, b.path));
 }
 
@@ -94,7 +100,7 @@ function folderDepth(path: string): number {
 }
 
 function sideOf(change: PendingChange, folders: ReadonlySet<string>): MatchSide | null {
-  if (change.kinds.length !== 1 || !MATCHABLE.has(change.itemType)) return null;
+  if (change.kinds.length !== 1 || SHAPES[change.itemType] === undefined) return null;
   if (change.kinds[0] === 'locallyDeleted') return 'deleted';
   return change.kinds[0] === 'private' && !isInPrivateFolder(change, folders) ? 'new' : null;
 }

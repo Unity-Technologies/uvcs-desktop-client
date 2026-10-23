@@ -13,6 +13,21 @@ export interface MatchDialogWords {
   empty: string;
   /** With candidates, none the search finds. */
   noMatches: string;
+  /** With candidates, none `cm` would pair: a text file with a binary one, binary files of other extensions. */
+  noneOfItsKind: string;
+  /** With candidates `cm` would pair, none as alike as the minimum. */
+  noneThisAlike: string;
+  /** Measuring failed: the rows show unmeasured. */
+  notMeasured: string;
+}
+
+/** What the list shows, for the words its empty state picks from. */
+export interface ListCounts {
+  search: string;
+  /** Rows the list shows, the search applied. */
+  shown: number;
+  /** The candidates `cm` would pair; undefined while unknown, or for folders. */
+  pairable: number | undefined;
 }
 
 /**
@@ -30,6 +45,9 @@ export function matchDialogWords(change: PendingChange, side: MatchSide, private
       placeholder: `Find a new ${noun}`,
       listLabel: `New ${noun}s`,
       noMatches: `No matching new ${noun}s.`,
+      noneOfItsKind: `No new ${noun}s of its kind: a text file pairs with text files, a binary one with its extension.`,
+      noneThisAlike: `No new ${noun}s this alike. Lower the minimum to see more.`,
+      notMeasured: "Couldn't measure how alike they are.",
       empty: privateShown ? `No new ${noun}s in Changes.` : 'Changes hides private files: show them in Settings › Pending changes.',
     };
   }
@@ -39,13 +57,23 @@ export function matchDialogWords(change: PendingChange, side: MatchSide, private
     placeholder: `Find a deleted ${noun}`,
     listLabel: `Deleted ${noun}s`,
     noMatches: `No matching deleted ${noun}s.`,
+    noneOfItsKind: `No deleted ${noun}s of its kind: a text file pairs with text files, a binary one with its extension.`,
+    noneThisAlike: `No deleted ${noun}s this alike. Lower the minimum to see more.`,
+    notMeasured: "Couldn't measure how alike they are.",
     empty: `No deleted ${noun}s in Changes.`,
   };
 }
 
-/** What the list says with no row: nothing to pick, or nothing the search finds. */
-export function emptyListWords(words: MatchDialogWords, search: string): string {
-  return search.trim() ? words.noMatches : words.empty;
+/**
+ * What the list says with no row: what the search hides first, then why the slider or `cm`'s pairing hide the rest,
+ * then that there was nothing to pick. Null while it shows rows.
+ */
+export function emptyListWords(words: MatchDialogWords, { search, shown, pairable }: ListCounts, candidates: number): string | null {
+  if (shown > 0) return null;
+  if (search.trim()) return words.noMatches;
+  if (candidates === 0) return words.empty;
+  if (pairable === 0) return words.noneOfItsKind;
+  return pairable === undefined ? words.empty : words.noneThisAlike;
 }
 
 /** The toast once the move is recorded: "Matched Player.cs with src/game/Hero.cs". */

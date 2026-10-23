@@ -1,4 +1,5 @@
 import type { MovePair, MoveSimilarity, PendingChange } from '@shared/domain/pendingChanges';
+import { queryKeys } from '../../api/queryKeys';
 import { searchedCandidates, type MatchSide } from './moveMatches';
 
 /**
@@ -17,6 +18,15 @@ export interface ScoredCandidate {
  * too unlike (under Settings' 20% by default).
  */
 export const DEFAULT_MINIMUM_SIMILARITY = 0;
+
+/**
+ * The measure's query key: an area of its own, which no refresh names (`refreshScopes`). The candidates are fixed as
+ * the dialog opens, so a file saved elsewhere meanwhile can't change the answer, and measuring again costs a `cm ls`,
+ * the deleted files' `cm cat`s and a read of every new file.
+ */
+export function moveSimilaritiesKey(workspacePath: string, path: string) {
+  return queryKeys.inWorkspace(workspacePath, 'moveSimilarities', path);
+}
 
 /** Only files are scored: `cm` scores a folder by its entries once its files are paired, which a pick by hand isn't. */
 export function isScored(change: PendingChange): boolean {
@@ -43,6 +53,16 @@ export function scoredCandidates(candidates: readonly PendingChange[], similarit
     rows.push({ candidate, similarity: typeof similarity === 'number' ? similarity : null });
   });
   return rows.sort((a, b) => (b.similarity ?? -1) - (a.similarity ?? -1));
+}
+
+/** How many candidates `cm` would pair with the change; undefined while unknown. */
+export function pairableCount(similarities: readonly MoveSimilarity[] | undefined): number | undefined {
+  return similarities?.filter((similarity) => similarity !== 'notPairable').length;
+}
+
+/** The slider shows for files with candidates, until it is known none of them pairs: then it could do nothing. */
+export function showsMinimum(change: PendingChange, candidates: number, pairable: number | undefined): boolean {
+  return isScored(change) && candidates > 0 && pairable !== 0;
 }
 
 /** The rows the dialog's search leaves, in their order (`searchedCandidates`). */
