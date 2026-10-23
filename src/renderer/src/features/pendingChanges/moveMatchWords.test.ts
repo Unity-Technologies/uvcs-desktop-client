@@ -59,14 +59,28 @@ describe('the Search matches words', () => {
 });
 
 describe('a candidate the detection paired', () => {
-  it('says what with, and that a pick pairs it with the change instead', () => {
-    expect(pairingTag(change('src/Rifle.cs'), { path: 'src/Old/Shotgun.cs', itemType: 'file', pairedWith: 'src/Gun.cs' })).toEqual({
+  it('says where a deleted one was found moved to, and that a pick moves it to the change instead', () => {
+    expect(pairingTag(change('src/Rifle.cs'), { path: 'src/Old/Shotgun.cs', itemType: 'file', pairedWith: 'src/Gun.cs' }, 'new')).toEqual({
       label: 'Paired with Gun.cs',
-      tip: 'Changes found it moved with src/Gun.cs. Picking it pairs it with Rifle.cs instead.',
+      tip: 'Changes found it moved to src/Gun.cs. Picking it records it moved to Rifle.cs instead.',
+    });
+  });
+
+  it('says where a new one was found moved from, and that a pick moves the change to it instead', () => {
+    expect(pairingTag(change('src/Weapon.cs'), { path: 'src/Gun.cs', itemType: 'file', pairedWith: 'src/Old/Shotgun.cs' }, 'deleted')).toEqual({
+      label: 'Paired with Shotgun.cs',
+      tip: 'Changes found it moved from src/Old/Shotgun.cs. Picking it records Weapon.cs moved to it instead.',
+    });
+  });
+
+  it("says a detected move's own other item is the move Changes found, which a pick records", () => {
+    expect(pairingTag(change('src/Gun.cs'), { path: 'src/Old/Shotgun.cs', itemType: 'file', pairedWith: 'src/Gun.cs' }, 'new')).toEqual({
+      label: 'Found by Changes',
+      tip: 'Changes found this move. Picking it records it.',
     });
   });
 
   it('says nothing for a candidate nothing paired', () => {
-    expect(pairingTag(change('src/Rifle.cs'), { path: 'src/Weapon.cs', itemType: 'file' })).toBeNull();
+    expect(pairingTag(change('src/Rifle.cs'), { path: 'src/Weapon.cs', itemType: 'file' }, 'new')).toBeNull();
   });
 });
