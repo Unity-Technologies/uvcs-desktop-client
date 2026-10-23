@@ -57,14 +57,15 @@ filters no tree by name, so the first search of a changeset lists its whole tree
   searches waiting, and nothing is kept: a search keeps its best 60 alone (`BestPaths`, ranked as the renderer's lists
   rank, `shared/fuzzyScore`). The searches asked meanwhile join it (`repositoryPathsFound` tells each the best so far);
   the dialog says it reads the files from the server meanwhile (`repositoryFileSearchNote`).
-- **Every later search of that changeset reads the file**, never the server: on codice (79,000 items, 6.7 MB) about
+- **Every later search of that changeset reads the file**, never the server: on a large repository (79,000 items, 6.7 MB) about
   120 ms. The file is written as `.partial` and renamed once whole, so a listing that failed or stopped leaves none.
-- **The repository's newer changeset replaces it**: one tree per repository, the branch's latest searched. Its last
-  window leaving it deletes its trees (`forget`, from `onRepositoryLeft`), the app quitting deletes them all
-  (`dispose`), and a session that crashed leaves its folder for the next one to delete.
+- **A repository keeps the 3 trees searched last** (`TREES_KEPT`): a window or two going back and forth between
+  branches never lists one again. Its last window leaving it deletes its trees (`forget`, from `onRepositoryLeft`), the
+  app quitting deletes them all (`dispose`), and the folder a crashed session left is deleted as the next one starts
+  (`removeLeftOvers`). A tree whose file went (the OS clearing its temp folder) is listed again.
 - A newer query stops the search before it (`stopFindingRepositoryPaths`), at once; the listing goes on for the next.
 
-`cm` sends the tree only once it has built it, so the first results come with the whole listing: on codice about 10 s,
+`cm` sends the tree only once it has built it, so the first results come with the whole listing: on that repository about 10 s,
 5 of them `cm ls` resolving each item's owner one by one, even with a format that prints no owner.
 
 ## What it offers, and what it doesn't

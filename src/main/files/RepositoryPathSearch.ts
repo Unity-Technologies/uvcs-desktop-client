@@ -31,10 +31,17 @@ export interface PathSearch {
 /** Items matched between two updates, at most: a few updates for a big tree, each with the best results so far. */
 const ITEMS_PER_UPDATE = 5000;
 
+/**
+ * Whole trees kept of a repository, those searched last: a window or two may go back and forth between branches, and
+ * each tree let go would be listed from the server again.
+ */
+const TREES_KEPT = 3;
+
 /** Bytes of lines written to a tree's file at once: the listing arrives faster than it could be written line by line. */
 const WRITE_BATCH = 256 * 1024;
 
 interface Tree {
+  readonly key: string;
   repository: string;
   /** The file once the listing is done; until then, the listing every search of the tree waits for. */
   file: string | null;
@@ -61,27 +68,31 @@ export class RepositoryPathSearch {
   async search(place: RepositoryPlace, changesetId: number, query: string, { limit, signal, onUpdate }: PathSearch): Promise<ListedPath[]> {
     const best = new BestPaths(query, limit);
     const tree = this.treeOf(place, changesetId);
+    try {
+      await this.searchTree(place, changesetId, tree, best, signal, onUpdate);
+    } catch (error) {
+      if (!isMissingFile(error) || tree.file === null) throw error;
+      // The tree's file went (the OS cleared its temp folder): list it again.
+      this.forgetTree(tree);
+      return this.search(place, changesetId, query, { limit, signal, onUpdate });
+    }
+    return best.take();
+  }
+
+  private async searchTree(place: RepositoryPlace, changesetId: number, tree: Tree, best: BestPaths, signal: AbortSignal | undefined, onUpdate: PathSearch['onUpdate']): Promise<void> {
     if (tree.file === null) {
       // A search that joins a listing from its first item matches as it goes; one that joins late missed the items
       // already read, so it reads the whole file once it is written.
       const fromTheStart = tree.listing === null || tree.listed === 0;
-      if (fromTheStart) {
-        await this.matchWhileListing(place, changesetId, tree, best, signal, onUpdate);
-        return best.take();
-      }
+      if (fromTheStart) return this.matchWhileListing(place, changesetId, tree, best, signal, onUpdate);
       await untilListedOrStopped(tree.listing!, signal);
     }
     if (!signal?.aborted && tree.file !== null) await this.matchFile(tree.file, best, signal, onUpdate);
-    return best.take();
   }
 
   /** Lets a repository's trees go: its last window left it (`onRepositoryLeft`). A listing under way stops. */
   forget(repository: string): void {
-    for (const [key, tree] of this.trees) {
-      if (tree.repository !== repository) continue;
-      this.trees.delete(key);
-      this.drop(tree);
-    }
+    for (const tree of [...this.trees.values()]) if (tree.repository === repository) this.forgetTree(tree);
   }
 
   /** Deletes the trees sessions that crashed left: at start-up, never waiting for a first search. */
@@ -96,13 +107,12 @@ export class RepositoryPathSearch {
     this.folder.dispose();
   }
 
+  /** The changeset's tree, made the last searched: the map holds the trees in the order they were last searched. */
   private treeOf(place: RepositoryPlace, changesetId: number): Tree {
-    const key = `${place.repository}#${changesetId}`;
-    let tree = this.trees.get(key);
-    if (!tree) {
-      tree = { repository: place.repository, file: null, listing: null, listeners: new Set(), listed: 0, abort: new AbortController() };
-      this.trees.set(key, tree);
-    }
+    const key = treeKey(place.repository, changesetId);
+    const tree = this.trees.get(key) ?? { key, repository: place.repository, file: null, listing: null, listeners: new Set(), listed: 0, abort: new AbortController() };
+    this.trees.delete(key);
+    this.trees.set(key, tree);
     return tree;
   }
 
@@ -157,23 +167,27 @@ export class RepositoryPathSearch {
 
   /**
    * Lists the tree into its file: written as `<name>.partial` while the listing runs, renamed once it is whole, so a
-   * listing that failed or was stopped leaves no tree a search would trust. The repository's older trees go then: a
-   * window searches one changeset at a time, the branch's latest.
+   * listing that failed or was stopped leaves no tree a search would trust. The repository keeps the trees searched
+   * last (`TREES_KEPT`).
    */
   private async list(place: RepositoryPlace, changesetId: number, tree: Tree): Promise<string> {
-    const folder = await this.folder.path();
     const name = `${createHash('sha1').update(place.repository).digest('hex').slice(0, 16)}-${changesetId}`;
-    const partial = join(folder, `${name}.partial`);
-    const file = join(folder, `${name}.paths`);
     const at = cmPlace(place);
-    const writer = new BatchedWriter(partial);
+    let partial: string | null = null;
+    let writer: BatchedWriter | null = null;
+    let file: string;
     try {
+      const folder = await this.folder.path();
+      partial = join(folder, `${name}.partial`);
+      file = join(folder, `${name}.paths`);
+      writer = new BatchedWriter(partial);
+      const into = writer;
       await this.cm.executeRecords(
         repositoryPathsArgs(at.spec(`cs:${changesetId}`)),
         (fields) => {
           const item = readListedPath(fields);
           if (!item) return undefined;
-          writer.write(listedPathLine(item));
+          into.write(listedPathLine(item));
           tree.listed++;
           for (const listener of tree.listeners) listener(item);
           // Nothing is kept: the item is in the file, and in the searches' best results when it is one of them.
@@ -184,30 +198,46 @@ export class RepositoryPathSearch {
       writer.close();
       await rename(partial, file);
     } catch (error) {
-      writer.close();
-      await rm(partial, { force: true });
+      writer?.close();
+      if (partial) await rm(partial, { force: true });
       // The next search lists it again.
       tree.listing = null;
       tree.listed = 0;
       throw error;
     }
     tree.file = file;
-    this.dropOlderTrees(tree);
+    this.keepLastSearchedTrees(tree.repository);
     return file;
   }
 
-  private dropOlderTrees(newest: Tree): void {
-    for (const [key, tree] of this.trees) {
-      if (tree === newest || tree.repository !== newest.repository || tree.file === null) continue;
-      this.trees.delete(key);
-      this.drop(tree);
-    }
+  /** Lets the repository's whole trees go but the `TREES_KEPT` searched last. */
+  private keepLastSearchedTrees(repository: string): void {
+    const whole = [...this.trees.values()].filter((tree) => tree.repository === repository && tree.file !== null);
+    for (const tree of whole.slice(0, -TREES_KEPT)) this.forgetTree(tree);
   }
 
-  private drop(tree: Tree): void {
+  /**
+   * Stops the tree's listing and deletes its file. A file Windows still holds (an antivirus reading it) stays for the
+   * session folder's deletion as the app quits, or the next session's.
+   */
+  private forgetTree(tree: Tree): void {
+    if (this.trees.get(tree.key) === tree) this.trees.delete(tree.key);
     tree.abort.abort();
-    if (tree.file) rmSync(tree.file, { force: true });
+    if (!tree.file) return;
+    try {
+      rmSync(tree.file, { force: true });
+    } catch {
+      // Deleted with the session folder (`SessionFolder`).
+    }
   }
+}
+
+function treeKey(repository: string, changesetId: number): string {
+  return `${repository}#${changesetId}`;
+}
+
+function isMissingFile(error: unknown): boolean {
+  return error instanceof Error && 'code' in error && error.code === 'ENOENT';
 }
 
 /**

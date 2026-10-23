@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdir, mkdtemp, readdir, readFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -84,13 +84,12 @@ describe('finding a file in a repository explored without a workspace', () => {
     expect(fake.commands).toHaveLength(1);
   });
 
-  it('lists another changeset again, and lets the older tree of the repository go once the newer is whole', async () => {
+  it('lists another changeset again, and keeps the three trees of the repository searched last', async () => {
     const { fake, search, treeFiles } = await setUp();
-    await search.search(GAME, 12, 'player', { limit: 10 });
-    await search.search(GAME, 13, 'player', { limit: 10 });
+    for (const changesetId of [12, 13, 14, 12, 15]) await search.search(GAME, changesetId, 'player', { limit: 10 });
 
-    expect(fake.lines().map((line) => line.split(' ')[3])).toEqual(['--tree=cs:12@game@local', '--tree=cs:13@game@local']);
-    expect((await treeFiles()).map((file) => file.replace(/^.*-/, ''))).toEqual(['13.paths']);
+    expect(fake.lines().map((line) => line.split(' ')[3])).toEqual(['--tree=cs:12@game@local', '--tree=cs:13@game@local', '--tree=cs:14@game@local', '--tree=cs:15@game@local']);
+    expect((await treeFiles()).map((file) => file.replace(/^.*-/, ''))).toEqual(['12.paths', '14.paths', '15.paths']);
   });
 
   it("keeps no tree of a listing that failed, and lists it again on the next search", async () => {
@@ -105,6 +104,26 @@ describe('finding a file in a repository explored without a workspace', () => {
     expect(fake.commands).toHaveLength(2);
   });
 
+  it("lists again a tree whose file went, as when the OS clears its temp folder", async () => {
+    const { fake, search, tempFolder, treeFiles } = await setUp();
+    await search.search(GAME, 12, 'player', { limit: 10 });
+    const folder = (await readdir(tempFolder))[0]!;
+    await rm(join(tempFolder, folder, (await treeFiles())[0]!));
+
+    expect(paths(await search.search(GAME, 12, 'readme', { limit: 10 }))).toEqual(['README.md']);
+    expect(fake.commands).toHaveLength(2);
+  });
+
+  it('lists again on the next search when the tree could not even be written', async () => {
+    const tempFolder = await mkdtemp(join(tmpdir(), 'path-search-'));
+    const fake = fakeCmClient({ ls: TREE });
+    const search = new RepositoryPathSearch(fake.cm, new SessionFolder({ prefix: 'uvcs-trees-', tempFolder: join(tempFolder, 'missing'), pid: 100, isRunning: () => false }));
+
+    await expect(search.search(GAME, 12, 'player', { limit: 10 })).rejects.toThrow();
+    await mkdir(join(tempFolder, 'missing'));
+    expect(paths(await search.search(GAME, 12, 'readme', { limit: 10 }))).toEqual(['README.md']);
+  });
+
   it("lets a repository's trees go, stopping a listing under way, once no window explores it", async () => {
     const { search, treeFiles } = await setUp();
     await search.search(GAME, 12, 'player', { limit: 10 });
@@ -112,9 +131,15 @@ describe('finding a file in a repository explored without a workspace', () => {
     search.forget('game@local');
     expect(await treeFiles()).toEqual([]);
 
-    const listing = await setUp(runsUntilCancelled('Operation cancelled'));
+    let started!: () => void;
+    const listingStarted = new Promise<void>((resolve) => (started = resolve));
+    const listsUntilCancelled = runsUntilCancelled('Operation cancelled') as (command: FakeCmCommand) => Promise<string | CmFailure>;
+    const listing = await setUp((command) => {
+      started();
+      return listsUntilCancelled(command);
+    });
     const searching = listing.search.search(GAME, 14, 'player', { limit: 10 });
-    await Promise.resolve();
+    await listingStarted;
     listing.search.forget('game@local');
     await expect(searching).rejects.toThrow('Operation cancelled');
     expect(await listing.treeFiles()).toEqual([]);
