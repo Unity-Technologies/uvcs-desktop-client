@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { ContentSource } from '@shared/domain/content';
 import type { ConflictSide, DirectoryConflict, MergeContributors, MergeRequest } from '@shared/domain/merge';
-import { mergeLabels } from '../mergeDescription';
 import { ONLY_MOVED } from '../../diff/viewer/movedFrom';
+import { mergeLabels } from '../mergeDescription';
 import { comparedVersions, comparisonSegments, comparisonsOf, identicalNoteOf } from './directoryConflictComparison';
 
 const contributors: MergeContributors = {
@@ -25,42 +25,78 @@ const conflict = (type: DirectoryConflict['type'], source: ConflictSide, destina
 const at = (path: string, point: string): ContentSource => ({ kind: 'repositoryPath', path, at: point });
 const empty: ContentSource = { kind: 'empty' };
 
-describe('comparisonsOf', () => {
-  const moved = conflict('moveDelete', side('moved', '/assets/Legacy.cs', '/assets/old/Legacy.cs'), side('deleted', '/assets/old/Legacy.cs'));
+const movedDeleted = conflict('moveDelete', side('moved', '/assets/Legacy.cs', '/assets/old/Legacy.cs'), side('deleted', '/assets/old/Legacy.cs'));
+const twins = conflict('evilTwin', side('added', '/src/ui/Theme.cs'), side('added', '/src/ui/Theme.cs'));
 
+describe('comparisonsOf', () => {
   it('compares a file with yours and with the base', () => {
-    expect(comparisonsOf(moved, contributors)).toEqual(['destination', 'base']);
+    expect(comparisonsOf(movedDeleted, contributors, merge)).toEqual(['destination', 'base']);
   });
 
   it('compares only with yours when the plan names no base', () => {
     const { base: _base, ...withoutBase } = contributors;
-    expect(comparisonsOf(moved, withoutBase)).toEqual(['destination']);
+    expect(comparisonsOf(movedDeleted, withoutBase, merge)).toEqual(['destination']);
+  });
+
+  it('compares an incoming item that was added only with yours: the base has nothing of it', () => {
+    expect(comparisonsOf(twins, contributors, merge)).toEqual(['destination']);
+    expect(comparisonsOf(conflict('addMove', side('added', '/b.cs'), side('moved', '/b.cs', '/a.cs')), contributors, merge)).toEqual(['destination']);
+  });
+
+  it("compares only with yours when undoing or cherry picking: cm's base there is no common ancestor", () => {
+    expect(comparisonsOf(movedDeleted, contributors, { kind: 'subtractive', sourceSpec: 'cs:42' })).toEqual(['destination']);
+    expect(comparisonsOf(movedDeleted, contributors, { kind: 'cherryPick', sourceSpec: 'cs:42' })).toEqual(['destination']);
   });
 
   it('compares nothing for a folder, an xlink, or a plan without its changesets', () => {
-    expect(comparisonsOf(conflict('divergentMove', side('moved', '/b', '/a'), side('moved', '/c', '/a'), true), contributors)).toEqual([]);
-    expect(comparisonsOf(conflict('xlink', side('changed', '/lib'), side('changed', '/lib')), contributors)).toEqual([]);
-    expect(comparisonsOf(moved, undefined)).toEqual([]);
+    expect(comparisonsOf(conflict('divergentMove', side('moved', '/b', '/a'), side('moved', '/c', '/a'), true), contributors, merge)).toEqual([]);
+    expect(comparisonsOf(conflict('xlink', side('changed', '/lib'), side('changed', '/lib')), contributors, merge)).toEqual([]);
+    expect(comparisonsOf(movedDeleted, undefined, merge)).toEqual([]);
   });
 });
 
 describe('comparedVersions', () => {
   it('diffs a moved file against yours deleted, and against the base at its old path', () => {
-    const moved = conflict('moveDelete', side('moved', '/assets/Legacy.cs', '/assets/old/Legacy.cs'), side('deleted', '/assets/old/Legacy.cs'));
-    expect(comparedVersions(moved, 'destination', contributors, merge)).toEqual({ original: empty, modified: at('/assets/Legacy.cs', 'cs:42') });
-    expect(comparedVersions(moved, 'base', contributors, merge)).toEqual({ original: at('/assets/old/Legacy.cs', 'cs:35'), modified: at('/assets/Legacy.cs', 'cs:42') });
+    expect(comparedVersions(movedDeleted, 'destination', contributors, merge)).toEqual({
+      original: empty,
+      modified: at('/assets/Legacy.cs', 'cs:42'),
+      path: '/assets/Legacy.cs',
+      oldPath: '/assets/old/Legacy.cs',
+    });
+    expect(comparedVersions(movedDeleted, 'base', contributors, merge)).toEqual({
+      original: at('/assets/old/Legacy.cs', 'cs:35'),
+      modified: at('/assets/Legacy.cs', 'cs:42'),
+      path: '/assets/Legacy.cs',
+      oldPath: '/assets/old/Legacy.cs',
+    });
   });
 
-  it('diffs two files added with the same name against each other, and the incoming one against nothing at the base', () => {
-    const twins = conflict('evilTwin', side('added', '/src/shared/Config.cs'), side('added', '/src/shared/Config.cs'));
-    expect(comparedVersions(twins, 'destination', contributors, merge)).toEqual({ original: at('/src/shared/Config.cs', 'cs:40'), modified: at('/src/shared/Config.cs', 'cs:42') });
-    expect(comparedVersions(twins, 'base', contributors, merge)).toEqual({ original: empty, modified: at('/src/shared/Config.cs', 'cs:42') });
+  it('reads yours where you moved it, and names both paths', () => {
+    const deletedMoved = conflict('deleteMove', side('deleted', '/src/Menu.cs'), side('moved', '/src/ui/Menu.cs', '/src/Menu.cs'));
+    expect(comparedVersions(deletedMoved, 'destination', contributors, merge)).toEqual({ original: at('/src/ui/Menu.cs', 'cs:40'), modified: empty, path: '/src/ui/Menu.cs' });
+    const movedApart = conflict('divergentMove', side('moved', '/src/game/Menu.cs', '/src/Menu.cs'), side('moved', '/src/ui/Menu.cs', '/src/Menu.cs'));
+    expect(comparedVersions(movedApart, 'destination', contributors, merge)).toEqual({
+      original: at('/src/ui/Menu.cs', 'cs:40'),
+      modified: at('/src/game/Menu.cs', 'cs:42'),
+      path: '/src/game/Menu.cs',
+      oldPath: '/src/ui/Menu.cs',
+    });
   });
 
-  it('diffs an incoming delete as empty against yours changed', () => {
+  it('diffs two files added with the same name against each other', () => {
+    expect(comparedVersions(twins, 'destination', contributors, merge)).toEqual({ original: at('/src/ui/Theme.cs', 'cs:40'), modified: at('/src/ui/Theme.cs', 'cs:42'), path: '/src/ui/Theme.cs' });
+  });
+
+  it('reads an incoming item moved onto an added one at its old path in the base', () => {
+    const movedOnto = conflict('movedEvilTwin', side('moved', '/src/Theme.cs', '/src/old/Theme.cs'), side('added', '/src/Theme.cs'));
+    expect(comparedVersions(movedOnto, 'base', contributors, merge).original).toEqual(at('/src/old/Theme.cs', 'cs:35'));
+    expect(comparedVersions(movedOnto, 'destination', contributors, merge).original).toEqual(at('/src/Theme.cs', 'cs:40'));
+  });
+
+  it('diffs an incoming delete as empty against yours changed, and against the base', () => {
     const deleted = conflict('deleteChange', side('deleted', '/src/ui/Menu.cs'), side('changed', '/src/ui/Menu.cs'));
-    expect(comparedVersions(deleted, 'destination', contributors, merge)).toEqual({ original: at('/src/ui/Menu.cs', 'cs:40'), modified: empty });
-    expect(comparedVersions(deleted, 'base', contributors, merge)).toEqual({ original: at('/src/ui/Menu.cs', 'cs:35'), modified: empty });
+    expect(comparedVersions(deleted, 'destination', contributors, merge)).toEqual({ original: at('/src/ui/Menu.cs', 'cs:40'), modified: empty, path: '/src/ui/Menu.cs' });
+    expect(comparedVersions(deleted, 'base', contributors, merge)).toEqual({ original: at('/src/ui/Menu.cs', 'cs:35'), modified: empty, path: '/src/ui/Menu.cs' });
   });
 
   it('reads a shelve merge’s incoming side from the shelve', () => {
@@ -70,19 +106,26 @@ describe('comparedVersions', () => {
 });
 
 describe('comparisonSegments', () => {
+  const workspace = mergeLabels(merge, { status: 'ready', contributors, changes: [], fileConflicts: [], directoryConflicts: [], warnings: [] });
+
   it("names the sides in a workspace's words, and a server branch's", () => {
-    const workspace = mergeLabels(merge, { status: 'ready', contributors, changes: [], fileConflicts: [], directoryConflicts: [], warnings: [] });
-    expect(comparisonSegments(['destination', 'base'], workspace).map((segment) => segment.label)).toEqual(['Incoming ↔ Yours', 'Incoming ↔ Base']);
+    expect(comparisonSegments(['destination', 'base'], workspace)).toEqual([
+      { value: 'destination', label: 'Incoming ↔ Yours', title: '/main/feature against /main' },
+      { value: 'base', label: 'Incoming ↔ Base', title: '/main/feature against the common ancestor' },
+    ]);
     const server = mergeLabels({ ...merge, destinationBranch: '/main' }, undefined);
-    expect(comparisonSegments(['destination'], server)).toEqual([{ value: 'destination', label: 'Source ↔ Destination', title: '/main/feature against /main' }]);
+    expect(comparisonSegments(['destination', 'base'], server).map((segment) => segment.label)).toEqual(['Source ↔ Destination', 'Source ↔ Base']);
+  });
+
+  it('offers no switch with one comparison to show', () => {
+    expect(comparisonSegments(['destination'], workspace)).toEqual([]);
   });
 });
 
 describe('identicalNoteOf', () => {
   it('says an incoming move kept the content when compared with the base, and leaves the rest to the diff', () => {
-    const moved = conflict('moveDelete', side('moved', '/assets/Legacy.cs', '/assets/old/Legacy.cs'), side('deleted', '/assets/old/Legacy.cs'));
-    expect(identicalNoteOf(moved, 'base')).toBe(ONLY_MOVED);
-    expect(identicalNoteOf(moved, 'destination')).toBeUndefined();
+    expect(identicalNoteOf(movedDeleted, 'base')).toBe(ONLY_MOVED);
+    expect(identicalNoteOf(movedDeleted, 'destination')).toBeUndefined();
     expect(identicalNoteOf(conflict('changeDelete', side('changed', '/a.cs'), side('deleted', '/a.cs')), 'base')).toBeUndefined();
   });
 });
