@@ -1,7 +1,7 @@
+import { isUnityOrganization } from '../domain/organizations';
 import { LINK_VIEWS, type Link, type LinkLines, type LinkObject, type LinkPage, type LinkView, type RepositoryLink, type WorkspaceLink } from './link';
 import { decodeSegment, isBranchKeyword, pathOf, serverOf, UNWRITABLE_IN_NAMES } from './linkSegments';
 import { specLink } from './specLink';
-import { isUnityOrganization } from '../domain/organizations';
 
 /**
  * What reading a link found: the link, or why it can't be opened. `unknown` is a link this version can read but names
