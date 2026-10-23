@@ -176,8 +176,8 @@ export function xlinkDialogFields(target: XlinkDialogTarget, draft: XlinkDraft):
     pointError: draft.point.trim() === '' ? undefined : pointError,
     pointSource: xlinkedSource(draft.pointKind, draft.repository),
     folderSource: folderSourceOf(draft),
-    workspaceBranches: { kind: 'branch', title: 'Branch of this workspace', chooseLabel: 'Choose a branch', repository: undefined, unavailable: undefined },
-    xlinkedBranches: xlinkedSource('branch', draft.repository),
+    workspaceBranches: { kind: 'branch', title: 'Branch of this workspace', chooseLabel: 'Choose the branch worked on', repository: undefined, unavailable: undefined },
+    xlinkedBranches: { ...xlinkedSource('branch', draft.repository), chooseLabel: 'Choose the branch changes go to' },
     ruleNotes: ruleNotesOf(draft.rules, ruleErrors),
     problem,
   };
