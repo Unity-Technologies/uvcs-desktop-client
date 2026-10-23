@@ -1,6 +1,19 @@
 import type { XlinksApi } from '@shared/api/xlinks';
-import type { NewXlink, XlinkEdit } from '@shared/domain/xlinks';
-import { addXlinkRulesArgs, createXlinkArgs, deleteXlinkRulesArgs, editXlinkPointArgs, showXlinkArgs } from '../cm/xlinkArgs';
+import type { NewXlink, XlinkEdit, XlinkPoint } from '@shared/domain/xlinks';
+import { readRecords } from '../cm/formatRecords';
+import { FOUND_LABELS } from '../cm/foundObjects';
+import { subfoldersIn } from '../cm/repositoryFolders';
+import {
+  addXlinkRulesArgs,
+  createXlinkArgs,
+  deleteXlinkRulesArgs,
+  editXlinkPointArgs,
+  labelChangesetArgs,
+  repositoryFolderArgs,
+  showXlinkArgs,
+  xlinkPointSpec,
+  xlinkTreeSpec,
+} from '../cm/xlinkArgs';
 import { parseXlinkRules } from '../cm/xlinkShow';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { ServiceContext } from './ServiceContext';
@@ -16,6 +29,20 @@ export function createXlinksService({ cm }: Pick<ServiceContext, 'cm'>): XlinksA
 
   async function create(workspacePath: string, xlink: NewXlink) {
     await cm.query(createXlinkArgs(toAbsolutePath(workspacePath, xlink.path), xlink), inWorkspace(workspacePath));
+  }
+
+  async function treePoint(workspacePath: string, repository: string, point: XlinkPoint) {
+    const spec = xlinkTreeSpec(point, repository);
+    if (spec) return spec;
+    const label = point.kind === 'label' ? point.label.trim() : '';
+    const output = await cm.query(labelChangesetArgs(label, repository), inWorkspace(workspacePath));
+    const found = readRecords(FOUND_LABELS, output).find((each) => each.name === label);
+    if (!found) throw new Error(`There is no label ${label} in ${repository}.`);
+    return xlinkPointSpec({ kind: 'changeset', changeset: found.changeset }, repository);
+  }
+
+  async function folders(workspacePath: string, treeSpec: string, folder: string) {
+    return subfoldersIn(await cm.query(repositoryFolderArgs(folder, treeSpec), inWorkspace(workspacePath)));
   }
 
   // Rules are dropped before any is added: a rule that changes keeps its branch, and `cm` refuses a second rule for it.
@@ -35,5 +62,5 @@ export function createXlinksService({ cm }: Pick<ServiceContext, 'cm'>): XlinksA
     }
   }
 
-  return { rules, create, edit };
+  return { rules, create, treePoint, folders, edit };
 }
