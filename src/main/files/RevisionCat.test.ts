@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { fitsCommandLine } from '../cm/commandLineLimit';
-import { catReadsOf, fakeCat } from '../cm/testing/fakeCat';
+import { catReadsOf, fakeCat, PURGED, purgedRevisionLine } from '../cm/testing/fakeCat';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { MAX_QUICK_BACKLOG, MAX_QUICK_CAT, MAX_RUNNING_CATS, RevisionCat, type CatRevision } from './RevisionCat';
 
@@ -193,6 +193,18 @@ describe('RevisionCat', () => {
     expect(results[1]).toMatchObject({ reason: { message: 'The specified revision was not found itemid:404#cs:5@eco@local' } });
     expect(await readFile(target(4), 'utf8')).toBe('content of itemid:4#cs:5@eco@local');
     expect(readsPerCommand(fake)).toEqual([['query', 4]]);
+  });
+
+  it("fails a purged revision alone, with cm's line for it (which names its file), and keeps the others as written: no command more", async () => {
+    const purging = fakeCat((spec) => (spec.startsWith('revid:13@') ? PURGED : `content of ${spec}`));
+    const { fake, flush, save, target } = await setUp(purging);
+    const reads = [7, 13, 9].map((id) => save(revision(id)));
+    flush();
+    const results = await Promise.allSettled(reads);
+    expect(results.map((result) => result.status)).toEqual(['fulfilled', 'rejected', 'fulfilled']);
+    expect(results[1]).toMatchObject({ reason: { message: purgedRevisionLine(target(13), 13) } });
+    expect(await readFile(target(9), 'utf8')).toBe('content of revid:9@eco@local');
+    expect(readsPerCommand(fake)).toEqual([['query', 3]]);
   });
 
   it('finds the one spec that failed a whole cm cat before it wrote anything, saying nothing of it, in halves: every other read is saved', async () => {
