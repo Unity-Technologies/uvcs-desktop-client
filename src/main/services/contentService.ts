@@ -1,9 +1,10 @@
 import { readFile, stat, writeFile } from 'node:fs/promises';
 import { isMissingItemError, isNotInTreeError, isServerPathNotFoundError } from '../cm/missingItem';
+import { isPurgedRevisionError } from '../cm/purgedRevision';
 import type { ContentApi } from '@shared/api/content';
 import type { ContentSource, FileContent } from '@shared/domain/content';
 import { listsTree, repositoryOfSpec, spec } from '@shared/domain/specs';
-import { EMPTY_CONTENT, MAX_MODEL_BYTES, toFileContent } from '../files/fileContent';
+import { EMPTY_CONTENT, MAX_MODEL_BYTES, PURGED_CONTENT, toFileContent } from '../files/fileContent';
 import { explainLockedFile } from '../files/lockedFile';
 import type { CatRevision } from '../files/RevisionCat';
 import { saveContent } from '../files/saveContent';
@@ -17,8 +18,13 @@ export function createContentService({ cm, reviews, repositoryTrees, workspaceCo
     if (source.kind === 'empty') return EMPTY_CONTENT;
     if (source.kind === 'reviewSnapshot') return reviews.readSnapshot(workspacePath, source.path);
     if (source.kind === 'repositoryPath' && source.beside) return readBeside(workspacePath, source);
-    const { bytes, name } = await bytesOf(workspacePath, source);
-    return toFileContent(bytes, name);
+    try {
+      const { bytes, name } = await bytesOf(workspacePath, source);
+      return toFileContent(bytes, name);
+    } catch (error) {
+      if (isPurgedRevisionError(error)) return PURGED_CONTENT;
+      throw error;
+    }
   }
 
   /**
