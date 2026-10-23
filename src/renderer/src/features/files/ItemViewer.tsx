@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { workspacePathOf, type Place } from '@shared/domain/place';
+import type { Place } from '@shared/domain/place';
 import { canAnnotate } from '@shared/domain/annotate';
 import type { TreeItem } from '@shared/domain/explorer';
 import { focusMain } from '../../lib/mainFocus';
@@ -45,7 +45,6 @@ export interface FileViewChoice {
  * The tree keeps the keyboard; F6 moves it into the file to scroll it, and F6 or Esc back.
  */
 export function ItemViewer({ place, item, comparison, comment, listings, viewShortcut, fileViewChoice }: ItemViewerProps) {
-  const workspacePath = workspacePathOf(place);
   const shared = useFilesViewStore();
   const { fileView, setFileView } = fileViewChoice ?? shared;
   // A file with changes is annotated as it is on disk; any other as its revision, read once (a shelve's has none to annotate).
@@ -88,9 +87,8 @@ export function ItemViewer({ place, item, comparison, comment, listings, viewSho
         <AnnotationPane key={item.path} path={item.path} repository={item.repository} revision={revision ?? undefined} leading={viewSwitch} />
       ) : comparison.kind === 'lastChange' ? (
         <RevisionChanges place={place} item={item} listings={listings} title={title} />
-      ) : workspacePath === null ? null : comparison.change ? (
-        // Pending changes and private files are a workspace's: a repository's items are revisions, shown as their last change.
-        <ChangeDiffPanel workspacePath={workspacePath} change={comparison.change} title={title} />
+      ) : comparison.change ? (
+        <ChangeDiffPanel workspacePath={comparison.workspacePath} change={comparison.change} title={title} />
       ) : (
         <FileDiffViewer place={place} original={{ kind: 'empty' }} modified={{ kind: 'workspaceFile', path: item.path }} fileName={item.name} title={title} />
       )}

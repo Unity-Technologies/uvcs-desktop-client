@@ -69,7 +69,9 @@ interface ItemDetailsPaneProps {
 export function ItemDetailsPane({ place, item, pendingIndex, lock, menu, onSelectFolder, listings, fileViewChoice }: ItemDetailsPaneProps) {
   const shown = useSettledValue(item, item.path);
   const settled = shown.path === item.path;
-  const inWorkspace = pendingIndex !== undefined;
+  // Files shows a workspace's items, with their pending changes; Browse repository, revisions only.
+  const workspacePath = pendingIndex !== undefined ? workspacePathOf(place) : null;
+  const inWorkspace = workspacePath !== null;
   const pendingChange = pendingIndex?.changeAt(item.path);
   const isFile = item.itemType !== 'directory';
   const controlled = !item.isPrivate;
@@ -80,13 +82,12 @@ export function ItemDetailsPane({ place, item, pendingIndex, lock, menu, onSelec
   const { data: changeset } = useChangeset(!shown.isPrivate && shown.changeset !== null && shown.changeset > 0 ? shown.changeset : null, shown.repository);
   const comment = changeset?.id === shown.changeset ? changeset.comment : undefined;
   // What `cm fileinfo` tells of an item (its changelist, its hash on disk) is a workspace's own.
-  const workspacePath = inWorkspace ? workspacePathOf(place) : null;
   const { data: details } = useQuery({
     queryKey: queryKeys.inPlace(place, 'explorer', 'details', item.path),
     queryFn: workspacePath === null ? skipToken : () => api.explorer.details(workspacePath, item.path),
     enabled: controlled && settled && (!isFile || moreDetailsOpen),
   });
-  const shownComparison = itemComparison(shown, pendingIndex?.changeAt(shown.path), inWorkspace);
+  const shownComparison = itemComparison(shown, pendingIndex?.changeAt(shown.path), workspacePath);
 
   const status = pendingChange ? describeKinds(pendingChange) : item.isPrivate ? 'Private' : item.isCheckedOut ? 'Checked out' : '';
   const onDisk = pendingChange && onDiskState(item, pendingChange);
