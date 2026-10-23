@@ -25,7 +25,7 @@ describe('the Search matches words', () => {
   });
 
   it('says where to show private files when Changes hides them, the only new items there are', () => {
-    expect(matchDialogWords(change('a.cs'), 'deleted', false).empty).toBe('Changes hides private files: Settings › Changes shows them.');
+    expect(matchDialogWords(change('a.cs'), 'deleted', false).empty).toBe('Changes hides private files: show them in Settings › Pending changes.');
     expect(matchDialogWords(change('a.cs'), 'new', false).empty).toBe('No deleted files in Changes.');
   });
 

@@ -30,7 +30,7 @@ export function matchDialogWords(change: PendingChange, side: MatchSide, private
       placeholder: `Find a new ${noun}`,
       listLabel: `New ${noun}s`,
       noMatches: `No matching new ${noun}s.`,
-      empty: privateShown ? `No new ${noun}s in Changes.` : 'Changes hides private files: Settings › Changes shows them.',
+      empty: privateShown ? `No new ${noun}s in Changes.` : 'Changes hides private files: show them in Settings › Pending changes.',
     };
   }
   return {
