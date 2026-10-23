@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { Shelve } from '@shared/domain/shelve';
 import { spec } from '@shared/domain/specs';
 import { linkCopyText } from '../../app/links/linkTo';
@@ -50,7 +51,7 @@ export function shelveMenu(workspacePath: string, shelves: ShelveInfo[], { left 
     menuAction('apply', () => void apply(left), { label: left ? 'Restore' : 'Apply to workspace' }),
     !left && mine && menuAction('applyAndDelete', () => void apply(true)),
     menuAction('newCodeReview', () =>
-      openCreateCodeReviewDialog(workspacePath, { kind: 'shelve', value: String(shelve.id), title: splitComment(shelve.comment).summary }),
+      openCreateCodeReviewDialog(workspacePlace(workspacePath), { kind: 'shelve', value: String(shelve.id), title: splitComment(shelve.comment).summary }),
     ),
     copySubmenu('Shelve', shelveCopyTexts(workspacePath, shelve), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     mine &&

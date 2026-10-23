@@ -1,4 +1,5 @@
-import { workspacePlace } from '@shared/domain/place';
+import { MAX_LISTED_CODE_REVIEWS } from '@shared/domain/codeReview';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -12,6 +13,7 @@ import { createCodeReviewsService } from './codeReviewsService';
 import { serviceContext } from './testing/serviceContext';
 
 const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
+const IN_WORKSPACE = workspacePlace(WORKSPACE);
 
 function review(id: number, targetType: string, target: string, status = 'Under review') {
   return {
@@ -46,7 +48,7 @@ describe('code review list', () => {
   it('lists the newest reviews with one cm find, filtered on the server', async () => {
     const { service, commands } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_CHANGESET) });
 
-    await service.list(WORKSPACE, { assignedToMe: true, status: 'Reviewed', owners: ['ana'], sinceDate: '2026-09-01', text: 'fix' });
+    await service.list(IN_WORKSPACE, { assignedToMe: true, status: 'Reviewed', owners: ['ana'], sinceDate: '2026-09-01', text: 'fix' });
 
     expect(commands).toMatchObject([
       {
@@ -66,7 +68,7 @@ describe('code review list', () => {
       ...EVERY_BRANCH_NAME,
     });
 
-    const reviews = await service.list(WORKSPACE, {});
+    const reviews = await service.list(IN_WORKSPACE, {});
 
     expect(reviews.map((listed) => listed.target)).toEqual([
       { kind: 'branch', branch: '/main/task1' },
@@ -76,15 +78,15 @@ describe('code review list', () => {
     ]);
     expect(lines().filter((line) => line.startsWith('find branch'))).toHaveLength(2);
 
-    await service.list(WORKSPACE, {});
+    await service.list(IN_WORKSPACE, {});
     expect(lines().filter((line) => line.startsWith('find branch'))).toHaveLength(2);
   });
 
   it('asks nothing more when the branch lists already read name every target', async () => {
     const { service, branchNames, lines } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_TASK1) });
-    branchNames.remember(workspacePlace(WORKSPACE), [{ id: 37, name: '/main/task1' }]);
+    branchNames.remember(IN_WORKSPACE, [{ id: 37, name: '/main/task1' }]);
 
-    const [listed] = await service.list(WORKSPACE, {});
+    const [listed] = await service.list(IN_WORKSPACE, {});
 
     expect(listed?.target).toEqual({ kind: 'branch', branch: '/main/task1' });
     expect(lines()).toEqual([foundLine(FOUND_REVIEWS, 'order by date desc limit 300')]);
@@ -93,7 +95,7 @@ describe('code review list', () => {
   it('lists summaries with branch targets by id, never reading branch names', async () => {
     const { service, lines } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_TASK1, ON_CHANGESET) });
 
-    const summaries = await service.listSummaries(WORKSPACE, {});
+    const summaries = await service.listSummaries(IN_WORKSPACE, {});
 
     expect(summaries.map((summary) => summary.targetBranchId)).toEqual([37, undefined]);
     expect(lines()).toHaveLength(1);
@@ -102,7 +104,7 @@ describe('code review list', () => {
   it('names the changeset and shelve targets of summaries from the same records, a branch only by its id', async () => {
     const { service, lines } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_TASK1, ON_CHANGESET, ON_SHELVE) });
 
-    const summaries = await service.listSummaries(WORKSPACE, {});
+    const summaries = await service.listSummaries(IN_WORKSPACE, {});
 
     expect(summaries.map((summary) => summary.target)).toEqual([undefined, { kind: 'changeset', changesetId: 120 }, { kind: 'shelve', shelveId: 3 }]);
     expect(lines()).toHaveLength(1);
@@ -113,14 +115,14 @@ describe('one code review', () => {
   it('reads a review by id', async () => {
     const { service, lines } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_CHANGESET) });
 
-    expect(await service.get(WORKSPACE, 6)).toMatchObject({ id: 6, title: 'Review 6', status: 'Under review', target: { kind: 'changeset' } });
+    expect(await service.get(IN_WORKSPACE, 6)).toMatchObject({ id: 6, title: 'Review 6', status: 'Under review', target: { kind: 'changeset' } });
     expect(lines()).toEqual([foundLine(FOUND_REVIEWS, 'where id = 6 order by date desc')]);
   });
 
   it("fails for a review that doesn't exist", async () => {
     const { service } = codeReviews({ 'find review': '' });
 
-    await expect(service.get(WORKSPACE, 6)).rejects.toThrow('Code review 6 was not found.');
+    await expect(service.get(IN_WORKSPACE, 6)).rejects.toThrow('Code review 6 was not found.');
   });
 });
 
@@ -128,14 +130,14 @@ describe('code review writes', () => {
   it('creates a review and returns its id', async () => {
     const { service, commands } = codeReviews({ codereview: '42\n' });
 
-    expect(await service.create(WORKSPACE, { targetSpec: 'br:/main/task1', title: 'Jump', assignee: 'bob' })).toBe(42);
+    expect(await service.create(IN_WORKSPACE, { targetSpec: 'br:/main/task1', title: 'Jump', assignee: 'bob' })).toBe(42);
     expect(commands).toMatchObject([{ via: 'query', args: ['codereview', 'br:/main/task1', 'Jump', '--assignee=bob', '--format={id}'] }]);
   });
 
   it('changes the assignee with one command, reading nothing back', async () => {
     const { service, lines } = codeReviews({ 'codereview -e': '' });
 
-    await service.update(WORKSPACE, 6, { assignee: '' });
+    await service.update(IN_WORKSPACE, 6, { assignee: '' });
 
     expect(lines()).toEqual(['codereview -e 6 --assignee=']);
   });
@@ -143,7 +145,7 @@ describe('code review writes', () => {
   it('checks that a status change took, as cm ignores it on reviews nobody is assigned to', async () => {
     const { service, lines } = codeReviews({ 'codereview -e': '', 'find review': recordsOutput(FOUND_REVIEWS, review(6, 'Changeset', '120', 'Reviewed')) });
 
-    await service.update(WORKSPACE, 6, { status: 'Reviewed' });
+    await service.update(IN_WORKSPACE, 6, { status: 'Reviewed' });
 
     expect(lines()).toEqual(['codereview -e 6 --status=Reviewed', foundLine(FOUND_REVIEWS, 'where id = 6 order by date desc')]);
   });
@@ -151,7 +153,7 @@ describe('code review writes', () => {
   it('fails when cm left the status as it was', async () => {
     const { service } = codeReviews({ 'codereview -e': '', 'find review': recordsOutput(FOUND_REVIEWS, review(6, 'Changeset', '120', 'Under review')) });
 
-    await expect(service.update(WORKSPACE, 6, { status: 'Reviewed' })).rejects.toThrow(
+    await expect(service.update(IN_WORKSPACE, 6, { status: 'Reviewed' })).rejects.toThrow(
       new Error("The status didn't change: a review nobody is assigned to keeps its status. Assign the review, then try again."),
     );
   });
@@ -159,8 +161,41 @@ describe('code review writes', () => {
   it('deletes several reviews with one command', async () => {
     const { service, lines } = codeReviews({ 'codereview -d': '' });
 
-    await service.remove(WORKSPACE, [6, 7]);
+    await service.remove(IN_WORKSPACE, [6, 7]);
 
     expect(lines()).toEqual(['codereview -d 6 7']);
+  });
+});
+
+describe('code reviews of a repository explored without a workspace', () => {
+  const ON_REPOSITORY = repositoryPlace('game@local');
+
+  it('lists them and names their branches naming the repository, outside every workspace', async () => {
+    const { service, commands } = codeReviews({ 'find review': recordsOutput(FOUND_REVIEWS, ON_TASK1), ...EVERY_BRANCH_NAME });
+
+    const [listed] = await service.list(ON_REPOSITORY, {});
+
+    expect(listed?.target).toEqual({ kind: 'branch', branch: '/main/task1' });
+    expect(commands.map(({ args }) => args[2])).toEqual([
+      `order by date desc limit ${MAX_LISTED_CODE_REVIEWS} on repository 'game@local'`,
+      "on repository 'game@local'",
+      "where hidden = 'true' on repository 'game@local'",
+    ]);
+    expect(commands.every(({ options }) => options.outsideWorkspaces)).toBe(true);
+  });
+
+  // Outside a workspace, `cm codereview` with no `--repository` fails ("Object reference not set…") after creating.
+  it('creates, edits and deletes with --repository, the target spec naming the repository too', async () => {
+    const { service, lines } = codeReviews({ codereview: '42\n' });
+
+    expect(await service.create(ON_REPOSITORY, { targetSpec: 'cs:12', title: 'Jump' })).toBe(42);
+    await service.update(ON_REPOSITORY, 6, { assignee: 'bob' });
+    await service.remove(ON_REPOSITORY, [6, 7]);
+
+    expect(lines()).toEqual([
+      'codereview cs:12@game@local Jump --format={id} --repository=game@local',
+      'codereview -e 6 --assignee=bob --repository=game@local',
+      'codereview -d 6 7 --repository=game@local',
+    ]);
   });
 });

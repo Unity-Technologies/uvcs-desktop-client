@@ -186,11 +186,11 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   shelve: () => shelveMenu(ws, [shelve]),
   othersShelve: () => shelveMenu(ws, [shelve], { mine: false }),
   leftShelve: () => shelveMenu(ws, [shelve], { left: true }),
-  codeReview: () => codeReviewMenu(ws, [review]),
-  branchCodeReview: () => codeReviewMenu(ws, [branchReview], workspace.selector),
-  branchCodeReviewOnItsBranch: () => codeReviewMenu(ws, [branchReview], { kind: 'branch', name: branch.name }),
-  changesetCodeReview: () => codeReviewMenu(ws, [changesetReview], workspace.selector),
-  shelveCodeReview: () => codeReviewMenu(ws, [{ ...review, target: { kind: 'shelve', shelveId: 12 } }], workspace.selector),
+  codeReview: () => codeReviewMenu(workspacePlace(ws), [review]),
+  branchCodeReview: () => codeReviewMenu(workspacePlace(ws), [branchReview], workspace.selector),
+  branchCodeReviewOnItsBranch: () => codeReviewMenu(workspacePlace(ws), [branchReview], { kind: 'branch', name: branch.name }),
+  changesetCodeReview: () => codeReviewMenu(workspacePlace(ws), [changesetReview], workspace.selector),
+  shelveCodeReview: () => codeReviewMenu(workspacePlace(ws), [{ ...review, target: { kind: 'shelve', shelveId: 12 } }], workspace.selector),
   file: () => fileMenu(ws, [file], new PendingChangesIndex([])),
   folder: () => fileMenu(ws, [{ ...file, path: 'src', name: 'src', itemType: 'directory' }], new PendingChangesIndex([])),
   lockedFile: () => fileMenu(ws, [file], new PendingChangesIndex([change]), pendingLocks),
@@ -244,6 +244,8 @@ const REPOSITORY_MENUS: Record<string, () => MenuEntry[]> = {
   repositoryLabel: () => labelMenu(onRepository, [label]),
   repositoryLabelPair: () => labelMenu(onRepository, [label, { ...label, name: 'v2' }]),
   repositoryAttributeType: () => attributeTypeMenu(onRepository, [{ name: 'status', comment: '' } as never]),
+  repositoryCodeReview: () => codeReviewMenu(onRepository, [branchReview]),
+  repositoryCodeReviews: () => codeReviewMenu(onRepository, [review, changesetReview]),
 };
 
 /**
@@ -272,6 +274,8 @@ describe('menus without a workspace', () => {
     expect(ids(REPOSITORY_MENUS.repositoryChangesetInterval!())).toEqual(['diffRange']);
     expect(ids(REPOSITORY_MENUS.repositoryChangeset!())).toContain('newLabel');
     expect(ids(REPOSITORY_MENUS.repositoryLabel!())).toEqual(expect.arrayContaining(['diff', 'newBranch', 'compare', 'rename', 'delete']));
+    expect(ids(REPOSITORY_MENUS.repositoryCodeReview!())).toEqual(expect.arrayContaining(['openReview', 'status', 'assign', 'delete']));
+    expect(ids(REPOSITORY_MENUS.repositoryBranch!())).toContain('newCodeReview');
   });
 
   it('offers in a workspace what a repository leaves out, so the list names what each needs', () => {
@@ -416,12 +420,12 @@ describe('one menu per object, the same everywhere', () => {
   });
 
   it('a code review reads the same in the Code reviews view, the palette and the Branch Explorer', () => {
-    const inView = codeReviewMenu(ws, [branchReview], workspace.selector);
+    const inView = codeReviewMenu(workspacePlace(ws), [branchReview], workspace.selector);
     const { target: _named, ...asSearched } = branchReview;
     expectOnlyAdds(graphMenu({ kind: 'codeReview', review: asSearched }, graphContext), inView);
     // The one exception (ARCHITECTURE.md "Menus"): the palette's searches don't name a branch, so it can't switch to it.
     expectOnlyAdds(codeReviewResult(asSearched, resultContext).menu!(), withoutAction(inView, 'switch'));
-    expectOnlyAdds(codeReviewResult(changesetReview, resultContext).menu!(), codeReviewMenu(ws, [changesetReview], workspace.selector));
+    expectOnlyAdds(codeReviewResult(changesetReview, resultContext).menu!(), codeReviewMenu(workspacePlace(ws), [changesetReview], workspace.selector));
   });
 });
 
@@ -476,7 +480,7 @@ describe('Copy', () => {
 
   it("copies a code review as its number, title and link, in the workspace's repository", async () => {
     fakeApi.answer('workspaces.info', async () => WORKSPACE_INFO);
-    expect(await copiedBy(codeReviewMenu(ws, [review]))).toEqual(['Code review number: 9', 'Code review title: Review the task', 'Code review link: uvcs://local/repos/game/code-reviews/9']);
+    expect(await copiedBy(codeReviewMenu(workspacePlace(ws), [review]))).toEqual(['Code review number: 9', 'Code review title: Review the task', 'Code review link: uvcs://local/repos/game/code-reviews/9']);
   });
 
   it("copies a diff's file as the link to its change there", async () => {

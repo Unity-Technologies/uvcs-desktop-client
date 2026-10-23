@@ -69,7 +69,7 @@ export function branchMenu(place: Place, branches: BranchInfo[], currentBranch: 
     single && workspacePath !== null && menuAction('mergeTo', () => void mergeTo(spec.branch(single.name), single.name, isTaskBranch(single) ? taskMergeOf(single) : undefined)),
     single && workspacePath !== null && menuAction('cherryPick', () => cherryPickFromBranch(single.name), { label: 'Cherry pick branch changes', ...onCurrent }),
     single && menuAction('newBranch', () => void openCreateBranchDialog(place, branchHeadOrigin(single)).then((name) => name && host.onBranchCreated?.(name))),
-    single && workspacePath !== null && menuAction('newCodeReview', () => openCreateCodeReviewDialog(workspacePath, { kind: 'branch', value: single.name })),
+    single && menuAction('newCodeReview', () => openCreateCodeReviewDialog(place, { kind: 'branch', value: single.name })),
     single && menuAction('changesets', () => showBranchChangesets(place, single.name)),
     single && menuAction('compare', () => void diffWithAnotherBranch(single), { label: 'Compare with another branch…' }),
     single && !host.inBranchExplorer && menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'branch', name: single.name, date: single.date })),

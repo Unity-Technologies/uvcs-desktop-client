@@ -34,8 +34,8 @@ export function usePaletteServerSearch(workspacePath: string | null, typed: stri
     labels: useQuery({ queryKey: labelsKey(path, textFilter), queryFn: () => api.labels.list(workspacePlace(path), textFilter), ...server('labels') }),
     shelves: useQuery({ queryKey: shelvesKey(path, textFilter), queryFn: () => api.shelves.list(path, textFilter), ...server('shelves') }),
     codeReviews: useQuery({
-      queryKey: reviewSummariesKey(path, term),
-      queryFn: () => api.codeReviews.listSummaries(path, { text: term }),
+      queryKey: reviewSummariesKey(workspacePlace(path), term),
+      queryFn: () => api.codeReviews.listSummaries(workspacePlace(path), { text: term }),
       ...server('codeReviews'),
     }),
   };

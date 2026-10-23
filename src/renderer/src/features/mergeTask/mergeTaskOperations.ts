@@ -27,7 +27,7 @@ export async function finishMergedTask(
     await runAction(
       workspacePlace(workspacePath),
       "Couldn't mark the code review as reviewed",
-      () => api.codeReviews.update(workspacePath, review.id, { status: 'Reviewed' }),
+      () => api.codeReviews.update(workspacePlace(workspacePath), review.id, { status: 'Reviewed' }),
       isAffectedByCodeReviews,
     );
   }

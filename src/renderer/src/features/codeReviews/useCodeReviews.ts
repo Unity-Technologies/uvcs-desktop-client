@@ -1,39 +1,40 @@
 import { useQuery } from '@tanstack/react-query';
+import type { Place } from '@shared/domain/place';
 import type { CodeReviewFilter } from '@shared/domain/codeReview';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient, SLOW_CHANGING_QUERY } from '../../app/queryClient';
-import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace } from '../../app/workspace/useWorkspace';
 import { compactFilter } from '../../lib/compactFilter';
 import { listedReviewIn } from './listedReview';
 import { latestReviewByBranch } from './reviewsByBranch';
 
 export function useCodeReviews(filter: CodeReviewFilter) {
-  const workspacePath = useWorkspacePath();
+  const place = usePlace();
   // Equivalent filters (no owners, not only assigned) share one cache entry and one `cm find`.
   const query = compactFilter(filter);
   return useQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'codeReviews', query),
-    queryFn: () => api.codeReviews.list(workspacePath, query),
+    queryKey: queryKeys.inPlace(place, 'codeReviews', query),
+    queryFn: () => api.codeReviews.list(place, query),
     placeholderData: (previous) => previous,
   });
 }
 
 export function useCodeReview(reviewId: number) {
-  const workspacePath = useWorkspacePath();
+  const place = usePlace();
   // Opened from a list that read it, the page shows at once, as fresh as that list: read again only once it's stale.
-  const listed = () => listedReviewIn(queryClient, workspacePath, reviewId);
+  const listed = () => listedReviewIn(queryClient, place, reviewId);
   return useQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'codeReviews', 'review', reviewId),
-    queryFn: () => api.codeReviews.get(workspacePath, reviewId),
+    queryKey: queryKeys.inPlace(place, 'codeReviews', 'review', reviewId),
+    queryFn: () => api.codeReviews.get(place, reviewId),
     initialData: () => listed()?.review,
     initialDataUpdatedAt: () => listed()?.readAt,
   });
 }
 
 /** The newest reviews of the repository as `cm` lists them, branch targets by id; `text` narrows them by title. */
-export function reviewSummariesKey(workspacePath: string, text?: string): readonly unknown[] {
-  return queryKeys.inWorkspace(workspacePath, 'codeReviews', 'summaries', { text });
+export function reviewSummariesKey(place: Place, text?: string): readonly unknown[] {
+  return queryKeys.inPlace(place, 'codeReviews', 'summaries', { text });
 }
 
 /**
@@ -42,18 +43,18 @@ export function reviewSummariesKey(workspacePath: string, text?: string): readon
  * `enabled` lets a view ask only once its own data is in, so the chips never delay it.
  */
 export function useReviewsByBranch(enabled = true) {
-  const workspacePath = useWorkspacePath();
-  return useQuery({ ...reviewSummariesQuery(workspacePath), select: latestReviewByBranch, enabled });
+  const place = usePlace();
+  return useQuery({ ...reviewSummariesQuery(place), select: latestReviewByBranch, enabled });
 }
 
 /**
  * How the newest reviews of the repository are read, all of them (`reviewSummariesKey` without a text): rarely, as
  * the palette reads the same list, and a focus never reads them again.
  */
-export function reviewSummariesQuery(workspacePath: string) {
+export function reviewSummariesQuery(place: Place) {
   return {
-    queryKey: reviewSummariesKey(workspacePath),
-    queryFn: () => api.codeReviews.listSummaries(workspacePath, {}),
+    queryKey: reviewSummariesKey(place),
+    queryFn: () => api.codeReviews.listSummaries(place, {}),
     ...SLOW_CHANGING_QUERY,
   };
 }

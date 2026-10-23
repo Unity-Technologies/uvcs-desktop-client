@@ -174,7 +174,7 @@ export function codeReviewResult(review: CodeReviewSummary, context: ResultConte
     detail: `${review.status} · ${displayName(review.owner)}`,
     detailMatches: [],
     quality: wordMatchQuality(review.title, term),
-    menu: () => codeReviewMenu(workspacePath, [review], context.workspaceOn),
+    menu: () => codeReviewMenu(workspacePlace(workspacePath), [review], context.workspaceOn),
     run: () => openReview(review),
   };
 }

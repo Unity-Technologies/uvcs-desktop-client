@@ -1,28 +1,30 @@
-import { workspacePlace } from '@shared/domain/place';
+import type { Place } from '@shared/domain/place';
 import type { CodeReviewsApi } from '@shared/api/codeReviews';
 import { MAX_LISTED_CODE_REVIEWS, type CodeReview, type CodeReviewFilter, type CodeReviewSummary, type CodeReviewTarget } from '@shared/domain/codeReview';
 import type { QueryFilter } from '@shared/domain/query';
+import { cmPlace } from '../cm/cmPlace';
 import { FOUND_REVIEWS, type RawCodeReview } from '../cm/codeReviewRecords';
 import { equalsCondition, findArgs } from '../cm/findQuery';
 import { readRecords } from '../cm/formatRecords';
 import type { BranchNamesContext, ServiceContext } from './ServiceContext';
 
 export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }: BranchNamesContext): CodeReviewsApi {
-  async function findReviews(workspacePath: string, conditions: string[], filter: QueryFilter): Promise<RawCodeReview[]> {
-    const output = await cm.query(findArgs(FOUND_REVIEWS, filter, 'date desc', conditions), { cwd: workspacePath });
+  async function findReviews(place: Place, conditions: string[], filter: QueryFilter): Promise<RawCodeReview[]> {
+    const at = cmPlace(place);
+    const output = await cm.query(findArgs(FOUND_REVIEWS, filter, 'date desc', conditions, at.repository), at.options);
     return readRecords(FOUND_REVIEWS, output);
   }
 
-  function findReviewById(workspacePath: string, reviewId: number): Promise<RawCodeReview[]> {
-    return findReviews(workspacePath, [`id = ${reviewId}`], {});
+  function findReviewById(place: Place, reviewId: number): Promise<RawCodeReview[]> {
+    return findReviews(place, [`id = ${reviewId}`], {});
   }
 
-  function findListedReviews(workspacePath: string, filter: CodeReviewFilter): Promise<RawCodeReview[]> {
+  function findListedReviews(place: Place, filter: CodeReviewFilter): Promise<RawCodeReview[]> {
     const conditions = [
       ...(filter.assignedToMe ? ["assignee = 'me'"] : []),
       ...(filter.status ? [equalsCondition('status', filter.status)] : []),
     ];
-    return findReviews(workspacePath, conditions, {
+    return findReviews(place, conditions, {
       owners: filter.owners,
       sinceDate: filter.sinceDate,
       text: filter.text,
@@ -34,9 +36,9 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
    * `cm` reports branch targets only by object id; the names come from the branch lists already read, or from the
    * names of every branch, read once in a while (`BranchNamesCache`).
    */
-  async function resolveTargets(workspacePath: string, reviews: RawCodeReview[]): Promise<CodeReview[]> {
+  async function resolveTargets(place: Place, reviews: RawCodeReview[]): Promise<CodeReview[]> {
     const branchIds = reviews.filter((review) => review.targetType === 'branch').map((review) => review.targetId);
-    const names = branchIds.length > 0 ? await branchNames.resolve(workspacePlace(workspacePath), branchIds) : new Map<number, string>();
+    const names = branchIds.length > 0 ? await branchNames.resolve(place, branchIds) : new Map<number, string>();
 
     return reviews.map((review) => ({
       ...summaryOf(review),
@@ -45,42 +47,52 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
   }
 
   return {
-    async list(workspacePath, filter) {
-      return resolveTargets(workspacePath, await findListedReviews(workspacePath, filter));
+    async list(place, filter) {
+      return resolveTargets(place, await findListedReviews(place, filter));
     },
 
-    async listSummaries(workspacePath, filter) {
-      return (await findListedReviews(workspacePath, filter)).map(summaryOf);
+    async listSummaries(place, filter) {
+      return (await findListedReviews(place, filter)).map(summaryOf);
     },
 
-    async get(workspacePath, reviewId) {
-      const [review] = await resolveTargets(workspacePath, await findReviewById(workspacePath, reviewId));
+    async get(place, reviewId) {
+      const [review] = await resolveTargets(place, await findReviewById(place, reviewId));
       if (!review) throw new Error(`Code review ${reviewId} was not found.`);
       return review;
     },
 
-    async create(workspacePath, { targetSpec, title, assignee }) {
+    async create(place, { targetSpec, title, assignee }) {
+      const at = cmPlace(place);
       const output = await cm.query(
-        ['codereview', targetSpec, title, ...(assignee ? [`--assignee=${assignee}`] : []), '--format={id}'],
-        { cwd: workspacePath },
+        ['codereview', at.spec(targetSpec), title, ...(assignee ? [`--assignee=${assignee}`] : []), '--format={id}', ...at.repositoryOption],
+        at.options,
       );
       return Number.parseInt(output.trim(), 10);
     },
 
-    async update(workspacePath, reviewId, { status, assignee }) {
+    async update(place, reviewId, { status, assignee }) {
+      const at = cmPlace(place);
       await cm.query(
-        ['codereview', '-e', String(reviewId), ...(status ? [`--status=${status}`] : []), ...(assignee !== undefined ? [`--assignee=${assignee}`] : [])],
-        { cwd: workspacePath },
+        [
+          'codereview',
+          '-e',
+          String(reviewId),
+          ...(status ? [`--status=${status}`] : []),
+          ...(assignee !== undefined ? [`--assignee=${assignee}`] : []),
+          ...at.repositoryOption,
+        ],
+        at.options,
       );
       // `cm` succeeds without changing the status of a review nobody is assigned to.
-      const [updated] = status ? await findReviewById(workspacePath, reviewId) : [];
+      const [updated] = status ? await findReviewById(place, reviewId) : [];
       if (updated && updated.status !== status) {
         throw new Error("The status didn't change: a review nobody is assigned to keeps its status. Assign the review, then try again.");
       }
     },
 
-    async remove(workspacePath, reviewIds) {
-      await cm.query(['codereview', '-d', ...reviewIds.map(String)], { cwd: workspacePath });
+    async remove(place, reviewIds) {
+      const at = cmPlace(place);
+      await cm.query(['codereview', '-d', ...reviewIds.map(String), ...at.repositoryOption], at.options);
     },
   };
 }

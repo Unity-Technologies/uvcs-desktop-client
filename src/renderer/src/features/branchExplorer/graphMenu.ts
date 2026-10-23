@@ -63,7 +63,7 @@ export function graphMenu(target: GraphTarget | null, context: GraphMenuContext)
 function graphCodeReviewMenu(review: CodeReviewSummary, { workspacePath, layout, currentBranch }: GraphMenuContext): MenuEntry[] {
   const reviewed = [...layout.lanesByBranch.values()].find((lane) => lane.branch.id === review.targetBranchId)?.branch.name;
   const workspaceOn = currentBranch === undefined ? undefined : { kind: 'branch' as const, name: currentBranch };
-  return codeReviewMenu(workspacePath, [reviewed === undefined ? review : { ...review, target: { kind: 'branch', branch: reviewed } }], workspaceOn);
+  return codeReviewMenu(workspacePlace(workspacePath), [reviewed === undefined ? review : { ...review, target: { kind: 'branch', branch: reviewed } }], workspaceOn);
 }
 
 function graphChangesetMenu(id: number, { workspacePath, layout, currentBranch, loadedChangeset, repository, goToChangeset }: GraphMenuContext, host: MenuHost): MenuEntry[] {

@@ -37,6 +37,6 @@ export function usePaletteLists(workspacePath: string | null) {
     changesets: useQuery({ ...cached, ...recentChangesetsQuery(workspacePlace(path)) }),
     shelves: useQuery({ queryKey: shelvesKey(path, recentShelvesFilter), queryFn: () => api.shelves.list(path, recentShelvesFilter), ...cached }),
     // The same newest reviews the branch chips read (`useReviewsByBranch`): one query for both.
-    codeReviews: useQuery({ ...reviewSummariesQuery(path), ...cached }),
+    codeReviews: useQuery({ ...reviewSummariesQuery(workspacePlace(path)), ...cached }),
   };
 }
