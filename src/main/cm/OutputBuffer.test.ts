@@ -18,6 +18,12 @@ describe('OutputBuffer', () => {
     expect(buffer.textBefore(16)).toBe('abcdef0123456789');
   });
 
+  it('keeps no end when asked for none', () => {
+    const buffer = new OutputBuffer(0);
+    buffer.append('abc');
+    expect([buffer.tail, buffer.textBefore(3)]).toEqual(['', 'abc']);
+  });
+
   it('starts over once cleared', () => {
     const buffer = new OutputBuffer(5);
     buffer.append('abc');

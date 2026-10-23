@@ -33,7 +33,8 @@ export class OutputBuffer {
 
   append(text: string): void {
     this.size += text.length;
-    this.end = text.length >= this.tailLength ? text.slice(-this.tailLength) : (this.end + text).slice(-this.tailLength);
+    // `slice(-0)` is the whole text: with no tail kept, none is.
+    if (this.tailLength > 0) this.end = text.length >= this.tailLength ? text.slice(-this.tailLength) : (this.end + text).slice(-this.tailLength);
     const headRoom = this.keepAtMost / 2 - this.headSize;
     if (headRoom >= text.length) return void this.keepInHead(text);
     if (headRoom > 0) this.keepInHead(text.slice(0, headRoom));

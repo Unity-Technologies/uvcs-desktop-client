@@ -144,12 +144,11 @@ export class CmClient {
   /**
    * Runs a quick command whose list only `--xml` prints (`cm history`), where `query` would, and reads each element
    * named `element` as it arrives (`XmlElementReader`) into what `readElement` builds of it, as `queryRecords` reads
-   * records; `arrays`: the elements inside it that are always arrays (`parseXml`).
+   * records.
    */
-  queryXmlElements<T>(args: string[], element: string, readElement: ReadElement<T>, options: CmRecordsOptions & { arrays?: string[] } = {}): Promise<T[]> {
-    const { arrays, ...runOptions } = options;
-    const placed = this.placed(runOptions);
-    return this.runStreamed(args, new XmlElementReader(element, readElement, arrays), placed, this.runsInPooledShell(args, placed));
+  queryXmlElements<T>(args: string[], element: string, readElement: ReadElement<T>, options: CmRecordsOptions = {}): Promise<T[]> {
+    const placed = this.placed(options);
+    return this.runStreamed(args, new XmlElementReader(element, readElement), placed, this.runsInPooledShell(args, placed));
   }
 
   /** Prepares `cm shell` sessions for a working directory (defaults to the home directory). */

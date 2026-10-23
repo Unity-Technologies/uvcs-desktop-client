@@ -6,7 +6,7 @@ export type ReadElement<T> = (element: XmlNode) => T | undefined;
 
 /**
  * Reads the elements named `name` of an XML list as they arrive, in byte chunks, into what `readElement` builds of
- * each (`parseXml`, its `arrays` always arrays): for a command whose list only `--xml` prints whole (`cm history`, whose
+ * each (`parseXml`): for a command whose list only `--xml` prints whole (`cm history`, whose
  * `--format` has no revision type). Only the element still arriving is kept between chunks: the output is never held
  * whole, and what lies between the elements (the root, the list's own tags) is dropped.
  *
@@ -23,7 +23,6 @@ export class XmlElementReader<T> implements StreamReader {
   constructor(
     private readonly name: string,
     private readonly readElement: ReadElement<T>,
-    private readonly arrays: readonly string[] = [],
   ) {
     this.openTag = Buffer.from(`<${name}>`, 'utf8');
     this.closeTag = Buffer.from(`</${name}>`, 'utf8');
@@ -62,7 +61,7 @@ export class XmlElementReader<T> implements StreamReader {
   }
 
   private readElementIn(xml: string): void {
-    const element = child(parseXml(xml, [...this.arrays]), this.name);
+    const element = child(parseXml(xml, []), this.name);
     const row = element && this.readElement(element);
     if (row !== undefined) this.rows.push(row);
   }

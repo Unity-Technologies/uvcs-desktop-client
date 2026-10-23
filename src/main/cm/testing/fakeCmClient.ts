@@ -83,8 +83,8 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
     const answer = answers[key]!;
     const result = typeof answer === 'function' ? await answer(command) : answer;
     if (result instanceof CmFailure) throw failure(command, result, commands.length);
-    // As `CmClient`, a command whose lines are listened to hands each line its output prints.
-    options.onOutputLine && result.split(/\r\n|\r|\n/).filter(Boolean).forEach(options.onOutputLine);
+    // As `CmClient`, a command run as a process of its own (`execute`) hands its lines listener each line it prints.
+    if (via === 'execute' && options.onOutputLine) result.split(/\r\n|\r|\n/).filter(Boolean).forEach(options.onOutputLine);
     return result;
   }
 
@@ -101,10 +101,8 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
     execute: (args: string[], options?: CmRunOptions) => run('execute', args, options),
     queryRecords: <T>(args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions) => runStreamed('query', args, new RecordReader(readRecord), options),
     executeRecords: <T>(args: string[], readRecord: ReadRecord<T>, options?: CmRecordsOptions) => runStreamed('execute', args, new RecordReader(readRecord), options),
-    queryXmlElements: <T>(args: string[], element: string, readElement: ReadElement<T>, options: CmRecordsOptions & { arrays?: string[] } = {}) => {
-      const { arrays, ...runOptions } = options;
-      return runStreamed('query', args, new XmlElementReader(element, readElement, arrays), runOptions);
-    },
+    queryXmlElements: <T>(args: string[], element: string, readElement: ReadElement<T>, options?: CmRecordsOptions) =>
+      runStreamed('query', args, new XmlElementReader(element, readElement), options),
     warmUp: (cwd = '') => void warmedUp.push(cwd),
     show: (cwd: string) => void shown.push(cwd),
     release: (cwd: string) => void released.push(cwd),
