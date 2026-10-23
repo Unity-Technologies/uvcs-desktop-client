@@ -32,23 +32,6 @@
   text-align: left;
 }
 
-/* The highlighted result's actions (Tab), like the command palette's. */
-.actions {
-  display: flex;
-  flex: none;
-  padding: 2px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--text-secondary);
-}
-
-.actions:hover,
-.actions[data-state='open'] {
-  background: var(--bg-active);
-  color: var(--text-primary);
-}
-
 .empty {
   padding: var(--space-6);
   color: var(--text-tertiary);

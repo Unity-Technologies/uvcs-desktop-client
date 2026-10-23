@@ -20,7 +20,7 @@ import { fileMenu } from './fileMenu';
 import { itemDecoration } from './itemDecoration';
 import { PendingChangesIndex } from './itemStatus';
 import { useWorkspacePaths } from './useWorkspacePaths';
-import styles from '../../components/GoToFileList.module.css';
+import styles from './GoToFileDialog.module.css';
 
 const MAX_RESULTS = 60;
 
