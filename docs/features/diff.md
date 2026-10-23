@@ -336,9 +336,9 @@ no one version's code, so it compares nothing. The menu only asks whether there 
 the entry is chosen. Both texts are compared as they show (`clipboardText`): line breaks are LF and each last line
 ended, so the clipboard's CRLF and a missing final line break don't show as changes. It's offered with a selection,
 whatever the clipboard holds: reading the clipboard as the menu opens would ask the OS for its content (an image, a huge
-text) at every right-click, and the menu would show before the answer. An empty clipboard says so in a toast. The
-official client's "Add diff selection" then "Diff with previous selection" took two steps and kept the first selection;
-copying is the step people already know.
+text) at every right-click, and the menu would show before the answer. An empty clipboard, or one the page can't read,
+says so in a toast. The official client's "Add diff selection" then "Diff with previous selection" took two steps and
+kept the first selection; copying is the step people already know.
 
 ## Moved code
 

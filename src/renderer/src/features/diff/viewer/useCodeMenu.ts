@@ -111,7 +111,7 @@ export function useCodeMenu({ containerRef, scrollTo, fileName, textOf, sides, e
       const clipboard = clipboardText(read);
       if (clipboard === null) return nothingCopied();
       openCodeComparisonDialog(clipboardComparison(clipboard, selection, useDiffPreferences.getState().comparisonMethod));
-    });
+    }, nothingCopied);
   };
 
   const actionsFor = (on: OpenedCode): CodeMenuActions => {
