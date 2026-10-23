@@ -1,0 +1,28 @@
+/* Rules as rows of two branches, "Working on → Changes go to", their headings over the columns. */
+.rules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.row {
+  display: grid;
+  /* Fixed arrow and button columns, so the headings line up over rows with a Remove button. */
+  grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr) var(--control-height);
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.columnHeading {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.arrow {
+  color: var(--text-tertiary);
+}
+
+/* A row's problem, or that cm added it, under its two branches. */
+.note {
+  grid-column: 1 / -1;
+}
