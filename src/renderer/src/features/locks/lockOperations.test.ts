@@ -6,9 +6,10 @@ vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 import type { Lock, LockStatus } from '@shared/domain/lock';
 import { answerConfirms } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes } from '../../testing/operationOutcome';
-import { isReleasable, releaseLocks, removeLocks } from './lockOperations';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
+import { isReleasable, releaseLocks, removeLocks, unlocksIn } from './lockOperations';
 
-const ws = '/ws';
+const ws = workspacePlace('/ws');
 const lock = (path: string, status: LockStatus = 'Locked'): Lock => ({
   itemId: 1,
   guid: 'g',
@@ -28,23 +29,28 @@ describe('lock operations', () => {
     expect(isReleasable(lock('/a.psd', 'Retained'))).toBe(false);
   });
 
+  it('unlocks from a workspace only: a repository explored without one leaves its locks as they are', () => {
+    expect(unlocksIn(ws)).toBe(true);
+    expect(unlocksIn(repositoryPlace('game@local'))).toBe(false);
+  });
+
   it('releases the locks, keeping them retained until the change reaches its branch', async () => {
     fakeApi.answer('locks.unlock', () => undefined);
 
     await releaseLocks(ws, [lock('/art/hero.psd')]);
 
-    expect(fakeApi.argsOf('locks.unlock')).toEqual([[ws, [lock('/art/hero.psd')], { remove: false }]]);
+    expect(fakeApi.argsOf('locks.unlock')).toEqual([[ws.workspacePath, [lock('/art/hero.psd')], { remove: false }]]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Released the lock on hero.psd' }]);
   });
 
   it('refreshes only the locks, never the history nor the workspace', async () => {
     fakeApi.answer('locks.unlock', () => undefined);
 
-    const afterRelease = watchRefreshes(ws);
+    const afterRelease = watchRefreshes(ws.workspacePath);
     await releaseLocks(ws, [lock('/a.psd')]);
     expect(afterRelease()).toEqual(['locks']);
 
-    const afterRemove = watchRefreshes(ws);
+    const afterRemove = watchRefreshes(ws.workspacePath);
     await removeLocks(ws, [lock('/a.psd')]);
     expect(afterRemove()).toEqual(['locks']);
   });
@@ -57,7 +63,7 @@ describe('lock operations', () => {
     expect(fakeApi.methods()).toEqual([]);
 
     await removeLocks(ws, [lock('/a.psd'), lock('/b.psd')]);
-    expect(fakeApi.argsOf('locks.unlock')).toEqual([[ws, [lock('/a.psd'), lock('/b.psd')], { remove: true }]]);
+    expect(fakeApi.argsOf('locks.unlock')).toEqual([[ws.workspacePath, [lock('/a.psd'), lock('/b.psd')], { remove: true }]]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Removed 2 locks' }]);
   });
 

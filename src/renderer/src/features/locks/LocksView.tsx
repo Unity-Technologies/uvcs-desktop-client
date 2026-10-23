@@ -1,6 +1,5 @@
 import { ExternalLink, Lock as LockIcon, LockOpen } from 'lucide-react';
 import { useMemo } from 'react';
-import { workspacePathOf } from '@shared/domain/place';
 import type { Lock } from '@shared/domain/lock';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { ObjectListView } from '../../components/ObjectListView';
@@ -29,7 +28,7 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { LockDetails } from './LockDetails';
 import { lockKey } from './lockKey';
 import { lockMenu } from './lockMenu';
-import { isReleasable, releaseLocks } from './lockOperations';
+import { isReleasable, releaseLocks, unlocksIn } from './lockOperations';
 import { useLocks } from './useLocks';
 import { useLockRulesPage } from './useLockRulesPage';
 import { openLockRules, useLockRulesCommand } from './useLockRulesCommand';
@@ -64,7 +63,6 @@ const ownerOf = (lock: Lock): string => lock.owner;
 /** Exclusive checkouts on the repository: who holds what, and releasing them. */
 export function LocksView() {
   const place = usePlace();
-  const workspacePath = workspacePathOf(place);
   const filters = useLocksViewStore();
   const { text: filter, people, update } = filters;
   const me = useWorkspaceUser();
@@ -96,8 +94,8 @@ export function LocksView() {
               Lock rules
             </Button>
           )}
-          {workspacePath !== null && (
-            <Button icon={<LockOpen size={14} />} disabled={releasable.length === 0} onClick={() => void releaseLocks(workspacePath, releasable)}>
+          {unlocksIn(place) && (
+            <Button icon={<LockOpen size={14} />} disabled={releasable.length === 0} onClick={() => void releaseLocks(place, releasable)}>
               Release
             </Button>
           )}
@@ -131,7 +129,7 @@ export function LocksView() {
         contextMenu={(rows) => lockMenu(place, rows)}
         initialSort={{ columnId: 'date', descending: true }}
         noun="lock"
-        details={focused && <LockDetails key={lockKey(focused)} workspacePath={workspacePath} lock={focused} menu={lockMenu(place, [focused])} />}
+        details={focused && <LockDetails key={lockKey(focused)} place={place} lock={focused} menu={lockMenu(place, [focused])} />}
       />
     </>
   );
