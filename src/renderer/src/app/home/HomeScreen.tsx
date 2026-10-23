@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import type { UnityProject } from '@shared/domain/repository';
 import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
@@ -26,6 +26,8 @@ export function HomeScreen() {
   const firstServer = servers?.[0]?.server;
   const open = useOpenWorkspace();
   const goHome = useCallback(() => setSection(WELCOME), [setSection]);
+  // The home screen starts on its welcome each time a window comes back to it, as it did when it held its own state.
+  useEffect(() => goHome, [goHome]);
   const shownServer = section.kind === 'server' ? section.server : '';
   const { data: projects = NO_PROJECTS } = useProjects(section.kind === 'server' ? section.server : null);
   const project = shownProject(useProjectPickStore((state) => state.picks[shownServer]), projects);
