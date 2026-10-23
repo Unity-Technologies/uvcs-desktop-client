@@ -92,6 +92,8 @@ export interface XlinkDialogFields {
   showsFolder: boolean;
   /** Only a writable xlink takes changes, so only it has branches to expand to. */
   showsRules: boolean;
+  /** The rules' column headings, over the rows once there is one. */
+  showsRuleHeadings: boolean;
   pointLabel: string;
   pointPlaceholder: string;
   pointHint: string | undefined;
@@ -139,6 +141,7 @@ export function xlinkDialogFields(target: XlinkDialogTarget, draft: XlinkDraft):
     isNew,
     showsFolder: isNew && !draft.writable,
     showsRules: draft.writable,
+    showsRuleHeadings: draft.writable && draft.rules.length > 0,
     pointLabel: words.label,
     pointPlaceholder: words.placeholder,
     pointHint: words.hint,

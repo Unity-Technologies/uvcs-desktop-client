@@ -51,7 +51,8 @@ describe('A new xlink', () => {
 
   it('shows a folder of its repository only while read-only, and rules only once writable', () => {
     expect(xlinkDialogFields(CREATE, filled())).toMatchObject({ showsFolder: true, showsRules: false });
-    expect(xlinkDialogFields(CREATE, filled({ writable: true }))).toMatchObject({ showsFolder: false, showsRules: true });
+    expect(xlinkDialogFields(CREATE, filled({ writable: true }))).toMatchObject({ showsFolder: false, showsRules: true, showsRuleHeadings: false });
+    expect(xlinkDialogFields(CREATE, withNewRule(filled({ writable: true }))).showsRuleHeadings).toBe(true);
   });
 
   it('is created in its folder with what was typed, a branch named without its slash too', () => {

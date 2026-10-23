@@ -93,17 +93,17 @@ function XlinkDialog({ target, save, onClose }: { target: XlinkDialogTarget; sav
       {fields.showsFolder && (
         <TextField label="Folder of the repository" value={draft.folder} placeholder="/" hint="The xlink shows only this folder." onChange={(event) => change({ folder: event.target.value })} />
       )}
-      {fields.showsRules && <ExpansionRules draft={draft} notes={fields.ruleNotes} onChange={setDraft} />}
+      {fields.showsRules && <ExpansionRules draft={draft} headings={fields.showsRuleHeadings} notes={fields.ruleNotes} onChange={setDraft} />}
     </Dialog>
   );
 }
 
-function ExpansionRules({ draft, notes, onChange }: { draft: XlinkDraft; notes: ReadonlyMap<number, RuleNote>; onChange: (draft: XlinkDraft) => void }) {
+function ExpansionRules({ draft, headings, notes, onChange }: { draft: XlinkDraft; headings: boolean; notes: ReadonlyMap<number, RuleNote>; onChange: (draft: XlinkDraft) => void }) {
   return (
     <div className={fieldStyles.field}>
       <span className={fieldStyles.label}>Branch expansion rules</span>
       <span className={fieldStyles.hint}>Changes made in the xlink while on a branch of this workspace go to the branch of its repository named here.</span>
-      {draft.rules.length > 0 && (
+      {headings && (
         <div className={styles.rules}>
           <div className={styles.row} aria-hidden>
             <span className={styles.columnHeading}>Working on</span>
