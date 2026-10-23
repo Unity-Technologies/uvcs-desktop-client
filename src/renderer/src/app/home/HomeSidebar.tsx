@@ -33,12 +33,13 @@ export function HomeSidebar({ section, onSelect }: HomeSidebarProps) {
     };
   };
   const serverItem = (server: string): NavSectionItem => {
-    // The group names the kind of organization, so its entries need no detail of their own.
-    const { label } = describeServer(server);
+    // The group names the kind of organization, so its entries need no detail of their own; folded, where groups are
+    // only rules, the tooltip says it (`navItemTip`): `acme · Unity organization` and `acme · Cloud organization`.
+    const { label, detail } = describeServer(server);
     // Folded, every organization would be the same icon: their initials tell them apart.
     const icon = rail && server !== 'local' ? <ServerMonogram label={label} /> : <ServerIcon server={server} />;
     const railLabel = server === 'local' ? 'Local' : undefined;
-    return item({ kind: 'server', server }, icon, label, { railLabel });
+    return item({ kind: 'server', server }, icon, label, { railLabel, detail: rail ? detail : undefined });
   };
   const serverSections = isLoading
     ? [{ label: 'Servers', items: [{ key: 'loading', element: <CenteredSpinner /> }] }]
