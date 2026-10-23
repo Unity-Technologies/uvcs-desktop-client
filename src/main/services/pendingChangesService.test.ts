@@ -259,7 +259,9 @@ describe('how alike the items of a move are', () => {
           .map(({ path, type, content, revid }) => ({ name: path.split('/').pop()!, wkpath: path.split('/').join(sep), type, size: content.length, revid, repspec: 'rep:game@local', changeset: 3 })),
       );
       const unknown = args.slice(1, -1).filter((arg) => !listed.some(({ path }) => absolute(path) === arg));
-      return unknown.length > 0 ? cmFails(`${unknown.map((path) => `Item ${path.toLowerCase()} not found.`).join('\n')}\n${records}`) : records;
+      // As cm prints a path it can't find on Windows: the drive letter in lower case, the rest as asked.
+      const printed = (path: string) => path.replace(/^[A-Z]:/, (drive) => drive.toLowerCase());
+      return unknown.length > 0 ? cmFails(`${unknown.map((path) => `Item ${printed(path)} not found.`).join('\n')}\n${records}`) : records;
     };
     const cat = fakeCat((catSpec) => listed.find(({ revid }) => catSpec === `revid:${revid}@game@local`)?.content);
     return { workspace, ...pendingChanges({ ls, cat }) };

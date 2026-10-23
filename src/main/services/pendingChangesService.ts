@@ -1,5 +1,5 @@
 import { open, readFile } from 'node:fs/promises';
-import { join, normalize } from 'node:path';
+import { join } from 'node:path';
 import { app } from 'electron';
 import type { PendingChangesApi } from '@shared/api/pendingChanges';
 import type {
@@ -14,7 +14,7 @@ import type {
 import { spec } from '@shared/domain/specs';
 import { checkinArgs } from '../cm/checkinArgs';
 import { CmError } from '../cm/CmError';
-import { deletedFilesArgs, notFoundPaths, parseDeletedFiles, type DeletedFile } from '../cm/deletedFiles';
+import { deletedFilesArgs, parseDeletedFiles, pathsNotFound, type DeletedFile } from '../cm/deletedFiles';
 import { textForLog } from '../cm/hideSecrets';
 import { readCheckinOutput } from '../cm/checkinOutput';
 import { explainLockedItems } from '../cm/lockedItems';
@@ -84,7 +84,7 @@ export function createPendingChangesService({ cm, operations, revisionCat }: Ser
       // The paths come from the window, which isn't trusted: each one must be inside the workspace (`workspaceFileOf`).
       const fileOf = (path: string) => workspaceFileOf(workspacePath, path);
       return measureMoveSimilarities(pairs, {
-        listDeleted: (paths) => listDeletedFiles(workspacePath, paths.map(fileOf)),
+        listDeleted: (paths) => listDeletedFiles(workspacePath, paths),
         // By revision, in its repository: `RevisionCat` reads those asked together with a `cm cat` per repository.
         readDeleted: async ({ revision }) => {
           const target = join(directory, String(saved++));
@@ -100,16 +100,20 @@ export function createPendingChangesService({ cm, operations, revisionCat }: Ser
 
   /**
    * The deleted files `cm ls` lists. It fails on a path it can't find, having listed the others: they are listed again
-   * without the paths it named (`notFoundPaths`), so one such path costs one more `cm ls`, never every file's measure.
+   * without the paths it named (`pathsNotFound`), so one such path costs one more `cm ls`, never every file's measure.
+   * Reading the records out of the failure's output instead was left out: what a failure keeps is the log's text,
+   * secrets hidden, and the folder rule (`matchCandidates`) already keeps out the paths `cm` is known not to find.
    */
-  async function listDeletedFiles(workspacePath: string, absolutePaths: readonly string[]): Promise<Map<string, DeletedFile>> {
-    const list = async (paths: readonly string[]) => parseDeletedFiles(await cm.query(deletedFilesArgs(paths), { cwd: workspacePath }));
+  async function listDeletedFiles(workspacePath: string, paths: readonly string[]): Promise<Map<string, DeletedFile>> {
+    // The paths come from the window, which isn't trusted: each one must be inside the workspace (`workspaceFileOf`).
+    const list = async (listed: readonly string[]) =>
+      parseDeletedFiles(await cm.query(deletedFilesArgs(listed.map((path) => workspaceFileOf(workspacePath, path))), { cwd: workspacePath }));
     try {
-      return await list(absolutePaths);
+      return await list(paths);
     } catch (error) {
-      const missing = new Set(error instanceof CmError ? notFoundPaths(error.command.output).map((path) => comparablePath(path)) : []);
-      const found = absolutePaths.filter((path) => !missing.has(comparablePath(path)));
-      if (missing.size === 0 || found.length === 0 || found.length === absolutePaths.length) throw error;
+      const missing = error instanceof CmError ? pathsNotFound(paths, error.command.output, process.platform) : new Set<string>();
+      const found = paths.filter((path) => !missing.has(path));
+      if (missing.size === 0 || found.length === 0) throw error;
       return list(found);
     }
   }
@@ -192,9 +196,4 @@ async function glanceAt(file: string): Promise<FileGlance> {
   } finally {
     await handle.close();
   }
-}
-
-/** A path as `cm` and the app may each spell it: Windows names a drive in either case and its paths ignore case. */
-function comparablePath(path: string, platform: NodeJS.Platform = process.platform): string {
-  return platform === 'win32' ? normalize(path).toLowerCase() : normalize(path);
 }
