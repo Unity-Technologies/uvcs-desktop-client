@@ -16,7 +16,7 @@ you touch:
 
 | Doc                                     | Covers                                                                         |
 | --------------------------------------- | ------------------------------------------------------------------------------ |
-| `features/diff.md`                      | Comparing two branches, changesets or labels, editing, discarding, stepping through changes, comparison methods, line breaks, images, review marks, highlighting memory |
+| `features/diff.md`                      | Comparing two branches, changesets or labels, editing, the code's menu, discarding, stepping through changes, comparison methods, line breaks, images, review marks, highlighting memory |
 | `features/model-diff.md`                | 3D models (FBX, OBJ, glTF): reading them as Unity imports them, what changed in Unity's terms, the 3D view, materials and textures where each version is, the disk or the repository at its point (`api.unityAssets`) |
 | `features/merge.md`                     | The merge page, conflict resolution, external merge tools, finishing a task    |
 | `features/incoming.md`                  | Incoming: changesets and their files, conflicts with your changes, updating    |
@@ -150,8 +150,9 @@ and many people use the same server. Every `cm` command other than local reads (
   is all read so, a quick `cm cat` after another in one session, free between them for any other read: a small
   merge's few dozen versions in tens of ms, where a process costs 100-150 ms to start. Past it, batches go to
   processes of their own. `cm cat` writes every
-  revision it finds even when one fails, and names each it doesn't (`The specified revision was not found <spec>`):
-  that read fails alone with its line, and when every line names one, the others were written whole. A failure that
+  revision it finds even when one fails, and names each it doesn't: by its spec when it can't find it (`The specified
+  revision was not found <spec>`), by its file when its content was purged (`purgedTargetOf`; diff.md "A purged
+  version"). That read fails alone with its line, and when every line names one, the others were written whole. A failure that
   names nothing (a spec it can't take fails the command before it writes anything, a dropped connection) is narrowed
   down in halves (`narrowDown`): the half that fails again is split again, so one bad spec costs about two commands
   per halving, never one per read; when both halves fail, they all fail.

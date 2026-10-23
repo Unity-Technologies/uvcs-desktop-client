@@ -48,9 +48,12 @@ export function bufferAfterDiscard(buffer: FileBufferState, latest: DiffContents
   return { buffer: { ...buffer, unsaved: null }, editorText: latest === buffer.shown ? buffer.saved : null };
 }
 
-/** Whether saving `written` left the file as its loaded revision (the diff compares against it and shows no changes). */
+/**
+ * Whether saving `written` left the file as its loaded revision (the diff compares against it and shows no changes).
+ * Never where that revision was purged: its text isn't known, so no text is it.
+ */
 export function savedAsBase(contents: DiffContents, written: string): boolean {
-  return contents.original.kind === 'workspaceBase' && written === contents.left.text;
+  return contents.original.kind === 'workspaceBase' && !contents.left.purged && written === contents.left.text;
 }
 
 /**

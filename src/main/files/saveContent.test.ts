@@ -6,7 +6,8 @@ import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { recordsOutput } from '../cm/testing/cmOutput';
 import { TREE_ITEM_FORMAT, TREE_ITEMS } from '../cm/treeItems';
 import { cmFails, fakeCmClient } from '../cm/testing/fakeCmClient';
-import { saveContent } from './saveContent';
+import { fakeCat, PURGED } from '../cm/testing/fakeCat';
+import { PURGED_VERSION_MESSAGE, saveContent, saveVersion } from './saveContent';
 
 const FILEINFO = `<?xml version="1.0" encoding="utf-8"?><FileInfos>
 <FileInfo><ServerPath>/docs</ServerPath><RepSpec>game@local</RepSpec><IsXlink>false</IsXlink></FileInfo>
@@ -166,5 +167,14 @@ describe('saveContent in a repository explored without a workspace', () => {
     await expect(saveContent(cm, onRepository, { kind: 'workspaceFile', path: 'a.cs' }, 'out')).rejects.toThrow('needs a workspace');
     await expect(saveContent(cm, onRepository, { kind: 'workspaceBase', path: 'a.cs' }, 'out')).rejects.toThrow('needs a workspace');
     expect(commands).toEqual([]);
+  });
+});
+
+describe('saveVersion of a revision whose content was purged', () => {
+  it("fails saying so, rather than with cm's line naming the file it was to write", async () => {
+    const { cm } = fakeCmClient({ cat: fakeCat(() => PURGED) });
+    const copies = { read: async () => null };
+    const saved = saveVersion(cm, copies, workspacePlace(tmpdir()), { kind: 'revision', revision: { revisionId: 13, repository: 'game@local' }, fileName: 'a.png' }, join(tmpdir(), 'a.png'));
+    await expect(saved).rejects.toThrow(PURGED_VERSION_MESSAGE);
   });
 });

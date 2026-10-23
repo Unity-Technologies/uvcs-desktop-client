@@ -15,6 +15,7 @@ import {
   CodeXml,
   Copy,
   CornerLeftUp,
+  Delete,
   Download,
   ExternalLink,
   Eye,
@@ -41,6 +42,7 @@ import {
   GitMerge,
   GitPullRequest,
   GitPullRequestArrow,
+  Hash,
   History,
   Link,
   Layers,
@@ -55,9 +57,12 @@ import {
   Pencil,
   PictureInPicture2,
   Plus,
+  Redo2,
+  Replace,
   RotateCcw,
   ScanText,
   Scissors,
+  Search,
   ServerCog,
   ShieldCheck,
   Square,
@@ -66,6 +71,7 @@ import {
   SquareTerminal,
   Tag,
   Text,
+  TextSelect,
   Trash2,
   Undo2,
   UserPlus,
@@ -122,6 +128,9 @@ export const MENU_WORDS = {
   openInFileManager: word('open', FolderSearch, OPEN_IN_FILE_MANAGER_LABEL),
 
   // What it does to the workspace or to the object.
+  // Text typed into (`codeMenu`): its edits undone and redone, as the editor's keys do.
+  undoEdit: word('act', Undo2, 'Undo'),
+  redoEdit: word('act', Redo2, 'Redo'),
   switch: word('act', ArrowRightLeft),
   taskWorkspace: word('act', FolderGit2, 'Work on this branch in a new workspace…'),
   revert: word('act', RotateCcw),
@@ -192,6 +201,11 @@ export const MENU_WORDS = {
   locks: word('navigate', Lock, 'Show locks'),
   showInLocks: word('navigate', Lock, 'Show in Locks'),
   showInFiles: word('navigate', FolderTree, 'Show in Files'),
+  // Text (`codeMenu`): finding in it, a line of it, and what's selected compared with the clipboard.
+  find: word('navigate', Search, 'Find'),
+  replace: word('navigate', Replace, 'Replace'),
+  goToLine: word('navigate', Hash, 'Go to line…'),
+  compareWithClipboard: word('navigate', GitCompareArrows, 'Compare with clipboard'),
   // The Branch Explorer's own ways around the graph.
   parent: word('navigate', CornerLeftUp, 'Go to parent changeset'),
   head: word('navigate', ArrowRightToLine, 'Go to head changeset'),
@@ -211,8 +225,13 @@ export const MENU_WORDS = {
   copyLineLink: word('clipboard', Link),
   copyLines: word('clipboard', Copy),
   paste: word('clipboard', ClipboardPaste, 'Paste'),
+  // Text selected (`codeMenu`), not an object: what it holds, not its names.
+  copyText: word('clipboard', Copy, 'Copy'),
 
   // What it's called, says or is filed under.
+  // Text (`codeMenu`): what's selected removed, without the clipboard; everything selected.
+  deleteText: word('edit', Delete, 'Delete'),
+  selectAll: word('edit', TextSelect, 'Select all'),
   rename: word('edit', Pencil, 'Rename…'),
   editComment: word('edit', MessageSquareText, 'Edit comment…'),
   describe: word('edit', Text, 'Edit description…'),

@@ -16,7 +16,7 @@ export interface DiffDiscards {
  */
 export function diffDiscards(place: Place, buffer: FileBuffer, onMatchesBase: (() => void) | undefined): DiffDiscards | null {
   const { original, modified, left } = buffer.shown;
-  const file = discardedFileIn(place, original, modified);
+  const file = discardedFileIn(place, original, modified, left);
   if (file === null) return null;
   const target = { ...file, baseText: original.kind === 'workspaceBase' ? (left.text ?? '') : null, onMatchesBase };
   const current = buffer.unsaved ?? buffer.shown.right.text ?? '';

@@ -50,6 +50,8 @@ const MODEL_FORMATS: Record<string, ModelFormat> = {
 };
 
 export const EMPTY_CONTENT: FileContent = { text: '', isBinary: false, size: 0 };
+/** A revision whose content was purged (`isPurgedRevisionError`): an answer that never changes, not a failure. */
+export const PURGED_CONTENT: FileContent = { isBinary: false, size: 0, purged: true };
 
 /** Classifies raw bytes as text, image or opaque binary. `fileName` is used to recognize images. */
 export function toFileContent(bytes: Buffer, fileName: string): FileContent {
