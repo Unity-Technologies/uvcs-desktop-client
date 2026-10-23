@@ -7,10 +7,15 @@ import type { ChangedLine } from './changeBlocks';
  * file's top, `top`), and the viewer's virtualizer holds that diff by its `diffs-container` (`observers`, private).
  * `pierreLinePosition.test.ts` fails when an update moves what this reaches.
  */
-export function pierreLinePosition(virtualizer: Virtualizer, fileContainer: Element, { side, lineNumber }: ChangedLine): number | undefined {
+export function pierreLinePosition(virtualizer: Virtualizer, fileContainer: Element, line: ChangedLine): number | undefined {
+  return pierreLineBox(virtualizer, fileContainer, line)?.top;
+}
+
+/** The same, with the line's height as laid out (a wrapped line's, all its rows). */
+export function pierreLineBox(virtualizer: Virtualizer, fileContainer: Element, { side, lineNumber }: ChangedLine): { top: number; height: number } | undefined {
   const diff = (virtualizer as unknown as VirtualizerInternals).observers.get(fileContainer);
   const position = diff?.getLinePosition?.(lineNumber, side);
-  return position && diff?.top !== undefined ? diff.top + position.top : undefined;
+  return position && diff?.top !== undefined ? { top: diff.top + position.top, height: position.height } : undefined;
 }
 
 /** The virtualizer's members this reaches. */
