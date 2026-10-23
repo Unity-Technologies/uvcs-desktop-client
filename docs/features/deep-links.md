@@ -118,13 +118,15 @@ the workspace only gives the page a window and a repository to read.
      paths with their links followed, as `cm` names the root as it is on disk: `/private/tmp/wk` for `/tmp/wk` on
      macOS, a junction on Windows); a folder in none says so. A file named with no page shows in Changes when it has a
      pending change, in Files otherwise.
-   - this window's workspace, when it is on the repository;
+   - this window's place, when it is on the repository: its workspace, or the repository it explores without one;
    - else another window's, the last focused first, which comes forward and opens it (`windows.openLinkIn`);
    - else the only workspace on the repository, in this window if it shows the home screen, else in a new one: the
      workspace a window shows is never left for a link;
    - else, with several, the user picks one (`pickLinkWorkspace`: name, branch, folder; the most recent first);
-   - else, with none, "No workspace on game yet" offers to create one (`offerNewWorkspace`, then the New workspace
-     dialog with the repository filled in, on the server as the user's profiles name it), then opens the link in it.
+   - else, with none, the repository is explored without a workspace (`exploreFor`, docs/features/explore-repository.md),
+     on the server as the user's profiles name it, as any place opens a link: the window exploring it, else this one
+     on the home screen, else a new one. A view only a workspace has (Files, from an older `/path/` link) opens the
+     repository's first view instead; its Create workspace makes one, without leaving it.
 5. **The page** (`linkNavigation`) opens on top of the view, so Back returns to where the user was; a file is selected
    and its lines scrolled to and selected. A label's diff, and browsing a branch or the repository, first read the
    label's changeset or the branch's head (`linkLookup`: `labels.get`, `branches.get`, a light `cm find`); one that

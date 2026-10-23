@@ -1,6 +1,5 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
-import { workspacePathOf, workspacePlace, type Place } from '@shared/domain/place';
+import { workspacePathOf, type Place } from '@shared/domain/place';
 import { otherRepository } from '@shared/domain/repository';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -19,8 +18,9 @@ export function useWorkspacePath(): string {
  * or without a workspace. Only use it inside the place's screen.
  */
 export function usePlace(): Place {
-  const workspacePath = useWorkspacePath();
-  return useMemo(() => workspacePlace(workspacePath), [workspacePath]);
+  const place = useSession((state) => state.place);
+  if (!place) throw new Error('No place is open.');
+  return place;
 }
 
 /** The info of the place's workspace: none for a repository explored without one (the query never runs). */

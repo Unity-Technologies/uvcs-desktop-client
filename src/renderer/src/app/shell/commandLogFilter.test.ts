@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 import type { CommandLogEntry } from '@shared/events';
 import { commandLogFilterTexts, commandLogRows, isFiltering, NO_FILTER } from './commandLogFilter';
 
@@ -41,28 +42,28 @@ describe('commandLogFilterTexts', () => {
 
 describe('commandLogRows', () => {
   it('numbers each row by its place in the whole log, whatever the scope and filter hide', () => {
-    const rows = commandLogRows(log, 'workspace', '/work/game', { query: 'find', failedOnly: false });
+    const rows = commandLogRows(log, 'place', workspacePlace('/work/game'), { query: 'find', failedOnly: false });
     expect(rows).toEqual([{ entry: log.entries[3], number: 43, cwd: undefined }]);
   });
 
   it('shows the commands of the workspace, or all of them with where the others ran', () => {
-    expect(ids(commandLogRows(log, 'workspace', '/work/game', NO_FILTER))).toEqual([11, 15, 16]);
-    const all = commandLogRows(log, 'all', '/work/game', NO_FILTER);
+    expect(ids(commandLogRows(log, 'place', workspacePlace('/work/game'), NO_FILTER))).toEqual([11, 15, 16]);
+    const all = commandLogRows(log, 'all', workspacePlace('/work/game'), NO_FILTER);
     expect(all.map((row) => row.cwd)).toEqual([undefined, '/Users/me', undefined, undefined]);
   });
 
   it('keeps rows with every word typed, in any order, in one of the texts it shows', () => {
-    expect(ids(commandLogRows(log, 'all', '/work/game', { query: 'LOCKED checkin', failedOnly: false }))).toEqual([15]);
-    expect(ids(commandLogRows(log, 'all', '/work/game', { query: 'users', failedOnly: false }))).toEqual([12]);
-    expect(ids(commandLogRows(log, 'all', '/work/game', { query: 'status merge', failedOnly: false }))).toEqual([]);
+    expect(ids(commandLogRows(log, 'all', workspacePlace('/work/game'), { query: 'LOCKED checkin', failedOnly: false }))).toEqual([15]);
+    expect(ids(commandLogRows(log, 'all', workspacePlace('/work/game'), { query: 'users', failedOnly: false }))).toEqual([12]);
+    expect(ids(commandLogRows(log, 'all', workspacePlace('/work/game'), { query: 'status merge', failedOnly: false }))).toEqual([]);
   });
 
   it('never matches where a command ran when the row does not show it', () => {
-    expect(ids(commandLogRows(log, 'all', '/work/game', { query: 'game', failedOnly: false }))).toEqual([]);
+    expect(ids(commandLogRows(log, 'all', workspacePlace('/work/game'), { query: 'game', failedOnly: false }))).toEqual([]);
   });
 
   it('keeps failed commands only when asked', () => {
-    expect(ids(commandLogRows(log, 'all', '/work/game', { query: '', failedOnly: true }))).toEqual([15]);
+    expect(ids(commandLogRows(log, 'all', workspacePlace('/work/game'), { query: '', failedOnly: true }))).toEqual([15]);
   });
 });
 

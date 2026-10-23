@@ -21,6 +21,8 @@ export interface GraphKeyboard {
   select: (selection: GraphSelection | null) => void;
   homeChangeset: number | null;
   repository: string;
+  /** The window shows a workspace, which `M` merges into: a repository explored without one has none (`keyboardMergeSource`). */
+  inWorkspace: boolean;
   canvas: RefObject<GraphCanvasHandle | null>;
   goHome: () => void;
   find: () => void;
@@ -29,6 +31,17 @@ export interface GraphKeyboard {
   toggleDetails: () => void;
   /** Esc with nothing selected: out of the focus on a branch. */
   exitFocus: () => void;
+}
+
+/**
+ * What `M` merges into the workspace: the changeset or branch selected; nothing with neither selected, nor in a
+ * repository explored without a workspace, which has none to merge into (the merge page is a workspace's).
+ */
+export function keyboardMergeSource(selection: GraphSelection | null, inWorkspace: boolean): string | null {
+  if (!inWorkspace) return null;
+  if (selection?.kind === 'changeset') return spec.changeset(selection.id);
+  if (selection?.kind === 'branch') return spec.branch(selection.name);
+  return null;
 }
 
 /** The Branch Explorer's `graph*` shortcuts, pressed anywhere in the view but in its fields, buttons and menus. */
@@ -90,8 +103,8 @@ function graphKeyBindings(keyboard: GraphKeyboard, layout: GraphLayout, event: K
     [
       'graphMerge',
       () => {
-        if (selectedId !== null) graphActions.merge('merge', spec.changeset(selectedId));
-        else if (selection?.kind === 'branch') graphActions.merge('merge', spec.branch(selection.name));
+        const source = keyboardMergeSource(selection, keyboard.inWorkspace);
+        if (source !== null) graphActions.merge('merge', source);
       },
     ],
     ['graphDetails', keyboard.toggleDetails],

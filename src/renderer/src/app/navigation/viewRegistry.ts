@@ -32,7 +32,8 @@ import type { Icon } from '../../lib/actions';
 import type { NavBadge } from '../../ui/nav/navBadgeText';
 import { isMac } from '../../lib/platform';
 import { viewShortcut } from '../../lib/shortcutRegistry';
-import type { ViewId } from './views';
+import type { Place } from '@shared/domain/place';
+import { showsView, type ViewId } from './views';
 
 // Every view is in the startup bundle: its first frame is its own loading state (its header, its filters, its skeleton),
 // never a generic fallback that it then replaces. What is heavy beneath them loads on first use instead, in a pane
@@ -69,6 +70,11 @@ const SIDEBAR_VIEWS: Omit<ViewDefinition, 'shortcut'>[] = [
 
 /** In sidebar order: the sidebar lists them group by group, in this order. */
 export const VIEWS: ViewDefinition[] = SIDEBAR_VIEWS.map((view, position) => ({ ...view, shortcut: viewShortcut(position, isMac) }));
+
+/** The views the place shows (`showsView`), in sidebar order, each with its usual shortcut. */
+export function viewsOf(place: Place): ViewDefinition[] {
+  return VIEWS.filter((view) => showsView(place, view.id));
+}
 
 export function viewDefinition(id: ViewId): ViewDefinition {
   return VIEWS.find((view) => view.id === id)!;

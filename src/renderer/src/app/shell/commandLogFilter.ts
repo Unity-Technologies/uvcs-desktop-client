@@ -3,7 +3,8 @@ import { withControlPictures } from '../../lib/controlPictures';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import type { NumberedLog } from './commandLogNumbering';
 import { commandEnding } from './commandEnding';
-import { ranInWorkspace, type CommandLogScope } from './commandLogScope';
+import type { Place } from '@shared/domain/place';
+import { ranInPlace, type CommandLogScope } from './commandLogScope';
 
 export interface CommandLogFilter {
   query: string;
@@ -33,12 +34,12 @@ export function commandLogFilterTexts(entry: CommandLogEntry, cwd?: string): str
 }
 
 /** The rows the log shows for the scope and the filter, each with its number in the whole log. */
-export function commandLogRows(log: NumberedLog, scope: CommandLogScope, workspacePath: string, filter: CommandLogFilter): CommandLogRow[] {
+export function commandLogRows(log: NumberedLog, scope: CommandLogScope, place: Place, filter: CommandLogFilter): CommandLogRow[] {
   return log.entries.flatMap((entry, index) => {
-    const inWorkspace = ranInWorkspace(entry, workspacePath);
-    if (scope === 'workspace' && !inWorkspace) return [];
+    const inPlace = ranInPlace(entry, place);
+    if (scope === 'place' && !inPlace) return [];
     if (filter.failedOnly && entry.exitCode === 0) return [];
-    const cwd = inWorkspace ? undefined : entry.cwd;
+    const cwd = inPlace ? undefined : entry.cwd;
     if (!matchesWordFilter(commandLogFilterTexts(entry, cwd), filter.query)) return [];
     return [{ entry, number: log.firstNumber + index, cwd }];
   });

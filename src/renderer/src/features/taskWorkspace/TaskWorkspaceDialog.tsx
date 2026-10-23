@@ -88,7 +88,7 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
       return;
     }
     onClose();
-    if (newWindow) void api.windows.openWorkspace(outcome.workspacePath);
+    if (newWindow) void api.windows.openPlace(workspacePlace(outcome.workspacePath));
     else openWorkspace(outcome.workspacePath);
   };
 

@@ -7,6 +7,7 @@ import { IconButton } from '../../ui/IconButton';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { removeAccount, useAccounts } from '../account/accounts';
 import { accountForServer, organizationName, signInMethod } from '../account/serverAccount';
+import { serverOfPlace } from '../workspace/placeOrigin';
 import { useSession } from '../workspace/sessionStore';
 import { useWorkspaceInfoOf } from '../workspace/useWorkspace';
 import styles from './AccountsPane.module.css';
@@ -17,9 +18,11 @@ import styles from './AccountsPane.module.css';
  */
 export function AccountsPane() {
   const { data: accounts, isLoading } = useAccounts();
+  const place = useSession((state) => state.place);
   const { data: info } = useWorkspaceInfoOf(useSession((state) => state.workspacePath));
-  const inUse = info && accounts ? accountForServer(accounts, info.server) : undefined;
-  // The open workspace's account comes first: "Manage accounts" in the account menu usually starts from it.
+  const server = place ? serverOfPlace(place, info) : undefined;
+  const inUse = server && accounts ? accountForServer(accounts, server) : undefined;
+  // The account of the window's place comes first: "Manage accounts" in the account menu usually starts from it.
   const ordered = accounts && inUse ? [inUse, ...accounts.filter((account) => account !== inUse)] : accounts;
 
   return (

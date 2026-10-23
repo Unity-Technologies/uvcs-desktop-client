@@ -1,5 +1,6 @@
 import { fakeApi } from '../../testing/fakeWindow';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 
 vi.mock('../home/dialogs/CreateWorkspaceDialog', () => ({ openCreateWorkspaceDialog: vi.fn() }));
 
@@ -35,13 +36,13 @@ describe('openDroppedFolder', () => {
 
   it('opens it in a new window when Shift was held', async () => {
     fakeApi.answer('workspaces.findRoot', () => '/ws');
-    fakeApi.answer('windows.openWorkspace', () => undefined);
+    fakeApi.answer('windows.openPlace', () => undefined);
     const here = target({ newWindow: true, currentWorkspace: '/other' });
 
     await openDroppedFolder(folder('/ws'), here);
 
     expect(here.openHere).not.toHaveBeenCalled();
-    expect(fakeApi.calls()).toContainEqual({ method: 'windows.openWorkspace', args: ['/ws'] });
+    expect(fakeApi.calls()).toContainEqual({ method: 'windows.openPlace', args: [workspacePlace('/ws')] });
   });
 
   it('does nothing when the folder belongs to the workspace this window already shows', async () => {
@@ -65,13 +66,13 @@ describe('openDroppedFolder', () => {
 
   it('opens the created workspace in a new window when Shift was held', async () => {
     fakeApi.answer('workspaces.findRoot', () => null);
-    fakeApi.answer('windows.openWorkspace', () => undefined);
+    fakeApi.answer('windows.openPlace', () => undefined);
 
     await openDroppedFolder(folder('/projects/new'), target({ newWindow: true }));
     const [[{ onCreated }]] = vi.mocked(openCreateWorkspaceDialog).mock.calls as [[{ onCreated: (path: string) => void }]];
     onCreated('/projects/new');
 
-    expect(fakeApi.calls()).toContainEqual({ method: 'windows.openWorkspace', args: ['/projects/new'] });
+    expect(fakeApi.calls()).toContainEqual({ method: 'windows.openPlace', args: [workspacePlace('/projects/new')] });
   });
 
   it('tells the user a drop takes one folder, without asking cm anything', async () => {

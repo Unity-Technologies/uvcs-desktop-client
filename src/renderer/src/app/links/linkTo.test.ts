@@ -2,7 +2,17 @@ import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { fakeApi } from '../../testing/fakeWindow';
-import { diffTargetObject, linkCopyText, repositoryLinkTo } from './linkTo';
+import { diffTargetObject, linkCopyText, placeLinkTo, repositoryLinkTo } from './linkTo';
+
+describe('placeLinkTo', () => {
+  it("links to the place's repository: a repository's own, asking nothing; a workspace's from its info", async () => {
+    expect(await placeLinkTo(repositoryPlace('game@local'), { object: { kind: 'changeset', id: 12 } })()).toBe('uvcs://local/repos/game/changesets/12');
+    expect(fakeApi.calls()).toEqual([]);
+
+    fakeApi.answer('workspaces.info', async () => ({ repository: 'tools@local' }));
+    expect(await placeLinkTo(workspacePlace('/wk/tools'), { object: { kind: 'changeset', id: 3 } })()).toBe('uvcs://local/repos/tools/changesets/3');
+  });
+});
 
 describe('repositoryLinkTo', () => {
   it("writes the link to a repository's object as cm names the repository", () => {

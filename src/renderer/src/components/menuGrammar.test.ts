@@ -130,7 +130,7 @@ const graphContext = {
   revealCreatedBranch: () => {},
 };
 const lane = layout.lanesByBranch.get('/main/a')!;
-const resultContext: ResultContext = { workspacePath: ws, term: '', currentBranch: '/main', loadedChangeset: 6, changelists: [], changeAt: () => undefined };
+const resultContext: ResultContext = { place: workspacePlace(ws), term: '', currentBranch: '/main', loadedChangeset: 6, changelists: [], changeAt: () => undefined };
 
 const mergeVersion = { kind: 'spec', spec: 'itemid:7#cs:11@game@local' } as const;
 const mergeConflictState = { file: { key: '/src/a.ts', path: 'src/a.ts', base: mergeVersion, source: mergeVersion, destination: mergeVersion }, status: 'ready', isBinary: false, decidedByUser: true, resolution: null } as FileConflictState;

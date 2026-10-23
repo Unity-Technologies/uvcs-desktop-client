@@ -40,3 +40,8 @@ export function workspacePathOf(place: Place): string | null {
 export function placeId(place: Place): string {
   return place.kind === 'workspace' ? place.workspacePath : `repository:${place.repository}`;
 }
+
+/** Whether two places are the same one: windows, page windows and links compare them. */
+export function samePlace(a: Place, b: Place): boolean {
+  return placeId(a) === placeId(b);
+}

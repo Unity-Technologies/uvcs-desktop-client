@@ -13,6 +13,8 @@ export interface CommandLogEntry {
   durationMs: number;
   exitCode: number;
   viaShell: boolean;
+  /** It ran in the app's folder outside every workspace: for a repository explored without one (`CmRunOptions.outsideWorkspaces`). */
+  outsideWorkspaces?: true;
   /** Output is kept only for failed commands, to help diagnose them. It and the command line are clipped (`clipForLog`). */
   output: string;
 }
@@ -44,7 +46,7 @@ export interface UvcsEvents {
   operationProgress: OperationProgressEvent;
   /** The settings changed, in this window or another one. */
   settingsChanged: AppSettings;
-  /** A workspace was picked from the OS recent documents; `system.takeRequestedWorkspace` tells which. */
+  /** A workspace was picked from the OS recent documents; `system.takeRequestedPlace` tells which. */
   workspaceOpenRequested: Record<string, never>;
   /** A native menu item was chosen; runs the registered command with this id. */
   menuCommand: { commandId: string };

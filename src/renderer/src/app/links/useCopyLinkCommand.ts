@@ -7,8 +7,9 @@ import { useCommands, type Command } from '../commands/commandStore';
 import { useNavigation } from '../navigation/navigationStore';
 import type { Page } from '../navigation/pages';
 import type { ViewId } from '../navigation/views';
-import { useWorkspacePath } from '../workspace/useWorkspace';
-import { workspaceLinkTo } from './linkTo';
+import type { Place } from '@shared/domain/place';
+import { usePlace } from '../workspace/useWorkspace';
+import { placeLinkTo } from './linkTo';
 import { useSelectedObjectLink } from './selectedObjectLink';
 import { hasLinkToCopy, linkToCopy } from './shownLink';
 import { shownFileNow } from './useShownFile';
@@ -20,7 +21,7 @@ import { shownFileNow } from './useShownFile';
  * again only when whether there is a link changes, never as a selection moves.
  */
 export function useCopyLinkCommand(): void {
-  const workspacePath = useWorkspacePath();
+  const place = usePlace();
   const top = useNavigation((state) => state.pages.at(-1));
   const view = useNavigation((state) => state.view);
   const hasSelectedObject = useSelectedObjectLink((state) => state.source !== null);
@@ -38,20 +39,20 @@ export function useCopyLinkCommand(): void {
           keywords: ['share', 'url', 'uvcs'],
           shortcut: hotkey('copyLink'),
           disabled: !hasLink,
-          run: () => void copyLinkNow(workspacePath, top, view),
+          run: () => void copyLinkNow(place, top, view),
         },
       ],
-      [hasLink, workspacePath, top, view],
+      [hasLink, place, top, view],
     ),
   );
 }
 
 /** Copies the link to what is in front now: the stores read as the command runs. */
-async function copyLinkNow(workspacePath: string, top: Page | undefined, view: ViewId): Promise<void> {
+async function copyLinkNow(place: Place, top: Page | undefined, view: ViewId): Promise<void> {
   const source = useSelectedObjectLink.getState().source?.current ?? null;
   const toCopy = linkToCopy({ top, shown: shownFileNow(top), hasSelectedObject: source !== null, view });
   if (!toCopy) return;
-  const link = toCopy.kind === 'selectedObject' ? source : workspaceLinkTo(workspacePath, toCopy.target);
+  const link = toCopy.kind === 'selectedObject' ? source : placeLinkTo(place, toCopy.target);
   const text = typeof link === 'function' ? await link() : link;
   if (text) copyToClipboard(text, 'Link');
 }

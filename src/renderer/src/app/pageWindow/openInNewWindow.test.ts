@@ -16,12 +16,12 @@ const DIFF: Page = { kind: 'diff', title: 'Changeset 10', target: TARGET };
 const PLAYER: DiffEntry = { status: 'changed', path: 'src/player.cs', itemType: 'file', baseRevisionId: 13, revisionId: 37, repository: 'game@local' };
 
 beforeEach(() => {
-  useSession.setState({ workspacePath: WORKSPACE });
+  useSession.getState().openWorkspace(WORKSPACE);
   useNavigation.setState({ view: 'changesets', pages: [DIFF] });
   fakeApi.answer('windows.openPage', () => undefined);
 });
 afterEach(() => {
-  useSession.setState({ workspacePath: null });
+  useSession.setState({ place: null, workspacePath: null });
   useShownDiffFile.setState({ shown: null });
   queryClient.clear();
 });
@@ -34,7 +34,7 @@ describe('moving a page to a new window', () => {
     movePageToNewWindow(DIFF);
 
     expect(fakeApi.argsOf('windows.openPage')).toEqual([
-      [{ workspacePath: WORKSPACE, page: { ...DIFF, focusPath: 'src/player.cs' }, diff: { target: TARGET, entries: [PLAYER] } }],
+      [{ place: workspacePlace(WORKSPACE), page: { ...DIFF, focusPath: 'src/player.cs' }, diff: { target: TARGET, entries: [PLAYER] } }],
     ]);
     expect(useNavigation.getState().pages).toEqual([]);
   });
@@ -44,6 +44,6 @@ describe('moving a page to a new window', () => {
 
     movePageToNewWindow(DIFF);
 
-    expect(fakeApi.argsOf('windows.openPage')).toEqual([[{ workspacePath: WORKSPACE, page: DIFF }]]);
+    expect(fakeApi.argsOf('windows.openPage')).toEqual([[{ place: workspacePlace(WORKSPACE), page: DIFF }]]);
   });
 });

@@ -1,3 +1,4 @@
+import type { Place } from '../domain/place';
 import type { ConnectionProblem, SetupProblem } from '../domain/setup';
 
 /** A folder being dragged over a window, read while the drag runs (`system.draggedFolder`). */
@@ -32,8 +33,11 @@ export interface SystemApi {
   cancelOperation(operationId: string): Promise<void>;
   /** Lists the workspace in the OS recent documents (the Dock menu on macOS, the jump list on Windows). */
   addRecentDocument(workspacePath: string): Promise<void>;
-  /** The workspace this window was asked to open (picked from the OS recent documents, or opened in a new window), once; null if none. */
-  takeRequestedWorkspace(): Promise<string | null>;
+  /**
+   * The place this window was asked to open (a workspace picked from the OS recent documents, or a place opened in a
+   * new window), once; null if none.
+   */
+  takeRequestedPlace(): Promise<Place | null>;
   /**
    * A data URL of the user's Gravatar picture, or null when they have none, the user isn't an email address, or profile
    * pictures aren't on (`showsGravatar`: off until the user chose them, and then nothing is sent). Kept for the session,

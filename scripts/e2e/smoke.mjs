@@ -13,6 +13,8 @@ import { createWorkspace } from './workspaceFixture.mjs';
 
 /** The sidebar's views by their accessible names, in its order (`VIEWS` in viewRegistry.ts): a new view is one line. */
 const VIEWS = ['Changes', 'Incoming', 'Files', 'Branch Explorer', 'Changesets', 'Branches', 'Labels', 'Shelves', 'Attributes', 'Code reviews', 'Locks', 'Sync'];
+/** Those a repository explored without a workspace shows (`showsView`): none of a workspace's own. */
+const REPOSITORY_VIEWS = VIEWS.filter((view) => !['Changes', 'Incoming', 'Files', 'Sync'].includes(view));
 /** Long enough for a slow CI machine; waits end as soon as what they wait for shows. */
 const TIMEOUT_MS = 15_000;
 
@@ -165,6 +167,36 @@ try {
     await window.getByRole('dialog').getByRole('option', { name: /^Changeset 3/ }).click();
     await main.getByText('src/player.cs', { exact: true }).first().waitFor();
     await main.getByRole('button', { name: /^Copy link/ }).waitFor();
+    await window.keyboard.press('ControlOrMeta+K');
+  });
+  await step('Explore a repository', async () => {
+    await window.keyboard.press('Escape');
+    await window.getByRole('dialog').waitFor({ state: 'detached' });
+    await window.getByRole('button', { name: 'Home' }).first().click();
+    await window.getByRole('navigation').getByRole('button', { name: /^This computer/ }).click();
+    await window.getByRole('button', { name: 'Repository actions' }).first().click();
+    await window.getByRole('menuitem', { name: 'Explore', exact: true }).click();
+    await main.getByRole('heading', { level: 1, name: 'Branch Explorer', exact: true }).waitFor();
+    await window.getByRole('button', { name: 'Create workspace' }).waitFor();
+  });
+  for (const view of REPOSITORY_VIEWS) {
+    await step(`${view} of a repository`, async () => {
+      await window.getByRole('navigation').getByRole('button', { name: new RegExp(`^${view}( \\d+)?$`) }).click();
+      await main.getByRole('heading', { level: 1, name: view, exact: true }).waitFor();
+      await settled();
+    });
+  }
+  await step("A repository's changeset diff, in a new window too", async () => {
+    await window.getByRole('navigation').getByRole('button', { name: /^Changesets/ }).click();
+    await main.getByRole('button', { name: 'Open diff' }).click();
+    await main.getByText('src/player.cs', { exact: true }).first().waitFor();
+    const opened = app.waitForEvent('window');
+    await main.getByRole('button', { name: 'Open in new window' }).click();
+    const pageWindow = await opened;
+    pageWindow.on('pageerror', (error) => errors.push(`repository page window pageerror: ${error.message}`));
+    pageWindow.on('console', (message) => message.type() === 'error' && errors.push(`repository page window console.error: ${message.text()}`));
+    await pageWindow.getByText('src/player.cs', { exact: true }).first().waitFor({ timeout: TIMEOUT_MS });
+    await pageWindow.close();
     await window.keyboard.press('ControlOrMeta+K');
   });
   await step('Settings and dark theme', async () => {

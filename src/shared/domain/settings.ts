@@ -16,8 +16,10 @@ export interface SavedWindowBounds {
 
 /** A window open when the app last quit, opened again where it was at the next launch (`WorkspaceWindows.saveSession`). */
 export interface SavedWindow {
-  /** The workspace it showed; none on the home screen. */
+  /** The workspace it showed; none on the home screen or a repository explored without one. */
   workspacePath?: string;
+  /** The repository it explored without a workspace (`repositoryPlace`). */
+  repository?: string;
   bounds: SavedWindowBounds;
   fullScreen: boolean;
   /** The view it showed (a renderer `ViewId`): saved only by a restart to install an update, which nobody chose. */
