@@ -27,6 +27,7 @@ you touch:
 | `features/updates.md`                   | The About dialog, reporting an issue, how the app updates (unsigned macOS too), What's New, releases, the app icon and CI |
 | `features/locks.md`                     | Lock rules: where they are edited, and why not in the app                      |
 | `features/permissions.md`               | Permissions: the ACL model, `cm showacl`/`cm acl` quirks, the dialog, where it's reachable |
+| `features/explore-repository.md`        | Exploring a repository without a workspace: the entry points, what its window shows and offers, Create workspace, links |
 | `features/page-windows.md`              | A page (a diff, a history, a review) in a new window: where it's offered, how it belongs to its workspace window, Follow selection |
 | `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 
@@ -104,9 +105,14 @@ the workspace, editing a file) needs a workspace.
 - **Caches and queues key by place** (`placeId`: a workspace's path, `repository:<spec>` for a repository):
   `BranchNamesCache`, `RevisionCat`, `RepositoryTrees`, `RevisionDownloads`, `HandedOverDiffs`, the review mode setting.
   `BranchNamesCache` keeps a place's names only while a window shows it (its `isShown`): a workspace's while it is
-  watched; a repository's never yet, so every code review list there reads every branch name again (two `cm find
-  branch`). Keeping them while a window explores the repository, and letting them go with its last one, comes with
-  the windows that explore one.
+  watched, a repository's while a window explores it (`WorkspaceWindows.explores`); the last window to leave it lets
+  them go (`onRepositoryLeft`).
+- **Windows key by place** too: one window per place (`WorkspaceWindows.windowShowing`, `samePlace`), page windows
+  belonging to it, the session saving either (`SavedWindow.repository`). A window says it explores a repository
+  (`windows.exploring`, `useRepositoryShown`) as watching a workspace says it shows one. The renderer's session holds
+  the place (`useSession().place`; `workspacePath` is its workspace's, null while exploring), and each place has its
+  screen on one layout (`PlaceLayout`: `WorkspaceScreen`, `RepositoryScreen`), its views (`showsView`, `viewsOf`) and
+  its commands (`usePlaceCommands`, then `useWorkspaceCommands` or `useRepositoryCommands`).
 - **The renderer** keys a place's queries `queryKeys.inPlace(place, …)` (a workspace's are `inWorkspace`'s, so every
   refresh scope reads both alike), refreshes them with `invalidatePlace` (`runAction` takes the place it changed), and
   gets the window's place from `usePlace()`, its repository and server from `usePlaceRepository()` and
