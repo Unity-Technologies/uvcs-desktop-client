@@ -7,6 +7,7 @@ const text = (value: string): FileContent => ({ text: value, isBinary: false, si
 const svg = (value: string): FileContent => ({ ...text(value), image: { bytes: new TextEncoder().encode(value), mimeType: 'image/svg+xml' } });
 const image = (size: number): FileContent => ({ isBinary: true, size, image: { bytes: new Uint8Array(size), mimeType: 'image/png' } });
 const fbx = (size: number): FileContent => ({ isBinary: true, size, model: { bytes: new Uint8Array(size), format: 'fbx' } });
+const purged: FileContent = { isBinary: false, size: 0, purged: true };
 const obj = (value: string): FileContent => ({ ...text(value), model: { bytes: new TextEncoder().encode(value), format: 'obj' } });
 
 describe('diffPresentation', () => {
@@ -27,6 +28,17 @@ describe('diffPresentation', () => {
   it('compares images, or previews the one side of an added or deleted image', () => {
     expect(diffPresentation(image(10), image(12))).toEqual({ kind: 'image', comparable: true });
     expect(diffPresentation(missing, image(12))).toEqual({ kind: 'image', comparable: false });
+  });
+
+  it('shows the other version alone where one was purged, as an added or deleted file shows it', () => {
+    expect(diffPresentation(purged, text('v3\n'))).toEqual({ kind: 'text', empty: false, identical: false });
+    expect(diffPresentation(image(10), purged)).toEqual({ kind: 'image', comparable: false });
+    expect(diffPresentation(purged, fbx(10))).toEqual({ kind: 'model', comparable: false });
+    expect(diffPresentation(purged, { isBinary: true, size: 4 })).toEqual({ kind: 'binary' });
+  });
+
+  it('has nothing to show where both versions were purged', () => {
+    expect(diffPresentation(purged, purged)).toEqual({ kind: 'purged' });
   });
 
   it('falls back to a binary summary', () => {
