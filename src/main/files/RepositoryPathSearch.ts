@@ -9,6 +9,7 @@ import { closeSync, createReadStream, openSync, rmSync, writeSync } from 'node:f
 import { rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
+import type { FoundPathsSource } from '@shared/domain/explorer';
 import type { RepositoryPlace } from '@shared/domain/place';
 import { cmPlace } from '../cm/cmPlace';
 import type { CmClient } from '../cm/CmClient';
@@ -16,8 +17,7 @@ import { listedPathLine, readListedPath, readListedPathLine, repositoryPathsArgs
 import { BestPaths } from './BestPaths';
 import { SessionFolder } from './SessionFolder';
 
-/** Where the paths a search found so far come from: the server, listing the tree the first time, or its file since. */
-export type PathSearchSource = 'server' | 'disk';
+export type PathSearchSource = FoundPathsSource;
 
 export interface PathSearch {
   /** How many results it keeps, the best first. */
@@ -69,7 +69,7 @@ export class RepositoryPathSearch {
         await this.matchWhileListing(place, changesetId, tree, best, signal, onUpdate);
         return best.take();
       }
-      await tree.listing;
+      await untilListedOrStopped(tree.listing!, signal);
     }
     if (!signal?.aborted && tree.file !== null) await this.matchFile(tree.file, best, signal, onUpdate);
     return best.take();
@@ -114,9 +114,9 @@ export class RepositoryPathSearch {
     const stop = (): void => void tree.listeners.delete(listener);
     signal?.addEventListener('abort', stop, { once: true });
     try {
-      tree.listing ??= this.list(place, changesetId, tree);
-      await tree.listing;
-      if (best.changed) onUpdate?.(best.take(), 'server');
+      tree.listing ??= this.startListing(place, changesetId, tree);
+      await untilListedOrStopped(tree.listing, signal);
+      if (best.changed && !signal?.aborted) onUpdate?.(best.take(), 'server');
     } finally {
       stop();
       signal?.removeEventListener('abort', stop);
@@ -141,6 +141,13 @@ export class RepositoryPathSearch {
       lines.close();
     }
     if (best.changed && !signal?.aborted) onUpdate?.(best.take(), 'disk');
+  }
+
+  /** Starts the tree's listing; its failure is the searches' awaiting it, never unhandled when all of them stopped. */
+  private startListing(place: RepositoryPlace, changesetId: number, tree: Tree): Promise<string> {
+    const listing = this.list(place, changesetId, tree);
+    listing.catch(() => undefined);
+    return listing;
   }
 
   /**
@@ -196,6 +203,16 @@ export class RepositoryPathSearch {
     tree.abort.abort();
     if (tree.file) rmSync(tree.file, { force: true });
   }
+}
+
+/**
+ * Waits for the tree's listing, unless the search is stopped first: then at once, the listing going on for the next
+ * search. Fails as the listing does.
+ */
+function untilListedOrStopped(listing: Promise<string>, signal: AbortSignal | undefined): Promise<unknown> {
+  if (!signal) return listing;
+  if (signal.aborted) return Promise.resolve();
+  return Promise.race([listing, new Promise((resolve) => signal.addEventListener('abort', resolve, { once: true }))]);
 }
 
 /** Appends lines to a file in batches, synchronously: the listing's records can't wait for a write, and its memory stays a batch. */

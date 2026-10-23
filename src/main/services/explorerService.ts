@@ -2,7 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import type { ExplorerApi } from '@shared/api/explorer';
 import type { DeletedItemRestore, ItemMove, RevisionType } from '@shared/domain/explorer';
-import type { Place } from '@shared/domain/place';
+import type { Place, RepositoryPlace } from '@shared/domain/place';
 import { repositorySpec } from '@shared/domain/specs';
 import { cmPlace } from '../cm/cmPlace';
 import { parseItemDetails } from '../cm/itemDetailsXml';
@@ -14,9 +14,13 @@ import { moveArgs, moveItems } from '../files/moveItems';
 import { renamePrivate } from '../files/renamePrivate';
 import { restoreDeletedItems } from '../files/restoreDeletedItems';
 import { toAbsolutePath, toAbsolutePaths } from '../files/workspacePaths';
+import { sendEventToCaller } from '../ipc/sendEvent';
 import type { ServiceContext } from './ServiceContext';
 
-export function createExplorerService({ cm, operations, workspaceCopies, headers }: ServiceContext): ExplorerApi {
+/** How many of a repository's paths a search keeps, the best first: as many as the workspace's Go to file shows. */
+export const FOUND_PATHS_LIMIT = 60;
+
+export function createExplorerService({ cm, operations, workspaceCopies, headers, repositoryPaths }: ServiceContext): ExplorerApi {
   const inWorkspace = (workspacePath: string) => ({ cwd: workspacePath });
 
   /**
@@ -88,9 +92,28 @@ export function createExplorerService({ cm, operations, workspaceCopies, headers
     await cm.query(['changerevisiontype', ...toAbsolutePaths(workspacePath, paths), `--type=${type}`], inWorkspace(workspacePath));
   }
 
+  /** The searches of a repository's paths running, by id: a newer query or a closed dialog stops one (`stopFindingRepositoryPaths`). */
+  const pathSearches = new Map<string, AbortController>();
+
+  async function findRepositoryPaths(place: RepositoryPlace, changesetId: number, query: string, searchId: string) {
+    const stop = new AbortController();
+    pathSearches.set(searchId, stop);
+    try {
+      return await repositoryPaths.search(place, changesetId, query, {
+        limit: FOUND_PATHS_LIMIT,
+        signal: stop.signal,
+        onUpdate: (paths, source) => sendEventToCaller('repositoryPathsFound', { searchId, paths, source }),
+      });
+    } finally {
+      pathSearches.delete(searchId);
+    }
+  }
+
   return {
     listDirectory,
     listRepositoryDirectory,
+    findRepositoryPaths,
+    stopFindingRepositoryPaths: async (searchId) => pathSearches.get(searchId)?.abort(),
     listAllPaths: listWorkspacePaths,
     details,
     addRecursive,

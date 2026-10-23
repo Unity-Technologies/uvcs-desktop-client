@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { repositoryPlace } from '@shared/domain/place';
 import { formatOutput } from '../cm/testing/cmOutput';
-import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer, type CmFailure, type FakeCmCommand } from '../cm/testing/fakeCmClient';
 import { RepositoryPathSearch, type PathSearchSource } from './RepositoryPathSearch';
 import { SessionFolder } from './SessionFolder';
 
@@ -129,6 +129,24 @@ describe('finding a file in a repository explored without a workspace', () => {
     expect(await search.search(GAME, 12, 'player', { limit: 10, signal: stopped.signal })).toEqual([]);
     expect(paths(await search.search(GAME, 12, 'readme', { limit: 10 }))).toEqual(['README.md']);
     expect(fake.commands).toHaveLength(1);
+  });
+
+  it('stops a search at once while its tree is still listed, the listing going on for the next', async () => {
+    let started!: () => void;
+    const listingStarted = new Promise<void>((resolve) => (started = resolve));
+    const listsUntilCancelled = runsUntilCancelled('cancelled');
+    const { fake, search } = await setUp((command) => {
+      started();
+      return (listsUntilCancelled as (command: FakeCmCommand) => Promise<string | CmFailure>)(command);
+    });
+    const stop = new AbortController();
+
+    const searching = search.search(GAME, 12, 'player', { limit: 10, signal: stop.signal });
+    await listingStarted;
+    stop.abort();
+    expect(await searching).toEqual([]);
+    expect(fake.commands[0]!.options.signal?.aborted).toBe(false);
+    search.dispose();
   });
 
   it('deletes every tree as the app quits', async () => {

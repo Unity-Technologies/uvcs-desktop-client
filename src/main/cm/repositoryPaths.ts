@@ -1,10 +1,8 @@
+import type { FoundPath } from '@shared/domain/explorer';
 import { recordFormat, type ReadRecord } from './formatRecords';
 
 /** A file or folder of a repository's tree at a changeset, by its path in it (`Assets/Player.cs`, no leading slash). */
-export interface ListedPath {
-  path: string;
-  isDirectory: boolean;
-}
+export type ListedPath = FoundPath;
 
 const FIELDS = ['type', 'path'];
 

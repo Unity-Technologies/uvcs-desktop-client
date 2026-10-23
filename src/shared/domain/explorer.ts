@@ -101,3 +101,12 @@ export interface RestoreOutcome {
   refused?: RestoreRefusal;
   stopped?: boolean;
 }
+
+/** A file or folder of a repository's tree, by its path in it (`Assets/Player.cs`), as a search by name finds it. */
+export interface FoundPath {
+  path: string;
+  isDirectory: boolean;
+}
+
+/** Where a repository's paths a search found came from: the server, listing the tree the first time, or its file since. */
+export type FoundPathsSource = 'server' | 'disk';
