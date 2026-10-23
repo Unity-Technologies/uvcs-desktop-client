@@ -84,10 +84,12 @@ export function withoutRule(draft: XlinkDraft, key: number): XlinkDraft {
 /**
  * What a field's "Choose" button picks, and where: a rule's `from` side among the workspace's branches; its `to` side
  * and the branch, changeset or label the xlink points to among the xlinked repository's, which a new xlink has only
- * once picked.
+ * once picked. The folder of the repository a read-only xlink shows is picked from its tree where the xlink points.
  */
 export interface PickSource {
-  kind: XlinkPointKind;
+  kind: XlinkPointKind | 'folder';
+  /** For a folder, where the tree it is picked from is read. */
+  point?: XlinkPoint;
   /** The picker's title. */
   title: string;
   /** The button's words. */
@@ -118,6 +120,8 @@ export interface XlinkDialogFields {
   pointError: string | undefined;
   /** What the field of where it points picks: a branch, changeset or label of the xlinked repository. */
   pointSource: PickSource;
+  /** What the folder of the repository picks: one of its tree's, where the xlink points. */
+  folderSource: PickSource;
   /** What a rule's `from` side picks: a branch of the workspace's repository. */
   workspaceBranches: PickSource;
   /** What a rule's `to` side picks: a branch of the xlinked repository. */
@@ -171,6 +175,7 @@ export function xlinkDialogFields(target: XlinkDialogTarget, draft: XlinkDraft):
     nameError,
     pointError: draft.point.trim() === '' ? undefined : pointError,
     pointSource: xlinkedSource(draft.pointKind, draft.repository),
+    folderSource: folderSourceOf(draft),
     workspaceBranches: { kind: 'branch', title: 'Branch of this workspace', chooseLabel: 'Choose a branch', repository: undefined, unavailable: undefined },
     xlinkedBranches: xlinkedSource('branch', draft.repository),
     ruleNotes: ruleNotesOf(draft.rules, ruleErrors),
@@ -188,6 +193,15 @@ function xlinkedSource(kind: XlinkPointKind, repository: string | null): PickSou
   return repository
     ? { kind, title: `${capitalized} of ${repository}`, chooseLabel, repository, unavailable: undefined }
     : { kind, title: `${capitalized} of its repository`, chooseLabel, repository: undefined, unavailable: 'Choose its repository first' };
+}
+
+/** Picking a folder of the repository's tree where the xlink points, once both are known. */
+function folderSourceOf(draft: XlinkDraft): PickSource {
+  const point = pointOf(draft);
+  const source = { kind: 'folder', title: `Folder of ${draft.repository ?? 'its repository'}`, chooseLabel: 'Choose a folder', repository: draft.repository ?? undefined } as const;
+  if (!draft.repository) return { ...source, unavailable: 'Choose its repository first' };
+  if (!point) return { ...source, unavailable: 'Say where it points first' };
+  return { ...source, point, unavailable: undefined };
 }
 
 function ruleNotesOf(rows: readonly RuleRow[], errors: ReadonlyMap<number, string>): Map<number, RuleNote> {

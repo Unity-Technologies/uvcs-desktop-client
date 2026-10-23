@@ -175,6 +175,19 @@ describe('Picking branches from a list', () => {
     expect(xlinkDialogFields(CREATE, filled({ repository: null, pointKind: 'label' })).pointSource.unavailable).toBe('Choose its repository first');
   });
 
+  it('picks the folder of a read-only xlink from its repository’s tree where it points, once both are known', () => {
+    expect(xlinkDialogFields(CREATE, filled({ repository: 'lib@local', pointKind: 'label', point: 'v1.0' })).folderSource).toEqual({
+      kind: 'folder',
+      title: 'Folder of lib@local',
+      chooseLabel: 'Choose a folder',
+      repository: 'lib@local',
+      point: { kind: 'label', label: 'v1.0' },
+      unavailable: undefined,
+    });
+    expect(xlinkDialogFields(CREATE, filled({ repository: null })).folderSource.unavailable).toBe('Choose its repository first');
+    expect(xlinkDialogFields(CREATE, filled({ pointKind: 'changeset', point: 'abc' })).folderSource.unavailable).toBe('Say where it points first');
+  });
+
   it("can't list its repository's branches before a new xlink has one", () => {
     expect(xlinkDialogFields(CREATE, filled({ repository: null })).xlinkedBranches.unavailable).toBe('Choose its repository first');
   });
