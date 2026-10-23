@@ -5,6 +5,9 @@
 #     them under the deleted file's own name in another folder at 40%.
 #   - Two deleted binary files (.png, .fbx) with new ones of sizes from 100% to 0% alike, and a .psd of the same size,
 #     which isn't offered (a binary file pairs only with its extension).
+#   - The other way round, for Search matches on a new file: src/Gameplay/WeaponSystem.cs, with 27 deleted versions of
+#     it in src/Legacy/Weapons from 100% to 0% (every 5%, and 97, 88, 67, 33, 12 and 3%), and art/Textures/Weapon.png
+#     with 21 deleted ones in art/Textures/Old, by size.
 #   - 300 unrelated new files (0%), a log too large to measure (–), and a deleted folder with a new one.
 # Changes pairs on its own whatever is past its similarity setting: turn off "Detect moved and renamed files" in
 # Settings › Pending changes to see every deleted file, and every version, in Search matches.
@@ -34,19 +37,27 @@ class_file() { # <path> <class> <changed>
 bytes() { mkdir -p "$(dirname "$1")"; head -c "$2" /dev/urandom > "$1"; }
 
 CLASSES=(PlayerController InventorySystem EnemySpawner SaveGameManager AudioMixer)
+# The deleted versions of the new WeaponSystem.cs: every 5%, and a few in between.
+WEAPON_SIMILARITIES=($(seq 0 5 100) 97 88 67 33 12 3)
 FOLDERS=(src/Gameplay src/Gameplay/Characters src/Systems src/Systems/Persistence src/UI src/Audio tools/Editor)
 
 for class in "${CLASSES[@]}"; do class_file "src/Legacy/$class.cs" "$class" 0; done
 bytes art/Textures/Hero.png 20000
 bytes art/Models/Hero.fbx 50000
 for name in Old1 Old2 Old3; do class_file "src/Retired/$name.cs" "$name" 0; done
+# Similarity s% has (100 - s) / 2 % of the lines rewritten.
+for similarity in "${WEAPON_SIMILARITIES[@]}"; do
+  class_file "src/Legacy/Weapons/WeaponSystemAt$similarity.cs" WeaponSystem $((LINES * (100 - similarity) / 200))
+done
+# By size, against the new 20,000-byte Weapon.png: s% is a deleted file of 2,000,000 / (200 - s) bytes.
+for similarity in $(seq 0 5 100); do bytes "art/Textures/Old/WeaponAt$similarity.png" $((2000000 / (200 - similarity))); done
 # The new files' folders, checked in empty: cm moves a file only into a folder under version control.
 mkdir -p "${FOLDERS[@]}" logs && for batch in $(seq 0 11); do mkdir -p "src/Generated/Batch$batch"; done
 cm add -R . >/dev/null
 cm ci --all -c "Initial layout" >/dev/null
 
 # Deleted from disk, outside cm: Changes lists them as deleted.
-rm src/Legacy/*.cs art/Textures/Hero.png art/Models/Hero.fbx
+rm src/Legacy/*.cs src/Legacy/Weapons/*.cs art/Textures/Hero.png art/Models/Hero.fbx art/Textures/Old/*.png
 rm -rf src/Retired
 
 # New versions of each class: similarity 100 - 5k% has (5k / 2)% of the lines rewritten.
@@ -57,6 +68,9 @@ for class in "${CLASSES[@]}"; do
     class_file "$folder/${class}At${similarity}.cs" "$class" $((LINES * step * 5 / 200))
   done
 done
+# The new file the deleted WeaponSystemAt*.cs and WeaponAt*.png were.
+class_file src/Gameplay/WeaponSystem.cs WeaponSystem 0
+bytes art/Textures/Weapon.png 20000
 # The deleted file's own name in another folder, though far from its content.
 class_file src/Gameplay/Characters/PlayerController.cs PlayerController $((LINES * 60 / 200))
 

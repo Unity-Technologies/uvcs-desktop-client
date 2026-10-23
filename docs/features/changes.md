@@ -56,5 +56,7 @@ would lose the item's history. "Search matches…" in either one's menu pairs th
 - `scripts/sandboxes/moves.sh` leaves a file and a folder of each side to pair (`src/lib/Rewritten.cs` and
   `src/app/Rewrote.cs`, `src/legacy` and `src/modern`). `scripts/sandboxes/move-matches.sh` leaves hundreds of new
   files at known similarities (each named for its percentage) to five deleted classes and two deleted binary files,
-  with unrelated files, a log too large to measure and a `.psd` that isn't pairable; turn off "Detect moved and
-  renamed files" in Settings › Pending changes first, or `cm` pairs the most alike on its own.
+  and, the other way round, a new class and a new texture with dozens of deleted versions at known similarities
+  (`src/Gameplay/WeaponSystem.cs`, `art/Textures/Weapon.png`), with unrelated files, a log too large to measure and a
+  `.psd` that isn't pairable. Turn off "Detect moved and renamed files" in Settings › Pending changes first, or `cm`
+  pairs the most alike on its own.
