@@ -40,6 +40,22 @@ export function arrivalChange(arrival: Arrival, count: number): number | null {
   return arrival === 'first' ? 0 : count - 1;
 }
 
+/** Where a view opens: at the step `index`, moved to (lit, counted "1 of 12") or only brought into view. */
+export interface Opening {
+  index: number;
+  movesTo: boolean;
+}
+
+/**
+ * Where a view opens (`useStepNavigation`): stepped to from the file beside it, moved to its first or last step;
+ * opened any other way (picked in a list, from a link, on a page), with its first step brought into view but not moved
+ * to, so the first move down still goes to it. None without steps.
+ */
+export function openingStep(arrival: Arrival | null, count: number): Opening | null {
+  if (count === 0) return null;
+  return arrival ? { index: arrivalChange(arrival, count)!, movesTo: true } : { index: 0, movesTo: false };
+}
+
 /** How many of the changes start above `line` of the modified file. */
 export function changesAbove(regions: ChangeRegion[], line: number): number {
   const index = regions.findIndex((region) => region.newStart >= line);
