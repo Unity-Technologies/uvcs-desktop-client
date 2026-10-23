@@ -1,4 +1,4 @@
-import { AppWindow, PencilOff, RefreshCw } from 'lucide-react';
+import { AppWindow, ArchiveX, PencilOff, RefreshCw } from 'lucide-react';
 import { Suspense, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import { openFile } from '../../../components/externalApps/externalAppOperations';
 import { lazyComponent } from '../../../lib/lazyComponent';
@@ -26,6 +26,7 @@ import { modelBesideMeta, modelOfMeta } from './model/modelMeta';
 import { SiblingFinderContext } from './model/modelSiblings';
 import { ModelModeSwitch } from './ModelModeSwitch';
 import { NothingToDiff } from './NothingToDiff';
+import { purgedNotice, purgedVersionsOf } from './purgedVersions';
 import { renderedEdits } from './renderedEdits';
 import { RepresentationSwitch } from './RepresentationSwitch';
 import { followsLayout } from './shownDiff';
@@ -71,9 +72,14 @@ interface LoadedFileDiffProps {
 export function LoadedFileDiff({ workspacePath, contents, fileName, title, identicalDescription, compareControls, onMatchesBase, stepsThroughChanges = true }: LoadedFileDiffProps) {
   const { comparisonMethod, imageMode, modelMode, representations, setComparisonMethod, setRepresentation } = useDiffPreferences();
   const editablePath = canEditInPlace(contents.original, contents.modified) ? contents.modified.path : null;
+  // A purged version shows as a missing one does: the other alone, under a line saying why (`purgedNotice`).
+  const purged = purgedVersionsOf(contents.left, contents.right);
   const sides = useMemo(
-    () => ({ original: contents.original.kind !== 'empty', modified: contents.modified.kind !== 'empty' }),
-    [contents.original.kind, contents.modified.kind],
+    () => ({
+      original: contents.original.kind !== 'empty' && purged !== 'original' && purged !== 'both',
+      modified: contents.modified.kind !== 'empty' && purged !== 'modified' && purged !== 'both',
+    }),
+    [contents.original.kind, contents.modified.kind, purged],
   );
   const buffer = useFileBuffer({ workspacePath, contents, path: editablePath, onMatchesBase });
   const { left, right } = buffer.shown;
@@ -275,8 +281,14 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
       );
   }
 
+  const purgedLine = purgedNotice(purged);
   return (
     <DiffViewerFrame ref={frame} title={title} controls={controls}>
+      {purgedLine && (
+        <DiffNotice tone="info" icon={<ArchiveX size={13} />}>
+          {purgedLine}
+        </DiffNotice>
+      )}
       {body}
     </DiffViewerFrame>
   );
