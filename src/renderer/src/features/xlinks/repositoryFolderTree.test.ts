@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { folderKey, folderRows, initiallyExpanded, openingFolder, parentFolder, toggled, type FolderListing } from './repositoryFolderTree';
+import { folderKey, folderListingOf, folderRows, initiallyExpanded, openingFolder, parentFolder, toggled, type FolderListing } from './repositoryFolderTree';
 
 const LISTINGS = new Map<string, FolderListing>([
   ['/', ['/Assets', '/Shaders']],
@@ -28,10 +28,23 @@ describe('The folder picker’s tree', () => {
   });
 
   it('says a folder open but not read yet is loading, and one that couldn’t be read failed', () => {
-    const rows = folderRows('lib@local', new Map<string, FolderListing>([['/', ['/Shaders']], ['/Shaders', 'failed']]), new Set(['/', '/Shaders']));
+    const rows = folderRows('lib@local', new Map<string, FolderListing>([['/', ['/Shaders', '/Art']], ['/Shaders', { failed: 'Couldn’t read this folder' }]]), new Set(['/', '/Shaders']));
 
-    expect(rows.map((row) => row.contents)).toEqual(['shown', 'failed']);
-    expect(folderRows('lib@local', new Map(), new Set(['/']))[0]!.contents).toBe('loading');
+    expect(rows.map((row) => [row.contents, row.note, row.failure])).toEqual([
+      ['shown', undefined, undefined],
+      ['failed', 'failed', 'Couldn’t read this folder'],
+      ['loading', undefined, undefined],
+    ]);
+    expect(folderRows('lib@local', new Map(), new Set(['/']))[0]!.note).toBe('loading');
+  });
+
+  it('tells why the tree can’t be read at all, as cm says it (a label not in that repository), before a folder’s own failure', () => {
+    const folderFailed = { error: new Error('cm ls failed') };
+
+    expect(folderListingOf(new Error('There is no label v9 in lib@local.'), folderFailed)).toEqual({ failed: 'There is no label v9 in lib@local.' });
+    expect(folderListingOf(null, folderFailed)).toEqual({ failed: 'Couldn’t read this folder' });
+    expect(folderListingOf(null, { data: ['/Shaders'], error: null })).toEqual(['/Shaders']);
+    expect(folderListingOf(null, { error: null })).toBe('loading');
   });
 
   it('keeps the root open, and opens or closes any other folder', () => {
@@ -66,6 +79,13 @@ describe('The folder picker’s keys', () => {
     expect(folderKey(rows, '/Assets', 'ArrowLeft')).toEqual({ toggle: '/Assets' });
     expect(folderKey(rows, '/Assets/Lib', 'ArrowLeft')).toEqual({ select: '/Assets' });
     expect(folderKey(rows, '/', 'ArrowLeft')).toEqual({});
+  });
+
+  it('jumps to the first and last rows with Home and End, and a screenful with Page Up and Page Down', () => {
+    expect(folderKey(rows, '/Assets/Lib', 'Home')).toEqual({ select: '/' });
+    expect(folderKey(rows, '/', 'End')).toEqual({ select: '/Shaders' });
+    expect(folderKey(rows, '/', 'PageDown')).toEqual({ select: '/Shaders' });
+    expect(folderKey(rows, '/Shaders', 'PageUp')).toEqual({ select: '/' });
   });
 
   it('chooses the selected folder with Enter, and leaves other keys alone', () => {
