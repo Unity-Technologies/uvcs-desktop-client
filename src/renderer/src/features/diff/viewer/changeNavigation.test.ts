@@ -1,7 +1,7 @@
 import { parseDiffFromFile } from '@pierre/diffs';
 import { describe, expect, it } from 'vitest';
 import { listChangeBlocks, listChangeRegions } from './changeBlocks';
-import { adjacentChange, arrivalChange, positionLabel, changesAbove, currentAfterChange, modifiedLineAt, plannedMove } from './changeNavigation';
+import { adjacentChange, arrivalChange, positionLabel, changesAbove, currentAfterChange, modifiedLineAt, openingStep, plannedMove } from './changeNavigation';
 
 const lines = (...items: string[]) => items.map((item) => `${item}\n`).join('');
 const blocksOf = (original: string, modified: string) => listChangeBlocks(parseDiffFromFile({ name: 'a.ts', contents: original }, { name: 'a.ts', contents: modified }));
@@ -50,6 +50,27 @@ describe('arrivalChange', () => {
     expect(arrivalChange('first', 4)).toBe(0);
     expect(arrivalChange('last', 4)).toBe(3);
     expect(arrivalChange('last', 0)).toBeNull();
+  });
+});
+
+describe('openingStep', () => {
+  it('moves to the change a step from the file beside it arrives at', () => {
+    expect(openingStep('first', 4, false)).toEqual({ index: 0, movesTo: true });
+    expect(openingStep('last', 4, false)).toEqual({ index: 3, movesTo: true });
+  });
+
+  it('brings the first change into view, without moving to it, in a diff opened any other way', () => {
+    expect(openingStep(null, 4, false)).toEqual({ index: 0, movesTo: false });
+  });
+
+  it("stays on a link's lines, unless stepped to", () => {
+    expect(openingStep(null, 4, true)).toBeNull();
+    expect(openingStep('last', 4, true)).toEqual({ index: 3, movesTo: true });
+  });
+
+  it('opens a diff without changes where it is', () => {
+    expect(openingStep(null, 0, false)).toBeNull();
+    expect(openingStep('last', 0, false)).toBeNull();
   });
 });
 

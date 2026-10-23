@@ -70,5 +70,10 @@ export interface FileContent {
   isBinary: boolean;
   /** Too big to show: text over the diff cap, or an image or a model over its preview cap. */
   tooLarge?: 'text' | 'image' | 'model';
+  /**
+   * A revision whose content a purge removed from the server: there is nothing to read, ever (`PURGED_CONTENT`). It
+   * has no text, image or model, and its size reads as 0.
+   */
+  purged?: true;
   size: number;
 }

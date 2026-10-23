@@ -10,8 +10,9 @@ import { hasLineChanges, type LineDiff } from './lineDiff';
  *   with the way to see them.
  * - `textDiff`: the read-only diff.
  * - `tooLarge`, `image`, `model`, `binary`: what a text diff can't show.
+ * - `purged`: both versions' content was purged from the server.
  */
-export type DiffBody = 'editable' | 'emptyFile' | 'noContentChanges' | 'onlyIgnoredChanges' | 'textDiff' | 'tooLarge' | 'image' | 'model' | 'binary';
+export type DiffBody = 'editable' | 'emptyFile' | 'noContentChanges' | 'onlyIgnoredChanges' | 'textDiff' | 'tooLarge' | 'image' | 'model' | 'binary' | 'purged';
 
 /** `savedDiff`: the diff of the texts as read, under the comparison method (`lineDiff`); null for what isn't text. */
 export function diffBodyOf(presentation: DiffPresentation, editable: boolean, savedDiff: LineDiff | null): DiffBody {

@@ -28,6 +28,8 @@ export function useChangeNavigation(
     view: {
       isShown: () => view.current !== null,
       reveal: (index) => view.current?.reveal(regions[index]!),
+      show: (index) => view.current?.show(regions[index]!),
+      opensOnLines: () => view.current?.opensOnLines() ?? false,
       countAbove: () => {
         const line = view.current?.lineAtTop(blocks);
         if (line != null) topLine.current = line;

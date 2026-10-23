@@ -8,7 +8,8 @@ import { TREE_ITEM_FORMAT, TREE_ITEMS } from '../cm/treeItems';
 import { cmFails, fakeCmClient, optionValue, type CmAnswer, type FakeCmCommand } from '../cm/testing/fakeCmClient';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { ContentSource } from '@shared/domain/content';
-import { catReadsOf, fakeCat } from '../cm/testing/fakeCat';
+import { catReadsOf, fakeCat, PURGED } from '../cm/testing/fakeCat';
+import { PURGED_CONTENT } from '../files/fileContent';
 import { RevisionCat } from '../files/RevisionCat';
 import { contentHashOf } from '../files/WorkspaceCopies';
 import type { ReviewStore } from '../review/ReviewStore';
@@ -88,6 +89,27 @@ describe('reading content', () => {
       ['ls', '/lib/a.cs', '--tree=cs:30', TREE_ITEM_FORMAT],
       ['cat', 'revid:432@lib@local'],
     ]);
+  });
+
+  it("reads a revision whose content was purged as purged, an answer rather than cm's failure", async () => {
+    const workspace = await newWorkspace();
+    const { service } = content({ cat: fakeCat(() => PURGED) });
+
+    const byId = await service.read(workspacePlace(workspace), { kind: 'revision', revision: { revisionId: 13, repository: 'game@local' }, fileName: 'a.png' });
+    const atChangeset = await service.read(workspacePlace(workspace), { kind: 'repositoryPath', path: '/a.png', at: 'cs:1' });
+
+    expect([byId, atChangeset]).toEqual([PURGED_CONTENT, PURGED_CONTENT]);
+  });
+
+  it("reads a diff's other side as it is when one was purged", async () => {
+    const workspace = await newWorkspace();
+    const { service } = content({ cat: fakeCat((spec) => (spec.startsWith('revid:13@') ? PURGED : 'v3\n')) });
+    const side = (revisionId: number): ContentSource => ({ kind: 'revision', revision: { revisionId, repository: 'game@local' }, fileName: 'a.txt' });
+
+    const [original, modified] = await Promise.all([service.read(workspacePlace(workspace), side(13)), service.read(workspacePlace(workspace), side(22))]);
+
+    expect(original).toEqual(PURGED_CONTENT);
+    expect(modified).toMatchObject({ text: 'v3\n', isBinary: false });
   });
 
   it('reads workspace files from disk and the empty side without asking cm', async () => {
@@ -210,6 +232,13 @@ describe('reading the bytes of a model companion', () => {
     expect(written).toHaveLength(2);
   });
 
+  it('reads one whose content was purged as nothing, as one that is not there: the model shows without it', async () => {
+    const workspace = await newWorkspace();
+    const { service } = content({ cat: fakeCat(() => PURGED), ls: ASSETS_LISTING });
+
+    expect(await service.readBytes(workspacePlace(workspace), { kind: 'repositoryPath', path: '/Assets/Barrel.bin', at: 'cs:12' })).toBeNull();
+  });
+
   describe('beside a revision of the model (a History, named at the path it was opened at)', () => {
     /** `cm ls <folder> --tree` as cm answers each folder at the point; a folder the tree hasn't fails as cm does. */
     const listings = (folders: Record<string, string>) => async ({ args }: FakeCmCommand) =>
@@ -229,6 +258,13 @@ describe('reading the bytes of a model companion', () => {
         ['query', 'cat', 'revid:41@eco@local'],
       ]);
       expect(written).toHaveLength(1);
+    });
+
+    it('reads one whose content was purged as purged, as any version read', async () => {
+      const workspace = await newWorkspace();
+      const { service } = content({ cat: fakeCat(() => PURGED), ls });
+
+      expect(await service.read(workspacePlace(workspace), binBeside(43))).toEqual(PURGED_CONTENT);
     });
 
     it("reads one in a folder below the model's by its revision in that folder's listing, the model checked in its own", async () => {

@@ -17,6 +17,7 @@ export const SHORTCUT_AREAS = [
   'Lists',
   'Changes',
   'Diff',
+  'Text',
   'Branch Explorer',
   'Files',
   'History',
@@ -95,6 +96,20 @@ export const SHORTCUTS = {
   editFile: { area: 'Diff', label: 'Type in the file', keys: ['mod+e'] },
   leaveEditor: { area: 'Diff', label: 'Leave the text for the file list (edits stay)', keys: ['escape'] },
   saveFile: { area: 'Diff', label: 'Save the edits', keys: ['mod+s'] },
+
+  // The text of a diff or a merge, as its editor (Pierre's) takes the keys; its right-click menu shows them (`codeMenu`).
+  // Pierre opens Replace with ⌥⌘F on every OS, Ctrl+Alt+F off macOS, where Ctrl+Alt is AltGr: there it takes Ctrl+H,
+  // as other editors on Windows and Linux do (`pierreEditorKeymap`). ⌘H would hide the app on macOS.
+  textUndo: { area: 'Text', label: 'Undo', keys: ['mod+z'] },
+  textRedo: { area: 'Text', label: 'Redo', keys: ['mod+shift+z'], keysOffMac: ['mod+y'] },
+  textCut: { area: 'Text', label: 'Cut', keys: ['mod+x'] },
+  textCopy: { area: 'Text', label: 'Copy', keys: ['mod+c'] },
+  textPaste: { area: 'Text', label: 'Paste', keys: ['mod+v'] },
+  textSelectAll: { area: 'Text', label: 'Select all', keys: ['mod+a'] },
+  textFind: { area: 'Text', label: 'Find in the text being typed', keys: ['mod+f'] },
+  textReplace: { area: 'Text', label: 'Find and replace in the text being typed', keys: ['mod+alt+f'], keysOffMac: ['mod+h'] },
+  // ⌃G on macOS, as in other editors there: ⌘G is Find next.
+  goToLine: { area: 'Text', label: 'Go to line', keys: ['ctrl+g'], keysOffMac: ['mod+g'] },
 
   graphFind: { area: 'Branch Explorer', label: 'Find in graph', keys: ['mod+f', '/'] },
   graphNextMatch: { area: 'Branch Explorer', label: 'Next match', keys: ['enter'] },

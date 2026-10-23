@@ -8,8 +8,9 @@
   outline: none;
 }
 
-/* The ring paints over the content, which covers an inset shadow. */
-.scroller:focus-visible {
+/* The ring paints over the content, which covers an inset shadow. Not when focus came back from a command run there
+   (Go to line…: `focusWithoutRing`), as after a click. */
+.scroller:focus-visible:not([data-pointer-focus]) {
   outline: var(--focus-outline);
   outline-offset: -2px;
 }

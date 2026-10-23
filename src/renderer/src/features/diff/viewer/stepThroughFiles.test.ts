@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { listChangeBlocks, listChangeRegions } from './changeBlocks';
-import { arrivalChange, positionLabel, plannedMove } from './changeNavigation';
+import { openingStep, positionLabel, plannedMove } from './changeNavigation';
 import { DIFF_TEST_TEXTS } from './diffTestTexts';
 import { fileSteps, type PendingArrival } from './fileSteps';
 import { pressStep } from './stepNavigation';
@@ -9,7 +9,8 @@ import { lineDiff } from './lineDiff';
 /**
  * Moving through changes (⌥↓ ⌥↑, F7 ⇧F7) in a diff beside a list of files, as `useStepNavigation` does (`pressStep`)
  * with the list's `FileStepsContext`: past the last change on to the next file's first, past the first back to the
- * previous file's last, and through files with nothing to step through. The view stays at the top of each file it opens.
+ * previous file's last, and through files with nothing to step through. A file opens with its first change at the top
+ * of the view (`openingStep`): moved to when stepped to, only shown when picked in the list.
  */
 
 const changesOf = (original: string, modified: string): number => listChangeRegions(listChangeBlocks(lineDiff(original, modified, 'recognizeAll').meta)).length;
@@ -29,7 +30,13 @@ class DiffBesideList {
     return `${this.shown}: ${positionLabel({ count: this.count, current: this.current }, 'change')}`;
   }
 
-  /** The view stays at the top of each file: no change starts above it. */
+  /** A file picked in the list, as a click on it. */
+  pick(path: string): this {
+    this.open(path);
+    return this;
+  }
+
+  /** Each file opens at its first change, or the last it was stepped to: no change starts above the view's top. */
   press(direction: 1 | -1): this {
     const outcome = pressStep({ count: this.count, current: this.current, above: 0 }, direction, this.steps(), () => 0);
     if (typeof outcome === 'number') this.current = outcome;
@@ -51,7 +58,8 @@ class DiffBesideList {
   private open(path: string): void {
     this.shown = path;
     const arrival = this.steps().takeArrival(path);
-    this.current = arrival ? arrivalChange(arrival, this.count) : null;
+    const opening = openingStep(arrival, this.count, false);
+    this.current = opening?.movesTo ? opening.index : null;
   }
 }
 
@@ -112,6 +120,13 @@ describe('stepping through the changes of a list of files', () => {
     expect(list.press(1).header).toBe('same.txt: No changes');
     expect(list.goesTo(-1)).toBe('file');
     expect(list.press(1).header).toBe('b.ts: 1 of 1');
+  });
+});
+
+describe('a file picked in the list', () => {
+  it('opens counting its changes, its first in view, and the first move goes to it', () => {
+    const list = new DiffBesideList({ 'a.ts': 2, 'b.ts': changesOf(original, modified) }).pick('b.ts');
+    expect([list.header, list.press(1).header]).toEqual(['b.ts: 3 changes', 'b.ts: 1 of 3']);
   });
 });
 
