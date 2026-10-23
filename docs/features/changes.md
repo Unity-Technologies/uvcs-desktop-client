@@ -43,8 +43,8 @@ would lose the item's history. "Search matches…" in either one's menu pairs th
     each path checked to be inside the workspace (`workspaceFileOf`): the window isn't trusted.
   - Measured once as the dialog opens: the slider, "Minimum similarity" (`PercentSlider`, as Settings' own), filters
     what was measured and runs nothing. Its query key has an area no refresh names (`moveSimilaritiesKey`), as the
-    candidates are fixed: a file saved meanwhile measures nothing again. It starts at 0: what's left to pair by hand
-    is mostly what the detection found under its own minimum.
+    candidates are fixed: a file saved meanwhile measures nothing again. It starts at 80%, as the official client's
+    does; a file the detection found too unlike shows once it's lowered (the empty list says so).
   - Unrelated files cost no diff: one side holding lines the other lacks bounds the changes from below
     (`changesAtLeast`), and past the deleted file's lines it reads 0. Every diff stops at the deleted file's lines and
     at `MAX_DIFF_WORK`, and the main process yields between pairs: a diff runs in one go, answering no other call.

@@ -13,11 +13,8 @@ export interface ScoredCandidate {
   similarity: number | null;
 }
 
-/**
- * The slider starts with every candidate shown: what is left to pair by hand is mostly what the move detection found
- * too unlike (under Settings' 20% by default).
- */
-export const DEFAULT_MINIMUM_SIMILARITY = 0;
+/** Where the slider starts: the official client's Search matches starts at 80% (`DEFAULT_SIMILARITY_VALUE`). */
+export const DEFAULT_MINIMUM_SIMILARITY = 80;
 
 /**
  * The measure's query key: an area of its own, which no refresh names (`refreshScopes`). The candidates are fixed as
