@@ -4,9 +4,10 @@ import type { XlinkExpansionRule } from '@shared/domain/xlinks';
  * A rule line of `cm xlink --show`, after the xlink's own line and a "Branch expansion rules:" heading:
  * `br:/main/task 1@game@local -> br:/main/x@lib@local [user-defined]`. Each side is a branch spec in its repository
  * (`name@server`, the server itself holding an `@` on Unity Cloud: `lib@acme@cloud`); a branch name holds no `@`. The
- * suffix, localized, marks a rule someone added (`HumanReadableXlinkDataGenerator`); `cm` added the others itself.
+ * suffix, localized, marks a rule someone added; `cm` added the others itself. A branch `cm` can't find prints as its
+ * id (`br:6b0c9f4e-…@lib@local`): such a rule is left out, as no branch name could delete or show it.
  */
-const RULE_LINE = /^br:([^@]+)@\S.* -> br:([^@]+)@\S+?( \[[^\]]+\])?$/;
+const RULE_LINE = /^br:(\/[^@]*)@\S.* -> br:(\/[^@]*)@\S+?( \[[^\]]+\])?$/;
 
 /** The branch expansion rules `cm xlink --show` prints; none for a read-only xlink, which prints only its own line. */
 export function parseXlinkRules(output: string): XlinkExpansionRule[] {

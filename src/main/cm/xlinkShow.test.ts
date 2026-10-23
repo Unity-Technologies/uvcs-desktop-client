@@ -24,6 +24,12 @@ describe('The branch expansion rules of an xlink', () => {
     expect(parseXlinkRules(cloud)).toEqual([{ from: '/main', to: '/main/dev', userDefined: true }]);
   });
 
+  it('leaves out a rule naming a branch cm couldn’t find, printed as its id: no command could name it back', () => {
+    const output = ['br:/main@game@local -> br:/main/dev@lib@local [user-defined]', 'br:/main/task@game@local -> br:6b0c9f4e-2d1a-4c3b-9f00-1a2b3c4d5e6f@lib@local'].join('\n');
+
+    expect(parseXlinkRules(output)).toEqual([{ from: '/main', to: '/main/dev', userDefined: true }]);
+  });
+
   it('reads none for a read-only xlink or one without rules: cm prints only its own line', () => {
     expect(parseXlinkRules('/wk/game/code/ro --> xlink:ro:/sub@1@lib@local\n')).toEqual([]);
   });
