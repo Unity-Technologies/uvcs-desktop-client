@@ -421,10 +421,11 @@ by name, and never passes it to `cm`.
   `acme@cloud` (`serverKind`, `shared/domain/organizations.ts`), which `cm profile list` already tells: the home
   sidebar groups them (`serverGroups`: Unity organizations, cloud organizations, servers), each kind with its icon
   (`ServerIcon`; `OrganizationIcon` is the building Unity's apps draw). Only a Unity organization has projects: a
-  repository of type `Project`, which `cm repository list` leaves out unless asked with its hidden `--type=all`, and
-  `{reptype}` tells apart (`repositoryListArgs`). They come in the one command that lists the repositories, asked only
-  of a Unity organization; a `cm` refusing `--type` (its error names the option, `refusesTypeOption`) is asked again
-  without it, and the list shows no projects. A project shows as the other clients draw it (`ProjectIcon`): a white
+  repository of type `Project`, which `cm repository list` leaves out unless asked with `--type=all`, and
+  `{reptype}` tells apart (`repositoryListArgs`). Neither is in `cm`'s help: `cm` keeps `--type` for its own use and
+  testing, so the app leans on an option `cm` doesn't promise. They come in the one command that lists the
+  repositories, asked only of a Unity organization; a `cm` refusing `--type` or its `all` (`refusesTypeOption`) is
+  asked again without it, and the list shows no projects. A project shows as the other clients draw it (`ProjectIcon`): a white
   cube on a tile in one of six colors (`--project-*`), picked by the code of its GUID's last character, the
   listing's `{repguid}` (`projectColor`), so it looks the same in every client; "All projects" is indigo
   (`ALL_PROJECTS_GUID`). All workspaces colors a project only once its organization's list was read

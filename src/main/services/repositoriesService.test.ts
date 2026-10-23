@@ -60,7 +60,17 @@ describe('repositories', () => {
 
   it('lists only the repositories of a Unity organization when cm refuses --type', async () => {
     const { service, lines } = repositories({
-      'repository list racing@unity --type=all': cmFails("Unexpected option --type for command 'repository list'"),
+      // As cm refuses an option it doesn't take: the complaint, the command's description, then its usage help.
+      'repository list racing@unity --type=all': cmFails(
+        [
+          'repository: Unexpected option --type',
+          'Lists the repositories on a server.',
+          'Usage:',
+          '',
+          '    cm repository | repo list | ls [<repserverspec>] [--format=<str_format>]',
+          '',
+        ].join('\n'),
+      ),
       'repository list racing@unity': formatOutput(['4', 'Racing/Game', 'racing@unity', 'bob']),
     });
 
@@ -68,6 +78,16 @@ describe('repositories', () => {
       repositories: [{ id: '4', name: 'Racing/Game', server: 'racing@unity', owner: 'bob', spec: 'Racing/Game@racing@unity' }],
       projects: [],
     });
+    expect(lines()).toHaveLength(2);
+  });
+
+  it("lists only the repositories of a Unity organization when cm doesn't know --type's all", async () => {
+    const { service, lines } = repositories({
+      'repository list racing@unity --type=all': cmFails("Requested value 'all' was not found."),
+      'repository list racing@unity': formatOutput(['4', 'Racing/Game', 'racing@unity', 'bob']),
+    });
+
+    expect((await service.list('racing@unity')).projects).toEqual([]);
     expect(lines()).toHaveLength(2);
   });
 

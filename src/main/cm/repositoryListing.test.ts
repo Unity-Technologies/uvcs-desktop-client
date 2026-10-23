@@ -89,6 +89,7 @@ describe('refusesTypeOption', () => {
   it("tells cm's refusal of --type, which names the option, from other failures", () => {
     expect(refusesTypeOption("Unexpected option --type for command 'repository list'")).toBe(true);
     expect(refusesTypeOption('Opción inesperada --type')).toBe(true);
+    expect(refusesTypeOption("Requested value 'all' was not found.")).toBe(true);
     expect(refusesTypeOption('Unable to connect to racing_studio@unity')).toBe(false);
   });
 });

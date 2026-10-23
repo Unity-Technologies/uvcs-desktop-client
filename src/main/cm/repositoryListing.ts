@@ -1,7 +1,9 @@
 // `cm repository list` of a server. A Unity organization's projects are repositories of a type of their own, which the
 // command leaves out unless asked with `--type=all`, and `{reptype}` tells them apart (`Project`, `VCS`, and storage
-// types the app has no use for). Neither is in `cm`'s help, so a `cm` that doesn't take `--type` is asked again
-// without it (`refusesTypeOption`). Projects come in the same call as the repositories: no command of their own.
+// types the app has no use for). Neither is in `cm`'s help: `cm` keeps `--type` for its own use and testing, so the app
+// leans on an option `cm` doesn't promise, and a `cm` that refuses it, or its `all`, is asked again without it
+// (`refusesTypeOption`): the list then shows no projects. Projects come in the same call as the repositories: no
+// command of their own.
 
 import type { RepositoryListing, RepositorySummary, UnityProject } from '@shared/domain/repository';
 import { projectOfRepository } from '@shared/domain/organizations';
@@ -45,7 +47,10 @@ function byName(a: string, b: string): number {
   return a.localeCompare(b);
 }
 
-/** Whether `cm` failed the listing for not taking `--type`, whose refusal names the option in any language. */
-export function refusesTypeOption(output: string): boolean {
-  return output.includes('--type');
+/**
+ * Whether `cm` failed the listing for not taking `--type`, whose refusal names the option in any language, or for not
+ * knowing its value `all`, which a `cm` reading the type by name refuses quoting it.
+ */
+export function refusesTypeOption(message: string): boolean {
+  return message.includes('--type') || message.includes("'all'");
 }
