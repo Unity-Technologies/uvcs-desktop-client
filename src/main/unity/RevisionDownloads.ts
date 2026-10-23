@@ -3,12 +3,10 @@
 // there has the revision's content (the hash `cm ls` listed), else downloaded with every other read asked at once in
 // one `cm cat <spec>;<file> <spec>;<file> …`, which downloads them in one batch. What was downloaded is kept for the
 // session in a folder of its own under the OS's temp folder, the latest `MAX_KEPT_BYTES` of it, and deleted as the
-// app quits (`dispose`), or as the next one starts after a crash (`removeLeftOverDownloads`).
+// app quits (`dispose`), or as the next one starts after a crash (`removeLeftOvers`; both `SessionFolder`'s).
 
 import { createHash } from 'node:crypto';
-import { rmSync } from 'node:fs';
-import { mkdir, mkdtemp, readFile, rm, stat } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { mkdir, readFile, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { placeId, type Place } from '@shared/domain/place';
 import type { RevisionRef } from '@shared/domain/revision';
@@ -17,8 +15,7 @@ import { cmPlace } from '../cm/cmPlace';
 import type { CmClient } from '../cm/CmClient';
 import { catArgs, catBatchesOf, type CatRead } from '../cm/catBatches';
 import { MAX_MODEL_BYTES } from '../files/fileContent';
-import { removeFoldersOfGoneProcesses } from '../files/goneProcessFolders';
-import { processIsRunning } from '../system/processIsRunning';
+import { SessionFolder } from '../files/SessionFolder';
 import { contentHashOf, WorkspaceCopies, type RevisionFile } from '../files/WorkspaceCopies';
 
 /**
@@ -69,16 +66,10 @@ interface Waiting {
 export class RevisionDownloads {
   private readonly cm: Pick<CmClient, 'execute'>;
   private readonly copies: Pick<WorkspaceCopies, 'read' | 'has'>;
-  private readonly tempFolder: string;
-  private leftOvers: Promise<void> | null = null;
-  private readonly pid: number;
-  private readonly isRunning: (pid: number) => boolean;
-  private readonly removeFolder: (folder: string) => void;
+  private readonly sessionFolder: SessionFolder;
   private downloads = 0;
   private readonly maxKeptBytes: number;
   private readonly schedule: (run: () => void) => void;
-  private folder: Promise<string> | null = null;
-  private folderMade: string | null = null;
   /** Downloaded files by revision, oldest first, with their sizes. */
   private readonly kept = new Map<string, { target: string; size: number }>();
   private keptBytes = 0;
@@ -91,13 +82,10 @@ export class RevisionDownloads {
   private checking = 0;
   private scheduled = false;
 
-  constructor({ cm, copies = new WorkspaceCopies(), tempFolder = tmpdir(), maxKeptBytes = MAX_KEPT_BYTES, schedule = (run) => void setImmediate(run), pid = process.pid, isRunning = processIsRunning, removeFolder = (folder) => rmSync(folder, { recursive: true, force: true }) }: RevisionDownloadsOptions) {
-    this.removeFolder = removeFolder;
-    this.pid = pid;
-    this.isRunning = isRunning;
+  constructor({ cm, copies = new WorkspaceCopies(), tempFolder, maxKeptBytes = MAX_KEPT_BYTES, schedule = (run) => void setImmediate(run), pid, isRunning, removeFolder }: RevisionDownloadsOptions) {
+    this.sessionFolder = new SessionFolder({ prefix: FOLDER_PREFIX, tempFolder, pid, isRunning, removeFolder });
     this.cm = cm;
     this.copies = copies;
-    this.tempFolder = tempFolder;
     this.maxKeptBytes = maxKeptBytes;
     this.schedule = schedule;
   }
@@ -185,22 +173,18 @@ export class RevisionDownloads {
    * app's running now (a development build beside the installed one) stays. This session's own is made once they're gone.
    */
   removeLeftOvers(): Promise<void> {
-    this.leftOvers ??= removeFoldersOfGoneProcesses({ tempFolder: this.tempFolder, prefix: FOLDER_PREFIX, pid: this.pid, isRunning: this.isRunning });
-    return this.leftOvers;
+    return this.sessionFolder.removeLeftOvers();
   }
+
 
   /**
    * Deletes the session's downloads, at once: the app is quitting. A file Windows still holds (an antivirus, a `cm cat`
    * not done) leaves the folder for the next session (`removeLeftOvers`): quitting never fails for it.
    */
   dispose(): void {
-    if (!this.folderMade) return;
-    try {
-      this.removeFolder(this.folderMade);
-    } catch {
-      // The next session deletes it.
-    }
+    this.sessionFolder.dispose();
   }
+
 
   private download(place: Place, file: RevisionFile, key: string): Promise<string> {
     const under = this.downloading.get(key);
@@ -228,7 +212,7 @@ export class RevisionDownloads {
     this.waiting = [];
     let folder: string;
     try {
-      folder = await this.sessionFolder();
+      folder = await this.sessionFolder.path();
     } catch (error) {
       return waiting.forEach((one) => one.reject(error));
     }
@@ -265,18 +249,6 @@ export class RevisionDownloads {
     if (again.length > 0) await this.downloadBatch(again, folder, true);
   }
 
-  private sessionFolder(): Promise<string> {
-    this.folder ??= this.removeLeftOvers()
-      .then(() => mkdtemp(join(this.tempFolder, `${FOLDER_PREFIX}${this.pid}-`)))
-      .then(
-      (made) => (this.folderMade = made),
-      (error: unknown) => {
-        this.folder = null;
-        throw error;
-      },
-    );
-    return this.folder;
-  }
 
   private keep(key: string, file: { target: string; size: number }): void {
     this.forget(key);
