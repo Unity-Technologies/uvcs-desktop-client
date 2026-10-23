@@ -55,7 +55,7 @@ const CHANGE_FIELDS = 4;
  * Reads `cm status` printed as records (`statusRecordsArgs`) as they arrive: a `STATUS` record first, then, with
  * `--changelists`, each changelist (`CHLIST <name> <description>`) followed by its changes; without `--compact`, the
  * files left with conflict markers too (`CONFLICT_MARKERS <path>`). Records, not XML: 100,000 changes print 9 MB where `--xml` printed
- * 60 MB, and 500,000 passed `MAX_OUTPUT_LENGTH` as XML (ARCHITECTURE.md "Parsing `cm` output"). A local read of the
+ * 60 MB, and 500,000 were too large to read as XML (ARCHITECTURE.md "Parsing `cm` output"). A local read of the
  * workspace, which the server never sees.
  *
  * A change lists every code of the item at once (`CH+MV`), and reads as `cm status --xml` read it before

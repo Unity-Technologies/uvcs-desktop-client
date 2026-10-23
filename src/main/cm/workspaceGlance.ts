@@ -9,7 +9,7 @@ import { parseWorkspaceStatus } from './workspaceStatus';
  * (`cm status <path>` as records, which a workspace of a million changes prints as one of ten does): two local reads
  * of the workspace on disk, which answer the same from any directory (`anyDirectory`). So each workspace glanced at
  * starts no sessions of its own, and the switcher of a workspace window none in the home folder. Records hold no
- * selector, and XML holding the changes passed `MAX_OUTPUT_LENGTH` past about 400,000 of them.
+ * selector, and XML holding the changes was too large to read past about 400,000 of them.
  */
 export async function readWorkspaceGlance(cm: CmClient, workspacePath: string, platform: NodeJS.Platform = process.platform): Promise<WorkspaceGlance> {
   const reader = new PendingChangesReader(workspacePath, { platform, resolvedRoot: await resolvedRootOf(workspacePath) });
