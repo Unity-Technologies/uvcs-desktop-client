@@ -251,8 +251,8 @@ export function menuSubmenu(id: MenuWordId, entries: MenuEntry[]): GroupedEntry 
   return { id, label: label ?? id, icon, menuGroup: group, entries };
 }
 
-/** Where an object's menu shows, when that changes it; what a place adds goes through `withEntries`. */
-export interface MenuPlace {
+/** Where an object's menu shows (its host), when that changes it; what a host adds goes through `withEntries`. */
+export interface MenuHost {
   /** The Branch Explorer, where "Show in Branch Explorer" would lead where the user already is. */
   inBranchExplorer?: boolean;
   /** Called with the name of a branch created from the menu, e.g. to show it. */

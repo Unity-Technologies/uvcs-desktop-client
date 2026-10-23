@@ -7,7 +7,7 @@ import { groupedMenu } from '../../lib/menuGroups';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
 import { serverMergeLabel } from '../../components/mergeMenuLabels';
-import { menuAction, type MenuPlace } from '../../components/menuWords';
+import { menuAction, type MenuHost } from '../../components/menuWords';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { showBranchChangesets } from '../changesets/showBranchChangesets';
 import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
@@ -46,7 +46,7 @@ export function branchCopyTexts(workspacePath: string, branch: Pick<BranchInfo, 
  * The menu of the selected branches, the same wherever branches show: the Branches view, the Branch Explorer, the
  * branch switcher, the top bar, the palette and their details. `currentBranch` is the branch the workspace is on.
  */
-export function branchMenu(workspacePath: string, branches: BranchInfo[], currentBranch: string | undefined, place: MenuPlace = {}): MenuEntry[] {
+export function branchMenu(workspacePath: string, branches: BranchInfo[], currentBranch: string | undefined, host: MenuHost = {}): MenuEntry[] {
   if (branches.length === 0) return [];
 
   const single = branches.length === 1 ? branches[0]! : null;
@@ -66,11 +66,11 @@ export function branchMenu(workspacePath: string, branches: BranchInfo[], curren
     single && menuAction('mergeTo', () => void mergeTo(spec.branch(single.name), single.name, isTaskBranch(single) ? taskMergeOf(single) : undefined)),
     single && menuAction('cherryPick', () => cherryPickFromBranch(single.name), { label: 'Cherry pick branch changes', ...onCurrent }),
     single &&
-      menuAction('newBranch', () => void openCreateBranchDialog(workspacePath, branchHeadOrigin(single)).then((name) => name && place.onBranchCreated?.(name))),
+      menuAction('newBranch', () => void openCreateBranchDialog(workspacePath, branchHeadOrigin(single)).then((name) => name && host.onBranchCreated?.(name))),
     single && menuAction('newCodeReview', () => openCreateCodeReviewDialog(workspacePath, { kind: 'branch', value: single.name })),
     single && menuAction('changesets', () => showBranchChangesets(workspacePath, single.name)),
     single && menuAction('compare', () => void diffWithAnotherBranch(single), { label: 'Compare with another branch…' }),
-    single && !place.inBranchExplorer && menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'branch', name: single.name, date: single.date })),
+    single && !host.inBranchExplorer && menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'branch', name: single.name, date: single.date })),
     single && copySubmenu('Branch', branchCopyTexts(workspacePath, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     single && menuAction('rename', () => void renameBranch(workspacePath, single), { shortcut: hotkey('rename') }),
     single && menuAction('permissions', () => openObjectPermissions(workspacePath, 'branch', single)),

@@ -6,7 +6,7 @@ import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
-import { menuAction, type MenuPlace } from '../../components/menuWords';
+import { menuAction, type MenuHost } from '../../components/menuWords';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { mergeTo } from '../branches/branchOperations';
 import { openObjectPermissions } from '../permissions/openPermissions';
@@ -35,7 +35,7 @@ export function labelCopyTexts(workspacePath: string, label: Pick<LabelInfo, 'na
 }
 
 /** The menu of the selected labels, the same wherever labels show: the Labels view, the Branch Explorer, the top bar, the palette and their details. */
-export function labelMenu(workspacePath: string, labels: LabelInfo[], place: MenuPlace = {}): MenuEntry[] {
+export function labelMenu(workspacePath: string, labels: LabelInfo[], host: MenuHost = {}): MenuEntry[] {
   if (labels.length === 0) return [];
   const single = labels.length === 1 ? labels[0]! : null;
   const pair = labels.length === 2 ? ([labels[0]!, labels[1]!] as const) : null;
@@ -47,11 +47,11 @@ export function labelMenu(workspacePath: string, labels: LabelInfo[], place: Men
     single && menuAction('switch', () => void switchToLabel(workspacePath, single), { label: 'Switch to this label' }),
     single && menuAction('merge', () => mergeFromLabel(single)),
     single && menuAction('mergeTo', () => void mergeTo(spec.label(single.name), single.name)),
-    single && menuAction('newBranch', () => void createBranchFromLabel(workspacePath, single).then((name) => name && place.onBranchCreated?.(name))),
+    single && menuAction('newBranch', () => void createBranchFromLabel(workspacePath, single).then((name) => name && host.onBranchCreated?.(name))),
     single && menuAction('compare', () => void diffWithAnotherLabel(single), { label: 'Compare with another label…' }),
     single && menuAction('browse', () => browseLabel(single), { label: 'Browse repository at this label' }),
     single &&
-      !place.inBranchExplorer &&
+      !host.inBranchExplorer &&
       menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'label', name: single.name, changeset: single.changeset, date: single.date })),
     single && copySubmenu('Label', labelCopyTexts(workspacePath, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     single && menuAction('rename', () => void renameLabel(workspacePath, single), { shortcut: hotkey('rename') }),

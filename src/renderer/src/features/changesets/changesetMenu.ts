@@ -7,7 +7,7 @@ import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
-import { menuAction, type MenuPlace } from '../../components/menuWords';
+import { menuAction, type MenuHost } from '../../components/menuWords';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { openCreateBranchDialog } from '../branches/CreateBranchDialog';
 import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
@@ -52,13 +52,13 @@ export function changesetCopyTexts(workspacePath: string, changeset: ChangesetIn
  * The menu of the selected changesets (one, or two for interval operations), the same wherever changesets show: the
  * Changesets view, the Branch Explorer, Incoming, the top bar, the palette and their details.
  */
-export function changesetMenu(context: ChangesetMenuContext, selected: ChangesetInfo[], place: MenuPlace = {}): MenuEntry[] {
-  if (selected.length === 1) return singleChangesetMenu(context, selected[0]!, place);
+export function changesetMenu(context: ChangesetMenuContext, selected: ChangesetInfo[], host: MenuHost = {}): MenuEntry[] {
+  if (selected.length === 1) return singleChangesetMenu(context, selected[0]!, host);
   if (selected.length === 2) return intervalMenu(selected);
   return [];
 }
 
-function singleChangesetMenu(context: ChangesetMenuContext, changeset: ChangesetInfo, place: MenuPlace): MenuEntry[] {
+function singleChangesetMenu(context: ChangesetMenuContext, changeset: ChangesetInfo, host: MenuHost): MenuEntry[] {
   const { workspacePath, loadedChangeset, loadedBranch } = context;
   const source = spec.changeset(changeset.id);
   const canRevertTo = typeof loadedChangeset === 'number' && changeset.branch === loadedBranch && changeset.id < loadedChangeset;
@@ -77,13 +77,13 @@ function singleChangesetMenu(context: ChangesetMenuContext, changeset: Changeset
         parentBranch: changeset.branch,
         startingPoint: source,
         startingPointLabel: `changeset ${changeset.id}`,
-      }).then((name) => name && place.onBranchCreated?.(name)),
+      }).then((name) => name && host.onBranchCreated?.(name)),
     ),
     menuAction('newLabel', () => openCreateLabelDialog(workspacePath, changeset.id)),
     menuAction('newCodeReview', () => openCreateCodeReviewDialog(workspacePath, { kind: 'changeset', value: String(changeset.id) })),
     menuAction('compare', () => void diffWithAnotherChangeset(changeset), { label: 'Compare with another changeset…' }),
     menuAction('browse', () => navigation.openPage({ kind: 'browseRepository', changesetId: changeset.id }), { label: 'Browse repository at this changeset' }),
-    !place.inBranchExplorer && menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'changeset', id: changeset.id, date: changeset.date })),
+    !host.inBranchExplorer && menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'changeset', id: changeset.id, date: changeset.date })),
     copySubmenu('Changeset', changesetCopyTexts(workspacePath, changeset, context.repository), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     menuAction('editComment', () => void editChangesetComment(workspacePath, changeset)),
     menuAction('move', () => void moveChangesetToBranch(workspacePath, changeset)),

@@ -1,7 +1,7 @@
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu, withEntries } from '../../lib/menuGroups';
-import { menuAction, type MenuPlace } from '../../components/menuWords';
+import { menuAction, type MenuHost } from '../../components/menuWords';
 import { branchMenu } from '../branches/branchMenu';
 import { changesetMenu } from '../changesets/changesetMenu';
 import { codeReviewMenu } from '../codeReviews/codeReviewMenu';
@@ -29,15 +29,15 @@ interface GraphMenuContext {
  * own ways around it added in their group; "Show in Branch Explorer" would lead where the user is.
  */
 export function graphMenu(target: GraphTarget | null, context: GraphMenuContext): MenuEntry[] {
-  const place: MenuPlace = { inBranchExplorer: true, onBranchCreated: context.revealCreatedBranch };
+  const host: MenuHost = { inBranchExplorer: true, onBranchCreated: context.revealCreatedBranch };
   switch (target?.kind) {
     case 'changeset':
-      return graphChangesetMenu(target.id, context, place);
+      return graphChangesetMenu(target.id, context, host);
     case 'branch':
-      return graphBranchMenu(target.lane, context, place);
+      return graphBranchMenu(target.lane, context, host);
     case 'label': {
       const { label } = target;
-      return withEntries(labelMenu(context.workspacePath, [labelInfo(context.layout, label, context.repository ?? '')], place), [
+      return withEntries(labelMenu(context.workspacePath, [labelInfo(context.layout, label, context.repository ?? '')], host), [
         menuAction('labeledChangeset', () => context.goToChangeset(label.changeset)),
       ]);
     }
@@ -65,16 +65,16 @@ function graphCodeReviewMenu(review: CodeReviewSummary, { workspacePath, layout,
   return codeReviewMenu(workspacePath, [reviewed === undefined ? review : { ...review, target: { kind: 'branch', branch: reviewed } }], workspaceOn);
 }
 
-function graphChangesetMenu(id: number, { workspacePath, layout, currentBranch, loadedChangeset, repository, goToChangeset }: GraphMenuContext, place: MenuPlace): MenuEntry[] {
+function graphChangesetMenu(id: number, { workspacePath, layout, currentBranch, loadedChangeset, repository, goToChangeset }: GraphMenuContext, host: MenuHost): MenuEntry[] {
   const changeset = layout.nodes.get(id)?.changeset;
   if (!changeset) return [];
-  const menu = changesetMenu({ workspacePath, loadedChangeset, loadedBranch: currentBranch, repository }, [changeset], place);
+  const menu = changesetMenu({ workspacePath, loadedChangeset, loadedBranch: currentBranch, repository }, [changeset], host);
   return withEntries(menu, [layout.nodes.has(changeset.parent) && menuAction('parent', () => goToChangeset(changeset.parent))]);
 }
 
-function graphBranchMenu(lane: Lane, { workspacePath, layout, currentBranch, repository, goToChangeset, showRelatedTo }: GraphMenuContext, place: MenuPlace): MenuEntry[] {
+function graphBranchMenu(lane: Lane, { workspacePath, layout, currentBranch, repository, goToChangeset, showRelatedTo }: GraphMenuContext, host: MenuHost): MenuEntry[] {
   const { branch, baseChangeset } = lane;
-  const menu = branchMenu(workspacePath, [{ ...branch, repository }], currentBranch, place);
+  const menu = branchMenu(workspacePath, [{ ...branch, repository }], currentBranch, host);
   return withEntries(menu, [
     layout.nodes.has(branch.headChangeset) && menuAction('head', () => goToChangeset(branch.headChangeset)),
     baseChangeset !== null && menuAction('base', () => goToChangeset(baseChangeset)),
