@@ -7,7 +7,7 @@ This doc holds how xlinks are created and edited.
 ## Creating and editing
 
 Files offers **New xlink…** on a controlled folder or file (it goes in the folder, or the file's folder:
-`newXlinkDirectoryOf`) and **Edit xlink…** on an xlink (`editableXlinkOf`). Both open `XlinkDialog`, whose fields,
+`newXlinkDirectoryOf`; not on an xlink, where it would go in the xlinked repository) and **Edit xlink…** on an xlink (`editableXlinkOf`). Both open `XlinkDialog`, whose fields,
 checks and what it saves are decided by `xlinkDraft.ts` (`xlinkDialogFields`, `newXlinkOf`, `xlinkEditOf`).
 
 - **Where it points**: a branch (its latest changeset; the default, `/main`), a changeset or a label of the

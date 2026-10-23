@@ -36,6 +36,10 @@ describe('Creating and editing xlinks from Files', () => {
     expect(newXlinkDirectoryOf({ path: 'code/notes.txt', itemType: 'file', isPrivate: true })).toBeNull();
   });
 
+  it('creates none from an xlink: it would go in the xlinked repository', () => {
+    expect(newXlinkDirectoryOf({ path: 'code/lib', itemType: 'directory', isPrivate: false, xlink })).toBeNull();
+  });
+
   it('edits an xlink, not a folder', () => {
     expect(editableXlinkOf({ isPrivate: false, xlink })).toEqual({ isPrivate: false, xlink });
     expect(editableXlinkOf({ isPrivate: false })).toBeNull();

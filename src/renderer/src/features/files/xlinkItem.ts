@@ -31,10 +31,11 @@ export function xlinkDetailOf(item: Pick<TreeItem, 'xlink'>, details: Pick<ItemD
 
 /**
  * The folder a new xlink made from an item goes into: the item itself, or a file's folder. Only a controlled folder
- * takes one (`cm`: "is not in a workspace"), so none from a private item, whose folder may be private too.
+ * takes one (`cm`: "is not in a workspace"), so none from a private item, whose folder may be private too. Nor from
+ * an xlink: the new one would go in the xlinked repository.
  */
-export function newXlinkDirectoryOf(item: Pick<TreeItem, 'path' | 'itemType' | 'isPrivate'>): string | null {
-  if (item.isPrivate) return null;
+export function newXlinkDirectoryOf(item: Pick<TreeItem, 'path' | 'itemType' | 'isPrivate' | 'xlink'>): string | null {
+  if (item.isPrivate || item.xlink) return null;
   return item.itemType === 'directory' ? item.path : parentOf(item.path);
 }
 
