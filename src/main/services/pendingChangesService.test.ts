@@ -8,6 +8,7 @@ import type { PendingChangesFilter } from '@shared/domain/pendingChanges';
 import { CmError } from '../cm/CmError';
 import { statusRecordsArgs } from '../cm/pendingChangesRecords';
 import { change, pendingStatus } from '../cm/testing/cmOutput';
+import { catReadsOf, fakeCat } from '../cm/testing/fakeCat';
 import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { DiskDetails } from '../files/DiskDetails';
 import { OperationTracker } from '../operations/OperationTracker';
@@ -234,6 +235,39 @@ describe('recording a move', () => {
     const { service } = pendingChanges({ move: cmFails("newdir is a private directory. It can't be moved.") });
 
     await expect(service.recordMove(WORKSPACE, 'src/a.cs', 'newdir/a.cs')).rejects.toThrow(/private directory/);
+  });
+});
+
+describe('how alike the items of a move are', () => {
+  it('reads every deleted text file with one cm cat, the new ones from disk, and sizes the binary ones', async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'similar-'));
+    await mkdir(join(workspace, 'src'));
+    await writeFile(join(workspace, 'src', 'Hero.cs'), 'a\nb\nc\nd\n');
+    const old = (path: string) => join(workspace, ...path.split('/'));
+    const cat = fakeCat((spec) => ({ [old('src/Player.cs')]: 'a\nb\nc\nx\n', [old('src/Enemy.cs')]: 'q\nr\n' })[spec]);
+    const { service, commands } = pendingChanges({ cat });
+    const file = (path: string, size = 8) => ({ path, itemType: 'file' as const, size });
+    const binary = (path: string, size: number) => ({ path, itemType: 'binaryFile' as const, size });
+
+    const similarities = await service.moveSimilarities(workspace, [
+      { deleted: file('src/Player.cs'), added: file('src/Hero.cs') },
+      { deleted: file('src/Enemy.cs'), added: file('src/Hero.cs') },
+      { deleted: binary('art/hero.png', 1000), added: binary('art/new.png', 900) },
+    ]);
+
+    expect(similarities[0]).toBeCloseTo(0.5);
+    expect(similarities[1]).toBe(0);
+    expect(similarities[2]).toBeCloseTo(0.9);
+    expect(commands.map((command) => command.args[0])).toEqual(['cat']);
+    expect(catReadsOf(commands[0]!.args).map((read) => read.spec)).toEqual([old('src/Player.cs'), old('src/Enemy.cs')]);
+  });
+
+  it("scores nothing it can't read: a deleted file cm doesn't find, a new one gone from disk", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'similar-'));
+    const { service } = pendingChanges({ cat: fakeCat(() => undefined) });
+    const file = (path: string) => ({ path, itemType: 'file' as const, size: 8 });
+
+    expect(await service.moveSimilarities(workspace, [{ deleted: file('gone.cs'), added: file('missing.cs') }])).toEqual([null]);
   });
 });
 

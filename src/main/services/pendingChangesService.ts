@@ -1,3 +1,4 @@
+import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { app } from 'electron';
 import type { PendingChangesApi } from '@shared/api/pendingChanges';
@@ -5,6 +6,7 @@ import type {
   Changelist,
   CheckinRequest,
   CheckinResult,
+  MovePair,
   PendingChangesFilter,
   PendingChangesSnapshot,
 } from '@shared/domain/pendingChanges';
@@ -14,17 +16,18 @@ import { explainLockedItems } from '../cm/lockedItems';
 import { pendingChangesStatusOptions } from '../cm/pendingChangesStatusOptions';
 import { readCheckinProgress } from '../cm/progress/checkinProgress';
 import { onLinksThemselves } from '../cm/symlinkArgs';
-import { withTempFile } from '../files/tempFile';
+import { withTempDirectory, withTempFile } from '../files/tempFile';
 import { moveArgs } from '../files/moveItems';
-import { toAbsolutePaths } from '../files/workspacePaths';
+import { toAbsolutePath, toAbsolutePaths } from '../files/workspacePaths';
 import { addFilterRules } from '../workspace/filterRuleFile';
 import { readPendingChanges } from '../workspace/readPendingChanges';
+import { MAX_SCORED_TEXT_BYTES, measureMoveSimilarities } from '../workspace/moveSimilarities';
 import { shelveAndUndo } from '../workspace/shelveAndUndo';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 const DEFAULT_CHANGELIST = 'Default';
 
-export function createPendingChangesService({ cm, operations }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): PendingChangesApi {
+export function createPendingChangesService({ cm, operations, revisionCat }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): PendingChangesApi {
   const shelveAwayDependencies = { cm, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'shelve-backups') };
 
   function list(workspacePath: string, filter: PendingChangesFilter): Promise<PendingChangesSnapshot> {
@@ -67,6 +70,26 @@ export function createPendingChangesService({ cm, operations }: ServiceContext, 
     // `cm move` of an item missing from disk onto an existing private one only records the move; were the item back on
     // disk, it refuses, as the destination exists.
     await cm.query(moveArgs(workspacePath, { from: deletedPath, to: newPath }), { cwd: workspacePath });
+  }
+
+  function moveSimilarities(workspacePath: string, pairs: MovePair[]): Promise<(number | null)[]> {
+    return withTempDirectory((directory) => {
+      let saved = 0;
+      return measureMoveSimilarities(pairs, {
+        // A deleted file's loaded revision, by its workspace path: `cm cat` reads it there, under an xlink too, so the
+        // paths of one workspace share a batch (`RevisionCat`), one `cm cat` for every deleted file.
+        readDeleted: async (path) => {
+          const target = join(directory, String(saved++));
+          await revisionCat.save(workspacePath, { spec: toAbsolutePath(workspacePath, path), repository: workspacePath }, target);
+          return readFile(target);
+        },
+        readAdded: async (path) => {
+          const file = toAbsolutePath(workspacePath, path);
+          // The status's size may be older than the file: one grown since isn't read whole.
+          return (await stat(file)).size > MAX_SCORED_TEXT_BYTES ? null : readFile(file);
+        },
+      });
+    });
   }
 
   async function checkout(workspacePath: string, paths: string[]): Promise<void> {
@@ -116,6 +139,7 @@ export function createPendingChangesService({ cm, operations }: ServiceContext, 
     add,
     remove,
     recordMove,
+    moveSimilarities,
     checkout,
     addFilterRules,
     shelve,

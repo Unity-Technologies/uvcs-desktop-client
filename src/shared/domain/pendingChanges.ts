@@ -34,6 +34,15 @@ export interface PendingChange {
   changelist?: string;
 }
 
+/** An item of a move Search matches scores: as Changes listed it (a deleted item's size is its loaded revision's). */
+export type MatchItem = Pick<PendingChange, 'path' | 'itemType' | 'size'>;
+
+/** A deleted item and a new one that could be one moved item. */
+export interface MovePair {
+  deleted: MatchItem;
+  added: MatchItem;
+}
+
 export interface Changelist {
   name: string;
   description: string;
