@@ -12,7 +12,7 @@ import { cmPlace } from '../cm/cmPlace';
 import type { CmClient } from '../cm/CmClient';
 import { isNotInTreeError } from '../cm/missingItem';
 import { OwnCopies, ownCopy } from '../cm/ownCopy';
-import { parseTreeListing, treeListingArgs, type ListedItem } from '../cm/treeListing';
+import { readListedItem, treeListingArgs, type ListedItem } from '../cm/treeListing';
 import type { RevisionFile } from '../files/WorkspaceCopies';
 import type { ProjectAssetIndex } from './ProjectAssetIndex';
 import { RepositoryAssetTree } from './RepositoryAssetTree';
@@ -29,7 +29,7 @@ export interface KeptTree {
 const KEPT_TREES = 8;
 
 interface RepositoryTreesOptions {
-  cm: Pick<CmClient, 'query' | 'execute'>;
+  cm: Pick<CmClient, 'queryRecords' | 'executeRecords'>;
   downloads: Pick<RevisionDownloads, 'read'>;
   platform?: NodeJS.Platform;
   /** The time, which a branch head's tree is kept for. */
@@ -41,7 +41,7 @@ export class RepositoryTrees {
   private readonly trees = new Map<string, KeptTree>();
   /** The repository specs the listings name, one copy each (`ownItems`). */
   private readonly repositories = new OwnCopies();
-  private readonly cm: Pick<CmClient, 'query' | 'execute'>;
+  private readonly cm: Pick<CmClient, 'queryRecords' | 'executeRecords'>;
   private readonly downloads: Pick<RevisionDownloads, 'read'>;
   private readonly platform: NodeJS.Platform;
   private readonly now: () => number;
@@ -65,12 +65,12 @@ export class RepositoryTrees {
     if (kept && (at.startsWith('cs:') || this.now() - kept.since < BRANCH_TREE_LIFE_MS)) return this.trees.set(key, kept), kept;
     const source = {
       // A folder's children are quick to list, in a pooled `cm shell`; a subtree, however small it looks, may be a
-      // whole project, in a process of its own (`execute`), never holding a shell other reads wait for.
+      // whole project, in a process of its own (`executeRecords`), never holding a shell other reads wait for.
       list: (folder: string, recursive: boolean) => {
         const args = treeListingArgs(folder, where.spec(at), recursive);
-        const listed = recursive ? this.cm.execute(args, where.options) : this.cm.query(args, where.options);
+        const listed = recursive ? this.cm.executeRecords(args, readListedItem, where.options) : this.cm.queryRecords(args, readListedItem, where.options);
         return listed.then(
-          (output) => this.ownItems(parseTreeListing(output)),
+          (items) => this.ownItems(items),
           (error: unknown) => (isNotInTreeError(error) ? null : Promise.reject(error)),
         );
       },
@@ -87,7 +87,7 @@ export class RepositoryTrees {
 
   /**
    * The items as strings of their own (`ownCopy`): a kept tree keeps its listings, whose items are otherwise slices of
-   * the whole output, a whole project's listing kept for a few names.
+   * their records, every field of a whole project's listing kept for a few names.
    */
   private ownItems(items: ListedItem[]): ListedItem[] {
     return items.map(({ path, revision, hash, ...rest }) => ({

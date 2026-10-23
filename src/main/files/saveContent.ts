@@ -10,7 +10,7 @@ import type { CmError } from '../cm/CmError';
 import { isNotInTreeError } from '../cm/missingItem';
 import { isPurgedRevisionError } from '../cm/purgedRevision';
 import { removedItemSpec } from '../cm/removedItemSpec';
-import { parseTreeItems, TREE_ITEM_FORMAT } from '../cm/treeItems';
+import { readTreeItem, TREE_ITEM_FORMAT } from '../cm/treeItems';
 import type { WorkspaceCopies } from './WorkspaceCopies';
 import { toAbsolutePath } from './workspacePaths';
 
@@ -109,8 +109,8 @@ async function saveRepositoryPath(cm: CmClient, place: Place, path: string, at: 
 async function saveFromTree(cm: CmClient, place: Place, path: string, at: string, target: string): Promise<void> {
   if (!listsTree(at)) throw new Error(`${path} is under an xlink, which ${at} can't be read through`);
   const where = cmPlace(place);
-  const listed = await cm.query(['ls', path, `--tree=${where.spec(at)}`, TREE_ITEM_FORMAT], where.options);
-  const item = parseTreeItems(listed).find((candidate) => `/${candidate.path}` === path);
+  const listed = await cm.queryRecords(['ls', path, `--tree=${where.spec(at)}`, TREE_ITEM_FORMAT], readTreeItem, where.options);
+  const item = listed.find((candidate) => `/${candidate.path}` === path);
   if (!item || item.revisionId < 0) throw new Error(`${path} isn't in the tree at ${at}`);
   await saveRevision(cm, place, spec.revision(item), target);
 }

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { parseRepositoryListing, refusesTypeOption, repositoryListArgs } from './repositoryListing';
-import { formatOutput } from './testing/cmOutput';
+import { refusesTypeOption, repositoryListArgs, repositoryListingOf } from './repositoryListing';
+import { formatOutput, recordsIn } from './testing/cmOutput';
+
+const parseRepositoryListing = (output: string, server: string, options: { withProjects: boolean }) => repositoryListingOf(recordsIn(output), server, options);
 
 const ORGANIZATION = 'racing_studio@unity';
 

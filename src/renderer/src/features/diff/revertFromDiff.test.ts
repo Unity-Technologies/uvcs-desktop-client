@@ -19,7 +19,7 @@ const ws = '/ws';
 const repository = 'game@local';
 const ofChangeset: DiffTarget = { kind: 'changeset', changesetId: 42 };
 
-/** A diff's entry as `parseDiffEntries` reads it: an item only moved keeps its revision on both sides. */
+/** A diff's entry as `readDiffEntry` reads it: an item only moved keeps its revision on both sides. */
 function entry(status: DiffStatus = 'changed', itemType: ItemType = 'file', inRepository = repository): DiffEntry {
   const revisionId = status === 'deleted' ? -1 : status === 'moved' ? 39 : 40;
   return { status, path: 'src/a.ts', itemType, baseRevisionId: 39, revisionId, repository: inRepository };

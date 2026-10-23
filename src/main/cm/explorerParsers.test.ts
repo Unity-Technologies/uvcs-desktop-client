@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { FOUND_REVIEWS } from './codeReviewRecords';
-import { readRecords } from './formatRecords';
 import { parseItemDetails } from './itemDetailsXml';
-import { parseLocks } from './lockRecords';
-import { listedRevisionId, parseTreeItems, TREE_ITEMS } from './treeItems';
-import { formatOutput, recordsOutput } from './testing/cmOutput';
+import { lockReader } from './lockRecords';
+import { listedRevisionId, readTreeItem, TREE_ITEMS } from './treeItems';
+import { formatOutput, recordsIn, recordsOutput } from './testing/cmOutput';
 
 /** Items of `cm ls --format=TREE_ITEM_FORMAT`, the fields as `cm` prints them. */
 const listed = (...items: Partial<Record<(typeof TREE_ITEMS.fields)[number], string | number>>[]): string => recordsOutput(TREE_ITEMS, ...items);
@@ -15,7 +14,9 @@ describe('listedRevisionId', () => {
   });
 });
 
-describe('parseTreeItems', () => {
+describe('readTreeItem', () => {
+  const parseTreeItems = (output: string) => recordsIn(output, readTreeItem);
+
   it('skips the listed directory and maps each child', () => {
     const output = listed(
       { name: '.', wkpath: 'src', type: 'dir', size: 0, revid: 1 },
@@ -126,10 +127,10 @@ describe('parseItemDetails', () => {
   });
 });
 
-describe('parseLocks', () => {
+describe('lockReader', () => {
   it('parses the smart locks layout', () => {
     const line = ['repo', '41', 'guid-1', '2026-09-25T09:43:06+02:00', '/main', '19', '/main/task', '55', 'Retained', 'jane', 'wk', '/a.psd'];
-    const [lock] = parseLocks(formatOutput(line), 'local');
+    const [lock] = recordsIn(formatOutput(line), lockReader('local'));
     expect(lock).toEqual({
       repository: 'repo@local',
       itemId: 41,
@@ -153,7 +154,7 @@ describe('code review records', () => {
       { id: 62, title: 'Changeset review', status: 'Status Reviewed', targettype: 'Changeset', target: 2 },
       { id: 63, title: 'Shelve review', status: 'Status Under review', targettype: 'Shelve', target: 3 },
     );
-    expect(readRecords(FOUND_REVIEWS, output)).toMatchObject([
+    expect(recordsIn(output, FOUND_REVIEWS)).toMatchObject([
       { id: 60, status: 'Rework required', targetType: 'branch', targetId: 54, assignee: '' },
       { id: 62, status: 'Reviewed', targetType: 'changeset', targetId: 2 },
       { id: 63, status: 'Under review', targetType: 'shelve', targetId: 3 },

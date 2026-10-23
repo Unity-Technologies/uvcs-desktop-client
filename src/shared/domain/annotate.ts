@@ -5,7 +5,7 @@ export function canAnnotate(itemType: ItemType): boolean {
   return itemType === 'file';
 }
 
-interface AnnotatedLine {
+export interface AnnotatedLine {
   lineNumber: number;
   content: string;
   /** Changeset where the line was last modified. */

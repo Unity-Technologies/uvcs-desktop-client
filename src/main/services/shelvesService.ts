@@ -2,15 +2,15 @@ import type { ShelvesApi } from '@shared/api/shelves';
 import { cmPlace } from '../cm/cmPlace';
 import { findArgs } from '../cm/findQuery';
 import { FOUND_SHELVES } from '../cm/foundObjects';
-import { readRecords } from '../cm/formatRecords';
+import { layoutReader } from '../cm/formatRecords';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 export function createShelvesService({ cm, operations }: ServiceContext, { leftChanges }: SwitchContext): ShelvesApi {
   return {
     async list(place, filter) {
       const at = cmPlace(place);
-      const output = await cm.query(findArgs(FOUND_SHELVES, { ...filter, branch: undefined }, null, [], at.repository), at.options);
-      return readRecords(FOUND_SHELVES, output).sort((a, b) => b.id - a.id);
+      const shelves = await cm.queryRecords(findArgs(FOUND_SHELVES, { ...filter, branch: undefined }, null, [], at.repository), layoutReader(FOUND_SHELVES), at.options);
+      return shelves.sort((a, b) => b.id - a.id);
     },
 
     apply: (workspacePath, shelveId, deleteShelve, operationId) =>

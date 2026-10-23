@@ -34,7 +34,7 @@ these is missing, say so in your report as a finding.
 - **Consistency**: does it follow the idiom of the code next to it (naming, file layout, the renderer tiers, the UI
   building blocks, copy rules, `styles/tokens.css`)? Is the same thing now done two ways? Duplication, dead code,
   leftover debug output, a file grown past one concept.
-- **`cm` economy**: the six questions of "Every `cm` command earns its place" in CLAUDE.md. A command in a loop, on a
+- **`cm` economy**: the seven questions of "Every `cm` command earns its place" in CLAUDE.md. A command in a loop, on a
   timer, unsettled, or `query()` where it should be `execute()` (or the reverse) is a must-fix.
 - **Cross-platform**: paths and separators, drive letters, CRLF, NFD names, `.cmd` launchers, shortcuts and copy per OS.
 - **Safety**: secrets in logs or errors, a new IPC capability that isn't a typed `UvcsApi` method, anything opening

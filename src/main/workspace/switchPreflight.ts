@@ -2,7 +2,7 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import { selectorSpec } from '@shared/domain/specs';
 import type { SwitchPreflight } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
-import { LOCK_LIST_FORMAT_ARGS, parseLocks } from '../cm/lockRecords';
+import { LOCK_LIST_FORMAT_ARGS, lockReader } from '../cm/lockRecords';
 import { isLeftChanges } from './leftChangesRecords';
 import { shelvableChanges, summarizePending } from './pendingSnapshot';
 import { readPendingSnapshot } from './readPendingChanges';
@@ -40,10 +40,10 @@ function countLeftOnSource(records: SwitchShelveRecords, workspace: WorkspaceIde
 
 /** Pending paths locked by this user in this workspace: undoing them for the switch releases their locks. */
 async function lockedPendingPaths(cm: CmClient, workspacePath: string, workspace: WorkspaceIdentity, pending: PendingChange[]): Promise<string[]> {
-  const output = await cm.query(['lock', 'list', '--onlycurrentuser', '--onlycurrentworkspace', ...LOCK_LIST_FORMAT_ARGS], { cwd: workspacePath });
   const server = workspace.repository.slice(workspace.repository.indexOf('@') + 1);
+  const locks = await cm.queryRecords(['lock', 'list', '--onlycurrentuser', '--onlycurrentworkspace', ...LOCK_LIST_FORMAT_ARGS], lockReader(server), { cwd: workspacePath });
   const lockedPaths = new Set(
-    parseLocks(output, server)
+    locks
       .filter((lock) => lock.repository === workspace.repository)
       .map((lock) => lock.path.replace(/^\//, '')),
   );

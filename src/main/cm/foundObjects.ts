@@ -1,7 +1,7 @@
 // The objects lists read with `cm find`, as `--format` records: just the fields each list needs, split by control
 // characters (`recordFormat`; why records, not XML: ARCHITECTURE.md "Parsing `cm` output"). `cm find --xml` printed
 // the same fields through the same formatter; what XML parsing did besides, records do too: CRLF becomes LF
-// (`parseRecords`), and each layout trims the free text it shows. Dates come in `FIND_DATE_FORMAT` (`findCommand`).
+// (`RecordReader`), and each layout trims the free text it shows. Dates come in `FIND_DATE_FORMAT` (`findCommand`).
 
 import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';

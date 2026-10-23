@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { parseAccounts } from './accounts';
+import { readAccount } from './accounts';
 import { serverProfiles } from './profiles';
-import { formatOutput } from './testing/cmOutput';
+import { formatOutput, recordsIn } from './testing/cmOutput';
+
+const parseAccounts = (output: string) => recordsIn(output, readAccount);
 
 describe('serverProfiles', () => {
   it('puts the local server first and drops wildcard and duplicate profiles', () => {

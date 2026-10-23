@@ -2,12 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CmResult } from './CmResult';
 import { CmShellPool, IDLE_DIRECTORY_MS } from './CmShellPool';
 import { RecordReader } from './formatRecords';
+import { textLimitOf } from './outputLimit';
+import type { OutputReading } from './outputReading';
 
 /** A session whose commands finish when the test says so. */
 class FakeSession {
   static created: FakeSession[] = [];
   readonly ran: string[] = [];
-  readonly recordReaders: (RecordReader<unknown> | undefined)[] = [];
+  readonly readings: (OutputReading | undefined)[] = [];
   disposed = false;
   started = false;
   answerFirstCommand = (): void => {};
@@ -39,9 +41,9 @@ class FakeSession {
     return this.starting;
   }
 
-  run(args: string[], records?: RecordReader<unknown>): Promise<CmResult> {
+  run(args: string[], reading?: OutputReading): Promise<CmResult> {
     this.ran.push(args.join(' '));
-    this.recordReaders.push(records);
+    this.readings.push(reading);
     return new Promise((finish) => this.running.push({ command: args.join(' '), finish }));
   }
 
@@ -85,11 +87,12 @@ describe('CmShellPool', () => {
     await expect(slow).resolves.toMatchObject({ output: 'status' });
   });
 
-  it('hands the session the reader of the records of a command that prints them', () => {
-    const records = new RecordReader((fields) => fields);
-    void pool.run('/wk', ['find', 'branch'], records);
-    void pool.run('/wk', ['status']);
-    expect(FakeSession.created.flatMap((session) => session.recordReaders)).toEqual([records, undefined]);
+  it('hands the session how to read the output of each command', () => {
+    const streamed = { stream: new RecordReader((fields) => fields) };
+    const operation = { text: textLimitOf('operation') };
+    void pool.run('/wk', ['find', 'branch'], streamed);
+    void pool.run('/wk', ['undo', 'a.txt'], operation);
+    expect(FakeSession.created.flatMap((session) => session.readings)).toEqual([streamed, operation]);
   });
 
   it('keeps sessions apart per directory', () => {

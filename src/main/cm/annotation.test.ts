@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { parseAnnotation } from './annotation';
-import { formatOutput } from './testing/cmOutput';
+import { AnnotationReader } from './annotation';
+import { formatOutput, recordsIn } from './testing/cmOutput';
+
+/** The annotation of `output`, its records read as they arrive. */
+function parseAnnotation(output: string) {
+  const reader = new AnnotationReader();
+  return reader.annotation(recordsIn(output, reader.read));
+}
 
 
 describe('parseAnnotation', () => {

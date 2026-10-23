@@ -4,7 +4,7 @@ import type { Place } from '@shared/domain/place';
 import { FOUND_ATTRIBUTE_TYPES, FOUND_ATTRIBUTE_VALUES } from '../cm/attributeRecords';
 import { cmPlace } from '../cm/cmPlace';
 import { equalsCondition, findQueryArgs, queryOn } from '../cm/findQuery';
-import { parseRecords, readRecords, recordFormat } from '../cm/formatRecords';
+import { layoutReader, recordFormat } from '../cm/formatRecords';
 import { withTempFile } from '../files/tempFile';
 import type { ServiceContext } from './ServiceContext';
 
@@ -12,10 +12,9 @@ import type { ServiceContext } from './ServiceContext';
 const USED_VALUES_SAMPLE = 500;
 
 export function createAttributesService({ cm }: ServiceContext): AttributesApi {
-  async function listTypes(place: Place): Promise<AttributeType[]> {
+  function listTypes(place: Place): Promise<AttributeType[]> {
     const at = cmPlace(place);
-    const output = await cm.query(findQueryArgs(FOUND_ATTRIBUTE_TYPES, '', at.repository), at.options);
-    return readRecords(FOUND_ATTRIBUTE_TYPES, output);
+    return cm.queryRecords(findQueryArgs(FOUND_ATTRIBUTE_TYPES, '', at.repository), layoutReader(FOUND_ATTRIBUTE_TYPES), at.options);
   }
 
   async function createType(place: Place, name: string, comment: string): Promise<void> {
@@ -40,18 +39,16 @@ export function createAttributesService({ cm }: ServiceContext): AttributesApi {
   }
 
   /** `objectSpec` as the object's lists name it (`br:/main`): the query names the repository, never the spec. */
-  async function valuesOf(place: Place, objectSpec: string): Promise<AttributeValue[]> {
+  function valuesOf(place: Place, objectSpec: string): Promise<AttributeValue[]> {
     const at = cmPlace(place);
     const query = `where ${equalsCondition('srcobj', objectSpec)}`;
-    const output = await cm.query(findQueryArgs(FOUND_ATTRIBUTE_VALUES, query, at.repository), at.options);
-    return readRecords(FOUND_ATTRIBUTE_VALUES, output);
+    return cm.queryRecords(findQueryArgs(FOUND_ATTRIBUTE_VALUES, query, at.repository), layoutReader(FOUND_ATTRIBUTE_VALUES), at.options);
   }
 
-  async function usedValues(place: Place, attribute: string): Promise<string[]> {
+  function usedValues(place: Place, attribute: string): Promise<string[]> {
     const at = cmPlace(place);
     const query = queryOn(`where ${equalsCondition('type', attribute)} limit ${USED_VALUES_SAMPLE}`, at.repository);
-    const output = await cm.query(['find', 'attribute', query, `--format=${recordFormat(['value'])}`, '--nototal'], at.options);
-    return parseRecords(output).map(([value = '']) => value.trim());
+    return cm.queryRecords(['find', 'attribute', query, `--format=${recordFormat(['value'])}`, '--nototal'], ([value = '']) => value.trim(), at.options);
   }
 
   function setValue(place: Place, objectSpec: string, attribute: string, value: string): Promise<void> {

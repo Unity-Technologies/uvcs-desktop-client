@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { formatOutput, treeListingOutput } from './testing/cmOutput';
-import { parseTreeListing, treeListingArgs } from './treeListing';
+import { formatOutput, recordsIn, treeListingOutput } from './testing/cmOutput';
+import { readListedItem, treeListingArgs } from './treeListing';
+
+const parseTreeListing = (output: string) => recordsIn(output, readListedItem);
 
 describe('treeListingArgs', () => {
   it('lists a folder and everything below it at a point, or its children alone, the root as /', () => {

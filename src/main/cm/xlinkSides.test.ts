@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { recordsOutput } from './testing/cmOutput';
-import { TREE_ITEMS } from './treeItems';
+import { recordsIn, recordsOutput } from './testing/cmOutput';
+import { readTreeItem, TREE_ITEMS } from './treeItems';
 import { FOUND_PARENTS, parentPointOf, readsSide, xlinkAfterPoint, xlinkBeforePoint, xlinkIn, xlinkListArgs } from './xlinkSides';
 
-/** A `cm ls --tree` listing as `cm` prints it: server paths, an xlink named after its target, the folder itself as `.`. */
-function listing(...items: { wkpath: string; name: string; type?: string }[]): string {
-  return recordsOutput(TREE_ITEMS, { name: '.', wkpath: '/plugins', type: 'dir' }, ...items.map(({ type = 'dir', ...item }) => ({ ...item, type })));
+/** A `cm ls --tree` listing as `cm` prints it (server paths, an xlink named after its target, the folder itself as `.`), read. */
+function listing(...items: { wkpath: string; name: string; type?: string }[]) {
+  const output = recordsOutput(TREE_ITEMS, { name: '.', wkpath: '/plugins', type: 'dir' }, ...items.map(({ type = 'dir', ...item }) => ({ ...item, type })));
+  return recordsIn(output, readTreeItem);
 }
 
 describe('The sides of a diff an xlink is read at', () => {
@@ -40,9 +41,9 @@ describe('The sides of a diff an xlink is read at', () => {
   });
 
   it('names the found changeset parent as a point; none before the first changeset', () => {
-    expect(parentPointOf(recordsOutput(FOUND_PARENTS, { parent: 279866 }))).toBe('cs:279866');
-    expect(parentPointOf(recordsOutput(FOUND_PARENTS, { parent: -1 }))).toBeNull();
-    expect(parentPointOf('')).toBeNull();
+    expect(parentPointOf(recordsIn(recordsOutput(FOUND_PARENTS, { parent: 279866 }), FOUND_PARENTS))).toBe('cs:279866');
+    expect(parentPointOf(recordsIn(recordsOutput(FOUND_PARENTS, { parent: -1 }), FOUND_PARENTS))).toBeNull();
+    expect(parentPointOf([])).toBeNull();
   });
 });
 

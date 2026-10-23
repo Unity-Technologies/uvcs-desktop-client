@@ -39,7 +39,7 @@ export function queryOn(query: string, repository: string | undefined): string {
 }
 
 /**
- * Builds `cm find` arguments: `<object> "<where/order/limit>"`, printing the fields `found` reads (`readRecords`).
+ * Builds `cm find` arguments: `<object> "<where/order/limit>"`, printing the fields `found` reads (`layoutReader`).
  * `orderBy` is null for objects `cm` cannot sort (shelves).
  */
 export function findArgs(

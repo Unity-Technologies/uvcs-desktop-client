@@ -62,12 +62,13 @@ you touch:
      So is, on Windows, a command that prints text (see Parsing).
    - A pooled command may take two minutes, a workspace write half an hour (a few paths can still be a whole tree).
    - `queryRecords()` and `executeRecords()` run a command that prints `--format` records as `query()` and
-     `execute()` do, routing included, and read each record as it arrives (see Parsing: records).
-   - A command may print at most `MAX_OUTPUT_LENGTH` (256 MB) characters, shell or process: text output is read as one
-     string, and V8 refuses strings past about 512 MB. Records are never one string; the limit counts their bytes, which
-     bounds what reading them costs. Past it the command is killed (a session starts a new process)
-     and fails with a `CmError` (`CmOutputTooLargeError`), never a crash. A list that can get there needs a
-     server-side filter or a `limit` (Server budget: Queries).
+     `execute()` do, routing included, and read each record as it arrives (see Parsing: records); `queryXmlElements()`
+     reads an XML list element by element the same way (`cm history`), and `queryLines()` a list of one item a line
+     (`cm listusers`).
+   - No output is held as one string unless it is a small answer (Parsing: "No list is one string"): a list is read as
+     it arrives with no size limit, an answer stops past `MAX_TEXT_OUTPUT_LENGTH` (4 MB) with a `CmError`
+     (`CmOutputTooLargeError`; a session starts a new process), and an operation keeps the ends of what it prints and
+     is never stopped for its size.
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
    (see Renderer: Command log); one that ended without an exit code (stopped on a prompt, `cm` not found) is logged
    with -1, which the log and the error dialog word as "Stopped" (`commandEnding`), and one its caller cancelled is not
@@ -267,21 +268,44 @@ and many people use the same server. Every `cm` command other than local reads (
 
 ## Parsing `cm` output
 
+- **No list is one string.** V8 refuses strings past about 512 MB, and long before that one string costs the main
+  process what the whole output weighs, twice. So every command the app runs says what it prints
+  (`COMMAND_OUTPUTS`, `cmOutputKind` in `main/cm/commandOutputs.ts`), and that decides how it's read:
+  - a **list** (anything that grows with the repository, the workspace or the server: finds, `cm ls`, diffs,
+    annotations, histories, pending changes, lock, profile, workspace and repository lists, the merge preview, an
+    organization's members) is read as it arrives, `queryRecords`/`executeRecords` for `--format` records,
+    `queryXmlElements` for an XML list (`XmlElementReader`), `queryLines` for one item a line with no `--format`
+    (`LineReader`: `cm listusers`; `cm` writes errors to stderr, and a shell's `CommandResult` line is left out), and
+    never stopped for its size;
+  - an **answer** (one small object: `whoami`, a workspace's header, an item's details) is read whole by
+    `query`/`execute`, and stopped past `MAX_TEXT_OUTPUT_LENGTH` (4 MB);
+  - an **operation** (a write: undo, add, checkin, update, merge, cat...) may print a line per item, so `query`/`execute`
+    keep only its start and end (`TextLimit` `keepEnds`, `OutputBuffer`, the middle marked `leftOutMarker`), where
+    `cm` prints its result and its error, and never stop it: stopping a checkin halfway is worse than any output.
+    What a caller needs from a long run it takes from its lines as they arrive (`onOutputLine`): a merge keeps the
+    records that tell how it ended (`mergeOutcomeRecordOf`).
+
+  `query` and `execute` refuse a list and a command missing from `COMMAND_OUTPUTS` (`textOutputKind`), in `CmClient`
+  and in `fakeCmClient` alike, so a new list read as text fails its first test, and a new command says how it's read
+  before it runs once. No code parses a whole output as records: `RecordReader` is the one way records are read, and a
+  test reads an output string through it (`recordsIn`).
 - **Records, not XML.** A command that has `--format` is read as records: a `RecordLayout` names the fields it prints
   (`layoutFormat`, `recordFormat`: control-character separators, no ambiguity with paths or comments) and
-  `readRecords` reads each by name (`layoutReader`, the reader a streamed command takes too). Values arrive as printed
-  with CRLF turned into LF (`parseRecords`); a layout trims the free text it shows (comments, titles, attribute
+  `layoutReader` reads each by name. Values arrive as printed with CRLF turned into LF (`RecordReader`); a layout trims the free text it shows (comments, titles, attribute
   values), as XML parsing did, and leaves the rest as printed: names, paths, and the Branch Explorer's, annotate's and
   diff's records, where whitespace matters. Only `cm diff` quotes some values (`unquoted`). Each layout is declared
   once: the `cm find` objects in `foundObjects.ts` (`FOUND_BRANCHES`...; `findArgs`,
   `findQueryArgs`), `FOUND_REVIEWS`, `FOUND_ATTRIBUTE_TYPES`, `TREE_ITEMS` for `cm ls` (whether a listed item has a revision is one rule for every `cm ls`
   reader: `listedRevisionId`). For 19,807 branches, records
   are 2.6 MB where `cm find --xml` printed 9.1 MB, and parse in a third of the time (26 ms against 77; 115 against 365
-  for 100k, and past about 600k branches the XML passed `MAX_OUTPUT_LENGTH`). `--xml` also prints every field, some
+  for 100k, and past about 600k branches the XML passed what one string could hold). `--xml` also prints every field, some
   costing the server (`cm ls --xml` reads every item's GUID). A test writes the output as `cm` prints it for that
   layout (`recordsOutput`, `foundLine`). Anything with more than a few fields takes a `RecordLayout`; the small
-  positional readers of two to four fields stay as they are (`parseWorkspaceListing`, `parseWorkspaceItem`,
-  `parseBranchNames`, the incoming check, `parseAccounts`, the Branch Explorer's row builders `graphBranch`...).
+  positional readers of two to four fields stay as they are (`readWorkspaceListedItem`, `readWorkspaceItem`,
+  `parseBranchNames`, the incoming check, `readAccount`, the Branch Explorer's row builders `graphBranch`...). A
+  reader that needs every row before it can say anything (the repositories and projects, sorted apart) takes each
+  record's fields (`readFields`) and folds them after (`repositoryListingOf`); one that only needs to remember what
+  it saw keeps it as the records arrive (`AnnotationReader`, each changeset once).
 - **`cm ls` on Windows**: it asks `--encoding` of `--xml` only, so its records come in UTF-8 only from a `cm shell`: a
   listing that can't take a pooled one starts a `cm shell` of its own (`processCommand`, about half a second more
   than an `--xml` process), and a server path holding a quote, which no shell line can hold, prints in the console's
@@ -294,7 +318,7 @@ and many people use the same server. Every `cm` command other than local reads (
   with `--changelists` each `CHLIST <name> <description>` before its changes, each change as `<codes> <path> <is
   folder> <merges>` (a move `<codes> <similarity> <old path> <path> …`), and `CONFLICT_MARKERS <path>`. 100,000 changes
   print 9 MB where `--xml` printed 60 MB, in half the time (0.9 s against 1.8 s; 500,000: 46 MB in 4.6 s against
-  300 MB in 9 s, past `MAX_OUTPUT_LENGTH` as one string). A change prints every code of the item at once (`CH+MV`):
+  300 MB in 9 s, past what one string could hold). A change prints every code of the item at once (`CH+MV`):
   `listedCodes` reads it as `--xml` listed it (a deleted item is only deleted, an added one only added; an item in no
   category, a cloaked folder, isn't listed). Its paths are absolute, from the root `cm` keeps, which may differ from the
   app's in case, composition or a link resolved (`PrintedWorkspacePaths`); an item printed twice is one change with
@@ -310,23 +334,18 @@ and many people use the same server. Every `cm` command other than local reads (
   UTF-8: `printsInConsoleCodePage`); a workspace of a million changes holds one of its two sessions for 5–7 s, while
   the other keeps answering the workspace's other reads. As `cm ls`'s, its
   records come in UTF-8 on Windows only from a `cm shell` (`processCommand`, `printsInConsoleCodePage`).
-- **XML remains** only where `--format` can't say it, for answers that stay small: the `cm status` header
-  (`parseWorkspaceStatus`: a local read, under a KB); `cm history --format`
-  has no revision type, which tells text from binary from a directory, and a revision from a move or a removal
-  (`itemHistoryArgs`: one item's revisions, about 600 bytes each, a few MB for a file changed in thousands of
-  changesets); `cm fileinfo` reads one item or two, where records would save nothing (`parseItemDetails`,
-  `removedItemSpec`, `saveContent`, `explorerService`). XML goes through `parseXml`.
-- **A list that can grow takes records, read as they arrive** (`queryRecords`, `executeRecords`): pending changes
-  (`readPendingChanges`), the Branch Explorer, the Changesets and Branches lists, branch names. Lists still read as
-  one string (`query` then `parseRecords`) stay well under `MAX_OUTPUT_LENGTH` on the largest repositories, but grow
-  with them, and move to `queryRecords` next, the biggest first: a diff of a changeset or branch touching most of a
-  big tree (`diffService`, about 100 bytes a file), a `cm ls` of a whole tree (`explorerService`,
-  `withConflictRepositories`), a big file's annotations (`annotation`).
+- **XML remains** only where `--format` can't say it: the `cm status` header (`parseWorkspaceStatus`: a local read,
+  under a KB) and `cm fileinfo` of one item or two (`parseItemDetails`, `removedItemSpec`), answers that stay small;
+  and `cm history`, whose `--format` has no revision type, which tells text from binary from a directory, and a
+  revision from a move or a removal (`itemHistoryArgs`: about 600 bytes a revision), read element by element as it
+  arrives (`queryXmlElements`, `HISTORY_RECORD`). XML goes through `parseXml`.
+- **The merge preview streams too**: `cm merge --machinereadable` ends its records with `--endlineseparator`
+  (`MERGE_PREVIEW_RECORD_ARGS`), as `cm status` and `cm lock list` do, and in that mode prints nothing else.
 - Never parse human-readable output when a machine format exists.
 - **Records are read as they arrive**: new code reads a `--format` command with `cm.queryRecords(args, readRecord,
   options)` (or `executeRecords`), where `readRecord` builds a row (a branch, a changeset) from each record's fields, or
-  `undefined` to leave it out. `RecordReader` takes stdout in byte chunks, from a pooled `cm shell` (`RecordOutput`)
-  or a process (`runCmProcess`'s `records`), and reads each record once its separator arrives, keeping only the one
+  `undefined` to leave it out. `RecordReader` takes stdout in byte chunks, from a pooled `cm shell` (`StreamOutput`)
+  or a process (`runCmProcess`'s `reading`), and reads each record once its separator arrives, keeping only the one
   still arriving: the output is never joined, copied for its CRLF, split into an array of records or held whole. A
   `cm find branch` of 1,000,000 branches (151 MB) costs the main process 451 MB of peak RSS instead of 722 MB, and
   427 ms instead of 566 ms, the rows holding 305 MB instead of 444 MB; 100,000 branches 79 MB of peak instead of 115 MB
@@ -342,15 +361,8 @@ and many people use the same server. Every `cm` command other than local reads (
     own record at most. Decoding each field on its own makes fresh strings but cost 30% more time than reading the
     whole output; slices of decoded chunks would keep every chunk alive. Sharing one copy of repeated owners and branch
     names (a `Map`) saved a tenth of the peak for a quarter more time, the record's string being alive anyway: dropped.
-- Output already held as text (a cache's string, `ProfileList`; the callers read with `query()`, such as the `cm ls`
-  listings, annotate, diffs and the smaller services' lists) is read with `parseRecords(output, readRecord)`: the same field
-  rules (`fieldsOf`), its records found in the string itself, with no copy into bytes (a million branches: 386 ms and
-  581 MB of peak, where splitting the whole took 566 ms and 722 MB). Unlike `queryRecords`, it reads text after the
-  last record as one more record, as it always did, so its callers read what they read before until they move to
-  `queryRecords`.
-- Values read from text output are slices of the command's whole output, which V8 keeps alive while any slice lives;
-  values read as records arrive, slices of their own record. A cache that keeps them past the answer copies them as it
-  keeps them, not every parser (`ownCopy`; `OwnCopies` for a value many entries repeat, like a repository spec):
+- Values read as records arrive are slices of their own record, which V8 keeps alive while any slice lives. A cache
+  that keeps them past the answer copies them as it keeps them, not every parser (`ownCopy`; `OwnCopies` for a value many entries repeat, like a repository spec):
   `BranchNamesCache`, `WorkspaceCopies`, `RepositoryTrees`.
 - `cm find branch` leaves hidden branches out unless asked for (`hidden = 'true'`), and `cm find changeset` their
   changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`; a list of one branch's changesets always asks for
@@ -1196,7 +1208,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   - **One order**: by path, folder by folder, names as people read them (`file_2` before `file_10`, case only between
     names otherwise equal; different names read the same, "v01" and "v1" or a name in two Unicode forms, by their code
     units, so each folder's files stay together): `comparePaths` (`shared/pathOrder`), used where the files are read
-    (`parseDiffEntries`, `parseMergePlan`) and by Changes (`sortChanges`, once a read: `useSortedChanges`; filtering
+    (`mergedDiffEntries`, `mergePlanOf`) and by Changes (`sortChanges`, once a read: `useSortedChanges`; filtering
     keeps the order, and `layoutChangeRows` lays the changes out as they come). `cm status` prints the changes in no
     order, so Changes sorts them folder by folder (`sortByPath`): a million in 0.9 s, where sorting the whole list took
     2 s. A read that kept most changes as they were (`sharePendingChanges`, in any order) starts from the last order and

@@ -2,7 +2,7 @@ import type { ChangesetsApi } from '@shared/api/changesets';
 import { cmPlace } from '../cm/cmPlace';
 import { findArgs, findQueryArgs } from '../cm/findQuery';
 import { FOUND_CHANGESETS } from '../cm/foundObjects';
-import { layoutReader, readRecords } from '../cm/formatRecords';
+import { layoutReader } from '../cm/formatRecords';
 import type { ServiceContext } from './ServiceContext';
 
 /**
@@ -22,8 +22,8 @@ export function createChangesetsService({ cm }: ServiceContext): ChangesetsApi {
 
     async get(place, changesetId, repository) {
       const at = cmPlace(place);
-      const output = await cm.query(findQueryArgs(FOUND_CHANGESETS, `where changesetid = ${changesetId}`, repository ?? at.repository), at.options);
-      const [changeset] = readRecords(FOUND_CHANGESETS, output);
+      const args = findQueryArgs(FOUND_CHANGESETS, `where changesetid = ${changesetId}`, repository ?? at.repository);
+      const [changeset] = await cm.queryRecords(args, layoutReader(FOUND_CHANGESETS), at.options);
       if (!changeset) throw new Error(`Changeset ${changesetId} was not found.`);
       return changeset;
     },

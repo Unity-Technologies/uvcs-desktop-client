@@ -9,7 +9,7 @@ import {
   change,
   changesetsFound,
   diffRecord,
-  mergeOutput,
+  mergePreviewOutput,
   pendingStatus,
   shelvesCreated,
   statusHeader,
@@ -41,7 +41,7 @@ function blockedWorkspace(workspacePath: string, { pending: changed = ['src/old.
   const pendingChanges = (): string => pendingStatus(workspacePath, ...pending.map((path) => change('CH', path)));
   const shelveMerge: CmAnswer = ({ args }) => {
     if (args.includes('--merge')) return '';
-    return mergeOutput(['APPLY', 'ADD', '/src/old.txt'], ...(putBackConflicts ? [['DIR_CONFLICT', 'CHG_RM', 'Change/Delete conflict', 'x', 'Modified /src/old.txt', 'Deleted /src/old.txt', '29', 'False', 'CHG', '/src/old.txt', 'RM', '/src/old.txt']] : []));
+    return mergePreviewOutput(['APPLY', 'ADD', '/src/old.txt'], ...(putBackConflicts ? [['DIR_CONFLICT', 'CHG_RM', 'Change/Delete conflict', 'x', 'Modified /src/old.txt', 'Deleted /src/old.txt', '29', 'False', 'CHG', '/src/old.txt', 'RM', '/src/old.txt']] : []));
   };
   const fake = fakeCmClient({
     'status --header --xml': statusHeader('/main/task1'),
@@ -52,7 +52,6 @@ function blockedWorkspace(workspacePath: string, { pending: changed = ['src/old.
     'status --controlledchanged --changed': pendingChanges,
     'status --iscochanged': pendingChanges,
     'status --checkout': pendingStatus(workspacePath),
-    'status --short': () => pending.map((path) => `CH ${path}\n`).join(''),
     'shelveset create': async ({ args }) => {
       shelveComment = await readFile(optionValue(args, '-commentsfile=')!, 'utf8');
       return shelvesCreated({ id: 12 });
