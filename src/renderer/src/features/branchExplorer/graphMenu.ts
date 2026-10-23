@@ -1,4 +1,4 @@
-import { workspacePlace } from '@shared/domain/place';
+import type { Place } from '@shared/domain/place';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu, withEntries } from '../../lib/menuGroups';
@@ -13,7 +13,7 @@ import { labelInfo } from './model/graphLabels';
 import type { GraphLayout, Lane } from './model/layoutGraph';
 
 interface GraphMenuContext {
-  workspacePath: string;
+  place: Place;
   layout: GraphLayout;
   /** What the workspace is on, as the lists' menus take it. */
   currentBranch: string | undefined;
@@ -38,7 +38,7 @@ export function graphMenu(target: GraphTarget | null, context: GraphMenuContext)
       return graphBranchMenu(target.lane, context, host);
     case 'label': {
       const { label } = target;
-      return withEntries(labelMenu(workspacePlace(context.workspacePath), [labelInfo(context.layout, label, context.repository ?? '')], host), [
+      return withEntries(labelMenu(context.place, [labelInfo(context.layout, label, context.repository ?? '')], host), [
         menuAction('labeledChangeset', () => context.goToChangeset(label.changeset)),
       ]);
     }
@@ -60,22 +60,22 @@ export function graphMenu(target: GraphTarget | null, context: GraphMenuContext)
  * The canvas itself gives the chip's branch menu to a right-click and the context-menu key (`targetAt(..., false)`,
  * `graphKeyboard`); this one reads as the Code reviews view's wherever a chip's menu is asked for.
  */
-function graphCodeReviewMenu(review: CodeReviewSummary, { workspacePath, layout, currentBranch }: GraphMenuContext): MenuEntry[] {
+function graphCodeReviewMenu(review: CodeReviewSummary, { place, layout, currentBranch }: GraphMenuContext): MenuEntry[] {
   const reviewed = [...layout.lanesByBranch.values()].find((lane) => lane.branch.id === review.targetBranchId)?.branch.name;
   const workspaceOn = currentBranch === undefined ? undefined : { kind: 'branch' as const, name: currentBranch };
-  return codeReviewMenu(workspacePlace(workspacePath), [reviewed === undefined ? review : { ...review, target: { kind: 'branch', branch: reviewed } }], workspaceOn);
+  return codeReviewMenu(place, [reviewed === undefined ? review : { ...review, target: { kind: 'branch', branch: reviewed } }], workspaceOn);
 }
 
-function graphChangesetMenu(id: number, { workspacePath, layout, currentBranch, loadedChangeset, repository, goToChangeset }: GraphMenuContext, host: MenuHost): MenuEntry[] {
+function graphChangesetMenu(id: number, { place, layout, currentBranch, loadedChangeset, repository, goToChangeset }: GraphMenuContext, host: MenuHost): MenuEntry[] {
   const changeset = layout.nodes.get(id)?.changeset;
   if (!changeset) return [];
-  const menu = changesetMenu({ place: workspacePlace(workspacePath), loadedChangeset, loadedBranch: currentBranch, repository }, [changeset], host);
+  const menu = changesetMenu({ place, loadedChangeset, loadedBranch: currentBranch, repository }, [changeset], host);
   return withEntries(menu, [layout.nodes.has(changeset.parent) && menuAction('parent', () => goToChangeset(changeset.parent))]);
 }
 
-function graphBranchMenu(lane: Lane, { workspacePath, layout, currentBranch, repository, goToChangeset, showRelatedTo }: GraphMenuContext, host: MenuHost): MenuEntry[] {
+function graphBranchMenu(lane: Lane, { place, layout, currentBranch, repository, goToChangeset, showRelatedTo }: GraphMenuContext, host: MenuHost): MenuEntry[] {
   const { branch, baseChangeset } = lane;
-  const menu = branchMenu(workspacePlace(workspacePath), [{ ...branch, repository }], currentBranch, host);
+  const menu = branchMenu(place, [{ ...branch, repository }], currentBranch, host);
   return withEntries(menu, [
     layout.nodes.has(branch.headChangeset) && menuAction('head', () => goToChangeset(branch.headChangeset)),
     baseChangeset !== null && menuAction('base', () => goToChangeset(baseChangeset)),

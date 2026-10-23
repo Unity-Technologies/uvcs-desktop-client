@@ -21,4 +21,11 @@ describe('branchExplorerFinds', () => {
     expect(finds.merges[2]).toMatch(/^where date >= '2026-07-01T/);
     expect(finds.labels[2]).toBe(finds.merges[2]);
   });
+
+  it('names the repository last on every find when no workspace tells cm which', () => {
+    const finds = branchExplorerFinds({ sinceDate: '2026-07-01', includeHidden: false }, 'game@local');
+    expect(finds.branches[2]).toBe("on repository 'game@local'");
+    expect(finds.hiddenBranches[2]).toBe("where hidden = 'true' on repository 'game@local'");
+    expect(finds.merges[2]).toMatch(/^where date >= '2026-07-01T.* on repository 'game@local'$/);
+  });
 });

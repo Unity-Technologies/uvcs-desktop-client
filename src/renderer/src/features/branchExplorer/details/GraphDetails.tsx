@@ -1,5 +1,4 @@
-import { workspacePlace } from '@shared/domain/place';
-import { useWorkspaceInfo, useWorkspacePath } from '../../../app/workspace/useWorkspace';
+import { usePlace, usePlaceRepository } from '../../../app/workspace/useWorkspace';
 import type { ObjectLinks } from '../../../components/objectLinks';
 import { NoSelection } from '../../../components/NoSelection';
 import type { MenuEntry } from '../../../lib/actions';
@@ -30,8 +29,8 @@ interface GraphDetailsProps {
  * them, their links leading around the graph.
  */
 export function GraphDetails({ selection, layout, pendingChangeCount, menuFor, goToChangeset, selectBranch }: GraphDetailsProps) {
-  const workspacePath = useWorkspacePath();
-  const repository = useWorkspaceInfo().data?.repository ?? '';
+  const place = usePlace();
+  const repository = usePlaceRepository() ?? '';
   const label = selectedLabel(layout, selection, repository);
   const lane = selection?.kind === 'branch' ? layout.lanesByBranch.get(selection.name) : undefined;
   const node = selection?.kind === 'changeset' ? layout.nodes.get(selection.id) : undefined;
@@ -43,7 +42,7 @@ export function GraphDetails({ selection, layout, pendingChangeCount, menuFor, g
   };
 
   if (label) {
-    return <LabelDetails key={label.name} place={workspacePlace(workspacePath)} label={label} menu={menuFor({ kind: 'label', label, more: [] })} links={links} />;
+    return <LabelDetails key={label.name} place={place} label={label} menu={menuFor({ kind: 'label', label, more: [] })} links={links} />;
   }
   if (node) {
     return <GraphChangesetDetails key={node.changeset.id} node={node} layout={layout} menu={menuFor({ kind: 'changeset', id: node.changeset.id })} links={links} />;

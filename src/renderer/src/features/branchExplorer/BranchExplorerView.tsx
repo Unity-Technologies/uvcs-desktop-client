@@ -3,7 +3,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import type { BranchExplorerData } from '@shared/domain/branchExplorer';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
-import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace, usePlaceRepository, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { useWorkspaceUser } from '../../app/account/accounts';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { branchWorkedOn } from '../../components/workingObject';
@@ -46,8 +46,9 @@ import styles from './BranchExplorerView.module.css';
 const NO_REVIEWS: ReadonlyMap<number, CodeReviewSummary> = new Map();
 
 export function BranchExplorerView() {
-  const workspacePath = useWorkspacePath();
+  const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
+  const placeRepository = usePlaceRepository();
   const { data, isPending, isFetching, isPlaceholderData, error } = useBranchExplorerData();
   const preferences = useBranchExplorerPreferences();
   const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, detailsOpen, people, showComments, showAvatars } = preferences;
@@ -64,7 +65,7 @@ export function BranchExplorerView() {
   /** Changesets the user expanded out of "+N" nodes. */
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(new Set());
 
-  const repository = workspace?.repository ?? '';
+  const repository = placeRepository ?? '';
   const currentBranch = branchWorkedOn(workspace?.selector) ?? null;
   const homeChangeset = workspace?.loadedChangeset ?? null;
   // On a label or a changeset, the workspace's changes go on the loaded changeset's branch.
@@ -174,11 +175,11 @@ export function BranchExplorerView() {
 
   const menuFor = (target: GraphTarget | null) =>
     graphMenu(target, {
-      workspacePath,
+      place,
       layout: layout!,
       currentBranch: currentBranch ?? undefined,
       loadedChangeset: workspace?.loadedChangeset,
-      repository: workspace?.repository,
+      repository: placeRepository,
       goToChangeset,
       showRelatedTo: (name) => focusOn(name, focusHops),
       revealCreatedBranch,

@@ -1,14 +1,16 @@
-import { workspacePlace } from '@shared/domain/place';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
+import { roundTripDate } from '../cm/findQuery';
 import { formatOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient } from '../cm/testing/fakeCmClient';
 import { createBranchExplorerService } from './branchExplorerService';
 import { serviceContext } from './testing/serviceContext';
 
 const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
+const IN_WORKSPACE = workspacePlace(WORKSPACE);
 const DAY = '2026-09-01T10:00:00+02:00';
 
 const BRANCHES = formatOutput(['3', '/main', '', 'ana', DAY, '5', ''], ['37', '/main/task1', '/main', 'ana', DAY, '5', 'Task']);
@@ -34,7 +36,7 @@ describe('Branch Explorer load', () => {
   it('reads the graph with five finds, the merges in a process of their own', async () => {
     const { service, commands } = branchExplorer();
 
-    await service.load(WORKSPACE, { includeHidden: false });
+    await service.load(IN_WORKSPACE, { includeHidden: false });
 
     expect(commands.map(({ via, args }) => [via, args[1]])).toEqual([
       ['query', 'branch'],
@@ -49,7 +51,7 @@ describe('Branch Explorer load', () => {
   it('reads each find as records as they arrive, never holding its whole output: a big repository answers with hundreds of MB', async () => {
     const { service, commands } = branchExplorer();
 
-    await service.load(WORKSPACE, { includeHidden: false });
+    await service.load(IN_WORKSPACE, { includeHidden: false });
 
     expect(commands.map((command) => command.readsRecords)).toEqual([true, true, true, true, true]);
   });
@@ -57,7 +59,7 @@ describe('Branch Explorer load', () => {
   it('draws the visible branches, changesets, merge links and labels', async () => {
     const { service } = branchExplorer();
 
-    const graph = await service.load(WORKSPACE, { includeHidden: false });
+    const graph = await service.load(IN_WORKSPACE, { includeHidden: false });
 
     expect(graph.branches.map((branch) => branch.name)).toEqual(['/main', '/main/task1']);
     expect(graph.changesets.map((changeset) => changeset.id)).toEqual([0, 2, 5]);
@@ -71,7 +73,7 @@ describe('Branch Explorer load', () => {
   it('draws hidden branches too when asked, and reads their changesets', async () => {
     const { service, lines } = branchExplorer();
 
-    const graph = await service.load(WORKSPACE, { includeHidden: true });
+    const graph = await service.load(IN_WORKSPACE, { includeHidden: true });
 
     expect(graph.branches.map((branch) => [branch.name, branch.isHidden])).toContainEqual(['/main/old', true]);
     expect(lines().find((line) => line.startsWith('find changeset'))).toContain("ignorehidden = 'true'");
@@ -80,14 +82,28 @@ describe('Branch Explorer load', () => {
   it('remembers every branch name, hidden ones too, so code reviews name their branches without asking cm', async () => {
     const { service, branchNames, commands } = branchExplorer();
 
-    await service.load(WORKSPACE, { includeHidden: false });
+    await service.load(IN_WORKSPACE, { includeHidden: false });
 
-    expect(await branchNames.resolve(workspacePlace(WORKSPACE), [21, 37, 99])).toEqual(
+    expect(await branchNames.resolve(IN_WORKSPACE, [21, 37, 99])).toEqual(
       new Map([
         [21, '/main/old'],
         [37, '/main/task1'],
       ]),
     );
     expect(commands).toHaveLength(5);
+  });
+});
+
+describe('Branch Explorer of a repository explored without a workspace', () => {
+  it('reads the graph with the same five finds, each naming the repository, outside every workspace', async () => {
+    const { service, commands, branchNames } = branchExplorer();
+    const onRepository = repositoryPlace('game@local');
+
+    await service.load(onRepository, { sinceDate: '2026-07-01', includeHidden: false });
+
+    const since = `where date >= '${roundTripDate('2026-07-01')}' on repository 'game@local'`;
+    expect(commands.map(({ args }) => args[2])).toEqual(["on repository 'game@local'", "where hidden = 'true' on repository 'game@local'", since, since, since]);
+    expect(commands.every(({ options }) => options.outsideWorkspaces)).toBe(true);
+    expect(await branchNames.resolve(onRepository, [21])).toEqual(new Map([[21, '/main/old']]));
   });
 });

@@ -119,7 +119,7 @@ const pendingLocks = new Map([['src/a.ts', { mine: false, owner: 'ana', workspac
 // /main/task keeps its object id, as the code review of it names it (`targetBranchId`).
 const layout = layoutGraph({ ...sampleHistory(), branches: [...sampleHistory().branches, { ...graphBranch('/main/task', '/main', 5), id: branch.id }] });
 const graphContext = {
-  workspacePath: ws,
+  place: workspacePlace(ws),
   layout,
   currentBranch: '/main',
   loadedChangeset: 6,
@@ -247,6 +247,9 @@ const REPOSITORY_MENUS: Record<string, () => MenuEntry[]> = {
   repositoryCodeReview: () => codeReviewMenu(onRepository, [branchReview]),
   repositoryCodeReviews: () => codeReviewMenu(onRepository, [review, changesetReview]),
   repositoryShelve: () => shelveMenu(onRepository, [shelve]),
+  repositoryGraphChangeset: () => graphMenu({ kind: 'changeset', id: 5 }, { ...graphContext, place: onRepository, currentBranch: undefined, loadedChangeset: undefined }),
+  repositoryGraphBranch: () => graphMenu({ kind: 'branch', lane }, { ...graphContext, place: onRepository, currentBranch: undefined, loadedChangeset: undefined }),
+  repositoryGraphLabel: () => graphMenu({ kind: 'label', label: sampleHistory().labels[0]!, more: [] }, { ...graphContext, place: onRepository }),
 };
 
 /**
