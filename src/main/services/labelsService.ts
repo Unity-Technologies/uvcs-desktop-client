@@ -8,8 +8,8 @@ import type { ServiceContext } from './ServiceContext';
 
 export function createLabelsService({ cm }: ServiceContext): LabelsApi {
   return {
-    async list(workspacePath, filter) {
-      const output = await cm.query(findArgs(FOUND_LABELS, filter, 'date desc'), { cwd: workspacePath });
+    async list(workspacePath, filter, repository) {
+      const output = await cm.query(findArgs(FOUND_LABELS, filter, 'date desc', [], repository), { cwd: workspacePath });
       return readRecords(FOUND_LABELS, output);
     },
 

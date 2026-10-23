@@ -29,6 +29,15 @@ describe('labels', () => {
     expect(listed).toEqual([{ id: 80, name: 'v1.0', changeset: 12, branch: '/main', comment: 'First', owner: 'ana', date: '2026-09-25T10:00:00+02:00', repository: 'game@local' }]);
   });
 
+  it("lists an xlinked repository's labels with the same one cm find", async () => {
+    const { service, commands } = labels({ 'find label': recordsOutput(FOUND_LABELS, { ...V1, repname: 'lib' }) });
+
+    const listed = await service.list(WORKSPACE, {}, 'lib@local');
+
+    expect(commands).toMatchObject([{ via: 'query', args: findQueryArgs(FOUND_LABELS, "order by date desc on repository 'lib@local'") }]);
+    expect(listed.map((label) => label.repository)).toEqual(['lib@local']);
+  });
+
   it('finds one label by its name with one cm find, none when there is no such label', async () => {
     const { service, commands } = labels({ "find label where name = 'v1.0'": recordsOutput(FOUND_LABELS, V1), "find label where name = 'v9'": '' });
 

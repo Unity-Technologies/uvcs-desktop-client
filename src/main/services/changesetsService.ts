@@ -13,8 +13,8 @@ const IGNORE_HIDDEN = "ignorehidden = 'true'";
 export function createChangesetsService({ cm }: ServiceContext): ChangesetsApi {
   return {
     // Read as they arrive: every changeset of a large repository (280,000) is tens of MB.
-    list(workspacePath, filter) {
-      const args = findArgs(FOUND_CHANGESETS, filter, 'changesetid desc', filter.branch ? [IGNORE_HIDDEN] : []);
+    list(workspacePath, filter, repository) {
+      const args = findArgs(FOUND_CHANGESETS, filter, 'changesetid desc', filter.branch ? [IGNORE_HIDDEN] : [], repository);
       return cm.queryRecords(args, layoutReader(FOUND_CHANGESETS), { cwd: workspacePath });
     },
 

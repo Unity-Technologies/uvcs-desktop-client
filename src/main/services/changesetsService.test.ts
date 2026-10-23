@@ -52,6 +52,14 @@ describe('changesets', () => {
     ]);
   });
 
+  it("lists an xlinked repository's newest changesets with the same one cm find", async () => {
+    const { service, commands } = changesets({ 'find changeset': recordsOutput(FOUND_CHANGESETS, changesetRecord(4)) });
+
+    await service.list(WORKSPACE, { limit: 2000 }, 'lib@acme@cloud');
+
+    expect(commands).toMatchObject([{ via: 'query', args: findQueryArgs(FOUND_CHANGESETS, "order by changesetid desc limit 2000 on repository 'lib@acme@cloud'") }]);
+  });
+
   // `cm find changeset` leaves a hidden branch's changesets out unless `ignorehidden` brings them in: a branch asked
   // for by name shows its changesets, hidden or not; the list of every branch keeps hidden branches out.
   it("lists a branch's changesets whether the branch is hidden or not, and every branch's without hidden ones", async () => {

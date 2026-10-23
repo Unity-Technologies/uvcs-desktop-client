@@ -9,7 +9,8 @@ export interface CreateLabelRequest {
 }
 
 export interface LabelsApi {
-  list(workspacePath: string, filter: QueryFilter): Promise<Label[]>;
+  /** `repository` (`name@server`) lists another repository's labels than the workspace's, an xlinked one's. */
+  list(workspacePath: string, filter: QueryFilter, repository?: string): Promise<Label[]>;
   /** One label by its name (a light `cm find`), or null when there is none: a link names labels so. */
   get(workspacePath: string, name: string): Promise<Label | null>;
   create(workspacePath: string, request: CreateLabelRequest): Promise<void>;

@@ -2,8 +2,8 @@ import type { Changeset } from '../domain/changeset';
 import type { QueryFilter } from '../domain/query';
 
 export interface ChangesetsApi {
-  /** Newest first. */
-  list(workspacePath: string, filter: QueryFilter): Promise<Changeset[]>;
+  /** Newest first. `repository` (`name@server`) lists another repository's than the workspace's, an xlinked one's. */
+  list(workspacePath: string, filter: QueryFilter, repository?: string): Promise<Changeset[]>;
   /** `repository` reads a changeset of another repository than the workspace's (an item's, under an xlink). */
   get(workspacePath: string, changesetId: number, repository?: string): Promise<Changeset>;
   editComment(workspacePath: string, changesetId: number, comment: string): Promise<void>;
