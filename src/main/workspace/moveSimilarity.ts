@@ -17,16 +17,26 @@ export function comparedLines(text: string): string[] {
   return lines.map((line) => line.replace(/\s+/g, ''));
 }
 
-export function textSimilarity(deletedLines: readonly string[], addedLines: readonly string[]): number {
+/**
+ * The most a diff may work, in lines times changes: Myers' diff takes about (lines of both) × (changes found) steps,
+ * and runs in one go on the main process, which answers no other call meanwhile. A few thousand lines are measured
+ * whatever they changed; two large files, only while they're alike (for 50,000 lines each, up to 200 changes).
+ */
+export const MAX_DIFF_WORK = 20_000_000;
+
+/** The lines' similarity, or null where telling it would take more than `maxWork` (`MAX_DIFF_WORK`). */
+export function textSimilarity(deletedLines: readonly string[], addedLines: readonly string[], maxWork = MAX_DIFF_WORK): number | null {
   if (deletedLines.length === 0) return addedLines.length === 0 ? 1 : 0;
   // More changes than the deleted file has lines read as 0, so no diff needs to find more than that many.
-  const limit = deletedLines.length;
-  if (changesAtLeast(deletedLines, addedLines) >= limit) return 0;
+  const lines = deletedLines.length;
+  if (changesAtLeast(deletedLines, addedLines) >= lines) return 0;
+  const limit = Math.min(lines, Math.floor(maxWork / (deletedLines.length + addedLines.length)));
   const ids = lineIds(deletedLines, addedLines);
   const changes = diffArrays(ids.deleted, ids.added, { maxEditLength: limit });
-  if (changes === undefined) return 0;
+  // Past the limit: no more alike than 0 where it is the file's lines, unknown where the work stopped it first.
+  if (changes === undefined) return limit === lines ? 0 : null;
   const changed = changes.reduce((sum, change) => sum + (change.added || change.removed ? change.count : 0), 0);
-  return 1 - Math.min(changed, limit) / limit;
+  return 1 - Math.min(changed, lines) / lines;
 }
 
 /** `cm`'s `GetBinChangesPerUnit`: an empty deleted file is alike only another empty one. */

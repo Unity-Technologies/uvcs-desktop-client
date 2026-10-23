@@ -33,6 +33,19 @@ describe('text similarity', () => {
     expect(textSimilarity([], ['a'])).toBe(0);
   });
 
+  it("doesn't tell what would take more work than allowed: the same lines reordered, in large files", () => {
+    const deleted = numbered(2_000);
+    const reordered = [...deleted.slice(1_000), ...deleted.slice(0, 1_000)];
+    const work = 4_000 * 100;
+
+    // The same lines in another order pass the multiset bound and need a long diff.
+    expect(textSimilarity(deleted, reordered, work)).toBeNull();
+    // Alike files need a short one, within the same work.
+    expect(textSimilarity(deleted, [...deleted.slice(0, 1_990), ...numbered(10, 'new')], work)).toBeCloseTo(0.99);
+    // Unlike ones need none.
+    expect(textSimilarity(deleted, numbered(2_000, 'other'), work)).toBe(0);
+  });
+
   // A dissimilar pair is told without a diff; a similar one runs a diff bounded by the deleted file's lines.
   it('scores large files', () => {
     const deleted = numbered(5_000);

@@ -11,7 +11,10 @@ import type {
   PendingChangesFilter,
   PendingChangesSnapshot,
 } from '@shared/domain/pendingChanges';
+import { spec } from '@shared/domain/specs';
 import { checkinArgs } from '../cm/checkinArgs';
+import { deletedFilesArgs, parseDeletedFiles } from '../cm/deletedFiles';
+import { textForLog } from '../cm/hideSecrets';
 import { readCheckinOutput } from '../cm/checkinOutput';
 import { explainLockedItems } from '../cm/lockedItems';
 import { pendingChangesStatusOptions } from '../cm/pendingChangesStatusOptions';
@@ -19,7 +22,7 @@ import { readCheckinProgress } from '../cm/progress/checkinProgress';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { withTempDirectory, withTempFile } from '../files/tempFile';
 import { moveArgs } from '../files/moveItems';
-import { toAbsolutePath, toAbsolutePaths } from '../files/workspacePaths';
+import { toAbsolutePaths, workspaceFileOf } from '../files/workspacePaths';
 import { addFilterRules } from '../workspace/filterRuleFile';
 import { readPendingChanges } from '../workspace/readPendingChanges';
 import { BINARY_SNIFF_BYTES, looksBinary } from '../files/fileContent';
@@ -77,16 +80,19 @@ export function createPendingChangesService({ cm, operations, revisionCat }: Ser
   function moveSimilarities(workspacePath: string, pairs: MovePair[]): Promise<MoveSimilarity[]> {
     return withTempDirectory((directory) => {
       let saved = 0;
+      // The paths come from the window, which isn't trusted: each one must be inside the workspace (`workspaceFileOf`).
+      const fileOf = (path: string) => workspaceFileOf(workspacePath, path);
       return measureMoveSimilarities(pairs, {
-        // A deleted file's loaded revision, by its workspace path: `cm cat` reads it there, under an xlink too, so the
-        // paths of one workspace share a batch (`RevisionCat`), one `cm cat` for every deleted file.
-        readDeleted: async (path) => {
+        listDeleted: async (paths) => parseDeletedFiles(await cm.query(deletedFilesArgs(paths.map(fileOf)), { cwd: workspacePath })),
+        // By revision, in its repository: `RevisionCat` reads those asked together with a `cm cat` per repository.
+        readDeleted: async ({ revision }) => {
           const target = join(directory, String(saved++));
-          await revisionCat.save(workspacePath, { spec: toAbsolutePath(workspacePath, path), repository: workspacePath }, target);
+          await revisionCat.save(workspacePath, { spec: spec.revision(revision), repository: revision.repository }, target);
           return readFile(target);
         },
-        glanceAtAdded: (path) => glanceAt(toAbsolutePath(workspacePath, path)),
-        readAdded: (path) => readFile(toAbsolutePath(workspacePath, path)),
+        glanceAtAdded: (path) => glanceAt(fileOf(path)),
+        readAdded: (path) => readFile(fileOf(path)),
+        onUnreadable: (path, error) => console.warn(`[search matches] Couldn't read ${path} to measure it:`, textForLog(String(error))),
       });
     });
   }

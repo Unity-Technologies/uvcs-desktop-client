@@ -1,15 +1,16 @@
 import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, realpath, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import type { OperationProgress } from '@shared/domain/operation';
 import type { PendingChangesFilter } from '@shared/domain/pendingChanges';
 import { CmError } from '../cm/CmError';
 import { statusRecordsArgs } from '../cm/pendingChangesRecords';
-import { change, pendingStatus } from '../cm/testing/cmOutput';
+import { change, pendingStatus, recordsOutput } from '../cm/testing/cmOutput';
 import { catReadsOf, fakeCat } from '../cm/testing/fakeCat';
 import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { TREE_ITEMS } from '../cm/treeItems';
 import { DiskDetails } from '../files/DiskDetails';
 import { OperationTracker } from '../operations/OperationTracker';
 import { createPendingChangesService } from './pendingChangesService';
@@ -239,15 +240,28 @@ describe('recording a move', () => {
 });
 
 describe('how alike the items of a move are', () => {
-  it('reads every deleted file with one cm cat and the new ones from disk, telling text from binary by content', async () => {
+  /** A workspace on disk holding the new files, and `cm` answering for the deleted ones as it would. */
+  async function measuring(deleted: Record<string, { type: 'txt' | 'bin'; content: Buffer | string }>, added: Record<string, Buffer | string>) {
     const workspace = await mkdtemp(join(tmpdir(), 'similar-'));
-    await mkdir(join(workspace, 'src'));
-    await mkdir(join(workspace, 'art'));
-    await writeFile(join(workspace, 'src', 'Hero.cs'), 'a\nb\nc\nd\n');
-    await writeFile(join(workspace, 'art', 'new.png'), Buffer.alloc(900, 0));
-    const old = (path: string) => join(workspace, ...path.split('/'));
-    const oldFiles: Record<string, Buffer | string> = { [old('src/Player.cs')]: 'a\nb\nc\nx\n', [old('src/Enemy.cs')]: 'q\nr\n', [old('art/hero.png')]: Buffer.alloc(1000, 0) };
-    const { service, commands } = pendingChanges({ cat: fakeCat((spec) => oldFiles[spec]) });
+    for (const [path, content] of Object.entries(added)) {
+      await mkdir(join(workspace, ...path.split('/').slice(0, -1)), { recursive: true });
+      await writeFile(join(workspace, ...path.split('/')), content);
+    }
+    const listed = Object.entries(deleted).map(([path, { type, content }], index) => ({ path, type, content, revid: 10 + index }));
+    // `cm ls` prints the path relative to the workspace, in the OS's separators.
+    const ls = recordsOutput(
+      TREE_ITEMS,
+      ...listed.map(({ path, type, content, revid }) => ({ name: path.split('/').pop()!, wkpath: path.split('/').join(sep), type, size: content.length, revid, repspec: 'rep:game@local', changeset: 3 })),
+    );
+    const cat = fakeCat((catSpec) => listed.find(({ revid }) => catSpec === `revid:${revid}@game@local`)?.content);
+    return { workspace, ...pendingChanges({ ls, cat }) };
+  }
+
+  it('lists the deleted files with one cm ls, reads only the text ones by revision, and the new ones from disk', async () => {
+    const { workspace, service, commands } = await measuring(
+      { 'src/Player.cs': { type: 'txt', content: 'a\nb\nc\nx\n' }, 'src/Enemy.cs': { type: 'txt', content: 'q\nr\n' }, 'art/hero.png': { type: 'bin', content: Buffer.alloc(1000, 0) } },
+      { 'src/Hero.cs': 'a\nb\nc\nd\n', 'art/new.png': Buffer.alloc(900, 0) },
+    );
 
     const similarities = await service.moveSimilarities(workspace, [
       { deleted: 'src/Player.cs', added: 'src/Hero.cs' },
@@ -260,15 +274,35 @@ describe('how alike the items of a move are', () => {
     expect(similarities[1]).toBe(0);
     expect(similarities[2]).toBeCloseTo(0.9);
     expect(similarities[3]).toBe('notPairable');
-    expect(commands.map((command) => command.args[0])).toEqual(['cat']);
-    expect(catReadsOf(commands[0]!.args).map((read) => read.spec)).toEqual([old('src/Player.cs'), old('src/Enemy.cs'), old('art/hero.png')]);
+    expect(commands.map(({ args, via }) => [args[0], via])).toEqual([
+      ['ls', 'query'],
+      ['cat', 'query'],
+    ]);
+    expect(commands[0]!.args.slice(1, -1)).toEqual([join(workspace, 'src', 'Player.cs'), join(workspace, 'src', 'Enemy.cs'), join(workspace, 'art', 'hero.png')]);
+    expect(catReadsOf(commands[1]!.args).map((read) => read.spec)).toEqual(['revid:10@game@local', 'revid:11@game@local']);
   });
 
-  it("measures nothing it can't read: a deleted file cm doesn't find, a new one gone from disk", async () => {
-    const workspace = await mkdtemp(join(tmpdir(), 'similar-'));
-    const { service } = pendingChanges({ cat: fakeCat(() => undefined) });
+  // `RevisionCat` reads up to `MAX_QUICK_CAT` revisions in a pooled shell, one such command after another.
+  it('reads six deleted text files with two quick cm cats', async () => {
+    const deleted = Object.fromEntries(Array.from({ length: 6 }, (_, index) => [`src/Old${index}.cs`, { type: 'txt' as const, content: `line ${index}\n` }]));
+    const { workspace, service, commands } = await measuring(deleted, { 'src/New.cs': 'line 0\n' });
 
-    expect(await service.moveSimilarities(workspace, [{ deleted: 'gone.cs', added: 'missing.cs' }])).toEqual(['notMeasured']);
+    const similarities = await service.moveSimilarities(workspace, Object.keys(deleted).map((path) => ({ deleted: path, added: 'src/New.cs' })));
+
+    expect(similarities).toEqual([1, 0, 0, 0, 0, 0]);
+    expect(commands.map(({ args, via }) => [args[0], via])).toEqual([
+      ['ls', 'query'],
+      ['cat', 'query'],
+      ['cat', 'query'],
+    ]);
+  });
+
+  it("refuses a path outside the workspace: the window isn't trusted", async () => {
+    const { workspace, service, commands } = await measuring({}, {});
+
+    await expect(service.moveSimilarities(workspace, [{ deleted: '../secret.cs', added: 'a.cs' }])).resolves.toEqual(['notMeasured']);
+    await expect(service.moveSimilarities(workspace, [{ deleted: 'a.cs', added: '../../etc/passwd' }])).resolves.toEqual(['notMeasured']);
+    expect(commands.filter(({ args }) => args.some((arg) => arg.includes('secret')))).toEqual([]);
   });
 });
 

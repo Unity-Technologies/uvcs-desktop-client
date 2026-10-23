@@ -100,8 +100,10 @@ function plainBytes(bytes: Buffer): Uint8Array {
   return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 }
 
-/** A NUL byte near the start, as Git tells binary files: text in UTF-8 or a single-byte code page has none. */
-/** A NUL byte in the file's start: text never holds one. */
+/**
+ * A NUL byte near the start, as Git tells binary files: text in UTF-8 or a single-byte code page has none. UTF-16
+ * text has them, so it reads as binary.
+ */
 export function looksBinary(bytes: Buffer): boolean {
   return bytes.subarray(0, BINARY_SNIFF_BYTES).includes(0);
 }
