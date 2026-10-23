@@ -59,7 +59,7 @@ export function useMovedCode({ diff, comparisonMethod, fileName, layout, contain
     if (!container) return;
     const lines = linesOf(move, side);
     stopScrolling.current?.();
-    stopScrolling.current = scrollToChange(container, { index: 0, lines, newStart: move.additions.start }, virtualizer, true);
+    stopScrolling.current = scrollToChange(container, { index: 0, lines, newStart: move.additions.start }, virtualizer, 'move');
     flash.light(changeRows(lines));
   };
 

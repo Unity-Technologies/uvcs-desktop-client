@@ -2,7 +2,7 @@ import type { Virtualizer } from '@pierre/diffs';
 import type { Editor } from '@pierre/diffs/edit';
 import { useEffect, useImperativeHandle, useRef, type RefObject } from 'react';
 import type { ChangeRegion } from './changeBlocks';
-import { lineAtTopOf, scrollToChange, type ChangeView } from './changeView';
+import { lineAtTopOf, scrollToChange, type ChangeScroll, type ChangeView } from './changeView';
 import { changeRows } from './lineMarksCss';
 import { isTypingIn } from './pierreDom';
 import { useChangeFlash } from './useChangeFlash';
@@ -18,7 +18,7 @@ interface ChangeViewOptions {
   editor: RefObject<Editor | null>;
   /** Picks the change moved to, for ⌥⌘Z (`useBlockDiscard`). */
   pickChange: (change: ChangeRegion) => void;
-  /** The diff opened on a link's lines (`useLineLinks`' `focusLines`): it stays on them. */
+  /** The diff opened on a link's lines (`useLineLinks`' `focusLines`). */
   opensOnLines: boolean;
 }
 
@@ -32,17 +32,17 @@ export function useChangeView({ changeViewRef, containerRef, virtualizer, editor
   const stopScrolling = useRef<() => void>(undefined);
   useEffect(() => () => stopScrolling.current?.(), []);
 
-  const scrollTo = (change: ChangeRegion, smooth: boolean): HTMLElement | null => {
+  const scrollTo = (change: ChangeRegion, why: ChangeScroll): HTMLElement | null => {
     const container = containerRef.current;
     if (!container) return null;
     stopScrolling.current?.();
-    stopScrolling.current = scrollToChange(container, change, virtualizer, smooth);
+    stopScrolling.current = scrollToChange(container, change, virtualizer, why);
     return container;
   };
 
   useImperativeHandle(changeViewRef, () => ({
     reveal: (change: ChangeRegion) => {
-      const container = scrollTo(change, true);
+      const container = scrollTo(change, 'move');
       if (!container) return;
       changeFlash.light(changeRows(change.lines));
       pickChange(change);
@@ -52,9 +52,8 @@ export function useChangeView({ changeViewRef, containerRef, virtualizer, editor
         typedInto.focus({ lineNumber: Math.min(change.newStart, typedInto.getText().split('\n').length), preventScroll: true });
       }
     },
-    show: (change: ChangeRegion) => {
-      if (!opensOnLines) scrollTo(change, false);
-    },
+    show: (change: ChangeRegion) => void scrollTo(change, 'open'),
+    opensOnLines: () => opensOnLines,
     lineAtTop: (blocks) => (containerRef.current ? lineAtTopOf(containerRef.current, blocks) : null),
   }));
 }

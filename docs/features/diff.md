@@ -255,9 +255,10 @@ not rendered there yet is scrolled to where Pierre lays it out, `pierreLinePosit
 as changes are always in the hunks shown), lights up for a moment and, where discards are, is picked for ⌥⌘Z. Past
 the last or first change, a diff beside a list of files (a diff page, Changes: `FileStepsContext`) goes on to the next
 file's first change or the previous file's last, asking about unsaved edits first. A diff opened any other way
-(picked in a list, from a link, on a page) opens with its first change in view, as with unchanged lines collapsed,
-not lit nor counted until the first move goes to it (`openingStep`, `ChangeView.show`); one opened on a link's lines
-stays on them. A version shown alone (an added
+(picked in a list, from a link, on a page) opens with its first change in view, a few rows from the top unless it
+starts in view already (a collapsed diff's first hunk, whose bar stays above it: `ChangeScroll`), not lit nor counted
+until the first move goes to it (`openingStep`, `ChangeView.show`); one opened on a link's lines stays on them. It
+opens so once, as the diff first shows: changes typed or read later leave the view where it is. A version shown alone (an added
 or deleted file) is one change, "1 of 1"; a file with none to step through (an image, a binary, identical versions)
 keeps the arrows, "No changes", so stepping through the list never stops there. It steps through the files as the list
 shows them: in a tree, those in a closed folder are skipped. The list itself, its order and its List/Tree layout, are

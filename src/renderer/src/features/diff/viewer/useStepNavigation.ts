@@ -42,6 +42,8 @@ export interface StepView {
    * it opens where it is, unless stepped to from the file beside it.
    */
   show?: (index: number) => void;
+  /** Whether the view opened on lines of its own (a link's), which it stays on unless stepped to. */
+  opensOnLines?: () => boolean;
   /** How many steps start above the top of the view, read from the screen: where the first move goes from. */
   countAbove: () => number;
   /**
@@ -116,21 +118,27 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts }:
   latestMoveTo.current = moveTo;
 
   // Opened by a step from the file beside it: at its first or last step; opened otherwise, with its first step in
-  // view (`openingStep`). Once the view shows, and once: `opened` is set from then on.
+  // view (`openingStep`). Once, as the view first shows (or never, given up on): steps that come later, typed or
+  // read again, leave the view where it is.
   const arrival = useRef<Arrival | null | undefined>(undefined);
   const opened = useRef(false);
   useEffect(() => {
+    if (opened.current) return;
     if (arrival.current === undefined) arrival.current = files?.takeArrival(path) ?? null;
-    const at = opened.current ? null : openingStep(arrival.current, steps.length);
-    if (at === null) return;
+    const from = arrival.current;
     let frames = 0;
     let frame = 0;
     const arrive = (): void => {
-      if (latestView.current.isShown()) {
-        opened.current = true;
-        return at.movesTo ? latestMoveTo.current(at.index) : latestView.current.show?.(at.index);
+      const view = latestView.current;
+      const shown = view.isShown();
+      if (!shown && ++frames < ARRIVAL_MAX_FRAMES) {
+        frame = requestAnimationFrame(arrive);
+        return;
       }
-      if (++frames < ARRIVAL_MAX_FRAMES) frame = requestAnimationFrame(arrive);
+      opened.current = true;
+      const at = shown ? openingStep(from, steps.length, view.opensOnLines?.() ?? false) : null;
+      if (at?.movesTo) latestMoveTo.current(at.index);
+      else if (at) view.show?.(at.index);
     };
     // From the next frame, not at once: a development build's second mount (StrictMode) runs the view's cleanups,
     // which would stop the scroll started here, then this effect again, which would find the view opened already.

@@ -49,11 +49,13 @@ export interface Opening {
 /**
  * Where a view opens (`useStepNavigation`): stepped to from the file beside it, moved to its first or last step;
  * opened any other way (picked in a list, from a link, on a page), with its first step brought into view but not moved
- * to, so the first move down still goes to it. None without steps.
+ * to, so the first move down still goes to it. None without steps, nor on a link's lines (`opensOnLines`), which it
+ * stays on unless stepped to.
  */
-export function openingStep(arrival: Arrival | null, count: number): Opening | null {
+export function openingStep(arrival: Arrival | null, count: number, opensOnLines: boolean): Opening | null {
   if (count === 0) return null;
-  return arrival ? { index: arrivalChange(arrival, count)!, movesTo: true } : { index: 0, movesTo: false };
+  if (arrival) return { index: arrivalChange(arrival, count)!, movesTo: true };
+  return opensOnLines ? null : { index: 0, movesTo: false };
 }
 
 /** How many of the changes start above `line` of the modified file. */
