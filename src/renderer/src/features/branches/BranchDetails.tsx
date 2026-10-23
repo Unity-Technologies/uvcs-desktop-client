@@ -5,7 +5,7 @@ import type { BranchInfo } from '@shared/domain/branch';
 import { shortBranchName, spec } from '@shared/domain/specs';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { cmVersionQuery } from '../../app/startup/useCmAvailability';
-import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { DetailsHeading } from '../../components/DetailsHeading';
 import { PLAIN_LINKS, type ObjectLinks } from '../../components/objectLinks';
 import { branchWorkedOn } from '../../components/workingObject';
@@ -32,10 +32,10 @@ interface BranchDetailsProps {
 
 export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [] }: BranchDetailsProps) {
   const { data: workspace } = useWorkspaceInfo();
-  const workspacePath = useWorkspacePath();
+  const place = usePlace();
   const { data: cmVersion } = useQuery(cmVersionQuery);
   const isCurrent = branchWorkedOn(workspace?.selector) === branch.name;
-  const saveComment = editsBranchComments(cmVersion) ? (comment: string) => saveBranchComment(workspacePath, branch, comment) : undefined;
+  const saveComment = editsBranchComments(cmVersion) ? (comment: string) => saveBranchComment(place, branch, comment) : undefined;
   useShowInFollowingWindow(branchDiffPage(branch));
 
   return (

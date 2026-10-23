@@ -1,3 +1,4 @@
+import { placeId, type Place } from '@shared/domain/place';
 import type { Changeset } from '@shared/domain/changeset';
 import type { QueryFilter } from '@shared/domain/query';
 import { shortBranchName } from '@shared/domain/specs';
@@ -15,12 +16,12 @@ import type { ViewFilters } from '../../lib/viewFilters';
 const ANY_TIME_LIMIT = 2000;
 
 /**
- * A branch picked by name, with the workspace it was picked in: the store outlives the workspace a window shows, and
- * another workspace's repository may have no such branch, or another one by that name. It holds the time range and
+ * A branch picked by name, with the place it was picked in (`placeId`): the store outlives the place a window shows,
+ * and another place's repository may have no such branch, or another one by that name. It holds the time range and
  * people its history shows with, its own for the session, so picking a branch never changes what the view remembers.
  */
 export interface PickedBranch {
-  workspacePath: string;
+  pickedIn: string;
   name: string;
   since: SincePreset;
   people: PeoplePick;
@@ -48,8 +49,8 @@ export const CURRENT_BRANCH: Pick<ChangesetFilters, 'onlyCurrentBranch' | 'picke
  * history (Any time, capped as always) by everyone, with no text hiding some. The time range, the people and "This
  * branch" the view remembers stay as they were, and show again once the pick is cleared.
  */
-export function pickedBranchFilters(workspacePath: string, name: string): Pick<ChangesetFilters, 'text' | 'pickedBranch'> {
-  return { text: '', pickedBranch: { workspacePath, name, since: 'anyTime', people: EVERYONE } };
+export function pickedBranchFilters(place: Place, name: string): Pick<ChangesetFilters, 'text' | 'pickedBranch'> {
+  return { text: '', pickedBranch: { pickedIn: placeId(place), name, since: 'anyTime', people: EVERYONE } };
 }
 
 /** A branch picked by name is the repository's, so it is kept for the session, as the people picked by name are. */
@@ -58,20 +59,20 @@ export const CHANGESET_SESSION_FILTERS: readonly (keyof ChangesetFilters)[] = ['
 /** The time range and people the view shows and reads with. */
 export type ShownFilters = Pick<ChangesetFilters, 'since' | 'people'>;
 
-/** The branch picked in `workspacePath`; one picked in another workspace is none here. */
-function pickedIn(pickedBranch: PickedBranch | null, workspacePath: string): PickedBranch | null {
-  return pickedBranch?.workspacePath === workspacePath ? pickedBranch : null;
+/** The branch picked in `place`; one picked in another place is none here. */
+function pickedIn(pickedBranch: PickedBranch | null, place: Place): PickedBranch | null {
+  return pickedBranch?.pickedIn === placeId(place) ? pickedBranch : null;
 }
 
 /** The time range and people shown: the picked branch's own while one applies here, else those the view remembers. */
-export function shownFilters({ since, people, pickedBranch }: Pick<ChangesetFilters, 'since' | 'people' | 'pickedBranch'>, workspacePath: string): ShownFilters {
-  const picked = pickedIn(pickedBranch, workspacePath);
+export function shownFilters({ since, people, pickedBranch }: Pick<ChangesetFilters, 'since' | 'people' | 'pickedBranch'>, place: Place): ShownFilters {
+  const picked = pickedIn(pickedBranch, place);
   return picked ? { since: picked.since, people: picked.people } : { since, people };
 }
 
 /** A change to the time range or the people goes to the picked branch while one applies here, so the remembered ones stay. */
-export function shownFiltersChange(pickedBranch: PickedBranch | null, workspacePath: string, change: Partial<ShownFilters>): Partial<ChangesetFilters> {
-  const picked = pickedIn(pickedBranch, workspacePath);
+export function shownFiltersChange(pickedBranch: PickedBranch | null, place: Place, change: Partial<ShownFilters>): Partial<ChangesetFilters> {
+  const picked = pickedIn(pickedBranch, place);
   return picked ? { pickedBranch: { ...picked, ...change } } : change;
 }
 
@@ -79,15 +80,15 @@ export function shownFiltersChange(pickedBranch: PickedBranch | null, workspaceP
 export type BranchScope = { kind: 'all' } | { kind: 'current'; name: string } | { kind: 'picked'; name: string };
 
 /**
- * The branch filter as it applies in `workspacePath`: a branch picked in another workspace is none here, and "This
- * branch" is none while the workspace is on no branch (a label, a changeset).
+ * The branch filter as it applies in `place`: a branch picked in another place is none here, and "This branch" is
+ * none while the workspace is on no branch (a label, a changeset), or the place is a repository with no workspace.
  */
 export function branchScopeIn(
   { onlyCurrentBranch, pickedBranch }: Pick<ChangesetFilters, 'onlyCurrentBranch' | 'pickedBranch'>,
-  workspacePath: string,
+  place: Place,
   currentBranch: string | undefined,
 ): BranchScope {
-  const picked = pickedIn(pickedBranch, workspacePath);
+  const picked = pickedIn(pickedBranch, place);
   if (picked) return { kind: 'picked', name: picked.name };
   if (onlyCurrentBranch && currentBranch) return { kind: 'current', name: currentBranch };
   return { kind: 'all' };
@@ -140,7 +141,7 @@ export interface ChangesetChoice {
  * read (`recent`, at most `readLimit` of them; undefined while unread or when the read failed) whose row matches it,
  * and first the one whose number was typed (`1234`, `cs:1234`), so any changeset is reachable without listing them all.
  */
-export function changesetChoices(recent: readonly Changeset[] | undefined, readLimit: number, exclude: number, search: string): ChangesetChoice[] {
+export function changesetChoices(recent: readonly Changeset[] | undefined, readLimit: number, exclude: number | undefined, search: string): ChangesetChoice[] {
   const typed = typedChangesetNumber(search);
   const matching = (recent ?? [])
     .filter((changeset) => changeset.id !== exclude && changeset.id !== typed && matchesWordFilter(changesetRowTexts(changeset), search))

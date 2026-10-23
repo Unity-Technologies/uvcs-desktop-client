@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { runRead } from '../../app/operations/runOperation';
 import { menuAction } from '../../components/menuWords';
@@ -65,6 +66,6 @@ export async function revertToOlderSide(workspacePath: string, path: string, old
 
 async function changesetOf(workspacePath: string, olderSide: OlderSide): Promise<number | undefined> {
   if (olderSide.kind === 'changeset') return olderSide.changesetId;
-  const changeset = await runRead("Couldn't read the changeset", () => readChangeset(workspacePath, olderSide.changesetId));
+  const changeset = await runRead("Couldn't read the changeset", () => readChangeset(workspacePlace(workspacePath), olderSide.changesetId));
   return changeset?.parent;
 }

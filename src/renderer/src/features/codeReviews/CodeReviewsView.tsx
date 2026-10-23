@@ -3,7 +3,7 @@ import { useCallback, useMemo } from 'react';
 import { CODE_REVIEW_STATUSES, MAX_LISTED_CODE_REVIEWS, type CodeReview } from '@shared/domain/codeReview';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
-import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ObjectListView } from '../../components/ObjectListView';
 import { branchWorkedOn } from '../../components/workingObject';
@@ -19,7 +19,7 @@ import { openCreateCodeReviewDialog } from './CreateCodeReviewDialog';
 import { useSelectCreated } from './useSelectCreated';
 import { useCodeReviews } from './useCodeReviews';
 import { SincePicker } from '../../components/SincePicker';
-import { useWorkspaceUser } from '../../app/account/accounts';
+import { usePlaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { matchesPeople, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
@@ -39,11 +39,11 @@ import { codeReviewsQuery, reviewFilterTexts } from './codeReviewFilters';
 const ownerOf = (review: CodeReview): string => review.owner;
 
 export function CodeReviewsView() {
-  const workspacePath = useWorkspacePath();
+  const place = usePlace();
   const { data: workspace } = useWorkspaceInfo();
   const filters = useCodeReviewsViewStore();
   const { text: search, people, since, status, assignedToMe, update } = filters;
-  const me = useWorkspaceUser();
+  const me = usePlaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const [selection, setSelection] = useViewSelection('codeReviews');
   const { data: reviews, isPending, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, assignedToMe }));
@@ -59,14 +59,14 @@ export function CodeReviewsView() {
   const currentBranch = branchWorkedOn(workspace?.selector) ?? '';
   // On the workspace's branch, and selected once the refreshed list shows it.
   const newReview = useCallback(
-    () => openCreateCodeReviewDialog(workspacePath, { kind: 'branch', value: currentBranch }, (reviewId) => selectWhenShown(String(reviewId))),
-    [workspacePath, currentBranch, selectWhenShown],
+    () => openCreateCodeReviewDialog(place, { kind: 'branch', value: currentBranch }, (reviewId) => selectWhenShown(String(reviewId))),
+    [place, currentBranch, selectWhenShown],
   );
   useCommands(
     useMemo<Command[]>(() => [{ id: 'codeReviews.new', group: 'Code reviews', label: 'New code review…', icon: MessageSquareCode, run: newReview }], [newReview]),
   );
   const selected = visible.find((review) => reviewKey(review) === selection.anchor);
-  useCopyCommand('Code reviews', 'Code review', selection.selected.size === 1 && selected ? codeReviewCopyTexts(workspacePath, selected) : undefined);
+  useCopyCommand('Code reviews', 'Code review', selection.selected.size === 1 && selected ? codeReviewCopyTexts(place, selected) : undefined);
 
   const header = (
     <ViewHeader
@@ -76,7 +76,7 @@ export function CodeReviewsView() {
       subtitle={reviews && reviews.length >= MAX_LISTED_CODE_REVIEWS && 'newest'}
       actions={
         <>
-          <ViewRefreshButton workspacePath={workspacePath} fetching={isFetching} />
+          <ViewRefreshButton fetching={isFetching} />
           <Button variant="primary" icon={<Plus size={14} />} onClick={newReview}>
             New review
           </Button>
@@ -134,10 +134,10 @@ export function CodeReviewsView() {
         selection={selection}
         onSelectionChange={setSelection}
         onActivate={(review) => openReview(review)}
-        contextMenu={(rows) => codeReviewMenu(workspacePath, rows, workspace?.selector)}
+        contextMenu={(rows) => codeReviewMenu(place, rows, workspace?.selector)}
         initialSort={{ columnId: 'date', descending: true }}
         noun="code review"
-        details={selected && <CodeReviewDetails key={selected.id} review={selected} menu={codeReviewMenu(workspacePath, [selected], workspace?.selector)} />}
+        details={selected && <CodeReviewDetails key={selected.id} review={selected} menu={codeReviewMenu(place, [selected], workspace?.selector)} />}
       />
     </>
   );

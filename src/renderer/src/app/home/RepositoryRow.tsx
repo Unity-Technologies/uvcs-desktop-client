@@ -9,6 +9,7 @@ import { Button } from '../../ui/Button';
 import { Highlight } from '../../ui/Highlight';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
+import { exploreRepository } from '../workspace/exploreRepository';
 import { windowAskedBy, workspaceOpener } from '../workspace/workspaceWindowChoice';
 import { repositoryMenu } from './homeMenus';
 import { repositoryLabels } from './repositoryProjects';
@@ -67,9 +68,20 @@ export function RepositoryRow({ repository, project, workspaces, expanded, onTog
         ) : (
           // On every row it would read as a wall of buttons: it shows on the row under the pointer or the keyboard.
           workspaces.length === 0 && (
-            <Button size="small" className={styles.rowCreate} onClick={() => onCreateWorkspace(repository)}>
-              New workspace
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="small"
+                className={styles.rowCreate}
+                data-tip="Browse its history without downloading it"
+                onClick={(event) => exploreRepository(repository.spec, windowAskedBy(event))}
+              >
+                Explore
+              </Button>
+              <Button size="small" className={styles.rowCreate} onClick={() => onCreateWorkspace(repository)}>
+                New workspace
+              </Button>
+            </>
           )
         )}
         <ActionDropdownMenu entries={menu()}>

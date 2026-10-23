@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BrowserWindow } from 'electron';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { SavedWindow } from '@shared/domain/settings';
 import { EVENT_CHANNEL } from '@shared/ipc';
 import { memorySettings } from '../settings/testing/memorySettings';
@@ -31,6 +32,7 @@ function setUp(recentWorkspacePaths: string[] = [], openWindows: SavedWindow[] =
   const onWindowsChanged = vi.fn();
   const onClosed = vi.fn();
   const onLastWindowClosing = vi.fn();
+  const onRepositoryLeft = vi.fn();
   const settings = memorySettings({ recentWorkspacePaths, openWindows });
   const windows = new WorkspaceWindows({
     settings,
@@ -38,11 +40,12 @@ function setUp(recentWorkspacePaths: string[] = [], openWindows: SavedWindow[] =
     workspaceOf: (viewer) => shown.get(viewer),
     onWindowsChanged,
     onClosed,
+    onRepositoryLeft,
   });
-  const open = (workspacePath?: string): FakeWindow => windows.open(workspacePath) as unknown as FakeWindow;
+  const open = (workspacePath?: string): FakeWindow => windows.open(workspacePath === undefined ? undefined : workspacePlace(workspacePath)) as unknown as FakeWindow;
   /** The page of `window` now shows `workspacePath` (after taking its request, or picked on the home screen). */
   const shows = (window: FakeWindow, workspacePath: string): void => void shown.set(window.webContents.id, workspacePath);
-  return { windows, settings, open, shows, onWindowsChanged, onClosed, onLastWindowClosing };
+  return { windows, settings, open, shows, onWindowsChanged, onClosed, onLastWindowClosing, onRepositoryLeft };
 }
 
 const asBrowserWindow = (window: FakeWindow): BrowserWindow => window as unknown as BrowserWindow;
@@ -55,7 +58,7 @@ describe('one window per workspace', () => {
     open();
     game.minimize();
 
-    windows.showWorkspace(GAME);
+    windows.showPlace(workspacePlace(GAME));
     expect(fakeElectron.windows()).toHaveLength(2);
     expect(fakeElectron.focused()).toBe(game);
     expect(game.isMinimized()).toBe(false);
@@ -64,14 +67,14 @@ describe('one window per workspace', () => {
   it("opens a window for a workspace no window shows, which takes it once as its page starts", () => {
     const { windows } = setUp();
 
-    windows.showWorkspace(GAME);
+    windows.showPlace(workspacePlace(GAME));
     const [window] = fakeElectron.windows();
     expect(windows.workspaceIn(asBrowserWindow(window!))).toBe(GAME);
     // Showing it while its page starts: asking again brings it forward instead of opening a second one.
-    windows.showWorkspace(GAME);
+    windows.showPlace(workspacePlace(GAME));
     expect(fakeElectron.windows()).toHaveLength(1);
 
-    expect(windows.takeRequested(window!.webContents.id)).toBe(GAME);
+    expect(windows.takeRequested(window!.webContents.id)).toEqual(workspacePlace(GAME));
     expect(windows.takeRequested(window!.webContents.id)).toBeNull();
   });
 
@@ -79,9 +82,9 @@ describe('one window per workspace', () => {
     const { windows } = setUp();
     const game = mkdtempSync(join(tmpdir(), 'uvcs-game-'));
 
-    windows.showWorkspace(game);
-    windows.showWorkspace(join(tmpdir(), 'uvcs-deleted-workspace'));
-    expect(vi.mocked(createMainWindow).mock.calls.map(([, options]) => options?.workspacePath)).toEqual([game, undefined]);
+    windows.showPlace(workspacePlace(game));
+    windows.showPlace(workspacePlace(join(tmpdir(), 'uvcs-deleted-workspace')));
+    expect(vi.mocked(createMainWindow).mock.calls.map(([, options]) => options?.place)).toEqual([workspacePlace(game), undefined]);
   });
 
   it('finds the window showing a workspace, other than the one asking', () => {
@@ -89,9 +92,148 @@ describe('one window per workspace', () => {
     const game = open();
     shows(game, GAME);
 
-    expect(windows.windowShowing(GAME)).toBe(asBrowserWindow(game));
-    expect(windows.windowShowing(GAME, game.webContents.id)).toBeUndefined();
-    expect(windows.windowShowing(TOOLS)).toBeUndefined();
+    expect(windows.windowShowing(workspacePlace(GAME))).toBe(asBrowserWindow(game));
+    expect(windows.windowShowing(workspacePlace(GAME), game.webContents.id)).toBeUndefined();
+    expect(windows.windowShowing(workspacePlace(TOOLS))).toBeUndefined();
+  });
+});
+
+describe('a repository explored without a workspace', () => {
+  const GAME_REPOSITORY = repositoryPlace('game@local');
+
+  it("opens a window on it at once, no folder to look for, and brings that window forward when asked again", () => {
+    const { windows } = setUp();
+
+    windows.showPlace(GAME_REPOSITORY);
+    windows.showPlace(GAME_REPOSITORY);
+    const [window] = fakeElectron.windows();
+    expect(fakeElectron.windows()).toHaveLength(1);
+    expect(vi.mocked(createMainWindow).mock.calls[0]?.[1]?.place).toEqual(GAME_REPOSITORY);
+    expect(windows.takeRequested(window!.webContents.id)).toEqual(GAME_REPOSITORY);
+  });
+
+  it('is shown by the window that says it explores it, which shows no workspace, until it leaves it', () => {
+    const { windows, open } = setUp();
+    const window = open();
+
+    windows.repositoryShown(window.webContents.id, 'game@local');
+    expect(windows.placeIn(asBrowserWindow(window))).toEqual(GAME_REPOSITORY);
+    expect(windows.workspaceIn(asBrowserWindow(window))).toBeUndefined();
+    expect(windows.windowShowing(GAME_REPOSITORY)).toBe(asBrowserWindow(window));
+    expect(windows.windowShowing(repositoryPlace('game@acme@cloud'))).toBeUndefined();
+    expect(windows.explores('game@local')).toBe(true);
+    expect(windows.shownWorkspaces()).toEqual([]);
+
+    windows.repositoryShown(window.webContents.id, undefined);
+    expect(windows.placeIn(asBrowserWindow(window))).toBeUndefined();
+    expect(windows.explores('game@local')).toBe(false);
+  });
+
+  it('is told apart from a workspace on the same repository: each has its window', () => {
+    const { windows, open, shows } = setUp();
+    shows(open(), GAME);
+
+    windows.showPlace(GAME_REPOSITORY);
+    expect(fakeElectron.windows()).toHaveLength(2);
+  });
+
+  it('is saved as the app quits and opens again at launch', () => {
+    const { windows, settings, open } = setUp();
+    const window = open();
+    windows.repositoryShown(window.webContents.id, 'game@local');
+
+    windows.saveSession({ withViews: false });
+    expect(settings.get().openWindows.map(({ workspacePath, repository }) => ({ workspacePath, repository }))).toEqual([{ workspacePath: undefined, repository: 'game@local' }]);
+
+    fakeElectron.reset();
+    fakeElectron.app.ready = true;
+    vi.mocked(createMainWindow).mockClear();
+    const relaunched = setUp([], settings.get().openWindows);
+    expect(relaunched.windows.firstWorkspace()).toBeUndefined();
+    relaunched.windows.openFirst();
+    expect(vi.mocked(createMainWindow).mock.calls.map(([, options]) => options?.place)).toEqual([GAME_REPOSITORY]);
+  });
+
+  it('is explored no more by a window that made a workspace of it', () => {
+    const { windows, open, shows } = setUp();
+    const window = open();
+    windows.repositoryShown(window.webContents.id, 'game@local');
+
+    shows(window, GAME);
+    windows.workspaceShown(window.webContents.id, GAME);
+    expect(windows.explores('game@local')).toBe(false);
+    expect(windows.placeIn(asBrowserWindow(window))).toEqual(workspacePlace(GAME));
+  });
+
+  it("keeps exploring through a page's effects run twice (React's StrictMode): explored, left, explored again", () => {
+    const { windows, open } = setUp();
+    const window = open();
+
+    windows.repositoryShown(window.webContents.id, 'game@local');
+    windows.repositoryShown(window.webContents.id, undefined);
+    windows.repositoryShown(window.webContents.id, 'game@local');
+
+    expect(windows.explores('game@local')).toBe(true);
+    expect(windows.placeIn(asBrowserWindow(window))).toEqual(GAME_REPOSITORY);
+  });
+
+  it("keeps the page windows of the workspace a window made of the repository, its watch heard before it left the repository", () => {
+    const { windows, open, shows } = setUp();
+    const window = open();
+    windows.repositoryShown(window.webContents.id, 'game@local');
+    shows(window, GAME);
+    windows.workspaceShown(window.webContents.id, GAME);
+    const page = windows.openPage(window.webContents.id, { place: workspacePlace(GAME), page: { kind: 'history', path: 'a.cs' } }) as unknown as FakeWindow;
+
+    windows.repositoryShown(window.webContents.id, undefined);
+    expect(page.isDestroyed()).toBe(false);
+  });
+
+  it('forgets what a window explored once its page loads again (a reload), which says again what it shows', () => {
+    const { windows, open, onRepositoryLeft } = setUp();
+    const window = open();
+    windows.repositoryShown(window.webContents.id, 'game@local');
+
+    window.webContents.emit('did-navigate');
+    expect(windows.explores('game@local')).toBe(false);
+    expect(windows.windowShowing(GAME_REPOSITORY)).toBeUndefined();
+    expect(onRepositoryLeft).toHaveBeenCalledWith('game@local');
+  });
+
+  it('forgets what a closed window explored', () => {
+    const { windows, open } = setUp();
+    const window = open();
+    windows.repositoryShown(window.webContents.id, 'game@local');
+
+    window.close();
+    expect(windows.explores('game@local')).toBe(false);
+  });
+
+  it('lets a repository go once the last window exploring it leaves it, closes, or makes a workspace of it', () => {
+    const { windows, open, onRepositoryLeft } = setUp();
+    const [first, second, third] = [open(), open(), open()];
+    windows.repositoryShown(first.webContents.id, 'game@local');
+    windows.repositoryShown(second.webContents.id, 'game@local');
+    windows.repositoryShown(third.webContents.id, 'art@local');
+
+    windows.repositoryShown(first.webContents.id, 'game@local');
+    first.close();
+    expect(onRepositoryLeft).not.toHaveBeenCalled();
+    windows.repositoryShown(second.webContents.id, undefined);
+    windows.workspaceShown(third.webContents.id, GAME);
+    expect(onRepositoryLeft.mock.calls).toEqual([['game@local'], ['art@local']]);
+  });
+
+  it('closes the page windows a window opened on it once it leaves it', () => {
+    const { windows, open } = setUp();
+    const window = open();
+    windows.repositoryShown(window.webContents.id, 'game@local');
+    const page = windows.openPage(window.webContents.id, { place: GAME_REPOSITORY, page: { kind: 'history', path: 'a.cs' } }) as unknown as FakeWindow;
+
+    windows.repositoryShown(window.webContents.id, 'game@local');
+    expect(page.isDestroyed()).toBe(false);
+    windows.repositoryShown(window.webContents.id, undefined);
+    expect(page.isDestroyed()).toBe(true);
   });
 });
 
@@ -105,7 +247,7 @@ describe('a workspace requested from the OS (recent documents, the command line)
     expect(fakeElectron.windows()).toHaveLength(2);
     expect(fakeElectron.focused()).toBe(home);
     expect(home.webContents.sent).toEqual([[EVENT_CHANNEL, 'workspaceOpenRequested', {}]]);
-    expect(windows.takeRequested(home.webContents.id)).toBe(GAME);
+    expect(windows.takeRequested(home.webContents.id)).toEqual(workspacePlace(GAME));
   });
 
   it('opens a new window when every window shows another workspace', () => {
@@ -135,7 +277,7 @@ describe('a workspace requested from the OS (recent documents, the command line)
     expect(fakeElectron.windows()).toEqual([]);
     fakeElectron.app.ready = true;
     windows.openFirst();
-    expect(windows.takeRequested(fakeElectron.windows()[0]!.webContents.id)).toBe(GAME);
+    expect(windows.takeRequested(fakeElectron.windows()[0]!.webContents.id)).toEqual(workspacePlace(GAME));
 
     windows.openFirst();
     expect(windows.takeRequested(fakeElectron.windows()[1]!.webContents.id)).toBeNull();
@@ -153,7 +295,7 @@ describe('a link opened in a workspace (docs/features/deep-links.md)', () => {
     const tools = open();
     shows(tools, TOOLS);
 
-    expect(windows.openLinkIn(tools.webContents.id, GAME, LINK)).toBe('handedOver');
+    expect(windows.openLinkIn(tools.webContents.id, workspacePlace(GAME), LINK)).toBe('handedOver');
     expect(fakeElectron.focused()).toBe(game);
     expect(game.webContents.sent).toEqual([[EVENT_CHANNEL, 'linkRequested', {}]]);
     expect(windows.takeLink(game.webContents.id)).toBe(LINK);
@@ -164,7 +306,7 @@ describe('a link opened in a workspace (docs/features/deep-links.md)', () => {
     const { windows, open } = setUp();
     const home = open();
 
-    expect(windows.openLinkIn(home.webContents.id, GAME, LINK)).toBe('openHere');
+    expect(windows.openLinkIn(home.webContents.id, workspacePlace(GAME), LINK)).toBe('openHere');
     expect(fakeElectron.windows()).toHaveLength(1);
   });
 
@@ -173,7 +315,7 @@ describe('a link opened in a workspace (docs/features/deep-links.md)', () => {
     const tools = open();
     shows(tools, TOOLS);
 
-    expect(windows.openLinkIn(tools.webContents.id, GAME, LINK)).toBe('handedOver');
+    expect(windows.openLinkIn(tools.webContents.id, workspacePlace(GAME), LINK)).toBe('handedOver');
     const [, opened] = fakeElectron.windows();
     expect(windows.workspaceIn(asBrowserWindow(opened!))).toBe(GAME);
     expect(windows.takeLink(opened!.webContents.id)).toBe(LINK);
@@ -203,7 +345,7 @@ describe('a link opened in a workspace (docs/features/deep-links.md)', () => {
     const { windows, open, shows } = setUp();
     const game = open();
     shows(game, GAME);
-    const page = windows.openPage(game.webContents.id, { workspacePath: GAME, page: { kind: 'history', path: 'a.cs' } }) as unknown as FakeWindow;
+    const page = windows.openPage(game.webContents.id, { place: workspacePlace(GAME), page: { kind: 'history', path: 'a.cs' } }) as unknown as FakeWindow;
 
     expect(windows.openLinkAtHome(page.webContents.id, SERVER_LINK)).toBe('handedOver');
     const opened = fakeElectron.windows().at(-1)!;
@@ -250,7 +392,7 @@ describe('a link opened in a workspace (docs/features/deep-links.md)', () => {
     const { windows, open, shows } = setUp();
     const game = open();
     shows(game, GAME);
-    const page = windows.openPage(game.webContents.id, { workspacePath: GAME, page: { kind: 'history', path: 'a.cs' } }) as unknown as FakeWindow;
+    const page = windows.openPage(game.webContents.id, { place: workspacePlace(GAME), page: { kind: 'history', path: 'a.cs' } }) as unknown as FakeWindow;
     page.focus();
 
     windows.openLink(LINK);
@@ -284,7 +426,7 @@ describe('the first window at launch', () => {
     const { windows } = setUp([lastUsed, TOOLS]);
 
     windows.openFirst();
-    expect(windows.takeRequested(fakeElectron.windows()[0]!.webContents.id)).toBe(lastUsed);
+    expect(windows.takeRequested(fakeElectron.windows()[0]!.webContents.id)).toEqual(workspacePlace(lastUsed));
   });
 
   it('names the workspace it opens before opening it, so its `cm shell`s can start first', () => {
@@ -294,7 +436,7 @@ describe('the first window at launch', () => {
     expect(windows.firstWorkspace()).toBe(lastUsed);
     expect(fakeElectron.windows()).toEqual([]);
     windows.openFirst();
-    expect(windows.takeRequested(fakeElectron.windows()[0]!.webContents.id)).toBe(lastUsed);
+    expect(windows.takeRequested(fakeElectron.windows()[0]!.webContents.id)).toEqual(workspacePlace(lastUsed));
   });
 
   it('opens on the home screen when the last workspace used is gone', () => {
@@ -381,7 +523,7 @@ describe('the windows open as the app quit', () => {
   /** What each window was opened with: its workspace, where it opens and whether it takes the focus. */
   const openedWith = () =>
     vi.mocked(createMainWindow).mock.calls.map(([, options]) => ({
-      workspacePath: options?.workspacePath,
+      place: options?.place,
       reopen: options?.reopen,
       inBackground: options?.inBackground,
     }));
@@ -469,8 +611,8 @@ describe('the windows open as the app quit', () => {
     expect(windows.firstWorkspace()).toBe(game);
     windows.openFirst();
     expect(openedWith()).toEqual([
-      { workspacePath: undefined, reopen: { bounds: RIGHT, fullScreen: false }, inBackground: true },
-      { workspacePath: game, reopen: { workspacePath: game, bounds: LEFT, fullScreen: true }, inBackground: false },
+      { place: undefined, reopen: { bounds: RIGHT, fullScreen: false }, inBackground: true },
+      { place: workspacePlace(game), reopen: { workspacePath: game, bounds: LEFT, fullScreen: true }, inBackground: false },
     ]);
   });
 
@@ -480,7 +622,7 @@ describe('the windows open as the app quit', () => {
 
     expect(windows.firstWorkspace()).toBe(lastUsed);
     windows.openFirst();
-    expect(openedWith()).toEqual([{ workspacePath: lastUsed, reopen: undefined, inBackground: undefined }]);
+    expect(openedWith()).toEqual([{ place: workspacePlace(lastUsed), reopen: undefined, inBackground: undefined }]);
   });
 
   it('open behind the workspace that launched the app, which comes forward in its own window', () => {
@@ -491,10 +633,10 @@ describe('the windows open as the app quit', () => {
     expect(windows.firstWorkspace()).toBe(TOOLS);
     windows.openFirst();
     expect(openedWith()).toEqual([
-      { workspacePath: game, reopen: { workspacePath: game, bounds: LEFT, fullScreen: false }, inBackground: true },
-      { workspacePath: undefined, reopen: undefined, inBackground: undefined },
+      { place: workspacePlace(game), reopen: { workspacePath: game, bounds: LEFT, fullScreen: false }, inBackground: true },
+      { place: undefined, reopen: undefined, inBackground: undefined },
     ]);
-    expect(windows.takeRequested(fakeElectron.windows()[1]!.webContents.id)).toBe(TOOLS);
+    expect(windows.takeRequested(fakeElectron.windows()[1]!.webContents.id)).toEqual(workspacePlace(TOOLS));
   });
 
   it('are never opened again by development builds, which start on the home screen', () => {
@@ -503,7 +645,7 @@ describe('the windows open as the app quit', () => {
     const { windows } = setUp([], [{ workspacePath: game, bounds: LEFT, fullScreen: false }]);
 
     windows.openFirst();
-    expect(openedWith()).toEqual([{ workspacePath: undefined, reopen: undefined, inBackground: undefined }]);
+    expect(openedWith()).toEqual([{ place: undefined, reopen: undefined, inBackground: undefined }]);
   });
 });
 
@@ -515,7 +657,7 @@ describe('page windows', () => {
   function withPageWindow(setup = setUp()) {
     const game = setup.open();
     setup.shows(game, GAME);
-    const page = setup.windows.openPage(game.webContents.id, { workspacePath: GAME, page: DIFF }) as unknown as FakeWindow;
+    const page = setup.windows.openPage(game.webContents.id, { place: workspacePlace(GAME), page: DIFF }) as unknown as FakeWindow;
     setup.shows(page, GAME);
     return { ...setup, game, page };
   }
@@ -524,15 +666,15 @@ describe('page windows', () => {
 
   it('open on the page, cascaded from their workspace window the first time, then where the last page window was', () => {
     const { windows, settings, game, page } = withPageWindow();
-    expect(vi.mocked(createMainWindow).mock.calls.at(-1)?.[1]).toEqual({ cascadeFrom: game, workspacePath: GAME, page: DIFF });
+    expect(vi.mocked(createMainWindow).mock.calls.at(-1)?.[1]).toEqual({ cascadeFrom: game, place: workspacePlace(GAME), page: DIFF });
 
-    windows.openPage(game.webContents.id, { workspacePath: GAME, page: HISTORY });
+    windows.openPage(game.webContents.id, { place: workspacePlace(GAME), page: HISTORY });
     expect(vi.mocked(createMainWindow).mock.calls.at(-1)?.[1]).toMatchObject({ cascadeFrom: page, page: HISTORY });
 
     page.close();
     fakeElectron.windows().at(-1)!.close();
     settings.update({ pageWindowBounds: { x: 2000, y: 40, width: 900, height: 700, maximized: false } });
-    windows.openPage(game.webContents.id, { workspacePath: GAME, page: DIFF });
+    windows.openPage(game.webContents.id, { place: workspacePlace(GAME), page: DIFF });
     expect(vi.mocked(createMainWindow).mock.calls.at(-1)?.[1]).toMatchObject({ cascadeFrom: undefined, page: DIFF });
   });
 
@@ -541,8 +683,8 @@ describe('page windows', () => {
     page.focus();
 
     expect(windows.all()).toEqual([game]);
-    expect(windows.windowShowing(GAME)).toBe(game);
-    windows.showWorkspace(GAME);
+    expect(windows.windowShowing(workspacePlace(GAME))).toBe(game);
+    windows.showPlace(workspacePlace(GAME));
     expect(fakeElectron.focused()).toBe(game);
     windows.saveSession({ withViews: false });
     expect(settings.get().openWindows.map(({ workspacePath }) => workspacePath)).toEqual([GAME]);
@@ -551,7 +693,7 @@ describe('page windows', () => {
   it('belong to the workspace window, also when a page window opens another', () => {
     const { windows, game, page } = withPageWindow();
 
-    const another = windows.openPage(page.webContents.id, { workspacePath: GAME, page: HISTORY }) as unknown as FakeWindow;
+    const another = windows.openPage(page.webContents.id, { place: workspacePlace(GAME), page: HISTORY }) as unknown as FakeWindow;
     expect(windows.pageWindowsOf(game.webContents.id)).toEqual([page, another]);
     expect(windows.ownerOf(another.webContents.id)).toBe(game.webContents.id);
   });

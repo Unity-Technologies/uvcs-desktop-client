@@ -11,18 +11,13 @@ import { SearchField } from '../../ui/SearchField';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { ToggleChip } from '../../ui/ToggleChip';
 import { cmVersionQuery } from '../startup/useCmAvailability';
-import { useWorkspacePath } from '../workspace/useWorkspace';
+import { usePlace } from '../workspace/useWorkspace';
 import { CommandLogEntryRow } from './CommandLogEntryRow';
 import { commandLogRows, isFiltering, NO_FILTER } from './commandLogFilter';
 import { numberDigits } from './commandLogNumbering';
-import { ranInWorkspace, type CommandLogScope } from './commandLogScope';
+import { commandLogScopes, ranInPlace } from './commandLogScope';
 import { useCommandLogStore } from './commandLogStore';
 import styles from './CommandLogPanel.module.css';
-
-const SCOPES: { value: CommandLogScope; label: string; title: string }[] = [
-  { value: 'workspace', label: 'This workspace', title: 'Commands that ran in this workspace' },
-  { value: 'all', label: 'All', title: 'Every command the app ran, including lookups of other workspaces and servers' },
-];
 
 export function CommandLogPanel() {
   const entries = useCommandLogStore((state) => state.entries);
@@ -31,7 +26,7 @@ export function CommandLogPanel() {
   const scope = useCommandLogStore((state) => state.scope);
   const filter = useCommandLogStore((state) => state.filter);
   const { setScope, setFilter, clear, toggle } = useCommandLogStore.getState();
-  const workspacePath = useWorkspacePath();
+  const place = usePlace();
   // Asked once at start (`prefetchStartupQueries`): showing it runs no command.
   const { data: cmVersion } = useQuery(cmVersionQuery);
   const listRef = useRef<HTMLDivElement>(null);
@@ -39,14 +34,14 @@ export function CommandLogPanel() {
   const log = useMemo(() => ({ entries, firstNumber }), [entries, firstNumber]);
   // Filtering reads every command's output, megabytes of it: the field takes each key at once, the rows follow.
   const shownFilter = useDeferredValue(filter);
-  const rows = useMemo(() => commandLogRows(log, scope, workspacePath, shownFilter), [log, scope, workspacePath, shownFilter]);
+  const rows = useMemo(() => commandLogRows(log, scope, place, shownFilter), [log, scope, place, shownFilter]);
 
   // The entry asked for shows even if the filter or the scope hid it; only when asked, so filtering can hide it again.
   useEffect(() => {
     const revealed = revealedId === null || rows.some((row) => row.entry.id === revealedId) ? undefined : entries.find((entry) => entry.id === revealedId);
     if (!revealed) return;
     setFilter(NO_FILTER);
-    if (!ranInWorkspace(revealed, workspacePath)) setScope('all');
+    if (!ranInPlace(revealed, place)) setScope('all');
   }, [revealedId]);
 
   useEffect(() => {
@@ -81,7 +76,7 @@ export function CommandLogPanel() {
         <ToggleChip pressed={filter.failedOnly} icon={<CircleX size={13} />} onChange={(failedOnly) => setFilter({ failedOnly })}>
           Failed
         </ToggleChip>
-        <SegmentedControl value={scope} segments={SCOPES} onChange={setScope} />
+        <SegmentedControl value={scope} segments={commandLogScopes(place)} onChange={setScope} />
         <IconButton size="small" icon={<Trash2 size={13} />} label="Clear" onClick={clear} />
         <IconButton size="small" icon={<X size={14} />} label="Close" onClick={toggle} />
       </header>

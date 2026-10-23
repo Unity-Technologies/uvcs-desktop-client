@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
-import type { RepositorySummary } from '@shared/domain/repository';
 import { ServerSelect } from '../../../components/ServerSelect';
 import { Combobox } from '../../../ui/Combobox';
 import styles from './HomeDialogs.module.css';
-import type { NewWorkspaceForm } from './newWorkspaceForm';
+import type { NamedRepository, NewWorkspaceForm } from './newWorkspaceForm';
 
 interface RepositoryNameComboboxProps {
   server: string;
@@ -11,7 +10,7 @@ interface RepositoryNameComboboxProps {
   name: string;
   onNameChange: (name: string) => void;
   /** The server's repositories, suggested as the user types. */
-  repositories: readonly RepositorySummary[] | undefined;
+  repositories: readonly NamedRepository[] | undefined;
   /** Why the server's repositories couldn't be read. */
   error?: string;
   form: Pick<NewWorkspaceForm, 'repositoryList' | 'repositoryNote' | 'repositoryLocked'>;

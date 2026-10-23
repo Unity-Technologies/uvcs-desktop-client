@@ -1,5 +1,6 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { queryKeys } from '../../api/queryKeys';
 import { createQueryClient } from '../../app/queryClient';
@@ -31,7 +32,7 @@ describe('listedReviewIn', () => {
     const client = createQueryClient();
     client.setQueryData(listKey, [review(4, 'listed')]);
 
-    expect(listedReviewIn(client, '/wk', 4)?.review).toEqual(review(4, 'listed'));
+    expect(listedReviewIn(client, workspacePlace('/wk'), 4)?.review).toEqual(review(4, 'listed'));
   });
 
   it('never takes it from a list an operation marked stale and nobody read again', async () => {
@@ -39,6 +40,6 @@ describe('listedReviewIn', () => {
     client.setQueryData(listKey, [review(4, 'old status')]);
     await client.invalidateQueries({ queryKey: queryKeys.inWorkspace('/wk', 'codeReviews') });
 
-    expect(listedReviewIn(client, '/wk', 4)).toBeUndefined();
+    expect(listedReviewIn(client, workspacePlace('/wk'), 4)).toBeUndefined();
   });
 });

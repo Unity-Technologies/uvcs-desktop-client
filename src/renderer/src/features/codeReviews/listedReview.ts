@@ -1,4 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query';
+import type { Place } from '@shared/domain/place';
 import type { CodeReview, CodeReviewSummary } from '@shared/domain/codeReview';
 import { queryKeys } from '../../api/queryKeys';
 
@@ -21,10 +22,10 @@ export function listedReview(lists: readonly { data: unknown; readAt: number }[]
  * The review from the workspace's code review queries in `client` (lists; the single reviews and summaries without
  * their target are skipped), but those an operation marked stale and nobody read again: their copy may hold an old status.
  */
-export function listedReviewIn(client: QueryClient, workspacePath: string, reviewId: number): { review: CodeReview; readAt: number } | undefined {
+export function listedReviewIn(client: QueryClient, place: Place, reviewId: number): { review: CodeReview; readAt: number } | undefined {
   const lists = client
     .getQueryCache()
-    .findAll({ queryKey: queryKeys.inWorkspace(workspacePath, 'codeReviews') })
+    .findAll({ queryKey: queryKeys.inPlace(place, 'codeReviews') })
     .filter((query) => !query.state.isInvalidated)
     .map((query) => ({ data: query.state.data, readAt: query.state.dataUpdatedAt }));
   return listedReview(lists, reviewId);

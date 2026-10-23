@@ -1,7 +1,7 @@
 import { History } from 'lucide-react';
 import { useCallback, useEffect, useMemo } from 'react';
 import type { PageProps } from '../../app/navigation/pages';
-import { useOtherRepository, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { useOtherRepository, usePlace } from '../../app/workspace/useWorkspace';
 import { detailsWidthOf, useDetailsWidthStore, type DetailsWidthLimits } from '../../components/detailsWidthStore';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { hidesEveryRow } from '../../lib/hidesEveryRow';
@@ -38,7 +38,7 @@ const LIST_WIDTH_KEY = 'historyList';
  * under a header of its changeset, as a diff against the revision it was made from or annotated (`RevisionPane`).
  */
 export function HistoryPage({ page }: PageProps<'history'>) {
-  const workspacePath = useWorkspacePath();
+  const place = usePlace();
   const { data: history, error } = useItemHistory(page.path, page.revision);
   // A file under an xlink: its changesets, branches and labels are the xlinked repository's.
   const otherRepository = useOtherRepository(history?.revisions[0]?.repository);
@@ -58,9 +58,9 @@ export function HistoryPage({ page }: PageProps<'history'>) {
   // What a link to the page names (`useShownRevision`), and a link's lines (`#L42`) shown on the revision the page
   // opened on until another one is selected or the view switches.
   const shownRevision = shownRevisionOf(page.path, focusedRow, view, Boolean(otherRepository));
-  const place = historyPlace(shownRevision);
-  const linkFocus = useFocusUntilMoved(page.focusLines ? { path: page.path, lines: page.focusLines } : null, place);
-  const lineLinks = useMemo(() => historyLineLinks(linkFocus, shownRevision), [linkFocus, place]);
+  const revisionPlace = historyPlace(shownRevision);
+  const linkFocus = useFocusUntilMoved(page.focusLines ? { path: page.path, lines: page.focusLines } : null, revisionPlace);
+  const lineLinks = useMemo(() => historyLineLinks(linkFocus, shownRevision), [linkFocus, revisionPlace]);
   // Every render, published only when it changed (`publishShownRevision`), and none once the page goes.
   useEffect(() => publishShownRevision(shownRevision));
   useEffect(() => () => publishShownRevision(null), []);
@@ -82,7 +82,7 @@ export function HistoryPage({ page }: PageProps<'history'>) {
     (selected: HistoryRow[]) =>
       historyMenu(
         {
-          workspacePath,
+          place,
           path: page.path,
           ofWorkspaceFile: page.revision === undefined,
           otherRepository,
@@ -93,7 +93,7 @@ export function HistoryPage({ page }: PageProps<'history'>) {
         },
         selected,
       ),
-    [workspacePath, page.path, page.revision, otherRepository, selectAnew, setView],
+    [place, page.path, page.revision, otherRepository, selectAnew, setView],
   );
 
   const header = (

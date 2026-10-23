@@ -2,7 +2,7 @@ import { FileDiff, GitCommitVertical, House, Tag } from 'lucide-react';
 import type { ChangesetInfo } from '@shared/domain/changeset';
 import { spec } from '@shared/domain/specs';
 import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
-import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { DetailsHeading } from '../../components/DetailsHeading';
 import { MAX_LABEL_CHIPS } from '../../components/LabelChips';
 import { PLAIN_LINKS, type ObjectLinks } from '../../components/objectLinks';
@@ -34,14 +34,14 @@ interface ChangesetDetailsProps {
 export function ChangesetDetails({ changeset, menu, links = PLAIN_LINKS, relations = [], withChangedFiles = true }: ChangesetDetailsProps) {
   const { data: workspace } = useWorkspaceInfo();
   const changesetLabels = useLabelsByChangeset().get(changeset.id) ?? [];
-  const workspacePath = useWorkspacePath();
+  const place = usePlace();
   useShowInFollowingWindow(changesetDiffPage(changeset));
 
   return (
     <DetailsPanel
       icon={<GitCommitVertical />}
       kind="Changeset"
-      heading={<DetailsHeading comment={changeset.comment} onSave={(comment) => saveChangesetComment(workspacePath, changeset, comment)} />}
+      heading={<DetailsHeading comment={changeset.comment} onSave={(comment) => saveChangesetComment(place, changeset, comment)} />}
       author={{ user: changeset.owner, date: changeset.date }}
       meta={[
         <DetailsCopyable key="id" text={spec.changeset(changeset.id)} what={copiedWhat('Changeset', 'spec')} />,

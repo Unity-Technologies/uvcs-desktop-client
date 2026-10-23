@@ -1,4 +1,5 @@
-import { homedir } from 'node:os';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CommandLogEntry } from '@shared/events';
@@ -16,6 +17,8 @@ import { SHELL_ARGS } from './shellCommandLine';
 
 const CM_PATH = join('opt', 'plasticscm', 'cm');
 const WORKSPACE = join(homedir(), 'wkspaces', 'game');
+/** Created on first use, so it's under the run's own temp folder (`vitest.tempDirectory.ts`). */
+const OUTSIDE_WORKSPACES = join(tmpdir(), 'outside-workspaces');
 
 interface ProcessRun {
   cmPath: string;
@@ -26,7 +29,7 @@ interface ProcessRun {
 type Answer = (options?: CmProcessOptions) => CmResult;
 
 /** A `CmClient` over fake runners: every process and shell command is recorded and answered with `answer`. */
-function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer = ((): CmResult => ({ output: 'done\n', exitCode: 0 })) as Answer } = {}) {
+function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer = ((): CmResult => ({ output: 'done\n', exitCode: 0 })) as Answer, outsideWorkspaces = OUTSIDE_WORKSPACES } = {}) {
   const processes: ProcessRun[] = [];
   const shellCommands: { cwd: string; args: string[] }[] = [];
   const pools: { cmPath: string; disposed: boolean; shown: string[]; warmed: string[]; released: string[] }[] = [];
@@ -52,7 +55,7 @@ function fakeClient({ warm = true, platform = 'linux' as NodeJS.Platform, answer
       };
     },
   };
-  const cm = new CmClient(() => CM_PATH, platform, runners);
+  const cm = new CmClient(() => CM_PATH, outsideWorkspaces, platform, runners);
   const logged: CommandLogEntry[] = [];
   cm.onCommandLogged((entry) => logged.push(entry));
   return { cm, processes, shellCommands, pools, logged };
@@ -133,7 +136,7 @@ describe('CmClient routing', () => {
       dispose: () => undefined,
     });
     const runProcess = async () => ({ output: '', exitCode: 0 });
-    const cm = new CmClient(() => CM_PATH, 'linux', { runProcess, createShellPool: (cmPath) => new CmShellPool(cmPath, session) });
+    const cm = new CmClient(() => CM_PATH, OUTSIDE_WORKSPACES, 'linux', { runProcess, createShellPool: (cmPath) => new CmShellPool(cmPath, session) });
 
     cm.showWhileOpening(WORKSPACE);
     await cm.query(['profile', 'list'], { anyDirectory: true });
@@ -143,6 +146,33 @@ describe('CmClient routing', () => {
 
     expect(ranIn).toEqual([WORKSPACE, homedir()]);
     cm.dispose();
+  });
+
+  it("runs a command naming its repository in the app's folder outside every workspace, even with one shown, creating it", async () => {
+    const { cm, shellCommands, processes, logged } = fakeClient();
+    cm.show(WORKSPACE);
+
+    await cm.query(['find', 'branch', "on repository 'game@local'"], { outsideWorkspaces: true });
+    await cm.execute(['diff', 'br:/main@game@local'], { outsideWorkspaces: true });
+    await cm.query(['status'], { cwd: WORKSPACE });
+
+    expect(shellCommands.map(({ cwd }) => cwd)).toEqual([OUTSIDE_WORKSPACES, WORKSPACE]);
+    expect(processes.map(({ options }) => options.cwd)).toEqual([OUTSIDE_WORKSPACES]);
+    expect(existsSync(OUTSIDE_WORKSPACES)).toBe(true);
+    // The log tells them apart, for the window exploring the repository to show its own (`ranInPlace`).
+    expect(logged.map((entry) => entry.outsideWorkspaces ?? false)).toEqual([true, true, false]);
+  });
+
+  it('makes the folder outside every workspace again for a new process when it was deleted during the session', async () => {
+    const outsideWorkspaces = join(mkdtempSync(join(tmpdir(), 'cm-client-')), 'outside-workspaces');
+    const { cm, processes } = fakeClient({ outsideWorkspaces });
+    await cm.execute(['diff', 'br:/main@game@local'], { outsideWorkspaces: true });
+
+    rmSync(outsideWorkspaces, { recursive: true });
+    await cm.execute(['diff', 'br:/task@game@local'], { outsideWorkspaces: true });
+
+    expect(existsSync(outsideWorkspaces)).toBe(true);
+    expect(processes.map(({ options }) => options.cwd)).toEqual([outsideWorkspaces, outsideWorkspaces]);
   });
 
   it('runs a query as a process of its own while no session of the directory is ready yet, and warms them up', async () => {
@@ -536,7 +566,7 @@ describe('CmClient sessions', () => {
     const locations = [CM_PATH, join('usr', 'local', 'bin', 'cm')];
     const processes: string[] = [];
     const pools: { cmPath: string; disposed: boolean }[] = [];
-    const cm = new CmClient(() => locations[0]!, 'linux', {
+    const cm = new CmClient(() => locations[0]!, OUTSIDE_WORKSPACES, 'linux', {
       runProcess: async (cmPath) => {
         processes.push(cmPath);
         return { output: '', exitCode: 0 };

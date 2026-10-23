@@ -1,4 +1,5 @@
 import { CheckCircle2, EyeOff, GitBranchPlus, GitBranch, X } from 'lucide-react';
+import { workspacePlace } from '@shared/domain/place';
 import { branchLabel } from '../../lib/branchLabels';
 import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
@@ -21,7 +22,7 @@ export function FinishedTaskCard({ workspacePath, task }: { workspacePath: strin
   };
 
   const startNext = (): void =>
-    void openCreateBranchDialog(workspacePath, {
+    void openCreateBranchDialog(workspacePlace(workspacePath), {
       parentBranch: task.destination,
       startingPoint: `cs:${task.changesetId}`,
       startingPointLabel: `changeset ${task.changesetId} (the merge)`,

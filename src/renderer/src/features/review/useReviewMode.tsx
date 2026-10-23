@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { placeId, type Place } from '@shared/domain/place';
 import { saveSettings, useSettings } from '../../app/settings/useSettings';
 import { ReviewBar } from './ReviewBar';
 import { ReviewModeHint } from './ReviewModeHint';
@@ -24,7 +25,7 @@ export interface ReviewMode<T> extends ListReview<T> {
 }
 
 interface ReviewModeOptions<T> {
-  workspacePath: string;
+  place: Place;
   items: readonly T[];
   /** Where each item stands by its stored mark. */
   statusOf: ReviewStatusOf<T>;
@@ -34,9 +35,9 @@ interface ReviewModeOptions<T> {
 }
 
 /** Review marks on a list of files, shared by every list that shows diffs: what's reviewed, what changed since, and the filter for what's left. */
-export function useReviewMode<T>({ workspacePath, items, statusOf: storedStatusOf, setReviewed, offer = false }: ReviewModeOptions<T>): ReviewMode<T> {
+export function useReviewMode<T>({ place, items, statusOf: storedStatusOf, setReviewed, offer = false }: ReviewModeOptions<T>): ReviewMode<T> {
   const { reviewModeWorkspaces, reviewModeHintDone } = useSettings();
-  const on = reviewModeWorkspaces.includes(workspacePath);
+  const on = reviewModeWorkspaces.includes(placeId(place));
   const [onlyUnreviewed, setOnlyUnreviewed] = useState(false);
   // Kept while nothing they depend on changes, so lists of thousands of files work them out again only then.
   const statusOf = useMemo(() => shownStatusOf(storedStatusOf, on), [on, storedStatusOf]);
@@ -49,15 +50,15 @@ export function useReviewMode<T>({ workspacePath, items, statusOf: storedStatusO
     const reviewable = reviewableOf(selected, statusOf);
     if (reviewable.length === 0) return;
     if (!on) {
-      void setReviewMode(workspacePath, true);
-      announceReviewMode(workspacePath);
+      void setReviewMode(place, true);
+      announceReviewMode(place);
     }
     // Outside review mode every file shows unreviewed, so they are all marked.
     setReviewed(reviewable, shouldMarkReviewed(reviewable, statusOf));
   };
 
   const hint = offer && !reviewModeHintDone && progress.total > 0 && (
-    <ReviewModeHint onTurnOn={() => void setReviewMode(workspacePath, true)} onDismiss={() => void saveSettings({ reviewModeHintDone: true })} />
+    <ReviewModeHint onTurnOn={() => void setReviewMode(place, true)} onDismiss={() => void saveSettings({ reviewModeHintDone: true })} />
   );
 
   return {

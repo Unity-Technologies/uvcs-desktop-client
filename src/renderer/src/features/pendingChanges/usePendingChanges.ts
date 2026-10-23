@@ -1,9 +1,10 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
+import { workspacePathOf } from '@shared/domain/place';
 import type { PendingChangesFilter, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { useSettings } from '../../app/settings/useSettings';
-import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace } from '../../app/workspace/useWorkspace';
 import type { NavBadge } from '../../ui/nav/navBadgeText';
 import { isCheckinCandidate } from './changeCategories';
 import { sharePendingChanges } from './sharePendingChanges';
@@ -20,8 +21,9 @@ export function pendingChangesQuery(workspacePath: string, filter: PendingChange
   });
 }
 
+/** The pending changes of the place's workspace: none for a repository explored without one (the query never runs). */
 export function usePendingChanges() {
-  return usePendingChangesOf(useWorkspacePath());
+  return usePendingChangesOf(workspacePathOf(usePlace()));
 }
 
 /** Like `usePendingChanges`, for code that also runs without a workspace (null). */

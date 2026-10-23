@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
+import { workspacePlace } from '@shared/domain/place';
 import { NO_BITS, type ObjectPermissions, type PermissionChanges } from '@shared/domain/permissions';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
@@ -35,7 +36,7 @@ describe('saving permissions', () => {
     const reread = seedPermissionsQuery('local', 'rep:game@local');
     const changes = draftChanges(read, setOwnState(read, EMPTY_DRAFT, developers, ['ci'], 'allow'));
 
-    expect(await savePermissions({ target: branch, permissions: read, changes, workspacePath: ws })).toBe(true);
+    expect(await savePermissions({ target: branch, permissions: read, changes, place: workspacePlace(ws) })).toBe(true);
 
     const [[target, request]] = fakeApi.argsOf('permissions.apply') as [[unknown, PermissionChanges]];
     expect(target).toEqual(branch);
@@ -50,7 +51,7 @@ describe('saving permissions', () => {
     fakeApi.answer('permissions.apply', () => undefined);
     const refreshed = watchRefreshes(ws);
 
-    await savePermissions({ target: branch, permissions: read, changes: draftChanges(read, setOwner(EMPTY_DRAFT, developers)), workspacePath: ws });
+    await savePermissions({ target: branch, permissions: read, changes: draftChanges(read, setOwner(EMPTY_DRAFT, developers)), place: workspacePlace(ws) });
 
     expect(refreshed()).toEqual(['branchExplorer', 'branches']);
   });

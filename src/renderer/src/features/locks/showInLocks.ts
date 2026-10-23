@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import { navigation } from '../../app/navigation/navigationStore';
 import { selectInView } from '../../app/navigation/viewSelectionStore';
 import type { PendingLock } from '../pendingChanges/locks/pendingLocks';
@@ -9,6 +10,6 @@ import { useLocksViewStore } from './locksViewStore';
  */
 export function showInLocks(workspacePath: string, lock: PendingLock): void {
   useLocksViewStore.getState().clear();
-  selectInView(workspacePath, 'locks', lock.key);
+  selectInView(workspacePlace(workspacePath), 'locks', lock.key);
   navigation.goToView('locks');
 }

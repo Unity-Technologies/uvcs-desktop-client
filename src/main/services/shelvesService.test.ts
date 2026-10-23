@@ -1,6 +1,7 @@
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { FOUND_SHELVES } from '../cm/foundObjects';
 import { foundLine, recordsOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient } from '../cm/testing/fakeCmClient';
@@ -19,9 +20,18 @@ describe('shelves', () => {
     const fake = fakeCmClient({ 'find shelve': recordsOutput(FOUND_SHELVES, shelveRecord(3), shelveRecord(9), shelveRecord(5)) });
     const service = createShelvesService(serviceContext(fake.cm), {} as SwitchContext);
 
-    const listed = await service.list(WORKSPACE, { owners: ['me'], branch: '/main' });
+    const listed = await service.list(workspacePlace(WORKSPACE), { owners: ['me'], branch: '/main' });
 
     expect(fake.lines()).toEqual([foundLine(FOUND_SHELVES, "where owner = 'me'")]);
     expect(listed.map((shelve) => shelve.id)).toEqual([9, 5, 3]);
+  });
+
+  it('lists the shelves of a repository with no workspace naming it, outside every workspace', async () => {
+    const fake = fakeCmClient({ 'find shelve': recordsOutput(FOUND_SHELVES, shelveRecord(3)) });
+    const service = createShelvesService(serviceContext(fake.cm), {} as SwitchContext);
+
+    await service.list(repositoryPlace('game@local'), { owners: ['me'] });
+
+    expect(fake.commands.map(({ args, options }) => [args[2], options])).toEqual([["where owner = 'me' on repository 'game@local'", { outsideWorkspaces: true }]]);
   });
 });

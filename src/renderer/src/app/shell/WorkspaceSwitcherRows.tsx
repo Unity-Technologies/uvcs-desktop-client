@@ -11,7 +11,7 @@ import { missingWorkspaceMenu, workspaceMenu } from '../home/homeMenus';
 import { unlistedRecentPaths, type WorkspaceEntry } from '../home/recentWorkspaces';
 import { useDescribeWorkspace } from '../home/useDescribeWorkspace';
 import { useSettings } from '../settings/useSettings';
-import { useWorkspaceInfo } from '../workspace/useWorkspace';
+import { usePlaceRepository } from '../workspace/useWorkspace';
 import { windowAskedBy, type OpenWorkspaceIn } from '../workspace/workspaceWindowChoice';
 import { useMissingWorkspacePaths, useWorkspaceList } from '../workspace/workspaceQueries';
 import { WorkspaceSwitcherChips } from './WorkspaceSwitcherChips';
@@ -22,7 +22,7 @@ import styles from './WorkspaceSwitcher.module.css';
  * The switcher's filter and its workspaces, recent ones first: the arrows move through them from the filter, Enter
  * opens the highlighted one (in a new window with Shift: `windowAskedBy`), and the menu key opens its actions.
  */
-export function WorkspaceSwitcherRows({ currentPath, onChoose }: { currentPath: string; onChoose: OpenWorkspaceIn }) {
+export function WorkspaceSwitcherRows({ currentPath, onChoose }: { currentPath: string | null; onChoose: OpenWorkspaceIn }) {
   const [filter, setFilter] = useState('');
   const [highlightedPath, setHighlightedPath] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -32,7 +32,7 @@ export function WorkspaceSwitcherRows({ currentPath, onChoose }: { currentPath: 
   const { recentWorkspacePaths } = useSettings();
   const { data: workspaces = [] } = useWorkspaceList();
   const describe = useDescribeWorkspace(workspaces);
-  const currentRepository = useWorkspaceInfo().data?.repository;
+  const currentRepository = usePlaceRepository();
   const { data: missingPaths = [] } = useMissingWorkspacePaths(unlistedRecentPaths(workspaces, recentWorkspacePaths));
 
   const { recent, others } = workspaceSwitcherList(workspaces, recentWorkspacePaths, missingPaths, currentPath, describe, filter);

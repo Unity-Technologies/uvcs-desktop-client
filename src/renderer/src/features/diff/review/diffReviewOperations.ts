@@ -1,3 +1,4 @@
+import type { Place } from '@shared/domain/place';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { DiffReviewMark } from '@shared/domain/review';
 import { api } from '../../../api/client';
@@ -7,13 +8,14 @@ import { toast } from '../../../ui/toast/toastStore';
 
 /** Identifies the marks of one diff: the repository it belongs to and the diff's name there. */
 export interface DiffReviewTarget {
-  workspacePath: string;
+  /** Where the diff shows: its marks are cached with that place's queries. */
+  place: Place;
   repository: string;
   name: string;
 }
 
-export function diffReviewMarksKey({ workspacePath, repository, name }: DiffReviewTarget) {
-  return queryKeys.inWorkspace(workspacePath, 'diffReview', repository, name);
+export function diffReviewMarksKey({ place, repository, name }: DiffReviewTarget) {
+  return queryKeys.inPlace(place, 'diffReview', repository, name);
 }
 
 /** Marks the files reviewed at the revision the diff shows, or clears their marks. The list shows it right away; the store confirms it. */

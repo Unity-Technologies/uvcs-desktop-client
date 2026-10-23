@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import { api } from '../../api/client';
 import { toast } from '../../ui/toast/toastStore';
 import { openCreateWorkspaceDialog } from '../home/dialogs/CreateWorkspaceDialog';
@@ -27,7 +28,7 @@ export async function openDroppedFolder(dropped: DroppedFolder, { newWindow, cur
     toast.info('Drop a folder', 'A workspace opens from its folder, or from any folder inside it.');
     return;
   }
-  const open = newWindow ? (path: string) => void api.windows.openWorkspace(path) : openHere;
+  const open = newWindow ? (path: string) => void api.windows.openPlace(workspacePlace(path)) : openHere;
   const workspaceRoot = await api.workspaces.findRoot(dropped.path);
   if (!workspaceRoot) {
     openCreateWorkspaceDialog({ path: dropped.path, onCreated: open });

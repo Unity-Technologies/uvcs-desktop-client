@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 const selected = vi.hoisted(() => [] as unknown[][]);
 vi.mock('../../app/navigation/viewSelectionStore', () => ({ selectInView: (...args: unknown[]) => void selected.push(args) }));
 
+import { workspacePlace } from '@shared/domain/place';
 import { EVERYONE, MINE } from '../../lib/peopleFilter';
 import { whereTheWindowIs } from '../../testing/operationOutcome';
 import { useLocksViewStore } from './locksViewStore';
@@ -17,7 +18,7 @@ describe('Show in Locks', () => {
 
     const { text, people } = useLocksViewStore.getState();
     expect({ text, people }).toEqual({ text: '', people: EVERYONE });
-    expect(selected).toEqual([['/ws', 'locks', 'lock-7']]);
+    expect(selected).toEqual([[workspacePlace('/ws'), 'locks', 'lock-7']]);
     expect(whereTheWindowIs().view).toBe('locks');
   });
 });

@@ -28,4 +28,8 @@ describe('diffBodyOf', () => {
     expect(diffBodyOf({ kind: 'model', comparable: false }, false, null)).toBe('model');
     expect(diffBodyOf({ kind: 'binary' }, false, null)).toBe('binary');
   });
+
+  it('says both versions were purged, editable or not', () => {
+    expect(diffBodyOf({ kind: 'purged' }, true, null)).toBe('purged');
+  });
 });

@@ -25,12 +25,16 @@ window" is what browsers and the official client say.
 
 - **One page, nothing else** (`PageWindowScreen`): the top bar with the page's title (and a way back to the page it
   came from within the window, never past the one it opened on: `pageWindowGoBack`), and "Follow selection" at its
-  end. No sidebar, status bar, command log or folder drop. Its title is "<page> — <workspace>".
-- **Its address names its workspace and page** (`pageWindowQuery`, read by `openPageWindowFromAddress` before the first
+  end. No sidebar, status bar, command log or folder drop. Its title is "<page> — <workspace>", or the repository's name
+  for a repository explored without a workspace (`placeName`).
+- **A workspace's follows its disk** as its window does (`WorkspaceWatch` in `PageWindowScreen`); a repository's,
+  explored without a workspace, has none to watch.
+- **Its address names its place and page** (`pageWindowQuery`, read by `openPageWindowFromAddress` before the first
   render), and keeps them: a reload shows the page again.
-- **It belongs to the workspace window it was opened from** (`PageWindowRegistry`; one opened from a page window
-  belongs to that one's owner). It closes with it, and once it shows another workspace or the home screen
-  (`workspaceShown`, from `workspaces.watch` and `unwatch`). It isn't a workspace window (`WorkspaceWindows.all`):
+- **It belongs to the window it was opened from**, a workspace's or a repository's explored without one
+  (`PageWindowRegistry`, by `Place`; one opened from a page window belongs to that one's owner). It closes with it,
+  and once it shows another place or the home screen (`workspaceShown`, from `workspaces.watch` and `unwatch`;
+  `repositoryShown`, from `windows.exploring`). It isn't a workspace window (`WorkspaceWindows.all`):
   opening its workspace brings the workspace window forward, and it isn't saved for the next launch.
 - **Where it opens**: where the last page window was left (`pageWindowBounds`, saved apart from the workspace windows'
   `windowBounds`), so once dragged to the second display, the next one opens there; cascaded from the last page window

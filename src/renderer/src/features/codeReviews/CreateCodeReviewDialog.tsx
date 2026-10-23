@@ -1,4 +1,5 @@
 import { useId, useMemo, useState } from 'react';
+import type { Place } from '@shared/domain/place';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction } from '../../app/operations/runOperation';
@@ -17,18 +18,18 @@ import { draftTargetSpec, type ReviewTargetDraft, type ReviewTargetKind } from '
  * Opens the "new code review" dialog. Other features can prefill the target,
  * e.g. from a branch, changeset or shelve context menu.
  */
-export function openCreateCodeReviewDialog(workspacePath: string, initialTarget: ReviewTargetDraft, onCreated?: (reviewId: number) => void): void {
-  openDialog((close) => <CreateCodeReviewDialog workspacePath={workspacePath} initialTarget={initialTarget} onClose={close} onCreated={onCreated} />);
+export function openCreateCodeReviewDialog(place: Place, initialTarget: ReviewTargetDraft, onCreated?: (reviewId: number) => void): void {
+  openDialog((close) => <CreateCodeReviewDialog place={place} initialTarget={initialTarget} onClose={close} onCreated={onCreated} />);
 }
 
 interface CreateCodeReviewDialogProps {
-  workspacePath: string;
+  place: Place;
   initialTarget: ReviewTargetDraft;
   onClose: () => void;
   onCreated?: (reviewId: number) => void;
 }
 
-function CreateCodeReviewDialog({ workspacePath, initialTarget, onClose, onCreated }: CreateCodeReviewDialogProps) {
+function CreateCodeReviewDialog({ place, initialTarget, onClose, onCreated }: CreateCodeReviewDialogProps) {
   const branchListId = useId();
   const { data: branches } = useBranches();
   const [targetKind, setTargetKind] = useState<ReviewTargetKind>(initialTarget.kind);
@@ -47,9 +48,9 @@ function CreateCodeReviewDialog({ workspacePath, initialTarget, onClose, onCreat
     if (!isValid) return;
     setCreating(true);
     const reviewId = await runAction(
-      workspacePath,
+      place,
       "Couldn't create the code review",
-      () => api.codeReviews.create(workspacePath, { targetSpec, title: title.trim(), assignee: assignee.trim() || undefined }),
+      () => api.codeReviews.create(place, { targetSpec, title: title.trim(), assignee: assignee.trim() || undefined }),
       isAffectedByCodeReviews,
     );
     setCreating(false);

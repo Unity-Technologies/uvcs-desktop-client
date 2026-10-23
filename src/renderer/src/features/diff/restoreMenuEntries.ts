@@ -1,6 +1,6 @@
 import type { DiffEntry } from '@shared/domain/diff';
 import type { DeletedItemRestore } from '@shared/domain/explorer';
-import { inWorkspaceRepository } from '@shared/domain/repository';
+import { inPlaceRepository } from '@shared/domain/repository';
 import { menuAction } from '../../components/menuWords';
 import type { GroupedEntry } from '../../lib/menuGroups';
 import { fileNameOf, pluralize } from '../../lib/text';
@@ -33,7 +33,7 @@ export function restoreMenuEntries(workspacePath: string, selected: DiffEntry[],
 
 function restoredEntries(selected: DiffEntry[], diffEntries: DiffEntry[], workspaceRepository: string | undefined): DiffEntry[] | null {
   const restorable = (entry: DiffEntry) =>
-    entry.status === 'deleted' && entry.itemType !== 'xlink' && entry.baseRevisionId >= 0 && inWorkspaceRepository(entry.repository, workspaceRepository) === true;
+    entry.status === 'deleted' && entry.itemType !== 'xlink' && entry.baseRevisionId >= 0 && inPlaceRepository(entry.repository, workspaceRepository) === true;
   if (selected.length === 0 || !selected.every(restorable)) return null;
   const deletedFolders = diffEntries.filter((entry) => restorable(entry) && entry.itemType === 'directory');
   // The outermost deleted folder holding each item, or the item itself.

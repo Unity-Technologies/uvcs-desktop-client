@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { skipToken, useQuery } from '@tanstack/react-query';
 import { File, FileSymlink, Folder, History, Lock } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { workspacePathOf, type Place } from '@shared/domain/place';
 import type { TreeItem } from '@shared/domain/explorer';
 import { revisionRef } from '@shared/domain/revision';
 import { spec } from '@shared/domain/specs';
@@ -43,7 +44,8 @@ const DETAILS_ICONS: Record<DetailsKind['icon'], ReactNode> = {
 };
 
 interface ItemDetailsPaneProps {
-  workspacePath: string;
+  /** A workspace (Files), or any place for a repository tree (Browse repository), whose items are all revisions. */
+  place: Place;
   item: TreeItem;
   /** The workspace's pending changes; none in a repository tree (Browse repository), where every item is a revision. */
   pendingIndex?: PendingChangesIndex;
@@ -64,10 +66,12 @@ interface ItemDetailsPaneProps {
  * what it holds. The heading follows the selection at once; the viewer and what `cm` is asked once it settles, without
  * remounting, so arrowing through the tree reads and renders no file it passes.
  */
-export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu, onSelectFolder, listings, fileViewChoice }: ItemDetailsPaneProps) {
+export function ItemDetailsPane({ place, item, pendingIndex, lock, menu, onSelectFolder, listings, fileViewChoice }: ItemDetailsPaneProps) {
   const shown = useSettledValue(item, item.path);
   const settled = shown.path === item.path;
-  const inWorkspace = pendingIndex !== undefined;
+  // Files shows a workspace's items, with their pending changes; Browse repository, revisions only.
+  const workspacePath = pendingIndex !== undefined ? workspacePathOf(place) : null;
+  const inWorkspace = workspacePath !== null;
   const pendingChange = pendingIndex?.changeAt(item.path);
   const isFile = item.itemType !== 'directory';
   const controlled = !item.isPrivate;
@@ -77,12 +81,13 @@ export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu,
 
   const { data: changeset } = useChangeset(!shown.isPrivate && shown.changeset !== null && shown.changeset > 0 ? shown.changeset : null, shown.repository);
   const comment = changeset?.id === shown.changeset ? changeset.comment : undefined;
+  // What `cm fileinfo` tells of an item (its changelist, its hash on disk) is a workspace's own.
   const { data: details } = useQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'explorer', 'details', item.path),
-    queryFn: () => api.explorer.details(workspacePath, item.path),
-    enabled: inWorkspace && controlled && settled && (!isFile || moreDetailsOpen),
+    queryKey: queryKeys.inPlace(place, 'explorer', 'details', item.path),
+    queryFn: workspacePath === null ? skipToken : () => api.explorer.details(workspacePath, item.path),
+    enabled: controlled && settled && (!isFile || moreDetailsOpen),
   });
-  const shownComparison = itemComparison(shown, pendingIndex?.changeAt(shown.path), inWorkspace);
+  const shownComparison = itemComparison(shown, pendingIndex?.changeAt(shown.path), workspacePath);
 
   const status = pendingChange ? describeKinds(pendingChange) : item.isPrivate ? 'Private' : item.isCheckedOut ? 'Checked out' : '';
   const onDisk = pendingChange && onDiskState(item, pendingChange);
@@ -156,7 +161,7 @@ export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu,
         isFile &&
         shownComparison && (
           // Only the Files view switches "Diff | Annotate" with a key: Browse repository has no such command.
-          <ItemViewer workspacePath={workspacePath} item={shown} comparison={shownComparison} comment={comment} listings={listings} viewShortcut={inWorkspace ? hotkey('annotate') : undefined} fileViewChoice={fileViewChoice} />
+          <ItemViewer place={place} item={shown} comparison={shownComparison} comment={comment} listings={listings} viewShortcut={inWorkspace ? hotkey('annotate') : undefined} fileViewChoice={fileViewChoice} />
         )
       }
     >

@@ -1,4 +1,5 @@
 import { CODE_REVIEW_STATUSES, type CodeReviewSummary } from '@shared/domain/codeReview';
+import type { Place } from '@shared/domain/place';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { linkCopyText } from '../../app/links/linkTo';
 import { openInNewWindow } from '../../app/pageWindow/openInNewWindow';
@@ -11,8 +12,8 @@ import { codeReviewPage, deleteReviews, openReview, reassignReview, setReviewSta
 import { reviewedCodeAction } from './reviewedCode';
 
 /** What a code review is copied as, first what ⌘C copies: its number, then its title. */
-export function codeReviewCopyTexts(workspacePath: string, review: Pick<CodeReviewSummary, 'id' | 'title'>): CopyTexts {
-  return { number: String(review.id), title: review.title.trim(), link: linkCopyText(workspacePath, undefined, { object: { kind: 'codeReview', id: review.id } }) };
+export function codeReviewCopyTexts(place: Place, review: Pick<CodeReviewSummary, 'id' | 'title'>): CopyTexts {
+  return { number: String(review.id), title: review.title.trim(), link: linkCopyText(place, undefined, { object: { kind: 'codeReview', id: review.id } }) };
 }
 
 /**
@@ -21,10 +22,10 @@ export function codeReviewCopyTexts(workspacePath: string, review: Pick<CodeRevi
  * review comes with its target named, disabled where `workspaceOn` (what the workspace is on) already is: everywhere
  * but a branch review in the palette, whose searches don't read branch names (ARCHITECTURE.md "Menus").
  */
-export function codeReviewMenu(workspacePath: string, reviews: CodeReviewSummary[], workspaceOn?: WorkspaceSelector): MenuEntry[] {
+export function codeReviewMenu(place: Place, reviews: CodeReviewSummary[], workspaceOn?: WorkspaceSelector): MenuEntry[] {
   if (reviews.length === 0) return [];
   const single = reviews.length === 1 ? reviews[0]! : null;
-  const reviewedCode = single?.target && reviewedCodeAction(workspacePath, single.target, workspaceOn);
+  const reviewedCode = single?.target && reviewedCodeAction(place, single.target, workspaceOn);
 
   return groupedMenu([
     single && menuAction('openReview', () => openReview(single)),
@@ -42,11 +43,11 @@ export function codeReviewMenu(workspacePath: string, reviews: CodeReviewSummary
           id: `status.${status}`,
           label: status,
           disabled: status === single.status,
-          run: () => void setReviewStatus(workspacePath, single, status),
+          run: () => void setReviewStatus(place, single, status),
         })),
       ),
-    single && menuAction('assign', () => void reassignReview(workspacePath, single)),
-    single && copySubmenu('Code review', codeReviewCopyTexts(workspacePath, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
-    menuAction('delete', () => void deleteReviews(workspacePath, reviews), single ? {} : { label: `Delete ${reviews.length} reviews…` }),
+    single && menuAction('assign', () => void reassignReview(place, single)),
+    single && copySubmenu('Code review', codeReviewCopyTexts(place, single), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
+    menuAction('delete', () => void deleteReviews(place, reviews), single ? {} : { label: `Delete ${reviews.length} reviews…` }),
   ]);
 }

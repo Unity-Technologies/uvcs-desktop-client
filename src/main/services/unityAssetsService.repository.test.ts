@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import type { Place } from '@shared/domain/place';
 import type { AssetsPoint, UnityAssetsRequest } from '@shared/domain/unityAssets';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { treeListingOutput, type ListedRecord } from '../cm/testing/cmOutput';
@@ -64,11 +65,11 @@ async function setUp(items: ListedRecord[], { platform = 'darwin' as NodeJS.Plat
   const fetched: RevisionFile[] = [];
   let time = 0;
   const downloads = {
-    read: async (_workspace: string, file: RevisionFile) => {
+    read: async (_place: Place, file: RevisionFile) => {
       downloaded.push(file);
       return Buffer.from(METAS[file.revision.revisionId] ?? 'bytes');
     },
-    fetch: async (_workspace: string, file: RevisionFile) => {
+    fetch: async (_place: Place, file: RevisionFile) => {
       fetched.push(file);
       if (file.revision.revisionId === 404) throw new Error('The specified revision was not found');
     },
@@ -148,7 +149,7 @@ describe('unityAssets.find at a point of the repository', () => {
     const fake = fakeCmClient({
       ls: (command) => (command.args[1] === '/Game' && failProject ? cmFails('The server is down') : (listing(PROJECT)(command) as string)),
     });
-    const downloads = { read: async (_workspace: string, file: RevisionFile) => Buffer.from(METAS[file.revision.revisionId] ?? 'bytes'), fetch: async () => undefined };
+    const downloads = { read: async (_place: Place, file: RevisionFile) => Buffer.from(METAS[file.revision.revisionId] ?? 'bytes'), fetch: async () => undefined };
     const unityAssets = createUnityAssetsService({ trees: new RepositoryTrees({ cm: fake.cm, downloads }), downloads, watchers: { listen: () => () => undefined, coverageOf: () => 'full' } });
     const request = { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', point: { kind: 'repository', at: 'cs:12' } as const, textures: [], guids: [MAT_GUID], paths: [], searchTexturesGlobally: false };
     // The server is down for the whole first find: it can't tell.

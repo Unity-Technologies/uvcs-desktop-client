@@ -6,7 +6,8 @@ build, as `npm run dev` serves it), then over the production build, which it lea
 is what catches a bug only `npm run dev` shows: StrictMode mounts every component, unmounts it and mounts it again,
 so an effect whose cleanup leaves something its second run can't use (a WebGL canvas whose context was lost) fails
 there, while the production build, which ships, runs each effect once. Each run builds, then `smoke.mjs` launches `out/` with Playwright's Electron driver and a throwaway
-`--user-data-dir`, opens a workspace, answers the question about profile pictures, visits every sidebar view, a diff, a file's last change read from the disk (the fake's revision is another file's), against its parent revision too, a model diff (a 3D model's, in its worker), a branch's permissions (an edit, then discarded), the command palette and Settings, and switches
+`--user-data-dir`, opens a workspace, answers the question about profile pictures, visits every sidebar view, a diff, a file's last change read from the disk (the fake's revision is another file's), against its parent revision too, a model diff (a 3D model's, in its worker), a branch's permissions (an edit, then discarded), the command palette, the repository explored without a workspace
+(from the home screen: its views, a file found by name and a changeset's diff) and Settings, and switches
 to the dark theme. It fails on any `pageerror` or `console.error`, a view whose heading doesn't show or that stays
 `Loading`, any `cm` command the fake couldn't answer, and an answer to the profile pictures question that wasn't
 saved. Beyond that answer, it asserts only that things appear, never pixels or copy.

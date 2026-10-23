@@ -16,7 +16,7 @@ you touch:
 
 | Doc                                     | Covers                                                                         |
 | --------------------------------------- | ------------------------------------------------------------------------------ |
-| `features/diff.md`                      | Comparing two branches, changesets or labels, editing, discarding, stepping through changes, comparison methods, line breaks, images, review marks, highlighting memory |
+| `features/diff.md`                      | Comparing two branches, changesets or labels, editing, the code's menu, discarding, stepping through changes, comparison methods, line breaks, images, review marks, highlighting memory |
 | `features/model-diff.md`                | 3D models (FBX, OBJ, glTF): reading them as Unity imports them, what changed in Unity's terms, the 3D view, materials and textures where each version is, the disk or the repository at its point (`api.unityAssets`) |
 | `features/merge.md`                     | The merge page, conflict resolution, external merge tools, finishing a task    |
 | `features/incoming.md`                  | Incoming: changesets and their files, conflicts with your changes, updating    |
@@ -27,6 +27,7 @@ you touch:
 | `features/updates.md`                   | The About dialog, reporting an issue, how the app updates (unsigned macOS too), What's New, releases, the app icon and CI |
 | `features/locks.md`                     | Lock rules: where they are edited, and why not in the app                      |
 | `features/permissions.md`               | Permissions: the ACL model, `cm showacl`/`cm acl` quirks, the dialog, where it's reachable |
+| `features/explore-repository.md`        | Exploring a repository without a workspace: the entry points, what its window shows and offers, Create workspace, links |
 | `features/page-windows.md`              | A page (a diff, a history, a review) in a new window: where it's offered, how it belongs to its workspace window, Follow selection |
 | `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 
@@ -74,9 +75,55 @@ you touch:
 
 To add a capability: its types in `shared/domain`, the method in `shared/api/<area>.ts` (part of `UvcsApi`), the
 implementation in `main/services/<area>Service.ts` (wired in `createServices`), `cm` argument builders and parsers as
-pure, tested helpers in `main/cm/`, then a query or mutation in the renderer through `api.<area>.<method>`. The preload
+pure, tested helpers in `main/cm/`, then a query or mutation in the renderer through `api.<area>.<method>`. A method on
+the server takes a `Place` and runs its commands through `cmPlace`, tested in a workspace and in a repository with none
+("Places", below). The preload
 and the IPC channel never change: the preload gains no capability or channel; besides `invoke` and `on` it exposes only
 values the page needs synchronously before its first frame (`platform`, the starting zoom `initialZoom`).
+
+## Places: a workspace, or a repository with none
+
+What a window shows is a `Place` (`shared/domain/place.ts`): a workspace, or a repository explored without one. The
+server's objects (branches, changesets, labels, shelves, attributes, code reviews, locks, diffs, histories, annotations,
+a changeset's tree) read and change the same in both; only the disk (pending changes, switching, updating, merging into
+the workspace, editing a file) needs a workspace.
+
+- **APIs**: a method on the server takes a `Place`; a method on the disk takes a workspace's path, which a repository's
+  place has none of, so the type checker keeps the disk out of a repository's window.
+- **Commands are written once, through `cmPlace`** (`main/cm/cmPlace.ts`). In a workspace a command runs as it always
+  has: in the workspace's folder, which tells `cm` the repository, its arguments as written. With no workspace each
+  command names the repository itself: `cm find` ends with `on repository '<repository>'` (`findCommand`: anywhere but
+  last `cm` fails, "missing EndOfFile"), specs end with `@<repository>` (`CmPlace.spec`; one naming its repository
+  already, an xlinked item's, stays), a new branch or attribute is created by that spec (`CmPlace.newObject`: a bare
+  name in a workspace), and `cm codereview` takes `--repository` (`CmPlace.repositoryOption`: without it, outside a
+  workspace, `cm` fails with "Object reference not set to an instance of an object", after creating the review).
+- **Outside every workspace**: a repository's commands run in an empty folder of the app's (`CmRunOptions.outsideWorkspaces`,
+  `<userData>/outside-workspaces`), never in a workspace another window shows (`anyDirectory`): a command that forgot to
+  name its repository fails ("Not on workspace") instead of reading, or changing, that workspace's repository.
+- **The disk is a workspace's**: a read of its files, its loaded revision or a review snapshot asks `workspaceOf`, a
+  bug told as one for a repository; `WorkspaceCopies` (revisions read from the disk) is asked only in a workspace.
+- **Caches and queues key by place** (`placeId`: a workspace's path, `repository:<spec>` for a repository):
+  `BranchNamesCache`, `RevisionCat`, `RepositoryTrees`, `RevisionDownloads`, `HandedOverDiffs`, the review mode setting.
+  `BranchNamesCache` keeps a place's names only while a window shows it (its `isShown`): a workspace's while it is
+  watched, a repository's while a window explores it (`WorkspaceWindows.explores`); the last window to leave it lets
+  them go (`onRepositoryLeft`).
+- **Windows key by place** too: one window per place (`WorkspaceWindows.windowShowing`, `samePlace`), page windows
+  belonging to it, the session saving either (`SavedWindow.repository`). A window says it explores a repository
+  (`windows.exploring`, `useRepositoryShown`) as watching a workspace says it shows one. The renderer's session holds
+  the place (`useSession().place`; `workspacePath` is its workspace's, null while exploring), and each place has its
+  screen on one layout (`PlaceLayout`: `WorkspaceScreen`, `RepositoryScreen`), its views (`showsView`, `viewsOf`) and
+  its commands (`usePlaceCommands`, then `useWorkspaceCommands` or `useRepositoryCommands`).
+- **The renderer** keys a place's queries `queryKeys.inPlace(place, …)` (a workspace's are `inWorkspace`'s, so every
+  refresh scope reads both alike), refreshes them with `invalidatePlace` (`runAction` takes the place it changed), and
+  gets the window's place from `usePlace()`, its repository and server from `usePlaceRepository()` and
+  `usePlaceServer()`. `useWorkspaceInfo()` and `usePendingChanges()` are the place's workspace's: none for a repository.
+- **Menus**: an object's menu takes the place; what needs a workspace takes its path (`workspacePathOf`), so it isn't
+  there for a repository. The words whose action needs one are listed once (`NEEDS_A_WORKSPACE`, `menuWords`), and
+  `menuGrammar.test.ts` builds every object's menu for a repository and checks none of them is offered.
+
+Tried and dropped: a temporary workspace for a repository (the official client's way). `cm` makes only workspaces that
+every client lists (`cm lwk`, the official client's home), and one a crash leaves stays there; the app would have
+to special-case it wherever a workspace shows (watchers, recent workspaces, the session, the incoming check).
 
 ## Server budget
 
@@ -109,8 +156,9 @@ and many people use the same server. Every `cm` command other than local reads (
   is all read so, a quick `cm cat` after another in one session, free between them for any other read: a small
   merge's few dozen versions in tens of ms, where a process costs 100-150 ms to start. Past it, batches go to
   processes of their own. `cm cat` writes every
-  revision it finds even when one fails, and names each it doesn't (`The specified revision was not found <spec>`):
-  that read fails alone with its line, and when every line names one, the others were written whole. A failure that
+  revision it finds even when one fails, and names each it doesn't: by its spec when it can't find it (`The specified
+  revision was not found <spec>`), by its file when its content was purged (`purgedTargetOf`; diff.md "A purged
+  version"). That read fails alone with its line, and when every line names one, the others were written whole. A failure that
   names nothing (a spec it can't take fails the command before it writes anything, a dropped connection) is narrowed
   down in halves (`narrowDown`): the half that fails again is split again, so one bad spec costs about two commands
   per halving, never one per read; when both halves fail, they all fail.
@@ -643,7 +691,7 @@ A workspace window may open page windows (a diff, a history… in a window of it
 belong to it and aren't workspace windows: `features/page-windows.md`.
 
 - `main/window/WorkspaceWindows` opens the windows; opening a workspace that another window shows brings that window
-  forward instead (`windows.focusWorkspace`, checked by `useOpenWorkspace`). The windows open as the installed app quits
+  forward instead (`windows.focusPlace`, checked by `useOpenWorkspace`). The windows open as the installed app quits
   (`saveSession`, from `Quitting`: each one's workspace or home screen, bounds, maximized and full screen, the last
   focused one last; `openWindows`) open again at its next launch where they were (`openFirst`, `windowsToReopen`: one
   per workspace, none for a folder that's gone), the focused one in front and the others shown behind it
@@ -653,7 +701,7 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   its last window closes (Windows, Linux), that window is saved as it closes (`Quitting.lastWindowClosing`). With none
   saved (on macOS, every window was closed before quitting), the first window reopens the last workspace used. Development builds start on one home screen, where automated UI checks pick a workspace. A new
   window opens on the home screen. A new window asked to open a workspace
-  takes it at start (`system.takeRequestedWorkspace`), as does a folder the installed app is launched with on Windows
+  takes it at start (`system.takeRequestedPlace`), as does a folder the installed app is launched with on Windows
   and Linux (`workspaceArgument`; a second launch hands it to the running app). A launch for a `uvcs://` link names no
   folder: the link goes to the window in front once the first windows opened (`receiveLinks`,
   features/deep-links.md). The first window waits until `cm` has
@@ -665,7 +713,7 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   (`useExpandedDirectories`, `useViewSelection`) or says which workspace it belongs to (`cutItemsIn`,
   `revealRequestIn`); otherwise the next workspace reads it, e.g. lists a folder only the last one has. The big part
   of what the window read of the workspace it leaves (for another one or the home screen) goes once its views unmount
-  (`useForgetLeftWorkspace`, `forgetWorkspace`): what nothing shows of its immutable results (revisions, what
+  (`useForgetLeftPlace`, `forgetPlace`): what nothing shows of its immutable results (revisions, what
   changesets changed) and of every content its diffs read, its own files too (`content`, `contentBytes`,
   `diffContents`, whatever their source). Each window has its own query client, and a workspace's revisions, kept an
   hour, held hundreds of MB after the window moved on. Its lists and info are light and stay until their usual
@@ -692,10 +740,11 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   (`ProfileList`: everyone asking while it runs takes its answer, a removed account makes it `forget` a read started
   before, and once one succeeded `cm` is configured for the session). Unconfigured, that read runs as a process:
   `cm shell` refuses to start, so no session is ever ready. No server is asked at start-up: the home screen works
-  without any. A workspace's server is checked as
-  the workspace opens, `cm checkconnection <server>` with the server its info names (`checkConnection`, once per server
-  until it answers), and a server out of reach or a failed sign-in show in a corner card naming it
-  (`ConnectionProblemCard`, `connectionProblemShown`) while the workspace works with what's local. Checking the default
+  without any. The server of the window's place is checked as
+  it opens, `cm checkconnection <server>` (`checkConnection`, once per server until it answers): a workspace's once its
+  info names it, a repository's explored without one from its spec (`serverOfPlace`). A server out of reach or a failed
+  sign-in show in a corner card naming it (`ConnectionProblemCard`, `connectionProblemShown`), while a workspace works
+  with what's local. Checking the default
   server at start-up, and stopping the app on its failure, was dropped: it left a user offline unable to open even the
   home screen, and named no server, as `cm checkconnection` prints none.
 - Dropping a folder on any window, home screen or workspace, opens its workspace in that window, or with Shift in a
@@ -719,8 +768,8 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   menu's key cap), the modifier a folder drop takes, and the one browsers use for a new window on all three OSs.
   With another modifier held too it opens here, and a missing workspace always opens here, whatever the keys: its
   screen locates, recreates or forgets it. The menu says the same: Open workspace, then Open in new window
-  (`workspaceMenu`), but not a missing workspace's. The new window asks `windows.openWorkspace`, so a workspace another
-  window shows comes forward instead; the new window remembers it as recent as it opens it (`useRequestedWorkspace`).
+  (`workspaceMenu`), but not a missing workspace's. The new window asks `windows.openPlace`, so a workspace another
+  window shows comes forward instead; the new window remembers it as recent as it opens it (`useRequestedPlace`).
 - A new workspace (the New workspace dialog: `createWorkspaceAndUpdate`) opens as soon as `cm workspace create` makes
   it, then gets the latest files of /main through the workspace's own Update (`updateWorkspace`: `cm update` in a process
   of its own, its progress card, its refreshes). `cm workspace create` already puts it on /main with nothing loaded, so
@@ -768,9 +817,10 @@ What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--tim
    and opens the first window, and builds the menu bar right after creating it, before it shows. What `cm` logs
    before the window exists waits for it (`CommandLogRelay`), and the page's events sent while it still loads reach
    it once it has (`sendEventTo`), so its command log lists them.
-3. The window is created hidden, its background the page's `--bg-app` (`WINDOW_BACKGROUND`), and names the workspace
-   it opens in its page's address when the folder is there (`startingWorkspaceQuery`).
-4. The page opens that workspace (`openWorkspaceFromAddress`) and asks for its first screen's data
+3. The window is created hidden, its background the page's `--bg-app` (`WINDOW_BACKGROUND`), and names the place it
+   opens in its page's address: a workspace when the folder is there, a repository explored without one
+   (`startingPlaceQuery`).
+4. The page opens that place (`openPlaceFromAddress`) and asks for its first screen's data
    (`prefetchStartupQueries`) before its first render, and applies the theme as it renders (`useTheme`): its first
    frame is the themed workspace screen or home screen, never the home screen on the way nor a frame without colors.
    The window shows on that frame (`ready-to-show`): the first render is synchronous (`flushSync` in `main.tsx`,
@@ -801,7 +851,7 @@ shells answer only after about a second).
 Tried and dropped, so they aren't proposed again:
 - Showing the window as it is created (`show: true`): an empty frame shows 150 ms sooner, but `show()` then holds the
   main process while the page loads, which ran its scripts 150 ms later.
-- Asking the main process which workspace to open (`takeRequestedWorkspace`), or awaiting the settings, before the
+- Asking the main process which workspace to open (`takeRequestedPlace`), or awaiting the settings, before the
   first render: the wait paints an empty frame, the window shows on it, and `show()` holds the answer: the first
   render came 90 ms later.
 - Minifying the renderer bundle (1.7 MB to 0.73 MB): the page's scripts ran 0-8 ms sooner, within noise.
@@ -866,7 +916,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   memo. The production build runs each effect once and hides such a bug, so `npm run e2e` runs the smoke test over a
   development build too (scripts/e2e/README.md).
 
-- **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)`, so `invalidateWorkspace(path)` refreshes everything after an operation
+- **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)` (a place's, `queryKeys.inPlace`: "Places" above), so `invalidateWorkspace(path)` refreshes everything after an operation
   (or what it can touch: `invalidateWorkspace(path, affected)`, `runOperation({ affects })`).
   A page opened from a list starts from the row that list already read, so it shows at once: a shelve
   (`cachedShelve`), a code review (`listedReview`, as `initialData` as fresh as that list, never from a list an
@@ -940,8 +990,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   hiding, permissions), and what undoes or deletes it last, in the danger tone; a separator between groups. Entries come from one
   vocabulary (`components/menuWords`: one id, icon, wording and group per concept) and `groupedMenu` orders them.
   One builder per kind (`branchMenu`, `changesetMenu`, `labelMenu`, `shelveMenu`, `codeReviewMenu`, `fileMenu`,
-  `pendingChangeMenu`) serves every place the object shows: its view, details' "More actions", the Branch Explorer,
-  the top bar's pill (right-click, `workingObjectMenu`), the switcher, the palette. A place only adds entries, at the
+  `pendingChangeMenu`) serves every host the object shows in (`MenuHost`): its view, details' "More actions", the Branch Explorer,
+  the top bar's pill (right-click, `workingObjectMenu`), the switcher, the palette. A host only adds entries, at the
   end of their group (`withEntries`: the graph's "Go to head changeset"); the Branch Explorer leaves out "Show in
   Branch Explorer". One exception: the palette's code reviews of a branch have no "Switch to this branch", as its
   searches read reviews without branch names (`listSummaries`; naming them would read every branch,
@@ -950,7 +1000,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   copied"); ⌘C in a list copies its first entry (`useCopyCommand`) unless text is selected, ⇧⌘C a link to what is in
   front (`useCopyLinkCommand`, features/deep-links.md). Items that open a dialog
   end with "…"; submenus hold real sets of choices, the choice made checked after its label (`checked`), so the icon
-  in front stays the item's own (an app's). `menuGrammar.test.ts` checks every builder and every place. A menu's
+  in front stays the item's own (an app's). `menuGrammar.test.ts` checks every builder and every host, in a workspace and in a repository with none. A menu's
   content is in a portal, but React bubbles its events to the row its trigger sits in: `ActionDropdownMenu` keeps its
   clicks and mouse presses from reaching that row (picking from a changelist's "…" selected and folded it).
 - **Back buttons**: a page goes back with the mouse's back button and, on Windows, the Browser Back key (the `app-command`

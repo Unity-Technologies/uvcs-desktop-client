@@ -1,6 +1,7 @@
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { ANNOTATE_DATE_FORMAT, ANNOTATE_FORMAT } from '../cm/annotation';
 import { formatOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient } from '../cm/testing/fakeCmClient';
@@ -23,7 +24,7 @@ describe('annotate', () => {
   it("annotates the workspace's file with one quick command, each changeset's details once", async () => {
     const { service, commands } = annotate(TWO_LINES);
 
-    const annotation = await service.file(WORKSPACE, 'src/player.cs');
+    const annotation = await service.file(workspacePlace(WORKSPACE), 'src/player.cs');
 
     expect(commands).toMatchObject([
       { via: 'query', args: ['annotate', join(WORKSPACE, 'src', 'player.cs'), `--format=${ANNOTATE_FORMAT}`, `--dateformat=${ANNOTATE_DATE_FORMAT}`], options: { cwd: WORKSPACE } },
@@ -38,8 +39,23 @@ describe('annotate', () => {
   it('annotates a revision by its spec instead of the workspace file', async () => {
     const { service, commands } = annotate(TWO_LINES);
 
-    await service.file(WORKSPACE, 'src/player.cs', 'revid:432@game@local');
+    await service.file(workspacePlace(WORKSPACE), 'src/player.cs', 'revid:432@game@local');
 
     expect(commands[0]?.args[1]).toBe('revid:432@game@local');
+  });
+
+  it('annotates a revision of a repository with no workspace by its spec, outside every workspace', async () => {
+    const { service, commands } = annotate(TWO_LINES);
+
+    await service.file(repositoryPlace('game@local'), 'src/player.cs', 'serverpath:/src/player.cs#cs:12');
+
+    expect(commands.map(({ args, options }) => [args[1], options])).toEqual([['serverpath:/src/player.cs#cs:12@game@local', { outsideWorkspaces: true }]]);
+  });
+
+  it("can't annotate the file as it is with no workspace: a bug told as one", async () => {
+    const { service, commands } = annotate(TWO_LINES);
+
+    await expect(service.file(repositoryPlace('game@local'), 'src/player.cs')).rejects.toThrow('needs a workspace');
+    expect(commands).toEqual([]);
   });
 });

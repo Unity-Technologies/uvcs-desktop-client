@@ -9,7 +9,7 @@ import { cmVersionQuery } from './useCmAvailability';
 /**
  * Asks for what the first screen shows as the page loads: the components' own queries would ask only after the first
  * paint, and by then the main process is busy showing the window (`show()` holds it for 50-100 ms). A window that
- * starts on a workspace (`openWorkspaceFromAddress`, its folder known to be there) asks for what its Changes view
+ * starts on a workspace (`openPlaceFromAddress`, its folder known to be there) asks for what its Changes view
  * shows; the home screen for its workspaces and servers.
  */
 export async function prefetchStartupQueries(): Promise<void> {

@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import { api } from '../../../api/client';
 import { fileNameOf } from '../../../lib/text';
 import { toast } from '../../../ui/toast/toastStore';
@@ -29,7 +30,7 @@ export async function undoLastDiscard(target: DiscardTarget): Promise<void> {
 }
 
 async function undoDiscard(target: DiscardTarget, discard: Discard): Promise<void> {
-  const now = await api.content.read(target.workspacePath, { kind: 'workspaceFile', path: target.path });
+  const now = await api.content.read(workspacePlace(target.workspacePath), { kind: 'workspaceFile', path: target.path });
   // Someone (an agent, an editor, a later discard) wrote the file since: putting the old text back would lose that.
   if (now.text !== discard.after) {
     toast.info(`${fileNameOf(target.path)} changed since`, 'Nothing was undone, so the newer changes stay.');

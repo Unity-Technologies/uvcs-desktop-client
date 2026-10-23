@@ -1,5 +1,6 @@
 import { fakeApi } from '../../testing/fakeWindow';
 import { describe, expect, it, vi } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 import { newWindowRunOf, windowAskedBy, workspaceOpener } from './workspaceWindowChoice';
 
 const pressed = (held: Partial<Record<'shiftKey' | 'altKey' | 'ctrlKey' | 'metaKey', boolean>> = {}) => ({
@@ -42,13 +43,13 @@ describe('workspaceOpener', () => {
   });
 
   it('asks for a new window, which the main process brings forward instead where another window shows the workspace', () => {
-    fakeApi.answer('windows.openWorkspace', () => undefined);
+    fakeApi.answer('windows.openPlace', () => undefined);
     const openHere = vi.fn();
 
     workspaceOpener(openHere)('/ws', 'newWindow');
 
     expect(openHere).not.toHaveBeenCalled();
-    expect(fakeApi.calls()).toEqual([{ method: 'windows.openWorkspace', args: ['/ws'] }]);
+    expect(fakeApi.calls()).toEqual([{ method: 'windows.openPlace', args: [workspacePlace('/ws')] }]);
   });
 });
 

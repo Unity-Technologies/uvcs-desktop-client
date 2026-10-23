@@ -128,13 +128,16 @@ the workspace only gives the page a window and a repository to read.
      paths with their links followed, as `cm` names the root as it is on disk: `/private/tmp/wk` for `/tmp/wk` on
      macOS, a junction on Windows); a folder in none says so. A file named with no page shows in Changes when it has a
      pending change, in Files otherwise.
-   - this window's workspace, when it is on the repository;
+   - this window's place, when it is on the repository: its workspace, or the repository it explores without one;
    - else another window's, the last focused first, which comes forward and opens it (`windows.openLinkIn`);
    - else the only workspace on the repository, in this window if it shows the home screen, else in a new one: the
      workspace a window shows is never left for a link;
    - else, with several, the user picks one (`pickLinkWorkspace`: name, branch, folder; the most recent first);
-   - else, with none, "No workspace on game yet" offers to create one (`offerNewWorkspace`, then the New workspace
-     dialog with the repository filled in, on the server as the user's profiles name it), then opens the link in it.
+   - else, with none, the repository is explored without a workspace (`exploreFor`, docs/features/explore-repository.md),
+     on the server as the user's profiles name it, as any place opens a link: the window exploring it, else this one
+     on the home screen, else a new one. A path (an older `/path/` link) opens in its Files, the latest of the main
+     branch, the item selected (`requestReveal`, by place); a view only a workspace has opens the repository's first
+     view instead. Its Create workspace makes a workspace of it, without leaving it.
 6. **The page** (`linkNavigation`) opens on top of the view, so Back returns to where the user was; a file is selected
    and its lines scrolled to and selected. A label's diff, and browsing a branch or the repository, first read the
    label's changeset or the branch's head (`linkLookup`: `labels.get`, `branches.get`, a light `cm find`); one that
@@ -155,15 +158,17 @@ badges.
   window's top bar too): the link to what the page is about, never the file or lines it shows (`pageObjectTarget`): a
   diff's changeset, branch, label, shelve or range, a review, a history's item at the revision shown, a browsed
   changeset at the item shown ("Copy link to shelve 2", "… to history of Player.cs": `objectLinkLabel`).
-- **The lines selected**, in a committed diff, a history's annotations, a file in Browse repository (its newer side) and
-  an unchanged file of the Files view:
+- **The lines selected**, in a committed diff, a history's annotations, a file in Browse repository (its newer side), an
+  unchanged file of the Files view, and a file of a repository's Files:
   - a quiet **"Copy link" chip** by the first of them, at the right end of its pane, as a change's "Revert change"
     sits (`LineLinkChip`, placed by `lineChipAnchor`); its tooltip says what it copies ("Copy link to lines 40–52 of
     Player.cs", `copyLinkLabel`) and the ⇧⌘C that copies it too;
-  - **a right-click on code** (`lineMenu`, `useLineTools`), which first selects the line clicked when it isn't
-    selected (`rightClickSelection`): "Annotate at this line" in a diff (the newer side's, `diffEntryAnnotation`),
-    "Copy link to line 42" (⇧⌘C) and "Copy line" (its text, `linesText`). Changes keeps its own: its lines are picked
-    to discard them, and no link names a pending change.
+  - **a right-click on code**, which first selects the line clicked when it isn't selected (`rightClickSelection`,
+    `useLineTools`): wherever lines are selected for links (a committed diff, Annotate, a browsed or Files file), the
+    lines' entries join the code's menu (`lineMenuEntries`, through `useCodeMenu`; features/diff.md "The code's
+    menu"): "Annotate at this line" in a diff (the newer side's, `diffEntryAnnotation`), "Copy link to line 42" (⇧⌘C)
+    and "Copy line" (its text, `linesText`). Changes' code menu has no line entries: its lines are picked to discard
+    them, and no link names a pending change.
   - Copied from either, the toast teaches the shortcut ("⇧⌘C copies it next time", `nextTimeHint`, `copyPageLink`).
   - Line numbers say how on hover ("Click to select · Shift+click a range", `lineNumberHint`), not while dragging.
 - **⇧⌘C (Ctrl+Shift+C) and the palette's "Copy link"** copy the most specific thing in front (`useCopyLinkCommand`,
@@ -176,7 +181,9 @@ badges.
   selected in its viewer get the chip and the menu, pinned to the changeset the workspace has loaded, as line numbers
   shift along a branch (`…/changesets/28/-/browse/Player.cs#L40`; `filesItemLink`, `useFilesItemLinks`,
   `LineLinks.linkOf`). It's the repository's version, never the workspace's own edits. A private or ignored item, one
-  under an xlink and a workspace on a shelve offer none.
+  under an xlink and a workspace on a shelve offer none. In a repository explored without a workspace, Files is a
+  branch's latest and links the same way: an item to the branch, its lines to the branch's head changeset
+  (`branchFilesOrigin`, given to `RepositoryTree` as its `linkOrigin`).
 - **The home screen**: ⇧⌘C and the palette's "Copy link" copy the server's repositories shown, the Unity project
   picked when there is one (`homeLink`); the welcome and All workspaces have none.
 - Nothing only on this computer is copied as a link: Changes offers none (a pending change exists nowhere else), nor

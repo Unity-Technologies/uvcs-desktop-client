@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { Shelve } from '@shared/domain/shelve';
-import { useWorkspaceUser } from '../../app/account/accounts';
+import { usePlaceUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
 import { useSettings } from '../../app/settings/useSettings';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -38,7 +38,7 @@ interface MyShelvesListProps {
  */
 export function MyShelvesList({ workspacePath, scope, onScopeChange, recent, onDone }: MyShelvesListProps) {
   const { switchShelves } = useSettings();
-  const me = useWorkspaceUser();
+  const me = usePlaceUser();
   const everyone = useEveryonesShelves(scope === 'everyone');
   const [filter, setFilter] = useState('');
   const { data: found, isFetching: searching } = useShelvesSearch(scope, filter);

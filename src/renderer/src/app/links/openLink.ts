@@ -1,3 +1,4 @@
+import { repositoryPlace, workspacePathOf, workspacePlace, type Place } from '@shared/domain/place';
 import type { WorkspaceHead, WorkspaceLocation, WorkspaceSelector, WorkspaceSummary } from '@shared/domain/workspace';
 import { repositorySpec } from '@shared/domain/specs';
 import { formatLink } from '@shared/links/formatLink';
@@ -11,19 +12,20 @@ import { requestLineFocus } from '../../features/pendingChanges/changesLineFocus
 import { changeRowKey } from '../../features/pendingChanges/changeRows';
 import { pendingChangesQuery } from '../../features/pendingChanges/usePendingChanges';
 import { toast } from '../../ui/toast/toastStore';
-import { openCreateWorkspaceDialog } from '../home/dialogs/CreateWorkspaceDialog';
 import { useHomeSection } from '../home/homeSectionStore';
 import { useProjectPickStore } from '../home/projectPickStore';
 import { navigation } from '../navigation/navigationStore';
+import { firstViewOf, showsView } from '../navigation/views';
 import { selectInView } from '../navigation/viewSelectionStore';
 import { queryClient } from '../queryClient';
 import { settingsQuery } from '../settings/useSettings';
+import { exploreHere } from '../workspace/exploreRepository';
 import { openUnlessShownElsewhere } from '../workspace/useOpenWorkspace';
 import { useSession } from '../workspace/sessionStore';
 import { workspaceInfoQuery } from '../workspace/useWorkspace';
 import { serversQuery, workspaceHeadsQuery, workspaceListQuery, workspaceRepositoryQuery } from '../workspace/workspaceQueries';
 import { linkDestination, type WorkspaceOnRepository } from './linkDestination';
-import { offerNewWorkspace, pickLinkWorkspace, showLinkFailure, type LinkWorkspaceChoice } from './linkDialogs';
+import { pickLinkWorkspace, showLinkFailure, type LinkWorkspaceChoice } from './linkDialogs';
 import { linkLookup, linkNavigation, type LinkLooked, type LinkNavigation, type LinkTarget } from './linkNavigation';
 import { serverLinkPlace } from './serverLinkPlace';
 
@@ -69,9 +71,9 @@ async function toldIfFailed(open: () => Promise<void>): Promise<void> {
 
 async function openRepositoryLink(link: RepositoryLink): Promise<void> {
   const workspaces = await workspacesOnRepositories(link.repository);
-  const current = useSession.getState().workspacePath;
+  const current = useSession.getState().place;
   const destination = linkDestination(link, {
-    current: current === null ? null : { path: current, repository: (await queryClient.fetchQuery(workspaceInfoQuery(current))).repository },
+    current: current === null ? null : { repository: await repositoryOfShown(current) },
     workspaces,
     shown: await api.windows.shownWorkspaces(),
     recent: (await queryClient.fetchQuery(settingsQuery)).recentWorkspacePaths,
@@ -80,15 +82,25 @@ async function openRepositoryLink(link: RepositoryLink): Promise<void> {
     case 'here':
       return showHere(current!, link, link);
     case 'workspace':
-      return openIn(destination.path, link, () => showHere(destination.path, link, link));
+      return openInWorkspace(destination.path, link);
     case 'pick': {
       const picked = await pickLinkWorkspace(link.repository, await workspaceChoices(destination.paths));
-      if (picked) await openIn(picked, link, () => showHere(picked, link, link));
+      if (picked) await openInWorkspace(picked, link);
       return;
     }
-    case 'none':
-      return createWorkspaceFor(link);
+    case 'explore':
+      return exploreFor(link);
   }
+}
+
+/** The repository of a place: a repository's own, a workspace's from its info. */
+async function repositoryOfShown(place: Place): Promise<string> {
+  return place.kind === 'repository' ? place.repository : (await queryClient.fetchQuery(workspaceInfoQuery(place.workspacePath))).repository;
+}
+
+function openInWorkspace(workspacePath: string, link: RepositoryLink): Promise<void> {
+  const place = workspacePlace(workspacePath);
+  return openIn(place, link, () => showHere(place, link, link));
 }
 
 /**
@@ -99,52 +111,56 @@ async function openWorkspaceLink(link: WorkspaceLink): Promise<void> {
   const location = await api.workspaces.locate(link.folder);
   if (!location) return showLinkFailure({ kind: 'notInWorkspace', folder: link.folder });
   const show = (): Promise<void> => showWorkspaceItem(location, link);
-  return useSession.getState().workspacePath === location.root ? show() : openIn(location.root, link, show);
+  return useSession.getState().workspacePath === location.root ? show() : openIn(workspacePlace(location.root), link, show);
 }
 
 /** What a workspace link opens in its workspace, this window's now. */
 async function showWorkspaceItem({ root, itemPath: item }: WorkspaceLocation, link: WorkspaceLink): Promise<void> {
   const target: LinkTarget = link.page || !item ? link : { page: { kind: 'view', view: (await hasChange(root, item)) ? 'changes' : 'files', path: `/${item}` }, lines: link.lines };
-  return showHere(root, target, null);
+  return showHere(workspacePlace(root), target, null);
 }
 
 /**
- * Hands the link to the window showing the workspace, or one opening it (`windows.openLinkIn`), as the app writes it;
- * this window opens the workspace, then shows the link, when it shows the home screen.
+ * Hands the link to the window showing the place, or one opening it (`windows.openLinkIn`), as the app writes it;
+ * this window opens the place, then shows the link, when it shows the home screen.
  */
-async function openIn(workspacePath: string, link: RepositoryLink | WorkspaceLink, showOnceOpen: () => Promise<void>): Promise<void> {
-  if ((await api.windows.openLinkIn(workspacePath, formatLink(link))) === 'handedOver') return;
-  await openUnlessShownElsewhere(workspacePath, useSession.getState().openWorkspace);
+async function openIn(place: Place, link: RepositoryLink | WorkspaceLink, showOnceOpen: () => Promise<void>): Promise<void> {
+  if ((await api.windows.openLinkIn(place, formatLink(link))) === 'handedOver') return;
+  if (place.kind === 'workspace') await openUnlessShownElsewhere(place.workspacePath, useSession.getState().openWorkspace);
+  else await exploreHere(place.repository);
   return showOnceOpen();
 }
 
-/** Opens what the link names in this window's workspace, once what it needs is read (a label's changeset). */
-async function showHere(workspacePath: string, target: LinkTarget, link: RepositoryLink | null): Promise<void> {
+/** Opens what the link names in this window's place, once what it needs is read (a label's changeset). */
+async function showHere(place: Place, target: LinkTarget, link: RepositoryLink | null): Promise<void> {
   const lookup = linkLookup(target);
-  const looked = lookup && (await readLookup(workspacePath, lookup));
+  const looked = lookup && (await readLookup(place, lookup));
   if (lookup && !looked) {
     const what = lookup.kind === 'label' ? `label ${lookup.name}` : `branch ${lookup.name}`;
     return showLinkFailure({ kind: 'notFound', what, repository: link?.repository ?? 'this repository' });
   }
-  navigate(workspacePath, linkNavigation(target, looked || null));
+  navigate(place, linkNavigation(target, looked || null));
 }
 
-async function readLookup(workspacePath: string, lookup: NonNullable<ReturnType<typeof linkLookup>>): Promise<LinkLooked | null> {
+async function readLookup(place: Place, lookup: NonNullable<ReturnType<typeof linkLookup>>): Promise<LinkLooked | null> {
   if (lookup.kind === 'label') {
-    const label = await api.labels.get(workspacePath, lookup.name);
+    const label = await api.labels.get(place, lookup.name);
     return label && { changesetId: label.changeset };
   }
-  const branch = await api.branches.get(workspacePath, lookup.name);
+  const branch = await api.branches.get(place, lookup.name);
   return branch && { changesetId: branch.headChangeset };
 }
 
-function navigate(workspacePath: string, where: LinkNavigation): void {
+/** Goes where the link leads in the place; a view the place doesn't show (a repository's Files) opens its first one. */
+function navigate(place: Place, where: LinkNavigation): void {
   if (where.kind === 'page') return navigation.openPage(where.page);
   const { show } = where;
   if (show?.kind === 'branchExplorer') return showInBranchExplorer(show.target);
-  if (show?.kind === 'files') useFilesViewStore.getState().requestReveal(workspacePath, show.path);
-  if (show?.kind === 'change') {
-    selectInView(workspacePath, 'changes', changeRowKey(show.path));
+  if (!showsView(place, where.view)) return navigation.goToView(firstViewOf(place));
+  const workspacePath = workspacePathOf(place);
+  if (show?.kind === 'files') useFilesViewStore.getState().requestReveal(place, show.path);
+  if (show?.kind === 'change' && workspacePath !== null) {
+    selectInView(place, 'changes', changeRowKey(show.path));
     if (show.lines) requestLineFocus(workspacePath, show.path, show.lines);
   }
   navigation.goToView(where.view);
@@ -195,17 +211,13 @@ async function hasChange(workspacePath: string, path: string): Promise<boolean> 
 }
 
 /**
- * Offers to create a workspace on the repository, then opens the link in it as any link opens (`openIn`): here when
- * this window shows the home screen, else in a window of its own. The server as the user's profiles name it
- * (`ssl://host:8088`), which a link leaves the protocol out of.
+ * Explores the repository without a workspace, as none is on it yet, then opens the link there as any link opens
+ * (`openIn`): here when this window shows the home screen, else in the window exploring it or one of its own. The
+ * server as the user's profiles name it (`ssl://host:8088`), which a link leaves the protocol out of.
  */
-async function createWorkspaceFor(link: RepositoryLink): Promise<void> {
-  if (!(await offerNewWorkspace(link.repository))) return;
+async function exploreFor(link: RepositoryLink): Promise<void> {
   const profiles = await api.repositories.servers();
   const server = profiles.find((profile) => sameServer(profile.server, link.server))?.server ?? link.server;
-  openCreateWorkspaceDialog({
-    repository: { id: '', name: link.repository, server, owner: '', spec: repositorySpec(link.repository, server) },
-    // The dialog calls it and goes: it tells its own failure.
-    onCreated: (workspacePath) => toldIfFailed(() => openIn(workspacePath, link, () => showHere(workspacePath, link, link))),
-  });
+  const place = repositoryPlace(repositorySpec(link.repository, server));
+  return openIn(place, link, () => showHere(place, link, link));
 }

@@ -22,7 +22,9 @@ the selection to settle (`useSettledValue`, without remounting); revisions are c
 into the diff to scroll it, F6 or Esc back to the tree, which keeps `MAIN_FOCUS`. Every folder listing of the
 workspace is one query (`directoryListingQuery`), shared by the tree, Go to file's actions, Paste and the name checks.
 Browse repository shows its tree the same way, every item as its revision (with a filter of its open folders); a
-changeset's tree never changes, so each of its folders is read once (`repositoryListingQuery`, immutable).
+changeset's tree never changes, so each of its folders is read once (`repositoryListingQuery`, immutable). That tree
+(`RepositoryTree`) is also the Files view of a repository explored without a workspace, at a branch's latest
+changeset (docs/features/explore-repository.md "Files").
 
 ## Finding a file
 

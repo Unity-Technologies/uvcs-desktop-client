@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { workspacePathOf, type Place } from '@shared/domain/place';
 import type { UnityAssetsRequest } from '@shared/domain/unityAssets';
 import { gltfImageBytes } from '../gltfJson';
 import { textureLoadsOf, type GltfImage } from '../textures/textureLoadPlan';
@@ -56,9 +57,12 @@ const NO_REQUESTS = [null, null];
  * too, from the same reads (so the look reads nothing again), and only for versions whose materials may resolve
  * differently (`materialsMayDiffer`); no texture is decoded for it.
  */
-export function useModelMaterials(workspacePath: string, versions: Record<Side, MaterialVersion | null>, wanted: boolean): ModelMaterials {
-  const mtl = useMtlMaterials(workspacePath, versions);
-  const workspaceSettings = useWorkspaceImportSettings(workspacePath, versions);
+export function useModelMaterials(place: Place, versions: Record<Side, MaterialVersion | null>, wanted: boolean): ModelMaterials {
+  // What the look reads besides the model (the Unity project's files, its lookups) is a workspace's; '' for none, as
+  // the look's parts take it: none is offered without one (`materialsOffered`, `comparableVersions`).
+  const workspacePath = workspacePathOf(place) ?? '';
+  const mtl = useMtlMaterials(place, versions);
+  const workspaceSettings = useWorkspaceImportSettings(workspacePathOf(place), versions);
   const inputs = useMemo(
     () => ({
       before: materialsInputOf(versions.before, mtl.before, workspaceSettings.before),

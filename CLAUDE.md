@@ -54,7 +54,9 @@ src/renderer/  React UI. Talks to main only through `api.<area>.<method>` (`rend
 ```
 
 - **Adding a capability**: ARCHITECTURE.md "How a request flows" (domain type → `shared/api` → service wired in
-  `createServices` → pure, tested `cm` helpers in `main/cm/` → a query or mutation in the renderer).
+  `createServices` → pure, tested `cm` helpers in `main/cm/` → a query or mutation in the renderer). What reads or
+  changes the server takes the window's `Place` (a workspace, or a repository with none) and runs through `cmPlace`;
+  only what needs the disk takes a workspace's path (ARCHITECTURE.md "Places").
 - **`CmClient`** is the single entry point to `cm`. Never spawn `cm` any other way.
 - **Renderer tiers**: `ui/` design-system primitives, `components/` domain-aware pieces shared by features,
   `features/<area>/` one folder per area, `lib/` pure helpers, `app/` the shell (navigation, palette, operations,
@@ -147,7 +149,8 @@ npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click 
   whose merge has file and directory conflicts and changes in several folders: the merge page), `deletes.sh`
   (changesets deleting a file, a folder, an accented name, and a path a new file took: restoring deleted items),
   `smart-merge.sh` (Unity prefabs that conflict line by line, one Smart Merge merges and one it can't: needs a Unity
-  Editor installed).
+  Editor installed), `purged.sh` (changesets whose earlier, later or both versions a purge removed: needs the purge
+  permission on the local server).
   `scripts/perf/soak.mjs` catches leaks.
 - `UVCS_RENDERER_PLATFORM=win32` (or `linux`) previews another OS's shortcuts, copy and layout from a Mac (the page
   only: the menus and window frame stay the Mac's).

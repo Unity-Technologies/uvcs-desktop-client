@@ -15,7 +15,8 @@ export function workspaceSwitcherList(
   workspaces: WorkspaceSummary[],
   recentPaths: string[],
   missingPaths: string[],
-  currentPath: string,
+  /** The workspace the window shows, left out; null while it explores a repository without one. */
+  currentPath: string | null,
   describe: (entry: Pick<WorkspaceEntry, 'workspace' | 'missing'>) => WorkspaceEntry,
   filter: string,
 ): WorkspaceSwitcherList {

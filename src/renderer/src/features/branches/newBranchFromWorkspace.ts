@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
@@ -17,11 +18,11 @@ const MAIN_BRANCH = '/main';
 export async function newBranchFromWorkspace(workspace: WorkspaceInfo): Promise<void> {
   const loaded = loadedOrigin(workspace);
   if (loaded && branchWorkedOn(workspace.selector) === MAIN_BRANCH) {
-    openCreateBranchDialog(workspace.path, loaded);
+    openCreateBranchDialog(workspacePlace(workspace.path), loaded);
     return;
   }
 
-  const [mainHead] = await api.changesets.list(workspace.path, { branch: MAIN_BRANCH, limit: 1 }).catch(() => []);
+  const [mainHead] = await api.changesets.list(workspacePlace(workspace.path), { branch: MAIN_BRANCH, limit: 1 }).catch(() => []);
   const main: NewBranchOrigin | null = mainHead
     ? {
         parentBranch: MAIN_BRANCH,
@@ -35,7 +36,7 @@ export async function newBranchFromWorkspace(workspace: WorkspaceInfo): Promise<
       }
     : null;
   const [first, ...rest] = [main, loaded].filter((origin) => origin !== null);
-  if (first) openCreateBranchDialog(workspace.path, first, ...rest);
+  if (first) openCreateBranchDialog(workspacePlace(workspace.path), first, ...rest);
   else toast.error("Couldn't start a new branch", `The workspace is on a shelve, and the latest ${MAIN_BRANCH} couldn't be read.`);
 }
 

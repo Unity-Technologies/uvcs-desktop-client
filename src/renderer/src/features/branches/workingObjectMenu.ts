@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
 import type { Label } from '@shared/domain/label';
@@ -27,13 +28,13 @@ export function workingObjectMenu(workspace: WorkspaceInfo, object: WorkingObjec
   const currentBranch = branchWorkedOn(workspace.selector);
   switch (object?.kind) {
     case 'branch':
-      return branchMenu(workspace.path, [object.branch], currentBranch);
+      return branchMenu(workspacePlace(workspace.path), [object.branch], currentBranch);
     case 'changeset':
-      return changesetMenu({ workspacePath: workspace.path, loadedChangeset: workspace.loadedChangeset, loadedBranch: object.changeset.branch }, [object.changeset]);
+      return changesetMenu({ place: workspacePlace(workspace.path), loadedChangeset: workspace.loadedChangeset, loadedBranch: object.changeset.branch }, [object.changeset]);
     case 'label':
-      return labelMenu(workspace.path, [object.label]);
+      return labelMenu(workspacePlace(workspace.path), [object.label]);
     case 'shelve':
-      return shelveMenu(workspace.path, [object.shelve], { mine: false });
+      return shelveMenu(workspacePlace(workspace.path), [object.shelve], { mine: false });
     default:
       return LOADING;
   }

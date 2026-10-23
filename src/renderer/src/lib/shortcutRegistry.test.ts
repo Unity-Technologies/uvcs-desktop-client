@@ -97,7 +97,19 @@ describe('shortcut registry', () => {
   });
 
   it('leaves undo and redo to text off macOS, where Ctrl+Y is Redo', () => {
-    for (const key of keysOn(false)) expect(['mod+y', 'mod+shift+z'], key).not.toContain(key);
+    // Redo in the text is the text's own key: the editor's, which its menu shows (`codeMenu`).
+    const notTextRedo = Object.entries(SHORTCUTS).filter(([id]) => id !== 'textRedo');
+    for (const key of notTextRedo.flatMap(([, shortcut]) => shortcutKeys(shortcut, false))) expect(['mod+y', 'mod+shift+z'], key).not.toContain(key);
+  });
+
+  it("gives the text each OS's editing keys: Redo, Replace (never ⌘H, which hides the app on macOS) and Go to line", () => {
+    expect(shortcutKeys(SHORTCUTS.textRedo, true)).toEqual(['mod+shift+z']);
+    expect(shortcutKeys(SHORTCUTS.textRedo, false)).toEqual(['mod+y']);
+    expect(shortcutKeys(SHORTCUTS.textReplace, true)).toEqual(['mod+alt+f']);
+    expect(shortcutKeys(SHORTCUTS.textReplace, false)).toEqual(['mod+h']);
+    // ⌘G is Find next on macOS.
+    expect(shortcutKeys(SHORTCUTS.goToLine, true)).toEqual(['ctrl+g']);
+    expect(shortcutKeys(SHORTCUTS.goToLine, false)).toEqual(['mod+g']);
   });
 
   it('opens the menu with F10 off macOS only, where the window has no menu bar of its own on Windows', () => {

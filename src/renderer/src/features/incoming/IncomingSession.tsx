@@ -1,5 +1,6 @@
 import { Folder } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { workspacePlace } from '@shared/domain/place';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import { isHeaderRow } from '../../lib/groupedPathTree';
@@ -124,7 +125,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
       else if (resolutions) await updateResolvingConflicts(workspacePath, incoming, resolutions);
     });
 
-  const menuContext = { workspacePath, loadedChangeset: incoming.loadedChangeset, loadedBranch: incoming.branch ?? undefined };
+  const menuContext = { place: workspacePlace(workspacePath), loadedChangeset: incoming.loadedChangeset, loadedBranch: incoming.branch ?? undefined };
   const scopedChangeset = scope.kind === 'changeset' ? changesetList.changesets.find((changeset) => changeset.id === scope.id) : undefined;
   // Conflicts are settled in the whole update, the merge updating makes; a changeset's files are what it did.
   const conflictOf = (path: string) => (conflictPaths.has(path) ? states.find((state) => state.file.key === path) : undefined);

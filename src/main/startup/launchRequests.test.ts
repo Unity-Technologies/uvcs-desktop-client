@@ -2,6 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { workspacePathOf } from '@shared/domain/place';
 import { memorySettings } from '../settings/testing/memorySettings';
 import { fakeElectron } from '../window/testing/fakeElectron';
 import { WorkspaceWindows } from '../window/WorkspaceWindows';
@@ -23,6 +24,7 @@ function setUp() {
   const windows = new WorkspaceWindows({
     settings: memorySettings({ recentWorkspacePaths: [lastUsed] }),
     workspaceOf: () => undefined,
+    onRepositoryLeft: () => {},
     onWindowsChanged: () => {},
     onLastWindowClosing: () => {},
     onClosed: () => {},
@@ -40,7 +42,10 @@ function setUp() {
     lookup.resolve(root);
     await lookup.answer;
   };
-  const requestedIn = (index: number): string | null => windows.takeRequested(fakeElectron.windows()[index]!.webContents.id);
+  const requestedIn = (index: number): string | null => {
+    const place = windows.takeRequested(fakeElectron.windows()[index]!.webContents.id);
+    return place && workspacePathOf(place);
+  };
   return { windows, findRoot, found, requestedIn, lastUsed };
 }
 

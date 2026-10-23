@@ -11,7 +11,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  useSession.setState({ workspacePath: null });
+  useSession.setState({ place: null, workspacePath: null });
   queryClient.clear();
 });
 
@@ -26,7 +26,7 @@ describe('prefetchStartupQueries', () => {
   });
 
   it("asks for what a workspace's Changes view shows when the window starts on it, not for the home screen's lists", async () => {
-    useSession.setState({ workspacePath: '/wk' });
+    useSession.getState().openWorkspace('/wk');
     fakeApi.answer('workspaces.info', () => ({}));
     fakeApi.answer('pendingChanges.list', () => ({ changes: [] }));
 

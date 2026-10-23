@@ -1,6 +1,7 @@
 import { fakeApi } from '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { OperationProgress } from '@shared/domain/operation';
+import { workspacePlace } from '@shared/domain/place';
 import { taskWorkspaceActions } from './taskWorkspaceActions';
 
 const progress = (fraction: number) => ({ fraction }) as unknown as OperationProgress;
@@ -9,15 +10,15 @@ describe('taskWorkspaceActions', () => {
   it('creates the branch from the current workspace, with no comment', async () => {
     fakeApi.answer('branches.create', () => undefined);
 
-    await taskWorkspaceActions('/wk/game', 'op-1', () => {}).createBranch('/main/task-1');
+    await taskWorkspaceActions(workspacePlace('/wk/game'), 'op-1', () => {}).createBranch('/main/task-1');
 
-    expect(fakeApi.argsOf('branches.create')).toEqual([['/wk/game', { name: '/main/task-1', comment: '' }]]);
+    expect(fakeApi.argsOf('branches.create')).toEqual([[workspacePlace('/wk/game'), { name: '/main/task-1', comment: '' }]]);
   });
 
   it('creates the workspace in the folder and resolves to where it was created', async () => {
     fakeApi.answer('workspaces.create', () => ({ path: '/wk/game-task-1' }));
 
-    expect(await taskWorkspaceActions('/wk/game', 'op-1', () => {}).createWorkspace('game-task-1', '/wk/game-task-1', 'game@local')).toBe('/wk/game-task-1');
+    expect(await taskWorkspaceActions(workspacePlace('/wk/game'), 'op-1', () => {}).createWorkspace('game-task-1', '/wk/game-task-1', 'game@local')).toBe('/wk/game-task-1');
     expect(fakeApi.argsOf('workspaces.create')).toEqual([[{ name: 'game-task-1', path: '/wk/game-task-1', repository: 'game@local' }]]);
   });
 
@@ -28,7 +29,7 @@ describe('taskWorkspaceActions', () => {
       fakeApi.emit('operationProgress', { operationId: 'other', progress: progress(0.9) });
     });
 
-    await taskWorkspaceActions('/wk/game', 'op-1', (each) => reported.push(each)).switchTo('/wk/game-task-1', '/main/task-1');
+    await taskWorkspaceActions(workspacePlace('/wk/game'), 'op-1', (each) => reported.push(each)).switchTo('/wk/game-task-1', '/main/task-1');
     fakeApi.emit('operationProgress', { operationId: 'op-1', progress: progress(1) });
 
     expect(reported).toEqual([progress(0.5)]);
@@ -41,7 +42,7 @@ describe('taskWorkspaceActions', () => {
       throw new Error('Server unreachable');
     });
 
-    await expect(taskWorkspaceActions('/wk/game', 'op-1', (each) => reported.push(each)).switchTo('/wk/game-task-1', '/main/task-1')).rejects.toThrow('Server unreachable');
+    await expect(taskWorkspaceActions(workspacePlace('/wk/game'), 'op-1', (each) => reported.push(each)).switchTo('/wk/game-task-1', '/main/task-1')).rejects.toThrow('Server unreachable');
     fakeApi.emit('operationProgress', { operationId: 'op-1', progress: progress(1) });
 
     expect(reported).toEqual([]);

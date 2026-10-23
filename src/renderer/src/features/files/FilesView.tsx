@@ -1,5 +1,6 @@
 import { FilePlus, FolderPlus, RefreshCw, Search } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { workspacePlace } from '@shared/domain/place';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
@@ -60,7 +61,7 @@ export function FilesView() {
   const focusedMenu = focused ? fileMenu(workspacePath, [focused], pendingIndex, locks) : [];
   const lineLinks = useFilesItemLinks(workspace, focused, pendingIndex);
 
-  const revealRequest = useRevealRequest(workspacePath);
+  const revealRequest = useRevealRequest(workspacePlace(workspacePath));
   useEffect(() => {
     if (!revealRequest) return;
     const { path, selected = [path] } = revealRequest;
@@ -71,7 +72,7 @@ export function FilesView() {
   }, [revealRequest, expand, workspacePath]);
 
   const openGoToFile = useCallback(
-    (query?: string) => void goToFile(workspacePath, query).then((path) => path && useFilesViewStore.getState().requestReveal(workspacePath, path)),
+    (query?: string) => void goToFile(workspacePath, query).then((path) => path && useFilesViewStore.getState().requestReveal(workspacePlace(workspacePath), path)),
     [workspacePath],
   );
   useFileCommands(workspacePath, selectedItems, pendingIndex, locks, openGoToFile);
@@ -144,7 +145,7 @@ export function FilesView() {
           ) : focused ? (
             <LineLinksContext.Provider value={lineLinks}>
               <ItemDetailsPane
-                workspacePath={workspacePath}
+                place={workspacePlace(workspacePath)}
                 item={focused}
                 pendingIndex={pendingIndex}
                 lock={locks.get(focused.path)}

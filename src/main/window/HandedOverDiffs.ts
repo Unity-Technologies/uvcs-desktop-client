@@ -1,4 +1,5 @@
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
+import { placeId, type Place } from '@shared/domain/place';
 
 /** The page windows opening at once, at most: an older hand-over nobody took (its window failed to load) goes. */
 const MAX_WAITING = 4;
@@ -11,16 +12,16 @@ const MAX_WAITING = 4;
 export class HandedOverDiffs {
   private readonly waiting = new Map<string, DiffEntry[]>();
 
-  hand(workspacePath: string, target: DiffTarget, entries: DiffEntry[]): void {
-    const key = keyOf(workspacePath, target);
+  hand(place: Place, target: DiffTarget, entries: DiffEntry[]): void {
+    const key = keyOf(place, target);
     this.waiting.delete(key);
     this.waiting.set(key, entries);
     if (this.waiting.size > MAX_WAITING) this.waiting.delete(this.waiting.keys().next().value!);
   }
 
   /** The entries handed over for this diff, once; undefined when none were (read it with `cm diff`). */
-  take(workspacePath: string, target: DiffTarget): DiffEntry[] | undefined {
-    const key = keyOf(workspacePath, target);
+  take(place: Place, target: DiffTarget): DiffEntry[] | undefined {
+    const key = keyOf(place, target);
     const entries = this.waiting.get(key);
     this.waiting.delete(key);
     return entries;
@@ -28,7 +29,7 @@ export class HandedOverDiffs {
 }
 
 /** A target's fields in one order, whatever order the page wrote them in. */
-function keyOf(workspacePath: string, target: DiffTarget): string {
+function keyOf(place: Place, target: DiffTarget): string {
   const fields = Object.entries(target).sort(([a], [b]) => a.localeCompare(b));
-  return JSON.stringify([workspacePath, fields]);
+  return JSON.stringify([placeId(place), fields]);
 }

@@ -2,20 +2,20 @@ import * as Popover from '@radix-ui/react-popover';
 import { useState } from 'react';
 import { displayName } from '../../lib/userName';
 import { Avatar } from '../../ui/Avatar';
-import { useWorkspaceInfo } from '../workspace/useWorkspace';
+import { usePlaceServer } from '../workspace/useWorkspace';
 import { useServerAccount } from './accounts';
 import { AccountMenu } from './AccountMenu';
 import { organizationName } from './serverAccount';
 import styles from './AccountMenu.module.css';
 
-/** Who you are on the workspace's server, at the right end of the top bar; opens the account menu. */
+/** Who you are on the server of the window's place (`usePlaceServer`), at the right end of the top bar; opens the account menu. */
 export function AccountButton() {
   const [open, setOpen] = useState(false);
-  const { data: info } = useWorkspaceInfo();
-  const identity = useServerAccount(info?.server);
-  if (!info || !identity) return null;
+  const placeServer = usePlaceServer();
+  const identity = useServerAccount(placeServer);
+  if (!placeServer || !identity) return null;
 
-  const server = organizationName(info.server, identity.account) ?? info.server;
+  const server = organizationName(placeServer, identity.account) ?? placeServer;
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
@@ -26,7 +26,7 @@ export function AccountButton() {
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content className={styles.popover} side="bottom" align="end" sideOffset={6}>
-          <AccountMenu server={info.server} identity={identity} onDone={() => setOpen(false)} />
+          <AccountMenu server={placeServer} identity={identity} onDone={() => setOpen(false)} />
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

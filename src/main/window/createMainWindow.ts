@@ -1,8 +1,9 @@
 import { join } from 'node:path';
 import { app, BrowserWindow, nativeTheme, shell } from 'electron';
+import type { Place } from '@shared/domain/place';
 import type { PageSeed, PageWindowPage } from '@shared/domain/pageWindow';
 import type { SavedWindow } from '@shared/domain/settings';
-import { pageWindowQuery, startingWorkspaceQuery } from '@shared/startingWorkspace';
+import { pageWindowQuery, startingPlaceQuery } from '@shared/startingPlace';
 import { WINDOW_BACKGROUND, windowChrome } from '@shared/windowChrome';
 import { sendEventTo } from '../ipc/sendEvent';
 import type { SettingsStore } from '../settings/SettingsStore';
@@ -19,14 +20,17 @@ const DEFAULT_SIZE = { width: 1400, height: 900 };
 interface MainWindowOptions {
   /** The window it was opened from: it opens a little below and to the right, so it doesn't hide that one. */
   cascadeFrom?: BrowserWindow;
-  /** The workspace its page starts on (`startingWorkspaceQuery`), its folder known to be there; the home screen without one. */
-  workspacePath?: string;
+  /**
+   * The place its page starts on (`startingPlaceQuery`): a workspace whose folder is known to be there, or a repository
+   * explored without one; the home screen without one.
+   */
+  place?: Place;
   /** A window open when the app last quit: it opens where it was, full screen if it was. */
   reopen?: SavedWindow;
   /** Shows without taking the focus: a window reopened at launch behind the one that had it. */
   inBackground?: boolean;
   /**
-   * A page window's page (`windows.openPage`), shown in `workspacePath`. Without `cascadeFrom`, it opens where the last
+   * A page window's page (`windows.openPage`), shown in `place`. Without `cascadeFrom`, it opens where the last
    * page window was left (`pageWindowBounds`: on the other display, say), and its bounds are saved apart from the
    * workspace windows'.
    */
@@ -41,7 +45,7 @@ interface MainWindowOptions {
  */
 export function createMainWindow(
   settings: SettingsStore,
-  { cascadeFrom, workspacePath, reopen, inBackground, page, seed }: MainWindowOptions = {},
+  { cascadeFrom, place, reopen, inBackground, page, seed }: MainWindowOptions = {},
 ): BrowserWindow {
   const boundsKey = page ? 'pageWindowBounds' : 'windowBounds';
   const { bounds, maximized } = openingBounds(settings, { cascadeFrom, reopen }, boundsKey);
@@ -83,7 +87,7 @@ export function createMainWindow(
     return { action: 'deny' };
   });
 
-  loadPage(window, page && workspacePath ? pageWindowQuery(workspacePath, page, seed) : startingWorkspaceQuery(workspacePath, reopen?.view));
+  loadPage(window, page && place ? pageWindowQuery(place, page, seed) : startingPlaceQuery(place, reopen?.view));
   return window;
 }
 
