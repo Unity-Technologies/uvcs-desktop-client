@@ -6,7 +6,10 @@ import { isMenuCommandEnabled, REPOSITORY_MENU_COMMANDS, WORKSPACE_MENU_COMMANDS
 
 const read = (path: string) => readFileSync(join(__dirname, path), 'utf8');
 const menuCommands = [...read('appMenuTemplate.ts').matchAll(/commandItem\([^,]+, '([^']+)'/g)].map(([, id]) => id);
+// Every place's commands (`usePlaceCommands`), and a workspace's own.
+const PLACE_COMMAND_SOURCES = ['../../renderer/src/app/shell/usePlaceCommands.ts'];
 const WORKSPACE_COMMAND_SOURCES = [
+  ...PLACE_COMMAND_SOURCES,
   '../../renderer/src/app/shell/useWorkspaceCommands.ts',
   '../../renderer/src/features/branches/useBranchCommands.ts',
   '../../renderer/src/features/merge/useMergeCommands.ts',
@@ -30,9 +33,9 @@ describe('workspace menu commands', () => {
     expect(isMenuCommandEnabled('workspace.open', undefined)).toBe(true);
   });
 
-  it('are enabled in a repository explored without a workspace only where they need no disk', () => {
-    const repository = repositoryPlace('game@local');
-    expect(WORKSPACE_MENU_COMMANDS.filter((id) => isMenuCommandEnabled(id, repository))).toEqual(['app.commandLog', 'branch.new']);
-    expect(REPOSITORY_MENU_COMMANDS.every((id) => WORKSPACE_MENU_COMMANDS.includes(id))).toBe(true);
+  it('are enabled in a repository explored without a workspace where every place registers them', () => {
+    const placeCommands = commandIdsIn(PLACE_COMMAND_SOURCES);
+    expect([...REPOSITORY_MENU_COMMANDS].sort()).toEqual(WORKSPACE_MENU_COMMANDS.filter((id) => placeCommands.has(id)).sort());
+    expect(WORKSPACE_MENU_COMMANDS.filter((id) => isMenuCommandEnabled(id, repositoryPlace('game@local')))).toEqual([...REPOSITORY_MENU_COMMANDS]);
   });
 });

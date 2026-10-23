@@ -14,6 +14,7 @@ import { WorkspaceTopBar } from './WorkspaceTopBar';
 import { COMMAND_LOG_HEIGHT, useCommandLogHost, useCommandLogStore } from './commandLogStore';
 import { useMainFocus } from './useMainFocus';
 import { useWindowTitle } from './useWindowTitle';
+import { usePlaceCommands } from './usePlaceCommands';
 import { useWorkspaceCommands } from './useWorkspaceCommands';
 import { useCopyLinkCommand } from '../links/useCopyLinkCommand';
 import { useWorkspaceWatcher } from './useWorkspaceWatcher';
@@ -26,6 +27,7 @@ export function WorkspaceScreen() {
   const setCommandLogHeight = useCommandLogStore((state) => state.setHeight);
   useCommandLogHost();
   useWorkspaceWatcher();
+  usePlaceCommands();
   useWorkspaceCommands();
   useCopyLinkCommand();
   useWindowTitle();
