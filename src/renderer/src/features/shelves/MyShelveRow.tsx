@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import { MoreHorizontal } from 'lucide-react';
 import { COPY_ENTRY_IDS } from '../../components/copyMenu';
 import { runningFirst, withoutAction } from '../../lib/actions';
@@ -58,7 +59,7 @@ export function MyShelveRow({ workspacePath, row, onDone }: MyShelveRowProps) {
       >
         {left ? 'Restore' : 'Apply'}
       </Button>
-      <ActionDropdownMenu entries={runningFirst(withoutAction(shelveMenu(workspacePath, [shelve], { left, mine }), 'apply'), onDone, COPY_ENTRY_IDS)}>
+      <ActionDropdownMenu entries={runningFirst(withoutAction(shelveMenu(workspacePlace(workspacePath), [shelve], { left, mine }), 'apply'), onDone, COPY_ENTRY_IDS)}>
         <IconButton size="small" icon={<MoreHorizontal size={14} />} label="More actions" />
       </ActionDropdownMenu>
     </li>

@@ -1,5 +1,6 @@
 import '../../testing/fakeWindow';
 import { afterEach, describe, expect, it } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 import { pageWindowQuery, startingWorkspaceQuery } from '@shared/startingWorkspace';
 import { useNavigation } from '../navigation/navigationStore';
 import type { Page } from '../navigation/pages';
@@ -37,7 +38,7 @@ describe('openPageWindowFromAddress', () => {
 
     openPageWindowFromAddress(addressOf(pageWindowQuery('/work/game', page, { readAt: 1_700_000_000_000, shelve })));
 
-    expect(cachedShelve('/work/game', 4)).toEqual(shelve);
+    expect(cachedShelve(workspacePlace('/work/game'), 4)).toEqual(shelve);
   });
 
   it("leaves a workspace window to start as before, and a page that can't show in a window of its own", () => {

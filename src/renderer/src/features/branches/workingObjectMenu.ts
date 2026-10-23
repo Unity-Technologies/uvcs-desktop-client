@@ -34,7 +34,7 @@ export function workingObjectMenu(workspace: WorkspaceInfo, object: WorkingObjec
     case 'label':
       return labelMenu(workspacePlace(workspace.path), [object.label]);
     case 'shelve':
-      return shelveMenu(workspace.path, [object.shelve], { mine: false });
+      return shelveMenu(workspacePlace(workspace.path), [object.shelve], { mine: false });
     default:
       return LOADING;
   }

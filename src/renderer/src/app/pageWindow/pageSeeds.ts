@@ -18,7 +18,7 @@ export function pageSeed(workspacePath: string, page: Page): PageSeed | undefine
     return listed && { readAt: listed.readAt, changeset: listed.changeset };
   }
   if (target.kind === 'shelve') {
-    const listed = listedShelve(workspacePath, target.shelveId);
+    const listed = listedShelve(workspacePlace(workspacePath), target.shelveId);
     return listed && { readAt: listed.readAt, shelve: listed.shelve };
   }
   return undefined;

@@ -1,11 +1,12 @@
 import { Archive } from 'lucide-react';
 import { useMemo } from 'react';
+import { workspacePathOf } from '@shared/domain/place';
 import type { Shelve } from '@shared/domain/shelve';
 import { spec } from '@shared/domain/specs';
 import { useWorkspaceUser } from '../../app/account/accounts';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
-import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace } from '../../app/workspace/useWorkspace';
 import { authorColumn, avatarColumn, commentColumn, dateColumn, numberColumn, secondaryColumn } from '../../components/historyColumns';
 import { ObjectListView } from '../../components/ObjectListView';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
@@ -43,7 +44,8 @@ const COLUMNS: Column<Shelve>[] = [
 ];
 
 export function ShelvesView() {
-  const workspacePath = useWorkspacePath();
+  const place = usePlace();
+  const workspacePath = workspacePathOf(place);
   const filters = useShelvesViewStore();
   const { text: search, people, update } = filters;
   const me = useWorkspaceUser();
@@ -57,7 +59,7 @@ export function ShelvesView() {
     [shelves, people, me, search],
   );
   const selected = visible.find((shelve) => shelveKey(shelve) === selection.anchor);
-  useCopyCommand('Shelves', 'Shelve', selection.selected.size === 1 && selected ? shelveCopyTexts(workspacePath, selected) : undefined);
+  useCopyCommand('Shelves', 'Shelve', selection.selected.size === 1 && selected && workspacePath !== null ? shelveCopyTexts(workspacePath, selected) : undefined);
 
   return (
     <>
@@ -87,10 +89,10 @@ export function ShelvesView() {
         selection={selection}
         onSelectionChange={setSelection}
         onActivate={showShelveChanges}
-        contextMenu={(selectedShelves) => shelveMenu(workspacePath, selectedShelves)}
+        contextMenu={(selectedShelves) => shelveMenu(place, selectedShelves)}
         initialSort={{ columnId: 'id', descending: true }}
         noun="shelve"
-        details={selected && <ShelveDetails key={selected.id} shelve={selected} menu={shelveMenu(workspacePath, [selected])} />}
+        details={selected && <ShelveDetails key={selected.id} shelve={selected} menu={shelveMenu(place, [selected])} />}
       />
     </>
   );

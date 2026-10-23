@@ -1,4 +1,4 @@
-import { workspacePlace } from '@shared/domain/place';
+import { workspacePathOf, type Place } from '@shared/domain/place';
 import type { Shelve } from '@shared/domain/shelve';
 import { spec } from '@shared/domain/specs';
 import { linkCopyText } from '../../app/links/linkTo';
@@ -37,26 +37,28 @@ interface ShelveMenuOptions {
   onDeleted?: () => void;
 }
 
-/** The menu of a shelve, the same wherever shelves show: the Shelves view, Changes' shelves, a shelve's diff, the palette and its details. */
-export function shelveMenu(workspacePath: string, shelves: ShelveInfo[], { left = false, mine = true, onApplied, onDeleted }: ShelveMenuOptions = {}): MenuEntry[] {
+/**
+ * The menu of a shelve, the same wherever shelves show: the Shelves view, Changes' shelves, a shelve's diff, the
+ * palette and its details. Applying it needs a workspace, which a repository explored without one hasn't.
+ */
+export function shelveMenu(place: Place, shelves: ShelveInfo[], { left = false, mine = true, onApplied, onDeleted }: ShelveMenuOptions = {}): MenuEntry[] {
   if (shelves.length !== 1) return [];
   const shelve = shelves[0]!;
-  const apply = async (andDelete: boolean): Promise<void> => {
-    if ((await applyShelve(workspacePath, shelve.id, andDelete)) && onApplied) onApplied();
+  const workspacePath = workspacePathOf(place);
+  const apply = async (into: string, andDelete: boolean): Promise<void> => {
+    if ((await applyShelve(into, shelve.id, andDelete)) && onApplied) onApplied();
   };
 
   return groupedMenu([
     menuAction('diff', () => showShelveChanges(shelve)),
     menuAction('diffInNewWindow', () => openInNewWindow(shelveDiffPage(shelve))),
-    menuAction('apply', () => void apply(left), { label: left ? 'Restore' : 'Apply to workspace' }),
-    !left && mine && menuAction('applyAndDelete', () => void apply(true)),
-    menuAction('newCodeReview', () =>
-      openCreateCodeReviewDialog(workspacePlace(workspacePath), { kind: 'shelve', value: String(shelve.id), title: splitComment(shelve.comment).summary }),
-    ),
-    copySubmenu('Shelve', shelveCopyTexts(workspacePath, shelve), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
+    workspacePath !== null && menuAction('apply', () => void apply(workspacePath, left), { label: left ? 'Restore' : 'Apply to workspace' }),
+    workspacePath !== null && !left && mine && menuAction('applyAndDelete', () => void apply(workspacePath, true)),
+    menuAction('newCodeReview', () => openCreateCodeReviewDialog(place, { kind: 'shelve', value: String(shelve.id), title: splitComment(shelve.comment).summary })),
+    workspacePath !== null && copySubmenu('Shelve', shelveCopyTexts(workspacePath, shelve), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     mine &&
       menuAction('delete', async () => {
-        if ((await deleteShelve(workspacePath, shelve.id)) && onDeleted) onDeleted();
+        if ((await deleteShelve(place, shelve.id)) && onDeleted) onDeleted();
       }),
   ]);
 }

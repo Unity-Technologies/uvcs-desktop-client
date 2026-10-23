@@ -39,7 +39,7 @@ describe('handing a page window what its page shows', () => {
       plantPageSeed(WS, { readAt: READ_AT, shelve: SHELVE });
       vi.advanceTimersByTime(60 * 60 * 1000);
 
-      expect(cachedShelve(WS, 4)).toEqual(SHELVE);
+      expect(cachedShelve(workspacePlace(WS), 4)).toEqual(SHELVE);
     } finally {
       vi.useRealTimers();
     }
@@ -49,6 +49,6 @@ describe('handing a page window what its page shows', () => {
     plantPageSeed(WS, { readAt: READ_AT, changeset: CHANGESET, shelve: SHELVE });
 
     expect(listedChangeset(workspacePlace(WS), 10)).toEqual({ changeset: CHANGESET, readAt: READ_AT });
-    expect(cachedShelve(WS, 4)).toEqual(SHELVE);
+    expect(cachedShelve(workspacePlace(WS), 4)).toEqual(SHELVE);
   });
 });

@@ -32,7 +32,7 @@ export function usePaletteServerSearch(workspacePath: string | null, typed: stri
     searches,
     branches: useQuery({ queryKey: branchesKey(path, textFilter), queryFn: () => api.branches.list(workspacePlace(path), textFilter), ...server('branches') }),
     labels: useQuery({ queryKey: labelsKey(path, textFilter), queryFn: () => api.labels.list(workspacePlace(path), textFilter), ...server('labels') }),
-    shelves: useQuery({ queryKey: shelvesKey(path, textFilter), queryFn: () => api.shelves.list(path, textFilter), ...server('shelves') }),
+    shelves: useQuery({ queryKey: shelvesKey(path, textFilter), queryFn: () => api.shelves.list(workspacePlace(path), textFilter), ...server('shelves') }),
     codeReviews: useQuery({
       queryKey: reviewSummariesKey(workspacePlace(path), term),
       queryFn: () => api.codeReviews.listSummaries(workspacePlace(path), { text: term }),

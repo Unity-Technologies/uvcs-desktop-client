@@ -160,7 +160,7 @@ export function shelveResult(shelve: Shelve, context: ResultContext): SearchResu
     detail: `sh:${shelve.id} · ${displayName(shelve.owner)} · ${formatRelativeDate(shelve.date)}`,
     detailMatches: specMatches(`sh:${shelve.id}`, term),
     quality: term ? Math.max(wordMatchQuality(shelve.comment, term), wordMatchQuality(`sh:${shelve.id}`, term)) : undefined,
-    menu: () => shelveMenu(workspacePath, [shelve]),
+    menu: () => shelveMenu(workspacePlace(workspacePath), [shelve]),
     run: () => showShelveChanges(shelve),
   };
 }

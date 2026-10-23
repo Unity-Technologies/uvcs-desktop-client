@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { Shelve } from '@shared/domain/shelve';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import { SEPARATOR, type Action, type MenuEntry } from '../../lib/actions';
@@ -34,7 +35,7 @@ const record: SwitchShelveRecord = {
 };
 
 function menuOf(shown: Shelve, records: SwitchShelveRecord[] = [], onDeleted = () => {}) {
-  return shelveDiffMenu(ws, shown, { records, me: 'ana@example.com', onApplied: () => {}, onDeleted });
+  return shelveDiffMenu(workspacePlace(ws), shown, { records, me: 'ana@example.com', onApplied: () => {}, onDeleted });
 }
 
 const entries = (menu: MenuEntry[]) => menu.filter((entry): entry is Action => entry !== SEPARATOR && 'id' in entry);
@@ -69,6 +70,13 @@ describe("a shelve's diff", () => {
 
     await left;
 
-    expect(fakeApi.argsOf('shelves.delete')).toEqual([[ws, 12]]);
+    expect(fakeApi.argsOf('shelves.delete')).toEqual([[workspacePlace(ws), 12]]);
+  });
+
+  it('offers its button to apply in a workspace only: a repository with no workspace has nothing to apply it to', () => {
+    expect(menuOf(shelve('Spike')).appliesHere).toBe(true);
+    const inRepository = shelveDiffMenu(repositoryPlace('game@local'), shelve('Spike'), { records: [], me: 'ana@example.com', onApplied: () => {}, onDeleted: () => {} });
+    expect(inRepository.appliesHere).toBe(false);
+    expect(ids(inRepository.menu)).toEqual(['newCodeReview', 'delete']);
   });
 });

@@ -1,4 +1,4 @@
-import { workspacePlace } from '@shared/domain/place';
+import type { Place } from '@shared/domain/place';
 import type { ShelveAwayRequest, ShelvedAway, Shelve } from '@shared/domain/shelve';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
@@ -78,7 +78,7 @@ export function showShelveChanges(shelve: Pick<Shelve, 'id'>, focusPath?: string
   navigation.openPage(shelveDiffPage(shelve, focusPath));
 }
 
-export async function deleteShelve(workspacePath: string, shelveId: number): Promise<boolean> {
+export async function deleteShelve(place: Place, shelveId: number): Promise<boolean> {
   const confirmed = await confirm({
     title: `Delete shelve ${shelveId}?`,
     message: 'The shelved changes will be lost. This cannot be undone.',
@@ -87,7 +87,7 @@ export async function deleteShelve(workspacePath: string, shelveId: number): Pro
   });
   if (!confirmed) return false;
 
-  const deleted = await runVoidAction(workspacePlace(workspacePath), "Couldn't delete the shelve", () => api.shelves.delete(workspacePath, shelveId), isAffectedByShelveDeletion);
+  const deleted = await runVoidAction(place, "Couldn't delete the shelve", () => api.shelves.delete(place, shelveId), isAffectedByShelveDeletion);
   if (deleted) toast.success(`Deleted shelve ${shelveId}`);
   return deleted;
 }

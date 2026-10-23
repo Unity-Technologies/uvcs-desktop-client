@@ -183,9 +183,9 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   changesetInterval: () => changesetMenu({ place: workspacePlace(ws) }, [changeset, { ...changeset, id: 2 }]),
   label: () => labelMenu(workspacePlace(ws), [label]),
   labelPair: () => labelMenu(workspacePlace(ws), [label, { ...label, name: 'v2' }]),
-  shelve: () => shelveMenu(ws, [shelve]),
-  othersShelve: () => shelveMenu(ws, [shelve], { mine: false }),
-  leftShelve: () => shelveMenu(ws, [shelve], { left: true }),
+  shelve: () => shelveMenu(workspacePlace(ws), [shelve]),
+  othersShelve: () => shelveMenu(workspacePlace(ws), [shelve], { mine: false }),
+  leftShelve: () => shelveMenu(workspacePlace(ws), [shelve], { left: true }),
   codeReview: () => codeReviewMenu(workspacePlace(ws), [review]),
   branchCodeReview: () => codeReviewMenu(workspacePlace(ws), [branchReview], workspace.selector),
   branchCodeReviewOnItsBranch: () => codeReviewMenu(workspacePlace(ws), [branchReview], { kind: 'branch', name: branch.name }),
@@ -246,6 +246,7 @@ const REPOSITORY_MENUS: Record<string, () => MenuEntry[]> = {
   repositoryAttributeType: () => attributeTypeMenu(onRepository, [{ name: 'status', comment: '' } as never]),
   repositoryCodeReview: () => codeReviewMenu(onRepository, [branchReview]),
   repositoryCodeReviews: () => codeReviewMenu(onRepository, [review, changesetReview]),
+  repositoryShelve: () => shelveMenu(onRepository, [shelve]),
 };
 
 /**
@@ -406,10 +407,10 @@ describe('one menu per object, the same everywhere', () => {
   });
 
   it('a shelve reads the same in the Shelves view, Changes, its diff, the top bar and the palette', () => {
-    const common = shelveMenu(ws, [shelve]);
+    const common = shelveMenu(workspacePlace(ws), [shelve]);
     expectOnlyAdds(shelveResult(shelve, resultContext).menu!(), common);
-    expectOnlyAdds(common, withoutAction(shelveMenu(ws, [shelve]), 'apply'));
-    expectOnlyAdds(workingObjectMenu({ ...workspace, selector: { kind: 'shelve', name: '12' } }, { kind: 'shelve', shelve }), shelveMenu(ws, [shelve], { mine: false }));
+    expectOnlyAdds(common, withoutAction(shelveMenu(workspacePlace(ws), [shelve]), 'apply'));
+    expectOnlyAdds(workingObjectMenu({ ...workspace, selector: { kind: 'shelve', name: '12' } }, { kind: 'shelve', shelve }), shelveMenu(workspacePlace(ws), [shelve], { mine: false }));
   });
 
   it("a changed file reads the same in a diff, Incoming and a merge, the merge only adding its own", () => {
@@ -468,7 +469,7 @@ describe('Copy', () => {
   });
 
   it('copies a shelve as its number, spec, full spec, comment and GUID', async () => {
-    expect(await copiedBy(shelveMenu(ws, [shelve]))).toEqual([
+    expect(await copiedBy(shelveMenu(workspacePlace(ws), [shelve]))).toEqual([
       'Shelve number: 12',
       'Shelve link: uvcs://local/repos/game/shelves/12',
       'Shelve spec: sh:12',
@@ -511,11 +512,11 @@ describe('shelves', () => {
   const ids = (menu: MenuEntry[]): (string | undefined)[] => topEntries(menu).map((entry) => entry.id);
 
   it("offers everything on the user's own shelve", () => {
-    expect(ids(shelveMenu(ws, [shelve]))).toEqual(['diff', 'diffInNewWindow', 'apply', 'applyAndDelete', 'newCodeReview', 'copy', 'delete']);
+    expect(ids(shelveMenu(workspacePlace(ws), [shelve]))).toEqual(['diff', 'diffInNewWindow', 'apply', 'applyAndDelete', 'newCodeReview', 'copy', 'delete']);
   });
 
   it("only applies, shows, reviews and copies someone else's: deleting it is theirs to do", () => {
-    expect(ids(shelveMenu(ws, [shelve], { mine: false }))).toEqual(['diff', 'diffInNewWindow', 'apply', 'newCodeReview', 'copy']);
+    expect(ids(shelveMenu(workspacePlace(ws), [shelve], { mine: false }))).toEqual(['diff', 'diffInNewWindow', 'apply', 'newCodeReview', 'copy']);
   });
 });
 
