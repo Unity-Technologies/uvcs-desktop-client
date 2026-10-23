@@ -30,7 +30,7 @@ import { UpdateCard } from './updates/UpdateCard';
 import { loadUpdateStatus } from './updates/updateStore';
 import { useForgetLeftWorkspace } from './workspace/leftWorkspace';
 import { useSession } from './workspace/sessionStore';
-import { useRequestedWorkspace } from './workspace/useRequestedWorkspace';
+import { useRequestedPlace } from './workspace/useRequestedPlace';
 import { WorkspaceGate } from './workspace/WorkspaceGate';
 
 export function App() {
@@ -61,7 +61,7 @@ function Root() {
   useAppCommands();
   useMenuCommands();
   useAppMenuKeys();
-  useRequestedWorkspace();
+  useRequestedPlace();
   useLinkRequests();
   useEffect(() => void loadUpdateStatus(), []);
   const workspacePath = useSession((state) => state.workspacePath);

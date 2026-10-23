@@ -25,7 +25,7 @@ export function windowAskedBy(event: HeldModifiers, { missing = false }: { missi
 /**
  * Opens a workspace here with `openHere` (`useOpenWorkspace`), or in a new window: `windows.openPlace` brings
  * forward the window that already shows it instead (one window per workspace), and the new window remembers it as
- * recent as it opens it (`useRequestedWorkspace`).
+ * recent as it opens it (`useRequestedPlace`).
  */
 export function workspaceOpener(openHere: (path: string) => void): OpenWorkspaceIn {
   return (path, where) => {

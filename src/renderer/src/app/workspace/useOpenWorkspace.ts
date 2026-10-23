@@ -8,7 +8,7 @@ import { useSession } from './sessionStore';
 /**
  * Opens a workspace on its Changes view and remembers it as recent. A workspace shown in another window isn't
  * opened twice: that window comes forward instead. The one this window already shows keeps its view: the main
- * process's request for the workspace a window opened on (`useRequestedWorkspace`) comes after the page's address
+ * process's request for the workspace a window opened on (`useRequestedPlace`) comes after the page's address
  * opened it, on the view it showed before restarting to install an update.
  */
 export function useOpenWorkspace(): (path: string) => void {
