@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isUnityOrganization, nameInProject, nameWithProject, projectColor, projectOfRepository, serverKind } from './organizations';
+import { isUnityOrganization, nameInProject, nameWithProject, projectColor, projectOfRepository, projectPartOf, serverKind } from './organizations';
 
 describe('serverKind', () => {
   it('tells Unity organizations from cloud organizations by the alias cm names them with', () => {
@@ -23,15 +23,21 @@ describe('serverKind', () => {
 });
 
 describe('projectOfRepository', () => {
-  const projects = new Set(['Racing', 'Cloud Repositories', 'Racing/Tools']);
+  const projects = new Set(['Racing', 'Cloud Repositories']);
 
   it('finds the project a repository is named after', () => {
     expect(projectOfRepository('Racing/Game', projects)).toBe('Racing');
     expect(projectOfRepository('Cloud Repositories/TextEditorSample', projects)).toBe('Cloud Repositories');
   });
 
-  it('takes the longest project the name starts with', () => {
-    expect(projectOfRepository('Racing/Tools/Build', projects)).toBe('Racing/Tools');
+  it('takes the part before the first /, a name holding more being the repository\'s own', () => {
+    expect(projectOfRepository('Racing/Tools/Build', projects)).toBe('Racing');
+    expect(projectPartOf('Racing/Tools/Build')).toBe('Racing');
+  });
+
+  it('finds no project part in a name without a /, or starting with one', () => {
+    expect(projectPartOf('Game')).toBeUndefined();
+    expect(projectPartOf('/Game')).toBeUndefined();
   });
 
   it('finds none for a name no project starts, or only shares the start of a word with one', () => {
@@ -44,7 +50,7 @@ describe('projectOfRepository', () => {
 describe('nameInProject', () => {
   it("drops the project's name from the repository's", () => {
     expect(nameInProject('Racing/Game', 'Racing')).toBe('Game');
-    expect(nameInProject('Racing/Tools/Build', 'Racing/Tools')).toBe('Build');
+    expect(nameInProject('Racing/Tools/Build', 'Racing')).toBe('Tools/Build');
   });
 
   it('keeps the whole name of a repository in no project', () => {

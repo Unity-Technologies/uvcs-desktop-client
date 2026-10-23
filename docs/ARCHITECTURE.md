@@ -429,8 +429,9 @@ by name, and never passes it to `cm`.
   cube on a tile in one of six colors (`--project-*`), picked by the code of its GUID's last character, the
   listing's `{repguid}` (`projectColor`), so it looks the same in every client; "All projects" is indigo
   (`ALL_PROJECTS_GUID`). All workspaces colors a project only once its organization's list was read
-  (`useReadProjects`, which asks nothing); until then its tile is neutral. A repository there is named after its project (`Racing/Game`:
-  `projectOfRepository`, `nameInProject`, `nameWithProject`), which New repository builds from the project picked.
+  (`useReadProjects`, which asks nothing); until then its tile is neutral. A repository there is named after its project, the part before the first `/`
+  (`Racing/Game`: `projectPartOf`, `projectOfRepository`, `nameInProject`, `nameWithProject`), which New repository
+  builds from the project picked and Rename keeps (`repositoryRename`).
   The Repositories view filters by project (`ProjectFilter`, remembered per organization: `useProjectPickStore`) and
   All workspaces by organization and project (`PlaceFilter`, `placeOf`), from the repository each workspace already
   names: no command. Display names ("UnityTechnologies" for `unity@unity`) come only from Unity's web API, which the

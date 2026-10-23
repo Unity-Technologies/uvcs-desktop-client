@@ -1,4 +1,4 @@
-import { isUnityOrganization, serverKind, type ServerKind } from '@shared/domain/organizations';
+import { isUnityOrganization, projectPartOf, serverKind, type ServerKind } from '@shared/domain/organizations';
 import type { UnityProject } from '@shared/domain/repository';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { describeServer, splitRepositorySpec } from '../../lib/servers';
@@ -24,14 +24,14 @@ export interface PlaceChoice {
 
 /**
  * The place of a workspace, from the repository spec it is known to work on (`Racing/Game@acme@unity`): no command.
- * A Unity organization's repository is named after its project, the part before its first `/`; undefined while the
- * repository isn't known.
+ * A Unity organization's repository is named after its project (`projectPartOf`); undefined while the repository
+ * isn't known.
  */
 export function placeOf(entry: Pick<WorkspaceEntry, 'repository'>): WorkspacePlace | undefined {
   if (!entry.repository) return undefined;
   const { name, server } = splitRepositorySpec(entry.repository);
-  const slash = name.indexOf('/');
-  return isUnityOrganization(server) && slash > 0 ? { server, project: name.slice(0, slash) } : { server };
+  const project = isUnityOrganization(server) ? projectPartOf(name) : undefined;
+  return project === undefined ? { server } : { server, project };
 }
 
 const KIND_ORDER: readonly ServerKind[] = ['unityOrganization', 'cloudOrganization', 'local', 'server'];
@@ -69,7 +69,12 @@ function withGuid(choice: PlaceChoice, guid: string | undefined): PlaceChoice {
 
 /** The Unity organizations the workspaces are on, whose projects' GUIDs their lists, once read, tell. */
 export function organizationsOf(entries: readonly Pick<WorkspaceEntry, 'repository'>[]): string[] {
-  return [...new Set(entries.flatMap((entry) => (placeOf(entry)?.project === undefined ? [] : [placeOf(entry)!.server])))].sort();
+  const organizations = new Set<string>();
+  for (const entry of entries) {
+    const place = placeOf(entry);
+    if (place?.project !== undefined) organizations.add(place.server);
+  }
+  return [...organizations].sort();
 }
 
 function byServer(a: string, b: string): number {

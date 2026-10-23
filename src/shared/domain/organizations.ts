@@ -23,16 +23,18 @@ export function isUnityOrganization(server: string): boolean {
 }
 
 /**
- * The project of `projects` a repository named `name` belongs to: the one its name starts with, before a `/`
- * (`Racing/Game` → `Racing`), the longest when several do. Undefined for a name no project starts.
+ * The project a Unity organization's repository is named after: the part of its name before the first `/`
+ * (`Racing/Game` → `Racing`), as project names hold none. Undefined for a name with none.
  */
+export function projectPartOf(name: string): string | undefined {
+  const slash = name.indexOf('/');
+  return slash > 0 ? name.slice(0, slash) : undefined;
+}
+
+/** The project of `projects` a repository named `name` belongs to (`projectPartOf`); undefined for one it names none of. */
 export function projectOfRepository(name: string, projects: ReadonlySet<string>): string | undefined {
-  let project: string | undefined;
-  for (let slash = name.indexOf('/'); slash > 0; slash = name.indexOf('/', slash + 1)) {
-    const prefix = name.slice(0, slash);
-    if (projects.has(prefix)) project = prefix;
-  }
-  return project;
+  const project = projectPartOf(name);
+  return project !== undefined && projects.has(project) ? project : undefined;
 }
 
 /** A repository's name inside its project, as people call it: `Racing/Game` → `Game`; the whole name without one. */
