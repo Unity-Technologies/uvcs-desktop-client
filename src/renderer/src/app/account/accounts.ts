@@ -6,7 +6,7 @@ import { describeServer } from '../../lib/servers';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
 import { queryClient } from '../queryClient';
-import { useWorkspaceInfo } from '../workspace/useWorkspace';
+import { usePlaceServer } from '../workspace/useWorkspace';
 import { accountForServer } from './serverAccount';
 
 /** Refreshed when the window regains focus after a minute: signing in with the official client adds or changes one. */
@@ -31,9 +31,9 @@ export function useServerAccount(server: string | undefined): { user: string; ac
   return defaultUser ? { user: defaultUser } : undefined;
 }
 
-/** Who you are on the workspace's server (`useServerAccount`); undefined while it's read. */
+/** Who you are on the server of the window's place (`usePlaceServer`, `useServerAccount`); undefined while it's read. */
 export function useWorkspaceUser(): string | undefined {
-  return useServerAccount(useWorkspaceInfo().data?.server)?.user;
+  return useServerAccount(usePlaceServer())?.user;
 }
 
 /** Who you are on `server`, like `useServerAccount`, for code outside components (from the same cached queries). */
