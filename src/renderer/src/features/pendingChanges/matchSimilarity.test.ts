@@ -10,18 +10,13 @@ const boss = change('src/Boss.cs', ['private'], 'file', 50);
 const paths = (rows: { candidate: PendingChange }[]) => rows.map((row) => row.candidate.path);
 
 describe('the pairs measured', () => {
-  it('puts the deleted item first, whichever side the dialog was opened on, with the sizes Changes listed', () => {
-    expect(movePairsOf(deleted, [hero], 'deleted')).toEqual([
-      { deleted: { path: 'src/Player.cs', itemType: 'file', size: 120 }, added: { path: 'src/Hero.cs', itemType: 'file', size: 90 } },
-    ]);
-    expect(movePairsOf(hero, [deleted], 'new')).toEqual([
-      { deleted: { path: 'src/Player.cs', itemType: 'file', size: 120 }, added: { path: 'src/Hero.cs', itemType: 'file', size: 90 } },
-    ]);
+  it('puts the deleted file first, whichever side the dialog was opened on', () => {
+    expect(movePairsOf(deleted, [hero], 'deleted')).toEqual([{ deleted: 'src/Player.cs', added: 'src/Hero.cs' }]);
+    expect(movePairsOf(hero, [deleted], 'new')).toEqual([{ deleted: 'src/Player.cs', added: 'src/Hero.cs' }]);
   });
 
   it('measures files only', () => {
     expect(isScored(deleted)).toBe(true);
-    expect(isScored(change('art/a.png', ['private'], 'binaryFile'))).toBe(true);
     expect(isScored(change('src', ['locallyDeleted'], 'directory'))).toBe(false);
   });
 });
@@ -33,16 +28,20 @@ describe('the rows', () => {
     expect(paths(scoredCandidates(candidates, undefined, 50))).toEqual(['src/Hero.cs', 'src/Enemy.cs', 'src/Boss.cs']);
   });
 
-  it('orders by similarity, the most alike first, those it could not tell last', () => {
-    expect(scoredCandidates(candidates, [0.2, null, 0.85], 0)).toEqual([
+  it('orders by similarity, the most alike first, those it could not measure last', () => {
+    expect(scoredCandidates(candidates, [0.2, 'notMeasured', 0.85], 0)).toEqual([
       { candidate: boss, similarity: 0.85 },
       { candidate: hero, similarity: 0.2 },
       { candidate: enemy, similarity: null },
     ]);
   });
 
-  it('keeps the candidates at least as alike as the minimum, and those it could not tell', () => {
-    expect(paths(scoredCandidates(candidates, [0.2, null, 0.85], 50))).toEqual(['src/Boss.cs', 'src/Enemy.cs']);
+  it("leaves out what cm wouldn't pair, a text file with a binary one", () => {
+    expect(paths(scoredCandidates(candidates, [0.2, 'notPairable', 0.85], 0))).toEqual(['src/Boss.cs', 'src/Hero.cs']);
+  });
+
+  it('keeps the candidates at least as alike as the minimum, and those it could not measure', () => {
+    expect(paths(scoredCandidates(candidates, [0.2, 'notMeasured', 0.85], 50))).toEqual(['src/Boss.cs', 'src/Enemy.cs']);
     expect(paths(scoredCandidates(candidates, [0.5, 0.49, 1], 50))).toEqual(['src/Boss.cs', 'src/Hero.cs']);
   });
 
@@ -69,9 +68,8 @@ describe('the similarity shown', () => {
     expect(similarityLabel(null)).toBe('–');
   });
 
-  it('says what it measures for text and binary files, and why it is missing', () => {
-    expect(similarityTip(hero, 0.5)).toBe('How many lines are the same');
-    expect(similarityTip(change('a.png', ['private'], 'binaryFile'), 0.5)).toBe('How close the sizes are');
-    expect(similarityTip(hero, null)).toBe('Not measured: too large or unreadable');
+  it('says what it measures, and why it is missing', () => {
+    expect(similarityTip(0.5)).toBe('Lines alike for text, size for a binary file');
+    expect(similarityTip(null)).toBe('Not measured: too large or unreadable');
   });
 });

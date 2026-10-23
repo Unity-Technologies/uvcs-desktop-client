@@ -1,28 +1,43 @@
 import { describe, expect, it } from 'vitest';
-import type { ItemType, MatchItem } from '@shared/domain/pendingChanges';
 import { MAX_SCORED_TEXT_BYTES, measureMoveSimilarities } from './moveSimilarities';
 
-const item = (path: string, itemType: ItemType = 'file', size = 10): MatchItem => ({ path, itemType, size });
+/** Binary content: a NUL byte in its start, as `looksBinary` tells it. */
+const binary = (size: number) => Buffer.alloc(size, 0);
 
-/** Reads from texts by path, counting what each side read. */
-function reads(deletedTexts: Record<string, string>, addedTexts: Record<string, string>) {
+/** Reads from contents by path, counting what each side read whole. */
+function reads(deletedFiles: Record<string, Buffer | string>, addedFiles: Record<string, Buffer | string>, sizes: Record<string, number> = {}) {
   const read = { deleted: [] as string[], added: [] as string[] };
-  const from = (texts: Record<string, string>, log: string[]) => async (path: string) => {
-    log.push(path);
-    return path in texts ? Buffer.from(texts[path]!) : null;
+  const bytes = (content: Buffer | string) => (typeof content === 'string' ? Buffer.from(content) : content);
+  return {
+    read,
+    reads: {
+      readDeleted: async (path: string) => {
+        read.deleted.push(path);
+        return path in deletedFiles ? bytes(deletedFiles[path]!) : null;
+      },
+      glanceAtAdded: async (path: string) => {
+        if (!(path in addedFiles)) return null;
+        const content = bytes(addedFiles[path]!);
+        return { size: sizes[path] ?? content.length, isBinary: content.includes(0) };
+      },
+      readAdded: async (path: string) => {
+        read.added.push(path);
+        return path in addedFiles ? bytes(addedFiles[path]!) : null;
+      },
+      yieldNow: async () => {},
+    },
   };
-  return { read, reads: { readDeleted: from(deletedTexts, read.deleted), readAdded: from(addedTexts, read.added), yieldNow: async () => {} } };
 }
 
 describe('measuring the pairs of a Search matches', () => {
-  it('scores text pairs by their lines and binary pairs by their sizes, in order', async () => {
-    const { reads: io } = reads({ 'a.cs': 'x\ny\n' }, { 'b.cs': 'x\ny\n', 'c.cs': 'x\nz\n' });
+  it('measures text files by their lines and binary files by their sizes, in order', async () => {
+    const { reads: io } = reads({ 'a.cs': 'x\ny\n', 'a.png': binary(100) }, { 'b.cs': 'x\ny\n', 'c.cs': 'x\nz\n', 'b.png': binary(80) });
 
     const similarities = await measureMoveSimilarities(
       [
-        { deleted: item('a.cs'), added: item('b.cs') },
-        { deleted: item('a.cs'), added: item('c.cs') },
-        { deleted: item('a.png', 'binaryFile', 100), added: item('b.png', 'binaryFile', 80) },
+        { deleted: 'a.cs', added: 'b.cs' },
+        { deleted: 'a.cs', added: 'c.cs' },
+        { deleted: 'a.png', added: 'b.png' },
       ],
       io,
     );
@@ -32,56 +47,57 @@ describe('measuring the pairs of a Search matches', () => {
     expect(similarities[2]).toBeCloseTo(0.8);
   });
 
-  it('reads each file once, however many pairs it is in, and no binary file', async () => {
-    const { read, reads: io } = reads({ 'a.cs': 'x\n' }, { 'b.cs': 'x\n', 'c.cs': 'y\n' });
+  it("doesn't pair what cm's move detection doesn't: text with binary, binary files of other extensions", async () => {
+    const { reads: io } = reads({ 'a.cs': 'x\n', 'a.png': binary(10) }, { 'b.png': binary(10), 'b.PNG': binary(10), 'b.psd': binary(10), 'b.cs': 'x\n' });
+
+    expect(
+      await measureMoveSimilarities(
+        [
+          { deleted: 'a.cs', added: 'b.png' },
+          { deleted: 'a.png', added: 'b.cs' },
+          { deleted: 'a.png', added: 'b.psd' },
+          { deleted: 'a.png', added: 'b.PNG' },
+        ],
+        io,
+      ),
+    ).toEqual(['notPairable', 'notPairable', 'notPairable', 1]);
+  });
+
+  it('reads each deleted file once, however many pairs it is in, and no new binary file whole', async () => {
+    const { read, reads: io } = reads({ 'a.cs': 'x\n', 'a.png': binary(10) }, { 'b.cs': 'x\n', 'c.cs': 'y\n', 'b.png': binary(10) });
 
     await measureMoveSimilarities(
       [
-        { deleted: item('a.cs'), added: item('b.cs') },
-        { deleted: item('a.cs'), added: item('c.cs') },
-        { deleted: item('a.png', 'binaryFile'), added: item('b.png', 'binaryFile') },
+        { deleted: 'a.cs', added: 'b.cs' },
+        { deleted: 'a.cs', added: 'c.cs' },
+        { deleted: 'a.png', added: 'b.png' },
       ],
       io,
     );
 
-    expect(read.deleted).toEqual(['a.cs']);
+    expect([...read.deleted].sort()).toEqual(['a.cs', 'a.png']);
     expect([...read.added].sort()).toEqual(['b.cs', 'c.cs']);
   });
 
-  it("leaves unscored what cm's detection doesn't pair: folders, and a text file with a binary one", async () => {
-    const { read, reads: io } = reads({}, {});
+  it("doesn't measure a text file too large to diff, unread, nor one that couldn't be read", async () => {
+    const { read, reads: io } = reads({ 'a.cs': 'x\n', 'big.cs': 'x\n'.repeat(10) }, { 'b.cs': 'x\n', 'huge.log': 'x\n' }, { 'huge.log': MAX_SCORED_TEXT_BYTES + 1 });
 
     const similarities = await measureMoveSimilarities(
       [
-        { deleted: item('src', 'directory'), added: item('lib', 'directory') },
-        { deleted: item('a.cs'), added: item('a.png', 'binaryFile') },
-        { deleted: item('a.png', 'binaryFile'), added: item('a.cs') },
+        { deleted: 'a.cs', added: 'huge.log' },
+        { deleted: 'a.cs', added: 'gone.cs' },
+        { deleted: 'gone.cs', added: 'b.cs' },
       ],
       io,
     );
 
-    expect(similarities).toEqual([null, null, null]);
-    expect(read).toEqual({ deleted: [], added: [] });
+    expect(similarities).toEqual(['notMeasured', 'notMeasured', 'notMeasured']);
+    expect(read.added).toEqual(['b.cs']);
   });
 
-  it("leaves unscored a file too large to diff, unread, and one that couldn't be read", async () => {
-    const { read, reads: io } = reads({ 'a.cs': 'x\n' }, {});
-
-    const similarities = await measureMoveSimilarities(
-      [
-        { deleted: item('a.cs', 'file', MAX_SCORED_TEXT_BYTES + 1), added: item('b.cs') },
-        { deleted: item('a.cs'), added: item('gone.cs') },
-      ],
-      io,
-    );
-
-    expect(similarities).toEqual([null, null]);
-    expect(read.added).toEqual(['gone.cs']);
-  });
-
-  it("scores a file's text without its byte order mark", async () => {
+  it("measures a file's text without its byte order mark", async () => {
     const { reads: io } = reads({ 'a.cs': '﻿x\n' }, { 'b.cs': 'x\n' });
 
-    expect(await measureMoveSimilarities([{ deleted: item('a.cs'), added: item('b.cs') }], io)).toEqual([1]);
+    expect(await measureMoveSimilarities([{ deleted: 'a.cs', added: 'b.cs' }], io)).toEqual([1]);
   });
 });

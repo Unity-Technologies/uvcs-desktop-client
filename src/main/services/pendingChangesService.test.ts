@@ -239,35 +239,36 @@ describe('recording a move', () => {
 });
 
 describe('how alike the items of a move are', () => {
-  it('reads every deleted text file with one cm cat, the new ones from disk, and sizes the binary ones', async () => {
+  it('reads every deleted file with one cm cat and the new ones from disk, telling text from binary by content', async () => {
     const workspace = await mkdtemp(join(tmpdir(), 'similar-'));
     await mkdir(join(workspace, 'src'));
+    await mkdir(join(workspace, 'art'));
     await writeFile(join(workspace, 'src', 'Hero.cs'), 'a\nb\nc\nd\n');
+    await writeFile(join(workspace, 'art', 'new.png'), Buffer.alloc(900, 0));
     const old = (path: string) => join(workspace, ...path.split('/'));
-    const cat = fakeCat((spec) => ({ [old('src/Player.cs')]: 'a\nb\nc\nx\n', [old('src/Enemy.cs')]: 'q\nr\n' })[spec]);
-    const { service, commands } = pendingChanges({ cat });
-    const file = (path: string, size = 8) => ({ path, itemType: 'file' as const, size });
-    const binary = (path: string, size: number) => ({ path, itemType: 'binaryFile' as const, size });
+    const oldFiles: Record<string, Buffer | string> = { [old('src/Player.cs')]: 'a\nb\nc\nx\n', [old('src/Enemy.cs')]: 'q\nr\n', [old('art/hero.png')]: Buffer.alloc(1000, 0) };
+    const { service, commands } = pendingChanges({ cat: fakeCat((spec) => oldFiles[spec]) });
 
     const similarities = await service.moveSimilarities(workspace, [
-      { deleted: file('src/Player.cs'), added: file('src/Hero.cs') },
-      { deleted: file('src/Enemy.cs'), added: file('src/Hero.cs') },
-      { deleted: binary('art/hero.png', 1000), added: binary('art/new.png', 900) },
+      { deleted: 'src/Player.cs', added: 'src/Hero.cs' },
+      { deleted: 'src/Enemy.cs', added: 'src/Hero.cs' },
+      { deleted: 'art/hero.png', added: 'art/new.png' },
+      { deleted: 'src/Player.cs', added: 'art/new.png' },
     ]);
 
     expect(similarities[0]).toBeCloseTo(0.5);
     expect(similarities[1]).toBe(0);
     expect(similarities[2]).toBeCloseTo(0.9);
+    expect(similarities[3]).toBe('notPairable');
     expect(commands.map((command) => command.args[0])).toEqual(['cat']);
-    expect(catReadsOf(commands[0]!.args).map((read) => read.spec)).toEqual([old('src/Player.cs'), old('src/Enemy.cs')]);
+    expect(catReadsOf(commands[0]!.args).map((read) => read.spec)).toEqual([old('src/Player.cs'), old('src/Enemy.cs'), old('art/hero.png')]);
   });
 
-  it("scores nothing it can't read: a deleted file cm doesn't find, a new one gone from disk", async () => {
+  it("measures nothing it can't read: a deleted file cm doesn't find, a new one gone from disk", async () => {
     const workspace = await mkdtemp(join(tmpdir(), 'similar-'));
     const { service } = pendingChanges({ cat: fakeCat(() => undefined) });
-    const file = (path: string) => ({ path, itemType: 'file' as const, size: 8 });
 
-    expect(await service.moveSimilarities(workspace, [{ deleted: file('gone.cs'), added: file('missing.cs') }])).toEqual([null]);
+    expect(await service.moveSimilarities(workspace, [{ deleted: 'gone.cs', added: 'missing.cs' }])).toEqual(['notMeasured']);
   });
 });
 

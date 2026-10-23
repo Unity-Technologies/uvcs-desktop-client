@@ -35,9 +35,9 @@ export function matchSideOf(change: PendingChange, changes: readonly PendingChan
 const NO_FOLDERS: ReadonlySet<string> = new Set();
 
 /**
- * The changes that could be the other side of the change's move, the likeliest first (`compareCandidates`). As
- * `cm`'s move detection pairs them (`isPairable`): folders with folders, text files with text files, and binary files
- * with binary files of the same extension.
+ * The changes that could be the other side of the change's move, of the same type, the likeliest first
+ * (`compareCandidates`). Which files `cm` would pair, text or binary, is told from their content as they're measured
+ * (`api.pendingChanges.moveSimilarities`).
  */
 export function matchCandidates(change: PendingChange, changes: readonly PendingChange[]): PendingChange[] {
   const folders = privateFolders(changes);
@@ -45,14 +45,8 @@ export function matchCandidates(change: PendingChange, changes: readonly Pending
   if (side === null) return [];
   const otherSide: MatchSide = side === 'deleted' ? 'new' : 'deleted';
   return changes
-    .filter((other) => isPairable(change, other) && sideOf(other, folders) === otherSide)
+    .filter((other) => other.itemType === change.itemType && sideOf(other, folders) === otherSide)
     .sort((a, b) => compareCandidates(change.path, a.path, b.path));
-}
-
-/** `cm` pairs only items of one type, and a binary file only with one of its extension (`bBinMatchingOnlySameExtension`). */
-function isPairable(change: PendingChange, other: PendingChange): boolean {
-  if (change.itemType !== other.itemType) return false;
-  return change.itemType !== 'binaryFile' || extensionOf(change.path)?.toLowerCase() === extensionOf(other.path)?.toLowerCase();
 }
 
 /** The candidates the dialog's search leaves: each word typed in the path (`matchesWordFilter`), as the list marks them. */

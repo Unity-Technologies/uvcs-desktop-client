@@ -4,6 +4,7 @@ import type {
   CheckinResult,
   FilterRuleList,
   MovePair,
+  MoveSimilarity,
   PendingChangesFilter,
   PendingChangesSnapshot,
 } from '../domain/pendingChanges';
@@ -23,11 +24,10 @@ export interface PendingChangesApi {
    */
   recordMove(workspacePath: string, deletedPath: string, newPath: string): Promise<void>;
   /**
-   * How alike each pair's files are, from 0 to 1, in their order, as `cm`'s move detection measures it
-   * (`main/workspace/moveSimilarity`); null where it can't tell (a folder, a file too large or unreadable). Reads the
-   * deleted text files' loaded revisions with one `cm cat` for all of them, the new ones from disk.
+   * How alike each pair's files are, in their order, as `cm`'s move detection measures it. Reads the deleted files'
+   * loaded revisions with one `cm cat` for all of them, the new ones from disk. Files only: folders aren't measured.
    */
-  moveSimilarities(workspacePath: string, pairs: MovePair[]): Promise<(number | null)[]>;
+  moveSimilarities(workspacePath: string, pairs: MovePair[]): Promise<MoveSimilarity[]>;
   checkout(workspacePath: string, paths: string[]): Promise<void>;
   /** Appends patterns to `ignore.conf`, `cloaked.conf` or `hidden_changes.conf`, leaving out those already there. */
   addFilterRules(workspacePath: string, list: FilterRuleList, patterns: string[]): Promise<void>;

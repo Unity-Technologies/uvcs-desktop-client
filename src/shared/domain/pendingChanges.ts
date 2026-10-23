@@ -34,14 +34,18 @@ export interface PendingChange {
   changelist?: string;
 }
 
-/** An item of a move Search matches scores: as Changes listed it (a deleted item's size is its loaded revision's). */
-export type MatchItem = Pick<PendingChange, 'path' | 'itemType' | 'size'>;
-
-/** A deleted item and a new one that could be one moved item. */
+/** A file deleted from disk and a new one that could be one moved file, by their workspace paths. */
 export interface MovePair {
-  deleted: MatchItem;
-  added: MatchItem;
+  deleted: string;
+  added: string;
 }
+
+/**
+ * How alike a pair's files are, from 0 to 1 (`main/workspace/moveSimilarity`). `notPairable` where `cm`'s move
+ * detection wouldn't pair them (a text file with a binary one, binary files of other extensions), `notMeasured` where
+ * it can't tell (a file too large to diff, or unreadable).
+ */
+export type MoveSimilarity = number | 'notPairable' | 'notMeasured';
 
 export interface Changelist {
   name: string;

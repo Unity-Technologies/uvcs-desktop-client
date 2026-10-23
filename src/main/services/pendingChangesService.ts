@@ -1,4 +1,4 @@
-import { readFile, stat } from 'node:fs/promises';
+import { open, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { app } from 'electron';
 import type { PendingChangesApi } from '@shared/api/pendingChanges';
@@ -7,6 +7,7 @@ import type {
   CheckinRequest,
   CheckinResult,
   MovePair,
+  MoveSimilarity,
   PendingChangesFilter,
   PendingChangesSnapshot,
 } from '@shared/domain/pendingChanges';
@@ -21,7 +22,8 @@ import { moveArgs } from '../files/moveItems';
 import { toAbsolutePath, toAbsolutePaths } from '../files/workspacePaths';
 import { addFilterRules } from '../workspace/filterRuleFile';
 import { readPendingChanges } from '../workspace/readPendingChanges';
-import { MAX_SCORED_TEXT_BYTES, measureMoveSimilarities } from '../workspace/moveSimilarities';
+import { BINARY_SNIFF_BYTES, looksBinary } from '../files/fileContent';
+import { measureMoveSimilarities, type FileGlance } from '../workspace/moveSimilarities';
 import { shelveAndUndo } from '../workspace/shelveAndUndo';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
@@ -72,7 +74,7 @@ export function createPendingChangesService({ cm, operations, revisionCat }: Ser
     await cm.query(moveArgs(workspacePath, { from: deletedPath, to: newPath }), { cwd: workspacePath });
   }
 
-  function moveSimilarities(workspacePath: string, pairs: MovePair[]): Promise<(number | null)[]> {
+  function moveSimilarities(workspacePath: string, pairs: MovePair[]): Promise<MoveSimilarity[]> {
     return withTempDirectory((directory) => {
       let saved = 0;
       return measureMoveSimilarities(pairs, {
@@ -83,11 +85,8 @@ export function createPendingChangesService({ cm, operations, revisionCat }: Ser
           await revisionCat.save(workspacePath, { spec: toAbsolutePath(workspacePath, path), repository: workspacePath }, target);
           return readFile(target);
         },
-        readAdded: async (path) => {
-          const file = toAbsolutePath(workspacePath, path);
-          // The status's size may be older than the file: one grown since isn't read whole.
-          return (await stat(file)).size > MAX_SCORED_TEXT_BYTES ? null : readFile(file);
-        },
+        glanceAtAdded: (path) => glanceAt(toAbsolutePath(workspacePath, path)),
+        readAdded: (path) => readFile(toAbsolutePath(workspacePath, path)),
       });
     });
   }
@@ -157,4 +156,17 @@ function createdShelveId(output: string): number {
   const created = /sh:(\d+)/.exec(output);
   if (!created) throw new Error('The shelve finished but no shelve id was reported.');
   return Number(created[1]);
+}
+
+/** A file's size and whether its start looks binary (`looksBinary`), reading only that start. */
+async function glanceAt(file: string): Promise<FileGlance> {
+  const handle = await open(file, 'r');
+  try {
+    const { size } = await handle.stat();
+    const start = Buffer.alloc(Math.min(size, BINARY_SNIFF_BYTES));
+    const { bytesRead } = await handle.read(start, 0, start.length, 0);
+    return { size, isBinary: looksBinary(start.subarray(0, bytesRead)) };
+  } finally {
+    await handle.close();
+  }
 }

@@ -66,7 +66,7 @@ function MoveMatchDialog({ workspacePath, change, side, listed, finish }: MoveMa
             extras={
               scored &&
               similarities.data && (
-                <span className={styles.similarity} data-tip={similarityTip(candidate, similarity)}>
+                <span className={styles.similarity} data-tip={similarityTip(similarity)}>
                   {similarityLabel(similarity)}
                 </span>
               )
