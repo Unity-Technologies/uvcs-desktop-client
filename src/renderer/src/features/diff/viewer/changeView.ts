@@ -9,6 +9,8 @@ import { pierreLinePosition } from './pierreLinePosition';
 export interface ChangeView {
   /** Brings a change into view, lights it for a moment and, while typing, puts the caret on it. */
   reveal: (change: ChangeRegion) => void;
+  /** Brings a change into view as the diff opens, unless it opened on a link's lines (`scrollToLine`). */
+  show: (change: ChangeRegion) => void;
   /** The line of the modified file at the top of the view (`blocks` are the diff's); none before the diff shows. */
   lineAtTop: (blocks: ChangeBlock[]) => number | null;
 }
@@ -21,20 +23,21 @@ const MAX_FRAMES = 60;
 /**
  * Scrolls the diff in `container` so the change starts a few rows from the top, unless it's all in view already.
  * A big diff renders only the lines in view: a change not rendered yet is scrolled to where Pierre lays it out, then
- * set right once its rows render. Returns a function that stops it.
+ * set right once its rows render. `smooth`: a short way smoothly (a move), else at once (a diff opening). Returns a
+ * function that stops it.
  */
-export function scrollToChange(container: HTMLElement, change: ChangeRegion, virtualizer: Virtualizer | undefined): () => void {
+export function scrollToChange(container: HTMLElement, change: ChangeRegion, virtualizer: Virtualizer | undefined, smooth: boolean): () => void {
   let frames = 0;
   let jumped = false;
   let frame = 0;
   const attempt = (): void => {
     const root = pierreShadowRoot(container);
     const first = root && rowOf(root, change.lines[0]!);
-    if (root && first) return scrollToRows(container, first, lastRows(root, change), !jumped);
+    if (root && first) return scrollToRows(container, first, lastRows(root, change), smooth && !jumped);
     const fileContainer = container.querySelector('diffs-container');
     const top = !jumped && virtualizer && fileContainer ? pierreLinePosition(virtualizer, fileContainer, change.lines[0]!) : undefined;
     if (top !== undefined) {
-      container.scrollTop = top - CONTEXT_ROWS * rowHeight(root?.querySelector('[data-line]'));
+        container.scrollTop = top - CONTEXT_ROWS * rowHeight(root?.querySelector('[data-line]'));
       jumped = true;
     }
     if (++frames < MAX_FRAMES) frame = requestAnimationFrame(attempt);

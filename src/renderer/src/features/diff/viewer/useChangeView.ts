@@ -18,24 +18,32 @@ interface ChangeViewOptions {
   editor: RefObject<Editor | null>;
   /** Picks the change moved to, for ⌥⌘Z (`useBlockDiscard`). */
   pickChange: (change: ChangeRegion) => void;
+  /** The diff opened on a link's lines (`useLineLinks`' `focusLines`): it stays on them. */
+  opensOnLines: boolean;
 }
 
 /**
  * The diff's side of moving from change to change (`ChangeView`): a change moved to is scrolled into view, lit for a
- * moment and picked; while typing, the caret goes on to it.
+ * moment and picked; while typing, the caret goes on to it. The one a diff opens at is only scrolled into view.
  */
-export function useChangeView({ changeViewRef, containerRef, virtualizer, editor, pickChange }: ChangeViewOptions): void {
+export function useChangeView({ changeViewRef, containerRef, virtualizer, editor, pickChange, opensOnLines }: ChangeViewOptions): void {
   const changeFlash = useChangeFlash();
   useShadowStyle(containerRef, changeFlash.css);
   const stopScrolling = useRef<() => void>(undefined);
   useEffect(() => () => stopScrolling.current?.(), []);
 
+  const scrollTo = (change: ChangeRegion, smooth: boolean): HTMLElement | null => {
+    const container = containerRef.current;
+    if (!container) return null;
+    stopScrolling.current?.();
+    stopScrolling.current = scrollToChange(container, change, virtualizer, smooth);
+    return container;
+  };
+
   useImperativeHandle(changeViewRef, () => ({
     reveal: (change: ChangeRegion) => {
-      const container = containerRef.current;
+      const container = scrollTo(change, true);
       if (!container) return;
-      stopScrolling.current?.();
-      stopScrolling.current = scrollToChange(container, change, virtualizer);
       changeFlash.light(changeRows(change.lines));
       pickChange(change);
       // Typing goes on from the change (F7 while typing): the caret would otherwise bring the view back to it.
@@ -43,6 +51,9 @@ export function useChangeView({ changeViewRef, containerRef, virtualizer, editor
       if (typedInto && isTypingIn(container)) {
         typedInto.focus({ lineNumber: Math.min(change.newStart, typedInto.getText().split('\n').length), preventScroll: true });
       }
+    },
+    show: (change: ChangeRegion) => {
+      if (!opensOnLines) scrollTo(change, false);
     },
     lineAtTop: (blocks) => (containerRef.current ? lineAtTopOf(containerRef.current, blocks) : null),
   }));

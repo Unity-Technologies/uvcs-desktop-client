@@ -2,7 +2,7 @@ import { useCallback, useContext, useEffect, useRef, useState, type RefObject } 
 import { isModalDialogOpen } from '../../../lib/modalDialog';
 import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkeys, type ShortcutId } from '../../../lib/shortcutRegistry';
-import { arrivalChange, plannedMove, positionLabel } from './changeNavigation';
+import { openingStep, plannedMove, positionLabel } from './changeNavigation';
 import { FileStepsContext, type Arrival } from './fileSteps';
 import { positionAfterChange, pressStep } from './stepNavigation';
 
@@ -37,6 +37,11 @@ export interface StepView {
   isShown: () => boolean;
   /** Brings the step at `index` into view. */
   reveal: (index: number) => void;
+  /**
+   * Brings the step at `index` into view as the view opens, without moving to it: not lit, nor picked. A view without
+   * it opens where it is, unless stepped to from the file beside it.
+   */
+  show?: (index: number) => void;
   /** How many steps start above the top of the view, read from the screen: where the first move goes from. */
   countAbove: () => number;
   /**
@@ -110,22 +115,26 @@ export function useStepNavigation({ steps, view, frame, path, noun, shortcuts }:
   const latestMoveTo = useRef(moveTo);
   latestMoveTo.current = moveTo;
 
-  // Opened by a step from the file beside it: at its first or last step, once the view shows.
+  // Opened by a step from the file beside it: at its first or last step; opened otherwise, with its first step in
+  // view (`openingStep`). Once the view shows, and once: `opened` is set from then on.
   const arrival = useRef<Arrival | null | undefined>(undefined);
+  const opened = useRef(false);
   useEffect(() => {
     if (arrival.current === undefined) arrival.current = files?.takeArrival(path) ?? null;
-    const at = arrival.current ? arrivalChange(arrival.current, steps.length) : null;
+    const at = opened.current ? null : openingStep(arrival.current, steps.length);
     if (at === null) return;
     let frames = 0;
     let frame = 0;
     const arrive = (): void => {
       if (latestView.current.isShown()) {
-        arrival.current = null;
-        return latestMoveTo.current(at);
+        opened.current = true;
+        return at.movesTo ? latestMoveTo.current(at.index) : latestView.current.show?.(at.index);
       }
       if (++frames < ARRIVAL_MAX_FRAMES) frame = requestAnimationFrame(arrive);
     };
-    arrive();
+    // From the next frame, not at once: a development build's second mount (StrictMode) runs the view's cleanups,
+    // which would stop the scroll started here, then this effect again, which would find the view opened already.
+    frame = requestAnimationFrame(arrive);
     return () => cancelAnimationFrame(frame);
   }, [files, path, steps.length]);
 
