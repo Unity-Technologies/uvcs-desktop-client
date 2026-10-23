@@ -15,6 +15,7 @@ import { pendingChangesStatusOptions } from '../cm/pendingChangesStatusOptions';
 import { readCheckinProgress } from '../cm/progress/checkinProgress';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { withTempFile } from '../files/tempFile';
+import { moveArgs } from '../files/moveItems';
 import { toAbsolutePaths } from '../files/workspacePaths';
 import { addFilterRules } from '../workspace/filterRuleFile';
 import { readPendingChanges } from '../workspace/readPendingChanges';
@@ -60,6 +61,12 @@ export function createPendingChangesService({ cm, operations }: ServiceContext, 
 
   async function remove(workspacePath: string, paths: string[]): Promise<void> {
     await cm.query(['remove', ...toAbsolutePaths(workspacePath, paths)], { cwd: workspacePath });
+  }
+
+  async function recordMove(workspacePath: string, deletedPath: string, newPath: string): Promise<void> {
+    // `cm move` of an item missing from disk onto an existing private one only records the move; were the item back on
+    // disk, it refuses, as the destination exists.
+    await cm.query(moveArgs(workspacePath, { from: deletedPath, to: newPath }), { cwd: workspacePath });
   }
 
   async function checkout(workspacePath: string, paths: string[]): Promise<void> {
@@ -108,6 +115,7 @@ export function createPendingChangesService({ cm, operations }: ServiceContext, 
     undoUnchanged,
     add,
     remove,
+    recordMove,
     checkout,
     addFilterRules,
     shelve,

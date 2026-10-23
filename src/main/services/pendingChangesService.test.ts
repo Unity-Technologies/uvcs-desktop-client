@@ -221,6 +221,22 @@ describe('undo, add and remove', () => {
   });
 });
 
+describe('recording a move', () => {
+  it('moves the item deleted from disk onto the new one with one quick cm move', async () => {
+    const { service, commands } = pendingChanges({ move: 'src/a.cs has been moved to src/b.cs' });
+
+    await service.recordMove(WORKSPACE, 'src/a.cs', 'src/b.cs');
+
+    expect(commands).toMatchObject([{ via: 'query', args: ['move', at('src', 'a.cs'), at('src', 'b.cs')], options: { cwd: WORKSPACE } }]);
+  });
+
+  it("fails as cm refuses: the new item's folder isn't under version control", async () => {
+    const { service } = pendingChanges({ move: cmFails("newdir is a private directory. It can't be moved.") });
+
+    await expect(service.recordMove(WORKSPACE, 'src/a.cs', 'newdir/a.cs')).rejects.toThrow(/private directory/);
+  });
+});
+
 describe('shelve', () => {
   it('shelves the paths with one cm shelveset of its own process and returns the new shelve', async () => {
     const { seen, answer } = readingFileOption('-commentsfile=', 'sh:12@game@local\n');
