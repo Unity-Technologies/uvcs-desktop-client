@@ -1,9 +1,6 @@
 import type { FoundPath } from '@shared/domain/explorer';
 import { recordFormat, type ReadRecord } from './formatRecords';
 
-/** A file or folder of a repository's tree at a changeset, by its path in it (`Assets/Player.cs`, no leading slash). */
-export type ListedPath = FoundPath;
-
 const FIELDS = ['type', 'path'];
 
 /**
@@ -19,7 +16,7 @@ export function repositoryPathsArgs(treeSpec: string): string[] {
  * One record of `repositoryPathsArgs`: the item, its path without the leading slash; none for the root itself. On
  * Windows `cm` joins the path below the root with backslashes (`/Assets\Player.cs`): read as the tree names it.
  */
-export const readListedPath: ReadRecord<ListedPath> = ([type, path]) => {
+export const readListedPath: ReadRecord<FoundPath> = ([type, path]) => {
   const relative = path?.replaceAll('\\', '/').replace(/^\//, '') ?? '';
   // An xlink is a folder of the tree: the listing walks into it.
   return relative ? { path: relative, isDirectory: type === 'dir' || type === 'xlink' } : undefined;
@@ -29,13 +26,13 @@ export const readListedPath: ReadRecord<ListedPath> = ([type, path]) => {
  * One item as a line of a tree's file on disk (`RepositoryPathSearch`): `d` or `f`, then its path. An item whose path
  * holds a line break (which Windows can't even write) is left out (`''`): every line is one item.
  */
-export function listedPathLine({ path, isDirectory }: ListedPath): string {
+export function listedPathLine({ path, isDirectory }: FoundPath): string {
   if (path.includes('\n') || path.includes('\r')) return '';
   return `${isDirectory ? 'd' : 'f'}${path}\n`;
 }
 
 /** A line written by `listedPathLine`, its line break already gone; none for an empty or unknown one. */
-export function readListedPathLine(line: string): ListedPath | undefined {
+export function readListedPathLine(line: string): FoundPath | undefined {
   const kind = line[0];
   if ((kind !== 'd' && kind !== 'f') || line.length < 2) return undefined;
   return { path: line.slice(1), isDirectory: kind === 'd' };

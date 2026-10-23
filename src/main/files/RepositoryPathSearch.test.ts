@@ -3,10 +3,11 @@ import { mkdir, mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import type { FoundPathsSource } from '@shared/domain/explorer';
 import { repositoryPlace } from '@shared/domain/place';
 import { formatOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer, type CmFailure, type FakeCmCommand } from '../cm/testing/fakeCmClient';
-import { RepositoryPathSearch, type PathSearchSource } from './RepositoryPathSearch';
+import { RepositoryPathSearch } from './RepositoryPathSearch';
 import { SessionFolder } from './SessionFolder';
 
 const GAME = repositoryPlace('game@local');
@@ -49,7 +50,7 @@ describe('finding a file in a repository explored without a workspace', () => {
     const { fake, search } = await setUp();
     await search.search(GAME, 12, 'player', { limit: 10 });
 
-    const sources: PathSearchSource[] = [];
+    const sources: FoundPathsSource[] = [];
     expect(paths(await search.search(GAME, 12, 'readme', { limit: 10, onUpdate: (_, source) => sources.push(source) }))).toEqual(['README.md']);
     expect(fake.commands).toHaveLength(1);
     expect(sources).toEqual(['disk']);
@@ -57,7 +58,7 @@ describe('finding a file in a repository explored without a workspace', () => {
 
   it('tells the best results as they are found, from the server the first time', async () => {
     const { search } = await setUp();
-    const updates: [string[], PathSearchSource][] = [];
+    const updates: [string[], FoundPathsSource][] = [];
 
     await search.search(GAME, 12, 'enemy', { limit: 10, onUpdate: (found, source) => updates.push([paths(found), source]) });
 

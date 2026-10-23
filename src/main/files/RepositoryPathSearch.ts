@@ -9,15 +9,13 @@ import { closeSync, createReadStream, openSync, rmSync, writeSync } from 'node:f
 import { rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
-import type { FoundPathsSource } from '@shared/domain/explorer';
+import type { FoundPath, FoundPathsSource } from '@shared/domain/explorer';
 import type { RepositoryPlace } from '@shared/domain/place';
 import { cmPlace } from '../cm/cmPlace';
 import type { CmClient } from '../cm/CmClient';
-import { listedPathLine, readListedPath, readListedPathLine, repositoryPathsArgs, type ListedPath } from '../cm/repositoryPaths';
+import { listedPathLine, readListedPath, readListedPathLine, repositoryPathsArgs } from '../cm/repositoryPaths';
 import { BestPaths } from './BestPaths';
 import { SessionFolder } from './SessionFolder';
-
-export type PathSearchSource = FoundPathsSource;
 
 export interface PathSearch {
   /** How many results it keeps, the best first. */
@@ -25,7 +23,7 @@ export interface PathSearch {
   /** Stops it: a newer query replaced it, or its window went. The tree's listing goes on for the next search. */
   signal?: AbortSignal;
   /** The best results so far, each time they change as the paths go past. */
-  onUpdate?: (paths: ListedPath[], source: PathSearchSource) => void;
+  onUpdate?: (paths: FoundPath[], source: FoundPathsSource) => void;
 }
 
 /** Items matched between two updates, at most: a few updates for a big tree, each with the best results so far. */
@@ -47,7 +45,7 @@ interface Tree {
   file: string | null;
   listing: Promise<string> | null;
   /** The searches matching the items as the listing reads them, and how many items it read so far. */
-  readonly listeners: Set<(item: ListedPath) => void>;
+  readonly listeners: Set<(item: FoundPath) => void>;
   listed: number;
   readonly abort: AbortController;
 }
@@ -65,7 +63,7 @@ export class RepositoryPathSearch {
    * changeset lists its tree from the server (one `cm ls -R`); a search asked meanwhile joins that listing; every later
    * one reads the tree's file. Fails as the listing does; a search stopped (`signal`) resolves what it found so far.
    */
-  async search(place: RepositoryPlace, changesetId: number, query: string, { limit, signal, onUpdate }: PathSearch): Promise<ListedPath[]> {
+  async search(place: RepositoryPlace, changesetId: number, query: string, { limit, signal, onUpdate }: PathSearch): Promise<FoundPath[]> {
     const best = new BestPaths(query, limit);
     const tree = this.treeOf(place, changesetId);
     try {
@@ -119,7 +117,7 @@ export class RepositoryPathSearch {
   /** Matches the items as the tree's listing reads them, starting it when no search did. */
   private async matchWhileListing(place: RepositoryPlace, changesetId: number, tree: Tree, best: BestPaths, signal: AbortSignal | undefined, onUpdate: PathSearch['onUpdate']): Promise<void> {
     let sinceUpdate = 0;
-    const listener = (item: ListedPath): void => {
+    const listener = (item: FoundPath): void => {
       best.offer(item);
       if (++sinceUpdate < ITEMS_PER_UPDATE || !best.changed) return;
       sinceUpdate = 0;

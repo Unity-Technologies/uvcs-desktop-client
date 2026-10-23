@@ -1,7 +1,7 @@
+import type { FoundPath } from '@shared/domain/explorer';
 import { ranksBefore, scoreOf, toNeedle } from '@shared/fuzzyScore';
-import type { ListedPath } from '../cm/repositoryPaths';
 
-interface Ranked extends ListedPath {
+interface Ranked extends FoundPath {
   score: number;
 }
 
@@ -23,7 +23,7 @@ export class BestPaths {
   }
 
   /** Considers one path; returns whether it is among the best now. */
-  offer(item: ListedPath): boolean {
+  offer(item: FoundPath): boolean {
     if (!this.needle) return false;
     const score = scoreOf(item.path.toLowerCase(), this.needle);
     if (score === 0) return false;
@@ -43,7 +43,7 @@ export class BestPaths {
   }
 
   /** The best so far, best first. */
-  take(): ListedPath[] {
+  take(): FoundPath[] {
     this.changedSinceTake = false;
     return this.best.map(({ path, isDirectory }) => ({ path, isDirectory }));
   }
