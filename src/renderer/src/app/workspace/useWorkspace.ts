@@ -1,4 +1,6 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
+import { workspacePlace, type Place } from '@shared/domain/place';
 import { otherRepository } from '@shared/domain/repository';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -9,6 +11,15 @@ export function useWorkspacePath(): string {
   const workspacePath = useSession((state) => state.workspacePath);
   if (!workspacePath) throw new Error('No workspace is open.');
   return workspacePath;
+}
+
+/**
+ * What this window shows (`Place`), for the views that read and change the server's objects, which work the same with
+ * or without a workspace. Only use it inside the place's screen.
+ */
+export function usePlace(): Place {
+  const workspacePath = useWorkspacePath();
+  return useMemo(() => workspacePlace(workspacePath), [workspacePath]);
 }
 
 export function useWorkspaceInfo() {
