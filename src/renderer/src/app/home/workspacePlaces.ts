@@ -2,7 +2,7 @@ import { isUnityOrganization, serverKind, type ServerKind } from '@shared/domain
 import type { UnityProject } from '@shared/domain/repository';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { describeServer, splitRepositorySpec } from '../../lib/servers';
-import type { WorkspaceEntry } from './recentWorkspaces';
+import { entryMatches, type WorkspaceEntry } from './recentWorkspaces';
 
 /** Where a workspace's repository lives: a server, and in a Unity organization the project too. */
 export interface WorkspacePlace {
@@ -92,6 +92,11 @@ export function isInPlace(entry: Pick<WorkspaceEntry, 'repository'>, place: Work
   if (place === null) return true;
   const own = placeOf(entry);
   return own !== undefined && own.server === place.server && (place.project === undefined || own.project === place.project);
+}
+
+/** The workspaces All workspaces shows: those the search finds, in the place picked. */
+export function workspacesShown<Entry extends WorkspaceEntry>(entries: readonly Entry[], filter: string, place: WorkspacePlace | null): Entry[] {
+  return entries.filter((entry) => entryMatches(entry, filter) && isInPlace(entry, place));
 }
 
 export function samePlace(a: WorkspacePlace | null, b: WorkspacePlace | null): boolean {

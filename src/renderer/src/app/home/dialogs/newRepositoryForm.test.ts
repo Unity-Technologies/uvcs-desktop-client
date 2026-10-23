@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { initialProject, newRepositoryOf } from './newRepositoryForm';
+import { formProject, newRepositoryOf } from './newRepositoryForm';
 
 const PROJECTS = ['Archived', 'Racing'];
 
@@ -34,13 +34,17 @@ describe('newRepositoryOf', () => {
   });
 });
 
-describe('initialProject', () => {
+describe('formProject', () => {
   it('starts on the project the list shows', () => {
-    expect(initialProject('Racing', PROJECTS)).toBe('Racing');
+    expect(formProject(undefined, 'Racing', PROJECTS)).toBe('Racing');
   });
 
   it('starts on none for all projects, or a project the server no longer has', () => {
-    expect(initialProject(null, PROJECTS)).toBeNull();
-    expect(initialProject('Deleted', PROJECTS)).toBeNull();
+    expect(formProject(undefined, null, PROJECTS)).toBeNull();
+    expect(formProject(undefined, 'Deleted', PROJECTS)).toBeNull();
+  });
+
+  it('takes the project picked over the one the list shows', () => {
+    expect(formProject('Archived', 'Racing', PROJECTS)).toBe('Archived');
   });
 });

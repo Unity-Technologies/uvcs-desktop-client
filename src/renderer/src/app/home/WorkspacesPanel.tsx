@@ -6,9 +6,8 @@ import { SearchField } from '../../ui/SearchField';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { openCreateWorkspaceDialog } from './dialogs/CreateWorkspaceDialog';
 import { PlaceFilter } from './PlaceFilter';
-import { entryMatches } from './recentWorkspaces';
 import { useWorkspaceEntries } from './useWorkspaceEntries';
-import { isInPlace, organizationsOf, placeChoices, type WorkspacePlace } from './workspacePlaces';
+import { organizationsOf, placeChoices, workspacesShown, type WorkspacePlace } from './workspacePlaces';
 import { useReadProjects } from '../workspace/workspaceQueries';
 import { WorkspaceList, type WorkspaceListHandle } from './WorkspaceList';
 import { WorkspaceListSkeleton } from './WorkspaceListSkeleton';
@@ -27,7 +26,7 @@ export function WorkspacesPanel({ onOpen, onOpenFolder }: WorkspacesPanelProps) 
   const organizations = organizationsOf(everyEntry);
   const readProjects = useReadProjects(organizations);
   const choices = useMemo(() => placeChoices(everyEntry, readProjects), [everyEntry, readProjects]);
-  const all = everyEntry.filter((entry) => entryMatches(entry, filter) && isInPlace(entry, place));
+  const all = workspacesShown(everyEntry, filter, place);
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<WorkspaceListHandle>(null);
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isInPlace, matchingPlaces, organizationsOf, placeChoices, placeLabel, placeOf, samePlace } from './workspacePlaces';
+import { isInPlace, matchingPlaces, organizationsOf, placeChoices, placeLabel, placeOf, samePlace, workspacesShown } from './workspacePlaces';
 
 const GAME = { repository: 'Racing/Game@studio@unity' };
 const ART = { repository: 'Racing/Art@studio@unity' };
@@ -93,6 +93,21 @@ describe('isInPlace', () => {
   it('keeps every workspace everywhere, and none whose repository is unknown somewhere', () => {
     expect(isInPlace(RESOLVING, null)).toBe(true);
     expect(isInPlace(RESOLVING, { server: 'studio@unity' })).toBe(false);
+  });
+});
+
+describe('workspacesShown', () => {
+  const entry = (name: string, repository: string) => ({ workspace: { name, path: `/wk/${name}`, guid: name }, missing: false, repository });
+  const entries = [entry('game', GAME.repository), entry('art', ART.repository), entry('editor', EDITOR.repository), entry('codice', LEGACY.repository)];
+
+  it('shows the workspaces the search finds in the place picked', () => {
+    expect(workspacesShown(entries, 'a', { server: 'studio@unity', project: 'Racing' }).map((shown) => shown.workspace.name)).toEqual(['game', 'art']);
+    expect(workspacesShown(entries, 'art', { server: 'studio@unity', project: 'Racing' }).map((shown) => shown.workspace.name)).toEqual(['art']);
+  });
+
+  it('shows every workspace the search finds, everywhere', () => {
+    expect(workspacesShown(entries, '', null)).toEqual(entries);
+    expect(workspacesShown(entries, 'codice', null).map((shown) => shown.workspace.name)).toEqual(['codice']);
   });
 });
 

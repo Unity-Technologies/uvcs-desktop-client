@@ -11,7 +11,7 @@ import { useProjects, useRepositories, useWorkspaceList } from '../../workspace/
 import { useDefaultWorkspaceRoot } from '../useDefaultWorkspaceRoot';
 import { defaultWorkspacePath, suggestWorkspaceName } from '../workspaceNaming';
 import { createNewRepository } from './createNewRepository';
-import { initialProject, newRepositoryOf } from './newRepositoryForm';
+import { formProject, newRepositoryOf } from './newRepositoryForm';
 import { LocationField } from './LocationField';
 
 interface CreateRepositoryOptions {
@@ -44,7 +44,7 @@ function CreateRepositoryDialog({ server: initialServer, project: shownProject, 
   const projectNames = useMemo(() => projects.map((listed) => listed.name), [projects]);
   // Undefined until picked: the dialog starts on the project the list shows, once the server's projects are read.
   const [pickedProject, setPickedProject] = useState<string | null>();
-  const project = pickedProject === undefined ? initialProject(shownProject, projectNames) : pickedProject;
+  const project = formProject(pickedProject, shownProject, projectNames);
   const repository = newRepositoryOf({ name, project, projects: projectNames, takenNames: (repositories ?? []).map((listed) => listed.name) });
 
   const workspaceName = suggestWorkspaceName(name.trim(), (workspaces ?? []).map((workspace) => workspace.name));
