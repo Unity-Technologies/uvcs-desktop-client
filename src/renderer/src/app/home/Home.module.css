@@ -350,21 +350,6 @@
   white-space: nowrap;
 }
 
-/* A repository's quiet line: across all projects, its project's cube centered on the line, before the text. */
-.repositorySubtitle {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-  color: var(--text-tertiary);
-  font-size: var(--text-sm);
-}
-
-.repositorySubtitleText {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .rowChip {
   flex: none;

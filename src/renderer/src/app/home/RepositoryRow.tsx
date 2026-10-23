@@ -1,7 +1,6 @@
 import { ChevronRight, MoreHorizontal } from 'lucide-react';
 import type { RepositorySummary } from '@shared/domain/repository';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
-import { ProjectIcon } from '../../components/ProjectIcon';
 import { RepositoryAvatar } from '../../components/RepositoryAvatar';
 import { ROVING_ITEM } from '../../lib/rovingFocus';
 import { pluralize } from '../../lib/text';
@@ -19,8 +18,6 @@ interface RepositoryRowProps {
   repository: RepositorySummary;
   /** The Unity project the list shows, none for all projects (`repositoryLabels`). */
   project: string | null;
-  /** The organization's projects' GUIDs by name, which color their icons. */
-  projectGuids: ReadonlyMap<string, string>;
   /** The workspaces known to work on the repository. */
   workspaces: WorkspaceSummary[];
   /** Its workspaces show under it (`repositoryListRows`). */
@@ -30,7 +27,7 @@ interface RepositoryRowProps {
   onCreateWorkspace: (repository: RepositorySummary) => void;
 }
 
-export function RepositoryRow({ repository, project, projectGuids, workspaces, expanded, onToggle, onOpen, onCreateWorkspace }: RepositoryRowProps) {
+export function RepositoryRow({ repository, project, workspaces, expanded, onToggle, onOpen, onCreateWorkspace }: RepositoryRowProps) {
   const menu = () => repositoryMenu(repository, onCreateWorkspace);
   const onlyWorkspace = workspaces.length === 1 ? workspaces[0] : undefined;
   const title = repositoryLabels(repository, project);
@@ -52,17 +49,14 @@ export function RepositoryRow({ repository, project, projectGuids, workspaces, e
                 <Highlight text={title.name} />
               </span>
             </span>
-            <span className={styles.repositorySubtitle}>
-              {title.project && <ProjectIcon guid={projectGuids.get(title.project)} size={14} />}
-              <span className={styles.repositorySubtitleText}>
-                {title.project && (
-                  <>
-                    <Highlight text={title.project} />
-                    {details.length > 0 && ' · '}
-                  </>
-                )}
-                {details.join(' · ')}
-              </span>
+            <span className={styles.rowSubtitle}>
+              {title.project && (
+                <>
+                  Project <Highlight text={title.project} />
+                  {details.length > 0 && ' · '}
+                </>
+              )}
+              {details.join(' · ')}
             </span>
           </span>
         </button>

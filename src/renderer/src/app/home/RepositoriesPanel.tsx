@@ -36,7 +36,6 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
   const pickProject = useProjectPickStore((store) => store.pick);
   const { all: workspaceEntries } = useWorkspaceEntries('');
   const choices = useMemo(() => projectChoices(projects, repositories ?? []), [projects, repositories]);
-  const projectGuids = useMemo(() => new Map(projects.map((listed) => [listed.name, listed.guid])), [projects]);
   // Named as in the sidebar: "This computer", an organization's name.
   const place = describeServer(server);
 
@@ -82,7 +81,6 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
         rows={rows}
         query={filter}
         project={project}
-        projectGuids={projectGuids}
         onToggle={toggle}
         onOpen={onOpen}
         onCreateWorkspace={createWorkspace}
