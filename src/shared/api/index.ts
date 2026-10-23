@@ -27,6 +27,7 @@ import type { UnityAssetsApi } from './unityAssets';
 import type { UpdatesApi } from './updates';
 import type { WindowsApi } from './windows';
 import type { WorkspacesApi } from './workspaces';
+import type { XlinksApi } from './xlinks';
 
 /**
  * Everything the renderer can ask the main process to do.
@@ -62,4 +63,5 @@ export interface UvcsApi {
   updates: UpdatesApi;
   windows: WindowsApi;
   workspaces: WorkspacesApi;
+  xlinks: XlinksApi;
 }
