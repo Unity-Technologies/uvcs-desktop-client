@@ -140,7 +140,8 @@ and many people use the same server. Every `cm` command other than local reads (
   that has no form for N, which runs once per workspace, never per row of a server list: the home screen's `cm wi`
   of each workspace (`workspaceHeadsReader`, "Home", below), the recent workspaces' `cm status --header` it couldn't
   tell (`workspaceRepositoryLookup`), and the switcher's two `cm status` of each workspace of the same repository, its
-  header and its changes counted (`workspaces.glance`, `readWorkspaceGlance`).
+  header and its changes counted (`workspaces.glance`, `readWorkspaceGlance`). An `--xml` header still asks the server
+  for the branch head ("`cm status` asks the server for its header", in "Parsing `cm` output").
 - **Revisions asked together, one `cm cat` per batch**: every revision read by its spec (`content.read` of a
   `revision` or a `spec`: diffs, History, Incoming, a merge's conflicting files) goes through `RevisionCat`, which
   saves the reads asked together with one `cm cat <spec>;<file> <spec>;<file> …` per batch (`nextCatBatch`,
@@ -316,8 +317,8 @@ and many people use the same server. Every `cm` command other than local reads (
 - **`cm status` as records**: it has no `--format`, but `--machinereadable` with control-character separators
   (`statusRecordsArgs`) prints records `RecordReader` reads as they arrive (`PendingChangesReader`): a `STATUS` record,
   with `--changelists` each `CHLIST <name> <description>` before its changes, each change as `<codes> <path> <is
-  folder> <merges>` (a move `<codes> <similarity> <old path> <path> …`), and `CONFLICT_MARKERS <path>`. 100,000 changes
-  print 9 MB where `--xml` printed 60 MB, in half the time (0.9 s against 1.8 s; 500,000: 46 MB in 4.6 s against
+  folder> <merges>` (a move `<codes> <similarity> <old path> <path> …`), with `--compact` ("`cm status` asks the
+  server for its header", below). 100,000 changes print 9 MB where `--xml` printed 60 MB, in half the time (0.9 s against 1.8 s; 500,000: 46 MB in 4.6 s against
   300 MB in 9 s, past what one string could hold). A change prints every code of the item at once (`CH+MV`):
   `listedCodes` reads it as `--xml` listed it (a deleted item is only deleted, an added one only added; an item in no
   category, a cloaked folder, isn't listed). Its paths are absolute, from the root `cm` keeps, which may differ from the
@@ -334,6 +335,13 @@ and many people use the same server. Every `cm` command other than local reads (
   UTF-8: `printsInConsoleCodePage`); a workspace of a million changes holds one of its two sessions for 5–7 s, while
   the other keeps answering the workspace's other reads. As `cm ls`'s, its
   records come in UTF-8 on Windows only from a `cm shell` (`processCommand`, `printsInConsoleCodePage`).
+- **`cm status` asks the server for its header**: unless `--compact` (or `--cset`, `--format`) is passed, `cm status`
+  works out the workspace header even when it prints none, and asks the server for the head of the branch: about
+  80 ms a command against Unity Cloud, in a warm `cm shell`, against about 20 ms with `--compact`. In machine-readable
+  mode that header adds only `CONFLICT_MARKERS <path>` records, which nothing reads, so the records (`statusRecordsArgs`)
+  and the machine-readable header (`machineReadableHeaderArgs`) pass `--compact` and stay local reads. The `--xml`
+  header (`readStatusHeader`, the switcher's `readWorkspaceGlance`) can't: `--compact` prints the legacy text, and
+  `--cset` drops the `<WkConfigName>` the selector is read from, so each costs that round trip.
 - **XML remains** only where `--format` can't say it: the `cm status` header (`parseWorkspaceStatus`: a local read,
   under a KB) and `cm fileinfo` of one item or two (`parseItemDetails`, `removedItemSpec`), answers that stay small;
   and `cm history`, whose `--format` has no revision type, which tells text from binary from a directory, and a
@@ -457,7 +465,8 @@ by name, and never passes it to `cm`.
 - **Where the app takes the name instead**, each from an output `cm` already names it in, never by mapping ids to names
   itself (`isOrganizationIdServer`, `main/cm/organizationIds.ts`, only tells an id apart):
   - The workspace's repository and server (`WorkspaceInfo`, `readWorkspaceStatus`): from
-    `cm status --header --machinereadable` (`machineReadableHeaderArgs`), a local read
+    `cm status --header --machinereadable` (`machineReadableHeaderArgs`), a local read with `--compact` ("`cm status`
+    asks the server for its header")
     run only when the `--xml` header printed an id (`serverByName`). The header is shared for a few seconds
     (`WorkspaceHeaders`). Reads that need only what is loaded take `readWorkspaceLoad`, which has no server to misuse,
     and the header as printed (`parseWorkspaceStatus`) holds the id only as `printedServer`. The header's branch is

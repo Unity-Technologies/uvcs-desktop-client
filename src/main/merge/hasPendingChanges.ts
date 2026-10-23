@@ -1,7 +1,10 @@
 import type { CmClient } from '../cm/CmClient';
 import { statusRecordsArgs } from '../cm/pendingChangesRecords';
 
-/** The records of `cm status --machinereadable` that are no change: its header, a file's conflict markers. */
+/**
+ * The records of `cm status --machinereadable` that are no change: its header, a file's conflict markers (which
+ * `--compact` prints none of; skipped should a `cm` print them anyway).
+ */
 const NO_CHANGE_RECORDS = new Set(['STATUS', 'CONFLICT_MARKERS']);
 
 /**
