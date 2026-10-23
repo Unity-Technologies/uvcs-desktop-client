@@ -186,10 +186,17 @@ try {
       await settled();
     });
   }
-  await step("A repository's changeset diff", async () => {
+  await step("A repository's changeset diff, in a new window too", async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Changesets/ }).click();
     await main.getByRole('button', { name: 'Open diff' }).click();
     await main.getByText('src/player.cs', { exact: true }).first().waitFor();
+    const opened = app.waitForEvent('window');
+    await main.getByRole('button', { name: 'Open in new window' }).click();
+    const pageWindow = await opened;
+    pageWindow.on('pageerror', (error) => errors.push(`repository page window pageerror: ${error.message}`));
+    pageWindow.on('console', (message) => message.type() === 'error' && errors.push(`repository page window console.error: ${message.text()}`));
+    await pageWindow.getByText('src/player.cs', { exact: true }).first().waitFor({ timeout: TIMEOUT_MS });
+    await pageWindow.close();
     await window.keyboard.press('ControlOrMeta+K');
   });
   await step('Settings and dark theme', async () => {
