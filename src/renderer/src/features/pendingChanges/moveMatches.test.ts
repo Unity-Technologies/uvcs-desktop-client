@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ChangeKind, ItemType, PendingChange } from '@shared/domain/pendingChanges';
-import { compareCandidates, matchCandidates, matchSideOf, moveMatchOf } from './moveMatches';
+import { compareCandidates, matchCandidates, matchSideOf, moveMatchOf, searchedCandidates } from './moveMatches';
 
 const change = (path: string, kinds: ChangeKind[], itemType: ItemType = 'file'): PendingChange => ({ path, kinds, itemType, size: 0, lastModified: '' });
 const deleted = (path: string, itemType?: ItemType) => change(path, ['locallyDeleted'], itemType);
@@ -79,6 +79,15 @@ describe('the likeliest candidate first', () => {
 
   it('takes names with no extension as unlike one another but for their name', () => {
     expect(ranked('Makefile', ['README', 'build/Makefile'])).toEqual(['build/Makefile', 'README']);
+  });
+});
+
+describe('the search', () => {
+  it('keeps the candidates holding every word typed in their path, in their order', () => {
+    const candidates = [added('src/game/Hero.cs'), added('src/HeroTests.cs'), added('docs/hero.md')];
+
+    expect(paths([...searchedCandidates(candidates, 'hero src')])).toEqual(['src/game/Hero.cs', 'src/HeroTests.cs']);
+    expect(searchedCandidates(candidates, ' ')).toBe(candidates);
   });
 });
 

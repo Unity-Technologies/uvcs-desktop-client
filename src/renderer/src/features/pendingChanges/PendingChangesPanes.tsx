@@ -190,7 +190,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
             grouping === 'changelist' ? (moved, changelist) => void moveToChangelist(workspacePath, changelist, moved) : undefined
           }
           contextMenu={(selected) =>
-            pendingChangeMenu(workspacePath, selected, changelists, { isIncluded, setIncluded: setIncludedChanges }, review, locks)
+            pendingChangeMenu(workspacePath, selected, changelists, { isIncluded, setIncluded: setIncludedChanges }, review, locks, allChanges)
           }
           changelistMenu={(changelist) =>
             changelistMenu(workspacePath, changelist, {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemType, PendingChange } from '@shared/domain/pendingChanges';
-import { matchDialogWords, matchedMessage } from './moveMatchWords';
+import { emptyListWords, matchDialogWords, matchedMessage } from './moveMatchWords';
 
 const change = (path: string, itemType: ItemType = 'file'): PendingChange => ({ path, kinds: ['locallyDeleted'], itemType, size: 0, lastModified: '' });
 
@@ -10,7 +10,9 @@ describe('the Search matches words', () => {
       title: 'Where did Player.cs go?',
       description: 'Pick the new file it became. Checked in, it becomes a move, and its history goes on.',
       placeholder: 'Find a new file',
+      listLabel: 'New files',
       empty: 'No new files in Changes.',
+      noMatches: 'No matching new files.',
     });
   });
 
@@ -25,6 +27,14 @@ describe('the Search matches words', () => {
   it('says where to show private files when Changes hides them, the only new items there are', () => {
     expect(matchDialogWords(change('a.cs'), 'deleted', false).empty).toBe('Changes hides private files: Settings › Changes shows them.');
     expect(matchDialogWords(change('a.cs'), 'new', false).empty).toBe('No deleted files in Changes.');
+  });
+
+  it('says the search found nothing only while there is a search', () => {
+    const words = matchDialogWords(change('a.cs'), 'deleted', true);
+
+    expect(emptyListWords(words, '')).toBe('No new files in Changes.');
+    expect(emptyListWords(words, '  ')).toBe('No new files in Changes.');
+    expect(emptyListWords(words, 'hero')).toBe('No matching new files.');
   });
 
   it('names the move recorded', () => {

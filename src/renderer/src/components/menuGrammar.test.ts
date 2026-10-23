@@ -174,6 +174,9 @@ const mergeDirectoryConflict = {
 const deletedEntry = { status: 'deleted', path: 'src/Enemy.cs', itemType: 'file', revisionId: -1, baseRevisionId: 18, repository } as const;
 const deletedFolder = { ...deletedEntry, path: 'docs', itemType: 'directory', baseRevisionId: 24 } as const;
 
+const deletedChange: PendingChange = { path: 'src/Player.cs', kinds: ['locallyDeleted'], itemType: 'file', size: 0, lastModified: '' };
+const privateChange: PendingChange = { ...deletedChange, path: 'src/Hero.cs', kinds: ['private'] };
+
 const MENUS: Record<string, () => MenuEntry[]> = {
   branch: () => branchMenu(ws, [branch], '/main'),
   currentBranch: () => branchMenu(ws, [branch], branch.name),
@@ -194,6 +197,8 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   folder: () => fileMenu(ws, [{ ...file, path: 'src', name: 'src', itemType: 'directory' }], new PendingChangesIndex([])),
   lockedFile: () => fileMenu(ws, [file], new PendingChangesIndex([change]), pendingLocks),
   pendingChange: () => pendingChangeMenu(ws, [change], [], { isIncluded: () => false, setIncluded: () => {} }),
+  deletedPendingChange: () => pendingChangeMenu(ws, [deletedChange], [], undefined, undefined, undefined, [deletedChange, privateChange]),
+  privatePendingChange: () => pendingChangeMenu(ws, [privateChange], [], undefined, undefined, undefined, [deletedChange, privateChange]),
   lockedPendingChange: () => pendingChangeMenu(ws, [change], [], { isIncluded: () => false, setIncluded: () => {} }, undefined, pendingLocks),
   history: () =>
     historyMenu({ workspacePath: ws, path: 'src/a.ts', ofWorkspaceFile: true, annotate: () => {} }, [

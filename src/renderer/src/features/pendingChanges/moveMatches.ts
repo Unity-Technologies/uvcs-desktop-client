@@ -1,5 +1,6 @@
 import type { ItemType, PendingChange } from '@shared/domain/pendingChanges';
 import { comparePaths } from '@shared/pathOrder';
+import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { extensionOf, fileNameOf } from '../../lib/text';
 
 /**
@@ -44,6 +45,11 @@ export function matchCandidates(change: PendingChange, changes: readonly Pending
   return changes
     .filter((other) => SHAPES[other.itemType] === shape && sideOf(other, folders) === otherSide)
     .sort((a, b) => compareCandidates(change.path, a.path, b.path));
+}
+
+/** The candidates the dialog's search leaves: each word typed in the path (`matchesWordFilter`), as the list marks them. */
+export function searchedCandidates(candidates: readonly PendingChange[], search: string): readonly PendingChange[] {
+  return search.trim() ? candidates.filter((candidate) => matchesWordFilter([candidate.path], search)) : candidates;
 }
 
 /** The move a pick records: from the deleted item to the new one, whichever side the change is. */
