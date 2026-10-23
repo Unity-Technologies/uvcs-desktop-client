@@ -51,7 +51,7 @@ export function createContentService({ cm, reviews, repositoryTrees, workspaceCo
     }
     try {
       const read = await bytesOf(workspacePath, source);
-      if (read === PURGED) return null;
+      if (read === PURGED_READ) return null;
       const { bytes } = read;
       if (bytes.length > MAX_MODEL_BYTES) throw new Error(`${fileNameOfAny(source)} is too large to read`);
       // A plain Uint8Array: IPC copies it as binary (a Buffer would arrive as one too, pool slice and all).
@@ -82,10 +82,10 @@ export function createContentService({ cm, reviews, repositoryTrees, workspaceCo
   }
 
   /**
-   * A file's bytes from the disk or `cm cat`, and the name that tells what they are; `PURGED` where `cm cat` said the
-   * revision it was to write to the temp file was purged (`isPurgedRevisionError`).
+   * A file's bytes from the disk or `cm cat`, and the name that tells what they are; `PURGED_READ` where `cm cat` said
+   * the revision it was to write to the temp file was purged (`isPurgedRevisionError`).
    */
-  async function bytesOf(workspacePath: string, source: Exclude<ContentSource, { kind: 'empty' | 'reviewSnapshot' }>): Promise<{ bytes: Buffer; name: string } | typeof PURGED> {
+  async function bytesOf(workspacePath: string, source: Exclude<ContentSource, { kind: 'empty' | 'reviewSnapshot' }>): Promise<{ bytes: Buffer; name: string } | typeof PURGED_READ> {
     if (source.kind === 'workspaceFile') {
       const absolutePath = workspaceFileOf(workspacePath, source.path);
       const bytes = await readFile(absolutePath).catch((error: unknown) => {
@@ -105,7 +105,7 @@ export function createContentService({ cm, reviews, repositoryTrees, workspaceCo
         if (source.kind === 'revision' || source.kind === 'spec') await revisionCat.save(workspacePath, catRevisionOf(source), outputFile);
         else await saveContent(cm, workspacePath, source, outputFile);
       } catch (error) {
-        if (isPurgedRevisionError(error, outputFile)) return PURGED;
+        if (isPurgedRevisionError(error, outputFile)) return PURGED_READ;
         throw error;
       }
       return { bytes: await readFile(outputFile), name: fileNameOf(source) };
@@ -124,11 +124,11 @@ export function createContentService({ cm, reviews, repositoryTrees, workspaceCo
 }
 
 /** What `bytesOf` answers for a revision whose content was purged. */
-const PURGED = Symbol('purged');
+const PURGED_READ = Symbol('purged');
 
 /** The content of what `bytesOf` read: `PURGED_CONTENT` for a purged revision, an answer rather than a failure. */
-function contentOf(read: { bytes: Buffer; name: string } | typeof PURGED): FileContent {
-  return read === PURGED ? PURGED_CONTENT : toFileContent(read.bytes, read.name);
+function contentOf(read: { bytes: Buffer; name: string } | typeof PURGED_READ): FileContent {
+  return read === PURGED_READ ? PURGED_CONTENT : toFileContent(read.bytes, read.name);
 }
 
 /** `cm` telling an item isn't there (`isMissingItemError`) or a tree that hasn't it (`isNotInTreeError`), or the disk. */

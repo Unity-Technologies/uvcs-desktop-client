@@ -117,10 +117,11 @@ export interface CatFailureExplained<T> {
  * What a failed `cm cat` told about `reads`. `cm cat` goes on after a problem: it writes every revision it can, prints
  * a `not found <spec>` line per revision it can't resolve, a purged line naming the file of each revision a purge
  * removed, and a line naming no spec per download that failed.
+ *
+ * A purged line names the file as `cm cat` was given it. Were it ever written otherwise (a short or case-changed path),
+ * the line would name no read: the batch would be read again in halves, down to the read alone, which would then fail
+ * with `cm`'s own line rather than read as purged (`isPurgedRevisionError` matches its file too).
  */
-// A purged line names the file as `cm cat` was given it. Were it ever written otherwise (a short or case-changed path),
-// the line would name no read: the batch would be read again in halves, down to the read alone, which would then fail
-// with `cm`'s own line rather than read as purged (`isPurgedRevisionError` matches its file too).
 export function explainCatFailure<T extends Pick<CatRead, 'spec' | 'target'>>(reads: readonly T[], failure: unknown): CatFailureExplained<T> {
   const lines = failureLines(failure);
   const unwritten = reads.flatMap((read) => {

@@ -5,7 +5,7 @@ import { CmError } from './CmError';
  * content of the file '<file>' because the revision (id:13) was purged and its content is no longer available.` It
  * names the file it was to write, as it was given (`--file=<file>`, or `<spec>;<file>` in a batch), never the spec.
  */
-const PURGED_LINE = /^Can't retrieve the content of the file '(.*)' because the revision \(id:\d+\) was purged\b/i;
+const PURGED_LINE = /^Can't retrieve the content of the file '(.*)' because the revision \(id:\d+\) was purged\b/;
 
 /**
  * `cm` failing because the revision it was to write to `target` was purged. Only a line naming `target` tells it: a
