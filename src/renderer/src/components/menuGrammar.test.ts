@@ -38,11 +38,12 @@ import { mergeItemMenu, type MergeMenuContext } from '../features/merge/mergeIte
 import type { FileConflictState } from '../features/merge/resolve/useFileConflicts';
 import { changelistMenu } from '../features/pendingChanges/changelistMenu';
 import { pendingChangeMenu } from '../features/pendingChanges/pendingChangeMenu';
-import { lineMenu } from '../features/diff/viewer/lineMenu';
+import { codeMenu, type CodeMenuActions } from '../features/diff/viewer/codeMenu';
+import { lineMenuEntries } from '../features/diff/viewer/lineMenu';
 import { shelveMenu } from '../features/shelves/shelveMenu';
 import { syncBranchMenu } from '../features/sync/syncBranchMenu';
 import { isSubmenu, SEPARATOR, withoutAction, type Action, type MenuEntry, type Submenu } from '../lib/actions';
-import { groupOf, MENU_GROUPS } from '../lib/menuGroups';
+import { groupedMenu, groupOf, MENU_GROUPS } from '../lib/menuGroups';
 import { COPY_KINDS } from './copyMenu';
 import { MENU_WORDS, type MenuWord } from './menuWords';
 import { externalAppsKey } from './externalApps/externalApps';
@@ -234,10 +235,19 @@ const MENUS: Record<string, () => MenuEntry[]> = {
  * Menus of lines of code, not of an object: what they copy is the lines' link and text, so they have their own "Copy …"
  * entries and no object's "Copy" submenu. Every other rule of the grammar holds.
  */
-const CODE_MENUS: Record<string, () => MenuEntry[]> = {
-  diffLines: () => lineMenu({ lines: { side: 'new', first: 40, last: 52 }, copyLink: () => {}, copyLines: () => {}, annotate: () => {} }),
-  annotatedLine: () => lineMenu({ lines: { side: 'new', first: 42, last: 42 }, copyLink: () => {}, copyLines: () => {} }),
+const LINE_MENUS: Record<string, () => MenuEntry[]> = {
+  diffLines: () => groupedMenu(lineMenuEntries({ lines: { side: 'new', first: 40, last: 52 }, copyLink: () => {}, copyLines: () => {}, annotate: () => {} })),
+  annotatedLine: () => groupedMenu(lineMenuEntries({ lines: { side: 'new', first: 42, last: 42 }, copyLink: () => {}, copyLines: () => {} })),
 };
+const textActions = Object.fromEntries(['undo', 'redo', 'cut', 'copy', 'paste', 'delete', 'selectAll', 'goToLine', 'find', 'replace', 'compareWithClipboard'].map((name) => [name, () => {}])) as unknown as CodeMenuActions;
+/** Menus of code, the text typed into or read (`codeMenu`): their Copy copies the text selected, not an object's names. */
+const TEXT_MENUS: Record<string, () => MenuEntry[]> = {
+  typedText: () => codeMenu({ editable: true, selectedText: true, selectedCode: true, canUndo: true, canRedo: true, canSelectAll: true }, textActions),
+  readText: () => codeMenu({ editable: false, selectedText: true, selectedCode: true, canUndo: false, canRedo: false, canSelectAll: false }, textActions),
+  committedDiffText: () =>
+    codeMenu({ editable: false, selectedText: true, selectedCode: true, canUndo: false, canRedo: false, canSelectAll: true }, textActions, lineMenuEntries({ lines: { side: 'new', first: 40, last: 52 }, copyLink: () => {}, copyLines: () => {}, annotate: () => {} })),
+};
+const CODE_MENUS = { ...LINE_MENUS, ...TEXT_MENUS };
 const EVERY_MENU = { ...MENUS, ...CODE_MENUS };
 
 const wordOf = (entry: Action | Submenu): MenuWord | undefined => (entry.id ? (MENU_WORDS as Record<string, MenuWord>)[entry.id] : undefined);
@@ -286,10 +296,30 @@ describe('the menu grammar', () => {
 });
 
 describe('lines of code', () => {
-  it.each(Object.entries(CODE_MENUS))('%s: copies the lines\' link and text, and no object\'s Copy submenu', (_name, build) => {
+  it.each(Object.entries(LINE_MENUS))('%s: copies the lines\' link and text, and no object\'s Copy submenu', (_name, build) => {
     const entries = topEntries(build());
     expect(entries.filter((entry) => entry.id === 'copy')).toEqual([]);
     expect(entries.filter((entry) => entry.label.startsWith('Copy')).map((entry) => entry.id)).toEqual(expect.arrayContaining(['copyLines']));
+  });
+});
+
+describe('text', () => {
+  it.each(Object.entries(TEXT_MENUS))("%s: copies the text selected, and no object's Copy submenu", (_name, build) => {
+    const entries = topEntries(build());
+    expect(entries.filter((entry) => entry.id === 'copy')).toEqual([]);
+    expect(entries.map((entry) => entry.id)).toContain('copyText');
+  });
+
+  it("reads, in a committed diff, as the code's menu with the lines' entries at the end of their groups", () => {
+    expect(topEntries(TEXT_MENUS.committedDiffText!()).map((entry) => entry.label)).toEqual([
+      'Go to line…',
+      'Compare with clipboard',
+      'Annotate at these lines',
+      'Copy',
+      'Copy link to lines 40–52',
+      'Copy lines',
+      'Select all',
+    ]);
   });
 });
 
