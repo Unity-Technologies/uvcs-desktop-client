@@ -52,12 +52,13 @@ function OpenPalette({ close }: { close: () => void }) {
   const linkGroup = useMemo(() => linkGroupIn(deferredQuery), [deferredQuery]);
   const { scope, text } = parseScope(linkGroup ? '' : deferredQuery);
   const commandsByOwner = useCommandStore((state) => state.commandsByOwner);
+  const place = useSession((state) => state.place);
   const workspacePath = useSession((state) => state.workspacePath);
   useFocusBackOnClose();
 
   const commands = useMemo(() => paletteCommands(commandsByOwner), [commandsByOwner]);
   const commandIndex = useMemo(() => createFuzzyIndex(commands.map(commandSearchText)), [commands]);
-  const { groups: objectGroups, isLoading } = usePaletteSearch(workspacePath, text, scope);
+  const { groups: objectGroups, isLoading } = usePaletteSearch(place, text, scope);
   const workspaceGroup = useWorkspaceResults(workspacePath, text);
 
   const groups = useMemo<SearchGroup[]>(() => {

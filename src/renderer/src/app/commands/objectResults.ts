@@ -1,5 +1,5 @@
 import { Archive, File, Folder, GitBranch, GitCommitVertical, MessageSquareCode, Tag } from 'lucide-react';
-import { workspacePlace } from '@shared/domain/place';
+import type { Place } from '@shared/domain/place';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
@@ -36,9 +36,9 @@ import { navigation } from '../navigation/navigationStore';
 import { annotatedHistory } from '../../features/history/annotatedHistory';
 import type { SearchResult } from './searchResults';
 
-/** What the palette's results need to know about the workspace, and the typed search (empty to list without matching). */
+/** What the palette's results need to know about the window's place, and the typed search (empty to list without matching). */
 export interface ResultContext {
-  workspacePath: string;
+  place: Place;
   term: string;
   currentBranch?: string;
   loadedChangeset?: number | null;
@@ -48,8 +48,9 @@ export interface ResultContext {
   changeAt: (path: string) => PendingChange | undefined;
 }
 
-export function fileResult(entry: { path: string; isDirectory: boolean }, context: ResultContext): SearchResult {
-  const { workspacePath, term } = context;
+/** A workspace's file or pending change, from the lists only a workspace has (`paletteGroups`). */
+export function fileResult(entry: { path: string; isDirectory: boolean }, workspacePath: string, context: ResultContext): SearchResult {
+  const { term } = context;
   const separator = entry.path.lastIndexOf('/');
   const nameStart = separator + 1;
   const matches = fuzzyMatchPositions(entry.path, term);
@@ -96,7 +97,7 @@ function namePositions(name: string, term: string, match: NameMatch): number[] {
 }
 
 export function branchResult(branch: Branch, context: ResultContext, match: NameMatch = 'fuzzy'): SearchResult {
-  const { workspacePath, term, currentBranch } = context;
+  const { term, currentBranch } = context;
   return {
     id: `branch:${branch.id}`,
     icon: GitBranch,
@@ -107,13 +108,13 @@ export function branchResult(branch: Branch, context: ResultContext, match: Name
     detail: `${displayName(branch.owner)} · ${formatRelativeDate(branch.date)}`,
     detailMatches: [],
     isCurrent: branch.name === currentBranch,
-    menu: () => branchMenu(workspacePlace(workspacePath), [branch], currentBranch),
+    menu: () => branchMenu(context.place, [branch], currentBranch),
     run: () => diffBranch(branch),
   };
 }
 
 export function labelResult(label: Label, context: ResultContext, match: NameMatch = 'fuzzy'): SearchResult {
-  const { workspacePath, term } = context;
+  const { term } = context;
   return {
     id: `label:${label.id}`,
     icon: Tag,
@@ -122,13 +123,13 @@ export function labelResult(label: Label, context: ResultContext, match: NameMat
     quality: term ? fuzzyMatchQuality(label.name, term) : undefined,
     detail: `cs:${label.changeset} · ${formatRelativeDate(label.date)}`,
     detailMatches: [],
-    menu: () => labelMenu(workspacePlace(workspacePath), [label]),
+    menu: () => labelMenu(context.place, [label]),
     run: () => showLabelChanges(label),
   };
 }
 
 export function changesetResult(changeset: Changeset, context: ResultContext): SearchResult {
-  const { workspacePath, term, loadedChangeset, currentBranch } = context;
+  const { term, loadedChangeset, currentBranch } = context;
   return {
     id: `changeset:${changeset.id}`,
     icon: GitCommitVertical,
@@ -136,7 +137,7 @@ export function changesetResult(changeset: Changeset, context: ResultContext): S
     detail: `cs:${changeset.id} · ${displayName(changeset.owner)} · ${formatRelativeDate(changeset.date)}`,
     detailMatches: specMatches(`cs:${changeset.id}`, term),
     quality: term ? Math.max(wordMatchQuality(changeset.comment, term), wordMatchQuality(`cs:${changeset.id}`, term)) : undefined,
-    menu: () => changesetMenu({ place: workspacePlace(workspacePath), loadedChangeset, loadedBranch: currentBranch }, [changeset]),
+    menu: () => changesetMenu({ place: context.place, loadedChangeset, loadedBranch: currentBranch }, [changeset]),
     run: () => openChangesetDiff(changeset),
   };
 }
@@ -152,7 +153,7 @@ export function exactChangesetResult(changesetId: number): SearchResult {
 }
 
 export function shelveResult(shelve: Shelve, context: ResultContext): SearchResult {
-  const { workspacePath, term } = context;
+  const { term } = context;
   return {
     id: `shelve:${shelve.id}`,
     icon: Archive,
@@ -160,13 +161,13 @@ export function shelveResult(shelve: Shelve, context: ResultContext): SearchResu
     detail: `sh:${shelve.id} · ${displayName(shelve.owner)} · ${formatRelativeDate(shelve.date)}`,
     detailMatches: specMatches(`sh:${shelve.id}`, term),
     quality: term ? Math.max(wordMatchQuality(shelve.comment, term), wordMatchQuality(`sh:${shelve.id}`, term)) : undefined,
-    menu: () => shelveMenu(workspacePlace(workspacePath), [shelve]),
+    menu: () => shelveMenu(context.place, [shelve]),
     run: () => showShelveChanges(shelve),
   };
 }
 
 export function codeReviewResult(review: CodeReviewSummary, context: ResultContext): SearchResult {
-  const { workspacePath, term } = context;
+  const { term } = context;
   return {
     id: `codeReview:${review.id}`,
     icon: MessageSquareCode,
@@ -174,7 +175,7 @@ export function codeReviewResult(review: CodeReviewSummary, context: ResultConte
     detail: `${review.status} · ${displayName(review.owner)}`,
     detailMatches: [],
     quality: wordMatchQuality(review.title, term),
-    menu: () => codeReviewMenu(workspacePlace(workspacePath), [review], context.workspaceOn),
+    menu: () => codeReviewMenu(context.place, [review], context.workspaceOn),
     run: () => openReview(review),
   };
 }

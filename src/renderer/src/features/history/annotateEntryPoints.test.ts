@@ -47,8 +47,8 @@ describe('Annotate outside the Files view', () => {
   });
 
   it("opens a palette result's history annotated", () => {
-    const context = { workspacePath: ws, term: '', currentBranch: '/main', loadedChangeset: 6, changelists: [], changeAt: () => undefined };
-    expect(annotate(fileResult({ path: 'src/a.ts', isDirectory: false }, context).menu!())).toEqual({ kind: 'history', path: 'src/a.ts', view: 'annotate' });
+    const context = { place: workspacePlace(ws), term: '', currentBranch: '/main', loadedChangeset: 6, changelists: [], changeAt: () => undefined };
+    expect(annotate(fileResult({ path: 'src/a.ts', isDirectory: false }, ws, context).menu!())).toEqual({ kind: 'history', path: 'src/a.ts', view: 'annotate' });
   });
 
   it("opens a changeset diff's file on the revision the diff shows", () => {
