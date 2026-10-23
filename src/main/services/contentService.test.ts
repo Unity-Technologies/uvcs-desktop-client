@@ -512,6 +512,19 @@ describe('reading content in a repository explored without a workspace', () => {
     ]);
   });
 
+  it("reads a model's .bin beside its revision from the repository's tree at the point, outside every workspace", async () => {
+    const { answer } = catWriting('BIN');
+    const { service, commands } = content({ cat: answer, ls: ASSETS_LISTING });
+    const bin = { kind: 'repositoryPath' as const, path: '/Assets/Barrel.bin', at: 'cs:12', beside: { path: '/Assets/Barrel.gltf', revisionId: 43 } };
+
+    expect(new TextDecoder().decode((await service.readBytes(onRepository, bin))!)).toBe('BIN');
+    expect(commands.map(({ args }) => args.filter((arg) => !arg.startsWith('--file=') && !arg.startsWith('--format')))).toEqual([
+      ['ls', '/Assets', '--tree=cs:12@game@local'],
+      ['cat', 'revid:41@eco@local'],
+    ]);
+    expect(commands.every(({ options }) => options.outsideWorkspaces)).toBe(true);
+  });
+
   it("never reads a workspace's file, what it loaded or a review snapshot: there is none", async () => {
     const { service, commands } = content({});
 

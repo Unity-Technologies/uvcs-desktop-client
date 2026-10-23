@@ -149,6 +149,24 @@ describe('Where a changed xlink points', () => {
     expect(commands).toEqual([]);
   });
 
+  it("reads a changeset's xlink in a repository explored without a workspace, naming the repository on the find and both trees", async () => {
+    const { service, commands } = xlinks({
+      find: recordsOutput(FOUND_PARENTS, { parent: 36 }),
+      'ls /plugins --tree=cs:36@game@local': pluginsAt(1),
+      'ls /plugins --tree=cs:37@game@local': pluginsAt(2),
+    });
+
+    const sides = await service.xlinkSides(repositoryPlace('game@local'), { kind: 'changeset', changesetId: 37 }, XLINK);
+
+    expect(sides).toEqual({ before: unityGUI(1), after: unityGUI(2) });
+    expect(commands.map((command) => command.args.slice(0, 3))).toEqual([
+      ['find', 'changeset', "where changesetid = 37 on repository 'game@local'"],
+      ['ls', '/plugins', '--tree=cs:37@game@local'],
+      ['ls', '/plugins', '--tree=cs:36@game@local'],
+    ]);
+    expect(commands.every((command) => command.options.outsideWorkspaces)).toBe(true);
+  });
+
   it('fails on any other cm error', async () => {
     const { service } = xlinks({ find: recordsOutput(FOUND_PARENTS, { parent: 36 }), ls: cmFails('The server is not available') });
 
