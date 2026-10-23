@@ -1,6 +1,6 @@
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, Folder } from 'lucide-react';
-import { useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import type { XlinkPoint } from '@shared/domain/xlinks';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -10,7 +10,7 @@ import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { Spinner } from '../../ui/Spinner';
-import { folderKey, folderRows, initiallyExpanded, openingFolder, toggled, type FolderListing } from './repositoryFolderTree';
+import { folderKey, folderListingOf, folderRows, initiallyExpanded, openingFolder, toggled, type FolderListing } from './repositoryFolderTree';
 import styles from './RepositoryFolderPickerDialog.module.css';
 
 interface PickRepositoryFolderOptions {
@@ -47,13 +47,16 @@ function RepositoryFolderPickerDialog({ title, repository, point, current, finis
       ...SLOW_CHANGING_QUERY,
     })),
   });
-  const listings = new Map<string, FolderListing>(
-    [...expanded].map((folder, index) => {
-      const query = folderQueries[index]!;
-      return [folder, treeQuery.isError || query.isError ? 'failed' : (query.data ?? 'loading')];
-    }),
-  );
+  const listings = new Map<string, FolderListing>([...expanded].map((folder, index) => [folder, folderListingOf(treeQuery.error, folderQueries[index]!)]));
   const rows = folderRows(repository, listings, expanded);
+  const treeId = useId();
+  const rowId = (index: number) => `${treeId}-${index}`;
+  const selectedIndex = rows.findIndex((row) => row.path === selected);
+  const treeRef = useRef<HTMLDivElement>(null);
+  // The selection moved by the keyboard stays in sight in a tree taller than the dialog.
+  useEffect(() => {
+    treeRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
+  }, [selected]);
 
   const onKeyDown = (event: KeyboardEvent): void => {
     const outcome = folderKey(rows, selected, event.key);
@@ -73,15 +76,25 @@ function RepositoryFolderPickerDialog({ title, repository, point, current, finis
         <>
           <Button onClick={() => finish(undefined)}>Cancel</Button>
           <Button variant="primary" onClick={() => finish(selected)}>
-            Choose {selected}
+            Choose folder
           </Button>
         </>
       }
     >
-      <div className={styles.tree} role="tree" aria-label={title} tabIndex={0} onKeyDown={onKeyDown} autoFocus>
-        {rows.map((row) => (
+      <div
+        ref={treeRef}
+        className={styles.tree}
+        role="tree"
+        aria-label={title}
+        aria-activedescendant={selectedIndex >= 0 ? rowId(selectedIndex) : undefined}
+        tabIndex={0}
+        onKeyDown={onKeyDown}
+        autoFocus
+      >
+        {rows.map((row, index) => (
           <div
             key={row.path}
+            id={rowId(index)}
             role="treeitem"
             aria-selected={row.path === selected}
             aria-expanded={row.expandable ? row.expanded : undefined}
@@ -101,8 +114,8 @@ function RepositoryFolderPickerDialog({ title, repository, point, current, finis
             </span>
             <Folder size={14} className={styles.icon} />
             <span className={styles.name}>{row.name}</span>
-            {row.expanded && row.contents === 'loading' && <Spinner size={12} />}
-            {row.expanded && row.contents === 'failed' && <span className={styles.failed}>Couldn’t read it</span>}
+            {row.note === 'loading' && <Spinner size={12} />}
+            {row.note === 'failed' && <span className={styles.failed}>{row.failure}</span>}
           </div>
         ))}
       </div>
