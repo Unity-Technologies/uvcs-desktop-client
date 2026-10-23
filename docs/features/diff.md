@@ -286,11 +286,13 @@ selection until lines are picked to discard, Pierre echoing them back picking no
 ## The code's menu
 
 A right-click on code opens its menu (`codeMenu`, wired by `useCodeMenu`, every choice in `codeTarget`): every text
-diff's sides, the whole-file editor and a merge's hand-editing (`HandEditor`). It follows the menus' one grammar, so it
+diff's sides, the whole-file editor, a merge's hand-editing (`HandEditor`) and Annotate (`AnnotatedCode`). The merge
+page's conflicts (`ConflictHunks`) have none: Pierre numbers each side of a conflict there on its own (both read line
+3), so no line number or selection there names one text to go to or compare. It follows the menus' one grammar, so it
 reads, in groups: Undo, Redo; Find, Replace, Go to line…, Compare with clipboard; Cut, Copy, Paste; Delete, Select all.
-Where a diff selects lines for links (a committed diff), the lines' own entries join it at the end of their groups
-("Annotate at this line", "Copy link to line 42", "Copy line": `lineMenuEntries`). What it holds depends on the side
-right-clicked (`codeMenuTarget`):
+Where a diff selects lines for links (a committed diff, Annotate), the lines' own entries join it at the end of their
+groups ("Annotate at this line", "Copy link to line 42", "Copy line": `lineMenuEntries`). What it holds depends on the
+side right-clicked (`codeMenuTarget`):
 
 - **Typed into** (the newer side of a workspace file's diff once its editor is attached, the whole-file editor, a
   merge's hand-editing): everything, through Pierre's editor. Undo and Redo are its history (`canUndo`, `canRedo`). Cut,
@@ -325,9 +327,9 @@ reads the platform (`pierreReadsMac`), so Replace opens from the menu on a Mac p
 
 **Go to line…** asks for a line of the side it's on (`goToLine`: "Line number (1–240)", the caret's or the line
 right-clicked already in the field), takes only a line that side has and says which it has otherwise. Typed into, the
-caret goes to the start of that line; read-only, the line scrolls a third of the way down (`scrollToLine`) and is
-selected where lines are. ⌃G goes to a line of the text typed into while the caret is in it, else of the side whose
-lines are selected, else of the newer side (`keyboardGoToLine`).
+caret goes to the start of that line; read-only, the line scrolls a third of the way down (`scrollToLine`; Annotate's
+own rows in place) and is selected where lines are. ⌃G goes to a line of the text typed into while the caret is in it,
+else of the side whose lines are selected, else of the newer side (`keyboardGoToLine`).
 
 **Compare with clipboard** compares the code selected with the text on the clipboard, in the moved code's dialog
 (`openCodeComparisonDialog`): the clipboard on the left, the selection on the right, "Clipboard compared with lines

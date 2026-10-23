@@ -151,11 +151,11 @@ badges.
     sits (`LineLinkChip`, placed by `lineChipAnchor`); its tooltip says what it copies ("Copy link to lines 40–52 of
     Player.cs", `copyLinkLabel`) and the ⇧⌘C that copies it too;
   - **a right-click on code**, which first selects the line clicked when it isn't selected (`rightClickSelection`,
-    `useLineTools`): wherever lines are selected for links (a committed diff, a browsed or Files file), the lines'
-    entries join the code's menu (`lineMenuEntries`, through `useCodeMenu`; features/diff.md "The code's menu"):
-    "Annotate at this line" in a diff (the newer side's, `diffEntryAnnotation`), "Copy link to line 42" (⇧⌘C) and "Copy
-    line" (its text, `linesText`). Changes' code menu has no line entries: its lines are picked to discard them, and no
-    link names a pending change.
+    `useLineTools`): wherever lines are selected for links (a committed diff, Annotate, a browsed or Files file), the
+    lines' entries join the code's menu (`lineMenuEntries`, through `useCodeMenu`; features/diff.md "The code's
+    menu"): "Annotate at this line" in a diff (the newer side's, `diffEntryAnnotation`), "Copy link to line 42" (⇧⌘C)
+    and "Copy line" (its text, `linesText`). Changes' code menu has no line entries: its lines are picked to discard
+    them, and no link names a pending change.
   - Copied from either, the toast teaches the shortcut ("⇧⌘C copies it next time", `nextTimeHint`, `copyPageLink`).
   - Line numbers say how on hover ("Click to select · Shift+click a range", `lineNumberHint`), not while dragging.
 - **⇧⌘C (Ctrl+Shift+C) and the palette's "Copy link"** copy the most specific thing in front (`useCopyLinkCommand`,

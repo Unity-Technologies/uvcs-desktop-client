@@ -2,8 +2,7 @@ import { useContext, useRef, type MouseEvent, type ReactNode, type RefObject } f
 import type { FocusedLines } from '../../../app/navigation/pages';
 import { usePageLineLink } from '../../../app/links/usePageLineLink';
 import { copyLinkLabel } from '../../../app/links/shownLink';
-import type { MenuEntry } from '../../../lib/actions';
-import { groupedMenu, type GroupedEntry } from '../../../lib/menuGroups';
+import type { GroupedEntry } from '../../../lib/menuGroups';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { copyToClipboard } from '../../../ui/copyToClipboard';
 import { contextMenuSelection, copiedLinesWord, lineChipAnchor, linesText, lineUnderPointer, type CodeLayout } from './lineActions';
@@ -30,13 +29,13 @@ interface LineToolsOptions {
 }
 
 /**
- * What the lines selected offer: the "Copy link" chip by them, where a link names them, and the lines' menu on a
- * right-click (`lineMenuEntries`), which first selects the line clicked when it isn't selected; its entries can join
- * another menu (`lineEntries`).
+ * What the lines selected offer: the "Copy link" chip by them, where a link names them, and the lines' entries in the
+ * code's right-click menu (`lineMenuEntries`, joined by `useCodeMenu`), the right-click first selecting the line
+ * clicked when it isn't selected.
  */
 export function useLineTools({ containerRef, layout, range, select, selectable, publishes, textOf }: LineToolsOptions): {
   chip: ReactNode;
-  menu: { enabled: boolean; onContextMenu: (event: MouseEvent) => void; entries: () => MenuEntry[]; pickLines: (event: MouseEvent) => FocusedLines | null; lineEntries: () => (GroupedEntry | false | undefined)[] };
+  menu: { enabled: boolean; pickLines: (event: MouseEvent) => FocusedLines | null; lineEntries: () => (GroupedEntry | false | undefined)[] };
 } {
   const lineLinks = useContext(LineLinksContext);
   const annotateAt = lineLinks?.annotateAt;
@@ -70,11 +69,5 @@ export function useLineTools({ containerRef, layout, range, select, selectable, 
   const chip = anchor && (
     <LineLinkChip containerRef={containerRef} line={anchor} layout={layout} label={copyLinkLabel(link.target)} shortcut={hotkey('copyLink')} onCopy={link.copy} />
   );
-  // Off any line, with none selected: no menu, not even the system's.
-  const onContextMenu = (event: MouseEvent): void => {
-    if (!pickLines(event)) event.preventDefault();
-  };
-  const entries = (): MenuEntry[] => groupedMenu(lineEntries());
-
-  return { chip, menu: { enabled: selectable, onContextMenu, entries, pickLines, lineEntries } };
+  return { chip, menu: { enabled: selectable, pickLines, lineEntries } };
 }

@@ -212,8 +212,9 @@ the conflicts left, dropping each one decided (`decideConflict`), so a conflict'
 show the same sides. Text edited by hand or saved in a tool carries none: its conflicts offer no Keep base. While a tool has the file, a banner says so (Bring to
 front, Stop waiting), its conflicts show without choices and the merge can't complete; a toast tells how it ended.
 Editing the text in the app opens a banner with Done and Discard edits; the choice shows picked and "Changes" shows what
-it produces. The text's right-click menu and Ctrl+G are a diff's editor's (diff.md "The code's menu"). Binary
-conflicts offer the versions to keep as cards, each side's and the base's (where the file has one), and no merge tool; one whose versions render (3D models,
+it produces. The text's right-click menu and Ctrl+G are a diff's editor's (diff.md "The code's menu"); the
+conflicts' view has neither. Binary conflicts offer the versions to keep as cards, each side's and the base's (where
+the file has one), and no merge tool; one whose versions render (3D models,
 images: `rendersVersions`) also shows each side against the base and the base itself ("Choose | Yours | Incoming |
 Base"), and a model's cards tell what each side changed since the base (docs/features/model-diff.md "In a merge").
 Deciding often means looking at the versions in the artist's own app (two PSDs in Photoshop, two FBX in Blender): the
