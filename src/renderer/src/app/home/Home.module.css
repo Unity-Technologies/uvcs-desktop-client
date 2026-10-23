@@ -454,14 +454,14 @@
 }
 
 /* A project picked, cut to fit the chip: Unity project names run long ("HidyUVCSToolbarButtonHunt"). */
-.projectChipName {
+.pickChipName {
   overflow: hidden;
   max-width: 220px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.projectChoice {
+.pickChoice {
   display: flex;
   flex: 1;
   align-items: center;
@@ -469,18 +469,18 @@
   min-width: 0;
 }
 
-.projectChoice[data-picked='true'] {
+.pickChoice[data-picked='true'] {
   font-weight: var(--weight-semibold);
 }
 
-.projectChoiceName {
+.pickChoiceName {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.projectChoiceCount {
+.pickChoiceCount {
   color: var(--text-tertiary);
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
@@ -492,6 +492,6 @@
 }
 
 /* A project under its organization, in All workspaces' place filter: indented past the organization's icon. */
-.projectChoice[data-nested='true'] {
+.pickChoice[data-nested='true'] {
   padding-left: var(--space-4);
 }
