@@ -10,7 +10,10 @@ export function repositoryOfPlace(place: Place, workspace: WorkspaceOrigin): str
   return place.kind === 'repository' ? place.repository : workspace?.repository;
 }
 
-/** The server of a place's repository: a repository's own, from its spec, at once; a workspace's once its info is read. */
+/**
+ * The server of a place's repository: a repository's own, from its spec, at once; a workspace's once its info is read.
+ * None for a spec that names no server, so nothing asks `cm` about a server named ''.
+ */
 export function serverOfPlace(place: Place, workspace: WorkspaceOrigin): string | undefined {
-  return place.kind === 'repository' ? serverOfRepository(place.repository) : workspace?.server;
+  return place.kind === 'repository' ? serverOfRepository(place.repository) || undefined : workspace?.server;
 }

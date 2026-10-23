@@ -16,5 +16,6 @@ describe('where a place is from', () => {
     expect(repositoryOfPlace(repositoryPlace('game@acme@cloud'), undefined)).toBe('game@acme@cloud');
     expect(serverOfPlace(repositoryPlace('game@acme@cloud'), undefined)).toBe('acme@cloud');
     expect(serverOfPlace(repositoryPlace('game@localhost:8087'), undefined)).toBe('localhost:8087');
+    expect(serverOfPlace(repositoryPlace('game'), undefined)).toBeUndefined();
   });
 });
