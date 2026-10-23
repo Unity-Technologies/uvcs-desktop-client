@@ -39,7 +39,7 @@ doesn't show, named by a link or by a window reopened after an update, opens the
 Everything that reads or changes the server's objects works as in a workspace, through the same code
 (ARCHITECTURE.md "Places"): diffs, histories, annotate, Browse repository, Copy and its links, creating, renaming and
 deleting branches and labels, comments, attributes, permissions, code reviews, deleting shelves. A new branch starts
-from the branch selected (`newBranchStart`); a new label from a changeset picked (`newLabel`).
+from the branch selected (`newBranchButton`); a new label from a changeset picked (`newLabel`).
 
 What needs the disk is never offered: the words listed in `NEEDS_A_WORKSPACE` (switching, merging into a workspace,
 cherry picking, applying a shelve, reverting, checking in, opening a file in an app), the workspace commands of the

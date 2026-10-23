@@ -33,11 +33,19 @@ export function startingPointCards(origins: NewBranchOrigin[]): OptionCard<strin
   }));
 }
 
+/** The Branches view's New branch: whether it can start one, and the tooltip saying what it waits for. */
+export interface NewBranchButton {
+  enabled: boolean;
+  tip?: string;
+}
+
 /**
- * Where the Branches view's New branch starts: the selected branch's head, else what the workspace has loaded; with
- * neither (a repository explored without a workspace, nothing selected) it waits for a branch to be selected.
+ * Where the Branches view's New branch starts: the selected branch's head, else what the workspace has loaded, once its
+ * info is read; with neither (a repository explored without a workspace, nothing selected) it waits for a branch to be
+ * selected, and says so.
  */
-export function newBranchStart(hasSelectedBranch: boolean, inWorkspace: boolean): 'selectedBranch' | 'workspace' | null {
-  if (hasSelectedBranch) return 'selectedBranch';
-  return inWorkspace ? 'workspace' : null;
+export function newBranchButton(hasSelectedBranch: boolean, workspace: { read: boolean } | null): NewBranchButton {
+  if (hasSelectedBranch) return { enabled: true };
+  if (workspace) return { enabled: workspace.read };
+  return { enabled: false, tip: 'Select the branch to start from' };
 }
