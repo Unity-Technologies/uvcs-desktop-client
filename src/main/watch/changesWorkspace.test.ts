@@ -20,6 +20,7 @@ describe('changesWorkspace', () => {
     expect(changesWorkspace(['changelist'])).toBe(false);
     expect(changesWorkspace(['label', 'create', 'lb:v1'])).toBe(false);
     expect(changesWorkspace(['xlink', '--show', '/ws/lib'])).toBe(false);
+    expect(changesWorkspace(['xlink', '-s', '/ws/lib'])).toBe(false);
   });
 });
 
