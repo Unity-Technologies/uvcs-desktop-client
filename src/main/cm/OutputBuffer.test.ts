@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { countedText } from '@shared/testing/countedText';
 import { OutputBuffer } from './OutputBuffer';
+import { leftOutMarker } from './outputLimit';
 
 describe('OutputBuffer', () => {
   it('keeps the end of what arrived, however it was chunked', () => {
@@ -36,4 +37,43 @@ describe('OutputBuffer', () => {
     expect(new Set(chunks.map((chunk) => chunk.charactersRead()))).toEqual(new Set([301]));
     expect(buffer.textBefore(buffer.length)).toHaveLength(6_553_600);
   });
+
+  describe('keeping only its ends', () => {
+    it('keeps everything while it fits', () => {
+      const buffer = new OutputBuffer(5, 10);
+      buffer.append('abcd');
+      buffer.append('efgh');
+      expect(buffer.textBefore(buffer.length)).toBe('abcdefgh');
+    });
+
+    it('keeps the first and the last half past it, the middle marked, however it was chunked', () => {
+      const chunked = new OutputBuffer(5, 10);
+      ['ab', 'cdefg', 'hijklmnop', 'qr', 's', 'tuvwxyz'].forEach((chunk) => chunked.append(chunk));
+      const whole = new OutputBuffer(5, 10);
+      whole.append('abcdefghijklmnopqrstuvwxyz');
+
+      for (const buffer of [chunked, whole]) {
+        expect(buffer.length).toBe(26);
+        expect(buffer.tail).toBe('vwxyz');
+        expect(buffer.textBefore(buffer.length)).toMatch(/^abcde\n… 1[0-6] more characters …\n[a-z]*vwxyz$/);
+      }
+      expect(whole.textBefore(whole.length)).toBe(`abcde${leftOutMarker(16)}vwxyz`);
+    });
+
+    it('leaves out what follows the end asked for, in the tail it kept', () => {
+      const buffer = new OutputBuffer(5, 10);
+      buffer.append('abcdefghijklmnopqrstuvwxyz');
+      expect(buffer.textBefore(24)).toBe(`abcde${leftOutMarker(16)}vwx`);
+    });
+
+    it('holds about what it keeps however much arrives', () => {
+      const buffer = new OutputBuffer(301, 1000);
+      for (let i = 0; i < 10_000; i++) buffer.append(`line ${i}\n`);
+      const text = buffer.textBefore(buffer.length);
+      expect(text.startsWith('line 0\nline 1\n')).toBe(true);
+      expect(text.endsWith('line 9999\n')).toBe(true);
+      expect(text.length).toBeLessThan(1100);
+    });
+  });
 });
+

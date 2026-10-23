@@ -1,9 +1,9 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import type { CmResult } from './CmResult';
 import { changesWorkspace } from '../watch/changesWorkspace';
-import type { RecordReader } from './formatRecords';
-import { CmOutputTooLargeError, MAX_OUTPUT_LENGTH } from './outputLimit';
-import { RecordOutput, TextOutput, type OutputStream, type ShellCommandOutput } from './ShellCommandOutput';
+import { ANSWER_TEXT, CmOutputTooLargeError } from './outputLimit';
+import type { OutputReading } from './outputReading';
+import { StreamOutput, TextOutput, type OutputStream, type ShellCommandOutput } from './ShellCommandOutput';
 import { SHELL_ARGS, toShellCommandLine } from './shellCommandLine';
 import { resultLineAtEnd } from './shellResultLine';
 /** A trailing line without a newline that looks like a question, e.g. "Select your system [0-1]:". */
@@ -21,15 +21,13 @@ const STARTUP_PROBE = ['version'];
 export interface CmShellSessionLimits {
   /** How long output may pause on a question-like line before it counts as a prompt. */
   promptStallMs?: number;
-  /** The most characters (bytes, for records) a command may print (`MAX_OUTPUT_LENGTH`). */
-  maxOutputLength?: number;
 }
 
 interface PendingCommand {
   commandLine: string;
   timeoutMs: number;
-  /** Where its `--format` records go as they arrive (`CmClient.queryRecords`); none for a command whose output is text. */
-  records?: RecordReader<unknown>;
+  /** How its output is read: streamed as it arrives (`CmClient.queryRecords`), or kept as text within its limit. */
+  reading: OutputReading;
   resolve: (result: CmResult) => void;
   reject: (error: Error) => void;
 }
@@ -50,7 +48,7 @@ export class CmShellSession {
   private readonly queue: PendingCommand[] = [];
   private running: PendingCommand | null = null;
   /** The running command's output; output that comes while none runs goes nowhere. */
-  private output: ShellCommandOutput = new TextOutput(TAIL_LENGTH);
+  private output: ShellCommandOutput = idleOutput();
   /** Bytes received so far, to tell whether output came in while a prompt timer was pending. */
   private received = 0;
   private promptTimer: NodeJS.Timeout | null = null;
@@ -58,15 +56,13 @@ export class CmShellSession {
   /** Whether the current process answered a command yet; until then it's starting, which takes about a second. */
   private answered = false;
   private readonly promptStallMs: number;
-  private readonly maxOutputLength: number;
 
   constructor(
     private readonly cmPath: string,
     private readonly cwd: string,
-    { promptStallMs = PROMPT_STALL_MS, maxOutputLength = MAX_OUTPUT_LENGTH }: CmShellSessionLimits = {},
+    { promptStallMs = PROMPT_STALL_MS }: CmShellSessionLimits = {},
   ) {
     this.promptStallMs = promptStallMs;
-    this.maxOutputLength = maxOutputLength;
   }
 
   get pendingCount(): number {
@@ -89,12 +85,13 @@ export class CmShellSession {
   }
 
   /**
-   * Runs `cm <args>`. With `records`, its `--format` records go there as they arrive, and the result's output is only
-   * what it printed besides them (`RecordReader.takeRest`): nothing, or its error.
+   * Runs `cm <args>`, its output read as `reading` says (an answer's text by default). Streamed, its stdout goes to the
+   * reader as it arrives, and the result's output is only what it printed besides (`StreamReader.takeRest`): nothing,
+   * or its error.
    */
-  run(args: string[], records?: RecordReader<unknown>): Promise<CmResult> {
+  run(args: string[], reading: OutputReading = { text: ANSWER_TEXT }): Promise<CmResult> {
     return new Promise((resolve, reject) => {
-      this.queue.push({ commandLine: toShellCommandLine(args), timeoutMs: shellCommandTimeoutMs(args), records, resolve, reject });
+      this.queue.push({ commandLine: toShellCommandLine(args), timeoutMs: shellCommandTimeoutMs(args), reading, resolve, reject });
       this.runNext();
     });
   }
@@ -112,7 +109,8 @@ export class CmShellSession {
     if (this.running || this.queue.length === 0) return;
 
     this.running = this.queue.shift()!;
-    this.output = this.running.records ? new RecordOutput(this.running.records, TAIL_LENGTH) : new TextOutput(TAIL_LENGTH);
+    const { reading } = this.running;
+    this.output = 'stream' in reading ? new StreamOutput(reading.stream, TAIL_LENGTH) : new TextOutput(TAIL_LENGTH, reading.text);
     this.timeoutTimer = setTimeout(
       () => this.guarded(() => this.abortRunning(new Error('The cm command took too long and was stopped.'))),
       this.running.timeoutMs,
@@ -127,7 +125,7 @@ export class CmShellSession {
     this.answered = false;
     // What a killed process still had in its pipes must not end up in the output of the next command.
     const onData = (stream: OutputStream) => (chunk: Buffer) => child === this.process && this.guarded(() => this.onOutput(chunk, stream));
-    // Bytes: the command's output decodes them (`TextOutput`), or finds records in them before decoding (`RecordOutput`).
+    // Bytes: the command's output decodes them (`TextOutput`), or finds its items in them before decoding (`StreamOutput`).
     child.stdout.on('data', onData('stdout'));
     child.stderr.on('data', onData('stderr'));
     // A process that died while a command was written to it breaks the pipe (EPIPE): an error nobody listened to would throw.
@@ -142,9 +140,9 @@ export class CmShellSession {
     // No command to answer: it would only end up in the next one's output, or count toward its limit.
     if (!this.running) return;
     this.output.append(chunk, stream);
-    // Past the limit a text output could never be read as one string: the command is stopped a chunk past it at most.
-    if (this.output.length > this.maxOutputLength) {
-      this.abortRunning(new CmOutputTooLargeError(this.maxOutputLength, this.output.unit));
+    // An answer past its limit: the command is stopped a chunk past it at most.
+    if (this.output.length > this.output.stopsAt) {
+      this.abortRunning(new CmOutputTooLargeError(this.output.stopsAt));
       return;
     }
     this.received += chunk.length;
@@ -166,7 +164,7 @@ export class CmShellSession {
     if (!result || !this.running) return;
 
     const output = this.output.beforeResultLine();
-    this.output = new TextOutput(TAIL_LENGTH);
+    this.output = idleOutput();
     this.answered = true;
     this.finishRunning().resolve({ output, exitCode: result.exitCode });
     this.runNext();
@@ -213,7 +211,7 @@ export class CmShellSession {
   private abortRunning(reason: Error): void {
     const child = this.process;
     this.process = null;
-    this.output = new TextOutput(TAIL_LENGTH);
+    this.output = idleOutput();
     child?.kill('SIGKILL');
     if (this.running) this.finishRunning().reject(reason);
     this.runNext();
@@ -229,7 +227,7 @@ export class CmShellSession {
   private onProcessEnded(child: ChildProcessWithoutNullStreams, error: Error): void {
     if (child !== this.process) return;
     this.process = null;
-    this.output = new TextOutput(TAIL_LENGTH);
+    this.output = idleOutput();
     if (this.running) this.finishRunning().reject(error);
     this.runNext();
   }
@@ -245,4 +243,9 @@ export class CmShellSession {
 /** How long a command may run: reads are quick, while writes to thousands of files take minutes. */
 export function shellCommandTimeoutMs(args: readonly string[]): number {
   return changesWorkspace(args) ? WRITE_TIMEOUT_MS : READ_TIMEOUT_MS;
+}
+
+/** The output kept while no command runs: nothing it receives is anyone's. */
+function idleOutput(): ShellCommandOutput {
+  return new TextOutput(TAIL_LENGTH, ANSWER_TEXT);
 }

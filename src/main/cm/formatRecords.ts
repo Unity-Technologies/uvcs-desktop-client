@@ -1,3 +1,5 @@
+import type { StreamReader } from './outputReading';
+
 /** Control characters, which never appear in names, paths or comments: records split without ambiguity. */
 export const FIELD_SEPARATOR = '\u001f';
 export const RECORD_SEPARATOR = '\u001e';
@@ -17,7 +19,8 @@ export function recordFormat(placeholders: readonly string[]): string {
 /** What a caller builds of each record's fields (a branch, a changeset); undefined leaves the record out. */
 export type ReadRecord<T> = (fields: string[]) => T | undefined;
 
-const asFields: ReadRecord<string[]> = (fields) => fields;
+/** Each record as its fields: for a reader that folds the rows once they're all read (`annotationOf`). */
+export const readFields: ReadRecord<string[]> = (fields) => fields;
 
 /**
  * The records of a whole `--format` output already held as text, read by `readRecord` (their fields, by default):
@@ -27,7 +30,7 @@ const asFields: ReadRecord<string[]> = (fields) => fields;
 export function parseRecords(output: string): string[][];
 export function parseRecords<T>(output: string, readRecord: ReadRecord<T>): T[];
 export function parseRecords<T>(output: string, readRecord?: ReadRecord<T>): (T | string[])[] {
-  const read = readRecord ?? asFields;
+  const read = readRecord ?? readFields;
   const rows: (T | string[])[] = [];
   for (let start = 0; start <= output.length; ) {
     const separator = output.indexOf(RECORD_SEPARATOR, start);
@@ -63,7 +66,7 @@ function fieldsOf(record: string): string[] {
  *
  * As `cm` prints them: a line break after each record's separator (CRLF on Windows, read as LF in fields too).
  */
-export class RecordReader<T> {
+export class RecordReader<T> implements StreamReader {
   private readonly rows: T[] = [];
   /** The bytes after the last record separator: the record still arriving, or text that is no record at all. */
   private incomplete: Buffer[] = [];
