@@ -10,8 +10,12 @@ import { searchedCandidates, type MatchCandidate, type MatchSide } from './moveM
 /** A candidate and how alike it is to the change, from 0 to 1; null where it can't be told, or isn't measured yet. */
 export interface ScoredCandidate {
   candidate: MatchCandidate;
-  similarity: number | null;
+  /** From 0 to 1; null where it couldn't be measured; undefined while it isn't measured (yet, or for a folder). */
+  similarity: number | null | undefined;
 }
+
+/** What shows under the search: the slider, the word that measuring failed in its place, or nothing. */
+export type MinimumNote = 'slider' | 'notMeasured' | null;
 
 /** Where the slider starts: the official client's Search matches starts at 80% (`DEFAULT_SIMILARITY_VALUE`). */
 export const DEFAULT_MINIMUM_SIMILARITY = 80;
@@ -41,7 +45,7 @@ export function movePairsOf(change: PendingChange, candidates: readonly MatchCan
  * the candidates' order (`compareCandidates`).
  */
 export function scoredCandidates(candidates: readonly MatchCandidate[], similarities: readonly MoveSimilarity[] | undefined, minimumPercent: number): ScoredCandidate[] {
-  if (!similarities) return candidates.map((candidate) => ({ candidate, similarity: null }));
+  if (!similarities) return candidates.map((candidate) => ({ candidate, similarity: undefined }));
   const minimum = minimumPercent / 100;
   const rows: ScoredCandidate[] = [];
   candidates.forEach((candidate, index) => {
@@ -57,9 +61,18 @@ export function pairableCount(similarities: readonly MoveSimilarity[] | undefine
   return similarities?.filter((similarity) => similarity !== 'notPairable').length;
 }
 
-/** The slider shows for files with candidates, until it is known none of them pairs: then it could do nothing. */
-export function showsMinimum(change: PendingChange, candidates: number, pairable: number | undefined): boolean {
-  return isScored(change) && candidates > 0 && pairable !== 0;
+/** Whether the dialog measures its candidates: only files are, and only when there are some. */
+export function isMeasured(change: PendingChange, candidates: number): boolean {
+  return isScored(change) && candidates > 0;
+}
+
+/**
+ * The note under the search: that measuring failed, or the slider for measured candidates, until it is known none of
+ * them pairs (then it could do nothing).
+ */
+export function minimumNoteOf({ change, candidates, pairable, failed }: { change: PendingChange; candidates: number; pairable: number | undefined; failed: boolean }): MinimumNote {
+  if (failed) return 'notMeasured';
+  return isMeasured(change, candidates) && pairable !== 0 ? 'slider' : null;
 }
 
 /** The rows the dialog's search leaves, in their order (`searchedCandidates`). */

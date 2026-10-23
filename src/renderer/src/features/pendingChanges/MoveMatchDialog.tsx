@@ -11,15 +11,16 @@ import { PickList } from '../../ui/PickList';
 import { ItemTag } from '../../components/ItemTag';
 import {
   DEFAULT_MINIMUM_SIMILARITY,
-  isScored,
+  isMeasured,
+  minimumNoteOf,
   movePairsOf,
   moveSimilaritiesKey,
   pairableCount,
   scoredCandidates,
   searchedRows,
-  showsMinimum,
   similarityLabel,
   similarityTip,
+  type MinimumNote,
 } from './matchSimilarity';
 import { matchCandidates, moveMatchOf, type MatchSide, type MoveMatch } from './moveMatches';
 import { emptyListWords, matchDialogWords, pairingTag, type PairingTag } from './moveMatchWords';
@@ -43,11 +44,11 @@ function MoveMatchDialog({ workspacePath, change, side, listed, finish }: MoveMa
   const [search, setSearch] = useState('');
   const [minimum, setMinimum] = useState(DEFAULT_MINIMUM_SIMILARITY);
   const candidates = useMemo(() => matchCandidates(change, listed), [change, listed]);
-  const scored = isScored(change) && candidates.length > 0;
+  const measured = isMeasured(change, candidates.length);
   const similarities = useQuery({
     queryKey: moveSimilaritiesKey(workspacePath, change.path),
     queryFn: () => api.pendingChanges.moveSimilarities(workspacePath, movePairsOf(change, candidates, side)),
-    enabled: scored,
+    enabled: measured,
     // Measured once as the dialog opens: the slider filters what was measured.
     staleTime: Infinity,
     gcTime: 0,
@@ -68,24 +69,24 @@ function MoveMatchDialog({ workspacePath, change, side, listed, finish }: MoveMa
         placeholder={words.placeholder}
         label={words.listLabel}
         onPick={(row) => finish(moveMatchOf(change, row.candidate, side))}
-        loading={scored && similarities.isPending}
+        loading={measured && similarities.isPending}
         rowHeight={28}
         height={280}
         empty={emptyListWords(words, { search, shown: shown.length, pairable }, candidates.length)}
         note={
-          similarities.isError ? (
-            <p className={styles.notMeasured}>{words.notMeasured}</p>
-          ) : (
-            showsMinimum(change, candidates.length, pairable) && (
-              <PercentSlider label="Minimum similarity" value={minimum} onChange={setMinimum} disabled={!similarities.data} className={styles.minimum} />
-            )
-          )
+          <SearchNote
+            note={minimumNoteOf({ change, candidates: candidates.length, pairable, failed: similarities.isError })}
+            notMeasured={words.notMeasured}
+            minimum={minimum}
+            onMinimumChange={setMinimum}
+            disabled={!similarities.data}
+          />
         }
         renderItem={({ candidate, similarity }) => (
           <ItemPathRow
             path={candidate.path}
             itemType={candidate.itemType}
-            extras={<CandidateExtras tag={pairingTag(change, candidate)} similarity={similarities.data ? similarity : undefined} />}
+            extras={<CandidateExtras tag={pairingTag(change, candidate)} similarity={similarity} />}
           />
         )}
       />
@@ -105,4 +106,11 @@ function CandidateExtras({ tag, similarity }: { tag: PairingTag | null; similari
       )}
     </>
   );
+}
+
+/** What `minimumNoteOf` decided shows under the search. */
+function SearchNote({ note, notMeasured, minimum, onMinimumChange, disabled }: { note: MinimumNote; notMeasured: string; minimum: number; onMinimumChange: (value: number) => void; disabled: boolean }) {
+  if (note === 'notMeasured') return <p className={styles.notMeasured}>{notMeasured}</p>;
+  if (note === 'slider') return <PercentSlider label="Minimum similarity" value={minimum} onChange={onMinimumChange} disabled={disabled} className={styles.minimum} />;
+  return null;
 }
