@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { FileContent } from '@shared/domain/content';
-import { purgedNotice, purgedVersionsOf } from './purgedVersions';
+import type { ContentSource, FileContent } from '@shared/domain/content';
+import { diffSidesOf, purgedNotice, purgedVersionsOf } from './purgedVersions';
 
 const PURGED: FileContent = { isBinary: false, size: 0, purged: true };
 const TEXT: FileContent = { text: 'v3\n', isBinary: false, size: 3 };
@@ -11,6 +11,22 @@ describe('purgedVersionsOf', () => {
     expect(purgedVersionsOf(PURGED, TEXT)).toBe('original');
     expect(purgedVersionsOf(TEXT, PURGED)).toBe('modified');
     expect(purgedVersionsOf(PURGED, PURGED)).toBe('both');
+  });
+});
+
+describe('diffSidesOf', () => {
+  const revision = (revisionId: number): ContentSource => ({ kind: 'revision', revision: { revisionId, repository: 'game@local' }, fileName: 'a.txt' });
+
+  it('shows both versions of a change, and an added or deleted file alone', () => {
+    expect(diffSidesOf(revision(1), revision(2), 'none')).toEqual({ original: true, modified: true });
+    expect(diffSidesOf({ kind: 'empty' }, revision(2), 'none')).toEqual({ original: false, modified: true });
+    expect(diffSidesOf(revision(1), { kind: 'empty' }, 'none')).toEqual({ original: true, modified: false });
+  });
+
+  it('shows the version left alone where the other was purged, and neither where both were', () => {
+    expect(diffSidesOf(revision(1), revision(2), 'original')).toEqual({ original: false, modified: true });
+    expect(diffSidesOf(revision(1), revision(2), 'modified')).toEqual({ original: true, modified: false });
+    expect(diffSidesOf(revision(1), revision(2), 'both')).toEqual({ original: false, modified: false });
   });
 });
 

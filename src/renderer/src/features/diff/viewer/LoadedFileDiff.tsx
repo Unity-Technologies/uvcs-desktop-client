@@ -26,7 +26,7 @@ import { modelBesideMeta, modelOfMeta } from './model/modelMeta';
 import { SiblingFinderContext } from './model/modelSiblings';
 import { ModelModeSwitch } from './ModelModeSwitch';
 import { NothingToDiff } from './NothingToDiff';
-import { purgedNotice, purgedVersionsOf } from './purgedVersions';
+import { diffSidesOf, purgedNotice, purgedVersionsOf } from './purgedVersions';
 import { renderedEdits } from './renderedEdits';
 import { RepresentationSwitch } from './RepresentationSwitch';
 import { followsLayout } from './shownDiff';
@@ -74,13 +74,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const editablePath = canEditInPlace(contents.original, contents.modified) ? contents.modified.path : null;
   // A purged version shows as a missing one does: the other alone, under a line saying why (`purgedNotice`).
   const purged = purgedVersionsOf(contents.left, contents.right);
-  const sides = useMemo(
-    () => ({
-      original: contents.original.kind !== 'empty' && purged !== 'original' && purged !== 'both',
-      modified: contents.modified.kind !== 'empty' && purged !== 'modified' && purged !== 'both',
-    }),
-    [contents.original.kind, contents.modified.kind, purged],
-  );
+  const sides = useMemo(() => diffSidesOf(contents.original, contents.modified, purged), [contents.original, contents.modified, purged]);
   const buffer = useFileBuffer({ workspacePath, contents, path: editablePath, onMatchesBase });
   const { left, right } = buffer.shown;
   const current = buffer.unsaved ?? right.text ?? '';

@@ -1,4 +1,5 @@
-import type { FileContent } from '@shared/domain/content';
+import type { ContentSource, FileContent } from '@shared/domain/content';
+import type { DiffSides } from './shownDiff';
 
 /**
  * Which versions of a diff a purge removed from the server (`FileContent.purged`). A purged version shows as a missing
@@ -10,6 +11,14 @@ export function purgedVersionsOf(left: FileContent, right: FileContent): PurgedV
   if (left.purged && right.purged) return 'both';
   if (left.purged) return 'original';
   return right.purged ? 'modified' : 'none';
+}
+
+/** Which sides are real versions: not an empty side (an added or deleted file's), nor a purged one. */
+export function diffSidesOf(original: ContentSource, modified: ContentSource, purged: PurgedVersions): DiffSides {
+  return {
+    original: original.kind !== 'empty' && purged !== 'original' && purged !== 'both',
+    modified: modified.kind !== 'empty' && purged !== 'modified' && purged !== 'both',
+  };
 }
 
 /** The line above a diff one of whose versions was purged: why only the other shows. Null where none or both were. */
