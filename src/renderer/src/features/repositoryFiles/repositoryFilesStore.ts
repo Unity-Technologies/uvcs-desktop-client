@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ChosenBranch } from './shownFilesBranch';
+import type { ChosenBranch } from './repositoryFilesBody';
 
 interface RepositoryFilesStore {
   /** The branch each repository's Files view shows, by repository spec, as the user picked it this session. */

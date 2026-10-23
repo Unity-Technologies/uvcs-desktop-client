@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Branch } from '@shared/domain/branch';
 import { filesItemLink } from '../files/filesItemLink';
-import { branchFilesOrigin, filesBranchCaption, filesBranchToRead, repositoryFilesBodyOf } from './shownFilesBranch';
+import { branchFilesOrigin, filesBranchCaption, filesBranchToRead, repositoryFilesBodyOf } from './repositoryFilesBody';
 
 const branch = (name: string, headChangeset: number, guid = `guid-${name}`): Branch => ({
   id: headChangeset,

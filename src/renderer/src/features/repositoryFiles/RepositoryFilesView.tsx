@@ -12,7 +12,7 @@ import { RepositoryTree, RepositoryTreeSkeleton } from '../browseRepository/Repo
 import { useFilesViewStore, useRevealRequest } from '../files/filesViewStore';
 import { FilesBranchPicker } from './FilesBranchPicker';
 import { useRepositoryFilesStore } from './repositoryFilesStore';
-import { branchFilesOrigin, filesBranchCaption, filesBranchToRead, repositoryFilesBodyOf } from './shownFilesBranch';
+import { branchFilesOrigin, filesBranchCaption, filesBranchToRead, repositoryFilesBodyOf } from './repositoryFilesBody';
 
 const WIDTH_KEY = 'repositoryFilesTree';
 
