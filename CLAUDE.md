@@ -147,7 +147,8 @@ npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click 
   whose merge has file and directory conflicts and changes in several folders: the merge page), `deletes.sh`
   (changesets deleting a file, a folder, an accented name, and a path a new file took: restoring deleted items),
   `smart-merge.sh` (Unity prefabs that conflict line by line, one Smart Merge merges and one it can't: needs a Unity
-  Editor installed).
+  Editor installed), `purged.sh` (changesets whose earlier, later or both versions a purge removed: needs the purge
+  permission on the local server).
   `scripts/perf/soak.mjs` catches leaks.
 - `UVCS_RENDERER_PLATFORM=win32` (or `linux`) previews another OS's shortcuts, copy and layout from a Mac (the page
   only: the menus and window frame stay the Mac's).

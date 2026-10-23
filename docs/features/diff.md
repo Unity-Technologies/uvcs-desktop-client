@@ -73,6 +73,25 @@ Not shown: the xlink's branch expansion rules, which only `cm xlink --show` prin
 xlink. The official client shows the xlink as text in a file diff, rules included; its target changesets are what a
 reader of the diff needs.
 
+## A purged version
+
+A purge (`cm purge`, where the server allows it) removes old revisions' content for good; their changesets, paths and
+history stay. `cm cat` of one fails with `Can't retrieve the content of the file '<file>' because the revision (id:N)
+was purged …`, naming the file it was to write, never the spec (`isPurgedRevisionError`, `purgedTargetOf`). In a batch
+it writes the other revisions and prints that line for each purged one, so `explainCatFailure` tells them apart by
+their file, with no command more. `ContentApi.read` answers such a version as `PURGED_CONTENT` (`FileContent.purged`),
+not as a failure: it never comes back, so it is cached as any revision.
+
+- A diff shows a purged version as a missing one (an added or deleted file's): the other version alone, under a line
+  saying which was purged (`purgedVersionsOf`, `purgedNotice`). Both purged, it says so ("Content purged"). A binary's
+  sizes say "Purged" for it (`sizeChange`).
+- The merge page never takes a purged version as an empty text, which would merge the file as emptied: its read fails
+  (`conflictVersionQuery`, `PURGED_VERSION_MESSAGE`).
+- Open and Save as of one fail saying it was purged (`saveVersion`), not with `cm`'s line naming a temp file.
+- Only English output is recognized, as elsewhere; in another language the diff says it couldn't load the file.
+
+`scripts/sandboxes/purged.sh` builds a diff with each case: the later version purged, both, the earlier one.
+
 ## Reverting a file
 
 A file a changeset's diff changed (the diff page, a details panel's changed files: a changeset's, a label's, a code
