@@ -318,7 +318,9 @@ and their decisions went to paths a decision had moved.
   decision whose conflict an earlier one took out of the merge, or moved (a conflict inside a folder whose move was
   decided again is another conflict, by its paths), is dropped, and a toast says so
   (`droppedDecisionsToast`). Deciding a conflict the way it's decided already runs nothing (`isDecidedAs`).
-- A decided conflict is no longer in `cm`'s list: it stays listed from the decisions, under the same key
+- `cm` drops the conflict it resolves from the list it prints; one still listed means it resolved another (the list
+  its number came from was out of date: someone checked in since the preview), and the decision fails ("The merge
+  changed since it was calculated"). A decided conflict stays listed from the decisions, under the same key
   (`buildMergeItems`, `directory:<identity>`), with its decision as status.
 - A file conflict keeps its decision when a decision moves it: the page keys it by its item in its repository
   (`fileConflictKey`), never its path, and sends its decision by the path the plan names now (`collectResolutions`).
