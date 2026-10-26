@@ -29,7 +29,8 @@ const decision = (conflict: DirectoryConflict, resolution: DirectoryConflictReso
  * A `cm` merging /main/feature that keeps its decisions in the state files it's given, as `cm` does: each
  * `--resolveconflict` adds one to them and prints the merge calculated again. Keeping the incoming move takes the
  * player to /play; keeping both shared folders adds the incoming one's file; keeping yours of the folder added on both
- * sides drops the move's conflict (`cm` would, were the moved folder inside it). A name `taken` it refuses.
+ * sides drops the move's conflict (`cm` would, were the moved folder inside it). A name `taken` it refuses. The
+ * destination's tree has the player in /core: listing it anywhere else fails, as `cm ls` of a path it doesn't hold.
  */
 function decidingCm() {
   const solvedIn = async (args: readonly string[]): Promise<string[]> => {
@@ -60,7 +61,7 @@ function decidingCm() {
   return fakeCmClient({
     status: changedStatus(),
     'merge br:/main/feature': merge,
-    ls: treeListing('game@local', 'core/Player.cs', 'play/Player.cs'),
+    ls: ({ args }) => (args.includes('/core/Player.cs') && args.length === 4 ? treeListing('game@local', 'core/Player.cs') : cmFails(`Can't resolve the selector for the item ${args[1]}`)),
   });
 }
 
@@ -77,8 +78,10 @@ describe('DirectoryDecisions', () => {
     expect(decided.plan.fileConflicts.map((conflict) => conflict.path)).toEqual(['/play/Player.cs']);
     expect(decided.plan.directoryConflicts).toEqual([addedTwice]);
     expect(decided.decisions).toEqual([decision(movedApart, { choice: 'source' })]);
-    // The merge's conflicts before any decision, for its number; the decision; the conflicting files' listing.
-    expect(commands.map((command) => command.args[0])).toEqual(['merge', 'merge', 'ls']);
+    // The merge before any decision, its conflicting files listed in the destination's tree; then the decision, whose
+    // conflicting file, moved to where no such path is in that tree, is still the item listed before.
+    expect(commands.map((command) => command.args[0])).toEqual(['merge', 'ls', 'merge']);
+    expect(decided.plan.fileConflicts[0]).toMatchObject({ path: '/play/Player.cs', repository: 'game@local', destinationRevisionId: 40 });
     expect(resolving(commands)).toEqual(['--resolveconflict --conflict=1 --resolutionoption=src']);
     expect(commands.every((command) => command.via === 'query' && !command.args.includes('--merge'))).toBe(true);
   });
