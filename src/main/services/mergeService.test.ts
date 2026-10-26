@@ -38,7 +38,7 @@ function decidingCm() {
       await writeFile(optionValue(args, '--solvedconflictsfile=')!, 'EVIL src');
       return mergePreviewOutput();
     },
-  }).cm;
+  });
 }
 
 describe("a merge page's directory decisions", () => {
@@ -47,7 +47,7 @@ describe("a merge page's directory decisions", () => {
   });
 
   it('are what the merge runs on, once applied', async () => {
-    const { service, run } = merge(decidingCm());
+    const { service, run } = merge(decidingCm().cm);
     const [conflict] = (await service.preview(WORKSPACE, { kind: 'merge', sourceSpec: 'br:/main/task1' })).directoryConflicts;
 
     const decided = await service.decideDirectoryConflicts(WORKSPACE, { kind: 'merge', sourceSpec: 'br:/main/task1' }, 'page-1', [{ conflict: conflict!, resolution: { choice: 'source' } }]);
@@ -58,8 +58,19 @@ describe("a merge page's directory decisions", () => {
     expect(await readFile(decidedOn.state.solved, 'utf8')).toBe('EVIL src');
   });
 
+  it('start from the merge the page previewed: the first one calculates the merge only once more', async () => {
+    const { cm, commands } = decidingCm();
+    const { service } = merge(cm);
+    const [conflict] = (await service.preview(WORKSPACE, { kind: 'merge', sourceSpec: 'br:/main/task1' })).directoryConflicts;
+    commands.length = 0;
+
+    await service.decideDirectoryConflicts(WORKSPACE, { kind: 'merge', sourceSpec: 'br:/main/task1' }, 'page-1', [{ conflict: conflict!, resolution: { choice: 'source' } }]);
+
+    expect(commands.map((command) => command.args.includes('--resolveconflict'))).toEqual([true]);
+  });
+
   it('are gone once the page closes: the merge then runs on none', async () => {
-    const { service, run } = merge(decidingCm());
+    const { service, run } = merge(decidingCm().cm);
     const [conflict] = (await service.preview(WORKSPACE, { kind: 'merge', sourceSpec: 'br:/main/task1' })).directoryConflicts;
     await service.decideDirectoryConflicts(WORKSPACE, { kind: 'merge', sourceSpec: 'br:/main/task1' }, 'page-1', [{ conflict: conflict!, resolution: { choice: 'source' } }]);
 

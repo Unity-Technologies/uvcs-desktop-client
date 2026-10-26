@@ -7,6 +7,7 @@ import { mergePlanOf } from '../cm/mergeOutput';
 import { changedStatus, mergePreviewOutput, treeListing } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, optionValue, type CmFailure, type FakeCmCommand } from '../cm/testing/fakeCmClient';
 import { DirectoryDecisions } from './directoryDecisions';
+import type { MergeStateFiles } from './mergeStateFiles';
 import { previewMerge } from './previewMerge';
 
 const FROM_FEATURE: MergeRequest = { kind: 'merge', sourceSpec: 'br:/main/feature' };
@@ -66,9 +67,15 @@ function decidingCm() {
   });
 }
 
-/** What `cm` keeps solved for the page's decisions, as the merge would run on them; none before any decision. */
+/** The state `cm` keeps for the page's decisions, as the merge would run on it; none before any decision. */
+function stateOf(decisions: DirectoryDecisions, id: string, request = FROM_FEATURE): Promise<MergeStateFiles | undefined> {
+  return decisions.runOn(id, WORKSPACE, request, async (decided) => decided?.state);
+}
+
+/** What `cm` keeps solved for the page's decisions; none before any decision. */
 async function solvedOf(decisions: DirectoryDecisions, id: string): Promise<string | undefined> {
-  return decisions.runOn(id, WORKSPACE, FROM_FEATURE, async (decided) => decided && readFile(decided.state.solved, 'utf8'));
+  const state = await stateOf(decisions, id);
+  return state && readFile(state.solved, 'utf8');
 }
 
 const resolving = (commands: FakeCmCommand[]): string[] =>
@@ -105,7 +112,7 @@ describe('DirectoryDecisions', () => {
     const { cm, commands } = decidingCm();
     const decisions = new DirectoryDecisions(cm);
     await decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(movedApart, { choice: 'source' })]);
-    const first = decisions.stateOf('page-1')!;
+    const first = (await stateOf(decisions, 'page-1'))!;
     commands.length = 0;
 
     const decided = await decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(movedApart, { choice: 'source' }), decision(addedTwice, { choice: 'rename', newName: 'shared main' })]);
@@ -113,7 +120,7 @@ describe('DirectoryDecisions', () => {
     expect(resolving(commands)).toEqual(['--resolveconflict --conflict=1 --resolutionoption=rename --resolutioninfo=shared main']);
     expect(decided.plan.changes).toEqual([{ kind: 'added', path: '/shared/Config.cs' }]);
     // In a state of its own, a copy of the first's with this decision: the first's stays as it was.
-    const second = decisions.stateOf('page-1')!;
+    const second = (await stateOf(decisions, 'page-1'))!;
     expect(dirname(second.solved)).not.toBe(dirname(first.solved));
     expect(await readFile(second.solved, 'utf8')).toBe('DIV_MV src\nEVIL rename shared main\n');
     expect(await readFile(first.solved, 'utf8')).toBe('DIV_MV src\n');
@@ -129,7 +136,22 @@ describe('DirectoryDecisions', () => {
 
     expect(resolving(commands)).toEqual(['--resolveconflict --conflict=1 --resolutionoption=dst', '--resolveconflict --conflict=1 --resolutionoption=src']);
     expect(decided.plan.fileConflicts.map((conflict) => conflict.path)).toEqual(['/core/Player.cs']);
-    expect(await readFile(decisions.stateOf('page-1')!.solved, 'utf8')).toBe('DIV_MV dst\nEVIL src\n');
+    expect(await readFile((await stateOf(decisions, 'page-1'))!.solved, 'utf8')).toBe('DIV_MV dst\nEVIL src\n');
+  });
+
+  it('deletes the states of the decisions a changed one applies again, keeping those it goes on from', async () => {
+    const { cm } = decidingCm();
+    const decisions = new DirectoryDecisions(cm);
+    await decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(movedApart, { choice: 'source' })]);
+    const kept = dirname((await stateOf(decisions, 'page-1'))!.solved);
+    await decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(movedApart, { choice: 'source' }), decision(addedTwice, { choice: 'source' })]);
+    const cut = dirname((await stateOf(decisions, 'page-1'))!.solved);
+
+    await decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(movedApart, { choice: 'source' }), decision(addedTwice, { choice: 'destination' })]);
+
+    expect(existsSync(cut)).toBe(false);
+    expect(existsSync(kept)).toBe(true);
+    expect(existsSync((await stateOf(decisions, 'page-1'))!.solved)).toBe(true);
   });
 
   it('drops a decision whose conflict an earlier one took out of the merge', async () => {
@@ -153,7 +175,7 @@ describe('DirectoryDecisions', () => {
 
     expect(decided).toEqual({ plan: expect.objectContaining({ directoryConflicts: [movedApart, addedTwice] }), decisions: [] });
     expect(commands).toEqual([]);
-    expect(decisions.stateOf('page-1')).toBeUndefined();
+    expect((await stateOf(decisions, 'page-1'))).toBeUndefined();
   });
 
   it('starts from the merge the page previewed: the first decision calculates the merge only once', async () => {
@@ -220,11 +242,12 @@ describe('DirectoryDecisions', () => {
     await decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(movedApart, { choice: 'source' })]);
     await decisions.decide(WORKSPACE, FROM_FEATURE, 'page-2', [decision(movedApart, { choice: 'destination' })]);
 
-    expect(await readFile(decisions.stateOf('page-1')!.solved, 'utf8')).toBe('DIV_MV src\n');
-    expect(await readFile(decisions.stateOf('page-2')!.solved, 'utf8')).toBe('DIV_MV dst\n');
+    expect(await readFile((await stateOf(decisions, 'page-1'))!.solved, 'utf8')).toBe('DIV_MV src\n');
+    expect(await readFile((await stateOf(decisions, 'page-2'))!.solved, 'utf8')).toBe('DIV_MV dst\n');
 
-    await decisions.decide(WORKSPACE, { ...FROM_FEATURE, destinationBranch: '/main' }, 'page-1', [decision(addedTwice, { choice: 'source' })]);
-    expect(await readFile(decisions.stateOf('page-1')!.solved, 'utf8')).toBe('EVIL src\n');
+    const toMain = { ...FROM_FEATURE, destinationBranch: '/main' };
+    await decisions.decide(WORKSPACE, toMain, 'page-1', [decision(addedTwice, { choice: 'source' })]);
+    expect(await readFile((await stateOf(decisions, 'page-1', toMain))!.solved, 'utf8')).toBe('EVIL src\n');
   });
 
   it('leaves the decisions applied as they were when changing one fails, as the page still shows them', async () => {
@@ -236,7 +259,7 @@ describe('DirectoryDecisions', () => {
     commands.length = 0;
     const decided = await decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(addedTwice, { choice: 'destination' })]);
 
-    expect(await readFile(decisions.stateOf('page-1')!.solved, 'utf8')).toBe('EVIL dst\n');
+    expect(await readFile((await stateOf(decisions, 'page-1'))!.solved, 'utf8')).toBe('EVIL dst\n');
     expect(resolving(commands)).toEqual([]);
     expect(decided.decisions).toEqual([decision(addedTwice, { choice: 'destination' })]);
   });
@@ -290,12 +313,12 @@ describe('DirectoryDecisions', () => {
     const { cm } = decidingCm();
     const decisions = new DirectoryDecisions(cm);
     await decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(movedApart, { choice: 'source' })]);
-    const folder = dirname(dirname(decisions.stateOf('page-1')!.solved));
+    const folder = dirname(dirname((await stateOf(decisions, 'page-1'))!.solved));
 
     await decisions.discard('page-1');
 
     expect(existsSync(folder)).toBe(false);
-    expect(decisions.stateOf('page-1')).toBeUndefined();
+    expect((await stateOf(decisions, 'page-1'))).toBeUndefined();
   });
 
   it('fails as cm does, and the next decision goes on from the ones applied', async () => {
