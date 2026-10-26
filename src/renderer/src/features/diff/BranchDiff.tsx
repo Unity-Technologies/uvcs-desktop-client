@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
-import { useCopyCommand } from '../../app/commands/useCopyCommand';
 import type { FocusedLines } from '../../app/navigation/pages';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { branchWorkedOn } from '../../components/workingObject';
@@ -12,7 +11,7 @@ import { SplitPane } from '../../ui/SplitPane';
 import type { Column } from '../../ui/table/column';
 import { DataTable } from '../../ui/table/DataTable';
 import { TableSkeleton } from '../../ui/table/TableSkeleton';
-import { changesetCopyTexts, changesetMenu } from '../changesets/changesetMenu';
+import { changesetMenu } from '../changesets/changesetMenu';
 import { useChangesets } from '../changesets/useChangesets';
 import { branchChangesetPane } from './branchChangesetPane';
 import { DiffFrame } from './DiffFrame';
@@ -60,9 +59,7 @@ function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; 
   const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
   const selectedId = selection.anchor === null ? null : Number(selection.anchor);
   const firstId = changesets?.[0]?.id;
-  const selected = (changesets ?? []).filter((changeset) => selection.selected.has(changesetKey(changeset)));
-  // The changesets' own menu and copy shortcuts, as in the Changesets view: Copy ▸ Link names the changeset stepped to.
-  useCopyCommand('Changesets', 'Changeset', selected.length === 1 ? changesetCopyTexts(place, selected[0]!) : undefined);
+  // The changesets' own menu, as in the Changesets view: its Copy ▸ Link names the changeset stepped to.
   const menuContext = { place, loadedChangeset: workspace?.loadedChangeset, loadedBranch: branchWorkedOn(workspace?.selector) };
 
   useEffect(() => {
