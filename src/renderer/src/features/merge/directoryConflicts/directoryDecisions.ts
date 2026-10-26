@@ -39,6 +39,11 @@ export function canKeepBothAs(newName: string, applied: DirectoryConflictResolut
   return isValidRenameName(newName) && !(applied?.choice === 'rename' && applied.newName === newName);
 }
 
+/** The choice the panel shows picked: Keep both while its name is being given, else the decision applied. */
+export function pickedChoice(naming: boolean, applied: DirectoryConflictResolution | undefined): DirectoryConflictResolution['choice'] | undefined {
+  return naming ? 'rename' : applied?.choice;
+}
+
 /** Whether `conflict` is decided as `resolution` already: deciding it so again changes nothing. */
 export function isDecidedAs(decisions: readonly DirectoryDecision[], conflict: DirectoryConflict, resolution: DirectoryConflictResolution): boolean {
   const identity = directoryConflictIdentity(conflict);

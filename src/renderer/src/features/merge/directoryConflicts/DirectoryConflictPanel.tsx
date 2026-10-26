@@ -6,7 +6,7 @@ import { Button } from '../../../ui/Button';
 import { Spinner } from '../../../ui/Spinner';
 import { TextField } from '../../../ui/TextField';
 import type { MergeLabels } from '../mergeDescription';
-import { canKeepBothAs } from './directoryDecisions';
+import { canKeepBothAs, pickedChoice } from './directoryDecisions';
 import { renameNameProblem } from './renameNameProblem';
 import { suggestRename } from './renameSuggestion';
 import styles from './DirectoryConflictPanel.module.css';
@@ -31,16 +31,18 @@ export function DirectoryConflictPanel({ conflict, labels, resolution, applying,
   const canKeepBoth = RENAMEABLE_CONFLICTS.has(conflict.type);
   const [naming, setNaming] = useState(false);
   const [newName, setNewName] = useState(() => (resolution?.choice === 'rename' ? resolution.newName : suggestRename(conflict.destination.path, labels.destination)));
-  const picked = naming ? 'rename' : resolution?.choice;
+  const picked = pickedChoice(naming, resolution);
   const { source, destination } = labels.roles;
 
+  // While a decision applies, the choices wait without being disabled: a disabled button would drop the keyboard's focus.
   const keepSide = (choice: 'source' | 'destination'): void => {
+    if (locked) return;
     setNaming(false);
     onResolve({ choice });
   };
   const keepBoth = (event: FormEvent): void => {
     event.preventDefault();
-    if (canKeepBothAs(newName, resolution)) onResolve({ choice: 'rename', newName });
+    if (!locked && canKeepBothAs(newName, resolution)) onResolve({ choice: 'rename', newName });
   };
 
   return (
@@ -72,17 +74,16 @@ export function DirectoryConflictPanel({ conflict, labels, resolution, applying,
           onSelect={() => keepSide('source')}
         />
         {canKeepBoth && (
-          <Option selected={picked === 'rename'} disabled={locked} title="Keep both" detail={`${destination.name} gets a new name`} onSelect={() => setNaming(true)}>
+          <Option selected={picked === 'rename'} disabled={locked} title="Keep both" detail={`${destination.name} gets a new name`} onSelect={() => !locked && setNaming(true)}>
             {picked === 'rename' && (
               <form className={styles.rename} onSubmit={keepBoth}>
                 <TextField
                   label={`New name for ${destination.name.toLowerCase()}`}
                   value={newName}
-                  disabled={locked}
                   onChange={(event) => setNewName(event.target.value)}
                   error={renameNameProblem(newName)}
                 />
-                <Button type="submit" variant="primary" size="small" disabled={locked || !canKeepBothAs(newName, resolution)}>
+                <Button type="submit" variant="primary" size="small" disabled={!canKeepBothAs(newName, resolution)} aria-disabled={locked}>
                   Apply
                 </Button>
               </form>
@@ -122,7 +123,7 @@ interface OptionProps {
 function Option({ selected, disabled, title, detail, onSelect, children }: OptionProps) {
   return (
     <div className={styles.option} data-selected={selected}>
-      <button role="radio" aria-checked={selected} className={styles.optionButton} disabled={disabled} onClick={onSelect}>
+      <button role="radio" aria-checked={selected} className={styles.optionButton} aria-disabled={disabled} onClick={onSelect}>
         <span className={styles.radio} />
         <span className={styles.optionText}>
           <span className={styles.optionTitle}>{title}</span>

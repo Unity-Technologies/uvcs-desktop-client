@@ -70,8 +70,11 @@ export const MERGE_GROUP_TIPS: Record<MergeGroup, string> = {
  * directory conflicts decided are no longer in the plan, `cm` having applied them, and stay listed from the decisions.
  */
 export function buildMergeItems(plan: MergePlan, decisions: readonly DirectoryDecision[], conflictedFiles: readonly ConflictedFile[]): MergeItem[] {
+  const decided = decisions.map((decision) => decision.conflict);
+  const decidedIdentities = new Set(decided.map(directoryConflictIdentity));
+  const waiting = plan.directoryConflicts.filter((conflict) => !decidedIdentities.has(directoryConflictIdentity(conflict)));
   return [
-    ...[...decisions.map((decision) => decision.conflict), ...plan.directoryConflicts].map(
+    ...[...decided, ...waiting].map(
       (conflict): MergeItem => ({
         kind: 'directoryConflict',
         key: `directory:${directoryConflictIdentity(conflict)}`,

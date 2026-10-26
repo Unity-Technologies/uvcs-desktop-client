@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DirectoryConflict, DirectoryDecision } from '@shared/domain/merge';
-import { canKeepBothAs, droppedDecisions, droppedDecisionsToast, isDecidedAs, resolutionsByConflict, withDecision } from './directoryDecisions';
+import { canKeepBothAs, droppedDecisions, droppedDecisionsToast, isDecidedAs, pickedChoice, resolutionsByConflict, withDecision } from './directoryDecisions';
 
 const conflictAt = (path: string, itemId: number): DirectoryConflict => ({
   type: 'evilTwin',
@@ -59,6 +59,14 @@ describe('canKeepBothAs', () => {
 
   it("refuses a name that isn't one", () => {
     for (const name of ['', '  ', 'a/b', 'a\\b', '.', '..']) expect(canKeepBothAs(name, undefined)).toBe(false);
+  });
+});
+
+describe('pickedChoice', () => {
+  it('shows Keep both picked while its name is given, else the decision applied', () => {
+    expect(pickedChoice(true, { choice: 'source' })).toBe('rename');
+    expect(pickedChoice(false, { choice: 'source' })).toBe('source');
+    expect(pickedChoice(false, undefined)).toBeUndefined();
   });
 });
 
