@@ -261,7 +261,7 @@ describe('runMerge into the workspace', () => {
   it("merges a file conflict a directory decision moved where the destination's tree has no such path, as the item listed before", async () => {
     // Kept where the source moved its folder: /moved isn't in the destination's tree, so `cm ls` of it would fail.
     const { cm, commands } = mergingCm([fileConflict('moved/a.txt', 30)]);
-    const before = { path: '/src/a.txt', itemId: 30, baseChangeset: 1, sourceChangeset: 3, destinationChangeset: 4, repository: 'eco@local', destinationRevisionId: 40, destinationIsBinary: false };
+    const before = { path: '/src/a.txt', destinationPath: '/src/a.txt', itemId: 30, baseChangeset: 1, sourceChangeset: 3, destinationChangeset: 4, repository: 'eco@local', destinationRevisionId: 40, destinationIsBinary: false };
 
     await runMerge(cm, workspacePath, FROM_TASK, { directoryDecisionsId: 'page-1', files: { '/moved/a.txt': { choice: 'destination' } } }, recordingContext().context, {
       state: await decidedState('DIV_MV src'),

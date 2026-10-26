@@ -40,8 +40,13 @@ export interface MergeChange {
 
 /** A file changed on both contributors. Its contents must be merged. */
 export interface FileConflict {
-  /** Repository path on the destination, e.g. `/src/app.ts`. */
+  /** Repository path in the merge's result, e.g. `/src/app.ts`: where a directory decision may have moved it. */
   path: string;
+  /**
+   * Where the destination's tree has it, as the merge listed it before any directory decision: its versions are named
+   * by it (and the workspace's copy found by it), so a decision moving the file reads none of them again.
+   */
+  destinationPath: string;
   itemId: number;
   baseChangeset: number;
   sourceChangeset: number;

@@ -14,7 +14,7 @@ export function conflictedFilesOf(plan: MergePlan, request: MergeRequest): Confl
     base: hasMergeBase(conflict) ? versionAt(conflict, baseVersionSpec(conflict)) : { kind: 'empty' },
     ...(hasMergeBase(conflict) && { baseName: `cs:${conflict.baseChangeset}` }),
     source: versionAt(conflict, sourceVersionSpec(request, conflict)),
-    destination: { kind: 'revision', revision: { revisionId: conflict.destinationRevisionId, repository: conflict.repository }, fileName: conflict.path },
+    destination: { kind: 'revision', revision: { revisionId: conflict.destinationRevisionId, repository: conflict.repository }, fileName: conflict.destinationPath },
     ...(conflict.destinationIsBinary && { isKnownBinary: true }),
     ...(request.kind === 'subtractive' && hasMergeBase(conflict) && { baseIsUndoneChange: true }),
   }));
@@ -29,5 +29,5 @@ export function fileConflictKey({ itemId, repository }: Pick<FileConflict, 'item
 }
 
 function versionAt(conflict: FileConflict, versionSpec: string): ContentSource {
-  return { kind: 'spec', spec: versionSpec, fileName: conflict.path };
+  return { kind: 'spec', spec: versionSpec, fileName: conflict.destinationPath };
 }

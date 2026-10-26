@@ -4,7 +4,7 @@ import { fileConflictKey } from './conflictedFiles';
 import { collectResolutions } from './mergeResolutions';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
-const fileConflict = (path: string, itemId: number) => ({ path, itemId, repository: 'game@local', baseChangeset: 1, sourceChangeset: 3, destinationChangeset: 4, destinationRevisionId: 40, destinationIsBinary: false });
+const fileConflict = (path: string, itemId: number) => ({ path, destinationPath: path, itemId, repository: 'game@local', baseChangeset: 1, sourceChangeset: 3, destinationChangeset: 4, destinationRevisionId: 40, destinationIsBinary: false });
 const autoConflict = fileConflict('/auto.txt', 20);
 const manualConflict = fileConflict('/manual.txt', 21);
 const side = { operation: 'added' as const, path: '/t.txt', description: '' };

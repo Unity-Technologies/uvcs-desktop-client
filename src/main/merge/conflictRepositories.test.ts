@@ -75,7 +75,7 @@ describe('withRepositories', () => {
 
 describe('withConflictRepositories after a directory decision', () => {
   const MOVED = '/01project/maps/MergePrinter.cs';
-  const completed: FileConflict = { path: OWN, itemId: 425954, baseChangeset: 16828, sourceChangeset: 17092, destinationChangeset: 16973, repository: 'acme@acme@cloud', destinationRevisionId: 31259533, destinationIsBinary: false };
+  const completed: FileConflict = { path: OWN, destinationPath: OWN, itemId: 425954, baseChangeset: 16828, sourceChangeset: 17092, destinationChangeset: 16973, repository: 'acme@acme@cloud', destinationRevisionId: 31259533, destinationIsBinary: false };
 
   it('takes a file conflict completed before at the path the decision moved it to, listing only the others', async () => {
     const { cm, lines } = fakeCmClient({ ls: recordsOutput(TREE_ITEMS, { name: 'Grass.png', wkpath: TEXTURE, type: 'bin', size: 1, changeset: 1, repspec: 'rep:acme@acme@cloud', revid: 31259610, itemid: 420530 }) });
