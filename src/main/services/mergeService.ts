@@ -14,7 +14,7 @@ export function createMergeService({ cm, operations, workspaceCopies }: ServiceC
   const backupsRoot = join(app.getPath('userData'), 'update-backups');
 
   return {
-    preview: (workspacePath, request) => previewMerge(cm, workspacePath, request, workspaceCopies),
+    preview: (workspacePath, request) => previewMerge(cm, workspacePath, request, { copies: workspaceCopies }),
     run: (workspacePath, request, resolutions, operationId) =>
       operations.run(operationId, async (context) => {
         const result = await runMerge(cm, workspacePath, request, resolutions, context);

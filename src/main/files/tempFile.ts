@@ -30,12 +30,26 @@ export function withTempPath<T>(work: (filePath: string) => Promise<T>): Promise
  * left behind in the temp folder never fails what `work` did.
  */
 export async function withTempDirectory<T>(work: (directory: string) => Promise<T>): Promise<T> {
-  const directory = await mkdtemp(join(tmpdir(), `${PREFIX}${process.pid}-`));
+  const directory = await createTempDirectory();
   try {
     return await work(directory);
   } finally {
-    await rm(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }).catch(() => undefined);
+    await removeTempDirectory(directory);
   }
+}
+
+/**
+ * A fresh temporary directory that outlives the call, for what is kept between calls (a merge's directory decisions):
+ * its owner deletes it with `removeTempDirectory`, and one a killed session left goes at the next start
+ * (`removeLeftOverTempDirectories`).
+ */
+export function createTempDirectory(): Promise<string> {
+  return mkdtemp(join(tmpdir(), `${PREFIX}${process.pid}-`));
+}
+
+/** Deletes a temporary directory, trying again while Windows holds a file in it; one that stays never fails the caller. */
+export async function removeTempDirectory(directory: string): Promise<void> {
+  await rm(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }).catch(() => undefined);
 }
 
 /**

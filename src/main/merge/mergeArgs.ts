@@ -1,5 +1,5 @@
 import type { MergePlan, MergeRequest } from '@shared/domain/merge';
-import { MERGE_FIELD_SEPARATOR } from '../cm/mergeOutput';
+import { MERGE_FIELD_SEPARATOR, MERGE_PREVIEW_RECORD_ARGS } from '../cm/mergeOutput';
 
 export const MACHINE_READABLE_ARGS = ['--machinereadable', `--fieldseparator=${MERGE_FIELD_SEPARATOR}`];
 
@@ -12,6 +12,11 @@ export function mergeSourceArgs(request: MergeRequest): string[] {
     ...(request.intervalOriginSpec ? [`--interval-origin=${request.intervalOriginSpec}`] : []),
     ...(request.destinationBranch ? [`--to=br:${request.destinationBranch}`] : []),
   ];
+}
+
+/** A `cm merge` that only prints its plan, with its contributors, as records read as they arrive (`mergePlanOf`). */
+export function mergePlanArgs(request: MergeRequest): string[] {
+  return ['merge', ...mergeSourceArgs(request), ...MACHINE_READABLE_ARGS, ...MERGE_PREVIEW_RECORD_ARGS, '--printcontributors'];
 }
 
 /**
