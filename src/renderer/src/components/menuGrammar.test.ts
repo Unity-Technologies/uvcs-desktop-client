@@ -627,23 +627,20 @@ describe('locks', () => {
   });
 });
 
-describe("a changeset's Copy submenu", () => {
-  const copyShortcuts = (entries: MenuEntry[]): Record<string, string | undefined> => {
-    const copy = entries.find((entry): entry is Submenu => isSubmenu(entry) && entry.id === 'copy')!;
-    return Object.fromEntries(copy.entries.filter((entry): entry is Action => typeof entry === 'object' && 'run' in entry).map((entry) => [entry.id, entry.shortcut]));
-  };
+describe("a changeset's menu", () => {
+  const shortcuts = (entries: MenuEntry[]): Record<string, string> =>
+    Object.fromEntries(
+      entries.flatMap((entry) => (isSubmenu(entry) ? entry.entries : [entry])).flatMap((entry) => (typeof entry === 'object' && 'run' in entry && entry.shortcut ? [[entry.id, entry.shortcut]] : [])),
+    );
 
-  it("names ⌘C and ⇧⌘C on what they copy in a list that binds them", () => {
-    const shortcuts = copyShortcuts(changesetMenu({ place: workspacePlace(ws) }, [changeset]));
-
-    expect(shortcuts['copy.number']).toBeDefined();
-    expect(shortcuts['copy.link']).toBeDefined();
+  it('names the list keys on what they do in a list that binds them', () => {
+    expect(shortcuts(changesetMenu({ place: workspacePlace(ws) }, [changeset]))).toEqual({ diff: 'mod+d', 'copy.number': 'mod+c', 'copy.link': 'mod+shift+c' });
   });
 
-  it('names no shortcut where the keys copy something else, as in a branch diff stepped changeset by changeset', () => {
-    const shortcuts = copyShortcuts(changesetMenu({ place: workspacePlace(ws) }, [changeset], { copyKeysElsewhere: true }));
+  it('names no shortcut where the list keys reach something else, as in a branch diff stepped changeset by changeset', () => {
+    const menu = changesetMenu({ place: workspacePlace(ws) }, [changeset], { listKeysElsewhere: true });
 
-    expect(Object.values(shortcuts).filter(Boolean)).toEqual([]);
-    expect(Object.keys(shortcuts)).toContain('copy.link');
+    expect(shortcuts(menu)).toEqual({});
+    expect(menu.some((entry) => isSubmenu(entry) && entry.entries.some((copy) => typeof copy === 'object' && 'id' in copy && copy.id === 'copy.link'))).toBe(true);
   });
 });

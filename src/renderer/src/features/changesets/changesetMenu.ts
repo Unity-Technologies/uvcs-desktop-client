@@ -65,10 +65,11 @@ function singleChangesetMenu(context: ChangesetMenuContext, changeset: Changeset
   const { place, loadedChangeset, loadedBranch } = context;
   const workspacePath = workspacePathOf(place);
   const source = spec.changeset(changeset.id);
+  const keys = host.listKeysElsewhere ? {} : { diff: hotkey('listDiff'), copy: hotkey('listCopy'), copyLink: hotkey('copyLink') };
   const canRevertTo = typeof loadedChangeset === 'number' && changeset.branch === loadedBranch && changeset.id < loadedChangeset;
 
   return groupedMenu([
-    menuAction('diff', () => openChangesetDiff(changeset), { shortcut: hotkey('listDiff') }),
+    menuAction('diff', () => openChangesetDiff(changeset), { shortcut: keys.diff }),
     menuAction('diffInNewWindow', () => openInNewWindow(changesetDiffPage(changeset))),
     workspacePath !== null && menuAction('switch', () => void switchToChangeset(workspacePath, changeset), { label: 'Switch to this changeset' }),
     canRevertTo && menuAction('revert', () => revertWorkspaceToChangeset(changeset, loadedChangeset), { label: 'Revert workspace to this changeset…' }),
@@ -88,7 +89,7 @@ function singleChangesetMenu(context: ChangesetMenuContext, changeset: Changeset
     menuAction('compare', () => void diffWithAnotherChangeset(changeset), { label: 'Compare with another changeset…' }),
     menuAction('browse', () => navigation.openPage({ kind: 'browseRepository', changesetId: changeset.id }), { label: 'Browse repository at this changeset' }),
     !host.inBranchExplorer && menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'changeset', id: changeset.id, date: changeset.date })),
-    copySubmenu('Changeset', changesetCopyTexts(place, changeset, context.repository), host.copyKeysElsewhere ? {} : { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
+    copySubmenu('Changeset', changesetCopyTexts(place, changeset, context.repository), { shortcut: keys.copy, linkShortcut: keys.copyLink }),
     menuAction('editComment', () => void editChangesetComment(place, changeset)),
     menuAction('move', () => void moveChangesetToBranch(place, changeset)),
     menuAction('delete', () => void deleteChangeset(place, changeset)),

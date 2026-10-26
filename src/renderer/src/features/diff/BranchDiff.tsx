@@ -49,8 +49,8 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines }: Branch
 /** The Changesets view's columns that fit beside a diff; the avatar, whose tooltip names the author, always shows. */
 const CHANGESET_COLUMNS: Column<Changeset>[] = [avatarColumn({ alwaysShown: true }), numberColumn('Changeset'), commentColumn(), dateColumn()];
 
-/** The list binds no ⌘C, and ⇧⌘C copies the page's branch: its Copy submenu names neither. */
-const BRANCH_DIFF_HOST: MenuHost = { copyKeysElsewhere: true };
+/** The list binds no list keys: ⌘D and ⌘C reach the view under the page, ⇧⌘C copies the page's branch. */
+const BRANCH_DIFF_HOST: MenuHost = { listKeysElsewhere: true };
 
 /** Kept out of the render: a new `rowKey` makes the table key every changeset of the branch again on each step. */
 const changesetKey = (changeset: Changeset): string => String(changeset.id);

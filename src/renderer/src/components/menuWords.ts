@@ -334,10 +334,10 @@ export interface MenuHost {
   /** The Branch Explorer, where "Show in Branch Explorer" would lead where the user already is. */
   inBranchExplorer?: boolean;
   /**
-   * A list whose ⌘C and ⇧⌘C copy something else (a page's own object, the view under the page's selection), so the
-   * Copy submenu names no shortcut there: a branch diff's "Changeset by changeset".
+   * A list that binds none of the list keys (⌘D, ⌘C, ⇧⌘C), so the menu names no shortcut: there they reach the page's
+   * own object or the view under the page (docs/ARCHITECTURE.md "Menus").
    */
-  copyKeysElsewhere?: boolean;
+  listKeysElsewhere?: boolean;
   /** Called with the name of a branch created from the menu, e.g. to show it. */
   onBranchCreated?: (name: string) => void;
 }
