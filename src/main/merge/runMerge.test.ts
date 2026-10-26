@@ -244,7 +244,10 @@ describe('runMerge into the workspace', () => {
     const { cm, commands } = mergingCm([fileConflict('src/a.txt', 30)]);
     const decided = await decidedState('DIV_MV src');
 
-    await runMerge(cm, workspacePath, FROM_TASK, { directoryDecisionsId: 'page-1', files: { '/src/a.txt': { choice: 'destination' } } }, recordingContext().context, decided);
+    await runMerge(cm, workspacePath, FROM_TASK, { directoryDecisionsId: 'page-1', files: { '/src/a.txt': { choice: 'destination' } } }, recordingContext().context, {
+      state: decided,
+      known: [],
+    });
 
     const merges = commands.filter((command) => command.args[0] === 'merge');
     const stateOf = ({ args }: { args: string[] }) => ({ result: optionValue(args, '--mergeresultfile='), solved: optionValue(args, '--solvedconflictsfile=') });
@@ -253,6 +256,20 @@ describe('runMerge into the workspace', () => {
     expect(merges.some((command) => command.args.includes('--resolveconflict'))).toBe(false);
     // The page's own state stays as its decisions left it, for another merge should this one fail.
     expect(await readFile(decided.solved, 'utf8')).toBe('DIV_MV src');
+  });
+
+  it("merges a file conflict a directory decision moved where the destination's tree has no such path, as the item listed before", async () => {
+    // Kept where the source moved its folder: /moved isn't in the destination's tree, so `cm ls` of it would fail.
+    const { cm, commands } = mergingCm([fileConflict('moved/a.txt', 30)]);
+    const before = { path: '/src/a.txt', itemId: 30, baseChangeset: 1, sourceChangeset: 3, destinationChangeset: 4, repository: 'eco@local', destinationRevisionId: 40, destinationIsBinary: false };
+
+    await runMerge(cm, workspacePath, FROM_TASK, { directoryDecisionsId: 'page-1', files: { '/moved/a.txt': { choice: 'destination' } } }, recordingContext().context, {
+      state: await decidedState('DIV_MV src'),
+      known: [before],
+    });
+
+    expect(commands.filter((command) => command.args[0] === 'ls')).toEqual([]);
+    expect(finalMerge(commands.map((command) => command.line))).toBeDefined();
   });
 
   it('stops before merging while a directory conflict has no decision', async () => {

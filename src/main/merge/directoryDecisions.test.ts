@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { DirectoryConflict, DirectoryConflictResolution, DirectoryDecision, MergeRequest } from '@shared/domain/merge';
 import { mergePlanOf } from '../cm/mergeOutput';
 import { changedStatus, mergePreviewOutput, treeListing } from '../cm/testing/cmOutput';
@@ -184,6 +184,45 @@ describe('DirectoryDecisions', () => {
 
     await decisions.decide(WORKSPACE, { ...FROM_FEATURE, destinationBranch: '/main' }, 'page-1', [decision(addedTwice, { choice: 'source' })]);
     expect(await readFile(decisions.stateOf('page-1')!.solved, 'utf8')).toBe('EVIL src\n');
+  });
+
+  it("runs the merge on the page's decisions: the state cm kept and the file conflicts as listed before any decision", async () => {
+    const { cm } = decidingCm();
+    const decisions = new DirectoryDecisions(cm);
+    await decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(movedApart, { choice: 'source' })]);
+
+    const decided = await decisions.runOn('page-1', WORKSPACE, FROM_FEATURE, async (applied) => applied);
+
+    expect(await readFile(decided!.state.solved, 'utf8')).toBe('DIV_MV src\n');
+    expect(decided!.known).toEqual([expect.objectContaining({ path: '/core/Player.cs', destinationRevisionId: 40 })]);
+    expect(await decisions.runOn(undefined, WORKSPACE, FROM_FEATURE, async (applied) => applied)).toBeUndefined();
+    expect(await decisions.runOn('page-2', WORKSPACE, FROM_FEATURE, async (applied) => applied)).toBeUndefined();
+  });
+
+  it("refuses to run a merge on another merge's decisions", async () => {
+    const { cm } = decidingCm();
+    const decisions = new DirectoryDecisions(cm);
+    await decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(movedApart, { choice: 'source' })]);
+    const work = vi.fn(async () => undefined);
+
+    await expect(decisions.runOn('page-1', WORKSPACE, { ...FROM_FEATURE, destinationBranch: '/main' }, work)).rejects.toThrow('another merge');
+    expect(work).not.toHaveBeenCalled();
+  });
+
+  it("keeps a page's decisions while a merge runs on them, though the page closes meanwhile", async () => {
+    const { cm } = decidingCm();
+    const decisions = new DirectoryDecisions(cm);
+    await decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(movedApart, { choice: 'source' })]);
+    let finish = (): void => undefined;
+    const running = decisions.runOn('page-1', WORKSPACE, FROM_FEATURE, (applied) => new Promise<string>((resolve) => (finish = () => resolve(applied!.state.solved))));
+
+    const discarded = decisions.discard('page-1');
+    finish();
+    const solved = await running;
+
+    expect(existsSync(solved)).toBe(true);
+    await discarded;
+    expect(existsSync(solved)).toBe(false);
   });
 
   it("deletes a page's decisions once it closes", async () => {
