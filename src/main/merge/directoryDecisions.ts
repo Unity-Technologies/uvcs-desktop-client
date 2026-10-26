@@ -117,20 +117,22 @@ export class DirectoryDecisions {
   }
 
   private async apply(merge: DecidedMergeState, workspacePath: string, request: MergeRequest, decisions: DirectoryDecision[]): Promise<DecidedMerge> {
-    merge.applied.length = sameDecisionsCount(merge.applied, decisions);
-    for (const decision of decisions.slice(merge.applied.length)) {
-      const conflicts = merge.applied.at(-1)?.plan.directoryConflicts ?? (await this.initialOf(merge, workspacePath, request)).directoryConflicts;
+    // Kept only once every decision applied: one `cm` refuses leaves those applied before, as the page still shows them.
+    const applied = merge.applied.slice(0, sameDecisionsCount(merge.applied, decisions));
+    for (const decision of decisions.slice(applied.length)) {
+      const conflicts = applied.at(-1)?.plan.directoryConflicts ?? (await this.initialOf(merge, workspacePath, request)).directoryConflicts;
       const index = conflicts.findIndex((conflict) => directoryConflictIdentity(conflict) === directoryConflictIdentity(decision.conflict));
       if (index < 0) continue;
-      merge.applied.push(await this.resolve(merge, workspacePath, request, { conflict: conflicts[index]!, resolution: decision.resolution }, index));
+      applied.push(await this.resolve(merge, workspacePath, request, applied.at(-1)?.state, { conflict: conflicts[index]!, resolution: decision.resolution }, index));
     }
+    merge.applied = applied;
 
-    const last = merge.applied.at(-1);
+    const last = applied.at(-1);
     if (!last) return { plan: await previewMerge(this.cm, workspacePath, request, { copies: this.copies }), decisions: [] };
     const initial = await this.initialOf(merge, workspacePath, request);
     return {
       plan: await withConflictRepositories(this.cm, workspacePath, request, last.plan, this.copies, initial.fileConflicts),
-      decisions: merge.applied.map((applied) => applied.decision),
+      decisions: applied.map((one) => one.decision),
     };
   }
 
@@ -139,13 +141,19 @@ export class DirectoryDecisions {
     return merge.initial;
   }
 
-  /** `cm` resolves the conflict numbered `index + 1` in its list, on a copy of the state the decision before left. */
-  private async resolve(merge: DecidedMergeState, workspacePath: string, request: MergeRequest, decision: DirectoryDecision, index: number): Promise<AppliedDecision> {
+  /** `cm` resolves the conflict numbered `index + 1` in its list, on a copy of the state the decision `before` left. */
+  private async resolve(
+    merge: DecidedMergeState,
+    workspacePath: string,
+    request: MergeRequest,
+    before: MergeStateFiles | undefined,
+    decision: DirectoryDecision,
+    index: number,
+  ): Promise<AppliedDecision> {
     merge.folder ||= await createTempDirectory();
     const folder = join(merge.folder, String(++merge.folders));
     await mkdir(folder);
     const state = mergeStateFilesIn(folder);
-    const before = merge.applied.at(-1)?.state;
     if (before) await copyMergeState(before, state);
 
     const args = [...mergePlanArgs(request), ...mergeStateArgs(state), ...resolveConflictArgs(index, decision.resolution)];
