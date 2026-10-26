@@ -47,8 +47,10 @@ describe('directoryConflictStatus', () => {
     expect(directoryConflictStatus({ choice: 'rename', newName: 'b' })).toBe('keepingBoth');
   });
 
-  it('still needs a decision while "Keep both" has no name the merge can take', () => {
-    for (const newName of ['', '  ', 'a/b', 'a\\b', '.', '..']) expect(directoryConflictStatus({ choice: 'rename', newName })).toBe('needsDecision');
+  it('is being applied while cm calculates the merge again on its decision, whatever it was decided before', () => {
+    expect(directoryConflictStatus(undefined, true)).toBe('applying');
+    expect(directoryConflictStatus({ choice: 'source' }, true)).toBe('applying');
+    expect(presentStatus('applying', workspaceLabels).label).toBe('Updating the merge…');
   });
 });
 
@@ -90,6 +92,8 @@ describe('planProgress', () => {
     expect(planProgress(['automatic', 'keepingSource'])).toBe('Ready to merge');
     expect(planProgress(['automatic', 'needsDecision'])).toBe('1 conflict to decide');
     expect(planProgress(['needsDecision', 'openInTool', 'combined'])).toBe('2 conflicts to decide');
+    // A directory decision being applied isn't in the merge yet: it can't complete meanwhile.
+    expect(planProgress(['applying', 'combined'])).toBe('1 conflict to decide');
   });
 });
 

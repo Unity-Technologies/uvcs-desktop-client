@@ -1,5 +1,5 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import type { DirectoryConflictResolution, MergePlan, MergeRequest } from '@shared/domain/merge';
+import type { MergePlan, MergeRequest } from '@shared/domain/merge';
 import { Folder } from 'lucide-react';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
@@ -18,6 +18,7 @@ import { TaskMergeOptions } from '../mergeTask/TaskMergeOptions';
 import { useFinishingTask } from '../mergeTask/useFinishingTask';
 import { conflictedFilesOf } from './conflictedFiles';
 import { conflictStepKeys } from './conflictSteps';
+import { useDirectoryDecisions } from './directoryConflicts/useDirectoryDecisions';
 import { MergeDetail } from './MergeDetail';
 import type { MergeCompletion } from './MergeCompleted';
 import { mergeLabels } from './mergeDescription';
@@ -39,7 +40,8 @@ import { useSelectionFollowsItem } from './useSelectionFollowsItem';
 interface MergeSessionProps {
   workspacePath: string;
   request: MergeRequest;
-  plan: MergePlan;
+  /** The merge before any directory decision: each one applied makes `cm` calculate it again (`useDirectoryDecisions`). */
+  initialPlan: MergePlan;
   /** A task branch merged into a branch on the server, which the merge also finishes. */
   task?: TaskMerge;
   onCompleted: (completion: MergeCompletion) => void;
@@ -49,11 +51,13 @@ const itemKey = (item: MergeItem): string => item.key;
 const itemPath = (item: MergeItem): string => item.path;
 
 /** The decisions for one merge plan, from the first conflict to "Complete merge". */
-export function MergeSession({ workspacePath, request, plan, task, onCompleted }: MergeSessionProps) {
-  const labels = useMemo(() => mergeLabels(request, plan), [request, plan]);
+export function MergeSession({ workspacePath, request, initialPlan, task, onCompleted }: MergeSessionProps) {
+  const directory = useDirectoryDecisions(workspacePath, request, initialPlan);
+  const { plan } = directory;
+  // The contributors stay with every decision: the labels, and every file state built on them, stay as they are.
+  const labels = useMemo(() => mergeLabels(request, initialPlan), [request, initialPlan]);
   const conflictedFiles = useMemo(() => conflictedFilesOf(plan, request), [plan, request]);
   const { states: fileStates, decide, reset, resolveInTool, openFile } = useFileConflicts(workspacePath, conflictedFiles, labels);
-  const [directoryResolutions, setDirectoryResolutions] = useState<(DirectoryConflictResolution | undefined)[]>([]);
   const [comment, setComment] = useState(() => (task ? defaultMergeComment(task.branch) : `Merge from ${labels.source}`));
   const { choices: taskChoices, setChoices: setTaskChoices, finishing } = useFinishingTask(task);
   const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
@@ -64,10 +68,10 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
 
   const intoServerBranch = Boolean(request.destinationBranch);
   const conflicting = plan.fileConflicts.length + plan.directoryConflicts.length > 0;
-  // Thousands of items, from the plan alone: sorted and laid out once, not again for every version loaded or decision
-  // made, which change only the progress the rows read.
-  const items = useMemo(() => buildMergeItems(plan, conflictedFiles), [plan, conflictedFiles]);
-  const progress = useMemo(() => mergeProgress(fileStates, directoryResolutions), [fileStates, directoryResolutions]);
+  // Thousands of items, from the plan and the directory decisions alone: sorted and laid out once, not again for every
+  // version loaded or file decided, which change only the progress the rows read.
+  const items = useMemo(() => buildMergeItems(plan, directory.decisions, conflictedFiles), [plan, directory.decisions, conflictedFiles]);
+  const progress = useMemo(() => mergeProgress(fileStates, directory.resolutions, directory.applying), [fileStates, directory.resolutions, directory.applying]);
   const latest = useRef({ items, progress });
   const typeOf = useMemo(() => mergeItemTypes(plan.changes.map((change) => change.path)), [plan.changes]);
   const { mergerFor, othersFor } = useFileMergers();
@@ -79,7 +83,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   const latestRowKeyOf = useRef(rowKeyOf);
   latestRowKeyOf.current = rowKeyOf;
   const conflictStatuses = useMemo(() => items.map((item) => conflictStatusOf(item, progress)).filter((status) => status !== null), [items, progress]);
-  const resolutions = collectResolutions({ plan, fileStates, comment });
+  const resolutions = collectResolutions({ plan, fileStates, directoryDecisionsId: directory.decisionsId, comment });
   const selected = mergeItemAt(items, rows, selectedKey);
   const selectedGroup = selected ? undefined : rows.filter(isHeaderRow).find((row) => row.key === selectedKey);
   // The list follows the keys at once; the file behind it (a few hundred ms to highlight a file of a few thousand
@@ -128,9 +132,6 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   const listedKeys = useMemo(() => new Set(filter.visible.map(itemKey)), [filter.visible]);
   useSelectionFollowsItem(selectedKey, selected?.key, selection, setSelection, (key) => listedKeys.has(key), rowKeyOf);
 
-  const resolveDirectoryConflict = (index: number, resolution: DirectoryConflictResolution): void =>
-    setDirectoryResolutions((current) => Object.assign([...current], { [index]: resolution }));
-
   const merge = async (): Promise<void> => {
     if (!resolutions) return;
     setMerging(true);
@@ -151,7 +152,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
           intoServerBranch={intoServerBranch}
           comment={comment}
           onCommentChange={setComment}
-          canMerge={Boolean(resolutions) && !merging}
+          canMerge={Boolean(resolutions) && !merging && directory.applying === null}
           merging={merging}
           onMerge={() => void merge()}
           run={run.progress || runPlans.length > 0 ? { control: <ResolveRunControl states={fileStates} run={run} plans={runPlans} />, running: Boolean(run.progress) } : undefined}
@@ -192,7 +193,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
               decide,
               reset,
               resolveIn: (key, merger) => void resolveInTool(key, merger),
-              resolveDirectory: resolveDirectoryConflict,
+              resolveDirectory: (conflict, resolution) => void directory.decide(conflict, resolution),
             })
           }
         />
@@ -210,7 +211,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
               toolActions={{ resolveIn: (key, merger) => void resolveInTool(key, merger), run: run.progress, runOffered: runPlans.length > 0 }}
               onDecideFile={decide}
               onStartOverFile={reset}
-              onResolveDirectory={resolveDirectoryConflict}
+              onResolveDirectory={(conflict, resolution) => void directory.decide(conflict, resolution)}
             />
           </FileStepsContext.Provider>
         ) : selectedGroup ? (

@@ -1,9 +1,9 @@
-import { directoryConflictDecided, type DirectoryConflictResolution, type MergeChange } from '@shared/domain/merge';
+import type { DirectoryConflictResolution, MergeChange } from '@shared/domain/merge';
 import { UNITY_YAML_MERGE_NAME } from '@shared/domain/mergeTools';
 import type { StatusTone as ChangeTone } from '../../components/StatusBadge';
 import { pluralize } from '../../lib/text';
 import type { MergeLabels } from './mergeDescription';
-import { fileStateOf, type MergeItem, type MergeProgress } from './mergeItems';
+import { directoryResolutionOf, fileStateOf, isApplying, type MergeItem, type MergeProgress } from './mergeItems';
 import { hasBase } from './resolve/conflictPanelView';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
@@ -29,7 +29,9 @@ export type ConflictStatus =
   /** Saved in a merge tool. */
   | 'resolvedInTool'
   /** A merge tool has the file open, waiting for the user to save and close it. */
-  | 'openInTool';
+  | 'openInTool'
+  /** A directory conflict's decision being applied: `cm` calculates the merge again on it. */
+  | 'applying';
 
 /** How a status reads: `pending` waits for the user, `automatic` needs nothing, `decided` follows the user's choice. */
 type StatusTone = 'muted' | 'pending' | 'automatic' | 'decided';
@@ -66,14 +68,16 @@ export function conflictStatusOf(item: MergeItem, progress: MergeProgress): Conf
     case 'fileConflict':
       return fileConflictStatus(fileStateOf(item, progress));
     case 'directoryConflict':
-      return directoryConflictStatus(progress.directoryResolutions[item.index]);
+      return directoryConflictStatus(directoryResolutionOf(item, progress), isApplying(item, progress));
     case 'change':
       return null;
   }
 }
 
-export function directoryConflictStatus(resolution: DirectoryConflictResolution | undefined): ConflictStatus {
-  if (!resolution || !directoryConflictDecided(resolution)) return 'needsDecision';
+/** A directory conflict's status: the decision applied, or `applying` while one is. */
+export function directoryConflictStatus(resolution: DirectoryConflictResolution | undefined, applying = false): ConflictStatus {
+  if (applying) return 'applying';
+  if (!resolution) return 'needsDecision';
   switch (resolution.choice) {
     case 'source':
       return 'keepingSource';
@@ -124,6 +128,8 @@ export function presentStatus(status: ConflictStatus, labels: MergeLabels, tool 
     case 'resolvedInTool':
       if (tool === UNITY_YAML_MERGE_NAME) return { label: 'Merged by UnityYAMLMerge', tone: 'decided', explanation: 'UnityYAMLMerge merged both sides’ changes' };
       return { label: `Resolved in ${tool}`, tone: 'decided', explanation: `Saved in ${tool}` };
+    case 'applying':
+      return { label: 'Updating the merge…', tone: 'muted', explanation: 'Working out what your decision changes' };
     case 'openInTool':
       // Smart Merge has no window: it merges the file on its own, before the tool opens.
       if (tool === UNITY_YAML_MERGE_NAME) return { label: 'Merging…', tone: 'muted', explanation: 'UnityYAMLMerge is merging it' };
@@ -179,5 +185,5 @@ export function planProgress(statuses: ConflictStatus[]): string {
 
 /** Whether a conflict still stands in the way of completing the merge. */
 function isWaiting(status: ConflictStatus): boolean {
-  return status === 'needsDecision' || status === 'unreadable' || status === 'reading' || status === 'openInTool';
+  return status === 'needsDecision' || status === 'unreadable' || status === 'reading' || status === 'openInTool' || status === 'applying';
 }

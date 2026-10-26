@@ -6,10 +6,11 @@ import type { MergeTool } from '@shared/domain/mergeTools';
 import { DEFAULT_SETTINGS } from '@shared/domain/settings';
 import { queryClient } from '../../app/queryClient';
 import { externalAppsKey } from '../../components/externalApps/externalApps';
-import type { DirectoryConflict, MergePlan, MergeRequest } from '@shared/domain/merge';
+import type { DirectoryConflict, DirectoryDecision, MergePlan, MergeRequest } from '@shared/domain/merge';
 import { isSubmenu, type Action, type MenuEntry, type Submenu } from '../../lib/actions';
 import { SERVER_ROLES, WORKSPACE_ROLES, type MergeLabels } from './mergeDescription';
 import { fileConflictKey } from './conflictedFiles';
+import { resolutionsByConflict } from './directoryConflicts/directoryDecisions';
 import { mergeProgress, type MergeItem } from './mergeItems';
 import { mergeItemMenu, type MergeMenuContext } from './mergeItemMenu';
 import type { Merger } from './mergeTools/mergeToolFor';
@@ -44,27 +45,29 @@ const conflict = (path: string, more: Partial<FileConflictState> = {}): Listed =
   return { item: { kind: 'fileConflict', key: `file:/${path}`, path, file: state.file }, state };
 };
 const change = (kind: 'added' | 'changed' | 'deleted' | 'moved', path = 'src/c.ts'): Listed => ({ item: { kind: 'change', key: `change:${path}`, path, change: { kind, path: `/${path}` } } });
+const sharedConflict = (type: DirectoryConflict['type']): DirectoryConflict => ({
+  type,
+  title: 'Added on both sides with the same name',
+  explanation: '',
+  itemId: 3,
+  isDirectory: true,
+  source: { operation: 'added', path: '/src/shared', description: 'Added /src/shared' },
+  destination: { operation: 'added', path: '/src/shared', description: 'Added /src/shared' },
+});
 const directoryConflict = (type: DirectoryConflict['type']): Listed => ({
-  item: {
-    kind: 'directoryConflict',
-    key: 'directory:0',
-    path: 'src/shared',
-    index: 0,
-    conflict: {
-      type,
-      title: 'Added on both sides with the same name',
-      explanation: '',
-      itemId: 3,
-      isDirectory: true,
-      source: { operation: 'added', path: '/src/shared', description: 'Added /src/shared' },
-      destination: { operation: 'added', path: '/src/shared', description: 'Added /src/shared' },
-    },
-  },
+  item: { kind: 'directoryConflict', key: 'directory:shared', path: 'src/shared', conflict: sharedConflict(type) },
 });
 
-/** The menu of `listed`, its conflicting files' states the page's progress. */
-function menuOf(listed: Listed[], more: Partial<MergeMenuContext> = {}): MenuEntry[] {
-  const progress = mergeProgress(listed.flatMap(({ state }) => (state ? [state] : [])), []);
+/**
+ * The menu of `listed`, its conflicting files' states the page's progress, with the directory decisions applied and
+ * the one being applied.
+ */
+function menuOf(listed: Listed[], more: Partial<MergeMenuContext> = {}, decisions: DirectoryDecision[] = [], applying: string | null = null): MenuEntry[] {
+  const progress = mergeProgress(
+    listed.flatMap(({ state }) => (state ? [state] : [])),
+    resolutionsByConflict(decisions),
+    applying,
+  );
   return mergeItemMenu(listed.map(({ item }) => item), context({ progress, ...more }));
 }
 
@@ -73,7 +76,7 @@ function context(more: Partial<MergeMenuContext> = {}): MergeMenuContext {
     workspacePath: '/ws',
     request,
     plan,
-    progress: mergeProgress([], []),
+    progress: mergeProgress([], new Map()),
     labels,
     itemTypeOf: () => 'file',
     mergerFor: () => vscodeMerger,
@@ -255,9 +258,21 @@ describe('mergeItemMenu', () => {
     (entry(menu, 'keepSource') as Action).run();
     (entry(menu, 'keepBoth') as Action).run();
     expect(resolveDirectory.mock.calls).toEqual([
-      [0, { choice: 'source' }],
-      [0, { choice: 'rename', newName: expect.stringMatching(/shared/) }],
+      [sharedConflict('evilTwin'), { choice: 'source' }],
+      [sharedConflict('evilTwin'), { choice: 'rename', newName: expect.stringMatching(/shared/) }],
     ]);
+  });
+
+  it('keeps both under the name given before, once kept both', () => {
+    const resolveDirectory = vi.fn();
+    const keptBoth = { conflict: sharedConflict('evilTwin'), resolution: { choice: 'rename', newName: 'shared-mine' } } as const;
+    (entry(menuOf([directoryConflict('evilTwin')], { resolveDirectory }, [keptBoth]), 'keepBoth') as Action).run();
+    expect(resolveDirectory.mock.calls).toEqual([[sharedConflict('evilTwin'), { choice: 'rename', newName: 'shared-mine' }]]);
+  });
+
+  it("waits while a decision is being applied: cm calculates the merge again on each one", () => {
+    const menu = menuOf([directoryConflict('evilTwin')], {}, [], 'another conflict');
+    expect(['keepDestination', 'keepSource', 'keepBoth'].map((id) => (entry(menu, id) as Action).disabled)).toEqual([true, true, true]);
   });
 
   it("doesn't offer keeping both where the conflict can't keep both", () => {

@@ -172,7 +172,7 @@ describe('where the whole merge stands', () => {
   });
 
   it('gives changes that apply cleanly no conflict status, and words them as what will happen', () => {
-    expect(conflictStatusOf({ kind: 'change', key: 'change:0', path: 'a.ts', change: { kind: 'changed', path: '/a.ts' } }, mergeProgress([], []))).toBeNull();
+    expect(conflictStatusOf({ kind: 'change', key: 'change:0', path: 'a.ts', change: { kind: 'changed', path: '/a.ts' } }, mergeProgress([], new Map()))).toBeNull();
     expect(describeChange({ kind: 'changed', path: '/a.ts' }, workspace)).toBe('Will be changed: only the incoming side changed it');
     expect(describeChange({ kind: 'deleted', path: '/a.ts' }, serverBranch)).toBe('Will be deleted: deleted on the source side');
     expect(describeChange({ kind: 'moved', path: '/b.ts' }, workspace)).toBe('Will be moved');

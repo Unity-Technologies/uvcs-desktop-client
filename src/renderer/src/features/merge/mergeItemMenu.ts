@@ -1,6 +1,6 @@
 import { workspacePlace } from '@shared/domain/place';
 import type { RepositoryVersion } from '@shared/domain/content';
-import { mergeSourcePoint, RENAMEABLE_CONFLICTS, type DirectoryConflictResolution, type MergePlan, type MergeRequest } from '@shared/domain/merge';
+import { mergeSourcePoint, RENAMEABLE_CONFLICTS, type DirectoryConflict, type DirectoryConflictResolution, type MergePlan, type MergeRequest } from '@shared/domain/merge';
 import type { ItemType } from '@shared/domain/pendingChanges';
 import type { PageOf } from '../../app/navigation/pages';
 import { changedFileMenu, type ChangedFile } from '../../components/changedFileMenu';
@@ -10,7 +10,7 @@ import type { GroupedEntry } from '../../lib/menuGroups';
 import { annotatedHistory } from '../history/annotatedHistory';
 import { fileConflictKey } from './conflictedFiles';
 import { suggestRename } from './directoryConflicts/renameSuggestion';
-import { fileStateOf, type MergeItem, type MergeProgress } from './mergeItems';
+import { directoryResolutionOf, fileStateOf, type MergeItem, type MergeProgress } from './mergeItems';
 import { conflictMenuEntries, withConflictOpening, type ConflictMenuContext } from './resolve/conflictMenuEntries';
 
 /** What the merge page knows and can do, for the menu of what it lists. */
@@ -20,7 +20,7 @@ export interface MergeMenuContext extends Omit<ConflictMenuContext, 'yoursInWork
   progress: MergeProgress;
   /** What a repository path of the merge is (`mergeItemTypes`): a folder has nothing to open. */
   itemTypeOf: (path: string) => ItemType;
-  resolveDirectory: (index: number, resolution: DirectoryConflictResolution) => void;
+  resolveDirectory: (conflict: DirectoryConflict, resolution: DirectoryConflictResolution) => void;
 }
 
 /**
@@ -40,14 +40,20 @@ export function mergeItemMenu(items: MergeItem[], context: MergeMenuContext): Me
   return withConflictOpening(menu, conflicts);
 }
 
-/** Keep yours, keep incoming, and keep both (yours under the name its panel suggests) where both can stay. */
-function directoryConflictEntries(item: Extract<MergeItem, { kind: 'directoryConflict' }>, { labels, resolveDirectory }: MergeMenuContext): GroupedEntry[] {
-  const { conflict, index } = item;
-  const keep = (resolution: DirectoryConflictResolution) => () => resolveDirectory(index, resolution);
+/**
+ * Keep yours, keep incoming, and keep both (yours under the name it was given, else the one its panel suggests) where
+ * both can stay; each waits while a decision is being applied.
+ */
+function directoryConflictEntries(item: Extract<MergeItem, { kind: 'directoryConflict' }>, { labels, progress, resolveDirectory }: MergeMenuContext): GroupedEntry[] {
+  const { conflict } = item;
+  const applied = directoryResolutionOf(item, progress);
+  const newName = applied?.choice === 'rename' ? applied.newName : suggestRename(conflict.destination.path, labels.destination);
+  const waiting = progress.applyingDirectory !== null && { disabled: true, disabledReason: 'Updating the merge…' };
+  const keep = (resolution: DirectoryConflictResolution) => () => resolveDirectory(conflict, resolution);
   return [
-    menuAction('keepDestination', keep({ choice: 'destination' }), { label: `Keep ${labels.roles.destination.name.toLowerCase()}` }),
-    menuAction('keepSource', keep({ choice: 'source' }), { label: `Keep ${labels.roles.source.name.toLowerCase()}` }),
-    ...(RENAMEABLE_CONFLICTS.has(conflict.type) ? [menuAction('keepBoth', keep({ choice: 'rename', newName: suggestRename(conflict.destination.path, labels.destination) }))] : []),
+    menuAction('keepDestination', keep({ choice: 'destination' }), { label: `Keep ${labels.roles.destination.name.toLowerCase()}`, ...waiting }),
+    menuAction('keepSource', keep({ choice: 'source' }), { label: `Keep ${labels.roles.source.name.toLowerCase()}`, ...waiting }),
+    ...(RENAMEABLE_CONFLICTS.has(conflict.type) ? [menuAction('keepBoth', keep({ choice: 'rename', newName }), { ...waiting })] : []),
   ];
 }
 

@@ -1,4 +1,5 @@
-import { directoryConflictDecided, type DirectoryConflict, type DirectoryConflictResolution, type MergeChange, type MergePlan } from '@shared/domain/merge';
+import { directoryConflictIdentity } from '@shared/domain/directoryConflictIdentity';
+import type { DirectoryConflict, DirectoryConflictResolution, DirectoryDecision, MergeChange, MergePlan } from '@shared/domain/merge';
 import { comparePaths } from '@shared/pathOrder';
 import { statusTones } from '../../components/changeFilter';
 import type { StatusTone } from '../../components/StatusBadge';
@@ -8,27 +9,44 @@ import type { ConflictedFile, FileConflictState } from './resolve/useFileConflic
 
 /**
  * Something in the merge the user can look at: a conflict to decide or a change that applies cleanly. `path` is
- * where it is, without the root ("src/app.ts"), as the list shows it. Items come from the plan alone and never change
- * with it: where a conflict stands is the `MergeProgress`.
+ * where it is, without the root ("src/app.ts"), as the list shows it. Items come from the plan and the directory
+ * decisions alone, and change only with them: where a conflict stands is the `MergeProgress`.
  */
 export type MergeItem = { key: string; path: string } & (
-  | { kind: 'directoryConflict'; index: number; conflict: DirectoryConflict }
+  | { kind: 'directoryConflict'; conflict: DirectoryConflict }
   | { kind: 'fileConflict'; file: ConflictedFile }
   | { kind: 'change'; change: MergeChange }
 );
 
 /**
  * Where the conflicts stand: each file's state, by its key, as its versions load and the user decides, and each
- * directory conflict's resolution, by its index. Kept apart from the items: thousands of them are sorted and laid out
- * once, and a status changing (thousands do while the versions load) only draws again the rows that show it.
+ * directory conflict's resolution applied, by its identity (`directoryConflictIdentity`), with the one being applied.
+ * Kept apart from the items: thousands of them are sorted and laid out once, and a status changing (thousands do while
+ * the versions load) only draws again the rows that show it.
  */
 export interface MergeProgress {
   fileStates: ReadonlyMap<string, FileConflictState>;
-  directoryResolutions: readonly (DirectoryConflictResolution | undefined)[];
+  directoryResolutions: ReadonlyMap<string, DirectoryConflictResolution>;
+  /** The identity of the directory conflict whose decision is being applied, if one is. */
+  applyingDirectory: string | null;
 }
 
-export function mergeProgress(fileStates: readonly FileConflictState[], directoryResolutions: readonly (DirectoryConflictResolution | undefined)[]): MergeProgress {
-  return { fileStates: new Map(fileStates.map((state) => [state.file.key, state])), directoryResolutions };
+export function mergeProgress(
+  fileStates: readonly FileConflictState[],
+  directoryResolutions: ReadonlyMap<string, DirectoryConflictResolution>,
+  applyingDirectory: string | null = null,
+): MergeProgress {
+  return { fileStates: new Map(fileStates.map((state) => [state.file.key, state])), directoryResolutions, applyingDirectory };
+}
+
+/** A directory conflict's resolution applied; none while it waits for the user. */
+export function directoryResolutionOf(item: Extract<MergeItem, { kind: 'directoryConflict' }>, progress: MergeProgress): DirectoryConflictResolution | undefined {
+  return progress.directoryResolutions.get(directoryConflictIdentity(item.conflict));
+}
+
+/** Whether the directory conflict's decision is being applied. */
+export function isApplying(item: Extract<MergeItem, { kind: 'directoryConflict' }>, progress: MergeProgress): boolean {
+  return progress.applyingDirectory === directoryConflictIdentity(item.conflict);
 }
 
 /** A conflicting file's state: every file of the plan has one, from the first render (`useFileConflicts`). */
@@ -48,16 +66,16 @@ export const MERGE_GROUP_TIPS: Record<MergeGroup, string> = {
 
 /**
  * Conflicts first (directory ones, then files), then everything that merges cleanly, but a folder added or deleted
- * with what it holds: its items say it already, as in a diff (`withoutRepeatedFolders`); a moved one stays.
+ * with what it holds: its items say it already, as in a diff (`withoutRepeatedFolders`); a moved one stays. The
+ * directory conflicts decided are no longer in the plan, `cm` having applied them, and stay listed from the decisions.
  */
-export function buildMergeItems(plan: MergePlan, conflictedFiles: readonly ConflictedFile[]): MergeItem[] {
+export function buildMergeItems(plan: MergePlan, decisions: readonly DirectoryDecision[], conflictedFiles: readonly ConflictedFile[]): MergeItem[] {
   return [
-    ...plan.directoryConflicts.map(
-      (conflict, index): MergeItem => ({
+    ...[...decisions.map((decision) => decision.conflict), ...plan.directoryConflicts].map(
+      (conflict): MergeItem => ({
         kind: 'directoryConflict',
-        key: `directory:${index}`,
+        key: `directory:${directoryConflictIdentity(conflict)}`,
         path: withoutRoot(conflict.destination.path),
-        index,
         conflict,
       }),
     ),
@@ -75,7 +93,7 @@ function isConflict(item: MergeItem): boolean {
 }
 
 export function needsDecision(item: MergeItem, progress: MergeProgress): boolean {
-  if (item.kind === 'directoryConflict') return !directoryConflictDecided(progress.directoryResolutions[item.index]);
+  if (item.kind === 'directoryConflict') return !directoryResolutionOf(item, progress);
   if (item.kind === 'fileConflict') return !fileStateOf(item, progress).resolution;
   return false;
 }
