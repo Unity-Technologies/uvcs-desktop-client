@@ -1,5 +1,5 @@
 import { mkdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { directoryConflictIdentity } from '@shared/domain/directoryConflictIdentity';
 import type { DecidedMerge, DirectoryConflictResolution, DirectoryDecision, FileConflict, MergePlan, MergeRequest } from '@shared/domain/merge';
 import type { CmClient } from '../cm/CmClient';
@@ -86,7 +86,7 @@ export class DirectoryDecisions {
   }
 
   /** Applies `decisions`, in order, to the merge the page `id` shows, and returns the merge recalculated on them. */
-  decide(workspacePath: string, request: MergeRequest, id: string, decisions: DirectoryDecision[]): Promise<DecidedMerge> {
+  async decide(workspacePath: string, request: MergeRequest, id: string, decisions: DirectoryDecision[]): Promise<DecidedMerge> {
     decisions.forEach(assertDecisionValid);
     const merge = this.mergeOf(id, mergeKey(workspacePath, request));
     const applying = merge.queue.then(() => this.apply(merge, workspacePath, request, decisions));
@@ -142,6 +142,8 @@ export class DirectoryDecisions {
       if (index < 0) continue;
       applied.push(await this.resolve(merge, workspacePath, request, applied.at(-1)?.state, { conflict: conflicts[index]!, resolution: decision.resolution }, index));
     }
+    // The states of the decisions applied again are left: a merge never runs on them.
+    for (const cut of merge.applied.filter((step) => !applied.includes(step))) void removeTempDirectory(dirname(cut.state.solved));
     merge.applied = applied;
 
     const initial = await this.initialOf(merge, workspacePath, request);

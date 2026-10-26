@@ -2,11 +2,11 @@ import type { FileConflict, MergePlan, MergeRequest } from '@shared/domain/merge
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
 import type { PrintedMergePlan } from '../cm/mergeOutput';
-
-type PrintedFileConflict = PrintedMergePlan['fileConflicts'][number];
 import { readTreeItem, TREE_ITEM_FORMAT, type ListedTreeItem } from '../cm/treeItems';
 import { readWorkspaceLoad } from '../cm/workspaceStatus';
 import { revisionFilesOf, type WorkspaceCopies } from '../files/WorkspaceCopies';
+
+type PrintedFileConflict = PrintedMergePlan['fileConflicts'][number];
 
 /**
  * The plan with the repository of each conflicting file, and its revision in the destination. `cm merge` prints a file

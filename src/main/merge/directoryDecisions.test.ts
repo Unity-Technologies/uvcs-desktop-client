@@ -193,8 +193,8 @@ describe('DirectoryDecisions', () => {
     const { cm, commands } = decidingCm();
     const decisions = new DirectoryDecisions(cm);
 
-    expect(() => decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(addedTwice, { choice: 'rename', newName: '../shared' })])).toThrow('is not a valid name');
-    expect(() => decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(movedApart, { choice: 'rename', newName: 'core2' })])).toThrow('keeping both items is not possible');
+    await expect(decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(addedTwice, { choice: 'rename', newName: '../shared' })])).rejects.toThrow('is not a valid name');
+    await expect(decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(movedApart, { choice: 'rename', newName: 'core2' })])).rejects.toThrow('keeping both items is not possible');
     expect(commands).toEqual([]);
   });
 
