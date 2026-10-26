@@ -66,6 +66,11 @@ function decidingCm() {
   });
 }
 
+/** What `cm` keeps solved for the page's decisions, as the merge would run on them; none before any decision. */
+async function solvedOf(decisions: DirectoryDecisions, id: string): Promise<string | undefined> {
+  return decisions.runOn(id, WORKSPACE, FROM_FEATURE, async (decided) => decided && readFile(decided.state.solved, 'utf8'));
+}
+
 const resolving = (commands: FakeCmCommand[]): string[] =>
   commands.filter((command) => command.args.includes('--resolveconflict')).map(({ args }) => args.slice(args.indexOf('--resolveconflict')).join(' '));
 
@@ -162,6 +167,17 @@ describe('DirectoryDecisions', () => {
 
     expect(commands.map((command) => command.args[0])).toEqual(['merge']);
     expect(decided.plan.fileConflicts[0]).toMatchObject({ path: '/play/Player.cs', destinationPath: '/core/Player.cs' });
+  });
+
+  it("fails a decision cm applied to another conflict, as when the preview it was numbered by is out of date", async () => {
+    const { cm } = decidingCm();
+    const decisions = new DirectoryDecisions(cm);
+    // Previewed before someone checked in: the folder moved apart was second in the list then, and is first now.
+    const previewed = await previewMerge(cm, WORKSPACE, FROM_FEATURE);
+    decisions.previewed(WORKSPACE, FROM_FEATURE, { ...previewed, directoryConflicts: [addedTwice, movedApart] });
+
+    await expect(decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(movedApart, { choice: 'source' })])).rejects.toThrow('The merge changed');
+    expect(await solvedOf(decisions, 'page-1')).toBeUndefined();
   });
 
   it("starts from a merge's own preview only", async () => {
