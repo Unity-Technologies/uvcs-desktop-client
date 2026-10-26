@@ -1023,7 +1023,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   `BranchNamesCache`), while changeset and shelve reviews come named (`CodeReviewSummary.target`) and keep it. "Copy ▸" (`copySubmenu`) lists what the object has in one order (name or number, title, paths,
   its link, spec, full spec with `@repository`, comment, GUID), each with what it copies, and the toast names it ("Branch spec
   copied"); ⌘C in a list copies its first entry (`useCopyCommand`) unless text is selected, ⇧⌘C a link to what is in
-  front (`useCopyLinkCommand`, features/deep-links.md). Items that open a dialog
+  front (`useCopyLinkCommand`, features/deep-links.md). A menu names a list key (⌘D, ⌘C, ⇧⌘C) only where its list binds
+  it: a list on a page that binds none, its keys reaching the view under the page or the page's own object, passes
+  `MenuHost.listKeysElsewhere` (a branch diff's "Changeset by changeset"). Items that open a dialog
   end with "…"; submenus hold real sets of choices, the choice made checked after its label (`checked`), so the icon
   in front stays the item's own (an app's). `menuGrammar.test.ts` checks every builder and every host, in a workspace and in a repository with none. A menu's
   content is in a portal, but React bubbles its events to the row its trigger sits in: `ActionDropdownMenu` keeps its

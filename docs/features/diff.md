@@ -30,6 +30,13 @@ is noise for anyone reading a branch, and the web code review and GitHub show on
 not decide first whether the branch received merges (as the official client does to show its button): that is the
 same common-ancestor calculation `--integration` already makes inside its one command.
 
+"Changeset by changeset" steps through the branch's changesets in a list beside the diff, one `cm find` for them all.
+Each row has the changeset's own menu (`changesetMenu`, as in the Changesets view), whose Copy ▸ Link shares the
+changeset stepped to; the header's Copy link (⇧⌘C) stays the branch's, what the page is about. The list binds no list
+keys, so its menu names none (`listKeysElsewhere`, ARCHITECTURE.md "Menus"): no ⌘C (`useCopyCommand`), as the view
+under the page keeps its own, and offering the list's link would take the view's from ⇧⌘C once the page closes
+(`useOfferSelectedObjectLink`).
+
 ## Comparing two branches, changesets or labels
 
 Two objects of a kind are compared from a selection of two (labels, changesets), or from one object's menu, "Compare

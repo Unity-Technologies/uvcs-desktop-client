@@ -336,6 +336,11 @@ export function menuSubmenu(id: MenuWordId, entries: MenuEntry[]): GroupedEntry 
 export interface MenuHost {
   /** The Branch Explorer, where "Show in Branch Explorer" would lead where the user already is. */
   inBranchExplorer?: boolean;
+  /**
+   * A list that binds none of the list keys (⌘D, ⌘C, ⇧⌘C), so the menu names no shortcut: there they reach the page's
+   * own object or the view under the page (docs/ARCHITECTURE.md "Menus").
+   */
+  listKeysElsewhere?: boolean;
   /** Called with the name of a branch created from the menu, e.g. to show it. */
   onBranchCreated?: (name: string) => void;
 }

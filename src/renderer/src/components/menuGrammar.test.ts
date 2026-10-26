@@ -631,3 +631,21 @@ describe('locks', () => {
     expect(ids(MENUS.pendingChange!())).not.toContain('showInLocks');
   });
 });
+
+describe("a changeset's menu", () => {
+  const shortcuts = (entries: MenuEntry[]): Record<string, string> =>
+    Object.fromEntries(
+      entries.flatMap((entry) => (isSubmenu(entry) ? entry.entries : [entry])).flatMap((entry) => (typeof entry === 'object' && 'run' in entry && entry.shortcut ? [[entry.id, entry.shortcut]] : [])),
+    );
+
+  it('names the list keys on what they do in a list that binds them', () => {
+    expect(shortcuts(changesetMenu({ place: workspacePlace(ws) }, [changeset]))).toEqual({ diff: 'mod+d', 'copy.number': 'mod+c', 'copy.link': 'mod+shift+c' });
+  });
+
+  it('names no shortcut where the list keys reach something else, as in a branch diff stepped changeset by changeset', () => {
+    const menu = changesetMenu({ place: workspacePlace(ws) }, [changeset], { listKeysElsewhere: true });
+
+    expect(shortcuts(menu)).toEqual({});
+    expect(menu.some((entry) => isSubmenu(entry) && entry.entries.some((copy) => typeof copy === 'object' && 'id' in copy && copy.id === 'copy.link'))).toBe(true);
+  });
+});
