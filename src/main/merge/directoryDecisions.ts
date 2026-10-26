@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { directoryConflictIdentity } from '@shared/domain/directoryConflictIdentity';
-import type { DecidedMerge, DirectoryConflict, DirectoryConflictResolution, DirectoryDecision, MergeRequest } from '@shared/domain/merge';
+import type { DecidedMerge, DirectoryConflictResolution, DirectoryDecision, MergePlan, MergeRequest } from '@shared/domain/merge';
 import type { CmClient } from '../cm/CmClient';
 import { readFields } from '../cm/formatRecords';
 import { mergePlanOf, type PrintedMergePlan } from '../cm/mergeOutput';
@@ -26,8 +26,11 @@ interface DecidedMergeState {
   merge: string;
   folder: string;
   applied: AppliedDecision[];
-  /** The directory conflicts before any decision, read once: the first decision's number in `cm`'s list. */
-  initialConflicts?: DirectoryConflict[];
+  /**
+   * The merge before any decision, read once: the first decision's number in `cm`'s list, and its conflicting files
+   * completed (`withConflictRepositories`), which the decisions may move but never change.
+   */
+  initial?: MergePlan;
   /** Folders made so far, to name the next one. */
   folders: number;
   /** Decisions are applied one batch after the other: each starts from the state the one before left. */
@@ -86,7 +89,7 @@ export class DirectoryDecisions {
   private async apply(merge: DecidedMergeState, workspacePath: string, request: MergeRequest, decisions: DirectoryDecision[]): Promise<DecidedMerge> {
     merge.applied.length = sameDecisionsCount(merge.applied, decisions);
     for (const decision of decisions.slice(merge.applied.length)) {
-      const conflicts = merge.applied.at(-1)?.plan.directoryConflicts ?? (await this.initialConflictsOf(merge, workspacePath, request));
+      const conflicts = merge.applied.at(-1)?.plan.directoryConflicts ?? (await this.initialOf(merge, workspacePath, request)).directoryConflicts;
       const index = conflicts.findIndex((conflict) => directoryConflictIdentity(conflict) === directoryConflictIdentity(decision.conflict));
       if (index < 0) continue;
       merge.applied.push(await this.resolve(merge, workspacePath, request, { conflict: conflicts[index]!, resolution: decision.resolution }, index));
@@ -94,15 +97,16 @@ export class DirectoryDecisions {
 
     const last = merge.applied.at(-1);
     if (!last) return { plan: await previewMerge(this.cm, workspacePath, request, { copies: this.copies }), decisions: [] };
+    const initial = await this.initialOf(merge, workspacePath, request);
     return {
-      plan: await withConflictRepositories(this.cm, workspacePath, request, last.plan, this.copies),
+      plan: await withConflictRepositories(this.cm, workspacePath, request, last.plan, this.copies, initial.fileConflicts),
       decisions: merge.applied.map((applied) => applied.decision),
     };
   }
 
-  private async initialConflictsOf(merge: DecidedMergeState, workspacePath: string, request: MergeRequest): Promise<DirectoryConflict[]> {
-    merge.initialConflicts ??= (await readMergePlan(this.cm, workspacePath, request)).directoryConflicts;
-    return merge.initialConflicts;
+  private async initialOf(merge: DecidedMergeState, workspacePath: string, request: MergeRequest): Promise<MergePlan> {
+    merge.initial ??= await withConflictRepositories(this.cm, workspacePath, request, await readMergePlan(this.cm, workspacePath, request), this.copies);
+    return merge.initial;
   }
 
   /** `cm` resolves the conflict numbered `index + 1` in its list, on a copy of the state the decision before left. */

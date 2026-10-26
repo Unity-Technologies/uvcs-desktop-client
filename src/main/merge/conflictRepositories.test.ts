@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import type { FileConflict } from '@shared/domain/merge';
 import type { PrintedMergePlan } from '../cm/mergeOutput';
+import { fakeCmClient } from '../cm/testing/fakeCmClient';
 import { recordsIn, recordsOutput } from '../cm/testing/cmOutput';
 import { readTreeItem, TREE_ITEM_FORMAT, TREE_ITEMS } from '../cm/treeItems';
 
 const treeItemsIn = (output: string) => recordsIn(output, readTreeItem);
-import { conflictListingArgs, destinationTree, withRepositories } from './conflictRepositories';
+import { conflictListingArgs, destinationTree, withConflictRepositories, withRepositories } from './conflictRepositories';
 
 const XLINKED = '/01project/src/client/plugins/editor-plugin/Packages/com.acme.editor.tests/Infrastructure/DiffWindowMockExtensions.cs';
 const OWN = '/01project/src/client/cm/commands/merge/MergePrinter.cs';
@@ -68,5 +70,32 @@ describe('withRepositories', () => {
 
   it('keeps a plan without file conflicts as it is', () => {
     expect(withRepositories(plan([]), []).fileConflicts).toEqual([]);
+  });
+});
+
+describe('withConflictRepositories after a directory decision', () => {
+  const MOVED = '/01project/maps/MergePrinter.cs';
+  const completed: FileConflict = { path: OWN, itemId: 425954, baseChangeset: 16828, sourceChangeset: 17092, destinationChangeset: 16973, repository: 'acme@acme@cloud', destinationRevisionId: 31259533, destinationIsBinary: false };
+
+  it('takes a file conflict completed before at the path the decision moved it to, listing only the others', async () => {
+    const { cm, lines } = fakeCmClient({ ls: recordsOutput(TREE_ITEMS, { name: 'Grass.png', wkpath: TEXTURE, type: 'bin', size: 1, changeset: 1, repspec: 'rep:acme@acme@cloud', revid: 31259610, itemid: 420530 }) });
+    const moved = plan([MOVED, TEXTURE]);
+    moved.fileConflicts[1] = { ...moved.fileConflicts[1]!, itemId: 420530 };
+
+    const completedPlan = await withConflictRepositories(cm, '/work', { kind: 'merge', sourceSpec: 'br:/main/task1008583' }, moved, undefined, [completed]);
+
+    expect(completedPlan.fileConflicts).toEqual([
+      { ...completed, path: MOVED },
+      expect.objectContaining({ path: TEXTURE, destinationRevisionId: 31259610, destinationIsBinary: true }),
+    ]);
+    expect(lines()).toEqual([conflictListingArgs({ ...moved, fileConflicts: [moved.fileConflicts[1]!] }, 'cs:278648').join(' ')]);
+  });
+
+  it('lists nothing when every file conflict was completed before', async () => {
+    const { cm, commands } = fakeCmClient();
+
+    await withConflictRepositories(cm, '/work', { kind: 'merge', sourceSpec: 'br:/main/task1008583' }, plan([MOVED]), undefined, [completed]);
+
+    expect(commands).toEqual([]);
   });
 });
