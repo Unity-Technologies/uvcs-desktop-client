@@ -13,7 +13,7 @@ import {
 import { catArgs, catBatchesOf, explainCatFailure, type CatRead } from '../cm/catBatches';
 import type { CmClient } from '../cm/CmClient';
 import { createdChangesetOf, destinationMovedIn, mergeOutcomeRecordOf, mergePlanOf } from '../cm/mergeOutput';
-import { directoryConflictIdentity } from './directoryConflictIdentity';
+import { directoryConflictIdentity } from '@shared/domain/directoryConflictIdentity';
 import { readMergeProgress } from '../cm/progress/mergeProgress';
 import { withTempDirectory } from '../files/tempFile';
 import { retryWhileBusy } from '../files/whileBusy';

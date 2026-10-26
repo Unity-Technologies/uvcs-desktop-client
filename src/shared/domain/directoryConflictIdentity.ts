@@ -1,4 +1,4 @@
-import type { DirectoryConflict } from '@shared/domain/merge';
+import type { DirectoryConflict } from './merge';
 
 /** Identifies a directory conflict across successive `cm merge` runs, which renumber the remaining ones. */
 export function directoryConflictIdentity(conflict: DirectoryConflict): string {
