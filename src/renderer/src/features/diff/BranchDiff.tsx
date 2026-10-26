@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
 import type { FocusedLines } from '../../app/navigation/pages';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
+import type { MenuHost } from '../../components/menuWords';
 import { branchWorkedOn } from '../../components/workingObject';
 import { avatarColumn, commentColumn, dateColumn, numberColumn } from '../../components/historyColumns';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
@@ -48,6 +49,9 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines }: Branch
 /** The Changesets view's columns that fit beside a diff; the avatar, whose tooltip names the author, always shows. */
 const CHANGESET_COLUMNS: Column<Changeset>[] = [avatarColumn({ alwaysShown: true }), numberColumn('Changeset'), commentColumn(), dateColumn()];
 
+/** The list binds no ⌘C, and ⇧⌘C copies the page's branch: its Copy submenu names neither. */
+const BRANCH_DIFF_HOST: MenuHost = { copyKeysElsewhere: true };
+
 /** Kept out of the render: a new `rowKey` makes the table key every changeset of the branch again on each step. */
 const changesetKey = (changeset: Changeset): string => String(changeset.id);
 
@@ -83,7 +87,7 @@ function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; 
             rowKey={changesetKey}
             selection={selection}
             onSelectionChange={setSelection}
-            contextMenu={(rows) => changesetMenu(menuContext, rows)}
+            contextMenu={(rows) => changesetMenu(menuContext, rows, BRANCH_DIFF_HOST)}
           />
         ) : (
           <TableSkeleton columns={CHANGESET_COLUMNS} />

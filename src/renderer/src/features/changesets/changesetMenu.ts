@@ -88,7 +88,7 @@ function singleChangesetMenu(context: ChangesetMenuContext, changeset: Changeset
     menuAction('compare', () => void diffWithAnotherChangeset(changeset), { label: 'Compare with another changeset…' }),
     menuAction('browse', () => navigation.openPage({ kind: 'browseRepository', changesetId: changeset.id }), { label: 'Browse repository at this changeset' }),
     !host.inBranchExplorer && menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'changeset', id: changeset.id, date: changeset.date })),
-    copySubmenu('Changeset', changesetCopyTexts(place, changeset, context.repository), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
+    copySubmenu('Changeset', changesetCopyTexts(place, changeset, context.repository), host.copyKeysElsewhere ? {} : { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
     menuAction('editComment', () => void editChangesetComment(place, changeset)),
     menuAction('move', () => void moveChangesetToBranch(place, changeset)),
     menuAction('delete', () => void deleteChangeset(place, changeset)),
