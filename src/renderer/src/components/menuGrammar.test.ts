@@ -626,3 +626,24 @@ describe('locks', () => {
     expect(ids(MENUS.pendingChange!())).not.toContain('showInLocks');
   });
 });
+
+describe("a changeset's Copy submenu", () => {
+  const copyShortcuts = (entries: MenuEntry[]): Record<string, string | undefined> => {
+    const copy = entries.find((entry): entry is Submenu => isSubmenu(entry) && entry.id === 'copy')!;
+    return Object.fromEntries(copy.entries.filter((entry): entry is Action => typeof entry === 'object' && 'run' in entry).map((entry) => [entry.id, entry.shortcut]));
+  };
+
+  it("names ⌘C and ⇧⌘C on what they copy in a list that binds them", () => {
+    const shortcuts = copyShortcuts(changesetMenu({ place: workspacePlace(ws) }, [changeset]));
+
+    expect(shortcuts['copy.number']).toBeDefined();
+    expect(shortcuts['copy.link']).toBeDefined();
+  });
+
+  it('names no shortcut where the keys copy something else, as in a branch diff stepped changeset by changeset', () => {
+    const shortcuts = copyShortcuts(changesetMenu({ place: workspacePlace(ws) }, [changeset], { copyKeysElsewhere: true }));
+
+    expect(Object.values(shortcuts).filter(Boolean)).toEqual([]);
+    expect(Object.keys(shortcuts)).toContain('copy.link');
+  });
+});
