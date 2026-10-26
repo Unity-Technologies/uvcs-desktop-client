@@ -78,11 +78,6 @@ describe('merge items', () => {
     expect(decided).toEqual(waiting);
   });
 
-  it('lists a directory conflict decided once, should cm still list it', () => {
-    const items = buildMergeItems(plan, [{ conflict: twin, resolution: { choice: 'source' } }], [file]);
-    expect(items.filter((item) => item.kind === 'directoryConflict')).toHaveLength(1);
-  });
-
   it('starts on the first item waiting for the user in the order the list shows, not directory conflicts first', () => {
     // The directory conflict is /twin.txt, after /a.txt in path order.
     const items = buildMergeItems(plan, [], [file]);

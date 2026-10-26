@@ -67,14 +67,12 @@ export const MERGE_GROUP_TIPS: Record<MergeGroup, string> = {
 /**
  * Conflicts first (directory ones, then files), then everything that merges cleanly, but a folder added or deleted
  * with what it holds: its items say it already, as in a diff (`withoutRepeatedFolders`); a moved one stays. The
- * directory conflicts decided are no longer in the plan, `cm` having applied them, and stay listed from the decisions.
+ * directory conflicts decided are no longer in the plan, `cm` dropping each it applies (`DirectoryDecisions` fails a
+ * decision it still lists), and stay listed from the decisions.
  */
 export function buildMergeItems(plan: MergePlan, decisions: readonly DirectoryDecision[], conflictedFiles: readonly ConflictedFile[]): MergeItem[] {
-  const decided = decisions.map((decision) => decision.conflict);
-  const decidedIdentities = new Set(decided.map(directoryConflictIdentity));
-  const waiting = plan.directoryConflicts.filter((conflict) => !decidedIdentities.has(directoryConflictIdentity(conflict)));
   return [
-    ...[...decided, ...waiting].map(
+    ...[...decisions.map((decision) => decision.conflict), ...plan.directoryConflicts].map(
       (conflict): MergeItem => ({
         kind: 'directoryConflict',
         key: `directory:${directoryConflictIdentity(conflict)}`,
