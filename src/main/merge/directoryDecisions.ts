@@ -1,5 +1,5 @@
 import { mkdir } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { directoryConflictIdentity } from '@shared/domain/directoryConflictIdentity';
 import type { DecidedMerge, DirectoryConflictResolution, DirectoryDecision, FileConflict, MergePlan, MergeRequest } from '@shared/domain/merge';
 import type { CmClient } from '../cm/CmClient';
@@ -26,9 +26,10 @@ export interface AppliedDirectoryDecisions {
   known: readonly FileConflict[];
 }
 
-/** A decision `cm` applied: the state it kept after it (and those before), and the plan it printed then. */
+/** A decision `cm` applied: the state it kept after it (and those before) in its own folder, and the plan it printed then. */
 interface AppliedDecision {
   decision: DirectoryDecision;
+  folder: string;
   state: MergeStateFiles;
   plan: PrintedMergePlan;
 }
@@ -65,7 +66,11 @@ interface DecidedMergeState {
  */
 export class DirectoryDecisions {
   private readonly merges = new Map<string, DecidedMergeState>();
-  /** The last merges previewed, by `mergeKey`: a page's first decision starts from the merge it shows. */
+  /**
+   * The last merges previewed, by `mergeKey`, not by page: a page's first decision starts from the merge it shows (two
+   * pages of the same merge, from the newer preview). Should it be out of date, `cm` finds the merge changed
+   * (`resolve`).
+   */
   private readonly previews = new Map<string, MergePlan>();
 
   constructor(
@@ -92,11 +97,6 @@ export class DirectoryDecisions {
     const applying = merge.queue.then(() => this.apply(merge, workspacePath, request, decisions));
     merge.queue = applying.catch(() => undefined);
     return applying;
-  }
-
-  /** The state `cm` kept after the page's decisions; none before any decision. */
-  stateOf(id: string): MergeStateFiles | undefined {
-    return this.merges.get(id)?.applied.at(-1)?.state;
   }
 
   /**
@@ -142,8 +142,8 @@ export class DirectoryDecisions {
       if (index < 0) continue;
       applied.push(await this.resolve(merge, workspacePath, request, applied.at(-1)?.state, { conflict: conflicts[index]!, resolution: decision.resolution }, index));
     }
-    // The states of the decisions applied again are left: a merge never runs on them.
-    for (const cut of merge.applied.filter((step) => !applied.includes(step))) void removeTempDirectory(dirname(cut.state.solved));
+    // The states of the decisions applied again go: a merge never runs on them.
+    await Promise.all(merge.applied.filter((step) => !applied.includes(step)).map((cut) => removeTempDirectory(cut.folder)));
     merge.applied = applied;
 
     const initial = await this.initialOf(merge, workspacePath, request);
@@ -180,7 +180,13 @@ export class DirectoryDecisions {
 
     const args = [...mergePlanArgs(request), ...mergeStateArgs(state), ...resolveConflictArgs(index, decision.resolution)];
     const plan = mergePlanOf(await this.cm.queryRecords(args, readFields, { cwd: workspacePath }));
-    return { decision, state, plan };
+    // `cm` drops the conflict it resolved from the list it prints. One still listed means it resolved another: the
+    // merge changed since the list the number came from (a preview out of date, someone checked in meanwhile).
+    const decided = directoryConflictIdentity(decision.conflict);
+    if (plan.directoryConflicts.some((conflict) => directoryConflictIdentity(conflict) === decided)) {
+      throw new Error('The merge changed since it was calculated. Review it again.');
+    }
+    return { decision, folder, state, plan };
   }
 }
 
