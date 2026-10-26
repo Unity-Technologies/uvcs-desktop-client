@@ -8,6 +8,7 @@ import { menuAction } from '../../components/menuWords';
 import type { MenuEntry } from '../../lib/actions';
 import type { GroupedEntry } from '../../lib/menuGroups';
 import { annotatedHistory } from '../history/annotatedHistory';
+import { fileConflictKey } from './conflictedFiles';
 import { suggestRename } from './directoryConflicts/renameSuggestion';
 import { fileStateOf, type MergeItem, type MergeProgress } from './mergeItems';
 import { conflictMenuEntries, withConflictOpening, type ConflictMenuContext } from './resolve/conflictMenuEntries';
@@ -63,7 +64,7 @@ function changedFileOf(item: MergeItem, { request, plan, progress, itemTypeOf }:
   switch (item.kind) {
     case 'fileConflict': {
       const { source } = item.file;
-      const incomingChangeset = plan.fileConflicts.find((conflict) => conflict.path === item.file.key)?.sourceChangeset;
+      const incomingChangeset = plan.fileConflicts.find((conflict) => fileConflictKey(conflict) === item.file.key)?.sourceChangeset;
       return {
         path: item.path,
         history,

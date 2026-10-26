@@ -9,7 +9,7 @@ import type { ConflictedFile } from './resolve/useFileConflicts';
  */
 export function conflictedFilesOf(plan: MergePlan, request: MergeRequest): ConflictedFile[] {
   return plan.fileConflicts.map((conflict) => ({
-    key: conflict.path,
+    key: fileConflictKey(conflict),
     path: conflict.path.replace(/^\//, ''),
     base: hasMergeBase(conflict) ? versionAt(conflict, baseVersionSpec(conflict)) : { kind: 'empty' },
     ...(hasMergeBase(conflict) && { baseName: `cs:${conflict.baseChangeset}` }),
@@ -18,6 +18,14 @@ export function conflictedFilesOf(plan: MergePlan, request: MergeRequest): Confl
     ...(conflict.destinationIsBinary && { isKnownBinary: true }),
     ...(request.kind === 'subtractive' && hasMergeBase(conflict) && { baseIsUndoneChange: true }),
   }));
+}
+
+/**
+ * What the merge page keys a conflicting file by: its item, in its repository, never its path. A directory decision
+ * can move the file (a folder moved apart on both sides: `DirectoryDecisions`), and its decision moves with it.
+ */
+export function fileConflictKey({ itemId, repository }: Pick<FileConflict, 'itemId' | 'repository'>): string {
+  return `${itemId}@${repository}`;
 }
 
 function versionAt(conflict: FileConflict, versionSpec: string): ContentSource {

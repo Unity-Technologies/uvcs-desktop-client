@@ -1,4 +1,5 @@
 import type { FileConflictResolution, MergePlan, MergeResolutions } from '@shared/domain/merge';
+import { fileConflictKey } from './conflictedFiles';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
 interface CollectResolutionsInput {
@@ -16,10 +17,13 @@ interface CollectResolutionsInput {
 export function collectResolutions({ plan, fileStates, directoryDecisionsId, comment }: CollectResolutionsInput): MergeResolutions | null {
   if (plan.directoryConflicts.length > 0) return null;
 
+  // Sent by the path the plan names the file at now; the page keys it by its item (`fileConflictKey`).
+  const states = new Map(fileStates.map((state) => [state.file.key, state]));
   const files: Record<string, FileConflictResolution> = {};
-  for (const state of fileStates) {
-    if (!state.resolution) return null;
-    files[state.file.key] = state.resolution;
+  for (const conflict of plan.fileConflicts) {
+    const resolution = states.get(fileConflictKey(conflict))?.resolution;
+    if (!resolution) return null;
+    files[conflict.path] = resolution;
   }
 
   return { ...(directoryDecisionsId !== undefined && { directoryDecisionsId }), files, comment };

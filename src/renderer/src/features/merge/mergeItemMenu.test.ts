@@ -9,6 +9,7 @@ import { externalAppsKey } from '../../components/externalApps/externalApps';
 import type { DirectoryConflict, MergePlan, MergeRequest } from '@shared/domain/merge';
 import { isSubmenu, type Action, type MenuEntry, type Submenu } from '../../lib/actions';
 import { SERVER_ROLES, WORKSPACE_ROLES, type MergeLabels } from './mergeDescription';
+import { fileConflictKey } from './conflictedFiles';
 import { mergeProgress, type MergeItem } from './mergeItems';
 import { mergeItemMenu, type MergeMenuContext } from './mergeItemMenu';
 import type { Merger } from './mergeTools/mergeToolFor';
@@ -16,10 +17,13 @@ import type { FileConflictState } from './resolve/useFileConflicts';
 
 const labels: MergeLabels = { source: '/main/task', destination: '/main', roles: WORKSPACE_ROLES };
 const request: MergeRequest = { kind: 'merge', sourceSpec: 'br:/main/task' };
+const conflictInPlan = { path: '/src/a.ts', sourceChangeset: 11, itemId: 7, repository: 'game@local' };
 const plan = {
   contributors: { source: { changesetId: 12, branch: '/main/task' }, destination: { changesetId: 10, branch: '/main' } },
-  fileConflicts: [{ path: '/src/a.ts', sourceChangeset: 11 }],
+  fileConflicts: [conflictInPlan],
 } as MergePlan;
+/** A conflicting file's key on the page (`fileConflictKey`): the plan's item for src/a.ts, any other a key of its own. */
+const keyOf = (path: string): string => (`/${path}` === conflictInPlan.path ? fileConflictKey(conflictInPlan) : `/${path}`);
 const vscode: MergeTool = { id: 'vscode', name: 'Visual Studio Code', canBringToFront: true } as MergeTool;
 const vscodeMerger: Merger = { kind: 'tool', tool: vscode };
 
@@ -29,7 +33,7 @@ const versions = {
   destination: { kind: 'spec', spec: 'itemid:7#cs:10@game@local', fileName: '/src/a.ts' },
 } as const;
 const conflictState = (path: string, more: Partial<FileConflictState> = {}): FileConflictState =>
-  ({ file: { key: `/${path}`, path, ...versions }, status: 'ready', isBinary: false, decidedByUser: false, resolution: null, ...more }) as FileConflictState;
+  ({ file: { key: keyOf(path), path, ...versions }, status: 'ready', isBinary: false, decidedByUser: false, resolution: null, ...more }) as FileConflictState;
 /** An item the menu acts on, with its state when it is a conflicting file: the page's progress holds it. */
 interface Listed {
   item: MergeItem;
@@ -120,7 +124,7 @@ describe('mergeItemMenu', () => {
     const menu = menuOf([conflict('src/a.ts', { decidedByUser: true })], { resolveIn });
     expect((entry(menu, 'resolveIn') as Action).label).toBe('Resolve in Visual Studio Code');
     (entry(menu, 'resolveIn') as Action).run();
-    expect(resolveIn).toHaveBeenCalledWith('/src/a.ts', vscodeMerger);
+    expect(resolveIn).toHaveBeenCalledWith(keyOf('src/a.ts'), vscodeMerger);
     expect(ids(menu)).toContain('startOver');
   });
 
