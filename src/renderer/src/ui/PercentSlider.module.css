@@ -1,0 +1,18 @@
+.slider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  color: var(--text-secondary);
+}
+
+.slider input {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.value {
+  width: 36px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

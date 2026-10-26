@@ -14,6 +14,7 @@ import {
   isAffectedByServerMerge,
   isAffectedByPendingChangeEdit,
   isAffectedByPermissions,
+  isAffectedByRecordedMove,
   isAffectedByRestoredItems,
   isAffectedByShelveApplied,
   isAffectedByShelveDeletion,
@@ -127,6 +128,13 @@ describe('refresh scopes', () => {
     expect(isAffectedByPendingChangeEdit(key('locks', {}))).toBe(true);
     expect(isAffectedByPendingChangeEdit(key('shelves', { owners: ['me'] }))).toBe(false);
     expect(isAffectedByPendingChangeEdit(key('history', 'a.txt'))).toBe(false);
+  });
+
+  it('refreshes the workspace, not its locks nor the repository, when a move is recorded by hand', () => {
+    expect(isAffectedByRecordedMove(key('pendingChanges'))).toBe(true);
+    expect(isAffectedByRecordedMove(key('explorer', 'allPaths'))).toBe(true);
+    expect(isAffectedByRecordedMove(key('locks', {}))).toBe(false);
+    expect(isAffectedByRecordedMove(key('history', 'a.txt'))).toBe(false);
   });
 
   it('refreshes the workspace, not its locks nor the repository, when deleted items are restored', () => {

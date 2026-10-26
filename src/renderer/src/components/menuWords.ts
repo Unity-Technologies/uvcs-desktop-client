@@ -24,6 +24,7 @@ import {
   FileClock,
   FileDiff,
   FileDown,
+  FileSearch,
   FilePlus,
   Files,
   Filter,
@@ -166,6 +167,8 @@ export const MENU_WORDS = {
   restore: word('act', ArchiveRestore),
   restoreTo: word('act', FolderInput, 'Restore to…'),
   add: word('act', Plus),
+  // An item deleted from disk and a new one paired by hand as one moved item (`pickMoveMatch`).
+  searchMatches: word('act', FileSearch, 'Search matches…'),
   checkout: word('act', PenLine, 'Check out'),
   status: word('act', CircleDot, 'Set status'),
   assign: word('act', UserPlus, 'Assign reviewer…'),
