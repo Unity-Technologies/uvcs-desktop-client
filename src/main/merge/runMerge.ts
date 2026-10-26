@@ -3,7 +3,6 @@ import { basename, join } from 'node:path';
 import {
   baseVersionSpec,
   sourceVersionSpec,
-  type DirectoryConflictResolution,
   type FileConflictResolution,
   type MergePlan,
   type MergeRequest,
@@ -12,8 +11,7 @@ import {
 } from '@shared/domain/merge';
 import { catArgs, catBatchesOf, explainCatFailure, type CatRead } from '../cm/catBatches';
 import type { CmClient } from '../cm/CmClient';
-import { createdChangesetOf, destinationMovedIn, mergeOutcomeRecordOf, mergePlanOf } from '../cm/mergeOutput';
-import { directoryConflictIdentity } from '@shared/domain/directoryConflictIdentity';
+import { createdChangesetOf, destinationMovedIn, mergeOutcomeRecordOf } from '../cm/mergeOutput';
 import { readMergeProgress } from '../cm/progress/mergeProgress';
 import { withTempDirectory } from '../files/tempFile';
 import { retryWhileBusy } from '../files/whileBusy';
@@ -22,11 +20,13 @@ import type { OperationContext } from '../operations/OperationTracker';
 import { fileConflictResolutionsFile } from './fileConflictResolutionsFile';
 import { fileConflictArgs, MACHINE_READABLE_ARGS, mergeSourceArgs } from './mergeArgs';
 import { assertResolutionsComplete, describeUnmergeablePlan } from './mergeRules';
+import { copyMergeState, mergeStateArgs, mergeStateFilesIn, type MergeStateFiles } from './mergeStateFiles';
 import { previewMerge } from './previewMerge';
 
 /**
  * Runs a merge with the user's decisions:
- * 1. Directory conflicts are solved one by one with `--resolveconflict`; `cm` keeps the decisions in state files.
+ * 1. The directory conflicts were decided on the page as they came, each applied by `cm` to its state files
+ *    (`DirectoryDecisions`): `decided` holds them, and the merge goes on from a copy of it.
  * 2. The final `cm merge --merge` applies everything. Every conflicting file has a decision (see `fileConflictArgs`),
  *    so nothing is decided behind the user's back and no external merge tool opens. A merge into a server branch
  *    takes each file's decision from a resolutions file (`fileConflictResolutionsFile`).
@@ -34,7 +34,8 @@ import { previewMerge } from './previewMerge';
  *    or base's text as the page read it, or else (binaries) that revision, all with one `cm cat`. A version that can't
  *    be saved leaves its file as yours, named in the result (`keptVersionNotSaved`, or `keptVersionMaybeNotSaved` when `cm`
  *    didn't tell): the merge is in the workspace by then.
- * If anything looks different from the plan the user reviewed, it stops before changing the workspace.
+ * It previews the merge again on those decisions first, and stops before changing the workspace when a conflict has
+ * no decision.
  */
 export async function runMerge(
   cm: CmClient,
@@ -42,13 +43,16 @@ export async function runMerge(
   request: MergeRequest,
   resolutions: MergeResolutions,
   context: OperationContext,
+  decided?: MergeStateFiles,
 ): Promise<MergeResult> {
-  const plan = await previewMerge(cm, workspacePath, request);
-  const unmergeable = describeUnmergeablePlan(plan);
-  if (unmergeable) throw new Error(unmergeable);
-  assertResolutionsComplete(plan, resolutions);
-
   return withTempDirectory(async (directory) => {
+    const state = mergeStateFilesIn(directory);
+    if (decided) await copyMergeState(decided, state);
+    const plan = await previewMerge(cm, workspacePath, request, decided && { state });
+    const unmergeable = describeUnmergeablePlan(plan);
+    if (unmergeable) throw new Error(unmergeable);
+    assertResolutionsComplete(plan, resolutions);
+
     const commentsFile = join(directory, 'comment.txt');
     const fileConflictResolutionsPath = join(directory, 'file-conflict-resolutions.json');
     if (request.destinationBranch) {
@@ -63,25 +67,18 @@ export async function runMerge(
       ...fileConflictArgs(request, plan, fileConflictResolutionsPath),
       '--nointeractiveresolution',
       ...MACHINE_READABLE_ARGS,
-      `--mergeresultfile=${join(directory, 'result')}`,
-      `--solvedconflictsfile=${join(directory, 'solved')}`,
+      ...mergeStateArgs(state),
       ...(request.destinationBranch ? [`--commentsfile=${commentsFile}`] : []),
     ];
-    /** Runs the merge, its progress read from its lines as they arrive, and keeps the records that tell how it ended. */
-    const run = async (args: string[]): Promise<string[][]> => {
-      const outcome: string[][] = [];
-      const progress = context.progressOf(readMergeProgress);
-      const onOutputLine = (line: string): void => {
-        progress(line);
-        const record = mergeOutcomeRecordOf(line);
-        if (record) outcome.push(record);
-      };
-      await cm.execute(args, { cwd: workspacePath, signal: context.signal, onOutputLine });
-      return outcome;
+    const outcome: string[][] = [];
+    const progress = context.progressOf(readMergeProgress);
+    // The merge's progress is read from its lines as they arrive, and the records that tell how it ended are kept.
+    const onOutputLine = (line: string): void => {
+      progress(line);
+      const record = mergeOutcomeRecordOf(line);
+      if (record) outcome.push(record);
     };
-
-    await resolveDirectoryConflicts(plan, resolutions.directoryConflicts, (resolution) => run([...mergeArgs, ...resolveConflictArgs(resolution)]));
-    const outcome = await run(mergeArgs);
+    await cm.execute(mergeArgs, { cwd: workspacePath, signal: context.signal, onOutputLine });
 
     if (request.destinationBranch) {
       return { changesetId: createdChangesetOf(outcome), ...(destinationMovedIn(outcome) && { destinationMoved: true }) };
@@ -120,34 +117,6 @@ async function writeServerFileConflictResolutions(
     });
   }
   await writeFile(fileConflictResolutionsPath, json, 'utf8');
-}
-
-/** `cm` numbers the remaining conflicts on each run, so the next one to solve is always number 1. */
-async function resolveDirectoryConflicts(
-  plan: MergePlan,
-  resolutions: DirectoryConflictResolution[],
-  solveNext: (resolution: DirectoryConflictResolution) => Promise<string[][]>,
-): Promise<void> {
-  for (const [index, resolution] of resolutions.entries()) {
-    const outcome = await solveNext(resolution);
-    const remaining = mergePlanOf(outcome).directoryConflicts.map(directoryConflictIdentity);
-    const expected = plan.directoryConflicts.slice(index + 1).map(directoryConflictIdentity);
-    if (remaining.join('\n') !== expected.join('\n')) {
-      throw new Error('The merge changed while solving its directory conflicts, so nothing was merged. Review it again.');
-    }
-  }
-}
-
-function resolveConflictArgs(resolution: DirectoryConflictResolution): string[] {
-  const common = ['--resolveconflict', '--conflict=1'];
-  switch (resolution.choice) {
-    case 'source':
-      return [...common, '--resolutionoption=src'];
-    case 'destination':
-      return [...common, '--resolutionoption=dst'];
-    case 'rename':
-      return [...common, '--resolutionoption=rename', `--resolutioninfo=${resolution.newName}`];
-  }
 }
 
 /**

@@ -1,17 +1,20 @@
-import { directoryConflictDecided, type DirectoryConflictResolution, type FileConflictResolution, type MergePlan, type MergeResolutions } from '@shared/domain/merge';
+import type { FileConflictResolution, MergePlan, MergeResolutions } from '@shared/domain/merge';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
 interface CollectResolutionsInput {
   plan: MergePlan;
   fileStates: FileConflictState[];
-  directoryResolutions: readonly (DirectoryConflictResolution | undefined)[];
+  /** The page's directory decisions, applied as they're made (`decideDirectoryConflicts`): the merge goes on from them. */
+  directoryDecisionsId?: string;
   comment?: string;
 }
 
-/** Everything the merge needs, or null while any conflict still waits for the user. */
-export function collectResolutions({ plan, fileStates, directoryResolutions, comment }: CollectResolutionsInput): MergeResolutions | null {
-  const directoryConflicts = plan.directoryConflicts.map((_, index) => directoryResolutions[index]);
-  if (directoryConflicts.some((resolution) => !directoryConflictDecided(resolution))) return null;
+/**
+ * Everything the merge needs, or null while any conflict still waits for the user: a directory conflict the plan still
+ * lists has no decision, as each one decided is applied and leaves it.
+ */
+export function collectResolutions({ plan, fileStates, directoryDecisionsId, comment }: CollectResolutionsInput): MergeResolutions | null {
+  if (plan.directoryConflicts.length > 0) return null;
 
   const files: Record<string, FileConflictResolution> = {};
   for (const state of fileStates) {
@@ -19,5 +22,5 @@ export function collectResolutions({ plan, fileStates, directoryResolutions, com
     files[state.file.key] = state.resolution;
   }
 
-  return { directoryConflicts: directoryConflicts as DirectoryConflictResolution[], files, comment };
+  return { ...(directoryDecisionsId !== undefined && { directoryDecisionsId }), files, comment };
 }

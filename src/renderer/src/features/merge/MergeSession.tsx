@@ -79,7 +79,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   const latestRowKeyOf = useRef(rowKeyOf);
   latestRowKeyOf.current = rowKeyOf;
   const conflictStatuses = useMemo(() => items.map((item) => conflictStatusOf(item, progress)).filter((status) => status !== null), [items, progress]);
-  const resolutions = collectResolutions({ plan, fileStates, directoryResolutions, comment });
+  const resolutions = collectResolutions({ plan, fileStates, comment });
   const selected = mergeItemAt(items, rows, selectedKey);
   const selectedGroup = selected ? undefined : rows.filter(isHeaderRow).find((row) => row.key === selectedKey);
   // The list follows the keys at once; the file behind it (a few hundred ms to highlight a file of a few thousand

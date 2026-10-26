@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DirectoryConflict, MergePlan } from '@shared/domain/merge';
-import { assertResolutionsComplete, describeUnmergeablePlan } from './mergeRules';
+import { assertDecisionValid, assertResolutionsComplete, describeUnmergeablePlan } from './mergeRules';
 
 function directoryConflict(type: DirectoryConflict['type']): DirectoryConflict {
   const side = { operation: 'added' as const, path: '/twin.txt', description: 'Added /twin.txt' };
@@ -16,40 +16,39 @@ const plan: MergePlan = {
 };
 
 describe('assertResolutionsComplete', () => {
-  it('accepts a decision for every conflict', () => {
-    expect(() =>
-      assertResolutionsComplete(plan, {
-        directoryConflicts: [{ choice: 'rename', newName: 'twin-dst.txt' }],
-        files: { '/a.txt': { choice: 'text', text: 'merged' } },
-      }),
-    ).not.toThrow();
+  const decided: MergePlan = { ...plan, directoryConflicts: [] };
+
+  it('accepts a decision for every file conflict once no directory conflict is left', () => {
+    expect(() => assertResolutionsComplete(decided, { files: { '/a.txt': { choice: 'text', text: 'merged' } } })).not.toThrow();
   });
 
   it('refuses when a file conflict has no decision', () => {
-    expect(() => assertResolutionsComplete(plan, { directoryConflicts: [{ choice: 'source' }], files: {} })).toThrow(/a\.txt/);
+    expect(() => assertResolutionsComplete(decided, { files: {} })).toThrow(/a\.txt/);
   });
 
   it('refuses to keep the base of a file added on both sides, which has none', () => {
-    const addedOnBoth = { ...plan, directoryConflicts: [], fileConflicts: [{ ...plan.fileConflicts[0]!, baseChangeset: -1 }] };
-    expect(() => assertResolutionsComplete(addedOnBoth, { directoryConflicts: [], files: { '/a.txt': { choice: 'base' } } })).toThrow(/a\.txt has no base/);
-    expect(() => assertResolutionsComplete(plan, { directoryConflicts: [{ choice: 'source' }], files: { '/a.txt': { choice: 'base' } } })).not.toThrow();
+    const addedOnBoth = { ...decided, fileConflicts: [{ ...plan.fileConflicts[0]!, baseChangeset: -1 }] };
+    expect(() => assertResolutionsComplete(addedOnBoth, { files: { '/a.txt': { choice: 'base' } } })).toThrow(/a\.txt has no base/);
+    expect(() => assertResolutionsComplete(decided, { files: { '/a.txt': { choice: 'base' } } })).not.toThrow();
   });
 
-  it('refuses when directory conflicts are missing decisions', () => {
-    expect(() => assertResolutionsComplete(plan, { directoryConflicts: [], files: { '/a.txt': { choice: 'source' } } })).toThrow();
+  it('refuses while a directory conflict is left: its decision is applied as it is made, so it has none', () => {
+    expect(() => assertResolutionsComplete(plan, { files: { '/a.txt': { choice: 'source' } } })).toThrow(/directory conflict/);
+  });
+});
+
+describe('assertDecisionValid', () => {
+  it('takes keeping one side of any conflict, and both items under a name', () => {
+    expect(() => assertDecisionValid({ conflict: directoryConflict('deleteMove'), resolution: { choice: 'source' } })).not.toThrow();
+    expect(() => assertDecisionValid({ conflict: directoryConflict('evilTwin'), resolution: { choice: 'rename', newName: 'twin-dst.txt' } })).not.toThrow();
   });
 
   it('refuses renames that are not file names', () => {
-    expect(() =>
-      assertResolutionsComplete(plan, { directoryConflicts: [{ choice: 'rename', newName: 'sub/x.txt' }], files: { '/a.txt': { choice: 'source' } } }),
-    ).toThrow(/not a valid name/);
+    expect(() => assertDecisionValid({ conflict: directoryConflict('evilTwin'), resolution: { choice: 'rename', newName: 'sub/x.txt' } })).toThrow(/not a valid name/);
   });
 
   it('refuses renames for conflicts that cannot keep both items', () => {
-    const deleteMove = { ...plan, directoryConflicts: [directoryConflict('deleteMove')] };
-    expect(() =>
-      assertResolutionsComplete(deleteMove, { directoryConflicts: [{ choice: 'rename', newName: 'x.txt' }], files: { '/a.txt': { choice: 'source' } } }),
-    ).toThrow(/not possible/);
+    expect(() => assertDecisionValid({ conflict: directoryConflict('deleteMove'), resolution: { choice: 'rename', newName: 'x.txt' } })).toThrow(/not possible/);
   });
 });
 

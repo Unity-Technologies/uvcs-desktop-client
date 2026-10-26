@@ -13,11 +13,8 @@ export function describeUnmergeablePlan(plan: MergePlan): string | null {
 
 /** Refuses to merge unless every conflict has a valid decision, so no file is left half-merged. */
 export function assertResolutionsComplete(plan: MergePlan, resolutions: MergeResolutions): void {
-  if (resolutions.directoryConflicts.length !== plan.directoryConflicts.length) {
-    throw new Error('Every directory conflict needs a decision before merging.');
-  }
-
-  plan.directoryConflicts.forEach((conflict, index) => assertDecisionValid({ conflict, resolution: resolutions.directoryConflicts[index]! }));
+  // Directory decisions are applied as they're made (`DirectoryDecisions`): a conflict left is one without.
+  if (plan.directoryConflicts.length > 0) throw new Error('Every directory conflict needs a decision before merging.');
 
   const unresolved = plan.fileConflicts.filter((conflict) => !resolutions.files[conflict.path]);
   if (unresolved.length > 0) throw new Error(`Resolve ${unresolved.map((conflict) => conflict.path).join(', ')} before merging.`);

@@ -156,8 +156,11 @@ export interface DecidedMerge {
 }
 
 export interface MergeResolutions {
-  /** One per directory conflict, in the plan's order. */
-  directoryConflicts: DirectoryConflictResolution[];
+  /**
+   * The merge page's directory decisions (`decideDirectoryConflicts`), applied already: the merge goes on from them.
+   * None while the merge has no directory conflict decided.
+   */
+  directoryDecisionsId?: string;
   /** Keyed by file conflict path. Every file conflict needs one. */
   files: Record<string, FileConflictResolution>;
   /** Changeset comment, for merges into a branch on the server. */

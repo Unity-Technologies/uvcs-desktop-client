@@ -3,6 +3,7 @@ import { app } from 'electron';
 import type { MergeApi } from '@shared/api/merge';
 import type { MergeRequest } from '@shared/domain/merge';
 import { readIncomingChangesetPage, readIncomingChanges, readIncomingSummary } from '../merge/incoming';
+import { DirectoryDecisions } from '../merge/directoryDecisions';
 import { findMergedInto } from '../merge/mergedInto';
 import { previewMerge } from '../merge/previewMerge';
 import { runMerge } from '../merge/runMerge';
@@ -12,12 +13,16 @@ import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 export function createMergeService({ cm, operations, workspaceCopies }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): MergeApi {
   const backupsRoot = join(app.getPath('userData'), 'update-backups');
+  const directoryDecisions = new DirectoryDecisions(cm, workspaceCopies);
 
   return {
     preview: (workspacePath, request) => previewMerge(cm, workspacePath, request, { copies: workspaceCopies }),
+    decideDirectoryConflicts: (workspacePath, request, decisionsId, decisions) => directoryDecisions.decide(workspacePath, request, decisionsId, decisions),
+    discardDirectoryDecisions: (decisionsId) => directoryDecisions.discard(decisionsId),
     run: (workspacePath, request, resolutions, operationId) =>
       operations.run(operationId, async (context) => {
-        const result = await runMerge(cm, workspacePath, request, resolutions, context);
+        const decided = resolutions.directoryDecisionsId === undefined ? undefined : directoryDecisions.stateOf(resolutions.directoryDecisionsId);
+        const result = await runMerge(cm, workspacePath, request, resolutions, context, decided);
         // A shelve applied from the merge view (its conflicts resolved): what shelving it away took comes back, and a
         // shelve of left changes, or one to apply and delete, is done.
         const appliedShelve = shelveAppliedToWorkspace(request);

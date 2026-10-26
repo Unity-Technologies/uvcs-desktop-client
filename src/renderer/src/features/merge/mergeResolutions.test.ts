@@ -29,20 +29,18 @@ const automatic = state('/auto.txt', { mergedAutomatically: true, resolution: { 
 const manual = state('/manual.txt', { remainingConflicts: 1 });
 
 describe('collectResolutions', () => {
-  it('waits until every conflict is decided', () => {
-    expect(collectResolutions({ plan, fileStates: [automatic], directoryResolutions: [undefined] })).toBeNull();
-    expect(collectResolutions({ plan, fileStates: [automatic, manual], directoryResolutions: [{ choice: 'source' }] })).toBeNull();
+  const decided: MergePlan = { ...plan, directoryConflicts: [] };
+
+  it('waits until every conflict is decided: a directory conflict still listed has no decision applied', () => {
+    expect(collectResolutions({ plan, fileStates: [automatic] })).toBeNull();
+    expect(collectResolutions({ plan: decided, fileStates: [automatic, manual] })).toBeNull();
+    expect(collectResolutions({ plan: decided, fileStates: [automatic] })).not.toBeNull();
   });
 
-  it('waits while "Keep both" has no name the merge can take', () => {
-    for (const newName of ['', 'a/b', '..']) expect(collectResolutions({ plan, fileStates: [automatic], directoryResolutions: [{ choice: 'rename', newName }] })).toBeNull();
-    expect(collectResolutions({ plan, fileStates: [automatic], directoryResolutions: [{ choice: 'rename', newName: 't (task).txt' }] })).not.toBeNull();
-  });
-
-  it("collects each file's own decision, in a workspace merge or into a server branch alike", () => {
-    const decided = state('/manual.txt', { decidedByUser: true, resolution: { choice: 'destination' } });
-    expect(collectResolutions({ plan, fileStates: [automatic, decided], directoryResolutions: [{ choice: 'source' }], comment: 'Merge' })).toEqual({
-      directoryConflicts: [{ choice: 'source' }],
+  it("collects each file's own decision, and the directory decisions the merge goes on from", () => {
+    const manualDecided = state('/manual.txt', { decidedByUser: true, resolution: { choice: 'destination' } });
+    expect(collectResolutions({ plan: decided, fileStates: [automatic, manualDecided], directoryDecisionsId: 'page-1', comment: 'Merge' })).toEqual({
+      directoryDecisionsId: 'page-1',
       files: { '/auto.txt': { choice: 'text', text: 'merged' }, '/manual.txt': { choice: 'destination' } },
       comment: 'Merge',
     });
