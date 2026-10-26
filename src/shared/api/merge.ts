@@ -8,7 +8,8 @@ export interface MergeApi {
    * Applies the merge page's directory decisions, in order, as the user makes them, and returns the merge calculated
    * again on them: a decision can move, remove or add file conflicts and changes. Nothing in the workspace changes.
    * `decisionsId` names the page's decisions, kept until `discardDirectoryDecisions`; the merge goes on from them
-   * (`MergeResolutions.directoryDecisionsId`). A decision whose conflict an earlier one took out of the merge is dropped.
+   * (`MergeResolutions.directoryDecisionsId`). A decision whose conflict an earlier one took out of the merge, or moved
+   * (it's then another conflict, decided again), is dropped.
    */
   decideDirectoryConflicts(workspacePath: string, request: MergeRequest, decisionsId: string, decisions: DirectoryDecision[]): Promise<DecidedMerge>;
   /** Forgets a merge page's directory decisions: the page closed. */

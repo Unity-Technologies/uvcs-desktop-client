@@ -315,14 +315,19 @@ and their decisions went to paths a decision had moved.
   merge…", every choice waits, and the merge can't complete.
 - Each decision's state is kept in a folder of its own, a copy of the one before plus that decision: `cm` can't take a
   decision back, so changing one goes on from the state before it and applies again the decisions after it. A
-  decision whose conflict an earlier one took out of the merge is dropped, and a toast says so
+  decision whose conflict an earlier one took out of the merge, or moved (a conflict inside a folder whose move was
+  decided again is another conflict, by its paths), is dropped, and a toast says so
   (`droppedDecisionsToast`). Deciding a conflict the way it's decided already runs nothing (`isDecidedAs`).
 - A decided conflict is no longer in `cm`'s list: it stays listed from the decisions, under the same key
   (`buildMergeItems`, `directory:<identity>`), with its decision as status.
 - A file conflict keeps its decision when a decision moves it: the page keys it by its item in its repository
   (`fileConflictKey`), never its path, and sends its decision by the path the plan names now (`collectResolutions`).
-  Its repository and destination revision stay those the merge read before any decision (`withConflictRepositories`'
-  `known`): its new path may be one the destination's tree doesn't hold (`cm ls` of it fails).
+  Its repository, destination revision and path in the destination stay those the merge read before any decision
+  (`withConflictRepositories`' `known`, `FileConflict.destinationPath`): its new path may be one the destination's tree
+  doesn't hold (`cm ls` of it fails), and its versions, named by `destinationPath`, aren't read again. Completing the
+  merge takes them too (`DirectoryDecisions.runOn`), on the page's own decisions only, held while it runs.
+- The first decision starts from the merge the page previewed (`DirectoryDecisions.previewed`), so the merge is
+  calculated once more per decision, never twice.
 - The page names its decisions with an id of its own; the main process keeps them in a temporary folder until the
   page closes (`discardDirectoryDecisions`), and a session that dies leaves it for the next start to delete
   (`removeLeftOverTempDirectories`).
