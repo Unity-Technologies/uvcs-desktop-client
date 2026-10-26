@@ -186,6 +186,20 @@ describe('DirectoryDecisions', () => {
     expect(await readFile(decisions.stateOf('page-1')!.solved, 'utf8')).toBe('EVIL src\n');
   });
 
+  it('leaves the decisions applied as they were when changing one fails, as the page still shows them', async () => {
+    const { cm, commands } = decidingCm();
+    const decisions = new DirectoryDecisions(cm);
+    await decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(addedTwice, { choice: 'destination' })]);
+
+    await expect(decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(addedTwice, { choice: 'rename', newName: 'taken' })])).rejects.toThrow('The name is taken.');
+    commands.length = 0;
+    const decided = await decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(addedTwice, { choice: 'destination' })]);
+
+    expect(await readFile(decisions.stateOf('page-1')!.solved, 'utf8')).toBe('EVIL dst\n');
+    expect(resolving(commands)).toEqual([]);
+    expect(decided.decisions).toEqual([decision(addedTwice, { choice: 'destination' })]);
+  });
+
   it("runs the merge on the page's decisions: the state cm kept and the file conflicts as listed before any decision", async () => {
     const { cm } = decidingCm();
     const decisions = new DirectoryDecisions(cm);
