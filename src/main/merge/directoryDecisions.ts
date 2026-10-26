@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { directoryConflictIdentity } from '@shared/domain/directoryConflictIdentity';
-import type { DecidedMerge, DirectoryConflictResolution, DirectoryDecision, MergePlan, MergeRequest } from '@shared/domain/merge';
+import type { DecidedMerge, DirectoryConflictResolution, DirectoryDecision, FileConflict, MergePlan, MergeRequest } from '@shared/domain/merge';
 import type { CmClient } from '../cm/CmClient';
 import { readFields } from '../cm/formatRecords';
 import { mergePlanOf, type PrintedMergePlan } from '../cm/mergeOutput';
@@ -12,6 +12,16 @@ import { mergePlanArgs } from './mergeArgs';
 import { assertDecisionValid } from './mergeRules';
 import { copyMergeState, mergeStateArgs, mergeStateFilesIn, type MergeStateFiles } from './mergeStateFiles';
 import { previewMerge, readMergePlan } from './previewMerge';
+
+/**
+ * What a merge goes on from once directory decisions were applied (`runMerge`): the state `cm` kept after them, and the
+ * file conflicts as the merge listed them before any decision, which the decisions may have moved to a path the
+ * destination's tree doesn't hold but never changed (`withConflictRepositories`' `known`).
+ */
+export interface AppliedDirectoryDecisions {
+  state: MergeStateFiles;
+  known: readonly FileConflict[];
+}
 
 /** A decision `cm` applied: the state it kept after it (and those before), and the plan it printed then. */
 interface AppliedDecision {
@@ -33,7 +43,10 @@ interface DecidedMergeState {
   initial?: MergePlan;
   /** Folders made so far, to name the next one. */
   folders: number;
-  /** Decisions are applied one batch after the other: each starts from the state the one before left. */
+  /**
+   * Decisions are applied one batch after the other, each starting from the state the one before left, and a merge
+   * running on them holds them until it ends (`runOn`).
+   */
   queue: Promise<unknown>;
 }
 
@@ -58,18 +71,35 @@ export class DirectoryDecisions {
   /** Applies `decisions`, in order, to the merge the page `id` shows, and returns the merge recalculated on them. */
   decide(workspacePath: string, request: MergeRequest, id: string, decisions: DirectoryDecision[]): Promise<DecidedMerge> {
     decisions.forEach(assertDecisionValid);
-    const merge = this.mergeOf(id, JSON.stringify([workspacePath, request]));
+    const merge = this.mergeOf(id, mergeKey(workspacePath, request));
     const applying = merge.queue.then(() => this.apply(merge, workspacePath, request, decisions));
     merge.queue = applying.catch(() => undefined);
     return applying;
   }
 
-  /** The state `cm` kept after the page's decisions, for the merge to go on from; none before any decision. */
+  /** The state `cm` kept after the page's decisions; none before any decision. */
   stateOf(id: string): MergeStateFiles | undefined {
     return this.merges.get(id)?.applied.at(-1)?.state;
   }
 
-  /** Forgets the page's decisions and deletes their folder, once a decision being applied ends. */
+  /**
+   * Runs `work` (the merge) on the page `id`'s decisions, once a decision being applied ends, and holds them until it
+   * ends, even if the page closes meanwhile. None (`undefined`) before any decision. Refuses decisions made for
+   * another merge: the merge would run on that one's state.
+   */
+  runOn<T>(id: string | undefined, workspacePath: string, request: MergeRequest, work: (decided: AppliedDirectoryDecisions | undefined) => Promise<T>): Promise<T> {
+    const merge = id === undefined ? undefined : this.merges.get(id);
+    if (!merge) return work(undefined);
+    if (merge.merge !== mergeKey(workspacePath, request)) return Promise.reject(new Error('These directory decisions were made for another merge. Review the merge again.'));
+    const running = merge.queue.then(() => {
+      const state = merge.applied.at(-1)?.state;
+      return work(state && merge.initial && { state, known: merge.initial.fileConflicts });
+    });
+    merge.queue = running.catch(() => undefined);
+    return running;
+  }
+
+  /** Forgets the page's decisions and deletes their folder, once a decision being applied, or a merge on them, ends. */
   discard(id: string): Promise<void> {
     const merge = this.merges.get(id);
     if (!merge) return Promise.resolve();
@@ -122,6 +152,11 @@ export class DirectoryDecisions {
     const plan = mergePlanOf(await this.cm.queryRecords(args, readFields, { cwd: workspacePath }));
     return { decision, state, plan };
   }
+}
+
+/** Which merge decisions are for: a workspace and a merge request. */
+function mergeKey(workspacePath: string, request: MergeRequest): string {
+  return JSON.stringify([workspacePath, request]);
 }
 
 /** How many of the decisions applied are still the first ones asked, the same conflicts decided the same way. */

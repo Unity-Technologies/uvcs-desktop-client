@@ -21,8 +21,9 @@ export function createMergeService({ cm, operations, workspaceCopies }: ServiceC
     discardDirectoryDecisions: (decisionsId) => directoryDecisions.discard(decisionsId),
     run: (workspacePath, request, resolutions, operationId) =>
       operations.run(operationId, async (context) => {
-        const decided = resolutions.directoryDecisionsId === undefined ? undefined : directoryDecisions.stateOf(resolutions.directoryDecisionsId);
-        const result = await runMerge(cm, workspacePath, request, resolutions, context, decided);
+        const result = await directoryDecisions.runOn(resolutions.directoryDecisionsId, workspacePath, request, (decided) =>
+          runMerge(cm, workspacePath, request, resolutions, context, decided),
+        );
         // A shelve applied from the merge view (its conflicts resolved): what shelving it away took comes back, and a
         // shelve of left changes, or one to apply and delete, is done.
         const appliedShelve = shelveAppliedToWorkspace(request);

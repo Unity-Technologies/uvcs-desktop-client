@@ -1,4 +1,4 @@
-import type { MergePlan, MergeRequest } from '@shared/domain/merge';
+import type { FileConflict, MergePlan, MergeRequest } from '@shared/domain/merge';
 import type { CmClient } from '../cm/CmClient';
 import { CmError, SILENT_FAILURE_MESSAGE } from '../cm/CmError';
 import { readFields } from '../cm/formatRecords';
@@ -16,13 +16,15 @@ interface PreviewOptions {
   copies?: Pick<WorkspaceCopies, 'remember'>;
   /** The merge after the directory decisions `cm` keeps in these files (`DirectoryDecisions`), instead of before any. */
   state?: MergeStateFiles;
+  /** The file conflicts as listed before those decisions, which they may have moved (`withConflictRepositories`). */
+  known?: readonly FileConflict[];
 }
 
 /** Asks `cm` what a merge would do. Nothing in the workspace changes. */
-export async function previewMerge(cm: CmClient, workspacePath: string, request: MergeRequest, { copies, state }: PreviewOptions = {}): Promise<MergePlan> {
+export async function previewMerge(cm: CmClient, workspacePath: string, request: MergeRequest, { copies, state, known }: PreviewOptions = {}): Promise<MergePlan> {
   const intoWorkspace = !request.destinationBranch;
   if (intoWorkspace && (await hasPendingChanges(cm, workspacePath))) return PENDING_CHANGES_PLAN;
-  return withConflictRepositories(cm, workspacePath, request, await readMergePlan(cm, workspacePath, request, state), copies);
+  return withConflictRepositories(cm, workspacePath, request, await readMergePlan(cm, workspacePath, request, state), copies, known);
 }
 
 /** The plan as `cm merge` prints it, after the directory decisions in `state` when given. */

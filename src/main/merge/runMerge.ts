@@ -20,13 +20,15 @@ import type { OperationContext } from '../operations/OperationTracker';
 import { fileConflictResolutionsFile } from './fileConflictResolutionsFile';
 import { fileConflictArgs, MACHINE_READABLE_ARGS, mergeSourceArgs } from './mergeArgs';
 import { assertResolutionsComplete, describeUnmergeablePlan } from './mergeRules';
-import { copyMergeState, mergeStateArgs, mergeStateFilesIn, type MergeStateFiles } from './mergeStateFiles';
+import type { AppliedDirectoryDecisions } from './directoryDecisions';
+import { copyMergeState, mergeStateArgs, mergeStateFilesIn } from './mergeStateFiles';
 import { previewMerge } from './previewMerge';
 
 /**
  * Runs a merge with the user's decisions:
  * 1. The directory conflicts were decided on the page as they came, each applied by `cm` to its state files
- *    (`DirectoryDecisions`): `decided` holds them, and the merge goes on from a copy of it.
+ *    (`DirectoryDecisions`): the merge goes on from a copy of `decided`'s state, its file conflicts completed as listed
+ *    before those decisions.
  * 2. The final `cm merge --merge` applies everything. Every conflicting file has a decision (see `fileConflictArgs`),
  *    so nothing is decided behind the user's back and no external merge tool opens. A merge into a server branch
  *    takes each file's decision from a resolutions file (`fileConflictResolutionsFile`).
@@ -43,12 +45,12 @@ export async function runMerge(
   request: MergeRequest,
   resolutions: MergeResolutions,
   context: OperationContext,
-  decided?: MergeStateFiles,
+  decided?: AppliedDirectoryDecisions,
 ): Promise<MergeResult> {
   return withTempDirectory(async (directory) => {
     const state = mergeStateFilesIn(directory);
-    if (decided) await copyMergeState(decided, state);
-    const plan = await previewMerge(cm, workspacePath, request, decided && { state });
+    if (decided) await copyMergeState(decided.state, state);
+    const plan = await previewMerge(cm, workspacePath, request, decided && { state, known: decided.known });
     const unmergeable = describeUnmergeablePlan(plan);
     if (unmergeable) throw new Error(unmergeable);
     assertResolutionsComplete(plan, resolutions);

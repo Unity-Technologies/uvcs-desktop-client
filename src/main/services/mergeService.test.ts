@@ -54,8 +54,8 @@ describe("a merge page's directory decisions", () => {
     await run({}, { directoryDecisionsId: 'page-1' });
 
     expect(decided.plan.directoryConflicts).toEqual([]);
-    const state = vi.mocked(runMerge).mock.calls[0]![5]!;
-    expect(await readFile(state.solved, 'utf8')).toBe('EVIL src');
+    const decidedOn = vi.mocked(runMerge).mock.calls[0]![5]!;
+    expect(await readFile(decidedOn.state.solved, 'utf8')).toBe('EVIL src');
   });
 
   it('are gone once the page closes: the merge then runs on none', async () => {

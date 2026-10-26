@@ -214,7 +214,13 @@ describe('DirectoryDecisions', () => {
     const decisions = new DirectoryDecisions(cm);
     await decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(movedApart, { choice: 'source' })]);
     let finish = (): void => undefined;
-    const running = decisions.runOn('page-1', WORKSPACE, FROM_FEATURE, (applied) => new Promise<string>((resolve) => (finish = () => resolve(applied!.state.solved))));
+    let started = (): void => undefined;
+    const merging = new Promise<void>((resolve) => (started = resolve));
+    const running = decisions.runOn('page-1', WORKSPACE, FROM_FEATURE, (applied) => {
+      started();
+      return new Promise<string>((resolve) => (finish = () => resolve(applied!.state.solved)));
+    });
+    await merging;
 
     const discarded = decisions.discard('page-1');
     finish();
