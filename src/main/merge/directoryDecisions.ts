@@ -11,7 +11,10 @@ import { withConflictRepositories } from './conflictRepositories';
 import { mergePlanArgs } from './mergeArgs';
 import { assertDecisionValid } from './mergeRules';
 import { copyMergeState, mergeStateArgs, mergeStateFilesIn, type MergeStateFiles } from './mergeStateFiles';
-import { previewMerge, readMergePlan } from './previewMerge';
+import { readMergePlan } from './previewMerge';
+
+/** How many previewed merges are remembered: one per page open, a few windows at most. */
+const REMEMBERED_PREVIEWS = 4;
 
 /**
  * What a merge goes on from once directory decisions were applied (`runMerge`): the state `cm` kept after them, and the
@@ -62,11 +65,25 @@ interface DecidedMergeState {
  */
 export class DirectoryDecisions {
   private readonly merges = new Map<string, DecidedMergeState>();
+  /** The last merges previewed, by `mergeKey`: a page's first decision starts from the merge it shows. */
+  private readonly previews = new Map<string, MergePlan>();
 
   constructor(
     private readonly cm: CmClient,
     private readonly copies?: Pick<WorkspaceCopies, 'remember'>,
   ) {}
+
+  /**
+   * Remembers the merge a page previewed (`merge.preview`), so that its first decision starts from it instead of
+   * calculating the merge again. Only the last few: a page opened from an older one previews it again anyway.
+   */
+  previewed(workspacePath: string, request: MergeRequest, plan: MergePlan): void {
+    if (plan.status !== 'ready') return;
+    const key = mergeKey(workspacePath, request);
+    this.previews.delete(key);
+    this.previews.set(key, plan);
+    if (this.previews.size > REMEMBERED_PREVIEWS) this.previews.delete(this.previews.keys().next().value!);
+  }
 
   /** Applies `decisions`, in order, to the merge the page `id` shows, and returns the merge recalculated on them. */
   decide(workspacePath: string, request: MergeRequest, id: string, decisions: DirectoryDecision[]): Promise<DecidedMerge> {
@@ -127,17 +144,20 @@ export class DirectoryDecisions {
     }
     merge.applied = applied;
 
-    const last = applied.at(-1);
-    if (!last) return { plan: await previewMerge(this.cm, workspacePath, request, { copies: this.copies }), decisions: [] };
     const initial = await this.initialOf(merge, workspacePath, request);
+    const last = applied.at(-1);
+    if (!last) return { plan: initial, decisions: [] };
     return {
       plan: await withConflictRepositories(this.cm, workspacePath, request, last.plan, this.copies, initial.fileConflicts),
       decisions: applied.map((one) => one.decision),
     };
   }
 
+  /** The merge before any decision: the one the page previewed, else read again (and its conflicting files listed). */
   private async initialOf(merge: DecidedMergeState, workspacePath: string, request: MergeRequest): Promise<MergePlan> {
-    merge.initial ??= await withConflictRepositories(this.cm, workspacePath, request, await readMergePlan(this.cm, workspacePath, request), this.copies);
+    merge.initial ??=
+      this.previews.get(merge.merge) ??
+      (await withConflictRepositories(this.cm, workspacePath, request, await readMergePlan(this.cm, workspacePath, request), this.copies));
     return merge.initial;
   }
 

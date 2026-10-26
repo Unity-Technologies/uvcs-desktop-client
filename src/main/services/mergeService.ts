@@ -16,7 +16,11 @@ export function createMergeService({ cm, operations, workspaceCopies }: ServiceC
   const directoryDecisions = new DirectoryDecisions(cm, workspaceCopies);
 
   return {
-    preview: (workspacePath, request) => previewMerge(cm, workspacePath, request, { copies: workspaceCopies }),
+    preview: async (workspacePath, request) => {
+      const plan = await previewMerge(cm, workspacePath, request, { copies: workspaceCopies });
+      directoryDecisions.previewed(workspacePath, request, plan);
+      return plan;
+    },
     decideDirectoryConflicts: (workspacePath, request, decisionsId, decisions) => directoryDecisions.decide(workspacePath, request, decisionsId, decisions),
     discardDirectoryDecisions: (decisionsId) => directoryDecisions.discard(decisionsId),
     run: (workspacePath, request, resolutions, operationId) =>
