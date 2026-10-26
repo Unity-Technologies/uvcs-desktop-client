@@ -7,6 +7,7 @@ import { mergePlanOf } from '../cm/mergeOutput';
 import { changedStatus, mergePreviewOutput, treeListing } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, optionValue, type CmFailure, type FakeCmCommand } from '../cm/testing/fakeCmClient';
 import { DirectoryDecisions } from './directoryDecisions';
+import { previewMerge } from './previewMerge';
 
 const FROM_FEATURE: MergeRequest = { kind: 'merge', sourceSpec: 'br:/main/feature' };
 const WORKSPACE = '/work';
@@ -137,7 +138,7 @@ describe('DirectoryDecisions', () => {
     expect(decided.plan.directoryConflicts).toEqual([]);
   });
 
-  it('previews the merge as it was once no decision is left', async () => {
+  it('gives back the merge as it was once no decision is left, asking cm nothing', async () => {
     const { cm, commands } = decidingCm();
     const decisions = new DirectoryDecisions(cm);
     await decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(movedApart, { choice: 'source' })]);
@@ -146,8 +147,32 @@ describe('DirectoryDecisions', () => {
     const decided = await decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', []);
 
     expect(decided).toEqual({ plan: expect.objectContaining({ directoryConflicts: [movedApart, addedTwice] }), decisions: [] });
-    expect(resolving(commands)).toEqual([]);
+    expect(commands).toEqual([]);
     expect(decisions.stateOf('page-1')).toBeUndefined();
+  });
+
+  it('starts from the merge the page previewed: the first decision calculates the merge only once', async () => {
+    const { cm, commands } = decidingCm();
+    const decisions = new DirectoryDecisions(cm);
+    const previewed = await previewMerge(cm, WORKSPACE, FROM_FEATURE);
+    decisions.previewed(WORKSPACE, FROM_FEATURE, previewed);
+    commands.length = 0;
+
+    const decided = await decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(movedApart, { choice: 'source' })]);
+
+    expect(commands.map((command) => command.args[0])).toEqual(['merge']);
+    expect(decided.plan.fileConflicts[0]).toMatchObject({ path: '/play/Player.cs', destinationPath: '/core/Player.cs' });
+  });
+
+  it("starts from a merge's own preview only", async () => {
+    const { cm, commands } = decidingCm();
+    const decisions = new DirectoryDecisions(cm);
+    decisions.previewed(WORKSPACE, { ...FROM_FEATURE, destinationBranch: '/main' }, await previewMerge(cm, WORKSPACE, { ...FROM_FEATURE, destinationBranch: '/main' }));
+    commands.length = 0;
+
+    await decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(movedApart, { choice: 'source' })]);
+
+    expect(commands.map((command) => command.args[0])).toEqual(['merge', 'ls', 'merge']);
   });
 
   it('applies decisions sent together one batch after the other, each from the state the one before left', async () => {
