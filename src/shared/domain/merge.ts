@@ -139,6 +139,22 @@ export type FileConflictResolution =
   /** The merged text written by the user or merged automatically. */
   | { choice: 'text'; text: string };
 
+/** A directory conflict the user decided: the conflict as the merge listed it, and how to resolve it. */
+export interface DirectoryDecision {
+  conflict: DirectoryConflict;
+  resolution: DirectoryConflictResolution;
+}
+
+/**
+ * A merge after the user's directory decisions, applied as they're made (`decideDirectoryConflicts`): the plan `cm`
+ * calculated again on them, where a decision may have moved, removed or added file conflicts and changes, and the
+ * decisions it took, in the order they apply.
+ */
+export interface DecidedMerge {
+  plan: MergePlan;
+  decisions: DirectoryDecision[];
+}
+
 export interface MergeResolutions {
   /** One per directory conflict, in the plan's order. */
   directoryConflicts: DirectoryConflictResolution[];
