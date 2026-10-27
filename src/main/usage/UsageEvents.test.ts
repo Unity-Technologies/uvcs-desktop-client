@@ -28,13 +28,14 @@ interface Setup {
   inFront?: () => string | undefined;
   /** Whether the workspace in front's `cm shell`s answer at once, or were let go while it idled. */
   shellsReady?: () => boolean;
+  pingDetails?: () => typeof DETAILS;
 }
 
-function usageEvents({ answers = { trackevent: '' }, inFront = () => GAME, shellsReady = () => true }: Setup = {}) {
+function usageEvents({ answers = { trackevent: '' }, inFront = () => GAME, shellsReady = () => true, pingDetails = () => DETAILS }: Setup = {}) {
   const fake = fakeCmClient(answers);
   const timers = manualRepeat();
   const cm = { query: fake.cm.query, hasReadyShell: shellsReady };
-  const usage = new UsageEvents({ cm, workspaceInFront: inFront, pingDetails: () => DETAILS, repeat: timers.repeat });
+  const usage = new UsageEvents({ cm, workspaceInFront: inFront, pingDetails, repeat: timers.repeat });
   return { ...fake, ...timers, usage };
 }
 
@@ -123,6 +124,17 @@ describe('usage events', () => {
     await usage.featureUsed(GAME, 'checkin');
 
     expect(lines()).toEqual(['trackevent featureuse undo', 'trackevent featureuse checkin']);
+  });
+
+  it("fails nothing when the ping can't read the display: opening the workspace goes on", async () => {
+    const { usage, lines } = usageEvents({
+      pingDetails: () => {
+        throw new Error('No display');
+      },
+    });
+
+    await expect(usage.workspaceShown(GAME)).resolves.toBeUndefined();
+    expect(lines()).toEqual([]);
   });
 
   it('stops pinging once disposed', async () => {

@@ -76,13 +76,14 @@ export class UsageEvents implements UsageRecorder {
   }
 
   private ping(workspacePath: string): Promise<void> {
-    return this.record(workspacePath, pingArgs(this.options.pingDetails()));
+    return this.record(workspacePath, () => pingArgs(this.options.pingDetails()));
   }
 
-  private async record(workspacePath: string, args: string[]): Promise<void> {
+  /** `args` is read inside: what fails to say the event (the display, for a ping) fails nothing else either. */
+  private async record(workspacePath: string, args: string[] | (() => string[])): Promise<void> {
     if (this.refused) return;
     try {
-      await this.options.cm.query(args, { cwd: workspacePath, inPooledShell: true });
+      await this.options.cm.query(typeof args === 'function' ? args() : args, { cwd: workspacePath, inPooledShell: true });
     } catch (error) {
       // `cm` answered with an error; anything else (a shell closed with its window, one that crashed) passes.
       if (!(error instanceof CmError)) return;

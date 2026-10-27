@@ -35,9 +35,12 @@ export function pingExtraInfo({ dark, screen }: PingDetails): string {
 }
 
 /**
- * A display's size in physical pixels, as the other GUIs report it: Electron gives it in device-independent pixels and
- * the scale factor (1.25, 1.5 on Windows), and the product isn't always whole.
+ * A display's size in physical pixels, as the other GUIs report it. Electron gives it in device-independent pixels and
+ * a scale factor. On Windows, whose scale factors aren't whole (1.25, 1.5), those pixels are rounded (a 2560-pixel
+ * display at 150% is 1707), and multiplying back lands a pixel off: Electron converts it itself there
+ * (`screen.dipToScreenRect`, Windows only, `windowsScreenSize`). Elsewhere the product is whole.
  */
-export function physicalSize(size: Size, scaleFactor: number): Size {
+export function physicalSize(platform: NodeJS.Platform, { size, scaleFactor }: { size: Size; scaleFactor: number }, windowsScreenSize: () => Size): Size {
+  if (platform === 'win32') return windowsScreenSize();
   return { width: Math.round(size.width * scaleFactor), height: Math.round(size.height * scaleFactor) };
 }
