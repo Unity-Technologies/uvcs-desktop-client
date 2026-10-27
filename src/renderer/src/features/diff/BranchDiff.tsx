@@ -74,8 +74,9 @@ function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; 
     setSelection(singleSelection(String(id)));
     setRevealKey(String(id));
   };
-  useShortcut(hotkey('nextChangeset'), () => stepTo(1));
-  useShortcut(hotkey('previousChangeset'), () => stepTo(-1));
+  // Not from a text field: ⌥⇧↓ ⌥⇧↑ select to the text's ends on macOS (the filters'); the diff's step keys do the same.
+  useShortcut(hotkey('nextChangeset'), () => stepTo(1), true, { whileTyping: false });
+  useShortcut(hotkey('previousChangeset'), () => stepTo(-1), true, { whileTyping: false });
 
   if (error) return <EmptyState title="Couldn't load the branch changesets" description={error.message} />;
   const pane = branchChangesetPane(changesets, selectedId);
@@ -86,7 +87,11 @@ function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; 
       query={query}
       onQueryChange={setQuery}
       selection={selection}
-      onSelectionChange={setSelection}
+      onSelectionChange={(next) => {
+        // A changeset picked in the list is already in view; the one stepped to before isn't revealed again.
+        setRevealKey(null);
+        setSelection(next);
+      }}
       stepsTo={stepsTo}
       onStep={stepTo}
       revealKey={revealKey}
