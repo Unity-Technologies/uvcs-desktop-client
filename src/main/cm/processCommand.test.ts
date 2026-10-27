@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { checkinArgs } from './checkinArgs';
 import { fitsCommandLine } from './commandLineLimit';
 import { processCommand } from './processCommand';
-import { toShellCommandLine } from './shellCommandLine';
+import { SHELL_ARGS, toShellCommandLine } from './shellCommandLine';
 import { TREE_ITEM_FORMAT } from './treeItems';
 
 const manyPaths = Array.from({ length: 20_000 }, (_, index) => `/Users/ana/work/My Project/Assets/Textures/Level ${index % 40}/texture_${index}.png`);
@@ -15,7 +15,7 @@ describe('processCommand', () => {
   it('never starts a process with more than the limit: 20,000 paths go to a cm shell of its own, as one command line', () => {
     const args = checkinArgs(manyPaths, '/tmp/comment.txt', true);
     const { args: started, input } = processCommand(args);
-    expect(started).toEqual(['shell', '--encoding=utf-8']);
+    expect(started).toEqual(SHELL_ARGS);
     expect(fitsCommandLine(started)).toBe(true);
     const [line, exit] = input!.split('\n');
     expect(exit).toBe('exit');
@@ -26,7 +26,7 @@ describe('processCommand', () => {
 
   it('on Windows, runs commands that print text in a cm shell of its own, the only way cm prints them in UTF-8', () => {
     const update = ['update', '--forcedetailedprogress', '--dontmerge'];
-    expect(processCommand(update, 'win32')).toEqual({ args: ['shell', '--encoding=utf-8'], input: 'update --forcedetailedprogress --dontmerge\nexit\n' });
+    expect(processCommand(update, 'win32')).toEqual({ args: SHELL_ARGS, input: 'update --forcedetailedprogress --dontmerge\nexit\n' });
     expect(processCommand(['diff', 'cs:4', '--format={path}'], 'win32').input).toBe('diff cs:4 --format={path}\nexit\n');
     expect(processCommand(update, 'linux')).toEqual({ args: update });
     expect(processCommand(update, 'darwin')).toEqual({ args: update });
@@ -35,7 +35,7 @@ describe('processCommand', () => {
   // `cm ls` applies `--encoding` to `--xml` only: its records come in UTF-8 only from a `cm shell`.
   it("on Windows, lists items in a cm shell of its own, the field separators of the listing's format and all", () => {
     const listing = ['ls', 'C:\\wk\\Assets\\Señal', TREE_ITEM_FORMAT, '--symlink'];
-    expect(processCommand(listing, 'win32')).toEqual({ args: ['shell', '--encoding=utf-8'], input: `${toShellCommandLine(listing)}\nexit\n` });
+    expect(processCommand(listing, 'win32')).toEqual({ args: SHELL_ARGS, input: `${toShellCommandLine(listing)}\nexit\n` });
     expect(processCommand(listing, 'darwin')).toEqual({ args: listing });
   });
 

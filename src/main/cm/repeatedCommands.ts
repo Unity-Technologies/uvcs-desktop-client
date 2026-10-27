@@ -6,7 +6,7 @@ import { commandLineForLog } from './hideSecrets';
  * (it only greets the server, but for its header: ARCHITECTURE.md "`cm status` asks the server for its header");
  * everything else asks the server.
  */
-const LOCAL_COMMANDS = new Set(['status', 'getworkspacefrompath', 'gwp', 'wi', 'workspaceinfo', 'lwk', 'profile', 'version', 'location', 'changelist']);
+const LOCAL_COMMANDS = new Set(['status', 'getworkspacefrompath', 'gwp', 'wi', 'workspaceinfo', 'lwk', 'profile', 'version', 'location', 'changelist', 'trackevent']);
 
 export function isServerCommand(args: readonly string[]): boolean {
   const [command = '', subcommand] = args;

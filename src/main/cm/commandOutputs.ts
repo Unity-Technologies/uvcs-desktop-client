@@ -50,6 +50,8 @@ const COMMAND_OUTPUTS: Readonly<Record<string, KindOf>> = {
   getworkspacefrompath: 'answer',
   showacl: 'answer',
   showowner: 'answer',
+  // Records a usage event (`UsageEvents`): prints nothing unless it fails.
+  trackevent: 'answer',
   version: 'answer',
   whoami: 'answer',
   wi: 'answer',

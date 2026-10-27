@@ -58,6 +58,8 @@ const COMMANDS = {
   listusers: ([, kind]) => (kind === '--onlygroups' ? 'Developers\nArtists\n' : `${OWNER}\nana@example.com\n`),
   acl: () => 'Command finished successfully\n',
   setowner: () => '',
+  // A usage event, recorded as `cm` records it: nothing printed.
+  trackevent: () => '',
 };
 
 /**
