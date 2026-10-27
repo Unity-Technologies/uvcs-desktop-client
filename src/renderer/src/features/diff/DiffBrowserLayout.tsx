@@ -35,6 +35,8 @@ export function DiffBrowserLayout({ aboveFiles, aboveDiff, children }: DiffBrows
         initialSize={340}
         minSize={220}
         maxSize={640}
+        // A list above the files that comes or goes (a branch read again gains its second changeset) moves the files'
+        // slot, which mounts the browser again: rare enough to keep one plain layout per case.
         first={
           aboveFiles ? (
             <SplitPane direction="vertical" initialSize={260} minSize={96} maxSize={720} restMinSize={160} first={aboveFiles} second={filesSlot} />

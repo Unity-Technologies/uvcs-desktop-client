@@ -9,8 +9,8 @@ of a changeset the workspace is on) is read from its disk, not downloaded: ARCHI
 
 ## The diff's header
 
-Over a changeset's or a shelve's files (`TargetDiff`: from Changesets, Shelves, the Branch Explorer, a branch diff's
-"By changeset"), the header says who, when and why (`ChangesetSummary`, `ShelveSummary`). A long comment is folded as a
+Over a changeset's or a shelve's files (`TargetDiff`: from Changesets, Shelves, the Branch Explorer; in a branch diff's
+"Changeset by changeset", over the diff's column, as "A branch's diff" says), the header says who, when and why (`ChangesetSummary`, `ShelveSummary`). A long comment is folded as a
 details panel folds it (`FoldedComment`, through `SummaryComment`), but tighter: two lines of title and three of
 description, then "Show more"; expanded, the description grows to at most 40% of the window and scrolls past that, so
 the files and the diff stay in sight. A short comment shows whole, with no link. The header's description is keyed by
@@ -41,7 +41,8 @@ filter matches every word typed in a changeset's number, comment or author's nam
 filter hides stays selected and shown: its diff doesn't change under the user while they type, and the next step goes
 on to the nearest changeset shown on that side (`changesetStep`). The arrows above the list, ⌥⇧↓ and ⌥⇧↑
 (`nextChangeset`, `previousChangeset`, as Annotate steps through a changeset's blocks; ⌥↓ ⌥↑ are the changes'), step
-from anywhere in the page. A branch with one changeset shows no list (`showsChangesetList`): the header names it.
+from anywhere in the page but a text field, where they select text (`useShortcut`'s `whileTyping`). A branch with one
+changeset shows no list (`showsChangesetList`): the header names it.
 
 The list stays mounted as each changeset is stepped to, keeping its focus, scroll and filter: the files and the diff
 are drawn by a `DiffBrowser` mounted again for each changeset, into the slots of a `DiffBrowserLayout` that stays
