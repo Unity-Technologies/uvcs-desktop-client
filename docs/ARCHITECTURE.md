@@ -32,6 +32,7 @@ you touch:
 | `features/page-windows.md`              | A page (a diff, a history, a review) in a new window: where it's offered, how it belongs to its workspace window, Follow selection |
 | `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 | `features/xlinks.md`                    | Creating and editing xlinks: where they point, writable ones, branch expansion rules, the `cm xlink` commands |
+| `features/usage-events.md`              | The usage events recorded through `cm` (an hourly ping, the features used), how the shells name the app |
 
 ## How a request flows
 
@@ -558,7 +559,9 @@ any other scheme (`file:`, `smb:`, `ms-msdt:`) to a program.
 ## What leaves the device
 
 Besides `cm`, which talks only to the user's own servers, the app reaches the three places below, and nothing else.
-There is no telemetry, analytics or crash reporting. `PRIVACY.md` at the repository root is the app's privacy notice:
+There is no analytics or crash reporting of the app's own: its usage events (an hourly ping, the features used) are
+recorded through `cm`, which sends them to Unity as it does the other UVCS clients', only for Cloud Edition
+(features/usage-events.md). `PRIVACY.md` at the repository root is the app's privacy notice:
 a change that sends anything new, or something more to any of these places, is flagged to the maintainers in its pull
 request and never written into `PRIVACY.md` by the change itself.
 
@@ -947,7 +950,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   (`cachedShelve`), a code review (`listedReview`, as `initialData` as fresh as that list, never from a list an
   operation marked stale).
 - **Refresh**: views refresh themselves when something changes, never on a timer except the incoming check (the app's
-  own update check runs hourly too, against GitHub, never the server: features/updates.md).
+  own update check runs hourly too, against GitHub, never the server: features/updates.md; so does the usage ping, a
+  local `cm trackevent`: features/usage-events.md).
   - `main/watch/WorkspaceWatcher` watches an open workspace (recursive on macOS/Windows; on Linux a watch per folder,
     `FolderTreeWatch`, as Node's recursive mode there watches every file and loses files saved by replacing them;
     it walks the tree asynchronously, `FOLDERS_PER_STEP` folders at a time, so a big project never holds the main
