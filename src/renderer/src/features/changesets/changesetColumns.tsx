@@ -10,7 +10,7 @@ import type { Column } from '../../ui/table/column';
 export function changesetColumns(loadedChangeset: number | null | undefined, labelsByChangeset: ReadonlyMap<number, readonly Label[]>): Column<Changeset>[] {
   return [
     avatarColumn(),
-    numberColumn('Changeset', { marker: (changeset) => changeset.id === loadedChangeset && <WorkspaceMark on="changeset" /> }),
+    numberColumn('Changeset', (changeset) => changeset.id === loadedChangeset && <WorkspaceMark on="changeset" />),
     commentColumn((changeset) => <LabelChips labels={labelsByChangeset.get(changeset.id)} />),
     secondaryColumn('branch', 'Branch', {
       text: (changeset) => shortBranchName(changeset.branch),

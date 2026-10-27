@@ -1,16 +1,16 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useMemo } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
 import { ListToolbar } from '../../components/ListToolbar';
-import { numberColumnWidth } from '../../components/numberColumnWidth';
-import { avatarColumn, commentColumn, dateColumn, numberColumn } from '../../components/historyColumns';
+import { RECORD_ROW_HEIGHT, RecordComment, RecordRow, recordRowStyles } from '../../components/RecordRow';
 import type { MenuEntry } from '../../lib/actions';
 import { focusMainNear } from '../../lib/mainFocus';
 import type { SelectionState } from '../../lib/selection';
 import { hotkey } from '../../lib/shortcutRegistry';
-import { HighlightQuery } from '../../ui/Highlight';
+import { displayName } from '../../lib/userName';
+import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { NoMatches } from '../../ui/NoMatches';
+import { RelativeTime } from '../../ui/RelativeTime';
 import { SearchField } from '../../ui/SearchField';
 import { ListSkeleton } from '../../ui/Skeleton';
 import type { Column } from '../../ui/table/column';
@@ -18,16 +18,32 @@ import { DataTable } from '../../ui/table/DataTable';
 import { changesetFilterPlaceholder } from './changesetByChangeset';
 import styles from './BranchChangesetList.module.css';
 
-/**
- * The Changesets view's columns that fit above a diff's files: the avatar, whose tooltip names the author, always
- * shows, and the numbers take no more room than the newest one, the longest (there are no column titles to fit).
- */
-function changesetColumns(newestId: number): Column<Changeset>[] {
-  return [avatarColumn({ alwaysShown: true }), numberColumn('Changeset', { width: numberColumnWidth(newestId) }), commentColumn(), dateColumn()];
-}
-
-/** The table's own row height, the placeholder rows' too. */
-const ROW_HEIGHT = 30;
+/** Each changeset as History reads a revision (`RecordRow`): the comment, then cs:N · author · date. */
+const CHANGESET_COLUMNS: Column<Changeset>[] = [
+  {
+    id: 'changeset',
+    header: 'Changeset',
+    render: (changeset) => (
+      <RecordRow
+        owner={changeset.owner}
+        title={<RecordComment comment={changeset.comment} />}
+        meta={
+          <>
+            <span className="mono">
+              cs:<Highlight text={String(changeset.id)} />
+            </span>
+            <span className={recordRowStyles.clipped}>
+              <Highlight text={displayName(changeset.owner)} />
+            </span>
+            <span className={recordRowStyles.date}>
+              <RelativeTime date={changeset.date} />
+            </span>
+          </>
+        }
+      />
+    ),
+  },
+];
 
 /** Kept out of the render: a new `rowKey` makes the table key every changeset of the branch again on each step. */
 const changesetKey = (changeset: Changeset): string => String(changeset.id);
@@ -55,9 +71,6 @@ interface BranchChangesetListProps {
  */
 export function BranchChangesetList({ changesets, shown, query, onQueryChange, selection, onSelectionChange, stepsTo, onStep, revealKey, contextMenu }: BranchChangesetListProps) {
   const reading = changesets === undefined;
-  // Sized by the whole branch, not what the filter shows, so the comments don't move as it's typed.
-  const newestId = changesets?.[0]?.id ?? 0;
-  const columns = useMemo(() => changesetColumns(newestId), [newestId]);
   return (
     <div className={styles.list}>
       <ListToolbar>
@@ -79,18 +92,19 @@ export function BranchChangesetList({ changesets, shown, query, onQueryChange, s
         </div>
       </ListToolbar>
       {reading ? (
-        <ListSkeleton rowHeight={ROW_HEIGHT} />
+        <ListSkeleton rowHeight={RECORD_ROW_HEIGHT} />
       ) : (
         <HighlightQuery query={query}>
           <DataTable
             rows={shown}
-            columns={columns}
+            columns={CHANGESET_COLUMNS}
             rowKey={changesetKey}
             selection={selection}
             onSelectionChange={onSelectionChange}
             contextMenu={contextMenu}
             revealKey={revealKey}
-            rowHeight={ROW_HEIGHT}
+            rowHeight={RECORD_ROW_HEIGHT}
+            divided
             label="Changesets"
             hideHeader
             empty={<NoMatches noun="changesets" onClear={() => onQueryChange('')} />}
