@@ -1,5 +1,5 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import type { MergePlan, MergeRequest } from '@shared/domain/merge';
+import type { DirectoryConflict, DirectoryConflictResolution, MergePlan, MergeRequest } from '@shared/domain/merge';
 import { Folder } from 'lucide-react';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
@@ -31,6 +31,7 @@ import { mergeItemTypes } from './mergeItemTypes';
 import { ResolveRunControl, useRunOffer } from './mergeTools/ResolveRunControl';
 import { useResolveRun } from './mergeTools/useResolveRun';
 import { useFileMergers } from './mergeTools/useMergeTools';
+import { forgetLostFileDecisions } from './lostFileDecisions';
 import { completeMerge } from './mergeOperations';
 import { collectResolutions } from './mergeResolutions';
 import { conflictStatusOf, planProgress, summarizePlan } from './mergeStatus';
@@ -132,6 +133,12 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
   const listedKeys = useMemo(() => new Set(filter.visible.map(itemKey)), [filter.visible]);
   useSelectionFollowsItem(selectedKey, selected?.key, selection, setSelection, (key) => listedKeys.has(key), rowKeyOf);
 
+  // A decided file the directory decision took out of the merge starts over, and a toast says so.
+  const decideDirectory = async (conflict: DirectoryConflict, resolution: DirectoryConflictResolution): Promise<void> => {
+    const decided = await directory.decide(conflict, resolution);
+    if (decided) forgetLostFileDecisions(plan, decided.plan, [...latest.current.progress.fileStates.values()], reset);
+  };
+
   const merge = async (): Promise<void> => {
     if (!resolutions) return;
     setMerging(true);
@@ -193,7 +200,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
               decide,
               reset,
               resolveIn: (key, merger) => void resolveInTool(key, merger),
-              resolveDirectory: (conflict, resolution) => void directory.decide(conflict, resolution),
+              resolveDirectory: (conflict, resolution) => void decideDirectory(conflict, resolution),
             })
           }
         />
@@ -211,7 +218,7 @@ export function MergeSession({ workspacePath, request, initialPlan, task, onComp
               toolActions={{ resolveIn: (key, merger) => void resolveInTool(key, merger), run: run.progress, runOffered: runPlans.length > 0 }}
               onDecideFile={decide}
               onStartOverFile={reset}
-              onResolveDirectory={(conflict, resolution) => void directory.decide(conflict, resolution)}
+              onResolveDirectory={(conflict, resolution) => void decideDirectory(conflict, resolution)}
             />
           </FileStepsContext.Provider>
         ) : selectedGroup ? (
