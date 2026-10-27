@@ -74,7 +74,7 @@ export function mergePlanOf(records: readonly string[][]): PrintedMergePlan {
         readStatus(plan, fields);
         break;
       case 'CONTRIBUTOR':
-        addContributor(plan, contributors, fields);
+        addContributor(contributors, fields);
         break;
       case 'DIR_CONFLICT':
         plan.directoryConflicts.push(parseDirectoryConflict(fields));
@@ -113,15 +113,11 @@ function byPath(a: { path: string }, b: { path: string }): number {
   return comparePaths(a.path, b.path);
 }
 
-function addContributor(plan: PrintedMergePlan, contributors: Partial<MergeContributors>, [role, changesetId, point, branch]: string[]): void {
+function addContributor(contributors: Partial<MergeContributors>, [role, changesetId, , branch]: string[]): void {
   const contributor: MergeContributor = { changesetId: Number(changesetId), branch: branch ?? '' };
   if (role === 'SRC') contributors.source = contributor;
-  else if (role === 'DST') {
-    contributors.destination = contributor;
-    // `cs:4@game@local`: the merged repository follows the changeset.
-    const at = point?.indexOf('@') ?? -1;
-    if (at >= 0) plan.repository = point!.slice(at + 1);
-  } else if (role === 'BASE') contributors.base ??= contributor;
+  else if (role === 'DST') contributors.destination = contributor;
+  else if (role === 'BASE') contributors.base ??= contributor;
 }
 
 function parseFileConflict([path, base, source, destination, itemId]: string[]): PrintedFileConflict {

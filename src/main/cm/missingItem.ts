@@ -27,6 +27,11 @@ export function isServerPathNotFoundError(error: unknown): boolean {
   return error instanceof CmError && /the specified revision was not found serverpath:/i.test(error.message);
 }
 
-export function notInTreePaths(_error: unknown): string[] {
-  return [];
+/**
+ * The paths `cm ls <paths> --tree=<point>` found no such item for (`isNotInTreeError`), one line each: it lists every
+ * other path it was given all the same, and exits with 1.
+ */
+export function notInTreePaths(error: unknown): string[] {
+  if (!(error instanceof CmError)) return [];
+  return [...error.message.matchAll(/can't resolve the selector for the item (.+?)\s*$/gim)].map((match) => match[1]!);
 }

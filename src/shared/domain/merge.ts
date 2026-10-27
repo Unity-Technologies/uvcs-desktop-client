@@ -59,8 +59,9 @@ export interface FileConflict {
   /**
    * The destination's revision of the file, in `repository`: read by its id, from the workspace's disk where the
    * workspace's file has its content (`WorkspaceCopies`), else downloaded. None for a file conflict a directory
-   * decision revealed where the destination's tree doesn't have it (moved there by the destination into a folder the
-   * decision dropped): its version is read as the item at its changeset (`destinationVersionSpec`).
+   * decision revealed at a path the destination's tree doesn't have (a file changed on both sides that the destination
+   * moved into a folder added on both, revealed where the source has it once the incoming folder is kept): its version
+   * is read as the item at its changeset (`destinationVersionSpec`).
    */
   destinationRevisionId?: number;
   /**
@@ -119,8 +120,6 @@ export type MergePlanStatus =
 export interface MergePlan {
   status: MergePlanStatus;
   contributors?: MergeContributors;
-  /** The merged repository, as the destination contributor names it (`game@local`). */
-  repository?: string;
   changes: MergeChange[];
   fileConflicts: FileConflict[];
   directoryConflicts: DirectoryConflict[];

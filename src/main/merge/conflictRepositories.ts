@@ -2,6 +2,7 @@ import type { FileConflict, MergePlan, MergeRequest } from '@shared/domain/merge
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
 import type { PrintedMergePlan } from '../cm/mergeOutput';
+import { notInTreePaths } from '../cm/missingItem';
 import { readTreeItem, TREE_ITEM_FORMAT, type ListedTreeItem } from '../cm/treeItems';
 import { readWorkspaceLoad } from '../cm/workspaceStatus';
 import { revisionFilesOf, type WorkspaceCopies } from '../files/WorkspaceCopies';
@@ -21,8 +22,8 @@ type PrintedFileConflict = PrintedMergePlan['fileConflicts'][number];
  * where the source put it), but they are the same items with the same revisions: they're taken as they were, at their
  * new path, and only the others are listed. A decision can also reveal a file conflict `cm` held back under it, at a
  * path the destination's tree may not hold (a file the destination moved into a folder added on both sides, back where
- * the source has it once the incoming folder is kept): when the listing fails after a decision, those are completed by
- * their item, in the merged repository, and read so (`withoutDestinationRevision`).
+ * the source has it once the incoming folder is kept): those `cm` names as not in the tree (`notInTreePaths`) are
+ * listed in the source's tree instead (`revealedInSource`), the others listed again.
  */
 export async function withConflictRepositories(
   cm: CmClient,
@@ -36,23 +37,44 @@ export async function withConflictRepositories(
   const unknown = plan.fileConflicts.filter((conflict) => !knownByItem.has(sameItemKey(conflict)));
   if (unknown.length === 0) return withRepositories(plan, [], knownByItem);
   const tree = destinationTree(request, plan) ?? (await loadedTree(cm, workspacePath));
-  const listing = cm.queryRecords(conflictListingArgs({ ...plan, fileConflicts: unknown }, tree), readTreeItem, { cwd: workspacePath });
-  const repository = plan.repository;
-  if (known === undefined || repository === undefined) return listedPlan(await listing);
-  return listing.then(listedPlan, () => withRepositories(plan, [], new Map([...knownByItem, ...unknown.map(withoutDestinationRevision(repository))])));
+  const list = (conflicts: PrintedFileConflict[], inTree: string): Promise<ListedTreeItem[]> =>
+    conflicts.length === 0 ? Promise.resolve([]) : cm.queryRecords(conflictListingArgs({ ...plan, fileConflicts: conflicts }, inTree), readTreeItem, { cwd: workspacePath });
 
-  function listedPlan(listed: ListedTreeItem[]): MergePlan {
-    copies?.remember(workspacePath, revisionFilesOf(listed));
-    return withRepositories(plan, listed, knownByItem);
+  let listed: ListedTreeItem[];
+  let revealed: FileConflict[] = [];
+  try {
+    listed = await list(unknown, tree);
+  } catch (error) {
+    const missing = new Set(notInTreePaths(error));
+    const source = sourceTree(plan);
+    // Only after a decision, and only for the paths `cm` names: any other failure is the listing's own.
+    if (known === undefined || source === null || missing.size === 0) throw error;
+    listed = await list(unknown.filter((conflict) => !missing.has(conflict.path)), tree);
+    const elsewhere = unknown.filter((conflict) => missing.has(conflict.path));
+    revealed = revealedInSource(elsewhere, await list(elsewhere, source));
   }
+  copies?.remember(workspacePath, revisionFilesOf(listed));
+  return withRepositories(plan, listed, new Map([...knownByItem, ...revealed.map((conflict) => [sameItemKey(conflict), conflict] as const)]));
 }
 
-/** A file conflict completed by its item in `repository`, its destination read as that item at its changeset. */
-function withoutDestinationRevision(repository: string) {
-  return (conflict: PrintedFileConflict): [string, FileConflict] => [
-    sameItemKey(conflict),
-    { ...conflict, destinationPath: conflict.path, repository, destinationIsBinary: false },
-  ];
+/** The tree the merge comes from: its source contributor, unless a shelve, whose tree can't be listed. */
+function sourceTree(plan: PrintedMergePlan): string | null {
+  const source = plan.contributors?.source.changesetId;
+  return source !== undefined && source >= 0 ? spec.changeset(source) : null;
+}
+
+/**
+ * Revealed file conflicts completed from their listing in the source's tree, which crosses xlinks: the repository
+ * their item and changesets belong to, and whether `cm` keeps them as binaries. The source's revision isn't the
+ * destination's: they keep none, their destination read as their item at its changeset (`destinationVersionSpec`).
+ */
+function revealedInSource(conflicts: PrintedFileConflict[], listed: readonly ListedTreeItem[]): FileConflict[] {
+  const byPath = new Map(listed.map((item) => [item.path, item]));
+  return conflicts.map((conflict) => {
+    const item = byPath.get(conflict.path.replace(/^\//, ''));
+    if (!item?.repository) throw new Error(`Couldn't tell which repository ${conflict.path} is in.`);
+    return { ...conflict, destinationPath: conflict.path, repository: item.repository, destinationIsBinary: item.itemType === 'binaryFile' };
+  });
 }
 
 /**
