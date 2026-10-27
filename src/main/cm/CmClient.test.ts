@@ -191,6 +191,21 @@ describe('CmClient routing', () => {
     expect(pools[0]?.warmed).toEqual([WORKSPACE]);
   });
 
+  it("waits for the directory's pooled session to start for a command that must run in one, never a process", async () => {
+    const { cm, processes, shellCommands, pools } = fakeClient({ warm: false });
+
+    await cm.query(['trackevent', 'featureuse', 'checkin'], { cwd: WORKSPACE, inPooledShell: true });
+
+    expect(processes).toEqual([]);
+    expect(shellCommands).toEqual([{ cwd: WORKSPACE, args: ['trackevent', 'featureuse', 'checkin'] }]);
+    expect(pools[0]?.warmed).toEqual([WORKSPACE]);
+  });
+
+  it('tells whether a pooled session of the directory answers at once', () => {
+    expect(fakeClient({ warm: true }).cm.hasReadyShell(WORKSPACE)).toBe(true);
+    expect(fakeClient({ warm: false }).cm.hasReadyShell(WORKSPACE)).toBe(false);
+  });
+
   it.each([
     ['cancellable', { signal: new AbortController().signal }],
     ['streamed', { onOutputLine: () => undefined }],

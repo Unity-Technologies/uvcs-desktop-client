@@ -36,6 +36,12 @@ export interface CmRunOptions {
    * instead of reading or changing the repository of a workspace it happened to run in.
    */
   outsideWorkspaces?: boolean;
+  /**
+   * A command whose effect belongs to the `cm shell` that runs it: `cm trackevent` stores an event that shell sends, as
+   * the application it was started as (`SHELL_ARGS`), and does nothing in a process of its own. It waits for the
+   * directory's pooled session to start instead of running as a process meanwhile.
+   */
+  inPooledShell?: boolean;
   signal?: AbortSignal;
   /** Signal sent to the process when `signal` aborts (default SIGTERM). */
   killSignal?: NodeJS.Signals;
@@ -220,11 +226,19 @@ export class CmClient {
   /**
    * Whether a query goes to a pooled `cm shell`: not when it can be cancelled, streams its output, can't be written on
    * a shell line (`canRunInShell`) or may run long (`runsLong`). Any other warms the directory's sessions up, and runs
-   * as a process of its own until one of them answers.
+   * as a process of its own until one of them answers, unless it must run in one (`inPooledShell`).
    */
-  private runsInPooledShell(args: string[], { cwd = homedir(), signal, onOutputLine }: CmRunOptions): boolean {
+  private runsInPooledShell(args: string[], { cwd = homedir(), signal, onOutputLine, inPooledShell }: CmRunOptions): boolean {
     if (signal || onOutputLine || !canRunInShell(args) || runsLong(args)) return false;
     this.shellPool.warmUp(cwd);
+    return inPooledShell === true || this.shellPool.isReady(cwd);
+  }
+
+  /**
+   * Whether a pooled `cm shell` in `cwd` answers at once: what may skip a turn (the hourly usage ping, `UsageEvents`)
+   * doesn't wake the sessions of a workspace left idle.
+   */
+  hasReadyShell(cwd: string): boolean {
     return this.shellPool.isReady(cwd);
   }
 
