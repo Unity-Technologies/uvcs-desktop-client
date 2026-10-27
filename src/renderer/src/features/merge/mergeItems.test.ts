@@ -34,10 +34,11 @@ function fileState(resolved: boolean): FileConflictState {
 }
 
 describe('merge items', () => {
-  it('groups the conflicts before the changes that apply cleanly, each group by path as every list of files', () => {
+  it('groups the directory conflicts, then the file conflicts, then the changes that apply cleanly, each by path', () => {
     const groups = mergeItemGroups(buildMergeItems({ ...plan, changes: [{ kind: 'added', path: '/src/b.txt' }, { kind: 'changed', path: '/new.txt' }] }, [], [file]));
     expect(groups.map((group) => [group.key, group.label, group.sorted.map((item) => item.path)])).toEqual([
-      ['group:conflicts', 'Conflicts', ['a.txt', 'twin.txt']],
+      ['group:directoryConflicts', 'Directory conflicts', ['twin.txt']],
+      ['group:fileConflicts', 'File conflicts', ['a.txt']],
       ['group:changes', 'Changes to apply', ['new.txt', 'src/b.txt']],
     ]);
   });
@@ -78,11 +79,11 @@ describe('merge items', () => {
     expect(decided).toEqual(waiting);
   });
 
-  it('starts on the first item waiting for the user in the order the list shows, not directory conflicts first', () => {
-    // The directory conflict is /twin.txt, after /a.txt in path order.
+  it('starts on the first item waiting for the user in the order the list shows: directory conflicts first', () => {
+    // The directory conflict is /twin.txt, after /a.txt in path order, but its group comes first.
     const items = buildMergeItems(plan, [], [file]);
-    expect(firstWaiting(items, mergeProgress([fileState(false)], twinResolutions()))?.path).toBe('a.txt');
-    expect(firstWaiting(items, mergeProgress([fileState(true)], twinResolutions()))?.path).toBe('twin.txt');
+    expect(firstWaiting(items, mergeProgress([fileState(false)], twinResolutions()))?.path).toBe('twin.txt');
+    expect(firstWaiting(items, mergeProgress([fileState(false)], twinResolutions({ choice: 'source' })))?.path).toBe('a.txt');
     expect(firstWaiting(items, mergeProgress([fileState(true)], twinResolutions({ choice: 'source' })))).toBeUndefined();
   });
 
@@ -98,24 +99,35 @@ describe('merge items', () => {
 });
 
 describe('a folder conflict that holds another conflict', () => {
-  // Added on both sides as a folder, with a file in it changed on both sides: in a tree the folder conflict is the
-  // folder's row, not a row of its own.
+  // Added on both sides as a folder, with a file in it changed on both sides.
   const folder = { operation: 'added' as const, path: '/src/shared', description: 'Added /src/shared' };
-  const nested: MergePlan = { ...plan, directoryConflicts: [{ ...plan.directoryConflicts[0]!, isDirectory: true, source: folder, destination: folder }] };
-  const inside: ConflictedFile = { ...file, key: '/src/shared/a.txt', path: 'src/shared/a.txt' };
-  const items = buildMergeItems(nested, [], [inside]);
+  const folderConflict: DirectoryConflict = { ...twin, itemId: 2, isDirectory: true, source: folder, destination: folder };
+
+  it('has a row of its own among the directory conflicts, the file under its folder among the file conflicts', () => {
+    const inside: ConflictedFile = { ...file, key: '/src/shared/a.txt', path: 'src/shared/a.txt' };
+    const items = buildMergeItems({ ...plan, directoryConflicts: [folderConflict] }, [], [inside]);
+    const rows = layoutGroupedTree(mergeItemGroups(items), (item: MergeItem) => item.key, true);
+
+    const groupOf = (key: string): string | undefined => rows.slice(0, rows.findIndex((row) => row.key === key)).filter((row) => row.type === 'group').at(-1)?.key;
+    expect(groupOf(items[0]!.key)).toBe('group:directoryConflicts');
+    expect(groupOf('file:/src/shared/a.txt')).toBe('group:fileConflicts');
+    expect(mergeItemAt(items, rows, items[0]!.key)?.kind).toBe('directoryConflict');
+  });
+
+  // A folder moved on one side and deleted on the other, holding a file added on both: in a tree the folder conflict
+  // is the folder's row, not a row of its own.
+  const twinInside: DirectoryConflict = { ...twin, itemId: 3, source: { ...side, path: '/src/shared/twin.txt' }, destination: { ...side, path: '/src/shared/twin.txt' } };
+  const items = buildMergeItems({ ...plan, directoryConflicts: [folderConflict, twinInside] }, [], []);
   const rows = layoutGroupedTree(mergeItemGroups(items), (item: MergeItem) => item.key, true);
   const folderRow = rows.find((row) => row.type === 'folder' && row.item?.kind === 'directoryConflict')!;
 
-  it('is the item its folder row shows, so selecting the row selects the conflict', () => {
-    expect(folderRow).toBeDefined();
-    expect(mergeItemAt(items, rows, folderRow.key)?.kind).toBe('directoryConflict');
-    expect(mergeItemAt(items, rows, 'file:/src/shared/a.txt')?.kind).toBe('fileConflict');
-    expect(mergeItemAt(items, rows, 'group:conflicts')).toBeUndefined();
+  it('is the item its folder row shows when it holds another directory conflict, so selecting the row selects it', () => {
+    expect(mergeItemAt(items, rows, folderRow.key)?.conflict).toEqual(folderConflict);
+    expect(mergeItemAt(items, rows, 'group:directoryConflicts')).toBeUndefined();
   });
 
   it("is what the folder row's menu acts on, alone, instead of everything the folder holds", () => {
-    expect(mergeItemsActedOn(rows, new Set([folderRow.key]), items).map((item) => item.kind)).toEqual(['directoryConflict']);
-    expect(mergeItemsActedOn(rows, new Set([folderRow.key, 'file:/src/shared/a.txt']), items)).toEqual(items);
+    expect(mergeItemsActedOn(rows, new Set([folderRow.key]), items).map((item) => item.path)).toEqual(['src/shared']);
+    expect(mergeItemsActedOn(rows, new Set([folderRow.key, items[1]!.key]), items)).toEqual(items);
   });
 });
