@@ -1,9 +1,9 @@
 import type { DirectoryConflictResolution, MergeChange } from '@shared/domain/merge';
 import { UNITY_YAML_MERGE_NAME } from '@shared/domain/mergeTools';
 import type { StatusTone as ChangeTone } from '../../components/StatusBadge';
+import type { GroupProgress } from '../../components/TreeGroupLabel';
 import { pluralize } from '../../lib/text';
 import type { MergeLabels } from './mergeDescription';
-import type { GroupProgress } from '../../components/TreeGroupLabel';
 import { directoryResolutionOf, fileStateOf, isApplying, type MergeGroup, type MergeItem, type MergeProgress } from './mergeItems';
 import { hasBase } from './resolve/conflictPanelView';
 import type { FileConflictState } from './resolve/useFileConflicts';
@@ -188,11 +188,15 @@ export function planProgress(statuses: ConflictStatus[]): string {
   return `${resolved} resolved · ${waiting} to decide`;
 }
 
-/** A conflict group's count in the list, "1 of 3" resolved, and its tooltip: "1 resolved, 2 to decide". */
+/**
+ * A conflict group's count in the list, "1 of 3" resolved, and its tooltip: "1 resolved, 2 to decide", none once nothing
+ * is left. A directory decision being applied is still to decide, as in the header: it isn't in the merge yet.
+ */
 export function groupProgress(statuses: ConflictStatus[]): GroupProgress {
   const { resolved, waiting } = tally(statuses);
-  const tip = waiting === 0 ? 'All resolved' : resolved === 0 ? `${waiting} to decide` : `${resolved} resolved, ${waiting} to decide`;
-  return { count: `${resolved} of ${statuses.length}`, tip };
+  const count = `${resolved} of ${statuses.length}`;
+  if (waiting === 0) return { count };
+  return { count, tip: resolved === 0 ? `${waiting} to decide` : `${resolved} resolved, ${waiting} to decide` };
 }
 
 /** What a merge list group's header says instead of its count: how many of its conflicts are resolved; none for the changes. */

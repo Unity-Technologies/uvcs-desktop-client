@@ -14,8 +14,10 @@ interface TreeGroupLabelProps {
 }
 
 export interface GroupProgress {
+  /** Shown in place of the count, e.g. "1 of 3". */
   count: string;
-  tip: string;
+  /** What the count means, as its tooltip, e.g. "1 resolved, 2 to decide". */
+  tip?: string;
 }
 
 /** A group of a list of changed files (a merge's conflicts, Incoming's files changed on both sides): its chevron, name and count. */

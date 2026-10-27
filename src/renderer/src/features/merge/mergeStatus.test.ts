@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { FileContent } from '@shared/domain/content';
 import { mergeLabels } from './mergeDescription';
+import { directoryConflictIdentity } from '@shared/domain/directoryConflictIdentity';
+import type { DirectoryConflict } from '@shared/domain/merge';
+import { resolutionsByConflict } from './directoryConflicts/directoryDecisions';
 import { mergeProgress, type MergeItem } from './mergeItems';
 import { changeTone, describeChange, directoryConflictStatus, fileConflictStatus, groupProgress, mergeGroupProgress, planProgress, presentStatus, summarizePlan } from './mergeStatus';
 import type { FileConflictState } from './resolve/useFileConflicts';
@@ -103,7 +106,7 @@ describe('planProgress', () => {
 describe('groupProgress', () => {
   it("counts a group's conflicts resolved out of all, with those still to decide in its tooltip", () => {
     expect(groupProgress(['keepingSource', 'needsDecision', 'reading'])).toEqual({ count: '1 of 3', tip: '1 resolved, 2 to decide' });
-    expect(groupProgress(['automatic', 'keepingBoth'])).toEqual({ count: '2 of 2', tip: 'All resolved' });
+    expect(groupProgress(['automatic', 'keepingBoth'])).toEqual({ count: '2 of 2' });
     expect(groupProgress(['needsDecision'])).toEqual({ count: '0 of 1', tip: '1 to decide' });
   });
 });
@@ -115,8 +118,18 @@ describe('mergeGroupProgress', () => {
     const change: MergeItem = { kind: 'change', key: 'change:0', path: 'b.txt', change: { kind: 'added', path: '/b.txt' } };
     const progress = mergeProgress([state], new Map());
 
-    expect(mergeGroupProgress('fileConflicts', [conflict], progress)).toEqual({ count: '1 of 1', tip: 'All resolved' });
+    expect(mergeGroupProgress('fileConflicts', [conflict], progress)).toEqual({ count: '1 of 1' });
     expect(mergeGroupProgress('changes', [change], progress)).toBeUndefined();
+  });
+
+  it('counts a directory conflict decided as resolved, and one whose decision is being applied as still to decide', () => {
+    const side = { operation: 'added' as const, path: '/shared', description: 'Added /shared' };
+    const conflictOf = (itemId: number): DirectoryConflict => ({ type: 'evilTwin', title: '', explanation: '', itemId, isDirectory: true, source: side, destination: side });
+    const [decided, applying] = [conflictOf(30), conflictOf(31)];
+    const items: MergeItem[] = [decided, applying].map((conflict) => ({ kind: 'directoryConflict', key: `directory:${conflict.itemId}`, path: 'shared', conflict }));
+    const progress = mergeProgress([], resolutionsByConflict([{ conflict: decided, resolution: { choice: 'source' } }]), directoryConflictIdentity(applying));
+
+    expect(mergeGroupProgress('directoryConflicts', items, progress)).toEqual({ count: '1 of 2', tip: '1 resolved, 1 to decide' });
   });
 });
 
