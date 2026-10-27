@@ -560,9 +560,9 @@ any other scheme (`file:`, `smb:`, `ms-msdt:`) to a program.
 
 Besides `cm`, the app reaches the three places below, and nothing else. `cm` talks to the user's own servers and, for
 Cloud Edition only, sends Unity the app's usage events (an hourly ping, the features used) as it does the other UVCS
-clients' (features/usage-events.md). The app has no analytics or crash reporting of its own. `PRIVACY.md` at the repository root is the app's privacy notice:
-a change that sends anything new, or something more to any of these places, is flagged to the maintainers in its pull
-request and never written into `PRIVACY.md` by the change itself.
+clients' (features/usage-events.md). The app has no analytics or crash reporting of its own. `PRIVACY.md` at the
+repository root is the app's privacy notice: a change that sends anything new, or something more to any of these
+places, is flagged to the maintainers in its pull request and never written into `PRIVACY.md` by the change itself.
 
 - **Gravatar**, for profile pictures, only once the user chose to show them ("Profile pictures (Gravatar)").
 - **GitHub**, for updates (`AppUpdates`, docs/features/updates.md).
