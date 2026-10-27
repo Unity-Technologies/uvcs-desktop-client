@@ -2,11 +2,34 @@
   display: flex;
   flex: 1;
   flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+  animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
+}
+
+/* The conflict and its choices keep a readable width; the comparison below takes the panel's. */
+.decision {
+  display: flex;
+  flex: none;
+  flex-direction: column;
   gap: var(--space-5);
   max-width: 720px;
   padding: var(--space-6);
-  overflow: auto;
-  animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
+}
+
+/* What is left of the panel, never so little that the diff can't be read: the panel scrolls instead. */
+.comparison {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 280px;
+  border-top: 1px solid var(--border-default);
+}
+
+.comparisonBar {
+  display: flex;
+  flex: none;
+  padding: var(--space-2) var(--space-3) 6px;
 }
 
 .header {
