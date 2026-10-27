@@ -95,7 +95,8 @@ describe('withConflictRepositories after a directory decision', () => {
     // Moved by the destination into a folder added on both sides, it's revealed where the source has it once the
     // incoming folder is kept: `cm ls` of that path in the destination's tree fails.
     const { cm } = fakeCmClient({ ls: cmFails("Can't resolve the selector for the item /01project/Enemy.cs") });
-    const revealed = { ...plan(['/01project/Enemy.cs']), repository: 'acme@acme@cloud' };
+    const base = plan(['/01project/Enemy.cs']);
+    const revealed = { ...base, repository: 'acme@acme@cloud', fileConflicts: [{ ...base.fileConflicts[0]!, itemId: 425960 }] };
 
     const completedPlan = await withConflictRepositories(cm, '/work', { kind: 'merge', sourceSpec: 'br:/main/task1008583' }, revealed, undefined, [completed]);
 

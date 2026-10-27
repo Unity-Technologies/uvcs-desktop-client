@@ -109,9 +109,9 @@ describe("the merge page reading the destination's versions", () => {
       ...files.map(({ path, revid, text }) => ({ name: path.split('/').pop(), wkpath: `/${path}`, size: text.length, type: 'txt', changeset: 4, repspec: 'rep:eco@local', revid, itemid: 30, hash: md5(text) })),
     );
   /** The destination's version as the merge page asks for it (`conflictedFilesOf`): by its revision. */
-  const destinationOf = ({ path, repository, destinationRevisionId }: { path: string; repository: string; destinationRevisionId: number }): ContentSource => ({
+  const destinationOf = ({ path, repository, destinationRevisionId }: { path: string; repository: string; destinationRevisionId?: number }): ContentSource => ({
     kind: 'revision',
-    revision: { revisionId: destinationRevisionId, repository },
+    revision: { revisionId: destinationRevisionId!, repository },
     fileName: path,
   });
 

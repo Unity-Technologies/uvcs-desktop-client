@@ -58,9 +58,11 @@ export interface FileConflict {
   repository: string;
   /**
    * The destination's revision of the file, in `repository`: read by its id, from the workspace's disk where the
-   * workspace's file has its content (`WorkspaceCopies`), else downloaded.
+   * workspace's file has its content (`WorkspaceCopies`), else downloaded. None for a file conflict a directory
+   * decision revealed where the destination's tree doesn't have it (moved there by the destination into a folder the
+   * decision dropped): its version is read as the item at its changeset (`destinationVersionSpec`).
    */
-  destinationRevisionId: number;
+  destinationRevisionId?: number;
   /**
    * `cm` keeps the destination's revision as a binary (its `cm ls` type): the file can't merge line by line whatever
    * its other versions hold, so the merge page reads none of its versions until the user opens it. False says nothing
@@ -117,6 +119,8 @@ export type MergePlanStatus =
 export interface MergePlan {
   status: MergePlanStatus;
   contributors?: MergeContributors;
+  /** The merged repository, as the destination contributor names it (`game@local`). */
+  repository?: string;
   changes: MergeChange[];
   fileConflicts: FileConflict[];
   directoryConflicts: DirectoryConflict[];
@@ -209,6 +213,11 @@ export function mergeSourcePoint(request: MergeRequest, sourceChangeset: number)
 /** The incoming version: the item at the source's changeset, or a shelve's in the shelve. */
 export function sourceVersionSpec(request: MergeRequest, conflict: FileConflict): string {
   return spec.itemAt(conflict.itemId, mergeSourcePoint(request, conflict.sourceChangeset), conflict.repository);
+}
+
+/** The destination's version by its item, for a file conflict the plan names no destination revision of. */
+export function destinationVersionSpec(conflict: FileConflict): string {
+  return spec.itemAt(conflict.itemId, spec.changeset(conflict.destinationChangeset), conflict.repository);
 }
 
 /** The common ancestor's version: the item at the base's changeset. Only for a file with a base (`hasMergeBase`). */

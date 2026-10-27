@@ -1,5 +1,5 @@
 import type { ContentSource } from '@shared/domain/content';
-import { baseVersionSpec, hasMergeBase, sourceVersionSpec, type FileConflict, type MergePlan, type MergeRequest } from '@shared/domain/merge';
+import { baseVersionSpec, destinationVersionSpec, hasMergeBase, sourceVersionSpec, type FileConflict, type MergePlan, type MergeRequest } from '@shared/domain/merge';
 import type { ConflictedFile } from './resolve/useFileConflicts';
 
 /**
@@ -14,7 +14,7 @@ export function conflictedFilesOf(plan: MergePlan, request: MergeRequest): Confl
     base: hasMergeBase(conflict) ? versionAt(conflict, baseVersionSpec(conflict)) : { kind: 'empty' },
     ...(hasMergeBase(conflict) && { baseName: `cs:${conflict.baseChangeset}` }),
     source: versionAt(conflict, sourceVersionSpec(request, conflict)),
-    destination: { kind: 'revision', revision: { revisionId: conflict.destinationRevisionId, repository: conflict.repository }, fileName: conflict.destinationPath },
+    destination: destinationOf(conflict),
     ...(conflict.destinationIsBinary && { isKnownBinary: true }),
     ...(request.kind === 'subtractive' && hasMergeBase(conflict) && { baseIsUndoneChange: true }),
   }));
@@ -26,6 +26,12 @@ export function conflictedFilesOf(plan: MergePlan, request: MergeRequest): Confl
  */
 export function fileConflictKey({ itemId, repository }: Pick<FileConflict, 'itemId' | 'repository'>): string {
   return `${itemId}@${repository}`;
+}
+
+/** By its revision, which the workspace's disk may hold; else, the plan naming none, as the item at its changeset. */
+function destinationOf(conflict: FileConflict): ContentSource {
+  if (conflict.destinationRevisionId === undefined) return versionAt(conflict, destinationVersionSpec(conflict));
+  return { kind: 'revision', revision: { revisionId: conflict.destinationRevisionId, repository: conflict.repository }, fileName: conflict.destinationPath };
 }
 
 function versionAt(conflict: FileConflict, versionSpec: string): ContentSource {
