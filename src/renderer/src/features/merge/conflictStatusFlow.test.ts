@@ -168,7 +168,7 @@ describe('where the whole merge stands', () => {
   it('counts every conflict, saying how many wait for the user', () => {
     const statuses = [conflicted, stateOf({ decision: decisionFor('both', document) }), stateOf({ openTool: vsCode })].map(fileConflictStatus);
     expect(summarizePlan(12, statuses)).toBe('12 changes to apply · 3 conflicts: 1 decided, 2 need your decision');
-    expect(planProgress(statuses)).toBe('2 conflicts to decide');
+    expect(planProgress(statuses)).toBe('1 resolved · 2 to decide');
   });
 
   it('gives changes that apply cleanly no conflict status, and words them as what will happen', () => {

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { FileContent } from '@shared/domain/content';
 import { mergeLabels } from './mergeDescription';
-import { changeTone, describeChange, directoryConflictStatus, fileConflictStatus, groupProgress, planProgress, presentStatus, summarizePlan } from './mergeStatus';
+import { mergeProgress, type MergeItem } from './mergeItems';
+import { changeTone, describeChange, directoryConflictStatus, fileConflictStatus, groupProgress, mergeGroupProgress, planProgress, presentStatus, summarizePlan } from './mergeStatus';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
 const text = (value: string): FileContent => ({ text: value, isBinary: false, size: value.length });
@@ -104,6 +105,18 @@ describe('groupProgress', () => {
     expect(groupProgress(['keepingSource', 'needsDecision', 'reading'])).toEqual({ count: '1 of 3', tip: '1 resolved, 2 to decide' });
     expect(groupProgress(['automatic', 'keepingBoth'])).toEqual({ count: '2 of 2', tip: 'All resolved' });
     expect(groupProgress(['needsDecision'])).toEqual({ count: '0 of 1', tip: '1 to decide' });
+  });
+});
+
+describe('mergeGroupProgress', () => {
+  it("counts the conflict groups' conflicts as they stand, and gives the changes to apply their plain count", () => {
+    const state = fileState({ file: { ...fileState({}).file, key: 'a' }, resolution: { choice: 'source' } });
+    const conflict: MergeItem = { kind: 'fileConflict', key: 'file:a', path: 'a.txt', file: state.file };
+    const change: MergeItem = { kind: 'change', key: 'change:0', path: 'b.txt', change: { kind: 'added', path: '/b.txt' } };
+    const progress = mergeProgress([state], new Map());
+
+    expect(mergeGroupProgress('fileConflicts', [conflict], progress)).toEqual({ count: '1 of 1', tip: 'All resolved' });
+    expect(mergeGroupProgress('changes', [change], progress)).toBeUndefined();
   });
 });
 

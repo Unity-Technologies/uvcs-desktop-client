@@ -11,7 +11,7 @@ import type { SelectionState } from '../../lib/selection';
 import { ConflictStatusChip } from './ConflictStatusChip';
 import type { MergeLabels } from './mergeDescription';
 import { directoryResolutionOf, fileStateOf, isApplying, MERGE_GROUP_TIPS, type MergeGroup, type MergeItem, type MergeProgress } from './mergeItems';
-import { changeTone, describeChange, directoryConflictStatus, fileConflictStatus, fileConflictTool } from './mergeStatus';
+import { changeTone, describeChange, directoryConflictStatus, fileConflictStatus, fileConflictTool, mergeGroupProgress } from './mergeStatus';
 
 interface MergeItemListProps {
   /** Conflicts, then the changes that apply cleanly, as a list or a tree (`useGroupedFileTree`). */
@@ -57,6 +57,7 @@ export function MergeItemList({ rows, progress, tree, toggleCollapsed, typeOf, l
       toggleCollapsed={toggleCollapsed}
       renderItem={renderItem}
       groupTip={(group) => MERGE_GROUP_TIPS[group]}
+      groupProgress={(group, items) => mergeGroupProgress(group, items, progress)}
       query={query}
       filterBar={filterBar}
       selection={selection}

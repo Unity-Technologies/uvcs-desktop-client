@@ -3,7 +3,8 @@ import { UNITY_YAML_MERGE_NAME } from '@shared/domain/mergeTools';
 import type { StatusTone as ChangeTone } from '../../components/StatusBadge';
 import { pluralize } from '../../lib/text';
 import type { MergeLabels } from './mergeDescription';
-import { directoryResolutionOf, fileStateOf, isApplying, type MergeItem, type MergeProgress } from './mergeItems';
+import type { GroupProgress } from '../../components/TreeGroupLabel';
+import { directoryResolutionOf, fileStateOf, isApplying, type MergeGroup, type MergeItem, type MergeProgress } from './mergeItems';
 import { hasBase } from './resolve/conflictPanelView';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
@@ -176,18 +177,36 @@ export function summarizePlan(changeCount: number, statuses: ConflictStatus[]): 
   return `${changes} · ${pluralize(statuses.length, 'conflict')}: ${parts.join(', ')}`;
 }
 
-/** The header's few words, "2 conflicts to decide" or "Ready to merge"; its tooltip says the rest (`summarizePlan`). */
+/**
+ * The header's few words: "2 resolved · 5 to decide", "7 conflicts to decide" before any is resolved, or "Ready to
+ * merge"; its tooltip says the rest (`summarizePlan`). Merged automatically counts as resolved: it needs nothing more.
+ */
 export function planProgress(statuses: ConflictStatus[]): string {
-  const waiting = statuses.filter(isWaiting).length;
+  const { resolved, waiting } = tally(statuses);
   if (waiting === 0) return 'Ready to merge';
-  return `${pluralize(waiting, 'conflict')} to decide`;
+  if (resolved === 0) return `${pluralize(waiting, 'conflict')} to decide`;
+  return `${resolved} resolved · ${waiting} to decide`;
+}
+
+/** A conflict group's count in the list, "1 of 3" resolved, and its tooltip: "1 resolved, 2 to decide". */
+export function groupProgress(statuses: ConflictStatus[]): GroupProgress {
+  const { resolved, waiting } = tally(statuses);
+  const tip = waiting === 0 ? 'All resolved' : resolved === 0 ? `${waiting} to decide` : `${resolved} resolved, ${waiting} to decide`;
+  return { count: `${resolved} of ${statuses.length}`, tip };
+}
+
+/** What a merge list group's header says instead of its count: how many of its conflicts are resolved; none for the changes. */
+export function mergeGroupProgress(group: MergeGroup, items: MergeItem[], progress: MergeProgress): GroupProgress | undefined {
+  if (group === 'changes') return undefined;
+  return groupProgress(items.map((item) => conflictStatusOf(item, progress)).filter((status) => status !== null));
+}
+
+function tally(statuses: ConflictStatus[]): { resolved: number; waiting: number } {
+  const waiting = statuses.filter(isWaiting).length;
+  return { resolved: statuses.length - waiting, waiting };
 }
 
 /** Whether a conflict still stands in the way of completing the merge. */
 function isWaiting(status: ConflictStatus): boolean {
   return status === 'needsDecision' || status === 'unreadable' || status === 'reading' || status === 'openInTool' || status === 'applying';
-}
-
-export function groupProgress(_statuses: ConflictStatus[]): { count: string; tip: string } {
-  return { count: '', tip: '' };
 }
