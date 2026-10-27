@@ -30,7 +30,23 @@ is noise for anyone reading a branch, and the web code review and GitHub show on
 not decide first whether the branch received merges (as the official client does to show its button): that is the
 same common-ancestor calculation `--integration` already makes inside its one command.
 
-"Changeset by changeset" steps through the branch's changesets in a list beside the diff, one `cm find` for them all.
+"Changeset by changeset" steps through the branch's changesets in a list stacked above the files of the one selected
+(`BranchChangesetList`), one `cm find` for them all, so the diff keeps the width it has in "Whole branch" and the
+files don't move as the mode switches. Its filter matches every word typed in a changeset's number, comment or author
+over the list already read (`filterBranchChangesets`), with no command; it is not the view filter, so ⌘F stays with
+the files. A changeset the filter hides stays selected and shown: its diff doesn't change under the user while they
+type, and the next step goes on to the nearest changeset shown on that side (`changesetStep`). The arrows above the
+list, ⌥⇧↓ and ⌥⇧↑ (`nextChangeset`, `previousChangeset`, as Annotate steps through a changeset's blocks; ⌥↓ ⌥↑ are
+the changes'), step from anywhere in the page. A branch with one changeset shows no list (`showsChangesetList`): the
+header already names it. The list has no column titles, so its numbers take only the room the newest one needs
+(`numberColumnWidth`).
+
+The list stays mounted as each changeset is stepped to, keeping its focus, scroll and filter: the files and the diff
+are drawn by a `DiffBrowser` mounted again for each changeset, into the slots of a `DiffBrowserLayout` that stays
+(`createPortal`). Why not key only what changes inside one component: the files and the diff share the browser's state
+(the selection, the filter, the review), and the list sits in the files' column, so no single subtree holds just the
+changeset's part.
+
 Each row has the changeset's own menu (`changesetMenu`, as in the Changesets view), whose Copy ▸ Link shares the
 changeset stepped to; the header's Copy link (⇧⌘C) stays the branch's, what the page is about. The list binds no list
 keys, so its menu names none (`listKeysElsewhere`, ARCHITECTURE.md "Menus"): no ⌘C (`useCopyCommand`), as the view
