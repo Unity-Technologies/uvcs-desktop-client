@@ -8,6 +8,7 @@ import {
   type MergeContributors,
   type MergeRequest,
 } from '@shared/domain/merge';
+import { workspacePlace } from '@shared/domain/place';
 import { PathLabel } from '../../../components/PathLabel';
 import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { TextField } from '../../../ui/TextField';
@@ -109,7 +110,7 @@ function Comparison({ workspacePath, request, contributors, conflict, labels }: 
         </div>
       )}
       <FileDiffViewer
-        workspacePath={workspacePath}
+        place={workspacePlace(workspacePath)}
         original={original}
         modified={modified}
         fileName={path}
