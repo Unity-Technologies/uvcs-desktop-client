@@ -1,0 +1,9 @@
+/* A slot fills its pane as the pane's own content would (`SplitPane`'s `.pane`), whatever is drawn into it. */
+.slot {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}

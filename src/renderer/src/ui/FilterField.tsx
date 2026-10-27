@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { focusMain, isKeyboardTaken } from '../lib/mainFocus';
+import { focusMainNear, isKeyboardTaken } from '../lib/mainFocus';
 import { windowShortcutMayRun } from '../lib/modalDialog';
 import { hotkey, hotkeys } from '../lib/shortcutRegistry';
 import { matchesShortcut } from '../lib/shortcuts';
@@ -21,7 +21,7 @@ const FILTER_FIELD_WIDTH = 240;
 
 /**
  * The text filter of a view's filter bar, first in it. ⌘F (and / from anywhere but a text field) goes to it while it
- * shows and is enabled; ↓ goes on to the list, and Esc empties it, then goes back to the list.
+ * shows and is enabled; ↓ goes on to the list it filters, and Esc empties it, then goes back to that list.
  */
 export function FilterField({ value, onChange, placeholder, width = FILTER_FIELD_WIDTH, disabled }: FilterFieldProps) {
   const ref = useRef<HTMLInputElement>(null);
@@ -53,7 +53,7 @@ export function FilterField({ value, onChange, placeholder, width = FILTER_FIELD
       disabled={disabled}
       tip={{ text: placeholder, shortcut: hotkey('listFilter') }}
       onKeyDown={(event) => {
-        if ((event.key === 'ArrowDown' || event.key === 'Escape') && focusMain(document)) event.preventDefault();
+        if ((event.key === 'ArrowDown' || event.key === 'Escape') && focusMainNear(event.currentTarget)) event.preventDefault();
       }}
     />
   );

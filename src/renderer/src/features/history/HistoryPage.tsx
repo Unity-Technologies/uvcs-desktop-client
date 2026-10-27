@@ -17,7 +17,8 @@ import type { AnnotationHistory } from '../annotate/AnnotationPane';
 import { openChangesetDiff } from '../changesets/changesetOperations';
 import { LineLinksContext } from '../diff/viewer/lineLinks';
 import { useFocusUntilMoved } from '../diff/viewer/useFocusUntilMoved';
-import { HISTORY_ROW_HEIGHT, HistoryList } from './HistoryList';
+import { RECORD_ROW_HEIGHT } from '../../components/RecordRow';
+import { HistoryList } from './HistoryList';
 import { historyMenu } from './historyMenu';
 import { historyRowKey, historyRows, revisionRowKey, type HistoryRow } from './historyRows';
 import { historyLineLinks, historyPlace } from './historyLineLinks';
@@ -120,7 +121,7 @@ export function HistoryPage({ page }: PageProps<'history'>) {
         // beside an empty list.
         first={
           !history ? (
-            <ListSkeleton rowHeight={HISTORY_ROW_HEIGHT} />
+            <ListSkeleton rowHeight={RECORD_ROW_HEIGHT} />
           ) : rows.length === 0 ? null : filters.visible.length === 0 ? (
             <NoMatches icon={<History size={22} />} noun="revisions" onClear={filters.clear} />
           ) : (

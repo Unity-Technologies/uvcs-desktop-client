@@ -1,0 +1,16 @@
+.list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* The files' filter bar's measures (`useChangeFilter`), so the two bars of the column read alike. */
+.bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  height: var(--pane-toolbar-height);
+  padding: 0 var(--space-2);
+}
