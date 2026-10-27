@@ -1246,9 +1246,10 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     page or a resolve run moving to a conflict) opens the groups and folders holding it, so its row shows
     (`useOpenToSelected`, `rowsHolding`); only a new selection opens anything, so a folder closed around it stays closed.
   - **One way to group**: a list whose files fall in groups (Changes' changelists, Incoming's conflicts with your
-    changes and changes to apply, the merge page's conflicts and changes to apply) lays them out with
-    `layoutGroupedTree` (`lib/groupedPathTree`): each group's header row (`TreeGroupLabel`: chevron, name, count, what
-    it is as its tooltip), then its files as a list or a tree, a level in (`groupedRowLevel`). Groups close as folders
+    changes and changes to apply, the merge page's directory conflicts, file conflicts and changes to apply) lays them
+    out with `layoutGroupedTree` (`lib/groupedPathTree`): each group's header row (`TreeGroupLabel`: chevron, name,
+    count, or what its items' progress says instead, `FileTreeList`'s `groupProgress`, the merge page's
+    `mergeGroupProgress`; what it is as its tooltip), then its files as a list or a tree, a level in (`groupedRowLevel`). Groups close as folders
     do. A group only exists where the user acts on it differently; kinds of change are never groups, the chips filter by
     them.
   - **One list**: `FileTreeList` (`components/`) is every one of them but Changes, which adds checkboxes and drag and
