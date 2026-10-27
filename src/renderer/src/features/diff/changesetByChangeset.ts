@@ -1,15 +1,16 @@
 import type { Changeset } from '@shared/domain/changeset';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { pluralize } from '../../lib/text';
-import { displayName } from '../../lib/userName';
+import { userFilterTexts } from '../../lib/userName';
 
 /**
  * The changesets a branch diff's "Changeset by changeset" list shows for its filter: every word in the number, the
- * comment or the author's name, as the rows show them (`RecordRow`). A blank filter shows them all.
+ * comment or the author, by the name shown and as stored (`userFilterTexts`, ARCHITECTURE.md "Filters"). A blank
+ * filter shows them all.
  */
 export function filterBranchChangesets(changesets: readonly Changeset[], query: string): readonly Changeset[] {
   if (!query.trim()) return changesets;
-  return changesets.filter((changeset) => matchesWordFilter([String(changeset.id), changeset.comment, displayName(changeset.owner)], query));
+  return changesets.filter((changeset) => matchesWordFilter([String(changeset.id), changeset.comment, ...userFilterTexts(changeset.owner)], query));
 }
 
 /**

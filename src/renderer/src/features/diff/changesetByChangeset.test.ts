@@ -27,10 +27,10 @@ describe('filterBranchChangesets', () => {
     expect(ids(filterBranchChangesets(branch, 'rosa'))).toEqual([280532]);
   });
 
-  it("matches the author's name as the rows show it, not the email domain they hide", () => {
+  it('matches the author by the name shown and as stored', () => {
     const changesets = [changeset(9, 'Fix the build', 'jane.doe@unity3d.com'), changeset(8, 'Tidy up', 'rosa')];
     expect(ids(filterBranchChangesets(changesets, 'jane doe'))).toEqual([9]);
-    expect(filterBranchChangesets(changesets, 'unity3d')).toEqual([]);
+    expect(ids(filterBranchChangesets(changesets, 'jane.doe@unity3d'))).toEqual([9]);
   });
 
   it('matches words across the number, the comment and the author', () => {
