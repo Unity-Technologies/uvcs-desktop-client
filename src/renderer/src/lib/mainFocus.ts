@@ -24,6 +24,17 @@ export function focusMain(root: ParentNode): boolean {
   return true;
 }
 
+/**
+ * Focuses the main element nearest `element`, the first one under its closest ancestor holding one: a list's filter
+ * goes to the list it filters, not to another list above it in the same view (a branch's changesets above the files).
+ */
+export function focusMainNear(element: Element): boolean {
+  for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+    if (findMainFocus(ancestor)) return focusMain(ancestor);
+  }
+  return false;
+}
+
 /** Something else holds the keyboard: a dialog, a menu, a popover or a text field. */
 export function isKeyboardTaken(): boolean {
   let active = document.activeElement;

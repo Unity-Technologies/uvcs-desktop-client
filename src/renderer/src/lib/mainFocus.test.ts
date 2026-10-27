@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { focusMain, isKeyboardTaken } from './mainFocus';
+import { focusMain, focusMainNear, isKeyboardTaken } from './mainFocus';
 
 /** Just enough of a DOM element for the focus rules: its tag, whether it is editable, its shadow root, its children. */
 class FakeElement {
@@ -93,5 +93,30 @@ describe('focusMain', () => {
     page();
 
     expect(focusMain(view(new FakeElement('DIV', { visible: false })))).toBe(false);
+  });
+});
+
+describe('focusMainNear', () => {
+  /** An element under `parent` whose subtree holds these main elements. */
+  const node = (parent: Element | null, ...mainElements: FakeElement[]) => ({ parentElement: parent, querySelectorAll: () => mainElements }) as unknown as Element;
+
+  it('focuses the main element under the closest ancestor holding one, not one further up', () => {
+    page();
+    const changesets = new FakeElement('DIV');
+    const files = new FakeElement('DIV');
+    const column = node(null, changesets, files);
+    const filesPane = node(column, files);
+    const filterBar = node(filesPane);
+    const field = node(filterBar);
+
+    expect(focusMainNear(field)).toBe(true);
+    expect([changesets.focused, files.focused]).toEqual([0, 1]);
+  });
+
+  it('says so when no ancestor holds a main element on screen', () => {
+    page();
+    const field = node(node(null, new FakeElement('DIV', { visible: false })));
+
+    expect(focusMainNear(field)).toBe(false);
   });
 });
