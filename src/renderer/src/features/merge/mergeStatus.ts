@@ -187,3 +187,7 @@ export function planProgress(statuses: ConflictStatus[]): string {
 function isWaiting(status: ConflictStatus): boolean {
   return status === 'needsDecision' || status === 'unreadable' || status === 'reading' || status === 'openInTool' || status === 'applying';
 }
+
+export function groupProgress(_statuses: ConflictStatus[]): { count: string; tip: string } {
+  return { count: '', tip: '' };
+}

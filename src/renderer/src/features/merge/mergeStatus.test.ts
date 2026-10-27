@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FileContent } from '@shared/domain/content';
 import { mergeLabels } from './mergeDescription';
-import { changeTone, describeChange, directoryConflictStatus, fileConflictStatus, planProgress, presentStatus, summarizePlan } from './mergeStatus';
+import { changeTone, describeChange, directoryConflictStatus, fileConflictStatus, groupProgress, planProgress, presentStatus, summarizePlan } from './mergeStatus';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
 const text = (value: string): FileContent => ({ text: value, isBinary: false, size: value.length });
@@ -87,13 +87,23 @@ describe('summarizePlan', () => {
 });
 
 describe('planProgress', () => {
-  it('counts what still stands in the way, or says the merge is ready', () => {
+  it('counts the conflicts resolved and those still to decide, or says the merge is ready', () => {
     expect(planProgress([])).toBe('Ready to merge');
     expect(planProgress(['automatic', 'keepingSource'])).toBe('Ready to merge');
-    expect(planProgress(['automatic', 'needsDecision'])).toBe('1 conflict to decide');
-    expect(planProgress(['needsDecision', 'openInTool', 'combined'])).toBe('2 conflicts to decide');
+    expect(planProgress(['needsDecision', 'needsDecision'])).toBe('2 conflicts to decide');
+    // Merged automatically counts as resolved: it needs nothing from the user.
+    expect(planProgress(['automatic', 'needsDecision'])).toBe('1 resolved · 1 to decide');
+    expect(planProgress(['needsDecision', 'openInTool', 'combined'])).toBe('1 resolved · 2 to decide');
     // A directory decision being applied isn't in the merge yet: it can't complete meanwhile.
-    expect(planProgress(['applying', 'combined'])).toBe('1 conflict to decide');
+    expect(planProgress(['applying', 'combined'])).toBe('1 resolved · 1 to decide');
+  });
+});
+
+describe('groupProgress', () => {
+  it("counts a group's conflicts resolved out of all, with those still to decide in its tooltip", () => {
+    expect(groupProgress(['keepingSource', 'needsDecision', 'reading'])).toEqual({ count: '1 of 3', tip: '1 resolved, 2 to decide' });
+    expect(groupProgress(['automatic', 'keepingBoth'])).toEqual({ count: '2 of 2', tip: 'All resolved' });
+    expect(groupProgress(['needsDecision'])).toEqual({ count: '0 of 1', tip: '1 to decide' });
   });
 });
 
