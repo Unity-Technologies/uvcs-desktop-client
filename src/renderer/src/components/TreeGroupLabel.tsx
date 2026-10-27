@@ -7,19 +7,28 @@ interface TreeGroupLabelProps {
   collapsed: boolean;
   /** How many items it holds. */
   count: number;
+  /** What it says instead of the count, e.g. how many of its conflicts are resolved ("1 of 3"), and that count's tooltip. */
+  progress?: GroupProgress;
   /** What the group is, as its tooltip (e.g. "Changed on both sides"). */
   tip?: string;
 }
 
+export interface GroupProgress {
+  count: string;
+  tip: string;
+}
+
 /** A group of a list of changed files (a merge's conflicts, Incoming's files changed on both sides): its chevron, name and count. */
-export function TreeGroupLabel({ label, collapsed, count, tip }: TreeGroupLabelProps) {
+export function TreeGroupLabel({ label, collapsed, count, progress, tip }: TreeGroupLabelProps) {
   return (
     <>
       <ChevronRight size={13} className={styles.chevron} data-collapsed={collapsed} aria-hidden />
       <span className={styles.groupLabel} data-tip={tip}>
         {label}
       </span>
-      <span className={styles.count}>{formatCount(count)}</span>
+      <span className={styles.count} data-tip={progress?.tip}>
+        {progress ? progress.count : formatCount(count)}
+      </span>
     </>
   );
 }

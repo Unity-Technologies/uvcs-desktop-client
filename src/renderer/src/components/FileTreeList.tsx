@@ -9,7 +9,7 @@ import type { Column } from '../ui/table/column';
 import { DataTable } from '../ui/table/DataTable';
 import { FileTreeCell } from './FileTreeCell';
 import { ListToolbar } from './ListToolbar';
-import { TreeGroupLabel } from './TreeGroupLabel';
+import { TreeGroupLabel, type GroupProgress } from './TreeGroupLabel';
 import styles from './FileTreeList.module.css';
 
 interface FileTreeListProps<T, G> {
@@ -21,6 +21,8 @@ interface FileTreeListProps<T, G> {
   renderItem: (row: PathTreeRow<T>, level: number) => ReactNode;
   /** What a group is, as its tooltip. */
   groupTip?: (group: G) => string | undefined;
+  /** What a group's header says instead of its count, from the items it holds (`TreeGroupLabel`'s `progress`). */
+  groupProgress?: (group: G, items: T[]) => GroupProgress | undefined;
   /** The filter's text, marked in the rows. */
   query: string;
   /** Under the filter bar, e.g. the review bar: what its `actions` open, right beneath them. */
@@ -56,6 +58,7 @@ export function FileTreeList<T, G>({
   toggleCollapsed,
   renderItem,
   groupTip,
+  groupProgress,
   query,
   belowFilterBar,
   filterBar,
@@ -73,7 +76,12 @@ export function FileTreeList<T, G>({
     {
       id: 'path',
       header: 'File',
-      render: (row) => (row.type === 'group' ? <GroupRow row={row} tip={groupTip?.(row.group)} /> : renderItem(row, groupedRowLevel(row, grouped))),
+      render: (row) =>
+        row.type === 'group' ? (
+          <GroupRow row={row} tip={groupTip?.(row.group)} progress={groupProgress?.(row.group, row.items)} />
+        ) : (
+          renderItem(row, groupedRowLevel(row, grouped))
+        ),
     },
   ];
 
@@ -119,10 +127,10 @@ export function FileTreeList<T, G>({
   );
 }
 
-function GroupRow<T, G>({ row, tip }: { row: TreeGroupRow<T, G>; tip?: string }) {
+function GroupRow<T, G>({ row, tip, progress }: { row: TreeGroupRow<T, G>; tip?: string; progress?: GroupProgress }) {
   return (
     <FileTreeCell depth={0} tree folder>
-      <TreeGroupLabel label={row.label} collapsed={row.collapsed} count={row.items.length} tip={tip} />
+      <TreeGroupLabel label={row.label} collapsed={row.collapsed} count={row.items.length} progress={progress} tip={tip} />
     </FileTreeCell>
   );
 }
