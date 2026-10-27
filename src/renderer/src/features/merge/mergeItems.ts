@@ -57,10 +57,11 @@ export function fileStateOf(item: Extract<MergeItem, { kind: 'fileConflict' }>, 
 }
 
 /** The merge page's groups: what both sides changed, and what applies cleanly. */
-export type MergeGroup = 'conflicts' | 'changes';
+export type MergeGroup = 'directoryConflicts' | 'fileConflicts' | 'changes';
 
 export const MERGE_GROUP_TIPS: Record<MergeGroup, string> = {
-  conflicts: 'Changed on both sides',
+  directoryConflicts: 'Moved, deleted or added on both sides in ways that clash',
+  fileConflicts: 'Changed on both sides',
   changes: 'Changed on one side only',
 };
 
@@ -87,10 +88,6 @@ export function buildMergeItems(plan: MergePlan, decisions: readonly DirectoryDe
       (item) => item.change.kind === 'moved',
     ),
   ];
-}
-
-function isConflict(item: MergeItem): boolean {
-  return item.kind !== 'change';
 }
 
 export function needsDecision(item: MergeItem, progress: MergeProgress): boolean {
@@ -132,12 +129,18 @@ export function mergeItemsActedOn(rows: readonly GroupedTreeRow<MergeItem, Merge
   return row?.type === 'folder' && row.item && row.item.kind !== 'change' ? [row.item] : underRows;
 }
 
-/** The conflicts, then the changes that apply cleanly, each in path order as every list of changed files; empty ones left out. */
+/**
+ * The directory conflicts, then the file conflicts, then the changes that apply cleanly, each in path order as every
+ * list of changed files; empty ones left out. Directory conflicts come first: each one decided can move, remove or
+ * add file conflicts.
+ */
 export function mergeItemGroups(items: MergeItem[]): TreeGroup<MergeItem, MergeGroup>[] {
   const byPath = (a: MergeItem, b: MergeItem): number => comparePaths(a.path, b.path);
+  const ofKind = (kind: MergeItem['kind']): MergeItem[] => items.filter((item) => item.kind === kind).sort(byPath);
   const groups: TreeGroup<MergeItem, MergeGroup>[] = [
-    { key: 'group:conflicts', label: 'Conflicts', group: 'conflicts', sorted: items.filter(isConflict).sort(byPath) },
-    { key: 'group:changes', label: 'Changes to apply', group: 'changes', sorted: items.filter((item) => !isConflict(item)).sort(byPath) },
+    { key: 'group:directoryConflicts', label: 'Directory conflicts', group: 'directoryConflicts', sorted: ofKind('directoryConflict') },
+    { key: 'group:fileConflicts', label: 'File conflicts', group: 'fileConflicts', sorted: ofKind('fileConflict') },
+    { key: 'group:changes', label: 'Changes to apply', group: 'changes', sorted: ofKind('change') },
   ];
   return groups.filter((group) => group.sorted.length > 0);
 }

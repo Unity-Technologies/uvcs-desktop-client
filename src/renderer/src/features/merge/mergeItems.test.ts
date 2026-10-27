@@ -122,7 +122,7 @@ describe('a folder conflict that holds another conflict', () => {
   const folderRow = rows.find((row) => row.type === 'folder' && row.item?.kind === 'directoryConflict')!;
 
   it('is the item its folder row shows when it holds another directory conflict, so selecting the row selects it', () => {
-    expect(mergeItemAt(items, rows, folderRow.key)?.conflict).toEqual(folderConflict);
+    expect(mergeItemAt(items, rows, folderRow.key)).toMatchObject({ kind: 'directoryConflict', conflict: folderConflict });
     expect(mergeItemAt(items, rows, 'group:directoryConflicts')).toBeUndefined();
   });
 
