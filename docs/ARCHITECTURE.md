@@ -558,10 +558,9 @@ any other scheme (`file:`, `smb:`, `ms-msdt:`) to a program.
 
 ## What leaves the device
 
-Besides `cm`, which talks only to the user's own servers, the app reaches the three places below, and nothing else.
-There is no analytics or crash reporting of the app's own: its usage events (an hourly ping, the features used) are
-recorded through `cm`, which sends them to Unity as it does the other UVCS clients', only for Cloud Edition
-(features/usage-events.md). `PRIVACY.md` at the repository root is the app's privacy notice:
+Besides `cm`, the app reaches the three places below, and nothing else. `cm` talks to the user's own servers and, for
+Cloud Edition only, sends Unity the app's usage events (an hourly ping, the features used) as it does the other UVCS
+clients' (features/usage-events.md). The app has no analytics or crash reporting of its own. `PRIVACY.md` at the repository root is the app's privacy notice:
 a change that sends anything new, or something more to any of these places, is flagged to the maintainers in its pull
 request and never written into `PRIVACY.md` by the change itself.
 
@@ -951,7 +950,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   operation marked stale).
 - **Refresh**: views refresh themselves when something changes, never on a timer except the incoming check (the app's
   own update check runs hourly too, against GitHub, never the server: features/updates.md; so does the usage ping, a
-  local `cm trackevent`: features/usage-events.md).
+  local `cm trackevent` skipped while the workspace's shells are let go: features/usage-events.md).
   - `main/watch/WorkspaceWatcher` watches an open workspace (recursive on macOS/Windows; on Linux a watch per folder,
     `FolderTreeWatch`, as Node's recursive mode there watches every file and loses files saved by replacing them;
     it walks the tree asynchronously, `FOLDERS_PER_STEP` folders at a time, so a big project never holds the main

@@ -79,8 +79,9 @@ Before adding or changing a `cm` call, answer these (the why and the numbers: AR
    already sends a write that may run long (`runsLong`) to a process. Shell arguments can't hold quotes or newlines:
    multi-line text goes through temp files (`-commentsfile`).
 4. **When does it run?** Only on an event, a settled selection (`useSettled`), a focus once stale, or an operation —
-   never on a timer (the incoming check is the one exception; the hourly usage ping is local). Immutable results use `IMMUTABLE_QUERY`, heavy lists
-   that rarely change `SLOW_CHANGING_QUERY`, equivalent filters share one query key (`compactFilter`).
+   never on a timer (the incoming check, and the hourly usage ping: features/usage-events.md). Immutable results use
+   `IMMUTABLE_QUERY`, heavy lists that rarely change `SLOW_CHANGING_QUERY`, equivalent filters share one query key
+   (`compactFilter`).
 5. **How is it read?** A list, anything that grows with the repository or the workspace, is read as it arrives
    (`queryRecords`, `queryXmlElements`), never as one string; `query()` and `execute()` take only a small answer or an
    operation, whose ends they keep. Each command says which in `COMMAND_OUTPUTS` (ARCHITECTURE.md "Parsing `cm`
