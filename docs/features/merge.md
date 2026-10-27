@@ -340,8 +340,11 @@ and their decisions went to paths a decision had moved.
   doesn't hold (`cm ls` of it fails), and its versions, named by `destinationPath`, aren't read again.
   A file conflict a decision reveals has no such listing: if its path isn't in the destination's tree either (a file
   the destination moved into a folder added on both sides, revealed where the source has it once the incoming folder
-  is kept), the listing fails, and its destination is read as its item at its changeset (`destinationVersionSpec`,
-  with the repository the destination contributor names: `MergePlan.repository`). Completing the
+  is kept), `cm ls` names it as not in the tree while listing the others (`notInTreePaths`). The others are listed
+  again, and it is listed in the source's tree, which tells its repository (an xlinked one's too) and whether it's a
+  binary; its destination is read as its item at its changeset (`destinationVersionSpec`). Only after a decision, and
+  only for the paths `cm` names: any other failure fails the decision. The failed listing shows in the command log, as
+  every failed command does; it's expected there. Completing the
   merge takes them too (`DirectoryDecisions.runOn`), on the page's own decisions only, held while it runs.
 - The first decision starts from the merge the page previewed (`DirectoryDecisions.previewed`), so the merge is
   calculated once more per decision, never twice.
