@@ -1,7 +1,9 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { Changeset } from '@shared/domain/changeset';
 import { ListToolbar } from '../../components/ListToolbar';
-import { RECORD_ROW_HEIGHT, RecordComment, RecordRow, recordRowStyles } from '../../components/RecordRow';
+import { RecordComment } from '../../components/RecordComment';
+import { RecordMetaPart } from '../../components/RecordMetaPart';
+import { RECORD_ROW_HEIGHT, RecordRow } from '../../components/RecordRow';
 import type { MenuEntry } from '../../lib/actions';
 import { focusMainNear } from '../../lib/mainFocus';
 import type { SelectionState } from '../../lib/selection';
@@ -29,15 +31,17 @@ const CHANGESET_COLUMNS: Column<Changeset>[] = [
         title={<RecordComment comment={changeset.comment} />}
         meta={
           <>
-            <span className="mono">
-              cs:<Highlight text={String(changeset.id)} />
-            </span>
-            <span className={recordRowStyles.clipped}>
+            <RecordMetaPart>
+              <span className="mono">
+                cs:<Highlight text={String(changeset.id)} />
+              </span>
+            </RecordMetaPart>
+            <RecordMetaPart clips>
               <Highlight text={displayName(changeset.owner)} />
-            </span>
-            <span className={recordRowStyles.date}>
+            </RecordMetaPart>
+            <RecordMetaPart>
               <RelativeTime date={changeset.date} />
-            </span>
+            </RecordMetaPart>
           </>
         }
       />

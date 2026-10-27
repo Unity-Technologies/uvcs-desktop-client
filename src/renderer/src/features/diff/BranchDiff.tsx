@@ -13,10 +13,11 @@ import { changesetMenu } from '../changesets/changesetMenu';
 import { useChangesets } from '../changesets/useChangesets';
 import { changesetStep, filterBranchChangesets, showsChangesetList } from './changesetByChangeset';
 import { BranchChangesetList } from './BranchChangesetList';
+import { BranchDescription } from './BranchDescription';
 import { branchChangesetPane } from './branchChangesetPane';
 import { DiffBrowserLayout } from './DiffBrowserLayout';
 import { DiffFrame } from './DiffFrame';
-import { BranchDescription, TargetDiff } from './TargetDiff';
+import { TargetDiff } from './TargetDiff';
 
 type BranchDiffMode = 'wholeBranch' | 'byChangeset';
 

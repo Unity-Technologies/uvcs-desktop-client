@@ -1,7 +1,5 @@
 import type { ReactNode } from 'react';
-import { firstLine } from '../lib/text';
 import { Avatar } from '../ui/Avatar';
-import { Highlight } from '../ui/Highlight';
 import styles from './RecordRow.module.css';
 
 /** A `RecordRow`'s height in a `DataTable` (its `rowHeight`, `divided`), and its placeholder rows'. */
@@ -12,7 +10,7 @@ interface RecordRowProps {
   owner: string;
   /** The first line: the comment (`RecordComment`), with what goes beside it. */
   title: ReactNode;
-  /** The second line's parts, a dot between each; a part with `recordRowStyles.clipped` gives way first. */
+  /** The second line's parts (`RecordMetaPart`), a dot between each. */
   meta: ReactNode;
 }
 
@@ -32,16 +30,3 @@ export function RecordRow({ owner, title, meta }: RecordRowProps) {
     </span>
   );
 }
-
-/** A comment's first line, marked where the filter matched it; "No comment" without one. */
-export function RecordComment({ comment }: { comment: string }) {
-  const shown = firstLine(comment);
-  if (!shown) return <span className={styles.noComment}>No comment</span>;
-  return (
-    <span className={styles.clipped}>
-      <Highlight text={shown} />
-    </span>
-  );
-}
-
-export { styles as recordRowStyles };

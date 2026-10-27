@@ -3,7 +3,9 @@ import type { ItemRevision } from '@shared/domain/history';
 import type { Label } from '@shared/domain/label';
 import { shortBranchName } from '@shared/domain/specs';
 import { LabelChips } from '../../components/LabelChips';
-import { RECORD_ROW_HEIGHT, RecordComment, RecordRow, recordRowStyles } from '../../components/RecordRow';
+import { RecordComment } from '../../components/RecordComment';
+import { RecordMetaPart } from '../../components/RecordMetaPart';
+import { RECORD_ROW_HEIGHT, RecordRow } from '../../components/RecordRow';
 import { WorkspaceMark } from '../../components/WorkspaceMark';
 import type { MenuEntry } from '../../lib/actions';
 import type { SelectionState } from '../../lib/selection';
@@ -15,9 +17,6 @@ import { DataTable } from '../../ui/table/DataTable';
 import { useLabelsByChangeset } from '../labels/useLabelsByChangeset';
 import { changesetOf, dateOf, historyRowKey, ownerOf, type HistoryRow } from './historyRows';
 import styles from './HistoryList.module.css';
-
-/** Two lines a row: the comment, then where and by whom. */
-export const HISTORY_ROW_HEIGHT = RECORD_ROW_HEIGHT;
 
 interface HistoryListProps {
   rows: readonly HistoryRow[];
@@ -44,7 +43,7 @@ export function HistoryList({ rows, selection, onSelectionChange, contextMenu, w
       selection={selection}
       onSelectionChange={onSelectionChange}
       contextMenu={contextMenu}
-      rowHeight={HISTORY_ROW_HEIGHT}
+      rowHeight={RECORD_ROW_HEIGHT}
       divided
       revealKey={revealKey}
       label="Revisions"
@@ -91,21 +90,23 @@ function RevisionTitle({ revision, labels, isWorkspaceRevision }: { revision: It
 function RowMeta({ row }: { row: HistoryRow }) {
   return (
     <>
-      <span className="mono">
-        cs:<Highlight text={String(changesetOf(row))} />
-      </span>
+      <RecordMetaPart>
+        <span className="mono">
+          cs:<Highlight text={String(changesetOf(row))} />
+        </span>
+      </RecordMetaPart>
       {/* The branch by its own name (task branches nest deep), whole in its tooltip. The author gives way first: the avatar already says who. */}
       {row.kind === 'revision' && (
         <span className={styles.branch} data-tip={row.revision.branch}>
           <Highlight text={shortBranchName(row.revision.branch)} />
         </span>
       )}
-      <span className={recordRowStyles.clipped}>
+      <RecordMetaPart clips>
         <Highlight text={displayName(ownerOf(row))} />
-      </span>
-      <span className={recordRowStyles.date}>
+      </RecordMetaPart>
+      <RecordMetaPart>
         <RelativeTime date={dateOf(row)} />
-      </span>
+      </RecordMetaPart>
     </>
   );
 }

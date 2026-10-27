@@ -59,6 +59,6 @@
   font-size: var(--text-xs);
 }
 
-.date {
+.whole {
   white-space: nowrap;
 }

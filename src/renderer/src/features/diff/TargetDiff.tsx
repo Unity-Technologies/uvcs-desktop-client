@@ -4,14 +4,15 @@ import type { DiffTarget } from '@shared/domain/diff';
 import type { DiffSideName, FocusedLines } from '../../app/navigation/pages';
 import { EmptyState } from '../../ui/EmptyState';
 import { usePlace } from '../../app/workspace/useWorkspace';
-import { PathLabel } from '../../components/PathLabel';
 import { ChangesetSummary } from '../changesets/ChangesetSummary';
 import { useChangeset } from '../changesets/useChangeset';
 import { cachedShelve } from '../shelves/cachedShelve';
 import { ShelveSummary } from '../shelves/ShelveSummary';
 import { DiffBrowser } from './DiffBrowser';
 import { DiffBrowserLayout } from './DiffBrowserLayout';
-import { DiffFrame, DiffHeader } from './DiffFrame';
+import { BranchDescription } from './BranchDescription';
+import { DiffFrame } from './DiffFrame';
+import { DiffHeader } from './DiffHeader';
 import { useDiffEntries } from './useDiffEntries';
 import styles from './TargetDiff.module.css';
 
@@ -84,14 +85,4 @@ function ShelveDescription({ shelveId }: { shelveId: number }) {
 function ChangesetDescription({ changesetId }: { changesetId: number }) {
   const { data: changeset } = useChangeset(changesetId);
   return changeset ? <ChangesetSummary changeset={changeset} /> : <div className={styles.title}>Changeset {changesetId}</div>;
-}
-
-/** A branch's diff, whole or changeset by changeset: the same header in both, so switching moves nothing. */
-export function BranchDescription({ branch }: { branch: string }) {
-  return (
-    <div className={styles.branchTitle}>
-      <span>All changes on</span>
-      <PathLabel path={branch} fitContent />
-    </div>
-  );
 }
