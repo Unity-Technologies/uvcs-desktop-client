@@ -114,7 +114,7 @@ describe('a folder conflict that holds another conflict', () => {
     expect(mergeItemAt(items, rows, items[0]!.key)?.kind).toBe('directoryConflict');
   });
 
-  // A folder moved on one side and deleted on the other, holding a file added on both: in a tree the folder conflict
+  // Added on both sides, holding a file added on both: in a tree the folder conflict
   // is the folder's row, not a row of its own.
   const twinInside: DirectoryConflict = { ...twin, itemId: 3, source: { ...side, path: '/src/shared/twin.txt' }, destination: { ...side, path: '/src/shared/twin.txt' } };
   const items = buildMergeItems({ ...plan, directoryConflicts: [folderConflict, twinInside] }, [], []);

@@ -56,7 +56,7 @@ export function fileStateOf(item: Extract<MergeItem, { kind: 'fileConflict' }>, 
   return state;
 }
 
-/** The merge page's groups: what both sides changed, and what applies cleanly. */
+/** The merge page's groups: the directory conflicts, the file conflicts, and what applies cleanly. */
 export type MergeGroup = 'directoryConflicts' | 'fileConflicts' | 'changes';
 
 export const MERGE_GROUP_TIPS: Record<MergeGroup, string> = {
@@ -108,8 +108,9 @@ export function firstWaiting(items: MergeItem[], progress: MergeProgress): Merge
 
 /**
  * The item shown by the row keyed `key`: its own row, or a folder's row when the item is that folder. A folder
- * conflict holding another conflict (a folder added on both sides, a file in it changed on both) is its folder's row
- * in a tree (`layoutPathTree`), with no row of its own: selecting that row is selecting the conflict.
+ * conflict holding another directory conflict (a folder added on both sides, a file in it added on both) is its
+ * folder's row in a tree (`layoutPathTree`), with no row of its own: selecting that row is selecting the conflict. The
+ * file conflicts under it are in their own group.
  */
 export function mergeItemAt(items: MergeItem[], rows: readonly GroupedTreeRow<MergeItem, MergeGroup>[], key: string | null): MergeItem | undefined {
   if (key === null) return undefined;
