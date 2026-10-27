@@ -6,11 +6,16 @@
 /** The features whose use is recorded, as Feature Use events name them. */
 export type UsageFeature = 'checkin' | 'undo';
 
+interface Size {
+  width: number;
+  height: number;
+}
+
 /** What a ping says of how the app looks, as the other GUIs' pings say it. */
 export interface PingDetails {
   dark: boolean;
-  /** The primary display's size in physical pixels. */
-  screen: { width: number; height: number };
+  /** The primary display's size in physical pixels (`physicalSize`). */
+  screen: Size;
 }
 
 export function featureUseArgs(feature: UsageFeature): string[] {
@@ -22,9 +27,17 @@ export function pingArgs(details: PingDetails): string[] {
 }
 
 /**
- * `key=value` pairs joined by `:`, `cm` puts them after the OS version. The theme is written `Light` or `Dark`, as the
- * other GUIs write theirs.
+ * `key=value` pairs joined by `:`, which `cm` puts after the OS version, in the order the other GUIs write them. The
+ * theme is written `Light` or `Dark`, as theirs.
  */
 export function pingExtraInfo({ dark, screen }: PingDetails): string {
-  return [`theme=${dark ? 'Dark' : 'Light'}`, `screenresolution=${screen.width}x${screen.height}`].join(':');
+  return [`screenresolution=${screen.width}x${screen.height}`, `theme=${dark ? 'Dark' : 'Light'}`].join(':');
+}
+
+/**
+ * A display's size in physical pixels, as the other GUIs report it: Electron gives it in device-independent pixels and
+ * the scale factor (1.25, 1.5 on Windows), and the product isn't always whole.
+ */
+export function physicalSize(size: Size, scaleFactor: number): Size {
+  return { width: Math.round(size.width * scaleFactor), height: Math.round(size.height * scaleFactor) };
 }

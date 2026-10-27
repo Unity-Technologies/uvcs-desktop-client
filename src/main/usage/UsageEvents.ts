@@ -1,4 +1,5 @@
 import type { CmClient } from '../cm/CmClient';
+import { CmError } from '../cm/CmError';
 import { textForLog } from '../cm/hideSecrets';
 import { featureUseArgs, pingArgs, type PingDetails, type UsageFeature } from './usageEventArgs';
 
@@ -6,7 +7,7 @@ import { featureUseArgs, pingArgs, type PingDetails, type UsageFeature } from '.
 export const PING_PERIOD_MS = 60 * 60 * 1000;
 
 /** Runs `run` every `ms` until the returned function is called. */
-export type Repeat = (run: () => void, ms: number) => () => void;
+export type Repeat = (run: () => unknown, ms: number) => () => void;
 
 const repeatInBackground: Repeat = (run, ms) => {
   // `unref`: the pings never keep the app from quitting.
@@ -26,7 +27,7 @@ export interface UsageRecorder {
 export const NO_USAGE: UsageRecorder = { workspaceShown: () => undefined, featureUsed: () => undefined };
 
 interface UsageEventsOptions {
-  cm: Pick<CmClient, 'query'>;
+  cm: Pick<CmClient, 'query' | 'hasReadyShell'>;
   /** The workspace of the window in front, which each hourly ping is for; undefined when none shows one. */
   workspaceInFront: () => string | undefined;
   pingDetails: () => PingDetails;
@@ -34,49 +35,59 @@ interface UsageEventsOptions {
 }
 
 /**
- * Records the app's usage events with `cm trackevent`, in the workspace's `cm shell`: `cm` stores them and sends them to
- * Unity as it does the other GUIs' (only for Cloud Edition), with the organization and user of the workspace's server.
- * The shells start naming the app and with their own pings off (`SHELL_ARGS`): the app pings once an hour for the
- * workspace in front, instead of each shell for its own.
+ * Records the app's usage events with `cm trackevent`, in the workspace's pooled `cm shell` (`inPooledShell`): `cm`
+ * stores them and that shell sends them to Unity as it does the other GUIs' (only for Cloud Edition), with the
+ * organization and user of the workspace's server. The shells start naming the app and with their own pings off
+ * (`SHELL_ARGS`): the app pings once an hour for the workspace in front, instead of each shell for its own.
  *
- * Best effort: recording never delays or fails what the user asked for, and the first failure (a `cm` without
- * `trackevent`) stops it for the session rather than failing at every event.
+ * Best effort: recording never delays or fails what the user asked for. A `cm` that refuses it (one without
+ * `trackevent`) stops it for the session rather than failing at every event; a shell closing under it doesn't.
  */
 export class UsageEvents implements UsageRecorder {
   private stopPinging: (() => void) | undefined;
-  private failed = false;
+  private refused = false;
 
   constructor(private readonly options: UsageEventsOptions) {}
 
-  workspaceShown(workspacePath: string): void {
-    if (this.stopPinging) return;
+  /** The first ping waits for the workspace's shells, which its window just started (`workspaces.watch`). */
+  workspaceShown(workspacePath: string): Promise<void> {
+    if (this.stopPinging) return Promise.resolve();
     const repeat = this.options.repeat ?? repeatInBackground;
     this.stopPinging = repeat(() => this.pingWorkspaceInFront(), PING_PERIOD_MS);
-    this.ping(workspacePath);
+    return this.ping(workspacePath);
   }
 
-  featureUsed(workspacePath: string, feature: UsageFeature): void {
-    this.record(workspacePath, featureUseArgs(feature));
+  featureUsed(workspacePath: string, feature: UsageFeature): Promise<void> {
+    return this.record(workspacePath, featureUseArgs(feature));
   }
 
   dispose(): void {
     this.stopPinging?.();
   }
 
-  private pingWorkspaceInFront(): void {
+  /**
+   * Skipped while the workspace's shells are let go (idle for minutes, `IDLE_DIRECTORY_MS`): waking two `cm shell`s for
+   * a workspace nobody works in costs more than one hour's ping is worth.
+   */
+  private pingWorkspaceInFront(): Promise<void> {
     const workspacePath = this.options.workspaceInFront();
-    if (workspacePath !== undefined) this.ping(workspacePath);
+    if (workspacePath === undefined || !this.options.cm.hasReadyShell(workspacePath)) return Promise.resolve();
+    return this.ping(workspacePath);
   }
 
-  private ping(workspacePath: string): void {
-    this.record(workspacePath, pingArgs(this.options.pingDetails()));
+  private ping(workspacePath: string): Promise<void> {
+    return this.record(workspacePath, pingArgs(this.options.pingDetails()));
   }
 
-  private record(workspacePath: string, args: string[]): void {
-    if (this.failed) return;
-    this.options.cm.query(args, { cwd: workspacePath }).catch((error: unknown) => {
-      this.failed = true;
-      console.warn('[usage events] Not recorded from now on:', textForLog(String(error)));
-    });
+  private async record(workspacePath: string, args: string[]): Promise<void> {
+    if (this.refused) return;
+    try {
+      await this.options.cm.query(args, { cwd: workspacePath, inPooledShell: true });
+    } catch (error) {
+      // `cm` answered with an error; anything else (a shell closed with its window, one that crashed) passes.
+      if (!(error instanceof CmError)) return;
+      this.refused = true;
+      console.warn('[usage events] Not recorded from now on:', textForLog(error.message));
+    }
   }
 }
