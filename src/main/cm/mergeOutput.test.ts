@@ -41,6 +41,10 @@ const PREVIEW = output(
 describe('parseMergePlan', () => {
   const plan = parseMergePlan(PREVIEW);
 
+  it('reads the merged repository from the destination contributor', () => {
+    expect(parseMergePlan(PREVIEW).repository).toBe('sandbox-merge@local');
+  });
+
   it('reads the three contributors', () => {
     expect(plan.status).toBe('ready');
     expect(plan.contributors).toEqual({

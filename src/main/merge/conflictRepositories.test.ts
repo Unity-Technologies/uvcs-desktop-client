@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FileConflict } from '@shared/domain/merge';
 import type { PrintedMergePlan } from '../cm/mergeOutput';
-import { fakeCmClient } from '../cm/testing/fakeCmClient';
+import { cmFails, fakeCmClient } from '../cm/testing/fakeCmClient';
 import { recordsIn, recordsOutput } from '../cm/testing/cmOutput';
 import { readTreeItem, TREE_ITEM_FORMAT, TREE_ITEMS } from '../cm/treeItems';
 
@@ -89,6 +89,27 @@ describe('withConflictRepositories after a directory decision', () => {
       expect.objectContaining({ path: TEXTURE, destinationRevisionId: 31259610, destinationIsBinary: true }),
     ]);
     expect(lines()).toEqual([conflictListingArgs({ ...moved, fileConflicts: [moved.fileConflicts[1]!] }, 'cs:278648').join(' ')]);
+  });
+
+  it("reads by its item a file conflict the decision revealed at a path the destination's tree doesn't hold", async () => {
+    // Moved by the destination into a folder added on both sides, it's revealed where the source has it once the
+    // incoming folder is kept: `cm ls` of that path in the destination's tree fails.
+    const { cm } = fakeCmClient({ ls: cmFails("Can't resolve the selector for the item /01project/Enemy.cs") });
+    const revealed = { ...plan(['/01project/Enemy.cs']), repository: 'acme@acme@cloud' };
+
+    const completedPlan = await withConflictRepositories(cm, '/work', { kind: 'merge', sourceSpec: 'br:/main/task1008583' }, revealed, undefined, [completed]);
+
+    expect(completedPlan.fileConflicts).toEqual([
+      { ...revealed.fileConflicts[0], destinationPath: '/01project/Enemy.cs', repository: 'acme@acme@cloud', destinationIsBinary: false },
+    ]);
+  });
+
+  it('fails as cm does when listing a conflicting file fails before any decision', async () => {
+    const { cm } = fakeCmClient({ ls: cmFails("Can't resolve the selector for the item /01project/Enemy.cs") });
+
+    await expect(
+      withConflictRepositories(cm, '/work', { kind: 'merge', sourceSpec: 'br:/main/task1008583' }, { ...plan(['/01project/Enemy.cs']), repository: 'acme@acme@cloud' }),
+    ).rejects.toThrow("Can't resolve the selector");
   });
 
   it('lists nothing when every file conflict was completed before', async () => {

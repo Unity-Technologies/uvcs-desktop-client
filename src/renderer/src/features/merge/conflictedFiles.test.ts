@@ -35,6 +35,12 @@ describe('conflictedFilesOf', () => {
     expect(moved?.path).toBe('moved/a.cs');
   });
 
+  it('reads the destination as the item at its changeset when the plan names no revision of it', () => {
+    const { destinationRevisionId: _none, ...revealed } = conflict;
+    const [file] = conflictedFilesOf(plan([revealed]), { kind: 'merge', sourceSpec: 'br:/main/task' });
+    expect(file?.destination).toEqual({ kind: 'spec', spec: 'itemid:27#cs:4@lib@local', fileName: '/src/a.cs' });
+  });
+
   it("knows a file is a binary, before any version is read, when cm keeps the destination's revision as one", () => {
     const [texture, code] = conflictedFilesOf(plan([{ ...conflict, path: '/a.png', destinationIsBinary: true }, conflict]), { kind: 'merge', sourceSpec: 'br:/main/task' });
     expect(texture?.isKnownBinary).toBe(true);
