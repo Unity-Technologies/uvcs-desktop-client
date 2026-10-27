@@ -122,7 +122,7 @@ describe('withConflictRepositories after a directory decision', () => {
     // Then listed again without it, and in the source's tree, both at once: in either order.
     const listings = lines().map((line) => line.split(' --format')[0]);
     expect(listings[0]).toBe(`ls ${ENEMY} ${TEXTURE} --tree=cs:278648`);
-    expect(listings.slice(1).sort()).toEqual([`ls ${ENEMY} --tree=cs:278738`, `ls ${TEXTURE} --tree=cs:278648`]);
+    expect(listings.slice(1).sort()).toEqual([`ls ${ENEMY} --tree=cs:278738`, `ls ${TEXTURE} --tree=cs:278648`].sort());
   });
 
   it('lists in the source\'s tree every revealed file conflict the destination\'s tree has no such path for, however many', async () => {

@@ -67,7 +67,8 @@ export interface FileConflict {
   /**
    * `cm` keeps the destination's revision as a binary (its `cm ls` type): the file can't merge line by line whatever
    * its other versions hold, so the merge page reads none of its versions until the user opens it. False says nothing
-   * about the other versions: they are read to tell.
+   * about the other versions: they are read to tell. For a conflict a directory decision revealed where the
+   * destination's tree has no such path, the source's type stands for it.
    */
   destinationIsBinary: boolean;
 }

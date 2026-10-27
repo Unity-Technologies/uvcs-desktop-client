@@ -46,12 +46,13 @@ export async function withConflictRepositories(
     listed = await list(unknown, tree);
   } catch (error) {
     const missing = new Set(notInTreePaths(error));
-    const source = sourceTree(plan);
-    // Only after a decision, and only for the paths `cm` names: any other failure is the listing's own.
-    if (known === undefined || source === null || missing.size === 0) throw error;
-    listed = await list(unknown.filter((conflict) => !missing.has(conflict.path)), tree);
     const elsewhere = unknown.filter((conflict) => missing.has(conflict.path));
-    revealed = revealedInSource(elsewhere, await list(elsewhere, source));
+    const source = sourceTree(plan);
+    // Only after a decision, and only for the paths of conflicts `cm` names: any other failure is the listing's own.
+    if (known === undefined || source === null || elsewhere.length === 0) throw error;
+    const [inDestination, inSource] = await Promise.all([list(unknown.filter((conflict) => !missing.has(conflict.path)), tree), list(elsewhere, source)]);
+    listed = inDestination;
+    revealed = revealedInSource(elsewhere, inSource);
   }
   copies?.remember(workspacePath, revisionFilesOf(listed));
   return withRepositories(plan, listed, new Map([...knownByItem, ...revealed.map((conflict) => [sameItemKey(conflict), conflict] as const)]));
@@ -65,8 +66,10 @@ function sourceTree(plan: PrintedMergePlan): string | null {
 
 /**
  * Revealed file conflicts completed from their listing in the source's tree, which crosses xlinks: the repository
- * their item and changesets belong to, and whether `cm` keeps them as binaries. The source's revision isn't the
- * destination's: they keep none, their destination read as their item at its changeset (`destinationVersionSpec`).
+ * their item and changesets belong to, and whether `cm` keeps them as binaries, the source's type standing for the
+ * destination's (whose tree has no such path: a type changed on one side alone is all it can miss). The source's
+ * revision isn't the destination's: they keep none, their destination read as their item at its changeset
+ * (`destinationVersionSpec`).
  */
 function revealedInSource(conflicts: PrintedFileConflict[], listed: readonly ListedTreeItem[]): FileConflict[] {
   const byPath = new Map(listed.map((item) => [item.path, item]));

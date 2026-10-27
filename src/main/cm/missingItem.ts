@@ -11,8 +11,8 @@ export function isMissingItemError(error: unknown): boolean {
 
 /**
  * `cm ls <path> --tree=<point>` finding no such path in the tree: `Can't resolve the selector for the item /a.cs`
- * (exit code 1, with an empty listing). A changeset or branch that isn't there fails otherwise (an empty listing alone,
- * or "does not exist"), never with this.
+ * (exit code 1, with no listing of that path; the other paths it was given are listed: `notInTreePaths`). A changeset
+ * or branch that isn't there fails otherwise (an empty listing alone, or "does not exist"), never with this.
  */
 export function isNotInTreeError(error: unknown): boolean {
   return error instanceof CmError && /can't resolve the selector for the item/i.test(error.message);
@@ -29,9 +29,9 @@ export function isServerPathNotFoundError(error: unknown): boolean {
 
 /**
  * The paths `cm ls <paths> --tree=<point>` found no such item for (`isNotInTreeError`), one line each: it lists every
- * other path it was given all the same, and exits with 1.
+ * other path it was given all the same, and exits with 1. Read from all it printed: the error's message is one line.
  */
 export function notInTreePaths(error: unknown): string[] {
   if (!(error instanceof CmError)) return [];
-  return [...error.message.matchAll(/can't resolve the selector for the item (.+?)\s*$/gim)].map((match) => match[1]!);
+  return [...error.command.output.matchAll(/can't resolve the selector for the item (.+?)\s*$/gim)].map((match) => match[1]!);
 }
