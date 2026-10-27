@@ -21,15 +21,14 @@ export function useDirectoryDecisions(workspacePath: string, request: MergeReque
   useEffect(() => () => void api.merge.discardDirectoryDecisions(decisionsId), [decisionsId]);
 
   const decide = useCallback(
-    async (conflict: DirectoryConflict, resolution: DirectoryConflictResolution): Promise<DecidedMerge | null> => {
-      if (latest.current.applying !== null || isDecidedAs(latest.current.decided.decisions, conflict, resolution)) return null;
+    async (conflict: DirectoryConflict, resolution: DirectoryConflictResolution): Promise<void> => {
+      if (latest.current.applying !== null || isDecidedAs(latest.current.decided.decisions, conflict, resolution)) return;
       latest.current.applying = directoryConflictIdentity(conflict);
       setApplying(latest.current.applying);
       const merge = await applyDirectoryDecision(workspacePath, request, decisionsId, latest.current.decided.decisions, conflict, resolution);
       latest.current.applying = null;
       setApplying(null);
       if (merge) setDecided(merge);
-      return merge;
     },
     [workspacePath, request, decisionsId],
   );
@@ -44,7 +43,6 @@ export function useDirectoryDecisions(workspacePath: string, request: MergeReque
     applying,
     /** What the merge goes on from (`MergeResolutions.directoryDecisionsId`); none before any decision. */
     decisionsId: decided.decisions.length > 0 ? decisionsId : undefined,
-    /** Applies a decision; resolves with the merge it leaves, or null when it changed nothing or failed. */
     decide,
   };
 }

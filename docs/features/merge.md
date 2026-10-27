@@ -320,9 +320,10 @@ and their decisions went to paths a decision had moved.
   decision whose conflict an earlier one took out of the merge, or moved (a conflict inside a folder whose move was
   decided again is another conflict, by its paths), is dropped, and a toast says so
   (`droppedDecisionsToast`). Deciding a conflict the way it's decided already runs nothing (`isDecidedAs`).
-- A file conflict the user decided that a directory decision takes out of the merge starts over, so a later decision
-  bringing it back brings it undecided, and a toast names it ("Your decision on Forest.cs no longer applies",
-  `forgetLostFileDecisions`). One the decision only moved keeps its decision.
+- A directory decision moves file conflicts or reveals ones `cm` held back under it (a file changed on both sides
+  that one side moved into a folder added on both is listed only once that folder is decided); none was seen to take
+  one away, as a file changed on both sides is in both, and a decision only picks where an item goes or which of two
+  keeps a name. So no decision on a file is lost to one.
 - File conflicts can be decided before or after the directory conflicts, in any order: nothing is written until the
   merge completes, the list always shows the merge the directory decisions leave, and the merge can't complete while
   a directory conflict waits. The official client asks for the directory conflicts first because it writes each file's
