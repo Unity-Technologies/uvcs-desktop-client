@@ -16,7 +16,7 @@ import { BranchChangesetList } from './BranchChangesetList';
 import { branchChangesetPane } from './branchChangesetPane';
 import { DiffBrowserLayout } from './DiffBrowserLayout';
 import { DiffFrame } from './DiffFrame';
-import { TargetDiff } from './TargetDiff';
+import { BranchDescription, TargetDiff } from './TargetDiff';
 
 type BranchDiffMode = 'wholeBranch' | 'byChangeset';
 
@@ -94,11 +94,23 @@ function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; 
     />
   );
 
-  // The changesets stay above the files as each changeset's diff is read (`DiffBrowserLayout`); the mode switch stays
-  // in the header while the changesets are read, and when there are none.
-  if (pane.kind === 'changeset') return <TargetDiff target={{ kind: 'changeset', changesetId: pane.changesetId }} toolbar={toolbar} focusPath={focusPath} aboveFiles={changesetList} />;
+  // The changesets stay above the files as each changeset's diff is read (`DiffBrowserLayout`), and the header names
+  // the branch, as in "Whole branch", whatever is read: each changeset's summary, as tall as its comment, goes above
+  // its diff, where its height moves nothing being clicked.
+  const branchDescription = <BranchDescription branch={branch} />;
+  if (pane.kind === 'changeset') {
+    return (
+      <TargetDiff
+        target={{ kind: 'changeset', changesetId: pane.changesetId }}
+        toolbar={toolbar}
+        focusPath={focusPath}
+        aboveFiles={changesetList}
+        pageDescription={branchDescription}
+      />
+    );
+  }
   return (
-    <DiffFrame toolbar={toolbar}>
+    <DiffFrame description={branchDescription} toolbar={toolbar}>
       {pane.kind === 'reading' ? <DiffBrowserLayout aboveFiles={changesetList} /> : <EmptyState title="This branch has no changesets" />}
     </DiffFrame>
   );

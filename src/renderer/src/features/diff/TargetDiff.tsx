@@ -11,7 +11,7 @@ import { cachedShelve } from '../shelves/cachedShelve';
 import { ShelveSummary } from '../shelves/ShelveSummary';
 import { DiffBrowser } from './DiffBrowser';
 import { DiffBrowserLayout } from './DiffBrowserLayout';
-import { DiffFrame } from './DiffFrame';
+import { DiffFrame, DiffHeader } from './DiffFrame';
 import { useDiffEntries } from './useDiffEntries';
 import styles from './TargetDiff.module.css';
 
@@ -28,18 +28,22 @@ interface TargetDiffProps {
   sideNames?: readonly [DiffSideName, DiffSideName];
   /** Above the files, staying as the target changes: a branch's changesets, stepped through one at a time. */
   aboveFiles?: ReactNode;
+  /**
+   * What the page's header describes instead of the target, which is then described above the diff: a branch, its
+   * changesets stepped through. A changeset's summary changes height with its comment; over the whole page it would
+   * move the lists being stepped through.
+   */
+  pageDescription?: ReactNode;
 }
 
-export function TargetDiff({ target, toolbar, focusPath, focusLines, branchHead, sideNames, aboveFiles }: TargetDiffProps) {
+export function TargetDiff({ target, toolbar, focusPath, focusLines, branchHead, sideNames, aboveFiles, pageDescription }: TargetDiffProps) {
   const { data: entries, error } = useDiffEntries(target, { branchHead });
+  // Keyed so another changeset (Branch diff's "By changeset") folds its own comment afresh (`FoldedComment`).
+  const description = <TargetDescription key={JSON.stringify(target)} target={target} sideNames={sideNames} />;
 
   return (
-    <DiffFrame
-      // Keyed so another changeset (Branch diff's "By changeset") folds its own comment afresh (`FoldedComment`).
-      description={<TargetDescription key={JSON.stringify(target)} target={target} sideNames={sideNames} />}
-      toolbar={toolbar}
-    >
-      <DiffBrowserLayout aboveFiles={aboveFiles}>
+    <DiffFrame description={pageDescription ?? description} toolbar={toolbar}>
+      <DiffBrowserLayout aboveFiles={aboveFiles} aboveDiff={pageDescription && <DiffHeader description={description} />}>
         {(slots) =>
           // Beside the files' column, which stays empty: what's above it (a branch's changesets) can still be stepped.
           error ? (
@@ -66,12 +70,7 @@ function TargetDescription({ target, sideNames }: { target: DiffTarget; sideName
       );
     }
     case 'branch':
-      return (
-        <div className={styles.branchTitle}>
-          <span>All changes on</span>
-          <PathLabel path={target.branch} fitContent />
-        </div>
-      );
+      return <BranchDescription branch={target.branch} />;
     case 'shelve':
       return <ShelveDescription shelveId={target.shelveId} />;
   }
@@ -85,4 +84,14 @@ function ShelveDescription({ shelveId }: { shelveId: number }) {
 function ChangesetDescription({ changesetId }: { changesetId: number }) {
   const { data: changeset } = useChangeset(changesetId);
   return changeset ? <ChangesetSummary changeset={changeset} /> : <div className={styles.title}>Changeset {changesetId}</div>;
+}
+
+/** A branch's diff, whole or changeset by changeset: the same header in both, so switching moves nothing. */
+export function BranchDescription({ branch }: { branch: string }) {
+  return (
+    <div className={styles.branchTitle}>
+      <span>All changes on</span>
+      <PathLabel path={branch} fitContent />
+    </div>
+  );
 }

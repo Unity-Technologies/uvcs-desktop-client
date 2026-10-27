@@ -13,11 +13,18 @@ interface DiffFrameProps {
 export function DiffFrame({ description, toolbar, children }: DiffFrameProps) {
   return (
     <div className={styles.diff}>
-      <header className={styles.header}>
-        <div className={styles.description}>{description}</div>
-        {toolbar}
-      </header>
+      <DiffHeader description={description} toolbar={toolbar} />
       {children}
     </div>
+  );
+}
+
+/** What a diff compares, and the switches at its end: over the whole page, or over one changeset's diff in a branch's. */
+export function DiffHeader({ description, toolbar }: Omit<DiffFrameProps, 'children'>) {
+  return (
+    <header className={styles.header}>
+      <div className={styles.description}>{description}</div>
+      {toolbar}
+    </header>
   );
 }
