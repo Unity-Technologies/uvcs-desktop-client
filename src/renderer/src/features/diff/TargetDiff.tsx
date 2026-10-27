@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import type { DiffTarget } from '@shared/domain/diff';
 import type { DiffSideName, FocusedLines } from '../../app/navigation/pages';
 import { EmptyState } from '../../ui/EmptyState';
@@ -9,6 +10,7 @@ import { useChangeset } from '../changesets/useChangeset';
 import { cachedShelve } from '../shelves/cachedShelve';
 import { ShelveSummary } from '../shelves/ShelveSummary';
 import { DiffBrowser } from './DiffBrowser';
+import { DiffBrowserLayout } from './DiffBrowserLayout';
 import { DiffFrame } from './DiffFrame';
 import { useDiffEntries } from './useDiffEntries';
 import styles from './TargetDiff.module.css';
@@ -24,9 +26,11 @@ interface TargetDiffProps {
   branchHead?: number;
   /** For a range, its sides named where their specs don't say what they are (two branches' heads). */
   sideNames?: readonly [DiffSideName, DiffSideName];
+  /** Above the files, staying as the target changes: a branch's changesets, stepped through one at a time. */
+  aboveFiles?: ReactNode;
 }
 
-export function TargetDiff({ target, toolbar, focusPath, focusLines, branchHead, sideNames }: TargetDiffProps) {
+export function TargetDiff({ target, toolbar, focusPath, focusLines, branchHead, sideNames, aboveFiles }: TargetDiffProps) {
   const { data: entries, error } = useDiffEntries(target, { branchHead });
 
   return (
@@ -35,11 +39,16 @@ export function TargetDiff({ target, toolbar, focusPath, focusLines, branchHead,
       description={<TargetDescription key={JSON.stringify(target)} target={target} sideNames={sideNames} />}
       toolbar={toolbar}
     >
-      {error ? (
-        <EmptyState title="Couldn't calculate the differences" description={error.message} />
-      ) : (
-        <DiffBrowser key={JSON.stringify(target)} target={target} entries={entries} initialPath={focusPath} initialLines={focusLines} />
-      )}
+      <DiffBrowserLayout aboveFiles={aboveFiles}>
+        {(slots) =>
+          // Beside the files' column, which stays empty: what's above it (a branch's changesets) can still be stepped.
+          error ? (
+            createPortal(<EmptyState title="Couldn't calculate the differences" description={error.message} />, slots.diff)
+          ) : (
+            <DiffBrowser key={JSON.stringify(target)} target={target} entries={entries} initialPath={focusPath} initialLines={focusLines} slots={slots} />
+          )
+        }
+      </DiffBrowserLayout>
     </DiffFrame>
   );
 }
