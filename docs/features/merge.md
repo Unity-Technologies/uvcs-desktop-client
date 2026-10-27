@@ -147,12 +147,14 @@ The page is a preview until "Complete merge" (into the workspace) or "Merge into
 branch's last name). Its header is one row: a "Preview" pill (its
 tooltip: nothing is written until then), the title fitted as a whole (`fitMergeTitle`: the words stay, the branches give
 way from their middle; it keeps that room in a narrow window, ARCHITECTURE.md "Long names"), the changesets it combines
-("cs:3 → cs:5"; a click lists them with the base), where it stands ("2 conflicts to decide", the full summary in its
+("cs:3 → cs:5"; a click lists them with the base), where it stands ("2 resolved · 5 to decide", "7 conflicts to decide" before any is resolved, `planProgress`; merged
+automatically counts as resolved; the full summary in its
 tooltip) and the merge button, the primary action only once nothing waits. Merging into a server branch, a second row
 holds the changeset comment (`Merge from <source>`) and the button.
 The list (`MergeItemList`) is every list of changed files (ARCHITECTURE.md "Lists of changed files") in three groups,
 "Directory conflicts", "File conflicts" then "Changes to apply" (`mergeItemGroups`), each by path, directory
-conflicts first as each one decided can move, remove or add file conflicts: the filter (the "!" chip for conflicts,
+conflicts first as each one decided can move, remove or add file conflicts; each conflict group counts its conflicts
+resolved ("1 of 3", what is left to decide in its tooltip: `mergeGroupProgress`): the filter (the "!" chip for conflicts,
 `mergeItemTones`), List or Tree, and several items selected at once, whose menu keeps yours or the incoming version of
 every conflicting file among them, or the base when every one of them has one (`keepVersionEntries`). One item's menu is any changed file's (ARCHITECTURE.md "One
 menu": history, open or save the incoming version, Copy) with what a merge adds (`mergeItemMenu`): a conflicting file, the same
