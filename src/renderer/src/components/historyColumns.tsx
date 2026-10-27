@@ -32,12 +32,15 @@ export function avatarColumn<Row extends HistoryRow>({ alwaysShown = false }: { 
   return { id: 'avatar', header: '', width: 34, hideBelow: alwaysShown ? undefined : HIDE_AVATAR_BELOW, render: (row) => <Avatar user={row.owner} size={20} /> };
 }
 
-/** The number, in mono; `marker` adds something after it (the changeset loaded in the workspace). */
-export function numberColumn<Row extends HistoryRow>(header: string, marker?: (row: Row) => ReactNode): Column<Row> {
+/**
+ * The number, in mono; `marker` adds something after it (the changeset loaded in the workspace). `width` fits a list
+ * without column titles to its numbers (`numberColumnWidth`); otherwise the column fits its title.
+ */
+export function numberColumn<Row extends HistoryRow>(header: string, { marker, width = 84 }: { marker?: (row: Row) => ReactNode; width?: number } = {}): Column<Row> {
   return {
     id: 'id',
     header,
-    width: 84,
+    width,
     sortValue: (row) => row.id,
     render: (row) => (
       <span className={styles.numberCell}>
