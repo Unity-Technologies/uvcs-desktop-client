@@ -119,11 +119,32 @@ describe('withConflictRepositories after a directory decision', () => {
     expect(enemy).toEqual({ ...revealedPlan().fileConflicts[0], destinationPath: ENEMY, repository: 'editorGUI@acme@cloud', destinationIsBinary: true });
     expect(texture).toMatchObject({ path: TEXTURE, destinationRevisionId: 31259610, destinationIsBinary: true });
     expect(moved).toEqual({ ...completed, path: MOVED });
-    expect(lines().map((line) => line.split(' --format')[0])).toEqual([
-      `ls ${ENEMY} ${TEXTURE} --tree=cs:278648`,
-      `ls ${TEXTURE} --tree=cs:278648`,
-      `ls ${ENEMY} --tree=cs:278738`,
-    ]);
+    // Then listed again without it, and in the source's tree, both at once: in either order.
+    const listings = lines().map((line) => line.split(' --format')[0]);
+    expect(listings[0]).toBe(`ls ${ENEMY} ${TEXTURE} --tree=cs:278648`);
+    expect(listings.slice(1).sort()).toEqual([`ls ${ENEMY} --tree=cs:278738`, `ls ${TEXTURE} --tree=cs:278648`]);
+  });
+
+  it('lists in the source\'s tree every revealed file conflict the destination\'s tree has no such path for, however many', async () => {
+    const PLAYER = '/01project/plugins/editor-plugin/Player.fbx';
+    const bothInSource = recordsOutput(
+      TREE_ITEMS,
+      { name: 'Enemy.fbx', wkpath: ENEMY, type: 'bin', size: 9, changeset: 17092, repspec: 'rep:editorGUI@acme@cloud', revid: 432299, itemid: 425960 },
+      { name: 'Player.fbx', wkpath: PLAYER, type: 'bin', size: 9, changeset: 17092, repspec: 'rep:editorGUI@acme@cloud', revid: 432300, itemid: 425961 },
+    );
+    const { cm } = fakeCmClient({
+      ls: ({ args }) => {
+        if (optionValue(args, '--tree=') === 'cs:278738') return bothInSource;
+        if (args.includes(ENEMY)) return cmFails(`Can't resolve the selector for the item ${ENEMY}\nCan't resolve the selector for the item ${PLAYER}\n`);
+        return textureInDestination;
+      },
+    });
+    const twoRevealed = revealedPlan();
+    twoRevealed.fileConflicts.push({ ...twoRevealed.fileConflicts[0]!, path: PLAYER, itemId: 425961 });
+
+    const completedPlan = await withConflictRepositories(cm, '/work', { kind: 'merge', sourceSpec: 'br:/main/task1008583' }, twoRevealed, undefined, [completed]);
+
+    expect(completedPlan.fileConflicts.filter((conflict) => conflict.destinationRevisionId === undefined).map((conflict) => conflict.path)).toEqual([ENEMY, PLAYER]);
   });
 
   it("fails as cm does when a revealed file conflict's path is in neither tree", async () => {
@@ -139,6 +160,15 @@ describe('withConflictRepositories after a directory decision', () => {
 
     await expect(withConflictRepositories(cm, '/work', { kind: 'merge', sourceSpec: 'br:/main/task1008583' }, revealedPlan(), undefined, [completed])).rejects.toThrow(
       'The server is unreachable.',
+    );
+    expect(lines()).toHaveLength(1);
+  });
+
+  it('fails at once when cm names no path among the conflicts as not in the tree', async () => {
+    const { cm, lines } = fakeCmClient({ ls: notInTree('/01project/Other.cs') });
+
+    await expect(withConflictRepositories(cm, '/work', { kind: 'merge', sourceSpec: 'br:/main/task1008583' }, revealedPlan(), undefined, [completed])).rejects.toThrow(
+      "Can't resolve the selector",
     );
     expect(lines()).toHaveLength(1);
   });
