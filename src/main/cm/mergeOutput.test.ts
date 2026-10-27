@@ -1,10 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { MERGE_FIELD_SEPARATOR, parseCreatedChangeset, parseDestinationMoved, parseMergePlan } from './mergeOutput';
+import { createdChangesetOf, destinationMovedIn, MERGE_FIELD_SEPARATOR, mergeOutcomeRecordOf, mergePlanOf } from './mergeOutput';
+import { formatOutput, recordsIn } from './testing/cmOutput';
 
-/** Real `cm merge --machinereadable --printcontributors` output, written with `|` for readability. */
+/**
+ * Real `cm merge --machinereadable --printcontributors` records, written with `|` for readability, as the preview
+ * prints them (`MERGE_PREVIEW_RECORD_ARGS`).
+ */
 function output(...lines: string[]): string {
-  return lines.map((line) => line.split('|').join(MERGE_FIELD_SEPARATOR)).join('\n');
+  return formatOutput(...lines.map((line) => line.split('|')));
 }
+
+/** The plan of a preview, its records read as they arrive. */
+const parseMergePlan = (preview: string) => mergePlanOf(recordsIn(preview));
+
+/** The records a merge run keeps of the lines it prints (`mergeOutcomeRecordOf`). */
+const outcomeOf = (...lines: string[]): string[][] => lines.flatMap((line) => {
+  const record = mergeOutcomeRecordOf(line.split('|').join(MERGE_FIELD_SEPARATOR));
+  return record ? [record] : [];
+});
 
 const PREVIEW = output(
   'CONTRIBUTOR|SRC|3|cs:3@sandbox-merge@local|/main/task',
@@ -98,24 +111,30 @@ describe('parseMergePlan', () => {
     expect(done.contributors?.base).toBeUndefined();
   });
 
-  it('ignores progress lines printed while merging', () => {
-    const run = parseMergePlan(output('DO_MERGE|/private/tmp/w/src/a.txt', 'Some plain text line'));
-    expect(run).toEqual({ status: 'ready', changes: [], fileConflicts: [], directoryConflicts: [], warnings: [] });
+  it('keeps only the records of a merge run that tell how it ended, not its progress', () => {
+    const outcome = outcomeOf(
+      'DO_MERGE|/private/tmp/w/src/a.txt',
+      'Some plain text line',
+      'DIR_CONFLICT|EVIL|Evil twin conflict|Added twice.|Added /src/twin.txt|Added /src/twin.txt|45|False|ADD|/src/twin.txt|ADD|/src/twin.txt',
+      "CHANGESET|cs:7@/main/t3@sandbox-merge@local (mount:'/')",
+    );
+    expect(outcome.map(([record]) => record)).toEqual(['DIR_CONFLICT', 'CHANGESET']);
+    expect(mergePlanOf(outcome).directoryConflicts).toHaveLength(1);
   });
 });
 
-describe('parseCreatedChangeset', () => {
+describe('createdChangesetOf', () => {
   it('reads the changeset created by a merge into a server branch', () => {
-    expect(parseCreatedChangeset(output("CHANGESET|cs:7@/main/t3@sandbox-merge@local (mount:'/')"))).toBe(7);
-    expect(parseCreatedChangeset('nothing')).toBeUndefined();
+    expect(createdChangesetOf(outcomeOf("CHANGESET|cs:7@/main/t3@sandbox-merge@local (mount:'/')"))).toBe(7);
+    expect(createdChangesetOf(outcomeOf('nothing'))).toBeUndefined();
   });
 });
 
-describe('parseDestinationMoved', () => {
+describe('destinationMovedIn', () => {
   it('tells when someone checked in on the destination while merging into it', () => {
-    const raced = output("CHANGESET|cs:12@/main@mtask-repo@local (mount:'/')", 'MERGE_NEEDED|12|/main|mtask-repo|local');
-    expect(parseDestinationMoved(raced)).toBe(true);
-    expect(parseCreatedChangeset(raced)).toBe(12);
-    expect(parseDestinationMoved(output("CHANGESET|cs:7@/main/t3@sandbox-merge@local (mount:'/')"))).toBe(false);
+    const raced = outcomeOf("CHANGESET|cs:12@/main@mtask-repo@local (mount:'/')", 'MERGE_NEEDED|12|/main|mtask-repo|local');
+    expect(destinationMovedIn(raced)).toBe(true);
+    expect(createdChangesetOf(raced)).toBe(12);
+    expect(destinationMovedIn(outcomeOf("CHANGESET|cs:7@/main/t3@sandbox-merge@local (mount:'/')"))).toBe(false);
   });
 });

@@ -9,20 +9,22 @@ import {
   ArrowUpFromLine,
   Binary,
   Cherry,
-  ClipboardPaste,
   CircleCheck,
   CircleDot,
+  ClipboardPaste,
   CodeXml,
   Copy,
   CornerLeftUp,
+  Delete,
   Download,
   ExternalLink,
   Eye,
   EyeOff,
   FileCheck,
-  FileDiff,
   FileClock,
+  FileDiff,
   FileDown,
+  FileSearch,
   FilePlus,
   Files,
   Filter,
@@ -30,8 +32,10 @@ import {
   FolderInput,
   FolderLock,
   FolderOpen,
+  FolderPen,
   FolderPlus,
   FolderSearch,
+  FolderSymlink,
   FolderTree,
   GitBranchPlus,
   GitCommitHorizontal,
@@ -41,9 +45,10 @@ import {
   GitMerge,
   GitPullRequest,
   GitPullRequestArrow,
+  Hash,
   History,
-  Link,
   Layers,
+  Link,
   Lock,
   LockOpen,
   Merge,
@@ -51,13 +56,16 @@ import {
   MessageSquareText,
   Minus,
   MoveRight,
-  PenLine,
   Pencil,
+  PenLine,
   PictureInPicture2,
   Plus,
+  Redo2,
+  Replace,
   RotateCcw,
   ScanText,
   Scissors,
+  Search,
   ServerCog,
   ShieldCheck,
   Square,
@@ -65,7 +73,9 @@ import {
   SquareCheckBig,
   SquareTerminal,
   Tag,
+  Telescope,
   Text,
+  TextSelect,
   Trash2,
   Undo2,
   UserPlus,
@@ -106,6 +116,9 @@ export const MENU_WORDS = {
   release: word('primary', LockOpen, 'Release lock'),
   openWorkspace: word('primary', FolderOpen, 'Open workspace'),
   openInNewWindow: word('primary', AppWindow, 'Open in new window'),
+  // A repository, without a workspace (`exploreRepository`).
+  explore: word('primary', Telescope, 'Explore'),
+  exploreInNewWindow: word('primary', AppWindow, 'Explore in new window'),
   locate: word('primary', FolderSearch, 'Locate or recreate…'),
 
   // Opening it in other apps, and the file manager (`openOnDiskEntries`, `openRevisionEntries`): a file's Enter too.
@@ -122,6 +135,9 @@ export const MENU_WORDS = {
   openInFileManager: word('open', FolderSearch, OPEN_IN_FILE_MANAGER_LABEL),
 
   // What it does to the workspace or to the object.
+  // Text typed into (`codeMenu`): its edits undone and redone, as the editor's keys do.
+  undoEdit: word('act', Undo2, 'Undo'),
+  redoEdit: word('act', Redo2, 'Redo'),
   switch: word('act', ArrowRightLeft),
   taskWorkspace: word('act', FolderGit2, 'Work on this branch in a new workspace…'),
   revert: word('act', RotateCcw),
@@ -151,6 +167,8 @@ export const MENU_WORDS = {
   restore: word('act', ArchiveRestore),
   restoreTo: word('act', FolderInput, 'Restore to…'),
   add: word('act', Plus),
+  // An item deleted from disk and a new one paired by hand as one moved item (`pickMoveMatch`).
+  searchMatches: word('act', FileSearch, 'Search matches…'),
   checkout: word('act', PenLine, 'Check out'),
   status: word('act', CircleDot, 'Set status'),
   assign: word('act', UserPlus, 'Assign reviewer…'),
@@ -173,6 +191,8 @@ export const MENU_WORDS = {
   newCodeReview: word('create', MessageSquareCode, 'New code review…'),
   newFile: word('create', FilePlus, 'New file…'),
   newFolder: word('create', FolderPlus, 'New folder…'),
+  // A folder showing another repository (docs/features/xlinks.md).
+  newXlink: word('create', FolderSymlink, 'New xlink…'),
   newWorkspace: word('create', FolderPlus, 'New workspace…'),
   newTaskWorkspace: word('create', FolderGit2, 'New workspace for a task…'),
   newWindow: word('create', AppWindow, 'New window'),
@@ -192,6 +212,11 @@ export const MENU_WORDS = {
   locks: word('navigate', Lock, 'Show locks'),
   showInLocks: word('navigate', Lock, 'Show in Locks'),
   showInFiles: word('navigate', FolderTree, 'Show in Files'),
+  // Text (`codeMenu`): finding in it, a line of it, and what's selected compared with the clipboard.
+  find: word('navigate', Search, 'Find'),
+  replace: word('navigate', Replace, 'Replace'),
+  goToLine: word('navigate', Hash, 'Go to line…'),
+  compareWithClipboard: word('navigate', GitCompareArrows, 'Compare with clipboard'),
   // The Branch Explorer's own ways around the graph.
   parent: word('navigate', CornerLeftUp, 'Go to parent changeset'),
   head: word('navigate', ArrowRightToLine, 'Go to head changeset'),
@@ -211,8 +236,13 @@ export const MENU_WORDS = {
   copyLineLink: word('clipboard', Link),
   copyLines: word('clipboard', Copy),
   paste: word('clipboard', ClipboardPaste, 'Paste'),
+  // Text selected (`codeMenu`), not an object: what it holds, not its names.
+  copyText: word('clipboard', Copy, 'Copy'),
 
   // What it's called, says or is filed under.
+  // Text (`codeMenu`): what's selected removed, without the clipboard; everything selected.
+  deleteText: word('edit', Delete, 'Delete'),
+  selectAll: word('edit', TextSelect, 'Select all'),
   rename: word('edit', Pencil, 'Rename…'),
   editComment: word('edit', MessageSquareText, 'Edit comment…'),
   describe: word('edit', Text, 'Edit description…'),
@@ -220,6 +250,7 @@ export const MENU_WORDS = {
   changelist: word('edit', FolderInput, 'Move to changelist'),
   filterRules: word('edit', EyeOff, 'Ignore, cloak or hide'),
   revisionType: word('edit', Binary, 'Revision type'),
+  editXlink: word('edit', FolderPen, 'Edit xlink…'),
   hide: word('edit', EyeOff),
   unhide: word('edit', Eye),
   forget: word('edit', X, 'Remove from list'),
@@ -237,6 +268,56 @@ export const MENU_WORDS = {
 
 export type MenuWordId = keyof typeof MENU_WORDS;
 
+/**
+ * The words whose action needs a workspace, so a repository explored without one never offers them
+ * (ARCHITECTURE.md "Places"): they change the files on disk or what the workspace is on (switch, merge into
+ * it, cherry pick, apply, revert, check in, shelve, resolve a conflict), or read and open them there (the editor, the
+ * terminal, the file manager). The server's merges ("Merge to…", finishing a task) are here too: the merge page runs
+ * in a workspace. `rename` or `delete` aren't: they serve branches and labels as well as files, and the menus of files
+ * take a workspace's path, which a repository's window has none of. `menuGrammar.test.ts` builds every object's menu
+ * for a repository and checks none of these is there.
+ */
+export const NEEDS_A_WORKSPACE = [
+  'switch',
+  'revert',
+  'apply',
+  'applyAndDelete',
+  'checkin',
+  'shelve',
+  'include',
+  'exclude',
+  'keepDestination',
+  'keepSource',
+  'keepBase',
+  'keepBoth',
+  'resolveIn',
+  'startOver',
+  'restore',
+  'restoreTo',
+  'add',
+  'checkout',
+  'merge',
+  'mergeTask',
+  'mergeTo',
+  'cherryPick',
+  'subtractive',
+  'cherryPickRange',
+  'subtractiveRange',
+  'newFile',
+  'newFolder',
+  'newXlink',
+  'openInEditor',
+  'terminal',
+  'reveal',
+  'openInFileManager',
+  'cut',
+  'paste',
+  'changelist',
+  'filterRules',
+  'revisionType',
+  'editXlink',
+] as const satisfies readonly MenuWordId[];
+
 type ActionOptions = Partial<Pick<Action, 'label' | 'shortcut' | 'detail' | 'disabled' | 'disabledReason'>>;
 
 /** An entry of the vocabulary: its words (or `label`, where they name the object), icon and group. */
@@ -251,10 +332,15 @@ export function menuSubmenu(id: MenuWordId, entries: MenuEntry[]): GroupedEntry 
   return { id, label: label ?? id, icon, menuGroup: group, entries };
 }
 
-/** Where an object's menu shows, when that changes it; what a place adds goes through `withEntries`. */
-export interface MenuPlace {
+/** Where an object's menu shows (its host), when that changes it; what a host adds goes through `withEntries`. */
+export interface MenuHost {
   /** The Branch Explorer, where "Show in Branch Explorer" would lead where the user already is. */
   inBranchExplorer?: boolean;
+  /**
+   * A list that binds none of the list keys (⌘D, ⌘C, ⇧⌘C), so the menu names no shortcut: there they reach the page's
+   * own object or the view under the page (docs/ARCHITECTURE.md "Menus").
+   */
+  listKeysElsewhere?: boolean;
   /** Called with the name of a branch created from the menu, e.g. to show it. */
   onBranchCreated?: (name: string) => void;
 }

@@ -1,6 +1,7 @@
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { LOCK_LIST_FORMAT_ARGS } from '../cm/lockRecords';
 import { formatOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
@@ -20,7 +21,7 @@ describe('locks', () => {
     const output = formatOutput(['game', '118', 'f1d0', '2026-09-25T10:00:00+02:00', '/main', '', '/main/task1', '', 'Locked', 'ana', 'ana-wk', '/art/Hero.fbx']);
     const { service, commands } = locks({ 'lock list': output });
 
-    const listed = await service.list(WORKSPACE, 'game@acme@cloud', { onlyMine: false });
+    const listed = await service.list(workspacePlace(WORKSPACE), 'game@acme@cloud', { onlyMine: false });
 
     expect(commands).toMatchObject([{ via: 'query', args: ['lock', 'list', '--anystatus', '--repository=game@acme@cloud', ...LOCK_LIST_FORMAT_ARGS], options: { cwd: WORKSPACE } }]);
     expect(listed).toEqual([
@@ -42,9 +43,17 @@ describe('locks', () => {
   it("narrows the list to the user's own locks, or this workspace's, on the server", async () => {
     const { service, lines } = locks({ 'lock list': '' });
 
-    await service.list(WORKSPACE, 'game@local', { onlyMine: true, onlyThisWorkspace: true });
+    await service.list(workspacePlace(WORKSPACE), 'game@local', { onlyMine: true, onlyThisWorkspace: true });
 
     expect(lines()[0]).toContain('--onlycurrentuser --onlycurrentworkspace');
+  });
+
+  it('lists the locks of a repository with no workspace outside every workspace, the command naming it as always', async () => {
+    const { service, commands } = locks({ 'lock list': '' });
+
+    await service.list(repositoryPlace('game@local'), 'game@local', { onlyMine: true });
+
+    expect(commands).toMatchObject([{ args: ['lock', 'list', '--anystatus', '--repository=game@local', '--onlycurrentuser', ...LOCK_LIST_FORMAT_ARGS], options: { outsideWorkspaces: true } }]);
   });
 
   it('releases several locks, each named in its repository, with one command', async () => {

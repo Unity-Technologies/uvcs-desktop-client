@@ -1,5 +1,6 @@
 import { Lock as LockIcon, LockOpen } from 'lucide-react';
 import type { Lock } from '@shared/domain/lock';
+import type { Place } from '@shared/domain/place';
 import { DetailsHeading } from '../../components/DetailsHeading';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
@@ -8,9 +9,10 @@ import { DetailsBadge } from '../../ui/DetailsBadge';
 import { DetailsPanel } from '../../ui/DetailsPanel';
 import { DetailsSection } from '../../ui/DetailsSection';
 import { PropertyList } from '../../ui/PropertyList';
-import { isReleasable, releaseLocks } from './lockOperations';
+import { isReleasable, releaseLocks, unlocksIn } from './lockOperations';
 
-export function LockDetails({ workspacePath, lock, menu }: { workspacePath: string; lock: Lock; menu: MenuEntry[] }) {
+/** The lock, with a Release button where the place unlocks (`unlocksIn`). */
+export function LockDetails({ place, lock, menu }: { place: Place; lock: Lock; menu: MenuEntry[] }) {
   const nameStart = lock.path.lastIndexOf('/') + 1;
 
   return (
@@ -22,8 +24,9 @@ export function LockDetails({ workspacePath, lock, menu }: { workspacePath: stri
       author={{ user: lock.owner, date: lock.date }}
       badges={<DetailsBadge tone={isReleasable(lock) ? 'warning' : 'neutral'}>{lock.status}</DetailsBadge>}
       primaryAction={
+        unlocksIn(place) &&
         isReleasable(lock) && (
-          <Button variant="primary" size="small" icon={<LockOpen size={13} />} onClick={() => void releaseLocks(workspacePath, [lock])}>
+          <Button variant="primary" size="small" icon={<LockOpen size={13} />} onClick={() => void releaseLocks(place, [lock])}>
             Release
           </Button>
         )

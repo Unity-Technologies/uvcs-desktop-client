@@ -9,20 +9,23 @@ import { categoryOf, existsOnDisk, isControlled } from '../pendingChanges/change
  * - `lastChange`: an up-to-date file (or any of a repository tree), its revision against the one before it.
  */
 export type ItemComparison =
-  | { kind: 'changes'; change: PendingChange }
-  | { kind: 'new'; reason: 'added' | 'private' | 'ignored'; change?: PendingChange }
+  | { kind: 'changes'; workspacePath: string; change: PendingChange }
+  | { kind: 'new'; workspacePath: string; reason: 'added' | 'private' | 'ignored'; change?: PendingChange }
   | { kind: 'lastChange' };
 
 type ComparedItem = Pick<TreeItem, 'itemType' | 'isPrivate' | 'revisionId'>;
 
-/** Null for a folder, or a file with nothing to compare (a revision `cm ls` didn't list). */
-export function itemComparison(item: ComparedItem, change: PendingChange | undefined, inWorkspace: boolean): ItemComparison | null {
+/**
+ * Null for a folder, or a file with nothing to compare (a revision `cm ls` didn't list). `workspacePath` is the workspace
+ * the item is on disk in, whose pending changes and private files compare; null for a repository tree's revision.
+ */
+export function itemComparison(item: ComparedItem, change: PendingChange | undefined, workspacePath: string | null): ItemComparison | null {
   if (item.itemType === 'directory') return null;
-  if (inWorkspace && change) {
-    if (!isControlled(change)) return { kind: 'new', reason: categoryOf(change) === 'private' ? 'private' : 'ignored' };
-    return change.kinds.includes('added') ? { kind: 'new', reason: 'added', change } : { kind: 'changes', change };
+  if (workspacePath !== null && change) {
+    if (!isControlled(change)) return { kind: 'new', workspacePath, reason: categoryOf(change) === 'private' ? 'private' : 'ignored' };
+    return change.kinds.includes('added') ? { kind: 'new', workspacePath, reason: 'added', change } : { kind: 'changes', workspacePath, change };
   }
-  if (inWorkspace && item.isPrivate) return { kind: 'new', reason: 'private' };
+  if (workspacePath !== null && item.isPrivate) return { kind: 'new', workspacePath, reason: 'private' };
   return item.revisionId > 0 ? { kind: 'lastChange' } : null;
 }
 

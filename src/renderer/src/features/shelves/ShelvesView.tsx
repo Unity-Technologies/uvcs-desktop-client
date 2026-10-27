@@ -2,10 +2,10 @@ import { Archive } from 'lucide-react';
 import { useMemo } from 'react';
 import type { Shelve } from '@shared/domain/shelve';
 import { spec } from '@shared/domain/specs';
-import { useWorkspaceUser } from '../../app/account/accounts';
+import { usePlaceUser } from '../../app/account/accounts';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
-import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace } from '../../app/workspace/useWorkspace';
 import { authorColumn, avatarColumn, commentColumn, dateColumn, numberColumn, secondaryColumn } from '../../components/historyColumns';
 import { ObjectListView } from '../../components/ObjectListView';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
@@ -43,10 +43,10 @@ const COLUMNS: Column<Shelve>[] = [
 ];
 
 export function ShelvesView() {
-  const workspacePath = useWorkspacePath();
+  const place = usePlace();
   const filters = useShelvesViewStore();
   const { text: search, people, update } = filters;
-  const me = useWorkspaceUser();
+  const me = usePlaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const { data: shelves, isPending, isFetching, error } = useShelves({ owners: pickedOwners(queriedPeople) });
   const offered = usePeopleSeen('shelves', shelves, ownerOf);
@@ -57,7 +57,7 @@ export function ShelvesView() {
     [shelves, people, me, search],
   );
   const selected = visible.find((shelve) => shelveKey(shelve) === selection.anchor);
-  useCopyCommand('Shelves', 'Shelve', selection.selected.size === 1 && selected ? shelveCopyTexts(workspacePath, selected) : undefined);
+  useCopyCommand('Shelves', 'Shelve', selection.selected.size === 1 && selected ? shelveCopyTexts(place, selected) : undefined);
 
   return (
     <>
@@ -65,7 +65,7 @@ export function ShelvesView() {
         title="Shelves"
         count={shelves && visible.length}
         total={shelves?.length}
-        actions={<ViewRefreshButton workspacePath={workspacePath} fetching={isFetching} />}
+        actions={<ViewRefreshButton fetching={isFetching} />}
       >
         <FilterBar
           text={<FilterField value={search} onChange={(text) => update({ text })} placeholder="Filter shelves" />}
@@ -87,10 +87,10 @@ export function ShelvesView() {
         selection={selection}
         onSelectionChange={setSelection}
         onActivate={showShelveChanges}
-        contextMenu={(selectedShelves) => shelveMenu(workspacePath, selectedShelves)}
+        contextMenu={(selectedShelves) => shelveMenu(place, selectedShelves)}
         initialSort={{ columnId: 'id', descending: true }}
         noun="shelve"
-        details={selected && <ShelveDetails key={selected.id} shelve={selected} menu={shelveMenu(workspacePath, [selected])} />}
+        details={selected && <ShelveDetails key={selected.id} shelve={selected} menu={shelveMenu(place, [selected])} />}
       />
     </>
   );

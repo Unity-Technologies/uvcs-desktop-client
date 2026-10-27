@@ -1,3 +1,4 @@
+import { placeId, type Place } from '@shared/domain/place';
 import type { AppSettings } from '@shared/domain/settings';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -9,17 +10,17 @@ import { withReviewMode } from './reviewModeWorkspaces';
 /** The keys of a review, said the same wherever review mode is offered or shown. */
 export const REVIEW_KEYS = 'R marks a file, J and K move';
 
-export function useReviewModeOn(workspacePath: string): boolean {
-  return useSettings().reviewModeWorkspaces.includes(workspacePath);
+export function useReviewModeOn(place: Place): boolean {
+  return useSettings().reviewModeWorkspaces.includes(placeId(place));
 }
 
-/** Turns review mode on or off for the workspace. Turning it on is taking the offer, so the hint never shows again. */
-export async function setReviewMode(workspacePath: string, on: boolean): Promise<void> {
+/** Turns review mode on or off for the place. Turning it on is taking the offer, so the hint never shows again. */
+export async function setReviewMode(place: Place, on: boolean): Promise<void> {
   const { reviewModeWorkspaces } = queryClient.getQueryData<AppSettings>(queryKeys.settings) ?? (await api.settings.get());
-  await saveSettings({ reviewModeWorkspaces: withReviewMode(reviewModeWorkspaces, workspacePath, on), ...(on && { reviewModeHintDone: true }) });
+  await saveSettings({ reviewModeWorkspaces: withReviewMode(reviewModeWorkspaces, placeId(place), on), ...(on && { reviewModeHintDone: true }) });
 }
 
 /** Review mode came on without its button (R, or marking a file from a menu): say so, how it works, and the way back. */
-export function announceReviewMode(workspacePath: string): void {
-  toast.info('Review mode on', REVIEW_KEYS, { label: 'Turn off', run: () => void setReviewMode(workspacePath, false) });
+export function announceReviewMode(place: Place): void {
+  toast.info('Review mode on', REVIEW_KEYS, { label: 'Turn off', run: () => void setReviewMode(place, false) });
 }

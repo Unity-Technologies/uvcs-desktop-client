@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { RevisionType, TreeItem } from '@shared/domain/explorer';
 import { api } from '../../api/client';
 import { openFile } from '../../components/externalApps/externalAppOperations';
@@ -22,14 +23,14 @@ export function addItems(workspacePath: string, items: TreeItem[]): Promise<unkn
   const directories = items.filter((item) => item.itemType === 'directory').map((item) => item.path);
   const files = items.filter((item) => item.itemType !== 'directory').map((item) => item.path);
 
-  return runAction(workspacePath, "Couldn't add the items", async () => {
+  return runAction(workspacePlace(workspacePath), "Couldn't add the items", async () => {
     if (directories.length > 0) await api.explorer.addRecursive(workspacePath, directories);
     if (files.length > 0) await api.pendingChanges.add(workspacePath, files);
   }, isAffectedByPendingChangeEdit);
 }
 
 export function checkoutItems(workspacePath: string, items: TreeItem[]): Promise<unknown> {
-  return runAction(workspacePath, "Couldn't check out the items", () =>
+  return runAction(workspacePlace(workspacePath), "Couldn't check out the items", () =>
     api.pendingChanges.checkout(workspacePath, items.map((item) => item.path)),
     isAffectedByPendingChangeEdit,
   );
@@ -50,7 +51,7 @@ export async function deleteItems(workspacePath: string, items: TreeItem[]): Pro
   });
   if (!confirmed) return;
 
-  await runAction(workspacePath, "Couldn't delete the items", () => api.pendingChanges.remove(workspacePath, controlled.map((item) => item.path)), isAffectedByPendingChangeEdit);
+  await runAction(workspacePlace(workspacePath), "Couldn't delete the items", () => api.pendingChanges.remove(workspacePath, controlled.map((item) => item.path)), isAffectedByPendingChangeEdit);
 }
 
 export async function renameItem(workspacePath: string, item: TreeItem): Promise<void> {
@@ -66,10 +67,10 @@ export async function renameItem(workspacePath: string, item: TreeItem): Promise
   if (!newName || newName === item.name) return;
 
   const newPath = parent ? `${parent}/${newName}` : newName;
-  await runAction(workspacePath, `Couldn't rename ${item.name}`, async () => {
+  await runAction(workspacePlace(workspacePath), `Couldn't rename ${item.name}`, async () => {
     if (item.isPrivate) await api.explorer.renamePrivate(workspacePath, item.path, newPath);
     else await api.explorer.move(workspacePath, item.path, newPath);
-    useFilesViewStore.getState().requestReveal(workspacePath, newPath);
+    useFilesViewStore.getState().requestReveal(workspacePlace(workspacePath), newPath);
   });
 }
 
@@ -87,14 +88,14 @@ export async function createItem(workspacePath: string, directory: string, kind:
   if (!name) return;
 
   const path = directory ? `${directory}/${name}` : name;
-  await runAction(workspacePath, `Couldn't create ${fileNameOf(path)}`, async () => {
+  await runAction(workspacePlace(workspacePath), `Couldn't create ${fileNameOf(path)}`, async () => {
     await api.explorer.create(workspacePath, path, kind);
-    useFilesViewStore.getState().requestReveal(workspacePath, path);
+    useFilesViewStore.getState().requestReveal(workspacePlace(workspacePath), path);
   });
 }
 
 export function changeRevisionType(workspacePath: string, items: TreeItem[], type: RevisionType): Promise<unknown> {
-  return runAction(workspacePath, "Couldn't change the revision type", () =>
+  return runAction(workspacePlace(workspacePath), "Couldn't change the revision type", () =>
     api.explorer.changeRevisionType(workspacePath, items.map((item) => item.path), type),
   );
 }

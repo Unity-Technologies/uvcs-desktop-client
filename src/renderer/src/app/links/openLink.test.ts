@@ -1,18 +1,20 @@
 import '../../testing/fakeWindow';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { WorkspaceHead } from '@shared/domain/workspace';
 import { useFilesViewStore } from '../../features/files/filesViewStore';
 import { requestLineFocus } from '../../features/pendingChanges/changesLineFocus';
 import { fakeApi } from '../../testing/fakeWindow';
 import { shownToasts, whereTheWindowIs } from '../../testing/operationOutcome';
-import { openCreateWorkspaceDialog } from '../home/dialogs/CreateWorkspaceDialog';
+import { useHomeSection } from '../home/homeSectionStore';
+import { useProjectPickStore } from '../home/projectPickStore';
+import { useNavigation } from '../navigation/navigationStore';
 import { useSession } from '../workspace/sessionStore';
-import { offerNewWorkspace, pickLinkWorkspace, showLinkFailure } from './linkDialogs';
+import { pickLinkWorkspace, showLinkFailure } from './linkDialogs';
 import { openLink } from './openLink';
 
-vi.mock('./linkDialogs', () => ({ showLinkFailure: vi.fn(), pickLinkWorkspace: vi.fn(), offerNewWorkspace: vi.fn() }));
-vi.mock('../home/dialogs/CreateWorkspaceDialog', () => ({ openCreateWorkspaceDialog: vi.fn() }));
+vi.mock('./linkDialogs', () => ({ showLinkFailure: vi.fn(), pickLinkWorkspace: vi.fn() }));
 vi.mock('../../features/pendingChanges/changesLineFocus', () => ({ requestLineFocus: vi.fn() }));
 
 const GAME = join('/wk', 'game');
@@ -26,7 +28,7 @@ function head(repository: string | null, branch = '/main'): WorkspaceHead {
 
 /** The user's workspaces and their repositories, the windows showing some, and this window's workspace (none: home). */
 function workspaces(heads: Record<string, WorkspaceHead>, { current = null as string | null, shown = [] as string[], recent = [] as string[] } = {}): void {
-  useSession.setState({ workspacePath: current, leftWorkspacePath: null });
+  useSession.setState({ place: current === null ? null : workspacePlace(current), workspacePath: current, leftWorkspacePath: null });
   fakeApi.answer('workspaces.list', async () => Object.keys(heads).map((path) => ({ path, name: path.split(/[\\/]/).at(-1), guid: path })));
   fakeApi.answer('workspaces.heads', async () => heads);
   fakeApi.answer('workspaces.info', async (path: string) => ({ path, repository: heads[path]?.repository }));
@@ -37,8 +39,6 @@ function workspaces(heads: Record<string, WorkspaceHead>, { current = null as st
 beforeEach(() => {
   vi.mocked(showLinkFailure).mockReset();
   vi.mocked(pickLinkWorkspace).mockReset();
-  vi.mocked(offerNewWorkspace).mockReset();
-  vi.mocked(openCreateWorkspaceDialog).mockReset();
   useFilesViewStore.setState({ revealRequest: null });
 });
 
@@ -66,14 +66,14 @@ describe('a repository link', () => {
 
     await openLink('plastic://acme.unity/repos/game/changesets/12/diff');
 
-    expect(fakeApi.argsOf('windows.openLinkIn')).toEqual([[GAME, 'uvcs://acme.unity/repos/game/changesets/12']]);
+    expect(fakeApi.argsOf('windows.openLinkIn')).toEqual([[workspacePlace(GAME), 'uvcs://acme.unity/repos/game/changesets/12']]);
     expect(whereTheWindowIs().pages).toEqual([]);
   });
 
   it('opens the only workspace on it here when this window shows the home screen, then the link', async () => {
     workspaces({ [GAME]: head('game@acme@unity') });
     fakeApi.answer('windows.openLinkIn', async () => 'openHere');
-    fakeApi.answer('windows.focusWorkspace', async () => false);
+    fakeApi.answer('windows.focusPlace', async () => false);
     fakeApi.answer('settings.rememberRecentWorkspace', async () => undefined);
     fakeApi.answer('system.addRecentDocument', async () => undefined);
 
@@ -104,46 +104,43 @@ describe('a repository link', () => {
     await openLink(CHANGESET_12);
 
     expect(fakeApi.argsOf('workspaces.repositoryOf').map(([path]) => path)).toEqual([GAME]);
-    expect(fakeApi.argsOf('windows.openLinkIn')).toEqual([[GAME, CHANGESET_12]]);
+    expect(fakeApi.argsOf('windows.openLinkIn')).toEqual([[workspacePlace(GAME), CHANGESET_12]]);
   });
 
-  it('offers to create a workspace when none is on the repository, on the server as the profiles name it', async () => {
+  it('explores the repository when no workspace is on it, here on the home screen, on the server as the profiles name it', async () => {
     workspaces({ [TOOLS]: head('tools@ssl://host:8088') });
-    vi.mocked(offerNewWorkspace).mockResolvedValue(true);
     fakeApi.answer('repositories.servers', async () => [{ server: 'ssl://host:8088', user: 'ana', workingMode: 'LDAPWorkingMode' }]);
+    fakeApi.answer('windows.openLinkIn', async () => 'openHere');
+    fakeApi.answer('windows.focusPlace', async () => false);
 
     await openLink('uvcs://host:8088/repos/game/changesets/12');
 
-    expect(offerNewWorkspace).toHaveBeenCalledWith('game');
-    expect(vi.mocked(openCreateWorkspaceDialog).mock.calls[0]![0].repository).toMatchObject({ name: 'game', server: 'ssl://host:8088', spec: 'game@ssl://host:8088' });
+    expect(fakeApi.argsOf('windows.openLinkIn')).toEqual([[repositoryPlace('game@ssl://host:8088'), 'uvcs://host:8088/repos/game/changesets/12']]);
+    expect(useSession.getState().place).toEqual(repositoryPlace('game@ssl://host:8088'));
+    expect(whereTheWindowIs().pages).toMatchObject([{ kind: 'diff', target: { kind: 'changeset', changesetId: 12 } }]);
   });
 
-  it("opens the link in the workspace created for it as any link opens, never leaving this window's workspace", async () => {
+  it("hands the link to the window exploring the repository, or a new one, never leaving this window's workspace", async () => {
     workspaces({ [TOOLS]: head('tools@acme@unity') }, { current: TOOLS });
-    vi.mocked(offerNewWorkspace).mockResolvedValue(true);
     fakeApi.answer('repositories.servers', async () => []);
     fakeApi.answer('windows.openLinkIn', async () => 'handedOver');
 
     await openLink(CHANGESET_12);
-    // The dialog calls it as `void`; it hands back what it started, to await here.
-    await (vi.mocked(openCreateWorkspaceDialog).mock.calls[0]![0].onCreated(GAME) as unknown as Promise<void>);
 
-    expect(fakeApi.argsOf('windows.openLinkIn')).toEqual([[GAME, CHANGESET_12]]);
+    expect(fakeApi.argsOf('windows.openLinkIn')).toEqual([[repositoryPlace('game@acme@unity'), CHANGESET_12]]);
     expect(useSession.getState().workspacePath).toBe(TOOLS);
   });
 
-  it("tells in a toast when the workspace created for it can't take the link", async () => {
-    workspaces({ [TOOLS]: head('tools@acme@unity') }, { current: TOOLS });
-    vi.mocked(offerNewWorkspace).mockResolvedValue(true);
-    fakeApi.answer('repositories.servers', async () => []);
-    fakeApi.answer('windows.openLinkIn', async () => {
-      throw new Error('The window closed');
-    });
+  it('opens it here in the window exploring the repository already: a path in its Files, a changeset its diff', async () => {
+    workspaces({});
+    useSession.getState().explore('game@acme@unity');
 
+    useNavigation.setState({ view: 'labels' });
+    await openLink('uvcs://acme.unity/repos/game/path/src/a.cs');
+    expect(whereTheWindowIs().view).toBe('files');
+    expect(useFilesViewStore.getState().revealRequest).toMatchObject({ place: repositoryPlace('game@acme@unity'), path: 'src/a.cs' });
     await openLink(CHANGESET_12);
-    await (vi.mocked(openCreateWorkspaceDialog).mock.calls[0]![0].onCreated(GAME) as unknown as Promise<void>);
-
-    expect(shownToasts()).toMatchObject([{ title: "Couldn't open the link" }]);
+    expect(whereTheWindowIs().pages).toMatchObject([{ kind: 'diff', target: { kind: 'changeset', changesetId: 12 } }]);
   });
 
   it("opens a label's diff at its changeset, or says the label isn't there", async () => {
@@ -185,7 +182,7 @@ describe('a workspace link', () => {
     await openLink(`uvcs://${GAME.replaceAll('\\', '/').replace(/^(?!\/)/, '/')}/Assets/Player.cs`);
 
     expect(whereTheWindowIs().view).toBe('files');
-    expect(useFilesViewStore.getState().revealRequest).toMatchObject({ workspacePath: GAME, path: 'Assets/Player.cs' });
+    expect(useFilesViewStore.getState().revealRequest).toMatchObject({ place: workspacePlace(GAME), path: 'Assets/Player.cs' });
   });
 
   it('goes to the window for its workspace when this one shows another', async () => {
@@ -195,7 +192,7 @@ describe('a workspace link', () => {
 
     await openLink('uvcs:///wk/game/-/incoming');
 
-    expect(fakeApi.argsOf('windows.openLinkIn')).toEqual([[GAME, 'uvcs:///wk/game/-/incoming']]);
+    expect(fakeApi.argsOf('windows.openLinkIn')).toEqual([[workspacePlace(GAME), 'uvcs:///wk/game/-/incoming']]);
   });
 
   it("tells in a toast when the workspaces can't be read", async () => {
@@ -214,5 +211,30 @@ describe('a workspace link', () => {
     await openLink('uvcs:///tmp/elsewhere');
 
     expect(showLinkFailure).toHaveBeenCalledWith({ kind: 'notInWorkspace', folder: '/tmp/elsewhere' });
+  });
+});
+
+describe("a link to a server's repositories", () => {
+  it("shows them on this window's home screen, the project it names picked, as the user's profiles name the server", async () => {
+    useHomeSection.setState({ section: { kind: 'welcome' } });
+    useProjectPickStore.setState({ picks: {} });
+    fakeApi.answer('windows.openLinkAtHome', async () => 'openHere');
+    fakeApi.answer('repositories.servers', async () => [{ server: 'MyCroquerOrg@unity', user: 'ana', workingMode: 'SSOWorkingMode' }]);
+
+    await openLink('uvcs://mycroquerorg.unity/projects/Racing');
+
+    expect(fakeApi.argsOf('windows.openLinkAtHome')).toEqual([['uvcs://mycroquerorg.unity/projects/Racing']]);
+    expect(useHomeSection.getState().section).toEqual({ kind: 'server', server: 'MyCroquerOrg@unity' });
+    expect(useProjectPickStore.getState().picks).toEqual({ 'MyCroquerOrg@unity': 'Racing' });
+  });
+
+  it('leaves this window as it is when another window on the home screen took it', async () => {
+    useHomeSection.setState({ section: { kind: 'welcome' } });
+    fakeApi.answer('windows.openLinkAtHome', async () => 'handedOver');
+
+    await openLink('uvcs://acme.unity');
+
+    expect(useHomeSection.getState().section).toEqual({ kind: 'welcome' });
+    expect(fakeApi.methods()).not.toContain('repositories.list');
   });
 });

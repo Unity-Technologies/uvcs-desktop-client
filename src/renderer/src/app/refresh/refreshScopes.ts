@@ -1,6 +1,7 @@
 /**
- * Which workspace queries each kind of change makes stale. Workspace query keys are
- * `['workspace', path, area, ...details]` (`queryKeys.inWorkspace`); these predicates read the area and details.
+ * Which queries of a place each kind of change makes stale. A place's query keys are `['workspace', path, area,
+ * ...details]` (`queryKeys.inWorkspace`) or, for a repository explored without a workspace, `['repository', spec,
+ * area, ...details]` (`queryKeys.inPlace`); these predicates read the area and details, the same for both.
  */
 type QueryKey = readonly unknown[];
 
@@ -177,6 +178,14 @@ export function isAffectedByPendingChangeEdit(key: QueryKey): boolean {
  * No lock: a restored item is no checkout.
  */
 export function isAffectedByRestoredItems(key: QueryKey): boolean {
+  return isAffectedByWorkspaceEdit(key);
+}
+
+/**
+ * A move was recorded between an item deleted from disk and a new one (Search matches): what is moved, and the items
+ * that came or went. Nothing on disk changed, and a move takes no lock.
+ */
+export function isAffectedByRecordedMove(key: QueryKey): boolean {
   return isAffectedByWorkspaceEdit(key);
 }
 

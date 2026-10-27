@@ -15,6 +15,10 @@ describe('formatLink and parseLink', () => {
   // Every shape docs/features/deep-links.md names, as the app writes it and reads it back.
   it.each<[string, Link]>([
     ['uvcs://acme.unity/repos/game', game],
+    ['uvcs://acme.unity', { kind: 'server', server: 'acme@unity' }],
+    ['uvcs://acme.unity/projects/Racing', { kind: 'server', server: 'acme@unity', project: 'Racing' }],
+    ['uvcs://acme.unity/projects/Cloud%20Repositories', { kind: 'server', server: 'acme@unity', project: 'Cloud Repositories' }],
+    ['uvcs://host:8087', { kind: 'server', server: 'host:8087' }],
     ['uvcs://acme.unity/repos/game/-/locks', { ...game, page: { kind: 'view', view: 'locks' } }],
     ['uvcs://acme.unity/repos/game/-/files/Assets/Player.cs', { ...game, page: { kind: 'view', view: 'files', path: '/Assets/Player.cs' } }],
     ['uvcs://acme.unity/repos/game/-/browse/Assets/Player.cs#L42', { ...game, page: { kind: 'browse', path: '/Assets/Player.cs' }, lines: { side: 'new', first: 42, last: 42 } }],
@@ -107,8 +111,8 @@ describe('parseLink', () => {
   });
 
   it('reads a range of lines written without its second L, and ignores any other fragment', () => {
-    expect(linkIn('uvcs://acme.unity/repos/game/changesets/1/-/files/a.cs#L4-9').lines).toEqual({ side: 'new', first: 4, last: 9 });
-    expect(linkIn('uvcs://acme.unity/repos/game/changesets/1#top').lines).toBeUndefined();
+    expect(linkIn('uvcs://acme.unity/repos/game/changesets/1/-/files/a.cs#L4-9')).toMatchObject({ lines: { side: 'new', first: 4, last: 9 } });
+    expect(linkIn('uvcs://acme.unity/repos/game/changesets/1#top')).not.toHaveProperty('lines');
   });
 
   it("reads a workspace's Windows folder written with backslashes", () => {
@@ -165,7 +169,10 @@ describe('parseLink', () => {
     });
 
     it.each([
-      'uvcs://acme.unity',
+      'uvcs://acme.unity/projects',
+      'uvcs://acme.unity/projects/%22Racing',
+      'uvcs://acme.cloud/projects/Racing',
+      'uvcs://host:8087/projects/Racing',
       'uvcs://acme.unity/branches/main',
       'uvcs://acme.unity/repos',
       'uvcs://acme.unity/repos/game/changesets/abc',
@@ -209,6 +216,7 @@ describe('parseLink', () => {
       'uvcs://acme.unity/repos/game/-/dashboard',
       'uvcs:///wk/game/-/browse/a.cs',
       'uvcs://acme.unity/repos/game/changesets/1/-/branch-explorer/x',
+      'uvcs://acme.unity/projects/Racing/members',
     ])('%j names something this version does not know', (text) => {
       expect(parseLink(text)).toMatchObject({ problem: { kind: 'unknown' } });
     });

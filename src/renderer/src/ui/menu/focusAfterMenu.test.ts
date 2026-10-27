@@ -1,13 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { focusAfterMenu } from './focusAfterMenu';
 
-/** Just enough of a DOM element: its tag and whether it is in the page. */
+/** Just enough of a DOM element: its tag, whether it is in the page, editable, and the shadow root it hosts. */
 class FakeElement {
-  readonly isContentEditable = false;
+  shadowRoot: { activeElement: FakeElement | null } | null = null;
   constructor(
     readonly tagName: string,
     readonly isConnected = true,
+    readonly isContentEditable = false,
   ) {}
+}
+
+/** An element hosting an open shadow root, with `inside` focused in it, as Pierre's `diffs-container` holds its editor. */
+function hostOf(inside: FakeElement): FakeElement {
+  const host = new FakeElement('DIFFS-CONTAINER');
+  host.shadowRoot = { activeElement: inside };
+  return host;
 }
 
 /** The page as the menu closes: what has focus, and whether a dialog is open. */
@@ -46,6 +54,18 @@ describe('focusAfterMenu', () => {
     page({ activeElement: new FakeElement('BUTTON') });
     expect(closeMenu()).toBe('givenBack');
     page({ activeElement: new FakeElement('INPUT', false) });
+    expect(closeMenu()).toBe('givenBack');
+  });
+
+  it("leaves the caret in a field inside a shadow root (Pierre's editor), whose host is all the document names", () => {
+    page({ activeElement: hostOf(new FakeElement('DIV', true, true)) });
+    expect(closeMenu()).toBe('kept');
+    page({ activeElement: hostOf(hostOf(new FakeElement('INPUT'))) });
+    expect(closeMenu()).toBe('kept');
+  });
+
+  it('gives focus back from a shadow root whose focus is on no field', () => {
+    page({ activeElement: hostOf(new FakeElement('BUTTON')) });
     expect(closeMenu()).toBe('givenBack');
   });
 });

@@ -1,48 +1,27 @@
-import { ChevronsUpDown, Settings } from 'lucide-react';
-import { RepositoryAvatar } from '../../components/RepositoryAvatar';
+import { Settings } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { NavFooter, NavGroups, NavItem, Sidebar as SidebarColumn, type NavSection } from '../../ui/nav/SidebarNav';
 import { useNavigation } from '../navigation/navigationStore';
-import { VIEWS, type ViewDefinition } from '../navigation/viewRegistry';
+import { sidebarGroups } from '../navigation/sidebarGroups';
+import type { ViewDefinition } from '../navigation/viewRegistry';
 import { openSettingsDialog } from '../settings/SettingsDialog';
-import { useWorkspaceInfo, useWorkspacePath } from '../workspace/useWorkspace';
+import { usePlace } from '../workspace/useWorkspace';
 import { useSidebarCollapsed } from './sidebarStore';
 import { SidebarToggleItem } from './SidebarToggleItem';
-import { WorkspaceSwitcher } from './WorkspaceSwitcher';
-import styles from './Sidebar.module.css';
 
-const GROUPS: ViewDefinition['group'][] = ['Workspace', 'History', 'Collaborate'];
-
-export function Sidebar() {
-  const { data: workspace } = useWorkspaceInfo();
-  const workspacePath = useWorkspacePath();
+/** The sidebar: the place's card (`card`), its views by group (`viewsOf`), then Settings and the rail toggle. */
+export function Sidebar({ card }: { card: ReactNode }) {
+  const place = usePlace();
   const rail = useSidebarCollapsed();
   const activeView = useNavigation((state) => state.view);
-  const sections: NavSection[] = GROUPS.map((group) => ({
-    label: group,
-    items: VIEWS.filter((view) => view.group === group).map((view) => ({
-      key: view.id,
-      element: <SidebarViewItem view={view} />,
-      active: view.id === activeView,
-    })),
+  const sections: NavSection[] = sidebarGroups(place).map(({ label, views: inGroup }) => ({
+    label,
+    items: inGroup.map((view) => ({ key: view.id, element: <SidebarViewItem view={view} />, active: view.id === activeView })),
   }));
 
   return (
     <SidebarColumn rail={rail}>
-      <WorkspaceSwitcher currentPath={workspacePath}>
-        <button
-          className={styles.workspace}
-          data-rail={rail}
-          aria-label="Switch workspace"
-          data-tip={rail ? workspace && `${workspace.name} · ${workspace.repository}` : undefined}
-        >
-          <RepositoryAvatar repository={workspace?.repository} label={workspace?.name} size={28} />
-          <span className={styles.workspaceText}>
-            <span className={styles.workspaceName}>{workspace?.name ?? '…'}</span>
-            <span className={styles.workspaceRepo}>{workspace?.repository}</span>
-          </span>
-          <ChevronsUpDown size={14} className={styles.workspaceChevron} />
-        </button>
-      </WorkspaceSwitcher>
+      {card}
 
       <NavGroups sections={sections} />
 

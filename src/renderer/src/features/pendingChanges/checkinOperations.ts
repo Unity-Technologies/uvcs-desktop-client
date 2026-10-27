@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
 import { ApiError, api } from '../../api/client';
@@ -136,7 +137,7 @@ export async function shelveChanges({ workspacePath, changes, paths, comment, ke
 }
 
 export function undoUnchangedCheckouts(workspacePath: string): Promise<void | undefined> {
-  return runAction(workspacePath, "Couldn't undo the unchanged checkouts", () => api.pendingChanges.undoUnchanged(workspacePath), isAffectedByPendingChangeEdit);
+  return runAction(workspacePlace(workspacePath), "Couldn't undo the unchanged checkouts", () => api.pendingChanges.undoUnchanged(workspacePath), isAffectedByPendingChangeEdit);
 }
 
 /** Puts the comment first among the recent ones the check-in panel offers, once. A store that can't save it says so. */

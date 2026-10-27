@@ -1,6 +1,8 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { PendingChangesFilter } from '@shared/domain/pendingChanges';
 import { setReviewMode } from '../../features/review/reviewModeSetting';
 import { Checkbox } from '../../ui/Checkbox';
+import { PercentSlider } from '../../ui/PercentSlider';
 import { useSession } from '../workspace/sessionStore';
 import { SettingsGroup } from './SettingsGroup';
 import { useSettings, useUpdateSettings } from './useSettings';
@@ -25,7 +27,7 @@ export function PendingChangesPane() {
           <Checkbox
             label="Review mode in this workspace: mark files as you review them, in Changes and every diff (R)"
             checked={settings.reviewModeWorkspaces.includes(workspacePath)}
-            onChange={(on) => void setReviewMode(workspacePath, on)}
+            onChange={(on) => void setReviewMode(workspacePlace(workspacePath), on)}
           />
         </SettingsGroup>
       )}
@@ -39,19 +41,14 @@ export function PendingChangesPane() {
 
       <SettingsGroup title="Moved and renamed files">
         <Checkbox label="Detect moved and renamed files" checked={filter.detectLocalMoves} onChange={(detectLocalMoves) => updateFilter({ detectLocalMoves })} />
-        <label className={styles.slider}>
-          <span>Similarity to consider a file moved</span>
-          <input
-            type="range"
-            min={5}
-            max={100}
-            step={5}
-            value={filter.moveSimilarityPercent}
-            disabled={!filter.detectLocalMoves}
-            onChange={(event) => updateFilter({ moveSimilarityPercent: Number(event.target.value) })}
-          />
-          <span className={styles.sliderValue}>{filter.moveSimilarityPercent}%</span>
-        </label>
+        <PercentSlider
+          label="Similarity to consider a file moved"
+          min={5}
+          value={filter.moveSimilarityPercent}
+          disabled={!filter.detectLocalMoves}
+          onChange={(moveSimilarityPercent) => updateFilter({ moveSimilarityPercent })}
+          className={styles.slider}
+        />
       </SettingsGroup>
     </>
   );

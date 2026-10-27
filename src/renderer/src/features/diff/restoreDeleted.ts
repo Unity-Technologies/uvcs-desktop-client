@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { DeletedItemRestore, RestoreOutcome, RestoreRefusal } from '@shared/domain/explorer';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -99,7 +100,7 @@ function refusalAction(workspacePath: string, notRestored: DeletedItemRestore[],
       label: 'Show in Files',
       run: () => {
         navigation.goToView('files');
-        useFilesViewStore.getState().requestReveal(workspacePath, loadedPath);
+        useFilesViewStore.getState().requestReveal(workspacePlace(workspacePath), loadedPath);
       },
     };
   }

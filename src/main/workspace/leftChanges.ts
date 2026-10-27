@@ -1,7 +1,9 @@
 import { rm } from 'node:fs/promises';
+import type { Place } from '@shared/domain/place';
 import type { Shelve, ShelveApplyResult } from '@shared/domain/shelve';
 import { selectorSpec } from '@shared/domain/specs';
 import type { KeptAsideFile, LeftChanges, RestoreResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
+import { cmPlace } from '../cm/cmPlace';
 import type { CmClient } from '../cm/CmClient';
 import type { OperationContext } from '../operations/OperationTracker';
 import { applyShelveCleanly, type ApplyOutcome } from './applyShelveCleanly';
@@ -91,11 +93,14 @@ export class LeftChangesFinder {
     await this.finishApplied(workspacePath, workspace, shelveId, deleteShelve);
   }
 
-  /** Deletes the shelves, the files their records moved aside, and the records. */
-  async discard(workspacePath: string, shelveIds: number[]): Promise<void> {
-    const workspace = await readWorkspaceIdentity(this.headers, workspacePath);
-    const keys = shelveIds.map((shelveId) => ({ shelveId, repository: workspace.repository }));
-    await deleteShelves(this.cm, workspacePath, keys.map(({ shelveId, repository }) => ({ id: shelveId, repository })));
+  /**
+   * Deletes the shelves of the place's repository, the files their records moved aside, and the records: a record is
+   * the repository's, so deleting one of its shelves from a window with no workspace forgets it too.
+   */
+  async discard(place: Place, shelveIds: number[]): Promise<void> {
+    const repository = place.kind === 'repository' ? place.repository : (await readWorkspaceIdentity(this.headers, place.workspacePath)).repository;
+    const keys = shelveIds.map((shelveId) => ({ shelveId, repository }));
+    await deleteShelves(this.cm, cmPlace(place).options, keys.map(({ shelveId }) => ({ id: shelveId, repository })));
     for (const key of keys) {
       const backup = this.records.find(key)?.backup;
       if (backup) await rm(backup.directory, { recursive: true, force: true, maxRetries: 5 });
@@ -115,7 +120,7 @@ export class LeftChangesFinder {
     // Kept or not: a file still on the shelve's revision diffs against it, showing no change at all.
     await detachReplacedFiles(this.cm, workspacePath);
     await restoreChangelists(this.cm, workspacePath, record.changelists);
-    if (deleteShelve) await deleteShelves(this.cm, workspacePath, [{ id: record.shelveId, repository: record.repository }]);
+    if (deleteShelve) await deleteShelves(this.cm, { cwd: workspacePath }, [{ id: record.shelveId, repository: record.repository }]);
     this.records.remove([record]);
   }
 
@@ -129,7 +134,7 @@ export class LeftChangesFinder {
     const record = this.ownRecord(workspace, shelveId);
     if (record) return this.finish(workspacePath, record, deleteShelve || record.reason !== 'shelve');
     await detachReplacedFiles(this.cm, workspacePath);
-    if (deleteShelve) await deleteShelves(this.cm, workspacePath, [{ id: shelveId, repository: workspace.repository }]);
+    if (deleteShelve) await deleteShelves(this.cm, { cwd: workspacePath }, [{ id: shelveId, repository: workspace.repository }]);
   }
 
   /** The record of a shelve this workspace made: another workspace's backup and changelists aren't this one's. */

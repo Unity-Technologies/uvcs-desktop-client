@@ -2,7 +2,7 @@ import type { MergePlan, MergeRequest } from '@shared/domain/merge';
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
 import type { PrintedMergePlan } from '../cm/mergeOutput';
-import { parseTreeItems, TREE_ITEM_FORMAT, type ListedTreeItem } from '../cm/treeItems';
+import { readTreeItem, TREE_ITEM_FORMAT, type ListedTreeItem } from '../cm/treeItems';
 import { readWorkspaceLoad } from '../cm/workspaceStatus';
 import { revisionFilesOf, type WorkspaceCopies } from '../files/WorkspaceCopies';
 
@@ -23,7 +23,7 @@ export async function withConflictRepositories(
 ): Promise<MergePlan> {
   if (plan.fileConflicts.length === 0) return withRepositories(plan, []);
   const tree = destinationTree(request, plan) ?? (await loadedTree(cm, workspacePath));
-  const listed = parseTreeItems(await cm.query(conflictListingArgs(plan, tree), { cwd: workspacePath }));
+  const listed = await cm.queryRecords(conflictListingArgs(plan, tree), readTreeItem, { cwd: workspacePath });
   copies?.remember(workspacePath, revisionFilesOf(listed));
   return withRepositories(plan, listed);
 }

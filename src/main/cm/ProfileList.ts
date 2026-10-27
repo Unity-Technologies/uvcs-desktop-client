@@ -1,4 +1,5 @@
-import { ACCOUNT_FORMAT } from './accounts';
+import type { Account } from '@shared/domain/account';
+import { ACCOUNT_FORMAT, readAccount } from './accounts';
 import type { CmClient } from './CmClient';
 
 const PROFILE_LIST_ARGS = ['profile', 'list', `--format=${ACCOUNT_FORMAT}`];
@@ -9,18 +10,18 @@ const PROFILE_LIST_ARGS = ['profile', 'list', `--format=${ACCOUNT_FORMAT}`];
  * in a workspace's `cm shell`s when a window shows one (`anyDirectory`), starting none in the home folder.
  */
 export class ProfileList {
-  private reading: Promise<string> | null = null;
+  private reading: Promise<Account[]> | null = null;
   private readOnce = false;
 
-  constructor(private readonly cm: Pick<CmClient, 'query'>) {}
+  constructor(private readonly cm: Pick<CmClient, 'queryRecords'>) {}
 
-  /** The profiles as `cm` prints them in `ACCOUNT_FORMAT` (`parseAccounts`); a read running already answers. */
-  read(): Promise<string> {
+  /** The profiles (`readAccount`); a read running already answers. */
+  read(): Promise<Account[]> {
     if (this.reading) return this.reading;
-    const reading = this.cm.query(PROFILE_LIST_ARGS, { anyDirectory: true }).then(
-      (output) => {
+    const reading = this.cm.queryRecords(PROFILE_LIST_ARGS, readAccount, { anyDirectory: true }).then(
+      (accounts) => {
         this.readOnce = true;
-        return output;
+        return accounts;
       },
     );
     this.reading = reading;

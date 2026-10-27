@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { api } from '../../api/client';
 import { runAction, runVoidAction } from '../../app/operations/runOperation';
@@ -15,7 +16,7 @@ import { DEFAULT_CHANGELIST_LABEL } from './changeRows';
 export async function moveToChangelist(workspacePath: string, changelist: string | null, changes: PendingChange[]): Promise<void> {
   const needsCheckout = changes.filter((change) => change.kinds.includes('changed') && !change.kinds.includes('checkedOut'));
   const moved = await runVoidAction(
-    workspacePath,
+    workspacePlace(workspacePath),
     "Couldn't move the changes",
     async () => {
       if (needsCheckout.length > 0) await api.pendingChanges.checkout(workspacePath, needsCheckout.map((change) => change.path));
@@ -31,7 +32,7 @@ export async function moveToNewChangelist(workspacePath: string, changes: Pendin
   if (!name) return;
 
   const created = await runVoidAction(
-    workspacePath,
+    workspacePlace(workspacePath),
     "Couldn't create the changelist",
     () => api.pendingChanges.createChangelist(workspacePath, { name, description: '' }),
     isAffectedByWorkspaceState,
@@ -43,7 +44,7 @@ export async function renameChangelist(workspacePath: string, changelist: Change
   const name = await prompt({ title: 'Rename changelist', label: 'Name', initialValue: changelist.name, confirmLabel: 'Rename' });
   if (!name) return;
   await runAction(
-    workspacePath,
+    workspacePlace(workspacePath),
     "Couldn't rename the changelist",
     () => api.pendingChanges.editChangelist(workspacePath, changelist.name, { name }),
     isAffectedByWorkspaceState,
@@ -59,7 +60,7 @@ export async function editChangelistDescription(workspacePath: string, changelis
   });
   if (!description) return;
   await runAction(
-    workspacePath,
+    workspacePlace(workspacePath),
     "Couldn't update the changelist",
     () => api.pendingChanges.editChangelist(workspacePath, changelist.name, { description }),
     isAffectedByWorkspaceState,
@@ -74,5 +75,5 @@ export async function deleteChangelist(workspacePath: string, changelist: Change
     danger: true,
   });
   if (!confirmed) return;
-  await runAction(workspacePath, "Couldn't delete the changelist", () => api.pendingChanges.deleteChangelist(workspacePath, changelist.name), isAffectedByWorkspaceState);
+  await runAction(workspacePlace(workspacePath), "Couldn't delete the changelist", () => api.pendingChanges.deleteChangelist(workspacePath, changelist.name), isAffectedByWorkspaceState);
 }

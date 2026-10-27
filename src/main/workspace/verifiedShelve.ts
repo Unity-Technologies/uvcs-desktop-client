@@ -2,8 +2,8 @@ import type { DiffEntry } from '@shared/domain/diff';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { spec } from '@shared/domain/specs';
 import { automaticShelveComment, parseCreatedShelves, type CreatedShelve } from '../cm/automaticShelve';
-import type { CmClient } from '../cm/CmClient';
-import { DIFF_FORMAT, parseDiffEntries } from '../cm/diffEntries';
+import type { CmClient, CmRunOptions } from '../cm/CmClient';
+import { queryDiffEntries } from '../cm/diffEntries';
 import { readShelveProgress } from '../cm/progress/shelveProgress';
 import { withTempFile } from '../files/tempFile';
 import { toAbsolutePaths } from '../files/workspacePaths';
@@ -51,7 +51,7 @@ export async function createVerifiedShelve(
   const created = parseCreatedShelves(output);
   if (created.length === 0) throw new Error('The shelve finished but no shelve was reported, so the workspace was left as it was.');
   if (created.length > 1) {
-    await deleteShelves(cm, workspacePath, created);
+    await deleteShelves(cm, { cwd: workspacePath }, created);
     throw new Error(XLINK_CHANGES);
   }
 
@@ -59,18 +59,18 @@ export async function createVerifiedShelve(
   const entries = await readShelveEntries(cm, workspacePath, shelve.id);
   const missing = missingFromShelve(changes, new Set(entries.flatMap((entry) => (entry.oldPath ? [entry.path, entry.oldPath] : [entry.path]))));
   if (missing.length > 0) {
-    await deleteShelves(cm, workspacePath, created);
+    await deleteShelves(cm, { cwd: workspacePath }, created);
     throw new Error(`Some changes couldn't be shelved (${missing.slice(0, 3).join(', ')}), so the workspace was left as it was. Check them in first.`);
   }
   return shelve;
 }
 
 /** The items a shelve changes. */
-export async function readShelveEntries(cm: CmClient, workspacePath: string, shelveId: number): Promise<DiffEntry[]> {
-  const output = await cm.query(['diff', spec.shelve(shelveId), '--repositorypaths', `--format=${DIFF_FORMAT}`], { cwd: workspacePath });
-  return parseDiffEntries(output);
+export function readShelveEntries(cm: CmClient, workspacePath: string, shelveId: number): Promise<DiffEntry[]> {
+  return queryDiffEntries(cm, [spec.shelve(shelveId)], { cwd: workspacePath });
 }
 
-export async function deleteShelves(cm: CmClient, workspacePath: string, shelves: CreatedShelve[]): Promise<void> {
-  for (const shelve of shelves) await cm.query(['shelveset', 'delete', `sh:${shelve.id}@${shelve.repository}`], { cwd: workspacePath });
+/** Each spec names its shelve's repository, so `options` only say where it runs: a workspace's folder, or outside one. */
+export async function deleteShelves(cm: CmClient, options: CmRunOptions, shelves: CreatedShelve[]): Promise<void> {
+  for (const shelve of shelves) await cm.query(['shelveset', 'delete', `sh:${shelve.id}@${shelve.repository}`], options);
 }

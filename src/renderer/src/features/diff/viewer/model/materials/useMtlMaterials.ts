@@ -1,5 +1,6 @@
 import { useQueries } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import type { Place } from '@shared/domain/place';
 import type { ContentSource } from '@shared/domain/content';
 import { contentBytesQuery } from '../../contentQueries';
 import type { FileMaterial } from '../parsedModel';
@@ -14,10 +15,10 @@ const SIDES = ['before', 'after'] as const;
  * An OBJ's `.mtl` materials, read beside it as the version of it that goes with each version of the model (its
  * `SiblingFinder`: the disk's for a workspace file, the diff's revision for a committed one); null for another format.
  */
-export function useMtlMaterials(workspacePath: string, versions: Record<'before' | 'after', MaterialVersion | null>): Record<'before' | 'after', FileMaterial[] | null> {
+export function useMtlMaterials(place: Place, versions: Record<'before' | 'after', MaterialVersion | null>): Record<'before' | 'after', FileMaterial[] | null> {
   const files = useMemo(() => SIDES.map((side) => mtlFiles(versions[side])), [versions]);
   const reads = useQueries({
-    queries: uniqueFiles(files.flat(), sourceKey).map((source) => contentBytesQuery(workspacePath, source)),
+    queries: uniqueFiles(files.flat(), sourceKey).map((source) => contentBytesQuery(place, source)),
     combine: dataOf,
   });
   return useMemo(() => {

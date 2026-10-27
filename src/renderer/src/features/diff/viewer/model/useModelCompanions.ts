@@ -1,5 +1,6 @@
 import { useQueries } from '@tanstack/react-query';
 import { useContext, useMemo, useRef } from 'react';
+import type { Place } from '@shared/domain/place';
 import type { ContentSource, ModelBytes } from '@shared/domain/content';
 import { contentBytesQuery } from '../contentQueries';
 import { gltfCompanions } from './gltfJson';
@@ -21,7 +22,7 @@ function combineReads(results: { isPending: boolean; isError: boolean; data?: Ui
  * (`SiblingFinderContext`), cached as any content is; null while they are being read. A file that can't be found or
  * read is left out: the model then says it needs it. A self-contained model needs none, and reads at once.
  */
-export function useModelCompanions(workspacePath: string, side: DiffSide, source: ContentSource, model: ModelBytes | undefined): Readonly<Record<string, Uint8Array>> | null {
+export function useModelCompanions(place: Place, side: DiffSide, source: ContentSource, model: ModelBytes | undefined): Readonly<Record<string, Uint8Array>> | null {
   const findSibling = useContext(SiblingFinderContext);
   const path = sourcePathOf(source);
   const needed = useMemo(() => (model ? gltfCompanions(model.bytes, model.format) : []), [model]);
@@ -30,7 +31,7 @@ export function useModelCompanions(workspacePath: string, side: DiffSide, source
   // One result for all the reads, a new one only when one of them changes.
   const reads = useQueries({
     // A file that isn't there is an answer (null), kept as any other; a failure is read again.
-    queries: found.map(({ source: sibling }) => contentBytesQuery(workspacePath, sibling)),
+    queries: found.map(({ source: sibling }) => contentBytesQuery(place, sibling)),
     combine: combineReads,
   });
   const names = found.map(({ name }) => name).join('\n');

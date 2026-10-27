@@ -1,5 +1,6 @@
 import { GitBranch } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { workspacePathOf, type Place } from '@shared/domain/place';
 import { PathLabel } from '../../components/PathLabel';
 import { FilterOptions } from '../../ui/FilterOptions';
 import { FilterPopover } from '../../ui/FilterPopover';
@@ -15,7 +16,7 @@ import type { BranchScope } from './changesetFilters';
 const PICKED_BRANCH_MAX_WIDTH = 220;
 
 interface BranchScopeFilterProps {
-  workspacePath: string;
+  place: Place;
   scope: BranchScope;
   /** The branch the workspace is on; none on a label, a changeset or a shelve, where "This branch" has none to follow. */
   currentBranch: string | undefined;
@@ -29,7 +30,7 @@ interface BranchScopeFilterProps {
  * branch switcher shows, in its order (`branchSwitcherGroups`). That list is the repository's every branch, read once
  * and shared with the switcher, the pickers and the palette (`useBranches`); it is asked for only once the popover opens.
  */
-export function BranchScopeFilter({ workspacePath, scope, currentBranch, onShowAll, onShowCurrent, onPick }: BranchScopeFilterProps) {
+export function BranchScopeFilter({ place, scope, currentBranch, onShowAll, onShowCurrent, onPick }: BranchScopeFilterProps) {
   const [open, setOpen] = useState(false);
   const choose = (choice: () => void) => () => {
     setOpen(false);
@@ -54,7 +55,7 @@ export function BranchScopeFilter({ workspacePath, scope, currentBranch, onShowA
       }
     >
       <FilterOptions label="Branches" kind="radio" options={options} />
-      <BranchList workspacePath={workspacePath} currentBranch={currentBranch} onPick={(name) => choose(() => onPick(name))()} />
+      <BranchList place={place} currentBranch={currentBranch} onPick={(name) => choose(() => onPick(name))()} />
     </FilterPopover>
   );
 }
@@ -65,9 +66,9 @@ function chipName(scope: BranchScope): string {
   return scope.kind === 'current' ? `Branch: This branch, ${scope.name}` : `Branch: ${scope.name}`;
 }
 
-function BranchList({ workspacePath, currentBranch, onPick }: { workspacePath: string; currentBranch: string | undefined; onPick: (name: string) => void }) {
+function BranchList({ place, currentBranch, onPick }: { place: Place; currentBranch: string | undefined; onPick: (name: string) => void }) {
   const branchesQuery = useBranches();
-  const recentGuids = useRecentBranchGuids(workspacePath);
+  const recentGuids = useRecentBranchGuids(workspacePathOf(place));
   const groups = useMemo(() => branchSwitcherGroups(branchesQuery.data ?? [], recentGuids), [branchesQuery.data, recentGuids]);
   return <BranchSearchList groups={groups} currentBranch={currentBranch} onPick={(branch) => onPick(branch.name)} read={branchesRead(branchesQuery)} />;
 }

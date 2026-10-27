@@ -1,5 +1,6 @@
 import { fakeApi } from '../../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 import type { ExternalApps } from '@shared/domain/externalApps';
 import { SEPARATOR, type Action, type MenuEntry, type Submenu } from '../../../lib/actions';
 import { SERVER_ROLES, WORKSPACE_ROLES, type MergeLabels } from '../mergeDescription';
@@ -67,9 +68,9 @@ describe('openableVersions', () => {
     await base!.open(null);
 
     expect(fakeApi.argsOf('history.openRevision')).toEqual([
-      ['/ws', versions.destination, 'hero.DESTINATION.psd', undefined],
-      ['/ws', versions.source, 'hero.SOURCE.psd', 'custom:1'],
-      ['/ws', versions.base, 'hero.BASE.psd', undefined],
+      [workspacePlace('/ws'), versions.destination, 'hero.DESTINATION.psd', undefined],
+      [workspacePlace('/ws'), versions.source, 'hero.SOURCE.psd', 'custom:1'],
+      [workspacePlace('/ws'), versions.base, 'hero.BASE.psd', undefined],
     ]);
   });
 });
@@ -113,7 +114,7 @@ describe('versionsMenu', () => {
     expect(labelsOf(incoming)).toEqual(labelsOf(versionAppEntries(async () => {}, APPS)));
     (incoming.find((entry) => entry !== SEPARATOR && entry.label === 'Photoshop') as Action).run();
     await settle();
-    expect(fakeApi.argsOf('history.openRevision')).toEqual([['/ws', versions.source, 'hero.INCOMING.psd', 'custom:1']]);
+    expect(fakeApi.argsOf('history.openRevision')).toEqual([[workspacePlace('/ws'), versions.source, 'hero.INCOMING.psd', 'custom:1']]);
   });
 });
 

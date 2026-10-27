@@ -1,5 +1,6 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
+import { workspacePlace, type Place } from '@shared/domain/place';
 import type { Changeset } from '@shared/domain/changeset';
 import type { Label } from '@shared/domain/label';
 import { compactFilter } from '../../lib/compactFilter';
@@ -29,9 +30,10 @@ import { useChangesetFilters } from './changesetsViewStore';
 
 const today = new Date(2026, 8, 25);
 
-const WORKSPACE = '/ws';
-/** The view's filters with `name` picked in `workspacePath`. */
-const picked = (workspacePath: string, name: string): ChangesetFilters => ({ ...DEFAULT_CHANGESET_FILTERS, ...pickedBranchFilters(workspacePath, name) });
+const WORKSPACE = workspacePlace('/ws');
+const OTHER = workspacePlace('/other');
+/** The view's filters with `name` picked in `place`. */
+const picked = (place: Place, name: string): ChangesetFilters => ({ ...DEFAULT_CHANGESET_FILTERS, ...pickedBranchFilters(place, name) });
 const ALL = { kind: 'all' } as const;
 
 describe('toQueryFilter', () => {
@@ -83,15 +85,15 @@ describe('branchScopeIn', () => {
 
   // The store outlives the workspace a window shows; another repository may have no such branch, or another one.
   it('leaves out a branch picked in another workspace', () => {
-    expect(branchScopeIn(picked('/other', '/main/task'), WORKSPACE, '/main')).toEqual(ALL);
+    expect(branchScopeIn(picked(OTHER, '/main/task'), WORKSPACE, '/main')).toEqual(ALL);
   });
 });
 
 describe('isFilteringChangesets', () => {
   it('is on with a branch that applies here, and off with one that does not', () => {
-    const filters = picked('/other', '/main/task');
+    const filters = picked(OTHER, '/main/task');
     expect(isFilteringChangesets('', shownFilters(filters, WORKSPACE), branchScopeIn(filters, WORKSPACE, '/main'))).toBe(false);
-    expect(isFilteringChangesets('', shownFilters(filters, '/other'), branchScopeIn(filters, '/other', '/main'))).toBe(true);
+    expect(isFilteringChangesets('', shownFilters(filters, OTHER), branchScopeIn(filters, OTHER, '/main'))).toBe(true);
     expect(isFilteringChangesets('fix', DEFAULT_CHANGESET_FILTERS, ALL)).toBe(true);
     expect(isFilteringChangesets('', { ...DEFAULT_CHANGESET_FILTERS, people: MINE }, ALL)).toBe(true);
   });
@@ -103,14 +105,14 @@ describe('a picked branch', () => {
   it("shows the branch's whole history by everyone, while the remembered time range and people wait", () => {
     const filters = { ...remembered, ...pickedBranchFilters(WORKSPACE, '/main/task') };
     expect(shownFilters(filters, WORKSPACE)).toEqual({ since: 'anyTime', people: EVERYONE });
-    expect(shownFilters(filters, '/other')).toEqual({ since: 'lastWeek', people: MINE });
+    expect(shownFilters(filters, OTHER)).toEqual({ since: 'lastWeek', people: MINE });
     expect(shownFilters({ ...filters, ...ALL_BRANCHES }, WORKSPACE)).toEqual({ since: 'lastWeek', people: MINE });
   });
 
   it('takes changes to the time range and people as its own, and gives them to the remembered ones once gone', () => {
     const filters = { ...remembered, ...pickedBranchFilters(WORKSPACE, '/main/task') };
     expect(shownFiltersChange(filters.pickedBranch, WORKSPACE, { since: 'lastYear' })).toEqual({ pickedBranch: { ...filters.pickedBranch, since: 'lastYear' } });
-    expect(shownFiltersChange(filters.pickedBranch, '/other', { since: 'lastYear' })).toEqual({ since: 'lastYear' });
+    expect(shownFiltersChange(filters.pickedBranch, OTHER, { since: 'lastYear' })).toEqual({ since: 'lastYear' });
     expect(shownFiltersChange(null, WORKSPACE, { people: EVERYONE })).toEqual({ people: EVERYONE });
   });
 });

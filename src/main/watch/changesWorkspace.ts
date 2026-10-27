@@ -30,6 +30,8 @@ export function changesWorkspace(args: readonly string[]): boolean {
   if (command === 'shelveset') return subcommand === 'apply' && !args.includes('--preview');
   // `cm changelist` alone lists them.
   if (command === 'changelist') return subcommand !== undefined;
+  // `cm xlink` creates or edits an xlink, a pending change, unless it only shows one.
+  if (command === 'xlink') return !args.includes('--show') && !args.includes('-s');
   return false;
 }
 

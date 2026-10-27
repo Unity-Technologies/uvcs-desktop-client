@@ -14,7 +14,7 @@ import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 import type { CmClient } from '../cm/CmClient';
 import { OwnCopies, ownCopy } from '../cm/ownCopy';
 import type { ListedTreeItem } from '../cm/treeItems';
-import { parseWorkspaceListing, workspaceListingArgs } from '../cm/workspaceListing';
+import { readWorkspaceListedItem, workspaceListingArgs } from '../cm/workspaceListing';
 import { MAX_MODEL_BYTES } from './fileContent';
 import { toAbsolutePath, workspaceFileOf } from './workspacePaths';
 
@@ -38,13 +38,13 @@ const MAX_LISTED_FOLDERS = 500;
 
 interface WorkspaceCopiesOptions {
   /** Lists a workspace folder when a read's revision isn't known yet; without it, only what was remembered tells. */
-  cm?: Pick<CmClient, 'query'>;
+  cm?: Pick<CmClient, 'queryRecords'>;
   /** The most listed revisions remembered; tests pass a few. */
   maxListed?: number;
 }
 
 export class WorkspaceCopies {
-  private readonly cm: Pick<CmClient, 'query'> | undefined;
+  private readonly cm: Pick<CmClient, 'queryRecords'> | undefined;
   private readonly maxListed: number;
   /**
    * The hashes of disk files, by path, size and time written: a file known to differ from a revision isn't read again
@@ -120,7 +120,7 @@ export class WorkspaceCopies {
   }
 
   /**
-   * Remembers a workspace folder's own listing (the Files view's `cm ls`, `parseTreeItems`): its files' revisions, and that a
+   * Remembers a workspace folder's own listing (the Files view's `cm ls`, `readTreeItem`): its files' revisions, and that a
    * revision it doesn't name isn't there, so the folder isn't listed again for one until the workspace changes.
    */
   rememberFolder(workspacePath: string, folder: string, files: Iterable<RevisionFile>, listedAt = this.generationOf(workspacePath)): void {
@@ -194,9 +194,10 @@ export class WorkspaceCopies {
     const kept = this.listedFolders.get(key);
     if (kept) return kept;
     const listedAt = this.generationOf(workspacePath);
-    const listing: Promise<void> = this.cm!.query(workspaceListingArgs(toAbsolutePath(workspacePath, folder)), { cwd: workspacePath }).then(
-      (output) => {
-        this.rememberHeld(workspacePath, parseWorkspaceListing(output), listedAt);
+    const args = workspaceListingArgs(toAbsolutePath(workspacePath, folder));
+    const listing: Promise<void> = this.cm!.queryRecords(args, readWorkspaceListedItem, { cwd: workspacePath }).then(
+      (files) => {
+        this.rememberHeld(workspacePath, files, listedAt);
         // Asked before the workspace changed: the folder is listed again for the next read.
         if (listedAt !== this.generationOf(workspacePath) && this.listedFolders.get(key) === listing) this.listedFolders.delete(key);
       },
@@ -256,7 +257,7 @@ async function readHashed(absolutePath: string, size: number, keepBytes: boolean
 }
 
 /**
- * The files of a `cm ls` listing (`parseTreeItems`) as the revisions they hold: neither folders nor links, nor a private item or a
+ * The files of a `cm ls` listing (`readTreeItem`) as the revisions they hold: neither folders nor links, nor a private item or a
  * checkout, which hold none.
  */
 export function revisionFilesOf(items: readonly ListedTreeItem[]): RevisionFile[] {

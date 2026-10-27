@@ -14,7 +14,7 @@ interface BrokenWorkspaceProps {
 
 /** Shown instead of the workspace when its folder is there but `cm` can't read it as a workspace. */
 export function BrokenWorkspace({ path, error, retrying, onRetry }: BrokenWorkspaceProps) {
-  const closeWorkspace = useSession((state) => state.closeWorkspace);
+  const goHome = useSession((state) => state.goHome);
   const title = `“${lastSegment(path)}” can't be opened`;
   const details = errorDetailsAction(title, error);
 
@@ -33,7 +33,7 @@ export function BrokenWorkspace({ path, error, retrying, onRetry }: BrokenWorksp
               {details.label}
             </Button>
           )}
-          <Button icon={<ArrowLeft size={14} />} onClick={closeWorkspace}>
+          <Button icon={<ArrowLeft size={14} />} onClick={goHome}>
             All workspaces
           </Button>
         </>

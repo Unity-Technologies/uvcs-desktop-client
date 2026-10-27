@@ -31,6 +31,11 @@ class FakeWebContents extends EventEmitter {
   reload(): void {
     this.reloads++;
   }
+  /** How many times Edit ▸ Paste ran in the page (`webContents.paste`). */
+  pastes = 0;
+  paste(): void {
+    this.pastes++;
+  }
   setWindowOpenHandler(handler: WindowOpenHandler): void {
     this.openHandler = handler;
   }
@@ -164,6 +169,7 @@ export const fakeElectron = {
     app,
     BrowserWindow: FakeWindow,
     nativeTheme,
+    webContents: { fromId: (id: number) => state.windows.find((window) => window.webContents.id === id)?.webContents },
     shell: { openExternal: async (url: string) => void state.openedExternally.push(url) },
   },
   app,

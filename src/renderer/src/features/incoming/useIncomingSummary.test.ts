@@ -1,5 +1,6 @@
 import { fakeApi } from '../../testing/fakeWindow';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { workspacePlace } from '@shared/domain/place';
 import type { IncomingSummary } from '@shared/domain/incoming';
 import { DEFAULT_SETTINGS } from '@shared/domain/settings';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
@@ -101,7 +102,7 @@ describe('notifyIncoming', () => {
     await notifyIncoming(ws, behind(12, 2), behind(14, 4));
 
     expect(await sent).toEqual([ws, "Ana Diaz checked in 'Faster login' on main (and 1 more)"]);
-    expect(fakeApi.argsOf('changesets.get')).toEqual([[ws, 14]]);
+    expect(fakeApi.argsOf('changesets.get')).toEqual([[workspacePlace(ws), 14]]);
   });
 
   it('stays quiet with the setting off, the window focused, or no new head', async () => {

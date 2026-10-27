@@ -67,12 +67,3 @@ function LinkWorkspacePicker({ repositoryName, choices, finish }: { repositoryNa
     </Dialog>
   );
 }
-
-/** Offers to create a workspace on a repository the user has none on, to open a link there. */
-export function offerNewWorkspace(repositoryName: string): Promise<boolean> {
-  return confirm({
-    title: `No workspace on ${repositoryName} yet`,
-    message: 'This link opens in a workspace on that repository. Create one to open it.',
-    confirmLabel: 'Create workspace…',
-  });
-}

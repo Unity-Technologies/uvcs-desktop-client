@@ -33,6 +33,7 @@
     "release": "electron-vite build && electron-builder --publish always"
   },
   "devDependencies": {
+    "@phosphor-icons/core": "2.1.1",
     "@pierre/diffs": "^1.6.1",
     "@playwright/cli": "^0.1.22",
     "@radix-ui/react-context-menu": "^2.3.7",
@@ -48,7 +49,7 @@
     "@vitejs/plugin-react": "^5.2.0",
     "cmdk": "^1.1.1",
     "diff": "^9.0.0",
-    "electron": "^44.4.5",
+    "electron": "^44.5.0",
     "electron-builder": "^26.15.3",
     "electron-updater": "^6.8.9",
     "electron-vite": "^5.0.0",

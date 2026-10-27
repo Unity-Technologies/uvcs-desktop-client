@@ -1,7 +1,18 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { fakeApi } from '../../testing/fakeWindow';
-import { diffTargetObject, linkCopyText, repositoryLinkTo } from './linkTo';
+import { diffTargetObject, linkCopyText, placeLinkTo, repositoryLinkTo } from './linkTo';
+
+describe('placeLinkTo', () => {
+  it("links to the place's repository: a repository's own, asking nothing; a workspace's from its info", async () => {
+    expect(await placeLinkTo(repositoryPlace('game@local'), { object: { kind: 'changeset', id: 12 } })()).toBe('uvcs://local/repos/game/changesets/12');
+    expect(fakeApi.calls()).toEqual([]);
+
+    fakeApi.answer('workspaces.info', async () => ({ repository: 'tools@local' }));
+    expect(await placeLinkTo(workspacePlace('/wk/tools'), { object: { kind: 'changeset', id: 3 } })()).toBe('uvcs://local/repos/tools/changesets/3');
+  });
+});
 
 describe('repositoryLinkTo', () => {
   it("writes the link to a repository's object as cm names the repository", () => {
@@ -12,16 +23,20 @@ describe('repositoryLinkTo', () => {
 
 describe('linkCopyText', () => {
   it("names the object's own repository when known, else the workspace's, read when copied", async () => {
-    expect(linkCopyText('/ws', 'lib@local', { object: { kind: 'label', name: 'v1' } })).toBe('uvcs://local/repos/lib/labels/v1');
+    expect(linkCopyText(workspacePlace('/ws'), 'lib@local', { object: { kind: 'label', name: 'v1' } })).toBe('uvcs://local/repos/lib/labels/v1');
     fakeApi.answer('workspaces.info', async () => ({ repository: 'game@local' }));
-    const copy = linkCopyText('/ws', undefined, { object: { kind: 'codeReview', id: 9 } });
+    const copy = linkCopyText(workspacePlace('/ws'), undefined, { object: { kind: 'codeReview', id: 9 } });
     expect(typeof copy === 'function' && (await copy())).toBe('uvcs://local/repos/game/code-reviews/9');
+  });
+
+  it("names a repository explored without a workspace at once: it is the place", () => {
+    expect(linkCopyText(repositoryPlace('game@acme@unity'), undefined, { object: { kind: 'codeReview', id: 9 } })).toBe('uvcs://acme.unity/repos/game/code-reviews/9');
   });
 });
 
 describe('linkCopyText', () => {
   it('copies no link to a name a link could not carry', () => {
-    expect(linkCopyText('/ws', 'game@local', { object: { kind: 'changeset', id: 1 }, page: { kind: 'diffFile', path: '/say "hi".md' } })).toBeNull();
+    expect(linkCopyText(workspacePlace('/ws'), 'game@local', { object: { kind: 'changeset', id: 1 }, page: { kind: 'diffFile', path: '/say "hi".md' } })).toBeNull();
   });
 });
 

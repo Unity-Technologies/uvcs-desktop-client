@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const opened = vi.hoisted(() => [] as unknown[][]);
 vi.mock('./CreateBranchDialog', () => ({ openCreateBranchDialog: (...args: unknown[]) => void opened.push(args) }));
 
+import { workspacePlace } from '@shared/domain/place';
 import type { WorkspaceInfo, WorkspaceSelector } from '@shared/domain/workspace';
 import { shownToasts } from '../../testing/operationOutcome';
 import { newBranchFromWorkspace } from './newBranchFromWorkspace';
@@ -42,7 +43,7 @@ describe('a new branch from the workspace', () => {
 
     await newBranchFromWorkspace(workspaceOn({ kind: 'branch', name: '/main/task' }, 90));
 
-    expect(fakeApi.argsOf('changesets.list')).toEqual([[ws, { branch: '/main', limit: 1 }]]);
+    expect(fakeApi.argsOf('changesets.list')).toEqual([[workspacePlace(ws), { branch: '/main', limit: 1 }]]);
     expect(offered()).toEqual(['/main @ cs:120', '/main/task @ cs:90']);
   });
 

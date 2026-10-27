@@ -63,7 +63,7 @@ export interface HistoryPoints {
   /** The changeset that made each side's revision; null for a side with none (the file was created). */
   changesets: Record<DiffSide, number | null>;
   /** Whether the revisions are the workspace's repository's; undefined while that isn't known. */
-  inWorkspaceRepository: boolean | undefined;
+  inPlaceRepository: boolean | undefined;
 }
 
 /**
@@ -71,9 +71,9 @@ export interface HistoryPoints {
  * that made its revision. None under an xlink: that is a changeset of the xlinked repository, whose paths aren't the
  * workspace's.
  */
-export function historyPointOf({ changesets, inWorkspaceRepository }: HistoryPoints, side: DiffSide): string | null {
+export function historyPointOf({ changesets, inPlaceRepository }: HistoryPoints, side: DiffSide): string | null {
   const changeset = changesets[side];
-  return inWorkspaceRepository && changeset !== null && changeset >= 0 ? `cs:${changeset}` : null;
+  return inPlaceRepository && changeset !== null && changeset >= 0 ? `cs:${changeset}` : null;
 }
 
 /**

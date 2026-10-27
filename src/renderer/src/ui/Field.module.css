@@ -92,6 +92,27 @@
   background: var(--bg-input);
 }
 
+/* A popover's search bar (`bare`), as the branch lists' is: no border of its own, the popover's edges and a rule
+   under it frame it, and the caret shows where typing goes. */
+.search[data-bare] {
+  flex: none;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.search[data-bare] .input,
+.search[data-bare] .input:focus {
+  height: 36px;
+  padding-left: 32px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.search[data-bare] .searchIcon {
+  left: 12px;
+}
+
 .searchIcon {
   position: absolute;
   left: 8px;

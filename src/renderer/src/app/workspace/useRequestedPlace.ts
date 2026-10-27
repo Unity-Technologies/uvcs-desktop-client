@@ -1,0 +1,25 @@
+import { useEffect } from 'react';
+import { api } from '../../api/client';
+import { useUvcsEvent } from '../../api/useUvcsEvent';
+import { exploreHere } from './exploreRepository';
+import { useOpenWorkspace } from './useOpenWorkspace';
+
+/**
+ * Opens the place the main process asks this window to open: the one it was opened for (already open from the
+ * page's address, `openPlaceFromAddress`: this remembers a workspace as recent) and a workspace picked from the OS
+ * recent documents while the app runs. A repository explored without a workspace is explored.
+ */
+export function useRequestedPlace(): void {
+  const openWorkspace = useOpenWorkspace();
+  const openRequested = async (): Promise<void> => {
+    const place = await api.system.takeRequestedPlace();
+    if (place?.kind === 'workspace') openWorkspace(place.workspacePath);
+    if (place?.kind === 'repository') await exploreHere(place.repository);
+  };
+
+  useEffect(() => {
+    void openRequested();
+    // Only the request waiting at launch; later ones arrive as events.
+  }, []);
+  useUvcsEvent('workspaceOpenRequested', () => void openRequested());
+}

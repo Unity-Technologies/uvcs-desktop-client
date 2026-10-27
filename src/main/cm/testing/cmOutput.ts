@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { FIELD_SEPARATOR, RECORD_SEPARATOR, type RecordLayout } from '../formatRecords';
+import { FIELD_SEPARATOR, layoutReader, readFields, RECORD_SEPARATOR, RecordReader, type ReadRecord, type RecordLayout } from '../formatRecords';
 import { findQueryArgs } from '../findQuery';
 import { TREE_ITEMS } from '../treeItems';
 import { FOUND_BRANCHES, FOUND_CHANGESETS, FOUND_SHELVES, type FoundObjects } from '../foundObjects';
@@ -8,6 +8,19 @@ import { FOUND_BRANCHES, FOUND_CHANGESETS, FOUND_SHELVES, type FoundObjects } fr
  * `cm` output as `cm` prints it, for tests to parse and for `fakeCmClient` to answer with. Only the fields the parsers
  * read; the repository is `eco@local` unless said otherwise.
  */
+
+/**
+ * The records an output holds, read as `CmClient` reads a command's as they arrive (`RecordReader`): by `read`, a
+ * `ReadRecord` or a `RecordLayout`, or as their fields. Text after the last record is none.
+ */
+export function recordsIn(output: string): string[][];
+export function recordsIn<T>(output: string, read: ReadRecord<T> | RecordLayout<T>): T[];
+export function recordsIn<T>(output: string, read?: ReadRecord<T> | RecordLayout<T>): (T | string[])[] {
+  const readRecord: ReadRecord<T | string[]> = read === undefined ? readFields : typeof read === 'function' ? read : layoutReader(read);
+  const reader = new RecordReader(readRecord);
+  reader.read(Buffer.from(output, 'utf8'));
+  return reader.finish();
+}
 
 /** `--format` output as `cm` prints it for a `recordFormat`: fields and records ended by control characters, a line per record. */
 export function formatOutput(...records: readonly (string | number)[][]): string {
@@ -180,9 +193,19 @@ export function diffRecord(status: string, path: string, { oldPath = '', base = 
   return formatOutput([status, `"/${path}"`, `"${oldPath && `/${oldPath}`}"`, base, revision, type, `"${repository}"`]);
 }
 
-/** `cm merge … --machinereadable --fieldseparator=…` output: one record per line, fields apart by the separator given. */
+/** `cm merge … --machinereadable --fieldseparator=…` output, as a merge run prints it: one record per line, fields apart by the separator given. */
 export function mergeOutput(...records: string[][]): string {
   return records.map((fields) => fields.join(FIELD_SEPARATOR)).join('\n') + '\n';
+}
+
+/** The preview of `cm merge` (`MERGE_PREVIEW_RECORD_ARGS`): its records, each ended by the record separator. */
+export function mergePreviewOutput(...records: string[][]): string {
+  return formatOutput(...records);
+}
+
+/** `cm status … --machinereadable` of no changes but `changed`, by their paths in a workspace at `/wk` (`hasPendingChanges`). */
+export function changedStatus(...changed: string[]): string {
+  return pendingStatus(join('/', 'wk'), ...changed.map((path) => change('CH', path)));
 }
 
 /** `cm ls <paths> --tree=… --format=TREE_ITEM_FORMAT` listing text files of `repository`, by their server paths. */

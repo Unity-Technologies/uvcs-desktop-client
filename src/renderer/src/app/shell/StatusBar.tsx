@@ -1,6 +1,7 @@
 import { selectorSpec } from '@shared/domain/specs';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { ArrowDownToLine, Check, GitCommitVertical, TerminalSquare } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { PathLabel } from '../../components/PathLabel';
 import { SELECTOR_ICONS, SELECTOR_KIND_LABELS, workingObjectName } from '../../components/workingObject';
 import { useKnownIncomingSummary } from '../../features/incoming/useKnownIncomingSummary';
@@ -11,9 +12,9 @@ import { navigation } from '../navigation/navigationStore';
 import { describeMeasures, describeProgress } from '../operations/describeProgress';
 import { ringValue } from '../operations/progressBar';
 import { useRunningOperation, type RunningOperation } from '../operations/runningOperationsStore';
-import { useWorkspaceInfo, useWorkspacePath } from '../workspace/useWorkspace';
+import { usePlace, useWorkspaceInfo, useWorkspacePath } from '../workspace/useWorkspace';
 import { CommandHint } from './CommandHint';
-import { ranInWorkspace } from './commandLogScope';
+import { ranInPlace } from './commandLogScope';
 import { useCommandLogStore } from './commandLogStore';
 import { StatusBarVersion } from './StatusBarVersion';
 import { isUnseenFailure } from './unseenFailure';
@@ -21,29 +22,24 @@ import { workspaceContext, type LoadedChangeset, type SyncState } from './worksp
 import styles from './StatusBar.module.css';
 
 /**
- * A quiet line at the bottom. On the left, what is running or whether the branch moved on. On the right, the command
- * log, then where the workspace is: its branch (or label, or shelve) and the loaded changeset's number (none on a shelve, which is no changeset), and last the app's version (`StatusBarVersion`). The last `cm` command is only a faint hint,
- * shown on hover and while something runs; a failed one leaves a red dot until the log (which the hint opens) has been
- * looked at, unless the operation that ran it dealt with it.
+ * A quiet line at the bottom. On the left, what is running or whether the branch moved on (`activity`). On the right,
+ * the command log, then where the place is (`where`), and last the app's version (`StatusBarVersion`). The last `cm`
+ * command of the place is only a faint hint, shown on hover and while something runs; a failed one leaves a red dot
+ * until the log (which the hint opens) has been looked at, unless the operation that ran it dealt with it. A repository
+ * explored without a workspace has neither: nothing runs on it, and it is nowhere in particular.
  */
-export function StatusBar() {
-  const workspacePath = useWorkspacePath();
-  const { data: info } = useWorkspaceInfo();
-  const summary = useKnownIncomingSummary();
-  const running = useRunningOperation(workspacePath);
-  const lastCommand = useCommandLogStore((state) => state.entries.findLast((entry) => ranInWorkspace(entry, workspacePath)));
+export function StatusBar({ activity, where, busy = false }: { activity?: ReactNode; where?: ReactNode; busy?: boolean }) {
+  const place = usePlace();
+  const lastCommand = useCommandLogStore((state) => state.entries.findLast((entry) => ranInPlace(entry, place)));
   const failure = useCommandLogStore((state) =>
-    state.open ? undefined : state.entries.findLast((entry) => isUnseenFailure(entry, state.seenUpTo, state.handledIds) && ranInWorkspace(entry, workspacePath)),
+    state.open ? undefined : state.entries.findLast((entry) => isUnseenFailure(entry, state.seenUpTo, state.handledIds) && ranInPlace(entry, place)),
   );
   const toggleCommandLog = useCommandLogStore((state) => state.toggle);
-  const context = info && workspaceContext(info, summary);
   const hint = failure ?? lastCommand;
 
   return (
-    <footer className={styles.statusBar} data-busy={Boolean(running)}>
-      <div className={styles.context}>
-        {running ? <RunningActivity operation={running} /> : context?.sync && <SyncItem sync={context.sync} />}
-      </div>
+    <footer className={styles.statusBar} data-busy={busy}>
+      <div className={styles.context}>{activity}</div>
       <button
         className={styles.log}
         data-failed={Boolean(failure)}
@@ -58,14 +54,37 @@ export function StatusBar() {
           {failure && <span className={styles.failedDot} />}
         </span>
       </button>
-      {context && info && (
-        <div className={styles.where}>
-          {info.selector.kind !== 'changeset' && <WorkingObjectItem selector={info.selector} repository={context.repository} />}
-          {context.changeset && <ChangesetItem changeset={context.changeset} repository={context.repository} />}
-        </div>
-      )}
+      {where}
       <StatusBarVersion />
     </footer>
+  );
+}
+
+/**
+ * A workspace's status bar: what runs on it or whether its branch moved on, and where it is: its branch (or label, or
+ * shelve) and the loaded changeset's number (none on a shelve, which is no changeset).
+ */
+export function WorkspaceStatusBar() {
+  const workspacePath = useWorkspacePath();
+  const { data: info } = useWorkspaceInfo();
+  const summary = useKnownIncomingSummary();
+  const running = useRunningOperation(workspacePath);
+  const context = info && workspaceContext(info, summary);
+
+  return (
+    <StatusBar
+      busy={Boolean(running)}
+      activity={running ? <RunningActivity operation={running} /> : context?.sync && <SyncItem sync={context.sync} />}
+      where={
+        context &&
+        info && (
+          <div className={styles.where}>
+            {info.selector.kind !== 'changeset' && <WorkingObjectItem selector={info.selector} repository={context.repository} />}
+            {context.changeset && <ChangesetItem changeset={context.changeset} repository={context.repository} />}
+          </div>
+        )
+      }
+    />
   );
 }
 

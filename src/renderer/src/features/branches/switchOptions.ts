@@ -70,6 +70,8 @@ export function switchButton(action: SwitchChangesAction | null): PrimaryButton 
 
 /** What the new-branch dialog shows about switching to the new branch, from the checkbox, the plan and the choice. */
 export interface NewBranchSwitch {
+  /** Whether it offers to switch at all: only a workspace switches, never a repository explored without one. */
+  offered: boolean;
   /** The question to ask about the pending changes, and "Go to Changes" with it; null when there is none. */
   question: { choice: SwitchChoice; preflight: SwitchPreflight } | null;
   /** The workspace stays where it is despite the checkbox: a merge is unfinished. */
@@ -77,18 +79,24 @@ export interface NewBranchSwitch {
   button: PrimaryButton;
 }
 
-/** Decides `NewBranchSwitch`. `pending` is undefined until the workspace was read. */
+/**
+ * Decides `NewBranchSwitch`. `pending` is undefined until the workspace was read; `inWorkspace` is whether the window
+ * shows a workspace, without which there is nothing to switch.
+ */
 export function newBranchSwitch(
   switchAfter: boolean,
   pending: { preflight: SwitchPreflight; plan: SwitchPlan } | undefined,
   action: SwitchChangesAction | null,
+  inWorkspace: boolean,
 ): NewBranchSwitch {
-  const plan = switchAfter ? pending?.plan : undefined;
+  const switching = inWorkspace && switchAfter;
+  const plan = switching ? pending?.plan : undefined;
   const blockedByMerge = plan?.kind === 'blockedByMerge';
   return {
+    offered: inWorkspace,
     question: plan?.kind === 'ask' && pending ? { choice: plan.choice, preflight: pending.preflight } : null,
     blockedByMerge,
-    button: createBranchButton(action, switchAfter && !blockedByMerge),
+    button: createBranchButton(action, switching && !blockedByMerge),
   };
 }
 

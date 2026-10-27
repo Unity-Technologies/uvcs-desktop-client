@@ -3,7 +3,8 @@ import { commandLineForLog } from './hideSecrets';
 
 /**
  * Commands that only read this machine: client configuration, workspace metadata, the disk. `status` scans the disk
- * (it only greets the server); everything else asks the server.
+ * (it only greets the server, but for its header: ARCHITECTURE.md "`cm status` asks the server for its header");
+ * everything else asks the server.
  */
 const LOCAL_COMMANDS = new Set(['status', 'getworkspacefrompath', 'gwp', 'wi', 'workspaceinfo', 'lwk', 'profile', 'version', 'location', 'changelist']);
 

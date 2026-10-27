@@ -16,8 +16,8 @@ function read(output: string, workspacePath = WORKSPACE, platform: NodeJS.Platfo
 }
 
 describe('statusRecordsArgs', () => {
-  it('asks cm status for records split by control characters, after its own options', () => {
-    expect(statusRecordsArgs('--private', '--changelists')).toEqual(['status', '--private', '--changelists', '--machinereadable', '--fieldseparator=\u001f', '--endlineseparator=\u001e']);
+  it('asks cm status for records split by control characters, after its own options, without the header that asks the server for the branch head', () => {
+    expect(statusRecordsArgs('--private', '--changelists')).toEqual(['status', '--private', '--changelists', '--machinereadable', '--compact', '--fieldseparator=\u001f', '--endlineseparator=\u001e']);
   });
 });
 

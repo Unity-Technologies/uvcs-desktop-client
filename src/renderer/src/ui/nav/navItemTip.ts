@@ -5,7 +5,7 @@ export interface NavItemWords {
   label: string;
   /** Shown instead of the label on the rail's tile, where room is short ("Expand" for "Expand sidebar"). */
   railLabel?: string;
-  /** Quiet text beside the label, e.g. "Cloud"; the rail's tile leaves it out. */
+  /** Quiet text beside the label, e.g. "Unity organization"; the rail's tile leaves it out. */
   detail?: string;
   /** A count, e.g. pending changes. */
   badge?: NavBadge;

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { DiffTarget } from '@shared/domain/diff';
 import type { DiffSideName, FocusedLines } from '../../app/navigation/pages';
 import { EmptyState } from '../../ui/EmptyState';
-import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { usePlace } from '../../app/workspace/useWorkspace';
 import { PathLabel } from '../../components/PathLabel';
 import { ChangesetSummary } from '../changesets/ChangesetSummary';
 import { useChangeset } from '../changesets/useChangeset';
@@ -69,7 +69,7 @@ function TargetDescription({ target, sideNames }: { target: DiffTarget; sideName
 }
 
 function ShelveDescription({ shelveId }: { shelveId: number }) {
-  const shelve = cachedShelve(useWorkspacePath(), shelveId);
+  const shelve = cachedShelve(usePlace(), shelveId);
   return shelve ? <ShelveSummary shelve={shelve} /> : <div className={styles.title}>Shelve {shelveId}</div>;
 }
 

@@ -45,7 +45,7 @@ export const useCommandLogStore = create<CommandLogStore>()(
     (set) => ({
       ...EMPTY_LOG,
       open: false,
-      scope: 'workspace',
+      scope: 'place',
       filter: NO_FILTER,
       seenUpTo: 0,
       revealedId: null,

@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { findQueryArgs } from './findQuery';
 import { FOUND_BRANCHES, FOUND_CHANGESETS, FOUND_LABELS } from './foundObjects';
 import { recordsOutput } from './testing/cmOutput';
-import { workingObjectCommentIn, workingObjectFindArgs } from './workingObjectComment';
+import { fakeCmClient } from './testing/fakeCmClient';
+import { readWorkingObjectComment, workingObjectFindArgs } from './workingObjectComment';
+import type { WorkspaceSelector } from '@shared/domain/workspace';
+
+/** The comment read when `cm find` prints `found`, as one record read as it arrives. */
+function workingObjectCommentIn(found: string, selector: WorkspaceSelector): Promise<string> {
+  return readWorkingObjectComment(fakeCmClient({ find: found }).cm, '/wk', selector);
+}
 
 const branches = recordsOutput(FOUND_BRANCHES, { name: '/main/task', comment: 'Old task' }, { name: '/main/fixes/task', comment: 'Report exceptions via telemetry' });
 
@@ -18,41 +25,31 @@ describe('workingObjectFindArgs', () => {
   });
 });
 
-describe('workingObjectCommentIn', () => {
-  it('picks the branch with the full name among those sharing the last segment', () => {
-    expect(
+describe('readWorkingObjectComment', () => {
+  it('picks the branch with the full name among those sharing the last segment', async () => {
+    await expect(
       workingObjectCommentIn(branches, {
         kind: 'branch',
         name: '/main/fixes/task',
       }),
-    ).toBe('Report exceptions via telemetry');
+    ).resolves.toBe('Report exceptions via telemetry');
   });
 
-  it('takes only the label of that very name, not another the wildcard for a quote matched', () => {
+  it('takes only the label of that very name, not another the wildcard for a quote matched', async () => {
     const labels = recordsOutput(FOUND_LABELS, { name: 'v1-rc', comment: 'Another' });
-    expect(workingObjectCommentIn(labels, { kind: 'label', name: "v1'rc" })).toBe('');
-    expect(workingObjectCommentIn(labels, { kind: 'label', name: 'v1-rc' })).toBe('Another');
+    await expect(workingObjectCommentIn(labels, { kind: 'label', name: "v1'rc" })).resolves.toBe('');
+    await expect(workingObjectCommentIn(labels, { kind: 'label', name: 'v1-rc' })).resolves.toBe('Another');
   });
 
-  it('is empty when the object is not found', () => {
-    expect(
-      workingObjectCommentIn(branches, {
-        kind: 'branch',
-        name: '/main/other/task',
-      }),
-    ).toBe('');
-    expect(
-      workingObjectCommentIn('', {
-        kind: 'label',
-        name: 'v1',
-      }),
-    ).toBe('');
+  it('is empty when the object is not found', async () => {
+    await expect(workingObjectCommentIn(branches, { kind: 'branch', name: '/main/other/task' })).resolves.toBe('');
+    await expect(workingObjectCommentIn('', { kind: 'label', name: 'v1' })).resolves.toBe('');
   });
 });
 
 describe('the comment of a changeset', () => {
-  it('reads the one changeset found, its comment as cm keeps it', () => {
+  it('reads the one changeset found, its comment as cm keeps it', async () => {
     const output = recordsOutput(FOUND_CHANGESETS, { changesetid: 42, comment: '"Quoted"\nand multi-line' });
-    expect(workingObjectCommentIn(output, { kind: 'changeset', name: '42' })).toBe('"Quoted"\nand multi-line');
+    await expect(workingObjectCommentIn(output, { kind: 'changeset', name: '42' })).resolves.toBe('"Quoted"\nand multi-line');
   });
 });

@@ -13,6 +13,7 @@ import { TRASH_NAME } from '../../lib/platform';
 import { formatCount } from '../../lib/text';
 import { categoryOf, existsOnDisk, hasRevisions, isCheckinCandidate, isControlled } from './changeCategories';
 import { moveToChangelistSubmenu } from './changelistMenu';
+import { matchSideOf } from './moveMatches';
 import { itemRulePatterns, sharedExtension } from './filterRulePatterns';
 import { showInLocks } from '../locks/showInLocks';
 import type { PendingLocks } from './locks/pendingLocks';
@@ -25,6 +26,7 @@ import {
   checkout,
   deletePrivateFiles,
   FILTER_LIST_FILES,
+  searchMatches,
   undoChanges,
   undoChangesLabel,
 } from './pendingChangeOperations';
@@ -46,6 +48,8 @@ export function pendingChangeMenu(
   review?: ListReview<PendingChange>,
   /** Offers to show a locked change's lock; left out where the locks aren't read (the command palette). */
   locks?: PendingLocks,
+  /** Every change listed, which Search matches pairs one with; left out where they aren't at hand (the command palette). */
+  listed?: readonly PendingChange[],
 ): MenuEntry[] {
   if (changes.length === 0) return [];
 
@@ -55,6 +59,7 @@ export function pendingChangeMenu(
   const controlledChanges = changes.filter(isControlled);
   const checkoutCandidates = controlledChanges.filter((change) => !change.kinds.includes('checkedOut') && !change.kinds.includes('added'));
   const onDisk = single && existsOnDisk(single);
+  const matchSide = single && listed ? matchSideOf(single, listed) : null;
 
   return groupedMenu([
     ...(inclusion ? inclusionEntries(changes, inclusion) : []),
@@ -64,6 +69,7 @@ export function pendingChangeMenu(
         label: privateChanges.length === 1 ? 'Add to version control' : `Add ${formatCount(privateChanges.length)} items to version control`,
       }),
     checkoutCandidates.length > 0 && menuAction('checkout', () => void checkout(workspacePath, checkoutCandidates)),
+    single && matchSide && listed && menuAction('searchMatches', () => void searchMatches(workspacePath, single, matchSide, listed)),
     single && hasRevisions(single) && menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path })),
     single &&
       hasRevisions(single) &&

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import type { RepositorySummary } from '@shared/domain/repository';
 import { splitRepositorySpec } from '../../../lib/servers';
 import { Button } from '../../../ui/Button';
 import { Dialog } from '../../../ui/dialog/Dialog';
@@ -11,10 +10,10 @@ import { useDefaultWorkspaceRoot } from '../useDefaultWorkspaceRoot';
 import { createNewWorkspace } from './createNewWorkspace';
 import { LocationField } from './LocationField';
 import { RepositoryNameCombobox } from './RepositoryNameCombobox';
-import { initialRepositoryName, newWorkspaceFormOf, repositoriesToName, serverToList } from './newWorkspaceForm';
+import { initialRepositoryName, newWorkspaceFormOf, repositoriesToName, serverToList, type NamedRepository } from './newWorkspaceForm';
 
 interface CreateWorkspaceOptions {
-  repository?: RepositorySummary;
+  repository?: NamedRepository;
   /** A folder the user already chose, e.g. by dropping it on the window. */
   path?: string;
   onCreated: (workspacePath: string) => void;

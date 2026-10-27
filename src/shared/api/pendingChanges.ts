@@ -3,6 +3,8 @@ import type {
   CheckinRequest,
   CheckinResult,
   FilterRuleList,
+  MovePair,
+  MoveSimilarity,
   PendingChangesFilter,
   PendingChangesSnapshot,
 } from '../domain/pendingChanges';
@@ -16,6 +18,16 @@ export interface PendingChangesApi {
   undoUnchanged(workspacePath: string, paths?: string[]): Promise<void>;
   add(workspacePath: string, paths: string[]): Promise<void>;
   remove(workspacePath: string, paths: string[]): Promise<void>;
+  /**
+   * Records a move the local-move detection didn't pair: an item deleted from disk (`locallyDeleted`) became the
+   * private one at `newPath`, which keeps its content. Nothing on disk changes (`cm move` of a missing item).
+   */
+  recordMove(workspacePath: string, deletedPath: string, newPath: string): Promise<void>;
+  /**
+   * How alike each pair's files are, in their order, as `cm`'s move detection measures it. Reads the deleted files'
+   * loaded revisions with one `cm cat` for all of them, the new ones from disk. Files only: folders aren't measured.
+   */
+  moveSimilarities(workspacePath: string, pairs: MovePair[]): Promise<MoveSimilarity[]>;
   checkout(workspacePath: string, paths: string[]): Promise<void>;
   /** Appends patterns to `ignore.conf`, `cloaked.conf` or `hidden_changes.conf`, leaving out those already there. */
   addFilterRules(workspacePath: string, list: FilterRuleList, patterns: string[]): Promise<void>;

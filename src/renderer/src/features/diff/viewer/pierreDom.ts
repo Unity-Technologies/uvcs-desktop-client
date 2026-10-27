@@ -1,5 +1,6 @@
 import type { RowUnderPointer } from './lineActions';
-import type { ChangedLine } from './changeBlocks';
+import type { ChangedLine, DiffSide } from './changeBlocks';
+import type { TextPosition, TextSpan } from './textSpans';
 
 /**
  * Where the viewer finds what Pierre renders. Pierre draws a diff (or a whole file) inside the shadow root of a
@@ -28,6 +29,15 @@ export function paneRect(pane: Element): DOMRect {
 export function isTypingIn(container: Element | null | undefined): boolean {
   const focused = pierreShadowRoot(container)?.activeElement;
   return focused instanceof HTMLElement && focused.isContentEditable;
+}
+
+/**
+ * Whether the editor in `container` has focus: its text, or its search panel (`data-search-panel`, which Pierre's
+ * editor draws in the same shadow root), whose keys are the editor's too.
+ */
+export function editorHasFocusIn(container: Element | null | undefined): boolean {
+  const focused = pierreShadowRoot(container)?.activeElement;
+  return focused instanceof HTMLElement && (focused.isContentEditable || focused.closest('[data-search-panel]') !== null);
 }
 
 /** The `data-line-type` of a changed line's rows. */
@@ -125,7 +135,51 @@ export function rowTextRange(row: Element, start: number, end: number): Range | 
  */
 export function rowUnderPointer(path: readonly EventTarget[]): RowUnderPointer | null {
   const row = path.find((target): target is HTMLElement => target instanceof HTMLElement && (target.hasAttribute('data-column-number') || target.hasAttribute('data-line')));
-  if (!row) return null;
+  return row ? rowOf(row) : null;
+}
+
+/** Text selected in the page, in a diff or a file Pierre renders (not typed into: the editor has its own selections). */
+export interface PageTextSelection {
+  /** What the selection holds, as the page puts it on the clipboard. */
+  text: string;
+  /** Where it is in its side's text, when it starts and ends on rows of one side; null across sides (unified) or off rows. */
+  place: { side: DiffSide; span: TextSpan } | null;
+}
+
+/**
+ * The text selected in the diff inside `container`, read from the page (Chromium's `ShadowRoot.getSelection`: the
+ * document's selection only names the shadow host): each end's row gives its line (`data-line`, one-based) and side,
+ * and the characters before it in the row its character, Pierre putting each line's text in its row's text nodes, in
+ * order. Null when nothing is selected there.
+ */
+export function pageTextSelection(container: Element | null): PageTextSelection | null {
+  const root = pierreShadowRoot(container) as (ShadowRoot & { getSelection?: () => Selection | null }) | null;
+  const selection = root?.getSelection?.();
+  if (!root || !selection || selection.isCollapsed || !selection.anchorNode || !root.contains(selection.anchorNode)) return null;
+  const text = selection.toString();
+  if (!text) return null;
+  const anchor = rowPoint(selection.anchorNode, selection.anchorOffset);
+  const focus = selection.focusNode && rowPoint(selection.focusNode, selection.focusOffset);
+  const place = anchor && focus && anchor.side === focus.side ? { side: anchor.side, span: { start: anchor.position, end: focus.position } } : null;
+  return { text, place };
+}
+
+/** The side, line and character a selection's end is at, in a row of code; null off rows (a line number, a gap). */
+function rowPoint(node: Node, offset: number): { side: DiffSide; position: TextPosition } | null {
+  const element = node instanceof Element ? node : node.parentElement;
+  const row = element?.closest('[data-line]');
+  const lineNumber = Number(row?.getAttribute('data-line'));
+  if (!row || !Number.isInteger(lineNumber) || lineNumber < 1) return null;
+  const before = document.createRange();
+  before.setStart(row, 0);
+  before.setEnd(node, offset);
+  const { pane, lineType } = rowOf(row);
+  const side: DiffSide = pane ?? (lineType === 'change-deletion' ? 'deletions' : 'additions');
+  return { side, position: { line: lineNumber - 1, character: before.toString().length } };
+}
+
+/** What a row (a line's number cell or code) says of its line, as Pierre marks it. */
+function rowOf(row: Element): RowUnderPointer {
   const pane = row.closest('[data-deletions], [data-additions]');
   return {
     lineNumber: Number(row.getAttribute('data-column-number') ?? row.getAttribute('data-line')),

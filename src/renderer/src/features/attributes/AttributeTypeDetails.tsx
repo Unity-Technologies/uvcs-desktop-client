@@ -1,4 +1,5 @@
 import { Tags } from 'lucide-react';
+import type { Place } from '@shared/domain/place';
 import type { AttributeType } from '@shared/domain/attribute';
 import { DetailsHeading } from '../../components/DetailsHeading';
 import type { MenuEntry } from '../../lib/actions';
@@ -12,17 +13,17 @@ import { useAttributeUsedValues } from './useAttributes';
 import styles from './AttributeChips.module.css';
 
 interface AttributeTypeDetailsProps {
-  workspacePath: string;
+  place: Place;
   type: AttributeType;
   menu: MenuEntry[];
 }
 
-export function AttributeTypeDetails({ workspacePath, type, menu }: AttributeTypeDetailsProps) {
+export function AttributeTypeDetails({ place, type, menu }: AttributeTypeDetailsProps) {
   return (
     <DetailsPanel
       icon={<Tags />}
       kind="Attribute"
-      heading={<DetailsHeading name={type.name} comment={type.comment} onSave={(comment) => saveAttributeComment(workspacePath, type, comment)} />}
+      heading={<DetailsHeading name={type.name} comment={type.comment} onSave={(comment) => saveAttributeComment(place, type, comment)} />}
       author={{ user: type.owner, date: type.date }}
       menu={menu}
       properties={[

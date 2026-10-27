@@ -8,6 +8,7 @@ import { createHash } from 'node:crypto';
 import type { Stats } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { posix } from 'node:path';
+import { workspacePlace } from '@shared/domain/place';
 import type { UnityAssetsApi } from '@shared/api/unityAssets';
 import { listsTree } from '@shared/domain/specs';
 import {
@@ -107,7 +108,7 @@ export function createUnityAssetsService({ watchers, trees, downloads, platform 
 
   /** At a point of the repository: the model's folder listed first, the project's only when a lookup reaches past it. */
   function findInTree(workspacePath: string, request: UnityAssetsRequest, modelPath: string, project: UnityProject | null, point: Extract<AssetsPoint, { kind: 'repository' }>): Promise<UnityAssetsAnswer> {
-    const kept = trees.at(workspacePath, point.at);
+    const kept = trees.at(workspacePlace(workspacePath), point.at);
     const wide = project ? project.root : folderOf(modelPath);
     // A model at the root or right in `Assets` would list its project as its folder: the project's listing serves both.
     const near = project && [project.root, project.assets].includes(folderOf(modelPath)) ? wide : folderOf(modelPath);
@@ -190,7 +191,7 @@ export function createUnityAssetsService({ watchers, trees, downloads, platform 
       bytes = await readDiskFile(workspaceFileOf(workspacePath, path));
     } else {
       refuseUnlikelyRevision(file.revision);
-      bytes = await downloads.read(workspacePath, { path, revision: file.revision, hash: file.hash, size: file.size });
+      bytes = await downloads.read(workspacePlace(workspacePath), { path, revision: file.revision, hash: file.hash, size: file.size });
     }
     // A plain Uint8Array: IPC copies it as binary.
     return bytes && new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -209,7 +210,7 @@ export function createUnityAssetsService({ watchers, trees, downloads, platform 
       return [{ path: pathInWorkspace(file), revision: file.revision, hash: file.hash, size: file.size }];
     });
     // Each read that follows tells its own failure.
-    await Promise.all(revisions.map((revision) => downloads.fetch(workspacePath, revision).catch(() => undefined)));
+    await Promise.all(revisions.map((revision) => downloads.fetch(workspacePlace(workspacePath), revision).catch(() => undefined)));
   }
 
   return { find, read, download };

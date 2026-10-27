@@ -1,6 +1,6 @@
 import type { FocusedLines } from '../navigation/pages';
 import { useNavigation } from '../navigation/navigationStore';
-import { useWorkspacePath } from '../workspace/useWorkspace';
+import { usePlace } from '../workspace/useWorkspace';
 import { copyLinesLink, copyPageLink } from './copyPageLink';
 import type { LinkTarget } from './linkNavigation';
 import { pageLinkTarget, placeLinesTarget } from './shownLink';
@@ -17,13 +17,13 @@ export function usePageLineLink(
   linkOf?: (lines: FocusedLines) => LinkTarget | null,
   lines: FocusedLines | null = null,
 ): { target: LinkTarget | null; copy: () => void } {
-  const workspacePath = useWorkspacePath();
+  const place = usePlace();
   const page = useNavigation((state) => state.pages.at(-1));
   const shown = useShownFile(publishes && !linkOf ? page : undefined);
   if (linkOf) {
     const target = placeLinesTarget(publishes, linkOf, lines);
-    return { target, copy: () => void copyLinesLink(workspacePath, target) };
+    return { target, copy: () => void copyLinesLink(place, target) };
   }
   const target = publishes && page ? pageLinkTarget(page, shown) : null;
-  return { target, copy: () => void (page && copyPageLink(workspacePath, page)) };
+  return { target, copy: () => void (page && copyPageLink(place, page)) };
 }

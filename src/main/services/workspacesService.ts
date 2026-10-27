@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { app } from 'electron';
 import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
 import type { WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
-import { parseRecords, recordFormat } from '../cm/formatRecords';
+import { recordFormat } from '../cm/formatRecords';
 import { readUpdateProgress } from '../cm/progress/updateProgress';
 import { switchArgs, UPDATE_ARGS } from '../cm/updateArgs';
 import { readWorkingObjectComment } from '../cm/workingObjectComment';
@@ -31,8 +31,8 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
   const createdFolders = new Set<string>();
 
   async function list(): Promise<WorkspaceSummary[]> {
-    const output = await cm.query(['workspace', 'list', `--format=${recordFormat(['wkname', 'path', 'wkid'])}`], { anyDirectory: true });
-    const workspaces = parseRecords(output).map(([name = '', path = '', guid = '']) => ({ name, path, guid }));
+    const args = ['workspace', 'list', `--format=${recordFormat(['wkname', 'path', 'wkid'])}`];
+    const workspaces = await cm.queryRecords(args, ([name = '', path = '', guid = '']) => ({ name, path, guid }), { anyDirectory: true });
     // The client registry can list the same workspace several times; show each folder once.
     return [...new Map(workspaces.map((workspace) => [workspace.path, workspace])).values()];
   }

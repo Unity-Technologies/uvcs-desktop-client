@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { MAIN_BRANCH_GUID } from '@shared/domain/branch';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
 import { findQueryArgs, roundTripDate } from '../cm/findQuery';
 import { FOUND_BRANCHES } from '../cm/foundObjects';
@@ -15,6 +16,7 @@ import { readingFileOption } from './testing/readingFileOption';
 import { serviceContext } from './testing/serviceContext';
 
 const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
+const IN_WORKSPACE = workspacePlace(WORKSPACE);
 
 function branchRecord(id: number, name: string, date: string) {
   return {
@@ -53,7 +55,7 @@ describe('branch list', () => {
   it('lists visible branches with one quick cm find, newest first', async () => {
     const { service, commands } = branches({ 'find branch': recordsOutput(FOUND_BRANCHES, TASK2, TASK1) });
 
-    const listed = await service.list(WORKSPACE, { includeHidden: false });
+    const listed = await service.list(IN_WORKSPACE, { includeHidden: false });
 
     expect(commands).toMatchObject([
       { via: 'query', args: findQueryArgs(FOUND_BRANCHES, "where hidden = 'false' order by date desc"), options: { cwd: WORKSPACE }, readsRecords: true },
@@ -68,7 +70,7 @@ describe('branch list', () => {
   it('asks cm for the fields it reads as records, dates in the round-trip format', async () => {
     const { service, lines } = branches({ 'find branch': '' });
 
-    await service.list(WORKSPACE, { includeHidden: false });
+    await service.list(IN_WORKSPACE, { includeHidden: false });
 
     expect(lines()).toEqual([
       "find branch where hidden = 'false' order by date desc " +
@@ -80,7 +82,7 @@ describe('branch list', () => {
   it('reads hidden branches with a second query only when asked, flagged and merged by date', async () => {
     const { service, lines } = branches({ 'find branch': visibleOrHidden(recordsOutput(FOUND_BRANCHES, TASK2, TASK1), recordsOutput(FOUND_BRANCHES, OLD_HIDDEN)) });
 
-    const listed = await service.list(WORKSPACE, { includeHidden: true });
+    const listed = await service.list(IN_WORKSPACE, { includeHidden: true });
 
     expect(lines()).toEqual([
       foundLine(FOUND_BRANCHES, "where hidden = 'false' order by date desc"),
@@ -96,7 +98,7 @@ describe('branch list', () => {
   it('filters on the server by date, owners, text and limit, and never by branch', async () => {
     const { service, lines } = branches({ 'find branch': '' });
 
-    await service.list(WORKSPACE, { includeHidden: false, sinceDate: '2026-09-01', owners: ['ana'], text: 'task', limit: 50, branch: '/main' });
+    await service.list(IN_WORKSPACE, { includeHidden: false, sinceDate: '2026-09-01', owners: ['ana'], text: 'task', limit: 50, branch: '/main' });
 
     expect(lines()).toEqual([
       foundLine(FOUND_BRANCHES, `where hidden = 'false' and name like '%ask%' and date >= '${roundTripDate('2026-09-01')}' and owner = 'ana' order by date desc limit 50`),
@@ -106,9 +108,9 @@ describe('branch list', () => {
   it('remembers the names it listed, so code reviews name their branches without asking cm', async () => {
     const { service, branchNames, commands } = branches({ 'find branch': recordsOutput(FOUND_BRANCHES, TASK2, TASK1) });
 
-    await service.list(WORKSPACE, { includeHidden: false });
+    await service.list(IN_WORKSPACE, { includeHidden: false });
 
-    expect(await branchNames.resolve(WORKSPACE, [37, 38])).toEqual(
+    expect(await branchNames.resolve(IN_WORKSPACE, [37, 38])).toEqual(
       new Map([
         [37, '/main/task1'],
         [38, '/main/task2'],
@@ -124,7 +126,7 @@ describe('one branch by name', () => {
       'find branch': visibleOrHidden(recordsOutput(FOUND_BRANCHES, TASK1, OTHER_TASK1), ''),
     });
 
-    const branch = await service.get(WORKSPACE, '/main/fix/task1');
+    const branch = await service.get(IN_WORKSPACE, '/main/fix/task1');
 
     expect(lines()).toEqual([
       foundLine(FOUND_BRANCHES, "where name = 'task1' and hidden = 'false' order by date desc"),
@@ -136,19 +138,19 @@ describe('one branch by name', () => {
   it('finds a hidden branch, flagged as such', async () => {
     const { service } = branches({ 'find branch': visibleOrHidden('', recordsOutput(FOUND_BRANCHES, OLD_HIDDEN)) });
 
-    expect(await service.get(WORKSPACE, '/main/old')).toMatchObject({ id: 21, isHidden: true });
+    expect(await service.get(IN_WORKSPACE, '/main/old')).toMatchObject({ id: 21, isHidden: true });
   });
 
   it("answers null for a branch that doesn't exist", async () => {
     const { service } = branches({ 'find branch': '' });
 
-    expect(await service.get(WORKSPACE, '/main/gone')).toBeNull();
+    expect(await service.get(IN_WORKSPACE, '/main/gone')).toBeNull();
   });
 
   it('looks a name holding a quote up with a wildcard in its place, and returns only the branch of that very name', async () => {
     const { service, lines } = branches({ 'find branch': branchesFound({ name: '/main/dani-s', id: 41 }) });
 
-    expect(await service.get(WORKSPACE, "/main/dani's")).toBeNull();
+    expect(await service.get(IN_WORKSPACE, "/main/dani's")).toBeNull();
     expect(lines()[0]).toContain("name like 'dani%s'");
   });
 });
@@ -158,7 +160,7 @@ describe('branch writes', () => {
     const { seen, answer } = readingFileOption('-commentsfile=');
     const { service, commands } = branches({ 'branch create': answer });
 
-    await service.create(WORKSPACE, { name: '/main/task3', startingPoint: 'cs:12', comment: 'Line one\nLine two' });
+    await service.create(IN_WORKSPACE, { name: '/main/task3', startingPoint: 'cs:12', comment: 'Line one\nLine two' });
 
     expect(commands).toMatchObject([
       { via: 'query', args: ['branch', 'create', '/main/task3', '--changeset=cs:12', `-commentsfile=${seen.file}`], options: { cwd: WORKSPACE } },
@@ -171,7 +173,7 @@ describe('branch writes', () => {
     const { seen, answer } = readingFileOption('-commentsfile=', cmFails('Error: The branch /main/task3 already exists.'));
     const { service } = branches({ 'branch create': answer });
 
-    await expect(service.create(WORKSPACE, { name: '/main/task3', comment: '' })).rejects.toThrow('already exists');
+    await expect(service.create(IN_WORKSPACE, { name: '/main/task3', comment: '' })).rejects.toThrow('already exists');
     expect(existsSync(seen.file)).toBe(false);
   });
 
@@ -179,7 +181,7 @@ describe('branch writes', () => {
     const { seen, answer } = readingFileOption('-commentsfile=');
     const { service, commands } = branches({ 'branch editcomment': answer });
 
-    await service.editComment(WORKSPACE, '/main/task1', 'Fix the "jump" bug\nOn every level');
+    await service.editComment(IN_WORKSPACE, '/main/task1', 'Fix the "jump" bug\nOn every level');
 
     expect(commands).toMatchObject([{ via: 'query', args: ['branch', 'editcomment', 'br:/main/task1', `-commentsfile=${seen.file}`], options: { cwd: WORKSPACE } }]);
     expect(seen.content).toBe('Fix the "jump" bug\nOn every level');
@@ -190,7 +192,7 @@ describe('branch writes', () => {
     const { seen, answer } = readingFileOption('-commentsfile=');
     const { service, commands } = branches({ 'branch editcomment': answer });
 
-    await service.editComment(WORKSPACE, '/main/task1', '');
+    await service.editComment(IN_WORKSPACE, '/main/task1', '');
 
     expect(commands).toMatchObject([{ args: ['branch', 'editcomment', 'br:/main/task1', `-commentsfile=${seen.file}`] }]);
     expect(seen.content).toBe('');
@@ -200,17 +202,17 @@ describe('branch writes', () => {
     const { seen, answer } = readingFileOption('-commentsfile=', cmFails('Error: The branch /main/gone does not exist.'));
     const { service } = branches({ 'branch editcomment': answer });
 
-    await expect(service.editComment(WORKSPACE, '/main/gone', 'Gone')).rejects.toThrow('does not exist');
+    await expect(service.editComment(IN_WORKSPACE, '/main/gone', 'Gone')).rejects.toThrow('does not exist');
     expect(existsSync(seen.file)).toBe(false);
   });
 
   it('renames, deletes, hides and unhides with one command for all the branches', async () => {
     const { service, lines } = branches({ branch: '' });
 
-    await service.rename(WORKSPACE, '/main/task1', 'task-one');
-    await service.delete(WORKSPACE, ['/main/task1', '/main/task2']);
-    await service.setHidden(WORKSPACE, ['/main/task1', '/main/task2'], true);
-    await service.setHidden(WORKSPACE, ['/main/task1'], false);
+    await service.rename(IN_WORKSPACE, '/main/task1', 'task-one');
+    await service.delete(IN_WORKSPACE, ['/main/task1', '/main/task2']);
+    await service.setHidden(IN_WORKSPACE, ['/main/task1', '/main/task2'], true);
+    await service.setHidden(IN_WORKSPACE, ['/main/task1'], false);
 
     expect(lines()).toEqual([
       'branch rename br:/main/task1 task-one',
@@ -218,6 +220,47 @@ describe('branch writes', () => {
       'branch hide br:/main/task1 br:/main/task2',
       'branch unhide br:/main/task1',
     ]);
+  });
+});
+
+describe('branches of a repository explored without a workspace', () => {
+  const ON_REPOSITORY = repositoryPlace('game@local');
+  const OUTSIDE = { outsideWorkspaces: true };
+
+  it('lists them with the same finds, naming the repository last, run outside every workspace', async () => {
+    const { service, commands, branchNames } = branches({ 'find branch': visibleOrHidden(recordsOutput(FOUND_BRANCHES, TASK1), recordsOutput(FOUND_BRANCHES, OLD_HIDDEN)) });
+
+    const listed = await service.list(ON_REPOSITORY, { includeHidden: true, limit: 5 });
+
+    expect(commands.map(({ args, options }) => [args[2], options])).toEqual([
+      ["where hidden = 'false' order by date desc limit 5 on repository 'game@local'", OUTSIDE],
+      ["where hidden = 'true' order by date desc limit 5 on repository 'game@local'", OUTSIDE],
+    ]);
+    expect(listed.map((branch) => branch.name)).toEqual(['/main/old', '/main/task1']);
+    // The code review chips of that repository's window take their names from the list.
+    expect(await branchNames.resolve(ON_REPOSITORY, [37])).toEqual(new Map([[37, '/main/task1']]));
+  });
+
+  it('creates, renames, comments, deletes, hides and unhides naming the repository on every spec', async () => {
+    const { seen, answer } = readingFileOption('-commentsfile=');
+    const { service, commands } = branches({ 'branch create': answer, 'branch editcomment': answer, branch: '' });
+
+    await service.create(ON_REPOSITORY, { name: '/main/task3', startingPoint: 'lb:v1.0', comment: 'New' });
+    await service.rename(ON_REPOSITORY, '/main/task1', 'task-one');
+    await service.editComment(ON_REPOSITORY, '/main/task1', 'Fixed');
+    await service.delete(ON_REPOSITORY, ['/main/task1', '/main/task2']);
+    await service.setHidden(ON_REPOSITORY, ['/main/task1'], true);
+    await service.setHidden(ON_REPOSITORY, ['/main/task1'], false);
+
+    expect(commands.map(({ args, options }) => [args.map((arg) => (arg.startsWith('-commentsfile=') ? '-commentsfile=…' : arg)).join(' '), options])).toEqual([
+      ['branch create br:/main/task3@game@local --label=lb:v1.0@game@local -commentsfile=…', OUTSIDE],
+      ['branch rename br:/main/task1@game@local task-one', OUTSIDE],
+      ['branch editcomment br:/main/task1@game@local -commentsfile=…', OUTSIDE],
+      ['branch delete br:/main/task1@game@local br:/main/task2@game@local', OUTSIDE],
+      ['branch hide br:/main/task1@game@local', OUTSIDE],
+      ['branch unhide br:/main/task1@game@local', OUTSIDE],
+    ]);
+    expect(seen.content).toBe('Fixed');
   });
 });
 

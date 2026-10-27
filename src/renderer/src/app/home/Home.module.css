@@ -350,6 +350,7 @@
   white-space: nowrap;
 }
 
+
 .rowChip {
   flex: none;
   max-width: 28%;
@@ -452,3 +453,6 @@
   gap: 8px;
   max-width: 420px;
 }
+
+/* A project under its organization, in All workspaces' place filter: indented past the organization's icon. */
+

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ContentSource } from '@shared/domain/content';
 import type { DiffEntry } from '@shared/domain/diff';
 import { MAX_CHANGED_ASSETS } from '@shared/domain/unityAssets';
-import { inWorkspaceRepository } from '@shared/domain/repository';
+import { inPlaceRepository } from '@shared/domain/repository';
 import { changedAssetsOf, diffAssetsPoint, pointForModel, lastChangeAssetsPoint, revisionsAssetsPoint, workspaceAssetsPoint } from './assetsPoints';
 
 const revision = (revisionId: number, fileName = 'Art/Tree.fbx'): ContentSource => ({ kind: 'revision', revision: { revisionId, repository: 'eco@local' }, fileName });
@@ -87,11 +87,11 @@ describe('pointForModel', () => {
 
 describe('revisionsAssetsPoint and lastChangeAssetsPoint', () => {
   it("puts a history's revisions each at the changeset that made it, only in the workspace's repository", () => {
-    const points = { changesets: { original: 7, modified: 9 }, inWorkspaceRepository: true };
+    const points = { changesets: { original: 7, modified: 9 }, inPlaceRepository: true };
     const pointOf = revisionsAssetsPoint(points);
     expect(pointOf('original', revision(3))).toEqual({ kind: 'repository', at: 'cs:7' });
     expect(pointOf('modified', revision(4))).toEqual({ kind: 'repository', at: 'cs:9' });
-    expect(revisionsAssetsPoint({ ...points, inWorkspaceRepository: false })('modified', revision(4))).toBeNull();
+    expect(revisionsAssetsPoint({ ...points, inPlaceRepository: false })('modified', revision(4))).toBeNull();
   });
 
   it("puts Files' last change at its changeset, and before it, that changeset undone; a shelve's has none", () => {
@@ -102,10 +102,10 @@ describe('revisionsAssetsPoint and lastChangeAssetsPoint', () => {
   });
 
   it("gives no point while the workspace's repository isn't known: an xlinked revision would list the wrong tree", () => {
-    expect(inWorkspaceRepository('eco@local', undefined)).toBeUndefined();
-    expect(inWorkspaceRepository('eco@local', 'eco@local')).toBe(true);
-    expect(inWorkspaceRepository('art@local', 'eco@local')).toBe(false);
-    expect(revisionsAssetsPoint({ changesets: { original: 7, modified: 9 }, inWorkspaceRepository: undefined })('modified', revision(4))).toBeNull();
+    expect(inPlaceRepository('eco@local', undefined)).toBeUndefined();
+    expect(inPlaceRepository('eco@local', 'eco@local')).toBe(true);
+    expect(inPlaceRepository('art@local', 'eco@local')).toBe(false);
+    expect(revisionsAssetsPoint({ changesets: { original: 7, modified: 9 }, inPlaceRepository: undefined })('modified', revision(4))).toBeNull();
     expect(lastChangeAssetsPoint(12, 'eco@local', undefined)('modified', revision(4))).toBeNull();
   });
 });

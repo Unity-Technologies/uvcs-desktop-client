@@ -1,3 +1,4 @@
+import { workspacePlace } from '@shared/domain/place';
 import type { TreeItem } from '@shared/domain/explorer';
 import { isWritable, repositoryLinkTo } from '../../app/links/linkTo';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -27,6 +28,9 @@ import { fileMenuTargets, itemViews } from './fileMenuTargets';
 import { useFilesViewStore } from './filesViewStore';
 import type { PendingChangesIndex } from './itemStatus';
 import { isWorkspaceRoot } from './workspaceRoot';
+import { listedItems } from './directoryListing';
+import { editableXlinkOf, isUnderXlink, newXlinkDirectoryOf, type XlinkSurroundings } from './xlinkItem';
+import { createXlink, editXlink } from '../xlinks/xlinkOperations';
 import { hotkey } from '../../lib/shortcutRegistry';
 
 export const FILE_SHORTCUTS = {
@@ -43,7 +47,7 @@ export const FILE_SHORTCUTS = {
 function showAnnotated(workspacePath: string, path: string): void {
   const view = useFilesViewStore.getState();
   view.setFileView('annotate');
-  view.requestReveal(workspacePath, path);
+  view.requestReveal(workspacePlace(workspacePath), path);
 }
 
 /**
@@ -54,6 +58,19 @@ export function itemLinkText(workspacePath: string, item: TreeItem): string | nu
   const workspace = queryClient.getQueryData(workspaceInfoQuery(workspacePath).queryKey);
   const target = workspace ? filesItemLink(workspace, item) : null;
   return workspace && target && isWritable(target) ? repositoryLinkTo(workspace.repository, target) : null;
+}
+
+/** Where an item is as far as xlinks go, from what its window already read: the tree's listings, the workspace's info. */
+function xlinkSurroundingsOf(workspacePath: string, item: TreeItem): XlinkSurroundings {
+  return {
+    underXlink: isUnderXlink(item.path, (directory) => listedItems(workspacePath, directory)),
+    workspaceRepository: queryClient.getQueryData(workspaceInfoQuery(workspacePath).queryKey)?.repository,
+  };
+}
+
+/** Whether the item at `path` is added and not checked in yet. */
+function isAdded(pendingChanges: PendingChangesIndex, path: string): boolean {
+  return pendingChanges.changeAt(path)?.kinds.includes('added') ?? false;
 }
 
 /** Who may check in under the item's path, on every branch (a secured path). */
@@ -71,6 +88,9 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
   const { privateItems, checkoutCandidates, undoable, typedFiles } = fileMenuTargets(items, pendingChanges);
   const views = single && itemViews(single, pendingChanges);
   const directory = targetDirectoryFor(single ?? undefined);
+  const surroundings = single && xlinkSurroundingsOf(workspacePath, single);
+  const xlinkDirectory = single && surroundings && newXlinkDirectoryOf(single, surroundings);
+  const editedXlink = single && surroundings && editableXlinkOf(single, surroundings);
   // The workspace root can't be renamed or deleted from here.
   const hasRoot = items.some(isWorkspaceRoot);
 
@@ -82,6 +102,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
     checkoutCandidates.length > 0 && menuAction('checkout', () => void checkoutItems(workspacePath, checkoutCandidates)),
     single && menuAction('newFile', () => void createItem(workspacePath, directory, 'file'), { shortcut: FILE_SHORTCUTS.newFile }),
     single && menuAction('newFolder', () => void createItem(workspacePath, directory, 'directory'), { shortcut: FILE_SHORTCUTS.newFolder }),
+    xlinkDirectory !== null && menuAction('newXlink', () => createXlink(workspacePath, xlinkDirectory)),
     single && views?.changes && menuAction('changes', () => useFilesViewStore.getState().setFileView('diff'), { shortcut: FILE_SHORTCUTS.showChanges }),
     single && views?.history && menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path }), { shortcut: FILE_SHORTCUTS.history }),
     single && views?.annotate && menuAction('annotate', () => showAnnotated(workspacePath, single.path), { shortcut: FILE_SHORTCUTS.annotate }),
@@ -92,6 +113,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
     itemCopySubmenu(workspacePath, items.map((item) => item.path), single ? itemLinkText(workspacePath, single) : null),
     pasteAction(workspacePath, items),
     single && !hasRoot && menuAction('rename', () => void renameItem(workspacePath, single), { shortcut: FILE_SHORTCUTS.rename }),
+    editedXlink && menuAction('editXlink', () => void editXlink(workspacePath, editedXlink, isAdded(pendingChanges, editedXlink.path))),
     typedFiles.length > 0 &&
       menuSubmenu('revisionType', [
         { id: 'type.bin', label: 'Binary', run: () => void changeRevisionType(workspacePath, typedFiles, 'bin') },

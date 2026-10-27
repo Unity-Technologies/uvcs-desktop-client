@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
 import type { FocusedLines } from '../../app/navigation/pages';
+import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
+import type { MenuHost } from '../../components/menuWords';
+import { branchWorkedOn } from '../../components/workingObject';
 import { avatarColumn, commentColumn, dateColumn, numberColumn } from '../../components/historyColumns';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
@@ -9,6 +12,7 @@ import { SplitPane } from '../../ui/SplitPane';
 import type { Column } from '../../ui/table/column';
 import { DataTable } from '../../ui/table/DataTable';
 import { TableSkeleton } from '../../ui/table/TableSkeleton';
+import { changesetMenu } from '../changesets/changesetMenu';
 import { useChangesets } from '../changesets/useChangesets';
 import { branchChangesetPane } from './branchChangesetPane';
 import { DiffFrame } from './DiffFrame';
@@ -45,15 +49,22 @@ export function BranchDiff({ branch, branchHead, focusPath, focusLines }: Branch
 /** The Changesets view's columns that fit beside a diff; the avatar, whose tooltip names the author, always shows. */
 const CHANGESET_COLUMNS: Column<Changeset>[] = [avatarColumn({ alwaysShown: true }), numberColumn('Changeset'), commentColumn(), dateColumn()];
 
+/** The list binds no list keys: ⌘D and ⌘C reach the view under the page, ⇧⌘C copies the page's branch. */
+const BRANCH_DIFF_HOST: MenuHost = { listKeysElsewhere: true };
+
 /** Kept out of the render: a new `rowKey` makes the table key every changeset of the branch again on each step. */
 const changesetKey = (changeset: Changeset): string => String(changeset.id);
 
 function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; toolbar: React.ReactNode; focusPath?: string }) {
+  const place = usePlace();
+  const { data: workspace } = useWorkspaceInfo();
   const filter = useMemo(() => ({ branch }), [branch]);
   const { data: changesets, error } = useChangesets(filter);
   const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
   const selectedId = selection.anchor === null ? null : Number(selection.anchor);
   const firstId = changesets?.[0]?.id;
+  // The changesets' own menu, as in the Changesets view: its Copy ▸ Link names the changeset stepped to.
+  const menuContext = { place, loadedChangeset: workspace?.loadedChangeset, loadedBranch: branchWorkedOn(workspace?.selector) };
 
   useEffect(() => {
     if (selectedId === null && firstId !== undefined) setSelection(singleSelection(String(firstId)));
@@ -70,7 +81,14 @@ function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; 
       first={
         // The list's own column titles over placeholder rows while the changesets are read: the layout stays.
         changesets ? (
-          <DataTable rows={changesets} columns={CHANGESET_COLUMNS} rowKey={changesetKey} selection={selection} onSelectionChange={setSelection} />
+          <DataTable
+            rows={changesets}
+            columns={CHANGESET_COLUMNS}
+            rowKey={changesetKey}
+            selection={selection}
+            onSelectionChange={setSelection}
+            contextMenu={(rows) => changesetMenu(menuContext, rows, BRANCH_DIFF_HOST)}
+          />
         ) : (
           <TableSkeleton columns={CHANGESET_COLUMNS} />
         )

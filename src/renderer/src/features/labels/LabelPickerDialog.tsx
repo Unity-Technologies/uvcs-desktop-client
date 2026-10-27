@@ -1,3 +1,4 @@
+import type { Place } from '@shared/domain/place';
 import { Tag } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { Label } from '@shared/domain/label';
@@ -13,6 +14,8 @@ interface PickLabelOptions {
   title: string;
   /** A label not to offer, e.g. the one being compared. */
   exclude?: string;
+  /** Another place's labels than the window's, e.g. an xlinked repository's (`repositoryPlace`). */
+  place?: Place;
 }
 
 /** Asks the user to choose a label. Resolves to it, or undefined if dismissed. */
@@ -20,8 +23,8 @@ export function pickLabel(options: PickLabelOptions): Promise<Label | undefined>
   return askDialog<Label>((finish) => <LabelPickerDialog {...options} finish={finish} />);
 }
 
-function LabelPickerDialog({ title, exclude, finish }: PickLabelOptions & { finish: (label: Label | undefined) => void }) {
-  const { data: labels } = useLabels();
+function LabelPickerDialog({ title, exclude, place, finish }: PickLabelOptions & { finish: (label: Label | undefined) => void }) {
+  const { data: labels, error } = useLabels({}, place);
   const [search, setSearch] = useState('');
   const choices = useMemo(() => labelChoices(labels ?? [], exclude, search), [labels, exclude, search]);
 
@@ -35,9 +38,9 @@ function LabelPickerDialog({ title, exclude, finish }: PickLabelOptions & { fini
         placeholder="Find a label"
         label="Labels"
         onPick={finish}
-        loading={!labels}
+        loading={!labels && !error}
         rowHeight={30}
-        empty="No labels found."
+        empty={error ? `Couldn't read the labels: ${error.message}` : 'No labels found.'}
         renderItem={(label) => (
           <>
             <Tag size={13} className={styles.icon} />

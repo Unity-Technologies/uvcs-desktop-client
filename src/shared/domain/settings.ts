@@ -16,8 +16,10 @@ export interface SavedWindowBounds {
 
 /** A window open when the app last quit, opened again where it was at the next launch (`WorkspaceWindows.saveSession`). */
 export interface SavedWindow {
-  /** The workspace it showed; none on the home screen. */
+  /** The workspace it showed; none on the home screen or a repository explored without one. */
   workspacePath?: string;
+  /** The repository it explored without a workspace (`repositoryPlace`). */
+  repository?: string;
   bounds: SavedWindowBounds;
   fullScreen: boolean;
   /** The view it showed (a renderer `ViewId`): saved only by a restart to install an update, which nobody chose. */
@@ -44,7 +46,10 @@ export interface AppSettings {
   restoreLeftChangesAutomatically: boolean;
   /** The shelves created while switching with pending changes, until they are restored or discarded. */
   switchShelves: SwitchShelveRecord[];
-  /** The workspaces whose Changes and diffs show review marks, progress and the Unreviewed filter. Off everywhere at first. */
+  /**
+   * The places whose Changes and diffs show review marks, progress and the Unreviewed filter, by `placeId`: a
+   * workspace's path, a repository explored without one as `repository:<spec>`. Off everywhere at first.
+   */
   reviewModeWorkspaces: string[];
   /** The offer to turn on review mode after a burst of changes was dismissed or taken: it never shows again. */
   reviewModeHintDone: boolean;

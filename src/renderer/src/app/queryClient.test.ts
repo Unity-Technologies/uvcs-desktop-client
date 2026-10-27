@@ -1,12 +1,14 @@
 import '../testing/fakeWindow';
 import { focusManager, type QueryClient } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 
 import { queryKeys } from '../api/queryKeys';
 import {
   createQueryClient,
   IMMUTABLE_QUERY,
+  invalidatePlaceIn,
   invalidateWorkspaceIn,
   keyedByWorkspaceInfo,
   MAX_UNUSED_IMMUTABLE,
@@ -39,6 +41,34 @@ function showWorkspaceInfo(before: WorkspaceInfo, after: WorkspaceInfo = before)
 }
 
 const isStale = (queryKey: readonly unknown[]) => client.getQueryCache().find({ queryKey, exact: true })?.isStale();
+
+describe('invalidatePlace', () => {
+  const repository = repositoryPlace('game@local');
+  const inRepository = (...parts: unknown[]) => queryKeys.inPlace(repository, ...parts);
+
+  it("keys a workspace's queries as the workspace's own, so either way refreshes them", () => {
+    expect(queryKeys.inPlace(workspacePlace(ws), 'branches')).toEqual(key('branches'));
+  });
+
+  it('refreshes what an operation on a repository affects there, and leaves workspaces and immutable results alone', async () => {
+    const branches = await showQuery(client, inRepository('branches'));
+    const labels = await showQuery(client, inRepository('labels'));
+    const diff = await showQuery(client, inRepository('changesets', 'diff', 12), { meta: IMMUTABLE_QUERY });
+    const workspaceBranches = await showQuery(client, key('branches'));
+
+    await invalidatePlaceIn(client, repository, (queryKey) => queryKey[2] === 'branches');
+
+    expect([branches.reads(), labels.reads(), diff.reads(), workspaceBranches.reads()]).toEqual([2, 1, 1, 1]);
+  });
+
+  it("refreshes a workspace's place as the workspace", async () => {
+    const shown = await showQuery(client, key('branches'));
+
+    await invalidatePlaceIn(client, workspacePlace(ws));
+
+    expect(shown.reads()).toBe(2);
+  });
+});
 
 describe('invalidateWorkspace', () => {
   it('re-reads the views of the workspace on screen and only marks the others stale', async () => {
