@@ -272,6 +272,28 @@ describe('runMerge into the workspace', () => {
     expect(finalMerge(commands.map((command) => command.line))).toBeDefined();
   });
 
+  it("saves the incoming version of a file conflict a decision revealed where the destination's tree has no such path", async () => {
+    await mkdir(join(workspacePath, 'src', 'game'));
+    const { cm, lines } = fakeCmClient({
+      status: changedStatus(),
+      'merge br:/main/task': async ({ args }) => {
+        if (!args.includes('--merge')) return mergePreviewOutput(...CONTRIBUTORS, fileConflict('src/game/Enemy.cs', 41));
+        await writeFile(optionValue(args, '--solvedconflictsfile=')!, 'merged');
+        return '';
+      },
+      ls: ({ args }) => (optionValue(args, '--tree=') === 'cs:4' ? cmFails("Can't resolve the selector for the item /src/game/Enemy.cs") : treeListing('eco@local', 'src/game/Enemy.cs')),
+      cat: fakeCat(() => 'incoming version\n'),
+    });
+
+    await runMerge(cm, workspacePath, FROM_TASK, { directoryDecisionsId: 'page-1', files: { '/src/game/Enemy.cs': { choice: 'source' } } }, recordingContext().context, {
+      state: await decidedState('EVIL src'),
+      known: [],
+    });
+
+    expect(lines()).toContain(`cat itemid:41#cs:3@eco@local --file=${join(workspacePath, 'src', 'game', 'Enemy.cs')}`);
+    expect(await readFile(join(workspacePath, 'src', 'game', 'Enemy.cs'), 'utf8')).toBe('incoming version\n');
+  });
+
   it('stops before merging while a directory conflict has no decision', async () => {
     const { cm, lines } = mergingCm([EVIL_TWIN, fileConflict('src/a.txt', 30)]);
 

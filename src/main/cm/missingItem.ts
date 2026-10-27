@@ -26,3 +26,7 @@ export function isNotInTreeError(error: unknown): boolean {
 export function isServerPathNotFoundError(error: unknown): boolean {
   return error instanceof CmError && /the specified revision was not found serverpath:/i.test(error.message);
 }
+
+export function notInTreePaths(_error: unknown): string[] {
+  return [];
+}

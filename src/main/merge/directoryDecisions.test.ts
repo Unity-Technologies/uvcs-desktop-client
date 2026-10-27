@@ -191,6 +191,23 @@ describe('DirectoryDecisions', () => {
     expect(decided.plan.fileConflicts[0]).toMatchObject({ path: '/play/Player.cs', destinationPath: '/core/Player.cs' });
   });
 
+  it("completes a file conflict a decision reveals where the destination's tree has no such path, from the source's", async () => {
+    // Main moved Enemy.cs into its own /shared, added on both sides: keeping the incoming one reveals it where the
+    // feature has it.
+    const enemy = ['FILE_CONFLICT', '/src/game/Enemy.cs', '1', '2', '4', '41'];
+    const { cm } = fakeCmClient({
+      'merge br:/main/feature': ({ args }) => mergePreviewOutput(...CONTRIBUTORS, ...(args.includes('--resolveconflict') ? [enemy] : [ADDED_TWICE])),
+      ls: ({ args }) => (optionValue(args, '--tree=') === 'cs:5' ? cmFails("Can't resolve the selector for the item /src/game/Enemy.cs") : treeListing('game@local', 'src/game/Enemy.cs')),
+    });
+    const decisions = new DirectoryDecisions(cm);
+
+    const decided = await decisions.decide(WORKSPACE, FROM_FEATURE, 'page-1', [decision(addedTwice, { choice: 'source' })]);
+
+    expect(decided.plan.fileConflicts).toEqual([
+      { path: '/src/game/Enemy.cs', destinationPath: '/src/game/Enemy.cs', itemId: 41, baseChangeset: 1, sourceChangeset: 2, destinationChangeset: 4, repository: 'game@local', destinationIsBinary: false },
+    ]);
+  });
+
   it("fails a decision cm applied to another conflict, as when the preview it was numbered by is out of date", async () => {
     const { cm } = decidingCm();
     const decisions = new DirectoryDecisions(cm);

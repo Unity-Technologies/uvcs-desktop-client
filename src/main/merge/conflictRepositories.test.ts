@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FileConflict } from '@shared/domain/merge';
 import type { PrintedMergePlan } from '../cm/mergeOutput';
-import { cmFails, fakeCmClient } from '../cm/testing/fakeCmClient';
+import { cmFails, fakeCmClient, optionValue } from '../cm/testing/fakeCmClient';
 import { recordsIn, recordsOutput } from '../cm/testing/cmOutput';
 import { readTreeItem, TREE_ITEM_FORMAT, TREE_ITEMS } from '../cm/treeItems';
 
@@ -91,26 +91,62 @@ describe('withConflictRepositories after a directory decision', () => {
     expect(lines()).toEqual([conflictListingArgs({ ...moved, fileConflicts: [moved.fileConflicts[1]!] }, 'cs:278648').join(' ')]);
   });
 
-  it("reads by its item a file conflict the decision revealed at a path the destination's tree doesn't hold", async () => {
-    // Moved by the destination into a folder added on both sides, it's revealed where the source has it once the
-    // incoming folder is kept: `cm ls` of that path in the destination's tree fails.
-    const { cm } = fakeCmClient({ ls: cmFails("Can't resolve the selector for the item /01project/Enemy.cs") });
-    const base = plan(['/01project/Enemy.cs']);
-    const revealed = { ...base, repository: 'acme@acme@cloud', fileConflicts: [{ ...base.fileConflicts[0]!, itemId: 425960 }] };
+  // Moved by the destination into a folder added on both sides, a file changed on both is revealed where the source
+  // has it once the incoming folder is kept: the destination's tree has no such path, the source's has it.
+  const ENEMY = '/01project/plugins/editor-plugin/Enemy.fbx';
+  const notInTree = (path: string) => cmFails(`Can't resolve the selector for the item ${path}`);
+  const enemyInSource = recordsOutput(TREE_ITEMS, { name: 'Enemy.fbx', wkpath: ENEMY, type: 'bin', size: 9, changeset: 17092, repspec: 'rep:editorGUI@acme@cloud', revid: 432299, itemid: 425960 });
+  const textureInDestination = recordsOutput(TREE_ITEMS, { name: 'Grass.png', wkpath: TEXTURE, type: 'bin', size: 1, changeset: 1, repspec: 'rep:acme@acme@cloud', revid: 31259610, itemid: 420530 });
+  const revealedPlan = (): PrintedMergePlan => {
+    const revealed = plan([ENEMY, TEXTURE, MOVED]);
+    revealed.fileConflicts[0] = { ...revealed.fileConflicts[0]!, itemId: 425960 };
+    revealed.fileConflicts[1] = { ...revealed.fileConflicts[1]!, itemId: 420530 };
+    return revealed;
+  };
 
-    const completedPlan = await withConflictRepositories(cm, '/work', { kind: 'merge', sourceSpec: 'br:/main/task1008583' }, revealed, undefined, [completed]);
+  it("lists a file conflict the decision revealed where the destination's tree has no such path in the source's, and reads it by item", async () => {
+    const { cm, lines } = fakeCmClient({
+      ls: ({ args }) => {
+        if (optionValue(args, '--tree=') === 'cs:278738') return enemyInSource;
+        return args.includes(ENEMY) ? notInTree(ENEMY) : textureInDestination;
+      },
+    });
 
-    expect(completedPlan.fileConflicts).toEqual([
-      { ...revealed.fileConflicts[0], destinationPath: '/01project/Enemy.cs', repository: 'acme@acme@cloud', destinationIsBinary: false },
+    const completedPlan = await withConflictRepositories(cm, '/work', { kind: 'merge', sourceSpec: 'br:/main/task1008583' }, revealedPlan(), undefined, [completed]);
+
+    // The repository and type its listing in the source's tree tells, under an xlink too; no destination revision.
+    const [enemy, texture, moved] = completedPlan.fileConflicts;
+    expect(enemy).toEqual({ ...revealedPlan().fileConflicts[0], destinationPath: ENEMY, repository: 'editorGUI@acme@cloud', destinationIsBinary: true });
+    expect(texture).toMatchObject({ path: TEXTURE, destinationRevisionId: 31259610, destinationIsBinary: true });
+    expect(moved).toEqual({ ...completed, path: MOVED });
+    expect(lines().map((line) => line.split(' --format')[0])).toEqual([
+      `ls ${ENEMY} ${TEXTURE} --tree=cs:278648`,
+      `ls ${TEXTURE} --tree=cs:278648`,
+      `ls ${ENEMY} --tree=cs:278738`,
     ]);
   });
 
-  it('fails as cm does when listing a conflicting file fails before any decision', async () => {
-    const { cm } = fakeCmClient({ ls: cmFails("Can't resolve the selector for the item /01project/Enemy.cs") });
+  it("fails as cm does when a revealed file conflict's path is in neither tree", async () => {
+    const { cm } = fakeCmClient({ ls: ({ args }) => (args.includes(ENEMY) ? notInTree(ENEMY) : textureInDestination) });
 
-    await expect(
-      withConflictRepositories(cm, '/work', { kind: 'merge', sourceSpec: 'br:/main/task1008583' }, { ...plan(['/01project/Enemy.cs']), repository: 'acme@acme@cloud' }),
-    ).rejects.toThrow("Can't resolve the selector");
+    await expect(withConflictRepositories(cm, '/work', { kind: 'merge', sourceSpec: 'br:/main/task1008583' }, revealedPlan(), undefined, [completed])).rejects.toThrow(
+      "Can't resolve the selector",
+    );
+  });
+
+  it('fails as cm does when the listing fails otherwise after a decision, guessing nothing', async () => {
+    const { cm, lines } = fakeCmClient({ ls: cmFails('The server is unreachable.') });
+
+    await expect(withConflictRepositories(cm, '/work', { kind: 'merge', sourceSpec: 'br:/main/task1008583' }, revealedPlan(), undefined, [completed])).rejects.toThrow(
+      'The server is unreachable.',
+    );
+    expect(lines()).toHaveLength(1);
+  });
+
+  it('fails as cm does when listing a conflicting file fails before any decision', async () => {
+    const { cm } = fakeCmClient({ ls: notInTree(ENEMY) });
+
+    await expect(withConflictRepositories(cm, '/work', { kind: 'merge', sourceSpec: 'br:/main/task1008583' }, plan([ENEMY]))).rejects.toThrow("Can't resolve the selector");
   });
 
   it('lists nothing when every file conflict was completed before', async () => {
