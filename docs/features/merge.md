@@ -150,8 +150,9 @@ way from their middle; it keeps that room in a narrow window, ARCHITECTURE.md "L
 ("cs:3 → cs:5"; a click lists them with the base), where it stands ("2 conflicts to decide", the full summary in its
 tooltip) and the merge button, the primary action only once nothing waits. Merging into a server branch, a second row
 holds the changeset comment (`Merge from <source>`) and the button.
-The list (`MergeItemList`) is every list of changed files (ARCHITECTURE.md "Lists of changed files") in two groups,
-"Conflicts" then "Changes to apply" (`mergeItemGroups`), each by path: the filter (the "!" chip for conflicts,
+The list (`MergeItemList`) is every list of changed files (ARCHITECTURE.md "Lists of changed files") in three groups,
+"Directory conflicts", "File conflicts" then "Changes to apply" (`mergeItemGroups`), each by path, directory
+conflicts first as each one decided can move, remove or add file conflicts: the filter (the "!" chip for conflicts,
 `mergeItemTones`), List or Tree, and several items selected at once, whose menu keeps yours or the incoming version of
 every conflicting file among them, or the base when every one of them has one (`keepVersionEntries`). One item's menu is any changed file's (ARCHITECTURE.md "One
 menu": history, open or save the incoming version, Copy) with what a merge adds (`mergeItemMenu`): a conflicting file, the same
@@ -166,9 +167,8 @@ in Incoming too). A version taken
 out of the repository opens under a name that tells which it is (`versionCopyName`: `hero.INCOMING.psd`, as the merge
 tools name theirs), so two versions open side by side in one app don't look alike; a directory conflict its
 panel's choices, Keep both under the name it was given, else the one the panel suggests, each applied as it's picked
-("Directory conflicts" below). A directory conflict holding another conflict (a folder added on both sides, a file in it
-changed on both) is its folder's row in a tree: selecting that row selects the
-conflict, and its menu acts on it alone (`mergeItemAt`, `mergeItemsActedOn`). A clean change isn't annotated: `cm` names only the
+("Directory conflicts" below). A directory conflict holding another directory conflict (a folder added on both sides, a file
+in it added on both) is its folder's row in a tree: selecting that row selects the conflict, and its menu acts on it alone (`mergeItemAt`, `mergeItemsActedOn`). A clean change isn't annotated: `cm` names only the
 merge's changesets, where the file may not have changed. A folder added with its files is listed once, through them
 (ARCHITECTURE.md "Folders once"). The page starts on the first item that needs the user in the order the list shows
 (`firstWaiting`), and goes back there after a run. Directory conflicts are named in plain words ("Added on both sides
@@ -318,6 +318,13 @@ and their decisions went to paths a decision had moved.
   decision whose conflict an earlier one took out of the merge, or moved (a conflict inside a folder whose move was
   decided again is another conflict, by its paths), is dropped, and a toast says so
   (`droppedDecisionsToast`). Deciding a conflict the way it's decided already runs nothing (`isDecidedAs`).
+- A file conflict the user decided that a directory decision takes out of the merge starts over, so a later decision
+  bringing it back brings it undecided, and a toast names it ("Your decision on Forest.cs no longer applies",
+  `forgetLostFileDecisions`). One the decision only moved keeps its decision.
+- File conflicts can be decided before or after the directory conflicts, in any order: nothing is written until the
+  merge completes, the list always shows the merge the directory decisions leave, and the merge can't complete while
+  a directory conflict waits. The official client asks for the directory conflicts first because it writes each file's
+  decision to the workspace as it's made.
 - `cm` drops the conflict it resolves from the list it prints; one still listed means it resolved another (the list
   its number came from was out of date: someone checked in since the preview), and the decision fails ("The merge
   changed since it was calculated"). A decided conflict stays listed from the decisions, under the same key
