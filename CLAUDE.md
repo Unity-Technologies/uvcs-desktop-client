@@ -356,6 +356,13 @@ them on the server, and reading shell command lines cost more to keep right than
    pieces named, the `cm` commands, the alternatives dropped), behavior changes beyond the goal, how it was checked,
    what the review found and what changed for it, the docs. The title says what the user can now do, like a commit
    message, and nothing in it names an internal review or approval ("Public text says what changed", in Commits).
+   **A change anyone can see carries its picture**: one screenshot of the outcome, so a reviewer sees at a glance what
+   the task did, taken from the app with Playwright (a sandbox, a sensible window size, the pointer out of the way).
+   One is the rule: not every state, theme or window size, only a second shot when the feature can't be understood
+   without it (a before and after, a theme-specific change). When a still can't show it (motion, a flow, something
+   that must *not* move), a short video or GIF instead (`playwright-cli video-start`, a few seconds). Attach it with
+   `gh pr create --attach <file>` (`gh` 2.99 or later; `.claude/skills/playwright-cli/references/pr-attachments.md`);
+   never commit it to the repository.
 7. **Stop there**, and report the pull request's link to the user, with what to try in the app for anything visible.
    A person approves and merges it: don't approve or merge it yourself. Comments on the pull request are answered
    with new commits on the same branch, never a force push.
