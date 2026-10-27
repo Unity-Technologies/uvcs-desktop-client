@@ -23,7 +23,7 @@ import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 const UPDATE_NEEDS_MERGE = 'Some of your local changes collide with incoming ones. Open Incoming to merge them while updating.';
 
-export function createWorkspacesService({ cm, operations, watchers, windows, settings, headers }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): WorkspacesApi {
+export function createWorkspacesService({ cm, operations, watchers, windows, settings, headers, usage }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): WorkspacesApi {
   const switchDependencies = { cm, settings, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'switch-backups') };
   const lookUpRepository = workspaceRepositoryLookup(cm);
   const readHeads = workspaceHeadsReader(cm);
@@ -87,6 +87,7 @@ export function createWorkspacesService({ cm, operations, watchers, windows, set
   async function watch(workspacePath: string): Promise<WatchCoverage> {
     cm.show(workspacePath);
     windows.workspaceShown(callerId(), workspacePath);
+    usage.workspaceShown(workspacePath);
     const coverage = watchers.watch(callerId(), workspacePath);
     const home = homedir();
     if (!windows.showsHomeScreen() && watchers.coverageOf(home) === undefined) cm.release(home);

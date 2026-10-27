@@ -15,6 +15,7 @@ import type { RepositoryPathSearch } from '../files/RepositoryPathSearch';
 import type { RepositoryTrees } from '../unity/RepositoryTrees';
 import type { RevisionDownloads } from '../unity/RevisionDownloads';
 import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
+import type { UsageRecorder } from '../usage/UsageEvents';
 import type { HandedOverDiffs } from '../window/HandedOverDiffs';
 import type { WorkspaceWindows } from '../window/WorkspaceWindows';
 import type { LeftChangesFinder } from '../workspace/leftChanges';
@@ -46,6 +47,8 @@ export interface ServiceContext {
   updates: AppUpdates;
   /** Branch names by object id, kept while a window shows the workspace (`BranchNamesCache`). */
   branchNames: BranchNamesCache;
+  /** The app's usage events: the pings and the features used (`UsageEvents`). */
+  usage: UsageRecorder;
 }
 
 /**

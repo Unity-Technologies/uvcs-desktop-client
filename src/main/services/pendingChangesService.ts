@@ -35,7 +35,7 @@ import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 const DEFAULT_CHANGELIST = 'Default';
 
-export function createPendingChangesService({ cm, operations, revisionCat }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): PendingChangesApi {
+export function createPendingChangesService({ cm, operations, revisionCat, usage }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): PendingChangesApi {
   const shelveAwayDependencies = { cm, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'shelve-backups') };
 
   function list(workspacePath: string, filter: PendingChangesFilter): Promise<PendingChangesSnapshot> {
@@ -43,6 +43,7 @@ export function createPendingChangesService({ cm, operations, revisionCat }: Ser
   }
 
   function checkin(workspacePath: string, request: CheckinRequest, operationId: string): Promise<CheckinResult> {
+    usage.featureUsed(workspacePath, 'checkin');
     return operations.run(operationId, ({ signal, progressOf }) =>
       withTempFile(request.comment, async (commentsFile) => {
         const output = await explainLockedItems('checked in', () =>
@@ -58,6 +59,7 @@ export function createPendingChangesService({ cm, operations, revisionCat }: Ser
   }
 
   async function undo(workspacePath: string, paths: string[]): Promise<void> {
+    usage.featureUsed(workspacePath, 'undo');
     await cm.query(onLinksThemselves('undo', ...toAbsolutePaths(workspacePath, paths)), { cwd: workspacePath });
   }
 

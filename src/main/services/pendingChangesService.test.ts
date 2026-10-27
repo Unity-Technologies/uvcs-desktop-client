@@ -13,6 +13,7 @@ import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer, type FakeCmCo
 import { TREE_ITEMS } from '../cm/treeItems';
 import { DiskDetails } from '../files/DiskDetails';
 import { OperationTracker } from '../operations/OperationTracker';
+import { NO_USAGE, type UsageRecorder } from '../usage/UsageEvents';
 import { createPendingChangesService } from './pendingChangesService';
 import type { SwitchContext } from './ServiceContext';
 import { readingFileOption } from './testing/readingFileOption';
@@ -23,9 +24,9 @@ vi.mock('electron', () => ({ app: { getPath: () => tmpdir() } }));
 const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
 const at = (...parts: string[]): string => join(WORKSPACE, ...parts);
 
-function pendingChanges(answers: Record<string, CmAnswer>, operations?: OperationTracker) {
+function pendingChanges(answers: Record<string, CmAnswer>, operations?: OperationTracker, usage: UsageRecorder = NO_USAGE) {
   const fake = fakeCmClient(answers);
-  const context = serviceContext(fake.cm, operations ? { operations } : {});
+  const context = serviceContext(fake.cm, { usage, ...(operations ? { operations } : {}) });
   return { ...fake, service: createPendingChangesService(context, {} as SwitchContext), operations: context.operations };
 }
 
@@ -112,6 +113,15 @@ describe('checkin', () => {
     expect(existsSync(seen.file)).toBe(false);
   });
 
+  it('records the use of checkin as it starts, whether or not it succeeds, as the other GUIs count it', async () => {
+    const featureUsed = vi.fn();
+    const { service } = pendingChanges({ checkin: cmFails('Error: The server is unreachable.') }, undefined, { ...NO_USAGE, featureUsed });
+
+    await service.checkin(WORKSPACE, { paths: ['a.txt'], comment: 'c', addsPrivate: false }, 'op-1').catch(() => undefined);
+
+    expect(featureUsed.mock.calls).toEqual([[WORKSPACE, 'checkin']]);
+  });
+
   it('reports a checkin that found nothing left to record', async () => {
     const { service } = pendingChanges({ checkin: 'CI_START\nNO_CHANGES_APPLIED\n' });
 
@@ -196,6 +206,16 @@ describe('undo, add and remove', () => {
     await service.undo(WORKSPACE, ['src/a.cs', 'src/b.cs']);
 
     expect(commands).toMatchObject([{ via: 'query', args: ['undo', at('src', 'a.cs'), at('src', 'b.cs'), '--symlink'], options: { cwd: WORKSPACE } }]);
+  });
+
+  it('records the use of undo, and not of undoing unchanged checkouts, a feature of its own', async () => {
+    const featureUsed = vi.fn();
+    const { service } = pendingChanges({ undo: '' }, undefined, { ...NO_USAGE, featureUsed });
+
+    await service.undo(WORKSPACE, ['src/a.cs']);
+    await service.undoUnchanged(WORKSPACE);
+
+    expect(featureUsed.mock.calls).toEqual([[WORKSPACE, 'undo']]);
   });
 
   it('undoes unchanged checkouts of the chosen items, or of the whole workspace', async () => {

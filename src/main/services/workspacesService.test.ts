@@ -9,6 +9,7 @@ import { change, formatOutput, machineReadableStatusHeader, pendingStatus, statu
 import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { UPDATE_ARGS } from '../cm/updateArgs';
 import { runForCaller } from '../ipc/caller';
+import { NO_USAGE, type UsageRecorder } from '../usage/UsageEvents';
 import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
 import type { WorkspaceWindows } from '../window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from '../workspace/WorkspaceHeaders';
@@ -22,10 +23,10 @@ const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
 
 const STATUS_HEADER = statusHeader('/main/task1', { changeset: 12, repository: 'game' });
 
-function workspaces(answers: Record<string, CmAnswer>, watchers?: Partial<WorkspaceWatchers>, windows?: Partial<WorkspaceWindows>) {
+function workspaces(answers: Record<string, CmAnswer>, watchers?: Partial<WorkspaceWatchers>, windows?: Partial<WorkspaceWindows>, usage: UsageRecorder = NO_USAGE) {
   const fake = fakeCmClient(answers);
   const headers = new WorkspaceHeaders(cmHeaderReaders(fake.cm));
-  const context = serviceContext(fake.cm, { headers, watchers: watchers as WorkspaceWatchers, windows: { workspaceShown: () => undefined, ...windows } as WorkspaceWindows });
+  const context = serviceContext(fake.cm, { headers, watchers: watchers as WorkspaceWatchers, windows: { workspaceShown: () => undefined, ...windows } as WorkspaceWindows, usage });
   return { ...fake, operations: context.operations, service: createWorkspacesService(context, {} as SwitchContext) };
 }
 
@@ -242,6 +243,17 @@ describe('watching a workspace', () => {
       [7, WORKSPACE],
       [7, undefined],
     ]);
+  });
+
+  it('tells the usage events a workspace shows, which starts the pings', async () => {
+    const workspaceShown = vi.fn();
+    const window = { id: 7, isDestroyed: () => false } as unknown as WebContents;
+    const usage = { ...NO_USAGE, workspaceShown };
+    const { service } = workspaces({}, { watch: async () => 'full' as const, coverageOf: () => undefined }, { showsHomeScreen: () => true }, usage);
+
+    await runForCaller(window, () => service.watch(WORKSPACE));
+
+    expect(workspaceShown.mock.calls).toEqual([[WORKSPACE]]);
   });
 
   it("lets the home folder's cm sessions go once no window shows the home screen, and keeps them while one does", async () => {

@@ -35,6 +35,8 @@ import { handleQuitting, Quitting } from './startup/quitting';
 import { openSettings, sendSettingsChanges } from './startup/settings';
 import { isShown, watchShownWorkspaces } from './startup/workspaceWatching';
 import { createAppUpdates } from './update/createAppUpdates';
+import { readPingDetails } from './usage/readPingDetails';
+import { UsageEvents } from './usage/UsageEvents';
 import { DEVELOPMENT_DOCK_ICON } from './window/appIcon';
 import { appMenuInstaller, installDockMenu } from './window/appMenu';
 import { askToQuitWhenDone } from './window/askToQuitWhenDone';
@@ -105,6 +107,7 @@ cm.onCommandLogged((entry) => commandLog.logged(entry));
 if (!app.isPackaged) warnOnRepeatedServerCommands(cm);
 if (!app.isPackaged) warnOnOrganizationIds(cm);
 ignoreOwnCommandWrites(cm, watchers, headers);
+const usage = new UsageEvents({ cm, workspaceInFront: () => windows.shownWorkspaces()[0], pingDetails: readPingDetails });
 const api = createServices({
   cm,
   operations,
@@ -122,6 +125,7 @@ const api = createServices({
   repositoryTrees,
   repositoryPaths,
   branchNames,
+  usage,
 });
 const early = new EarlyCalls(apiMethods(api));
 
@@ -161,6 +165,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('will-quit', () => {
+  usage.dispose();
   cm.dispose();
   revisionDownloads.dispose();
   repositoryPaths.dispose();
