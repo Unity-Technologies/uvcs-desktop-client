@@ -1,5 +1,6 @@
 import type { Changeset } from '@shared/domain/changeset';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
+import { pluralize } from '../../lib/text';
 
 /**
  * The changesets a branch diff's "Changeset by changeset" list shows for its filter: every word in the number, the
@@ -33,4 +34,9 @@ export function changesetStep(changesets: readonly Changeset[], shown: readonly 
  */
 export function showsChangesetList(changesets: readonly Changeset[] | undefined): boolean {
   return changesets === undefined || changesets.length > 1;
+}
+
+/** The filter field's placeholder: "Filter 11 changesets"; "Filter changesets" while they're read (undefined). */
+export function changesetFilterPlaceholder(count: number | undefined): string {
+  return count === undefined ? 'Filter changesets' : `Filter ${pluralize(count, 'changeset')}`;
 }

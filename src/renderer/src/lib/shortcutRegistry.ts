@@ -90,6 +90,9 @@ export const SHORTCUTS = {
   // F7 as in other diff tools, and while typing, where the editor moves lines with ⌥↓ ⌥↑.
   nextChange: { area: 'Diff', label: 'Next change', keys: ['alt+down', 'f7'] },
   previousChange: { area: 'Diff', label: 'Previous change', keys: ['alt+up', 'shift+f7'] },
+  // As Annotate steps through a changeset's blocks; ⌥↓ ⌥↑ are the changes'.
+  nextChangeset: { area: 'Diff', label: 'Next changeset, in a branch changeset by changeset', keys: ['alt+shift+down'] },
+  previousChangeset: { area: 'Diff', label: 'Previous changeset, in a branch changeset by changeset', keys: ['alt+shift+up'] },
   discardLines: { area: 'Diff', label: 'Discard the picked lines', keys: ['mod+alt+z'], keysOffMac: ['mod+shift+backspace'] },
   undoDiscard: { area: 'Diff', label: 'Undo the last discard or edit', keys: ['mod+z'] },
   clearPickedLines: { area: 'Diff', label: 'Clear the picked lines', keys: ['escape'] },

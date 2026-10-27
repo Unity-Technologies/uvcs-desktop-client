@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
-import { changesetStep, filterBranchChangesets, showsChangesetList } from './branchChangesetList';
+import { changesetFilterPlaceholder, changesetStep, filterBranchChangesets, showsChangesetList } from './changesetByChangeset';
 
 const changeset = (id: number, comment = '', owner = 'ana'): Changeset => ({ id, guid: `guid-${id}`, branch: '/main/task', comment, owner, date: '2026-10-01T10:00:00Z', parent: id - 1, repository: 'game@local' });
 const ids = (changesets: readonly Changeset[]): number[] => changesets.map((one) => one.id);
@@ -84,5 +84,13 @@ describe('showsChangesetList', () => {
   it("doesn't show for a branch with one changeset, or none", () => {
     expect(showsChangesetList([branch[0]!])).toBe(false);
     expect(showsChangesetList([])).toBe(false);
+  });
+});
+
+describe('changesetFilterPlaceholder', () => {
+  it('counts the changesets once read', () => {
+    expect(changesetFilterPlaceholder(undefined)).toBe('Filter changesets');
+    expect(changesetFilterPlaceholder(1)).toBe('Filter 1 changeset');
+    expect(changesetFilterPlaceholder(1204)).toBe('Filter 1,204 changesets');
   });
 });
