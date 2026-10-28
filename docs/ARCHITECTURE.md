@@ -569,7 +569,7 @@ request and never written into `PRIVACY.md` by the change itself.
   doesn't set `webPreferences.spellcheck`), and on Windows and Linux it downloads the Hunspell dictionary of the OS's
   language from Google's servers; macOS uses the system's spellchecker and downloads nothing.
 - **The hosts of images a comment links to** (`![alt](https://…)`), only when the image shows: on hover over its chip
-  (`CommentImage`, docs/features/rich-comments.md "Images").
+  or when the keyboard focus reaches it (`CommentImage`, docs/features/rich-comments.md "Images").
   Fetched by the page with no referrer, so the host learns the picture was looked at, never from where.
 
 Otherwise the page reaches nothing: the renderer's Content-Security-Policy (`src/renderer/index.html`) allows only the
@@ -937,7 +937,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   - Every view and page is in the startup bundle (`viewRegistry`, `pageRegistry`), so none paints a fallback it then
     replaces. A heavy library (Pierre, Shiki, three.js) loads on first use, behind a `lazyComponent` at the leaf that
     uses it (`FileDiffViewer`'s `LoadedFileDiff`, `AnnotationPane`'s `AnnotatedCode`, `FileConflictPanel`'s
-    `ConflictBody`), whose fallback looks as that leaf does while its data loads; it joins `HEAVY_PACKAGES`, and
+    `ConflictBody`, `CodeBlock`'s `HighlightedCodeBlock`), whose fallback looks as that leaf does while its data loads; it joins `HEAVY_PACKAGES`, and
     `startupBundle.test.ts` fails on a static import that reaches one. The numbers: "Start-up", step 4.
 - **Effects survive a second mount**: in development React's StrictMode mounts every component, runs its cleanup and
   mounts it again on the same DOM nodes. An effect that owns a resource builds a fresh one on each run and frees it in
