@@ -1,10 +1,11 @@
+import { CommentLine } from '../../components/comments/CommentLine';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronRight, GitCommitVertical, Layers } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
 import type { MenuEntry } from '../../lib/actions';
 import { navigationTarget } from '../../lib/listNavigation';
-import { firstLine, formatCountAtLeast } from '../../lib/text';
+import { formatCountAtLeast } from '../../lib/text';
 import { Avatar } from '../../ui/Avatar';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { RelativeTime } from '../../ui/RelativeTime';
@@ -94,7 +95,7 @@ export function IncomingChangesetList({ changesets, more, scope, onScope, collap
       >
         <GitCommitVertical size={14} className={styles.icon} />
         <span className={styles.text}>
-          <span className={styles.comment}>{firstLine(changeset.comment) || 'No comment'}</span>
+          <span className={styles.comment}><CommentLine comment={changeset.comment} interactive={false} placeholder="No comment" /></span>
           <span className={styles.meta}>
             <Avatar user={changeset.owner} size={14} />
             cs:{changeset.id} · <RelativeTime date={changeset.date} />

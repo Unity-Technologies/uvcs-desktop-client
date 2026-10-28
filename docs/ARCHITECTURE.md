@@ -32,6 +32,7 @@ you touch:
 | `features/page-windows.md`              | A page (a diff, a history, a review) in a new window: where it's offered, how it belongs to its workspace window, Follow selection |
 | `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 | `features/xlinks.md`                    | Creating and editing xlinks: where they point, writable ones, branch expansion rules, the `cm xlink` commands |
+| `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images |
 
 ## How a request flows
 
@@ -557,7 +558,7 @@ any other scheme (`file:`, `smb:`, `ms-msdt:`) to a program.
 
 ## What leaves the device
 
-Besides `cm`, which talks only to the user's own servers, the app reaches the three places below, and nothing else.
+Besides `cm`, which talks only to the user's own servers, the app reaches the places below, and nothing else.
 There is no telemetry, analytics or crash reporting. `PRIVACY.md` at the repository root is the app's privacy notice:
 a change that sends anything new, or something more to any of these places, is flagged to the maintainers in its pull
 request and never written into `PRIVACY.md` by the change itself.
@@ -567,9 +568,13 @@ request and never written into `PRIVACY.md` by the change itself.
 - **Google**, for spell-checking dictionaries: Electron's built-in spellchecker is on by default (`createMainWindow`
   doesn't set `webPreferences.spellcheck`), and on Windows and Linux it downloads the Hunspell dictionary of the OS's
   language from Google's servers; macOS uses the system's spellchecker and downloads nothing.
+- **The hosts of images a comment links to** (`![alt](https://…)`), only when the image shows: on hover over its chip
+  or when the keyboard focus reaches it (`CommentImage`, docs/features/rich-comments.md "Images").
+  Fetched by the page with no referrer, so the host learns the picture was looked at, never from where.
 
-The page itself reaches nothing: the renderer's Content-Security-Policy (`src/renderer/index.html`) allows only the
-app's own files and `data:`/`blob:` images, so profile pictures reach it from main as data URLs.
+Otherwise the page reaches nothing: the renderer's Content-Security-Policy (`src/renderer/index.html`) allows only the
+app's own files, `data:`/`blob:` images (profile pictures reach it from main as data URLs) and `https:` images for
+those comments; no script, style or connection leaves it.
 
 ## Errors
 
@@ -932,7 +937,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   - Every view and page is in the startup bundle (`viewRegistry`, `pageRegistry`), so none paints a fallback it then
     replaces. A heavy library (Pierre, Shiki, three.js) loads on first use, behind a `lazyComponent` at the leaf that
     uses it (`FileDiffViewer`'s `LoadedFileDiff`, `AnnotationPane`'s `AnnotatedCode`, `FileConflictPanel`'s
-    `ConflictBody`), whose fallback looks as that leaf does while its data loads; it joins `HEAVY_PACKAGES`, and
+    `ConflictBody`, `CodeBlock`'s `HighlightedCodeBlock`), whose fallback looks as that leaf does while its data loads; it joins `HEAVY_PACKAGES`, and
     `startupBundle.test.ts` fails on a static import that reaches one. The numbers: "Start-up", step 4.
 - **Effects survive a second mount**: in development React's StrictMode mounts every component, runs its cleanup and
   mounts it again on the same DOM nodes. An effect that owns a resource builds a fresh one on each run and frees it in
@@ -1132,7 +1137,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   kind reads the same way: the kind and status badges with the default action (what Enter does on the row) and the row's
   context menu behind "More actions"; a `DetailsHeading` (the comment's first line as the title and the rest as its
   description, or the object's name with the comment below; folded to a few lines with "Show more" and "Show less" by
-  `FoldedComment`, which a diff's header shares, see `features/diff.md` "The diff's header"; edited in place where cm can edit it, the title in a field that wraps and grows, and a comment left unedited saved as it was, `editedComment`; the comment saved shows at once, not the old one until the refresh reads it, `shownComment`; a name reads a size above a comment's title); a meta row (author ·
+  `FoldedComment`, which a diff's header shares, see `features/diff.md` "The diff's header"; read as Markdown with chips for what it names, features/rich-comments.md; edited in place where cm can edit it, the title in a field that wraps and grows, and a comment left unedited saved as it was, `editedComment`; the comment saved shows at once, not the old one until the refresh reads it, `shownComment`; a name reads a size above a comment's title); a meta row (author ·
   date · spec to copy · branch chip); attribute chips (`AttributeChips`); properties and relations behind "More details";
   then the changes pane under a remembered splitter (`DetailsChangesPane`), its title a disclosure once the list is read
   that hides it and shows it again from the cache, remembered for every panel as More details is (`changesCollapsed`). cm edits changeset, attribute, branch, label and shelve

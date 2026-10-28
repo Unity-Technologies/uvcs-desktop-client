@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { editedComment, joinComment, looksLikeMarkdown, shownComment, splitComment, withSummaryText } from './comment';
+import { editedComment, joinComment, shownComment, splitComment, withSummaryText } from './comment';
 
 describe('splitComment', () => {
   it('reads the first line as the summary and the rest as the description', () => {
@@ -104,27 +104,5 @@ describe('shownComment', () => {
 
   it('shows a comment removed as empty until the refresh', () => {
     expect(shownComment('Old comment', { saved: '', replaced: 'Old comment' })).toBe('');
-  });
-});
-
-describe('looksLikeMarkdown', () => {
-  it('recognizes headings, fences, quotes and lists', () => {
-    expect(looksLikeMarkdown('## Why\nBecause.')).toBe(true);
-    expect(looksLikeMarkdown('```\ncode\n```')).toBe(true);
-    expect(looksLikeMarkdown('> quoted')).toBe(true);
-    expect(looksLikeMarkdown('- one\n- two')).toBe(true);
-    expect(looksLikeMarkdown('1. one\n2. two')).toBe(true);
-  });
-
-  it('recognizes links, bold and code', () => {
-    expect(looksLikeMarkdown('See [the ticket](https://jira.example.com/VCS-1).')).toBe(true);
-    expect(looksLikeMarkdown('This is **important**.')).toBe(true);
-    expect(looksLikeMarkdown('Call `refresh()` first.')).toBe(true);
-  });
-
-  it('keeps plain prose plain', () => {
-    expect(looksLikeMarkdown('Fixed the crash when opening a workspace.\nAlso tidied up the logs.')).toBe(false);
-    expect(looksLikeMarkdown('* removed accelerator projects')).toBe(false);
-    expect(looksLikeMarkdown('2 * 3 = 6, see https://example.com')).toBe(false);
   });
 });

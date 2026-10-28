@@ -4,6 +4,8 @@ import { shownComment, splitComment, type CommentParts, type SavedComment } from
 import { copyToClipboard } from '../ui/copyToClipboard';
 import { IconButton } from '../ui/IconButton';
 import { CommentEditor } from './CommentEditor';
+import { CommentLine } from './comments/CommentLine';
+import { commentHeading } from '../lib/comments/commentHeading';
 import { FoldedComment } from './FoldedComment';
 import styles from './DetailsHeading.module.css';
 
@@ -35,6 +37,8 @@ export function DetailsHeading({ name, comment: given = '', onSave }: DetailsHea
   };
   const parts = name === undefined ? splitComment(comment) : { summary: '', description: comment.trim() };
   const edit = onSave ? () => setDraft(parts) : undefined;
+  // What shows (`commentHeading`): a named object's whole comment is its description.
+  const shown = name === undefined ? commentHeading(comment) : parts.description ? ({ kind: 'block', description: parts.description } as const) : ({ kind: 'empty' } as const);
 
   if (draft && onSave) {
     return (
@@ -53,16 +57,17 @@ export function DetailsHeading({ name, comment: given = '', onSave }: DetailsHea
         descriptionLines={DESCRIPTION_LINES}
         title={
           name ??
-          (parts.summary ||
-            (edit ? (
-              <button className={styles.add} onClick={edit}>
-                No comment. Add one…
-              </button>
-            ) : (
-              <span className={styles.placeholder}>No comment</span>
-            )))
+          (shown.kind === 'titled' ? (
+            <CommentLine comment={comment} />
+          ) : shown.kind === 'block' ? undefined : edit ? (
+            <button className={styles.add} onClick={edit}>
+              No comment. Add one…
+            </button>
+          ) : (
+            <span className={styles.placeholder}>No comment</span>
+          ))
         }
-        description={parts.description}
+        description={shown.kind === 'empty' ? '' : shown.description}
       >
         {name !== undefined && !parts.description && edit && (
           <button className={styles.add} onClick={edit}>

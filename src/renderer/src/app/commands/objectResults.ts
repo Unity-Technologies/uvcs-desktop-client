@@ -30,7 +30,7 @@ import { openOnDiskEntries } from '../../components/externalApps/openWithMenu';
 import { menuAction } from '../../components/menuWords';
 import { fuzzyMatchPositions, fuzzyMatchQuality } from '../../lib/fuzzyIndex';
 import { wordMatchQuality } from '../../lib/matchesAllWords';
-import { firstLine } from '../../lib/text';
+import { commentLineText } from '../../lib/comments/commentText';
 import { wordMatchPositions, wordMatchRanges } from '../../lib/textMatchRanges';
 import { displayName } from '../../lib/userName';
 import { navigation } from '../navigation/navigationStore';
@@ -134,7 +134,7 @@ export function changesetResult(changeset: Changeset, context: ResultContext): S
   return {
     id: `changeset:${changeset.id}`,
     icon: GitCommitVertical,
-    label: firstLine(changeset.comment) || '(no comment)',
+    label: commentLineText(changeset.comment) || '(no comment)',
     detail: `cs:${changeset.id} · ${displayName(changeset.owner)} · ${formatRelativeDate(changeset.date)}`,
     detailMatches: specMatches(`cs:${changeset.id}`, term),
     quality: term ? Math.max(wordMatchQuality(changeset.comment, term), wordMatchQuality(`cs:${changeset.id}`, term)) : undefined,
@@ -158,7 +158,7 @@ export function shelveResult(shelve: Shelve, context: ResultContext): SearchResu
   return {
     id: `shelve:${shelve.id}`,
     icon: Archive,
-    label: firstLine(shelve.comment) || '(no comment)',
+    label: commentLineText(shelve.comment) || '(no comment)',
     detail: `sh:${shelve.id} · ${displayName(shelve.owner)} · ${formatRelativeDate(shelve.date)}`,
     detailMatches: specMatches(`sh:${shelve.id}`, term),
     quality: term ? Math.max(wordMatchQuality(shelve.comment, term), wordMatchQuality(`sh:${shelve.id}`, term)) : undefined,
@@ -172,7 +172,7 @@ export function codeReviewResult(review: CodeReviewSummary, context: ResultConte
   return {
     id: `codeReview:${review.id}`,
     icon: MessageSquareCode,
-    label: review.title,
+    label: commentLineText(review.title),
     detail: `${review.status} · ${displayName(review.owner)}`,
     detailMatches: [],
     quality: wordMatchQuality(review.title, term),

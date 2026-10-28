@@ -1,3 +1,4 @@
+import { CommentLine } from '../../components/comments/CommentLine';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { PathLabel } from '../../components/PathLabel';
 import { UserLabel } from '../../ui/Avatar';
@@ -20,7 +21,7 @@ export const CODE_REVIEW_COLUMNS: Column<CodeReview>[] = [
           #<Highlight text={String(review.id)} />
         </span>
         <span className={styles.titleText}>
-          <Highlight text={review.title} />
+          <CommentLine comment={review.title} />
         </span>
       </span>
     ),

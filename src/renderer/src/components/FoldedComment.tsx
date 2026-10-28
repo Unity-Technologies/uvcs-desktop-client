@@ -1,14 +1,14 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { looksLikeMarkdown } from '../lib/comment';
 import { foldedCut, isCut } from './foldedCut';
 import { Markdown } from './Markdown';
 import styles from './FoldedComment.module.css';
 
 interface FoldedCommentProps {
   /** The comment's first line (or an object's name), styled by the caller with `titleClassName`. */
-  title: ReactNode;
+  /** Left out for a comment that opens with a block (`commentHeading`), which shows whole as its description. */
+  title?: ReactNode;
   titleClassName: string;
-  /** The rest of the comment, rendered as Markdown when it was written as such (`looksLikeMarkdown`). */
+  /** The rest of the comment, rendered as a comment's Markdown (docs/features/rich-comments.md). */
   description: string;
   /** How many lines of the title and of the description show while folded. */
   titleLines: number;
@@ -43,12 +43,14 @@ export function FoldedComment({ title, titleClassName, description, titleLines, 
 
   return (
     <div className={styles.folded} data-expanded={expanded} style={sizes}>
-      <h2 ref={titleRef} className={`${styles.title} ${titleClassName} selectable`} style={{ WebkitLineClamp: expanded ? 'none' : titleLines }}>
-        {title}
-      </h2>
+      {title !== undefined && (
+        <h2 ref={titleRef} className={`${styles.title} ${titleClassName} selectable`} style={{ WebkitLineClamp: expanded ? 'none' : titleLines }}>
+          {title}
+        </h2>
+      )}
       {description && (
         <div ref={descriptionRef} className={`${styles.description} selectable`} data-cut={cut.description}>
-          {looksLikeMarkdown(description) ? <Markdown text={description} /> : <p className={styles.plain}>{description}</p>}
+          <Markdown text={description} comment />
         </div>
       )}
       {children}

@@ -1,7 +1,7 @@
+import { commentLineText } from '../../lib/comments/commentText';
 import { GalleryHorizontalEnd } from 'lucide-react';
 import type { MouseEvent } from 'react';
 import { formatRelativeDate } from '../../lib/formatDate';
-import { firstLine } from '../../lib/text';
 import { Avatar } from '../../ui/Avatar';
 import type { AnnotateColumns } from './annotateOptionsStore';
 import type { AnnotationBlock } from './annotationBlocks';
@@ -58,7 +58,7 @@ export function BlockLabel({ block, index, columns, lineHeight, onHoverLabel, on
       )}
       {/* Only the text opens the card, not the room after it, so moving down the gutter doesn't pop cards. */}
       <span className={styles.comment}>
-        <span {...cardTrigger}>{firstLine(changeset.comment) || 'No comment'}</span>
+        <span {...cardTrigger}>{commentLineText(changeset.comment) || 'No comment'}</span>
       </span>
       {/* The one way to the revision: the rest of the cell is for reading, not a target that jumps away. */}
       {columns.changeset && (

@@ -1,0 +1,78 @@
+/* A chip sits on the text's line: it never makes a line or a row taller. */
+.chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  max-width: 100%;
+  padding: 0 5px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-weight: var(--weight-medium);
+  line-height: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+  vertical-align: baseline;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.chip:hover {
+  background: var(--bg-selected-strong);
+}
+
+.chip:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-visible);
+}
+
+.icon {
+  flex: none;
+  align-self: center;
+}
+
+.label,
+.summary {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.label {
+  flex: 0 1 auto;
+}
+
+.repository {
+  flex: none;
+  color: var(--text-secondary);
+  font-weight: var(--weight-regular);
+}
+
+.summary {
+  flex: 0 1 auto;
+  max-width: 32ch;
+  color: var(--text-secondary);
+  font-weight: var(--weight-regular);
+}
+
+.summary::before,
+.repository::before {
+  content: '· ';
+}
+
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  color: var(--accent-text);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.emoji {
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', var(--font-ui);
+  font-style: normal;
+  line-height: 1;
+}

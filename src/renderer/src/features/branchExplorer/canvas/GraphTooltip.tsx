@@ -1,4 +1,7 @@
 import type { PendingMergeLink } from '@shared/domain/pendingChanges';
+import { Markdown } from '../../../components/Markdown';
+import { splitComment } from '../../../lib/comment';
+import { commentLineText, commentText } from '../../../lib/comments/commentText';
 import { displayName } from '../../../lib/userName';
 import { formatRelativeDate } from '../../../lib/formatDate';
 import { pluralize } from '../../../lib/text';
@@ -63,7 +66,7 @@ export function GraphTooltip({ target, layout, palette, pendingChangeCount, x, y
     if (!changeset) return null;
     const maxWidth = captionCardMaxWidth(anchor.x, containerWidth, window.innerWidth);
     const summary = summaryOf(changeset.comment);
-    const body = changeset.comment.slice(changeset.comment.indexOf(summary) + summary.length).trim();
+    const body = splitComment(changeset.comment).description;
     return (
       <div ref={cardRef} className={styles.card} style={{ left: anchor.x, top: anchor.baseline, maxWidth }} {...{ [HOVER_CARD_ATTRIBUTE]: true }}>
         {/* Same font, size and color as the caption it lays over: a heavier or brighter line would read as the text jumping. */}
@@ -77,7 +80,11 @@ export function GraphTooltip({ target, layout, palette, pendingChangeCount, x, y
           <span className={styles.metaPart}>Changeset {changeset.id}</span> · <span className={styles.metaPart}>{displayName(changeset.owner)}</span> ·{' '}
           <span className={styles.metaPart}>{formatRelativeDate(changeset.date)}</span>
         </div>
-        {body && <div className={styles.cardBody}>{body}</div>}
+        {body && (
+          <div className={styles.cardBody}>
+            <Markdown text={body} comment />
+          </div>
+        )}
       </div>
     );
   }
@@ -101,7 +108,7 @@ function tooltipContent(target: PointerCardTarget, layout: GraphLayout, pendingC
       if (!changeset) return null;
       return {
         title: `Changeset ${changeset.id} · ${changeset.branch}`,
-        body: changeset.comment || 'No comment',
+        body: commentText(changeset.comment) || 'No comment',
         meta: `${displayName(changeset.owner)} · ${formatRelativeDate(changeset.date)}`,
       };
     }
@@ -120,12 +127,12 @@ function tooltipContent(target: PointerCardTarget, layout: GraphLayout, pendingC
       }
       return {
         title: `Label ${target.label.name}`,
-        body: target.label.comment || undefined,
+        body: commentText(target.label.comment) || undefined,
         meta: `Changeset ${target.label.changeset} · ${displayName(target.label.owner)}`,
       };
     case 'codeReview':
       return {
-        title: target.review.title,
+        title: commentLineText(target.review.title),
         body: `Code review ${target.review.id} · ${target.review.status}`,
         meta: 'Click to open the review',
       };

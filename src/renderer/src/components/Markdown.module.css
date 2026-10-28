@@ -55,6 +55,80 @@
   white-space: pre;
 }
 
+.markdown blockquote > * {
+  margin: 0;
+}
+
+.markdown pre code {
+  padding: 0;
+  background: none;
+  font-size: inherit;
+}
+
+.markdown del {
+  color: var(--text-secondary);
+}
+
+.markdown hr {
+  width: 100%;
+  border: none;
+  border-top: 1px solid var(--border-default);
+}
+
+/* A task list's box is its bullet. */
+.markdown .taskList {
+  padding-left: 0;
+  list-style: none;
+}
+
+.task {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.task > input {
+  flex: none;
+  margin: 0;
+  transform: translateY(1px);
+}
+
+.task > ul,
+.task > ol {
+  flex-basis: 100%;
+}
+
+.table {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.table table {
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  /* Words stay whole in a cell: breaking anywhere let a narrow panel squeeze each column to one letter. The table
+     scrolls sideways instead. */
+  overflow-wrap: normal;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-default);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  background: var(--bg-subtle);
+  font-weight: var(--weight-semibold);
+}
+
+/* A key (`<kbd>`): the keycap rows draw, one style for both. */
+.key {
+  composes: key from './comments/CommentLine.module.css';
+}
+
 .link {
   color: var(--accent-text);
   text-decoration: none;

@@ -1,3 +1,5 @@
+import { commentLineText } from '../../lib/comments/commentText';
+import { CommentLine } from '../../components/comments/CommentLine';
 import { Trash2, UserPlus } from 'lucide-react';
 import { CODE_REVIEW_STATUSES, type CodeReview, type CodeReviewStatus } from '@shared/domain/codeReview';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -42,7 +44,7 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
       <ReviewHeader review={review} />
       <div className={styles.changes}>
         {diffTarget ? (
-          <DiffPage page={{ kind: 'diff', title: review.title, target: diffTarget, focusPath: page.focusPath, focusLines: page.focusLines }} />
+          <DiffPage page={{ kind: 'diff', title: commentLineText(review.title), target: diffTarget, focusPath: page.focusPath, focusLines: page.focusLines }} />
         ) : (
           <EmptyState title="The reviewed changes are not available" description={describeTarget(review.target)} />
         )}
@@ -83,7 +85,7 @@ function ReviewHeader({ review }: { review: CodeReview }) {
     <header className={styles.header}>
       <div className={styles.titleRow}>
         <h1 className={`${styles.title} selectable`}>
-          {review.title} <span className={styles.id}>#{review.id}</span>
+          <CommentLine comment={review.title} /> <span className={styles.id}>#{review.id}</span>
         </h1>
         <CodeReviewStatusBadge status={review.status} />
       </div>

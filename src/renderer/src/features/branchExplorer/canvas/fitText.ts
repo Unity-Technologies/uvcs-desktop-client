@@ -1,4 +1,4 @@
-import { splitComment } from '../../../lib/comment';
+import { commentLineText } from '../../../lib/comments/commentText';
 import { fitPath, trimToFit } from '../../../lib/trimToFit';
 
 const MAX_CACHED = 5000;
@@ -48,13 +48,13 @@ function cached(key: string, fit: () => string): string {
 
 const summaries = new Map<string, string>();
 
-/** A comment's summary, its first line with text (`splitComment`). Asked for on every frame, so remembered. */
+/** A comment's summary, its first line with text and without Markdown marks (`commentLineText`). Asked for on every frame, so remembered. */
 export function summaryOf(comment: string): string {
   if (!comment) return '';
   let summary = summaries.get(comment);
   if (summary === undefined) {
     if (summaries.size > MAX_CACHED) summaries.clear();
-    summaries.set(comment, (summary = splitComment(comment).summary));
+    summaries.set(comment, (summary = commentLineText(comment)));
   }
   return summary;
 }

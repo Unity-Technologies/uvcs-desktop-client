@@ -71,12 +71,6 @@
   line-height: 1.55;
 }
 
-.plain {
-  margin: 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
 /* author · date · cs:N · branch, as a details panel's meta row: each item starts with its dot, and the row reaches a
    dot's width past the left edge, so only dots between items show, also where it wraps. */
 .metaRow {

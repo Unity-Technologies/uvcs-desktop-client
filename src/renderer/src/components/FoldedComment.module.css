@@ -35,12 +35,6 @@
   mask-image: none;
 }
 
-.plain {
-  margin: 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
 .toggle {
   padding: 0;
   border: none;
