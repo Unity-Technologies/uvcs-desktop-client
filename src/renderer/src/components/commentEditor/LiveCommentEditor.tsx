@@ -9,7 +9,7 @@ import { commentEditorExtensions, editable, editableWhen, theme, themed, type Co
 import { changeToMatch } from './commentFieldText';
 import type { CommentFieldProps } from './commentFieldProps';
 import { activeFormats, FORMAT_COMMANDS, type FormatCommandId } from './formatCommands';
-import { hasFocus } from './liveDecorations';
+import { hasFocus, noteFocus } from './liveDecorations';
 import type { Box } from './popupPosition';
 import { SelectionBar } from './SelectionBar';
 import { formatsOf, selectionBarShows } from './selectionBarState';
@@ -69,6 +69,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
     if (caret !== undefined || autoFocus) {
       editor.dispatch({ selection: { anchor: Math.min(caret ?? value.length, editor.state.doc.length) } });
       editor.focus();
+      noteFocus(editor);
     }
     setView(editor);
     setState(editor.state);
@@ -106,7 +107,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
   useLayoutEffect(() => view?.requestMeasure(), [view, widgets]);
 
   return (
-    <div ref={host} className={classNames(fieldStyles.field, styles.editor, className)} style={style} onMouseDown={bar.onPointerDown}>
+    <div ref={host} className={classNames(fieldStyles.field, styles.editor, className)} style={style} data-single-line={singleLine || undefined} onMouseDown={bar.onPointerDown}>
       {widgets.map((widget) => createPortal(widget.node, widget.host, String(widget.key)))}
       {suggestions.list}
       {bar.element}

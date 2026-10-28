@@ -17,6 +17,14 @@ export const hasFocus = StateField.define<boolean>({
 
 const trackFocus = EditorView.focusChangeEffect.of((_state, focusing) => focusChanged.of(focusing));
 
+/**
+ * Tells the state the editor's focus as it is now: a focus given in code as the editor is made (`autoFocus`, the
+ * caret handed over by the plain field) comes before the editor listens for it.
+ */
+export function noteFocus(view: EditorView): void {
+  if (view.state.field(hasFocus) !== view.hasFocus) view.dispatch({ effects: focusChanged.of(view.hasFocus) });
+}
+
 function revealsSelection(state: EditorState): { revealsSelection: boolean } {
   return { revealsSelection: state.field(hasFocus) };
 }

@@ -17,6 +17,12 @@
   overflow: auto;
 }
 
+/* A one-line field wraps a long title over a few lines and scrolls past them, its scrollbar hidden: a chip's or an
+   emoji's glyph a pixel past the line would show one on a single line. */
+.editor[data-single-line] :global(.cm-editor .cm-scroller) {
+  scrollbar-width: none;
+}
+
 .editor :global(.cm-editor .cm-content) {
   padding: 0;
   caret-color: var(--text-primary);
