@@ -17,7 +17,13 @@ export const oneLine: Extension = EditorState.transactionFilter.of((transaction)
   });
   if (!breaks) return transaction;
   const changes: ChangeSpec[] = [];
-  transaction.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => changes.push({ from: fromA, to: toA, insert: oneLineText(inserted.toString()) }));
+  const doc = transaction.startState.doc;
+  transaction.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => {
+    const joined = oneLineText(inserted.toString());
+    // A line end after a space, or before one, adds no second space.
+    const spaced = /\s$/.test(doc.sliceString(fromA - 1, fromA)) ? joined.replace(/^ /, '') : joined;
+    changes.push({ from: fromA, to: toA, insert: /^\s/.test(doc.sliceString(toA, toA + 1)) ? spaced.replace(/ $/, '') : spaced });
+  });
   const set = transaction.startState.changes(changes);
   const userEvent = transaction.annotation(Transaction.userEvent);
   return { changes: set, selection: transaction.startState.selection.map(set, 1), scrollIntoView: true, ...(userEvent && { userEvent }) };
