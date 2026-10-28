@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { EVERYONE, MINE } from '../../lib/peopleFilter';
-import { detailsOpenOf, migrateBranchExplorerPreferences } from './branchExplorerMigration';
+import { hiddenAfterMigration, migrateBranchExplorerPreferences } from './branchExplorerMigration';
 
 describe('migrateBranchExplorerPreferences', () => {
   it('keeps the people picked from version 1 on, and drops whether the details were open', () => {
-    const mine = MINE;
-    const migrated = migrateBranchExplorerPreferences({ dateRange: 'lastWeek', people: mine, detailsOpen: false, showComments: false }, 1);
-    expect(migrated).toEqual({ dateRange: 'lastWeek', people: mine, showComments: false });
+    const migrated = migrateBranchExplorerPreferences({ dateRange: 'lastWeek', people: MINE, detailsOpen: false, showComments: false }, 1);
+    expect(migrated).toEqual({ dateRange: 'lastWeek', people: MINE, showComments: false });
   });
 
   it('turns version 0 date ranges into the shared presets, and starts with everyone', () => {
@@ -18,11 +17,18 @@ describe('migrateBranchExplorerPreferences', () => {
   });
 });
 
-describe('detailsOpenOf', () => {
-  it('is open unless the details were closed', () => {
-    expect(detailsOpenOf({ detailsOpen: false })).toBe(false);
-    expect(detailsOpenOf({ detailsOpen: true })).toBe(true);
-    expect(detailsOpenOf({})).toBe(true);
-    expect(detailsOpenOf(undefined)).toBe(true);
+describe('hiddenAfterMigration', () => {
+  it("hides the Branch Explorer's details when they were closed, keeping the other views'", () => {
+    expect(hiddenAfterMigration({ detailsOpen: false }, { labels: true }, 'branchExplorer')).toEqual({ labels: true, branchExplorer: true });
+  });
+
+  it('keeps them hidden when they already were', () => {
+    expect(hiddenAfterMigration({ detailsOpen: false }, { branchExplorer: true }, 'branchExplorer')).toEqual({ branchExplorer: true });
+  });
+
+  it('leaves every view as it was when they were open, or nothing was remembered', () => {
+    expect(hiddenAfterMigration({ detailsOpen: true }, { labels: true }, 'branchExplorer')).toEqual({ labels: true });
+    expect(hiddenAfterMigration({}, {}, 'branchExplorer')).toEqual({});
+    expect(hiddenAfterMigration(undefined, {}, 'branchExplorer')).toEqual({});
   });
 });

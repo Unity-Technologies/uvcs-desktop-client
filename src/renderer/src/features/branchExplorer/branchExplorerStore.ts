@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { navigation } from '../../app/navigation/navigationStore';
-import { detailsHidden, useDetailsPaneStore } from '../../components/detailsPaneStore';
+import { useDetailsPaneStore } from '../../components/detailsPaneStore';
 import { EVERYONE, rememberedPick, type PeoplePick } from '../../lib/peopleFilter';
 import type { SincePreset } from '../../lib/sincePresets';
-import { detailsOpenOf, migrateBranchExplorerPreferences } from './branchExplorerMigration';
+import { hiddenAfterMigration, migrateBranchExplorerPreferences } from './branchExplorerMigration';
 import type { BranchChoice } from './model/branchChoice';
 import type { RevealTarget } from './model/revealTarget';
 
@@ -51,9 +51,7 @@ export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
       partialize: ({ visibleBranches: _branches, revealRequest: _request, set: _action, people, ...remembered }) => ({ ...remembered, people: rememberedPick(people) }),
       migrate: (persisted, version) => {
         // The details' own store keeps whether they're hidden now: a user who had closed them keeps them closed.
-        if (!detailsOpenOf(persisted) && !detailsHidden(useDetailsPaneStore.getState(), BRANCH_EXPLORER_DETAILS_KEY)) {
-          useDetailsPaneStore.getState().toggleHidden(BRANCH_EXPLORER_DETAILS_KEY);
-        }
+        useDetailsPaneStore.setState(({ hidden }) => ({ hidden: hiddenAfterMigration(persisted, hidden, BRANCH_EXPLORER_DETAILS_KEY) }));
         return migrateBranchExplorerPreferences(persisted, version) as BranchExplorerPreferences;
       },
     },
