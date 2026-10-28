@@ -51,7 +51,8 @@ function decorationOf(mark: LiveMark): Range<Decoration> {
     case 'key':
       return Decoration.mark({ class: 'cm-key' }).range(mark.from, mark.to);
     case 'selected':
-      return Decoration.mark({ class: 'cm-selectedWidget' }).range(mark.from, mark.to);
+      // Inclusive, so it opens before the widget's own replacement at the same place and wraps it.
+      return Decoration.mark({ class: 'cm-selectedWidget', inclusive: true }).range(mark.from, mark.to);
     case 'fence':
       return Decoration.mark({ class: 'cm-fence' }).range(mark.from, mark.to);
     case 'line':
