@@ -7,7 +7,7 @@ import { hasPendingChanges } from '../merge/hasPendingChanges';
 import type { OperationContext } from '../operations/OperationTracker';
 import { moveNewItemsAside } from './moveNewItemsAside';
 import { shelvedContents, summarizePending } from './pendingSnapshot';
-import { failureReason, putBackAfterFailure, putShelvedChangesBack } from './putShelvedChangesBack';
+import { changesPutBackError, failureReason, putShelvedChangesBack } from './putShelvedChangesBack';
 import { readPendingSnapshot } from './readPendingChanges';
 import { selectorObjectRef } from './selectorObjectRef';
 import type { ShelveFlowDependencies } from './shelveFlowDependencies';
@@ -89,9 +89,7 @@ async function loadAroundChanges(
     context.beginStep('Loading its files', 2, 3);
     await load();
   } catch (error) {
-    const failure = failureReason(error);
-    if (await putBackAfterFailure(deps, workspacePath, record, context)) throw new Error(`${failure}. Your changes were put back.`);
-    throw new Error(`${failure}. Your changes are safe in shelve ${record.shelveId}; restore them from Changes.`);
+    throw await changesPutBackError(deps, workspacePath, record, failureReason(error), context);
   }
 
   context.beginStep('Bringing your changes back', 3, 3);
