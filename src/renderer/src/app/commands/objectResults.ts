@@ -31,7 +31,7 @@ import { menuAction } from '../../components/menuWords';
 import { fuzzyMatchPositions, fuzzyMatchQuality } from '../../lib/fuzzyIndex';
 import { filterHaystack, wordMatchQuality } from '../../lib/matchesAllWords';
 import { commentLineText, commentText } from '../../lib/comments/commentText';
-import { excerptAroundMatch } from '../../lib/matchExcerpt';
+import { excerptAroundMatch, type Excerpt } from '../../lib/matchExcerpt';
 import { wordMatchPositions, wordMatchRanges } from '../../lib/textMatchRanges';
 import { displayName } from '../../lib/userName';
 import { navigation } from '../navigation/navigationStore';
@@ -102,7 +102,10 @@ type MatchShown = Pick<SearchResult, 'labelMatches' | 'detail' | 'detailMatches'
 
 /** How a named object's row shows the way it was found; `detail` is what it shows when found by its name. */
 function matchShown(name: string, description: string, detail: string, term: string, match: ObjectMatch): MatchShown {
-  if (match === 'description') return descriptionMatchShown(name, description, term);
+  const excerpt = match === 'description' ? excerptAroundMatch(commentText(description), term) : undefined;
+  // Found among the rows holding the words, but the description shows none of them: the name held them all (or they
+  // are only in what the description hides, a link's address), so the row is a name hit.
+  if (excerpt && excerpt.matches.length > 0) return descriptionMatchShown(name, description, term, excerpt);
   return {
     labelMatches: match === 'fuzzy' ? fuzzyMatchPositions(name, term) : wordMatchPositions(name, term),
     quality: term ? fuzzyMatchQuality(name, term) : undefined,
@@ -115,8 +118,7 @@ function matchShown(name: string, description: string, detail: string, term: str
  * Found by its description: the description takes the detail's place, cut to keep the match in view, so the row shows
  * why it matched; the words typed are marked there and in the name.
  */
-function descriptionMatchShown(name: string, description: string, term: string): MatchShown {
-  const excerpt = excerptAroundMatch(commentText(description), term);
+function descriptionMatchShown(name: string, description: string, term: string, excerpt: Excerpt): MatchShown {
   return {
     labelMatches: wordMatchPositions(name, term),
     detail: excerpt.text,
