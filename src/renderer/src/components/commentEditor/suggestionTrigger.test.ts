@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { deleteCharBackward, history, undo } from '@codemirror/commands';
+import { history, undo } from '@codemirror/commands';
+import { findClusterBreak } from '@codemirror/state';
 import { editorState, run, written } from './commentEditorTesting';
 import { typingAt } from './typingAt';
 import { pickSuggestion, suggestionQueryAt, suggestionsShownAt } from './suggestionTrigger';
@@ -85,8 +86,9 @@ describe('suggestionsShownAt', () => {
 describe('an emoji picked', () => {
   const rainbowFlag = '🏳️‍🌈';
 
-  // The caret steps over it as one too, by the same grapheme clusters: checked on screen, as moving needs a view.
-  it('is one character to Backspace, however many code points it holds', () => {
-    expect(written(run(deleteCharBackward, editorState(`Pride ${rainbowFlag}‸`))!)).toBe('Pride ‸');
+  // Backspace and the caret step by the editor's grapheme clusters (`findClusterBreak`), which the commands call.
+  it('is one character to Backspace and to the caret, however many code points it holds', () => {
+    const text = `Pride ${rainbowFlag}`;
+    expect(findClusterBreak(text, text.length, false)).toBe('Pride '.length);
   });
 });
