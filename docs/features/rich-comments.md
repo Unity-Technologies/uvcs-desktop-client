@@ -54,7 +54,10 @@ before.
   in a full comment, its summary (the comment's first line, a review's title). On hover, or keyboard focus, it shows
   the Branch Explorer's card (`HoverCard` through `ChipHoverCard`, from `chipCard`): the comment drawn as a comment's
   line, then "Changeset 4207 · Ana Diaz · 2 hours ago" (a review's status too); only what the window already read, no
-  command. Nothing read yet, the card says what it is ("Changeset 4207"). A click opens it as its link would (`openReference` → `openLink`):
+  command. Nothing read yet, the card says what it is ("Changeset 4207"). The card, as an image's preview, is placed by its chip
+  (`AnchoredCard`, `hoverCardPosition`) the way the app's tooltips are, never as a popover layer: it takes no keys or
+  focus, so Esc still closes a dialog while a card shows (a popover's layer took it; checked by hand in a dialog, as
+  no test reaches the layers). A click opens it as its link would (`openReference` → `openLink`):
   in this window when it shows that repository, else in the one that does; a repository named without its server is
   on the place's (`referenceRepository`). In a row or a title a chip is no tab stop: the row's keys reach its object.
 - A **person** is their avatar and name, their card the name `cm` knows them by; an **emoji** is itself, its name in
