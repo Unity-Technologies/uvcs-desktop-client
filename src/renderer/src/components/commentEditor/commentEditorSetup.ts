@@ -14,6 +14,7 @@ import { compactChips, widgetPortals } from './liveWidgets';
 import { markdownFromClipboard, pasteMarkdown } from './richPaste';
 import { ownStep } from './ownStep';
 import { formatsOf } from './selectionBarState';
+import { typingAt } from './typingAt';
 import type { WidgetPortals } from './widgetPortals';
 
 /** What the field does with the keys that leave the text: read when pressed, so the latest props answer. */
@@ -67,6 +68,7 @@ export function commentEditorExtensions(options: CommentEditorOptions, enabled: 
     history(),
     commentMarkdown(),
     syntaxHighlighting(markdownStyle),
+    typingAt,
     liveDrawing(),
     codeColors,
     widgetPortals.of(options.portals),

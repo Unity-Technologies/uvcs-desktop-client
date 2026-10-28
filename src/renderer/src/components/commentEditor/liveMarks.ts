@@ -2,6 +2,7 @@ import type { EditorState } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
 import type { SyntaxNode, SyntaxNodeRef } from '@lezer/common';
 import { findReferences, type CommentReference } from '../../lib/comments/commentReferences';
+import { typingAt } from './typingAt';
 
 /**
  * What the live editor draws over a comment's Markdown text (docs/features/rich-comments.md, "Writing"): the text
@@ -12,7 +13,7 @@ export type LiveMark =
   | { kind: 'hidden'; from: number; to: number }
   /** A reference to an object, a person or an emoji, drawn as the comment's chip: one piece the caret steps over. */
   | { kind: 'reference'; from: number; to: number; reference: CommentReference; source: string }
-  /** A reference selected (a click selects one), shown as typed so typing replaces it. */
+  /** A reference selected (a click selects one), shown as typed so typing replaces it, or one being typed (`typingAt`). */
   | { kind: 'typedReference'; from: number; to: number }
   /** An image, drawn as the comment's chip with its description. */
   | { kind: 'image'; from: number; to: number; alt: string; url: string; source: string }
@@ -62,7 +63,7 @@ export function liveMarksOf(state: EditorState, options: LiveMarksOptions, range
     });
     for (const found of referencesIn(state, from, to, options)) {
       marks.push(
-        options.revealsSelection && insideSelection(state, found.from, found.to)
+        options.revealsSelection && (insideSelection(state, found.from, found.to) || found.to === state.field(typingAt, false))
           ? { kind: 'typedReference', from: found.from, to: found.to }
           : { kind: 'reference', ...found },
       );
