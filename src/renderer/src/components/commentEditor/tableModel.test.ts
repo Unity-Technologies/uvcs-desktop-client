@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { EditorState } from '@codemirror/state';
 import { editorState } from './commentEditorTesting';
-import { rowCells, tablesIn } from './tableModel';
+import { rowCells, tablesIn, tableWidgetKey } from './tableModel';
 
 const TABLE = '| Name | Size |\n| :--- | ---: |\n| a.png | 2 MB |';
 
@@ -57,5 +57,25 @@ describe('rowCells', () => {
 
   it('keeps an empty cell', () => {
     expect(rowCells('|  | b |', 0).map((cell) => cell.text)).toEqual(['', 'b']);
+  });
+});
+
+describe('tableWidgetKey', () => {
+  /** 100 rows of references, as a long comment's table of changes has. */
+  const BIG = ['| Change | In |', '| --- | --- |', ...Array.from({ length: 100 }, (_, row) => `| cs:${row + 1} | br:/main/task-${row} |`)].join('\n');
+  const keys = (state: EditorState) => tablesIn(state, { revealsSelection: true }).map(tableWidgetKey);
+
+  it('stays the same as keys are typed above the table: no table is drawn again, nor its chips', () => {
+    const before = editorState(`Notes‸\n\n${BIG}`);
+    let typed = before;
+    for (const key of ' and more') typed = typed.update({ changes: { from: typed.selection.main.head, insert: key }, selection: { anchor: typed.selection.main.head + 1 }, userEvent: 'input.type' }).state;
+    const changed = keys(typed).filter((key, index) => key !== keys(before)[index]);
+    expect(changed).toHaveLength(0);
+  });
+
+  it('changes with what the table shows: a cell’s text, or the selection covering it', () => {
+    const [table] = tablesIn(editorState(`${TABLE}\n\nAfter‸`), { revealsSelection: true });
+    expect(tableWidgetKey({ ...table!, header: [{ ...table!.header[0]!, text: 'File' }, table!.header[1]!] })).not.toBe(tableWidgetKey(table!));
+    expect(tableWidgetKey({ ...table!, selected: true })).not.toBe(tableWidgetKey(table!));
   });
 });
