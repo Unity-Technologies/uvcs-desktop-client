@@ -6,7 +6,7 @@
 /* In focus mode, one panel over the view, under the dialogs as a single field's is (`LiveCommentEditor.module.css`):
    the summary a title over the description, which takes the rest. The fields' own sizes give way (`!important` over
    the description's height set inline). */
-.group[data-open] {
+.group[data-open='overlay'] {
   position: fixed;
   inset: 8vh max(24px, calc(50vw - 440px));
   z-index: 790;
@@ -43,4 +43,15 @@
   z-index: 789;
   background: var(--overlay);
   animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
+}
+
+/* In a dialog the group grows in place, as a field alone does: the dialog keeps its focus and clicks. */
+.group[data-open='inPlace'] {
+  display: flex;
+  flex-direction: column;
+}
+
+.group[data-open='inPlace'] [data-group-field='description'] {
+  height: 46vh !important;
+  max-height: none !important;
 }

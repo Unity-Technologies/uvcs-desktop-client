@@ -1,8 +1,10 @@
 import { createContext, useMemo, useRef, useState, type FocusEvent, type ReactNode } from 'react';
-import { FocusModeFooter } from './FocusModeFooter';
 import { createPortal } from 'react-dom';
+import { isInModalDialog } from '../../lib/modalDialog';
 import type { CommentFieldHandle } from './commentFieldProps';
-import type { GroupField } from './focusGroup';
+import { focusLeavesGroup, type GroupField } from './focusGroup';
+import { focusModeLayout, type FocusModeLayout } from './focusMode';
+import { FocusModeFooter } from './FocusModeFooter';
 import styles from './CommentFocusGroup.module.css';
 
 /** What the fields of a group share: one focus mode, and a way to put the caret in another of them. */
@@ -17,19 +19,21 @@ export interface FocusGroup {
 export const FocusGroupContext = createContext<FocusGroup | null>(null);
 
 /**
- * The check-in's summary and description in one focus mode (`focusModeFields`): the same two editors, laid out over
- * the view as one panel, the summary a title over the description. Out of it as the focus leaves both: moving between
- * them is no leaving.
+ * A comment's title and description in one focus mode (`focusModeFields`: the check-in's, Edit comment's): the same
+ * two editors, laid out over the view as one panel, the title over the description, or grown in place in a dialog
+ * (`focusModeLayout`), as a dialog keeps its focus and clicks. Out of it as the focus leaves both (`focusLeavesGroup`):
+ * moving between them, or into a menu they opened, is no leaving.
  */
 export function CommentFocusGroup({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(false);
+  const [layout, setLayout] = useState<FocusModeLayout | null>(null);
   const container = useRef<HTMLDivElement>(null);
   const handles = useRef(new Map<GroupField, CommentFieldHandle>());
+  const open = layout !== null;
   const group = useMemo<FocusGroup>(
     () => ({
       open,
-      toggle: () => setOpen((shown) => !shown),
-      close: () => setOpen(false),
+      toggle: () => setLayout((shown) => (shown ? null : focusModeLayout(isInModalDialog(container.current)))),
+      close: () => setLayout(null),
       register: (field, handle) => {
         if (handle) handles.current.set(field, handle);
         else handles.current.delete(field);
@@ -43,12 +47,14 @@ export function CommentFocusGroup({ children }: { children: ReactNode }) {
     [open],
   );
   const onBlur = (event: FocusEvent): void => {
-    if (open && !container.current?.contains(event.relatedTarget as Node | null)) setOpen(false);
+    const to = event.relatedTarget instanceof Element ? event.relatedTarget : null;
+    const moved = to && { inside: container.current?.contains(to) ?? false, inMenu: to.closest('[role="menu"]') !== null };
+    if (open && focusLeavesGroup(moved)) setLayout(null);
   };
   return (
     <FocusGroupContext.Provider value={group}>
-      {open && createPortal(<div className={styles.backdrop} onMouseDown={() => setOpen(false)} />, document.body)}
-      <div ref={container} className={styles.group} data-open={open || undefined} onBlur={onBlur}>
+      {layout === 'overlay' && createPortal(<div className={styles.backdrop} onMouseDown={() => setLayout(null)} />, document.body)}
+      <div ref={container} className={styles.group} data-open={layout ?? undefined} onBlur={onBlur}>
         {children}
         {open && <FocusModeFooter />}
       </div>

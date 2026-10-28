@@ -152,6 +152,17 @@ New label and New attribute (`CommentArea`: a press on its label puts the caret 
 htmlFor>` can't focus, and the label names it, `fieldLabelAttributes`), the comment of a merge into a server branch (`MergeHeader`) and a new code review's title
 (`CreateCodeReviewDialog`). Comments asked for with `prompt()` (a changelist's, an attribute's) stay plain fields.
 
+A changeset's comment is edited as the check-in writes it, a title and a description: Edit comment and the details
+panels' editor open it in its parts (`editingParts`: its title and the rest when it has one; whole in the description
+when it opens with a list, a table or code, or is empty, so nothing moves into the title) and write them back as the
+check-in joins them (`editedComment`): unchanged, the comment is written back as it was, so saving with no edit
+writes nothing (the dialog's Save stays disabled); with one part edited, the other keeps its text and the comment
+keeps the line ends it had after its title, so a "title, line end, body" comment never gains a blank line; a title
+given to a comment that had none is set off by a blank line. Edit comment's two fields are one focus mode
+(`CommentFocusGroup`, grown in place in the dialog), ↓ and ↑ go between them, Enter from the title to the
+description; it has no Recent comments (they're for a check-in, not a changeset already made). New branch, New label
+and New attribute stay one field: theirs is a description, not a commit message.
+
 - **The text is the comment.** The editor is CodeMirror 6 over the comment's own Markdown, drawn as it reads: what a
   field gives and takes is the stored text, LF line ends as `cm` keeps them, never converted, so saving, undo and
   copying need nothing and what the user didn't touch is never rewritten. A rich-text editor (Tiptap/ProseMirror)

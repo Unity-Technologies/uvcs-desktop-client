@@ -125,17 +125,17 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
     group.register(groupField, handle);
     return () => group.register(groupField, null);
   }, [group, groupField, handle]);
-  // Tab and the arrows between the group's fields, while focus mode shows them together.
-  keys.current.groupKey =
-    grouped && grouped.group.open
-      ? (editor, key) => {
+  // ↓ and ↑ between the group's fields, and in focus mode Tab too: out of it Tab goes on through the form.
+  keys.current.groupKey = grouped
+    ? (editor, key) => {
+          if (!grouped.group.open && (key === 'Tab' || key === 'ShiftTab')) return false;
           const head = editor.state.selection.main.head;
           const move = groupMove(grouped.field, key, { atEnd: head === editor.state.doc.length, onFirstLine: onFirstVisualLine(editor, head) });
           if (!move) return false;
           grouped.group.moveTo(move.to, move.caret);
           return true;
         }
-      : undefined;
+    : undefined;
 
   const suggestions = useSuggestions(view, state);
   const focus = useFocusMode(view, state, host, singleLine, suggestions.shown, grouped?.group ?? null);

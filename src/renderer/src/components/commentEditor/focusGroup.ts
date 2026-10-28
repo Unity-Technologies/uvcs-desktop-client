@@ -21,3 +21,11 @@ export function groupMove(field: GroupField, key: GroupKey, at: { atEnd: boolean
   if (field === 'description' && key === 'ArrowUp' && at.onFirstLine) return { to: 'summary', caret: 'end' };
   return null;
 }
+
+/**
+ * Whether the focus moving to `to` leaves the group's focus mode: anywhere outside its fields, or nowhere, except a
+ * menu one of its fields opened (Recent comments), which renders apart from it, over the page.
+ */
+export function focusLeavesGroup(to: { inside: boolean; inMenu: boolean } | null): boolean {
+  return !to || (!to.inside && !to.inMenu);
+}

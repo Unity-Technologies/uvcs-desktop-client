@@ -1,6 +1,6 @@
 import { Copy, Pencil } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import { shownComment, splitComment, type CommentParts, type SavedComment } from '../lib/comment';
+import { editingParts, shownComment, type CommentParts, type SavedComment } from '../lib/comment';
 import { copyToClipboard } from '../ui/copyToClipboard';
 import { IconButton } from '../ui/IconButton';
 import { CommentEditor } from './CommentEditor';
@@ -35,7 +35,7 @@ export function DetailsHeading({ name, comment: given = '', onSave }: DetailsHea
     if (saved) setLastSaved({ saved: edited, replaced: given });
     return saved;
   };
-  const parts = name === undefined ? splitComment(comment) : { summary: '', description: comment.trim() };
+  const parts = name === undefined ? editingParts(comment) : { summary: '', description: comment.trim() };
   const edit = onSave ? () => setDraft(parts) : undefined;
   // What shows (`commentHeading`): a named object's whole comment is its description.
   const shown = name === undefined ? commentHeading(comment) : parts.description ? ({ kind: 'block', description: parts.description } as const) : ({ kind: 'empty' } as const);
