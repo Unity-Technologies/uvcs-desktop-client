@@ -1,4 +1,5 @@
 import { repositoryPlace } from '@shared/domain/place';
+import { sameServer } from '@shared/links/linkSegments';
 import type { CommentReference } from '../../lib/comments/commentReferences';
 import { queryKeys } from '../../api/queryKeys';
 import { IMMUTABLE_QUERY } from '../../app/queryMeta';
@@ -13,14 +14,29 @@ import { chipContent, referenceRepository } from './chipContent';
 export const MAX_RESOLVED_PER_COMMENT = 10;
 
 /**
+ * How long a failed read (no access, a server out of reach, a timeout) is kept before a chip shown or hovered asks
+ * again: long enough that a comment shown again, or a card hovered twice, asks nothing more, short enough that a
+ * server back online recovers within the session.
+ */
+export const UNREADABLE_RETRY_MS = 5 * 60_000;
+
+/**
  * An object of another repository than the place's that one command reads (`cm find … on repository`): a
  * changeset or a label. A branch takes two (its hidden ones apart), a shelve has no read of its own, and a code
- * review reads its target's name too: they keep what their chip shows.
+ * review reads its target's name too: they keep what their chip shows. `onPlaceServer`: the repository is on the
+ * place's own server, which a comment may read as it shows; another server is read only as its chip's card opens,
+ * so a comment can't make the app contact a server by being read.
  */
-export type RemoteObject = { repository: string; kind: 'changeset'; id: number } | { repository: string; kind: 'label'; name: string };
+export type RemoteObject = { repository: string; onPlaceServer: boolean } & ({ kind: 'changeset'; id: number } | { kind: 'label'; name: string });
 
-/** What reading a remote object gave: its fields for the chip and its card, or that it couldn't be read. */
-export type RemoteRead = { found: CachedObject } | { unreadable: true };
+/**
+ * What reading a remote object gave: its fields for the chip and its card; an answer that the repository has none
+ * (`missing`), kept as an object is; or a failure (`unreadable`), asked again after `UNREADABLE_RETRY_MS`.
+ */
+export type RemoteRead = { found: CachedObject } | { missing: true } | { unreadable: true };
+
+/** What a `cm find` line can't carry quoted: a quote, a space or a control character. */
+const UNQUOTABLE = /['"\s\p{Cc}]/u;
 
 /** The other repository's object a reference names, or null: one of the place's own, or nothing one command reads. */
 export function remoteObjectOf(reference: CommentReference, placeRepository: string | undefined): RemoteObject | null {
@@ -30,22 +46,30 @@ export function remoteObjectOf(reference: CommentReference, placeRepository: str
   if (chip.kind !== 'object' || !chip.target.repository || chip.target.page) return null;
   const repository = referenceRepository(chip.target, placeRepository);
   const object = chip.target.object;
-  if (object?.kind === 'changeset') return { repository, kind: 'changeset', id: object.id };
-  if (object?.kind === 'label') return { repository, kind: 'label', name: object.name };
+  if (UNQUOTABLE.test(repository) || (object?.kind === 'label' && UNQUOTABLE.test(object.name))) return null;
+  const onPlaceServer = sameServer(serverOf(repository), serverOf(placeRepository));
+  if (object?.kind === 'changeset') return { repository, onPlaceServer, kind: 'changeset', id: object.id };
+  if (object?.kind === 'label') return { repository, onPlaceServer, kind: 'label', name: object.name };
   return null;
 }
 
+/** A repository spec's server, as `cm` names it after the repository's name: `acme@unity` for `game@acme@unity`. */
+function serverOf(repository: string): string {
+  return repository.slice(repository.indexOf('@') + 1);
+}
+
 /**
- * What a comment shown in full reads as it shows: its other repositories' objects, once each, in the order they
- * show, up to `limit`. One read is a command per object, never one for several: `cm find` has no `in (…)`, and
- * ids OR-ed together are refused (`noOredIdLookups.test.ts`). An object already read costs nothing (its query's).
+ * What a comment shown in full reads as it shows: its other repositories' objects on the place's server (never
+ * another server's: `onPlaceServer`), once each, in the order they show, up to `limit`. One read is a command per
+ * object, never one for several: `cm find` has no `in (…)`, and ids OR-ed together are refused
+ * (`noOredIdLookups.test.ts`). An object already read costs nothing (its query's).
  */
 export function referencesToResolve(references: readonly CommentReference[], placeRepository: string | undefined, limit = MAX_RESOLVED_PER_COMMENT): RemoteObject[] {
   const objects = new Map<string, RemoteObject>();
   for (const reference of references) {
     if (objects.size >= limit) break;
     const object = remoteObjectOf(reference, placeRepository);
-    if (object) objects.set(objectKey(object), object);
+    if (object?.onPlaceServer) objects.set(objectKey(object), object);
   }
   return [...objects.values()];
 }
@@ -66,10 +90,12 @@ export function referencesOfBlocks(blocks: readonly unknown[]): CommentReference
 
 /**
  * The query that reads a remote object, through the services every view uses, the repository as the place
- * (`repositoryPlace`): kept apart from the place's own caches by its key. Read once for the session, a failure too
- * (no access, a server out of reach, nothing by that number): the chip keeps what it showed and its card says so,
- * and showing it again, or hovering it, asks the server nothing more. A new window asks again.
- * `enabled` is a row's chip waiting for its card to open.
+ * (`repositoryPlace`): kept apart from the place's own caches by its key. An object read, or an answer that there's
+ * none, is kept for the window's life (`gcTime: Infinity`; off screen, bounded as every immutable result is, by
+ * `MAX_UNUSED_IMMUTABLE`). Immutable though comments can be edited: a chip's summary of another repository's object
+ * is a reminder of what it points at, and the object's own page reads it fresh. A failure is kept for
+ * `UNREADABLE_RETRY_MS`, then asked again. Another server's object is read in a process of its own (`ownProcess`).
+ * `enabled` is a chip waiting for its card to open.
  */
 export function remoteObjectQuery(object: RemoteObject, read: (object: RemoteObject) => Promise<RemoteRead> = readRemoteObject, enabled = true) {
   return {
@@ -82,7 +108,8 @@ export function remoteObjectQuery(object: RemoteObject, read: (object: RemoteObj
       }
     },
     enabled,
-    staleTime: Infinity,
+    staleTime: (query: { state: { data?: RemoteRead } }) => (query.state.data && 'unreadable' in query.state.data ? UNREADABLE_RETRY_MS : Infinity),
+    gcTime: Infinity,
     meta: IMMUTABLE_QUERY,
   };
 }
@@ -91,8 +118,10 @@ async function readRemoteObject(object: RemoteObject): Promise<RemoteRead> {
   // Loaded on the first read: a chip draws without the API client.
   const { api } = await import('../../api/client');
   const place = repositoryPlace(object.repository);
-  const found = object.kind === 'changeset' ? await api.changesets.get(place, object.id) : await api.labels.get(place, object.name);
-  return found ? { found } : { unreadable: true };
+  // Another server may not answer for its whole timeout: never in a pooled `cm shell` session, which it would hold.
+  const read = { ownProcess: !object.onPlaceServer };
+  const found = object.kind === 'changeset' ? await api.changesets.find(place, object.id, read) : await api.labels.get(place, object.name, read);
+  return found ? { found } : { missing: true };
 }
 
 function objectKey(object: RemoteObject): string {

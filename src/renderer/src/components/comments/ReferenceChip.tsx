@@ -70,7 +70,7 @@ function ObjectChip({ reference, placeRepository, cachedAs, source, compact, int
   const remote = useRemoteObject(reference, placeRepository);
   const cached = useCachedObject(cachedAs) ?? remote.found;
   const summary = cached && summaryOf(cached);
-  const card = useMemo(() => chipCard({ title, repository }, cached && cachedRecordOf(cached), cardDate, remote.unreadable), [title, repository, cached, remote.unreadable]);
+  const card = useMemo(() => chipCard({ title, repository }, cached && cachedRecordOf(cached), cardDate, remote.unread), [title, repository, cached, remote.unread]);
   const Icon = CHIP_ICONS[icon];
   const open = (event: MouseEvent): void => {
     // In a row, the chip opens its object and leaves the row's selection alone.

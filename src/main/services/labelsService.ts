@@ -15,9 +15,10 @@ export function createLabelsService({ cm }: ServiceContext): LabelsApi {
       return cm.queryRecords(findArgs(FOUND_LABELS, filter, 'date desc', [], at.repository), layoutReader(FOUND_LABELS), at.options);
     },
 
-    async get(place, name) {
+    async get(place, name, read = {}) {
       const at = cmPlace(place);
-      const labels = await cm.queryRecords(findArgs(FOUND_LABELS, {}, null, [equalsCondition('name', name)], at.repository), layoutReader(FOUND_LABELS), at.options);
+      const args = findArgs(FOUND_LABELS, {}, null, [equalsCondition('name', name)], at.repository);
+      const labels = await (read.ownProcess ? cm.executeRecords(args, layoutReader(FOUND_LABELS), at.options) : cm.queryRecords(args, layoutReader(FOUND_LABELS), at.options));
       return labels.find((label) => label.name === name) ?? null;
     },
 

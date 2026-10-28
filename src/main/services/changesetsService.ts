@@ -28,6 +28,14 @@ export function createChangesetsService({ cm }: ServiceContext): ChangesetsApi {
       return changeset;
     },
 
+    async find(place, changesetId, read = {}) {
+      const at = cmPlace(place);
+      const args = findQueryArgs(FOUND_CHANGESETS, `where changesetid = ${changesetId}`, at.repository);
+      const reader = layoutReader(FOUND_CHANGESETS);
+      const [changeset] = await (read.ownProcess ? cm.executeRecords(args, reader, at.options) : cm.queryRecords(args, reader, at.options));
+      return changeset ?? null;
+    },
+
     async editComment(place, changesetId, comment) {
       const at = cmPlace(place);
       await cm.query(['changeset', 'editcomment', at.spec(`cs:${changesetId}`), comment], at.options);

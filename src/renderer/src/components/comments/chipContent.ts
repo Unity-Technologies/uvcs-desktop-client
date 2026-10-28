@@ -222,18 +222,26 @@ export interface ChipCard {
   meta: string[];
 }
 
-/** `unreadable`: another repository's object its read failed for (`remoteObjectQuery`), which the card says. */
-export function chipCard(chip: { title: string; repository?: string }, cached: CachedRecord | undefined, ago: (date: string) => string, unreadable = false): ChipCard {
+/**
+ * `unread`: why another repository's object has nothing to show (`remoteObjectQuery`), which the card says in place
+ * of where it is: the repository has none by that name (`missing`), or couldn't be reached (`unreadable`).
+ */
+export function chipCard(chip: { title: string; repository?: string }, cached: CachedRecord | undefined, ago: (date: string) => string, unread?: 'missing' | 'unreadable'): ChipCard {
   const comment = cached?.title || cached?.comment || undefined;
   const meta = [
     ...(comment ? [chip.title] : []),
     ...(cached?.status ? [cached.status] : []),
     ...(cached?.owner ? [displayName(cached.owner)] : []),
     ...(cached?.date ? [ago(cached.date)] : []),
-    ...(chip.repository ? [`In ${chip.repository}`] : []),
-    ...(unreadable ? ["Couldn't be read"] : []),
+    ...(chip.repository ? [repositoryWords(chip.title, chip.repository, unread)] : []),
   ];
   return comment ? { comment, title: chip.title, meta } : { title: chip.title, meta };
+}
+
+function repositoryWords(title: string, repository: string, unread: 'missing' | 'unreadable' | undefined): string {
+  if (unread === 'missing') return `No ${title.charAt(0).toLowerCase()}${title.slice(1)} in ${repository}`;
+  if (unread === 'unreadable') return `Couldn't reach ${repository}`;
+  return `In ${repository}`;
 }
 
 /** A person's card: their name as shown, then as `cm` knows them, unless it reads the same ("Ana" over "ana"). */
