@@ -18,7 +18,7 @@ import { activeFormats, FORMAT_COMMANDS, type FormatCommandId } from './formatCo
 import { hasFocus, noteFocus } from './liveDecorations';
 import type { Box } from './popupPosition';
 import { SelectionBar } from './SelectionBar';
-import { formatsOf, selectionBarShows } from './selectionBarState';
+import { formatsOf, pressHidesBar, selectionBarShows } from './selectionBarState';
 import { optionId, SuggestionList } from './SuggestionList';
 import { isDismissed, isPickable, suggestionKeyAction } from './suggestionRows';
 import { pickSuggestion, suggestionsShownAt, type SuggestionQuery } from './suggestionTrigger';
@@ -287,7 +287,12 @@ function useSelectionBar(view: EditorView | null, state: EditorState | null, sin
       }}
     />
   ) : null;
-  return { element, onPointerDown: () => setPointerDown(true) };
+  return {
+    element,
+    onPointerDown: (event: React.MouseEvent<HTMLElement>) => {
+      if (pressHidesBar(event.currentTarget, event.target)) setPointerDown(true);
+    },
+  };
 }
 
 /** The selection's box in the window: its first line's, as wide as the selection runs on it. */

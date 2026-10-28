@@ -30,3 +30,12 @@ export function selectionBarShows(state: EditorState, focused: boolean, pointerD
   const main = state.selection.main;
   return focused && !pointerDown && !main.empty && !isInCode(state, main.from);
 }
+
+/**
+ * Whether a press hides the bar, as a selection is being made: a press in the field's own DOM. React hands the field
+ * a press on its portals too (the bar, the suggestions, a chip's card), and the bar hiding under its own button's
+ * press left the button's click nothing to run on.
+ */
+export function pressHidesBar(field: { contains: (node: never) => boolean }, target: unknown): boolean {
+  return field.contains(target as never);
+}
