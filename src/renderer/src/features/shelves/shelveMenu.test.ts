@@ -1,6 +1,7 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it, vi } from 'vitest';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
+import { AUTOMATIC_SHELVE_COMMENT } from '@shared/domain/shelve';
 
 const opened = vi.hoisted(() => [] as unknown[][]);
 const editing = vi.hoisted(() => [] as unknown[][]);
@@ -31,20 +32,20 @@ describe('shelveMenu', () => {
     expect(reviewTitleOf('Spike the new HUD\r\nDetails')).toBe('Spike the new HUD');
   });
 
-  it("edits the user's shelve's comment wherever it shows: left by a switch, or in a repository with no workspace", () => {
+  it("edits the user's shelve's comment in a workspace, or in a repository with no workspace", () => {
     const shelve = { id: 12, comment: 'Spike', repository: 'game@local' };
-    for (const [place, options] of [
-      [workspacePlace('/ws'), {}],
-      [workspacePlace('/ws'), { left: true }],
-      [repositoryPlace('game@local'), {}],
-    ] as const) {
+    for (const place of [workspacePlace('/ws'), repositoryPlace('game@local')]) {
       editing.length = 0;
-      void actions(shelveMenu(place, [shelve], options)).find((action) => action.id === 'editComment')!.run();
+      void actions(shelveMenu(place, [shelve])).find((action) => action.id === 'editComment')!.run();
       expect(editing).toEqual([[place, shelve]]);
     }
   });
 
-  it("leaves someone else's shelve's comment to them", () => {
-    expect(actions(shelveMenu(workspacePlace('/ws'), [{ id: 12, comment: 'Spike', repository: 'game@local' }], { mine: false })).map((action) => action.id)).not.toContain('editComment');
+  it("leaves someone else's shelve's comment to them, and never edits changes a switch or an update left", () => {
+    const offered = (comment: string, options: { mine?: boolean; left?: boolean }): boolean =>
+      actions(shelveMenu(workspacePlace('/ws'), [{ id: 12, comment, repository: 'game@local' }], options)).some((action) => action.id === 'editComment');
+    expect(offered('Spike', { mine: false })).toBe(false);
+    expect(offered('Spike', { left: true })).toBe(false);
+    expect(offered(`${AUTOMATIC_SHELVE_COMMENT} (from br:3)`, {})).toBe(false);
   });
 });
