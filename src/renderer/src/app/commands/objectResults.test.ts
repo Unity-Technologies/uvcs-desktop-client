@@ -86,7 +86,7 @@ describe('branchResult', () => {
   it('keeps the match of a long description in view', () => {
     const comment = 'The settings dialog remembers its size and position between sessions, and resolve owner names in one batch';
 
-    expect(branchResult({ ...branch, comment }, contextFor('batch'), 'description').detail).toBe('…names in one batch');
+    expect(branchResult({ ...branch, comment }, contextFor('batch'), 'description').detail).toBe('…resolve owner names in one batch');
   });
 
   it('ranks a match in the description below the same match in a name', () => {

@@ -11,6 +11,7 @@ import type { Label } from '@shared/domain/label';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { Shelve } from '@shared/domain/shelve';
 import { createFuzzyIndex } from '../../lib/fuzzyIndex';
+import { countedReads } from '@shared/testing/countedReads';
 import { createWordFilterIndex } from '../../lib/wordFilterIndex';
 import type { ResultContext } from './objectResults';
 import {
@@ -224,6 +225,24 @@ describe('paletteGroups finding branches and labels by their description', () =>
     const onlyDescribed = Array.from({ length: MAX_PER_SECTION + 5 }, (_, id) => withComment(id + 100, `/main/task-${id}`, 'fix'));
 
     expect(branchesFound('fix', ...many, ...onlyDescribed)).toHaveLength(MAX_PER_SECTION);
+  });
+
+  it('keeps room for a description that holds the words typed over names that only hold their letters, scattered', () => {
+    const scattered = Array.from({ length: MAX_PER_SECTION }, (_, id) => withComment(id, `/main/axbxc${id}`, ''));
+    const results = branchesFound('abc', ...scattered, withComment(100, '/main/task', 'Rename abc'));
+
+    expect(results).toHaveLength(MAX_PER_SECTION);
+    expect(results[0]).toBe('/main/task');
+  });
+
+  it('reads only the rows it shows of 20,000 branches all holding the word typed, on each keystroke', () => {
+    const { items, reads } = countedReads(Array.from({ length: 20_000 }, (_, id) => withComment(id, `/main/task${id}`, 'Fix the build')));
+    const list = branches(...items);
+    const readsToIndex = reads();
+    for (const term of ['b', 'bu', 'bui', 'build']) groupsFor({ term, lists: { branches: list } });
+
+    // Each of the at most MAX_PER_SECTION rows a keystroke shows is read for its result (name, owner, date...).
+    expect((reads() - readsToIndex) / 4).toBeLessThan(MAX_PER_SECTION * 20);
   });
 
   it('finds a label by its description too', () => {
