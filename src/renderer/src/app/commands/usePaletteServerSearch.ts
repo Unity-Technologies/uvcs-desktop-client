@@ -14,7 +14,8 @@ import { NOWHERE } from './usePaletteLists';
 
 /** Room for the loose matches of a case-tolerant server search, which are filtered precisely here. */
 const SERVER_SEARCH_LIMIT = 50;
-const SERVER_SEARCH_DELAY_MS = 300;
+/** How long typing pauses before the server is asked: the palette's search, a comment's changeset lookup. */
+export const SERVER_SEARCH_DELAY_MS = 300;
 const SERVER_SEARCH_STALE_TIME = 60_000;
 
 /**

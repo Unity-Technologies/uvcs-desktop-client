@@ -2,13 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { placeId } from '@shared/domain/place';
 import { everyBranchQuery, everyLabelQuery, recentShelvesQuery } from '../../app/commands/paletteQueryKeys';
-import { useChangesetSearch } from '../../app/commands/usePaletteServerSearch';
+import { SERVER_SEARCH_DELAY_MS, useChangesetSearch } from '../../app/commands/usePaletteServerSearch';
+import { useDebouncedValue } from '../../lib/useDebouncedValue';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { recentChangesetsQuery } from '../../features/changesets/recentChangesets';
 import { useChangeset } from '../../features/changesets/useChangeset';
 import { reviewSummariesQuery } from '../../features/codeReviews/useCodeReviews';
 import { peopleSeenIn } from '../people/usePeopleSeen';
-import { changesetToLookUp, useSettledLookup } from './changesetLookup';
+import { changesetToLookUp } from './changesetLookup';
 import {
   branchIndex,
   branchSuggestions,
@@ -104,12 +105,12 @@ export function useSuggestionRows(query: SuggestionQuery | null): { rows: Sugges
 }
 
 /**
- * A changeset's number the newest ones don't hold, looked up once typing stops on it (`useSettledLookup`): one read for
+ * A changeset's number the newest ones don't hold, looked up once typing stops on it (`useDebouncedValue`, as the palette's search waits): one read for
  * the number stopped at, cached as the changeset is (`useChangeset`), never one per digit typed.
  */
 function useChangesetLookup(typed: string | null, listed: readonly { label: string }[]): ChangesetLookup {
   const number = typed === null ? null : changesetToLookUp(typed, listed);
-  const settled = useSettledLookup(number);
+  const settled = useDebouncedValue(number, SERVER_SEARCH_DELAY_MS);
   const found = useChangeset(settled !== null && settled === number ? settled : null);
   if (number === null) return { state: 'none' };
   if (found.data && found.data.id === number) return { state: 'found', suggestion: changesetSuggestion(found.data) };
