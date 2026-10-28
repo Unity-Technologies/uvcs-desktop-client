@@ -13,4 +13,10 @@ describe('copiedText', () => {
   it('gives a part of it as it reads, its references as written (a chip its spec)', () => {
     expect(copiedText({ selected: 'Bring 12 Switching keeps changes back', shown: SHOWN, source: SOURCE, withSources: 'Bring cs:12 back' })).toBe('Bring cs:12 back');
   });
+
+  it('leaves a part to what was copied inside it: a comment’s description selected whole, in the box holding its title too', () => {
+    const description = 'Shelve pending\nBring 12 Switching keeps changes back';
+    expect(copiedText({ selected: description, shown: SHOWN, source: SOURCE, withSources: 'Shelve pending\nBring cs:12 back', copiedInside: true })).toBeNull();
+    expect(copiedText({ selected: SHOWN, shown: SHOWN, source: SOURCE, withSources: 'unused', copiedInside: true })).toBe(SOURCE);
+  });
 });
