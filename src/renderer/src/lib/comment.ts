@@ -59,3 +59,12 @@ export interface SavedComment {
 export function shownComment(comment: string, lastSaved: SavedComment | null): string {
   return lastSaved && comment === lastSaved.replaced ? lastSaved.saved : comment;
 }
+
+/**
+ * A comment written whole (a dialog's) as it is stored: without the blank lines at its ends or the space a picked
+ * suggestion leaves after it. Its first line's indent stays (`trimEnd`, not `trim`): a comment opening with an indented
+ * code block would otherwise lose it.
+ */
+export function storedComment(text: string): string {
+  return text.replace(/^(?:[^\S\n]*\n)+/, '').trimEnd();
+}

@@ -4,6 +4,7 @@ import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { CommentArea } from '../../components/commentEditor/CommentArea';
 import { commentPlaceholder } from '../../components/commentEditor/commentPlaceholders';
+import { storedComment } from '../../lib/comment';
 
 /** Asks for a new (possibly multi-line) changeset comment. Resolves to `undefined` if cancelled. */
 export function askForChangesetComment(changesetId: number, currentComment: string): Promise<string | undefined> {
@@ -18,14 +19,14 @@ interface EditCommentDialogProps {
 
 function EditCommentDialog({ changesetId, currentComment, finish }: EditCommentDialogProps) {
   const [comment, setComment] = useState(currentComment);
-  const unchanged = comment.trim() === currentComment.trim();
+  const unchanged = storedComment(comment) === storedComment(currentComment);
 
   return (
     <Dialog
       title={`Edit comment of changeset ${changesetId}`}
       width={560}
       onClose={() => finish(undefined)}
-      onSubmit={() => !unchanged && finish(comment.trim())}
+      onSubmit={() => !unchanged && finish(storedComment(comment))}
       footer={
         <>
           <Button onClick={() => finish(undefined)}>Cancel</Button>

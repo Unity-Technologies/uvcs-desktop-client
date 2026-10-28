@@ -18,6 +18,7 @@ import { chosenStartingPoint, startingPointCards, type NewBranchOrigin } from '.
 import { StartingPointPicker } from './StartingPointPicker';
 import { newBranchSwitch, planSwitch, switchNotes, type SwitchPlan } from './switchOptions';
 import styles from './CreateBranchDialog.module.css';
+import { storedComment } from '../../lib/comment';
 
 /**
  * `origins` holds one starting point, or several to choose from (the first is the default). Resolves with the new
@@ -67,7 +68,7 @@ function CreateBranchDialog({ place, origins, onFinish }: CreateBranchDialogProp
     setCreating(true);
     const created = await createBranchAndSwitch(
       place,
-      { name: fullName, startingPoint: origin.startingPoint, comment: comment.trim() },
+      { name: fullName, startingPoint: origin.startingPoint, comment: storedComment(comment) },
       { requested: switchAfter, blockedByMerge, pendingChanges: action ?? undefined, workspaceOn: pending?.preflight.sourceName },
       () => onFinish(fullName),
     );

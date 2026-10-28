@@ -10,6 +10,7 @@ import { CommentArea } from '../../components/commentEditor/CommentArea';
 import { commentPlaceholder } from '../../components/commentEditor/commentPlaceholders';
 import { TextField } from '../../ui/TextField';
 import { validateAttributeName } from './attributeNames';
+import { storedComment } from '../../lib/comment';
 
 export function openCreateAttributeDialog(place: Place): void {
   openDialog((close) => <CreateAttributeDialog place={place} onClose={close} />);
@@ -25,7 +26,7 @@ function CreateAttributeDialog({ place, onClose }: { place: Place; onClose: () =
   const create = async (): Promise<void> => {
     if (!trimmed || error) return;
     setCreating(true);
-    const created = await runVoidAction(place, "Couldn't create the attribute", () => api.attributes.createType(place, trimmed, comment.trim()), isAffectedByAttributes);
+    const created = await runVoidAction(place, "Couldn't create the attribute", () => api.attributes.createType(place, trimmed, storedComment(comment)), isAffectedByAttributes);
     setCreating(false);
     if (created) onClose();
   };

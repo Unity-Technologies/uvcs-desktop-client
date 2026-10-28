@@ -9,6 +9,7 @@ import { commentPlaceholder } from '../../components/commentEditor/commentPlaceh
 import { TextField } from '../../ui/TextField';
 import { validateLabelName } from './labelNames';
 import { createLabel, offersSwitchToNewLabel } from './createLabel';
+import { storedComment } from '../../lib/comment';
 
 /**
  * Opens the "new label" dialog. Pass `changesetId` to label a specific changeset (e.g. from the changesets view);
@@ -30,7 +31,7 @@ function CreateLabelDialog({ place, changesetId, onClose }: { place: Place; chan
   const create = async (): Promise<void> => {
     if (!trimmed || error) return;
     setCreating(true);
-    await createLabel(place, { name: trimmed, changesetId, comment: comment.trim() }, { switchAfter, onCreated: onClose });
+    await createLabel(place, { name: trimmed, changesetId, comment: storedComment(comment) }, { switchAfter, onCreated: onClose });
     setCreating(false);
   };
 

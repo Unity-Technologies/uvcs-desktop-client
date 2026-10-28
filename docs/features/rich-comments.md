@@ -158,6 +158,8 @@ htmlFor>` can't focus, and the label names it, `fieldLabelAttributes`), the comm
   only to what a comment opens (`http(s):`, `uvcs:`), any other keeping its text; code from an editor (monospace, preformatted) becomes a code block in the
   language VS Code names, on a line of its own (`pasteMarkdown`). A copy with nothing its plain text doesn't hold
   pastes as it is; in code nothing converts; an address pasted on selected text links it (`linkFromPaste`).
+- **Stored as written**: a dialog's comment goes in without the blank lines at its ends or the space a picked
+  suggestion leaves (`storedComment`), its first line's indent kept, as an indented code block needs it.
 - **Placeholders** say what a field of many lines takes (`commentPlaceholder`): "Description (optional) · Markdown,
   cs:, br:, @ to link".
 - **Loading**: CodeMirror is a heavy library (`HEAVY_SCOPES` in `startupBundle.test.ts`), loaded behind
