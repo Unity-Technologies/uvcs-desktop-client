@@ -106,7 +106,8 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
   // also when the owner kept its value (a summary given a line end keeps the line, `withSummaryText`).
   useEffect(() => {
     if (!view) return;
-    const sync = ownerSync(view.state, value, sentSinceSync.current);
+    // `state` is what this render showed; the view may hold keys typed since, before React ran this effect.
+    const sync = ownerSync(view.state, value, { sent: sentSinceSync.current, rendered: (state ?? view.state).doc.toString() });
     if (sync) view.dispatch(sync);
     if (view.state.doc.toString() === value) sentSinceSync.current = [];
   }, [view, value, state]);
