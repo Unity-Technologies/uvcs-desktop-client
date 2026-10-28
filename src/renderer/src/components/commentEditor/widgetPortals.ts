@@ -10,6 +10,7 @@ export class WidgetPortals {
   private readonly listeners = new Set<() => void>();
   private snapshot: readonly WidgetPortal[] = [];
   private nextKey = 0;
+  private telling = false;
 
   show(host: HTMLElement, node: ReactNode): void {
     this.shown.set(host, { key: this.shown.get(host)?.key ?? this.nextKey++, node });
@@ -27,9 +28,19 @@ export class WidgetPortals {
 
   readonly portals = (): readonly WidgetPortal[] => this.snapshot;
 
+  /**
+   * Tells React once the work that drew the widgets is done (a microtask): CodeMirror draws them inside whatever asks it
+   * to measure, a component's render among them (`coordsAtPos`), and telling React then updated an editor while
+   * another one rendered. The snapshot changes with the telling, so React reads one consistent list.
+   */
   private changed(): void {
-    this.snapshot = [...this.shown].map(([host, { key, node }]) => ({ host, key, node }));
-    for (const listener of this.listeners) listener();
+    if (this.telling) return;
+    this.telling = true;
+    queueMicrotask(() => {
+      this.telling = false;
+      this.snapshot = [...this.shown].map(([host, { key, node }]) => ({ host, key, node }));
+      for (const listener of this.listeners) listener();
+    });
   }
 }
 
