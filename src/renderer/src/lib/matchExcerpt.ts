@@ -21,8 +21,7 @@ export function excerptAroundMatch(text: string, query: string): Excerpt {
   return { text: shown, matches: wordMatchPositions(shown, query) };
 }
 
-/** Where the word holding `position` starts; `position` itself in a text without a space before it. */
+/** Where the word holding `position` starts; the text's start when that is its first word (never cut inside it). */
 function wordStartBefore(line: string, position: number): number {
-  const space = line.lastIndexOf(' ', position);
-  return space === -1 ? position : space + 1;
+  return line.lastIndexOf(' ', position) + 1;
 }

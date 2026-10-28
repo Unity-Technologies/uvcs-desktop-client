@@ -23,9 +23,8 @@ describe('excerptAroundMatch', () => {
     expect(excerptAroundMatch('Nothing here', 'missing')).toEqual({ text: 'Nothing here', matches: [] });
   });
 
-  it('cuts a single long word where the context starts', () => {
-    const text = `${'x'.repeat(60)}match`;
-
-    expect(excerptAroundMatch(text, 'match').text).toBe(`…${'x'.repeat(24)}match`);
+  it('never cuts inside its first word: a text without a space before the context shows from its start', () => {
+    expect(excerptAroundMatch('Resolve owner names in one batch', 'batch').text).toBe('Resolve owner names in one batch');
+    expect(excerptAroundMatch(`${'x'.repeat(60)}match`, 'match').text).toBe(`${'x'.repeat(60)}match`);
   });
 });
