@@ -16,6 +16,8 @@
  */
 .card {
   position: absolute;
+  display: flex;
+  flex-direction: column;
   width: max-content;
   padding: 6px 9px;
   border: 1px solid var(--border-strong);
@@ -42,15 +44,15 @@
   display: inline-block;
 }
 
+/* A long comment scrolls in the card, which stops at the window's bottom (`captionCardMaxHeight`): the pointer can
+   reach it, and a line clamp can't cut Markdown's blocks (a table, code). */
 .cardBody {
+  min-height: 0;
   margin-top: 5px;
   color: var(--text-secondary);
   font-size: var(--text-sm);
   line-height: 1.5;
   white-space: normal;
   overflow-wrap: break-word;
-  display: -webkit-box;
-  -webkit-line-clamp: 14;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  overflow-y: auto;
 }

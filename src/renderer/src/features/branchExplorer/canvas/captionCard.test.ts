@@ -1,5 +1,5 @@
-import { captionCardMaxHeight, describe, expect, it } from 'vitest';
-import { captionCardCorner, captionCardMaxWidth, captionOnScreen, cardMaxWidth, keepInside } from './captionCard';
+import { describe, expect, it } from 'vitest';
+import { captionCardCorner, captionCardMaxHeight, captionCardMaxWidth, captionOnScreen, cardMaxWidth, keepInside } from './captionCard';
 
 describe('captionCardCorner', () => {
   it('puts the text of the card on the caption: same first glyph, same baseline', () => {

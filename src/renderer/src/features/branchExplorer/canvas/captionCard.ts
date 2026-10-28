@@ -72,3 +72,14 @@ export function captionMetrics(font: string, fontSize: number): CaptionMetrics {
   metricsByFont.set(font, metrics);
   return metrics;
 }
+
+/** Never shorter than this: the summary, its meta line and a few lines of its comment. */
+const CARD_MIN_HEIGHT = 160;
+
+/**
+ * How tall the card over a caption may grow, from its top in the window: to the window's bottom edge, its body
+ * scrolling past that (the pointer can reach the card), so a long comment never runs off the window.
+ */
+export function captionCardMaxHeight(cardTop: number, windowHeight: number): number {
+  return Math.max(CARD_MIN_HEIGHT, Math.round(windowHeight - cardTop - EDGE_MARGIN));
+}

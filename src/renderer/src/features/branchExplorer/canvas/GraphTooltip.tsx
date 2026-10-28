@@ -1,5 +1,6 @@
 import type { PendingMergeLink } from '@shared/domain/pendingChanges';
 import { Markdown } from '../../../components/Markdown';
+import { CommentLine } from '../../../components/comments/CommentLine';
 import { HoverCard, HoverCardMeta } from '../../../ui/HoverCard';
 import { splitComment } from '../../../lib/comment';
 import { commentLineText, commentText } from '../../../lib/comments/commentText';
@@ -9,8 +10,7 @@ import { pluralize } from '../../../lib/text';
 import type { GraphLayout } from '../model/layoutGraph';
 import { MERGE_LINK_NAMES } from '../model/mergeLinkNames';
 import { useLayoutEffect, useRef } from 'react';
-import { captionCardCorner, captionCardMaxWidth, keepInside } from './captionCard';
-import { summaryOf } from './fitText';
+import { captionCardCorner, captionCardMaxHeight, captionCardMaxWidth, keepInside } from './captionCard';
 import type { GraphPalette } from './graphPalette';
 import type { PointerCardTarget } from './graphTargets';
 import styles from './GraphTooltip.module.css';
@@ -60,13 +60,13 @@ export function GraphTooltip({ target, layout, palette, pendingChangeCount, x, y
       card.style.top = `${corner.top}px`;
     }
     card.style.left = `${keepInside(card.offsetLeft, card.offsetWidth, containerWidth)}px`;
+    card.style.maxHeight = `${captionCardMaxHeight(card.getBoundingClientRect().top, window.innerHeight)}px`;
   });
 
   if (anchor?.kind === 'caption' && target.kind === 'changeset') {
     const changeset = layout.nodes.get(target.id)?.changeset;
     if (!changeset) return null;
     const maxWidth = captionCardMaxWidth(anchor.x, containerWidth, window.innerWidth);
-    const summary = summaryOf(changeset.comment);
     const body = splitComment(changeset.comment).description;
     return (
       <div ref={cardRef} className={styles.card} style={{ left: anchor.x, top: anchor.baseline, maxWidth }} {...{ [CAPTION_CARD_ATTRIBUTE]: true }}>
@@ -74,7 +74,8 @@ export function GraphTooltip({ target, layout, palette, pendingChangeCount, x, y
         <div className={styles.subject} style={{ font: palette.fonts.caption, lineHeight: SUBJECT_LINE_HEIGHT, color: anchor.color }}>
           {/* An empty inline block sits on the baseline, where the caption's first glyph starts. */}
           <span ref={textOriginRef} className={styles.textOrigin} />
-          {summary}
+          {/* Its references as chips, as the body draws them and a row's first line does. */}
+          <CommentLine comment={changeset.comment} interactive={false} />
         </div>
         {/* Wrapped in a card narrowed by the edge, the line breaks between its parts, never inside one. */}
         <HoverCardMeta>
