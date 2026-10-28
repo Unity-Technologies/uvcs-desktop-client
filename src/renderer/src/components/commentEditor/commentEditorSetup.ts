@@ -12,6 +12,7 @@ import { formatForKey, pastesPlain } from './formattingKeys';
 import { liveDrawing } from './liveDecorations';
 import { widgetPortals } from './liveWidgets';
 import { markdownFromClipboard, pasteMarkdown } from './richPaste';
+import { oneLine } from './oneLine';
 import { ownStep } from './ownStep';
 import { formatsOf } from './selectionBarState';
 import { typingAt } from './typingAt';
@@ -69,6 +70,7 @@ export function commentEditorExtensions(options: CommentEditorOptions, enabled: 
     commentMarkdown(),
     syntaxHighlighting(markdownStyle),
     typingAt,
+    options.singleLine ? oneLine : [],
     liveDrawing(),
     codeColors,
     widgetPortals.of(options.portals),

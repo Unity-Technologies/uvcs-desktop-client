@@ -142,8 +142,10 @@ New label (`CommentArea`), the comment of a merge into a server branch (`MergeHe
   continues a list, and Enter after an opening fence adds the closing one (`closeCodeFence`). ⌘↵ saves the field's
   form (a dialog, the details editor) or is the window's (check in, merge); Esc closes the suggestions first.
 - **One-line fields** (a summary, a title, the merge comment) take the inline formats only and wrap a long line;
-  Enter goes on to the description (a summary) or submits (a dialog's title). Lines pasted in a summary go on in its
-  description (`withSummaryText`); in a title or the merge comment they join (`oneLineText`).
+  Enter goes on to the description (a summary) or submits (a dialog's title). A line end typed (Shift+Enter) or
+  dropped becomes a space (`oneLine`). Lines pasted in a summary go on in its description (`withSummaryText`); in a
+  title or the merge comment they join (`oneLineText`). The field's text follows its owner's value after every change
+  that differs from it, also when the owner kept its value.
 - **The selection bar** (`SelectionBar`, `selectionBarShows`): over text selected, once the pointer lets go, never in
   a code block; B, I, S, code and link, then list, task, quote and code block in a field of many lines, each on while
   the selection is in it. No toolbar shows otherwise: the fields stay small.

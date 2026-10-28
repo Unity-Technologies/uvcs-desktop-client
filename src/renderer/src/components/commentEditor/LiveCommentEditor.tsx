@@ -1,4 +1,4 @@
-import { Annotation, EditorState, Transaction } from '@codemirror/state';
+import { EditorState, Transaction } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { useEffect, useId, useImperativeHandle, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
@@ -7,6 +7,7 @@ import { pierreThemeName } from '../../lib/codeTheme';
 import { classNames } from '../../lib/classNames';
 import { commentEditorExtensions, editable, editableWhen, theme, themed, type CommentEditorKeys } from './commentEditorSetup';
 import { changeToMatch } from './commentFieldText';
+import { ownerChange } from './oneLine';
 import type { CommentFieldProps } from './commentFieldProps';
 import { activeFormats, FORMAT_COMMANDS, type FormatCommandId } from './formatCommands';
 import { hasFocus, noteFocus } from './liveDecorations';
@@ -20,9 +21,6 @@ import { useSuggestionRows } from './useSuggestionRows';
 import { WidgetPortals } from './widgetPortals';
 import fieldStyles from './CommentField.module.css';
 import styles from './LiveCommentEditor.module.css';
-
-/** A change the field's owner made (`value`), which isn't the user's typing to hand back, nor a step to undo. */
-const fromOwner = Annotation.define<boolean>();
 
 interface LiveCommentEditorProps extends CommentFieldProps {
   /** The caret in the plain field it replaces, which it takes over (`CommentField`). */
@@ -53,7 +51,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
         extensions: [
           commentEditorExtensions({ singleLine, label, placeholder, portals, keys }, !disabled, codeTheme),
           EditorView.updateListener.of((update) => {
-            if (update.docChanged && !update.transactions.some((transaction) => transaction.annotation(fromOwner))) changed.current(update.state.doc.toString());
+            if (update.docChanged && !update.transactions.some((transaction) => transaction.annotation(ownerChange))) changed.current(update.state.doc.toString());
             if (update.docChanged || update.selectionSet || update.focusChanged || update.transactions.some((transaction) => transaction.effects.length > 0)) setState(update.state);
           }),
         ],
@@ -81,11 +79,13 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
     // One editor per mount: what changes while it shows reaches it through the effects below.
   }, []);
 
+  // After each render, its change and its owner's answer both in: the text follows the owner's whenever they differ,
+  // also when the owner kept its value (a summary given a line end keeps the line, `withSummaryText`).
   useEffect(() => {
     if (!view) return;
     const change = changeToMatch(view.state.doc.toString(), value);
-    if (change) view.dispatch({ changes: change, annotations: [fromOwner.of(true), Transaction.addToHistory.of(false)] });
-  }, [view, value]);
+    if (change) view.dispatch({ changes: change, annotations: [ownerChange.of(true), Transaction.addToHistory.of(false)] });
+  }, [view, value, state]);
 
   useEffect(() => view?.dispatch({ effects: editable.reconfigure(editableWhen(!disabled)) }), [view, disabled]);
   useEffect(() => view?.dispatch({ effects: theme.reconfigure(themed(codeTheme)) }), [view, codeTheme]);
