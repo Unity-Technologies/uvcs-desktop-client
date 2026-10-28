@@ -113,6 +113,10 @@ describe('chipCard', () => {
     expect(chipCard({ title: 'Changeset 4', repository: 'art' }, undefined, ago, { kind: 'unreadable' })).toEqual({ title: 'Changeset 4', meta: ["Couldn't read it from art"] });
   });
 
+  it('names a cloud organization by its name in a link’s form, not cm’s spec', () => {
+    expect(chipCard({ title: 'Changeset 4', repository: 'art' }, undefined, ago, { kind: 'unknownServer', server: 'other@cloud' }).meta).toEqual(['In art on other.cloud, not a server you use']);
+  });
+
   it('names the server of a repository on one the user doesn’t work with, which is never read', () => {
     expect(chipCard({ title: 'Changeset 4', repository: 'art' }, undefined, ago, { kind: 'unknownServer', server: 'attacker.example.com:8087' })).toEqual({
       title: 'Changeset 4',

@@ -7,6 +7,8 @@ import {
   MAX_RESOLVED_PER_COMMENT,
   referencesOfBlocks,
   referencesToResolve,
+  chipRead,
+  knownServersFrom,
   knownServersQuery,
   remoteObjectOf,
   remoteObjectQuery,
@@ -141,9 +143,17 @@ describe('serverReads', () => {
     expect(serverReads(object('ACME@cloud'), ['acme@cloud'])).toBe('onCard');
   });
 
-  it('takes every organization of Unity Cloud for known once the user signs in to it for all of them', () => {
-    expect(serverReads(object('other@cloud'), ['*@cloud'])).toBe('onCard');
-    expect(serverReads(object('other@cloud'), ['acme@cloud'])).toBe('never');
+  it('takes every cloud organization for known once the user signs in to them all (`*@cloud`), and nothing else for it', () => {
+    // The user's servers as `accounts.list` gives them, a wildcard profile among them (accountsService.test.ts).
+    const accounts = [{ name: '*@cloud', server: '*@cloud', user: 'ana', workingMode: 'SSOWorkingMode' }];
+    expect(serverReads(object('other@cloud'), knownServersFrom(accounts))).toBe('onCard');
+    expect(serverReads(object('other@unity'), knownServersFrom(accounts))).toBe('never');
+    expect(serverReads(object('123@cloud.cn'), knownServersFrom(accounts))).toBe('never');
+    expect(serverReads(object('other@cloud'), knownServersFrom([{ name: 'acme@cloud_ana', server: 'acme@cloud', user: 'ana', workingMode: 'SSOWorkingMode' }]))).toBe('never');
+  });
+
+  it('takes this computer’s server for known: it needs no profile', () => {
+    expect(serverReads(object('local'), knownServersFrom([]))).toBe('onCard');
   });
 
   it('never reads a server the user doesn’t work with: cm would sign in there with the user’s own credentials', () => {
@@ -166,7 +176,8 @@ describe('remoteObjectQuery, as the window comes back', () => {
     const observer = new QueryObserver(client, remoteObjectQuery(object, failing));
     const unsubscribe = observer.subscribe(() => {});
     try {
-      await vi.waitFor(() => expect(failing).toHaveBeenCalledTimes(1));
+      await client.getQueryCache().find({ queryKey: remoteObjectQuery(object).queryKey })?.promise;
+      expect(failing).toHaveBeenCalledTimes(1);
       vi.advanceTimersByTime(UNREADABLE_RETRY_MS + 1);
       focusManager.setFocused(false);
       focusManager.setFocused(true);
@@ -183,5 +194,28 @@ describe('remoteObjectQuery, as the window comes back', () => {
 describe('knownServersQuery', () => {
   it('reads the user’s servers under the key Settings and the links read them by: one cache entry for all', () => {
     expect(knownServersQuery.queryKey).toEqual(serversQuery.queryKey);
+  });
+});
+
+describe('chipRead', () => {
+  const placeServer: RemoteObject = { repository: 'lib@acme@unity', server: 'acme@unity', onPlaceServer: true, kind: 'changeset', id: 4 };
+  const otherServer: RemoteObject = { repository: 'art@build.example.com:8087', server: 'build.example.com:8087', onPlaceServer: false, kind: 'changeset', id: 4 };
+
+  it('reads nothing as a chip draws, in a row or anywhere, even on the place’s server: only its card open reads', () => {
+    expect(chipRead(placeServer, undefined, false, undefined)).toEqual({ enabled: false });
+    expect(chipRead(placeServer, undefined, true, undefined)).toEqual({ enabled: true });
+  });
+
+  it('reads another server you use only with the card open, and one you don’t never, its card saying where it is', () => {
+    expect(chipRead(otherServer, ['build.example.com:8087'], true, undefined)).toEqual({ enabled: true });
+    expect(chipRead(otherServer, ['build.example.com:8087'], false, undefined)).toEqual({ enabled: false });
+    expect(chipRead(otherServer, ['acme@cloud'], true, undefined)).toEqual({ enabled: false, unread: { kind: 'unknownServer', server: 'build.example.com:8087' } });
+    expect(chipRead(otherServer, undefined, true, undefined)).toEqual({ enabled: false });
+  });
+
+  it('says what a read found, or why there is nothing', () => {
+    expect(chipRead(placeServer, undefined, true, { missing: true })).toEqual({ enabled: true, unread: { kind: 'missing' } });
+    expect(chipRead(placeServer, undefined, false, { unreadable: true })).toEqual({ enabled: false, unread: { kind: 'unreadable' } });
+    expect(chipRead(null, undefined, true, undefined)).toEqual({ enabled: false });
   });
 });
