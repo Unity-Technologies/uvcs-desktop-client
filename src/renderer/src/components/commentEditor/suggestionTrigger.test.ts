@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { history, undo } from '@codemirror/commands';
 import { editorState, run, written } from './commentEditorTesting';
-import { pickSuggestion, suggestionQueryAt } from './suggestionTrigger';
+import { typingAt } from './typingAt';
+import { pickSuggestion, suggestionQueryAt, suggestionsShownAt } from './suggestionTrigger';
 
 const queryAt = (written: string) => suggestionQueryAt(editorState(written));
 
@@ -69,5 +70,14 @@ describe('pickSuggestion', () => {
 
   it('steps over a space already there', () => {
     expect(pick('On br:ta‸ today', 'br:/main/task')).toBe('On br:/main/task ‸today');
+  });
+});
+
+describe('suggestionsShownAt', () => {
+  it('opens the list only as the word is typed, never for a reference the field opened with the caret after', () => {
+    const opened = editorState('Tested on lb:v1.4.0', typingAt);
+    expect(suggestionsShownAt(opened)).toBeNull();
+    const typed = opened.update({ changes: { from: opened.doc.length, insert: '1' }, selection: { anchor: opened.doc.length + 1 }, userEvent: 'input.type' }).state;
+    expect(suggestionsShownAt(typed)).toMatchObject({ kind: 'label', text: 'v1.4.01' });
   });
 });
