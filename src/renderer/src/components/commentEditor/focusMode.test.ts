@@ -2,7 +2,15 @@ import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { PressedKey } from '../../lib/shortcuts';
 import { caretOpeningFocusMode, focusModeButton, focusModeKey, focusModeLayout, focusModeParts, layoutAfterFocus, offersFocusMode } from './focusMode';
-import { editorState } from './commentEditorTesting';
+import { EditorState } from '@codemirror/state';
+
+/**
+ * A field's state, `‸` where its caret is. Not `commentEditorTesting`'s: its Markdown loads `@codemirror/view`,
+ * which reads the page's styles as it loads, and `fakeWindow` makes it believe there is a page.
+ */
+function editorState(text: string): EditorState {
+  return EditorState.create({ doc: text.replace('‸', ''), selection: { anchor: text.indexOf('‸') } });
+}
 
 function press(key: string, code: string, modifiers: Partial<PressedKey> = {}): PressedKey {
   return { key, code, metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, ...modifiers };
