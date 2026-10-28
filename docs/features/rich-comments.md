@@ -169,18 +169,22 @@ htmlFor>` can't focus, and the label names it, `fieldLabelAttributes`), the comm
 ### Suggestions
 
 Typing `cs:`, `br:`, `lb:`, `sh:`, `cr:` or `@`, or `:` and two letters of an emoji's name, after a space, a line's
-start, a bracket or an emphasis mark (`suggestionQueryAt`), opens a list under the word while it's typed (`suggestionsShownAt`: a field opened with its caret after a reference opens none) (a listbox the field's
-`aria-activedescendant` walks): ↑↓ move, Enter or Tab picks, Esc closes it until another word is typed. A colon in a
-sentence (`10:30`, `Note:`) opens nothing. A pick writes the reference as `cm` takes it and a space
-(`pickSuggestion`); a branch or label whose name a spec can't hold (a space, a sentence's punctuation or an emphasis
-mark at its end) is written as its `uvcs://` link (`objectReferenceText`), which shows as the same chip; a person as
-`cm` names them (`@ana@acme.com` on Unity Cloud).
+start, a bracket or an emphasis mark (`suggestionQueryAt`), opens a list under the word while it's typed
+(`suggestionsShownAt`), so a field opened with its caret after a reference opens none. The list is a listbox the
+field's `aria-activedescendant` walks: ↑↓ move, Enter or Tab picks, Esc closes it until another word is typed
+(`suggestionKeyAction`); with nothing to pick, the arrows move the caret. A colon in a sentence (`10:30`, `Note:`)
+opens nothing. A pick writes the reference as `cm` takes it and a space (`pickSuggestion`); a branch or label whose
+name a spec can't hold (a space, a sentence's punctuation or an emphasis mark at its end) is written as its
+`uvcs://` link (`objectReferenceText`), which shows as the same chip; a person as `cm` names them (`@ana@acme.com` on
+Unity Cloud).
 
 The data costs the server nothing new (`useSuggestionRows`): each kind reads the list the palette and the views
-already share, under the same query key, only once its trigger is typed: every branch (`branchesKey(place, {})`),
-every label, the last three months' shelves, the newest reviews (`reviewSummariesQuery`), the newest 2,000
-changesets (`recentChangesetsQuery`). A changeset's number they don't hold is looked up once typing stops on it (`useDebouncedValue`, 300 ms after the last key as the palette's search waits: `cs:4207` reads 4207 alone, never 4 on the way)
-(`useChangeset`); words they don't match offer "Search all changesets for …", the palette's on-demand search
+already share, through the same query (`paletteQueries`), only once its trigger is typed (`suggestionListsRead`):
+every branch (`everyBranchQuery`), every label (`everyLabelQuery`), the last three months' shelves
+(`recentShelvesQuery`), the newest reviews (`reviewSummariesQuery`), the newest 2,000 changesets
+(`recentChangesetsQuery`). A changeset's number they don't hold is looked up (`useChangeset`) once typing stops on it
+for as long as the palette's search waits (`useDebouncedValue`, `SERVER_SEARCH_DELAY_MS`): `cs:4207` reads 4207
+alone, never 4 on the way. Words they don't match offer "Search all changesets for …", the palette's on-demand search
 (`useChangesetSearch`), run only when picked. People are the owners those lists hold and everyone the place's lists
 showed (`peopleSeenIn`): no query lists people. Each list is read into an index once per read and ranked at each key
 (`rankCandidates`: the name typed, then names starting with it, then names holding it, then comments), the best
