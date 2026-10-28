@@ -137,8 +137,9 @@ Markdown's blocks.
 
 Copying from a shown comment (`copyAsSource`, `copiedText`) has one rule for the whole and one for a part:
 
-- **The whole comment** selected (⌘A in a details panel, or a drag over all of it; spaces and line breaks aside) gives
-  it back exactly as written, its marks, list markers and code fences included, as "Copy comment" does.
+- **The whole comment** selected (a drag over its title and description in a details panel or over a diff,
+  `FoldedComment`'s `comment`; spaces and line breaks aside) gives it back exactly as written, its marks, list markers
+  and code fences included, as "Copy comment" does. Its description selected whole gives the description as written.
 - **A part** gives what it reads, its lines kept, with what was written wherever it shows something else: a chip its
   spec, a person their `@name`, an emoji its `:name:`, an image its Markdown. Its marks (`**`, `-`, fences) aren't
   rebuilt: the page can't say where a part starts in the source. A comment's line in a row or a title shows its title

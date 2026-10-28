@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { copyAsSource } from './comments/copyAsSource';
 import { foldedCut, isCut } from './foldedCut';
 import { Markdown } from './Markdown';
 import styles from './FoldedComment.module.css';
@@ -17,6 +18,8 @@ interface FoldedCommentProps {
   expandedMaxHeight?: string;
   /** Shown under the description (a details panel's "Add a description…"). */
   children?: ReactNode;
+  /** The comment as written, when the title and the description are its parts: copying both gives it back. */
+  comment?: string;
 }
 
 /**
@@ -25,8 +28,9 @@ interface FoldedCommentProps {
  * (`ChangesetSummary`, `ShelveSummary`). What is cut is measured for the comment it first shows: a place that shows
  * another object's comment instead keys it by that object, as the details panels and `TargetDiff` do.
  */
-export function FoldedComment({ title, titleClassName, description, titleLines, descriptionLines, expandedMaxHeight, children }: FoldedCommentProps) {
+export function FoldedComment({ title, titleClassName, description, titleLines, descriptionLines, expandedMaxHeight, children, comment }: FoldedCommentProps) {
   const [expanded, setExpanded] = useState(false);
+  const copyWhole = useMemo(() => (comment === undefined ? undefined : copyAsSource(comment)), [comment]);
   const [cut, setCut] = useState({ title: false, description: false });
   const titleRef = useRef<HTMLHeadingElement>(null);
   const descriptionRef = useRef<HTMLDivElement>(null);
@@ -43,16 +47,19 @@ export function FoldedComment({ title, titleClassName, description, titleLines, 
 
   return (
     <div className={styles.folded} data-expanded={expanded} style={sizes}>
-      {title !== undefined && (
-        <h2 ref={titleRef} className={`${styles.title} ${titleClassName} selectable`} style={{ WebkitLineClamp: expanded ? 'none' : titleLines }}>
-          {title}
-        </h2>
-      )}
-      {description && (
-        <div ref={descriptionRef} className={`${styles.description} selectable`} data-cut={cut.description}>
-          <Markdown text={description} comment />
-        </div>
-      )}
+      {/* Its own box, so a copy of the whole comment reads only the comment (`copyAsSource`), not the buttons below. */}
+      <div className={styles.comment} onCopy={copyWhole}>
+        {title !== undefined && (
+          <h2 ref={titleRef} className={`${styles.title} ${titleClassName} selectable`} style={{ WebkitLineClamp: expanded ? 'none' : titleLines }}>
+            {title}
+          </h2>
+        )}
+        {description && (
+          <div ref={descriptionRef} className={`${styles.description} selectable`} data-cut={cut.description}>
+            <Markdown text={description} comment />
+          </div>
+        )}
+      </div>
       {children}
       {(cut.title || cut.description) && (
         <button className={styles.toggle} aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>

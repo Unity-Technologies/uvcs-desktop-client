@@ -68,6 +68,8 @@ export function DetailsHeading({ name, comment: given = '', onSave }: DetailsHea
           ))
         }
         description={shown.kind === 'empty' ? '' : shown.description}
+        // A named object's title is its name, not part of its comment.
+        comment={name === undefined && shown.kind !== 'empty' ? comment : undefined}
       >
         {name !== undefined && !parts.description && edit && (
           <button className={styles.add} onClick={edit}>

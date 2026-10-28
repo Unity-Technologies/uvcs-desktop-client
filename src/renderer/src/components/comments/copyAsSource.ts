@@ -13,7 +13,9 @@ export function copyAsSource(source?: string): (event: ClipboardEvent<HTMLElemen
     if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
     const fragment = selection.getRangeAt(0).cloneContents();
     const withSources = fragment.querySelector('[data-source]') ? readWithSources(fragment) : null;
-    const text = copiedText({ selected: selection.toString(), shown: event.currentTarget.innerText, source, withSources });
+    // A copy bubbles from the innermost comment out: one that set it calls `preventDefault`.
+    const copiedInside = event.defaultPrevented;
+    const text = copiedText({ selected: selection.toString(), shown: event.currentTarget.innerText, source, withSources, copiedInside });
     if (text === null) return;
     event.clipboardData.setData('text/plain', text);
     event.preventDefault();

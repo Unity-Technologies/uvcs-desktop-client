@@ -22,6 +22,7 @@ export function SummaryComment({ comment }: { comment: string }) {
       titleLines={TITLE_LINES}
       descriptionLines={DESCRIPTION_LINES}
       expandedMaxHeight={EXPANDED_MAX_HEIGHT}
+      comment={heading.kind === 'empty' ? undefined : comment}
     />
   );
 }
