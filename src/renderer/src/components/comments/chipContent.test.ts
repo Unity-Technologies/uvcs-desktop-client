@@ -107,8 +107,10 @@ describe('chipCard', () => {
     expect(chipCard({ title: 'Changeset 12', repository: 'art' }, undefined, ago)).toEqual({ title: 'Changeset 12', meta: ['In art'] });
   });
 
-  it('says so when another repository’s object couldn’t be read', () => {
-    expect(chipCard({ title: 'Changeset 4', repository: 'codice' }, undefined, ago, true)).toEqual({ title: 'Changeset 4', meta: ['In codice', "Couldn't be read"] });
+  it('says another repository has no such object, or couldn’t be reached, in place of where it is', () => {
+    expect(chipCard({ title: 'Changeset 280528', repository: 'codice' }, undefined, ago, 'missing')).toEqual({ title: 'Changeset 280528', meta: ['No changeset 280528 in codice'] });
+    expect(chipCard({ title: 'Label v2', repository: 'codice' }, undefined, ago, 'missing')).toEqual({ title: 'Label v2', meta: ['No label v2 in codice'] });
+    expect(chipCard({ title: 'Changeset 4', repository: 'codice' }, undefined, ago, 'unreadable')).toEqual({ title: 'Changeset 4', meta: ["Couldn't reach codice"] });
   });
 
   it('leaves out what an object read has no word for', () => {

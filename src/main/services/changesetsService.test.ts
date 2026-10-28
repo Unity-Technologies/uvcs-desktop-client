@@ -117,12 +117,22 @@ describe('changesets of a repository explored without a workspace', () => {
   const ON_REPOSITORY = repositoryPlace('game@local');
   const OUTSIDE = { outsideWorkspaces: true };
 
-  it("reads another repository's changeset for a comment's chip with one quick find, the repository as the place", async () => {
+  it("finds another repository's changeset for a comment's chip with one find: quick on the place's server, in a process of its own on another", async () => {
     const { cm, commands } = fakeCmClient({ 'find changeset': recordsOutput(FOUND_CHANGESETS, changesetRecord(4)) });
+    const service = createChangesetsService(serviceContext(cm));
 
-    await createChangesetsService(serviceContext(cm)).get(repositoryPlace('codice@codice@cloud'), 4);
+    expect(await service.find(repositoryPlace('lib@acme@cloud'), 4)).toMatchObject({ id: 4 });
+    await service.find(repositoryPlace('game@far.example.com:8087'), 4, { ownProcess: true });
 
-    expect(commands.map(({ via, args }) => [via, args[2]])).toEqual([['query', "where changesetid = 4 on repository 'codice@codice@cloud'"]]);
+    expect(commands.map(({ via, args }) => [via, args[2]])).toEqual([
+      ['query', "where changesetid = 4 on repository 'lib@acme@cloud'"],
+      ['execute', "where changesetid = 4 on repository 'game@far.example.com:8087'"],
+    ]);
+  });
+
+  it('finds no changeset by a number the repository has none of, as an answer, not a failure', async () => {
+    const { cm } = fakeCmClient({ 'find changeset': recordsOutput(FOUND_CHANGESETS) });
+    expect(await createChangesetsService(serviceContext(cm)).find(repositoryPlace('codice@codice@cloud'), 280528)).toBeNull();
   });
 
   it('lists and reads them naming the repository, an xlinked one when asked, outside every workspace', async () => {
