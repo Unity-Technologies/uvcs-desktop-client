@@ -80,8 +80,8 @@ function unwrap(state: EditorState, construct: SyntaxNode): { changes: ChangeSpe
 }
 
 /**
- * The marks around a range's text, line by line (`**` can't span a paragraph), leaving the spaces at its edges out:
- * `** bold**` isn't bold. A caret gets both marks, itself between them, to type the text in.
+ * The marks around a range's text, line by line (`**` can't span a paragraph), leaving the spaces at its edges out
+ * (`** bold**` isn't bold) and a code block's and a table's lines alone (`isBlockLine`). A caret gets both marks, itself between them, to type the text in.
  */
 function wrap(state: EditorState, range: SelectionRange, mark: string): { changes: ChangeSpec[]; range: SelectionRange } {
   if (range.empty) return { changes: [{ from: range.from, insert: mark + mark }], range: EditorSelection.cursor(range.from + mark.length) };
@@ -92,12 +92,20 @@ function wrap(state: EditorState, range: SelectionRange, mark: string): { change
     const text = state.sliceDoc(from, to);
     const start = from + (text.length - text.trimStart().length);
     const end = to - (text.length - text.trimEnd().length);
-    if (end > start) changes.push({ from: start, insert: mark }, { from: end, insert: mark });
+    if (end > start && !isBlockLine(state, line.from)) changes.push({ from: start, insert: mark }, { from: end, insert: mark });
     if (line.to >= range.to) break;
   }
   const set = state.changes(changes);
   // The text stays selected, inside its marks.
   return { changes, range: EditorSelection.range(set.mapPos(range.anchor, range.anchor <= range.head ? 1 : -1), set.mapPos(range.head, range.anchor <= range.head ? -1 : 1)) };
+}
+
+/** Lines inline marks would break: a code block's (its fences too) and a table's, left as they are in a selection. */
+const MARKLESS_BLOCKS = new Set(['FencedCode', 'CodeBlock', 'Table']);
+
+function isBlockLine(state: EditorState, lineFrom: number): boolean {
+  for (let node: SyntaxNode | null = syntaxTree(state).resolveInner(lineFrom, 1); node; node = node.parent) if (MARKLESS_BLOCKS.has(node.name)) return true;
+  return false;
 }
 
 /** A list, a task list, a numbered list or a quote on the selected lines; off again when every line already is one. */

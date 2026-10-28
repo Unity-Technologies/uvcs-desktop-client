@@ -29,7 +29,7 @@ describe('inline formats', () => {
   });
 
   it('leaves a code block’s lines and a table’s alone in a selection over several, where marks would break them', () => {
-    expect(format('bold', '«See\n```\nlet a\n```\n| a | b |\n| - | - |\nend»')).toBe('**«See**\n```\nlet a\n```\n| a | b |\n| - | - |\n**end»**');
+    expect(format('bold', '«See\n```\nlet a\n```\n| a | b |\n| - | - |\n\nend»')).toBe('**«See**\n```\nlet a\n```\n| a | b |\n| - | - |\n\n**end»**');
   });
 
   it('toggles: in bold, ⌘B takes the marks away and keeps the text', () => {
