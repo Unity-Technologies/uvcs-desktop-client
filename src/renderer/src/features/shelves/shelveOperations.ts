@@ -11,6 +11,7 @@ import { askForComment } from '../../components/EditCommentDialog';
 import { pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
+import { writeListedShelveComment } from './cachedShelve';
 import { appliedShelveMessage, setAsideComment } from './shelveMessages';
 
 /**
@@ -84,9 +85,16 @@ export async function editShelveComment(place: Place, shelve: Pick<Shelve, 'id' 
   if (comment !== undefined) await saveShelveComment(place, shelve, comment);
 }
 
-/** Resolves to whether it saved, so a comment that couldn't be saved stays in its editor. */
+/**
+ * Resolves to whether it saved, so a comment that couldn't be saved stays in its editor. The lists already read take
+ * the comment before they're marked stale, so a page showing the shelve from them shows it at once.
+ */
 export function saveShelveComment(place: Place, shelve: Pick<Shelve, 'id'>, comment: string): Promise<boolean> {
-  return runVoidAction(place, "Couldn't update the comment", () => api.shelves.editComment(place, shelve.id, comment), isAffectedByShelveComment);
+  const save = async (): Promise<void> => {
+    await api.shelves.editComment(place, shelve.id, comment);
+    writeListedShelveComment(place, shelve.id, comment);
+  };
+  return runVoidAction(place, "Couldn't update the comment", save, isAffectedByShelveComment);
 }
 
 export async function deleteShelve(place: Place, shelveId: number): Promise<boolean> {
