@@ -36,10 +36,17 @@ export interface NewXlink {
 }
 
 /**
- * What creating an xlink did (`XlinksApi.create`): checked in, in `changesetId`, with its files loaded (`loaded`), or
- * stopped after `cm xlink` by a later step, whose failure `reason` names: not checked in, it is a pending change; checked
- * in, its files didn't load. The pending changes put aside to load them wait in shelve `changesWaitIn` when they
- * couldn't merge back cleanly ("Welcome back" offers them).
+ * A checked-in xlink's files loaded (`XlinksApi.load`). The pending changes put aside to load them wait in shelve
+ * `changesWaitIn` when they couldn't merge back cleanly ("Welcome back" offers them).
+ */
+export interface LoadedXlinkFiles {
+  changesWaitIn?: number;
+}
+
+/**
+ * What creating an xlink did (`XlinksApi.create`): checked in, in `changesetId`, with its files loaded (`loaded`, as
+ * `LoadedXlinkFiles`), or stopped after `cm xlink` by a later step, whose failure `reason` names: not checked in, it
+ * is a pending change; checked in, its files didn't load.
  */
 export type CreatedXlink =
   | { kind: 'loaded'; changesetId: number; changesWaitIn?: number }

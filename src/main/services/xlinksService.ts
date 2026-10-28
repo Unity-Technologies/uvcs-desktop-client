@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { app } from 'electron';
 import type { XlinksApi } from '@shared/api/xlinks';
-import type { CreatedXlink, NewXlink, XlinkEdit, XlinkPoint } from '@shared/domain/xlinks';
+import type { CreatedXlink, LoadedXlinkFiles, NewXlink, XlinkEdit, XlinkPoint } from '@shared/domain/xlinks';
 import { checkinArgs } from '../cm/checkinArgs';
 import { readCheckinOutput } from '../cm/checkinOutput';
 import { layoutReader } from '../cm/formatRecords';
@@ -23,8 +23,10 @@ import { parseXlinkRules } from '../cm/xlinkShow';
 import { withTempFile } from '../files/tempFile';
 import { toAbsolutePath } from '../files/workspacePaths';
 import { failureReason } from '../workspace/putShelvedChangesBack';
-import { loadXlink } from '../workspace/loadXlink';
+import { loadXlink, type XlinkLoad } from '../workspace/loadXlink';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
+
+const filesOf = (load: XlinkLoad): LoadedXlinkFiles => (load.kind === 'changesWaiting' ? { changesWaitIn: load.shelveId } : {});
 
 /**
  * Xlinks created and edited. Creating one checks it in and loads its files, an operation; every other command is a
@@ -56,19 +58,22 @@ export function createXlinksService({ cm, operations }: Pick<ServiceContext, 'cm
 
       context.reportProgress('Loading its files');
       try {
-        const load = await loadXlink(shelveFlow, workspacePath, xlink.path, context);
-        return load.kind === 'loaded' ? { kind: 'loaded', changesetId } : { kind: 'loaded', changesetId, changesWaitIn: load.shelveId };
+        return { kind: 'loaded', changesetId, ...filesOf(await loadXlink(shelveFlow, workspacePath, xlink.path, context)) };
       } catch (error) {
         return { kind: 'notLoaded', changesetId, reason: failureReason(error) };
       }
     });
   }
 
+  function load(workspacePath: string, path: string, operationId: string): Promise<LoadedXlinkFiles> {
+    return operations.run(operationId, async (context) => filesOf(await loadXlink(shelveFlow, workspacePath, path, context)));
+  }
+
   /** Checks in the xlink and nothing else: the folder holding it, and the added folders above, go in with it (`checkinArgs`). */
   function checkInAlone(workspacePath: string, absolutePath: string, comment: string): Promise<number> {
     return withTempFile(comment, async (commentsFile) => {
       const checkin = readCheckinOutput(await cm.execute(checkinArgs([absolutePath], commentsFile, false), inWorkspace(workspacePath)));
-      if (checkin.kind === 'noChanges') throw new Error('cm found nothing to check in');
+      if (checkin.kind === 'noChanges') throw new Error('Nothing was checked in');
       return checkin.changesetId;
     });
   }
@@ -104,5 +109,5 @@ export function createXlinksService({ cm, operations }: Pick<ServiceContext, 'cm
     }
   }
 
-  return { rules, create, treePoint, folders, edit };
+  return { rules, create, load, treePoint, folders, edit };
 }

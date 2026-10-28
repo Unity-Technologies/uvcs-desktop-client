@@ -17,7 +17,7 @@ import { describeSelector } from './switchSelectors';
 import { createAutomaticShelve } from './verifiedShelve';
 import { readWorkspaceIdentity } from './workspaceIdentity';
 
-const IN_MERGE = 'A merge in progress keeps its files from loading: check the merge in or undo it, then update the xlink’s folder.';
+const IN_MERGE = 'A merge in progress keeps its files from loading: check the merge in or undo it, then load them from the xlink’s menu in Files.';
 
 /** How a checked-in xlink's files loaded: the changes moved aside for it wait in a shelve when they couldn't merge back cleanly. */
 export type XlinkLoad = { kind: 'loaded' } | { kind: 'changesWaiting'; shelveId: number };

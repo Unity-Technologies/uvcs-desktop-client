@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { NewXlink } from '@shared/domain/xlinks';
@@ -7,6 +8,8 @@ import { FOUND_LABELS } from '../cm/foundObjects';
 import { recordsOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { TREE_ITEMS } from '../cm/treeItems';
+import { playAlongDependencies } from '../workspace/testing/playAlongDependencies';
+import { playAlongWorkspace } from '../workspace/testing/playAlongWorkspace';
 import type { SwitchContext } from './ServiceContext';
 import { readingFileOption } from './testing/readingFileOption';
 import { serviceContext } from './testing/serviceContext';
@@ -82,6 +85,42 @@ describe('Creating an xlink', () => {
     const { service } = xlinks({ xlink: '', checkin: CHECKED_IN, update: cmFails('The server is unreachable.'), status: '' });
 
     expect(await service.create(WORKSPACE, ENGINE, 'c', 'op-1')).toEqual({ kind: 'notLoaded', changesetId: 3, reason: 'The server is unreachable' });
+  });
+
+  it('says so in plain words when cm checks in nothing', async () => {
+    const { service } = xlinks({ xlink: '', checkin: 'CI_START\nNO_CHANGES_APPLIED\n' });
+
+    expect(await service.create(WORKSPACE, ENGINE, 'c', 'op-1')).toEqual({ kind: 'notCheckedIn', reason: 'Nothing was checked in' });
+  });
+
+  it('says which shelve holds the changes put aside to load its files when they don’t come back on their own', async () => {
+    const workspacePath = join(await mkdtemp(join(tmpdir(), 'uvcs-xlink-create-')), 'wk');
+    const workspace = playAlongWorkspace(workspacePath, { pending: { 'src/a.txt': 'CH' }, updateRefusesPendingChanges: true, fail: { shelveConflicts: 1 } });
+    const { deps } = playAlongDependencies(workspace.cm, workspacePath);
+    // The play-along workspace knows no xlinks: creating and checking in this one answer as cm does.
+    const play = { query: workspace.cm.query.bind(workspace.cm), execute: workspace.cm.execute.bind(workspace.cm) };
+    workspace.cm.query = (args, options) => (args[0] === 'xlink' ? Promise.resolve('') : play.query(args, options));
+    workspace.cm.execute = (args, options) => (args[0] === 'checkin' ? Promise.resolve(CHECKED_IN) : play.execute(args, options));
+    const service = createXlinksService(serviceContext(workspace.cm), { switchShelves: deps.records, leftChanges: deps.leftChanges });
+
+    expect(await service.create(workspacePath, ENGINE, 'c', 'op-1')).toEqual({ kind: 'loaded', changesetId: 3, changesWaitIn: 7 });
+    expect(workspace.updatedFolders).toEqual(['code/lib']);
+  });
+
+});
+
+describe('Loading a checked-in xlink’s files', () => {
+  it('updates its folder alone, as an operation', async () => {
+    const { service, commands } = xlinks({ update: '' });
+
+    expect(await service.load(WORKSPACE, 'code/lib', 'op-1')).toEqual({});
+    expect(commands).toMatchObject([{ via: 'execute', args: ['update', LIB, '--machinereadable', '--noinput', '--dontmerge'] }]);
+  });
+
+  it('fails with what went wrong: nothing exists to tell apart from it', async () => {
+    const { service } = xlinks({ update: cmFails('The server is unreachable.'), status: '' });
+
+    await expect(service.load(WORKSPACE, 'code/lib', 'op-1')).rejects.toThrow('The server is unreachable.');
   });
 });
 
