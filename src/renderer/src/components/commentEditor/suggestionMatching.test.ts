@@ -15,12 +15,12 @@ import { branchIndex, branchQueryText, changesetIndex, changesetSuggestion, code
 import { rankCandidates } from './suggestionRanking';
 
 /** Queries a user types in a list's filter and after a trigger alike: case, several words, punctuation, accents. */
-const QUERIES = ['Accelerator', 'ACCEL', 'merged accelerator', 'accelerator-v2:', 'v2 delete', 'scm1009064', 'ana', 'Díaz', 'diaz', 'cache Ana', '280712'];
+const QUERIES = ['Accelerator', 'ACCEL', 'merged accelerator', 'accelerator-v2:', 'v2 delete', 'task-2210', 'ana', 'Díaz', 'diaz', 'cache Ana', '4207'];
 
 const changesets: Changeset[] = [
-  { id: 280712, guid: 'g1', branch: '/main/scm1009064', comment: 'HAL: merged /main/scm1009064: accelerator-v2: delete the old cache', owner: 'ana@acme.com', date: '2026-10-01', parent: 1, repository: 'game' },
-  { id: 280711, guid: 'g2', branch: '/main', comment: 'Accelerator tuning\n\nThe second line says delete', owner: 'jose.diaz@acme.com', date: '2026-09-30', parent: 1, repository: 'game' },
-  { id: 280700, guid: 'g3', branch: '/main/task', comment: 'Nothing to see', owner: 'Ana Díaz', date: '2026-09-29', parent: 1, repository: 'game' },
+  { id: 4207, guid: 'g1', branch: '/main/task-2210', comment: 'Art: merged /main/task-2210: accelerator-v2: delete the old cache', owner: 'ana@acme.com', date: '2026-10-01', parent: 1, repository: 'game' },
+  { id: 4206, guid: 'g2', branch: '/main', comment: 'Accelerator tuning\n\nThe second line says delete', owner: 'jose.diaz@acme.com', date: '2026-09-30', parent: 1, repository: 'game' },
+  { id: 4200, guid: 'g3', branch: '/main/task', comment: 'Nothing to see', owner: 'Ana Díaz', date: '2026-09-29', parent: 1, repository: 'game' },
 ];
 const branches: Branch[] = changesets.map((changeset, index) => ({
   id: index,
@@ -64,7 +64,7 @@ describe('the suggestions match what the lists’ filter matches', () => {
   });
 
   it('keep their order on top of it: the number typed, then a name that starts with it', () => {
-    expect(rankCandidates(changesetIndex(changesets), '280711', EVERY).map((changeset) => changeset.id)).toEqual([280711]);
+    expect(rankCandidates(changesetIndex(changesets), '4206', EVERY).map((changeset) => changeset.id)).toEqual([4206]);
     expect(rankCandidates(branchIndex(branches), 'main/task', EVERY)[0]?.name).toBe('/main/task');
   });
 });
@@ -82,6 +82,6 @@ describe('a suggestion’s summary', () => {
 
   it('shows its first line as it is when the match is in sight, or there’s nothing typed', () => {
     expect(changesetSuggestion(changesets[1]!, 'accelerator').detail).toBe('Accelerator tuning');
-    expect(changesetSuggestion(changesets[0]!, '').detail).toBe('HAL: merged /main/scm1009064: accelerator-v2: delete the old cache');
+    expect(changesetSuggestion(changesets[0]!, '').detail).toBe('Art: merged /main/task-2210: accelerator-v2: delete the old cache');
   });
 });

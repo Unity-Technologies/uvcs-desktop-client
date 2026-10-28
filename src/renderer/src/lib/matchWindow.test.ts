@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { matchWindow } from './matchWindow';
 
-const SUMMARY = 'HAL: merged /main/scm1009064: accelerator-v2: delete the old cache';
+const SUMMARY = 'Art: merged /main/task-2210: accelerator-v2: delete the old cache';
 
 /** Where the first `needle` ends in what's shown: it must fit the room. */
 const endOf = (shown: string, needle: string) => shown.toLowerCase().indexOf(needle) + needle.length;
@@ -16,7 +16,7 @@ describe('matchWindow', () => {
     const shown = matchWindow(SUMMARY, 'accelerator', 32);
     expect(shown.startsWith('…')).toBe(true);
     expect(endOf(shown, 'accelerator')).toBeLessThanOrEqual(32);
-    expect(shown).toContain('/main/scm1009064: accelerator-v2');
+    expect(shown).toContain('/main/task-2210: accelerator-v2');
   });
 
   it('starts at the match itself when even a little of what comes before leaves no room', () => {
