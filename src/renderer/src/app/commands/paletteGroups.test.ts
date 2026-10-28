@@ -252,6 +252,22 @@ describe('paletteGroups finding branches and labels by their description', () =>
     expect(branchesFound('resolve names', ...newer, older)[0]).toBe('/main/old');
   });
 
+  it('ranks a description holding what was typed after a name holding it in its folders, which it would otherwise beat', () => {
+    const byDescription = withComment(1, '/main/other', 'Batch the owner lookups');
+    const inFolders = withComment(2, '/main/batch/task1', '');
+    const groups = rankGroups(groupsFor({ term: 'batch', lists: { branches: branches(byDescription, inFolders) } }));
+
+    expect(labelsIn(groups, 'branches')).toEqual(['/main/batch/task1', '/main/other']);
+  });
+
+  it('ranks a description holding the words typed apart before a name holding their letters scattered', () => {
+    const byDescription = withComment(1, '/main/other', 'Batch the owner lookups');
+    const scattered = withComment(2, '/main/bxaxtxcxh', '');
+    const groups = rankGroups(groupsFor({ term: 'batch owner', lists: { branches: branches(scattered, byDescription) } }));
+
+    expect(labelsIn(groups, 'branches')[0]).toBe('/main/other');
+  });
+
   it('finds a label by its description too', () => {
     const groups = groupsFor({ term: 'first public', lists: { labels: labels({ ...label(1, 'v1.0'), comment: 'First public release' }, label(2, 'v2.0')) } });
 
