@@ -8,6 +8,7 @@ import { deleteChip } from './chipEditing';
 import { codeColors, codeTheme } from './codeColors';
 import { commentMarkdown } from './commentLanguage';
 import { closeCodeFence, FORMAT_COMMANDS, isInCode, linkFromPaste } from './formatCommands';
+import { enterAction, modEnterAction, type FieldKeyAction } from './fieldKeys';
 import { formatForKey, pastesPlain } from './formattingKeys';
 import { liveDrawing } from './liveDecorations';
 import { widgetPortals } from './liveWidgets';
@@ -97,20 +98,31 @@ export function commentEditorExtensions(options: CommentEditorOptions, enabled: 
 }
 
 function submit(view: EditorView, keys: CommentEditorKeys): boolean {
-  if (keys.onSubmit) {
-    keys.onSubmit();
-    return true;
-  }
-  const form = view.dom.closest('form');
-  if (!form) return false;
-  form.requestSubmit();
-  return true;
+  return runFieldKey(view, modEnterAction({ singleLine: false, hasHandler: Boolean(keys.onSubmit), inForm: inForm(view) }), keys.onSubmit);
 }
 
 function enterOnOneLine(view: EditorView, keys: CommentEditorKeys): boolean {
-  if (keys.onEnter) keys.onEnter();
-  else view.dom.closest('form')?.requestSubmit();
-  return true;
+  return runFieldKey(view, enterAction({ singleLine: true, hasHandler: Boolean(keys.onEnter), inForm: inForm(view) }), keys.onEnter);
+}
+
+function inForm(view: EditorView): boolean {
+  return view.dom.closest('form') !== null;
+}
+
+/** Does what `fieldKeys` decided; false leaves the key to what comes after (the window, a new line). */
+function runFieldKey(view: EditorView, action: FieldKeyAction, handler: (() => void) | undefined): boolean {
+  switch (action) {
+    case 'owner':
+      handler?.();
+      return true;
+    case 'form':
+      view.dom.closest('form')?.requestSubmit();
+      return true;
+    case 'nothing':
+      return true;
+    default:
+      return false;
+  }
 }
 
 /**

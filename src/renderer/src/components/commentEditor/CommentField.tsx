@@ -1,6 +1,8 @@
 import { Suspense, useEffect, useImperativeHandle, useRef, type KeyboardEvent } from 'react';
 import { classNames } from '../../lib/classNames';
 import { lazyComponent } from '../../lib/lazyComponent';
+import { isModPressed } from '../../lib/shortcuts';
+import { enterAction, modEnterAction } from './fieldKeys';
 import type { CommentFieldProps } from './commentFieldProps';
 import styles from './CommentField.module.css';
 
@@ -41,16 +43,16 @@ function PlainCommentField({ value, onChange, singleLine = false, label, id, pla
   const remember = (): void => {
     focusRef.current = { at: field.current?.selectionStart ?? value.length };
   };
+  // The editor's decision (`fieldKeys`), so the keys work the same before it loads.
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.key !== 'Enter') return;
-    if (event.metaKey || event.ctrlKey) {
-      if (!onSubmit) return;
-      event.preventDefault();
-      onSubmit();
-    } else if (singleLine && onEnter) {
-      event.preventDefault();
-      onEnter();
-    }
+    const inForm = field.current?.form != null;
+    const mod = isModPressed(event);
+    const action = mod ? modEnterAction({ singleLine, hasHandler: Boolean(onSubmit), inForm }) : enterAction({ singleLine, hasHandler: Boolean(onEnter), inForm });
+    if (action === 'window' || action === 'newLine') return;
+    event.preventDefault();
+    if (action === 'owner') (mod ? onSubmit : onEnter)?.();
+    else if (action === 'form') field.current?.form?.requestSubmit();
   };
   const shared = {
     ref: field,
