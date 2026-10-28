@@ -173,7 +173,7 @@ mark at its end) is written as its `uvcs://` link (`objectReferenceText`), which
 The data costs the server nothing new (`useSuggestionRows`): each kind reads the list the palette and the views
 already share, under the same query key, only once its trigger is typed: every branch (`branchesKey(place, {})`),
 every label, the last three months' shelves, the newest reviews (`reviewSummariesQuery`), the newest 2,000
-changesets (`recentChangesetsQuery`). A changeset's number they don't hold is looked up once typing settles
+changesets (`recentChangesetsQuery`). A changeset's number they don't hold is looked up once typing stops on it (`useSettledLookup`, 300 ms after the last key: `cs:4207` reads 4207 alone, never 4 on the way)
 (`useChangeset`); words they don't match offer "Search all changesets for …", the palette's on-demand search
 (`useChangesetSearch`), run only when picked. People are the owners those lists hold and everyone the place's lists
 showed (`peopleSeenIn`): no query lists people. Each list is read into an index once per read and ranked at each key

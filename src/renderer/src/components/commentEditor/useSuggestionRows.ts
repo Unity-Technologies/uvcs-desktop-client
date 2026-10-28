@@ -11,8 +11,8 @@ import { recentChangesetsQuery } from '../../features/changesets/recentChangeset
 import { useChangeset } from '../../features/changesets/useChangeset';
 import { reviewSummariesQuery } from '../../features/codeReviews/useCodeReviews';
 import { sinceDateFor } from '../../lib/sincePresets';
-import { useSettledValue } from '../../lib/useSettled';
 import { peopleSeenIn } from '../people/usePeopleSeen';
+import { changesetToLookUp, useSettledLookup } from './changesetLookup';
 import {
   branchIndex,
   branchSuggestions,
@@ -112,12 +112,12 @@ export function useSuggestionRows(query: SuggestionQuery | null): { rows: Sugges
 }
 
 /**
- * A changeset's number the newest ones don't hold, looked up once typing settles (`useSettledValue`): one read for
+ * A changeset's number the newest ones don't hold, looked up once typing stops on it (`useSettledLookup`): one read for
  * the number stopped at, cached as the changeset is (`useChangeset`), never one per digit typed.
  */
 function useChangesetLookup(typed: string | null, listed: readonly { label: string }[]): ChangesetLookup {
-  const number = typed !== null && /^\d+$/.test(typed) && !listed.some((suggestion) => suggestion.label === typed) ? Number(typed) : null;
-  const settled = useSettledValue(number, String(number));
+  const number = typed === null ? null : changesetToLookUp(typed, listed);
+  const settled = useSettledLookup(number);
   const found = useChangeset(settled !== null && settled === number ? settled : null);
   if (number === null) return { state: 'none' };
   if (found.data && found.data.id === number) return { state: 'found', suggestion: changesetSuggestion(found.data) };
