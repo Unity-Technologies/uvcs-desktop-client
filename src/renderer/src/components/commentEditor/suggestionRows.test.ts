@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Suggestion } from './suggestionItems';
 import { nextPickable, suggestionKeyAction, suggestionRows, type ChangesetLookup, type ChangesetSearch } from './suggestionRows';
-import { isDismissed } from './suggestionTrigger';
 
 function changeset(id: number): Suggestion {
   return { key: `cs:${id}`, kind: 'changeset', label: String(id), insert: `cs:${id}` };
@@ -107,13 +106,5 @@ describe('suggestionKeyAction', () => {
   it('dismisses with Esc, and leaves every other key to the text', () => {
     expect(suggestionKeyAction('Escape', none, onlyNote, 0)).toEqual({ kind: 'dismiss' });
     expect(suggestionKeyAction('a', none, picks, 0)).toBeNull();
-  });
-});
-
-describe('isDismissed', () => {
-  it('keeps the list closed for the word Esc closed it on, and opens it for another', () => {
-    expect(isDismissed({ kind: 'branch', from: 4, to: 8, text: 'ta' }, 4)).toBe(true);
-    expect(isDismissed({ kind: 'branch', from: 12, to: 15, text: 'ma' }, 4)).toBe(false);
-    expect(isDismissed({ kind: 'branch', from: 4, to: 8, text: 'ta' }, null)).toBe(false);
   });
 });

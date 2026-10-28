@@ -5,7 +5,7 @@ import { editorState, run, written } from './commentEditorTesting';
 import { typingAt } from './typingAt';
 import { justPicked } from './justPicked';
 import { liveMarksOf } from './liveMarks';
-import { pickSuggestion, suggestionQueryAt, suggestionsShownAt } from './suggestionTrigger';
+import { isDismissed, pickSuggestion, suggestionQueryAt, suggestionsShownAt } from './suggestionTrigger';
 
 const queryAt = (written: string) => suggestionQueryAt(editorState(written));
 
@@ -127,5 +127,13 @@ describe('a suggestion just picked', () => {
     const typed = state.update({ changes: { from: 'Fixes cs:4207'.length, insert: '1' }, selection: { anchor: 'Fixes cs:42071'.length } }).state;
     expect(typed.field(justPicked)).toBeNull();
     expect(references(typed)).toEqual(['typedReference']);
+  });
+});
+
+describe('isDismissed', () => {
+  it('keeps the list closed for the word Esc closed it on, and opens it for another', () => {
+    expect(isDismissed({ kind: 'branch', from: 4, to: 8, text: 'ta' }, 4)).toBe(true);
+    expect(isDismissed({ kind: 'branch', from: 12, to: 15, text: 'ma' }, 4)).toBe(false);
+    expect(isDismissed({ kind: 'branch', from: 4, to: 8, text: 'ta' }, null)).toBe(false);
   });
 });

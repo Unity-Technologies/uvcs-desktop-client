@@ -28,6 +28,7 @@ describe('the comment editor’s focus', () => {
     expect(offenders(/\.field\(hasFocus\b/, [join('commentEditor', 'editorFocus.ts'), join('commentEditor', 'liveDecorations.ts')])).toEqual([]);
   });
 
+  // By name: an editor is a `view` or an `editor` in this code, as CodeMirror's own docs call it.
   it('is given in code only through `focusEditor`, which reconciles the mirror with it', () => {
     const inCommentEditors = offenders(/\b(?:view|editor)\??\.focus\(\)/, [join('commentEditor', 'editorFocus.ts')]).filter((line) =>
       COMMENT_EDITORS.some((folder) => line.startsWith(folder)),

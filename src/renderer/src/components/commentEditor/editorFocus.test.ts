@@ -57,17 +57,13 @@ describe('editorFocused', () => {
 describe('suggestions, as the user writes', () => {
   const shows = (state: EditorState, domFocused: boolean | null) => suggestionGate(state, editorFocused(domFocused, state.field(hasFocus)), null);
 
-  it('show after clicking into the field and typing `cs:`', () => {
+  it('show after clicking into the field (or ⇧⌘F from it), the mirror told, and typing `cs:`', () => {
     expect(shows(type(mirror(field(), true), 'cs:'), true)).toMatchObject({ kind: 'changeset' });
   });
 
   it('show when focus mode was opened by its button on a field never focused, its focus event missed, then `cs:` typed', () => {
     // The field gets the DOM's focus in code as focus mode opens; the mirror never heard of it.
     expect(shows(type(field(), 'cs:'), true)).toMatchObject({ kind: 'changeset' });
-  });
-
-  it('show when focus mode was opened with ⇧⌘F from a focused field, then `cs:` typed', () => {
-    expect(shows(type(mirror(field(), true), 'cs:'), true)).toMatchObject({ kind: 'changeset' });
   });
 
   it('show back in a place, its field made again with the same draft, focus mode opened without typing first', () => {

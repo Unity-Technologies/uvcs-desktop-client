@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { placeId } from '@shared/domain/place';
 import { everyBranchQuery, everyLabelQuery, recentShelvesQuery } from '../../app/commands/paletteQueries';
@@ -50,8 +50,10 @@ export function useSuggestionRows(query: SuggestionQuery | null): { rows: Sugges
   const paletteChangesets = useQuery({ ...recentChangesetsQuery(place), enabled: false });
   const term = useDebouncedValue(typed, SERVER_SEARCH_DELAY_MS);
 
-  const everyBranchRead = useQuery({ ...everyBranchQuery(place), enabled: false }).data !== undefined;
-  const everyLabelRead = useQuery({ ...everyLabelQuery(place), enabled: false }).data !== undefined;
+  // Whether every branch or label is read already, from the cache: the queries below observe them.
+  const queryClient = useQueryClient();
+  const everyBranchRead = queryClient.getQueryData(everyBranchQuery(place).queryKey) !== undefined;
+  const everyLabelRead = queryClient.getQueryData(everyLabelQuery(place).queryKey) !== undefined;
   const reads = suggestionReads({ kind, typed, settled: term, paletteChangesetsRead: paletteChangesets.data !== undefined, everyBranchRead, everyLabelRead });
   const fewChangesets = useQuery({ ...suggestedChangesetsQuery(place), enabled: reads.fewChangesets });
   const changesets = paletteChangesets.data ? paletteChangesets : fewChangesets;
