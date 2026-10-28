@@ -85,6 +85,14 @@ describe('labels', () => {
 describe('labels of a repository explored without a workspace', () => {
   const ON_REPOSITORY = repositoryPlace('game@local');
 
+  it("reads another repository's label for a comment's chip with one quick find, the repository as the place", async () => {
+    const { service, commands } = labels({ 'find label': recordsOutput(FOUND_LABELS, V1) });
+
+    await service.get(repositoryPlace('art@acme@cloud'), 'v1.0');
+
+    expect(commands.map(({ via, args }) => [via, args[2]])).toEqual([['query', "where name = 'v1.0' on repository 'art@acme@cloud'"]]);
+  });
+
   it('lists, finds, creates, renames and deletes naming the repository, outside every workspace', async () => {
     const { seen, answer } = readingFileOption('-commentsfile=');
     const { service, commands } = labels({ 'find label': recordsOutput(FOUND_LABELS, V1), 'label create': answer, label: '' });

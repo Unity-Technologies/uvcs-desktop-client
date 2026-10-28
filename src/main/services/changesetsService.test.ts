@@ -117,6 +117,14 @@ describe('changesets of a repository explored without a workspace', () => {
   const ON_REPOSITORY = repositoryPlace('game@local');
   const OUTSIDE = { outsideWorkspaces: true };
 
+  it("reads another repository's changeset for a comment's chip with one quick find, the repository as the place", async () => {
+    const { cm, commands } = fakeCmClient({ 'find changeset': recordsOutput(FOUND_CHANGESETS, changesetRecord(4)) });
+
+    await createChangesetsService(serviceContext(cm)).get(repositoryPlace('codice@codice@cloud'), 4);
+
+    expect(commands.map(({ via, args }) => [via, args[2]])).toEqual([['query', "where changesetid = 4 on repository 'codice@codice@cloud'"]]);
+  });
+
   it('lists and reads them naming the repository, an xlinked one when asked, outside every workspace', async () => {
     const { cm, commands } = fakeCmClient({ 'find changeset': recordsOutput(FOUND_CHANGESETS, changesetRecord(7)) });
     const service = createChangesetsService(serviceContext(cm));
