@@ -41,7 +41,7 @@ export interface FoundReference {
  * emphasis mark (`_cs:12_`), never inside a word, a path, an address or a time (`ana@acme.com`, `/a/cs:1`,
  * `10:30:00`). Letters and digits of any script count as a word's (`josé@acme.com`).
  */
-const CANDIDATE = /(?<![\p{L}\p{N}/@:.#\\-])(?:(?:cs|br|lb|sh|cr):\S+|serverpath:\/\S*|uvcs:\/\/\S+|plastic:\/\/\S+|@[\p{L}\p{N}_\\]\S*|:[a-z0-9_+-]+:)/gu;
+const CANDIDATE = /(?<![\p{L}\p{N}/@:.#\\-])(?:(?:cs|br|lb|sh|cr):\S+|serverpath:\/\S*|(?i:uvcs|plastic):\/\/\S+|@[\p{L}\p{N}_\\]\S*|:[a-z0-9_+-]+:)/gu;
 
 /**
  * What ends a sentence, a bracket or an emphasis rather than a name: `cm` reads none of it as the end of a spec (it

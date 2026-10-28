@@ -76,7 +76,6 @@ export function cachedRecordOf(object: CachedObject): CachedRecord {
 }
 
 
-
 function keyOf(reference: CommentReference): string | null {
   switch (reference.kind) {
     case 'branch':

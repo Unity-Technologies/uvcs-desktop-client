@@ -247,7 +247,7 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
 - **Stored as written**: a dialog's comment goes in without the blank lines at its ends or the space a picked
   suggestion leaves (`storedComment`), its first line's indent kept, as an indented code block needs it.
 - **Placeholders** say only what a field is for ("Description (optional)", "Summary"); an empty comment in focus
-  mode, which has the room, says what it takes in a plain sentence (`placeholderShown`, `FOCUS_MODE_PLACEHOLDER`).
+  mode says "Write in Markdown" (`placeholderShown`, `FOCUS_MODE_PLACEHOLDER`), its hints under it naming the triggers.
 - **Loading**: CodeMirror is a heavy library (`HEAVY_SCOPES` in `startupBundle.test.ts`), loaded behind
   `CommentField`'s lazy boundary and warmed at idle after start-up (`main.tsx`). Until it arrives, a plain field in
   the same box takes the typing and hands its caret over.
