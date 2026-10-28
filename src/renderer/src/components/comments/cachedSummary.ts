@@ -30,38 +30,63 @@ interface CachedObject {
   title?: unknown;
 }
 
+/** Each list read once into its objects by what a reference names them by (`id:12`, `name:/main`), kept as long as it. */
+const indexes = new WeakMap<readonly unknown[], Map<string, CachedObject>>();
+/** Each object's summary, read once: a summary reads the comment as Markdown. */
+const summaries = new WeakMap<CachedObject, string | undefined>();
+
 /**
- * A reference's summary (its comment's first line without marks, a review's title) from what the window has already
- * read of its area: a list (every branch, the newest changesets…) or the object alone. Nothing is asked for: a chip
- * shows its summary once something read it (docs/features/rich-comments.md, "What a chip reads").
+ * A reference's summary (its comment's first line without marks, a review's title) from the place's lists the window
+ * already read (every branch, the newest changesets…). Nothing is asked for: a chip shows its summary once something
+ * read it (docs/features/rich-comments.md, "What a chip reads"). An object read alone is left out: it may be another
+ * repository's (an xlink's changeset is cached in the place's area by its id). Each list is indexed once, so a lookup
+ * costs no walk over thousands of rows whenever the cache changes.
  */
 export function summaryIn(cached: readonly unknown[], reference: CommentReference): string | undefined {
+  const key = keyOf(reference);
+  if (!key) return undefined;
   for (const data of cached) {
-    const objects = Array.isArray(data) ? data : [data];
-    for (const object of objects) {
-      if (isObject(object) && names(object, reference)) return summaryOf(object);
-    }
+    if (!Array.isArray(data)) continue;
+    const object = indexOf(data).get(key);
+    if (object) return summaryOf(object);
   }
   return undefined;
 }
 
-function names(object: CachedObject, reference: CommentReference): boolean {
+function keyOf(reference: CommentReference): string | null {
   switch (reference.kind) {
     case 'branch':
     case 'label':
-      return object.name === reference.name;
+      return `name:${reference.name}`;
     case 'changeset':
     case 'shelve':
     case 'codeReview':
-      return object.id === reference.id;
+      return `id:${reference.id}`;
     default:
-      return false;
+      return null;
   }
 }
 
+function indexOf(list: readonly unknown[]): Map<string, CachedObject> {
+  let index = indexes.get(list);
+  if (!index) {
+    index = new Map();
+    for (const object of list) {
+      if (!isObject(object)) continue;
+      if (typeof object.name === 'string') index.set(`name:${object.name}`, object);
+      if (typeof object.id === 'number') index.set(`id:${object.id}`, object);
+    }
+    indexes.set(list, index);
+  }
+  return index;
+}
+
 function summaryOf(object: CachedObject): string | undefined {
-  const text = typeof object.title === 'string' ? object.title : typeof object.comment === 'string' ? object.comment : '';
-  return commentLineText(text) || undefined;
+  if (!summaries.has(object)) {
+    const text = typeof object.title === 'string' ? object.title : typeof object.comment === 'string' ? object.comment : '';
+    summaries.set(object, commentLineText(text) || undefined);
+  }
+  return summaries.get(object);
 }
 
 function isObject(value: unknown): value is CachedObject {

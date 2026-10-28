@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { countedArray } from '@shared/testing/countedReads';
 import type { CommentReference } from '../../lib/comments/commentReferences';
 import { cachedAreaOf, summaryIn } from './cachedSummary';
 
@@ -20,6 +21,12 @@ describe('summaryIn', () => {
 
   it("reads the place's lists only: an object read alone may be another repository's (an xlink's changeset)", () => {
     expect(summaryIn([{ id: 12, comment: "The xlinked repository's changeset" }], { kind: 'changeset', id: 12 })).toBeUndefined();
+  });
+
+  it('reads each list once, however many chips look in it', () => {
+    const { array, reads } = countedArray(Array.from({ length: 1000 }, (_, index) => ({ id: index, comment: `Changeset ${index}` })));
+    for (let id = 0; id < 50; id++) summaryIn([array], { kind: 'changeset', id });
+    expect(reads()).toBe(1000);
   });
 
   it('has none for an object nothing read, or one without a comment', () => {
