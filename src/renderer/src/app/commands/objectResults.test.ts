@@ -6,16 +6,18 @@ import { workspacePlace } from '@shared/domain/place';
 
 import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
+import type { Label } from '@shared/domain/label';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { Shelve } from '@shared/domain/shelve';
 import { useFilesViewStore } from '../../features/files/filesViewStore';
 import { changeStatus } from '../../features/pendingChanges/changeTone';
 import { isSubmenu, type Action, type MenuEntry } from '../../lib/actions';
 import { navigation } from '../navigation/navigationStore';
-import { branchResult, changesetResult, fileResult, shelveResult, type ResultContext } from './objectResults';
+import { branchResult, changesetResult, fileResult, labelResult, shelveResult, type ResultContext } from './objectResults';
 
 const change: PendingChange = { path: 'src/app.ts', kinds: ['changed'], itemType: 'file', size: 1, lastModified: '2026-01-01T00:00:00Z' };
 const branch: Branch = { id: 3, name: '/main/task', guid: 'g', parent: '/main', comment: '', owner: 'ana', date: '2026-01-01T00:00:00Z', headChangeset: 5, repository: 'repo@server' };
+const label: Label = { id: 7, name: 'v1.0', changeset: 5, branch: '/main', comment: '', owner: 'ana', date: '2026-01-01T00:00:00Z', repository: 'repo@server' };
 const changeset = (comment: string): Changeset => ({ id: 12, comment, guid: 'c', branch: '/main', owner: 'ana', date: '2026-01-01T00:00:00Z', parent: 11, repository: 'repo@server' });
 const shelve = (comment: string): Shelve => ({ id: 4, comment, guid: 's', owner: 'ana', date: '2026-01-01T00:00:00Z', parentChangeset: 1, repository: 'repo@server' });
 
@@ -73,6 +75,33 @@ describe('branchResult', () => {
 
   it('marks what the server matched by the words typed, not fuzzily', () => {
     expect(branchResult(branch, contextFor('task'), 'words').labelMatches).toEqual([6, 7, 8, 9]);
+  });
+
+  it('shows the description that matched in place of who made it and when, marking the words typed in it and in the name', () => {
+    const result = branchResult({ ...branch, comment: '**Resolve** owner names\n\nin one batch' }, contextFor('task batch'), 'description');
+
+    expect(result).toMatchObject({ label: '/main/task', labelMatches: [6, 7, 8, 9], detail: 'Resolve owner names in one batch', detailMatches: [27, 28, 29, 30, 31] });
+  });
+
+  it('keeps the match of a long description in view', () => {
+    const comment = 'The settings dialog remembers its size and position between sessions, and resolve owner names in one batch';
+
+    expect(branchResult({ ...branch, comment }, contextFor('batch'), 'description').detail).toBe('…names in one batch');
+  });
+
+  it('ranks a match in the description below the same match in a name', () => {
+    const inName = branchResult({ ...branch, name: '/main/batch' }, contextFor('batch'));
+    const inDescription = branchResult({ ...branch, comment: 'batch' }, contextFor('batch'), 'description');
+
+    expect(inDescription.quality).toBeLessThan(inName.quality!);
+  });
+});
+
+describe('labelResult', () => {
+  it('shows the description that matched in place of its changeset and date', () => {
+    const result = labelResult({ ...label, comment: 'First public release' }, contextFor('public'), 'description');
+
+    expect(result).toMatchObject({ label: 'v1.0', detail: 'First public release', detailMatches: [6, 7, 8, 9, 10, 11] });
   });
 });
 

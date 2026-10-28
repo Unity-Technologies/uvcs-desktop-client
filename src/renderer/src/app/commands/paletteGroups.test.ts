@@ -11,6 +11,7 @@ import type { Label } from '@shared/domain/label';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { Shelve } from '@shared/domain/shelve';
 import { createFuzzyIndex } from '../../lib/fuzzyIndex';
+import { createWordFilterIndex } from '../../lib/wordFilterIndex';
 import type { ResultContext } from './objectResults';
 import {
   lacksServerMatch,
@@ -19,12 +20,13 @@ import {
   searchesServerFor,
   type CachedLists,
   type ChangesetSearch,
+  type DescribedList,
   type IndexedList,
   type PaletteGroupsInput,
   type ServerMatches,
 } from './paletteGroups';
 import type { PaletteScope } from './paletteScope';
-import type { SearchGroup } from './searchResults';
+import { rankGroups, type SearchGroup } from './searchResults';
 
 const branch = (id: number, name: string, guid = `guid-${id}`): Branch => ({
   id,
@@ -46,8 +48,11 @@ const change = (path: string): PendingChange => ({ path, kinds: ['changed'], ite
 function indexed<T>(items: T[], nameOf: (item: T) => string): IndexedList<T> {
   return { items, index: createFuzzyIndex(items.map(nameOf)) };
 }
-const branches = (...items: Branch[]) => indexed(items, (item) => item.name);
-const labels = (...items: Label[]) => indexed(items, (item) => item.name);
+function described<T extends { name: string; comment: string }>(items: T[]): DescribedList<T> {
+  return { ...indexed(items, (item) => item.name), words: createWordFilterIndex(items.map((item) => [item.name, item.comment])) };
+}
+const branches = (...items: Branch[]) => described(items);
+const labels = (...items: Label[]) => described(items);
 const files = (...paths: string[]) => indexed(paths.map((path) => ({ path, isDirectory: false })), (entry) => entry.path);
 
 interface Search {
@@ -165,6 +170,66 @@ describe('paletteGroups with a search', () => {
     const groups = groupsFor({ term: 'sh:4', lists: { shelves: [shelve(3, 'Three'), shelve(4, 'Four')] } });
 
     expect(labelsIn(groups, 'shelves')).toEqual(['Four']);
+  });
+});
+
+describe('paletteGroups finding branches and labels by their description', () => {
+  const withComment = (id: number, name: string, comment: string): Branch => ({ ...branch(id, name), comment });
+  const branchesFound = (term: string, ...items: Branch[]) => labelsIn(groupsFor({ term, lists: { branches: branches(...items) } }), 'branches');
+
+  it('finds a branch by a word of its description', () => {
+    expect(branchesFound('batch', withComment(1, '/main/scm1042', 'Resolve owner names in one batch'), withComment(2, '/main/other', 'Unrelated'))).toEqual([
+      '/main/scm1042',
+    ]);
+  });
+
+  it('finds a branch by several words, in any order, each in its name or its description', () => {
+    const resolve = withComment(1, '/main/scm1042', 'Resolve owner names in one batch');
+    const other = withComment(2, '/main/scm2000', 'Resolve paths');
+
+    expect(branchesFound('names resolve', resolve, other)).toEqual(['/main/scm1042']);
+    expect(branchesFound('scm1042 batch', resolve, other)).toEqual(['/main/scm1042']);
+  });
+
+  it('finds a branch by punctuation typed as it is written', () => {
+    expect(branchesFound('[CLI] cm ls', withComment(1, '/main/scm1042', '[CLI]: cm ls: resolve owner names in one batch'))).toEqual(['/main/scm1042']);
+  });
+
+  it('finds a branch whatever the case typed or written', () => {
+    expect(branchesFound('RESOLVE Owner', withComment(1, '/main/scm1042', 'resolve OWNER names'))).toEqual(['/main/scm1042']);
+  });
+
+  it('lists the branches found by name first, then those found by their description, each once', () => {
+    const byDescription = withComment(1, '/main/scm1042', 'Faster checkin');
+    const byName = withComment(2, '/main/checkin', '');
+    const byBoth = withComment(3, '/main/checkin-ui', 'Checkin dialog');
+    const groups = rankGroups(groupsFor({ term: 'checkin', lists: { branches: branches(byDescription, byName, byBoth) } }));
+
+    expect(labelsIn(groups, 'branches')).toEqual(['/main/checkin', '/main/checkin-ui', '/main/scm1042']);
+  });
+
+  it('shows a branch found by its description with a code review titled the same', () => {
+    const term = '[CLI] cm ls';
+    const title = '[CLI]: cm ls: resolve owner names in one batch';
+    const groups = rankGroups(
+      groupsFor({ term, lists: { branches: branches(withComment(1, '/main/scm1042', title)), codeReviews: [review(5, title)] } }),
+    );
+
+    expect(labelsIn(groups, 'branches')).toEqual(['/main/scm1042']);
+    expect(labelsIn(groups, 'codeReviews')).toEqual([title]);
+  });
+
+  it('caps the section at MAX_PER_SECTION rows, name and description hits together', () => {
+    const many = Array.from({ length: MAX_PER_SECTION + 5 }, (_, id) => withComment(id, `/main/fix-${id}`, `fix ${id}`));
+    const onlyDescribed = Array.from({ length: MAX_PER_SECTION + 5 }, (_, id) => withComment(id + 100, `/main/task-${id}`, 'fix'));
+
+    expect(branchesFound('fix', ...many, ...onlyDescribed)).toHaveLength(MAX_PER_SECTION);
+  });
+
+  it('finds a label by its description too', () => {
+    const groups = groupsFor({ term: 'first public', lists: { labels: labels({ ...label(1, 'v1.0'), comment: 'First public release' }, label(2, 'v2.0')) } });
+
+    expect(labelsIn(groups, 'labels')).toEqual(['v1.0']);
   });
 });
 
