@@ -10,6 +10,7 @@ import { codeColors, codeTheme } from './codeColors';
 import { commentMarkdown } from './commentLanguage';
 import { closeCodeFence, FORMAT_COMMANDS, isInCode, linkFromPaste } from './formatCommands';
 import { enterAction, modEnterAction, type FieldKeyAction } from './fieldKeys';
+import { fieldLabelAttributes } from './fieldLabel';
 import { formatForKey, pastesPlain } from './formattingKeys';
 import { liveDrawing } from './liveDecorations';
 import { widgetPortals } from './liveWidgets';
@@ -31,7 +32,7 @@ export interface CommentEditorKeys {
 export interface CommentEditorOptions {
   singleLine: boolean;
   label: string;
-  id?: string;
+  labelledBy?: string;
   placeholder: string;
   portals: WidgetPortals;
   keys: { current: CommentEditorKeys };
@@ -82,7 +83,7 @@ export function commentEditorExtensions(options: CommentEditorOptions, enabled: 
     EditorView.lineWrapping,
     EditorView.perLineTextDirection.of(true),
     placeholder(options.placeholder),
-    EditorView.contentAttributes.of({ 'aria-label': options.label, 'aria-multiline': String(!options.singleLine), spellcheck: 'true', ...(options.id && { id: options.id }) }),
+    EditorView.contentAttributes.of({ ...fieldLabelAttributes(options.label, options.labelledBy), 'aria-multiline': String(!options.singleLine), spellcheck: 'true' }),
     Prec.highest(
       keymap.of([
         { key: 'Backspace', run: deleteChip(false) },

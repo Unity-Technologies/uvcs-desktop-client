@@ -15,8 +15,10 @@ export interface CommentFieldProps {
   singleLine?: boolean;
   /** Its name for screen readers, where no label shows it. */
   label: string;
-  /** The id a `<label htmlFor>` names (`CommentArea`): a click on the label puts the caret in the field. */
+  /** The plain field's id before the editor loads, which its `<label htmlFor>` names (`CommentArea`). */
   id?: string;
+  /** The id of the label shown above the field, which names the editor (`fieldLabelAttributes`). */
+  labelledBy?: string;
   placeholder: string;
   autoFocus?: boolean;
   disabled?: boolean;
