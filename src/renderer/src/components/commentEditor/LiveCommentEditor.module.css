@@ -126,6 +126,19 @@
   cursor: pointer;
 }
 
+/* A key (`<kbd>`) as a keycap, as the shown comment draws one (`Markdown.module.css`). */
+.editor :global(.cm-key) {
+  padding: 0 4px;
+  border: 1px solid var(--border-default);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
 /* A reference selected, shown as typed so typing replaces it. */
 .editor :global(.cm-typedReference) {
   border-radius: var(--radius-sm);

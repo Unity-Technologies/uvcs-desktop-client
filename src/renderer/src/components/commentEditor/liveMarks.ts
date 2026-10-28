@@ -23,6 +23,8 @@ export type LiveMark =
   | { kind: 'task'; from: number; to: number; checked: boolean; box: number }
   /** A link's text, drawn as a link. */
   | { kind: 'link'; from: number; to: number }
+  /** A key between `<kbd>` and `</kbd>`, drawn as its keycap, as the shown comment draws it. */
+  | { kind: 'key'; from: number; to: number }
   /** A code block's fences and language, dimmed so the code stands out. */
   | { kind: 'fence'; from: number; to: number }
   /** A line inside a block: a quote's, or a code block's (its first and last too, for the block's corners). */
@@ -106,6 +108,9 @@ function markNode(state: EditorState, node: SyntaxNodeRef, reveals: (from: numbe
     case 'Link':
       markLink(node.node, reveals, marks);
       return;
+    case 'HTMLTag':
+      markKey(state, node.node, reveals, marks);
+      return;
   }
 }
 
@@ -153,6 +158,18 @@ function markLink(link: SyntaxNode, reveals: (from: number, to: number) => boole
   const textEnd = link.getChildren('LinkMark')[1]?.from ?? link.to;
   // A link with no text yet (`[](url)`, as ⌘K writes it) has nothing to draw as a link.
   if (textEnd > link.from + 1) marks.push({ kind: 'link', from: link.from + 1, to: textEnd });
+}
+
+/**
+ * `<kbd>Ctrl</kbd>` reads as its keycap, the shown comment's only raw HTML (`parseMarkdown`): the tags hide, unless
+ * the caret is in the key. Read from its opening tag, the closing one being a later sibling on its line.
+ */
+function markKey(state: EditorState, open: SyntaxNode, reveals: (from: number, to: number) => boolean, marks: LiveMark[]): void {
+  if (!/^<kbd>$/i.test(state.sliceDoc(open.from, open.to))) return;
+  let close = open.nextSibling;
+  while (close && !(close.name === 'HTMLTag' && /^<\/kbd>$/i.test(state.sliceDoc(close.from, close.to)))) close = close.nextSibling;
+  if (!close || close.from === open.to || state.sliceDoc(open.to, close.from).includes('\n') || reveals(open.from, close.to)) return;
+  marks.push({ kind: 'hidden', from: open.from, to: open.to }, { kind: 'key', from: open.to, to: close.from }, { kind: 'hidden', from: close.from, to: close.to });
 }
 
 export interface FoundReference {

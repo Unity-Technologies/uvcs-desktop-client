@@ -48,6 +48,8 @@ function decorationOf(mark: LiveMark): Range<Decoration> {
       return Decoration.replace({ widget: new TaskWidget(mark.checked, mark.box) }).range(mark.from, mark.to);
     case 'link':
       return Decoration.mark({ class: 'cm-linkText' }).range(mark.from, mark.to);
+    case 'key':
+      return Decoration.mark({ class: 'cm-key' }).range(mark.from, mark.to);
     case 'fence':
       return Decoration.mark({ class: 'cm-fence' }).range(mark.from, mark.to);
     case 'line':
