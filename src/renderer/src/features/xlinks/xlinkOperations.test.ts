@@ -12,9 +12,11 @@ import { shownToasts, watchRefreshes } from '../../testing/operationOutcome';
 import { directoryListingKey } from '../files/directoryListing';
 import { useFilesViewStore } from '../files/filesViewStore';
 import { draftOf, type XlinkDialogTarget, type XlinkDraft } from './xlinkDraft';
-import { createXlink, editXlink } from './xlinkOperations';
+import { createXlink, editXlink, loadXlinkFiles } from './xlinkOperations';
 
 const ws = '/ws';
+/** What a checkin or an update refreshes (`isAffectedByCheckinOrUpdate`). */
+const CHECKIN_OR_UPDATE = ['annotate', 'branchExplorer', 'branches', 'changesets', 'explorer', 'history', 'incoming', 'info', 'locks', 'pendingChanges', 'review'];
 const WRITABLE: XlinkTarget = { writable: true, path: '/', changeset: 17, repository: 'lib', server: 'local' };
 const lib = { path: 'code/lib', name: 'lib', xlink: WRITABLE };
 
@@ -45,7 +47,7 @@ describe('Creating an xlink', () => {
     expect(saved).toBe(true);
     expect(fakeApi.calls()).toEqual([{ method: 'xlinks.create', args: [ws, LIB_XLINK, 'Add xlink code/lib', expect.any(String)] }]);
     // Checked in and updated: every view but those a checkin leaves alone.
-    expect(refreshes()).toEqual(expect.arrayContaining(['explorer', 'pendingChanges', 'changesets', 'branches']));
+    expect(refreshes()).toEqual(CHECKIN_OR_UPDATE);
     expect(shownToasts()).toEqual([expect.objectContaining({ kind: 'success', title: 'Created xlink code/lib', detail: 'Checked in as changeset 3.' })]);
     expect(useFilesViewStore.getState().revealRequest).toMatchObject({ place: workspacePlace(ws), path: 'code/lib' });
   });
@@ -68,6 +70,19 @@ describe('Creating an xlink', () => {
     expect(await save({ ...draftOf(target), name: 'lib', repository: 'lib@local' })).toBe(false);
     expect(shownToasts()).toEqual([expect.objectContaining({ kind: 'error', title: 'Creating xlink code/lib failed' })]);
     expect(useFilesViewStore.getState().revealRequest).toBeNull();
+  });
+});
+
+describe('Loading a checked-in xlink’s files', () => {
+  it('loads them as an operation that refreshes what an update does, and says so', async () => {
+    fakeApi.answer('xlinks.load', () => ({}));
+    const refreshes = watchRefreshes(ws);
+
+    expect(await loadXlinkFiles(ws, 'code/lib')).toBe(true);
+
+    expect(fakeApi.calls()).toEqual([{ method: 'xlinks.load', args: [ws, 'code/lib', expect.any(String)] }]);
+    expect(refreshes()).toEqual(CHECKIN_OR_UPDATE);
+    expect(shownToasts()).toEqual([expect.objectContaining({ kind: 'success', title: 'Loaded the files of xlink code/lib' })]);
   });
 });
 

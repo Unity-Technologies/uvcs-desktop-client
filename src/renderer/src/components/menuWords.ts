@@ -28,6 +28,7 @@ import {
   FilePlus,
   Files,
   Filter,
+  FolderDown,
   FolderGit2,
   FolderInput,
   FolderLock,
@@ -170,6 +171,7 @@ export const MENU_WORDS = {
   // An item deleted from disk and a new one paired by hand as one moved item (`pickMoveMatch`).
   searchMatches: word('act', FileSearch, 'Search matches…'),
   checkout: word('act', PenLine, 'Check out'),
+  loadXlink: word('act', FolderDown, 'Load its files'),
   status: word('act', CircleDot, 'Set status'),
   assign: word('act', UserPlus, 'Assign reviewer…'),
   // Sync: the words name the other repository ("Push to game@cloud").
@@ -296,6 +298,7 @@ export const NEEDS_A_WORKSPACE = [
   'restoreTo',
   'add',
   'checkout',
+  'loadXlink',
   'merge',
   'mergeTask',
   'mergeTo',

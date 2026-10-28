@@ -5,7 +5,7 @@ import { runOperation, runRead, runVoidAction } from '../../app/operations/runOp
 import { isAffectedByCheckinOrUpdate, isAffectedByPendingChangeEdit } from '../../app/refresh/refreshScopes';
 import { listedItems } from '../files/directoryListing';
 import { useFilesViewStore } from '../files/filesViewStore';
-import { createdXlinkMessage } from './createdXlinkMessage';
+import { createdXlinkMessage, loadedXlinkMessage } from './createdXlinkMessage';
 import { openXlinkDialog } from './XlinkDialog';
 import { checkinCommentOf, newXlinkOf, xlinkEditOf, type XlinkDialogTarget } from './xlinkDraft';
 
@@ -24,12 +24,27 @@ export function createXlink(workspacePath: string, directory: string): void {
       kind: 'update',
       cancellable: false,
       run: (operationId) => api.xlinks.create(workspacePath, xlink, checkinCommentOf(directory, draft), operationId),
-      success: (result) => createdXlinkMessage(xlink.path, result),
+      success: (result) => createdXlinkMessage(xlink.path, result, () => void loadXlinkFiles(workspacePath, xlink.path)),
       affects: isAffectedByCheckinOrUpdate,
     });
     if (created) useFilesViewStore.getState().requestReveal(workspacePlace(workspacePath), xlink.path);
     return created !== undefined;
   });
+}
+
+/** Loads the files of the checked-in xlink at `path` (`XlinksApi.load`): for one checked in without them. Resolves to whether they loaded. */
+export async function loadXlinkFiles(workspacePath: string, path: string): Promise<boolean> {
+  const loaded = await runOperation({
+    title: `Loading the files of xlink ${path}`,
+    workspacePath,
+    // It updates the xlink's folder, and may put the other changes aside meanwhile.
+    kind: 'update',
+    cancellable: false,
+    run: (operationId) => api.xlinks.load(workspacePath, path, operationId),
+    success: (result) => loadedXlinkMessage(path, result),
+    affects: isAffectedByCheckinOrUpdate,
+  });
+  return loaded !== undefined;
 }
 
 /** Opens the xlink at `item` to point it elsewhere or change its rules, once its rules are read (a writable one's). */
