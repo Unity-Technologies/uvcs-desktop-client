@@ -54,8 +54,18 @@ before.
   in a full comment, its summary (the comment's first line, a review's title), set apart by a little space and a
   muted weight, no dot between; read aloud as "Changeset 4207, Fix the switch" (`chipName`). On hover, or keyboard focus, it shows
   the Branch Explorer's card (`HoverCard` through `ChipHoverCard`, from `chipCard`): the comment drawn as a comment's
-  line, then "Changeset 4207 · Ana Diaz · 2 hours ago" (a review's status too); only what the window already read, no
-  command. Nothing read yet, the card says what it is ("Changeset 4207"). The card, as an image's preview, is placed by its chip
+  line, then "Changeset 4207 · Ana Diaz · 2 hours ago" (a review's status too). An object of the place's
+  repository shows only what the window already read, with no command, however it's written (`cs:12@game` reads as
+  `cs:12`). Another repository's changeset or label is read (`remoteObjectQuery`, `remoteObjectOf`): by a comment
+  shown in full (`ResolvedReferences`: the details panels, a review's description and comments) once the selection
+  settles, so the rows an arrow passes read nothing, its first `MAX_RESOLVED_PER_COMMENT` (10) such objects;
+  by a row's chip (or the rest of a long comment's) only as its card opens. Each is one `cm find` for that object
+  through the service that reads it (`changesets.get`, `labels.get`, the repository as the place), never one for
+  several: `cm find` has no `in (…)` and OR-ed ids are refused (`noOredIdLookups.test.ts`), and a server many people
+  share is spared a comment's list of changesets. Each is read once for the window's life, a failure too (no
+  access, a server out of reach): the chip keeps "4 codice", the card adds "Couldn't be read", and nothing asks
+  again until a new window. A branch (two finds, its hidden ones apart), a shelve (no read of one) and a code review
+  (its target's name read too) aren't read. Nothing read yet, the card says what it is ("Changeset 4207"). The card, as an image's preview, is placed by its chip
   (`AnchoredCard`, `hoverCardPosition`) the way the app's tooltips are, never as a popover layer: it takes no keys or
   focus, so Esc still closes a dialog while a card shows (a popover's layer took it; checked by hand in a dialog, as
   no test reaches the layers). A click opens it as its link would (`openReference` → `openLink`):

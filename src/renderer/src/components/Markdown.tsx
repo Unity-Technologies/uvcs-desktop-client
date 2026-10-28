@@ -6,6 +6,7 @@ import { CodeBlock } from './comments/CodeBlock';
 import { CommentImage } from './comments/CommentImage';
 import { copyAsSource } from './comments/copyAsSource';
 import { ReferenceChip } from './comments/ReferenceChip';
+import { ResolvedReferences } from './comments/ResolvedReferences';
 import styles from './Markdown.module.css';
 
 interface MarkdownProps {
@@ -17,7 +18,13 @@ interface MarkdownProps {
 /** Markdown text (a comment, release notes, an attribute's value) rendered as elements; web links open in the browser. */
 export function Markdown({ text, comment = false }: MarkdownProps) {
   const blocks = useMemo(() => parseMarkdown(text, { comment }), [text, comment]);
-  return <MarkdownBlocks blocks={blocks} copiesSource={comment} />;
+  return (
+    <>
+      {/* A comment shown in full reads its other repositories' objects; a row's chips wait for their cards. */}
+      {comment && <ResolvedReferences blocks={blocks} />}
+      <MarkdownBlocks blocks={blocks} copiesSource={comment} />
+    </>
+  );
 }
 
 interface MarkdownBlocksProps {

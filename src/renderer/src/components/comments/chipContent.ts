@@ -222,7 +222,8 @@ export interface ChipCard {
   meta: string[];
 }
 
-export function chipCard(chip: { title: string; repository?: string }, cached: CachedRecord | undefined, ago: (date: string) => string): ChipCard {
+/** `unreadable`: another repository's object its read failed for (`remoteObjectQuery`), which the card says. */
+export function chipCard(chip: { title: string; repository?: string }, cached: CachedRecord | undefined, ago: (date: string) => string, unreadable = false): ChipCard {
   const comment = cached?.title || cached?.comment || undefined;
   const meta = [
     ...(comment ? [chip.title] : []),
@@ -230,6 +231,7 @@ export function chipCard(chip: { title: string; repository?: string }, cached: C
     ...(cached?.owner ? [displayName(cached.owner)] : []),
     ...(cached?.date ? [ago(cached.date)] : []),
     ...(chip.repository ? [`In ${chip.repository}`] : []),
+    ...(unreadable ? ["Couldn't be read"] : []),
   ];
   return comment ? { comment, title: chip.title, meta } : { title: chip.title, meta };
 }

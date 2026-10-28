@@ -1,4 +1,4 @@
-import { cloneElement, useRef, type ReactElement } from 'react';
+import { cloneElement, useEffect, useRef, type ReactElement } from 'react';
 import { formatRelativeDate } from '../../lib/formatDate';
 import { HoverCard } from '../../ui/HoverCard';
 import { AnchoredCard, useHoverOpen } from './AnchoredCard';
@@ -12,15 +12,20 @@ interface ChipHoverCardProps {
   card: ChipCard;
   /** The chip: hovered, or focused from the keyboard, it shows the card. */
   children: ReactElement<Record<string, unknown>>;
+  /** The card opened: a chip of another repository reads its object then (`remoteObjectQuery`). */
+  onOpen?: () => void;
 }
 
 /**
  * A chip's hover card (`chipCard`), the Branch Explorer's card (`HoverCard`): the comment drawn as a comment's line,
  * then what the object is, who and when. On hover after a moment, and at once on keyboard focus.
  */
-export function ChipHoverCard({ card, children }: ChipHoverCardProps) {
+export function ChipHoverCard({ card, children, onOpen }: ChipHoverCardProps) {
   const anchor = useRef<HTMLElement>(null);
   const { open, handlers } = useHoverOpen();
+  useEffect(() => {
+    if (open) onOpen?.();
+  }, [open]);
   return (
     <>
       {cloneElement(children, { ref: anchor, ...handlers })}

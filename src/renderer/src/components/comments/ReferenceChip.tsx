@@ -8,6 +8,7 @@ import { chipCard, chipContent, chipName, emojiLabel, personCard, type ChipConte
 import { cardDate, ChipHoverCard } from './ChipHoverCard';
 import { CHIP_ICONS } from './chipIcons';
 import { useCachedObject } from './useCachedObject';
+import { useRemoteObject } from './useRemoteObject';
 import styles from './ReferenceChip.module.css';
 
 interface ReferenceChipProps {
@@ -46,6 +47,7 @@ export const ReferenceChip = memo(function ReferenceChip({ reference, source, co
     case 'object':
       return (
         <ObjectChip
+          reference={reference}
           placeRepository={placeRepository}
           cachedAs={chip.cachedAs}
           source={source}
@@ -61,13 +63,14 @@ export const ReferenceChip = memo(function ReferenceChip({ reference, source, co
   }
 });
 
-type ObjectChipProps = Omit<Extract<ChipContent, { kind: 'object' }>, 'kind'> & Omit<ReferenceChipProps, 'reference'> & { placeRepository: string | undefined };
+type ObjectChipProps = Omit<Extract<ChipContent, { kind: 'object' }>, 'kind'> & ReferenceChipProps & { placeRepository: string | undefined };
 
-function ObjectChip({ placeRepository, cachedAs, source, compact, interactive, icon, label, title, repository, target }: ObjectChipProps) {
+function ObjectChip({ reference, placeRepository, cachedAs, source, compact, interactive, icon, label, title, repository, target }: ObjectChipProps) {
   const place = usePlace();
-  const cached = useCachedObject(cachedAs);
+  const remote = useRemoteObject(reference, placeRepository);
+  const cached = useCachedObject(cachedAs) ?? remote.found;
   const summary = cached && summaryOf(cached);
-  const card = useMemo(() => chipCard({ title, repository }, cached && cachedRecordOf(cached), cardDate), [title, repository, cached]);
+  const card = useMemo(() => chipCard({ title, repository }, cached && cachedRecordOf(cached), cardDate, remote.unreadable), [title, repository, cached, remote.unreadable]);
   const Icon = CHIP_ICONS[icon];
   const open = (event: MouseEvent): void => {
     // In a row, the chip opens its object and leaves the row's selection alone.
@@ -88,13 +91,13 @@ function ObjectChip({ placeRepository, cachedAs, source, compact, interactive, i
   );
   if (!interactive) {
     return (
-      <ChipHoverCard card={card}>
+      <ChipHoverCard card={card} onOpen={remote.wanted}>
         <span {...shown}>{content}</span>
       </ChipHoverCard>
     );
   }
   return (
-    <ChipHoverCard card={card}>
+    <ChipHoverCard card={card} onOpen={remote.wanted}>
       {/* In a row or a title the row's keys reach the object; only a full comment's chips are tab stops. */}
       <a href="#" {...shown} aria-label={chipName(title, compact ? undefined : summary || undefined)} tabIndex={compact ? -1 : undefined} onClick={open} onMouseDown={(event) => event.stopPropagation()}>
         {content}

@@ -1,7 +1,7 @@
 import { repositoryPlace } from '@shared/domain/place';
 import type { CommentReference } from '../../lib/comments/commentReferences';
 import { queryKeys } from '../../api/queryKeys';
-import { IMMUTABLE_QUERY } from '../../app/queryClient';
+import { IMMUTABLE_QUERY } from '../../app/queryMeta';
 import type { CachedObject } from './cachedSummary';
 import { chipContent, referenceRepository } from './chipContent';
 
