@@ -1,5 +1,5 @@
 import type { TreeItem } from '@shared/domain/explorer';
-import { firstLine } from '../../lib/text';
+import { commentLineText, commentText } from '../../lib/comments/commentText';
 import { displayName } from '../../lib/userName';
 import { useOtherRepository } from '../../app/workspace/useWorkspace';
 import { RelativeTime } from '../../ui/RelativeTime';
@@ -30,7 +30,7 @@ export function ComparisonTitle({ item, comparison, comment }: ComparisonTitlePr
       </span>
     );
   }
-  const summary = comment && firstLine(comment);
+  const summary = comment && commentLineText(comment);
   return (
     <span className={styles.comparison}>
       <span className={styles.title}>{item.parentRevisionId > 0 ? 'Last change' : 'Added'}</span>
@@ -47,7 +47,7 @@ export function ComparisonTitle({ item, comparison, comment }: ComparisonTitlePr
       </span>
       {summary && (
         // A one-line comment tips only when cut; a longer one always, with its other lines.
-        <span className={styles.comment} data-tip={comment} data-tip-overflow={summary === comment?.trim() || undefined}>
+        <span className={styles.comment} data-tip={comment && commentText(comment)} data-tip-overflow={summary === comment?.trim() || undefined}>
           {summary}
         </span>
       )}

@@ -1,3 +1,4 @@
+import { CommentLine } from '../../components/comments/CommentLine';
 import type { Place } from '@shared/domain/place';
 import { useQuery } from '@tanstack/react-query';
 import { GitCommitVertical } from 'lucide-react';
@@ -73,5 +74,5 @@ function ChangesetPickerDialog({ title, exclude, place, finish }: PickChangesetO
 
 function ChangesetComment({ comment }: { comment: string }) {
   const title = firstLine(comment).trim();
-  return title ? <Highlight text={title} /> : <span className={styles.muted}>No comment</span>;
+  return title ? <CommentLine comment={title} interactive={false} /> : <span className={styles.muted}>No comment</span>;
 }

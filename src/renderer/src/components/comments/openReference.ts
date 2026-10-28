@@ -21,3 +21,8 @@ export async function openReference(place: Place, target: ChipTarget): Promise<v
       : `${target.repository}@${splitRepositorySpec(placeRepository).server}`;
   await openLink(repositoryLinkTo(repository, linkTarget));
 }
+
+/** A `uvcs://` link a comment holds, opened in the app (`openLink`). */
+export async function openAppLink(url: string): Promise<void> {
+  await openLink(url);
+}

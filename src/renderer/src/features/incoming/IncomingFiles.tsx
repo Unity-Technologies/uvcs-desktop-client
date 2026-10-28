@@ -1,3 +1,4 @@
+import { commentLineText } from '../../lib/comments/commentText';
 import { FileSearch, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
@@ -6,7 +7,6 @@ import { FileTreeList } from '../../components/FileTreeList';
 import type { MenuEntry } from '../../lib/actions';
 import type { GroupedTreeRow } from '../../lib/groupedPathTree';
 import type { SelectionState } from '../../lib/selection';
-import { firstLine } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
 import { SkeletonBar } from '../../ui/Skeleton';
@@ -41,8 +41,8 @@ export function IncomingFiles({ changeset, onShowAll, files, summary, rows, tree
   return (
     <div className={styles.files}>
       <div className={styles.header}>
-        <span className={styles.title} data-tip={changeset ? firstLine(changeset.comment) : undefined}>
-          {changeset ? `cs:${changeset.id} · ${firstLine(changeset.comment) || 'No comment'}` : 'All incoming changes'}
+        <span className={styles.title} data-tip={changeset ? commentLineText(changeset.comment) : undefined}>
+          {changeset ? `cs:${changeset.id} · ${commentLineText(changeset.comment) || 'No comment'}` : 'All incoming changes'}
         </span>
         {changeset && <IconButton icon={<X size={13} />} label="Show all incoming changes" size="small" onClick={onShowAll} />}
       </div>

@@ -1,3 +1,4 @@
+import { CommentLine } from '../../components/comments/CommentLine';
 import { MoreHorizontal } from 'lucide-react';
 import { workspacePlace } from '@shared/domain/place';
 import { COPY_ENTRY_IDS } from '../../components/copyMenu';
@@ -37,7 +38,7 @@ export function MyShelveRow({ workspacePath, row, onDone }: MyShelveRowProps) {
         {author !== null && <Avatar user={shelve.owner} size={20} tip={null} />}
         <span className={styles.text}>
           <span className={styles.title}>
-            <Highlight text={title} />
+            <CommentLine comment={title} interactive={false} />
           </span>
           <span className={styles.detail}>
             {author !== null && (

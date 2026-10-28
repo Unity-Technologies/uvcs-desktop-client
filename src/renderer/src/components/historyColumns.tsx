@@ -1,3 +1,4 @@
+import { CommentLine } from './comments/CommentLine';
 import type { ReactNode } from 'react';
 import { firstLine } from '../lib/text';
 import { Avatar, UserLabel } from '../ui/Avatar';
@@ -61,7 +62,7 @@ export function commentColumn<Row extends HistoryRow>(chips?: (row: Row) => Reac
         {chips?.(row)}
         {firstLine(row.comment) ? (
           <span className={styles.clipped}>
-            <Highlight text={firstLine(row.comment)} />
+            <CommentLine comment={row.comment} />
           </span>
         ) : (
           <span className={styles.noComment}>No comment</span>

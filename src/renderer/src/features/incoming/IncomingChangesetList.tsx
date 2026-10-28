@@ -1,3 +1,4 @@
+import { CommentLine } from '../../components/comments/CommentLine';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronRight, GitCommitVertical, Layers } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
@@ -94,7 +95,7 @@ export function IncomingChangesetList({ changesets, more, scope, onScope, collap
       >
         <GitCommitVertical size={14} className={styles.icon} />
         <span className={styles.text}>
-          <span className={styles.comment}>{firstLine(changeset.comment) || 'No comment'}</span>
+          <span className={styles.comment}>{firstLine(changeset.comment) ? <CommentLine comment={changeset.comment} interactive={false} /> : 'No comment'}</span>
           <span className={styles.meta}>
             <Avatar user={changeset.owner} size={14} />
             cs:{changeset.id} · <RelativeTime date={changeset.date} />

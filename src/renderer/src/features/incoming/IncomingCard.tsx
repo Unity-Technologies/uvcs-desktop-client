@@ -1,3 +1,4 @@
+import { CommentLine } from '../../components/comments/CommentLine';
 import { AlertTriangle, ArrowDownToLine } from 'lucide-react';
 import type { Changeset } from '@shared/domain/changeset';
 import { PathLabel } from '../../components/PathLabel';
@@ -63,7 +64,7 @@ export function IncomingCard({ state, changesets, failed, check, actions }: Inco
           <li key={changeset.id} className={styles.changeset}>
             <Avatar user={changeset.owner} size={20} />
             <span className={styles.text}>
-              <span className={styles.comment}>{firstLine(changeset.comment) || 'No comment'}</span>
+              <span className={styles.comment}>{firstLine(changeset.comment) ? <CommentLine comment={changeset.comment} /> : 'No comment'}</span>
               <span className={styles.meta}>
                 cs:{changeset.id} · {displayName(changeset.owner)} · <RelativeTime date={changeset.date} />
               </span>
