@@ -1,12 +1,10 @@
 import type { EditorState } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
-import { hotkey } from '../../lib/shortcutRegistry';
-import { toolbarButtons } from './toolbarButtons';
+import { FORMAT_ACTIONS, startsBlocks } from './formatActions';
 import { FORMAT_COMMANDS } from './formatCommands';
-import styles from './SelectionBar.module.css';
-
-/** Where the inline formats end and the blocks start: a hairline between the two groups. */
-const FIRST_BLOCK = 'bullet';
+import { FormatButton } from './FormatButton';
+import { toolbarButtons } from './toolbarButtons';
+import styles from './FormatToolbar.module.css';
 
 interface FormatToolbarProps {
   view: EditorView;
@@ -22,25 +20,18 @@ interface FormatToolbarProps {
 export function FormatToolbar({ view, state, focused }: FormatToolbarProps) {
   return (
     <div className={styles.toolbar} role="toolbar" aria-label="Format" onMouseDown={(event) => event.preventDefault()}>
-      {toolbarButtons(state, focused).map(({ action: { id, label, icon: Icon, shortcutId }, pressed, enabled }) => (
-        <span key={id} className={styles.group} data-starts-blocks={id === FIRST_BLOCK || undefined}>
-          <button
-            type="button"
-            className={styles.button}
-            aria-label={label}
-            aria-pressed={pressed}
-            disabled={!enabled}
-            data-tip={label}
-            data-tip-shortcut={shortcutId && hotkey(shortcutId)}
-            tabIndex={-1}
-            onClick={() => {
-              FORMAT_COMMANDS[id](view);
-              view.focus();
-            }}
-          >
-            <Icon size={15} strokeWidth={2.25} aria-hidden />
-          </button>
-        </span>
+      {toolbarButtons(state, focused).map(({ action, pressed, enabled }) => (
+        <FormatButton
+          key={action.id}
+          action={action}
+          pressed={pressed}
+          enabled={enabled}
+          startsBlocks={startsBlocks(FORMAT_ACTIONS, action.id)}
+          onPress={() => {
+            FORMAT_COMMANDS[action.id](view);
+            view.focus();
+          }}
+        />
       ))}
     </div>
   );

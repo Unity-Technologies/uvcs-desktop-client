@@ -1,0 +1,15 @@
+/* Focus mode's toolbar (`FormatToolbar`): the top strip of the field it formats, as GitHub's, tinted as a table's
+   header and set off by a line, edge to edge under the box's top corners (the box's padding moves onto its text:
+   `LiveCommentEditor.module.css`). The bar's buttons are always there, clear of the corner button at its end. */
+.toolbar {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1px;
+  order: -1;
+  padding: 3px 34px 3px 6px;
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: calc(var(--radius-md) - 1px) calc(var(--radius-md) - 1px) 0 0;
+  background: var(--bg-subtle);
+}

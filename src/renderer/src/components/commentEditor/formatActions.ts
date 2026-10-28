@@ -34,3 +34,8 @@ export const FORMAT_ACTIONS: readonly FormatAction[] = [
 export function formatsOf(singleLine: boolean): readonly FormatCommandId[] {
   return FORMAT_ACTIONS.filter((action) => !singleLine || !action.block).map((action) => action.id);
 }
+
+/** Whether `id` is the first block format among those a bar shows, which a hairline sets off from the inline ones. */
+export function startsBlocks(shown: readonly FormatAction[], id: FormatCommandId): boolean {
+  return shown.find((action) => action.block)?.id === id;
+}
