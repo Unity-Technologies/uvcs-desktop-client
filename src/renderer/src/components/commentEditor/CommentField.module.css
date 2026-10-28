@@ -1,0 +1,26 @@
+/* The field's own frame inside the box its owner styles (`className`): the editor, or the plain field before it
+   loads, fill it with the same font and no padding of their own, so nothing moves as one takes the other's place. */
+.field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  cursor: text;
+}
+
+.plain {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  outline: none;
+  resize: none;
+}
+
+.plain::placeholder {
+  color: var(--text-tertiary);
+}

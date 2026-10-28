@@ -1,0 +1,153 @@
+/* CodeMirror inside a comment field's box, in the app's font and tokens. Its own theme is injected at run time with
+   selectors as specific as two classes, so these hold three to come first. */
+.editor :global(.cm-editor) {
+  flex: 1;
+  min-height: 0;
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.editor :global(.cm-editor.cm-focused) {
+  outline: none;
+}
+
+.editor :global(.cm-editor .cm-scroller) {
+  font-family: inherit;
+  line-height: inherit;
+  overflow: auto;
+}
+
+.editor :global(.cm-editor .cm-content) {
+  padding: 0;
+  caret-color: var(--text-primary);
+}
+
+.editor :global(.cm-editor .cm-line) {
+  padding: 0;
+}
+
+.editor :global(.cm-editor .cm-placeholder) {
+  color: var(--text-tertiary);
+}
+
+/* Markdown as it reads (`markdownStyle`). */
+.editor :global(.cm-heading1) {
+  font-size: 1.3em;
+  font-weight: var(--weight-semibold);
+}
+
+.editor :global(.cm-heading2) {
+  font-size: 1.15em;
+  font-weight: var(--weight-semibold);
+}
+
+.editor :global(.cm-heading3),
+.editor :global(.cm-strong) {
+  font-weight: var(--weight-semibold);
+}
+
+.editor :global(.cm-emphasis) {
+  font-style: italic;
+}
+
+.editor :global(.cm-strikethrough) {
+  color: var(--text-secondary);
+  text-decoration: line-through;
+}
+
+.editor :global(.cm-inlineCode) {
+  border-radius: var(--radius-sm);
+  background: var(--bg-code);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+/* Markdown's own marks, where the caret shows them. */
+.editor :global(.cm-markup) {
+  color: var(--text-tertiary);
+}
+
+.editor :global(.cm-linkText),
+.editor :global(.cm-linkText) * {
+  color: var(--accent-text);
+}
+
+.editor :global(.cm-editor .cm-quoteLine) {
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--border-default);
+  color: var(--text-secondary);
+}
+
+.editor :global(.cm-editor .cm-codeLine),
+.editor :global(.cm-editor .cm-codeFirstLine),
+.editor :global(.cm-editor .cm-codeLastLine) {
+  padding: 0 var(--space-3);
+  background: var(--bg-code);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+.editor :global(.cm-editor .cm-codeFirstLine) {
+  padding-top: var(--space-1);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.editor :global(.cm-editor .cm-codeLastLine) {
+  padding-bottom: var(--space-1);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+/* A code block's fences and language stay, dimmed, so the code stands out. */
+.editor :global(.cm-fence),
+.editor :global(.cm-fence) * {
+  color: var(--text-tertiary);
+}
+
+.editor :global(.cm-bullet) {
+  display: inline-block;
+  width: 1ch;
+  color: var(--text-secondary);
+}
+
+.editor :global(.cm-task) {
+  margin: 0 var(--space-1) 0 0;
+  vertical-align: -2px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* A reference selected, shown as typed so typing replaces it. */
+.editor :global(.cm-typedReference) {
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+}
+
+.editor :global(.cm-chip) {
+  cursor: default;
+}
+
+/* A table away from the caret, as the shown comment draws one (`Markdown.module.css`). */
+.table {
+  max-width: 100%;
+  padding: var(--space-1) 0;
+  overflow-x: auto;
+  cursor: text;
+}
+
+.table table {
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-default);
+  overflow-wrap: normal;
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  background: var(--bg-subtle);
+  font-weight: var(--weight-semibold);
+}

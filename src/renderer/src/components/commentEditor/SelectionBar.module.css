@@ -1,0 +1,51 @@
+/* Over the selection, above a dialog as the suggestions are. */
+.bar {
+  position: fixed;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 3px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-md);
+  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
+}
+
+.group {
+  display: contents;
+}
+
+/* A hairline between the inline formats and the blocks. */
+.group[data-starts-blocks]::before {
+  content: '';
+  align-self: stretch;
+  width: 1px;
+  margin: 3px 3px;
+  background: var(--border-default);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.button[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
