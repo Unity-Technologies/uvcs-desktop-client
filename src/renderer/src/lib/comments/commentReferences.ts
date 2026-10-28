@@ -40,8 +40,10 @@ export interface FoundReference {
  * Where a reference may start: anything that can only be one, after a space, a line's start, an opening bracket or an
  * emphasis mark (`_cs:12_`), never inside a word, a path, an address or a time (`ana@acme.com`, `/a/cs:1`,
  * `10:30:00`). Letters and digits of any script count as a word's (`josé@acme.com`).
+ * The app's links read in any case, as `isAppLink` reads them, spelled out letter by letter: the engine of the Node
+ * the app builds with (22) has no regex modifier for case.
  */
-const CANDIDATE = /(?<![\p{L}\p{N}/@:.#\\-])(?:(?:cs|br|lb|sh|cr):\S+|serverpath:\/\S*|(?i:uvcs|plastic):\/\/\S+|@[\p{L}\p{N}_\\]\S*|:[a-z0-9_+-]+:)/gu;
+const CANDIDATE = /(?<![\p{L}\p{N}/@:.#\\-])(?:(?:cs|br|lb|sh|cr):\S+|serverpath:\/\S*|[uU][vV][cC][sS]:\/\/\S+|[pP][lL][aA][sS][tT][iI][cC]:\/\/\S+|@[\p{L}\p{N}_\\]\S*|:[a-z0-9_+-]+:)/gu;
 
 /**
  * What ends a sentence, a bracket or an emphasis rather than a name: `cm` reads none of it as the end of a spec (it
