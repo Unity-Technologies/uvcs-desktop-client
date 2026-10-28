@@ -7,13 +7,13 @@ import type { PageOf } from '../../app/navigation/pages';
 import { runRead, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByChangesetComment, isAffectedByChangesetMove } from '../../app/refresh/refreshScopes';
 import { switchWorkspace } from '../../app/shell/workspaceOperations';
+import { askForComment } from '../../components/EditCommentDialog';
 import { branchLabel } from '../../lib/branchLabels';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { toast } from '../../ui/toast/toastStore';
 import { pickBranch } from '../branches/BranchPickerDialog';
 import { pickChangeset } from './ChangesetPickerDialog';
-import { askForComment } from '../../components/EditCommentDialog';
 
 /** The diff of what a changeset changed. */
 export function changesetDiffPage(changeset: Pick<Changeset, 'id'>, focusPath?: string): PageOf<'diff'> {
