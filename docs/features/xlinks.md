@@ -44,9 +44,31 @@ it saves are decided by `xlinkDraft.ts` (`xlinkDialogFields`, `newXlinkOf`, `xli
   server; nothing changes those or the repository, so the edit dialog shows them in its description only. Moving or
   renaming the folder is Rename, Cut and Paste, as for any item.
 
-Creating an xlink makes it a pending change (added) and editing one checks it out; editing one not checked in yet
-leaves it added (the dialog says which: `descriptionOfEdited`). The change reaches others once checked in. A new
-xlink's folder stays empty until then, and fills when the workspace updates.
+Editing an xlink checks it out; editing one not checked in yet leaves it added (the dialog says which:
+`descriptionOfEdited`). The change reaches others once checked in.
+
+## Creating checks it in and loads its files
+
+`cm` fills an xlink's folder only from the server's tree: a pending xlink has no files, and no `cm` command loads
+them. So **Create and check in** (`XlinksApi.create`) creates the xlink, checks it in alone with the dialog's comment
+(`checkinCommentOf`: the one typed, or "Add xlink <path>"), and loads its files, one operation. Other pending changes
+stay pending. Updating the workspace wouldn't load them: it is at the changeset the checkin made, so `cm update`
+finds it up to date and reads no tree; updating the xlink's folder does (`loadXlinkArgs`).
+
+Before updating a folder, `cm` looks for pending changes in the whole workspace and does as client.conf's
+`PendingChangesOnSwitchAction` says. Unset, as by default, it updates the folder and leaves them as they are. Set to
+shelve them, it would shelve, undo and merge them back itself, which the app never lets `cm` do (as
+`switchWithChanges`); `--machinereadable` turns that into refusing, as a setting to fail does. On a refusal
+(`loadXlink`; told apart by the changes still pending, as its words are localized), unchanged checkouts are undone,
+a merge in progress is left alone (the files don't load), and other changes are put aside as a switch puts them: an
+automatic shelve recorded with `reason: 'update'`, undo, added files moved aside, the folder updated, the shelve
+merged back. The workspace didn't move, so only a change under the new folder could conflict; changes that don't come
+back cleanly wait in their shelve, offered by "Welcome back". A failure before the files load puts the changes back.
+
+Once `cm xlink` made it, the xlink exists whatever comes next: a later step that fails ends the operation with what
+it is now (`CreatedXlink`: not checked in, a pending change to check in from Changes; or checked in without its
+files) rather than an error, so the dialog closes instead of offering to create it again (`createdXlinkMessage`).
+Only `cm xlink` failing keeps the dialog open.
 
 An edit that fails halfway leaves the xlink as the dialog still shows it, so Save can be pressed again: when adding
 the new rules fails, the rules just deleted are added back (`xlinksService`). Pointing it again where the first try
@@ -54,14 +76,16 @@ already did changes nothing.
 
 ## `cm` commands
 
-All in `main/cm/xlinkArgs.ts` (arguments) and `xlinkShow.ts` (`parseXlinkRules`), run by `xlinksService`. None
-moves files, so each is a quick `query()`; each creates or edits an item, so it counts as the app's own write
-(`changesWorkspace`), except `--show`.
+All in `main/cm/xlinkArgs.ts` (arguments) and `xlinkShow.ts` (`parseXlinkRules`), run by `xlinksService`. No
+`cm xlink` moves files, so each is a quick `query()`; each creates or edits an item, so it counts as the app's own
+write (`changesWorkspace`), except `--show`. Creating also checks in and updates, both processes (`execute()`).
 
 | Does                     | Command                                                                  | When                                        |
 | ------------------------ | ------------------------------------------------------------------------ | ------------------------------------------- |
 | Reads the rules          | `cm xlink --show <path>`                                                 | Edit xlink… on a writable xlink, once       |
-| Creates                  | `cm xlink [-w] [-rs] <path> <folder> <point spec> [rules]`               | Create xlink                                |
+| Creates                  | `cm xlink [-w] [-rs] <path> <folder> <point spec> [rules]`               | Create and check in                         |
+| Checks the new one in    | `cm checkin <path> --all --dependencies -commentsfile=<file>` (`checkinArgs`) | Create and check in, once created      |
+| Loads its files          | `cm update <path> --machinereadable --noinput --dontmerge`               | Create and check in, once checked in        |
 | Points elsewhere         | `cm xlink -e <path> <point spec>`                                        | Save, when the point changed                |
 | Deletes, then adds rules | `cm xlink --deleterules <path> <rules>`, then `--addrules` | Save, when rules changed (one each at most) |
 
