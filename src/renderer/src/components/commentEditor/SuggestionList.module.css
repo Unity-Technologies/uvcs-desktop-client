@@ -27,10 +27,12 @@
   cursor: default;
 }
 
-/* The row the keys are at, as the palette marks its own (`CommandPalette.module.css`). */
+/* The row the keys are at, as the palette marks its own (`CommandPalette.module.css`): an outline in place of its
+   inset shadow, as the row never takes the focus itself (the field keeps it, `aria-activedescendant`). */
 .option[aria-selected='true'] {
   background: var(--bg-hover);
-  box-shadow: inset 0 0 0 1px var(--border-default);
+  outline: 1px solid var(--border-default);
+  outline-offset: -1px;
 }
 
 .lead {
