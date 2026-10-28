@@ -250,11 +250,22 @@ name a spec can't hold (a space, a sentence's punctuation or an emphasis mark at
 Unity Cloud); an emoji as the character itself (🎉, not `:tada:`), one character to Backspace and to the caret even
 when it joins several (🏳️‍🌈). A `:name:` typed out whole stays as typed.
 
-The data costs the server nothing new (`useSuggestionRows`): each kind reads the list the palette and the views
-already share, through the same query (`paletteQueries`), only once its trigger is typed (`suggestionListsRead`):
-every branch (`everyBranchQuery`), every label (`everyLabelQuery`), the last three months' shelves
-(`recentShelvesQuery`), the newest reviews (`reviewSummariesQuery`), the newest 2,000 changesets
-(`recentChangesetsQuery`). A changeset's number they don't hold is looked up (`useChangeset`) once typing stops on it
+The list opens on the trigger's key, always with a row: a pick, or "Reading branches…" with a spinner (`Spinner`,
+still with reduced motion), or "Couldn't read branches" when the read failed (never "No branches", which would read
+as a repository with none; typing the trigger again reads again). The word typed is underlined in the chips' accent
+from its trigger on (`suggestionCue`, `suggestionCueField`), pulsing gently while its list is read, so the field
+shows it understood `br:` whatever the list does. The list opens under the line or over it, always inside the
+window, and is placed again as its rows change size (`suggestionListPosition`, a `ResizeObserver`).
+
+The data is sized for a repository of 20,000 branches and 280,000 changesets (`useSuggestionRows`, `listedFrom`).
+Each kind reads only once its trigger is typed (`suggestionListsRead`), through the queries the palette and the views
+share (`paletteQueries`): every branch (`everyBranchQuery`), every label (`everyLabelQuery`), the last three months'
+shelves (`recentShelvesQuery`), the newest reviews (`reviewSummariesQuery`). Until every branch or label is read
+(about two seconds there), the server searches what is typed once typing settles (`branchSearchQuery`,
+`labelSearchQuery`: one `cm find … like … limit 50` per settled text, the palette's own search and key), and its
+answer shows. Changesets: the palette's newest 2,000 when already read (`recentChangesetsQuery`), else the newest 50
+(`suggestedChangesetsQuery`, half a second there). On codice, `br:scm10` ran two finds (the search, 0.2 s, then every
+branch, 1.8 s) and `cs:` then a number two (the newest 50, 0.5 s, then the number). A changeset's number they don't hold is looked up (`useChangeset`) once typing stops on it
 for as long as the palette's search waits (`useDebouncedValue`, `SERVER_SEARCH_DELAY_MS`): `cs:4207` reads 4207
 alone, never 4 on the way. Words they don't match offer "Search all changesets for …", the palette's on-demand search
 (`useChangesetSearch`), run only when picked. People are the owners those lists hold and everyone the place's lists
