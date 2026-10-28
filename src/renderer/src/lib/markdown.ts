@@ -2,7 +2,7 @@ import type { Nodes, Parent, PhrasingContent, RootContent, Root } from 'mdast';
 import { fromMarkdown } from 'mdast-util-from-markdown';
 import { gfmFromMarkdown } from 'mdast-util-gfm';
 import { gfm } from 'micromark-extension-gfm';
-import { findReferences, type CommentReference } from './comments/commentReferences';
+import { findReferences, type CommentReference, type FoundReference } from './comments/commentReferences';
 
 /**
  * Markdown as people write it in version control (comments, release notes, attribute values), read by micromark as
@@ -56,8 +56,11 @@ export interface MarkdownOptions {
   comment?: boolean;
 }
 
-/** The only schemes a link opens: web pages and mail (in the browser and mail app) and the app's own links. */
-const OPENED_SCHEMES = /^(https?:|mailto:|uvcs:)/i;
+/**
+ * The only schemes a link opens: web pages (in the browser) and the app's own links. A mail link shows its text: the
+ * app opens nothing else outside it (`openExternal` takes web pages only).
+ */
+const OPENED_SCHEMES = /^(https?:|uvcs:)/i;
 
 export function parseMarkdown(source: string, options: MarkdownOptions = {}): MarkdownBlock[] {
   return new MarkdownReader(source, options).blocks();
@@ -136,16 +139,35 @@ function inlineText(inline: MarkdownInline): string {
   }
 }
 
+function readTree(source: string): Root {
+  return fromMarkdown(source, { extensions: [gfm()], mdastExtensions: [gfmFromMarkdown()] });
+}
+
+/**
+ * Where a reference stands for itself in a comment: one shown as written, the rest of it an opaque placeholder
+ * Markdown reads as text. References are found in the comment as written, so what Markdown would read in them
+ * never splits one (a server's host as a bare mail link, `__init__` as emphasis); those inside code, a link or an
+ * image stay the text they are.
+ */
+const PLACEHOLDER = /\uE000(\d+)\uE001/g;
+
 /** Reads micromark's syntax tree into the app's, with the link definitions a reference-style link points to. */
 class MarkdownReader {
   private readonly tree: Root;
   private readonly definitions = new Map<string, string>();
+  private readonly references: FoundReference[] = [];
 
   constructor(
     source: string,
     private readonly options: MarkdownOptions,
   ) {
-    this.tree = fromMarkdown(source.replace(/\r\n?/g, '\n'), { extensions: [gfm()], mdastExtensions: [gfmFromMarkdown()] });
+    const text = source.replace(/\r\n?/g, '\n');
+    const found = options.comment ? findReferences(text) : [];
+    if (found.length > 0) {
+      const written = writtenRanges(readTree(text), text);
+      this.references = found.filter((reference) => !written.some(([from, to]) => reference.from < to && reference.to > from));
+    }
+    this.tree = readTree(withPlaceholders(text, this.references));
     for (const node of this.tree.children) if (node.type === 'definition') this.definitions.set(node.identifier, node.url);
   }
 
@@ -213,53 +235,29 @@ class MarkdownReader {
     return 'value' in node ? this.textInlines(String(node.value)) : [];
   }
 
-  /** `inLink`: a link's own text, where no reference is read (the link already says where it leads). */
-  private inlines(nodes: readonly PhrasingContent[], inLink = false): MarkdownInline[] {
-    const inlines: MarkdownInline[] = [];
-    for (let index = 0; index < nodes.length; index++) {
-      const node = nodes[index]!;
-      const mention = inLink ? null : this.mentionedAddress(node, nodes[index + 1]);
-      if (mention) {
-        inlines.push(...mention);
-        index++;
-      } else {
-        inlines.push(...this.inline(node, inLink));
-      }
-    }
-    return joinedTexts(inlines);
+  private inlines(nodes: readonly PhrasingContent[]): MarkdownInline[] {
+    return joinedTexts(nodes.flatMap((node) => this.inline(node)));
   }
 
-  /**
-   * GitHub's bare links take an email address, so `@ana@acme.com` reads as the text "@" and a mail link: a comment
-   * names the person instead.
-   */
-  private mentionedAddress(node: PhrasingContent, next: PhrasingContent | undefined): MarkdownInline[] | null {
-    if (!this.options.comment || node.type !== 'text' || next?.type !== 'link' || !/(^|\s)@$/.test(node.value)) return null;
-    const address = textOf(next);
-    if (next.url !== `mailto:${address}`) return null;
-    const source = `@${address}`;
-    return [...this.textInlines(node.value.slice(0, -1)), { kind: 'reference', reference: { kind: 'user', name: address }, source }];
-  }
-
-  private inline(node: PhrasingContent, inLink: boolean): MarkdownInline[] {
+  private inline(node: PhrasingContent): MarkdownInline[] {
     switch (node.type) {
       case 'text':
-        return this.textInlines(node.value, !inLink);
+        return this.textInlines(node.value);
       case 'inlineCode':
         return [{ kind: 'code', text: node.value }];
       case 'strong':
-        return [{ kind: 'strong', children: this.inlines(node.children, inLink) }];
+        return [{ kind: 'strong', children: this.inlines(node.children) }];
       case 'emphasis':
-        return [{ kind: 'emphasis', children: this.inlines(node.children, inLink) }];
+        return [{ kind: 'emphasis', children: this.inlines(node.children) }];
       case 'delete':
-        return [{ kind: 'strike', children: this.inlines(node.children, inLink) }];
+        return [{ kind: 'strike', children: this.inlines(node.children) }];
       case 'break':
         return [{ kind: 'break' }];
       case 'link':
-        return this.link(node.url, this.inlines(node.children, true));
+        return this.link(node.url, this.inlines(node.children));
       case 'linkReference': {
         const url = this.definitions.get(node.identifier);
-        return url ? this.link(url, this.inlines(node.children, true)) : this.textInlines(textOf(node), !inLink);
+        return url ? this.link(url, this.inlines(node.children)) : this.textInlines(textOf(node));
       }
       case 'image':
         return this.image(node.url, node.alt ?? '');
@@ -282,25 +280,70 @@ class MarkdownReader {
     return /^https?:/i.test(url) ? [{ kind: 'image', url, alt }] : this.textInlines(alt);
   }
 
-  /** Text, its line breaks kept in a comment and its references read; joined as CommonMark does elsewhere. */
-  private textInlines(text: string, readsReferences = true): MarkdownInline[] {
+  /** Text, its line breaks kept in a comment and its references put back; joined as CommonMark does elsewhere. */
+  private textInlines(text: string): MarkdownInline[] {
     if (!this.options.comment) return text ? [{ kind: 'text', text: text.replace(/\n/g, ' ') }] : [];
-    return text.split('\n').flatMap((line, index) => [
-      ...(index > 0 ? [{ kind: 'break' } as const] : []),
-      ...(readsReferences ? this.referencesIn(line) : line ? [{ kind: 'text', text: line } as const] : []),
-    ]);
+    return text.split('\n').flatMap((line, index) => [...(index > 0 ? [{ kind: 'break' } as const] : []), ...this.referencesIn(line)]);
   }
 
   private referencesIn(text: string): MarkdownInline[] {
     const inlines: MarkdownInline[] = [];
     let cursor = 0;
-    for (const found of findReferences(text)) {
-      if (found.from > cursor) inlines.push({ kind: 'text', text: text.slice(cursor, found.from) });
+    for (const placeholder of text.matchAll(PLACEHOLDER)) {
+      const found = this.references[Number(placeholder[1])]!;
+      if (placeholder.index > cursor) inlines.push({ kind: 'text', text: text.slice(cursor, placeholder.index) });
       inlines.push({ kind: 'reference', reference: found.reference, source: found.source });
-      cursor = found.to;
+      cursor = placeholder.index + placeholder[0].length;
     }
     if (cursor < text.length) inlines.push({ kind: 'text', text: text.slice(cursor) });
     return inlines;
+  }
+}
+
+/** The comment with each reference in its placeholder's place, from the last so the earlier ones keep their places. */
+function withPlaceholders(text: string, references: readonly FoundReference[]): string {
+  let written = text;
+  for (let index = references.length - 1; index >= 0; index--) {
+    const { from, to } = references[index]!;
+    written = `${written.slice(0, from)}\uE000${index}\uE001${written.slice(to)}`;
+  }
+  return written;
+}
+
+/**
+ * Where a comment shows what was written as it is, so no reference is read there: code, raw HTML, a link written
+ * as one (`[text](url)`, `<url>`) and an image. A bare web address GitHub links by itself isn't one of them: a
+ * reference may hold what reads as one (`cs:12@game@build.acme.com`).
+ */
+function writtenRanges(tree: Root, text: string): Array<[number, number]> {
+  const ranges: Array<[number, number]> = [];
+  const visit = (node: Nodes): void => {
+    const from = node.position?.start.offset;
+    const to = node.position?.end.offset;
+    if (from !== undefined && to !== undefined && isWrittenAsIs(node, text.slice(from, to))) {
+      ranges.push([from, to]);
+      return;
+    }
+    if ('children' in node) for (const child of (node as Parent).children) visit(child as Nodes);
+  };
+  visit(tree);
+  return ranges;
+}
+
+function isWrittenAsIs(node: Nodes, written: string): boolean {
+  switch (node.type) {
+    case 'inlineCode':
+    case 'code':
+    case 'html':
+    case 'image':
+    case 'imageReference':
+    case 'linkReference':
+    case 'definition':
+      return true;
+    case 'link':
+      return written.startsWith('[') || written.startsWith('<');
+    default:
+      return false;
   }
 }
 

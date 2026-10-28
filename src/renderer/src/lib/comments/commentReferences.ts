@@ -37,20 +37,22 @@ export interface FoundReference {
 }
 
 /**
- * Where a reference may start: anything that can only be one, after a space, a line's start or an opening bracket,
- * never inside a word, a path, an address or a time (`ana@acme.com`, `/a/cs:1`, `10:30:00`).
+ * Where a reference may start: anything that can only be one, after a space, a line's start, an opening bracket or an
+ * emphasis mark (`_cs:12_`), never inside a word, a path, an address or a time (`ana@acme.com`, `/a/cs:1`,
+ * `10:30:00`). Letters and digits of any script count as a word's (`josé@acme.com`).
  */
-const CANDIDATE = /(?<![\w/@:.#\\-])(?:(?:cs|br|lb|sh|cr):\S+|serverpath:\/\S*|uvcs:\/\/\S+|@[\w\\]\S*|:[a-z0-9_+-]+:)/g;
+const CANDIDATE = /(?<![\p{L}\p{N}/@:.#\\-])(?:(?:cs|br|lb|sh|cr):\S+|serverpath:\/\S*|uvcs:\/\/\S+|@[\p{L}\p{N}_\\]\S*|:[a-z0-9_+-]+:)/gu;
 
 /**
- * What ends a sentence or a bracket rather than a name: `cm` reads none of it as the end of a spec (it has no
- * quoting, and a branch's or label's name may hold almost anything), so a comment's `see cs:12.` or `(br:/main)` is
- * read as people mean it.
+ * What ends a sentence, a bracket or an emphasis rather than a name: `cm` reads none of it as the end of a spec (it
+ * has no quoting, and a branch's or label's name may hold almost anything), so a comment's `see cs:12.`,
+ * `(br:/main)` or `**cs:12**` is read as people mean it. A name that itself ends in one of these (`br:/main/task_`)
+ * is written as its `uvcs://` link.
  */
-const TRAILING_PUNCTUATION = /[.,;:!?)\]}'"]+$/;
+const TRAILING_PUNCTUATION = /[.,;:!?)\]}'"*_~]+$/;
 
-/** A person as `cm` names them: a name, `DOMAIN\name`, or an email address (Unity Cloud). */
-const MENTION = /^@([\w\\][\w.+\\-]*(?:@[\w-]+(?:\.[\w-]+)+)?)/;
+/** A person as `cm` names them, in any script: a name, `DOMAIN\name`, or an email address (Unity Cloud). */
+const MENTION = /^@([\p{L}\p{N}_\\][\p{L}\p{N}_.+\\-]*(?:@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+)?)/u;
 
 /** Every reference in a text, in order. Code and links are the caller's to leave out (`commentTree`). */
 export function findReferences(text: string): FoundReference[] {
@@ -71,7 +73,7 @@ function readCandidate(candidate: string): { reference: CommentReference; source
 }
 
 function readMention(candidate: string): { reference: CommentReference; source: string } | null {
-  const name = MENTION.exec(candidate)?.[1]?.replace(/[.-]+$/, '');
+  const name = MENTION.exec(candidate)?.[1]?.replace(/[._-]+$/, '');
   return name ? { reference: { kind: 'user', name }, source: `@${name}` } : null;
 }
 
