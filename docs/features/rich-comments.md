@@ -56,16 +56,8 @@ before.
   the Branch Explorer's card (`HoverCard` through `ChipHoverCard`, from `chipCard`): the comment drawn as a comment's
   line, then "Changeset 4207 · Ana Diaz · 2 hours ago" (a review's status too). An object of the place's
   repository shows only what the window already read, with no command, however it's written (`cs:12@game` reads as
-  `cs:12`). Another repository's changeset or label is read (`remoteObjectQuery`, `remoteObjectOf`): by a comment
-  shown in full (`ResolvedReferences`: the details panels, a review's description and comments) once the selection
-  settles, so the rows an arrow passes read nothing, its first `MAX_RESOLVED_PER_COMMENT` (10) such objects;
-  by a row's chip (or the rest of a long comment's) only as its card opens. Each is one `cm find` for that object
-  through the service that reads it (`changesets.get`, `labels.get`, the repository as the place), never one for
-  several: `cm find` has no `in (…)` and OR-ed ids are refused (`noOredIdLookups.test.ts`), and a server many people
-  share is spared a comment's list of changesets. Each is read once for the window's life, a failure too (no
-  access, a server out of reach): the chip keeps "4 codice", the card adds "Couldn't be read", and nothing asks
-  again until a new window. A branch (two finds, its hidden ones apart), a shelve (no read of one) and a code review
-  (its target's name read too) aren't read. Nothing read yet, the card says what it is ("Changeset 4207"). The card, as an image's preview, is placed by its chip
+  `cs:12`). Another repository's changeset or label is read as "What a chip reads" says. Nothing read yet, the card
+  says what it is ("Changeset 4207"). The card, as an image's preview, is placed by its chip
   (`AnchoredCard`, `hoverCardPosition`) the way the app's tooltips are, never as a popover layer: it takes no keys or
   focus, so Esc still closes a dialog while a card shows (a popover's layer took it; checked by hand in a dialog, as
   no test reaches the layers). A click opens it as its link would (`openReference` → `openLink`):
@@ -78,14 +70,38 @@ before.
 
 ## What a chip reads
 
-Nothing: a chip shows its object's summary only once one of the place's lists the window already read holds it
-(`useCachedObject`, `summaryIn`): the palette's lists, the views' lists. It looks through the cached lists of the
-place's area (`queryKeys.inPlace(place, 'changesets' | 'branches' | 'labels' | 'shelves' | 'codeReviews')`), each
-indexed once (a lookup walks no list), and wakes only when its area's data changes. An object read alone is left
-out: an xlinked repository's changeset is cached in the place's area by its id too; only a changeset read by its
-number in the place's own repository counts (`changesetKey` with no other repository: a number typed in a comment). A comment naming fifty
-changesets costs the server nothing (CLAUDE.md, "`cm` economy"). Objects of another repository show without a
-summary.
+- **An object of the place's repository** reads nothing: the chip shows its summary once one of the place's lists
+  the window already read holds it (`useCachedObject`, `summaryIn`): the palette's lists, the views' lists. It looks
+  through the cached lists of the place's area (`queryKeys.inPlace(place, 'changesets' | 'branches' | 'labels' |
+  'shelves' | 'codeReviews')`), each indexed once (a lookup walks no list), and wakes only when its area's data
+  changes. An object read alone is left out: an xlinked repository's changeset is cached in the place's area by its id
+  too; only a changeset read by its number in the place's own repository counts (`changesetKey` with no other
+  repository: a number typed in a comment). A spec naming the place's repository (`cs:12@game`, its link) is one of
+  its own. A comment naming fifty of them costs the server nothing (CLAUDE.md, "`cm` economy").
+- **A changeset or a label of another repository on the place's server** (an xlinked one, another of the same
+  organization) is read by the comment shown in full around it, once what it shows stayed put for
+  `SELECTION_SETTLE_MS` (`ResolvedReferences`, `useKeySettled`), so the rows an arrow passes, and a glance, read
+  nothing; its first `MAX_RESOLVED_PER_COMMENT` (10) such objects, the rest as their cards open. The comments shown
+  in full (`<Markdown comment>`) are the details panels' (changeset, branch, label, shelve, a review's description and
+  comments, through `FoldedComment` and `SummaryComment`), History's revision header (`RevisionHeader`), Annotate's
+  card (`AnnotationCard`) and the Branch Explorer's tooltip (`GraphTooltip`). A row's chip (History, the lists,
+  Incoming, the palette, notifications) reads only as its card opens.
+- **One on another server** is read only as its chip's card opens, on hover or keyboard focus, never as a comment
+  shows: a comment can't make the app contact a server by being read (ARCHITECTURE.md "What leaves the device"). It
+  runs in a `cm` process of its own that gives up after `OWN_PROCESS_READ_TIMEOUT_MS` (`OneObjectRead`'s
+  `ownProcess`): a host that never answers holds no pooled session. `cm`'s stdin is closed there, so it asks nothing;
+  a server with browser sign-in and no profile prints a sign-in address and waits, which the timeout ends, and
+  nothing opens.
+- Each read is one `cm find` for that object, through the service that reads it (`changesets.find`, `labels.get`,
+  the repository as the place, `remoteObjectOf`, `remoteObjectQuery`), never one for several: `cm find` has no `in
+  (…)` and OR-ed ids are refused (`noOredIdLookups.test.ts`). A name a command line can't quote (a quote, a space, a
+  control character) reads nothing. An object read, or an answer that the repository has none, is kept for the
+  window's life ("No changeset 280528 in codice" on the card); a failure (no access, a server out of reach) for
+  `UNREADABLE_RETRY_MS`, five minutes, then asked again ("Couldn't reach codice"). The chip keeps "280528 codice"
+  either way. Kept as immutable though comments can be edited: a chip's summary of another repository's object is a
+  reminder of what it points at, and the object's own page reads it fresh.
+- A branch (two finds, its hidden ones apart), a shelve (no read of one) and a code review (its target's name read
+  too) of another repository aren't read.
 
 ## Where comments show
 
