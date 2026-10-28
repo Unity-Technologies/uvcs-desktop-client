@@ -306,3 +306,35 @@ alone, never 4 on the way. Words they don't match offer "Search all changesets f
 showed (`peopleSeenIn`): no query lists people. Each list is read into an index once per read and ranked at each key
 (`rankCandidates`: the name typed, then names starting with it, then names holding it, then comments), the best
 eight shown.
+
+## Checking it on screen
+
+The flows that broke before, as steps to follow in a development build (StrictMode) against
+`scripts/sandboxes/rich-comments.sh`, and for the big-repository ones a large repository, reads only. Each is
+checked in both themes when it draws something.
+
+1. **Focus mode by its button after a workspace switch.** In the check-in, type `cs:` and pick; open focus mode,
+   type `cs:` and pick; close it. Switch to another workspace and back. Without clicking or typing in the
+   description, press its "Write in a larger editor" button and type `cs:`: the list shows.
+2. **Suggestions at the window's bottom.** Write a description longer than its box, the caret on its last line at
+   the window's bottom; type `cs:` and `br:`: the list shows whole, over the line.
+3. **A big repository's first trigger.** Open it, go to Changes at once and type `br:` and a few letters in the
+   description: "Reading branches…" with a spinner on the key, then branches; the command log shows one search and
+   one read of every branch.
+4. **Selecting by drag over widgets.** With chips, an emoji, a keycap, a table, an image and code in a comment, drag
+   from the bottom up: nothing moves; the widgets covered show as selected; ⌘C gives the source.
+5. **Typing fast in code.** In a ```` ```ts ```` block, type a line fast: the colors already there stay, no key is lost.
+6. **The format bar's buttons.** Select a word in a small field and click each button of the bar: each formats.
+7. **A pick at a line's end.** With a line below, type each trigger (`cs:`, `br:`, `lb:`, `sh:`, `cr:`, `@`) and pick:
+   each shows as its chip at once.
+8. **Tab in focus mode.** In a list, Tab nests an item and ⇧Tab takes it back; in code Tab indents; in a paragraph it
+   does nothing; in the check-in's summary Tab goes to the description.
+9. **Edit comment's shapes.** On a comment with a title, one opening with a list, one with a table, a single line,
+   and a title and body with no blank line: the fields open as `editingParts` says and Save stays disabled until an
+   edit.
+10. **Esc in a dialog with a chip's card open.** In Edit comment, hover a chip until its card shows, press Esc: the
+    dialog closes.
+11. **A confirm opened from focus mode.** With a change pending, open the check-in's focus mode and press ⌘↵ where the
+    check-in asks something: the question shows over focus mode, which closed.
+12. **Another server's chips.** Hover a chip of a repository on a server you use: its card reads it once (the command
+    log). Hover one on a server you don't: its card says "In … on …, not a server you use" and the log shows nothing.
