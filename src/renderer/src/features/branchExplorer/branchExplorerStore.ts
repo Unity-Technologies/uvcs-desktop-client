@@ -1,12 +1,17 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { navigation } from '../../app/navigation/navigationStore';
+import { detailsHidden, useDetailsPaneStore } from '../../components/detailsPaneStore';
 import { EVERYONE, rememberedPick, type PeoplePick } from '../../lib/peopleFilter';
-import { sincePresetOf, type SincePreset } from '../../lib/sincePresets';
+import type { SincePreset } from '../../lib/sincePresets';
+import { detailsOpenOf, migrateBranchExplorerPreferences } from './branchExplorerMigration';
 import type { BranchChoice } from './model/branchChoice';
 import type { RevealTarget } from './model/revealTarget';
 
-interface BranchExplorerPreferences {
+/** The key of the Branch Explorer's details (`ListWithDetails`, `DetailsToggleButton`). */
+export const BRANCH_EXPLORER_DETAILS_KEY = 'branchExplorer';
+
+export interface BranchExplorerPreferences {
   dateRange: SincePreset;
   hideMergedBranches: boolean;
   showHiddenBranches: boolean;
@@ -44,11 +49,12 @@ export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
       name: 'branch-explorer-preferences',
       version: 2,
       partialize: ({ visibleBranches: _branches, revealRequest: _request, set: _action, people, ...remembered }) => ({ ...remembered, people: rememberedPick(people) }),
-      // Before every view shared the time presets, the Branch Explorer had date ranges of its own. Before every view
-      // could hide its details, it kept whether its own were open (`detailsOpen`): now `useDetailsPaneStore` does.
-      migrate: (persisted) => {
-        const { detailsOpen: _detailsOpen, ...old } = (persisted ?? {}) as Partial<BranchExplorerPreferences> & { detailsOpen?: boolean };
-        return { ...old, dateRange: sincePresetOf(old.dateRange) ?? 'lastMonth', people: EVERYONE } as BranchExplorerPreferences;
+      migrate: (persisted, version) => {
+        // The details' own store keeps whether they're hidden now: a user who had closed them keeps them closed.
+        if (!detailsOpenOf(persisted) && !detailsHidden(useDetailsPaneStore.getState(), BRANCH_EXPLORER_DETAILS_KEY)) {
+          useDetailsPaneStore.getState().toggleHidden(BRANCH_EXPLORER_DETAILS_KEY);
+        }
+        return migrateBranchExplorerPreferences(persisted, version) as BranchExplorerPreferences;
       },
     },
   ),

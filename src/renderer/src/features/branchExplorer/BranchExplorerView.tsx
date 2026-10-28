@@ -16,7 +16,7 @@ import { NoMatches } from '../../ui/NoMatches';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
-import { useBranchExplorerPreferences } from './branchExplorerStore';
+import { BRANCH_EXPLORER_DETAILS_KEY, useBranchExplorerPreferences } from './branchExplorerStore';
 import { GraphCanvas, type GraphHighlights } from './canvas/GraphCanvas';
 import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';
 import type { GraphTarget } from './canvas/graphTargets';
@@ -45,8 +45,6 @@ import { usePendingChangeset } from './usePendingChangeset';
 import { useRevealRequest } from './useRevealRequest';
 import styles from './BranchExplorerView.module.css';
 
-const DETAILS_KEY = 'branchExplorer';
-
 const NO_REVIEWS: ReadonlyMap<number, CodeReviewSummary> = new Map();
 
 export function BranchExplorerView() {
@@ -56,7 +54,7 @@ export function BranchExplorerView() {
   const { data, isPending, isFetching, isPlaceholderData, error } = useBranchExplorerData();
   const preferences = useBranchExplorerPreferences();
   const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, people, showComments, showAvatars } = preferences;
-  const detailsOpen = useDetailsPaneStore((state) => !detailsHidden(state, DETAILS_KEY));
+  const detailsOpen = useDetailsPaneStore((state) => !detailsHidden(state, BRANCH_EXPLORER_DETAILS_KEY));
 
   const me = usePlaceUser();
   const highlightedAuthors = useMemo(() => pickedNames(people, me), [people, me]);
@@ -213,14 +211,14 @@ export function BranchExplorerView() {
       find,
       fit,
       zoomBy,
-      toggleDetails: () => useDetailsPaneStore.getState().toggleHidden(DETAILS_KEY),
+      toggleDetails: () => useDetailsPaneStore.getState().toggleHidden(BRANCH_EXPLORER_DETAILS_KEY),
       exitFocus: () => setFocus(null),
     });
 
   const header = (
     <ViewHeader
       title="Branch Explorer"
-      detailsToggle={<DetailsToggleButton detailsKey={DETAILS_KEY} />}
+      detailsToggle={<DetailsToggleButton detailsKey={BRANCH_EXPLORER_DETAILS_KEY} />}
       subtitle={layout && filtered && `${pluralize(filtered.changesets.length, 'changeset')} · ${pluralize(layout.lanes.length, 'branch', 'branches')}`}
       actions={
         <>
@@ -255,7 +253,7 @@ export function BranchExplorerView() {
       <>
         {header}
         <div className={styles.body}>
-          <ListWithDetails detailsKey={DETAILS_KEY} list={<GraphSkeleton />} details={null} />
+          <ListWithDetails detailsKey={BRANCH_EXPLORER_DETAILS_KEY} list={<GraphSkeleton />} details={null} />
         </div>
       </>
     );
@@ -268,7 +266,7 @@ export function BranchExplorerView() {
         {header}
         <div className={styles.body}>
           <ListWithDetails
-            detailsKey={DETAILS_KEY}
+            detailsKey={BRANCH_EXPLORER_DETAILS_KEY}
            
             list={<NoMatches icon={<GitGraph size={22} />} noun="branches" hint="Check some branches in the Branches filter, or show every branch again." onClear={clearFilters} />}
             details={null}
@@ -284,7 +282,7 @@ export function BranchExplorerView() {
         {header}
         <div className={styles.body}>
           <ListWithDetails
-            detailsKey={DETAILS_KEY}
+            detailsKey={BRANCH_EXPLORER_DETAILS_KEY}
            
             // With the details closed, the graph's pane says it.
             list={detailsOpen ? <div className={styles.emptyGraph} /> : emptyRange}
@@ -302,7 +300,7 @@ export function BranchExplorerView() {
         <div className="visually-hidden" aria-live="polite" aria-atomic="true">
           {describeSelection(layout, selection, homeChangeset)}
         </div>
-        <ListWithDetails detailsKey={DETAILS_KEY}
+        <ListWithDetails detailsKey={BRANCH_EXPLORER_DETAILS_KEY}
          
           list={
             <GraphCanvas
