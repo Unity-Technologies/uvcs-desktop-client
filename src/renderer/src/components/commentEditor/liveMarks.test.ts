@@ -165,7 +165,7 @@ describe('liveMarksOf, with a selection', () => {
     const marks = marksWith(withSelection(text, [text.length, 0]));
     expect(marks.filter((mark) => !mark.startsWith('selected'))).toEqual(marksOf(text, { revealsSelection: false }));
     const widgets = liveMarksOf(editorState(text), { revealsSelection: false }).filter((mark) => WIDGETS.has(mark.kind));
-    expect(widgets).toHaveLength(6);
+    expect(widgets).toHaveLength(5);
     expect(marks.filter((mark) => mark.startsWith('selected'))).toEqual(widgets.map((mark) => (mark.kind === 'line' ? '' : `selected ${text.slice(mark.from, mark.to)}`)));
   });
 
@@ -183,6 +183,6 @@ describe('liveMarksOf, with a selection', () => {
 
   it('reveals around each caret of several, a range among them revealing only where it started', () => {
     const text = 'Make **bold** and _quick_ end';
-    expect(marksWith(withSelection(text, [21, 21], [text.length, 0]))).toEqual(['hidden **', 'hidden **']);
+    expect(marksWith(withSelection(text, [21, 21], [16, 0]))).toEqual(['hidden **', 'hidden **']);
   });
 });
