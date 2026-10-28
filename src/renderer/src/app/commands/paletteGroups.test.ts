@@ -268,6 +268,14 @@ describe('paletteGroups finding branches and labels by their description', () =>
     expect(labelsIn(groups, 'branches')[0]).toBe('/main/other');
   });
 
+  it('shows who made it and when on a branch whose name holds the words typed in another order, with a description or not', () => {
+    // "fix crash" isn't in "crash-fix" letter by letter, so only the words find it.
+    for (const comment of ['', 'Unrelated']) {
+      const [result] = groupsFor({ term: 'fix crash', lists: { branches: branches(withComment(1, '/main/crash-fix', comment)) } })[0]!.results;
+      expect(result).toMatchObject({ label: '/main/crash-fix', detail: expect.stringMatching(/^Ana · /), labelMatches: [6, 7, 8, 9, 10, 12, 13, 14] });
+    }
+  });
+
   it('finds a label by its description too', () => {
     const groups = groupsFor({ term: 'first public', lists: { labels: labels({ ...label(1, 'v1.0'), comment: 'First public release' }, label(2, 'v2.0')) } });
 
