@@ -21,12 +21,3 @@ export function codeTokenStyle(token: ColoredToken): CSSProperties {
   if (flags & UNDERLINE) style.textDecoration = 'underline';
   return style;
 }
-
-/**
- * The language a fence names, as the highlighter looks it up: lower case, its own names and aliases (`csharp`,
- * `cs`, `c#`). Null for none, where the block stays plain.
- */
-export function fenceLanguage(info: string | undefined): string | null {
-  const name = info?.trim().split(/\s+/)[0]?.toLowerCase();
-  return name ? name : null;
-}
