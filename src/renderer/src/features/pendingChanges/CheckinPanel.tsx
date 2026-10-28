@@ -2,6 +2,7 @@ import { ArrowDownToLine, GitMerge, History } from 'lucide-react';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { CommentField } from '../../components/commentEditor/CommentField';
+import { DESCRIPTION_PLACEHOLDER } from '../../components/commentEditor/commentPlaceholders';
 import type { CommentFieldHandle } from '../../components/commentEditor/commentFieldProps';
 import { splitComment, withSummaryText } from '../../lib/comment';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -20,8 +21,6 @@ import { describeUpload, type UploadSummary } from './uploadSummary';
 import styles from './CheckinPanel.module.css';
 
 const DESCRIPTION_MIN_HEIGHT = 32;
-/** What the description takes, said once where it's written: Markdown, and what links objects and people. */
-export const DESCRIPTION_PLACEHOLDER = 'Description (optional) · Markdown, cs:, br:, @ to link';
 const DESCRIPTION_MAX_HEIGHT = 360;
 
 interface CheckinPanelProps {

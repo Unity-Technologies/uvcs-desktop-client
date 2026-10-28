@@ -1,4 +1,7 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
+import { DESCRIPTION_PLACEHOLDER } from './commentEditor/commentPlaceholders';
+import { CommentField } from './commentEditor/CommentField';
+import type { CommentFieldHandle } from './commentEditor/commentFieldProps';
 import { editedComment, withSummaryText, type CommentParts } from '../lib/comment';
 import { hotkey } from '../lib/shortcutRegistry';
 import { Button } from '../ui/Button';
@@ -24,8 +27,7 @@ interface CommentEditorProps {
  */
 export function CommentEditor({ draft, withSummary, original, opened, onChange, onSave, onClose }: CommentEditorProps) {
   const [saving, setSaving] = useState(false);
-  const summaryRef = useRef<HTMLTextAreaElement>(null);
-  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  const descriptionRef = useRef<CommentFieldHandle>(null);
 
   const save = async (): Promise<void> => {
     const comment = editedComment(original, opened, draft);
@@ -39,45 +41,39 @@ export function CommentEditor({ draft, withSummary, original, opened, onChange, 
     onClose();
   };
 
+  // ⌘↵ is each field's own (`onSubmit`); Esc, once the field has closed its suggestions, reaches here.
   const onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-      event.preventDefault();
-      void save();
-    } else if (event.key === 'Escape') {
-      event.stopPropagation();
-      onClose();
-    } else if (event.key === 'Enter' && event.target === summaryRef.current) {
-      event.preventDefault();
-      descriptionRef.current?.focus();
-    }
+    if (event.key !== 'Escape') return;
+    event.stopPropagation();
+    onClose();
   };
 
   return (
     <div className={styles.editor} onKeyDown={onKeyDown}>
       {withSummary && (
-        <textarea
-          ref={summaryRef}
+        <CommentField
+          singleLine
           className={styles.summaryField}
           value={draft.summary}
-          rows={1}
           placeholder="Summary"
-          aria-label="Summary"
+          label="Summary"
           autoFocus
           disabled={saving}
-          spellCheck
-          onChange={(event) => onChange(withSummaryText(draft, event.target.value))}
+          onChange={(text) => onChange(withSummaryText(draft, text))}
+          onEnter={() => descriptionRef.current?.focus()}
+          onSubmit={() => void save()}
         />
       )}
-      <textarea
+      <CommentField
         ref={descriptionRef}
         autoFocus={!withSummary}
         className={styles.descriptionField}
         value={draft.description}
-        placeholder="Description (optional)"
-        aria-label="Description"
+        placeholder={DESCRIPTION_PLACEHOLDER}
+        label="Description"
         disabled={saving}
-        spellCheck
-        onChange={(event) => onChange({ ...draft, description: event.target.value })}
+        onChange={(text) => onChange({ ...draft, description: text })}
+        onSubmit={() => void save()}
       />
       <div className={styles.footer}>
         <span className={styles.hint}>
