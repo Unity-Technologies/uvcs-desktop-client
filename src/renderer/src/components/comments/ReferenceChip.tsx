@@ -1,22 +1,12 @@
-import { Archive, File, GitBranch, GitCommitVertical, Link2, MessageSquareCode, Tag, type LucideIcon } from 'lucide-react';
 import { memo, useMemo, type MouseEvent } from 'react';
 import type { CommentReference } from '../../lib/comments/commentReferences';
 import { displayName } from '../../lib/userName';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { Avatar } from '../../ui/Avatar';
-import { chipContent, chipTip, emojiLabel, type ChipContent, type ChipIcon } from './chipContent';
+import { chipContent, chipTip, emojiLabel, type ChipContent } from './chipContent';
+import { CHIP_ICONS } from './chipIcons';
 import { useCachedSummary } from './useCachedSummary';
 import styles from './ReferenceChip.module.css';
-
-const ICONS: Record<ChipIcon, LucideIcon> = {
-  changeset: GitCommitVertical,
-  branch: GitBranch,
-  label: Tag,
-  shelve: Archive,
-  codeReview: MessageSquareCode,
-  file: File,
-  link: Link2,
-};
 
 interface ReferenceChipProps {
   reference: CommentReference;
@@ -72,7 +62,7 @@ type ObjectChipProps = Omit<Extract<ChipContent, { kind: 'object' }>, 'kind'> & 
 function ObjectChip({ placeRepository, cachedAs, source, compact, interactive, icon, label, title, repository, target }: ObjectChipProps) {
   const place = usePlace();
   const summary = useCachedSummary(cachedAs);
-  const Icon = ICONS[icon];
+  const Icon = CHIP_ICONS[icon];
   const open = (event: MouseEvent): void => {
     // In a row, the chip opens its object and leaves the row's selection alone.
     event.stopPropagation();
