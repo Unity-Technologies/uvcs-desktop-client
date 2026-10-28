@@ -50,6 +50,7 @@ describe('liveMarksOf', () => {
     it('reads a link as its text, its brackets and address showing only around the caret', () => {
       expect(marksOf('See [the docs](https://example.com) ‸')).toEqual(['hidden [', 'link the docs', 'hidden ]', 'hidden (', 'hidden https://example.com', 'hidden )']);
       expect(marksOf('See [the d‸ocs](https://example.com)')).toEqual(['link the docs']);
+      expect(marksOf('See [‸](url)')).toEqual([]);
     });
   });
 

@@ -155,7 +155,8 @@ function markLink(link: SyntaxNode, reveals: (from: number, to: number) => boole
     if (!shows && (child.name === 'LinkMark' || child.name === 'URL' || child.name === 'LinkTitle')) marks.push({ kind: 'hidden', from: child.from, to: child.to });
   }
   const textEnd = link.getChildren('LinkMark')[1]?.from ?? link.to;
-  marks.push({ kind: 'link', from: link.from + 1, to: textEnd });
+  // A link with no text yet (`[](url)`, as ⌘K writes it) has nothing to draw as a link.
+  if (textEnd > link.from + 1) marks.push({ kind: 'link', from: link.from + 1, to: textEnd });
 }
 
 export interface FoundReference {
