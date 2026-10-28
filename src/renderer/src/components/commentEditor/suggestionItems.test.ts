@@ -117,7 +117,8 @@ describe('emoji suggestions', () => {
   });
 
   it('write an emoji of several code points whole', () => {
-    expect(emojiSuggestions('rainbow_fl')[0]?.insert).toBe('🏳️‍🌈');
+    // The rainbow flag, written as escapes: its joiner (U+200D) is invisible (`noInvisibleCharacters.test.ts`).
+    expect(emojiSuggestions('rainbow_fl')[0]?.insert).toBe('\u{1F3F3}\u{FE0F}\u200D\u{1F308}');
   });
 
   it('show the best few only', () => {

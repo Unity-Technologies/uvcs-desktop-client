@@ -333,7 +333,7 @@ edit or caret move (`justPicked`); a branch or label whose
 name a spec can't hold (a space, a sentence's punctuation or an emphasis mark at its end) is written as its
 `uvcs://` link (`objectReferenceText`), which shows as the same chip; a person as `cm` names them (`@ana@acme.com` on
 Unity Cloud); an emoji as the character itself (🎉, not `:tada:`), one character to Backspace and to the caret even
-when it joins several (🏳️‍🌈). A `:name:` typed out whole stays as typed.
+when it joins several (the rainbow flag, a white flag and a rainbow joined). A `:name:` typed out whole stays as typed.
 
 The list opens on the trigger's key, always with a row: a pick, or "Reading branches…" with a spinner (`Spinner`,
 still with reduced motion), or "Couldn't read branches" when the read failed (never "No branches", which would read

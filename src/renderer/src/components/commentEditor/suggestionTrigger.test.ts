@@ -86,7 +86,8 @@ describe('suggestionsShownAt', () => {
 });
 
 describe('an emoji picked', () => {
-  const rainbowFlag = '🏳️‍🌈';
+  // Written as escapes: its joiner (U+200D) is invisible, and scanners flag an invisible character in source (`noInvisibleCharacters.test.ts`).
+  const rainbowFlag = '\u{1F3F3}\u{FE0F}\u200D\u{1F308}';
 
   // Backspace and the caret step by the editor's grapheme clusters (`findClusterBreak`), which the commands call.
   it('is one character to Backspace and to the caret, however many code points it holds', () => {
