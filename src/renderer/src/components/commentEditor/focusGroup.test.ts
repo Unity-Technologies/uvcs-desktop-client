@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { focusModeFields, groupMove } from './focusGroup';
+import { focusLeavesGroup, focusModeFields, groupMove } from './focusGroup';
 
 const at = { atEnd: false, onFirstLine: false };
 
@@ -27,5 +27,18 @@ describe('groupMove', () => {
     expect(groupMove('summary', 'ShiftTab', at)).toBeNull();
     expect(groupMove('description', 'Tab', at)).toBeNull();
     expect(groupMove('description', 'ArrowDown', { ...at, atEnd: true })).toBeNull();
+  });
+});
+
+describe('focusLeavesGroup', () => {
+  const inGroup = { inside: true, inMenu: false };
+  it('stays open while the focus moves within the group or into a menu it opened (Recent comments)', () => {
+    expect(focusLeavesGroup(inGroup)).toBe(false);
+    expect(focusLeavesGroup({ inside: false, inMenu: true })).toBe(false);
+  });
+
+  it('closes as the focus goes anywhere else, or nowhere', () => {
+    expect(focusLeavesGroup({ inside: false, inMenu: false })).toBe(true);
+    expect(focusLeavesGroup(null)).toBe(true);
   });
 });

@@ -1,3 +1,5 @@
+import { commentHeading } from './comments/commentHeading';
+
 /** A comment read as a title (its first line) and a description (the rest), like a commit message. */
 export interface CommentParts {
   summary: string;
@@ -9,6 +11,19 @@ export function splitComment(comment: string): CommentParts {
   const [summary = '', ...rest] = comment.replace(/\r\n?/g, '\n').replace(/^\s*\n/, '').split('\n');
   return { summary: summary.trim(), description: rest.join('\n').replace(/^\s*\n/, '').trimEnd() };
 }
+
+/**
+ * The parts a comment opens in to be edited as a title and a description (the check-in's fields): its title and the
+ * rest when it has one (`commentHeading`'s `titled`, a list's first item aside); whole in the description when it opens
+ * with a list, a table or code, or is empty, so nothing moves into the title. `editedComment` writes them back.
+ */
+export function editingParts(comment: string): CommentParts {
+  const titled = commentHeading(comment).kind === 'titled' && !OPENS_WITH_LIST.test(comment);
+  return titled ? splitComment(comment) : { summary: '', description: comment };
+}
+
+/** A comment opening with a list item: the item is no title, though a row shows it as the comment's line. */
+const OPENS_WITH_LIST = /^\s*(?:[-*+]|\d+[.)])\s/;
 
 /** The comment to store: the summary line, then a blank line and the description when there is one. */
 export function joinComment({ summary, description }: CommentParts): string {
@@ -25,7 +40,8 @@ export function editedComment(original: string, opened: CommentParts, draft: Com
   const summary = draft.summary.trim();
   const description = draft.description.replace(/^\s*\n/, '').trimEnd();
   if (!summary || !description) return summary || description;
-  return summary + separatorAfterTitle(original) + description;
+  // A title given to a comment that had none is set off by a blank line, as the check-in writes one.
+  return summary + (opened.summary ? separatorAfterTitle(original) : '\n\n') + description;
 }
 
 /** One line end when the original's description starts on the line after its title, else a blank line. */
