@@ -75,7 +75,9 @@ you touch:
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
    (see Renderer: Command log); one that ended without an exit code (stopped on a prompt, `cm` not found) is logged
    with -1, which the log and the error dialog word as "Stopped" (`commandEnding`), and one its caller cancelled is not
-   logged: it's no failure.
+   logged: it's no failure. One that gave up waiting is logged (its signal aborted with a `TimeoutError`:
+   `gaveUpWaiting`), as every read with a timeout is: a chip's read on another server, the repositories listed once
+   (`repositoriesService`), a workspace's repository (`workspaceRepositories`).
 
 To add a capability: its types in `shared/domain`, the method in `shared/api/<area>.ts` (part of `UvcsApi`), the
 implementation in `main/services/<area>Service.ts` (wired in `createServices`), `cm` argument builders and parsers as
