@@ -7,7 +7,7 @@ function changeset(id: number): Suggestion {
 }
 
 const NONE: { lookup: ChangesetLookup; search: ChangesetSearch } = { lookup: { state: 'none' }, search: { state: 'none' } };
-const read = (suggestions: Suggestion[]) => ({ suggestions, reading: false });
+const read = (suggestions: Suggestion[]) => ({ suggestions, reading: false, failed: false });
 
 describe('suggestionRows', () => {
   it('lists what matched', () => {
@@ -17,9 +17,16 @@ describe('suggestionRows', () => {
   });
 
   it('says the list is being read, then that nothing matched', () => {
-    expect(suggestionRows('label', 'v1', { suggestions: [], reading: true })).toEqual([{ kind: 'note', text: 'Reading labels…' }]);
+    expect(suggestionRows('label', 'v1', { suggestions: [], reading: true, failed: false })).toEqual([{ kind: 'note', text: 'Reading labels…', pending: true }]);
     expect(suggestionRows('label', 'v1', read([]))).toEqual([{ kind: 'note', text: 'No labels match “v1”' }]);
     expect(suggestionRows('person', '', read([]))).toEqual([{ kind: 'note', text: 'No people' }]);
+  });
+
+  it('says a list couldn’t be read, for every kind, never that the repository has none', () => {
+    const words = { changeset: 'changesets', branch: 'branches', label: 'labels', shelve: 'shelves', codeReview: 'code reviews', person: 'people' } as const;
+    for (const [kind, noun] of Object.entries(words)) {
+      expect(suggestionRows(kind as keyof typeof words, 'v1', { suggestions: [], reading: false, failed: true }, kind === 'changeset' ? NONE : undefined)).toEqual([{ kind: 'note', text: `Couldn't read ${noun}` }]);
+    }
   });
 
   it('closes the emoji list when nothing matches', () => {
@@ -30,7 +37,7 @@ describe('suggestionRows', () => {
     it('look up a number the newest ones don’t hold', () => {
       expect(suggestionRows('changeset', '12', read([changeset(4120)]), { ...NONE, lookup: { state: 'reading', id: 12 } })).toEqual([
         { kind: 'pick', suggestion: changeset(4120) },
-        { kind: 'note', text: 'Looking up changeset 12…' },
+        { kind: 'note', text: 'Looking up changeset 12…', pending: true },
       ]);
       expect(suggestionRows('changeset', '12', read([]), { ...NONE, lookup: { state: 'found', suggestion: changeset(12) } })).toEqual([{ kind: 'pick', suggestion: changeset(12) }]);
       expect(suggestionRows('changeset', '12', read([]), { ...NONE, lookup: { state: 'missing', id: 12 } })).toEqual([{ kind: 'note', text: 'No changeset 12' }]);
@@ -45,7 +52,7 @@ describe('suggestionRows', () => {
         { kind: 'pick', suggestion: changeset(4207) },
         { kind: 'searchAll', text: 'switch' },
       ]);
-      expect(suggestionRows('changeset', 'switch', read([]), { ...NONE, search: { state: 'searching', text: 'switch' } })).toEqual([{ kind: 'note', text: 'Searching all changesets…' }]);
+      expect(suggestionRows('changeset', 'switch', read([]), { ...NONE, search: { state: 'searching', text: 'switch' } })).toEqual([{ kind: 'note', text: 'Searching all changesets…', pending: true }]);
       expect(suggestionRows('changeset', 'switch', read([changeset(4207)]), { ...NONE, search: { state: 'found', text: 'switch', suggestions: [changeset(4207), changeset(80)] } })).toEqual([
         { kind: 'pick', suggestion: changeset(4207) },
         { kind: 'pick', suggestion: changeset(80) },
