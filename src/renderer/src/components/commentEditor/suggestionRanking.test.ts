@@ -18,12 +18,12 @@ describe('rankCandidates', () => {
     { name: 'Main', comment: '' },
   ];
 
-  it('ranks a name starting with what was typed, then one holding it, then a description holding it', () => {
-    expect(names(rankCandidates(byName(items), 'main', 10))).toEqual(['main-menu', 'Main', 'fix-main', 'release']);
+  it('ranks the name typed, then a name starting with it, then one holding it, then a description holding it', () => {
+    expect(names(rankCandidates(byName(items), 'main', 10))).toEqual(['Main', 'main-menu', 'fix-main', 'release']);
   });
 
   it('ignores case, and keeps the list’s order within a tier', () => {
-    expect(names(rankCandidates(byName(items), 'MAIN', 2))).toEqual(['main-menu', 'Main']);
+    expect(names(rankCandidates(byName(items), 'MAI', 2))).toEqual(['main-menu', 'Main']);
   });
 
   it('offers the first ones when nothing is typed, and none when nothing matches', () => {

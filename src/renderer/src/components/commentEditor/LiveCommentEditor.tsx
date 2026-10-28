@@ -129,7 +129,8 @@ function useSuggestions(view: EditorView | null, state: EditorState | null) {
   const shown = open !== null && rows.length > 0;
   const [active, setActive] = useState(0);
   const firstPickable = Math.max(0, rows.findIndex(isPickable));
-  const listKey = open ? `${open.kind}:${open.from}:${open.text}:${rows.length}` : '';
+  // A new list (the word typed, the search's answer) starts at its first row.
+  const listKey = open ? `${open.kind}:${open.from}:${rows.map((row) => (row.kind === 'pick' ? row.suggestion.key : row.kind)).join()}` : '';
   useEffect(() => setActive(firstPickable), [listKey]);
 
   const pick = (index: number): void => {

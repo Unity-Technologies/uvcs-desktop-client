@@ -21,27 +21,27 @@ export function indexCandidates<T>(items: readonly T[], keysOf: (item: T) => rea
 }
 
 /**
- * The best `limit` items for what was typed, in three tiers: a name that starts with it, a name that holds it, then a
- * description that holds it; the index's order within a tier (newest first, where the lists are). Nothing typed: the
- * first `limit`. The walk ends as soon as the first tier is full.
+ * The best `limit` items for what was typed, in four tiers: a name that is it, a name that starts with it, a name that
+ * holds it, then a description that holds it; the index's order within a tier (newest first, where the lists are).
+ * Nothing typed: the first `limit`. One walk of the index, which never stops early: the name typed may come last.
  */
 export function rankCandidates<T>(index: CandidateIndex<T>, typed: string, limit: number): T[] {
   const query = lower(typed);
   if (!query) return index.candidates.slice(0, limit).map((candidate) => candidate.item);
-  const tiers: T[][] = [[], [], []];
+  const tiers: T[][] = [[], [], [], []];
   for (const candidate of index.candidates) {
     const tier = tierOf(candidate, query);
     if (tier < 0 || tiers[tier]!.length >= limit) continue;
     tiers[tier]!.push(candidate.item);
-    if (tier === 0 && tiers[0]!.length >= limit) break;
   }
   return tiers.flat().slice(0, limit);
 }
 
 function tierOf(candidate: Candidate<unknown>, query: string): number {
-  if (candidate.keys.some((key) => key.startsWith(query))) return 0;
-  if (candidate.keys.some((key) => key.includes(query))) return 1;
-  if (candidate.texts.some((text) => text.includes(query))) return 2;
+  if (candidate.keys.some((key) => key === query)) return 0;
+  if (candidate.keys.some((key) => key.startsWith(query))) return 1;
+  if (candidate.keys.some((key) => key.includes(query))) return 2;
+  if (candidate.texts.some((text) => text.includes(query))) return 3;
   return -1;
 }
 

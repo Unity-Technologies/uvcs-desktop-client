@@ -46,8 +46,8 @@ describe('changeset suggestions', () => {
 describe('branch suggestions', () => {
   const index = branchIndex([branch('/main', '2026-01-01'), branch('/main/task-2210', '2026-10-01', 'The task'), branch('/main/release', '2026-09-01')]);
 
-  it('find a branch by its name, with or without its leading slash, or its last part; newest first', () => {
-    expect(branchSuggestions(index, 'main', PLACE).map((suggestion) => suggestion.label)).toEqual(['/main/task-2210', '/main/release', '/main']);
+  it('find a branch by its name, with or without its leading slash, or its last part: the name typed first, then newest first', () => {
+    expect(branchSuggestions(index, 'main', PLACE).map((suggestion) => suggestion.label)).toEqual(['/main', '/main/task-2210', '/main/release']);
     expect(branchSuggestions(index, '/main/t', PLACE).map((suggestion) => suggestion.label)).toEqual(['/main/task-2210']);
     expect(branchSuggestions(index, 'task', PLACE).map((suggestion) => suggestion.insert)).toEqual(['br:/main/task-2210']);
   });
