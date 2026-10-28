@@ -1,6 +1,6 @@
 import '../../testing/fakeWindow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { QueryClient } from '@tanstack/react-query';
+import { focusManager, QueryClient, QueryObserver } from '@tanstack/react-query';
 import { findReferences } from '../../lib/comments/commentReferences';
 import {
   MAX_RESOLVED_PER_COMMENT,
@@ -8,6 +8,7 @@ import {
   referencesToResolve,
   remoteObjectOf,
   remoteObjectQuery,
+  serverReads,
   UNREADABLE_RETRY_MS,
   type RemoteObject,
   type RemoteRead,
@@ -19,10 +20,10 @@ const remoteOf = (text: string) => remoteObjectOf(findReferences(text)[0]!.refer
 
 describe('remoteObjectOf', () => {
   it('names a changeset or a label of another repository, and whether it is on the place’s server', () => {
-    expect(remoteOf('cs:4@lib@acme@unity')).toEqual({ repository: 'lib@acme@unity', onPlaceServer: true, kind: 'changeset', id: 4 });
-    expect(remoteOf('lb:v1.0@art')).toEqual({ repository: 'art@acme@unity', onPlaceServer: true, kind: 'label', name: 'v1.0' });
-    expect(remoteOf('cs:4@codice@codice@cloud')).toEqual({ repository: 'codice@codice@cloud', onPlaceServer: false, kind: 'changeset', id: 4 });
-    expect(remoteOf('uvcs://codice.cloud/repos/codice/changesets/280528')).toEqual({ repository: 'codice@codice@cloud', onPlaceServer: false, kind: 'changeset', id: 280528 });
+    expect(remoteOf('cs:4@lib@acme@unity')).toEqual({ repository: 'lib@acme@unity', server: 'acme@unity', onPlaceServer: true, kind: 'changeset', id: 4 });
+    expect(remoteOf('lb:v1.0@art')).toEqual({ repository: 'art@acme@unity', server: 'acme@unity', onPlaceServer: true, kind: 'label', name: 'v1.0' });
+    expect(remoteOf('cs:4@art@acme@cloud')).toEqual({ repository: 'art@acme@cloud', server: 'acme@cloud', onPlaceServer: false, kind: 'changeset', id: 4 });
+    expect(remoteOf('uvcs://acme.cloud/repos/art/changesets/1201')).toEqual({ repository: 'art@acme@cloud', server: 'acme@cloud', onPlaceServer: false, kind: 'changeset', id: 1201 });
   });
 
   it('tells the place’s server however it’s written: an organization in any case, a protocol or none', () => {
@@ -37,10 +38,10 @@ describe('remoteObjectOf', () => {
   });
 
   it('reads nothing it can’t read in one command, nor while the place’s repository is unknown', () => {
-    expect(remoteOf('br:/main@codice@codice@cloud')).toBeNull();
-    expect(remoteOf('sh:3@codice@codice@cloud')).toBeNull();
-    expect(remoteOf('cr:9@codice@codice@cloud')).toBeNull();
-    expect(remoteObjectOf(findReferences('cs:4@codice@codice@cloud')[0]!.reference, undefined)).toBeNull();
+    expect(remoteOf('br:/main@art@acme@cloud')).toBeNull();
+    expect(remoteOf('sh:3@art@acme@cloud')).toBeNull();
+    expect(remoteOf('cr:9@art@acme@cloud')).toBeNull();
+    expect(remoteObjectOf(findReferences('cs:4@art@acme@cloud')[0]!.reference, undefined)).toBeNull();
   });
 
   it('reads nothing a command line couldn’t quote safely: a quote in a repository, a server or a label', () => {
@@ -59,8 +60,8 @@ describe('referencesToResolve', () => {
   });
 
   it('never reads another server’s objects as a comment shows: only as a chip’s card opens', () => {
-    expect(referencesToResolve(referencesIn('cs:4@codice@codice@cloud cs:7@x@evil.example.com:8087 cs:2@lib'), PLACE)).toEqual([
-      { repository: 'lib@acme@unity', onPlaceServer: true, kind: 'changeset', id: 2 },
+    expect(referencesToResolve(referencesIn('cs:4@art@acme@cloud cs:7@x@evil.example.com:8087 cs:2@lib'), PLACE)).toEqual([
+      { repository: 'lib@acme@unity', server: 'acme@unity', onPlaceServer: true, kind: 'changeset', id: 2 },
     ]);
   });
 });
@@ -78,7 +79,7 @@ describe('referencesOfBlocks', () => {
 });
 
 describe('remoteObjectQuery', () => {
-  const object: RemoteObject = { repository: 'codice@codice@cloud', onPlaceServer: false, kind: 'changeset', id: 4 };
+  const object: RemoteObject = { repository: 'art@acme@cloud', server: 'acme@cloud', onPlaceServer: false, kind: 'changeset', id: 4 };
   const client = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
   beforeEach(() => vi.useFakeTimers());
@@ -86,13 +87,13 @@ describe('remoteObjectQuery', () => {
 
   it('keys an object by its repository, apart from the place’s own caches', () => {
     expect(remoteObjectQuery(object).queryKey).not.toEqual(remoteObjectQuery({ ...object, repository: 'lib@acme@unity' }).queryKey);
-    expect(JSON.stringify(remoteObjectQuery(object).queryKey)).toContain('codice@codice@cloud');
+    expect(JSON.stringify(remoteObjectQuery(object).queryKey)).toContain('art@acme@cloud');
   });
 
   it('reads an object once for good, and keeps an answer that there is none just the same', async () => {
     const queries = client();
     const read = vi.fn<(object: RemoteObject) => Promise<RemoteRead>>(async (asked) => (asked.kind === 'changeset' && asked.id === 4 ? { found: { comment: 'Fix' } } : { missing: true }));
-    const missing: RemoteObject = { ...object, id: 280528 };
+    const missing: RemoteObject = { ...object, id: 1201 };
     for (let shown = 0; shown < 2; shown++) {
       await queries.prefetchQuery(remoteObjectQuery(object, read));
       await queries.prefetchQuery(remoteObjectQuery(missing, read));
@@ -122,5 +123,57 @@ describe('remoteObjectQuery', () => {
     vi.advanceTimersByTime(2);
     await queries.prefetchQuery(remoteObjectQuery(object, failing));
     expect(failing).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('serverReads', () => {
+  const object = (server: string, onPlaceServer = false): RemoteObject => ({ repository: `art@${server}`, server, onPlaceServer, kind: 'changeset', id: 4 });
+
+  it('reads the place’s own server as a comment shows', () => {
+    expect(serverReads(object('acme@unity', true), [])).toBe('onShow');
+  });
+
+  it('reads another server the user already works with only as the chip’s card opens', () => {
+    expect(serverReads(object('build.acme.com:8087'), ['build.acme.com:8087', 'local'])).toBe('onCard');
+    expect(serverReads(object('ssl://build.acme.com:8087'), ['build.acme.com:8087'])).toBe('onCard');
+    expect(serverReads(object('ACME@cloud'), ['acme@cloud'])).toBe('onCard');
+  });
+
+  it('takes every organization of Unity Cloud for known once the user signs in to it for all of them', () => {
+    expect(serverReads(object('other@cloud'), ['*@cloud'])).toBe('onCard');
+    expect(serverReads(object('other@cloud'), ['acme@cloud'])).toBe('never');
+  });
+
+  it('never reads a server the user doesn’t work with: cm would sign in there with the user’s own credentials', () => {
+    expect(serverReads(object('attacker.example.com:8087'), ['build.acme.com:8087'])).toBe('never');
+  });
+
+  it('waits for the user’s servers before deciding', () => {
+    expect(serverReads(object('build.acme.com:8087'), undefined)).toBe('unknownYet');
+  });
+});
+
+describe('remoteObjectQuery, as the window comes back', () => {
+  it('reads nothing again on focus or a reconnection, even once a failure is stale', async () => {
+    vi.useFakeTimers();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const object: RemoteObject = { repository: 'art@build.acme.com:8087', server: 'build.acme.com:8087', onPlaceServer: false, kind: 'changeset', id: 4 };
+    const failing = vi.fn<(object: RemoteObject) => Promise<RemoteRead>>(async () => {
+      throw new Error('No access');
+    });
+    const observer = new QueryObserver(client, remoteObjectQuery(object, failing));
+    const unsubscribe = observer.subscribe(() => {});
+    try {
+      await vi.waitFor(() => expect(failing).toHaveBeenCalledTimes(1));
+      vi.advanceTimersByTime(UNREADABLE_RETRY_MS + 1);
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+      await Promise.resolve();
+      expect(failing).toHaveBeenCalledTimes(1);
+    } finally {
+      unsubscribe();
+      focusManager.setFocused(undefined);
+      vi.useRealTimers();
+    }
   });
 });

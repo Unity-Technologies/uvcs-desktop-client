@@ -11,7 +11,7 @@ describe('listedFrom', () => {
   });
 
   it('answers from the server’s search of what is typed while the whole list is still being read', () => {
-    expect(listedFrom(pending, read(['/main/scm1009']))).toEqual({ items: ['/main/scm1009'], reading: false, failed: false });
+    expect(listedFrom(pending, read(['/main/fix-1009']))).toEqual({ items: ['/main/fix-1009'], reading: false, failed: false });
     expect(listedFrom(pending, pending)).toEqual({ items: [], reading: true, failed: false });
     expect(listedFrom(pending, null)).toEqual({ items: [], reading: true, failed: false });
   });

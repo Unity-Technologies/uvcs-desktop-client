@@ -96,8 +96,8 @@ before.
   the repository as the place, `remoteObjectOf`, `remoteObjectQuery`), never one for several: `cm find` has no `in
   (…)` and OR-ed ids are refused (`noOredIdLookups.test.ts`). A name a command line can't quote (a quote, a space, a
   control character) reads nothing. An object read, or an answer that the repository has none, is kept for the
-  window's life ("No changeset 280528 in codice" on the card); a failure (no access, a server out of reach) for
-  `UNREADABLE_RETRY_MS`, five minutes, then asked again ("Couldn't reach codice"). The chip keeps "280528 codice"
+  window's life ("No changeset 1201 in art" on the card); a failure (no access, a server out of reach) for
+  `UNREADABLE_RETRY_MS`, five minutes, then asked again ("Couldn't read it from art"). The chip keeps "1201 art"
   either way. Kept as immutable though comments can be edited: a chip's summary of another repository's object is a
   reminder of what it points at, and the object's own page reads it fresh.
 - A branch (two finds, its hidden ones apart), a shelve (no read of one) and a code review (its target's name read
@@ -278,11 +278,10 @@ The data is sized for a repository of 20,000 branches and 280,000 changesets (`u
 Each kind reads only once its trigger is typed (`suggestionListsRead`), through the queries the palette and the views
 share (`paletteQueries`): every branch (`everyBranchQuery`), every label (`everyLabelQuery`), the last three months'
 shelves (`recentShelvesQuery`), the newest reviews (`reviewSummariesQuery`). Until every branch or label is read
-(about two seconds there), the server searches what is typed once typing settles (`branchSearchQuery`,
+(seconds, on a repository of 20,000 branches), the server searches what is typed once typing settles (`branchSearchQuery`,
 `labelSearchQuery`: one `cm find … like … limit 50` per settled text, the palette's own search and key), and its
 answer shows. Changesets: the palette's newest 2,000 when already read (`recentChangesetsQuery`), else the newest 50
-(`suggestedChangesetsQuery`, half a second there). On codice, `br:scm10` ran two finds (the search, 0.2 s, then every
-branch, 1.8 s) and `cs:` then a number two (the newest 50, 0.5 s, then the number). A changeset's number they don't hold is looked up (`useChangeset`) once typing stops on it
+(`suggestedChangesetsQuery`). `br:fix-10` runs two finds, the search and then every branch; `cs:` then a number two, the newest 50 and then the number. A changeset's number they don't hold is looked up (`useChangeset`) once typing stops on it
 for as long as the palette's search waits (`useDebouncedValue`, `SERVER_SEARCH_DELAY_MS`): `cs:4207` reads 4207
 alone, never 4 on the way. Words they don't match offer "Search all changesets for …", the palette's on-demand search
 (`useChangesetSearch`), run only when picked. People are the owners those lists hold and everyone the place's lists

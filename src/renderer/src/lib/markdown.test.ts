@@ -71,8 +71,8 @@ describe('parseInline', () => {
   });
 
   it("links to the official client's plastic:// links, which the app opens too", () => {
-    expect(parseInline('[the fix](plastic://codice.cloud/repos/codice/changesets/280528/diff)')).toEqual([
-      { kind: 'link', url: 'plastic://codice.cloud/repos/codice/changesets/280528/diff', children: [{ kind: 'text', text: 'the fix' }] },
+    expect(parseInline('[the fix](plastic://acme.cloud/repos/art/changesets/1201/diff)')).toEqual([
+      { kind: 'link', url: 'plastic://acme.cloud/repos/art/changesets/1201/diff', children: [{ kind: 'text', text: 'the fix' }] },
     ]);
   });
 

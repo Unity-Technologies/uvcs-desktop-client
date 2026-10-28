@@ -81,9 +81,9 @@ describe('findReferences', () => {
   });
 
   it('reads the official client’s plastic:// links as their uvcs:// twins', () => {
-    const changeset = { kind: 'link', link: { kind: 'repository', server: 'codice@cloud', repository: 'codice', object: { kind: 'changeset', id: 280528 } } };
-    expect(referencesIn('See plastic://codice.cloud/repos/codice/changesets/280528/diff')).toEqual([changeset]);
-    expect(referencesIn('See uvcs://codice.cloud/repos/codice/changesets/280528/diff')).toEqual([changeset]);
+    const changeset = { kind: 'link', link: { kind: 'repository', server: 'acme@cloud', repository: 'art', object: { kind: 'changeset', id: 1201 } } };
+    expect(referencesIn('See plastic://acme.cloud/repos/art/changesets/1201/diff')).toEqual([changeset]);
+    expect(referencesIn('See uvcs://acme.cloud/repos/art/changesets/1201/diff')).toEqual([changeset]);
     expect(referencesIn('plastic://ssl://host:8088/repos/game/changesets/5/diff plastic://showchangeset=cs%3A12%40game%40acme%40cloud')).toEqual([
       { kind: 'link', link: { kind: 'repository', server: 'host:8088', repository: 'game', object: { kind: 'changeset', id: 5 } } },
       { kind: 'link', link: { kind: 'repository', server: 'acme@cloud', repository: 'game', object: { kind: 'changeset', id: 12 } } },
@@ -91,7 +91,7 @@ describe('findReferences', () => {
   });
 
   it('reads the app’s links in any case, as they open (`isAppLink`)', () => {
-    expect(referencesIn('See UVCS://codice.cloud/repos/codice/changesets/4 and Plastic://codice.cloud/repos/codice/changesets/5')).toHaveLength(2);
+    expect(referencesIn('See UVCS://acme.cloud/repos/art/changesets/4 and Plastic://acme.cloud/repos/art/changesets/5')).toHaveLength(2);
   });
 
   it('leaves as text a plastic:// link that names nothing it can open', () => {

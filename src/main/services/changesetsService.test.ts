@@ -1,6 +1,7 @@
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { OWN_PROCESS_READ_TIMEOUT_MS } from './oneObjectRead';
 import { repositoryPlace, workspacePlace } from '@shared/domain/place';
 import { findQueryArgs, roundTripDate } from '../cm/findQuery';
 import { FOUND_CHANGESETS } from '../cm/foundObjects';
@@ -130,15 +131,26 @@ describe('changesets of a repository explored without a workspace', () => {
     ]);
   });
 
-  it('gives up on another server that never answers, as one waiting on a sign-in nobody will give would never end', async () => {
-    const { cm, commands } = fakeCmClient({ 'find changeset': recordsOutput(FOUND_CHANGESETS) });
-    await createChangesetsService(serviceContext(cm)).find(repositoryPlace('game@far.example.com:8087'), 4, { ownProcess: true });
-    expect(commands[0]!.options.signal).toBeInstanceOf(AbortSignal);
+  it('gives up on another server that never answers after `OWN_PROCESS_READ_TIMEOUT_MS`, killing the process outright', async () => {
+    vi.useFakeTimers();
+    try {
+      const { cm, commands } = fakeCmClient({ 'find changeset': recordsOutput(FOUND_CHANGESETS) });
+      await createChangesetsService(serviceContext(cm)).find(repositoryPlace('game@far.example.com:8087'), 4, { ownProcess: true });
+      const { signal, killSignal } = commands[0]!.options;
+      expect(killSignal).toBe('SIGKILL');
+      vi.advanceTimersByTime(OWN_PROCESS_READ_TIMEOUT_MS - 1);
+      expect(signal?.aborted).toBe(false);
+      vi.advanceTimersByTime(1);
+      expect(signal?.aborted).toBe(true);
+      expect((signal?.reason as DOMException).name).toBe('TimeoutError');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('finds no changeset by a number the repository has none of, as an answer, not a failure', async () => {
     const { cm } = fakeCmClient({ 'find changeset': recordsOutput(FOUND_CHANGESETS) });
-    expect(await createChangesetsService(serviceContext(cm)).find(repositoryPlace('codice@codice@cloud'), 280528)).toBeNull();
+    expect(await createChangesetsService(serviceContext(cm)).find(repositoryPlace('art@acme@cloud'), 1201)).toBeNull();
   });
 
   it('lists and reads them naming the repository, an xlinked one when asked, outside every workspace', async () => {

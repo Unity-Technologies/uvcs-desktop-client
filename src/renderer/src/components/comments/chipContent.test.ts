@@ -107,10 +107,17 @@ describe('chipCard', () => {
     expect(chipCard({ title: 'Changeset 12', repository: 'art' }, undefined, ago)).toEqual({ title: 'Changeset 12', meta: ['In art'] });
   });
 
-  it('says another repository has no such object, or couldn’t be reached, in place of where it is', () => {
-    expect(chipCard({ title: 'Changeset 280528', repository: 'codice' }, undefined, ago, 'missing')).toEqual({ title: 'Changeset 280528', meta: ['No changeset 280528 in codice'] });
-    expect(chipCard({ title: 'Label v2', repository: 'codice' }, undefined, ago, 'missing')).toEqual({ title: 'Label v2', meta: ['No label v2 in codice'] });
-    expect(chipCard({ title: 'Changeset 4', repository: 'codice' }, undefined, ago, 'unreadable')).toEqual({ title: 'Changeset 4', meta: ["Couldn't reach codice"] });
+  it('says another repository has no such object, or couldn’t be read from, in place of where it is', () => {
+    expect(chipCard({ title: 'Changeset 1201', repository: 'art' }, undefined, ago, { kind: 'missing' })).toEqual({ title: 'Changeset 1201', meta: ['No changeset 1201 in art'] });
+    expect(chipCard({ title: 'Label v2', repository: 'art' }, undefined, ago, { kind: 'missing' })).toEqual({ title: 'Label v2', meta: ['No label v2 in art'] });
+    expect(chipCard({ title: 'Changeset 4', repository: 'art' }, undefined, ago, { kind: 'unreadable' })).toEqual({ title: 'Changeset 4', meta: ["Couldn't read it from art"] });
+  });
+
+  it('names the server of a repository on one the user doesn’t work with, which is never read', () => {
+    expect(chipCard({ title: 'Changeset 4', repository: 'art' }, undefined, ago, { kind: 'unknownServer', server: 'attacker.example.com:8087' })).toEqual({
+      title: 'Changeset 4',
+      meta: ['In art on attacker.example.com:8087, not a server you use'],
+    });
   });
 
   it('leaves out what an object read has no word for', () => {
