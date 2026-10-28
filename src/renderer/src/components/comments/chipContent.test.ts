@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { findReferences } from '../../lib/comments/commentReferences';
-import { chipContent, chipTip, emojiLabel, referenceRepository, type ChipContent } from './chipContent';
+import { chipCard, chipContent, emojiLabel, referenceRepository, type ChipContent } from './chipContent';
 
 const chipOf = (text: string, placeRepository?: string): ChipContent => chipContent(findReferences(text)[0]!.reference, placeRepository);
 
@@ -83,10 +83,32 @@ describe('referenceRepository', () => {
   });
 });
 
-describe('chipTip', () => {
-  it('says what the object is, its summary once read, and its repository when another', () => {
-    expect(chipTip('Changeset 12', undefined, undefined)).toEqual({ tip: 'Changeset 12' });
-    expect(chipTip('Changeset 12', 'Fix the switch', 'art')).toEqual({ tip: 'Changeset 12: Fix the switch', sub: 'In art' });
+describe('chipCard', () => {
+  const ago = (date: string) => `ago(${date})`;
+
+  it('leads with the comment read, then what the object is, who made it and when, as the Branch Explorer’s card', () => {
+    expect(chipCard({ title: 'Changeset 4' }, { comment: 'Merge **cr:44**\n\nMore', owner: 'daniel.penalba@unity3d.com', date: '2026-10-28' }, ago)).toEqual({
+      comment: 'Merge **cr:44**\n\nMore',
+      title: 'Changeset 4',
+      meta: ['Changeset 4', 'Daniel Penalba', 'ago(2026-10-28)'],
+    });
+  });
+
+  it('takes a review’s title and status', () => {
+    expect(chipCard({ title: 'Code review 44' }, { title: 'Review the switch', status: 'Under review', owner: 'ana', date: '2026-10-01' }, ago)).toEqual({
+      comment: 'Review the switch',
+      title: 'Code review 44',
+      meta: ['Code review 44', 'Under review', 'Ana', 'ago(2026-10-01)'],
+    });
+  });
+
+  it('says what the object is alone while nothing read it, and its repository when another', () => {
+    expect(chipCard({ title: 'Changeset 12' }, undefined, ago)).toEqual({ title: 'Changeset 12', meta: [] });
+    expect(chipCard({ title: 'Changeset 12', repository: 'art' }, undefined, ago)).toEqual({ title: 'Changeset 12', meta: ['In art'] });
+  });
+
+  it('leaves out what an object read has no word for', () => {
+    expect(chipCard({ title: 'Label v1' }, { comment: '', owner: 'ana' }, ago)).toEqual({ title: 'Label v1', meta: ['Ana'] });
   });
 });
 
