@@ -27,8 +27,8 @@ import {
   shelveSuggestions,
   SUGGESTION_LIMIT,
 } from './suggestionItems';
-import { suggestionListsRead, suggestionRows, type ChangesetLookup, type ChangesetSearch, type SuggestionRow } from './suggestionRows';
-import { listedFrom } from './suggestionSource';
+import { suggestionRows, type ChangesetLookup, type ChangesetSearch, type SuggestionRow } from './suggestionRows';
+import { listedFrom, suggestionReads, type ListRead, type Listed } from './suggestionSource';
 import type { SuggestionQuery } from './suggestionTrigger';
 
 const NO_ROWS: SuggestionRow[] = [];
@@ -46,22 +46,23 @@ export function useSuggestionRows(query: SuggestionQuery | null): { rows: Sugges
   const placeRepository = usePlaceRepository();
   const kind = query?.kind;
   const typed = query?.text ?? '';
-  const reads = suggestionListsRead(kind);
-
-  // The palette's newest 2,000, only if already read; else the newest 50, read in under a second.
+  // The palette's newest 2,000 changesets and every branch and label, as far as the window already read them.
   const paletteChangesets = useQuery({ ...recentChangesetsQuery(place), enabled: false });
-  const fewChangesets = useQuery({ ...suggestedChangesetsQuery(place), enabled: reads.changesets && paletteChangesets.data === undefined });
-  const changesets = paletteChangesets.data ? paletteChangesets : fewChangesets;
-  const everyBranch = useQuery({ ...everyBranchQuery(place), enabled: reads.branches });
-  const everyLabel = useQuery({ ...everyLabelQuery(place), enabled: reads.labels });
-  // Until the whole list is read, the server searches what is typed once typing settles: one find per settled text.
   const term = useDebouncedValue(typed, SERVER_SEARCH_DELAY_MS);
-  const searching = term.trim() !== '' && term === typed;
-  const searchedBranches = useQuery({ ...branchSearchQuery(place, term), enabled: reads.branches && searching && everyBranch.data === undefined });
-  const searchedLabels = useQuery({ ...labelSearchQuery(place, term), enabled: reads.labels && searching && everyLabel.data === undefined });
-  const branchesListed = listedFrom(everyBranch, reads.branches && searching ? searchedBranches : null);
-  const labelsListed = listedFrom(everyLabel, reads.labels && searching ? searchedLabels : null);
-  const changesetsListed = listedFrom(changesets, null);
+
+  const everyBranchRead = useQuery({ ...everyBranchQuery(place), enabled: false }).data !== undefined;
+  const everyLabelRead = useQuery({ ...everyLabelQuery(place), enabled: false }).data !== undefined;
+  const reads = suggestionReads({ kind, typed, settled: term, paletteChangesetsRead: paletteChangesets.data !== undefined, everyBranchRead, everyLabelRead });
+  const fewChangesets = useQuery({ ...suggestedChangesetsQuery(place), enabled: reads.fewChangesets });
+  const changesets = paletteChangesets.data ? paletteChangesets : fewChangesets;
+  const everyBranch = useQuery({ ...everyBranchQuery(place), enabled: reads.everyBranch });
+  const everyLabel = useQuery({ ...everyLabelQuery(place), enabled: reads.everyLabel });
+  const searchedBranches = useQuery({ ...branchSearchQuery(place, term), enabled: reads.searchBranches });
+  const searchedLabels = useQuery({ ...labelSearchQuery(place, term), enabled: reads.searchLabels });
+  // Kept while what they're made of is: the indexes and rankings below are built once per read, not at each render.
+  const branchesListed = useListed(everyBranch, reads.searchBranches ? searchedBranches : null);
+  const labelsListed = useListed(everyLabel, reads.searchLabels ? searchedLabels : null);
+  const changesetsListed = useListed(changesets, null);
   const shelves = useQuery({ ...recentShelvesQuery(place), enabled: reads.shelves });
   const reviews = useQuery({ ...reviewSummariesQuery(place), enabled: reads.codeReviews });
 
@@ -130,4 +131,10 @@ function useChangesetLookup(typed: string | null, listed: readonly { label: stri
   if (found.data && found.data.id === number) return { state: 'found', suggestion: changesetSuggestion(found.data) };
   if (found.isError && settled === number) return { state: 'missing', id: number };
   return { state: 'reading', id: number };
+}
+
+/** `listedFrom`, the same object while its items and state are: what ranks it is memoized on it. */
+function useListed<T>(whole: ListRead<T>, searched: ListRead<T> | null): Listed<T> {
+  const listed = listedFrom(whole, searched);
+  return useMemo(() => listed, [listed.items, listed.reading, listed.failed]);
 }

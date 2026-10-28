@@ -125,18 +125,3 @@ export function suggestionKeyAction(key: string, modifiers: KeyModifiers, rows: 
 export function isDismissed(query: SuggestionQuery, dismissedAt: number | null): boolean {
   return dismissedAt !== null && query.from === dismissedAt;
 }
-
-/**
- * Which of the shared lists a suggestion list asks for: only the one its trigger names, and nothing before a trigger
- * is typed. A mention reads the newest changesets for their authors; it takes the other lists' owners only when
- * they're already cached.
- */
-export function suggestionListsRead(kind: SuggestionKind | undefined): { changesets: boolean; branches: boolean; labels: boolean; shelves: boolean; codeReviews: boolean } {
-  return {
-    changesets: kind === 'changeset' || kind === 'person',
-    branches: kind === 'branch',
-    labels: kind === 'label',
-    shelves: kind === 'shelve',
-    codeReviews: kind === 'codeReview',
-  };
-}

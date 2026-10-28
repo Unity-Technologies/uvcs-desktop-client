@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Suggestion } from './suggestionItems';
-import { isDismissed, nextPickable, suggestionKeyAction, suggestionListsRead, suggestionRows, type ChangesetLookup, type ChangesetSearch } from './suggestionRows';
+import { isDismissed, nextPickable, suggestionKeyAction, suggestionRows, type ChangesetLookup, type ChangesetSearch } from './suggestionRows';
 
 function changeset(id: number): Suggestion {
   return { key: `cs:${id}`, kind: 'changeset', label: String(id), insert: `cs:${id}` };
@@ -114,17 +114,5 @@ describe('isDismissed', () => {
     expect(isDismissed({ kind: 'branch', from: 4, to: 8, text: 'ta' }, 4)).toBe(true);
     expect(isDismissed({ kind: 'branch', from: 12, to: 15, text: 'ma' }, 4)).toBe(false);
     expect(isDismissed({ kind: 'branch', from: 4, to: 8, text: 'ta' }, null)).toBe(false);
-  });
-});
-
-describe('suggestionListsRead', () => {
-  it('asks for no list before a trigger is typed, and for the one its trigger names after', () => {
-    expect(Object.values(suggestionListsRead(undefined)).some(Boolean)).toBe(false);
-    expect(suggestionListsRead('branch')).toEqual({ changesets: false, branches: true, labels: false, shelves: false, codeReviews: false });
-    expect(suggestionListsRead('emoji')).toEqual({ changesets: false, branches: false, labels: false, shelves: false, codeReviews: false });
-  });
-
-  it('reads the newest changesets for a mention, and no other list', () => {
-    expect(suggestionListsRead('person')).toEqual({ changesets: true, branches: false, labels: false, shelves: false, codeReviews: false });
   });
 });

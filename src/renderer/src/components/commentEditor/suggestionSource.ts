@@ -1,3 +1,5 @@
+import type { SuggestionKind } from './suggestionTriggers';
+
 /** A list query's state, as TanStack Query gives it. */
 export interface ListRead<T> {
   data: readonly T[] | undefined;
@@ -22,7 +24,43 @@ export function listedFrom<T>(whole: ListRead<T>, searched: ListRead<T> | null):
   if (whole.data) return { items: whole.data, reading: false, failed: false };
   if (searched?.data) return { items: searched.data, reading: false, failed: false };
   const reading = (whole.isPending && !whole.isError) || (searched !== null && searched.isPending && !searched.isError);
-  return { items: [], reading, failed: !reading && whole.isError };
+  return { items: NOTHING as readonly T[], reading, failed: !reading && whole.isError };
+}
+
+/** One empty list for every read with nothing yet: what indexes a list (`branchIndex`) is built once for it. */
+const NOTHING: readonly never[] = Object.freeze([]);
+
+/** What a suggestion list asks the server for, by what is typed and what the window already read. */
+export interface SuggestionReads {
+  /** The newest 50 changesets (`suggestedChangesetsQuery`), for changesets and people. */
+  fewChangesets: boolean;
+  everyBranch: boolean;
+  everyLabel: boolean;
+  /** The server's search of the branch or label typed (`branchSearchQuery`, `labelSearchQuery`). */
+  searchBranches: boolean;
+  searchLabels: boolean;
+  shelves: boolean;
+  codeReviews: boolean;
+}
+
+/**
+ * What a suggestion list reads (docs/features/rich-comments.md, "Suggestions"): only for its trigger's kind; the
+ * newest 50 changesets unless the palette's 2,000 are read already; every branch or label, and until it is read the
+ * server's search of the text typed, once it settles (`settled`, as typed) and only when not empty: one find per
+ * settled text, never one per key.
+ */
+export function suggestionReads(state: { kind: SuggestionKind | undefined; typed: string; settled: string; paletteChangesetsRead: boolean; everyBranchRead: boolean; everyLabelRead: boolean }): SuggestionReads {
+  const { kind } = state;
+  const searching = state.settled.trim() !== '' && state.settled === state.typed;
+  return {
+    fewChangesets: (kind === 'changeset' || kind === 'person') && !state.paletteChangesetsRead,
+    everyBranch: kind === 'branch',
+    everyLabel: kind === 'label',
+    searchBranches: kind === 'branch' && searching && !state.everyBranchRead,
+    searchLabels: kind === 'label' && searching && !state.everyLabelRead,
+    shelves: kind === 'shelve',
+    codeReviews: kind === 'codeReview',
+  };
 }
 
 /**

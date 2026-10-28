@@ -278,7 +278,7 @@ shows it understood `br:` whatever the list does. The list opens under the line 
 window, and is placed again as its rows change size (`suggestionListPosition`, a `ResizeObserver`).
 
 The data is sized for a repository of 20,000 branches and 280,000 changesets (`useSuggestionRows`, `listedFrom`).
-Each kind reads only once its trigger is typed (`suggestionListsRead`), through the queries the palette and the views
+Each kind reads only once its trigger is typed (`suggestionReads`), through the queries the palette and the views
 share (`paletteQueries`): every branch (`everyBranchQuery`), every label (`everyLabelQuery`), the last three months'
 shelves (`recentShelvesQuery`), the newest reviews (`reviewSummariesQuery`). Until every branch or label is read
 (seconds, on a repository of 20,000 branches), the server searches what is typed once typing settles (`branchSearchQuery`,
