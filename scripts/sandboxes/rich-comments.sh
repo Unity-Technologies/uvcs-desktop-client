@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds a repository whose comments use everything a rich comment can hold (docs/features/rich-comments.md): Markdown
-# (headings, bold, a task list, a table, code in C#, a quote, a rule), a reference of every kind (changesets, a branch,
+# (headings, bold, a task list, a table, code in C#, keys, a quote, a rule), a reference of every kind (changesets, a branch,
 # a label, a shelve, a code review, a file at a changeset, an object in another repository and on a server named by its
 # host, a uvcs:// link), people (one named in another script), emoji, an image from the web, a bare email address,
 # plain multi-line comments that must read as written, and a comment that opens with a list. One-line comments with
@@ -63,6 +63,7 @@ checkin "$(comment task "Fix **the crash** when switching with \`pending changes
 - [x] Shelve, undo, switch, bring
 - [ ] Put the changes back when the switch fails
 - Run \`cm switch\` only once, see serverpath:/Assets/Scripts/SwitchFlow.cs#cs:$SWITCH
+- Find it with <kbd>Ctrl</kbd>+<kbd>F</kbd> (<kbd>⌘</kbd><kbd>F</kbd> on a Mac)
 
 | Case | Before | After |
 | :-- | :-: | --: |
