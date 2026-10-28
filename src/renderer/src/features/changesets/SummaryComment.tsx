@@ -1,3 +1,4 @@
+import { CommentLine } from '../../components/comments/CommentLine';
 import { FoldedComment } from '../../components/FoldedComment';
 import { splitComment } from '../../lib/comment';
 import styles from './ChangesetSummary.module.css';
@@ -15,7 +16,7 @@ export function SummaryComment({ comment }: { comment: string }) {
   const { summary, description } = splitComment(comment);
   return (
     <FoldedComment
-      title={summary || <span className={styles.noComment}>No comment</span>}
+      title={summary ? <CommentLine comment={summary} /> : <span className={styles.noComment}>No comment</span>}
       titleClassName={styles.title}
       description={description}
       titleLines={TITLE_LINES}

@@ -4,6 +4,7 @@ import { shownComment, splitComment, type CommentParts, type SavedComment } from
 import { copyToClipboard } from '../ui/copyToClipboard';
 import { IconButton } from '../ui/IconButton';
 import { CommentEditor } from './CommentEditor';
+import { CommentLine } from './comments/CommentLine';
 import { FoldedComment } from './FoldedComment';
 import styles from './DetailsHeading.module.css';
 
@@ -53,14 +54,15 @@ export function DetailsHeading({ name, comment: given = '', onSave }: DetailsHea
         descriptionLines={DESCRIPTION_LINES}
         title={
           name ??
-          (parts.summary ||
-            (edit ? (
-              <button className={styles.add} onClick={edit}>
-                No comment. Add one…
-              </button>
-            ) : (
-              <span className={styles.placeholder}>No comment</span>
-            )))
+          (parts.summary ? (
+            <CommentLine comment={parts.summary} />
+          ) : edit ? (
+            <button className={styles.add} onClick={edit}>
+              No comment. Add one…
+            </button>
+          ) : (
+            <span className={styles.placeholder}>No comment</span>
+          ))
         }
         description={parts.description}
       >

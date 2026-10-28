@@ -59,18 +59,3 @@ export interface SavedComment {
 export function shownComment(comment: string, lastSaved: SavedComment | null): string {
   return lastSaved && comment === lastSaved.replaced ? lastSaved.saved : comment;
 }
-
-const BLOCK_SYNTAX = [/^#{1,6}\s+\S/, /^\s*(```|~~~)/, /^\s*>\s?\S/];
-const LIST_ITEM = /^\s*([-*+]|\d+[.)])\s+\S/;
-const INLINE_SYNTAX = [/\[[^\]]+\]\(https?:\/\/[^\s)]+\)/, /\*\*[^*\n]+\*\*/, /`[^`\n]+`/];
-
-/**
- * Whether a text was clearly written as Markdown (headings, fences, quotes, links, bold, code, or a list of several
- * items), so rendering it reads better than showing its characters. Plain prose with a stray `*` stays plain.
- */
-export function looksLikeMarkdown(text: string): boolean {
-  const lines = text.split('\n');
-  if (lines.some((line) => BLOCK_SYNTAX.some((pattern) => pattern.test(line)))) return true;
-  if (lines.filter((line) => LIST_ITEM.test(line)).length >= 2) return true;
-  return INLINE_SYNTAX.some((pattern) => pattern.test(text));
-}

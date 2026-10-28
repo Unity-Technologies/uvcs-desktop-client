@@ -5,7 +5,8 @@ import { LabelChips } from '../../components/LabelChips';
 import { Markdown } from '../../components/Markdown';
 import { WorkspaceMark } from '../../components/WorkspaceMark';
 import { withoutAction, type MenuEntry } from '../../lib/actions';
-import { looksLikeMarkdown, splitComment } from '../../lib/comment';
+import { splitComment } from '../../lib/comment';
+import { CommentLine } from '../../components/comments/CommentLine';
 import { displayName } from '../../lib/userName';
 import { Avatar } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
@@ -47,7 +48,7 @@ export function RevisionHeader({ row, path, menu, otherRepository, isWorkspaceRe
       <div className={styles.main}>
         <div className={styles.titleRow}>
           <h2 className={`${styles.title} selectable`} data-kind={row.kind} data-tip-overflow data-tip={summary}>
-            {summary || <span className={styles.noComment}>No comment</span>}
+            {summary ? <CommentLine comment={summary} /> : <span className={styles.noComment}>No comment</span>}
           </h2>
           <LabelChips labels={labels} />
           {isWorkspaceRevision && <WorkspaceMark on="revision" />}
@@ -59,7 +60,7 @@ export function RevisionHeader({ row, path, menu, otherRepository, isWorkspaceRe
         </div>
         {expanded && (
           <div className={`${styles.description} selectable`}>
-            {looksLikeMarkdown(description) ? <Markdown text={description} /> : <p className={styles.plain}>{description}</p>}
+            <Markdown text={description} comment />
           </div>
         )}
         <div className={styles.metaRow}>
