@@ -7,12 +7,15 @@ export type SuggestionRow =
   | { kind: 'pick'; suggestion: Suggestion }
   /** "Search all changesets for “x”": the comments of the changesets past the newest ones read, searched only if picked. */
   | { kind: 'searchAll'; text: string }
-  | { kind: 'note'; text: string };
+  /** Where things stand; `pending` while something is being read, drawn with a spinner. */
+  | { kind: 'note'; text: string; pending?: boolean };
 
 /** The list a kind's suggestions come from: what it ranked, and whether it's still being read. */
 export interface SuggestionSource {
   suggestions: readonly Suggestion[];
   reading: boolean;
+  /** Its list couldn't be read: said so, never as a repository with none. The trigger typed again reads again. */
+  failed: boolean;
 }
 
 /** A changeset's number typed that the newest ones don't hold, looked up once typing settles. */
@@ -39,7 +42,8 @@ const NOUNS: Record<SuggestionKind, string> = {
 export function suggestionRows(kind: SuggestionKind, typed: string, source: SuggestionSource, changesets?: { lookup: ChangesetLookup; search: ChangesetSearch }): SuggestionRow[] {
   const picks: SuggestionRow[] = source.suggestions.map((suggestion) => ({ kind: 'pick', suggestion }));
   if (kind === 'emoji') return picks;
-  if (source.reading && picks.length === 0) return [{ kind: 'note', text: `Reading ${NOUNS[kind]}…` }];
+  if (source.reading && picks.length === 0) return [{ kind: 'note', text: `Reading ${NOUNS[kind]}…`, pending: true }];
+  if (source.failed && picks.length === 0) return [{ kind: 'note', text: `Couldn't read ${NOUNS[kind]}` }];
   const extra = changesets && !source.reading ? changesetRows(typed, source.suggestions, changesets) : [];
   const rows = [...picks, ...extra];
   if (rows.length > 0) return rows;
@@ -51,7 +55,7 @@ function changesetRows(typed: string, listed: readonly Suggestion[], { lookup, s
     if (listed.some((suggestion) => suggestion.label === typed)) return [];
     switch (lookup.state) {
       case 'reading':
-        return [{ kind: 'note', text: `Looking up changeset ${lookup.id}…` }];
+        return [{ kind: 'note', text: `Looking up changeset ${lookup.id}…`, pending: true }];
       case 'found':
         return [{ kind: 'pick', suggestion: lookup.suggestion }];
       case 'missing':
@@ -61,7 +65,7 @@ function changesetRows(typed: string, listed: readonly Suggestion[], { lookup, s
     }
   }
   if (!typed.trim()) return [];
-  if (search.state === 'searching' && search.text === typed) return [{ kind: 'note', text: 'Searching all changesets…' }];
+  if (search.state === 'searching' && search.text === typed) return [{ kind: 'note', text: 'Searching all changesets…', pending: true }];
   if (search.state === 'found' && search.text === typed) {
     const shown = new Set(listed.map((suggestion) => suggestion.key));
     return search.suggestions.filter((suggestion) => !shown.has(suggestion.key)).map((suggestion) => ({ kind: 'pick', suggestion }));

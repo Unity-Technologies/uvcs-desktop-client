@@ -28,6 +28,8 @@ import { pressHidesBar, selectionBarShows } from './selectionBarState';
 import { optionId, SuggestionList } from './SuggestionList';
 import { isDismissed, isPickable, suggestionKeyAction } from './suggestionRows';
 import { pickSuggestion, suggestionsShownAt, type SuggestionQuery } from './suggestionTrigger';
+import { setSuggestionCue } from './suggestionCueField';
+import { suggestionCue } from './suggestionSource';
 import { useSuggestionRows } from './useSuggestionRows';
 import { WidgetPortals } from './widgetPortals';
 import fieldStyles from './CommentField.module.css';
@@ -273,7 +275,14 @@ function useSuggestions(view: EditorView | null, state: EditorState | null) {
     if (!query) setDismissedAt(null);
   }, [query === null]);
 
-  const { rows, searchAll } = useSuggestionRows(open);
+  const { rows, reading, searchAll } = useSuggestionRows(open);
+  // The cue at the word typed, apart from the list: the field shows it understood the trigger whatever the list does.
+  const cue = suggestionCue({ recognized: query !== null, dismissed: query !== null && isDismissed(query, dismissedAt), reading });
+  const cueRange = query && cue ? { from: query.from, to: query.to, state: cue } : null;
+  const cueKey = cueRange ? `${cueRange.from}:${cueRange.to}:${cueRange.state}` : '';
+  useEffect(() => {
+    view?.dispatch({ effects: setSuggestionCue.of(cueRange) });
+  }, [view, cueKey]);
   const shown = open !== null && rows.length > 0;
   const [active, setActive] = useState(0);
   const firstPickable = Math.max(0, rows.findIndex(isPickable));

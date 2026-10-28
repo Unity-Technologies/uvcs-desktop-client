@@ -18,6 +18,18 @@ const SERVER_SEARCH_LIMIT = 50;
 export const SERVER_SEARCH_DELAY_MS = 300;
 const SERVER_SEARCH_STALE_TIME = 60_000;
 
+/** The server's search of branches by name (`cm find branch … like`, `SERVER_SEARCH_LIMIT`), the palette's and the suggestions'. */
+export function branchSearchQuery(place: Place, term: string) {
+  const textFilter: QueryFilter = { text: term, limit: SERVER_SEARCH_LIMIT };
+  return { queryKey: branchesKey(place, textFilter), queryFn: () => api.branches.list(place, textFilter), staleTime: SERVER_SEARCH_STALE_TIME };
+}
+
+/** The server's search of labels by name, as `branchSearchQuery`. */
+export function labelSearchQuery(place: Place, term: string) {
+  const textFilter: QueryFilter = { text: term, limit: SERVER_SEARCH_LIMIT };
+  return { queryKey: labelsKey(place, textFilter), queryFn: () => api.labels.list(place, textFilter), staleTime: SERVER_SEARCH_STALE_TIME };
+}
+
 /**
  * Once typing pauses, `cm find ... like` asks the server for what the cached lists may miss (objects created since,
  * or beyond the cached limits), only for the sections in scope. `term` is the settled term the answers are for.
@@ -32,8 +44,8 @@ export function usePaletteServerSearch(shown: Place | null, typed: string, scope
   return {
     term,
     searches,
-    branches: useQuery({ queryKey: branchesKey(place, textFilter), queryFn: () => api.branches.list(place, textFilter), ...server('branches') }),
-    labels: useQuery({ queryKey: labelsKey(place, textFilter), queryFn: () => api.labels.list(place, textFilter), ...server('labels') }),
+    branches: useQuery({ ...branchSearchQuery(place, term), ...server('branches') }),
+    labels: useQuery({ ...labelSearchQuery(place, term), ...server('labels') }),
     shelves: useQuery({ queryKey: shelvesKey(place, textFilter), queryFn: () => api.shelves.list(place, textFilter), ...server('shelves') }),
     codeReviews: useQuery({
       queryKey: reviewSummariesKey(place, term),

@@ -2,10 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { placeId } from '@shared/domain/place';
 import { everyBranchQuery, everyLabelQuery, recentShelvesQuery } from '../../app/commands/paletteQueries';
-import { SERVER_SEARCH_DELAY_MS, useChangesetSearch } from '../../app/commands/usePaletteServerSearch';
+import { branchSearchQuery, labelSearchQuery, SERVER_SEARCH_DELAY_MS, useChangesetSearch } from '../../app/commands/usePaletteServerSearch';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
-import { recentChangesetsQuery } from '../../features/changesets/recentChangesets';
+import { recentChangesetsQuery, suggestedChangesetsQuery } from '../../features/changesets/recentChangesets';
 import { useChangeset } from '../../features/changesets/useChangeset';
 import { reviewSummariesQuery } from '../../features/codeReviews/useCodeReviews';
 import { peopleSeenIn } from '../people/usePeopleSeen';
@@ -28,80 +28,94 @@ import {
   SUGGESTION_LIMIT,
 } from './suggestionItems';
 import { suggestionListsRead, suggestionRows, type ChangesetLookup, type ChangesetSearch, type SuggestionRow } from './suggestionRows';
+import { listedFrom } from './suggestionSource';
 import type { SuggestionQuery } from './suggestionTrigger';
 
 const NO_ROWS: SuggestionRow[] = [];
 
 /**
- * The suggestion list's rows for what is typed (docs/features/rich-comments.md, "Suggestions"). No command of its
- * own: each kind reads the list the palette and the views already share, under the same query key, and only once its
- * trigger is typed. People come from the owners of those lists and everyone the place's lists showed; a changeset
- * past the newest ones is looked up by its number once typing settles, or found by "Search all changesets", which
- * searches only when picked.
+ * The suggestion list's rows for what is typed (docs/features/rich-comments.md, "Suggestions"). Each kind reads the
+ * list the palette and the views share, under the same query key, only once its trigger is typed. Changesets: the
+ * palette's newest 2,000 when cached, else the newest 50 (`suggestedChangesetsQuery`). Branches and labels: the whole
+ * list, and the server's search of what is typed until it is read (`listedFrom`). People come from the owners of
+ * those lists and everyone the place's lists showed; a changeset past the newest ones is looked up by its number once
+ * typing settles, or found by "Search all changesets", which searches only when picked.
  */
-export function useSuggestionRows(query: SuggestionQuery | null): { rows: SuggestionRow[]; searchAll: (text: string) => void } {
+export function useSuggestionRows(query: SuggestionQuery | null): { rows: SuggestionRow[]; reading: boolean; searchAll: (text: string) => void } {
   const place = usePlace();
   const placeRepository = usePlaceRepository();
   const kind = query?.kind;
   const typed = query?.text ?? '';
   const reads = suggestionListsRead(kind);
 
-  const changesets = useQuery({ ...recentChangesetsQuery(place), enabled: reads.changesets });
-  const branches = useQuery({ ...everyBranchQuery(place), enabled: reads.branches });
-  const labels = useQuery({ ...everyLabelQuery(place), enabled: reads.labels });
+  // The palette's newest 2,000, only if already read; else the newest 50, read in under a second.
+  const paletteChangesets = useQuery({ ...recentChangesetsQuery(place), enabled: false });
+  const fewChangesets = useQuery({ ...suggestedChangesetsQuery(place), enabled: reads.changesets && paletteChangesets.data === undefined });
+  const changesets = paletteChangesets.data ? paletteChangesets : fewChangesets;
+  const everyBranch = useQuery({ ...everyBranchQuery(place), enabled: reads.branches });
+  const everyLabel = useQuery({ ...everyLabelQuery(place), enabled: reads.labels });
+  // Until the whole list is read, the server searches what is typed once typing settles: one find per settled text.
+  const term = useDebouncedValue(typed, SERVER_SEARCH_DELAY_MS);
+  const searching = term.trim() !== '' && term === typed;
+  const searchedBranches = useQuery({ ...branchSearchQuery(place, term), enabled: reads.branches && searching && everyBranch.data === undefined });
+  const searchedLabels = useQuery({ ...labelSearchQuery(place, term), enabled: reads.labels && searching && everyLabel.data === undefined });
+  const branchesListed = listedFrom(everyBranch, reads.branches && searching ? searchedBranches : null);
+  const labelsListed = listedFrom(everyLabel, reads.labels && searching ? searchedLabels : null);
+  const changesetsListed = listedFrom(changesets, null);
   const shelves = useQuery({ ...recentShelvesQuery(place), enabled: reads.shelves });
   const reviews = useQuery({ ...reviewSummariesQuery(place), enabled: reads.codeReviews });
 
   // Each list read into an index once per read: a key typed walks no object.
-  const changesetsIndex = useMemo(() => changesetIndex(changesets.data ?? []), [changesets.data]);
-  const branchesIndex = useMemo(() => branchIndex(branches.data ?? []), [branches.data]);
-  const labelsIndex = useMemo(() => labelIndex(labels.data ?? []), [labels.data]);
+  const changesetsIndex = useMemo(() => changesetIndex(changesetsListed.items), [changesetsListed.items]);
+  const branchesIndex = useMemo(() => branchIndex(branchesListed.items), [branchesListed.items]);
+  const labelsIndex = useMemo(() => labelIndex(labelsListed.items), [labelsListed.items]);
   const shelvesIndex = useMemo(() => shelveIndex(shelves.data ?? []), [shelves.data]);
   const reviewsIndex = useMemo(() => codeReviewIndex(reviews.data ?? []), [reviews.data]);
   const peopleIndex = useMemo(
     () =>
       kind === 'person'
         ? personIndex([
-            ...(changesets.data ?? []).map((changeset) => changeset.owner),
-            ...(branches.data ?? []).map((branch) => branch.owner),
-            ...(labels.data ?? []).map((label) => label.owner),
+            ...changesetsListed.items.map((changeset) => changeset.owner),
+            ...(everyBranch.data ?? []).map((branch) => branch.owner),
+            ...(everyLabel.data ?? []).map((label) => label.owner),
             ...(shelves.data ?? []).map((shelve) => shelve.owner),
             ...(reviews.data ?? []).flatMap((review) => [review.owner, review.assignee].filter(Boolean)),
             ...peopleSeenIn(placeId(place)),
           ])
         : null,
-    [kind, changesets.data, branches.data, labels.data, shelves.data, reviews.data, place],
+    [kind, changesetsListed.items, everyBranch.data, everyLabel.data, shelves.data, reviews.data, place],
   );
 
   const listed = useMemo(() => {
     switch (kind) {
       case 'changeset':
-        return { suggestions: changesetSuggestions(changesetsIndex, typed), reading: changesets.isPending };
+        return { suggestions: changesetSuggestions(changesetsIndex, typed), reading: changesetsListed.reading, failed: changesetsListed.failed };
       case 'branch':
-        return { suggestions: branchSuggestions(branchesIndex, typed, placeRepository), reading: branches.isPending };
+        return { suggestions: branchSuggestions(branchesIndex, typed, placeRepository), reading: branchesListed.reading, failed: branchesListed.failed };
       case 'label':
-        return { suggestions: labelSuggestions(labelsIndex, typed, placeRepository), reading: labels.isPending };
+        return { suggestions: labelSuggestions(labelsIndex, typed, placeRepository), reading: labelsListed.reading, failed: labelsListed.failed };
       case 'shelve':
-        return { suggestions: shelveSuggestions(shelvesIndex, typed), reading: shelves.isPending };
+        return { suggestions: shelveSuggestions(shelvesIndex, typed), reading: shelves.isPending && !shelves.isError, failed: shelves.isError };
       case 'codeReview':
-        return { suggestions: codeReviewSuggestions(reviewsIndex, typed), reading: reviews.isPending };
+        return { suggestions: codeReviewSuggestions(reviewsIndex, typed), reading: reviews.isPending && !reviews.isError, failed: reviews.isError };
       case 'person':
-        return { suggestions: peopleIndex ? personSuggestions(peopleIndex, typed) : [], reading: changesets.isPending };
+        return { suggestions: peopleIndex ? personSuggestions(peopleIndex, typed) : [], reading: changesetsListed.reading, failed: changesetsListed.failed };
       case 'emoji':
-        return { suggestions: emojiSuggestions(typed), reading: false };
+        return { suggestions: emojiSuggestions(typed), reading: false, failed: false };
       default:
         return null;
     }
-  }, [kind, typed, changesetsIndex, branchesIndex, labelsIndex, shelvesIndex, reviewsIndex, peopleIndex, placeRepository, changesets.isPending, branches.isPending, labels.isPending, shelves.isPending, reviews.isPending]);
+  }, [kind, typed, changesetsIndex, branchesIndex, labelsIndex, shelvesIndex, reviewsIndex, peopleIndex, placeRepository, changesetsListed, branchesListed, labelsListed, shelves.isPending, shelves.isError, reviews.isPending, reviews.isError]);
 
   const lookup = useChangesetLookup(kind === 'changeset' && changesets.data !== undefined ? typed : null, listed?.suggestions ?? []);
+  const reading = listed?.reading ?? false;
   const search = useChangesetSearch(place);
   const searched: ChangesetSearch =
     search.term === undefined ? { state: 'none' } : search.found.data ? { state: 'found', text: search.term, suggestions: search.found.data.slice(0, SUGGESTION_LIMIT).map(changesetSuggestion) } : { state: 'searching', text: search.term };
 
   // The best few rows: cheap to lay out again on each render.
   const rows = listed && kind ? suggestionRows(kind, typed, listed, kind === 'changeset' ? { lookup, search: searched } : undefined) : NO_ROWS;
-  return { rows, searchAll: (text) => search.start(text) };
+  return { rows, reading, searchAll: (text) => search.start(text) };
 }
 
 /**

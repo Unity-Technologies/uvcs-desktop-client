@@ -3,6 +3,7 @@ import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { displayName } from '../../lib/userName';
 import { Avatar } from '../../ui/Avatar';
+import { Spinner } from '../../ui/Spinner';
 import { CHIP_ICONS } from '../comments/chipIcons';
 import { suggestionListPosition, type Box } from './popupPosition';
 import type { Suggestion } from './suggestionItems';
@@ -48,6 +49,7 @@ export function SuggestionList({ id, rows, active, anchor, onPick, onHover }: Su
       {rows.map((row, index) =>
         row.kind === 'note' ? (
           <div key={`note:${row.text}`} className={styles.note} role="presentation">
+            {row.pending && <Spinner size={12} />}
             {row.text}
           </div>
         ) : (

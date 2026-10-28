@@ -257,6 +257,19 @@
   white-space: nowrap;
 }
 
+/* The word typed after a trigger (`suggestionCue`): the field understood it, whatever the list does. It pulses gently
+   while its list is read; the durations drop to zero with reduced motion, and the pulse with them. */
+.editor :global(.cm-suggestionCue) {
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+.editor :global(.cm-suggestionCue[data-reading]) {
+  animation: var(--keyframes-pulse) calc(var(--duration-slow) * 2) ease-in-out infinite alternate;
+}
+
 /* A reference selected, shown as typed so typing replaces it. */
 .editor :global(.cm-typedReference) {
   border-radius: var(--radius-sm);
