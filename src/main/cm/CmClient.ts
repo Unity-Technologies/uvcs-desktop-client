@@ -256,8 +256,8 @@ export class CmClient {
     this.startListeners.forEach((listener) => listener({ args, cwd, finished }));
 
     const result = await finished.catch((error: unknown) => {
-      // A command its caller cancelled is no failure to log.
-      if (options.signal?.aborted) throw error;
+      // A command its caller cancelled is no failure to log; one that gave up waiting (a timeout's abort) is.
+      if (options.signal?.aborted && !gaveUpWaiting(options.signal)) throw error;
       const entry = log(endedWithoutExitCode(error));
       throw error instanceof CmOutputTooLargeError ? stoppedFailure(error, entry) : error;
     });
@@ -320,4 +320,9 @@ function failure(result: CmResult, entry: CommandLogEntry): CmError {
     output: entry.output,
     logEntryId: entry.id,
   });
+}
+
+/** Whether a signal aborted because its time ran out (`AbortSignal.timeout`, `readOneObject`), not by its caller. */
+function gaveUpWaiting(signal: AbortSignal): boolean {
+  return signal.reason instanceof DOMException && signal.reason.name === 'TimeoutError';
 }

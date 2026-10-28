@@ -134,8 +134,12 @@ describe('changesets of a repository explored without a workspace', () => {
   it('gives up on another server that never answers after `OWN_PROCESS_READ_TIMEOUT_MS`, killing the process outright', async () => {
     vi.useFakeTimers();
     try {
-      const { cm, commands } = fakeCmClient({ 'find changeset': recordsOutput(FOUND_CHANGESETS) });
-      await createChangesetsService(serviceContext(cm)).find(repositoryPlace('game@far.example.com:8087'), 4, { ownProcess: true });
+      // A host that never answers: the read waits on its signal, as a process left running does.
+      const { cm, commands } = fakeCmClient({
+        'find changeset': ({ options }) => new Promise((_, reject) => options.signal?.addEventListener('abort', () => reject(new Error('Killed')))),
+      });
+      const read = createChangesetsService(serviceContext(cm)).find(repositoryPlace('game@far.example.com:8087'), 4, { ownProcess: true });
+      const failed = expect(read).rejects.toThrow('Killed');
       const { signal, killSignal } = commands[0]!.options;
       expect(killSignal).toBe('SIGKILL');
       vi.advanceTimersByTime(OWN_PROCESS_READ_TIMEOUT_MS - 1);
@@ -143,6 +147,7 @@ describe('changesets of a repository explored without a workspace', () => {
       vi.advanceTimersByTime(1);
       expect(signal?.aborted).toBe(true);
       expect((signal?.reason as DOMException).name).toBe('TimeoutError');
+      await failed;
     } finally {
       vi.useRealTimers();
     }
