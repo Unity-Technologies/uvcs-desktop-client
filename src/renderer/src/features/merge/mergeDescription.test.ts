@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MergePlan } from '@shared/domain/merge';
-import { completionCounts, completionTitle, describeSpec, mergeLabels, mergeTitle, mergeTitleText } from './mergeDescription';
+import { completionCounts, completionTitle, describeSpec, mergeInProgressWords, mergeLabels, mergeTitle, mergeTitleText } from './mergeDescription';
 
 const plan: MergePlan = {
   status: 'ready',
@@ -48,6 +48,14 @@ describe('mergeTitle', () => {
     expect(title({ kind: 'merge', sourceSpec: 'sh:2' }, '/main')).toBe('Apply shelve 2 to /main');
     expect(title({ kind: 'cherryPick', sourceSpec: 'cs:9', intervalOriginSpec: 'cs:5' }, '/main')).toBe('Cherry pick changeset 5…changeset 9 into /main');
     expect(title({ kind: 'subtractive', sourceSpec: 'cs:7' }, '/main')).toBe('Undo changeset 7 on /main');
+  });
+});
+
+describe('mergeInProgressWords', () => {
+  it('names what the merge does to what, and where it goes in full', () => {
+    expect(mergeInProgressWords({ kind: 'merge', sourceSpec: 'br:/main/task' })).toEqual({ label: 'Merge /main/task', railLabel: 'Merge', title: 'Merge /main/task into your workspace' });
+    expect(mergeInProgressWords({ kind: 'merge', sourceSpec: 'br:/main/task', destinationBranch: '/main' }).title).toBe('Merge /main/task into /main');
+    expect(mergeInProgressWords({ kind: 'subtractive', sourceSpec: 'cs:7' })).toEqual({ label: 'Undo changeset 7', railLabel: 'Undo', title: 'Undo changeset 7 on your workspace' });
   });
 });
 

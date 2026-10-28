@@ -94,6 +94,6 @@ export function whereTheWindowIs(): { view: ViewId; pages: Page[] } {
 
 beforeEach(() => {
   useToastStore.setState({ toasts: [] });
-  useNavigation.setState({ view: 'changes', pages: [] });
+  useNavigation.setState({ view: 'changes', pages: [], merge: null });
   queryClient.clear();
 });

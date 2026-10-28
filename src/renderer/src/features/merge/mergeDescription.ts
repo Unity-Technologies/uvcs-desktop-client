@@ -97,3 +97,17 @@ export function completionCounts(changeCount: number, conflictCount: number): st
 export function mergeTitleText({ verb, source, preposition, destination }: MergeTitle): string {
   return `${verb} ${source} ${preposition} ${destination}`;
 }
+
+/** How the sidebar names a merge in progress: what it does to what ("Merge /main/task"), and the whole of it in its tip. */
+export interface MergeInProgressWords {
+  label: string;
+  /** The rail's tile: the verb alone. */
+  railLabel: string;
+  /** "Merge /main/task into your workspace". */
+  title: string;
+}
+
+export function mergeInProgressWords(request: MergeRequest): MergeInProgressWords {
+  const title = mergeTitle(request, request.destinationBranch ?? 'your workspace');
+  return { label: `${title.verb} ${title.source}`, railLabel: title.verb, title: mergeTitleText(title) };
+}

@@ -52,12 +52,11 @@ describe('applyShelve', () => {
     applyAnswers({ kind: 'conflicts' }, { kind: 'conflicts' });
 
     expect(await applyShelve(ws, 12, true)).toBe(false);
-    await applyShelve(ws, 13, false);
+    expect(whereTheWindowIs().pages).toEqual([{ kind: 'merge', request: { kind: 'merge', sourceSpec: 'sh:12', deleteShelve: true } }]);
 
-    expect(whereTheWindowIs().pages).toEqual([
-      { kind: 'merge', request: { kind: 'merge', sourceSpec: 'sh:12', deleteShelve: true } },
-      { kind: 'merge', request: { kind: 'merge', sourceSpec: 'sh:13' } },
-    ]);
+    useNavigation.setState({ pages: [], merge: null });
+    await applyShelve(ws, 13, false);
+    expect(whereTheWindowIs().pages).toEqual([{ kind: 'merge', request: { kind: 'merge', sourceSpec: 'sh:13' } }]);
     expect(shownToasts()).toEqual([]);
   });
 
