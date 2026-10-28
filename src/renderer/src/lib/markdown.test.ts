@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { markdownPreview, parseInline, parseMarkdown } from './markdown';
+import { markdownPreview, parseInline, parseMarkdown, plainText } from './markdown';
 
 describe('parseMarkdown', () => {
   it('reads headings, paragraphs, lists, quotes and code blocks', () => {
@@ -60,8 +60,131 @@ describe('parseInline', () => {
     expect(parseInline('merge_only_reviewed')).toEqual([{ kind: 'text', text: 'merge_only_reviewed' }]);
   });
 
-  it('never reads links to other schemes', () => {
-    expect(parseInline('[x](javascript:alert(1))')).toEqual([{ kind: 'text', text: '[x](javascript:alert(1))' }]);
+  it('never links to other schemes: such a link shows its text', () => {
+    expect(parseInline('[x](javascript:alert(1)) [y](file:///etc/passwd)')).toEqual([{ kind: 'text', text: 'x y' }]);
+  });
+
+  it("links to the app's own links", () => {
+    expect(parseInline('[the fix](uvcs://local/repos/game/changesets/12)')).toEqual([
+      { kind: 'link', url: 'uvcs://local/repos/game/changesets/12', children: [{ kind: 'text', text: 'the fix' }] },
+    ]);
+  });
+
+  it('reads the first line of a heading, a list item or a quote without its marks', () => {
+    expect(parseInline('## Fix **crash**')).toEqual([{ kind: 'text', text: 'Fix ' }, { kind: 'strong', children: [{ kind: 'text', text: 'crash' }] }]);
+    expect(parseInline('- [x] Done')).toEqual([{ kind: 'text', text: 'Done' }]);
+    expect(parseInline('> Quoted')).toEqual([{ kind: 'text', text: 'Quoted' }]);
+  });
+
+  it('reads strikethrough', () => {
+    expect(parseInline('~~old~~ new')).toEqual([{ kind: 'strike', children: [{ kind: 'text', text: 'old' }] }, { kind: 'text', text: ' new' }]);
+  });
+
+  it('shows raw HTML as the text it is', () => {
+    expect(parseInline('<b>bold</b> <script>x</script>')).toEqual([{ kind: 'text', text: '<b>bold</b> <script>x</script>' }]);
+  });
+});
+
+describe('parseMarkdown with GitHub extensions', () => {
+  it('reads tables with their alignment', () => {
+    expect(parseMarkdown('| Case | After |\n| :-- | --: |\n| Switch | Kept |')).toEqual([
+      {
+        kind: 'table',
+        align: ['left', 'right'],
+        header: [[{ kind: 'text', text: 'Case' }], [{ kind: 'text', text: 'After' }]],
+        rows: [[[{ kind: 'text', text: 'Switch' }], [{ kind: 'text', text: 'Kept' }]]],
+      },
+    ]);
+  });
+
+  it('reads task lists, nested lists and where a numbered list starts', () => {
+    expect(parseMarkdown('- [x] Shelve\n- [ ] Switch\n  - Bring\n\n3. Third')).toEqual([
+      {
+        kind: 'list',
+        ordered: false,
+        items: [
+          { children: [{ kind: 'text', text: 'Shelve' }], checked: true },
+          {
+            children: [{ kind: 'text', text: 'Switch' }],
+            checked: false,
+            sublist: { kind: 'list', ordered: false, items: [{ children: [{ kind: 'text', text: 'Bring' }] }] },
+          },
+        ],
+      },
+      { kind: 'list', ordered: true, start: 3, items: [{ children: [{ kind: 'text', text: 'Third' }] }] },
+    ]);
+  });
+
+  it("keeps a code block's language, a rule and a quote's blocks", () => {
+    expect(parseMarkdown('```csharp\nvar a = 1;\n```\n\n---\n\n> One\n>\n> - Two')).toEqual([
+      { kind: 'code', text: 'var a = 1;', language: 'csharp' },
+      { kind: 'rule' },
+      {
+        kind: 'quote',
+        children: [
+          { kind: 'paragraph', children: [{ kind: 'text', text: 'One' }] },
+          { kind: 'list', ordered: false, items: [{ children: [{ kind: 'text', text: 'Two' }] }] },
+        ],
+      },
+    ]);
+  });
+
+  it('reads images from the web only, and reference-style links', () => {
+    expect(parseInline('![shot](https://example.com/a.png) ![local](file:///a.png) [docs][1]\n\n[1]: https://example.com/docs')).toEqual([
+      { kind: 'image', url: 'https://example.com/a.png', alt: 'shot' },
+      { kind: 'text', text: ' local ' },
+      { kind: 'link', url: 'https://example.com/docs', children: [{ kind: 'text', text: 'docs' }] },
+    ]);
+  });
+});
+
+describe('parseMarkdown of a comment', () => {
+  const comment = { comment: true };
+
+  it('keeps each line break, as GitHub shows a comment', () => {
+    expect(parseMarkdown('First line\nsecond line', comment)).toEqual([
+      { kind: 'paragraph', children: [{ kind: 'text', text: 'First line' }, { kind: 'break' }, { kind: 'text', text: 'second line' }] },
+    ]);
+  });
+
+  it('reads references in its text, never in code or in a link', () => {
+    expect(parseInline('Fixes cs:12 for @ana, not `cs:13` nor [cs:14](https://x.com) :tada:', comment)).toEqual([
+      { kind: 'text', text: 'Fixes ' },
+      { kind: 'reference', reference: { kind: 'changeset', id: 12 }, source: 'cs:12' },
+      { kind: 'text', text: ' for ' },
+      { kind: 'reference', reference: { kind: 'user', name: 'ana' }, source: '@ana' },
+      { kind: 'text', text: ', not ' },
+      { kind: 'code', text: 'cs:13' },
+      { kind: 'text', text: ' nor ' },
+      { kind: 'link', url: 'https://x.com', children: [{ kind: 'text', text: 'cs:14' }] },
+      { kind: 'text', text: ' ' },
+      { kind: 'reference', reference: { kind: 'emoji', name: 'tada', glyph: '🎉' }, source: ':tada:' },
+    ]);
+  });
+
+  it('reads a person named by an email address as the person, not a mail link', () => {
+    expect(parseInline('Thanks @ana@acme.com!', comment)).toEqual([
+      { kind: 'text', text: 'Thanks ' },
+      { kind: 'reference', reference: { kind: 'user', name: 'ana@acme.com' }, source: '@ana@acme.com' },
+      { kind: 'text', text: '!' },
+    ]);
+  });
+
+  it('keeps underscores and stars in names and paths as written', () => {
+    expect(parseInline('br:/main/task_22_fix and *.meta files', comment)).toEqual([
+      { kind: 'reference', reference: { kind: 'branch', name: '/main/task_22_fix' }, source: 'br:/main/task_22_fix' },
+      { kind: 'text', text: ' and *.meta files' },
+    ]);
+  });
+
+  it('reads references only in comments', () => {
+    expect(parseInline('cs:12')).toEqual([{ kind: 'text', text: 'cs:12' }]);
+  });
+});
+
+describe('plainText', () => {
+  it('writes references as written, emoji as themselves and images by their description', () => {
+    expect(plainText(parseInline('See cs:12 :tada: ![the dialog](https://x.com/a.png)', { comment: true }))).toBe('See cs:12 🎉 the dialog');
   });
 });
 

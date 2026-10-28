@@ -1,0 +1,63 @@
+.chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  max-width: 100%;
+  padding: 0 5px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-code);
+  color: var(--text-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+  vertical-align: baseline;
+  cursor: pointer;
+}
+
+.chip:hover {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+
+.chip:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-visible);
+}
+
+.icon {
+  flex: none;
+  align-self: center;
+}
+
+.alt {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview {
+  z-index: 900;
+  padding: var(--space-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-lg);
+  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
+}
+
+.preview img {
+  display: block;
+  max-width: min(420px, 70vw);
+  max-height: 320px;
+  border-radius: var(--radius-md);
+}
+
+.inline {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.inline img {
+  display: block;
+  max-width: 100%;
+  border-radius: var(--radius-md);
+}

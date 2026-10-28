@@ -105,7 +105,7 @@ function blocksOfElement(element: HtmlElement): MarkdownBlock[] {
   const heading = HEADINGS[tag];
   if (heading) return withInlines(children, (inlines) => ({ kind: 'heading', level: heading, children: inlines }));
   if (tag === 'p' || tag === 'tr') return withInlines(children, (inlines) => ({ kind: 'paragraph', children: inlines }));
-  if (tag === 'blockquote') return withInlines(children, (inlines) => ({ kind: 'quote', children: inlines }));
+  if (tag === 'blockquote') return withInlines(children, (inlines) => ({ kind: 'quote', children: [{ kind: 'paragraph', children: inlines }] }));
   if (tag === 'pre') return [{ kind: 'code', text: textOf(children).replace(/\n$/, '') }];
   if (tag === 'ul' || tag === 'ol') {
     const list = listOf(element);
@@ -164,7 +164,7 @@ function merged(inlines: MarkdownInline[]): MarkdownInline[] {
   for (const inline of inlines) {
     const previous = result.at(-1);
     if (inline.kind === 'text' && previous?.kind === 'text') previous.text = (previous.text + inline.text).replace(/ {2,}/g, ' ');
-    else if (inline.kind === 'text' || inline.kind === 'code' || inline.children.length > 0) result.push(inline);
+    else if (inline.kind === 'text' || !('children' in inline) || inline.children.length > 0) result.push(inline);
   }
   return result;
 }
