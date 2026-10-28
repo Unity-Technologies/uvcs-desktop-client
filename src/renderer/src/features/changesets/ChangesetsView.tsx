@@ -39,11 +39,12 @@ import {
 } from './changesetFilters';
 import { useChangesetFilters } from './changesetsViewStore';
 import { changesetMenu } from './changesetMenu';
-import { openChangesetDiff, openRangeDiff } from './changesetOperations';
+import { changesetDiffPage, openChangesetDiff, openRangeDiff } from './changesetOperations';
 import { useChangesets } from './useChangesets';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { changesetCopyTexts } from './changesetMenu';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
+import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 
 const changesetKey = (changeset: Changeset): string => String(changeset.id);
 const ownerOf = (changeset: Changeset): string => changeset.owner;
@@ -76,6 +77,7 @@ export function ChangesetsView() {
   );
   const selected = visible.filter((changeset) => selection.selected.has(changesetKey(changeset)));
   const focused = visible.find((changeset) => changesetKey(changeset) === selection.anchor);
+  useShowInFollowingWindow(focused ? changesetDiffPage(focused) : null);
   useCopyCommand('Changesets', 'Changeset', selected.length === 1 ? changesetCopyTexts(place, selected[0]!) : undefined);
   const columns = useMemo(() => changesetColumns(workspace?.loadedChangeset, labelsByChangeset), [workspace?.loadedChangeset, labelsByChangeset]);
   const menuContext = { place, loadedChangeset: workspace?.loadedChangeset, loadedBranch: currentBranch };

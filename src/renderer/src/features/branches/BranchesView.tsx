@@ -30,7 +30,7 @@ import { BranchDetails } from './BranchDetails';
 import { branchHeadOrigin } from './branchHeadOrigin';
 import { branchColumns } from './branchColumns';
 import { branchMenu } from './branchMenu';
-import { diffBranch, renameBranch } from './branchOperations';
+import { branchDiffPage, diffBranch, renameBranch } from './branchOperations';
 import { useBranchesViewStore, type BranchesLayout } from './branchesViewStore';
 import { buildBranchTree, sortBranchesByName, type BranchTreeRow } from './branchTree';
 import { useCollapsedBranches } from './useCollapsedBranches';
@@ -40,6 +40,7 @@ import { newBranchButton } from './newBranchOrigins';
 import { useBranches } from './useBranches';
 import { branchCopyTexts } from './branchMenu';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
+import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 
 export function BranchesView() {
   const place = usePlace();
@@ -58,6 +59,7 @@ export function BranchesView() {
   const listed = useMemo(() => (layout === 'tree' ? sortBranchesByName(branches ?? []) : (branches ?? [])), [layout, branches]);
   const matching = useMemo(() => filterBranches(listed, search, (owner) => matchesPeople(people, me, owner)), [listed, search, people, me]);
   const selected = matching.find((branch) => branchKey(branch) === selection.anchor);
+  useShowInFollowingWindow(selected ? branchDiffPage(selected) : null);
   const { collapsed, toggle: toggleCollapsed } = useCollapsedBranches(matching, selected, setSelection, branchKey);
   const rows = useMemo(
     () => (layout === 'tree' ? buildBranchTree(matching, collapsed) : matching.map((branch) => ({ branch, depth: 0, hasChildren: false, collapsed: false }))),

@@ -2,6 +2,7 @@ import { GitGraph } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { BranchExplorerData } from '@shared/domain/branchExplorer';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
+import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { detailsHidden, useDetailsPaneStore } from '../../components/detailsPaneStore';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
@@ -20,7 +21,9 @@ import { BRANCH_EXPLORER_DETAILS_KEY, useBranchExplorerPreferences } from './bra
 import { GraphCanvas, type GraphHighlights } from './canvas/GraphCanvas';
 import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';
 import type { GraphTarget } from './canvas/graphTargets';
+import { followedPage } from './details/followedPage';
 import { GraphDetails } from './details/GraphDetails';
+import { followedObject } from './model/followedObject';
 import { openSelection } from './graphActions';
 import { handleGraphKey } from './graphKeyboard';
 import { graphMenu } from './graphMenu';
@@ -112,6 +115,7 @@ export function BranchExplorerView() {
     }),
     [selection, homeChangeset, pendingChangeCount, currentBranch, highlightedAuthors, search.shown, searchLit, activeHit, showComments, showAvatars, reviews],
   );
+  useShowInFollowingWindow(followedPage(layout ? followedObject(layout, selection, repository) : null));
 
   const goToChangeset = useCallback((id: number) => {
     setSelection({ kind: 'changeset', id });

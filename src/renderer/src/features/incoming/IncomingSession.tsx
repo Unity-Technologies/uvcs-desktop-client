@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { workspacePlace } from '@shared/domain/place';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { BranchIncomingChanges } from '@shared/domain/incoming';
+import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { isHeaderRow } from '../../lib/groupedPathTree';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { pluralize } from '../../lib/text';
@@ -11,6 +12,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
 import { ChangesetDetails } from '../changesets/ChangesetDetails';
 import { changesetMenu } from '../changesets/changesetMenu';
+import { changesetDiffPage } from '../changesets/changesetOperations';
 import { diffEntryKey } from '../diff/DiffEntryList';
 import { FileStepsContext, useFileSteps } from '../diff/viewer/fileSteps';
 import { conflictStepKeys } from '../merge/conflictSteps';
@@ -127,6 +129,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
 
   const menuContext = { place: workspacePlace(workspacePath), loadedChangeset: incoming.loadedChangeset, loadedBranch: incoming.branch ?? undefined };
   const scopedChangeset = scope.kind === 'changeset' ? changesetList.changesets.find((changeset) => changeset.id === scope.id) : undefined;
+  useShowInFollowingWindow(showsChangeset && scopedChangeset ? changesetDiffPage(scopedChangeset) : null);
   // Conflicts are settled in the whole update, the merge updating makes; a changeset's files are what it did.
   const conflictOf = (path: string) => (conflictPaths.has(path) ? states.find((state) => state.file.key === path) : undefined);
   const fileMenu = (selected: DiffEntry[]) =>

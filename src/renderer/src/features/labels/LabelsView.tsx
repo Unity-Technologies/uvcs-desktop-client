@@ -31,11 +31,12 @@ import { RelativeTime } from '../../ui/RelativeTime';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { LabelDetails } from './LabelDetails';
 import { labelMenu } from './labelMenu';
-import { newLabel, newLabelActionLabel, renameLabel, showLabelChanges } from './labelOperations';
+import { labelDiffPage, newLabel, newLabelActionLabel, renameLabel, showLabelChanges } from './labelOperations';
 import { useLabelsViewStore } from './labelsViewStore';
 import { useLabels } from './useLabels';
 import { labelCopyTexts } from './labelMenu';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
+import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 
 const COLUMNS: Column<Label>[] = [
   {
@@ -67,6 +68,7 @@ export function LabelsView() {
     [labels, people, me, search],
   );
   const selected = visible.find((label) => labelKey(label) === selection.anchor);
+  useShowInFollowingWindow(selected ? labelDiffPage(selected) : null);
   useRenameCommand('Labels', 'label', selection.selected.size === 1 ? selected : undefined, (label) => void renameLabel(place, label));
   useCopyCommand('Labels', 'Label', selection.selected.size === 1 && selected ? labelCopyTexts(place, selected) : undefined);
   const filtering = isFiltering(filters);

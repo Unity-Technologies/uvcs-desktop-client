@@ -2,7 +2,6 @@ import { Archive, FileDiff } from 'lucide-react';
 import { Fragment } from 'react';
 import type { Shelve } from '@shared/domain/shelve';
 import { spec } from '@shared/domain/specs';
-import { useShowInFollowingWindow } from '../../app/pageWindow/useShowInFollowingWindow';
 import { DetailsHeading } from '../../components/DetailsHeading';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
@@ -10,11 +9,10 @@ import { Button } from '../../ui/Button';
 import { DetailsCopyable } from '../../ui/DetailsCopyable';
 import { DetailsPanel } from '../../ui/DetailsPanel';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
-import { shelveDiffPage, showShelveChanges } from './shelveOperations';
+import { showShelveChanges } from './shelveOperations';
 import { copiedWhat } from '../../components/copyMenu';
 
 export function ShelveDetails({ shelve, menu }: { shelve: Shelve; menu: MenuEntry[] }) {
-  useShowInFollowingWindow(shelveDiffPage(shelve));
   return (
     <DetailsPanel
       icon={<Archive />}
