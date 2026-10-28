@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { captionCardMaxHeight, describe, expect, it } from 'vitest';
 import { captionCardCorner, captionCardMaxWidth, captionOnScreen, cardMaxWidth, keepInside } from './captionCard';
 
 describe('captionCardCorner', () => {
@@ -46,5 +46,12 @@ describe('cardMaxWidth', () => {
   it('reads comfortably on large windows and never covers too much of a small one', () => {
     expect(cardMaxWidth(2400)).toBe(420);
     expect(cardMaxWidth(1000)).toBe(300);
+  });
+});
+
+describe('captionCardMaxHeight', () => {
+  it('keeps a long comment’s card inside the window, its body scrolling, never shorter than a few lines', () => {
+    expect(captionCardMaxHeight(100, 900)).toBe(792);
+    expect(captionCardMaxHeight(850, 900)).toBe(160);
   });
 });
