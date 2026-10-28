@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Suggestion } from './suggestionItems';
-import { nextPickable, suggestionRows, type ChangesetLookup, type ChangesetSearch } from './suggestionRows';
+import { isDismissed, nextPickable, suggestionKeyAction, suggestionRows, type ChangesetLookup, type ChangesetSearch } from './suggestionRows';
 
 function changeset(id: number): Suggestion {
   return { key: `cs:${id}`, kind: 'changeset', label: String(id), insert: `cs:${id}` };
@@ -70,5 +70,42 @@ describe('nextPickable', () => {
     expect(nextPickable(rows, 2, 1)).toBe(0);
     expect(nextPickable(rows, 0, -1)).toBe(2);
     expect(nextPickable([{ kind: 'note', text: '…' }], 0, 1)).toBe(-1);
+  });
+});
+
+describe('suggestionKeyAction', () => {
+  const picks = [{ kind: 'pick', suggestion: changeset(1) }, { kind: 'pick', suggestion: changeset(2) }] as const;
+  const onlyNote = [{ kind: 'note', text: 'No branches match “x”' }] as const;
+  const none = { metaKey: false, ctrlKey: false, altKey: false, shiftKey: false };
+
+  it('moves through the rows that can be picked with the arrows', () => {
+    expect(suggestionKeyAction('ArrowDown', none, picks, 0)).toEqual({ kind: 'move', to: 1 });
+    expect(suggestionKeyAction('ArrowUp', none, picks, 0)).toEqual({ kind: 'move', to: 1 });
+  });
+
+  it('leaves the arrows to the caret when nothing can be picked', () => {
+    expect(suggestionKeyAction('ArrowDown', none, onlyNote, 0)).toBeNull();
+    expect(suggestionKeyAction('ArrowUp', none, onlyNote, 0)).toBeNull();
+  });
+
+  it('picks with Enter or Tab, without a modifier, a row that can be picked', () => {
+    expect(suggestionKeyAction('Enter', none, picks, 1)).toEqual({ kind: 'pick', index: 1 });
+    expect(suggestionKeyAction('Tab', none, picks, 0)).toEqual({ kind: 'pick', index: 0 });
+    expect(suggestionKeyAction('Enter', { ...none, metaKey: true }, picks, 0)).toBeNull();
+    expect(suggestionKeyAction('Tab', { ...none, shiftKey: true }, picks, 0)).toBeNull();
+    expect(suggestionKeyAction('Enter', none, onlyNote, 0)).toBeNull();
+  });
+
+  it('dismisses with Esc, and leaves every other key to the text', () => {
+    expect(suggestionKeyAction('Escape', none, onlyNote, 0)).toEqual({ kind: 'dismiss' });
+    expect(suggestionKeyAction('a', none, picks, 0)).toBeNull();
+  });
+});
+
+describe('isDismissed', () => {
+  it('keeps the list closed for the word Esc closed it on, and opens it for another', () => {
+    expect(isDismissed({ kind: 'branch', from: 4, to: 8, text: 'ta' }, 4)).toBe(true);
+    expect(isDismissed({ kind: 'branch', from: 12, to: 15, text: 'ma' }, 4)).toBe(false);
+    expect(isDismissed({ kind: 'branch', from: 4, to: 8, text: 'ta' }, null)).toBe(false);
   });
 });
