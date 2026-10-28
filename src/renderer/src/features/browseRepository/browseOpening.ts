@@ -12,14 +12,20 @@ export interface BrowseOpening {
    * last change may fold them away or not have them. None: the choice every file shares.
    */
   fileView: 'annotate' | null;
+  /**
+   * Shows the page's details again if the user hid them: the lines a link names show only there. An item alone leaves
+   * the user's choice as it was, its row selected in the tree.
+   */
+  showsDetails: boolean;
 }
 
 export function browseOpening({ focusPath, focusLines }: Pick<PageOf<'browseRepository'>, 'focusPath' | 'focusLines'>): BrowseOpening {
-  if (!focusPath) return { selected: null, expand: [], focus: null, fileView: null };
+  if (!focusPath) return { selected: null, expand: [], focus: null, fileView: null, showsDetails: false };
   return {
     selected: focusPath,
     expand: ancestorsOf(focusPath),
     focus: focusLines ? { path: focusPath, lines: focusLines } : null,
     fileView: focusLines ? 'annotate' : null,
+    showsDetails: focusLines !== undefined,
   };
 }

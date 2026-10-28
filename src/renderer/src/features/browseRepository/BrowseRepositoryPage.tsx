@@ -22,9 +22,8 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
   // What the page's link names (its header, ⇧⌘C): the item selected now, not the one it opened on.
   const publish = (path: string | null): void => publishShownBrowseItem(path === null ? null : { changesetId: page.changesetId, path });
   useEffect(() => () => publishShownBrowseItem(null), []);
-  // The lines a link names show only in the details: hidden, they show again.
   useEffect(() => {
-    if (opening.focus) useDetailsPaneStore.getState().showDetails(DETAILS_KEY);
+    if (opening.showsDetails) useDetailsPaneStore.getState().showDetails(DETAILS_KEY);
   }, [opening]);
 
   return (
