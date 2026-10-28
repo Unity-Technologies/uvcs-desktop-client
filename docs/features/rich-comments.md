@@ -225,7 +225,9 @@ start, a bracket or an emphasis mark (`suggestionQueryAt`), opens a list under t
 (`suggestionsShownAt`), so a field opened with its caret after a reference opens none. The list is a listbox the
 field's `aria-activedescendant` walks: ↑↓ move, Enter or Tab picks, Esc closes it until another word is typed
 (`suggestionKeyAction`); with nothing to pick, the arrows move the caret. A colon in a sentence (`10:30`, `Note:`)
-opens nothing. A pick writes the reference as `cm` takes it and a space (`pickSuggestion`); a branch or label whose
+opens nothing. A pick writes the reference as `cm` takes it and a space (`pickSuggestion`), no space before a line's end or a
+sentence's punctuation, where the reference stays drawn as its chip though the caret is against it, until the next
+edit or caret move (`justPicked`); a branch or label whose
 name a spec can't hold (a space, a sentence's punctuation or an emphasis mark at its end) is written as its
 `uvcs://` link (`objectReferenceText`), which shows as the same chip; a person as `cm` names them (`@ana@acme.com` on
 Unity Cloud); an emoji as the character itself (🎉, not `:tada:`), one character to Backspace and to the caret even

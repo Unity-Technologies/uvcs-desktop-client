@@ -21,6 +21,7 @@ import { oneLine } from './oneLine';
 import { ownStep } from './ownStep';
 import { formatsOf } from './formatActions';
 import { typingAt } from './typingAt';
+import { justPicked } from './justPicked';
 import type { WidgetPortals } from './widgetPortals';
 
 /** What the field does with the keys that leave the text: read when pressed, so the latest props answer. */
@@ -79,6 +80,7 @@ export function commentEditorExtensions(options: CommentEditorOptions, enabled: 
     commentMarkdown(),
     syntaxHighlighting(markdownStyle),
     typingAt,
+    justPicked,
     options.singleLine ? oneLine : [],
     liveDrawing(),
     codeColors,

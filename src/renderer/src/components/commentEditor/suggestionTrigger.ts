@@ -1,6 +1,7 @@
 import type { EditorState, TransactionSpec } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
 import { isInCode } from './formatCommands';
+import { suggestionPicked } from './justPicked';
 import { ownStep } from './ownStep';
 import { SUGGESTION_TRIGGERS, type SuggestionKind } from './suggestionTriggers';
 import { typingAt } from './typingAt';
@@ -57,8 +58,9 @@ export function suggestionsShownAt(state: EditorState): SuggestionQuery | null {
 
 /**
  * What picking a suggestion does: the word typed becomes `insert` and a space, the caret after it to go on writing.
- * A space already there is stepped over, not doubled; a sentence's punctuation after the word stays right after it.
- * One step to undo.
+ * A space already there is stepped over, not doubled; a sentence's punctuation after the word stays right after it,
+ * and a line's end too (no space left at it): the reference stays drawn there all the same (`justPicked`). One step
+ * to undo.
  */
 export function pickSuggestion(state: EditorState, query: SuggestionQuery, insert: string): TransactionSpec {
   const next = state.sliceDoc(query.to, query.to + 1);
@@ -66,6 +68,7 @@ export function pickSuggestion(state: EditorState, query: SuggestionQuery, inser
   return {
     changes: { from: query.from, to: query.to, insert: insert + space },
     selection: { anchor: query.from + insert.length + (space || next === ' ' ? 1 : 0) },
+    effects: suggestionPicked.of({ from: query.from, to: query.from + insert.length }),
     scrollIntoView: true,
     userEvent: 'input.complete',
     annotations: ownStep,

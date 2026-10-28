@@ -2,6 +2,7 @@ import type { EditorState } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
 import type { SyntaxNode, SyntaxNodeRef } from '@lezer/common';
 import { findReferences, type CommentReference } from '../../lib/comments/commentReferences';
+import { justPicked } from './justPicked';
 
 /**
  * What the live editor draws over a comment's Markdown text (docs/features/rich-comments.md, "Writing"): the text
@@ -228,6 +229,9 @@ function excludedRanges(state: EditorState, from: number, to: number, options: L
  * reveals other text again: the selection would jump and shake.
  */
 export function selectionReveals(state: EditorState, from: number, to: number): boolean {
+  // A reference a suggestion just wrote stays drawn, the caret against it (`justPicked`).
+  const picked = state.field(justPicked, false);
+  if (picked && from >= picked.from && to <= picked.to) return false;
   return state.selection.ranges.some((range) => range.anchor >= from && range.anchor <= to);
 }
 
