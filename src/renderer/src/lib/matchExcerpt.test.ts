@@ -15,6 +15,20 @@ describe('excerptAroundMatch', () => {
     });
   });
 
+  it('starts near the longest word typed, not a short one found inside another word earlier', () => {
+    const text = 'The flag stays false when the settings dialog closes, until we resolve owner names in one batch';
+
+    expect(excerptAroundMatch(text, 'ls resolve').text).toBe('…dialog closes, until we resolve owner names in one batch');
+  });
+
+  it('ends a long text a little past its start, so a row never holds a whole essay', () => {
+    const text = `Resolve ${'owner names '.repeat(40)}`;
+    const { text: shown } = excerptAroundMatch(text, 'resolve');
+
+    expect(shown).toHaveLength(201);
+    expect(shown.endsWith('…')).toBe(true);
+  });
+
   it('puts its lines on one line', () => {
     expect(excerptAroundMatch('Title\n\n  Body\r\nmore', 'body').text).toBe('Title Body more');
   });
