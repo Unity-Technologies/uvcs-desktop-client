@@ -57,7 +57,7 @@ export function PlaceLayout({ topBar, sidebarCard, statusBar }: PlaceLayoutProps
             restMinSize={COMMAND_LOG_HEIGHT.restMin}
             size={commandLogHeight}
             onSizeChange={setCommandLogHeight}
-            hideSized={!commandLogOpen}
+            hidden={commandLogOpen ? undefined : 'second'}
             first={
               <div ref={contentRef} className={styles.content}>
                 {/* Views stay mounted under pages so going back keeps their scroll and selection. Keyed by the view so

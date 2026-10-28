@@ -16,8 +16,8 @@ interface SplitPaneProps {
   direction?: 'horizontal' | 'vertical';
   /** Which pane keeps `initialSize`; the other one takes the remaining space. */
   sizedPane?: 'first' | 'second';
-  /** Hides the sized pane and the splitter without remounting the other pane. */
-  hideSized?: boolean;
+  /** Hides a pane and the splitter without remounting the other pane, which then fills the split. */
+  hidden?: 'first' | 'second';
   first: ReactNode;
   second: ReactNode;
 }
@@ -31,7 +31,7 @@ export function SplitPane({
   onSizeChange,
   direction = 'horizontal',
   sizedPane = 'first',
-  hideSized = false,
+  hidden,
   first,
   second,
 }: SplitPaneProps) {
@@ -57,8 +57,9 @@ export function SplitPane({
 
   const sizedStyle = sizedPaneStyle(horizontal, size, minSize, restMinSize);
   const pane = (which: 'first' | 'second', content: ReactNode): ReactNode => {
-    if (which !== sizedPane) return <div className={`${styles.pane} ${styles.rest}`}>{content}</div>;
-    return hideSized ? null : (
+    if (which === hidden) return null;
+    if (which !== sizedPane || hidden) return <div className={`${styles.pane} ${styles.rest}`}>{content}</div>;
+    return (
       <div className={styles.pane} style={sizedStyle}>
         {content}
       </div>
@@ -68,7 +69,7 @@ export function SplitPane({
   return (
     <div ref={containerRef} className={styles.split} data-direction={direction}>
       {pane('first', first)}
-      {!hideSized && (
+      {!hidden && (
         <div
           className={styles.handle}
           onPointerDown={startDrag}

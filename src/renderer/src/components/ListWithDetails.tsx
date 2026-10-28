@@ -15,7 +15,7 @@ interface ListWithDetailsProps {
    * objects reads better wide. A tree of files sizes itself instead, as its details show the selected file's content.
    */
   sized?: 'details' | 'list';
-  /** Hides the details and the splitter, keeping the list mounted (with the details sized). */
+  /** Hides the details and the splitter, keeping the list mounted. */
   hideDetails?: boolean;
 }
 
@@ -32,7 +32,7 @@ export function ListWithDetails({ list, details, detailsKey, widthLimits = DETAI
       restMinSize={widthLimits.restMin}
       size={width}
       onSizeChange={(size) => setWidth(detailsKey, size)}
-      hideSized={sized === 'details' && hideDetails}
+      hidden={hideDetails ? 'second' : undefined}
       first={list}
       second={details}
     />
