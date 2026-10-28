@@ -24,8 +24,10 @@
   overflow: hidden;
 }
 
+/* A name with no place to break (a branch's single long segment) breaks anywhere rather than run past the card. */
 .meta {
   margin-top: 4px;
   color: var(--text-tertiary);
   font-size: var(--text-xs);
+  overflow-wrap: anywhere;
 }
