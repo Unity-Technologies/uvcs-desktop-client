@@ -19,7 +19,7 @@ describe('pasteClipboard', () => {
     expect(other.webContents.pastes).toBe(0);
   });
 
-  it('pastes the clipboard's text alone when asked to match the style, as Edit ▸ Paste and Match Style does', async () => {
+  it('pastes the clipboard’s text alone when asked to match the style, as Edit ▸ Paste and Match Style does', async () => {
     const asking = fakeElectron.newWindow();
     const windows = createWindowsService({} as ServiceContext);
     await runForCaller(asking.webContents as never, () => windows.pasteClipboard({ plainText: true }));
