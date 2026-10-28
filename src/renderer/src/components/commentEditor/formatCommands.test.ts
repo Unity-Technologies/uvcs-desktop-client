@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { history, undo } from '@codemirror/commands';
 import { editorState, run, written } from './commentEditorTesting';
-import { activeFormats, closeCodeFence, FORMAT_COMMANDS, linkFromPaste, type FormatCommandId } from './formatCommands';
+import { activeFormats, closeCodeFence, FORMAT_COMMANDS, linkFromPaste, toggleTask, type FormatCommandId } from './formatCommands';
 
 function format(command: FormatCommandId, text: string): string | null {
   const next = run(FORMAT_COMMANDS[command], editorState(text));
@@ -113,6 +113,14 @@ describe('closeCodeFence', () => {
     expect(run(closeCodeFence, editorState('```\ncode\n```‸'))).toBeNull();
     expect(run(closeCodeFence, editorState('```\ncode‸\n```'))).toBeNull();
     expect(run(closeCodeFence, editorState('plain‸'))).toBeNull();
+  });
+});
+
+describe('toggleTask', () => {
+  it('checks a task’s box, and unchecks it', () => {
+    const state = editorState('- [ ] write\n- [x] test');
+    expect(state.update(toggleTask(state, 2)).state.doc.toString()).toBe('- [x] write\n- [x] test');
+    expect(state.update(toggleTask(state, 14)).state.doc.toString()).toBe('- [ ] write\n- [ ] test');
   });
 });
 

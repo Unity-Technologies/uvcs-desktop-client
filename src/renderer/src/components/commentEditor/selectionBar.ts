@@ -30,23 +30,3 @@ export function selectionBarShows(state: EditorState, focused: boolean, pointerD
   const main = state.selection.main;
   return focused && !pointerDown && !main.empty && !isInCode(state, main.from);
 }
-
-export interface Box {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-}
-
-/**
- * Where the bar goes, in the window: centered over the selection's first line, `gap` above it, or under its last
- * line when there's no room above; never past the window's edges.
- */
-export function selectionBarPosition(selection: Box, bar: { width: number; height: number }, window: { width: number; height: number }, gap = 6): { left: number; top: number } {
-  const margin = 8;
-  const centered = (selection.left + selection.right) / 2 - bar.width / 2;
-  const left = Math.min(Math.max(centered, margin), window.width - bar.width - margin);
-  const above = selection.top - gap - bar.height;
-  const top = above >= margin ? above : Math.min(selection.bottom + gap, window.height - bar.height - margin);
-  return { left: Math.round(left), top: Math.round(top) };
-}

@@ -1,4 +1,4 @@
-import { EditorSelection, type ChangeSpec, type EditorState, type SelectionRange, type StateCommand } from '@codemirror/state';
+import { EditorSelection, type ChangeSpec, type EditorState, type SelectionRange, type StateCommand, type TransactionSpec } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
 import type { SyntaxNode } from '@lezer/common';
 
@@ -205,6 +205,12 @@ export const closeCodeFence: StateCommand = ({ state, dispatch }) => {
   dispatch(state.update({ changes: { from: line.to, insert: '\n\n```' }, selection: { anchor: line.to + 1 }, scrollIntoView: true, userEvent: 'input' }));
   return true;
 };
+
+/** A click on a task's box: `[ ]` checked as `[x]`, or the other way round. `box` is where its `[` is. */
+export function toggleTask(state: EditorState, box: number): TransactionSpec {
+  const checked = /x/i.test(state.sliceDoc(box + 1, box + 2));
+  return { changes: { from: box + 1, to: box + 2, insert: checked ? ' ' : 'x' }, userEvent: 'input.toggle' };
+}
 
 /**
  * What a paste of `text` on the selection does when it's an address and text is selected: links the text to it, as
