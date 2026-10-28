@@ -1,9 +1,9 @@
 import { createContext, useMemo, useRef, useState, type FocusEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { isInModalDialog } from '../../lib/modalDialog';
 import type { CommentFieldHandle } from './commentFieldProps';
 import { focusLeavesGroup, type GroupField } from './focusGroup';
-import { focusModeLayout, type FocusModeLayout } from './focusMode';
+import { focusModeLayout, groupShowsHints, type FocusModeLayout } from './focusMode';
+import { useInModalDialog } from './useInModalDialog';
 import { FocusModeFooter } from './FocusModeFooter';
 import styles from './CommentFocusGroup.module.css';
 
@@ -29,10 +29,11 @@ export function CommentFocusGroup({ children }: { children: ReactNode }) {
   const container = useRef<HTMLDivElement>(null);
   const handles = useRef(new Map<GroupField, CommentFieldHandle>());
   const open = layout !== null;
+  const inDialog = useInModalDialog(container);
   const group = useMemo<FocusGroup>(
     () => ({
       open,
-      toggle: () => setLayout((shown) => (shown ? null : focusModeLayout(isInModalDialog(container.current)))),
+      toggle: () => setLayout((shown) => (shown ? null : focusModeLayout(inDialog))),
       close: () => setLayout(null),
       register: (field, handle) => {
         if (handle) handles.current.set(field, handle);
@@ -44,7 +45,7 @@ export function CommentFocusGroup({ children }: { children: ReactNode }) {
         else handle?.focusAtEnd();
       },
     }),
-    [open],
+    [open, inDialog],
   );
   const onBlur = (event: FocusEvent): void => {
     const to = event.relatedTarget instanceof Element ? event.relatedTarget : null;
@@ -56,7 +57,7 @@ export function CommentFocusGroup({ children }: { children: ReactNode }) {
       {layout === 'overlay' && createPortal(<div className={styles.backdrop} onMouseDown={() => setLayout(null)} />, document.body)}
       <div ref={container} className={styles.group} data-open={layout ?? undefined} onBlur={onBlur}>
         {children}
-        {open && <FocusModeFooter />}
+        {groupShowsHints({ open, inDialog }) && <FocusModeFooter />}
       </div>
     </FocusGroupContext.Provider>
   );

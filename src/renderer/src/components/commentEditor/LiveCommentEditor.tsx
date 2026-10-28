@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom';
 import { useResolvedTheme } from '../../app/settings/useResolvedTheme';
 import { pierreThemeName } from '../../lib/codeTheme';
 import { classNames } from '../../lib/classNames';
-import { isInModalDialog } from '../../lib/modalDialog';
+import { useInModalDialog } from './useInModalDialog';
 import { isMac } from '../../lib/platform';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { FocusGroupContext, type FocusGroup } from './CommentFocusGroup';
@@ -183,7 +183,8 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
 function useFocusMode(view: EditorView | null, state: EditorState | null, host: RefObject<HTMLDivElement | null>, singleLine: boolean, suggesting: boolean, group: FocusGroup | null) {
   const [ownLayout, setOwnLayout] = useState<FocusModeLayout | null>(null);
   // In a group (the check-in), focus mode is the group's: both its fields, from either of them.
-  const parts = focusModeParts({ singleLine, inGroup: group !== null, groupOpen: group?.open ?? false, ownLayout });
+  const inDialog = useInModalDialog(host);
+  const parts = focusModeParts({ singleLine, inGroup: group !== null, groupOpen: group?.open ?? false, ownLayout, inDialog });
   const close = (): void => {
     if (group) group.close();
     else setOwnLayout(null);
@@ -200,7 +201,7 @@ function useFocusMode(view: EditorView | null, state: EditorState | null, host: 
   }, [view]);
   const toggle = (): void => {
     if (group) group.toggle();
-    else setOwnLayout((shown) => (shown ? null : focusModeLayout(isInModalDialog(host.current))));
+    else setOwnLayout((shown) => (shown ? null : focusModeLayout(inDialog)));
     if (!view) return;
     const caret = caretOpeningFocusMode(view.state, focusedBefore.current || view.hasFocus);
     if (caret === null) focusEditor(view);
