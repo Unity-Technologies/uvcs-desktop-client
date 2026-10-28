@@ -47,7 +47,7 @@ export function ComparisonTitle({ item, comparison, comment }: ComparisonTitlePr
       </span>
       {summary && (
         // A one-line comment tips only when cut; a longer one always, with its other lines.
-        <span className={styles.comment} data-tip={comment && commentText(comment)} data-tip-overflow={summary === comment?.trim() || undefined}>
+        <span className={styles.comment} data-tip={comment && commentText(comment)} data-tip-overflow={!comment?.trim().includes('\n') || undefined}>
           {summary}
         </span>
       )}

@@ -6,51 +6,46 @@ import { copyAsSource } from './comments/copyAsSource';
 import { ReferenceChip } from './comments/ReferenceChip';
 import styles from './Markdown.module.css';
 
-/** How a text's images show: on hover, as a comment's (the default), or in place, as a merge request's description. */
-export type MarkdownImages = 'onHover' | 'inline';
-
 interface MarkdownProps {
   text: string;
   /** A comment: its references show as chips, its line breaks are kept, and copying gives back what was written. */
   comment?: boolean;
-  images?: MarkdownImages;
 }
 
 /** Markdown text (a comment, release notes, an attribute's value) rendered as elements; web links open in the browser. */
-export function Markdown({ text, comment = false, images = 'onHover' }: MarkdownProps) {
+export function Markdown({ text, comment = false }: MarkdownProps) {
   const blocks = useMemo(() => parseMarkdown(text, { comment }), [text, comment]);
-  return <MarkdownBlocks blocks={blocks} images={images} copiesSource={comment} />;
+  return <MarkdownBlocks blocks={blocks} copiesSource={comment} />;
 }
 
 interface MarkdownBlocksProps {
   blocks: MarkdownBlock[];
-  images?: MarkdownImages;
   copiesSource?: boolean;
 }
 
 /** Text already read into Markdown's tree (`parseMarkdown`, `releaseNotesFromHtml`), rendered as elements. */
-export function MarkdownBlocks({ blocks, images = 'onHover', copiesSource = false }: MarkdownBlocksProps) {
+export function MarkdownBlocks({ blocks, copiesSource = false }: MarkdownBlocksProps) {
   return (
     <div className={`${styles.markdown} selectable`} onCopy={copiesSource ? copyAsSource : undefined}>
-      {renderBlocks(blocks, images)}
+      {renderBlocks(blocks)}
     </div>
   );
 }
 
-function renderBlocks(blocks: readonly MarkdownBlock[], images: MarkdownImages): ReactNode[] {
-  return blocks.map((block, index) => renderBlock(block, index, images));
+function renderBlocks(blocks: readonly MarkdownBlock[]): ReactNode[] {
+  return blocks.map((block, index) => renderBlock(block, index));
 }
 
-function renderBlock(block: MarkdownBlock, key: number, images: MarkdownImages): ReactNode {
+function renderBlock(block: MarkdownBlock, key: number): ReactNode {
   switch (block.kind) {
     case 'heading': {
       const Heading = `h${block.level + 3}` as 'h4' | 'h5' | 'h6';
-      return <Heading key={key}>{renderInlines(block.children, images)}</Heading>;
+      return <Heading key={key}>{renderInlines(block.children)}</Heading>;
     }
     case 'paragraph':
-      return <p key={key}>{renderInlines(block.children, images)}</p>;
+      return <p key={key}>{renderInlines(block.children)}</p>;
     case 'quote':
-      return <blockquote key={key}>{renderBlocks(block.children, images)}</blockquote>;
+      return <blockquote key={key}>{renderBlocks(block.children)}</blockquote>;
     case 'code':
       return (
         <pre key={key} data-language={block.language}>
@@ -58,7 +53,7 @@ function renderBlock(block: MarkdownBlock, key: number, images: MarkdownImages):
         </pre>
       );
     case 'list':
-      return renderList(block, key, images);
+      return renderList(block, key);
     case 'table':
       return (
         <div key={key} className={styles.table}>
@@ -67,7 +62,7 @@ function renderBlock(block: MarkdownBlock, key: number, images: MarkdownImages):
               <tr>
                 {block.header.map((cell, column) => (
                   <th key={column} style={{ textAlign: block.align[column] ?? undefined }}>
-                    {renderInlines(cell, images, true)}
+                    {renderInlines(cell, true)}
                   </th>
                 ))}
               </tr>
@@ -77,7 +72,7 @@ function renderBlock(block: MarkdownBlock, key: number, images: MarkdownImages):
                 <tr key={rowIndex}>
                   {row.map((cell, column) => (
                     <td key={column} style={{ textAlign: block.align[column] ?? undefined }}>
-                      {renderInlines(cell, images, true)}
+                      {renderInlines(cell, true)}
                     </td>
                   ))}
                 </tr>
@@ -91,7 +86,7 @@ function renderBlock(block: MarkdownBlock, key: number, images: MarkdownImages):
   }
 }
 
-function renderList(list: MarkdownList, key: number, images: MarkdownImages): ReactNode {
+function renderList(list: MarkdownList, key: number): ReactNode {
   const List = list.ordered ? 'ol' : 'ul';
   const isTaskList = list.items.some((item) => item.checked !== undefined);
   return (
@@ -99,8 +94,8 @@ function renderList(list: MarkdownList, key: number, images: MarkdownImages): Re
       {list.items.map((item, index) => (
         <li key={index} className={item.checked !== undefined ? styles.task : undefined}>
           {item.checked !== undefined && <input type="checkbox" checked={item.checked} disabled aria-label={item.checked ? 'Done' : 'To do'} />}
-          <span>{renderInlines(item.children, images)}</span>
-          {item.sublist && renderList(item.sublist, 0, images)}
+          <span>{renderInlines(item.children)}</span>
+          {item.sublist && renderList(item.sublist, 0)}
         </li>
       ))}
     </List>
@@ -108,7 +103,7 @@ function renderList(list: MarkdownList, key: number, images: MarkdownImages): Re
 }
 
 /** `compact`: in a table's cell, chips show without their summary (their tooltip has it), so the columns stay narrow. */
-function renderInlines(inlines: readonly MarkdownInline[], images: MarkdownImages, compact = false): ReactNode[] {
+function renderInlines(inlines: readonly MarkdownInline[], compact = false): ReactNode[] {
   return inlines.map((inline, index) => {
     switch (inline.kind) {
       case 'text':
@@ -116,21 +111,21 @@ function renderInlines(inlines: readonly MarkdownInline[], images: MarkdownImage
       case 'code':
         return <code key={index}>{inline.text}</code>;
       case 'strong':
-        return <strong key={index}>{renderInlines(inline.children, images, compact)}</strong>;
+        return <strong key={index}>{renderInlines(inline.children, compact)}</strong>;
       case 'emphasis':
-        return <em key={index}>{renderInlines(inline.children, images, compact)}</em>;
+        return <em key={index}>{renderInlines(inline.children, compact)}</em>;
       case 'strike':
-        return <del key={index}>{renderInlines(inline.children, images, compact)}</del>;
+        return <del key={index}>{renderInlines(inline.children, compact)}</del>;
       case 'break':
         return <br key={index} />;
       case 'link':
         return (
           <MarkdownLink key={index} url={inline.url}>
-            {renderInlines(inline.children, images, compact)}
+            {renderInlines(inline.children, compact)}
           </MarkdownLink>
         );
       case 'image':
-        return <CommentImage key={index} url={inline.url} alt={inline.alt} source={`![${inline.alt}](${inline.url})`} inline={images === 'inline'} />;
+        return <CommentImage key={index} url={inline.url} alt={inline.alt} source={`![${inline.alt}](${inline.url})`} />;
       case 'reference':
         return <ReferenceChip key={index} reference={inline.reference} source={inline.source} compact={compact} />;
     }
@@ -147,7 +142,8 @@ function MarkdownLink({ url, children }: { url: string; children: ReactNode }) {
       onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();
-        if (/^uvcs:/i.test(url)) void import('./comments/openReference').then(({ openAppLink }) => openAppLink(url));
+        // Loaded on the first click: opening a link reaches the windows, the navigation and the queries.
+        if (/^uvcs:/i.test(url)) void import('../app/links/openLink').then(({ openLink }) => openLink(url));
         else void api.system.openExternal(url);
       }}
     >

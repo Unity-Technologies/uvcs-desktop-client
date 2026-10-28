@@ -172,7 +172,7 @@ export function codeReviewResult(review: CodeReviewSummary, context: ResultConte
   return {
     id: `codeReview:${review.id}`,
     icon: MessageSquareCode,
-    label: review.title,
+    label: commentLineText(review.title),
     detail: `${review.status} · ${displayName(review.owner)}`,
     detailMatches: [],
     quality: wordMatchQuality(review.title, term),

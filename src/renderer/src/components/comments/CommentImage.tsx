@@ -1,6 +1,6 @@
 import * as RadixPopover from '@radix-ui/react-popover';
 import { Image as ImageIcon } from 'lucide-react';
-import { useRef, useState, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { api } from '../../api/client';
 import styles from './CommentImage.module.css';
 
@@ -12,31 +12,22 @@ interface CommentImageProps {
   alt: string;
   /** What copying gives back. */
   source: string;
-  /** A merge request's description shows its images; a comment shows each on hover only (docs/features/rich-comments.md). */
-  inline?: boolean;
 }
 
 /**
- * An image a comment links to. Fetched from its host only when shown, never as the comment renders, and without
- * telling the host which page asked (`no-referrer`). A click opens it in the browser.
+ * An image a comment links to, as a chip with its description: its picture shows on hover, fetched from its host
+ * only then, never as the comment renders, and without telling the host which page asked (`no-referrer`). A click
+ * opens it in the browser.
  */
-export function CommentImage({ url, alt, source, inline = false }: CommentImageProps) {
+export function CommentImage({ url, alt, source }: CommentImageProps) {
   const [open, setOpen] = useState(false);
   const timer = useRef<number>(undefined);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
   const openInBrowser = (event: MouseEvent): void => {
     event.preventDefault();
     event.stopPropagation();
     void api.system.openExternal(url);
   };
-
-  if (inline) {
-    return (
-      <a href={url} className={styles.inline} data-source={source} onClick={openInBrowser}>
-        <img src={url} alt={alt} referrerPolicy="no-referrer" loading="lazy" />
-      </a>
-    );
-  }
-
   const show = (): void => {
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setOpen(true), HOVER_DELAY_MS);

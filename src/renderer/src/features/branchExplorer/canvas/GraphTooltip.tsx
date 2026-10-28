@@ -1,7 +1,7 @@
 import type { PendingMergeLink } from '@shared/domain/pendingChanges';
 import { Markdown } from '../../../components/Markdown';
 import { splitComment } from '../../../lib/comment';
-import { commentText } from '../../../lib/comments/commentText';
+import { commentLineText, commentText } from '../../../lib/comments/commentText';
 import { displayName } from '../../../lib/userName';
 import { formatRelativeDate } from '../../../lib/formatDate';
 import { pluralize } from '../../../lib/text';
@@ -132,7 +132,7 @@ function tooltipContent(target: PointerCardTarget, layout: GraphLayout, pendingC
       };
     case 'codeReview':
       return {
-        title: target.review.title,
+        title: commentLineText(target.review.title),
         body: `Code review ${target.review.id} · ${target.review.status}`,
         meta: 'Click to open the review',
       };

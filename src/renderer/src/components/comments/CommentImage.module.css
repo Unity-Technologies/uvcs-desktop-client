@@ -50,14 +50,3 @@
   max-height: 320px;
   border-radius: var(--radius-md);
 }
-
-.inline {
-  display: inline-block;
-  max-width: 100%;
-}
-
-.inline img {
-  display: block;
-  max-width: 100%;
-  border-radius: var(--radius-md);
-}

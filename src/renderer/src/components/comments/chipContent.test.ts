@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { findReferences } from '../../lib/comments/commentReferences';
-import { chipContent, type ChipContent } from './chipContent';
+import { chipContent, chipTip, emojiLabel, referenceRepository, type ChipContent } from './chipContent';
 
 const chipOf = (text: string, placeRepository?: string): ChipContent => chipContent(findReferences(text)[0]!.reference, placeRepository);
 
@@ -72,5 +72,26 @@ describe('chipContent', () => {
   it('shows people and emoji as themselves', () => {
     expect(chipOf('@ana@acme.com')).toEqual({ kind: 'user', name: 'ana@acme.com' });
     expect(chipOf(':tada:')).toEqual({ kind: 'emoji', glyph: '🎉', name: 'tada' });
+  });
+});
+
+describe('referenceRepository', () => {
+  it("opens an object in the repository it names, on the place's server when it names none, else the place's", () => {
+    expect(referenceRepository({ repository: 'art@acme@unity' }, 'game@local')).toBe('art@acme@unity');
+    expect(referenceRepository({ repository: 'art' }, 'game@acme@unity')).toBe('art@acme@unity');
+    expect(referenceRepository({}, 'game@acme@unity')).toBe('game@acme@unity');
+  });
+});
+
+describe('chipTip', () => {
+  it('says what the object is, its summary once read, and its repository when another', () => {
+    expect(chipTip('Changeset 12', undefined, undefined)).toEqual({ tip: 'Changeset 12' });
+    expect(chipTip('Changeset 12', 'Fix the switch', 'art')).toEqual({ tip: 'Changeset 12: Fix the switch', sub: 'In art' });
+  });
+});
+
+describe('emojiLabel', () => {
+  it("reads an emoji's name as words", () => {
+    expect(emojiLabel('white_check_mark')).toBe('white check mark');
   });
 });

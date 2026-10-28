@@ -4,25 +4,15 @@ import { repositoryLinkTo } from '../../app/links/linkTo';
 import type { LinkTarget } from '../../app/links/linkNavigation';
 import { queryClient } from '../../app/queryClient';
 import { workspaceInfoQuery } from '../../app/workspace/useWorkspace';
-import { splitRepositorySpec } from '../../lib/servers';
-import type { ChipTarget } from './chipContent';
+import { referenceRepository, type ChipTarget } from './chipContent';
 
 /**
  * Opens what a chip names as its link would (`openLink`): in this window when it shows that repository, else in the
- * one that does, or wherever the user picks. A repository named without its server (`cs:12@art`) is on the place's.
+ * one that does, or wherever the user picks. `placeRepository` is the window's, once known; else it is read.
  */
-export async function openReference(place: Place, target: ChipTarget): Promise<void> {
+export async function openReference(place: Place, placeRepository: string | undefined, target: ChipTarget): Promise<void> {
   const linkTarget: LinkTarget = { ...(target.object && { object: target.object }), ...(target.page && { page: target.page }) };
-  const placeRepository = place.kind === 'repository' ? place.repository : (await queryClient.fetchQuery(workspaceInfoQuery(place.workspacePath))).repository;
-  const repository = !target.repository
-    ? placeRepository
-    : target.repository.includes('@')
-      ? target.repository
-      : `${target.repository}@${splitRepositorySpec(placeRepository).server}`;
-  await openLink(repositoryLinkTo(repository, linkTarget));
-}
-
-/** A `uvcs://` link a comment holds, opened in the app (`openLink`). */
-export async function openAppLink(url: string): Promise<void> {
-  await openLink(url);
+  const repository =
+    placeRepository ?? (place.kind === 'repository' ? place.repository : (await queryClient.fetchQuery(workspaceInfoQuery(place.workspacePath))).repository);
+  await openLink(repositoryLinkTo(referenceRepository(target, repository), linkTarget));
 }

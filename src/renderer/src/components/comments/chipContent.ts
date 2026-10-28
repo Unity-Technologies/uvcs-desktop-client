@@ -187,3 +187,25 @@ function linkObjectWords(object: LinkObject): { icon: ChipIcon; label: string; t
 function repositoryName(repository: string): string {
   return repository.split('@')[0] ?? repository;
 }
+
+/**
+ * The repository a chip's object is in, as `cm` names it: the one it names (`art@acme@unity`), on the place's server
+ * when it names none (`art`), else the place's own.
+ */
+export function referenceRepository(target: ChipTarget, placeRepository: string): string {
+  if (!target.repository) return placeRepository;
+  if (target.repository.includes('@')) return target.repository;
+  const at = placeRepository.indexOf('@');
+  return at < 0 ? target.repository : `${target.repository}${placeRepository.slice(at)}`;
+}
+
+/** An object chip's tooltip: what it is, its summary when one was read, and the repository it is in when another. */
+export function chipTip(title: string, summary: string | undefined, repository: string | undefined): { tip: string; sub?: string } {
+  const tip = summary ? `${title}: ${summary}` : title;
+  return repository ? { tip, sub: `In ${repository}` } : { tip };
+}
+
+/** How an emoji is read aloud: its name in words (`white_check_mark` as "white check mark"). */
+export function emojiLabel(name: string): string {
+  return name.replace(/_/g, ' ');
+}

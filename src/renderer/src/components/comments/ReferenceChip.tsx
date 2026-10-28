@@ -4,7 +4,7 @@ import type { CommentReference } from '../../lib/comments/commentReferences';
 import { displayName } from '../../lib/userName';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { Avatar } from '../../ui/Avatar';
-import { chipContent, type ChipContent, type ChipIcon } from './chipContent';
+import { chipContent, chipTip, emojiLabel, type ChipContent, type ChipIcon } from './chipContent';
 import { useCachedSummary } from './useCachedSummary';
 import styles from './ReferenceChip.module.css';
 
@@ -38,7 +38,7 @@ export const ReferenceChip = memo(function ReferenceChip({ reference, source, co
   switch (chip.kind) {
     case 'emoji':
       return (
-        <span className={styles.emoji} data-source={source} data-tip={`:${chip.name}:`} role="img" aria-label={chip.name.replace(/_/g, ' ')}>
+        <span className={styles.emoji} data-source={source} data-tip={`:${chip.name}:`} role="img" aria-label={emojiLabel(chip.name)}>
           {chip.glyph}
         </span>
       );
@@ -52,6 +52,7 @@ export const ReferenceChip = memo(function ReferenceChip({ reference, source, co
     case 'object':
       return (
         <ObjectChip
+          placeRepository={placeRepository}
           cachedAs={chip.cachedAs}
           source={source}
           compact={compact}
@@ -66,9 +67,9 @@ export const ReferenceChip = memo(function ReferenceChip({ reference, source, co
   }
 });
 
-type ObjectChipProps = Omit<Extract<ChipContent, { kind: 'object' }>, 'kind'> & Omit<ReferenceChipProps, 'reference'>;
+type ObjectChipProps = Omit<Extract<ChipContent, { kind: 'object' }>, 'kind'> & Omit<ReferenceChipProps, 'reference'> & { placeRepository: string | undefined };
 
-function ObjectChip({ cachedAs, source, compact, interactive, icon, label, title, repository, target }: ObjectChipProps) {
+function ObjectChip({ placeRepository, cachedAs, source, compact, interactive, icon, label, title, repository, target }: ObjectChipProps) {
   const place = usePlace();
   const summary = useCachedSummary(cachedAs);
   const Icon = ICONS[icon];
@@ -77,15 +78,10 @@ function ObjectChip({ cachedAs, source, compact, interactive, icon, label, title
     event.stopPropagation();
     event.preventDefault();
     // Loaded on the first click: opening a link reaches the windows, the navigation and the queries.
-    void import('./openReference').then(({ openReference }) => openReference(place, target));
+    void import('./openReference').then(({ openReference }) => openReference(place, placeRepository, target));
   };
-  const shown = {
-    className: styles.chip,
-    'data-icon': icon,
-    'data-source': source,
-    'data-tip': summary ? `${title}: ${summary}` : title,
-    'data-tip-sub': repository ? `In ${repository}` : undefined,
-  };
+  const { tip, sub } = chipTip(title, summary, repository);
+  const shown = { className: styles.chip, 'data-icon': icon, 'data-source': source, 'data-tip': tip, 'data-tip-sub': sub };
   const content = (
     <>
       <Icon className={styles.icon} size={compact ? 12 : 13} strokeWidth={2.25} aria-hidden />
@@ -96,7 +92,8 @@ function ObjectChip({ cachedAs, source, compact, interactive, icon, label, title
   );
   if (!interactive) return <span {...shown}>{content}</span>;
   return (
-    <a href="#" {...shown} onClick={open} onMouseDown={(event) => event.stopPropagation()}>
+    // In a row or a title the row's keys reach the object; only a full comment's chips are tab stops.
+    <a href="#" {...shown} tabIndex={compact ? -1 : undefined} onClick={open} onMouseDown={(event) => event.stopPropagation()}>
       {content}
     </a>
   );
