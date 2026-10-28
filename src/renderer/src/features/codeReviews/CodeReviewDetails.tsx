@@ -1,3 +1,4 @@
+import { CommentLine } from '../../components/comments/CommentLine';
 import { FileDiff, MessageSquareCode } from 'lucide-react';
 import { Fragment } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
@@ -28,7 +29,7 @@ export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: 
     <DetailsPanel
       icon={<MessageSquareCode />}
       kind="Code review"
-      heading={<DetailsHeading name={review.title} />}
+      heading={<DetailsHeading name={<CommentLine comment={review.title} />} />}
       author={{ user: review.owner, date: review.date }}
       meta={[
         <DetailsCopyable key="id" text={`#${review.id}`} copyText={String(review.id)} what={copiedWhat('Code review', 'number')} />,

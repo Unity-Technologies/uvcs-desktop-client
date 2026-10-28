@@ -1,3 +1,4 @@
+import { commentLineText } from '../../lib/comments/commentText';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { openReview } from './codeReviewOperations';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
@@ -9,9 +10,9 @@ export function CodeReviewChip({ review, iconOnly = false }: { review: CodeRevie
     <button
       type="button"
       className={styles.chip}
-      data-tip={iconOnly ? `${review.status}: ${review.title}` : review.title}
+      data-tip={iconOnly ? `${review.status}: ${commentLineText(review.title)}` : commentLineText(review.title)}
       data-tip-sub={`Code review ${review.id} · ${review.status} · click to open`}
-      aria-label={`Open code review ${review.id}: ${review.title}`}
+      aria-label={`Open code review ${review.id}: ${commentLineText(review.title)}`}
       onMouseDown={(event) => event.stopPropagation()}
       onDoubleClick={(event) => event.stopPropagation()}
       onClick={(event) => {
