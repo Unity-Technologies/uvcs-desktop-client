@@ -1,3 +1,4 @@
+import '../../testing/fakeWindow';
 import { describe, expect, it, vi } from 'vitest';
 import { QueryClient } from '@tanstack/react-query';
 import { findReferences } from '../../lib/comments/commentReferences';

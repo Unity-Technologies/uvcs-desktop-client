@@ -107,6 +107,10 @@ describe('chipCard', () => {
     expect(chipCard({ title: 'Changeset 12', repository: 'art' }, undefined, ago)).toEqual({ title: 'Changeset 12', meta: ['In art'] });
   });
 
+  it('says so when another repository’s object couldn’t be read', () => {
+    expect(chipCard({ title: 'Changeset 4', repository: 'codice' }, undefined, ago, true)).toEqual({ title: 'Changeset 4', meta: ['In codice', "Couldn't be read"] });
+  });
+
   it('leaves out what an object read has no word for', () => {
     expect(chipCard({ title: 'Label v1' }, { comment: '', owner: 'ana' }, ago)).toEqual({ title: 'Label v1', meta: ['Ana'] });
   });
