@@ -28,6 +28,10 @@ describe('inline formats', () => {
     expect(format('bold', '«one\n\ntwo»')).toBe('**«one**\n\n**two»**');
   });
 
+  it('leaves a code block’s lines and a table’s alone in a selection over several, where marks would break them', () => {
+    expect(format('bold', '«See\n```\nlet a\n```\n| a | b |\n| - | - |\nend»')).toBe('**«See**\n```\nlet a\n```\n| a | b |\n| - | - |\n**end»**');
+  });
+
   it('toggles: in bold, ⌘B takes the marks away and keeps the text', () => {
     expect(format('bold', 'Fix **the swi‸tch** now')).toBe('Fix the swi‸tch now');
     expect(format('bold', 'Fix **«the switch»** now')).toBe('Fix «the switch» now');
