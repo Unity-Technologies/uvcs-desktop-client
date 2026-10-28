@@ -76,6 +76,35 @@
 /* A field alone in focus mode has its hints at its bottom, under the text (CodeMirror's own box comes last). */
 .footer {
   order: 1;
+  padding: 0 10px var(--space-2);
+}
+
+/* In focus mode the toolbar is the box's top strip, edge to edge: the box's own padding moves onto the text. */
+.editor[data-focus-mode] {
+  padding: 0 !important;
+}
+
+.editor[data-focus-mode] :global(.cm-editor) {
+  padding: var(--space-2) 10px;
+}
+
+.editor[data-focus-mode][data-expanded='overlay'] :global(.cm-editor) {
+  padding: var(--space-3) var(--space-5);
+}
+
+.editor[data-focus-mode][data-expanded='overlay'] .footer {
+  padding: 0 var(--space-5) var(--space-3);
+}
+
+/* The corner button, at the strip's end, centered on it, on the strip's tint. */
+.editor[data-focus-mode] .expand {
+  top: 5px;
+  right: 6px;
+  background: none;
+}
+
+.editor[data-focus-mode] .expand:hover {
+  background: var(--bg-hover);
 }
 
 .backdrop {
