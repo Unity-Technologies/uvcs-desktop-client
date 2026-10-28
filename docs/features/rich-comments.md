@@ -296,7 +296,8 @@ What the list depends on, each with one owner (`suggestionGate` decides; the edi
 
 - **Opens**: a trigger typed at the caret (`suggestionQueryAt`) while the word is being typed (`typingAt`, the
   editor's state: set by a key typed or a Backspace taking back what was typed, cleared by any other edit or caret
-  move), in a field with the focus. The focus is the DOM's (`editorFocused`, `fieldFocused`); the state's mirror of it
+  move, and by the field losing the focus, so Enter from the summary or a click back opens no list on a word typed
+  before), in a field with the focus. The focus is the DOM's (`editorFocused`, `fieldFocused`); the state's mirror of it
   (`hasFocus`, `editorFocus`) is for the decorations alone and has one writer, `watchFocus`, which sets it from the
   DOM on the field's `focusin` and `focusout`, on its window's `focus` and `blur` (the window active again moves no
   element's focus), and after any update where they differ; CodeMirror's `focusChangeEffect` doesn't write it. Code

@@ -138,7 +138,8 @@ describe('watchFocus, the mirror’s only writer', () => {
     window.dispatchEvent(new Event('focus'));
     settle();
     expect(field.state.field(hasFocus)).toBe(true);
-    expect(suggestionGate(field.state, editorFocused(field.domFocused, field.state.field(hasFocus)), null)).not.toBeNull();
+    // Drawn focused again; its list waits for the next key (leaving ended the typing).
+    expect(suggestionGate(type(field.state, 'm'), editorFocused(field.domFocused, field.state.field(hasFocus)), null)).not.toBeNull();
   });
 
   it('follows the field’s own focus events, and after an update that left the two apart', () => {

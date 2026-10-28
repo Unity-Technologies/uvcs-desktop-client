@@ -24,8 +24,9 @@ function offenders(pattern: RegExp, allowed: readonly string[]): string[] {
  * opened, and hid the suggestions for good. These keep the rule for every change to come.
  */
 describe('the comment editor’s focus', () => {
-  it('is read from its mirror only by the decorations and the helpers that reconcile it', () => {
-    expect(offenders(/\.field\(hasFocus\b/, [join('commentEditor', 'editorFocus.ts'), join('commentEditor', 'liveDecorations.ts')])).toEqual([]);
+  it('is read from its mirror only by the decorations, the typing it ends (`typingAt`) and the helpers that reconcile it', () => {
+    const allowed = [join('commentEditor', 'editorFocus.ts'), join('commentEditor', 'liveDecorations.ts'), join('commentEditor', 'typingAt.ts')];
+    expect(offenders(/\.field\(hasFocus\b/, allowed)).toEqual([]);
   });
 
   it('has one writer of its mirror, the reconciler (`watchFocus`): never CodeMirror’s own focus notification', () => {
