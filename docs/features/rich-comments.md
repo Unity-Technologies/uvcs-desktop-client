@@ -128,7 +128,10 @@ does.
 | Every list (changesets, branches, labels, shelves, attributes, code reviews, History, Incoming, the changeset picker, the branch search, My shelves, a check-in's rejection) | The first line: inline formatting, compact chips, emoji, links as their text, images by their description (`CommentLine`); the filter's words marked |
 | What holds only text: the Branch Explorer's canvas, its tooltips, the palette's rows (reviews' titles too), notifications, the branch pill, the comparison title | Without marks (`commentLineText`, `commentText`): references as written, emoji as themselves; a line with nothing Markdown could read skips the parsing (the canvas asks for thousands) |
 
-The Branch Explorer's caption card lays its first line over the canvas's, so both draw `summaryOf`'s text.
+The Branch Explorer's caption card lays its first line over the canvas's: the canvas draws its text (`summaryOf`), the
+card the same line as a row does (`CommentLine`), its references as chips. A long comment's card stops at the
+window's bottom (`captionCardMaxHeight`) and its body scrolls, as the pointer can reach it; no line clamp, which cut
+Markdown's blocks.
 
 ## Copying
 
@@ -175,8 +178,11 @@ writes nothing (the dialog's Save stays disabled); with one part edited, the oth
 keeps the line ends it had after its title, so a "title, line end, body" comment never gains a blank line; a title
 given to a comment that had none is set off by a blank line. Edit comment's two fields are one focus mode
 (`CommentFocusGroup`, grown in place in the dialog), ↓ and ↑ go between them, Enter from the title to the
-description; it has no Recent comments (they're for a check-in, not a changeset already made). New branch, New label
-and New attribute stay one field: theirs is a description, not a commit message.
+description; it has no Recent comments (they're for a check-in, not a changeset already made). Leaving it edited (Esc,
+Cancel, a click outside) asks first ("Discard your changes to this comment?", `hasUnsavedEdit`); unedited, it closes.
+A recent comment picked in the check-in opens in the same parts (`recentCommentPick`), and the caret goes to the
+end of the field that took its text. New branch, New label and New attribute stay one field: theirs is a
+description, not a commit message; their focus mode grows within the dialog, its hints above the buttons.
 
 - **The text is the comment.** The editor is CodeMirror 6 over the comment's own Markdown, drawn as it reads: what a
   field gives and takes is the stored text, LF line ends as `cm` keeps them, never converted, so saving, undo and
@@ -204,6 +210,10 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   shown as typed, so typing replaces it (`selectChip`). Backspace right after a chip takes back its last letter, as
   in any text it shows as: a chip taken away whole by one key (Slack's way) was dropped, since the caret beside a
   chip always shows its text, and a key taking away more than it shows would surprise. Undo brings a chip back.
+  A chip is React in the box CodeMirror gives it (`WidgetPortals`, drawn by `WidgetPortalsView`). CodeMirror draws
+  boxes inside whatever asks it to measure, a component's render among them, so the portals are told after that work
+  (a microtask), never during it. A key redraws only its own line's chips (`liveDecorationsOf`): a decoration equal
+  to the one before is kept, its DOM with it, so a comment of hundreds of chips types as a short one.
 - **Keys** (the registry's Comments area, matched as every shortcut is: `formatForKey`): ⌘B bold, ⌘I italic, ⇧⌘X
   strikethrough, ⌘E code, ⌘K link, ⇧⌘8 list, ⇧⌘7 numbered list, ⇧⌘9 quote, ⌥⇧⌘C code block (Ctrl+Shift+E off macOS, where Ctrl+Alt is
   AltGr), ⇧⌘V (Ctrl+Shift+V) pastes the plain text, through the window (`pasteClipboard({ plainText })`,
@@ -217,12 +227,15 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   dropped becomes a space (`oneLine`). Lines pasted in a summary go on in its description (`withSummaryText`); in a
   title or the merge comment they join (`oneLineText`). The field's text follows its owner's value after every change
   that differs from it, also when the owner kept its value. A text the owner puts in whole (a recent comment picked,
-  a changelist's comment) is one step to undo, back to what was written (`ownerSync`).
+  a changelist's comment) is one step to undo, back to what was written (`ownerSync`). The owner's value can arrive
+  after more keys were typed: a value the field itself sent is never written back (`sentSinceSync`), or it would take
+  those keys away and put them back where the caret no longer is.
 - **Focus mode** (`focusMode`, `useFocusMode`): a field of many lines grows into a larger editor to write a long
   comment, by the quiet button in its corner (shown on hover or focus) or ⇧⌘F (Ctrl+Shift+F), and back the same way
   or with Esc. Over the view it is the field's own box at a writing size, the rest dimmed (a click there goes back); in
   a dialog the field grows in place (`focusModeLayout`), as a dialog keeps its focus and its clicks. It is the same
-  editor, never a copy: the text, the caret, the selection and the undo history stay. It closes as ⌘↵ saves or checks
+  editor, never a copy: the text, the caret, the selection and the undo history stay; on a field with text never
+  focused yet, it opens with the caret at the end (`caretOpeningFocusMode`). It closes as ⌘↵ saves or checks
   in, and as the focus leaves the editor (`layoutAfterFocus`: a question the check-in asks, Tab), and it lies under
   the dialogs (z 790): a dialog it opens never shows behind it, nor does Tab walk the dimmed view. A popup
   editor holding a copy of the text was dropped: two editors of one comment would have to be kept in step, and its
@@ -350,3 +363,23 @@ checked in both themes when it draws something.
     check-in asks something: the question shows over focus mode, which closed.
 12. **Another server's chips.** Hover a chip of a repository on a server you use: its card reads it once (the command
     log). Hover one on a server you don't: its card says "In … on …, not a server you use" and the log shows nothing.
+13. **Typing fast with a list open.** In the description, type `cs:` so the list shows, then type a sentence as fast
+    as keys go (a script's `keyboard.type` with no delay): every key lands, in order.
+14. **A long comment of chips.** Paste 150 lines of three references each in focus mode and type at the first line's
+    start: each key shows at once (the profiler: under 16 ms a key in a production build).
+15. **Focus mode by its button on a field with text.** Pick a recent comment, switch views and back, and press the
+    description's "Write in a larger editor" without clicking in it: the caret is at the text's end.
+16. **Leaving Edit comment edited.** Edit a comment and press Esc, then Cancel: each asks to discard; with no edit,
+    each closes at once.
+17. **Focus mode in New branch, New label and New attribute.** At 1400×900 and at 720 px tall, open each dialog's
+    focus mode: the field grows within the dialog, its hints above the buttons, nothing past the dialog's edge.
+18. **A chip's number.** In a row and in a narrow card, a chip with a long summary: its id shows whole, the summary
+    shortened.
+19. **A recent comment that opens with a list.** Pick one: it goes whole into the description, the summary stays
+    empty, and the caret waits at the description's end.
+20. **The Branch Explorer's card.** Hover the caption of a changeset whose title has references and whose comment is
+    longer than the window: the title shows its chips, the card stops at the window's bottom and its body scrolls.
+21. **Two editors in a development build.** With the check-in's description holding chips, open Edit comment on a
+    changeset with chips: the console shows no "Cannot update a component while rendering a different component".
+22. **Copying a shown comment.** In a details panel, select a whole comment with a list, bold and a chip and copy:
+    the clipboard holds it as written. Copy a part: it reads as shown, its chip as its spec.
