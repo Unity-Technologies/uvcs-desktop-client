@@ -366,20 +366,25 @@ folder added on both sides, a file moved on one side and deleted on the other).
 ### A merge in progress
 
 A merge is in progress from the moment its page opens until it completes or the user closes it (`MergeInProgress`,
-`navigationStore`). Checking something meanwhile never loses it: another view, Back, or a page opened on top of it (a
-file's history from its list) only set it aside. Its page stays mounted (`PlaceLayout`, keyed by the merge's id), so
-everything decided, edited or read comes back as it was, and a run of a merge tool goes on while it's away; its
-shortcuts and Back wait until it shows again (`usePageShown`). The sidebar holds the way back above the views
-(`MergeInProgressItem`: "Merge /main/task", a dot, "In progress: Merge /main/task into your workspace" in its tooltip),
-which shows the merge again over the view shown (`returnToMerge`).
+`navigationStore`). Checking something in the workspace meanwhile never loses it: another view, Back, or a page opened
+on top of it (a file's history from its list) only set it aside. Its page stays mounted (`PlaceLayout`, keyed by the
+merge's id), so everything decided, edited or read comes back as it was, and a run of a merge tool goes on while it's
+away; its shortcuts and Back wait until it shows again (`usePageShown`). The sidebar holds the way back above the views
+(`MergeInProgressItem`: "Merge /main/task", a dot, "In progress: Merge /main/task into your workspace" in its tooltip,
+`mergeInProgressWords`), which shows the merge again over the view shown (`returnToMerge`).
 
-- Only Close merge (the page's ✕, `CloseMergeButton`, confirmed) drops it; completing it, or the page finding nothing it
-  can do (nothing to merge, pending changes in the way), settles it (`mergeSettled`, `settleMerge`), and leaving it then
-  closes it as any page.
-- One merge at a time, as the official client: opening the same merge again (same request and task, `isSameMerge`)
-  goes back to it as it stands; another one asks first ("Start another merge?") and replaces it.
-- A merge into a server branch that completes, and "Resolve in the workspace instead", close it (`closeMerge`) wherever
-  the user is, with the pages opened on top of it.
+- Only Close merge (the page's ✕, `CloseMergeButton`, `closeMergeAsked`, confirmed) drops it. Completing it, or the
+  page finding nothing it can do (nothing to merge, pending changes in the way), settles it (`mergeSettled`,
+  `settleMerge`); leaving a settled merge closes it as any page. One that settles while set aside (it completed, or its
+  plan came back, while the user was elsewhere) keeps its sidebar entry until the user has seen how it ended
+  (`mergeAfterLeaving`).
+- One merge at a time, as the official client: opening the same merge again (what is merged where, and the task:
+  `isSameMerge`) goes back to it as it stands; another one asks first ("Start another merge?", `replaceMergeQuestion`)
+  and replaces it.
+- A merge belongs to its workspace (`MergeInProgress.workspacePath`): leaving the workspace, for the home screen or
+  another workspace, ends it, since the workspace's screen closes with everything in it.
+- What ends a merge from its page ends that one only (`closeMerge(id)`, `shownMergeId`): a merge into a server branch
+  that completes, and "Resolve in the workspace instead", never close another merge the user started while it ran.
 - Nothing is kept across restarts: the app stores nothing of its own about a merge. The official client reopens a merge
   it left half applied in the workspace, from a record `cm` keeps there; no `cm` command prints that record, and this
   app never reads `cm`'s files (ARCHITECTURE.md "`cm` owns its files"), so it can't yet.
