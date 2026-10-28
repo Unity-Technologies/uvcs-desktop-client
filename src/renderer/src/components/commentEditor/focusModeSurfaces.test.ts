@@ -31,8 +31,9 @@ describe('focusModeFor', () => {
 
 describe('the comment editor’s focus mode', () => {
   it('has no in-place layout anywhere: a dialog’s larger editor is the overlay too', () => {
-    const inPlace = filesUnder(RENDERER, isAppSource)
-      .filter((path) => !path.endsWith('.test.ts') && /inPlace/.test(readFileSync(path, 'utf8')))
+    const inPlace = filesUnder(RENDERER, (name) => isAppSource(name) || name.endsWith('.css'))
+      // The layout's name as written, in code and CSS (`queryKeys.inPlace` is a query's place, not a layout).
+      .filter((path) => !path.endsWith('.test.ts') && /['"]inPlace['"]/.test(readFileSync(path, 'utf8')))
       .map((path) => path.slice(RENDERER.length + 1));
     expect(inPlace).toEqual([]);
   });
