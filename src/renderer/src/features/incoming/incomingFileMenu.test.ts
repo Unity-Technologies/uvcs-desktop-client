@@ -60,7 +60,7 @@ const onMergePage = (state: FileConflictState) =>
     workspacePath: '/ws',
     request,
     plan,
-    progress: mergeProgress([state], []),
+    progress: mergeProgress([state], new Map()),
     labels: UPDATE_LABELS,
     itemTypeOf: () => 'file',
     mergerFor: () => vscodeMerger,

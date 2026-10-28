@@ -8,6 +8,7 @@ import { statusRecordsArgs } from '../cm/pendingChangesRecords';
 import { fakeCat, PURGED } from '../cm/testing/fakeCat';
 import { cmFails, fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { recordingContext } from '../operations/testing/recordingContext';
+import { mergeStateFilesIn, type MergeStateFiles } from './mergeStateFiles';
 import { runMerge } from './runMerge';
 
 const FROM_TASK: MergeRequest = { kind: 'merge', sourceSpec: 'br:/main/task' };
@@ -20,20 +21,18 @@ const CONTRIBUTORS = [
 ];
 const fileConflict = (path: string, itemId: number): string[] => ['FILE_CONFLICT', `/${path}`, '1', '3', '4', String(itemId)];
 const EVIL_TWIN = ['DIR_CONFLICT', 'EVIL', 'Evil twin conflict', 'Two items, one name.', 'Added /src/twin.txt', 'Added /src/twin.txt', '45', 'False', 'ADD', '/src/twin.txt', 'ADD', '/src/twin.txt'];
-const CHANGE_DELETE = ['DIR_CONFLICT', 'CHG_RM', 'Change/Delete conflict', 'Changed and deleted.', 'Modified /src/cd.txt', 'Deleted /src/cd.txt', '29', 'False', 'CHG', '/src/cd.txt', 'RM', '/src/cd.txt'];
 
-const noDecisions: MergeResolutions = { directoryConflicts: [], files: {} };
+const noDecisions: MergeResolutions = { files: {} };
 
 /**
- * A `cm` merging /main/task: the preview prints `plan`, and each `--resolveconflict` run prints the directory
- * conflicts still left (`remainingAfterSolving`, one list per run). The final `--merge` prints `finalOutput`.
+ * A `cm` merging /main/task: the preview prints `plan` (the merge after the decisions in the state files it's given,
+ * if any), and the final `--merge` prints `finalOutput`, writing its state files as `cm` does.
  */
-function mergingCm(plan: string[][], { remainingAfterSolving = [] as string[][][], finalOutput = '', pending = changedStatus() } = {}) {
-  let solved = 0;
-  const merge: CmAnswer = ({ args }) => {
-    if (args.includes('--resolveconflict')) return mergeOutput(...CONTRIBUTORS, ...(remainingAfterSolving[solved++] ?? []));
-    if (args.includes('--merge')) return finalOutput;
-    return mergePreviewOutput(...CONTRIBUTORS, ...plan);
+function mergingCm(plan: string[][], { finalOutput = '', pending = changedStatus() } = {}) {
+  const merge: CmAnswer = async ({ args }) => {
+    if (!args.includes('--merge')) return mergePreviewOutput(...CONTRIBUTORS, ...plan);
+    await writeFile(optionValue(args, '--solvedconflictsfile=')!, 'merged');
+    return finalOutput;
   };
   return fakeCmClient({
     status: pending,
@@ -46,20 +45,28 @@ function mergingCm(plan: string[][], { remainingAfterSolving = [] as string[][][
 
 let workspacePath: string;
 
+/** The state files the merge page's directory decisions left (`DirectoryDecisions`), holding `solved`. */
+async function decidedState(solved: string): Promise<MergeStateFiles> {
+  const state = mergeStateFilesIn(await mkdtemp(join(tmpdir(), 'uvcs-decided-')));
+  await writeFile(state.result, 'merge result');
+  await writeFile(state.solved, solved);
+  return state;
+}
+
 beforeEach(async () => {
   workspacePath = await mkdtemp(join(tmpdir(), 'uvcs-merge-'));
   await mkdir(join(workspacePath, 'src'));
   for (const name of ['a.txt', 'b.txt', 'c.txt']) await writeFile(join(workspacePath, 'src', name), `mine ${name}\n`);
 });
 
-/** The `cm merge --merge` that applies everything; the runs solving directory conflicts carry `--merge` too. */
-const finalMerge = (lines: string[]): string | undefined => lines.find((line) => line.includes(' --merge') && !line.includes('--resolveconflict'));
+/** The `cm merge --merge` that applies everything. */
+const finalMerge = (lines: string[]): string | undefined => lines.find((line) => line.includes(' --merge'));
 
 describe('runMerge into the workspace', () => {
   it("never lets cm decide a conflicting file: it keeps the destination, without cm's interactive resolution", async () => {
     const { cm, commands } = mergingCm([fileConflict('src/a.txt', 30)]);
 
-    await runMerge(cm, workspacePath, FROM_TASK, { directoryConflicts: [], files: { '/src/a.txt': { choice: 'destination' } } }, recordingContext().context);
+    await runMerge(cm, workspacePath, FROM_TASK, { files: { '/src/a.txt': { choice: 'destination' } } }, recordingContext().context);
 
     const merge = commands.find((command) => command.line === finalMerge([command.line]))!;
     expect(merge.via).toBe('execute');
@@ -69,7 +76,6 @@ describe('runMerge into the workspace', () => {
   it("writes each file's decision once cm merged: the user's text, the incoming version, or the workspace's left as it is", async () => {
     const { cm, lines } = mergingCm([fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31), fileConflict('src/c.txt', 32)]);
     const resolutions: MergeResolutions = {
-      directoryConflicts: [],
       files: { '/src/a.txt': { choice: 'text', text: 'combined\n' }, '/src/b.txt': { choice: 'source' }, '/src/c.txt': { choice: 'destination' } },
     };
 
@@ -85,7 +91,6 @@ describe('runMerge into the workspace', () => {
   it("writes the incoming text the page already read instead of asking cm for it; the others' still come from cm cat", async () => {
     const { cm, lines } = mergingCm([fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31)]);
     const resolutions: MergeResolutions = {
-      directoryConflicts: [],
       files: { '/src/a.txt': { choice: 'source', text: 'incoming as read\n' }, '/src/b.txt': { choice: 'source' } },
     };
 
@@ -98,7 +103,6 @@ describe('runMerge into the workspace', () => {
   it('writes every incoming version it has no text of (binaries) with one cm cat in a process of its own, however many', async () => {
     const { cm, commands } = mergingCm([fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31), fileConflict('src/c.txt', 32)]);
     const resolutions: MergeResolutions = {
-      directoryConflicts: [],
       files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'source' }, '/src/c.txt': { choice: 'destination' } },
     };
 
@@ -122,7 +126,6 @@ describe('runMerge into the workspace', () => {
       cat: fakeCat((spec) => (spec.includes('#cs:1@') ? 'base version\n' : 'incoming version\n')),
     });
     const resolutions: MergeResolutions = {
-      directoryConflicts: [],
       files: { '/src/a.txt': { choice: 'base', text: 'base as read\n' }, '/src/b.txt': { choice: 'base' }, '/src/c.txt': { choice: 'source' } },
     };
 
@@ -145,7 +148,7 @@ describe('runMerge into the workspace', () => {
       cat: fakeCat(() => undefined),
     });
 
-    expect(await runMerge(cm, workspacePath, FROM_TASK, { directoryConflicts: [], files: { '/src/a.txt': { choice: 'base' } } }, recordingContext().context)).toEqual({
+    expect(await runMerge(cm, workspacePath, FROM_TASK, { files: { '/src/a.txt': { choice: 'base' } } }, recordingContext().context)).toEqual({
       keptVersionNotSaved: ['/src/a.txt'],
     });
   });
@@ -162,7 +165,7 @@ describe('runMerge into the workspace', () => {
       ls: treeListing('eco@local', 'src/a.txt', 'src/b.txt'),
       cat: (command) => (command.options.signal?.aborted ? cmFails('Cancelled') : fakeCat(() => 'incoming version\n')(command)),
     });
-    const resolutions: MergeResolutions = { directoryConflicts: [], files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'source' } } };
+    const resolutions: MergeResolutions = { files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'source' } } };
 
     await runMerge(cm, workspacePath, FROM_TASK, resolutions, recordingContext(cancel.signal).context);
 
@@ -177,7 +180,7 @@ describe('runMerge into the workspace', () => {
       ls: treeListing('eco@local', 'src/a.txt', 'src/b.txt'),
       cat: fakeCat((spec) => (spec.startsWith('itemid:30#') ? 'incoming version\n' : undefined)),
     });
-    const resolutions: MergeResolutions = { directoryConflicts: [], files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'source' } } };
+    const resolutions: MergeResolutions = { files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'source' } } };
 
     expect(await runMerge(cm, workspacePath, FROM_TASK, resolutions, recordingContext().context)).toEqual({ keptVersionNotSaved: ['/src/b.txt'] });
     expect(await readFile(join(workspacePath, 'src', 'a.txt'), 'utf8')).toBe('incoming version\n');
@@ -191,7 +194,7 @@ describe('runMerge into the workspace', () => {
       ls: treeListing('eco@local', 'src/a.txt', 'src/b.txt'),
       cat,
     });
-  const bothIncoming: MergeResolutions = { directoryConflicts: [], files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'source' } } };
+  const bothIncoming: MergeResolutions = { files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'source' } } };
 
   it('tries a cm cat that failed naming none once more, and says its files may not hold the incoming version when it fails again', async () => {
     const { cm, lines } = keepingTwoIncoming(cmFails('The connection was closed.'));
@@ -233,37 +236,77 @@ describe('runMerge into the workspace', () => {
       cat: '',
     });
 
-    await runMerge(cm, workspacePath, { kind: 'merge', sourceSpec: 'sh:7' }, { directoryConflicts: [], files: { '/src/b.txt': { choice: 'source' } } }, recordingContext().context);
+    await runMerge(cm, workspacePath, { kind: 'merge', sourceSpec: 'sh:7' }, { files: { '/src/b.txt': { choice: 'source' } } }, recordingContext().context);
     expect(lines()).toContain(`cat itemid:31#sh:7@eco@local --file=${join(workspacePath, 'src', 'b.txt')}`);
   });
 
-  it('solves directory conflicts one at a time, each as number 1, before the merge that applies everything', async () => {
-    const { cm, lines } = mergingCm([EVIL_TWIN, CHANGE_DELETE], { remainingAfterSolving: [[CHANGE_DELETE], []] });
-    const resolutions: MergeResolutions = { directoryConflicts: [{ choice: 'rename', newName: 'twin-2.txt' }, { choice: 'source' }], files: {} };
+  it('goes on from the directory decisions the page applied: it previews and merges on a copy of their state, solving none again', async () => {
+    const { cm, commands } = mergingCm([fileConflict('src/a.txt', 30)]);
+    const decided = await decidedState('DIV_MV src');
 
-    await runMerge(cm, workspacePath, FROM_TASK, resolutions, recordingContext().context);
+    await runMerge(cm, workspacePath, FROM_TASK, { directoryDecisionsId: 'page-1', files: { '/src/a.txt': { choice: 'destination' } } }, recordingContext().context, {
+      state: decided,
+      known: [],
+    });
 
-    const solving = lines().filter((line) => line.includes('--resolveconflict'));
-    expect(solving.map((line) => line.slice(line.indexOf('--resolveconflict')))).toEqual([
-      '--resolveconflict --conflict=1 --resolutionoption=rename --resolutioninfo=twin-2.txt',
-      '--resolveconflict --conflict=1 --resolutionoption=src',
-    ]);
-    expect(lines().at(-1)).toBe(finalMerge(lines()));
+    const merges = commands.filter((command) => command.args[0] === 'merge');
+    const stateOf = ({ args }: { args: string[] }) => ({ result: optionValue(args, '--mergeresultfile='), solved: optionValue(args, '--solvedconflictsfile=') });
+    expect(merges.map(stateOf)).toEqual([stateOf(merges[0]!), stateOf(merges[0]!)]);
+    expect(stateOf(merges[0]!).solved).not.toBe(decided.solved);
+    expect(merges.some((command) => command.args.includes('--resolveconflict'))).toBe(false);
+    // The page's own state stays as its decisions left it, for another merge should this one fail.
+    expect(await readFile(decided.solved, 'utf8')).toBe('DIV_MV src');
   });
 
-  it('stops before merging when the conflicts left differ from the plan the user reviewed', async () => {
-    const { cm, lines } = mergingCm([EVIL_TWIN, CHANGE_DELETE], { remainingAfterSolving: [[EVIL_TWIN]] });
-    const resolutions: MergeResolutions = { directoryConflicts: [{ choice: 'destination' }, { choice: 'source' }], files: {} };
+  it("merges a file conflict a directory decision moved where the destination's tree has no such path, as the item listed before", async () => {
+    // Kept where the source moved its folder: /moved isn't in the destination's tree, so `cm ls` of it would fail.
+    const { cm, commands } = mergingCm([fileConflict('moved/a.txt', 30)]);
+    const before = { path: '/src/a.txt', destinationPath: '/src/a.txt', itemId: 30, baseChangeset: 1, sourceChangeset: 3, destinationChangeset: 4, repository: 'eco@local', destinationRevisionId: 40, destinationIsBinary: false };
 
-    await expect(runMerge(cm, workspacePath, FROM_TASK, resolutions, recordingContext().context)).rejects.toThrow(/merge changed/);
-    expect(lines().filter((line) => line.includes('--resolveconflict'))).toHaveLength(1);
+    await runMerge(cm, workspacePath, FROM_TASK, { directoryDecisionsId: 'page-1', files: { '/moved/a.txt': { choice: 'destination' } } }, recordingContext().context, {
+      state: await decidedState('DIV_MV src'),
+      known: [before],
+    });
+
+    expect(commands.filter((command) => command.args[0] === 'ls')).toEqual([]);
+    expect(finalMerge(commands.map((command) => command.line))).toBeDefined();
+  });
+
+  it("saves the incoming version of a file conflict a decision revealed where the destination's tree has no such path", async () => {
+    await mkdir(join(workspacePath, 'src', 'game'));
+    const { cm, lines } = fakeCmClient({
+      status: changedStatus(),
+      'merge br:/main/task': async ({ args }) => {
+        if (!args.includes('--merge')) return mergePreviewOutput(...CONTRIBUTORS, fileConflict('src/game/Enemy.cs', 41));
+        await writeFile(optionValue(args, '--solvedconflictsfile=')!, 'merged');
+        return '';
+      },
+      ls: ({ args }) => (optionValue(args, '--tree=') === 'cs:4' ? cmFails("Can't resolve the selector for the item /src/game/Enemy.cs") : treeListing('eco@local', 'src/game/Enemy.cs')),
+      cat: fakeCat(() => 'incoming version\n'),
+    });
+
+    await runMerge(cm, workspacePath, FROM_TASK, { directoryDecisionsId: 'page-1', files: { '/src/game/Enemy.cs': { choice: 'source' } } }, recordingContext().context, {
+      state: await decidedState('EVIL src'),
+      known: [],
+    });
+
+    expect(lines()).toContain(`cat itemid:41#cs:3@eco@local --file=${join(workspacePath, 'src', 'game', 'Enemy.cs')}`);
+    expect(await readFile(join(workspacePath, 'src', 'game', 'Enemy.cs'), 'utf8')).toBe('incoming version\n');
+  });
+
+  it('stops before merging while a directory conflict has no decision', async () => {
+    const { cm, lines } = mergingCm([EVIL_TWIN, fileConflict('src/a.txt', 30)]);
+
+    await expect(runMerge(cm, workspacePath, FROM_TASK, { files: { '/src/a.txt': { choice: 'source' } } }, recordingContext().context)).rejects.toThrow(
+      'Every directory conflict needs a decision before merging.',
+    );
     expect(finalMerge(lines())).toBeUndefined();
   });
 
   it('runs nothing when a conflict has no decision, so no file is left half-merged', async () => {
     const { cm, lines } = mergingCm([fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31)]);
 
-    await expect(runMerge(cm, workspacePath, FROM_TASK, { directoryConflicts: [], files: { '/src/a.txt': { choice: 'source' } } }, recordingContext().context)).rejects.toThrow(
+    await expect(runMerge(cm, workspacePath, FROM_TASK, { files: { '/src/a.txt': { choice: 'source' } } }, recordingContext().context)).rejects.toThrow(
       'Resolve /src/b.txt before merging.',
     );
     expect(finalMerge(lines())).toBeUndefined();
@@ -302,7 +345,7 @@ describe('runMerge into a server branch', () => {
       },
       ls: treeListing('eco@local', 'src/a.txt', 'src/b.txt'),
     });
-  const keepSource: MergeResolutions = { directoryConflicts: [], files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'source' } }, comment: 'Merge task\ninto main' };
+  const keepSource: MergeResolutions = { files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'source' } }, comment: 'Merge task\ninto main' };
 
   it('merges on the server with the comment from a file and each file\'s decision, and names the changeset made', async () => {
     let comment = '';
@@ -335,7 +378,6 @@ describe('runMerge into a server branch', () => {
       resultText = await readFile(fileConflictResolutions.resolutions[0]!.resultFile!, 'utf8');
     });
     const mixed: MergeResolutions = {
-      directoryConflicts: [],
       files: { '/src/a.txt': { choice: 'text', text: 'mine and theirs\n' }, '/src/b.txt': { choice: 'destination' } },
     };
 
@@ -360,7 +402,6 @@ describe('runMerge into a server branch', () => {
       cat: fakeCat((spec) => ({ 'itemid:31#cs:1@eco@local': 'base b', 'itemid:32#cs:1@eco@local': 'base c' })[spec]),
     });
     const keepBase: MergeResolutions = {
-      directoryConflicts: [],
       files: { '/src/a.txt': { choice: 'base', text: 'base as read\n' }, '/art/b.png': { choice: 'base' }, '/art/c.png': { choice: 'base' } },
     };
 
@@ -379,7 +420,7 @@ describe('runMerge into a server branch', () => {
       cat: fakeCat(() => undefined),
     });
 
-    await expect(runMerge(cm, workspacePath, TO_MAIN, { directoryConflicts: [], files: { '/art/b.png': { choice: 'base' } } }, recordingContext().context)).rejects.toThrow(/b\.png/);
+    await expect(runMerge(cm, workspacePath, TO_MAIN, { files: { '/art/b.png': { choice: 'base' } } }, recordingContext().context)).rejects.toThrow(/b\.png/);
     expect(finalMerge(lines())).toBeUndefined();
   });
 });

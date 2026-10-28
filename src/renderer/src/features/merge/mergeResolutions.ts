@@ -1,23 +1,30 @@
-import { directoryConflictDecided, type DirectoryConflictResolution, type FileConflictResolution, type MergePlan, type MergeResolutions } from '@shared/domain/merge';
+import type { FileConflictResolution, MergePlan, MergeResolutions } from '@shared/domain/merge';
+import { fileConflictKey } from './conflictedFiles';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
 interface CollectResolutionsInput {
   plan: MergePlan;
   fileStates: FileConflictState[];
-  directoryResolutions: readonly (DirectoryConflictResolution | undefined)[];
+  /** The page's directory decisions, applied as they're made (`decideDirectoryConflicts`): the merge goes on from them. */
+  directoryDecisionsId?: string;
   comment?: string;
 }
 
-/** Everything the merge needs, or null while any conflict still waits for the user. */
-export function collectResolutions({ plan, fileStates, directoryResolutions, comment }: CollectResolutionsInput): MergeResolutions | null {
-  const directoryConflicts = plan.directoryConflicts.map((_, index) => directoryResolutions[index]);
-  if (directoryConflicts.some((resolution) => !directoryConflictDecided(resolution))) return null;
+/**
+ * Everything the merge needs, or null while any conflict still waits for the user: a directory conflict the plan still
+ * lists has no decision, as each one decided is applied and leaves it.
+ */
+export function collectResolutions({ plan, fileStates, directoryDecisionsId, comment }: CollectResolutionsInput): MergeResolutions | null {
+  if (plan.directoryConflicts.length > 0) return null;
 
+  // Sent by the path the plan names the file at now; the page keys it by its item (`fileConflictKey`).
+  const states = new Map(fileStates.map((state) => [state.file.key, state]));
   const files: Record<string, FileConflictResolution> = {};
-  for (const state of fileStates) {
-    if (!state.resolution) return null;
-    files[state.file.key] = state.resolution;
+  for (const conflict of plan.fileConflicts) {
+    const resolution = states.get(fileConflictKey(conflict))?.resolution;
+    if (!resolution) return null;
+    files[conflict.path] = resolution;
   }
 
-  return { directoryConflicts: directoryConflicts as DirectoryConflictResolution[], files, comment };
+  return { ...(directoryDecisionsId !== undefined && { directoryDecisionsId }), files, comment };
 }

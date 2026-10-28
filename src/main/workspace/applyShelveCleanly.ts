@@ -21,6 +21,6 @@ export async function applyShelveCleanly(cm: CmClient, workspacePath: string, sh
   const conflictCount = plan.fileConflicts.length + plan.directoryConflicts.length;
   if (conflictCount > 0) return { kind: 'conflicts', count: conflictCount };
 
-  await runMerge(cm, workspacePath, request, { directoryConflicts: [], files: {} }, context);
+  await runMerge(cm, workspacePath, request, { files: {} }, context);
   return { kind: 'applied', count: plan.changes.length };
 }

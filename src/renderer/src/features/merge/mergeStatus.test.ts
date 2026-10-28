@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { FileContent } from '@shared/domain/content';
 import { mergeLabels } from './mergeDescription';
-import { changeTone, describeChange, directoryConflictStatus, fileConflictStatus, planProgress, presentStatus, summarizePlan } from './mergeStatus';
+import { directoryConflictIdentity } from '@shared/domain/directoryConflictIdentity';
+import type { DirectoryConflict } from '@shared/domain/merge';
+import { resolutionsByConflict } from './directoryConflicts/directoryDecisions';
+import { mergeProgress, type MergeItem } from './mergeItems';
+import { changeTone, describeChange, directoryConflictStatus, fileConflictStatus, groupProgress, mergeGroupProgress, planProgress, presentStatus, summarizePlan } from './mergeStatus';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
 const text = (value: string): FileContent => ({ text: value, isBinary: false, size: value.length });
@@ -47,8 +51,10 @@ describe('directoryConflictStatus', () => {
     expect(directoryConflictStatus({ choice: 'rename', newName: 'b' })).toBe('keepingBoth');
   });
 
-  it('still needs a decision while "Keep both" has no name the merge can take', () => {
-    for (const newName of ['', '  ', 'a/b', 'a\\b', '.', '..']) expect(directoryConflictStatus({ choice: 'rename', newName })).toBe('needsDecision');
+  it('is being applied while cm calculates the merge again on its decision, whatever it was decided before', () => {
+    expect(directoryConflictStatus(undefined, true)).toBe('applying');
+    expect(directoryConflictStatus({ choice: 'source' }, true)).toBe('applying');
+    expect(presentStatus('applying', workspaceLabels).label).toBe('Updating the merge…');
   });
 });
 
@@ -85,11 +91,45 @@ describe('summarizePlan', () => {
 });
 
 describe('planProgress', () => {
-  it('counts what still stands in the way, or says the merge is ready', () => {
+  it('counts the conflicts resolved and those still to decide, or says the merge is ready', () => {
     expect(planProgress([])).toBe('Ready to merge');
     expect(planProgress(['automatic', 'keepingSource'])).toBe('Ready to merge');
-    expect(planProgress(['automatic', 'needsDecision'])).toBe('1 conflict to decide');
-    expect(planProgress(['needsDecision', 'openInTool', 'combined'])).toBe('2 conflicts to decide');
+    expect(planProgress(['needsDecision', 'needsDecision'])).toBe('2 conflicts to decide');
+    // Merged automatically counts as resolved: it needs nothing from the user.
+    expect(planProgress(['automatic', 'needsDecision'])).toBe('1 resolved · 1 to decide');
+    expect(planProgress(['needsDecision', 'openInTool', 'combined'])).toBe('1 resolved · 2 to decide');
+    // A directory decision being applied isn't in the merge yet: it can't complete meanwhile.
+    expect(planProgress(['applying', 'combined'])).toBe('1 resolved · 1 to decide');
+  });
+});
+
+describe('groupProgress', () => {
+  it("counts a group's conflicts resolved out of all, with those still to decide in its tooltip", () => {
+    expect(groupProgress(['keepingSource', 'needsDecision', 'reading'])).toEqual({ count: '1 of 3', tip: '1 resolved, 2 to decide' });
+    expect(groupProgress(['automatic', 'keepingBoth'])).toEqual({ count: '2 of 2' });
+    expect(groupProgress(['needsDecision'])).toEqual({ count: '0 of 1', tip: '1 to decide' });
+  });
+});
+
+describe('mergeGroupProgress', () => {
+  it("counts the conflict groups' conflicts as they stand, and gives the changes to apply their plain count", () => {
+    const state = fileState({ file: { ...fileState({}).file, key: 'a' }, resolution: { choice: 'source' } });
+    const conflict: MergeItem = { kind: 'fileConflict', key: 'file:a', path: 'a.txt', file: state.file };
+    const change: MergeItem = { kind: 'change', key: 'change:0', path: 'b.txt', change: { kind: 'added', path: '/b.txt' } };
+    const progress = mergeProgress([state], new Map());
+
+    expect(mergeGroupProgress('fileConflicts', [conflict], progress)).toEqual({ count: '1 of 1' });
+    expect(mergeGroupProgress('changes', [change], progress)).toBeUndefined();
+  });
+
+  it('counts a directory conflict decided as resolved, and one whose decision is being applied as still to decide', () => {
+    const side = { operation: 'added' as const, path: '/shared', description: 'Added /shared' };
+    const conflictOf = (itemId: number): DirectoryConflict => ({ type: 'evilTwin', title: '', explanation: '', itemId, isDirectory: true, source: side, destination: side });
+    const [decided, applying] = [conflictOf(30), conflictOf(31)];
+    const items: MergeItem[] = [decided, applying].map((conflict) => ({ kind: 'directoryConflict', key: `directory:${conflict.itemId}`, path: 'shared', conflict }));
+    const progress = mergeProgress([], resolutionsByConflict([{ conflict: decided, resolution: { choice: 'source' } }]), directoryConflictIdentity(applying));
+
+    expect(mergeGroupProgress('directoryConflicts', items, progress)).toEqual({ count: '1 of 2', tip: '1 resolved, 1 to decide' });
   });
 });
 

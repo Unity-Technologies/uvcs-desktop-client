@@ -16,6 +16,7 @@ const ICONS: Record<ConflictStatus, LucideIcon> = {
   edited: PencilLine,
   resolvedInTool: Check,
   openInTool: AppWindow,
+  applying: Ellipsis,
 };
 
 interface ConflictStatusChipProps {

@@ -40,8 +40,13 @@ export interface MergeChange {
 
 /** A file changed on both contributors. Its contents must be merged. */
 export interface FileConflict {
-  /** Repository path on the destination, e.g. `/src/app.ts`. */
+  /** Repository path in the merge's result, e.g. `/src/app.ts`: where a directory decision may have moved it. */
   path: string;
+  /**
+   * Where the destination's tree has it, as the merge listed it before any directory decision: its versions are named
+   * by it (and the workspace's copy found by it), so a decision moving the file reads none of them again.
+   */
+  destinationPath: string;
   itemId: number;
   baseChangeset: number;
   sourceChangeset: number;
@@ -53,13 +58,17 @@ export interface FileConflict {
   repository: string;
   /**
    * The destination's revision of the file, in `repository`: read by its id, from the workspace's disk where the
-   * workspace's file has its content (`WorkspaceCopies`), else downloaded.
+   * workspace's file has its content (`WorkspaceCopies`), else downloaded. None for a file conflict a directory
+   * decision revealed at a path the destination's tree doesn't have (a file changed on both sides that the destination
+   * moved into a folder added on both, revealed where the source has it once the incoming folder is kept): its version
+   * is read as the item at its changeset (`destinationVersionSpec`).
    */
-  destinationRevisionId: number;
+  destinationRevisionId?: number;
   /**
    * `cm` keeps the destination's revision as a binary (its `cm ls` type): the file can't merge line by line whatever
    * its other versions hold, so the merge page reads none of its versions until the user opens it. False says nothing
-   * about the other versions: they are read to tell.
+   * about the other versions: they are read to tell. For a conflict a directory decision revealed where the
+   * destination's tree has no such path, the source's type stands for it.
    */
   destinationIsBinary: boolean;
 }
@@ -139,9 +148,28 @@ export type FileConflictResolution =
   /** The merged text written by the user or merged automatically. */
   | { choice: 'text'; text: string };
 
+/** A directory conflict the user decided: the conflict as the merge listed it, and how to resolve it. */
+export interface DirectoryDecision {
+  conflict: DirectoryConflict;
+  resolution: DirectoryConflictResolution;
+}
+
+/**
+ * A merge after the user's directory decisions, applied as they're made (`decideDirectoryConflicts`): the plan `cm`
+ * calculated again on them, where a decision may have moved, removed or added file conflicts and changes, and the
+ * decisions it took, in the order they apply.
+ */
+export interface DecidedMerge {
+  plan: MergePlan;
+  decisions: DirectoryDecision[];
+}
+
 export interface MergeResolutions {
-  /** One per directory conflict, in the plan's order. */
-  directoryConflicts: DirectoryConflictResolution[];
+  /**
+   * The merge page's directory decisions (`decideDirectoryConflicts`), applied already: the merge goes on from them.
+   * None while the merge has no directory conflict decided.
+   */
+  directoryDecisionsId?: string;
   /** Keyed by file conflict path. Every file conflict needs one. */
   files: Record<string, FileConflictResolution>;
   /** Changeset comment, for merges into a branch on the server. */
@@ -187,6 +215,11 @@ export function sourceVersionSpec(request: MergeRequest, conflict: FileConflict)
   return spec.itemAt(conflict.itemId, mergeSourcePoint(request, conflict.sourceChangeset), conflict.repository);
 }
 
+/** The destination's version by its item, for a file conflict the plan names no destination revision of. */
+export function destinationVersionSpec(conflict: FileConflict): string {
+  return spec.itemAt(conflict.itemId, spec.changeset(conflict.destinationChangeset), conflict.repository);
+}
+
 /** The common ancestor's version: the item at the base's changeset. Only for a file with a base (`hasMergeBase`). */
 export function baseVersionSpec(conflict: FileConflict): string {
   return spec.itemAt(conflict.itemId, spec.changeset(conflict.baseChangeset), conflict.repository);
@@ -199,16 +232,10 @@ export function hasMergeBase(conflict: FileConflict): boolean {
 
 /**
  * Whether "Keep both" takes `newName` for the destination's item: one name, never a path (no `/` or `\`), `.` or `..`.
- * The merge page counts the conflict as decided only then, and the merge refuses anything else.
+ * The merge page applies it only then, and the main process refuses anything else (`assertDecisionValid`).
  */
 export function isValidRenameName(newName: string): boolean {
   return newName.trim() !== '' && !/[\\/]/.test(newName) && newName !== '.' && newName !== '..';
-}
-
-/** Whether a directory conflict is decided: a side kept, or both under a name the merge takes (`isValidRenameName`). */
-export function directoryConflictDecided(resolution: DirectoryConflictResolution | undefined): boolean {
-  if (!resolution) return false;
-  return resolution.choice !== 'rename' || isValidRenameName(resolution.newName);
 }
 
 /** Directory conflicts where keeping both items under a new name is possible. */

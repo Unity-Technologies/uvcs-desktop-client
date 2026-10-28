@@ -147,11 +147,15 @@ The page is a preview until "Complete merge" (into the workspace) or "Merge into
 branch's last name). Its header is one row: a "Preview" pill (its
 tooltip: nothing is written until then), the title fitted as a whole (`fitMergeTitle`: the words stay, the branches give
 way from their middle; it keeps that room in a narrow window, ARCHITECTURE.md "Long names"), the changesets it combines
-("cs:3 → cs:5"; a click lists them with the base), where it stands ("2 conflicts to decide", the full summary in its
+("cs:3 → cs:5"; a click lists them with the base), where it stands ("2 resolved · 5 to decide", "7 conflicts to
+decide" before any is resolved, `planProgress`; merged automatically counts as resolved; the full summary in its
 tooltip) and the merge button, the primary action only once nothing waits. Merging into a server branch, a second row
 holds the changeset comment (`Merge from <source>`) and the button.
-The list (`MergeItemList`) is every list of changed files (ARCHITECTURE.md "Lists of changed files") in two groups,
-"Conflicts" then "Changes to apply" (`mergeItemGroups`), each by path: the filter (the "!" chip for conflicts,
+The list (`MergeItemList`) is every list of changed files (ARCHITECTURE.md "Lists of changed files") in three groups,
+"Directory conflicts", "File conflicts" then "Changes to apply" (`mergeItemGroups`), each by path, directory
+conflicts first as each one decided can move, remove or add file conflicts. Each conflict group counts its conflicts
+resolved instead of all it holds ("1 of 3", what is left to decide in its tooltip: `mergeGroupProgress`). The list has
+the filter (the "!" chip for conflicts,
 `mergeItemTones`), List or Tree, and several items selected at once, whose menu keeps yours or the incoming version of
 every conflicting file among them, or the base when every one of them has one (`keepVersionEntries`). One item's menu is any changed file's (ARCHITECTURE.md "One
 menu": history, open or save the incoming version, Copy) with what a merge adds (`mergeItemMenu`): a conflicting file, the same
@@ -165,11 +169,9 @@ with ▸", which would open the incoming one a second way, and keeps "Save this 
 in Incoming too). A version taken
 out of the repository opens under a name that tells which it is (`versionCopyName`: `hero.INCOMING.psd`, as the merge
 tools name theirs), so two versions open side by side in one app don't look alike; a directory conflict its
-panel's choices, Keep both under the name the panel suggests. Keep both counts as decided only while its name is one
-name, never a path, `.` or `..` (`isValidRenameName`, which main checks again; the field says what is wrong:
-`renameNameProblem`). A directory conflict holding another conflict (a folder added on both sides, a file in it
-changed on both) is its folder's row in a tree: selecting that row selects the
-conflict, and its menu acts on it alone (`mergeItemAt`, `mergeItemsActedOn`). A clean change isn't annotated: `cm` names only the
+panel's choices, Keep both under the name it was given, else the one the panel suggests, each applied as it's picked
+("Directory conflicts" below). A directory conflict holding another directory conflict (a folder added on both sides, a file
+in it added on both) is its folder's row in a tree: selecting that row selects the conflict, and its menu acts on it alone (`mergeItemAt`, `mergeItemsActedOn`). A clean change isn't annotated: `cm` names only the
 merge's changesets, where the file may not have changed. A folder added with its files is listed once, through them
 (ARCHITECTURE.md "Folders once"). The page starts on the first item that needs the user in the order the list shows
 (`firstWaiting`), and goes back there after a run. Directory conflicts are named in plain words ("Added on both sides
@@ -241,9 +243,12 @@ from, and the progress card ends as the one toast, "Merged subtask into child_1 
 tells them apart, `distinctBranchNames`), with "Show in Branch Explorer" (`completeMerge`). When someone checked in on
 the destination while it merged, `cm` leaves the merge's changeset beside the new head: the page that merges it into the
 branch opens instead (`followUpMerge`), with a toast saying why. The page reads its plan once (`MERGE_PLAN_QUERY`):
-no refresh, not even the one after the merge, previews it again.
+no refresh, not even the one after the merge, previews it again; only a directory decision changes it ("Directory
+conflicts" below).
 
-Complete merge writes each conflicting file's decision into the workspace, after `cm merge` (`runMerge`): the text
+Complete merge goes on from the directory decisions applied (a copy of their state files, `runMerge`'s `decided`),
+previewing the merge on them again first and stopping, with nothing merged, while a conflict has no decision. It
+writes each conflicting file's decision into the workspace, after `cm merge`: the text
 decided, or, keeping the incoming version or the base of a text file, the text the page read (`resolutionOf` carries
 it when it writes back byte for byte, UTF-8); the incoming versions and bases of binaries and of text in other
 encodings are saved by `cm` straight into the workspace (the item at the source's point or at the base's changeset,
@@ -295,6 +300,68 @@ by the lines changed (lockfiles repeat lines by the thousand). The list and Inco
 file behind the selection follows it deferred, so arrowing never waits for a file to highlight. Conflicts, Base and
 the hand editor follow the diffs' size rule (`syntaxHighlighting`), and Base (when big) and the hand editor render
 only the lines in view.
+
+### Directory conflicts
+
+A directory conflict is applied as soon as it's decided, as the official client does, so the page always shows the
+merge the decisions leave: keeping one side of a folder moved apart on both sides moves the files changed on both into
+that side's folder, keeping one item of a folder added on both sides takes the other's conflicts out of the merge, and
+keeping both brings the incoming one's files as changes to apply. `cm` can't merge a file conflict before the directory
+conflicts are solved (`cm merge` refuses to, and the official client alike). Solving them
+all only when the merge completes was dropped: the file conflicts the page showed were then those before any decision,
+and their decisions went to paths a decision had moved.
+
+- Keeping a side applies at once; Keep both applies once its name is confirmed (Apply, or Enter), never on each key
+  typed: each decision makes `cm` calculate the merge again. Its name is one name, never a path, `.` or `..`
+  (`isValidRenameName`, `canKeepBothAs`; the field says what is wrong: `renameNameProblem`); the main process refuses
+  anything else (`assertDecisionValid`).
+- The page sends its decisions in the order they were made with the new one after them (`useDirectoryDecisions`,
+  `applyDirectoryDecision`, `withDecision`), and the main process applies them (`DirectoryDecisions`): one `cm merge
+  --resolveconflict --conflict=N` each, a quick read that never merges (no `--merge`: `cm` returns before merging and
+  the workspace isn't touched), on `cm`'s state files (`--mergeresultfile`, `--solvedconflictsfile`: `MergeStateFiles`).
+  `cm` prints the merge calculated again, contributors included: that is the page's plan from then on. `N` is the
+  conflict's place in the list `cm` printed last, found by its identity (`directoryConflictIdentity`), as `cm` numbers
+  the conflicts left on each run. Decisions apply one at a time: while one applies, its conflict reads "Updating the
+  merge…", every choice waits, and the merge can't complete.
+- Each decision's state is kept in a folder of its own, a copy of the one before plus that decision: `cm` can't take a
+  decision back, so changing one goes on from the state before it and applies again the decisions after it. A
+  decision whose conflict an earlier one took out of the merge, or moved (a conflict inside a folder whose move was
+  decided again is another conflict, by its paths), is dropped, and a toast says so
+  (`droppedDecisionsToast`). Deciding a conflict the way it's decided already runs nothing (`isDecidedAs`).
+- A directory decision moves file conflicts or reveals ones `cm` held back under it (a file changed on both sides
+  that one side moved into a folder added on both is listed only once that folder is decided); none was seen to take
+  one away, as a file changed on both sides is in both, and a decision only picks where an item goes or which of two
+  keeps a name. So no decision on a file is lost to one.
+- File conflicts can be decided before or after the directory conflicts, in any order: nothing is written until the
+  merge completes, the list always shows the merge the directory decisions leave, and the merge can't complete while
+  a directory conflict waits. The official client asks for the directory conflicts first because it writes each file's
+  decision to the workspace as it's made.
+- `cm` drops the conflict it resolves from the list it prints; one still listed means it resolved another (the list
+  its number came from was out of date: someone checked in since the preview), and the decision fails ("The merge
+  changed since it was calculated"). A decided conflict stays listed from the decisions, under the same key
+  (`buildMergeItems`, `directory:<identity>`), with its decision as status.
+- A file conflict keeps its decision when a decision moves it: the page keys it by its item in its repository
+  (`fileConflictKey`), never its path, and sends its decision by the path the plan names now (`collectResolutions`).
+  Its repository, destination revision and path in the destination stay those the merge read before any decision
+  (`withConflictRepositories`' `known`, `FileConflict.destinationPath`): its new path may be one the destination's tree
+  doesn't hold (`cm ls` of it fails), and its versions, named by `destinationPath`, aren't read again.
+  A file conflict a decision reveals has no such listing: if its path isn't in the destination's tree either (a file
+  the destination moved into a folder added on both sides, revealed where the source has it once the incoming folder
+  is kept), `cm ls` names it as not in the tree, a line for each such path, while listing the others
+  (`notInTreePaths`, which reads every line it printed). The others are listed again, and those it names in the
+  source's tree, both at once, which tells their repository (an xlinked one's too) and whether they're binaries (the
+  source's type standing for the destination's); its destination is read as its item at its changeset (`destinationVersionSpec`). Only after a decision, and
+  only for the paths `cm` names: any other failure fails the decision. The failed listing shows in the command log, as
+  every failed command does; it's expected there. Completing the
+  merge takes them too (`DirectoryDecisions.runOn`), on the page's own decisions only, held while it runs.
+- The first decision starts from the merge the page previewed (`DirectoryDecisions.previewed`), so the merge is
+  calculated once more per decision, never twice.
+- The page names its decisions with an id of its own; the main process keeps them in a temporary folder until the
+  page closes (`discardDirectoryDecisions`), and a session that dies leaves it for the next start to delete
+  (`removeLeftOverTempDirectories`).
+
+Sandbox: `scripts/sandboxes/merge-conflicts.sh` (a folder moved apart on both sides holding a file changed on both, a
+folder added on both sides, a file moved on one side and deleted on the other).
 
 ### Stepping through conflicts
 

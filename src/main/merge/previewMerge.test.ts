@@ -44,6 +44,17 @@ describe('previewMerge', () => {
     expect(commands.some((command) => command.args.includes('--merge'))).toBe(false);
   });
 
+  it("previews the merge after the directory decisions cm keeps in the state files it's given", async () => {
+    const { cm, lines } = fakeCmClient({ 'merge br:/main/task': mergePreviewOutput(SOURCE, DESTINATION) });
+    const state = { result: join(tmpdir(), 'decided', 'result'), solved: join(tmpdir(), 'decided', 'solved') };
+
+    await previewMerge(cm, '/work', TO_MAIN, { state });
+
+    expect(lines()).toEqual([
+      `merge br:/main/task --to=br:/main --machinereadable --fieldseparator= --endlineseparator= --printcontributors --mergeresultfile=${state.result} --solvedconflictsfile=${state.solved}`,
+    ]);
+  });
+
   it("names each conflicting file's repository with one listing of the destination's tree", async () => {
     const { cm, lines } = fakeCmClient({
       status: changedStatus(),
@@ -98,9 +109,9 @@ describe("the merge page reading the destination's versions", () => {
       ...files.map(({ path, revid, text }) => ({ name: path.split('/').pop(), wkpath: `/${path}`, size: text.length, type: 'txt', changeset: 4, repspec: 'rep:eco@local', revid, itemid: 30, hash: md5(text) })),
     );
   /** The destination's version as the merge page asks for it (`conflictedFilesOf`): by its revision. */
-  const destinationOf = ({ path, repository, destinationRevisionId }: { path: string; repository: string; destinationRevisionId: number }): ContentSource => ({
+  const destinationOf = ({ path, repository, destinationRevisionId }: { path: string; repository: string; destinationRevisionId?: number }): ContentSource => ({
     kind: 'revision',
-    revision: { revisionId: destinationRevisionId, repository },
+    revision: { revisionId: destinationRevisionId!, repository },
     fileName: path,
   });
 
@@ -118,7 +129,7 @@ describe("the merge page reading the destination's versions", () => {
     const copies = new WorkspaceCopies({ cm: fake.cm });
     const content = createContentService(serviceContext(fake.cm, { workspaceCopies: copies }));
 
-    const plan = await previewMerge(fake.cm, workspace, FROM_TASK, copies);
+    const plan = await previewMerge(fake.cm, workspace, FROM_TASK, { copies });
     const read = await Promise.all(plan.fileConflicts.map((conflict) => content.read(workspacePlace(workspace), destinationOf(conflict))));
 
     expect(read.map((one) => one.text)).toEqual(['destination a\n', 'destination b\n']);
