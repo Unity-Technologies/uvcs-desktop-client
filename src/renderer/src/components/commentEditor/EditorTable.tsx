@@ -24,7 +24,7 @@ export function EditorTable({ table, onCellPressed }: EditorTableProps) {
       </Cell>
     ));
   return (
-    <div className={styles.table}>
+    <div className={styles.table} data-selected={table.selected || undefined}>
       <table>
         <thead>
           <tr>{cells(table.header, 'th')}</tr>

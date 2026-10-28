@@ -1,6 +1,6 @@
 import type { EditorState } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
-import { selectionReveals, type LiveMarksOptions } from './liveMarks';
+import { selectionCovers, selectionReveals, type LiveMarksOptions } from './liveMarks';
 
 /** A cell of a table drawn in the editor: its text as written, and where it is, for a click to put the caret in it. */
 export interface TableCell {
@@ -18,6 +18,8 @@ export type ColumnAlign = 'left' | 'center' | 'right' | null;
 export interface TableModel {
   from: number;
   to: number;
+  /** Whether a selection covers some of it: drawn as selected, as the browser's selection doesn't paint it. */
+  selected: boolean;
   align: ColumnAlign[];
   header: TableCell[];
   rows: TableCell[][];
@@ -29,14 +31,15 @@ export function tablesIn(state: EditorState, options: LiveMarksOptions): TableMo
   syntaxTree(state).iterate({
     enter: (node) => {
       if (node.name !== 'Table') return;
-      if (!(options.revealsSelection && selectionReveals(state, node.from, node.to))) tables.push(tableAt(state, node.from, node.to));
+      if (options.revealsSelection && selectionReveals(state, node.from, node.to)) return false;
+      tables.push({ ...tableAt(state, node.from, node.to), selected: options.revealsSelection && selectionCovers(state, node.from, node.to) });
       return false;
     },
   });
   return tables;
 }
 
-function tableAt(state: EditorState, from: number, to: number): TableModel {
+function tableAt(state: EditorState, from: number, to: number): Omit<TableModel, 'selected'> {
   const first = state.doc.lineAt(from);
   const last = state.doc.lineAt(to);
   const lines = [];

@@ -226,6 +226,14 @@
   cursor: default;
 }
 
+/* A widget a selection covers: the browser's selection paints text, never what's drawn in its place (`selectionCovers`). */
+.editor :global(.cm-selectedWidget) :global(:is(.cm-chip, .cm-task, .cm-bullet)),
+.table[data-selected] {
+  border-radius: var(--radius-sm);
+  background: var(--bg-selected-strong);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
 /* A table away from the caret, as the shown comment draws one (`Markdown.module.css`). */
 .table {
   max-width: 100%;

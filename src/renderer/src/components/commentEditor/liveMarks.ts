@@ -27,6 +27,8 @@ export type LiveMark =
   | { kind: 'link'; from: number; to: number }
   /** A key between `<kbd>` and `</kbd>`, drawn as its keycap, as the shown comment draws it. */
   | { kind: 'key'; from: number; to: number }
+  /** A widget a selection covers (a chip, an image, a task's box, a bullet), drawn as selected. */
+  | { kind: 'selected'; from: number; to: number }
   /** A code block's fences and language, dimmed so the code stands out. */
   | { kind: 'fence'; from: number; to: number }
   /** A line inside a block: a quote's, or a code block's (its first and last too, for the block's corners). */
@@ -70,6 +72,7 @@ export function liveMarksOf(state: EditorState, options: LiveMarksOptions, range
       );
     }
   }
+  if (options.revealsSelection) marks.push(...selectedWidgets(state, marks));
   return marks.sort((a, b) => startOf(a) - startOf(b));
 }
 
@@ -217,9 +220,29 @@ function excludedRanges(state: EditorState, from: number, to: number, options: L
   return excluded;
 }
 
-/** A selection on `[from, to]` or next to it: the caret at a construct's edge reveals it, as it's about to type there. */
+/**
+ * Whether the selection reveals `[from, to]`: a caret on it or next to it (at a construct's edge, as it's about to type
+ * there). A selection reveals only where it started, its anchor: the press or the caret that began it showed that
+ * construct already, and what it grows over stays drawn. Revealing what a drag covers would reflow the text under the
+ * pointer (a table's source is shorter than the table, an image's much longer), moving where the drag lands, which
+ * reveals other text again: the selection would jump and shake.
+ */
 export function selectionReveals(state: EditorState, from: number, to: number): boolean {
-  return state.selection.ranges.some((range) => range.from <= to && range.to >= from);
+  return state.selection.ranges.some((range) => range.anchor >= from && range.anchor <= to);
+}
+
+/** Whether a selection, not a caret, covers some of `[from, to]`: a widget drawn there shows as selected. */
+export function selectionCovers(state: EditorState, from: number, to: number): boolean {
+  return state.selection.ranges.some((range) => !range.empty && range.from < to && range.to > from);
+}
+
+/** What draws as a widget in place of its text, which the browser's selection doesn't paint. */
+const WIDGET_KINDS = new Set<LiveMark['kind']>(['reference', 'image', 'task', 'bullet']);
+
+function selectedWidgets(state: EditorState, marks: readonly LiveMark[]): LiveMark[] {
+  return marks.flatMap((mark) =>
+    mark.kind !== 'line' && WIDGET_KINDS.has(mark.kind) && selectionCovers(state, mark.from, mark.to) ? [{ kind: 'selected' as const, from: mark.from, to: mark.to }] : [],
+  );
 }
 
 

@@ -50,6 +50,8 @@ function decorationOf(mark: LiveMark): Range<Decoration> {
       return Decoration.mark({ class: 'cm-linkText' }).range(mark.from, mark.to);
     case 'key':
       return Decoration.mark({ class: 'cm-key' }).range(mark.from, mark.to);
+    case 'selected':
+      return Decoration.mark({ class: 'cm-selectedWidget' }).range(mark.from, mark.to);
     case 'fence':
       return Decoration.mark({ class: 'cm-fence' }).range(mark.from, mark.to);
     case 'line':

@@ -131,7 +131,10 @@ htmlFor>` can't focus, and the label names it, `fieldLabelAttributes`), the comm
   was tried and rejected: writing its tree back as Markdown rewrote people's comments (`[url](url)` for a bare link,
   a list split in two, `_` escaped).
 - **Drawn as it reads around the caret** (`liveMarksOf`): Markdown's marks (`**`, `` ` ``, `~~`, `# `, a link's
-  brackets and address) show only for the construct the caret is in; the rest of the line stays drawn. A list's `-`
+  brackets and address) show only for the construct the caret is in; the rest of the line stays drawn. A selection
+reveals only where it started (`selectionReveals`: its anchor, which the press or the caret had shown already) and
+keeps drawn whatever it grows over, so a drag never reflows the text under the pointer; the widgets it covers (chips,
+images, boxes, bullets, a table) show as selected (`selectionCovers`), and copying or cutting still takes the source. A list's `-`
   is a bullet, a task's `[ ]` a checkbox a click ticks (`toggleTask`), quotes and code blocks show as blocks, a code
   block's fences dimmed and its code colored by the comments' own highlighter (`codeColors`: Pierre's Shiki, as
   `CodeBlock`, the same size limit and line length: a block past `MAX_HIGHLIGHTED_COMMENT_CHARS` stays plain; only the
