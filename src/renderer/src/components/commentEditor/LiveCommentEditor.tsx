@@ -140,6 +140,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
   const suggestions = useSuggestions(view, state);
   const focus = useFocusMode(view, state, host, singleLine, suggestions.shown, grouped?.group ?? null);
   const bar = useSelectionBar(view, state, singleLine, suggestions.shown, focus.inFocusMode);
+  keys.current.takesTab = focus.parts.takesTab;
   useEffect(
     () => view?.dispatch({ effects: placeholderText.reconfigure(placeholderOf(placeholderShown(placeholder, { focusMode: focus.inFocusMode, singleLine }))) }),
     [view, placeholder, focus.inFocusMode, singleLine],
@@ -220,6 +221,13 @@ function useFocusMode(view: EditorView | null, state: EditorState | null, host: 
   useEffect(() => {
     if (!group && ownLayout && !focused) setOwnLayout(layoutAfterFocus(ownLayout, focused));
   }, [group, ownLayout, focused]);
+  // Focus mode has Tab for its fields (the text's, or the group's move to the description): CodeMirror's Esc-then-Tab
+  // escape (its tab focus mode, on for two seconds after an Esc it saw, as one closing the suggestions before ⇧⌘F)
+  // would skip their bindings and hand Tab to the window. Out of focus mode, Esc then Tab still leaves the field, so
+  // the keyboard is never trapped.
+  useEffect(() => {
+    if (view && parts.inFocusMode) view.setTabFocusMode(false);
+  }, [view, parts.inFocusMode]);
   // As its size changes, the caret stays in view: centered in the larger editor, the least scroll back in the field.
   const previous = useRef(parts.inFocusMode);
   useLayoutEffect(() => {

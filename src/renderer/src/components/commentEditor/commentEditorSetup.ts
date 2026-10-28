@@ -21,6 +21,7 @@ import { oneLine } from './oneLine';
 import { ownStep } from './ownStep';
 import { formatsOf } from './formatActions';
 import { typingAt } from './typingAt';
+import { indentLines, outdentLines } from './focusModeTab';
 import { justPicked } from './justPicked';
 import { suggestionCueField } from './suggestionCueField';
 import type { WidgetPortals } from './widgetPortals';
@@ -33,6 +34,8 @@ export interface CommentEditorKeys {
   onSubmit?: () => void;
   /** Tab, ⇧Tab, ↓ and ↑ between a focus group's fields (`groupMove`): true when the key went to the other field. */
   groupKey?: (view: EditorView, key: GroupKey) => boolean;
+  /** In focus mode Tab and ⇧Tab are the text's (`indentLines`, `outdentLines`, `focusModeParts`' `takesTab`). */
+  takesTab?: boolean;
 }
 
 export interface CommentEditorOptions {
@@ -96,7 +99,11 @@ export function commentEditorExtensions(options: CommentEditorOptions, enabled: 
     EditorView.contentAttributes.of({ ...fieldLabelAttributes(options.label, options.labelledBy), 'aria-multiline': String(!options.singleLine), spellcheck: 'true' }),
     Prec.highest(
       keymap.of([
-        { key: 'Tab', run: (view) => options.keys.current.groupKey?.(view, 'Tab') ?? false, shift: (view) => options.keys.current.groupKey?.(view, 'ShiftTab') ?? false },
+        {
+          key: 'Tab',
+          run: (view) => options.keys.current.groupKey?.(view, 'Tab') || (options.keys.current.takesTab === true && indentLines(view)),
+          shift: (view) => options.keys.current.groupKey?.(view, 'ShiftTab') || (options.keys.current.takesTab === true && outdentLines(view)),
+        },
         { key: 'ArrowDown', run: (view) => options.keys.current.groupKey?.(view, 'ArrowDown') ?? false },
         { key: 'ArrowUp', run: (view) => options.keys.current.groupKey?.(view, 'ArrowUp') ?? false },
         { key: 'Mod-Enter', run: (view) => submit(view, options.keys.current) },
