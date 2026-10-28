@@ -32,7 +32,7 @@ before.
   | `cr:311` | a code review (or merge request) |
   | `serverpath:/src/a.cs#cs:12` | a file at a changeset, branch, label or shelve |
   | any of the above `@game@acme@unity`, `@game` | the object in another repository (on the place's server) |
-  | `uvcs://…` | what the link opens (docs/features/deep-links.md) |
+  | `uvcs://…`, or the official client's `plastic://…` (`isAppLink`) | what the link opens (docs/features/deep-links.md), its text kept as written |
   | `@ana`, `@ACME\tom`, `@ana@acme.com`, `@josé` | a person, as `cm` names owners, in any script |
   | `:tada:` | an emoji, by GitHub's names (`gemoji`) |
 

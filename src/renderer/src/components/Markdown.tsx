@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import { api } from '../api/client';
+import { isAppLink } from '@shared/links/parseLink';
 import { parseMarkdown, type MarkdownBlock, type MarkdownInline, type MarkdownList } from '../lib/markdown';
 import { CodeBlock } from './comments/CodeBlock';
 import { CommentImage } from './comments/CommentImage';
@@ -146,7 +147,7 @@ function MarkdownLink({ url, children }: { url: string; children: ReactNode }) {
         event.preventDefault();
         event.stopPropagation();
         // Loaded on the first click: opening a link reaches the windows, the navigation and the queries.
-        if (/^uvcs:/i.test(url)) void import('../app/links/openLink').then(({ openLink }) => openLink(url));
+        if (isAppLink(url)) void import('../app/links/openLink').then(({ openLink }) => openLink(url));
         else void api.system.openExternal(url);
       }}
     >
