@@ -132,8 +132,14 @@ The Branch Explorer's caption card lays its first line over the canvas's, so bot
 
 ## Copying
 
-Copying from a shown comment gives back what was written where it shows something else (`copyAsSource`): a chip its
-spec, a person their `@name`, an emoji its `:name:`, an image its Markdown. "Copy comment" copies the stored text.
+Copying from a shown comment (`copyAsSource`, `copiedText`) has one rule for the whole and one for a part:
+
+- **The whole comment** selected (⌘A in a details panel, or a drag over all of it; spaces and line breaks aside) gives
+  it back exactly as written, its marks, list markers and code fences included, as "Copy comment" does.
+- **A part** gives what it reads, its lines kept, with what was written wherever it shows something else: a chip its
+  spec, a person their `@name`, an emoji its `:name:`, an image its Markdown. Its marks (`**`, `-`, fences) aren't
+  rebuilt: the page can't say where a part starts in the source. A comment's line in a row or a title shows its title
+  only, so a copy from it is always a part's.
 
 ## Images
 

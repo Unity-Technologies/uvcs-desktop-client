@@ -22,20 +22,22 @@ export function Markdown({ text, comment = false }: MarkdownProps) {
     <>
       {/* A comment shown in full reads its other repositories' objects; a row's chips wait for their cards. */}
       {comment && <ResolvedReferences blocks={blocks} />}
-      <MarkdownBlocks blocks={blocks} copiesSource={comment} />
+      <MarkdownBlocks blocks={blocks} source={comment ? text : undefined} />
     </>
   );
 }
 
 interface MarkdownBlocksProps {
   blocks: MarkdownBlock[];
-  copiesSource?: boolean;
+  /** A comment's text as written: copying from it gives back what was written (`copyAsSource`). */
+  source?: string;
 }
 
 /** Text already read into Markdown's tree (`parseMarkdown`, `releaseNotesFromHtml`), rendered as elements. */
-export function MarkdownBlocks({ blocks, copiesSource = false }: MarkdownBlocksProps) {
+export function MarkdownBlocks({ blocks, source }: MarkdownBlocksProps) {
+  const onCopy = useMemo(() => (source === undefined ? undefined : copyAsSource(source)), [source]);
   return (
-    <div className={`${styles.markdown} selectable`} onCopy={copiesSource ? copyAsSource : undefined}>
+    <div className={`${styles.markdown} selectable`} onCopy={onCopy}>
       {renderBlocks(blocks)}
     </div>
   );
