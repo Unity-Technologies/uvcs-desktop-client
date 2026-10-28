@@ -55,11 +55,26 @@ describe('createWordFilterIndex', () => {
     expect(queried.calls).toBe(4);
   });
 
-  it('stops looking once it has the rows asked for', () => {
+  it('finds the rows holding what was typed as typed before those holding its words apart, wherever they are in the list', () => {
+    const apart = Array.from({ length: 60 }, (_, id) => [`/main/task${id}`, 'Resolve the names']);
+    const searched = createWordFilterIndex([...apart, ['/main/old', 'Resolve names in one batch']]);
+
+    expect(searched.matching('resolve names', 50, nothingShown)).toEqual([60, ...Array.from({ length: 49 }, (_, id) => id)]);
+  });
+
+  it('looks at each row once per keystroke: a test per word typed, and one for the words together', () => {
+    const branches = Array.from({ length: 20_000 }, (_, id) => [`/main/task${id}`, `Resolve the names ${id}`]);
+    const searched = createWordFilterIndex(branches);
+    const { calls } = countCalls(String.prototype, 'includes', () => searched.matching('resolve names', 50, nothingShown));
+
+    expect(calls).toBe(20_000 * 3);
+  });
+
+  it('stops looking once it has the rows asked for that hold what was typed as typed', () => {
     const branches = Array.from({ length: 20_000 }, (_, id) => [`/main/task${id}`, 'Same comment']);
     const searched = createWordFilterIndex(branches);
-    const { calls } = countCalls(String.prototype, 'includes', () => searched.matching('same', 50, nothingShown));
+    const { calls } = countCalls(String.prototype, 'includes', () => searched.matching('same comment', 50, nothingShown));
 
-    expect(calls).toBe(50);
+    expect(calls).toBe(50 * 3);
   });
 });

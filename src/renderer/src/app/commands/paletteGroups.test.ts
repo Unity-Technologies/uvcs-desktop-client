@@ -245,6 +245,13 @@ describe('paletteGroups finding branches and labels by their description', () =>
     expect((reads() - readsToIndex) / 4).toBeLessThan(MAX_PER_SECTION * 20);
   });
 
+  it('finds an older branch whose description holds what was typed as typed past many newer ones holding its words apart', () => {
+    const newer = Array.from({ length: MAX_PER_SECTION + 5 }, (_, id) => withComment(id, `/main/task-${id}`, 'Resolve the names'));
+    const older = withComment(100, '/main/old', 'Resolve names in one batch');
+
+    expect(branchesFound('resolve names', ...newer, older)[0]).toBe('/main/old');
+  });
+
   it('finds a label by its description too', () => {
     const groups = groupsFor({ term: 'first public', lists: { labels: labels({ ...label(1, 'v1.0'), comment: 'First public release' }, label(2, 'v2.0')) } });
 
