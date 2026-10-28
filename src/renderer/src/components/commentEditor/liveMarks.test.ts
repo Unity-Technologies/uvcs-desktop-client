@@ -47,6 +47,11 @@ describe('liveMarksOf', () => {
       expect(marksOf('Title\n===\n\n‸')).toEqual([]);
     });
 
+    it('draws a key as its keycap, its tags showing only around the caret', () => {
+      expect(marksOf('Press <kbd>Ctrl</kbd>+<kbd>F</kbd> ‸')).toEqual(['hidden <kbd>', 'key Ctrl', 'hidden </kbd>', 'hidden <kbd>', 'key F', 'hidden </kbd>']);
+      expect(marksOf('Press <kbd>Ct‸rl</kbd>')).toEqual([]);
+    });
+
     it('reads a link as its text, its brackets and address showing only around the caret', () => {
       expect(marksOf('See [the docs](https://example.com) ‸')).toEqual(['hidden [', 'link the docs', 'hidden ]', 'hidden (', 'hidden https://example.com', 'hidden )']);
       expect(marksOf('See [the d‸ocs](https://example.com)')).toEqual(['link the docs']);
