@@ -17,7 +17,7 @@ import { describeSelector } from './switchSelectors';
 import { createAutomaticShelve } from './verifiedShelve';
 import { readWorkspaceIdentity } from './workspaceIdentity';
 
-const IN_MERGE = 'A merge in progress keeps its files from loading: check the merge in or undo it, then load them from the xlink’s menu in Files.';
+const IN_MERGE = 'A merge in progress keeps its files from loading: check the merge in or undo it, then open the xlink’s folder in Files and choose Load its files on it.';
 
 /** How a checked-in xlink's files loaded: the changes moved aside for it wait in a shelve when they couldn't merge back cleanly. */
 export type XlinkLoad = { kind: 'loaded' } | { kind: 'changesWaiting'; shelveId: number };
@@ -67,17 +67,18 @@ async function loadAroundChanges(
   context: OperationContext,
 ): Promise<XlinkLoad> {
   const { cm, records } = deps;
-  const workspace = await readWorkspaceIdentity(cm, workspacePath);
-  const objectRef = await selectorObjectRef(cm, workspacePath, workspace.selector);
-  if (!objectRef) throw new Error(`Couldn't find ${describeSelector(workspace.selector)} in the repository, so your changes stayed as they were.`);
-
-  context.beginStep('Putting your changes aside', 1, 3);
-  // Any failure to update with changes pending comes here, not only the refusal: when the changes can't even be
-  // shelved (the server is down), what `cm update` said is the failure to tell.
-  const shelve = await createAutomaticShelve(cm, workspacePath, snapshot.changes, objectRef, context).catch(() => {
-    throw refusal;
+  // Any failure to update with changes pending comes here, not only the refusal. When `cm` fails before the changes
+  // are shelved (the server is down), nothing changed and what `cm update` said is the failure to tell; the app's own
+  // reasons the changes can't be shelved ("Check them in first") stay, as they say what to do.
+  const shelve = await asideOrRefusal(refusal, async () => {
+    const workspace = await readWorkspaceIdentity(cm, workspacePath);
+    const objectRef = await selectorObjectRef(cm, workspacePath, workspace.selector);
+    if (!objectRef) throw new Error(`Couldn't find ${describeSelector(workspace.selector)} in the repository, so your changes stayed as they were.`);
+    context.beginStep('Putting your changes aside', 1, 3);
+    return { workspace, objectRef, created: await createAutomaticShelve(cm, workspacePath, snapshot.changes, objectRef, context) };
   });
-  const record = newShelveRecord(workspace, shelve.id, shelvedContents(snapshot), { mode: 'leave', reason: 'xlink', objectRef, target: NO_TARGET });
+  const { workspace, objectRef } = shelve;
+  const record = newShelveRecord(workspace, shelve.created.id, shelvedContents(snapshot), { mode: 'leave', reason: 'xlink', objectRef, target: NO_TARGET });
   records.save(record);
 
   // From here on the changes live in the shelve: a failure puts them back.
@@ -95,4 +96,12 @@ async function loadAroundChanges(
   context.beginStep('Bringing your changes back', 3, 3);
   const broughtBack = await putShelvedChangesBack(cm, deps.leftChanges, workspacePath, record, context).catch(() => false);
   return broughtBack ? { kind: 'loaded' } : { kind: 'changesWaiting', shelveId: record.shelveId };
+}
+
+async function asideOrRefusal<T>(refusal: CmError, step: () => Promise<T>): Promise<T> {
+  try {
+    return await step();
+  } catch (error) {
+    throw error instanceof CmError ? refusal : error;
+  }
 }

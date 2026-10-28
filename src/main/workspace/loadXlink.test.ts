@@ -5,11 +5,13 @@ import { join } from 'node:path';
 import { AUTOMATIC_SHELVE_COMMENT } from '@shared/domain/shelve';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { recordingContext } from '../operations/testing/recordingContext';
+import { CmError } from '../cm/CmError';
 import { loadXlink } from './loadXlink';
 import { playAlongDependencies } from './testing/playAlongDependencies';
 import { playAlongWorkspace, type WorkspaceScenario } from './testing/playAlongWorkspace';
 
 const EDITED_AND_ADDED = { 'src/a.txt': 'CH', 'src/new.txt': 'AD' };
+const FAILED = { args: [], exitCode: 1, logEntryId: 0 } as unknown as ConstructorParameters<typeof CmError>[1];
 
 let workspacePath: string;
 
@@ -97,9 +99,17 @@ describe('Loading a checked-in xlink’s files', () => {
   it('tells what cm update said when the changes in the way can’t even be shelved', async () => {
     const { deps, pending, lines } = workspaceWith({ pending: EDITED_AND_ADDED, updateRefusesPendingChanges: true });
     const execute = deps.cm.execute;
-    deps.cm.execute = async (args, options) => (args[0] === 'shelveset' ? Promise.reject(new Error('The server is unreachable.')) : execute(args, options));
+    deps.cm.execute = async (args, options) => (args[0] === 'shelveset' ? Promise.reject(new CmError('The server is unreachable.', FAILED)) : execute(args, options));
 
     await expect(load(deps)).rejects.toThrow('The workspace cannot be updated since there are pending changes.');
+    expect(pending()).toEqual(EDITED_AND_ADDED);
+    expect(lines().some((line) => line.startsWith('undo'))).toBe(false);
+  });
+
+  it('says what to do when the changes in the way can’t be shelved, leaving them as they were', async () => {
+    const { deps, pending, lines } = workspaceWith({ pending: EDITED_AND_ADDED, updateRefusesPendingChanges: true, fail: { shelveMisses: 'src/a.txt' } });
+
+    await expect(load(deps)).rejects.toThrow('Check them in first.');
     expect(pending()).toEqual(EDITED_AND_ADDED);
     expect(lines().some((line) => line.startsWith('undo'))).toBe(false);
   });

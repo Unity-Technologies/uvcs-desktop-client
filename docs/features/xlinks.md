@@ -64,8 +64,9 @@ changes are put aside as a switch puts them: an automatic shelve recorded with `
 moved aside, the folder updated, the shelve merged back. The workspace didn't move, so only a change under the new
 folder could conflict; changes that don't come back cleanly wait in their shelve, offered by "Welcome back" as "put
 aside to load an xlink". A failure before the files load puts the changes back. The refusal's words are localized,
-so it is told apart only by changes being pending: any failed update with changes pending takes this path. When the
-changes can't even be shelved (the server is down), the error is what `cm update` said, nothing having changed.
+so it is told apart only by changes being pending: any failed update with changes pending takes this path. When `cm`
+fails before the changes are shelved (the server is down), nothing changed and the error is what `cm update` said;
+the app's own reasons they can't be shelved (changes inside another xlink: "Check them in first") stay as they are.
 
 The files load with no progress bar, "Loading its files" alone: `--forcedetailedprogress`, which prints the bar
 `readUpdateProgress` reads, is turned off by `--machinereadable`, which keeps `cm` from shelving.
