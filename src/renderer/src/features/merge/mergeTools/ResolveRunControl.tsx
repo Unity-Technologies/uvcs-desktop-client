@@ -95,6 +95,7 @@ function RunStrip({ states, run, progress }: { states: FileConflictState[]; run:
   const words = runStripWords(progress.toolName, current?.openTool?.toolName);
 
   // Esc stops, asking first while the tool has a file: stopping closes it. Smart Merge has nothing to lose.
+  const shown = usePageShown();
   const stopFromKeyboard = async (): Promise<void> => {
     if (isKeyboardTaken()) return;
     if (toolOpen && words.confirmsStop) {
@@ -107,7 +108,7 @@ function RunStrip({ states, run, progress }: { states: FileConflictState[]; run:
     }
     run.stop();
   };
-  useShortcut(hotkey('stopResolvingInTool'), () => void stopFromKeyboard(), usePageShown());
+  useShortcut(hotkey('stopResolvingInTool'), () => void stopFromKeyboard(), shown);
 
   if (progress.paused) {
     return (

@@ -1,21 +1,23 @@
 import { followUpMerge, type MergeRequest, type MergeResolutions, type MergeResult } from '@shared/domain/merge';
 import { api } from '../../api/client';
-import { navigation } from '../../app/navigation/navigationStore';
+import { navigation, shownMergeId } from '../../app/navigation/navigationStore';
 import { runOperation, type OperationSuccess } from '../../app/operations/runOperation';
 import { isAffectedByCheckinOrUpdate, isAffectedByServerMerge, isAffectedByShelveApplied } from '../../app/refresh/refreshScopes';
 import { branchLabel, branchLabels } from '../../lib/branchLabels';
 import { fileNameOf, listNames, pluralize } from '../../lib/text';
 import { toast } from '../../ui/toast/toastStore';
+import { confirm } from '../../ui/dialog/confirm';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { finishMergedTask } from '../mergeTask/mergeTaskOperations';
 import { taskEnding, type FinishingTask, type TaskMerge } from '../mergeTask/taskMerge';
-import { describeSpec } from './mergeDescription';
+import { CLOSE_MERGE_QUESTION, describeSpec } from './mergeDescription';
 
 /**
  * Runs the merge. Resolves with its result for the page to tell what happened, or null when there's nothing more to
  * show there: it failed, or it merged into a branch on the server, which goes back to where the merge was opened from
  * with a toast naming the new changeset (or opens the merge that finishes it, when its destination moved meanwhile).
- * A task merged so is finished as picked on the page (`finishMergedTask`).
+ * A task merged so is finished as picked on the page (`finishMergedTask`). It ends the merge on screen when it started,
+ * never another one the user started meanwhile.
  */
 export async function completeMerge(
   workspacePath: string,
@@ -23,6 +25,7 @@ export async function completeMerge(
   resolutions: MergeResolutions,
   finishing?: FinishingTask,
 ): Promise<MergeResult | null> {
+  const mergeId = shownMergeId();
   const result = await runOperation({
     title: 'Merging',
     workspacePath,
@@ -34,7 +37,7 @@ export async function completeMerge(
   const destination = request.destinationBranch;
   if (!destination) return result;
 
-  navigation.closeMerge();
+  if (mergeId !== undefined) navigation.closeMerge(mergeId);
   if (result.destinationMoved) {
     toast.info(`${branchLabel(destination)} moved while merging`, destinationMovedExplanation(result.changesetId, destination));
     openMerge(followUpMerge(result, destination), finishing?.task);
@@ -101,6 +104,13 @@ function workspaceMergeSuccess({ keptVersionNotSaved = [], keptVersionMaybeNotSa
 function mergedNames(sourceSpec: string, taskBranch: string | undefined, destination: string): [string, string] {
   const sourceBranch = taskBranch ?? (sourceSpec.startsWith('br:') ? describeSpec(sourceSpec) : undefined);
   return sourceBranch ? branchLabels(sourceBranch, destination) : [describeSpec(sourceSpec), branchLabel(destination)];
+}
+
+/** Ends the merge on screen once the user confirms: what they decided in it is discarded. */
+export async function closeMergeAsked(): Promise<void> {
+  const mergeId = shownMergeId();
+  if (mergeId === undefined) return;
+  if (await confirm({ ...CLOSE_MERGE_QUESTION, danger: true })) navigation.closeMerge(mergeId);
 }
 
 /** Opens the merge page; `task` when it finishes a task branch on the server. */
