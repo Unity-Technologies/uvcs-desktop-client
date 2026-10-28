@@ -15,7 +15,7 @@ import type { Box } from './popupPosition';
 import { SelectionBar } from './SelectionBar';
 import { formatsOf, selectionBarShows } from './selectionBarState';
 import { optionId, SuggestionList } from './SuggestionList';
-import { isPickable, nextPickable } from './suggestionRows';
+import { isDismissed, isPickable, suggestionKeyAction } from './suggestionRows';
 import { pickSuggestion, suggestionQueryAt, type SuggestionQuery } from './suggestionTrigger';
 import { useSuggestionRows } from './useSuggestionRows';
 import { WidgetPortals } from './widgetPortals';
@@ -121,7 +121,7 @@ function useSuggestions(view: EditorView | null, state: EditorState | null) {
   const query = state && state.field(hasFocus) ? suggestionQueryAt(state) : null;
   // Esc closes the list until the word typed is another one.
   const [dismissedAt, setDismissedAt] = useState<number | null>(null);
-  const open: SuggestionQuery | null = query && query.from !== dismissedAt ? query : null;
+  const open: SuggestionQuery | null = query && !isDismissed(query, dismissedAt) ? query : null;
   useEffect(() => {
     if (!query) setDismissedAt(null);
   }, [query === null]);
@@ -146,17 +146,11 @@ function useSuggestions(view: EditorView | null, state: EditorState | null) {
     if (!shown || !view) return;
     const onKeyDown = (event: KeyboardEvent): void => {
       if (!view.dom.contains(event.target as Node) || event.isComposing) return;
-      const plain = !event.metaKey && !event.ctrlKey && !event.altKey;
-      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-        const next = nextPickable(rows, active, event.key === 'ArrowDown' ? 1 : -1);
-        if (next >= 0) setActive(next);
-      } else if ((event.key === 'Enter' || (event.key === 'Tab' && !event.shiftKey)) && plain && rows[active] && isPickable(rows[active])) {
-        pick(active);
-      } else if (event.key === 'Escape') {
-        setDismissedAt(open!.from);
-      } else {
-        return;
-      }
+      const action = suggestionKeyAction(event.key, event, rows, active);
+      if (!action) return;
+      if (action.kind === 'move') setActive(action.to);
+      else if (action.kind === 'pick') pick(action.index);
+      else setDismissedAt(open!.from);
       event.preventDefault();
       event.stopPropagation();
     };
@@ -165,19 +159,18 @@ function useSuggestions(view: EditorView | null, state: EditorState | null) {
   });
 
   // The field is the list's combobox: screen readers follow the row the keys are at.
+  const activeOption = rows[active] !== undefined && isPickable(rows[active]);
   useEffect(() => {
     if (!view) return;
     const content = view.contentDOM;
     content.setAttribute('aria-autocomplete', 'list');
     content.setAttribute('aria-expanded', String(shown));
-    if (shown) {
-      content.setAttribute('aria-controls', listId);
-      content.setAttribute('aria-activedescendant', optionId(listId, active));
-    } else {
-      content.removeAttribute('aria-controls');
-      content.removeAttribute('aria-activedescendant');
-    }
-  }, [view, shown, active, listId]);
+    if (shown) content.setAttribute('aria-controls', listId);
+    else content.removeAttribute('aria-controls');
+    // Only an option the keys are at: a note ("Reading branches…") is no option.
+    if (shown && activeOption) content.setAttribute('aria-activedescendant', optionId(listId, active));
+    else content.removeAttribute('aria-activedescendant');
+  }, [view, shown, active, listId, activeOption]);
 
   const anchor = shown && view ? boxAt(view, open!.from, open!.from) : null;
   const list = anchor ? <SuggestionList id={listId} rows={rows} active={active} anchor={anchor} onPick={pick} onHover={setActive} /> : null;

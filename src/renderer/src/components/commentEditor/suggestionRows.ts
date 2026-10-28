@@ -1,5 +1,5 @@
 import type { Suggestion } from './suggestionItems';
-import type { SuggestionKind } from './suggestionTrigger';
+import type { SuggestionKind, SuggestionQuery } from './suggestionTrigger';
 
 /** A row of the suggestion list: something to pick, the search of every changeset to start, or a word on where it stands. */
 export type SuggestionRow =
@@ -80,4 +80,43 @@ export function nextPickable(rows: readonly SuggestionRow[], index: number, step
     if (isPickable(rows[candidate]!)) return candidate;
   }
   return -1;
+}
+
+/** What a key does while the list shows: null leaves it to the text (the caret, a new line, the window). */
+export type SuggestionKeyAction = { kind: 'move'; to: number } | { kind: 'pick'; index: number } | { kind: 'dismiss' };
+
+export interface KeyModifiers {
+  metaKey: boolean;
+  ctrlKey: boolean;
+  altKey: boolean;
+  shiftKey: boolean;
+}
+
+/**
+ * The list's keys, taken before the field's: up and down move through what can be picked (with nothing to pick, the
+ * caret moves), Enter or Tab picks the row the keys are at (only with no modifier: Cmd+Enter is the field's), Esc
+ * closes the list.
+ */
+export function suggestionKeyAction(key: string, modifiers: KeyModifiers, rows: readonly SuggestionRow[], active: number): SuggestionKeyAction | null {
+  const plain = !modifiers.metaKey && !modifiers.ctrlKey && !modifiers.altKey && !modifiers.shiftKey;
+  switch (key) {
+    case 'ArrowDown':
+    case 'ArrowUp': {
+      if (!plain) return null;
+      const to = nextPickable(rows, active, key === 'ArrowDown' ? 1 : -1);
+      return to < 0 ? null : { kind: 'move', to };
+    }
+    case 'Enter':
+    case 'Tab':
+      return plain && rows[active] && isPickable(rows[active]) ? { kind: 'pick', index: active } : null;
+    case 'Escape':
+      return { kind: 'dismiss' };
+    default:
+      return null;
+  }
+}
+
+/** Whether Esc closed the list on this word (`dismissedAt`: where it started): it opens again for another one. */
+export function isDismissed(query: SuggestionQuery, dismissedAt: number | null): boolean {
+  return dismissedAt !== null && query.from === dismissedAt;
 }
