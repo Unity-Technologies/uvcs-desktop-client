@@ -8,7 +8,8 @@ What the user sees or the app does today (for performance work, the numbers and 
 
 ## Behavior with this pull request
 
-What the user can now do or see, and the numbers after.
+What the user can now do or see, and the numbers after. A visible change shows it here: one representative screenshot
+(a short video or GIF when a still can't show it), attached with `gh pr create --attach`.
 
 ## How it was implemented
 
@@ -24,8 +25,7 @@ settings stored differently, a `cm` version it needs, something that now works d
 ## Checklist
 
 - [ ] `npm run typecheck` and `npm test` pass. What the new tests cover:
-- [ ] Seen working in the app, in both themes, a narrow window and a development build, with a clean console
-      (screenshots if it's visible):
+- [ ] Seen working in the app, in both themes, a narrow window and a development build, with a clean console:
 - [ ] `npm run e2e` passes, if it touches startup, navigation or many views
 - [ ] Other areas the change reaches, and how they were checked:
 - [ ] Reviewed in a clean context (`.claude/agents/reviewer.md`): what it found, what changed for it, and why any

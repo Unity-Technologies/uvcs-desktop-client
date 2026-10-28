@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Builds a repository whose last changeset and pending changes hold every kind of move: to a deeper folder, to a
-# sibling folder, a rename, a move and rename, from and to the root, and moves whose content changed too.
+# sibling folder, a rename, a move and rename, from and to the root, and moves whose content changed too. Pending too:
+# a file renamed and rewritten and a folder renamed with its file rewritten, which the move detection can't pair and
+# Search matches pairs by hand (src/lib/Rewritten.cs and src/legacy, deleted, beside src/app/Rewrote.cs and src/modern).
 # Usage: scripts/sandboxes/moves.sh   → repo moves-demo@local, workspace /tmp/uvcs-moves-demo
 set -euo pipefail
 REPO=moves-demo@local
@@ -21,7 +23,8 @@ append() { sleep 1; printf '// %s\n' "$2" >> "$1"; }
 MERGE=src/nunit/nunitclient/merge
 for name in MatchMergeToFileConflictResolutionsTests MergeToFileConflictCleanerTests ParseMergeToFileConflictResolutionsTests; do w "$MERGE/$name.cs"; done
 for name in MatchMergeToFileConflictResolutions MergeToFileConflictResolution; do w "src/client/basecommands/merge/mergeto/$name.cs"; done
-for name in Renamed MovedAndRenamed Sibling Rooted Plain Edited Plié; do w "src/lib/$name.cs"; done
+for name in Renamed MovedAndRenamed Sibling Rooted Plain Edited Plié Rewritten; do w "src/lib/$name.cs"; done
+w src/legacy/Importer.cs
 LONG_FROM=assets/art/characters/heroes/legacy-prototypes/rigging-experiments-2019/controllers
 LONG_TO=tools/build/pipelines/generated-importers/animation-retargeting/runtime-adapters
 w "$LONG_FROM/HumanoidAnimationRetargetingControllerForLegacyRigs.cs"
@@ -54,4 +57,7 @@ append "$MERGE/mergeto/fileconflictsresolution/ParseMergeToFileConflictResolutio
 append src/app/Sibling.cs "changed after the move"
 append src/lib/Plain.cs "a plain change"
 cm co src/lib/Plain.cs >/dev/null 2>&1 || true
+# Moved outside cm, with content too different for the detection to tell: deleted and private for cm.
+rm src/lib/Rewritten.cs && printf '%s\n' 'namespace Game {' '  record Rewrote(int Id, string Name);' '}' > src/app/Rewrote.cs
+mv src/legacy src/modern && printf '%s\n' 'static class Importer { /* rewritten */ }' > src/modern/Importer.cs
 echo "Built $REPO in $WK"

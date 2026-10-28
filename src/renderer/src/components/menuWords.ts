@@ -24,6 +24,7 @@ import {
   FileClock,
   FileDiff,
   FileDown,
+  FileSearch,
   FilePlus,
   Files,
   Filter,
@@ -166,6 +167,8 @@ export const MENU_WORDS = {
   restore: word('act', ArchiveRestore),
   restoreTo: word('act', FolderInput, 'Restore to…'),
   add: word('act', Plus),
+  // An item deleted from disk and a new one paired by hand as one moved item (`pickMoveMatch`).
+  searchMatches: word('act', FileSearch, 'Search matches…'),
   checkout: word('act', PenLine, 'Check out'),
   status: word('act', CircleDot, 'Set status'),
   assign: word('act', UserPlus, 'Assign reviewer…'),
@@ -333,6 +336,11 @@ export function menuSubmenu(id: MenuWordId, entries: MenuEntry[]): GroupedEntry 
 export interface MenuHost {
   /** The Branch Explorer, where "Show in Branch Explorer" would lead where the user already is. */
   inBranchExplorer?: boolean;
+  /**
+   * A list that binds none of the list keys (⌘D, ⌘C, ⇧⌘C), so the menu names no shortcut: there they reach the page's
+   * own object or the view under the page (docs/ARCHITECTURE.md "Menus").
+   */
+  listKeysElsewhere?: boolean;
   /** Called with the name of a branch created from the menu, e.g. to show it. */
   onBranchCreated?: (name: string) => void;
 }

@@ -38,6 +38,9 @@ export function MergeDetail({
       return (
         <DirectoryConflictPanel
           key={item.key}
+          workspacePath={workspacePath}
+          request={request}
+          contributors={plan.contributors}
           conflict={item.conflict}
           labels={labels}
           resolution={directoryResolutionOf(item, progress)}

@@ -143,10 +143,12 @@ npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click 
   it prints renderer errors as `[renderer]` and `[pageerror]`).
 - Sandboxes on a local server: `scripts/sandboxes/demo.sh` (a small game project), `branch-explorer.sh` (a branch
   topology), `long-branch-names.sh` (very long, nested and non-ASCII branch names; a task that conflicts), `moves.sh`
-  (every kind of move, some changed too, checked in and pending), `moved-code.sh` (code moved inside a file, as it
-  was and edited, checked in and pending), `permissions.sh` (permissions at every level, a secured path and a group of
-  branches; never the server's own), `models.sh` (a Unity project with one changeset per 3D model diff case: units,
-  rotation, pivot, hierarchy, material slots, sculpt, polycount, UVs; a branch and a pending model too), `textures.sh`
+  (every kind of move, some changed too, checked in and pending; a file and a folder the detection can't pair: Search
+  matches), `move-matches.sh` (hundreds of new files at known similarities to deleted ones, both ways, and a pairing
+  the detection gets wrong: Search matches' slider), `moved-code.sh` (code moved inside a file, as it was and edited,
+  checked in and pending), `permissions.sh` (permissions at every level, a secured path and a group of branches; never
+  the server's own), `models.sh` (a Unity project with one changeset per 3D model diff case: units, rotation, pivot,
+  hierarchy, material slots, sculpt, polycount, UVs; a branch and a pending model too), `textures.sh`
   (TGA, TIFF, PSD, EXR and HDR textures changed, resized, added, deleted, unreadable and in conflict: the image
   diff; takes names), `incoming.sh`
   (a workspace three changesets behind, with a local change that conflicts: Incoming), `merge-conflicts.sh` (a branch
@@ -354,6 +356,13 @@ them on the server, and reading shell command lines cost more to keep right than
    pieces named, the `cm` commands, the alternatives dropped), behavior changes beyond the goal, how it was checked,
    what the review found and what changed for it, the docs. The title says what the user can now do, like a commit
    message, and nothing in it names an internal review or approval ("Public text says what changed", in Commits).
+   **A change anyone can see carries its picture**: one screenshot of the outcome, so a reviewer sees at a glance what
+   the task did, taken from the app with Playwright (a sandbox, a sensible window size, the pointer out of the way).
+   One is the rule: not every state, theme or window size, only a second shot when the feature can't be understood
+   without it (a before and after, a theme-specific change). When a still can't show it (motion, a flow, something
+   that must *not* move), a short video or GIF instead (`playwright-cli video-start`, a few seconds). Attach it with
+   `gh pr create --attach <file>` (`gh` 2.99 or later; `.claude/skills/playwright-cli/references/pr-attachments.md`);
+   never commit it to the repository.
 7. **Stop there**, and report the pull request's link to the user, with what to try in the app for anything visible.
    A person approves and merges it: don't approve or merge it yourself. Comments on the pull request are answered
    with new commits on the same branch, never a force push.

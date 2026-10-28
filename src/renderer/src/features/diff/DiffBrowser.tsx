@@ -1,5 +1,6 @@
 import { FileSearch, Folder } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { placeId } from '@shared/domain/place';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import type { FocusedLines } from '../../app/navigation/pages';
@@ -12,8 +13,8 @@ import { pluralize } from '../../lib/text';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
-import { SplitPane } from '../../ui/SplitPane';
 import { ReviewModeButton } from '../review/ReviewModeButton';
+import type { DiffBrowserSlots } from './DiffBrowserLayout';
 import { diffEntryTones } from './diffEntrySources';
 import { DiffEntryList, diffEntryKey } from './DiffEntryList';
 import { diffEntryMenu } from './diffEntryMenu';
@@ -42,13 +43,15 @@ interface DiffBrowserProps {
   initialPath?: string;
   /** The lines of `initialPath` it opens scrolled to, selected (a link's `#L42`), until another file is selected. */
   initialLines?: FocusedLines;
+  /** Where the list and the diff are drawn: a `DiffBrowserLayout`'s, which stays as this is mounted for each target. */
+  slots: DiffBrowserSlots;
 }
 
 /**
  * A list of changed files next to the diff of the selected one, in one layout from the first frame on: placeholder
  * rows while the files are read, and "No differences" beside an empty list.
  */
-export function DiffBrowser({ target, entries: diffEntries, initialPath, initialLines }: DiffBrowserProps) {
+export function DiffBrowser({ target, entries: diffEntries, initialPath, initialLines, slots }: DiffBrowserProps) {
   const place = usePlace();
   const reading = diffEntries === undefined;
   const readEntries = diffEntries ?? NO_ENTRIES;
@@ -110,11 +113,8 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
   }, [targetKey, focused?.path]);
 
   return (
-    <SplitPane
-      initialSize={340}
-      minSize={220}
-      maxSize={640}
-      first={
+    <>
+      {createPortal(
         <DiffEntryList
           rows={rows}
           tree={tree}
@@ -127,9 +127,10 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
           review={review}
           loading={reading}
           noMatches={pane === 'noMatches' && <NoMatches noun="files" onClear={clearFilter} />}
-        />
-      }
-      second={
+        />,
+        slots.files,
+      )}
+      {createPortal(
         pane === 'noDifferences' ? (
           <EmptyState icon={<FileSearch size={22} />} title="No differences" description="There are no file changes to show." />
         ) : pane === 'entry' && focused ? (
@@ -151,8 +152,9 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath, initial
           </FileStepsContext.Provider>
         ) : pane === 'folder' && focusedFolder ? (
           <EmptyState icon={<Folder size={24} />} title={focusedFolder.path} description={`${pluralize(focusedFolder.items.length, 'change')}. Select a file to see its diff.`} />
-        ) : null
-      }
-    />
+        ) : null,
+        slots.diff,
+      )}
+    </>
   );
 }

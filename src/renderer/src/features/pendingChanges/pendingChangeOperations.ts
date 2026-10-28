@@ -4,12 +4,15 @@ import { api } from '../../api/client';
 import { openFile } from '../../components/externalApps/externalAppOperations';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runOperation, runVoidAction } from '../../app/operations/runOperation';
-import { isAffectedByPendingChangeEdit, isAffectedByShelving } from '../../app/refresh/refreshScopes';
+import { isAffectedByPendingChangeEdit, isAffectedByRecordedMove, isAffectedByShelving } from '../../app/refresh/refreshScopes';
 import { TRASH_NAME } from '../../lib/platform';
 import { fileNameOf, formatCount, pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
 import { existsOnDisk, isControlled, isShelvable } from './changeCategories';
+import type { MatchSide } from './moveMatches';
+import { matchedMessage } from './moveMatchWords';
+import { pickMoveMatch } from './MoveMatchDialog';
 import { askUndoChanges } from './UndoChangesDialog';
 import { BACKUP_SHELVE_COMMENT } from './undoPlan';
 
@@ -95,6 +98,19 @@ export function checkout(workspacePath: string, changes: PendingChange[]): Promi
     api.pendingChanges.checkout(workspacePath, changes.map((change) => change.path)),
     isAffectedByPendingChangeEdit,
   );
+}
+
+/** Search matches: asks which item is the other side of the change's move, and records the move. */
+export async function searchMatches(workspacePath: string, change: PendingChange, side: MatchSide, listed: readonly PendingChange[]): Promise<void> {
+  const match = await pickMoveMatch({ workspacePath, change, side, listed });
+  if (!match) return;
+  const recorded = await runVoidAction(
+    workspacePlace(workspacePath),
+    "Couldn't match the items",
+    () => api.pendingChanges.recordMove(workspacePath, match.from, match.to),
+    isAffectedByRecordedMove,
+  );
+  if (recorded) toast.success(matchedMessage(match));
 }
 
 export async function addFilterRules(workspacePath: string, list: FilterRuleList, patterns: string[]): Promise<void> {

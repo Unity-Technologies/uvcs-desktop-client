@@ -176,6 +176,9 @@ const mergeDirectoryConflict = {
 const deletedEntry = { status: 'deleted', path: 'src/Enemy.cs', itemType: 'file', revisionId: -1, baseRevisionId: 18, repository } as const;
 const deletedFolder = { ...deletedEntry, path: 'docs', itemType: 'directory', baseRevisionId: 24 } as const;
 
+const deletedChange: PendingChange = { path: 'src/Player.cs', kinds: ['locallyDeleted'], itemType: 'file', size: 0, lastModified: '' };
+const privateChange: PendingChange = { ...deletedChange, path: 'src/Hero.cs', kinds: ['private'] };
+
 const MENUS: Record<string, () => MenuEntry[]> = {
   branch: () => branchMenu(workspacePlace(ws), [branch], '/main'),
   currentBranch: () => branchMenu(workspacePlace(ws), [branch], branch.name),
@@ -197,6 +200,8 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   xlink: () => fileMenu(ws, [{ ...file, path: 'lib', name: 'lib', itemType: 'directory', xlink: { writable: true, path: '/', changeset: 4, repository: 'lib', server: 'local' } }], new PendingChangesIndex([])),
   lockedFile: () => fileMenu(ws, [file], new PendingChangesIndex([change]), pendingLocks),
   pendingChange: () => pendingChangeMenu(ws, [change], [], { isIncluded: () => false, setIncluded: () => {} }),
+  deletedPendingChange: () => pendingChangeMenu(ws, [deletedChange], [], undefined, undefined, undefined, [deletedChange, privateChange]),
+  privatePendingChange: () => pendingChangeMenu(ws, [privateChange], [], undefined, undefined, undefined, [deletedChange, privateChange]),
   lockedPendingChange: () => pendingChangeMenu(ws, [change], [], { isIncluded: () => false, setIncluded: () => {} }, undefined, pendingLocks),
   history: () =>
     historyMenu({ place: workspacePlace(ws), path: 'src/a.ts', ofWorkspaceFile: true, annotate: () => {} }, [
@@ -624,5 +629,23 @@ describe('locks', () => {
     expect(ids(MENUS.file!())).toContain('locks');
     expect(ids(MENUS.lockedPendingChange!())).toContain('showInLocks');
     expect(ids(MENUS.pendingChange!())).not.toContain('showInLocks');
+  });
+});
+
+describe("a changeset's menu", () => {
+  const shortcuts = (entries: MenuEntry[]): Record<string, string> =>
+    Object.fromEntries(
+      entries.flatMap((entry) => (isSubmenu(entry) ? entry.entries : [entry])).flatMap((entry) => (typeof entry === 'object' && 'run' in entry && entry.shortcut ? [[entry.id, entry.shortcut]] : [])),
+    );
+
+  it('names the list keys on what they do in a list that binds them', () => {
+    expect(shortcuts(changesetMenu({ place: workspacePlace(ws) }, [changeset]))).toEqual({ diff: 'mod+d', 'copy.number': 'mod+c', 'copy.link': 'mod+shift+c' });
+  });
+
+  it('names no shortcut where the list keys reach something else, as in a branch diff stepped changeset by changeset', () => {
+    const menu = changesetMenu({ place: workspacePlace(ws) }, [changeset], { listKeysElsewhere: true });
+
+    expect(shortcuts(menu)).toEqual({});
+    expect(menu.some((entry) => isSubmenu(entry) && entry.entries.some((copy) => typeof copy === 'object' && 'id' in copy && copy.id === 'copy.link'))).toBe(true);
   });
 });

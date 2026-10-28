@@ -9,8 +9,8 @@ of a changeset the workspace is on) is read from its disk, not downloaded: ARCHI
 
 ## The diff's header
 
-Over a changeset's or a shelve's files (`TargetDiff`: from Changesets, Shelves, the Branch Explorer, a branch diff's
-"By changeset"), the header says who, when and why (`ChangesetSummary`, `ShelveSummary`). A long comment is folded as a
+Over a changeset's or a shelve's files (`TargetDiff`: from Changesets, Shelves, the Branch Explorer; in a branch diff's
+"Changeset by changeset", over the diff's column, as "A branch's diff" says), the header says who, when and why (`ChangesetSummary`, `ShelveSummary`). A long comment is folded as a
 details panel folds it (`FoldedComment`, through `SummaryComment`), but tighter: two lines of title and three of
 description, then "Show more"; expanded, the description grows to at most 40% of the window and scrolls past that, so
 the files and the diff stay in sight. A short comment shows whole, with no link. The header's description is keyed by
@@ -29,6 +29,32 @@ Why no toggle, like the official client's "Show pending to integrate": the whole
 is noise for anyone reading a branch, and the web code review and GitHub show only the clean one, with no option. Why
 not decide first whether the branch received merges (as the official client does to show its button): that is the
 same common-ancestor calculation `--integration` already makes inside its one command.
+
+"Changeset by changeset" steps through the branch's changesets in a list stacked above the files of the one selected
+(`BranchChangesetList`), one `cm find` for them all, so the diff keeps the width it has in "Whole branch" and the
+files don't move as the mode switches. The page's header names the branch in both modes (`BranchDescription`); the
+selected changeset's summary sits above its diff (`TargetDiff`'s `pageDescription`), since its height follows its
+comment, and over the whole page it would move the lists being clicked at each step. Each changeset reads as History
+reads a revision (`RecordRow`): its comment's first line across the list's width, then cs:N, author and date. Its
+filter matches every word typed in a changeset's number, comment or author's name over the list already read
+(`filterBranchChangesets`), with no command; it is not the view filter, so ⌘F stays with the files. A changeset the
+filter hides stays selected and shown: its diff doesn't change under the user while they type, and the next step goes
+on to the nearest changeset shown on that side (`changesetStep`). The arrows above the list, ⌥⇧↓ and ⌥⇧↑
+(`nextChangeset`, `previousChangeset`, as Annotate steps through a changeset's blocks; ⌥↓ ⌥↑ are the changes'), step
+from anywhere in the page but a text field, where they select text (`useShortcut`'s `whileTyping`). A branch with one
+changeset shows no list (`showsChangesetList`): the header names it.
+
+The list stays mounted as each changeset is stepped to, keeping its focus, scroll and filter: the files and the diff
+are drawn by a `DiffBrowser` mounted again for each changeset, into the slots of a `DiffBrowserLayout` that stays
+(`createPortal`). Why not key only what changes inside one component: the files and the diff share the browser's state
+(the selection, the filter, the review), and the list sits in the files' column, so no single subtree holds just the
+changeset's part.
+
+Each row has the changeset's own menu (`changesetMenu`, as in the Changesets view), whose Copy ▸ Link shares the
+changeset stepped to; the header's Copy link (⇧⌘C) stays the branch's, what the page is about. The list binds no list
+keys, so its menu names none (`listKeysElsewhere`, ARCHITECTURE.md "Menus"): no ⌘C (`useCopyCommand`), as the view
+under the page keeps its own, and offering the list's link would take the view's from ⇧⌘C once the page closes
+(`useOfferSelectedObjectLink`).
 
 ## Comparing two branches, changesets or labels
 

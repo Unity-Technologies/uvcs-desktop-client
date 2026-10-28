@@ -181,6 +181,14 @@ export function isAffectedByRestoredItems(key: QueryKey): boolean {
   return isAffectedByWorkspaceEdit(key);
 }
 
+/**
+ * A move was recorded between an item deleted from disk and a new one (Search matches): what is moved, and the items
+ * that came or went. Nothing on disk changed, and a move takes no lock.
+ */
+export function isAffectedByRecordedMove(key: QueryKey): boolean {
+  return isAffectedByWorkspaceEdit(key);
+}
+
 /** The workspace's files, the items that came or went, and what is checked out, added or moved. */
 function isAffectedByWorkspaceEdit(key: QueryKey): boolean {
   return isAffectedByFileChanges(key) || isAffectedByMovedPaths(key) || isAffectedByWorkspaceState(key);
