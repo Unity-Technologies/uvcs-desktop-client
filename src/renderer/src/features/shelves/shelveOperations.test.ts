@@ -11,10 +11,13 @@ vi.mock('../../components/EditCommentDialog', () => ({
 }));
 
 import { workspacePlace } from '@shared/domain/place';
-import type { ShelveApplyResult } from '@shared/domain/shelve';
+import type { Shelve, ShelveApplyResult } from '@shared/domain/shelve';
+import { queryKeys } from '../../api/queryKeys';
+import { queryClient } from '../../app/queryClient';
 import { useNavigation } from '../../app/navigation/navigationStore';
 import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
 import { pressToastAction, shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
+import { cachedShelve } from './cachedShelve';
 import { applyShelve, deleteShelve, editShelveComment, saveShelveComment, shelveAway } from './shelveOperations';
 
 const ws = '/ws';
@@ -210,5 +213,29 @@ describe('editShelveComment', () => {
 
     fakeApi.answer('shelves.editComment', () => undefined);
     expect(await saveShelveComment(workspacePlace(ws), shelve, 'New comment')).toBe(true);
+  });
+
+  it("shows the saved comment at once wherever the shelve is read from a list, as its diff's header and menu do", async () => {
+    const listed = (id: number, comment: string): Shelve => ({ id, guid: `g${id}`, comment, owner: 'ana', date: '', parentChangeset: 1, repository: 'game@local' });
+    queryClient.setQueryData(queryKeys.inWorkspace(ws, 'shelves', { owners: ['me'] }), [listed(12, 'Old comment'), listed(13, 'Other')]);
+    queryClient.setQueryData(queryKeys.inWorkspace(ws, 'shelves', 'handedOver', 12), [listed(12, 'Old comment')]);
+    fakeApi.answer('shelves.editComment', () => undefined);
+
+    await saveShelveComment(workspacePlace(ws), shelve, 'Spike the new HUD');
+
+    expect(cachedShelve(workspacePlace(ws), 12)?.comment).toBe('Spike the new HUD');
+    expect(queryClient.getQueryData<Shelve[]>(queryKeys.inWorkspace(ws, 'shelves', 'handedOver', 12))?.[0]?.comment).toBe('Spike the new HUD');
+    expect(cachedShelve(workspacePlace(ws), 13)?.comment).toBe('Other');
+  });
+
+  it('keeps the listed comment when the save fails', async () => {
+    queryClient.setQueryData(queryKeys.inWorkspace(ws, 'shelves', {}), [{ id: 12, guid: 'g', comment: 'Old comment', owner: 'ana', date: '', parentChangeset: 1, repository: 'game@local' }]);
+    fakeApi.answer('shelves.editComment', () => {
+      throw commandFailure('offline');
+    });
+
+    await saveShelveComment(workspacePlace(ws), shelve, 'Spike the new HUD');
+
+    expect(cachedShelve(workspacePlace(ws), 12)?.comment).toBe('Old comment');
   });
 });
