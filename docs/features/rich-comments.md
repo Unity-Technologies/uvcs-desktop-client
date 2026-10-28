@@ -316,7 +316,8 @@ start, a bracket or an emphasis mark (`suggestionQueryAt`), opens a list under t
 field's `aria-activedescendant` walks: ↑↓ move, Enter or Tab picks, Esc closes it until another word is typed
 (`suggestionKeyAction`); with nothing to pick, the arrows move the caret. Enter picks the highlighted suggestion,
 or a row the user moved to; it never runs "Search all changesets" the list merely starts at, so Enter after a
-reference nothing matches (another repository's) is a line end. A colon in a sentence (`10:30`, `Note:`)
+reference nothing matches is a line end. Another repository's object (`cs:2@art`, `namesAnotherRepository`) gets no
+list at all: this repository's lists, searches and number lookup say nothing about it. A colon in a sentence (`10:30`, `Note:`)
 opens nothing. A pick writes the reference as `cm` takes it and a space (`pickSuggestion`), no space before a line's end or a
 sentence's punctuation, where the reference stays drawn as its chip though the caret is against it, until the next
 edit or caret move (`justPicked`); a branch or label whose

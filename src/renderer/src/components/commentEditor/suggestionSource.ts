@@ -1,4 +1,4 @@
-import type { SuggestionKind } from './suggestionTriggers';
+import { namesAnotherRepository, type SuggestionKind } from './suggestionTriggers';
 
 /** A list query's state, as TanStack Query gives it. */
 export interface ListRead<T> {
@@ -51,7 +51,7 @@ export interface SuggestionReads {
  */
 export function suggestionReads(state: { kind: SuggestionKind | undefined; typed: string; settled: string; paletteChangesetsRead: boolean; everyBranchRead: boolean; everyLabelRead: boolean }): SuggestionReads {
   const { kind } = state;
-  const searching = state.settled.trim() !== '' && state.settled === state.typed;
+  const searching = state.settled.trim() !== '' && state.settled === state.typed && !(kind !== undefined && namesAnotherRepository(kind, state.typed));
   return {
     fewChangesets: (kind === 'changeset' || kind === 'person') && !state.paletteChangesetsRead,
     everyBranch: kind === 'branch',

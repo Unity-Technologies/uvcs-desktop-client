@@ -1,5 +1,5 @@
 import type { Suggestion } from './suggestionItems';
-import type { SuggestionKind } from './suggestionTriggers';
+import { namesAnotherRepository, type SuggestionKind } from './suggestionTriggers';
 
 /** A row of the suggestion list: something to pick, the search of every changeset to start, or a word on where it stands. */
 export type SuggestionRow =
@@ -35,10 +35,11 @@ const NOUNS: Record<SuggestionKind, string> = {
 
 /**
  * The rows the list shows (docs/features/rich-comments.md, "Suggestions"). Emoji offer only matches: no row at all
- * closes the list, as a colon in a sentence opens nothing. Changesets add the exact number looked up, or the search of
+ * closes the list, as a colon in a sentence opens nothing; so does another repository's object (`namesAnotherRepository`). Changesets add the exact number looked up, or the search of
  * them all for words the newest don't match.
  */
 export function suggestionRows(kind: SuggestionKind, typed: string, source: SuggestionSource, changesets?: { lookup: ChangesetLookup; search: ChangesetSearch }): SuggestionRow[] {
+  if (namesAnotherRepository(kind, typed)) return [];
   const picks: SuggestionRow[] = source.suggestions.map((suggestion) => ({ kind: 'pick', suggestion }));
   if (kind === 'emoji') return picks;
   if (source.reading && picks.length === 0) return [{ kind: 'note', text: `Reading ${NOUNS[kind]}…`, pending: true }];
