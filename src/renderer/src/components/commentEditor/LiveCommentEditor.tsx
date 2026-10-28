@@ -11,7 +11,7 @@ import { isMac } from '../../lib/platform';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { FocusGroupContext, type FocusGroup } from './CommentFocusGroup';
 import { groupMove } from './focusGroup';
-import { focusModeButton, focusModeKey, focusModeLayout, layoutAfterFocus, offersFocusMode, type FocusModeLayout } from './focusMode';
+import { focusModeKey, focusModeLayout, focusModeParts, layoutAfterFocus, type FocusModeLayout } from './focusMode';
 import { commentEditorExtensions, editable, editableWhen, placeholderText, theme, themed, type CommentEditorKeys } from './commentEditorSetup';
 import { placeholderShown } from './commentPlaceholders';
 import { FocusModeFooter } from './FocusModeFooter';
@@ -142,8 +142,6 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
     () => view?.dispatch({ effects: placeholderText.reconfigure(placeholderOf(placeholderShown(placeholder, { focusMode: focus.inFocusMode, singleLine }))) }),
     [view, placeholder, focus.inFocusMode, singleLine],
   );
-  // Focus mode's toolbar is the top strip of a comment of many lines (in the check-in, the description's), formatting it.
-  const toolbar = view && state && focus.inFocusMode && !singleLine ? <FormatToolbar view={view} state={state} focused={state.field(hasFocus)} /> : null;
 
   const widgets = useSyncExternalStore(portals.subscribe, portals.portals);
   // What React drew in the widgets changes their size: the editor measures its lines again.
@@ -156,13 +154,14 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
       style={style}
       data-single-line={singleLine || undefined}
       data-group-field={groupField}
-      data-expanded={focus.layout ?? undefined}
-      data-focus-mode={(focus.inFocusMode && !singleLine) || undefined}
+      data-expanded={focus.parts.layout ?? undefined}
+      data-focus-mode={focus.parts.toolbar || undefined}
       onMouseDown={bar.onPointerDown}
     >
       {focus.element}
-      {toolbar}
-      {!grouped && focus.inFocusMode && (
+      {/* The top strip of the comment it formats (in the check-in, the description's). */}
+      {focus.parts.toolbar && view && state && <FormatToolbar view={view} state={state} focused={state.field(hasFocus)} />}
+      {focus.parts.footer && (
         <div className={styles.footer}>
           <FocusModeFooter />
         </div>
@@ -181,40 +180,38 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
 function useFocusMode(view: EditorView | null, state: EditorState | null, host: RefObject<HTMLDivElement | null>, singleLine: boolean, suggesting: boolean, group: FocusGroup | null) {
   const [ownLayout, setOwnLayout] = useState<FocusModeLayout | null>(null);
   // In a group (the check-in), focus mode is the group's: both its fields, from either of them.
-  const layout: FocusModeLayout | null = group ? (group.open ? 'overlay' : null) : ownLayout;
-  const setLayout = (next: FocusModeLayout | null): void => {
-    if (group) {
-      if (!next) group.close();
-    } else setOwnLayout(next);
+  const parts = focusModeParts({ singleLine, inGroup: group !== null, groupOpen: group?.open ?? false, ownLayout });
+  const close = (): void => {
+    if (group) group.close();
+    else setOwnLayout(null);
   };
-  const offered = offersFocusMode(singleLine) || group !== null;
   const toggle = (): void => {
     if (group) group.toggle();
     else setOwnLayout((shown) => (shown ? null : focusModeLayout(isInModalDialog(host.current))));
     view?.focus();
   };
   // What the key handler reads when a key comes, without listening again at each render.
-  const latest = useRef({ layout, suggesting, toggle, setLayout });
-  latest.current = { layout, suggesting, toggle, setLayout };
+  const latest = useRef({ expanded: parts.inFocusMode, suggesting, toggle, close });
+  latest.current = { expanded: parts.inFocusMode, suggesting, toggle, close };
   useEffect(() => {
-    if (!view || !offered) return;
+    if (!view || !parts.offered) return;
     const onKeyDown = (event: KeyboardEvent): void => {
       if (!view.dom.contains(event.target as Node)) return;
-      const action = focusModeKey(event, isMac, { expanded: latest.current.layout !== null, suggesting: latest.current.suggesting });
+      const action = focusModeKey(event, isMac, { expanded: latest.current.expanded, suggesting: latest.current.suggesting });
       if (!action) return;
       if (action === 'submitting') {
-        latest.current.setLayout(null);
+        latest.current.close();
         return;
       }
       event.preventDefault();
       event.stopPropagation();
       if (action === 'toggle') latest.current.toggle();
-      else latest.current.setLayout(null);
+      else latest.current.close();
     };
     // Taken on the way down, before a dialog's Esc closes it or the details' Esc cancels the edit.
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [view, offered]);
+  }, [view, parts.offered]);
   // Out of it once the focus leaves the editor: a dialog it opened (⌘↵'s question) never shows behind it.
   const focused = state?.field(hasFocus) ?? false;
   // A group's fields hand the focus to each other: the group tells leaving itself (`CommentFocusGroup`).
@@ -222,36 +219,33 @@ function useFocusMode(view: EditorView | null, state: EditorState | null, host: 
     if (!group && ownLayout && !focused) setOwnLayout(layoutAfterFocus(ownLayout, focused));
   }, [group, ownLayout, focused]);
   // As its size changes, the caret stays in view: centered in the larger editor, the least scroll back in the field.
-  const previous = useRef(layout);
+  const previous = useRef(parts.inFocusMode);
   useLayoutEffect(() => {
-    if (!view || previous.current === layout) return;
-    previous.current = layout;
-    view.dispatch({ effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: layout ? 'center' : 'nearest' }) });
-  }, [view, layout]);
-  // The group's panel is its own box: its fields keep theirs; its one button is on its description.
-  const shownLayout = group ? null : layout;
-  const inFocusMode = layout !== null;
-  if (!offered || (group && singleLine)) return { layout: shownLayout, inFocusMode, element: null };
-  const button = focusModeButton(layout);
-  const Icon = button.icon === 'collapse' ? Minimize2 : Maximize2;
+    if (!view || previous.current === parts.inFocusMode) return;
+    previous.current = parts.inFocusMode;
+    view.dispatch({ effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: parts.inFocusMode ? 'center' : 'nearest' }) });
+  }, [view, parts.inFocusMode]);
+  const button = parts.button;
+  const Icon = button?.icon === 'collapse' ? Minimize2 : Maximize2;
   const element = (
     <>
-      {shownLayout === 'overlay' && createPortal(<div className={styles.backdrop} onMouseDown={() => setLayout(null)} />, document.body)}
-      <button
-        type="button"
-        className={styles.expand}
-        aria-label={button.label}
-        aria-pressed={button.pressed}
-        data-tip={button.label}
-        data-tip-shortcut={hotkey('commentFocusMode')}
-        onMouseDown={(event) => event.preventDefault()}
-        onClick={toggle}
-      >
-        <Icon size={13} strokeWidth={2} aria-hidden />
-      </button>
+      {parts.backdrop && createPortal(<div className={styles.backdrop} onMouseDown={close} />, document.body)}
+      {button && (
+        <button
+          type="button"
+          className={styles.expand}
+          aria-label={button.label}
+          data-tip={button.label}
+          data-tip-shortcut={hotkey('commentFocusMode')}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={toggle}
+        >
+          <Icon size={13} strokeWidth={2} aria-hidden />
+        </button>
+      )}
     </>
   );
-  return { layout: shownLayout, inFocusMode, element };
+  return { parts, inFocusMode: parts.inFocusMode, element };
 }
 
 /** Puts the caret at `at` and the focus in the editor. */

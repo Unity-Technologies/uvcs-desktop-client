@@ -36,7 +36,56 @@ export function layoutAfterFocus(layout: FocusModeLayout | null, focused: boolea
   return focused ? layout : null;
 }
 
-/** The corner button: what it does, its icon, and whether the larger editor is open (`aria-pressed`). */
-export function focusModeButton(layout: FocusModeLayout | null): { label: string; icon: 'expand' | 'collapse'; pressed: boolean } {
-  return layout ? { label: 'Back to the field', icon: 'collapse', pressed: true } : { label: 'Write in a larger editor', icon: 'expand', pressed: false };
+/** The corner button: what it does and its icon, its name alone telling whether the larger editor is open. */
+export function focusModeButton(open: boolean): { label: string; icon: 'expand' | 'collapse' } {
+  return open ? { label: 'Back to the field', icon: 'collapse' } : { label: 'Write in a larger editor', icon: 'expand' };
+}
+
+/** A field's part in focus mode: alone, or one of the check-in's group (`CommentFocusGroup`), open or not. */
+export interface FocusModeField {
+  singleLine: boolean;
+  inGroup: boolean;
+  groupOpen: boolean;
+  /** A field alone: how its larger editor shows, null while it doesn't. */
+  ownLayout: FocusModeLayout | null;
+}
+
+/** What focus mode shows on a field (`focusModeParts`); the editor only draws it. */
+export interface FocusModeParts {
+  /** Whether its keys (⇧⌘F, Esc) reach it. */
+  offered: boolean;
+  /** The field's own box at a writing size (`data-expanded`): a field alone; a group's panel is the group's. */
+  layout: FocusModeLayout | null;
+  inFocusMode: boolean;
+  /** The corner button, on a comment of many lines. */
+  button: { label: string; icon: 'expand' | 'collapse' } | null;
+  /** The formats' strip at the box's top (`FormatToolbar`). */
+  toolbar: boolean;
+  /** The hints under the text (`FocusModeFooter`): a field alone's; the group draws its own. */
+  footer: boolean;
+  /** The dimmed view behind (`overlay`). */
+  backdrop: boolean;
+  /** Tab indents the text (`focusModeTab`), as the text is the only thing on screen. */
+  takesTab: boolean;
+}
+
+/**
+ * Focus mode's parts on a field: a one-line field alone has none; the check-in's summary takes the group's keys and
+ * nothing else; a comment of many lines has the corner button and, in focus mode, the toolbar and Tab, and alone its
+ * own hints and box (over the view, the backdrop).
+ */
+export function focusModeParts({ singleLine, inGroup, groupOpen, ownLayout }: FocusModeField): FocusModeParts {
+  const layout = inGroup ? null : ownLayout;
+  const inFocusMode = inGroup ? groupOpen : ownLayout !== null;
+  const many = !singleLine;
+  return {
+    offered: offersFocusMode(singleLine) || inGroup,
+    layout: many ? layout : null,
+    inFocusMode: (many || inGroup) && inFocusMode,
+    button: many ? focusModeButton(inFocusMode) : null,
+    toolbar: many && inFocusMode,
+    footer: many && !inGroup && inFocusMode,
+    backdrop: many && layout === 'overlay',
+    takesTab: many && inFocusMode,
+  };
 }
