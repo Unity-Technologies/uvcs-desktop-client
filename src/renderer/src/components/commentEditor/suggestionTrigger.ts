@@ -1,4 +1,4 @@
-import type { EditorState } from '@codemirror/state';
+import type { EditorState, TransactionSpec } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
 import { isInCode } from './formatCommands';
 
@@ -52,8 +52,25 @@ export function suggestionQueryAt(state: EditorState): SuggestionQuery | null {
   if (kind === 'person' && !PERSON_NAME.test(text)) return null;
   const from = line.from + match.index;
   if (isInCode(state, from + 1) || isInAddress(state, from + 1)) return null;
-  const rest = /^\S*/.exec(line.text.slice(main.head - line.from))![0];
+  // A sentence's punctuation after the word stays: it's no part of a name (`TRAILING_PUNCTUATION`).
+  const rest = /^\S*/.exec(line.text.slice(main.head - line.from))![0].replace(/[.,;:!?)\]}'"*_~]+$/, '');
   return { kind, from, to: main.head + rest.length, text };
+}
+
+/**
+ * What picking a suggestion does: the word typed becomes `insert` and a space, the caret after it to go on writing.
+ * A space already there is stepped over, not doubled; a sentence's punctuation after the word stays right after it.
+ * One step to undo.
+ */
+export function pickSuggestion(state: EditorState, query: SuggestionQuery, insert: string): TransactionSpec {
+  const next = state.sliceDoc(query.to, query.to + 1);
+  const space = next === '' || !/[\s.,;:!?)\]}'"*_~]/.test(next) ? ' ' : '';
+  return {
+    changes: { from: query.from, to: query.to, insert: insert + space },
+    selection: { anchor: query.from + insert.length + (space || next === ' ' ? 1 : 0) },
+    scrollIntoView: true,
+    userEvent: 'input.complete',
+  };
 }
 
 /** Inside a web address (`https://ci.acme.com/job?b=br:`) or a link's, where a reference is never read. */

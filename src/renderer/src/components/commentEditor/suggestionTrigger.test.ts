@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { editorState } from './commentEditorTesting';
-import { suggestionQueryAt } from './suggestionTrigger';
+import { editorState, written } from './commentEditorTesting';
+import { pickSuggestion, suggestionQueryAt } from './suggestionTrigger';
 
 const queryAt = (written: string) => suggestionQueryAt(editorState(written));
 
@@ -41,5 +41,26 @@ describe('suggestionQueryAt', () => {
     expect(queryAt('```\n@‸\n```')).toBeNull();
     expect(queryAt('«cs:12»')).toBeNull();
     expect(queryAt('cs:12 ‸')).toBeNull();
+  });
+});
+
+describe('pickSuggestion', () => {
+  const pick = (text: string, insert: string) => {
+    const state = editorState(text);
+    return written(state.update(pickSuggestion(state, suggestionQueryAt(state)!, insert)).state);
+  };
+
+  it('writes the pick and a space in place of the word typed, the caret after them', () => {
+    expect(pick('Fixes cs:42‸', 'cs:4207')).toBe('Fixes cs:4207 ‸');
+    expect(pick('Thanks @an‸a now', '@ana.diaz')).toBe('Thanks @ana.diaz ‸now');
+  });
+
+  it('keeps a sentence’s punctuation right after the pick', () => {
+    expect(pick('Thanks @an‸a!', '@ana.diaz')).toBe('Thanks @ana.diaz‸!');
+    expect(pick('(see cs:42‸)', 'cs:4207')).toBe('(see cs:4207‸)');
+  });
+
+  it('steps over a space already there', () => {
+    expect(pick('On br:ta‸ today', 'br:/main/task')).toBe('On br:/main/task ‸today');
   });
 });
