@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { editedComment, editingParts, joinComment, shownComment, splitComment, storedComment, withSummaryText } from './comment';
+import { editedComment, editingParts, hasUnsavedEdit, joinComment, shownComment, splitComment, storedComment, withSummaryText } from './comment';
 
 describe('splitComment', () => {
   it('reads the first line as the summary and the rest as the description', () => {
@@ -143,5 +143,16 @@ describe('editingParts', () => {
     expect(editedComment(comment, editingParts(comment), { summary: 'Fix', description: 'Body, edited' })).toBe('Fix\nBody, edited');
     const list = '- one\n- two';
     expect(editedComment(list, editingParts(list), { summary: 'Title', description: list })).toBe('Title\n\n- one\n- two');
+  });
+});
+
+describe('hasUnsavedEdit', () => {
+  const comment = 'Fix\n\nBody';
+  const opened = editingParts(comment);
+
+  it('asks before Esc or Cancel throws away an edit, and closes at once when nothing would change', () => {
+    expect(hasUnsavedEdit(comment, opened, opened)).toBe(false);
+    expect(hasUnsavedEdit(comment, opened, { ...opened, description: 'Body, edited' })).toBe(true);
+    expect(hasUnsavedEdit(comment, opened, { ...opened, description: 'Body  ' })).toBe(false);
   });
 });
