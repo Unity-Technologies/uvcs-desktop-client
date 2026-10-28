@@ -1,7 +1,7 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { PressedKey } from '../../lib/shortcuts';
-import { focusModeKey, focusModeLayout, offersFocusMode } from './focusMode';
+import { focusModeKey, focusModeLayout, layoutAfterFocus, offersFocusMode } from './focusMode';
 
 function press(key: string, code: string, modifiers: Partial<PressedKey> = {}): PressedKey {
   return { key, code, metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, ...modifiers };
@@ -41,5 +41,14 @@ describe('focusModeLayout', () => {
   it('opens over the view, and grows in place in a dialog, which keeps its clicks and focus', () => {
     expect(focusModeLayout(false)).toBe('overlay');
     expect(focusModeLayout(true)).toBe('inPlace');
+  });
+});
+
+describe('layoutAfterFocus', () => {
+  it('leaves the larger editor once the focus leaves it (a dialog it opened, Tab), and keeps it while focused', () => {
+    expect(layoutAfterFocus('overlay', false)).toBeNull();
+    expect(layoutAfterFocus('inPlace', false)).toBeNull();
+    expect(layoutAfterFocus('overlay', true)).toBe('overlay');
+    expect(layoutAfterFocus(null, true)).toBeNull();
   });
 });
