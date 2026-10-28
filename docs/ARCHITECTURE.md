@@ -1075,6 +1075,12 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   `userFilterTexts`), and `HighlightQuery` marks those words in each cell; a path cut to fit finds them in the whole
   path first (`PathLabel`, `positionsInTrimmed`). Fuzzy finders (the palette, Go to file) pass the positions they
   ranked by (`fuzzyMatchPositions`). Text a row shows but its filter doesn't look at is never marked.
+  - **The palette's branches and labels** are found by name (fuzzily) and by the words of their name and description,
+    the list filter's rule over texts lower-cased once per list (`createWordFilterIndex`), from the every-branch and
+    every-label lists it reads anyway (their `cm find` already prints the comment): no command of its own. A
+    description hit ranks below the same match in a name (`DESCRIPTION_MATCH_PENALTY`) and shows its description in
+    place of the detail, cut to keep the match in view (`excerptAroundMatch`). The owner isn't searched there: a
+    person's name would list every branch they made.
   - **One filter bar**: every view lays its filters out with `FilterBar`, whose slots fix the order: the text
     (`FilterField`, "Filter <things>", 240px), people, time (`SincePicker`, the presets of `lib/sincePresets`, any time
     last), kinds and statuses (`ToggleChip`, `ChoiceChip`, the Branch Explorer's Branches picker, Changesets'
