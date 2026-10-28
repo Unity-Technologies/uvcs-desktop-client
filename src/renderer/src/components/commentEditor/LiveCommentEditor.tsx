@@ -31,7 +31,7 @@ interface LiveCommentEditorProps extends CommentFieldProps {
  * The comment editor (docs/features/rich-comments.md, "Writing"): CodeMirror over the comment's own text, drawn as it
  * reads around the caret, with the suggestion list and the selection bar. Its text is the stored comment, in and out.
  */
-export function LiveCommentEditor({ value, onChange, singleLine = false, label, placeholder, autoFocus, disabled = false, onEnter, onSubmit, className, style, ref, initialFocus }: LiveCommentEditorProps) {
+export function LiveCommentEditor({ value, onChange, singleLine = false, label, id, placeholder, autoFocus, disabled = false, onEnter, onSubmit, className, style, ref, initialFocus }: LiveCommentEditorProps) {
   const host = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<EditorView | null>(null);
   const [state, setState] = useState<EditorState | null>(null);
@@ -51,7 +51,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
       state: EditorState.create({
         doc: value,
         extensions: [
-          commentEditorExtensions({ singleLine, label, placeholder, portals, keys }, !disabled, codeTheme),
+          commentEditorExtensions({ singleLine, label, id, placeholder, portals, keys }, !disabled, codeTheme),
           EditorView.updateListener.of((update) => {
             if (update.docChanged && !update.transactions.some((transaction) => transaction.annotation(ownerChange))) {
               typedSinceSync.current = true;

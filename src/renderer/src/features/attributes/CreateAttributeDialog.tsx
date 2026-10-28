@@ -6,7 +6,9 @@ import { isAffectedByAttributes } from '../../app/refresh/refreshScopes';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
-import { TextArea, TextField } from '../../ui/TextField';
+import { CommentArea } from '../../components/commentEditor/CommentArea';
+import { commentPlaceholder } from '../../components/commentEditor/commentPlaceholders';
+import { TextField } from '../../ui/TextField';
 import { validateAttributeName } from './attributeNames';
 
 export function openCreateAttributeDialog(place: Place): void {
@@ -44,7 +46,7 @@ function CreateAttributeDialog({ place, onClose }: { place: Place; onClose: () =
       }
     >
       <TextField label="Name" value={name} placeholder="status" autoFocus error={error} onChange={(event) => setName(event.target.value)} />
-      <TextArea label="Comment" value={comment} placeholder="What the attribute means and its expected values" onChange={(event) => setComment(event.target.value)} />
+      <CommentArea label="Comment" value={comment} placeholder={commentPlaceholder('What the attribute means and its values')} onChange={setComment} />
     </Dialog>
   );
 }

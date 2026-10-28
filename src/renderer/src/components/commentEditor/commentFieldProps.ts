@@ -15,6 +15,8 @@ export interface CommentFieldProps {
   singleLine?: boolean;
   /** Its name for screen readers, where no label shows it. */
   label: string;
+  /** The id a `<label htmlFor>` names (`CommentArea`): a click on the label puts the caret in the field. */
+  id?: string;
   placeholder: string;
   autoFocus?: boolean;
   disabled?: boolean;

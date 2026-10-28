@@ -18,7 +18,7 @@ export function CommentArea({ label, hint, error, tall = false, singleLine, ...f
   const id = useId();
   return (
     <FieldFrame id={id} label={label} hint={hint} error={error}>
-      <CommentField {...field} label={label} singleLine={singleLine} className={classNames(styles.box, singleLine ? styles.oneLine : styles.lines, tall && styles.tall)} />
+      <CommentField {...field} id={id} label={label} singleLine={singleLine} className={classNames(styles.box, singleLine ? styles.oneLine : styles.lines, tall && styles.tall)} />
     </FieldFrame>
   );
 }

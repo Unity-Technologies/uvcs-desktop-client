@@ -113,8 +113,8 @@ so nothing moves as colors arrive; switching themes keeps the old colors until t
 
 Every comment field writes a comment the same way (`CommentField`, `components/commentEditor/`): the check-in and
 shelve composer (`CheckinPanel`: its summary and description), the details panels' editor (`CommentEditor`, through
-`DetailsHeading`: changesets, branches, labels, attribute types), Edit comment (`EditCommentDialog`), New branch and
-New label (`CommentArea`), the comment of a merge into a server branch (`MergeHeader`) and a new code review's title
+`DetailsHeading`: changesets, branches, labels, attribute types), Edit comment (`EditCommentDialog`), New branch,
+New label and New attribute (`CommentArea`, its label naming the field, `id`), the comment of a merge into a server branch (`MergeHeader`) and a new code review's title
 (`CreateCodeReviewDialog`). Comments asked for with `prompt()` (a changelist's, an attribute's) stay plain fields.
 
 - **The text is the comment.** The editor is CodeMirror 6 over the comment's own Markdown, drawn as it reads: what a

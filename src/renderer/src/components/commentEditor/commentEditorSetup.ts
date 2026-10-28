@@ -29,6 +29,7 @@ export interface CommentEditorKeys {
 export interface CommentEditorOptions {
   singleLine: boolean;
   label: string;
+  id?: string;
   placeholder: string;
   portals: WidgetPortals;
   keys: { current: CommentEditorKeys };
@@ -79,7 +80,7 @@ export function commentEditorExtensions(options: CommentEditorOptions, enabled: 
     EditorView.lineWrapping,
     EditorView.perLineTextDirection.of(true),
     placeholder(options.placeholder),
-    EditorView.contentAttributes.of({ 'aria-label': options.label, 'aria-multiline': String(!options.singleLine), spellcheck: 'true' }),
+    EditorView.contentAttributes.of({ 'aria-label': options.label, 'aria-multiline': String(!options.singleLine), spellcheck: 'true', ...(options.id && { id: options.id }) }),
     Prec.highest(
       keymap.of([
         { key: 'Backspace', run: deleteChip(false) },
