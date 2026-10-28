@@ -27,6 +27,8 @@ export function suggestionListPosition(trigger: Box, list: { width: number; heig
   const margin = 8;
   const left = Math.min(Math.max(trigger.left, margin), window.width - list.width - margin);
   const below = trigger.bottom + gap;
-  const top = below + list.height <= window.height - margin ? below : Math.max(trigger.top - gap - list.height, margin);
-  return { left: Math.round(left), top: Math.round(top) };
+  const top = below + list.height <= window.height - margin ? below : trigger.top - gap - list.height;
+  // A line at the window's edge, or scrolled past it in a field taller than its box, still opens the list in view.
+  const inside = Math.max(Math.min(top, window.height - list.height - margin), margin);
+  return { left: Math.round(left), top: Math.round(inside) };
 }

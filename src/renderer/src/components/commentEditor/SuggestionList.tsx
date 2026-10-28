@@ -26,10 +26,18 @@ interface SuggestionListProps {
 export function SuggestionList({ id, rows, active, anchor, onPick, onHover }: SuggestionListProps) {
   const list = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+  // Placed again whenever the trigger moves or the list's size does: rows of the same count may be taller or wider
+  // ("Reading branches…" giving way to a branch), which would leave a list opened under the line past the window.
   useLayoutEffect(() => {
-    if (!list.current) return;
-    setPosition(suggestionListPosition(anchor, { width: list.current.offsetWidth, height: list.current.offsetHeight }, { width: window.innerWidth, height: window.innerHeight }));
-  }, [anchor.left, anchor.top, anchor.bottom, rows.length]);
+    const element = list.current;
+    if (!element) return;
+    const place = (): void =>
+      setPosition(suggestionListPosition(anchor, { width: element.offsetWidth, height: element.offsetHeight }, { width: window.innerWidth, height: window.innerHeight }));
+    place();
+    const resized = new ResizeObserver(place);
+    resized.observe(element);
+    return () => resized.disconnect();
+  }, [anchor.left, anchor.top, anchor.bottom]);
   useLayoutEffect(() => {
     list.current?.querySelector(`#${CSS.escape(optionId(id, active))}`)?.scrollIntoView({ block: 'nearest' });
   }, [id, active]);
