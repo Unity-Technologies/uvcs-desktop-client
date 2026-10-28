@@ -136,7 +136,8 @@ New label and New attribute (`CommentArea`, its label naming the field, `id`), t
   `cs:12` is typed and corrected a key at a time.
 - **Keys** (the registry's Comments area, matched as every shortcut is: `formatForKey`): ⌘B bold, ⌘I italic, ⇧⌘X
   strikethrough, ⌘E code, ⌘K link, ⇧⌘8 list, ⇧⌘9 quote, ⌥⇧⌘C code block (Ctrl+Shift+E off macOS, where Ctrl+Alt is
-  AltGr), ⇧⌘V pastes the plain text. Each toggles (`FORMAT_COMMANDS`: ⌘B in bold unbolds) and is one step to undo
+  AltGr), ⇧⌘V (Ctrl+Shift+V) pastes the plain text, through the window (`pasteClipboard({ plainText })`,
+  `pasteAndMatchStyle`), as no menu item takes the key and the page can't paste by itself. Each toggles (`FORMAT_COMMANDS`: ⌘B in bold unbolds) and is one step to undo
   (`ownStep`), as are a pick, a chip taken away, a paste and a box ticked. A key the field takes stays in it: ⌘B
   never opens New branch from a comment, nor ⌘K the palette (⇧⌘P still does). Typed Markdown works as typed; Enter
   continues a list, and Enter after an opening fence adds the closing one (`closeCodeFence`). ⌘↵ saves the field's

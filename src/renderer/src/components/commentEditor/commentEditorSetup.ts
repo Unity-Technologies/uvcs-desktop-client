@@ -3,6 +3,7 @@ import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { Compartment, EditorState, Prec, type Extension } from '@codemirror/state';
 import { EditorView, keymap, placeholder } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
+import { api } from '../../api/client';
 import { isMac } from '../../lib/platform';
 import { deleteChip } from './chipEditing';
 import { codeColors, codeTheme } from './codeColors';
@@ -135,8 +136,12 @@ function formattingKeys(formats: ReturnType<typeof formatsOf>): Extension {
       keydown: (event, view) => {
         plainPasteNext.delete(view);
         if (pastesPlain(event, isMac)) {
+          // The page can't paste by itself, and no menu item takes ⇧⌘V (macOS's Paste and Match Style is ⌥⇧⌘V): the
+          // window pastes the clipboard's text, the paste that follows marked as this key's.
+          event.preventDefault();
           plainPasteNext.add(view);
-          return false;
+          void api.windows.pasteClipboard({ plainText: true });
+          return true;
         }
         const format = formatForKey(event, formats, isMac);
         if (!format) return false;
