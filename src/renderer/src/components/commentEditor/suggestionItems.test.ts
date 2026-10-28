@@ -108,12 +108,16 @@ describe('person suggestions', () => {
 describe('emoji suggestions', () => {
   it('find an emoji by the start of its name first, then by its tags', () => {
     const found = emojiSuggestions('tad');
-    expect(found[0]).toEqual({ key: ':tada:', kind: 'emoji', label: ':tada:', detail: 'party popper', glyph: '🎉', insert: ':tada:' });
+    expect(found[0]).toEqual({ key: ':tada:', kind: 'emoji', label: ':tada:', detail: 'party popper', glyph: '🎉', insert: '🎉' });
   });
 
-  it('write the name typed when an emoji has several', () => {
-    expect(emojiSuggestions('thumbsu')[0]?.insert).toBe(':thumbsup:');
-    expect(emojiSuggestions('+1')[0]?.insert).toBe(':+1:');
+  it('write the emoji itself, so it shows at once and reads so in every client; its row names the name typed', () => {
+    expect(emojiSuggestions('thumbsu')[0]).toMatchObject({ label: ':thumbsup:', insert: '👍' });
+    expect(emojiSuggestions('+1')[0]).toMatchObject({ label: ':+1:', insert: '👍' });
+  });
+
+  it('write an emoji of several code points whole', () => {
+    expect(emojiSuggestions('rainbow_fl')[0]?.insert).toBe('🏳️‍🌈');
   });
 
   it('show the best few only', () => {
