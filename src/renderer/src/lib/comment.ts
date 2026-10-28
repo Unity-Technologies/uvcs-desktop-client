@@ -58,6 +58,16 @@ export function hasUnsavedEdit(original: string, opened: CommentParts, draft: Co
   return storedComment(editedComment(original, opened, draft)) !== storedComment(original);
 }
 
+/**
+ * What leaving a comment editor does (Edit comment, a details panel's): unedited it closes; Esc or Cancel on an edit
+ * asks first; leaving it for another row keeps the draft, found again on coming back, as a question there would hold
+ * the list's selection hostage and nothing typed is lost either way.
+ */
+export function commentEditorExit(edited: boolean, exit: 'cancel' | 'leave'): 'close' | 'ask' | 'keepDraft' {
+  if (!edited) return 'close';
+  return exit === 'cancel' ? 'ask' : 'keepDraft';
+}
+
 /** One line end when the original's description starts on the line after its title, else a blank line. */
 function separatorAfterTitle(original: string): string {
   const [, next] = original.replace(/\r\n?/g, '\n').replace(/^\s*\n/, '').split('\n');

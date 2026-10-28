@@ -1,8 +1,9 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
+import { confirm } from '../ui/dialog/confirm';
 import { DESCRIPTION_PLACEHOLDER } from './commentEditor/commentPlaceholders';
 import { CommentField } from './commentEditor/CommentField';
 import type { CommentFieldHandle } from './commentEditor/commentFieldProps';
-import { editedComment, withSummaryText, type CommentParts } from '../lib/comment';
+import { commentEditorExit, editedComment, hasUnsavedEdit, withSummaryText, type CommentParts } from '../lib/comment';
 import { hotkey } from '../lib/shortcutRegistry';
 import { Button } from '../ui/Button';
 import { Kbd } from '../ui/Kbd';
@@ -29,6 +30,12 @@ export function CommentEditor({ draft, withSummary, original, opened, onChange, 
   const [saving, setSaving] = useState(false);
   const descriptionRef = useRef<CommentFieldHandle>(null);
 
+  const edited = hasUnsavedEdit(original, opened, draft);
+  // Esc and Cancel ask before throwing an edit away (`commentEditorExit`), as Edit comment does.
+  const cancel = async (): Promise<void> => {
+    if (commentEditorExit(edited, 'cancel') === 'close' || (await confirm(DISCARD_QUESTION))) onClose();
+  };
+
   const save = async (): Promise<void> => {
     const comment = editedComment(original, opened, draft);
     if (comment !== original) {
@@ -45,7 +52,7 @@ export function CommentEditor({ draft, withSummary, original, opened, onChange, 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.key !== 'Escape') return;
     event.stopPropagation();
-    onClose();
+    void cancel();
   };
 
   return (
@@ -79,13 +86,16 @@ export function CommentEditor({ draft, withSummary, original, opened, onChange, 
         <span className={styles.hint}>
           <Kbd keys={hotkey('saveComment')} /> to save · Esc to cancel
         </span>
-        <Button size="small" variant="ghost" onClick={onClose} disabled={saving}>
+        <Button size="small" variant="ghost" onClick={() => void cancel()} disabled={saving}>
           Cancel
         </Button>
-        <Button size="small" variant="primary" onClick={() => void save()} loading={saving}>
+        <Button size="small" variant="primary" onClick={() => void save()} loading={saving} disabled={!edited}>
           Save
         </Button>
       </div>
     </div>
   );
 }
+
+/** The question before an edit is thrown away, the same in Edit comment (`EditCommentDialog`). */
+export const DISCARD_QUESTION = { title: 'Discard your changes to this comment?', message: 'What you wrote here is lost.', confirmLabel: 'Discard', danger: true } as const;

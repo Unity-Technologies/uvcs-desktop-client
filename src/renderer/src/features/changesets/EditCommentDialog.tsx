@@ -6,7 +6,8 @@ import { CommentArea } from '../../components/commentEditor/CommentArea';
 import { CommentFocusGroup } from '../../components/commentEditor/CommentFocusGroup';
 import type { CommentFieldHandle } from '../../components/commentEditor/commentFieldProps';
 import { DESCRIPTION_PLACEHOLDER } from '../../components/commentEditor/commentPlaceholders';
-import { editedComment, editingParts, hasUnsavedEdit, storedComment, withSummaryText } from '../../lib/comment';
+import { commentEditorExit, editedComment, editingParts, hasUnsavedEdit, storedComment, withSummaryText } from '../../lib/comment';
+import { DISCARD_QUESTION } from '../../components/CommentEditor';
 import { confirm } from '../../ui/dialog/confirm';
 
 /** Asks for a new (possibly multi-line) changeset comment. Resolves to `undefined` if cancelled. */
@@ -34,7 +35,7 @@ function EditCommentDialog({ changesetId, currentComment, finish }: EditCommentD
   const unchanged = !hasUnsavedEdit(currentComment, opened, draft);
   // Esc and Cancel ask before throwing an edit away; with nothing changed they close at once.
   const cancel = async (): Promise<void> => {
-    if (unchanged || (await confirm({ title: 'Discard your changes to this comment?', message: 'What you wrote here is lost.', confirmLabel: 'Discard', danger: true }))) finish(undefined);
+    if (commentEditorExit(!unchanged, 'cancel') === 'close' || (await confirm(DISCARD_QUESTION))) finish(undefined);
   };
 
   return (

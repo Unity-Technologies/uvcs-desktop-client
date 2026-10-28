@@ -182,6 +182,9 @@ given to a comment that had none is set off by a blank line. Edit comment's two 
 (`CommentFocusGroup`, grown in place in the dialog), ↓ and ↑ go between them, Enter from the title to the
 description; it has no Recent comments (they're for a check-in, not a changeset already made). Leaving it edited (Esc,
 Cancel, a click outside) asks first ("Discard your changes to this comment?", `hasUnsavedEdit`); unedited, it closes.
+A details panel's editor does the same, its Save disabled until an edit; left edited for another row, it keeps the
+draft and opens with it on coming back (`commentEditorExit`, `useCommentDraftStore`, `DetailsHeading`'s `draftKey`),
+as a question there would hold the list's selection hostage.
 A recent comment picked in the check-in opens in the same parts (`recentCommentPick`), and the caret goes to the
 end of the field that took its text. New branch, New label and New attribute stay one field: theirs is a
 description, not a commit message; their focus mode grows within the dialog, its hints above the buttons. In
