@@ -41,7 +41,7 @@ const POINTER_TOOLTIP_ROOM = 360;
 const SUBJECT_LINE_HEIGHT = 1.45;
 
 /** Marks the cards the pointer can move into to select and copy their text: the canvas leaves them alone. */
-export const HOVER_CARD_ATTRIBUTE = 'data-hover-card';
+export const CAPTION_CARD_ATTRIBUTE = 'data-hover-card';
 
 export function GraphTooltip({ target, layout, palette, pendingChangeCount, x, y, anchor, containerWidth }: GraphTooltipProps) {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -69,7 +69,7 @@ export function GraphTooltip({ target, layout, palette, pendingChangeCount, x, y
     const summary = summaryOf(changeset.comment);
     const body = splitComment(changeset.comment).description;
     return (
-      <div ref={cardRef} className={styles.card} style={{ left: anchor.x, top: anchor.baseline, maxWidth }} {...{ [HOVER_CARD_ATTRIBUTE]: true }}>
+      <div ref={cardRef} className={styles.card} style={{ left: anchor.x, top: anchor.baseline, maxWidth }} {...{ [CAPTION_CARD_ATTRIBUTE]: true }}>
         {/* Same font, size and color as the caption it lays over: a heavier or brighter line would read as the text jumping. */}
         <div className={styles.subject} style={{ font: palette.fonts.caption, lineHeight: SUBJECT_LINE_HEIGHT, color: anchor.color }}>
           {/* An empty inline block sits on the baseline, where the caption's first glyph starts. */}
