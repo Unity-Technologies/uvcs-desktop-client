@@ -60,7 +60,9 @@ function sameUser(owner: string, me: string): boolean {
 
 function leftTitle(record: SwitchShelveRecord): string {
   const source = branchLabel(record.source.name);
-  return record.reason === 'update' ? `Put aside to update ${source}` : `Left on ${source}`;
+  if (record.reason === 'update') return `Put aside to update ${source}`;
+  if (record.reason === 'xlink') return `Put aside to load an xlink on ${source}`;
+  return `Left on ${source}`;
 }
 
 /** Whether the shelve shows for the words typed: each in its number, its comment, what it's called here or its author, in any case. */
