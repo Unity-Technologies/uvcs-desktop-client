@@ -145,7 +145,8 @@ New label (`CommentArea`), the comment of a merge into a server branch (`MergeHe
   Enter goes on to the description (a summary) or submits (a dialog's title). A line end typed (Shift+Enter) or
   dropped becomes a space (`oneLine`). Lines pasted in a summary go on in its description (`withSummaryText`); in a
   title or the merge comment they join (`oneLineText`). The field's text follows its owner's value after every change
-  that differs from it, also when the owner kept its value.
+  that differs from it, also when the owner kept its value. A text the owner puts in whole (a recent comment picked,
+  a changelist's comment) is one step to undo, back to what was written (`ownerSync`).
 - **The selection bar** (`SelectionBar`, `selectionBarShows`): over text selected, once the pointer lets go, never in
   a code block; B, I, S, code and link, then list, task, quote and code block in a field of many lines, each on while
   the selection is in it. No toolbar shows otherwise: the fields stay small.

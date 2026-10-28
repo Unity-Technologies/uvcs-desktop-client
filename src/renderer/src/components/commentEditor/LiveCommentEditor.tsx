@@ -1,4 +1,4 @@
-import { EditorState, Transaction } from '@codemirror/state';
+import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { useEffect, useId, useImperativeHandle, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
@@ -6,8 +6,8 @@ import { useResolvedTheme } from '../../app/settings/useResolvedTheme';
 import { pierreThemeName } from '../../lib/codeTheme';
 import { classNames } from '../../lib/classNames';
 import { commentEditorExtensions, editable, editableWhen, theme, themed, type CommentEditorKeys } from './commentEditorSetup';
-import { changeToMatch } from './commentFieldText';
 import { ownerChange } from './oneLine';
+import { ownerSync } from './ownerSync';
 import type { CommentFieldProps } from './commentFieldProps';
 import { activeFormats, FORMAT_COMMANDS, type FormatCommandId } from './formatCommands';
 import { hasFocus, noteFocus } from './liveDecorations';
@@ -38,6 +38,8 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
   const [portals] = useState(() => new WidgetPortals());
   const keys = useRef<CommentEditorKeys>({});
   keys.current = { onEnter, onSubmit };
+  // Whether the user changed the text since the owner's value was last followed: the owner's answer to that change.
+  const typedSinceSync = useRef(false);
   const changed = useRef(onChange);
   changed.current = onChange;
   const codeTheme = pierreThemeName(useResolvedTheme());
@@ -51,7 +53,10 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
         extensions: [
           commentEditorExtensions({ singleLine, label, placeholder, portals, keys }, !disabled, codeTheme),
           EditorView.updateListener.of((update) => {
-            if (update.docChanged && !update.transactions.some((transaction) => transaction.annotation(ownerChange))) changed.current(update.state.doc.toString());
+            if (update.docChanged && !update.transactions.some((transaction) => transaction.annotation(ownerChange))) {
+              typedSinceSync.current = true;
+              changed.current(update.state.doc.toString());
+            }
             if (update.docChanged || update.selectionSet || update.focusChanged || update.transactions.some((transaction) => transaction.effects.length > 0)) setState(update.state);
           }),
         ],
@@ -83,8 +88,9 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
   // also when the owner kept its value (a summary given a line end keeps the line, `withSummaryText`).
   useEffect(() => {
     if (!view) return;
-    const change = changeToMatch(view.state.doc.toString(), value);
-    if (change) view.dispatch({ changes: change, annotations: [ownerChange.of(true), Transaction.addToHistory.of(false)] });
+    const sync = ownerSync(view.state, value, typedSinceSync.current);
+    typedSinceSync.current = false;
+    if (sync) view.dispatch(sync);
   }, [view, value, state]);
 
   useEffect(() => view?.dispatch({ effects: editable.reconfigure(editableWhen(!disabled)) }), [view, disabled]);

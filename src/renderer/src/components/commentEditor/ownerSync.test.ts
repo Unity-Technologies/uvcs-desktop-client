@@ -20,6 +20,6 @@ describe('ownerSync', () => {
     const pasted = before.update({ changes: { from: 5, insert: '\nmore' }, selection: { anchor: 10 }, userEvent: 'input.paste' }).state;
     const kept = pasted.update(ownerSync(pasted, 'Title', true)!).state;
     expect(written(kept)).toBe('Title‸');
-    expect(run(undo, kept)!.doc.toString()).toBe('Title');
+    expect((run(undo, kept) ?? kept).doc.toString()).toBe('Title');
   });
 });
