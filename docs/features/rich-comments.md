@@ -257,6 +257,21 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
 
 ### Suggestions
 
+What the list depends on, each with one owner (`suggestionGate` decides; the editor only feeds it):
+
+- **Opens**: a trigger typed at the caret (`suggestionQueryAt`) while the word is being typed (`typingAt`, the
+  editor's state: set by a key typed or a Backspace taking back what was typed, cleared by any other edit or caret
+  move), in a field with the focus. The focus is the DOM's (`editorFocused`, `fieldFocused`); the state's mirror of it
+  (`hasFocus`, `editorFocus`) is for the decorations alone and is reconciled from the DOM on `focusin`, `focusout` and
+  any update where they differ (`focusReconciler`), and code focuses an editor only through `focusEditor`.
+  `editorFocusRules.test.ts` keeps both rules: a mirror left behind as focus mode opened by its button once hid the
+  list for good.
+- **Closes**: Esc, a pick, the caret leaving the word, the focus leaving the field, a list with no row (emoji with no
+  match). A pick leaves the reference drawn as its chip until the next edit or caret move (`justPicked`).
+- **Stays closed**: on the word Esc closed it on (`dismissedAt`, the word's start, held by the editor: one editor per
+  field, made again with each place, so nothing carries over between places or fields), until another word is typed.
+  Nothing it depends on is module-level; the lists it reads are the place's queries, keyed by the place.
+
 Typing `cs:`, `br:`, `lb:`, `sh:`, `cr:` or `@`, or `:` and two letters of an emoji's name, after a space, a line's
 start, a bracket or an emphasis mark (`suggestionQueryAt`), opens a list under the word while it's typed
 (`suggestionsShownAt`), so a field opened with its caret after a reference opens none. The list is a listbox the
