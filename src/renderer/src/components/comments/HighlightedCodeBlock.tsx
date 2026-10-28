@@ -1,7 +1,7 @@
 import { getSharedHighlighter, type ThemedToken } from '@pierre/diffs';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useResolvedTheme } from '../../app/settings/useResolvedTheme';
-import { pierreThemeName } from '../../features/diff/viewer/pierreOptions';
+import { pierreThemeName } from '../../lib/codeTheme';
 import { codeTokenStyle } from './codeTokenStyle';
 
 interface HighlightedCodeBlockProps {
