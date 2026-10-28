@@ -1,7 +1,7 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { PressedKey } from '../../lib/shortcuts';
-import { focusModeKey, offersFocusMode } from './focusMode';
+import { focusModeKey, focusModeLayout, offersFocusMode } from './focusMode';
 
 function press(key: string, code: string, modifiers: Partial<PressedKey> = {}): PressedKey {
   return { key, code, metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, ...modifiers };
@@ -34,5 +34,12 @@ describe('focusModeKey', () => {
 
   it('leaves every other key to the text', () => {
     expect(focusModeKey(press('f', 'KeyF'), true, { expanded: true, suggesting: false })).toBeNull();
+  });
+});
+
+describe('focusModeLayout', () => {
+  it('opens over the view, and grows in place in a dialog, which keeps its clicks and focus', () => {
+    expect(focusModeLayout(false)).toBe('overlay');
+    expect(focusModeLayout(true)).toBe('inPlace');
   });
 });

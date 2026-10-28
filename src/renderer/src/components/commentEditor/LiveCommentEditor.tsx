@@ -1,10 +1,15 @@
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { useEffect, useId, useImperativeHandle, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { Maximize2, Minimize2 } from 'lucide-react';
+import { useEffect, useId, useImperativeHandle, useLayoutEffect, useRef, useState, useSyncExternalStore, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { useResolvedTheme } from '../../app/settings/useResolvedTheme';
 import { pierreThemeName } from '../../lib/codeTheme';
 import { classNames } from '../../lib/classNames';
+import { MODAL_DIALOG } from '../../lib/modalDialog';
+import { isMac } from '../../lib/platform';
+import { hotkey } from '../../lib/shortcutRegistry';
+import { focusModeKey, focusModeLayout, offersFocusMode } from './focusMode';
 import { commentEditorExtensions, editable, editableWhen, theme, themed, type CommentEditorKeys } from './commentEditorSetup';
 import { ownerChange } from './oneLine';
 import { ownerSync } from './ownerSync';
@@ -107,18 +112,71 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
 
   const suggestions = useSuggestions(view, state);
   const bar = useSelectionBar(view, state, singleLine, suggestions.shown);
+  const focus = useFocusMode(view, host, singleLine, suggestions.shown);
 
   const widgets = useSyncExternalStore(portals.subscribe, portals.portals);
   // What React drew in the widgets changes their size: the editor measures its lines again.
   useLayoutEffect(() => view?.requestMeasure(), [view, widgets]);
 
   return (
-    <div ref={host} className={classNames(fieldStyles.field, styles.editor, className)} style={style} data-single-line={singleLine || undefined} onMouseDown={bar.onPointerDown}>
+    <div
+      ref={host}
+      className={classNames(fieldStyles.field, styles.editor, className)}
+      style={style}
+      data-single-line={singleLine || undefined}
+      data-expanded={focus.layout ?? undefined}
+      onMouseDown={bar.onPointerDown}
+    >
+      {focus.element}
       {widgets.map((widget) => createPortal(widget.node, widget.host, String(widget.key)))}
       {suggestions.list}
       {bar.element}
     </div>
   );
+}
+
+/**
+ * Focus mode (`focusMode`): the field grows into a large editor and back, by its corner button, its shortcut or Esc.
+ * The same editor, so its text, caret and selection stay.
+ */
+function useFocusMode(view: EditorView | null, host: RefObject<HTMLDivElement | null>, singleLine: boolean, suggesting: boolean) {
+  const [layout, setLayout] = useState<'overlay' | 'inPlace' | null>(null);
+  const offered = offersFocusMode(singleLine);
+  const toggle = (): void => {
+    setLayout((shown) => (shown ? null : focusModeLayout(host.current?.closest(`[${Object.keys(MODAL_DIALOG)[0]}]`) != null)));
+    view?.focus();
+  };
+  useEffect(() => {
+    if (!view || !offered) return;
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (!view.dom.contains(event.target as Node)) return;
+      const action = focusModeKey(event, isMac, { expanded: layout !== null, suggesting });
+      if (!action) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (action === 'toggle') toggle();
+      else setLayout(null);
+    };
+    // Taken on the way down, before a dialog's Esc closes it or the details' Esc cancels the edit.
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  });
+  // The editor measures its lines again at its new size, the caret kept in view.
+  useLayoutEffect(() => {
+    if (view) view.dispatch({ effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: 'center' }) });
+  }, [view, layout]);
+  if (!offered) return { layout: null, element: null };
+  const Icon = layout ? Minimize2 : Maximize2;
+  const label = layout ? 'Back to the field' : 'Write in a larger editor';
+  const element = (
+    <>
+      {layout === 'overlay' && createPortal(<div className={styles.backdrop} onMouseDown={() => setLayout(null)} />, document.body)}
+      <button type="button" className={styles.expand} aria-label={label} data-tip={label} data-tip-shortcut={hotkey('commentFocusMode')} onMouseDown={(event) => event.preventDefault()} onClick={toggle}>
+        <Icon size={13} strokeWidth={2} aria-hidden />
+      </button>
+    </>
+  );
+  return { layout, element };
 }
 
 /** The suggestion list for what is typed at the caret: its rows, the key it's at, and the keys that walk it. */

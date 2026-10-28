@@ -1,3 +1,78 @@
+.editor {
+  position: relative;
+}
+
+/* Focus mode's button (`useFocusMode`): in the corner, quiet until the field is hovered or focused. */
+.expand {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+  z-index: 1;
+}
+
+.editor:hover .expand,
+.editor:focus-within .expand,
+.editor[data-expanded] .expand {
+  opacity: 1;
+}
+
+.expand:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.expand:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-visible);
+}
+
+/* The text keeps clear of the button. */
+.editor:not([data-single-line]) :global(.cm-editor .cm-content) {
+  padding-right: 22px;
+}
+
+/* Over the view, the rest dimmed: the field's own box at a writing size. Its owner's sizes give way (`!important`
+   over a height set inline, the check-in's resizable description). */
+.editor[data-expanded='overlay'] {
+  position: fixed !important;
+  inset: 8vh max(24px, calc(50vw - 440px)) !important;
+  z-index: 850;
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  padding: var(--space-4) var(--space-5) !important;
+  box-shadow: var(--shadow-lg);
+  font-size: var(--text-md);
+}
+
+/* In a dialog: the field grows in place, the dialog scrolling around it. */
+.editor[data-expanded='inPlace'] {
+  height: 56vh !important;
+  max-height: 56vh !important;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 849;
+  background: var(--overlay);
+  animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
+}
+
 /* CodeMirror inside a comment field's box, in the app's font and tokens. Its own theme is injected at run time with
    selectors as specific as two classes, so these hold three to come first. */
 .editor :global(.cm-editor) {

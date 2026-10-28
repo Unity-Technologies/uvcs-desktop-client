@@ -155,6 +155,13 @@ htmlFor>` can't focus, and the label names it, `fieldLabelAttributes`), the comm
   title or the merge comment they join (`oneLineText`). The field's text follows its owner's value after every change
   that differs from it, also when the owner kept its value. A text the owner puts in whole (a recent comment picked,
   a changelist's comment) is one step to undo, back to what was written (`ownerSync`).
+- **Focus mode** (`focusMode`, `useFocusMode`): a field of many lines grows into a larger editor to write a long
+  comment, by the quiet button in its corner (shown on hover or focus) or ⇧⌘F (Ctrl+Shift+F), and back the same way
+  or with Esc. Over the view it is the field's own box at a writing size, the rest dimmed (a click there goes back); in
+  a dialog the field grows in place (`focusModeLayout`), as a dialog keeps its focus and its clicks. It is the same
+  editor, never a copy: the text, the caret, the selection and the undo history stay, and ⌘↵ still saves. A popup
+  editor holding a copy of the text was dropped: two editors of one comment would have to be kept in step, and its
+  undo, caret and suggestions would start over.
 - **The selection bar** (`SelectionBar`, `selectionBarShows`): over text selected, once the pointer lets go, never in
   a code block; B, I, S, code and link, then list, task, quote and code block in a field of many lines, each on while
   the selection is in it. No toolbar shows otherwise: the fields stay small.

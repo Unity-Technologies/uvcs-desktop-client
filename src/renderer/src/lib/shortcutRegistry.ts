@@ -127,6 +127,7 @@ export const SHORTCUTS = {
   commentQuote: { area: 'Comments', label: 'Quote', keys: ['mod+shift+9'] },
   commentCodeBlock: { area: 'Comments', label: 'Code block', keys: ['mod+alt+shift+c'], keysOffMac: ['mod+shift+e'] },
   commentPastePlain: { area: 'Comments', label: 'Paste without formatting', keys: ['mod+shift+v'] },
+  commentFocusMode: { area: 'Comments', label: 'Write in a larger editor, and back', keys: ['mod+shift+f'] },
 
   graphFind: { area: 'Branch Explorer', label: 'Find in graph', keys: ['mod+f', '/'] },
   graphNextMatch: { area: 'Branch Explorer', label: 'Next match', keys: ['enter'] },
