@@ -1,3 +1,4 @@
+import type { EditorState } from '@codemirror/state';
 import { matchesShortcut, type PressedKey } from '../../lib/shortcuts';
 import { SHORTCUTS, shortcutKeys } from '../../lib/shortcutRegistry';
 
@@ -88,4 +89,13 @@ export function focusModeParts({ singleLine, inGroup, groupOpen, ownLayout }: Fo
     backdrop: many && layout === 'overlay',
     takesTab: many && inFocusMode,
   };
+}
+
+/**
+ * Where the caret goes as focus mode opens and gives the field the focus: a field never focused since it was made (a
+ * workspace switch, Home and back, its draft put back) has its caret at the start, where no one put it, so it goes to
+ * the draft's end; one the user was in keeps it. Null leaves it.
+ */
+export function caretOpeningFocusMode(state: EditorState, focusedBefore: boolean): number | null {
+  return !focusedBefore && state.doc.length > 0 ? state.doc.length : null;
 }

@@ -11,7 +11,7 @@ import { isMac } from '../../lib/platform';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { FocusGroupContext, type FocusGroup } from './CommentFocusGroup';
 import { groupMove } from './focusGroup';
-import { focusModeKey, focusModeLayout, focusModeParts, layoutAfterFocus, type FocusModeLayout } from './focusMode';
+import { caretOpeningFocusMode, focusModeKey, focusModeLayout, focusModeParts, layoutAfterFocus, type FocusModeLayout } from './focusMode';
 import { commentEditorExtensions, editable, editableWhen, placeholderText, theme, themed, type CommentEditorKeys } from './commentEditorSetup';
 import { placeholderShown } from './commentPlaceholders';
 import { FocusModeFooter } from './FocusModeFooter';
@@ -194,10 +194,16 @@ function useFocusMode(view: EditorView | null, state: EditorState | null, host: 
     if (group) group.close();
     else setOwnLayout(null);
   };
+  // Whether the field had the focus since it was made: if not, focus mode opening puts the caret at the draft's end.
+  const focusedBefore = useRef(false);
+  if (view?.hasFocus) focusedBefore.current = true;
   const toggle = (): void => {
     if (group) group.toggle();
     else setOwnLayout((shown) => (shown ? null : focusModeLayout(isInModalDialog(host.current))));
-    if (view) focusEditor(view);
+    if (!view) return;
+    const caret = caretOpeningFocusMode(view.state, focusedBefore.current || view.hasFocus);
+    if (caret === null) focusEditor(view);
+    else focusAt(view, caret);
   };
   // What the key handler reads when a key comes, without listening again at each render.
   const latest = useRef({ expanded: parts.inFocusMode, suggesting, toggle, close });
