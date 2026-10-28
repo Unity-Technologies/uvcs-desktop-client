@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { EditorSelection, EditorState } from '@codemirror/state';
 import { editorState } from './commentEditorTesting';
 import { liveMarksOf, type LiveMark } from './liveMarks';
 
@@ -136,5 +137,52 @@ describe('liveMarksOf', () => {
   it('reads only the ranges asked for (the editor’s visible ones)', () => {
     const state = editorState('cs:1\ncs:2\ncs:3');
     expect(liveMarksOf(state, { revealsSelection: false }, [{ from: 5, to: 9 }]).map((mark) => mark.kind === 'reference' && mark.source)).toEqual(['cs:2']);
+  });
+});
+
+/** A state whose selection is `ranges`, each `[anchor, head]`: a drag upward has its head before its anchor. */
+function withSelection(text: string, ...ranges: [anchor: number, head: number][]): EditorState {
+  const state = editorState(text, EditorState.allowMultipleSelections.of(true));
+  return state.update({ selection: EditorSelection.create(ranges.map(([anchor, head]) => EditorSelection.range(anchor, head))) }).state;
+}
+
+function marksWith(state: EditorState): string[] {
+  return liveMarksOf(state, FOCUSED).map((mark) => shown(mark, state.doc.toString()));
+}
+
+const WIDGETS = new Set<LiveMark['kind']>(['reference', 'image', 'task', 'bullet']);
+
+describe('liveMarksOf, with a selection', () => {
+  // `cs:12` is 5–10, `**now**` 11–18.
+  const SHIP = 'Ship cs:12 **now** end';
+
+  it('keeps what it covers drawn, as the press that started it showed it, so nothing moves under the pointer', () => {
+    expect(marksWith(withSelection(SHIP, [SHIP.length, 0]))).toEqual(['reference cs:12', 'selected cs:12', 'hidden **', 'hidden **']);
+  });
+
+  it('draws every construct a drag covers, the widgets marked as selected', () => {
+    const text = 'An ![robot](https://x.y/r.png) :green_heart: <kbd>Ctrl</kbd> `code` [docs](https://x.y) cs:12\n\n- [ ] Ship\n- item\n\nend';
+    const marks = marksWith(withSelection(text, [text.length, 0]));
+    expect(marks.filter((mark) => !mark.startsWith('selected'))).toEqual(marksOf(text, { revealsSelection: false }));
+    const widgets = liveMarksOf(editorState(text), { revealsSelection: false }).filter((mark) => WIDGETS.has(mark.kind));
+    expect(widgets).toHaveLength(6);
+    expect(marks.filter((mark) => mark.startsWith('selected'))).toEqual(widgets.map((mark) => (mark.kind === 'line' ? '' : `selected ${text.slice(mark.from, mark.to)}`)));
+  });
+
+  it('draws a chip it ends inside of, marked as selected', () => {
+    expect(marksWith(withSelection(SHIP, [SHIP.length, 7]))).toEqual(['reference cs:12', 'selected cs:12', 'hidden **', 'hidden **']);
+  });
+
+  it('leaves a chip it only reaches the edge of unselected', () => {
+    expect(marksWith(withSelection(SHIP, [SHIP.length, 10]))).toEqual(['reference cs:12', 'hidden **', 'hidden **']);
+  });
+
+  it('keeps revealed the construct it started in (Shift+→ inside **now**), as the caret showed it before it grew', () => {
+    expect(marksWith(withSelection(SHIP, [14, 16]))).toEqual(['reference cs:12']);
+  });
+
+  it('reveals around each caret of several, a range among them revealing only where it started', () => {
+    const text = 'Make **bold** and _quick_ end';
+    expect(marksWith(withSelection(text, [21, 21], [text.length, 0]))).toEqual(['hidden **', 'hidden **']);
   });
 });
