@@ -3,9 +3,11 @@ import type { CommentReference } from '../../lib/comments/commentReferences';
 import { displayName } from '../../lib/userName';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { Avatar } from '../../ui/Avatar';
-import { chipContent, chipTip, emojiLabel, type ChipContent } from './chipContent';
+import { cachedRecordOf, cachedSummaryOf } from './cachedSummary';
+import { chipCard, chipContent, emojiLabel, type ChipContent } from './chipContent';
+import { cardDate, ChipHoverCard } from './ChipHoverCard';
 import { CHIP_ICONS } from './chipIcons';
-import { useCachedSummary } from './useCachedSummary';
+import { useCachedObject } from './useCachedObject';
 import styles from './ReferenceChip.module.css';
 
 interface ReferenceChipProps {
@@ -34,10 +36,12 @@ export const ReferenceChip = memo(function ReferenceChip({ reference, source, co
       );
     case 'user':
       return (
-        <span className={styles.person} data-source={source} data-tip={chip.name}>
-          <Avatar user={chip.name} size={compact ? 14 : 16} tip={null} />
-          {displayName(chip.name)}
-        </span>
+        <ChipHoverCard card={{ title: displayName(chip.name), meta: [chip.name] }}>
+          <span className={styles.person} data-source={source}>
+            <Avatar user={chip.name} size={compact ? 14 : 16} tip={null} />
+            {displayName(chip.name)}
+          </span>
+        </ChipHoverCard>
       );
     case 'object':
       return (
@@ -61,7 +65,9 @@ type ObjectChipProps = Omit<Extract<ChipContent, { kind: 'object' }>, 'kind'> & 
 
 function ObjectChip({ placeRepository, cachedAs, source, compact, interactive, icon, label, title, repository, target }: ObjectChipProps) {
   const place = usePlace();
-  const summary = useCachedSummary(cachedAs);
+  const cached = useCachedObject(cachedAs);
+  const summary = cached && cachedSummaryOf(cached);
+  const card = useMemo(() => chipCard({ title, repository }, cached && cachedRecordOf(cached), cardDate), [title, repository, cached]);
   const Icon = CHIP_ICONS[icon];
   const open = (event: MouseEvent): void => {
     // In a row, the chip opens its object and leaves the row's selection alone.
@@ -70,8 +76,7 @@ function ObjectChip({ placeRepository, cachedAs, source, compact, interactive, i
     // Loaded on the first click: opening a link reaches the windows, the navigation and the queries.
     void import('./openReference').then(({ openReference }) => openReference(place, placeRepository, target));
   };
-  const { tip, sub } = chipTip(title, summary, repository);
-  const shown = { className: styles.chip, 'data-icon': icon, 'data-source': source, 'data-tip': tip, 'data-tip-sub': sub };
+  const shown = { className: styles.chip, 'data-icon': icon, 'data-source': source, 'aria-label': title };
   const content = (
     <>
       <Icon className={styles.icon} size={compact ? 12 : 13} strokeWidth={2.25} aria-hidden />
@@ -80,11 +85,19 @@ function ObjectChip({ placeRepository, cachedAs, source, compact, interactive, i
       {!compact && summary && <span className={styles.summary}>{summary}</span>}
     </>
   );
-  if (!interactive) return <span {...shown}>{content}</span>;
+  if (!interactive) {
+    return (
+      <ChipHoverCard card={card}>
+        <span {...shown}>{content}</span>
+      </ChipHoverCard>
+    );
+  }
   return (
-    // In a row or a title the row's keys reach the object; only a full comment's chips are tab stops.
-    <a href="#" {...shown} tabIndex={compact ? -1 : undefined} onClick={open} onMouseDown={(event) => event.stopPropagation()}>
-      {content}
-    </a>
+    <ChipHoverCard card={card}>
+      {/* In a row or a title the row's keys reach the object; only a full comment's chips are tab stops. */}
+      <a href="#" {...shown} tabIndex={compact ? -1 : undefined} onClick={open} onMouseDown={(event) => event.stopPropagation()}>
+        {content}
+      </a>
+    </ChipHoverCard>
   );
 }

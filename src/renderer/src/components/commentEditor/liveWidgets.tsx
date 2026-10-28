@@ -67,7 +67,7 @@ export class ReferenceWidget extends WidgetType {
     const host = document.createElement('span');
     host.className = 'cm-chip';
     selectOnPress(view, host, this.source.length);
-    // With its summary, as a shown comment draws it, as soon as the cache holds it (`useCachedSummary`); compact on one line.
+    // With its summary, as a shown comment draws it, as soon as the cache holds it (`useCachedObject`); compact on one line.
     showIn(view, host, <ReferenceChip reference={this.reference} source={this.source} compact={view.state.facet(compactChips)} interactive={false} />);
     return host;
   }

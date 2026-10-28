@@ -51,18 +51,21 @@ before.
 
 - An **object** is a chip: its icon, its own name or number (`task-2210`, `4207`), the repository when it isn't the
   place's (an object of the place's repository reads as its own however it's written: `cs:12@game`, its link), and,
-  in a full comment, its summary (the comment's first line, a review's title). Its tooltip says what it is in words
-  ("Changeset 4207: Fix the switch", `chipTip`). A click opens it as its link would (`openReference` → `openLink`):
+  in a full comment, its summary (the comment's first line, a review's title). On hover, or keyboard focus, it shows
+  the Branch Explorer's card (`HoverCard` through `ChipHoverCard`, from `chipCard`): the comment drawn as a comment's
+  line, then "Changeset 4207 · Ana Diaz · 2 hours ago" (a review's status too); only what the window already read, no
+  command. Nothing read yet, the card says what it is ("Changeset 4207"). A click opens it as its link would (`openReference` → `openLink`):
   in this window when it shows that repository, else in the one that does; a repository named without its server is
   on the place's (`referenceRepository`). In a row or a title a chip is no tab stop: the row's keys reach its object.
-- A **person** is their avatar and name; an **emoji** is itself, its name in the tooltip.
+- A **person** is their avatar and name, their card the name `cm` knows them by; an **emoji** is itself, its name in
+  the tooltip.
 - Inside something clicked as a whole (a button, a picker's option: Incoming's list, the branch search, My shelves,
   the changeset picker) a chip reads the same but is no link (`interactive={false}`), so the click stays the row's.
 
 ## What a chip reads
 
 Nothing: a chip shows its object's summary only once one of the place's lists the window already read holds it
-(`useCachedSummary`, `summaryIn`): the palette's lists, the views' lists. It looks through the cached lists of the
+(`useCachedObject`, `summaryIn`): the palette's lists, the views' lists. It looks through the cached lists of the
 place's area (`queryKeys.inPlace(place, 'changesets' | 'branches' | 'labels' | 'shelves' | 'codeReviews')`), each
 indexed once (a lookup walks no list), and wakes only when its area's data changes. An object read alone is left
 out: an xlinked repository's changeset is cached in the place's area by its id too; only a changeset read by its
@@ -132,7 +135,7 @@ htmlFor>` can't focus, and the label names it, `fieldLabelAttributes`), the comm
   block being edited is tokenized again at a key). A key (`<kbd>Ctrl</kbd>`) is its keycap, its tags showing with the caret in it. A table the caret isn't in is drawn as a table (`tableModel`; a click on a cell puts the caret at its
   end). An image is its chip. A field without the focus draws everything.
 - **References are the comments' chips** (`ReferenceChip`, with their summary as a shown comment has it, as soon as
-  the window read it: a list, or the number looked up as typed; compact on one line, the summary in the tooltip), for
+  the window read it: a list, or the number looked up as typed; compact on one line, the summary in its card), for
   every kind a comment reads (`findReferences`). The chip the caret reaches, by an arrow or typing it, shows as its
   text to edit, as Markdown's marks show around the caret; the others stay drawn. A click selects a chip's text,
   shown as typed, so typing replaces it (`selectChip`). Backspace right after a chip takes back its last letter, as

@@ -23,11 +23,14 @@ export function cachedAreaOf(reference: CommentReference): CachedArea | null {
   }
 }
 
-interface CachedObject {
+export interface CachedObject {
   id?: unknown;
   name?: unknown;
   comment?: unknown;
   title?: unknown;
+  status?: unknown;
+  owner?: unknown;
+  date?: unknown;
 }
 
 /** Each list read once into its objects by what a reference names them by (`id:12`, `name:/main`), kept as long as it. */
@@ -44,16 +47,36 @@ const summaries = new WeakMap<CachedObject, string | undefined>();
  * costs no walk over thousands of rows whenever the cache changes.
  */
 export function summaryIn(cached: readonly unknown[], reference: CommentReference, lookedUp?: unknown): string | undefined {
+  const object = cachedObjectIn(cached, reference, lookedUp);
+  return object && summaryOf(object);
+}
+
+/**
+ * The object a reference names in what the window read, as `summaryIn` finds it, for its hover card (`chipCard`):
+ * the same object while its list stays read, so a chip renders again only when it does.
+ */
+export function cachedObjectIn(cached: readonly unknown[], reference: CommentReference, lookedUp?: unknown): CachedObject | undefined {
   const key = keyOf(reference);
   if (!key) return undefined;
   // The object looked up alone in the place's own repository (`useChangeset` with no other one: a number typed).
-  if (isObject(lookedUp) && `id:${String(lookedUp.id)}` === key) return summaryOf(lookedUp);
+  if (isObject(lookedUp) && `id:${String(lookedUp.id)}` === key) return lookedUp;
   for (const data of cached) {
     if (!Array.isArray(data)) continue;
     const object = indexOf(data).get(key);
-    if (object) return summaryOf(object);
+    if (object) return object;
   }
   return undefined;
+}
+
+/** What a hover card shows of a cached object: its text fields, whichever it has (`CachedRecord`). */
+export function cachedRecordOf(object: CachedObject): { comment?: string; title?: string; status?: string; owner?: string; date?: string } {
+  const text = (value: unknown) => (typeof value === 'string' ? value : undefined);
+  return { comment: text(object.comment), title: text(object.title), status: text(object.status), owner: text(object.owner), date: text(object.date) };
+}
+
+/** A cached object's summary, read once. */
+export function cachedSummaryOf(object: CachedObject): string | undefined {
+  return summaryOf(object);
 }
 
 function keyOf(reference: CommentReference): string | null {
