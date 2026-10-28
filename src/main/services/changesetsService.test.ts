@@ -130,6 +130,12 @@ describe('changesets of a repository explored without a workspace', () => {
     ]);
   });
 
+  it('gives up on another server that never answers, as one waiting on a sign-in nobody will give would never end', async () => {
+    const { cm, commands } = fakeCmClient({ 'find changeset': recordsOutput(FOUND_CHANGESETS) });
+    await createChangesetsService(serviceContext(cm)).find(repositoryPlace('game@far.example.com:8087'), 4, { ownProcess: true });
+    expect(commands[0]!.options.signal).toBeInstanceOf(AbortSignal);
+  });
+
   it('finds no changeset by a number the repository has none of, as an answer, not a failure', async () => {
     const { cm } = fakeCmClient({ 'find changeset': recordsOutput(FOUND_CHANGESETS) });
     expect(await createChangesetsService(serviceContext(cm)).find(repositoryPlace('codice@codice@cloud'), 280528)).toBeNull();
