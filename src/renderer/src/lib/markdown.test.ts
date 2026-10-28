@@ -223,4 +223,16 @@ describe('parseMarkdown of a comment, what Markdown reads around a reference', (
     expect(parseInline('Ask ana@acme.com', comment)).toEqual([{ kind: 'text', text: 'Ask ana@acme.com' }]);
     expect(parseInline('[mail](mailto:ana@acme.com)')).toEqual([{ kind: 'text', text: 'mail' }]);
   });
+
+  it('leaves a bare web address whole, references in it included', () => {
+    expect(parseInline('CI: https://ci.acme.com/job?BRANCH=br:/main/task done', { comment: true })).toEqual([
+      { kind: 'text', text: 'CI: ' },
+      { kind: 'link', url: 'https://ci.acme.com/job?BRANCH=br:/main/task', children: [{ kind: 'text', text: 'https://ci.acme.com/job?BRANCH=br:/main/task' }] },
+      { kind: 'text', text: ' done' },
+    ]);
+  });
+
+  it('keeps text that looks like a placeholder as it is', () => {
+    expect(parseInline('Icons \uE0007\uE001 here', { comment: true })).toEqual([{ kind: 'text', text: 'Icons \uE0007\uE001 here' }]);
+  });
 });

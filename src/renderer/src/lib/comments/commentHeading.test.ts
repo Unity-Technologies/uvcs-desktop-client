@@ -4,18 +4,38 @@ import { commentLineText } from './commentText';
 
 describe('commentHeading', () => {
   it('takes the first line as the title and the rest as the description', () => {
-    expect(commentHeading('Fix the switch\n\nIt kept the changes.')).toEqual({ title: 'Fix the switch', description: 'It kept the changes.' });
+    expect(commentHeading('Fix **the switch**\n\nIt kept the changes.')).toEqual({
+      kind: 'titled',
+      title: [{ kind: 'text', text: 'Fix ' }, { kind: 'strong', children: [{ kind: 'text', text: 'the switch' }] }],
+      description: 'It kept the changes.',
+    });
   });
 
-  it('has no title for a comment that opens with a block, which shows whole', () => {
-    expect(commentHeading('- Fixed A\n- Fixed B\n- Fixed C')).toEqual({ title: null, description: '- Fixed A\n- Fixed B\n- Fixed C' });
-    expect(commentHeading('```csharp\nvar a = 1;\n```')).toEqual({ title: null, description: '```csharp\nvar a = 1;\n```' });
-    expect(commentHeading('| a | b |\n| - | - |\n| 1 | 2 |')).toMatchObject({ title: null });
-    expect(commentHeading('3. Fix the build')).toMatchObject({ title: null, description: '3. Fix the build' });
+  it('has no title for a comment that opens with code or a table, which shows whole', () => {
+    expect(commentHeading('```csharp\nvar a = 1;\n```')).toEqual({ kind: 'block', description: '```csharp\nvar a = 1;\n```' });
+    expect(commentHeading('| a | b |\n| - | - |\n| 1 | 2 |')).toEqual({ kind: 'block', description: '| a | b |\n| - | - |\n| 1 | 2 |' });
+  });
+
+  it('keeps the number a numbered first line starts with', () => {
+    expect(commentHeading('3. Fix the build')).toEqual({ kind: 'titled', title: [{ kind: 'text', text: '3. ' }, { kind: 'text', text: 'Fix the build' }], description: '' });
   });
 
   it('has nothing for an empty comment', () => {
-    expect(commentHeading('  \n ')).toEqual({ title: null, description: '' });
+    expect(commentHeading('  \n ')).toEqual({ kind: 'empty' });
+  });
+});
+
+describe('commentHeading of a comment that opens with a list or a quote', () => {
+  it("takes the first item as the title, with its marker, and the rest as the description: nothing shows twice", () => {
+    expect(commentHeading('- Tidied the README\n- Notes\n- Nothing else')).toEqual({
+      kind: 'titled',
+      title: [{ kind: 'text', text: '• ' }, { kind: 'text', text: 'Tidied the README' }],
+      description: '- Notes\n- Nothing else',
+    });
+  });
+
+  it('skips a rule it opens with', () => {
+    expect(commentLineText('---\nShipped')).toBe('Shipped');
   });
 });
 
