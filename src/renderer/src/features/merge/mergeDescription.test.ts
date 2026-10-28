@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MergePlan } from '@shared/domain/merge';
-import { completionCounts, completionTitle, describeSpec, mergeInProgressWords, mergeLabels, mergeTitle, mergeTitleText } from './mergeDescription';
+import { completionCounts, completionTitle, describeSpec, mergeInProgressWords, mergeLabels, replaceMergeQuestion, mergeTitle, mergeTitleText } from './mergeDescription';
 
 const plan: MergePlan = {
   status: 'ready',
@@ -53,9 +53,23 @@ describe('mergeTitle', () => {
 
 describe('mergeInProgressWords', () => {
   it('names what the merge does to what, and where it goes in full', () => {
-    expect(mergeInProgressWords({ kind: 'merge', sourceSpec: 'br:/main/task' })).toEqual({ label: 'Merge /main/task', railLabel: 'Merge', title: 'Merge /main/task into your workspace' });
-    expect(mergeInProgressWords({ kind: 'merge', sourceSpec: 'br:/main/task', destinationBranch: '/main' }).title).toBe('Merge /main/task into /main');
-    expect(mergeInProgressWords({ kind: 'subtractive', sourceSpec: 'cs:7' })).toEqual({ label: 'Undo changeset 7', railLabel: 'Undo', title: 'Undo changeset 7 on your workspace' });
+    expect(mergeInProgressWords({ kind: 'merge', sourceSpec: 'br:/main/task' }, false)).toEqual({
+      label: 'Merge /main/task',
+      railLabel: 'Merge',
+      tip: 'In progress: Merge /main/task into your workspace',
+    });
+    expect(mergeInProgressWords({ kind: 'merge', sourceSpec: 'br:/main/task', destinationBranch: '/main' }, false).tip).toBe('In progress: Merge /main/task into /main');
+    expect(mergeInProgressWords({ kind: 'subtractive', sourceSpec: 'cs:7' }, false)).toMatchObject({ label: 'Undo changeset 7', railLabel: 'Undo' });
+  });
+
+  it("doesn't call a settled merge in progress", () => {
+    expect(mergeInProgressWords({ kind: 'merge', sourceSpec: 'br:/main/task' }, true).tip).toBe('Merge /main/task into your workspace');
+  });
+});
+
+describe('replaceMergeQuestion', () => {
+  it('names the merge whose decisions would be discarded', () => {
+    expect(replaceMergeQuestion({ kind: 'cherryPick', sourceSpec: 'cs:9' }).message).toBe("Cherry pick changeset 9 into your workspace isn't complete. Starting another merge discards what you decided in it.");
   });
 });
 

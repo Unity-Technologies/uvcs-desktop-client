@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
 import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
+import { useSession } from '../workspace/sessionStore';
 import { guardLeaving, settleBeforeLeaving } from './leaveGuard';
 import { navigation, useNavigation } from './navigationStore';
 import type { Page, PageOf } from './pages';
@@ -22,7 +23,10 @@ function guardWith(canLeave: boolean): { asked: number } {
   return guard;
 }
 
-beforeEach(() => useNavigation.setState({ view: 'changes', pages: [], merge: null }));
+beforeEach(() => {
+  useSession.getState().openWorkspace('/ws');
+  useNavigation.setState({ view: 'changes', pages: [], merge: null });
+});
 afterEach(() => liftGuard());
 
 describe('navigation', () => {
@@ -145,38 +149,113 @@ describe('a merge in progress', () => {
     expect(useNavigation.getState()).toMatchObject({ pages: [fromTask], merge: { page: fromTask } });
   });
 
+  const mergeId = (): number => useNavigation.getState().merge!.id;
+
   it('closes with the pages opened on top of it, and nothing under it', async () => {
     navigation.openPage(browse);
     await openMerge(fromTask);
     navigation.openPage(history);
-    navigation.closeMerge();
+    navigation.closeMerge(mergeId());
 
     expect(useNavigation.getState()).toMatchObject({ pages: [browse], merge: null });
   });
 
+  it("isn't closed by an older merge that ends: a server merge completing after the user started another one", async () => {
+    await openMerge(fromTask);
+    const older = mergeId();
+    const other = merge('br:/main/other');
+    await openMerge(other);
+    navigation.closeMerge(older);
+
+    expect(useNavigation.getState()).toMatchObject({ pages: [other], merge: { page: other } });
+  });
+
   it('closes as any page once settled: completed, or with nothing to merge', async () => {
     await openMerge(fromTask);
-    navigation.settleMerge(useNavigation.getState().merge!.id);
+    navigation.settleMerge(mergeId());
     navigation.goToView('branches');
 
     expect(useNavigation.getState().merge).toBeNull();
   });
 
-  it('starts another merge without asking once settled', async () => {
+  it('stays reachable when it settles while set aside, until the user saw how it ended', async () => {
     await openMerge(fromTask);
-    navigation.settleMerge(useNavigation.getState().merge!.id);
-    await openMerge(merge('br:/main/other'));
+    navigation.goToView('branches');
+    navigation.settleMerge(mergeId());
+    navigation.goToView('labels');
+
+    expect(useNavigation.getState().merge).toMatchObject({ page: fromTask, settled: true });
+
+    navigation.returnToMerge();
+    navigation.goBack();
+
+    expect(useNavigation.getState()).toMatchObject({ pages: [], merge: null });
+  });
+
+  it('is set aside when going to the view already shown, which asks nothing', async () => {
+    const guard = guardWith(false);
+    await openMerge(fromTask);
+    navigation.goToView('changes');
+
+    expect(useNavigation.getState()).toMatchObject({ pages: [], merge: { page: fromTask } });
+    expect(guard.asked).toBe(0);
+  });
+
+  it('stays set aside when the user keeps unsaved edits instead of going back to it', async () => {
+    await openMerge(fromTask);
+    navigation.goToView('branches');
+    navigation.openPage(history);
+    guardWith(false);
+    navigation.returnToMerge();
+    await settleBeforeLeaving();
+
+    expect(useNavigation.getState().pages).toEqual([history]);
+  });
+
+  it('starts another merge without asking once settled, dropping the settled one', async () => {
+    await openMerge(fromTask);
+    navigation.settleMerge(mergeId());
+    const other = merge('br:/main/other');
+    await openMerge(other);
 
     expect(askedDialogs()).toEqual([]);
+    expect(useNavigation.getState().pages).toEqual([other]);
+  });
+
+  it('starts it anew once settled, rather than going back to how it ended', async () => {
+    await openMerge(fromTask);
+    const settled = mergeId();
+    navigation.settleMerge(settled);
+    await openMerge(merge('br:/main/task'));
+
+    expect(useNavigation.getState().merge).toMatchObject({ settled: false });
+    expect(mergeId()).not.toBe(settled);
   });
 
   it("isn't settled by an older merge's page", async () => {
     await openMerge(fromTask);
-    const { id } = useNavigation.getState().merge!;
-    navigation.closeMerge();
+    const id = mergeId();
+    navigation.closeMerge(id);
     await openMerge(fromTask);
     navigation.settleMerge(id);
 
     expect(useNavigation.getState().merge?.settled).toBe(false);
+  });
+
+  it('ends when the window leaves its workspace: home, or another workspace', async () => {
+    await openMerge(fromTask);
+    useSession.getState().openWorkspace('/ws');
+
+    expect(useNavigation.getState().merge).not.toBeNull();
+
+    useSession.getState().goHome();
+
+    expect(useNavigation.getState()).toMatchObject({ pages: [], merge: null });
+
+    useSession.getState().openWorkspace('/ws');
+    await openMerge(fromTask);
+    useSession.getState().openWorkspace('/other');
+
+    expect(useNavigation.getState().merge).toBeNull();
   });
 });

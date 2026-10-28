@@ -53,11 +53,19 @@ describe('applyShelve', () => {
 
     expect(await applyShelve(ws, 12, true)).toBe(false);
     expect(whereTheWindowIs().pages).toEqual([{ kind: 'merge', request: { kind: 'merge', sourceSpec: 'sh:12', deleteShelve: true } }]);
-
-    useNavigation.setState({ pages: [], merge: null });
-    await applyShelve(ws, 13, false);
-    expect(whereTheWindowIs().pages).toEqual([{ kind: 'merge', request: { kind: 'merge', sourceSpec: 'sh:13' } }]);
     expect(shownToasts()).toEqual([]);
+  });
+
+  it('asks before a second shelve in conflict replaces the merge of the first one, and keeps it on Cancel', async () => {
+    applyAnswers({ kind: 'conflicts' }, { kind: 'conflicts' });
+    const first = { kind: 'merge', request: { kind: 'merge', sourceSpec: 'sh:12' } };
+    await applyShelve(ws, 12, false);
+    answerConfirms(false);
+    await applyShelve(ws, 13, false);
+    await Promise.resolve();
+
+    expect(confirmTitles()).toEqual(['Start another merge?']);
+    expect(whereTheWindowIs().pages).toEqual([first]);
   });
 
   it('shelves the pending changes away first when the user agrees, then applies', async () => {
