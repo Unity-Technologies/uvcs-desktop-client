@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Builds a repository whose comments use everything a rich comment can hold (docs/features/rich-comments.md): Markdown
 # (headings, bold, a task list, a table, code in C#, a quote, a rule), a reference of every kind (changesets, a branch,
-# a label, a shelve, a code review, a file at a changeset, an object in another repository, a uvcs:// link), people,
-# emoji, an image from the web, and plain multi-line comments that must read as written. One-line comments with
+# a label, a shelve, a code review, a file at a changeset, an object in another repository and on a server named by its
+# host, a uvcs:// link), people (one named in another script), emoji, an image from the web, a bare email address,
+# plain multi-line comments that must read as written, and a comment that opens with a list. One-line comments with
 # formatting and chips fill the lists.
 # Usage: scripts/sandboxes/rich-comments.sh [repo-name [workspace-folder]]   → repo rich-comments@local, workspace /tmp/uvcs-rich-comments
 # It deletes and recreates both (and a second repository, <repo-name>-art, for the cross-repository reference), so it
@@ -81,14 +82,15 @@ public void Switch(Branch target)
 
 ---
 
-Thanks @$ME! Same fix in the art repository: cs:1@$NAME-art@local. The dialog: ![the switch dialog](https://raw.githubusercontent.com/github/explore/main/topics/git/git.png)
+Thanks @$ME and @josé.garcía! Same fix in the art repository: cs:1@$NAME-art@local, and on the build server:
+cs:7@game@build.acme.com:8087. Questions to ana@acme.com. The dialog: ![the switch dialog](https://raw.githubusercontent.com/github/explore/main/topics/git/git.png)
 ~~Old approach~~ dropped. Link: uvcs://local/repos/$NAME/changesets/$SWITCH and [the docs](https://docs.unity.com/en-us/unity-version-control)")"
 TASK=$(changeset /main/task-2210)
 
 cm label create lb:v1.4.0 "cs:$TASK" -commentsfile="$(comment label "Release with the switch fix from br:/main/task-2210 :rocket:")" >/dev/null
 
 w Assets/Scripts/PlayerController.cs "public class PlayerController { float speed = 12f; }"
-cm shelveset create --all -commentsfile="$(comment shelve "WIP: faster steering, after cs:$TASK")" >/dev/null
+SHELVE=$(cm shelveset create --all --summaryformat -commentsfile="$(comment shelve "WIP: faster steering, after cs:$TASK")" | sed -E 's/^sh:([0-9]+).*/\1/')
 cm undo --all . >/dev/null 2>&1 || cm undo -r . >/dev/null
 
 REVIEW=$(cm codereview "cs:$TASK" "Review the switch fix in br:/main/task-2210" --format={id})
@@ -96,7 +98,12 @@ REVIEW=$(cm codereview "cs:$TASK" "Review the switch fix in br:/main/task-2210" 
 cm switch main >/dev/null
 w README.md "# Rich comments
 Merged the switch fix."
-checkin "$(comment main "Merge request cr:$REVIEW approved :+1: — ships in lb:v1.4.0, shelve sh:1 has the next step")"
+checkin "$(comment main "Merge request cr:$REVIEW approved :+1: — ships in lb:v1.4.0, shelve sh:$SHELVE has the next step")"
+
+w docs/notes.md "Release notes"
+checkin "$(comment list "- Tidied the README
+- Notes for the release
+- Nothing else")"
 
 # The other repository's first changeset, which the task's comment names.
 ARTWK="$WK-art"
@@ -109,4 +116,4 @@ w Textures/Ship.txt "ship"
 checkin "$(comment art 'Art for the switch dialog')"
 cd "$WK"
 
-echo "Built $REPO in $WK (and $ART in $ARTWK): code review $REVIEW, label v1.4.0, a shelve"
+echo "Built $REPO in $WK (and $ART in $ARTWK): code review $REVIEW, label v1.4.0, shelve $SHELVE"
