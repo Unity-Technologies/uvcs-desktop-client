@@ -1,13 +1,13 @@
-import type { NewXlink, XlinkEdit, XlinkExpansionRule, XlinkPoint } from '../domain/xlinks';
+import type { CreatedXlink, NewXlink, XlinkEdit, XlinkExpansionRule, XlinkPoint } from '../domain/xlinks';
 
 export interface XlinksApi {
   /** The branch expansion rules of the xlink at `path`, a workspace path (`cm xlink --show`): a read-only one has none. */
   rules(workspacePath: string, path: string): Promise<XlinkExpansionRule[]>;
   /**
-   * Creates an xlink, a pending change (`cm xlink`): its folder fills with the repository's files once it is checked
-   * in and the workspace updated.
+   * Creates an xlink (`cm xlink`), checks it in alone with `comment`, and loads its files: `cm` fills its folder only
+   * once it is checked in. Fails only when `cm xlink` does; a later step that fails is in what it resolves to.
    */
-  create(workspacePath: string, xlink: NewXlink): Promise<void>;
+  create(workspacePath: string, xlink: NewXlink, comment: string, operationId: string): Promise<CreatedXlink>;
   /**
    * The tree where `point` is in `repository`, as `folders` lists it: a changeset's or branch head's spec at once; a
    * label is read at its changeset, which one `cm find` names.
