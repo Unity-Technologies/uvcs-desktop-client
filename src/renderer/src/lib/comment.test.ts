@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { editedComment, editingParts, hasUnsavedEdit, joinComment, shownComment, splitComment, storedComment, withSummaryText } from './comment';
+import { editedComment, editingParts, hasUnsavedEdit, recentCommentPick, joinComment, shownComment, splitComment, storedComment, withSummaryText } from './comment';
 
 describe('splitComment', () => {
   it('reads the first line as the summary and the rest as the description', () => {
@@ -154,5 +154,16 @@ describe('hasUnsavedEdit', () => {
     expect(hasUnsavedEdit(comment, opened, opened)).toBe(false);
     expect(hasUnsavedEdit(comment, opened, { ...opened, description: 'Body, edited' })).toBe(true);
     expect(hasUnsavedEdit(comment, opened, { ...opened, description: 'Body  ' })).toBe(false);
+  });
+});
+
+describe('recentCommentPick', () => {
+  it('fills the check-in as Edit comment opens a comment, the caret where its text ends', () => {
+    expect(recentCommentPick('Fix the switch\n\nKeeps changes')).toEqual({ parts: { summary: 'Fix the switch', description: 'Keeps changes' }, caretIn: 'description' });
+    expect(recentCommentPick('Fix the switch')).toEqual({ parts: { summary: 'Fix the switch', description: '' }, caretIn: 'summary' });
+  });
+
+  it('keeps a comment that opens with a list whole in the description, its first item no title', () => {
+    expect(recentCommentPick('- one\n- two')).toEqual({ parts: { summary: '', description: '- one\n- two' }, caretIn: 'description' });
   });
 });
