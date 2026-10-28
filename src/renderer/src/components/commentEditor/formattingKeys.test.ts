@@ -16,8 +16,8 @@ describe('formatForKey', () => {
     expect(formatForKey(press('b', 'KeyB', { metaKey: true }), EVERY, true)).toBe('bold');
     expect(formatForKey(press('i', 'KeyI', { metaKey: true }), EVERY, true)).toBe('italic');
     expect(formatForKey(press('x', 'KeyX', { metaKey: true, shiftKey: true }), EVERY, true)).toBe('strikethrough');
-    expect(formatForKey(press('e', 'KeyE', { metaKey: true }), EVERY, true)).toBe('code');
-    expect(formatForKey(press('k', 'KeyK', { metaKey: true }), EVERY, true)).toBe('link');
+    expect(formatForKey(press('c', 'KeyC', { metaKey: true, shiftKey: true }), EVERY, true)).toBe('code');
+    expect(formatForKey(press('u', 'KeyU', { metaKey: true, shiftKey: true }), EVERY, true)).toBe('link');
     // Shift turns 8 into *, and 9 into (: digits go by their place.
     expect(formatForKey(press('*', 'Digit8', { metaKey: true, shiftKey: true }), EVERY, true)).toBe('bullet');
     expect(formatForKey(press('(', 'Digit9', { metaKey: true, shiftKey: true }), EVERY, true)).toBe('quote');
@@ -28,6 +28,8 @@ describe('formatForKey', () => {
 
   it('takes Ctrl on Windows and Linux, and never Ctrl+Alt, which is AltGr there', () => {
     expect(formatForKey(press('b', 'KeyB', { ctrlKey: true }), EVERY, false)).toBe('bold');
+    expect(formatForKey(press('U', 'KeyU', { ctrlKey: true, shiftKey: true }), EVERY, false)).toBe('link');
+    expect(formatForKey(press('C', 'KeyC', { ctrlKey: true, shiftKey: true }), EVERY, false)).toBe('code');
     expect(formatForKey(press('E', 'KeyE', { ctrlKey: true, shiftKey: true }), EVERY, false)).toBe('codeBlock');
     expect(formatForKey(press('C', 'KeyC', { ctrlKey: true, altKey: true, shiftKey: true }), EVERY, false)).toBeNull();
   });
@@ -35,6 +37,12 @@ describe('formatForKey', () => {
   it('leaves the blocks to a field of many lines', () => {
     expect(formatForKey(press('*', 'Digit8', { metaKey: true, shiftKey: true }), INLINE, true)).toBeNull();
     expect(formatForKey(press('b', 'KeyB', { metaKey: true }), INLINE, true)).toBe('bold');
+  });
+
+  it('leaves ⌘K to the command palette and ⌘E to the window, as Slack does', () => {
+    expect(formatForKey(press('k', 'KeyK', { metaKey: true }), EVERY, true)).toBeNull();
+    expect(formatForKey(press('e', 'KeyE', { metaKey: true }), EVERY, true)).toBeNull();
+    expect(formatForKey(press('k', 'KeyK', { ctrlKey: true }), EVERY, false)).toBeNull();
   });
 
   it('leaves other keys alone', () => {

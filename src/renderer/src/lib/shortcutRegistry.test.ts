@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { filesUnder, isAppSource } from '@shared/testing/filesUnder';
-import { SHORTCUT_AREAS, SHORTCUTS, shortcutKeys, viewShortcut } from './shortcutRegistry';
+import { SHORTCUT_AREAS, SHORTCUTS, shortcutKeys, viewShortcut, type ShortcutDefinition } from './shortcutRegistry';
 
 const RENDERER = join(__dirname, '..');
 const APP_MENU = join(RENDERER, '..', '..', 'main', 'window', 'appMenuTemplate.ts');
@@ -62,6 +62,24 @@ describe('shortcut registry', () => {
       const keys = [...global, ...views];
       expect(new Set(keys).size).toBe(keys.length);
     }
+  });
+
+  it('lets only a comment field's keys share a global key, inside the field (`scope`), and gives them Slack's keys', () => {
+    for (const mac of [true, false]) {
+      const global = new Set(
+        Object.values(SHORTCUTS)
+          .filter((shortcut) => shortcut.area === 'General' && !shortcut.label.startsWith('Save'))
+          .flatMap((shortcut) => shortcutKeys(shortcut, mac)),
+      );
+      const sharing = Object.entries(SHORTCUTS)
+        .filter(([, shortcut]) => shortcut.area !== 'General' && shortcutKeys(shortcut, mac).some((key) => global.has(key)))
+        .filter(([, shortcut]) => (shortcut as ShortcutDefinition).scope !== 'commentField')
+        .map(([id]) => id);
+      expect(sharing, mac ? 'macOS' : 'off macOS').toEqual([]);
+    }
+    expect(SHORTCUTS.commentLink.keys).toEqual(['mod+shift+u']);
+    expect(SHORTCUTS.commentCode.keys).toEqual(['mod+shift+c']);
+    for (const shortcut of Object.values(SHORTCUTS).filter((candidate) => candidate.area === 'Comments')) expect((shortcut as ShortcutDefinition).scope).toBe('commentField');
   });
 
   it('writes keys the formatter and matcher understand', () => {
