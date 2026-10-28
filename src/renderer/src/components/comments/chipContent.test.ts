@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { findReferences } from '../../lib/comments/commentReferences';
-import { chipCard, chipContent, emojiLabel, personCard, referenceRepository, type ChipContent } from './chipContent';
+import { chipCard, chipContent, chipName, emojiLabel, personCard, referenceRepository, type ChipContent } from './chipContent';
 
 const chipOf = (text: string, placeRepository?: string): ChipContent => chipContent(findReferences(text)[0]!.reference, placeRepository);
 
@@ -125,5 +125,12 @@ describe('personCard', () => {
 describe('emojiLabel', () => {
   it("reads an emoji's name as words", () => {
     expect(emojiLabel('white_check_mark')).toBe('white check mark');
+  });
+});
+
+describe('chipName', () => {
+  it('reads a chip aloud as it shows, its summary after its name, a pause between', () => {
+    expect(chipName('Changeset 4', 'Merge request fixes')).toBe('Changeset 4, Merge request fixes');
+    expect(chipName('Changeset 4', undefined)).toBe('Changeset 4');
   });
 });
