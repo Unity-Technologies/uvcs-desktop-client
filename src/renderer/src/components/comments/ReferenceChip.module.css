@@ -39,9 +39,11 @@
   text-overflow: ellipsis;
 }
 
-/* The object's id never shrinks: only its summary gives way (`.summary`), so "v1.4.0" never reads "v1…". */
+/* The object's id gives way only after its summary (`.summary`), so "v1.4.0" never reads "v1…"; a long one (a
+   branch's nested name, a link's) stops at a width of its own, cut with an ellipsis, and never runs past the chip. */
 .label {
-  flex: none;
+  flex: 0 0 auto;
+  max-width: min(28ch, 100%);
 }
 
 .repository {
