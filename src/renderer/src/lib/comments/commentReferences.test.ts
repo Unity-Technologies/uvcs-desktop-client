@@ -90,6 +90,10 @@ describe('findReferences', () => {
     ]);
   });
 
+  it('reads the app’s links in any case, as they open (`isAppLink`)', () => {
+    expect(referencesIn('See UVCS://codice.cloud/repos/codice/changesets/4 and Plastic://codice.cloud/repos/codice/changesets/5')).toHaveLength(2);
+  });
+
   it('leaves as text a plastic:// link that names nothing it can open', () => {
     expect(referencesIn('plastic://acme.unity/projects plastic://showchangeset=nothing')).toEqual([]);
   });
