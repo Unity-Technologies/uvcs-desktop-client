@@ -104,3 +104,71 @@ A fenced block is highlighted in its fence's language (`CodeBlock`, `fenceLangua
 share (Pierre's Shiki, `getSharedHighlighter`), with the diffs' themes (`pierreThemeName`), following the app's.
 `HighlightedCodeBlock` loads on the first block with a language, never at start-up; until its grammar loads, and for
 a language the highlighter doesn't know, the block shows plain in the same box, so nothing moves as colors arrive.
+
+## Writing
+
+Every comment field writes a comment the same way (`CommentField`, `components/commentEditor/`): the check-in and
+shelve composer (`CheckinPanel`: its summary and description), the details panels' editor (`CommentEditor`, through
+`DetailsHeading`: changesets, branches, labels, attribute types), Edit comment (`EditCommentDialog`), New branch and
+New label (`CommentArea`), the comment of a merge into a server branch (`MergeHeader`) and a new code review's title
+(`CreateCodeReviewDialog`). Comments asked for with `prompt()` (a changelist's, an attribute's) stay plain fields.
+
+- **The text is the comment.** The editor is CodeMirror 6 over the comment's own Markdown, drawn as it reads: what a
+  field gives and takes is the stored text, LF line ends as `cm` keeps them, never converted, so saving, undo and
+  copying need nothing and what the user didn't touch is never rewritten. A rich-text editor (Tiptap/ProseMirror)
+  was tried and rejected: writing its tree back as Markdown rewrote people's comments (`[url](url)` for a bare link,
+  a list split in two, `_` escaped).
+- **Drawn as it reads around the caret** (`liveMarksOf`): Markdown's marks (`**`, `` ` ``, `~~`, `# `, a link's
+  brackets and address) show only for the construct the caret is in; the rest of the line stays drawn. A list's `-`
+  is a bullet, a task's `[ ]` a checkbox a click ticks (`toggleTask`), quotes and code blocks show as blocks, a code
+  block's fences dimmed and its code colored by the comments' own highlighter (`codeColors`: Pierre's Shiki, as
+  `CodeBlock`). A table the caret isn't in is drawn as a table (`tableModel`; a click on a cell puts the caret at its
+  end). An image is its chip. A field without the focus draws everything.
+- **References are the comments' chips** (`ReferenceChip`, compact as in a row: the summary is in the tooltip), for
+  every kind a comment reads (`findReferences`). A chip is one piece: the caret steps over it, Backspace right after
+  it or Delete right before it takes it away whole (`deleteChip`), and a click selects its text, shown as typed, so
+  typing replaces it (`selectChip`). A reference being typed stays text until the caret moves on (`typingAt`), so
+  `cs:12` is typed and corrected a key at a time.
+- **Keys** (the registry's Comments area, matched as every shortcut is: `formatForKey`): ⌘B bold, ⌘I italic, ⇧⌘X
+  strikethrough, ⌘E code, ⌘K link, ⇧⌘8 list, ⇧⌘9 quote, ⌥⇧⌘C code block (Ctrl+Shift+E off macOS, where Ctrl+Alt is
+  AltGr), ⇧⌘V pastes the plain text. Each toggles (`FORMAT_COMMANDS`: ⌘B in bold unbolds) and is one step to undo
+  (`ownStep`), as are a pick, a chip taken away, a paste and a box ticked. A key the field takes stays in it: ⌘B
+  never opens New branch from a comment, nor ⌘K the palette (⇧⌘P still does). Typed Markdown works as typed; Enter
+  continues a list, and Enter after an opening fence adds the closing one (`closeCodeFence`). ⌘↵ saves the field's
+  form (a dialog, the details editor) or is the window's (check in, merge); Esc closes the suggestions first.
+- **One-line fields** (a summary, a title, the merge comment) take the inline formats only and wrap a long line;
+  Enter goes on to the description (a summary) or submits (a dialog's title). Lines pasted in a summary go on in its
+  description (`withSummaryText`); in a title or the merge comment they join (`oneLineText`).
+- **The selection bar** (`SelectionBar`, `selectionBarShows`): over text selected, once the pointer lets go, never in
+  a code block; B, I, S, code and link, then list, task, quote and code block in a field of many lines, each on while
+  the selection is in it. No toolbar shows otherwise: the fields stay small.
+- **Pasting** (`markdownFromClipboard`): HTML from a web page, Slack or Google Docs becomes Markdown (bold, italic,
+  strikethrough, links, lists, tables, images from the web), Docs' bold-looking `<b id="docs-internal-guid-…">`
+  unwrapped and its styled spans read; code from an editor (monospace, preformatted) becomes a code block in the
+  language VS Code names, on a line of its own (`pasteMarkdown`). A copy with nothing its plain text doesn't hold
+  pastes as it is; in code nothing converts; an address pasted on selected text links it (`linkFromPaste`).
+- **Placeholders** say what a field of many lines takes (`commentPlaceholder`): "Description (optional) · Markdown,
+  cs:, br:, @ to link".
+- **Loading**: CodeMirror is a heavy library (`HEAVY_SCOPES` in `startupBundle.test.ts`), loaded behind
+  `CommentField`'s lazy boundary and warmed at idle after start-up (`main.tsx`). Until it arrives, a plain field in
+  the same box takes the typing and hands its caret over.
+
+### Suggestions
+
+Typing `cs:`, `br:`, `lb:`, `sh:`, `cr:` or `@`, or `:` and two letters of an emoji's name, after a space, a line's
+start, a bracket or an emphasis mark (`suggestionQueryAt`), opens a list under the word (a listbox the field's
+`aria-activedescendant` walks): ↑↓ move, Enter or Tab picks, Esc closes it until another word is typed. A colon in a
+sentence (`10:30`, `Note:`) opens nothing. A pick writes the reference as `cm` takes it and a space
+(`pickSuggestion`); a branch or label whose name a spec can't hold (a space, a sentence's punctuation or an emphasis
+mark at its end) is written as its `uvcs://` link (`objectReferenceText`), which shows as the same chip; a person as
+`cm` names them (`@ana@acme.com` on Unity Cloud).
+
+The data costs the server nothing new (`useSuggestionRows`): each kind reads the list the palette and the views
+already share, under the same query key, only once its trigger is typed: every branch (`branchesKey(place, {})`),
+every label, the last three months' shelves, the newest reviews (`reviewSummariesQuery`), the newest 2,000
+changesets (`recentChangesetsQuery`). A changeset's number they don't hold is looked up once typing settles
+(`useChangeset`); words they don't match offer "Search all changesets for …", the palette's on-demand search
+(`useChangesetSearch`), run only when picked. People are the owners those lists hold and everyone the place's lists
+showed (`peopleSeenIn`): no query lists people. Each list is read into an index once per read and ranked at each key
+(`rankCandidates`: the name typed, then names starting with it, then names holding it, then comments), the best
+eight shown.

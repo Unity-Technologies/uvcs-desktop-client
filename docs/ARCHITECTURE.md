@@ -32,7 +32,7 @@ you touch:
 | `features/page-windows.md`              | A page (a diff, a history, a review) in a new window: where it's offered, how it belongs to its workspace window, Follow selection |
 | `features/deep-links.md`                | `uvcs://` links: the grammar, the official client's older links, how a link opens, where links are copied, registering the scheme on each OS |
 | `features/xlinks.md`                    | Creating and editing xlinks: where they point, writable ones, branch expansion rules, the `cm xlink` commands |
-| `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images |
+| `features/rich-comments.md`             | Comments as Markdown: references to objects, people and emoji (`cr:` for reviews), chips, where comments show, copying, images; writing them (the editor, its keys, suggestions and their data, paste) |
 
 ## How a request flows
 
@@ -935,9 +935,9 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     its header, the error in the tooltip ("Couldn't check again": `incomingRefreshFailed`); the other views still give
     the body to the error.
   - Every view and page is in the startup bundle (`viewRegistry`, `pageRegistry`), so none paints a fallback it then
-    replaces. A heavy library (Pierre, Shiki, three.js) loads on first use, behind a `lazyComponent` at the leaf that
-    uses it (`FileDiffViewer`'s `LoadedFileDiff`, `AnnotationPane`'s `AnnotatedCode`, `FileConflictPanel`'s
-    `ConflictBody`), whose fallback looks as that leaf does while its data loads; it joins `HEAVY_PACKAGES`, and
+    replaces. A heavy library (Pierre, Shiki, three.js, CodeMirror) loads on first use, behind a `lazyComponent` at the
+    leaf that uses it (`FileDiffViewer`'s `LoadedFileDiff`, `AnnotationPane`'s `AnnotatedCode`, `FileConflictPanel`'s
+    `ConflictBody`, `CommentField`'s `LiveCommentEditor`), whose fallback looks as that leaf does while its data loads; it joins `HEAVY_PACKAGES`, and
     `startupBundle.test.ts` fails on a static import that reaches one. The numbers: "Start-up", step 4.
 - **Effects survive a second mount**: in development React's StrictMode mounts every component, runs its cleanup and
   mounts it again on the same DOM nodes. An effect that owns a resource builds a fresh one on each run and frees it in
@@ -1044,7 +1044,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   `mod` is ⌘ on macOS and Ctrl elsewhere, shown as symbols in the Mac's order (⇧⌘K) or spelled out (Ctrl+Shift+K,
   `formatShortcut`). A shortcut takes other keys off macOS where Windows and Linux conventions differ (`keysOffMac`: Alt+←
   back, Delete deletes) and never Ctrl+Alt there, which is AltGr on European layouts (the test checks it). Letters match
-  by the character typed (Ctrl+Z on a German keyboard), digits by position. F2 renames the selected file, branch, label or
+  by the character typed (Ctrl+Z on a German keyboard), digits by position. A comment field takes its formatting keys
+(⌘B, ⌘K, ⌘E: the registry's Comments area) before the window's shortcuts (features/rich-comments.md "Writing"). F2 renames the selected file, branch, label or
   attribute (`useRenameCommand`); the context-menu key and Shift+F10 open a list's menu at its focused row. A field (`isTextEntry`) keeps
   its own text chords, Ctrl+Y (redo) included off macOS (`belongsToField`).
 - **Per OS**: platform differences go through small pure helpers taking the platform (`revealLabel`, `trashName`,
