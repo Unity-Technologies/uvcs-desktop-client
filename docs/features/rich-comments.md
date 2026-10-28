@@ -130,7 +130,8 @@ does.
 
 The Branch Explorer's caption card lays its first line over the canvas's: the canvas draws its text (`summaryOf`), the
 card the same line as a row does (`CommentLine`), its references as chips. A long comment's card stops at the
-canvas's bottom (`captionCardMaxHeight`), above the status bar, and its body scrolls; a card opening within a few
+canvas's bottom (`captionCardMaxHeight`), above the status bar, and its body scrolls, the wheel over it its own and
+not the graph's (`wheelGoesTo`; a zoom still zooms the graph); a card opening within a few
 lines of that bottom keeps a few lines' height (`CARD_MIN_HEIGHT`) and can reach under the status bar, as the pointer can reach it; no line clamp, which cut
 Markdown's blocks.
 
