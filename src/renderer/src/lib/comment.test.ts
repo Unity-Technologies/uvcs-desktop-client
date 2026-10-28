@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { editedComment, joinComment, shownComment, splitComment, withSummaryText } from './comment';
+import { editedComment, joinComment, shownComment, splitComment, storedComment, withSummaryText } from './comment';
 
 describe('splitComment', () => {
   it('reads the first line as the summary and the rest as the description', () => {
@@ -104,5 +104,16 @@ describe('shownComment', () => {
 
   it('shows a comment removed as empty until the refresh', () => {
     expect(shownComment('Old comment', { saved: '', replaced: 'Old comment' })).toBe('');
+  });
+});
+
+describe('storedComment', () => {
+  it('leaves out the space a picked suggestion leaves at the end, and blank lines at either end', () => {
+    expect(storedComment('Fixes cs:12 ')).toBe('Fixes cs:12');
+    expect(storedComment('\n\nFixes it\n\n')).toBe('Fixes it');
+  });
+
+  it("keeps the first line's indent: a comment opening with an indented code block stays one", () => {
+    expect(storedComment('    let a = 1;\n    let b = 2;\n')).toBe('    let a = 1;\n    let b = 2;');
   });
 });
