@@ -19,7 +19,7 @@ with a way to reveal it: `filesKeptAside`, `noteKeptAside`), switches, and merge
 `applyShelveCleanly`). Stopping is honoured only until the changes are shelved. Failures put the changes back
 (`rollBackSwitch`), switching back first if the switch moved the workspace halfway; when that isn't possible the error
 says which shelve holds them and where to restore them. Every flow that shelves changes out of the workspace (switch,
-shelve away, update, loading a new xlink's files: docs/features/xlinks.md) puts them back the same way
+shelve away, update, loading an xlink's files: docs/features/xlinks.md) puts them back the same way
 (`putBackAfterFailure`). Left shelves (the app's and the official client's) are offered again by the "Welcome back"
 banner in Changes (`features/leftChanges`), or restored automatically on arrival when they apply cleanly
 (`restoreOnArrival`). Changes still waiting to be brought (conflicts

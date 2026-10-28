@@ -43,7 +43,7 @@ describe('Welcome back', () => {
 
   it('tells changes put aside to load an xlink’s files, which no branch deleted or moved', () => {
     expect(leftChangesTitle(left({ reason: 'xlink' }))).toBe('3 changes put aside to load an xlink');
-    expect(leftChangesDetail(left({ reason: 'xlink' }), NOW)).toBe('Shelved 2 hours ago (shelve 12) to load a new xlink’s files. Restoring merges your changes back.');
+    expect(leftChangesDetail(left({ reason: 'xlink' }), NOW)).toBe('Shelved 2 hours ago (shelve 12) to load an xlink’s files. Restoring merges your changes back.');
   });
 });
 
@@ -64,5 +64,6 @@ describe('the dot on Changes', () => {
   it('tells changes put aside to update', () => {
     expect(leftChangesSummary([left({ reason: 'update' })])).toBe('Changes put aside to update · restore them in Changes');
     expect(leftChangesSummary([left({ reason: 'xlink' })])).toBe('Changes put aside to load an xlink · restore them in Changes');
+    expect(leftChangesSummary([left({ reason: 'update' }), left({ shelveId: 11, reason: 'xlink' })])).toBe('Changes put aside · restore them in Changes');
   });
 });
