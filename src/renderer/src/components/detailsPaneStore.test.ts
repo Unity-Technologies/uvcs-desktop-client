@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DETAILS_WIDTH, detailsWidthOf } from './detailsPaneStore';
+import { DETAILS_WIDTH, detailsHidden, detailsWidthOf, withDetailsToggled } from './detailsPaneStore';
 
 describe('detailsWidthOf', () => {
   it("keeps each view's own width", () => {
@@ -15,5 +15,22 @@ describe('detailsWidthOf', () => {
   it("keeps a remembered width within the view's limits", () => {
     expect(detailsWidthOf({ widths: { labels: 2000 } }, 'labels', DETAILS_WIDTH)).toBe(DETAILS_WIDTH.max);
     expect(detailsWidthOf({ widths: { labels: 10 } }, 'labels', DETAILS_WIDTH)).toBe(DETAILS_WIDTH.min);
+  });
+});
+
+describe('detailsHidden', () => {
+  it("shows a view's details until they are hidden", () => {
+    expect(detailsHidden({ hidden: {} }, 'branches')).toBe(false);
+    expect(detailsHidden({ hidden: { branches: true } }, 'branches')).toBe(true);
+  });
+});
+
+describe('withDetailsToggled', () => {
+  it("hides one view's details, leaving the others' as they were", () => {
+    expect(withDetailsToggled({ labels: true }, 'branches')).toEqual({ labels: true, branches: true });
+  });
+
+  it('shows them again, forgetting the view', () => {
+    expect(withDetailsToggled({ labels: true, branches: true }, 'branches')).toEqual({ labels: true });
   });
 });
