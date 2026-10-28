@@ -86,18 +86,21 @@ before.
   comments, through `FoldedComment` and `SummaryComment`), History's revision header (`RevisionHeader`), Annotate's
   card (`AnnotationCard`) and the Branch Explorer's tooltip (`GraphTooltip`). A row's chip (History, the lists,
   Incoming, the palette, notifications) reads only as its card opens.
-- **One on another server** is read only as its chip's card opens, on hover or keyboard focus, never as a comment
-  shows: a comment can't make the app contact a server by being read (ARCHITECTURE.md "What leaves the device"). It
-  runs in a `cm` process of its own that gives up after `OWN_PROCESS_READ_TIMEOUT_MS` (`OneObjectRead`'s
-  `ownProcess`): a host that never answers holds no pooled session. `cm`'s stdin is closed there, so it asks nothing;
-  a server with browser sign-in and no profile prints a sign-in address and waits, which the timeout ends, and
-  nothing opens.
+- **One on another server** is read only if the user already works with that server (one of their profiles, Settings ›
+  Accounts: `knownServersQuery`, `serversQuery`'s; `*@cloud` covers every Unity Cloud organization), and then only
+  while its chip's card is open, on hover or keyboard focus, never as a comment shows (`serverReads`). A server the
+  user doesn't use is never read, not even with the card open: for a server it has no profile for, `cm` doesn't
+  fail but signs in there with the user's own credentials, and a comment can name any server. Its card says where it
+  is instead ("In art on build.example.com:8087, not a server you use"), with nothing to read it. A read runs in a
+  `cm` process of its own that is killed after `OWN_PROCESS_READ_TIMEOUT_MS` (`readOneObject`, `OneObjectRead`'s
+  `ownProcess`), so a host that never answers holds no pooled session; the command log shows it. Coming back to the
+  window or online asks nothing again (`refetchOnWindowFocus`, `refetchOnReconnect` off).
 - Each read is one `cm find` for that object, through the service that reads it (`changesets.find`, `labels.get`,
   the repository as the place, `remoteObjectOf`, `remoteObjectQuery`), never one for several: `cm find` has no `in
   (…)` and OR-ed ids are refused (`noOredIdLookups.test.ts`). A name a command line can't quote (a quote, a space, a
   control character) reads nothing. An object read, or an answer that the repository has none, is kept for the
   window's life ("No changeset 1201 in art" on the card); a failure (no access, a server out of reach) for
-  `UNREADABLE_RETRY_MS`, five minutes, then asked again ("Couldn't read it from art"). The chip keeps "1201 art"
+  `UNREADABLE_RETRY_MS`, five minutes, then asked again ("Couldn't read it from art", no access or out of reach). The chip keeps "1201 art"
   either way. Kept as immutable though comments can be edited: a chip's summary of another repository's object is a
   reminder of what it points at, and the object's own page reads it fresh.
 - A branch (two finds, its hidden ones apart), a shelve (no read of one) and a code review (its target's name read
