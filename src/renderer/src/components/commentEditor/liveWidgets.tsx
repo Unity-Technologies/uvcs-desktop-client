@@ -12,6 +12,9 @@ import type { WidgetPortals } from './widgetPortals';
 /** Where an editor's widgets render their React content. */
 export const widgetPortals = Facet.define<WidgetPortals, WidgetPortals | null>({ combine: (values) => values[0] ?? null });
 
+/** Whether chips leave their summary to their tooltip: on one line (a summary, a title), where room is short. */
+export const compactChips = Facet.define<boolean, boolean>({ combine: (values) => values.some(Boolean) });
+
 /** The portals each widget's element renders into, for its `destroy`, which gets no view. */
 const portalsOfHost = new WeakMap<HTMLElement, WidgetPortals>();
 
@@ -64,8 +67,8 @@ export class ReferenceWidget extends WidgetType {
     const host = document.createElement('span');
     host.className = 'cm-chip';
     selectOnPress(view, host, this.source.length);
-    // Compact, as in a row: the object alone keeps the text being written readable; its summary is in its tooltip.
-    showIn(view, host, <ReferenceChip reference={this.reference} source={this.source} compact interactive={false} />);
+    // With its summary, as a shown comment draws it, as soon as the cache holds it (`useCachedSummary`); compact on one line.
+    showIn(view, host, <ReferenceChip reference={this.reference} source={this.source} compact={view.state.facet(compactChips)} interactive={false} />);
     return host;
   }
 

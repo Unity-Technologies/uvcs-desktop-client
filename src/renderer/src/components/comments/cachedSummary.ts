@@ -39,12 +39,15 @@ const summaries = new WeakMap<CachedObject, string | undefined>();
  * A reference's summary (its comment's first line without marks, a review's title) from the place's lists the window
  * already read (every branch, the newest changesets…). Nothing is asked for: a chip shows its summary once something
  * read it (docs/features/rich-comments.md, "What a chip reads"). An object read alone is left out: it may be another
- * repository's (an xlink's changeset is cached in the place's area by its id). Each list is indexed once, so a lookup
+ * repository's (an xlink's changeset is cached in the place's area by its id); only `lookedUp`, a changeset read by
+ * its number in the place's own repository, counts. Each list is indexed once, so a lookup
  * costs no walk over thousands of rows whenever the cache changes.
  */
-export function summaryIn(cached: readonly unknown[], reference: CommentReference): string | undefined {
+export function summaryIn(cached: readonly unknown[], reference: CommentReference, lookedUp?: unknown): string | undefined {
   const key = keyOf(reference);
   if (!key) return undefined;
+  // The object looked up alone in the place's own repository (`useChangeset` with no other one: a number typed).
+  if (isObject(lookedUp) && `id:${String(lookedUp.id)}` === key) return summaryOf(lookedUp);
   for (const data of cached) {
     if (!Array.isArray(data)) continue;
     const object = indexOf(data).get(key);

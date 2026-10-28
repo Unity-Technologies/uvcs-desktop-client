@@ -65,7 +65,8 @@ Nothing: a chip shows its object's summary only once one of the place's lists th
 (`useCachedSummary`, `summaryIn`): the palette's lists, the views' lists. It looks through the cached lists of the
 place's area (`queryKeys.inPlace(place, 'changesets' | 'branches' | 'labels' | 'shelves' | 'codeReviews')`), each
 indexed once (a lookup walks no list), and wakes only when its area's data changes. An object read alone is left
-out: an xlinked repository's changeset is cached in the place's area by its id too. A comment naming fifty
+out: an xlinked repository's changeset is cached in the place's area by its id too; only a changeset read by its
+number in the place's own repository counts (`changesetKey` with no other repository: a number typed in a comment). A comment naming fifty
 changesets costs the server nothing (CLAUDE.md, "`cm` economy"). Objects of another repository show without a
 summary.
 
@@ -130,7 +131,8 @@ htmlFor>` can't focus, and the label names it, `fieldLabelAttributes`), the comm
   `CodeBlock`, the same size limit and line length: a block past `MAX_HIGHLIGHTED_COMMENT_CHARS` stays plain; only the
   block being edited is tokenized again at a key). A table the caret isn't in is drawn as a table (`tableModel`; a click on a cell puts the caret at its
   end). An image is its chip. A field without the focus draws everything.
-- **References are the comments' chips** (`ReferenceChip`, compact as in a row: the summary is in the tooltip), for
+- **References are the comments' chips** (`ReferenceChip`, with their summary as a shown comment has it, as soon as
+  the window read it: a list, or the number looked up as typed; compact on one line, the summary in the tooltip), for
   every kind a comment reads (`findReferences`). A chip is one piece: the caret steps over it, Backspace right after
   it or Delete right before it takes it away whole (`deleteChip`), and a click selects its text, shown as typed, so
   typing replaces it (`selectChip`). A reference being typed stays text until the caret moves on (`typingAt`), so

@@ -39,7 +39,8 @@ export async function readChangeset(place: Place, changesetId: number): Promise<
   );
 }
 
-function changesetKey(place: Place, changesetId: number | null, other?: string) {
+/** Where a changeset read by its number is cached: `other` names the repository when it isn't the place's. */
+export function changesetKey(place: Place, changesetId: number | null, other?: string) {
   return queryKeys.inPlace(place, 'changesets', 'byId', changesetId, other);
 }
 

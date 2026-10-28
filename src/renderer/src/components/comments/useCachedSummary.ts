@@ -3,6 +3,7 @@ import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import type { CommentReference } from '../../lib/comments/commentReferences';
 import { queryKeys } from '../../api/queryKeys';
 import { usePlace } from '../../app/workspace/useWorkspace';
+import { changesetKey } from '../../features/changesets/useChangeset';
 import { cachedAreaOf, summaryIn } from './cachedSummary';
 
 /**
@@ -19,8 +20,9 @@ export function useCachedSummary(reference: CommentReference | undefined): strin
     return summaryIn(
       queryClient.getQueryCache().findAll({ queryKey: areaKey }).map((query) => query.state.data),
       reference,
+      reference.kind === 'changeset' ? queryClient.getQueryData(changesetKey(place, reference.id)) : undefined,
     );
-  }, [areaKey, queryClient, reference]);
+  }, [areaKey, queryClient, reference, place]);
   const subscribe = useCallback(
     (changed: () => void) => {
       if (!areaKey) return () => {};

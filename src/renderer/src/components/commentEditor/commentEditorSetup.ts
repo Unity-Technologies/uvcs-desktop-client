@@ -13,7 +13,7 @@ import { enterAction, modEnterAction, type FieldKeyAction } from './fieldKeys';
 import { fieldLabelAttributes } from './fieldLabel';
 import { formatForKey, pastesPlain } from './formattingKeys';
 import { liveDrawing } from './liveDecorations';
-import { widgetPortals } from './liveWidgets';
+import { compactChips, widgetPortals } from './liveWidgets';
 import { markdownFromClipboard, pasteMarkdown } from './richPaste';
 import { oneLine } from './oneLine';
 import { ownStep } from './ownStep';
@@ -78,6 +78,7 @@ export function commentEditorExtensions(options: CommentEditorOptions, enabled: 
     liveDrawing(),
     codeColors,
     widgetPortals.of(options.portals),
+    compactChips.of(options.singleLine),
     editable.of(editableWhen(enabled)),
     theme.of(themed(codeThemeName)),
     EditorView.lineWrapping,
