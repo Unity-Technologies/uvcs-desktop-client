@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds a repository whose comments use everything a rich comment can hold (docs/features/rich-comments.md): Markdown
-# (headings, bold, a task list, a table, code in C#, keys, a quote, a rule), a reference of every kind (changesets, a branch,
+# (headings, bold, a task list, a table, code in C# and in a language no highlighter knows, keys, a quote, a rule), a reference of every kind (changesets, a branch,
 # a label, a shelve, a code review, a file at a changeset, an object in another repository and on a server named by its
 # host, a uvcs:// link), people (one named in another script), emoji, an image from the web, a bare email address,
 # plain multi-line comments that must read as written, and a comment that opens with a list. One-line comments with
@@ -105,6 +105,15 @@ w docs/notes.md "Release notes"
 checkin "$(comment list "- Tidied the README
 - Notes for the release
 - Nothing else")"
+
+w docs/keys.md "Keys"
+checkin "$(comment keys 'Press <kbd>Esc</kbd> to cancel a switch
+
+A language the highlighter doesn'"'"'t know shows plain, and a long line scrolls sideways:
+
+```nosuchlanguage
+switch --keep-changes --to /main/task-2210 --then bring --everything --that --was --pending --before --the --switch --started
+```')"
 
 # The other repository's first changeset, which the task's comment names.
 ARTWK="$WK-art"
