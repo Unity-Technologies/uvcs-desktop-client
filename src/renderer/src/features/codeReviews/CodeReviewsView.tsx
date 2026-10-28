@@ -109,7 +109,7 @@ export function CodeReviewsView() {
     <>
       {header}
       <ObjectListView
-        widthKey="codeReviews"
+        detailsKey="codeReviews"
         loading={isPending}
         error={error}
         errorTitle="Couldn't read the code reviews"

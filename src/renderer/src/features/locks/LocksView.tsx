@@ -113,7 +113,7 @@ export function LocksView() {
     <>
       {header}
       <ObjectListView
-        widthKey="locks"
+        detailsKey="locks"
         loading={isPending}
         error={error}
         errorTitle="Couldn't read the locks"

@@ -73,7 +73,7 @@ export function ShelvesView() {
         />
       </ViewHeader>
       <ObjectListView
-        widthKey="shelves"
+        detailsKey="shelves"
         loading={isPending}
         error={error}
         errorTitle="Couldn't load shelves"

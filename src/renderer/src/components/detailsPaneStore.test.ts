@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DETAILS_WIDTH, detailsWidthOf } from './detailsWidthStore';
+import { DETAILS_WIDTH, detailsWidthOf } from './detailsPaneStore';
 
 describe('detailsWidthOf', () => {
   it("keeps each view's own width", () => {

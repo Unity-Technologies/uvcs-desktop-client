@@ -249,7 +249,7 @@ export function BranchExplorerView() {
       <>
         {header}
         <div className={styles.body}>
-          <ListWithDetails widthKey="branchExplorer" hideDetails={!detailsOpen} list={<GraphSkeleton />} details={null} />
+          <ListWithDetails detailsKey="branchExplorer" hideDetails={!detailsOpen} list={<GraphSkeleton />} details={null} />
         </div>
       </>
     );
@@ -262,7 +262,7 @@ export function BranchExplorerView() {
         {header}
         <div className={styles.body}>
           <ListWithDetails
-            widthKey="branchExplorer"
+            detailsKey="branchExplorer"
             hideDetails={!detailsOpen}
             list={<NoMatches icon={<GitGraph size={22} />} noun="branches" hint="Check some branches in the Branches filter, or show every branch again." onClear={clearFilters} />}
             details={null}
@@ -278,7 +278,7 @@ export function BranchExplorerView() {
         {header}
         <div className={styles.body}>
           <ListWithDetails
-            widthKey="branchExplorer"
+            detailsKey="branchExplorer"
             hideDetails={!detailsOpen}
             // With the details closed, the graph's pane says it.
             list={detailsOpen ? <div className={styles.emptyGraph} /> : emptyRange}
@@ -296,7 +296,7 @@ export function BranchExplorerView() {
         <div className="visually-hidden" aria-live="polite" aria-atomic="true">
           {describeSelection(layout, selection, homeChangeset)}
         </div>
-        <ListWithDetails widthKey="branchExplorer"
+        <ListWithDetails detailsKey="branchExplorer"
           hideDetails={!detailsOpen}
           list={
             <GraphCanvas

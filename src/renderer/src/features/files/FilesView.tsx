@@ -113,7 +113,7 @@ export function FilesView() {
     <>
       {header}
       <ListWithDetails
-        widthKey="filesTree"
+        detailsKey="filesTree"
         widthLimits={FILE_TREE_WIDTH}
         sized="list"
         list={

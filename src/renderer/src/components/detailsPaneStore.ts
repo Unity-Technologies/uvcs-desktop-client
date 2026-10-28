@@ -11,22 +11,22 @@ export interface DetailsWidthLimits {
 
 export const DETAILS_WIDTH: DetailsWidthLimits = { initial: 400, min: 300, max: 720 };
 
-interface DetailsWidthState {
+interface DetailsPaneState {
   /** Each view's details width, by the view's key: what its details show differs (a branch's meta, a file's diff). */
   widths: Record<string, number>;
 }
 
-interface DetailsWidthStore extends DetailsWidthState {
+interface DetailsPaneStore extends DetailsPaneState {
   setWidth: (key: string, width: number) => void;
 }
 
 /** A view's details width: the one it was left at, within its limits, else its default. */
-export function detailsWidthOf(state: DetailsWidthState, key: string, limits: DetailsWidthLimits): number {
+export function detailsWidthOf(state: DetailsPaneState, key: string, limits: DetailsWidthLimits): number {
   const width = state.widths[key] ?? limits.initial;
   return Math.min(Math.max(width, limits.min), limits.max);
 }
 
-export const useDetailsWidthStore = create<DetailsWidthStore>()(
+export const useDetailsPaneStore = create<DetailsPaneStore>()(
   persist(
     (set) => ({
       widths: {},

@@ -1128,7 +1128,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
   - The shelves list in Changes stays a quick list with "Mine | Everyone" (⇧⌘S), not a filter bar: it's a popover
     over Changes, and its "All shelves" hands its scope and text to the Shelves view.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
-- **List and details**: `ListWithDetails` (each view remembers its own details width, `widthKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. A view listing objects lays its body out with `ObjectListView` (the table with a row always selected and its details, a skeleton of them while loading, its empty state in the details pane, `NoMatches` under the column titles, or the error) and refreshes with `ViewRefreshButton`. Every
+- **List and details**: `ListWithDetails` (each view remembers its own details width, `detailsKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. A view listing objects lays its body out with `ObjectListView` (the table with a row always selected and its details, a skeleton of them while loading, its empty state in the details pane, `NoMatches` under the column titles, or the error) and refreshes with `ViewRefreshButton`. Every
   kind reads the same way: the kind and status badges with the default action (what Enter does on the row) and the row's
   context menu behind "More actions"; a `DetailsHeading` (the comment's first line as the title and the rest as its
   description, or the object's name with the comment below; folded to a few lines with "Show more" and "Show less" by

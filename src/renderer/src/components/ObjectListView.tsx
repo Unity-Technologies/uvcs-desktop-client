@@ -11,7 +11,7 @@ type TableProps<Row> = Parameters<typeof DataTable<Row>>[0];
 
 interface ObjectListViewProps<Row> extends Omit<TableProps<Row>, 'selectFirstRow' | 'empty'> {
   /** Whose details width this is: each view remembers its own. */
-  widthKey: string;
+  detailsKey: string;
   /**
    * No rows have been read yet: a skeleton of the view's layout. TanStack's `isPending`, not `isLoading`: a query
    * still waiting to start (on the repository's name) has read nothing either, and must never read as empty.
@@ -43,13 +43,13 @@ interface ObjectListViewProps<Row> extends Omit<TableProps<Row>, 'selectFirstRow
  * else the empty state beside them.
  * Only an error reading the rows takes the whole body.
  */
-export function ObjectListView<Row>({ widthKey, loading, error, errorTitle, filtering, noMatches, emptyState, query, details, noun, ...table }: ObjectListViewProps<Row>) {
+export function ObjectListView<Row>({ detailsKey, loading, error, errorTitle, filtering, noMatches, emptyState, query, details, noun, ...table }: ObjectListViewProps<Row>) {
   if (error) return <EmptyState title={errorTitle} description={error.message} />;
   const state = objectListState({ loading, rowCount: table.rows.length, filtering });
-  if (state === 'loading') return <ListWithDetailsSkeleton widthKey={widthKey} columns={table.columns} />;
+  if (state === 'loading') return <ListWithDetailsSkeleton detailsKey={detailsKey} columns={table.columns} />;
   return (
     <ListWithDetails
-      widthKey={widthKey}
+      detailsKey={detailsKey}
       list={
         <HighlightQuery query={query}>
           <DataTable {...table} selectFirstRow empty={state === 'noMatches' ? noMatches : undefined} />

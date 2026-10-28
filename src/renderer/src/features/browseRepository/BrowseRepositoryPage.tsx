@@ -24,7 +24,7 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
       <ViewHeader title={`Repository at changeset ${page.changesetId}`} subtitle="Read-only">
         <FilterBar text={<FilterField value={filter} onChange={setFilter} placeholder="Filter open folders" />} />
       </ViewHeader>
-      <RepositoryTree changesetId={page.changesetId} opening={opening} filter={filter} widthKey="browseRepositoryTree" onShownItem={publish} />
+      <RepositoryTree changesetId={page.changesetId} opening={opening} filter={filter} detailsKey="browseRepositoryTree" onShownItem={publish} />
     </>
   );
 }

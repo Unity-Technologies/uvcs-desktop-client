@@ -81,7 +81,7 @@ export function AttributesView() {
         />
       </ViewHeader>
       <ObjectListView
-        widthKey="attributes"
+        detailsKey="attributes"
         loading={isPending}
         error={error}
         errorTitle="Couldn't load attributes"

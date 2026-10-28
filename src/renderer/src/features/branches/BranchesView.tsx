@@ -118,7 +118,7 @@ export function BranchesView() {
         />
       </ViewHeader>
       <ObjectListView
-        widthKey="branches"
+        detailsKey="branches"
         loading={isPending}
         error={error}
         errorTitle="Couldn't load branches"

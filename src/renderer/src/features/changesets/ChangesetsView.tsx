@@ -121,7 +121,7 @@ export function ChangesetsView() {
     <>
       {header}
       <ObjectListView
-        widthKey="changesets"
+        detailsKey="changesets"
         loading={isPending}
         error={error}
         errorTitle="Couldn't load changesets"

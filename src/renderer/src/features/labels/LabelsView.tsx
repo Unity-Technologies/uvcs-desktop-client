@@ -92,7 +92,7 @@ export function LabelsView() {
         />
       </ViewHeader>
       <ObjectListView
-        widthKey="labels"
+        detailsKey="labels"
         loading={isPending}
         error={error}
         errorTitle="Couldn't load labels"
