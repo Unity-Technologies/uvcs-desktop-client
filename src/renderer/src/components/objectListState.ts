@@ -18,3 +18,18 @@ export function objectListState({ loading, rowCount, filtering }: ObjectListRead
   if (rowCount > 0) return 'listed';
   return filtering ? 'noMatches' : 'nothing';
 }
+
+/** Where each part of a listed view goes (`ObjectListView`): what the list says under its column titles, and the details. */
+export interface ObjectListLayout {
+  /** Under the column titles while there is no row: the filters' notice, the view's first-use state, or nothing. */
+  inList: 'noMatches' | 'emptyState' | null;
+  /** In the details pane: the view's first-use state, nothing, or the focused row's details. */
+  inDetails: 'emptyState' | 'blank' | 'selected';
+}
+
+/** Where a listed view's states show: its first-use state beside the list, or in it while the details are hidden. */
+export function objectListLayout(state: Exclude<ObjectListState, 'loading'>, detailsHidden: boolean): ObjectListLayout {
+  if (state === 'listed') return { inList: null, inDetails: 'selected' };
+  if (state === 'noMatches') return { inList: 'noMatches', inDetails: 'blank' };
+  return detailsHidden ? { inList: 'emptyState', inDetails: 'blank' } : { inList: null, inDetails: 'emptyState' };
+}
