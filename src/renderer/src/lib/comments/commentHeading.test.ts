@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commentHeading, commentLineInlines } from './commentHeading';
+import { commentHeading, commentLineInlines, wholeCopySource } from './commentHeading';
 import { commentLineText } from './commentText';
 
 describe('commentHeading', () => {
@@ -62,3 +62,16 @@ describe('commentLineInlines', () => {
   });
 });
 
+describe('wholeCopySource', () => {
+  it('is the comment when its title and description show as its parts, whatever block it opens with', () => {
+    const titled = 'Fix **the switch**\n\n- Shelve';
+    expect(wholeCopySource(commentHeading(titled), titled, false)).toBe(titled);
+    const listFirst = '- Shelve\n- Bring';
+    expect(wholeCopySource(commentHeading(listFirst), listFirst, false)).toBe(listFirst);
+  });
+
+  it('is none for an empty comment, and for a named object, whose title is its name and not part of its comment', () => {
+    expect(wholeCopySource(commentHeading(''), '', false)).toBeUndefined();
+    expect(wholeCopySource({ kind: 'block', description: 'Release notes' }, 'Release notes', true)).toBeUndefined();
+  });
+});
