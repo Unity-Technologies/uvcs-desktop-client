@@ -1,6 +1,6 @@
 import { CommentLine } from '../../components/comments/CommentLine';
 import { FoldedComment } from '../../components/FoldedComment';
-import { commentHeading } from '../../lib/comments/commentHeading';
+import { commentHeading, wholeCopySource } from '../../lib/comments/commentHeading';
 import styles from './ChangesetSummary.module.css';
 
 /**
@@ -22,7 +22,7 @@ export function SummaryComment({ comment }: { comment: string }) {
       titleLines={TITLE_LINES}
       descriptionLines={DESCRIPTION_LINES}
       expandedMaxHeight={EXPANDED_MAX_HEIGHT}
-      comment={heading.kind === 'empty' ? undefined : comment}
+      comment={wholeCopySource(heading, comment, false)}
     />
   );
 }

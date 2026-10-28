@@ -77,3 +77,12 @@ function firstLineOf(block: MarkdownBlock): MarkdownInline[] {
       return [];
   }
 }
+
+/**
+ * The text a copy of a whole shown comment gives back (`FoldedComment`'s `comment`; docs/features/rich-comments.md,
+ * "Copying"): the comment itself when its title and description show as its parts. None for an empty one, or for a
+ * named object (a branch, a label), whose title is its name and whose description copies on its own.
+ */
+export function wholeCopySource(heading: CommentHeading, comment: string, named: boolean): string | undefined {
+  return named || heading.kind === 'empty' ? undefined : comment;
+}

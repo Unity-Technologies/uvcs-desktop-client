@@ -5,7 +5,7 @@ import { copyToClipboard } from '../ui/copyToClipboard';
 import { IconButton } from '../ui/IconButton';
 import { CommentEditor } from './CommentEditor';
 import { CommentLine } from './comments/CommentLine';
-import { commentHeading } from '../lib/comments/commentHeading';
+import { commentHeading, wholeCopySource } from '../lib/comments/commentHeading';
 import { FoldedComment } from './FoldedComment';
 import styles from './DetailsHeading.module.css';
 
@@ -68,8 +68,7 @@ export function DetailsHeading({ name, comment: given = '', onSave }: DetailsHea
           ))
         }
         description={shown.kind === 'empty' ? '' : shown.description}
-        // A named object's title is its name, not part of its comment.
-        comment={name === undefined && shown.kind !== 'empty' ? comment : undefined}
+        comment={wholeCopySource(shown, comment, name !== undefined)}
       >
         {name !== undefined && !parts.description && edit && (
           <button className={styles.add} onClick={edit}>
