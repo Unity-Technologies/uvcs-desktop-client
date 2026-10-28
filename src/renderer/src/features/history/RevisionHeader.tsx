@@ -39,9 +39,12 @@ export function RevisionHeader({ row, path, menu, otherRepository, isWorkspaceRe
   const labels = useLabelsByChangeset(otherRepository).get(changesetId);
   const owner = ownerOf(row);
   const date = dateOf(row);
-  // A revision's comment shows as a heading (`commentHeading`); a pending change's description is its title alone.
+  // A revision's comment shows as a heading (`commentHeading`): one opening with code or a table shows whole, with no
+  // title. A pending change's description is its title alone.
   const comment = row.kind === 'revision' ? row.revision.comment : row.change.description;
-  const description = row.kind === 'revision' ? commentHeading(comment).description : '';
+  const heading = row.kind === 'revision' ? commentHeading(comment) : null;
+  const opensWithBlock = heading?.kind === 'block';
+  const description = heading && heading.kind !== 'empty' ? heading.description : '';
   // The header's own buttons already offer these two.
   const moreActions = withoutAction(withoutAction(menu, 'changesetDiff'), 'showInBranchExplorer');
 
@@ -50,18 +53,20 @@ export function RevisionHeader({ row, path, menu, otherRepository, isWorkspaceRe
       <Avatar user={owner} size={28} />
       <div className={styles.main}>
         <div className={styles.titleRow}>
-          <h2 className={`${styles.title} selectable`} data-kind={row.kind} data-tip-overflow data-tip={commentLineText(comment)}>
-            <CommentLine comment={comment} placeholder={<span className={styles.noComment}>No comment</span>} />
-          </h2>
+          {!opensWithBlock && (
+            <h2 className={`${styles.title} selectable`} data-kind={row.kind} data-tip-overflow data-tip={commentLineText(comment)}>
+              <CommentLine comment={comment} placeholder={<span className={styles.noComment}>No comment</span>} />
+            </h2>
+          )}
           <LabelChips labels={labels} />
           {isWorkspaceRevision && <WorkspaceMark on="revision" />}
-          {description && (
+          {description && !opensWithBlock && (
             <button className={styles.more} aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>
               {expanded ? 'Less' : 'More'}
             </button>
           )}
         </div>
-        {expanded && (
+        {(expanded || opensWithBlock) && description && (
           <div className={`${styles.description} selectable`}>
             <Markdown text={description} comment />
           </div>

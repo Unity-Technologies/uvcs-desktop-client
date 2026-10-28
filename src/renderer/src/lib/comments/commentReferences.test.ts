@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findReferences, type CommentReference } from './commentReferences';
+import { findReferences, mayHoldReference, type CommentReference } from './commentReferences';
 
 const referencesIn = (text: string): CommentReference[] => findReferences(text).map((found) => found.reference);
 const sourcesIn = (text: string): string[] => findReferences(text).map((found) => found.source);
@@ -90,5 +90,11 @@ describe('findReferences', () => {
 
   it('reads nothing a spec cannot hold', () => {
     expect(referencesIn('cs:abc sh:x cr: br:/ lb: cs:12@ serverpath:a.cs#cs:1 serverpath:/a.cs#cr:1')).toEqual([]);
+  });
+
+  it('says quickly whether a text may hold one, and asking leaves the next read whole', () => {
+    expect(mayHoldReference('Fix: the crash')).toBe(false);
+    expect(mayHoldReference('Fix cs:12')).toBe(true);
+    expect(sourcesIn('cs:1 and cs:2')).toEqual(['cs:1', 'cs:2']);
   });
 });

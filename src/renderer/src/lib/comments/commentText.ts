@@ -1,14 +1,15 @@
 import { parseMarkdown, plainText, type MarkdownBlock } from '../markdown';
 import { firstLine } from '../text';
 import { commentLineInlines } from './commentHeading';
+import { mayHoldReference } from './commentReferences';
 
 /**
- * What Markdown or a reference could read in a first line: without any, the line is its own text and needs no parsing
- * (the Branch Explorer asks for thousands of comments' lines as it draws). A heading underlined on the next line
- * (`===`) reads as the line itself too.
+ * What Markdown could read in a first line: without any (and no reference, `mayHoldReference`), the line is its own
+ * text and needs no parsing: the Branch Explorer asks for thousands of comments' lines as it draws, and "Fix: crash"
+ * is plain. A heading underlined on the next line (`===`) reads as the line itself too.
  */
-const MARKDOWN_CHARACTERS = /[*_~`[\]<>!:@#|&\\]/;
-const BLOCK_START = /^\s*(?:[-+]|\d+[.)])\s/;
+const MARKDOWN_CHARACTERS = /[*_~`[\]<>|&\\]|https?:|www\./;
+const BLOCK_START = /^\s*(?:[-+>]|#{1,6}(?:\s|$)|\d+[.)](?:\s|$)|```|~~~)/;
 
 /**
  * A comment as one line of plain text (`commentLineInlines`), for what shows only text (the Branch Explorer's canvas,
@@ -16,7 +17,7 @@ const BLOCK_START = /^\s*(?:[-+]|\d+[.)])\s/;
  */
 export function commentLineText(comment: string): string {
   const line = firstLine(comment);
-  if (!MARKDOWN_CHARACTERS.test(line) && !BLOCK_START.test(line)) return line;
+  if (!MARKDOWN_CHARACTERS.test(line) && !BLOCK_START.test(line) && !mayHoldReference(line)) return line;
   return plainText(commentLineInlines(comment)).trim();
 }
 

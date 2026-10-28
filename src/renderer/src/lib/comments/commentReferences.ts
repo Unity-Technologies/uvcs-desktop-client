@@ -54,7 +54,15 @@ const TRAILING_PUNCTUATION = /[.,;:!?)\]}'"*_~]+$/;
 /** A person as `cm` names them, in any script: a name, `DOMAIN\name`, or an email address (Unity Cloud). */
 const MENTION = /^@([\p{L}\p{N}_\\][\p{L}\p{N}_.+\\-]*(?:@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+)?)/u;
 
-/** Every reference in a text, in order. Code and links are the caller's to leave out (`commentTree`). */
+// Its own expression: `test` on the global one would leave a `lastIndex` that `matchAll` in `findReferences` copies.
+const ANY_CANDIDATE = new RegExp(CANDIDATE.source, 'u');
+
+/** Whether a text may hold a reference, without reading any: a quick test before parsing. */
+export function mayHoldReference(text: string): boolean {
+  return ANY_CANDIDATE.test(text);
+}
+
+/** Every reference in a text, in order. Code and links are the caller's to leave out (`parseMarkdown`). */
 export function findReferences(text: string): FoundReference[] {
   const found: FoundReference[] = [];
   for (const match of text.matchAll(CANDIDATE)) {

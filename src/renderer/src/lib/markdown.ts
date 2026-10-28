@@ -290,7 +290,9 @@ class MarkdownReader {
     const inlines: MarkdownInline[] = [];
     let cursor = 0;
     for (const placeholder of text.matchAll(PLACEHOLDER)) {
-      const found = this.references[Number(placeholder[1])]!;
+      // The comment's own text may hold what reads as a placeholder (icon fonts' private-use glyphs): it stays text.
+      const found = this.references[Number(placeholder[1])];
+      if (!found) continue;
       if (placeholder.index > cursor) inlines.push({ kind: 'text', text: text.slice(cursor, placeholder.index) });
       inlines.push({ kind: 'reference', reference: found.reference, source: found.source });
       cursor = placeholder.index + placeholder[0].length;
@@ -311,9 +313,9 @@ function withPlaceholders(text: string, references: readonly FoundReference[]): 
 }
 
 /**
- * Where a comment shows what was written as it is, so no reference is read there: code, raw HTML, a link written
- * as one (`[text](url)`, `<url>`) and an image. A bare web address GitHub links by itself isn't one of them: a
- * reference may hold what reads as one (`cs:12@game@build.acme.com`).
+ * Where a comment shows what was written as it is, so no reference is read there: code, raw HTML, an image, and a
+ * link, a bare web address included (`https://ci/job?BRANCH=br:/main` stays one address). A bare email address
+ * isn't one of them: a reference may hold what reads as one (`cs:12@game@build.acme.com`).
  */
 function writtenRanges(tree: Root, text: string): Array<[number, number]> {
   const ranges: Array<[number, number]> = [];
@@ -341,7 +343,7 @@ function isWrittenAsIs(node: Nodes, written: string): boolean {
     case 'definition':
       return true;
     case 'link':
-      return written.startsWith('[') || written.startsWith('<');
+      return !node.url.startsWith('mailto:') || written.startsWith('[') || written.startsWith('<');
     default:
       return false;
   }

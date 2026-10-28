@@ -37,8 +37,8 @@ export function DetailsHeading({ name, comment: given = '', onSave }: DetailsHea
   };
   const parts = name === undefined ? splitComment(comment) : { summary: '', description: comment.trim() };
   const edit = onSave ? () => setDraft(parts) : undefined;
-  // What shows: a comment that opens with a list or code has no title, and shows whole (`commentHeading`).
-  const shown = name === undefined ? commentHeading(comment) : { title: null, description: parts.description };
+  // What shows (`commentHeading`): a named object's whole comment is its description.
+  const shown = name === undefined ? commentHeading(comment) : parts.description ? ({ kind: 'block', description: parts.description } as const) : ({ kind: 'empty' } as const);
 
   if (draft && onSave) {
     return (
@@ -57,9 +57,9 @@ export function DetailsHeading({ name, comment: given = '', onSave }: DetailsHea
         descriptionLines={DESCRIPTION_LINES}
         title={
           name ??
-          (shown.title !== null ? (
-            <CommentLine comment={shown.title} />
-          ) : shown.description ? undefined : edit ? (
+          (shown.kind === 'titled' ? (
+            <CommentLine comment={comment} />
+          ) : shown.kind === 'block' ? undefined : edit ? (
             <button className={styles.add} onClick={edit}>
               No comment. Add one…
             </button>
@@ -67,7 +67,7 @@ export function DetailsHeading({ name, comment: given = '', onSave }: DetailsHea
             <span className={styles.placeholder}>No comment</span>
           ))
         }
-        description={shown.description}
+        description={shown.kind === 'empty' ? '' : shown.description}
       >
         {name !== undefined && !parts.description && edit && (
           <button className={styles.add} onClick={edit}>

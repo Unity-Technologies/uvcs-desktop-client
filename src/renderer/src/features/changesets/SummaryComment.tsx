@@ -13,12 +13,12 @@ const EXPANDED_MAX_HEIGHT = '40vh';
 
 /** A changeset's or shelve's comment over its diff, folded to a few lines with "Show more" (`FoldedComment`). */
 export function SummaryComment({ comment }: { comment: string }) {
-  const { title, description } = commentHeading(comment);
+  const heading = commentHeading(comment);
   return (
     <FoldedComment
-      title={title !== null ? <CommentLine comment={title} /> : description ? undefined : <span className={styles.noComment}>No comment</span>}
+      title={heading.kind === 'titled' ? <CommentLine comment={comment} /> : heading.kind === 'block' ? undefined : <span className={styles.noComment}>No comment</span>}
       titleClassName={styles.title}
-      description={description}
+      description={heading.kind === 'empty' ? '' : heading.description}
       titleLines={TITLE_LINES}
       descriptionLines={DESCRIPTION_LINES}
       expandedMaxHeight={EXPANDED_MAX_HEIGHT}

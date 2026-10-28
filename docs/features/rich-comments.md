@@ -19,7 +19,8 @@ before.
 - **References** (`findReferences`, `lib/comments/commentReferences.ts`), read in the comment as written, before
   Markdown reads it, so what Markdown would read in one never splits it (a server's host as a bare mail link,
   `__init__` as emphasis): each stands behind a placeholder while micromark reads the rest (`withPlaceholders`).
-  None is read inside code, raw HTML, an image or a link written as one (`[text](url)`, `<url>`: `writtenRanges`):
+  None is read inside code, raw HTML, an image or a link, a bare web address included (`?BRANCH=br:/main` stays in
+  its address: `writtenRanges`):
 
   | Written | Names |
   | --- | --- |
@@ -69,10 +70,13 @@ summary.
 
 ## Where comments show
 
-A comment reads as a heading (`commentHeading`): its first line the title, the rest the description; one that opens
-with a block (a list, code, a table, a quote) has no title, as its first line alone would cut the block, which shows
-whole. As one line (`commentLineInlines`) it is the title, or that block's first line (a list's first item with its
-marker, `3. Fix the build`; code's first line; a table's header).
+A comment reads as a heading (`commentHeading`), one decision for every header and row: its first line the title,
+the rest the description; a list's or a quote's first line keeps its marker (`• Tidied the README`,
+`3. Fix the build`) and the rest of the list follows it, so nothing shows twice. One that opens with code or a table
+has no title, as its first line alone would cut the block, which shows whole; a rule it opens with is skipped. As one
+line (`commentLineInlines`) it is the title, or that block's first line (code's first line, a table's header). Only
+the opening block is read for it (up to the first blank line), so a row costs what its comment's first paragraph
+does.
 
 | Where | How |
 | --- | --- |
