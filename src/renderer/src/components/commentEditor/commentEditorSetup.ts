@@ -10,7 +10,7 @@ import { commentMarkdown } from './commentLanguage';
 import { closeCodeFence, FORMAT_COMMANDS, isInCode, linkFromPaste } from './formatCommands';
 import { formatForKey, pastesPlain } from './formattingKeys';
 import { liveDrawing } from './liveDecorations';
-import { compactChips, widgetPortals } from './liveWidgets';
+import { widgetPortals } from './liveWidgets';
 import { markdownFromClipboard, pasteMarkdown } from './richPaste';
 import { ownStep } from './ownStep';
 import { formatsOf } from './selectionBarState';
@@ -72,7 +72,6 @@ export function commentEditorExtensions(options: CommentEditorOptions, enabled: 
     liveDrawing(),
     codeColors,
     widgetPortals.of(options.portals),
-    compactChips.of(options.singleLine),
     editable.of(editableWhen(enabled)),
     theme.of(themed(codeThemeName)),
     EditorView.lineWrapping,

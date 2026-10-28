@@ -11,10 +11,12 @@
   outline: none;
 }
 
+/* Lines wrap, so the text only ever scrolls down: CodeMirror's content keeps the width it had before a scrollbar
+   showed, which would scroll it sideways by the scrollbar's width. */
 .editor :global(.cm-editor .cm-scroller) {
   font-family: inherit;
   line-height: inherit;
-  overflow: auto;
+  overflow: hidden auto;
 }
 
 /* A one-line field wraps a long title over a few lines and scrolls past them, its scrollbar hidden: a chip's or an
@@ -24,6 +26,8 @@
 }
 
 .editor :global(.cm-editor .cm-content) {
+  flex-shrink: 1;
+  min-width: 0;
   padding: 0;
   caret-color: var(--text-primary);
 }
