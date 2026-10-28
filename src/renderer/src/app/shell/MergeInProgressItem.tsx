@@ -6,13 +6,13 @@ import { navigation } from '../navigation/navigationStore';
 
 /** The way back to the merge in progress, from any view or page: it shows the merge as it was left. */
 export function MergeInProgressItem({ merge, shown }: { merge: MergeInProgress; shown: boolean }) {
-  const words = mergeInProgressWords(merge.page.request);
+  const words = mergeInProgressWords(merge.page.request, merge.settled);
   return (
     <NavItem
       icon={<GitMerge size={15} />}
       label={words.label}
       railLabel={words.railLabel}
-      dot={`In progress: ${words.title}`}
+      dot={words.tip}
       active={shown}
       onClick={navigation.returnToMerge}
     />

@@ -1,7 +1,7 @@
 import { Settings } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { NavFooter, NavGroups, NavItem, Sidebar as SidebarColumn, type NavSection } from '../../ui/nav/SidebarNav';
-import { mergeAwaiting, showsMerge } from '../navigation/mergeInProgress';
+import { showsMerge } from '../navigation/mergeInProgress';
 import { useNavigation } from '../navigation/navigationStore';
 import { sidebarGroups } from '../navigation/sidebarGroups';
 import type { ViewDefinition } from '../navigation/viewRegistry';
@@ -24,8 +24,7 @@ export function Sidebar({ card }: { card: ReactNode }) {
     label,
     items: inGroup.map((view) => ({ key: view.id, element: <SidebarViewItem view={view} />, active: view.id === activeView })),
   }));
-  const awaiting = mergeAwaiting(merge);
-  const mergeSection: NavSection[] = awaiting ? [{ items: [{ key: 'merge', element: <MergeInProgressItem merge={awaiting} shown={mergeShown} />, active: mergeShown }] }] : [];
+  const mergeSection: NavSection[] = merge ? [{ items: [{ key: 'merge', element: <MergeInProgressItem merge={merge} shown={mergeShown} />, active: mergeShown }] }] : [];
   const sections = [...mergeSection, ...viewSections];
 
   return (
