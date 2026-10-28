@@ -22,6 +22,8 @@ interface DetailsPaneStore extends DetailsPaneState {
   setWidth: (key: string, width: number) => void;
   /** Hides a view's details, or shows them again. */
   toggleHidden: (key: string) => void;
+  /** Shows a view's details, for what only they show: the lines a link names. */
+  showDetails: (key: string) => void;
 }
 
 /** A view's details width: the one it was left at, within its limits, else its default. */
@@ -41,6 +43,11 @@ export function withDetailsToggled(hidden: Record<string, boolean>, key: string)
   return wasHidden ? others : { ...others, [key]: true };
 }
 
+/** The views' hidden details with one view's shown. */
+export function withDetailsShown(hidden: Record<string, boolean>, key: string): Record<string, boolean> {
+  return hidden[key] ? withDetailsToggled(hidden, key) : hidden;
+}
+
 export const useDetailsPaneStore = create<DetailsPaneStore>()(
   persist(
     (set) => ({
@@ -48,8 +55,10 @@ export const useDetailsPaneStore = create<DetailsPaneStore>()(
       hidden: {},
       setWidth: (key, width) => set((state) => ({ widths: { ...state.widths, [key]: width } })),
       toggleHidden: (key) => set((state) => ({ hidden: withDetailsToggled(state.hidden, key) })),
+      showDetails: (key) => set((state) => ({ hidden: withDetailsShown(state.hidden, key) })),
     }),
-    // Version 0 kept one width for every view; each view starts from its default instead.
+    // Version 0 kept one width for every view; each view starts from its default instead. Named for the widths it held
+    // first: renamed, the widths remembered would be lost.
     { name: 'details-width', version: 1, migrate: () => ({ widths: {}, hidden: {} }) },
   ),
 );

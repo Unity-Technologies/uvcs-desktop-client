@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DETAILS_WIDTH, detailsHidden, detailsWidthOf, withDetailsToggled } from './detailsPaneStore';
+import { DETAILS_WIDTH, detailsHidden, detailsWidthOf, withDetailsShown, withDetailsToggled } from './detailsPaneStore';
 
 describe('detailsWidthOf', () => {
   it("keeps each view's own width", () => {
@@ -32,5 +32,12 @@ describe('withDetailsToggled', () => {
 
   it('shows them again, forgetting the view', () => {
     expect(withDetailsToggled({ labels: true, branches: true }, 'branches')).toEqual({ labels: true });
+  });
+});
+
+describe('withDetailsShown', () => {
+  it("shows one view's details, leaving them shown when they were", () => {
+    expect(withDetailsShown({ labels: true, branches: true }, 'branches')).toEqual({ labels: true });
+    expect(withDetailsShown({ labels: true }, 'branches')).toEqual({ labels: true });
   });
 });
