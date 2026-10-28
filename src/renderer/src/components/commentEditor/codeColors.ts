@@ -1,6 +1,6 @@
 import { Facet, StateEffect, type Extension } from '@codemirror/state';
 import { Decoration, ViewPlugin, type DecorationSet, type EditorView, type ViewUpdate } from '@codemirror/view';
-import { fencedCodeIn, tokenMarks, type FencedCode, type TokenMark } from './codeHighlight';
+import { colorArrivalDelay, fencedCodeIn, tokenMarks, type FencedCode, type TokenMark } from './codeHighlight';
 
 /** The diffs' theme the code is colored in (`pierreThemeName`), following the app's. */
 export const codeTheme = Facet.define<string, string>({ combine: (values) => values[0] ?? 'pierre-light' });
@@ -8,8 +8,6 @@ export const codeTheme = Facet.define<string, string>({ combine: (values) => val
 const colorsArrived = StateEffect.define<null>();
 
 const TOKENIZED_LINE_LENGTH = 1000;
-/** How long the text stays unchanged before colors that arrived redraw it. */
-const TYPING_PAUSE_MS = 200;
 
 /**
  * Colors are kept per block's text, language and theme: typing elsewhere never colors a block again, and only the
@@ -47,13 +45,10 @@ export const codeColors: Extension = ViewPlugin.fromClass(
       window.clearTimeout(this.arrival);
     }
 
-    /**
-     * Redraws with the colors once typing pauses: redrawing the line under a key just typed, while the page's thread
-     * was busy loading a grammar, dropped that key in the text's last line (seen typing fast into a first block).
-     */
+    /** Redraws with the colors once typing pauses (`colorArrivalDelay`). */
     private arriveWhenIdle(): void {
       window.clearTimeout(this.arrival);
-      const wait = TYPING_PAUSE_MS - (performance.now() - this.typedAt);
+      const wait = colorArrivalDelay(performance.now(), this.typedAt);
       if (wait > 0) {
         this.arrival = window.setTimeout(() => this.arriveWhenIdle(), wait);
         return;

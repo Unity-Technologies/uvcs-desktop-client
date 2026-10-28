@@ -62,3 +62,16 @@ function cssText(style: ReturnType<typeof codeTokenStyle>): string {
     .map(([property, value]) => `${property.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}: ${String(value)}`)
     .join('; ');
 }
+
+/** How long the text stays unchanged before colors that arrived redraw it (`codeColors`). */
+export const TYPING_PAUSE_MS = 200;
+
+/**
+ * How long colors that arrived wait before they redraw the code: none after a pause in typing, the rest of the pause
+ * while typing. Redrawing a line as a key lands there, the first time a grammar loaded, put a key typed fast at the
+ * text's end (seen on screen in a development build; no test reaches the editor's input, so the cause isn't pinned:
+ * waiting for a pause is what made it go away).
+ */
+export function colorArrivalDelay(now: number, typedAt: number): number {
+  return Math.max(0, TYPING_PAUSE_MS - (now - typedAt));
+}
