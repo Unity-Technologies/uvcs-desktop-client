@@ -17,7 +17,7 @@ import { placeholderShown } from './commentPlaceholders';
 import { FocusModeFooter } from './FocusModeFooter';
 import { FormatToolbar } from './FormatToolbar';
 import { ownerChange } from './oneLine';
-import { ownerSync } from './ownerSync';
+import { ownerExchange } from './ownerSync';
 import type { CommentFieldProps } from './commentFieldProps';
 import { activeFormats, FORMAT_COMMANDS, type FormatCommandId } from './formatCommands';
 import { fieldFocused, focusEditor } from './editorFocus';
@@ -37,9 +37,6 @@ import { WidgetPortalsView } from './WidgetPortalsView';
 import fieldStyles from './CommentField.module.css';
 import styles from './LiveCommentEditor.module.css';
 
-/** How many texts sent to the owner are kept to tell its late echoes (`ownerSync`): far more keys than a render lags. */
-const MAX_SENT_TEXTS = 200;
-
 interface LiveCommentEditorProps extends CommentFieldProps {
   /** The caret in the plain field it replaces, which it takes over (`CommentField`). */
   initialFocus: { current: { at: number } | null };
@@ -56,8 +53,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
   const [portals] = useState(() => new WidgetPortals());
   const keys = useRef<CommentEditorKeys>({});
   keys.current = { onEnter, onSubmit };
-  // The texts sent to the owner since the two last agreed (`ownerSync`): its late echoes of them are no change.
-  const sentSinceSync = useRef<string[]>([]);
+  const [exchange] = useState(ownerExchange);
   const changed = useRef(onChange);
   changed.current = onChange;
   const codeTheme = pierreThemeName(useResolvedTheme());
@@ -72,9 +68,8 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
           commentEditorExtensions({ singleLine, label, labelledBy, placeholder, portals, keys }, !disabled, codeTheme),
           EditorView.updateListener.of((update) => {
             if (update.docChanged && !update.transactions.some((transaction) => transaction.annotation(ownerChange))) {
-              const text = update.state.doc.toString();
-              sentSinceSync.current = [...sentSinceSync.current.slice(-(MAX_SENT_TEXTS - 1)), text];
-              changed.current(text);
+              exchange.typed();
+              changed.current(update.state.doc.toString());
             }
             if (update.docChanged || update.selectionSet || update.focusChanged || update.transactions.some((transaction) => transaction.effects.length > 0)) setState(update.state);
           }),
@@ -106,10 +101,8 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
   // also when the owner kept its value (a summary given a line end keeps the line, `withSummaryText`).
   useEffect(() => {
     if (!view) return;
-    // `state` is what this render showed; the view may hold keys typed since, before React ran this effect.
-    const sync = ownerSync(view.state, value, { sent: sentSinceSync.current, rendered: (state ?? view.state).doc.toString() });
+    const sync = exchange.synced(view.state, state, value);
     if (sync) view.dispatch(sync);
-    if (view.state.doc.toString() === value) sentSinceSync.current = [];
   }, [view, value, state]);
 
   useEffect(() => view?.dispatch({ effects: editable.reconfigure(editableWhen(!disabled)) }), [view, disabled]);

@@ -3,26 +3,43 @@ import { changeToMatch } from './commentFieldText';
 import { ownerChange } from './oneLine';
 import { ownStep } from './ownStep';
 
-/** What the field knows of its exchange with its owner when it compares their texts. */
+/** A field's exchange with its owner: the texts it sends, the values the owner gives back. */
 export interface OwnerExchange {
-  /** The texts the field sent its owner since they last agreed. */
-  sent: readonly string[];
-  /** The text the render that brought `value` showed: keys typed since are newer than that render. */
-  rendered: string;
+  /** The field sent its owner a text the user typed (or pasted, cut, dropped). */
+  typed: () => void;
+  /**
+   * After a render: the change that makes the editor's text (`live`) its owner's `value`, or null when there's none to
+   * make. `rendered` is the state that render showed (null before the first), which the view may since have passed.
+   */
+  synced: (live: EditorState, rendered: EditorState | null, value: string) => TransactionSpec | null;
 }
 
 /**
- * The change that makes the editor's text its owner's `value`, when the owner gave a text of its own. The owner's
- * value is only late, and never written back, when it is the text its render showed (keys typed between that render
- * and its effect are newer) or one the field sent (keys typed fast, the owner's renders behind them): writing it back
- * took typed keys away and put them back where the caret no longer was, scrambling the text. Any other value is the
- * owner's: its answer to the change just made (`sent` not empty: a summary handing a pasted line to its description),
- * which stays out of the history, so undo takes back the typing itself; or a text put in whole (a recent comment
- * picked, a changelist's comment, another workspace's draft), one step back to what was written before it.
+ * How a field follows its owner's value (docs/features/rich-comments.md, "Writing"). React renders the field's state
+ * and its owner's value together (the update listener's `setState` and the owner's store batched in one render), so a
+ * value equal to the text its render showed is the owner agreeing, whatever keys landed since, between that render and
+ * its effect: writing it back took those keys away and put them back where the caret no longer was. Any other value is
+ * the owner's own: its answer to text just sent (a summary handing a pasted line to its description), kept out of the
+ * history so undo takes back the typing itself; or a text put in whole with nothing waiting for an answer (a recent
+ * comment picked, a changelist's comment, another workspace's draft), one step back to what was written before it.
+ * Telling an echo by matching the texts sent was dropped: an owner's answer can equal a text sent a moment before.
  */
-export function ownerSync(state: EditorState, value: string, { sent, rendered }: OwnerExchange): TransactionSpec | null {
-  if (value === rendered || sent.includes(value)) return null;
-  const change = changeToMatch(state.doc.toString(), value);
-  if (!change) return null;
-  return { changes: change, annotations: [ownerChange.of(true), sent.length > 0 ? Transaction.addToHistory.of(false) : ownStep] };
+export function ownerExchange(): OwnerExchange {
+  let awaitingAnswer = false;
+  return {
+    typed: () => {
+      awaitingAnswer = true;
+    },
+    synced: (live, rendered, value) => {
+      const shown = (rendered ?? live).doc.toString();
+      const change = value === shown ? null : changeToMatch(live.doc.toString(), value);
+      if (!change) {
+        if (live.doc.toString() === value) awaitingAnswer = false;
+        return null;
+      }
+      const answer = awaitingAnswer;
+      awaitingAnswer = false;
+      return { changes: change, annotations: [ownerChange.of(true), answer ? Transaction.addToHistory.of(false) : ownStep] };
+    },
+  };
 }
