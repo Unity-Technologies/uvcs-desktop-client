@@ -8,6 +8,8 @@ import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import { SegmentedControl } from '../../ui/SegmentedControl';
+import { CommentArea } from '../../components/commentEditor/CommentArea';
+import { oneLineText } from '../../components/commentEditor/commentFieldText';
 import { TextField } from '../../ui/TextField';
 import { toast } from '../../ui/toast/toastStore';
 import { useBranches } from '../branches/useBranches';
@@ -109,7 +111,8 @@ function CreateCodeReviewDialog({ place, initialTarget, onClose, onCreated }: Cr
           onChange={(event) => setTarget(event.target.value)}
         />
       )}
-      <TextField label="Title" placeholder="What should be reviewed?" value={title} onChange={(event) => setTitle(event.target.value)} autoFocus />
+      {/* A title is one line: Enter creates the review, as the field it replaced did. */}
+      <CommentArea singleLine label="Title" placeholder="What should be reviewed?" value={title} onChange={(text) => setTitle(oneLineText(text))} autoFocus />
       <TextField
         label="Reviewer"
         placeholder="jane.doe@example.com"
