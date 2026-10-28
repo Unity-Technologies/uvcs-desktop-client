@@ -267,7 +267,6 @@ export function BranchExplorerView() {
         <div className={styles.body}>
           <ListWithDetails
             detailsKey={BRANCH_EXPLORER_DETAILS_KEY}
-           
             list={<NoMatches icon={<GitGraph size={22} />} noun="branches" hint="Check some branches in the Branches filter, or show every branch again." onClear={clearFilters} />}
             details={null}
           />
@@ -283,7 +282,6 @@ export function BranchExplorerView() {
         <div className={styles.body}>
           <ListWithDetails
             detailsKey={BRANCH_EXPLORER_DETAILS_KEY}
-           
             // With the details closed, the graph's pane says it.
             list={detailsOpen ? <div className={styles.emptyGraph} /> : emptyRange}
             details={emptyRange}
@@ -300,8 +298,8 @@ export function BranchExplorerView() {
         <div className="visually-hidden" aria-live="polite" aria-atomic="true">
           {describeSelection(layout, selection, homeChangeset)}
         </div>
-        <ListWithDetails detailsKey={BRANCH_EXPLORER_DETAILS_KEY}
-         
+        <ListWithDetails
+          detailsKey={BRANCH_EXPLORER_DETAILS_KEY}
           list={
             <GraphCanvas
               ref={canvasRef}
