@@ -569,7 +569,7 @@ request and never written into `PRIVACY.md` by the change itself.
   doesn't set `webPreferences.spellcheck`), and on Windows and Linux it downloads the Hunspell dictionary of the OS's
   language from Google's servers; macOS uses the system's spellchecker and downloads nothing.
 - **The hosts of images a comment links to** (`![alt](https://…)`), only when the image shows: on hover over its chip
-  in a comment, in place in a merge request's description (`CommentImage`, docs/features/rich-comments.md "Images").
+  (`CommentImage`, docs/features/rich-comments.md "Images").
   Fetched by the page with no referrer, so the host learns the picture was looked at, never from where.
 
 Otherwise the page reaches nothing: the renderer's Content-Security-Policy (`src/renderer/index.html`) allows only the
