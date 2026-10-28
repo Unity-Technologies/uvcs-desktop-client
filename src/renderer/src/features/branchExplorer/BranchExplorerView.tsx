@@ -21,7 +21,7 @@ import { BRANCH_EXPLORER_DETAILS_KEY, useBranchExplorerPreferences } from './bra
 import { GraphCanvas, type GraphHighlights } from './canvas/GraphCanvas';
 import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';
 import type { GraphTarget } from './canvas/graphTargets';
-import { followedPage } from './details/followedPage';
+import { followedPage } from './followedPage';
 import { GraphDetails } from './details/GraphDetails';
 import { followedObject } from './model/followedObject';
 import { openSelection } from './graphActions';
