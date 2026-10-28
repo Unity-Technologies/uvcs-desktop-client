@@ -50,6 +50,12 @@ function renderInlines(inlines: readonly MarkdownInline[], interactive: boolean)
         return <span key={index}>{renderInlines(inline.children, interactive)}</span>;
       case 'image':
         return <Highlight key={index} text={inline.alt} />;
+      case 'key':
+        return (
+          <kbd key={index} className={styles.key}>
+            <Highlight text={inline.text} />
+          </kbd>
+        );
       case 'break':
         return ' ';
       case 'reference':

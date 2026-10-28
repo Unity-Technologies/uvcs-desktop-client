@@ -17,6 +17,8 @@ export type MarkdownInline =
   | { kind: 'strike'; children: MarkdownInline[] }
   | { kind: 'link'; url: string; children: MarkdownInline[] }
   | { kind: 'image'; url: string; alt: string }
+  /** A key, written `<kbd>Ctrl</kbd>`: the one HTML element read as such, as GitHub reads it. */
+  | { kind: 'key'; text: string }
   | { kind: 'break' }
   /** A changeset, branch, person, emoji… a comment names (`commentReferences`), and the text it was written as. */
   | { kind: 'reference'; reference: CommentReference; source: string };
@@ -127,6 +129,7 @@ function inlineText(inline: MarkdownInline): string {
   switch (inline.kind) {
     case 'text':
     case 'code':
+    case 'key':
       return inline.text;
     case 'image':
       return inline.alt;
@@ -236,7 +239,18 @@ class MarkdownReader {
   }
 
   private inlines(nodes: readonly PhrasingContent[]): MarkdownInline[] {
-    return joinedTexts(nodes.flatMap((node) => this.inline(node)));
+    const inlines: MarkdownInline[] = [];
+    for (let index = 0; index < nodes.length; index++) {
+      const closing = keyClosingAt(nodes, index);
+      if (closing < 0) {
+        inlines.push(...this.inline(nodes[index]!));
+        continue;
+      }
+      // What a key holds reads as written, a reference included (`<kbd>cs:12</kbd>`).
+      inlines.push({ kind: 'key', text: plainText(this.inlines(nodes.slice(index + 1, closing))) });
+      index = closing;
+    }
+    return joinedTexts(inlines);
   }
 
   private inline(node: PhrasingContent): MarkdownInline[] {
@@ -347,6 +361,20 @@ function isWrittenAsIs(node: Nodes, written: string): boolean {
     default:
       return false;
   }
+}
+
+const KEY_OPENING = /^<kbd>$/i;
+const KEY_CLOSING = /^<\/kbd>$/i;
+
+/** Where the `</kbd>` closing a `<kbd>` at `index` is, among its siblings; -1 when `index` opens no key. */
+function keyClosingAt(nodes: readonly PhrasingContent[], index: number): number {
+  const node = nodes[index];
+  if (node?.type !== 'html' || !KEY_OPENING.test(node.value)) return -1;
+  for (let next = index + 1; next < nodes.length; next++) {
+    const sibling = nodes[next]!;
+    if (sibling.type === 'html') return KEY_CLOSING.test(sibling.value) ? next : -1;
+  }
+  return -1;
 }
 
 /** Neighbouring texts as one: micromark splits text where a mark could have started. */

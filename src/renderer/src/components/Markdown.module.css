@@ -124,6 +124,22 @@
   font-weight: var(--weight-semibold);
 }
 
+/* A key (`<kbd>`), as a keycap: GitHub's way, in the app's tokens. */
+.markdown kbd {
+  display: inline-block;
+  padding: 0 4px;
+  border: 1px solid var(--border-default);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  line-height: 1.4;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+
 .link {
   color: var(--accent-text);
   text-decoration: none;

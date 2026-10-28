@@ -10,7 +10,8 @@ before.
 
 - **Markdown**: CommonMark with GitHub's extensions (tables, task lists, strikethrough, bare links, footnotes), read
   by micromark (`parseMarkdown` in `lib/markdown.ts`, the one Markdown reader the app has: release notes and attribute
-  values use it too). Raw HTML reads as the text it is; links open only to `http(s):` (in the browser) and `uvcs:`
+  values use it too). Raw HTML reads as the text it is, but for `<kbd>`, which shows a key as a keycap, as on GitHub
+  (`<kbd>Ctrl</kbd>+<kbd>F</kbd>`); links open only to `http(s):` (in the browser) and `uvcs:`
   (in the app), anything else shows its text, a bare email address too (`openExternal` opens web pages only); images
   only from `http(s):`.
 - **Line breaks are kept** in a comment (`parseMarkdown(…, { comment: true })`), as GitHub shows comments: plain

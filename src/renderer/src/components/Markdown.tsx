@@ -115,6 +115,8 @@ function renderInlines(inlines: readonly MarkdownInline[], compact = false): Rea
         return <em key={index}>{renderInlines(inline.children, compact)}</em>;
       case 'strike':
         return <del key={index}>{renderInlines(inline.children, compact)}</del>;
+      case 'key':
+        return <kbd key={index}>{inline.text}</kbd>;
       case 'break':
         return <br key={index} />;
       case 'link':
