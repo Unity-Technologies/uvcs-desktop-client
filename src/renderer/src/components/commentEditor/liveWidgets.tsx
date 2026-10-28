@@ -7,7 +7,7 @@ import { selectChip } from './chipEditing';
 import { focusEditor } from './editorFocus';
 import { toggleTask } from './formatCommands';
 import { EditorTable } from './EditorTable';
-import type { TableModel } from './tableModel';
+import { tableWidgetKey, type TableModel } from './tableModel';
 import type { WidgetPortals } from './widgetPortals';
 
 /** Where an editor's widgets render their React content. */
@@ -34,12 +34,13 @@ function removeFrom(host: HTMLElement): void {
 
 /** A widget whose content React renders into its element, through the editor's portals. */
 abstract class PortalWidget extends WidgetType {
-  protected abstract content(view: EditorView): React.ReactNode;
+  /** What React draws in `host`, the element CodeMirror gave the widget. */
+  protected abstract content(view: EditorView, host: HTMLElement): React.ReactNode;
   protected abstract tag(): 'span' | 'div';
 
   override toDOM(view: EditorView): HTMLElement {
     const host = document.createElement(this.tag());
-    showIn(view, host, this.content(view));
+    showIn(view, host, this.content(view, host));
     return host;
   }
 
@@ -182,7 +183,7 @@ export class TableWidget extends PortalWidget {
 
   constructor(readonly table: TableModel) {
     super();
-    this.key = JSON.stringify(table);
+    this.key = tableWidgetKey(table);
   }
 
   override eq(other: TableWidget): boolean {
@@ -193,12 +194,13 @@ export class TableWidget extends PortalWidget {
     return 'div';
   }
 
-  protected override content(view: EditorView): React.ReactNode {
+  protected override content(view: EditorView, host: HTMLElement): React.ReactNode {
+    // The table kept as text was typed above it (`tableWidgetKey`): its cells are found from where it is now.
     return (
       <EditorTable
         table={this.table}
         onCellPressed={(at) => {
-          view.dispatch({ selection: { anchor: at }, userEvent: 'select.pointer' });
+          view.dispatch({ selection: { anchor: view.posAtDOM(host) + (at - this.table.from) }, userEvent: 'select.pointer' });
           focusEditor(view);
         }}
       />

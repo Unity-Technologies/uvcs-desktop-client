@@ -25,6 +25,14 @@ export interface TableModel {
   rows: TableCell[][];
 }
 
+/**
+ * What a drawn table shows, wherever it sits in the comment (`TableWidget.eq`): its cells' positions are counted from
+ * its start, so keys typed above it keep its DOM and its chips; a cell's text or the selection over it draws it again.
+ */
+export function tableWidgetKey(table: TableModel): string {
+  return JSON.stringify(table, (name, value: unknown) => ((name === 'from' || name === 'to') && typeof value === 'number' ? value - table.from : value));
+}
+
 /** The tables to draw: every one the selection isn't in (any, in a field without the focus). */
 export function tablesIn(state: EditorState, options: LiveMarksOptions): TableModel[] {
   const tables: TableModel[] = [];
