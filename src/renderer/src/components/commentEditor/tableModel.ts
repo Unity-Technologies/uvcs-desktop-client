@@ -1,6 +1,6 @@
 import type { EditorState } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
-import { touchesSelection, type LiveMarksOptions } from './liveMarks';
+import { selectionReveals, type LiveMarksOptions } from './liveMarks';
 
 /** A cell of a table drawn in the editor: its text as written, and where it is, for a click to put the caret in it. */
 export interface TableCell {
@@ -29,7 +29,7 @@ export function tablesIn(state: EditorState, options: LiveMarksOptions): TableMo
   syntaxTree(state).iterate({
     enter: (node) => {
       if (node.name !== 'Table') return;
-      if (!(options.revealsSelection && touchesSelection(state, node.from, node.to))) tables.push(tableAt(state, node.from, node.to));
+      if (!(options.revealsSelection && selectionReveals(state, node.from, node.to))) tables.push(tableAt(state, node.from, node.to));
       return false;
     },
   });

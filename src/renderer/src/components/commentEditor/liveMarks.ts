@@ -52,7 +52,7 @@ const WEB_ADDRESS = /^(?:[a-z][a-z0-9+.-]*:\/\/|www\.)/i;
  */
 export function liveMarksOf(state: EditorState, options: LiveMarksOptions, ranges: readonly { from: number; to: number }[] = [{ from: 0, to: state.doc.length }]): LiveMark[] {
   const marks: LiveMark[] = [];
-  const reveals = (from: number, to: number): boolean => options.revealsSelection && touchesSelection(state, from, to);
+  const reveals = (from: number, to: number): boolean => options.revealsSelection && selectionReveals(state, from, to);
   for (const { from, to } of ranges) {
     syntaxTree(state).iterate({
       from,
@@ -64,7 +64,7 @@ export function liveMarksOf(state: EditorState, options: LiveMarksOptions, range
     });
     for (const found of referencesIn(state, from, to, options)) {
       marks.push(
-        options.revealsSelection && touchesSelection(state, found.from, found.to)
+        options.revealsSelection && selectionReveals(state, found.from, found.to)
           ? { kind: 'typedReference', from: found.from, to: found.to }
           : { kind: 'reference', ...found },
       );
@@ -206,7 +206,7 @@ function excludedRanges(state: EditorState, from: number, to: number, options: L
     from,
     to,
     enter: (node) => {
-      const drawnTable = node.name === 'Table' && !(options.revealsSelection && touchesSelection(state, node.from, node.to));
+      const drawnTable = node.name === 'Table' && !(options.revealsSelection && selectionReveals(state, node.from, node.to));
       if (!NO_REFERENCES.has(node.name) && !drawnTable) return;
       // A bare email address isn't one: a mention or a spec may hold what reads as one (`@ana@acme.com`).
       if (node.name === 'URL' && !WEB_ADDRESS.test(state.sliceDoc(node.from, node.to))) return;
@@ -218,7 +218,7 @@ function excludedRanges(state: EditorState, from: number, to: number, options: L
 }
 
 /** A selection on `[from, to]` or next to it: the caret at a construct's edge reveals it, as it's about to type there. */
-export function touchesSelection(state: EditorState, from: number, to: number): boolean {
+export function selectionReveals(state: EditorState, from: number, to: number): boolean {
   return state.selection.ranges.some((range) => range.from <= to && range.to >= from);
 }
 
