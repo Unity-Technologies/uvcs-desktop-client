@@ -1,7 +1,7 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { PressedKey } from '../../lib/shortcuts';
-import { focusModeKey, focusModeLayout, layoutAfterFocus, offersFocusMode } from './focusMode';
+import { focusModeButton, focusModeKey, focusModeLayout, layoutAfterFocus, offersFocusMode } from './focusMode';
 
 function press(key: string, code: string, modifiers: Partial<PressedKey> = {}): PressedKey {
   return { key, code, metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, ...modifiers };
@@ -50,5 +50,12 @@ describe('layoutAfterFocus', () => {
     expect(layoutAfterFocus('inPlace', false)).toBeNull();
     expect(layoutAfterFocus('overlay', true)).toBe('overlay');
     expect(layoutAfterFocus(null, true)).toBeNull();
+  });
+});
+
+describe('focusModeButton', () => {
+  it('names what it does, and says whether the larger editor is open', () => {
+    expect(focusModeButton(null)).toEqual({ label: 'Write in a larger editor', icon: 'expand', pressed: false });
+    expect(focusModeButton('overlay')).toEqual({ label: 'Back to the field', icon: 'collapse', pressed: true });
   });
 });
