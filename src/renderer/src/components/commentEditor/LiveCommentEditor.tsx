@@ -15,6 +15,7 @@ import { placeholderShown } from './commentPlaceholders';
 import { FormatToolbar } from './FormatToolbar';
 import { ownerChange } from './oneLine';
 import { ownerExchange } from './ownerSync';
+import { COMMENT_FIELD_ATTRIBUTE } from './commentFieldScope';
 import type { CommentFieldProps } from './commentFieldProps';
 import { activeFormats, FORMAT_COMMANDS, type FormatCommandId } from './formatCommands';
 import { fieldFocused, focusEditor } from './editorFocus';
@@ -150,6 +151,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
       className={classNames(fieldStyles.field, styles.editor, className)}
       style={style}
       data-single-line={singleLine || undefined}
+      {...{ [COMMENT_FIELD_ATTRIBUTE]: true }}
       data-group-field={groupField}
       data-focus-mode={focus.parts.toolbar || undefined}
       onMouseDown={(event) => {

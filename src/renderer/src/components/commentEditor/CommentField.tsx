@@ -3,6 +3,7 @@ import { classNames } from '../../lib/classNames';
 import { lazyComponent } from '../../lib/lazyComponent';
 import { isModPressed } from '../../lib/shortcuts';
 import { CommentFocusGroup, FocusGroupContext } from './CommentFocusGroup';
+import { COMMENT_FIELD_ATTRIBUTE } from './commentFieldScope';
 import { enterAction, modEnterAction } from './fieldKeys';
 import type { CommentFieldProps } from './commentFieldProps';
 import styles from './CommentField.module.css';
@@ -100,7 +101,7 @@ function PlainCommentField({ value, onChange, singleLine = false, label, id, lab
     onKeyDown,
   };
   return (
-    <div className={classNames(styles.field, className)} style={style}>
+    <div className={classNames(styles.field, className)} style={style} {...{ [COMMENT_FIELD_ATTRIBUTE]: true }}>
       {singleLine ? <input {...shared} onChange={(event) => onChange(event.target.value)} /> : <textarea {...shared} onChange={(event) => onChange(event.target.value)} />}
     </div>
   );

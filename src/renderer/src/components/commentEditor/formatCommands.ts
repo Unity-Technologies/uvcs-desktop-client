@@ -170,7 +170,7 @@ function fenceLinesOf(state: EditorState, block: SyntaxNode): ChangeSpec[] {
 }
 
 /**
- * A link on the selection, as GitHub's ⌘K: the selected text inside `[…]` and `url` selected to paste the address
+ * A link on the selection, as GitHub's link key: the selected text inside `[…]` and `url` selected to paste the address
  * over; a selected address becomes the link's address, the caret where its text goes. Inside a link, the link goes
  * and its text stays.
  */

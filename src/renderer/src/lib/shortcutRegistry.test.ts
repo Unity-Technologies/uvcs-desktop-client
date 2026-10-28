@@ -72,7 +72,8 @@ describe('shortcut registry', () => {
           .flatMap((shortcut) => shortcutKeys(shortcut, mac)),
       );
       const sharing = Object.entries(SHORTCUTS)
-        .filter(([, shortcut]) => shortcut.area !== 'General' && shortcutKeys(shortcut, mac).some((key) => global.has(key)))
+        // Views bind their own keys while they show (graphs, lists); a comment field's must say where they win.
+        .filter(([, shortcut]) => shortcut.area === 'Comments' && shortcutKeys(shortcut, mac).some((key) => global.has(key)))
         .filter(([, shortcut]) => (shortcut as ShortcutDefinition).scope !== 'commentField')
         .map(([id]) => id);
       expect(sharing, mac ? 'macOS' : 'off macOS').toEqual([]);

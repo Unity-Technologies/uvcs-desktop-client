@@ -43,6 +43,12 @@ export interface ShortcutDefinition {
   offMacOnly?: true;
   /** The command a native menu item runs; its accelerator must be the first key. */
   commandId?: string;
+  /**
+   * Where it binds, when not the window: a comment field's keys (`commentField`) win inside a focused comment field,
+   * and only there, so they may share a window's key (⇧⌘U formats a link there and updates the workspace elsewhere);
+   * no two window keys share one (`shortcutRegistry.test.ts`, `yieldsToCommentField`).
+   */
+  scope?: 'commentField';
 }
 
 export const SHORTCUTS = {
@@ -116,19 +122,19 @@ export const SHORTCUTS = {
   goToLine: { area: 'Text', label: 'Go to line', keys: ['ctrl+g'], keysOffMac: ['mod+g'] },
 
   // A comment being written (`components/commentEditor`): Slack's keys, which take the comment's own text before the
-  // window's (⌘B, ⌘K, ⌘E and ⇧⌘C do something else outside a comment). Off macOS the code block takes Ctrl+Shift+E,
-  // as Ctrl+Alt is AltGr there.
-  commentBold: { area: 'Comments', label: 'Bold', keys: ['mod+b'] },
-  commentItalic: { area: 'Comments', label: 'Italic', keys: ['mod+i'] },
-  commentStrikethrough: { area: 'Comments', label: 'Strikethrough', keys: ['mod+shift+x'] },
-  commentCode: { area: 'Comments', label: 'Code', keys: ['mod+e'] },
-  commentLink: { area: 'Comments', label: 'Link', keys: ['mod+k'] },
-  commentList: { area: 'Comments', label: 'List', keys: ['mod+shift+8'] },
-  commentNumberedList: { area: 'Comments', label: 'Numbered list', keys: ['mod+shift+7'] },
-  commentQuote: { area: 'Comments', label: 'Quote', keys: ['mod+shift+9'] },
-  commentCodeBlock: { area: 'Comments', label: 'Code block', keys: ['mod+alt+shift+c'], keysOffMac: ['mod+shift+e'] },
-  commentPastePlain: { area: 'Comments', label: 'Paste without formatting', keys: ['mod+shift+v'] },
-  commentFocusMode: { area: 'Comments', label: 'Write in a larger editor, and back', keys: ['mod+shift+f'] },
+  // window's inside a focused comment field (`scope`): ⌘B, ⇧⌘U and ⇧⌘C do something else outside one. ⌘K stays the
+  // command palette's, as everywhere. Off macOS the code block takes Ctrl+Shift+E, as Ctrl+Alt is AltGr there.
+  commentBold: { area: 'Comments', label: 'Bold', keys: ['mod+b'], scope: 'commentField' },
+  commentItalic: { area: 'Comments', label: 'Italic', keys: ['mod+i'], scope: 'commentField' },
+  commentStrikethrough: { area: 'Comments', label: 'Strikethrough', keys: ['mod+shift+x'], scope: 'commentField' },
+  commentCode: { area: 'Comments', label: 'Code', keys: ['mod+shift+c'], scope: 'commentField' },
+  commentLink: { area: 'Comments', label: 'Link', keys: ['mod+shift+u'], scope: 'commentField' },
+  commentList: { area: 'Comments', label: 'List', keys: ['mod+shift+8'], scope: 'commentField' },
+  commentNumberedList: { area: 'Comments', label: 'Numbered list', keys: ['mod+shift+7'], scope: 'commentField' },
+  commentQuote: { area: 'Comments', label: 'Quote', keys: ['mod+shift+9'], scope: 'commentField' },
+  commentCodeBlock: { area: 'Comments', label: 'Code block', keys: ['mod+alt+shift+c'], keysOffMac: ['mod+shift+e'], scope: 'commentField' },
+  commentPastePlain: { area: 'Comments', label: 'Paste without formatting', keys: ['mod+shift+v'], scope: 'commentField' },
+  commentFocusMode: { area: 'Comments', label: 'Write in a larger editor, and back', keys: ['mod+shift+f'], scope: 'commentField' },
 
   graphFind: { area: 'Branch Explorer', label: 'Find in graph', keys: ['mod+f', '/'] },
   graphNextMatch: { area: 'Branch Explorer', label: 'Next match', keys: ['enter'] },

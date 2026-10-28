@@ -223,12 +223,16 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   as widgets come and go (`WidgetPortals` keeps the same list otherwise), never on a key: rendering every chip's
   portal at each key made a comment of hundreds of chips slow to type. A chip's DOM is kept as its line redraws
   (`ReferenceWidget.eq`), and a guard test counts that a key changes only its line's decorations (`liveDecorationsOf`).
-- **Keys** (the registry's Comments area, matched as every shortcut is: `formatForKey`): ⌘B bold, ⌘I italic, ⇧⌘X
-  strikethrough, ⌘E code, ⌘K link, ⇧⌘8 list, ⇧⌘7 numbered list, ⇧⌘9 quote, ⌥⇧⌘C code block (Ctrl+Shift+E off macOS, where Ctrl+Alt is
+- **Keys** (the registry's Comments area, matched as every shortcut is: `formatForKey`), Slack's: ⌘B bold, ⌘I italic,
+  ⇧⌘X strikethrough, ⇧⌘C code, ⇧⌘U link (Ctrl+Shift+C and Ctrl+Shift+U off macOS), ⇧⌘8 list, ⇧⌘7 numbered list, ⇧⌘9 quote, ⌥⇧⌘C code block (Ctrl+Shift+E off macOS, where Ctrl+Alt is
   AltGr), ⇧⌘V (Ctrl+Shift+V) pastes the plain text, through the window (`pasteClipboard({ plainText })`,
   `pasteAndMatchStyle`), as no menu item takes the key and the page can't paste by itself. Each toggles (`FORMAT_COMMANDS`: ⌘B in bold unbolds) and is one step to undo
-  (`ownStep`), as are a pick, a paste and a box ticked. A key the field takes stays in it: ⌘B
-  never opens New branch from a comment, nor ⌘K the palette (⇧⌘P still does). Typed Markdown works as typed; Enter
+  (`ownStep`), as are a pick, a paste and a box ticked. A key the field takes stays in it: its keys are
+  `scope: 'commentField'` in the registry, which win inside a focused comment field and only there
+  (`yieldsToCommentField`, `inCommentField`): ⌘B never opens New branch from a comment, ⇧⌘U never updates the
+  workspace from one, nor ⇧⌘C copies a link; outside a field they do. ⌘K is no field's key: it opens the palette
+  from a comment as everywhere, and ⌘E is the window's. The app menu's accelerators are shown, not registered
+  (`commandItem`), so the renderer decides. Typed Markdown works as typed; Enter
   continues a list, and Enter after an opening fence adds the closing one (`closeCodeFence`). ⌘↵ saves the field's
   form (a dialog, the details editor) or is the window's (check in, merge); Esc closes the suggestions first.
 - **One-line fields** (a summary, a title, the merge comment) take the inline formats only and wrap a long line;
@@ -282,7 +286,7 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   enabled. The text then takes the box's whole width, a code block the same inset on both sides. The hints are the
   window's key hints, each key a cap as the palette and the shortcuts sheet draw them (`Kbd`): `cs:` `br:` `lb:`
   `sh:` `cr:` reference, `@` mention, `:` emoji, read from the triggers the suggestions take
-  (`focusModeHints`, `SUGGESTION_TRIGGERS`). ⌘K is the link button's tooltip, as every format's key is. The hints
+  (`focusModeHints`, `SUGGESTION_TRIGGERS`). ⇧⌘U is the link button's tooltip, as every format's key is. The hints
   keep one line: where it's too narrow the last ones go (`KeyHints`' `oneLine`, `hintsThatFit`), never wrapping. A table and a keycap have no button: no single construct of the
   Markdown reader holds a key's `<kbd>` tags to toggle, and an empty table is more text to fill in than to type.
 - **The selection bar** (`SelectionBar`, `selectionBarShows`): over text selected, once the pointer lets go, never in
