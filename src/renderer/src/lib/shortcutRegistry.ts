@@ -62,6 +62,7 @@ export const SHORTCUTS = {
   workspaceInNewWindow: { area: 'General', label: 'Open the workspace in a new window, or Shift-click it (home screen, switcher, palette)', keys: ['shift+enter'] },
   commandLog: { area: 'General', label: 'Command log', keys: ['mod+shift+l'], commandId: 'app.commandLog' },
   toggleSidebar: { area: 'General', label: 'Collapse or expand the sidebar', keys: ['mod+\\'], commandId: 'app.sidebar' },
+  toggleDetails: { area: 'General', label: "Hide or show the view's details panel", keys: ['mod+i'], commandId: 'view.details' },
   appMenu: { area: 'General', label: 'Open the menu', keys: ['f10'], offMacOnly: true },
   saveComment: { area: 'General', label: 'Save an edited comment', keys: ['mod+enter'] },
 
@@ -132,7 +133,7 @@ export const SHORTCUTS = {
   graphOpen: { area: 'Branch Explorer', label: 'Diff the selected changeset or branch', keys: ['enter'] },
   graphOpenBranch: { area: 'Branch Explorer', label: 'Diff the branch of the selection', keys: ['shift+enter'] },
   graphMerge: { area: 'Branch Explorer', label: 'Merge from the selection', keys: ['m'] },
-  graphDetails: { area: 'Branch Explorer', label: 'Show or hide the details panel', keys: ['space'] },
+  graphDetails: { area: 'Branch Explorer', label: 'Hide or show the details panel', keys: ['space'] },
   graphContextMenu: { area: 'Branch Explorer', label: 'Actions of the selection', keys: ['shift+f10'] },
   graphHome: { area: 'Branch Explorer', label: 'Go to the workspace', keys: ['h'] },
   graphZoomIn: { area: 'Branch Explorer', label: 'Zoom in', keys: ['plus', '='] },

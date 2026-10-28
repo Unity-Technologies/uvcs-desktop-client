@@ -20,7 +20,6 @@ interface BranchExplorerPreferences {
   structureOnly: boolean;
   showComments: boolean;
   showAvatars: boolean;
-  detailsOpen: boolean;
   /** Something to select and frame, asked for from another view; cleared once handled. */
   revealRequest: RevealTarget | null;
   set: (changes: Partial<Omit<BranchExplorerPreferences, 'set'>>) => void;
@@ -38,17 +37,17 @@ export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
       structureOnly: false,
       showComments: true,
       showAvatars: true,
-      detailsOpen: true,
       revealRequest: null,
       set,
     }),
     {
       name: 'branch-explorer-preferences',
-      version: 1,
+      version: 2,
       partialize: ({ visibleBranches: _branches, revealRequest: _request, set: _action, people, ...remembered }) => ({ ...remembered, people: rememberedPick(people) }),
-      // Before every view shared the time presets, the Branch Explorer had date ranges of its own.
+      // Before every view shared the time presets, the Branch Explorer had date ranges of its own. Before every view
+      // could hide its details, it kept whether its own were open (`detailsOpen`): now `useDetailsPaneStore` does.
       migrate: (persisted) => {
-        const old = (persisted ?? {}) as Partial<BranchExplorerPreferences>;
+        const { detailsOpen: _detailsOpen, ...old } = (persisted ?? {}) as Partial<BranchExplorerPreferences> & { detailsOpen?: boolean };
         return { ...old, dateRange: sincePresetOf(old.dateRange) ?? 'lastMonth', people: EVERYONE } as BranchExplorerPreferences;
       },
     },

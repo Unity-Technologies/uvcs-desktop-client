@@ -25,7 +25,7 @@ interface DetailsPaneStore extends DetailsPaneState {
 }
 
 /** A view's details width: the one it was left at, within its limits, else its default. */
-export function detailsWidthOf(state: DetailsPaneState, key: string, limits: DetailsWidthLimits): number {
+export function detailsWidthOf(state: Pick<DetailsPaneState, 'widths'>, key: string, limits: DetailsWidthLimits): number {
   const width = state.widths[key] ?? limits.initial;
   return Math.min(Math.max(width, limits.min), limits.max);
 }

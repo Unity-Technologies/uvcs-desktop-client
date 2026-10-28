@@ -2,6 +2,8 @@ import { GitGraph } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { BranchExplorerData } from '@shared/domain/branchExplorer';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
+import { DetailsToggleButton } from '../../components/DetailsToggleButton';
+import { detailsHidden, useDetailsPaneStore } from '../../components/detailsPaneStore';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { usePlace, usePlaceRepository, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { usePlaceUser } from '../../app/account/accounts';
@@ -43,6 +45,8 @@ import { usePendingChangeset } from './usePendingChangeset';
 import { useRevealRequest } from './useRevealRequest';
 import styles from './BranchExplorerView.module.css';
 
+const DETAILS_KEY = 'branchExplorer';
+
 const NO_REVIEWS: ReadonlyMap<number, CodeReviewSummary> = new Map();
 
 export function BranchExplorerView() {
@@ -51,7 +55,8 @@ export function BranchExplorerView() {
   const placeRepository = usePlaceRepository();
   const { data, isPending, isFetching, isPlaceholderData, error } = useBranchExplorerData();
   const preferences = useBranchExplorerPreferences();
-  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, detailsOpen, people, showComments, showAvatars } = preferences;
+  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, people, showComments, showAvatars } = preferences;
+  const detailsOpen = useDetailsPaneStore((state) => !detailsHidden(state, DETAILS_KEY));
 
   const me = usePlaceUser();
   const highlightedAuthors = useMemo(() => pickedNames(people, me), [people, me]);
@@ -208,7 +213,7 @@ export function BranchExplorerView() {
       find,
       fit,
       zoomBy,
-      toggleDetails: () => preferences.set({ detailsOpen: !detailsOpen }),
+      toggleDetails: () => useDetailsPaneStore.getState().toggleHidden(DETAILS_KEY),
       exitFocus: () => setFocus(null),
     });
 
@@ -227,6 +232,7 @@ export function BranchExplorerView() {
             onLeave={() => canvasRef.current?.focus()}
           />
           <ViewRefreshButton fetching={isFetching} />
+          <DetailsToggleButton detailsKey={DETAILS_KEY} />
         </>
       }
     >
@@ -249,7 +255,7 @@ export function BranchExplorerView() {
       <>
         {header}
         <div className={styles.body}>
-          <ListWithDetails detailsKey="branchExplorer" hideDetails={!detailsOpen} list={<GraphSkeleton />} details={null} />
+          <ListWithDetails detailsKey={DETAILS_KEY} list={<GraphSkeleton />} details={null} />
         </div>
       </>
     );
@@ -262,8 +268,8 @@ export function BranchExplorerView() {
         {header}
         <div className={styles.body}>
           <ListWithDetails
-            detailsKey="branchExplorer"
-            hideDetails={!detailsOpen}
+            detailsKey={DETAILS_KEY}
+           
             list={<NoMatches icon={<GitGraph size={22} />} noun="branches" hint="Check some branches in the Branches filter, or show every branch again." onClear={clearFilters} />}
             details={null}
           />
@@ -278,8 +284,8 @@ export function BranchExplorerView() {
         {header}
         <div className={styles.body}>
           <ListWithDetails
-            detailsKey="branchExplorer"
-            hideDetails={!detailsOpen}
+            detailsKey={DETAILS_KEY}
+           
             // With the details closed, the graph's pane says it.
             list={detailsOpen ? <div className={styles.emptyGraph} /> : emptyRange}
             details={emptyRange}
@@ -296,8 +302,8 @@ export function BranchExplorerView() {
         <div className="visually-hidden" aria-live="polite" aria-atomic="true">
           {describeSelection(layout, selection, homeChangeset)}
         </div>
-        <ListWithDetails detailsKey="branchExplorer"
-          hideDetails={!detailsOpen}
+        <ListWithDetails detailsKey={DETAILS_KEY}
+         
           list={
             <GraphCanvas
               ref={canvasRef}

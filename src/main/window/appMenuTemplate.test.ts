@@ -155,6 +155,7 @@ describe('appMenuTemplate', () => {
       'Command &Palette…',
       'Command &Log',
       'Toggle &Sidebar',
+      'Toggle &Details',
       '&Refresh',
       '&Actual Size',
       'Zoom &In',
