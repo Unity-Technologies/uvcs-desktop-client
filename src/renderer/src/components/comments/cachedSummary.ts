@@ -1,5 +1,5 @@
 import type { CommentReference } from '../../lib/comments/commentReferences';
-import { firstLine } from '../../lib/text';
+import { commentLineText } from '../../lib/comments/commentText';
 
 /** The query area each object kind is cached under (`queryKeys.inPlace(place, area, …)`). */
 export type CachedArea = 'changesets' | 'branches' | 'labels' | 'shelves' | 'codeReviews';
@@ -31,9 +31,9 @@ interface CachedObject {
 }
 
 /**
- * A reference's summary (its comment's first line, a review's title) from what the window has already read of its
- * area: a list (every branch, the newest changesets…) or the object alone. Nothing is asked for: a chip shows its
- * summary once something read it (docs/features/rich-comments.md, "What a chip reads").
+ * A reference's summary (its comment's first line without marks, a review's title) from what the window has already
+ * read of its area: a list (every branch, the newest changesets…) or the object alone. Nothing is asked for: a chip
+ * shows its summary once something read it (docs/features/rich-comments.md, "What a chip reads").
  */
 export function summaryIn(cached: readonly unknown[], reference: CommentReference): string | undefined {
   for (const data of cached) {
@@ -61,7 +61,7 @@ function names(object: CachedObject, reference: CommentReference): boolean {
 
 function summaryOf(object: CachedObject): string | undefined {
   const text = typeof object.title === 'string' ? object.title : typeof object.comment === 'string' ? object.comment : '';
-  return firstLine(text) || undefined;
+  return commentLineText(text) || undefined;
 }
 
 function isObject(value: unknown): value is CachedObject {

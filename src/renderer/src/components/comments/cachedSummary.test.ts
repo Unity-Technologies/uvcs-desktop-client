@@ -14,6 +14,10 @@ describe('summaryIn', () => {
     expect(summaryIn([[{ name: '/main/task', comment: 'Task' }]], { kind: 'branch', name: '/main/task' })).toBe('Task');
   });
 
+  it('reads the summary without Markdown marks, emoji as themselves', () => {
+    expect(summaryIn([[{ id: 2, comment: '**Switching** keeps changes :tada:' }]], { kind: 'changeset', id: 2 })).toBe('Switching keeps changes 🎉');
+  });
+
   it('has none for an object nothing read, or one without a comment', () => {
     expect(summaryIn([changesets], { kind: 'changeset', id: 99 })).toBeUndefined();
     expect(summaryIn([changesets], { kind: 'changeset', id: 13 })).toBeUndefined();
