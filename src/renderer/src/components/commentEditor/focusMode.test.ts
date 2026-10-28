@@ -1,7 +1,7 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { PressedKey } from '../../lib/shortcuts';
-import { focusModeButton, focusModeKey, focusModeLayout, layoutAfterFocus, offersFocusMode } from './focusMode';
+import { focusModeButton, focusModeKey, focusModeLayout, focusModeParts, layoutAfterFocus, offersFocusMode } from './focusMode';
 
 function press(key: string, code: string, modifiers: Partial<PressedKey> = {}): PressedKey {
   return { key, code, metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, ...modifiers };
@@ -59,8 +59,33 @@ describe('layoutAfterFocus', () => {
 });
 
 describe('focusModeButton', () => {
-  it('names what it does, and says whether the larger editor is open', () => {
-    expect(focusModeButton(null)).toEqual({ label: 'Write in a larger editor', icon: 'expand', pressed: false });
-    expect(focusModeButton('overlay')).toEqual({ label: 'Back to the field', icon: 'collapse', pressed: true });
+  it('names what it does, the name alone telling whether the larger editor is open', () => {
+    expect(focusModeButton(false)).toEqual({ label: 'Write in a larger editor', icon: 'expand' });
+    expect(focusModeButton(true)).toEqual({ label: 'Back to the field', icon: 'collapse' });
+  });
+});
+
+describe('focusModeParts', () => {
+  const field = { singleLine: false, inGroup: false, groupOpen: false, ownLayout: null } as const;
+  const none = { offered: false, layout: null, inFocusMode: false, button: null, toolbar: false, footer: false, backdrop: false, takesTab: false };
+
+  it('gives a one-line field alone nothing', () => {
+    expect(focusModeParts({ ...field, singleLine: true })).toEqual(none);
+  });
+
+  it('gives a comment of many lines its corner button, and in focus mode its toolbar, hints and Tab', () => {
+    expect(focusModeParts(field)).toEqual({ ...none, offered: true, button: focusModeButton(false) });
+    const expanded = { offered: true, inFocusMode: true, button: focusModeButton(true), toolbar: true, footer: true, takesTab: true };
+    expect(focusModeParts({ ...field, ownLayout: 'overlay' })).toEqual({ ...none, ...expanded, layout: 'overlay', backdrop: true });
+    expect(focusModeParts({ ...field, ownLayout: 'inPlace' })).toEqual({ ...none, ...expanded, layout: 'inPlace' });
+  });
+
+  it('gives the check-in’s summary the group’s keys only: no button, no toolbar, and Tab goes on to the description', () => {
+    expect(focusModeParts({ ...field, singleLine: true, inGroup: true, groupOpen: true })).toEqual({ ...none, offered: true, inFocusMode: true });
+  });
+
+  it('gives the check-in’s description the button, the toolbar and Tab, the group drawing the panel and its hints', () => {
+    expect(focusModeParts({ ...field, inGroup: true })).toEqual({ ...none, offered: true, button: focusModeButton(false) });
+    expect(focusModeParts({ ...field, inGroup: true, groupOpen: true })).toEqual({ ...none, offered: true, inFocusMode: true, button: focusModeButton(true), toolbar: true, takesTab: true });
   });
 });
