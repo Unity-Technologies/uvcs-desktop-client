@@ -13,7 +13,7 @@ import { prompt } from '../../ui/dialog/prompt';
 import { toast } from '../../ui/toast/toastStore';
 import { pickBranch } from '../branches/BranchPickerDialog';
 import { pickChangeset } from './ChangesetPickerDialog';
-import { askForChangesetComment } from './EditCommentDialog';
+import { askForComment } from '../../components/EditCommentDialog';
 
 /** The diff of what a changeset changed. */
 export function changesetDiffPage(changeset: Pick<Changeset, 'id'>, focusPath?: string): PageOf<'diff'> {
@@ -58,7 +58,7 @@ export function switchToChangeset(workspacePath: string, changeset: Pick<Changes
 }
 
 export async function editChangesetComment(place: Place, changeset: Pick<Changeset, 'id' | 'comment'>): Promise<void> {
-  const comment = await askForChangesetComment(changeset.id, changeset.comment);
+  const comment = await askForComment(`changeset ${changeset.id}`, changeset.comment);
   if (comment !== undefined) await saveChangesetComment(place, changeset, comment);
 }
 

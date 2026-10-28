@@ -10,7 +10,7 @@ const asked = vi.hoisted(() => ({
 }));
 vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
-vi.mock('./EditCommentDialog', () => ({ askForChangesetComment: async () => asked.comment }));
+vi.mock('../../components/EditCommentDialog', () => ({ askForComment: async () => asked.comment }));
 vi.mock('./ChangesetPickerDialog', () => ({
   pickChangeset: async (options: { title: string; exclude: number }) => {
     asked.changesetPicker = options;
