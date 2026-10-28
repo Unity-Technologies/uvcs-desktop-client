@@ -1,7 +1,7 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { trackPointerDrag } from '../lib/pointerDrag';
 import styles from './SplitPane.module.css';
-import { sizedPaneStyle } from './splitPaneSize';
+import { paneRole, sizedPaneStyle } from './splitPaneSize';
 
 interface SplitPaneProps {
   /** Size in pixels of the sized pane; double-clicking the splitter goes back to it. */
@@ -57,8 +57,9 @@ export function SplitPane({
 
   const sizedStyle = sizedPaneStyle(horizontal, size, minSize, restMinSize);
   const pane = (which: 'first' | 'second', content: ReactNode): ReactNode => {
-    if (which === hidden) return null;
-    if (which !== sizedPane || hidden) return <div className={`${styles.pane} ${styles.rest}`}>{content}</div>;
+    const role = paneRole(which, sizedPane, hidden);
+    if (role === 'hidden') return null;
+    if (role === 'rest') return <div className={`${styles.pane} ${styles.rest}`}>{content}</div>;
     return (
       <div className={styles.pane} style={sizedStyle}>
         {content}
