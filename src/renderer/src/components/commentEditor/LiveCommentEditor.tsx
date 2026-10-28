@@ -1,8 +1,7 @@
 import { EditorState } from '@codemirror/state';
 import { EditorView, placeholder as placeholderOf } from '@codemirror/view';
 import { Maximize2, Minimize2 } from 'lucide-react';
-import { useContext, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { createPortal } from 'react-dom';
+import { useContext, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useResolvedTheme } from '../../app/settings/useResolvedTheme';
 import { pierreThemeName } from '../../lib/codeTheme';
 import { classNames } from '../../lib/classNames';
@@ -10,11 +9,9 @@ import { isMac } from '../../lib/platform';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { FocusGroupContext, type FocusGroup } from './CommentFocusGroup';
 import { groupMove } from './focusGroup';
-import { backdropParent } from './backdropParent';
-import { caretOpeningFocusMode, focusModeKey, focusModeLayout, focusModeParts, layoutAfterFocus, type FocusModeLayout } from './focusMode';
+import { caretOpeningFocusMode, focusModeKey, focusModeParts } from './focusMode';
 import { commentEditorExtensions, editable, editableWhen, placeholderText, theme, themed, type CommentEditorKeys } from './commentEditorSetup';
 import { placeholderShown } from './commentPlaceholders';
-import { FocusModeFooter } from './FocusModeFooter';
 import { FormatToolbar } from './FormatToolbar';
 import { ownerChange } from './oneLine';
 import { ownerExchange } from './ownerSync';
@@ -137,7 +134,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
     : undefined;
 
   const suggestions = useSuggestions(view, state);
-  const focus = useFocusMode(view, state, host, singleLine, suggestions.shown, grouped?.group ?? null);
+  const focus = useFocusMode(view, singleLine, suggestions.shown, grouped?.group ?? null);
   const bar = useSelectionBar(view, state, singleLine, suggestions.shown, focus.inFocusMode);
   keys.current.takesTab = focus.parts.takesTab;
   useEffect(
@@ -154,7 +151,6 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
       style={style}
       data-single-line={singleLine || undefined}
       data-group-field={groupField}
-      data-expanded={focus.parts.layout ?? undefined}
       data-focus-mode={focus.parts.toolbar || undefined}
       onMouseDown={(event) => {
         bar.onPointerDown(event);
@@ -164,11 +160,6 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
       {focus.element}
       {/* The top strip of the comment it formats (in the check-in, the description's). */}
       {focus.parts.toolbar && view && state && <FormatToolbar view={view} state={state} focused={fieldFocused(view, state)} />}
-      {focus.parts.footer && (
-        <div className={styles.footer}>
-          <FocusModeFooter />
-        </div>
-      )}
       <WidgetPortalsView portals={portals} onDrawn={measure} />
       {suggestions.list}
       {bar.element}
@@ -180,14 +171,10 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
  * Focus mode (`focusMode`): the field grows into a large editor and back, by its corner button, its shortcut or Esc.
  * The same editor, so its text, caret and selection stay.
  */
-function useFocusMode(view: EditorView | null, state: EditorState | null, host: RefObject<HTMLDivElement | null>, singleLine: boolean, suggesting: boolean, group: FocusGroup | null) {
-  const [ownLayout, setOwnLayout] = useState<FocusModeLayout | null>(null);
-  // In a group (the check-in), focus mode is the group's: both its fields, from either of them.
-  const parts = focusModeParts({ singleLine, inGroup: group !== null, groupOpen: group?.open ?? false, ownLayout });
-  const close = (): void => {
-    if (group) group.close();
-    else setOwnLayout(null);
-  };
+function useFocusMode(view: EditorView | null, singleLine: boolean, suggesting: boolean, group: FocusGroup | null) {
+  // Focus mode is the group's (`CommentFocusGroup`): both its fields, from either of them; a comment alone is a group of one.
+  const parts = focusModeParts({ singleLine, inGroup: group !== null, groupOpen: group?.open ?? false });
+  const close = (): void => group?.close();
   // Whether the field had the focus since it was made: if not, focus mode opening puts the caret at the draft's end.
   const focusedBefore = useRef(false);
   useEffect(() => {
@@ -199,8 +186,7 @@ function useFocusMode(view: EditorView | null, state: EditorState | null, host: 
     return () => view.contentDOM.removeEventListener('focusin', noteFocus);
   }, [view]);
   const toggle = (): void => {
-    if (group) group.toggle();
-    else setOwnLayout((shown) => (shown ? null : focusModeLayout()));
+    group?.toggle();
     if (!view) return;
     const caret = caretOpeningFocusMode(view.state, focusedBefore.current || view.hasFocus);
     if (caret === null) focusEditor(view);
@@ -228,12 +214,6 @@ function useFocusMode(view: EditorView | null, state: EditorState | null, host: 
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [view, parts.offered]);
-  // Out of it once the focus leaves the editor: a dialog it opened (⌘↵'s question) never shows behind it.
-  const focused = state ? fieldFocused(view, state) : false;
-  // A group's fields hand the focus to each other: the group tells leaving itself (`CommentFocusGroup`).
-  useEffect(() => {
-    if (!group && ownLayout && !focused) setOwnLayout(layoutAfterFocus(ownLayout, focused));
-  }, [group, ownLayout, focused]);
   // Focus mode has Tab for its fields (the text's, or the group's move to the description): CodeMirror's Esc-then-Tab
   // escape (its tab focus mode, on for two seconds after an Esc it saw, as one closing the suggestions before ⇧⌘F)
   // would skip their bindings and hand Tab to the window. Out of focus mode, Esc then Tab still leaves the field, so
@@ -252,7 +232,6 @@ function useFocusMode(view: EditorView | null, state: EditorState | null, host: 
   const Icon = button?.icon === 'collapse' ? Minimize2 : Maximize2;
   const element = (
     <>
-      {parts.backdrop && createPortal(<div className={styles.backdrop} onMouseDown={close} />, backdropParent(host.current))}
       {button && (
         <button
           type="button"

@@ -15,17 +15,23 @@ export const COMMENT_SURFACES = [
 
 export type CommentSurface = (typeof COMMENT_SURFACES)[number];
 
-/** The larger editor a surface offers. */
+/**
+ * The larger editor a surface offers: one frame for all (`CommentFocusGroup`'s panel), padded, the description a
+ * bordered box with the toolbar as its top strip and the hints as a caption under it; a changeset's comment (and a
+ * shelve's, the same dialog) adds its title field on top. Out of it, every field is compact: no toolbar, no hints.
+ */
 export interface FocusModeExperience {
+  /** A one-line comment (a merge's, a code review's title) has none. */
+  offered: boolean;
+  title: boolean;
   layout: FocusModeLayout;
-  /** What it edits: a changeset's title over its description (`CommentFocusGroup`), one description, or none (one line). */
-  fields: 'titleAndDescription' | 'description' | 'none';
-  /** The toolbar strip and the hints caption: only in the larger editor, the field compact until then. */
-  toolbar: 'inFocusMode';
-  hints: 'inFocusMode';
+  toolbar: 'strip';
+  hints: 'caption';
 }
 
-const FIELDS: Record<CommentSurface, FocusModeExperience['fields']> = {
+type Fields = 'titleAndDescription' | 'description' | 'none';
+
+const FIELDS: Record<CommentSurface, Fields> = {
   checkin: 'titleAndDescription',
   editCommentDialog: 'titleAndDescription',
   changesetDetails: 'titleAndDescription',
@@ -37,10 +43,8 @@ const FIELDS: Record<CommentSurface, FocusModeExperience['fields']> = {
   codeReviewTitle: 'none',
 };
 
-/**
- * The one larger editor, the same everywhere: the check-in's panel over the window (in a dialog too, above it), its
- * toolbar and hints only there; a changeset's comment as its title over its description, as the check-in writes it.
- */
+/** The one larger editor, the same everywhere: the check-in's panel over the window (in a dialog too, above it). */
 export function focusModeFor(surface: CommentSurface): FocusModeExperience {
-  return { layout: focusModeLayout(), fields: FIELDS[surface], toolbar: 'inFocusMode', hints: 'inFocusMode' };
+  const fields = FIELDS[surface];
+  return { offered: fields !== 'none', title: fields === 'titleAndDescription', layout: focusModeLayout(), toolbar: 'strip', hints: 'caption' };
 }

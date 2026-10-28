@@ -245,6 +245,10 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   comment, by the quiet button in its corner (shown on hover or focus) or ⇧⌘F (Ctrl+Shift+F), and back the same way
   or with Esc. It is one experience everywhere (`focusModeFor`, `focusModeLayout`): a panel over the window, the
   rest dimmed (a click there goes back), the toolbar and the hints only there, every field compact until it opens.
+  It is one frame, `CommentFocusGroup`'s panel: padded, the description a bordered box with the toolbar as its top
+  strip, the hints a caption under the box; a changeset's comment (and a shelve's) adds its title field on top. A
+  comment of many lines on its own is a group of one (`CommentField`), so no field draws a larger editor of its own
+  (`focusModeSurfaces.test.ts`): a branch's once filled its panel edge to edge, its hints inside the text.
   From a dialog it lies above the dialog: the backdrop goes in the dialog (`backdropParent`), so a click on it closes
   the panel and never the dialog, Esc closes the panel first, then the dialog, and ⌘↵ leaves the panel and submits;
   the dialog's centering gives way while it's open (`Dialog.module.css`). Growing a dialog's field in place was

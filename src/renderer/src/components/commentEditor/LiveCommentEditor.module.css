@@ -26,7 +26,7 @@
 
 .editor:hover .expand,
 .editor:focus-within .expand,
-.editor[data-expanded] .expand {
+.editor[data-focus-mode] .expand {
   opacity: 1;
 }
 
@@ -51,29 +51,6 @@
   padding-right: 0;
 }
 
-/* Over the view, the rest dimmed: the field's own box at a writing size. Its owner's sizes give way (`!important`
-   over a height set inline, the check-in's resizable description). Under the dialogs (800): a dialog never opens
-   behind it, and it closes as the focus leaves it (`layoutAfterFocus`). */
-.editor[data-expanded='overlay'] {
-  position: fixed !important;
-  inset: 8vh max(24px, calc(50vw - 440px)) !important;
-  z-index: 790;
-  width: auto !important;
-  height: auto !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  padding: var(--space-4) var(--space-5) !important;
-  box-shadow: var(--shadow-lg);
-  font-size: var(--text-md);
-}
-
-
-/* A field alone in focus mode has its hints at its bottom, under the text (CodeMirror's own box comes last). */
-.footer {
-  order: 1;
-  padding: 0 10px var(--space-2);
-}
-
 /* In focus mode the toolbar is the box's top strip, edge to edge: the box's own padding moves onto the text. */
 .editor[data-focus-mode] {
   padding: 0 !important;
@@ -81,14 +58,6 @@
 
 .editor[data-focus-mode] :global(.cm-editor) {
   padding: var(--space-2) 10px;
-}
-
-.editor[data-focus-mode][data-expanded='overlay'] :global(.cm-editor) {
-  padding: var(--space-3) var(--space-5);
-}
-
-.editor[data-focus-mode][data-expanded='overlay'] .footer {
-  padding: 0 var(--space-5) var(--space-3);
 }
 
 /* The corner button, at the strip's end, centered on it, on the strip's tint. */
@@ -100,14 +69,6 @@
 
 .editor[data-focus-mode] .expand:hover {
   background: var(--bg-hover);
-}
-
-.backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 789;
-  background: var(--overlay);
-  animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
 }
 
 /* CodeMirror inside a comment field's box, in the app's font and tokens. Its own theme is injected at run time with

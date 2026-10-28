@@ -1,7 +1,8 @@
-import { Suspense, useEffect, useImperativeHandle, useRef, useState, type KeyboardEvent } from 'react';
+import { Suspense, useContext, useEffect, useImperativeHandle, useRef, useState, type KeyboardEvent } from 'react';
 import { classNames } from '../../lib/classNames';
 import { lazyComponent } from '../../lib/lazyComponent';
 import { isModPressed } from '../../lib/shortcuts';
+import { CommentFocusGroup, FocusGroupContext } from './CommentFocusGroup';
 import { enterAction, modEnterAction } from './fieldKeys';
 import type { CommentFieldProps } from './commentFieldProps';
 import styles from './CommentField.module.css';
@@ -28,9 +29,21 @@ export function preloadCommentEditor(): void {
 /**
  * A comment field (docs/features/rich-comments.md, "Writing"): the live editor, Markdown drawn as it reads around the
  * caret with chips and suggestions. Until the editor's code arrives, a plain field in the same box takes the typing,
- * and hands the editor its caret, so nothing moves and nothing typed is lost.
+ * and hands the editor its caret, so nothing moves and nothing typed is lost. A comment of many lines on its own (New
+ * branch's, a branch's) is a group of one, the description: every larger editor is the group's one panel, the same
+ * frame, a changeset's adding its title field (`focusModeFor`).
  */
 export function CommentField(props: CommentFieldProps) {
+  const group = useContext(FocusGroupContext);
+  if (props.singleLine || group) return <EditorField {...props} />;
+  return (
+    <CommentFocusGroup>
+      <EditorField {...props} groupField="description" />
+    </CommentFocusGroup>
+  );
+}
+
+function EditorField(props: CommentFieldProps) {
   const fallbackFocus = useRef<{ at: number } | null>(null);
   // Chosen once per field: a field that showed the lazy one keeps it, never mounting its editor again as the code lands.
   const [LiveCommentEditor] = useState(() => loadedEditor);

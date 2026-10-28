@@ -40,8 +40,9 @@ describe('the comment editor’s focus mode', () => {
   });
 
   it('is drawn by one panel, `CommentFocusGroup`: no field draws a larger editor of its own', () => {
-    const ownPanels = filesUnder(RENDERER, (name) => isAppSource(name) || name.endsWith('.css'))
-      .filter((path) => !path.endsWith('.test.ts') && /data-expanded/.test(readFileSync(path, 'utf8')))
+    // `data-expanded` was a field's own larger editor; other parts of the app use the name for their own panes.
+    const ownPanels = filesUnder(join(RENDERER, 'components', 'commentEditor'), (name) => isAppSource(name) || name.endsWith('.css'))
+      .filter((path) => /data-expanded/.test(readFileSync(path, 'utf8')))
       .map((path) => path.slice(RENDERER.length + 1));
     expect(ownPanels).toEqual([]);
   });

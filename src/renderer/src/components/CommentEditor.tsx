@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useRef, useState, type KeyboardEvent } from 'react';
 import { confirm } from '../ui/dialog/confirm';
 import { DESCRIPTION_PLACEHOLDER } from './commentEditor/commentPlaceholders';
 import { CommentField } from './commentEditor/CommentField';
@@ -31,7 +31,7 @@ interface CommentEditorProps {
 export function CommentEditor({ draft, surface, original, opened, onChange, onSave, onClose }: CommentEditorProps) {
   const [saving, setSaving] = useState(false);
   // A changeset's title and description are one larger editor, as the check-in's (`CommentFocusGroup`).
-  const withSummary = focusModeFor(surface).fields === 'titleAndDescription';
+  const withSummary = focusModeFor(surface).title;
   const descriptionRef = useRef<CommentFieldHandle>(null);
 
   const edited = hasUnsavedEdit(original, opened, draft);
@@ -61,7 +61,7 @@ export function CommentEditor({ draft, surface, original, opened, onChange, onSa
 
   return (
     <div className={styles.editor} onKeyDown={onKeyDown}>
-      <GroupedWhen grouped={withSummary}>
+      <CommentFocusGroup>
       {withSummary && (
         <CommentField
           singleLine
@@ -79,7 +79,7 @@ export function CommentEditor({ draft, surface, original, opened, onChange, onSa
       )}
       <CommentField
         ref={descriptionRef}
-        groupField={withSummary ? 'description' : undefined}
+        groupField="description"
         autoFocus={!withSummary}
         className={styles.descriptionField}
         value={draft.description}
@@ -89,7 +89,7 @@ export function CommentEditor({ draft, surface, original, opened, onChange, onSa
         onChange={(text) => onChange({ ...draft, description: text })}
         onSubmit={() => void save()}
       />
-      </GroupedWhen>
+      </CommentFocusGroup>
       <div className={styles.footer}>
         <span className={styles.hint}>
           <Kbd keys={hotkey('saveComment')} /> to save · Esc to cancel
@@ -107,8 +107,3 @@ export function CommentEditor({ draft, surface, original, opened, onChange, onSa
 
 /** The question before an edit is thrown away, the same in Edit comment (`EditCommentDialog`). */
 export const DISCARD_QUESTION = { title: 'Discard your changes to this comment?', message: 'What you wrote here is lost.', confirmLabel: 'Discard', danger: true } as const;
-
-/** A changeset's title and description as one larger editor; a named object's one description as itself. */
-function GroupedWhen({ grouped, children }: { grouped: boolean; children: ReactNode }) {
-  return grouped ? <CommentFocusGroup>{children}</CommentFocusGroup> : children;
-}

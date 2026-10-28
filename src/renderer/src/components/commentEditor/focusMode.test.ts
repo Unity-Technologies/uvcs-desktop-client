@@ -1,7 +1,7 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { PressedKey } from '../../lib/shortcuts';
-import { caretOpeningFocusMode, focusModeButton, focusModeKey, focusModeParts, layoutAfterFocus, offersFocusMode } from './focusMode';
+import { caretOpeningFocusMode, focusModeButton, focusModeKey, focusModeParts, offersFocusMode } from './focusMode';
 import { EditorState } from '@codemirror/state';
 
 /**
@@ -51,14 +51,6 @@ describe('focusModeKey', () => {
   });
 });
 
-describe('layoutAfterFocus', () => {
-  it('leaves the larger editor once the focus leaves it (a dialog it opened, Tab), and keeps it while focused', () => {
-    expect(layoutAfterFocus('overlay', false)).toBeNull();
-    expect(layoutAfterFocus('overlay', true)).toBe('overlay');
-    expect(layoutAfterFocus(null, true)).toBeNull();
-  });
-});
-
 describe('focusModeButton', () => {
   it('names what it does, the name alone telling whether the larger editor is open', () => {
     expect(focusModeButton(false)).toEqual({ label: 'Write in a larger editor', icon: 'expand' });
@@ -67,17 +59,15 @@ describe('focusModeButton', () => {
 });
 
 describe('focusModeParts', () => {
-  const field = { singleLine: false, inGroup: false, groupOpen: false, ownLayout: null } as const;
-  const none = { offered: false, layout: null, inFocusMode: false, button: null, toolbar: false, footer: false, backdrop: false, takesTab: false };
+  const field = { singleLine: false, inGroup: false, groupOpen: false } as const;
+  const none = { offered: false, inFocusMode: false, button: null, toolbar: false, takesTab: false };
 
   it('gives a one-line field alone nothing', () => {
     expect(focusModeParts({ ...field, singleLine: true })).toEqual(none);
   });
 
-  it('gives a comment of many lines its corner button, and in focus mode its toolbar, hints and Tab', () => {
-    expect(focusModeParts(field)).toEqual({ ...none, offered: true, button: focusModeButton(false) });
-    const expanded = { offered: true, inFocusMode: true, button: focusModeButton(true), toolbar: true, footer: true, takesTab: true };
-    expect(focusModeParts({ ...field, ownLayout: 'overlay' })).toEqual({ ...none, ...expanded, layout: 'overlay', backdrop: true });
+  it('gives a comment of many lines outside a group nothing: `CommentField` makes it a group of one', () => {
+    expect(focusModeParts(field)).toEqual(none);
   });
 
   it('gives the check-in’s summary the group’s keys only: no button, no toolbar, and Tab goes on to the description', () => {
