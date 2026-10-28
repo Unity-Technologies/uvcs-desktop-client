@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { findReferences } from '../../lib/comments/commentReferences';
-import { chipCard, chipContent, emojiLabel, referenceRepository, type ChipContent } from './chipContent';
+import { chipCard, chipContent, emojiLabel, personCard, referenceRepository, type ChipContent } from './chipContent';
 
 const chipOf = (text: string, placeRepository?: string): ChipContent => chipContent(findReferences(text)[0]!.reference, placeRepository);
 
@@ -109,6 +109,16 @@ describe('chipCard', () => {
 
   it('leaves out what an object read has no word for', () => {
     expect(chipCard({ title: 'Label v1' }, { comment: '', owner: 'ana' }, ago)).toEqual({ title: 'Label v1', meta: ['Ana'] });
+  });
+});
+
+describe('personCard', () => {
+  it('names a person as shown, then as cm knows them', () => {
+    expect(personCard('daniel.penalba@unity3d.com')).toEqual({ title: 'Daniel Penalba', meta: ['daniel.penalba@unity3d.com'] });
+  });
+
+  it('says the name once when both read the same', () => {
+    expect(personCard('ana')).toEqual({ title: 'Ana', meta: [] });
   });
 });
 
