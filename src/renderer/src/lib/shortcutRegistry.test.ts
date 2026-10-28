@@ -64,7 +64,7 @@ describe('shortcut registry', () => {
     }
   });
 
-  it('lets only a comment field's keys share a global key, inside the field (`scope`), and gives them Slack's keys', () => {
+  it("lets only a comment field's keys share a global key, inside the field (`scope`), and gives them Slack's keys", () => {
     for (const mac of [true, false]) {
       const global = new Set(
         Object.values(SHORTCUTS)
