@@ -27,7 +27,7 @@ export type XlinkLoad = { kind: 'loaded' } | { kind: 'changesWaiting'; shelveId:
  * (`loadXlinkArgs`), which leaves the other pending changes as they are. When `cm` refuses because of them (its
  * PendingChangesOnSwitchAction asks to shelve or fail), they are moved aside as a switch moves them, never by `cm`:
  * 1. Shelve every change with the official automatic-shelve comment, check the shelve holds them all, and record it
- *    like changes put aside to update, so "Welcome back" offers them should they not come back.
+ *    (`reason: 'xlink'`), so "Welcome back" offers them should they not come back.
  * 2. Undo them, move the files they added aside, and load the xlink's files.
  * 3. Merge the shelve back: the workspace is at the changeset it was shelved on, so only a change made under the
  *    xlink's folder meanwhile could conflict.
@@ -53,7 +53,7 @@ export async function loadXlink(deps: ShelveFlowDependencies, workspacePath: str
         await load();
         return { kind: 'loaded' };
       case 'shelveChanges':
-        return loadAroundChanges(deps, workspacePath, snapshot, load, context);
+        return loadAroundChanges(deps, workspacePath, snapshot, load, error, context);
     }
   }
 }
@@ -63,6 +63,7 @@ async function loadAroundChanges(
   workspacePath: string,
   snapshot: PendingChangesSnapshot,
   load: () => Promise<string>,
+  refusal: CmError,
   context: OperationContext,
 ): Promise<XlinkLoad> {
   const { cm, records } = deps;
@@ -71,8 +72,12 @@ async function loadAroundChanges(
   if (!objectRef) throw new Error(`Couldn't find ${describeSelector(workspace.selector)} in the repository, so your changes stayed as they were.`);
 
   context.beginStep('Putting your changes aside', 1, 3);
-  const shelve = await createAutomaticShelve(cm, workspacePath, snapshot.changes, objectRef, context);
-  const record = newShelveRecord(workspace, shelve.id, shelvedContents(snapshot), { mode: 'bring', reason: 'update', objectRef, target: NO_TARGET });
+  // Any failure to update with changes pending comes here, not only the refusal: when the changes can't even be
+  // shelved (the server is down), what `cm update` said is the failure to tell.
+  const shelve = await createAutomaticShelve(cm, workspacePath, snapshot.changes, objectRef, context).catch(() => {
+    throw refusal;
+  });
+  const record = newShelveRecord(workspace, shelve.id, shelvedContents(snapshot), { mode: 'leave', reason: 'xlink', objectRef, target: NO_TARGET });
   records.save(record);
 
   // From here on the changes live in the shelve: a failure puts them back.
