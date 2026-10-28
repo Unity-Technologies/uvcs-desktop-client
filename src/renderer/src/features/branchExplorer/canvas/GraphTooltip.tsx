@@ -1,5 +1,6 @@
 import type { PendingMergeLink } from '@shared/domain/pendingChanges';
 import { Markdown } from '../../../components/Markdown';
+import { HoverCard } from '../../../ui/HoverCard';
 import { splitComment } from '../../../lib/comment';
 import { commentLineText, commentText } from '../../../lib/comments/commentText';
 import { displayName } from '../../../lib/userName';
@@ -94,9 +95,7 @@ export function GraphTooltip({ target, layout, palette, pendingChangeCount, x, y
   const flip = x > containerWidth - POINTER_TOOLTIP_ROOM;
   return (
     <div className={styles.tooltip} data-flip={flip} style={{ left: flip ? x - 14 : x + 14, top: y + 14 }}>
-      <div className={styles.title}>{content.title}</div>
-      {content.body && <div className={styles.body}>{content.body}</div>}
-      {content.meta && <div className={styles.meta}>{content.meta}</div>}
+      <HoverCard title={content.title} body={content.body} meta={content.meta} />
     </div>
   );
 }
