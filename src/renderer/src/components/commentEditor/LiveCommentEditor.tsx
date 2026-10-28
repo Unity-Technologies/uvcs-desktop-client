@@ -1,7 +1,7 @@
 import { EditorState } from '@codemirror/state';
 import { EditorView, placeholder as placeholderOf } from '@codemirror/view';
 import { Maximize2, Minimize2 } from 'lucide-react';
-import { useContext, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type RefObject } from 'react';
+import { useContext, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { useResolvedTheme } from '../../app/settings/useResolvedTheme';
 import { pierreThemeName } from '../../lib/codeTheme';
@@ -33,6 +33,7 @@ import { setSuggestionCue } from './suggestionCueField';
 import { suggestionCue } from './suggestionSource';
 import { useSuggestionRows } from './useSuggestionRows';
 import { WidgetPortals } from './widgetPortals';
+import { WidgetPortalsView } from './WidgetPortalsView';
 import fieldStyles from './CommentField.module.css';
 import styles from './LiveCommentEditor.module.css';
 
@@ -150,9 +151,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
     [view, placeholder, focus.inFocusMode, singleLine],
   );
 
-  const widgets = useSyncExternalStore(portals.subscribe, portals.portals);
-  // What React drew in the widgets changes their size: the editor measures its lines again.
-  useLayoutEffect(() => view?.requestMeasure(), [view, widgets]);
+  const measure = useMemo(() => () => view?.requestMeasure(), [view]);
 
   return (
     <div
@@ -176,7 +175,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
           <FocusModeFooter />
         </div>
       )}
-      {widgets.map((widget) => createPortal(widget.node, widget.host, String(widget.key)))}
+      <WidgetPortalsView portals={portals} onDrawn={measure} />
       {suggestions.list}
       {bar.element}
     </div>

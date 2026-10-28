@@ -13,7 +13,14 @@ function revealsSelection(state: EditorState): { revealsSelection: boolean } {
 
 const hidden = Decoration.replace({});
 
-/** A mark's decoration (`liveMarksOf` decides; this only draws). */
+/**
+ * The decorations that draw the marks (`liveMarksOf` decides; this only draws): each widget equal (`eq`) to the one it
+ * was for the same text, so CodeMirror keeps its DOM, and its React content, across keys typed elsewhere.
+ */
+export function liveDecorationsOf(marks: readonly LiveMark[]): Range<Decoration>[] {
+  return marks.map(decorationOf);
+}
+
 function decorationOf(mark: LiveMark): Range<Decoration> {
   switch (mark.kind) {
     case 'hidden':
@@ -62,7 +69,7 @@ const liveMarks = ViewPlugin.fromClass(
 );
 
 function draw(view: EditorView): DecorationSet {
-  return Decoration.set(liveMarksOf(view.state, revealsSelection(view.state), view.visibleRanges).map(decorationOf), true);
+  return Decoration.set(liveDecorationsOf(liveMarksOf(view.state, revealsSelection(view.state), view.visibleRanges)), true);
 }
 
 /**

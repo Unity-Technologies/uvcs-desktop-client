@@ -14,7 +14,7 @@ describe('liveDecorationsOf, as a key is typed in a long comment', () => {
     const typed = before.update({ changes: { from: 0, insert: 'q' }, selection: { anchor: 1 }, userEvent: 'input.type' });
     const drawn = (state: typeof before) => Decoration.set(liveDecorationsOf(liveMarksOf(state, { revealsSelection: true })), true);
     let changed = 0;
-    RangeSet.compare([drawn(before).map(typed.changes)], [drawn(typed.state)], typed.changes, {
+    RangeSet.compare([drawn(before)], [drawn(typed.state)], typed.changes, {
       compareRange: () => changed++,
       comparePoint: () => changed++,
     });
