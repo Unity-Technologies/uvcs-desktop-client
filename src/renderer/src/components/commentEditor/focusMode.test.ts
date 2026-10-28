@@ -1,7 +1,8 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { PressedKey } from '../../lib/shortcuts';
-import { focusModeButton, focusModeKey, focusModeLayout, focusModeParts, layoutAfterFocus, offersFocusMode } from './focusMode';
+import { caretOpeningFocusMode, focusModeButton, focusModeKey, focusModeLayout, focusModeParts, layoutAfterFocus, offersFocusMode } from './focusMode';
+import { editorState } from './commentEditorTesting';
 
 function press(key: string, code: string, modifiers: Partial<PressedKey> = {}): PressedKey {
   return { key, code, metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, ...modifiers };
@@ -87,5 +88,17 @@ describe('focusModeParts', () => {
   it('gives the check-in’s description the button, the toolbar and Tab, the group drawing the panel and its hints', () => {
     expect(focusModeParts({ ...field, inGroup: true })).toEqual({ ...none, offered: true, button: focusModeButton(false) });
     expect(focusModeParts({ ...field, inGroup: true, groupOpen: true })).toEqual({ ...none, offered: true, inFocusMode: true, button: focusModeButton(true), toolbar: true, takesTab: true });
+  });
+});
+
+describe('caretOpeningFocusMode', () => {
+  it('puts the caret at a draft’s end when focus mode opens on a field never focused since it was made (a workspace switch, Home and back)', () => {
+    expect(caretOpeningFocusMode(editorState('‸A draft'), false)).toBe('A draft'.length);
+  });
+
+  it('leaves the caret where the user put it, and an empty field as it is', () => {
+    expect(caretOpeningFocusMode(editorState('A dr‸aft'), true)).toBeNull();
+    expect(caretOpeningFocusMode(editorState('‸A draft'), true)).toBeNull();
+    expect(caretOpeningFocusMode(editorState('‸'), false)).toBeNull();
   });
 });
