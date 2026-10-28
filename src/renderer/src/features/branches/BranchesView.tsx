@@ -2,6 +2,7 @@ import { EyeOff, GitBranch, GitBranchPlus, List, ListTree } from 'lucide-react';
 import { useMemo } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import { useRenameCommand } from '../../app/commands/useRenameCommand';
+import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
@@ -79,6 +80,7 @@ export function BranchesView() {
     <>
       <ViewHeader
         title="Branches"
+        detailsToggle={<DetailsToggleButton detailsKey="branches" />}
         count={branches && matching.length}
         total={branches?.length}
         actions={

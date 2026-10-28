@@ -220,6 +220,7 @@ export function BranchExplorerView() {
   const header = (
     <ViewHeader
       title="Branch Explorer"
+      detailsToggle={<DetailsToggleButton detailsKey={DETAILS_KEY} />}
       subtitle={layout && filtered && `${pluralize(filtered.changesets.length, 'changeset')} · ${pluralize(layout.lanes.length, 'branch', 'branches')}`}
       actions={
         <>
@@ -232,7 +233,6 @@ export function BranchExplorerView() {
             onLeave={() => canvasRef.current?.focus()}
           />
           <ViewRefreshButton fetching={isFetching} />
-          <DetailsToggleButton detailsKey={DETAILS_KEY} />
         </>
       }
     >

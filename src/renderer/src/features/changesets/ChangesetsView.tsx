@@ -4,6 +4,7 @@ import type { Changeset } from '@shared/domain/changeset';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
+import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { ObjectListView } from '../../components/ObjectListView';
 import { branchWorkedOn } from '../../components/workingObject';
 import { EmptyState } from '../../ui/EmptyState';
@@ -98,7 +99,7 @@ export function ChangesetsView() {
   const cap = changesets && changesetsCap(visible.length, changesets.length, since);
   const filtering = isFilteringChangesets(text, { since, people }, branchScope);
   const header = (
-    <ViewHeader title="Changesets" count={cap ? undefined : changesets && visible.length} total={changesets?.length} subtitle={cap}>
+    <ViewHeader title="Changesets" count={cap ? undefined : changesets && visible.length} total={changesets?.length} subtitle={cap} detailsToggle={<DetailsToggleButton detailsKey="changesets" />}>
       <FilterBar
         text={<FilterField value={text} onChange={(value) => update({ text: value })} placeholder="Filter changesets" />}
         people={<PeopleFilter value={people} onChange={(value) => updateShown({ people: value })} people={offered} mineTip="Changesets you checked in" />}

@@ -2,6 +2,7 @@ import { Search } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { RepositoryPlace } from '@shared/domain/place';
 import { placeId } from '@shared/domain/place';
+import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { EmptyState } from '../../ui/EmptyState';
 import { FilterBar } from '../../ui/FilterBar';
@@ -65,6 +66,7 @@ export function RepositoryFilesView({ place }: { place: RepositoryPlace }) {
   const header = (
     <ViewHeader
       title="Files"
+      detailsToggle={<DetailsToggleButton detailsKey={DETAILS_KEY} />}
       subtitle={shown ? filesBranchCaption(shown) : undefined}
       actions={
         <>

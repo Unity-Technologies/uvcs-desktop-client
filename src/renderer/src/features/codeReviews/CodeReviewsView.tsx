@@ -2,6 +2,7 @@ import { CircleDot, MessageSquareCode, Plus, UserCheck } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { CODE_REVIEW_STATUSES, MAX_LISTED_CODE_REVIEWS, type CodeReview } from '@shared/domain/codeReview';
 import { useCommands, type Command } from '../../app/commands/commandStore';
+import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { usePlace, useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
@@ -71,6 +72,7 @@ export function CodeReviewsView() {
   const header = (
     <ViewHeader
       title="Code reviews"
+      detailsToggle={<DetailsToggleButton detailsKey="codeReviews" />}
       count={reviews && visible.length}
       total={reviews?.length}
       subtitle={reviews && reviews.length >= MAX_LISTED_CODE_REVIEWS && 'newest'}

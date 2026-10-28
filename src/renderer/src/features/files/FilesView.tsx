@@ -6,6 +6,7 @@ import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { selectAfterLeaving } from '../../app/navigation/leaveGuard';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
+import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { NoSelection } from '../../components/NoSelection';
 import { EmptyState } from '../../ui/EmptyState';
@@ -92,6 +93,7 @@ export function FilesView() {
   const header = (
     <ViewHeader
       title="Files"
+      detailsToggle={<DetailsToggleButton detailsKey="filesTree" />}
       subtitle={workspacePath}
       actions={
         <>

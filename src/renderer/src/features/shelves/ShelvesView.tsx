@@ -6,6 +6,7 @@ import { usePlaceUser } from '../../app/account/accounts';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { usePlace } from '../../app/workspace/useWorkspace';
+import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { authorColumn, avatarColumn, commentColumn, dateColumn, numberColumn, secondaryColumn } from '../../components/historyColumns';
 import { ObjectListView } from '../../components/ObjectListView';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
@@ -63,6 +64,7 @@ export function ShelvesView() {
     <>
       <ViewHeader
         title="Shelves"
+        detailsToggle={<DetailsToggleButton detailsKey="shelves" />}
         count={shelves && visible.length}
         total={shelves?.length}
         actions={<ViewRefreshButton fetching={isFetching} />}

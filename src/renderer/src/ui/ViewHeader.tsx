@@ -14,6 +14,8 @@ interface ViewHeaderProps {
   children?: ReactNode;
   /** Buttons at the right of the title; put the view's primary action last. */
   actions?: ReactNode;
+  /** Hides the view's details panel or shows it again (`DetailsToggleButton`): every view with one has it, rightmost. */
+  detailsToggle?: ReactNode;
   /** Sits in the window's title area (no top bar above it), so its empty space moves the window. */
   inTitleBar?: boolean;
 }
@@ -22,14 +24,17 @@ interface ViewHeaderProps {
  * The header every view shares: title and actions on the first row, filters on the second.
  * Keeping the same structure everywhere makes each screen predictable at a glance.
  */
-export function ViewHeader({ title, count, total, subtitle, children, actions, inTitleBar }: ViewHeaderProps) {
+export function ViewHeader({ title, count, total, subtitle, children, actions, detailsToggle, inTitleBar }: ViewHeaderProps) {
   return (
     <header className={styles.header} data-title-bar={inTitleBar}>
       <div className={styles.titleRow}>
         <h1 className={styles.title}>{title}</h1>
         {count !== undefined && <div className={styles.subtitle}>{shownCount(count, total)}</div>}
         {subtitle && <div className={styles.subtitle}>{subtitle}</div>}
-        <div className={styles.actions}>{actions}</div>
+        <div className={styles.actions}>
+          {actions}
+          {detailsToggle}
+        </div>
       </div>
       {children && <div className={styles.toolbar}>{children}</div>}
     </header>

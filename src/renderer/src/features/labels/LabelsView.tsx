@@ -2,6 +2,7 @@ import { Plus, Tag } from 'lucide-react';
 import { useMemo } from 'react';
 import type { Label } from '@shared/domain/label';
 import { useRenameCommand } from '../../app/commands/useRenameCommand';
+import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { usePlace } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
@@ -74,6 +75,7 @@ export function LabelsView() {
     <>
       <ViewHeader
         title="Labels"
+        detailsToggle={<DetailsToggleButton detailsKey="labels" />}
         count={labels && visible.length}
         total={labels?.length}
         actions={

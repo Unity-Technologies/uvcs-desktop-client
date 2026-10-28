@@ -1,6 +1,7 @@
 import { ExternalLink, Lock as LockIcon, LockOpen } from 'lucide-react';
 import { useMemo } from 'react';
 import type { Lock } from '@shared/domain/lock';
+import { DetailsToggleButton } from '../../components/DetailsToggleButton';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { ObjectListView } from '../../components/ObjectListView';
 import { PathLabel } from '../../components/PathLabel';
@@ -84,6 +85,7 @@ export function LocksView() {
   const header = (
     <ViewHeader
       title="Locks"
+      detailsToggle={<DetailsToggleButton detailsKey="locks" />}
       count={locks && visible.length}
       total={locks?.length}
       actions={
