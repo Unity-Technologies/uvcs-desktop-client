@@ -1,0 +1,42 @@
+/* Out of focus mode the group is no box of its own: its fields lay out in the panel around them. */
+.group {
+  display: contents;
+}
+
+/* In focus mode, one panel over the view, under the dialogs as a single field's is (`LiveCommentEditor.module.css`):
+   the summary a title over the description, which takes the rest. The fields' own sizes give way (`!important` over
+   the description's height set inline). */
+.group[data-open] {
+  position: fixed;
+  inset: 8vh max(24px, calc(50vw - 440px));
+  z-index: 790;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-lg);
+}
+
+.group[data-open] [data-group-field='summary'] {
+  max-height: none !important;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+.group[data-open] [data-group-field='description'] {
+  flex: 1;
+  height: auto !important;
+  max-height: none !important;
+  font-size: var(--text-md);
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 789;
+  background: var(--overlay);
+  animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
+}

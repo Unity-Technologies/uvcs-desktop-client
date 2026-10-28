@@ -9,6 +9,7 @@ import { codeColors, codeTheme } from './codeColors';
 import { commentMarkdown } from './commentLanguage';
 import { closeCodeFence, FORMAT_COMMANDS, isInCode, linkFromPaste } from './formatCommands';
 import { enterAction, modEnterAction, type FieldKeyAction } from './fieldKeys';
+import type { GroupKey } from './focusGroup';
 import { fieldLabelAttributes } from './fieldLabel';
 import { formatForKey, pastesPlain } from './formattingKeys';
 import { hasFocus, liveDrawing } from './liveDecorations';
@@ -28,6 +29,8 @@ export interface CommentEditorKeys {
   onEnter?: () => void;
   /** ⌘↵: none submits the field's form (a dialog), or leaves the key to the window (check in, merge). */
   onSubmit?: () => void;
+  /** Tab, ⇧Tab, ↓ and ↑ between a focus group's fields (`groupMove`): true when the key went to the other field. */
+  groupKey?: (view: EditorView, key: GroupKey) => boolean;
 }
 
 export interface CommentEditorOptions {
@@ -88,6 +91,9 @@ export function commentEditorExtensions(options: CommentEditorOptions, enabled: 
     EditorView.contentAttributes.of({ ...fieldLabelAttributes(options.label, options.labelledBy), 'aria-multiline': String(!options.singleLine), spellcheck: 'true' }),
     Prec.highest(
       keymap.of([
+        { key: 'Tab', run: (view) => options.keys.current.groupKey?.(view, 'Tab') ?? false, shift: (view) => options.keys.current.groupKey?.(view, 'ShiftTab') ?? false },
+        { key: 'ArrowDown', run: (view) => options.keys.current.groupKey?.(view, 'ArrowDown') ?? false },
+        { key: 'ArrowUp', run: (view) => options.keys.current.groupKey?.(view, 'ArrowUp') ?? false },
         { key: 'Mod-Enter', run: (view) => submit(view, options.keys.current) },
         { key: 'ArrowDown', run: (view) => moveIntoBlock(view, 1, false), shift: (view) => moveIntoBlock(view, 1, true) },
         { key: 'ArrowUp', run: (view) => moveIntoBlock(view, -1, false), shift: (view) => moveIntoBlock(view, -1, true) },

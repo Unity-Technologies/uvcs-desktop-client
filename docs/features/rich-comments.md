@@ -169,6 +169,11 @@ htmlFor>` can't focus, and the label names it, `fieldLabelAttributes`), the comm
   the dialogs (z 790): a dialog it opens never shows behind it, nor does Tab walk the dimmed view. A popup
   editor holding a copy of the text was dropped: two editors of one comment would have to be kept in step, and its
   undo, caret and suggestions would start over.
+  In the check-in, focus mode opens the summary and the description together (`CommentFocusGroup`,
+  `focusModeFields`): one panel, the summary a title over the description, the caret staying where it was. Tab, or
+  ↓ at the summary's end, goes to the description's start; ⇧Tab, or ↑ on its first line, back to the summary's end
+  (`groupMove`). They stay the same two editors; moving between them is no leaving, and the panel closes as the focus
+  leaves both or ⌘↵ checks in. The dialogs' single comments open alone.
 - **The selection bar** (`SelectionBar`, `selectionBarShows`): over text selected, once the pointer lets go, never in
   a code block; B, I, S, code and link, then list, task, quote and code block in a field of many lines, each on while
   the selection is in it. No toolbar shows otherwise: the fields stay small.

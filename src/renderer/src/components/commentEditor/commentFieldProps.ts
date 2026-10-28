@@ -1,10 +1,13 @@
 import type { CSSProperties, Ref } from 'react';
+import type { GroupField } from './focusGroup';
 
 /** What a comment field's owner can do with it: put the caret in it. */
 export interface CommentFieldHandle {
   focus: () => void;
   /** The caret at the end of the text, as after typing it. */
   focusAtEnd: () => void;
+  /** The caret at the text's start. */
+  focusAtStart: () => void;
 }
 
 /** A comment field: the text in and out as stored, never converted (docs/features/rich-comments.md, "Writing"). */
@@ -19,6 +22,8 @@ export interface CommentFieldProps {
   id?: string;
   /** The id of the label shown above the field, which names the editor (`fieldLabelAttributes`). */
   labelledBy?: string;
+  /** Its part in a `CommentFocusGroup` (the check-in's summary or description): focus mode opens the group. */
+  groupField?: GroupField;
   placeholder: string;
   autoFocus?: boolean;
   disabled?: boolean;

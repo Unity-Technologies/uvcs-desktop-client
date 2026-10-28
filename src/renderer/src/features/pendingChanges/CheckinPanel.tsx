@@ -2,6 +2,7 @@ import { ArrowDownToLine, GitMerge, History } from 'lucide-react';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { CommentField } from '../../components/commentEditor/CommentField';
+import { CommentFocusGroup } from '../../components/commentEditor/CommentFocusGroup';
 import { DESCRIPTION_PLACEHOLDER } from '../../components/commentEditor/commentPlaceholders';
 import type { CommentFieldHandle } from '../../components/commentEditor/commentFieldProps';
 import { splitComment, withSummaryText } from '../../lib/comment';
@@ -128,39 +129,44 @@ export function CheckinPanel({
   return (
     <div className={styles.panel}>
       <ResizeHandle size={descriptionHeight} min={DESCRIPTION_MIN_HEIGHT} max={DESCRIPTION_MAX_HEIGHT} onResize={setDescriptionHeight} />
-      <div className={styles.summaryField}>
+      {/* Focus mode opens the summary and the description together (`focusModeFields('checkin')`). */}
+      <CommentFocusGroup>
+        <div className={styles.summaryField}>
+          <CommentField
+            ref={summaryRef}
+            groupField="summary"
+            singleLine
+            className={styles.summary}
+            label={shelving ? 'Shelve summary' : 'Summary'}
+            placeholder={shelving ? 'Shelve summary' : 'Summary'}
+            value={summary}
+            // Pasted lines go on in the description, as the title takes one line.
+            onChange={(text) => onMessageChange(withSummaryText({ summary, description }, text))}
+            onEnter={() => descriptionRef.current?.focus()}
+          />
+          {recentComments.length > 0 && (
+            <ActionDropdownMenu
+              entries={recentComments.map((recent, index) => ({
+                id: `recent.${index}`,
+                label: recent.split('\n')[0]!,
+                run: () => onMessageChange(splitComment(recent)),
+              }))}
+            >
+              <IconButton size="small" className={styles.recent} icon={<History size={14} />} label="Recent comments" />
+            </ActionDropdownMenu>
+          )}
+        </div>
         <CommentField
-          ref={summaryRef}
-          singleLine
-          className={styles.summary}
-          label={shelving ? 'Shelve summary' : 'Summary'}
-          placeholder={shelving ? 'Shelve summary' : 'Summary'}
-          value={summary}
-          // Pasted lines go on in the description, as the title takes one line.
-          onChange={(text) => onMessageChange(withSummaryText({ summary, description }, text))}
-          onEnter={() => descriptionRef.current?.focus()}
+          ref={descriptionRef}
+          groupField="description"
+          className={styles.description}
+          label="Description"
+          placeholder={DESCRIPTION_PLACEHOLDER}
+          style={{ height: descriptionHeight }}
+          value={description}
+          onChange={(text) => onMessageChange({ description: text })}
         />
-        {recentComments.length > 0 && (
-          <ActionDropdownMenu
-            entries={recentComments.map((recent, index) => ({
-              id: `recent.${index}`,
-              label: recent.split('\n')[0]!,
-              run: () => onMessageChange(splitComment(recent)),
-            }))}
-          >
-            <IconButton size="small" className={styles.recent} icon={<History size={14} />} label="Recent comments" />
-          </ActionDropdownMenu>
-        )}
-      </div>
-      <CommentField
-        ref={descriptionRef}
-        className={styles.description}
-        label="Description"
-        placeholder={DESCRIPTION_PLACEHOLDER}
-        style={{ height: descriptionHeight }}
-        value={description}
-        onChange={(text) => onMessageChange({ description: text })}
-      />
+      </CommentFocusGroup>
       {shelving && (
         <div className={styles.keep} data-tip="Shelve a copy and keep working on the changes, instead of putting them aside">
           <Checkbox checked={keepShelved} onChange={setKeepShelved} label="Keep the changes here" />

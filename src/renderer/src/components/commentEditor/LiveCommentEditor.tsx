@@ -1,7 +1,7 @@
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { Maximize2, Minimize2 } from 'lucide-react';
-import { useEffect, useId, useImperativeHandle, useLayoutEffect, useRef, useState, useSyncExternalStore, type RefObject } from 'react';
+import { useContext, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { useResolvedTheme } from '../../app/settings/useResolvedTheme';
 import { pierreThemeName } from '../../lib/codeTheme';
@@ -9,6 +9,8 @@ import { classNames } from '../../lib/classNames';
 import { isInModalDialog } from '../../lib/modalDialog';
 import { isMac } from '../../lib/platform';
 import { hotkey } from '../../lib/shortcutRegistry';
+import { FocusGroupContext, type FocusGroup } from './CommentFocusGroup';
+import { groupMove } from './focusGroup';
 import { focusModeButton, focusModeKey, focusModeLayout, layoutAfterFocus, offersFocusMode, type FocusModeLayout } from './focusMode';
 import { commentEditorExtensions, editable, editableWhen, theme, themed, type CommentEditorKeys } from './commentEditorSetup';
 import { ownerChange } from './oneLine';
@@ -36,7 +38,7 @@ interface LiveCommentEditorProps extends CommentFieldProps {
  * The comment editor (docs/features/rich-comments.md, "Writing"): CodeMirror over the comment's own text, drawn as it
  * reads around the caret, with the suggestion list and the selection bar. Its text is the stored comment, in and out.
  */
-export function LiveCommentEditor({ value, onChange, singleLine = false, label, labelledBy, placeholder, autoFocus, disabled = false, onEnter, onSubmit, className, style, ref, initialFocus }: LiveCommentEditorProps) {
+export function LiveCommentEditor({ value, onChange, singleLine = false, label, labelledBy, groupField, placeholder, autoFocus, disabled = false, onEnter, onSubmit, className, style, ref, initialFocus }: LiveCommentEditorProps) {
   const host = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<EditorView | null>(null);
   const [state, setState] = useState<EditorState | null>(null);
@@ -101,18 +103,37 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
   useEffect(() => view?.dispatch({ effects: editable.reconfigure(editableWhen(!disabled)) }), [view, disabled]);
   useEffect(() => view?.dispatch({ effects: theme.reconfigure(themed(codeTheme)) }), [view, codeTheme]);
 
-  useImperativeHandle(ref, () => ({
-    focus: () => view?.focus(),
-    focusAtEnd: () => {
-      if (!view) return;
-      view.dispatch({ selection: { anchor: view.state.doc.length }, scrollIntoView: true });
-      view.focus();
-    },
-  }));
+  const handle = useMemo(
+    () => ({
+      focus: () => view?.focus(),
+      focusAtEnd: () => focusAt(view, view?.state.doc.length ?? 0),
+      focusAtStart: () => focusAt(view, 0),
+    }),
+    [view],
+  );
+  useImperativeHandle(ref, () => handle, [handle]);
+  const group = useContext(FocusGroupContext);
+  const grouped = group && groupField ? { group, field: groupField } : null;
+  useEffect(() => {
+    if (!group || !groupField) return;
+    group.register(groupField, handle);
+    return () => group.register(groupField, null);
+  }, [group, groupField, handle]);
+  // Tab and the arrows between the group's fields, while focus mode shows them together.
+  keys.current.groupKey =
+    grouped && grouped.group.open
+      ? (editor, key) => {
+          const head = editor.state.selection.main.head;
+          const move = groupMove(grouped.field, key, { atEnd: head === editor.state.doc.length, onFirstLine: onFirstVisualLine(editor, head) });
+          if (!move) return false;
+          grouped.group.moveTo(move.to, move.caret);
+          return true;
+        }
+      : undefined;
 
   const suggestions = useSuggestions(view, state);
   const bar = useSelectionBar(view, state, singleLine, suggestions.shown);
-  const focus = useFocusMode(view, state, host, singleLine, suggestions.shown);
+  const focus = useFocusMode(view, state, host, singleLine, suggestions.shown, grouped?.group ?? null);
 
   const widgets = useSyncExternalStore(portals.subscribe, portals.portals);
   // What React drew in the widgets changes their size: the editor measures its lines again.
@@ -124,6 +145,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
       className={classNames(fieldStyles.field, styles.editor, className)}
       style={style}
       data-single-line={singleLine || undefined}
+      data-group-field={groupField}
       data-expanded={focus.layout ?? undefined}
       onMouseDown={bar.onPointerDown}
     >
@@ -139,16 +161,24 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
  * Focus mode (`focusMode`): the field grows into a large editor and back, by its corner button, its shortcut or Esc.
  * The same editor, so its text, caret and selection stay.
  */
-function useFocusMode(view: EditorView | null, state: EditorState | null, host: RefObject<HTMLDivElement | null>, singleLine: boolean, suggesting: boolean) {
-  const [layout, setLayout] = useState<FocusModeLayout | null>(null);
-  const offered = offersFocusMode(singleLine);
+function useFocusMode(view: EditorView | null, state: EditorState | null, host: RefObject<HTMLDivElement | null>, singleLine: boolean, suggesting: boolean, group: FocusGroup | null) {
+  const [ownLayout, setOwnLayout] = useState<FocusModeLayout | null>(null);
+  // In a group (the check-in), focus mode is the group's: both its fields, from either of them.
+  const layout: FocusModeLayout | null = group ? (group.open ? 'overlay' : null) : ownLayout;
+  const setLayout = (next: FocusModeLayout | null): void => {
+    if (group) {
+      if (!next) group.close();
+    } else setOwnLayout(next);
+  };
+  const offered = offersFocusMode(singleLine) || group !== null;
   const toggle = (): void => {
-    setLayout((shown) => (shown ? null : focusModeLayout(isInModalDialog(host.current))));
+    if (group) group.toggle();
+    else setOwnLayout((shown) => (shown ? null : focusModeLayout(isInModalDialog(host.current))));
     view?.focus();
   };
   // What the key handler reads when a key comes, without listening again at each render.
-  const latest = useRef({ layout, suggesting, toggle });
-  latest.current = { layout, suggesting, toggle };
+  const latest = useRef({ layout, suggesting, toggle, setLayout });
+  latest.current = { layout, suggesting, toggle, setLayout };
   useEffect(() => {
     if (!view || !offered) return;
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -156,13 +186,13 @@ function useFocusMode(view: EditorView | null, state: EditorState | null, host: 
       const action = focusModeKey(event, isMac, { expanded: latest.current.layout !== null, suggesting: latest.current.suggesting });
       if (!action) return;
       if (action === 'submitting') {
-        setLayout(null);
+        latest.current.setLayout(null);
         return;
       }
       event.preventDefault();
       event.stopPropagation();
       if (action === 'toggle') latest.current.toggle();
-      else setLayout(null);
+      else latest.current.setLayout(null);
     };
     // Taken on the way down, before a dialog's Esc closes it or the details' Esc cancels the edit.
     window.addEventListener('keydown', onKeyDown, true);
@@ -170,9 +200,10 @@ function useFocusMode(view: EditorView | null, state: EditorState | null, host: 
   }, [view, offered]);
   // Out of it once the focus leaves the editor: a dialog it opened (⌘↵'s question) never shows behind it.
   const focused = state?.field(hasFocus) ?? false;
+  // A group's fields hand the focus to each other: the group tells leaving itself (`CommentFocusGroup`).
   useEffect(() => {
-    if (layout && !focused) setLayout(layoutAfterFocus(layout, focused));
-  }, [layout, focused]);
+    if (!group && ownLayout && !focused) setOwnLayout(layoutAfterFocus(ownLayout, focused));
+  }, [group, ownLayout, focused]);
   // As its size changes, the caret stays in view: centered in the larger editor, the least scroll back in the field.
   const previous = useRef(layout);
   useLayoutEffect(() => {
@@ -180,12 +211,14 @@ function useFocusMode(view: EditorView | null, state: EditorState | null, host: 
     previous.current = layout;
     view.dispatch({ effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: layout ? 'center' : 'nearest' }) });
   }, [view, layout]);
-  if (!offered) return { layout: null, element: null };
+  // The group's panel is its own box: its fields keep theirs; its one button is on its description.
+  const shownLayout = group ? null : layout;
+  if (!offered || (group && singleLine)) return { layout: shownLayout, element: null };
   const button = focusModeButton(layout);
   const Icon = button.icon === 'collapse' ? Minimize2 : Maximize2;
   const element = (
     <>
-      {layout === 'overlay' && createPortal(<div className={styles.backdrop} onMouseDown={() => setLayout(null)} />, document.body)}
+      {shownLayout === 'overlay' && createPortal(<div className={styles.backdrop} onMouseDown={() => setLayout(null)} />, document.body)}
       <button
         type="button"
         className={styles.expand}
@@ -200,7 +233,21 @@ function useFocusMode(view: EditorView | null, state: EditorState | null, host: 
       </button>
     </>
   );
-  return { layout, element };
+  return { layout: shownLayout, element };
+}
+
+/** Puts the caret at `at` and the focus in the editor. */
+function focusAt(view: EditorView | null, at: number): void {
+  if (!view) return;
+  view.dispatch({ selection: { anchor: at }, scrollIntoView: true });
+  view.focus();
+}
+
+/** Whether `head` is on the text's first line as shown, a wrapped first line's later rows excluded. */
+function onFirstVisualLine(view: EditorView, head: number): boolean {
+  const here = view.coordsAtPos(head);
+  const first = view.coordsAtPos(0);
+  return !here || !first || Math.abs(here.top - first.top) < 2;
 }
 
 /** The suggestion list for what is typed at the caret: its rows, the key it's at, and the keys that walk it. */

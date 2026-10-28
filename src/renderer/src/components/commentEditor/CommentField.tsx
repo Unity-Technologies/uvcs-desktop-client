@@ -44,13 +44,17 @@ export function CommentField(props: CommentFieldProps) {
 }
 
 /** The field before the editor loads: the same box and text, a plain input or textarea. */
-function PlainCommentField({ value, onChange, singleLine = false, label, id, labelledBy, placeholder, autoFocus, disabled, onEnter, onSubmit, className, style, ref, focusRef }: CommentFieldProps & { focusRef: { current: { at: number } | null } }) {
+function PlainCommentField({ value, onChange, singleLine = false, label, id, labelledBy, groupField: _groupField, placeholder, autoFocus, disabled, onEnter, onSubmit, className, style, ref, focusRef }: CommentFieldProps & { focusRef: { current: { at: number } | null } }) {
   const field = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
   useImperativeHandle(ref, () => ({
     focus: () => field.current?.focus(),
     focusAtEnd: () => {
       field.current?.focus();
       field.current?.setSelectionRange(value.length, value.length);
+    },
+    focusAtStart: () => {
+      field.current?.focus();
+      field.current?.setSelectionRange(0, 0);
     },
   }));
   const remember = (): void => {
