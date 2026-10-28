@@ -190,16 +190,17 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   ↓ at the summary's end, goes to the description's start; ⇧Tab, or ↑ on its first line, back to the summary's end
   (`groupMove`). They stay the same two editors; moving between them is no leaving, and the panel closes as the focus
   leaves both or ⌘↵ checks in. The dialogs' single comments open alone.
-  Focus mode has a toolbar at its top (`FormatToolbar`, `toolbarButtons`) and a footer at its bottom
-  (`FocusModeFooter`). The toolbar holds every format of `FORMAT_ACTIONS`, the one list the selection bar and the keys
-  read too, each tooltip its name and key, pressed where the caret's text has it. Its buttons never take the focus.
-  In the check-in it acts on the field with the caret, the blocks disabled in the one-line summary: every button
-  stays, so the toolbar holds still as the caret goes between the fields, and a button acting on the field the caret
-  isn't in would format text out of sight. In code only the code block is enabled. The footer is the window's key
-  hints (`KeyHints`, as the palette's and Go to file's): `cs:` `br:` `lb:` `sh:` `cr:` reference, `@` mention, `:`
-  emoji, ⌘K link, read from the triggers the suggestions take (`focusModeHints`, `SUGGESTION_TRIGGERS`). A table and
-  a keycap have no button: no single construct of the Markdown reader holds a key's `<kbd>` tags to toggle, and an
-  empty table is more text to fill in than to type.
+  In focus mode a comment of many lines has a toolbar as its box's top strip (`FormatToolbar`, `toolbarButtons`), as
+  GitHub's, and its hints right under the box as its caption (`FocusModeFooter`, `KeyHints`' `caption`). The toolbar
+  holds every format of `FORMAT_ACTIONS`, the one list the selection bar and the keys read too, each tooltip its name
+  and key, pressed where the caret's text has it; its buttons never take the focus, and the corner button back to
+  the field sits at the strip's end. It formats its own field only: in the check-in that is the description, its
+  buttons disabled while the caret is in the summary, whose formats are its keys; in code only the code block is
+  enabled. The text then takes the box's whole width, a code block the same inset on both sides. The hints are the
+  window's key hints, each key a cap as the palette and the shortcuts sheet draw them (`Kbd`): `cs:` `br:` `lb:`
+  `sh:` `cr:` reference, `@` mention, `:` emoji, ⌘K link, read from the triggers the suggestions take
+  (`focusModeHints`, `SUGGESTION_TRIGGERS`). A table and a keycap have no button: no single construct of the
+  Markdown reader holds a key's `<kbd>` tags to toggle, and an empty table is more text to fill in than to type.
 - **The selection bar** (`SelectionBar`, `selectionBarShows`): over text selected, once the pointer lets go, never in
   a code block nor in focus mode, which has its toolbar; B, I, S, code and link, then list, task, numbered list, quote
   and code block in a field of many lines, each on while the selection is in it. No toolbar shows otherwise: the

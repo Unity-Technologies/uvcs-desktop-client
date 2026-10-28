@@ -50,8 +50,8 @@
   color: var(--accent-text);
 }
 
-/* Focus mode's toolbar (`FormatToolbar`): the bar's buttons in a row over the text, always there; clear of the
-   corner button. */
+/* Focus mode's toolbar (`FormatToolbar`): the top strip of the field it formats, as GitHub's, the bar's buttons
+   always there, clear of the corner button. */
 .toolbar {
   display: flex;
   flex: none;
@@ -59,9 +59,8 @@
   align-items: center;
   gap: 1px;
   order: -1;
-  margin-bottom: var(--space-2);
-  padding: 0 28px var(--space-2) 0;
-  border-bottom: 1px solid var(--border-subtle);
+  margin: -3px 0 var(--space-1) -3px;
+  padding-right: 28px;
 }
 
 .button:disabled {

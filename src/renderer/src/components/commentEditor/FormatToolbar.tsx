@@ -11,17 +11,18 @@ const FIRST_BLOCK = 'bullet';
 interface FormatToolbarProps {
   view: EditorView;
   state: EditorState;
-  singleLine: boolean;
+  /** Whether the caret is in its field: in the check-in's summary, the description's strip is disabled. */
+  focused: boolean;
 }
 
 /**
- * Focus mode's toolbar over the field with the caret (`toolbarButtons`): the selection bar's formats, always shown.
- * Its buttons never take the focus (a press is no click on the text), so the caret and the selection stay.
+ * Focus mode's toolbar, the top strip of the field it formats (`toolbarButtons`): the selection bar's formats,
+ * always shown. Its buttons never take the focus (a press is no click on the text), so the caret and the selection stay.
  */
-export function FormatToolbar({ view, state, singleLine }: FormatToolbarProps) {
+export function FormatToolbar({ view, state, focused }: FormatToolbarProps) {
   return (
     <div className={styles.toolbar} role="toolbar" aria-label="Format" onMouseDown={(event) => event.preventDefault()}>
-      {toolbarButtons(state, singleLine).map(({ action: { id, label, icon: Icon, shortcutId }, pressed, enabled }) => (
+      {toolbarButtons(state, focused).map(({ action: { id, label, icon: Icon, shortcutId }, pressed, enabled }) => (
         <span key={id} className={styles.group} data-starts-blocks={id === FIRST_BLOCK || undefined}>
           <button
             type="button"

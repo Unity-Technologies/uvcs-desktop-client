@@ -9,10 +9,13 @@ export interface KeyHint {
   typed?: boolean;
 }
 
-/** A quiet line under a keyboard-driven list telling its keys, e.g. "⇥ actions". */
-export function KeyHints({ hints, className }: { hints: readonly KeyHint[]; className?: string }) {
+/**
+ * A quiet line under a keyboard-driven list telling its keys, e.g. "⇥ actions": a footer, its top border apart from the
+ * list, or a `caption` right under a field, as a field's help reads.
+ */
+export function KeyHints({ hints, caption = false }: { hints: readonly KeyHint[]; caption?: boolean }) {
   return (
-    <div className={classNames(styles.hints, className)}>
+    <div className={classNames(styles.hints, caption && styles.caption)}>
       {hints.map(({ keys, label, typed }) => (
         <span key={label} className={styles.hint}>
           {(typeof keys === 'string' ? [keys] : keys).map((key) => (

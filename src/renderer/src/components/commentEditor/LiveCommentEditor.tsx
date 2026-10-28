@@ -142,9 +142,8 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
     () => view?.dispatch({ effects: placeholderText.reconfigure(placeholderOf(placeholderShown(placeholder, { focusMode: focus.inFocusMode, singleLine }))) }),
     [view, placeholder, focus.inFocusMode, singleLine],
   );
-  const tools = view && state && focus.inFocusMode ? <FormatToolbar view={view} state={state} singleLine={singleLine} /> : null;
-  // In a group, the toolbar is the group's, over the field with the caret; a field alone has its own, and its footer.
-  const toolbar = grouped ? grouped.group.activeField === grouped.field && grouped.group.toolbarSlot && tools && createPortal(tools, grouped.group.toolbarSlot) : tools;
+  // Focus mode's toolbar is the top strip of a comment of many lines (in the check-in, the description's), formatting it.
+  const toolbar = view && state && focus.inFocusMode && !singleLine ? <FormatToolbar view={view} state={state} focused={state.field(hasFocus)} /> : null;
 
   const widgets = useSyncExternalStore(portals.subscribe, portals.portals);
   // What React drew in the widgets changes their size: the editor measures its lines again.
@@ -158,11 +157,16 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
       data-single-line={singleLine || undefined}
       data-group-field={groupField}
       data-expanded={focus.layout ?? undefined}
+      data-focus-mode={(focus.inFocusMode && !singleLine) || undefined}
       onMouseDown={bar.onPointerDown}
     >
       {focus.element}
       {toolbar}
-      {!grouped && focus.inFocusMode && <FocusModeFooter />}
+      {!grouped && focus.inFocusMode && (
+        <div className={styles.footer}>
+          <FocusModeFooter />
+        </div>
+      )}
       {widgets.map((widget) => createPortal(widget.node, widget.host, String(widget.key)))}
       {suggestions.list}
       {bar.element}
