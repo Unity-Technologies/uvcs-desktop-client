@@ -28,6 +28,13 @@ describe('the comment editor’s focus', () => {
     expect(offenders(/\.field\(hasFocus\b/, [join('commentEditor', 'editorFocus.ts'), join('commentEditor', 'liveDecorations.ts')])).toEqual([]);
   });
 
+  it('has one writer of its mirror, the reconciler (`watchFocus`): never CodeMirror’s own focus notification', () => {
+    // Two writers once let a stale one win: the mirror said unfocused while the DOM had the focus.
+    const inCommentEditors = (lines: string[]) => lines.filter((line) => COMMENT_EDITORS.some((folder) => line.startsWith(folder)));
+    expect(inCommentEditors(offenders(/focusChangeEffect/, []))).toEqual([]);
+    expect(offenders(/focusChanged\.of\(/, [join('commentEditor', 'editorFocus.ts')])).toEqual([]);
+  });
+
   // By name: an editor is a `view` or an `editor` in this code, as CodeMirror's own docs call it.
   it('is given in code only through `focusEditor`, which reconciles the mirror with it', () => {
     const inCommentEditors = offenders(/\b(?:view|editor)\??\.focus\(\)/, [join('commentEditor', 'editorFocus.ts')]).filter((line) =>

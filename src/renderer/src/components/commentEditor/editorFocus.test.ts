@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { EditorState } from '@codemirror/state';
+import type { EditorState, TransactionSpec } from '@codemirror/state';
 import { editorState } from './commentEditorTesting';
-import { editorFocused, focusMirrorSpec, hasFocus } from './editorFocus';
+import { editorFocused, focusMirrorSpec, hasFocus, watchFocus } from './editorFocus';
 import { suggestionGate } from './suggestionTrigger';
 import { typingAt } from './typingAt';
 
@@ -80,5 +80,70 @@ describe('suggestions, as the user writes', () => {
     expect(shows(type(field(), 'cs:'), false)).toBeNull();
     const typed = type(mirror(field(), true), 'cs:');
     expect(suggestionGate(typed, true, 'Fixes '.length)).toBeNull();
+  });
+});
+
+/**
+ * A field the reconciler watches, its DOM and window plain event targets: `domFocused` is what the DOM says
+ * (`view.hasFocus`: the field is the active element of a window that has the focus).
+ */
+function watchedField(text = 'br:scm10') {
+  const dom = new EventTarget();
+  const window = new EventTarget();
+  const queued: (() => void)[] = [];
+  const watched = { domFocused: true, state: mirror(type(field(''), text), true) };
+  const watcher = watchFocus(
+    {
+      targets: [dom, window],
+      hasFocus: () => watched.domFocused,
+      state: () => watched.state,
+      dispatch: (spec: TransactionSpec) => {
+        watched.state = watched.state.update(spec).state;
+      },
+    },
+    (run) => queued.push(run),
+  );
+  /** Runs what the reconciler queued: the microtasks after the events. */
+  const settle = (): void => {
+    while (queued.length) queued.shift()!();
+  };
+  return { field: watched, dom, window, watcher, settle };
+}
+
+describe('watchFocus, the mirror’s only writer', () => {
+  it('brings the mirror back when the window is active again with no focus event on the field', () => {
+    // Flow 3's failure: another app took the window's activation while a list showed; coming back moved no element's
+    // focus, so nothing told the mirror, and the field drew as unfocused with its list closed though it had the focus.
+    const { field, window, settle } = watchedField();
+    field.domFocused = false;
+    window.dispatchEvent(new Event('blur'));
+    settle();
+    expect(field.state.field(hasFocus)).toBe(false);
+    field.domFocused = true;
+    window.dispatchEvent(new Event('focus'));
+    settle();
+    expect(field.state.field(hasFocus)).toBe(true);
+    expect(suggestionGate(field.state, editorFocused(field.domFocused, field.state.field(hasFocus)), null)).not.toBeNull();
+  });
+
+  it('follows the field’s own focus events, and after an update that left the two apart', () => {
+    const { field, dom, watcher, settle } = watchedField();
+    field.domFocused = false;
+    dom.dispatchEvent(new Event('focusout'));
+    settle();
+    expect(field.state.field(hasFocus)).toBe(false);
+    field.domFocused = true;
+    watcher.afterUpdate();
+    settle();
+    expect(field.state.field(hasFocus)).toBe(true);
+  });
+
+  it('writes nothing once stopped: a field made again has a watcher of its own', () => {
+    const { field, window, watcher, settle } = watchedField();
+    watcher.stop();
+    field.domFocused = false;
+    window.dispatchEvent(new Event('blur'));
+    settle();
+    expect(field.state.field(hasFocus)).toBe(true);
   });
 });
