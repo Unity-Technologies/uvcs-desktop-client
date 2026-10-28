@@ -6,7 +6,7 @@ import { usePlace } from '../../app/workspace/useWorkspace';
 import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
-import { cachedShelve } from './cachedShelve';
+import { useCachedShelve } from './cachedShelve';
 import { shelveDiffMenu } from './shelveDiffMenu';
 import { applyShelve } from './shelveOperations';
 
@@ -19,7 +19,7 @@ export function ShelveDiffActions({ shelveId }: { shelveId: number }) {
   const place = usePlace();
   const { switchShelves } = useSettings();
   const me = usePlaceUser();
-  const shelve = cachedShelve(place, shelveId);
+  const shelve = useCachedShelve(place, shelveId);
   if (!shelve) return null;
 
   const { appliesTo, left, menu } = shelveDiffMenu(place, shelve, {

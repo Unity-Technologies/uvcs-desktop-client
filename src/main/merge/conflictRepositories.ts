@@ -1,10 +1,13 @@
-import type { MergePlan, MergeRequest } from '@shared/domain/merge';
+import type { FileConflict, MergePlan, MergeRequest } from '@shared/domain/merge';
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
 import type { PrintedMergePlan } from '../cm/mergeOutput';
+import { notInTreePaths } from '../cm/missingItem';
 import { readTreeItem, TREE_ITEM_FORMAT, type ListedTreeItem } from '../cm/treeItems';
 import { readWorkspaceLoad } from '../cm/workspaceStatus';
 import { revisionFilesOf, type WorkspaceCopies } from '../files/WorkspaceCopies';
+
+type PrintedFileConflict = PrintedMergePlan['fileConflicts'][number];
 
 /**
  * The plan with the repository of each conflicting file, and its revision in the destination. `cm merge` prints a file
@@ -13,6 +16,14 @@ import { revisionFilesOf, type WorkspaceCopies } from '../files/WorkspaceCopies'
  * destination's tree reads each one's (it crosses xlinks), and only when some file conflicts. The destination's
  * revisions it lists are remembered with their hashes (`copies`): the workspace's disk serves each one its file has. Its
  * type tells a binary (`destinationIsBinary`) with no byte read.
+ *
+ * `known`: file conflicts this merge completed already, before a directory decision (`DirectoryDecisions`). The
+ * decision may have moved them to a path the destination's tree doesn't hold (a folder moved apart on both sides, kept
+ * where the source put it), but they are the same items with the same revisions: they're taken as they were, at their
+ * new path, and only the others are listed. A decision can also reveal a file conflict `cm` held back under it, at a
+ * path the destination's tree may not hold (a file the destination moved into a folder added on both sides, back where
+ * the source has it once the incoming folder is kept): those `cm` names as not in the tree (`notInTreePaths`) are
+ * listed in the source's tree instead (`revealedInSource`), the others listed again.
  */
 export async function withConflictRepositories(
   cm: CmClient,
@@ -20,12 +31,61 @@ export async function withConflictRepositories(
   request: MergeRequest,
   plan: PrintedMergePlan,
   copies?: Pick<WorkspaceCopies, 'remember'>,
+  known?: readonly FileConflict[],
 ): Promise<MergePlan> {
-  if (plan.fileConflicts.length === 0) return withRepositories(plan, []);
+  const knownByItem = new Map((known ?? []).map((conflict) => [sameItemKey(conflict), conflict]));
+  const unknown = plan.fileConflicts.filter((conflict) => !knownByItem.has(sameItemKey(conflict)));
+  if (unknown.length === 0) return withRepositories(plan, [], knownByItem);
   const tree = destinationTree(request, plan) ?? (await loadedTree(cm, workspacePath));
-  const listed = await cm.queryRecords(conflictListingArgs(plan, tree), readTreeItem, { cwd: workspacePath });
+  const list = (conflicts: PrintedFileConflict[], inTree: string): Promise<ListedTreeItem[]> =>
+    conflicts.length === 0 ? Promise.resolve([]) : cm.queryRecords(conflictListingArgs({ ...plan, fileConflicts: conflicts }, inTree), readTreeItem, { cwd: workspacePath });
+
+  let listed: ListedTreeItem[];
+  let revealed: FileConflict[] = [];
+  try {
+    listed = await list(unknown, tree);
+  } catch (error) {
+    const missing = new Set(notInTreePaths(error));
+    const elsewhere = unknown.filter((conflict) => missing.has(conflict.path));
+    const source = sourceTree(plan);
+    // Only after a decision, and only for the paths of conflicts `cm` names: any other failure is the listing's own.
+    if (known === undefined || source === null || elsewhere.length === 0) throw error;
+    const [inDestination, inSource] = await Promise.all([list(unknown.filter((conflict) => !missing.has(conflict.path)), tree), list(elsewhere, source)]);
+    listed = inDestination;
+    revealed = revealedInSource(elsewhere, inSource);
+  }
   copies?.remember(workspacePath, revisionFilesOf(listed));
-  return withRepositories(plan, listed);
+  return withRepositories(plan, listed, new Map([...knownByItem, ...revealed.map((conflict) => [sameItemKey(conflict), conflict] as const)]));
+}
+
+/** The tree the merge comes from: its source contributor, unless a shelve, whose tree can't be listed. */
+function sourceTree(plan: PrintedMergePlan): string | null {
+  const source = plan.contributors?.source.changesetId;
+  return source !== undefined && source >= 0 ? spec.changeset(source) : null;
+}
+
+/**
+ * Revealed file conflicts completed from their listing in the source's tree, which crosses xlinks: the repository
+ * their item and changesets belong to, and whether `cm` keeps them as binaries, the source's type standing for the
+ * destination's (whose tree has no such path: a type changed on one side alone is all it can miss). The source's
+ * revision isn't the destination's: they keep none, their destination read as their item at its changeset
+ * (`destinationVersionSpec`).
+ */
+function revealedInSource(conflicts: PrintedFileConflict[], listed: readonly ListedTreeItem[]): FileConflict[] {
+  const byPath = new Map(listed.map((item) => [item.path, item]));
+  return conflicts.map((conflict) => {
+    const item = byPath.get(conflict.path.replace(/^\//, ''));
+    if (!item?.repository) throw new Error(`Couldn't tell which repository ${conflict.path} is in.`);
+    return { ...conflict, destinationPath: conflict.path, repository: item.repository, destinationIsBinary: item.itemType === 'binaryFile' };
+  });
+}
+
+/**
+ * A conflicting file the way `cm merge` prints it again after a directory decision: its item and the changesets it
+ * merges, which a decision never changes, unlike its path. An xlinked repository's item has its own changesets.
+ */
+function sameItemKey(conflict: PrintedFileConflict): string {
+  return [conflict.itemId, conflict.baseChangeset, conflict.sourceChangeset, conflict.destinationChangeset].join('|');
 }
 
 /**
@@ -50,16 +110,27 @@ export function conflictListingArgs(plan: PrintedMergePlan, tree: string): strin
   return ['ls', ...plan.fileConflicts.map((conflict) => conflict.path), `--tree=${tree}`, TREE_ITEM_FORMAT];
 }
 
-/** Completes the plan's conflicts with the repositories, revisions and types `cm ls` listed for their paths. */
-export function withRepositories(plan: PrintedMergePlan, listed: readonly ListedTreeItem[]): MergePlan {
+/**
+ * Completes the plan's conflicts with the repositories, revisions and types `cm ls` listed for their paths, or as they
+ * were completed before (`known`, by `sameItemKey`).
+ */
+export function withRepositories(plan: PrintedMergePlan, listed: readonly ListedTreeItem[], known: ReadonlyMap<string, FileConflict> = new Map()): MergePlan {
   const byPath = new Map(listed.map((item) => [item.path, item]));
   return {
     ...plan,
     fileConflicts: plan.fileConflicts.map((conflict) => {
+      const before = known.get(sameItemKey(conflict));
+      if (before) return { ...before, path: conflict.path };
       const item = byPath.get(conflict.path.replace(/^\//, ''));
       if (!item?.repository) throw new Error(`Couldn't tell which repository ${conflict.path} is in.`);
       if (item.revisionId <= 0) throw new Error(`Couldn't tell which version of ${conflict.path} the destination has.`);
-      return { ...conflict, repository: item.repository, destinationRevisionId: item.revisionId, destinationIsBinary: item.itemType === 'binaryFile' };
+      return {
+        ...conflict,
+        destinationPath: conflict.path,
+        repository: item.repository,
+        destinationRevisionId: item.revisionId,
+        destinationIsBinary: item.itemType === 'binaryFile',
+      };
     }),
   };
 }

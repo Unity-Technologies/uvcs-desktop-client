@@ -1,9 +1,10 @@
-import { directoryConflictDecided, type DirectoryConflictResolution, type MergeChange } from '@shared/domain/merge';
+import type { DirectoryConflictResolution, MergeChange } from '@shared/domain/merge';
 import { UNITY_YAML_MERGE_NAME } from '@shared/domain/mergeTools';
 import type { StatusTone as ChangeTone } from '../../components/StatusBadge';
+import type { GroupProgress } from '../../components/TreeGroupLabel';
 import { pluralize } from '../../lib/text';
 import type { MergeLabels } from './mergeDescription';
-import { fileStateOf, type MergeItem, type MergeProgress } from './mergeItems';
+import { directoryResolutionOf, fileStateOf, isApplying, type MergeGroup, type MergeItem, type MergeProgress } from './mergeItems';
 import { hasBase } from './resolve/conflictPanelView';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
@@ -29,7 +30,9 @@ export type ConflictStatus =
   /** Saved in a merge tool. */
   | 'resolvedInTool'
   /** A merge tool has the file open, waiting for the user to save and close it. */
-  | 'openInTool';
+  | 'openInTool'
+  /** A directory conflict's decision being applied: `cm` calculates the merge again on it. */
+  | 'applying';
 
 /** How a status reads: `pending` waits for the user, `automatic` needs nothing, `decided` follows the user's choice. */
 type StatusTone = 'muted' | 'pending' | 'automatic' | 'decided';
@@ -66,14 +69,16 @@ export function conflictStatusOf(item: MergeItem, progress: MergeProgress): Conf
     case 'fileConflict':
       return fileConflictStatus(fileStateOf(item, progress));
     case 'directoryConflict':
-      return directoryConflictStatus(progress.directoryResolutions[item.index]);
+      return directoryConflictStatus(directoryResolutionOf(item, progress), isApplying(item, progress));
     case 'change':
       return null;
   }
 }
 
-export function directoryConflictStatus(resolution: DirectoryConflictResolution | undefined): ConflictStatus {
-  if (!resolution || !directoryConflictDecided(resolution)) return 'needsDecision';
+/** A directory conflict's status: the decision applied, or `applying` while one is. */
+export function directoryConflictStatus(resolution: DirectoryConflictResolution | undefined, applying = false): ConflictStatus {
+  if (applying) return 'applying';
+  if (!resolution) return 'needsDecision';
   switch (resolution.choice) {
     case 'source':
       return 'keepingSource';
@@ -124,6 +129,8 @@ export function presentStatus(status: ConflictStatus, labels: MergeLabels, tool 
     case 'resolvedInTool':
       if (tool === UNITY_YAML_MERGE_NAME) return { label: 'Merged by UnityYAMLMerge', tone: 'decided', explanation: 'UnityYAMLMerge merged both sides’ changes' };
       return { label: `Resolved in ${tool}`, tone: 'decided', explanation: `Saved in ${tool}` };
+    case 'applying':
+      return { label: 'Updating the merge…', tone: 'muted', explanation: 'Working out what your decision changes' };
     case 'openInTool':
       // Smart Merge has no window: it merges the file on its own, before the tool opens.
       if (tool === UNITY_YAML_MERGE_NAME) return { label: 'Merging…', tone: 'muted', explanation: 'UnityYAMLMerge is merging it' };
@@ -170,14 +177,40 @@ export function summarizePlan(changeCount: number, statuses: ConflictStatus[]): 
   return `${changes} · ${pluralize(statuses.length, 'conflict')}: ${parts.join(', ')}`;
 }
 
-/** The header's few words, "2 conflicts to decide" or "Ready to merge"; its tooltip says the rest (`summarizePlan`). */
+/**
+ * The header's few words: "2 resolved · 5 to decide", "7 conflicts to decide" before any is resolved, or "Ready to
+ * merge"; its tooltip says the rest (`summarizePlan`). Merged automatically counts as resolved: it needs nothing more.
+ */
 export function planProgress(statuses: ConflictStatus[]): string {
-  const waiting = statuses.filter(isWaiting).length;
+  const { resolved, waiting } = tally(statuses);
   if (waiting === 0) return 'Ready to merge';
-  return `${pluralize(waiting, 'conflict')} to decide`;
+  if (resolved === 0) return `${pluralize(waiting, 'conflict')} to decide`;
+  return `${resolved} resolved · ${waiting} to decide`;
+}
+
+/**
+ * A conflict group's count in the list, "1 of 3" resolved, and its tooltip: "1 resolved, 2 to decide", none once nothing
+ * is left. A directory decision being applied is still to decide, as in the header: it isn't in the merge yet.
+ */
+export function groupProgress(statuses: ConflictStatus[]): GroupProgress {
+  const { resolved, waiting } = tally(statuses);
+  const count = `${resolved} of ${statuses.length}`;
+  if (waiting === 0) return { count };
+  return { count, tip: resolved === 0 ? `${waiting} to decide` : `${resolved} resolved, ${waiting} to decide` };
+}
+
+/** What a merge list group's header says instead of its count: how many of its conflicts are resolved; none for the changes. */
+export function mergeGroupProgress(group: MergeGroup, items: MergeItem[], progress: MergeProgress): GroupProgress | undefined {
+  if (group === 'changes') return undefined;
+  return groupProgress(items.map((item) => conflictStatusOf(item, progress)).filter((status) => status !== null));
+}
+
+function tally(statuses: ConflictStatus[]): { resolved: number; waiting: number } {
+  const waiting = statuses.filter(isWaiting).length;
+  return { resolved: statuses.length - waiting, waiting };
 }
 
 /** Whether a conflict still stands in the way of completing the merge. */
 function isWaiting(status: ConflictStatus): boolean {
-  return status === 'needsDecision' || status === 'unreadable' || status === 'reading' || status === 'openInTool';
+  return status === 'needsDecision' || status === 'unreadable' || status === 'reading' || status === 'openInTool' || status === 'applying';
 }

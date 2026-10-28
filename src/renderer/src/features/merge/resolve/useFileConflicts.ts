@@ -19,7 +19,7 @@ import { useQueriesByFrame } from './useQueriesByFrame';
 
 /** A file changed on both sides, and where to read each version from. */
 export interface ConflictedFile {
-  /** Identifies the file in the resolutions sent to the main process. */
+  /** Identifies the file: its versions read and its decision are kept by it. */
   key: string;
   /** Shown to the user and used to pick syntax highlighting. */
   path: string;

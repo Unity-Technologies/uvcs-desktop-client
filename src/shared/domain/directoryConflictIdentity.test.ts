@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { DirectoryConflict } from '@shared/domain/merge';
+import type { DirectoryConflict } from './merge';
 import { directoryConflictIdentity } from './directoryConflictIdentity';
 
 const divergentMove: DirectoryConflict = {

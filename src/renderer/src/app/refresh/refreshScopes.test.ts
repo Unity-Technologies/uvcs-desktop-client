@@ -18,6 +18,7 @@ import {
   isAffectedByRestoredItems,
   isAffectedByShelveApplied,
   isAffectedByShelveDeletion,
+  isAffectedByShelveComment,
   isAffectedByShelving,
   isAffectedByShelvingAway,
   isAffectedByWorkspaceState,
@@ -152,6 +153,14 @@ describe('refresh scopes', () => {
     expect(isAffectedByChangesetComment(key('workingObjectComment', 'changeset', '4'))).toBe(true);
     expect(isAffectedByChangesetComment(key('branches', {}))).toBe(false);
     expect(isAffectedByChangesetComment(key('pendingChanges'))).toBe(false);
+  });
+
+  it("refreshes only what shows a shelve's comment when one is edited", () => {
+    expect(isAffectedByShelveComment(key('shelves', { owners: ['me'] }))).toBe(true);
+    expect(isAffectedByShelveComment(key('workingObjectComment', 'shelve', '3'))).toBe(true);
+    expect(isAffectedByShelveComment(key('leftChanges', { kind: 'branch', name: '/main' }))).toBe(false);
+    expect(isAffectedByShelveComment(key('changesets', 'list', {}))).toBe(false);
+    expect(isAffectedByShelveComment(key('pendingChanges'))).toBe(false);
   });
 
   it('refreshes what shows changesets, the branch lists and incoming, not the workspace, when a changeset moves or goes', () => {

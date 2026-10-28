@@ -21,7 +21,7 @@ describe('completeMerge', () => {
 
     await completeMerge(ws, { kind: 'merge', sourceSpec: 'br:/main/task' }, resolutions);
 
-    expect(refreshed()).toEqual(['annotate', 'branchExplorer', 'branches', 'changesets', 'explorer', 'history', 'incoming', 'info', 'locks', 'pendingChanges', 'review']);
+    expect(refreshed()).toEqual(['annotate', 'branchExplorer', 'branches', 'changesets', 'explorer', 'history', 'incoming', 'info', 'locks', 'pendingChanges', 'review', 'workingObjectComment']);
   });
 
   it('refreshes the workspace, its locks, the shelve lists and the left changes after applying a shelve', async () => {
@@ -39,7 +39,7 @@ describe('completeMerge', () => {
 
     await completeMerge(ws, { kind: 'merge', sourceSpec: 'br:/main/task', destinationBranch: '/main' }, resolutions);
 
-    expect(refreshed()).toEqual(['branchExplorer', 'branches', 'changesets', 'history', 'incoming', 'locks']);
+    expect(refreshed()).toEqual(['branchExplorer', 'branches', 'changesets', 'history', 'incoming', 'locks', 'workingObjectComment']);
   });
 });
 
@@ -170,7 +170,7 @@ describe('completing a merge', () => {
 
       await completeMerge(ws, finishTask, resolutions, { task, review });
 
-      expect(refreshed()).toEqual(['branchExplorer', 'branches', 'changesets', 'codeReviews', 'history', 'incoming', 'locks']);
+      expect(refreshed()).toEqual(['branchExplorer', 'branches', 'changesets', 'codeReviews', 'history', 'incoming', 'locks', 'workingObjectComment']);
     });
 
     it('still finishes when marking the review fails, telling so', async () => {

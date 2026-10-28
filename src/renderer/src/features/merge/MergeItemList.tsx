@@ -10,8 +10,8 @@ import type { PathTreeRow } from '../../lib/pathTree';
 import type { SelectionState } from '../../lib/selection';
 import { ConflictStatusChip } from './ConflictStatusChip';
 import type { MergeLabels } from './mergeDescription';
-import { fileStateOf, MERGE_GROUP_TIPS, type MergeGroup, type MergeItem, type MergeProgress } from './mergeItems';
-import { changeTone, describeChange, directoryConflictStatus, fileConflictStatus, fileConflictTool } from './mergeStatus';
+import { directoryResolutionOf, fileStateOf, isApplying, MERGE_GROUP_TIPS, type MergeGroup, type MergeItem, type MergeProgress } from './mergeItems';
+import { changeTone, describeChange, directoryConflictStatus, fileConflictStatus, fileConflictTool, mergeGroupProgress } from './mergeStatus';
 
 interface MergeItemListProps {
   /** Conflicts, then the changes that apply cleanly, as a list or a tree (`useGroupedFileTree`). */
@@ -57,6 +57,7 @@ export function MergeItemList({ rows, progress, tree, toggleCollapsed, typeOf, l
       toggleCollapsed={toggleCollapsed}
       renderItem={renderItem}
       groupTip={(group) => MERGE_GROUP_TIPS[group]}
+      groupProgress={(group, items) => mergeGroupProgress(group, items, progress)}
       query={query}
       filterBar={filterBar}
       selection={selection}
@@ -110,7 +111,7 @@ function MergeItemRow({ item, progress, labels, typeOf, nameOnly }: { item: Merg
 function MergeItemMarks({ item, progress, labels }: { item: MergeItem; progress: MergeProgress; labels: MergeLabels }) {
   if (item.kind === 'directoryConflict') {
     const { conflict } = item;
-    const status = directoryConflictStatus(progress.directoryResolutions[item.index]);
+    const status = directoryConflictStatus(directoryResolutionOf(item, progress), isApplying(item, progress));
     return (
       <ConflictStatusChip
         status={status}

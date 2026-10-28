@@ -1,7 +1,7 @@
-import type { DirectoryConflictResolution, MergePlan, MergeRequest } from '@shared/domain/merge';
+import type { DirectoryConflict, DirectoryConflictResolution, MergePlan, MergeRequest } from '@shared/domain/merge';
 import { DirectoryConflictPanel } from './directoryConflicts/DirectoryConflictPanel';
 import { MergeChangePreview } from './MergeChangePreview';
-import { fileStateOf, type MergeItem, type MergeProgress } from './mergeItems';
+import { directoryResolutionOf, fileStateOf, isApplying, type MergeItem, type MergeProgress } from './mergeItems';
 import type { ConflictToolActions } from './mergeTools/MergeToolButton';
 import { FileConflictPanel } from './resolve/FileConflictPanel';
 import type { FileConflictDecision } from './resolve/fileConflictDecision';
@@ -17,7 +17,7 @@ interface MergeDetailProps {
   toolActions: ConflictToolActions;
   onDecideFile: (key: string, decision: FileConflictDecision) => void;
   onStartOverFile: (key: string) => void;
-  onResolveDirectory: (index: number, resolution: DirectoryConflictResolution) => void;
+  onResolveDirectory: (conflict: DirectoryConflict, resolution: DirectoryConflictResolution) => void;
 }
 
 /** The right-hand side of the merge: whatever the selected item needs. */
@@ -43,8 +43,10 @@ export function MergeDetail({
           contributors={plan.contributors}
           conflict={item.conflict}
           labels={labels}
-          resolution={progress.directoryResolutions[item.index]}
-          onResolve={(resolution) => onResolveDirectory(item.index, resolution)}
+          resolution={directoryResolutionOf(item, progress)}
+          applying={isApplying(item, progress)}
+          locked={progress.applyingDirectory !== null}
+          onResolve={(resolution) => onResolveDirectory(item.conflict, resolution)}
         />
       );
     case 'fileConflict':

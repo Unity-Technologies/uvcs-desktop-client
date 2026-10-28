@@ -133,13 +133,13 @@ const lane = layout.lanesByBranch.get('/main/a')!;
 const resultContext: ResultContext = { place: workspacePlace(ws), term: '', currentBranch: '/main', loadedChangeset: 6, changelists: [], changeAt: () => undefined };
 
 const mergeVersion = { kind: 'spec', spec: 'itemid:7#cs:11@game@local' } as const;
-const mergeConflictState = { file: { key: '/src/a.ts', path: 'src/a.ts', base: mergeVersion, source: mergeVersion, destination: mergeVersion }, status: 'ready', isBinary: false, decidedByUser: true, resolution: null } as FileConflictState;
+const mergeConflictState = { file: { key: '7@game@local', path: 'src/a.ts', base: mergeVersion, source: mergeVersion, destination: mergeVersion }, status: 'ready', isBinary: false, decidedByUser: true, resolution: null } as FileConflictState;
 /** Every menu the app builds for an object, one of each kind and situation. */
 const mergeContext: MergeMenuContext = {
   workspacePath: ws,
   request: { kind: 'merge', sourceSpec: 'br:/main/task' },
-  plan: { contributors: { source: { changesetId: 12, branch: '/main/task' }, destination: { changesetId: 10, branch: '/main' } }, fileConflicts: [{ path: '/src/a.ts', sourceChangeset: 11 }] } as never,
-  progress: mergeProgress([mergeConflictState], []),
+  plan: { contributors: { source: { changesetId: 12, branch: '/main/task' }, destination: { changesetId: 10, branch: '/main' } }, fileConflicts: [{ path: '/src/a.ts', sourceChangeset: 11, itemId: 7, repository: 'game@local' }] } as never,
+  progress: mergeProgress([mergeConflictState], new Map()),
   labels: { source: '/main/task', destination: '/main', roles: WORKSPACE_ROLES },
   itemTypeOf: () => 'file',
   mergerFor: () => ({ kind: 'tool', tool: { id: 'vscode', name: 'Visual Studio Code' } }) as never,
@@ -564,10 +564,10 @@ describe('shelves', () => {
   const ids = (menu: MenuEntry[]): (string | undefined)[] => topEntries(menu).map((entry) => entry.id);
 
   it("offers everything on the user's own shelve", () => {
-    expect(ids(shelveMenu(workspacePlace(ws), [shelve]))).toEqual(['diff', 'diffInNewWindow', 'apply', 'applyAndDelete', 'newCodeReview', 'copy', 'delete']);
+    expect(ids(shelveMenu(workspacePlace(ws), [shelve]))).toEqual(['diff', 'diffInNewWindow', 'apply', 'applyAndDelete', 'newCodeReview', 'copy', 'editComment', 'delete']);
   });
 
-  it("only applies, shows, reviews and copies someone else's: deleting it is theirs to do", () => {
+  it("only applies, shows, reviews and copies someone else's: describing and deleting it is theirs to do", () => {
     expect(ids(shelveMenu(workspacePlace(ws), [shelve], { mine: false }))).toEqual(['diff', 'diffInNewWindow', 'apply', 'newCodeReview', 'copy']);
   });
 });

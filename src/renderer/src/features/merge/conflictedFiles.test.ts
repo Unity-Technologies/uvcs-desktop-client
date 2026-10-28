@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest';
 import type { FileConflict, MergePlan } from '@shared/domain/merge';
 import { conflictedFilesOf } from './conflictedFiles';
 
-const conflict: FileConflict = { path: '/src/a.cs', itemId: 27, baseChangeset: 3, sourceChangeset: 5, destinationChangeset: 4, repository: 'lib@local', destinationRevisionId: 432, destinationIsBinary: false };
+const conflict: FileConflict = { path: '/src/a.cs', destinationPath: '/src/a.cs', itemId: 27, baseChangeset: 3, sourceChangeset: 5, destinationChangeset: 4, repository: 'lib@local', destinationRevisionId: 432, destinationIsBinary: false };
 const plan = (fileConflicts: FileConflict[]): MergePlan => ({ status: 'ready', changes: [], fileConflicts, directoryConflicts: [], warnings: [] });
 
 describe('conflictedFilesOf', () => {
   it("reads the base and the source as the item at their changesets, and the destination by its revision, all in the file's repository", () => {
     expect(conflictedFilesOf(plan([conflict]), { kind: 'merge', sourceSpec: 'br:/main/task' })).toEqual([
       {
-        key: '/src/a.cs',
+        key: '27@lib@local',
         path: 'src/a.cs',
         base: { kind: 'spec', spec: 'itemid:27#cs:3@lib@local', fileName: '/src/a.cs' },
         baseName: 'cs:3',
@@ -17,6 +17,28 @@ describe('conflictedFilesOf', () => {
         destination: { kind: 'revision', revision: { revisionId: 432, repository: 'lib@local' }, fileName: '/src/a.cs' },
       },
     ]);
+  });
+
+  it('keys each file by its item in its repository, which a directory decision moving the file keeps', () => {
+    const [main, xlinked] = conflictedFilesOf(plan([conflict, { ...conflict, path: '/lib/a.cs', repository: 'xlinked@local' }]), { kind: 'merge', sourceSpec: 'br:/main/task' });
+    const [moved] = conflictedFilesOf(plan([{ ...conflict, path: '/moved/a.cs' }]), { kind: 'merge', sourceSpec: 'br:/main/task' });
+
+    expect(moved?.key).toBe(main?.key);
+    expect(xlinked?.key).not.toBe(main?.key);
+  });
+
+  it('reads a file a directory decision moved as before: its versions keep the sources, and so the reads, they had', () => {
+    const [before] = conflictedFilesOf(plan([conflict]), { kind: 'merge', sourceSpec: 'br:/main/task' });
+    const [moved] = conflictedFilesOf(plan([{ ...conflict, path: '/moved/a.cs' }]), { kind: 'merge', sourceSpec: 'br:/main/task' });
+
+    expect([moved?.base, moved?.source, moved?.destination]).toEqual([before?.base, before?.source, before?.destination]);
+    expect(moved?.path).toBe('moved/a.cs');
+  });
+
+  it('reads the destination as the item at its changeset when the plan names no revision of it', () => {
+    const { destinationRevisionId: _none, ...revealed } = conflict;
+    const [file] = conflictedFilesOf(plan([revealed]), { kind: 'merge', sourceSpec: 'br:/main/task' });
+    expect(file?.destination).toEqual({ kind: 'spec', spec: 'itemid:27#cs:4@lib@local', fileName: '/src/a.cs' });
   });
 
   it("knows a file is a binary, before any version is read, when cm keeps the destination's revision as one", () => {

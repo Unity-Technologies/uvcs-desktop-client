@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Builds a branch to merge into main with every kind of item the merge page lists: files changed on both sides
 # (conflicts, one of them in three places), directory conflicts (a folder and a file added on both sides with the same
-# name, a file one side moved while the other deleted it, one deleted while the other changed it), and changes that
-# apply cleanly in several folders. Merge /main/feature from the Branches view.
+# name, a file one side moved while the other deleted it, one deleted while the other changed it, and a folder each side
+# moved somewhere else, holding a file changed on both: deciding where the folder goes moves that file's conflict), two
+# files changed on both sides that main moved into the folder added on both (cm lists their conflicts only once that
+# folder is decided), and changes that apply cleanly in several folders. Merge /main/feature from the Branches view.
 # Usage: scripts/sandboxes/merge-conflicts.sh [repo-name [workspace-folder]]   → repo merge-demo@local, workspace /tmp/uvcs-merge-demo
 # It deletes and recreates both, so it takes only names: the repository is always on the local server, the
 # workspace always a folder of /tmp.
@@ -46,6 +48,8 @@ w src/ui/Hud.cs "public class Hud {}"
 w src/ui/Menu.cs "public class Menu {}"
 w docs/readme.md "# Merge demo"
 w assets/old/Legacy.cs "public class Legacy {}"
+w levels/Forest.cs "public class Forest { int trees = 10; }"
+w levels/Desert.cs "public class Desert {}"
 commit "Base project"
 
 cm branch create /main/feature --changeset >/dev/null 2>&1 || cm mkbr /main/feature >/dev/null
@@ -65,7 +69,10 @@ w src/game/Level.cs "$(level 3 Dragon 90)"
 w src/ui/Theme.cs "public class Theme { string name = \"feature\"; }"
 cm mv assets/old/Legacy.cs assets/Legacy.cs >/dev/null
 cm rm src/ui/Menu.cs >/dev/null
+w levels/Forest.cs "public class Forest { int trees = 25; }"
 commit "Feature: faster player, new widgets, shared config"
+cm mv levels maps >/dev/null
+commit "Feature: levels are maps"
 
 cm switch /main >/dev/null
 w src/game/Player.cs "public class Player
@@ -79,5 +86,11 @@ w src/game/Level.cs "$(level 2 Hydra 45)"
 w src/ui/Theme.cs "public class Theme { string name = \"main\"; }"
 w src/ui/Menu.cs "public class Menu { bool paused; }"
 cm rm assets/old/Legacy.cs >/dev/null
+w levels/Forest.cs "public class Forest { int trees = 5; }"
 commit "Main: slower player, its own shared config, no legacy code"
+cm mv levels stages >/dev/null
+commit "Main: levels are stages"
+cm mv src/game/Enemy.cs src/shared/Enemy.cs >/dev/null
+cm mv src/game/Player.cs src/shared/Player.cs >/dev/null
+commit "Main: enemies and players are shared"
 echo "Built $REPO in $WK: merge /main/feature into it"
