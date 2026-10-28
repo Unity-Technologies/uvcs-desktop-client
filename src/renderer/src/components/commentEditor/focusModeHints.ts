@@ -1,4 +1,3 @@
-import { hotkey } from '../../lib/shortcutRegistry';
 import type { KeyHint } from '../../ui/KeyHints';
 import { SUGGESTION_TRIGGERS, type SuggestionKind } from './suggestionTriggers';
 
@@ -20,8 +19,9 @@ const TRIGGER_WORDS: Record<SuggestionKind, string> = {
 };
 
 /**
- * Focus mode's footer: the triggers the suggestions take (`SUGGESTION_TRIGGERS`), grouped by what they write, then
- * the key for a link. Read from the triggers themselves, it names whatever the editor reads.
+ * The comment editor's hints: the triggers the suggestions take (`SUGGESTION_TRIGGERS`), grouped by what they write,
+ * the most used first (a narrow field drops the last, `hintsThatFit`). Read from the triggers themselves, they name
+ * whatever the editor reads. The key for a link is the link button's tooltip, as every format's key is.
  */
 export function focusModeHints(): FocusModeHint[] {
   const hints: FocusModeHint[] = [];
@@ -31,6 +31,5 @@ export function focusModeHints(): FocusModeHint[] {
     if (hint) hints[hints.indexOf(hint)] = { ...hint, keys: [...hint.keys, trigger] };
     else hints.push({ keys: [trigger], typed: true, label });
   }
-  hints.push({ keys: [hotkey('commentLink')], typed: false, label: 'link' });
   return hints;
 }

@@ -22,3 +22,14 @@
   padding: 0;
   border-top: none;
 }
+
+/* One line, never wrapped: what does not fit is dropped (`hintsThatFit`), never cut mid-hint. */
+.oneLine {
+  flex-wrap: nowrap;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.hint[hidden] {
+  display: none;
+}

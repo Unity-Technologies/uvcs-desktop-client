@@ -265,8 +265,9 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   buttons disabled while the caret is in the summary, whose formats are its keys; in code only the code block is
   enabled. The text then takes the box's whole width, a code block the same inset on both sides. The hints are the
   window's key hints, each key a cap as the palette and the shortcuts sheet draw them (`Kbd`): `cs:` `br:` `lb:`
-  `sh:` `cr:` reference, `@` mention, `:` emoji, ⌘K link, read from the triggers the suggestions take
-  (`focusModeHints`, `SUGGESTION_TRIGGERS`). A table and a keycap have no button: no single construct of the
+  `sh:` `cr:` reference, `@` mention, `:` emoji, read from the triggers the suggestions take
+  (`focusModeHints`, `SUGGESTION_TRIGGERS`). ⌘K is the link button's tooltip, as every format's key is. The hints
+  keep one line: where it's too narrow the last ones go (`KeyHints`' `oneLine`, `hintsThatFit`), never wrapping. A table and a keycap have no button: no single construct of the
   Markdown reader holds a key's `<kbd>` tags to toggle, and an empty table is more text to fill in than to type.
 - **The selection bar** (`SelectionBar`, `selectionBarShows`): over text selected, once the pointer lets go, never in
   a code block nor in focus mode, which has its toolbar; B, I, S, code and link, then list, task, numbered list, quote
