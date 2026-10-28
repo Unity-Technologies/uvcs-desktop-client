@@ -99,18 +99,20 @@ export function changesetSuggestion(changeset: Changeset, typed = ''): Suggestio
   return { key: `cs:${changeset.id}`, kind: 'changeset', label: String(changeset.id), detail: suggestionDetail(changeset.comment, typed), owner: changeset.owner, insert: `cs:${changeset.id}` };
 }
 
-/** How many characters of a summary a suggestion's row has room for, about: its match is kept within them. */
-const DETAIL_ROOM = 34;
+/** How many characters of a summary a suggestion's row shows beside its number and its author (about 150 px): its match is kept within them. */
+const DETAIL_ROOM = 22;
+/** The same beside a branch's or a label's name, which takes most of the row. */
+const DETAIL_ROOM_BESIDE_A_NAME = 12;
 
 /**
  * A comment as a suggestion's summary, the words typed in sight (`matchWindow`), as `Highlight` marks them: its first
  * line, or the whole comment on one line when only its body holds them, so the row shows why it was offered.
  */
-export function suggestionDetail(comment: string, typed: string): string {
+export function suggestionDetail(comment: string, typed: string, room = DETAIL_ROOM): string {
   const line = commentLineText(comment);
   const whole = commentText(comment).replace(/\s+/g, ' ').trim();
   const bodyOnly = wordMatchRanges(line, typed).length === 0 && wordMatchRanges(whole, typed).length > 0;
-  return matchWindow(bodyOnly ? whole : line, typed, DETAIL_ROOM);
+  return matchWindow(bodyOnly ? whole : line, typed, room);
 }
 
 /** `placeRepository` writes a name a spec can't hold as its link (`objectReferenceText`). */
@@ -119,7 +121,7 @@ export function branchSuggestions(index: CandidateIndex<Branch>, typed: string, 
     key: `br:${branch.name}`,
     kind: 'branch',
     label: branch.name,
-    detail: suggestionDetail(branch.comment, typed),
+    detail: suggestionDetail(branch.comment, typed, DETAIL_ROOM_BESIDE_A_NAME),
     owner: branch.owner,
     insert: objectReferenceText({ kind: 'branch', name: branch.name }, placeRepository),
   }));
@@ -130,7 +132,7 @@ export function labelSuggestions(index: CandidateIndex<Label>, typed: string, pl
     key: `lb:${label.name}`,
     kind: 'label',
     label: label.name,
-    detail: suggestionDetail(label.comment, typed),
+    detail: suggestionDetail(label.comment, typed, DETAIL_ROOM_BESIDE_A_NAME),
     owner: label.owner,
     insert: objectReferenceText({ kind: 'label', name: label.name }, placeRepository),
   }));
