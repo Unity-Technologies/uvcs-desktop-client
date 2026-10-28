@@ -159,7 +159,10 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
       data-group-field={groupField}
       data-expanded={focus.parts.layout ?? undefined}
       data-focus-mode={focus.parts.toolbar || undefined}
-      onMouseDown={bar.onPointerDown}
+      onMouseDown={(event) => {
+        bar.onPointerDown(event);
+        if (view) caretAtPress(view, event);
+      }}
     >
       {focus.element}
       {/* The top strip of the comment it formats (in the check-in, the description's). */}
@@ -256,6 +259,17 @@ function useFocusMode(view: EditorView | null, state: EditorState | null, host: 
     </>
   );
   return { parts, inFocusMode: parts.inFocusMode, element };
+}
+
+/**
+ * A press in the field's box but not on its text (under the last line, its padding) puts the caret where the press
+ * is, as on the text: the editor is only as tall as its text, and the rest of a tall box was dead to the pointer.
+ */
+function caretAtPress(view: EditorView, event: React.MouseEvent): void {
+  if (event.button !== 0 || view.contentDOM.contains(event.target as Node) || !view.dom.parentElement?.contains(event.target as Node)) return;
+  if ((event.target as Element).closest('button, [role="toolbar"], a')) return;
+  event.preventDefault();
+  focusAt(view, view.posAtCoords({ x: event.clientX, y: event.clientY }, false));
 }
 
 /** Puts the caret at `at` and the focus in the editor. */
