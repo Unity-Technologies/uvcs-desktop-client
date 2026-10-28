@@ -43,12 +43,12 @@ export function changesetIndex(changesets: readonly Changeset[]): CandidateIndex
 
 export function branchIndex(branches: readonly Branch[]): CandidateIndex<Branch> {
   // Newest first, as a branch worked on lately is the one a comment most likely names.
-  const newest = [...branches].sort((a, b) => b.date.localeCompare(a.date));
+  const newest = [...branches].sort(byNewest);
   return indexCandidates(newest, (branch) => [branch.name.replace(/^\//, ''), lastSegment(branch.name)], (branch) => [firstLine(branch.comment)]);
 }
 
 export function labelIndex(labels: readonly Label[]): CandidateIndex<Label> {
-  const newest = [...labels].sort((a, b) => b.date.localeCompare(a.date));
+  const newest = [...labels].sort(byNewest);
   return indexCandidates(newest, (label) => [label.name], (label) => [firstLine(label.comment)]);
 }
 
@@ -172,4 +172,9 @@ export function objectReferenceText(object: { kind: 'branch' | 'label'; name: st
 function readsBackWhole(text: string): boolean {
   const found = findReferences(text);
   return found.length === 1 && found[0]!.from === 0 && found[0]!.to === text.length;
+}
+
+/** Newest first by the date `cm` prints (ISO 8601): compared as text, the code units' order, never a locale's. */
+function byNewest(a: { date: string }, b: { date: string }): number {
+  return a.date < b.date ? 1 : a.date > b.date ? -1 : 0;
 }

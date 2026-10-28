@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
 import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
 import type { Label } from '@shared/domain/label';
@@ -56,6 +57,13 @@ describe('branch suggestions', () => {
     const [suggestion] = branchSuggestions(branchIndex([branch('/main/my task', '2026-10-01')]), 'my', PLACE);
     expect(suggestion!.insert).toBe('uvcs://acme.unity/repos/game/branches/main/my%20task');
     expect(findReferences(suggestion!.insert)).toMatchObject([{ reference: { kind: 'link', link: { object: { kind: 'branch', name: '/main/my task' } } } }]);
+  });
+});
+
+describe('branchIndex', () => {
+  it('is read in n·log n of the list, once per read: 20,000 branches cost no more than their sort', () => {
+    const build = (size: number) => Array.from({ length: size }, (_, index) => branch(`/main/task-${index}`, `2026-10-${String((index % 28) + 1).padStart(2, '0')}`));
+    expect(readGrowthWhenDoubled(10_000, build, (counted) => branchIndex(counted))).toBeLessThan(2.4);
   });
 });
 
