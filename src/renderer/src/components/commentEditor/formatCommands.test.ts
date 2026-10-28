@@ -62,6 +62,13 @@ describe('line formats', () => {
     expect(format('quote', '> said‸')).toBe('said‸');
   });
 
+  it('numbers the selected lines from one, and turns a list into a numbered one', () => {
+    expect(format('numbered', 'one‸')).toBe('1. one‸');
+    expect(format('numbered', '«one\ntwo»')).toBe('1. «one\n2. two»');
+    expect(format('numbered', '- one‸')).toBe('1. one‸');
+    expect(format('numbered', '«1. one\n2. two»')).toBe('«one\ntwo»');
+  });
+
   it('keeps an indented item’s indent', () => {
     expect(format('bullet', '  nested‸')).toBe('  - nested‸');
   });
@@ -129,6 +136,7 @@ describe('activeFormats', () => {
     expect([...activeFormats(editorState('**Fix _the‸_**'))].sort()).toEqual(['bold', 'italic']);
     expect([...activeFormats(editorState('- [ ] write‸'))]).toEqual(['task']);
     expect([...activeFormats(editorState('- write‸'))]).toEqual(['bullet']);
+    expect([...activeFormats(editorState('2. write‸'))]).toEqual(['numbered']);
     expect([...activeFormats(editorState('> said‸'))]).toEqual(['quote']);
     expect([...activeFormats(editorState('```\nco‸de\n```'))]).toEqual(['codeBlock']);
   });

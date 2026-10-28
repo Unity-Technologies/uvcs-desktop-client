@@ -4,7 +4,7 @@ import type { PressedKey } from '../../lib/shortcuts';
 import { formatForKey, pastesPlain } from './formattingKeys';
 import type { FormatCommandId } from './formatCommands';
 
-const EVERY: FormatCommandId[] = ['bold', 'italic', 'strikethrough', 'code', 'link', 'bullet', 'task', 'quote', 'codeBlock'];
+const EVERY: FormatCommandId[] = ['bold', 'italic', 'strikethrough', 'code', 'link', 'bullet', 'task', 'numbered', 'quote', 'codeBlock'];
 const INLINE: FormatCommandId[] = ['bold', 'italic', 'strikethrough', 'code', 'link'];
 
 function press(key: string, code: string, modifiers: Partial<PressedKey> = {}): PressedKey {
@@ -21,6 +21,7 @@ describe('formatForKey', () => {
     // Shift turns 8 into *, and 9 into (: digits go by their place.
     expect(formatForKey(press('*', 'Digit8', { metaKey: true, shiftKey: true }), EVERY, true)).toBe('bullet');
     expect(formatForKey(press('(', 'Digit9', { metaKey: true, shiftKey: true }), EVERY, true)).toBe('quote');
+    expect(formatForKey(press('&', 'Digit7', { metaKey: true, shiftKey: true }), EVERY, true)).toBe('numbered');
     // ⌥ turns C into ç on macOS: the letter goes by its place then.
     expect(formatForKey(press('Ç', 'KeyC', { metaKey: true, altKey: true, shiftKey: true }), EVERY, true)).toBe('codeBlock');
   });
