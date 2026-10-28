@@ -6,7 +6,7 @@ import { ListWithDetails } from './ListWithDetails';
 interface ListWithDetailsSkeletonProps<Row> {
   columns: Column<Row>[];
   rowHeight?: number;
-  /** The view's details width, so the skeleton has the view's layout. */
+  /** The view's details key, so the skeleton has the view's layout: its details' width, or none while they're hidden. */
   detailsKey: string;
 }
 

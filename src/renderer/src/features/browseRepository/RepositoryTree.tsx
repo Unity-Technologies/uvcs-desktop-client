@@ -30,7 +30,7 @@ interface RepositoryTreeProps {
   opening: BrowseOpening;
   /** Filters the open folders' rows. */
   filter: string;
-  /** Where the tree's width is kept, one per place it shows in. */
+  /** Where the tree's width and whether its details are hidden are kept, one per place it shows in. */
   detailsKey: string;
   /** The item selected now, for the link its host copies (Browse repository's page). */
   onShownItem?: (path: string | null) => void;
