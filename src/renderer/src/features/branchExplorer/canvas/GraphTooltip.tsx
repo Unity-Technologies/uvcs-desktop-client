@@ -60,7 +60,8 @@ export function GraphTooltip({ target, layout, palette, pendingChangeCount, x, y
       card.style.top = `${corner.top}px`;
     }
     card.style.left = `${keepInside(card.offsetLeft, card.offsetWidth, containerWidth)}px`;
-    card.style.maxHeight = `${captionCardMaxHeight(card.getBoundingClientRect().top, window.innerHeight)}px`;
+    const canvasBottom = card.offsetParent?.getBoundingClientRect().bottom ?? window.innerHeight;
+    card.style.maxHeight = `${captionCardMaxHeight(card.getBoundingClientRect().top, canvasBottom)}px`;
   });
 
   if (anchor?.kind === 'caption' && target.kind === 'changeset') {

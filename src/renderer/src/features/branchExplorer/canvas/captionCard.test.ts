@@ -50,7 +50,7 @@ describe('cardMaxWidth', () => {
 });
 
 describe('captionCardMaxHeight', () => {
-  it('keeps a long comment’s card inside the window, its body scrolling, never shorter than a few lines', () => {
+  it('keeps a long comment’s card inside the canvas, its body scrolling, never shorter than a few lines', () => {
     expect(captionCardMaxHeight(100, 900)).toBe(792);
     expect(captionCardMaxHeight(850, 900)).toBe(160);
   });

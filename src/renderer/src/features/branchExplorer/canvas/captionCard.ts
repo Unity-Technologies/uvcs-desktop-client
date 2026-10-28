@@ -77,9 +77,10 @@ export function captionMetrics(font: string, fontSize: number): CaptionMetrics {
 const CARD_MIN_HEIGHT = 160;
 
 /**
- * How tall the card over a caption may grow, from its top in the window: to the window's bottom edge, its body
- * scrolling past that (the pointer can reach the card), so a long comment never runs off the window.
+ * How tall the card over a caption may grow, from its top: to the canvas's bottom edge (`canvasBottom`, both in the
+ * window), its body scrolling past that (the pointer can reach the card), so a long comment is never cut by the
+ * canvas, nor hidden under the status bar below it.
  */
-export function captionCardMaxHeight(cardTop: number, windowHeight: number): number {
-  return Math.max(CARD_MIN_HEIGHT, Math.round(windowHeight - cardTop - EDGE_MARGIN));
+export function captionCardMaxHeight(cardTop: number, canvasBottom: number): number {
+  return Math.max(CARD_MIN_HEIGHT, Math.round(canvasBottom - cardTop - EDGE_MARGIN));
 }

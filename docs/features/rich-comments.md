@@ -130,7 +130,7 @@ does.
 
 The Branch Explorer's caption card lays its first line over the canvas's: the canvas draws its text (`summaryOf`), the
 card the same line as a row does (`CommentLine`), its references as chips. A long comment's card stops at the
-window's bottom (`captionCardMaxHeight`) and its body scrolls, as the pointer can reach it; no line clamp, which cut
+canvas's bottom (`captionCardMaxHeight`), above the status bar, and its body scrolls, as the pointer can reach it; no line clamp, which cut
 Markdown's blocks.
 
 ## Copying
@@ -380,7 +380,8 @@ checked in both themes when it draws something.
 19. **A recent comment that opens with a list.** Pick one: it goes whole into the description, the summary stays
     empty, and the caret waits at the description's end.
 20. **The Branch Explorer's card.** Hover the caption of a changeset whose title has references and whose comment is
-    longer than the window: the title shows its chips, the card stops at the window's bottom and its body scrolls.
+    longer than the window (720 px tall): the title shows its chips, the card stops above the status bar, its bottom
+    edge in sight, and its body scrolls.
 21. **Two editors in a development build.** With the check-in's description holding chips, open Edit comment on a
     changeset with chips: the console shows no "Cannot update a component while rendering a different component".
 22. **Copying a shown comment.** In a details panel, drag over a whole comment with a list, bold and a chip, its title
