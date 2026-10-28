@@ -95,6 +95,21 @@ describe('branchResult', () => {
 
     expect(inDescription.quality).toBeLessThan(inName.quality!);
   });
+
+  it('shows a row found by the words of its name alone as a name hit, with who made it and when', () => {
+    const asNameHit = branchResult({ ...branch, name: '/main/fix-12' }, contextFor('fix'), 'words');
+
+    for (const comment of ['', 'Unrelated work']) {
+      const result = branchResult({ ...branch, name: '/main/fix-12', comment }, contextFor('fix'), 'description');
+      expect(result).toMatchObject({ detail: asNameHit.detail, detailMatches: [], labelMatches: [6, 7, 8], quality: asNameHit.quality });
+    }
+  });
+
+  it('shows who made it and when for a description whose words match only in what it shows hidden (a link’s address)', () => {
+    const result = branchResult({ ...branch, comment: 'See [the design](https://host/abc123)' }, contextFor('abc123'), 'description');
+
+    expect(result.detail).toBe(branchResult(branch, contextFor('abc123')).detail);
+  });
 });
 
 describe('labelResult', () => {
