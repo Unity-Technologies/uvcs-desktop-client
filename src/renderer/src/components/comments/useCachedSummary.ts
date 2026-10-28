@@ -9,12 +9,12 @@ import { cachedAreaOf, summaryIn } from './cachedSummary';
  * A reference's summary from what the window already read (`summaryIn`), kept up to date as more is read: it never
  * asks the server for anything.
  */
-export function useCachedSummary(reference: CommentReference): string | undefined {
+export function useCachedSummary(reference: CommentReference | undefined): string | undefined {
   const place = usePlace();
   const queryClient = useQueryClient();
-  const area = cachedAreaOf(reference);
+  const area = reference ? cachedAreaOf(reference) : null;
   const read = useCallback(() => {
-    if (!area) return undefined;
+    if (!area || !reference) return undefined;
     const cached = queryClient.getQueryCache().findAll({ queryKey: queryKeys.inPlace(place, area) }).map((query) => query.state.data);
     return summaryIn(cached, reference);
   }, [area, place, queryClient, reference]);

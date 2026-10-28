@@ -67,7 +67,7 @@ function renderBlock(block: MarkdownBlock, key: number, images: MarkdownImages):
               <tr>
                 {block.header.map((cell, column) => (
                   <th key={column} style={{ textAlign: block.align[column] ?? undefined }}>
-                    {renderInlines(cell, images)}
+                    {renderInlines(cell, images, true)}
                   </th>
                 ))}
               </tr>
@@ -77,7 +77,7 @@ function renderBlock(block: MarkdownBlock, key: number, images: MarkdownImages):
                 <tr key={rowIndex}>
                   {row.map((cell, column) => (
                     <td key={column} style={{ textAlign: block.align[column] ?? undefined }}>
-                      {renderInlines(cell, images)}
+                      {renderInlines(cell, images, true)}
                     </td>
                   ))}
                 </tr>
@@ -107,7 +107,8 @@ function renderList(list: MarkdownList, key: number, images: MarkdownImages): Re
   );
 }
 
-function renderInlines(inlines: readonly MarkdownInline[], images: MarkdownImages): ReactNode[] {
+/** `compact`: in a table's cell, chips show without their summary (their tooltip has it), so the columns stay narrow. */
+function renderInlines(inlines: readonly MarkdownInline[], images: MarkdownImages, compact = false): ReactNode[] {
   return inlines.map((inline, index) => {
     switch (inline.kind) {
       case 'text':
@@ -115,23 +116,23 @@ function renderInlines(inlines: readonly MarkdownInline[], images: MarkdownImage
       case 'code':
         return <code key={index}>{inline.text}</code>;
       case 'strong':
-        return <strong key={index}>{renderInlines(inline.children, images)}</strong>;
+        return <strong key={index}>{renderInlines(inline.children, images, compact)}</strong>;
       case 'emphasis':
-        return <em key={index}>{renderInlines(inline.children, images)}</em>;
+        return <em key={index}>{renderInlines(inline.children, images, compact)}</em>;
       case 'strike':
-        return <del key={index}>{renderInlines(inline.children, images)}</del>;
+        return <del key={index}>{renderInlines(inline.children, images, compact)}</del>;
       case 'break':
         return <br key={index} />;
       case 'link':
         return (
           <MarkdownLink key={index} url={inline.url}>
-            {renderInlines(inline.children, images)}
+            {renderInlines(inline.children, images, compact)}
           </MarkdownLink>
         );
       case 'image':
         return <CommentImage key={index} url={inline.url} alt={inline.alt} source={`![${inline.alt}](${inline.url})`} inline={images === 'inline'} />;
       case 'reference':
-        return <ReferenceChip key={index} reference={inline.reference} source={inline.source} />;
+        return <ReferenceChip key={index} reference={inline.reference} source={inline.source} compact={compact} />;
     }
   });
 }

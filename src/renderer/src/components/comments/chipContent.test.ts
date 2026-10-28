@@ -2,17 +2,25 @@ import { describe, expect, it } from 'vitest';
 import { findReferences } from '../../lib/comments/commentReferences';
 import { chipContent, type ChipContent } from './chipContent';
 
-const chipOf = (text: string): ChipContent => chipContent(findReferences(text)[0]!.reference);
+const chipOf = (text: string, placeRepository?: string): ChipContent => chipContent(findReferences(text)[0]!.reference, placeRepository);
 
 describe('chipContent', () => {
   it('names each object by its own name or number, in words in its title, and opens it', () => {
-    expect(chipOf('cs:4207')).toEqual({ kind: 'object', icon: 'changeset', label: '4207', title: 'Changeset 4207', target: { object: { kind: 'changeset', id: 4207 } } });
+    expect(chipOf('cs:4207')).toEqual({
+      kind: 'object',
+      icon: 'changeset',
+      label: '4207',
+      title: 'Changeset 4207',
+      target: { object: { kind: 'changeset', id: 4207 } },
+      cachedAs: { kind: 'changeset', id: 4207 },
+    });
     expect(chipOf('br:/main/task-2210')).toEqual({
       kind: 'object',
       icon: 'branch',
       label: 'task-2210',
       title: 'Branch /main/task-2210',
       target: { object: { kind: 'branch', name: '/main/task-2210' } },
+      cachedAs: { kind: 'branch', name: '/main/task-2210' },
     });
     expect(chipOf('lb:v1.4.0')).toMatchObject({ icon: 'label', label: 'v1.4.0', title: 'Label v1.4.0' });
     expect(chipOf('sh:12')).toMatchObject({ icon: 'shelve', label: '12', title: 'Shelve 12', target: { object: { kind: 'shelve', id: 12 } } });
@@ -28,6 +36,14 @@ describe('chipContent', () => {
       repository: 'art',
       target: { repository: 'art@acme@unity', object: { kind: 'changeset', id: 12 } },
     });
+  });
+
+  it("reads an object of the place's repository as its own, however it's written", () => {
+    const local = { kind: 'object', icon: 'changeset', label: '12', title: 'Changeset 12', target: { object: { kind: 'changeset', id: 12 } }, cachedAs: { kind: 'changeset', id: 12 } };
+    expect(chipOf('cs:12@game@acme@unity', 'game@acme@unity')).toEqual(local);
+    expect(chipOf('cs:12@game', 'game@acme@unity')).toEqual(local);
+    expect(chipOf('uvcs://acme@unity/repos/game/changesets/12', 'game@acme@unity')).toEqual(local);
+    expect(chipOf('cs:12@art', 'game@acme@unity')).toMatchObject({ repository: 'art', target: { repository: 'art' } });
   });
 
   it("shows a file by its name, and opens its object's diff on it", () => {

@@ -110,6 +110,9 @@
 
 .table th,
 .table td {
+  /* Words stay whole in a cell: breaking anywhere let a narrow panel squeeze each column to one letter. The table
+     scrolls sideways instead. */
+  overflow-wrap: normal;
   padding: var(--space-1) var(--space-2);
   border: 1px solid var(--border-default);
   text-align: left;

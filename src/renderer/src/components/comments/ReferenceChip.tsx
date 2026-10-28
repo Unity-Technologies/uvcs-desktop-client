@@ -2,9 +2,9 @@ import { Archive, File, GitBranch, GitCommitVertical, Link2, MessageSquareCode, 
 import { memo, useMemo, type MouseEvent } from 'react';
 import type { CommentReference } from '../../lib/comments/commentReferences';
 import { displayName } from '../../lib/userName';
-import { usePlace } from '../../app/workspace/useWorkspace';
+import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { Avatar } from '../../ui/Avatar';
-import { chipContent, type ChipIcon } from './chipContent';
+import { chipContent, type ChipContent, type ChipIcon } from './chipContent';
 import { useCachedSummary } from './useCachedSummary';
 import styles from './ReferenceChip.module.css';
 
@@ -33,7 +33,8 @@ interface ReferenceChipProps {
 
 /** A changeset, branch, person or emoji a comment names, as `chipContent` says it shows; a click opens an object. */
 export const ReferenceChip = memo(function ReferenceChip({ reference, source, compact = false, interactive = true }: ReferenceChipProps) {
-  const chip = useMemo(() => chipContent(reference), [reference]);
+  const placeRepository = usePlaceRepository();
+  const chip = useMemo(() => chipContent(reference, placeRepository), [reference, placeRepository]);
   switch (chip.kind) {
     case 'emoji':
       return (
@@ -51,7 +52,7 @@ export const ReferenceChip = memo(function ReferenceChip({ reference, source, co
     case 'object':
       return (
         <ObjectChip
-          reference={reference}
+          cachedAs={chip.cachedAs}
           source={source}
           compact={compact}
           interactive={interactive}
@@ -65,11 +66,11 @@ export const ReferenceChip = memo(function ReferenceChip({ reference, source, co
   }
 });
 
-type ObjectChipProps = Omit<Extract<ReturnType<typeof chipContent>, { kind: 'object' }>, 'kind'> & ReferenceChipProps;
+type ObjectChipProps = Omit<Extract<ChipContent, { kind: 'object' }>, 'kind'> & Omit<ReferenceChipProps, 'reference'>;
 
-function ObjectChip({ reference, source, compact, interactive, icon, label, title, repository, target }: ObjectChipProps) {
+function ObjectChip({ cachedAs, source, compact, interactive, icon, label, title, repository, target }: ObjectChipProps) {
   const place = usePlace();
-  const summary = useCachedSummary(reference);
+  const summary = useCachedSummary(cachedAs);
   const Icon = ICONS[icon];
   const open = (event: MouseEvent): void => {
     // In a row, the chip opens its object and leaves the row's selection alone.

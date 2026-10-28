@@ -25,11 +25,48 @@ export type ChipContent =
       /** The repository it is in, named when it isn't the place's own. */
       repository?: string;
       target: ChipTarget;
+      /** The object as the place's caches hold it, for its summary (`useCachedSummary`): one of the place's own only. */
+      cachedAs?: CommentReference;
     }
   | { kind: 'user'; name: string }
   | { kind: 'emoji'; glyph: string; name: string };
 
-export function chipContent(reference: CommentReference): ChipContent {
+/**
+ * `placeRepository`: the window's (`game@acme@unity`), so an object named in it however it's written (`cs:12`,
+ * `cs:12@game`, its `uvcs://` link) reads as one of the place's own.
+ */
+export function chipContent(reference: CommentReference, placeRepository?: string): ChipContent {
+  const chip = chipOf(reference);
+  if (chip.kind !== 'object') return chip;
+  const local = !chip.target.repository || isPlaceRepository(chip.target.repository, placeRepository);
+  if (!local) return chip;
+  const { repository: _named, target, ...rest } = chip;
+  const { repository: _targetRepository, ...localTarget } = target;
+  const cachedAs = cachedReferenceOf(localTarget.object);
+  return { ...rest, target: localTarget, ...(cachedAs && !localTarget.page && { cachedAs }) };
+}
+
+/** `game@acme@unity` names the place's repository, and so does `game` alone, on the place's server. */
+function isPlaceRepository(repository: string, placeRepository: string | undefined): boolean {
+  if (!placeRepository) return false;
+  return repository === placeRepository || (!repository.includes('@') && repository === placeRepository.split('@')[0]);
+}
+
+function cachedReferenceOf(object: LinkObject | undefined): CommentReference | undefined {
+  switch (object?.kind) {
+    case 'changeset':
+    case 'shelve':
+    case 'codeReview':
+      return { kind: object.kind, id: object.id };
+    case 'branch':
+    case 'label':
+      return { kind: object.kind, name: object.name };
+    default:
+      return undefined;
+  }
+}
+
+function chipOf(reference: CommentReference): ChipContent {
   switch (reference.kind) {
     case 'user':
       return { kind: 'user', name: reference.name };
