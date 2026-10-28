@@ -1,7 +1,7 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { PressedKey } from '../../lib/shortcuts';
-import { caretOpeningFocusMode, focusModeButton, focusModeKey, focusModeLayout, focusModeParts, groupShowsHints, layoutAfterFocus, offersFocusMode } from './focusMode';
+import { caretOpeningFocusMode, focusModeButton, focusModeKey, focusModeLayout, focusModeParts, groupShowsHints, inPlaceFieldHeight, layoutAfterFocus, offersFocusMode } from './focusMode';
 import { EditorState } from '@codemirror/state';
 
 /**
@@ -136,5 +136,16 @@ describe('caretOpeningFocusMode', () => {
     expect(caretOpeningFocusMode(editorState('A dr‸aft'), true)).toBeNull();
     expect(caretOpeningFocusMode(editorState('‸A draft'), true)).toBeNull();
     expect(caretOpeningFocusMode(editorState('‸'), false)).toBeNull();
+  });
+});
+
+describe('inPlaceFieldHeight', () => {
+  it('grows a dialog’s comment by all the room the window has under the dialog', () => {
+    // New label at 720 px: the dialog from 101 to 553, its comment 110 px: the comment takes the 142 px left above the margin.
+    expect(inPlaceFieldHeight({ windowHeight: 720, dialogTop: 101, dialogHeight: 452, fieldHeight: 110 })).toBe(110 + 720 - 101 - 24 - 452);
+  });
+
+  it('never makes it shorter than a few lines, a dialog taller than the window scrolling around it', () => {
+    expect(inPlaceFieldHeight({ windowHeight: 500, dialogTop: 70, dialogHeight: 480, fieldHeight: 110 })).toBe(160);
   });
 });
