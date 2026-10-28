@@ -38,6 +38,9 @@ export interface LiveMarksOptions {
 /** Where references can't be: code, links and their addresses, images, raw HTML (as the shown comment reads them). */
 const NO_REFERENCES = new Set(['InlineCode', 'FencedCode', 'CodeBlock', 'URL', 'Link', 'Image', 'Autolink', 'HTMLTag', 'HTMLBlock', 'Comment', 'CommentBlock']);
 
+/** A bare address the Markdown reader links: a web page's, where `?branch=br:/main` stays in the address. */
+const WEB_ADDRESS = /^(?:[a-z][a-z0-9+.-]*:\/\/|www\.)/i;
+
 /** A task's line: `- [ ]` or `* [x]`, indented or not. */
 const TASK_LINE = /^\s*[-*+]\s+\[[ xX]\]/;
 
@@ -188,6 +191,8 @@ function excludedRanges(state: EditorState, from: number, to: number, options: L
     enter: (node) => {
       const drawnTable = node.name === 'Table' && !(options.revealsSelection && touchesSelection(state, node.from, node.to));
       if (!NO_REFERENCES.has(node.name) && !drawnTable) return;
+      // A bare email address isn't one: a mention or a spec may hold what reads as one (`@ana@acme.com`).
+      if (node.name === 'URL' && !WEB_ADDRESS.test(state.sliceDoc(node.from, node.to))) return;
       excluded.push([node.from, node.to]);
       return false;
     },

@@ -112,6 +112,10 @@ describe('liveMarksOf', () => {
       ]);
     });
 
+    it('reads a person or a repository named by what reads as an email address', () => {
+      expect(marksOf('Thanks @ana@acme.com for cs:12@game@build.acme.com ‸')).toEqual(['reference @ana@acme.com', 'reference cs:12@game@build.acme.com']);
+    });
+
     it('leaves a sentence’s punctuation out of a reference', () => {
       expect(marksOf('See cs:12. ‸')).toEqual(['reference cs:12']);
     });
