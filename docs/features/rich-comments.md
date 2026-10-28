@@ -228,8 +228,9 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   title or the merge comment they join (`oneLineText`). The field's text follows its owner's value after every change
   that differs from it, also when the owner kept its value. A text the owner puts in whole (a recent comment picked,
   a changelist's comment) is one step to undo, back to what was written (`ownerSync`). The owner's value can arrive
-  after more keys were typed: a value the field itself sent is never written back (`sentSinceSync`), or it would take
-  those keys away and put them back where the caret no longer is.
+  after more keys were typed: a value the field itself sent (`sentSinceSync`), or the text the render that brought it
+  showed (a key can land between a render and its effects), is never written back, or it would take those keys away
+  and put them back where the caret no longer is.
 - **Focus mode** (`focusMode`, `useFocusMode`): a field of many lines grows into a larger editor to write a long
   comment, by the quiet button in its corner (shown on hover or focus) or ⇧⌘F (Ctrl+Shift+F), and back the same way
   or with Esc. Over the view it is the field's own box at a writing size, the rest dimmed (a click there goes back); in
