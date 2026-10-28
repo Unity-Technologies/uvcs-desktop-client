@@ -51,6 +51,24 @@ describe('markdownFromClipboard', () => {
   });
 });
 
+describe('markdownFromClipboard, what it never keeps', () => {
+  it('drops scripts and styles, with what they hold', () => {
+    const html = '<style>p { color: red }</style><p>Read <b>this</b></p><script>alert(1)</script>';
+    expect(markdownFromClipboard(html, 'Read this')).toBe('Read **this**');
+  });
+
+  it('keeps a link only to what the app opens: a web page or a uvcs: link; any other is its text', () => {
+    const html = '<p><a href="javascript:alert(1)">run</a>, <a href="file:///etc/passwd">file</a>, <a href="mailto:ana@acme.com">mail</a>, <a href="uvcs://acme.unity/repos/game/changesets/12">cs</a> and <a href="https://example.com">web</a></p>';
+    expect(markdownFromClipboard(html, 'run, file, mail, cs and web')).toBe('run, file, mail, [cs](uvcs://acme.unity/repos/game/changesets/12) and [web](https://example.com)');
+  });
+
+  it('reads Word’s and Outlook’s copy cleanly', () => {
+    const html =
+      '<html xmlns:o="urn:schemas-microsoft-com:office:office"><body><!--StartFragment--><p class=MsoNormal style="mso-margin-top-alt:auto"><b><span style="mso-bidi-font-weight:normal">Release</span></b> notes<o:p></o:p></p><!--EndFragment--></body></html>';
+    expect(markdownFromClipboard(html, 'Release notes')).toBe('**Release** notes');
+  });
+});
+
 describe('pasteMarkdown', () => {
   const paste = (text: string, markdown: string) => {
     const state = editorState(text);
