@@ -23,7 +23,12 @@ export function HoverCard({ title, body, meta, className, style }: HoverCardProp
     <div className={classNames(styles.card, className)} style={style}>
       <div className={styles.title}>{title}</div>
       {body && <div className={styles.body}>{body}</div>}
-      {meta && <div className={styles.meta}>{meta}</div>}
+      {meta && <HoverCardMeta>{meta}</HoverCardMeta>}
     </div>
   );
+}
+
+/** A card's last line, who and when: the Branch Explorer's caption card says it too, under its own first line. */
+export function HoverCardMeta({ children }: { children: ReactNode }) {
+  return <div className={styles.meta}>{children}</div>;
 }

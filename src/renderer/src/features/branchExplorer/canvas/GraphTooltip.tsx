@@ -1,6 +1,6 @@
 import type { PendingMergeLink } from '@shared/domain/pendingChanges';
 import { Markdown } from '../../../components/Markdown';
-import { HoverCard } from '../../../ui/HoverCard';
+import { HoverCard, HoverCardMeta } from '../../../ui/HoverCard';
 import { splitComment } from '../../../lib/comment';
 import { commentLineText, commentText } from '../../../lib/comments/commentText';
 import { displayName } from '../../../lib/userName';
@@ -77,10 +77,10 @@ export function GraphTooltip({ target, layout, palette, pendingChangeCount, x, y
           {summary}
         </div>
         {/* Wrapped in a card narrowed by the edge, the line breaks between its parts, never inside one. */}
-        <div className={styles.meta}>
+        <HoverCardMeta>
           <span className={styles.metaPart}>Changeset {changeset.id}</span> · <span className={styles.metaPart}>{displayName(changeset.owner)}</span> ·{' '}
           <span className={styles.metaPart}>{formatRelativeDate(changeset.date)}</span>
-        </div>
+        </HoverCardMeta>
         {body && (
           <div className={styles.cardBody}>
             <Markdown text={body} comment />

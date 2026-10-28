@@ -1,5 +1,6 @@
 import type { CommentReference } from '../../lib/comments/commentReferences';
 import { commentLineText } from '../../lib/comments/commentText';
+import type { CachedRecord } from './chipContent';
 
 /** The query area each object kind is cached under (`queryKeys.inPlace(place, area, …)`). */
 export type CachedArea = 'changesets' | 'branches' | 'labels' | 'shelves' | 'codeReviews';
@@ -68,16 +69,13 @@ export function cachedObjectIn(cached: readonly unknown[], reference: CommentRef
   return undefined;
 }
 
-/** What a hover card shows of a cached object: its text fields, whichever it has (`CachedRecord`). */
-export function cachedRecordOf(object: CachedObject): { comment?: string; title?: string; status?: string; owner?: string; date?: string } {
+/** What a hover card shows of a cached object: its text fields, whichever it has. */
+export function cachedRecordOf(object: CachedObject): CachedRecord {
   const text = (value: unknown) => (typeof value === 'string' ? value : undefined);
   return { comment: text(object.comment), title: text(object.title), status: text(object.status), owner: text(object.owner), date: text(object.date) };
 }
 
-/** A cached object's summary, read once. */
-export function cachedSummaryOf(object: CachedObject): string | undefined {
-  return summaryOf(object);
-}
+
 
 function keyOf(reference: CommentReference): string | null {
   switch (reference.kind) {
@@ -107,7 +105,8 @@ function indexOf(list: readonly unknown[]): Map<string, CachedObject> {
   return index;
 }
 
-function summaryOf(object: CachedObject): string | undefined {
+/** A cached object's summary (its comment's first line without marks, a review's title), read once. */
+export function summaryOf(object: CachedObject): string | undefined {
   if (!summaries.has(object)) {
     const text = typeof object.title === 'string' ? object.title : typeof object.comment === 'string' ? object.comment : '';
     summaries.set(object, commentLineText(text) || undefined);

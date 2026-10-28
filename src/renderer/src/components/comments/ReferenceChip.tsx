@@ -3,7 +3,7 @@ import type { CommentReference } from '../../lib/comments/commentReferences';
 import { displayName } from '../../lib/userName';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { Avatar } from '../../ui/Avatar';
-import { cachedRecordOf, cachedSummaryOf } from './cachedSummary';
+import { cachedRecordOf, summaryOf } from './cachedSummary';
 import { chipCard, chipContent, emojiLabel, personCard, type ChipContent } from './chipContent';
 import { cardDate, ChipHoverCard } from './ChipHoverCard';
 import { CHIP_ICONS } from './chipIcons';
@@ -66,7 +66,7 @@ type ObjectChipProps = Omit<Extract<ChipContent, { kind: 'object' }>, 'kind'> & 
 function ObjectChip({ placeRepository, cachedAs, source, compact, interactive, icon, label, title, repository, target }: ObjectChipProps) {
   const place = usePlace();
   const cached = useCachedObject(cachedAs);
-  const summary = cached && cachedSummaryOf(cached);
+  const summary = cached && summaryOf(cached);
   const card = useMemo(() => chipCard({ title, repository }, cached && cachedRecordOf(cached), cardDate), [title, repository, cached]);
   const Icon = CHIP_ICONS[icon];
   const open = (event: MouseEvent): void => {
@@ -77,7 +77,7 @@ function ObjectChip({ placeRepository, cachedAs, source, compact, interactive, i
     void import('./openReference').then(({ openReference }) => openReference(place, placeRepository, target));
   };
   // An empty `data-tip`: the app's tooltip of the row or cell around it gives way to the chip's card (`findTip`).
-  const shown = { className: styles.chip, 'data-icon': icon, 'data-source': source, 'data-tip': '', 'aria-label': title };
+  const shown = { className: styles.chip, 'data-icon': icon, 'data-source': source, 'data-tip': '' };
   const content = (
     <>
       <Icon className={styles.icon} size={compact ? 12 : 13} strokeWidth={2.25} aria-hidden />
@@ -96,7 +96,7 @@ function ObjectChip({ placeRepository, cachedAs, source, compact, interactive, i
   return (
     <ChipHoverCard card={card}>
       {/* In a row or a title the row's keys reach the object; only a full comment's chips are tab stops. */}
-      <a href="#" {...shown} tabIndex={compact ? -1 : undefined} onClick={open} onMouseDown={(event) => event.stopPropagation()}>
+      <a href="#" {...shown} aria-label={title} tabIndex={compact ? -1 : undefined} onClick={open} onMouseDown={(event) => event.stopPropagation()}>
         {content}
       </a>
     </ChipHoverCard>

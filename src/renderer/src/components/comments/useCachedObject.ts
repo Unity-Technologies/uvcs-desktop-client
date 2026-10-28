@@ -7,7 +7,7 @@ import { changesetKey } from '../../features/changesets/changesetKey';
 import { cachedAreaOf, cachedObjectIn, type CachedObject } from './cachedSummary';
 
 /**
- * The object a reference names in what the window already read (`cachedObjectIn`): its summary (`cachedSummaryOf`)
+ * The object a reference names in what the window already read (`cachedObjectIn`): its summary (`summaryOf`)
  * and its hover card's fields (`cachedRecordOf`), kept up to date as its area's lists are read again. It never asks
  * the server for anything, and wakes only for its own area's data.
  */

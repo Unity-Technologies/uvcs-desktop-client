@@ -12,7 +12,7 @@ import type { WidgetPortals } from './widgetPortals';
 /** Where an editor's widgets render their React content. */
 export const widgetPortals = Facet.define<WidgetPortals, WidgetPortals | null>({ combine: (values) => values[0] ?? null });
 
-/** Whether chips leave their summary to their tooltip: on one line (a summary, a title), where room is short. */
+/** Whether chips leave their summary to their card (`ChipHoverCard`): on one line (a summary, a title), where room is short. */
 export const compactChips = Facet.define<boolean, boolean>({ combine: (values) => values.some(Boolean) });
 
 /** The portals each widget's element renders into, for its `destroy`, which gets no view. */

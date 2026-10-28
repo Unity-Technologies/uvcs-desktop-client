@@ -9,12 +9,6 @@
   transform: translateX(-100%);
 }
 
-.meta {
-  margin-top: 4px;
-  color: var(--text-tertiary);
-  font-size: var(--text-xs);
-}
-
 /*
  * The card that completes a cut caption, laid exactly over it: its border and
  * padding are mirrored in captionCard.ts (CARD_INSET_X). It only fades in: moving would break the "completes in
