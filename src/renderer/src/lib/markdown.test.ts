@@ -260,5 +260,19 @@ describe('keys in a comment', () => {
   it('writes a key as its text', () => {
     expect(plainText(parseInline('<kbd>Ctrl</kbd>+<kbd>F</kbd>'))).toBe('Ctrl+F');
   });
+
+  it('reads a key inside a link or emphasis, and a key in a key as the text around it', () => {
+    expect(parseInline('**<kbd>Esc</kbd>** [<kbd>F1</kbd>](https://x.com)')).toEqual([
+      { kind: 'strong', children: [{ kind: 'key', text: 'Esc' }] },
+      { kind: 'text', text: ' ' },
+      { kind: 'link', url: 'https://x.com', children: [{ kind: 'key', text: 'F1' }] },
+    ]);
+    expect(parseInline('<kbd><kbd>a</kbd></kbd>')).toEqual([{ kind: 'text', text: '<kbd>' }, { kind: 'key', text: 'a' }, { kind: 'text', text: '</kbd>' }]);
+  });
+
+  it('reads a key across a line break as one line, and an empty key as nothing', () => {
+    expect(parseInline('<kbd>Ctrl\nF</kbd>', { comment: true })).toEqual([{ kind: 'key', text: 'Ctrl F' }]);
+    expect(parseInline('Press <kbd></kbd> now')).toEqual([{ kind: 'text', text: 'Press  now' }]);
+  });
 });
 

@@ -52,4 +52,13 @@ describe('commentLineInlines', () => {
   it('is empty for an empty comment', () => {
     expect(commentLineInlines('')).toEqual([]);
   });
+
+  it('keeps a key in a row', () => {
+    expect(commentLineInlines('Press <kbd>Esc</kbd> to cancel')).toEqual([
+      { kind: 'text', text: 'Press ' },
+      { kind: 'key', text: 'Esc' },
+      { kind: 'text', text: ' to cancel' },
+    ]);
+  });
 });
+
