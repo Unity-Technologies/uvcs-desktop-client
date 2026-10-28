@@ -2,7 +2,7 @@ import '../../testing/fakeWindow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { focusManager, QueryClient, QueryObserver } from '@tanstack/react-query';
 import { findReferences } from '../../lib/comments/commentReferences';
-import { serversQuery } from '../../app/workspace/workspaceQueries';
+import { queryKeys } from '../../api/queryKeys';
 import {
   MAX_RESOLVED_PER_COMMENT,
   referencesOfBlocks,
@@ -192,8 +192,8 @@ describe('remoteObjectQuery, as the window comes back', () => {
 });
 
 describe('knownServersQuery', () => {
-  it('reads the user’s servers under the key Settings and the links read them by: one cache entry for all', () => {
-    expect(knownServersQuery.queryKey).toEqual(serversQuery.queryKey);
+  it('reads the user’s profiles, wildcards among them, under the key Settings › Accounts reads them by: one cache entry', () => {
+    expect(knownServersQuery.queryKey).toEqual(queryKeys.accounts);
   });
 });
 

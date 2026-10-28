@@ -84,10 +84,12 @@ before.
   nothing; its first `MAX_RESOLVED_PER_COMMENT` (10) such objects, the rest as their cards open. The comments shown
   in full (`<Markdown comment>`) are the details panels' (changeset, branch, label, shelve, a review's description and
   comments, through `FoldedComment` and `SummaryComment`), History's revision header (`RevisionHeader`), Annotate's
-  card (`AnnotationCard`) and the Branch Explorer's tooltip (`GraphTooltip`). A row's chip (History, the lists,
-  Incoming, the palette, notifications) reads only as its card opens.
+  card (`AnnotationCard`) and the Branch Explorer's tooltip (`GraphTooltip`). Any chip, a row's or a comment's (History,
+  the lists, Incoming, the palette, notifications), reads only while its card is open (`chipRead`), never as it
+  draws: `remoteReadRules.test.ts` keeps reads to those two doors.
 - **One on another server** is read only if the user already works with that server (one of their profiles, Settings ›
-  Accounts: `knownServersQuery`, `serversQuery`'s; `*@cloud` covers every Unity Cloud organization), and then only
+  Accounts: `knownServersQuery`, `accounts.list`'s, wildcards kept; `knownServersFrom` adds this computer's), and
+  then only
   while its chip's card is open, on hover or keyboard focus, never as a comment shows (`serverReads`). A server the
   user doesn't use is never read, not even with the card open: for a server it has no profile for, `cm` doesn't
   fail but signs in there with the user's own credentials, and a comment can name any server. Its card says where it
@@ -95,6 +97,10 @@ before.
   `cm` process of its own that is killed after `OWN_PROCESS_READ_TIMEOUT_MS` (`readOneObject`, `OneObjectRead`'s
   `ownProcess`), so a host that never answers holds no pooled session; the command log shows it. Coming back to the
   window or online asks nothing again (`refetchOnWindowFocus`, `refetchOnReconnect` off).
+  A `*@cloud` profile covers the servers named `x@cloud` (`serverKind`'s `cloudOrganization`): `cm` reaches them on
+  Unity's own cloud hosts, so the token never goes to a third party. A Unity organization (`x@unity`) and a regional
+  cloud (`123@cloud.cn`) need a profile of their own. Narrowing it to the user's own organizations would take a list
+  of them, which nothing reads yet.
 - Each read is one `cm find` for that object, through the service that reads it (`changesets.find`, `labels.get`,
   the repository as the place, `remoteObjectOf`, `remoteObjectQuery`), never one for several: `cm find` has no `in
   (…)` and OR-ed ids are refused (`noOredIdLookups.test.ts`). A name a command line can't quote (a quote, a space, a

@@ -22,6 +22,6 @@ describe('reads of other repositories’ objects', () => {
 
   it('in a chip, are enabled by `chipRead` alone', () => {
     const hook = readFileSync(join(RENDERER, 'components', 'comments', 'useRemoteObject.ts'), 'utf8');
-    expect(hook).toMatch(/remoteObjectQuery\(object, undefined, read\.enabled\)/);
+    expect(hook).toMatch(/remoteObjectQuery\(object, undefined, chipRead\(/);
   });
 });

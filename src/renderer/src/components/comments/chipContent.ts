@@ -1,4 +1,5 @@
 import type { LinkObject, LinkPage, RepositoryLink } from '@shared/links/link';
+import { serverAuthority } from '@shared/links/linkSegments';
 import { branchLabel } from '../../lib/branchLabels';
 import { displayName } from '../../lib/userName';
 import type { CommentReference, ReferencePoint } from '../../lib/comments/commentReferences';
@@ -249,7 +250,7 @@ function repositoryWords(title: string, repository: string, unread: UnreadObject
     case 'unreadable':
       return `Couldn't read it from ${repository}`;
     case 'unknownServer':
-      return `In ${repository} on ${unread.server}, not a server you use`;
+      return `In ${repository} on ${serverAuthority(unread.server)}, not a server you use`;
     default:
       return `In ${repository}`;
   }

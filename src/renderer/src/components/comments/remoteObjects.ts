@@ -1,10 +1,12 @@
 import { repositoryPlace } from '@shared/domain/place';
+import type { Account } from '@shared/domain/account';
+import { serverKind } from '@shared/domain/organizations';
 import { sameServer } from '@shared/links/linkSegments';
 import type { CommentReference } from '../../lib/comments/commentReferences';
 import { queryKeys } from '../../api/queryKeys';
 import { IMMUTABLE_QUERY } from '../../app/queryMeta';
 import type { CachedObject } from './cachedSummary';
-import { chipContent, referenceRepository } from './chipContent';
+import { chipContent, referenceRepository, type UnreadObject } from './chipContent';
 
 /**
  * How many objects of other repositories a comment shown in full reads as it shows: each is one `cm find` on a
@@ -58,14 +60,38 @@ export function remoteObjectOf(reference: CommentReference, placeRepository: str
  * already works with (a profile of theirs, Settings › Accounts, `serversQuery`) only as its chip's card opens
  * (`onCard`); any other server never. For a server with no profile `cm` doesn't fail: it signs in there with the
  * user's own credentials (a password, or a sign-in token), and a comment can name any server: pointing at a chip is no
- * consent to sign in to a stranger's. `*@cloud`: the user signs in to every Unity Cloud organization alike, which all
- * reach Unity's servers. `unknownYet` while the user's servers aren't read.
+ * consent to sign in to a stranger's. `*@cloud`, a profile for every cloud organization, covers the servers named
+ * `x@cloud` (`serverKind`'s `cloudOrganization`), which `cm` reaches on Unity's own cloud hosts, so its token never
+ * goes to a third party; a Unity organization (`x@unity`) or a regional cloud (`123@cloud.cn`) needs a profile of its
+ * own. Narrowing it to the user's own organizations would take a list of them, which nothing reads yet. `unknownYet`
+ * while the user's servers aren't read.
  */
 export function serverReads(object: RemoteObject, knownServers: readonly string[] | undefined): 'onShow' | 'onCard' | 'never' | 'unknownYet' {
   if (object.onPlaceServer) return 'onShow';
   if (!knownServers) return 'unknownYet';
-  const everyCloudOrganization = knownServers.includes('*@cloud') && /@cloud$/i.test(object.server);
+  const everyCloudOrganization = knownServers.includes('*@cloud') && serverKind(object.server) === 'cloudOrganization';
   return everyCloudOrganization || knownServers.some((known) => sameServer(known, object.server)) ? 'onCard' : 'never';
+}
+
+/** The servers the user works with: those of their profiles, a wildcard's too (`*@cloud`), and this computer's. */
+export function knownServersFrom(accounts: readonly Account[]): string[] {
+  return ['local', ...accounts.map((account) => account.server)];
+}
+
+/**
+ * What a chip does about another repository's object it names (`useRemoteObject`): it reads it only while its card
+ * is open, never as it draws (a list's rows would each run a find), and only from a server `serverReads` allows; a
+ * comment shown in full reads its own (`ResolvedReferences`), which the chip then shows. `unread` says why there is
+ * nothing: none by that number, a failed read, or a server the user doesn't work with, which is never read.
+ */
+export function chipRead(object: RemoteObject | null, knownServers: readonly string[] | undefined, cardOpen: boolean, data: RemoteRead | undefined): { enabled: boolean; unread?: UnreadObject } {
+  if (!object) return { enabled: false };
+  const reads = serverReads(object, knownServers);
+  if (reads === 'never') return { enabled: false, unread: { kind: 'unknownServer', server: object.server } };
+  const enabled = cardOpen && (reads === 'onShow' || reads === 'onCard');
+  if (data && 'missing' in data) return { enabled, unread: { kind: 'missing' } };
+  if (data && 'unreadable' in data) return { enabled, unread: { kind: 'unreadable' } };
+  return { enabled };
 }
 
 /** A repository spec's server, as `cm` names it after the repository's name: `acme@unity` for `game@acme@unity`. */
@@ -133,13 +159,14 @@ export function remoteObjectQuery(object: RemoteObject, read: (object: RemoteObj
 }
 
 /**
- * The user's servers (`serversQuery`'s, Settings › Accounts: a local `cm profile list`), under its key, so both read
- * one cache entry. Apart from it so a chip draws without the API client, which loads on the first read.
+ * The user's profiles, wildcards among them (`accounts.list`, Settings › Accounts: a local `cm profile list`), under
+ * Accounts' key, so both read one cache entry. Apart from it so a chip draws without the API client, which loads on
+ * the first read. (`repositories.servers` leaves wildcards out, as it lists servers to browse.)
  */
 export const knownServersQuery = {
-  queryKey: queryKeys.profiles,
-  queryFn: async () => (await import('../../api/client')).api.repositories.servers(),
-  staleTime: Infinity,
+  queryKey: queryKeys.accounts,
+  queryFn: async () => (await import('../../api/client')).api.accounts.list(),
+  staleTime: 60_000,
 };
 
 async function readRemoteObject(object: RemoteObject): Promise<RemoteRead> {
