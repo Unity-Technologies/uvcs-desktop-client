@@ -8,6 +8,8 @@ export const codeTheme = Facet.define<string, string>({ combine: (values) => val
 const colorsArrived = StateEffect.define<null>();
 
 const TOKENIZED_LINE_LENGTH = 1000;
+/** How long the text stays unchanged before colors that arrived redraw it. */
+const TYPING_PAUSE_MS = 200;
 
 /**
  * Colors are kept per block's text, language and theme: typing elsewhere never colors a block again, and only the
@@ -25,12 +27,16 @@ export const codeColors: Extension = ViewPlugin.fromClass(
     decorations: DecorationSet = Decoration.none;
     private readonly colored = new Map<string, Colored>();
     private destroyed = false;
+    /** When the text last changed: colors wait for a pause in typing to arrive (`arriveWhenIdle`). */
+    private typedAt = 0;
+    private arrival: number | undefined;
 
     constructor(private readonly view: EditorView) {
       this.decorations = this.draw();
     }
 
     update(update: ViewUpdate): void {
+      if (update.docChanged) this.typedAt = performance.now();
       const arrived = update.transactions.some((transaction) => transaction.effects.some((effect) => effect.is(colorsArrived)));
       const themed = update.startState.facet(codeTheme) !== update.state.facet(codeTheme);
       if (update.docChanged || update.viewportChanged || arrived || themed) this.decorations = this.draw();
@@ -38,6 +44,21 @@ export const codeColors: Extension = ViewPlugin.fromClass(
 
     destroy(): void {
       this.destroyed = true;
+      window.clearTimeout(this.arrival);
+    }
+
+    /**
+     * Redraws with the colors once typing pauses: redrawing the line under a key just typed, while the page's thread
+     * was busy loading a grammar, dropped that key in the text's last line (seen typing fast into a first block).
+     */
+    private arriveWhenIdle(): void {
+      window.clearTimeout(this.arrival);
+      const wait = TYPING_PAUSE_MS - (performance.now() - this.typedAt);
+      if (wait > 0) {
+        this.arrival = window.setTimeout(() => this.arriveWhenIdle(), wait);
+        return;
+      }
+      if (!this.destroyed) this.view.dispatch({ effects: colorsArrived.of(null) });
     }
 
     private draw(): DecorationSet {
@@ -75,7 +96,7 @@ export const codeColors: Extension = ViewPlugin.fromClass(
           // A language the highlighter doesn't know: the block stays plain.
           this.colored.set(key, 'none');
         }
-        if (!this.destroyed) this.view.dispatch({ effects: colorsArrived.of(null) });
+        this.arriveWhenIdle();
       })();
     }
   },
