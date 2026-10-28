@@ -37,7 +37,7 @@ export const ReferenceChip = memo(function ReferenceChip({ reference, source, co
     case 'user':
       return (
         <ChipHoverCard card={{ title: displayName(chip.name), meta: [chip.name] }}>
-          <span className={styles.person} data-source={source}>
+          <span className={styles.person} data-source={source} data-tip="">
             <Avatar user={chip.name} size={compact ? 14 : 16} tip={null} />
             {displayName(chip.name)}
           </span>
@@ -76,7 +76,8 @@ function ObjectChip({ placeRepository, cachedAs, source, compact, interactive, i
     // Loaded on the first click: opening a link reaches the windows, the navigation and the queries.
     void import('./openReference').then(({ openReference }) => openReference(place, placeRepository, target));
   };
-  const shown = { className: styles.chip, 'data-icon': icon, 'data-source': source, 'aria-label': title };
+  // An empty `data-tip`: the app's tooltip of the row or cell around it gives way to the chip's card (`findTip`).
+  const shown = { className: styles.chip, 'data-icon': icon, 'data-source': source, 'data-tip': '', 'aria-label': title };
   const content = (
     <>
       <Icon className={styles.icon} size={compact ? 12 : 13} strokeWidth={2.25} aria-hidden />
