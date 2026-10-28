@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { placeId } from '@shared/domain/place';
-import { everyBranchQuery, everyLabelQuery, recentShelvesQuery } from '../../app/commands/paletteQueryKeys';
+import { everyBranchQuery, everyLabelQuery, recentShelvesQuery } from '../../app/commands/paletteQueries';
 import { SERVER_SEARCH_DELAY_MS, useChangesetSearch } from '../../app/commands/usePaletteServerSearch';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';

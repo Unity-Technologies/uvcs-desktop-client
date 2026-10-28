@@ -8,7 +8,7 @@ import { reviewSummariesKey } from '../../features/codeReviews/useCodeReviews';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
 import { queryClient } from '../queryClient';
 import { lacksServerMatch, searchesServerFor } from './paletteGroups';
-import { branchesKey, changesetsKey, labelsKey, shelvesKey } from './paletteQueryKeys';
+import { branchesKey, changesetsKey, labelsKey, shelvesKey } from './paletteQueries';
 import { isInScope, type PaletteScope, type SectionId } from './paletteScope';
 import { NOWHERE } from './usePaletteLists';
 

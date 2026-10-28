@@ -1,7 +1,7 @@
 import '../../testing/fakeWindow';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { workspacePlace } from '@shared/domain/place';
-import { everyBranchQuery, everyLabelQuery, recentShelvesQuery } from './paletteQueryKeys';
+import { everyBranchQuery, everyLabelQuery, recentShelvesQuery } from './paletteQueries';
 
 const PLACE = workspacePlace('/work/game');
 

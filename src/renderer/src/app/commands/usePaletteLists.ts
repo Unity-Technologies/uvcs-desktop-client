@@ -7,7 +7,7 @@ import { useWorkspacePaths } from '../../features/files/useWorkspacePaths';
 import { usePendingChangesOf } from '../../features/pendingChanges/usePendingChanges';
 import { SLOW_CHANGING_QUERY } from '../queryClient';
 import { useWorkspaceInfoOf } from '../workspace/useWorkspace';
-import { everyBranchQuery, everyLabelQuery, recentShelvesQuery } from './paletteQueryKeys';
+import { everyBranchQuery, everyLabelQuery, recentShelvesQuery } from './paletteQueries';
 
 /**
  * A placeholder place, never queried: the palette's hooks key their queries by it on the home screen, where no place
