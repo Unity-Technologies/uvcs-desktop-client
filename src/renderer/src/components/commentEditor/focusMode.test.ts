@@ -1,7 +1,7 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { PressedKey } from '../../lib/shortcuts';
-import { caretOpeningFocusMode, focusModeButton, focusModeKey, focusModeLayout, focusModeParts, layoutAfterFocus, offersFocusMode } from './focusMode';
+import { caretOpeningFocusMode, focusModeButton, focusModeKey, focusModeLayout, focusModeParts, groupShowsHints, layoutAfterFocus, offersFocusMode } from './focusMode';
 import { EditorState } from '@codemirror/state';
 
 /**
@@ -75,7 +75,7 @@ describe('focusModeButton', () => {
 });
 
 describe('focusModeParts', () => {
-  const field = { singleLine: false, inGroup: false, groupOpen: false, ownLayout: null } as const;
+  const field = { singleLine: false, inGroup: false, groupOpen: false, ownLayout: null, inDialog: false } as const;
   const none = { offered: false, layout: null, inFocusMode: false, button: null, toolbar: false, footer: false, backdrop: false, takesTab: false };
 
   it('gives a one-line field alone nothing', () => {
@@ -96,6 +96,34 @@ describe('focusModeParts', () => {
   it('gives the check-in’s description the button, the toolbar and Tab, the group drawing the panel and its hints', () => {
     expect(focusModeParts({ ...field, inGroup: true })).toEqual({ ...none, offered: true, button: focusModeButton(false) });
     expect(focusModeParts({ ...field, inGroup: true, groupOpen: true })).toEqual({ ...none, offered: true, inFocusMode: true, button: focusModeButton(true), toolbar: true, takesTab: true });
+  });
+
+  it('gives a dialog’s comment the large editor’s layout at the dialog’s size: the toolbar and the hints always, the button kept', () => {
+    // New branch, New label, New attribute: Tab still leaves the field out of focus mode, as in any form.
+    expect(focusModeParts({ ...field, inDialog: true })).toEqual({ ...none, offered: true, button: focusModeButton(false), toolbar: true, footer: true });
+    expect(focusModeParts({ ...field, inDialog: true, ownLayout: 'inPlace' })).toEqual({
+      ...none,
+      offered: true,
+      layout: 'inPlace',
+      inFocusMode: true,
+      button: focusModeButton(true),
+      toolbar: true,
+      footer: true,
+      takesTab: true,
+    });
+  });
+
+  it('gives Edit comment’s description the toolbar always, the group drawing the hints; its summary stays a title', () => {
+    expect(focusModeParts({ ...field, inGroup: true, inDialog: true })).toEqual({ ...none, offered: true, button: focusModeButton(false), toolbar: true });
+    expect(focusModeParts({ ...field, singleLine: true, inGroup: true, inDialog: true })).toEqual({ ...none, offered: true });
+  });
+});
+
+describe('groupShowsHints', () => {
+  it('shows a group’s hints in focus mode, and always in a dialog', () => {
+    expect(groupShowsHints({ open: false, inDialog: false })).toBe(false);
+    expect(groupShowsHints({ open: true, inDialog: false })).toBe(true);
+    expect(groupShowsHints({ open: false, inDialog: true })).toBe(true);
   });
 });
 
