@@ -1,6 +1,6 @@
 import type { EditorState } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
-import { fenceLanguage } from '../comments/codeBlockLanguage';
+import { highlightedLanguage } from '../comments/codeBlockLanguage';
 import { codeTokenStyle, type ColoredToken } from '../comments/codeTokenStyle';
 
 /** A code block's code and the language its fence names, which the comments' highlighter colors. */
@@ -11,7 +11,7 @@ export interface FencedCode {
   language: string;
 }
 
-/** The code blocks with a language in `[from, to]`, as the shown comment highlights them (`CodeBlock`). */
+/** The code blocks with a language in `[from, to]` small enough to highlight, as the shown comment does (`CodeBlock`). */
 export function fencedCodeIn(state: EditorState, from = 0, to = state.doc.length): FencedCode[] {
   const blocks: FencedCode[] = [];
   syntaxTree(state).iterate({
@@ -21,8 +21,11 @@ export function fencedCodeIn(state: EditorState, from = 0, to = state.doc.length
       if (node.name !== 'FencedCode') return;
       const info = node.node.getChild('CodeInfo');
       const code = node.node.getChild('CodeText');
-      const language = fenceLanguage(info ? state.sliceDoc(info.from, info.to) : undefined);
-      if (language && code) blocks.push({ from: code.from, text: state.sliceDoc(code.from, code.to), language });
+      if (!code) return false;
+      // A block past the comments' limit (a pasted log) stays plain, as the shown comment leaves it (`highlightedLanguage`).
+      const text = state.sliceDoc(code.from, code.to);
+      const language = highlightedLanguage(text, info ? state.sliceDoc(info.from, info.to) : undefined);
+      if (language) blocks.push({ from: code.from, text, language });
       return false;
     },
   });

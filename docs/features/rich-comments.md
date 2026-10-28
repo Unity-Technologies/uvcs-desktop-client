@@ -126,7 +126,8 @@ New label (`CommentArea`), the comment of a merge into a server branch (`MergeHe
   brackets and address) show only for the construct the caret is in; the rest of the line stays drawn. A list's `-`
   is a bullet, a task's `[ ]` a checkbox a click ticks (`toggleTask`), quotes and code blocks show as blocks, a code
   block's fences dimmed and its code colored by the comments' own highlighter (`codeColors`: Pierre's Shiki, as
-  `CodeBlock`). A table the caret isn't in is drawn as a table (`tableModel`; a click on a cell puts the caret at its
+  `CodeBlock`, the same size limit and line length: a block past `MAX_HIGHLIGHTED_COMMENT_CHARS` stays plain; only the
+  block being edited is tokenized again at a key). A table the caret isn't in is drawn as a table (`tableModel`; a click on a cell puts the caret at its
   end). An image is its chip. A field without the focus draws everything.
 - **References are the comments' chips** (`ReferenceChip`, compact as in a row: the summary is in the tooltip), for
   every kind a comment reads (`findReferences`). A chip is one piece: the caret steps over it, Backspace right after

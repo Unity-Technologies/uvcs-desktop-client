@@ -7,7 +7,12 @@ export const codeTheme = Facet.define<string, string>({ combine: (values) => val
 
 const colorsArrived = StateEffect.define<null>();
 
-/** Colors are kept per block's text, language and theme, so typing elsewhere never colors a block again. */
+const TOKENIZED_LINE_LENGTH = 1000;
+
+/**
+ * Colors are kept per block's text, language and theme: typing elsewhere never colors a block again, and only the
+ * block being edited is tokenized at each key, a small one at that (`highlightedLanguage`).
+ */
 type Colored = TokenMark[] | 'reading' | 'none';
 
 /**
@@ -63,7 +68,8 @@ export const codeColors: Extension = ViewPlugin.fromClass(
           const { getSharedHighlighter } = await import('@pierre/diffs');
           const highlighter = await getSharedHighlighter({ themes: ['pierre-light', 'pierre-dark'], langs: [] });
           await highlighter.loadLanguages([block.language]);
-          const { tokens } = highlighter.codeToTokens(block.text, { lang: block.language, theme });
+          // No line past 1,000 characters is tokenized (a minified one), as `HighlightedCodeBlock` does.
+          const { tokens } = highlighter.codeToTokens(block.text, { lang: block.language, theme, tokenizeMaxLineLength: TOKENIZED_LINE_LENGTH });
           this.colored.set(key, tokenMarks(0, tokens));
         } catch {
           // A language the highlighter doesn't know: the block stays plain.
