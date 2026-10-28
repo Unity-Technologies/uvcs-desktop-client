@@ -6,7 +6,8 @@ import { CommentArea } from '../../components/commentEditor/CommentArea';
 import { CommentFocusGroup } from '../../components/commentEditor/CommentFocusGroup';
 import type { CommentFieldHandle } from '../../components/commentEditor/commentFieldProps';
 import { DESCRIPTION_PLACEHOLDER } from '../../components/commentEditor/commentPlaceholders';
-import { editedComment, editingParts, storedComment, withSummaryText } from '../../lib/comment';
+import { editedComment, editingParts, hasUnsavedEdit, storedComment, withSummaryText } from '../../lib/comment';
+import { confirm } from '../../ui/dialog/confirm';
 
 /** Asks for a new (possibly multi-line) changeset comment. Resolves to `undefined` if cancelled. */
 export function askForChangesetComment(changesetId: number, currentComment: string): Promise<string | undefined> {
@@ -30,17 +31,21 @@ function EditCommentDialog({ changesetId, currentComment, finish }: EditCommentD
   const [draft, setDraft] = useState(opened);
   const description = useRef<CommentFieldHandle>(null);
   const comment = storedComment(editedComment(currentComment, opened, draft));
-  const unchanged = comment === storedComment(currentComment);
+  const unchanged = !hasUnsavedEdit(currentComment, opened, draft);
+  // Esc and Cancel ask before throwing an edit away; with nothing changed they close at once.
+  const cancel = async (): Promise<void> => {
+    if (unchanged || (await confirm({ title: 'Discard your changes to this comment?', message: 'What you wrote here is lost.', confirmLabel: 'Discard', danger: true }))) finish(undefined);
+  };
 
   return (
     <Dialog
       title={`Edit comment of changeset ${changesetId}`}
       width={560}
-      onClose={() => finish(undefined)}
+      onClose={() => void cancel()}
       onSubmit={() => !unchanged && finish(comment)}
       footer={
         <>
-          <Button onClick={() => finish(undefined)}>Cancel</Button>
+          <Button onClick={() => void cancel()}>Cancel</Button>
           <Button type="submit" variant="primary" disabled={unchanged}>
             Save comment
           </Button>

@@ -44,6 +44,11 @@ export function editedComment(original: string, opened: CommentParts, draft: Com
   return summary + (opened.summary ? separatorAfterTitle(original) : '\n\n') + description;
 }
 
+/** Whether closing the editor would throw away an edit: what it would save differs from the comment (`storedComment`). */
+export function hasUnsavedEdit(original: string, opened: CommentParts, draft: CommentParts): boolean {
+  return storedComment(editedComment(original, opened, draft)) !== storedComment(original);
+}
+
 /** One line end when the original's description starts on the line after its title, else a blank line. */
 function separatorAfterTitle(original: string): string {
   const [, next] = original.replace(/\r\n?/g, '\n').replace(/^\s*\n/, '').split('\n');
