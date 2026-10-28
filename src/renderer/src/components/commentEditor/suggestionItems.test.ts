@@ -31,14 +31,14 @@ function label(name: string): Label {
 }
 
 describe('changeset suggestions', () => {
-  const index = changesetIndex([changeset(4207, 'Fix the switch\n\nMore'), changeset(4206, 'Faster startup'), changeset(1420, 'Old')]);
+  const index = changesetIndex([changeset(4207, 'Fix **the switch**\n\nMore'), changeset(4206, 'Faster startup'), changeset(1420, 'Old')]);
 
   it('find a changeset by its number, then by its comment', () => {
     expect(changesetSuggestions(index, '42').map((suggestion) => suggestion.label)).toEqual(['4207', '4206', '1420']);
     expect(changesetSuggestions(index, 'switch').map((suggestion) => suggestion.insert)).toEqual(['cs:4207']);
   });
 
-  it('show the comment’s first line and who made it', () => {
+  it('show the comment’s first line as text, and who made it', () => {
     expect(changesetSuggestions(index, '4207')[0]).toEqual({ key: 'cs:4207', kind: 'changeset', label: '4207', detail: 'Fix the switch', owner: 'ana', insert: 'cs:4207' });
   });
 });

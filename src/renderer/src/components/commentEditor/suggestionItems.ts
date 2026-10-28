@@ -6,6 +6,7 @@ import type { Label } from '@shared/domain/label';
 import type { Shelve } from '@shared/domain/shelve';
 import { formatLink } from '@shared/links/formatLink';
 import { findReferences } from '../../lib/comments/commentReferences';
+import { commentLineText } from '../../lib/comments/commentText';
 import { lastSegment } from '../../lib/paths';
 import { splitRepositorySpec } from '../../lib/servers';
 import { firstLine } from '../../lib/text';
@@ -23,7 +24,7 @@ export interface Suggestion {
   kind: SuggestionKind;
   /** What the row leads with: "4207", "/main/task-2210", "Ana Diaz", ":tada:". */
   label: string;
-  /** What describes it, quieter: a comment's first line, a review's title, `@ana`, an emoji's description. */
+  /** What describes it, quieter: a comment's first line as text (`commentLineText`), `@ana`, an emoji's description. */
   detail?: string;
   /** Whose avatar leads the row: a person's. */
   person?: string;
@@ -85,7 +86,7 @@ export function changesetSuggestions(index: CandidateIndex<Changeset>, typed: st
 }
 
 export function changesetSuggestion(changeset: Changeset): Suggestion {
-  return { key: `cs:${changeset.id}`, kind: 'changeset', label: String(changeset.id), detail: firstLine(changeset.comment), owner: changeset.owner, insert: `cs:${changeset.id}` };
+  return { key: `cs:${changeset.id}`, kind: 'changeset', label: String(changeset.id), detail: commentLineText(changeset.comment), owner: changeset.owner, insert: `cs:${changeset.id}` };
 }
 
 /** `placeRepository` writes a name a spec can't hold as its link (`objectReferenceText`). */
@@ -94,7 +95,7 @@ export function branchSuggestions(index: CandidateIndex<Branch>, typed: string, 
     key: `br:${branch.name}`,
     kind: 'branch',
     label: branch.name,
-    detail: firstLine(branch.comment),
+    detail: commentLineText(branch.comment),
     owner: branch.owner,
     insert: objectReferenceText({ kind: 'branch', name: branch.name }, placeRepository),
   }));
@@ -105,7 +106,7 @@ export function labelSuggestions(index: CandidateIndex<Label>, typed: string, pl
     key: `lb:${label.name}`,
     kind: 'label',
     label: label.name,
-    detail: firstLine(label.comment),
+    detail: commentLineText(label.comment),
     owner: label.owner,
     insert: objectReferenceText({ kind: 'label', name: label.name }, placeRepository),
   }));
@@ -116,7 +117,7 @@ export function shelveSuggestions(index: CandidateIndex<Shelve>, typed: string):
     key: `sh:${shelve.id}`,
     kind: 'shelve',
     label: String(shelve.id),
-    detail: firstLine(shelve.comment),
+    detail: commentLineText(shelve.comment),
     owner: shelve.owner,
     insert: `sh:${shelve.id}`,
   }));
@@ -127,7 +128,7 @@ export function codeReviewSuggestions(index: CandidateIndex<CodeReviewSummary>, 
     key: `cr:${review.id}`,
     kind: 'codeReview',
     label: String(review.id),
-    detail: review.title,
+    detail: commentLineText(review.title),
     owner: review.owner,
     insert: `cr:${review.id}`,
   }));
