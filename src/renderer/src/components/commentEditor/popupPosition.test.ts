@@ -34,4 +34,15 @@ describe('suggestionListPosition', () => {
   it('keeps it inside the window', () => {
     expect(suggestionListPosition({ left: 700, right: 720, top: 300, bottom: 318 }, list, window).left).toBe(452);
   });
+
+  it('keeps it inside the window with the line at its bottom edge, or scrolled past it in a field taller than its box', () => {
+    expect(suggestionListPosition({ left: 100, right: 120, top: 590, bottom: 608 }, list, window).top).toBe(386);
+    expect(suggestionListPosition({ left: 100, right: 120, top: 900, bottom: 918 }, list, window).top).toBe(392);
+  });
+
+  it('goes over the line once the list grows past the room under it, the same rows taller', () => {
+    const trigger = { left: 100, right: 120, top: 360, bottom: 378 };
+    expect(suggestionListPosition(trigger, { width: 360, height: 30 }, window).top).toBe(382);
+    expect(suggestionListPosition(trigger, { width: 360, height: 260 }, window).top).toBe(96);
+  });
 });
