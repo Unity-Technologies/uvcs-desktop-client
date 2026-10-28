@@ -11,7 +11,9 @@ import { closeCodeFence, FORMAT_COMMANDS, isInCode, linkFromPaste } from './form
 import { enterAction, modEnterAction, type FieldKeyAction } from './fieldKeys';
 import { fieldLabelAttributes } from './fieldLabel';
 import { formatForKey, pastesPlain } from './formattingKeys';
-import { liveDrawing } from './liveDecorations';
+import { hasFocus, liveDrawing } from './liveDecorations';
+import { tablesIn } from './tableModel';
+import { verticalMoveInto } from './verticalMove';
 import { compactChips, widgetPortals } from './liveWidgets';
 import { markdownFromClipboard, pasteMarkdown } from './richPaste';
 import { oneLine } from './oneLine';
@@ -87,6 +89,8 @@ export function commentEditorExtensions(options: CommentEditorOptions, enabled: 
     Prec.highest(
       keymap.of([
         { key: 'Mod-Enter', run: (view) => submit(view, options.keys.current) },
+        { key: 'ArrowDown', run: (view) => moveIntoBlock(view, 1, false), shift: (view) => moveIntoBlock(view, 1, true) },
+        { key: 'ArrowUp', run: (view) => moveIntoBlock(view, -1, false), shift: (view) => moveIntoBlock(view, -1, true) },
         { key: 'Enter', run: options.singleLine ? (view) => enterOnOneLine(view, options.keys.current) : closeCodeFence },
       ]),
     ),
@@ -95,6 +99,20 @@ export function commentEditorExtensions(options: CommentEditorOptions, enabled: 
     formattingKeys(formats),
     pasting(),
   ];
+}
+
+/**
+ * ↓ or ↑ (with Shift, extending the selection) into a table drawn in place of its source (`verticalMoveInto`), where
+ * the editor, moving by what it shows, would step over it. A move within a wrapped line stays the editor's.
+ */
+function moveIntoBlock(view: EditorView, direction: 1 | -1, extend: boolean): boolean {
+  const range = view.state.selection.main;
+  const own = view.moveVertically(range, direction === 1);
+  if (view.state.doc.lineAt(own.head).number === view.state.doc.lineAt(range.head).number) return false;
+  const target = verticalMoveInto(view.state, tablesIn(view.state, { revealsSelection: view.state.field(hasFocus) }), range.head, direction);
+  if (target === null) return false;
+  view.dispatch({ selection: extend ? { anchor: range.anchor, head: target } : { anchor: target }, scrollIntoView: true, userEvent: 'select' });
+  return true;
 }
 
 function submit(view: EditorView, keys: CommentEditorKeys): boolean {
