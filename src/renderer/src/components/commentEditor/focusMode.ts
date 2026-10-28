@@ -4,18 +4,19 @@ import { SHORTCUTS, shortcutKeys } from '../../lib/shortcutRegistry';
 
 /**
  * Focus mode (docs/features/rich-comments.md, "Writing"): a comment of many lines grows into a large editor over
- * the view, or within the dialog it's in, and back. It is the same editor, its text, caret and selection kept.
+ * the window, a dialog's too, and back. It is the same editor, its text, caret and selection kept.
  */
 export function offersFocusMode(singleLine: boolean): boolean {
   return !singleLine;
 }
 
 /**
- * How the larger editor shows: over the view, the rest dimmed behind it; in a dialog, the field grows in place, as
- * the dialog keeps the focus and the clicks within it (one outside would close it).
+ * How the larger editor shows, the same everywhere (`focusModeFor`): a panel over the window, the rest dimmed behind
+ * it, above the dialog it opened from. Growing a dialog's field in place was dropped: the dialog grew too tall, or
+ * its field barely grew, by how much room its other fields left.
  */
-export function focusModeLayout(inDialog: boolean): FocusModeLayout {
-  return inDialog ? 'inPlace' : 'overlay';
+export function focusModeLayout(): FocusModeLayout {
+  return 'overlay';
 }
 
 /**
@@ -30,7 +31,7 @@ export function focusModeKey(event: PressedKey, mac: boolean, state: { expanded:
   return null;
 }
 
-export type FocusModeLayout = 'overlay' | 'inPlace';
+export type FocusModeLayout = 'overlay';
 
 /** The larger editor stays only while it has the focus: a dialog it opened (a check-in's question) or Tab leaves it. */
 export function layoutAfterFocus(layout: FocusModeLayout | null, focused: boolean): FocusModeLayout | null {

@@ -45,13 +45,16 @@
   animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
 }
 
-/* In a dialog the group grows in place, as a field alone does: the dialog keeps its focus and clicks. */
-.group[data-open='inPlace'] {
-  display: flex;
-  flex-direction: column;
+
+/* A dialog's fields (Edit comment's `CommentArea`s) come in their label's frame: in the panel the frames give way, no
+   label shown, the description's frame taking the rest as the check-in's description does. */
+.group[data-open='overlay'] > :has([data-group-field]) > :not([data-group-field], :has([data-group-field])) {
+  display: none;
 }
 
-.group[data-open='inPlace'] [data-group-field='description'] {
-  height: 46vh !important;
-  max-height: none !important;
+.group[data-open='overlay'] > :has([data-group-field='description']) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
 }

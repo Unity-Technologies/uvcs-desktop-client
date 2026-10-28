@@ -67,12 +67,6 @@
   font-size: var(--text-md);
 }
 
-/* In a dialog the field grows within what the dialog leaves it: its other fields, its title and its buttons take about
-   560px of the window (New branch's, the tallest), so the field never pushes its hints under the buttons. */
-.editor[data-expanded='inPlace'] {
-  height: clamp(160px, calc(100vh - 560px), 56vh) !important;
-  max-height: clamp(160px, calc(100vh - 560px), 56vh) !important;
-}
 
 /* A field alone in focus mode has its hints at its bottom, under the text (CodeMirror's own box comes last). */
 .footer {

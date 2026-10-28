@@ -180,15 +180,16 @@ check-in joins them (`editedComment`): unchanged, the comment is written back as
 writes nothing (the dialog's Save stays disabled); with one part edited, the other keeps its text and the comment
 keeps the line ends it had after its title, so a "title, line end, body" comment never gains a blank line; a title
 given to a comment that had none is set off by a blank line. Edit comment's two fields are one focus mode
-(`CommentFocusGroup`, grown in place in the dialog), ↓ and ↑ go between them, Enter from the title to the
+(`CommentFocusGroup`, the check-in's panel over the dialog), ↓ and ↑ go between them, Enter from the title to the
 description; it has no Recent comments (they're for a check-in, not a changeset already made). Leaving it edited (Esc,
 Cancel, a click outside) asks first ("Discard your changes to this comment?", `hasUnsavedEdit`); unedited, it closes.
-A details panel's editor does the same, its Save disabled until an edit; left edited for another row, it keeps the
+A changeset's details panel edits it the same way, its title and description one focus mode too, its Save disabled
+until an edit; left edited for another row, it keeps the
 draft and opens with it on coming back (`commentEditorExit`, `useCommentDraftStore`, `DetailsHeading`'s `draftKey`),
 as a question there would hold the list's selection hostage.
 A recent comment picked in the check-in opens in the same parts (`recentCommentPick`), and the caret goes to the
 end of the field that took its text. New branch, New label and New attribute stay one field: theirs is a
-description, not a commit message; their focus mode grows within the dialog, its hints above the buttons.
+description, not a commit message, as are a branch's, a label's and an attribute's in their details panels.
 
 - **The text is the comment.** The editor is CodeMirror 6 over the comment's own Markdown, drawn as it reads: what a
   field gives and takes is the stored text, LF line ends as `cm` keeps them, never converted, so saving, undo and
@@ -242,12 +243,19 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   summary can equal a text sent a moment before, and was ignored for good.
 - **Focus mode** (`focusMode`, `useFocusMode`): a field of many lines grows into a larger editor to write a long
   comment, by the quiet button in its corner (shown on hover or focus) or ⇧⌘F (Ctrl+Shift+F), and back the same way
-  or with Esc. Over the view it is the field's own box at a writing size, the rest dimmed (a click there goes back); in
-  a dialog the field grows in place (`focusModeLayout`), as a dialog keeps its focus and its clicks. It is the same
+  or with Esc. It is one experience everywhere (`focusModeFor`, `focusModeLayout`): a panel over the window, the
+  rest dimmed (a click there goes back), the toolbar and the hints only there, every field compact until it opens.
+  From a dialog it lies above the dialog: the backdrop goes in the dialog (`backdropParent`), so a click on it closes
+  the panel and never the dialog, Esc closes the panel first, then the dialog, and ⌘↵ leaves the panel and submits;
+  the dialog's centering gives way while it's open (`Dialog.module.css`). Growing a dialog's field in place was
+  dropped: the dialog grew too tall, or its field barely grew, by how much room its other fields left. It is the same
   editor, never a copy: the text, the caret, the selection and the undo history stay; on a field with text never
   focused yet, it opens with the caret at the end (`caretOpeningFocusMode`). It closes as ⌘↵ saves or checks
   in, and as the focus leaves the editor (`layoutAfterFocus`: a question the check-in asks, Tab), and it lies under
-  the dialogs (z 790): a dialog it opens never shows behind it, nor does Tab walk the dimmed view. A popup
+  the dialogs it opens (z 790): a question it raises never shows behind it, nor does Tab walk the dimmed view. Its
+  entry points: the check-in's summary (⇧⌘F) and description, Edit comment, a details panel's editor (a changeset's
+  title and description; a branch's, label's or attribute's description), New branch, New label and New attribute.
+  A merge's comment and a code review's title are one line and have none. A popup
   editor holding a copy of the text was dropped: two editors of one comment would have to be kept in step, and its
   undo, caret and suggestions would start over.
   In the check-in, focus mode opens the summary and the description together (`CommentFocusGroup`,
@@ -388,8 +396,10 @@ checked in both themes when it draws something.
     description's "Write in a larger editor" without clicking in it: the caret is at the text's end.
 16. **Leaving Edit comment edited.** Edit a comment and press Esc, then Cancel: each asks to discard; with no edit,
     each closes at once.
-17. **Focus mode in New branch, New label and New attribute.** At 1400×900 and at 720 px tall, open each dialog's
-    focus mode: the field grows within the dialog, its hints above the buttons, nothing past the dialog's edge.
+17. **The larger editor from every entry point.** From the check-in's summary (⇧⌘F) and description, Edit comment,
+    a changeset's and a branch's details panel, New branch, New label and New attribute: compact until it opens, then
+    the same panel over the window with its toolbar and hints, a changeset's as a title over its description. From a
+    dialog: a click on the dimmed rest closes the panel only, Esc closes the panel then the dialog, ⌘↵ submits.
 18. **A chip's number.** In a row and in a narrow card, a chip with a long summary: its id shows whole, the summary
     shortened.
 19. **A recent comment that opens with a list.** Pick one: it goes whole into the description, the summary stays
@@ -402,3 +412,13 @@ checked in both themes when it draws something.
 22. **Copying a shown comment.** In a details panel, drag over a whole comment with a list, bold and a chip, its title
     and description, and copy: the clipboard holds it as written; its description alone gives the description as
     written. Copy two list items: they read as shown, their chips as their specs.
+23. **Enter after another repository's reference.** Type `see cs:2@other-repo` and press Enter twice: no list shows,
+    each Enter starts a line, nothing is searched.
+24. **Enter back from the summary.** In the description type `see br:`, Esc, then a title in the summary and Enter,
+    Enter: the description gains a line, no branch is picked. The same with a description ending in `note cs:9`.
+25. **A table of references.** Paste a 100-row table of references under a line in focus mode and type in the line:
+    each key under 16 ms in a production build, no chip drawn again.
+26. **A details panel's edit.** Edit a changeset's comment in its details panel: Save off until an edit; Esc and
+    Cancel ask; another row and back opens the editor again with the draft.
+27. **The wheel over the Branch Explorer's card.** Over a long comment's card the wheel scrolls the comment, not the
+    graph; a pinch still zooms the graph.

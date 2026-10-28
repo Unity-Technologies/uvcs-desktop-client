@@ -1,9 +1,9 @@
 import { createContext, useMemo, useRef, useState, type FocusEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { isInModalDialog } from '../../lib/modalDialog';
 import type { CommentFieldHandle } from './commentFieldProps';
 import { focusLeavesGroup, type GroupField } from './focusGroup';
 import { focusModeLayout, type FocusModeLayout } from './focusMode';
+import { backdropParent } from './backdropParent';
 import { FocusModeFooter } from './FocusModeFooter';
 import styles from './CommentFocusGroup.module.css';
 
@@ -19,9 +19,9 @@ export interface FocusGroup {
 export const FocusGroupContext = createContext<FocusGroup | null>(null);
 
 /**
- * A comment's title and description in one focus mode (`focusModeFields`: the check-in's, Edit comment's): the same
- * two editors, laid out over the view as one panel, the title over the description, or grown in place in a dialog
- * (`focusModeLayout`), as a dialog keeps its focus and clicks. Out of it as the focus leaves both (`focusLeavesGroup`):
+ * A comment's title and description in one focus mode (`focusModeFields`: the check-in's, Edit comment's, a
+ * changeset's details panel's): the same two editors, laid out over the window as one panel, the title over the
+ * description (`focusModeLayout`), above the dialog they're in. Out of it as the focus leaves both (`focusLeavesGroup`):
  * moving between them, or into a menu they opened, is no leaving.
  */
 export function CommentFocusGroup({ children }: { children: ReactNode }) {
@@ -32,7 +32,7 @@ export function CommentFocusGroup({ children }: { children: ReactNode }) {
   const group = useMemo<FocusGroup>(
     () => ({
       open,
-      toggle: () => setLayout((shown) => (shown ? null : focusModeLayout(isInModalDialog(container.current)))),
+      toggle: () => setLayout((shown) => (shown ? null : focusModeLayout())),
       close: () => setLayout(null),
       register: (field, handle) => {
         if (handle) handles.current.set(field, handle);
@@ -53,7 +53,7 @@ export function CommentFocusGroup({ children }: { children: ReactNode }) {
   };
   return (
     <FocusGroupContext.Provider value={group}>
-      {layout === 'overlay' && createPortal(<div className={styles.backdrop} onMouseDown={() => setLayout(null)} />, document.body)}
+      {layout === 'overlay' && createPortal(<div className={styles.backdrop} onMouseDown={() => setLayout(null)} />, backdropParent(container.current))}
       <div ref={container} className={styles.group} data-open={layout ?? undefined} onBlur={onBlur}>
         {children}
         {open && <FocusModeFooter />}

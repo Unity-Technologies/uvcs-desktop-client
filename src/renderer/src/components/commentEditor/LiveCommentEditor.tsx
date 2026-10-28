@@ -6,11 +6,11 @@ import { createPortal } from 'react-dom';
 import { useResolvedTheme } from '../../app/settings/useResolvedTheme';
 import { pierreThemeName } from '../../lib/codeTheme';
 import { classNames } from '../../lib/classNames';
-import { isInModalDialog } from '../../lib/modalDialog';
 import { isMac } from '../../lib/platform';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { FocusGroupContext, type FocusGroup } from './CommentFocusGroup';
 import { groupMove } from './focusGroup';
+import { backdropParent } from './backdropParent';
 import { caretOpeningFocusMode, focusModeKey, focusModeLayout, focusModeParts, layoutAfterFocus, type FocusModeLayout } from './focusMode';
 import { commentEditorExtensions, editable, editableWhen, placeholderText, theme, themed, type CommentEditorKeys } from './commentEditorSetup';
 import { placeholderShown } from './commentPlaceholders';
@@ -200,7 +200,7 @@ function useFocusMode(view: EditorView | null, state: EditorState | null, host: 
   }, [view]);
   const toggle = (): void => {
     if (group) group.toggle();
-    else setOwnLayout((shown) => (shown ? null : focusModeLayout(isInModalDialog(host.current))));
+    else setOwnLayout((shown) => (shown ? null : focusModeLayout()));
     if (!view) return;
     const caret = caretOpeningFocusMode(view.state, focusedBefore.current || view.hasFocus);
     if (caret === null) focusEditor(view);
@@ -252,7 +252,7 @@ function useFocusMode(view: EditorView | null, state: EditorState | null, host: 
   const Icon = button?.icon === 'collapse' ? Minimize2 : Maximize2;
   const element = (
     <>
-      {parts.backdrop && createPortal(<div className={styles.backdrop} onMouseDown={close} />, document.body)}
+      {parts.backdrop && createPortal(<div className={styles.backdrop} onMouseDown={close} />, backdropParent(host.current))}
       {button && (
         <button
           type="button"

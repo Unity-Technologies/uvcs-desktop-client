@@ -1,7 +1,7 @@
 import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { PressedKey } from '../../lib/shortcuts';
-import { caretOpeningFocusMode, focusModeButton, focusModeKey, focusModeLayout, focusModeParts, layoutAfterFocus, offersFocusMode } from './focusMode';
+import { caretOpeningFocusMode, focusModeButton, focusModeKey, focusModeParts, layoutAfterFocus, offersFocusMode } from './focusMode';
 import { EditorState } from '@codemirror/state';
 
 /**
@@ -51,17 +51,9 @@ describe('focusModeKey', () => {
   });
 });
 
-describe('focusModeLayout', () => {
-  it('opens over the view, and grows in place in a dialog, which keeps its clicks and focus', () => {
-    expect(focusModeLayout(false)).toBe('overlay');
-    expect(focusModeLayout(true)).toBe('inPlace');
-  });
-});
-
 describe('layoutAfterFocus', () => {
   it('leaves the larger editor once the focus leaves it (a dialog it opened, Tab), and keeps it while focused', () => {
     expect(layoutAfterFocus('overlay', false)).toBeNull();
-    expect(layoutAfterFocus('inPlace', false)).toBeNull();
     expect(layoutAfterFocus('overlay', true)).toBe('overlay');
     expect(layoutAfterFocus(null, true)).toBeNull();
   });
@@ -86,7 +78,6 @@ describe('focusModeParts', () => {
     expect(focusModeParts(field)).toEqual({ ...none, offered: true, button: focusModeButton(false) });
     const expanded = { offered: true, inFocusMode: true, button: focusModeButton(true), toolbar: true, footer: true, takesTab: true };
     expect(focusModeParts({ ...field, ownLayout: 'overlay' })).toEqual({ ...none, ...expanded, layout: 'overlay', backdrop: true });
-    expect(focusModeParts({ ...field, ownLayout: 'inPlace' })).toEqual({ ...none, ...expanded, layout: 'inPlace' });
   });
 
   it('gives the check-in’s summary the group’s keys only: no button, no toolbar, and Tab goes on to the description', () => {

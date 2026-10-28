@@ -1,7 +1,9 @@
-import { useRef, useState, type KeyboardEvent } from 'react';
+import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { confirm } from '../ui/dialog/confirm';
 import { DESCRIPTION_PLACEHOLDER } from './commentEditor/commentPlaceholders';
 import { CommentField } from './commentEditor/CommentField';
+import { CommentFocusGroup } from './commentEditor/CommentFocusGroup';
+import { focusModeFor, type CommentSurface } from './commentEditor/focusModeSurfaces';
 import type { CommentFieldHandle } from './commentEditor/commentFieldProps';
 import { commentEditorExit, editedComment, hasUnsavedEdit, withSummaryText, type CommentParts } from '../lib/comment';
 import { hotkey } from '../lib/shortcutRegistry';
@@ -11,8 +13,8 @@ import styles from './CommentEditor.module.css';
 
 interface CommentEditorProps {
   draft: CommentParts;
-  /** False where the title is the object's name: the whole comment is the description. */
-  withSummary: boolean;
+  /** A changeset's (a title over its description, as the check-in writes it) or a named object's (one description). */
+  surface: Extract<CommentSurface, 'changesetDetails' | 'namedObjectDetails'>;
   original: string;
   /** The parts the editor opened with: while the draft still reads them, saving leaves the comment as it was. */
   opened: CommentParts;
@@ -26,8 +28,10 @@ interface CommentEditorProps {
  * A summary field and a description, like the checkin composer: ⌘↵ saves, Escape cancels, an empty comment is fine.
  * Both grow with their text, so a comment written as one long line reads whole in its summary field.
  */
-export function CommentEditor({ draft, withSummary, original, opened, onChange, onSave, onClose }: CommentEditorProps) {
+export function CommentEditor({ draft, surface, original, opened, onChange, onSave, onClose }: CommentEditorProps) {
   const [saving, setSaving] = useState(false);
+  // A changeset's title and description are one larger editor, as the check-in's (`CommentFocusGroup`).
+  const withSummary = focusModeFor(surface).fields === 'titleAndDescription';
   const descriptionRef = useRef<CommentFieldHandle>(null);
 
   const edited = hasUnsavedEdit(original, opened, draft);
@@ -57,9 +61,11 @@ export function CommentEditor({ draft, withSummary, original, opened, onChange, 
 
   return (
     <div className={styles.editor} onKeyDown={onKeyDown}>
+      <GroupedWhen grouped={withSummary}>
       {withSummary && (
         <CommentField
           singleLine
+          groupField="summary"
           className={styles.summaryField}
           value={draft.summary}
           placeholder="Summary"
@@ -73,6 +79,7 @@ export function CommentEditor({ draft, withSummary, original, opened, onChange, 
       )}
       <CommentField
         ref={descriptionRef}
+        groupField={withSummary ? 'description' : undefined}
         autoFocus={!withSummary}
         className={styles.descriptionField}
         value={draft.description}
@@ -82,6 +89,7 @@ export function CommentEditor({ draft, withSummary, original, opened, onChange, 
         onChange={(text) => onChange({ ...draft, description: text })}
         onSubmit={() => void save()}
       />
+      </GroupedWhen>
       <div className={styles.footer}>
         <span className={styles.hint}>
           <Kbd keys={hotkey('saveComment')} /> to save · Esc to cancel
@@ -99,3 +107,8 @@ export function CommentEditor({ draft, withSummary, original, opened, onChange, 
 
 /** The question before an edit is thrown away, the same in Edit comment (`EditCommentDialog`). */
 export const DISCARD_QUESTION = { title: 'Discard your changes to this comment?', message: 'What you wrote here is lost.', confirmLabel: 'Discard', danger: true } as const;
+
+/** A changeset's title and description as one larger editor; a named object's one description as itself. */
+function GroupedWhen({ grouped, children }: { grouped: boolean; children: ReactNode }) {
+  return grouped ? <CommentFocusGroup>{children}</CommentFocusGroup> : children;
+}

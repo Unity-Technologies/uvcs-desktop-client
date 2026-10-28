@@ -54,7 +54,7 @@ export function DetailsHeading({ name, comment: given = '', onSave, draftKey }: 
     return (
       <div className={styles.heading} data-named={name !== undefined}>
         {name !== undefined && <h2 className={`${styles.title} selectable`}>{name}</h2>}
-        <CommentEditor draft={draft} original={comment} opened={parts} withSummary={name === undefined} onChange={setDraft} onSave={save} onClose={() => setDraft(null)} />
+        <CommentEditor draft={draft} original={comment} opened={parts} surface={name === undefined ? 'changesetDetails' : 'namedObjectDetails'} onChange={setDraft} onSave={save} onClose={() => setDraft(null)} />
       </div>
     );
   }
