@@ -64,6 +64,10 @@ describe('liveMarksOf', () => {
       expect(marksOf('- [ ] write\n- [x] test\n\n‸')).toEqual(['task - [ ] unchecked at 2', 'task - [x] checked at 14']);
     });
 
+    it('draws a task in a quote with its box alone, no bullet beside it', () => {
+      expect(marksOf('> - [ ] write\n\n‸').filter((mark) => mark.startsWith('bullet') || mark.startsWith('task'))).toEqual(['task - [ ] unchecked at 4']);
+    });
+
     it('keeps the bullet of a task whose `- ` the caret is at', () => {
       expect(marksOf('‸- [ ] write')).toEqual(['task [ ] unchecked at 2']);
     });
