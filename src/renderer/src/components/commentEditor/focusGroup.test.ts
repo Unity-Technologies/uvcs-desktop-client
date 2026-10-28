@@ -17,8 +17,8 @@ describe('groupMove', () => {
     expect(groupMove('summary', 'ArrowDown', at)).toBeNull();
   });
 
-  it('goes back to the summary’s end with ⇧Tab, or ↑ on the description’s first line', () => {
-    expect(groupMove('description', 'ShiftTab', at)).toEqual({ to: 'summary', caret: 'end' });
+  it('goes back to the summary’s end with ↑ on the description’s first line; ⇧Tab outdents there instead', () => {
+    expect(groupMove('description', 'ShiftTab', at)).toBeNull();
     expect(groupMove('description', 'ArrowUp', { ...at, onFirstLine: true })).toEqual({ to: 'summary', caret: 'end' });
     expect(groupMove('description', 'ArrowUp', at)).toBeNull();
   });
