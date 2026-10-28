@@ -22,6 +22,15 @@ export function editingParts(comment: string): CommentParts {
   return titled ? splitComment(comment) : { summary: '', description: comment };
 }
 
+/**
+ * A recent comment picked in the check-in: its parts as Edit comment opens a comment (`editingParts`), and the field
+ * the caret goes to, where its text ends: the description when it has one, else the summary.
+ */
+export function recentCommentPick(comment: string): { parts: CommentParts; caretIn: 'summary' | 'description' } {
+  const parts = editingParts(comment);
+  return { parts, caretIn: parts.description ? 'description' : 'summary' };
+}
+
 /** A comment opening with a list item: the item is no title, though a row shows it as the comment's line. */
 const OPENS_WITH_LIST = /^\s*(?:[-*+]|\d+[.)])\s/;
 

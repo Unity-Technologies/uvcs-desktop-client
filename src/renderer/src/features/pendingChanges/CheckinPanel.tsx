@@ -5,7 +5,7 @@ import { CommentField } from '../../components/commentEditor/CommentField';
 import { CommentFocusGroup } from '../../components/commentEditor/CommentFocusGroup';
 import { DESCRIPTION_PLACEHOLDER } from '../../components/commentEditor/commentPlaceholders';
 import type { CommentFieldHandle } from '../../components/commentEditor/commentFieldProps';
-import { splitComment, withSummaryText } from '../../lib/comment';
+import { recentCommentPick, withSummaryText } from '../../lib/comment';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
 import { Button } from '../../ui/Button';
@@ -87,6 +87,8 @@ export function CheckinPanel({
   const setDescriptionHeight = usePendingChangesViewStore((state) => state.setDescriptionHeight);
   const { summary, description } = useCheckinMessage(workspacePath);
   const descriptionRef = useRef<CommentFieldHandle>(null);
+  // The field a recent comment picked puts the caret in, once its menu closes.
+  const caretAfterPick = useRef<'summary' | 'description' | null>(null);
   const setMessage = useCheckinDraftStore((state) => state.setMessage);
   const onMessageChange = (message: { summary?: string; description?: string }): void => setMessage(workspacePath, message);
   const shelving = mode === 'shelve';
@@ -149,8 +151,20 @@ export function CheckinPanel({
               entries={recentComments.map((recent, index) => ({
                 id: `recent.${index}`,
                 label: recent.split('\n')[0]!,
-                run: () => onMessageChange(splitComment(recent)),
+                run: () => {
+                  const pick = recentCommentPick(recent);
+                  onMessageChange(pick.parts);
+                  caretAfterPick.current = pick.caretIn;
+                },
               }))}
+              // The caret goes to the text picked, not back to the button.
+              onCloseAutoFocus={(event) => {
+                const field = caretAfterPick.current;
+                caretAfterPick.current = null;
+                if (!field) return;
+                event.preventDefault();
+                (field === 'summary' ? summaryRef : descriptionRef).current?.focusAtEnd();
+              }}
             >
               <IconButton size="small" className={styles.recent} icon={<History size={14} />} label="Recent comments" />
             </ActionDropdownMenu>
