@@ -9,6 +9,7 @@ import { workspacePathOf } from '@shared/domain/place';
 import { typedChangesetNumber } from '../../lib/changesetNumber';
 import type { FuzzyIndex } from '../../lib/fuzzyIndex';
 import { matchesAllWords } from '../../lib/matchesAllWords';
+import type { WordFilterIndex } from '../../lib/wordFilterIndex';
 import {
   branchResult,
   changesetResult,
@@ -17,6 +18,7 @@ import {
   fileResult,
   labelResult,
   shelveResult,
+  type ObjectMatch,
   type ResultContext,
 } from './objectResults';
 import { isInScope, type PaletteScope } from './paletteScope';
@@ -51,13 +53,21 @@ export interface IndexedList<T> {
   index: FuzzyIndex;
 }
 
+/**
+ * A cached list whose rows are found by their description too: the words of each row's name and description
+ * (`createWordFilterIndex`), as its own view's filter finds them, built once per list.
+ */
+export interface DescribedList<T> extends IndexedList<T> {
+  words: WordFilterIndex;
+}
+
 /** The lists read once and kept, which answer every keystroke. Undefined while still loading. */
 export interface CachedLists {
   files?: IndexedList<WorkspacePathEntry>;
   /** The pending changes that could be checked in, in the order Changes shows them. */
   changes: readonly PendingChange[];
-  branches?: IndexedList<Branch>;
-  labels?: IndexedList<Label>;
+  branches?: DescribedList<Branch>;
+  labels?: DescribedList<Label>;
   changesets?: readonly Changeset[];
   shelves?: readonly Shelve[];
   codeReviews?: readonly CodeReviewSummary[];
@@ -166,7 +176,7 @@ function searchGroups({ context, lists, server, changesetSearch }: PaletteGroups
       section: 'branches',
       heading: 'Branches',
       results: withServerMatches(
-        ranked(lists.branches, term).map((branch) => branchResult(branch, context)),
+        byNameThenDescription(lists.branches, term, (branch, match) => branchResult(branch, context, match)),
         server.branches,
         (branch) => branch.name,
         (branch) => branchResult(branch, context, 'words'),
@@ -176,7 +186,7 @@ function searchGroups({ context, lists, server, changesetSearch }: PaletteGroups
       section: 'labels',
       heading: 'Labels',
       results: withServerMatches(
-        ranked(lists.labels, term).map((label) => labelResult(label, context)),
+        byNameThenDescription(lists.labels, term, (label, match) => labelResult(label, context, match)),
         server.labels,
         (label) => label.name,
         (label) => labelResult(label, context, 'words'),
@@ -222,6 +232,22 @@ function firstOnes<T>(items: readonly T[]): T[] {
 
 function ranked<T>(list: IndexedList<T> | undefined, term: string): T[] {
   return list ? list.index.rank(term, MAX_PER_SECTION).map((index) => list.items[index]!) : [];
+}
+
+/**
+ * The rows whose name matches fuzzily and those whose name and description hold every word typed (a description
+ * says what a branch is for, which its name often doesn't), the best `MAX_PER_SECTION` of both: a description
+ * ranks below the same match in a name (`branchResult`), and a name found first keeps its place on a tie, but a
+ * description holding the words typed beats a name holding only their letters, scattered.
+ */
+function byNameThenDescription<T>(list: DescribedList<T> | undefined, term: string, toResult: (item: T, match: ObjectMatch) => SearchResult): SearchResult[] {
+  if (!list) return [];
+  const byName = list.index.rank(term, MAX_PER_SECTION);
+  const shown = new Set(byName);
+  const byDescription = list.words.matching(term, MAX_PER_SECTION, (row) => shown.has(row));
+  const results = [...byName.map((row) => toResult(list.items[row]!, 'fuzzy')), ...byDescription.map((row) => toResult(list.items[row]!, 'description'))];
+  // `sort` is stable: equal matches keep the order above, names first.
+  return results.sort((a, b) => (b.quality ?? 0) - (a.quality ?? 0)).slice(0, MAX_PER_SECTION);
 }
 
 /**
