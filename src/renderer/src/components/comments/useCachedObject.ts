@@ -3,7 +3,7 @@ import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import type { CommentReference } from '../../lib/comments/commentReferences';
 import { queryKeys } from '../../api/queryKeys';
 import { usePlace } from '../../app/workspace/useWorkspace';
-import { changesetKey } from '../../features/changesets/useChangeset';
+import { changesetKey } from '../../features/changesets/changesetKey';
 import { cachedAreaOf, cachedObjectIn, type CachedObject } from './cachedSummary';
 
 /**

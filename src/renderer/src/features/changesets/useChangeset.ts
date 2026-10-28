@@ -4,6 +4,7 @@ import type { Changeset } from '@shared/domain/changeset';
 import { otherRepository } from '@shared/domain/repository';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
+import { changesetKey } from './changesetKey';
 import { queryClient } from '../../app/queryClient';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 
@@ -39,10 +40,6 @@ export async function readChangeset(place: Place, changesetId: number): Promise<
   );
 }
 
-/** Where a changeset read by its number is cached: `other` names the repository when it isn't the place's. */
-export function changesetKey(place: Place, changesetId: number | null, other?: string) {
-  return queryKeys.inPlace(place, 'changesets', 'byId', changesetId, other);
-}
 
 /** The changeset from a list of the place's changesets already read, and when that list was read. */
 export function listedChangeset(place: Place, changesetId: number | null): { changeset: Changeset; readAt: number } | undefined {
