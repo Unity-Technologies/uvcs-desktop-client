@@ -22,6 +22,9 @@ setTimeout(() => {
   void import('@pierre/diffs').then(({ preloadHighlighter }) => preloadHighlighter({ themes: ['pierre-light', 'pierre-dark'], langs: [] }));
 }, 1500);
 
+// And the comment editor's code (CodeMirror), so the first comment field shows it at once, not its plain stand-in.
+setTimeout(() => void import('./components/commentEditor/LiveCommentEditor'), 2500);
+
 document.documentElement.dataset.chrome = WINDOW_CHROME;
 exposePageZoom();
 guardUnloading();
