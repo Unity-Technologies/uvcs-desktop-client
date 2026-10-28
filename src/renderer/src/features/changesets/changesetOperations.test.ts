@@ -52,7 +52,7 @@ describe('changeset operations', () => {
     await editChangesetComment(inWs, changeset);
 
     expect(fakeApi.argsOf('changesets.editComment')).toEqual([[inWs, 42, 'New comment']]);
-    expect(refreshed()).toEqual(['annotate', 'branchExplorer', 'changesets', 'history']);
+    expect(refreshed()).toEqual(['annotate', 'branchExplorer', 'changesets', 'history', 'workingObjectComment']);
   });
 
   it('tells whether a comment was saved, so an unsaved one stays in its editor', async () => {
@@ -97,11 +97,11 @@ describe('changeset operations', () => {
 
     const afterMove = watchRefreshes(ws);
     await moveChangesetToBranch(inWs, changeset);
-    expect(afterMove()).toEqual(['annotate', 'branchExplorer', 'branches', 'changesets', 'history', 'incoming']);
+    expect(afterMove()).toEqual(['annotate', 'branchExplorer', 'branches', 'changesets', 'history', 'incoming', 'workingObjectComment']);
 
     const afterDelete = watchRefreshes(ws);
     await deleteChangeset(inWs, changeset);
-    expect(afterDelete()).toEqual(['annotate', 'branchExplorer', 'branches', 'changesets', 'history', 'incoming']);
+    expect(afterDelete()).toEqual(['annotate', 'branchExplorer', 'branches', 'changesets', 'history', 'incoming', 'workingObjectComment']);
   });
 
   it('deletes a changeset only once confirmed, and reports a refusal with no success', async () => {

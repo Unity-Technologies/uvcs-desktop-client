@@ -184,7 +184,7 @@ describe('deleteShelve', () => {
 describe('editShelveComment', () => {
   const shelve = { id: 12, comment: 'Old comment' };
 
-  it('saves the comment asked for and refreshes only what shows it (the shelve lists; the top bar too, isAffectedByShelveComment)', async () => {
+  it('saves the comment asked for and refreshes only what shows it: the shelve lists and the top bar', async () => {
     asked.comment = 'Spike the new HUD\n\nWith the radar';
     fakeApi.answer('shelves.editComment', () => undefined);
     const refreshed = watchRefreshes(ws);
@@ -193,7 +193,7 @@ describe('editShelveComment', () => {
 
     expect(asked.of.at(-1)).toBe('shelve 12');
     expect(fakeApi.argsOf('shelves.editComment')).toEqual([[workspacePlace(ws), 12, 'Spike the new HUD\n\nWith the radar']]);
-    expect(refreshed()).toEqual(['shelves']);
+    expect(refreshed()).toEqual(['shelves', 'workingObjectComment']);
   });
 
   it('saves nothing when the comment editor is cancelled', async () => {

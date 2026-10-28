@@ -140,7 +140,7 @@ describe('checkinChanges', () => {
 
     await checkinChanges({ workspacePath: ws, ...sending([change('a.ts')]), comment: 'x' });
 
-    expect(refreshed()).toEqual(['annotate', 'branchExplorer', 'branches', 'changesets', 'explorer', 'history', 'incoming', 'info', 'locks', 'pendingChanges', 'review']);
+    expect(refreshed()).toEqual(['annotate', 'branchExplorer', 'branches', 'changesets', 'explorer', 'history', 'incoming', 'info', 'locks', 'pendingChanges', 'review', 'workingObjectComment']);
   });
 
   it('says "Nothing to check in" when only checkouts without edits went in, and keeps the comment for a real one', async () => {
