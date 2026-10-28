@@ -51,7 +51,8 @@ before.
 
 - An **object** is a chip: its icon, its own name or number (`task-2210`, `4207`), the repository when it isn't the
   place's (an object of the place's repository reads as its own however it's written: `cs:12@game`, its link), and,
-  in a full comment, its summary (the comment's first line, a review's title). On hover, or keyboard focus, it shows
+  in a full comment, its summary (the comment's first line, a review's title), set apart by a little space and a
+  muted weight, no dot between; read aloud as "Changeset 4207, Fix the switch" (`chipName`). On hover, or keyboard focus, it shows
   the Branch Explorer's card (`HoverCard` through `ChipHoverCard`, from `chipCard`): the comment drawn as a comment's
   line, then "Changeset 4207 · Ana Diaz · 2 hours ago" (a review's status too); only what the window already read, no
   command. Nothing read yet, the card says what it is ("Changeset 4207"). The card, as an image's preview, is placed by its chip

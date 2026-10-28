@@ -244,3 +244,8 @@ export function personCard(name: string): ChipCard {
 export function emojiLabel(name: string): string {
   return name.replace(/_/g, ' ');
 }
+
+/** A chip's name for screen readers: what it shows, read as words (`Changeset 4, Merge request fixes`). */
+export function chipName(title: string, summary: string | undefined): string {
+  return summary ? `${title}, ${summary}` : title;
+}

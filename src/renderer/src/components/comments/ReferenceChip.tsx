@@ -4,7 +4,7 @@ import { displayName } from '../../lib/userName';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { Avatar } from '../../ui/Avatar';
 import { cachedRecordOf, summaryOf } from './cachedSummary';
-import { chipCard, chipContent, emojiLabel, personCard, type ChipContent } from './chipContent';
+import { chipCard, chipContent, chipName, emojiLabel, personCard, type ChipContent } from './chipContent';
 import { cardDate, ChipHoverCard } from './ChipHoverCard';
 import { CHIP_ICONS } from './chipIcons';
 import { useCachedObject } from './useCachedObject';
@@ -96,7 +96,7 @@ function ObjectChip({ placeRepository, cachedAs, source, compact, interactive, i
   return (
     <ChipHoverCard card={card}>
       {/* In a row or a title the row's keys reach the object; only a full comment's chips are tab stops. */}
-      <a href="#" {...shown} aria-label={title} tabIndex={compact ? -1 : undefined} onClick={open} onMouseDown={(event) => event.stopPropagation()}>
+      <a href="#" {...shown} aria-label={chipName(title, compact ? undefined : summary || undefined)} tabIndex={compact ? -1 : undefined} onClick={open} onMouseDown={(event) => event.stopPropagation()}>
         {content}
       </a>
     </ChipHoverCard>

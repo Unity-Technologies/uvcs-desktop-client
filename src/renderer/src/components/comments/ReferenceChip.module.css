@@ -56,9 +56,10 @@
   font-weight: var(--weight-regular);
 }
 
-.summary::before,
-.repository::before {
-  content: '· ';
+/* Apart from the object's id by a little more than the chip's gap, in a muted weight: no dot between. */
+.summary,
+.repository {
+  margin-left: var(--space-1);
 }
 
 .person {
