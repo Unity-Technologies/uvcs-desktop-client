@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { listedFrom, suggestionCue, type ListRead } from './suggestionSource';
+import { listedFrom, suggestionCue, suggestionReads, type ListRead } from './suggestionSource';
 
 const pending: ListRead<string> = { data: undefined, isPending: true, isError: false };
 const failed: ListRead<string> = { data: undefined, isPending: false, isError: true };
@@ -30,5 +30,37 @@ describe('suggestionCue', () => {
     expect(suggestionCue({ recognized: true, dismissed: false, reading: false })).toBe('ready');
     expect(suggestionCue({ recognized: true, dismissed: true, reading: true })).toBeNull();
     expect(suggestionCue({ recognized: false, dismissed: false, reading: false })).toBeNull();
+  });
+});
+
+describe('listedFrom, render after render', () => {
+  it('gives back the very list it was given, and one shared empty list, so what ranks them is built once per read', () => {
+    const branches = ['/main', '/main/fix-1009'];
+    expect(listedFrom(read(branches), null).items).toBe(branches);
+    expect(listedFrom(pending, null).items).toBe(listedFrom(failed, pending).items);
+  });
+});
+
+describe('suggestionReads', () => {
+  const none = { paletteChangesetsRead: false, everyBranchRead: false, everyLabelRead: false };
+  const reads = (kind: Parameters<typeof suggestionReads>[0]['kind'], typed: string, settled: string, lists = none) => suggestionReads({ kind, typed, settled, ...lists });
+
+  it('reads nothing before a trigger is typed, nor for emoji', () => {
+    expect(Object.values(reads(undefined, '', '')).some(Boolean)).toBe(false);
+    expect(Object.values(reads('emoji', 'ta', 'ta')).some(Boolean)).toBe(false);
+  });
+
+  it('reads the newest 50 changesets for `cs:` and a mention, unless the palette’s 2,000 are already read', () => {
+    expect(reads('changeset', '', '')).toMatchObject({ fewChangesets: true });
+    expect(reads('person', 'an', 'an')).toMatchObject({ fewChangesets: true });
+    expect(reads('changeset', '', '', { ...none, paletteChangesetsRead: true })).toMatchObject({ fewChangesets: false });
+  });
+
+  it('searches the server for a branch or label typed only once the text settles, and only until every one is read', () => {
+    expect(reads('branch', 'fix-10', 'fix-10')).toMatchObject({ everyBranch: true, searchBranches: true });
+    expect(reads('branch', 'fix-10', 'fix-1')).toMatchObject({ everyBranch: true, searchBranches: false });
+    expect(reads('branch', '', '')).toMatchObject({ searchBranches: false });
+    expect(reads('branch', 'fix-10', 'fix-10', { ...none, everyBranchRead: true })).toMatchObject({ searchBranches: false });
+    expect(reads('label', 'v1', 'v1')).toMatchObject({ everyLabel: true, searchLabels: true, searchBranches: false });
   });
 });
