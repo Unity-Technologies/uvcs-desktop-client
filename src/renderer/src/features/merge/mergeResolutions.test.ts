@@ -47,4 +47,8 @@ describe('collectResolutions', () => {
       comment: 'Merge',
     });
   });
+
+  it('stores the comment without the space a picked suggestion leaves after it', () => {
+    expect(collectResolutions({ plan, fileStates: [automatic], directoryResolutions: [{ choice: 'source' }], comment: 'Merge br:/main/task ' })?.comment).toBe('Merge br:/main/task');
+  });
 });
