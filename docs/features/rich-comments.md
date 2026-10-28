@@ -383,5 +383,6 @@ checked in both themes when it draws something.
     longer than the window: the title shows its chips, the card stops at the window's bottom and its body scrolls.
 21. **Two editors in a development build.** With the check-in's description holding chips, open Edit comment on a
     changeset with chips: the console shows no "Cannot update a component while rendering a different component".
-22. **Copying a shown comment.** In a details panel, select a whole comment with a list, bold and a chip and copy:
-    the clipboard holds it as written. Copy a part: it reads as shown, its chip as its spec.
+22. **Copying a shown comment.** In a details panel, drag over a whole comment with a list, bold and a chip, its title
+    and description, and copy: the clipboard holds it as written; its description alone gives the description as
+    written. Copy two list items: they read as shown, their chips as their specs.
