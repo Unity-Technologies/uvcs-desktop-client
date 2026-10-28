@@ -34,7 +34,7 @@ export async function completeMerge(
   const destination = request.destinationBranch;
   if (!destination) return result;
 
-  navigation.goBack();
+  navigation.closeMerge();
   if (result.destinationMoved) {
     toast.info(`${branchLabel(destination)} moved while merging`, destinationMovedExplanation(result.changesetId, destination));
     openMerge(followUpMerge(result, destination), finishing?.task);

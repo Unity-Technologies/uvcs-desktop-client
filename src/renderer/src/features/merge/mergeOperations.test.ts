@@ -2,7 +2,7 @@ import { fakeApi } from '../../testing/fakeWindow';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { MergeRequest } from '@shared/domain/merge';
-import { navigation } from '../../app/navigation/navigationStore';
+import { navigation, useNavigation } from '../../app/navigation/navigationStore';
 import { queryClient } from '../../app/queryClient';
 import { showQuery } from '../../testing/queryProbes';
 import { MERGE_PLAN_QUERY, mergePlanKey } from './useMergePlan';
@@ -86,6 +86,7 @@ describe('completing a merge', () => {
 
     expect(await completeMerge(ws, intoServerBranch, resolutions)).toBeNull();
     expect(whereTheWindowIs()).toEqual({ view: 'changes', pages: [] });
+    expect(useNavigation.getState().merge).toBeNull();
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Merged task into main (cs:42)', action: 'Show in Branch Explorer' }]);
 
     pressToastAction('Merged task into main (cs:42)');
@@ -101,6 +102,19 @@ describe('completing a merge', () => {
     await completeMerge(ws, { kind: 'merge', sourceSpec: 'cs:12', destinationBranch: long }, resolutions);
 
     expect(shownToasts().map(({ title }) => title)).toEqual(['Merged subtask into child_1 (cs:15)', 'Merged a/fix into b/fix (cs:15)', 'Merged changeset 12 into child_1 (cs:15)']);
+  });
+
+  it('closes the merge even when the user went to another view while it ran', async () => {
+    fakeApi.answer('merge.run', () => ({ changesetId: 42 }));
+    navigation.openPage({ kind: 'diff', title: 'Changeset 7', target: { kind: 'changeset', changesetId: 7 } });
+    navigation.openPage({ kind: 'merge', request: intoServerBranch });
+    navigation.goToView('branches');
+    navigation.openPage({ kind: 'history', path: 'src/a.cs' });
+
+    await completeMerge(ws, intoServerBranch, resolutions);
+
+    expect(whereTheWindowIs()).toEqual({ view: 'branches', pages: [{ kind: 'history', path: 'src/a.cs' }] });
+    expect(useNavigation.getState().merge).toBeNull();
   });
 
   it('opens the merge that finishes it when the destination moved meanwhile, instead of the success', async () => {

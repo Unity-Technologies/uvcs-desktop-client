@@ -26,7 +26,7 @@ export function ResolveInWorkspaceMenu({ workspacePath, sourceSpec, destination,
   const taskBranch = task.branch.name;
 
   const resolve = (path: ConflictPath): void => {
-    navigation.goBack();
+    navigation.closeMerge();
     if (path === 'intoTask') void mergeDestinationIntoTask(workspacePath, currentBranch, taskBranch, destination);
     else void resolveOnDestination(workspacePath, currentBranch, sourceSpec, destination);
   };
