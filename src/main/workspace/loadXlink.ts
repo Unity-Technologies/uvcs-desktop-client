@@ -1,3 +1,4 @@
+import type { PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import { CmError } from '../cm/CmError';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { loadXlinkArgs } from '../cm/xlinkArgs';
@@ -52,18 +53,23 @@ export async function loadXlink(deps: ShelveFlowDependencies, workspacePath: str
         await load();
         return { kind: 'loaded' };
       case 'shelveChanges':
-        return loadAroundChanges(deps, workspacePath, load, context);
+        return loadAroundChanges(deps, workspacePath, snapshot, load, context);
     }
   }
 }
 
-async function loadAroundChanges(deps: ShelveFlowDependencies, workspacePath: string, load: () => Promise<string>, context: OperationContext): Promise<XlinkLoad> {
+async function loadAroundChanges(
+  deps: ShelveFlowDependencies,
+  workspacePath: string,
+  snapshot: PendingChangesSnapshot,
+  load: () => Promise<string>,
+  context: OperationContext,
+): Promise<XlinkLoad> {
   const { cm, records } = deps;
   const workspace = await readWorkspaceIdentity(cm, workspacePath);
   const objectRef = await selectorObjectRef(cm, workspacePath, workspace.selector);
   if (!objectRef) throw new Error(`Couldn't find ${describeSelector(workspace.selector)} in the repository, so your changes stayed as they were.`);
 
-  const snapshot = await readPendingSnapshot(cm, workspacePath);
   context.beginStep('Putting your changes aside', 1, 3);
   const shelve = await createAutomaticShelve(cm, workspacePath, snapshot.changes, objectRef, context);
   const record = newShelveRecord(workspace, shelve.id, shelvedContents(snapshot), { mode: 'bring', reason: 'update', objectRef, target: NO_TARGET });
