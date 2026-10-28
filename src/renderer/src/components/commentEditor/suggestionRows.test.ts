@@ -16,6 +16,20 @@ describe('suggestionRows', () => {
     ]);
   });
 
+  it('offers nothing for another repository’s object: no search of this one, no number looked up here, no row', () => {
+    // `cs:2@other-repo` once offered "Search all changesets" here, which a second Enter turned into this repository's cs:3.
+    const found = { lookup: { state: 'found', suggestion: changeset(2) }, search: { state: 'found', text: '2@other-repo', suggestions: [changeset(3)] } } as const;
+    expect(suggestionRows('changeset', '2@other-repo', read([changeset(2)]), found)).toEqual([]);
+    expect(suggestionRows('changeset', '2@other-repo', read([]), NONE)).toEqual([]);
+    expect(suggestionRows('branch', '/main@art@build.example.com:8087', read([{ key: 'br:/main', kind: 'branch', label: '/main', insert: 'br:/main' }]))).toEqual([]);
+    expect(suggestionRows('label', 'v1@art', { suggestions: [], reading: true, failed: false })).toEqual([]);
+  });
+
+  it('still offers people for a mention that holds an address', () => {
+    const ana = { key: '@ana', kind: 'person', label: 'ana@acme.com', insert: '@ana@acme.com' } as const;
+    expect(suggestionRows('person', 'ana@acme', read([ana]))).toEqual([{ kind: 'pick', suggestion: ana }]);
+  });
+
   it('says the list is being read, then that nothing matched', () => {
     expect(suggestionRows('label', 'v1', { suggestions: [], reading: true, failed: false })).toEqual([{ kind: 'note', text: 'Reading labels…', pending: true }]);
     expect(suggestionRows('label', 'v1', read([]))).toEqual([{ kind: 'note', text: 'No labels match “v1”' }]);

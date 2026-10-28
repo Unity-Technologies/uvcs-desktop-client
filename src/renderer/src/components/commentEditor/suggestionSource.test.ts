@@ -50,6 +50,11 @@ describe('suggestionReads', () => {
     expect(Object.values(reads('emoji', 'ta', 'ta')).some(Boolean)).toBe(false);
   });
 
+  it('never searches this repository for another repository’s branch or label', () => {
+    expect(reads('branch', '/main@art', '/main@art')).toMatchObject({ searchBranches: false });
+    expect(reads('label', 'v1@art@build.example.com:8087', 'v1@art@build.example.com:8087')).toMatchObject({ searchLabels: false });
+  });
+
   it('reads the newest 50 changesets for `cs:` and a mention, unless the palette’s 2,000 are already read', () => {
     expect(reads('changeset', '', '')).toMatchObject({ fewChangesets: true });
     expect(reads('person', 'an', 'an')).toMatchObject({ fewChangesets: true });
