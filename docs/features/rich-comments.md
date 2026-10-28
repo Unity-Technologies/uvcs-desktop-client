@@ -213,8 +213,10 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   chip always shows its text, and a key taking away more than it shows would surprise. Undo brings a chip back.
   A chip is React in the box CodeMirror gives it (`WidgetPortals`, drawn by `WidgetPortalsView`). CodeMirror draws
   boxes inside whatever asks it to measure, a component's render among them, so the portals are told after that work
-  (a microtask), never during it. A key redraws only its own line's chips (`liveDecorationsOf`): a decoration equal
-  to the one before is kept, its DOM with it, so a comment of hundreds of chips types as a short one.
+  (a microtask), never during it. The portals are drawn by a memoized component of their own, which re-renders only
+  as widgets come and go (`WidgetPortals` keeps the same list otherwise), never on a key: rendering every chip's
+  portal at each key made a comment of hundreds of chips slow to type. A chip's DOM is kept as its line redraws
+  (`ReferenceWidget.eq`), and a guard test counts that a key changes only its line's decorations (`liveDecorationsOf`).
 - **Keys** (the registry's Comments area, matched as every shortcut is: `formatForKey`): ⌘B bold, ⌘I italic, ⇧⌘X
   strikethrough, ⌘E code, ⌘K link, ⇧⌘8 list, ⇧⌘7 numbered list, ⇧⌘9 quote, ⌥⇧⌘C code block (Ctrl+Shift+E off macOS, where Ctrl+Alt is
   AltGr), ⇧⌘V (Ctrl+Shift+V) pastes the plain text, through the window (`pasteClipboard({ plainText })`,

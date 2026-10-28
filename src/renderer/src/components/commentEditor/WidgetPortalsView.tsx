@@ -10,6 +10,6 @@ import type { WidgetPortals } from './widgetPortals';
 export const WidgetPortalsView = memo(function WidgetPortalsView({ portals, onDrawn }: { portals: WidgetPortals; onDrawn: () => void }) {
   const widgets = useSyncExternalStore(portals.subscribe, portals.portals);
   // What React drew in the widgets changes their size: the editor measures its lines again.
-  useLayoutEffect(onDrawn, [widgets]);
+  useLayoutEffect(onDrawn, [widgets, onDrawn]);
   return widgets.map((widget) => createPortal(widget.node, widget.host, String(widget.key)));
 });
