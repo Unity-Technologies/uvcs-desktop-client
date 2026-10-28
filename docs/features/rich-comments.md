@@ -168,12 +168,12 @@ so nothing moves as colors arrive; switching themes keeps the old colors until t
 
 Every comment field writes a comment the same way (`CommentField`, `components/commentEditor/`): the check-in and
 shelve composer (`CheckinPanel`: its summary and description), the details panels' editor (`CommentEditor`, through
-`DetailsHeading`: changesets, branches, labels, attribute types), Edit comment (`EditCommentDialog`), New branch,
+`DetailsHeading`: changesets, branches, labels, attribute types), Edit comment (`EditCommentDialog`, a changeset's or a shelve's), New branch,
 New label and New attribute (`CommentArea`: a press on its label puts the caret in the editor, which a `<label
 htmlFor>` can't focus, and the label names it, `fieldLabelAttributes`), the comment of a merge into a server branch (`MergeHeader`) and a new code review's title
 (`CreateCodeReviewDialog`). Comments asked for with `prompt()` (a changelist's, an attribute's) stay plain fields.
 
-A changeset's comment is edited as the check-in writes it, a title and a description: Edit comment and the details
+A changeset's or a shelve's comment is edited as the check-in writes it, a title and a description: Edit comment and the details
 panels' editor open it in its parts (`editingParts`: its title and the rest when it has one; whole in the description
 when it opens with a list, a table or code, or is empty, so nothing moves into the title) and write them back as the
 check-in joins them (`editedComment`): unchanged, the comment is written back as it was, so saving with no edit
