@@ -86,25 +86,51 @@ describe('suggestionKeyAction', () => {
   const none = { metaKey: false, ctrlKey: false, altKey: false, shiftKey: false };
 
   it('moves through the rows that can be picked with the arrows', () => {
-    expect(suggestionKeyAction('ArrowDown', none, picks, 0)).toEqual({ kind: 'move', to: 1 });
-    expect(suggestionKeyAction('ArrowUp', none, picks, 0)).toEqual({ kind: 'move', to: 1 });
+    expect(suggestionKeyAction('ArrowDown', none, picks, 0, false)).toEqual({ kind: 'move', to: 1 });
+    expect(suggestionKeyAction('ArrowUp', none, picks, 0, false)).toEqual({ kind: 'move', to: 1 });
   });
 
   it('leaves the arrows to the caret when nothing can be picked', () => {
-    expect(suggestionKeyAction('ArrowDown', none, onlyNote, 0)).toBeNull();
-    expect(suggestionKeyAction('ArrowUp', none, onlyNote, 0)).toBeNull();
+    expect(suggestionKeyAction('ArrowDown', none, onlyNote, 0, false)).toBeNull();
+    expect(suggestionKeyAction('ArrowUp', none, onlyNote, 0, false)).toBeNull();
   });
 
   it('picks with Enter or Tab, without a modifier, a row that can be picked', () => {
-    expect(suggestionKeyAction('Enter', none, picks, 1)).toEqual({ kind: 'pick', index: 1 });
-    expect(suggestionKeyAction('Tab', none, picks, 0)).toEqual({ kind: 'pick', index: 0 });
-    expect(suggestionKeyAction('Enter', { ...none, metaKey: true }, picks, 0)).toBeNull();
-    expect(suggestionKeyAction('Tab', { ...none, shiftKey: true }, picks, 0)).toBeNull();
-    expect(suggestionKeyAction('Enter', none, onlyNote, 0)).toBeNull();
+    expect(suggestionKeyAction('Enter', none, picks, 1, false)).toEqual({ kind: 'pick', index: 1 });
+    expect(suggestionKeyAction('Tab', none, picks, 0, false)).toEqual({ kind: 'pick', index: 0 });
+    expect(suggestionKeyAction('Enter', { ...none, metaKey: true }, picks, 0, false)).toBeNull();
+    expect(suggestionKeyAction('Tab', { ...none, shiftKey: true }, picks, 0, false)).toBeNull();
+    expect(suggestionKeyAction('Enter', none, onlyNote, 0, false)).toBeNull();
+  });
+
+  describe('Enter and Tab with each kind of row at the top of the list, the keys not moved yet', () => {
+    const searchAll = [{ kind: 'searchAll', text: '12@game@studio@cloud' }] as const;
+    const pending = [{ kind: 'note', text: 'Reading branches…', pending: true }] as const;
+
+    it('picks a suggestion: the highlighted match is what the word asks for', () => {
+      expect(suggestionKeyAction('Enter', none, picks, 0, false)).toEqual({ kind: 'pick', index: 0 });
+      expect(suggestionKeyAction('Tab', none, picks, 0, false)).toEqual({ kind: 'pick', index: 0 });
+    });
+
+    it('never runs "Search all changesets": Enter after another repository’s reference is a line end', () => {
+      expect(suggestionKeyAction('Enter', none, searchAll, 0, false)).toBeNull();
+      expect(suggestionKeyAction('Tab', none, searchAll, 0, false)).toBeNull();
+    });
+
+    it('leaves a note, whether it says nothing matches or a list is being read, to the text', () => {
+      expect(suggestionKeyAction('Enter', none, onlyNote, 0, false)).toBeNull();
+      expect(suggestionKeyAction('Enter', none, pending, 0, false)).toBeNull();
+    });
+
+    it('runs "Search all changesets" once the user moved to it, by a key or the pointer', () => {
+      const rows = [...picks, ...searchAll];
+      expect(suggestionKeyAction('Enter', none, rows, 2, true)).toEqual({ kind: 'pick', index: 2 });
+      expect(suggestionKeyAction('Enter', none, searchAll, 0, true)).toEqual({ kind: 'pick', index: 0 });
+    });
   });
 
   it('dismisses with Esc, and leaves every other key to the text', () => {
-    expect(suggestionKeyAction('Escape', none, onlyNote, 0)).toEqual({ kind: 'dismiss' });
-    expect(suggestionKeyAction('a', none, picks, 0)).toBeNull();
+    expect(suggestionKeyAction('Escape', none, onlyNote, 0, false)).toEqual({ kind: 'dismiss' });
+    expect(suggestionKeyAction('a', none, picks, 0, false)).toBeNull();
   });
 });
