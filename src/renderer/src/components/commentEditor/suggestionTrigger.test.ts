@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { history, undo } from '@codemirror/commands';
+import { deleteCharBackward, history, undo } from '@codemirror/commands';
 import { editorState, run, written } from './commentEditorTesting';
 import { typingAt } from './typingAt';
 import { pickSuggestion, suggestionQueryAt, suggestionsShownAt } from './suggestionTrigger';
@@ -79,5 +79,14 @@ describe('suggestionsShownAt', () => {
     expect(suggestionsShownAt(opened)).toBeNull();
     const typed = opened.update({ changes: { from: opened.doc.length, insert: '1' }, selection: { anchor: opened.doc.length + 1 }, userEvent: 'input.type' }).state;
     expect(suggestionsShownAt(typed)).toMatchObject({ kind: 'label', text: 'v1.4.01' });
+  });
+});
+
+describe('an emoji picked', () => {
+  const rainbowFlag = '🏳️‍🌈';
+
+  // The caret steps over it as one too, by the same grapheme clusters: checked on screen, as moving needs a view.
+  it('is one character to Backspace, however many code points it holds', () => {
+    expect(written(run(deleteCharBackward, editorState(`Pride ${rainbowFlag}‸`))!)).toBe('Pride ‸');
   });
 });

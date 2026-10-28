@@ -150,7 +150,9 @@ export function emojiSuggestions(typed: string): Suggestion[] {
   return rankCandidates(emojiIndex(), query, SUGGESTION_LIMIT).map((emoji) => {
     // The name typed, when it's one of the emoji's (`+1` and `thumbsup` are one emoji).
     const name = emoji.names.find((candidate) => candidate.startsWith(query)) ?? emoji.names[0]!;
-    return { key: `:${name}:`, kind: 'emoji', label: `:${name}:`, detail: emoji.description, glyph: emoji.emoji, insert: `:${name}:` };
+    // The emoji itself, not its name: it shows at once, and reads so in `cm` and every client that knows no names
+    // (gemoji's `emoji`, with its variation selectors and joiners). A name typed out whole stays as typed.
+    return { key: `:${name}:`, kind: 'emoji', label: `:${name}:`, detail: emoji.description, glyph: emoji.emoji, insert: emoji.emoji };
   });
 }
 

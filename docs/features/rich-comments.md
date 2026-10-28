@@ -201,7 +201,8 @@ field's `aria-activedescendant` walks: ↑↓ move, Enter or Tab picks, Esc clos
 opens nothing. A pick writes the reference as `cm` takes it and a space (`pickSuggestion`); a branch or label whose
 name a spec can't hold (a space, a sentence's punctuation or an emphasis mark at its end) is written as its
 `uvcs://` link (`objectReferenceText`), which shows as the same chip; a person as `cm` names them (`@ana@acme.com` on
-Unity Cloud).
+Unity Cloud); an emoji as the character itself (🎉, not `:tada:`), one character to Backspace and to the caret even
+when it joins several (🏳️‍🌈). A `:name:` typed out whole stays as typed.
 
 The data costs the server nothing new (`useSuggestionRows`): each kind reads the list the palette and the views
 already share, through the same query (`paletteQueries`), only once its trigger is typed (`suggestionListsRead`):
