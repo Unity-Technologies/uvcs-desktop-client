@@ -81,6 +81,21 @@ describe('suggestions, as the user writes', () => {
     const typed = type(mirror(field(), true), 'cs:');
     expect(suggestionGate(typed, true, 'Fixes '.length)).toBeNull();
   });
+
+  it('stay closed in a field the focus comes back to, by Enter from the summary or a click: leaving ended the typing', () => {
+    // `see br:`, Esc, then the summary: back in the description by Enter, its next Enter is a line end, not a pick.
+    const typed = type(mirror(field('see '), true), 'br:');
+    const away = mirror(typed, false);
+    expect(shows(mirror(away, true), true)).toBeNull();
+    // A description ending in a whole reference, `note cs:9`, typed before the summary: Enter back keeps its line.
+    const noted = mirror(mirror(type(mirror(field('note '), true), 'cs:9'), false), true);
+    expect(shows(noted, true)).toBeNull();
+  });
+
+  it('show again as soon as the user types in the field the focus came back to', () => {
+    const back = mirror(mirror(type(mirror(field('see '), true), 'br:'), false), true);
+    expect(shows(type(back, 'm'), true)).toMatchObject({ kind: 'branch', text: 'm' });
+  });
 });
 
 /**
