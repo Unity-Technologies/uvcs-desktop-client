@@ -190,7 +190,14 @@ function useFocusMode(view: EditorView | null, state: EditorState | null, host: 
   };
   // Whether the field had the focus since it was made: if not, focus mode opening puts the caret at the draft's end.
   const focusedBefore = useRef(false);
-  if (view?.hasFocus) focusedBefore.current = true;
+  useEffect(() => {
+    if (!view) return;
+    const noteFocus = (): void => {
+      focusedBefore.current = true;
+    };
+    view.contentDOM.addEventListener('focusin', noteFocus);
+    return () => view.contentDOM.removeEventListener('focusin', noteFocus);
+  }, [view]);
   const toggle = (): void => {
     if (group) group.toggle();
     else setOwnLayout((shown) => (shown ? null : focusModeLayout(isInModalDialog(host.current))));
