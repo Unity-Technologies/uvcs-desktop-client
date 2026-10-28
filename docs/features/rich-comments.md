@@ -100,10 +100,14 @@ Content-Security-Policy allows `https:` images for this (ARCHITECTURE.md, "What 
 
 ## Code
 
-A fenced block is highlighted in its fence's language (`CodeBlock`, `fenceLanguage`) by the highlighter the diffs
-share (Pierre's Shiki, `getSharedHighlighter`), with the diffs' themes (`pierreThemeName`), following the app's.
-`HighlightedCodeBlock` loads on the first block with a language, never at start-up; until its grammar loads, and for
-a language the highlighter doesn't know, the block shows plain in the same box, so nothing moves as colors arrive.
+A fenced block is highlighted in its fence's language (`CodeBlock`, `highlightedLanguage`) by the highlighter the
+diffs share (Pierre's Shiki, `getSharedHighlighter`), in the theme the app shows (`pierreThemeName`), in comments and
+everywhere else `Markdown` renders (release notes, attribute values, the Branch Explorer's caption card).
+`HighlightedCodeBlock` loads on the first block with a language, never at start-up. The highlighter runs on the page's
+thread, so a block past `MAX_HIGHLIGHTED_COMMENT_CHARS` (20,000 characters, the diffs' own limit there) shows plain,
+and no line is tokenized past 1,000 characters. Each block is tokenized once per theme (the last 50 kept). Until its
+grammar loads, for a language the highlighter doesn't know, and for a block too big, it shows plain in the same box,
+so nothing moves as colors arrive; switching themes keeps the old colors until the new ones are in.
 
 ## Writing
 

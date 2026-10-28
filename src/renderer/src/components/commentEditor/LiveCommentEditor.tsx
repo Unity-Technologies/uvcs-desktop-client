@@ -3,7 +3,7 @@ import { EditorView } from '@codemirror/view';
 import { useEffect, useId, useImperativeHandle, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { useResolvedTheme } from '../../app/settings/useResolvedTheme';
-import { pierreThemeName } from '../../features/diff/viewer/pierreOptions';
+import { pierreThemeName } from '../../lib/codeTheme';
 import { classNames } from '../../lib/classNames';
 import { commentEditorExtensions, editable, editableWhen, theme, themed, type CommentEditorKeys } from './commentEditorSetup';
 import { changeToMatch } from './commentFieldText';

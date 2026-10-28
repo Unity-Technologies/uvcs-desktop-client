@@ -246,8 +246,9 @@ class MarkdownReader {
         inlines.push(...this.inline(nodes[index]!));
         continue;
       }
-      // What a key holds reads as written, a reference included (`<kbd>cs:12</kbd>`).
-      inlines.push({ kind: 'key', text: plainText(this.inlines(nodes.slice(index + 1, closing))) });
+      // What a key holds reads as written, a reference included (`<kbd>cs:12</kbd>`); an empty key shows nothing.
+      const text = plainText(this.inlines(nodes.slice(index + 1, closing)));
+      if (text.trim()) inlines.push({ kind: 'key', text });
       index = closing;
     }
     return joinedTexts(inlines);

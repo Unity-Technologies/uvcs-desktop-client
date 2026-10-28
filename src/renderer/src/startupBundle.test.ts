@@ -8,9 +8,9 @@ import { VIEWS } from './app/navigation/viewRegistry';
  * What the window loads before its first frame: every module `main.tsx` reaches through static imports, every view
  * and page among them (`viewRegistry`, `pageRegistry`), so each paints its own layout at once (ARCHITECTURE.md "One
  * layout from the first frame"). The heavy libraries stay out of it, each loaded on first use behind a lazy boundary
- * at the leaf that uses it (`FileDiffViewer`, `AnnotationPane`, `FileConflictPanel`, `LoadedFileDiff`'s viewers, and
- * `CommentField`'s editor): one static import of them from a view, even of a helper, would put megabytes in front of
- * every start.
+ * at the leaf that uses it (`FileDiffViewer`, `AnnotationPane`, `FileConflictPanel`, `LoadedFileDiff`'s viewers, a
+ * comment's `CodeBlock`, and `CommentField`'s editor): one static import of them from a view, even of a helper, would
+ * put megabytes in front of every start.
  */
 const RENDERER_SOURCE = __dirname;
 const SHARED_SOURCE = resolve(__dirname, '../../shared');

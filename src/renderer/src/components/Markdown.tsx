@@ -48,9 +48,7 @@ function renderBlock(block: MarkdownBlock, key: number): ReactNode {
     case 'quote':
       return <blockquote key={key}>{renderBlocks(block.children)}</blockquote>;
     case 'code':
-      return (
-        <CodeBlock key={key} text={block.text} language={block.language} />
-      );
+      return <CodeBlock key={key} text={block.text} language={block.language} />;
     case 'list':
       return renderList(block, key);
     case 'table':
@@ -116,7 +114,11 @@ function renderInlines(inlines: readonly MarkdownInline[], compact = false): Rea
       case 'strike':
         return <del key={index}>{renderInlines(inline.children, compact)}</del>;
       case 'key':
-        return <kbd key={index}>{inline.text}</kbd>;
+        return (
+          <kbd key={index} className={styles.key}>
+            {inline.text}
+          </kbd>
+        );
       case 'break':
         return <br key={index} />;
       case 'link':

@@ -1,6 +1,7 @@
 import type { EditorState } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
-import { codeTokenStyle, fenceLanguage, type ColoredToken } from '../comments/codeTokenStyle';
+import { fenceLanguage } from '../comments/codeBlockLanguage';
+import { codeTokenStyle, type ColoredToken } from '../comments/codeTokenStyle';
 
 /** A code block's code and the language its fence names, which the comments' highlighter colors. */
 export interface FencedCode {

@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
 import { hasLineTooLongToDraw } from '../../diff/viewer/longLines';
-import { PIERRE_SURFACE_CSS, pierreThemeName } from '../../diff/viewer/pierreOptions';
+import { pierreThemeName } from '../../../lib/codeTheme';
+import { PIERRE_SURFACE_CSS } from '../../diff/viewer/pierreOptions';
 
 /**
  * Options shared by the Pierre components used to resolve conflicts, for `text`: its lines scroll sideways, or wrap
