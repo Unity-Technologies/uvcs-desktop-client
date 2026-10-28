@@ -70,6 +70,12 @@ describe('parseInline', () => {
     ]);
   });
 
+  it("links to the official client's plastic:// links, which the app opens too", () => {
+    expect(parseInline('[the fix](plastic://codice.cloud/repos/codice/changesets/280528/diff)')).toEqual([
+      { kind: 'link', url: 'plastic://codice.cloud/repos/codice/changesets/280528/diff', children: [{ kind: 'text', text: 'the fix' }] },
+    ]);
+  });
+
   it('reads the first line of a heading, a list item or a quote without its marks', () => {
     expect(parseInline('## Fix **crash**')).toEqual([{ kind: 'text', text: 'Fix ' }, { kind: 'strong', children: [{ kind: 'text', text: 'crash' }] }]);
     expect(parseInline('- [x] Done')).toEqual([{ kind: 'text', text: 'Done' }]);

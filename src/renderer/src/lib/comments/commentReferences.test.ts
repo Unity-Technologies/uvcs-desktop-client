@@ -80,6 +80,20 @@ describe('findReferences', () => {
     ]);
   });
 
+  it('reads the official client’s plastic:// links as their uvcs:// twins', () => {
+    const changeset = { kind: 'link', link: { kind: 'repository', server: 'codice@cloud', repository: 'codice', object: { kind: 'changeset', id: 280528 } } };
+    expect(referencesIn('See plastic://codice.cloud/repos/codice/changesets/280528/diff')).toEqual([changeset]);
+    expect(referencesIn('See uvcs://codice.cloud/repos/codice/changesets/280528/diff')).toEqual([changeset]);
+    expect(referencesIn('plastic://ssl://host:8088/repos/game/changesets/5/diff plastic://showchangeset=cs%3A12%40game%40acme%40cloud')).toEqual([
+      { kind: 'link', link: { kind: 'repository', server: 'host:8088', repository: 'game', object: { kind: 'changeset', id: 5 } } },
+      { kind: 'link', link: { kind: 'repository', server: 'acme@cloud', repository: 'game', object: { kind: 'changeset', id: 12 } } },
+    ]);
+  });
+
+  it('leaves as text a plastic:// link that names nothing it can open', () => {
+    expect(referencesIn('plastic://acme.unity/projects plastic://showchangeset=nothing')).toEqual([]);
+  });
+
   it('reads nothing inside a word, a path, an address or a time', () => {
     expect(referencesIn('ana@acme.com /a/cs:1 x-cs:2 10:30:00 http://h/:tada: abc@def')).toEqual([]);
   });
