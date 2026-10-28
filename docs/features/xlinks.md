@@ -59,16 +59,25 @@ Before updating a folder, `cm` looks for pending changes in the whole workspace 
 `PendingChangesOnSwitchAction` says. Unset, as by default, it updates the folder and leaves them as they are. Set to
 shelve them, it would shelve, undo and merge them back itself, which the app never lets `cm` do (as
 `switchWithChanges`); `--machinereadable` turns that into refusing, as a setting to fail does. On a refusal
-(`loadXlink`; told apart by the changes still pending, as its words are localized), unchanged checkouts are undone,
-a merge in progress is left alone (the files don't load), and other changes are put aside as a switch puts them: an
-automatic shelve recorded with `reason: 'update'`, undo, added files moved aside, the folder updated, the shelve
-merged back. The workspace didn't move, so only a change under the new folder could conflict; changes that don't come
-back cleanly wait in their shelve, offered by "Welcome back". A failure before the files load puts the changes back.
+(`loadXlink`), unchanged checkouts are undone, a merge in progress is left alone (the files don't load), and other
+changes are put aside as a switch puts them: an automatic shelve recorded with `reason: 'xlink'`, undo, added files
+moved aside, the folder updated, the shelve merged back. The workspace didn't move, so only a change under the new
+folder could conflict; changes that don't come back cleanly wait in their shelve, offered by "Welcome back" as "put
+aside to load an xlink". A failure before the files load puts the changes back. The refusal's words are localized,
+so it is told apart only by changes being pending: any failed update with changes pending takes this path. When the
+changes can't even be shelved (the server is down), the error is what `cm update` said, nothing having changed.
+
+The files load with no progress bar, "Loading its files" alone: `--forcedetailedprogress`, which prints the bar
+`readUpdateProgress` reads, is turned off by `--machinereadable`, which keeps `cm` from shelving.
 
 Once `cm xlink` made it, the xlink exists whatever comes next: a later step that fails ends the operation with what
 it is now (`CreatedXlink`: not checked in, a pending change to check in from Changes; or checked in without its
 files) rather than an error, so the dialog closes instead of offering to create it again (`createdXlinkMessage`).
 Only `cm xlink` failing keeps the dialog open.
+
+**Load its files** (`XlinksApi.load`, `loadXlinkFiles`) loads them later, the same way: on a checked-in xlink whose
+folder Files listed empty (`unloadedXlinkOf`), as one checked in from Changes is, and from the toast when they didn't
+load as it was created. An added xlink isn't offered it: nothing loads one before it's checked in.
 
 An edit that fails halfway leaves the xlink as the dialog still shows it, so Save can be pressed again: when adding
 the new rules fails, the rules just deleted are added back (`xlinksService`). Pointing it again where the first try
@@ -85,7 +94,7 @@ write (`changesWorkspace`), except `--show`. Creating also checks in and updates
 | Reads the rules          | `cm xlink --show <path>`                                                 | Edit xlink… on a writable xlink, once       |
 | Creates                  | `cm xlink [-w] [-rs] <path> <folder> <point spec> [rules]`               | Create and check in                         |
 | Checks the new one in    | `cm checkin <path> --all --dependencies -commentsfile=<file>` (`checkinArgs`) | Create and check in, once created      |
-| Loads its files          | `cm update <path> --machinereadable --noinput --dontmerge`               | Create and check in, once checked in        |
+| Loads its files          | `cm update <path> --machinereadable --noinput --dontmerge`               | Create and check in, once checked in; Load its files |
 | Points elsewhere         | `cm xlink -e <path> <point spec>`                                        | Save, when the point changed                |
 | Deletes, then adds rules | `cm xlink --deleterules <path> <rules>`, then `--addrules` | Save, when rules changed (one each at most) |
 
