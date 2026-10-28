@@ -7,7 +7,7 @@ interface Named {
   comment: string;
 }
 
-const byName = (items: readonly Named[]) => indexCandidates(items, (item) => [item.name], (item) => [item.comment]);
+const byName = (items: readonly Named[]) => indexCandidates(items, (item) => [item.name], (item) => [item.name, item.comment]);
 const names = (items: readonly Named[]) => items.map((item) => item.name);
 
 describe('rankCandidates', () => {
@@ -37,7 +37,8 @@ describe('rankCandidates', () => {
     const indexed = reads();
     rankCandidates(index, 'task-9', 8);
     rankCandidates(index, 'comment 99', 8);
-    expect(indexed).toBe(2000);
+    // Its name for the ranking, its name and comment for the filter, once each.
+    expect(indexed).toBe(3000);
     expect(reads()).toBe(indexed);
   });
 

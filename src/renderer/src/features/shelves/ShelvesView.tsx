@@ -14,7 +14,6 @@ import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { isOnlyMine, matchesPeople, pickedOwners, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
-import { userFilterTexts } from '../../lib/userName';
 import { isFiltering } from '../../lib/viewFilters';
 import { EmptyState } from '../../ui/EmptyState';
 import { FilterBar } from '../../ui/FilterBar';
@@ -27,6 +26,7 @@ import { shelveCopyTexts, shelveMenu } from './shelveMenu';
 import { showShelveChanges } from './shelveOperations';
 import { useShelvesViewStore } from './shelvesViewStore';
 import { useShelves } from './useShelves';
+import { shelveFilterTexts } from './shelveFilterTexts';
 
 /** Read like the changesets list; where a changeset shows its branch, a shelve shows the changeset it was made on. */
 const COLUMNS: Column<Shelve>[] = [
@@ -99,10 +99,6 @@ export function ShelvesView() {
 const ownerOf = (shelve: Shelve): string => shelve.owner;
 
 /** What the row shows: its number, comment, the changeset it's based on and its author. */
-function shelveFilterTexts(shelve: Shelve): string[] {
-  return [String(shelve.id), shelve.comment, spec.changeset(shelve.parentChangeset), ...userFilterTexts(shelve.owner)];
-}
-
 function shelveKey(shelve: Shelve): string {
   return String(shelve.id);
 }

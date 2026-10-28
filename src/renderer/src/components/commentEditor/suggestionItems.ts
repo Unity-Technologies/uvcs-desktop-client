@@ -6,11 +6,18 @@ import type { Label } from '@shared/domain/label';
 import type { Shelve } from '@shared/domain/shelve';
 import { formatLink } from '@shared/links/formatLink';
 import { findReferences } from '../../lib/comments/commentReferences';
-import { commentLineText } from '../../lib/comments/commentText';
+import { commentLineText, commentText } from '../../lib/comments/commentText';
+import { matchWindow } from '../../lib/matchWindow';
+import { wordMatchRanges } from '../../lib/textMatchRanges';
+import { branchFilterTexts } from '../../features/branches/branchFilters';
+import { changesetFilterTexts } from '../../features/changesets/changesetFilters';
+import { reviewFilterTexts } from '../../features/codeReviews/codeReviewFilters';
+import { labelFilterTexts } from '../../features/labels/labelFilters';
+import { shelveFilterTexts } from '../../features/shelves/shelveFilterTexts';
 import { lastSegment } from '../../lib/paths';
 import { splitRepositorySpec } from '../../lib/servers';
-import { firstLine } from '../../lib/text';
-import { displayName } from '../../lib/userName';
+
+import { displayName, userFilterTexts } from '../../lib/userName';
 import { indexCandidates, rankCandidates, type CandidateIndex } from './suggestionRanking';
 import type { SuggestionKind } from './suggestionTriggers';
 
@@ -36,43 +43,46 @@ export interface Suggestion {
   insert: string;
 }
 
-/** Each kind's list read into an index once per read (`indexCandidates`), so a key typed walks no object. */
+/**
+ * Each kind's list read into an index once per read (`indexCandidates`), so a key typed walks no object: by what
+ * names it, and by the texts its view's filter looks through (`*FilterTexts`), so the same words find the same objects.
+ */
 export function changesetIndex(changesets: readonly Changeset[]): CandidateIndex<Changeset> {
-  return indexCandidates(changesets, (changeset) => [String(changeset.id)], (changeset) => [firstLine(changeset.comment)]);
+  return indexCandidates(changesets, (changeset) => [String(changeset.id)], (changeset) => changesetFilterTexts(changeset));
 }
 
 export function branchIndex(branches: readonly Branch[]): CandidateIndex<Branch> {
   // Newest first, as a branch worked on lately is the one a comment most likely names.
   const newest = [...branches].sort(byNewest);
-  return indexCandidates(newest, (branch) => [branch.name.replace(/^\//, ''), lastSegment(branch.name)], (branch) => [firstLine(branch.comment)]);
+  return indexCandidates(newest, (branch) => [branch.name.replace(/^\//, ''), lastSegment(branch.name)], branchFilterTexts);
 }
 
 export function labelIndex(labels: readonly Label[]): CandidateIndex<Label> {
   const newest = [...labels].sort(byNewest);
-  return indexCandidates(newest, (label) => [label.name], (label) => [firstLine(label.comment)]);
+  return indexCandidates(newest, (label) => [label.name], labelFilterTexts);
 }
 
 export function shelveIndex(shelves: readonly Shelve[]): CandidateIndex<Shelve> {
   const newest = [...shelves].sort((a, b) => b.id - a.id);
-  return indexCandidates(newest, (shelve) => [String(shelve.id)], (shelve) => [firstLine(shelve.comment)]);
+  return indexCandidates(newest, (shelve) => [String(shelve.id)], shelveFilterTexts);
 }
 
 export function codeReviewIndex(reviews: readonly CodeReviewSummary[]): CandidateIndex<CodeReviewSummary> {
   const newest = [...reviews].sort((a, b) => b.id - a.id);
-  return indexCandidates(newest, (review) => [String(review.id)], (review) => [review.title]);
+  return indexCandidates(newest, (review) => [String(review.id)], reviewFilterTexts);
 }
 
 /** People by how `cm` names them and by the name shown; only those a mention reads back whole (`@ana@acme.com`). */
 export function personIndex(people: readonly string[]): CandidateIndex<string> {
   const mentionable = [...new Set(people)].filter((person) => readsBackWhole(`@${person}`));
-  return indexCandidates(mentionable, (person) => [person, displayName(person)]);
+  return indexCandidates(mentionable, (person) => [person, displayName(person)], userFilterTexts);
 }
 
 let emojiIndexOnce: CandidateIndex<Gemoji> | undefined;
 
 /** GitHub's emoji (`gemoji`), by their names first, then their tags: read into an index on the first `:`. */
 export function emojiIndex(): CandidateIndex<Gemoji> {
-  emojiIndexOnce ??= indexCandidates(gemoji, (emoji) => emoji.names, (emoji) => emoji.tags);
+  emojiIndexOnce ??= indexCandidates(gemoji, (emoji) => emoji.names, (emoji) => [...emoji.names, ...emoji.tags]);
   return emojiIndexOnce;
 }
 
@@ -82,11 +92,25 @@ export function branchQueryText(typed: string): string {
 }
 
 export function changesetSuggestions(index: CandidateIndex<Changeset>, typed: string): Suggestion[] {
-  return rankCandidates(index, typed, SUGGESTION_LIMIT).map(changesetSuggestion);
+  return rankCandidates(index, typed, SUGGESTION_LIMIT).map((changeset) => changesetSuggestion(changeset, typed));
 }
 
-export function changesetSuggestion(changeset: Changeset): Suggestion {
-  return { key: `cs:${changeset.id}`, kind: 'changeset', label: String(changeset.id), detail: commentLineText(changeset.comment), owner: changeset.owner, insert: `cs:${changeset.id}` };
+export function changesetSuggestion(changeset: Changeset, typed = ''): Suggestion {
+  return { key: `cs:${changeset.id}`, kind: 'changeset', label: String(changeset.id), detail: suggestionDetail(changeset.comment, typed), owner: changeset.owner, insert: `cs:${changeset.id}` };
+}
+
+/** How many characters of a summary a suggestion's row has room for, about: its match is kept within them. */
+const DETAIL_ROOM = 34;
+
+/**
+ * A comment as a suggestion's summary, the words typed in sight (`matchWindow`), as `Highlight` marks them: its first
+ * line, or the whole comment on one line when only its body holds them, so the row shows why it was offered.
+ */
+export function suggestionDetail(comment: string, typed: string): string {
+  const line = commentLineText(comment);
+  const whole = commentText(comment).replace(/\s+/g, ' ').trim();
+  const bodyOnly = wordMatchRanges(line, typed).length === 0 && wordMatchRanges(whole, typed).length > 0;
+  return matchWindow(bodyOnly ? whole : line, typed, DETAIL_ROOM);
 }
 
 /** `placeRepository` writes a name a spec can't hold as its link (`objectReferenceText`). */
@@ -95,7 +119,7 @@ export function branchSuggestions(index: CandidateIndex<Branch>, typed: string, 
     key: `br:${branch.name}`,
     kind: 'branch',
     label: branch.name,
-    detail: commentLineText(branch.comment),
+    detail: suggestionDetail(branch.comment, typed),
     owner: branch.owner,
     insert: objectReferenceText({ kind: 'branch', name: branch.name }, placeRepository),
   }));
@@ -106,7 +130,7 @@ export function labelSuggestions(index: CandidateIndex<Label>, typed: string, pl
     key: `lb:${label.name}`,
     kind: 'label',
     label: label.name,
-    detail: commentLineText(label.comment),
+    detail: suggestionDetail(label.comment, typed),
     owner: label.owner,
     insert: objectReferenceText({ kind: 'label', name: label.name }, placeRepository),
   }));
@@ -117,7 +141,7 @@ export function shelveSuggestions(index: CandidateIndex<Shelve>, typed: string):
     key: `sh:${shelve.id}`,
     kind: 'shelve',
     label: String(shelve.id),
-    detail: commentLineText(shelve.comment),
+    detail: suggestionDetail(shelve.comment, typed),
     owner: shelve.owner,
     insert: `sh:${shelve.id}`,
   }));
@@ -128,7 +152,7 @@ export function codeReviewSuggestions(index: CandidateIndex<CodeReviewSummary>, 
     key: `cr:${review.id}`,
     kind: 'codeReview',
     label: String(review.id),
-    detail: commentLineText(review.title),
+    detail: suggestionDetail(review.title, typed),
     owner: review.owner,
     insert: `cr:${review.id}`,
   }));

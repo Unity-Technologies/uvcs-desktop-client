@@ -114,7 +114,7 @@ export function useSuggestionRows(query: SuggestionQuery | null): { rows: Sugges
   const reading = listed?.reading ?? false;
   const search = useChangesetSearch(place);
   const searched: ChangesetSearch =
-    search.term === undefined ? { state: 'none' } : search.found.data ? { state: 'found', text: search.term, suggestions: search.found.data.slice(0, SUGGESTION_LIMIT).map(changesetSuggestion) } : { state: 'searching', text: search.term };
+    search.term === undefined ? { state: 'none' } : search.found.data ? { state: 'found', text: search.term, suggestions: search.found.data.slice(0, SUGGESTION_LIMIT).map((changeset) => changesetSuggestion(changeset, search.term)) } : { state: 'searching', text: search.term };
 
   // The best few rows: cheap to lay out again on each render.
   const rows = listed && kind ? suggestionRows(kind, typed, listed, kind === 'changeset' ? { lookup, search: searched } : undefined) : NO_ROWS;

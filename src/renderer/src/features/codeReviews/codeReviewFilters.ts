@@ -22,6 +22,7 @@ export function codeReviewsQuery({ since, people, status, assignedToMe }: CodeRe
 }
 
 /** What the row shows, which its filter looks through: its number, title, what it reviews, its author and its reviewer. */
-export function reviewFilterTexts(review: CodeReview): string[] {
-  return [String(review.id), review.title, describeTarget(review.target), ...userFilterTexts(review.owner), ...(review.assignee ? userFilterTexts(review.assignee) : [])];
+export function reviewFilterTexts(review: Pick<CodeReview, 'id' | 'title' | 'owner' | 'assignee'> & { target?: CodeReview['target'] }): string[] {
+  const target = review.target ? [describeTarget(review.target)] : [];
+  return [String(review.id), review.title, ...target, ...userFilterTexts(review.owner), ...(review.assignee ? userFilterTexts(review.assignee) : [])];
 }

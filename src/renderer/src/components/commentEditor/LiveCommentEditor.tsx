@@ -352,7 +352,7 @@ function useSuggestions(view: EditorView | null, state: EditorState | null) {
   }, [view, shown, active, listId, activeOption]);
 
   const anchor = shown && view ? boxAt(view, open!.from, open!.from) : null;
-  const list = anchor ? <SuggestionList id={listId} rows={rows} active={active} anchor={anchor} onPick={pick} onHover={moveTo} /> : null;
+  const list = anchor ? <SuggestionList id={listId} rows={rows} active={active} anchor={anchor} query={open!.text} onPick={pick} onHover={moveTo} /> : null;
   return { shown, list };
 }
 

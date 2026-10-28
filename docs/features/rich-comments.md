@@ -358,8 +358,14 @@ for as long as the palette's search waits (`useDebouncedValue`, `SERVER_SEARCH_D
 alone, never 4 on the way. Words they don't match offer "Search all changesets for …", the palette's on-demand search
 (`useChangesetSearch`), run only when picked. People are the owners those lists hold and everyone the place's lists
 showed (`peopleSeenIn`): no query lists people. Each list is read into an index once per read and ranked at each key
-(`rankCandidates`: the name typed, then names starting with it, then names holding it, then comments), the best
-eight shown.
+(`rankCandidates`: the name typed, then names starting with it, then names holding it, then the rest), the best
+eight shown. What matches is what the kind's view keeps for the same words: its filter's own test (`holdsEveryWord`,
+`matchesWordFilter`) over the texts its row shows (`changesetFilterTexts`, `branchFilterTexts`, `labelFilterTexts`,
+`shelveFilterTexts`, `reviewFilterTexts`, `userFilterTexts`), so "accelerator" finds a changeset after `cs:` exactly
+when the Changesets list keeps it (`suggestionMatching.test.ts`; a changeset's labels are the list's alone). Each row
+marks the words as the lists do (`HighlightQuery`, `Highlight`), and a summary whose first match would fall past the
+row's room starts later, after an ellipsis, so the match shows (`matchWindow`, `suggestionDetail`; the comment's
+body on one line when only it holds the words).
 
 ## Checking it on screen
 

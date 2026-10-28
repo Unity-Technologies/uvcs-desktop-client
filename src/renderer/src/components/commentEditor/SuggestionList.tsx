@@ -3,6 +3,7 @@ import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { displayName } from '../../lib/userName';
 import { Avatar } from '../../ui/Avatar';
+import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { Spinner } from '../../ui/Spinner';
 import { CHIP_ICONS } from '../comments/chipIcons';
 import { suggestionListPosition, type Box } from './popupPosition';
@@ -16,6 +17,8 @@ interface SuggestionListProps {
   active: number;
   /** Where the trigger typed is (`cs:`, `@`), which the list opens under. */
   anchor: Box;
+  /** What was typed after the trigger: marked in each row as the lists' filter marks it (`Highlight`). */
+  query: string;
   onPick: (index: number) => void;
   onHover: (index: number) => void;
 }
@@ -24,7 +27,7 @@ interface SuggestionListProps {
  * The suggestions for what is being typed, under it: a listbox the field's `aria-activedescendant` walks, its rows
  * picked with the keys or the pointer while the caret stays in the field.
  */
-export function SuggestionList({ id, rows, active, anchor, onPick, onHover }: SuggestionListProps) {
+export function SuggestionList({ id, rows, active, anchor, query, onPick, onHover }: SuggestionListProps) {
   const list = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
   // Placed again whenever the trigger moves or the list's size does: rows of the same count may be taller or wider
@@ -46,6 +49,7 @@ export function SuggestionList({ id, rows, active, anchor, onPick, onHover }: Su
   const style: CSSProperties = position ? { left: position.left, top: position.top } : { left: anchor.left, top: anchor.bottom, visibility: 'hidden' };
   return createPortal(
     <div ref={list} id={id} className={styles.list} role="listbox" aria-label="Suggestions" style={style} onMouseDown={(event) => event.preventDefault()}>
+      <HighlightQuery query={query}>
       {rows.map((row, index) =>
         row.kind === 'note' ? (
           <div key={`note:${row.text}`} className={styles.note} role="presentation">
@@ -66,6 +70,7 @@ export function SuggestionList({ id, rows, active, anchor, onPick, onHover }: Su
           </div>
         ),
       )}
+      </HighlightQuery>
     </div>,
     document.body,
   );
@@ -81,9 +86,19 @@ function SuggestionRowContent({ suggestion }: { suggestion: Suggestion }) {
       <span className={styles.lead}>
         <SuggestionIcon suggestion={suggestion} />
       </span>
-      <span className={styles.label}>{suggestion.label}</span>
-      {suggestion.detail && <span className={styles.detail}>{suggestion.detail}</span>}
-      {suggestion.owner && <span className={styles.owner}>{displayName(suggestion.owner)}</span>}
+      <span className={styles.label}>
+        <Highlight text={suggestion.label} />
+      </span>
+      {suggestion.detail && (
+        <span className={styles.detail}>
+          <Highlight text={suggestion.detail} />
+        </span>
+      )}
+      {suggestion.owner && (
+        <span className={styles.owner}>
+          <Highlight text={displayName(suggestion.owner)} />
+        </span>
+      )}
     </>
   );
 }

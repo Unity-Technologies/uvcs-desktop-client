@@ -36,7 +36,8 @@ const branches: Branch[] = changesets.map((changeset, index) => ({
 const labels: Label[] = changesets.map((changeset, index) => ({ id: index, name: `v${index}.0-accelerator`, changeset: changeset.id, branch: changeset.branch, comment: changeset.comment, owner: changeset.owner, date: changeset.date, repository: 'game' }));
 const shelves: Shelve[] = changesets.map((changeset) => ({ id: changeset.id % 100, guid: changeset.guid, comment: changeset.comment, owner: changeset.owner, date: changeset.date, parentChangeset: changeset.parent, repository: 'game' }));
 const reviews: CodeReviewSummary[] = changesets.map((changeset, index) => ({ id: index + 40, title: changeset.comment.split('\n')[0]!, status: 'Under review', owner: changeset.owner, assignee: '', date: changeset.date }) as CodeReviewSummary);
-const people = changesets.map((changeset) => changeset.owner);
+/** The people a mention can name: those it reads back whole (`personIndex`), as written in the lists' rows. */
+const people = ['ana@acme.com', 'jose.diaz@acme.com', 'ana.lopez'];
 
 const EVERY = 1000;
 
