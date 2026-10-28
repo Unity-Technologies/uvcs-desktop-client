@@ -31,7 +31,7 @@ describe('the comment editor’s focus', () => {
   it('has one writer of its mirror, the reconciler (`watchFocus`): never CodeMirror’s own focus notification', () => {
     // Two writers once let a stale one win: the mirror said unfocused while the DOM had the focus.
     const inCommentEditors = (lines: string[]) => lines.filter((line) => COMMENT_EDITORS.some((folder) => line.startsWith(folder)));
-    expect(inCommentEditors(offenders(/focusChangeEffect/, []))).toEqual([]);
+    expect(inCommentEditors(offenders(/\.focusChangeEffect\b/, []))).toEqual([]);
     expect(offenders(/focusChanged\.of\(/, [join('commentEditor', 'editorFocus.ts')])).toEqual([]);
   });
 

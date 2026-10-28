@@ -8,8 +8,8 @@ import { EditorView, ViewPlugin } from '@codemirror/view';
  * hand (the suggestions, the selection bar, the toolbar) asks `editorFocused`, the DOM's, so a mirror behind can never
  * hide them.
  *
- * The mirror is kept by CodeMirror's focus notification and reconciled whenever the two may differ
- * (`focusReconciler`): on `focusin` and `focusout`, and after any update where they do. A focus CodeMirror's
+ * The mirror has one writer, the reconciler (`watchFocus`), which sets it whenever the two may differ: on the
+ * field's and its window's focus events, and after any update where they do. A focus CodeMirror's
  * notification never told: focus mode opened by its button on a field that wasn't focused moves the field and gives
  * it the focus in code, and the mirror stayed false while the DOM had the focus; a later click inside the box brought
  * no focus event either. Before, the mirror was set once, at mount (`noteFocus`), and nothing put it right.
@@ -48,36 +48,66 @@ export function focusEditor(view: EditorView): void {
   reconcileFocus(view);
 }
 
+/** What the reconciler watches of a field: where its focus events land, the DOM's focus, its state, its dispatch. */
+export interface WatchedFocus {
+  /**
+   * The field's DOM (`focusin`, `focusout`) and its window (`focus`, `blur`): the window's activation coming back moves
+   * no element's focus, so the field itself hears nothing of it.
+   */
+  targets: readonly EventTarget[];
+  hasFocus: () => boolean;
+  state: () => EditorState;
+  dispatch: (spec: TransactionSpec) => void;
+}
+
+const FOCUS_EVENTS = ['focusin', 'focusout', 'focus', 'blur'] as const;
+
 /**
- * Keeps the mirror on the DOM's focus: on `focusin` and `focusout`, and after an update that leaves them apart, each
- * outside the update it follows (a microtask), never re-entrantly.
+ * The mirror's only writer (`editorFocusRules.test.ts`): it sets the mirror to the DOM's focus on every focus event of
+ * the field and its window, and after an update that left them apart, each outside the work it follows (`schedule`, a
+ * microtask), never re-entrantly. CodeMirror's own focus notification (`focusChangeEffect`) wrote it too, and with two
+ * writers the mirror can say the opposite of the DOM; nor does that notification hear the window come back.
  */
-const focusReconciler = ViewPlugin.define((view) => {
+export function watchFocus(field: WatchedFocus, schedule: (run: () => void) => void): { afterUpdate: () => void; stop: () => void } {
   let queued = false;
-  let destroyed = false;
+  let stopped = false;
   const reconcileSoon = (): void => {
-    if (queued) return;
+    if (queued || stopped) return;
     queued = true;
-    queueMicrotask(() => {
+    schedule(() => {
       queued = false;
-      if (!destroyed) reconcileFocus(view);
+      if (stopped) return;
+      const spec = focusMirrorSpec(field.state(), field.hasFocus());
+      if (spec) field.dispatch(spec);
     });
   };
-  view.dom.addEventListener('focusin', reconcileSoon);
-  view.dom.addEventListener('focusout', reconcileSoon);
+  for (const target of field.targets) for (const type of FOCUS_EVENTS) target.addEventListener(type, reconcileSoon);
   return {
-    update: (update) => {
-      if (update.view.hasFocus !== update.state.field(hasFocus)) reconcileSoon();
+    afterUpdate: () => {
+      if (field.hasFocus() !== field.state().field(hasFocus)) reconcileSoon();
     },
-    destroy: () => {
-      destroyed = true;
-      view.dom.removeEventListener('focusin', reconcileSoon);
-      view.dom.removeEventListener('focusout', reconcileSoon);
+    stop: () => {
+      stopped = true;
+      for (const target of field.targets) for (const type of FOCUS_EVENTS) target.removeEventListener(type, reconcileSoon);
     },
   };
+}
+
+const focusReconciler = ViewPlugin.define((view) => {
+  const window = view.dom.ownerDocument.defaultView;
+  const watcher = watchFocus(
+    {
+      targets: window ? [view.dom, window] : [view.dom],
+      hasFocus: () => view.hasFocus,
+      state: () => view.state,
+      dispatch: (spec) => view.dispatch(spec),
+    },
+    queueMicrotask,
+  );
+  return { update: watcher.afterUpdate, destroy: watcher.stop };
 });
 
-/** The focus's mirror and what keeps it right. */
+/** The focus's mirror and its only writer. */
 export function editorFocus(): Extension {
-  return [hasFocus, EditorView.focusChangeEffect.of((_state, focusing) => focusChanged.of(focusing)), focusReconciler];
+  return [hasFocus, focusReconciler];
 }

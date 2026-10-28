@@ -289,10 +289,12 @@ What the list depends on, each with one owner (`suggestionGate` decides; the edi
 - **Opens**: a trigger typed at the caret (`suggestionQueryAt`) while the word is being typed (`typingAt`, the
   editor's state: set by a key typed or a Backspace taking back what was typed, cleared by any other edit or caret
   move), in a field with the focus. The focus is the DOM's (`editorFocused`, `fieldFocused`); the state's mirror of it
-  (`hasFocus`, `editorFocus`) is for the decorations alone and is reconciled from the DOM on `focusin`, `focusout` and
-  any update where they differ (`focusReconciler`), and code focuses an editor only through `focusEditor`.
-  `editorFocusRules.test.ts` keeps both rules: a mirror left behind as focus mode opened by its button once hid the
-  list for good.
+  (`hasFocus`, `editorFocus`) is for the decorations alone and has one writer, `watchFocus`, which sets it from the
+  DOM on the field's `focusin` and `focusout`, on its window's `focus` and `blur` (the window active again moves no
+  element's focus), and after any update where they differ; CodeMirror's `focusChangeEffect` doesn't write it. Code
+  focuses an editor only through `focusEditor`. `editorFocusRules.test.ts` keeps the rules: a mirror left behind as
+  focus mode opened by its button once hid the list for good, and one that missed the window coming back drew a
+  focused field as unfocused, its list closed.
 - **Closes**: Esc, a pick, the caret leaving the word, the focus leaving the field, a list with no row (emoji with no
   match). A pick leaves the reference drawn as its chip until the next edit or caret move (`justPicked`).
 - **Stays closed**: on the word Esc closed it on (`dismissedAt`, the word's start, held by the editor: one editor per
