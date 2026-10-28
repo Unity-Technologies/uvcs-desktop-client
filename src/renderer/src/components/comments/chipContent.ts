@@ -222,11 +222,15 @@ export interface ChipCard {
   meta: string[];
 }
 
+/** Why another repository's object has nothing to show (`remoteObjectQuery`, `serverReads`). */
+export type UnreadObject = { kind: 'missing' } | { kind: 'unreadable' } | { kind: 'unknownServer'; server: string };
+
 /**
- * `unread`: why another repository's object has nothing to show (`remoteObjectQuery`), which the card says in place
- * of where it is: the repository has none by that name (`missing`), or couldn't be reached (`unreadable`).
+ * `unread`: why another repository's object has nothing to show, which the card says in place of where it is: the
+ * repository has none by that name, it couldn't be read from (no access, out of reach), or it is on a server the user
+ * doesn't work with, which is never read.
  */
-export function chipCard(chip: { title: string; repository?: string }, cached: CachedRecord | undefined, ago: (date: string) => string, unread?: 'missing' | 'unreadable'): ChipCard {
+export function chipCard(chip: { title: string; repository?: string }, cached: CachedRecord | undefined, ago: (date: string) => string, unread?: UnreadObject): ChipCard {
   const comment = cached?.title || cached?.comment || undefined;
   const meta = [
     ...(comment ? [chip.title] : []),
@@ -238,10 +242,17 @@ export function chipCard(chip: { title: string; repository?: string }, cached: C
   return comment ? { comment, title: chip.title, meta } : { title: chip.title, meta };
 }
 
-function repositoryWords(title: string, repository: string, unread: 'missing' | 'unreadable' | undefined): string {
-  if (unread === 'missing') return `No ${title.charAt(0).toLowerCase()}${title.slice(1)} in ${repository}`;
-  if (unread === 'unreadable') return `Couldn't reach ${repository}`;
-  return `In ${repository}`;
+function repositoryWords(title: string, repository: string, unread: UnreadObject | undefined): string {
+  switch (unread?.kind) {
+    case 'missing':
+      return `No ${title.charAt(0).toLowerCase()}${title.slice(1)} in ${repository}`;
+    case 'unreadable':
+      return `Couldn't read it from ${repository}`;
+    case 'unknownServer':
+      return `In ${repository} on ${unread.server}, not a server you use`;
+    default:
+      return `In ${repository}`;
+  }
 }
 
 /** A person's card: their name as shown, then as `cm` knows them, unless it reads the same ("Ana" over "ana"). */

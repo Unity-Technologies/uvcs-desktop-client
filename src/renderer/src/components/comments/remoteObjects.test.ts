@@ -2,10 +2,12 @@ import '../../testing/fakeWindow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { focusManager, QueryClient, QueryObserver } from '@tanstack/react-query';
 import { findReferences } from '../../lib/comments/commentReferences';
+import { serversQuery } from '../../app/workspace/workspaceQueries';
 import {
   MAX_RESOLVED_PER_COMMENT,
   referencesOfBlocks,
   referencesToResolve,
+  knownServersQuery,
   remoteObjectOf,
   remoteObjectQuery,
   serverReads,
@@ -175,5 +177,11 @@ describe('remoteObjectQuery, as the window comes back', () => {
       focusManager.setFocused(undefined);
       vi.useRealTimers();
     }
+  });
+});
+
+describe('knownServersQuery', () => {
+  it('reads the user’s servers under the key Settings and the links read them by: one cache entry for all', () => {
+    expect(knownServersQuery.queryKey).toEqual(serversQuery.queryKey);
   });
 });

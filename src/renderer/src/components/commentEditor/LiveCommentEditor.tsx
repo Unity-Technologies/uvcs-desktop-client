@@ -24,7 +24,7 @@ import { hasFocus, noteFocus } from './liveDecorations';
 import type { Box } from './popupPosition';
 import { SelectionBar } from './SelectionBar';
 import { formatsOf } from './formatActions';
-import { pressHidesBar, selectionBarShows } from './selectionBarState';
+import { pressHidesBar, pressPlacesCaret, selectionBarShows } from './selectionBarState';
 import { optionId, SuggestionList } from './SuggestionList';
 import { isDismissed, isPickable, suggestionKeyAction } from './suggestionRows';
 import { pickSuggestion, suggestionsShownAt, type SuggestionQuery } from './suggestionTrigger';
@@ -266,8 +266,9 @@ function useFocusMode(view: EditorView | null, state: EditorState | null, host: 
  * is, as on the text: the editor is only as tall as its text, and the rest of a tall box was dead to the pointer.
  */
 function caretAtPress(view: EditorView, event: React.MouseEvent): void {
-  if (event.button !== 0 || view.contentDOM.contains(event.target as Node) || !view.dom.parentElement?.contains(event.target as Node)) return;
-  if ((event.target as Element).closest('button, [role="toolbar"], a')) return;
+  const target = event.target as Element;
+  const press = { button: event.button, onText: view.contentDOM.contains(target), inBox: view.dom.parentElement?.contains(target) ?? false, onControl: target.closest('button, [role="toolbar"], a') !== null };
+  if (!pressPlacesCaret(press)) return;
   event.preventDefault();
   focusAt(view, view.posAtCoords({ x: event.clientX, y: event.clientY }, false));
 }

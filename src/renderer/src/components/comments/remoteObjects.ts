@@ -23,11 +23,10 @@ export const UNREADABLE_RETRY_MS = 5 * 60_000;
 /**
  * An object of another repository than the place's that one command reads (`cm find … on repository`): a
  * changeset or a label. A branch takes two (its hidden ones apart), a shelve has no read of its own, and a code
- * review reads its target's name too: they keep what their chip shows. `onPlaceServer`: the repository is on the
- * place's own server, which a comment may read as it shows; another server is read only as its chip's card opens,
- * so a comment can't make the app contact a server by being read.
+ * review reads its target's name too: they keep what their chip shows. `server`: where it is; `onPlaceServer`: the
+ * place's own, which a comment may read as it shows (`serverReads`).
  */
-export type RemoteObject = { repository: string; onPlaceServer: boolean } & ({ kind: 'changeset'; id: number } | { kind: 'label'; name: string });
+export type RemoteObject = { repository: string; server: string; onPlaceServer: boolean } & ({ kind: 'changeset'; id: number } | { kind: 'label'; name: string });
 
 /**
  * What reading a remote object gave: its fields for the chip and its card; an answer that the repository has none
@@ -48,9 +47,25 @@ export function remoteObjectOf(reference: CommentReference, placeRepository: str
   const object = chip.target.object;
   if (UNQUOTABLE.test(repository) || (object?.kind === 'label' && UNQUOTABLE.test(object.name))) return null;
   const onPlaceServer = sameServer(serverOf(repository), serverOf(placeRepository));
-  if (object?.kind === 'changeset') return { repository, onPlaceServer, kind: 'changeset', id: object.id };
-  if (object?.kind === 'label') return { repository, onPlaceServer, kind: 'label', name: object.name };
+  const server = serverOf(repository);
+  if (object?.kind === 'changeset') return { repository, server, onPlaceServer, kind: 'changeset', id: object.id };
+  if (object?.kind === 'label') return { repository, server, onPlaceServer, kind: 'label', name: object.name };
   return null;
+}
+
+/**
+ * When a remote object may be read: its place's own server as a comment shows (`onShow`); another server the user
+ * already works with (a profile of theirs, Settings › Accounts, `serversQuery`) only as its chip's card opens
+ * (`onCard`); any other server never. For a server with no profile `cm` doesn't fail: it signs in there with the
+ * user's own credentials (a password, or a sign-in token), and a comment can name any server: pointing at a chip is no
+ * consent to sign in to a stranger's. `*@cloud`: the user signs in to every Unity Cloud organization alike, which all
+ * reach Unity's servers. `unknownYet` while the user's servers aren't read.
+ */
+export function serverReads(object: RemoteObject, knownServers: readonly string[] | undefined): 'onShow' | 'onCard' | 'never' | 'unknownYet' {
+  if (object.onPlaceServer) return 'onShow';
+  if (!knownServers) return 'unknownYet';
+  const everyCloudOrganization = knownServers.includes('*@cloud') && /@cloud$/i.test(object.server);
+  return everyCloudOrganization || knownServers.some((known) => sameServer(known, object.server)) ? 'onCard' : 'never';
 }
 
 /** A repository spec's server, as `cm` names it after the repository's name: `acme@unity` for `game@acme@unity`. */
@@ -110,9 +125,22 @@ export function remoteObjectQuery(object: RemoteObject, read: (object: RemoteObj
     enabled,
     staleTime: (query: { state: { data?: RemoteRead } }) => (query.state.data && 'unreadable' in query.state.data ? UNREADABLE_RETRY_MS : Infinity),
     gcTime: Infinity,
+    // Read on a gesture only (a comment shown, a card opened): coming back to the window, or online, asks nothing.
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     meta: IMMUTABLE_QUERY,
   };
 }
+
+/**
+ * The user's servers (`serversQuery`'s, Settings › Accounts: a local `cm profile list`), under its key, so both read
+ * one cache entry. Apart from it so a chip draws without the API client, which loads on the first read.
+ */
+export const knownServersQuery = {
+  queryKey: queryKeys.profiles,
+  queryFn: async () => (await import('../../api/client')).api.repositories.servers(),
+  staleTime: Infinity,
+};
 
 async function readRemoteObject(object: RemoteObject): Promise<RemoteRead> {
   // Loaded on the first read: a chip draws without the API client.

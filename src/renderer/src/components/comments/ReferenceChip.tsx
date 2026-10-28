@@ -91,13 +91,13 @@ function ObjectChip({ reference, placeRepository, cachedAs, source, compact, int
   );
   if (!interactive) {
     return (
-      <ChipHoverCard card={card} onOpen={remote.wanted}>
+      <ChipHoverCard card={card} onOpenChange={remote.cardOpen}>
         <span {...shown}>{content}</span>
       </ChipHoverCard>
     );
   }
   return (
-    <ChipHoverCard card={card} onOpen={remote.wanted}>
+    <ChipHoverCard card={card} onOpenChange={remote.cardOpen}>
       {/* In a row or a title the row's keys reach the object; only a full comment's chips are tab stops. */}
       <a href="#" {...shown} aria-label={chipName(title, compact ? undefined : summary || undefined)} tabIndex={compact ? -1 : undefined} onClick={open} onMouseDown={(event) => event.stopPropagation()}>
         {content}
