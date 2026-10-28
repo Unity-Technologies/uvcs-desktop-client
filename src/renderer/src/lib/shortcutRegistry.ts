@@ -18,6 +18,7 @@ export const SHORTCUT_AREAS = [
   'Changes',
   'Diff',
   'Text',
+  'Comments',
   'Branch Explorer',
   'Files',
   'History',
@@ -113,6 +114,19 @@ export const SHORTCUTS = {
   textReplace: { area: 'Text', label: 'Find and replace in the text being typed', keys: ['mod+alt+f'], keysOffMac: ['mod+h'] },
   // ⌃G on macOS, as in other editors there: ⌘G is Find next.
   goToLine: { area: 'Text', label: 'Go to line', keys: ['ctrl+g'], keysOffMac: ['mod+g'] },
+
+  // A comment being written (`components/commentEditor`): Slack's keys, which take the comment's own text before the
+  // window's (⌘B, ⌘K, ⌘E and ⇧⌘C do something else outside a comment). Off macOS the code block takes Ctrl+Shift+E,
+  // as Ctrl+Alt is AltGr there.
+  commentBold: { area: 'Comments', label: 'Bold', keys: ['mod+b'] },
+  commentItalic: { area: 'Comments', label: 'Italic', keys: ['mod+i'] },
+  commentStrikethrough: { area: 'Comments', label: 'Strikethrough', keys: ['mod+shift+x'] },
+  commentCode: { area: 'Comments', label: 'Code', keys: ['mod+e'] },
+  commentLink: { area: 'Comments', label: 'Link', keys: ['mod+k'] },
+  commentList: { area: 'Comments', label: 'List', keys: ['mod+shift+8'] },
+  commentQuote: { area: 'Comments', label: 'Quote', keys: ['mod+shift+9'] },
+  commentCodeBlock: { area: 'Comments', label: 'Code block', keys: ['mod+alt+shift+c'], keysOffMac: ['mod+shift+e'] },
+  commentPastePlain: { area: 'Comments', label: 'Paste without formatting', keys: ['mod+shift+v'] },
 
   graphFind: { area: 'Branch Explorer', label: 'Find in graph', keys: ['mod+f', '/'] },
   graphNextMatch: { area: 'Branch Explorer', label: 'Next match', keys: ['enter'] },
