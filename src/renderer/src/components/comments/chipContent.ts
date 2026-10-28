@@ -234,6 +234,12 @@ export function chipCard(chip: { title: string; repository?: string }, cached: C
   return comment ? { comment, title: chip.title, meta } : { title: chip.title, meta };
 }
 
+/** A person's card: their name as shown, then as `cm` knows them, unless it reads the same ("Ana" over "ana"). */
+export function personCard(name: string): ChipCard {
+  const title = displayName(name);
+  return { title, meta: title.toLowerCase() === name.toLowerCase() ? [] : [name] };
+}
+
 /** How an emoji is read aloud: its name in words (`white_check_mark` as "white check mark"). */
 export function emojiLabel(name: string): string {
   return name.replace(/_/g, ' ');

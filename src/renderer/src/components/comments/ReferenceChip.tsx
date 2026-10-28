@@ -4,7 +4,7 @@ import { displayName } from '../../lib/userName';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { Avatar } from '../../ui/Avatar';
 import { cachedRecordOf, cachedSummaryOf } from './cachedSummary';
-import { chipCard, chipContent, emojiLabel, type ChipContent } from './chipContent';
+import { chipCard, chipContent, emojiLabel, personCard, type ChipContent } from './chipContent';
 import { cardDate, ChipHoverCard } from './ChipHoverCard';
 import { CHIP_ICONS } from './chipIcons';
 import { useCachedObject } from './useCachedObject';
@@ -36,7 +36,7 @@ export const ReferenceChip = memo(function ReferenceChip({ reference, source, co
       );
     case 'user':
       return (
-        <ChipHoverCard card={{ title: displayName(chip.name), meta: [chip.name] }}>
+        <ChipHoverCard card={personCard(chip.name)}>
           <span className={styles.person} data-source={source} data-tip="">
             <Avatar user={chip.name} size={compact ? 14 : 16} tip={null} />
             {displayName(chip.name)}
