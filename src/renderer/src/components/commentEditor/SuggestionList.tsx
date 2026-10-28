@@ -93,6 +93,8 @@ function SearchAllRow({ text }: { text: string }) {
         <Search className={styles.icon} size={14} strokeWidth={2.25} aria-hidden />
       </span>
       <span className={styles.searchAll}>Search all changesets for “{text}”</span>
+      {/* As the palette's same row says it. */}
+      <span className={styles.detail}>May take a few seconds</span>
     </>
   );
 }
