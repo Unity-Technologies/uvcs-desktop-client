@@ -135,7 +135,9 @@ htmlFor>` can't focus, and the label names it, `fieldLabelAttributes`), the comm
   is a bullet, a task's `[ ]` a checkbox a click ticks (`toggleTask`), quotes and code blocks show as blocks, a code
   block's fences dimmed and its code colored by the comments' own highlighter (`codeColors`: Pierre's Shiki, as
   `CodeBlock`, the same size limit and line length: a block past `MAX_HIGHLIGHTED_COMMENT_CHARS` stays plain; only the
-  block being edited is tokenized again at a key). A key (`<kbd>Ctrl</kbd>`) is its keycap, its tags showing with the caret in it. A table the caret isn't in is drawn as a table (`tableModel`; a click on a cell puts the caret at its
+  block being edited is tokenized again at a key; while typing, the colors drawn move with the text, `mapMarks`, and
+stay until the block's new ones replace them in one step once typing pauses, `codeColorsAfter`, `colorArrival`: code
+never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its keycap, its tags showing with the caret in it. A table the caret isn't in is drawn as a table (`tableModel`; a click on a cell puts the caret at its
   end; ↓ or ↑ from the line next to it lands on its first or last line, where the editor, moving by what it shows,
   would step over it: `verticalMoveInto`, Shift extending the selection). Tables are the only block drawn in place
   of their source: rules and fences show as typed. An image is its chip. A field without the focus draws everything.
