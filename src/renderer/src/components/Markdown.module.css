@@ -50,8 +50,9 @@
 }
 
 .markdown pre {
-  /* A code block's code at the diffs' size (Pierre's 13px, `--text-md`), inline code a little smaller than its text. */
-  font-size: var(--text-md);
+  /* A code block's code at its text's size: the diffs' 13px in a comment, which reads at `--text-md`, and smaller with
+     the text where that is (the Branch Explorer's caption card, an annotation's card); inline code a little smaller. */
+  font-size: 1em;
   padding: var(--space-2) var(--space-3);
   overflow-x: auto;
   white-space: pre;

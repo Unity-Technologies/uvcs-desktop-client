@@ -170,7 +170,8 @@
   padding: 0 var(--space-3);
   background: var(--bg-code);
   font-family: var(--font-mono);
-  font-size: var(--text-md);
+  /* The field's size, as a shown comment's code block is (`Markdown.module.css`). */
+  font-size: 1em;
 }
 
 .editor :global(.cm-editor .cm-codeFirstLine) {
