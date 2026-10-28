@@ -14,6 +14,10 @@ describe('oneLine', () => {
     expect(written(run(insertNewlineAndIndent, editorState('Title‸', oneLine))!)).toBe('Title ‸');
   });
 
+  it('writes no second space for a line end typed after one', () => {
+    expect(written(insert(editorState('Title ‸', oneLine), '\n', 'input.type'))).toBe('Title ‸');
+  });
+
   it('turns the lines of a drop into one', () => {
     expect(written(insert(editorState('A ‸', oneLine), 'b\nc', 'input.drop'))).toBe('A b c‸');
   });
