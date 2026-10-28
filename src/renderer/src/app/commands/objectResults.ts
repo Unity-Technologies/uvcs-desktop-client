@@ -95,8 +95,16 @@ function workspaceFileMenu(workspacePath: string, entry: { path: string; isDirec
  */
 export type ObjectMatch = 'fuzzy' | 'words' | 'description';
 
-/** A match in a description ranks below the same match in a name: the name is what a branch or label is known by. */
+/**
+ * A match in a description ranks a tier below the same match in a name (the name is what a branch or label is known
+ * by): the words together in a description (0.8) tie with the words in a name's folders (0.7), and the name comes first.
+ */
 const DESCRIPTION_MATCH_PENALTY = 0.1;
+
+/** `quality` one tier lower, rounded to the tenths the tiers are: 0.8 − 0.1 would be a hair above a name's 0.7. */
+function tierBelow(quality: number): number {
+  return Math.round((quality - DESCRIPTION_MATCH_PENALTY) * 10) / 10;
+}
 
 type MatchShown = Pick<SearchResult, 'labelMatches' | 'detail' | 'detailMatches' | 'quality'>;
 
@@ -123,7 +131,7 @@ function descriptionMatchShown(name: string, description: string, term: string, 
     labelMatches: wordMatchPositions(name, term),
     detail: excerpt.text,
     detailMatches: excerpt.matches,
-    quality: wordMatchQuality(filterHaystack([name, description]), term) - DESCRIPTION_MATCH_PENALTY,
+    quality: tierBelow(wordMatchQuality(filterHaystack([name, description]), term)),
   };
 }
 
