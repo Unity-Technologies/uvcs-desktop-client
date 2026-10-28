@@ -67,7 +67,7 @@ function CreateBranchDialog({ place, origins, onFinish }: CreateBranchDialogProp
     setCreating(true);
     const created = await createBranchAndSwitch(
       place,
-      { name: fullName, startingPoint: origin.startingPoint, comment },
+      { name: fullName, startingPoint: origin.startingPoint, comment: comment.trim() },
       { requested: switchAfter, blockedByMerge, pendingChanges: action ?? undefined, workspaceOn: pending?.preflight.sourceName },
       () => onFinish(fullName),
     );

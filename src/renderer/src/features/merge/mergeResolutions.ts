@@ -19,5 +19,6 @@ export function collectResolutions({ plan, fileStates, directoryResolutions, com
     files[state.file.key] = state.resolution;
   }
 
-  return { directoryConflicts: directoryConflicts as DirectoryConflictResolution[], files, comment };
+  // Trimmed, as a check-in's comment is (`joinComment`): a picked suggestion leaves a space after it.
+  return { directoryConflicts: directoryConflicts as DirectoryConflictResolution[], files, comment: comment?.trim() };
 }
