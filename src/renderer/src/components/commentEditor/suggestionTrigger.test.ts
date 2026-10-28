@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { history, undo } from '@codemirror/commands';
-import { findClusterBreak } from '@codemirror/state';
+import { findClusterBreak, type EditorState } from '@codemirror/state';
 import { editorState, run, written } from './commentEditorTesting';
 import { typingAt } from './typingAt';
+import { justPicked } from './justPicked';
+import { liveMarksOf } from './liveMarks';
 import { pickSuggestion, suggestionQueryAt, suggestionsShownAt } from './suggestionTrigger';
 
 const queryAt = (written: string) => suggestionQueryAt(editorState(written));
@@ -90,5 +92,40 @@ describe('an emoji picked', () => {
   it('is one character to Backspace and to the caret, however many code points it holds', () => {
     const text = `Pride ${rainbowFlag}`;
     expect(findClusterBreak(text, text.length, false)).toBe('Pride '.length);
+  });
+});
+
+describe('a suggestion just picked', () => {
+  const picked = (text: string, insert: string) => {
+    const state = editorState(text, justPicked);
+    return state.update(pickSuggestion(state, suggestionQueryAt(state)!, insert)).state;
+  };
+  const references = (state: EditorState) => liveMarksOf(state, { revealsSelection: true }).flatMap((mark) => (mark.kind === 'reference' || mark.kind === 'typedReference' ? [mark.kind] : []));
+
+  it('stays drawn as a chip with the caret against it: at a line’s end before another line, and before a sentence’s punctuation', () => {
+    const atLineEnd = picked('Fixes cs:42‸\nNext line', 'cs:4207');
+    expect(written(atLineEnd)).toBe('Fixes cs:4207‸\nNext line');
+    expect(references(atLineEnd)).toEqual(['reference']);
+    const beforeStop = picked('See cs:42‸.', 'cs:4207');
+    expect(written(beforeStop)).toBe('See cs:4207‸.');
+    expect(references(beforeStop)).toEqual(['reference']);
+  });
+
+  it('stays drawn in mid-text, with its space', () => {
+    const inText = picked('Fixes cs:42‸ now', 'cs:4207');
+    expect(written(inText)).toBe('Fixes cs:4207 ‸now');
+    expect(references(inText)).toEqual(['reference']);
+  });
+
+  it('shows as typed once the caret moves into it, as any chip', () => {
+    const state = picked('Fixes cs:42‸\nNext line', 'cs:4207');
+    expect(references(state.update({ selection: { anchor: 'Fixes cs:420'.length } }).state)).toEqual(['typedReference']);
+  });
+
+  it('is forgotten at the next edit, which the grammar then reads as it reads any', () => {
+    const state = picked('Fixes cs:42‸\nNext line', 'cs:4207');
+    const typed = state.update({ changes: { from: 'Fixes cs:4207'.length, insert: '1' }, selection: { anchor: 'Fixes cs:42071'.length } }).state;
+    expect(typed.field(justPicked)).toBeNull();
+    expect(references(typed)).toEqual(['typedReference']);
   });
 });
