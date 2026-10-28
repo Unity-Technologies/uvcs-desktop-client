@@ -93,7 +93,7 @@ describe('Creating an xlink', () => {
     expect(await service.create(WORKSPACE, ENGINE, 'c', 'op-1')).toEqual({ kind: 'notCheckedIn', reason: 'Nothing was checked in' });
   });
 
-  it('says which shelve holds the changes put aside to load its files when they don’t come back on their own', async () => {
+  it('names the shelve the changes put aside to load its files wait in, when they don’t come back on their own', async () => {
     const workspacePath = join(await mkdtemp(join(tmpdir(), 'uvcs-xlink-create-')), 'wk');
     const workspace = playAlongWorkspace(workspacePath, { pending: { 'src/a.txt': 'CH' }, updateRefusesPendingChanges: true, fail: { shelveConflicts: 1 } });
     const { deps } = playAlongDependencies(workspace.cm, workspacePath);

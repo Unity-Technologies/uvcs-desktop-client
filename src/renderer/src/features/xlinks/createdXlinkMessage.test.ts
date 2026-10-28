@@ -20,7 +20,7 @@ describe('How creating an xlink ends', () => {
     expect(createdXlinkMessage('lib', { kind: 'notCheckedIn', reason: 'The server is unreachable' }, loadAgain)).toEqual({
       kind: 'info',
       title: 'Created xlink lib, not checked in',
-      detail: 'The server is unreachable. To see its files, check it in from Changes, then choose Load its files on it in Files.',
+      detail: 'The server is unreachable. To see its files, check it in from Changes, then open its folder in Files and choose Load its files on it.',
     });
   });
 
@@ -31,7 +31,7 @@ describe('How creating an xlink ends', () => {
     expect(ending).toMatchObject({
       kind: 'info',
       title: 'Created xlink lib',
-      detail: 'Checked in as changeset 3, but its files didn’t load: The server is unreachable. To try again, choose Load its files on it in Files.',
+      detail: 'Checked in as changeset 3, but its files didn’t load: The server is unreachable. To try again, open its folder in Files and choose Load its files on it.',
       action: { label: 'Load its files' },
     });
     ending.action!.run();

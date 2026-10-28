@@ -1,7 +1,8 @@
 import type { CreatedXlink, LoadedXlinkFiles } from '@shared/domain/xlinks';
 import type { OperationSuccess } from '../../app/operations/runOperation';
 
-const LOAD_LATER = 'choose Load its files on it in Files';
+// Files offers it once it has listed the xlink's empty folder (`unloadedXlinkOf`): opened, not only selected.
+const LOAD_LATER = 'open its folder in Files and choose Load its files on it';
 const CHANGES_WAITING = 'Your other changes didn’t come back on their own: Changes offers them back.';
 
 /**
