@@ -6,7 +6,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { usePlace } from '../../app/workspace/useWorkspace';
 import { ChangesetSummary } from '../changesets/ChangesetSummary';
 import { useChangeset } from '../changesets/useChangeset';
-import { cachedShelve } from '../shelves/cachedShelve';
+import { useCachedShelve } from '../shelves/cachedShelve';
 import { ShelveSummary } from '../shelves/ShelveSummary';
 import { DiffBrowser } from './DiffBrowser';
 import { DiffBrowserLayout } from './DiffBrowserLayout';
@@ -78,7 +78,7 @@ function TargetDescription({ target, sideNames }: { target: DiffTarget; sideName
 }
 
 function ShelveDescription({ shelveId }: { shelveId: number }) {
-  const shelve = cachedShelve(usePlace(), shelveId);
+  const shelve = useCachedShelve(usePlace(), shelveId);
   return shelve ? <ShelveSummary shelve={shelve} /> : <div className={styles.title}>Shelve {shelveId}</div>;
 }
 

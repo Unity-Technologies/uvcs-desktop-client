@@ -10,7 +10,7 @@ const request: CreateWorkspaceRequest = { name: 'game', path: '/Users/me/wkspace
 const created = { name: 'game', path: request.path, guid: 'g' };
 
 /** What an update changes: the workspace and what it has loaded, never the labels, shelves, attributes, reviews or left changes. */
-const REFRESHED_BY_UPDATE: WorkspaceArea[] = ['annotate', 'branchExplorer', 'branches', 'changesets', 'explorer', 'history', 'incoming', 'info', 'locks', 'pendingChanges', 'review'];
+const REFRESHED_BY_UPDATE: WorkspaceArea[] = ['annotate', 'branchExplorer', 'branches', 'changesets', 'explorer', 'history', 'incoming', 'info', 'locks', 'pendingChanges', 'review', 'workingObjectComment'];
 
 describe('createWorkspaceAndUpdate', () => {
   it('creates the workspace, opens it, then updates it to the latest files with the Update progress card', async () => {

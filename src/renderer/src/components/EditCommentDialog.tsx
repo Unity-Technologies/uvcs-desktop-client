@@ -1,27 +1,30 @@
 import { useState } from 'react';
-import { Button } from '../../ui/Button';
-import { Dialog } from '../../ui/dialog/Dialog';
-import { askDialog } from '../../ui/dialog/dialogStore';
-import { TextArea } from '../../ui/TextField';
+import { Button } from '../ui/Button';
+import { Dialog } from '../ui/dialog/Dialog';
+import { askDialog } from '../ui/dialog/dialogStore';
+import { TextArea } from '../ui/TextField';
 
-/** Asks for a new (possibly multi-line) changeset comment. Resolves to `undefined` if cancelled. */
-export function askForChangesetComment(changesetId: number, currentComment: string): Promise<string | undefined> {
-  return askDialog<string>((finish) => <EditCommentDialog changesetId={changesetId} currentComment={currentComment} finish={finish} />);
+/**
+ * Asks for a new (possibly multi-line) comment of an object, named as its title reads it (`changeset 12`, `shelve 3`).
+ * Resolves to `undefined` if cancelled.
+ */
+export function askForComment(objectName: string, currentComment: string): Promise<string | undefined> {
+  return askDialog<string>((finish) => <EditCommentDialog objectName={objectName} currentComment={currentComment} finish={finish} />);
 }
 
 interface EditCommentDialogProps {
-  changesetId: number;
+  objectName: string;
   currentComment: string;
   finish: (comment: string | undefined) => void;
 }
 
-function EditCommentDialog({ changesetId, currentComment, finish }: EditCommentDialogProps) {
+function EditCommentDialog({ objectName, currentComment, finish }: EditCommentDialogProps) {
   const [comment, setComment] = useState(currentComment);
   const unchanged = comment.trim() === currentComment.trim();
 
   return (
     <Dialog
-      title={`Edit comment of changeset ${changesetId}`}
+      title={`Edit comment of ${objectName}`}
       width={560}
       onClose={() => finish(undefined)}
       onSubmit={() => !unchanged && finish(comment.trim())}

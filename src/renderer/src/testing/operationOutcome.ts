@@ -33,6 +33,7 @@ const WORKSPACE_AREAS = [
   'pendingChanges',
   'review',
   'shelves',
+  'workingObjectComment',
 ] as const;
 
 export type WorkspaceArea = (typeof WORKSPACE_AREAS)[number];
