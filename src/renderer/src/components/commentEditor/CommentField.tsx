@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useImperativeHandle, useRef, type KeyboardEvent } from 'react';
+import { Suspense, useEffect, useImperativeHandle, useRef, useState, type KeyboardEvent } from 'react';
 import { classNames } from '../../lib/classNames';
 import { lazyComponent } from '../../lib/lazyComponent';
 import { isModPressed } from '../../lib/shortcuts';
@@ -6,11 +6,21 @@ import { enterAction, modEnterAction } from './fieldKeys';
 import type { CommentFieldProps } from './commentFieldProps';
 import styles from './CommentField.module.css';
 
-/** The editor and CodeMirror load apart from the app's start (ARCHITECTURE.md "One layout from the first frame"). */
-const loadEditor = () => import('./LiveCommentEditor').then((module) => module.LiveCommentEditor);
-const LiveCommentEditor = lazyComponent(loadEditor);
+type LiveEditor = typeof import('./LiveCommentEditor').LiveCommentEditor;
 
-/** Starts loading the editor before a field needs it: at idle after start-up, and as the first field mounts. */
+/** The editor once its code is in: a field then renders it at once, as a lazy component suspends on its first render. */
+let loadedEditor: LiveEditor | null = null;
+let loading: Promise<LiveEditor> | null = null;
+
+/** The editor and CodeMirror load apart from the app's start (ARCHITECTURE.md "One layout from the first frame"). */
+function loadEditor(): Promise<LiveEditor> {
+  loading ??= import('./LiveCommentEditor').then((module) => (loadedEditor = module.LiveCommentEditor));
+  return loading;
+}
+
+const LazyCommentEditor = lazyComponent(loadEditor);
+
+/** Starts loading the editor before a field needs it: at idle after start-up (`main.tsx`), and as a field mounts. */
 export function preloadCommentEditor(): void {
   void loadEditor();
 }
@@ -22,10 +32,13 @@ export function preloadCommentEditor(): void {
  */
 export function CommentField(props: CommentFieldProps) {
   const fallbackFocus = useRef<{ at: number } | null>(null);
+  // Chosen once per field: a field that showed the lazy one keeps it, never mounting its editor again as the code lands.
+  const [LiveCommentEditor] = useState(() => loadedEditor);
   useEffect(preloadCommentEditor, []);
+  if (LiveCommentEditor) return <LiveCommentEditor {...props} initialFocus={fallbackFocus} />;
   return (
     <Suspense fallback={<PlainCommentField {...props} focusRef={fallbackFocus} />}>
-      <LiveCommentEditor {...props} initialFocus={fallbackFocus} />
+      <LazyCommentEditor {...props} initialFocus={fallbackFocus} />
     </Suspense>
   );
 }
