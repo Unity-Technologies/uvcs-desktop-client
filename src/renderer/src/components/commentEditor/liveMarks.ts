@@ -42,9 +42,6 @@ const NO_REFERENCES = new Set(['InlineCode', 'FencedCode', 'CodeBlock', 'URL', '
 /** A bare address the Markdown reader links: a web page's, where `?branch=br:/main` stays in the address. */
 const WEB_ADDRESS = /^(?:[a-z][a-z0-9+.-]*:\/\/|www\.)/i;
 
-/** A task's line: `- [ ]` or `* [x]`, indented or not. */
-const TASK_LINE = /^\s*[-*+]\s+\[[ xX]\]/;
-
 /**
  * The marks over `[from, to]` of the text (the editor's visible ranges; the whole text by default), in order. A table
  * the selection isn't in is left alone here: `tableModel` draws it whole.
@@ -89,7 +86,7 @@ function markNode(state: EditorState, node: SyntaxNodeRef, reveals: (from: numbe
       markTask(state, node, reveals, marks);
       return;
     case 'ListMark':
-      if (parent?.parent?.name === 'BulletList') markBullet(state, node, reveals, marks);
+      if (parent?.parent?.name === 'BulletList') markBullet(node, reveals, marks);
       return;
     case 'HeaderMark':
       // An underlined heading's `===` stays: only `#`s are a heading's mark before its text.
@@ -135,16 +132,15 @@ function markImage(state: EditorState, image: SyntaxNode, reveals: (from: number
 /** The box replaces the list's `- ` too, the box being the item's bullet, unless the caret is at the `- `. */
 function markTask(state: EditorState, marker: SyntaxNodeRef, reveals: (from: number, to: number) => boolean, marks: LiveMark[]): void {
   if (reveals(marker.from, marker.to)) return;
-  const line = state.doc.lineAt(marker.from);
-  const bullet = /^\s*[-*+]\s/.exec(line.text);
-  const bulletFrom = bullet ? line.from + bullet[0].length - 2 : marker.from;
+  // The item's own `-`, wherever its line starts (`> - [ ]` in a quote).
+  const bulletFrom = marker.node.parent?.parent?.getChild('ListMark')?.from ?? marker.from;
   const from = reveals(bulletFrom, marker.from) ? marker.from : bulletFrom;
   marks.push({ kind: 'task', from, to: marker.to, checked: /x/i.test(state.sliceDoc(marker.from, marker.to)), box: marker.from });
 }
 
 /** `- ` draws as a bullet, but not on a task's line, whose box is its bullet. */
-function markBullet(state: EditorState, mark: SyntaxNodeRef, reveals: (from: number, to: number) => boolean, marks: LiveMark[]): void {
-  if (TASK_LINE.test(state.doc.lineAt(mark.from).text) || reveals(mark.from, mark.to + 1)) return;
+function markBullet(mark: SyntaxNodeRef, reveals: (from: number, to: number) => boolean, marks: LiveMark[]): void {
+  if (mark.node.parent?.getChild('Task') || reveals(mark.from, mark.to + 1)) return;
   marks.push({ kind: 'bullet', from: mark.from, to: mark.to });
 }
 
