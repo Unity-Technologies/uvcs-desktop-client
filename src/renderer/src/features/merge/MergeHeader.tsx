@@ -11,6 +11,7 @@ import { Button } from '../../ui/Button';
 import { Kbd } from '../../ui/Kbd';
 import { useKnownIncomingSummary } from '../incoming/useKnownIncomingSummary';
 import { MergeContributors } from './MergeContributors';
+import { usePageShown } from '../../app/navigation/pageShown';
 import { mergeTitle, type MergeLabels } from './mergeDescription';
 import { MergeHeading } from './MergeHeading';
 import styles from './MergeHeader.module.css';
@@ -59,7 +60,8 @@ export function MergeHeader({
   alternative,
   mergeButtonRef,
 }: MergeHeaderProps) {
-  useShortcut(hotkey('merge'), onMerge, canMerge);
+  const shown = usePageShown();
+  useShortcut(hotkey('merge'), onMerge, canMerge && shown);
   // Stable while the request is, so the title is fitted again only when it changes or its room does.
   const title = useMemo(() => mergeTitle(request, labels.destination), [request, labels.destination]);
 
