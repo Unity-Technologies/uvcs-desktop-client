@@ -236,3 +236,29 @@ describe('parseMarkdown of a comment, what Markdown reads around a reference', (
     expect(parseInline('Icons \uE0007\uE001 here', { comment: true })).toEqual([{ kind: 'text', text: 'Icons \uE0007\uE001 here' }]);
   });
 });
+
+describe('keys in a comment', () => {
+  it('reads <kbd> as a key, as GitHub does, and leaves any other HTML as text', () => {
+    expect(parseInline('Press <kbd>Ctrl</kbd>+<kbd>F</kbd> or <KBD>⌘F</KBD>, not <b>this</b>')).toEqual([
+      { kind: 'text', text: 'Press ' },
+      { kind: 'key', text: 'Ctrl' },
+      { kind: 'text', text: '+' },
+      { kind: 'key', text: 'F' },
+      { kind: 'text', text: ' or ' },
+      { kind: 'key', text: '⌘F' },
+      { kind: 'text', text: ', not <b>this</b>' },
+    ]);
+  });
+
+  it('keeps a key written as text inside it, a reference included, and an unclosed <kbd> as text', () => {
+    expect(parseInline('<kbd>cs:12</kbd> and <kbd>Esc', { comment: true })).toEqual([
+      { kind: 'key', text: 'cs:12' },
+      { kind: 'text', text: ' and <kbd>Esc' },
+    ]);
+  });
+
+  it('writes a key as its text', () => {
+    expect(plainText(parseInline('<kbd>Ctrl</kbd>+<kbd>F</kbd>'))).toBe('Ctrl+F');
+  });
+});
+
