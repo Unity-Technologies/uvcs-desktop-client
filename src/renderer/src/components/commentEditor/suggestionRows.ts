@@ -98,10 +98,12 @@ export interface KeyModifiers {
 
 /**
  * The list's keys, taken before the field's: up and down move through what can be picked (with nothing to pick, the
- * caret moves), Enter or Tab picks the row the keys are at (only with no modifier: Cmd+Enter is the field's), Esc
- * closes the list.
+ * caret moves), Enter or Tab picks (only with no modifier: Cmd+Enter is the field's), Esc closes the list. Enter
+ * picks the highlighted suggestion, or a row the user `moved` to by a key or the pointer; an action ("Search all
+ * changesets") the list only starts at is never run by it, so Enter after a reference no suggestion matches, such as
+ * another repository's, is a line end.
  */
-export function suggestionKeyAction(key: string, modifiers: KeyModifiers, rows: readonly SuggestionRow[], active: number): SuggestionKeyAction | null {
+export function suggestionKeyAction(key: string, modifiers: KeyModifiers, rows: readonly SuggestionRow[], active: number, moved: boolean): SuggestionKeyAction | null {
   const plain = !modifiers.metaKey && !modifiers.ctrlKey && !modifiers.altKey && !modifiers.shiftKey;
   switch (key) {
     case 'ArrowDown':
@@ -112,10 +114,15 @@ export function suggestionKeyAction(key: string, modifiers: KeyModifiers, rows: 
     }
     case 'Enter':
     case 'Tab':
-      return plain && rows[active] && isPickable(rows[active]) ? { kind: 'pick', index: active } : null;
+      return plain && rows[active] && picksWithEnter(rows[active], moved) ? { kind: 'pick', index: active } : null;
     case 'Escape':
       return { kind: 'dismiss' };
     default:
       return null;
   }
+}
+
+/** A suggestion is what the word typed asks for; any other row is picked only by the user's choice. */
+function picksWithEnter(row: SuggestionRow, moved: boolean): boolean {
+  return row.kind === 'pick' || (moved && isPickable(row));
 }

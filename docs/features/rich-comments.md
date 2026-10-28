@@ -303,7 +303,9 @@ Typing `cs:`, `br:`, `lb:`, `sh:`, `cr:` or `@`, or `:` and two letters of an em
 start, a bracket or an emphasis mark (`suggestionQueryAt`), opens a list under the word while it's typed
 (`suggestionsShownAt`), so a field opened with its caret after a reference opens none. The list is a listbox the
 field's `aria-activedescendant` walks: ↑↓ move, Enter or Tab picks, Esc closes it until another word is typed
-(`suggestionKeyAction`); with nothing to pick, the arrows move the caret. A colon in a sentence (`10:30`, `Note:`)
+(`suggestionKeyAction`); with nothing to pick, the arrows move the caret. Enter picks the highlighted suggestion,
+or a row the user moved to; it never runs "Search all changesets" the list merely starts at, so Enter after a
+reference nothing matches (another repository's) is a line end. A colon in a sentence (`10:30`, `Note:`)
 opens nothing. A pick writes the reference as `cm` takes it and a space (`pickSuggestion`), no space before a line's end or a
 sentence's punctuation, where the reference stays drawn as its chip though the caret is against it, until the next
 edit or caret move (`justPicked`); a branch or label whose

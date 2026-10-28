@@ -320,10 +320,19 @@ function useSuggestions(view: EditorView | null, state: EditorState | null) {
   }, [view, cueKey]);
   const shown = open !== null && rows.length > 0;
   const [active, setActive] = useState(0);
+  // Whether the user chose the row the keys are at (an arrow, the pointer): only then does Enter run an action row.
+  const [moved, setMoved] = useState(false);
+  const moveTo = (index: number): void => {
+    setActive(index);
+    setMoved(true);
+  };
   const firstPickable = Math.max(0, rows.findIndex(isPickable));
   // A new list (the word typed, the search's answer) starts at its first row.
   const listKey = open ? `${open.kind}:${open.from}:${rows.map((row) => (row.kind === 'pick' ? row.suggestion.key : row.kind)).join()}` : '';
-  useEffect(() => setActive(firstPickable), [listKey]);
+  useEffect(() => {
+    setActive(firstPickable);
+    setMoved(false);
+  }, [listKey]);
 
   const pick = (index: number): void => {
     const row = rows[index];
@@ -337,9 +346,9 @@ function useSuggestions(view: EditorView | null, state: EditorState | null) {
     if (!shown || !view) return;
     const onKeyDown = (event: KeyboardEvent): void => {
       if (!view.dom.contains(event.target as Node) || event.isComposing) return;
-      const action = suggestionKeyAction(event.key, event, rows, active);
+      const action = suggestionKeyAction(event.key, event, rows, active, moved);
       if (!action) return;
-      if (action.kind === 'move') setActive(action.to);
+      if (action.kind === 'move') moveTo(action.to);
       else if (action.kind === 'pick') pick(action.index);
       else setDismissedAt(open!.from);
       event.preventDefault();
@@ -364,7 +373,7 @@ function useSuggestions(view: EditorView | null, state: EditorState | null) {
   }, [view, shown, active, listId, activeOption]);
 
   const anchor = shown && view ? boxAt(view, open!.from, open!.from) : null;
-  const list = anchor ? <SuggestionList id={listId} rows={rows} active={active} anchor={anchor} onPick={pick} onHover={setActive} /> : null;
+  const list = anchor ? <SuggestionList id={listId} rows={rows} active={active} anchor={anchor} onPick={pick} onHover={moveTo} /> : null;
   return { shown, list };
 }
 
