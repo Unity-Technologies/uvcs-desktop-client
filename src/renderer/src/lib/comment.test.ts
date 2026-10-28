@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { editedComment, joinComment, shownComment, splitComment, storedComment, withSummaryText } from './comment';
+import { editedComment, editingParts, joinComment, shownComment, splitComment, storedComment, withSummaryText } from './comment';
 
 describe('splitComment', () => {
   it('reads the first line as the summary and the rest as the description', () => {
@@ -115,5 +115,33 @@ describe('storedComment', () => {
 
   it("keeps the first line's indent: a comment opening with an indented code block stays one", () => {
     expect(storedComment('    let a = 1;\n    let b = 2;\n')).toBe('    let a = 1;\n    let b = 2;');
+  });
+});
+
+describe('editingParts', () => {
+  it('opens a comment with a title as its title and the rest, as the check-in writes them', () => {
+    expect(editingParts('Fix the switch\n\nKeeps the changes')).toEqual({ summary: 'Fix the switch', description: 'Keeps the changes' });
+    expect(editingParts('Fix the switch\nKeeps the changes')).toEqual({ summary: 'Fix the switch', description: 'Keeps the changes' });
+    expect(editingParts('Arreglo del cambio ñandú 🎉')).toEqual({ summary: 'Arreglo del cambio ñandú 🎉', description: '' });
+  });
+
+  it('opens a comment that starts with a list, a table or code, or an empty one, whole in the description: nothing moves', () => {
+    for (const comment of ['- one\n- two', '| a | b |\n| - | - |\n| 1 | 2 |', '```\nlet a\n```\nAfter', '']) {
+      expect(editingParts(comment)).toEqual({ summary: '', description: comment });
+    }
+  });
+
+  it('saves nothing when nothing was edited, whatever the comment’s shape: line ends, spaces, CRLF', () => {
+    for (const comment of ['Fix\n\nBody', 'Fix\nBody', 'One line', '- one\n- two', '| a |\n| - |', '```\nx\n```', 'Fix\r\n\r\nBody  ', '  Padded title  \nBody', 'Título ñ\n\nCuerpo', '']) {
+      const opened = editingParts(comment);
+      expect(editedComment(comment, opened, opened)).toBe(comment);
+    }
+  });
+
+  it('keeps the other part and the separator the comment had when one part is edited', () => {
+    const comment = 'Fix\nBody';
+    expect(editedComment(comment, editingParts(comment), { summary: 'Fix', description: 'Body, edited' })).toBe('Fix\nBody, edited');
+    const list = '- one\n- two';
+    expect(editedComment(list, editingParts(list), { summary: 'Title', description: list })).toBe('Title\n\n- one\n- two');
   });
 });
