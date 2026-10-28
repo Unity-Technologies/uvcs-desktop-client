@@ -29,8 +29,9 @@ import { groupedMenu, withEntries } from '../../lib/menuGroups';
 import { openOnDiskEntries } from '../../components/externalApps/openWithMenu';
 import { menuAction } from '../../components/menuWords';
 import { fuzzyMatchPositions, fuzzyMatchQuality } from '../../lib/fuzzyIndex';
-import { wordMatchQuality } from '../../lib/matchesAllWords';
-import { commentLineText } from '../../lib/comments/commentText';
+import { filterHaystack, wordMatchQuality } from '../../lib/matchesAllWords';
+import { commentLineText, commentText } from '../../lib/comments/commentText';
+import { excerptAroundMatch } from '../../lib/matchExcerpt';
 import { wordMatchPositions, wordMatchRanges } from '../../lib/textMatchRanges';
 import { displayName } from '../../lib/userName';
 import { navigation } from '../navigation/navigationStore';
@@ -88,42 +89,63 @@ function workspaceFileMenu(workspacePath: string, entry: { path: string; isDirec
 }
 
 /**
- * How a name was found: ranked by the fuzzy index, or, for what a server search brought, by the words typed; its
- * highlight marks the same letters.
+ * How an object was found: its name ranked by the fuzzy index, or, for what a server search brought, by the words
+ * typed; or by the words typed in its name and description (`createWordFilterIndex`). Its highlight marks the same
+ * letters.
  */
-export type NameMatch = 'fuzzy' | 'words';
+export type ObjectMatch = 'fuzzy' | 'words' | 'description';
 
-function namePositions(name: string, term: string, match: NameMatch): number[] {
-  return match === 'fuzzy' ? fuzzyMatchPositions(name, term) : wordMatchPositions(name, term);
+/** A match in a description ranks below the same match in a name: the name is what a branch or label is known by. */
+const DESCRIPTION_MATCH_PENALTY = 0.1;
+
+type MatchShown = Pick<SearchResult, 'labelMatches' | 'detail' | 'detailMatches' | 'quality'>;
+
+/** How a named object's row shows the way it was found; `detail` is what it shows when found by its name. */
+function matchShown(name: string, description: string, detail: string, term: string, match: ObjectMatch): MatchShown {
+  if (match === 'description') return descriptionMatchShown(name, description, term);
+  return {
+    labelMatches: match === 'fuzzy' ? fuzzyMatchPositions(name, term) : wordMatchPositions(name, term),
+    quality: term ? fuzzyMatchQuality(name, term) : undefined,
+    detail,
+    detailMatches: [],
+  };
 }
 
-export function branchResult(branch: Branch, context: ResultContext, match: NameMatch = 'fuzzy'): SearchResult {
+/**
+ * Found by its description: the description takes the detail's place, cut to keep the match in view, so the row shows
+ * why it matched; the words typed are marked there and in the name.
+ */
+function descriptionMatchShown(name: string, description: string, term: string): MatchShown {
+  const excerpt = excerptAroundMatch(commentText(description), term);
+  return {
+    labelMatches: wordMatchPositions(name, term),
+    detail: excerpt.text,
+    detailMatches: excerpt.matches,
+    quality: wordMatchQuality(filterHaystack([name, description]), term) - DESCRIPTION_MATCH_PENALTY,
+  };
+}
+
+export function branchResult(branch: Branch, context: ResultContext, match: ObjectMatch = 'fuzzy'): SearchResult {
   const { term, currentBranch } = context;
   return {
     id: `branch:${branch.id}`,
     icon: GitBranch,
     label: branch.name,
     labelIsBranch: true,
-    labelMatches: namePositions(branch.name, term, match),
-    quality: term ? fuzzyMatchQuality(branch.name, term) : undefined,
-    detail: `${displayName(branch.owner)} · ${formatRelativeDate(branch.date)}`,
-    detailMatches: [],
+    ...matchShown(branch.name, branch.comment, `${displayName(branch.owner)} · ${formatRelativeDate(branch.date)}`, term, match),
     isCurrent: branch.name === currentBranch,
     menu: () => branchMenu(context.place, [branch], currentBranch),
     run: () => diffBranch(branch),
   };
 }
 
-export function labelResult(label: Label, context: ResultContext, match: NameMatch = 'fuzzy'): SearchResult {
+export function labelResult(label: Label, context: ResultContext, match: ObjectMatch = 'fuzzy'): SearchResult {
   const { term } = context;
   return {
     id: `label:${label.id}`,
     icon: Tag,
     label: label.name,
-    labelMatches: namePositions(label.name, term, match),
-    quality: term ? fuzzyMatchQuality(label.name, term) : undefined,
-    detail: `cs:${label.changeset} · ${formatRelativeDate(label.date)}`,
-    detailMatches: [],
+    ...matchShown(label.name, label.comment, `cs:${label.changeset} · ${formatRelativeDate(label.date)}`, term, match),
     menu: () => labelMenu(context.place, [label]),
     run: () => showLabelChanges(label),
   };
