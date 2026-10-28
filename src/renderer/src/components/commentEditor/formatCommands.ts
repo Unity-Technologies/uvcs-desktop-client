@@ -1,6 +1,7 @@
 import { EditorSelection, type ChangeSpec, type EditorState, type SelectionRange, type StateCommand, type TransactionSpec } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
 import type { SyntaxNode } from '@lezer/common';
+import { ownStep } from './ownStep';
 
 /**
  * Formatting without knowing Markdown (docs/features/rich-comments.md, "Writing"): each command writes, or takes away,
@@ -56,10 +57,10 @@ function toggleInline(format: InlineFormat): StateCommand {
     const around = enclosing(state, main, node);
     if (!around && isInCode(state, main.from)) return false;
     if (around) {
-      dispatch(state.update(unwrap(state, around), { scrollIntoView: true, userEvent: 'input.format' }));
+      dispatch(state.update(unwrap(state, around), { scrollIntoView: true, userEvent: 'input.format', annotations: ownStep }));
       return true;
     }
-    dispatch(state.update(state.changeByRange((range) => wrap(state, range, mark)), { scrollIntoView: true, userEvent: 'input.format' }));
+    dispatch(state.update(state.changeByRange((range) => wrap(state, range, mark)), { scrollIntoView: true, userEvent: 'input.format', annotations: ownStep }));
     return true;
   };
 }
@@ -120,7 +121,7 @@ function toggleLinePrefix(format: LineFormat): StateCommand {
     );
     // The caret moves along with its text, after a marker written where it was.
     const selection = EditorSelection.create(state.selection.ranges.map((range) => EditorSelection.range(changes.mapPos(range.anchor, 1), changes.mapPos(range.head, 1))));
-    dispatch(state.update({ changes, selection, scrollIntoView: true, userEvent: 'input.format' }));
+    dispatch(state.update({ changes, selection, scrollIntoView: true, userEvent: 'input.format', annotations: ownStep }));
     return true;
   };
 }
@@ -130,20 +131,20 @@ function toggleCodeBlock({ state, dispatch }: Parameters<StateCommand>[0]): bool
   const main = state.selection.main;
   const block = enclosingFrom(state, main.head, 'FencedCode');
   if (block) {
-    dispatch(state.update({ changes: fenceLinesOf(state, block), scrollIntoView: true, userEvent: 'input.format' }));
+    dispatch(state.update({ changes: fenceLinesOf(state, block), scrollIntoView: true, userEvent: 'input.format', annotations: ownStep }));
     return true;
   }
   const first = state.doc.lineAt(main.from);
   const last = state.doc.lineAt(main.to);
   if (main.empty && !first.text.trim()) {
-    dispatch(state.update({ changes: { from: first.from, to: first.to, insert: '```\n\n```' }, selection: { anchor: first.from + 4 }, scrollIntoView: true, userEvent: 'input.format' }));
+    dispatch(state.update({ changes: { from: first.from, to: first.to, insert: '```\n\n```' }, selection: { anchor: first.from + 4 }, scrollIntoView: true, userEvent: 'input.format', annotations: ownStep }));
     return true;
   }
   const changes = state.changes([
     { from: first.from, insert: '```\n' },
     { from: last.to, insert: '\n```' },
   ]);
-  dispatch(state.update({ changes, selection: { anchor: first.from + 4, head: changes.mapPos(last.to, -1) }, scrollIntoView: true, userEvent: 'input.format' }));
+  dispatch(state.update({ changes, selection: { anchor: first.from + 4, head: changes.mapPos(last.to, -1) }, scrollIntoView: true, userEvent: 'input.format', annotations: ownStep }));
   return true;
 }
 
@@ -172,12 +173,12 @@ function toggleLink({ state, dispatch }: Parameters<StateCommand>[0]): boolean {
       { from: link.from, to: link.from + 1 },
       { from: textEnd, to: link.to },
     ]);
-    dispatch(state.update({ changes, selection: state.selection.map(changes), scrollIntoView: true, userEvent: 'input.format' }));
+    dispatch(state.update({ changes, selection: state.selection.map(changes), scrollIntoView: true, userEvent: 'input.format', annotations: ownStep }));
     return true;
   }
   const selected = state.sliceDoc(main.from, main.to);
   if (LINK_ADDRESS.test(selected)) {
-    dispatch(state.update({ changes: { from: main.from, to: main.to, insert: `[](${selected})` }, selection: { anchor: main.from + 1 }, scrollIntoView: true, userEvent: 'input.format' }));
+    dispatch(state.update({ changes: { from: main.from, to: main.to, insert: `[](${selected})` }, selection: { anchor: main.from + 1 }, scrollIntoView: true, userEvent: 'input.format', annotations: ownStep }));
     return true;
   }
   const address = main.from + selected.length + 3;
@@ -187,6 +188,7 @@ function toggleLink({ state, dispatch }: Parameters<StateCommand>[0]): boolean {
       selection: { anchor: address, head: address + 3 },
       scrollIntoView: true,
       userEvent: 'input.format',
+      annotations: ownStep,
     }),
   );
   return true;
@@ -209,7 +211,7 @@ export const closeCodeFence: StateCommand = ({ state, dispatch }) => {
 /** A click on a task's box: `[ ]` checked as `[x]`, or the other way round. `box` is where its `[` is. */
 export function toggleTask(state: EditorState, box: number): TransactionSpec {
   const checked = /x/i.test(state.sliceDoc(box + 1, box + 2));
-  return { changes: { from: box + 1, to: box + 2, insert: checked ? ' ' : 'x' }, userEvent: 'input.toggle' };
+  return { changes: { from: box + 1, to: box + 2, insert: checked ? ' ' : 'x' }, userEvent: 'input.toggle', annotations: ownStep };
 }
 
 /**

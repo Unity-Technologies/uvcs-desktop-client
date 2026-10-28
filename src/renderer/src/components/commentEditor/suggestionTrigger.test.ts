@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { editorState, written } from './commentEditorTesting';
+import { history, undo } from '@codemirror/commands';
+import { editorState, run, written } from './commentEditorTesting';
 import { pickSuggestion, suggestionQueryAt } from './suggestionTrigger';
 
 const queryAt = (written: string) => suggestionQueryAt(editorState(written));
@@ -58,6 +59,12 @@ describe('pickSuggestion', () => {
   it('keeps a sentence’s punctuation right after the pick', () => {
     expect(pick('Thanks @an‸a!', '@ana.diaz')).toBe('Thanks @ana.diaz‸!');
     expect(pick('(see cs:42‸)', 'cs:4207')).toBe('(see cs:4207‸)');
+  });
+
+  it('is a step of its own to undo, apart from the typing before it', () => {
+    const typed = editorState('Fixes ‸', history()).update({ changes: { from: 6, insert: 'cs:42' }, selection: { anchor: 11 }, userEvent: 'input.type' }).state;
+    const picked = typed.update(pickSuggestion(typed, suggestionQueryAt(typed)!, 'cs:4207')).state;
+    expect(written(run(undo, picked)!)).toBe('Fixes cs:42‸');
   });
 
   it('steps over a space already there', () => {

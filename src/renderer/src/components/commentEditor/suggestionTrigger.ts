@@ -1,6 +1,7 @@
 import type { EditorState, TransactionSpec } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
 import { isInCode } from './formatCommands';
+import { ownStep } from './ownStep';
 
 /** What a suggestion list offers: the objects a comment names, people and emoji. */
 export type SuggestionKind = 'changeset' | 'branch' | 'label' | 'shelve' | 'codeReview' | 'person' | 'emoji';
@@ -70,6 +71,7 @@ export function pickSuggestion(state: EditorState, query: SuggestionQuery, inser
     selection: { anchor: query.from + insert.length + (space || next === ' ' ? 1 : 0) },
     scrollIntoView: true,
     userEvent: 'input.complete',
+    annotations: ownStep,
   };
 }
 

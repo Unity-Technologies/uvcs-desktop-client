@@ -1,5 +1,6 @@
 import { EditorSelection, type EditorState, type StateCommand, type TransactionSpec } from '@codemirror/state';
 import { liveMarksOf } from './liveMarks';
+import { ownStep } from './ownStep';
 
 /** A chip's place in the text: a reference or an image, which the editor draws as one piece. */
 export interface ChipRange {
@@ -23,7 +24,7 @@ export function deleteChip(forward: boolean): StateCommand {
     if (!main.empty || state.selection.ranges.length > 1) return false;
     const chip = chipsOnLine(state, main.head).find((range) => (forward ? range.from : range.to) === main.head);
     if (!chip) return false;
-    dispatch(state.update({ changes: { from: chip.from, to: chip.to }, scrollIntoView: true, userEvent: forward ? 'delete.forward' : 'delete.backward' }));
+    dispatch(state.update({ changes: { from: chip.from, to: chip.to }, scrollIntoView: true, userEvent: forward ? 'delete.forward' : 'delete.backward', annotations: ownStep }));
     return true;
   };
 }

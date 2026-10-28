@@ -4,6 +4,7 @@ import { fromHtml } from 'hast-util-from-html';
 import { toMdast } from 'hast-util-to-mdast';
 import { gfmToMarkdown } from 'mdast-util-gfm';
 import { toMarkdown } from 'mdast-util-to-markdown';
+import { ownStep } from './ownStep';
 
 /**
  * What a paste from a web page, Slack or a document becomes (docs/features/rich-comments.md, "Pasting"): its
@@ -104,5 +105,5 @@ export function pasteMarkdown(state: EditorState, markdown: string): Transaction
   const before = block && state.sliceDoc(state.doc.lineAt(from).from, from).trim() ? '\n' : '';
   const after = block && state.sliceDoc(to, state.doc.lineAt(to).to).trim() ? '\n' : '';
   const insert = before + markdown + after;
-  return { changes: { from, to, insert }, selection: { anchor: from + before.length + markdown.length }, scrollIntoView: true, userEvent: 'input.paste' };
+  return { changes: { from, to, insert }, selection: { anchor: from + before.length + markdown.length }, scrollIntoView: true, userEvent: 'input.paste', annotations: ownStep };
 }
