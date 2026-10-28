@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode } from 'react';
 import { api } from '../api/client';
 import { parseMarkdown, type MarkdownBlock, type MarkdownInline, type MarkdownList } from '../lib/markdown';
+import { CodeBlock } from './comments/CodeBlock';
 import { CommentImage } from './comments/CommentImage';
 import { copyAsSource } from './comments/copyAsSource';
 import { ReferenceChip } from './comments/ReferenceChip';
@@ -48,9 +49,7 @@ function renderBlock(block: MarkdownBlock, key: number): ReactNode {
       return <blockquote key={key}>{renderBlocks(block.children)}</blockquote>;
     case 'code':
       return (
-        <pre key={key} data-language={block.language}>
-          <code>{block.text}</code>
-        </pre>
+        <CodeBlock key={key} text={block.text} language={block.language} />
       );
     case 'list':
       return renderList(block, key);

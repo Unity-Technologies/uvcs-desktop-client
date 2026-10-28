@@ -99,5 +99,7 @@ Content-Security-Policy allows `https:` images for this (ARCHITECTURE.md, "What 
 
 ## Code
 
-A fenced block keeps its language (`MarkdownBlock.language`, `data-language` on its `pre`); it shows in the code font,
-not yet highlighted.
+A fenced block is highlighted in its fence's language (`CodeBlock`, `fenceLanguage`) by the highlighter the diffs
+share (Pierre's Shiki, `getSharedHighlighter`), with the diffs' themes (`pierreThemeName`), following the app's.
+`HighlightedCodeBlock` loads on the first block with a language, never at start-up; until its grammar loads, and for
+a language the highlighter doesn't know, the block shows plain in the same box, so nothing moves as colors arrive.
