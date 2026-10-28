@@ -6,10 +6,10 @@ import { createPortal } from 'react-dom';
 import { useResolvedTheme } from '../../app/settings/useResolvedTheme';
 import { pierreThemeName } from '../../lib/codeTheme';
 import { classNames } from '../../lib/classNames';
-import { MODAL_DIALOG } from '../../lib/modalDialog';
+import { isInModalDialog } from '../../lib/modalDialog';
 import { isMac } from '../../lib/platform';
 import { hotkey } from '../../lib/shortcutRegistry';
-import { focusModeKey, focusModeLayout, offersFocusMode } from './focusMode';
+import { focusModeButton, focusModeKey, focusModeLayout, layoutAfterFocus, offersFocusMode, type FocusModeLayout } from './focusMode';
 import { commentEditorExtensions, editable, editableWhen, theme, themed, type CommentEditorKeys } from './commentEditorSetup';
 import { ownerChange } from './oneLine';
 import { ownerSync } from './ownerSync';
@@ -112,7 +112,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
 
   const suggestions = useSuggestions(view, state);
   const bar = useSelectionBar(view, state, singleLine, suggestions.shown);
-  const focus = useFocusMode(view, host, singleLine, suggestions.shown);
+  const focus = useFocusMode(view, state, host, singleLine, suggestions.shown);
 
   const widgets = useSyncExternalStore(portals.subscribe, portals.portals);
   // What React drew in the widgets changes their size: the editor measures its lines again.
@@ -139,39 +139,63 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
  * Focus mode (`focusMode`): the field grows into a large editor and back, by its corner button, its shortcut or Esc.
  * The same editor, so its text, caret and selection stay.
  */
-function useFocusMode(view: EditorView | null, host: RefObject<HTMLDivElement | null>, singleLine: boolean, suggesting: boolean) {
-  const [layout, setLayout] = useState<'overlay' | 'inPlace' | null>(null);
+function useFocusMode(view: EditorView | null, state: EditorState | null, host: RefObject<HTMLDivElement | null>, singleLine: boolean, suggesting: boolean) {
+  const [layout, setLayout] = useState<FocusModeLayout | null>(null);
   const offered = offersFocusMode(singleLine);
   const toggle = (): void => {
-    setLayout((shown) => (shown ? null : focusModeLayout(host.current?.closest(`[${Object.keys(MODAL_DIALOG)[0]}]`) != null)));
+    setLayout((shown) => (shown ? null : focusModeLayout(isInModalDialog(host.current))));
     view?.focus();
   };
+  // What the key handler reads when a key comes, without listening again at each render.
+  const latest = useRef({ layout, suggesting, toggle });
+  latest.current = { layout, suggesting, toggle };
   useEffect(() => {
     if (!view || !offered) return;
     const onKeyDown = (event: KeyboardEvent): void => {
       if (!view.dom.contains(event.target as Node)) return;
-      const action = focusModeKey(event, isMac, { expanded: layout !== null, suggesting });
+      const action = focusModeKey(event, isMac, { expanded: latest.current.layout !== null, suggesting: latest.current.suggesting });
       if (!action) return;
+      if (action === 'submitting') {
+        setLayout(null);
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
-      if (action === 'toggle') toggle();
+      if (action === 'toggle') latest.current.toggle();
       else setLayout(null);
     };
     // Taken on the way down, before a dialog's Esc closes it or the details' Esc cancels the edit.
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  });
-  // The editor measures its lines again at its new size, the caret kept in view.
+  }, [view, offered]);
+  // Out of it once the focus leaves the editor: a dialog it opened (⌘↵'s question) never shows behind it.
+  const focused = state?.field(hasFocus) ?? false;
+  useEffect(() => {
+    if (layout && !focused) setLayout(layoutAfterFocus(layout, focused));
+  }, [layout, focused]);
+  // As its size changes, the caret stays in view: centered in the larger editor, the least scroll back in the field.
+  const previous = useRef(layout);
   useLayoutEffect(() => {
-    if (view) view.dispatch({ effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: 'center' }) });
+    if (!view || previous.current === layout) return;
+    previous.current = layout;
+    view.dispatch({ effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: layout ? 'center' : 'nearest' }) });
   }, [view, layout]);
   if (!offered) return { layout: null, element: null };
-  const Icon = layout ? Minimize2 : Maximize2;
-  const label = layout ? 'Back to the field' : 'Write in a larger editor';
+  const button = focusModeButton(layout);
+  const Icon = button.icon === 'collapse' ? Minimize2 : Maximize2;
   const element = (
     <>
       {layout === 'overlay' && createPortal(<div className={styles.backdrop} onMouseDown={() => setLayout(null)} />, document.body)}
-      <button type="button" className={styles.expand} aria-label={label} data-tip={label} data-tip-shortcut={hotkey('commentFocusMode')} onMouseDown={(event) => event.preventDefault()} onClick={toggle}>
+      <button
+        type="button"
+        className={styles.expand}
+        aria-label={button.label}
+        aria-pressed={button.pressed}
+        data-tip={button.label}
+        data-tip-shortcut={hotkey('commentFocusMode')}
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={toggle}
+      >
         <Icon size={13} strokeWidth={2} aria-hidden />
       </button>
     </>

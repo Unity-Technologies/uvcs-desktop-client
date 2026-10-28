@@ -45,11 +45,12 @@
 }
 
 /* Over the view, the rest dimmed: the field's own box at a writing size. Its owner's sizes give way (`!important`
-   over a height set inline, the check-in's resizable description). */
+   over a height set inline, the check-in's resizable description). Under the dialogs (800): a dialog never opens
+   behind it, and it closes as the focus leaves it (`layoutAfterFocus`). */
 .editor[data-expanded='overlay'] {
   position: fixed !important;
   inset: 8vh max(24px, calc(50vw - 440px)) !important;
-  z-index: 850;
+  z-index: 790;
   width: auto !important;
   height: auto !important;
   min-height: 0 !important;
@@ -68,7 +69,7 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  z-index: 849;
+  z-index: 789;
   background: var(--overlay);
   animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
 }

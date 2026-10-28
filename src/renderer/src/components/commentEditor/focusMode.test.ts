@@ -32,6 +32,11 @@ describe('focusModeKey', () => {
     expect(focusModeKey(press('Escape', 'Escape'), true, { expanded: false, suggesting: false })).toBeNull();
   });
 
+  it('leaves the larger editor as ⌘↵ saves or checks in, the key going on to do it', () => {
+    expect(focusModeKey(press('Enter', 'Enter', { metaKey: true }), true, { expanded: true, suggesting: false })).toBe('submitting');
+    expect(focusModeKey(press('Enter', 'Enter', { metaKey: true }), true, { expanded: false, suggesting: false })).toBeNull();
+  });
+
   it('leaves every other key to the text', () => {
     expect(focusModeKey(press('f', 'KeyF'), true, { expanded: true, suggesting: false })).toBeNull();
   });

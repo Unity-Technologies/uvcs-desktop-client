@@ -162,7 +162,9 @@ htmlFor>` can't focus, and the label names it, `fieldLabelAttributes`), the comm
   comment, by the quiet button in its corner (shown on hover or focus) or ⇧⌘F (Ctrl+Shift+F), and back the same way
   or with Esc. Over the view it is the field's own box at a writing size, the rest dimmed (a click there goes back); in
   a dialog the field grows in place (`focusModeLayout`), as a dialog keeps its focus and its clicks. It is the same
-  editor, never a copy: the text, the caret, the selection and the undo history stay, and ⌘↵ still saves. A popup
+  editor, never a copy: the text, the caret, the selection and the undo history stay. It closes as ⌘↵ saves or checks
+  in, and as the focus leaves the editor (`layoutAfterFocus`: a question the check-in asks, Tab), and it lies under
+  the dialogs (z 790): a dialog it opens never shows behind it, nor does Tab walk the dimmed view. A popup
   editor holding a copy of the text was dropped: two editors of one comment would have to be kept in step, and its
   undo, caret and suggestions would start over.
 - **The selection bar** (`SelectionBar`, `selectionBarShows`): over text selected, once the pointer lets go, never in
