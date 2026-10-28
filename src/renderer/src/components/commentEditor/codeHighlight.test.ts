@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { editorState } from './commentEditorTesting';
-import { colorArrivalDelay, fencedCodeIn, tokenMarks } from './codeHighlight';
+import { fencedCodeIn, tokenMarks } from './codeHighlight';
 
 describe('fencedCodeIn', () => {
   it('finds each code block with a language, and its code', () => {
@@ -33,13 +33,5 @@ describe('tokenMarks', () => {
       { from: 10, to: 13, style: 'color: #0000ff' },
       { from: 16, to: 17, style: 'color: #ff0000; font-style: italic' },
     ]);
-  });
-});
-
-describe('colorArrivalDelay', () => {
-  it('redraws with the colors at once after a pause in typing, and waits out the rest of one while typing', () => {
-    expect(colorArrivalDelay(1000, 0)).toBe(0);
-    expect(colorArrivalDelay(1000, 900)).toBe(100);
-    expect(colorArrivalDelay(1000, 1000)).toBe(200);
   });
 });

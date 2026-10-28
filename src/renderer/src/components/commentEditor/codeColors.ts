@@ -1,6 +1,7 @@
 import { Facet, StateEffect, type Extension } from '@codemirror/state';
 import { Decoration, ViewPlugin, type DecorationSet, type EditorView, type ViewUpdate } from '@codemirror/view';
-import { colorArrivalDelay, fencedCodeIn, tokenMarks, type FencedCode, type TokenMark } from './codeHighlight';
+import { fencedCodeIn, tokenMarks, type FencedCode, type TokenMark } from './codeHighlight';
+import { colorArrivalDelay } from './colorArrival';
 
 /** The diffs' theme the code is colored in (`pierreThemeName`), following the app's. */
 export const codeTheme = Facet.define<string, string>({ combine: (values) => values[0] ?? 'pierre-light' });
