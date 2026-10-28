@@ -39,8 +39,9 @@
   text-overflow: ellipsis;
 }
 
+/* The object's id never shrinks: only its summary gives way (`.summary`), so "v1.4.0" never reads "v1…". */
 .label {
-  flex: 0 1 auto;
+  flex: none;
 }
 
 .repository {
