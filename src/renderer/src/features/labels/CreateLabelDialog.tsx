@@ -4,7 +4,9 @@ import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
-import { TextArea, TextField } from '../../ui/TextField';
+import { CommentArea } from '../../components/commentEditor/CommentArea';
+import { commentPlaceholder } from '../../components/commentEditor/commentPlaceholders';
+import { TextField } from '../../ui/TextField';
 import { validateLabelName } from './labelNames';
 import { createLabel, offersSwitchToNewLabel } from './createLabel';
 
@@ -48,7 +50,7 @@ function CreateLabelDialog({ place, changesetId, onClose }: { place: Place; chan
       }
     >
       <TextField label="Name" value={name} placeholder="v1.2.0" autoFocus error={error} onChange={(event) => setName(event.target.value)} />
-      <TextArea label="Comment" value={comment} placeholder="Release notes, milestone…" onChange={(event) => setComment(event.target.value)} />
+      <CommentArea label="Comment" value={comment} placeholder={commentPlaceholder('Release notes, milestone…')} onChange={setComment} />
       {offersSwitchToNewLabel(place) && <Checkbox label="Switch the workspace to the new label" checked={switchAfter} onChange={setSwitchAfter} />}
     </Dialog>
   );

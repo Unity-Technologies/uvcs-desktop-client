@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
-import { TextArea } from '../../ui/TextField';
+import { CommentArea } from '../../components/commentEditor/CommentArea';
+import { commentPlaceholder } from '../../components/commentEditor/commentPlaceholders';
 
 /** Asks for a new (possibly multi-line) changeset comment. Resolves to `undefined` if cancelled. */
 export function askForChangesetComment(changesetId: number, currentComment: string): Promise<string | undefined> {
@@ -34,17 +35,8 @@ function EditCommentDialog({ changesetId, currentComment, finish }: EditCommentD
         </>
       }
     >
-      <TextArea
-        label="Comment"
-        value={comment}
-        rows={8}
-        autoFocus
-        onChange={(event) => setComment(event.target.value)}
-        onKeyDown={(event) => {
-          // Enter adds lines; ⌘/Ctrl+Enter saves.
-          if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) event.currentTarget.form?.requestSubmit();
-        }}
-      />
+      {/* Enter adds lines; ⌘↵ saves, submitting the dialog. */}
+      <CommentArea label="Comment" tall value={comment} placeholder={commentPlaceholder('What changed and why')} autoFocus onChange={setComment} />
     </Dialog>
   );
 }
