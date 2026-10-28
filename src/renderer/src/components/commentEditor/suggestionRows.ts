@@ -1,5 +1,4 @@
 import type { Suggestion } from './suggestionItems';
-import type { SuggestionQuery } from './suggestionTrigger';
 import type { SuggestionKind } from './suggestionTriggers';
 
 /** A row of the suggestion list: something to pick, the search of every changeset to start, or a word on where it stands. */
@@ -119,9 +118,4 @@ export function suggestionKeyAction(key: string, modifiers: KeyModifiers, rows: 
     default:
       return null;
   }
-}
-
-/** Whether Esc closed the list on this word (`dismissedAt`: where it started): it opens again for another one. */
-export function isDismissed(query: SuggestionQuery, dismissedAt: number | null): boolean {
-  return dismissedAt !== null && query.from === dismissedAt;
 }

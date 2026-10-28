@@ -12,7 +12,7 @@ import { enterAction, modEnterAction, type FieldKeyAction } from './fieldKeys';
 import type { GroupKey } from './focusGroup';
 import { fieldLabelAttributes } from './fieldLabel';
 import { formatForKey, pastesPlain } from './formattingKeys';
-import { hasFocus, liveDrawing } from './liveDecorations';
+import { liveDrawing } from './liveDecorations';
 import { tablesIn } from './tableModel';
 import { verticalMoveInto } from './verticalMove';
 import { compactChips, widgetPortals } from './liveWidgets';
@@ -127,7 +127,7 @@ function moveIntoBlock(view: EditorView, direction: 1 | -1, extend: boolean): bo
   const range = view.state.selection.main;
   const own = view.moveVertically(range, direction === 1);
   if (view.state.doc.lineAt(own.head).number === view.state.doc.lineAt(range.head).number) return false;
-  const target = verticalMoveInto(view.state, tablesIn(view.state, { revealsSelection: view.state.field(hasFocus) }), range.head, direction);
+  const target = verticalMoveInto(view.state, tablesIn(view.state, { revealsSelection: view.hasFocus }), range.head, direction);
   if (target === null) return false;
   view.dispatch({ selection: extend ? { anchor: range.anchor, head: target } : { anchor: target }, scrollIntoView: true, userEvent: 'select' });
   return true;

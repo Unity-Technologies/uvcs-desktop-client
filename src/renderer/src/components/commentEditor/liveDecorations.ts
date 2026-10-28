@@ -1,30 +1,12 @@
-import { StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state';
+import { StateField, type EditorState, type Extension, type Range } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, type DecorationSet, type ViewUpdate } from '@codemirror/view';
+import { editorFocus, hasFocus } from './editorFocus';
 import { liveMarksOf, type LiveMark } from './liveMarks';
 import { BulletWidget, ImageWidget, ReferenceWidget, TableWidget, TaskWidget } from './liveWidgets';
 import { tablesIn } from './tableModel';
 
-/**
- * Whether the editor has the focus, kept in its state: a field without it shows its comment as it reads, so the
- * decorations, the table field among them (a state field sees no view), ask the state.
- */
-const focusChanged = StateEffect.define<boolean>();
-
-export const hasFocus = StateField.define<boolean>({
-  create: () => false,
-  update: (focused, transaction) => transaction.effects.reduce((value, effect) => (effect.is(focusChanged) ? effect.value : value), focused),
-});
-
-const trackFocus = EditorView.focusChangeEffect.of((_state, focusing) => focusChanged.of(focusing));
-
-/**
- * Tells the state the editor's focus as it is now: a focus given in code as the editor is made (`autoFocus`, the
- * caret handed over by the plain field) comes before the editor listens for it.
- */
-export function noteFocus(view: EditorView): void {
-  if (view.state.field(hasFocus) !== view.hasFocus) view.dispatch({ effects: focusChanged.of(view.hasFocus) });
-}
-
+/* A field without the focus shows its comment as it reads: the decorations, the table field among them (a state field
+   sees no view), ask the focus's mirror (`editorFocus`). */
 function revealsSelection(state: EditorState): { revealsSelection: boolean } {
   return { revealsSelection: state.field(hasFocus) };
 }
@@ -103,5 +85,5 @@ function tableDecorations(state: EditorState): DecorationSet {
 
 /** The comment drawn as it reads around the caret (docs/features/rich-comments.md, "Writing"). */
 export function liveDrawing(): Extension {
-  return [hasFocus, trackFocus, liveMarks, liveTables];
+  return [editorFocus(), liveMarks, liveTables];
 }

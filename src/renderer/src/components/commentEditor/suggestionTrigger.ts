@@ -57,6 +57,22 @@ export function suggestionsShownAt(state: EditorState): SuggestionQuery | null {
 }
 
 /**
+ * The suggestion list's query, or null for none (docs/features/rich-comments.md, "Suggestions"): the word typed at the
+ * caret (`suggestionsShownAt`), in a field with the focus (`editorFocused`: the DOM's), unless Esc closed the list on
+ * that word (`dismissedAt`: where it started).
+ */
+export function suggestionGate(state: EditorState, focused: boolean, dismissedAt: number | null): SuggestionQuery | null {
+  if (!focused) return null;
+  const query = suggestionsShownAt(state);
+  return query && !isDismissed(query, dismissedAt) ? query : null;
+}
+
+/** Whether Esc closed the list on this word (`dismissedAt`: where it started): it opens again for another one. */
+export function isDismissed(query: SuggestionQuery, dismissedAt: number | null): boolean {
+  return dismissedAt !== null && query.from === dismissedAt;
+}
+
+/**
  * What picking a suggestion does: the word typed becomes `insert` and a space, the caret after it to go on writing.
  * A space already there is stepped over, not doubled; a sentence's punctuation after the word stays right after it,
  * and a line's end too (no space left at it): the reference stays drawn there all the same (`justPicked`). One step

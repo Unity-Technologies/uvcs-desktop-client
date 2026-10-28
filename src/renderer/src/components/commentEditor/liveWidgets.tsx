@@ -4,6 +4,7 @@ import type { CommentReference } from '../../lib/comments/commentReferences';
 import { CommentImage } from '../comments/CommentImage';
 import { ReferenceChip } from '../comments/ReferenceChip';
 import { selectChip } from './chipEditing';
+import { focusEditor } from './editorFocus';
 import { toggleTask } from './formatCommands';
 import { EditorTable } from './EditorTable';
 import type { TableModel } from './tableModel';
@@ -125,7 +126,7 @@ function selectOnPress(view: EditorView, host: HTMLElement, length: number): voi
     event.stopPropagation();
     const from = view.posAtDOM(host);
     view.dispatch(selectChip({ from, to: from + length }));
-    view.focus();
+    focusEditor(view);
   });
 }
 
@@ -198,7 +199,7 @@ export class TableWidget extends PortalWidget {
         table={this.table}
         onCellPressed={(at) => {
           view.dispatch({ selection: { anchor: at }, userEvent: 'select.pointer' });
-          view.focus();
+          focusEditor(view);
         }}
       />
     );

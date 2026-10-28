@@ -20,14 +20,14 @@ import { ownerChange } from './oneLine';
 import { ownerSync } from './ownerSync';
 import type { CommentFieldProps } from './commentFieldProps';
 import { activeFormats, FORMAT_COMMANDS, type FormatCommandId } from './formatCommands';
-import { hasFocus, noteFocus } from './liveDecorations';
+import { fieldFocused, focusEditor } from './editorFocus';
 import type { Box } from './popupPosition';
 import { SelectionBar } from './SelectionBar';
 import { formatsOf } from './formatActions';
 import { pressHidesBar, pressPlacesCaret, selectionBarShows } from './selectionBarState';
 import { optionId, SuggestionList } from './SuggestionList';
-import { isDismissed, isPickable, suggestionKeyAction } from './suggestionRows';
-import { pickSuggestion, suggestionsShownAt, type SuggestionQuery } from './suggestionTrigger';
+import { isPickable, suggestionKeyAction } from './suggestionRows';
+import { pickSuggestion, suggestionGate, suggestionsShownAt, type SuggestionQuery } from './suggestionTrigger';
 import { setSuggestionCue } from './suggestionCueField';
 import { suggestionCue } from './suggestionSource';
 import { useSuggestionRows } from './useSuggestionRows';
@@ -84,8 +84,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
     const caret = initialFocus.current?.at;
     if (caret !== undefined || autoFocus) {
       editor.dispatch({ selection: { anchor: Math.min(caret ?? value.length, editor.state.doc.length) } });
-      editor.focus();
-      noteFocus(editor);
+      focusEditor(editor);
     }
     setView(editor);
     setState(editor.state);
@@ -111,7 +110,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
 
   const handle = useMemo(
     () => ({
-      focus: () => view?.focus(),
+      focus: () => view && focusEditor(view),
       focusAtEnd: () => focusAt(view, view?.state.doc.length ?? 0),
       focusAtStart: () => focusAt(view, 0),
     }),
@@ -166,7 +165,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
     >
       {focus.element}
       {/* The top strip of the comment it formats (in the check-in, the description's). */}
-      {focus.parts.toolbar && view && state && <FormatToolbar view={view} state={state} focused={state.field(hasFocus)} />}
+      {focus.parts.toolbar && view && state && <FormatToolbar view={view} state={state} focused={fieldFocused(view, state)} />}
       {focus.parts.footer && (
         <div className={styles.footer}>
           <FocusModeFooter />
@@ -194,7 +193,7 @@ function useFocusMode(view: EditorView | null, state: EditorState | null, host: 
   const toggle = (): void => {
     if (group) group.toggle();
     else setOwnLayout((shown) => (shown ? null : focusModeLayout(isInModalDialog(host.current))));
-    view?.focus();
+    if (view) focusEditor(view);
   };
   // What the key handler reads when a key comes, without listening again at each render.
   const latest = useRef({ expanded: parts.inFocusMode, suggesting, toggle, close });
@@ -219,7 +218,7 @@ function useFocusMode(view: EditorView | null, state: EditorState | null, host: 
     return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [view, parts.offered]);
   // Out of it once the focus leaves the editor: a dialog it opened (⌘↵'s question) never shows behind it.
-  const focused = state?.field(hasFocus) ?? false;
+  const focused = state ? fieldFocused(view, state) : false;
   // A group's fields hand the focus to each other: the group tells leaving itself (`CommentFocusGroup`).
   useEffect(() => {
     if (!group && ownLayout && !focused) setOwnLayout(layoutAfterFocus(ownLayout, focused));
@@ -277,7 +276,7 @@ function caretAtPress(view: EditorView, event: React.MouseEvent): void {
 function focusAt(view: EditorView | null, at: number): void {
   if (!view) return;
   view.dispatch({ selection: { anchor: at }, scrollIntoView: true });
-  view.focus();
+  focusEditor(view);
 }
 
 /** Whether `head` is on the text's first line as shown, a wrapped first line's later rows excluded. */
@@ -290,17 +289,19 @@ function onFirstVisualLine(view: EditorView, head: number): boolean {
 /** The suggestion list for what is typed at the caret: its rows, the key it's at, and the keys that walk it. */
 function useSuggestions(view: EditorView | null, state: EditorState | null) {
   const listId = useId();
-  const query = state && state.field(hasFocus) ? suggestionsShownAt(state) : null;
+  // The DOM's focus, never the mirror alone (`editorFocused`): a mirror behind once hid the list for good.
+  const focused = state ? fieldFocused(view, state) : false;
+  const query = state && focused ? suggestionsShownAt(state) : null;
   // Esc closes the list until the word typed is another one.
   const [dismissedAt, setDismissedAt] = useState<number | null>(null);
-  const open: SuggestionQuery | null = query && !isDismissed(query, dismissedAt) ? query : null;
+  const open: SuggestionQuery | null = state ? suggestionGate(state, focused, dismissedAt) : null;
   useEffect(() => {
     if (!query) setDismissedAt(null);
   }, [query === null]);
 
   const { rows, reading, searchAll } = useSuggestionRows(open);
   // The cue at the word typed, apart from the list: the field shows it understood the trigger whatever the list does.
-  const cue = suggestionCue({ recognized: query !== null, dismissed: query !== null && isDismissed(query, dismissedAt), reading });
+  const cue = suggestionCue({ recognized: query !== null, dismissed: query !== null && open === null, reading });
   const cueRange = query && cue ? { from: query.from, to: query.to, state: cue } : null;
   const cueKey = cueRange ? `${cueRange.from}:${cueRange.to}:${cueRange.state}` : '';
   useEffect(() => {
@@ -366,7 +367,7 @@ function useSelectionBar(view: EditorView | null, state: EditorState | null, sin
     return () => window.removeEventListener('mouseup', up);
   }, [pointerDown]);
 
-  const shows = view !== null && state !== null && !suggesting && selectionBarShows(state, state.field(hasFocus), pointerDown, focusMode);
+  const shows = view !== null && state !== null && !suggesting && selectionBarShows(state, fieldFocused(view, state), pointerDown, focusMode);
   const element = shows ? (
     <SelectionBar
       formats={formatsOf(singleLine)}
@@ -374,7 +375,7 @@ function useSelectionBar(view: EditorView | null, state: EditorState | null, sin
       anchor={selectionBox(view, state)}
       onFormat={(format: FormatCommandId) => {
         FORMAT_COMMANDS[format](view);
-        view.focus();
+        focusEditor(view);
       }}
     />
   ) : null;

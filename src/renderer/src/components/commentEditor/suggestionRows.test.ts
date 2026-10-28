@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Suggestion } from './suggestionItems';
-import { isDismissed, nextPickable, suggestionKeyAction, suggestionRows, type ChangesetLookup, type ChangesetSearch } from './suggestionRows';
+import { nextPickable, suggestionKeyAction, suggestionRows, type ChangesetLookup, type ChangesetSearch } from './suggestionRows';
+import { isDismissed } from './suggestionTrigger';
 
 function changeset(id: number): Suggestion {
   return { key: `cs:${id}`, kind: 'changeset', label: String(id), insert: `cs:${id}` };

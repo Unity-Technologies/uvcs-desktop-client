@@ -2,6 +2,7 @@ import type { EditorState } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import { FORMAT_ACTIONS, startsBlocks } from './formatActions';
 import { FORMAT_COMMANDS } from './formatCommands';
+import { focusEditor } from './editorFocus';
 import { FormatButton } from './FormatButton';
 import { toolbarButtons } from './toolbarButtons';
 import styles from './FormatToolbar.module.css';
@@ -29,7 +30,7 @@ export function FormatToolbar({ view, state, focused }: FormatToolbarProps) {
           startsBlocks={startsBlocks(FORMAT_ACTIONS, action.id)}
           onPress={() => {
             FORMAT_COMMANDS[action.id](view);
-            view.focus();
+            focusEditor(view);
           }}
         />
       ))}
