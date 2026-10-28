@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { editedComment, editingParts, hasUnsavedEdit, recentCommentPick, joinComment, shownComment, splitComment, storedComment, withSummaryText } from './comment';
+import { commentEditorExit, editedComment, editingParts, hasUnsavedEdit, recentCommentPick, joinComment, shownComment, splitComment, storedComment, withSummaryText } from './comment';
 
 describe('splitComment', () => {
   it('reads the first line as the summary and the rest as the description', () => {
@@ -165,5 +165,21 @@ describe('recentCommentPick', () => {
 
   it('keeps a comment that opens with a list whole in the description, its first item no title', () => {
     expect(recentCommentPick('- one\n- two')).toEqual({ parts: { summary: '', description: '- one\n- two' }, caretIn: 'description' });
+  });
+});
+
+describe('commentEditorExit', () => {
+  it('closes an editor with no edit, however it is left', () => {
+    expect(commentEditorExit(false, 'cancel')).toBe('close');
+    expect(commentEditorExit(false, 'leave')).toBe('close');
+  });
+
+  it('asks before Esc or Cancel throws an edit away (Edit comment, a details panel)', () => {
+    expect(commentEditorExit(true, 'cancel')).toBe('ask');
+  });
+
+  it('keeps the draft of an edit the user left for another row, to find it again on coming back', () => {
+    // A question as a row is clicked would hold the list's selection hostage; nothing typed is lost either way.
+    expect(commentEditorExit(true, 'leave')).toBe('keepDraft');
   });
 });
