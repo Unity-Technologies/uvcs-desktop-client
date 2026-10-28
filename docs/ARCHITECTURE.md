@@ -558,7 +558,11 @@ any other scheme (`file:`, `smb:`, `ms-msdt:`) to a program.
 
 ## What leaves the device
 
-Besides `cm`, which talks only to the user's own servers, the app reaches the places below, and nothing else.
+Besides `cm`, which talks to the user's own servers, the app reaches the places below, and nothing else. The one
+server `cm` may reach that the user didn't choose is one a comment names: a chip of an object on another server
+(`cs:4@game@other.example.com:8087`) reads it from that server only when the chip's card opens, on hover or keyboard
+focus, in a process of its own (`remoteObjectQuery`, docs/features/rich-comments.md "How references show"); a
+comment never makes the app contact another server by being shown.
 There is no telemetry, analytics or crash reporting. `PRIVACY.md` at the repository root is the app's privacy notice:
 a change that sends anything new, or something more to any of these places, is flagged to the maintainers in its pull
 request and never written into `PRIVACY.md` by the change itself.
