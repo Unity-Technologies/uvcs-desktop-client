@@ -12,6 +12,14 @@ describe('fencedCodeIn', () => {
   });
 });
 
+describe('fencedCodeIn, for a block too big to highlight', () => {
+  it('leaves a pasted log past the comments’ limit plain, as the shown comment does', () => {
+    const log = Array.from({ length: 5000 }, (_, line) => `line ${line} of the build log`).join('\n');
+    const state = editorState(`\`\`\`text\n${log}\n\`\`\`\n\`\`\`ts\nlet a;\n\`\`\``);
+    expect(fencedCodeIn(state).map((block) => block.language)).toEqual(['ts']);
+  });
+});
+
 describe('tokenMarks', () => {
   it('places each colored token on the code, line after line', () => {
     const lines = [
