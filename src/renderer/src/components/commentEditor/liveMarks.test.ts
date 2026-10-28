@@ -101,8 +101,10 @@ describe('liveMarksOf', () => {
       expect(marksOf('Fixes cs:12 on br:/main/task for @ana :tada: ‸')).toEqual(['reference cs:12', 'reference br:/main/task', 'reference @ana', 'reference :tada:']);
     });
 
-    it('keeps a chip whole with the caret at its edge: the caret steps over it', () => {
-      expect(marksOf('Fixes cs:12‸ now')).toEqual(['reference cs:12']);
+    it('shows the chip the caret reaches as its text, to edit, as marks show around the caret; the others stay drawn', () => {
+      expect(marksOf('Fixes cs:12‸ and cs:13')).toEqual(['typedReference cs:12', 'reference cs:13']);
+      expect(marksOf('Fixes ‸cs:12 and cs:13')).toEqual(['typedReference cs:12', 'reference cs:13']);
+      expect(marksOf('Fixes cs:1‸2')).toEqual(['typedReference cs:12']);
     });
 
     it('shows a selected reference as typed, so typing replaces it', () => {
