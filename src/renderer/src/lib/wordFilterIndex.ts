@@ -2,8 +2,9 @@ import { filterHaystack, holdsEveryWord, queryWords } from './matchesAllWords';
 
 export interface WordFilterIndex {
   /**
-   * The rows holding every word of `query` (`matchesWordFilter`'s rule), in the order the rows came, up to `limit`,
-   * leaving out those `isShown` already. A blank query finds none.
+   * The rows holding every word of `query` (`matchesWordFilter`'s rule), up to `limit`, leaving out those `isShown`
+   * already: first those holding the words together as typed, then the rest, each in the order the rows came, from
+   * the whole list (one look at each row). A blank query finds none.
    */
   matching(query: string, limit: number, isShown: (row: number) => boolean): number[];
 }
@@ -17,11 +18,17 @@ export function createWordFilterIndex(rows: readonly (readonly string[])[]): Wor
   return {
     matching(query, limit, isShown) {
       const words = queryWords(query);
-      const found: number[] = [];
-      for (let row = 0; row < haystacks.length && found.length < limit; row++) {
-        if (!isShown(row) && holdsEveryWord(haystacks[row]!, words)) found.push(row);
+      const typed = words.join(' ');
+      // What `wordMatchQuality` ranks higher: the words together, as typed, over the words apart.
+      const together: number[] = [];
+      const apart: number[] = [];
+      for (let row = 0; row < haystacks.length && together.length < limit; row++) {
+        const haystack = haystacks[row]!;
+        if (isShown(row) || !holdsEveryWord(haystack, words)) continue;
+        if (words.length === 1 || haystack.includes(typed)) together.push(row);
+        else if (apart.length < limit) apart.push(row);
       }
-      return found;
+      return [...together, ...apart].slice(0, limit);
     },
   };
 }
