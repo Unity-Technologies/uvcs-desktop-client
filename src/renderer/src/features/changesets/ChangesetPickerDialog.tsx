@@ -6,7 +6,6 @@ import { useMemo, useState } from 'react';
 import { usePlace } from '../../app/workspace/useWorkspace';
 import { branchLabel } from '../../lib/branchLabels';
 import { typedChangesetNumber } from '../../lib/changesetNumber';
-import { firstLine } from '../../lib/text';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { Highlight } from '../../ui/Highlight';
@@ -73,6 +72,5 @@ function ChangesetPickerDialog({ title, exclude, place, finish }: PickChangesetO
 }
 
 function ChangesetComment({ comment }: { comment: string }) {
-  const title = firstLine(comment).trim();
-  return title ? <CommentLine comment={title} interactive={false} /> : <span className={styles.muted}>No comment</span>;
+  return <CommentLine comment={comment} interactive={false} placeholder={<span className={styles.muted}>No comment</span>} />;
 }

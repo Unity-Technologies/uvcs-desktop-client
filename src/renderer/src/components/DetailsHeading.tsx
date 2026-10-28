@@ -5,6 +5,7 @@ import { copyToClipboard } from '../ui/copyToClipboard';
 import { IconButton } from '../ui/IconButton';
 import { CommentEditor } from './CommentEditor';
 import { CommentLine } from './comments/CommentLine';
+import { commentHeading } from '../lib/comments/commentHeading';
 import { FoldedComment } from './FoldedComment';
 import styles from './DetailsHeading.module.css';
 
@@ -36,6 +37,8 @@ export function DetailsHeading({ name, comment: given = '', onSave }: DetailsHea
   };
   const parts = name === undefined ? splitComment(comment) : { summary: '', description: comment.trim() };
   const edit = onSave ? () => setDraft(parts) : undefined;
+  // What shows: a comment that opens with a list or code has no title, and shows whole (`commentHeading`).
+  const shown = name === undefined ? commentHeading(comment) : { title: null, description: parts.description };
 
   if (draft && onSave) {
     return (
@@ -54,9 +57,9 @@ export function DetailsHeading({ name, comment: given = '', onSave }: DetailsHea
         descriptionLines={DESCRIPTION_LINES}
         title={
           name ??
-          (parts.summary ? (
-            <CommentLine comment={parts.summary} />
-          ) : edit ? (
+          (shown.title !== null ? (
+            <CommentLine comment={shown.title} />
+          ) : shown.description ? undefined : edit ? (
             <button className={styles.add} onClick={edit}>
               No comment. Add one…
             </button>
@@ -64,7 +67,7 @@ export function DetailsHeading({ name, comment: given = '', onSave }: DetailsHea
             <span className={styles.placeholder}>No comment</span>
           ))
         }
-        description={parts.description}
+        description={shown.description}
       >
         {name !== undefined && !parts.description && edit && (
           <button className={styles.add} onClick={edit}>

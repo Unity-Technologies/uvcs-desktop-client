@@ -1,6 +1,5 @@
 import { CommentLine } from './comments/CommentLine';
 import type { ReactNode } from 'react';
-import { firstLine } from '../lib/text';
 import { Avatar, UserLabel } from '../ui/Avatar';
 import { Highlight } from '../ui/Highlight';
 import { RelativeTime } from '../ui/RelativeTime';
@@ -60,13 +59,9 @@ export function commentColumn<Row extends HistoryRow>(chips?: (row: Row) => Reac
     render: (row) => (
       <span className={styles.commentCell}>
         {chips?.(row)}
-        {firstLine(row.comment) ? (
-          <span className={styles.clipped}>
-            <CommentLine comment={row.comment} />
-          </span>
-        ) : (
-          <span className={styles.noComment}>No comment</span>
-        )}
+        <span className={styles.clipped}>
+          <CommentLine comment={row.comment} placeholder={<span className={styles.noComment}>No comment</span>} />
+        </span>
       </span>
     ),
   };

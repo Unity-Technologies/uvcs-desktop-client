@@ -5,7 +5,8 @@ import styles from './FoldedComment.module.css';
 
 interface FoldedCommentProps {
   /** The comment's first line (or an object's name), styled by the caller with `titleClassName`. */
-  title: ReactNode;
+  /** Left out for a comment that opens with a block (`commentHeading`), which shows whole as its description. */
+  title?: ReactNode;
   titleClassName: string;
   /** The rest of the comment, rendered as a comment's Markdown (docs/features/rich-comments.md). */
   description: string;
@@ -42,9 +43,11 @@ export function FoldedComment({ title, titleClassName, description, titleLines, 
 
   return (
     <div className={styles.folded} data-expanded={expanded} style={sizes}>
-      <h2 ref={titleRef} className={`${styles.title} ${titleClassName} selectable`} style={{ WebkitLineClamp: expanded ? 'none' : titleLines }}>
-        {title}
-      </h2>
+      {title !== undefined && (
+        <h2 ref={titleRef} className={`${styles.title} ${titleClassName} selectable`} style={{ WebkitLineClamp: expanded ? 'none' : titleLines }}>
+          {title}
+        </h2>
+      )}
       {description && (
         <div ref={descriptionRef} className={`${styles.description} selectable`} data-cut={cut.description}>
           <Markdown text={description} comment />

@@ -1,6 +1,6 @@
 import { memo, useMemo, type ReactNode } from 'react';
-import { parseInline, type MarkdownInline } from '../../lib/markdown';
-import { firstLine } from '../../lib/text';
+import { commentLineInlines } from '../../lib/comments/commentHeading';
+import type { MarkdownInline } from '../../lib/markdown';
 import { Highlight } from '../../ui/Highlight';
 import { copyAsSource } from './copyAsSource';
 import { ReferenceChip } from './ReferenceChip';
@@ -10,15 +10,18 @@ interface CommentLineProps {
   comment: string;
   /** False inside something clicked as a whole (a button, a picker's option): its chips are no links (`ReferenceChip`). */
   interactive?: boolean;
+  /** What shows for an empty comment, in the caller's style ("No comment"). */
+  placeholder?: ReactNode;
 }
 
 /**
- * A comment's first line as a row or a title shows it (docs/features/rich-comments.md, "Where comments show"): its
- * inline formatting, references as compact chips, emoji; no blocks, no images (their description instead), links
- * as their text. Its words are marked where the list's filter matched (`Highlight`).
+ * A comment as one line, as a row or a title shows it (`commentLineInlines`; docs/features/rich-comments.md, "Where
+ * comments show"): its inline formatting, references as compact chips, emoji; no blocks, no images (their
+ * description instead), links as their text. Its words are marked where the list's filter matched (`Highlight`).
  */
-export const CommentLine = memo(function CommentLine({ comment, interactive = true }: CommentLineProps) {
-  const inlines = useMemo(() => parseInline(firstLine(comment), { comment: true }), [comment]);
+export const CommentLine = memo(function CommentLine({ comment, interactive = true, placeholder = null }: CommentLineProps) {
+  const inlines = useMemo(() => commentLineInlines(comment), [comment]);
+  if (inlines.length === 0) return placeholder;
   return <span onCopy={copyAsSource}>{renderInlines(inlines, interactive)}</span>;
 });
 

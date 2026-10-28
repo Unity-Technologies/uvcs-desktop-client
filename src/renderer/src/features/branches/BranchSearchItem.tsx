@@ -33,7 +33,7 @@ export const BranchSearchItem = forwardRef<HTMLButtonElement, BranchSearchItemPr
         {firstLine && (
           // A clipped or multi-line comment shows in full on hover.
           <span className={styles.comment} data-tip={commentText(comment)} data-tip-overflow={multiline ? undefined : ''}>
-            <CommentLine comment={firstLine} interactive={false} />
+            <CommentLine comment={comment} interactive={false} />
           </span>
         )}
       </span>

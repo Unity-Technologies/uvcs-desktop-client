@@ -5,7 +5,8 @@ import { LabelChips } from '../../components/LabelChips';
 import { Markdown } from '../../components/Markdown';
 import { WorkspaceMark } from '../../components/WorkspaceMark';
 import { withoutAction, type MenuEntry } from '../../lib/actions';
-import { splitComment } from '../../lib/comment';
+import { commentHeading } from '../../lib/comments/commentHeading';
+import { commentLineText } from '../../lib/comments/commentText';
 import { CommentLine } from '../../components/comments/CommentLine';
 import { displayName } from '../../lib/userName';
 import { Avatar } from '../../ui/Avatar';
@@ -38,7 +39,9 @@ export function RevisionHeader({ row, path, menu, otherRepository, isWorkspaceRe
   const labels = useLabelsByChangeset(otherRepository).get(changesetId);
   const owner = ownerOf(row);
   const date = dateOf(row);
-  const { summary, description } = row.kind === 'revision' ? splitComment(row.revision.comment) : { summary: row.change.description, description: '' };
+  // A revision's comment shows as a heading (`commentHeading`); a pending change's description is its title alone.
+  const comment = row.kind === 'revision' ? row.revision.comment : row.change.description;
+  const description = row.kind === 'revision' ? commentHeading(comment).description : '';
   // The header's own buttons already offer these two.
   const moreActions = withoutAction(withoutAction(menu, 'changesetDiff'), 'showInBranchExplorer');
 
@@ -47,8 +50,8 @@ export function RevisionHeader({ row, path, menu, otherRepository, isWorkspaceRe
       <Avatar user={owner} size={28} />
       <div className={styles.main}>
         <div className={styles.titleRow}>
-          <h2 className={`${styles.title} selectable`} data-kind={row.kind} data-tip-overflow data-tip={summary}>
-            {summary ? <CommentLine comment={summary} /> : <span className={styles.noComment}>No comment</span>}
+          <h2 className={`${styles.title} selectable`} data-kind={row.kind} data-tip-overflow data-tip={commentLineText(comment)}>
+            <CommentLine comment={comment} placeholder={<span className={styles.noComment}>No comment</span>} />
           </h2>
           <LabelChips labels={labels} />
           {isWorkspaceRevision && <WorkspaceMark on="revision" />}

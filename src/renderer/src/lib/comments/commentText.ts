@@ -1,12 +1,23 @@
-import { parseInline, parseMarkdown, plainText, type MarkdownBlock } from '../markdown';
+import { parseMarkdown, plainText, type MarkdownBlock } from '../markdown';
 import { firstLine } from '../text';
+import { commentLineInlines } from './commentHeading';
 
 /**
- * A comment's first line as plain text, for what shows only text (the Branch Explorer's canvas, notifications, the
- * palette): its Markdown marks left out, references as written, emoji as themselves.
+ * What Markdown or a reference could read in a first line: without any, the line is its own text and needs no parsing
+ * (the Branch Explorer asks for thousands of comments' lines as it draws). A heading underlined on the next line
+ * (`===`) reads as the line itself too.
+ */
+const MARKDOWN_CHARACTERS = /[*_~`[\]<>!:@#|&\\]/;
+const BLOCK_START = /^\s*(?:[-+]|\d+[.)])\s/;
+
+/**
+ * A comment as one line of plain text (`commentLineInlines`), for what shows only text (the Branch Explorer's canvas,
+ * notifications, the palette): its Markdown marks left out, references as written, emoji as themselves.
  */
 export function commentLineText(comment: string): string {
-  return plainText(parseInline(firstLine(comment), { comment: true })).trim();
+  const line = firstLine(comment);
+  if (!MARKDOWN_CHARACTERS.test(line) && !BLOCK_START.test(line)) return line;
+  return plainText(commentLineInlines(comment)).trim();
 }
 
 /** A whole comment as plain text, a line per line it shows, for a tooltip that holds only text. */

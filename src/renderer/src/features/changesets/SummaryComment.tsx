@@ -1,6 +1,6 @@
 import { CommentLine } from '../../components/comments/CommentLine';
 import { FoldedComment } from '../../components/FoldedComment';
-import { splitComment } from '../../lib/comment';
+import { commentHeading } from '../../lib/comments/commentHeading';
 import styles from './ChangesetSummary.module.css';
 
 /**
@@ -13,10 +13,10 @@ const EXPANDED_MAX_HEIGHT = '40vh';
 
 /** A changeset's or shelve's comment over its diff, folded to a few lines with "Show more" (`FoldedComment`). */
 export function SummaryComment({ comment }: { comment: string }) {
-  const { summary, description } = splitComment(comment);
+  const { title, description } = commentHeading(comment);
   return (
     <FoldedComment
-      title={summary ? <CommentLine comment={summary} /> : <span className={styles.noComment}>No comment</span>}
+      title={title !== null ? <CommentLine comment={title} /> : description ? undefined : <span className={styles.noComment}>No comment</span>}
       titleClassName={styles.title}
       description={description}
       titleLines={TITLE_LINES}
