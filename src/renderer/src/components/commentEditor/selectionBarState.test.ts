@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { editorState } from './commentEditorTesting';
-import { formatsOf, selectionBarShows } from './selectionBar';
+import { formatsOf, selectionBarShows } from './selectionBarState';
 
 describe('formatsOf', () => {
   it('offers a one-line field the inline formats, and a comment of many lines the blocks too', () => {
