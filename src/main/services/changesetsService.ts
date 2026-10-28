@@ -3,6 +3,7 @@ import { cmPlace } from '../cm/cmPlace';
 import { findArgs, findQueryArgs } from '../cm/findQuery';
 import { FOUND_CHANGESETS } from '../cm/foundObjects';
 import { layoutReader } from '../cm/formatRecords';
+import { readOneObject } from './oneObjectRead';
 import type { ServiceContext } from './ServiceContext';
 
 /**
@@ -31,8 +32,7 @@ export function createChangesetsService({ cm }: ServiceContext): ChangesetsApi {
     async find(place, changesetId, read = {}) {
       const at = cmPlace(place);
       const args = findQueryArgs(FOUND_CHANGESETS, `where changesetid = ${changesetId}`, at.repository);
-      const reader = layoutReader(FOUND_CHANGESETS);
-      const [changeset] = await (read.ownProcess ? cm.executeRecords(args, reader, at.options) : cm.queryRecords(args, reader, at.options));
+      const [changeset] = await readOneObject(cm, args, layoutReader(FOUND_CHANGESETS), at.options, read);
       return changeset ?? null;
     },
 
