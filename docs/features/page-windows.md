@@ -75,12 +75,13 @@ window" is what browsers and the official client say.
 
 ## Follow selection
 
-Off by default: the window shows what it was opened on, so two changesets can sit side by side. On ("Follow
-selection", a chip in its top bar that lights up), it shows the changes of what is selected in its workspace window:
-a changeset, branch, shelve or label's diff, or a code review, whichever view selects it (each view says what its selection
-shows: `useShowInFollowingWindow`; the Branch Explorer's `followedObject`), its details panel hidden or not. Each followed page shows afresh (keyed by `pageKey`): a branch diff followed after
-another never keeps the other's selected changeset. Turned off, the window forgets the selection it last got, so
-turned on again it waits for its workspace window's current one. A selection without changes to show (the pending changes in the Branch
-Explorer, another view's rows) leaves the page as it is. One page window of a workspace window follows at a time: the
-latest turned on takes it from the one before (`PageWindowRegistry.follow`). The word "pinned" for the default was
-dropped: naming what the option does reads plainer than naming its absence.
+Off by default: the window shows what it was opened on, so two changesets can sit side by side. On ("Follow selection",
+a chip in its top bar that lights up), it shows the changes of what is selected in its workspace window: a changeset,
+branch, shelve or label's diff, or a code review, whichever view selects it (each view says what its selection shows:
+`useShowInFollowingWindow`; the Branch Explorer's `followedObject`), its details panel hidden or not. Each followed page
+shows afresh (keyed by `pageKey`): a branch diff followed after another never keeps the other's selected changeset.
+Turned off, the window forgets the selection it last got, so turned on again it waits for its workspace window's current
+one. A selection without changes to show (the pending changes in the Branch Explorer, another view's rows) leaves the
+page as it is. One page window of a workspace window follows at a time: the latest turned on takes it from the one
+before (`PageWindowRegistry.follow`). The word "pinned" for the default was dropped: naming what the option does reads
+plainer than naming its absence.
