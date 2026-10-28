@@ -16,18 +16,18 @@
 
 .summary,
 .description {
-  padding: var(--space-2) 10px;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   background: var(--bg-input);
-  outline: none;
 }
 
+/* As tall as the input it replaced, one line: a long summary wraps, up to a few lines, then scrolls. */
 .summary {
   flex: 1;
-  min-width: 0;
-  height: 32px;
-  padding-block: 0;
+  min-height: 32px;
+  max-height: calc(4 * 18px + 14px);
+  padding: 6px 10px;
+  line-height: 18px;
 }
 
 /* Keeps typed text clear of the recent comments button floating at the right edge. */
@@ -43,12 +43,12 @@
 
 .description {
   min-height: 32px;
+  padding: var(--space-2) 10px;
   line-height: 1.5;
-  resize: none;
 }
 
-.summary:focus,
-.description:focus {
+.summary:focus-within,
+.description:focus-within {
   border-color: var(--accent);
   box-shadow: var(--focus-ring);
 }

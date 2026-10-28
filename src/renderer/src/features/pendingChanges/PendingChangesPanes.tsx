@@ -55,6 +55,7 @@ import { checkinFactsOf, shownChecksOf, currentChoice, type PreparedChangelist, 
 import { useCheckinSelection } from './useCheckinSelection';
 import { useSortedChanges } from './useSortedChanges';
 import styles from './PendingChangesView.module.css';
+import type { CommentFieldHandle } from '../../components/commentEditor/commentFieldProps';
 
 const changePath = (change: PendingChange): string => change.path;
 const NO_CHANGES: PendingChange[] = [];
@@ -87,7 +88,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
   const setIncluded = useCheckinDraftStore((state) => state.setIncluded);
   const includeEverything = useCheckinDraftStore((state) => state.includeEverything);
   const [selection, setSelection] = useViewSelection('changes');
-  const summaryRef = useRef<HTMLInputElement>(null);
+  const summaryRef = useRef<CommentFieldHandle>(null);
   // Back to checking in each time Changes shows, as a shelve is a detour.
   const [checkinMode, setCheckinMode] = useState<CheckinMode>('checkin');
 
@@ -165,7 +166,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, nothin
       prepareChangelistCheckin({ workspacePath, changelist, changes: changelistChanges.get(changelist.name) ?? NO_CHANGES, index, changelists, clearFilter });
       setCheckinMode(mode);
     });
-    focusAtEnd(summaryRef.current);
+    summaryRef.current?.focusAtEnd();
   };
 
   const listedCount = snapshot && allChanges.length;
@@ -325,13 +326,6 @@ function useMergeComment(workspacePath: string, snapshot: PendingChangesSnapshot
     const draft = checkinDraftOf(workspacePath);
     if (mergeSource && !draft.summary && !draft.description) setMessage(workspacePath, { summary: `Merged from ${mergeSource.branch}` });
   }, [mergeSource?.id]);
-}
-
-/** Puts the caret at the end of the field's text, as after typing it. */
-function focusAtEnd(field: HTMLInputElement | null): void {
-  if (!field) return;
-  field.focus();
-  field.setSelectionRange(field.value.length, field.value.length);
 }
 
 /** How many of the changes shown are selected: a selection can hold rows the filter now hides, and folders. */

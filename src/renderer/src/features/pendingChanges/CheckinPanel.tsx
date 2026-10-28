@@ -1,7 +1,9 @@
 import { ArrowDownToLine, GitMerge, History } from 'lucide-react';
-import { useEffect, useState, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
-import { splitComment } from '../../lib/comment';
+import { CommentField } from '../../components/commentEditor/CommentField';
+import type { CommentFieldHandle } from '../../components/commentEditor/commentFieldProps';
+import { splitComment, withSummaryText } from '../../lib/comment';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
 import { Button } from '../../ui/Button';
@@ -18,11 +20,13 @@ import { describeUpload, type UploadSummary } from './uploadSummary';
 import styles from './CheckinPanel.module.css';
 
 const DESCRIPTION_MIN_HEIGHT = 32;
+/** What the description takes, said once where it's written: Markdown, and what links objects and people. */
+export const DESCRIPTION_PLACEHOLDER = 'Description (optional) · Markdown, cs:, br:, @ to link';
 const DESCRIPTION_MAX_HEIGHT = 360;
 
 interface CheckinPanelProps {
   /** The summary field, for the view to put the caret in. */
-  summaryRef: RefObject<HTMLInputElement | null>;
+  summaryRef: RefObject<CommentFieldHandle | null>;
   /** Whose draft comment the fields show and edit. */
   workspacePath: string;
   /** How many changes the list holds, private ones too (the header counts only what checks in); undefined until read. */
@@ -82,6 +86,7 @@ export function CheckinPanel({
   const descriptionHeight = usePendingChangesViewStore((state) => state.descriptionHeight);
   const setDescriptionHeight = usePendingChangesViewStore((state) => state.setDescriptionHeight);
   const { summary, description } = useCheckinMessage(workspacePath);
+  const descriptionRef = useRef<CommentFieldHandle>(null);
   const setMessage = useCheckinDraftStore((state) => state.setMessage);
   const onMessageChange = (message: { summary?: string; description?: string }): void => setMessage(workspacePath, message);
   const shelving = mode === 'shelve';
@@ -125,13 +130,16 @@ export function CheckinPanel({
     <div className={styles.panel}>
       <ResizeHandle size={descriptionHeight} min={DESCRIPTION_MIN_HEIGHT} max={DESCRIPTION_MAX_HEIGHT} onResize={setDescriptionHeight} />
       <div className={styles.summaryField}>
-        <input
+        <CommentField
           ref={summaryRef}
+          singleLine
           className={styles.summary}
+          label={shelving ? 'Shelve summary' : 'Summary'}
           placeholder={shelving ? 'Shelve summary' : 'Summary'}
           value={summary}
-          onChange={(event) => onMessageChange({ summary: event.target.value })}
-          spellCheck
+          // Pasted lines go on in the description, as the title takes one line.
+          onChange={(text) => onMessageChange(withSummaryText({ summary, description }, text))}
+          onEnter={() => descriptionRef.current?.focus()}
         />
         {recentComments.length > 0 && (
           <ActionDropdownMenu
@@ -145,13 +153,14 @@ export function CheckinPanel({
           </ActionDropdownMenu>
         )}
       </div>
-      <textarea
+      <CommentField
+        ref={descriptionRef}
         className={styles.description}
-        placeholder="Description (optional)"
+        label="Description"
+        placeholder={DESCRIPTION_PLACEHOLDER}
         style={{ height: descriptionHeight }}
         value={description}
-        onChange={(event) => onMessageChange({ description: event.target.value })}
-        spellCheck
+        onChange={(text) => onMessageChange({ description: text })}
       />
       {shelving && (
         <div className={styles.keep} data-tip="Shelve a copy and keep working on the changes, instead of putting them aside">
