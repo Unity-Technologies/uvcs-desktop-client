@@ -52,22 +52,30 @@ function codeFence(text: string, language: string | undefined): string {
 /**
  * What a copy's HTML means rather than says: a Google Docs copy is wrapped in a `<b id="docs-internal-guid-…">` that
  * isn't bold, and says bold, italic and struck through with styles on spans; a chip copied from a shown comment
- * names what it was written as (`data-source`); an image pasted inline (`data:`) or from a file is no address to keep.
+ * names what it was written as (`data-source`); an image pasted inline (`data:`) or from a file is no address to keep,
+ * nor a link to anything but a web page or the app's own (`javascript:`, `file:`, `mailto:` keep their text).
  */
 function tidy(node: Root | Element): void {
   node.children = node.children.flatMap((child) => tidyChild(child as ElementContent));
 }
 
 function tidyChild(child: ElementContent): ElementContent[] {
-  if (child.type === 'text') return [{ ...child, value: child.value.replace(/ /g, ' ') }];
-  if (child.type !== 'element') return [child];
+  // A non-breaking space (U+00A0) is a space in a comment.
+  if (child.type === 'text') return [{ ...child, value: child.value.replace(/\u00a0/g, ' ') }];
+  // Comments (Word's `<!--StartFragment-->`) say nothing.
+  if (child.type !== 'element') return child.type === 'comment' ? [] : [child];
   const source = child.properties['dataSource'];
   if (typeof source === 'string') return [{ type: 'text', value: source }];
   if (child.tagName === 'img' && !/^https?:\/\//i.test(String(child.properties['src'] ?? ''))) return [];
   tidy(child);
   if (child.tagName === 'b' && String(child.properties['id'] ?? '').startsWith('docs-internal-guid')) return child.children;
+  // A link stays only to what a comment opens (`Markdown`'s links): a web page, or the app's own link.
+  if (child.tagName === 'a' && !LINKED_ADDRESS.test(String(child.properties['href'] ?? ''))) return child.children;
   return child.tagName === 'span' ? styledSpan(child) : [child];
 }
+
+/** What a shown comment opens as a link: `http(s):` in the browser, `uvcs:` in the app. */
+const LINKED_ADDRESS = /^(?:https?|uvcs):/i;
 
 /** A span styled bold, italic or struck through, as the element that says so. */
 function styledSpan(span: Element): ElementContent[] {

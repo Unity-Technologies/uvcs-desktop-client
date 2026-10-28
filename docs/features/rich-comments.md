@@ -152,7 +152,8 @@ New label and New attribute (`CommentArea`, its label naming the field, `id`), t
   the selection is in it. No toolbar shows otherwise: the fields stay small.
 - **Pasting** (`markdownFromClipboard`): HTML from a web page, Slack or Google Docs becomes Markdown (bold, italic,
   strikethrough, links, lists, tables, images from the web), Docs' bold-looking `<b id="docs-internal-guid-…">`
-  unwrapped and its styled spans read; code from an editor (monospace, preformatted) becomes a code block in the
+  unwrapped and its styled spans read, Word's and Outlook's markup left out; scripts and styles go, and a link stays
+  only to what a comment opens (`http(s):`, `uvcs:`), any other keeping its text; code from an editor (monospace, preformatted) becomes a code block in the
   language VS Code names, on a line of its own (`pasteMarkdown`). A copy with nothing its plain text doesn't hold
   pastes as it is; in code nothing converts; an address pasted on selected text links it (`linkFromPaste`).
 - **Placeholders** say what a field of many lines takes (`commentPlaceholder`): "Description (optional) · Markdown,
