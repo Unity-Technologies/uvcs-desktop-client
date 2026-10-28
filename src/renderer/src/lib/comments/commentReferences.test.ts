@@ -60,6 +60,13 @@ describe('findReferences', () => {
     ]);
   });
 
+  it('reads people named in any script', () => {
+    expect(referencesIn('@josé.garcía and @Ñandú')).toEqual([
+      { kind: 'user', name: 'josé.garcía' },
+      { kind: 'user', name: 'Ñandú' },
+    ]);
+  });
+
   it('reads emoji by GitHub names, and only those', () => {
     expect(referencesIn(':tada: :+1: :not_an_emoji:')).toEqual([
       { kind: 'emoji', name: 'tada', glyph: '🎉' },

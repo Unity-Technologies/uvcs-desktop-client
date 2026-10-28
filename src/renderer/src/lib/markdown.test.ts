@@ -193,3 +193,34 @@ describe('markdownPreview', () => {
     expect(markdownPreview('## Fixes\n- **Crash** on start\n- Slow `load`')).toBe('Fixes — Crash on start · Slow load');
   });
 });
+
+describe('parseMarkdown of a comment, what Markdown reads around a reference', () => {
+  const comment = { comment: true };
+
+  it('keeps a repository on a server named by its host whole, never a mail link', () => {
+    expect(parseInline('See cs:12@game@build.acme.com:8087 now', comment)).toEqual([
+      { kind: 'text', text: 'See ' },
+      { kind: 'reference', reference: { kind: 'changeset', id: 12, repository: 'game@build.acme.com:8087' }, source: 'cs:12@game@build.acme.com:8087' },
+      { kind: 'text', text: ' now' },
+    ]);
+  });
+
+  it('keeps a path with underscores whole, never emphasis', () => {
+    expect(parseInline('serverpath:/src/__init__.py#cs:3', comment)).toEqual([
+      { kind: 'reference', reference: { kind: 'file', path: '/src/__init__.py', at: { kind: 'changeset', id: 3 } }, source: 'serverpath:/src/__init__.py#cs:3' },
+    ]);
+  });
+
+  it('reads a reference inside emphasis', () => {
+    expect(parseInline('**cs:12** and _br:/main_', comment)).toEqual([
+      { kind: 'strong', children: [{ kind: 'reference', reference: { kind: 'changeset', id: 12 }, source: 'cs:12' }] },
+      { kind: 'text', text: ' and ' },
+      { kind: 'emphasis', children: [{ kind: 'reference', reference: { kind: 'branch', name: '/main' }, source: 'br:/main' }] },
+    ]);
+  });
+
+  it('shows a bare email address as text: the app opens no mail links', () => {
+    expect(parseInline('Ask ana@acme.com', comment)).toEqual([{ kind: 'text', text: 'Ask ana@acme.com' }]);
+    expect(parseInline('[mail](mailto:ana@acme.com)')).toEqual([{ kind: 'text', text: 'mail' }]);
+  });
+});

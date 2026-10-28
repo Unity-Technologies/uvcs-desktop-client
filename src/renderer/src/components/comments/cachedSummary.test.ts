@@ -8,14 +8,18 @@ describe('summaryIn', () => {
     { id: 13, comment: '' },
   ];
 
-  it("takes an object's summary from a list read before, or from the object read alone", () => {
+  it("takes an object's summary from a list read before", () => {
     expect(summaryIn([changesets], { kind: 'changeset', id: 12 })).toBe('Fix the switch');
-    expect(summaryIn([{ id: 7, title: 'Review the switch' }], { kind: 'codeReview', id: 7 })).toBe('Review the switch');
+    expect(summaryIn([[{ id: 7, title: 'Review the switch' }]], { kind: 'codeReview', id: 7 })).toBe('Review the switch');
     expect(summaryIn([[{ name: '/main/task', comment: 'Task' }]], { kind: 'branch', name: '/main/task' })).toBe('Task');
   });
 
   it('reads the summary without Markdown marks, emoji as themselves', () => {
     expect(summaryIn([[{ id: 2, comment: '**Switching** keeps changes :tada:' }]], { kind: 'changeset', id: 2 })).toBe('Switching keeps changes 🎉');
+  });
+
+  it("reads the place's lists only: an object read alone may be another repository's (an xlink's changeset)", () => {
+    expect(summaryIn([{ id: 12, comment: "The xlinked repository's changeset" }], { kind: 'changeset', id: 12 })).toBeUndefined();
   });
 
   it('has none for an object nothing read, or one without a comment', () => {
