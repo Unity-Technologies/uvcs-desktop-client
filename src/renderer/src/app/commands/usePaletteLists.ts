@@ -1,16 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { repositoryPlace, workspacePathOf, type Place } from '@shared/domain/place';
-import type { QueryFilter } from '@shared/domain/query';
-import { api } from '../../api/client';
 import { useRecentBranchGuids } from '../../features/branches/recentBranches';
 import { recentChangesetsQuery } from '../../features/changesets/recentChangesets';
 import { reviewSummariesQuery } from '../../features/codeReviews/useCodeReviews';
 import { useWorkspacePaths } from '../../features/files/useWorkspacePaths';
 import { usePendingChangesOf } from '../../features/pendingChanges/usePendingChanges';
-import { sinceDateFor } from '../../lib/sincePresets';
 import { SLOW_CHANGING_QUERY } from '../queryClient';
 import { useWorkspaceInfoOf } from '../workspace/useWorkspace';
-import { branchesKey, labelsKey, shelvesKey } from './paletteQueryKeys';
+import { everyBranchQuery, everyLabelQuery, recentShelvesQuery } from './paletteQueryKeys';
 
 /**
  * A placeholder place, never queried: the palette's hooks key their queries by it on the home screen, where no place
@@ -33,19 +30,17 @@ export function usePaletteLists(shown: Place | null) {
   const inWorkspace = workspacePath !== null;
   const path = workspacePath ?? '';
   const cached = { enabled, ...SLOW_CHANGING_QUERY, gcTime: CACHE_TIME };
-  // Shelves by everyone pile up by the thousand; older ones are still found by the server search.
-  const recentShelvesFilter: QueryFilter = { sinceDate: sinceDateFor('last3Months') };
 
   return {
     files: useWorkspacePaths(path, inWorkspace),
     pendingChanges: usePendingChangesOf(workspacePath),
     workspace: useWorkspaceInfoOf(workspacePath),
     recentBranchGuids: useRecentBranchGuids(path, inWorkspace),
-    branches: useQuery({ queryKey: branchesKey(place, {}), queryFn: () => api.branches.list(place, {}), ...cached }),
-    labels: useQuery({ queryKey: labelsKey(place, {}), queryFn: () => api.labels.list(place, {}), ...cached }),
+    branches: useQuery({ ...everyBranchQuery(place), ...cached }),
+    labels: useQuery({ ...everyLabelQuery(place), ...cached }),
     // Older changesets are still reachable by number (`1234` or `cs:1234`) or by searching them all on demand.
     changesets: useQuery({ ...cached, ...recentChangesetsQuery(place) }),
-    shelves: useQuery({ queryKey: shelvesKey(place, recentShelvesFilter), queryFn: () => api.shelves.list(place, recentShelvesFilter), ...cached }),
+    shelves: useQuery({ ...recentShelvesQuery(place), ...cached }),
     // The same newest reviews the branch chips read (`useReviewsByBranch`): one query for both.
     codeReviews: useQuery({ ...reviewSummariesQuery(place), ...cached }),
   };

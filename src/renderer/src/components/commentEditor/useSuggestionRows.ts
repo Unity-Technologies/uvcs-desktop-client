@@ -1,16 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { placeId } from '@shared/domain/place';
-import type { QueryFilter } from '@shared/domain/query';
-import { api } from '../../api/client';
-import { branchesKey, labelsKey, shelvesKey } from '../../app/commands/paletteQueryKeys';
+import { everyBranchQuery, everyLabelQuery, recentShelvesQuery } from '../../app/commands/paletteQueryKeys';
 import { useChangesetSearch } from '../../app/commands/usePaletteServerSearch';
-import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { usePlace, usePlaceRepository } from '../../app/workspace/useWorkspace';
 import { recentChangesetsQuery } from '../../features/changesets/recentChangesets';
 import { useChangeset } from '../../features/changesets/useChangeset';
 import { reviewSummariesQuery } from '../../features/codeReviews/useCodeReviews';
-import { sinceDateFor } from '../../lib/sincePresets';
 import { peopleSeenIn } from '../people/usePeopleSeen';
 import { changesetToLookUp, useSettledLookup } from './changesetLookup';
 import {
@@ -30,11 +26,8 @@ import {
   shelveSuggestions,
   SUGGESTION_LIMIT,
 } from './suggestionItems';
-import { suggestionRows, type ChangesetLookup, type ChangesetSearch, type SuggestionRow } from './suggestionRows';
-import type { SuggestionKind, SuggestionQuery } from './suggestionTrigger';
-
-/** The palette's recent shelves (`usePaletteLists`): one query and one cache entry for both. */
-const RECENT_SHELVES: QueryFilter = { sinceDate: sinceDateFor('last3Months') };
+import { suggestionListsRead, suggestionRows, type ChangesetLookup, type ChangesetSearch, type SuggestionRow } from './suggestionRows';
+import type { SuggestionQuery } from './suggestionTrigger';
 
 const NO_ROWS: SuggestionRow[] = [];
 
@@ -50,14 +43,13 @@ export function useSuggestionRows(query: SuggestionQuery | null): { rows: Sugges
   const placeRepository = usePlaceRepository();
   const kind = query?.kind;
   const typed = query?.text ?? '';
-  const asks = (...kinds: SuggestionKind[]) => kind !== undefined && kinds.includes(kind);
+  const reads = suggestionListsRead(kind);
 
-  // A mention reads the newest changesets for their authors; the other lists it only reads when they're cached.
-  const changesets = useQuery({ ...recentChangesetsQuery(place), enabled: asks('changeset', 'person') });
-  const branches = useQuery({ queryKey: branchesKey(place, {}), queryFn: () => api.branches.list(place, {}), ...SLOW_CHANGING_QUERY, enabled: asks('branch') });
-  const labels = useQuery({ queryKey: labelsKey(place, {}), queryFn: () => api.labels.list(place, {}), ...SLOW_CHANGING_QUERY, enabled: asks('label') });
-  const shelves = useQuery({ queryKey: shelvesKey(place, RECENT_SHELVES), queryFn: () => api.shelves.list(place, RECENT_SHELVES), ...SLOW_CHANGING_QUERY, enabled: asks('shelve') });
-  const reviews = useQuery({ ...reviewSummariesQuery(place), enabled: asks('codeReview') });
+  const changesets = useQuery({ ...recentChangesetsQuery(place), enabled: reads.changesets });
+  const branches = useQuery({ ...everyBranchQuery(place), enabled: reads.branches });
+  const labels = useQuery({ ...everyLabelQuery(place), enabled: reads.labels });
+  const shelves = useQuery({ ...recentShelvesQuery(place), enabled: reads.shelves });
+  const reviews = useQuery({ ...reviewSummariesQuery(place), enabled: reads.codeReviews });
 
   // Each list read into an index once per read: a key typed walks no object.
   const changesetsIndex = useMemo(() => changesetIndex(changesets.data ?? []), [changesets.data]);
