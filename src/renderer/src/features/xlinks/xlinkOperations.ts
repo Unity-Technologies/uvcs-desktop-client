@@ -1,21 +1,34 @@
 import { workspacePlace } from '@shared/domain/place';
 import type { TreeItem, XlinkTarget } from '@shared/domain/explorer';
 import { api } from '../../api/client';
-import { runRead, runVoidAction } from '../../app/operations/runOperation';
-import { isAffectedByPendingChangeEdit } from '../../app/refresh/refreshScopes';
+import { runOperation, runRead, runVoidAction } from '../../app/operations/runOperation';
+import { isAffectedByCheckinOrUpdate, isAffectedByPendingChangeEdit } from '../../app/refresh/refreshScopes';
 import { listedItems } from '../files/directoryListing';
 import { useFilesViewStore } from '../files/filesViewStore';
+import { createdXlinkMessage } from './createdXlinkMessage';
 import { openXlinkDialog } from './XlinkDialog';
-import { newXlinkOf, xlinkEditOf, type XlinkDialogTarget } from './xlinkDraft';
+import { checkinCommentOf, newXlinkOf, xlinkEditOf, type XlinkDialogTarget } from './xlinkDraft';
 
-/** Asks what to link and creates a new xlink inside `directory` (`''` is the root), selecting it in the tree. */
+/**
+ * Asks what to link and creates a new xlink inside `directory` (`''` is the root), checked in with its files loaded
+ * (`XlinksApi.create`), selecting it in the tree. The dialog stays open only when the xlink couldn't be created at all.
+ */
 export function createXlink(workspacePath: string, directory: string): void {
   const siblings = listedItems(workspacePath, directory)?.map((item) => item.name) ?? [];
   openXlinkDialog({ kind: 'create', directory, siblings }, async (draft) => {
     const xlink = newXlinkOf(directory, draft);
-    const created = await runVoidAction(workspacePlace(workspacePath), "Couldn't create the xlink", () => api.xlinks.create(workspacePath, xlink), isAffectedByPendingChangeEdit);
+    const created = await runOperation({
+      title: `Creating xlink ${xlink.path}`,
+      workspacePath,
+      // It checks in and updates: nothing else that changes the workspace may run meanwhile.
+      kind: 'update',
+      cancellable: false,
+      run: (operationId) => api.xlinks.create(workspacePath, xlink, checkinCommentOf(directory, draft), operationId),
+      success: (result) => createdXlinkMessage(xlink.path, result),
+      affects: isAffectedByCheckinOrUpdate,
+    });
     if (created) useFilesViewStore.getState().requestReveal(workspacePlace(workspacePath), xlink.path);
-    return created;
+    return created !== undefined;
   });
 }
 

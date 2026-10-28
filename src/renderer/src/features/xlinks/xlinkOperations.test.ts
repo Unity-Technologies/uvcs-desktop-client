@@ -30,9 +30,11 @@ beforeEach(() => {
 });
 
 describe('Creating an xlink', () => {
-  it('takes no name its folder already holds, creates it as typed, refreshes the workspace and selects it', async () => {
+  const LIB_XLINK = { path: 'code/lib', repository: 'lib@local', point: { kind: 'branch', branch: '/main' }, writable: false, relativeServer: false, folder: '/', rules: [] };
+
+  it('takes no name its folder already holds, creates it as typed with its comment, refreshes the workspace and selects it', async () => {
     queryClient.setQueryData(directoryListingKey(ws, 'code'), [{ name: 'Engine' }] as TreeItem[]);
-    fakeApi.answer('xlinks.create', () => undefined);
+    fakeApi.answer('xlinks.create', () => ({ kind: 'loaded', changesetId: 3 }));
     createXlink(ws, 'code');
     const { target, save } = lastDialog();
     expect(target).toEqual({ kind: 'create', directory: 'code', siblings: ['Engine'] });
@@ -41,23 +43,30 @@ describe('Creating an xlink', () => {
     const saved = await save({ ...draftOf(target), name: 'lib', repository: 'lib@local' });
 
     expect(saved).toBe(true);
-    expect(fakeApi.calls()).toEqual([
-      {
-        method: 'xlinks.create',
-        args: [ws, { path: 'code/lib', repository: 'lib@local', point: { kind: 'branch', branch: '/main' }, writable: false, relativeServer: false, folder: '/', rules: [] }],
-      },
-    ]);
-    expect(refreshes()).toEqual(['explorer', 'info', 'locks', 'pendingChanges', 'review']);
+    expect(fakeApi.calls()).toEqual([{ method: 'xlinks.create', args: [ws, LIB_XLINK, 'Add xlink code/lib', expect.any(String)] }]);
+    // Checked in and updated: every view but those a checkin leaves alone.
+    expect(refreshes()).toEqual(expect.arrayContaining(['explorer', 'pendingChanges', 'changesets', 'branches']));
+    expect(shownToasts()).toEqual([expect.objectContaining({ kind: 'success', title: 'Created xlink code/lib', detail: 'Checked in as changeset 3.' })]);
     expect(useFilesViewStore.getState().revealRequest).toMatchObject({ place: workspacePlace(ws), path: 'code/lib' });
   });
 
-  it('keeps the dialog open, with what was typed, when cm refuses', async () => {
+  it('closes once the xlink exists, even when a later step failed, saying what is left to do', async () => {
+    fakeApi.answer('xlinks.create', () => ({ kind: 'notCheckedIn', reason: 'The server is unreachable' }));
+    createXlink(ws, 'code');
+    const { target, save } = lastDialog();
+
+    expect(await save({ ...draftOf(target), name: 'lib', repository: 'lib@local' })).toBe(true);
+    expect(shownToasts()).toEqual([expect.objectContaining({ kind: 'info', title: 'Created xlink code/lib, not checked in' })]);
+    expect(useFilesViewStore.getState().revealRequest).toMatchObject({ path: 'code/lib' });
+  });
+
+  it('keeps the dialog open, with what was typed, when cm refuses to create it', async () => {
     fakeApi.answer('xlinks.create', () => Promise.reject(new Error('code is not in a workspace.')));
     createXlink(ws, 'code');
     const { target, save } = lastDialog();
 
     expect(await save({ ...draftOf(target), name: 'lib', repository: 'lib@local' })).toBe(false);
-    expect(shownToasts()).toEqual([expect.objectContaining({ kind: 'error', title: "Couldn't create the xlink" })]);
+    expect(shownToasts()).toEqual([expect.objectContaining({ kind: 'error', title: 'Creating xlink code/lib failed' })]);
     expect(useFilesViewStore.getState().revealRequest).toBeNull();
   });
 });
