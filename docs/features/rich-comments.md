@@ -166,7 +166,7 @@ New label and New attribute (`CommentArea`, its label naming the field, `id`), t
 ### Suggestions
 
 Typing `cs:`, `br:`, `lb:`, `sh:`, `cr:` or `@`, or `:` and two letters of an emoji's name, after a space, a line's
-start, a bracket or an emphasis mark (`suggestionQueryAt`), opens a list under the word (a listbox the field's
+start, a bracket or an emphasis mark (`suggestionQueryAt`), opens a list under the word while it's typed (`suggestionsShownAt`: a field opened with its caret after a reference opens none) (a listbox the field's
 `aria-activedescendant` walks): ↑↓ move, Enter or Tab picks, Esc closes it until another word is typed. A colon in a
 sentence (`10:30`, `Note:`) opens nothing. A pick writes the reference as `cm` takes it and a space
 (`pickSuggestion`); a branch or label whose name a spec can't hold (a space, a sentence's punctuation or an emphasis

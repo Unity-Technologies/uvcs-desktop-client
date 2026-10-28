@@ -16,7 +16,7 @@ import { SelectionBar } from './SelectionBar';
 import { formatsOf, selectionBarShows } from './selectionBarState';
 import { optionId, SuggestionList } from './SuggestionList';
 import { isDismissed, isPickable, suggestionKeyAction } from './suggestionRows';
-import { pickSuggestion, suggestionQueryAt, type SuggestionQuery } from './suggestionTrigger';
+import { pickSuggestion, suggestionsShownAt, type SuggestionQuery } from './suggestionTrigger';
 import { useSuggestionRows } from './useSuggestionRows';
 import { WidgetPortals } from './widgetPortals';
 import fieldStyles from './CommentField.module.css';
@@ -124,7 +124,7 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
 /** The suggestion list for what is typed at the caret: its rows, the key it's at, and the keys that walk it. */
 function useSuggestions(view: EditorView | null, state: EditorState | null) {
   const listId = useId();
-  const query = state && state.field(hasFocus) ? suggestionQueryAt(state) : null;
+  const query = state && state.field(hasFocus) ? suggestionsShownAt(state) : null;
   // Esc closes the list until the word typed is another one.
   const [dismissedAt, setDismissedAt] = useState<number | null>(null);
   const open: SuggestionQuery | null = query && !isDismissed(query, dismissedAt) ? query : null;

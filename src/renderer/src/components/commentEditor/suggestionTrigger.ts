@@ -2,6 +2,7 @@ import type { EditorState, TransactionSpec } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
 import { isInCode } from './formatCommands';
 import { ownStep } from './ownStep';
+import { typingAt } from './typingAt';
 
 /** What a suggestion list offers: the objects a comment names, people and emoji. */
 export type SuggestionKind = 'changeset' | 'branch' | 'label' | 'shelve' | 'codeReview' | 'person' | 'emoji';
@@ -56,6 +57,14 @@ export function suggestionQueryAt(state: EditorState): SuggestionQuery | null {
   // A sentence's punctuation after the word stays: it's no part of a name (`TRAILING_PUNCTUATION`).
   const rest = /^\S*/.exec(line.text.slice(main.head - line.from))![0].replace(/[.,;:!?)\]}'"*_~]+$/, '');
   return { kind, from, to: main.head + rest.length, text };
+}
+
+/**
+ * The suggestion list to show: the word at the caret's (`suggestionQueryAt`), only while it is being typed
+ * (`typingAt`). A field that opens with its caret after a reference, or a caret moved into one, opens none.
+ */
+export function suggestionsShownAt(state: EditorState): SuggestionQuery | null {
+  return state.field(typingAt, false) === state.selection.main.head ? suggestionQueryAt(state) : null;
 }
 
 /**
