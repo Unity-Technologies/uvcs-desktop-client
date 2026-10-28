@@ -1,3 +1,4 @@
+import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import { branchDiffPage } from '../branches/branchOperations';
 import { changesetDiffPage } from '../changesets/changesetOperations';
