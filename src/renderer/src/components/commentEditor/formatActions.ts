@@ -1,6 +1,7 @@
-import { Bold, Code, Italic, Link, List, ListOrdered, ListTodo, SquareCode, Strikethrough, TextQuote, type LucideIcon } from 'lucide-react';
+import { Bold, Code, Italic, Link, List, ListOrdered, ListTodo, SquareCode, TextQuote, type LucideIcon } from 'lucide-react';
 import type { ShortcutId } from '../../lib/shortcutRegistry';
 import type { FormatCommandId } from './formatCommands';
+import { StrikethroughIcon } from './StrikethroughIcon';
 
 /**
  * A format the comment editor offers (docs/features/rich-comments.md, "Writing"): what the selection bar, focus mode's
@@ -20,7 +21,7 @@ export interface FormatAction {
 export const FORMAT_ACTIONS: readonly FormatAction[] = [
   { id: 'bold', label: 'Bold', icon: Bold, shortcutId: 'commentBold', block: false },
   { id: 'italic', label: 'Italic', icon: Italic, shortcutId: 'commentItalic', block: false },
-  { id: 'strikethrough', label: 'Strikethrough', icon: Strikethrough, shortcutId: 'commentStrikethrough', block: false },
+  { id: 'strikethrough', label: 'Strikethrough', icon: StrikethroughIcon, shortcutId: 'commentStrikethrough', block: false },
   { id: 'code', label: 'Code', icon: Code, shortcutId: 'commentCode', block: false },
   { id: 'link', label: 'Link', icon: Link, shortcutId: 'commentLink', block: false },
   { id: 'bullet', label: 'List', icon: List, shortcutId: 'commentList', block: true },

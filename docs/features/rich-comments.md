@@ -262,8 +262,8 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   then Tab too (CodeMirror's tab focus mode, turned off as focus mode opens so a recent Esc can't skip its keys).
   In focus mode a comment of many lines has a toolbar as its box's top strip (`FormatToolbar`, `toolbarButtons`), as
   GitHub's, and its hints right under the box as its caption (`FocusModeFooter`, `KeyHints`' `caption`). The toolbar
-  holds every format of `FORMAT_ACTIONS`, the one list the selection bar and the keys read too, each tooltip its name
-  and key, pressed where the caret's text has it; its buttons never take the focus, and the corner button back to
+  holds every format of `FORMAT_ACTIONS`, the one list the selection bar and the keys read too (Lucide's icons, but
+  strikethrough's, `StrikethroughIcon`: an S centered like the B and the I beside it), each tooltip its name and key, pressed where the caret's text has it; its buttons never take the focus, and the corner button back to
   the field sits at the strip's end. It formats its own field only: in the check-in that is the description, its
   buttons disabled while the caret is in the summary, whose formats are its keys; in code only the code block is
   enabled. The text then takes the box's whole width, a code block the same inset on both sides. The hints are the
