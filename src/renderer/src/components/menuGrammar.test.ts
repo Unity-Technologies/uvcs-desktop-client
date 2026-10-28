@@ -564,10 +564,10 @@ describe('shelves', () => {
   const ids = (menu: MenuEntry[]): (string | undefined)[] => topEntries(menu).map((entry) => entry.id);
 
   it("offers everything on the user's own shelve", () => {
-    expect(ids(shelveMenu(workspacePlace(ws), [shelve]))).toEqual(['diff', 'diffInNewWindow', 'apply', 'applyAndDelete', 'newCodeReview', 'copy', 'delete']);
+    expect(ids(shelveMenu(workspacePlace(ws), [shelve]))).toEqual(['diff', 'diffInNewWindow', 'apply', 'applyAndDelete', 'newCodeReview', 'copy', 'editComment', 'delete']);
   });
 
-  it("only applies, shows, reviews and copies someone else's: deleting it is theirs to do", () => {
+  it("only applies, shows, reviews and copies someone else's: describing and deleting it is theirs to do", () => {
     expect(ids(shelveMenu(workspacePlace(ws), [shelve], { mine: false }))).toEqual(['diff', 'diffInNewWindow', 'apply', 'newCodeReview', 'copy']);
   });
 });

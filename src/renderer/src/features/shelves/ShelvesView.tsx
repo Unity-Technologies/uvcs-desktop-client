@@ -90,7 +90,7 @@ export function ShelvesView() {
         contextMenu={(selectedShelves) => shelveMenu(place, selectedShelves)}
         initialSort={{ columnId: 'id', descending: true }}
         noun="shelve"
-        details={selected && <ShelveDetails key={selected.id} shelve={selected} menu={shelveMenu(place, [selected])} />}
+        details={selected && <ShelveDetails key={selected.id} place={place} shelve={selected} menu={shelveMenu(place, [selected])} />}
       />
     </>
   );
