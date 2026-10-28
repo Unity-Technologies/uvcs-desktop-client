@@ -5,6 +5,7 @@ import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { Label } from '@shared/domain/label';
 import type { Shelve } from '@shared/domain/shelve';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
+import { userFilterTexts } from '../../lib/userName';
 import { branchFilterTexts } from '../../features/branches/branchFilters';
 import { changesetFilterTexts } from '../../features/changesets/changesetFilters';
 import { reviewFilterTexts } from '../../features/codeReviews/codeReviewFilters';
@@ -55,7 +56,7 @@ describe('the suggestions match what the lists’ filter matches', () => {
         [rankCandidates(labelIndex(labels), query, EVERY), labels.filter((label) => matchesWordFilter(labelFilterTexts(label), query))],
         [rankCandidates(shelveIndex(shelves), query, EVERY), shelves.filter((shelve) => matchesWordFilter(shelveFilterTexts(shelve), query))],
         [rankCandidates(codeReviewIndex(reviews), query, EVERY), reviews.filter((review) => matchesWordFilter(reviewFilterTexts(review), query))],
-        [rankCandidates(personIndex(people), query, EVERY), people.filter((person) => rankCandidates(personIndex([person]), query, 1).length > 0)],
+        [rankCandidates(personIndex(people), query, EVERY), people.filter((person) => matchesWordFilter(userFilterTexts(person), query))],
       ];
       for (const [suggested, listed] of pairs) expect(new Set(suggested), query).toEqual(new Set(listed));
     }
