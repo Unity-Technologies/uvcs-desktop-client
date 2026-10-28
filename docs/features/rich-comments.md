@@ -203,9 +203,15 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   undo, caret and suggestions would start over.
   In the check-in, focus mode opens the summary and the description together (`CommentFocusGroup`,
   `focusModeFields`): one panel, the summary a title over the description, the caret staying where it was. Tab, or
-  ↓ at the summary's end, goes to the description's start; ⇧Tab, or ↑ on its first line, back to the summary's end
+  ↓ at the summary's end, goes to the description's start; ↑ on its first line back to the summary's end
   (`groupMove`). They stay the same two editors; moving between them is no leaving, and the panel closes as the focus
   leaves both or ⌘↵ checks in. The dialogs' single comments open alone.
+  In focus mode Tab is the text's (`focusModeParts`' `takesTab`, `indentLines`, `outdentLines`): it nests a list item
+  under the one above by its marker's width (a task keeps its box), as GitHub and Obsidian do, and indents a code
+  block's line by the block's own indent (a tab, or the spaces its first indented line has), four spaces in a block
+  with none; a paragraph's line is left alone, as four spaces would make it a code block. ⇧Tab takes it back, each
+  line of a selection by its own kind. Esc leaves focus mode, and out of it Tab leaves the field as in any form, Esc
+  then Tab too (CodeMirror's tab focus mode, turned off as focus mode opens so a recent Esc can't skip its keys).
   In focus mode a comment of many lines has a toolbar as its box's top strip (`FormatToolbar`, `toolbarButtons`), as
   GitHub's, and its hints right under the box as its caption (`FocusModeFooter`, `KeyHints`' `caption`). The toolbar
   holds every format of `FORMAT_ACTIONS`, the one list the selection bar and the keys read too, each tooltip its name
