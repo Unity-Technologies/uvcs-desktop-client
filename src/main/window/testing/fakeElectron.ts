@@ -31,12 +31,12 @@ class FakeWebContents extends EventEmitter {
   reload(): void {
     this.reloads++;
   }
-  /** How many times Edit ▸ Paste ran in the page (`webContents.paste`). */
+  /** How many times Edit ▸ Paste and Match Style ran in the page (`webContents.pasteAndMatchStyle`). */
   plainPastes = 0;
   pasteAndMatchStyle(): void {
     this.plainPastes++;
   }
-
+  /** How many times Edit ▸ Paste ran in the page (`webContents.paste`). */
   pastes = 0;
   paste(): void {
     this.pastes++;
