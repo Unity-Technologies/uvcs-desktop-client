@@ -21,4 +21,15 @@ describe('WidgetPortals', () => {
     expect(changed).toHaveBeenCalledTimes(1);
     expect(portals.portals()).toHaveLength(1);
   });
+
+  it('keeps the same list while no widget comes or goes: what lets `WidgetPortalsView` skip a key’s render', async () => {
+    // A key re-renders the editor; the chips' view, memoized, re-renders only when this list is a new one.
+    const portals = new WidgetPortals();
+    portals.show(host(), 'chip');
+    await Promise.resolve();
+    const drawn = portals.portals();
+    portals.remove(host());
+    await Promise.resolve();
+    expect(portals.portals()).toBe(drawn);
+  });
 });
