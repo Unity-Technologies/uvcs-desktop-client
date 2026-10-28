@@ -307,7 +307,7 @@ A directory conflict is applied as soon as it's decided, as the official client 
 merge the decisions leave: keeping one side of a folder moved apart on both sides moves the files changed on both into
 that side's folder, keeping one item of a folder added on both sides takes the other's conflicts out of the merge, and
 keeping both brings the incoming one's files as changes to apply. `cm` can't merge a file conflict before the directory
-conflicts are solved (`AssertNoPendingDirectoryConflicts`, in `cm merge` and the official client alike). Solving them
+conflicts are solved (`cm merge` refuses to, and the official client alike). Solving them
 all only when the merge completes was dropped: the file conflicts the page showed were then those before any decision,
 and their decisions went to paths a decision had moved.
 
