@@ -1,7 +1,8 @@
 // `cm xlink` arguments. The command creates an xlink as a pending change (`cm xlink [-w] [-rs] <path> <folder> <point>
 // [rules]`), edits one, checking it out (`-e <path> <point>`: only where it points; writable, folder and server stay),
 // and adds or deletes its branch expansion rules (`-ar`/`-dr <path> <rules>`). None of it reads or writes the
-// xlinked files: they come with the next update, so each is a quick command.
+// xlinked files, so each is a quick command: they come once the xlink is checked in and its folder updated
+// (`loadXlinkArgs`).
 
 import { fullBranchName, repositoryFolder, type NewXlink, type XlinkPoint, type XlinkRule } from '@shared/domain/xlinks';
 import { equalsCondition, findArgs } from './findQuery';
@@ -46,6 +47,18 @@ export function addXlinkRulesArgs(absolutePath: string, rules: readonly XlinkRul
 
 export function deleteXlinkRulesArgs(absolutePath: string, rules: readonly XlinkRule[]): string[] {
   return ['xlink', '--deleterules', absolutePath, ...rules.map(xlinkRuleArg)];
+}
+
+/**
+ * `cm update` of a checked-in xlink's folder, which loads its files. Updating the workspace wouldn't: it is at the
+ * changeset that added the xlink already, so `cm update` finds it up to date and reads no tree. Updating a folder, `cm`
+ * looks for pending changes in the whole workspace first, and does as client.conf's PendingChangesOnSwitchAction says:
+ * with none set, as by default, it updates the folder and leaves them as they are; set to shelve them, it would shelve,
+ * undo and merge them back itself, which `--machinereadable` turns into refusing (as a setting to fail does), so the
+ * app moves them aside itself (`loadXlink`). `--noinput`: never ask; `--dontmerge`: never open a merge tool.
+ */
+export function loadXlinkArgs(absolutePath: string): string[] {
+  return ['update', absolutePath, '--machinereadable', '--noinput', '--dontmerge'];
 }
 
 export function showXlinkArgs(absolutePath: string): string[] {

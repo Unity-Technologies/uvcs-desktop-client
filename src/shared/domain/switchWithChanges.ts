@@ -87,9 +87,10 @@ export interface SwitchShelveRecord {
 }
 
 /**
- * Why the app shelved changes: to switch away, to update past incoming changesets that deleted or moved
- * files changed locally (`cm update` can't merge those), or because the user shelved them away (Shelve undoes what it
- * shelves). Only the first two are left changes, offered by "Welcome back"; all of them are put back the same way.
+ * Why the app shelved changes: to switch away, to update (past incoming changesets that deleted or moved files changed
+ * locally, which `cm update` can't merge; or to load a new xlink's files, which `cm` refuses with changes pending:
+ * `loadXlink`), or because the user shelved them away (Shelve undoes what it shelves). Only the first two are left
+ * changes, offered by "Welcome back"; all of them are put back the same way.
  */
 type ShelvedChangesReason = 'switch' | 'update' | 'shelve';
 
