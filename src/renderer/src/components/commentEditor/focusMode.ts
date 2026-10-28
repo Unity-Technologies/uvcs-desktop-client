@@ -49,8 +49,6 @@ export interface FocusModeField {
   groupOpen: boolean;
   /** A field alone: how its larger editor shows, null while it doesn't. */
   ownLayout: FocusModeLayout | null;
-  /** In a dialog (Edit comment, New branch, New label, New attribute), whose comment has the large editor's layout. */
-  inDialog: boolean;
 }
 
 /** What focus mode shows on a field (`focusModeParts`); the editor only draws it. */
@@ -75,10 +73,9 @@ export interface FocusModeParts {
 /**
  * Focus mode's parts on a field: a one-line field alone has none; the check-in's summary takes the group's keys and
  * nothing else; a comment of many lines has the corner button and, in focus mode, the toolbar and Tab, and alone its
- * own hints and box (over the view, the backdrop). In a dialog a comment of many lines has the large editor's layout at
- * the dialog's size: the toolbar and the hints always, focus mode growing it; Tab stays the form's until then.
+ * own hints and box (over the view, the backdrop).
  */
-export function focusModeParts({ singleLine, inGroup, groupOpen, ownLayout, inDialog }: FocusModeField): FocusModeParts {
+export function focusModeParts({ singleLine, inGroup, groupOpen, ownLayout }: FocusModeField): FocusModeParts {
   const layout = inGroup ? null : ownLayout;
   const inFocusMode = inGroup ? groupOpen : ownLayout !== null;
   const many = !singleLine;
@@ -87,16 +84,11 @@ export function focusModeParts({ singleLine, inGroup, groupOpen, ownLayout, inDi
     layout: many ? layout : null,
     inFocusMode: (many || inGroup) && inFocusMode,
     button: many ? focusModeButton(inFocusMode) : null,
-    toolbar: many && (inFocusMode || inDialog),
-    footer: many && !inGroup && (inFocusMode || inDialog),
+    toolbar: many && inFocusMode,
+    footer: many && !inGroup && inFocusMode,
     backdrop: many && layout === 'overlay',
     takesTab: many && inFocusMode,
   };
-}
-
-/** Whether a group of fields (`CommentFocusGroup`) shows its hints: in focus mode, and always in a dialog. */
-export function groupShowsHints({ open, inDialog }: { open: boolean; inDialog: boolean }): boolean {
-  return open || inDialog;
 }
 
 /**

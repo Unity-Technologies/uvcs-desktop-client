@@ -188,10 +188,7 @@ draft and opens with it on coming back (`commentEditorExit`, `useCommentDraftSto
 as a question there would hold the list's selection hostage.
 A recent comment picked in the check-in opens in the same parts (`recentCommentPick`), and the caret goes to the
 end of the field that took its text. New branch, New label and New attribute stay one field: theirs is a
-description, not a commit message; their focus mode grows within the dialog, its hints above the buttons. In
-all four dialogs the comment has the large editor's layout at the dialog's size (`focusModeParts`' `inDialog`,
-`groupShowsHints`): the toolbar always at its top, the hints under it, the corner button and ⇧⌘F growing it; Tab stays
-the form's until focus mode opens. Edit comment keeps its title over its description; the others have no title.
+description, not a commit message; their focus mode grows within the dialog, its hints above the buttons.
 
 - **The text is the comment.** The editor is CodeMirror 6 over the comment's own Markdown, drawn as it reads: what a
   field gives and takes is the stored text, LF line ends as `cm` keeps them, never converted, so saving, undo and
