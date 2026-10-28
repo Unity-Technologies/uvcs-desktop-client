@@ -1,5 +1,6 @@
 import type { Suggestion } from './suggestionItems';
-import type { SuggestionKind, SuggestionQuery } from './suggestionTrigger';
+import type { SuggestionQuery } from './suggestionTrigger';
+import type { SuggestionKind } from './suggestionTriggers';
 
 /** A row of the suggestion list: something to pick, the search of every changeset to start, or a word on where it stands. */
 export type SuggestionRow =

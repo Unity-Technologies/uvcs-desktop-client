@@ -124,6 +124,7 @@ export const SHORTCUTS = {
   commentCode: { area: 'Comments', label: 'Code', keys: ['mod+e'] },
   commentLink: { area: 'Comments', label: 'Link', keys: ['mod+k'] },
   commentList: { area: 'Comments', label: 'List', keys: ['mod+shift+8'] },
+  commentNumberedList: { area: 'Comments', label: 'Numbered list', keys: ['mod+shift+7'] },
   commentQuote: { area: 'Comments', label: 'Quote', keys: ['mod+shift+9'] },
   commentCodeBlock: { area: 'Comments', label: 'Code block', keys: ['mod+alt+shift+c'], keysOffMac: ['mod+shift+e'] },
   commentPastePlain: { area: 'Comments', label: 'Paste without formatting', keys: ['mod+shift+v'] },

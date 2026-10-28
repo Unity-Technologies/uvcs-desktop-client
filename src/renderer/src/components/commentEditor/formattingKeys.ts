@@ -1,18 +1,7 @@
 import { matchesShortcut, type PressedKey } from '../../lib/shortcuts';
-import { SHORTCUTS, shortcutKeys, type ShortcutId } from '../../lib/shortcutRegistry';
+import { SHORTCUTS, shortcutKeys } from '../../lib/shortcutRegistry';
+import { FORMAT_ACTIONS } from './formatActions';
 import type { FormatCommandId } from './formatCommands';
-
-/** Each format's shortcut in the registry, where the shortcuts sheet lists it. A task list has none, as in Slack. */
-export const FORMAT_SHORTCUTS: Partial<Record<FormatCommandId, ShortcutId>> = {
-  bold: 'commentBold',
-  italic: 'commentItalic',
-  strikethrough: 'commentStrikethrough',
-  code: 'commentCode',
-  link: 'commentLink',
-  bullet: 'commentList',
-  quote: 'commentQuote',
-  codeBlock: 'commentCodeBlock',
-};
 
 /**
  * The format a key press runs, matched as the window's shortcuts are (`matchesShortcut`: letters by the character
@@ -20,9 +9,8 @@ export const FORMAT_SHORTCUTS: Partial<Record<FormatCommandId, ShortcutId>> = {
  * the ones the field offers: a one-line field takes no block.
  */
 export function formatForKey(event: PressedKey, formats: readonly FormatCommandId[], mac: boolean): FormatCommandId | null {
-  for (const format of formats) {
-    const id = FORMAT_SHORTCUTS[format];
-    if (id && shortcutKeys(SHORTCUTS[id], mac).some((key) => matchesShortcut(event, key, mac))) return format;
+  for (const { id, shortcutId } of FORMAT_ACTIONS) {
+    if (formats.includes(id) && shortcutId && shortcutKeys(SHORTCUTS[shortcutId], mac).some((key) => matchesShortcut(event, key, mac))) return id;
   }
   return null;
 }

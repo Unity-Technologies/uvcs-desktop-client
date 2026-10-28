@@ -49,3 +49,27 @@
   background: var(--accent-soft);
   color: var(--accent-text);
 }
+
+/* Focus mode's toolbar (`FormatToolbar`): the bar's buttons in a row over the text, always there; clear of the
+   corner button. */
+.toolbar {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1px;
+  order: -1;
+  margin-bottom: var(--space-2);
+  padding: 0 28px var(--space-2) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.button:disabled:hover {
+  background: none;
+  color: var(--text-secondary);
+}

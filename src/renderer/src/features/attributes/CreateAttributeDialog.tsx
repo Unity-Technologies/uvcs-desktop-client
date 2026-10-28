@@ -7,7 +7,6 @@ import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import { CommentArea } from '../../components/commentEditor/CommentArea';
-import { commentPlaceholder } from '../../components/commentEditor/commentPlaceholders';
 import { TextField } from '../../ui/TextField';
 import { validateAttributeName } from './attributeNames';
 import { storedComment } from '../../lib/comment';
@@ -47,7 +46,7 @@ function CreateAttributeDialog({ place, onClose }: { place: Place; onClose: () =
       }
     >
       <TextField label="Name" value={name} placeholder="status" autoFocus error={error} onChange={(event) => setName(event.target.value)} />
-      <CommentArea label="Comment" value={comment} placeholder={commentPlaceholder('What the attribute means and its values')} onChange={setComment} />
+      <CommentArea label="Comment" value={comment} placeholder="What the attribute means and its values" onChange={setComment} />
     </Dialog>
   );
 }

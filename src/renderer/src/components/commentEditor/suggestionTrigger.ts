@@ -2,10 +2,8 @@ import type { EditorState, TransactionSpec } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
 import { isInCode } from './formatCommands';
 import { ownStep } from './ownStep';
+import { SUGGESTION_TRIGGERS, type SuggestionKind } from './suggestionTriggers';
 import { typingAt } from './typingAt';
-
-/** What a suggestion list offers: the objects a comment names, people and emoji. */
-export type SuggestionKind = 'changeset' | 'branch' | 'label' | 'shelve' | 'codeReview' | 'person' | 'emoji';
 
 /** What is being typed at the caret that a suggestion list completes. */
 export interface SuggestionQuery {
@@ -17,16 +15,6 @@ export interface SuggestionQuery {
   /** What was typed after the trigger, up to the caret. */
   text: string;
 }
-
-const TRIGGERS: Record<string, SuggestionKind> = {
-  'cs:': 'changeset',
-  'br:': 'branch',
-  'lb:': 'label',
-  'sh:': 'shelve',
-  'cr:': 'codeReview',
-  '@': 'person',
-  ':': 'emoji',
-};
 
 /**
  * A trigger where a reference may start (`findReferences`): after a space, a line's start, an opening bracket or an
@@ -49,7 +37,7 @@ export function suggestionQueryAt(state: EditorState): SuggestionQuery | null {
   const match = TYPED.exec(line.text.slice(0, main.head - line.from));
   if (!match) return null;
   const [, trigger = '', text = ''] = match;
-  const kind = TRIGGERS[trigger]!;
+  const kind = SUGGESTION_TRIGGERS[trigger]!;
   if (kind === 'emoji' && !EMOJI_NAME.test(text)) return null;
   if (kind === 'person' && !PERSON_NAME.test(text)) return null;
   const from = line.from + match.index;

@@ -1,5 +1,5 @@
 import { EditorState } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
+import { EditorView, placeholder as placeholderOf } from '@codemirror/view';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import { useContext, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
@@ -12,7 +12,10 @@ import { hotkey } from '../../lib/shortcutRegistry';
 import { FocusGroupContext, type FocusGroup } from './CommentFocusGroup';
 import { groupMove } from './focusGroup';
 import { focusModeButton, focusModeKey, focusModeLayout, layoutAfterFocus, offersFocusMode, type FocusModeLayout } from './focusMode';
-import { commentEditorExtensions, editable, editableWhen, theme, themed, type CommentEditorKeys } from './commentEditorSetup';
+import { commentEditorExtensions, editable, editableWhen, placeholderText, theme, themed, type CommentEditorKeys } from './commentEditorSetup';
+import { placeholderShown } from './commentPlaceholders';
+import { FocusModeFooter } from './FocusModeFooter';
+import { FormatToolbar } from './FormatToolbar';
 import { ownerChange } from './oneLine';
 import { ownerSync } from './ownerSync';
 import type { CommentFieldProps } from './commentFieldProps';
@@ -20,7 +23,8 @@ import { activeFormats, FORMAT_COMMANDS, type FormatCommandId } from './formatCo
 import { hasFocus, noteFocus } from './liveDecorations';
 import type { Box } from './popupPosition';
 import { SelectionBar } from './SelectionBar';
-import { formatsOf, pressHidesBar, selectionBarShows } from './selectionBarState';
+import { formatsOf } from './formatActions';
+import { pressHidesBar, selectionBarShows } from './selectionBarState';
 import { optionId, SuggestionList } from './SuggestionList';
 import { isDismissed, isPickable, suggestionKeyAction } from './suggestionRows';
 import { pickSuggestion, suggestionsShownAt, type SuggestionQuery } from './suggestionTrigger';
@@ -132,8 +136,15 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
       : undefined;
 
   const suggestions = useSuggestions(view, state);
-  const bar = useSelectionBar(view, state, singleLine, suggestions.shown);
   const focus = useFocusMode(view, state, host, singleLine, suggestions.shown, grouped?.group ?? null);
+  const bar = useSelectionBar(view, state, singleLine, suggestions.shown, focus.inFocusMode);
+  useEffect(
+    () => view?.dispatch({ effects: placeholderText.reconfigure(placeholderOf(placeholderShown(placeholder, { focusMode: focus.inFocusMode, singleLine }))) }),
+    [view, placeholder, focus.inFocusMode, singleLine],
+  );
+  const tools = view && state && focus.inFocusMode ? <FormatToolbar view={view} state={state} singleLine={singleLine} /> : null;
+  // In a group, the toolbar is the group's, over the field with the caret; a field alone has its own, and its footer.
+  const toolbar = grouped ? grouped.group.activeField === grouped.field && grouped.group.toolbarSlot && tools && createPortal(tools, grouped.group.toolbarSlot) : tools;
 
   const widgets = useSyncExternalStore(portals.subscribe, portals.portals);
   // What React drew in the widgets changes their size: the editor measures its lines again.
@@ -150,6 +161,8 @@ export function LiveCommentEditor({ value, onChange, singleLine = false, label, 
       onMouseDown={bar.onPointerDown}
     >
       {focus.element}
+      {toolbar}
+      {!grouped && focus.inFocusMode && <FocusModeFooter />}
       {widgets.map((widget) => createPortal(widget.node, widget.host, String(widget.key)))}
       {suggestions.list}
       {bar.element}
@@ -213,7 +226,8 @@ function useFocusMode(view: EditorView | null, state: EditorState | null, host: 
   }, [view, layout]);
   // The group's panel is its own box: its fields keep theirs; its one button is on its description.
   const shownLayout = group ? null : layout;
-  if (!offered || (group && singleLine)) return { layout: shownLayout, element: null };
+  const inFocusMode = layout !== null;
+  if (!offered || (group && singleLine)) return { layout: shownLayout, inFocusMode, element: null };
   const button = focusModeButton(layout);
   const Icon = button.icon === 'collapse' ? Minimize2 : Maximize2;
   const element = (
@@ -233,7 +247,7 @@ function useFocusMode(view: EditorView | null, state: EditorState | null, host: 
       </button>
     </>
   );
-  return { layout: shownLayout, element };
+  return { layout: shownLayout, inFocusMode, element };
 }
 
 /** Puts the caret at `at` and the focus in the editor. */
@@ -313,7 +327,7 @@ function useSuggestions(view: EditorView | null, state: EditorState | null) {
 }
 
 /** The selection bar over text selected: shown once the pointer lets go, never with the suggestions open. */
-function useSelectionBar(view: EditorView | null, state: EditorState | null, singleLine: boolean, suggesting: boolean) {
+function useSelectionBar(view: EditorView | null, state: EditorState | null, singleLine: boolean, suggesting: boolean, focusMode: boolean) {
   const [pointerDown, setPointerDown] = useState(false);
   useEffect(() => {
     if (!pointerDown) return;
@@ -322,7 +336,7 @@ function useSelectionBar(view: EditorView | null, state: EditorState | null, sin
     return () => window.removeEventListener('mouseup', up);
   }, [pointerDown]);
 
-  const shows = view !== null && state !== null && !suggesting && selectionBarShows(state, state.field(hasFocus), pointerDown);
+  const shows = view !== null && state !== null && !suggesting && selectionBarShows(state, state.field(hasFocus), pointerDown, focusMode);
   const element = shows ? (
     <SelectionBar
       formats={formatsOf(singleLine)}

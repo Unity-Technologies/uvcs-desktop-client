@@ -3,7 +3,6 @@ import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { CommentArea } from '../../components/commentEditor/CommentArea';
-import { commentPlaceholder } from '../../components/commentEditor/commentPlaceholders';
 import { storedComment } from '../../lib/comment';
 
 /** Asks for a new (possibly multi-line) changeset comment. Resolves to `undefined` if cancelled. */
@@ -37,7 +36,7 @@ function EditCommentDialog({ changesetId, currentComment, finish }: EditCommentD
       }
     >
       {/* Enter adds lines; ⌘↵ saves, submitting the dialog. */}
-      <CommentArea label="Comment" tall value={comment} placeholder={commentPlaceholder('What changed and why')} autoFocus onChange={setComment} />
+      <CommentArea label="Comment" tall value={comment} placeholder="What changed and why" autoFocus onChange={setComment} />
     </Dialog>
   );
 }

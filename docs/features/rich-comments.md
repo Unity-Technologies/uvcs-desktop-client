@@ -152,7 +152,7 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   in any text it shows as: a chip taken away whole by one key (Slack's way) was dropped, since the caret beside a
   chip always shows its text, and a key taking away more than it shows would surprise. Undo brings a chip back.
 - **Keys** (the registry's Comments area, matched as every shortcut is: `formatForKey`): ⌘B bold, ⌘I italic, ⇧⌘X
-  strikethrough, ⌘E code, ⌘K link, ⇧⌘8 list, ⇧⌘9 quote, ⌥⇧⌘C code block (Ctrl+Shift+E off macOS, where Ctrl+Alt is
+  strikethrough, ⌘E code, ⌘K link, ⇧⌘8 list, ⇧⌘7 numbered list, ⇧⌘9 quote, ⌥⇧⌘C code block (Ctrl+Shift+E off macOS, where Ctrl+Alt is
   AltGr), ⇧⌘V (Ctrl+Shift+V) pastes the plain text, through the window (`pasteClipboard({ plainText })`,
   `pasteAndMatchStyle`), as no menu item takes the key and the page can't paste by itself. Each toggles (`FORMAT_COMMANDS`: ⌘B in bold unbolds) and is one step to undo
   (`ownStep`), as are a pick, a paste and a box ticked. A key the field takes stays in it: ⌘B
@@ -179,9 +179,20 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   ↓ at the summary's end, goes to the description's start; ⇧Tab, or ↑ on its first line, back to the summary's end
   (`groupMove`). They stay the same two editors; moving between them is no leaving, and the panel closes as the focus
   leaves both or ⌘↵ checks in. The dialogs' single comments open alone.
+  Focus mode has a toolbar at its top (`FormatToolbar`, `toolbarButtons`) and a footer at its bottom
+  (`FocusModeFooter`). The toolbar holds every format of `FORMAT_ACTIONS`, the one list the selection bar and the keys
+  read too, each tooltip its name and key, pressed where the caret's text has it. Its buttons never take the focus.
+  In the check-in it acts on the field with the caret, the blocks disabled in the one-line summary: every button
+  stays, so the toolbar holds still as the caret goes between the fields, and a button acting on the field the caret
+  isn't in would format text out of sight. In code only the code block is enabled. The footer is the window's key
+  hints (`KeyHints`, as the palette's and Go to file's): `cs:` `br:` `lb:` `sh:` `cr:` reference, `@` mention, `:`
+  emoji, ⌘K link, read from the triggers the suggestions take (`focusModeHints`, `SUGGESTION_TRIGGERS`). A table and
+  a keycap have no button: no single construct of the Markdown reader holds a key's `<kbd>` tags to toggle, and an
+  empty table is more text to fill in than to type.
 - **The selection bar** (`SelectionBar`, `selectionBarShows`): over text selected, once the pointer lets go, never in
-  a code block; B, I, S, code and link, then list, task, quote and code block in a field of many lines, each on while
-  the selection is in it. No toolbar shows otherwise: the fields stay small.
+  a code block nor in focus mode, which has its toolbar; B, I, S, code and link, then list, task, numbered list, quote
+  and code block in a field of many lines, each on while the selection is in it. No toolbar shows otherwise: the
+  fields stay small.
 - **Pasting** (`markdownFromClipboard`): HTML from a web page, Slack or Google Docs becomes Markdown (bold, italic,
   strikethrough, links, lists, tables, images from the web), Docs' bold-looking `<b id="docs-internal-guid-…">`
   unwrapped and its styled spans read, Word's and Outlook's markup left out; scripts and styles go, and a link stays
@@ -190,8 +201,8 @@ never shows without its colors as it's typed). A key (`<kbd>Ctrl</kbd>`) is its 
   pastes as it is; in code nothing converts; an address pasted on selected text links it (`linkFromPaste`).
 - **Stored as written**: a dialog's comment goes in without the blank lines at its ends or the space a picked
   suggestion leaves (`storedComment`), its first line's indent kept, as an indented code block needs it.
-- **Placeholders** say what a field of many lines takes (`commentPlaceholder`): "Description (optional) · Markdown,
-  cs:, br:, @ to link".
+- **Placeholders** say only what a field is for ("Description (optional)", "Summary"); an empty comment in focus
+  mode, which has the room, says what it takes in a plain sentence (`placeholderShown`, `FOCUS_MODE_PLACEHOLDER`).
 - **Loading**: CodeMirror is a heavy library (`HEAVY_SCOPES` in `startupBundle.test.ts`), loaded behind
   `CommentField`'s lazy boundary and warmed at idle after start-up (`main.tsx`). Until it arrives, a plain field in
   the same box takes the typing and hands its caret over.

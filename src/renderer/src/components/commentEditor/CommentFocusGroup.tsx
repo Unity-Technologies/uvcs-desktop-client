@@ -1,4 +1,5 @@
 import { createContext, useMemo, useRef, useState, type FocusEvent, type ReactNode } from 'react';
+import { FocusModeFooter } from './FocusModeFooter';
 import { createPortal } from 'react-dom';
 import type { CommentFieldHandle } from './commentFieldProps';
 import type { GroupField } from './focusGroup';
@@ -11,6 +12,10 @@ export interface FocusGroup {
   close: () => void;
   register: (field: GroupField, handle: CommentFieldHandle | null) => void;
   moveTo: (field: GroupField, caret: 'start' | 'end') => void;
+  /** The field the caret was last in, whose formats the toolbar shows: the description until the summary has it. */
+  activeField: GroupField;
+  /** Where the active field puts the toolbar (`FormatToolbar`), at the panel's top. */
+  toolbarSlot: HTMLElement | null;
 }
 
 export const FocusGroupContext = createContext<FocusGroup | null>(null);
@@ -22,6 +27,8 @@ export const FocusGroupContext = createContext<FocusGroup | null>(null);
  */
 export function CommentFocusGroup({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [activeField, setActiveField] = useState<GroupField>('description');
+  const [toolbarSlot, setToolbarSlot] = useState<HTMLDivElement | null>(null);
   const container = useRef<HTMLDivElement>(null);
   const handles = useRef(new Map<GroupField, CommentFieldHandle>());
   const group = useMemo<FocusGroup>(
@@ -38,17 +45,25 @@ export function CommentFocusGroup({ children }: { children: ReactNode }) {
         if (caret === 'start') handle?.focusAtStart();
         else handle?.focusAtEnd();
       },
+      activeField,
+      toolbarSlot,
     }),
-    [open],
+    [open, activeField, toolbarSlot],
   );
+  const onFocus = (event: FocusEvent): void => {
+    const field = (event.target as Element).closest('[data-group-field]')?.getAttribute('data-group-field');
+    if (field === 'summary' || field === 'description') setActiveField(field);
+  };
   const onBlur = (event: FocusEvent): void => {
     if (open && !container.current?.contains(event.relatedTarget as Node | null)) setOpen(false);
   };
   return (
     <FocusGroupContext.Provider value={group}>
       {open && createPortal(<div className={styles.backdrop} onMouseDown={() => setOpen(false)} />, document.body)}
-      <div ref={container} className={styles.group} data-open={open || undefined} onBlur={onBlur}>
+      <div ref={container} className={styles.group} data-open={open || undefined} onFocus={onFocus} onBlur={onBlur}>
+        {open && <div ref={setToolbarSlot} className={styles.toolbar} />}
         {children}
+        {open && <FocusModeFooter />}
       </div>
     </FocusGroupContext.Provider>
   );

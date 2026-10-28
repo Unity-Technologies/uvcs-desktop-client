@@ -1,12 +1,12 @@
+export const DESCRIPTION_PLACEHOLDER = 'Description (optional)';
+
 /**
- * What a comment of many lines takes, said in its placeholder: Markdown, and the triggers that link objects and
- * people. One-line fields (a summary, a title) say nothing more than their name: their suggestions show as typed.
+ * An empty comment's placeholder in focus mode, which has the room to say what a comment takes; its footer names the
+ * triggers (`focusModeHints`). A small field says only what it's for.
  */
-export const COMMENT_POWERS = 'Markdown, cs:, br:, @ to link';
+export const FOCUS_MODE_PLACEHOLDER = 'Write in Markdown. Name a changeset, a branch or a person with cs:, br: or @.';
 
-/** A comment field's placeholder: what it's for, then what it takes. */
-export function commentPlaceholder(purpose: string): string {
-  return `${purpose} · ${COMMENT_POWERS}`;
+/** The placeholder a field shows: its own, or in focus mode, for a comment of many lines, what a comment takes. */
+export function placeholderShown(placeholder: string, field: { focusMode: boolean; singleLine: boolean }): string {
+  return field.focusMode && !field.singleLine ? FOCUS_MODE_PLACEHOLDER : placeholder;
 }
-
-export const DESCRIPTION_PLACEHOLDER = commentPlaceholder('Description (optional)');

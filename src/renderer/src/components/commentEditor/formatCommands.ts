@@ -8,7 +8,7 @@ import { ownStep } from './ownStep';
  * the Markdown for the selection, so the text stays the comment as stored. The selection bar and the keys run them,
  * and each is one step to undo.
  */
-export type FormatCommandId = 'bold' | 'italic' | 'strikethrough' | 'code' | 'link' | 'bullet' | 'task' | 'quote' | 'codeBlock';
+export type FormatCommandId = 'bold' | 'italic' | 'strikethrough' | 'code' | 'link' | 'bullet' | 'task' | 'numbered' | 'quote' | 'codeBlock';
 
 /** The marks each inline format writes, and the construct the Markdown reader names it by. */
 const INLINE: Record<InlineFormat, { mark: string; node: string }> = {
@@ -20,12 +20,14 @@ const INLINE: Record<InlineFormat, { mark: string; node: string }> = {
 };
 
 type InlineFormat = 'bold' | 'italic' | 'strikethrough' | 'code';
-type LineFormat = 'bullet' | 'task' | 'quote';
+type LineFormat = 'bullet' | 'task' | 'numbered' | 'quote';
 
-const LINE_PREFIX: Record<LineFormat, { prefix: string; is: RegExp }> = {
-  bullet: { prefix: '- ', is: /^(\s*)[-*+] (?!\[[ xX]\] )/ },
-  task: { prefix: '- [ ] ', is: /^(\s*)[-*+] \[[ xX]\] / },
-  quote: { prefix: '> ', is: /^(\s*)> ?/ },
+/** Each line format's marker, for the `index`th line written (a numbered list counts from one), and how it reads. */
+const LINE_PREFIX: Record<LineFormat, { prefix: (index: number) => string; is: RegExp }> = {
+  bullet: { prefix: () => '- ', is: /^(\s*)[-*+] (?!\[[ xX]\] )/ },
+  task: { prefix: () => '- [ ] ', is: /^(\s*)[-*+] \[[ xX]\] / },
+  numbered: { prefix: (index) => `${index + 1}. `, is: /^(\s*)\d+[.)] / },
+  quote: { prefix: () => '> ', is: /^(\s*)> ?/ },
 };
 
 /** Any list item's marker, so a list line becomes the other kind instead of gaining a second marker. */
@@ -45,6 +47,7 @@ export const FORMAT_COMMANDS: Record<FormatCommandId, StateCommand> = {
   link: toggleLink,
   bullet: toggleLinePrefix('bullet'),
   task: toggleLinePrefix('task'),
+  numbered: toggleLinePrefix('numbered'),
   quote: toggleLinePrefix('quote'),
   codeBlock: toggleCodeBlock,
 };
@@ -97,7 +100,7 @@ function wrap(state: EditorState, range: SelectionRange, mark: string): { change
   return { changes, range: EditorSelection.range(set.mapPos(range.anchor, range.anchor <= range.head ? 1 : -1), set.mapPos(range.head, range.anchor <= range.head ? -1 : 1)) };
 }
 
-/** A list, a task list or a quote on the selected lines; off again when every line already is one. */
+/** A list, a task list, a numbered list or a quote on the selected lines; off again when every line already is one. */
 function toggleLinePrefix(format: LineFormat): StateCommand {
   const { prefix, is } = LINE_PREFIX[format];
   return ({ state, dispatch }) => {
@@ -108,15 +111,15 @@ function toggleLinePrefix(format: LineFormat): StateCommand {
     const written = lines.length > 1 ? lines.filter((line) => line.text.trim()) : lines;
     const every = written.every((line) => is.test(line.text));
     const changes = state.changes(
-      written.map((line) => {
+      written.map((line, index) => {
         if (every) {
           const match = is.exec(line.text)!;
           return { from: line.from + match[1]!.length, to: line.from + match[0].length };
         }
         const list = format === 'quote' ? null : LIST_MARKER.exec(line.text);
-        if (list) return { from: line.from + list[1]!.length, to: line.from + list[0].length, insert: prefix };
+        if (list) return { from: line.from + list[1]!.length, to: line.from + list[0].length, insert: prefix(index) };
         const indent = /^\s*/.exec(line.text)![0].length;
-        return { from: line.from + indent, insert: prefix };
+        return { from: line.from + indent, insert: prefix(index) };
       }),
     );
     // The caret moves along with its text, after a marker written where it was.
@@ -234,7 +237,7 @@ export function activeFormats(state: EditorState): Set<FormatCommandId> {
   if (enclosing(state, main, 'Link')) active.add('link');
   if (enclosingFrom(state, main.head, 'FencedCode')) active.add('codeBlock');
   const lines = selectedLines(state, main).filter((line) => line.text.trim());
-  for (const format of ['bullet', 'task', 'quote'] as const) {
+  for (const format of ['bullet', 'task', 'numbered', 'quote'] as const) {
     if (lines.length > 0 && lines.every((line) => LINE_PREFIX[format].is.test(line.text))) active.add(format);
   }
   return active;

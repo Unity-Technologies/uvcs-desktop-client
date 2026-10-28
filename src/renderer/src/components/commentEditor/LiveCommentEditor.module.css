@@ -66,6 +66,13 @@
   max-height: 56vh !important;
 }
 
+/* Focus mode's footer (`FocusModeFooter`), under the text: the window's key hints (`KeyHints`). */
+.footer {
+  order: 1;
+  margin-top: var(--space-2);
+  padding-inline: 0;
+}
+
 .backdrop {
   position: fixed;
   inset: 0;

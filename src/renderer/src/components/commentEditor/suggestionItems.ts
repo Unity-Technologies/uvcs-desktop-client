@@ -12,7 +12,7 @@ import { splitRepositorySpec } from '../../lib/servers';
 import { firstLine } from '../../lib/text';
 import { displayName } from '../../lib/userName';
 import { indexCandidates, rankCandidates, type CandidateIndex } from './suggestionRanking';
-import type { SuggestionKind } from './suggestionTrigger';
+import type { SuggestionKind } from './suggestionTriggers';
 
 /** How many suggestions a list shows: the best few, never everything (ARCHITECTURE.md "Big lists"). */
 export const SUGGESTION_LIMIT = 8;

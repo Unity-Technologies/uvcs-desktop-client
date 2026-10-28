@@ -40,3 +40,8 @@
   background: var(--overlay);
   animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
 }
+
+/* The toolbar's place at the panel's top, which the field with the caret fills (`FormatToolbar`). */
+.toolbar {
+  display: contents;
+}

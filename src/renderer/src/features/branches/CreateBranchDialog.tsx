@@ -7,7 +7,6 @@ import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { CommentArea } from '../../components/commentEditor/CommentArea';
-import { commentPlaceholder } from '../../components/commentEditor/commentPlaceholders';
 import { TextField } from '../../ui/TextField';
 import { createBranchAndSwitch } from './branchOperations';
 import { validateBranchName } from './branchNames';
@@ -102,7 +101,7 @@ function CreateBranchDialog({ place, origins, onFinish }: CreateBranchDialogProp
         hint={name.trim() ? `Full name: ${fullName}` : topLevel ? 'A top-level branch, like /main.' : `A child of ${origin.parentBranch}.`}
         onChange={(event) => setName(event.target.value)}
       />
-      <CommentArea label="Comment" value={comment} placeholder={commentPlaceholder('What is this branch for?')} onChange={setComment} />
+      <CommentArea label="Comment" value={comment} placeholder="What is this branch for?" onChange={setComment} />
       <Checkbox label="Top-level branch" checked={topLevel} onChange={setTopLevel} />
       {offered && <Checkbox label="Switch the workspace to the new branch" checked={switchAfter} onChange={setSwitchAfter} />}
       {question && (

@@ -19,7 +19,7 @@ import { compactChips, widgetPortals } from './liveWidgets';
 import { markdownFromClipboard, pasteMarkdown } from './richPaste';
 import { oneLine } from './oneLine';
 import { ownStep } from './ownStep';
-import { formatsOf } from './selectionBarState';
+import { formatsOf } from './formatActions';
 import { typingAt } from './typingAt';
 import type { WidgetPortals } from './widgetPortals';
 
@@ -55,9 +55,10 @@ const markdownStyle = HighlightStyle.define([
   { tag: tags.quote, class: 'cm-quote' },
 ]);
 
-/** The parts of the editor the field changes while it shows: its being read-only, and the code's theme. */
+/** The parts of the editor the field changes while it shows: its being read-only, the code's theme, its placeholder. */
 export const editable = new Compartment();
 export const theme = new Compartment();
+export const placeholderText = new Compartment();
 
 export function editableWhen(enabled: boolean): Extension {
   return [EditorView.editable.of(enabled), EditorState.readOnly.of(!enabled)];
@@ -87,7 +88,7 @@ export function commentEditorExtensions(options: CommentEditorOptions, enabled: 
     theme.of(themed(codeThemeName)),
     EditorView.lineWrapping,
     EditorView.perLineTextDirection.of(true),
-    placeholder(options.placeholder),
+    placeholderText.of(placeholder(options.placeholder)),
     EditorView.contentAttributes.of({ ...fieldLabelAttributes(options.label, options.labelledBy), 'aria-multiline': String(!options.singleLine), spellcheck: 'true' }),
     Prec.highest(
       keymap.of([
