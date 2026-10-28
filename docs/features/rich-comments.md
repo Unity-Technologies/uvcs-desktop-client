@@ -133,15 +133,16 @@ htmlFor>` can't focus, and the label names it, `fieldLabelAttributes`), the comm
   end). An image is its chip. A field without the focus draws everything.
 - **References are the comments' chips** (`ReferenceChip`, with their summary as a shown comment has it, as soon as
   the window read it: a list, or the number looked up as typed; compact on one line, the summary in the tooltip), for
-  every kind a comment reads (`findReferences`). A chip is one piece: the caret steps over it, Backspace right after
-  it or Delete right before it takes it away whole (`deleteChip`), and a click selects its text, shown as typed, so
-  typing replaces it (`selectChip`). A reference being typed stays text until the caret moves on (`typingAt`), so
-  `cs:12` is typed and corrected a key at a time.
+  every kind a comment reads (`findReferences`). The chip the caret reaches, by an arrow or typing it, shows as its
+  text to edit, as Markdown's marks show around the caret; the others stay drawn. A click selects a chip's text,
+  shown as typed, so typing replaces it (`selectChip`). Backspace right after a chip takes back its last letter, as
+  in any text it shows as: a chip taken away whole by one key (Slack's way) was dropped, since the caret beside a
+  chip always shows its text, and a key taking away more than it shows would surprise. Undo brings a chip back.
 - **Keys** (the registry's Comments area, matched as every shortcut is: `formatForKey`): ⌘B bold, ⌘I italic, ⇧⌘X
   strikethrough, ⌘E code, ⌘K link, ⇧⌘8 list, ⇧⌘9 quote, ⌥⇧⌘C code block (Ctrl+Shift+E off macOS, where Ctrl+Alt is
   AltGr), ⇧⌘V (Ctrl+Shift+V) pastes the plain text, through the window (`pasteClipboard({ plainText })`,
   `pasteAndMatchStyle`), as no menu item takes the key and the page can't paste by itself. Each toggles (`FORMAT_COMMANDS`: ⌘B in bold unbolds) and is one step to undo
-  (`ownStep`), as are a pick, a chip taken away, a paste and a box ticked. A key the field takes stays in it: ⌘B
+  (`ownStep`), as are a pick, a paste and a box ticked. A key the field takes stays in it: ⌘B
   never opens New branch from a comment, nor ⌘K the palette (⇧⌘P still does). Typed Markdown works as typed; Enter
   continues a list, and Enter after an opening fence adds the closing one (`closeCodeFence`). ⌘↵ saves the field's
   form (a dialog, the details editor) or is the window's (check in, merge); Esc closes the suggestions first.

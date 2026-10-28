@@ -2,8 +2,8 @@ import { StateField } from '@codemirror/state';
 
 /**
  * Where the word being typed ends: the caret after a key typed, and after a Backspace that goes on taking back what
- * was just typed. A reference ending there shows as typed rather than as a chip (`liveMarksOf`), so `cs:12` can be
- * typed and corrected a key at a time; once the caret moves away, or a suggestion is picked, it's a chip, one piece.
+ * was just typed. Suggestions open only there (`suggestionsShownAt`): a field opened, or a caret moved, next to a
+ * reference opens none.
  */
 export const typingAt = StateField.define<number | null>({
   create: () => null,

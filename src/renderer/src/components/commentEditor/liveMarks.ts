@@ -2,7 +2,6 @@ import type { EditorState } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
 import type { SyntaxNode, SyntaxNodeRef } from '@lezer/common';
 import { findReferences, type CommentReference } from '../../lib/comments/commentReferences';
-import { typingAt } from './typingAt';
 
 /**
  * What the live editor draws over a comment's Markdown text (docs/features/rich-comments.md, "Writing"): the text
@@ -11,9 +10,12 @@ import { typingAt } from './typingAt';
 export type LiveMark =
   /** Markdown's own marks (`**`, `` ` ``, `# `, a link's address) that the construct around the caret alone shows. */
   | { kind: 'hidden'; from: number; to: number }
-  /** A reference to an object, a person or an emoji, drawn as the comment's chip: one piece the caret steps over. */
+  /** A reference to an object, a person or an emoji, drawn as the comment's chip while the caret is away from it. */
   | { kind: 'reference'; from: number; to: number; reference: CommentReference; source: string }
-  /** A reference selected (a click selects one), shown as typed so typing replaces it, or one being typed (`typingAt`). */
+  /**
+   * A reference the caret reaches (an arrow, a click selecting it, typing it), shown as its text to edit, as a mark
+   * shows around the caret.
+   */
   | { kind: 'typedReference'; from: number; to: number }
   /** An image, drawn as the comment's chip with its description. */
   | { kind: 'image'; from: number; to: number; alt: string; url: string; source: string }
@@ -62,7 +64,7 @@ export function liveMarksOf(state: EditorState, options: LiveMarksOptions, range
     });
     for (const found of referencesIn(state, from, to, options)) {
       marks.push(
-        options.revealsSelection && (insideSelection(state, found.from, found.to) || found.to === state.field(typingAt, false))
+        options.revealsSelection && touchesSelection(state, found.from, found.to)
           ? { kind: 'typedReference', from: found.from, to: found.to }
           : { kind: 'reference', ...found },
       );
@@ -220,10 +222,6 @@ export function touchesSelection(state: EditorState, from: number, to: number): 
   return state.selection.ranges.some((range) => range.from <= to && range.to >= from);
 }
 
-/** A selection over part of `[from, to]`, or a caret strictly inside: a chip's edges don't count, it's one piece. */
-function insideSelection(state: EditorState, from: number, to: number): boolean {
-  return state.selection.ranges.some((range) => (range.empty ? range.head > from && range.head < to : range.from < to && range.to > from));
-}
 
 function withSpaceAfter(state: EditorState, to: number): number {
   return state.sliceDoc(to, to + 1) === ' ' ? to + 1 : to;

@@ -5,7 +5,6 @@ import { EditorView, keymap, placeholder } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 import { api } from '../../api/client';
 import { isMac } from '../../lib/platform';
-import { deleteChip } from './chipEditing';
 import { codeColors, codeTheme } from './codeColors';
 import { commentMarkdown } from './commentLanguage';
 import { closeCodeFence, FORMAT_COMMANDS, isInCode, linkFromPaste } from './formatCommands';
@@ -87,8 +86,6 @@ export function commentEditorExtensions(options: CommentEditorOptions, enabled: 
     EditorView.contentAttributes.of({ ...fieldLabelAttributes(options.label, options.labelledBy), 'aria-multiline': String(!options.singleLine), spellcheck: 'true' }),
     Prec.highest(
       keymap.of([
-        { key: 'Backspace', run: deleteChip(false) },
-        { key: 'Delete', run: deleteChip(true) },
         { key: 'Mod-Enter', run: (view) => submit(view, options.keys.current) },
         { key: 'Enter', run: options.singleLine ? (view) => enterOnOneLine(view, options.keys.current) : closeCodeFence },
       ]),

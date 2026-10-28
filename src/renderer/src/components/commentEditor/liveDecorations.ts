@@ -1,4 +1,4 @@
-import { RangeSet, StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state';
+import { StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { liveMarksOf, type LiveMark } from './liveMarks';
 import { BulletWidget, ImageWidget, ReferenceWidget, TableWidget, TaskWidget } from './liveWidgets';
@@ -61,28 +61,23 @@ function decorationOf(mark: LiveMark): Range<Decoration> {
 const liveMarks = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet;
-    /** The chips, which the caret steps over as one piece. */
-    chips: DecorationSet;
 
     constructor(view: EditorView) {
-      ({ decorations: this.decorations, chips: this.chips } = draw(view));
+      this.decorations = draw(view);
     }
 
     update(update: ViewUpdate): void {
       const focusMoved = update.startState.field(hasFocus) !== update.state.field(hasFocus);
-      if (update.docChanged || update.selectionSet || update.viewportChanged || focusMoved) ({ decorations: this.decorations, chips: this.chips } = draw(update.view));
+      if (update.docChanged || update.selectionSet || update.viewportChanged || focusMoved) this.decorations = draw(update.view);
     }
   },
   {
     decorations: (plugin) => plugin.decorations,
-    provide: (plugin) => EditorView.atomicRanges.of((view) => view.plugin(plugin)?.chips ?? Decoration.none),
   },
 );
 
-function draw(view: EditorView): { decorations: DecorationSet; chips: DecorationSet } {
-  const decorations = liveMarksOf(view.state, revealsSelection(view.state), view.visibleRanges).map(decorationOf);
-  const chips = decorations.filter((range) => range.value.spec.widget instanceof ReferenceWidget || range.value.spec.widget instanceof ImageWidget);
-  return { decorations: Decoration.set(decorations, true), chips: RangeSet.of(chips, true) };
+function draw(view: EditorView): DecorationSet {
+  return Decoration.set(liveMarksOf(view.state, revealsSelection(view.state), view.visibleRanges).map(decorationOf), true);
 }
 
 /**
