@@ -67,7 +67,6 @@
   font-size: var(--text-md);
 }
 
-/* In a dialog: the field grows in place, the dialog scrolling around it. */
 /* In a dialog the field grows within what the dialog leaves it: its other fields, its title and its buttons take about
    560px of the window (New branch's, the tallest), so the field never pushes its hints under the buttons. */
 .editor[data-expanded='inPlace'] {
