@@ -10,6 +10,7 @@ import { hotkey } from '../../lib/shortcutRegistry';
 import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
 import { menuAction } from '../../components/menuWords';
 import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
+import { editsShelveComment } from './editsShelveComment';
 import { applyShelve, deleteShelve, editShelveComment, shelveDiffPage, showShelveChanges } from './shelveOperations';
 
 /** What a shelve is copied as, first what ⌘C copies: `3`, `sh:3`, `sh:3@repo@server`, its comment and GUID. */
@@ -30,7 +31,7 @@ export type ShelveInfo = Pick<Shelve, 'id' | 'comment' | 'repository'> & Partial
 interface ShelveMenuOptions {
   /** Changes a switch or an update left, which are restored (applied, then deleted) rather than applied. */
   left?: boolean;
-  /** `false` for someone else's, which Changes applies without deleting, and never describes again nor deletes. */
+  /** `false` for someone else's, which Changes applies without deleting, and never deletes nor edits the comment of. */
   mine?: boolean;
   /** What follows applying it or deleting it, e.g. leaving its diff. */
   onApplied?: () => void;
@@ -56,7 +57,7 @@ export function shelveMenu(place: Place, shelves: ShelveInfo[], { left = false, 
     workspacePath !== null && !left && mine && menuAction('applyAndDelete', () => void apply(workspacePath, true)),
     menuAction('newCodeReview', () => openCreateCodeReviewDialog(place, { kind: 'shelve', value: String(shelve.id), title: splitComment(shelve.comment).summary })),
     copySubmenu('Shelve', shelveCopyTexts(place, shelve), { shortcut: hotkey('listCopy'), linkShortcut: hotkey('copyLink') }),
-    mine && menuAction('editComment', () => void editShelveComment(place, shelve)),
+    editsShelveComment(shelve, { mine, left }) && menuAction('editComment', () => void editShelveComment(place, shelve)),
     mine &&
       menuAction('delete', async () => {
         if ((await deleteShelve(place, shelve.id)) && onDeleted) onDeleted();
