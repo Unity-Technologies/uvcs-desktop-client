@@ -10,7 +10,9 @@ export function displayName(user: string): string {
 
 /** `jane.doe` → `JD`; a one-word name gives its first two letters (`danipen` → `DA`), as the other UVCS clients show it. */
 export function initials(user: string): string {
-  const [first = [], second] = displayName(user).split(' ').map((word) => Array.from(word));
+  // NFC joins a letter written with a separate accent mark (`n` and a combining tilde) into one, so the two letters shown are letters.
+  const words = displayName(user).normalize('NFC').split(/\s+/).filter(Boolean);
+  const [first = [], second] = words.map((word) => Array.from(word));
   const letters = second ? [first[0], second[0]] : first.slice(0, 2);
   return letters.join('').toUpperCase() || '?';
 }
