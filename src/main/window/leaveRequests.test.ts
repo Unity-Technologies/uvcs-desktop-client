@@ -42,7 +42,7 @@ describe('leaving a page with unsaved edits', () => {
 
   it('quits once settled, when quitting was held back', async () => {
     const { fakeElectron, window, heldBack, quitStarted, continueLeaving } = await setUp();
-    quitStarted();
+    quitStarted(() => {});
     window.emit('close', closeEvent());
     heldBack();
 
@@ -71,9 +71,25 @@ describe('leaving a page with unsaved edits', () => {
     expect(closed(window)).toBe(false);
   });
 
+  it('tells who started the quit when the user cancels it, and only then', async () => {
+    const { window, heldBack, quitStarted, continueLeaving } = await setUp();
+    const cancelled = vi.fn();
+    heldBack();
+    continueLeaving(false);
+    quitStarted(cancelled);
+    window.emit('close', closeEvent());
+    heldBack();
+
+    continueLeaving(true);
+    expect(cancelled).not.toHaveBeenCalled();
+    quitStarted(cancelled);
+    continueLeaving(false);
+    expect(cancelled).toHaveBeenCalledOnce();
+  });
+
   it('stays, and stops quitting, when the user cancels', async () => {
     const { fakeElectron, window, heldBack, quitStarted, continueLeaving } = await setUp();
-    quitStarted();
+    quitStarted(() => {});
     window.emit('close', closeEvent());
     heldBack();
 

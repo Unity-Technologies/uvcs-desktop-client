@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
+import { quitStarted } from '../window/leaveRequests';
 import { Quitting, type QuittingDependencies } from './quitting';
 
 vi.mock('electron', async () => (await import('../window/testing/fakeElectron')).fakeElectron.module);
+vi.mock('../window/leaveRequests', () => ({ quitStarted: vi.fn() }));
 
 /** A quit with an operation running or not; the user answers `answer` when asked. */
 function setUp({ writing = false, windows = true, answer = true, quitsWithLastWindow = false } = {}) {
@@ -48,6 +50,15 @@ describe('quitting', () => {
     await settle();
     quit();
     expect(quitting.started()).toBe(true);
+  });
+
+  it('has not started anymore once a page cancelled the quit, so a window running an operation is held again', () => {
+    const { quitting, quit } = setUp();
+
+    expect(quit()).toBe(true);
+    expect(quitting.started()).toBe(true);
+    vi.mocked(quitStarted).mock.lastCall![0]();
+    expect(quitting.started()).toBe(false);
   });
 
   it('waits for a running operation once the user agrees, then quits', async () => {

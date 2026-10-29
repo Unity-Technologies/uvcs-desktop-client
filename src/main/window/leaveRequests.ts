@@ -5,10 +5,16 @@ import { focusWindow } from './WorkspaceWindows';
 /** Windows asked to close (their own close or quitting) whose page held on to unsaved edits. */
 const closing = new Set<number>();
 let quitting = false;
+/** Tells `Quitting` that the user cancelled the quit, which then isn't one anymore. */
+let quitCancelled: (() => void) | undefined;
 
-/** The app began quitting (`Quitting`, on `before-quit`): a page that settles its unsaved edits then quits it. */
-export function quitStarted(): void {
+/**
+ * The app began quitting (`Quitting`, on `before-quit`): a page that settles its unsaved edits then quits it, and one
+ * that cancels calls `onCancelled`.
+ */
+export function quitStarted(onCancelled: () => void): void {
   quitting = true;
+  quitCancelled = onCancelled;
 }
 
 /**
@@ -36,6 +42,7 @@ export function continueLeaving(viewer: number, canLeave: boolean): void {
   if (!window || window.isDestroyed()) return;
   const wasClosing = closing.delete(viewer);
   if (!canLeave) {
+    if (quitting) quitCancelled?.();
     quitting = false;
     return;
   }
