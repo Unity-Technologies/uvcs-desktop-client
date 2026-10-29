@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { BrowserWindow } from 'electron';
 import { EVENT_CHANNEL } from '@shared/ipc';
-import type { FakeElectron, FakeWindow } from './testing/fakeElectron';
+import { closeEvent, type FakeElectron, type FakeWindow } from './testing/fakeElectron';
 
 vi.mock('electron', async () => (await import('./testing/fakeElectron')).fakeElectron.module);
 
@@ -32,7 +32,7 @@ describe('leaving a page with unsaved edits', () => {
 
   it('closes the window once settled, when closing it was held back', async () => {
     const { fakeElectron, window, heldBack, continueLeaving } = await setUp();
-    window.emit('close');
+    window.emit('close', closeEvent());
     heldBack();
 
     continueLeaving(true);
@@ -43,7 +43,7 @@ describe('leaving a page with unsaved edits', () => {
   it('quits once settled, when quitting was held back', async () => {
     const { fakeElectron, window, heldBack, quitStarted, continueLeaving } = await setUp();
     quitStarted();
-    window.emit('close');
+    window.emit('close', closeEvent());
     heldBack();
 
     continueLeaving(true);
@@ -62,7 +62,7 @@ describe('leaving a page with unsaved edits', () => {
   it('stays, and stops quitting, when the user cancels', async () => {
     const { fakeElectron, window, heldBack, quitStarted, continueLeaving } = await setUp();
     quitStarted();
-    window.emit('close');
+    window.emit('close', closeEvent());
     heldBack();
 
     continueLeaving(false);
