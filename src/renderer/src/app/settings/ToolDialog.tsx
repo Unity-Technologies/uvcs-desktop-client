@@ -3,14 +3,13 @@ import { useId, useState } from 'react';
 import { TOOL_TARGET_LABELS, TOOL_TARGETS, type Tool } from '@shared/domain/tools';
 import { api } from '../../api/client';
 import { PLATFORM, PROGRAM_PLACEHOLDER } from '../../lib/platform';
-import { programName } from '../../lib/programName';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import { TextField } from '../../ui/TextField';
 import fieldStyles from '../../ui/Field.module.css';
-import { draftOfTool, NEW_TOOL_DRAFT, TOOL_PLACEHOLDER_HINT, toolDraftProblem, toolOfDraft, toolPreview, withTarget, type ToolDraft } from './toolSettings';
+import { draftOfTool, NEW_TOOL_DRAFT, TOOL_PLACEHOLDER_HINTS, toolDraftProblem, toolNamePlaceholder, toolOfDraft, toolPreview, withTarget, type ToolDraft } from './toolSettings';
 import styles from './SettingsDialog.module.css';
 
 /** Adds a tool (`tool` null) or edits one; `save` stores the tool the dialog ends with. */
@@ -45,9 +44,12 @@ function ToolDialog({ tool, save, close }: { tool: Tool | null; save: (tool: Too
       footer={
         <>
           <Button onClick={close}>Cancel</Button>
-          <Button type="submit" variant="primary" disabled={problem !== undefined}>
-            {tool ? 'Save' : 'Add'}
-          </Button>
+          {/* A disabled button gets no pointer: its wrapper says why it's off. */}
+          <span data-tip={problem}>
+            <Button type="submit" variant="primary" disabled={problem !== undefined}>
+              {tool ? 'Save' : 'Add'}
+            </Button>
+          </span>
         </>
       }
     >
@@ -57,8 +59,17 @@ function ToolDialog({ tool, save, close }: { tool: Tool | null; save: (tool: Too
           Choose…
         </Button>
       </div>
-      <TextField label="Name" value={draft.name} placeholder={draft.program.trim() ? programName(draft.program.trim()) : 'Post to tracker'} onChange={(event) => change({ name: event.target.value })} />
-      <TextField label="Arguments" value={draft.argsText} hint={TOOL_PLACEHOLDER_HINT} onChange={(event) => change({ argsText: event.target.value })} className={styles.args} />
+      <TextField label="Name" value={draft.name} placeholder={toolNamePlaceholder(draft)} onChange={(event) => change({ name: event.target.value })} />
+      <div className={fieldStyles.field}>
+        <TextField label="Arguments" value={draft.argsText} onChange={(event) => change({ argsText: event.target.value })} className={styles.args} />
+        <span className={`${fieldStyles.hint} ${styles.toolPlaceholders}`}>
+          {TOOL_PLACEHOLDER_HINTS.map(({ name, meaning }) => (
+            <code key={name} data-tip={meaning}>
+              {name}
+            </code>
+          ))}
+        </span>
+      </div>
       <div className={fieldStyles.field} role="group" aria-labelledby={runsOnId}>
         <span className={fieldStyles.label} id={runsOnId}>
           Runs on

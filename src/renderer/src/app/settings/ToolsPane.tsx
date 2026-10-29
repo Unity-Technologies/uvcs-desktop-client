@@ -4,7 +4,7 @@ import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { openToolDialog } from './ToolDialog';
-import { toolRowMenu, toolRows } from './toolSettings';
+import { toolRowMenu, toolRows, withSavedTool } from './toolSettings';
 import { SettingsGroup } from './SettingsGroup';
 import { saveSettings, useSettings } from './useSettings';
 import styles from './SettingsDialog.module.css';
@@ -13,8 +13,7 @@ import styles from './SettingsDialog.module.css';
 export function ToolsPane() {
   const { tools } = useSettings();
   const saveTools = (changed: Tool[]): Promise<void> => saveSettings({ tools: changed });
-  const withTool = (tool: Tool): Promise<void> =>
-    saveTools(tools.some((saved) => saved.id === tool.id) ? tools.map((saved) => (saved.id === tool.id ? tool : saved)) : [...tools, tool]);
+  const withTool = (tool: Tool): Promise<void> => saveTools(withSavedTool(tools, tool));
   const edit = (tool: Tool) => () => openToolDialog(tool, withTool);
 
   return (

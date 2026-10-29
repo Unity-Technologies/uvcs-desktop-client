@@ -23,6 +23,11 @@ function runsOnText(targets: readonly ToolTarget[]): string {
   return labels.map((label, index) => (index === 0 ? label : label.toLowerCase())).join(', ');
 }
 
+/** The tools with `tool` saved: an edited one keeps its place, a new one goes last. */
+export function withSavedTool(tools: readonly Tool[], tool: Tool): Tool[] {
+  return tools.some((saved) => saved.id === tool.id) ? tools.map((saved) => (saved.id === tool.id ? tool : saved)) : [...tools, tool];
+}
+
 /** A row's "…" menu: Edit…, Duplicate, Move up and Move down (not past the ends), Remove. */
 export function toolRowMenu(tools: readonly Tool[], id: string, edit: () => void, save: (tools: Tool[]) => void, newId: () => string): MenuEntry[] {
   const index = tools.findIndex((tool) => tool.id === id);
@@ -60,6 +65,12 @@ export function toolOfDraft(draft: ToolDraft, id: string): Tool {
   return { id, name: draft.name.trim() || programName(program), program, args: parseArgs(draft.argsText), targets: TOOL_TARGETS.filter((target) => draft.targets.includes(target)) };
 }
 
+/** What the Name field shows while empty: the name it saves as (`toolOfDraft`), or an example before a program. */
+export function toolNamePlaceholder(draft: ToolDraft): string {
+  const program = draft.program.trim();
+  return program ? programName(program) : 'Post to tracker';
+}
+
 /** Why the draft can't be saved yet; undefined when it can. */
 export function toolDraftProblem(draft: ToolDraft): string | undefined {
   if (draft.program.trim() === '') return 'Choose the program it runs.';
@@ -72,8 +83,8 @@ export function withTarget(targets: readonly ToolTarget[], target: ToolTarget, o
   return TOOL_TARGETS.filter((candidate) => (candidate === target ? on : targets.includes(candidate)));
 }
 
-/** "{object} {path} {changeset} {branch} {label} {repository} {workspace}", as the arguments' hint lists them. */
-export const TOOL_PLACEHOLDER_HINT = Object.keys(TOOL_PLACEHOLDERS).join(' ');
+/** The placeholders the arguments' hint lists, each with what it becomes (its tooltip). */
+export const TOOL_PLACEHOLDER_HINTS = Object.entries(TOOL_PLACEHOLDERS).map(([name, meaning]) => ({ name, meaning }));
 
 /**
  * The command the draft would run on an example of its first target, as one line ("post.exe cs:12 game@local"), so

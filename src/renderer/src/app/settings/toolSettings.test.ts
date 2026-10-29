@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Tool } from '@shared/domain/tools';
 import { SEPARATOR, type Action, type MenuEntry } from '../../lib/actions';
-import { draftOfTool, NEW_TOOL_DRAFT, toolDraftProblem, toolOfDraft, toolPreview, toolRowMenu, toolRows, withTarget } from './toolSettings';
+import { draftOfTool, NEW_TOOL_DRAFT, toolDraftProblem, toolNamePlaceholder, toolOfDraft, toolPreview, toolRowMenu, toolRows, withSavedTool, withTarget } from './toolSettings';
 
 const POST: Tool = { id: 'tool:1', name: 'Post', program: 'C:\\Tools\\post.exe', args: ['--object', '{object}', 'two words'], targets: ['branch', 'changeset'] };
 const UPLOAD: Tool = { id: 'tool:2', name: 'Upload', program: '/opt/upload', args: ['{path}'], targets: ['item'] };
@@ -39,6 +39,13 @@ describe('toolRowMenu', () => {
   });
 });
 
+describe('withSavedTool', () => {
+  it('keeps an edited tool in its place and adds a new one last', () => {
+    expect(withSavedTool([POST, UPLOAD], { ...POST, name: 'Post it' }).map((tool) => tool.name)).toEqual(['Post it', 'Upload']);
+    expect(withSavedTool([POST], UPLOAD).map((tool) => tool.id)).toEqual(['tool:1', 'tool:2']);
+  });
+});
+
 describe('the edit draft', () => {
   it('reads a tool back as it was saved, its arguments on one line', () => {
     const draft = draftOfTool(POST);
@@ -48,6 +55,11 @@ describe('the edit draft', () => {
 
   it("names a tool without a name after its program", () => {
     expect(toolOfDraft({ ...NEW_TOOL_DRAFT, program: ' /Applications/Poster.app ' }, 'tool:9')).toMatchObject({ name: 'Poster', program: '/Applications/Poster.app' });
+  });
+
+  it("shows, while the name is empty, the program's name it saves as, or an example before a program", () => {
+    expect(toolNamePlaceholder({ ...NEW_TOOL_DRAFT, program: ' C:\\Tools\\post.exe ' })).toBe('post');
+    expect(toolNamePlaceholder(NEW_TOOL_DRAFT)).toBe('Post to tracker');
   });
 
   it('needs a program and something to run on', () => {
