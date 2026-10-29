@@ -28,6 +28,7 @@ function setUp() {
     onWindowsChanged: () => {},
     onLastWindowClosing: () => {},
     onClosed: () => {},
+    onCloseRequested: () => {},
   });
   const lookups: { answer: Promise<string | null>; resolve: (root: string | null) => void }[] = [];
   const findRoot = (): Promise<string | null> => {

@@ -1,0 +1,43 @@
+export interface ClosingWithWritesDependencies {
+  /** Whether an operation changing a workspace that the window (or a page window it owns) started runs (`WindowWrites`). */
+  writesRunningIn: (windowId: number) => boolean;
+  /** Settles once none runs (`WindowWrites.finishedIn`). */
+  writesFinishedIn: (windowId: number) => Promise<void>;
+  /** Asks, over the window, whether to close it once its operation finishes (`askToCloseWhenDone`); false to keep it. */
+  askToCloseWhenDone: (windowId: number) => Promise<boolean>;
+  /** The window stays open: what took it as closing (the app's icon, `AppIconProgress.windowKept`) takes it back. */
+  kept: (windowId: number) => void;
+  close: (windowId: number) => void;
+}
+
+/**
+ * A window running an operation that changes its workspace (update, switch, checkin, merge, sync…) holds its own
+ * close back, on every OS: closing it would hide the operation while it still runs, and, where the app quits with its
+ * last window (Windows, Linux), leave it running with no window at all. The user is asked to close the window once
+ * the operation finishes, or to keep it. Quitting asks on its own (`Quitting`), and holds the windows open meanwhile.
+ */
+export class ClosingWithWrites {
+  /** Windows asking, or waiting for their operation to finish: closing one again meanwhile asks nothing more. */
+  private readonly holding = new Set<number>();
+
+  constructor(private readonly dependencies: ClosingWithWritesDependencies) {}
+
+  /** The window's `close`, before any other listener sees it (`WorkspaceWindows`' `onCloseRequested`). */
+  closeRequested(windowId: number, event: { preventDefault(): void }): void {
+    if (!this.holding.has(windowId) && !this.dependencies.writesRunningIn(windowId)) return;
+    event.preventDefault();
+    this.dependencies.kept(windowId);
+    if (!this.holding.has(windowId)) void this.closeWhenWritesFinish(windowId);
+  }
+
+  private async closeWhenWritesFinish(windowId: number): Promise<void> {
+    this.holding.add(windowId);
+    try {
+      if (!(await this.dependencies.askToCloseWhenDone(windowId))) return;
+      await this.dependencies.writesFinishedIn(windowId);
+    } finally {
+      this.holding.delete(windowId);
+    }
+    this.dependencies.close(windowId);
+  }
+}

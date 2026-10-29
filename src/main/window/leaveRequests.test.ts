@@ -50,6 +50,18 @@ describe('leaving a page with unsaved edits', () => {
     expect(fakeElectron.app.quits).toBe(1);
   });
 
+  it('reloads the page once settled, when closing it was held back before reaching the page (an operation runs)', async () => {
+    const { window, heldBack, continueLeaving } = await setUp();
+    const held = closeEvent();
+    held.preventDefault();
+    window.emit('close', held);
+    heldBack();
+
+    continueLeaving(true);
+    expect(window.webContents.reloads).toBe(1);
+    expect(closed(window)).toBe(false);
+  });
+
   it('reloads the page once settled, when a reload was held back', async () => {
     const { window, heldBack, continueLeaving } = await setUp();
     heldBack();

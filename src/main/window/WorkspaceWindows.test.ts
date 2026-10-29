@@ -33,6 +33,9 @@ function setUp(recentWorkspacePaths: string[] = [], openWindows: SavedWindow[] =
   const onClosed = vi.fn();
   const onLastWindowClosing = vi.fn();
   const onRepositoryLeft = vi.fn();
+  /** The windows whose close is held back, by `BrowserWindow.id`, as `ClosingWithWrites` holds one running an operation. */
+  const heldBack = new Set<number>();
+  const onCloseRequested = vi.fn((windowId: number, event: { preventDefault(): void }) => heldBack.has(windowId) && event.preventDefault());
   const settings = memorySettings({ recentWorkspacePaths, openWindows });
   const windows = new WorkspaceWindows({
     settings,
@@ -41,11 +44,12 @@ function setUp(recentWorkspacePaths: string[] = [], openWindows: SavedWindow[] =
     onWindowsChanged,
     onClosed,
     onRepositoryLeft,
+    onCloseRequested,
   });
   const open = (workspacePath?: string): FakeWindow => windows.open(workspacePath === undefined ? undefined : workspacePlace(workspacePath)) as unknown as FakeWindow;
   /** The page of `window` now shows `workspacePath` (after taking its request, or picked on the home screen). */
   const shows = (window: FakeWindow, workspacePath: string): void => void shown.set(window.webContents.id, workspacePath);
-  return { windows, settings, open, shows, onWindowsChanged, onClosed, onLastWindowClosing, onRepositoryLeft };
+  return { windows, settings, open, shows, onWindowsChanged, onClosed, onLastWindowClosing, onRepositoryLeft, heldBack };
 }
 
 const asBrowserWindow = (window: FakeWindow): BrowserWindow => window as unknown as BrowserWindow;
@@ -604,6 +608,16 @@ describe('the windows open as the app quit', () => {
     expect(onLastWindowClosing).toHaveBeenCalledOnce();
   });
 
+  it("don't hear the last window closing when its close is held back (an operation runs in it)", () => {
+    const { open, onLastWindowClosing, heldBack } = setUp();
+    const last = open();
+    heldBack.add(last.id);
+
+    last.close();
+    expect(last.isDestroyed()).toBe(false);
+    expect(onLastWindowClosing).not.toHaveBeenCalled();
+  });
+
   it('are saved as none when every window was closed before quitting (macOS)', () => {
     const { windows, settings, open } = setUp();
     open().close();
@@ -687,6 +701,23 @@ describe('page windows', () => {
     settings.update({ pageWindowBounds: { x: 2000, y: 40, width: 900, height: 700, maximized: false } });
     windows.openPage(game.webContents.id, { place: workspacePlace(GAME), page: DIFF });
     expect(vi.mocked(createMainWindow).mock.calls.at(-1)?.[1]).toMatchObject({ cascadeFrom: undefined, page: DIFF });
+  });
+
+  it('close with their workspace window: closing it waits for what they run too', () => {
+    const { windows, game, page } = withPageWindow();
+    const other = withPageWindow(setUp());
+
+    expect(windows.closingWith(game.id)).toEqual([game.id, page.id]);
+    expect(windows.closingWith(page.id)).toEqual([page.id]);
+    expect(other.windows.closingWith(other.game.id)).not.toContain(page.id);
+  });
+
+  it('hear their close before anything else, which may hold it back', () => {
+    const { page, heldBack } = withPageWindow();
+    heldBack.add(page.id);
+
+    page.close();
+    expect(page.isDestroyed()).toBe(false);
   });
 
   it("aren't workspace windows: opening their workspace brings its window forward, and they aren't saved for the next launch", () => {

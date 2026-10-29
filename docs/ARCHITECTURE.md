@@ -773,6 +773,14 @@ belong to it and aren't workspace windows: `features/page-windows.md`.
   kill its `cm` partway: the OS's message box asks to quit once it finishes or to stay (`askToQuitWhenDone`), and with
   no window left (Windows and Linux quit as the last one closes) the app quits once it finishes. A slow read never holds
   it. Then the pages hear it (`quitStarted`), so one with unsaved edits asks Save / Don't save / Cancel first.
+- Closing a window holds back the same way, on every OS, while an operation changing a workspace that it (or a page
+  window it owns, `WorkspaceWindows.closingWith`) started runs (`ClosingWithWrites`, from `WindowWrites`, which
+  `trackOperations` fills with each write's window): closing would hide the operation while it runs, and where the
+  app quits with its last window, leave it running with no window at all. The OS's message box asks, over the window
+  brought forward, to close it once the operation finishes or to keep it (`askToCloseWhenDone`); other windows'
+  operations never hold it. Its `close` listener comes before the window's others (`onCloseRequested`), which check
+  `event.defaultPrevented`: a held close neither saves the session as the last window nor reaches the page's
+  unsaved edits, and the app's icon takes the window back (`windowKept`).
 - Settings are written in main, one change at a time; values computed from the stored ones (the recent workspaces and
   branches) are computed there too, and every window gets the result (`settingsChanged`).
 - What a window checks as it opens runs until it succeeds once; later windows take that answer (`untilSucceeded`), and
