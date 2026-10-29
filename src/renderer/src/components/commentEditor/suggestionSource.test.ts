@@ -68,4 +68,11 @@ describe('suggestionReads', () => {
     expect(reads('branch', 'fix-10', 'fix-10', { ...none, everyBranchRead: true })).toMatchObject({ searchBranches: false });
     expect(reads('label', 'v1', 'v1')).toMatchObject({ everyLabel: true, searchLabels: true, searchBranches: false });
   });
+
+  it('searches the server’s users for a mention once the text settles: no list holds someone who never owned anything', () => {
+    expect(reads('person', 'manuel', 'manuel')).toMatchObject({ searchPeople: true });
+    expect(reads('person', 'manuel', 'manu')).toMatchObject({ searchPeople: false });
+    expect(reads('person', '', '')).toMatchObject({ searchPeople: false });
+    expect(reads('branch', 'manuel', 'manuel')).toMatchObject({ searchPeople: false });
+  });
 });
