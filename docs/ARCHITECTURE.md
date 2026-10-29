@@ -1086,7 +1086,7 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     owner isn't searched there: a person's name would list every branch they made. Hidden branches are searched too,
     the user may be on one: `cm find branch` leaves them out of the every-branch list, so the palette reads them apart
     (`onlyHidden`, one quick `find branch where hidden = 'true'`, cached as slow-changing beside it and refreshed by
-    hiding or unhiding through `isAffectedByBranchList`; `paletteBranches` joins the two). Their rows say "Hidden" and
+    hiding or unhiding through `isAffectedByBranchList`; `paletteBranches` joins the two). Their rows say "hidden", like "current" and
     rank half a tier below a visible branch that matches as well (`HIDDEN_BRANCH_PENALTY`; `lowered` rounds both
     penalties to hundredths).
   - **One filter bar**: every view lays its filters out with `FilterBar`, whose slots fix the order: the text
