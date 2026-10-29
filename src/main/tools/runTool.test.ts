@@ -72,7 +72,7 @@ describe('runTool', () => {
 
   it('reads %VAR% in the program, and runs the program of a macOS app bundle so it gets the arguments', async () => {
     const bundle = '/Applications/Poster.app';
-    const { dependencies, launched } = setUp([{ ...POST, program: '%APPS%/Poster.app', args: ['{object}'] }], {
+    const { dependencies, launched } = setUp([{ ...POST, program: '%APPS%/Poster.app', args: ['{object}'], targets: ['branch'] }], {
       platform: 'darwin',
       env: { APPS: '/Applications' },
       fs: fakeFileSystem([`${bundle}/Contents/MacOS/Poster`]),
@@ -82,9 +82,22 @@ describe('runTool', () => {
   });
 
   it('runs a Windows .cmd script through cmd.exe, its arguments quoted', async () => {
-    const { dependencies, launched } = setUp([{ ...POST, program: 'C:\\Tools\\post.cmd', args: ['{object}'] }], { platform: 'win32' });
+    const { dependencies, launched } = setUp([{ ...POST, program: 'C:\\Tools\\post.cmd', args: ['{object}'], targets: ['label'] }], { platform: 'win32' });
     await runTool(dependencies, repositoryPlace('game@local'), 'tool:1', [{ kind: 'label', name: 'v1 final' }]);
     expect(launched[0]).toMatchObject({ command: 'cmd.exe', verbatim: true, args: ['/d', '/s', '/c', '""C:\\Tools\\post.cmd" "lb:v1 final""'] });
+  });
+
+  it("a .cmd script's arguments lose what cmd.exe would read as a variable: a label named v1!", async () => {
+    const { dependencies, launched } = setUp([{ ...POST, program: 'C:\\Tools\\post.cmd', args: ['{object}'], targets: ['label'] }], { platform: 'win32' });
+    await runTool(dependencies, repositoryPlace('game@local'), 'tool:1', [{ kind: 'label', name: 'v1!' }]);
+    expect(launched[0]?.args.at(-1)).toBe('""C:\\Tools\\post.cmd" "lb:v1""');
+  });
+
+  it('runs on nothing when one object is of a kind the tool does not run on', async () => {
+    const { dependencies, launched } = setUp();
+    const running = runTool(dependencies, workspacePlace(WORKSPACE), 'tool:1', [{ kind: 'changeset', id: 1 }, { kind: 'label', name: 'v1' }]);
+    await expect(running).rejects.toThrow("Post doesn't run on that.");
+    expect(launched).toEqual([]);
   });
 
   it('fails when the tool is gone', async () => {

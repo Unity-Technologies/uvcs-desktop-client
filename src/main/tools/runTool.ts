@@ -2,7 +2,7 @@ import { normalize } from 'node:path';
 import type { RepositoryVersion } from '@shared/domain/content';
 import { workspacePathOf, type Place } from '@shared/domain/place';
 import { placeholderValues, toolArgs, type ResolvedSubject } from '@shared/domain/toolArgs';
-import type { ToolSubject } from '@shared/domain/tools';
+import { targetOf, type ToolSubject } from '@shared/domain/tools';
 import type { SettingsStore } from '../settings/SettingsStore';
 import type { AppFileSystem } from '../system/apps/appFileSystem';
 import { appExecutable } from '../system/apps/appExecutable';
@@ -22,12 +22,14 @@ export interface ToolRunDependencies {
 /**
  * Runs the user's tool on each subject, one process each and in order, as the official client did: started, never
  * waited for, in the workspace's folder. A revision is saved to a temp file first. The first that can't start stops
- * the rest and rejects; a macOS app bundle runs its program, so it gets the arguments.
+ * the rest and rejects; a macOS app bundle runs its program, so it gets the arguments. A subject the tool doesn't run
+ * on (its menu never offers that) rejects before anything starts.
  */
 export async function runTool(dependencies: ToolRunDependencies, place: Place, toolId: string, subjects: readonly ToolSubject[]): Promise<void> {
   const { settings, saveRevision, launch, platform, env, fs } = dependencies;
   const tool = settings.get().tools.find((candidate) => candidate.id === toolId);
   if (!tool) throw new Error("That tool isn't there anymore.");
+  if (subjects.some((subject) => !tool.targets.includes(targetOf(subject)))) throw new Error(`${tool.name} doesn't run on that.`);
   const program = appExecutable(expandEnvironment(tool.program, env, platform), fs);
   const workspacePath = workspacePathOf(place);
   const context = { repository: place.kind === 'repository' ? place.repository : undefined, workspacePath };
