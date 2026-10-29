@@ -19,12 +19,14 @@
 
 /* Quiet, at the end of the breadcrumb: a link to share and an option for a second display, not steps of the page. */
 .copyLink,
-.newWindow {
+.newWindow,
+.closeMerge {
   margin-left: auto;
   color: var(--text-tertiary);
 }
 
-.copyLink + .newWindow {
+.copyLink + .newWindow,
+.copyLink + .closeMerge {
   margin-left: 0;
 }
 

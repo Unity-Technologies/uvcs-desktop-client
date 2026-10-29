@@ -2,6 +2,7 @@ import { AlertTriangle, ArrowDownToLine, Eye } from 'lucide-react';
 import { useMemo, type ReactNode, type Ref } from 'react';
 import type { MergePlan, MergeRequest } from '@shared/domain/merge';
 import { shortBranchName } from '@shared/domain/specs';
+import { usePageShown } from '../../app/navigation/pageShown';
 import { updateWorkspace } from '../../app/shell/workspaceOperations';
 import { CommentField } from '../../components/commentEditor/CommentField';
 import { oneLineText } from '../../components/commentEditor/commentFieldText';
@@ -61,7 +62,8 @@ export function MergeHeader({
   alternative,
   mergeButtonRef,
 }: MergeHeaderProps) {
-  useShortcut(hotkey('merge'), onMerge, canMerge);
+  const shown = usePageShown();
+  useShortcut(hotkey('merge'), onMerge, canMerge && shown);
   // Stable while the request is, so the title is fitted again only when it changes or its room does.
   const title = useMemo(() => mergeTitle(request, labels.destination), [request, labels.destination]);
 

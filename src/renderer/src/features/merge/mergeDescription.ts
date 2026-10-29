@@ -97,3 +97,38 @@ export function completionCounts(changeCount: number, conflictCount: number): st
 export function mergeTitleText({ verb, source, preposition, destination }: MergeTitle): string {
   return `${verb} ${source} ${preposition} ${destination}`;
 }
+
+/** How the sidebar names a merge in progress: what it does to what ("Merge /main/task"), and the whole of it in its tip. */
+export interface MergeInProgressWords {
+  label: string;
+  /** The rail's tile: the verb alone. */
+  railLabel: string;
+  /** Under the tooltip: "In progress: Merge /main/task into your workspace", or once settled, the merge alone. */
+  tip: string;
+}
+
+export function mergeInProgressWords(request: MergeRequest, settled: boolean): MergeInProgressWords {
+  const title = mergeTitle(request, request.destinationBranch ?? 'your workspace');
+  const whole = mergeTitleText(title);
+  return { label: `${title.verb} ${title.source}`, railLabel: title.verb, tip: settled ? whole : `In progress: ${whole}` };
+}
+
+/** What a confirm asks before a step drops a merge holding the user's work. */
+export interface MergeQuestion {
+  title: string;
+  message: string;
+  confirmLabel: string;
+}
+
+/** Before another merge replaces the one in progress. */
+export function replaceMergeQuestion(inProgress: MergeRequest): MergeQuestion {
+  const title = mergeTitleText(mergeTitle(inProgress, inProgress.destinationBranch ?? 'your workspace'));
+  return {
+    title: 'Start another merge?',
+    message: `${title} isn't complete. Starting another merge discards what you decided in it.`,
+    confirmLabel: 'Start another merge',
+  };
+}
+
+/** Before Close ends the merge in progress. */
+export const CLOSE_MERGE_QUESTION: MergeQuestion = { title: 'Close this merge?', message: 'What you decided in it is discarded.', confirmLabel: 'Close merge' };

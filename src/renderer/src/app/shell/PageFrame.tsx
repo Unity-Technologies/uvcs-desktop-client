@@ -1,7 +1,9 @@
 import { FolderX, PictureInPicture2 } from 'lucide-react';
+import { CloseMergeButton } from '../../features/merge/CloseMergeButton';
 import { useNavigation } from '../navigation/navigationStore';
 import { PageContent, pageTitle } from '../navigation/pageRegistry';
 import type { Page } from '../navigation/pages';
+import { usePageShown } from '../navigation/pageShown';
 import { useBackButtons } from '../navigation/useBackButtons';
 import { viewDefinition } from '../navigation/viewRegistry';
 import { showsPage } from '../navigation/views';
@@ -20,8 +22,9 @@ export function PageFrame({ page }: { page: Page }) {
   const { view, pages, goBack } = useNavigation();
   const place = usePlace();
   const previous = pages.at(-2);
-  useShortcut(hotkey('back'), goBack);
-  useBackButtons(goBack);
+  const shown = usePageShown();
+  useShortcut(hotkey('back'), goBack, shown);
+  useBackButtons(goBack, shown);
 
   return (
     <div className={styles.frame}>
@@ -37,6 +40,7 @@ export function PageFrame({ page }: { page: Page }) {
             onClick={() => movePageToNewWindow(page)}
           />
         )}
+        {page.kind === 'merge' && <CloseMergeButton className={styles.closeMerge} />}
       </div>
       <div className={styles.content}>
         {showsPage(place, page) ? (

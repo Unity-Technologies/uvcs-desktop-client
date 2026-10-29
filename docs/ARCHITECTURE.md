@@ -1008,6 +1008,8 @@ module beside it, and the `.tsx` only maps the result to JSX (CLAUDE.md "Tests a
     navigation stays while on the home screen), as do Back (⌘[, Alt+←) and the mouse's back button. It shows only
     while `cm` lists that workspace (`workspaceToReturnTo`, from the list the home screen reads anyway).
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
+  Another view closes the pages, and Back the top one, except a merge in progress, which only steps aside (merge.md
+  "A merge in progress"): it stays mounted, its keys quiet while it doesn't show (`PageShownContext`).
   A sidebar entry may show a count (`useBadge`) and a dot for something waiting there (`useDot`), whose words go under
   the entry's tooltip and in its accessible description: Changes' says what changes were left and where
   (`leftChangesSummary`, in the "Welcome back" banner's words).
