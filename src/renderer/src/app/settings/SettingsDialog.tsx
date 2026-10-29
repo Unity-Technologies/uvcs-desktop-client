@@ -1,4 +1,4 @@
-import { AppWindow, FileDiff, GitCommitVertical, GitMerge, HardDrive, Palette, Users } from 'lucide-react';
+import { AppWindow, FileDiff, GitCommitVertical, GitMerge, HardDrive, Palette, Users, Wrench } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
@@ -10,10 +10,11 @@ import { AppsPane } from './AppsPane';
 import { CheckinPane } from './CheckinPane';
 import { MergeToolsPane } from './MergeToolsPane';
 import { PendingChangesPane } from './PendingChangesPane';
+import { ToolsPane } from './ToolsPane';
 import { WorkspacesPane } from './WorkspacesPane';
 import styles from './SettingsDialog.module.css';
 
-export type SettingsSection = 'appearance' | 'pendingChanges' | 'checkin' | 'apps' | 'merge' | 'workspaces' | 'accounts';
+export type SettingsSection = 'appearance' | 'pendingChanges' | 'checkin' | 'apps' | 'merge' | 'tools' | 'workspaces' | 'accounts';
 
 const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
   { id: 'appearance', label: 'Appearance', icon: <Palette size={15} /> },
@@ -21,6 +22,7 @@ const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
   { id: 'checkin', label: 'Check in', icon: <GitCommitVertical size={15} /> },
   { id: 'apps', label: 'Apps', icon: <AppWindow size={15} /> },
   { id: 'merge', label: 'Merge', icon: <GitMerge size={15} /> },
+  { id: 'tools', label: 'Tools', icon: <Wrench size={15} /> },
   { id: 'workspaces', label: 'Workspaces', icon: <HardDrive size={15} /> },
   { id: 'accounts', label: 'Accounts', icon: <Users size={15} /> },
 ];
@@ -50,6 +52,7 @@ function SettingsDialog({ initialSection, onClose }: { initialSection: SettingsS
           {section === 'checkin' && <CheckinPane />}
           {section === 'apps' && <AppsPane />}
           {section === 'merge' && <MergeToolsPane />}
+          {section === 'tools' && <ToolsPane />}
           {section === 'workspaces' && <WorkspacesPane />}
           {section === 'accounts' && <AccountsPane />}
         </div>
