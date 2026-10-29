@@ -14,7 +14,14 @@ import { WorkspaceWindows } from './WorkspaceWindows';
 vi.mock('electron', async () => (await import('./testing/fakeElectron')).fakeElectron.module);
 vi.mock('./createMainWindow', async () => {
   const { fakeElectron } = await import('./testing/fakeElectron');
-  return { createMainWindow: vi.fn(() => fakeElectron.newWindow()) };
+  return {
+    // As the real one: the close request is the window's first `close` listener.
+    createMainWindow: vi.fn((_settings, options?: { onCloseRequested?: (windowId: number, event: unknown) => void }) => {
+      const window = fakeElectron.newWindow();
+      if (options?.onCloseRequested) window.on('close', (event) => options.onCloseRequested?.(window.id, event));
+      return window;
+    }),
+  };
 });
 
 const GAME = join('/work', 'game');
@@ -693,7 +700,7 @@ describe('page windows', () => {
 
   it('open on the page, cascaded from their workspace window the first time, then where the last page window was', () => {
     const { windows, settings, game, page } = withPageWindow();
-    expect(vi.mocked(createMainWindow).mock.calls.at(-1)?.[1]).toEqual({ cascadeFrom: game, place: workspacePlace(GAME), page: DIFF });
+    expect(vi.mocked(createMainWindow).mock.calls.at(-1)?.[1]).toMatchObject({ cascadeFrom: game, place: workspacePlace(GAME), page: DIFF });
 
     windows.openPage(game.webContents.id, { place: workspacePlace(GAME), page: HISTORY });
     expect(vi.mocked(createMainWindow).mock.calls.at(-1)?.[1]).toMatchObject({ cascadeFrom: page, page: HISTORY });

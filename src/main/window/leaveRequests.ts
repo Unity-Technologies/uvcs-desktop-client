@@ -18,8 +18,8 @@ export function quitStarted(): void {
  */
 export function askBeforeUnloading(window: BrowserWindow): void {
   const viewer = window.webContents.id;
-  // Comes before the page's `beforeunload`, which may hold the close back; one held back already (`ClosingWithWrites`)
-  // doesn't reach the page.
+  // Comes before the page's `beforeunload`, which may hold the close back. `ClosingWithWrites`' listener is the window's
+  // first (`createMainWindow`), so a close it held back doesn't reach the page.
   window.on('close', (event) => {
     if (!event.defaultPrevented) closing.add(viewer);
   });

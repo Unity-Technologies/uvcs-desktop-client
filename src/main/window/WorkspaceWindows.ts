@@ -23,7 +23,7 @@ interface WorkspaceWindowsOptions {
   /** The last open window is closing, still open (`Quitting.lastWindowClosing`). */
   onLastWindowClosing: () => void;
   /**
-   * A window was asked to close, before anything else hears it: it may hold the close back (`event.preventDefault()`),
+   * A window was asked to close, before anything else hears it (`createMainWindow` registers it first): it may hold the close back (`event.preventDefault()`),
    * as `ClosingWithWrites` does while its operation runs.
    */
   onCloseRequested: (windowId: number, event: Event) => void;
@@ -72,9 +72,8 @@ export class WorkspaceWindows {
     const cascadeFrom = reopening ? undefined : (BrowserWindow.getFocusedWindow() ?? this.all().at(-1));
     // Its page starts on a workspace when its folder is there; for a missing one, the page's own check explains it.
     const startsOn = place && (place.kind === 'repository' || existsSync(place.workspacePath)) ? place : undefined;
-    const window = createMainWindow(this.options.settings, { cascadeFrom, place: startsOn, ...reopening });
+    const window = createMainWindow(this.options.settings, { cascadeFrom, place: startsOn, onCloseRequested: this.options.onCloseRequested, ...reopening });
     const viewer = window.webContents.id;
-    this.holdClosingOf(window);
     askBeforeUnloading(window);
     // A page loaded again (a reload) starts not knowing a page window follows it: it's told, or it would stop showing it.
     window.webContents.on('did-finish-load', () => {
@@ -121,10 +120,9 @@ export class WorkspaceWindows {
     if (!owner) return undefined;
     const lastPageWindow = this.pageWindowsOf(ownerId).at(-1);
     const cascadeFrom = lastPageWindow ?? (this.options.settings.get().pageWindowBounds ? undefined : owner);
-    const window = createMainWindow(this.options.settings, { cascadeFrom, place, page, seed });
+    const window = createMainWindow(this.options.settings, { cascadeFrom, place, page, seed, onCloseRequested: this.options.onCloseRequested });
     const viewer = window.webContents.id;
     this.pages.add(viewer, ownerId, place);
-    this.holdClosingOf(window);
     askBeforeUnloading(window);
     // Its page loaded again (a reload) starts with Follow selection off: it's told it's on.
     window.webContents.on('did-finish-load', () => {
@@ -150,12 +148,6 @@ export class WorkspaceWindows {
     const window = BrowserWindow.fromId(windowId);
     if (!window) return [windowId];
     return [windowId, ...this.pageWindowsOf(window.webContents.id).map((pageWindow) => pageWindow.id)];
-  }
-
-  /** Listens to the window's close before any other listener of its own, so they all see whether it was held back. */
-  private holdClosingOf(window: BrowserWindow): void {
-    const windowId = window.id;
-    window.on('close', (event) => this.options.onCloseRequested(windowId, event));
   }
 
   /** The page windows of a workspace window, in the order they opened. */

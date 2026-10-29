@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { app, BrowserWindow, nativeTheme, shell } from 'electron';
+import { app, BrowserWindow, nativeTheme, shell, type Event } from 'electron';
 import type { Place } from '@shared/domain/place';
 import type { PageSeed, PageWindowPage } from '@shared/domain/pageWindow';
 import type { SavedWindow } from '@shared/domain/settings';
@@ -37,6 +37,8 @@ interface MainWindowOptions {
   page?: PageWindowPage;
   /** What the page shows, already read where it opened (`PageSeed`). */
   seed?: PageSeed;
+  /** The window was asked to close; the first `close` listener, which may hold it back (`WorkspaceWindows`' `onCloseRequested`). */
+  onCloseRequested?: (windowId: number, event: Event) => void;
 }
 
 /**
@@ -45,7 +47,7 @@ interface MainWindowOptions {
  */
 export function createMainWindow(
   settings: SettingsStore,
-  { cascadeFrom, place, reopen, inBackground, page, seed }: MainWindowOptions = {},
+  { cascadeFrom, place, reopen, inBackground, page, seed, onCloseRequested }: MainWindowOptions = {},
 ): BrowserWindow {
   const boundsKey = page ? 'pageWindowBounds' : 'windowBounds';
   const { bounds, maximized } = openingBounds(settings, { cascadeFrom, reopen }, boundsKey);
@@ -67,6 +69,8 @@ export function createMainWindow(
     },
   });
 
+  // First: every other `close` listener (the bounds saved, `askBeforeUnloading`, the last window's) sees whether it was held back.
+  if (onCloseRequested) window.on('close', (event) => onCloseRequested(window.id, event));
   keepWindowBoundsSaved(window, settings, boundsKey);
   followPageZoom(window, chrome);
   window.once('ready-to-show', () => {
