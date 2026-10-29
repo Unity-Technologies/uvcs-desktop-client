@@ -21,7 +21,8 @@ function setUp({ writing = false, answer = true } = {}) {
     closing.closeRequested(1, { preventDefault: () => void (held = true) });
     return !held;
   };
-  return { dependencies, close, quit: () => (quitting = true), finishWrites: () => ((writing = false), finishWrites()) };
+  const closeLeftBehind = (): void => closing.closeLeftBehind(1);
+  return { dependencies, close, closeLeftBehind, quit: () => (quitting = true), finishWrites: () => ((writing = false), finishWrites()) };
 }
 
 /** Lets the awaited steps of the close run. */
@@ -99,6 +100,30 @@ describe('closing a window running an operation', () => {
     finishWrites();
     await settle();
     // Closing a window already closing is Electron's no-op.
+    expect(dependencies.close).toHaveBeenCalledExactlyOnceWith(1);
+  });
+});
+
+describe('closing a window the app closes itself', () => {
+  it('closes it at once when none of its operations runs, asking nothing', () => {
+    const { dependencies, closeLeftBehind } = setUp();
+
+    closeLeftBehind();
+    expect(dependencies.close).toHaveBeenCalledExactlyOnceWith(1);
+    expect(dependencies.askToCloseWhenDone).not.toHaveBeenCalled();
+  });
+
+  it('keeps it open, asking nothing, until its operation finishes, then closes it once', async () => {
+    const { dependencies, closeLeftBehind, finishWrites } = setUp({ writing: true });
+
+    closeLeftBehind();
+    closeLeftBehind();
+    await settle();
+    expect(dependencies.askToCloseWhenDone).not.toHaveBeenCalled();
+    expect(dependencies.close).not.toHaveBeenCalled();
+
+    finishWrites();
+    await settle();
     expect(dependencies.close).toHaveBeenCalledExactlyOnceWith(1);
   });
 });

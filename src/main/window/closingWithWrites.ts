@@ -24,6 +24,9 @@ export class ClosingWithWrites {
   /** Windows asking, or waiting for their operation to finish: closing one again meanwhile asks nothing more. */
   private readonly holding = new Set<number>();
 
+  /** Windows the app closes once their operation finishes (`closeLeftBehind`). */
+  private readonly leaving = new Set<number>();
+
   constructor(private readonly dependencies: ClosingWithWritesDependencies) {}
 
   /** The window's `close`, before any other listener sees it (`WorkspaceWindows`' `onCloseRequested`). */
@@ -33,6 +36,20 @@ export class ClosingWithWrites {
     event.preventDefault();
     this.dependencies.kept(windowId);
     if (!this.holding.has(windowId)) void this.closeWhenWritesFinish(windowId);
+  }
+
+  /**
+   * The app closes a window itself (a page window whose workspace window left its workspace): nothing is asked, as the
+   * user didn't close it, but it stays open while an operation it started runs, then closes.
+   */
+  closeLeftBehind(windowId: number): void {
+    if (this.leaving.has(windowId)) return;
+    if (!this.dependencies.writesRunningIn(windowId)) return this.dependencies.close(windowId);
+    this.leaving.add(windowId);
+    void this.dependencies.writesFinishedIn(windowId).then(() => {
+      this.leaving.delete(windowId);
+      this.dependencies.close(windowId);
+    });
   }
 
   private async closeWhenWritesFinish(windowId: number): Promise<void> {

@@ -27,6 +27,11 @@ interface WorkspaceWindowsOptions {
    * as `ClosingWithWrites` does while its operation runs.
    */
   onCloseRequested: (windowId: number, event: Event) => void;
+  /**
+   * A page window shows a place its workspace window left: the app closes it, never asking, and never while an operation
+   * it started runs (`ClosingWithWrites.closeLeftBehind`).
+   */
+  closeLeftBehind: (windowId: number) => void;
 }
 
 /** Where a window opens again at launch, as it was when the app quit (`createMainWindow`'s `reopen`). */
@@ -207,7 +212,10 @@ export class WorkspaceWindows {
 
   /** The page windows of the place a window left close. */
   private placeShown(viewer: number, place: Place | undefined): void {
-    for (const pageWindow of this.pages.leftBehindBy(viewer, place)) this.byViewer(pageWindow)?.close();
+    for (const pageWindow of this.pages.leftBehindBy(viewer, place)) {
+      const window = this.byViewer(pageWindow);
+      if (window) this.options.closeLeftBehind(window.id);
+    }
   }
 
   /** A page window starts or stops following its workspace window's selection; both hear it, and the one it took it from. */

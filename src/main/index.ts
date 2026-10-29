@@ -87,6 +87,7 @@ const windows = new WorkspaceWindows({
   },
   onLastWindowClosing: () => quitting.lastWindowClosing(),
   onCloseRequested: (windowId, event) => closing.closeRequested(windowId, event),
+  closeLeftBehind: (windowId) => closing.closeLeftBehind(windowId),
 });
 const closing = new ClosingWithWrites({
   quitting: () => quitting.started(),

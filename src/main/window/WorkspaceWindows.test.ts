@@ -35,6 +35,7 @@ function setUp(recentWorkspacePaths: string[] = [], openWindows: SavedWindow[] =
   const onRepositoryLeft = vi.fn();
   /** The windows whose close is held back, by `BrowserWindow.id`, as `ClosingWithWrites` holds one running an operation. */
   const heldBack = new Set<number>();
+  const closeLeftBehind = vi.fn((windowId: number) => fakeElectron.windows().find((window) => window.id === windowId)?.close());
   const onCloseRequested = vi.fn((windowId: number, event: { preventDefault(): void }) => heldBack.has(windowId) && event.preventDefault());
   const settings = memorySettings({ recentWorkspacePaths, openWindows });
   const windows = new WorkspaceWindows({
@@ -45,11 +46,12 @@ function setUp(recentWorkspacePaths: string[] = [], openWindows: SavedWindow[] =
     onClosed,
     onRepositoryLeft,
     onCloseRequested,
+    closeLeftBehind,
   });
   const open = (workspacePath?: string): FakeWindow => windows.open(workspacePath === undefined ? undefined : workspacePlace(workspacePath)) as unknown as FakeWindow;
   /** The page of `window` now shows `workspacePath` (after taking its request, or picked on the home screen). */
   const shows = (window: FakeWindow, workspacePath: string): void => void shown.set(window.webContents.id, workspacePath);
-  return { windows, settings, open, shows, onWindowsChanged, onClosed, onLastWindowClosing, onRepositoryLeft, heldBack };
+  return { windows, settings, open, shows, onWindowsChanged, onClosed, onLastWindowClosing, onRepositoryLeft, heldBack, closeLeftBehind };
 }
 
 const asBrowserWindow = (window: FakeWindow): BrowserWindow => window as unknown as BrowserWindow;
@@ -759,6 +761,13 @@ describe('page windows', () => {
     const other = withPageWindow();
     other.windows.workspaceShown(other.game.webContents.id, undefined);
     expect(other.page.isDestroyed()).toBe(true);
+  });
+
+  it("are left to the app's own close once their workspace window shows another place: it decides when, not the window", () => {
+    const { windows, game, page, closeLeftBehind } = withPageWindow();
+
+    windows.workspaceShown(game.webContents.id, TOOLS);
+    expect(closeLeftBehind).toHaveBeenCalledExactlyOnceWith(page.id);
   });
 
   it("follow their workspace window's selection: both hear it, and the page window gets each selection", () => {
