@@ -23,6 +23,7 @@ import type { SettingsApi } from './settings';
 import type { ShelvesApi } from './shelves';
 import type { SyncApi } from './sync';
 import type { SystemApi } from './system';
+import type { ToolsApi } from './tools';
 import type { UnityAssetsApi } from './unityAssets';
 import type { UpdatesApi } from './updates';
 import type { WindowsApi } from './windows';
@@ -59,6 +60,7 @@ export interface UvcsApi {
   shelves: ShelvesApi;
   sync: SyncApi;
   system: SystemApi;
+  tools: ToolsApi;
   unityAssets: UnityAssetsApi;
   updates: UpdatesApi;
   windows: WindowsApi;
