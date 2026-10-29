@@ -51,8 +51,8 @@ describe('toolArgs', () => {
     expect(toolArgs(['--label={label}', '{repository}', 'plain'], values)).toEqual(['--label={path} & "v1"', 'game@local', 'plain']);
   });
 
-  it('keeps unknown words in braces as typed', () => {
-    expect(toolArgs(['{unknown}', '{}'], values)).toEqual(['{unknown}', '{}']);
+  it('keeps unknown words in braces as typed, and what an object inherits stays a word', () => {
+    expect(toolArgs(['{unknown}', '{}', '{toString}', '{constructor}'], values)).toEqual(['{unknown}', '{}', '{toString}', '{constructor}']);
   });
 
   it('fills an empty value as an empty argument', () => {

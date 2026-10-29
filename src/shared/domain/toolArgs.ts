@@ -28,12 +28,17 @@ export function placeholderValues(subject: ResolvedSubject, context: ToolContext
   }
 }
 
-const PLACEHOLDER = new RegExp(Object.keys(TOOL_PLACEHOLDERS).map((name) => name.replace(/[{}]/g, '\\$&')).join('|'), 'g');
+/** Any `{word}`; only the names in `TOOL_PLACEHOLDERS` are filled in. */
+const BRACED_WORD = /\{\w+\}/g;
 
 /**
  * The arguments with every placeholder filled in, each still one argument: a path with spaces needs no quotes, and
  * nothing in a value is read again (a `{label}` named `{path}` stays so). Unknown `{words}` stay as typed.
  */
 export function toolArgs(args: readonly string[], values: Record<ToolPlaceholder, string>): string[] {
-  return args.map((arg) => arg.replace(PLACEHOLDER, (name) => values[name as ToolPlaceholder]));
+  return args.map((arg) => arg.replace(BRACED_WORD, (word) => (isPlaceholder(word) ? values[word] : word)));
+}
+
+function isPlaceholder(word: string): word is ToolPlaceholder {
+  return Object.hasOwn(TOOL_PLACEHOLDERS, word);
 }
